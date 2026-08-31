@@ -55,7 +55,7 @@ derive world geometry.
 python tools/smoke_test.py
 ```
 
-48 checks, headless, no orion2re needed. **The count must not go
+49 checks, headless, no orion2re needed. **The count must not go
 down.** If a change makes a check obsolete, replace it — do not
 delete it. Add a check for anything a future session could silently
 break; several checks exist because a fault was invisible on screen.
@@ -135,6 +135,11 @@ the repository — neither is required to start:
 python tools/help_extract.py                        # context-help texts
 python tools/nebula_extract.py /path/to/starbg.lbx  # nebula sprites
 ```
+
+Without the first, every right click opens a panel naming that
+command instead of the game's text — which reads as a broken feature,
+and did. The `--lang` must match `"language"` in `settings.json`; the
+loader reads `help_<language>.json` and no other name.
 
 **Never modify orion2re's tree.** C++ additions are gated behind
 `#ifdef ORION2RE_EXT`, and anything wanted from Joe goes in

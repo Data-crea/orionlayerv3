@@ -2278,6 +2278,43 @@ def main():
     assert "help_extract" not in _no_id[1], _no_id[1]
     ok("help: missing file and missing id say different things")
 
+    # Three places touch that file: core.helptext builds the path the
+    # loader reads, help_extract.py writes it, setup.py reports
+    # whether it is there. They were three independent spellings, and
+    # setup's was a hardcoded help_en.json — so a non-English install
+    # was told to run an extractor it had already run correctly, and
+    # an English file under a German setting was reported ok while
+    # every popup showed a placeholder. Asserted per language rather
+    # than for one, because "en" is exactly the value under which the
+    # bug is invisible.
+    import importlib.util as _ilu
+    from core.helptext import help_file as _help_file
+    _root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    _spec = _ilu.spec_from_file_location(
+        "_setup_mod", os.path.join(_root, "tools", "setup.py"))
+    _setup = _ilu.module_from_spec(_spec)
+    _spec.loader.exec_module(_setup)
+    for _lang in ("en", "de", "fr"):
+        _want = os.path.join(_root, *_help_file(_lang).split("/"))
+        _path, _what, _cmd = _setup.from_game({"language": _lang})[0]
+        assert _path == _want, (_lang, _path, _want)
+        # The command has to be runnable as printed: an install on a
+        # non-default language needs --lang, or following the advice
+        # writes a file the loader will not read.
+        assert _lang == "en" or ("--lang " + _lang) in _cmd, _cmd
+        assert "placeholder" in _what, _what
+    # The extractor writes the file the loader reads.
+    _espec = _ilu.spec_from_file_location(
+        "_extract_mod", os.path.join(_root, "tools", "help_extract.py"))
+    _extract = _ilu.module_from_spec(_espec)
+    _espec.loader.exec_module(_extract)
+    for _lang in ("en", "de"):
+        _written = os.path.join(_extract.OUT_DIR,
+                                os.path.basename(_help_file(_lang)))
+        assert _written == os.path.join(
+            _root, *_help_file(_lang).split("/")), _written
+    ok("help file path: loader, extractor and setup agree (3 languages)")
+
     # MOO2's help bodies are not plain text: they carry FMTPARA
     # control codes, and the column positions inside them are what
     # makes the Command Points table a table. Printing them raw put

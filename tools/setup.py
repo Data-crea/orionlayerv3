@@ -37,6 +37,11 @@ import subprocess
 import sys
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, ROOT)
+
+from core.config import load_settings      # noqa: E402
+from core.helptext import help_file        # noqa: E402
+
 GM = os.path.join(ROOT, "screens", "galaxy_map", "assets")
 
 #: (tool, arguments, a path that must exist afterwards, what it is)
@@ -61,14 +66,32 @@ REQUIRED_INPUTS = [
     (os.path.join(GM, "stars"), "star sprites (committed, see .gitignore)"),
 ]
 
-#: Derived from the user's own MOO2 files — reported, never run.
-FROM_GAME = [
-    (os.path.join(ROOT, "assets", "shared", "help", "help_en.json"),
-     "context-help texts", "python tools/help_extract.py"),
-    (os.path.join(GM, "nebula_ref"),
-     "nebula reference (unlocks 2 smoke assertions)",
-     "python tools/nebula_extract.py /path/to/starbg.lbx"),
-]
+def from_game(settings=None):
+    """Files derived from the user's own MOO2 — reported, never run.
+
+    [(path, what, command)]. The help entry is built from the
+    language in settings.json rather than from a fixed
+    `help_en.json`, because that is the file `HelpText` reads: a
+    German install extracted `help_de.json` correctly and was still
+    told here that the texts were absent, while an English file with
+    `"language": "de"` set was reported ok and showed placeholders in
+    game. Both directions were wrong, and neither is visible from
+    the report alone.
+    """
+    lang = (settings if settings is not None else load_settings()
+            ).get("language", "en")
+    cmd = "python tools/help_extract.py"
+    if lang != "en":
+        cmd += f" --lang {lang}"
+    return [
+        (os.path.join(ROOT, *help_file(lang).split("/")),
+         f"context-help texts ({lang}) — without them every right "
+         f"click shows a placeholder, not the game's text",
+         cmd),
+        (os.path.join(GM, "nebula_ref"),
+         "nebula reference (unlocks 2 smoke assertions)",
+         "python tools/nebula_extract.py /path/to/starbg.lbx"),
+    ]
 
 
 def run(tool, extra):
@@ -118,7 +141,7 @@ def main():
             failed.append(tool)
 
     print("\n  Derived from your Master of Orion 2 installation:")
-    for path, what, cmd in FROM_GAME:
+    for path, what, cmd in from_game():
         if os.path.exists(path):
             print(f"    ok       {what}")
         else:

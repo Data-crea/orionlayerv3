@@ -47,6 +47,25 @@ HELP_LBX = {
     "it": "ITA_HELP.LBX",
 }
 
+#: Directory the extracted files live in, resource-relative.
+HELP_DIR = "assets/shared/help"
+
+
+def help_file(language):
+    """Resource path of the extracted help file for a language.
+
+    The one place this string is built. It had been written out
+    independently in three: here, in `tools/help_extract.py` (which
+    writes the file) and in `tools/setup.py` (which reports whether
+    it is there). setup checked `help_en.json` while the loader read
+    `help_<language>.json`, so a German install was told to run an
+    extractor it had already run — the name-table-in-three-files
+    failure, in its checking variant. The smoke test now asserts the
+    three agree.
+    """
+    return f"{HELP_DIR}/help_{language}.json"
+
+
 #: Used when labels.json is missing so the popup never renders blank.
 FALLBACK_LABELS = {
     "close": "CLOSE",
@@ -92,12 +111,11 @@ class HelpText:
 
     def load(self):
         """(Re)read the help file and the label file."""
-        labels = self.res.load_json("assets/shared/help/labels.json")
+        labels = self.res.load_json(f"{HELP_DIR}/labels.json")
         if isinstance(labels, dict):
             self._labels.update(labels)
 
-        data = self.res.load_json(
-            f"assets/shared/help/help_{self.language}.json")
+        data = self.res.load_json(help_file(self.language))
         if not isinstance(data, dict):
             self._entries = {}
             self._available = False

@@ -50,12 +50,20 @@ out complete. Expect `SMOKE TEST PASSED`. `.gitignore` explains what
 is generated and, more usefully, why each exception is one.
 
 Two things come from your own copy of Master of Orion 2 and are
-therefore not in the repository. Neither is required to start:
+therefore not in the repository. Neither is required to start, but
+skipping the first looks like a broken feature rather than a missing
+step: right-click help then opens a panel that names this command
+instead of showing the game's text.
 
 ```bash
 python tools/help_extract.py                       # right-click help texts
+python tools/help_extract.py --lang de             # for GER_HELP.LBX
 python tools/nebula_extract.py /path/to/starbg.lbx # nebula sprites
 ```
+
+The language must match `"language"` in `settings.json` — the app
+reads `help_<language>.json` and nothing else. `python tools/setup.py`
+reports which of the two is missing, in the language you have set.
 
 Requires Python 3.10+ (verified on 3.12 and 3.14).
 
@@ -279,7 +287,7 @@ tools/
 python tools/smoke_test.py
 ```
 
-48 checks, headless, no orion2re needed. Covers resource resolution,
+49 checks, headless, no orion2re needed. Covers resource resolution,
 mod overrides, screen discovery, all screen lifecycles, the
 dispatcher's sub-screen lock, the injection chain — including that it
 survives a silent gap with no field list and that a reconnect drops

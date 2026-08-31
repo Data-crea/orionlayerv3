@@ -50,7 +50,7 @@ files under `doc/` and are only summarised here.
 | | |
 |---|---|
 | Python | 20,535 lines across 92 modules (core, screens, tools) |
-| Smoke test | `python tools/smoke_test.py` — **48 checks**, headless |
+| Smoke test | `python tools/smoke_test.py` — **49 checks**, headless |
 | Assets | 170 MB (select_race 68, galaxy_map 51, shared 23, new_game 21, colony_summary 1) |
 | Screens in HD | 7 of ~20–22 (colony summary is frame + sidebar only) |
 | Setup from clone | `python tools/setup.py` (deps via the system package manager) |
@@ -380,6 +380,19 @@ exactly as in `Draw_Help_Entry_`.
 The text itself is derived from the player's installation
 (`tools/help_extract.py`, language per `settings.json`) and never
 ships; until extracted, the popup says so with the command.
+
+**31 August — the file name had three independent spellings.**
+`core.helptext` built the path the loader reads, `help_extract.py`
+built the one it writes, and `setup.py` checked a hardcoded
+`help_en.json`. The two directions of the resulting lie: a German
+install that had extracted `help_de.json` correctly was told the
+texts were absent, and an English file under `"language": "de"` was
+reported ok while every popup showed a placeholder. `help_file()` in
+`core/helptext.py` is now the single source, all three go through it,
+and the smoke test asserts they agree for `en`, `de` and `fr` — `en`
+alone cannot catch it. `setup.py` also names the consequence and
+prints the `--lang` the settings actually call for, because the
+report was accurate and still read as optional.
 OrionLayer's own wording around it lives in
 `assets/shared/help/labels.json`. Not drawn, deliberately: the
 per-entry animation (`anim_lbx` is preserved in the JSON so the
