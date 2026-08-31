@@ -19,6 +19,15 @@ savegame so the arrays are populated):
     python tools/struct_probe.py colonies --records 2
     python tools/struct_probe.py leaders --records 3
 
+    python tools/struct_probe.py colonies --spec --records 2
+    python tools/struct_probe.py colonies --spec --full --records 1
+
+--spec decodes a record against the spec registered for that array
+and prints field name, offset, kind and value. It works for a record
+of any size, so the 64-byte ceiling on the int16 column view stops
+mattering for large structs like s_colony (361 B) — that view is
+untouched and still the right tool when there is no spec yet.
+
 Workflow:
   1. Note a ground truth in-game (e.g. a nebula's map position via
      the star coordinates around it, a colony's population).
@@ -81,6 +90,68 @@ def ascii_runs(raw, indent="    ", min_len=3):
             run = []
 
 
+#: Specs the --spec mode can decode against, by array name. A spec
+#: named here is NOT thereby trusted: unverified ones are exactly
+#: what this mode exists to check, and it prints their status in the
+#: header so a reader cannot mistake a decode for a verification.
+SPECS = {
+    "colonies": ("core.structs.unverified", "COLONY"),
+    "leaders": ("core.structs.unverified", "LEADER"),
+    "planets": ("core.structs.planet", "SPEC"),
+    "nebulas": ("core.structs.nebula", "SPEC"),
+}
+
+
+def load_spec(array):
+    """The Spec registered for an array name, or None."""
+    entry = SPECS.get(array)
+    if entry is None:
+        return None
+    import importlib
+    module, attr = entry
+    return getattr(importlib.import_module(module), attr, None)
+
+
+def spec_decode(raw, spec, indent="    "):
+    """Field name / offset / kind / value, one line per field.
+
+    Generic over Spec on purpose. s_leader_data needs exactly this
+    and so will anything else promoted out of unverified.py, and a
+    decoder wired to one struct is a decoder that gets copied.
+
+    An array field prints its length and its first values rather than
+    all of them — pop[42] and buildings[49] would bury the scalars
+    that are usually what somebody is checking. `--full` prints
+    everything.
+    """
+    view = spec.parse(raw)
+    width = max(len(n) for n, _, _ in spec.fields)
+    for name, offset, kind in spec.fields:
+        value = getattr(view, name)
+        if isinstance(value, list):
+            shown = ", ".join(str(v) for v in value[:SPEC_ARRAY_PREVIEW])
+            more = "" if len(value) <= SPEC_ARRAY_PREVIEW else ", ..."
+            value = f"[{len(value)}] {shown}{more}"
+        print(f"{indent}{offset:4d}  {name:<{width}}  "
+              f"{kind:<10}  {value}")
+
+
+def spec_decode_full(raw, spec, indent="    "):
+    """Every element of every array field, one per line."""
+    view = spec.parse(raw)
+    for name, offset, kind in spec.fields:
+        value = getattr(view, name)
+        if not isinstance(value, list):
+            continue
+        print(f"{indent}{name} ({kind}) at {offset}:")
+        for i, v in enumerate(value):
+            print(f"{indent}  [{i:3d}] {v}")
+
+
+#: How many elements of an array field the compact view shows.
+SPEC_ARRAY_PREVIEW = 8
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("array", choices=sorted(ARRAYS))
@@ -88,7 +159,18 @@ def main():
                     help="how many records to dump (default 4)")
     ap.add_argument("--host", default="localhost")
     ap.add_argument("--port", type=int, default=17362)
+    ap.add_argument("--spec", action="store_true",
+                    help="decode each record against the registered "
+                         "core.structs spec instead of dumping hex")
+    ap.add_argument("--full", action="store_true",
+                    help="with --spec, print every array element")
     args = ap.parse_args()
+
+    spec = load_spec(args.array) if args.spec else None
+    if args.spec and spec is None:
+        print(f"No spec registered for {args.array!r}. Known: "
+              f"{', '.join(sorted(SPECS))}")
+        return 1
 
     client = GameClient()
     if not client.connect(host=args.host, port=args.port):
@@ -127,13 +209,30 @@ def main():
               f"first (the main menu has no map data)")
         return 1
 
+    if spec is not None:
+        status = ("VERIFIED" if spec.verified
+                  else "UNVERIFIED — this decode is the check, not "
+                       "the proof")
+        print(f"spec {spec.name}: {spec.size} bytes, "
+              f"{len(spec.fields)} fields, {status}")
+        if spec.size != size:
+            print(f"  WARNING: array record size is {size}, spec says "
+                  f"{spec.size} — decoding anyway, but one of the two "
+                  f"is wrong and every field below is suspect")
+        print()
+
     for i, raw in enumerate(records[:args.records]):
         print(f"── {args.array}[{i}]  ({len(raw)} bytes) "
               + "─" * 30)
-        hexdump(raw)
-        ascii_runs(raw)
-        if len(raw) <= 64:
-            int16_columns(raw)
+        if spec is not None:
+            spec_decode(raw, spec)
+            if args.full:
+                spec_decode_full(raw, spec)
+        else:
+            hexdump(raw)
+            ascii_runs(raw)
+            if len(raw) <= 64:
+                int16_columns(raw)
         print()
     print(f"({len(records)} records total; showing "
           f"{min(args.records, len(records))})")

@@ -1840,7 +1840,68 @@ def main():
     assert (p.colony_index, p.star_index) == (7, 3)
     pv = pl.parse(bytes(PLAYER_SIZE))
     assert len(pl.contacts(pv)) == 8 and len(pl.traits(pv)) == 31
-    ok("struct specs (nebula, planet, player)")
+
+    # ── unverified.py's contract, asserted rather than trusted ──
+    # The file exists to quarantine specs that have ONE source. A
+    # spec promoted by flipping the flag in place, without moving to
+    # its own module with the evidence in the docstring, would leave
+    # no trace anywhere — so the flag is checked here for every spec
+    # the module exposes, not for a named list of them.
+    from core.structs import Spec as _Spec
+    from core.structs import unverified as _unv
+    _quarantined = [v for v in vars(_unv).values()
+                    if isinstance(v, _Spec)]
+    assert _quarantined, "unverified.py exposes no specs at all"
+    for _sp in _quarantined:
+        assert not _sp.verified, (
+            f"{_sp.name} is marked verified inside unverified.py — "
+            f"promotion means moving it to its own module with the "
+            f"evidence, not flipping the flag here")
+
+    # ── A spec must tile its struct ──
+    # Asserted as the rule over every spec in the tree that claims a
+    # size, not as a list of s_colony's 50 offsets: a field added,
+    # removed or mistyped shifts the chain and is caught without
+    # anybody updating this test. s_colony is packed with no padding
+    # (proved by compiling the header, doc/s_colony_offsets.md), so
+    # for it the chain must close exactly on 361.
+    _colony = _unv.COLONY
+    assert _colony.size == 361 and len(_colony.fields) == 50, \
+        (_colony.size, len(_colony.fields))
+    _end = 0
+    for _name, _off, _kind in _colony.fields:
+        assert _off == _end, (
+            f"s_colony: {_name} starts at {_off}, previous field "
+            f"ended at {_end} — the spec has a gap or an overlap")
+        _end = _off + _Spec.kind_width(_kind)
+    assert _end == _colony.size, \
+        f"s_colony fields end at {_end}, spec size is {_colony.size}"
+    _cv = _colony.parse(bytes(_colony.size))
+    assert len(_cv.pop) == 42 and len(_cv.buildings) == 49, \
+        (len(_cv.pop), len(_cv.buildings))
+
+    # ── The pop word's masks must not overlap ──
+    # Bits inside a member are NOT fixed by offsetof (decision 23's
+    # addition): they are a transcription of pop.h, so the one thing
+    # checkable without live data is that the transcription is at
+    # least self-consistent. Two masks sharing a bit would make one
+    # field silently corrupt the other's reads.
+    _masks = {n: v for n, v in vars(_unv).items()
+              if n.startswith("POP_MASK_")}
+    assert len(_masks) == 5, sorted(_masks)
+    _seen = 0
+    for _n, _m in sorted(_masks.items()):
+        assert _m and not (_m & _seen), \
+            f"{_n} = {_m:#x} overlaps a mask already claimed"
+        _seen |= _m
+    # The profession field must be wide enough for its own maximum,
+    # and pop.h defines no fourth profession.
+    assert _unv.POP_PROF_MAX <= (_unv.POP_MASK_PROF >> 7), \
+        "POP_MASK_PROF cannot hold POP_PROF_MAX"
+    assert _unv.pop_prof(_unv.POP_MASK_PROF) == 3, "prof shift is wrong"
+    assert _unv.pop_race(_unv.POP_RACE_NATIVE) == 9
+    ok("struct specs (nebula, planet, player; s_colony layout, "
+       "pop masks, quarantine contract)")
 
     # ── Glyph substitution: mechanism, not one font's quirk ──
     # This existed because the bundled Bank Gothic was a DEMO build
