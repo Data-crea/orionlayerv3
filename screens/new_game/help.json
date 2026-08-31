@@ -1,6 +1,7 @@
 {
   "_comment": "Right-click context help. Transcribed from ERICHELP::_new_game_screen_help_list (erichelp.cpp:27), installed by NEWGAME::Newgame_Screen_ (newgame.cpp:77). The original's help rectangles are wider than its click fields — {546, 99,84,212,226} covers the Difficulty picture AND its label, while field 1 is only the picture. HD resolves each region from the cover-scaled slot in layout.json, which is the same whole-control area. The screen-wide entry 545 must stay last: the walk stops at the first hit, so a fallback listed earlier would eat every other region.",
   "_source": "erichelp.cpp:27",
+  "hd_extension": "The help popup auto-sizes to its text and scrolls when it cannot fit. The original draws a fixed box and lets FMTPARA wrap into it at a fixed 339 px (TEXTBOX::Draw_Help_Entry_, textbox.cpp:307); at four HD resolutions a fixed box either wastes half the screen on two lines or clips a long entry. The deviation belongs to the panel rather than to any one region, so it is marked once per file, at the top level. Also marked in core/helppopup.py and asserted by the smoke test.",
   "regions": [
     { "help_id": 546, "slot": "difficulty",        "native": [ 99,  84, 212, 226] },
     { "help_id": 547, "slot": "galaxy_size",       "native": [249,  85, 376, 225] },

@@ -2173,8 +2173,108 @@ def main():
             for _res, _bl in _hjson.load(_fh).items():
                 assert any(_b["name"] == "help_popup" for _b in _bl), \
                     (_name, _res)
+    # The sidebar regions have to tile the column, not merely cover
+    # the readouts. MOO2's rectangles span the whole row band and
+    # leave 2 native pixels between consecutive entries
+    # (evanhelp.cpp:4); the HD sb_* boxes are sized to their content,
+    # so without help.json's pad_y a right click between two readouts
+    # opens nothing. That strip is invisible on screen — the region
+    # it belongs to is not drawn — so it needs a test.
+    #
+    # Asserted as the rule, against the file's own provenance
+    # rectangles rather than a copied constant: the HD column must
+    # cover at least the fraction of its span that the original
+    # covers of its own, the regions must not overlap (first hit
+    # wins, so an overlap silently shadows an entry), and none may
+    # leave the sidebar cutout.
+    d.switch_to("galaxy_map")
+    _gm_s = d.active
+    _gm_s.update(None)
+    with open(os.path.join(SCREENS_DIR, "galaxy_map", "help.json"),
+              encoding="utf-8") as _fh:
+        _sb_specs = [_r for _r in _hjson.load(_fh)["regions"]
+                     if "sb_" in str(_r.get("box"))]
+    assert len(_sb_specs) == 6, len(_sb_specs)
+
+    # Sort the specs themselves, so spec[i], native[i] and rect[i] are
+    # the same row. Reading the file order would agree today and stop
+    # agreeing the first time somebody reorders a region.
+    _sb_specs.sort(key=lambda r: r["native"][1])
+    _nat = [_r["native"] for _r in _sb_specs]
+    _nat_cov = (sum(_n[3] - _n[1] for _n in _nat)
+                / (_nat[-1][3] - _nat[0][1]))
+    _hd = [_gm_s.help_region_rect(_r) for _r in _sb_specs]
+    assert _hd == sorted(_hd, key=lambda r: r.top), \
+        "HD sidebar rows are not in the original's top-to-bottom order"
+    _hd_cov = sum(_r.h for _r in _hd) / (_hd[-1].bottom - _hd[0].top)
+    assert _hd_cov >= _nat_cov, (
+        f"sidebar help covers {_hd_cov:.1%} of its column, the original "
+        f"{_nat_cov:.1%} — dead strip between readouts")
+    for _a, _b in zip(_hd, _hd[1:]):
+        assert _b.top >= _a.bottom, (_a, _b)
+
+    # A region that fills its HD row where the original's does not
+    # fill its own is a deliberate deviation and has to say so —
+    # CLAUDE.md's rule that an HD EXTENSION is marked where it lives,
+    # so it cannot quietly become "how it has always been". Asserted
+    # as the rule rather than by naming the stardate: any future
+    # region that stops matching the original's proportions is caught
+    # the same way. The 0.9 separates 0.81 (the original's stardate,
+    # 17 of a 21-pixel row) from 0.97 (every readout) with room on
+    # both sides; it is a divider, not a tuned threshold.
+    _FILLS_ROW = 0.9
+    for _i, _spec in enumerate(_sb_specs[:-1]):
+        _n, _n_next = _nat[_i], _nat[_i + 1]
+        _nat_fill = (_n[3] - _n[1]) / (_n_next[1] - _n[1])
+        _hd_fill = _hd[_i].h / (_hd[_i + 1].top - _hd[_i].top)
+        if _nat_fill < _FILLS_ROW <= _hd_fill:
+            assert _spec.get("hd_extension"), (
+                f"help {_spec['help_id']} covers {_hd_fill:.0%} of its HD "
+                f"row where the original covers {_nat_fill:.0%} of its "
+                f"own — a deviation that is not marked hd_extension")
+    _cut = pygame.Rect(*_gm_s.box_rect("sidebar"))
+    for _r in _hd:
+        assert _cut.contains(_r), (_r, _cut)
     ok(f"help regions resolve ({_region_total} across "
-       f"{len(_help_screens)} screens)")
+       f"{len(_help_screens)} screens, sidebar tiles its column)")
+
+    # The auto-sizing panel is a marked HD EXTENSION: the original
+    # draws a fixed box and lets FMTPARA wrap into it at a fixed
+    # 339 px (textbox.cpp:307), which at four HD resolutions either
+    # wastes half the screen or clips a long entry. `helppopup.py`
+    # and the fundament both said the marking also stood in
+    # `screens/*/help.json`. It stood in none of the three, for as
+    # long as both documents claimed it — which is how a marking
+    # rots: nothing reads it, so nothing notices it left.
+    #
+    # Walked over the tree rather than over a list of screens. A list
+    # is a second thing to remember, and the file this rule is for is
+    # the one somebody adds next year. Mods are included: a mod that
+    # ships its own help.json ships the same popup and inherits the
+    # same deviation.
+    _tree = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    _help_files = []
+    for _dir, _subs, _files in os.walk(_tree):
+        if "__pycache__" in _dir or os.sep + ".git" in _dir:
+            continue
+        if "help.json" in _files:
+            _help_files.append(os.path.join(_dir, "help.json"))
+    assert _help_files, "no help.json in the tree at all"
+    for _hf in sorted(_help_files):
+        _rel = os.path.relpath(_hf, _tree)
+        with open(_hf, encoding="utf-8") as _fh:
+            _note = _hjson.load(_fh).get("hd_extension", "")
+        assert _note, (
+            f"{_rel} carries no top-level 'hd_extension': the "
+            f"auto-sizing help panel is a deviation from the original "
+            f"and has to say so where it is read")
+        # Not just the key — the reason. A marking that does not name
+        # what the original does instead is a label, not a record.
+        assert "339" in _note, (
+            f"{_rel}: hd_extension does not name the original's fixed "
+            f"339 px wrap")
+    ok(f"help.json marks the auto-sizing panel "
+       f"({len(_help_files)} files, tree-wide)")
 
     # Right click opens, left click closes and does NOT reach the game
     d.switch_to("main_menu")

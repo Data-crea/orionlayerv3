@@ -287,7 +287,7 @@ tools/
 python tools/smoke_test.py
 ```
 
-49 checks, headless, no orion2re needed. Covers resource resolution,
+50 checks, headless, no orion2re needed. Covers resource resolution,
 mod overrides, screen discovery, all screen lifecycles, the
 dispatcher's sub-screen lock, the injection chain — including that it
 survives a silent gap with no field list and that a reconnect drops

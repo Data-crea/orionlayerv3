@@ -79,6 +79,31 @@ class HelpMixin:
     def help_region_rect(self, spec):
         """Screen rect for one help.json region, or None.
 
+        The shape comes from `_help_region_shape`; `pad_y` then grows
+        it symmetrically. The original's rectangles are drawn around
+        the whole row band, not around the control inside it — MOO2
+        leaves 2 native pixels between consecutive sidebar entries
+        (evanhelp.cpp:4), so a right click anywhere in the column
+        finds an entry. HD boxes are sized to their content instead,
+        which leaves a dead strip between rows that the original does
+        not have; the pad closes it without moving anything that is
+        drawn, so the region still follows its boxes through the F5
+        editor. The value is in reference pixels, like every other
+        stored geometry.
+        """
+        rect = self._help_region_shape(spec)
+        if rect is None:
+            return None
+        pad = spec.get("pad_y", 0)
+        if pad:
+            # Even inflation: pygame keeps the centre and dy//2 is
+            # exact, so the band grows by `pad` on each side.
+            rect = rect.inflate(0, 2 * int(round(pad * self.layout.scale)))
+        return rect
+
+    def _help_region_shape(self, spec):
+        """Unpadded rect for one region. The region kinds live here.
+
         Handles the region kinds every screen can have. A screen with
         its own geometry (New Game's cover-scaled slots, the galaxy
         map's frame cutouts) adds kinds in `help_extra_rect`.

@@ -1,6 +1,7 @@
 {
   "_comment": "Right-click context help. Transcribed from EVANHELP::_main_menu_screen_help_list (evanhelp.cpp:55), installed by MAINMENU::Set_Main_Menu_Screen_Help_List_ (mainmenu.cpp:169). `native` is the original's 640x480 rectangle and is provenance only — HD resolves each region from its own box, because the HD layout puts the same control somewhere else. Regions are tested in order and the first hit wins, like fields::Check_Help_List_.",
   "_source": "evanhelp.cpp:55",
+  "hd_extension": "The help popup auto-sizes to its text and scrolls when it cannot fit. The original draws a fixed box and lets FMTPARA wrap into it at a fixed 339 px (TEXTBOX::Draw_Help_Entry_, textbox.cpp:307); at four HD resolutions a fixed box either wastes half the screen on two lines or clips a long entry. The deviation belongs to the panel rather than to any one region, so it is marked once per file, at the top level. Also marked in core/helppopup.py and asserted by the smoke test.",
   "regions": [
     { "help_id": 645, "box": "continue",     "native": [415, 172, 567, 193] },
     { "help_id": 646, "box": "load_game",    "native": [415, 195, 567, 215] },
