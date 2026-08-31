@@ -214,10 +214,19 @@ changed underneath the run.
 | Second sample | stardate 3508.5, 54 stars, 21 colonies, 131 pops |
 | | a *different* galaxy, with turns played |
 
-The second was confirmed stable across three consecutive snapshots
-before anything was read from it. Numbers from the two samples are
-not comparable and are never compared below. The first galaxy no
-longer exists and cannot be re-examined.
+**Why the state changed:** the maintainer loaded a savegame roughly
+50 turns old while the first pass was running. Different galaxy, no
+mystery — recorded here because a reader who finds two incompatible
+sets of numbers in one document deserves the reason and not just the
+fact. The second was confirmed stable across three consecutive
+snapshots before anything was read from it. Numbers from the two
+samples are not comparable and are never compared below. The first
+galaxy no longer exists and cannot be re-examined.
+
+That the loader ran is itself checkable rather than assumed:
+`n_turns_existed` reads 85, 85, 85, 85, 85, 79, 73, 70, 69, 68, 67,
+54, 54, 49, 28, 24, 0, 17, 14, 11, 5 across the 21 colonies — a
+founding order no freshly generated galaxy produces.
 
 ### What held
 
@@ -297,24 +306,55 @@ but `Colony_Calculation_` runs afterwards and overwrites it, so
 50 and 0 out of 21. That was the spec being right and the
 expectation being wrong.
 
-**`max_population` (offset 225) is only ever restored, never
-computed.** The complete set of writers is `savegame.cpp:322`
-(reading it back from a save) and `ericnet.cpp:443`. Nothing in the
-turn pass touches it, which is why it is 0 in every colony of both
-samples. A colony record loaded from a real savegame is the only
-state in which this field can be checked at all.
+**`max_population` (offset 225) is vestigial in both structs.**
+Phase B's first pass explained it as "only ever restored from a
+save", which the loaded savegame then refuted: it is 0 in all 21
+colonies *there too*, and `savegame.cpp:322` demonstrably does read
+it. Chasing that down settled it, and the answer clears `orion2.h`
+rather than accusing it.
+
+The cap the game actually uses is a table, not a struct member:
+`MOX::_planet_max_population[PLANET_SIZE_COUNT] = {5, 10, 15, 20, 25}`
+(mox.cpp:796), indexed by planet size and read directly at
+colcalc.cpp:1283 and invasion.cpp:318 and :924. The member is written
+only to 0 (homegen.cpp:615), restored from a save, or set on the
+network path (ericnet.cpp:443). `s_planet_data.max_population` is 0
+on all 270 planet slots for the same reason, and that spec is
+`verified=True` — a verified offset holding a value nobody uses,
+which is exactly the distinction decision 23 gained. Neither member
+should be read.
+
+Worth recording as corroboration rather than as the finding:
+`savegame.cpp:305-330` restores `s_colony` **field by field in the
+header's own order**, with matching widths — a second, hand-written
+expression of the same member sequence. It does not confirm any
+name, but a loader written against a different order would not
+round-trip.
 
 ### One finding that belongs to planet.py
 
-In the second sample, 132 of 270 planets carry a `colony_index` other
-than -1 while only 21 colonies exist; every value is inside
-`0..20`, so several planets share one. `planet.py`'s docstring says
-"`colony_index` -1 when the planet is uncolonised", which reads as
-though a non-negative value identified *this* planet's colony. The
-back-reference from a colony to its own planet does hold. What a
-non-negative `colony_index` means on the other ~110 planets is not
-established, and is not guessed here. It is on the list for the
-savegame pass.
+Raised in the first pass as unexplained and now settled. Of 270
+planet slots, **112 are not planets at all**: the array is always 5
+per star, and an unused slot is a record zeroed field by field
+(homegen.cpp:598-615), which `PLANET_TYPE_NOT_USED0 = 0`
+(orion2_consts.h:401) marks. Every one of those 112 carries
+`colony_index == 0` — because 0 is what zeroing writes, and 0 is
+also a legal colony index.
+
+Among the 158 real planets the docstring's claim holds exactly: 138
+at -1, and 20 carrying a colony index that appears once and points
+back at the colony naming that planet. The hazard is the filter:
+`colony_index != -1` as a test for "colonised" finds 112 phantom
+colonies, all of them apparently colony 0, and nothing about the
+result looks wrong. `planet_type != 0` has to come first.
+
+`core/structs/planet.py`'s docstring has been rewritten accordingly —
+offsets and `verified=True` untouched, since this was never a layout
+question. Each meaning now says whether it was seen live or is header
+only, and the four enum directions (climate, size, gravity, minerals)
+are marked as ranges confirmed and directions **not** confirmed: an
+observed range matching a declared range rules out a wrong offset and
+cannot tell Toxic from Gaia.
 
 ## second source still missing: live probe against a known colony
 
