@@ -39,7 +39,7 @@ Projekt ohnehin fährst, sind die drei meistens längst da; dann
 kannst du diesen Schritt überspringen.
 
 Erwartet: drei Generatoren `ok`, dann `absent context-help texts`,
-dann `SMOKE TEST PASSED — 50 checks green`.
+dann `SMOKE TEST PASSED — 51 checks green`.
 
 Der alte Baum bleibt vorerst liegen — `~/orionlayerv3` erst löschen,
 wenn der neue eine Woche funktioniert hat.

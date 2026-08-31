@@ -36,6 +36,8 @@ from core.config import REF_W, REF_H
 from core.screen_base import ScreenBase
 from core.structs import player as player_struct
 
+from . import colonylist
+
 log = logging.getLogger("colony_summary")
 
 PANEL_BG = palette.col("colony_summary", "panel_background", (8, 11, 20))
@@ -73,6 +75,7 @@ class ColonySummaryScreen(ScreenBase):
         self._frame_pos = (0, 0)
         self._local = None          # parsed s_player of the local player
         self._sort_key = "name"     # what the original starts on
+        self._state = None          # last snapshot, for the list
 
     # ── Lifecycle ─────────────────────────────────────────
 
@@ -87,6 +90,10 @@ class ColonySummaryScreen(ScreenBase):
     def update(self, game_state=None):
         if game_state is None:
             return
+        # Kept whole for the list, which needs colonies, planets and
+        # stars together; the sidebar only ever wanted the local
+        # player's record.
+        self._state = game_state
         raws = getattr(game_state, "player_raw", None) or []
         players = [player_struct.parse(r) for r in raws
                    if len(r) >= player_struct.SIZE]
@@ -121,6 +128,7 @@ class ColonySummaryScreen(ScreenBase):
     def render(self, surface):
         self._render_background(surface)
         self._render_panels(surface)
+        self._render_list(surface)
         self._render_sidebar(surface)
         self._render_buttons(surface)
         self._render_frame_image(surface)
@@ -154,6 +162,23 @@ class ColonySummaryScreen(ScreenBase):
             box = self.box_rect(name)
             if box:
                 surface.fill(PANEL_BG[:3], pygame.Rect(*self.layout.rect(box)))
+
+    def _render_list(self, surface):
+        """The colony list. The bar is an INVENTION — see colonylist.
+
+        Read-only: the rows come out of the snapshot and nothing here
+        sends anything to the game. Static for now, by design; the
+        hover band and the draggable dividers belong on a picture
+        somebody already believes.
+        """
+        box = self.box_rect("list_area")
+        if not box:
+            return
+        cfg = self._data.get("list", {})
+        rows = colonylist.build_rows(self._state, self._sort_key)
+        colonylist.render(surface, rows,
+                          pygame.Rect(*self.layout.rect(box)),
+                          cfg, self.layout, self.style)
 
     def _render_sidebar(self, surface):
         """Six empire lines, label over value, evenly stacked in the

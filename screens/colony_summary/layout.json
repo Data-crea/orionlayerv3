@@ -1,54 +1,161 @@
 {
   "frame": {
     "image": "frame.png",
-    "image_size": [1672, 941],
-    "title_rect": [733, 9, 447, 56],
+    "image_size": [
+      1672,
+      941
+    ],
+    "title_rect": [
+      733,
+      9,
+      447,
+      56
+    ],
     "title_font": 30,
     "title": "Colonies",
     "_note": "One PNG with transparent cutouts, stretched over the 1920x1080 reference area and drawn above all content. Every box in boxes.json is derived from the cutouts by tools/frame_holes.py (--write regenerates them). Do not move the cutout boxes by hand. The frame was generated at 1672x941 and is upscaled at every resolution; if the metal reads soft next to the galaxy map, regenerate the art larger and re-run frame_holes.",
     "_title_note": "The original has no title on this screen; the cutout is the same title bar the galaxy map has, so it carries the screen name."
   },
-
   "sort": {
     "_note": "The seven sort buttons of the original (colsum.cpp:267-273, Add_Multi_Button_Field_ at y=446). native_click is a point inside each native button; clicking there injects the same click the original receives, so no field id needs to be known. Hotkeys are the original's (ESTR 384/…: n p f i s r b).",
     "buttons": [
-      {"key": "name",       "label": "Name",       "hotkey": "n", "native_click": [95, 452]},
-      {"key": "population", "label": "Population", "hotkey": "p", "native_click": [146, 452]},
-      {"key": "food",       "label": "Food",       "hotkey": "f", "native_click": [225, 452]},
-      {"key": "industry",   "label": "Industry",   "hotkey": "i", "native_click": [268, 452]},
-      {"key": "science",    "label": "Science",    "hotkey": "s", "native_click": [332, 452]},
-      {"key": "producing",  "label": "Producing",  "hotkey": "r", "native_click": [399, 452]},
-      {"key": "bc",         "label": "BC",         "hotkey": "b", "native_click": [486, 452]}
+      {
+        "key": "name",
+        "label": "Name",
+        "hotkey": "n",
+        "native_click": [
+          95,
+          452
+        ]
+      },
+      {
+        "key": "population",
+        "label": "Population",
+        "hotkey": "p",
+        "native_click": [
+          146,
+          452
+        ]
+      },
+      {
+        "key": "food",
+        "label": "Food",
+        "hotkey": "f",
+        "native_click": [
+          225,
+          452
+        ]
+      },
+      {
+        "key": "industry",
+        "label": "Industry",
+        "hotkey": "i",
+        "native_click": [
+          268,
+          452
+        ]
+      },
+      {
+        "key": "science",
+        "label": "Science",
+        "hotkey": "s",
+        "native_click": [
+          332,
+          452
+        ]
+      },
+      {
+        "key": "producing",
+        "label": "Producing",
+        "hotkey": "r",
+        "native_click": [
+          399,
+          452
+        ]
+      },
+      {
+        "key": "bc",
+        "label": "BC",
+        "hotkey": "b",
+        "native_click": [
+          486,
+          452
+        ]
+      }
     ],
     "default": "name"
   },
-
   "return": {
     "label": "Return",
     "_note": "colsum.cpp:265 Add_Button_Field_(531, 445, …). Same injection path as the sort buttons.",
-    "native_click": [540, 452]
+    "native_click": [
+      540,
+      452
+    ]
   },
-
   "empire": {
     "_note": "Transcribed from COLSUM::Draw_Empire_Info_: six lines printed at native (520, 354), each an ESTRING with one s_player field. signed=true prints an explicit plus like the original's %+d.",
     "rows": [
-      {"key": "reserve",    "label": "Reserve",    "field": "bc"},
-      {"key": "income",     "label": "Income",     "field": "surplus_bc",        "signed": true, "warn_negative": true},
-      {"key": "population", "label": "Population", "field": "total_pop"},
-      {"key": "freighters", "label": "Freighters", "field": "surplus_freighters", "warn_negative": true},
-      {"key": "food",       "label": "Food",       "field": "surplus_food",      "signed": true, "warn_negative": true},
-      {"key": "research",   "label": "Research",   "field": "research_produced"}
+      {
+        "key": "reserve",
+        "label": "Reserve",
+        "field": "bc"
+      },
+      {
+        "key": "income",
+        "label": "Income",
+        "field": "surplus_bc",
+        "signed": true,
+        "warn_negative": true
+      },
+      {
+        "key": "population",
+        "label": "Population",
+        "field": "total_pop"
+      },
+      {
+        "key": "freighters",
+        "label": "Freighters",
+        "field": "surplus_freighters",
+        "warn_negative": true
+      },
+      {
+        "key": "food",
+        "label": "Food",
+        "field": "surplus_food",
+        "signed": true,
+        "warn_negative": true
+      },
+      {
+        "key": "research",
+        "label": "Research",
+        "field": "research_produced"
+      }
     ],
     "label_font": 18,
     "value_font": 26,
-    "row_pad": 0.10
+    "row_pad": 0.1
   },
-
   "panels": {
-    "_note": "Content for these arrives with the population bar work; for now each cutout is filled with panel_background so the frame reads as a finished surface.",
+    "_note": "Content for these arrives with the population bar work; list_area now draws the colony list (see `list` above), the other three are still filled with panel_background so the frame reads as a finished surface.",
     "list_area": "",
     "output_panel": "",
     "galaxy_inset": "",
     "spare_panel": ""
+  },
+  "list": {
+    "_invention": "INVENTION. The original draws three columns of population sprites per row, one icon per colonist, squished when a colony outgrows its column (COLDRAW::Do_Colony_Info_Pop_Stuff_For_Pop_, coldraw.cpp:282; Calculate_Squish_Step_, coldraw.cpp:12). This draws one allocation bar per row instead: one square per colonist, three zones in ECON order. MOO2 could not draw it and does not. Marked here, in colonylist.py, in v3_projektstatus.md and in a smoke check.",
+    "_transcribed": "The row set (colonies whose owner is the local player), the zone order food/industry/research (ECON_FOOD=0, orion2_consts.h:119; the original's own column order, colsum.cpp:318-329), the 'No Farming' label and the condition max_farms == 0 that shows it (coldraw.cpp:315, ESTR_NO_FARMING 387), and the bar length, which is COLCALC::Planet_Max_Population_For_Player_ (colcalc.cpp:896) and never _planet_max_population[size] alone.",
+    "row_height": 62,
+    "pad_x": 22,
+    "pad_y": 14,
+    "name_width": 330,
+    "name_font": 21,
+    "small_font": 15,
+    "bar_height": 34,
+    "square_gap": 2,
+    "no_farming": "No Farming",
+    "empty": "No colonies",
+    "_no_farming_note": "Drawn after the bar, not inside it. The design calls it a collapsed food zone, and it is one, but a zero-width zone has nowhere to put a label and the bar's empty tail is only one slot wide on Sol IV. The first version drew it at the bar's left and the worker squares painted over it: every number correct, nothing on screen."
   }
 }

@@ -1941,6 +1941,124 @@ def main():
     ok("struct specs (nebula, planet, player; s_colony promoted, "
        "pop masks, quarantine contract, max-pop base table)")
 
+    # ── The colony list ──
+    # Built against a synthetic snapshot, so the check runs headless
+    # and does not depend on somebody's savegame — a test that reads
+    # the user's disk answers differently for the user.
+    #
+    # The rules, not the instance: a row shows "No Farming" exactly
+    # when its colony's max_farms is 0; the three job counts add up
+    # to the population; and the bar never draws a square past its
+    # own end, which is what keeps "counting squares counts pops"
+    # true when a deviation makes the computed maximum too small.
+    from screens.colony_summary import colonylist as _cl
+    from core.structs import colony as _colsp, star as _starsp
+
+    def _mk_colony(owner, planet, pops, jobs, max_farms, climate):
+        b = bytearray(361)
+        b[0] = owner & 0xFF
+        b[2:4] = _s.pack("<h", planet)
+        b[10] = pops
+        i = 0
+        for prof, n in enumerate(jobs):
+            for _ in range(n):
+                b[12 + 4 * i:16 + 4 * i] = _s.pack("<I", (prof & 3) << 7)
+                i += 1
+        b[224] = max_farms
+        b[226] = climate
+        return bytes(b)
+
+    def _mk_planet(colony_index, star_index, orbit, size, climate):
+        b = bytearray(18)
+        b[0:2] = _s.pack("<h", colony_index)
+        b[2:4] = _s.pack("<h", star_index)
+        b[4] = orbit
+        b[6] = size
+        b[9] = climate
+        return bytes(b)
+
+    def _mk_star(name, slots):
+        b = bytearray(_starsp.SIZE)
+        b[0:len(name)] = name.encode("latin-1")
+        for i, v in enumerate(slots):
+            off = _starsp.PLANET_INDEX_OFFSET + 2 * i
+            b[off:off + 2] = _s.pack("<h", v)
+        return bytes(b)
+
+    class _GS:
+        player_num = 0
+    _gs = _GS()
+    # Two planets in one system, the first slot EMPTY, so the numeral
+    # of the first real planet is I and not II — HAROLD::Planet_Number_
+    # counts occupied slots, and getting that wrong renamed five of
+    # seven rows the first time it was tried.
+    _gs.planets_raw = [_mk_planet(0, 0, 1, 1, 5),
+                       _mk_planet(1, 0, 2, 3, 8)]
+    _gs.stars = _starsp.parse_all([_mk_star("Sol", [-1, 0, 1, -1, -1])])
+    _gs.colonies_raw = [
+        _mk_colony(0, 0, 3, (0, 3, 0), 0, 5),      # No Farming
+        _mk_colony(0, 1, 6, (2, 3, 1), 255, 8),    # farms
+        _mk_colony(1, 1, 4, (0, 4, 0), 255, 8),    # another player
+    ]
+    _pl_raw = bytearray(pl.SIZE)
+    _pl_raw[pl.TRAITS_OFFSET + _cl.TRAIT_ENVIRONMENT_IMMUNE] = 1
+    _gs.player_raw = [bytes(_pl_raw)]
+
+    _rows = _cl.build_rows(_gs, "name")
+    assert len(_rows) == 2, [r["name"] for r in _rows]
+    assert [r["name"] for r in _rows] == ["Sol I", "Sol II"], \
+        [r["name"] for r in _rows]
+    for _r in _rows:
+        assert sum(_r["jobs"]) == _r["pops"], _r
+    assert _rows[0]["no_farming"] and not _rows[1]["no_farming"], _rows
+    # The worked example from the fundament, section 3: Small(1)
+    # Ocean(5) with an environment-immune owner is 5, where the size
+    # table alone would say 10.
+    assert _rows[0]["max_pop"] == 5, _rows[0]["max_pop"]
+
+    # Nothing is drawn past the bar. Rendered onto a known background
+    # and measured, rather than asserted about the code: a clip that
+    # stops working is invisible in the source and obvious in pixels.
+    _surf = pygame.Surface((1920, 1080))
+    _surf.fill((0, 0, 0))
+    _area = pygame.Rect(100, 100, 1200, 400)
+    import json as _cjson
+    with open(os.path.join(SCREENS_DIR, "colony_summary", "layout.json"),
+              encoding="utf-8") as _fh:
+        _cfg = _cjson.load(_fh)["list"]
+    _cl.render(_surf, _rows, _area, _cfg, app.layout, app.style)
+    _px = pygame.surfarray.array3d(_surf)
+    for _x in range(_area.right, 1920):
+        assert not _px[_x].any(), f"the list drew at x={_x}, past its area"
+
+    # A row whose population EXCEEDS its computed maximum. The two
+    # documented deviations in max_population() both make the number
+    # too small, so this is a state the real screen can reach, and
+    # without the clip the squares run off the bar and off the panel.
+    # The rows above cannot catch it: both fit comfortably, so the
+    # clip is unreachable and removing it changes nothing.
+    _surf.fill((0, 0, 0))
+    _cl.render(_surf, [{"name": "Overflow", "pops": 8,
+                        "jobs": [0, 8, 0], "no_farming": False,
+                        "max_pop": 3}],
+               _area, _cfg, app.layout, app.style)
+    _px = pygame.surfarray.array3d(_surf)
+    for _x in range(_area.right, 1920):
+        assert not _px[_x].any(), (
+            f"a row with more pops than its maximum drew at x={_x} — "
+            f"the bar no longer clips at its own end")
+
+    # The bar is an INVENTION and the marking has to survive. Checked
+    # in both homes the project requires: the module that draws it and
+    # the JSON a mod would edit.
+    _cl_src = open(os.path.join(SCREENS_DIR, "colony_summary",
+                                "colonylist.py"), encoding="utf-8").read()
+    assert "INVENTION" in _cl_src, \
+        "colonylist.py no longer marks the bar as an INVENTION"
+    assert "INVENTION" in _cfg.get("_invention", ""), \
+        "layout.json list._invention no longer carries the marking"
+    ok("colony list (rows, No Farming, bar inside its area, INVENTION marked)")
+
     # ── Glyph substitution: mechanism, not one font's quirk ──
     # This existed because the bundled Bank Gothic was a DEMO build
     # that mapped 28 characters onto one watermark bitmap — including

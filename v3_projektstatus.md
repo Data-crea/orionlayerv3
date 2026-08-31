@@ -87,7 +87,7 @@ files under `doc/` and are only summarised here.
 | | |
 |---|---|
 | Python | 20,859 lines across 92 modules (core, screens, tools) |
-| Smoke test | `python tools/smoke_test.py` — **50 checks**, headless |
+| Smoke test | `python tools/smoke_test.py` — **51 checks**, headless |
 | Assets | 170 MB (select_race 68, galaxy_map 51, shared 23, new_game 21, colony_summary 1) |
 | Screens in HD | 7 of ~20–22 (colony summary is frame + sidebar only) |
 | Setup from clone | `python tools/setup.py` (deps via the system package manager) |
@@ -628,7 +628,44 @@ at most. See section 3 of the fundament, and the smoke rule that
 refuses the base table anywhere it appears without the climate
 factors.
 
-**Design for the list, agreed 31 August, not built.** Instead of the
+**The list renders — first visible step, 31 August.**
+`screens/colony_summary/colonylist.py` (278 lines, its own module
+because `screen.py` was at 258 against a ~300 guideline). One row per
+colony of the local player, sorted by name: the planet name, then one
+allocation bar, one square per colonist, three zones in ECON order.
+Static on purpose — no hover band, no draggable dividers, no click
+injection; the screen stays read-only. Those belong on a picture
+somebody already believes.
+
+**The bar is an INVENTION** and is marked as one in `colonylist.py`,
+in `layout.json` under `list._invention`, here, and in a smoke check
+that fails if either marking disappears. The original draws three
+columns of pop sprites per row, squished when a colony outgrows its
+column (coldraw.cpp:282).
+
+Verified against the original's own screen for the same savegame
+(85 turns, stardate 3508.5): seven rows, same names in the same
+order, "No Farming" on exactly Kif II, Malus I, Sol III and Sol IV,
+per-row populations and job splits identical, total 39. Bar length is
+`Planet_Max_Population_For_Player_` reimplemented, not the size table
+— with two stated deviations that both make a bar too short rather
+than too long: Advanced City Planning is not applied, because
+`tech_applications` has no verified offset, and the limit is taken
+for the owner's race rather than the best over races present, because
+that walk needs `pop_race`.
+
+Race groups as shades and androids/natives as locked are **not
+drawn**: they depend on `pop_race`, whose mask has no second source.
+The zone split is a list of runs so they can be added inside a run
+later without moving anything.
+
+One thing only the picture caught: "No Farming" was first drawn at
+the bar's left edge and the worker squares painted straight over it.
+Every number was right and the screen showed nothing. It now sits
+after the bar — the collapsed zone has zero width by construction,
+and the empty tail is one slot wide on Sol IV.
+
+**Rest of the design, agreed 31 August, not built.** Instead of the
 original's three icon columns per colony, one allocation bar per row:
 one small square per population unit, three colour zones (farm,
 industry, research), two draggable dividers between them, race groups
