@@ -192,6 +192,21 @@ via `tools/struct_probe.py`, or compiling orion2re's own header with
 its `#pragma pack(1)` and matching the assert in `sizes.h`.
 Unverified specs are quarantined in `structs/unverified.py`.
 
+**The header route carries as far as the byte layout and stops
+there.** `offsetof` and a satisfied `sizes.h` assert fix where a
+member begins and how wide it is; they say nothing about the meaning
+of bits *inside* one. `s_planet_data` is whole members throughout, so
+the header carried it end to end and `planet.py` is verified on that
+alone; `s_colony` carries the same way up to `pop[42]`, whose five
+fields are masks in `pop.h` — orion2re's own reading of what the
+original packs into that word, which no size assert can check. (They
+are explicit masks on a `uint32_t`, not C bitfields, so the
+implementation-defined ordering rule never enters into it; the gap is
+that a transcription of *meaning* is not a measurement of *layout*.)
+A packed word inside an otherwise verified struct is its own claim
+and needs its own second source — `doc/s_colony_offsets.md` is Phase
+A of exactly that, and says so in its own last section.
+
 **24. Ship icons are positioned by orion2re, not by us.**
 `s_ship_icon.x/y` are finished 640x480 top-left coordinates.
 Re-deriving the orbit slot geometry from `Get_XYs_For_Orbiting_Ships_`

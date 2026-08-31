@@ -14,6 +14,22 @@ copy said 48 while the table said 49.
 "Repository layout" below for what is committed, what is generated,
 and the one asset set that looks generated and is not.
 
+This session (31 August), last, in one line each: `s_colony` (361 B)
+was transcribed from `orion2.h:487-537` and its size confirmed by
+compiling orion2re's own headers — 50 members, contiguous, matching
+`ORION2RE_STATIC_SIZE_ASSERT(s_colony, 0x169)`, written up in
+`doc/s_colony_offsets.md` as **Phase A only**, with `COLONY` in
+`unverified.py` still deliberately empty because the second source
+(a live probe) does not exist yet; and **decision 23 was made more
+precise, not renumbered**: the header route was worded as if it
+verified a struct outright, which held for `s_planet_data` because
+every field there is a whole member, but `s_colony` packs race,
+original owner, profession, assigned and conquered into each `pop[]`
+word, and `offsetof` reaches the word without reaching its contents.
+Those masks live in `pop.h` and are orion2re's own reading of the
+original — a transcription of meaning, which a size assert cannot
+check.
+
 This session (31 August), latest, in one line each: the galaxy map's
 sidebar help regions were pulled onto the full row band — they had
 covered 87 % of the column against the original's 97 %, leaving five
