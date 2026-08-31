@@ -1,0 +1,366 @@
+{
+  "1920x1080": [
+    {
+      "name": "list_area",
+      "rect": [
+        98,
+        84,
+        1408,
+        619
+      ],
+      "role": [
+        "display"
+      ]
+    },
+    {
+      "name": "sidebar",
+      "rect": [
+        1532,
+        85,
+        286,
+        663
+      ],
+      "role": [
+        "display"
+      ]
+    },
+    {
+      "name": "return",
+      "rect": [
+        1532,
+        765,
+        286,
+        159
+      ],
+      "role": [
+        "click"
+      ],
+      "style": {
+        "font_size": 24
+      }
+    },
+    {
+      "name": "sort_name",
+      "rect": [
+        160,
+        959,
+        202,
+        53
+      ],
+      "role": [
+        "click"
+      ],
+      "style": {
+        "font_size": 18
+      }
+    },
+    {
+      "name": "sort_population",
+      "rect": [
+        375,
+        959,
+        198,
+        53
+      ],
+      "role": [
+        "click"
+      ],
+      "style": {
+        "font_size": 18
+      }
+    },
+    {
+      "name": "sort_food",
+      "rect": [
+        586,
+        960,
+        198,
+        52
+      ],
+      "role": [
+        "click"
+      ],
+      "style": {
+        "font_size": 18
+      }
+    },
+    {
+      "name": "sort_industry",
+      "rect": [
+        796,
+        959,
+        200,
+        53
+      ],
+      "role": [
+        "click"
+      ],
+      "style": {
+        "font_size": 18
+      }
+    },
+    {
+      "name": "sort_science",
+      "rect": [
+        1009,
+        960,
+        199,
+        52
+      ],
+      "role": [
+        "click"
+      ],
+      "style": {
+        "font_size": 18
+      }
+    },
+    {
+      "name": "sort_producing",
+      "rect": [
+        1221,
+        959,
+        200,
+        53
+      ],
+      "role": [
+        "click"
+      ],
+      "style": {
+        "font_size": 18
+      }
+    },
+    {
+      "name": "sort_bc",
+      "rect": [
+        1436,
+        960,
+        200,
+        52
+      ],
+      "role": [
+        "click"
+      ],
+      "style": {
+        "font_size": 18
+      }
+    },
+    {
+      "name": "output_panel",
+      "rect": [
+        98,
+        722,
+        464,
+        201
+      ],
+      "role": [
+        "display"
+      ]
+    },
+    {
+      "name": "galaxy_inset",
+      "rect": [
+        579,
+        722,
+        461,
+        201
+      ],
+      "role": [
+        "display"
+      ]
+    },
+    {
+      "name": "spare_panel",
+      "rect": [
+        1056,
+        721,
+        451,
+        203
+      ],
+      "role": [
+        "display"
+      ]
+    }
+  ],
+  "2560x1440": [
+    {
+      "name": "list_area",
+      "rect": [
+        98,
+        84,
+        1408,
+        619
+      ],
+      "role": [
+        "display"
+      ]
+    },
+    {
+      "name": "sidebar",
+      "rect": [
+        1532,
+        85,
+        286,
+        663
+      ],
+      "role": [
+        "display"
+      ]
+    },
+    {
+      "name": "return",
+      "rect": [
+        1532,
+        765,
+        286,
+        159
+      ],
+      "role": [
+        "click"
+      ],
+      "style": {
+        "font_size": 24
+      }
+    },
+    {
+      "name": "sort_name",
+      "rect": [
+        160,
+        959,
+        202,
+        53
+      ],
+      "role": [
+        "click"
+      ],
+      "style": {
+        "font_size": 18
+      }
+    },
+    {
+      "name": "sort_population",
+      "rect": [
+        375,
+        959,
+        198,
+        53
+      ],
+      "role": [
+        "click"
+      ],
+      "style": {
+        "font_size": 18
+      }
+    },
+    {
+      "name": "sort_food",
+      "rect": [
+        586,
+        960,
+        198,
+        52
+      ],
+      "role": [
+        "click"
+      ],
+      "style": {
+        "font_size": 18
+      }
+    },
+    {
+      "name": "sort_industry",
+      "rect": [
+        796,
+        959,
+        200,
+        53
+      ],
+      "role": [
+        "click"
+      ],
+      "style": {
+        "font_size": 18
+      }
+    },
+    {
+      "name": "sort_science",
+      "rect": [
+        1009,
+        960,
+        199,
+        52
+      ],
+      "role": [
+        "click"
+      ],
+      "style": {
+        "font_size": 18
+      }
+    },
+    {
+      "name": "sort_producing",
+      "rect": [
+        1221,
+        959,
+        200,
+        53
+      ],
+      "role": [
+        "click"
+      ],
+      "style": {
+        "font_size": 18
+      }
+    },
+    {
+      "name": "sort_bc",
+      "rect": [
+        1436,
+        960,
+        200,
+        52
+      ],
+      "role": [
+        "click"
+      ],
+      "style": {
+        "font_size": 18
+      }
+    },
+    {
+      "name": "output_panel",
+      "rect": [
+        98,
+        722,
+        464,
+        201
+      ],
+      "role": [
+        "display"
+      ]
+    },
+    {
+      "name": "galaxy_inset",
+      "rect": [
+        579,
+        722,
+        461,
+        201
+      ],
+      "role": [
+        "display"
+      ]
+    },
+    {
+      "name": "spare_panel",
+      "rect": [
+        1056,
+        721,
+        451,
+        203
+      ],
+      "role": [
+        "display"
+      ]
+    }
+  ]
+}

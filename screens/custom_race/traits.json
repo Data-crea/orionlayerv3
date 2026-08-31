@@ -1,0 +1,458 @@
+{
+  "_comment": "Order, labels and pick values follow the original MOO2 Custom Race screen; descriptions are the original in-game texts. Categories have no Normal row: clicking a selected option turns it off again. Specials sharing a group are mutually exclusive; value is the signed trait value written to the player record. field_id values are the orion2re Extension API field IDs from the Custom Race screen (screen 50).",
+  "starting_picks": 10,
+  "default_government": 2,
+  "messages": {
+    "picks_negative": "Picks remaining must be greater than or equal to zero."
+  },
+  "categories": [
+    {
+      "name": "Population",
+      "trait_id": 1,
+      "description": "These bonuses affect the rate at which the ~population grows~. The amount of population growth is multiplied by this bonus. Low population growth rates are a result of shorter life spans, health weakness, etc., while higher growth rates result from the opposite. Population growth modifiers include *-50% growth [-4]*, *+50% growth [3]*, *+100% growth [6]*.",
+      "options": [
+        {
+          "label": "-50% Growth",
+          "value": -1,
+          "picks": -4,
+          "field_id": 5
+        },
+        {
+          "label": "+50% Growth",
+          "value": 1,
+          "picks": 3,
+          "field_id": 6
+        },
+        {
+          "label": "+100% Growth",
+          "value": 2,
+          "picks": 6,
+          "field_id": 7
+        }
+      ]
+    },
+    {
+      "name": "Farming",
+      "trait_id": 2,
+      "description": "Farming bonuses affect the amount of ~food that each farmer can grow~. Races with farming bonuses have developed advanced agricultural techniques, while races with penalties lack farming aptitude. Races with farming penalties cannot be reduced below *1 food per farmer* if the world has any life bearing environment. Farming modifiers include *-1/2 food [-3]*, *+1 food [4]*, *+2 food [7]*.",
+      "options": [
+        {
+          "label": "-1/2 Food",
+          "value": -1,
+          "picks": -3,
+          "field_id": 8
+        },
+        {
+          "label": "+1 Food",
+          "value": 1,
+          "picks": 4,
+          "field_id": 9
+        },
+        {
+          "label": "+2 Food",
+          "value": 2,
+          "picks": 7,
+          "field_id": 10
+        }
+      ]
+    },
+    {
+      "name": "Industry",
+      "trait_id": 3,
+      "description": "Industry bonuses affect the amount of ~production that each factory worker can produce~. Races with industry bonuses have developed advanced manufacturing techniques, while races with penalties lack manufacturing aptitude. Races with industrial penalties cannot be reduced below *1 unit of production per worker*. Industry modifiers include *-1 production [-3]*, *+1 production [3]*, *+2 production [6]*.",
+      "options": [
+        {
+          "label": "-1 Production",
+          "value": -1,
+          "picks": -3,
+          "field_id": 11
+        },
+        {
+          "label": "+1 Production",
+          "value": 1,
+          "picks": 3,
+          "field_id": 12
+        },
+        {
+          "label": "+2 Production",
+          "value": 2,
+          "picks": 6,
+          "field_id": 13
+        }
+      ]
+    },
+    {
+      "name": "Science",
+      "trait_id": 4,
+      "description": "Science bonuses affect the amount of ~research that each scientist generates~. Races with science bonuses have developed advanced research techniques, while races with penalties lack scientific aptitude. Races with science penalties cannot be reduced below *1 unit of research per scientist*. Science modifiers include *-1 research [-3]*, *+1 research [3]*, *+2 research [6]*.",
+      "options": [
+        {
+          "label": "-1 Research",
+          "value": -1,
+          "picks": -3,
+          "field_id": 14
+        },
+        {
+          "label": "+1 Research",
+          "value": 1,
+          "picks": 3,
+          "field_id": 15
+        },
+        {
+          "label": "+2 Research",
+          "value": 2,
+          "picks": 6,
+          "field_id": 16
+        }
+      ]
+    },
+    {
+      "name": "Money",
+      "trait_id": 5,
+      "description": "Money bonuses affect the amount in credits a population can be ~taxed~. Races with monetary bonuses have developed advanced commercial concepts, while races with penalties lack economic skills. Monetary modifiers include *-0.5 BC [-4]*, *+0.5 BC [5]*, *+1 BC [8]*.",
+      "options": [
+        {
+          "label": "-0.5 BC",
+          "value": -1,
+          "picks": -4,
+          "field_id": 17
+        },
+        {
+          "label": "+0.5 BC",
+          "value": 1,
+          "picks": 5,
+          "field_id": 18
+        },
+        {
+          "label": "+1.0 BC",
+          "value": 2,
+          "picks": 8,
+          "field_id": 19
+        }
+      ]
+    },
+    {
+      "name": "Ship Defense",
+      "trait_id": 6,
+      "description": "Ship Defense bonuses decrease the ~chances of enemy fire hitting you~ in ship to ship combat. Races with bonuses in defense have developed keen evasion senses and have a much better chance of misleading an attacker. Penalties, on the other hand, indicate the race has difficulty visualizing complex 3 dimensional motions. Defense modifiers include *-20 defense [-2]*, *+25 defense [3]*, *+50 defense [7]*.",
+      "options": [
+        {
+          "label": "-20",
+          "value": -1,
+          "picks": -2,
+          "field_id": 20
+        },
+        {
+          "label": "+25",
+          "value": 1,
+          "picks": 3,
+          "field_id": 21
+        },
+        {
+          "label": "+50",
+          "value": 2,
+          "picks": 7,
+          "field_id": 22
+        }
+      ]
+    },
+    {
+      "name": "Ship Attack",
+      "trait_id": 7,
+      "description": "Ship Attack bonuses improve the ~chances of a ship engaged in combat to hit its target~. Races with bonuses have developed the ability to anticipate a target's motion, and have a much better chance of hitting the target. Penalties, on the other hand, indicate a race with poor depth perception and tracking skills. Attack modifiers include *-20 attack [-2]*, *+20 attack [2]*, *+50 attack [4]*.",
+      "options": [
+        {
+          "label": "-20",
+          "value": -1,
+          "picks": -2,
+          "field_id": 23
+        },
+        {
+          "label": "+20",
+          "value": 1,
+          "picks": 2,
+          "field_id": 24
+        },
+        {
+          "label": "+50",
+          "value": 2,
+          "picks": 4,
+          "field_id": 25
+        }
+      ]
+    },
+    {
+      "name": "Ground Combat",
+      "trait_id": 8,
+      "description": "Ground Combat bonuses affect the combat effectiveness of troops engaged in ~planetary combat or ship boarding actions~. Higher bonuses are normally indicative of races with extraordinary strength and agility, while lower combat bonuses indicate the lack thereof. Ground combat modifiers include *-10 [-2]*, *+10 [2]*, *+20 [4]*.",
+      "options": [
+        {
+          "label": "-10",
+          "value": -1,
+          "picks": -2,
+          "field_id": 26
+        },
+        {
+          "label": "+10",
+          "value": 1,
+          "picks": 2,
+          "field_id": 27
+        },
+        {
+          "label": "+20",
+          "value": 2,
+          "picks": 4,
+          "field_id": 28
+        }
+      ]
+    },
+    {
+      "name": "Spying",
+      "trait_id": 9,
+      "description": "Spying bonuses affect the ~sabotage and espionage skills~ of a race. Races with high spying bonuses have specialized disguise abilities or advanced espionage equipment. All offensive spies sent on missions will receive the full bonus/penalty, while defensive spies receive *one-half the amount*. Modifiers include *-10 [-3]*, *+10 [3]*, *+20 [6]*.",
+      "options": [
+        {
+          "label": "-10",
+          "value": -1,
+          "picks": -3,
+          "field_id": 29
+        },
+        {
+          "label": "+10",
+          "value": 1,
+          "picks": 3,
+          "field_id": 30
+        },
+        {
+          "label": "+20",
+          "value": 2,
+          "picks": 6,
+          "field_id": 31
+        }
+      ]
+    },
+    {
+      "name": "Governments",
+      "trait_id": 0,
+      "description": "Your form of government affects ~morale~, ~research~, ~income~ and ~spying~. Each type trades strengths against weaknesses. Select a government to read its details.",
+      "options": [
+        {
+          "label": "Feudal",
+          "value": 0,
+          "picks": -4,
+          "description": "Feudal Governments are ruled by powerful families similar to medieval Europe. Due to the fragmented and warlike nature of these governments they receive certain benefits and penalties:\n- *Ship costs are reduced by 1/3*.\n- Planets suffer a *-20% morale penalty* unless they have a ~marine or armor barracks~.\n- Feudal governments have all research generated by scientists *reduced by 50%*.\n- Feudal governments assimilate captured population at the rate of *1 population every 8 turns*.\n- Feudal populations ~instantly assimilate when conquered~ by any other race. There are always local barons looking out for themselves.",
+          "field_id": 32
+        },
+        {
+          "label": "Dictatorship",
+          "value": 2,
+          "picks": 0,
+          "description": "In this form of government, ~one being has absolute power~. All orders and decisions made are final and the general populace is ruled with an iron hand. This control confers several benefits and disadvantages to dictatorships.\n- Defensive agents receive a *+10 bonus* due to increased ~internal security~.\n- Planets suffer a *-20% morale penalty* unless they have a marine or armor barracks.\n- Dictatorships assimilate captured population at the rate of *1 population every 8 turns*.",
+          "field_id": 33
+        },
+        {
+          "label": "Democracy",
+          "value": 3,
+          "picks": 7,
+          "description": "The people ~elect representatives~ to run the government. No single body of people directly controls the government and the ~personal freedoms~ are greatest of all forms of governments.\n- Defensive agents are *penalized -10* due to the emphasis on personal freedoms.\n- Democracies assimilate captured population at the rate of *1 population every 4 turns*.\n- Due to the free exchange of ideas all research generated by scientists is *increased +50%*.\n- The government's concern with promoting trade *increases all tax revenues by +50%*.\n- Democracies are ~prohibited from annihilating captured populations~.",
+          "field_id": 34
+        },
+        {
+          "label": "Unification",
+          "value": 6,
+          "picks": 6,
+          "description": "Only a few races are genetically capable of forming a unified government. The population exists harmoniously ~without jealousy, envy or concern~ for individual advancement. Each individual works for the improvement of the whole, instead of the desires of the individual. The unified government is the social equivalent of a colony of bees.\n- Defensive agents receive a *+15 bonus* due to the lack of traitors.\n- ~All morale affects~ and any buildings modifying morale are ignored by unification governments.\n- Unification governments assimilate captured population at the rate of *1 population every 20 turns*.\n- Increased productivity results in a *+50% bonus to all industrial production*.\n- Increased productivity results in a *+50% bonus to all food production*.",
+          "field_id": 35
+        }
+      ]
+    }
+  ],
+  "specials": [
+    {
+      "name": "Low-G World",
+      "trait_id": 10,
+      "picks": -5,
+      "value": 1,
+      "description": "Races which come from ~low gravity worlds~ are considerably weaker than races from normal-G worlds, and have great difficulty adapting to more intense gravity fields. Colonists can operate only in low-G worlds without penalty, and suffer *half the heavy-G penalty* in normal-G environments. Finally, Low-G troops are weaker and suffer a *-10 ground combat penalty*. Low-G and Heavy-G are ~mutually exclusive~.",
+      "group": "gravity",
+      "field_id": 36
+    },
+    {
+      "name": "High-G World",
+      "trait_id": 11,
+      "picks": 6,
+      "value": 1,
+      "description": "Races which come from ~heavy gravity worlds~ are considerably hardier than races from normal-G worlds, and colonists can operate in both heavy-G and normal-G worlds without penalty. In addition, ground troops can sustain substantially more physical damage than other troops, taking *1 more hit than normal troops* before being slain in ground combats. Heavy-G and Low-G are ~mutually exclusive~.",
+      "group": "gravity",
+      "field_id": 37
+    },
+    {
+      "name": "Aquatic",
+      "trait_id": 12,
+      "picks": 5,
+      "value": 1,
+      "description": "Aquatic races originated on ~ocean worlds~, and therefore can more easily adapt to primarily water based environments. Aquatic races treat *Tundra and Swamp worlds as Terran* and *Ocean and Terran as Gaia* environments both for food production and maximum planetary population.",
+      "field_id": 38
+    },
+    {
+      "name": "Subterranean",
+      "trait_id": 13,
+      "picks": 6,
+      "value": 1,
+      "description": "Races which were originally subterranean are better adapted to ~living underground~, and are capable of building expansive complexes below the surface of a planet. As a result, these races' maximum population on all worlds is increased by *twice that world's size class*. Also, subterranean ground troops receive a *+10 combat bonus* when defending their colonies.",
+      "field_id": 39
+    },
+    {
+      "name": "Large Home World",
+      "trait_id": 14,
+      "picks": 1,
+      "value": 1,
+      "description": "The home world of your race is ~large instead of the normal medium size~.",
+      "field_id": 40
+    },
+    {
+      "name": "Rich Home World",
+      "trait_id": 15,
+      "picks": 2,
+      "value": 1,
+      "description": "The home world of your race is ~mineral rich~, producing a *base 5 production per worker*. Rich Home World and Poor Home World are ~mutually exclusive~.",
+      "group": "homeworld_minerals",
+      "field_id": 41
+    },
+    {
+      "name": "Poor Home World",
+      "trait_id": 15,
+      "picks": -1,
+      "value": -1,
+      "description": "The home world of your race is ~mineral poor~, producing a *base 2 production per worker*. Poor Home World and Rich Home World are ~mutually exclusive~.",
+      "group": "homeworld_minerals",
+      "field_id": 42
+    },
+    {
+      "name": "Artifacts World",
+      "trait_id": 16,
+      "picks": 3,
+      "value": 1,
+      "description": "The home world of your race has ~ancient artifacts~. All scientists produce *+2 research* on this planet.",
+      "field_id": 43
+    },
+    {
+      "name": "Cybernetic",
+      "trait_id": 17,
+      "picks": 4,
+      "value": 1,
+      "description": "Races which are cybernetic use ~mechanical appendages and artificial organs~ to sustain life. They consume only *one half food unit* each, and supplement the other half with *one half production unit*. Cybernetics also have an enhanced ability to repair their ships due to the ease with which they interface with mechanical devices. *10% of a ship's armor and structure* and *5% of a ship's internal systems* will be repaired each round of combat. All damage to cybernetic ships is repaired after combat. Cybernetics and Lithovore are ~mutually exclusive~.",
+      "group": "diet",
+      "field_id": 44
+    },
+    {
+      "name": "Lithovore",
+      "trait_id": 18,
+      "picks": 10,
+      "value": 1,
+      "description": "These are races which ~consume rocks instead of food~, and thus can subsist on any planet simply by eating the minerals. Lithovores *do not require any food whatsoever*. Lithovore and Cybernetics are ~mutually exclusive~.",
+      "group": "diet",
+      "field_id": 45
+    },
+    {
+      "name": "Repulsive",
+      "trait_id": 19,
+      "picks": -6,
+      "value": 1,
+      "description": "Other races find dealing with repulsive races impossible. Therefore, repulsive races are ~unable to form any agreements~ with other races. They can only use the diplomacy system to ~declare war and to sue for peace~. Legendary officers demand an *increase of 50%* to their cost of hiring to serve with repulsive races. Furthermore, the races assimilate conquered colonists into their population at *half the normal rate*. Repulsive and Charismatic are ~mutually exclusive~.",
+      "group": "demeanor",
+      "field_id": 46
+    },
+    {
+      "name": "Charismatic",
+      "trait_id": 20,
+      "picks": 3,
+      "value": 1,
+      "description": "Races which are extremely charismatic are quick to make allies and can almost always talk themselves out of problems. This ability *doubles the effect of all good diplomatic actions*, and *halves that of all negative ones*. When proposing deals, charismatic races have a *+50% bonus* to their chance of the opponent accepting. Charismatic races attract more legendary officers and leaders, *halving their hiring cost* and increasing the frequency with which heroes ask to be hired. In addition, they *double the rate at which conquered colonists are assimilated* into their empire. Charismatic and Repulsive are ~mutually exclusive~.",
+      "group": "demeanor",
+      "field_id": 47
+    },
+    {
+      "name": "Uncreative",
+      "trait_id": 21,
+      "picks": -4,
+      "value": 1,
+      "description": "Races which are not particularly creative have great difficulty in coming up with difficult new technology ideas. Uncreative races will be able to research *only 1 application selected randomly* in any field. Uncreative and Creative are ~mutually exclusive~.",
+      "group": "creativity",
+      "field_id": 48
+    },
+    {
+      "name": "Creative",
+      "trait_id": 22,
+      "picks": 8,
+      "value": 1,
+      "description": "Races which are creative have little difficulty in coming up with new technology ideas. As a result, these races will gain *every application in the fields that they research*, instead of only the specific application selected. Creative and Uncreative are ~mutually exclusive~.",
+      "group": "creativity",
+      "field_id": 49
+    },
+    {
+      "name": "Tolerant",
+      "trait_id": 23,
+      "picks": 10,
+      "value": 1,
+      "description": "These races typically regenerate, or have a metabolism quite unlike that of a standard humanoid. Races that are environmentally tolerant treat *all planet environments as Terran* for purposes of maximum population. Tolerant races also ~ignore pollution~, not spending any industry to clean it up. On multi-racial colonies, the proportion of non-tolerant population to tolerant population determines the amount of pollution that must be cleaned. For example, if there are 3 tolerant and 7 non-tolerant population units, *7/10 of the pollution* must be cleaned up.",
+      "field_id": 50
+    },
+    {
+      "name": "Fantastic Traders",
+      "trait_id": 24,
+      "picks": 4,
+      "value": 1,
+      "description": "Races which are fantastic traders possess a keen understanding of economics and deal making. They add *+25% bonus* to the profit they receive from trade treaties, and receive *1 BC per surplus food* created. In addition, they receive a *+100% bonus* to the amount of money they receive for building ~trade goods~.",
+      "field_id": 51
+    },
+    {
+      "name": "Telepathic",
+      "trait_id": 25,
+      "picks": 6,
+      "value": 1,
+      "description": "Telepathic races are capable of ~reading the minds of other beings~, allowing them to exactly isolate the motivations of anyone that they are attempting to negotiate with. As a result, telepathic races gain a *+25% diplomacy bonus* when conducting negotiations with other races. Telepaths can also use their mental abilities for ~mind control~. Telepathic fleets with at least one cruiser or larger ship can mind control a planet instead of bombarding or invading it. Mind Control gains ownership of the colony for all purposes *instantly assimilating all population*. Finally, telepathic spies are extremely adept at evading enemy agents and receive a *+10% bonus to all spy actions*.",
+      "field_id": 52
+    },
+    {
+      "name": "Lucky",
+      "trait_id": 26,
+      "picks": 3,
+      "value": 1,
+      "description": "Races which are lucky do not suffer from ~random galactic disasters~, and have a *greater chance of benefiting from good events*. ~Antarans~ will also have a tendency to overlook the colonies of lucky players.",
+      "field_id": 53
+    },
+    {
+      "name": "Omniscient",
+      "trait_id": 27,
+      "picks": 3,
+      "value": 1,
+      "description": "Omniscient races are visionaries capable of spanning the galaxy with their minds. This allows you to know *all star system and planetary data* throughout the entire galaxy at the start of the game. In addition, enemy fleets are ~automatically detected~, regardless of stealth special abilities or technologies.",
+      "field_id": 54
+    },
+    {
+      "name": "Stealthy Ships",
+      "trait_id": 28,
+      "picks": 4,
+      "value": 1,
+      "description": "Races with stealthy ships have managed to completely ~mask their ships from long range sensors~. This special ability has no effect on ship combat, but their ships will *remain unseen on the main screen*.",
+      "field_id": 55
+    },
+    {
+      "name": "Trans Dimensional",
+      "trait_id": 29,
+      "picks": 5,
+      "value": 1,
+      "description": "Trans-dimensional beings are capable of ~folding the fabric of space~ with their minds, allowing them to increase the speed at which ships travel through the galaxy by *2 parsecs per turn*. Furthermore, trans-dimensional races gain *+4 to their combat speed*.",
+      "field_id": 56
+    },
+    {
+      "name": "Warlord",
+      "trait_id": 30,
+      "picks": 4,
+      "value": 1,
+      "description": "Races with the warlord special ability have all of their crews function as *one level of experience higher* than normal, and their crews have the potential to eventually become ~ultra-elites~. Warlords *double the rate at which marines and tanks* are built and allows barracks to support *twice the normal number of troops*. Each colony produces *2 command points*.",
+      "field_id": 57
+    }
+  ]
+}

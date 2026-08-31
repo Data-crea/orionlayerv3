@@ -1,0 +1,203 @@
+{
+  "1920x1080": [
+    {
+      "name": "help_popup",
+      "role": [
+        "display"
+      ],
+      "hidden": true,
+      "style": {
+        "font_scale": 1.0
+      },
+      "rect": [
+        420,
+        170,
+        1080,
+        745
+      ]
+    }
+  ],
+  "2560x1440": [
+    {
+      "name": "panel_0",
+      "rect": [
+        159,
+        238,
+        464,
+        240
+      ],
+      "role": [
+        "layout"
+      ],
+      "style": {
+        "skin": "inner_panel"
+      }
+    },
+    {
+      "name": "panel_1",
+      "rect": [
+        123,
+        187,
+        541,
+        350
+      ],
+      "role": [
+        "layout"
+      ],
+      "style": {
+        "skin": "thin_border"
+      }
+    },
+    {
+      "name": "panel_2",
+      "rect": [
+        701,
+        187,
+        535,
+        351
+      ],
+      "role": [
+        "layout"
+      ],
+      "style": {
+        "skin": "thin_border"
+      }
+    },
+    {
+      "name": "panel_3",
+      "rect": [
+        729,
+        239,
+        467,
+        244
+      ],
+      "role": [
+        "layout"
+      ],
+      "style": {
+        "skin": "inner_panel"
+      }
+    },
+    {
+      "name": "panel_4",
+      "rect": [
+        1270,
+        185,
+        531,
+        354
+      ],
+      "role": [
+        "layout"
+      ],
+      "style": {
+        "skin": "thin_border"
+      }
+    },
+    {
+      "name": "panel_5",
+      "rect": [
+        1293,
+        234,
+        476,
+        249
+      ],
+      "role": [
+        "layout"
+      ],
+      "style": {
+        "skin": "inner_panel"
+      }
+    },
+    {
+      "name": "panel_6",
+      "rect": [
+        155,
+        603,
+        468,
+        240
+      ],
+      "role": [
+        "layout"
+      ],
+      "style": {
+        "skin": "inner_panel"
+      }
+    },
+    {
+      "name": "panel_7",
+      "rect": [
+        124,
+        555,
+        540,
+        351
+      ],
+      "role": [
+        "layout"
+      ],
+      "style": {
+        "skin": "thin_border"
+      }
+    },
+    {
+      "name": "panel_8",
+      "rect": [
+        689,
+        552,
+        549,
+        353
+      ],
+      "role": [
+        "layout"
+      ],
+      "style": {
+        "skin": "thin_border"
+      }
+    },
+    {
+      "name": "panel_9",
+      "rect": [
+        727,
+        601,
+        469,
+        245
+      ],
+      "role": [
+        "layout"
+      ],
+      "style": {
+        "skin": "inner_panel"
+      }
+    },
+    {
+      "name": "panel_10",
+      "rect": [
+        1285,
+        604,
+        524,
+        257
+      ],
+      "role": [
+        "layout"
+      ],
+      "style": {
+        "skin": "thin_border"
+      }
+    },
+    {
+      "name": "help_popup",
+      "role": [
+        "display"
+      ],
+      "hidden": true,
+      "style": {
+        "font_scale": 1.0
+      },
+      "rect": [
+        420,
+        170,
+        1080,
+        745
+      ]
+    }
+  ]
+}

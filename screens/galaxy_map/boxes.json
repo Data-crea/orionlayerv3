@@ -1,0 +1,629 @@
+{
+  "1920x1080": [
+    {
+      "name": "map_area",
+      "rect": [
+        105,
+        88,
+        1402,
+        854
+      ],
+      "role": [
+        "display"
+      ],
+      "style": {
+        "font_scale": 1.0
+      }
+    },
+    {
+      "name": "sidebar",
+      "rect": [
+        1546,
+        111,
+        255,
+        656
+      ],
+      "role": [
+        "display"
+      ],
+      "style": {
+        "font_scale": 1.3
+      }
+    },
+    {
+      "name": "nav_turn",
+      "rect": [
+        1544,
+        790,
+        258,
+        151
+      ],
+      "role": [
+        "click"
+      ],
+      "style": {
+        "font_size": 26
+      }
+    },
+    {
+      "name": "nav_colonies",
+      "rect": [
+        116,
+        966,
+        213,
+        42
+      ],
+      "role": [
+        "click"
+      ],
+      "style": {
+        "font_size": 18
+      }
+    },
+    {
+      "name": "nav_planets",
+      "rect": [
+        365,
+        966,
+        217,
+        42
+      ],
+      "role": [
+        "click"
+      ],
+      "style": {
+        "font_size": 18
+      }
+    },
+    {
+      "name": "nav_fleets",
+      "rect": [
+        620,
+        966,
+        212,
+        41
+      ],
+      "role": [
+        "click"
+      ],
+      "style": {
+        "font_size": 18
+      }
+    },
+    {
+      "name": "nav_leaders",
+      "rect": [
+        867,
+        966,
+        221,
+        41
+      ],
+      "role": [
+        "click"
+      ],
+      "style": {
+        "font_size": 18
+      }
+    },
+    {
+      "name": "nav_races",
+      "rect": [
+        1127,
+        966,
+        213,
+        42
+      ],
+      "role": [
+        "click"
+      ],
+      "style": {
+        "font_size": 18
+      }
+    },
+    {
+      "name": "nav_info",
+      "rect": [
+        1376,
+        966,
+        193,
+        42
+      ],
+      "role": [
+        "click"
+      ],
+      "style": {
+        "font_size": 18
+      }
+    },
+    {
+      "name": "sb_stardate_text",
+      "rect": [
+        1556,
+        119,
+        235,
+        93
+      ],
+      "role": [
+        "display"
+      ],
+      "style": {
+        "font_scale": 1.3,
+        "align": "center"
+      }
+    },
+    {
+      "name": "sb_treasury_text",
+      "rect": [
+        1556,
+        228,
+        138,
+        93
+      ],
+      "role": [
+        "display"
+      ],
+      "style": {
+        "font_scale": 1.3,
+        "align": "center"
+      }
+    },
+    {
+      "name": "sb_treasury_icon",
+      "rect": [
+        1700,
+        228,
+        91,
+        93
+      ],
+      "role": [
+        "display"
+      ],
+      "style": {}
+    },
+    {
+      "name": "sb_command_text",
+      "rect": [
+        1556,
+        338,
+        138,
+        93
+      ],
+      "role": [
+        "display"
+      ],
+      "style": {
+        "font_scale": 1.3,
+        "align": "center"
+      }
+    },
+    {
+      "name": "sb_command_icon",
+      "rect": [
+        1700,
+        338,
+        91,
+        93
+      ],
+      "role": [
+        "display"
+      ],
+      "style": {}
+    },
+    {
+      "name": "sb_food_text",
+      "rect": [
+        1556,
+        447,
+        138,
+        93
+      ],
+      "role": [
+        "display"
+      ],
+      "style": {
+        "font_scale": 1.3,
+        "align": "center"
+      }
+    },
+    {
+      "name": "sb_food_icon",
+      "rect": [
+        1700,
+        447,
+        91,
+        93
+      ],
+      "role": [
+        "display"
+      ],
+      "style": {}
+    },
+    {
+      "name": "sb_freighters_text",
+      "rect": [
+        1556,
+        556,
+        138,
+        93
+      ],
+      "role": [
+        "display"
+      ],
+      "style": {
+        "font_scale": 1.3,
+        "align": "center"
+      }
+    },
+    {
+      "name": "sb_freighters_icon",
+      "rect": [
+        1700,
+        556,
+        91,
+        93
+      ],
+      "role": [
+        "display"
+      ],
+      "style": {}
+    },
+    {
+      "name": "sb_research_text",
+      "rect": [
+        1556,
+        666,
+        138,
+        93
+      ],
+      "role": [
+        "display"
+      ],
+      "style": {
+        "font_scale": 1.3,
+        "align": "center"
+      }
+    },
+    {
+      "name": "sb_research_icon",
+      "rect": [
+        1700,
+        666,
+        91,
+        93
+      ],
+      "role": [
+        "display"
+      ],
+      "style": {}
+    },
+    {
+      "name": "help_popup",
+      "role": [
+        "display"
+      ],
+      "hidden": true,
+      "style": {
+        "font_scale": 1.0
+      },
+      "rect": [
+        266,
+        115,
+        1080,
+        800
+      ]
+    }
+  ],
+  "2560x1440": [
+    {
+      "name": "map_area",
+      "rect": [
+        105,
+        88,
+        1402,
+        854
+      ],
+      "role": [
+        "display"
+      ],
+      "style": {
+        "font_scale": 1.1
+      }
+    },
+    {
+      "name": "sidebar",
+      "rect": [
+        1546,
+        111,
+        255,
+        656
+      ],
+      "role": [
+        "display"
+      ],
+      "style": {
+        "font_scale": 1.3
+      }
+    },
+    {
+      "name": "nav_turn",
+      "rect": [
+        1544,
+        790,
+        258,
+        151
+      ],
+      "role": [
+        "click"
+      ],
+      "style": {
+        "font_size": 26,
+        "font_scale": 1.2
+      }
+    },
+    {
+      "name": "nav_colonies",
+      "rect": [
+        116,
+        966,
+        213,
+        42
+      ],
+      "role": [
+        "click"
+      ],
+      "style": {
+        "font_size": 18
+      }
+    },
+    {
+      "name": "nav_planets",
+      "rect": [
+        365,
+        966,
+        217,
+        42
+      ],
+      "role": [
+        "click"
+      ],
+      "style": {
+        "font_size": 18
+      }
+    },
+    {
+      "name": "nav_fleets",
+      "rect": [
+        620,
+        966,
+        212,
+        41
+      ],
+      "role": [
+        "click"
+      ],
+      "style": {
+        "font_size": 18
+      }
+    },
+    {
+      "name": "nav_leaders",
+      "rect": [
+        867,
+        966,
+        221,
+        41
+      ],
+      "role": [
+        "click"
+      ],
+      "style": {
+        "font_size": 18
+      }
+    },
+    {
+      "name": "nav_races",
+      "rect": [
+        1127,
+        966,
+        213,
+        42
+      ],
+      "role": [
+        "click"
+      ],
+      "style": {
+        "font_size": 18
+      }
+    },
+    {
+      "name": "nav_info",
+      "rect": [
+        1376,
+        966,
+        193,
+        42
+      ],
+      "role": [
+        "click"
+      ],
+      "style": {
+        "font_size": 18
+      }
+    },
+    {
+      "name": "sb_stardate_text",
+      "rect": [
+        1556,
+        119,
+        235,
+        93
+      ],
+      "role": [
+        "display"
+      ],
+      "style": {
+        "font_scale": 1.0,
+        "align": "center"
+      }
+    },
+    {
+      "name": "sb_treasury_text",
+      "rect": [
+        1556,
+        228,
+        138,
+        93
+      ],
+      "role": [
+        "display"
+      ],
+      "style": {
+        "font_scale": 1.0,
+        "align": "center"
+      }
+    },
+    {
+      "name": "sb_treasury_icon",
+      "rect": [
+        1700,
+        228,
+        91,
+        93
+      ],
+      "role": [
+        "display"
+      ]
+    },
+    {
+      "name": "sb_command_text",
+      "rect": [
+        1556,
+        338,
+        138,
+        93
+      ],
+      "role": [
+        "display"
+      ],
+      "style": {
+        "font_scale": 1.1,
+        "align": "center"
+      }
+    },
+    {
+      "name": "sb_command_icon",
+      "rect": [
+        1700,
+        338,
+        91,
+        93
+      ],
+      "role": [
+        "display"
+      ]
+    },
+    {
+      "name": "sb_food_text",
+      "rect": [
+        1556,
+        447,
+        138,
+        93
+      ],
+      "role": [
+        "display"
+      ],
+      "style": {
+        "font_scale": 1.1,
+        "align": "center"
+      }
+    },
+    {
+      "name": "sb_food_icon",
+      "rect": [
+        1700,
+        447,
+        91,
+        93
+      ],
+      "role": [
+        "display"
+      ]
+    },
+    {
+      "name": "sb_freighters_text",
+      "rect": [
+        1556,
+        556,
+        138,
+        93
+      ],
+      "role": [
+        "display"
+      ],
+      "style": {
+        "font_scale": 1.1,
+        "align": "center"
+      }
+    },
+    {
+      "name": "sb_freighters_icon",
+      "rect": [
+        1700,
+        556,
+        91,
+        93
+      ],
+      "role": [
+        "display"
+      ]
+    },
+    {
+      "name": "sb_research_text",
+      "rect": [
+        1556,
+        666,
+        138,
+        93
+      ],
+      "role": [
+        "display"
+      ],
+      "style": {
+        "font_scale": 1.1,
+        "align": "center"
+      }
+    },
+    {
+      "name": "sb_research_icon",
+      "rect": [
+        1700,
+        666,
+        91,
+        93
+      ],
+      "role": [
+        "display"
+      ],
+      "style": {
+        "font_scale": 0.8
+      }
+    },
+    {
+      "name": "help_popup",
+      "role": [
+        "display"
+      ],
+      "hidden": true,
+      "style": {
+        "font_scale": 1.0
+      },
+      "rect": [
+        266,
+        115,
+        1080,
+        800
+      ]
+    }
+  ]
+}

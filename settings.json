@@ -1,0 +1,25 @@
+{
+  "window": {
+    "width": 1920,
+    "height": 1080,
+    "fullscreen": false,
+    "resizable": true,
+    "vsync": true,
+    "min_width": 1280,
+    "min_height": 720
+  },
+  "orion2re": {
+    "path": "",
+    "host": "localhost",
+    "port": 17362,
+    "auto_start": false
+  },
+  "render_mode": "hd",
+  "active_mods": [],
+  "language": "en",
+  "skin": "default",
+  "cursor": {
+    "enabled": true,
+    "height_fraction": 0.04375
+  }
+}

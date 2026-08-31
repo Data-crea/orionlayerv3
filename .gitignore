@@ -1,0 +1,79 @@
+# OrionLayer v3 — what does not belong in the repository.
+#
+# The rule is the one the help texts already established: anything
+# DERIVED is generated, never committed. Two reasons, and the second
+# is the one that matters. Git stores images as whole blobs, not as
+# diffs, so every regeneration of an icon set leaves a full extra copy
+# in the history forever — and these are exactly the sets that get
+# regenerated. And artwork extracted from a copy of Master of Orion 2
+# is not ours to redistribute.
+#
+# Everything ignored here is rebuilt by `python tools/setup.py`, which
+# then runs the smoke test to prove the tree is complete.
+#
+# NOT ignored, deliberately:
+#   */assets/**/_src/           HD masters — the input, hand-made
+#   icons/_source_sheet.png     the sheet the sidebar icons are cut from
+#   nebula/type_*.png           authored HD artwork
+#   (nebula_ref/ used to be here — see below, it is ignored now)
+#   _black_hole_src.png         the input to make_black_hole_master.py
+#   stars/                      36 star sprites. These LOOK derived and
+#                               are not: the committed set is trimmed
+#                               to content (44 to 206 px, varying),
+#                               while make_star_icons.py as it stands
+#                               emits uniform 256x256 canvases. Some
+#                               earlier version or invocation produced
+#                               them and no longer exists. Until the
+#                               tool reproduces the artwork the project
+#                               was measured against, that artwork is
+#                               authored state, not derived state, and
+#                               it stays in the repository.
+
+# --- Generated artwork (tools/setup.py rebuilds all of it) ---
+# Each of these was checked byte-for-byte: regenerating produces the
+# committed file exactly. That check is the whole licence to ignore
+# them, and it is why stars/ is NOT in this list — see below.
+screens/galaxy_map/assets/ships/*/
+!screens/galaxy_map/assets/ships/_src/
+screens/galaxy_map/assets/black_hole.png
+screens/galaxy_map/assets/icons/*.png
+!screens/galaxy_map/assets/icons/_source_sheet.png
+
+# --- Contact sheets (diagnostic output of --sheet) ---
+**/_contact_sheet.png
+
+# --- Derived from the user's own MOO2 installation ---
+# Extracted by tools/help_extract.py. Not ours to ship.
+assets/shared/help/help_*.json
+
+# UNMODIFIED sprites out of STARBG.LBX, used as test fixtures. The
+# HD artwork in nebula/ is derived work and stays; this is the
+# original, pixel for pixel, and it is the one place in the tree
+# that carried it. `tools/nebula_extract.py /path/to/starbg.lbx`
+# puts it back. Without it the smoke test cannot check nebula shape
+# or brightness — it says so instead of passing quietly.
+screens/galaxy_map/assets/nebula_ref/
+
+# --- Local state ---
+# settings.json is NOT ignored: it holds window size, skin, language
+# and the localhost port, no secrets, and `load_settings()` falls back
+# to partial defaults without it — a fresh clone should start in the
+# state the project was last known good in, not in a half-default one.
+*.log
+
+# --- Python ---
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# --- Editors and OS ---
+.vscode/
+.idea/
+*~
+*.swp
+.DS_Store
+
+# --- Delivery leftovers (the ZIP era; git replaces all of this) ---
+*.zip
+tools/tree_manifest.sha256

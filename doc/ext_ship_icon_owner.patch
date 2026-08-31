@@ -1,0 +1,83 @@
+Extension API: append the owner of every ship icon to STATE_SNAPSHOT.
+
+STATUS: OPTIONAL. Do not apply this unless you want it.
+
+    OrionLayer does NOT need this patch. Corrected 29 August 2026
+    after actually reading shipstak.cpp instead of inferring from the
+    call chain.
+
+WHY IT LOOKED NECESSARY
+    s_ship_icon has no owner field. On the C++ side the galaxy map
+    resolves it as
+
+        _ship_icon[i].node_idx
+          -> MOX::_ship_node[node].ship_idx
+            -> MOX::_ship[ship].owner
+
+    and MOX::_ship_node[] is not serialized.
+
+WHY IT IS NOT NECESSARY
+    _ship_node is a pure function of _ship[], which IS serialized.
+    SHIPSTAK::Find_Ship_Stacks_ (shipstak.cpp:45) allocates nodes
+    strictly sequentially:
+
+        next_free = _next_free_node;
+        _ship_node[next_free].ship_idx = i;
+        _next_free_node++;
+
+    in BOTH branches of the loop, so node N is just the N-th ship with
+    status < 3, in array order. The location/x/y/owner comparison picks
+    which stack a ship joins, never which node it gets. And nothing
+    outside shipstak.cpp ever writes _ship_node[].ship_idx.
+
+    screens/galaxy_map/ships.py rebuilds the map from that rule and
+    validates it: Ship_Stack_Star_Id_ (shipstak.cpp:25) is literally
+    _ship[...].location, and Build_Ship_Icons_ copies that into
+    star_idx, so every icon carries its own checksum.
+
+WHAT THE PATCH IS STILL GOOD FOR
+    It removes the reconstruction and the one case the reconstruction
+    cannot cover: a snapshot taken after _ship[] changed but before
+    Find_Ship_Stacks_ ran again. The validation catches that and falls
+    back to neutral colours; this patch would just be right. Costs one
+    byte per icon against 45 KB for serializing _ship_node itself.
+
+WHERE
+    At the very END of ext::SerializeState(), after the ng_* block.
+    That position is load-bearing: an older client stops reading after
+    ng_antarans and is unaffected, and a newer client reading an
+    unpatched build simply finds no bytes left. Inserting the block
+    next to the ship icons instead would shift the ng_* offsets and
+    break the New Game screen.
+
+    Everything stays read-only; no game global is written.
+
+--- a/src/ext/ext_api.cpp
++++ b/src/ext/ext_api.cpp
+@@
+     Write16(buf, NEWGAME::_random_events_button_variable);
+     Write16(buf, NEWGAME::_xenon_attacks_button_variable);
++
++    // Ship icon owners: one uint8 per icon, 0xFF = unresolvable.
++    // s_ship_icon stores only node_idx; the owner sits two hops away
++    // through _ship_node, which is not serialized. Appended LAST so
++    // clients built against the older snapshot keep working.
++    for (int i = 0; i < MOX::_ship_icon_count; i++) {
++        int16_t node = MOX::_ship_icon[i].node_idx;
++        int16_t ship = (node >= 0 && node < MAX_SHIPS)
++                     ? MOX::_ship_node[node].ship_idx : -1;
++        Write8(buf, (ship >= 0 && ship < MAX_SHIPS)
++                    ? (uint8_t)MOX::_ship[ship].owner : 0xFF);
++    }
+ }
+
+VERIFY
+    Snapshot length grows by exactly _ship_icon_count bytes. With the
+    game on the galaxy map:
+
+        python tools/ext_diag.py
+
+    and in OrionLayer the fleets take the player colours instead of
+    grey. No colour change means the block is absent — check that the
+    build really picked up the patch, not that the client is wrong
+    (lesson: "check that the file you copied is the file you built").

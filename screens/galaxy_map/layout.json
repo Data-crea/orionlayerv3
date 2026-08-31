@@ -1,0 +1,148 @@
+{
+  "_comment": "All galaxy map data. Field IDs verified against the orion2re Galaxy Map field dump (24 fields) in ext_api_dokumentation_v3.md — with one correction from a live screenshot: field 14 (hotkey R) is the RACES button, not Research; the dump's label was a guess. Research is opened via the sidebar in the original. Layout mirrors the original: stardate tops the sidebar column, TURN sits bottom-right (the former status_bar cutout).",
+  "frame": {
+    "image": "frame.png",
+    "image_size": [
+      2322,
+      1256
+    ],
+    "title_rect": [
+      727,
+      16,
+      457,
+      50
+    ],
+    "title_font": 30,
+    "_note": "The cockpit frame is one PNG with transparent cutouts, stretched over the whole 1920x1080 reference area. Every box in boxes.json is derived from those cutouts by tools/frame_holes.py (--write regenerates boxes.json). Do not move the map/sidebar/nav boxes by hand: they would leave their cutout and be covered by the frame. title_rect is the title cutout in reference pixels. The frame is drawn ABOVE all content, so the map may bleed a few pixels under the rim.",
+    "map_background": "map_background.png",
+    "title": "Game",
+    "_title_note": "The original's top bar reads GAME and the bar itself is the game menu button (field 6, hotkey G). Kept literal rather than naming the screen."
+  },
+  "buttons": [
+    {
+      "key": "colonies",
+      "label": "Colonies",
+      "field_id": 10,
+      "hotkey": "c"
+    },
+    {
+      "key": "planets",
+      "label": "Planets",
+      "field_id": 11,
+      "hotkey": "p"
+    },
+    {
+      "key": "fleets",
+      "label": "Fleets",
+      "field_id": 12,
+      "hotkey": "f"
+    },
+    {
+      "key": "leaders",
+      "label": "Leaders",
+      "field_id": 13,
+      "hotkey": "l"
+    },
+    {
+      "key": "races",
+      "label": "Races",
+      "field_id": 14,
+      "hotkey": "r"
+    },
+    {
+      "key": "info",
+      "label": "Info",
+      "field_id": 15,
+      "hotkey": "i"
+    },
+    {
+      "key": "turn",
+      "label": "Turn",
+      "field_id": 7,
+      "hotkey": "t"
+    }
+  ],
+  "actions": {
+    "game_menu": 6,
+    "turn": 7,
+    "zoom_in": 8,
+    "zoom_out": 9
+  },
+  "sidebar_rows": [
+    "stardate",
+    "treasury",
+    "command",
+    "food",
+    "freighters",
+    "research"
+  ],
+  "sidebar_icons": {
+    "treasury": "treasury.png",
+    "command": "command.png",
+    "food": "food.png",
+    "freighters": "freighters.png",
+    "research": "research.png"
+  },
+  "sidebar_fonts": {
+    "label": 15,
+    "value": 26,
+    "sub": 18
+  },
+  "sidebar_dividers": true,
+  "_sidebar_icon_note": "Keys are sidebar_rows keys, values are files under assets/icons/ (cut from _source_sheet.png by tools/make_sidebar_icons.py). A row that is not listed gets no icon - that is why stardate is absent. POSITIONS ARE NOT HERE: every row owns two boxes in boxes.json, sb_<row>_text and sb_<row>_icon, both draggable and font-scalable in the F5 editor. sidebar_fonts are reference sizes multiplied by each text box's own font_scale. A text box style may carry \"align\": left | center | right. The icons are an HD addition; the original prints these five numbers over full-cell artwork.",
+  "labels": {
+    "treasury": "Treasury",
+    "command": "Command",
+    "food": "Food",
+    "freighters": "Freighters",
+    "research": "Research",
+    "breakthrough": "Breakthrough",
+    "no_research": "None",
+    "turn": "Turn",
+    "stardate": "Stardate"
+  },
+  "monetary_unit": "BC",
+  "nebula_forms": [
+    "type_00",
+    "type_01",
+    "type_02",
+    "type_03",
+    "type_04",
+    "type_05",
+    "type_06",
+    "type_07",
+    "type_08",
+    "type_09",
+    "type_10",
+    "type_11"
+  ],
+  "_nebula_note": "The twelve forms are the original STARBG.LBX nebula shapes (entry = type * 4 + zoom + 6) extracted by tools/nebula_extract.py; type_NN.png maps 1:1 to s_nebula.type NN, exactly as _nebula_pict_seg[type % 12] does. SIZE DOES NOT COME FROM THE ARTWORK. It comes from core/zoomtables.py NEBULA_DIM, the sprite dimensions of the four pre-rendered variants per type, indexed by zoom level like the original. An HD master may therefore be drawn at any resolution; only its aspect ratio has to match the original shape, which tools/nebula_asset_check.py verifies. Deriving the footprint from the asset width (the pre-29-August rule, asset_width / 3) broke as soon as masters were redrawn at their own working resolution.",
+  "_star_note": "spectral_class 0..5 map to blue/white/yellow/orange/red/brown, class 6 is the black hole. star.size 0/1/2 is large/medium/small. Both confirmed in orion2_consts.h (STAR_CLASS) and used by renderer.CLASS_DIRS.",
+  "_sizing_note": "Star and black hole sizes are NOT configured here. They come from core/zoomtables.py, transcribed from orion2re: MOX::_star_fields_dim {33,29,25,23,21,17} indexed by (zoom_level + star.size), and Draw_Black_Holes_ zoom_dist {39,33,33,24} which ignores star.size. Changing them would desync HD from the original's proportions. The same holds for nebulas: NEBULA_DIM there holds the twelve types x four zoom variants read out of STARBG.LBX.",
+  "ship_icons": {
+    "fit": "height",
+    "scale": 1.0,
+    "kinds": {
+      "eel": {
+        "fit": "area"
+      }
+    },
+    "_note": "Ship and monster icons. Sizes are NOT configured here - they come from core/zoomtables.py (SHIP_ICON_DIM 13/12/11/10 px wide by zoom level, MONSTER_ICON_DIM_ZOOM0 per monster type). Only zoom level changes an icon's size; galaxy size merely caps how far the player may zoom out, so a Small galaxy is stuck at zoom 0 and always draws the largest icon.",
+    "_fit_note": "How the HD artwork sits inside that native box, because the HD drawings do not share the original sprites' aspect ratios. 'height' (default) matches the original height - the dimension that decides whether a four-deep orbit stack collides, since slots sit only 11 - zoom px apart. 'width' matches the width and lets taller artwork overflow, which reads as an icon one size too big. 'box' never overflows. 'area' keeps the visual weight of the original box for artwork with a wildly different aspect - the eel master is 3.3:1 against a 10x9 box, where width-fit leaves a sliver and height-fit a banner three times too long.",
+    "_kinds_note": "Per-kind overrides of fit and scale; anything absent inherits the global value above. Keys are the asset folder names: player, antaran, guardian, amoeba, crystal, dragon, eel, hydra. 'scale' other than 1.0 is a deliberate departure from orion2re's footprint.",
+    "_owner_note": "Player colour needs the owner of each icon, which s_ship_icon does not carry. ships.py rebuilds orion2re's _ship_node table from the serialized _ship[] array and validates it against star_idx - no C++ patch needed. Run tools/ship_icon_check.py against a running game to see the resolved owner and sprite per icon."
+  },
+  "starfield": {
+    "enabled": true,
+    "seed": 20260829,
+    "count_scale": 1.0,
+    "dot_native": 1.0,
+    "brightness": 1.0,
+    "clumping": 0.0
+  },
+  "home_ping": {
+    "enabled": true,
+    "key": "home",
+    "_note": "INVENTION, not a transcription: MOO2 has no home-system ping and cannot alpha-blend at all. A navigation aid for large galaxies at HD resolutions. The key is consumed by OrionLayer and never forwarded to orion2re, so it takes nothing away from the game; HOME is chosen because the original binds no such key on the galaxy map. Timing and radii live in screens/galaxy_map/ping.py."
+  }
+}

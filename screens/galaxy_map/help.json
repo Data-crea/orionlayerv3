@@ -1,0 +1,26 @@
+{
+  "_comment": "Right-click context help. Transcribed from EVANHELP::_main_screen_help_list (evanhelp.cpp:4), installed by EVANHELP::Set_Main_Screen_Help_List_ (evanhelp.cpp:229). Only the 15 STATIC entries are here; the same function appends more at runtime for the multiplayer bar and the fleet popup, and neither exists in HD yet. Note what is NOT in the original's list: the map area itself. A right click on the stars means nothing to MOO2, which is why OrionLayer is free to pan with it.",
+  "_source": "evanhelp.cpp:4",
+  "_omitted": "Help 300 (the ZOOM rocker, native 236,425-307,479) has no HD element: fields 8/9 no longer drive the view and there is no rocker cutout in frame.png. Add the region here the day the rocker is drawn.",
+  "regions": [
+    { "help_id": 285, "title": true,  "native": [237,   0, 320,  20] },
+    { "help_id": 284, "box": "sb_stardate_text", "native": [542, 24, 616, 41] },
+    { "help_id": 286, "box": ["sb_treasury_text", "sb_treasury_icon"],
+      "native": [541, 45, 617, 119] },
+    { "help_id": 288, "box": ["sb_command_text", "sb_command_icon"],
+      "native": [541, 121, 617, 193] },
+    { "help_id": 290, "box": ["sb_food_text", "sb_food_icon"],
+      "native": [541, 195, 617, 268] },
+    { "help_id": 291, "box": ["sb_freighters_text", "sb_freighters_icon"],
+      "native": [541, 270, 617, 342] },
+    { "help_id": 292, "box": ["sb_research_text", "sb_research_icon"],
+      "native": [541, 344, 617, 418] },
+    { "help_id": 293, "box": "nav_colonies", "native": [ 13, 428,  79, 473] },
+    { "help_id": 294, "box": "nav_planets",  "native": [ 91, 428, 155, 473] },
+    { "help_id": 295, "box": "nav_fleets",   "native": [166, 428, 231, 473] },
+    { "help_id": 297, "box": "nav_leaders",  "native": [311, 428, 381, 475] },
+    { "help_id": 298, "box": "nav_races",    "native": [385, 428, 454, 475] },
+    { "help_id": 299, "box": "nav_info",     "native": [461, 428, 527, 475] },
+    { "help_id": 296, "box": "nav_turn",     "native": [542, 426, 618, 479] }
+  ]
+}

@@ -1,0 +1,10 @@
+{
+  "_comment": "Wording that belongs to OrionLayer rather than to MOO2. The help TEXT itself comes from the game's own HELP.LBX and is written to help_<lang>.json by tools/help_extract.py; this file only holds the frame around it, so a translation replaces it without touching code (decision 15).",
+  "close": "Close",
+  "missing_title": "Help text not installed",
+  "missing_body": "MOO2's help texts live in your own game installation, not in OrionLayer. Extract them once with:\n\npython tools/help_extract.py\n\nThe tool reads HELP.LBX from the Master of Orion 2 folder and writes assets/shared/help/help_en.json. Nothing else changes.",
+  "stale_title": "Help text out of date",
+  "stale_body": "The help file was written by an older version of the extractor and is missing layout information. Run it again:\n\npython tools/help_extract.py",
+  "unknown_title": "No help entry",
+  "unknown_body": "The help file loaded, but it has no entry {id}. That points at a different game version or a different language file, not at a missing extraction step."
+}

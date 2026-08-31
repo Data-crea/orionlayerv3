@@ -1,0 +1,22 @@
+# OrionLayer v3 runtime and tooling dependencies.
+#
+# Floors, not exact pins. An earlier version pinned exact releases on
+# the theory that the glyph substitution, the supersampled rotation
+# and the nine-slice cache all depend on how pygame and Pillow round,
+# so a silent minor bump could show up as a two-pixel drift nobody
+# could place. That worry was reasonable and turned out to be
+# untested: two quite different environments both run the 48 checks
+# green, which is evidence the tolerance is wider than the pins
+# claimed. Exact pins would also be theatre on a distribution whose
+# package manager hands you what it hands you.
+#
+# Verified green:
+#   pygame 2.6.1  numpy 2.4.4  Pillow 12.1.1  Python 3.12.3, SDL 2.28.4
+#   pygame 2.6.1  numpy 2.5.2  Pillow 12.3.0  Python 3.14.7, SDL 2.32.70
+#
+# If a future combination drifts, tools/smoke_test.py is what says so
+# — tighten the floor to a pin then, with the failure recorded.
+
+pygame>=2.6.1
+numpy>=2.4
+Pillow>=12.1

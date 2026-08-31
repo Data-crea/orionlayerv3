@@ -1,0 +1,221 @@
+{
+  "_comment": "New Game screen layout data. All rects/positions in v2 hd-space (3440x1440). Mod-overridable; value maps key game values to image filenames (assets/<category>/<image>.png) and display labels.",
+  "background_image_size": [
+    1937,
+    812
+  ],
+  "setting_slots": {
+    "difficulty": {
+      "rect": [
+        662,
+        325,
+        600,
+        306
+      ],
+      "field_id": 1
+    },
+    "galaxy_size": {
+      "rect": [
+        1421,
+        327,
+        605,
+        307
+      ],
+      "field_id": 3
+    },
+    "galaxy_age": {
+      "rect": [
+        2174,
+        324,
+        615,
+        311
+      ],
+      "field_id": 5
+    },
+    "players": {
+      "rect": [
+        655,
+        813,
+        607,
+        302
+      ],
+      "field_id": 7
+    },
+    "tech_level": {
+      "rect": [
+        1418,
+        809,
+        605,
+        311
+      ],
+      "field_id": 9
+    }
+  },
+  "categories": {
+    "difficulty": {
+      "title": "Difficulty",
+      "values": {
+        "0": {
+          "image": "tutor",
+          "label": "Tutor"
+        },
+        "1": {
+          "image": "easy",
+          "label": "Easy"
+        },
+        "2": {
+          "image": "average",
+          "label": "Average"
+        },
+        "3": {
+          "image": "hard",
+          "label": "Hard"
+        },
+        "4": {
+          "image": "impossible",
+          "label": "Impossible"
+        }
+      }
+    },
+    "galaxy_size": {
+      "title": "Galaxy Size",
+      "values": {
+        "0": {
+          "image": "small",
+          "label": "Small"
+        },
+        "1": {
+          "image": "medium",
+          "label": "Medium"
+        },
+        "2": {
+          "image": "large",
+          "label": "Large"
+        },
+        "3": {
+          "image": "huge",
+          "label": "Huge"
+        },
+        "4": {
+          "image": "maximum",
+          "label": "Maximum"
+        }
+      }
+    },
+    "galaxy_age": {
+      "title": "Galaxy Age",
+      "values": {
+        "0": {
+          "image": "mineral_rich",
+          "label": "Mineral Rich"
+        },
+        "1": {
+          "image": "average",
+          "label": "Average"
+        },
+        "2": {
+          "image": "organic_rich",
+          "label": "Organic Rich"
+        }
+      }
+    },
+    "players": {
+      "title": "Players",
+      "values": {
+        "0": {
+          "image": "2_players",
+          "label": "2 Players"
+        },
+        "1": {
+          "image": "3_players",
+          "label": "3 Players"
+        },
+        "2": {
+          "image": "4_players",
+          "label": "4 Players"
+        },
+        "3": {
+          "image": "5_players",
+          "label": "5 Players"
+        },
+        "4": {
+          "image": "6_players",
+          "label": "6 Players"
+        },
+        "5": {
+          "image": "7_players",
+          "label": "7 Players"
+        },
+        "6": {
+          "image": "8_players",
+          "label": "8 Players"
+        }
+      }
+    },
+    "tech_level": {
+      "title": "Tech Level",
+      "values": {
+        "0": {
+          "image": "pre_warp",
+          "label": "Pre Warp"
+        },
+        "1": {
+          "image": "average",
+          "label": "Average"
+        },
+        "2": {
+          "image": "advanced",
+          "label": "Advanced"
+        },
+        "3": {
+          "image": "post_warp",
+          "label": "Post Warp"
+        }
+      }
+    }
+  },
+  "toggles": {
+    "x": 2186,
+    "y0": 830,
+    "dy": 105,
+    "icon_size": 80,
+    "click_width": 600,
+    "label_offset_x": 100,
+    "label_font_size": 32,
+    "order": [
+      "tactical_combat",
+      "random_events",
+      "antarans_attack"
+    ],
+    "labels": {
+      "tactical_combat": "Tactical Combat",
+      "random_events": "Random Events",
+      "antarans_attack": "Antarans Attack"
+    },
+    "click_640": {
+      "tactical_combat": [
+        466,
+        279
+      ],
+      "random_events": [
+        466,
+        314
+      ],
+      "antarans_attack": [
+        466,
+        350
+      ]
+    },
+    "field_ids": {
+      "tactical_combat": 13,
+      "random_events": 11,
+      "antarans_attack": 12
+    }
+  },
+  "text": {
+    "title_dy": 55,
+    "title_font_size": 36,
+    "label_dy": 30,
+    "label_font_size": 38
+  }
+}

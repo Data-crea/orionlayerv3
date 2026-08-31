@@ -1,0 +1,80 @@
+{
+  "_note": "Screen data for Empire Identity. Name limits (ruler 15 / home 12) are UNVERIFIED against the original dialogs. The injection chain in screen.py detects the dialogs by field shape (core/injection.py); banner_colors must match the tile order of the original Select Banner Color dialog (row-major).",
+  "ruler_max_len": 15,
+  "home_max_len": 12,
+  "banner_colors": [
+    "red",
+    "yellow",
+    "green",
+    "silver",
+    "blue",
+    "brown",
+    "purple",
+    "orange"
+  ],
+  "default_color": "green",
+  "default_race": "elerian",
+  "race_by_select_id": {
+    "0": "alkari",
+    "1": "bulrathi",
+    "2": "darlok",
+    "3": "elerian",
+    "4": "gnolam",
+    "5": "human",
+    "6": "klackon",
+    "7": "meklar",
+    "8": "mrrshan",
+    "9": "psilon",
+    "10": "sakkra",
+    "11": "silicoid",
+    "12": "trilarian"
+  },
+  "empire_name": {
+    "alkari": "Alkari Empire",
+    "bulrathi": "Bulrathi Empire",
+    "darlok": "Darlok Empire",
+    "elerian": "Elerian Empire",
+    "gnolam": "Gnolam Empire",
+    "human": "Human Empire",
+    "klackon": "Klackon Empire",
+    "meklar": "Meklar Empire",
+    "mrrshan": "Mrrshan Empire",
+    "psilon": "Psilon Empire",
+    "sakkra": "Sakkra Empire",
+    "silicoid": "Silicoid Empire",
+    "trilarian": "Trilarian Empire"
+  },
+  "home_default": {
+    "alkari": "Altair",
+    "bulrathi": "Ursa",
+    "darlok": "Nazin",
+    "elerian": "Draconis",
+    "gnolam": "Gnol",
+    "human": "Sol",
+    "klackon": "Kholdan",
+    "meklar": "Meklon",
+    "mrrshan": "Fieras",
+    "psilon": "Mentar",
+    "sakkra": "Sssla",
+    "silicoid": "Cryslon",
+    "trilarian": "Trilar"
+  },
+  "labels": {
+    "ruler_title": "Ruler Name",
+    "ruler_hint": "Enter the name of your ruler.",
+    "banner_title": "Banner",
+    "banner_hint": "Choose your empire's banner.",
+    "home_title": "Home System",
+    "home_hint": "Enter the name of your home system.",
+    "preview_title": "Empire Preview",
+    "preview_ruler": "Ruler:",
+    "preview_home": "Home System:",
+    "busy": "Setting up your empire",
+    "busy_elapsed": "({s} s)",
+    "busy_steps": {
+      "ruler name": "Sending the ruler's name to the game...",
+      "banner": "Choosing the empire banner...",
+      "home star": "Generating the galaxy, then naming your home system..."
+    }
+  }
+}

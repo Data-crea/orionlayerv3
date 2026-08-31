@@ -1,0 +1,225 @@
+{
+  "1920x1080": [
+    {
+      "name": "identity_panel",
+      "rect": [
+        110,
+        125,
+        1700,
+        400
+      ],
+      "role": [
+        "layout"
+      ],
+      "style": {
+        "label": "Identity Panel",
+        "font_scale": 1.0,
+        "skin": "thin_border"
+      }
+    },
+    {
+      "name": "ruler_header",
+      "rect": [
+        150,
+        160,
+        420,
+        90
+      ],
+      "role": [
+        "layout"
+      ],
+      "style": {
+        "label": "Ruler Header",
+        "font_scale": 1.0
+      }
+    },
+    {
+      "name": "ruler_input",
+      "rect": [
+        180,
+        300,
+        360,
+        84
+      ],
+      "role": [
+        "input"
+      ],
+      "style": {
+        "label": "Ruler Input",
+        "font_scale": 1.0
+      }
+    },
+    {
+      "name": "banner_header",
+      "rect": [
+        610,
+        138,
+        610,
+        72
+      ],
+      "role": [
+        "layout"
+      ],
+      "style": {
+        "label": "Banner Header",
+        "font_scale": 1.0
+      }
+    },
+    {
+      "name": "banner_grid",
+      "rect": [
+        610,
+        212,
+        610,
+        300
+      ],
+      "role": [
+        "layout"
+      ],
+      "style": {
+        "label": "Banner Grid",
+        "font_scale": 1.0,
+        "skin": "thin_border"
+      }
+    },
+    {
+      "name": "home_header",
+      "rect": [
+        1250,
+        160,
+        460,
+        90
+      ],
+      "role": [
+        "layout"
+      ],
+      "style": {
+        "label": "Home Header",
+        "font_scale": 1.0
+      }
+    },
+    {
+      "name": "home_input",
+      "rect": [
+        1280,
+        300,
+        400,
+        84
+      ],
+      "role": [
+        "input"
+      ],
+      "style": {
+        "label": "Home Input",
+        "font_scale": 1.0
+      }
+    },
+    {
+      "name": "preview_panel",
+      "rect": [
+        110,
+        545,
+        1700,
+        440
+      ],
+      "role": [
+        "layout"
+      ],
+      "style": {
+        "label": "Preview Panel",
+        "font_scale": 1.0,
+        "skin": "thin_border"
+      }
+    },
+    {
+      "name": "preview_image",
+      "rect": [
+        560,
+        546,
+        1249,
+        438
+      ],
+      "role": [
+        "layout"
+      ],
+      "style": {
+        "label": "Homeworld Artwork",
+        "font_scale": 1.0,
+        "skin": "image",
+        "pannable": true,
+        "zoom": 1.0,
+        "crop": [
+          0.5,
+          0.5
+        ],
+        "fade_left": 0.42
+      }
+    },
+    {
+      "name": "preview_header",
+      "rect": [
+        110,
+        560,
+        1700,
+        50
+      ],
+      "role": [
+        "layout"
+      ],
+      "style": {
+        "label": "Preview Header",
+        "font_scale": 1.0
+      }
+    },
+    {
+      "name": "preview_banner",
+      "rect": [
+        240,
+        600,
+        320,
+        340
+      ],
+      "role": [
+        "layout"
+      ],
+      "style": {
+        "label": "Preview Banner",
+        "font_scale": 1.0
+      }
+    },
+    {
+      "name": "preview_text",
+      "rect": [
+        630,
+        660,
+        700,
+        260
+      ],
+      "role": [
+        "layout"
+      ],
+      "style": {
+        "label": "Preview Text",
+        "font_scale": 1.0
+      }
+    },
+    {
+      "name": "busy_panel",
+      "rect": [
+        110,
+        78,
+        1700,
+        46
+      ]
+    },
+    {
+      "name": "busy_text",
+      "rect": [
+        134,
+        85,
+        1652,
+        32
+      ]
+    }
+  ]
+}

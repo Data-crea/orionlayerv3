@@ -1,0 +1,170 @@
+{
+  "1920x1080": [
+    {
+      "name": "race_grid",
+      "rect": [
+        100,
+        115,
+        1070,
+        735
+      ],
+      "role": [
+        "layout"
+      ],
+      "style": {
+        "label": "Race Grid",
+        "font_scale": 1.0,
+        "skin": "thin_border"
+      }
+    },
+    {
+      "name": "info_panel",
+      "rect": [
+        1210,
+        115,
+        610,
+        735
+      ],
+      "role": [
+        "layout"
+      ],
+      "style": {
+        "label": "Info Panel",
+        "font_scale": 1.0,
+        "skin": "thin_border"
+      }
+    },
+    {
+      "name": "race_name",
+      "rect": [
+        1228,
+        125,
+        580,
+        60
+      ],
+      "role": [
+        "layout"
+      ],
+      "style": {
+        "label": "Race Name",
+        "font_scale": 1.0
+      }
+    },
+    {
+      "name": "race_description",
+      "rect": [
+        1228,
+        195,
+        580,
+        340
+      ],
+      "role": [
+        "layout"
+      ],
+      "style": {
+        "label": "Description",
+        "font_scale": 1.0
+      }
+    },
+    {
+      "name": "race_traits",
+      "rect": [
+        1228,
+        555,
+        580,
+        280
+      ],
+      "role": [
+        "layout"
+      ],
+      "style": {
+        "label": "Race Traits",
+        "font_scale": 1.0
+      }
+    }
+  ],
+  "2560x1440": [
+    {
+      "name": "race_grid",
+      "rect": [
+        115,
+        115,
+        1070,
+        837
+      ],
+      "role": [
+        "layout"
+      ],
+      "style": {
+        "label": "Race Grid",
+        "font_scale": 1.0,
+        "skin": "thin_border"
+      }
+    },
+    {
+      "name": "info_panel",
+      "rect": [
+        1210,
+        115,
+        610,
+        834
+      ],
+      "role": [
+        "layout"
+      ],
+      "style": {
+        "label": "Info Panel",
+        "font_scale": 1.0,
+        "skin": "thin_border"
+      }
+    },
+    {
+      "name": "race_name",
+      "rect": [
+        1228,
+        125,
+        580,
+        60
+      ],
+      "role": [
+        "layout"
+      ],
+      "style": {
+        "label": "Race Name",
+        "font_scale": 1.0
+      }
+    },
+    {
+      "name": "race_description",
+      "rect": [
+        1228,
+        208,
+        580,
+        400
+      ],
+      "role": [
+        "layout"
+      ],
+      "style": {
+        "label": "Description",
+        "font_scale": 1.0
+      }
+    },
+    {
+      "name": "race_traits",
+      "rect": [
+        1228,
+        618,
+        580,
+        310
+      ],
+      "role": [
+        "layout"
+      ],
+      "style": {
+        "label": "Race Traits",
+        "font_scale": 1.0
+      }
+    }
+  ]
+}

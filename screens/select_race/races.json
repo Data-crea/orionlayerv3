@@ -1,0 +1,702 @@
+[
+  {
+    "id": 0,
+    "name": "Alkari",
+    "subtitle": "Fleet defenders",
+    "color": [
+      212,
+      160,
+      74
+    ],
+    "homeworld": {
+      "name": "Altair",
+      "size": "Medium",
+      "gravity": "Normal",
+      "terrain": "Terran",
+      "minerals": "Abundant",
+      "special": null,
+      "planet_image": "alkari.png"
+    },
+    "traits": [
+      {
+        "name": "Ship Defense",
+        "value": "",
+        "good": true,
+        "note": "+50 ship defense"
+      },
+      {
+        "name": "Artifacts World",
+        "value": "",
+        "good": true,
+        "note": "Ancient Orion artifacts on homeworld"
+      },
+      {
+        "name": "Government",
+        "value": "Dictatorship",
+        "good": null
+      }
+    ],
+    "description": "The Alkari are an avian race which have descended from great flying reptiles. Alkari pilots are reared from a young age on the dynamics of 3 dimensional motion. As a result the Alkari boast superb pilots, gaining a *+50 defensive bonus* in space combat. Furthermore, the Alkari homeworld was once colonized by the Orions, and still possesses ~ancient artifacts~. The Alkari have a ~dictatorial~ government.",
+    "playstyle": "Defensive fleet specialists. High ship defense makes their ships difficult to hit. Standard economy, no production modifiers.",
+    "portrait_zoom": 1.2,
+    "portrait_crop": [
+      0.23,
+      0.53
+    ]
+  },
+  {
+    "id": 1,
+    "name": "Bulrathi",
+    "subtitle": "The fierce warriors",
+    "color": [
+      224,
+      96,
+      48
+    ],
+    "homeworld": {
+      "name": "Ursa",
+      "size": "Large",
+      "gravity": "Heavy G",
+      "terrain": "Terran",
+      "minerals": "Abundant",
+      "special": null,
+      "planet_image": "bulrathi.png"
+    },
+    "traits": [
+      {
+        "name": "Ground Combat",
+        "value": "+10",
+        "good": true,
+        "note": "+10 ground combat rating"
+      },
+      {
+        "name": "Ship Attack",
+        "value": "+1",
+        "good": true,
+        "note": "+20 ship attack"
+      },
+      {
+        "name": "Heavy G World",
+        "value": "",
+        "good": true,
+        "note": "No gravity penalty on Heavy G planets"
+      },
+      {
+        "name": "Government",
+        "value": "Dictatorship",
+        "good": null
+      }
+    ],
+    "description": "The Bulrathi are a large bear like people that possess tremendous strength and hardiness. The Bulrathi home world is a ~heavy gravity~ planet, making the race exceptionally strong and able to perform in all heavy G worlds without penalty. Due to their aggressive nature they receive a *+20 bonus to offense* in space combat. In addition, the Bulrathi have a *+10 bonus in ground combat* and have a ~dictatorial~ form of government.",
+    "playstyle": "Aggressive conquerors. Dominant in ground combat and decent ship offense. Heavy G homeworld means no gravity penalty. Best played with early military expansion.",
+    "portrait_zoom": 1.5,
+    "portrait_crop": [
+      0.23,
+      0.24
+    ]
+  },
+  {
+    "id": 2,
+    "name": "Darlok",
+    "subtitle": "The shadow masters",
+    "color": [
+      112,
+      176,
+      96
+    ],
+    "homeworld": {
+      "name": "Nazin",
+      "size": "Medium",
+      "gravity": "Normal",
+      "terrain": "Terran",
+      "minerals": "Abundant",
+      "special": null,
+      "planet_image": "darlok.png"
+    },
+    "traits": [
+      {
+        "name": "Spying",
+        "value": "",
+        "good": true,
+        "note": "+20 to all spy missions"
+      },
+      {
+        "name": "Stealthy Ships",
+        "value": "",
+        "good": true,
+        "note": "Ships invisible to long range detection"
+      },
+      {
+        "name": "Government",
+        "value": "Dictatorship",
+        "good": null
+      }
+    ],
+    "description": "The Darlok people are ~shape shifters~, who can assume almost any humanoid form. As a result, all Darlok spies gain a *+20 bonus to any spy mission*. Furthermore, Darloks have the ability to render their ships ~invisible~ to long range detection. They have a ~dictatorial~ form of government.",
+    "playstyle": "Espionage focused. Exceptional spies can steal technology and sabotage enemies. Stealthy ships allow surprise attacks. Standard economy.",
+    "portrait_crop": [
+      0.17,
+      0.5
+    ],
+    "portrait_zoom": 1.2
+  },
+  {
+    "id": 3,
+    "name": "Elerian",
+    "subtitle": "The mystic seers",
+    "color": [
+      80,
+      160,
+      208
+    ],
+    "homeworld": {
+      "name": "Draconis",
+      "size": "Medium",
+      "gravity": "Normal",
+      "terrain": "Terran",
+      "minerals": "Abundant",
+      "special": null,
+      "planet_image": "elerian.png"
+    },
+    "traits": [
+      {
+        "name": "Telepathic",
+        "value": "",
+        "good": true,
+        "note": "Mind control in combat, better diplomacy"
+      },
+      {
+        "name": "Omniscience",
+        "value": "",
+        "good": true,
+        "note": "See all stars, planets, and fleets on the map"
+      },
+      {
+        "name": "Ship Defense",
+        "value": "",
+        "good": true,
+        "note": "+25 ship defense"
+      },
+      {
+        "name": "Ship Attack",
+        "value": "",
+        "good": true,
+        "note": "+20 ship attack"
+      },
+      {
+        "name": "Spying",
+        "value": "",
+        "good": true,
+        "note": "+10% to all spy actions"
+      },
+      {
+        "name": "Government",
+        "value": "Feudal",
+        "good": null
+      }
+    ],
+    "description": "The Elerian people are humanoid, with strong angular facial features, almost elf like. They follow an order of female mystics that are ~omniscient~ and know about all of the planets when the game begins, and can always sense the presence of enemy fleets, regardless of range. Furthermore, the mystics can see slightly into the future giving them tactical advantages in space combat, adding *+20 to their offense* and *+25 to their defense*. The greatest of the Elerian mystics are ~telepathic~, allowing them to ~mind control~ and automatically capture undefended enemy worlds and gain immediate use of captured ships. In addition, their telepathic ability grants the Elerians *+10% to all spy actions*. Elerians have a ~feudal~ form of government.",
+    "playstyle": "Information and diplomacy advantage. Omniscience reveals the entire galaxy from turn one. Telepathy allows mind controlling captured colonies. Strong defensive fleet.",
+    "portrait_crop": [
+      0.23,
+      0
+    ],
+    "portrait_zoom": 1.1
+  },
+  {
+    "id": 4,
+    "name": "Gnolam",
+    "subtitle": "The merchant guild",
+    "color": [
+      64,
+      168,
+      104
+    ],
+    "homeworld": {
+      "name": "Gnol",
+      "size": "Small",
+      "gravity": "Low G",
+      "terrain": "Terran",
+      "minerals": "Rich",
+      "special": null,
+      "planet_image": "gnolam.png"
+    },
+    "traits": [
+      {
+        "name": "Money",
+        "value": "",
+        "good": true,
+        "note": "+0.5 BC per citizen"
+      },
+      {
+        "name": "Fantastic Traders",
+        "value": "",
+        "good": true,
+        "note": "25% bonus income from trade treaties"
+      },
+      {
+        "name": "Low G World",
+        "value": "",
+        "good": false,
+        "note": "Weaker ground combat on Normal and Heavy G"
+      },
+      {
+        "name": "Lucky",
+        "value": "",
+        "good": true,
+        "note": "Better random events"
+      },
+      {
+        "name": "Government",
+        "value": "Dictatorship",
+        "good": null
+      }
+    ],
+    "description": "The Gnolams are a dwarf like people, with a society that focuses almost exclusively on monetary gains. As a result, the Gnolams are ~fantastic traders~, doubling the gains they make from trade treaties. The capitalistic nature of the Gnolam is so intense that each Gnolam generates a bonus of *+1BC per population*. Gnolams are ~lucky~, will never be affected by random disasters, and are more likely to be affected by good events. The Gnolams are small in stature and come from a ~Low G~ homeworld and suffer from significant industry and farming penalties on normal and heavy G worlds, as well as having a *penalty to all ground combat* engagements. Gnolams have a ~dictatorial~ form of government.",
+    "playstyle": "Economy powerhouse. Extra income and trade bonuses fund rapid development. Lucky brings favorable random events. Small Low G homeworld is the trade off.",
+    "portrait_crop": [
+      0.11,
+      0.5
+    ],
+    "portrait_zoom": 1.3
+  },
+  {
+    "id": 5,
+    "name": "Human",
+    "subtitle": "The diplomats",
+    "color": [
+      208,
+      160,
+      48
+    ],
+    "homeworld": {
+      "name": "Sol",
+      "size": "Medium",
+      "gravity": "Normal",
+      "terrain": "Terran",
+      "minerals": "Abundant",
+      "special": null,
+      "planet_image": "human.png"
+    },
+    "traits": [
+      {
+        "name": "Charismatic",
+        "value": "",
+        "good": true,
+        "note": "+25% diplomacy effectiveness"
+      },
+      {
+        "name": "Lucky",
+        "value": "",
+        "good": true,
+        "note": "Half price for legendary leaders"
+      },
+      {
+        "name": "Government",
+        "value": "Democracy",
+        "good": null,
+        "note": "+50% research, +50% income, morale bonus"
+      }
+    ],
+    "description": "Humans are the most ~charismatic~ deal makers of the game. They gain a *+50% diplomacy bonus* when dealing with other races and pay half price to hire legendary officers and leaders. Humans are the only race with a democratic form of government.",
+    "playstyle": "Diplomacy and economy. Democracy provides major research and income bonuses at the cost of war restrictions. Charismatic trait improves all diplomatic interactions.",
+    "portrait_crop": [
+      0.29,
+      0.5
+    ]
+  },
+  {
+    "id": 6,
+    "name": "Klackon",
+    "subtitle": "The hive mind",
+    "color": [
+      192,
+      80,
+      80
+    ],
+    "homeworld": {
+      "name": "Kholdan",
+      "size": "Medium",
+      "gravity": "Normal",
+      "terrain": "Terran",
+      "minerals": "Abundant",
+      "special": null,
+      "planet_image": "klackon.png"
+    },
+    "traits": [
+      {
+        "name": "Production",
+        "value": "",
+        "good": true,
+        "note": "+2 production per worker"
+      },
+      {
+        "name": "Food",
+        "value": "",
+        "good": true,
+        "note": "+1 food per farmer"
+      },
+      {
+        "name": "Uncreative",
+        "value": "",
+        "good": false,
+        "note": "Cannot choose research direction"
+      },
+      {
+        "name": "Government",
+        "value": "Unification",
+        "good": null
+      }
+    ],
+    "description": "The Klackons are an insectoid people who are completely satisfied with their life. Their ~hive mind~ allows communication to pass swiftly and effectively, with each worker acting with great conviction, operating as one. As a result, Klackons are the only race with a ~unified~ government. In addition, Klackons are extremely industrious workers, adding *+1 to both their food and industry* production. Unfortunately, they are ~uncreative~ and have great difficulty in coming up with new technologies.",
+    "playstyle": "Industrial powerhouse. Unification gives massive production and food bonuses. Workers produce far more than any other race. Severely reduced research is the trade off.",
+    "portrait_crop": [
+      0.14,
+      0.5
+    ],
+    "portrait_zoom": 1.3
+  },
+  {
+    "id": 7,
+    "name": "Meklar",
+    "subtitle": "The cybernetic race",
+    "color": [
+      128,
+      128,
+      192
+    ],
+    "homeworld": {
+      "name": "Meklon",
+      "size": "Medium",
+      "gravity": "Normal",
+      "terrain": "Terran",
+      "minerals": "Rich",
+      "special": null,
+      "planet_image": "meklar.png"
+    },
+    "traits": [
+      {
+        "name": "Cybernetic",
+        "value": "",
+        "good": true,
+        "note": "Auto repair ships after combat"
+      },
+      {
+        "name": "Production",
+        "value": "",
+        "good": true,
+        "note": "+2 production per worker"
+      },
+      {
+        "name": "Half Resources",
+        "value": "",
+        "good": true,
+        "note": "Consume 1/2 food, 1/2 production"
+      },
+      {
+        "name": "Government",
+        "value": "Dictatorship",
+        "good": null
+      }
+    ],
+    "description": "The Meklars are a ~cybernetic~ race that have become extremely dependent on their cybernetic exoskeletons, to the point that their bodies have atrophied to small fragile frames. Unlike other races, Meklars consume 1/2 production and 1/2 food each, rounded up. Their cybernetic interfaces allow them to ~completely repair~ their ships after combat. In addition 10% of their ship's structure and 5% of their ship's internal systems are repaired each round of combat. Meklar factory workers produce *+2 production* each. Meklars have a ~dictatorial~ form of government.",
+    "playstyle": "Production and growth specialist. Cybernetic halves food requirements and adds factory output. Combined with production bonus, they outbuild everyone. Rich homeworld accelerates early game.",
+    "portrait_crop": [
+      0.41,
+      0.24
+    ],
+    "portrait_zoom": 1.3
+  },
+  {
+    "id": 8,
+    "name": "Mrrshan",
+    "subtitle": "The fierce hunters",
+    "color": [
+      208,
+      128,
+      48
+    ],
+    "homeworld": {
+      "name": "Fierias",
+      "size": "Medium",
+      "gravity": "Normal",
+      "terrain": "Terran",
+      "minerals": "Abundant",
+      "special": null,
+      "planet_image": "mrrshan.png"
+    },
+    "traits": [
+      {
+        "name": "Ship Attack",
+        "value": "+50",
+        "good": true,
+        "note": "+50 beam attack accuracy"
+      },
+      {
+        "name": "Warlord",
+        "value": "",
+        "good": true,
+        "note": "Double troops, +1 crew and leader level"
+      },
+      {
+        "name": "Rich Homeworld",
+        "value": "",
+        "good": true,
+        "note": "Mineral rich homeworld"
+      },
+      {
+        "name": "Government",
+        "value": "Dictatorship",
+        "good": null
+      }
+    ],
+    "description": "The Mrrshan are a cat like race with keen senses, giving them a *+50 to hit bonus* to all of their ship beam attacks. The Mrrshan possess a strict warrior code and are ~warlords~ by nature, doubling the start, rate and maximum number of troops and armor that can be stationed on a planet. Furthermore, they increase the level of their crew and their legendary officers and leaders by one. They have a ~mineral rich~ homeworld and a ~dictatorial~ form of government.",
+    "playstyle": "Offensive fleet specialists. The highest ship attack bonus in the game. Simple but effective: build ships and attack. Standard economy.",
+    "portrait_crop": [
+      0.17,
+      0.38
+    ],
+    "portrait_zoom": 2.1
+  },
+  {
+    "id": 9,
+    "name": "Psilon",
+    "subtitle": "Masters of the mind",
+    "color": [
+      144,
+      112,
+      208
+    ],
+    "homeworld": {
+      "name": "Mentar",
+      "size": "Large",
+      "gravity": "Low G",
+      "terrain": "Terran",
+      "minerals": "Abundant",
+      "special": null,
+      "planet_image": "psilon.png"
+    },
+    "traits": [
+      {
+        "name": "Research",
+        "value": "",
+        "good": true,
+        "note": "+2 research per scientist"
+      },
+      {
+        "name": "Creative",
+        "value": "",
+        "good": true,
+        "note": "All technologies available in every field"
+      },
+      {
+        "name": "Low G World",
+        "value": "",
+        "good": false,
+        "note": "Weaker ground combat on Normal and Heavy G"
+      },
+      {
+        "name": "Government",
+        "value": "Dictatorship",
+        "good": null
+      }
+    ],
+    "description": "The Psilons are a delicate race of brilliant researchers from a ~Low G~ home world. Each Psilon scientist produces *2 more research* than the galactic norm. In addition, the Psilons are very ~creative~, and they never ignore a potential avenue of research. Thus, ~all technologies~ are available to their scientists. Their ~large~ home world doesn't hurt either. They are ruled by a ~Dictatorship~.",
+    "playstyle": "Technology focused civilization with exceptional research flexibility. Creative means they never miss a technology. Low G makes physical warfare more challenging.",
+    "portrait_crop": [
+      0.08,
+      0.5
+    ],
+    "portrait_zoom": 1.7
+  },
+  {
+    "id": 10,
+    "name": "Sakkra",
+    "subtitle": "The brood masters",
+    "color": [
+      96,
+      160,
+      64
+    ],
+    "homeworld": {
+      "name": "Sssla",
+      "size": "Large",
+      "gravity": "Normal",
+      "terrain": "Swamp",
+      "minerals": "Abundant",
+      "special": null,
+      "planet_image": "sakkra.png"
+    },
+    "traits": [
+      {
+        "name": "Population Growth",
+        "value": "",
+        "good": true,
+        "note": "Double population growth rate"
+      },
+      {
+        "name": "Subterranean",
+        "value": "",
+        "good": true,
+        "note": "+2 max population per planet size"
+      },
+      {
+        "name": "Food",
+        "value": "",
+        "good": true,
+        "note": "+1 food per farmer"
+      },
+      {
+        "name": "Spying",
+        "value": "",
+        "good": false,
+        "note": "Penalty to all spying activities"
+      },
+      {
+        "name": "Large Homeworld",
+        "value": "",
+        "good": true,
+        "note": "More population capacity on homeworld"
+      },
+      {
+        "name": "Government",
+        "value": "Feudal",
+        "good": null
+      }
+    ],
+    "description": "The Sakkra are a race of reptiles with impressive regenerative capabilities. As a result, their *population grows at twice the normal rate*. They are ~subterranean~, living both under and above the surface of a planet, increasing the maximum population a planet can support by twice the planet's size. The Sakkra are very good at agriculture giving them a bonus of *+1 food per farmer*, but somewhat inept at spying with a penalty to all spying activities. The Sakkra come from a ~large~ home world and have a ~feudal~ form of government.",
+    "playstyle": "Explosive population growth. Double growth rate and Subterranean bonus means colonies fill fast. Numbers compensate for lack of technology bonuses.",
+    "portrait_crop": [
+      0.17,
+      0.29
+    ],
+    "portrait_zoom": 1.4
+  },
+  {
+    "id": 11,
+    "name": "Silicoid",
+    "subtitle": "The crystal entity",
+    "color": [
+      112,
+      184,
+      192
+    ],
+    "homeworld": {
+      "name": "Cryslon",
+      "size": "Large",
+      "gravity": "Normal",
+      "terrain": "Tundra",
+      "minerals": "Ultra Rich",
+      "special": null,
+      "planet_image": "silicoid.png"
+    },
+    "traits": [
+      {
+        "name": "Lithovore",
+        "value": "",
+        "good": true,
+        "note": "Eat minerals, no food needed"
+      },
+      {
+        "name": "Environment Immune",
+        "value": "",
+        "good": true,
+        "note": "Tolerant to all environments"
+      },
+      {
+        "name": "Slow Growth",
+        "value": "",
+        "good": false,
+        "note": "Half population growth rate"
+      },
+      {
+        "name": "Repulsive",
+        "value": "",
+        "good": false,
+        "note": "Poor diplomacy, double leader cost"
+      },
+      {
+        "name": "Government",
+        "value": "Dictatorship",
+        "good": null
+      }
+    ],
+    "description": "The Silicoids are crystalline beings that are ~lithovores~, eating minerals instead of food. They are ~environmentally tolerant~ but suffer from *half the standard population growth* rate. Silicoids are also ~repulsive~, incapable of effectively comprehending the nature of other beings, making it extremely difficult to negotiate with other races and doubling the cost of hiring legendary officers and leaders. They have a ~dictatorial~ form of government.",
+    "playstyle": "Unique colonization strategy. Can settle any planet immediately, ignoring environment. Severe diplomatic isolation means no treaties. Ultra Rich homeworld provides a strong industrial start.",
+    "portrait_crop": [
+      0.26,
+      0.5
+    ],
+    "portrait_zoom": 1.1
+  },
+  {
+    "id": 12,
+    "name": "Trilarian",
+    "subtitle": "The aquatic race",
+    "color": [
+      64,
+      144,
+      184
+    ],
+    "homeworld": {
+      "name": "Trilar",
+      "size": "Large",
+      "gravity": "Normal",
+      "terrain": "Ocean",
+      "minerals": "Abundant",
+      "special": null,
+      "planet_image": "trilarian.png"
+    },
+    "traits": [
+      {
+        "name": "Aquatic",
+        "value": "",
+        "good": true,
+        "note": "+1 food on Terran/Ocean/Swamp, bonus on wet worlds"
+      },
+      {
+        "name": "Trans Dimensional",
+        "value": "",
+        "good": true,
+        "note": "Ships ignore starlanes, travel between any stars"
+      },
+      {
+        "name": "Speed",
+        "value": "",
+        "good": true,
+        "note": "+2 parsecs ship speed, +4 combat speed"
+      },
+      {
+        "name": "Government",
+        "value": "Dictatorship",
+        "good": null
+      }
+    ],
+    "description": "Trilarians are ~aquatic~ based life forms and as such they treat all tundra and swamp worlds as ocean and ocean and terrans as gaias. Their homeworld is an ocean world and therefore can support more colonists and grows 3 food per farmer. Trilarians are also ~trans dimensional~ and can fold space with their minds, increasing *the speed* of their ships on the galactic map by 2 parsecs per turn and increasing their combat speed by 4. Trilarians have a ~dictatorial~ form of government.",
+    "playstyle": "Mobility advantage. Trans Dimensional movement means fleets reach any star without following starlanes. Aquatic trait provides food bonuses on wet worlds.",
+    "portrait_crop": [
+      0.23,
+      0.17
+    ],
+    "portrait_zoom": 1.8
+  },
+  {
+    "id": 13,
+    "name": "Custom Race",
+    "key": "custom",
+    "subtitle": "",
+    "color": [
+      212,
+      160,
+      74
+    ],
+    "homeworld": {},
+    "traits": [],
+    "description": "",
+    "portrait_crop": [
+      0.29,
+      0
+    ],
+    "portrait_zoom": 1.4
+  }
+]

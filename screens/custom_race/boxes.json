@@ -1,0 +1,354 @@
+{
+  "1920x1080": [
+    {
+      "name": "race_picks_panel",
+      "rect": [
+        75,
+        109,
+        696,
+        949
+      ],
+      "role": [
+        "layout"
+      ],
+      "style": {
+        "label": "Race Picks Panel",
+        "font_scale": 1.0,
+        "skin": "thin_border"
+      }
+    },
+    {
+      "name": "specials_panel",
+      "rect": [
+        783,
+        109,
+        502,
+        949
+      ],
+      "role": [
+        "layout"
+      ],
+      "style": {
+        "label": "Special Abilities Panel",
+        "font_scale": 1.0,
+        "skin": "thin_border"
+      }
+    },
+    {
+      "name": "description_panel",
+      "rect": [
+        1296,
+        109,
+        549,
+        949
+      ],
+      "role": [
+        "layout"
+      ],
+      "style": {
+        "label": "Description Panel",
+        "font_scale": 1.0,
+        "skin": "thin_border"
+      }
+    },
+    {
+      "name": "picks_score_bar",
+      "rect": [
+        510,
+        880,
+        900,
+        173
+      ],
+      "role": [
+        "display"
+      ],
+      "style": {
+        "label": "Picks/Score Bar",
+        "font_scale": 1.0
+      }
+    },
+    {
+      "name": "picks_text",
+      "rect": [
+        555,
+        900,
+        280,
+        50
+      ],
+      "role": [
+        "layout"
+      ],
+      "style": {
+        "label": "Race Picks Text",
+        "font_scale": 1.0
+      }
+    },
+    {
+      "name": "score_text",
+      "rect": [
+        1000,
+        900,
+        280,
+        50
+      ],
+      "role": [
+        "layout"
+      ],
+      "style": {
+        "label": "Score Text",
+        "font_scale": 1.0
+      }
+    },
+    {
+      "name": "picks_header",
+      "rect": [
+        75,
+        109,
+        696,
+        30
+      ],
+      "role": [
+        "layout"
+      ],
+      "style": {
+        "label": "Race Picks Header",
+        "font_scale": 1.0
+      }
+    },
+    {
+      "name": "specials_header",
+      "rect": [
+        783,
+        107,
+        502,
+        30
+      ],
+      "role": [
+        "layout"
+      ],
+      "style": {
+        "label": "Special Abilities Header",
+        "font_scale": 1.0
+      }
+    },
+    {
+      "name": "description_header",
+      "rect": [
+        1296,
+        107,
+        549,
+        30
+      ],
+      "role": [
+        "layout"
+      ],
+      "style": {
+        "label": "Description Header",
+        "font_scale": 1.0
+      }
+    },
+    {
+      "name": "picks_popup",
+      "rect": [
+        560,
+        400,
+        800,
+        280
+      ],
+      "style": {
+        "label": "Picks Popup Panel",
+        "font_scale": 1.0,
+        "skin": "none"
+      }
+    },
+    {
+      "name": "picks_popup_text",
+      "rect": [
+        620,
+        450,
+        680,
+        180
+      ],
+      "style": {
+        "label": "Picks Popup Text",
+        "font_scale": 1.0
+      }
+    }
+  ],
+  "2560x1440": [
+    {
+      "name": "race_picks_panel",
+      "rect": [
+        110,
+        109,
+        659,
+        834
+      ],
+      "role": [
+        "layout"
+      ],
+      "style": {
+        "label": "Race Picks Panel",
+        "font_scale": 0.9,
+        "skin": "thin_border"
+      }
+    },
+    {
+      "name": "specials_panel",
+      "rect": [
+        783,
+        110,
+        502,
+        832
+      ],
+      "role": [
+        "layout"
+      ],
+      "style": {
+        "label": "Special Abilities Panel",
+        "font_scale": 1.0,
+        "skin": "thin_border"
+      }
+    },
+    {
+      "name": "description_panel",
+      "rect": [
+        1296,
+        108,
+        523,
+        832
+      ],
+      "role": [
+        "layout"
+      ],
+      "style": {
+        "label": "Description Panel",
+        "font_scale": 1.0,
+        "skin": "thin_border"
+      }
+    },
+    {
+      "name": "picks_score_bar",
+      "rect": [
+        679,
+        955,
+        555,
+        49
+      ],
+      "role": [
+        "display"
+      ],
+      "style": {
+        "label": "Picks/Score Bar",
+        "font_scale": 1.0
+      }
+    },
+    {
+      "name": "picks_text",
+      "rect": [
+        710,
+        963,
+        330,
+        35
+      ],
+      "role": [
+        "layout"
+      ],
+      "style": {
+        "label": "Race Picks Text",
+        "font_scale": 1.0
+      }
+    },
+    {
+      "name": "score_text",
+      "rect": [
+        960,
+        963,
+        290,
+        35
+      ],
+      "role": [
+        "layout"
+      ],
+      "style": {
+        "label": "Score Text",
+        "font_scale": 1.0
+      }
+    },
+    {
+      "name": "picks_header",
+      "rect": [
+        75,
+        109,
+        696,
+        30
+      ],
+      "role": [
+        "layout"
+      ],
+      "style": {
+        "label": "Race Picks Header",
+        "font_scale": 1.0
+      }
+    },
+    {
+      "name": "specials_header",
+      "rect": [
+        783,
+        107,
+        502,
+        30
+      ],
+      "role": [
+        "layout"
+      ],
+      "style": {
+        "label": "Special Abilities Header",
+        "font_scale": 1.0
+      }
+    },
+    {
+      "name": "description_header",
+      "rect": [
+        1296,
+        107,
+        524,
+        30
+      ],
+      "role": [
+        "layout"
+      ],
+      "style": {
+        "label": "Description Header",
+        "font_scale": 1.0
+      }
+    },
+    {
+      "name": "picks_popup",
+      "rect": [
+        560,
+        400,
+        800,
+        280
+      ],
+      "style": {
+        "label": "Picks Popup Panel",
+        "font_scale": 1.0,
+        "skin": "none"
+      }
+    },
+    {
+      "name": "picks_popup_text",
+      "rect": [
+        620,
+        450,
+        680,
+        180
+      ],
+      "style": {
+        "label": "Picks Popup Text",
+        "font_scale": 1.0
+      }
+    }
+  ]
+}

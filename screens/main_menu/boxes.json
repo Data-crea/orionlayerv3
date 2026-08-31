@@ -1,0 +1,520 @@
+{
+  "1920x1080": [
+    {
+      "name": "continue",
+      "rect": [
+        1592,
+        178,
+        300,
+        50
+      ],
+      "field_id": 1,
+      "anchor": "right",
+      "role": [
+        "click"
+      ],
+      "style": {
+        "skin": "button",
+        "label": "Continue",
+        "font_size": 20,
+        "glows": {
+          "tl": [
+            19,
+            30
+          ],
+          "tr": [
+            -20,
+            29
+          ],
+          "bl": [
+            18,
+            -29
+          ],
+          "br": [
+            -20,
+            -30
+          ]
+        }
+      }
+    },
+    {
+      "name": "load_game",
+      "rect": [
+        1592,
+        258,
+        300,
+        50
+      ],
+      "field_id": 2,
+      "anchor": "right",
+      "role": [
+        "click"
+      ],
+      "style": {
+        "skin": "button",
+        "label": "Load Game",
+        "font_size": 20,
+        "glows": {
+          "tl": [
+            19,
+            30
+          ],
+          "tr": [
+            -20,
+            29
+          ],
+          "bl": [
+            18,
+            -29
+          ],
+          "br": [
+            -20,
+            -30
+          ]
+        }
+      }
+    },
+    {
+      "name": "new_game",
+      "rect": [
+        1592,
+        338,
+        300,
+        50
+      ],
+      "field_id": 3,
+      "anchor": "right",
+      "role": [
+        "click"
+      ],
+      "style": {
+        "skin": "button",
+        "label": "New Game",
+        "font_size": 20,
+        "glows": {
+          "tl": [
+            19,
+            30
+          ],
+          "tr": [
+            -20,
+            29
+          ],
+          "bl": [
+            18,
+            -29
+          ],
+          "br": [
+            -20,
+            -30
+          ]
+        }
+      }
+    },
+    {
+      "name": "multiplayer",
+      "rect": [
+        1592,
+        418,
+        300,
+        50
+      ],
+      "field_id": 4,
+      "anchor": "right",
+      "role": [
+        "click"
+      ],
+      "style": {
+        "skin": "button",
+        "label": "Multiplayer",
+        "font_size": 20,
+        "glows": {
+          "tl": [
+            19,
+            30
+          ],
+          "tr": [
+            -20,
+            29
+          ],
+          "bl": [
+            18,
+            -29
+          ],
+          "br": [
+            -20,
+            -30
+          ]
+        }
+      }
+    },
+    {
+      "name": "hall_of_fame",
+      "rect": [
+        1592,
+        498,
+        300,
+        50
+      ],
+      "field_id": 5,
+      "anchor": "right",
+      "role": [
+        "click"
+      ],
+      "style": {
+        "skin": "button",
+        "label": "Hall of Fame",
+        "font_size": 20,
+        "glows": {
+          "tl": [
+            19,
+            30
+          ],
+          "tr": [
+            -20,
+            29
+          ],
+          "bl": [
+            18,
+            -29
+          ],
+          "br": [
+            -20,
+            -30
+          ]
+        }
+      }
+    },
+    {
+      "name": "quit",
+      "rect": [
+        1592,
+        578,
+        300,
+        50
+      ],
+      "field_id": 6,
+      "anchor": "right",
+      "role": [
+        "click"
+      ],
+      "style": {
+        "skin": "button",
+        "label": "Quit",
+        "font_size": 20,
+        "glows": {
+          "tl": [
+            19,
+            30
+          ],
+          "tr": [
+            -20,
+            29
+          ],
+          "bl": [
+            18,
+            -29
+          ],
+          "br": [
+            -20,
+            -30
+          ]
+        }
+      }
+    },
+    {
+      "name": "version_text",
+      "rect": [
+        1592,
+        983,
+        300,
+        28
+      ],
+      "anchor": "right",
+      "role": [
+        "display"
+      ],
+      "style": {
+        "skin": "text",
+        "label": "Version {version}",
+        "font_size": 18,
+        "align": "right"
+      }
+    },
+    {
+      "name": "help_popup",
+      "role": [
+        "display"
+      ],
+      "hidden": true,
+      "style": {
+        "font_scale": 1.0
+      },
+      "rect": [
+        420,
+        170,
+        1080,
+        745
+      ]
+    }
+  ],
+  "2560x1440": [
+    {
+      "name": "continue",
+      "rect": [
+        1644,
+        178,
+        248,
+        50
+      ],
+      "field_id": 1,
+      "anchor": "right",
+      "role": [
+        "click"
+      ],
+      "style": {
+        "skin": "button",
+        "label": "Continue",
+        "font_size": 20,
+        "glows": {
+          "tl": [
+            19,
+            30
+          ],
+          "tr": [
+            -20,
+            29
+          ],
+          "bl": [
+            18,
+            -29
+          ],
+          "br": [
+            -20,
+            -30
+          ]
+        }
+      }
+    },
+    {
+      "name": "load_game",
+      "rect": [
+        1644,
+        258,
+        248,
+        50
+      ],
+      "field_id": 2,
+      "anchor": "right",
+      "role": [
+        "click"
+      ],
+      "style": {
+        "skin": "button",
+        "label": "Load Game",
+        "font_size": 20,
+        "glows": {
+          "tl": [
+            19,
+            30
+          ],
+          "tr": [
+            -20,
+            29
+          ],
+          "bl": [
+            18,
+            -29
+          ],
+          "br": [
+            -20,
+            -30
+          ]
+        }
+      }
+    },
+    {
+      "name": "new_game",
+      "rect": [
+        1645,
+        338,
+        247,
+        50
+      ],
+      "field_id": 3,
+      "anchor": "right",
+      "role": [
+        "click"
+      ],
+      "style": {
+        "skin": "button",
+        "label": "New Game",
+        "font_size": 20,
+        "glows": {
+          "tl": [
+            19,
+            30
+          ],
+          "tr": [
+            -20,
+            29
+          ],
+          "bl": [
+            18,
+            -29
+          ],
+          "br": [
+            -20,
+            -30
+          ]
+        }
+      }
+    },
+    {
+      "name": "multiplayer",
+      "rect": [
+        1646,
+        418,
+        246,
+        50
+      ],
+      "field_id": 4,
+      "anchor": "right",
+      "role": [
+        "click"
+      ],
+      "style": {
+        "skin": "button",
+        "label": "Multiplayer",
+        "font_size": 20,
+        "glows": {
+          "tl": [
+            19,
+            30
+          ],
+          "tr": [
+            -20,
+            29
+          ],
+          "bl": [
+            18,
+            -29
+          ],
+          "br": [
+            -20,
+            -30
+          ]
+        }
+      }
+    },
+    {
+      "name": "hall_of_fame",
+      "rect": [
+        1643,
+        498,
+        249,
+        50
+      ],
+      "field_id": 5,
+      "anchor": "right",
+      "role": [
+        "click"
+      ],
+      "style": {
+        "skin": "button",
+        "label": "Hall of Fame",
+        "font_size": 20,
+        "glows": {
+          "tl": [
+            19,
+            30
+          ],
+          "tr": [
+            -20,
+            29
+          ],
+          "bl": [
+            18,
+            -29
+          ],
+          "br": [
+            -20,
+            -30
+          ]
+        }
+      }
+    },
+    {
+      "name": "quit",
+      "rect": [
+        1641,
+        578,
+        251,
+        50
+      ],
+      "field_id": 6,
+      "anchor": "right",
+      "role": [
+        "click"
+      ],
+      "style": {
+        "skin": "button",
+        "label": "Quit",
+        "font_size": 20,
+        "glows": {
+          "tl": [
+            19,
+            30
+          ],
+          "tr": [
+            -20,
+            29
+          ],
+          "bl": [
+            18,
+            -29
+          ],
+          "br": [
+            -20,
+            -30
+          ]
+        }
+      }
+    },
+    {
+      "name": "version_text",
+      "rect": [
+        1592,
+        983,
+        300,
+        28
+      ],
+      "anchor": "right",
+      "role": [
+        "display"
+      ],
+      "style": {
+        "skin": "text",
+        "label": "Version {version}",
+        "font_size": 18,
+        "align": "right"
+      }
+    },
+    {
+      "name": "help_popup",
+      "role": [
+        "display"
+      ],
+      "hidden": true,
+      "style": {
+        "font_scale": 1.0
+      },
+      "rect": [
+        420,
+        170,
+        1080,
+        745
+      ]
+    }
+  ]
+}

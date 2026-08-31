@@ -1,0 +1,55 @@
+MIT License
+
+Copyright (c) 2026 OrionLayer v3 contributors
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+================================================================================
+
+SCOPE — what this licence does and does not cover
+
+This licence applies to the SOURCE CODE and DOCUMENTATION in this
+repository: the Python modules under core/, screens/, tools/ and main.py,
+the JSON configuration and layout files, and the Markdown documents.
+
+It does NOT apply to:
+
+  Artwork derived from Master of Orion 2
+      Portraits, banners, planets, nebulae, cockpit frames, backgrounds
+      and icons under screens/*/assets/ and assets/shared/ are derived
+      from the artwork of Master of Orion 2: Battle at Antares
+      (Simtex / MicroProse, 1996). Copyright in the underlying work
+      remains with its rightsholder. They are included here as part of a
+      modification that requires an installed, legally obtained copy of
+      the game and replaces none of it. They are not licensed for reuse
+      outside that purpose, and no claim of ownership is made over them.
+
+  The display font
+      assets/shared/fonts/Aldrich-Regular.ttf is Copyright (c) 2011
+      Matthew Desmond (MADType) and is licensed under the SIL Open Font
+      License, Version 1.1 — see assets/shared/fonts/OFL.txt.
+
+  Anything extracted at runtime
+      Context-help texts (HELP.LBX) and nebula reference sprites
+      (STARBG.LBX) are read from the user's own installation by
+      tools/help_extract.py and tools/nebula_extract.py. They are not
+      part of this repository and are excluded by .gitignore.
+
+OrionLayer requires orion2re, a separate project, to run. It communicates
+with it over a local TCP socket and includes no part of it.

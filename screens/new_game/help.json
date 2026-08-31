@@ -1,0 +1,17 @@
+{
+  "_comment": "Right-click context help. Transcribed from ERICHELP::_new_game_screen_help_list (erichelp.cpp:27), installed by NEWGAME::Newgame_Screen_ (newgame.cpp:77). The original's help rectangles are wider than its click fields — {546, 99,84,212,226} covers the Difficulty picture AND its label, while field 1 is only the picture. HD resolves each region from the cover-scaled slot in layout.json, which is the same whole-control area. The screen-wide entry 545 must stay last: the walk stops at the first hit, so a fallback listed earlier would eat every other region.",
+  "_source": "erichelp.cpp:27",
+  "regions": [
+    { "help_id": 546, "slot": "difficulty",        "native": [ 99,  84, 212, 226] },
+    { "help_id": 547, "slot": "galaxy_size",       "native": [249,  85, 376, 225] },
+    { "help_id": 544, "slot": "galaxy_age",        "native": [409,  83, 524, 225] },
+    { "help_id": 552, "slot": "players",           "native": [ 99, 228, 212, 371] },
+    { "help_id": 551, "slot": "tech_level",        "native": [249, 227, 375, 371] },
+    { "help_id": 554, "toggle": "tactical_combat", "native": [380, 258, 524, 291] },
+    { "help_id": 553, "toggle": "random_events",   "native": [380, 293, 524, 326] },
+    { "help_id": 555, "toggle": "antarans_attack", "native": [380, 328, 524, 362] },
+    { "help_id": 557, "frame_button": "left",      "native": [ 99, 383, 196, 409] },
+    { "help_id": 556, "frame_button": "right",     "native": [417, 385, 513, 410] },
+    { "help_id": 545, "screen": true,              "native": [  0,   0, 639, 479] }
+  ]
+}

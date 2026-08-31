@@ -1,0 +1,23 @@
+{
+  "source_size": [
+    1672,
+    941
+  ],
+  "slice_margins_px": {
+    "left": 368,
+    "right": 368,
+    "top": 122,
+    "bottom": 169
+  },
+  "content_inset": {
+    "left": 65,
+    "right": 65,
+    "top": 95,
+    "bottom": 19
+  },
+  "title_bar": {
+    "y": 12,
+    "height": 48,
+    "note": "Dark recessed panel in top center"
+  }
+}

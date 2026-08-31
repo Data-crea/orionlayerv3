@@ -1,0 +1,6 @@
+{
+  "name": "Example Mod",
+  "version": "1.0",
+  "author": "OrionLayer",
+  "description": "Demonstrates file overrides: replaces the main menu credits text. Activate by adding \"example_mod\" to active_mods in settings.json."
+}

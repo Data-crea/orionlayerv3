@@ -1,0 +1,62 @@
+Game Design ............ Steve Barcia
+                         Ken Burd
+Lead Programmer ..... Ken Burd
+Programmers ......... Evan Axelrad
+                      Eric Brown
+                      Jim Cowlishaw
+                      William Ivey
+                      Russ Williams
+Lead Artist ......... Dave Lawell
+Artists ............. Kevin Albers
+                      Andrea Burden
+                      Danny Garrett
+                      Terry Greer
+                      Shelly Hollen
+                      Jim McIntyre
+                      Patrick Owens
+                      Judith Peterson
+Libraries ........... Steve Barcia
+                      Rob Corell
+                      Ronnie Gauny
+Music ............... Laura Barratt
+Sound Effects ....... John Henke
+QA Lead ............. Evan Birkby
+Quality Assurance ... Olivia Allende
+                      Nieya Anjomi
+                      Mike Barker
+                      Anthony Constantino XXVI
+                      Paul Coppins
+                      Chris Evans
+                      Brian Hackert
+                      Hans Hagberg
+                      Tim Jordan
+                      Brian King
+                      Vansouk Lianemany
+                      Andy Mazurek
+                      Mike Richardson
+                      Ron Pepper
+                      Mike Predergast
+                      Ken Schmidt
+                      Larry Webber
+Compatibility Lead .  Hoi Nguyen
+Compatibility Tech .  William Hom
+                      Khoi Nguyen
+Special Thanks ...... Jenny Cowlishaw
+                      Matthew Kyle
+
+COMMUNITY
+
+1.50 Patch Project .. The MOO2 1.50 Project Team
+                      Darza
+1.40 Patch .......... Lord Brazen
+Additional Fixes .... Andrey Tyukov
+OCL ................. Dmitry Yulmukhametov
+OCL Improved ........ Nirran
+Mapgen Tool ......... TF8
+MoO2 Workshop ....... Grig De Griz
+Lua Scripting ....... Epirasque
+Feedback ............ The MOO2 Community
+
+ORION2RE
+
+Reimplementation .... Joes

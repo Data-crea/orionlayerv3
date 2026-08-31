@@ -1,0 +1,39 @@
+{
+  "source_size": [
+    1672,
+    941
+  ],
+  "slice_margins_px": {
+    "left": 368,
+    "right": 368,
+    "top": 122,
+    "bottom": 169
+  },
+  "content_inset": {
+    "left": 65,
+    "right": 65,
+    "top": 95,
+    "bottom": 19
+  },
+  "title_bar": {
+    "y": 12,
+    "height": 48,
+    "note": "Dark recessed panel in top center"
+  },
+  "button_bar_left": {
+    "x": 106,
+    "y": 861,
+    "width": 233,
+    "height": 39,
+    "note": "Dark panel in bottom-left corner tile, for Cancel"
+  },
+  "button_bar_right": {
+    "x_from_right": 113,
+    "y": 861,
+    "width": 232,
+    "height": 39,
+    "note": "Dark panel in bottom-right corner tile, for Accept"
+  },
+  "button_font_scale": 0.525,
+  "button_font_scale_note": "Font size as fraction of button bar height (default 0.35, was 0.7)"
+}
