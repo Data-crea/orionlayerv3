@@ -95,7 +95,7 @@ def ascii_runs(raw, indent="    ", min_len=3):
 #: what this mode exists to check, and it prints their status in the
 #: header so a reader cannot mistake a decode for a verification.
 SPECS = {
-    "colonies": ("core.structs.unverified", "COLONY"),
+    "colonies": ("core.structs.colony", "SPEC"),
     "leaders": ("core.structs.unverified", "LEADER"),
     "planets": ("core.structs.planet", "SPEC"),
     "nebulas": ("core.structs.nebula", "SPEC"),

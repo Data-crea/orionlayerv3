@@ -934,6 +934,26 @@ references in `doc/v3_orion2re_index.md`.
   truncation toward zero — `int(a / b)` in Python, never `//`. Column
   edges on the summary screen: farmers 101-226, workers 236-368,
   scientists 378-502, row y = 31*i + 34 (`colsum.cpp:311`).
+- **The displayed maximum population is computed, and the size table
+  is only its base.** `MOX::_planet_max_population[] = {5, 10, 15,
+  20, 25}` (mox.cpp:796) is indexed by `PLANET_SIZE`, and reading it
+  alone is wrong. `COLCALC::Planet_Max_Population_For_Player_`
+  (colcalc.cpp:896) applies a climate factor from
+  `_size_climate_max_pop_lookup[] = {25, 25, 25, 25, 25, 25, 40, 60,
+  80, 100}` (colcalc.cpp:57), adds 25 for an environment-immune race,
+  caps at 100, then rounds `(factor * base + 50) / 100`; Subterranean
+  adds more and Advanced City Planning a flat +5, and on a colonised
+  planet the result is the best limit over the races present.
+  **Worked example, because the gap is small enough to look like a
+  rounding difference:** Ixion II is Small(1) Ocean(5), so the base
+  table says 10 — and the game prints 5, because Ocean is a 25 %
+  climate and the owner's +25 immunity brings the factor to 50 %.
+  Verified against the original's own planet description on 31 August
+  2026. **Consequence: an HD bar whose length is proportional to
+  maximum population reimplements that function, never the table.**
+  A bar built on the table alone is twice too long on exactly the
+  planets a player looks at most, and nothing about it looks wrong.
+
 - **The engine version lives in two literals, not one.**
   `src/version.h` has `ENGINE_VERSION[] = "1.60.0"`; `consts.h` has a
   separately written `GAME_VERSION_LABEL[] = "Version 1.60.0"`, and

@@ -50,8 +50,13 @@ SPEC = Spec("s_star_data", SIZE, [
     ("in_nebula",      232, "u8"),
 ], verified=True)
 
-#: planet_index[5] at offset 195, five int16 — parsed separately
-#: because the Spec format has no array kind.
+#: planet_index[5] at offset 195, five int16 — read through the
+#: helper below rather than as a Spec field. Spec has carried an
+#: array kind since s_colony needed pop[42], so this is no longer a
+#: limitation; the helper stays because callers want the slots as a
+#: list they can walk, and because HAROLD::Planet_Number_ (harold.cpp)
+#: reads them exactly that way: a planet's Roman numeral counts the
+#: OCCUPIED slots before it, not its orbit.
 PLANET_INDEX_OFFSET = 195
 PLANET_SLOTS = 5
 

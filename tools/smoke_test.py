@@ -1865,7 +1865,9 @@ def main():
     # anybody updating this test. s_colony is packed with no padding
     # (proved by compiling the header, doc/s_colony_offsets.md), so
     # for it the chain must close exactly on 361.
-    _colony = _unv.COLONY
+    from core.structs import colony as _col
+    _colony = _col.SPEC
+    assert _colony.verified, "s_colony was promoted; the flag must say so"
     assert _colony.size == 361 and len(_colony.fields) == 50, \
         (_colony.size, len(_colony.fields))
     _end = 0
@@ -1886,7 +1888,7 @@ def main():
     # checkable without live data is that the transcription is at
     # least self-consistent. Two masks sharing a bit would make one
     # field silently corrupt the other's reads.
-    _masks = {n: v for n, v in vars(_unv).items()
+    _masks = {n: v for n, v in vars(_col).items()
               if n.startswith("POP_MASK_")}
     assert len(_masks) == 5, sorted(_masks)
     _seen = 0
@@ -1896,12 +1898,48 @@ def main():
         _seen |= _m
     # The profession field must be wide enough for its own maximum,
     # and pop.h defines no fourth profession.
-    assert _unv.POP_PROF_MAX <= (_unv.POP_MASK_PROF >> 7), \
+    assert _col.POP_PROF_MAX <= (_col.POP_MASK_PROF >> 7), \
         "POP_MASK_PROF cannot hold POP_PROF_MAX"
-    assert _unv.pop_prof(_unv.POP_MASK_PROF) == 3, "prof shift is wrong"
-    assert _unv.pop_race(_unv.POP_RACE_NATIVE) == 9
-    ok("struct specs (nebula, planet, player; s_colony layout, "
-       "pop masks, quarantine contract)")
+    assert _col.pop_prof(_col.POP_MASK_PROF) == 3, "prof shift is wrong"
+    assert _col.pop_race(_col.POP_RACE_NATIVE) == 9
+    # ── The max-population base table never travels alone ──
+    # orion2re's _planet_max_population[] (mox.cpp:796) is the BASE
+    # of a computation, not the answer: the climate factor and the
+    # immunity bonus halve it on Ixion II (10 -> 5), and the colony
+    # list's bar length is meant to be proportional to the real
+    # maximum. Asserted as the rule rather than by reimplementing the
+    # formula and checking it against itself: any file that carries
+    # the size table must also carry the climate factors, so the base
+    # cannot be transcribed on its own and quietly used as a maximum.
+    # Not vacuous — planet.py carries both today and is what this
+    # check measures.
+    _base_re = re.compile(r"5\s*,\s*10\s*,\s*15\s*,\s*20\s*,\s*25")
+    _fac_re = re.compile(r"40\s*,\s*60\s*,\s*80\s*,\s*100")
+    _root_pm = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    _lonely, _seen_base = [], 0
+    for _dir, _subs, _files in os.walk(_root_pm):
+        if "__pycache__" in _dir or os.sep + ".git" in _dir:
+            continue
+        for _f in _files:
+            if not _f.endswith(".py"):
+                continue
+            _fp = os.path.join(_dir, _f)
+            with open(_fp, encoding="utf-8", errors="replace") as _fh:
+                _txt = _fh.read()
+            if not _base_re.search(_txt):
+                continue
+            _seen_base += 1
+            if not _fac_re.search(_txt):
+                _lonely.append(os.path.relpath(_fp, _root_pm))
+    assert not _lonely, (
+        "the planet max-population size table appears without the "
+        "climate factors in: " + ", ".join(_lonely) + " — that base "
+        "is not a maximum (colcalc.cpp:896)")
+    assert _seen_base, \
+        "nothing in the tree carries the max-population base table any more"
+
+    ok("struct specs (nebula, planet, player; s_colony promoted, "
+       "pop masks, quarantine contract, max-pop base table)")
 
     # ── Glyph substitution: mechanism, not one font's quirk ──
     # This existed because the bundled Bank Gothic was a DEMO build

@@ -395,45 +395,46 @@ numeral after it. With that fixed, all seven names matched. Two of
 the seven `max_farms` comparisons had been failing purely because
 they were compared against the wrong colony.
 
-### MASK_RACE is neither confirmed nor refuted
+### MASK_PROF confirmed twice; MASK_RACE untouched by this savegame
 
-The ground truth offered Sol II as the one colony showing two races.
-It decodes 19 colonists **all of race 0**, with `original_owner` 0
-throughout — and every other colony of the empire is single-race too.
-Nothing in this savegame carries a second race, an android or a
-native, so there is no data here that could confirm the mask either
-way.
+The ground truth first offered Sol II as "the one colony showing two
+races". The maintainer withdrew that on a second look: the two
+distinguishable symbols stand in the **FARMERS column**, and Sol II
+is the only row with anything in that column at all — the other six
+show workers only. The colour difference is the profession, not a
+race. Recorded here as what it was: a reading of a screen that
+carried an assumption inside it, corrected before it cost anything.
 
-The likeliest reading of the screen is that the two distinguishable
-symbols in Sol II are a *profession* difference, not a racial one:
-Sol II decodes 2 farmers, 13 workers and 4 scientists and is the only
-one of the seven with more than one profession — every other colony
-is workers only. That would make the visible contrast farmer sprite
-against worker sprite, which is also exactly what makes `MASK_PROF`
-land 3/3 above. It is an interpretation of a screenshot this file's
-author cannot see, so it is written down as one.
+So `MASK_PROF` has two independent confirmations rather than one —
+the decode (Sol II 2 farmers, Ixion II and Sol I none) and the column
+the symbols sit in.
 
-## Still owed before COLONY is promoted
+`MASK_RACE` is untouched. Sol II decodes 19 colonists all of race 0
+with `original_owner` 0 throughout, and every colony of the empire is
+single-race. There is no android, no native and no conquered
+population anywhere in this savegame, so nothing here could confirm
+the mask or refute it. The check had no ground to stand on, which is
+different from failing.
 
-`COLONY` stays in `core/structs/unverified.py` with
-`verified=False`. There is no `core/structs/colony.py`, and nothing
-in `screens/` reads a field. Four fields of the struct now have two
-independent sources and the fifth claim does not, and the rule that
-one deviation blocks the promotion is worth more than the four days
-it might save.
+## Promoted — with the masks kept separate
 
-What would close it, in order of cost:
+`COLONY` moved to `core/structs/colony.py` with `verified=True` on
+31 August 2026. The evidence is in that module's docstring: which
+colony confirmed which field, in which savegame.
 
-1. **A colony with a second race present** — a conquered world, an
-   android, a native population. One such record confirms `MASK_RACE`
-   the way the farmer columns confirmed `MASK_PROF`. Failing that, a
-   statement that the two distinguishable symbols in Sol II are the
-   farmers rather than a second race turns the interpretation above
-   into ground truth and closes it immediately.
-2. The second data point that is still missing anyway: the same
-   colony after one turn, with the population read again. `n_pops`
-   already agrees twice in one state; agreeing across a change is
-   what rules out a coincidence that happens to hold at 39.
+**The byte layout and the bit layout were promoted on different
+evidence, and the module says so.** The four struct fields have two
+independent sources. Of the five masks inside a `pop[]` word, only
+`MASK_PROF` does; the rest remain a transcription of `pop.h`, which
+is exactly the distinction decision 23 gained.
+
+What `MASK_RACE` still needs is not another turn — the race mix does
+not change across one — but **a different savegame**: a colony
+holding androids, natives or a conquered population. One such record
+settles it the way the farmer column settled `MASK_PROF`.
+
+A second data point across a turn remains worth having for `n_pops`,
+which currently agrees twice within one state.
 
 Superseded by the section above: four fields now have their second
 source. The list below still stands, because one claim does not.

@@ -14,7 +14,18 @@ copy said 48 while the table said 49.
 "Repository layout" below for what is committed, what is generated,
 and the one asset set that looks generated and is not.
 
-This session (31 August), last, in one line each: `s_colony` (361 B)
+This session (31 August), last of all, in one line each: `s_colony`
+is **verified** and promoted to `core/structs/colony.py` — `owner`,
+`planet`, `n_pops` and `max_farms` all agree with the original's
+colony summary from an 85-turn savegame, `n_pops` twice over
+(39 against the empire sidebar, 3 against a planet description); the
+`pop[]` masks came along as a separate, partly open claim, with only
+`MASK_PROF` confirmed; `Spec` grew an array kind and
+`tools/struct_probe.py` a `--spec` decode mode; and the displayed
+maximum population turned out to be a computation rather than the
+size table, which the colony list's bar design depends on.
+
+This session (31 August), earlier, in one line each: `s_colony` (361 B)
 was transcribed from `orion2.h:487-537` and its size confirmed by
 compiling orion2re's own headers — 50 members, contiguous, matching
 `ORION2RE_STATIC_SIZE_ASSERT(s_colony, 0x169)`, written up in
@@ -203,7 +214,8 @@ to stay uncomfortable to extend.
 │   │                                  stars/, nebula/, icons/,
 │   │                                  ships/<kind>/0..3.png
 │   ├── colony_summary/                ID 20, frame + sidebar; list
-│   │   ├── screen.py             258  pending s_colony verification
+│   │   ├── screen.py             258  list pending; s_colony now
+│   │   │                              verified, so the data is there
 │   │   ├── layout.json                frame, sort/return native
 │   │   │                              click points, empire rows
 │   │   ├── boxes.json                 14 cutouts, all derived
@@ -598,8 +610,23 @@ point inside the original's own button (`colsum.cpp:265-273`), so no
 field id is needed and the hotkeys n p f i s r b keep working
 natively — decision 39.
 
-Not live: the list itself. It waits on `s_colony` (361 B,
-unverified). The three panels under the list are filled and empty.
+**The list is no longer blocked.** `s_colony` is verified as of
+31 August (`core/structs/colony.py`): `owner`, `planet`, `n_pops` and
+`max_farms` each agree with the original's own colony summary, and
+`MASK_PROF` with its FARMERS column. What is still missing is the
+work, not the data. The three panels under the list are filled and
+empty.
+
+One number the bar design depends on is **not** a struct field:
+maximum population is computed by
+`COLCALC::Planet_Max_Population_For_Player_` over climate, racial
+immunity and Advanced City Planning, and
+`MOX::_planet_max_population[size]` is only its base — 10 where the
+game shows 5 on a Small Ocean planet. A bar proportional to the
+table alone is twice too long on exactly the planets a player looks
+at most. See section 3 of the fundament, and the smoke rule that
+refuses the base table anywhere it appears without the climate
+factors.
 
 **Design for the list, agreed 31 August, not built.** Instead of the
 original's three icon columns per colony, one allocation bar per row:
@@ -889,9 +916,13 @@ without test coverage.
   Empire Identity emblem for custom races.
 
 ### Struct verification
-- `s_colony` field by field (population, owner, build queue) for the
-  Colony screen.
-- `s_leader_data` for the Officers screen.
+- `s_leader_data` for the Officers screen. `tools/struct_probe.py
+  --spec` now decodes any record against its spec, so the 64-byte
+  ceiling on the int16 column view no longer stands in the way.
+- The `pop[]` bit masks in `core/structs/colony.py` beyond
+  `MASK_PROF`. What settles `MASK_RACE` is a savegame holding
+  androids, natives or a conquered population — not another turn,
+  since the race mix does not change across one.
 
 ### Not built
 Colony, Research, Fleet, Ship Design, Officers, Diplomacy, the
