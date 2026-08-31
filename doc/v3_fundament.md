@@ -794,6 +794,24 @@ pixel off the integer cursor position, and that fraction legitimately
 magnifies with the zoom. Assert the invariant, not the thing that
 merely looks like it.
 
+**A later draw can erase an earlier one, and every number stays
+right.** The colony list's "No Farming" label was drawn at the left
+edge of the allocation bar and the worker squares were then painted
+over it. All seven rows matched the original in name, order, flag,
+population and job split — the comparison table was green in every
+cell — and the label was nowhere on screen. No test that checks
+values can see this, and neither can the pixel check that shipped
+with it: that one measures whether the bar stays inside its area,
+which it did. The class is the same one the help popup taught (see
+"A trick that works on one screen is not a rule"), reached by a
+different route: there the drawing reproduced what was already
+underneath, here it was covered by what came after.
+
+The consequence is the one that entry already names, stated as a
+rule rather than as a story: **render every new renderer to PNG and
+look at it before a green table counts as evidence.** A table says
+the data is right. Only the picture says it is visible.
+
 **Assert the rule, not the instance.** The New Game panel-skin check
 does not list which panels carry which skin; it asserts that every
 `inner_panel` box sits inside a `thin_border` box. A renamed or newly

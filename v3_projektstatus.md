@@ -953,13 +953,36 @@ without test coverage.
   Empire Identity emblem for custom races.
 
 ### Struct verification
+
+**Two of these are what still separates the colony list from full
+accuracy.** Both are named in `colonylist.py`'s docstring as
+deviations; they belong here as well, because a limitation that
+lives only in the module that works around it is a limitation nobody
+finds.
+
+- **`pop_race` has no second source.** Every colonist in the one
+  savegame checked is race 0, so nothing there could confirm
+  `MASK_RACE` or refute it. Until it is settled: the list draws no
+  race shading and no locked androids or natives, and the bar takes
+  the population limit for the colony owner's race instead of the
+  best over the races present — `Planet_Max_Population_For_Player_`
+  walks those races through the mask. What settles it is a savegame
+  holding androids, natives or a conquered population, not another
+  turn, since the race mix does not change across one.
+- **`tech_applications` has no verified offset** in
+  `core/structs/player.py`, which does not expose the field at all.
+  Advanced City Planning therefore does not add its flat +5 to a bar,
+  so every bar on a colony of a player who has researched it is five
+  squares short. Confirming that offset is the whole fix; inventing
+  one to make a bar longer is the trade decision 23 forbids.
+
+  Both deviations shorten a bar rather than lengthen it, which shows
+  as a bar that cannot hold its own squares — visible, and asserted
+  by a smoke rule — rather than as a quietly wrong length.
+
 - `s_leader_data` for the Officers screen. `tools/struct_probe.py
   --spec` now decodes any record against its spec, so the 64-byte
   ceiling on the int16 column view no longer stands in the way.
-- The `pop[]` bit masks in `core/structs/colony.py` beyond
-  `MASK_PROF`. What settles `MASK_RACE` is a savegame holding
-  androids, natives or a conquered population — not another turn,
-  since the race mix does not change across one.
 
 ### Not built
 Colony, Research, Fleet, Ship Design, Officers, Diplomacy, the
