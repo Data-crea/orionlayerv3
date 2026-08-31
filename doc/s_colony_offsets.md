@@ -356,18 +356,87 @@ are marked as ranges confirmed and directions **not** confirmed: an
 observed range matching a declared range rules out a wrong offset and
 cannot tell Toxic from Gaia.
 
-## second source still missing: live probe against a known colony
+## Second source: four fields confirmed, one claim still open
 
-The live pass above does **not** close this. It confirms that the
-bits sit where the header and `pop.h` say, and it settled the
-profession mapping and `max_farms` out of the C++ — but not one
-value was compared against a number a human read off the game's own
-screen, which is what "independent" means here. Both samples were
-also the wrong kind of state: one before the first turn, one a
-different galaxy whose colonies nobody had described. What is still
-owed is numeric agreement with a known colony in a real savegame —
-owner, population, the farmer/worker/scientist split, the race mix —
-and the same record again after one turn. Until that exists:
+Ground truth: a screenshot of the original colony summary, savegame
+at 85 turns, stardate 3508.5 — the same state the Phase B pass ran
+against. Seven colonies of the local player, named on screen; the
+population symbols were deliberately *not* counted, so nothing below
+leans on them.
+
+| Check | Result |
+|---|---|
+| `owner` (0) | **7/7.** Exactly seven colonies carry player 0, and their names are the seven on screen |
+| `planet` (2) | **7/7**, implied by the above — the name comes from colony → planet → star |
+| `n_pops` (10) | **39 = 39** against the empire sidebar's Population, and **3 = 3** for Ixion II against "Population (3/5)" |
+| `max_farms` (224) | **7/7** against "No Farming": 0 for Kif II, Malus I, Sol III, Sol IV; 255 for Ixion II, Sol I, Sol II |
+| `MASK_PROF` | **3/3.** Sol II decodes 2 farmers and the screen shows two farmer symbols; Ixion II and Sol I decode 0 and both show an empty farmer column |
+| `MASK_RACE` | **not confirmed** — see below |
+
+`n_pops` is the strongest of these, because `sys.cpp:1444` prints the
+description as `colony->n_pops` over the computed maximum, so "(3/5)"
+is that member rendered directly, and 39 is an independent agreement
+with a different field in a different struct (`s_player`).
+
+`max_farms` behaves exactly as the Phase B reading of
+`Colony_Calculation_` predicted: 0 where the game refuses farming,
+255 where it does not. Seven for seven, with the split falling where
+the screen says and not where a coincidence would put it.
+
+### A correction to the naming, found by this check
+
+The first attempt mapped colony → planet → star and appended the
+Roman numeral of `planet.orbit`. That produced Kif II and Malus I
+correctly and was **off by one** for Ixion and Sol. The rule is not
+the orbit: `HAROLD::Planet_Number_` (harold.cpp) walks
+`star->planet_index[5]` and counts only the **occupied** slots before
+the planet, so an empty slot earlier in the system shifts every
+numeral after it. With that fixed, all seven names matched. Two of
+the seven `max_farms` comparisons had been failing purely because
+they were compared against the wrong colony.
+
+### MASK_RACE is neither confirmed nor refuted
+
+The ground truth offered Sol II as the one colony showing two races.
+It decodes 19 colonists **all of race 0**, with `original_owner` 0
+throughout — and every other colony of the empire is single-race too.
+Nothing in this savegame carries a second race, an android or a
+native, so there is no data here that could confirm the mask either
+way.
+
+The likeliest reading of the screen is that the two distinguishable
+symbols in Sol II are a *profession* difference, not a racial one:
+Sol II decodes 2 farmers, 13 workers and 4 scientists and is the only
+one of the seven with more than one profession — every other colony
+is workers only. That would make the visible contrast farmer sprite
+against worker sprite, which is also exactly what makes `MASK_PROF`
+land 3/3 above. It is an interpretation of a screenshot this file's
+author cannot see, so it is written down as one.
+
+## Still owed before COLONY is promoted
+
+`COLONY` stays in `core/structs/unverified.py` with
+`verified=False`. There is no `core/structs/colony.py`, and nothing
+in `screens/` reads a field. Four fields of the struct now have two
+independent sources and the fifth claim does not, and the rule that
+one deviation blocks the promotion is worth more than the four days
+it might save.
+
+What would close it, in order of cost:
+
+1. **A colony with a second race present** — a conquered world, an
+   android, a native population. One such record confirms `MASK_RACE`
+   the way the farmer columns confirmed `MASK_PROF`. Failing that, a
+   statement that the two distinguishable symbols in Sol II are the
+   farmers rather than a second race turns the interpretation above
+   into ground truth and closes it immediately.
+2. The second data point that is still missing anyway: the same
+   colony after one turn, with the population read again. `n_pops`
+   already agrees twice in one state; agreeing across a change is
+   what rules out a coincidence that happens to hold at 39.
+
+Superseded by the section above: four fields now have their second
+source. The list below still stands, because one claim does not.
 
 - `COLONY` in `core/structs/unverified.py` stays empty.
 - No `core/structs/colony.py`.
