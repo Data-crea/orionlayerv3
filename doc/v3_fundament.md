@@ -141,7 +141,16 @@ homes:
   so a `help_id` on a box would be silently dropped the first time
   the F5 editor saved that screen. Order is load-bearing — the walk
   stops at the first hit, so a screen-wide fallback belongs last,
-  where the original keeps its own.
+  where the original keeps its own. A region's rectangle is the union
+  of the boxes it names, so it follows an F5 nudge instead of
+  drifting from it — which also means the hit area may legitimately
+  be *larger* than what is drawn, because MOO2's rectangles cover a
+  whole row band while an HD box is sized to its content, and the
+  difference is a dead strip that no screenshot can show. That
+  difference is a declared `pad_y` on the region, never a second
+  rectangle in `help.json` and never a taller box: the box is what
+  appears on screen, and a second copy of the geometry goes stale the
+  first time somebody moves one.
 - **The text** is not in the orion2re source at all. It lives in the
   user's own `HELP.LBX` and is extracted by `tools/help_extract.py`.
   Generated files derived from somebody's game installation are
@@ -481,6 +490,24 @@ and a third document pointed at a patch file that did not exist. A
 list of requests to somebody else must have exactly one home —
 `doc/orion2re_open_fixes.md` — and everything else must be a pointer,
 never a copy. A copy is a second thing to forget to update.
+
+**A marking that two documents claim exists is not a marking.**
+`core/helppopup.py` and this file both stated that the auto-sizing
+help panel was marked as an HD EXTENSION in `screens/*/help.json`. It
+was marked in none of the three, for as long as both documents said
+so. This is not the name-table failure above wearing a new costume:
+there the copies existed and drifted, here no copy was ever written,
+and nothing noticed because a marking *does* nothing — no code reads
+it, no screen shows it, and the two sentences asserting it were the
+only evidence anybody ever consulted. A labelling rule without a
+check is an intention, and it decays exactly the way the hand-copied
+engine version in decision 36 would have without
+`tools/version_check.py`: correct on the day it is written, and
+unfalsifiable every day after. The check has the same shape as that
+one, too — walk the tree rather than a list of screens, refuse a file
+that carries no marking, and refuse a marking that does not name what
+the original does instead, so the note records a reason rather than
+carrying a label.
 
 **A claim in a bug report needs a source like any other number.**
 "SendFrame drops the client, and that is the cause of every reconnect

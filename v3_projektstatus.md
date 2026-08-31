@@ -6,12 +6,22 @@ Updated: 31 August 2026 (evening)
 version opened with a warning that the context-help work was
 described here but missing from the tree — a package lost to the
 mis-copy. Both streams have now been merged into one tree and
-measured there: 48 smoke checks, 92 Python modules, 170 MB of
-assets. The numbers below are the tree's, not the documentation's.
+measured there. The counts live in the Snapshot table below and
+nowhere else in this file: they were restated here as well, and the
+copy said 48 while the table said 49.
 
 **The project is now a git repository, not a chain of ZIPs.** See
 "Repository layout" below for what is committed, what is generated,
 and the one asset set that looks generated and is not.
+
+This session (31 August), latest, in one line each: the galaxy map's
+sidebar help regions were pulled onto the full row band — they had
+covered 87 % of the column against the original's 97 %, leaving five
+dead strips where a right click opened nothing; and two deviations
+from the original are now marked where they are read, one of which
+`helppopup.py` and the fundament had both claimed for weeks was
+already marked in `screens/*/help.json` when it was marked in none
+of the three.
 
 This session (31 August), later, in one line each: the colony summary
 package and the context-help work were merged (they were built in
@@ -49,7 +59,7 @@ files under `doc/` and are only summarised here.
 
 | | |
 |---|---|
-| Python | 20,535 lines across 92 modules (core, screens, tools) |
+| Python | 20,859 lines across 92 modules (core, screens, tools) |
 | Smoke test | `python tools/smoke_test.py` — **50 checks**, headless |
 | Assets | 170 MB (select_race 68, galaxy_map 51, shared 23, new_game 21, colony_summary 1) |
 | Screens in HD | 7 of ~20–22 (colony summary is frame + sidebar only) |
@@ -109,8 +119,9 @@ to stay uncomfortable to extend.
 │   │                                  anchor, style, panel skins)
 │   ├── screen_base.py            390  Base class, frame buttons,
 │   │                                  key handling
-│   ├── screenhelp.py             240  Right-click help mixin:
-│   │                                  regions, modal guards, render
+│   ├── screenhelp.py             265  Right-click help mixin:
+│   │                                  regions, region padding,
+│   │                                  modal guards, render
 │   ├── helppopup.py              346  The help panel (auto-size,
 │   │                                  columns, scroll, backdrop)
 │   ├── helptext.py               180  Extracted HELP.LBX strings,
@@ -341,6 +352,30 @@ because two same-day sessions each took the next free number, and
 was renumbered since the version-line decision had been cited first.
 The walk stops at the first hit, so screen-wide fallbacks sit last,
 and the smoke test enforces that ordering.
+
+**The regions are derived from the boxes, and may be larger than
+them.** A region names its boxes and the rect is their union, so it
+follows an F5 nudge instead of drifting from it. That left the galaxy
+map's sidebar covering 87 % of its column where the original covers
+97 %: the `sb_*` boxes are sized to their content, 93 reference
+pixels inside a row pitch of 109/110, so 16–17 pixels between every
+pair of readouts answered a right click with nothing. A `pad_y` on
+the region closes it — 7 reference pixels, the largest value that
+keeps the band inside the `sidebar` cutout — without touching what is
+drawn. The pad applies to every region kind rather than to the `box`
+branch alone, so it cannot become a silent no-op, and it scales with
+the window, because an unscaled pad is correct only at the resolution
+it was tuned on.
+
+**Two deviations are marked where they are read**, under an
+`hd_extension` key in `help.json`: the stardate region fills its HD
+row where the original's fills 17 of a 21-pixel one, and the
+auto-sizing panel. The second is the one worth remembering —
+`helppopup.py` and the fundament both stated it was marked in
+`screens/*/help.json`, and it was marked in none of the three for as
+long as both said so. A smoke check now walks the tree, not a list of
+screens, and refuses a `help.json` that carries no marking or a
+marking that does not name the 339 px wrap it deviates from.
 
 The machinery: `core/screenhelp.py` (mixin on ScreenBase — every
 screen has the behaviour, a `help.json` opts in),
@@ -758,6 +793,13 @@ Everything else on the map:
   8/9 no longer drive the view and there is no rocker cutout in
   `frame.png`; recorded in `help.json` under `_omitted` rather than
   left silently absent.
+- **The sidebar help regions are padded vertically, not
+  horizontally.** The box union spans 1556–1791 inside a `sidebar`
+  cutout of 1546–1801, so about 10 reference pixels down each side of
+  the column still answer a right click with nothing. The same
+  `pad_y` mechanism would take a `pad_x`; the vertical strips were
+  the ones worth 12.8 % of the column, these are worth 8 % of its
+  width and were left rather than fixed unmeasured.
 - **The runtime-appended Galaxy Map regions are not transcribed.**
   `Set_Main_Screen_Help_List_` appends more for the multiplayer bar
   and the fleet popup; neither exists in HD yet.

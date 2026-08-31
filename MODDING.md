@@ -87,6 +87,25 @@ matters**: the list is walked top to bottom and the first hit wins,
 so a `"screen": true` fallback has to be last or it swallows
 everything below it.
 
+A region may add `"pad_y": <n>` to grow its hit area by n reference
+pixels above and below, without moving anything that is drawn. It is
+there because MOO2's rectangles cover a whole row band while an HD
+box is usually sized to its content, which leaves a strip between
+two controls where a right click finds nothing — invisible, because
+help regions are not drawn. Resize the region, never the box: the
+box is what appears on screen.
+
+**Every `help.json` needs a top-level `hd_extension` string, and the
+smoke test refuses one without it.** The help panel grows to fit its
+text and scrolls when it cannot, where the original draws a fixed box
+and wraps into it at a fixed 339 px — a deliberate deviation, and the
+project's rule is that a deviation is marked where it is read, not
+only in the module that implements it. The string has to name the
+339 px wrap, so that the note records the reason rather than merely
+carrying the label. Copy the one from any shipped `help.json`. The
+same key on a single region marks a deviation belonging to that
+region alone; `screens/galaxy_map/help.json` has an example.
+
 `assets/shared/help/help_<lang>.json` is the text, stored **raw**:
 MOO2's bodies carry `FMTPARA` control codes and the column positions
 inside them are the table layout, so the file keeps the bytes and

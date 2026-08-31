@@ -518,13 +518,26 @@ die Listen selbst liegen in drei Dateien.
 | Custom Race | `MOX::_help_entry_list` | zur Laufzeit | raceopt.cpp:796 |
 | Namens-/Bannerdialog | `_input_box_help_list` | 1 (675) | evanhelp.cpp:136 |
 
-Zwei Dinge, die man an der Galaxy-Map-Liste sehen muss. Erstens ist
+Drei Dinge, die man an der Galaxy-Map-Liste sehen muss. Erstens ist
 die **Kartenfläche nicht darin** — ein Rechtsklick auf die Sterne
 bedeutet dem Original nichts, weshalb OrionLayer dort frei mit der
 rechten Taste schwenken kann. Zweitens hängt
 `Set_Main_Screen_Help_List_` (evanhelp.cpp:229) je nach `_game_type`
 und geöffneter Flottenbox weitere Einträge an; die 15 statischen sind
 das, was immer gilt.
+
+Drittens — und das ist eine Zahl, keine Beobachtung: die fünf
+Sidebar-Anzeigen **kacheln ihre Spalte**. Zwischen zwei
+aufeinanderfolgenden Rechtecken liegen exakt 2 native Pixel
+(119→121, 193→195, 268→270, 342→344), viermal hintereinander, bei
+einem Zeilenabstand von 74–76. Ein Rechtsklick trifft also praktisch
+überall in der Spalte einen Eintrag. Wer die Liste nachbaut und die
+Rechtecke stattdessen um den *Inhalt* legt, bekommt tote Streifen
+zwischen den Anzeigen, die auf keinem Screenshot zu sehen sind.
+
+Die einzige Ausnahme in der Tabelle ist die Stardate (284): 24–41,
+also 17 Pixel in einer Zeile von 21, mit 4 Pixeln Abstand zur
+Treasury. Sie ist der einzige Eintrag, der seine Zeile nicht füllt.
 
 Mehrere Listen enden mit einem bildschirmfüllenden Eintrag
 (`{545, 0, 0, 639, 479}` bei New Game). Das funktioniert nur, weil
