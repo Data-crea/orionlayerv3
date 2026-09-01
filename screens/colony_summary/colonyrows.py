@@ -34,8 +34,9 @@ TRANSCRIBED, and each with its source:
                      anything on screen.
 
 NOT READ, deliberately: race groups as shades, and androids and
-natives as locked. Those need `pop_race`, whose mask has no second
-source (see `core/structs/colony.py`). Nothing here reads it, so
+natives as locked. Those need the pop word's low nibble, whose mask
+has no second source (see `core/structs/colony.py`). Nothing here
+reads it, so
 nothing on screen depends on an unverified claim; the zone split is
 built as a list of runs so the shading can be added inside a run
 later without moving anything else.
@@ -121,7 +122,7 @@ def max_population(colony, planet, traits):
     2. The original returns the best limit over the RACES PRESENT in
        the colony; this returns the limit for the owner's race. The
        two agree for a single-race colony and the walk needs
-       `pop_race`, whose mask has no second source yet.
+       the pop nibble, whose mask has no second source yet.
 
     Both make the bar too SHORT rather than too long, which shows as
     a bar that cannot hold its own squares — visible, not silent.
@@ -161,7 +162,7 @@ def build_rows(game_state, sort_key="name"):
 
     Only `owner`, `planet`, `n_pops`, `max_farms`, `climate` and
     `buildings` are read, plus `pop_prof` — every one of them backed
-    by two sources. `pop_race` is not touched.
+    by two sources. The pop word's low nibble is not touched.
 
     The dict keys ARE the interface to `colonylist.render()`: name,
     pops, jobs, no_farming, max_pop. Nothing else crosses.

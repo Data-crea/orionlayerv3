@@ -21,6 +21,12 @@ savegame so the arrays are populated):
 
     python tools/struct_probe.py colonies --spec --records 2
     python tools/struct_probe.py colonies --spec --full --records 1
+    python tools/struct_probe.py colonies --pop-nibble
+
+--pop-nibble runs one named prediction against every colony at once
+instead of dumping records for a human to compare; see
+`pop_nibble_report` for what it tests and why that particular
+prediction is answerable by a save with no androids in it.
 
 --spec decodes a record against the spec registered for that array
 and prints field name, offset, kind and value. It works for a record
@@ -152,6 +158,199 @@ def spec_decode_full(raw, spec, indent="    "):
 SPEC_ARRAY_PREVIEW = 8
 
 
+# ── The pop[] nibble ──────────────────────────────────────────────
+
+def pop_nibble_report(records, colony_spec):
+    """Counts for the low nibble of every pop[] word, live.
+
+    `pop.h:8` calls this nibble MASK_RACE and the name is wrong.
+    `COLONY::Get_Effective_Pop_Player_` (colony.cpp:1257) returns it
+    as a PLAYER index, mapping only 8 and 9 to the colony's owner,
+    and the race is a second lookup — `MOX::_player[idx].race` in
+    `Colony_Pop_Anim_` (colony.cpp:1275).
+
+    THE PREDICTION, which the reference save can answer despite
+    holding no androids, no natives and no conquered pops:
+
+        for every colony, for every pop i < n_pops:
+            (pop[i] & 0x0F) == colony.owner
+        and no value outside 0..9 anywhere.
+
+    It is falsifiable there because the snapshot carries the AI's
+    colonies too, and those have owners other than 0. Under the
+    "race" reading the nibble would be a race index and would NOT
+    track the owner across 21 colonies of several different owners —
+    unless every AI happens to play the race whose index equals its
+    own player number, which is what `distinct_owners` below is for.
+    A save where every colony has the same owner cannot decide this
+    at all, and the report says so rather than passing.
+
+    Returns counts, never a verdict alone. **A scattered distribution
+    is the tell.** If the mask is wrong — off by a bit, or the field
+    is somewhere else entirely — the nibble is effectively arbitrary
+    low bits of some other quantity, and what that looks like is a
+    spread across many values, not a clean failure. A pass/fail line
+    would throw away the one signal that distinguishes "wrong mask"
+    from "right mask, unexpected data".
+    """
+    from collections import Counter
+    from core.structs import colony as colony_struct
+
+    dist = Counter()          # nibble -> count, live pops only
+    tail = Counter()          # nibble -> count, slots past n_pops
+    per_owner = {}            # owner -> Counter of nibbles
+    mismatches = []           # (colony, pop, owner, nibble), 0..7 wrong
+    sentinels = []            # (colony, pop, owner, nibble), 8 or 9
+    out_of_range = []         # (colony, pop, nibble), 10..13
+    direct_race = []          # (colony, pop, nibble), >= 14
+    live = 0
+
+    for ci, raw in enumerate(records):
+        col = colony_spec.parse(raw)
+        owner = col.owner
+        n = min(col.n_pops, len(col.pop))
+        for pi, word in enumerate(col.pop):
+            nib = word & colony_struct.POP_MASK_PLAYER_INDEX
+            if pi >= n:
+                tail[nib] += 1
+                continue
+            live += 1
+            dist[nib] += 1
+            per_owner.setdefault(owner, Counter())[nib] += 1
+            # 8 and 9 are NOT prediction failures. They are the
+            # sentinel branch (colony.cpp:1261) and they resolve to
+            # this very owner, so they CONFIRM the player-index
+            # reading rather than contradicting it — counting them as
+            # mismatches would make the one save that can settle the
+            # sentinels report itself as a refutation.
+            if nib in (colony_struct.POP_ANDROID, colony_struct.POP_NATIVE):
+                sentinels.append((ci, pi, owner, nib))
+            elif nib <= colony_struct.POP_PLAYER_INDEX_MAX:
+                if nib != owner:
+                    mismatches.append((ci, pi, owner, nib))
+            # Two different things live above 9 and must not be
+            # reported as one. 14 and 15 have a branch in the source
+            # (colony.cpp:2129); 10 to 13 have none that was found, so
+            # they are genuinely unaccounted for and a stronger signal.
+            elif nib >= colony_struct.POP_DIRECT_RACE_MIN:
+                direct_race.append((ci, pi, nib))
+            else:
+                out_of_range.append((ci, pi, nib))
+
+    return {
+        "colonies": len(records), "live_pops": live,
+        "dist": dist, "tail": tail, "per_owner": per_owner,
+        "mismatches": mismatches, "out_of_range": out_of_range,
+        "direct_race": direct_race, "sentinels": sentinels,
+        "distinct_owners": sorted(per_owner),
+    }
+
+
+def _n(count, noun):
+    """'1 pop' / '3 pops'. The output is read by a person."""
+    return f"{count} {noun}{'' if count == 1 else 's'}"
+
+
+def print_pop_nibble_report(rep, indent="  "):
+    """The counts first, the verdict last, the caveats after that."""
+    from core.structs import colony as cs
+
+    print(f"{indent}{rep['colonies']} colonies, {rep['live_pops']} live "
+          f"pops (slots past n_pops counted separately)")
+    print(f"\n{indent}nibble distribution over live pops:")
+    for value, count in sorted(rep["dist"].items()):
+        note = {cs.POP_ANDROID: "  (android sentinel)",
+                cs.POP_NATIVE: "  (native sentinel)"}.get(value, "")
+        if value >= cs.POP_DIRECT_RACE_MIN:
+            note = "  (>= 14: matched as a race directly, colony.cpp:2129)"
+        print(f"{indent}  {value:2d}: {count:5d}{note}")
+    if rep["tail"]:
+        # "0x146" for value 0 count 146 read as a hex number; the
+        # separator has to survive being glanced at.
+        print(f"{indent}unused slots past n_pops: "
+              + ", ".join(f"{v} ({c})" for v, c in sorted(rep["tail"].items())))
+
+    print(f"\n{indent}nibble by colony owner — the load-bearing table:")
+    for owner in rep["distinct_owners"]:
+        counts = rep["per_owner"][owner]
+        shown = ", ".join(f"{v}:{c}" for v, c in sorted(counts.items()))
+        # Only a player index that is not this owner is wrong. 8 and 9
+        # belong here and flagging them made a save WITH androids —
+        # the one that can settle the sentinels — look like the
+        # refutation.
+        stray = [v for v in counts
+                 if v <= cs.POP_PLAYER_INDEX_MAX and v != owner]
+        flag = f"   <-- {stray} is not this owner" if stray else ""
+        print(f"{indent}  owner {owner}: {shown}{flag}")
+
+    print()
+    if len(rep["distinct_owners"]) < 2:
+        print(f"{indent}INCONCLUSIVE: every colony has the same owner "
+              f"({rep['distinct_owners']}), so 'nibble == owner' and "
+              f"'nibble == 0' are the same\n{indent}statement here. "
+              f"Load a save with AI colonies in the snapshot.")
+    elif rep["mismatches"]:
+        print(f"{indent}PREDICTION FAILED: {len(rep['mismatches'])} of "
+              f"{rep['live_pops']} pops carry a player index in 0..7 "
+              f"that is not their\n{indent}colony's owner.")
+        for ci, pi, owner, nib in rep["mismatches"][:12]:
+            print(f"{indent}  colony {ci} pop {pi}: owner {owner}, "
+                  f"nibble {nib}")
+        if len(rep["mismatches"]) > 12:
+            print(f"{indent}  ... {len(rep['mismatches']) - 12} more")
+        print(f"{indent}Read the distribution above before concluding the "
+              f"mask is wrong: a few values\n{indent}clustered near the "
+              f"owners is a different fault from a spread across many.")
+    else:
+        print(f"{indent}PREDICTION HELD across "
+              f"{len(rep['distinct_owners'])} distinct owners "
+              f"{rep['distinct_owners']}: every live pop in 0..7 carries "
+              f"its\n{indent}own colony's owner.")
+    if rep["sentinels"]:
+        print(f"{indent}Nibble 8 or 9: {_n(len(rep['sentinels']), 'pop')}"
+              f". NOT a failure — the android and native sentinels,\n"
+              f"{indent}which colony.cpp:1261 resolves to the colony's "
+              f"owner. This save can therefore\n{indent}say something "
+              f"about the sentinel branch; the reference one cannot.")
+
+    if rep["direct_race"]:
+        print(f"{indent}Nibble >= 14: "
+              f"{_n(len(rep['direct_race']), 'pop')}. Outside this "
+              f"prediction, but NOT corruption —\n{indent}colony.cpp:2129 "
+              f"matches those against a race index directly, on a branch "
+              f"that\n{indent}skips the player lookup entirely.")
+    if rep["out_of_range"]:
+        print(f"{indent}Nibble 10 to 13: "
+              f"{_n(len(rep['out_of_range']), 'pop')}. No branch in the "
+              f"source was found that reads\n{indent}those, so unlike "
+              f">= 14 they are unaccounted for — the strongest single "
+              f"sign\n{indent}that the mask is wrong.")
+
+    # Say what THIS data leaves open, not a fixed paragraph: a
+    # caveat that is printed whatever the numbers say is a caveat
+    # nobody reads, and here it would have been false on the one save
+    # that carries androids.
+    missing = []
+    if not rep["sentinels"]:
+        missing.append("8 and 9 (android, native), so the sentinel "
+                       "branch at colony.cpp:1261")
+    if not rep["direct_race"]:
+        missing.append(">= 14, so the direct-race branch at "
+                       "colony.cpp:2129")
+    print()
+    if missing:
+        print(f"{indent}STILL OPEN — absent from this save:")
+        for item in missing:
+            print(f"{indent}  - {item}")
+        print(f"{indent}Those need a save holding androids, natives or a "
+              f"conquered population.\n{indent}Another turn of this one "
+              f"will not produce them.")
+    else:
+        print(f"{indent}This save exercises every branch of the nibble: "
+              f"player indices, both\n{indent}sentinels, and at least "
+              f"one value >= 14.")
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("array", choices=sorted(ARRAYS))
@@ -164,7 +363,17 @@ def main():
                          "core.structs spec instead of dumping hex")
     ap.add_argument("--full", action="store_true",
                     help="with --spec, print every array element")
+    ap.add_argument("--pop-nibble", action="store_true",
+                    help="colonies only: test the pop[] low nibble "
+                         "against every colony's owner")
     args = ap.parse_args()
+
+    if args.pop_nibble and args.array != "colonies":
+        # Checked before the socket: an argument error should not need
+        # a running game to be told about.
+        print("--pop-nibble is a colonies check; the nibble lives in "
+              "s_colony.pop[]")
+        return 1
 
     spec = load_spec(args.array) if args.spec else None
     if args.spec and spec is None:
@@ -208,6 +417,13 @@ def main():
         print(f"{attr} is empty — start or load a game with content "
               f"first (the main menu has no map data)")
         return 1
+
+    if args.pop_nibble:
+        colony_spec = load_spec("colonies")
+        print("── pop[] low nibble: player index, not race "
+              + "─" * 20)
+        print_pop_nibble_report(pop_nibble_report(records, colony_spec))
+        return 0
 
     if spec is not None:
         status = ("VERIFIED" if spec.verified

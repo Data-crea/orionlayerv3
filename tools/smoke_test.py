@@ -1901,7 +1901,22 @@ def main():
     assert _col.POP_PROF_MAX <= (_col.POP_MASK_PROF >> 7), \
         "POP_MASK_PROF cannot hold POP_PROF_MAX"
     assert _col.pop_prof(_col.POP_MASK_PROF) == 3, "prof shift is wrong"
-    assert _col.pop_race(_col.POP_RACE_NATIVE) == 9
+    assert _col.pop_player_index(_col.POP_NATIVE) == 9
+    # The nibble is a PLAYER index, not a race: pop.h:8 names it
+    # MASK_RACE, but Get_Effective_Pop_Player_ (colony.cpp:1257)
+    # returns it as a player and maps only 8 and 9 to the colony
+    # owner, after which the race is a SECOND lookup
+    # (MOX::_player[idx].race, colony.cpp:1275). The wrong name
+    # must not come back into the spec — asserted here because a
+    # rename that reads plausibly is exactly what a later session
+    # would undo.
+    assert not hasattr(_col, "pop_race"), \
+        "pop_race is back — the nibble is a player index"
+    assert not hasattr(_col, "POP_MASK_RACE"), \
+        "POP_MASK_RACE is back — see colony.cpp:1257"
+    assert _col.pop_effective_player(_col.POP_ANDROID, 5) == 5
+    assert _col.pop_effective_player(_col.POP_NATIVE, 5) == 5
+    assert _col.pop_effective_player(3, 5) == 3
     # ── The max-population base table never travels alone ──
     # orion2re's _planet_max_population[] (mox.cpp:796) is the BASE
     # of a computation, not the answer: the climate factor and the
@@ -1940,6 +1955,76 @@ def main():
 
     ok("struct specs (nebula, planet, player; s_colony promoted, "
        "pop masks, quarantine contract, max-pop base table)")
+
+    # ── struct_probe's pop-nibble report ──
+    # The only check in this file for a tool that CANNOT run here: it
+    # needs a live orion2re. So its classification is exercised on
+    # synthetic records instead, which is the whole of what could
+    # silently rot — three separate misclassifications were found by
+    # hand while it was being written, and each one read plausibly.
+    #
+    # Behaviour, not wording. The strings are for a person; what must
+    # not drift is which pops land in which bucket.
+    import importlib.util as _spu
+    _sp_spec = _spu.spec_from_file_location(
+        "_probe_struct_probe",
+        os.path.join(os.path.dirname(SCREENS_DIR), "tools",
+                     "struct_probe.py"))
+    _sp = _spu.module_from_spec(_sp_spec)
+    _sp_spec.loader.exec_module(_sp)
+
+    def _mk_col(owner, nibbles):
+        b = bytearray(_col.SIZE)
+        b[0] = owner & 0xFF
+        b[10] = len(nibbles)
+        for _i, _nib in enumerate(nibbles):
+            b[12 + 4 * _i:16 + 4 * _i] = _s.pack(
+                "<I", (_i % 3) << 7 | _nib | _col.POP_MASK_ASSIGNED)
+        return bytes(b)
+
+    # The reference save's shape: several owners, no androids. The
+    # prediction is answerable precisely because the owners differ.
+    _rep = _sp.pop_nibble_report(
+        [_mk_col(0, [0] * 6), _mk_col(3, [3] * 4), _mk_col(5, [5] * 9)],
+        _col.SPEC)
+    assert not _rep["mismatches"] and _rep["distinct_owners"] == [0, 3, 5], _rep
+    assert _rep["live_pops"] == 19 and not _rep["sentinels"], _rep
+    assert _rep["dist"][5] == 9 and _rep["tail"][0] == 3 * 42 - 19, _rep
+
+    # A wrong mask does not fail cleanly, it SCATTERS — that spread is
+    # the tell the report exists to show, so a run that produced one
+    # value per colony would be a different fault entirely.
+    _scatter = _sp.pop_nibble_report(
+        [_mk_col(0, [1, 4, 10, 2]), _mk_col(3, [11, 6, 2])], _col.SPEC)
+    assert len(_scatter["mismatches"]) == 5, _scatter["mismatches"]
+    assert len(_scatter["dist"]) >= 6, _scatter["dist"]
+
+    # Androids and natives are NOT prediction failures. They resolve
+    # to the colony's owner (colony.cpp:1261), so they CONFIRM the
+    # player-index reading — counting them as mismatches made the one
+    # save that can settle the sentinels report itself as a
+    # refutation, which is how this check earned its place.
+    _andro = _sp.pop_nibble_report(
+        [_mk_col(0, [0, _col.POP_ANDROID, _col.POP_NATIVE]),
+         _mk_col(2, [2, 2])], _col.SPEC)
+    assert not _andro["mismatches"], _andro["mismatches"]
+    assert len(_andro["sentinels"]) == 2, _andro["sentinels"]
+
+    # 10..13 and >= 14 are different findings: the second has a branch
+    # in the source (colony.cpp:2129), the first has none that was
+    # found, so only the first is evidence against the mask.
+    _above = _sp.pop_nibble_report(
+        [_mk_col(0, [0, 11, 14, 15])], _col.SPEC)
+    assert [n for _c, _p, n in _above["out_of_range"]] == [11], _above
+    assert sorted(n for _c, _p, n in _above["direct_race"]) == [14, 15], _above
+    assert not _above["mismatches"], _above["mismatches"]
+
+    # A save whose colonies share one owner cannot decide anything:
+    # "nibble == owner" and "nibble == 0" are then the same sentence.
+    _one = _sp.pop_nibble_report([_mk_col(0, [0] * 4)], _col.SPEC)
+    assert _one["distinct_owners"] == [0] and not _one["mismatches"], _one
+    ok("struct_probe pop-nibble report (owner match, scatter, sentinels, "
+       "10-13 vs >=14)")
 
     # ── The colony list ──
     # Built against a synthetic snapshot, so the check runs headless
@@ -2059,7 +2144,25 @@ def main():
         "colonylist.py no longer marks the bar as an INVENTION"
     assert "INVENTION" in _cfg.get("_invention", ""), \
         "layout.json list._invention no longer carries the marking"
-    ok("colony list (rows, No Farming, bar inside its area, INVENTION marked)")
+    # The preview tool's fake rows must stay the shape build_rows
+    # actually produces. Nothing else would notice: a row dict that
+    # has drifted still renders, so the preview would go on looking
+    # right while showing something the game cannot produce — and a
+    # preview is trusted precisely because it looks like the screen.
+    # Keys, not values: the values are invented on purpose.
+    import importlib.util as _plu
+    _pv_spec = _plu.spec_from_file_location(
+        "_probe_colony_preview",
+        os.path.join(os.path.dirname(SCREENS_DIR), "tools",
+                     "colony_list_preview.py"))
+    _pv = _plu.module_from_spec(_pv_spec)
+    _pv_spec.loader.exec_module(_pv)
+    for _fake in _pv.ROWS:
+        assert set(_fake) == set(_rows[0]), (
+            f"colony_list_preview row {_fake.get('name')!r} has keys "
+            f"{sorted(_fake)} against build_rows' {sorted(_rows[0])}")
+    ok("colony list (rows, No Farming, bar inside its area, INVENTION "
+       "marked, preview rows match build_rows)")
 
     # ── The square is a fixed unit, not a ruler that moves ──
     # The unit used to be derived from the widest max_pop in the

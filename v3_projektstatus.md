@@ -87,7 +87,7 @@ files under `doc/` and are only summarised here.
 | | |
 |---|---|
 | Python | 21,642 lines across 94 modules (core, screens, tools) |
-| Smoke test | `python tools/smoke_test.py` — **53 checks**, headless |
+| Smoke test | `python tools/smoke_test.py` — **54 checks**, headless |
 | Assets | 170 MB (select_race 68, galaxy_map 51, shared 23, new_game 21, colony_summary 1) |
 | Screens in HD | 7 of ~20–22 (colony summary is frame + sidebar only) |
 | Setup from clone | `python tools/setup.py` (deps via the system package manager) |
@@ -334,7 +334,8 @@ reason the repository exists.
 `screen_base.py` (390), `editor/editor.py` (390),
 `new_game/screen.py` (382), `helppopup.py` (346),
 `empire_identity/screen.py` (342), `main.py` (328),
-`select_race/screen.py` (322), `galaxy_map/sidebar.py` (301).
+`select_race/screen.py` (322), `galaxy_map/sidebar.py` (301),
+`tools/colony_list_preview.py` (313), `tools/struct_probe.py` (459).
 `smoke_test.py` is exempt by nature.
 
 `screen_base.py` reached 572 lines while the help code sat in it and
@@ -342,6 +343,20 @@ was split rather than listed higher: `core/screenhelp.py` is a mixin,
 and none of what moved was about being a screen. `helppopup.py`
 crossed the line this session (column renderer + backdrop) and is
 listed instead of split, because everything in it is one widget.
+
+`struct_probe.py` grew from 243 to 459 with the pop-nibble report and
+is listed rather than split: it is one instrument with several views
+of the same snapshot — hexdump, int16 columns, spec decode, and now
+one named prediction — and a view that lived in its own file would
+still need the connection, the spec registry and the array table from
+this one.
+
+`colony_list_preview.py` is listed rather than split because a
+preview tool IS one thing, and the two halves it appears to have —
+four documented scenario rows, and the machinery that renders them —
+are useless apart. Most of its length is the rationale for each row:
+what that row is meant to settle, and, for the race-group row, what
+it cannot.
 
 `colonylist.py` crossed it at 380 when the allocation track was
 re-based on the engine's population cap, was listed for one session,
@@ -666,10 +681,11 @@ per-row populations and job splits identical, total 39. Bar length is
 than too long: Advanced City Planning is not applied, because
 `tech_applications` has no verified offset, and the limit is taken
 for the owner's race rather than the best over races present, because
-that walk needs `pop_race`.
+that walk needs the pop word's low nibble.
 
 Race groups as shades and androids/natives as locked are **not
-drawn**: they depend on `pop_race`, whose mask has no second source.
+drawn**: they depend on the pop word's low nibble, whose mask has no
+second source.
 The zone split is a list of runs so they can be added inside a run
 later without moving anything.
 
@@ -782,6 +798,75 @@ pixels low silently rescales every figure beside it. The symptom is
 that one profession looks subtly wrong next to the others — which
 reads as an ART problem and sends the next session to redraw a sprite
 that is fine, when the fault is a measurement.
+
+### Looking at it — `tools/colony_list_preview.py`
+
+```bash
+python tools/colony_list_preview.py
+python tools/colony_list_preview.py --pop-dir ~/moo2/pop_sprites
+```
+
+Headless, no game, no savegame: the real `frame.png` over the real
+`boxes.json` geometry around fake rows defined in the script. Writes
+to `/tmp/colony_list_preview/`, never into the tree, with absolute
+paths in every line it prints. Modelled on `starfield_preview.py`,
+for the same reason — judging a track has to cost one second, not one
+game start plus 85 turns.
+
+**Both modes from one invocation**, against one `Layout` and one
+`boxes.json` read. Two runs could let a changed argument or an edited
+layout.json slip between them, and the pair would then compare two
+LAYOUTS rather than two renderings of one — the exact failure the
+shared geometry exists to prevent, put back by the instrument meant
+to inspect it.
+
+**Every image is written twice, and the 50 % copy is the point.** A
+track is forty-two repeating slots with a dashed region and a
+hairline in it, which is the kind of picture that looks detailed at
+1:1 and turns to grain one step away. No pixel check can see that: it
+measures whether ink landed, not whether it settles.
+
+Four rows, each there to settle something: 22 pops (where the
+original squishes hardest and the fixed-unit track diverges most),
+`max_farms == 0`, a `max_pop` 9 colony whose 33 unreachable slots ask
+whether the faint baseline reads as *expandable* or as *cut off*, and
+a row meant to show three race groups. Plus the invariant pair — the
+same row alone and beside a larger colony — which the tool also
+*states*, comparing the two first-row bands and printing whether they
+agree, because a picture of two tracks is only evidence if somebody
+compares them.
+
+**The race-group row cannot be drawn as one, and the tool says so.**
+Race shading needs the pop nibble, whose mask has no second source, so
+`colonyrows` never reads it and every row reaching the renderer is
+race-blind. That row is identical to any single-race row with the
+same job split. It is kept, with a line in the output, because a
+preview that quietly substituted professions for races would answer a
+question nobody asked — and would be believed, because it looks like
+the screen.
+
+Exit codes carry the findings, so do not chain it behind `&&`: 1 if
+`--pop-dir` was given and no usable set came back, or if the shared
+row was not identical in both renderings. Omitting `--pop-dir`
+entirely is the quiet path and exits 0.
+
+**First finding, from the 50 % copies.** Square mode survives the
+reduction: the runs stay clean colour blocks and the zone boundaries
+stay readable. Figure mode does not, with stand-in sprites at the
+measured crop sizes — the silhouettes collapse into an
+undifferentiated stipple and the only thing still carrying the
+profession is the 3 px zone rule, which is itself close to
+disappearing. That is not yet a verdict on figure mode: the sprites
+were stand-ins, and real pop icons carry internal colour that a
+flat-ink placeholder does not. It IS a verdict on where the load
+sits — at a slot of 19 px the rule is doing most of the work, not the
+figure. Worth re-running against real artwork before the mode is
+judged.
+
+The smoke test asserts the fake rows carry exactly the keys
+`build_rows` produces. Nothing else would notice a drift: a stale row
+dict still renders, so the preview would go on looking right while
+showing a row the game cannot produce.
 
 **Rest of the design, agreed 31 August, not built.** Instead of the
 original's three icon columns per colony, one allocation bar per row:
@@ -1078,7 +1163,76 @@ as deviations; they belong here as well, because a limitation that
 lives only in the module that works around it is a limitation nobody
 finds.
 
-- **`pop_race` has no second source.** Every colonist in the one
+- **The pop nibble is a PLAYER index, not a race — and it still has
+  no second source.** Read out of the C++ on 1 September 2026:
+  `POP::MASK_RACE` (pop.h:8) is consumed by
+  `COLONY::Get_Effective_Pop_Player_` (colony.cpp:1257), which
+  returns `pop & 0x0F` as a player index and maps only 8 and 9 to the
+  colony's owner. The race is a second lookup —
+  `MOX::_player[idx].race` in `Colony_Pop_Anim_` (colony.cpp:1275).
+  The header names the mask after the thing two steps away from it,
+  and that name is no longer in the spec: the field is
+  `player_index`, and the smoke test asserts `pop_race` and
+  `POP_MASK_RACE` do not come back.
+
+  A third meaning shares the nibble: `Sum_Colonists_`
+  (colony.cpp:2129) matches `>= 14` against a race index directly,
+  bypassing the player lookup. So the nibble is not bounded by 9, and
+  14 or 15 in live data is a fourth state rather than corruption —
+  while 10 to 13, which no branch found reads, would be.
+
+  Both steps are on the wire already: this nibble, and
+  `s_player.race` at offset 37 in the verified `player.py` spec. So
+  race shading is reachable once the nibble is confirmed; it is the
+  nibble that is missing, not the second step.
+
+  `tools/struct_probe.py colonies --pop-nibble` runs the prediction
+  the reference save CAN answer: across all 21 colonies, including
+  the AI's, the nibble should equal each colony's own `owner`. That
+  is falsifiable without a single android, because the AI colonies
+  carry owners other than 0 — under the "race" reading the nibble
+  would not track the owner across them. Half of the prediction is
+  already recorded in `doc/s_colony_offsets.md`: 598 colonists across
+  two samples, nibble never above 9. The owner match is the
+  discriminating half and was never checked.
+
+  It reports counts and a per-owner table, never a verdict alone,
+  because **a wrong mask scatters rather than failing cleanly** — a
+  spread across many values is a different fault from a few values
+  clustered near the owners, and a pass/fail line throws away the one
+  signal that separates them.
+
+  **Run on 1 September 2026 against the reference save, and the race
+  reading is refuted.** 21 colonies, 131 live colonists, five owners:
+  owner 0 -> nibble 0 (x39), 1 -> 1 (x22), 2 -> 2 (x25), 3 -> 3
+  (x28), 4 -> 4 (x17). Zero mismatches, nothing outside 0..9, 751
+  unused slots all zero. The 39 for owner 0 agrees with the empire
+  sidebar Population recorded when `owner` and `n_pops` were verified
+  — a different field in a different struct.
+
+  The decisive part is the second query: `s_player.race` for those
+  five players is 5, 2, 3, 4, 0 (CyberToller, Darlok, Elerian,
+  Gnolam, Alkari), and **not one player's race equals its own
+  index**. Player 0 plays race 5, so a race nibble would decode his
+  colonists as 5; they decode as 0. Player 4 plays race 0 and decodes
+  as 4. The two readings predict a different number for every player
+  here, and all 131 colonists follow the owner. Without that second
+  query the correlation would have been suggestive and nothing more —
+  it is the one check that separates "the nibble is the owner" from
+  "the races happen to be numbered like the players".
+
+  So the nibble has two independent sources for 0..7 and is no longer
+  a bare transcription. **The sentinels are still not verified**: 8, 9
+  and >= 14 do not occur in this save, so `Get_Effective_Pop_Player_`'s
+  branch at colony.cpp:1261 stays untested and needs a savegame with
+  androids, natives or a conquered population.
+
+  Consequence for the colony list: race shading is now unblocked in
+  principle for single-race and multi-player colonies — nibble ->
+  player -> `s_player.race` — but NOT for androids and natives, which
+  are exactly the cases the shading was wanted for. Not built.
+
+- **The old note, still true of the sentinels.** Every colonist in the one
   savegame checked is race 0, so nothing there could confirm
   `MASK_RACE` or refute it. Until it is settled: the list draws no
   race shading and no locked androids or natives, and the bar takes

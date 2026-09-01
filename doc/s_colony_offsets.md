@@ -154,7 +154,7 @@ side.
 
 | Bits | Mask | Meaning | Source |
 |---|---|---|---|
-| 0-3 | `0x0000000F` | race index; 8 = android, 9 = native | pop.h:7, :14-15 |
+| 0-3 | `0x0000000F` | **player index**, NOT a race — see below; 8 = android, 9 = native, both resolving to the colony's owner | pop.h:7, :14-15; colony.cpp:1257 |
 | 4-6 | `0x00000070` | original owner | pop.h:8, :31 |
 | 7-8 | `0x00000180` | profession: 0 farmer, 1 worker, 2 scientist | pop.h:9, :17-21 |
 | 9 | `0x00000200` | assigned to a job | pop.h:10, :60 |
@@ -162,8 +162,9 @@ side.
 
 `COLMOVE::Pops_Identical_` (colmove.cpp:106) groups on
 `(pop1 ^ pop2) & 0x180` — the profession bits — plus
-`COLONY::Pop_To_Pop_State_` (colony.cpp:1240), which reads the race
-nibble and maps 9 to 3, 8 to 4 and everything else to 2. That is the
+`COLONY::Pop_To_Pop_State_` (colony.cpp:1240), which reads the low
+nibble and maps 9 to 3, 8 to 4 and everything else to 2 — the same
+two sentinels, treated the same way. That is the
 grouping an HD drag has to reproduce to translate into native clicks.
 
 The `MASK_ORIGINAL_OWNER` field at bits 4-6 does not appear in any of
@@ -371,7 +372,7 @@ leans on them.
 | `n_pops` (10) | **39 = 39** against the empire sidebar's Population, and **3 = 3** for Ixion II against "Population (3/5)" |
 | `max_farms` (224) | **7/7** against "No Farming": 0 for Kif II, Malus I, Sol III, Sol IV; 255 for Ixion II, Sol I, Sol II |
 | `MASK_PROF` | **3/3.** Sol II decodes 2 farmers and the screen shows two farmer symbols; Ixion II and Sol I decode 0 and both show an empty farmer column |
-| `MASK_RACE` | **not confirmed** — see below |
+| the low nibble | **not confirmed**, and pop.h's name for it is wrong — see below |
 
 `n_pops` is the strongest of these, because `sys.cpp:1444` prints the
 description as `colony->n_pops` over the computed maximum, so "(3/5)"
@@ -395,7 +396,7 @@ numeral after it. With that fixed, all seven names matched. Two of
 the seven `max_farms` comparisons had been failing purely because
 they were compared against the wrong colony.
 
-### MASK_PROF confirmed twice; MASK_RACE untouched by this savegame
+### MASK_PROF confirmed twice; the low nibble untouched by this savegame
 
 The ground truth first offered Sol II as "the one colony showing two
 races". The maintainer withdrew that on a second look: the two
@@ -409,12 +410,82 @@ So `MASK_PROF` has two independent confirmations rather than one —
 the decode (Sol II 2 farmers, Ixion II and Sol I none) and the column
 the symbols sit in.
 
-`MASK_RACE` is untouched. Sol II decodes 19 colonists all of race 0
-with `original_owner` 0 throughout, and every colony of the empire is
-single-race. There is no android, no native and no conquered
-population anywhere in this savegame, so nothing here could confirm
-the mask or refute it. The check had no ground to stand on, which is
-different from failing.
+The low nibble is untouched. Sol II decodes 19 colonists all of
+nibble 0 with `original_owner` 0 throughout, and every colony of the
+empire is single-race. There is no android, no native and no
+conquered population anywhere in this savegame, so nothing here could
+confirm the mask or refute it. The check had no ground to stand on,
+which is different from failing.
+
+### The nibble is a PLAYER index, and pop.h names it wrongly
+
+Read out of the C++ on 1 September 2026, after the name had already
+been carried into `core/structs/colony.py` once.
+
+`POP::MASK_RACE` (pop.h:8) is consumed by
+`COLONY::Get_Effective_Pop_Player_` (colony.cpp:1257), which takes
+`pop & 0x0F` and **returns it as a player index**. Only 8 and 9 are
+special, and both resolve to `MOX::_colony[idx].owner`
+(colony.cpp:1261-1263). The race is a SECOND lookup on top:
+`Colony_Pop_Anim_` (colony.cpp:1268) feeds that player index into
+`MOX::_player[player_idx].race` at colony.cpp:1275 to choose the
+sprite. `MAX_PLAYERS` is 8 (consts.h:7), which is why the player
+range is 0..7 and 8/9 are free to be sentinels.
+
+So the header names the mask after the thing two steps away from it.
+The name is not carried into the spec: the field is `player_index`,
+`pop_player_index()` reads it, `pop_effective_player()` transcribes
+the sentinel step, and the smoke test asserts `pop_race` and
+`POP_MASK_RACE` do not come back — a rename that reads plausibly is
+exactly what a later session would undo.
+
+**A third meaning shares the nibble.** `Sum_Colonists_`
+(colony.cpp:2129) has a branch for `pop_race_val >= 14` that compares
+the nibble **directly against a race index**, bypassing the player
+lookup. What 14 and 15 index was not established in this pass. The
+consequence for a reader is that the nibble is not bounded by 9, so
+those values in live data are a fourth state and not corruption —
+whereas 10 to 13, which no branch found here reads, would be.
+
+**Run, and the race reading is refuted.** 1 September 2026,
+`tools/struct_probe.py colonies --pop-nibble` against the reference
+save (stardate 3508.5, 21 colonies, 131 live colonists):
+
+| colony owner | nibble | colonists |
+|---|---|---|
+| 0 | 0 | 39 |
+| 1 | 1 | 22 |
+| 2 | 2 | 25 |
+| 3 | 3 | 28 |
+| 4 | 4 | 17 |
+
+Zero mismatches, nothing outside 0..9, and the 751 slots past
+`n_pops` uniformly zero. The 39 for owner 0 agrees with the empire
+sidebar's Population of 39 recorded earlier in this document, from a
+different field in a different struct.
+
+What makes this decisive rather than merely consistent is the second
+query. `s_player.race` (offset 37, verified spec) for those five
+players is **5, 2, 3, 4, 0** — CyberToller, Darlok, Elerian, Gnolam,
+Alkari — and *not one player's race equals its own index*. Player 0
+plays race 5, so under the "race" reading his colonists would decode
+as nibble 5; they decode as 0. Player 4 plays race 0 and decodes as
+4. The two readings predict a different number for every player in
+this save, and all 131 colonists follow the owner.
+
+The weaker half was already in hand — 598 colonists, nibble never
+above 9 — and it is consistent with BOTH readings, which is why it
+settled nothing on its own. The owner match is the discriminator.
+
+The report prints the per-owner distribution rather than a verdict
+because a wrong mask scatters rather than failing cleanly: a spread
+across many values is a different fault from a few clustered near the
+owners, and a pass/fail line throws away the signal that separates
+them. Here the table is one value per owner, which is the shape a
+correct mask produces and chance does not.
+
+**Still open: the sentinels.** 8, 9 and >= 14 do not occur in this
+save, so the branch at colony.cpp:1261 is transcription only.
 
 ## Promoted — with the masks kept separate
 
@@ -428,10 +499,12 @@ independent sources. Of the five masks inside a `pop[]` word, only
 `MASK_PROF` does; the rest remain a transcription of `pop.h`, which
 is exactly the distinction decision 23 gained.
 
-What `MASK_RACE` still needs is not another turn — the race mix does
-not change across one — but **a different savegame**: a colony
+What the low nibble still needs is not another turn — the race mix
+does not change across one — but **a different savegame**: a colony
 holding androids, natives or a conquered population. One such record
-settles it the way the farmer column settled `MASK_PROF`.
+settles the sentinel branch the way the farmer column settled
+`MASK_PROF`. The owner-match prediction, by contrast, is answerable
+from the reference save as it stands.
 
 A second data point across a turn remains worth having for `n_pops`,
 which currently agrees twice within one state.
@@ -458,5 +531,5 @@ production path.
 The cheapest ground truth to check first, in this order: `owner` at 0
 against the known player number; `n_pops` at 10 against the
 population the game prints; `max_farms` at 224 against the farm cap;
-then the first `pop[]` word at 12, whose low nibble must be a race
-index and whose bits 7-8 must be 0, 1 or 2.
+then the first `pop[]` word at 12, whose low nibble must equal that
+colony's own `owner` and whose bits 7-8 must be 0, 1 or 2.
