@@ -87,7 +87,7 @@ files under `doc/` and are only summarised here.
 | | |
 |---|---|
 | Python | 21,642 lines across 94 modules (core, screens, tools) |
-| Smoke test | `python tools/smoke_test.py` — **54 checks**, headless |
+| Smoke test | `python tools/smoke_test.py` — **55 checks**, headless |
 | Assets | 170 MB (select_race 68, galaxy_map 51, shared 23, new_game 21, colony_summary 1) |
 | Screens in HD | 7 of ~20–22 (colony summary is frame + sidebar only) |
 | Setup from clone | `python tools/setup.py` (deps via the system package manager) |
@@ -335,8 +335,9 @@ reason the repository exists.
 `new_game/screen.py` (382), `helppopup.py` (346),
 `empire_identity/screen.py` (342), `main.py` (328),
 `select_race/screen.py` (322), `galaxy_map/sidebar.py` (301),
-`tools/colony_list_preview.py` (313), `tools/struct_probe.py` (459).
-`smoke_test.py` is exempt by nature.
+`tools/colony_list_preview.py` (249), `tools/struct_probe.py` (459),
+`colony_summary/colonylist.py` (414). `smoke_test.py` is exempt by
+nature.
 
 `screen_base.py` reached 572 lines while the help code sat in it and
 was split rather than listed higher: `core/screenhelp.py` is a mixin,
@@ -358,15 +359,22 @@ are useless apart. Most of its length is the rationale for each row:
 what that row is meant to settle, and, for the race-group row, what
 it cannot.
 
-`colonylist.py` crossed it at 380 when the allocation track was
-re-based on the engine's population cap, was listed for one session,
-and is off the list again: it split into `colonyrows.py` (201) and
-`colonylist.py` (205). The seam was already in the data flow —
-`build_rows()` hands the renderer plain dicts — so nothing had to be
-invented to find it, which is the difference between a split and a
-file cut in half. Worth recording that the first reading was wrong:
-"the numbers exist only to give the bar its length, so it is one
-thing" describes a call graph that was never there.
+`colonylist.py` has been on and off this list twice. It crossed at
+380 when the track was re-based on the population cap, split into
+`colonyrows.py` (the numbers) and `colonylist.py` (the drawing) along
+the seam the data flow already had, and is back at 348 now that the
+name block is two aligned lines rather than one blit. It is listed
+rather than split again: the obvious seam — name block against track
+— is one renderer drawing one row, and the earlier split is not the
+precedent for it, because that seam already existed in the data flow
+and this one would have to be invented. The building column DID go to
+its own file (`colonybuild.py`), and the difference is the test: it
+carries a transcription with its own source and its own fitting
+behaviour, so it is a thing rather than a slice.
+
+It is on the list at 414 with that reasoning stated, which is the
+uncomfortable half of the rule working as intended: the next addition
+to this file should split it, not extend it.
 
 **Deleted this session, verified unreferenced by grep first:**
 `galaxy_map/assets/{map_background1,map_background2,3}.png`,
@@ -654,11 +662,11 @@ refuses the base table anywhere it appears without the climate
 factors.
 
 **The list renders — first visible step, 31 August.**
-`screens/colony_summary/colonyrows.py` (201 lines, the numbers),
-`screens/colony_summary/colonylist.py` (300, the drawing) and
-`screens/colony_summary/colonyfigures.py` (155, the optional sprite
-set) — their own modules because `screen.py` was at 258 against a
-~300 guideline. One
+`screens/colony_summary/colonyrows.py` (234 lines, the numbers),
+`screens/colony_summary/colonylist.py` (414, the drawing) and
+`screens/colony_summary/colonybuild.py` (166, the building column) —
+their own modules because `screen.py` was at 258 against a ~300
+guideline. One
 row per colony of the local player, sorted by name: the planet name,
 then one allocation bar, one square per colonist, three zones in ECON
 order.
@@ -735,75 +743,316 @@ three regions must appear in order with the unreachable one thin and
 at the foot of the track — so a dimmer square there fails instead of
 passing a colour test.
 
-**Figure mode — optional, off, and unreachable from a clean clone.**
-`list.figures.enabled` in `layout.json` swaps the filled region from
-one square per colonist to one SPRITE per colonist, with the zone
-colour as a 3 px rule beneath the figures instead of a background
-fill: the silhouette carries the profession and wants a quiet ground,
-while the rule still shows the zone as a run. The free and
-unreachable regions do not change.
+### The horizontal budget of list_area — decided 1 September 2026
 
-**The sprites do not exist yet, anywhere.** Nothing in the tree
-draws, cuts or ships a pop figure, and per decision 40 nothing ever
-will — they come out of the player's own game, like the help texts
-and the nebulae. So the mode is off by default and `load_figures`
-returns None on a missing file with a line saying why; `render` draws
-squares when handed None, so the fallback needs no branch anywhere
-else. What is built is the machinery and its contract, ready for
-whatever produces the artwork.
+`list_area` is 1408 reference px and every column spends from the
+same pot. Fixed costs are `pad_x` twice (44) and the 41 inter-slot
+gaps (82), so
 
-**One geometry, two renderings.** `track_metrics` and `row_regions`
-are computed once and handed to whichever mode draws. This is the
-whole point and the easiest thing to lose: if each mode worked out
-its own unit and zone edges, switching between them would compare two
-LAYOUTS rather than two drawings of one, and the drift would be a
-slot wide — enough to move a figure across a divider, small enough
-that no screenshot names it. The smoke check renders one row both
-ways and demands the two be identical pixel for pixel from the last
-filled slot rightwards, plus that they DIFFER inside it, so the
-comparison cannot pass by drawing nothing.
+    unit = (1408 - name_width - tail_width - building - 126) // 42
 
-**Sprites are normalised on HEIGHT, never on width.**
-`common_height = min over the set of (max_width * h/w)`, where
-`max_width` is the step minus the gap — one `unit`, because a figure
-that ate its gap would touch its neighbour. Read it as: what height
-would each sprite reach at exactly `max_width`? Take the smallest.
-The widest sprite in the set lands there and sets the height; every
-other follows from its own aspect ratio. Normalising on width inverts
-it — the narrowest figure becomes the tallest, since a narrow sprite
-stretched to a common width grows in both axes — and makes the set
-unstable, because one new sprite in a wider tool pose resizes every
-figure that was already right.
+| variant | no building col | +190 building |
+|---|---|---|
+| today: tail 150, label in tail | 19 | 14 |
+| **1. label moved below the bar, tail 0** | **22** | **18** |
+| 1 + name_width 230 | 25 | 20 |
+| name_width 336 (the true maximum) instead | 18 | 14 |
 
-Measured: at a step of 23 with a gap of 2, `max_width` is 21 and
-crops of 15x26, 20x25 and 18x26 give a common height of 26 at widths
-15, 20 and 18. The smoke test asserts that vector exactly, and
-separately asserts the RULE at four budgets — the crop with the
-largest h/w must render narrowest, which is precisely what a width
-normalisation inverts.
+The table lives in `layout.json` under `list._horizontal_budget`, so
+the next session cannot spend the width without reading what it
+costs. **Decided: candidate 1 adopted, candidate 2 rejected.**
 
-Note the limiter lands at 20 against a `max_width` of 21: two integer
-truncations cost it a pixel. The first version of the check asserted
-equality there, which failed — and was right to. `//` throughout, not
-`int(a / b)`: every value is positive so the two agree, but the exact
-form cannot land a width on 14 because 15.0 came back as 14.999999.
+**Candidate 1 — the label moved, and it was free.** `row_height` 62
+against `bar_height` 34 leaves 28 px, split 14 above and 14 below by
+centring the bar, and "No Farming" renders 88x14. So the label fits
+in height the row already pays for, and `tail_width` went to 0: 150
+px back into the track, unit 19 to 22. `no_farming_placement: "tail"`
+restores the old position.
 
-**A set whose crops do not share a baseline is refused, loudly.**
-More than `MAX_CROP_HEIGHT_SPREAD` (2 px) between the tallest and
-shortest source crop raises out of `check_crop_heights` naming every
-file and size. Absent sprites fall back quietly; a set that is
-present and inconsistent does not, because the whole sizing rule
-normalises the group onto one height, so a single crop taken two
-pixels low silently rescales every figure beside it. The symptom is
-that one profession looks subtly wrong next to the others — which
-reads as an ART problem and sends the next session to redraw a sprite
-that is fine, when the fault is a measurement.
+The condition it had to meet was named in advance, because this label
+has failed once before — drawn at the bar's left edge, with the
+worker squares painted over it, every number right and nothing on
+screen. Below the bar is outside the track's band *by construction*
+(squares occupy `y+1` to `y+bar_height-1`), so a full 42-slot row
+cannot reach it. That is geometry rather than data, and the smoke
+test asserts it against a row with all 42 slots filled — not against
+a screenshot that happened to have a gap in it.
+
+**Candidate 2 — measured, it goes the wrong way.** A planet name is a
+star name plus a numeral. `s_star.name` is `str15` (star.py:35) and
+the player can type all fifteen characters when renaming a home star
+(`namestar.cpp:262` caps input at 15); the numeral is at most V,
+since `star->planet_index` is [5]. Fifteen wide glyphs measure
+**336 px through `Style.render_text`** at `name_font` 21 — six px
+MORE than the 330 the column reserves. Holding the longest name the
+game can produce therefore costs width instead of recovering it: unit
+18 against today's 19.
+
+Narrowing to 230 looks safe on any real galaxy — realistic 15-char
+names run 190-230 px, and the widest of the 54 stars in the running
+reference game is "Draconis IV" at 124 — and overruns on a name a
+player can type. That is the trade being refused, and the render is
+what refused it: at `name_width` 230 the name visibly prints over its
+own track.
+
+**A latent fault the measurement exposed.** `name_width` was a
+reservation nothing enforced — `render_text` output was blitted
+unclipped — so the 6 px overrun landed on the track's first slots.
+The squares draw after the name, so the data won and the name was the
+casualty: the same draw-order fault as the No Farming label, one
+column to the left. The name is now clipped to its column, asserted
+at the structural maximum rather than at whatever a galaxy generated.
+Clipping does not make a narrow column correct; it confines the
+damage to the name. Going below 336 needs a stated truncation policy,
+an ellipsis being the obvious one, and that has not been built.
+
+**The name column, once it had the width.** The render after the
+budget decision showed the column three quarters empty, and two
+things came out of that.
+
+**Right-aligned to the column's right edge**, which is where the bar
+starts. Left-aligned, a name too long for the column grew rightward
+onto the track's first slots, and since the squares draw afterwards
+the data won and the name was the casualty. Right-aligned, the same
+overflow grows LEFT into `pad_x`, where nothing is drawn. The clip
+becomes a fallback rather than the mechanism.
+
+Re-run against the structural maximum: 15 W's plus " V" is 336 px,
+and it now spans x=3 to x=335 inside `list_area` — using 19 of the
+22 px of padding, finishing 17 px clear of the track, and never
+touching the clip. `name_gap` 14 is the gutter between the block and
+the first slot, taken out of `name_width` rather than out of the
+shared budget; without it the name ended on exactly the pixel the
+first square began on and the two read as a collision, which is what
+the first render after right-aligning showed.
+
+**A second line under the name**, and it is an **HD EXTENSION**:
+`climate` and `pops/max_pop`, e.g. "Terran 22/24", on EVERY row. The
+original prints that pair for the SELECTED colony only, into the
+bottom-left scan box at native (13, 354, 80, 88) —
+`COLSUM::Draw_Colony_Scan_Info_` (colsum.cpp:1155) formats
+`ESTRINGS::E_Strings_(74)` and squeezes it into that rect, guarded by
+`_g_colony_n != -1`. The rows themselves carry a name and nothing
+else. Per row it makes comparable what the original could only show
+one at a time, which is the same family as the allocation bar: not
+something MOO2 chose against, something its screen had no room for.
+Marked in `colonylist.py`, in `layout.json` under
+`list._hd_extension`, here, and in a smoke check that also refuses a
+marking which does not name what the original does instead.
+
+It is a SUBSET of that box, deliberately: the original's line carries
+planet size, gravity, mineral class and growth as well. Those are not
+drawn, and `output_panel` — the box they belong in — is still empty.
+
+**`colony->climate` is what the original reads too.** That choice was
+made by reasoning (the colony's field is rewritten when a shield
+turns a Radiated world Barren, colcalc.cpp:682) and is now
+source-backed: `Draw_Colony_Scan_Info_` takes
+`climate_idx = colony->climate` at colsum.cpp:1167 and indexes the
+same table. Still deliberately NOT `player_climate()`, which is an
+Aquatic transform for the pop limit and would print Terran for an
+Ocean world.
+
+**The ten ESTR ids were a second copy, and they are gone.** The note
+in `layout.json` listed climate → ESTR id for all ten, assembled by
+reading `orion2_str.h`. The original maps climate to string in
+exactly ONE place — `estrings.cpp:204-213`, which fills
+`MOX::_planet_climate_string[]` from the enum — and every screen that
+shows a climate indexes that table (colsum.cpp:1199, colland.cpp:40,
+colsysdi.cpp:165, plntsum.cpp:151, mainpups.cpp:348). An independent
+second derivation of the same table is the screen-ID-map failure in a
+new costume. All ten were checked against `estrings.cpp` and agreed;
+they were then removed in favour of a pointer, because a copy that
+agrees today is the one that drifts later. The names themselves stay
+in `layout.json` — they are not in the orion2re source at all, they
+are in the player's LBX — in enum order, which is load-bearing and is
+neither alphabetical nor a quality ranking.
+
+Substitution is a `replace`, not `str.format` (decision 37), so a
+stray brace in a translated string cannot raise inside the render
+path — asserted, along with an out-of-range climate byte degrading to
+"?" rather than raising.
+
+### The building column — built at 190, and a correction
+
+**The 190 was right and my measurement of it was wrong.** The number
+comes from `Squeeze_Print_Formatted_Paragraph_(0x200, y, 0x55, 0x16)`
+(colsum.cpp:621): x 512, width 85, max height 22, of a 640 px screen.
+85/640 is 13.3 %, which is 190 of 1408.
+
+I had rejected that as a scaled estimate and measured instead the
+widest producing string, on ONE line, at FULL font — 311 px at
+small_font — and concluded a column that holds its content does not
+fit. `BILL::_Squeeze_Print_Paragraph_` (bill.cpp:147) says otherwise
+and settles it: `width` is passed straight into
+`get_height(width, text)` and the loop compares `max_height >=
+height`. **The text is wrapped into the width and the HEIGHT is what
+is made to fit. Width never moves, and there is no truncation branch
+in the function at all.** So 85 of 640 is a width reservation, and
+all three constraints in my measurement — one line, full font, whole
+string unwrapped — are ones the original never imposes. A requirement
+the original does not have is not a measurement of the original.
+
+Worth keeping as the shape of the error: it was not a wrong number,
+it was the right number measured against the wrong question, and it
+came out nearly twice as large and looked exactly as authoritative.
+
+**Built at 190, two lines, small font**, in
+`screens/colony_summary/colonybuild.py`: the production name on the
+first, `- 8t` and the Buy button on the second.
+
+**The original budgets two lines in that same box.** colsum.cpp:621
+passes max height `0x16` = 22 into a row whose pitch is 31 —
+`buy_btn_y_coords` steps 35, 65, 96, 128, ... — so the box is two
+thirds of its row and holds more than one line of its own font. The
+two-line column is therefore the same PLACE as the original's, not
+just the same technique applied somewhere else. Our vertical reserve
+is the one that freed `tail_width`, `row_height` 62 against
+`bar_height` 34.
+
+**The behaviour is transcribed, not the mechanism.** The original
+squeezes in three steps: narrow the space glyph
+(`font_style_widths[32]--`), then the leading, then step down one
+font style. The first is a bitmap-font trick with no Aldrich
+equivalent and the third steps between discrete bitmap faces. What
+carries over is the shape: **wrap into the width, reduce size until
+it fits, never truncate.** At the floor it draws the text whole
+anyway, which is what the original does once its loop runs out of
+things to shrink.
+
+One gap the render found: the fit test was height-only at first, so
+a single word wider than the column — an unbreakable 15-glyph ship
+design at 225 px in a 190 px column — sat there overflowing, because
+it fits the height on one line and never triggered a shrink. Both
+dimensions now.
+
+**Whether that width condition is a transcription turned on one
+function, and it is.** `_Squeeze_Print_Paragraph_` loops on height
+alone, and `fmtpara.cpp` offers
+`Get_Formatted_Paragraph_Max_Width_` right beside the height function
+without ever calling it — which leaves two possibilities. Either
+`_Print_Formatted_Paragraph_` breaks inside an over-wide token, in
+which case height alone is sufficient and our width condition keeps
+the same guarantee by other means; or it breaks only at spaces, in
+which case a 15-glyph ship design overflows 85 px in the original too
+and our refusal to overflow is a deviation.
+
+It breaks inside the token. A character is placed when
+`char_x_end <= right_limit_x || line_started != 0` (fmtpara.cpp:567);
+`line_started` is 1 at the start of a line and 0 after the first
+character (:540, :572), so the first character goes down
+unconditionally and every later one must fit. When one does not and
+it is not a space, `Return_To_Last_Break_()` is tried — and breaks
+are recorded only at spaces, tabs and soft hyphens (:723, :731) — but
+`_para_p->str--` runs whether that succeeded or not and the line ends
+(:583-587). A token with no break inside it is broken mid-token, and
+the paragraph never exceeds the width. **Height alone is sufficient
+BECAUSE the width can never be exceeded.**
+
+So the guarantee — no ink past the reserved width, nothing truncated
+— is a **transcription**, and our width condition delivers it. The
+**means is a marked deviation**: the original character-wraps the
+token, we reduce the size and keep it whole. The reason is that the
+over-wide token here is a ship design name, user-typed data whose
+exact form is the point; a hyphen-less mid-word break that reads as
+wrapping in a five-pixel face at 640x480 reads as corruption at HD.
+Marked in `colonybuild.py`, in `layout.json` under
+`list._width_condition_note`, here, and in a smoke check that refuses
+a marking which drops either half or the line that settles it.
+
+**The Buy control is transcribed in position and deviates twice in
+form.** The original adds one per row at native x=599
+(colsum.cpp:302, `_list_buy_fields[10]`, `buy_btn_y_coords`), right
+of the producing text, gated on `Colony_Can_Buy_Product_0_`. That
+much is transcribed. Two things are not, and naming only the first
+would leave the larger one unmarked:
+
+1. **The label.** `E_Strings_(12)` is empty, so "Buy" is a word this
+   project chose. It lives in `layout.json`, decision 15.
+2. **Drawing text at all.** The original's control is a **sprite** —
+   `_anims[i + 11]` supplies the artwork, which is precisely why its
+   label string can be empty. A text button is a different object,
+   not a translation of that one; it is drawn this way because the
+   sprite is in the player's LBX and is not shipped.
+
+Nothing sends a click yet.
+
+**Still missing: the production names.** `build_rows` leaves
+`producing` empty. The id at offset 277 indexes
+`TECHDATA::_buildings[]`, whose names load from the player's
+`techname.lbx` at runtime (techinit.cpp:43-73) and are `kEmptyName`
+in the orion2re source. There is no extractor for that table, so the
+column renders empty on the real screen rather than inventing a name
+— the rule the help texts and the nebulae already follow. The walk is
+proven (it was used to measure the 49 names) and the extractor is a
+sibling of `help_extract.py` when somebody wants it. Turn counts need
+a cost calculation that is not built either.
+
+### `name_width` re-opened, and lowered to 240
+
+It was rejected at 230 because the render showed the name
+overprinting the track — **under left alignment**. Right alignment
+sends overflow left into `pad_x`, where nothing is drawn, so that
+render no longer applies and the trade re-opened.
+
+Reserved for the REALISTIC range now, with the structural maximum as
+the **ellipsis case rather than the reservation**. The widest of the
+54 stars in the running reference galaxy is "Draconis IV" at 124 px;
+a realistic 15-character name is 190 to 230 ("New Constantine V" is
+208). 336 px — fifteen wide glyphs, which a player can type
+(namestar.cpp:262) — is cut with an ellipsis instead of being
+reserved for. That spends nothing in every case it can hold and
+degrades visibly in the one it cannot.
+
+| name_width | no building col | + building 190 |
+|---|---|---|
+| 330 | 22 | 17 |
+| **240** | 24 | **19** |
+
+Shipped: `name_width` 240 with the 190 column, **unit 19**. The table
+is in `layout.json` under `list._horizontal_budget`.
+
+**Figure mode: built, compared, deleted.** For one session the
+filled region could draw a sprite per colonist instead of a square,
+with the zone colour as a 3 px rule beneath the figures instead of a
+background fill, selected by a `list.figures.enabled` key and fed
+from a `--pop-dir` outside the repository. It was built to be
+compared against the squares and it lost.
+
+What decided it was the preview's 50 % copies. Square mode survives
+the reduction — the runs stay clean colour blocks and the zone
+boundaries stay readable. The figures collapse into an
+undifferentiated stipple, and the only thing still carrying the
+profession is the 3 px rule, which is itself close to disappearing.
+At a 22 px slot the rule was doing the work the silhouette was
+supposed to do, which makes the sprites decoration over a bar that
+already said the same thing.
+
+Deleted rather than left switched off: **a dead branch is a file
+nobody checks.** `colonyfigures.py`, the layout key, the `--pop-dir`
+argument, the crop-baseline guard and the smoke check all went with
+it. The smoke check was replaced rather than removed, per the rule
+that the count must not go down — the replacement covers the name
+block, which is what the freed width went into.
+
+Two things are worth keeping from it. The **height-normalisation
+rule** — `common_height = min over the set of (max_width * h/w)`, so
+the widest sprite sets the height and every other follows from its
+own aspect ratio — was correct and measured, and would be the rule
+again for any future sprite set; normalising on width inverts it, the
+narrowest figure becoming the tallest. And the **crop-baseline
+guard**: a set whose source crops differ in height by more than 2 px
+is not a set, because the sizing normalises the whole group onto one
+height, so one crop taken two pixels low silently rescales every
+figure beside it — and the symptom reads as an art problem when the
+fault is a measurement. Both are recorded here rather than in code,
+because there is no code left to carry them.
 
 ### Looking at it — `tools/colony_list_preview.py`
 
 ```bash
 python tools/colony_list_preview.py
-python tools/colony_list_preview.py --pop-dir ~/moo2/pop_sprites
+python tools/colony_list_preview.py --size 2560x1440
 ```
 
 Headless, no game, no savegame: the real `frame.png` over the real
@@ -813,12 +1062,7 @@ paths in every line it prints. Modelled on `starfield_preview.py`,
 for the same reason — judging a track has to cost one second, not one
 game start plus 85 turns.
 
-**Both modes from one invocation**, against one `Layout` and one
-`boxes.json` read. Two runs could let a changed argument or an edited
-layout.json slip between them, and the pair would then compare two
-LAYOUTS rather than two renderings of one — the exact failure the
-shared geometry exists to prevent, put back by the instrument meant
-to inspect it.
+This rendered the comparison that deleted figure mode.
 
 **Every image is written twice, and the 50 % copy is the point.** A
 track is forty-two repeating slots with a dashed region and a
@@ -846,22 +1090,11 @@ question nobody asked — and would be believed, because it looks like
 the screen.
 
 Exit codes carry the findings, so do not chain it behind `&&`: 1 if
-`--pop-dir` was given and no usable set came back, or if the shared
-row was not identical in both renderings. Omitting `--pop-dir`
-entirely is the quiet path and exits 0.
+the shared row was not identical in both renderings.
 
-**First finding, from the 50 % copies.** Square mode survives the
-reduction: the runs stay clean colour blocks and the zone boundaries
-stay readable. Figure mode does not, with stand-in sprites at the
-measured crop sizes — the silhouettes collapse into an
-undifferentiated stipple and the only thing still carrying the
-profession is the 3 px zone rule, which is itself close to
-disappearing. That is not yet a verdict on figure mode: the sprites
-were stand-ins, and real pop icons carry internal colour that a
-flat-ink placeholder does not. It IS a verdict on where the load
-sits — at a slot of 19 px the rule is doing most of the work, not the
-figure. Worth re-running against real artwork before the mode is
-judged.
+Two decisions came out of its renders rather than out of argument:
+figure mode was deleted, and the name column was right-aligned and
+given a second line. Both are above.
 
 The smoke test asserts the fake rows carry exactly the keys
 `build_rows` produces. Nothing else would notice a drift: a stale row

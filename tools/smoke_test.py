@@ -2144,6 +2144,76 @@ def main():
         "colonylist.py no longer marks the bar as an INVENTION"
     assert "INVENTION" in _cfg.get("_invention", ""), \
         "layout.json list._invention no longer carries the marking"
+    # The per-row detail line is an HD EXTENSION and carries its own
+    # marker: the original prints climate and n/max for the SELECTED
+    # colony only, into the scan box at native (13, 354, 80, 88)
+    # (COLSUM::Draw_Colony_Scan_Info_, colsum.cpp:1155). A marking
+    # two documents claim exists is not a marking — this one is
+    # asserted in both homes, and refused if it does not name what
+    # the original does instead.
+    assert "HD EXTENSION" in _cl_src, \
+        "colonylist.py no longer marks the per-row detail line"
+    _hd = _cfg.get("_hd_extension", "")
+    assert "HD EXTENSION" in _hd, \
+        "layout.json list._hd_extension no longer carries the marking"
+    assert "colsum.cpp:1155" in _hd, \
+        ("list._hd_extension no longer names what the original does "
+         "instead — a label without the deviation it records is a "
+         "label, not a marking")
+    # ── "No Farming" survives a FULL track ──
+    # The label lives under the bar now, not in a horizontal tail: the
+    # tail cost 150 reference px of the one budget every row shares,
+    # the band under the bar is spare height row_height already pays
+    # for. What that placement has to prove is the thing its first
+    # position failed — the label was once drawn at the bar's left
+    # edge and the worker squares painted over it, every number right
+    # and nothing on screen. So: a 42-slot row, every slot filled,
+    # and the label's own colour must still be on the surface.
+    _surf.fill((0, 0, 0))
+    _cl.render(_surf, [{"name": "Full", "pops": _cl.POP_LIMIT_CAP,
+                        "jobs": [0, 30, 12], "no_farming": True,
+                        "max_pop": _cl.POP_LIMIT_CAP}],
+               _area, _cfg, app.layout, app.style)
+    _px = pygame.surfarray.array3d(_surf)
+    _label_ink = [(x, y) for x in range(_area.x, _area.right)
+                  for y in range(_area.y, _area.bottom)
+                  if tuple(_px[x, y]) == tuple(_cl.NO_FARM_COLOR[:3])]
+    assert _label_ink, (
+        "'No Farming' is not on the surface for a full 42-slot row — "
+        "the squares are painted over it again")
+    # And it is BELOW the bar, not inside it: inside is where the
+    # squares are, and a label that happens to survive today because
+    # one slot is empty is the same bug waiting.
+    _t = _cl.track_metrics(_area, _cfg, app.layout.scale)
+    _bar_top = (_area.y + int(_cfg["pad_y"] * app.layout.scale)
+                + (_t.row_h - _t.bar_h) // 2)
+    assert min(y for _x, y in _label_ink) >= _bar_top + _t.bar_h, (
+        "'No Farming' is drawn inside the bar's own band, where the "
+        "filled squares are")
+
+    # ── Nothing from the name column reaches the track ──
+    # The invariant, however it is achieved. Right-alignment plus
+    # pad_x is what achieves it today and the name-block check below
+    # tests that mechanism; this one tests the property, so a later
+    # change of mechanism still has to keep it. Asserted at the
+    # structural maximum (str15, namestar.cpp:262 caps input at 15),
+    # not at a name some galaxy happened to generate.
+    _surf.fill((0, 0, 0))
+    _cl.render(_surf, [{"name": "W" * 15 + " V", "pops": 3,
+                        "jobs": [1, 1, 1], "no_farming": False,
+                        "climate": 8, "max_pop": 9}],
+               _area, _cfg, app.layout, app.style)
+    _px = pygame.surfarray.array3d(_surf)
+    _name_end = (_area.x + int(_cfg["pad_x"] * app.layout.scale)
+                 + int(_cfg["name_width"] * app.layout.scale))
+    _rgb = tuple(_cl.ROW_NAME[:3])
+    _spill = [x for x in range(_name_end, _area.right)
+              if any(tuple(_px[x, y]) == _rgb
+                     for y in range(_area.y, _area.bottom))]
+    assert not _spill, (
+        f"the longest producible name draws past its column at "
+        f"x={_spill[:5]} — name_width is not being enforced")
+
     # The preview tool's fake rows must stay the shape build_rows
     # actually produces. Nothing else would notice: a row dict that
     # has drifted still renders, so the preview would go on looking
@@ -2161,8 +2231,9 @@ def main():
         assert set(_fake) == set(_rows[0]), (
             f"colony_list_preview row {_fake.get('name')!r} has keys "
             f"{sorted(_fake)} against build_rows' {sorted(_rows[0])}")
-    ok("colony list (rows, No Farming, bar inside its area, INVENTION "
-       "marked, preview rows match build_rows)")
+    ok("colony list (rows, No Farming below a full track, name clipped "
+       "to its column, INVENTION + HD EXTENSION marked, preview rows "
+       "match build_rows)")
 
     # ── The square is a fixed unit, not a ruler that moves ──
     # The unit used to be derived from the widest max_pop in the
@@ -2242,112 +2313,161 @@ def main():
     ok("colony list track = engine cap (unit fixed, filled/free/"
        "unreachable in order)")
 
-    # ── Figure mode: one geometry, two renderings ──
-    # The mode is off by default and its sprites are cut from the
-    # player's own game, so nothing here may touch the disk — a test
-    # that reads the user's disk answers differently for the user.
-    # The set is synthetic, and its crops are the measured ones:
-    # 15x26 farmer, 20x25 worker, 18x26 scientist.
-    from screens.colony_summary import colonyfigures as _cf
-
-    def _crop(w, h, color):
-        s = pygame.Surface((w, h), pygame.SRCALPHA)
-        s.fill(color)
-        return s
-
-    _crops = [_crop(15, 26, (255, 0, 0, 255)),
-              _crop(20, 25, (0, 255, 0, 255)),
-              _crop(18, 26, (0, 0, 255, 255))]
-
-    # The sizing rule, against the measurement it was written from: a
-    # step of 23 with a gap of 2 gives max_width 21, and the set comes
-    # out 26 tall at widths 15 / 20 / 18. Asserted as numbers because
-    # this is the one part of figure mode a picture cannot check —
-    # a set normalised the wrong way still renders, and still looks
-    # like a set, until somebody measures it.
-    _common, _widths = _cf.figure_sizes(23 - 2, _crops)
-    assert (_common, _widths) == (26, [15, 20, 18]), (_common, _widths)
-
-    # The RULE, not that instance, and at several budgets. Under a
-    # HEIGHT rule the whole set shares one height and the widths vary
-    # by aspect, so the source with the largest h/w — the narrowest,
-    # tallest-looking crop — renders NARROWEST. Under a width rule it
-    # would render TALLEST and every width would be equal. That is
-    # the discriminator, and it holds whatever the crops are.
+    # ── The name block: right-aligned, two lines ──
+    # Replaces the figure-mode check, which went when figure mode did
+    # (the count must not go down; an obsolete check is replaced, not
+    # deleted). Same subject — what the name column does with the
+    # width the budget gave it.
     #
-    # Nothing may exceed the budget, but nothing lands exactly on it
-    # either: two integer truncations cost the limiter up to a pixel,
-    # which is why the measured set reads 20 against a max_width of
-    # 21. Asserting equality there is asserting the arithmetic is
-    # float, and it was — that assertion is what caught it.
-    _aspect = [c.get_height() / c.get_width() for c in _crops]
-    _narrowest_src = _aspect.index(max(_aspect))
-    _widest_src = _aspect.index(min(_aspect))
-    for _mw in (10, 21, 40, 63):
-        _c, _w = _cf.figure_sizes(_mw, _crops)
-        assert all(0 < v <= _mw for v in _w), (_mw, _w)
-        assert _c > 0 and len(set(_w)) > 1, (_mw, _c, _w)
-        assert _w[_narrowest_src] == min(_w), (
-            f"at max_width {_mw} the tallest-aspect crop rendered "
-            f"{_w[_narrowest_src]} against widths {_w} — the set looks "
-            "normalised on width, not on height")
-        assert _w[_widest_src] == max(_w), (_mw, _w)
+    # RIGHT-ALIGNED against the column's right edge, which is where
+    # the bar starts. Left-aligned, a name too long for the column
+    # grew rightward onto the track's first slots, and since the
+    # squares draw afterwards the data won and the name was the
+    # casualty. Right-aligned it grows LEFT into pad_x, where nothing
+    # is drawn, so the clip becomes a fallback instead of the
+    # mechanism. Asserted at the structural maximum: s_star.name is
+    # str15 and namestar.cpp:262 lets a player type all fifteen.
+    _surf.fill((0, 0, 0))
+    _cl.render(_surf, [{"name": "W" * 15 + " V", "pops": 3,
+                        "jobs": [1, 1, 1], "no_farming": False,
+                        "climate": 8, "max_pop": 9}],
+               _area, _cfg, app.layout, app.style)
+    _px = pygame.surfarray.array3d(_surf)
+    _scale = app.layout.scale
+    _col_right = (_area.x + int(_cfg["pad_x"] * _scale)
+                  + int(_cfg["name_width"] * _scale))
+    _rgb = tuple(_cl.ROW_NAME[:3])
+    _name_cols = [x for x in range(_area.x, _area.right)
+                  if any(tuple(_px[x, y]) == _rgb
+                         for y in range(_area.y, _area.bottom))]
+    assert _name_cols, "the name did not draw at all"
+    assert max(_name_cols) < _col_right, (
+        f"the longest producible name reaches x={max(_name_cols)}, past "
+        f"its column at {_col_right} — it is on the track again")
+    # It must actually USE the padding, or the alignment is not what
+    # is keeping it off the track and this check would pass on a name
+    # that simply fitted.
+    assert min(_name_cols) < _area.x + int(_cfg["pad_x"] * _scale), (
+        "the structural maximum fits inside the column, so this check "
+        "is not exercising the overflow it exists for")
+    assert min(_name_cols) >= _area.x, (
+        f"the name overflowed past the left edge of list_area to "
+        f"x={min(_name_cols)} — pad_x is not deep enough for it")
 
-    # A set whose crops do not share a baseline is not a set. Loud,
-    # not a fallback: the symptom of a crop taken two pixels low is a
-    # figure that looks stylistically wrong beside its neighbours,
-    # which sends the next session to redraw artwork that is fine.
-    _cf.check_crop_heights(_crops, ("farmer", "worker", "scientist"))
-    try:
-        _cf.check_crop_heights(
-            _crops[:2] + [_crop(18, 29, (0, 0, 255, 255))],
-            ("farmer", "worker", "scientist"))
-    except ValueError as _e:
-        assert "baseline" in str(_e), _e
-    else:
-        raise AssertionError(
-            "a figure set whose crops span 4 px of height was accepted")
+    # ── The detail line ──
+    # Climate name plus n/max, from the same row dict, under the name.
+    # The climate is an index into the PLANET_CLIMATE enum
+    # (orion2_consts.h:362-374) and the wording lives in layout.json,
+    # so this asserts the wiring, not the words.
+    assert _cl._detail_text(
+        {"climate": 8, "pops": 12, "max_pop": 14}, _cfg) == "Terran 12/14"
+    assert _cl._detail_text(
+        {"climate": 0, "pops": 1, "max_pop": 42}, _cfg) == "Toxic 1/42"
+    assert len(_cfg["climates"]) == 10, _cfg["climates"]
+    # An index the enum does not cover must degrade, not raise: the
+    # climate byte is one unverified value away from being anything.
+    for _bad in (-1, 10, 255):
+        assert "?" in _cl._detail_text(
+            {"climate": _bad, "pops": 1, "max_pop": 2}, _cfg), _bad
+    # Substitution is a REPLACE, not str.format (decision 37): a
+    # translated string with a stray brace must not raise inside the
+    # render path, and an unknown placeholder must survive to be seen.
+    _braced = dict(_cfg)
+    _braced["detail"] = "{climate} {pops}/{max_pop} {not_a_key} }{"
+    _out = _cl._detail_text({"climate": 9, "pops": 2, "max_pop": 3}, _braced)
+    assert _out == "Gaia 2/3 {not_a_key} }{", _out
 
-    # ── The two modes must differ ONLY inside the filled region ──
-    # This is what makes the mode a comparison instead of a second
-    # layout: the unit, the zone edges, the free slots and the
-    # unreachable tail come from one computation, so everything from
-    # the last filled slot rightwards has to be identical pixel for
-    # pixel. A separate geometry per mode would drift by a slot —
-    # wide enough to move a figure across a divider, narrow enough
-    # that no screenshot names it.
-    _figrow = {"name": "Figures I", "pops": 6, "jobs": [2, 3, 1],
-               "no_farming": True, "max_pop": 11}
+    # Both lines right-align to the same edge, so the eye crosses one
+    # gap to the bar rather than a ragged one per row.
+    _surf.fill((0, 0, 0))
+    _cl.render(_surf, [{"name": "Sol", "pops": 12, "jobs": [4, 5, 3],
+                        "no_farming": False, "climate": 8,
+                        "max_pop": 14}],
+               _area, _cfg, app.layout, app.style)
+    _px = pygame.surfarray.array3d(_surf)
+    _detail_rgb = tuple(_cl.DETAIL_COLOR[:3])
+    _right_of = lambda rgb: max(
+        x for x in range(_area.x, _area.right)
+        if any(tuple(_px[x, y]) == rgb for y in range(_area.y, _area.bottom)))
+    assert abs(_right_of(_rgb) - _right_of(_detail_rgb)) <= 2, (
+        f"name ends at {_right_of(_rgb)}, detail at "
+        f"{_right_of(_detail_rgb)} — the two lines are not aligned")
+    ok("colony list name block (right-aligned, overflow into pad_x, "
+       "climate/pops detail line)")
 
-    def _draw(_figs):
-        _s = pygame.Surface((1920, 1080))
-        _s.fill((0, 0, 0))
-        _cl.render(_s, [_figrow], _area, _cfg, app.layout, app.style, _figs)
-        return pygame.surfarray.array3d(_s)
+    # ── The building column squeezes; it never truncates ──
+    # 190 px is a HARD width, transcribed from
+    # Squeeze_Print_Formatted_Paragraph_(0x200, y, 0x55, 0x16)
+    # (colsum.cpp:621). _Squeeze_Print_Paragraph_ (bill.cpp:147) wraps
+    # into the width and shrinks until the HEIGHT fits; there is no
+    # truncation branch in it at all. The behaviour is transcribed,
+    # not the three steps — the first of those narrows the space
+    # glyph, a bitmap-font trick Aldrich has no equivalent for.
+    from screens.colony_summary import colonybuild as _cb
+    _bw = _cfg["building_width"]
+    _small = app.layout.font_size(_cfg["small_font"])
+    _floor = app.layout.font_size(_cfg["build_font_min"])
+    _sizes = list(range(_small, _floor - 1, -1))
+    for _text in ("Trade Goods", "Atmosphere Renewer",
+                  "Alien Control Center", "W" * 15,
+                  "Refit " + "W" * 15):
+        _lines, _size = _cb.squeeze_lines(
+            app.style, _text, _bw, _cfg["row_height"], _sizes, (255,) * 3)
+        # Never truncate: every word of the source survives.
+        _kept = " ".join(_cb.wrap_text(app.style, _text, _size, _bw)).split()
+        assert _kept == _text.split(), (_text, _kept)
+        # The hard side is the width.
+        assert max(s.get_width() for s in _lines) <= _bw, (
+            f"{_text!r} squeezed to {max(s.get_width() for s in _lines)} px "
+            f"in a {_bw} px column — the width is the reservation")
+        assert _floor <= _size <= _small, (_text, _size)
 
-    _sq_px = _draw(None)
-    _fg_px = _draw(_cf.FigureSet(_crops, ("f", "w", "s")))
-    _tr = _cl.track_metrics(_area, _cfg, app.layout.scale)
-    _rg = _cl.row_regions(_figrow)
-    _bar_x = (_area.x + int(_cfg["pad_x"] * app.layout.scale)
-              + int(_cfg["name_width"] * app.layout.scale))
-    _split = _bar_x + _rg.filled * _tr.step
-    assert (_sq_px[_split:] == _fg_px[_split:]).all(), (
-        "square mode and figure mode disagree to the RIGHT of the "
-        "filled region — the free slots, the unreachable tail or the "
-        "No Farming column are not coming from the shared geometry")
-    assert not (_sq_px[_bar_x:_split] == _fg_px[_bar_x:_split]).all(), (
-        "figure mode drew the filled region exactly like square mode, "
-        "so the comparison above proves nothing")
+    # A single word wider than the column cannot be broken, so it fits
+    # the height on one line and never triggers a height-driven
+    # shrink. That is exactly how a 15-glyph ship design sat at 225 px
+    # in a 190 px column; the fit test has to be both dimensions.
+    _wide, _wsize = _cb.squeeze_lines(
+        app.style, "W" * 15, _bw, 999, _sizes, (255,) * 3)
+    assert _wsize < _small, (
+        "an unbreakable word wider than the column did not shrink — "
+        "the squeeze is driven by height alone again")
 
-    # Figures stay inside their own row band and inside the track.
-    _row_h = int(_cfg["row_height"] * app.layout.scale)
-    _band_end = _area.y + int(_cfg["pad_y"] * app.layout.scale) + _row_h
-    for _x in range(_bar_x, _bar_x + _tr.width):
-        assert not _fg_px[_x, _band_end:].any(), (
-            f"a figure drew below its row band at x={_x}")
-    ok("colony list figure mode (height-normalised set, crop-baseline "
-       "guard, geometry shared with squares)")
+    # And when nothing is left to shrink it still draws everything:
+    # the original prints the paragraph once its loop runs out.
+    _tiny, _tsize = _cb.squeeze_lines(
+        app.style, "W" * 60, 40, 4, _sizes, (255,) * 3)
+    assert _tiny and _tsize == _sizes[-1], (_tsize, len(_tiny))
+    # ── The markings on that column ──
+    # Three separate claims, three separate homes, and each one has to
+    # name what the original does instead: a label that records no
+    # deviation is a label, not a marking.
+    _cb_src = open(os.path.join(SCREENS_DIR, "colony_summary",
+                                "colonybuild.py"), encoding="utf-8").read()
+    # The width condition transcribes a guarantee and deviates in the
+    # means. Both halves have to survive, and the line that settles it
+    # is fmtpara.cpp:567 — without that reference the claim is an
+    # assertion about the original that nobody can check.
+    _wc = _cfg.get("_width_condition_note", "")
+    assert "fmtpara.cpp:567" in _wc and "fmtpara.cpp:567" in _cb_src, \
+        ("the width condition no longer cites the line that settles "
+         "whether it is a transcription or a deviation")
+    assert "TRANSCRIPTION" in _wc and "DEVIATION" in _wc, \
+        "the width condition's marking lost one of its two halves"
+    # The Buy control deviates twice. Naming only the label would
+    # leave drawing text where the original draws a sprite unmarked.
+    _bn = _cfg.get("_buy_note", "")
+    assert "DEVIATION 1" in _bn and "DEVIATION 2" in _bn, \
+        "the Buy control's marking no longer names both deviations"
+    assert "E_Strings_(12)" in _bn and "SPRITE" in _bn.upper(), \
+        ("the Buy marking no longer names what the original draws "
+         "instead of text")
+    # The two-line box is the original's own budget, not our idea.
+    _bc = _cfg.get("_building_column_note", "")
+    assert "colsum.cpp:621" in _bc and "31" in _bc, \
+        ("the building column no longer records that the original "
+         "budgets two lines in the same box")
+    ok("colony build column (hard 190 width, wrap + shrink, never "
+       "truncates, all three markings name their source)")
 
     # ── Glyph substitution: mechanism, not one font's quirk ──
     # This existed because the bundled Bank Gothic was a DEMO build

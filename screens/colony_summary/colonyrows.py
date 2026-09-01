@@ -19,6 +19,19 @@ TRANSCRIBED, and each with its source:
   "No Farming"       the CONDITION, `max_farms == 0` (coldraw.cpp:315,
                      ESTR_NO_FARMING 387). The wording lives in
                      layout.json and the drawing in `colonylist.py`.
+  the climate        `s_colony.climate` (offset 226) as an index into
+                     `PLANET_CLIMATE` (orion2_consts.h:362-374), 0
+                     Toxic to 9 Gaia. The COLONY's field, not the
+                     planet's: `Colony_Calculation_` rewrites it when
+                     a shield turns a Radiated world Barren
+                     (colcalc.cpp:682), so it is already the climate
+                     the game displays. NOT `player_climate()`, which
+                     is an Aquatic transform for the pop limit and
+                     would print Terran for an Ocean world.
+  the population     `n_pops` over the computed maximum, which is how
+                     the original prints it — `sys.cpp:1444` renders
+                     "Population (3/5)" from `colony->n_pops` and
+                     `Planet_Max_Population_For_Player_`.
   the planet name    colony -> planet -> star, with the numeral from
                      `HAROLD::Planet_Number_` (harold.cpp): it counts
                      the OCCUPIED slots of `star->planet_index[5]`
@@ -162,10 +175,15 @@ def build_rows(game_state, sort_key="name"):
 
     Only `owner`, `planet`, `n_pops`, `max_farms`, `climate` and
     `buildings` are read, plus `pop_prof` — every one of them backed
-    by two sources. The pop word's low nibble is not touched.
+    by two sources. The pop word's low nibble is not touched here;
+    it is verified for 0..7 but nothing on this screen needs it.
 
     The dict keys ARE the interface to `colonylist.render()`: name,
-    pops, jobs, no_farming, max_pop. Nothing else crosses.
+    climate, pops, jobs, no_farming, max_pop, producing,
+    producing_turns, can_buy. Nothing else crosses,
+    and a smoke check holds the preview tool's fake rows to the same
+    set — a stale row dict still renders, so nothing else would
+    notice it drift.
     """
     if game_state is None or not getattr(game_state, "colonies_raw", None):
         return []
@@ -193,6 +211,20 @@ def build_rows(game_state, sort_key="name"):
             "pops": col.n_pops,
             "jobs": jobs,
             "no_farming": col.max_farms == 0,
+            "climate": col.climate,
+            # The building column's content. `producing` is a display
+            # STRING and stays empty here: the production id at offset
+            # 277 indexes TECHDATA::_buildings[], whose names are
+            # loaded from the player's techname.lbx at runtime
+            # (techinit.cpp:43-73) and are `kEmptyName` in the orion2re
+            # source. There is no extractor for that table yet, so the
+            # column renders empty rather than inventing a name — the
+            # same "absent is a state to explain" rule the help texts
+            # and the nebulae follow. `producing_turns` needs a cost
+            # calculation that is not built either.
+            "producing": "",
+            "producing_turns": 0,
+            "can_buy": False,
             "max_pop": max_population(col, planet, traits),
         })
 

@@ -17,22 +17,29 @@ here, in `layout.json` under `list._invention`, in
 `v3_projektstatus.md`, and in a smoke check that fails if the marking
 disappears.
 
-TWO MODES, and the label differs between them. FIGURE MODE draws a
-sprite per colonist, which is what the original does — so the
-figures are closer to MOO2 than the squares are, and what stays
-invented is the rest: the fixed 42-slot track, the free and
-unreachable regions, and the zone colour as a rule beneath the
-figures instead of three columns. Neither mode is a transcription of
-the original's LAYOUT. It is off by default and cannot come on by
-itself; see `colonyfigures.load_figures`.
+A FIGURE MODE stood beside this for a day — a sprite per colonist,
+the zone colour as a rule beneath — and lost the comparison it was
+built for: at a 22 px slot the silhouettes collapse into a stipple
+one step down in scale, and the rule ended up carrying the profession
+the figures were meant to carry. Deleted rather than switched off,
+because a branch nobody renders is a branch nobody checks. The
+comparison is in `v3_projektstatus.md`.
 
-ONE GEOMETRY, TWO RENDERINGS. `track_metrics` and `row_regions` are
-computed once and handed to whichever mode draws. If each mode
-worked out its own unit, zone edges and free region, a comparison
-between the two would be comparing two LAYOUTS rather than two
-drawings of one layout, and the drift would be a slot wide — big
-enough to change which figure sits under a divider, small enough
-that no screenshot names it.
+**The per-row detail line is an HD EXTENSION.** The original prints
+climate and n/max for the SELECTED colony only, into the bottom-left
+scan box at native (13, 354, 80, 88) — `COLSUM::Draw_Colony_Scan_
+Info_` (colsum.cpp:1155) formats `ESTRINGS::E_Strings_(74)` and
+squeezes it into that rect, guarded by `_g_colony_n != -1`. The rows
+themselves carry a name and nothing else. Putting it on every row
+makes comparable what the original could only show one at a time,
+which is the same family as the allocation bar: not something MOO2
+chose against, something its screen had no room for. Marked here, in
+`layout.json` under `list._hd_extension`, in `v3_projektstatus.md`,
+and in a smoke check.
+
+It is a SUBSET of that box: the original's line also carries planet
+size, gravity, mineral class and population growth. Those are not
+drawn, and the box they come from is `output_panel`, still empty.
 
 TRANSCRIBED here, with its source:
   the zone order     food, industry, research — ECON_FOOD=0,
@@ -51,6 +58,7 @@ import pygame
 
 from core import palette
 
+from . import colonybuild
 from .colonyrows import POP_LIMIT_CAP
 
 #: One colour per profession, in ECON order. Palette so a skin or mod
@@ -67,6 +75,10 @@ ZONE_COLORS = (
 BAR_FREE = palette.col("colony_summary", "bar_free", (72, 88, 120))
 BAR_BEYOND = palette.col("colony_summary", "bar_beyond", (34, 42, 60))
 ROW_NAME = palette.col("colony_summary", "row_name", (206, 216, 238))
+#: The climate/population line under the name. Quieter than the
+#: name: it is context for the row, not its identity.
+DETAIL_COLOR = palette.col("colony_summary", "row_detail",
+                           (132, 148, 180))
 NO_FARM_COLOR = palette.col("colony_summary", "no_farming", (150, 120, 110))
 
 
@@ -75,14 +87,14 @@ NO_FARM_COLOR = palette.col("colony_summary", "no_farming", (150, 120, 110))
 #: `unit` is one slot's ink, `gap` the space after it, `step` the two
 #: together — the pitch from one slot to the next. `width` is the
 #: whole POP_LIMIT_CAP-slot track. A sprite may be at most `unit`
-#: wide, which is the step minus the gap: a figure that ate its gap
-#: would touch its neighbour and the count would stop being legible.
-Track = collections.namedtuple("Track", "unit gap step width bar_h")
+#: wide, which is the step minus the gap: ink that ate its gap would
+#: touch its neighbour and the count would stop being legible.
+Track = collections.namedtuple(
+    "Track", "unit gap step width bar_h row_h build_w build_gap")
 
 #: `runs` is (zone, start_slot, count) per profession — the squares
-#: fill them, the figures stand in them and the zone rule underlines
-#: them. `filled`..`reach` is the free region, `reach`..POP_LIMIT_CAP
-#: the unreachable one.
+#: fill them. `filled`..`reach` is the free region, `reach`..
+#: POP_LIMIT_CAP the unreachable one.
 Regions = collections.namedtuple("Regions", "runs filled reach")
 
 
@@ -98,12 +110,19 @@ def track_metrics(area, cfg, scale):
     gap = max(1, int(cfg.get("square_gap", 2) * scale))
     name_w = int(cfg.get("name_width", 320) * scale)
     pad_x = int(cfg.get("pad_x", 18) * scale)
-    tail_w = int(cfg.get("tail_width", 150) * scale)
-    bar_space = area.w - name_w - tail_w - 2 * pad_x
+    tail_w = int(cfg.get("tail_width", 0) * scale)
+    build_w = int(cfg.get("building_width", 0) * scale)
+    build_gap = int(cfg.get("building_gap", 16) * scale)
+    if build_w:
+        build_w += build_gap
+    bar_space = area.w - name_w - tail_w - build_w - 2 * pad_x
     unit = max(2, (bar_space - (POP_LIMIT_CAP - 1) * gap) // POP_LIMIT_CAP)
     return Track(unit=unit, gap=gap, step=unit + gap,
                  width=POP_LIMIT_CAP * unit + (POP_LIMIT_CAP - 1) * gap,
-                 bar_h=int(cfg.get("bar_height", 30) * scale))
+                 bar_h=int(cfg.get("bar_height", 30) * scale),
+                 row_h=int(cfg.get("row_height", 60) * scale),
+                 build_w=int(cfg.get("building_width", 0) * scale),
+                 build_gap=build_gap)
 
 
 def row_regions(row):
@@ -130,18 +149,13 @@ def row_regions(row):
 
 # ── The drawing ───────────────────────────────────────────────────
 
-def render(surface, rows, area, cfg, layout, style, figures=None):
+def render(surface, rows, area, cfg, layout, style):
     """Draw the rows into `area`. Everything sized from `cfg`.
 
     `area` is the `list_area` box in screen coordinates, `cfg` the
     `list` block of layout.json. No geometry constant lives here —
     `POP_LIMIT_CAP` is a population count the engine enforces, not a
     tuned size, and it is the one number the track is measured from.
-
-    `figures` is a `colonyfigures.FigureSet` or None. None draws
-    squares, which is the default and the only mode a clone of the
-    repository can reach; the caller loads the set once rather than
-    per frame.
 
     Text goes through `Style.render_text`, which takes a pixel size
     and returns a surface — it can mix two fonts inside one string,
@@ -161,29 +175,126 @@ def render(surface, rows, area, cfg, layout, style, figures=None):
     name_w = int(cfg.get("name_width", 320) * scale)
     name_px = layout.font_size(cfg.get("name_font", 20))
     small_px = layout.font_size(cfg.get("small_font", 15))
-    rule_h = max(1, int((cfg.get("figures") or {}).get("rule_height", 3)
-                        * scale))
 
     y = area.y + int(cfg.get("pad_y", 12) * scale)
     for row in rows:
         if y + row_h > area.bottom:
             break
-        label = style.render_text(row["name"], name_px, ROW_NAME)
-        surface.blit(label, (area.x + pad_x,
-                             y + (row_h - label.get_height()) // 2))
+        _draw_name_block(surface, row, area.x + pad_x, y, name_w, row_h,
+                         cfg, name_px, small_px, style)
         bar_x = area.x + pad_x + name_w
         bar_y = y + (row_h - track.bar_h) // 2
         _render_bar(surface, row, bar_x, bar_y, track, cfg, small_px,
-                    style, figures, rule_h)
+                    style)
+        if track.build_w:
+            colonybuild.draw(
+                surface, row, bar_x + track.width + track.build_gap, y,
+                track.build_w, row_h, cfg, style, layout)
         y += row_h
 
 
-def _render_bar(surface, row, x, y, track, cfg, text_px, style,
-                figures, rule_h):
+def _draw_name_block(surface, row, x, y, name_w, row_h, cfg,
+                     name_px, small_px, style):
+    """The colony name, and under it climate and population.
+
+    RIGHT-ALIGNED to the column's right edge. Left-aligned, a name
+    too long for the column grew RIGHTWARD onto the track's first
+    slots — and the squares draw afterwards, so the data won and the
+    name was the casualty. Right-aligned it grows LEFT into `pad_x`,
+    where nothing is drawn, which turns the clip from the mechanism
+    into a fallback: the structural maximum is 336 px and the room to
+    grow into is `pad_x` plus `name_gap`, 36 px on top of the 330
+    column. The clip stays, because that room is not infinite either
+    and a column narrowed later must fail towards the empty side. It
+    also puts both lines against the bar, so the eye crosses one gap
+    rather than a ragged one per row.
+
+    The detail line is `cfg["detail"]`, substituted by REPLACE and
+    not `str.format` (decision 37): a stray brace in a translated
+    string cannot raise inside the render path.
+    """
+    # The gutter is taken out of the column, not out of the track:
+    # right-aligned to `name_w` exactly, the name ends on the pixel
+    # the first square starts on and the two read as a collision.
+    right = x + name_w - int(cfg.get("name_gap", 14) * (name_px / 21.0))
+    # Everything from the left edge of `list_area` to `right` is
+    # available: right-alignment sends overflow into `pad_x`, where
+    # nothing is drawn. Only a name that outruns THAT is ellipsised.
+    room = right - (x - _pad_left(x, cfg, name_px))
+    lines = [(style.render_text(
+        _fit(row["name"], style, name_px, room, cfg), name_px, ROW_NAME), 0)]
+    detail = _detail_text(row, cfg)
+    if detail:
+        lines.append((style.render_text(detail, small_px, DETAIL_COLOR),
+                      int(cfg.get("detail_gap", 2) * (small_px / 15.0))))
+
+    block_h = sum(s.get_height() + gap for s, gap in lines)
+    top = y + (row_h - block_h) // 2
+    # Clipped to the column PLUS its left padding — the direction
+    # overflow is now allowed to grow. Clipping to the column alone
+    # would cut the very overflow this alignment exists to absorb.
+    prev_clip = surface.get_clip()
+    surface.set_clip(pygame.Rect(0, y, right, row_h))
+    for surf, gap in lines:
+        top += gap
+        surface.blit(surf, (right - surf.get_width(), top))
+        top += surf.get_height()
+    surface.set_clip(prev_clip)
+
+
+def _pad_left(x, cfg, name_px):
+    """How far left of the column the name may grow: `pad_x`."""
+    return int(cfg.get("pad_x", 18) * (name_px / 21.0))
+
+
+def _fit(text, style, px, room, cfg):
+    """`text`, ellipsised only if it outruns even the padding.
+
+    The reservation is the REALISTIC range, not the structural
+    maximum. A star name is str15 and a player can type all fifteen
+    (namestar.cpp:262), which renders 336 px — but the widest of the
+    54 stars in the reference galaxy is 124 px, and a realistic
+    15-character name is 190 to 230. Sizing the column for the
+    pathological case spends 100 px of the shared budget on a name
+    nobody types; sizing it for the realistic one and ellipsising the
+    rest spends nothing and degrades visibly in the one case it
+    cannot hold. Right alignment is what makes that trade available:
+    overflow grows left into `pad_x`, not right onto the track.
+    """
+    if style.render_text(text, px, ROW_NAME).get_width() <= room:
+        return text
+    dots = cfg.get("ellipsis", "…")
+    cut = text
+    while cut and style.render_text(
+            cut + dots, px, ROW_NAME).get_width() > room:
+        cut = cut[:-1]
+    return (cut + dots) if cut else text
+
+
+def _detail_text(row, cfg):
+    """'Terran 12/14' — climate name plus pops over the maximum.
+
+    HD EXTENSION: per row, where the original has it once for the
+    selected colony (colsum.cpp:1155). See the module docstring.
+    """
+    template = cfg.get("detail", "")
+    if not template:
+        return ""
+    climates = cfg.get("climates") or ()
+    index = row.get("climate", -1)
+    name = climates[index] if 0 <= index < len(climates) else "?"
+    for key, value in (("{climate}", name),
+                       ("{pops}", str(row["pops"])),
+                       ("{max_pop}", str(row["max_pop"]))):
+        template = template.replace(key, value)
+    return template
+
+
+def _render_bar(surface, row, x, y, track, cfg, text_px, style):
     """One POP_LIMIT_CAP-slot track, in three regions with three states.
 
-      filled       0..pops, one per assigned pop — a square in its
-                   zone's colour, or a figure standing on a zone rule.
+      filled       0..pops, one square per assigned pop, in its
+                   zone's colour.
       free         pops..max_pop, a dashed outline and no fill: a
                    slot this colony can be grown into TODAY.
       unreachable  max_pop..POP_LIMIT_CAP, no square at all, only a
@@ -194,10 +305,6 @@ def _render_bar(surface, row, x, y, track, cfg, text_px, style,
     free. It is room the colony does not have YET: Advanced City
     Planning adds a flat +5, Biospheres +2, Subterranean scales with
     size, terraforming moves the climate factor itself.
-
-    Only the FILLED region changes between the modes; the free and
-    unreachable ones are drawn by the same code from the same
-    `Regions`, so comparing the modes compares one thing.
 
     Drawn back to front — baseline, dashed, filled — because a later
     draw wins where regions overlap. Not hypothetical: the "No
@@ -226,17 +333,48 @@ def _render_bar(surface, row, x, y, track, cfg, text_px, style,
                      max(1, track.unit // 4))
 
     # 1. filled
-    if figures is None:
-        _draw_squares(surface, regions, track, x, y)
-    else:
-        _draw_figures(surface, regions, track, x, y, figures, rule_h)
+    _draw_squares(surface, regions, track, x, y)
 
     if row["no_farming"]:
-        label = cfg.get("no_farming", "")
-        if label:
-            surf = style.render_text(label, text_px, NO_FARM_COLOR)
-            surface.blit(surf, (x + track.width + track.gap * 4,
-                                y + (track.bar_h - surf.get_height()) // 2))
+        _draw_no_farming(surface, x, y, track, cfg, text_px, style)
+
+
+def _draw_no_farming(surface, x, y, track, cfg, text_px, style):
+    """The label, in the tail column or under the track.
+
+    BELOW is the cheaper of the two, and not by a little: the tail
+    column costs 150 reference px of the ONE horizontal budget every
+    row shares, while the band under the bar is 14 px that
+    `row_height` already spends and nothing occupies. At a 42-slot
+    track that is the difference between a 19 px slot and a 22 px one
+    — and 14 px against 18 px once a building column is added, which
+    is the decision this placement exists for. See
+    `_horizontal_budget` in layout.json.
+
+    What has to hold either way: the label must not be drawn where
+    something else draws later. It was once put at the bar's left
+    edge and the worker squares painted straight over it — every
+    number right, nothing on screen. Below the bar is outside the
+    track's own band by construction (squares occupy `y+1` to
+    `y+bar_h-1`), so a full 42-slot row cannot reach it. That is a
+    property of the geometry, not of the data, which is why it is
+    also a smoke check rather than a look at one screenshot.
+    """
+    label = cfg.get("no_farming", "")
+    if not label:
+        return
+    surf = style.render_text(label, text_px, NO_FARM_COLOR)
+    if cfg.get("no_farming_placement", "below") == "tail":
+        surface.blit(surf, (x + track.width + track.gap * 4,
+                            y + (track.bar_h - surf.get_height()) // 2))
+        return
+    # `y` is the BAR's top; the row extends half the spare height
+    # above and below it. Bottom-aligned in the band that leaves, so
+    # any rounding slack sits between the label and the bar, where it
+    # reads as spacing, rather than under the label, where it reads
+    # as a taller row.
+    row_bottom = y + track.bar_h + (track.row_h - track.bar_h) // 2
+    surface.blit(surf, (x, row_bottom - surf.get_height()))
 
 
 def _draw_squares(surface, regions, track, x, y):
@@ -246,30 +384,6 @@ def _draw_squares(surface, regions, track, x, y):
             pygame.draw.rect(surface, ZONE_COLORS[zone], pygame.Rect(
                 x + (start + i) * track.step, y + 1,
                 track.unit, track.bar_h - 2))
-
-
-def _draw_figures(surface, regions, track, x, y, figures, rule_h):
-    """One sprite per pop, the zone colour as a rule beneath them.
-
-    The colour stops being a fill because a filled block behind a
-    figure fights it for the same pixels — the silhouette carries
-    the profession and needs a quiet ground — while the rule still
-    shows the zone as a run, which is what the fill was doing.
-    Sprites are centred in their slot and stand ON the rule, so all
-    three professions share one line however their widths differ.
-    """
-    common, sprites = figures.sized(track.unit, track.bar_h - rule_h)
-    base = y + track.bar_h
-    for zone, start, count in regions.runs:
-        x0 = x + start * track.step
-        x1 = x + (start + count - 1) * track.step + track.unit
-        pygame.draw.rect(surface, ZONE_COLORS[zone],
-                         pygame.Rect(x0, base - rule_h, x1 - x0, rule_h))
-        sprite = sprites[zone]
-        offset = (track.unit - sprite.get_width()) // 2
-        for i in range(count):
-            surface.blit(sprite, (x + (start + i) * track.step + offset,
-                                  base - rule_h - common))
 
 
 def _dashed_rect(surface, color, rect, dash):

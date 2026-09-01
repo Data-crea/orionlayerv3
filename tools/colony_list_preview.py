@@ -6,7 +6,6 @@ one game start plus 85 turns. This builds the real screen — the real
 defined below, and writes both drawing modes from ONE run.
 
     python tools/colony_list_preview.py
-    python tools/colony_list_preview.py --pop-dir ~/moo2/pop_sprites
     python tools/colony_list_preview.py --size 2560x1440 --out-dir /tmp/x
 
 Every image is written twice, full size and 50 %. **The 50 % version
@@ -17,18 +16,11 @@ that survives the reduction reads as calm at full size; structure
 that dissolves was noise pretending to be information. No pixel check
 can say that: it measures whether ink landed, not whether it settles.
 
-**Both modes come out of one invocation**, against one `Layout` and
-one `boxes.json` read. From two runs a changed argument or an edited
-layout.json could slip between them, and the pair would compare two
-LAYOUTS rather than two renderings of one — the exact failure the
-shared `track_metrics`/`row_regions` exist to prevent, put back by
-the instrument meant to inspect it.
-
-Figure mode needs `--pop-dir`: the sprites are cut from the player's
-own game and are not in the repository (decision 40), so nothing here
-reads them from the tree. Without it the tool says so in one line and
-renders squares. It never crashes for a missing or malformed set — it
-reports through the exit code.
+This rendered the comparison that deleted figure mode: a sprite per
+colonist lost to a square per colonist, because the silhouettes did
+not survive the 50 % copy and the zone rule ended up carrying the
+profession they were supposed to carry. Only squares remain, and
+`--pop-dir` with it.
 
 Output goes to /tmp, not into the tree, and every path printed is
 absolute: both extractor faults in the fundament printed a success
@@ -65,6 +57,11 @@ DEFAULT_OUT_DIR = os.path.join("/tmp", "colony_list_preview")
 #
 # `jobs` is (food, industry, research) in ECON order.
 
+#: Production names are real, out of the player's TECHNAME.LBX
+#: (techinit.cpp:43-73 gives the walk). They are NOT shipped and
+#: `build_rows` leaves `producing` empty for want of an extractor —
+#: these are here so the column can be seen at all.
+#:
 #: 22 pops on one planet. This is where the ORIGINAL squishes
 #: hardest: it packs one icon per colonist into a fixed column and
 #: `Calculate_Squish_Step_` closes the spacing until they fit. The HD
@@ -72,7 +69,9 @@ DEFAULT_OUT_DIR = os.path.join("/tmp", "colony_list_preview")
 #: exactly where the two designs diverge most, and the thing to judge
 #: is whether twenty-two adjacent slots still read as countable.
 STRESS = {"name": "Vega I", "pops": 22, "jobs": [8, 9, 5],
-          "no_farming": False, "max_pop": 24}
+          "no_farming": False, "climate": 8, "max_pop": 24,
+          "producing": "Atmosphere Renewer", "producing_turns": 8,
+          "can_buy": True}
 
 #: Meant to be three race groups in one row. **It cannot be drawn as
 #: one.** Race shading needs the pop word's low nibble, whose mask
@@ -82,14 +81,18 @@ STRESS = {"name": "Vega I", "pops": 22, "jobs": [8, 9, 5],
 #: tool's output, because a preview that quietly substituted
 #: professions for races would answer a question nobody asked.
 RACE_GROUPS = {"name": "Sol III", "pops": 12, "jobs": [4, 5, 3],
-               "no_farming": False, "max_pop": 16}
+               "no_farming": False, "climate": 9, "max_pop": 16,
+               "producing": "Research Lab", "producing_turns": 3,
+               "can_buy": True}
 
 #: max_farms == 0. The label is drawn AFTER the track, in the
 #: reserved tail column, because the collapsed food zone has no width
 #: to hold it — the first version drew it at the bar's left and the
 #: worker squares painted straight over it.
 NO_FARMING = {"name": "Kif II", "pops": 9, "jobs": [0, 7, 2],
-              "no_farming": True, "max_pop": 14}
+              "no_farming": True, "climate": 1, "max_pop": 14,
+              "producing": "Alien Control Center",
+              "producing_turns": 12, "can_buy": False}
 
 #: max_pop 9, so 33 of the 42 slots are unreachable. The judgement
 #: this row exists for: does that long faint baseline read as room
@@ -97,7 +100,9 @@ NO_FARMING = {"name": "Kif II", "pops": 9, "jobs": [0, 7, 2],
 #: Biospheres, Subterranean, terraforming — or as a track cut off?
 #: Opposite meanings, and only a picture settles which one it has.
 SMALL = {"name": "Nazin I", "pops": 3, "jobs": [1, 1, 1],
-         "no_farming": False, "max_pop": 9}
+         "no_farming": False, "climate": 5, "max_pop": 9,
+         "producing": "Trade Goods", "producing_turns": 0,
+         "can_buy": False}
 
 ROWS = [STRESS, RACE_GROUPS, NO_FARMING, SMALL]
 
@@ -116,15 +121,14 @@ def build_context(width, height):
         f"assets/shared/skins/{res.skin}/colors.json", {}) or {}
     palette.init(colors)
 
-    from screens.colony_summary import colonyfigures, colonylist
+    from screens.colony_summary import colonylist
 
     layout = Layout(width, height)
     style = StyleRenderer(res.skin_dir(), res.font(), colors)
     data = res.load_json("screens/colony_summary/layout.json", {}) or {}
     boxes = load_boxes(os.path.join(SCREEN, "boxes.json"), width, height)
     return dict(res=res, colors=colors, layout=layout, style=style,
-                data=data, boxes=boxes,
-                colonylist=colonylist, colonyfigures=colonyfigures)
+                data=data, boxes=boxes, colonylist=colonylist)
 
 
 def box_rect(boxes, name):
@@ -138,7 +142,7 @@ def box_rect(boxes, name):
     return None
 
 
-def render_screen(ctx, rows, figures, width, height):
+def render_screen(ctx, rows, width, height):
     """One full screen: background, panel fills, list, frame, title.
 
     The same order `ColonySummaryScreen.render` uses, minus the
@@ -161,8 +165,7 @@ def render_screen(ctx, rows, figures, width, height):
     if ref is None:
         raise SystemExit("boxes.json has no list_area box for this size")
     ctx["colonylist"].render(surface, rows, pygame.Rect(*layout.rect(ref)),
-                             data.get("list", {}), layout, ctx["style"],
-                             figures)
+                             data.get("list", {}), layout, ctx["style"])
 
     frame_path = os.path.join(SCREEN, "assets", "frame.png")
     if os.path.exists(frame_path):
@@ -195,55 +198,10 @@ def write_pair(surface, out_dir, stem):
     return full, half
 
 
-def load_pop_set(ctx, pop_dir):
-    """A FigureSet from `pop_dir`, or None with a reason on one line.
-
-    Goes through the real `colonyfigures.load_figures`, so the crop
-    baseline guard runs here exactly as it would in the game instead
-    of being skipped by the instrument meant to surface it. The
-    filenames come from layout.json, so this tool holds no second
-    copy of them; `enabled` is forced on because the shipped default
-    is off and `--pop-dir` IS the decision to turn it on.
-    """
-    cfg = dict(ctx["data"].get("list", {}))
-    figures_cfg = dict(cfg.get("figures") or {})
-    figures_cfg["enabled"] = True
-    cfg["figures"] = figures_cfg
-    names = figures_cfg.get("sprites") or []
-
-    class _DirRes:
-        """Resolves the sprite names into --pop-dir and nowhere else."""
-
-        @staticmethod
-        def screen_file(_screen, *parts):
-            path = os.path.join(pop_dir, parts[-1])
-            return path if os.path.exists(path) else None
-
-    try:
-        figures = ctx["colonyfigures"].load_figures(_DirRes(), cfg)
-    except ValueError as exc:
-        # The crop-baseline guard. Loud, but not a traceback: a
-        # diagnostic should degrade, not crash. The non-zero exit at
-        # the end is how the tool reports that it found something.
-        print(f"\n  FIGURE SET REFUSED\n  {exc}\n")
-        return None, False
-    if figures is None:
-        # Asked for by name and not delivered. Not a crash, but not
-        # nothing either: --pop-dir IS the request for figure mode, so
-        # an empty directory is a finding and leaves through the exit
-        # code. Omitting the argument entirely is the quiet path.
-        print(f"  figure mode skipped: {pop_dir} has none of "
-              f"{', '.join(names)}")
-        return None, False
-    return figures, True
-
-
 def main():
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("--size", default="1920x1080", help="WxH")
     ap.add_argument("--out-dir", default=DEFAULT_OUT_DIR)
-    ap.add_argument("--pop-dir", help="directory holding the pop sprites; "
-                                      "without it, square mode only")
     args = ap.parse_args()
 
     width, height = (int(v) for v in args.size.lower().split("x"))
@@ -252,19 +210,10 @@ def main():
     pygame.display.set_mode((32, 32))
     ctx = build_context(width, height)
 
-    figures, ok = (None, True)
-    if args.pop_dir:
-        figures, ok = load_pop_set(ctx, args.pop_dir)
-    else:
-        print("  figure mode skipped: no --pop-dir given (the pop sprites "
-              "are cut from the player's own game and are not shipped)")
-
-    modes = [("squares", None)] + ([("figures", figures)] if figures else [])
-    print(f"\n{width}x{height} -> {os.path.abspath(args.out_dir)}")
-    for name, figure_set in modes:
-        print(f"\n{name}:")
-        write_pair(render_screen(ctx, ROWS, figure_set, width, height),
-                   args.out_dir, f"colony_list_{name}")
+    print(f"{width}x{height} -> {os.path.abspath(args.out_dir)}\n")
+    print("rows:")
+    write_pair(render_screen(ctx, ROWS, width, height),
+               args.out_dir, "colony_list")
 
     # ── The invariant, made visible ──
     # One square is the same size whatever else is on screen, because
@@ -275,8 +224,8 @@ def main():
     # purpose: the tracks then share an x axis, and a difference of
     # one slot shows up as a step instead of needing to be measured.
     print("\ninvariant (same row alone, then beside a larger colony):")
-    alone = render_screen(ctx, [SMALL], figures, width, height)
-    together = render_screen(ctx, [SMALL, STRESS], figures, width, height)
+    alone = render_screen(ctx, [SMALL], width, height)
+    together = render_screen(ctx, [SMALL, STRESS], width, height)
     pair = pygame.Surface((width, height * 2))
     pair.blit(alone, (0, 0))
     pair.blit(together, (0, height))
@@ -306,7 +255,7 @@ def main():
           "single-race row.\n  Race shading needs the pop nibble, whose mask has "
           "no second source, so nothing\n  reads it and no row can differ "
           "by race. Not a fault in this tool.")
-    return 0 if (ok and same) else 1
+    return 0 if same else 1
 
 
 if __name__ == "__main__":
