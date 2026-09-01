@@ -144,8 +144,8 @@
     "spare_panel": ""
   },
   "list": {
-    "_invention": "INVENTION. The original draws three columns of population sprites per row, one icon per colonist, squished when a colony outgrows its column (COLDRAW::Do_Colony_Info_Pop_Stuff_For_Pop_, coldraw.cpp:282; Calculate_Squish_Step_, coldraw.cpp:12). This draws one allocation bar per row instead: one square per colonist, three zones in ECON order. MOO2 could not draw it and does not. Marked here, in colonylist.py, in v3_projektstatus.md and in a smoke check.",
-    "_transcribed": "The row set (colonies whose owner is the local player), the zone order food/industry/research (ECON_FOOD=0, orion2_consts.h:119; the original's own column order, colsum.cpp:318-329), the 'No Farming' label and the condition max_farms == 0 that shows it (coldraw.cpp:315, ESTR_NO_FARMING 387), and the bar length, which is COLCALC::Planet_Max_Population_For_Player_ (colcalc.cpp:896) and never _planet_max_population[size] alone.",
+    "_invention": "INVENTION. The original draws three columns of population sprites per row, one icon per colonist, squished when a colony outgrows its column (COLDRAW::Do_Colony_Info_Pop_Stuff_For_Pop_, coldraw.cpp:282; Calculate_Squish_Step_, coldraw.cpp:12). This draws one allocation bar per row instead: one square per colonist, three zones in ECON order. MOO2 could not draw it and does not. Marked here, in colonylist.py (the renderer), in v3_projektstatus.md and in a smoke check.",
+    "_transcribed": "The row set (colonies whose owner is the local player), the zone order food/industry/research (ECON_FOOD=0, orion2_consts.h:119; the original's own column order, colsum.cpp:318-329), the 'No Farming' label and the condition max_farms == 0 that shows it (coldraw.cpp:315, ESTR_NO_FARMING 387), and the bar length, which is COLCALC::Planet_Max_Population_For_Player_ (colcalc.cpp:896) and never _planet_max_population[size] alone. The TRACK length is transcribed too, and separately: it is the engine's own population ceiling (POP_LIMIT_CAP in colonyrows.py, which carries its three sources — s_colony.pop[], the clamp at the end of COLCALC::Planet_Max_Population_For_Player_ colcalc.cpp:930, and the per-job cap in COLMOVE::Give_Colonist_New_Job_ colmove.cpp:518). The number lives in that constant and nowhere else, here included.",
     "row_height": 62,
     "pad_x": 22,
     "pad_y": 14,
@@ -154,8 +154,22 @@
     "small_font": 15,
     "bar_height": 34,
     "square_gap": 2,
+    "tail_width": 150,
+    "figures": {
+      "enabled": false,
+      "sprites": [
+        "pop_farmer.png",
+        "pop_worker.png",
+        "pop_scientist.png"
+      ],
+      "rule_height": 3,
+      "_note": "OFF by default, and it cannot switch itself on: the pop sprites are cut from the player's own copy of the game and are never in the repository (decision 40), so an installation without them keeps drawing squares. enabled true with the files present in screens/colony_summary/assets/ draws one figure per colonist instead of one square, with the zone colour as a rule_height rule under the figures instead of a background fill. Both modes read the SAME geometry (colonylist.track_metrics and row_regions), so switching compares two renderings and not two layouts. sprites is one file per ECON zone, in order: food, industry, research.",
+      "_sizing_note": "The set is normalised on HEIGHT, never on width: common_height = min over the set of (max_width * h/w), where max_width is the step minus the gap. The widest sprite therefore sets the height for all of them and every other follows from its own aspect ratio. Crops must share a baseline — colonyfigures refuses a set whose source heights span more than MAX_CROP_HEIGHT_SPREAD, because that fault looks like an art problem and is a measurement one."
+    },
     "no_farming": "No Farming",
     "empty": "No colonies",
-    "_no_farming_note": "Drawn after the bar, not inside it. The design calls it a collapsed food zone, and it is one, but a zero-width zone has nowhere to put a label and the bar's empty tail is only one slot wide on Sol IV. The first version drew it at the bar's left and the worker squares painted over it: every number correct, nothing on screen."
+    "_no_farming_note": "Drawn after the bar, not inside it. The design calls it a collapsed food zone, and it is one, but a zero-width zone has nowhere to put a label and the bar's empty tail is only one slot wide on Sol IV. The first version drew it at the bar's left and the worker squares painted over it: every number correct, nothing on screen.",
+    "_track_note": "The track is always POP_LIMIT_CAP slots long — the engine's population ceiling, defined once in colonyrows.py with its sources and its reasons — so one square is the same size in every row and in every empire. Three regions per row: filled (zone colour), free (dashed outline, reachable today), unreachable (a faint baseline only, reachable later via Advanced City Planning, Biospheres, Subterranean and terraforming). The third is not padding.",
+    "_tail_width_note": "Reference pixels reserved to the RIGHT of the track, for the 'No Farming' label. A full-length track ends where the panel does, so the label needs a column of its own; taking it out of the bar space rather than out of the track keeps every row's label in the same place."
   }
 }

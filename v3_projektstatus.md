@@ -86,8 +86,8 @@ files under `doc/` and are only summarised here.
 
 | | |
 |---|---|
-| Python | 20,859 lines across 92 modules (core, screens, tools) |
-| Smoke test | `python tools/smoke_test.py` — **51 checks**, headless |
+| Python | 21,642 lines across 94 modules (core, screens, tools) |
+| Smoke test | `python tools/smoke_test.py` — **53 checks**, headless |
 | Assets | 170 MB (select_race 68, galaxy_map 51, shared 23, new_game 21, colony_summary 1) |
 | Screens in HD | 7 of ~20–22 (colony summary is frame + sidebar only) |
 | Setup from clone | `python tools/setup.py` (deps via the system package manager) |
@@ -342,6 +342,16 @@ was split rather than listed higher: `core/screenhelp.py` is a mixin,
 and none of what moved was about being a screen. `helppopup.py`
 crossed the line this session (column renderer + backdrop) and is
 listed instead of split, because everything in it is one widget.
+
+`colonylist.py` crossed it at 380 when the allocation track was
+re-based on the engine's population cap, was listed for one session,
+and is off the list again: it split into `colonyrows.py` (201) and
+`colonylist.py` (205). The seam was already in the data flow —
+`build_rows()` hands the renderer plain dicts — so nothing had to be
+invented to find it, which is the difference between a split and a
+file cut in half. Worth recording that the first reading was wrong:
+"the numbers exist only to give the bar its length, so it is one
+thing" describes a call graph that was never there.
 
 **Deleted this session, verified unreferenced by grep first:**
 `galaxy_map/assets/{map_background1,map_background2,3}.png`,
@@ -629,10 +639,14 @@ refuses the base table anywhere it appears without the climate
 factors.
 
 **The list renders — first visible step, 31 August.**
-`screens/colony_summary/colonylist.py` (278 lines, its own module
-because `screen.py` was at 258 against a ~300 guideline). One row per
-colony of the local player, sorted by name: the planet name, then one
-allocation bar, one square per colonist, three zones in ECON order.
+`screens/colony_summary/colonyrows.py` (201 lines, the numbers),
+`screens/colony_summary/colonylist.py` (300, the drawing) and
+`screens/colony_summary/colonyfigures.py` (155, the optional sprite
+set) — their own modules because `screen.py` was at 258 against a
+~300 guideline. One
+row per colony of the local player, sorted by name: the planet name,
+then one allocation bar, one square per colonist, three zones in ECON
+order.
 Static on purpose — no hover band, no draggable dividers, no click
 injection; the screen stays read-only. Those belong on a picture
 somebody already believes.
@@ -662,8 +676,112 @@ later without moving anything.
 One thing only the picture caught: "No Farming" was first drawn at
 the bar's left edge and the worker squares painted straight over it.
 Every number was right and the screen showed nothing. It now sits
-after the bar — the collapsed zone has zero width by construction,
-and the empty tail is one slot wide on Sol IV.
+after the track, in a `tail_width` column reserved for it — the
+collapsed zone has zero width by construction, and the free tail is
+one slot wide on Sol IV.
+
+**The track is the engine's cap, not the empire's best colony.** The
+square used to be sized from the widest `max_pop` in the list being
+drawn, so the ruler moved with the empire: one new Gaia colony, or a
+finished Biosphere, lengthened the longest bar and shrank every
+square on screen. A square counted last turn was not the square
+counted this turn, and nothing in the picture said the scale had
+changed — the same class as the drift and double-scale faults, a
+number that is wrong only in comparison with itself.
+
+It now comes from `POP_LIMIT_CAP` in `colonyrows.py`, which is 42 in
+one place in the tree and carries all three of its sources: `s_colony.pop[42]`
+(orion2.h:497), the clamp closing
+`COLCALC::Planet_Max_Population_For_Player_` (colcalc.cpp:930), and
+the per-job cap in `COLMOVE::Give_Colonist_New_Job_`
+(`Sum_Colonists_ >= 42`, colmove.cpp:518) — that last one is why one
+zone may legitimately span the whole track, so it cannot be drawn
+shorter. `max_population()` clamps with the same constant, so the two
+cannot disagree about how long a full bar is.
+
+Three regions per row, each with its own state: **filled**, one
+square per assigned pop in its zone's colour; **free**, from `n_pops`
+to `max_pop`, a dashed outline and no fill; **unreachable**, from
+`max_pop` to the cap, no square at all and only a faint baseline.
+The third is not padding — Advanced City Planning (+5), Biospheres
+(+2), Subterranean and terraforming all move `max_pop` up during a
+game, so it is room the colony does not have yet, and a square there
+would claim it was either filled or free. Squares past `max_pop` are
+now drawn rather than clipped: they land in the unreachable region,
+where nothing else is, so the two stated deviations stay visible
+without losing a colonist off the picture.
+
+Two smoke checks hold it, both measured in pixels rather than by
+re-deriving the arithmetic, which would only check the formula
+against itself: the same row drawn alone and drawn beside a
+42-population colony must come out identical pixel for pixel, and the
+three regions must appear in order with the unreachable one thin and
+at the foot of the track — so a dimmer square there fails instead of
+passing a colour test.
+
+**Figure mode — optional, off, and unreachable from a clean clone.**
+`list.figures.enabled` in `layout.json` swaps the filled region from
+one square per colonist to one SPRITE per colonist, with the zone
+colour as a 3 px rule beneath the figures instead of a background
+fill: the silhouette carries the profession and wants a quiet ground,
+while the rule still shows the zone as a run. The free and
+unreachable regions do not change.
+
+**The sprites do not exist yet, anywhere.** Nothing in the tree
+draws, cuts or ships a pop figure, and per decision 40 nothing ever
+will — they come out of the player's own game, like the help texts
+and the nebulae. So the mode is off by default and `load_figures`
+returns None on a missing file with a line saying why; `render` draws
+squares when handed None, so the fallback needs no branch anywhere
+else. What is built is the machinery and its contract, ready for
+whatever produces the artwork.
+
+**One geometry, two renderings.** `track_metrics` and `row_regions`
+are computed once and handed to whichever mode draws. This is the
+whole point and the easiest thing to lose: if each mode worked out
+its own unit and zone edges, switching between them would compare two
+LAYOUTS rather than two drawings of one, and the drift would be a
+slot wide — enough to move a figure across a divider, small enough
+that no screenshot names it. The smoke check renders one row both
+ways and demands the two be identical pixel for pixel from the last
+filled slot rightwards, plus that they DIFFER inside it, so the
+comparison cannot pass by drawing nothing.
+
+**Sprites are normalised on HEIGHT, never on width.**
+`common_height = min over the set of (max_width * h/w)`, where
+`max_width` is the step minus the gap — one `unit`, because a figure
+that ate its gap would touch its neighbour. Read it as: what height
+would each sprite reach at exactly `max_width`? Take the smallest.
+The widest sprite in the set lands there and sets the height; every
+other follows from its own aspect ratio. Normalising on width inverts
+it — the narrowest figure becomes the tallest, since a narrow sprite
+stretched to a common width grows in both axes — and makes the set
+unstable, because one new sprite in a wider tool pose resizes every
+figure that was already right.
+
+Measured: at a step of 23 with a gap of 2, `max_width` is 21 and
+crops of 15x26, 20x25 and 18x26 give a common height of 26 at widths
+15, 20 and 18. The smoke test asserts that vector exactly, and
+separately asserts the RULE at four budgets — the crop with the
+largest h/w must render narrowest, which is precisely what a width
+normalisation inverts.
+
+Note the limiter lands at 20 against a `max_width` of 21: two integer
+truncations cost it a pixel. The first version of the check asserted
+equality there, which failed — and was right to. `//` throughout, not
+`int(a / b)`: every value is positive so the two agree, but the exact
+form cannot land a width on 14 because 15.0 came back as 14.999999.
+
+**A set whose crops do not share a baseline is refused, loudly.**
+More than `MAX_CROP_HEIGHT_SPREAD` (2 px) between the tallest and
+shortest source crop raises out of `check_crop_heights` naming every
+file and size. Absent sprites fall back quietly; a set that is
+present and inconsistent does not, because the whole sizing rule
+normalises the group onto one height, so a single crop taken two
+pixels low silently rescales every figure beside it. The symptom is
+that one profession looks subtly wrong next to the others — which
+reads as an ART problem and sends the next session to redraw a sprite
+that is fine, when the fault is a measurement.
 
 **Rest of the design, agreed 31 August, not built.** Instead of the
 original's three icon columns per colony, one allocation bar per row:
@@ -955,8 +1073,8 @@ without test coverage.
 ### Struct verification
 
 **Two of these are what still separates the colony list from full
-accuracy.** Both are named in `colonylist.py`'s docstring as
-deviations; they belong here as well, because a limitation that
+accuracy.** Both are named in `colonyrows.py`, in `max_population()`,
+as deviations; they belong here as well, because a limitation that
 lives only in the module that works around it is a limitation nobody
 finds.
 

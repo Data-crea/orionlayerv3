@@ -1952,6 +1952,7 @@ def main():
     # own end, which is what keeps "counting squares counts pops"
     # true when a deviation makes the computed maximum too small.
     from screens.colony_summary import colonylist as _cl
+    from screens.colony_summary import colonyrows as _cr
     from core.structs import colony as _colsp, star as _starsp
 
     def _mk_colony(owner, planet, pops, jobs, max_farms, climate):
@@ -2001,10 +2002,10 @@ def main():
         _mk_colony(1, 1, 4, (0, 4, 0), 255, 8),    # another player
     ]
     _pl_raw = bytearray(pl.SIZE)
-    _pl_raw[pl.TRAITS_OFFSET + _cl.TRAIT_ENVIRONMENT_IMMUNE] = 1
+    _pl_raw[pl.TRAITS_OFFSET + _cr.TRAIT_ENVIRONMENT_IMMUNE] = 1
     _gs.player_raw = [bytes(_pl_raw)]
 
-    _rows = _cl.build_rows(_gs, "name")
+    _rows = _cr.build_rows(_gs, "name")
     assert len(_rows) == 2, [r["name"] for r in _rows]
     assert [r["name"] for r in _rows] == ["Sol I", "Sol II"], \
         [r["name"] for r in _rows]
@@ -2033,10 +2034,11 @@ def main():
 
     # A row whose population EXCEEDS its computed maximum. The two
     # documented deviations in max_population() both make the number
-    # too small, so this is a state the real screen can reach, and
-    # without the clip the squares run off the bar and off the panel.
-    # The rows above cannot catch it: both fit comfortably, so the
-    # clip is unreachable and removing it changes nothing.
+    # too small, so this is a state the real screen can reach. Those
+    # squares now spill into the unreachable region rather than being
+    # clipped at max_pop — a pop is a fact, max_pop is a computation
+    # — so what has to hold is that the TRACK still ends inside the
+    # panel. The rows above cannot catch it: both fit comfortably.
     _surf.fill((0, 0, 0))
     _cl.render(_surf, [{"name": "Overflow", "pops": 8,
                         "jobs": [0, 8, 0], "no_farming": False,
@@ -2058,6 +2060,191 @@ def main():
     assert "INVENTION" in _cfg.get("_invention", ""), \
         "layout.json list._invention no longer carries the marking"
     ok("colony list (rows, No Farming, bar inside its area, INVENTION marked)")
+
+    # ── The square is a fixed unit, not a ruler that moves ──
+    # The unit used to be derived from the widest max_pop in the
+    # current list, so acquiring one better colony resized every
+    # square on the screen and a square counted last turn was not the
+    # square counted this turn. It now comes from POP_LIMIT_CAP, the
+    # engine's own ceiling (colcalc.cpp:930, pop[], colmove.cpp:518).
+    #
+    # Asserted in pixels rather than by reading the arithmetic: the
+    # SAME row, drawn alone and drawn beside a colony twice its size,
+    # must come out identical pixel for pixel. Reimplementing the
+    # unit formula here would only check it against itself.
+    _row_h = int(_cfg["row_height"] * app.layout.scale)
+    _band = pygame.Rect(_area.x, _area.y, _area.w,
+                        int(_cfg["pad_y"] * app.layout.scale) + _row_h)
+
+    def _first_row_pixels(_rowset):
+        _s = pygame.Surface((1920, 1080))
+        _s.fill((0, 0, 0))
+        _cl.render(_s, _rowset, _area, _cfg, app.layout, app.style)
+        return pygame.surfarray.array3d(_s.subsurface(_band))
+
+    _modest = {"name": "Alpha I", "pops": 4, "jobs": [1, 2, 1],
+               "no_farming": False, "max_pop": 8}
+    _grand = {"name": "Beta II", "pops": 30, "jobs": [10, 12, 8],
+              "no_farming": False, "max_pop": _cr.POP_LIMIT_CAP}
+    assert (_first_row_pixels([_modest])
+            == _first_row_pixels([_modest, _grand])).all(), (
+        "the colony list's square still changes size with the row set "
+        "— the unit must come from POP_LIMIT_CAP, not from the widest "
+        "max_pop currently on screen")
+
+    # ── Three regions, three visual states ──
+    # filled (zone colour) then free (dashed outline) then unreachable
+    # (a faint baseline and nothing else), left to right and never
+    # overlapping. Asserted from the picture by colour, so it holds
+    # whatever the geometry does; the unreachable region is checked
+    # for being a BASELINE — thin ink at the foot of the track — and
+    # not merely for being a different colour, because a dimmer
+    # square would pass a colour test and say the wrong thing.
+    _surf.fill((0, 0, 0))
+    _cl.render(_surf, [{"name": "Regions I", "pops": 4,
+                        "jobs": [1, 2, 1], "no_farming": False,
+                        "max_pop": 9}],
+               _area, _cfg, app.layout, app.style)
+    _px = pygame.surfarray.array3d(_surf)
+
+    def _cols_of(_color):
+        return [_x for _x in range(_area.x, _area.right)
+                if (_px[_x] == _color).all(axis=1).any()]
+
+    def _ink_rows(_x0, _x1):
+        return [_y for _y in range(_area.y, _area.bottom)
+                if (_px[_x0:_x1 + 1, _y] != 0).any()]
+
+    _zone_cols = [c for _z in _cl.ZONE_COLORS for c in _cols_of(_z)]
+    _free_cols = _cols_of(_cl.BAR_FREE)
+    _beyond_cols = _cols_of(_cl.BAR_BEYOND)
+    assert _zone_cols and _free_cols and _beyond_cols, (
+        "a colony below the population ceiling must show all three "
+        f"regions; found filled={bool(_zone_cols)} "
+        f"free={bool(_free_cols)} unreachable={bool(_beyond_cols)}")
+    assert (max(_zone_cols) < min(_free_cols)
+            and max(_free_cols) < min(_beyond_cols)), (
+        "the colony list's three regions are out of order or overlap: "
+        f"filled ends {max(_zone_cols)}, free "
+        f"{min(_free_cols)}-{max(_free_cols)}, unreachable starts "
+        f"{min(_beyond_cols)}")
+    _free_band = _ink_rows(min(_free_cols), max(_free_cols))
+    _beyond_band = _ink_rows(min(_beyond_cols), max(_beyond_cols))
+    assert len(_beyond_band) * 4 <= len(_free_band), (
+        f"the unreachable region is {len(_beyond_band)} px tall "
+        f"against a {len(_free_band)} px free slot — it is drawing a "
+        "square, not a baseline")
+    assert min(_beyond_band) > (min(_free_band) + max(_free_band)) // 2, \
+        "the unreachable region's ink is not at the foot of the track"
+    ok("colony list track = engine cap (unit fixed, filled/free/"
+       "unreachable in order)")
+
+    # ── Figure mode: one geometry, two renderings ──
+    # The mode is off by default and its sprites are cut from the
+    # player's own game, so nothing here may touch the disk — a test
+    # that reads the user's disk answers differently for the user.
+    # The set is synthetic, and its crops are the measured ones:
+    # 15x26 farmer, 20x25 worker, 18x26 scientist.
+    from screens.colony_summary import colonyfigures as _cf
+
+    def _crop(w, h, color):
+        s = pygame.Surface((w, h), pygame.SRCALPHA)
+        s.fill(color)
+        return s
+
+    _crops = [_crop(15, 26, (255, 0, 0, 255)),
+              _crop(20, 25, (0, 255, 0, 255)),
+              _crop(18, 26, (0, 0, 255, 255))]
+
+    # The sizing rule, against the measurement it was written from: a
+    # step of 23 with a gap of 2 gives max_width 21, and the set comes
+    # out 26 tall at widths 15 / 20 / 18. Asserted as numbers because
+    # this is the one part of figure mode a picture cannot check —
+    # a set normalised the wrong way still renders, and still looks
+    # like a set, until somebody measures it.
+    _common, _widths = _cf.figure_sizes(23 - 2, _crops)
+    assert (_common, _widths) == (26, [15, 20, 18]), (_common, _widths)
+
+    # The RULE, not that instance, and at several budgets. Under a
+    # HEIGHT rule the whole set shares one height and the widths vary
+    # by aspect, so the source with the largest h/w — the narrowest,
+    # tallest-looking crop — renders NARROWEST. Under a width rule it
+    # would render TALLEST and every width would be equal. That is
+    # the discriminator, and it holds whatever the crops are.
+    #
+    # Nothing may exceed the budget, but nothing lands exactly on it
+    # either: two integer truncations cost the limiter up to a pixel,
+    # which is why the measured set reads 20 against a max_width of
+    # 21. Asserting equality there is asserting the arithmetic is
+    # float, and it was — that assertion is what caught it.
+    _aspect = [c.get_height() / c.get_width() for c in _crops]
+    _narrowest_src = _aspect.index(max(_aspect))
+    _widest_src = _aspect.index(min(_aspect))
+    for _mw in (10, 21, 40, 63):
+        _c, _w = _cf.figure_sizes(_mw, _crops)
+        assert all(0 < v <= _mw for v in _w), (_mw, _w)
+        assert _c > 0 and len(set(_w)) > 1, (_mw, _c, _w)
+        assert _w[_narrowest_src] == min(_w), (
+            f"at max_width {_mw} the tallest-aspect crop rendered "
+            f"{_w[_narrowest_src]} against widths {_w} — the set looks "
+            "normalised on width, not on height")
+        assert _w[_widest_src] == max(_w), (_mw, _w)
+
+    # A set whose crops do not share a baseline is not a set. Loud,
+    # not a fallback: the symptom of a crop taken two pixels low is a
+    # figure that looks stylistically wrong beside its neighbours,
+    # which sends the next session to redraw artwork that is fine.
+    _cf.check_crop_heights(_crops, ("farmer", "worker", "scientist"))
+    try:
+        _cf.check_crop_heights(
+            _crops[:2] + [_crop(18, 29, (0, 0, 255, 255))],
+            ("farmer", "worker", "scientist"))
+    except ValueError as _e:
+        assert "baseline" in str(_e), _e
+    else:
+        raise AssertionError(
+            "a figure set whose crops span 4 px of height was accepted")
+
+    # ── The two modes must differ ONLY inside the filled region ──
+    # This is what makes the mode a comparison instead of a second
+    # layout: the unit, the zone edges, the free slots and the
+    # unreachable tail come from one computation, so everything from
+    # the last filled slot rightwards has to be identical pixel for
+    # pixel. A separate geometry per mode would drift by a slot —
+    # wide enough to move a figure across a divider, narrow enough
+    # that no screenshot names it.
+    _figrow = {"name": "Figures I", "pops": 6, "jobs": [2, 3, 1],
+               "no_farming": True, "max_pop": 11}
+
+    def _draw(_figs):
+        _s = pygame.Surface((1920, 1080))
+        _s.fill((0, 0, 0))
+        _cl.render(_s, [_figrow], _area, _cfg, app.layout, app.style, _figs)
+        return pygame.surfarray.array3d(_s)
+
+    _sq_px = _draw(None)
+    _fg_px = _draw(_cf.FigureSet(_crops, ("f", "w", "s")))
+    _tr = _cl.track_metrics(_area, _cfg, app.layout.scale)
+    _rg = _cl.row_regions(_figrow)
+    _bar_x = (_area.x + int(_cfg["pad_x"] * app.layout.scale)
+              + int(_cfg["name_width"] * app.layout.scale))
+    _split = _bar_x + _rg.filled * _tr.step
+    assert (_sq_px[_split:] == _fg_px[_split:]).all(), (
+        "square mode and figure mode disagree to the RIGHT of the "
+        "filled region — the free slots, the unreachable tail or the "
+        "No Farming column are not coming from the shared geometry")
+    assert not (_sq_px[_bar_x:_split] == _fg_px[_bar_x:_split]).all(), (
+        "figure mode drew the filled region exactly like square mode, "
+        "so the comparison above proves nothing")
+
+    # Figures stay inside their own row band and inside the track.
+    _row_h = int(_cfg["row_height"] * app.layout.scale)
+    _band_end = _area.y + int(_cfg["pad_y"] * app.layout.scale) + _row_h
+    for _x in range(_bar_x, _bar_x + _tr.width):
+        assert not _fg_px[_x, _band_end:].any(), (
+            f"a figure drew below its row band at x={_x}")
+    ok("colony list figure mode (height-normalised set, crop-baseline "
+       "guard, geometry shared with squares)")
 
     # ── Glyph substitution: mechanism, not one font's quirk ──
     # This existed because the bundled Bank Gothic was a DEMO build

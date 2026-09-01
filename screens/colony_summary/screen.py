@@ -36,7 +36,7 @@ from core.config import REF_W, REF_H
 from core.screen_base import ScreenBase
 from core.structs import player as player_struct
 
-from . import colonylist
+from . import colonyfigures, colonylist, colonyrows
 
 log = logging.getLogger("colony_summary")
 
@@ -76,6 +76,7 @@ class ColonySummaryScreen(ScreenBase):
         self._local = None          # parsed s_player of the local player
         self._sort_key = "name"     # what the original starts on
         self._state = None          # last snapshot, for the list
+        self._figures = None        # optional pop sprites, see enter()
 
     # ── Lifecycle ─────────────────────────────────────────
 
@@ -85,6 +86,7 @@ class ColonySummaryScreen(ScreenBase):
             "screens/colony_summary/layout.json", {}) or {}
         self._sort_key = self._data.get("sort", {}).get("default", "name")
         self._load_frame()
+        self._load_figures()
         self.update(game_state)
 
     def update(self, game_state=None):
@@ -114,6 +116,19 @@ class ColonySummaryScreen(ScreenBase):
         self._frame = (pygame.image.load(path).convert_alpha()
                        if path else None)
         self._scale_frame()
+
+    def _load_figures(self):
+        """The optional pop sprite set, once per screen entry.
+
+        Loaded here rather than in the renderer because file access
+        goes through `core/resources.py` (decision 16) and because
+        scaling and validating a set every frame would be work for a
+        picture that does not change. None is the ordinary answer —
+        the mode is off by default and the sprites are not shipped —
+        and `colonylist.render` draws squares when handed None.
+        """
+        self._figures = colonyfigures.load_figures(
+            self.app.res, self._data.get("list", {}))
 
     def _scale_frame(self):
         if self._frame is None:
@@ -175,10 +190,10 @@ class ColonySummaryScreen(ScreenBase):
         if not box:
             return
         cfg = self._data.get("list", {})
-        rows = colonylist.build_rows(self._state, self._sort_key)
+        rows = colonyrows.build_rows(self._state, self._sort_key)
         colonylist.render(surface, rows,
                           pygame.Rect(*self.layout.rect(box)),
-                          cfg, self.layout, self.style)
+                          cfg, self.layout, self.style, self._figures)
 
     def _render_sidebar(self, surface):
         """Six empire lines, label over value, evenly stacked in the

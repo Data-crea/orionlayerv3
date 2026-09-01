@@ -55,7 +55,7 @@ derive world geometry.
 python tools/smoke_test.py
 ```
 
-51 checks, headless, no orion2re needed. **The count must not go
+53 checks, headless, no orion2re needed. **The count must not go
 down.** If a change makes a check obsolete, replace it — do not
 delete it. Add a check for anything a future session could silently
 break; several checks exist because a fault was invisible on screen.
