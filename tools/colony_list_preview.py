@@ -55,7 +55,12 @@ DEFAULT_OUT_DIR = os.path.join("/tmp", "colony_list_preview")
 # name, pops, jobs, no_farming, max_pop — so the renderer cannot tell
 # the difference.
 #
-# `jobs` is (food, industry, research) in ECON order.
+# `jobs` is (food, industry, research) in ECON order, and
+# `production` is s_colony.production[4] in the same order plus BC
+# (orion2_consts.h:119-123). NOTHING DRAWS `production` — the
+# original does not either (decision 43) — but four of the seven sort
+# keys read it, so the preview rows carry it or a sorted preview
+# would order by zeroes.
 
 #: Production names are real, out of the player's TECHNAME.LBX
 #: (techinit.cpp:43-73 gives the walk). They are NOT shipped and
@@ -71,7 +76,7 @@ DEFAULT_OUT_DIR = os.path.join("/tmp", "colony_list_preview")
 STRESS = {"name": "Vega I", "pops": 22, "jobs": [8, 9, 5],
           "no_farming": False, "climate": 8, "max_pop": 24,
           "producing": "Atmosphere Renewer", "producing_turns": 8,
-          "can_buy": True}
+          "can_buy": True, "production": [16, 27, 11, 9]}
 
 #: Meant to be three race groups in one row. **It still cannot be
 #: drawn as one — but not for the reason this note used to give.**
@@ -95,7 +100,7 @@ STRESS = {"name": "Vega I", "pops": 22, "jobs": [8, 9, 5],
 RACE_GROUPS = {"name": "Sol III", "pops": 12, "jobs": [4, 5, 3],
                "no_farming": False, "climate": 9, "max_pop": 16,
                "producing": "Research Lab", "producing_turns": 3,
-               "can_buy": True}
+               "can_buy": True, "production": [8, 15, 7, 5]}
 
 #: max_farms == 0. The label is drawn AFTER the track, in the
 #: reserved tail column, because the collapsed food zone has no width
@@ -104,7 +109,8 @@ RACE_GROUPS = {"name": "Sol III", "pops": 12, "jobs": [4, 5, 3],
 NO_FARMING = {"name": "Kif II", "pops": 9, "jobs": [0, 7, 2],
               "no_farming": True, "climate": 1, "max_pop": 14,
               "producing": "Alien Control Center",
-              "producing_turns": 12, "can_buy": False}
+              "producing_turns": 12, "can_buy": False,
+              "production": [0, 21, 4, 6]}
 
 #: max_pop 9, so 33 of the 42 slots are unreachable. The judgement
 #: this row exists for: does that long faint baseline read as room
@@ -114,7 +120,7 @@ NO_FARMING = {"name": "Kif II", "pops": 9, "jobs": [0, 7, 2],
 SMALL = {"name": "Nazin I", "pops": 3, "jobs": [1, 1, 1],
          "no_farming": False, "climate": 5, "max_pop": 9,
          "producing": "Trade Goods", "producing_turns": 0,
-         "can_buy": False}
+         "can_buy": False, "production": [2, 3, 2, 1]}
 
 #: The structural maximum of the name column — and the one case the
 #: column is deliberately NOT sized to hold. `s_star.name` is str15
@@ -135,8 +141,9 @@ SMALL = {"name": "Nazin I", "pops": 3, "jobs": [1, 1, 1],
 #: and the squares, drawn after it, painted over the evidence.
 EXTREME_NAME = {"name": "WWWWWWWWWWWWWWW V", "pops": 6, "jobs": [2, 2, 2],
                 "no_farming": False, "climate": 7, "max_pop": 11,
-                "producing": "Deuterium Fuel Cells", "producing_turns": 5,
-                "can_buy": False}
+                "producing": "Deuterium Fuel Cells",
+                "producing_turns": 5, "can_buy": False,
+                "production": [4, 6, 5, 3]}
 
 ROWS = [STRESS, RACE_GROUPS, NO_FARMING, SMALL, EXTREME_NAME]
 

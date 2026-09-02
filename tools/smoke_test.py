@@ -2424,6 +2424,82 @@ def main():
         assert set(_fake) == set(_rows[0]), (
             f"colony_list_preview row {_fake.get('name')!r} has keys "
             f"{sorted(_fake)} against build_rows' {sorted(_rows[0])}")
+    # ── The seven sort keys, and their DIRECTIONS ──
+    # COLSUM::Switched_cmp_ (colsum.cpp:378-401, orion2re 1.60) is a
+    # switch on _g_sort_index with the sign as a literal per case.
+    # Five descending, Name and Producing ascending, and NO direction
+    # toggle anywhere — clicking the active header re-sorts
+    # identically. Asserted on the ORDER a sort produces rather than
+    # on the comparator functions, so a rewrite of how sorting is
+    # implemented still has to come out the same way round.
+    import json as _sjson
+    _sort_cfg = _sjson.load(open(os.path.join(
+        SCREENS_DIR, "colony_summary", "layout.json"),
+        encoding="utf-8"))["sort"]
+    _sorters = _cr.SORT_KEYS
+    assert set(_sorters) == {b["key"] for b in _sort_cfg["buttons"]}, (
+        f"the sort keys {sorted(_sorters)} do not match the buttons "
+        f"{sorted(b['key'] for b in _sort_cfg['buttons'])}")
+
+    def _order(_key, _rowset):
+        return [r["name"] for r in sorted(_rowset, key=_sorters[_key])]
+
+    # "beta" is deliberately lower-case and sorts BETWEEN two
+    # capitals only under casefold: by ASCII it lands after both.
+    _a = {"name": "Alpha", "pops": 3, "jobs": [1, 1, 1], "no_farming": False,
+          "climate": 8, "max_pop": 9, "producing": "", "producing_turns": 0,
+          "can_buy": False, "production": [1, 9, 5, 2]}
+    _b = {**_a, "name": "beta", "pops": 7, "production": [8, 2, 1, 9]}
+    _c = {**_a, "name": "Gamma", "pops": 5, "production": [4, 5, 9, 4]}
+    _set = [_a, _b, _c]
+
+    # Name: ascending, and CASE-INSENSITIVE — cmp_Alpha_ calls
+    # strcasecmp (colsum.cpp:1053). Plain str sort would put the
+    # lower-case "gamma" after both capitals.
+    assert _order("name", _set) == ["Alpha", "beta", "Gamma"], \
+        _order("name", _set)
+    assert _order("name", _set) != sorted(r["name"] for r in _set), (
+        "the name sort is matching a case-SENSITIVE order, so this "
+        "check is not exercising strcasecmp")
+    # The five descending keys.
+    assert _order("population", _set) == ["beta", "Gamma", "Alpha"], \
+        _order("population", _set)
+    assert _order("food", _set) == ["beta", "Gamma", "Alpha"], \
+        _order("food", _set)
+    assert _order("industry", _set) == ["Alpha", "Gamma", "beta"], \
+        _order("industry", _set)
+    assert _order("science", _set) == ["Gamma", "Alpha", "beta"], \
+        _order("science", _set)
+    assert _order("bc", _set) == ["beta", "Gamma", "Alpha"], \
+        _order("bc", _set)
+    # Producing cannot be honoured — Prod_To_Sort_Type_ needs
+    # _buildings[].cost and Selection_Name_, both loaded from the
+    # player's techname.lbx and not shipped. It must be declared
+    # unavailable AND fall back visibly, not silently.
+    assert "producing" in _cr.SORT_UNAVAILABLE, (
+        "producing is no longer declared unavailable — if the cost "
+        "and name tables have arrived, implement cmp_Prod_ "
+        "(colsum.cpp:1091) rather than dropping the marking")
+    assert _order("producing", _set) == _order("name", _set), (
+        "the producing key does something other than fall back to "
+        "the name, but the tables it needs are still not shipped")
+    # Sorting twice by the same key changes nothing: no toggle.
+    _once = _order("bc", _set)
+    assert _order("bc", [dict(r) for r in _set]) == _once, (
+        "sorting twice by the same key gave a different order — "
+        "Switched_cmp_ has no direction toggle (colsum.cpp:378-401)")
+    # Ties break on the name, which is OURS: the original's bubble
+    # sort leaves equal elements where they were, and for us that
+    # would reshuffle between frames.
+    _t1 = {**_a, "name": "Zeta", "pops": 4, "production": [1, 1, 1, 1]}
+    _t2 = {**_a, "name": "Aeta", "pops": 4, "production": [1, 1, 1, 1]}
+    assert _order("population", [_t1, _t2]) == ["Aeta", "Zeta"], (
+        "equal rows do not fall back to the name, so the list can "
+        "reorder itself between redraws")
+    ok("colony summary sort keys (seven, five descending, "
+       "case-insensitive name, no toggle, producing declared "
+       "unavailable)")
+
     # ── The sidebar's six s_player scalars ──
     # ONE home for these offsets: the verified spec in
     # core/structs/player.py. A probe spec briefly duplicated them in

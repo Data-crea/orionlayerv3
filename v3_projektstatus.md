@@ -845,6 +845,53 @@ is x 520, y 354, w 104. A colony row is `slot * 31 + 38`; the name
 column is x 12, w 89 — w 87 when the colony has an event — h 23; the
 building column x 512, w 85, h 22.
 
+**The sort bar works — 3 September 2026.** Seven keys, and the
+DIRECTIONS are transcribed rather than chosen: `Switched_cmp_`
+(colsum.cpp:378-401, 1.60) is a switch on `_g_sort_index` with the
+sign as a literal in each `case`. Five are descending — population,
+food, industry, science, BC — and Name and Producing ascending.
+
+**There is no direction toggle, and its absence is the
+transcription.** Clicking the header that is already lit re-sorts
+identically; the original has no reversal anywhere. No arrow is drawn
+for that reason. Every list control written since 1996 does the
+opposite, so this is the kind of fidelity that reads as a missing
+feature and needs the note.
+
+Name is CASE-INSENSITIVE, because `cmp_Alpha_` calls `strcasecmp`
+(colsum.cpp:1053). Star names generate capitalised, but a player
+renames a home star with free text (namestar.cpp:262), and a plain
+`str` sort would file that after every capital.
+
+**Six of seven are implemented; `producing` is not, and says so.**
+`cmp_Prod_` (colsum.cpp:1091) orders by `Prod_To_Sort_Type_`, which
+reads `TECHDATA::_buildings[].cost`, then breaks ties on
+`Selection_Name_` — a cost table and a name table both loaded at
+runtime from the player's own `techname.lbx` and neither shipped.
+That is the same absence that leaves the building column empty. The
+button is drawn DIMMED and still injects its click, because the
+original's list behind us sorts fine and the injection keeps the two
+screens agreeing; what it cannot do is reorder our rows. Falling back
+silently to the name would have looked like it worked.
+
+Tie-breaks are OURS and marked as an addition: the original's bubble
+sort (colsum.cpp:363) leaves equal elements where they were, which
+for us would reshuffle the list between redraws, so every key falls
+back to the name.
+
+`s_colony.production[4]` (offset 231, ECON order plus BC —
+orion2_consts.h:119-123) now reaches the row dicts for the four keys
+that need it. **Nothing draws it**, and the original does not either;
+that is decision 43 and why `output_panel` is an HD EXTENSION.
+
+**Scrolling is deliberately not built.** The original windows ten
+rows over the sorted list — `_list_col[10]`, `Update_Col_List_`
+(colsum.cpp:348) filling from `_g_colony_list_ptr[_first + i]` — and
+resets `_first = 0` on every sort click (colsum.cpp:828). The HD list
+draws every row that fits and has no `_first`, so there is nothing to
+reset yet; the place the reset goes is marked in `handle_click`. One
+piece verified before the next.
+
 **The list is no longer blocked.** `s_colony` is verified as of
 31 August (`core/structs/colony.py`): `owner`, `planet`, `n_pops` and
 `max_farms` each agree with the original's own colony summary, and

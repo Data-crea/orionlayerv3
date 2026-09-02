@@ -82,6 +82,8 @@ PANEL_BG = palette.col("colony_summary", "panel_background", (8, 11, 20))
 NAV_BG = palette.col("colony_summary", "nav_background", (10, 14, 26))
 NAV_HOVER_BG = palette.col("colony_summary", "nav_hover", (22, 34, 60))
 NAV_ACTIVE_BG = palette.col("colony_summary", "nav_active", (30, 48, 88))
+NAV_TEXT_DIM = palette.col(
+    "colony_summary", "nav_text_dim", (104, 116, 142))
 NAV_TEXT = palette.col("colony_summary", "nav_text", (196, 208, 236))
 TITLE_COLOR = palette.col("colony_summary", "title", (200, 210, 238))
 LABEL_COLOR = palette.col("colony_summary", "label", (140, 155, 190))
@@ -344,14 +346,33 @@ class ColonySummaryScreen(ScreenBase):
     def _render_buttons(self, surface):
         """Sort buttons and RETURN: the frame provides the bezel, so
         each box gets a fill plus its label; hover brightens it and
-        the active sort key stays lit."""
+        the active sort key stays lit.
+
+        **The active header does not indicate a direction, because
+        the original has none.** `Switched_cmp_` (colsum.cpp:378-401)
+        bakes the sign into each `case` as a literal — five of the
+        seven descending, Name and Producing ascending — and there is
+        no toggle anywhere: clicking the lit header re-sorts
+        identically. No arrow is drawn for that reason, and its
+        absence is a transcription rather than an omission.
+
+        A key this build cannot honour is drawn DIMMED
+        (`colonyrows.SORT_UNAVAILABLE`). It still injects its click,
+        because the original's own list behind us sorts perfectly
+        well and the injection is what keeps the two screens
+        agreeing; what it cannot do is reorder OUR rows. Dimming is
+        the difference between an absence that is visible and one
+        that is silent.
+        """
         mouse = mouse_input.pos()
-        specs = [(f"sort_{b['key']}", b["label"], b["key"] == self._sort_key)
+        unavailable = colonyrows.SORT_UNAVAILABLE
+        specs = [(f"sort_{b['key']}", b["label"], b["key"] == self._sort_key,
+                  b["key"] in unavailable)
                  for b in self._data.get("sort", {}).get("buttons", [])]
         specs.append(("return",
                       self._data.get("return", {}).get("label", "Return"),
-                      False))
-        for name, label, active in specs:
+                      False, False))
+        for name, label, active, dim in specs:
             box = self.box_rect(name)
             if not box:
                 continue
@@ -362,7 +383,8 @@ class ColonySummaryScreen(ScreenBase):
             surface.fill(fill[:3], rect)
             font = self.style.get_font(self.layout.font_size(
                 self.box_style(name).get("font_size", 18)))
-            text = font.render(label.upper(), True, NAV_TEXT[:3])
+            colour = NAV_TEXT_DIM if dim else NAV_TEXT
+            text = font.render(label.upper(), True, colour[:3])
             surface.blit(text, (rect.x + (rect.w - text.get_width()) // 2,
                                 rect.y + (rect.h - text.get_height()) // 2))
 
@@ -377,7 +399,20 @@ class ColonySummaryScreen(ScreenBase):
     def handle_click(self, screen_x, screen_y):
         for spec in self._data.get("sort", {}).get("buttons", []):
             if self._hit(f"sort_{spec['key']}", screen_x, screen_y):
+                # No direction toggle, even on the active header:
+                # Switched_cmp_ has none (colsum.cpp:378-401), so a
+                # second click re-sorts identically. Assigning the
+                # same key again IS the transcription.
                 self._sort_key = spec["key"]
+                # The original scrolls back to the top on any sort
+                # click — `_first = 0` at colsum.cpp:828. Nothing to
+                # reset here yet: the HD list does not scroll, it
+                # draws every row that fits. When scrolling arrives
+                # this is where the reset goes.
+                why = colonyrows.SORT_UNAVAILABLE.get(spec["key"])
+                if why:
+                    log.info("Sort %r not applied to the HD rows: %s",
+                             spec["key"], why)
                 self._inject(spec.get("native_click"), f"sort {spec['key']}")
                 return None
         if self._hit("return", screen_x, screen_y):

@@ -67,6 +67,10 @@ from core.structs import star as star_struct
 
 ROMAN = ("I", "II", "III", "IV", "V")
 
+#: orion2_consts.h:119-123. `s_colony.production[4]` is indexed by
+#: these, and the four sort keys that read it use them.
+ECON_FOOD, ECON_INDUSTRY, ECON_RESEARCH, ECON_BC = 0, 1, 2, 3
+
 #: colcalc.cpp:57, _size_climate_max_pop_lookup, indexed by climate.
 CLIMATE_FACTOR = (25, 25, 25, 25, 25, 25, 40, 60, 80, 100)
 #: mox.cpp:796, _planet_max_population, indexed by PLANET_SIZE. This
@@ -234,10 +238,86 @@ def build_rows(game_state, sort_key="name"):
             "producing": "",
             "producing_turns": 0,
             "can_buy": False,
+            # production[4] in ECON order, orion2_consts.h:119-123.
+            # Read for the four sort keys that need it; nothing
+            # DRAWS these — the original does not either, which is
+            # decision 43 and why output_panel is an HD EXTENSION.
+            "production": list(col.production),
             "max_pop": max_population(col, planet, traits),
         })
 
-    keys = {"name": lambda r: r["name"],
-            "population": lambda r: (-r["pops"], r["name"])}
-    rows.sort(key=keys.get(sort_key, keys["name"]))
+    rows.sort(key=SORT_KEYS.get(sort_key, SORT_KEYS["name"]))
     return rows
+
+
+# ── The seven sort keys, and the directions are transcribed ───────
+#
+# `COLSUM::Switched_cmp_` (colsum.cpp:378-401, orion2re 1.60) is a
+# plain switch on `_g_sort_index` with the DIRECTION BAKED IN as a
+# literal minus per case. Five of the seven are descending; Name and
+# Producing are not. There is NO direction toggle anywhere — clicking
+# the header that is already active re-sorts identically rather than
+# reversing, which is worth stating because every list control
+# written since 1996 does the opposite and the absence looks like an
+# omission rather than a transcription.
+#
+#   0 name        cmp_Alpha_    :1042   ascending
+#   1 population  cmp_Pops_     :1064   DESCENDING
+#   2 food        cmp_Food_     :1071   DESCENDING
+#   3 industry    cmp_Industry_ :1076   DESCENDING
+#   4 science     cmp_Research_ :1081   DESCENDING
+#   5 producing   cmp_Prod_     :1091   ascending — NOT IMPLEMENTED
+#   6 bc          cmp_BC_       :1086   DESCENDING
+#
+# The tie-breaks are OURS and are an addition, not a transcription:
+# the original's bubble sort (colsum.cpp:363) leaves equal elements
+# in whatever order they already had, which for us would mean a list
+# that reshuffles between frames. Every key below falls back to the
+# name so a redraw is stable.
+
+def _alpha(row):
+    """cmp_Alpha_ — `strcasecmp` on the planet name (colsum.cpp:1053).
+
+    CASE-INSENSITIVE, and that is the transcription rather than a
+    convenience: `strcasecmp` is what the original calls, so a lower-
+    case star name sorts among its peers instead of after all of
+    them. Star names are generated capitalised, but a player renames
+    a home star with free text (namestar.cpp:262).
+    """
+    return row["name"].casefold()
+
+
+def _by(field, econ=None):
+    """Descending on one number, then by name to break ties."""
+    if econ is None:
+        return lambda r: (-r[field], r["name"].casefold())
+    return lambda r: (-r["production"][econ], r["name"].casefold())
+
+
+#: `producing` is absent on purpose. `cmp_Prod_` (colsum.cpp:1091)
+#: orders by `Prod_To_Sort_Type_`, which reads
+#: `TECHDATA::_buildings[].cost` and then breaks ties on
+#: `COLBLDG::Selection_Name_` — a cost table and a name table both
+#: loaded at runtime from the player's own techname.lbx
+#: (techinit.cpp:43-73) and neither shipped. It is the same absence
+#: that leaves the building column empty. Sorting by it would need
+#: an invented order, so the key falls back to the name and the
+#: screen says so rather than pretending.
+SORT_KEYS = {
+    "name": _alpha,
+    "population": _by("pops"),
+    "food": _by("production", ECON_FOOD),
+    "industry": _by("production", ECON_INDUSTRY),
+    "science": _by("production", ECON_RESEARCH),
+    "bc": _by("production", ECON_BC),
+    "producing": _alpha,
+}
+
+#: Keys that do not do what their button says. The screen reads this
+#: to mark the control rather than letting a click look like it
+#: worked — an absence that is visible is a state, an absence that is
+#: silent is a bug.
+SORT_UNAVAILABLE = {
+    "producing": "needs the building cost and name tables from "
+                 "techname.lbx, which are not shipped",
+}
