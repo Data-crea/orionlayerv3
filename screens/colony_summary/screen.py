@@ -24,16 +24,25 @@ the original's button (colsum.cpp:265-273), and the screen injects a
 click there. Nothing here needs the field list.
 
 Data: the sidebar is transcribed from COLSUM::Draw_Empire_Info_
-(colsum.cpp:418), six lines, each one s_player field. The draw
-order, the labels, the ESTR ids, the per-row sign rule and the
-red-if-negative on Income are all the original's and all carry their
-source in layout.json under `empire`. Two things this screen does
-that the original does not are marked there: `warn_negative` on Food
-and Freighters, and stacking the label above its value at all — the
-original prints six LEFT-ALIGNED lines, because its justify=3 is
-inert (fmtpara.cpp:1057 drops to JUSTIFY_LEFT before a CR, and the
-six are joined by CR). Label-left/value-right would be an invention
-just as much; this one is at least honest about being one.
+(colsum.cpp:418), six lines, each one s_player field. Every file:line
+in this module and in layout.json's `empire` block was read in
+orion2re 1.60; a 1.31 archive numbers them differently, and that
+block carries the same warning. The draw order, the labels, the ESTR
+ids, the per-row sign rule and the red-if-negative on Income are all
+the original's and all carry their source there. `warn_negative` on
+Food and Freighters is an HD EXTENSION and marked there — the
+original reddens Income alone.
+
+Stacking the label above its value is a deviation too, and what the
+original does instead is currently OPEN rather than known. justify=3
+is certainly inert (fmtpara.cpp:1057 drops to JUSTIFY_LEFT before the
+CR that joins the six). But the two per-line prefixes turn out to be
+justification codes themselves — bytes 1A 30 and 1A 31, and 0x1A is
+Set_Justification_, not Set_Current_Colors_ — which sets LEFT for the
+label and RIGHT for the value. So the original may well draw
+label-left/value-right, which an earlier version of this note called
+an invention. Nothing here has been changed on the strength of that;
+see `empire._justify_note` for what is settled and what is not.
 
 **`output_panel` is an HD EXTENSION, and a whole-panel one.** The
 plan for it is the selected colony's food, industry and research.

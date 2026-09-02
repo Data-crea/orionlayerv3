@@ -2425,54 +2425,48 @@ def main():
             f"colony_list_preview row {_fake.get('name')!r} has keys "
             f"{sorted(_fake)} against build_rows' {sorted(_rows[0])}")
     # ── The sidebar's six s_player scalars ──
-    # s_player is a verified spec, and these six offsets are in it.
-    # `unverified.PLAYER_SIDEBAR` carries them a second time ON
-    # PURPOSE — a probe spec for `struct_probe.py players --sidebar`,
-    # because "verified" was claimed on ONE source (the header
-    # compiled with its own pragma pack, sizeof landing on the 0xf0e
-    # in sizes.h). A size assert cannot catch two adjacent int16s in
-    # the wrong order, and surplus_food @276 / surplus_bc @278 are
-    # exactly that: adjacent, both net flows, both printed signed,
-    # plausible either way round.
+    # ONE home for these offsets: the verified spec in
+    # core/structs/player.py. A probe spec briefly duplicated them in
+    # unverified.py on the mistaken belief that they were unverified;
+    # it is gone, and this check exists partly so it does not come
+    # back — a second Spec naming s_player is refused.
     #
-    # A deliberate duplicate is still a duplicate, so it is held to
-    # the verified spec here. When the probe agrees with a live game
-    # the probe spec goes away; until then neither copy may drift.
+    # What IS asserted is the thing the static assert cannot cover.
+    # `verified=True` here rests on the header compiled with its own
+    # pragma pack, sizeof landing on the 0xf0e in sizes.h. That fixes
+    # the LAYOUT and says nothing about which member is which where
+    # two are interchangeable — surplus_food @276 and surplus_bc @278
+    # are adjacent int16 net flows, both printed signed, and the
+    # struct is exactly as large either way round. So each carries a
+    # KIND, and tools/struct_probe.py players --sidebar is the check
+    # that can tell them apart.
     from core.structs import player as _plsp
     from core.structs import unverified as _unv
+    assert not any(getattr(_unv, _n, None).__class__.__name__ == "Spec"
+                   and getattr(_unv, _n).name == "s_player"
+                   for _n in dir(_unv) if _n.isupper()), (
+        "s_player is back in unverified.py — its offsets live in "
+        "core/structs/player.py and nowhere else")
     _pl_off = dict((n, (o, k)) for n, o, k in _plsp.SPEC.fields)
-    _probe_off = dict((n, (o, k)) for n, o, k in
-                      _unv.PLAYER_SIDEBAR.fields)
-    assert _unv.PLAYER_SIDEBAR.size == _plsp.SIZE, (
-        _unv.PLAYER_SIDEBAR.size, _plsp.SIZE)
-    assert not _unv.PLAYER_SIDEBAR.verified, (
-        "PLAYER_SIDEBAR is marked verified — it is a probe spec, and "
-        "the moment it is verified it should be deleted, not flagged")
-    for _f, (_o, _k) in _probe_off.items():
-        if _f in _pl_off:
-            assert _pl_off[_f] == (_o, _k), (
-                f"PLAYER_SIDEBAR and player.SPEC disagree about {_f}: "
-                f"probe says {(_o, _k)}, the verified spec says "
-                f"{_pl_off[_f]} — one of the two copies has drifted")
-    # traits and tech_applications are offsets player.py keeps as
-    # module constants rather than spec fields, so they are checked
-    # against those.
-    assert _probe_off["traits"][0] == _plsp.TRAITS_OFFSET, (
-        _probe_off["traits"], _plsp.TRAITS_OFFSET)
-    # Every one of the six carries a KIND, because they are not one
-    # kind and the difference decides what may be done with them —
-    # a gross added to a net is silently wrong.
     _six = ("bc", "surplus_bc", "total_pop", "surplus_freighters",
             "surplus_food", "research_produced")
     for _f in _six:
-        assert _f in _unv.PLAYER_KINDS, (
-            f"{_f} has no kind recorded in PLAYER_KINDS")
-        assert _unv.PLAYER_KINDS[_f][0] in (
-            "stock", "net flow", "gross", "count"), _unv.PLAYER_KINDS[_f]
-    assert _unv.PLAYER_KINDS["bc"][0] == "stock"
-    assert _unv.PLAYER_KINDS["research_produced"][0] == "gross"
-    assert (_unv.PLAYER_KINDS["surplus_food"][0]
-            == _unv.PLAYER_KINDS["surplus_bc"][0] == "net flow")
+        assert _f in _pl_off, f"player.SPEC no longer carries {_f}"
+        assert _f in _plsp.SIDEBAR_KINDS, (
+            f"{_f} has no kind recorded in player.SIDEBAR_KINDS — "
+            f"they are not one kind and adding a gross to a net is "
+            f"silently wrong")
+        assert _plsp.SIDEBAR_KINDS[_f][0] in (
+            "stock", "net flow", "gross", "count"), \
+            _plsp.SIDEBAR_KINDS[_f]
+    assert _plsp.SIDEBAR_KINDS["bc"][0] == "stock"
+    assert _plsp.SIDEBAR_KINDS["research_produced"][0] == "gross"
+    assert (_plsp.SIDEBAR_KINDS["surplus_food"][0]
+            == _plsp.SIDEBAR_KINDS["surplus_bc"][0] == "net flow")
+    # The anchors --sidebar carries as controls must resolve.
+    assert _pl_off["race"][1] == "u8" and _pl_off["race"][0] == 37
+    assert _plsp.TRAITS_OFFSET == 2308
+    assert _plsp.TECH_APPLICATIONS_OFFSET == 379
 
     # The sign rule is the original's and is PER ROW: only Income
     # (ESTR 106, "%sIncome: %s%s%+d") and Food (ESTR 102,

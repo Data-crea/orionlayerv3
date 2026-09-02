@@ -63,8 +63,58 @@ SPEC = Spec("s_player", SIZE, [
 
 CONTACT_OFFSET = 1512      # sbyte contact[MAX_PLAYERS]
 TRAITS_OFFSET = 2308       # int8_t traits[TRAIT_COUNT]
+#: uint8_t tech_applications[TECH_APP_COUNT]; TECH_APP_COUNT is 212
+#: (orion2_consts.h:1388, orion2re 1.60). Not a spec field — the
+#: table is not decoded yet — but the offset is wanted as an ANCHOR:
+#: a live read that gets race, traits and this right and the sidebar
+#: scalars wrong is telling you about the scalars, not the record.
+#: Advanced City Planning lives in this table; see
+#: colonyrows.max_population, which does NOT apply it.
+TECH_APPLICATIONS_OFFSET = 379
 TRAIT_COUNT = 31
 TRAIT_OMNISCIENCE = 27     # TRAIT enum, orion2_consts.h
+
+
+#: What KIND of number each sidebar scalar is. They are not one
+#: kind, and the difference decides what a reader may do with them:
+#:
+#:   stock      a balance that persists between turns. Differencing
+#:              two turns gives a flow.
+#:   net flow   already a per-turn difference, signed, and the sign
+#:              is meaningful — the original prints these with %+d.
+#:   gross      a per-turn amount with nothing subtracted. NOT
+#:              comparable with a net flow, and adding it to one is
+#:              the mistake this table exists to prevent.
+#:   count      a cardinality. Never negative in normal play, and a
+#:              negative one is a bug or a misread offset.
+#:
+#: Ordered as COLSUM::Draw_Empire_Info_ prints them (colsum.cpp:418,
+#: orion2re 1.60), which is also the order in the colony summary's
+#: layout.json. `tools/struct_probe.py players --sidebar` reads the
+#: six from SPEC above and annotates them with this.
+SIDEBAR_KINDS = {
+    "bc":                 ("stock",
+                           "treasury carried between turns"),
+    "surplus_bc":         ("net flow",
+                           "income minus maintenance, per turn"),
+    "total_pop":          ("count", "colonists across the empire"),
+    "surplus_freighters": ("count",
+                           "freighters free, not a per-turn change "
+                           "— the name says surplus, the number is "
+                           "a cardinality"),
+    "surplus_food":       ("net flow",
+                           "produced minus eaten, per turn"),
+    "research_produced":  ("gross",
+                           "RP generated this turn, nothing "
+                           "subtracted — not a net of anything"),
+}
+
+#: Already-trusted offsets, carried by `--sidebar` as controls.
+#: `race` and `traits` are the two with a live corroboration on
+#: record (see the docstring); `tech_applications` rides along
+#: because a wrong record shows up there first — it is the largest
+#: member and the furthest from the scalars.
+SIDEBAR_ANCHORS = ("race", "traits", "tech_applications")
 
 
 def contacts(view):

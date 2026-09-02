@@ -643,29 +643,45 @@ point inside the original's own button (`colsum.cpp:265-273`), so no
 field id is needed and the hotkeys n p f i s r b keep working
 natively — decision 39.
 
-**The sidebar's six numbers were re-opened — 2 September 2026.**
-`s_player` is a verified spec and all six offsets are in it, and the
-verification rests on ONE source: orion2re's header compiled with its
-own `#pragma pack(1)`, `sizeof` landing on the `0xf0e` in `sizes.h`.
-That was reproduced and every offset is exact — `bc` 50,
-`surplus_freighters` 56, `total_pop` 266, `research_produced` 272,
-`surplus_food` 276, `surplus_bc` 278, plus the anchors `race` 37,
-`tech_applications` 379 and `traits` 2308.
+**Everything below was read in orion2re 1.60.0** (`src/version.h`,
+`consts.h:43`). Line numbers from a 1.31 archive differ — three were
+carried in from one and are corrected here: `Draw_Empire_Info_` is
+colsum.cpp:**418** not 408, the justify test is fmtpara.cpp:**1057**
+not 1056, and `GAME_VERSION_LABEL` is consts.h:**43** not 47.
 
-One source is the problem, and a size assert is the wrong instrument
-for this particular risk: **`surplus_food` (276) and `surplus_bc`
-(278) are two bytes apart, both `int16`, both net flows, both printed
-with an explicit sign.** Swapped, every value on screen stays
-plausible — they are the same order of magnitude in most empires —
-and nothing anywhere would notice. So `core/structs/unverified.py`
-gains `PLAYER_SIDEBAR`, a PROBE spec, and
-`tools/struct_probe.py players --sidebar` prints the six beside the
-labels and signs the original uses, for a human to hold against the
-game's own screen. The three anchors ride along as controls: an
-answer that gets those right and the six wrong is telling you about
-the six. The smoke test holds the probe spec to `player.py` so the
-deliberate duplicate cannot drift, and refuses to let it be marked
-verified — when it agrees it should be deleted, not promoted.
+**What `s_player`'s `verified=True` actually rests on.** A **static
+assert**, not a live probe: `core/structs/player.py`'s own docstring
+says the offsets come from compiling orion2re's `orion2.h` with its
+`#pragma pack(1)` and reading `offsetof`, with `sizeof` landing on
+the `0xf0e` in `sizes.h`. That was reproduced on 2 September 2026 and
+every offset is exact — `bc` 50, `surplus_freighters` 56,
+`total_pop` 266, `research_produced` 272, `surplus_food` 276,
+`surplus_bc` 278, `race` 37, `tech_applications` 379, `traits` 2308.
+Git adds nothing: the whole tree arrives in one squashed commit
+(`e0ae910`, 31 August), so there is no per-field history to read.
+
+Two fields picked up live corroboration incidentally, both during the
+pop-nibble work: `race` @37 (the five players decoding 5, 2, 3, 4, 0)
+and `total_pop` @266 (the 39 that agreed with the empire sidebar's
+Population). The other four have never been read against the game's
+own screen.
+
+**A static assert fixes the layout and cannot tell interchangeable
+members apart**, which is the risk that actually bites here:
+**`surplus_food` (276) and `surplus_bc` (278) are two bytes apart,
+both `int16`, both net flows, both printed with an explicit sign.**
+Swapped, every value on screen stays plausible and the struct is
+exactly as large either way. So `tools/struct_probe.py players
+--sidebar` prints the six beside the labels and signs the original
+uses, for a human to hold against the game's own screen, with `race`,
+`traits` and `tech_applications` along as controls — right anchors
+and wrong scalars means the scalars.
+
+A probe spec briefly duplicated the six in
+`core/structs/unverified.py`, on the mistaken premise that they were
+unverified. **They never were.** It is deleted, the offsets have one
+home again, and a smoke check refuses any `Spec` named `s_player`
+outside `player.py`.
 
 They are also **not one kind of number**, which is recorded per
 field: `bc` is a stock, `surplus_bc` and `surplus_food` are net
@@ -681,9 +697,18 @@ enum, which is where these come from: 118 `%sReserve: %s%d`, 106
 `%sIncome: %s%s%+d`, 114 `%sPopulation: %s%d`, 103
 `%sFreighters: %s%d`, 102 `%sFood: %s%+d`, 117 `%sResearch: %s%d`.
 **Only Income and Food carry `%+d`**, which is why `signed` is per
-row. The colour attributes are the first two `%s` — `\0320` label,
-`\0321` value — and Income takes a third from
-`Red_If_Negative_Fmt_String_` (eric.cpp:176), `\0332` when negative.
+row.
+
+**The two per-line prefixes are NOT colour attributes** — this was
+got wrong first time and is worth the space. `s_0_0055110c` and
+`s_1_00551110` (estrings.cpp:8-9) are the literals `"\0320"` and
+`"\0321"`, and octal `032` is **0x1A, not ESC**: compiled, they are
+the bytes `1A 30` and `1A 31`. FMTPARA sends 0x1A to
+`Set_Justification_` and 0x1B to `Set_Current_Colors_`
+(fmtpara.cpp:364-368). Only the red one is a colour —
+`Red_If_Negative_Fmt_String_` (eric.cpp:176) returns `"\0332"` =
+`1B 32`, and `Set_Current_Colors_` (fmtpara.cpp:1154) sets
+`color_attr = code << 5`.
 Red-if-negative is the original's and applies to Income **alone**;
 this screen also colours Food and Freighters, and those two are
 marked HD EXTENSION.
@@ -695,10 +720,24 @@ newline, and the whole block reaches `Print_Formatted_Paragraph_` as
 one string. And that call passes **justify=3**, which is
 `JUSTIFY_FULL` and **inert here**: `Complete_Line_` (fmtpara.cpp:1057)
 checks the next character and drops to `Justify_Line_(0)` on CR, LF,
-FF or a terminating NUL. Every line is followed by that CR, so all
-six are LEFT ALIGNED. A label-left/value-right split read out of
-"justify" would have been an invention; so, strictly, is the
-label-above-value stacking this screen draws, and it says so.
+FF or a terminating NUL. Every line is followed by that CR, so
+justify=3 never applies.
+
+**The conclusion drawn from that was wrong, and it is now OPEN.** The
+prefixes above are justification codes: `Set_Justification_`
+(fmtpara.cpp:999) reads `mode = next char - '0'`, flushes the pending
+segment through `Complete_Line_` when `char_count > 0`, then assigns
+`justify_mode` (fmtpara.cpp:1017) — and `Justify_Line_`
+(fmtpara.cpp:1694) treats **mode 1 as RIGHT**, adding the whole
+remaining width to the first character's advance. So every line sets
+LEFT for its label, flushes, and sets RIGHT for its value. The first
+version of this section called label-left/value-right "an invention";
+on the 1.60 source that looks backwards. What is **not** established
+is whether the flushed segments share one visual row or become two —
+which decides between six rows of label-left/value-right and twelve
+alternating lines. Nothing in the renderer was changed on the
+strength of it; the label-above-value stacking is marked as the
+deviation it is either way.
 
 `E_Strings_(12)` is **OPEN, single source**: it has no entry in
 `orion2_str.h` at all, so only its uses can be read. Every use in the

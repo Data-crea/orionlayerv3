@@ -233,7 +233,8 @@ comparison and the failure is silent; anything larger belongs on the
 C++ side or not at all.
 
 **43. A screen may show what the original computes but never
-draws — and that is an HD EXTENSION, not a fix.** `colsum.cpp` sorts
+draws — and that is an HD EXTENSION, not a fix.** (Line numbers here
+are orion2re 1.60.0, `src/version.h`.) `colsum.cpp` sorts
 the colony list by food, industry and research: `cmp_Food_`,
 `cmp_Industry_` and `cmp_Research_` (colsum.cpp:1071-1083) read
 `colony->production[ECON_*]` and the sort buttons are wired to them.

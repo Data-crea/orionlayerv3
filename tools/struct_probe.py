@@ -355,34 +355,36 @@ def print_pop_nibble_report(rep, indent="  "):
 def sidebar_report(records, player_num, indent="  "):
     """The six s_player scalars COLSUM::Draw_Empire_Info_ prints.
 
-    SOURCE TWO, and the only one there is. The offsets come from
-    orion2re's own header compiled with its `#pragma pack(1)`, with
-    sizeof landing on the 0xf0e in sizes.h — one source, and the one
-    that cannot be wrong in the way that matters, because a header
-    describes the struct the ENGINE was built from while what is
-    parsed here is what came over the wire. A size assert cannot
-    catch two adjacent int16s in the wrong order.
+    Reads the six straight out of the VERIFIED spec in
+    `core/structs/player.py`. There is no second copy of these
+    offsets anywhere and there must not be: one of them briefly
+    existed in `unverified.py` on the mistaken belief that the six
+    were unverified, and it was deleted.
 
-    So this prints them beside the labels the original prints, in the
-    original's own draw order and with the original's own sign rule,
-    for a human to hold against the game's screen. It does not judge:
-    there is nothing on the wire to check these against, which is
-    exactly why the check is a pair of eyes on two screens.
+    WHAT THIS ADDS, given the spec is already verified. Verification
+    rests on the header compiled with its own `#pragma pack(1)`, with
+    sizeof landing on the 0xf0e in sizes.h — a static assert, which
+    fixes the LAYOUT but says nothing about which member is which
+    where two are interchangeable. `race` and `total_pop` have picked
+    up live corroboration incidentally (see player.py); the other
+    four have not been read against the game's own screen.
 
     THE PAIR TO STARE AT: `surplus_food` (276) and `surplus_bc` (278)
     are two bytes apart, both int16, both net flows, both printed
     signed. Swapped, both stay plausible — they are the same order of
-    magnitude in most empires — and no assert anywhere would notice.
-    If only one line is going to be checked properly, check those.
+    magnitude in most empires — and no assert anywhere would notice,
+    because the struct is exactly as large either way. If only one
+    line is going to be checked properly, check those two.
+
+    Everything cited below was read in orion2re 1.60.
     """
     from core.structs import player as player_struct
-    from core.structs import unverified as unverified_structs
 
-    kinds = unverified_structs.PLAYER_KINDS
+    kinds = player_struct.SIDEBAR_KINDS
     # Draw order, labels and format from COLSUM::Draw_Empire_Info_
-    # (colsum.cpp:418). The ESTR ids are the strings it passes; the
-    # text beside them is from orion2_str.h, which carries the table
-    # as comments on the enum.
+    # (colsum.cpp:418, orion2re 1.60). The ESTR ids are the strings
+    # it passes; the text beside them is from orion2_str.h, which
+    # carries the table as comments on the enum.
     rows = [
         ("Reserve",    "bc",                 118, False,
          "%sReserve: %s%d"),
@@ -422,12 +424,22 @@ def sidebar_report(records, player_num, indent="  "):
           f"carry %+d; the other four are %d.")
     print(f"{indent}Income also takes a third %s — the red attribute "
           f"from ERIC::Red_If_Negative_Fmt_String_ (eric.cpp:176), "
-          f"which is\n{indent}\\0332 when negative and E_Strings_(12) "
-          f"otherwise.")
+          f"which is\n{indent}bytes 1B 32 when negative "
+          f"(Set_Current_Colors_) and E_Strings_(12) otherwise.")
     print(f"\n{indent}HAZARD: surplus_food @276 and surplus_bc @278 "
           f"are adjacent int16 net flows, both signed-printed.")
     print(f"{indent}Swapped they read plausibly. Check Food and "
           f"Income against the game's own sidebar, not each other.")
+    anchor_off = dict(offsets)
+    anchor_off.setdefault("traits", player_struct.TRAITS_OFFSET)
+    anchor_off.setdefault("tech_applications",
+                          player_struct.TECH_APPLICATIONS_OFFSET)
+    print(f"\n{indent}Anchors (already trusted, here as controls): "
+          + ", ".join(f"{a}@{anchor_off[a]}"
+                      for a in player_struct.SIDEBAR_ANCHORS))
+    print(f"{indent}Wrong anchors mean the record is not what you "
+          f"think it is; right anchors and wrong scalars mean the "
+          f"scalars.")
     print(f"\n{indent}Kinds are not one kind — do not add a gross to "
           f"a net or difference a count:")
     for _label, field, _e, _s, _f in rows:
@@ -523,10 +535,10 @@ def main():
               + "─" * 20)
         sidebar_report(records, getattr(gs, "player_num", 0))
         print("\n  Read these against the original's own sidebar on "
-              "the Colonies screen.\n  Agreement there is the second "
-              "source; until then core/structs/unverified.py\n  "
-              "PLAYER_SIDEBAR is the honest status, whatever "
-              "player.py's verified flag says.")
+              "the Colonies screen. The spec is\n  verified on a "
+              "static assert, which fixes the layout and cannot tell "
+              "two\n  interchangeable int16s apart. This is the "
+              "check that can.")
         return 0
 
     if spec is not None:
