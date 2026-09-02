@@ -219,8 +219,34 @@ class ColonySummaryScreen(ScreenBase):
                           cfg, self.layout, self.style)
 
     def _render_sidebar(self, surface):
-        """Six empire lines, label over value, evenly stacked in the
-        sidebar cutout — COLSUM::Draw_Empire_Info_ transcribed."""
+        """Six rows, label LEFT and value RIGHT — the original's.
+
+        TRANSCRIBED, and it took two passes to read correctly. Each
+        entry is built as `<attr>Label: <attr><value>` and the two
+        `<attr>` are `ESTRINGS::s_0_0055110c` and `s_1_00551110`.
+        Those are not colour codes: they are the bytes `1A 30` and
+        `1A 31`, and FMTPARA sends 0x1A to `Set_Justification_`
+        (0x1B is `Set_Current_Colors_`, fmtpara.cpp:364-368). The
+        1.60 tree spells them a third time, unambiguously and with
+        the answer in the comment — `strings.cpp:22`, `"\x1A" "0"`,
+        */ switches paragraph justification to left alignment /*,
+        and `:24` the same for right.
+
+        So: LEFT for the label, then `Set_Justification_`
+        (fmtpara.cpp:999) flushes the label segment when
+        `char_count > 0`, then RIGHT for the value —
+        `Justify_Line_` mode 1 adds the whole remaining width to the
+        first character's advance (fmtpara.cpp:1699). **One row per
+        entry, not two:** `Set_Justification_` never advances y, and
+        y moves only on \r \n \v \f (fmtpara.cpp:322-341). The CR
+        that `String_Builder2_` joins the six with is what ends each
+        row.
+
+        The right edge is the paragraph's own: `para.x2 = x + width
+        - 1` (fmtpara.cpp:657) over
+        `Print_Formatted_Paragraph_(520, 354, 104, ...)`, so 623 of
+        640 native. See `_value_column` for how that reaches HD.
+        """
         box = self.box_rect("sidebar")
         cfg = self._data.get("empire", {})
         rows = cfg.get("rows", [])
@@ -228,6 +254,7 @@ class ColonySummaryScreen(ScreenBase):
             return
         rect = pygame.Rect(*self.layout.rect(box))
         surface.fill(PANEL_BG[:3], rect)
+        left, right = self._value_column(rect)
         fs = self.box_font_scale("sidebar")
         label_size = self.layout.font_size(int(cfg.get("label_font", 18) * fs))
         value_size = self.layout.font_size(int(cfg.get("value_font", 26) * fs))
@@ -240,13 +267,46 @@ class ColonySummaryScreen(ScreenBase):
             value, warn = self._empire_value(row)
             # render_text, not font.render: the sign characters are on
             # Bank Gothic DEMO's watermark list and get substituted.
+            # Red-if-negative IS the original's and is kept — see
+            # `empire._red_note`. It was queried as possibly resting
+            # on a mis-transcribed byte; it does not.
             vt = self.style.render_text(
                 value, value_size, (WARN_COLOR if warn else VALUE_COLOR)[:3])
-            block_h = label.get_height() + vt.get_height()
+            block_h = max(label.get_height(), vt.get_height())
             y = top + (int(row_h) - block_h) // 2
-            surface.blit(label, (rect.centerx - label.get_width() // 2, y))
-            surface.blit(vt, (rect.centerx - vt.get_width() // 2,
-                              y + label.get_height()))
+            # Both on ONE row: label flush left, value flush right.
+            surface.blit(label, (left, y + (block_h - label.get_height())))
+            surface.blit(vt, (right - vt.get_width(),
+                              y + (block_h - vt.get_height())))
+
+    def _value_column(self, rect):
+        """(left, right) of the row — right is where a value ends.
+
+        The width comes from the ORIGINAL's paragraph, not from a
+        margin somebody liked: `Print_Formatted_Paragraph_(520, 354,
+        104, buffer, 3)` at colsum.cpp:418, and 104 native px scaled
+        by REF_W / NATIVE_W is 312 reference px.
+
+        That is WIDER than the `sidebar` cutout, which is 286, so the
+        clamp below fires at every resolution and the column comes
+        out as the cutout. Both numbers are kept anyway, and the
+        clamp is not a formality: the cutout is derived from the
+        frame artwork by `frame_holes.py` and can move, while 104 is
+        the transcription. If a future frame gives the sidebar more
+        than 312 reference px, the column must STOP at 312 — the
+        original's line does not grow to fill a bigger hole, and a
+        value drifting further right as the art changes would be an
+        invention nobody chose.
+
+        What the native number fixes either way is the ALIGNMENT: the
+        value ends at the column's right edge (`para.x2 = x + width -
+        1`, fmtpara.cpp:657) rather than being centred or padded.
+        """
+        native_w = int(self._data.get("empire", {})
+                       .get("native_width", 104)
+                       * (REF_W / NATIVE_W) * self.layout.scale)
+        width = min(rect.w, native_w)
+        return rect.x, rect.x + width
 
     def _empire_value(self, row):
         """(text, warn). '--' while disconnected, never a fake zero."""

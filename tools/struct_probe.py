@@ -446,6 +446,40 @@ def sidebar_report(records, player_num, indent="  "):
         kind, why = kinds.get(field, ("?", "?"))
         print(f"{indent}  {field:<19} {kind:<9} {why}")
 
+    # ── The part that only needs eyes ──
+    # Written so the person at the keyboard compares two columns and
+    # ticks or crosses, rather than deciding what the comparison is.
+    # Four of these six have never been read against the game's own
+    # screen (see core/structs/player.py); this is the run that
+    # closes that, and it should not also require interpretation.
+    print(f"\n{indent}{'=' * 74}")
+    print(f"{indent}SOURCE TWO. Open the original's Colonies screen "
+          f"(F2 from the galaxy map,\n{indent}or the COLONIES button) "
+          f"and read the six numbers down its right-hand side.")
+    print(f"{indent}They are in the SAME ORDER there as here.\n")
+    print(f"{indent}{'the original shows':<28} {'we decoded':>12}   "
+          f"{'agrees?':<9} field")
+    print(f"{indent}{'-' * 74}")
+    for label, field, _estr, signed, _fmt in rows:
+        value = getattr(view, field)
+        shown = f"+{value}" if signed and value >= 0 else str(value)
+        print(f"{indent}{label + ': ______':<28} {shown:>12}   "
+              f"{'[  ]':<9} {field}")
+    print(f"\n{indent}Every line agreeing is the second source, and "
+          f"the four that lack one are\n{indent}bc, "
+          f"surplus_freighters, research_produced and surplus_food/"
+          f"surplus_bc.")
+    print(f"{indent}ANY line disagreeing: stop and record which. A "
+          f"single wrong line is more\n{indent}informative than six "
+          f"right ones — Food and Income swapping is the failure\n"
+          f"{indent}this whole check was built for, and it shows up "
+          f"as exactly two wrong lines.")
+    print(f"\n{indent}If the original's screen is not reachable in "
+          f"this build, say so rather than\n{indent}marking the "
+          f"table from the HD sidebar: OrionLayer draws these from "
+          f"the same\n{indent}bytes, so it would agree with itself "
+          f"and prove nothing.")
+
 
 def main():
     ap = argparse.ArgumentParser()

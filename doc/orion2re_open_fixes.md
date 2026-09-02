@@ -27,6 +27,7 @@ section for what was found where.
 | 4 | INJECT_CLICK pushes no MOUSEMOTION before the buttons | Open | Radio buttons toggle unreliably |
 | 5 | `racesel.lbx [entry 138]` crash on Custom Race Accept | **Applied** in the 30 Aug tree — that is why it stopped reproducing | Nothing |
 | — | Custom Race reports screen ID 50 | **Applied** | — |
+| 6 | `s_0_0055110c` / `s_1_00551110` declared `[3]` and `[4]`, defined three times | **Question, not a fix** | Nothing today |
 
 Items 3 and 4 are both about INJECT_CLICK and both live in the same
 code path, but they are separate faults: 3 is where the coordinates
@@ -346,3 +347,63 @@ snapshot deliberately omits".
 The lesson both share, and the reason they are written down: read the
 function that BUILDS a structure before concluding it has to be
 transmitted.
+
+---
+
+## 6. `s_0_0055110c` / `s_1_00551110` — a question, not a fix request
+
+**This asks for an answer, not a patch.** Nothing misbehaves today
+and OrionLayer is not blocked. It is here because the answer decides
+whether a transcription we have just shipped is right, and because
+the declaration disagreement is the kind that stays harmless until
+somebody changes one of the three copies.
+
+### What we found (orion2re 1.60, `src/version.h`)
+
+The two format prefixes that `COLSUM::Draw_Empire_Info_` passes into
+every sidebar line exist **three times, in three namespaces, at two
+declared sizes, in two spellings**:
+
+| Where | Declared | Defined | Spelling |
+|---|---|---|---|
+| `colsum.h:87-88` / `colsum.cpp:36-37` | `const char[3]` | COLSUM | `"\0320"` / `"\0321"` |
+| `estrings.h:9-10` / `estrings.cpp:8-9` | `const char[4]` | ESTRINGS | `"\0320"` / `"\0321"` |
+| `strings.h:39-40` / `strings.cpp:22,24` | `const char[3]` | strings | `"\x1A" "0"` / `"\x1A" "1"` |
+
+All three produce the same bytes — `1A 30` and `1A 31` — so the
+**value is not in doubt** and nothing is broken at runtime.
+
+### The question
+
+**Which byte does the original binary emit here — 0x1A or 0x1B?**
+
+It matters because the two are different FMTPARA commands:
+`0x1A` is `Set_Justification_` and `0x1B` is `Set_Current_Colors_`
+(`fmtpara.cpp:364-368`). On 0x1A the sidebar is six rows of
+label-left / value-right; on 0x1B it is six plain left-aligned lines
+with a label colour and a value colour. We have implemented the
+first, because `strings.cpp` writes the hex escape deliberately and
+comments it *"switches paragraph justification to left alignment"* —
+three independent spellings agreeing is as far as we can get from
+outside the binary.
+
+What would settle it from your side is the byte at the original's
+own data addresses, which the Ghidra-derived names still carry:
+`0x0055110c` and `0x00551110`.
+
+### The smaller half: `[3]` vs `[4]`
+
+`estrings.h` declares both as `const char[4]` while `colsum.h` and
+`strings.h` declare them `const char[3]`, and the definitions follow
+their own headers. Two of the three are `extern` declarations of
+symbols defined elsewhere, so this is an ODR-adjacent disagreement
+that a linker will not necessarily complain about. Worth a look even
+if the answer to the question above is "0x1A, as written".
+
+### Why this is not a fix request
+
+Because we cannot tell you what the right answer is, only that three
+places disagree about the type and two about the spelling. If the
+bytes are correct as written, the only change worth making is
+picking one home for the pair — and that is your call about your
+tree, not ours.

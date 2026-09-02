@@ -9,6 +9,48 @@ own `src/game/orion2.h` with the `#pragma pack(push, 1)` the header
 itself sets, then reading offsetof() for each member. sizeof came
 out at exactly 3854, matching PLAYER_SIZE / the 0xF0E in sizes.h —
 if any offset had drifted, the size would not land on the assert.
+Reproduced against orion2re 1.60 on 2 September 2026; every offset
+below was exact.
+
+**WHICH EVIDENCE STANDS, PER FIELD.** `verified=True` on this spec
+rests on that compile — a HEADER plus a STATIC ASSERT, and no more.
+It is worth being explicit about what that does and does not buy,
+because decision 23 asks for two independent sources and this is
+one, and because the flag is spec-wide while the evidence is not.
+
+What the static assert proves: the LAYOUT. If any member's offset
+were wrong the total would not land on 0xF0E. What it cannot prove:
+WHICH member is which, wherever two are interchangeable. The clearest
+case is on this screen — `surplus_food` (276) and `surplus_bc` (278)
+are two bytes apart, both int16, both net flows, both printed with an
+explicit sign, and the struct is exactly as large either way round.
+
+Live corroboration, where it exists, is INCIDENTAL — it fell out of
+other work rather than being collected for these fields:
+
+  race @37               YES. tools/struct_probe.py colonies
+                         --pop-nibble read it for five players as
+                         5, 2, 3, 4, 0 and the pop nibble decoded
+                         to each colony's owner instead — see
+                         core/structs/colony.py, which needed the
+                         two to disagree and they did.
+  total_pop @266         YES. The 39 for player 0 agreed with the
+                         empire sidebar's Population, recorded when
+                         `owner` and `n_pops` were verified.
+
+  bc @50                 NONE.
+  surplus_freighters @56 NONE.
+  research_produced @272 NONE.
+  surplus_food @276      NONE — and this is the one that matters,
+  surplus_bc @278        NONE   see the pair above.
+
+Four of the six the colony summary's sidebar draws have never been
+read against the game's own screen. `tools/struct_probe.py players
+--sidebar` exists to close that and needs only a running game; until
+it has been run, the sidebar is drawing numbers whose identity rests
+on the header alone. The flag stays True — that is a decision to
+take deliberately and not a thing to flip in passing — but it should
+not be read as more than the compile it came from.
 
 Sidebar semantics, from mainscr_main.cpp's sidebar drawing:
   treasury line     bc, then surplus_bc as a signed second line

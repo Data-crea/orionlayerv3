@@ -2500,11 +2500,167 @@ def main():
     for _key in ("_join_note", "_justify_note", "_geometry_note",
                  "_colour_note", "_open_note"):
         assert _emp.get(_key), f"empire.{_key} is gone"
-    assert "fmtpara.cpp:1057" in _emp["_justify_note"], (
-        "empire._justify_note no longer names where justify=3 drops "
-        "to LEFT — the inertness is the whole point of the note")
+    # The justify note carries the corrected mechanism, not the
+    # first one. justify=3 is inert because the buffer BEGINS with
+    # s_0, so Set_Justification_ assigns justify_mode = 0 before a
+    # character is drawn (fmtpara.cpp:1017) — not because CR ends
+    # each line, which was the first reading. And the layout it
+    # settles is label-left/value-right, which the renderer now does.
+    for _cite in ("fmtpara.cpp:1017", "fmtpara.cpp:999",
+                  "fmtpara.cpp:1699", "strings.cpp:22"):
+        assert _cite in _emp["_justify_note"], (
+            f"empire._justify_note no longer cites {_cite} — the "
+            f"mechanism it records is what makes label-left/"
+            f"value-right a transcription rather than a preference")
+    assert "0x1A" in _emp["_justify_note"], (
+        "empire._justify_note no longer records that the prefixes "
+        "are 0x1A justification codes — the octal 032/033 confusion "
+        "is what got this wrong twice")
     assert "OPEN" in _emp["_open_note"], (
         "empire._open_note no longer marks E_Strings_(12) as open")
+
+    # ── The sidebar draws label LEFT and value RIGHT ──
+    # The original's layout, and it is the whole point of the
+    # justify-code reading above: each entry is one row, the label
+    # flush against the column's left edge, the value flush against
+    # its right. Asserted in INK at every resolution, and the edges
+    # are read from boxes.json rather than recomputed the way
+    # `_value_column` computes them — deriving the expected edge from
+    # the renderer's own expression is the tautology 443aff1 shipped
+    # and had to be rewritten.
+    #
+    # Flushness is what distinguishes this from the layout it
+    # replaced. Centred label-over-value passes no part of it: the
+    # label would not start at the left edge and the value would not
+    # end at the right one.
+    _sb_boxes = load_boxes(
+        os.path.join(SCREENS_DIR, "colony_summary", "boxes.json"),
+        1920, 1080)
+    _sb_ref = [b.ref_rect for b in _sb_boxes if b.name == "sidebar"]
+    assert _sb_ref, "boxes.json has no sidebar box"
+
+    from screens.colony_summary import screen as _cs
+
+    # The screen loads its boxes and layout.json on activation, and
+    # the dispatcher has been through other screens since the earlier
+    # colony_summary check.
+    d.switch_to("colony_summary")
+
+    class _FakePlayer:
+        bc = 1234
+        surplus_bc = -42
+        total_pop = 39
+        surplus_freighters = 7
+        surplus_food = -3
+        research_produced = 88
+
+    for _W, _H in _SIZES:
+        _lay = Layout(_W, _H)
+        _rect = pygame.Rect(*_lay.rect(_sb_ref[0]))
+        # The column, derived here from the box and the native width
+        # in layout.json — NOT by calling _value_column.
+        _native = _emp.get("native_width", 104)
+        _col_w = min(_rect.w,
+                     int(_native * (1920 / _cs.NATIVE_W) * _lay.scale))
+        _col_l, _col_r = _rect.x, _rect.x + _col_w
+
+        _sf = pygame.Surface((_W, _H))
+        _sf.fill((0, 0, 0))
+        # `layout` is a property onto app.layout, so the resolution
+        # is swapped on the app for the duration of one render.
+        _scr = app.dispatcher.screens["colony_summary"]
+        _saved_layout, _saved_local = app.layout, _scr._local
+        app.layout, _scr._local = _lay, _FakePlayer()
+        try:
+            _scr._render_sidebar(_sf)
+        finally:
+            app.layout, _scr._local = _saved_layout, _saved_local
+
+        _arr = pygame.surfarray.array3d(_sf.subsurface(_rect))
+        _lab_rgb = tuple(_cs.LABEL_COLOR[:3])
+        _val_rgb = tuple(_cs.VALUE_COLOR[:3])
+        _warn_rgb = tuple(_cs.WARN_COLOR[:3])
+
+        def _cols(_rgb):
+            _m = (_arr == _rgb).all(axis=2).any(axis=1).nonzero()[0]
+            return (int(_m[0]) + _rect.x, int(_m[-1]) + _rect.x) \
+                if len(_m) else None
+
+        _lab = _cols(_lab_rgb)
+        _val = _cols(_val_rgb)
+        _warn = _cols(_warn_rgb)
+        assert _lab, f"{_W}x{_H}: no label ink in the sidebar"
+        assert _val, f"{_W}x{_H}: no value ink in the sidebar"
+
+        # A glyph's ink does not start at its surface's edge — there
+        # is a side bearing, and it grows with the font, which is why
+        # a fixed pixel tolerance passed at 1080p and failed at 4K by
+        # exactly the bearing. So the bearing is MEASURED off a
+        # standalone render of the same string and added to the
+        # column edge. That is glyph metrics, not layout: it says
+        # nothing about where the renderer decided to put the text,
+        # which is the thing under test.
+        _fs = _scr.box_font_scale("sidebar")
+        _lab_px = _lay.font_size(int(_emp.get("label_font", 18) * _fs))
+        _val_px = _lay.font_size(int(_emp.get("value_font", 26) * _fs))
+
+        def _bearings(_text, _px, _rgb):
+            """(ink left, ink right) inside the string's own surface.
+
+            Composited onto the SAME panel fill the sidebar uses.
+            Measured against a bare surface the numbers come out a
+            couple of pixels different, because an antialiased edge
+            column blends with whatever is behind it and stops
+            matching the colour exactly — so the bearing has to be
+            measured through the same compositing the renderer does,
+            or it is measuring a different picture.
+            """
+            _s2 = app.style.render_text(_text, _px, _rgb)
+            _pad = pygame.Surface((_s2.get_width() + 4,
+                                   _s2.get_height() + 4))
+            _pad.fill(_cs.PANEL_BG[:3])
+            _pad.blit(_s2, (2, 2))
+            _a2 = pygame.surfarray.array3d(_pad)
+            _m2 = (_a2 == _rgb).all(axis=2).any(axis=1).nonzero()[0]
+            if not len(_m2):
+                return None
+            return (int(_m2[0]) - 2,
+                    (_s2.get_width() + 1) - int(_m2[-1]))
+
+        _want_left, _want_right = [], []
+        for _r in _emp["rows"]:
+            _b = _bearings(_r["label"].upper(), _lab_px, _lab_rgb)
+            if _b:
+                _want_left.append(_col_l + _b[0])
+            _v = getattr(_FakePlayer, _r["field"])
+            _txt = _cs.format_value(_v, _r.get("signed", False))
+            _rgb2 = _warn_rgb if (_r.get("warn_negative")
+                                  and _v < 0) else _val_rgb
+            _b = _bearings(_txt, _val_px, _rgb2)
+            if _b:
+                _want_right.append(_col_r - _b[1])
+
+        _exp_left, _exp_right = min(_want_left), max(_want_right)
+        _val_right = max(_val[1], _warn[1] if _warn else _val[1])
+        assert abs(_lab[0] - _exp_left) <= 1, (
+            f"{_W}x{_H}: the label's leftmost ink is at {_lab[0]}; "
+            f"flush against the column's left edge {_col_l} it would "
+            f"be {_exp_left} once the glyph's own {_exp_left - _col_l} "
+            f"px bearing is allowed ({_lab[0] - _exp_left:+d}). The "
+            f"original left-justifies the label (strings.cpp:22, "
+            f"byte 1A 30).")
+        assert abs(_val_right - _exp_right) <= 1, (
+            f"{_W}x{_H}: the rightmost value ink is at {_val_right}; "
+            f"flush against the column's right edge {_col_r} it would "
+            f"be {_exp_right} ({_val_right - _exp_right:+d}). The "
+            f"original right-justifies the value (strings.cpp:24, "
+            f"byte 1A 31; para.x2 = x + width - 1, fmtpara.cpp:657).")
+        # And the two columns must not have collapsed into one.
+        assert _lab[0] < _val_right, (
+            f"{_W}x{_H}: label ink starts at {_lab[0]}, values end at "
+            f"{_val_right} — the two columns have collapsed")
+    ok("colony summary sidebar layout (label flush left, value flush "
+       "right, ink-measured at 12 resolutions)")
 
     # ── output_panel is an HD EXTENSION ──
     # The original SORTS the list by food, industry and research

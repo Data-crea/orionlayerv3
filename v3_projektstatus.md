@@ -683,6 +683,17 @@ unverified. **They never were.** It is deleted, the offsets have one
 home again, and a smoke check refuses any `Spec` named `s_player`
 outside `player.py`.
 
+`player.py`'s docstring now says **which evidence stands per field**
+rather than leaving a spec-wide flag to imply it covers everything:
+`race` @37 and `total_pop` @266 have incidental live corroboration
+from other work, and `bc`, `surplus_freighters`, `research_produced`,
+`surplus_food` and `surplus_bc` have none. The flag stays `True` —
+flipping it is a decision to take deliberately, not in passing — but
+it should not be read as more than the compile it came from.
+`--sidebar` now ends with a printed **expected-vs-actual table**, six
+blanks to fill from the original's own screen and a tick box each, so
+the run that closes this needs eyes and not interpretation.
+
 They are also **not one kind of number**, which is recorded per
 field: `bc` is a stock, `surplus_bc` and `surplus_food` are net
 flows, `research_produced` is gross, `total_pop` and
@@ -723,21 +734,73 @@ checks the next character and drops to `Justify_Line_(0)` on CR, LF,
 FF or a terminating NUL. Every line is followed by that CR, so
 justify=3 never applies.
 
-**The conclusion drawn from that was wrong, and it is now OPEN.** The
-prefixes above are justification codes: `Set_Justification_`
-(fmtpara.cpp:999) reads `mode = next char - '0'`, flushes the pending
-segment through `Complete_Line_` when `char_count > 0`, then assigns
-`justify_mode` (fmtpara.cpp:1017) — and `Justify_Line_`
-(fmtpara.cpp:1694) treats **mode 1 as RIGHT**, adding the whole
-remaining width to the first character's advance. So every line sets
-LEFT for its label, flushes, and sets RIGHT for its value. The first
-version of this section called label-left/value-right "an invention";
-on the 1.60 source that looks backwards. What is **not** established
-is whether the flushed segments share one visual row or become two —
-which decides between six rows of label-left/value-right and twelve
-alternating lines. Nothing in the renderer was changed on the
-strength of it; the label-above-value stacking is marked as the
-deviation it is either way.
+**The conclusion drawn from that was wrong twice, and is now
+settled.** The two prefixes are justification codes, and the 1.60
+tree says so three separate ways: `colsum.cpp:36-37` and
+`estrings.cpp:8-9` spell them `"\0320"` / `"\0321"`, and
+`strings.cpp:22,24` spells the same symbols `"\x1A" "0"` /
+`"\x1A" "1"` — unambiguous hex, and commented in the source itself
+as *"switches paragraph justification to left alignment"* and
+*"to right alignment"*. `Set_Justification_` (fmtpara.cpp:999) takes
+`mode = next char - '0'`, flushes the pending segment through
+`Complete_Line_` when `char_count > 0`, then assigns `justify_mode`
+(:1017); `Justify_Line_` (:1699) implements **mode 1 by adding the
+whole remaining width to the first character's advance** — right
+alignment — against `para.x2 = x + width - 1` = 623 of 640 (:657).
+
+**One row per entry, not two.** `Set_Justification_` never advances
+y; y moves only on CR, LF, VT and FF (fmtpara.cpp:322-341, where CR
+falls through to `Vertical_Move_Line_Advance_`). The CR that
+`String_Builder2_` joins the six with is what ends each row.
+
+**So the invention was the other way round.** Label-left /
+value-right is the transcription, and the stacked centred
+label-over-value this screen drew until 2 September 2026 was the
+invention. The renderer now does label-left / value-right, with the
+column's width taken from the original's own 104 px paragraph rather
+than a margin somebody liked — see `_value_column`, which keeps the
+native number even though the cutout is currently narrower, because
+the original's line does not grow to fill a bigger hole. A smoke
+check measures it in **ink at twelve resolutions**: the label's
+leftmost inked column flush with the column's left edge, the
+rightmost value ink flush with its right, both after subtracting the
+glyph's own side bearing — measured through the same compositing the
+renderer does, because an antialiased edge blends differently over
+the panel fill and a fixed pixel tolerance passed at 1080p and
+failed at 4K by exactly the bearing. Reverting to the centred layout
+fails it by 56 px.
+
+**`justify=3` is inert for a different reason than first recorded.**
+Not because CR terminates each line — that is true and would also do
+it — but because the buffer BEGINS with `s_0`, so
+`Set_Justification_` assigns `justify_mode = 0` with `char_count`
+still 0, before a single character is drawn. Mode 3 never reaches
+`Justify_Line_` at all.
+
+**Why this was wrong twice: an octal `032` read as `033`.** `"\0320"`
+looks like ESC + `'0'` and is SUB + `'0'` — a C octal escape is
+greedy to three digits, so `\032` is 0x1A, not `\033` = 0x1B. Read
+as ESC it is a colour code and the six lines are plain left-aligned
+text; read correctly it is a justification code and the original
+does label-left / value-right.
+
+**The same trap does NOT catch `Red_If_Negative_Fmt_String_`, which
+was queried and stands.** Its literal is `"\0332"`, and there the
+greedy escape takes `\033` = **0x1B**, leaving `'2'` — bytes
+`1B 32`, which FMTPARA routes to `Set_Current_Colors_`
+(:364-368, :1154). Three things agree: the bytes, the function's own
+comment, and `colsum.cpp` itself, which spells the same effect
+`"\x1B" "2"` at :567, :575 and :1189. Red-if-negative is real, is
+the original's, and is kept. Two literals one octal digit apart,
+opposite meanings, and the trap is on the other one.
+
+**What IS open about those symbols is a declaration, not a value.**
+`s_0_0055110c` and `s_1_00551110` exist three times in three
+namespaces at two declared sizes — `const char[3]` in `colsum.h` and
+`strings.h`, `const char[4]` in `estrings.h` — in two spellings, all
+producing the same bytes. Nothing misbehaves; it is item 6 in
+`doc/orion2re_open_fixes.md` as a **question** for Joe (which byte
+does the original binary emit at `0x0055110c`?), not a fix request.
 
 `E_Strings_(12)` is **OPEN, single source**: it has no entry in
 `orion2_str.h` at all, so only its uses can be read. Every use in the
