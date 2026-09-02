@@ -44,23 +44,30 @@ label-left/value-right, which an earlier version of this note called
 an invention. Nothing here has been changed on the strength of that;
 see `empire._justify_note` for what is settled and what is not.
 
-**`output_panel` is an HD EXTENSION, and a whole-panel one.** The
-plan for it is the selected colony's food, industry and research.
-**colsum.cpp does not draw those numbers anywhere.** Grepping the
-file for food/industry/research returns exactly two kinds of hit:
-the three sort comparators (`cmp_Food_`, `cmp_Industry_`,
-`cmp_Research_` at colsum.cpp:1071-1083, reading
-`colony->production[ECON_*]`), and the two EMPIRE totals in the
-sidebar (`surplus_food`, `research_produced`). Nothing per colony,
-ever. So the original SORTS by three values it never shows — the
-seven sort buttons include four whose key is invisible on the
-screen doing the sorting — and this panel would display them.
+**`output_panel` is a TRANSCRIPTION — the earlier marking here was
+wrong and is withdrawn (fundament 43).** It is to show the selected
+colony's food, industry and research, and this module claimed the
+original draws none of the three per colony. It draws all four.
+`COLSUM::Draw_Colony_Scan_Info_` (colsum.cpp:1155), reached from
+`Draw_Scan_Info_` at colsum.cpp:485, loops `i < ECON_COUNT` calling
+`Draw_Colony_Wee_Prod_(_g_colony_n, i, 106, y_pos, 366, 20)` with
+`y_pos` stepping 18, then adds morale at (106, 421); that path ends
+in `COLDRAW::Draw_Colony_Prod_Both_` (coldraw.cpp:36), which reads
+`colony->production[prod_type]` (coldraw.cpp:60) and draws it as
+tens-and-units sprites. Native x 106, y 349 upward — the bottom-left,
+which is where `output_panel` is.
 
-That is the same family as the allocation bar and the per-row detail
-line: not something MOO2 chose against, something its 640x480 screen
-had no room for. Marked here, in `doc/v3_fundament.md`, and in a
-smoke check. Nothing is drawn in it yet; the marking goes in first,
-because a panel that fills up quietly is a panel nobody marks.
+The claim came from grepping THIS FILE for the words
+"food|industry|research". The call site has none of them: the value
+is picked by a loop index against `ECON_COUNT`, and the drawing lives
+in `coldraw.cpp`. Searching for `production[` would have found it at
+once. A wrong marking defended by a smoke check is worse than no
+marking, and this one was.
+
+What the panel still owes is the OTHER half of that box: the seven
+values `E_Strings_(74)` carries (colsum.cpp:1196-1205), of which the
+HD row already draws three. See `colonylist._draw_name_block` and the
+module docstring there.
 
 The list waits on nothing now — `s_colony` is verified.
 """

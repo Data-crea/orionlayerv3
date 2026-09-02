@@ -2407,12 +2407,17 @@ def main():
         f"the longest producible name draws past its column at "
         f"x={_spill[:5]} — name_width is not being enforced")
 
-    # The preview tool's fake rows must stay the shape build_rows
-    # actually produces. Nothing else would notice: a row dict that
-    # has drifted still renders, so the preview would go on looking
-    # right while showing something the game cannot produce — and a
-    # preview is trusted precisely because it looks like the screen.
-    # Keys, not values: the values are invented on purpose.
+    # The preview drives the REAL screen off a synthetic snapshot.
+    # This replaces the old check that its hand-written row dicts
+    # matched build_rows' keys — those dicts are gone, because the
+    # preview fakes the STATE now and lets build_rows produce the
+    # rows, so that particular drift is structurally impossible.
+    #
+    # What can still drift is the snapshot: a spec change, or an
+    # entry edited until it no longer produces the SHAPE its comment
+    # claims. A "nearly full track" that quietly became half full
+    # still renders, and nobody would notice from the picture that
+    # the case had stopped being covered.
     import importlib.util as _plu
     _pv_spec = _plu.spec_from_file_location(
         "_probe_colony_preview",
@@ -2420,10 +2425,51 @@ def main():
                      "colony_list_preview.py"))
     _pv = _plu.module_from_spec(_pv_spec)
     _pv_spec.loader.exec_module(_pv)
-    for _fake in _pv.ROWS:
-        assert set(_fake) == set(_rows[0]), (
-            f"colony_list_preview row {_fake.get('name')!r} has keys "
-            f"{sorted(_fake)} against build_rows' {sorted(_rows[0])}")
+    _pv_rows = _cr.build_rows(_pv._Snapshot(_pv.COLONIES), "name")
+    assert len(_pv_rows) == len(_pv.COLONIES), (
+        f"the preview's snapshot yields {len(_pv_rows)} rows from "
+        f"{len(_pv.COLONIES)} colonies — build_rows drops some")
+    assert set(_pv_rows[0]) == set(_rows[0]), (
+        f"preview rows {sorted(_pv_rows[0])} against build_rows' "
+        f"{sorted(_rows[0])}")
+    assert any(r["no_farming"] for r in _pv_rows), (
+        "no preview colony shows No Farming — the max_farms == 0 "
+        "case is not being drawn")
+    _pv_full = max(_pv_rows, key=lambda r: r["pops"])
+    assert (_pv_full["pops"] >= 20
+            and _pv_full["max_pop"] - _pv_full["pops"] <= 4), (
+        f"the stress colony is {_pv_full['pops']}/"
+        f"{_pv_full['max_pop']} — it exists to show a nearly full "
+        f"track and no longer does")
+    _pv_sparse = min(_pv_rows,
+                     key=lambda r: r["pops"] / max(1, r["max_pop"]))
+    assert _pv_sparse["max_pop"] - _pv_sparse["pops"] >= 5, (
+        f"the sparse colony is {_pv_sparse['pops']}/"
+        f"{_pv_sparse['max_pop']} — it exists to show a long "
+        f"unreachable tail")
+    assert any(len(r["name"]) >= 15 for r in _pv_rows), (
+        "no preview colony has a str15 name, so the ellipsis case is "
+        "not drawn")
+    # Numerals are earned by OCCUPIED slots, not by the orbit
+    # (HAROLD::Planet_Number_). Every star reading "I" is how the
+    # first version of the synthetic snapshot was wrong.
+    assert any(not r["name"].endswith(" I") for r in _pv_rows), (
+        "every preview colony is numeral I — the filler planets that "
+        "earn a numeral are missing from the snapshot")
+    # The sidebar numbers exist to be FALSIFIABLE, not plausible.
+    assert _pv.PLAYER["surplus_bc"] < 0, (
+        "the preview's income is not negative, so red-if-negative "
+        "never renders and the picture cannot show it")
+    assert _pv.PLAYER["surplus_food"] > 0, (
+        "the preview's food is not positive, so the explicit plus "
+        "never appears beside the negative income")
+    assert len(str(_pv.PLAYER["bc"])) >= 5, (
+        "the preview's widest sidebar value is under five digits, so "
+        "right alignment is not visible AS alignment")
+    assert len(str(_pv.PLAYER["surplus_freighters"])) == 1, (
+        "the preview has no one-digit sidebar value to contrast with "
+        "the widest one")
+
     # ── The seven sort keys, and their DIRECTIONS ──
     # COLSUM::Switched_cmp_ (colsum.cpp:378-401, orion2re 1.60) is a
     # switch on _g_sort_index with the sign as a literal per case.
@@ -2791,24 +2837,58 @@ def main():
     ok("colony summary sidebar layout (label flush left, value flush "
        "right, ink-measured at 12 resolutions)")
 
-    # ── output_panel is an HD EXTENSION ──
-    # The original SORTS the list by food, industry and research
-    # (cmp_Food_/cmp_Industry_/cmp_Research_, colsum.cpp:1071-1083)
-    # and never draws any of the three per colony. Showing them is an
-    # extension, and decision 43 says the sort is not permission.
-    _scr_src = open(os.path.join(SCREENS_DIR, "colony_summary",
-                                 "screen.py"), encoding="utf-8").read()
-    assert "HD EXTENSION" in _scr_src and "output_panel" in _scr_src, (
-        "screen.py no longer marks output_panel as an HD EXTENSION")
-    assert "colsum.cpp:1071" in _scr_src, (
-        "screen.py's output_panel marking no longer names the sort "
-        "comparators — a marking without the evidence is a label")
+    # ── The colony row's two marked deviations ──
+    # Neither changes a pixel; both exist so the next reader takes
+    # them as choices rather than as fidelity.
+    #
+    #   the NAME is right-aligned  — the original left-aligns it,
+    #       Squeeze_Formatted_Paragraph_Centered_ (colsum.cpp:582)
+    #       passing 0 = JUSTIFY_LEFT through bill.cpp:210, with
+    #       "Centered_" meaning center_y ONLY (bill.cpp:205)
+    #   the DETAIL LINE is per row — the original draws it once for
+    #       the selected colony (colsum.cpp:1155)
+    _cl_src2 = open(os.path.join(SCREENS_DIR, "colony_summary",
+                                 "colonylist.py"), encoding="utf-8").read()
     with open(os.path.join(os.path.dirname(SCREENS_DIR), "doc",
                            "v3_fundament.md"), encoding="utf-8") as _fh:
         _fund_src = _fh.read()
-    assert "**43." in _fund_src and "output_panel" in _fund_src, (
-        "the fundament no longer carries the output_panel extension "
-        "as a decision")
+    for _cite in ("colsum.cpp:582", "bill.cpp:205", "bill.cpp:210",
+                  "JUSTIFY_LEFT"):
+        assert _cite in _cl_src2, (
+            f"colonylist.py no longer cites {_cite} — the name's "
+            f"right alignment is a deviation and the evidence that "
+            f"it is one has to travel with the marking")
+        assert _cite in _fund_src, (
+            f"the fundament no longer cites {_cite} for the "
+            f"right-aligned name")
+    assert "**45." in _fund_src, (
+        "the fundament no longer carries the colony row's two "
+        "deviations as a decision")
+    # The detail line's omission is deliberate and says what it omits.
+    assert "colsum.cpp:1196" in _cl_src2, (
+        "colonylist.py no longer names where the original's seven "
+        "values come from, so 'a SUBSET' is a claim without a source")
+
+    # ── output_panel: decision 43 is WITHDRAWN ──
+    # It marked output_panel an HD EXTENSION on the strength of a
+    # word grep of one file. The original draws all four ECON values
+    # per colony — Draw_Colony_Scan_Info_ (colsum.cpp:1155) loops
+    # Draw_Colony_Wee_Prod_ into Draw_Colony_Prod_Both_
+    # (coldraw.cpp:36), which reads colony->production[] at
+    # coldraw.cpp:60. The panel is a TRANSCRIPTION. This check keeps
+    # the withdrawal from being quietly reverted.
+    _scr_src = open(os.path.join(SCREENS_DIR, "colony_summary",
+                                 "screen.py"), encoding="utf-8").read()
+    assert "WITHDRAWN" in _fund_src, (
+        "fundament 43 no longer records that it was withdrawn — it "
+        "claimed the original never draws per-colony food/industry/"
+        "research, and coldraw.cpp:60 does")
+    assert "coldraw.cpp:60" in _fund_src and "coldraw.cpp:60" in _scr_src, (
+        "the withdrawal no longer cites where the original actually "
+        "draws production[] — a retraction without its evidence is "
+        "how the original error got in")
+    assert "TRANSCRIPTION" in _scr_src, (
+        "screen.py no longer records output_panel as a transcription")
     ok("colony summary sidebar (six s_player scalars kinded and held "
        "to the verified spec, sign rule per row, ESTR/join/justify "
        "provenance, output_panel marked HD EXTENSION)")

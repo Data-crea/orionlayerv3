@@ -268,31 +268,80 @@ check asserts `native_width` is still read and still *larger* than
 what gets drawn, so removing it as dead weight fails the suite rather
 than quietly ending the marking.
 
-**43. A screen may show what the original computes but never
-draws — and that is an HD EXTENSION, not a fix.** (Line numbers here
-are orion2re 1.60.0, `src/version.h`.) `colsum.cpp` sorts
-the colony list by food, industry and research: `cmp_Food_`,
-`cmp_Industry_` and `cmp_Research_` (colsum.cpp:1071-1083) read
-`colony->production[ECON_*]` and the sort buttons are wired to them.
-Grep that file for those three words and the only other hits are the
-two EMPIRE totals in the sidebar. **Not one of the three is ever
-drawn per colony.** The original lets you order ten rows by a number
-it will not show you, on the same screen, in the same frame.
+**43. WITHDRAWN, 3 September 2026 — it was built on a one-file word
+grep, and the grep was wrong.** (Line numbers here are orion2re
+1.60.0, `src/version.h`.)
 
-`output_panel` on the HD colony summary is planned to show exactly
-those three for the selected colony. That is the same family as the
-allocation bar and the per-row detail line: not something MOO2 chose
-against, something a 640x480 screen had no room for. It is marked in
-`screens/colony_summary/screen.py`, here, and in a smoke check — and
-the marking went in BEFORE any pixel did, because a panel that fills
-up gradually is a panel nobody remembers to mark.
+This decision claimed that `colsum.cpp` sorts the colony list by
+food, industry and research while never drawing any of the three per
+colony, and concluded that `output_panel` — which is to show those
+values for the selected colony — is therefore an HD EXTENSION.
 
-The general rule, and it is the one worth carrying: *the original
-computing a value is not permission to display it.* The sort proves
-the number exists and is meaningful; it says nothing about whether
-showing it is a transcription. It is not. Every such panel is an
-extension and gets labelled like one, or the word stops meaning
-anything and the project's whole claim about fidelity goes with it.
+**The original draws them.** `COLSUM::Draw_Colony_Scan_Info_`
+(colsum.cpp:1155), called from `Draw_Scan_Info_` (:80) at :485, runs
+`for (i = 0; i < ECON_COUNT; ++i) Draw_Colony_Wee_Prod_(_g_colony_n,
+i, 106, y_pos, 366, 20)` with `y_pos` stepping 18 — four rows of
+icons at native x 106, y 349 upward — plus
+`Draw_Info_Wee_Morale_(…, 106, 421, 366)`. That path lands in
+`COLDRAW::Draw_Colony_Prod_Both_` (coldraw.cpp:36), which reads
+`colony->production[prod_type]` (coldraw.cpp:60) and draws it as
+tens-and-units sprites. Food, industry, research and BC, per colony,
+on this screen, in the bottom-left — exactly where `output_panel`
+sits. **`output_panel` is a TRANSCRIPTION**, not an extension.
+
+**Why the grep missed it, which is the part worth keeping.** The
+search was `grep -in "food\|industry\|research" colsum.cpp`. The
+call site contains none of those words: the value is selected by a
+loop index against `ECON_COUNT`, and the drawing lives in a different
+file. A word grep finds a concept only where somebody spelled it, and
+the engine spells this one as an integer. Searching for the DATA
+(`production[`) instead of the LABEL would have found it in one step.
+
+That is decision 44's lesson arriving from the other side: there, one
+definition was mistaken for the definition; here, one file was
+mistaken for the code path. Both are the same error — a search that
+returned something, believed because it returned something.
+
+The rule this entry originally proposed — *the original computing a
+value is not permission to display it* — survives, and is worth
+keeping. It just has no example here, because on this screen the
+original displays them. It kept `output_panel` marked as an extension
+for a day and a half, which is exactly how long a wrong marking is
+more dangerous than no marking: it was asserted in a smoke check, so
+the tree actively defended the error.
+
+**45. Two deviations in the colony row, both kept, both marked.**
+
+**The colony NAME is right-aligned; the original left-aligns it.**
+`BILL::Squeeze_Formatted_Paragraph_Centered_(0x0C, y_pos,
+paragraph_type, 0x17, buffer, 0)` (colsum.cpp:582) forwards to
+`_Squeeze_Print_Paragraph_(x, y + height/2, …, center_y=true)`
+(bill.cpp:252). `center_y` does nothing but `y = y - height/2`
+(bill.cpp:205) — **"Centered_" is the vertical axis only.** The
+sixth parameter is `color_or_alignment`, and for a formatted
+paragraph it is handed to `Print_Formatted_Paragraph_` as the JUSTIFY
+argument (bill.cpp:210). colsum.cpp passes `0` = `JUSTIFY_LEFT`.
+
+Kept, because right alignment is what makes a 236 px name column
+affordable at all: overflow grows LEFT into `pad_x` where nothing is
+drawn, instead of rightward onto the track, and that is the trade
+that bought the building column. But a function called `Centered_`
+is a trap, and a later reader who checks the call and sees a name
+that agrees with the word will file this as transcribed.
+
+**The per-row second line has no per-row counterpart.**
+`Draw_Colony_Scan_Info_` draws it ONCE, for `_g_colony_n`, at native
+(13, 354, 80, 88), and substitutes seven values into
+`E_Strings_(74)`: size, climate, gravity, mineral class, `n_pops`,
+computed maximum, growth (colsum.cpp:1196-1205). The HD row shows
+three of them on every row. Kept for the same reason as the
+allocation bar — it makes comparable what the original could only
+show one at a time — and the other four belong in `output_panel`,
+which is the HD equivalent of that same box.
+
+Both are marked in `screens/colony_summary/colonylist.py`, here, and
+in smoke checks. Neither changes a pixel; the point is that the next
+person reads them as choices rather than as fidelity.
 
 **42. Derived artwork ships; unmodified original artwork does not.**
 The repository is public, and OrionLayer is a modification that

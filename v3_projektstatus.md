@@ -829,21 +829,100 @@ penalty), 112 (morale), 120 and 121 (worker penalty) and HESTR
 `0x142`. The conclusion stands; the citation had to be the string
 table rather than the field.
 
-**`output_panel` is an HD EXTENSION — decision 43.** It is planned to
-show the selected colony's food, industry and research, and
-`colsum.cpp` draws none of the three per colony. Grep it: the only
-hits are the three sort comparators (colsum.cpp:1071-1083, reading
-`colony->production[ECON_*]`) and the two empire totals. **The
-original sorts by numbers it never displays** — four of the seven
-sort buttons key on something invisible. The rule that came out of
-it: *the original computing a value is not permission to display it.*
-Marked in `screen.py`, in the fundament and in a smoke check, before
-a single pixel is drawn in the panel.
+**`output_panel` is a TRANSCRIPTION — decision 43 is WITHDRAWN,
+3 September 2026.** It was marked an HD EXTENSION on the claim that
+`colsum.cpp` never draws per-colony food, industry or research. It
+draws all four. `COLSUM::Draw_Colony_Scan_Info_` (colsum.cpp:1155),
+reached from `Draw_Scan_Info_` at :485, loops `i < ECON_COUNT`
+calling `Draw_Colony_Wee_Prod_(_g_colony_n, i, 106, y_pos, 366, 20)`
+with `y_pos` stepping 18, and adds morale at (106, 421); that lands
+in `COLDRAW::Draw_Colony_Prod_Both_` (coldraw.cpp:36), which reads
+`colony->production[prod_type]` (coldraw.cpp:60) and draws it as
+tens-and-units sprites at native x 106, y 349 upward — the
+bottom-left, which is exactly where `output_panel` sits.
+
+**Why the grep missed it.** The search was for the words
+"food|industry|research" in one file. The call site contains none of
+them: the value is chosen by a loop index against `ECON_COUNT`, and
+the drawing lives in `coldraw.cpp`. Searching for the DATA
+(`production[`) rather than the LABEL would have found it in one
+step. That is decision 44's lesson from the other side — there one
+definition was mistaken for the definition, here one file was
+mistaken for the code path — and the marking was defended by a smoke
+assertion for a day and a half, which is how a wrong marking becomes
+worse than none.
+
+The rule the entry proposed — *the original computing a value is not
+permission to display it* — survives; it simply has no example here.
 
 **Native geometry**, for re-deriving HD boxes: the empire paragraph
 is x 520, y 354, w 104. A colony row is `slot * 31 + 38`; the name
 column is x 12, w 89 — w 87 when the colony has an event — h 23; the
 building column x 512, w 85, h 22.
+
+**The preview draws the whole screen now — 3 September 2026.**
+`tools/colony_list_preview.py` drove `colonylist.render` alone, so
+the sidebar and the sort bar had no picture at all and both of the
+row renderer's deviations were found by reading rather than by
+looking. It now drives the real `ColonySummaryScreen.render` off a
+synthetic snapshot: real `s_star`, `s_planet_data`, `s_colony` and
+`s_player` bytes through the real specs, so `build_rows` and
+`_render_sidebar` cannot tell the difference. **Fake the state, never
+the drawing** — a preview that draws its own version of a screen is a
+picture of the preview. The hand-written row dicts are gone with it,
+and so is the check that they matched `build_rows`: that drift is now
+structurally impossible, and what is asserted instead is that each
+synthetic colony still produces the SHAPE its comment claims.
+
+One thing the rewrite got wrong first and the picture caught at once:
+every colony read numeral **I**. `HAROLD::Planet_Number_` counts
+OCCUPIED slots before the planet, not the orbit, so a numeral has to
+be earned with real planets in front of it — the snapshot now packs
+filler planets carrying `colony_index -1`.
+
+**The sidebar's numbers are chosen to be falsifiable, not
+plausible.** Plausible numbers are what hide an alignment bug: six
+values of similar width sit in a column whether they are right-
+aligned or centred. So `bc` is 18432 and `surplus_freighters` is 7 —
+five digits against one, which makes right alignment visible AS
+alignment — `surplus_bc` is **negative**, so red-if-negative actually
+renders for the first time, `surplus_food` is positive so the
+explicit plus shows beside it, and `research_produced` is unsigned so
+the sign is visibly a per-row property. All four kinds are
+distinguishable in one frame: a stock, two signed net flows, an
+unsigned gross, two counts.
+
+**`--native` composes the side-by-side.** A 640x480 original beside
+the HD render, same height, nearest-neighbour on the original so it
+reads as a different picture rather than a worse one. **It has not
+been run**: the original half cannot be synthesised and has to come
+off a running game, whose framebuffer the Extension API already
+carries. Without it the tool writes the HD half and says the
+comparison is incomplete.
+
+**Two deviations in the row, both kept, both marked — decision 45.**
+The colony NAME is right-aligned and the original left-aligns it:
+`Squeeze_Formatted_Paragraph_Centered_` (colsum.cpp:582) is
+`center_y` ONLY (bill.cpp:205), and its sixth argument reaches
+`Print_Formatted_Paragraph_` as JUSTIFY (bill.cpp:210) with colsum
+passing 0 = `JUSTIFY_LEFT`. Kept, because right alignment is what
+makes a 236 px column affordable. And the per-row second line has no
+per-row counterpart: the original draws it once for the selected
+colony. Both marked in `colonylist.py`, in the fundament and in
+smoke checks.
+
+**What the second line owes, if it stays.** `E_Strings_(74)` takes
+SEVEN values (colsum.cpp:1196-1205): planet size, climate, gravity
+class, mineral class, `n_pops`, computed maximum, growth. The row
+draws three — climate, `n_pops`, `max_pop` — and omits size, gravity,
+mineral class and growth. That omission is **deliberate**: a row is
+62 px and the second line is one short string, so seven values there
+would be a table rather than a caption, and the row exists to carry
+the track. They have a home already and it is the original's own —
+`output_panel` is the HD equivalent of that same bottom-left box. If
+the hover band from the design lands, the row keeps its three and the
+panel answers for the rest, which is what the original does one
+colony at a time.
 
 **The sort bar works — 3 September 2026.** Seven keys, and the
 DIRECTIONS are transcribed rather than chosen: `Switched_cmp_`

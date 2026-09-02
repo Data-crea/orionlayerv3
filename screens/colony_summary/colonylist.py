@@ -26,20 +26,32 @@ because a branch nobody renders is a branch nobody checks. The
 comparison is in `v3_projektstatus.md`.
 
 **The per-row detail line is an HD EXTENSION.** The original prints
-climate and n/max for the SELECTED colony only, into the bottom-left
-scan box at native (13, 354, 80, 88) — `COLSUM::Draw_Colony_Scan_
-Info_` (colsum.cpp:1155) formats `ESTRINGS::E_Strings_(74)` and
-squeezes it into that rect, guarded by `_g_colony_n != -1`. The rows
-themselves carry a name and nothing else. Putting it on every row
-makes comparable what the original could only show one at a time,
-which is the same family as the allocation bar: not something MOO2
-chose against, something its screen had no room for. Marked here, in
-`layout.json` under `list._hd_extension`, in `v3_projektstatus.md`,
-and in a smoke check.
+it ONCE, for the selected colony, into the bottom-left scan box at
+native (13, 354, 80, 88) — `COLSUM::Draw_Colony_Scan_Info_`
+(colsum.cpp:1155) formats `ESTRINGS::E_Strings_(74)` and squeezes it
+into that rect, guarded by `_g_colony_n != -1`. The rows themselves
+carry a name and nothing else. Putting it on every row makes
+comparable what the original could only show one at a time, which is
+the same family as the allocation bar: not something MOO2 chose
+against, something its screen had no room for. Marked here, in
+`layout.json` under `list._hd_extension`, in `doc/v3_fundament.md`,
+in `v3_projektstatus.md`, and in a smoke check.
 
-It is a SUBSET of that box: the original's line also carries planet
-size, gravity, mineral class and population growth. Those are not
-drawn, and the box they come from is `output_panel`, still empty.
+**It is a SUBSET, and the omission is deliberate.** That one call
+substitutes SEVEN values, in order: planet size, climate, gravity
+class, mineral class, `n_pops`, the computed maximum, and population
+growth (colsum.cpp:1196-1205). The row draws three — climate,
+`n_pops`, `max_pop` — and leaves four: size, gravity, mineral class
+and growth.
+
+They are left out because a row is 62 px and the second line is one
+short string; seven values there would be a table, not a caption, and
+the row exists to carry the allocation track. The four have a home
+already, and it is the original's own: `output_panel` is the HD
+equivalent of that bottom-left box, and the whole seven belong in it.
+If the hover band from the design ever lands, the row keeps its three
+and the panel answers for the rest — which is what the original does,
+one colony at a time.
 
 TRANSCRIBED here, with its source:
   the zone order     food, industry, research — ECON_FOOD=0,
@@ -239,6 +251,28 @@ def render(surface, rows, area, cfg, layout, style):
 def _draw_name_block(surface, row, x, y, name_w, row_h, cfg,
                      name_px, small_px, style):
     """The colony name, and under it climate and population.
+
+    **HD EXTENSION: the original LEFT-aligns this name.** It draws it
+    with `BILL::Squeeze_Formatted_Paragraph_Centered_(0x0C, y_pos,
+    paragraph_type, 0x17, buffer, 0)` (colsum.cpp:582), and that
+    wrapper's name is about the VERTICAL axis only — it forwards to
+    `_Squeeze_Print_Paragraph_(x, y + height/2, …, center_y=true)`
+    (bill.cpp:252), where `center_y` does nothing but
+    `y = y - height/2` (bill.cpp:205). The sixth parameter is
+    `color_or_alignment`, and for a formatted paragraph it goes
+    straight into `Print_Formatted_Paragraph_` as the JUSTIFY
+    argument (bill.cpp:210). colsum.cpp passes **0**, which is
+    JUSTIFY_LEFT.
+
+    The alignment below is therefore ours, and it is KEPT: right
+    alignment is what makes a 236 px name column affordable, because
+    overflow grows LEFT into `pad_x` where nothing is drawn instead
+    of rightward onto the track, and that trade is what bought the
+    building column. The marking does not undo the trade. It exists
+    because `Centered_` is a trap of a function name — a later reader
+    who checks the call site and sees a name agreeing with the word
+    will file this as transcribed. Marked here, in
+    `doc/v3_fundament.md` (45), and in a smoke check.
 
     RIGHT-ALIGNED to the column's right edge. Left-aligned, a name
     too long for the column grew RIGHTWARD onto the track's first
