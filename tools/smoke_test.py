@@ -2424,6 +2424,116 @@ def main():
         assert set(_fake) == set(_rows[0]), (
             f"colony_list_preview row {_fake.get('name')!r} has keys "
             f"{sorted(_fake)} against build_rows' {sorted(_rows[0])}")
+    # ── The sidebar's six s_player scalars ──
+    # s_player is a verified spec, and these six offsets are in it.
+    # `unverified.PLAYER_SIDEBAR` carries them a second time ON
+    # PURPOSE — a probe spec for `struct_probe.py players --sidebar`,
+    # because "verified" was claimed on ONE source (the header
+    # compiled with its own pragma pack, sizeof landing on the 0xf0e
+    # in sizes.h). A size assert cannot catch two adjacent int16s in
+    # the wrong order, and surplus_food @276 / surplus_bc @278 are
+    # exactly that: adjacent, both net flows, both printed signed,
+    # plausible either way round.
+    #
+    # A deliberate duplicate is still a duplicate, so it is held to
+    # the verified spec here. When the probe agrees with a live game
+    # the probe spec goes away; until then neither copy may drift.
+    from core.structs import player as _plsp
+    from core.structs import unverified as _unv
+    _pl_off = dict((n, (o, k)) for n, o, k in _plsp.SPEC.fields)
+    _probe_off = dict((n, (o, k)) for n, o, k in
+                      _unv.PLAYER_SIDEBAR.fields)
+    assert _unv.PLAYER_SIDEBAR.size == _plsp.SIZE, (
+        _unv.PLAYER_SIDEBAR.size, _plsp.SIZE)
+    assert not _unv.PLAYER_SIDEBAR.verified, (
+        "PLAYER_SIDEBAR is marked verified — it is a probe spec, and "
+        "the moment it is verified it should be deleted, not flagged")
+    for _f, (_o, _k) in _probe_off.items():
+        if _f in _pl_off:
+            assert _pl_off[_f] == (_o, _k), (
+                f"PLAYER_SIDEBAR and player.SPEC disagree about {_f}: "
+                f"probe says {(_o, _k)}, the verified spec says "
+                f"{_pl_off[_f]} — one of the two copies has drifted")
+    # traits and tech_applications are offsets player.py keeps as
+    # module constants rather than spec fields, so they are checked
+    # against those.
+    assert _probe_off["traits"][0] == _plsp.TRAITS_OFFSET, (
+        _probe_off["traits"], _plsp.TRAITS_OFFSET)
+    # Every one of the six carries a KIND, because they are not one
+    # kind and the difference decides what may be done with them —
+    # a gross added to a net is silently wrong.
+    _six = ("bc", "surplus_bc", "total_pop", "surplus_freighters",
+            "surplus_food", "research_produced")
+    for _f in _six:
+        assert _f in _unv.PLAYER_KINDS, (
+            f"{_f} has no kind recorded in PLAYER_KINDS")
+        assert _unv.PLAYER_KINDS[_f][0] in (
+            "stock", "net flow", "gross", "count"), _unv.PLAYER_KINDS[_f]
+    assert _unv.PLAYER_KINDS["bc"][0] == "stock"
+    assert _unv.PLAYER_KINDS["research_produced"][0] == "gross"
+    assert (_unv.PLAYER_KINDS["surplus_food"][0]
+            == _unv.PLAYER_KINDS["surplus_bc"][0] == "net flow")
+
+    # The sign rule is the original's and is PER ROW: only Income
+    # (ESTR 106, "%sIncome: %s%s%+d") and Food (ESTR 102,
+    # "%sFood: %s%+d") carry %+d; Reserve 118, Population 114,
+    # Freighters 103 and Research 117 are plain %d. A screen-wide
+    # "sign everything" would be wrong on four rows out of six.
+    _emp = _cjson.load(open(os.path.join(
+        SCREENS_DIR, "colony_summary", "layout.json"),
+        encoding="utf-8"))["empire"]
+    _signed = {r["key"] for r in _emp["rows"] if r.get("signed")}
+    assert _signed == {"income", "food"}, (
+        f"the signed rows are {sorted(_signed)}; the original prints "
+        f"%+d on Income (106) and Food (102) and %d on the other four")
+    _fields = [r["field"] for r in _emp["rows"]]
+    assert _fields == ["bc", "surplus_bc", "total_pop",
+                       "surplus_freighters", "surplus_food",
+                       "research_produced"], _fields
+    # Research is ABSOLUTE and carries no percent. Asserted because
+    # the claim is easy to cite wrongly: ESTR 117 is
+    # "%sResearch: %s%d" and there is no %% in it. The note has to
+    # keep saying so.
+    assert "no %% in it" in _emp["_estrings_note"], (
+        "empire._estrings_note no longer records that ESTR 117 "
+        "carries no percent")
+    for _pct in ("108", "112", "120", "121", "0x142"):
+        assert _pct in _emp["_estrings_note"], (
+            f"empire._estrings_note no longer lists {_pct} among the "
+            f"only string-table entries that DO carry a literal %% — "
+            f"the list is what makes 'not 117' checkable rather than "
+            f"asserted")
+    for _key in ("_join_note", "_justify_note", "_geometry_note",
+                 "_colour_note", "_open_note"):
+        assert _emp.get(_key), f"empire.{_key} is gone"
+    assert "fmtpara.cpp:1057" in _emp["_justify_note"], (
+        "empire._justify_note no longer names where justify=3 drops "
+        "to LEFT — the inertness is the whole point of the note")
+    assert "OPEN" in _emp["_open_note"], (
+        "empire._open_note no longer marks E_Strings_(12) as open")
+
+    # ── output_panel is an HD EXTENSION ──
+    # The original SORTS the list by food, industry and research
+    # (cmp_Food_/cmp_Industry_/cmp_Research_, colsum.cpp:1071-1083)
+    # and never draws any of the three per colony. Showing them is an
+    # extension, and decision 43 says the sort is not permission.
+    _scr_src = open(os.path.join(SCREENS_DIR, "colony_summary",
+                                 "screen.py"), encoding="utf-8").read()
+    assert "HD EXTENSION" in _scr_src and "output_panel" in _scr_src, (
+        "screen.py no longer marks output_panel as an HD EXTENSION")
+    assert "colsum.cpp:1071" in _scr_src, (
+        "screen.py's output_panel marking no longer names the sort "
+        "comparators — a marking without the evidence is a label")
+    with open(os.path.join(os.path.dirname(SCREENS_DIR), "doc",
+                           "v3_fundament.md"), encoding="utf-8") as _fh:
+        _fund_src = _fh.read()
+    assert "**43." in _fund_src and "output_panel" in _fund_src, (
+        "the fundament no longer carries the output_panel extension "
+        "as a decision")
+    ok("colony summary sidebar (six s_player scalars kinded and held "
+       "to the verified spec, sign rule per row, ESTR/join/justify "
+       "provenance, output_panel marked HD EXTENSION)")
+
     ok("colony list (rows, No Farming below a full track and clear of "
        "the hatching, horizontal budget balances to the pixel, name "
        "clipped to its column, INVENTION + HD EXTENSION marked, "

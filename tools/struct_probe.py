@@ -105,6 +105,7 @@ SPECS = {
     "leaders": ("core.structs.unverified", "LEADER"),
     "planets": ("core.structs.planet", "SPEC"),
     "nebulas": ("core.structs.nebula", "SPEC"),
+    "players": ("core.structs.player", "SPEC"),
 }
 
 
@@ -351,6 +352,89 @@ def print_pop_nibble_report(rep, indent="  "):
               f"one value >= 14.")
 
 
+def sidebar_report(records, player_num, indent="  "):
+    """The six s_player scalars COLSUM::Draw_Empire_Info_ prints.
+
+    SOURCE TWO, and the only one there is. The offsets come from
+    orion2re's own header compiled with its `#pragma pack(1)`, with
+    sizeof landing on the 0xf0e in sizes.h — one source, and the one
+    that cannot be wrong in the way that matters, because a header
+    describes the struct the ENGINE was built from while what is
+    parsed here is what came over the wire. A size assert cannot
+    catch two adjacent int16s in the wrong order.
+
+    So this prints them beside the labels the original prints, in the
+    original's own draw order and with the original's own sign rule,
+    for a human to hold against the game's screen. It does not judge:
+    there is nothing on the wire to check these against, which is
+    exactly why the check is a pair of eyes on two screens.
+
+    THE PAIR TO STARE AT: `surplus_food` (276) and `surplus_bc` (278)
+    are two bytes apart, both int16, both net flows, both printed
+    signed. Swapped, both stay plausible — they are the same order of
+    magnitude in most empires — and no assert anywhere would notice.
+    If only one line is going to be checked properly, check those.
+    """
+    from core.structs import player as player_struct
+    from core.structs import unverified as unverified_structs
+
+    kinds = unverified_structs.PLAYER_KINDS
+    # Draw order, labels and format from COLSUM::Draw_Empire_Info_
+    # (colsum.cpp:418). The ESTR ids are the strings it passes; the
+    # text beside them is from orion2_str.h, which carries the table
+    # as comments on the enum.
+    rows = [
+        ("Reserve",    "bc",                 118, False,
+         "%sReserve: %s%d"),
+        ("Income",     "surplus_bc",         106, True,
+         "%sIncome: %s%s%+d"),
+        ("Population", "total_pop",          114, False,
+         "%sPopulation: %s%d"),
+        ("Freighters", "surplus_freighters", 103, False,
+         "%sFreighters: %s%d"),
+        ("Food",       "surplus_food",       102, True,
+         "%sFood: %s%+d"),
+        ("Research",   "research_produced",  117, False,
+         "%sResearch: %s%d"),
+    ]
+
+    if not 0 <= player_num < len(records):
+        print(f"{indent}player_num {player_num} is outside the "
+              f"{len(records)} player records in the snapshot")
+        return
+
+    view = player_struct.parse(records[player_num])
+    print(f"{indent}s_player[{player_num}] "
+          f"{view.name!r} / {view.race_name!r}\n")
+    print(f"{indent}{'label':<11} {'field':<19} {'off':>4} "
+          f"{'kind':<9} {'value':>9}   what the original prints")
+    print(f"{indent}{'-' * 78}")
+    offsets = dict((n, o) for n, o, _k in player_struct.SPEC.fields)
+    for label, field, estr, signed, fmt in rows:
+        value = getattr(view, field)
+        kind = kinds.get(field, ("?", ""))[0]
+        shown = f"+{value}" if signed and value >= 0 else str(value)
+        print(f"{indent}{label:<11} {field:<19} {offsets[field]:>4} "
+              f"{kind:<9} {value:>9}   {label}: {shown}"
+              f"   (ESTR {estr} {fmt!r})")
+
+    print(f"\n{indent}Sign rule: only Income (106) and Food (102) "
+          f"carry %+d; the other four are %d.")
+    print(f"{indent}Income also takes a third %s — the red attribute "
+          f"from ERIC::Red_If_Negative_Fmt_String_ (eric.cpp:176), "
+          f"which is\n{indent}\\0332 when negative and E_Strings_(12) "
+          f"otherwise.")
+    print(f"\n{indent}HAZARD: surplus_food @276 and surplus_bc @278 "
+          f"are adjacent int16 net flows, both signed-printed.")
+    print(f"{indent}Swapped they read plausibly. Check Food and "
+          f"Income against the game's own sidebar, not each other.")
+    print(f"\n{indent}Kinds are not one kind — do not add a gross to "
+          f"a net or difference a count:")
+    for _label, field, _e, _s, _f in rows:
+        kind, why = kinds.get(field, ("?", "?"))
+        print(f"{indent}  {field:<19} {kind:<9} {why}")
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("array", choices=sorted(ARRAYS))
@@ -366,7 +450,16 @@ def main():
     ap.add_argument("--pop-nibble", action="store_true",
                     help="colonies only: test the pop[] low nibble "
                          "against every colony's owner")
+    ap.add_argument("--sidebar", action="store_true",
+                    help="players only: the six scalars "
+                         "COLSUM::Draw_Empire_Info_ prints, beside "
+                         "the labels and signs the original uses")
     args = ap.parse_args()
+
+    if args.sidebar and args.array != "players":
+        print("--sidebar is a players check; the six scalars live in "
+              "s_player")
+        return 1
 
     if args.pop_nibble and args.array != "colonies":
         # Checked before the socket: an argument error should not need
@@ -423,6 +516,17 @@ def main():
         print("── pop[] low nibble: player index, not race "
               + "─" * 20)
         print_pop_nibble_report(pop_nibble_report(records, colony_spec))
+        return 0
+
+    if args.sidebar:
+        print("── COLSUM::Draw_Empire_Info_ (colsum.cpp:418) "
+              + "─" * 20)
+        sidebar_report(records, getattr(gs, "player_num", 0))
+        print("\n  Read these against the original's own sidebar on "
+              "the Colonies screen.\n  Agreement there is the second "
+              "source; until then core/structs/unverified.py\n  "
+              "PLAYER_SIDEBAR is the honest status, whatever "
+              "player.py's verified flag says.")
         return 0
 
     if spec is not None:

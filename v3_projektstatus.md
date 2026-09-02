@@ -643,6 +643,94 @@ point inside the original's own button (`colsum.cpp:265-273`), so no
 field id is needed and the hotkeys n p f i s r b keep working
 natively — decision 39.
 
+**The sidebar's six numbers were re-opened — 2 September 2026.**
+`s_player` is a verified spec and all six offsets are in it, and the
+verification rests on ONE source: orion2re's header compiled with its
+own `#pragma pack(1)`, `sizeof` landing on the `0xf0e` in `sizes.h`.
+That was reproduced and every offset is exact — `bc` 50,
+`surplus_freighters` 56, `total_pop` 266, `research_produced` 272,
+`surplus_food` 276, `surplus_bc` 278, plus the anchors `race` 37,
+`tech_applications` 379 and `traits` 2308.
+
+One source is the problem, and a size assert is the wrong instrument
+for this particular risk: **`surplus_food` (276) and `surplus_bc`
+(278) are two bytes apart, both `int16`, both net flows, both printed
+with an explicit sign.** Swapped, every value on screen stays
+plausible — they are the same order of magnitude in most empires —
+and nothing anywhere would notice. So `core/structs/unverified.py`
+gains `PLAYER_SIDEBAR`, a PROBE spec, and
+`tools/struct_probe.py players --sidebar` prints the six beside the
+labels and signs the original uses, for a human to hold against the
+game's own screen. The three anchors ride along as controls: an
+answer that gets those right and the six wrong is telling you about
+the six. The smoke test holds the probe spec to `player.py` so the
+deliberate duplicate cannot drift, and refuses to let it be marked
+verified — when it agrees it should be deleted, not promoted.
+
+They are also **not one kind of number**, which is recorded per
+field: `bc` is a stock, `surplus_bc` and `surplus_food` are net
+flows, `research_produced` is gross, `total_pop` and
+`surplus_freighters` are counts. Adding a gross to a net is the
+mistake that table exists to prevent.
+
+**What the six actually are, from source.** `Draw_Empire_Info_` is
+colsum.cpp:418. The strings are NOT in the source — `Load_E_Strings_`
+(estrings.cpp:11) loads them from the player's own `estrings.lbx` at
+runtime — but `orion2_str.h` carries each one as a comment on the
+enum, which is where these come from: 118 `%sReserve: %s%d`, 106
+`%sIncome: %s%s%+d`, 114 `%sPopulation: %s%d`, 103
+`%sFreighters: %s%d`, 102 `%sFood: %s%+d`, 117 `%sResearch: %s%d`.
+**Only Income and Food carry `%+d`**, which is why `signed` is per
+row. The colour attributes are the first two `%s` — `\0320` label,
+`\0321` value — and Income takes a third from
+`Red_If_Negative_Fmt_String_` (eric.cpp:176), `\0332` when negative.
+Red-if-negative is the original's and applies to Income **alone**;
+this screen also colours Food and Freighters, and those two are
+marked HD EXTENSION.
+
+**Two findings that would have become inventions.** The six lines are
+joined by `String_Builder2_` (eric.cpp:425) through `E_Strings_(71)`
+= `%s%c%s` with the character `13` — a **carriage return**, not a
+newline, and the whole block reaches `Print_Formatted_Paragraph_` as
+one string. And that call passes **justify=3**, which is
+`JUSTIFY_FULL` and **inert here**: `Complete_Line_` (fmtpara.cpp:1057)
+checks the next character and drops to `Justify_Line_(0)` on CR, LF,
+FF or a terminating NUL. Every line is followed by that CR, so all
+six are LEFT ALIGNED. A label-left/value-right split read out of
+"justify" would have been an invention; so, strictly, is the
+label-above-value stacking this screen draws, and it says so.
+
+`E_Strings_(12)` is **OPEN, single source**: it has no entry in
+`orion2_str.h` at all, so only its uses can be read. Every use in the
+tree is consistent with the empty string — button labels where the
+sprite carries the artwork, "no help", "no prefix", the not-negative
+branch of `Red_If_Negative_Fmt_String_` — and consistent is not
+confirmed.
+
+**Research is absolute and carries no percent — but not for the
+reason it is tempting to cite.** ESTR 117 is `%sResearch: %s%d`;
+there is no `%%` in it and none in any research label. The only
+entries in the whole table with a literal `%%` are 108 (maintenance
+penalty), 112 (morale), 120 and 121 (worker penalty) and HESTR
+`0x142`. The conclusion stands; the citation had to be the string
+table rather than the field.
+
+**`output_panel` is an HD EXTENSION — decision 43.** It is planned to
+show the selected colony's food, industry and research, and
+`colsum.cpp` draws none of the three per colony. Grep it: the only
+hits are the three sort comparators (colsum.cpp:1071-1083, reading
+`colony->production[ECON_*]`) and the two empire totals. **The
+original sorts by numbers it never displays** — four of the seven
+sort buttons key on something invisible. The rule that came out of
+it: *the original computing a value is not permission to display it.*
+Marked in `screen.py`, in the fundament and in a smoke check, before
+a single pixel is drawn in the panel.
+
+**Native geometry**, for re-deriving HD boxes: the empire paragraph
+is x 520, y 354, w 104. A colony row is `slot * 31 + 38`; the name
+column is x 12, w 89 — w 87 when the colony has an event — h 23; the
+building column x 512, w 85, h 22.
+
 **The list is no longer blocked.** `s_colony` is verified as of
 31 August (`core/structs/colony.py`): `owner`, `planet`, `n_pops` and
 `max_farms` each agree with the original's own colony summary, and

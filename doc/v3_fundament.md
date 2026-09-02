@@ -232,6 +232,31 @@ the game already owns, so this only applies where the rule is one
 comparison and the failure is silent; anything larger belongs on the
 C++ side or not at all.
 
+**43. A screen may show what the original computes but never
+draws — and that is an HD EXTENSION, not a fix.** `colsum.cpp` sorts
+the colony list by food, industry and research: `cmp_Food_`,
+`cmp_Industry_` and `cmp_Research_` (colsum.cpp:1071-1083) read
+`colony->production[ECON_*]` and the sort buttons are wired to them.
+Grep that file for those three words and the only other hits are the
+two EMPIRE totals in the sidebar. **Not one of the three is ever
+drawn per colony.** The original lets you order ten rows by a number
+it will not show you, on the same screen, in the same frame.
+
+`output_panel` on the HD colony summary is planned to show exactly
+those three for the selected colony. That is the same family as the
+allocation bar and the per-row detail line: not something MOO2 chose
+against, something a 640x480 screen had no room for. It is marked in
+`screens/colony_summary/screen.py`, here, and in a smoke check — and
+the marking went in BEFORE any pixel did, because a panel that fills
+up gradually is a panel nobody remembers to mark.
+
+The general rule, and it is the one worth carrying: *the original
+computing a value is not permission to display it.* The sort proves
+the number exists and is meaningful; it says nothing about whether
+showing it is a transcription. It is not. Every such panel is an
+extension and gets labelled like one, or the word stops meaning
+anything and the project's whole claim about fidelity goes with it.
+
 **42. Derived artwork ships; unmodified original artwork does not.**
 The repository is public, and OrionLayer is a modification that
 requires an installed, legally obtained copy of Master of Orion 2 —

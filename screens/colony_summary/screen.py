@@ -10,7 +10,8 @@ everything else — the same construction as the galaxy map. The
 boxes in boxes.json ARE the cutouts, derived by tools/frame_holes.py:
   list_area       the colony rows (population bars: next step)
   sidebar         the six empire readouts
-  output_panel    production breakdown of the selected colony (later)
+  output_panel    per-colony food/industry/research — HD EXTENSION,
+                  see below (later)
   galaxy_inset    the original's small galaxy map (later)
   spare_panel     reserved
   return          RETURN
@@ -22,9 +23,37 @@ button and RETURN has a `native_click` in layout.json, a point inside
 the original's button (colsum.cpp:265-273), and the screen injects a
 click there. Nothing here needs the field list.
 
-Data: the sidebar is transcribed from COLSUM::Draw_Empire_Info_, six
-lines, each one s_player field — all six are in the verified spec.
-The list itself waits on s_colony, which is not verified yet.
+Data: the sidebar is transcribed from COLSUM::Draw_Empire_Info_
+(colsum.cpp:418), six lines, each one s_player field. The draw
+order, the labels, the ESTR ids, the per-row sign rule and the
+red-if-negative on Income are all the original's and all carry their
+source in layout.json under `empire`. Two things this screen does
+that the original does not are marked there: `warn_negative` on Food
+and Freighters, and stacking the label above its value at all — the
+original prints six LEFT-ALIGNED lines, because its justify=3 is
+inert (fmtpara.cpp:1057 drops to JUSTIFY_LEFT before a CR, and the
+six are joined by CR). Label-left/value-right would be an invention
+just as much; this one is at least honest about being one.
+
+**`output_panel` is an HD EXTENSION, and a whole-panel one.** The
+plan for it is the selected colony's food, industry and research.
+**colsum.cpp does not draw those numbers anywhere.** Grepping the
+file for food/industry/research returns exactly two kinds of hit:
+the three sort comparators (`cmp_Food_`, `cmp_Industry_`,
+`cmp_Research_` at colsum.cpp:1071-1083, reading
+`colony->production[ECON_*]`), and the two EMPIRE totals in the
+sidebar (`surplus_food`, `research_produced`). Nothing per colony,
+ever. So the original SORTS by three values it never shows — the
+seven sort buttons include four whose key is invisible on the
+screen doing the sorting — and this panel would display them.
+
+That is the same family as the allocation bar and the per-row detail
+line: not something MOO2 chose against, something its 640x480 screen
+had no room for. Marked here, in `doc/v3_fundament.md`, and in a
+smoke check. Nothing is drawn in it yet; the marking goes in first,
+because a panel that fills up quietly is a panel nobody marks.
+
+The list waits on nothing now — `s_colony` is verified.
 """
 import logging
 
