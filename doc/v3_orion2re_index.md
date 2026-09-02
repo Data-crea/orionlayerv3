@@ -461,12 +461,84 @@ einem `s_player`-Feld: `bc` (118), `surplus_bc` (106), `total_pop`
 
 ### Sortierung und Fenster
 
-`Sort_Col_List_` (colsum.cpp:363) ist ein stabiler Bubblesort über
-sieben Vergleicher, gewählt per `_g_sort_index`. Die zehn sichtbaren
-Zeilen sind ein Fenster über `COLXPORT::_g_colony_list_ptr`, Anfang in
-`_first`; Pfeile bei (619,15) und (619,316), Scroll-Feld nur bei zehn
-oder mehr Kolonien — **das verschiebt alle danach angelegten
-Feld-IDs**, weshalb dieser Screen über Koordinaten klickt.
+Neu gelesen am 3. September 2026 gegen **orion2re 1.60**
+(`src/version.h`); alle Zeilennummern in diesem Abschnitt stammen aus
+diesem Baum. Frühere Notizen nannten 1.31-Nummern.
+
+`Sort_Col_List_` (colsum.cpp:363) ist ein Bubblesort über
+`COLXPORT::_g_colony_list_ptr`, `MAX_COLONIES` volle Durchläufe ohne
+Abbruch. `-1`-Einträge liefern 0 und wandern deshalb nicht.
+
+**Die sieben Sortierköpfe** (colsum.cpp:267-273), alle
+`Add_Multi_Button_Field_(x, 446, …, &_g_sort_index, N, hotkey, 41)`:
+
+| `_x_fields` | x | `_g_sort_index` | Hotkey | Vergleicher | Richtung |
+|---|---|---|---|---|---|
+| 5 | 89 | 0 | ESTR 384 `n` | `cmp_Alpha_` (:1042) | aufsteigend |
+| 6 | 140 | 1 | `p` | `cmp_Pops_` (:1064) | **negiert** |
+| 7 | 219 | 2 | `f` | `cmp_Food_` (:1071) | **negiert** |
+| 8 | 262 | 3 | ESTR 327 `i` | `cmp_Industry_` (:1076) | **negiert** |
+| 9 | 326 | 4 | `s` | `cmp_Research_` (:1081) | **negiert** |
+| 10 | 393 | 5 | ESTR 436 `r` | `cmp_Prod_` (:1091) | aufsteigend |
+| 11 | 480 | 6 | ESTR 193 `b` | `cmp_BC_` (:1086) | **negiert** |
+
+`Switched_cmp_` (colsum.cpp:378-401) schaltet per `switch` auf
+`_g_sort_index`. **Es gibt keinen Richtungsumschalter.** Das
+Vorzeichen steht als Literal im jeweiligen `case`; ein zweiter Klick
+auf denselben Kopf sortiert identisch noch einmal. Fünf der sieben
+sind absteigend, `Name` und `Producing` aufsteigend.
+
+**Klick auf einen Sortierkopf** (colsum.cpp:825-838) — alle sieben
+teilen sich einen Zweig:
+
+```
+Sort_Col_List_(); Clear_List_Col_Array_(); _first = 0;
+Decrement_First_(10); Update_First_(10, …); Update_Col_List_();
+```
+
+`_first = 0` springt an den Listenanfang zurück. Das folgende
+`Decrement_First_(10)` (colsum.cpp:207) bewegt `_first` nicht mehr —
+`0 - 1` wird auf 0 geklemmt —, es setzt den Schieberegler.
+
+**Das Zehn-Zeilen-Fenster.** `_list_col[10]` (colsum.cpp:15) ist ein
+Fenster über die sortierte Liste; `Update_Col_List_` (colsum.cpp:348)
+füllt es mit `_g_colony_list_ptr[_first + i]` für `i < 10`.
+`Update_First_(10, &_first, &_slider_bar_position)` (colsum.cpp:193,
+gerufen u. a. :456) setzt bei weniger als zehn Kolonien
+`slider = -1, first = 0`.
+
+Geometrie — **zwei verschiedene Zahlen, für zwei verschiedene
+Zwecke**: gezeichnet wird bei `y = list_idx * 0x1F + 0x26`, also
+`slot*31 + 38` (colsum.cpp:581); das *Klickband* einer Zeile ist
+`y1 = slot*31 + 35` bis `y2 = slot*31 + 65` (colsum.cpp:285-307,
+`y_row_end` startet bei 65 und wächst um 31, `y1 = y_row_end - 30`).
+Der Name liegt bei x 12–101, die Produktion bei x 512–597, `Buy` bei
+x 599.
+
+Die Klickschleife ist `for (int i = 0; i < 10; ++i)` in
+`Evaluate_Col_List_Input_` (colsum.cpp:893, Schleife :904). Zeilen
+mit `_list_col[i] == -1` bekommen `-1000` statt eines Feldes, haben
+also **keine** anklickbare Fläche. **Aber:** `_x_fields[0] =
+Add_Hidden_Field_(0, 0, 639, 479, …)` (colsum.cpp:309) wird als
+Letztes angelegt und deckt den ganzen Schirm ab — außerhalb der zehn
+Zeilen gibt es keine *zeilenbezogene* Klickfläche, aber sehr wohl ein
+Auffangfeld.
+
+**Das Scroll-Feld und die Feld-IDs** (colsum.cpp:276-280):
+
+```
+if (num_colonies < 10) { _x_fields[12] = -1000; }
+else { _x_fields[12] = Add_Scroll_Field_(621, 40, …); }
+```
+
+`-1000` ist ein Sentinel, **kein Feld** — bei weniger als zehn
+Kolonien wird nichts angelegt, und jedes danach erzeugte Feld
+bekommt eine um eins kleinere ID: `_x_fields[13]`, die dreißig
+Zeilenfelder, die Pop-Felder aus `Add_Fields_Pop_For_`, und
+`_x_fields[0]`. **Die Feldnummerierung dieses Screens hängt also von
+der Kolonienzahl ab**, weshalb OrionLayer hier über Koordinaten
+klickt und nicht über IDs (Entscheidung 39). Die Pfeile bei (619,15)
+und (619,316) sind `_x_fields[1]` und `[2]` und existieren immer.
 
 ### Struktur — `s_colony`, 361 Byte, UNVERIFIZIERT
 
