@@ -2255,64 +2255,134 @@ def main():
         f"while the hatched band ends at {max(y for _x, y in _hatch)} "
         f"— the label is inside the track's band, not under it")
 
-    # ── The horizontal budget is an IDENTITY, not a constant ──
-    # THE ONE BUDGET: list_area is spent by five columns and nothing
-    # is left over.
+    # ── The budget, checked where it can actually fail ──
+    # The column sum — name + tail + building + pad + 42*unit +
+    # 41*gap == list_area — is no longer asserted. `track_metrics`
+    # hands the floor division's remainder to the name column's drawn
+    # width, so that sum balances BY CONSTRUCTION at every
+    # resolution, and a thing that cannot fail is not a check.
     #
-    #   name + tail + building + pad + 42*unit + 41*gap == list_area
+    # The previous version asserted it with `1920`, `1080` and `1.0`
+    # as literals: it covered one of the two keys in boxes.json and
+    # none of the sizes reached through the fallback chain. It
+    # balanced at scale 1.0 and 2.0 — where every int() truncates
+    # cleanly — and was 11 to 30 px short at every fractional scale,
+    # which it never looked at.
     #
-    # Asserted out of layout.json's own keys and the list_area box,
-    # never against the number 1408. A budget checked against a
-    # constant stops being a budget the moment a frame cutout moves:
-    # the constant goes on agreeing while the panel no longer does,
-    # and the check reports success about a screen that is wrong.
+    # So: twelve window sizes, and the two things the construction
+    # can still get wrong.
     #
-    # It failed by 38 px until 2 September 2026, because unit is a
-    # FLOOR division and 836/42 is 19.905. Those 38 px were not spent
-    # anywhere — they sat as dead air between the building column and
-    # the right edge of the panel. name_width 240 -> 236 makes the
-    # divide exact, which is what turns this from a tolerance into an
-    # identity. tail_width is in the sum although it is 0: it is a
-    # column the budget can be asked to pay for again.
+    #   1. the row ends flush     slot42_right + building + pad_x
+    #                             == list_area.right
+    #   2. the ellipsis threshold is the same everywhere — the
+    #      remainder is GUTTER, never text budget
     #
-    # In REFERENCE px at scale 1.0, which is the space the budget is
-    # stated in. At other scales each term is independently truncated
-    # by int(), so the sum is a bound and not an identity.
-    _boxes_ref = load_boxes(
-        os.path.join(SCREENS_DIR, "colony_summary", "boxes.json"), 1920, 1080)
-    _list_ref = [b.ref_rect for b in _boxes_ref if b.name == "list_area"]
-    assert _list_ref, "boxes.json has no list_area box at 1920x1080"
-    _bud_w = _list_ref[0][2]
-    _bud_area = pygame.Rect(0, 0, _bud_w, _list_ref[0][3])
-    _bt = _cl.track_metrics(_bud_area, _cfg, 1.0)
-    _cap = _cr.POP_LIMIT_CAP
-    _spend = {
-        "name_width": _cfg["name_width"],
-        "tail_width": _cfg["tail_width"],
-        "building": (_cfg["building_width"] + _cfg["building_gap"]
-                     if _cfg["building_width"] else 0),
-        "pad_x x2": 2 * _cfg["pad_x"],
-        f"{_cap}*unit": _cap * _bt.unit,
-        f"{_cap - 1}*square_gap": (_cap - 1) * _cfg["square_gap"],
-    }
-    assert sum(_spend.values()) == _bud_w, (
-        f"the horizontal budget does not balance: "
-        f"{' + '.join(f'{k} {v}' for k, v in _spend.items())} = "
-        f"{sum(_spend.values())} against list_area {_bud_w} "
-        f"({_bud_w - sum(_spend.values()):+d}). Every reference pixel "
-        f"of list_area is spent by exactly one column; a remainder is "
-        f"dead space at the right edge, not slack.")
-    # The remainder being zero is the same statement said the other
-    # way, and it is the part a later edit to any of these keys will
-    # break first: unit stops being a division and goes back to being
-    # a floor.
-    assert (_bud_w - _spend["name_width"] - _spend["tail_width"]
-            - _spend["building"] - _spend["pad_x x2"]
-            - _spend[f"{_cap - 1}*square_gap"]) % _cap == 0, (
-        f"list_area does not divide into {_cap} slots without a "
-        f"remainder — unit is flooring again, and the pixels it drops "
-        f"land as dead space beside the building column. Adjust "
-        f"name_width (see layout.json list._horizontal_budget).")
+    # (2) is what guards the design decision. Letting the remainder
+    # into the text budget ALSO closes (1), and silently makes the
+    # threshold range 244..288 reference px: the same colony name
+    # cuts on one monitor and not on another.
+    #
+    # Both are read off the SURFACE, not recomputed. An earlier draft
+    # of this check derived bar_x and the clip from layout.json the
+    # same way the renderer does, which made it agree with the
+    # renderer by construction — it passed unchanged when the gutter
+    # was moved a pixel and when the clip was tied to the drawn
+    # width, the two failures it exists for.
+    _SIZES = [(1280, 720), (1366, 768), (1440, 900), (1600, 900),
+              (1680, 1050), (1920, 1080), (1920, 1200), (2048, 1152),
+              (2560, 1080), (2560, 1440), (3440, 1440), (3840, 2160)]
+    _boxes_path = os.path.join(SCREENS_DIR, "colony_summary", "boxes.json")
+    # Two names that must land on opposite sides of the threshold at
+    # EVERY size: 167..179 reference px against 254..286, either side
+    # of the 244 the column pays for. The wide one is deliberately
+    # under 288, which is what the threshold becomes if the remainder
+    # leaks into the text budget — so a leak shows up as this name
+    # NOT being cut at the small sizes.
+    _NAME_FITS = "Wilhelmshaven V"
+    _NAME_CUTS = "Mmmmmmmmmmmmmmm"
+
+    def _ink_span(_surface, _rect, _rgb):
+        """First and last column in `_rect` carrying exactly `_rgb`."""
+        _a = pygame.surfarray.array3d(_surface.subsurface(_rect))
+        _cols = (_a == _rgb).all(axis=2).any(axis=1).nonzero()[0]
+        if not len(_cols):
+            return None
+        return int(_cols[0]) + _rect.x, int(_cols[-1]) + _rect.x
+
+    _name_rgb = tuple(_cl.ROW_NAME[:3])
+    _beyond_rgb = tuple(_cl.BAR_BEYOND[:3])
+    _cut_at = []
+    for _W, _H in _SIZES:
+        _lay = Layout(_W, _H)
+        _sc = _lay.scale
+        _bx = load_boxes(_boxes_path, _W, _H)
+        _lref = [b.ref_rect for b in _bx if b.name == "list_area"]
+        assert _lref, f"boxes.json has no list_area box at {_W}x{_H}"
+        _ar = pygame.Rect(*_lay.rect(_lref[0]))
+        _tk = _cl.track_metrics(_ar, _cfg, _sc)
+        _rh = int(_cfg["row_height"] * _sc)
+        _sf = pygame.Surface((_W, _H))
+        _sf.fill((0, 0, 0))
+        _cl.render(_sf, [{"name": _NAME_FITS, "pops": 2, "jobs": [1, 1, 0],
+                          "no_farming": False, "climate": 8, "max_pop": 6},
+                         {"name": _NAME_CUTS, "pops": 2, "jobs": [1, 1, 0],
+                          "no_farming": False, "climate": 8, "max_pop": 6}],
+                   _ar, _cfg, _lay, app.style)
+        _top = _ar.y + int(_cfg["pad_y"] * _sc)
+        _b0 = pygame.Rect(_ar.x, _top, _ar.w, _rh)
+        _b1 = pygame.Rect(_ar.x, _top + _rh, _ar.w, _rh)
+
+        # 1. FLUSH. slot 42's right edge is the last column of the
+        #    faint baseline, which is drawn to exactly `track.width`
+        #    from wherever the renderer decided the bar starts — so
+        #    this reads the bar's real position off the surface.
+        _base = _ink_span(_sf, _b0, _beyond_rgb)
+        assert _base, (
+            f"{_W}x{_H}: no unreachable baseline drawn, so slot 42's "
+            f"right edge cannot be read from the surface")
+        _slot42_r = _base[1] + 1
+        _bld_r = _slot42_r + _tk.build_gap + _tk.build_w
+        _pd = int(_cfg["pad_x"] * _sc)
+        assert _bld_r + _pd == _ar.right, (
+            f"{_W}x{_H} (scale {_sc:.4f}): the row does not end flush "
+            f"— slot 42 ends {_slot42_r}, building column to {_bld_r}, "
+            f"plus pad_x {_pd} is {_bld_r + _pd}, against "
+            f"list_area.right {_ar.right} "
+            f"({_ar.right - _bld_r - _pd:+d}). The budget's remainder "
+            f"is not reaching the name column's drawn width, or "
+            f"something else is spending it.")
+
+        # 2. THE THRESHOLD, by whether each name was actually cut.
+        _nat_fits = app.style.render_text(
+            _NAME_FITS, _lay.font_size(_cfg["name_font"]),
+            _cl.ROW_NAME).get_width()
+        _nat_cuts = app.style.render_text(
+            _NAME_CUTS, _lay.font_size(_cfg["name_font"]),
+            _cl.ROW_NAME).get_width()
+        _drawn_fits = _ink_span(_sf, _b0, _name_rgb)
+        _drawn_cuts = _ink_span(_sf, _b1, _name_rgb)
+        assert _drawn_fits and _drawn_cuts, f"{_W}x{_H}: a name did not draw"
+        _w_fits = _drawn_fits[1] - _drawn_fits[0] + 1
+        _w_cuts = _drawn_cuts[1] - _drawn_cuts[0] + 1
+        # 4 px of slack on the comparison: the span is measured from
+        # exact-colour pixels and an antialiased edge column can fall
+        # outside that. A cut removes whole glyphs, never 4 px.
+        assert _w_fits >= _nat_fits - 4, (
+            f"{_W}x{_H}: {_NAME_FITS!r} is {_nat_fits} px, inside the "
+            f"{_cfg['name_width']} the column pays for, and it was cut "
+            f"anyway (drew {_w_fits}) — the text budget has shrunk")
+        assert _w_cuts < _nat_cuts - 4, (
+            f"{_W}x{_H} (scale {_sc:.4f}): {_NAME_CUTS!r} is "
+            f"{_nat_cuts} px against a text budget of "
+            f"{_cfg['name_width']} scaled, and it was NOT cut (drew "
+            f"{_w_cuts}). The name column is clipping against its "
+            f"DRAWN width, so the budget's per-resolution remainder "
+            f"has become text budget: the ellipsis threshold now "
+            f"moves with the resolution and the same colony name cuts "
+            f"on one monitor and not on another.")
+        _cut_at.append(f"{_W}x{_H}")
+
+    assert len(_cut_at) == len(_SIZES), (_cut_at, _SIZES)
 
     # ── Nothing from the name column reaches the track ──
     # The invariant, however it is achieved. Right-alignment plus

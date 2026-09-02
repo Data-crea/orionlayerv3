@@ -89,8 +89,14 @@ NO_FARM_COLOR = palette.col("colony_summary", "no_farming", (150, 120, 110))
 #: whole POP_LIMIT_CAP-slot track. A sprite may be at most `unit`
 #: wide, which is the step minus the gap: ink that ate its gap would
 #: touch its neighbour and the count would stop being legible.
+#:
+#: `slack` is what `list_area` has left after the building column,
+#: the two `pad_x` and the whole track have been paid for — the
+#: pixels the slot's floor division drops. It is added to the name
+#: column's DRAWN width and to nothing else, so the row ends flush at
+#: every resolution. See `track_metrics`.
 Track = collections.namedtuple(
-    "Track", "unit gap step width bar_h row_h build_w build_gap")
+    "Track", "unit gap step width slack bar_h row_h build_w build_gap")
 
 #: `runs` is (zone, start_slot, count) per profession — the squares
 #: fill them. `filled`..`reach` is the free region, `reach`..
@@ -106,6 +112,28 @@ def track_metrics(area, cfg, scale):
     constant in `colonyrows.py`. `tail_width` is reserved BESIDE the
     track, not taken out of it: a full-length track ends where the
     panel does, and "No Farming" needs a column no slot reaches.
+
+    **`slack`, and why the name column gets it.** `unit` is a floor
+    division, so the six columns almost never spend `list_area`
+    exactly: at scale 1.0 the shipped values divide evenly, and at
+    every fractional scale the six independent `int()` calls each
+    drop a fraction. Those pixels used to land at the right edge as
+    dead air — 30 px at 1280x720, 15 at 2560x1440 — where nothing
+    claimed them and the row simply stopped short of the panel.
+
+    They go to the name column's DRAWN width instead, which is the
+    only column that can take a variable amount without lying: the
+    slot must stay `POP_LIMIT_CAP`-derived or counting stops meaning
+    anything, `building_width` is a hard transcription, and `pad_x`
+    and `square_gap` are the fixed costs.
+
+    It is drawn width and NOT text budget. The name still clips and
+    ellipsises at `name_width * scale`, so the threshold is the same
+    244 reference px everywhere; the slack becomes gutter between the
+    name and the first slot. Letting it into the text budget would
+    make the ellipsis resolution-dependent — 244 ref px at 1080p
+    against 288 at 720p, so the same name cuts on one monitor and not
+    on another. See `_draw_name_block` and `_name_width_note`.
     """
     gap = max(1, int(cfg.get("square_gap", 2) * scale))
     name_w = int(cfg.get("name_width", 320) * scale)
@@ -117,8 +145,16 @@ def track_metrics(area, cfg, scale):
         build_w += build_gap
     bar_space = area.w - name_w - tail_w - build_w - 2 * pad_x
     unit = max(2, (bar_space - (POP_LIMIT_CAP - 1) * gap) // POP_LIMIT_CAP)
+    width = POP_LIMIT_CAP * unit + (POP_LIMIT_CAP - 1) * gap
+    # Clamped at 0: `unit` has a floor of 2, so a `list_area` too
+    # narrow for the columns configured would compute a NEGATIVE
+    # remainder, and adding that to the name column would drag the
+    # track left over the names. The row then overruns the panel on
+    # the right, which is the visible failure and the honest one.
+    slack = max(0, area.w - (name_w + tail_w + build_w
+                             + 2 * pad_x + width))
     return Track(unit=unit, gap=gap, step=unit + gap,
-                 width=POP_LIMIT_CAP * unit + (POP_LIMIT_CAP - 1) * gap,
+                 width=width, slack=slack,
                  bar_h=int(cfg.get("bar_height", 30) * scale),
                  row_h=int(cfg.get("row_height", 60) * scale),
                  build_w=int(cfg.get("building_width", 0) * scale),
@@ -180,9 +216,16 @@ def render(surface, rows, area, cfg, layout, style):
     for row in rows:
         if y + row_h > area.bottom:
             break
+        # The name block is handed `name_w`, the TEXT BUDGET, and is
+        # unaware of `slack`: it right-aligns, clips and ellipsises
+        # against that and nothing else, so the threshold does not
+        # move with the resolution. The bar starts past the slack, so
+        # the leftover pixels read as a wider gutter — which is the
+        # one thing that column can absorb without saying anything
+        # untrue.
         _draw_name_block(surface, row, area.x + pad_x, y, name_w, row_h,
                          cfg, name_px, small_px, style)
-        bar_x = area.x + pad_x + name_w
+        bar_x = area.x + pad_x + name_w + track.slack
         bar_y = y + (row_h - track.bar_h) // 2
         _render_bar(surface, row, bar_x, bar_y, track, cfg, small_px,
                     style)

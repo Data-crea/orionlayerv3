@@ -812,6 +812,66 @@ success about a screen that is wrong. A second assertion says the
 same thing the other way — that the remainder is zero — because that
 is the half a later edit to any of those keys breaks first.
 
+#### …and it only balanced at scale 1.0 — 2 September 2026
+
+The assertion above had `1920`, `1080` and `1.0` as literals. It was
+scale-blind by construction: it covered one of the two keys in
+`boxes.json` and none of the sizes reached through the fallback
+chain, and the comment beside it called the truncation at other
+scales "a bound and not an identity", which excused the gap instead
+of measuring it.
+
+Measured, across twelve window sizes:
+
+| | | | |
+|---|---|---|---|
+| 1280x720 +30 | 1440x900 +22 | 1680x1050 +11 | 1920x1200 **0** |
+| 1366x768 +29 | 1600x900 +15 | 1920x1080 **0** | 2048x1152 +21 |
+| 2560x1080 **0** | 2560x1440 +15 | 3440x1440 +15 | 3840x2160 **0** |
+
+It closes at four of twelve, and the pattern is exact: **only at
+integer scale.** At 1.0 and 2.0 every term truncates cleanly and
+42·unit divides; at every fractional scale the six independent
+`int()` calls each drop a fraction, and 11 to 30 px land at the right
+edge as the same dead air the reference-space fix had just removed.
+
+**The name column absorbs the remainder — as DRAWN WIDTH, not as
+text budget.** `track_metrics` computes `slack`, what `list_area` has
+left after the building column, both `pad_x` and the whole track, and
+`render` adds it to where the bar starts. Nothing is written back to
+`layout.json`; it is a per-frame number. The row then ends flush at
+all twelve.
+
+The split matters, and it is the whole point of doing this in two
+numbers. Adding the remainder to the column outright also closes the
+right edge, and silently makes the ellipsis threshold range **244 to
+288 reference px** — 288 at 1280x720 against 244 at 1080p, so the
+same colony name cuts on one monitor and not on another. The name
+still clips and ellipsises against `name_width * scale`, so the
+threshold is 244 everywhere (241.9 to 244.0 measured, and that 2.1 px
+is three terms being scaled and truncated independently, not slack).
+The remainder becomes **gutter** between the name and the first slot,
+which is the one thing that column can absorb without saying anything
+untrue.
+
+So `name_width` 236 changes meaning rather than value: it is the
+**text budget**, and the drawn column is wider by a per-resolution
+remainder. Said in `_name_width_note`.
+
+**What is asserted now.** The column sum is gone — after the above it
+balances by construction and cannot fail, and a check that cannot
+fail asserts nothing. In its place, across the twelve sizes:
+
+    slot42_right + building + pad_x == list_area.right
+    the wide name is cut at EVERY size, the narrow one at none
+
+Both are read off the **surface**. An earlier draft derived `bar_x`
+and the clip from `layout.json` the same way the renderer does, which
+made it agree with the renderer by construction: it passed unchanged
+with the gutter moved a pixel and with the clip tied to the drawn
+width — the two failures it exists for. Both breaks were then made
+deliberately and both now fail, naming the resolution and the cause.
+
 The condition it had to meet was named in advance, because this label
 has failed once before — drawn at the bar's left edge, with the
 worker squares painted over it, every number right and nothing on
