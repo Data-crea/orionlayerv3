@@ -232,6 +232,42 @@ the game already owns, so this only applies where the rule is one
 comparison and the failure is silent; anything larger belongs on the
 C++ side or not at all.
 
+**44. A frame cutout narrower than the original's proportion is a
+DEVIATION, and the clamp that absorbs it must be able to expire.**
+The colony summary's sidebar draws its six values right-justified
+against a column whose width the original states: 104 native px of
+640 (`colsum.cpp:418`), which is 312 reference px. The `sidebar`
+cutout gives 286. The renderer takes the smaller, so **the clamp
+fires at every resolution** and the original's proportion is never
+the one drawn — 8.3 % of the column, every value 26 reference px
+left of where the transcription puts it.
+
+The alignment is transcribed and the width is not, and those are
+marked separately. A deviation that is live in every single frame is
+the easiest kind to stop seeing, precisely because nothing ever looks
+wrong: 286 is a perfectly reasonable column, and the only evidence
+that it is a deviation is a number in a note.
+
+**The shape of the workaround is the decision here.** The clamp is
+`min(cutout, native)` and not a hardcoded 286. The cutout comes from
+the frame artwork through `frame_holes.py` and can move; 104 is a
+transcription and cannot. Written as a `min`, the deviation ends the
+day the artwork gives that hole 312 or more, with nobody needing to
+remember it — a workaround that cannot expire is a permanent change
+wearing a temporary label.
+
+And the frame art is **not** widened to suit it. That would be
+deriving artwork from a deviation to make the deviation go away,
+which is the tail wagging the dog and would also make the marking
+unfalsifiable. If the sidebar hole should be wider, that is an
+artwork decision with its own reasons.
+
+The failure this guards against is not the clamp; it is the native
+number being deleted once somebody notices it never wins. A smoke
+check asserts `native_width` is still read and still *larger* than
+what gets drawn, so removing it as dead weight fails the suite rather
+than quietly ending the marking.
+
 **43. A screen may show what the original computes but never
 draws — and that is an HD EXTENSION, not a fix.** (Line numbers here
 are orion2re 1.60.0, `src/version.h`.) `colsum.cpp` sorts
@@ -522,6 +558,30 @@ weeks; it is `_races_button`, and the wrong label had already reached
 **A name table copied into three files is the same failure.** The
 screen-ID map lived independently in `dispatcher.py`, `ext_diag.py`
 and the index doc. Diffing them found real drift in two of the three.
+
+**And it applies to somebody else's tree, where you cannot fix it —
+so grep for the second copy before believing the first.** The colony
+summary's sidebar layout was got wrong twice, in opposite directions,
+because one definition was read and treated as the definition.
+`s_0_0055110c` and `s_1_00551110` — the two format prefixes every
+sidebar line carries — are defined **three times in three
+namespaces**: COLSUM (`colsum.cpp:36-37`), ESTRINGS
+(`estrings.cpp:8-9`) and strings (`strings.cpp:22,24`), and declared
+at two different sizes on top of that (`[3]`, `[3]`, `[4]`). The
+first two spell the value in octal, where `"\0320"` looks like ESC
+and is SUB; the third spells it `"\x1A" "0"` and carries the answer
+in a comment — *"switches paragraph justification to left
+alignment"*. One grep found one site, and the escape was misread in
+one direction and then, correcting it, in the other.
+
+What would have settled it in a minute was not more care with octal.
+It was `grep -rn s_0_0055110c` — three hits where one was expected,
+which is the signal, before any argument about what the bytes mean.
+The octal is the local detail; the transferable rule is that a
+symbol found once has not been found, and that the copies disagreeing
+about their *type* is a louder warning than the values agreeing is a
+reassurance. Filed as a question rather than a fix in
+`doc/orion2re_open_fixes.md` item 6, because it is not our tree.
 
 The same thing happened to the list of C++ fixes being asked of Joe,
 and there it was worse, because the drift pointed outward. The status

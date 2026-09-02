@@ -141,7 +141,7 @@
       }
     ],
     "native_width": 104,
-    "_native_width_note": "The width of the original's empire paragraph, in its own 640x480 pixels: Print_Formatted_Paragraph_(520, 354, 104, buffer, 3) at colsum.cpp:418, read in orion2re 1.60. The right edge of a VALUE is x + width - 1 = 623 (para.x2, fmtpara.cpp:657). Scaled by REF_W / 640 that is 312 reference px, which is wider than the 286 the sidebar cutout gives, so today the column is the cutout - see _value_column in screen.py for why the number is kept anyway.",
+    "_native_width_note": "DEVIATION, live at every resolution. The width of the original's empire paragraph in its own 640x480 pixels: Print_Formatted_Paragraph_(520, 354, 104, buffer, 3) at colsum.cpp:418, read in orion2re 1.60. The right edge of a VALUE is x + width - 1 = 623 (para.x2, fmtpara.cpp:657), and THAT alignment is transcribed. The WIDTH is not: 104 scaled by REF_W / 640 is 312 reference px against the 286 the sidebar cutout gives, so screen.py clamps to the cutout and the clamp fires everywhere. 286 against 312 is 8.3 % of the column - every value sits 26 reference px left of the original's proportion. Both numbers are kept and the clamp is a min() rather than a hardcoded 286 so that it stops firing by itself if the frame art ever gives this hole 312 or more; the art is NOT being changed to suit it. A smoke check asserts this key is still read and still larger than what is drawn, so it cannot be deleted as dead weight once somebody notices it never wins.",
     "label_font": 18,
     "value_font": 26,
     "row_pad": 0.1

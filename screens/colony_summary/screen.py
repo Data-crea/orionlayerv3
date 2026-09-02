@@ -282,31 +282,54 @@ class ColonySummaryScreen(ScreenBase):
     def _value_column(self, rect):
         """(left, right) of the row — right is where a value ends.
 
-        The width comes from the ORIGINAL's paragraph, not from a
-        margin somebody liked: `Print_Formatted_Paragraph_(520, 354,
-        104, buffer, 3)` at colsum.cpp:418, and 104 native px scaled
-        by REF_W / NATIVE_W is 312 reference px.
+        The alignment is TRANSCRIBED: the value ends at the column's
+        right edge, because the original right-justifies it
+        (`para.x2 = x + width - 1`, fmtpara.cpp:657, over
+        `Print_Formatted_Paragraph_(520, 354, 104, buffer, 3)` at
+        colsum.cpp:418). See `_render_sidebar` for the justification
+        codes that establish it.
 
-        That is WIDER than the `sidebar` cutout, which is 286, so the
-        clamp below fires at every resolution and the column comes
-        out as the cutout. Both numbers are kept anyway, and the
-        clamp is not a formality: the cutout is derived from the
-        frame artwork by `frame_holes.py` and can move, while 104 is
-        the transcription. If a future frame gives the sidebar more
-        than 312 reference px, the column must STOP at 312 — the
-        original's line does not grow to fill a bigger hole, and a
-        value drifting further right as the art changes would be an
-        invention nobody chose.
+        **The WIDTH is a DEVIATION, and it is live at every
+        resolution.** The original's paragraph is 104 native px of
+        640, which is 312 reference px once scaled by
+        `REF_W / NATIVE_W`. The `sidebar` cutout gives 286. The
+        column is `min` of the two, so the shipped column is always
+        the cutout's 286 — the clamp fires everywhere and the
+        original's proportion is never the one drawn. Marked in
+        `doc/v3_fundament.md` and in a smoke check.
 
-        What the native number fixes either way is the ALIGNMENT: the
-        value ends at the column's right edge (`para.x2 = x + width -
-        1`, fmtpara.cpp:657) rather than being centred or padded.
+        It is not a rounding difference: 286 against 312 is 8.3 % of
+        the column, and every value on the screen sits 26 reference
+        px left of where the original's proportion would put it.
+
+        **Both numbers are kept, and the clamp is written to stop
+        firing on its own.** The cutout comes from the frame artwork
+        via `frame_holes.py` and can move; 104 is the transcription
+        and cannot. If a future frame gives this hole 312 reference
+        px or more, `min` selects the native width and the deviation
+        ends without anybody remembering to come back — which is the
+        only reason a clamp is the right shape here rather than a
+        note saying "286 for now". The frame art is NOT being changed
+        to suit this: that would be deriving geometry from a
+        deviation, and the artwork is a separate decision.
+
+        What must not happen is the native number quietly
+        disappearing once somebody notices it never wins. The smoke
+        check asserts `native_width` is still read and still larger
+        than what gets drawn, so deleting it as dead weight fails.
         """
-        native_w = int(self._data.get("empire", {})
-                       .get("native_width", 104)
-                       * (REF_W / NATIVE_W) * self.layout.scale)
-        width = min(rect.w, native_w)
-        return rect.x, rect.x + width
+        native_w = self._native_column_width()
+        return rect.x, rect.x + min(rect.w, native_w)
+
+    def _native_column_width(self):
+        """The original's 104 px paragraph, in this screen's pixels.
+
+        Separate from `_value_column` so the smoke check can ask for
+        the unclamped number without re-deriving it, and so deleting
+        it breaks a test rather than silently ending the marking.
+        """
+        return int(self._data.get("empire", {}).get("native_width", 104)
+                   * (REF_W / NATIVE_W) * self.layout.scale)
 
     def _empire_value(self, row):
         """(text, warn). '--' while disconnected, never a fake zero."""

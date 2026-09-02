@@ -758,9 +758,21 @@ value-right is the transcription, and the stacked centred
 label-over-value this screen drew until 2 September 2026 was the
 invention. The renderer now does label-left / value-right, with the
 column's width taken from the original's own 104 px paragraph rather
-than a margin somebody liked — see `_value_column`, which keeps the
-native number even though the cutout is currently narrower, because
-the original's line does not grow to fill a bigger hole. A smoke
+than a margin somebody liked.
+
+**The width is itself a DEVIATION, and a live one — decision 44.**
+104 native px is 312 reference px; the `sidebar` cutout is 286, and
+`min` picks the cutout at every resolution, so the original's
+proportion is never the one drawn. That is 8.3 % of the column and
+26 reference px per value. The alignment is transcribed, the width is
+not, and the two are marked apart. The clamp is written as `min` and
+not as a hardcoded 286 so it **expires by itself** if the frame art
+ever gives that hole 312 or more; the art is not being widened to
+suit it, which would be deriving artwork from a deviation. The smoke
+check asserts `native_width` is still read and still *larger* than
+what is drawn — deleting it as dead weight fails, and the day it
+stops being larger the marking should be retired rather than
+restored. A smoke
 check measures it in **ink at twelve resolutions**: the label's
 leftmost inked column flush with the column's left edge, the
 rightmost value ink flush with its right, both after subtracting the

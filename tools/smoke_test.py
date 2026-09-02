@@ -2659,6 +2659,59 @@ def main():
         assert _lab[0] < _val_right, (
             f"{_W}x{_H}: label ink starts at {_lab[0]}, values end at "
             f"{_val_right} — the two columns have collapsed")
+    # ── The clamped column is a DEVIATION and stays marked ──
+    # The original's paragraph is 104 native px = 312 reference px;
+    # the sidebar cutout is 286, and `min` picks the cutout at every
+    # resolution. Decision 44: the deviation is that the shipped
+    # column is never the original's proportion, and the risk is the
+    # native number being deleted once somebody notices it never
+    # wins. So: it must still be READ, and it must still be LARGER
+    # than what is drawn — the day it is not, the clamp has stopped
+    # firing on its own and the deviation is over.
+    assert "native_width" in _emp, (
+        "empire.native_width is gone — it is the original's 104 px "
+        "paragraph and the only evidence the drawn column is a "
+        "deviation rather than a choice (decision 44)")
+    for _cite in ("DEVIATION", "colsum.cpp:418", "fmtpara.cpp:657"):
+        assert _cite in _emp["_native_width_note"], (
+            f"empire._native_width_note no longer carries {_cite!r}")
+    _fund_dev = open(os.path.join(os.path.dirname(SCREENS_DIR), "doc",
+                                  "v3_fundament.md"),
+                     encoding="utf-8").read()
+    assert "**44." in _fund_dev and "native_width" in _fund_dev, (
+        "the fundament no longer carries the clamped sidebar column "
+        "as a decision")
+    _scr_dev = open(os.path.join(SCREENS_DIR, "colony_summary",
+                                 "screen.py"), encoding="utf-8").read()
+    assert "DEVIATION" in _scr_dev and "_native_column_width" in _scr_dev, (
+        "screen.py no longer marks the clamped column as a DEVIATION")
+
+    for _W, _H in _SIZES:
+        _lay = Layout(_W, _H)
+        _rect = pygame.Rect(*_lay.rect(_sb_ref[0]))
+        _saved = app.layout
+        app.layout = _lay
+        try:
+            _native = _scr._native_column_width()
+            _drawn = _scr._value_column(_rect)[1] - _rect.x
+        finally:
+            app.layout = _saved
+        assert _drawn == min(_rect.w, _native), (
+            f"{_W}x{_H}: the drawn column {_drawn} is neither the "
+            f"cutout {_rect.w} nor the native {_native} — the clamp "
+            f"has grown a third case")
+        # The marking is only true while the clamp actually fires.
+        # If this ever fails, the cutout has caught up with the
+        # original's proportion: delete decision 44 and this check
+        # rather than "fixing" it.
+        assert _native > _drawn, (
+            f"{_W}x{_H}: native_width scales to {_native} and the "
+            f"drawn column is {_drawn} — the clamp is no longer "
+            f"firing, so the deviation in decision 44 is over. That "
+            f"is good news: retire the marking, do not restore it.")
+    ok("colony summary sidebar column (clamp is a marked DEVIATION, "
+       "native width still carried and still larger)")
+
     ok("colony summary sidebar layout (label flush left, value flush "
        "right, ink-measured at 12 resolutions)")
 
