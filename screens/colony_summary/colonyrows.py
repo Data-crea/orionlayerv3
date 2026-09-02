@@ -47,12 +47,18 @@ TRANSCRIBED, and each with its source:
                      anything on screen.
 
 NOT READ, deliberately: race groups as shades, and androids and
-natives as locked. Those need the pop word's low nibble, whose mask
-has no second source (see `core/structs/colony.py`). Nothing here
-reads it, so
-nothing on screen depends on an unverified claim; the zone split is
-built as a list of runs so the shading can be added inside a run
-later without moving anything else.
+natives as locked. The mask is no longer the obstacle — the pop
+word's low nibble has a second source for 0..7, verified live, and
+that source refutes the "race" reading rather than merely agreeing
+with the player one (see `core/structs/colony.py`). What is still
+open is the meaning of 8 and 9: the android and native sentinels
+resolve to the colony's owner in `Get_Effective_Pop_Player_`
+(colony.cpp:1261) and occur in no sample save, so that branch stays
+transcription only — and those two are exactly the cases the locking
+was wanted for. Nothing here reads the nibble, so nothing on screen
+depends on the unverified part; the zone split is built as a list of
+runs so the shading can be added inside a run later without moving
+anything else.
 """
 from core.structs import colony as colony_struct
 from core.structs import planet as planet_struct
@@ -134,8 +140,11 @@ def max_population(colony, planet, traits):
        longer is exactly the trade decision 23 forbids.
     2. The original returns the best limit over the RACES PRESENT in
        the colony; this returns the limit for the owner's race. The
-       two agree for a single-race colony and the walk needs
-       the pop nibble, whose mask has no second source yet.
+       two agree for a single-race colony. The walk needs the pop
+       nibble, which is now confirmed for 0..7 — what it does not
+       have is the 8 and 9 sentinels, and a walk that mis-resolves
+       androids and natives would pick the wrong race for exactly
+       the colonies the walk exists for.
 
     Both make the bar too SHORT rather than too long, which shows as
     a bar that cannot hold its own squares — visible, not silent.

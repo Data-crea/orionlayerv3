@@ -202,12 +202,13 @@ def _draw_name_block(surface, row, x, y, name_w, row_h, cfg,
     slots — and the squares draw afterwards, so the data won and the
     name was the casualty. Right-aligned it grows LEFT into `pad_x`,
     where nothing is drawn, which turns the clip from the mechanism
-    into a fallback: the structural maximum is 336 px and the room to
-    grow into is `pad_x` plus `name_gap`, 36 px on top of the 330
-    column. The clip stays, because that room is not infinite either
-    and a column narrowed later must fail towards the empty side. It
-    also puts both lines against the bar, so the eye crosses one gap
-    rather than a ragged one per row.
+    into a fallback. `name_gap` comes out of the column, so the name
+    ends at `name_width - name_gap` and grows left across `pad_x`:
+    236 - 14 + 22 = 244 px of room, against a realistic maximum of
+    230 and a structural one of 336. The clip stays, because that
+    room is not infinite either and a column narrowed later must fail
+    towards the empty side. It also puts both lines against the bar,
+    so the eye crosses one gap rather than a ragged one per row.
 
     The detail line is `cfg["detail"]`, substituted by REPLACE and
     not `str.format` (decision 37): a stray brace in a translated

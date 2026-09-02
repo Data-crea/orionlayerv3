@@ -692,10 +692,13 @@ for the owner's race rather than the best over races present, because
 that walk needs the pop word's low nibble.
 
 Race groups as shades and androids/natives as locked are **not
-drawn**: they depend on the pop word's low nibble, whose mask has no
-second source.
-The zone split is a list of runs so they can be added inside a run
-later without moving anything.
+drawn** — but the mask is no longer the reason. The low nibble has a
+second source for 0..7, verified live, and that source refutes the
+"race" reading rather than merely agreeing with the player one. What
+is still open is the meaning of 8 and 9, the android and native
+sentinels, which are exactly the two cases the locking was wanted
+for. The zone split is a list of runs so they can be added inside a
+run later without moving anything.
 
 One thing only the picture caught: "No Farming" was first drawn at
 the bar's left edge and the worker squares painted straight over it.
@@ -769,6 +772,46 @@ in height the row already pays for, and `tail_width` went to 0: 150
 px back into the track, unit 19 to 22. `no_farming_placement: "tail"`
 restores the old position.
 
+#### It is an identity now, and it was 38 px short — 2 September 2026
+
+The budget was stated as a division and checked as a table, which is
+not the same as being balanced. It was not:
+
+    name 240 + tail 0 + building 206 + pad 44
+         + 42*unit 798 + 41*gap 82  =  1370      against 1408
+
+`unit` is a FLOOR division and 836/42 is 19.905, so 38 px were
+dropped on the floor every frame. They were not slack and they were
+not padding — nothing claimed them, so they surfaced as dead air
+between the right edge of the building column (1446) and the right
+edge of `list_area` (1506), a 60 px gap after the Buy buttons that
+read as a misaligned panel rather than as a rounding error.
+
+**`name_width` 240 -> 236, and the division comes out exact:**
+(1408 - 236 - 0 - 206 - 44 - 82) / 42 = 840/42 = **20**, remainder 0.
+The four pixels are not a measurement of anything; they are what
+makes the pot divide, and they came off the name column because it
+is the only one of the four with slack against its own stated range
+— realistic maximum 230, room 244. `building_width` is a hard
+transcription, `pad_x` and `square_gap` are the fixed costs, so
+neither could give.
+
+The square went 19 -> 20 as a side effect, which is the trade coming
+out the right way round: the slack ended up in the thing the screen
+exists to make countable. The row now ends flush — slot 42 at 1278,
+building column 1294 to 1484, right `pad_x` to 1506.
+
+**The smoke test asserts the relation, not the number.** It reads
+`name_width`, `tail_width`, `building_width`, `building_gap`,
+`pad_x`, `square_gap` and `POP_LIMIT_CAP` out of `layout.json` and
+the width out of the `list_area` box, and requires the sum to equal
+it. A budget checked against the constant 1408 stops being a budget
+the first time `frame_holes.py` moves a cutout: the constant goes on
+agreeing while the panel no longer does, and the check then reports
+success about a screen that is wrong. A second assertion says the
+same thing the other way — that the remainder is zero — because that
+is the half a later edit to any of those keys breaks first.
+
 The condition it had to meet was named in advance, because this label
 has failed once before — drawn at the bar's left edge, with the
 worker squares painted over it, every number right and nothing on
@@ -817,10 +860,18 @@ the data won and the name was the casualty. Right-aligned, the same
 overflow grows LEFT into `pad_x`, where nothing is drawn. The clip
 becomes a fallback rather than the mechanism.
 
-Re-run against the structural maximum: 15 W's plus " V" is 336 px,
-and it now spans x=3 to x=335 inside `list_area` — using 19 of the
-22 px of padding, finishing 17 px clear of the track, and never
-touching the clip. `name_gap` 14 is the gutter between the block and
+Re-run against the structural maximum: 15 W's plus " V" is 336 px.
+That measurement is from the `name_width` 330 era, when it spanned
+x=3 to x=335 inside `list_area` and never touched the clip. At the
+shipped 236 it does not fit and is not meant to: the room before the
+clip is 236 - `name_gap` 14 + `pad_x` 22 = 244 px, so this name is
+ellipsised, uses the whole of the padding growing left, and still
+finishes clear of the track. That is the designed degradation and it
+is now a row in `tools/colony_list_preview.py` rather than a
+one-off measurement, because the two things no assertion can settle
+— whether the cut still reads as a name, and whether the leftward
+overflow reads as overflow rather than as a second column — need a
+picture. `name_gap` 14 is the gutter between the block and
 the first slot, taken out of `name_width` rather than out of the
 shared budget; without it the name ended on exactly the pixel the
 first square began on and the two read as a collision, which is what
@@ -1007,10 +1058,13 @@ degrades visibly in the one it cannot.
 | name_width | no building col | + building 190 |
 |---|---|---|
 | 330 | 22 | 17 |
-| **240** | 24 | **19** |
+| 240 | 24 | 19 |
+| **236** | 24 | **20** |
 
-Shipped: `name_width` 240 with the 190 column, **unit 19**. The table
-is in `layout.json` under `list._horizontal_budget`.
+Shipped: `name_width` 236 with the 190 column, **unit 20**. 240 was
+shipped for a day and left the budget 38 px short of balancing — see
+"It is an identity now" above. The table is in `layout.json` under
+`list._horizontal_budget`.
 
 **Figure mode: built, compared, deleted.** For one session the
 filled region could draw a sprite per colonist instead of a square,
@@ -1081,8 +1135,11 @@ agree, because a picture of two tracks is only evidence if somebody
 compares them.
 
 **The race-group row cannot be drawn as one, and the tool says so.**
-Race shading needs the pop nibble, whose mask has no second source, so
-`colonyrows` never reads it and every row reaching the renderer is
+The note used to give the wrong reason and was corrected on
+2 September 2026: the nibble's mask IS confirmed live for 0..7, and
+what is still open is only the meaning of 8 and 9 — the android and
+native sentinels, which are the cases the shading was wanted for.
+`colonyrows` reads no nibble, so every row reaching the renderer is
 race-blind. That row is identical to any single-race row with the
 same job split. It is kept, with a line in the output, because a
 preview that quietly substituted professions for races would answer a
@@ -1396,8 +1453,9 @@ as deviations; they belong here as well, because a limitation that
 lives only in the module that works around it is a limitation nobody
 finds.
 
-- **The pop nibble is a PLAYER index, not a race — and it still has
-  no second source.** Read out of the C++ on 1 September 2026:
+- **The pop nibble is a PLAYER index, not a race — and for 0..7 it
+  now has a second source; only the sentinels do not.** Read out of
+  the C++ on 1 September 2026:
   `POP::MASK_RACE` (pop.h:8) is consumed by
   `COLONY::Get_Effective_Pop_Player_` (colony.cpp:1257), which
   returns `pop & 0x0F` as a player index and maps only 8 and 9 to the

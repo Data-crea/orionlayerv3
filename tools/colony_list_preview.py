@@ -73,10 +73,22 @@ STRESS = {"name": "Vega I", "pops": 22, "jobs": [8, 9, 5],
           "producing": "Atmosphere Renewer", "producing_turns": 8,
           "can_buy": True}
 
-#: Meant to be three race groups in one row. **It cannot be drawn as
-#: one.** Race shading needs the pop word's low nibble, whose mask
-#: has no second source, so `colonyrows` never reads it and every row
-#: reaching the renderer is race-blind. This row is identical to any
+#: Meant to be three race groups in one row. **It still cannot be
+#: drawn as one — but not for the reason this note used to give.**
+#: The mask DOES have a second source. The pop word's low nibble was
+#: verified live on 1 September 2026: 131 colonists across five
+#: owners, each carrying its own colony's `owner`, against
+#: `s_player.race` values (5, 2, 3, 4, 0) that equal no player's own
+#: index — so the data refutes the "race" reading rather than merely
+#: agreeing with the player one (`core/structs/colony.py`).
+#:
+#: What remains open is only the meaning of 8 and 9. Those are the
+#: android and native sentinels, which `Get_Effective_Pop_Player_`
+#: maps to the colony's owner (colony.cpp:1261); neither occurs in
+#: any sample save, so that one branch is still transcription only —
+#: and androids and natives are exactly the cases the shading was
+#: wanted for. `colonyrows` reads no nibble, so every row reaching
+#: the renderer is race-blind and this one is identical to any
 #: single-race row with the same split. Kept, with a line in the
 #: tool's output, because a preview that quietly substituted
 #: professions for races would answer a question nobody asked.
@@ -104,7 +116,29 @@ SMALL = {"name": "Nazin I", "pops": 3, "jobs": [1, 1, 1],
          "producing": "Trade Goods", "producing_turns": 0,
          "can_buy": False}
 
-ROWS = [STRESS, RACE_GROUPS, NO_FARMING, SMALL]
+#: The structural maximum of the name column — and the one case the
+#: column is deliberately NOT sized to hold. `s_star.name` is str15
+#: (star.py:35) and a player can type all fifteen when renaming a
+#: home star (namestar.cpp:262); fifteen W's plus " V" measures 336 px
+#: at `name_font` 21. The column is 236 and the room before the clip
+#: is 244 — 236 less `name_gap` 14, plus the `pad_x` 22 that right
+#: alignment lets the name grow LEFT into — so this row ellipsises.
+#: That is the designed outcome and not a fault: reserving for 336
+#: would spend a hundred px of the one horizontal budget on a name
+#: nobody types (`layout.json`, `_name_width_note`).
+#:
+#: What the picture has to settle is the two things no assertion
+#: covers — whether the cut still reads as a name, and whether the
+#: overflow going left looks like overflow rather than like a second
+#: column. The failure this row exists to catch is the one LEFT
+#: alignment produced: the name printed onto the track's first slots
+#: and the squares, drawn after it, painted over the evidence.
+EXTREME_NAME = {"name": "WWWWWWWWWWWWWWW V", "pops": 6, "jobs": [2, 2, 2],
+                "no_farming": False, "climate": 7, "max_pop": 11,
+                "producing": "Deuterium Fuel Cells", "producing_turns": 5,
+                "can_buy": False}
+
+ROWS = [STRESS, RACE_GROUPS, NO_FARMING, SMALL, EXTREME_NAME]
 
 
 def build_context(width, height):
@@ -252,9 +286,12 @@ def main():
           f"{'yes' if same else 'NO — the unit moved with the row set'}")
 
     print("\n  note: the 'three race groups' row renders identically to a "
-          "single-race row.\n  Race shading needs the pop nibble, whose mask has "
-          "no second source, so nothing\n  reads it and no row can differ "
-          "by race. Not a fault in this tool.")
+          "single-race row.\n  The nibble's mask IS confirmed live — 0..7, "
+          "verified 1 September 2026, and the\n  data refutes the 'race' "
+          "reading. What is still open is only the meaning of 8\n  and 9, the "
+          "android and native sentinels, which are the cases the shading\n  "
+          "was wanted for. colonyrows reads no nibble, so no row can "
+          "differ by race.\n  Not a fault in this tool.")
     return 0 if same else 1
 
 

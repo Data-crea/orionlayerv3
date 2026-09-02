@@ -43,6 +43,7 @@ def main():
     pygame.display.set_mode((1920, 1080))
 
     from core import resources, palette
+    from core.box import load_boxes
     from core.config import load_settings, SCREENS_DIR
     from core.layout import Layout
     from core.style import StyleRenderer
@@ -2191,6 +2192,128 @@ def main():
         "'No Farming' is drawn inside the bar's own band, where the "
         "filled squares are")
 
+    # ── ...and it must not touch the HATCHED slots either ──
+    # The check above uses a FULL track, which has no free slots in
+    # it, so it can only speak for the filled squares. The dashed
+    # free region is the other thing drawn in that band, it is drawn
+    # BEFORE the label, and the label would therefore win silently —
+    # the same way round as the failure that started all this. So:
+    # a No Farming row that HAS a free region, and the two inks must
+    # not share a pixel.
+    #
+    # Measured as INK, not from row_height minus bar_height. The
+    # clearance those two give is 0 px at every scale checked (14
+    # against a 14 px label at 1.0, 18 against 19 at 1.3333, 28
+    # against 28 at 2.0) — the band and the label height come out
+    # equal rather than comfortable, so what decides this is where
+    # the glyphs actually land, and only the surface knows that.
+    #
+    # pops 3 against max_pop 20, so the free region starts at slot 3
+    # and the label's own 88 px reach about five slots: the two
+    # OVERLAP IN X by construction, and only their y keeps them
+    # apart. A row whose hatching began past the label would pass
+    # this by accident and prove nothing.
+    _surf.fill((0, 0, 0))
+    _cl.render(_surf, [{"name": "Hatched I", "pops": 3,
+                        "jobs": [0, 2, 1], "no_farming": True,
+                        "climate": 1, "max_pop": 20}],
+               _area, _cfg, app.layout, app.style)
+    _px = pygame.surfarray.array3d(_surf)
+    _nf_rgb = tuple(_cl.NO_FARM_COLOR[:3])
+    _free_rgb = tuple(_cl.BAR_FREE[:3])
+    _label = [(x, y) for x in range(_area.x, _area.right)
+              for y in range(_area.y, _area.bottom)
+              if tuple(_px[x, y]) == _nf_rgb]
+    _hatch = [(x, y) for x in range(_area.x, _area.right)
+              for y in range(_area.y, _area.bottom)
+              if tuple(_px[x, y]) == _free_rgb]
+    assert _label, "'No Farming' did not draw on a row that has free slots"
+    assert _hatch, (
+        "this row drew no dashed free slots, so it cannot test the "
+        "overlap it exists for — pops, max_pop or POP_LIMIT_CAP moved")
+    # The columns really are shared — assert it, because everything
+    # below is about the y and would be vacuous otherwise. If the
+    # label or the slot ever changes width enough that they stop
+    # overlapping, this check has quietly stopped testing anything
+    # and should say so rather than go on passing.
+    _label_x = set(x for x, _y in _label)
+    _hatch_x = set(x for x, _y in _hatch)
+    assert _label_x & _hatch_x, (
+        "the label and the dashed slots share no columns, so this "
+        "check cannot see an overlap even if there is one — widen the "
+        "gap between pops and max_pop in the row above")
+    # Sharing no pixel is necessary but not sufficient: two things
+    # interleaved row for row share no pixel and still collide. So
+    # the bands have to be disjoint in y as well, with the label
+    # below — which is where row_height's spare band is.
+    assert not (set(_label) & set(_hatch)), (
+        "'No Farming' and the dashed free slots ink the same pixels — "
+        "the label is painting over the hatching, which is drawn "
+        "first and therefore loses silently")
+    assert min(y for _x, y in _label) > max(y for _x, y in _hatch), (
+        f"'No Farming' ink runs from y={min(y for _x, y in _label)} "
+        f"while the hatched band ends at {max(y for _x, y in _hatch)} "
+        f"— the label is inside the track's band, not under it")
+
+    # ── The horizontal budget is an IDENTITY, not a constant ──
+    # THE ONE BUDGET: list_area is spent by five columns and nothing
+    # is left over.
+    #
+    #   name + tail + building + pad + 42*unit + 41*gap == list_area
+    #
+    # Asserted out of layout.json's own keys and the list_area box,
+    # never against the number 1408. A budget checked against a
+    # constant stops being a budget the moment a frame cutout moves:
+    # the constant goes on agreeing while the panel no longer does,
+    # and the check reports success about a screen that is wrong.
+    #
+    # It failed by 38 px until 2 September 2026, because unit is a
+    # FLOOR division and 836/42 is 19.905. Those 38 px were not spent
+    # anywhere — they sat as dead air between the building column and
+    # the right edge of the panel. name_width 240 -> 236 makes the
+    # divide exact, which is what turns this from a tolerance into an
+    # identity. tail_width is in the sum although it is 0: it is a
+    # column the budget can be asked to pay for again.
+    #
+    # In REFERENCE px at scale 1.0, which is the space the budget is
+    # stated in. At other scales each term is independently truncated
+    # by int(), so the sum is a bound and not an identity.
+    _boxes_ref = load_boxes(
+        os.path.join(SCREENS_DIR, "colony_summary", "boxes.json"), 1920, 1080)
+    _list_ref = [b.ref_rect for b in _boxes_ref if b.name == "list_area"]
+    assert _list_ref, "boxes.json has no list_area box at 1920x1080"
+    _bud_w = _list_ref[0][2]
+    _bud_area = pygame.Rect(0, 0, _bud_w, _list_ref[0][3])
+    _bt = _cl.track_metrics(_bud_area, _cfg, 1.0)
+    _cap = _cr.POP_LIMIT_CAP
+    _spend = {
+        "name_width": _cfg["name_width"],
+        "tail_width": _cfg["tail_width"],
+        "building": (_cfg["building_width"] + _cfg["building_gap"]
+                     if _cfg["building_width"] else 0),
+        "pad_x x2": 2 * _cfg["pad_x"],
+        f"{_cap}*unit": _cap * _bt.unit,
+        f"{_cap - 1}*square_gap": (_cap - 1) * _cfg["square_gap"],
+    }
+    assert sum(_spend.values()) == _bud_w, (
+        f"the horizontal budget does not balance: "
+        f"{' + '.join(f'{k} {v}' for k, v in _spend.items())} = "
+        f"{sum(_spend.values())} against list_area {_bud_w} "
+        f"({_bud_w - sum(_spend.values()):+d}). Every reference pixel "
+        f"of list_area is spent by exactly one column; a remainder is "
+        f"dead space at the right edge, not slack.")
+    # The remainder being zero is the same statement said the other
+    # way, and it is the part a later edit to any of these keys will
+    # break first: unit stops being a division and goes back to being
+    # a floor.
+    assert (_bud_w - _spend["name_width"] - _spend["tail_width"]
+            - _spend["building"] - _spend["pad_x x2"]
+            - _spend[f"{_cap - 1}*square_gap"]) % _cap == 0, (
+        f"list_area does not divide into {_cap} slots without a "
+        f"remainder — unit is flooring again, and the pixels it drops "
+        f"land as dead space beside the building column. Adjust "
+        f"name_width (see layout.json list._horizontal_budget).")
+
     # ── Nothing from the name column reaches the track ──
     # The invariant, however it is achieved. Right-alignment plus
     # pad_x is what achieves it today and the name-block check below
@@ -2231,9 +2354,10 @@ def main():
         assert set(_fake) == set(_rows[0]), (
             f"colony_list_preview row {_fake.get('name')!r} has keys "
             f"{sorted(_fake)} against build_rows' {sorted(_rows[0])}")
-    ok("colony list (rows, No Farming below a full track, name clipped "
-       "to its column, INVENTION + HD EXTENSION marked, preview rows "
-       "match build_rows)")
+    ok("colony list (rows, No Farming below a full track and clear of "
+       "the hatching, horizontal budget balances to the pixel, name "
+       "clipped to its column, INVENTION + HD EXTENSION marked, "
+       "preview rows match build_rows)")
 
     # ── The square is a fixed unit, not a ruler that moves ──
     # The unit used to be derived from the widest max_pop in the
