@@ -2501,6 +2501,45 @@ def main():
         "the preview has no one-digit sidebar value to contrast with "
         "the widest one")
 
+    # ── An OUTPOST is not a row ──
+    # Both of the original's conditions, from
+    # Build_Global_Colony_List_ (colxport.cpp:91-99): the colony's
+    # owner is the local player AND its outpost_flag is zero.
+    # Verified live on 3 September 2026 — 12 records carried the
+    # local player and the Colonies screen listed 11, the difference
+    # being the planet the game itself calls "Yian I (Elerian
+    # Outpost)". See core/structs/colony.py.
+    #
+    # The flag is set here through the SPEC's own offset, not a
+    # literal, so a spec change breaks this loudly instead of
+    # flipping some other byte and passing.
+    from core.structs import colony as _col_spec
+    _out_snap = _pv._Snapshot(_pv.COLONIES)
+    _with_all = _cr.build_rows(_out_snap, "name")
+    _op_off = dict((_n, _o) for _n, _o, _k
+                   in _col_spec.SPEC.fields)["outpost_flag"]
+    _victim = 1
+    _op_name = _with_all[0]["name"]
+    _op_raw = bytearray(_out_snap.colonies_raw[_victim])
+    assert _op_raw[_op_off] == 0, "the preview already ships an outpost"
+    _op_raw[_op_off] = 1
+    _out_snap.colonies_raw[_victim] = bytes(_op_raw)
+    _without = _cr.build_rows(_out_snap, "name")
+    assert len(_without) == len(_with_all) - 1, (
+        f"a colony with outpost_flag set is still in the rows: "
+        f"{len(_without)} of {len(_with_all)}. The original's list "
+        f"does not carry it (colxport.cpp:91-99)")
+    _gone = set(_r["index"] for _r in _with_all) - set(
+        _r["index"] for _r in _without)
+    assert _gone == {_victim}, (
+        f"the outpost filter dropped {_gone}, not the colony whose "
+        f"flag was set ({_victim})")
+    del _op_name
+    # And it is the FLAG that drops it, not the owner: everything
+    # else about that record is untouched and it was in the list a
+    # moment ago.
+    assert any(_r["index"] == _victim for _r in _with_all), _victim
+
     # ── The seven sort keys, and their DIRECTIONS ──
     # COLSUM::Switched_cmp_ (colsum.cpp:378-401, orion2re 1.60) is a
     # switch on _g_sort_index with the sign as a literal per case.
@@ -2617,7 +2656,99 @@ def main():
        "case-insensitive name, no toggle, ties in input order, "
        "producing declared unavailable)")
 
-    # ── output_panel: ten values, and the selection that feeds it ──
+    # ── DRAWN AGAINST PRESENT: the list says what it dropped ──
+    # render() stops at the first row that would cross the bottom of
+    # list_area. At 1920x1080 the panel holds nine rows, so a
+    # twelve-colony empire lost three IN SILENCE — every drawn row
+    # correct, every check in this suite green, and the fault found
+    # by somebody noticing a colony they owned was missing from a
+    # screenshot. The check is therefore on the two numbers being
+    # reconciled, not on the drawing being pretty.
+    d.switch_to("colony_summary")
+    _ov_area = pygame.Rect(*app.layout.rect(
+        d.active.box_rect("list_area")))
+    _ov_cfg = _sjson.load(open(os.path.join(
+        SCREENS_DIR, "colony_summary", "layout.json"),
+        encoding="utf-8"))["list"]
+    _ov_fits = _cl.rows_drawn(_ov_area, _ov_cfg, app.layout.scale, 99)
+    assert _ov_fits > 0, "no row fits list_area at all"
+    _ov_rows = [{"index": _i, "name": f"Over {_i}", "pops": 2,
+                 "jobs": [1, 1, 0], "no_farming": False, "climate": 8,
+                 "max_pop": 9, "producing": "", "producing_turns": 0,
+                 "can_buy": False, "production": [1, 1, 1, 1],
+                 "size": 2, "gravity": 1, "mineral": 2, "growth": 0,
+                 "morale": 0, "morale_applies": True}
+                for _i in range(_ov_fits + 3)]
+    assert _cl.rows_drawn(_ov_area, _ov_cfg, app.layout.scale,
+                          len(_ov_rows)) == _ov_fits, (
+        "rows_drawn does not agree with itself about how many fit")
+    # The wording is in layout.json (decision 15) and {count} is
+    # substituted by replace (decision 37), so the check reads the
+    # template rather than hardcoding the sentence.
+    assert "{count}" in _ov_cfg["overflow"], (
+        f"list.overflow {_ov_cfg['overflow']!r} does not carry "
+        f"{{count}}, so the line cannot say HOW MANY are missing — "
+        f"which is the whole of what it adds over silence")
+    _ov_expect = _ov_cfg["overflow"].replace("{count}", "3")
+    _ov_surf = pygame.Surface((_ov_area.right + 8, _ov_area.bottom + 8))
+    _ov_surf.fill((0, 0, 0))
+    _cl.render(_ov_surf, _ov_rows, _ov_area, _ov_cfg, app.layout,
+               app.style)
+    # The strip below the last drawn row must now carry ink, and it
+    # is ink NOTHING ELSE puts there: the bands stop before it by
+    # construction.
+    _ov_bands = _cl.row_bands(_ov_area, _ov_cfg, app.layout.scale,
+                              len(_ov_rows))
+    _ov_top = _ov_bands[-1][0] + _ov_bands[-1][1]
+    _ov_strip = pygame.Rect(_ov_area.x, _ov_top, _ov_area.w,
+                            _ov_area.bottom - _ov_top)
+    assert _ov_strip.h > 0, "no strip left under the last row"
+    assert pygame.surfarray.array3d(
+        _ov_surf.subsurface(_ov_strip)).sum() > 0, (
+        f"{len(_ov_rows) - _ov_fits} rows were dropped and nothing "
+        f"was drawn to say so. That is the fault this check exists "
+        f"for and it was live until 3 September 2026")
+    # The line must be the RIGHT number, measured by rendering the
+    # expected string and finding as much ink as it would put down.
+    _ov_ink = pygame.surfarray.array3d(
+        _ov_surf.subsurface(_ov_strip)).sum()
+    _ov_ref = pygame.Surface((_ov_strip.w, _ov_strip.h))
+    _ov_ref.fill((0, 0, 0))
+    _ov_txt = app.style.render_text(
+        _ov_expect, app.layout.font_size(_ov_cfg.get("small_font", 15)),
+        _cl.OVERFLOW_COLOR[:3])
+    _ov_ref.blit(_ov_txt, (int(_ov_cfg.get("pad_x", 18)
+                               * app.layout.scale), 0))
+    assert abs(_ov_ink - pygame.surfarray.array3d(_ov_ref).sum()) \
+        < _ov_ink * 0.02, (
+        f"the strip's ink does not match {_ov_expect!r} — the count "
+        f"in the line is not {len(_ov_rows) - _ov_fits}")
+    # AND THE NEGATIVE. A list that fits draws no line at all;
+    # without this the check above passes on a renderer that always
+    # draws one.
+    _ov_surf.fill((0, 0, 0))
+    _cl.render(_ov_surf, _ov_rows[:_ov_fits], _ov_area, _ov_cfg,
+               app.layout, app.style)
+    _ov_bands2 = _cl.row_bands(_ov_area, _ov_cfg, app.layout.scale,
+                               _ov_fits)
+    _ov_top2 = _ov_bands2[-1][0] + _ov_bands2[-1][1]
+    assert pygame.surfarray.array3d(_ov_surf.subsurface(pygame.Rect(
+        _ov_area.x, _ov_top2, _ov_area.w,
+        _ov_area.bottom - _ov_top2))).sum() == 0, (
+        "the list drew an overflow line with nothing overflowing")
+    # It is not a scrollbar and must not quietly become one. Nothing
+    # off the bottom can be selected, because row_at only knows the
+    # bands render laid out.
+    assert _cl.row_at(_ov_area, _ov_cfg, app.layout.scale,
+                      len(_ov_rows),
+                      (_ov_area.x + 4, _ov_top + 2)) is None, (
+        "a point below the last drawn row hit-tests to a row; the "
+        "hidden ones are not selectable and must not become so by "
+        "accident")
+    ok("colony list overflow (rows drawn against rows present, the "
+       "count is named, nothing drawn when nothing is dropped)")
+
+    # ── output_panel: eleven values, and the selection that feeds it ──
     # The panel is a TRANSCRIPTION of the original's bottom-left scan
     # box (colsum.cpp:1155, fundament 43 withdrawn), so what is
     # asserted is which values it shows, that they are VISIBLE and not
@@ -2667,25 +2798,41 @@ def main():
              "mineral": 4, "growth": -42, "morale": -7,
              "morale_applies": True}
     _shown = _co.visible_rows(_fake, _ocfg, _words, _climates)
+    assert len(_shown) == 11, (
+        f"the panel has {len(_shown)} rows; it draws the seven "
+        f"E_Strings_(74) values in six, the four ECON values, and "
+        f"morale")
     assert len(_shown) == len(_ocfg["rows"]), (_shown, _ocfg["rows"])
     _text = " ".join(f"{lab}={val}" for lab, val, _c in _shown)
     for _value in ("Large", "Gaia", "Heavy G", "Ultra Rich", "17", "31",
-                   "-42", "11", "22", "33"):
+                   "-42", "11", "22", "33", "44"):
         assert _value in _text, (
             f"the panel does not show {_value!r} — it is one of the "
-            f"ten the original's scan box carries. Got: {_text}")
+            f"eleven the original's scan box carries. Got: {_text}")
     assert "-7" in _text, "morale is not shown"
-    # BC IS THE MARKED DEVIATION, so its absence is asserted rather
-    # than left to be noticed. The original's loop is i < ECON_COUNT
-    # and ECON_COUNT is 4 (orion2_consts.h:123). If BC arrives, the
-    # note in layout.json is what has to change with it.
-    assert "44" not in _text, (
-        f"BC is being drawn. That is fine and it is what the original "
-        f"does — update output._deviation_note, which currently says "
-        f"three of the four are drawn. Got: {_text}")
-    assert "ECON_COUNT is 4" in _ocfg["_deviation_note"], (
-        "output._deviation_note no longer records that the original "
-        "draws four production values and this panel draws three")
+    # ALL FOUR PRODUCTION VALUES. BC was left out for a day on the
+    # reading that the panel showed "food, industry and research";
+    # the original draws four. ECON_COUNT is 4 (orion2_consts.h:123)
+    # and the GEOMETRY says so without the constant: y_pos starts at
+    # 349 and steps 18 (colsum.cpp:1170-1173) — 349, 367, 385, 403 —
+    # with morale one step further on at 421 (colsum.cpp:1176), which
+    # leaves room for four rows above it and not three.
+    _prod_rows = [_r for _r in _ocfg["rows"]
+                  if _r["value"] in ("{food}", "{industry}",
+                                     "{research}", "{bc}")]
+    assert len(_prod_rows) == 4, (
+        f"the panel draws {len(_prod_rows)} production rows; the "
+        f"original draws ECON_COUNT of them and ECON_COUNT is 4")
+    assert all(_r["column"] == _prod_rows[0]["column"]
+               for _r in _prod_rows), (
+        "the four production values are split across columns; the "
+        "original draws them as one column at native x 106")
+    for _cite in ("coldraw.cpp:60", "colsum.cpp:1170-1173",
+                  "colsum.cpp:1176"):
+        assert _cite in _ocfg["_deviation_note"], (
+            f"output._deviation_note no longer cites {_cite!r} — the "
+            f"geometry is what settled the fourth row independently "
+            f"of ECON_COUNT")
 
     # MORALE UNDER UNIFICATION: the label stays, the value goes. The
     # original zeroes its own sprite count (Draw_Info_Morale_Both_),
@@ -2767,11 +2914,16 @@ def main():
         f"value and the right column's label read as one phrase. "
         f"That is how the first render of this panel looked, with "
         f"every value in it correct.")
-    _widest_val = max(
-        (_v for _v in (list(_words["sizes"]) + list(_words["gravities"])
-                       + list(_words["minerals"]) + list(_climates))),
-        key=len)
-    _widest_lab = max((_r["label"] for _r in _ocfg["rows"]), key=len)
+    # PER ROW, against the values THAT ROW can actually show. Pairing
+    # the widest label in the panel with the widest value in the
+    # panel asserts a collision that cannot happen — POPULATION never
+    # prints "Ultra Poor" — and it failed at 1280x720 on exactly that
+    # imaginary pair. The real tightest is MINERALS against
+    # "Ultra Poor".
+    _POP_CAP = _cl.POP_LIMIT_CAP
+    _WORDS_FOR = {"{size}": _words["sizes"], "{climate}": list(_climates),
+                  "{gravity}": _words["gravities"],
+                  "{mineral}": _words["minerals"]}
     for _W, _H in _SIZES:
         _lay = Layout(_W, _H)
         _r = pygame.Rect(*_lay.rect(_op_box))
@@ -2779,18 +2931,33 @@ def main():
         _pad = int(_ocfg["pad_x"] * _lay.scale)
         _cw = (_r.w - 2 * _pad) // _cols
         _cgap = int(_ocfg["column_gap"] * _lay.scale)
-        _vw = app.style.render_text(
-            _widest_val, _lay.font_size(_ocfg["value_font"]),
-            (255, 255, 255)).get_width()
-        _lw = app.style.render_text(
-            _widest_lab.upper(), _lay.font_size(_ocfg["label_font"]),
-            (255, 255, 255)).get_width()
-        assert _lw + _vw <= _cw - _cgap, (
-            f"{_W}x{_H}: the widest label {_widest_lab!r} ({_lw} px) and "
-            f"the widest value {_widest_val!r} ({_vw} px) need "
-            f"{_lw + _vw} px in a column of {_cw - _cgap} — they "
-            f"collide, which is what column_gap 34 was measured to "
-            f"prevent")
+        # One em of the LABEL font, scaled like everything else.
+        _em = _lay.font_size(_ocfg["label_font"])
+        for _row_spec in _ocfg["rows"]:
+            _cands = _WORDS_FOR.get(_row_spec["value"])
+            if _cands is None:
+                # Numeric. The widest a value can get: growth sums ten
+                # int16 (colsum.cpp:1179-1182), the others are one,
+                # and population is the engine's cap over itself.
+                _cands = ([f"{_POP_CAP}/{_POP_CAP}"]
+                          if "/" in _row_spec["value"]
+                          else ["-327680" if _row_spec["id"] == "growth"
+                                else "-32768"])
+            _lw = app.style.render_text(
+                _row_spec["label"].upper(),
+                _lay.font_size(_ocfg["label_font"]),
+                (255, 255, 255)).get_width()
+            for _cand in _cands:
+                _vw = app.style.render_text(
+                    _cand, _lay.font_size(_ocfg["value_font"]),
+                    (255, 255, 255)).get_width()
+                assert _lw + _vw <= _cw - _cgap - _em, (
+                    f"{_W}x{_H}: {_row_spec['label']!r} ({_lw} px) and "
+                    f"{_cand!r} ({_vw} px) need {_lw + _vw} px in a "
+                    f"column of {_cw - _cgap}, leaving less than one "
+                    f"em of the label font between them — they read "
+                    f"as one phrase before they touch, which is what "
+                    f"column_gap 34 was measured to prevent")
 
     # ── The selection: row 0 on entry, and it keeps its COLONY ──
     # colsum.cpp:139 sets _g_colony_n = _list_col[0] in the screen's

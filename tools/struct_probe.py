@@ -388,8 +388,14 @@ def outpost_report(records, player_num, colony_spec):
 
     So the discriminating quantity is reported first and the counts
     second, and the verdict says INCONCLUSIVE rather than passing.
-    The reference save (stardate 3508.5, 21 colonies) is one of the
-    saves that cannot answer it.
+
+    ANSWERED on 3 September 2026, by a save at stardate 3502.4 with
+    55 colonies: 12 records carry the local player and the Colonies
+    screen lists 11, and the record the two differ by is the one with
+    the flag set — the planet the game itself labels an outpost. The
+    earlier save (stardate 3508.5, 21 colonies) could not answer it
+    at all; both verdicts are kept because this report has to be able
+    to say which kind of save it is looking at.
     """
     from collections import Counter
 
@@ -498,9 +504,14 @@ def sidebar_report(records, player_num, indent="  "):
     rests on the header compiled with its own `#pragma pack(1)`, with
     sizeof landing on the 0xf0e in sizes.h — a static assert, which
     fixes the LAYOUT but says nothing about which member is which
-    where two are interchangeable. `race` and `total_pop` have picked
-    up live corroboration incidentally (see player.py); the other
-    four have not been read against the game's own screen.
+    where two are interchangeable.
+
+    IT HAS BEEN RUN, and all six agreed with the original's own box
+    on 3 September 2026 (see player.py). This stays because a
+    verification is a thing somebody can repeat: another save, another
+    turn, or a spec edit that moves an offset all want the same
+    reading again, and the report is what makes it a command rather
+    than a memory.
 
     THE PAIR TO STARE AT: `surplus_food` (276) and `surplus_bc` (278)
     are two bytes apart, both int16, both net flows, both printed

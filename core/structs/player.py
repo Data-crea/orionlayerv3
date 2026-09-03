@@ -13,10 +13,11 @@ Reproduced against orion2re 1.60 on 2 September 2026; every offset
 below was exact.
 
 **WHICH EVIDENCE STANDS, PER FIELD.** `verified=True` on this spec
-rests on that compile — a HEADER plus a STATIC ASSERT, and no more.
-It is worth being explicit about what that does and does not buy,
-because decision 23 asks for two independent sources and this is
-one, and because the flag is spec-wide while the evidence is not.
+is spec-wide and the evidence is not, so it is worth being explicit.
+The flag rests on that compile — a HEADER plus a STATIC ASSERT — for
+every field here except the six the colony summary's sidebar draws,
+which have a second source as of 3 September 2026 and are listed
+below.
 
 What the static assert proves: the LAYOUT. If any member's offset
 were wrong the total would not land on 0xF0E. What it cannot prove:
@@ -25,32 +26,48 @@ case is on this screen — `surplus_food` (276) and `surplus_bc` (278)
 are two bytes apart, both int16, both net flows, both printed with an
 explicit sign, and the struct is exactly as large either way round.
 
-Live corroboration, where it exists, is INCIDENTAL — it fell out of
-other work rather than being collected for these fields:
+**ALL SIX SIDEBAR SCALARS WERE READ AGAINST THE ORIGINAL'S OWN BOX
+on 3 September 2026, and they agree — six of six.** That is the
+second source decision 23 asks for, and `tools/struct_probe.py
+players --sidebar` is what collected it: it prints the six beside the
+labels and signs the original uses, in the original's own order, for
+a human to hold against the game's Colonies screen.
 
-  race @37               YES. tools/struct_probe.py colonies
-                         --pop-nibble read it for five players as
-                         5, 2, 3, 4, 0 and the pop nibble decoded
-                         to each colony's owner instead — see
-                         core/structs/colony.py, which needed the
-                         two to disagree and they did.
-  total_pop @266         YES. The 39 for player 0 agreed with the
-                         empire sidebar's Population, recorded when
-                         `owner` and `n_pops` were verified.
+**The pair that mattered is settled by the numbers being different.**
+`surplus_food` (276) and `surplus_bc` (278) are adjacent int16 net
+flows, both printed with an explicit sign, and the struct is exactly
+as large either way round — swapped, both stay plausible and no
+assert anywhere would notice. In the reading that settled it the
+original showed Food **-10** and Income **+30**: opposite signs and
+different magnitudes, so a swap would have put -10 on the Income line
+and +30 on the Food line and been visible at a glance. Two numbers
+that happened to be close, or both positive, would have proved
+nothing about which is which; these could not both be true under the
+swap.
 
-  bc @50                 NONE.
-  surplus_freighters @56 NONE.
-  research_produced @272 NONE.
-  surplus_food @276      NONE — and this is the one that matters,
-  surplus_bc @278        NONE   see the pair above.
+  bc @50                 YES, against Reserve.
+  surplus_bc @278        YES, against Income, +30.
+  total_pop @266         YES, against Population — and previously,
+                         incidentally, as the 39 that agreed with
+                         the sidebar when `owner` and `n_pops` were
+                         verified.
+  surplus_freighters @56 YES, against Freighters.
+  surplus_food @276      YES, against Food, -10.
+  research_produced @272 YES, against Research.
 
-Four of the six the colony summary's sidebar draws have never been
-read against the game's own screen. `tools/struct_probe.py players
---sidebar` exists to close that and needs only a running game; until
-it has been run, the sidebar is drawing numbers whose identity rests
-on the header alone. The flag stays True — that is a decision to
-take deliberately and not a thing to flip in passing — but it should
-not be read as more than the compile it came from.
+  race @37               YES, but incidentally rather than here:
+                         `struct_probe colonies --pop-nibble` read
+                         it for five players as 5, 2, 3, 4, 0 while
+                         the pop nibble decoded to each colony's
+                         owner instead — see core/structs/colony.py,
+                         which needed the two to disagree and they
+                         did.
+
+What is still header-only is everything this spec carries that no
+screen has drawn yet. `verified=True` was never a claim about those,
+and the compile is still what it rests on; what changed is that the
+six the colony summary draws are no longer resting on it alone.
+
 
 Sidebar semantics, from mainscr_main.cpp's sidebar drawing:
   treasury line     bc, then surplus_bc as a signed second line

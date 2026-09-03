@@ -101,7 +101,7 @@ from core.config import REF_W, REF_H
 from core.screen_base import ScreenBase
 from core.structs import player as player_struct
 
-from . import colonylist, colonyoutput, colonyrows
+from . import colonylist, colonyoutput, colonyrows, colonyselect
 
 log = logging.getLogger("colony_summary")
 
@@ -143,12 +143,10 @@ class ColonySummaryScreen(ScreenBase):
         self._local = None          # parsed s_player of the local player
         self._sort_key = "name"     # what the original starts on
         self._state = None          # last snapshot, for the list
-        self._rows = []             # build_rows for _state + _sort_key
-        # The SELECTED colony, as its index in the snapshot's colony
-        # array — the same number the original keeps in
-        # `COLONY::_g_colony_n`, and not a row index. See
-        # `_reseat_selection`.
-        self._selected = None
+        # The rows for `_state` + `_sort_key`, and which COLONY is
+        # selected — a colony index and never a row index, which is
+        # `colonyselect`'s whole subject.
+        self._selection = colonyselect.Selection()
 
     # ── Lifecycle ─────────────────────────────────────────
 
@@ -179,70 +177,30 @@ class ColonySummaryScreen(ScreenBase):
         self._scale_frame()
 
     # ── Selection ─────────────────────────────────────────
+    #
+    # The state machine and the two rules that move it live in
+    # `colonyselect`; what stays here is the geometry, because the
+    # screen is what owns the boxes. `_rows` and `_selected` are
+    # properties over it so nothing else in this file has to know
+    # which object holds them.
 
     def _rebuild_rows(self):
-        """The rows for the current snapshot and sort key, once.
+        self._selection.rebuild(self._state, self._sort_key)
 
-        `_render_list` used to call `build_rows` every frame. It is
-        called here instead because the hover has to hit-test the
-        SAME list the renderer drew — two lists built from one
-        snapshot agree today and would not the first time anything
-        about the build depended on when it ran.
-        """
-        self._rows = colonyrows.build_rows(self._state, self._sort_key)
-        self._reseat_selection()
+    @property
+    def _rows(self):
+        return self._selection.rows
 
-    def _reseat_selection(self):
-        """Entry lands on row 0; after that the colony is kept.
-
-        TRANSCRIBED, and the two halves have different sources.
-
-        **Entry is row 0 of the sorted list.** colsum.cpp:139 sets
-        `COLONY::_g_colony_n = COLSUM::_list_col[0]` in the screen's
-        setup, before the input loop runs — and `_list_col` is filled
-        from the sorted `_g_colony_list_ptr` by `Update_Col_List_`
-        (colsum.cpp:348-351), so it is the first row as SORTED and
-        not the first colony in the array.
-
-        **A sort does not reseat it.** The sort handler
-        (colsum.cpp:830-837) re-sorts, clears the window array and
-        resets `_first`, and never touches `_g_colony_n`. So the
-        selected COLONY is kept and moves to wherever the new order
-        puts it — which is why the selection is stored as a colony
-        index and not as a row. Storing the row would keep the
-        HIGHLIGHT still and change the colony under it, which is the
-        opposite behaviour and would look identical on entry.
-
-        A selection whose colony has left the list — it was lost, or
-        the snapshot changed under us — falls back to row 0 rather
-        than to nothing, because the original has no state in which
-        this screen is up and no colony is scanned. Nothing is
-        selected only when there are no colonies at all.
-        """
-        if not self._rows:
-            self._selected = None
-            return
-        if any(row["index"] == self._selected for row in self._rows):
-            return
-        self._selected = self._rows[0]["index"]
+    @property
+    def _selected(self):
+        return self._selection.colony
 
     def selected_row(self):
-        """The selected row dict, or None. The panel's whole input."""
-        for row in self._rows:
-            if row["index"] == self._selected:
-                return row
-        return None
+        return self._selection.row()
 
     def selected_position(self):
-        """Where the selection sits in the CURRENT order, or None.
+        return self._selection.position()
 
-        Only the renderer's highlight and the smoke test want this;
-        the selection itself is never stored this way.
-        """
-        for i, row in enumerate(self._rows):
-            if row["index"] == self._selected:
-                return i
-        return None
 
     # ── Frame ─────────────────────────────────────────────
 
@@ -623,9 +581,7 @@ class ColonySummaryScreen(ScreenBase):
         mouse moved off the list would be blank most of the time.
         """
         super().handle_mouse_motion(screen_x, screen_y)
-        index = self._row_at(screen_x, screen_y)
-        if index is not None:
-            self._selected = self._rows[index]["index"]
+        self._selection.hover(self._row_at(screen_x, screen_y))
 
     def _hit(self, name, x, y):
         box = self.box_rect(name)

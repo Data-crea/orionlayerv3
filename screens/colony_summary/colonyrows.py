@@ -9,16 +9,14 @@ cannot reach back into a struct. The split also put both files back
 under the ~300-line guideline (decision 6) without inventing a seam.
 
 TRANSCRIBED, and each with its source:
-  the row set        colonies whose `owner` is the local player.
-                     HALF of the original's condition, and the half
-                     that is missing is named in `build_rows`:
-                     `Build_Global_Colony_List_` (colxport.cpp:91)
-                     takes TWO conditions — the colony's `owner`
-                     has to be the local player and its
-                     `outpost_flag` has to be zero — and only the
-                     first is applied here. An outpost of the local player
-                     would appear as a row the original's list does
-                     not have.
+  the row set        colonies of the local player that are not
+                     outposts — both of the original's conditions,
+                     from `Build_Global_Colony_List_`
+                     (colxport.cpp:91-99), which walks the colony
+                     array in order and keeps the ones whose `owner`
+                     is the local player and whose `outpost_flag` is
+                     zero. `N_Colonies_` (colxport.cpp:67) counts
+                     with the same pair.
   the job split      one colonist per `pop[]` word, counted by
                      profession — ECON_FOOD=0, ECON_INDUSTRY=1,
                      ECON_RESEARCH=2 (orion2_consts.h:119). The
@@ -294,25 +292,21 @@ def build_rows(game_state, sort_key="name"):
     rows = []
     for index, raw in enumerate(game_state.colonies_raw):
         col = colony_struct.parse(raw)
-        # TRANSCRIBED, and INCOMPLETE. The original's list is built by
-        # `Build_Global_Colony_List_` (colxport.cpp:91) on two
-        # conditions — the colony's `owner` has to be the local
-        # player and its `outpost_flag` has to be zero — and
-        # `N_Colonies_` (colxport.cpp:67) counts with the same pair.
-        # Only the owner half is here.
+        # TRANSCRIBED, both halves. `Build_Global_Colony_List_`
+        # (colxport.cpp:91-99) walks the colony array in order and
+        # keeps the ones whose `owner` is the local player and whose
+        # `outpost_flag` is zero; `N_Colonies_` (colxport.cpp:67)
+        # counts with the same pair. An outpost is a colony record
+        # like any other, so without the second condition it appears
+        # as a row the original's own list does not have.
         #
-        # The outpost half is written down rather than applied,
-        # because `outpost_flag` at offset 6 has one source and the
-        # project needs two (decision 23). The header route fixes
-        # where the byte is and how wide it is; what it cannot fix is
-        # that the byte MEANS outpost, and a filter is a claim about
-        # the meaning. The obvious second source is a count against
-        # the reference save, and that save cannot supply it: all 21
-        # of its colonies carry 0, so the filter would be invisible in
-        # it either way — see `core/structs/colony.py` and
-        # `tools/struct_probe.py colonies --outposts`, which is the
-        # probe and prints exactly that.
-        if col.owner != me:
+        # The outpost half waited for a second source, because a
+        # filter is a claim about what the byte at offset 6 MEANS and
+        # the header can only fix where it sits (decision 23). It has
+        # one now — see `core/structs/colony.py`, and
+        # `tools/struct_probe.py colonies --outposts` reproduces it
+        # against a live game.
+        if col.owner != me or col.outpost_flag != 0:
             continue
         # OURS, not a transcription: the original indexes
         # `MOX::_planet[]` unguarded because the array is always

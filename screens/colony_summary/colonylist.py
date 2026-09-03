@@ -92,6 +92,11 @@ ROW_NAME = palette.col("colony_summary", "row_name", (206, 216, 238))
 DETAIL_COLOR = palette.col("colony_summary", "row_detail",
                            (132, 148, 180))
 NO_FARM_COLOR = palette.col("colony_summary", "no_farming", (150, 120, 110))
+#: The "n not shown" line. Deliberately NOT `ROW_NAME`: it is not a
+#: colony and must not read as one, and the name-overflow check scans
+#: for row-name ink outside the name column.
+OVERFLOW_COLOR = palette.col("colony_summary", "row_overflow",
+                             (150, 120, 110))
 
 
 # ── Geometry: computed once, drawn by either mode ──────────────────
@@ -245,6 +250,66 @@ def render(surface, rows, area, cfg, layout, style):
             colonybuild.draw(
                 surface, row, bar_x + track.width + track.build_gap, y,
                 track.build_w, row_h, cfg, style, layout)
+
+    _draw_overflow(surface, rows, area, cfg, scale, layout, style)
+
+
+def _draw_overflow(surface, rows, area, cfg, scale, layout, style):
+    """Say how many rows did not fit, because otherwise nothing does.
+
+    **This is the fault it exists for, and it was live.** `render`
+    stops at the first row that would cross `area.bottom`, so a list
+    longer than the panel simply ends — no ellipsis, no count, no
+    scrollbar, and the rows that are drawn are all correct. At
+    1920x1080 the panel holds nine of them; a twelve-colony empire
+    lost three, and the way it was found was somebody noticing a
+    colony they knew they owned was not on a screenshot. Every check
+    in the suite was green, because every check looked at rows that
+    were drawn.
+
+    The line is NOT a scrollbar and is not a step towards one. What
+    scrolling should look like here is a separate question with its
+    own source — the original windows ten rows over the sorted list
+    and keeps `_first` (colsum.cpp:348, and `_first = 0` on every
+    sort click at colsum.cpp:828) — and deciding it under the
+    pressure of a visible bug is how the wrong thing gets built. What
+    this does is make the absence a STATE instead of a silence, which
+    is the same rule the dimmed Producing header follows.
+
+    Drawn in the strip the bands could not use, so it cannot cover a
+    row: the bands stop when the next one would cross `area.bottom`,
+    which leaves at least `row_height` minus one pixel of unused
+    height whenever anything was dropped at all.
+    """
+    template = cfg.get("overflow", "")
+    if not template:
+        return
+    bands = row_bands(area, cfg, scale, len(rows))
+    hidden = len(rows) - len(bands)
+    if hidden <= 0:
+        return
+    text = template.replace("{count}", str(hidden))
+    surf = style.render_text(
+        text, layout.font_size(cfg.get("small_font", 15)),
+        OVERFLOW_COLOR[:3])
+    top = bands[-1][0] + bands[-1][1] if bands else area.y
+    # Centred in what is left, and clamped so a panel too short for
+    # even one row still shows the line rather than drawing it off
+    # the bottom edge.
+    y = min(top + max(0, (area.bottom - top - surf.get_height()) // 2),
+            area.bottom - surf.get_height())
+    surface.blit(surf, (area.x + int(cfg.get("pad_x", 18) * scale),
+                        max(area.y, y)))
+
+
+def rows_drawn(area, cfg, scale, count):
+    """How many of `count` rows `render` would actually draw.
+
+    Exported so a caller — and the smoke test — can ask the question
+    without re-deriving the pitch. The whole fault this answers was
+    that nothing could ask it.
+    """
+    return len(row_bands(area, cfg, scale, count))
 
 
 def row_bands(area, cfg, scale, count):

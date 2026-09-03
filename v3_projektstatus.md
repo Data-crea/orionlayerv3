@@ -332,9 +332,9 @@ reason the repository exists.
 several entries had drifted and a list of counts that is wrong is
 worse than no list: `galaxy_map/screen.py` (805),
 `tools/struct_probe.py` (758), `galaxy_map/renderer.py` (747),
-`colony_summary/screen.py` (691), `custom_race/screen.py` (558),
-`colony_summary/colonylist.py` (533), `galaxy_map/ships.py` (529),
-`zoomtables.py` (515), `colony_summary/colonyrows.py` (514),
+`colony_summary/screen.py` (647), `colony_summary/colonylist.py`
+(598), `custom_race/screen.py` (558), `galaxy_map/ships.py` (529),
+`zoomtables.py` (515), `colony_summary/colonyrows.py` (508),
 `tools/ext_diag.py` (473), `style.py` (453),
 `tools/colony_list_preview.py` (443), `screen_base.py` (390),
 `editor/editor.py` (390), `empire_identity/renderer.py` (383),
@@ -344,7 +344,7 @@ worse than no list: `galaxy_map/screen.py` (805),
 `galaxy_map/sidebar.py` (301). `smoke_test.py` is exempt by nature.
 
 `colony_summary/colonyrows.py` crossed the line this session and is
-listed rather than split: it went 234 -> 514 across two commits and
+listed rather than split: it went 234 -> 508 across three commits and
 gained one function. The growth is the tie-break block, the NOT DRAWN section
 and the two comments around the row filter — all of it the sources
 for numbers that are already there. Splitting on that would put a
@@ -675,11 +675,17 @@ every offset is exact — `bc` 50, `surplus_freighters` 56,
 Git adds nothing: the whole tree arrives in one squashed commit
 (`e0ae910`, 31 August), so there is no per-field history to read.
 
-Two fields picked up live corroboration incidentally, both during the
-pop-nibble work: `race` @37 (the five players decoding 5, 2, 3, 4, 0)
-and `total_pop` @266 (the 39 that agreed with the empire sidebar's
-Population). The other four have never been read against the game's
-own screen.
+**All six were read against the original's own box on 3 September
+2026 and all six agreed.** `tools/struct_probe.py players --sidebar`
+prints them beside the labels and signs the original uses, in the
+original's order, and the reading closed the one risk that mattered:
+the original showed Food **-10** and Income **+30**, opposite signs
+and different magnitudes, so a swap of `surplus_food` and
+`surplus_bc` would have put -10 on the Income line and been visible
+at a glance. Two numbers that happened to be close, or both positive,
+would have proved nothing. `race` @37 and `total_pop` @266 already
+had incidental corroboration from the pop-nibble work; the other four
+have it now.
 
 **A static assert fixes the layout and cannot tell interchangeable
 members apart**, which is the risk that actually bites here:
@@ -1053,39 +1059,34 @@ That half of the claim rests on platform.cpp:1171-1172 against
 :1131-1134 and on nothing else, and it is written down that way
 rather than as "verified".
 
-**The outpost filter is NOT applied, and the gate it is waiting on
-was checked and failed — 3 September 2026.** The original's list is
-built on two conditions — the colony's `owner` has to be the local
-player and its `outpost_flag` has to be zero
-(`Build_Global_Colony_List_`, colxport.cpp:91; `N_Colonies_` counts
-with the same pair at colxport.cpp:67).
-`build_rows` applies only the first, so an outpost of the local
-player would appear as a row the original's list does not have.
+**The outpost filter is ARMED — 3 September 2026, and the gate that
+blocked it is closed.** The original's list is built on two
+conditions, the colony's `owner` and a zero `outpost_flag`
+(`Build_Global_Colony_List_`, colxport.cpp:91-99; `N_Colonies_`
+counts with the same pair at colxport.cpp:67). `build_rows` applies
+both now.
 
-`outpost_flag` sits at offset 6 of `s_colony` and has ONE source —
-the header compiled with its own pragma pack, which fixes the byte
-and its width and cannot say the byte MEANS outpost. A filter is a
-claim about the meaning, so it needs the second source decision 23
-asks for, and the obvious one is a count: colonies of the local
-player with the flag clear, against the rows the original's own
-screen lists.
+**The second source is discriminating, which the earlier one was
+not.** A save at stardate 3502.4 with 55 colonies: colony 54 sits on
+planet 239, the game labels that planet "Yian I (Elerian Outpost)"
+and shows 0/4 population, and the Colonies screen does not list it.
+Twelve records carry the local player as owner; the screen lists
+**eleven**, and the record they differ by is the one with the flag
+set. `tools/struct_probe.py colonies --outposts` reports ANSWERABLE
+and 12 against 11 — against the previous save it reported
+INCONCLUSIVE, because all 21 of its colonies carried 0 and the filter
+would have removed nothing either way.
 
-**The reference save cannot produce that number.** The check is now a
-mode of the probe — `python tools/struct_probe.py colonies
---outposts` — and against the stardate 3508.5 snapshot it reports all
-21 colonies carrying 0, across all six owners. The filter removes
-nothing, both counts are 7, and 7 is what the screen shows: which is
-also exactly what "offset 6 is a byte that is zero everywhere"
-predicts. Consistent, and not a second source. The probe says
-INCONCLUSIVE rather than passing, and names what would settle it — a
-save in which the local player holds at least one outpost. Another
-turn of this one will not produce one.
+**One write site, which is what makes the flag mean one thing.**
+`COLONIZE::Make_New_Colony_Or_Outpost_` sets it in the branch that
+runs when the new colony is not a colony — `outpost_flag = 1` with
+`n_pops = 0` beside it (colonize.cpp:381-382), which is also where
+the observed 0 population comes from. Nothing else assigns it; every
+other mention in the tree is a read, except `savegame.cpp:309`, which
+restores it from disk.
 
-The missing half is written into `build_rows` as a comment with its
-source, and into `core/structs/colony.py` as what offset 6 does and
-does not rest on. It is not on `doc/orion2re_open_fixes.md`: nothing
-is being asked of Joes, the data is already on the wire, and the only
-thing missing is a savegame.
+A smoke check sets the flag on one preview colony through the SPEC's
+own offset and demands that exact row leave the list.
 
 **Two states the original's row carries and ours does not.** Found
 while reading `Draw_Colony_Summary_For_Colony_` for the sort work,
@@ -1174,35 +1175,61 @@ seven values substituted into `ESTRINGS::E_Strings_(74)`
 class, `n_pops`, the computed maximum and growth — plus a column of
 production rows and morale from native x 106 (colsum.cpp:1171-1176).
 
-**Its own module, `colonyoutput.py` (179 lines), not the end of
-`screen.py`.** The screen was already over the guideline and a panel
-that draws ten values from a dict is not "being a screen". It is
-handed plain dicts and knows nothing about structs, the same seam
-`colonyrows` and `colonylist` already use, so a spec change breaks in
-one place — `build_rows`, where the offsets are.
+**Its own module, `colonyoutput.py`, not the end of `screen.py`.**
+The screen was already over the guideline and a panel that draws
+eleven values from a dict is not "being a screen". It is handed plain
+dicts and knows nothing about structs, the same seam `colonyrows` and
+`colonylist` already use, so a spec change breaks in one place —
+`build_rows`, where the offsets are.
 
-**Ten values in two columns of five**, label left and value right.
-The seven from `E_Strings_(74)` in six rows, because the original
-prints `n_pops` and the maximum as one pair and so does this, plus
-three production numbers; morale is the eleventh thing in the box and
-is not one of the ten. Three of the seven — climate, `n_pops`,
+**The selection machinery followed it out, into
+`colonyselect.py`** — the state and the two rules that move it, kept
+together because they only make sense together. What stayed in
+`screen.py` is the geometry, which belongs with whatever owns the
+boxes; `_rows` and `_selected` are properties over the `Selection`
+object so nothing else in the file has to know where they live.
+**It bought less than it looks like it should:** 691 lines to 647,
+because sixty lines of state and docstring became twenty-six lines of
+delegation. The next cohesive block is the sidebar —
+`_render_sidebar`, `_value_column`, `_native_column_width` and
+`_empire_value`, about 130 lines with their notes — and it was NOT
+moved here, because two smoke checks reach into
+`_native_column_width` and `_value_column` to hold decision 44's
+clamp, and pulling that apart in the same commit as four other
+changes is how a marking gets broken by accident.
+
+**Eleven rows in two columns, and the split follows the original's
+own two halves.** LEFT is the scan paragraph: the seven values
+`E_Strings_(74)` carries, in six rows, because the original prints
+`n_pops` and the maximum as one pair and so does this. RIGHT is the
+production column: all four ECON values with morale under them, which
+is the same grouping the original draws at native x 106. Label left,
+value right. Three of the seven — climate, `n_pops`,
 `max_pop` — are also on every row, and that is not a duplication to
 tidy: the per-row line is the HD EXTENSION and this is the original's
 own box, which prints all seven for one colony.
 
-**Three deviations, all marked in `layout.json` under
+**BC is drawn — 3 September 2026, and the deviation that left it out
+is retired.** It was omitted on the reading that the panel showed
+"food, industry and research". The original draws four: its loop is
+`i < ECON_COUNT` and ECON_COUNT is 4 (orion2_consts.h:123), and the
+GEOMETRY says so without taking the constant on trust — `y_pos`
+starts at 349 and steps 18 (colsum.cpp:1170-1173), giving 349, 367,
+385, 403, with morale one step further on at 421 (colsum.cpp:1176),
+which leaves room for exactly four rows above it and not three. The
+smoke check that asserted BC's absence is gone; what is asserted now
+is that there are four production rows and that they sit in one
+column, which is how the original draws them at native x 106.
+
+**Two deviations remain, both marked in `layout.json` under
 `output._deviation_note`, each one line away from being undone.**
-(1) BC is not drawn; the original's loop is `i < ECON_COUNT` and
-ECON_COUNT is 4 (orion2_consts.h:123), so it draws four. A smoke
-check asserts BC does NOT appear, so adding it fails the suite and
-takes the note with it rather than quietly widening the panel.
-(2) Each production row is one number where the original's is
+(1) Each production row is one number where the original's is
 several — `COLDRAW::Draw_Colony_Prod_Both_` (coldraw.cpp:36) draws
 imports (:46), pollution for industry (:56) and a shortage computed
 from maintenance minus imports minus production (:61) beside the net
 value. This prints `colony->production[i]` (coldraw.cpp:60) and
 nothing else, so it is a subset of that row rather than a smaller
-drawing of it. (3) Morale is a number here and a row of SPRITES
+drawing of it. (2) Morale is a number here and a row of SPRITES
 there: `Draw_Info_Morale_Both_` draws `abs(morale / 2)` of them,
 capped at 20, in one of two artworks by sign. The sprites are in the
 player's LBX and are not shipped — the same trade the Buy button
@@ -1259,6 +1286,35 @@ rest on the header's names alone, exactly as `outpost_flag` does. The
 thing that settles them is the `--native` side-by-side in
 `tools/colony_list_preview.py`, which still has never been run.
 
+**The list says what it dropped — 3 September 2026, and it was
+silent until then.** `colonylist.render` stops at the first row that
+would cross the bottom of `list_area`. At 1920x1080 that panel holds
+NINE rows, so a twelve-colony empire lost three with nothing on
+screen saying so — every drawn row correct, every check in the suite
+green, and the fault found by somebody noticing a colony they owned
+was missing from a screenshot. It is the exact shape of the fundament
+entry about a later draw erasing an earlier one, reached from the
+other side: there the data was right and invisible, here the data was
+right and absent.
+
+A line now reads `{count} more not shown`, in the strip the rows
+could not use, in a colour that is not the row name's — the wording
+in `layout.json` per decision 15, `{count}` substituted by replace
+per decision 37. `colonylist.rows_drawn` exports the number so a
+caller can ask the question at all, which is the part that was
+missing: nothing could compare drawn against present.
+
+**It is not a scrollbar and not a step towards one.** What scrolling
+should look like has its own source — the original windows ten rows
+over the sorted list (`Update_Col_List_`, colsum.cpp:348) and resets
+`_first` on every sort click (colsum.cpp:828) — and that decision
+belongs on its own evidence rather than under the pressure of a
+visible bug. A smoke check holds the three things that matter: the
+count in the line equals present minus drawn, nothing is drawn when
+nothing is dropped, and a point below the last drawn row still
+hit-tests to no row, so the hidden ones cannot become selectable by
+accident.
+
 **Scrolling is deliberately not built.** The original windows ten
 rows over the sorted list — `_list_col[10]`, `Update_Col_List_`
 (colsum.cpp:348) filling from `_g_colony_list_ptr[_first + i]` — and
@@ -1287,10 +1343,12 @@ refuses the base table anywhere it appears without the climate
 factors.
 
 **The list renders — first visible step, 31 August.**
-`screens/colony_summary/colonyrows.py` (514 lines, the numbers),
-`screens/colony_summary/colonylist.py` (533, the drawing),
-`screens/colony_summary/colonyoutput.py` (179, the scan box) and
-`screens/colony_summary/colonybuild.py` (207, the building column) —
+`screens/colony_summary/colonyrows.py` (the numbers),
+`screens/colony_summary/colonylist.py` (the drawing),
+`screens/colony_summary/colonyoutput.py` (the scan box),
+`screens/colony_summary/colonyselect.py` (which colony is selected)
+and `screens/colony_summary/colonybuild.py` (the building column) —
+counts in the over-300 list above, so there is one place to update —
 their own modules because `screen.py` was at 258 against a ~300
 guideline. One
 row per colony of the local player, sorted by name: the planet name,

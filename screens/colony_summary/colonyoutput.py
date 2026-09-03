@@ -10,9 +10,9 @@ and, from native x 106, a column of production rows plus morale
 (colsum.cpp:1171-1176). That box is where `output_panel` sits.
 
 **Its own module rather than the end of `screen.py`.** The screen was
-at 446 lines before this and the guideline is ~300 (decision 6); a
-panel that draws ten values from a dict is not "being a screen" in the
-sense the rest of that file is. The seam is the one `colonyrows` and
+already well over the ~300-line guideline (decision 6); a panel that
+draws eleven values from a dict is not "being a screen" in the sense
+the rest of that file is. The seam is the one `colonyrows` and
 `colonylist` already use: this module is handed plain dicts and knows
 nothing about structs, so it cannot reach back into a record and a
 spec change cannot break it silently — it breaks in one place, in
@@ -32,10 +32,16 @@ would be a value where the original has an absence — the same
 distinction the sidebar makes with "--" while disconnected, reached
 from the other side.
 
-The three deviations this panel carries — BC not shown, one number
-per production row where the original draws several, and morale as a
-number where the original draws sprites — are stated in `layout.json`
-under `output._deviation_note`, with what it would take to undo each.
+The two deviations this panel carries — one number per production
+row where the original draws several, and morale as a number where
+the original draws sprites — are stated in `layout.json` under
+`output._deviation_note`, with what it would take to undo each. A
+third is gone: BC was not drawn until the geometry settled it.
+`y_pos` starts at 349 and steps 18 (colsum.cpp:1170-1173) and morale
+is at 421 (colsum.cpp:1176), so there is room above it for exactly
+four production rows — 349, 367, 385, 403 — and not three, which
+agrees with `ECON_COUNT` being 4 without having to take the constant
+on trust.
 """
 from core import palette
 
@@ -65,7 +71,7 @@ def fill_template(template, values):
 
 
 def row_values(row, words, climates):
-    """The ten values, as strings, keyed by their placeholder.
+    """Every value the panel can name, keyed by its placeholder.
 
     Every list lookup falls back to "?" rather than raising or
     clamping. An index outside its enum means the spec moved or the
