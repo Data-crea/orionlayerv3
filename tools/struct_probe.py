@@ -58,7 +58,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(
 
 import struct
 
-from core.game_client import GameClient  # noqa: E402
+from core.game_client import fetch_snapshot  # noqa: E402
 
 ARRAYS = {
     "nebulas": ("nebulas_raw", 5),
@@ -673,26 +673,10 @@ def main():
               f"{', '.join(sorted(SPECS))}")
         return 1
 
-    client = GameClient()
-    if not client.connect(host=args.host, port=args.port):
-        print(f"Cannot reach orion2re at {args.host}:{args.port} — "
-              f"is the game running with -DORION2RE_EXT=ON?")
-        return 1
-
     print("Waiting for STATE_SNAPSHOT ...")
-    gs = None
-    deadline = time.monotonic() + 10.0
-    while time.monotonic() < deadline:
-        client.poll()
-        st = client.state
-        if st and st.current_screen >= 0:
-            gs = st
-            break
-        time.sleep(0.05)
-
+    gs, why = fetch_snapshot(host=args.host, port=args.port)
     if gs is None:
-        print("No STATE_SNAPSHOT within 10 s — is a game loaded?")
-        client.disconnect()
+        print(why)
         return 1
     print(f"Screen {gs.current_screen}, stardate {gs.stardate_str}, "
           f"{gs.num_stars} stars, {gs.num_colonies} colonies, "
@@ -700,7 +684,6 @@ def main():
 
     attr, size = ARRAYS[args.array]
     data = getattr(gs, attr, None)
-    client.disconnect()
     if data is None:
         print(f"{attr} not present in state")
         return 1

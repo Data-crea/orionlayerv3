@@ -895,6 +895,27 @@ and so is the check that they matched `build_rows`: that drift is now
 structurally impossible, and what is asserted instead is that each
 synthetic colony still produces the SHAPE its comment claims.
 
+**The invariant checker was measuring the wrong object, and had been
+since it was written.** It compared the FIRST ROW BAND across two
+renderings, which is the same colony only while the sort leaves it
+first: with `--sort population` it reported "NO — the unit moved with
+the row set" every time, correctly observing that two different
+colonies look different. The slot width is computed by
+`track_metrics` from `POP_LIMIT_CAP` and the panel and takes no rows
+at all, so it could not have moved.
+
+Asserting `track_metrics` directly would have been worse: it is a
+pure function of things the row set does not touch, so the assertion
+cannot fail and therefore says nothing. What CAN fail is the render —
+an earlier bar derived the unit from the widest `max_pop` in the
+list, which is the fault this exists to catch. So it now finds THAT
+COLONY in each rendering by its own index and compares the two
+TRACKS. Not the whole band: the frame PNG bleeds three or four pixels
+of metal edge into `list_area` on both sides, artwork that differs
+between one y and another, and comparing bands reported 310 differing
+pixels all of them in x 0..3 and 1405..1407. Verified to bite by
+making the unit depend on the row count.
+
 One thing the rewrite got wrong first and the picture caught at once:
 every colony read numeral **I**. `HAROLD::Planet_Number_` counts
 OCCUPIED slots before the planet, not the orbit, so a numeral has to
@@ -913,13 +934,66 @@ the sign is visibly a per-row property. All four kinds are
 distinguishable in one frame: a stock, two signed net flows, an
 unsigned gross, two counts.
 
-**`--native` composes the side-by-side.** A 640x480 original beside
-the HD render, same height, nearest-neighbour on the original so it
-reads as a different picture rather than a worse one. **It has not
-been run**: the original half cannot be synthesised and has to come
-off a running game, whose framebuffer the Extension API already
-carries. Without it the tool writes the HD half and says the
-comparison is incomplete.
+**`--live` — 3 September 2026, and without it `--native` was never a
+comparison.** The tool rendered its synthetic empire and nothing
+else. A run against a game with 55 colonies at stardate 3502.4 wrote
+a side-by-side whose HD half listed Vega I, Sol III, Kif II, a name
+of ten W's and Nazin I over a sidebar of 18432 / -214 / 39 / 7 /
++12 / 1180, and whose native half showed Blucher II, Wolf II,
+Draconis V over 878 / +42 / 78 / 17 / -3 / 27. Two different empires
+presented as a comparison, with nothing in the image saying so — and
+the API was reachable the whole time, since `struct_probe` read the
+same game in the same minute. The tool never asked.
+
+It asks now. `--live` takes one STATE_SNAPSHOT and hands the real
+state to the real screen, so `build_rows` runs over the wire's own
+colonies. It does NOT fall back to the synthetic empire when the game
+is unreachable: that substitution is what the switch exists to
+prevent.
+
+**The fetch has ONE home.** `core.game_client.fetch_snapshot` —
+connect, wait for `current_screen >= 0`, disconnect, return
+`(state, error)`. `struct_probe` had the loop and this tool needed
+the same one; the rule is that the third copy is the signal to
+extract, and this was extracted at the second anyway, because what
+is being copied is a protocol contract ("silence is busy, not dead")
+rather than four lines of shape.
+
+**Every image carries a provenance band**, `--live` or not: LIVE with
+the stardate, the record count, how many survive the outpost filter
+and how many are drawn; SYNTHETIC with "these colonies do not exist".
+`--native` without `--live` writes the image and says ON the image
+that it is not a comparison. This is the same class as the tenth row
+that used to vanish in silence — an absence shaped like a result —
+and a marking without a check is an intention, so a smoke check holds
+the band.
+
+**THE FIRST REAL SIDE-BY-SIDE, and it found things at once.** Run
+against the live game at stardate 3502.4 with a framebuffer captured
+off the wire:
+
+- **The sidebar agrees exactly** — 878 / +42 / 78 / 17 / -3 / 27 on
+  both halves, which is an independent confirmation of the six-of-six
+  reading recorded in `core/structs/player.py`.
+- **The original lists TEN rows and the HD list draws NINE.** The
+  original windows ten (`_list_col[10]`); `list_area` at 1920x1080
+  fits nine at `row_height` 62. Ours says "2 more not shown", so it
+  is honest, and it is still one row short of the original's window.
+- **The sort keys disagree, and nothing can currently fix that.** The
+  game was on Population and the HD screen on Name, because
+  `_g_sort_index` is not in the snapshot. `--live` takes the sort
+  from `--sort`, not from the game, and the two can differ without
+  either being wrong.
+- **Two of our word lists do not match the game's.** The original's
+  scan box reads "Normal Gravity" where ours reads "Normal G", and
+  "Mineral Rich" where ours reads "Rich". The words in `words` were
+  derived from the enum names and were marked as ours and
+  unconfirmed; this is the confirmation arriving and disagreeing.
+  NOT FIXED HERE — it is a separate change with its own evidence.
+- **Growth prints "+63k" in the original**, signed with a suffix,
+  where ours prints the raw sum. So the NUMBER is the same reading
+  and the wording is not, which narrows the open question in
+  `output._growth_note` rather than closing it.
 
 **Two deviations in the row, both kept, both marked — decision 45.**
 The colony NAME is right-aligned and the original left-aligns it:

@@ -26,6 +26,26 @@ looks detailed at 1:1 and turns to grain one step away. Structure
 that survives the reduction reads as calm at full size; structure
 that dissolves was noise pretending to be information.
 
+**`--live` builds the rows from a running game's snapshot, and
+without it `--native` is not a comparison.** For its first weeks this
+tool rendered the synthetic empire and nothing else, and a run
+against a game with 55 colonies at stardate 3502.4 wrote a
+side-by-side whose HD half listed Vega I, Sol III, Kif II, a name of
+ten W's and Nazin I over a sidebar of 18432 / -214 / 39 / 7 / +12 /
+1180, and whose native half showed Blucher II, Wolf II, Draconis V
+over 878 / +42 / 78 / 17 / -3 / 27. Two different empires side by
+side, offered as a comparison, with nothing in the image saying so.
+The API was reachable throughout — `struct_probe.py` read the same
+game in the same minute. The tool simply never asked.
+
+`--live` asks. It takes one STATE_SNAPSHOT through
+`core.game_client.fetch_snapshot` — the same call `struct_probe`
+makes, in one place rather than two — and hands the real state to the
+real screen, so `build_rows` runs over the wire's own colonies. It
+does NOT fall back to the synthetic empire when the game is
+unreachable: that substitution is the thing the switch exists to
+prevent.
+
 **`--native` puts a 640x480 original screenshot beside the HD render,
 scaled to the same height, in one image.** That side-by-side is the
 method that caught the mislabelled Research field, the misplaced TURN
@@ -34,7 +54,12 @@ the only check that has never come back empty. The original half
 cannot be synthesised here — it has to come off a running game (the
 Extension API carries the 640x480 framebuffer, see
 `doc/ext_api_dokumentation_v3.md`), so without `--native` this tool
-writes the HD half and says the comparison is incomplete.
+writes the HD half and says the comparison is incomplete. With
+`--native` but without `--live` it writes the image and says, on the
+image, that it is not a comparison.
+
+**Every image carries a band naming where its rows came from**, under
+`--live` as well as without it. See `provenance`.
 
 Output goes to /tmp, never into the tree, and every path printed is
 absolute: both extractor faults in the fundament printed a success
@@ -53,6 +78,7 @@ os.environ.setdefault("SDL_AUDIODRIVER", "dummy")
 import pygame  # noqa: E402
 
 from core import palette, resources  # noqa: E402
+from core.game_client import fetch_snapshot  # noqa: E402
 from core.config import SCREENS_DIR, load_settings  # noqa: E402
 from core.layout import Layout  # noqa: E402
 from core.style import StyleRenderer  # noqa: E402
@@ -306,19 +332,101 @@ def build_screen(width, height):
 
 # ── Rendering ─────────────────────────────────────────────────────
 
-def render_screen(app, screen, colonies, width, height, sort_key="name"):
+def render_screen(app, screen, state, width, height, sort_key="name"):
     """One full screen, through `ColonySummaryScreen.render`.
 
     Everything on it — background, panel fills, the list, the
     sidebar, the sort bar, the frame, the title — comes from the
     screen's own method. Nothing is drawn here.
+
+    `state` is a snapshot-shaped object: `_Snapshot` for the
+    synthetic empire, or a real `GameState` off the wire under
+    `--live`. The screen cannot tell them apart, which is the whole
+    point of faking the state rather than the drawing — and it is
+    also why the caller has to say which one it handed over. See
+    `provenance`.
     """
     screen._sort_key = sort_key
-    screen.update(_Snapshot(colonies))
+    screen.update(state)
     surface = pygame.Surface((width, height))
     surface.fill(tuple(app.colors.get("background", [6, 8, 16]))[:3])
     screen.render(surface)
     return surface
+
+
+# ── Where the rows came from, ON the picture ──────────────────────
+#
+# The failure this exists for was live, and it was invisible. A run
+# against a game with 55 colonies at stardate 3502.4 wrote a
+# side-by-side whose HD half showed Vega I, Sol III, Kif II, a name
+# of ten W's and Nazin I with a sidebar of 18432 / -214 / 39 / 7 /
+# +12 / 1180, and whose native half showed Blucher II, Wolf II,
+# Draconis V and 878 / +42 / 78 / 17 / -3 / 27. Two different
+# empires side by side, presented as a comparison, and nothing in
+# the image said so. The API was reachable the whole time; the tool
+# simply never asked.
+#
+# So: every image this tool writes carries a band naming its source,
+# under --live as well. A tool whose output LOOKS like a measurement
+# must not draw invented data without a mark on it — the same class
+# as the tenth row that used to vanish in silence, an absence shaped
+# like a result.
+#
+# The band is deliberately not styled like the game. It is tool
+# chrome and has to read as an annotation somebody added, not as
+# part of the screen being annotated.
+BAND_BG = (24, 24, 28)
+BAND_SYNTHETIC = (232, 172, 72)
+BAND_LIVE = (120, 210, 140)
+BAND_SUB = (170, 176, 190)
+
+
+def provenance(state, screen, live, sort_key):
+    """(headline, detail, colour) for the band. Never empty."""
+    # Imported here and not at the top: decision 18 has the renderers
+    # resolve their palette colours at IMPORT time, so `build_screen`
+    # must run `palette.init` before this module is pulled in. A
+    # top-level import would bind the code defaults and every colour
+    # in the preview would be a lie.
+    from screens.colony_summary import colonylist
+    rows = screen._rows
+    if live:
+        drawn = colonylist.rows_drawn(
+            pygame.Rect(*screen.layout.rect(screen.box_rect("list_area"))),
+            screen._data.get("list", {}), screen.layout.scale, len(rows))
+        return ("LIVE — rows built from the running game's snapshot",
+                f"stardate {state.stardate_str}, screen "
+                f"{state.current_screen}, {state.num_colonies} colony "
+                f"records, {len(rows)} of them the local player's and not "
+                f"outposts, {drawn} drawn, sorted by {sort_key}",
+                BAND_LIVE)
+    return ("SYNTHETIC — these colonies do not exist",
+            f"{len(rows)} rows hand-built in colony_list_preview.py to "
+            f"exercise shapes, not to measure anything. Run with --live "
+            f"against a running game for rows off the wire.",
+            BAND_SYNTHETIC)
+
+
+def with_band(surface, app, headline, detail, colour):
+    """The surface with a provenance band above it.
+
+    Above and not over: an overlay hides the thing being judged, and
+    the first instinct — a small corner watermark — is exactly what
+    somebody stops seeing by the third run.
+    """
+    head_px = app.layout.font_size(26)
+    sub_px = app.layout.font_size(17)
+    head = app.style.render_text(headline, head_px, colour)
+    sub = app.style.render_text(detail, sub_px, BAND_SUB)
+    pad = max(8, head_px // 2)
+    band_h = pad * 3 + head.get_height() + sub.get_height()
+    out = pygame.Surface((surface.get_width(),
+                          surface.get_height() + band_h))
+    out.fill(BAND_BG)
+    out.blit(head, (pad, pad))
+    out.blit(sub, (pad, pad * 2 + head.get_height()))
+    out.blit(surface, (0, band_h))
+    return out
 
 
 def write_pair(surface, out_dir, stem):
@@ -333,7 +441,7 @@ def write_pair(surface, out_dir, stem):
     return full, half
 
 
-def side_by_side(hd, native_path, out_dir):
+def side_by_side(hd, native_path):
     """The HD render beside a 640x480 original, same height, one image.
 
     NEAREST-NEIGHBOUR for the original, on purpose. Smoothing a
@@ -357,7 +465,103 @@ def side_by_side(hd, native_path, out_dir):
     pair.fill((0, 0, 0))
     pair.blit(hd, (0, 0))
     pair.blit(scaled, (hd.get_width() + gap, 0))
-    return write_pair(pair, out_dir, "colony_summary_vs_original")
+    return pair
+
+
+def colony_track_rect(app, screen, colony_index):
+    """The TRACK of the colony with `colony_index`, where it is now.
+
+    By IDENTITY, not by row number: the invariant check renders the
+    same colony twice with different neighbours, and under any sort
+    but the name it is not in the same row both times.
+
+    **The track and not the whole row band.** The frame PNG is drawn
+    over everything, and its metal edge bleeds three or four pixels
+    into `list_area` on both sides — artwork that legitimately
+    differs between one y and another. Comparing whole bands reported
+    310 differing pixels, all of them in x 0..3 and 1405..1407, and
+    none of them anything to do with the list. The track is also the
+    exact object the invariant is about: `track_metrics` derives the
+    slot from `POP_LIMIT_CAP` and the panel, so the squares are what
+    must not move.
+    """
+    from screens.colony_summary import colonylist   # see `provenance`
+    box = screen.box_rect("list_area")
+    area = pygame.Rect(*app.layout.rect(box))
+    cfg = screen._data.get("list", {})
+    rows = screen._rows
+    position = next((i for i, r in enumerate(rows)
+                     if r["index"] == colony_index), None)
+    bands = colonylist.row_bands(area, cfg, app.layout.scale, len(rows))
+    if position is None or position >= len(bands):
+        return None
+    top, height = bands[position]
+    scale = app.layout.scale
+    track = colonylist.track_metrics(area, cfg, scale)
+    left = (area.x + int(cfg.get("pad_x", 18) * scale)
+            + int(cfg.get("name_width", 320) * scale) + track.slack)
+    return pygame.Rect(left, top, track.width, height)
+
+
+def check_invariant(app, screen, width, height, sort_key, out_dir):
+    """One square is the same size whatever else is in the list.
+
+    **This checked the wrong object until 3 September 2026.** It
+    compared the FIRST ROW BAND across two renderings, which is the
+    same colony only while the sort happens to leave it first: with
+    `--sort population` it reported "NO — the unit moved with the row
+    set" every time, correctly observing that two different colonies
+    look different. The slot width is computed by
+    `colonylist.track_metrics` from `POP_LIMIT_CAP` and the panel,
+    and takes no rows at all, so it could not have moved.
+
+    Asserting `track_metrics` directly would be worse, not better: it
+    is a pure function of things the row set does not touch, so the
+    assertion cannot fail and therefore says nothing. What CAN fail
+    is the RENDER — an earlier version of the bar derived the unit
+    from the widest `max_pop` in the list, and that is the fault this
+    exists to catch. So it renders one colony alone and again beside
+    a much larger one, finds THAT COLONY in each result by its own
+    index, and demands the two bands be identical pixel for pixel.
+
+    The synthetic pair is used even under `--live`, and the band on
+    the image says so: the check needs two row sets that differ by a
+    colony big enough to move a derived unit, and a live empire is
+    whatever it is.
+    """
+    small = _Snapshot([COLONIES[3]])
+    both = _Snapshot([COLONIES[3], COLONIES[0]])
+    alone = render_screen(app, screen, small, width, height, sort_key)
+    band_alone = colony_track_rect(app, screen, 0)
+    together = render_screen(app, screen, both, width, height, sort_key)
+    # COLONIES[3] is packed first, so it is colony 0 in both snapshots
+    # — the identity is the array index and survives the re-sort.
+    band_together = colony_track_rect(app, screen, 0)
+
+    pair = pygame.Surface((width, height * 2))
+    pair.blit(alone, (0, 0))
+    pair.blit(together, (0, height))
+    pair = with_band(
+        pair, app,
+        "SYNTHETIC — the slot invariant, one colony alone then beside "
+        "a bigger one",
+        f"the same colony in both halves, found by identity and not by "
+        f"row; sorted by {sort_key}. One square must be the same size "
+        f"in both, because the unit comes from POP_LIMIT_CAP and the "
+        f"panel, never from the rows.",
+        BAND_SYNTHETIC)
+    write_pair(pair, out_dir, "colony_summary_invariant")
+
+    if band_alone is None or band_together is None:
+        print("  the colony is not drawn in both renderings — cannot "
+              "compare")
+        return False
+    same = (pygame.surfarray.array3d(alone.subsurface(band_alone))
+            == pygame.surfarray.array3d(
+                together.subsurface(band_together))).all()
+    print(f"  the same colony's track is identical in both renderings: "
+          f"{'yes' if same else 'NO — the unit moved with the row set'}")
+    return same
 
 
 def main():
@@ -369,74 +573,96 @@ def main():
                          "colony summary, for the side-by-side")
     ap.add_argument("--sort", default="name",
                     help="which sort key the bar shows as active")
+    ap.add_argument("--live", action="store_true",
+                    help="build the rows from a running game's snapshot "
+                         "instead of the synthetic empire — what makes "
+                         "--native a comparison rather than two "
+                         "unrelated pictures")
+    ap.add_argument("--host", default="localhost")
+    ap.add_argument("--port", type=int, default=17362)
     args = ap.parse_args()
 
     width, height = (int(v) for v in args.size.lower().split("x"))
     os.makedirs(args.out_dir, exist_ok=True)
+
+    # The snapshot is fetched BEFORE pygame comes up, so a tool that
+    # cannot reach the game says so in a second instead of opening a
+    # window first.
+    state, live = _Snapshot(COLONIES), False
+    if args.live:
+        state, why = fetch_snapshot(host=args.host, port=args.port)
+        if state is None:
+            print(why)
+            print("  --live cannot fall back to the synthetic empire: "
+                  "that is exactly the\n  substitution this switch "
+                  "exists to prevent.")
+            return 1
+        live = True
+
     pygame.init()
     pygame.display.set_mode((32, 32))
     app, screen = build_screen(width, height)
 
     print(f"{width}x{height} -> {os.path.abspath(args.out_dir)}\n")
+    full = render_screen(app, screen, state, width, height, args.sort)
+    head, detail, colour = provenance(state, screen, live, args.sort)
+    print(f"{head}\n  {detail}\n")
+    if live and not screen._rows:
+        print("  the running game has no colony for the local player, "
+              "so the list is\n  empty and there is nothing to compare. "
+              "Load a game with colonies.")
     print("full screen (list + sidebar + sort bar, one render):")
-    full = render_screen(app, screen, COLONIES, width, height, args.sort)
-    write_pair(full, args.out_dir, "colony_summary")
+    write_pair(with_band(full, app, head, detail, colour),
+               args.out_dir, "colony_summary")
 
-    # ── The invariant, made visible ──
-    # One square is the same size whatever else is on screen, because
-    # the unit comes from the engine's population cap and not from
-    # the widest colony in the list. The smoke test asserts it in
-    # pixels; this renders the two cases so a human can see the thing
-    # the assertion is about. Stacked rather than side by side on
-    # purpose: the tracks then share an x axis, and a difference of
-    # one slot shows up as a step instead of needing to be measured.
     print("\ninvariant (same colony alone, then beside a larger one):")
-    small = [COLONIES[3]]
-    alone = render_screen(app, screen, small, width, height, args.sort)
-    together = render_screen(app, screen, small + [COLONIES[0]],
-                             width, height, args.sort)
-    pair = pygame.Surface((width, height * 2))
-    pair.blit(alone, (0, 0))
-    pair.blit(together, (0, height))
-    write_pair(pair, args.out_dir, "colony_summary_invariant")
-
-    # Say it as well as show it: a picture of two tracks is only
-    # evidence if somebody compares them, and a comparison is exactly
-    # what a machine does better. The band is the FIRST ROW only —
-    # comparing whole screens reported a difference every time, and
-    # correctly, because the second rendering has a second row in it.
-    cfg = screen._data.get("list", {})
-    scale = app.layout.scale
-    x, y, w, _h = app.layout.rect(screen.box_rect("list_area"))
-    band = pygame.Rect(x, y, w, int((cfg.get("pad_y", 12)
-                                     + cfg.get("row_height", 60)) * scale))
-    same = (pygame.surfarray.array3d(alone.subsurface(band))
-            == pygame.surfarray.array3d(together.subsurface(band))).all()
-    print(f"  shared row identical in both renderings: "
-          f"{'yes' if same else 'NO — the unit moved with the row set'}")
+    same = check_invariant(app, screen, width, height, args.sort,
+                           args.out_dir)
 
     print("\nside by side with the original:")
     if args.native:
-        side_by_side(full, args.native, args.out_dir)
+        # The band goes on the COMPOSED image, because this is the
+        # picture the two-empires failure was in: whatever the halves
+        # are, the caption has to be attached to them together.
+        pair = side_by_side(full, args.native)
+        native_head = (head if live else
+                       "MISMATCHED — synthetic rows beside a real "
+                       "screenshot")
+        native_detail = (
+            f"left: {detail}   |   right: {os.path.abspath(args.native)}")
+        if not live:
+            native_detail = (
+                "left: rows that do not exist. right: a real game. THIS "
+                "IS NOT A COMPARISON — re-run with --live so both halves "
+                "come from the same empire. | " + detail)
+        write_pair(with_band(pair, app, native_head, native_detail,
+                             colour if live else BAND_SYNTHETIC),
+                   args.out_dir, "colony_summary_vs_original")
+        if not live:
+            print("  WRITTEN, AND IT IS NOT A COMPARISON. The HD half "
+                  "was drawn from the\n  synthetic empire and the other "
+                  "half is a real game: two different\n  worlds side by "
+                  "side. Re-run with --live.")
     else:
         print("  NOT RENDERED — no --native given, and the original "
               "half cannot be\n  synthesised here. It has to come off "
               "a running game: the Extension API\n  carries the "
               "640x480 framebuffer (ext_api_dokumentation_v3.md), so "
               "capture the\n  original's own Colonies screen and pass "
-              "it as --native shot.png.\n  Until then this comparison "
-              "is INCOMPLETE, and it is the one check that\n  has "
-              "never come back empty.")
+              "it as --native shot.png.\n  With --live as well, that "
+              "is the one check that has never come back empty.")
 
-    print("\n  note: the 'three race groups' row renders identically "
-          "to a single-race row.\n  The nibble's mask IS confirmed "
-          "live — 0..7, verified 1 September 2026, and the\n  data "
-          "refutes the 'race' reading. What is still open is only the "
-          "meaning of 8\n  and 9, the android and native sentinels, "
-          "which are the cases the shading\n  was wanted for. "
-          "colonyrows reads no nibble, so no row can differ by "
-          "race.\n  Not a fault in this tool.")
+    if not live:
+        print("\n  note: the 'three race groups' row renders identically "
+              "to a single-race row.\n  The nibble's mask IS confirmed "
+              "live — 0..7, verified 1 September 2026, and the\n  data "
+              "refutes the 'race' reading. What is still open is only the "
+              "meaning of 8\n  and 9, the android and native sentinels, "
+              "which are the cases the shading\n  was wanted for. "
+              "colonyrows reads no nibble, so no row can differ by "
+              "race.\n  Not a fault in this tool.")
     return 0 if same else 1
+
 
 
 if __name__ == "__main__":

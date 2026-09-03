@@ -2463,6 +2463,36 @@ def main():
     assert set(_pv_rows[0]) == set(_rows[0]), (
         f"preview rows {sorted(_pv_rows[0])} against build_rows' "
         f"{sorted(_rows[0])}")
+    # THE PROVENANCE BAND IS A MARKING, so it gets a check. The tool
+    # wrote a side-by-side of a synthetic empire against a real
+    # screenshot and nothing in the image said so — two different
+    # worlds presented as a comparison. A marking without a check is
+    # an intention (see the fundament on the help panel's).
+    d.switch_to("colony_summary")
+    _pv_screen = d.active
+    _pv_screen.update(_pv._Snapshot(_pv.COLONIES))
+    _syn_head, _syn_detail, _syn_col = _pv.provenance(
+        _pv._Snapshot(_pv.COLONIES), _pv_screen, False, "name")
+    assert "SYNTHETIC" in _syn_head, (
+        f"the preview's band no longer says the rows are invented: "
+        f"{_syn_head!r}. A tool whose output looks like a measurement "
+        f"must not draw made-up data unmarked")
+    assert _syn_detail and "colony_list_preview" in _syn_detail, _syn_detail
+    assert _syn_col != _pv.BAND_LIVE, "synthetic and live share a colour"
+    # And the band actually reaches the image: taller surface, ink in
+    # the strip the render does not occupy.
+    _pv_flat = pygame.Surface((400, 120))
+    _pv_flat.fill((0, 0, 0))
+    _pv_banded = _pv.with_band(_pv_flat, app, _syn_head, _syn_detail,
+                               _syn_col)
+    assert _pv_banded.get_height() > _pv_flat.get_height(), (
+        "with_band returned a surface no taller than its input, so the "
+        "band is drawn over the picture or not at all")
+    _pv_strip = pygame.Rect(
+        0, 0, _pv_banded.get_width(),
+        _pv_banded.get_height() - _pv_flat.get_height())
+    assert pygame.surfarray.array3d(
+        _pv_banded.subsurface(_pv_strip)).sum() > 0, "the band is blank"
     assert any(r["no_farming"] for r in _pv_rows), (
         "no preview colony shows No Farming — the max_farms == 0 "
         "case is not being drawn")
@@ -3444,7 +3474,7 @@ def main():
     ok("colony list (rows, No Farming below a full track and clear of "
        "the hatching, horizontal budget balances to the pixel, name "
        "clipped to its column, INVENTION + HD EXTENSION marked, "
-       "preview rows match build_rows)")
+       "preview rows match build_rows and carry a provenance band)")
 
     # ── The square is a fixed unit, not a ruler that moves ──
     # The unit used to be derived from the widest max_pop in the

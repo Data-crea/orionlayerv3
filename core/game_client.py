@@ -44,6 +44,57 @@ RECV_BUF_SIZE = 4 * 1024 * 1024   # 4 MB OS receive buffer
 STALE_TIMEOUT = 10.0
 
 
+#: How long a tool waits for the first STATE_SNAPSHOT before giving
+#: up. The server only talks inside an input loop — `ext::Tick()` runs
+#: from `fields::Get_Input_()` — so a game generating a galaxy or
+#: processing a turn is silent for as long as that takes, and silence
+#: is not death. Ten seconds is long enough for a game sitting on a
+#: screen and short enough that a tool run against nothing says so
+#: rather than hanging.
+SNAPSHOT_TIMEOUT = 10.0
+
+
+def fetch_snapshot(host="localhost", port=17362,
+                   timeout=SNAPSHOT_TIMEOUT):
+    """Connect, wait for one STATE_SNAPSHOT, disconnect, return it.
+
+    (state, error) — exactly one of them is None. The error is a
+    sentence a tool can print, because the two failures are different
+    things a user has to fix differently: nothing listening on the
+    port, and a connection that never produced a snapshot.
+
+    **One home for this, not two.** `struct_probe.py` had this loop
+    and `colony_list_preview.py` needed the same one; a second copy
+    of a wait whose contract is "poll until `current_screen` is set,
+    and treat silence as busy rather than dead" is the kind that
+    drifts by a condition and is then wrong in only one of the tools.
+    The rule is that the third copy is the signal to extract — this
+    is the second, and it is extracted anyway because the thing being
+    copied is a protocol contract rather than four lines of shape.
+
+    The caller gets a DISCONNECTED state object: everything the
+    snapshot carried is in it, and nothing will arrive afterwards.
+    That suits a tool that wants one reading. Anything that has to
+    keep watching wants a `GameClient` of its own.
+    """
+    client = GameClient()
+    if not client.connect(host=host, port=port):
+        return None, (f"Cannot reach orion2re at {host}:{port} — is the "
+                      f"game running with -DORION2RE_EXT=ON?")
+    deadline = time.monotonic() + timeout
+    while time.monotonic() < deadline:
+        client.poll()
+        state = client.state
+        if state and state.current_screen >= 0:
+            client.disconnect()
+            return state, None
+        time.sleep(0.05)
+    client.disconnect()
+    return None, (f"No STATE_SNAPSHOT within {timeout:.0f} s — is a game "
+                  f"loaded? The server only talks inside an input loop, "
+                  f"so a game busy generating or processing is silent.")
+
+
 def count_connections(port=17362):
     """How many established TCP connections exist on `port`.
 
