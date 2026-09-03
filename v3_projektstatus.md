@@ -331,17 +331,17 @@ reason the repository exists.
 **Over 300 lines, knowingly** — recounted 3 September 2026, because
 several entries had drifted and a list of counts that is wrong is
 worse than no list: `galaxy_map/screen.py` (805),
-`tools/struct_probe.py` (758), `galaxy_map/renderer.py` (747),
-`colony_summary/screen.py` (647), `colony_summary/colonylist.py`
+`tools/struct_probe.py` (753), `galaxy_map/renderer.py` (747),
+`tools/colony_list_preview.py` (669), `colony_summary/colonylist.py`
 (598), `custom_race/screen.py` (558), `galaxy_map/ships.py` (529),
-`zoomtables.py` (515), `colony_summary/colonyrows.py` (508),
-`tools/ext_diag.py` (473), `style.py` (453),
-`tools/colony_list_preview.py` (443), `screen_base.py` (390),
-`editor/editor.py` (390), `empire_identity/renderer.py` (383),
-`new_game/screen.py` (382), `empire_identity/screen.py` (372),
-`helppopup.py` (349), `main.py` (328), `select_race/screen.py` (322),
-`core/game_client.py` (321), `core/injection.py` (307),
-`galaxy_map/sidebar.py` (301). `smoke_test.py` is exempt by nature.
+`colony_summary/screen.py` (528), `zoomtables.py` (515),
+`colony_summary/colonyrows.py` (508), `tools/ext_diag.py` (473),
+`style.py` (453), `screen_base.py` (390), `editor/editor.py` (390),
+`empire_identity/renderer.py` (383), `new_game/screen.py` (382),
+`empire_identity/screen.py` (372), `game_client.py` (372),
+`helppopup.py` (349), `main.py` (328), `select_race/screen.py`
+(322), `injection.py` (307), `galaxy_map/sidebar.py` (301).
+`smoke_test.py` is exempt by nature.
 
 `colony_summary/colonyrows.py` crossed the line this session and is
 listed rather than split: it went 234 -> 508 across three commits and
@@ -1264,13 +1264,32 @@ boxes; `_rows` and `_selected` are properties over the `Selection`
 object so nothing else in the file has to know where they live.
 **It bought less than it looks like it should:** 691 lines to 647,
 because sixty lines of state and docstring became twenty-six lines of
-delegation. The next cohesive block is the sidebar —
-`_render_sidebar`, `_value_column`, `_native_column_width` and
-`_empire_value`, about 130 lines with their notes — and it was NOT
-moved here, because two smoke checks reach into
-`_native_column_width` and `_value_column` to hold decision 44's
-clamp, and pulling that apart in the same commit as four other
-changes is how a marking gets broken by accident.
+delegation.
+
+**The sidebar followed, into `colonyempire.py` — 647 to 528**, and
+that was a commit of its own for one reason: two smoke checks reach
+into `native_column_width` and `value_column` to hold decision 44's
+clamp, and one of them greps a source file for the DEVIATION
+marking. Left pointing at `screen.py` they would have gone on passing
+against a file that no longer contains what they assert — a check
+whose subject has moved out from under it is worse than no check,
+because it still reports green. They moved with the code and were
+strengthened on the way:
+
+- the marking is now asserted on `value_column.__doc__` rather than
+  anywhere in the file. The module docstring also contains the word
+  DEVIATION, so a file-wide search passed even with the marking taken
+  off the function it is about — verified by taking it off.
+- `screen.py` is asserted NOT to mention `native_width` again, so the
+  clamp cannot acquire a second home. Verified by giving it one.
+
+`NATIVE_W`/`NATIVE_H` moved with it and `screen.py` imports them:
+`_inject`'s bounds check and the sidebar's scaling are statements
+about the same 640x480 slice, and two copies of a screen size is how
+one of them ends up describing a window.
+
+Behaviour-neutral, and checked by looking: the sidebar renders the
+same six values in the same places before and after.
 
 **Eleven rows in two columns, and the split follows the original's
 own two halves.** LEFT is the scan paragraph: the seven values

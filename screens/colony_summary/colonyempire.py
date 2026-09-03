@@ -1,0 +1,184 @@
+"""The empire sidebar — six s_player scalars, the original's own.
+
+TRANSCRIBED from `COLSUM::Draw_Empire_Info_` (colsum.cpp:418): six
+lines printed at native (520, 354), each one an `s_player` field, in
+the original's order, with its explicit plus and its red-if-negative.
+All six offsets were read against the original's own box on
+3 September 2026 and all six agreed — see `core/structs/player.py`.
+
+**Every file:line in this module and in `layout.json`'s `empire`
+block was read in orion2re 1.60.** A 1.31 archive numbers them
+differently, and three were carried in from one before being
+corrected.
+
+**Split out of `screen.py` on 3 September 2026**, which had reached
+647 lines against a ~300 guideline (decision 6). This was the last
+cohesive block left in that file after the selection went to
+`colonyselect` and the scan box to `colonyoutput`: one box, one
+config block, six values, and one DEVIATION that is live in every
+frame.
+
+**The two smoke checks that hold decision 44's clamp moved with it,
+and that is the whole reason this was its own commit.** They call
+`native_column_width` and `value_column` directly and they grep a
+source file for the DEVIATION marking. Left pointing at `screen.py`
+they would have gone on passing against a file that no longer
+contains the thing they assert — a check whose subject has moved out
+from under it is worse than no check, because it still reports green.
+
+Module functions rather than methods: nothing here needs a screen,
+only a rect, a config block and a parsed `s_player`. That is also
+what lets the clamp be measured without standing a screen up.
+"""
+import pygame
+
+from core import palette
+from core.config import REF_W
+
+LABEL_COLOR = palette.col("colony_summary", "label", (140, 155, 190))
+VALUE_COLOR = palette.col("colony_summary", "value", (220, 228, 245))
+WARN_COLOR = palette.col("colony_summary", "warn", (235, 90, 80))
+PANEL_BG = palette.col("colony_summary", "panel_background", (8, 11, 20))
+
+#: The native screen the original draws under this one. ONE home for
+#: it — `screen.py` imports these rather than keeping its own pair,
+#: because `_inject`'s bounds check and this module's scaling are
+#: statements about the same 640x480 slice, and two copies of a
+#: screen size is how one of them ends up describing a window.
+NATIVE_W, NATIVE_H = 640, 480
+
+
+def format_value(value, signed=False):
+    """'+12' / '-3' with signed, else plain — the original's %+d / %d."""
+    if signed and value >= 0:
+        return f"+{value}"
+    return str(value)
+
+
+def empire_value(row, local):
+    """(text, warn). '--' while disconnected, never a fake zero."""
+    if local is None:
+        return "--", False
+    value = getattr(local, row["field"], None)
+    if value is None:
+        return "--", False
+    warn = bool(row.get("warn_negative")) and value < 0
+    return format_value(value, row.get("signed", False)), warn
+
+
+def native_column_width(cfg, layout):
+    """The original's 104 px paragraph, in this screen's pixels.
+
+    Separate from `value_column` so the smoke check can ask for the
+    unclamped number without re-deriving it, and so deleting it
+    breaks a test rather than silently ending the marking.
+    """
+    return int(cfg.get("native_width", 104)
+               * (REF_W / NATIVE_W) * layout.scale)
+
+
+def value_column(rect, cfg, layout):
+    """(left, right) of the row — right is where a value ends.
+
+    The alignment is TRANSCRIBED: the value ends at the column's
+    right edge, because the original right-justifies it
+    (`para.x2 = x + width - 1`, fmtpara.cpp:657, over
+    `Print_Formatted_Paragraph_(520, 354, 104, buffer, 3)` at
+    colsum.cpp:418). See `render` for the justification codes that
+    establish it.
+
+    **The WIDTH is a DEVIATION, and it is live at every
+    resolution.** The original's paragraph is 104 native px of
+    640, which is 312 reference px once scaled by
+    `REF_W / NATIVE_W`. The `sidebar` cutout gives 286. The
+    column is `min` of the two, so the shipped column is always
+    the cutout's 286 — the clamp fires everywhere and the
+    original's proportion is never the one drawn. Marked in
+    `doc/v3_fundament.md` and in a smoke check.
+
+    It is not a rounding difference: 286 against 312 is 8.3 % of
+    the column, and every value on the screen sits 26 reference
+    px left of where the original's proportion would put it.
+
+    **Both numbers are kept, and the clamp is written to stop
+    firing on its own.** The cutout comes from the frame artwork
+    via `frame_holes.py` and can move; 104 is the transcription
+    and cannot. If a future frame gives this hole 312 reference
+    px or more, `min` selects the native width and the deviation
+    ends without anybody remembering to come back — which is the
+    only reason a clamp is the right shape here rather than a
+    note saying "286 for now". The frame art is NOT being changed
+    to suit this: that would be deriving geometry from a
+    deviation, and the artwork is a separate decision.
+
+    What must not happen is the native number quietly
+    disappearing once somebody notices it never wins. The smoke
+    check asserts `native_width` is still read and still larger
+    than what gets drawn, so deleting it as dead weight fails.
+    """
+    native_w = native_column_width(cfg, layout)
+    return rect.x, rect.x + min(rect.w, native_w)
+
+
+def render(surface, box, cfg, local, layout, style, font_scale):
+    """Six rows, label LEFT and value RIGHT — the original's.
+
+    TRANSCRIBED, and it took two passes to read correctly. Each
+    entry is built as `<attr>Label: <attr><value>` and the two
+    `<attr>` are `ESTRINGS::s_0_0055110c` and `s_1_00551110`.
+    Those are not colour codes: they are the bytes `1A 30` and
+    `1A 31`, and FMTPARA sends 0x1A to `Set_Justification_`
+    (0x1B is `Set_Current_Colors_`, fmtpara.cpp:364-368). The
+    1.60 tree spells them a third time, unambiguously and with
+    the answer in the comment — `strings.cpp:22`, `"\x1A" "0"`,
+    */ switches paragraph justification to left alignment /*,
+    and `:24` the same for right.
+
+    So: LEFT for the label, then `Set_Justification_`
+    (fmtpara.cpp:999) flushes the label segment when
+    `char_count > 0`, then RIGHT for the value —
+    `Justify_Line_` mode 1 adds the whole remaining width to the
+    first character's advance (fmtpara.cpp:1699). **One row per
+    entry, not two:** `Set_Justification_` never advances y, and
+    y moves only on \r \n \v \f (fmtpara.cpp:322-341). The CR
+    that `String_Builder2_` joins the six with is what ends each
+    row.
+
+    The right edge is the paragraph's own: `para.x2 = x + width
+    - 1` (fmtpara.cpp:657) over
+    `Print_Formatted_Paragraph_(520, 354, 104, ...)`, so 623 of
+    640 native. See `value_column` for how that reaches HD.
+
+    `box` is the `sidebar` cutout in reference coordinates and
+    `font_scale` is the screen's `box_font_scale("sidebar")`; both
+    are handed in rather than looked up, because a renderer that can
+    reach a screen can reach anything.
+    """
+    rows = cfg.get("rows", [])
+    if not box or not rows:
+        return
+    rect = pygame.Rect(*layout.rect(box))
+    surface.fill(PANEL_BG[:3], rect)
+    left, right = value_column(rect, cfg, layout)
+    label_size = layout.font_size(int(cfg.get("label_font", 18) * font_scale))
+    value_size = layout.font_size(int(cfg.get("value_font", 26) * font_scale))
+    pad = int(rect.h * cfg.get("row_pad", 0.10))
+    row_h = (rect.h - 2 * pad) / len(rows)
+    for i, row in enumerate(rows):
+        top = rect.y + pad + int(i * row_h)
+        label = style.render_text(row["label"].upper(), label_size,
+                                  LABEL_COLOR[:3])
+        value, warn = empire_value(row, local)
+        # render_text, not font.render: the sign characters are on
+        # Bank Gothic DEMO's watermark list and get substituted.
+        # Red-if-negative IS the original's and is kept — see
+        # `empire._red_note`. It was queried as possibly resting
+        # on a mis-transcribed byte; it does not.
+        vt = style.render_text(
+            value, value_size, (WARN_COLOR if warn else VALUE_COLOR)[:3])
+        block_h = max(label.get_height(), vt.get_height())
+        y = top + (int(row_h) - block_h) // 2
+        # Both on ONE row: label flush left, value flush right.
+        surface.blit(label, (left, y + (block_h - label.get_height())))
+        surface.blit(vt, (right - vt.get_width(),
+                          y + (block_h - vt.get_height())))

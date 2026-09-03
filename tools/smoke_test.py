@@ -3184,6 +3184,7 @@ def main():
     assert _sb_ref, "boxes.json has no sidebar box"
 
     from screens.colony_summary import screen as _cs
+    from screens.colony_summary import colonyempire as _emp_mod0
 
     # The screen loads its boxes and layout.json on activation, and
     # the dispatcher has been through other screens since the earlier
@@ -3205,7 +3206,7 @@ def main():
         # in layout.json — NOT by calling _value_column.
         _native = _emp.get("native_width", 104)
         _col_w = min(_rect.w,
-                     int(_native * (1920 / _cs.NATIVE_W) * _lay.scale))
+                     int(_native * (1920 / _emp_mod0.NATIVE_W) * _lay.scale))
         _col_l, _col_r = _rect.x, _rect.x + _col_w
 
         _sf = pygame.Surface((_W, _H))
@@ -3221,9 +3222,9 @@ def main():
             app.layout, _scr._local = _saved_layout, _saved_local
 
         _arr = pygame.surfarray.array3d(_sf.subsurface(_rect))
-        _lab_rgb = tuple(_cs.LABEL_COLOR[:3])
-        _val_rgb = tuple(_cs.VALUE_COLOR[:3])
-        _warn_rgb = tuple(_cs.WARN_COLOR[:3])
+        _lab_rgb = tuple(_emp_mod0.LABEL_COLOR[:3])
+        _val_rgb = tuple(_emp_mod0.VALUE_COLOR[:3])
+        _warn_rgb = tuple(_emp_mod0.WARN_COLOR[:3])
 
         def _cols(_rgb):
             _m = (_arr == _rgb).all(axis=2).any(axis=1).nonzero()[0]
@@ -3262,7 +3263,7 @@ def main():
             _s2 = app.style.render_text(_text, _px, _rgb)
             _pad = pygame.Surface((_s2.get_width() + 4,
                                    _s2.get_height() + 4))
-            _pad.fill(_cs.PANEL_BG[:3])
+            _pad.fill(_emp_mod0.PANEL_BG[:3])
             _pad.blit(_s2, (2, 2))
             _a2 = pygame.surfarray.array3d(_pad)
             _m2 = (_a2 == _rgb).all(axis=2).any(axis=1).nonzero()[0]
@@ -3277,7 +3278,7 @@ def main():
             if _b:
                 _want_left.append(_col_l + _b[0])
             _v = getattr(_FakePlayer, _r["field"])
-            _txt = _cs.format_value(_v, _r.get("signed", False))
+            _txt = _emp_mod0.format_value(_v, _r.get("signed", False))
             _rgb2 = _warn_rgb if (_r.get("warn_negative")
                                   and _v < 0) else _val_rgb
             _b = _bearings(_txt, _val_px, _rgb2)
@@ -3325,21 +3326,44 @@ def main():
     assert "**44." in _fund_dev and "native_width" in _fund_dev, (
         "the fundament no longer carries the clamped sidebar column "
         "as a decision")
+    # The marking lives with the CODE, so this greps the module the
+    # clamp is in and not the screen it used to be in. The sidebar
+    # moved to colonyempire.py on 3 September 2026; a check left
+    # pointed at screen.py would have gone on passing against a file
+    # that no longer contains the thing it asserts, which is worse
+    # than no check because it still reports green.
+    from screens.colony_summary import colonyempire as _emp_mod
     _scr_dev = open(os.path.join(SCREENS_DIR, "colony_summary",
+                                 "colonyempire.py"),
+                    encoding="utf-8").read()
+    # On the FUNCTION THAT CLAMPS, not merely somewhere in the file:
+    # the module docstring also says "DEVIATION", so a file-wide
+    # search passes even after the marking is taken off the code it
+    # is about. Tying it to `value_column.__doc__` is what makes the
+    # marking travel with the thing it marks.
+    assert "DEVIATION" in (_emp_mod.value_column.__doc__ or ""), (
+        "value_column no longer says the clamped width is a "
+        "DEVIATION — that clamp fires at every resolution, and the "
+        "only evidence it is a deviation rather than a choice is the "
+        "sentence in its own docstring (decision 44)")
+    assert "native_column_width" in _scr_dev, (
+        "colonyempire.py no longer carries native_column_width")
+    # ONE home for the clamp, asserted as a rule: screen.py must not
+    # grow a second copy of it. The sidebar came back into a screen
+    # once before, as a duplicated s_player spec in unverified.py, and
+    # the check that refused a second Spec is why it stayed gone.
+    _scr_now = open(os.path.join(SCREENS_DIR, "colony_summary",
                                  "screen.py"), encoding="utf-8").read()
-    assert "DEVIATION" in _scr_dev and "_native_column_width" in _scr_dev, (
-        "screen.py no longer marks the clamped column as a DEVIATION")
+    assert "native_width" not in _scr_now, (
+        "screen.py mentions native_width again — the clamp and its "
+        "marking live in colonyempire.py, and a second copy is what "
+        "the marking cannot survive")
 
     for _W, _H in _SIZES:
         _lay = Layout(_W, _H)
         _rect = pygame.Rect(*_lay.rect(_sb_ref[0]))
-        _saved = app.layout
-        app.layout = _lay
-        try:
-            _native = _scr._native_column_width()
-            _drawn = _scr._value_column(_rect)[1] - _rect.x
-        finally:
-            app.layout = _saved
+        _native = _emp_mod.native_column_width(_emp, _lay)
+        _drawn = _emp_mod.value_column(_rect, _emp, _lay)[1] - _rect.x
         assert _drawn == min(_rect.w, _native), (
             f"{_W}x{_H}: the drawn column {_drawn} is neither the "
             f"cutout {_rect.w} nor the native {_native} — the clamp "

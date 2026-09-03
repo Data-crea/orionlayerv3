@@ -101,7 +101,8 @@ from core.config import REF_W, REF_H
 from core.screen_base import ScreenBase
 from core.structs import player as player_struct
 
-from . import colonylist, colonyoutput, colonyrows, colonyselect
+from . import (colonyempire, colonylist, colonyoutput,
+               colonyrows, colonyselect)
 
 log = logging.getLogger("colony_summary")
 
@@ -113,19 +114,11 @@ NAV_TEXT_DIM = palette.col(
     "colony_summary", "nav_text_dim", (104, 116, 142))
 NAV_TEXT = palette.col("colony_summary", "nav_text", (196, 208, 236))
 TITLE_COLOR = palette.col("colony_summary", "title", (200, 210, 238))
-LABEL_COLOR = palette.col("colony_summary", "label", (140, 155, 190))
-VALUE_COLOR = palette.col("colony_summary", "value", (220, 228, 245))
-WARN_COLOR = palette.col("colony_summary", "warn", (235, 90, 80))
 
-#: Native screen the original draws under this one (640x480).
-NATIVE_W, NATIVE_H = 640, 480
-
-
-def format_value(value, signed=False):
-    """'+12' / '-3' with signed, else plain — the original's %+d / %d."""
-    if signed and value >= 0:
-        return f"+{value}"
-    return str(value)
+#: The native screen the original draws under this one. Defined in
+#: `colonyempire`, which is the module that scales BY it; `_inject`
+#: only bounds-checks against it, and one home beats two.
+NATIVE_W, NATIVE_H = colonyempire.NATIVE_W, colonyempire.NATIVE_H
 
 
 class ColonySummaryScreen(ScreenBase):
@@ -307,127 +300,15 @@ class ColonySummaryScreen(ScreenBase):
             self.layout, self.style)
 
     def _render_sidebar(self, surface):
-        """Six rows, label LEFT and value RIGHT — the original's.
+        """The six empire readouts. Everything about them, including
+        the clamp that is decision 44's marked DEVIATION, is in
+        `colonyempire` — this hands over the box, the config block
+        and the parsed `s_player` and nothing else."""
+        colonyempire.render(
+            surface, self.box_rect("sidebar"),
+            self._data.get("empire", {}), self._local,
+            self.layout, self.style, self.box_font_scale("sidebar"))
 
-        TRANSCRIBED, and it took two passes to read correctly. Each
-        entry is built as `<attr>Label: <attr><value>` and the two
-        `<attr>` are `ESTRINGS::s_0_0055110c` and `s_1_00551110`.
-        Those are not colour codes: they are the bytes `1A 30` and
-        `1A 31`, and FMTPARA sends 0x1A to `Set_Justification_`
-        (0x1B is `Set_Current_Colors_`, fmtpara.cpp:364-368). The
-        1.60 tree spells them a third time, unambiguously and with
-        the answer in the comment — `strings.cpp:22`, `"\x1A" "0"`,
-        */ switches paragraph justification to left alignment /*,
-        and `:24` the same for right.
-
-        So: LEFT for the label, then `Set_Justification_`
-        (fmtpara.cpp:999) flushes the label segment when
-        `char_count > 0`, then RIGHT for the value —
-        `Justify_Line_` mode 1 adds the whole remaining width to the
-        first character's advance (fmtpara.cpp:1699). **One row per
-        entry, not two:** `Set_Justification_` never advances y, and
-        y moves only on \r \n \v \f (fmtpara.cpp:322-341). The CR
-        that `String_Builder2_` joins the six with is what ends each
-        row.
-
-        The right edge is the paragraph's own: `para.x2 = x + width
-        - 1` (fmtpara.cpp:657) over
-        `Print_Formatted_Paragraph_(520, 354, 104, ...)`, so 623 of
-        640 native. See `_value_column` for how that reaches HD.
-        """
-        box = self.box_rect("sidebar")
-        cfg = self._data.get("empire", {})
-        rows = cfg.get("rows", [])
-        if not box or not rows:
-            return
-        rect = pygame.Rect(*self.layout.rect(box))
-        surface.fill(PANEL_BG[:3], rect)
-        left, right = self._value_column(rect)
-        fs = self.box_font_scale("sidebar")
-        label_size = self.layout.font_size(int(cfg.get("label_font", 18) * fs))
-        value_size = self.layout.font_size(int(cfg.get("value_font", 26) * fs))
-        pad = int(rect.h * cfg.get("row_pad", 0.10))
-        row_h = (rect.h - 2 * pad) / len(rows)
-        for i, row in enumerate(rows):
-            top = rect.y + pad + int(i * row_h)
-            label = self.style.render_text(row["label"].upper(), label_size,
-                                           LABEL_COLOR[:3])
-            value, warn = self._empire_value(row)
-            # render_text, not font.render: the sign characters are on
-            # Bank Gothic DEMO's watermark list and get substituted.
-            # Red-if-negative IS the original's and is kept — see
-            # `empire._red_note`. It was queried as possibly resting
-            # on a mis-transcribed byte; it does not.
-            vt = self.style.render_text(
-                value, value_size, (WARN_COLOR if warn else VALUE_COLOR)[:3])
-            block_h = max(label.get_height(), vt.get_height())
-            y = top + (int(row_h) - block_h) // 2
-            # Both on ONE row: label flush left, value flush right.
-            surface.blit(label, (left, y + (block_h - label.get_height())))
-            surface.blit(vt, (right - vt.get_width(),
-                              y + (block_h - vt.get_height())))
-
-    def _value_column(self, rect):
-        """(left, right) of the row — right is where a value ends.
-
-        The alignment is TRANSCRIBED: the value ends at the column's
-        right edge, because the original right-justifies it
-        (`para.x2 = x + width - 1`, fmtpara.cpp:657, over
-        `Print_Formatted_Paragraph_(520, 354, 104, buffer, 3)` at
-        colsum.cpp:418). See `_render_sidebar` for the justification
-        codes that establish it.
-
-        **The WIDTH is a DEVIATION, and it is live at every
-        resolution.** The original's paragraph is 104 native px of
-        640, which is 312 reference px once scaled by
-        `REF_W / NATIVE_W`. The `sidebar` cutout gives 286. The
-        column is `min` of the two, so the shipped column is always
-        the cutout's 286 — the clamp fires everywhere and the
-        original's proportion is never the one drawn. Marked in
-        `doc/v3_fundament.md` and in a smoke check.
-
-        It is not a rounding difference: 286 against 312 is 8.3 % of
-        the column, and every value on the screen sits 26 reference
-        px left of where the original's proportion would put it.
-
-        **Both numbers are kept, and the clamp is written to stop
-        firing on its own.** The cutout comes from the frame artwork
-        via `frame_holes.py` and can move; 104 is the transcription
-        and cannot. If a future frame gives this hole 312 reference
-        px or more, `min` selects the native width and the deviation
-        ends without anybody remembering to come back — which is the
-        only reason a clamp is the right shape here rather than a
-        note saying "286 for now". The frame art is NOT being changed
-        to suit this: that would be deriving geometry from a
-        deviation, and the artwork is a separate decision.
-
-        What must not happen is the native number quietly
-        disappearing once somebody notices it never wins. The smoke
-        check asserts `native_width` is still read and still larger
-        than what gets drawn, so deleting it as dead weight fails.
-        """
-        native_w = self._native_column_width()
-        return rect.x, rect.x + min(rect.w, native_w)
-
-    def _native_column_width(self):
-        """The original's 104 px paragraph, in this screen's pixels.
-
-        Separate from `_value_column` so the smoke check can ask for
-        the unclamped number without re-deriving it, and so deleting
-        it breaks a test rather than silently ending the marking.
-        """
-        return int(self._data.get("empire", {}).get("native_width", 104)
-                   * (REF_W / NATIVE_W) * self.layout.scale)
-
-    def _empire_value(self, row):
-        """(text, warn). '--' while disconnected, never a fake zero."""
-        if self._local is None:
-            return "--", False
-        value = getattr(self._local, row["field"], None)
-        if value is None:
-            return "--", False
-        warn = bool(row.get("warn_negative")) and value < 0
-        return format_value(value, row.get("signed", False)), warn
 
     def _render_buttons(self, surface):
         """Sort buttons and RETURN: the frame provides the bezel, so
