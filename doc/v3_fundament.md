@@ -440,6 +440,45 @@ population bars will need anyway — a pop move is two clicks at
 computed positions, and there is no field id for "icon 7 of the
 farmers".
 
+**Amended 3 September 2026: where the original gives the button a
+HOTKEY, the key goes first and the coordinate stays as the
+fallback.** Not by field id either way, so the decision is unchanged
+in what it refuses; what changed is which of the two id-free paths is
+preferred, and why.
+
+A click is not inert. `INJECT_CLICK` arrives as an SDL button event,
+and platform.cpp:1171 hands its coordinates to
+`Set_Present_Mouse_Position_` while :1172 enqueues them as a mouse
+input event — so every injected click leaves the game's own pointer
+standing on the button we pressed. The key path (platform.cpp:1131)
+touches neither. Both sort the game correctly, and nothing on the HD
+screen can show the difference.
+
+**The coordinates are kept, and that is half the decision.** A
+`native_click` is checkable by a grep against the `Add_*_Field_` call
+with no game running; a hotkey is a letter in a JSON file that has to
+be taken on trust until somebody presses it. So the two are not a
+replacement but an order, and a smoke check refuses a sort button
+that has lost its point. RETURN has no letter at all — its field
+reports 0x25 — and takes the click path, which is what makes the
+fallback load-bearing rather than decorative.
+
+**And this one had to be verified live before it was switched on,
+because its failure mode is invisible.** A dropped key and a working
+key produce the same picture on this screen: the original re-sorts by
+a key it already holds without moving a pixel, since there is no
+direction toggle. "Nothing changed" is both outcomes. Sorting AWAY
+from the active key is the only observation that separates them, and
+that is what was run — `p` from a name-sorted list moved 15071 of
+307200 framebuffer bytes, `n` moved them back, and a frame taken
+after the key was byte-identical to one taken after the equivalent
+click. The pointer half of the claim was NOT observed and rests on
+the source alone: the cursor is composited onto the ARGB present
+surface (platform.cpp:794-822) and the Extension API sends the
+indexed one (ext_api.cpp:165), so no cursor is on the wire, and the
+game's window is hidden while the API is on (platform.cpp:1379).
+Saying which half was measured is the point of writing it down.
+
 **36. A value the API does not report is copied by hand — and gets a
 checker, not a reminder.** The engine version is on orion2re's main
 menu and nowhere on the wire: `HELLO_REPLY` carries `PROTO_VERSION`,
@@ -696,6 +735,31 @@ with a missing GAME button, and ship icons a size too large.
 The sidebar icons were criticised for a garish microscope and a
 cropped planet — both are in the original exactly like that. The real
 deviation was elsewhere and had been missed.
+
+**A defence against a fault the original does not have can BE a
+deviation.** Every sort key on the colony summary fell back to the
+planet name on a tie, marked as an addition of ours, with a written
+reason: the original's bubble sort "leaves equal elements in whatever
+order they already had, which for us would mean a list that
+reshuffles between frames". Half of that was right and the
+conclusion was wrong. The bubble sort swaps only on a strictly
+positive comparison (colsum.cpp:363) and `cmp_` returns 0 on
+equality (colsum.cpp:1056), so it is stable; the colonies arrive on
+the wire in `MOX::_colony[]` order (ext_api.cpp:94), the original's
+own list is filtered out of the same array in the same order
+(colxport.cpp:91), and Python's sort is stable too. The stability
+was already there, along the whole chain, and the fallback was
+buying nothing — while ordering ties the original leaves unordered,
+so two equal colonies sat alphabetically here and in array order
+there.
+
+No value on either screen was wrong, which is why it survived: the
+only symptom is two rows in a different sequence, and that is the
+kind of difference a side-by-side finds and a table of numbers never
+will. **Before adding a guard against somebody else's code, follow
+the value through every file it passes** — here four, of which the
+one that sorts is only the third. A guard justified by an assumption
+about code you have not read is a deviation with a comment on it.
 
 **Sometimes the honest answer is "the original could not do it
 either".** Star size steps 3 and 4 differ by 9 %. Chasing legibility

@@ -983,23 +983,54 @@ def main():
                     "surplus_food", "research_produced"], rows
     assert all(f in _fields for f in rows), rows
 
-    # Clicking a sort button records the key and would inject.
+    # Clicking a sort button records the key and sends the ORIGINAL'S
+    # OWN HOTKEY, not a click. Both paths live in `_inject` and the
+    # difference between them is invisible on screen — a click sorts
+    # the game correctly too, and additionally drags its pointer onto
+    # the button (platform.cpp:1171-1172). So the path is asserted
+    # here rather than left to a live session to notice.
     class _Cap:
-        def __init__(self): self.calls = []
+        def __init__(self): self.calls = []; self.keys = []
         def inject_click(self, x, y): self.calls.append((x, y))
         def activate_field(self, f): pass
-        def inject_key(self, k): pass
+        def inject_key(self, k): self.keys.append(k)
     cap = _Cap()
     app.client, was = cap, app.connected
     app.connected = True
     bx, by, bw, bh = cs.layout.rect(cs.box_rect("sort_food"))
     cs.handle_click(bx + bw // 2, by + bh // 2)
     assert cs._sort_key == "food"
-    assert cap.calls == [tuple(btns["food"]["native_click"])], cap.calls
+    assert cap.keys == [ord(HOTKEY["food"])], (cap.keys, HOTKEY["food"])
+    assert cap.calls == [], (
+        f"a sort button injected a click at {cap.calls} as well as (or "
+        f"instead of) its hotkey — the click path is the FALLBACK now, "
+        f"and taking both moves the game's pointer for nothing")
+    # RETURN has no letter to press: its field carries 0x25. It keeps
+    # the native_click, and this asserts the fallback still works —
+    # a hotkey path that swallowed every button would look identical
+    # on the sort bar and break the only way off the screen.
+    cap.calls.clear(); cap.keys.clear()
+    rbx, rby, rbw, rbh = cs.layout.rect(cs.box_rect("return"))
+    cs.handle_click(rbx + rbw // 2, rby + rbh // 2)
+    assert cap.calls == [tuple(cs._data["return"]["native_click"])], \
+        cap.calls
+    assert cap.keys == [], cap.keys
+    assert "hotkey" not in cs._data["return"], (
+        "RETURN grew a hotkey — field 14 reports 0x25, which is not a "
+        "key a player presses; if this is deliberate, verify it live "
+        "the way the sort keys were before trusting it")
+    # The click path is the fallback, so its points must SURVIVE.
+    # Deleting them once the hotkey works is the failure this guards:
+    # they are the half that can be checked by a grep against
+    # colsum.cpp:265-273 with no game running.
+    for key, b in btns.items():
+        assert "native_click" in b, (
+            f"sort button {key!r} lost its native_click — the hotkey "
+            f"path does not replace it, it precedes it")
     app.client, app.connected = FakeClient(), was
     cs.render(pygame.display.get_surface())
-    ok("colony_summary (frame cutouts == boxes.json, native clicks, "
-       "empire rows)")
+    ok("colony_summary (frame cutouts == boxes.json, sort hotkeys with "
+       "native clicks kept as the fallback, empire rows)")
 
     # ── Zoom tables (transcribed from orion2re) ──
     from core import zoomtables as zt
@@ -2534,17 +2565,57 @@ def main():
     assert _order("bc", [dict(r) for r in _set]) == _once, (
         "sorting twice by the same key gave a different order — "
         "Switched_cmp_ has no direction toggle (colsum.cpp:378-401)")
-    # Ties break on the name, which is OURS: the original's bubble
-    # sort leaves equal elements where they were, and for us that
-    # would reshuffle between frames.
-    _t1 = {**_a, "name": "Zeta", "pops": 4, "production": [1, 1, 1, 1]}
-    _t2 = {**_a, "name": "Aeta", "pops": 4, "production": [1, 1, 1, 1]}
-    assert _order("population", [_t1, _t2]) == ["Aeta", "Zeta"], (
-        "equal rows do not fall back to the name, so the list can "
-        "reorder itself between redraws")
+    # ── Ties keep the INPUT order, and that is transcribed ──
+    # The name fallback that used to be here was ours, and it ordered
+    # ties the original does not order. Four links carry the array
+    # order all the way through: ext_api.cpp:94 writes the colonies
+    # in `MOX::_colony[i]` order, colxport.cpp:91 filters them into
+    # `_g_colony_list_ptr` in that same order, colsum.cpp:363 swaps
+    # only on a STRICTLY positive comparison so equal elements never
+    # move, and colsum.cpp:1056 returns 0 on equality so the sign
+    # that would move them cannot arise.
+    #
+    # Driven through `build_rows` rather than through `_sorters`
+    # directly, because "input order" is a property of the whole
+    # path: the sort key alone cannot express it, and a key that
+    # LOOKS stable in isolation would still reshuffle if build_rows
+    # ever stopped walking `colonies_raw` in order or started using a
+    # sort that is not stable.
+    _tie_pv = [dict(_pv.COLONIES[3]), dict(_pv.COLONIES[3])]
+    _tie_pv[0]["star"] = "Zeta"
+    _tie_pv[1]["star"] = "Aeta"
+    # Same pops, same production: every key below is a tie.
+    for _k in ("population", "food", "industry", "science", "bc"):
+        _fwd = [r["name"] for r in
+                _cr.build_rows(_pv._Snapshot(_tie_pv), _k)]
+        _rev = [r["name"] for r in
+                _cr.build_rows(_pv._Snapshot(_tie_pv[::-1]), _k)]
+        assert _fwd == ["Zeta I", "Aeta I"], (_k, _fwd)
+        assert _rev == ["Aeta I", "Zeta I"], (_k, _rev)
+        assert _fwd == _rev[::-1], (_k, _fwd, _rev)
+    # The negative form, so the check cannot pass by accident on a
+    # key that happens to be alphabetical anyway: a name tie-break
+    # would put "Aeta I" first BOTH times.
+    assert _fwd[0] != _rev[0], (
+        "ties come out in the same order whichever way the snapshot "
+        "is packed, so something is ordering them — the original "
+        "orders them by nothing (colsum.cpp:363, colsum.cpp:1056)")
+    # And a redraw is still stable: same snapshot, same list. That is
+    # what the name fallback was bought for, and it was already true.
+    _snap = _pv._Snapshot(_tie_pv)
+    assert ([r["name"] for r in _cr.build_rows(_snap, "population")]
+            == [r["name"] for r in _cr.build_rows(_snap, "population")]), (
+        "two build_rows calls over one snapshot disagree — the list "
+        "reshuffles between redraws")
+    # The tuple form is what a tie-break looks like; the absence has
+    # to be visible in the key itself, not only in the order.
+    assert not isinstance(_cr.SORT_KEYS["population"]({
+        **_a, "name": "x", "pops": 1}), tuple), (
+        "a descending sort key returns a tuple again, which is a "
+        "tie-break by another name")
     ok("colony summary sort keys (seven, five descending, "
-       "case-insensitive name, no toggle, producing declared "
-       "unavailable)")
+       "case-insensitive name, no toggle, ties in input order, "
+       "producing declared unavailable)")
 
     # ── The sidebar's six s_player scalars ──
     # ONE home for these offsets: the verified spec in
@@ -2869,6 +2940,62 @@ def main():
         "colonylist.py no longer names where the original's seven "
         "values come from, so 'a SUBSET' is a claim without a source")
 
+    # ── Two states the original's row carries and ours does not ──
+    # Neither is a task and neither is on the open-fixes list; they
+    # are marked because an omission nobody wrote down cannot be told
+    # apart from one nobody noticed, and both were found by reading
+    # Draw_Colony_Summary_For_Colony_ for something else.
+    #
+    # The check has the same shape as the marking check the fundament
+    # asks for: refuse a marking that does not say what the ORIGINAL
+    # does, so the note records a reason rather than carrying a label.
+    _cr_src = open(os.path.join(SCREENS_DIR, "colony_summary",
+                                "colonyrows.py"), encoding="utf-8").read()
+    assert "NOT DRAWN" in _cr_src, (
+        "colonyrows.py no longer carries a NOT DRAWN section — the "
+        "star blockade and the colony event are two states of the "
+        "original's row string that the HD row does not draw")
+    for _cite in ("colsum.cpp:557-569", "colsum.cpp:562", "blockaded"):
+        assert _cite in _cr_src, (
+            f"the blockade marking no longer cites {_cite!r}, so it "
+            f"names a state without naming where the original draws it")
+    for _cite in ("colsum.cpp:553", "events.cpp:635",
+                  "Colony_Has_Event_"):
+        assert _cite in _cr_src, (
+            f"the colony-event marking no longer cites {_cite!r}")
+    # The two are NOT the same kind of absence and the note must keep
+    # them apart: blockaded is a verified field on the wire, events
+    # are not on the wire at all. Collapsing them into one line is
+    # how the reachable one would stop looking buildable.
+    assert "ext_api.cpp:53-136" in _cr_src, (
+        "the colony-event marking no longer names where the snapshot "
+        "is written, which is the only evidence that _event_data is "
+        "absent from it rather than merely unread")
+    from core.structs import star as _star_spec
+    assert any(_f[0] == "blockaded" for _f in _star_spec.SPEC.fields), (
+        "s_star_data.blockaded is gone from the verified spec, so the "
+        "blockade marking claims a field that no longer exists")
+    assert _star_spec.SPEC.verified, "star spec is no longer verified"
+    # And events really are absent from the snapshot: assert it
+    # against GameState rather than against the note, so the day Joe
+    # serializes them this fails and the marking gets revisited.
+    from core.game_state import GameState as _GS
+    # `ng_random_events` is the New Game screen's own toggle
+    # (ext_api.cpp:135) and is deliberately not what this looks for:
+    # what the marking claims absent is the EVENTS::_event_data[]
+    # array, which would arrive as a record array like every other
+    # one — a `*_raw` member, or a parsed list beside `stars`.
+    _gs_attrs = [_a2 for _a2 in dir(_GS()) if not _a2.startswith("_")]
+    _ev = [_a2 for _a2 in _gs_attrs
+           if "event" in _a2.lower() and not _a2.startswith("ng_")]
+    assert not _ev, (
+        f"GameState grew an events member {_ev} — the colony-event "
+        f"marking says the snapshot carries none, and that is now "
+        f"wrong. Re-read colsum.cpp:553 and decide whether the row "
+        f"can draw it before deleting the marking.")
+    ok("colony summary NOT DRAWN markings (star blockade reachable, "
+       "colony event not on the wire, both sourced)")
+
     # ── output_panel: decision 43 is WITHDRAWN ──
     # It marked output_panel an HD EXTENSION on the strength of a
     # word grep of one file. The original draws all four ECON values
@@ -2891,7 +3018,7 @@ def main():
         "screen.py no longer records output_panel as a transcription")
     ok("colony summary sidebar (six s_player scalars kinded and held "
        "to the verified spec, sign rule per row, ESTR/join/justify "
-       "provenance, output_panel marked HD EXTENSION)")
+       "provenance, output_panel marked TRANSCRIPTION)")
 
     ok("colony list (rows, No Farming below a full track and clear of "
        "the hatching, horizontal budget balances to the pixel, name "

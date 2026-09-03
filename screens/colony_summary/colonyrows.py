@@ -9,7 +9,16 @@ cannot reach back into a struct. The split also put both files back
 under the ~300-line guideline (decision 6) without inventing a seam.
 
 TRANSCRIBED, and each with its source:
-  the row set        colonies whose `owner` is the local player
+  the row set        colonies whose `owner` is the local player.
+                     HALF of the original's condition, and the half
+                     that is missing is named in `build_rows`:
+                     `Build_Global_Colony_List_` (colxport.cpp:91)
+                     takes TWO conditions — the colony's `owner`
+                     has to be the local player and its
+                     `outpost_flag` has to be zero — and only the
+                     first is applied here. An outpost of the local player
+                     would appear as a row the original's list does
+                     not have.
   the job split      one colonist per `pop[]` word, counted by
                      profession — ECON_FOOD=0, ECON_INDUSTRY=1,
                      ECON_RESEARCH=2 (orion2_consts.h:119). The
@@ -45,6 +54,46 @@ TRANSCRIBED, and each with its source:
                      three sources on the constant, which also says
                      why the square is measured from it and not from
                      anything on screen.
+
+NOT DRAWN — two states the original's row string carries and the HD
+row does not. Neither is a task in disguise and neither is on
+`doc/orion2re_open_fixes.md`; they are written down because they were
+found while reading `Draw_Colony_Summary_For_Colony_` for something
+else, and an omission nobody has recorded is indistinguishable from
+an omission nobody noticed.
+
+  the star's BLOCKADE   colsum.cpp:557-569. The branch tests
+                        `star->blockaded` as a BITMASK over players,
+                        shifted by the local player and masked to one
+                        bit (colsum.cpp:562) — the same shape as
+                        `s_star_data.visited`, and read the same way
+                        by `star.visited_by`. A blockaded system
+                        colours the row through an inline attribute
+                        and appends a marker string (ESTR 0x46 and
+                        0x86); an unblockaded one substitutes the
+                        empty string twice, which is why the name
+                        column is 89 px wide and not 87.
+                        REACHABLE: `blockaded` is offset 162 in the
+                        verified `core/structs/star.py` spec and the
+                        stars are in the snapshot. Not drawn because
+                        nothing has been built for it, not because
+                        the data is missing.
+  a COLONY EVENT        colsum.cpp:553, `EVENTS::Colony_Has_Event_`
+                        (events.cpp:635). A colony with an event
+                        takes the OTHER branch entirely: a different
+                        paragraph type, an inline colour attribute
+                        chosen by `Event_Good_` (colsum.cpp:534), and
+                        the event's own label appended to the name.
+                        NOT REACHABLE: the function reads
+                        `EVENTS::_event_data[]`, and the snapshot
+                        carries settings, players, stars, ships,
+                        colonies, planets, nebulas, leaders, antarans
+                        and ship icons and no events at all
+                        (ext_api.cpp:53-136). So this one cannot be
+                        drawn from what is on the wire today, which
+                        is a different kind of absence from the
+                        blockade's and is why the two are listed
+                        apart rather than as one line.
 
 NOT READ, deliberately: race groups as shades, and androids and
 natives as locked. The mask is no longer the obstacle — the pop
@@ -211,7 +260,34 @@ def build_rows(game_state, sort_key="name"):
     rows = []
     for raw in game_state.colonies_raw:
         col = colony_struct.parse(raw)
-        if col.owner != me or not 0 <= col.planet < len(planets):
+        # TRANSCRIBED, and INCOMPLETE. The original's list is built by
+        # `Build_Global_Colony_List_` (colxport.cpp:91) on two
+        # conditions — the colony's `owner` has to be the local
+        # player and its `outpost_flag` has to be zero — and
+        # `N_Colonies_` (colxport.cpp:67) counts with the same pair.
+        # Only the owner half is here.
+        #
+        # The outpost half is written down rather than applied,
+        # because `outpost_flag` at offset 6 has one source and the
+        # project needs two (decision 23). The header route fixes
+        # where the byte is and how wide it is; what it cannot fix is
+        # that the byte MEANS outpost, and a filter is a claim about
+        # the meaning. The obvious second source is a count against
+        # the reference save, and that save cannot supply it: all 21
+        # of its colonies carry 0, so the filter would be invisible in
+        # it either way — see `core/structs/colony.py` and
+        # `tools/struct_probe.py colonies --outposts`, which is the
+        # probe and prints exactly that.
+        if col.owner != me:
+            continue
+        # OURS, not a transcription: the original indexes
+        # `MOX::_planet[]` unguarded because the array is always
+        # there. We read a snapshot, where a short or absent planet
+        # list is a state that reaches this loop — an early frame, a
+        # reconnect, a spec that has moved. Dropping the row is the
+        # quiet answer and it is the right one here, because the
+        # alternative is a traceback inside a render path.
+        if not 0 <= col.planet < len(planets):
             continue
         planet = planet_struct.parse(planets[col.planet])
         jobs = [0, 0, 0]
@@ -239,9 +315,13 @@ def build_rows(game_state, sort_key="name"):
             "producing_turns": 0,
             "can_buy": False,
             # production[4] in ECON order, orion2_consts.h:119-123.
-            # Read for the four sort keys that need it; nothing
-            # DRAWS these — the original does not either, which is
-            # decision 43 and why output_panel is an HD EXTENSION.
+            # Read for the four sort keys that need it. Nothing in
+            # the ROW draws these; the original does not put them in
+            # its row either. It does draw all four per colony, in
+            # the bottom-left box `output_panel` occupies
+            # (coldraw.cpp:60) — decision 43 claimed otherwise and is
+            # WITHDRAWN, so output_panel is a TRANSCRIPTION and this
+            # comment used to say the opposite.
             "production": list(col.production),
             "max_pop": max_population(col, planet, traits),
         })
@@ -269,11 +349,48 @@ def build_rows(game_state, sort_key="name"):
 #   5 producing   cmp_Prod_     :1091   ascending — NOT IMPLEMENTED
 #   6 bc          cmp_BC_       :1086   DESCENDING
 #
-# The tie-breaks are OURS and are an addition, not a transcription:
-# the original's bubble sort (colsum.cpp:363) leaves equal elements
-# in whatever order they already had, which for us would mean a list
-# that reshuffles between frames. Every key below falls back to the
-# name so a redraw is stable.
+# ── Ties keep the input order, and that IS the transcription ──────
+#
+# Every key below used to fall back to the name on a tie, marked as
+# an addition of ours against a bubble sort whose behaviour on equal
+# elements was assumed to be arbitrary. It is not arbitrary, and the
+# addition was buying a stability the chain already had. Four links,
+# each one a file the value passes through in order:
+#
+#   ext_api.cpp:94    the snapshot writes `MOX::_colony[i]` for
+#                     ascending i, so `colonies_raw` arrives in the
+#                     engine's own array order.
+#   colxport.cpp:91   `Build_Global_Colony_List_` fills
+#                     `_g_colony_list_ptr` walking the same array
+#                     ascending, keeping only the player's colonies.
+#                     The original's list therefore starts in array
+#                     order too — the same order, filtered the same
+#                     way, which is what makes the comparison below
+#                     legitimate rather than a coincidence.
+#   colsum.cpp:363    `Sort_Col_List_` is a bubble sort that swaps
+#                     only when `Switched_cmp_` is STRICTLY greater
+#                     than zero. Equal elements are never swapped, so
+#                     the sort is stable and a tie comes out in array
+#                     order.
+#   colsum.cpp:1056   `cmp_` returns -1, 0 or 1 and returns 0 on
+#                     equality — the sign that would break that
+#                     stability cannot be produced. This is the link
+#                     that makes the one above a fact instead of a
+#                     property of one implementation: a comparator
+#                     that leaked a nonzero value for equal inputs
+#                     would reorder ties no matter how the sort
+#                     swaps.
+#
+# `build_rows` walks `colonies_raw` in order and `list.sort` is
+# stable, so dropping the name fallback does not make the list
+# unstable — it makes it agree with the original. A redraw reads the
+# same snapshot in the same order and produces the same list.
+#
+# The name fallback was not merely redundant. It ordered ties the
+# original does not order, so two colonies of equal population sat in
+# alphabetical order here and in array order there, and no value on
+# either screen was wrong — which is the kind of difference only a
+# side-by-side finds.
 
 def _alpha(row):
     """cmp_Alpha_ — `strcasecmp` on the planet name (colsum.cpp:1053).
@@ -288,10 +405,15 @@ def _alpha(row):
 
 
 def _by(field, econ=None):
-    """Descending on one number, then by name to break ties."""
+    """Descending on one number. No tie-break — see the block above.
+
+    A single negated value, never a tuple: the second element of a
+    tuple IS a tie-break, so the absence has to be visible in the
+    return rather than stated in a comment beside it.
+    """
     if econ is None:
-        return lambda r: (-r[field], r["name"].casefold())
-    return lambda r: (-r["production"][econ], r["name"].casefold())
+        return lambda r: -r[field]
+    return lambda r: -r["production"][econ]
 
 
 #: `producing` is absent on purpose. `cmp_Prod_` (colsum.cpp:1091)

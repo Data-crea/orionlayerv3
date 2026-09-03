@@ -40,6 +40,37 @@ Calculation_` writes -1 into a `uint8_t` when the planet can farm and
 this struct and in `s_planet_data`; see `core/structs/planet.py` for
 what the game actually computes.
 
+**`outpost_flag` (offset 6) has ONE source, and the obvious second
+one is not available in this save.** It is a whole member, so the
+header route fixes the byte and its width the way it does for every
+other member here; what the header cannot fix is that the byte MEANS
+outpost, and the first thing that wants to read it is a FILTER — the
+original builds its colony list on TWO conditions — the colony's
+`owner` has to be the local player and its `outpost_flag` has to be
+zero (`Build_Global_Colony_List_`, colxport.cpp:91, and
+`N_Colonies_` counts with the same pair at colxport.cpp:67).
+Applying a filter is a claim about meaning, which is decision 23's
+line, and this side of it needs a number.
+
+The number would be the row count: colonies of the local player with
+the flag clear, against the rows the original's own screen lists.
+**The reference save cannot produce it.** Checked 3 September 2026,
+`tools/struct_probe.py colonies --outposts` against the same
+stardate 3508.5 snapshot the fields above were read from: all 21
+colonies carry 0, across all six owners. The filter therefore
+removes nothing, both counts are 7, and 7 is what the screen shows —
+which is exactly what "offset 6 is a byte that is zero everywhere"
+predicts too. Consistent, and not a second source.
+
+This is the shape the pop nibble ran into from the other side. There
+the weak version (598 colonists, nibble never above 9) agreed with
+two competing readings and the owner match separated them. Here
+there is no separating query available in this save at all, and
+saying so is the finding: `build_rows` keeps the owner condition
+alone and names the missing half in a comment rather than applying
+it. What is needed is a save in which the local player holds an
+outpost; another turn of this one will not produce one.
+
 WHAT IS NOT VERIFIED: the bit layout inside a `pop[]` word. The
 header fixes the word's offset and width and can say nothing about
 its contents, which is the distinction decision 23 carries. Of the

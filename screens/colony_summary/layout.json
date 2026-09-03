@@ -17,7 +17,7 @@
     "_title_note": "The original has no title on this screen; the cutout is the same title bar the galaxy map has, so it carries the screen name."
   },
   "sort": {
-    "_note": "The seven sort buttons of the original (colsum.cpp:267-273, Add_Multi_Button_Field_ at y=446). native_click is a point inside each native button; clicking there injects the same click the original receives, so no field id needs to be known. Hotkeys are the original's (ESTR 384/…: n p f i s r b).",
+    "_note": "The seven sort buttons of the original (colsum.cpp:267-273, Add_Multi_Button_Field_ at y=446). TWO ways in, and the hotkey is the one taken: `hotkey` is the original's own binding (ESTR 384/…: n p f i s r b), sent as INJECT_KEY, which moves nothing else. `native_click` is a point inside each native button and STAYS - as the fallback, and because it is the checkable one: the point comes from the Add_Multi_Button_Field_ call above and can be verified by a grep with no game running. A click also drags the game's own pointer onto the button (platform.cpp:1171-1172); the key does not. Second source for the hotkeys, live 3 September 2026 on orion2re 1.60: the FIELD_LIST reports fields 16-22 at y 446-469 carrying N P F I S R B - the same seven letters, UPPERCASE on the wire, and the game accepts either case.",
     "buttons": [
       {
         "key": "name",
@@ -87,7 +87,7 @@
   },
   "return": {
     "label": "Return",
-    "_note": "colsum.cpp:265 Add_Button_Field_(531, 445, …). Same injection path as the sort buttons.",
+    "_note": "colsum.cpp:265 Add_Button_Field_(531, 445, …). The CLICK path, not the sort bar's hotkey path: RETURN has no letter to press. Its field (id 14, read live 3 September 2026) reports a hotkey byte of 0x25, which is not a key a player is asked for, so this button keeps its native_click and _inject falls through to it.",
     "native_click": [
       540,
       452

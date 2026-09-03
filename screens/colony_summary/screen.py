@@ -18,10 +18,30 @@ boxes in boxes.json ARE the cutouts, derived by tools/frame_holes.py:
   sort_*          the seven sort buttons
 The title cutout is not a box; it lives in layout.json ("frame").
 
-Input goes to the original by coordinates, not by field id: each sort
-button and RETURN has a `native_click` in layout.json, a point inside
-the original's button (colsum.cpp:265-273), and the screen injects a
-click there. Nothing here needs the field list.
+Input goes to the original without ever touching the field list. Two
+paths, and which one is taken is a property of the button:
+
+  a HOTKEY, where the original gives the button one. The seven sort
+  buttons do (`n p f i s r b` in layout.json), so a sort sends
+  `INJECT_KEY` and nothing else. Preferred because it moves nothing:
+  `INJECT_CLICK` arrives as an SDL button event, and platform.cpp:1171
+  feeds its coordinates to `Set_Present_Mouse_Position_` and
+  platform.cpp:1172 enqueues them as a mouse input event, so the
+  game's pointer is left standing on whichever button we clicked. The
+  key path (platform.cpp:1131) touches neither.
+
+  a NATIVE CLICK otherwise, and as the fallback for a button whose
+  hotkey is missing or malformed. `native_click` is a point inside
+  the original's own button, taken from its `Add_*_Field_` call with
+  a line number (colsum.cpp:265-273) — checkable by a grep, needing
+  no live session, and surviving a field list that shifts. RETURN
+  takes this path: its field carries a hotkey byte of 0x25, which is
+  not a letter anybody can be asked to press.
+
+Both are decision 39's trade: `INJECT_CLICK` carries window
+coordinates (open fix 3), so the click path holds at a 640x480
+window. The key path has no such constraint, which is a second
+reason to prefer it.
 
 Data: the sidebar is transcribed from COLSUM::Draw_Empire_Info_
 (colsum.cpp:418), six lines, each one s_player field. Every file:line
@@ -420,11 +440,10 @@ class ColonySummaryScreen(ScreenBase):
                 if why:
                     log.info("Sort %r not applied to the HD rows: %s",
                              spec["key"], why)
-                self._inject(spec.get("native_click"), f"sort {spec['key']}")
+                self._inject(spec, f"sort {spec['key']}")
                 return None
         if self._hit("return", screen_x, screen_y):
-            self._inject(self._data.get("return", {}).get("native_click"),
-                         "return")
+            self._inject(self._data.get("return", {}), "return")
             return None
         return super().handle_click(screen_x, screen_y)
 
@@ -432,8 +451,54 @@ class ColonySummaryScreen(ScreenBase):
         box = self.box_rect(name)
         return bool(box) and pygame.Rect(*self.layout.rect(box)).collidepoint(x, y)
 
-    def _inject(self, point, what):
-        """Click the original at a point inside one of its buttons."""
+    def _inject(self, spec, what):
+        """Send `spec` to the original: its hotkey if it has one, else
+        a click at its `native_click`.
+
+        The two paths are not interchangeable and the difference is
+        invisible from here, which is why the choice is made once, in
+        one place, rather than per call site.
+
+        VERIFIED LIVE, 3 September 2026, against orion2re 1.60 on the
+        reference save with the Colonies screen up. The check had to
+        be done before switching, because a key that is silently
+        dropped and a key that works produce the same picture: the
+        original re-sorts by a key it already holds without changing
+        a pixel (there is no direction toggle), so "nothing moved" is
+        the success case AND the failure case. Sorting AWAY from the
+        active key is what separates them. `INJECT_KEY` with `p` from
+        a name-sorted list moved 15071 of the 640x480 framebuffer's
+        pixels; `n` moved them back; `B` and `S` moved it again. The
+        game folds case — both `n` (110) and `N` (78) arrive, which
+        matters because the field list reports the binding as the
+        UPPERCASE byte while layout.json stores the lowercase letter,
+        and a future reader "fixing" that mismatch would be fixing
+        nothing. A frame taken after the key and a frame taken after
+        the equivalent `native_click` came out byte-identical.
+
+        What that live check could NOT show is the pointer, and the
+        limit is worth stating rather than leaving as a gap: the
+        cursor is composited onto the ARGB present surface
+        (platform.cpp:794-822), while the Extension API sends the
+        indexed `g_present_surface` (ext_api.cpp:165), so no cursor
+        of any kind is on the wire. The claim that a click moves the
+        pointer and a key does not rests on platform.cpp:1171-1172
+        against platform.cpp:1131-1134, and on nothing else.
+        """
+        hotkey = (spec or {}).get("hotkey")
+        if isinstance(hotkey, str) and len(hotkey) == 1 and hotkey.isascii():
+            log.info("Action: %s -> hotkey %r", what, hotkey)
+            if self.app.connected:
+                self.app.client.inject_key(ord(hotkey))
+            return
+        if hotkey is not None:
+            # Not a fall-through worth staying quiet about: a hotkey
+            # that is present but unusable means layout.json changed
+            # in a way nobody meant, and the click below would hide it
+            # by working.
+            log.warning("Unusable hotkey %r for %s, falling back to the "
+                        "native click", hotkey, what)
+        point = (spec or {}).get("native_click")
         if not point:
             log.warning("No native click point for %s", what)
             return

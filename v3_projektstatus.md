@@ -328,16 +328,29 @@ reason the repository exists.
 
 ---
 
-**Over 300 lines, knowingly:** `galaxy_map/screen.py` (805),
-`galaxy_map/renderer.py` (746), `custom_race/screen.py` (558),
-`galaxy_map/ships.py` (529), `zoomtables.py` (460), `style.py` (448),
-`screen_base.py` (390), `editor/editor.py` (390),
-`new_game/screen.py` (382), `helppopup.py` (346),
-`empire_identity/screen.py` (342), `main.py` (328),
-`select_race/screen.py` (322), `galaxy_map/sidebar.py` (301),
-`tools/colony_list_preview.py` (249), `tools/struct_probe.py` (459),
-`colony_summary/colonylist.py` (414). `smoke_test.py` is exempt by
-nature.
+**Over 300 lines, knowingly** — recounted 3 September 2026, because
+several entries had drifted and a list of counts that is wrong is
+worse than no list: `galaxy_map/screen.py` (805),
+`tools/struct_probe.py` (758), `galaxy_map/renderer.py` (747),
+`custom_race/screen.py` (558), `galaxy_map/ships.py` (529),
+`zoomtables.py` (515), `colony_summary/screen.py` (511),
+`colony_summary/colonylist.py` (492), `tools/ext_diag.py` (473),
+`style.py` (453), `tools/colony_list_preview.py` (443),
+`colony_summary/colonyrows.py` (443), `screen_base.py` (390),
+`editor/editor.py` (390), `empire_identity/renderer.py` (383),
+`new_game/screen.py` (382), `empire_identity/screen.py` (372),
+`helppopup.py` (349), `main.py` (328), `select_race/screen.py` (322),
+`core/game_client.py` (321), `core/injection.py` (307),
+`galaxy_map/sidebar.py` (301). `smoke_test.py` is exempt by nature.
+
+`colony_summary/colonyrows.py` crossed the line this session and is
+listed rather than split: it went 234 -> 443 without gaining a
+function. The growth is the tie-break block, the NOT DRAWN section
+and the two comments around the row filter — all of it the sources
+for numbers that are already there. Splitting on that would put a
+value in one file and the evidence for it in another, which is the
+thing the guideline exists to prevent, not an instance of it. If the
+file grows CODE, that is a different conversation.
 
 `screen_base.py` reached 572 lines while the help code sat in it and
 was split rather than listed higher: `core/screenhelp.py` is a mixin,
@@ -638,10 +651,11 @@ Food, Research, each one verified `s_player` field, with the
 original's explicit plus and red-if-negative. They go through
 `Style.render_text` — the reason was that `+` and `-` were on the
 DEMO Bank Gothic's watermark list, and the habit is worth keeping now
-that Aldrich renders them fine, because a mod's font may not. The seven sort buttons and RETURN inject a click at a
-point inside the original's own button (`colsum.cpp:265-273`), so no
-field id is needed and the hotkeys n p f i s r b keep working
-natively — decision 39.
+that Aldrich renders them fine, because a mod's font may not. RETURN injects a click at a point inside the original's own button
+(`colsum.cpp:265-273`), so no field id is needed. The seven sort
+buttons now send the original's own HOTKEY instead and keep that
+point as their fallback — decision 39, amended, and see "The sort bar
+sends keys" below.
 
 **Everything below was read in orion2re 1.60.0** (`src/version.h`,
 `consts.h:43`). Line numbers from a 1.31 archive differ — three were
@@ -953,15 +967,155 @@ original's list behind us sorts fine and the injection keeps the two
 screens agreeing; what it cannot do is reorder our rows. Falling back
 silently to the name would have looked like it worked.
 
-Tie-breaks are OURS and marked as an addition: the original's bubble
-sort (colsum.cpp:363) leaves equal elements where they were, which
-for us would reshuffle the list between redraws, so every key falls
-back to the name.
+**Ties keep the input order — 3 September 2026, and the tie-break
+that used to be here is gone.** Every key fell back to the planet
+name on a tie, marked as an addition of ours, on the reasoning that
+the original's bubble sort leaves equal elements wherever they were
+and that for us this would mean a list reshuffling between redraws.
+The first half is right and the second does not follow.
+
+Four files carry the array order end to end, and only one of them is
+the sort: `ext_api.cpp:94` writes the colonies in `MOX::_colony[i]`
+order, so `colonies_raw` arrives in it; `colxport.cpp:91` filters the
+original's own list out of the same array in the same order;
+`colsum.cpp:363` swaps only when `Switched_cmp_` is STRICTLY
+positive, so equal elements never move; and `colsum.cpp:1056` returns
+0 on equality, so the sign that would move them cannot arise.
+`build_rows` walks `colonies_raw` in order and `list.sort` is stable,
+so the list was already stable across redraws — and the fallback was
+ordering ties the original leaves unordered. Two colonies of equal
+population sat alphabetically on our screen and in array order on
+the original's, with every value on both correct. `_by()` now returns
+a single negated number, because a tuple IS a tie-break and the
+absence has to be visible in the key rather than asserted beside it.
+
+The smoke check was turned around with it: it no longer demands the
+name order for equal rows, it drives `build_rows` over two snapshots
+packed in opposite orders and demands the output follow the input —
+through the whole path, since "input order" is not a property a sort
+key can express on its own.
 
 `s_colony.production[4]` (offset 231, ECON order plus BC —
 orion2_consts.h:119-123) now reaches the row dicts for the four keys
-that need it. **Nothing draws it**, and the original does not either;
-that is decision 43 and why `output_panel` is an HD EXTENSION.
+that need it. **Nothing in the ROW draws it**, and the original does
+not put it in its row either — but it does draw all four per colony,
+in the bottom-left box `output_panel` occupies (coldraw.cpp:60).
+That is the withdrawal of decision 43, recorded above; the comment in
+`colonyrows.py` still carried the old claim and has been corrected.
+
+**The sort bar sends keys — 3 September 2026.** `_inject` has two
+paths now. A button with a `hotkey` in `layout.json` sends
+`INJECT_KEY` and nothing else; a button without one, or with a
+malformed one, falls through to its `native_click`. The seven sort
+buttons take the first path, RETURN the second — its field carries a
+hotkey byte of 0x25, which is not a letter anybody presses.
+
+**Why the key is preferred.** A click is not inert:
+`INJECT_CLICK` arrives as an SDL button event, and platform.cpp:1171
+feeds its coordinates to `Set_Present_Mouse_Position_` while :1172
+enqueues them as a mouse input event, so every injected click leaves
+the game's own pointer parked on the button we pressed. The key path
+(platform.cpp:1131) touches neither.
+
+**The click points STAY, and the smoke test refuses a sort button
+that loses one.** They are the half that can be checked without a
+running game — a grep against the `Add_Multi_Button_Field_` call at
+colsum.cpp:265-273 — while a hotkey is a letter in a JSON file that
+has to be taken on trust until somebody presses it. The two are an
+order, not a replacement.
+
+**It was verified live before it was switched on, because a silent
+failure looks exactly like a success here.** The original re-sorts by
+a key it already holds without moving a pixel — there is no direction
+toggle — so "nothing changed" is both the working and the broken
+outcome. Sorting AWAY from the active key is what separates them.
+Against orion2re 1.60 on the reference save, Colonies screen up:
+`p` from a name-sorted list moved 15071 of the 307200 framebuffer
+bytes, `n` moved them back, `B` and `S` moved it again, and an idle
+capture moved nothing at all. A frame taken after the key was
+byte-identical to one taken after the equivalent `native_click`.
+
+**Second source for the hotkeys, from the same session.** The
+FIELD_LIST reports fields 16-22 at y 446-469 carrying N P F I S R B —
+the same seven letters `layout.json` holds, UPPERCASE on the wire.
+The game folds case: both `n` (110) and `N` (78) arrive. Worth
+writing down, because the mismatch between the stored lowercase and
+the reported uppercase looks like a bug and fixing it would fix
+nothing.
+
+**What was NOT observed: the pointer.** The cursor is composited onto
+the ARGB present surface (platform.cpp:794-822) and the Extension API
+sends the indexed `g_present_surface` (ext_api.cpp:165), so no cursor
+of any kind is on the wire; the game's window is hidden while the API
+is on (platform.cpp:1379), so there is nothing to photograph either.
+That half of the claim rests on platform.cpp:1171-1172 against
+:1131-1134 and on nothing else, and it is written down that way
+rather than as "verified".
+
+**The outpost filter is NOT applied, and the gate it is waiting on
+was checked and failed — 3 September 2026.** The original's list is
+built on two conditions — the colony's `owner` has to be the local
+player and its `outpost_flag` has to be zero
+(`Build_Global_Colony_List_`, colxport.cpp:91; `N_Colonies_` counts
+with the same pair at colxport.cpp:67).
+`build_rows` applies only the first, so an outpost of the local
+player would appear as a row the original's list does not have.
+
+`outpost_flag` sits at offset 6 of `s_colony` and has ONE source —
+the header compiled with its own pragma pack, which fixes the byte
+and its width and cannot say the byte MEANS outpost. A filter is a
+claim about the meaning, so it needs the second source decision 23
+asks for, and the obvious one is a count: colonies of the local
+player with the flag clear, against the rows the original's own
+screen lists.
+
+**The reference save cannot produce that number.** The check is now a
+mode of the probe — `python tools/struct_probe.py colonies
+--outposts` — and against the stardate 3508.5 snapshot it reports all
+21 colonies carrying 0, across all six owners. The filter removes
+nothing, both counts are 7, and 7 is what the screen shows: which is
+also exactly what "offset 6 is a byte that is zero everywhere"
+predicts. Consistent, and not a second source. The probe says
+INCONCLUSIVE rather than passing, and names what would settle it — a
+save in which the local player holds at least one outpost. Another
+turn of this one will not produce one.
+
+The missing half is written into `build_rows` as a comment with its
+source, and into `core/structs/colony.py` as what offset 6 does and
+does not rest on. It is not on `doc/orion2re_open_fixes.md`: nothing
+is being asked of Joe, the data is already on the wire, and the only
+thing missing is a savegame.
+
+**Two states the original's row carries and ours does not.** Found
+while reading `Draw_Colony_Summary_For_Colony_` for the sort work,
+marked NOT DRAWN in `colonyrows.py`, and deliberately not dressed up
+as a task — an omission nobody wrote down cannot be told apart from
+one nobody noticed.
+
+- **The star's BLOCKADE** (colsum.cpp:557-569). `star->blockaded` is
+  a bitmask over players, shifted by the local player and masked to
+  one bit at colsum.cpp:562 — the same shape as `visited`, and read
+  the same way by `star.visited_by`. A blockaded system colours the
+  row through an inline attribute and appends a marker (ESTR 0x46 and
+  0x86); an unblockaded one substitutes the empty string twice, which
+  is why the native name column is 89 px wide and not 87.
+  **Reachable:** `blockaded` is offset 162 in the verified
+  `core/structs/star.py` spec and the stars are in the snapshot. Not
+  drawn because nothing has been built for it.
+- **A COLONY EVENT** (colsum.cpp:553, `EVENTS::Colony_Has_Event_` at
+  events.cpp:635). A colony with an event takes the other branch of
+  that function entirely: a different paragraph type, an inline
+  colour chosen by `Event_Good_` (colsum.cpp:534), and the event's own
+  label appended to the name. **Not reachable:** the function reads
+  `EVENTS::_event_data[]`, and the snapshot carries settings,
+  players, stars, ships, colonies, planets, nebulas, leaders, antarans
+  and ship icons and no events (ext_api.cpp:53-136).
+
+The two are listed apart because they are different kinds of absence,
+and collapsing them into one line is how the buildable one would stop
+looking buildable. A smoke check holds both markings to their sources
+and fails if `GameState` ever grows an events array — at which point
+the second entry is wrong and wants revisiting rather than deleting.
 
 **Scrolling is deliberately not built.** The original windows ten
 rows over the sorted list — `_list_col[10]`, `Update_Col_List_`
@@ -990,9 +1144,9 @@ refuses the base table anywhere it appears without the climate
 factors.
 
 **The list renders — first visible step, 31 August.**
-`screens/colony_summary/colonyrows.py` (234 lines, the numbers),
-`screens/colony_summary/colonylist.py` (414, the drawing) and
-`screens/colony_summary/colonybuild.py` (166, the building column) —
+`screens/colony_summary/colonyrows.py` (443 lines, the numbers),
+`screens/colony_summary/colonylist.py` (492, the drawing) and
+`screens/colony_summary/colonybuild.py` (207, the building column) —
 their own modules because `screen.py` was at 258 against a ~300
 guideline. One
 row per colony of the local player, sorted by name: the planet name,

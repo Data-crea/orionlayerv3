@@ -22,11 +22,17 @@ savegame so the arrays are populated):
     python tools/struct_probe.py colonies --spec --records 2
     python tools/struct_probe.py colonies --spec --full --records 1
     python tools/struct_probe.py colonies --pop-nibble
+    python tools/struct_probe.py colonies --outposts
 
 --pop-nibble runs one named prediction against every colony at once
 instead of dumping records for a human to compare; see
 `pop_nibble_report` for what it tests and why that particular
 prediction is answerable by a save with no androids in it.
+
+--outposts is the same shape for `outpost_flag` at offset 6, and it
+reaches the opposite outcome: it reports whether the loaded save can
+decide the question at all, and on the reference save it cannot. See
+`outpost_report`.
 
 --spec decodes a record against the spec registered for that array
 and prints field name, offset, kind and value. It works for a record
@@ -352,6 +358,133 @@ def print_pop_nibble_report(rep, indent="  "):
               f"one value >= 14.")
 
 
+# ── s_colony.outpost_flag (offset 6) ──────────────────────────────
+
+def outpost_report(records, player_num, colony_spec):
+    """The count `N_Colonies_` would produce, against the one we do.
+
+    WHAT THIS IS FOR. The original's colony list is built on TWO
+    conditions — the colony's `owner` has to be the local player and
+    its `outpost_flag` has to be zero (`Build_Global_Colony_List_`,
+    colxport.cpp:91; `N_Colonies_` counts with the same pair at
+    colxport.cpp:67). `build_rows`
+    applies only the first. Adding the second is a claim that the
+    byte at offset 6 MEANS "outpost", and the header route cannot
+    make that claim: it fixes where the byte is and how wide it is,
+    which is decision 23's distinction between layout and meaning.
+
+    THE PREDICTION a save can answer:
+
+        colonies of the local player whose flag is clear
+            == the number of rows the original's own screen lists
+
+    and it is only ANSWERABLE where the two counts differ — that is,
+    where the local player owns at least one outpost. In a save with
+    no outposts the filter removes nothing, both counts equal the
+    owner-only count, and the data agrees with "offset 6 is the
+    outpost flag" exactly as readily as with "offset 6 is a byte that
+    happens to be zero everywhere". That is not a second source; it
+    is the same source twice.
+
+    So the discriminating quantity is reported first and the counts
+    second, and the verdict says INCONCLUSIVE rather than passing.
+    The reference save (stardate 3508.5, 21 colonies) is one of the
+    saves that cannot answer it.
+    """
+    from collections import Counter
+
+    per_owner = Counter()
+    outposts_per_owner = Counter()
+    flag_values = Counter()
+    mine = []
+
+    for ci, raw in enumerate(records):
+        col = colony_spec.parse(raw)
+        flag_values[col.outpost_flag] += 1
+        per_owner[col.owner] += 1
+        if col.outpost_flag != 0:
+            outposts_per_owner[col.owner] += 1
+        if col.owner == player_num:
+            mine.append((ci, col.outpost_flag, col.n_pops, col.planet))
+
+    return {
+        "colonies": len(records), "player_num": player_num,
+        "per_owner": per_owner, "outposts_per_owner": outposts_per_owner,
+        "flag_values": flag_values, "mine": mine,
+        "owned": per_owner.get(player_num, 0),
+        "my_outposts": outposts_per_owner.get(player_num, 0),
+    }
+
+
+def print_outpost_report(rep, indent="  "):
+    """Counts first, then the verdict, then what would change it.
+
+    The verdict is the part worth reading: the counts look like
+    evidence whatever they say, and the question is whether they
+    could have come out any other way.
+    """
+    me = rep["player_num"]
+    print(f"{indent}{rep['colonies']} colonies in the snapshot, "
+          f"local player {me}")
+    print(f"{indent}outpost_flag values over ALL colonies: "
+          + ", ".join(f"{v} ({c})"
+                      for v, c in sorted(rep["flag_values"].items())))
+    print()
+    print(f"{indent}per owner — total / outposts / what the original "
+          f"would list:")
+    for owner in sorted(rep["per_owner"]):
+        total = rep["per_owner"][owner]
+        outp = rep["outposts_per_owner"].get(owner, 0)
+        marker = "   <-- local player" if owner == me else ""
+        print(f"{indent}  owner {owner:3d}: {total:3d} / {outp:3d} / "
+              f"{total - outp:3d}{marker}")
+
+    print()
+    print(f"{indent}local player: {rep['owned']} colonies by owner "
+          f"alone, {rep['owned'] - rep['my_outposts']} once outposts "
+          f"are dropped")
+    for ci, flag, pops, planet in rep["mine"]:
+        note = "   OUTPOST" if flag else ""
+        print(f"{indent}  colony {ci:3d}: outpost_flag={flag:3d} "
+              f"n_pops={pops:3d} planet={planet}{note}")
+
+    print()
+    if rep["my_outposts"] == 0:
+        print(f"{indent}INCONCLUSIVE. The local player owns no colony "
+              f"with a nonzero flag, so the")
+        print(f"{indent}outpost condition removes nothing and the row "
+              f"count is the same with it and")
+        print(f"{indent}without it. This save agrees with 'offset 6 is "
+              f"outpost_flag' and with 'offset 6")
+        print(f"{indent}is a byte that is zero here' equally well, "
+              f"which makes it consistent and not")
+        print(f"{indent}a second source.")
+        if sum(rep["outposts_per_owner"].values()) == 0:
+            print(f"{indent}No colony of ANY owner carries a nonzero "
+                  f"flag either, so the field is not")
+            print(f"{indent}exercised anywhere in this snapshot.")
+        print()
+        print(f"{indent}What would settle it: a save in which the "
+              f"local player holds at least one")
+        print(f"{indent}outpost. This count then drops below the "
+              f"owner-only count, and the number to")
+        print(f"{indent}hold it against is the row count on the "
+              f"original's own Colonies screen.")
+    else:
+        print(f"{indent}ANSWERABLE. The local player owns "
+              f"{rep['my_outposts']} colony/colonies with a nonzero "
+              f"flag,")
+        print(f"{indent}so the two counts differ: {rep['owned']} by "
+              f"owner alone against "
+              f"{rep['owned'] - rep['my_outposts']} with")
+        print(f"{indent}the outpost condition. Read the SECOND number "
+              f"against the number of rows the")
+        print(f"{indent}original's own Colonies screen lists. "
+              f"Agreement is the second source offset 6")
+        print(f"{indent}needs; disagreement says the byte is not what "
+              f"the header calls it.")
+
+
 def sidebar_report(records, player_num, indent="  "):
     """The six s_player scalars COLSUM::Draw_Empire_Info_ prints.
 
@@ -496,6 +629,10 @@ def main():
     ap.add_argument("--pop-nibble", action="store_true",
                     help="colonies only: test the pop[] low nibble "
                          "against every colony's owner")
+    ap.add_argument("--outposts", action="store_true",
+                    help="colonies only: the count the original's own "
+                         "list is built on (owner, and the flag clear), "
+                         "and whether this save can decide offset 6 at all")
     ap.add_argument("--sidebar", action="store_true",
                     help="players only: the six scalars "
                          "COLSUM::Draw_Empire_Info_ prints, beside "
@@ -505,6 +642,11 @@ def main():
     if args.sidebar and args.array != "players":
         print("--sidebar is a players check; the six scalars live in "
               "s_player")
+        return 1
+
+    if args.outposts and args.array != "colonies":
+        print("--outposts is a colonies check; outpost_flag lives at "
+              "offset 6 of s_colony")
         return 1
 
     if args.pop_nibble and args.array != "colonies":
@@ -556,6 +698,14 @@ def main():
         print(f"{attr} is empty — start or load a game with content "
               f"first (the main menu has no map data)")
         return 1
+
+    if args.outposts:
+        colony_spec = load_spec("colonies")
+        print("── s_colony.outpost_flag @6: the original's own list "
+              "condition " + "─" * 8)
+        print_outpost_report(outpost_report(
+            records, getattr(gs, "player_num", 0), colony_spec))
+        return 0
 
     if args.pop_nibble:
         colony_spec = load_spec("colonies")
