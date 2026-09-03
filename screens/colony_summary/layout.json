@@ -147,7 +147,7 @@
     "row_pad": 0.1
   },
   "panels": {
-    "_note": "Content for these arrives with the population bar work; list_area now draws the colony list (see `list` above), the other three are still filled with panel_background so the frame reads as a finished surface.",
+    "_note": "Every cutout that shows content gets the panel fill, so the frame never sits over raw background. list_area draws the colony list (see `list`) and output_panel the original's scan box for the selected colony (see `output`); galaxy_inset and spare_panel are still fill only. ONE PANEL PER STEP - the two that are empty are empty on purpose and not waiting on anything in this file.",
     "list_area": "",
     "output_panel": "",
     "galaxy_inset": "",
@@ -200,5 +200,108 @@
     "_building_column_note": "190 reference px, and it is a HARD width. Transcribed from BILL::Squeeze_Print_Formatted_Paragraph_(0x200, y, 0x55, 0x16) at colsum.cpp:621 - x 512, width 85, max height 22, of 640. 85/640 is 13.3 %, which is 190 of 1408. WHY IT IS A RESERVATION: _Squeeze_Print_Paragraph_ (bill.cpp:147) passes width straight into get_height(width, text) and loops on max_height >= height. The text is WRAPPED into the width and the HEIGHT is what is made to fit; width never moves, and there is no truncation branch in that function at all. TWO LINES, AND THE ORIGINAL BUDGETS TWO IN THE SAME BOX: max height 0x16 = 22 goes into a row whose pitch is 31 (buy_btn_y_coords steps 35, 65, 96, 128 ...), so that box is two thirds of its row and holds more than one line of its own font. The two-line column is the same PLACE as the original's, not just the same technique used elsewhere. TRANSCRIBED BEHAVIOUR, NOT MECHANISM: wrap into the width, reduce size until it fits, never truncate. The original's first squeeze step narrows the SPACE GLYPH (font_style_widths[32]--), a bitmap-font trick with no Aldrich equivalent; its third steps between discrete bitmap faces. build_font_min is the floor, and the text is drawn whole even there - the original prints the paragraph regardless once it runs out of things to shrink. A previous pass measured this as widest string, one line, full font and got 311 px, nearly twice as much; all three of those constraints are ones the original never imposes.",
     "_buy_note": "TRANSCRIBED IN POSITION, DEVIATES TWICE IN FORM. The original adds one per row at native x=599 (colsum.cpp:302, _list_buy_fields[10], buy_btn_y_coords), to the right of the producing text, as a Locked_Button_Field_ or a hidden field depending on Colony_Can_Buy_Product_0_. That is transcribed. DEVIATION 1: the LABEL. E_Strings_(12) is empty, so 'Buy' is a word this project chose; it lives here per decision 15. DEVIATION 2: drawing TEXT AT ALL. The original's control is a SPRITE - _anims[i + 11] supplies the artwork, which is why its label string can be empty. A text button is a different object, not a translation of that one, and it is drawn this way because the sprite is in the player's LBX and is not shipped. Naming only the label would leave the larger deviation unmarked. can_buy on the row decides whether it is drawn; nothing sends a click yet.",
     "_width_condition_note": "MARKED. squeeze_lines reduces the size until BOTH the height and the WIDTH fit. _Squeeze_Print_Paragraph_ loops on height alone, and fmtpara.cpp offers Get_Formatted_Paragraph_Max_Width_ beside the height function without calling it - so the question was whether the original lets an over-wide token overflow. It does not. _Print_Formatted_Paragraph_ places a character when char_x_end <= right_limit_x || line_started != 0 (fmtpara.cpp:567); line_started is 1 at line start and 0 after the first character (:540, :572), so the first character is placed unconditionally and every later one must fit. When one does not, Return_To_Last_Break_() is tried - breaks are recorded only at spaces, tabs and soft hyphens (:723, :731) - but _para_p->str-- runs whether it succeeded or not and the line ends (:583-587). A token with no break inside it is therefore BROKEN MID-TOKEN, and the paragraph never exceeds the width. Height alone is sufficient BECAUSE the width can never be exceeded. So: the GUARANTEE (no ink past the width, nothing truncated) is a TRANSCRIPTION and our width condition delivers it. The MEANS is a DEVIATION: the original character-wraps the token, we reduce the size and keep it whole. Visible, therefore marked. The reason is that the over-wide token here is a ship design name - user-typed data whose exact form is the point - and a hyphen-less mid-word break that reads as wrapping in a five-pixel face at 640x480 reads as corruption at HD."
+  },
+  "words": {
+    "_note": "THE WORD LISTS THE SCAN BOX SUBSTITUTES, and they are OUR OWN WORDING, not the game's bytes. The original fills four tables - MOX::_planet_size_string, _mineral_class_string and _planet_gravity_string at estrings.cpp:155-169, _planet_climate_string at estrings.cpp:204-213 - and every entry is an ESTRINGS::E_Strings_(id) call, so the strings themselves come from the player's own estrings.lbx, loaded at runtime and one file per language (estrings.cpp, Load_E_Strings_). They are not in the orion2re source, they are not shipped, and nothing here extracts them - the same absence that leaves the building column empty and gave the Buy button an invented label. So these are English words this project chose to match what the game prints, and they live here rather than in a renderer so a translation replaces them without touching code (decision 15). ORDER IS LOAD-BEARING: each list is indexed by its enum and is not a ranking - PLANET_SIZE at orion2_consts.h:392-397, MINERAL_RESOURCE at :328-333, PLANET_GRAVITY at :377-380. CLIMATE IS DELIBERATELY NOT HERE. It already has a home at list.climates, with its own provenance note, and is read from there by the row renderer and by the output panel alike. A second copy that agrees today is the screen-ID-map failure waiting; a smoke check asserts the ten climate words appear in exactly one of the two blocks. SECOND SOURCE for the wording, such as it is: the original's own planet description for Ixion II read 'Small Ocean, Normal Gravity, Mineral Abundant' on 31 August 2026 (see core/structs/planet.py), which confirms three of these words and the direction of all three enums. The rest are the enum names in title case and are unconfirmed against the game's screen.",
+    "sizes": [
+      "Tiny",
+      "Small",
+      "Medium",
+      "Large",
+      "Huge"
+    ],
+    "gravities": [
+      "Low G",
+      "Normal G",
+      "Heavy G"
+    ],
+    "minerals": [
+      "Ultra Poor",
+      "Poor",
+      "Abundant",
+      "Rich",
+      "Ultra Rich"
+    ]
+  },
+  "output": {
+    "_note": "output_panel is a TRANSCRIPTION of the original's bottom-left scan box (decision 43 was withdrawn; see screen.py). Two calls fill that box for the SELECTED colony, both in COLSUM::Draw_Colony_Scan_Info_ (colsum.cpp:1155), which is guarded by _g_colony_n != -1: a formatted paragraph at native (13, 354, 80, 88) that substitutes SEVEN values into ESTRINGS::E_Strings_(74) (colsum.cpp:1196-1206), and a column of production rows plus morale at native x 106 (colsum.cpp:1171-1176). The wording of every label here is ours and lives in this file (decision 15); substitution is a replace and never str.format (decision 37), so a stray brace in a translated label cannot raise inside the render path and an unknown placeholder is left standing rather than swallowed.",
+    "_deviation_note": "THREE DEVIATIONS, none of them cosmetic, all of them one line in this file away from being undone. (1) BC IS NOT SHOWN. The original's loop is `i < ECON_COUNT` and ECON_COUNT is 4 (orion2_consts.h:123), so it draws food, industry, research AND BC at native (106, 349 + 18i). Three rows are drawn here. Adding the fourth is one entry in `rows` with value '{bc}'; the row dicts already carry it, because the BC sort key reads the same production[] word. (2) EACH PRODUCTION ROW IS ONE NUMBER, and the original's is several. COLDRAW::Draw_Colony_Prod_Both_ (coldraw.cpp:36) draws the net value beside imports (coldraw.cpp:46), pollution for industry (coldraw.cpp:56), and a shortage computed as maintenance minus imports minus production (coldraw.cpp:61), all as tens-and-units sprites. This panel prints colony->production[i] (coldraw.cpp:60) and nothing else, so it is a SUBSET of that row rather than a smaller drawing of it. (3) MORALE IS A NUMBER HERE AND A ROW OF ICONS THERE. COLDRAW::Draw_Info_Morale_Both_ draws abs(morale / 2) sprites, capped at 20, in one of two artworks depending on the sign. The sprites are in the player's LBX and are not shipped, which is the same reason the Buy control is a text button - see list._buy_note, where the same trade is made and marked. What IS transcribed is the value (the signed halving, C truncation toward zero) and the Unification rule below.",
+    "_morale_note": "UNDER UNIFICATION THE ORIGINAL DRAWS NO MORALE AT ALL. Draw_Info_Morale_Both_ sets its count to 0 when the owner's traits[TRAIT_CURRENT_GOVERNMENT] is GOVERNMENT_UNIFICATION or above (6 and 7, orion2_consts.h:199-200; the trait index is 0, orion2_consts.h:949). Transcribed: the row renders `hidden_value` rather than a zero, because a drawn 0 is a claim that morale is neutral and the original is claiming that morale does not apply. The trait comes from the verified s_player spec (traits @2308).",
+    "_growth_note": "The sum of s_colony.pop_growth[10] (offset 200), which is what colsum.cpp:1179-1182 accumulates into total_growth and passes to E_Strings_(74). RAW, and deliberately: the format string that labels it is in the player's estrings.lbx and is not shipped, so its unit is unknown here - a live colony of 8 pops decoded 73 on 3 September 2026, which is plainly an accumulator and not a per-turn head count. Printing the engine's own number under our own label is the honest form; inventing a division to make it look like people would not be. colsum.cpp:1180 also sums pop_roundoff[10] into total_roundoff and then never passes it to anything - not transcribed, because there is nothing to transcribe. The sign is carried by the value; the original colours a negative growth instead (colsum.cpp:1187-1190), which needs the inline attribute machinery and is not done here.",
+    "_offsets_note": "MEANING, NOT LAYOUT. s_colony and s_planet_data are verified specs, which fixes where every member sits and how wide it is and says nothing about what its values mean (decision 23). Of the ten values here, size, climate, gravity_class, mineral_class and n_pops were read live against the original's own planet description for Ixion II on 31 August 2026 (core/structs/planet.py), and max_pop is computed from them. growth and morale rest on the header's names alone, exactly as outpost_flag does - the difference is that a wrong number here is drawn where the original draws its own, so the check that settles them is the --native side-by-side in tools/colony_list_preview.py, which has still never been run.",
+    "label_font": 13,
+    "value_font": 17,
+    "pad_x": 16,
+    "pad_y": 12,
+    "row_gap": 4,
+    "columns": 2,
+    "empty": "",
+    "_empty_note": "EMPTY, and that is the point. With no colony selected the panel draws NOTHING - no labels, no dashes, no zeroes. The original's box is guarded by `_g_colony_n != -1` (colsum.cpp:1165) and simply is not drawn, and a zero would be a value where the original has an absence. Put a string here to have it drawn centred instead; a smoke check asserts the panel puts no ink on an empty selection while the shipped value is empty.",
+    "hidden_value": "",
+    "rows": [
+      {
+        "id": "size",
+        "label": "Size",
+        "value": "{size}",
+        "column": 0
+      },
+      {
+        "id": "climate",
+        "label": "Climate",
+        "value": "{climate}",
+        "column": 0
+      },
+      {
+        "id": "gravity",
+        "label": "Gravity",
+        "value": "{gravity}",
+        "column": 0
+      },
+      {
+        "id": "mineral",
+        "label": "Minerals",
+        "value": "{mineral}",
+        "column": 0
+      },
+      {
+        "id": "population",
+        "label": "Population",
+        "value": "{pops}/{max_pop}",
+        "column": 0
+      },
+      {
+        "id": "growth",
+        "label": "Growth",
+        "value": "{growth}",
+        "column": 1
+      },
+      {
+        "id": "food",
+        "label": "Food",
+        "value": "{food}",
+        "column": 1
+      },
+      {
+        "id": "industry",
+        "label": "Industry",
+        "value": "{industry}",
+        "column": 1
+      },
+      {
+        "id": "research",
+        "label": "Research",
+        "value": "{research}",
+        "column": 1
+      },
+      {
+        "id": "morale",
+        "label": "Morale",
+        "value": "{morale}",
+        "column": 1
+      }
+    ],
+    "_rows_note": "TEN VALUES. The seven E_Strings_(74) carries - planet size, climate, gravity class, mineral class, n_pops, the computed maximum and growth (colsum.cpp:1198-1205) - in six rows, because the original prints n_pops and the maximum as one pair and so does this; plus three of the four production numbers, see _deviation_note. Morale is the eleventh thing in the box and is not one of the ten values: it is a count of sprites there, and a number here only because the sprites are not ours to ship. THREE OF THE SEVEN ARE ALSO IN THE ROW. climate, n_pops and max_pop are drawn per row as well (list._hd_extension), and that is not a duplication to clean up: the per-row line is the HD EXTENSION and THIS is the original's own box, which prints all seven for one colony. Removing them here would make the transcription a subset in order to tidy an extension.",
+    "column_gap": 34,
+    "_geometry_note": "TUNED AGAINST THE PICTURE, not against a rule. output_panel is 464 x 201 reference px and holds five rows in each of two columns, so the pitch is (201 - 2*pad_y - 4*row_gap) / 5 = 31 px and a column is (464 - 2*pad_x) / 2 = 216. column_gap 34 is the one number that came out of looking: at the first render it was 12, and 'Huge GROWTH' and 'Ultra Poor RESEARCH' read as single phrases because the left column's right-aligned value ended a few pixels from the right column's left-aligned label. Every number in that render was correct and the panel was unreadable, which is the failure mode the fundament's 'render it and look at it' rule exists for. The widest value the enums can produce is 'Ultra Poor' and the widest label is 'POPULATION'; both are measured by rendering, per decision 30, and two smoke checks hold the result: the gutter must be at least one em of the value font, which is the rule the 34 was measured against and the one the 12 broke, and the widest label plus the widest value must still fit the column minus that gutter, which is the different failure of a long word eating the gap. Both at twelve resolutions, both measured by rendering (decision 30)."
   }
 }

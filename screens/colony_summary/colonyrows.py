@@ -127,6 +127,15 @@ CLIMATE_FACTOR = (25, 25, 25, 25, 25, 25, 40, 60, 80, 100)
 #: the fundament, section 3.
 SIZE_BASE = (5, 10, 15, 20, 25)
 
+#: orion2_consts.h:949. The government sits in the trait array like a
+#: racial pick, at index 0.
+TRAIT_CURRENT_GOVERNMENT = 0
+#: orion2_consts.h:199-200. At or above this the original draws NO
+#: morale marks at all — Draw_Info_Morale_Both_ zeroes its own count
+#: rather than drawing an empty row, and 7 (Galactic Unification) is
+#: above it, which is why the test is >= and not ==.
+GOVERNMENT_UNIFICATION = 6
+
 TRAIT_AQUATIC = 12            # orion2_consts.h:961
 TRAIT_SUBTERRANEAN = 13       # orion2_consts.h:962
 TRAIT_ENVIRONMENT_IMMUNE = 23  # orion2_consts.h:972
@@ -214,6 +223,28 @@ def max_population(colony, planet, traits):
     return min(limit, POP_LIMIT_CAP)
 
 
+def colony_morale(colony, traits):
+    """(value, applies) — COLDRAW::Draw_Info_Morale_Both_, transcribed.
+
+    The engine never prints this number: it draws `abs(morale / 2)`
+    sprites, at most 20, in one of two artworks by sign. The HALVING
+    is the transcription and so is the sign, and `int(a / 2)` is C
+    truncation toward zero — `//` rounds a negative morale away from
+    zero and would draw one mark too many on exactly the colonies
+    where it matters. Turning the count into a printed number is a
+    DEVIATION and is marked in `layout.json` under
+    `output._deviation_note`.
+
+    `applies` is False under Unification and Galactic Unification,
+    where the original sets its count to 0 and therefore draws
+    nothing. That is not the same as a morale of zero, and the panel
+    draws nothing for it rather than a 0.
+    """
+    if traits and traits[TRAIT_CURRENT_GOVERNMENT] >= GOVERNMENT_UNIFICATION:
+        return 0, False
+    return int(colony.morale / 2), True
+
+
 def planet_name(colony, planets, stars):
     """'Sol III' — HAROLD::Planet_Number_ counts occupied slots."""
     if not 0 <= colony.planet < len(planets):
@@ -240,9 +271,12 @@ def build_rows(game_state, sort_key="name"):
     by two sources. The pop word's low nibble is not touched here;
     it is verified for 0..7 but nothing on this screen needs it.
 
-    The dict keys ARE the interface to `colonylist.render()`: name,
-    climate, pops, jobs, no_farming, max_pop, producing,
-    producing_turns, can_buy. Nothing else crosses,
+    The dict keys ARE the interface to the two renderers: index,
+    name, climate, pops, jobs, no_farming, max_pop, producing,
+    producing_turns, can_buy for `colonylist.render()`, and size,
+    gravity, mineral, growth, morale, morale_applies for
+    `colonyoutput.render()` on top of climate, pops and max_pop,
+    which both use. Nothing else crosses,
     and a smoke check holds the preview tool's fake rows to the same
     set — a stale row dict still renders, so nothing else would
     notice it drift.
@@ -258,7 +292,7 @@ def build_rows(game_state, sort_key="name"):
             player_struct.parse(game_state.player_raw[me]))
 
     rows = []
-    for raw in game_state.colonies_raw:
+    for index, raw in enumerate(game_state.colonies_raw):
         col = colony_struct.parse(raw)
         # TRANSCRIBED, and INCOMPLETE. The original's list is built by
         # `Build_Global_Colony_List_` (colxport.cpp:91) on two
@@ -290,12 +324,27 @@ def build_rows(game_state, sort_key="name"):
         if not 0 <= col.planet < len(planets):
             continue
         planet = planet_struct.parse(planets[col.planet])
+        morale, morale_applies = colony_morale(col, traits)
         jobs = [0, 0, 0]
         for i in range(min(col.n_pops, len(col.pop))):
             prof = colony_struct.pop_prof(col.pop[i])
             if 0 <= prof < len(jobs):
                 jobs[prof] += 1
         rows.append({
+            # The colony's index in the snapshot's own array, which is
+            # the engine's `MOX::_colony[]` index and therefore the
+            # same number `_list_col[]` holds and `_g_colony_n` is set
+            # to (colsum.cpp:139). It is here so the SELECTION can be
+            # a colony rather than a row: the original never reseats
+            # `_g_colony_n` on a sort — the handler at
+            # colsum.cpp:830-837 re-sorts, clears the window array and
+            # resets `_first`, and leaves the selected colony alone —
+            # so the selection follows its colony to wherever the new
+            # order puts it. A row index cannot express that.
+            #
+            # Nothing DRAWS it. It is an identity, and it is the one
+            # key in this dict that would be wrong to show.
+            "index": index,
             "name": planet_name(col, planets, stars),
             "pops": col.n_pops,
             "jobs": jobs,
@@ -324,6 +373,26 @@ def build_rows(game_state, sort_key="name"):
             # comment used to say the opposite.
             "production": list(col.production),
             "max_pop": max_population(col, planet, traits),
+            # ── For output_panel, and NOT drawn in the row ──
+            # The original's scan box prints seven values for the
+            # SELECTED colony (colsum.cpp:1196-1205) and the row
+            # already carries three of them. These are the other
+            # four plus morale, decoded here rather than in the
+            # panel because all struct reading in this screen lives
+            # in this module: the renderers get plain dicts and
+            # cannot reach back into a record, which is the seam the
+            # split was made along.
+            #
+            # All five are indices or counts, and the words they
+            # index live in layout.json (decision 15).
+            "size": planet.size,                    # PLANET_SIZE
+            "gravity": planet.gravity_class,        # PLANET_GRAVITY
+            "mineral": planet.mineral_class,        # MINERAL_RESOURCE
+            # colsum.cpp:1179-1182 sums all ten before printing.
+            # See output._growth_note for why it is not scaled.
+            "growth": sum(col.pop_growth),
+            "morale": morale,
+            "morale_applies": morale_applies,
         })
 
     rows.sort(key=SORT_KEYS.get(sort_key, SORT_KEYS["name"]))

@@ -2617,6 +2617,260 @@ def main():
        "case-insensitive name, no toggle, ties in input order, "
        "producing declared unavailable)")
 
+    # ── output_panel: ten values, and the selection that feeds it ──
+    # The panel is a TRANSCRIPTION of the original's bottom-left scan
+    # box (colsum.cpp:1155, fundament 43 withdrawn), so what is
+    # asserted is which values it shows, that they are VISIBLE and not
+    # merely computed, and that an absence stays an absence.
+    from screens.colony_summary import colonyoutput as _co
+    _out_cfg = _sjson.load(open(os.path.join(
+        SCREENS_DIR, "colony_summary", "layout.json"),
+        encoding="utf-8"))
+    _words = _out_cfg["words"]
+    _ocfg = _out_cfg["output"]
+    _climates = _out_cfg["list"]["climates"]
+
+    # THE WORD LISTS, and their provenance. The words are ours: the
+    # original reads them from the player's estrings.lbx at runtime
+    # (estrings.cpp, Load_E_Strings_), so there is nothing to
+    # transcribe and the note has to say so or the list reads as one.
+    for _cite in ("estrings.cpp:155-169", "estrings.cpp:204-213",
+                  "estrings.lbx", "decision 15", "list.climates"):
+        assert _cite in _words["_note"], (
+            f"words._note no longer carries {_cite!r} — these are our "
+            f"own English words, not the game's, and the note is the "
+            f"only thing that says so")
+    assert len(_words["sizes"]) == 5 and len(_words["gravities"]) == 3, (
+        f"the size and gravity lists are {len(_words['sizes'])} and "
+        f"{len(_words['gravities'])}; the enums are 5 and 3 "
+        f"(orion2_consts.h:392-397, :377-380) and the index IS the "
+        f"enum value")
+    assert len(_words["minerals"]) == 5, _words["minerals"]
+    # ONE HOME for each list. Asserting the rule, not the instance: a
+    # climate word appearing in both blocks is the screen-ID-map
+    # failure, and it would agree with itself on the day it was made.
+    assert "climates" not in _words, (
+        "the climate words have been copied into the words block; "
+        "they live in list.climates with their own provenance note, "
+        "and a second copy that agrees today is what drifts tomorrow")
+    for _w in ("sizes", "gravities", "minerals"):
+        assert _w not in _out_cfg["list"], (
+            f"{_w} now exists in the list block as well as in words")
+
+    # THE TEN VALUES, for one fake colony. Chosen so every one of
+    # them is distinguishable from every other in the output: a check
+    # that asserts "0" appears ten times asserts nothing.
+    _fake = {"index": 3, "name": "Probe I", "climate": 9, "pops": 17,
+             "jobs": [5, 6, 6], "no_farming": False, "max_pop": 31,
+             "producing": "", "producing_turns": 0, "can_buy": False,
+             "production": [11, 22, 33, 44], "size": 3, "gravity": 2,
+             "mineral": 4, "growth": -42, "morale": -7,
+             "morale_applies": True}
+    _shown = _co.visible_rows(_fake, _ocfg, _words, _climates)
+    assert len(_shown) == len(_ocfg["rows"]), (_shown, _ocfg["rows"])
+    _text = " ".join(f"{lab}={val}" for lab, val, _c in _shown)
+    for _value in ("Large", "Gaia", "Heavy G", "Ultra Rich", "17", "31",
+                   "-42", "11", "22", "33"):
+        assert _value in _text, (
+            f"the panel does not show {_value!r} — it is one of the "
+            f"ten the original's scan box carries. Got: {_text}")
+    assert "-7" in _text, "morale is not shown"
+    # BC IS THE MARKED DEVIATION, so its absence is asserted rather
+    # than left to be noticed. The original's loop is i < ECON_COUNT
+    # and ECON_COUNT is 4 (orion2_consts.h:123). If BC arrives, the
+    # note in layout.json is what has to change with it.
+    assert "44" not in _text, (
+        f"BC is being drawn. That is fine and it is what the original "
+        f"does — update output._deviation_note, which currently says "
+        f"three of the four are drawn. Got: {_text}")
+    assert "ECON_COUNT is 4" in _ocfg["_deviation_note"], (
+        "output._deviation_note no longer records that the original "
+        "draws four production values and this panel draws three")
+
+    # MORALE UNDER UNIFICATION: the label stays, the value goes. The
+    # original zeroes its own sprite count (Draw_Info_Morale_Both_),
+    # so drawing a 0 would claim neutral morale where the original is
+    # claiming that morale does not apply.
+    _unified = dict(_fake, morale_applies=False)
+    _mor = [(lab, val) for lab, val, _c
+            in _co.visible_rows(_unified, _ocfg, _words, _climates)
+            if lab.lower() == "morale"]
+    assert _mor and _mor[0][1] == _ocfg["hidden_value"], (
+        f"under Unification the morale row shows {_mor!r}; it must "
+        f"show hidden_value, and a 0 is not the same statement")
+
+    # AN INDEX OUTSIDE ITS ENUM IS VISIBLE, not clamped. A clamp
+    # would draw "Huge" for a 9 and look exactly like data.
+    _bad = _co.row_values(dict(_fake, size=99), _words, _climates)
+    assert _bad["size"] == "?", _bad["size"]
+
+    # Substitution is a REPLACE, never str.format (decision 37): a
+    # stray brace must not raise inside the render path.
+    assert _co.fill_template("{size} }{ {nope}", {"size": "Large"}) == \
+        "Large }{ {nope}", _co.fill_template("{size} }{ {nope}",
+                                             {"size": "Large"})
+
+    # ── The panel DRAWS them, and draws nothing when empty ──
+    # A green table says the data is right; only ink says it is
+    # visible. Both directions, because the empty case is the one
+    # that would silently become a column of zeroes.
+    d.switch_to("colony_summary")
+    _scr_op = d.active
+    _op_box = _scr_op.box_rect("output_panel")
+    assert _op_box, "output_panel has no box"
+    _oa = pygame.Rect(*app.layout.rect(_op_box))
+    _osurf = pygame.Surface((_oa.right + 8, _oa.bottom + 8))
+    _osurf.fill((0, 0, 0))
+    _co.render(_osurf, _fake, _oa, _ocfg, _words, _climates,
+               app.layout, app.style)
+    _ink = pygame.surfarray.array3d(_osurf.subsurface(_oa)).sum()
+    assert _ink > 0, "the panel drew nothing for a selected colony"
+    _osurf.fill((0, 0, 0))
+    _co.render(_osurf, None, _oa, _ocfg, _words, _climates,
+               app.layout, app.style)
+    assert pygame.surfarray.array3d(_osurf.subsurface(_oa)).sum() == 0, (
+        "the panel put ink on the screen with nothing selected. The "
+        "original's box is guarded by _g_colony_n != -1 "
+        "(colsum.cpp:1165) and a zero is a value where it has an "
+        "absence")
+    assert _ocfg["empty"] == "", (
+        "output.empty is no longer empty — that is allowed, but the "
+        "check above then has to change with it rather than fail")
+
+    # THE COLUMNS MUST NOT RUN TOGETHER, and the failure that
+    # actually happened was NOT an overlap. The first render had
+    # column_gap 12, every number in it was correct, no two glyphs
+    # touched — and 'Huge GROWTH' and 'Ultra Poor RESEARCH' read as
+    # single phrases, because the left column's right-aligned value
+    # ended twelve pixels before the right column's left-aligned
+    # label began. So there are two assertions and they catch
+    # different things:
+    #
+    #   the GUTTER must be at least one em of the value font. Two
+    #   runs of type separated by less than the height of the type
+    #   read as one run with a word space in it. That is the rule the
+    #   34 was measured against, stated as a rule so it survives a
+    #   font change rather than pinning the number that came out of
+    #   one look.
+    #
+    #   the widest LABEL plus the widest VALUE must still fit the
+    #   column minus that gutter, which is the different failure of a
+    #   long word eating the gap it was given.
+    #
+    # Both at every shipped resolution, and both measured by
+    # RENDERING (decision 30) because render_text can mix two fonts
+    # inside one string and a single font's .size() is not the width
+    # that gets drawn.
+    assert _ocfg["column_gap"] >= _ocfg["value_font"], (
+        f"column_gap {_ocfg['column_gap']} is under one em of the "
+        f"{_ocfg['value_font']} px value font, so the left column's "
+        f"value and the right column's label read as one phrase. "
+        f"That is how the first render of this panel looked, with "
+        f"every value in it correct.")
+    _widest_val = max(
+        (_v for _v in (list(_words["sizes"]) + list(_words["gravities"])
+                       + list(_words["minerals"]) + list(_climates))),
+        key=len)
+    _widest_lab = max((_r["label"] for _r in _ocfg["rows"]), key=len)
+    for _W, _H in _SIZES:
+        _lay = Layout(_W, _H)
+        _r = pygame.Rect(*_lay.rect(_op_box))
+        _cols = int(_ocfg["columns"])
+        _pad = int(_ocfg["pad_x"] * _lay.scale)
+        _cw = (_r.w - 2 * _pad) // _cols
+        _cgap = int(_ocfg["column_gap"] * _lay.scale)
+        _vw = app.style.render_text(
+            _widest_val, _lay.font_size(_ocfg["value_font"]),
+            (255, 255, 255)).get_width()
+        _lw = app.style.render_text(
+            _widest_lab.upper(), _lay.font_size(_ocfg["label_font"]),
+            (255, 255, 255)).get_width()
+        assert _lw + _vw <= _cw - _cgap, (
+            f"{_W}x{_H}: the widest label {_widest_lab!r} ({_lw} px) and "
+            f"the widest value {_widest_val!r} ({_vw} px) need "
+            f"{_lw + _vw} px in a column of {_cw - _cgap} — they "
+            f"collide, which is what column_gap 34 was measured to "
+            f"prevent")
+
+    # ── The selection: row 0 on entry, and it keeps its COLONY ──
+    # colsum.cpp:139 sets _g_colony_n = _list_col[0] in the screen's
+    # setup, and _list_col is filled from the SORTED list
+    # (colsum.cpp:348-351). The sort handler (colsum.cpp:830-837)
+    # never touches _g_colony_n, so the selection follows its colony
+    # into the new order rather than staying on row 0.
+    _sel_snap = _pv._Snapshot(_pv.COLONIES)
+    _scr_op._sort_key = "name"
+    _scr_op.update(_sel_snap)
+    assert _scr_op.selected_position() == 0, (
+        f"entry selection is row {_scr_op.selected_position()}, not "
+        f"row 0 of the sorted list (colsum.cpp:139)")
+    _first_name = _scr_op.selected_row()["name"]
+    _first_index = _scr_op._selected
+    # A key that reorders the list, so "row 0" and "the same colony"
+    # are different answers and the check can tell them apart.
+    _scr_op._sort_key = "population"
+    _scr_op._rebuild_rows()
+    _moved = _scr_op.selected_position()
+    assert _scr_op._selected == _first_index, (
+        f"the sort reseated the selection from colony {_first_index} "
+        f"to {_scr_op._selected}; the original keeps the colony and "
+        f"lets its ROW move (colsum.cpp:830-837 touches nothing)")
+    assert _scr_op.selected_row()["name"] == _first_name, "colony changed"
+    assert _moved != 0, (
+        f"{_first_name!r} is still at row 0 after re-sorting, so this "
+        f"check cannot tell 'keeps the colony' from 'keeps the row' — "
+        f"pick a sort key that actually moves it")
+    # And the panel follows the selection rather than the row index.
+    assert _co.visible_rows(_scr_op.selected_row(), _ocfg, _words,
+                            _climates), "the panel lost its row"
+    # An empty snapshot selects nothing at all — not row 0 of nothing.
+    _scr_op.update(_pv._Snapshot([]))
+    assert _scr_op._selected is None and _scr_op.selected_row() is None, (
+        f"an empty colony list still has a selection "
+        f"({_scr_op._selected!r})")
+    _scr_op.update(_sel_snap)
+
+    # The hit-test and the drawing share one geometry (decision 5):
+    # every drawn band's midpoint must resolve back to its own row.
+    _la = pygame.Rect(*app.layout.rect(_scr_op.box_rect("list_area")))
+    _lcfg = _out_cfg["list"]
+    _bands = _cl.row_bands(_la, _lcfg, app.layout.scale,
+                           len(_scr_op._rows))
+    assert _bands, "no row bands for a non-empty list"
+    for _i, (_top, _h) in enumerate(_bands):
+        assert _cl.row_at(_la, _lcfg, app.layout.scale,
+                          len(_scr_op._rows),
+                          (_la.x + 4, _top + _h // 2)) == _i, _i
+    # Hovering row 1 selects the colony IN row 1, and clicking it
+    # changes nothing — the original would leave for SCREEN_COLONY
+    # (colsum.cpp:912-920) and there is no HD screen to leave to.
+    _t1, _h1 = _bands[1]
+    _scr_op.handle_mouse_motion(_la.x + 4, _t1 + _h1 // 2)
+    assert _scr_op._selected == _scr_op._rows[1]["index"], (
+        "hovering a row did not select its colony "
+        "(colsum.cpp:880-890 assigns _g_colony_n on the SCANNED "
+        "field, not the clicked one)")
+    _before = _scr_op._selected
+    _cap2 = _Cap()
+    _cl_save, _conn_save = app.client, app.connected
+    app.client, app.connected = _cap2, True
+    _scr_op.handle_click(_la.x + 4, _t1 + _h1 // 2)
+    app.client, app.connected = _cl_save, _conn_save
+    assert _scr_op._selected == _before, "a row click moved the selection"
+    assert _cap2.calls == [] and _cap2.keys == [], (
+        f"a row click sent {_cap2.calls}/{_cap2.keys} to the game. It "
+        f"is inert on purpose: the original leaves for SCREEN_COLONY "
+        f"and no HD screen exists to leave to")
+    # Leaving the list keeps the last colony — the assignment in
+    # colsum.cpp:880-890 has no else branch.
+    _scr_op.handle_mouse_motion(_la.x - 40, _la.y - 40)
+    assert _scr_op._selected == _before, (
+        "the selection cleared when the pointer left the list; the "
+        "original's _g_colony_n keeps whatever it last held")
+    ok("colony summary output_panel (ten values drawn, BC deviation "
+       "marked, empty selection draws nothing, columns clear at 12 "
+       "resolutions, hover selects and the sort keeps the colony)")
+
     # ── The sidebar's six s_player scalars ──
     # ONE home for these offsets: the verified spec in
     # core/structs/player.py. A probe spec briefly duplicated them in

@@ -218,16 +218,16 @@ def render(surface, rows, area, cfg, layout, style):
 
     scale = layout.scale
     track = track_metrics(area, cfg, scale)
-    row_h = int(cfg.get("row_height", 60) * scale)
+    # No `row_h` here: the loop takes it from `row_bands`, which is
+    # the one place the row pitch is computed (decision 5). A local
+    # copy of that expression is how the drawing and the hit-test
+    # start to disagree.
     pad_x = int(cfg.get("pad_x", 18) * scale)
     name_w = int(cfg.get("name_width", 320) * scale)
     name_px = layout.font_size(cfg.get("name_font", 20))
     small_px = layout.font_size(cfg.get("small_font", 15))
 
-    y = area.y + int(cfg.get("pad_y", 12) * scale)
-    for row in rows:
-        if y + row_h > area.bottom:
-            break
+    for row, (y, row_h) in zip(rows, row_bands(area, cfg, scale, len(rows))):
         # The name block is handed `name_w`, the TEXT BUDGET, and is
         # unaware of `slack`: it right-aligns, clips and ellipsises
         # against that and nothing else, so the threshold does not
@@ -245,7 +245,48 @@ def render(surface, rows, area, cfg, layout, style):
             colonybuild.draw(
                 surface, row, bar_x + track.width + track.build_gap, y,
                 track.build_w, row_h, cfg, style, layout)
+
+
+def row_bands(area, cfg, scale, count):
+    """(top, height) for each row that FITS, in draw order.
+
+    Decision 5: one function makes the rect and both the drawing and
+    the hit-test call it. The hover selection reads the same bands
+    `render` lays out, so a row that is hovered is by construction a
+    row that is on screen — the list has no scrolling, and the last
+    row is dropped rather than clipped, which is exactly the case a
+    second copy of this arithmetic would get wrong.
+
+    Fewer bands than `count` therefore means the tail of the list is
+    not drawn. That is the honest shape: nothing off the bottom can
+    be selected because nothing off the bottom is there.
+    """
+    row_h = int(cfg.get("row_height", 60) * scale)
+    y = area.y + int(cfg.get("pad_y", 12) * scale)
+    bands = []
+    for _ in range(count):
+        if y + row_h > area.bottom:
+            break
+        bands.append((y, row_h))
         y += row_h
+    return bands
+
+
+def row_at(area, cfg, scale, count, point):
+    """Index of the drawn row under `point`, or None.
+
+    None also covers a point inside `area` but past the last drawn
+    row — the pad and the tail the bands do not reach. The original
+    has the same dead strip: its rows are fields, and the space below
+    them belongs to no field at all.
+    """
+    px, py = point
+    if not (area.x <= px < area.right):
+        return None
+    for i, (top, height) in enumerate(row_bands(area, cfg, scale, count)):
+        if top <= py < top + height:
+            return i
+    return None
 
 
 def _draw_name_block(surface, row, x, y, name_w, row_h, cfg,

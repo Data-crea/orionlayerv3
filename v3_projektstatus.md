@@ -332,11 +332,11 @@ reason the repository exists.
 several entries had drifted and a list of counts that is wrong is
 worse than no list: `galaxy_map/screen.py` (805),
 `tools/struct_probe.py` (758), `galaxy_map/renderer.py` (747),
-`custom_race/screen.py` (558), `galaxy_map/ships.py` (529),
-`zoomtables.py` (515), `colony_summary/screen.py` (511),
-`colony_summary/colonylist.py` (492), `tools/ext_diag.py` (473),
-`style.py` (453), `tools/colony_list_preview.py` (443),
-`colony_summary/colonyrows.py` (443), `screen_base.py` (390),
+`colony_summary/screen.py` (691), `custom_race/screen.py` (558),
+`colony_summary/colonylist.py` (533), `galaxy_map/ships.py` (529),
+`zoomtables.py` (515), `colony_summary/colonyrows.py` (514),
+`tools/ext_diag.py` (473), `style.py` (453),
+`tools/colony_list_preview.py` (443), `screen_base.py` (390),
 `editor/editor.py` (390), `empire_identity/renderer.py` (383),
 `new_game/screen.py` (382), `empire_identity/screen.py` (372),
 `helppopup.py` (349), `main.py` (328), `select_race/screen.py` (322),
@@ -344,8 +344,8 @@ worse than no list: `galaxy_map/screen.py` (805),
 `galaxy_map/sidebar.py` (301). `smoke_test.py` is exempt by nature.
 
 `colony_summary/colonyrows.py` crossed the line this session and is
-listed rather than split: it went 234 -> 443 without gaining a
-function. The growth is the tie-break block, the NOT DRAWN section
+listed rather than split: it went 234 -> 514 across two commits and
+gained one function. The growth is the tie-break block, the NOT DRAWN section
 and the two comments around the row filter — all of it the sources
 for numbers that are already there. Splitting on that would put a
 value in one file and the evidence for it in another, which is the
@@ -1118,6 +1118,147 @@ looking buildable. A smoke check holds both markings to their sources
 and fails if `GameState` ever grows an events array — at which point
 the second entry is wrong and wants revisiting rather than deleting.
 
+**The list has a SELECTION now — 3 September 2026.** Transcribed,
+and the two halves have separate sources.
+
+**Entry lands on row 0 of the SORTED list.** `colsum.cpp:139` sets
+`COLONY::_g_colony_n = COLSUM::_list_col[0]` in the screen's setup,
+before the input loop runs, and `_list_col` is filled from the sorted
+`_g_colony_list_ptr` by `Update_Col_List_` (colsum.cpp:348-351) — so
+it is the first row as sorted and not the first colony in the array.
+
+**After that it changes on HOVER, not on a click.**
+`Evaluate_Colony_Pop_Input_` takes the clicked field and the scanned
+one as two separate arguments, and it is the SCANNED one that moves
+the selection: over a row's name, producing or buy field it assigns
+`COLONY::_g_colony_n` (colsum.cpp:880-890). "Scanned" is this
+engine's word for hovered — `fields::Scan_Input_` (fields.cpp:652)
+returns the field under the pointer with no button involved, and
+`Evaluate_Input_` is handed both values from colsum.cpp:159-162.
+Leaving the list does not clear it: the assignment has no else
+branch, so the box goes on showing the last colony the pointer
+crossed.
+
+**The selection is a COLONY, never a row index**, and that is the
+part a row index would get wrong invisibly. The sort handler
+(colsum.cpp:830-837) re-sorts, clears the window array and resets
+`_first`, and never touches `_g_colony_n` — so the selected colony
+keeps its identity and moves to wherever the new order puts it. A row
+index would keep the highlight still and change the colony under it,
+which is the opposite behaviour and looks identical on entry. The
+row dicts therefore carry `index`, the snapshot's own colony index,
+which is the same number `_list_col[]` holds. Nothing draws it.
+
+**A click on a row is deliberately inert, and it is commented rather
+than left silent.** The original does something substantial there:
+clicking the name field sets `MOX::_current_screen = SCREEN_COLONY`
+and hands over the star and orbit (colsum.cpp:912-920), and clicking
+the producing text goes to `SCREEN_QUEUE_POPUP` instead
+(colsum.cpp:922-944). Neither destination has an HD screen, so
+injecting the click would move the game to a screen the HD side
+cannot draw and hand the player a 640x480 fallback with no way back
+that this screen knows about. The click is swallowed here rather than
+allowed to fall through — an absence that is written down is a state,
+one that happens to work out is a bug waiting for its second cause.
+The honest risk is named in the code: the hover has already moved the
+selection by the time a click arrives, so a player who clicks a row
+does see the panel change, which reads as the click working.
+
+**`output_panel` draws — 3 September 2026, and it is a
+TRANSCRIPTION** (decision 43 withdrawn; the marking was the opposite
+for a day and a half). `COLSUM::Draw_Colony_Scan_Info_`
+(colsum.cpp:1155) fills the native box at (13, 354, 80, 88) for the
+selected colony, guarded by `_g_colony_n != -1` (colsum.cpp:1165):
+seven values substituted into `ESTRINGS::E_Strings_(74)`
+(colsum.cpp:1196-1205) — planet size, climate, gravity class, mineral
+class, `n_pops`, the computed maximum and growth — plus a column of
+production rows and morale from native x 106 (colsum.cpp:1171-1176).
+
+**Its own module, `colonyoutput.py` (179 lines), not the end of
+`screen.py`.** The screen was already over the guideline and a panel
+that draws ten values from a dict is not "being a screen". It is
+handed plain dicts and knows nothing about structs, the same seam
+`colonyrows` and `colonylist` already use, so a spec change breaks in
+one place — `build_rows`, where the offsets are.
+
+**Ten values in two columns of five**, label left and value right.
+The seven from `E_Strings_(74)` in six rows, because the original
+prints `n_pops` and the maximum as one pair and so does this, plus
+three production numbers; morale is the eleventh thing in the box and
+is not one of the ten. Three of the seven — climate, `n_pops`,
+`max_pop` — are also on every row, and that is not a duplication to
+tidy: the per-row line is the HD EXTENSION and this is the original's
+own box, which prints all seven for one colony.
+
+**Three deviations, all marked in `layout.json` under
+`output._deviation_note`, each one line away from being undone.**
+(1) BC is not drawn; the original's loop is `i < ECON_COUNT` and
+ECON_COUNT is 4 (orion2_consts.h:123), so it draws four. A smoke
+check asserts BC does NOT appear, so adding it fails the suite and
+takes the note with it rather than quietly widening the panel.
+(2) Each production row is one number where the original's is
+several — `COLDRAW::Draw_Colony_Prod_Both_` (coldraw.cpp:36) draws
+imports (:46), pollution for industry (:56) and a shortage computed
+from maintenance minus imports minus production (:61) beside the net
+value. This prints `colony->production[i]` (coldraw.cpp:60) and
+nothing else, so it is a subset of that row rather than a smaller
+drawing of it. (3) Morale is a number here and a row of SPRITES
+there: `Draw_Info_Morale_Both_` draws `abs(morale / 2)` of them,
+capped at 20, in one of two artworks by sign. The sprites are in the
+player's LBX and are not shipped — the same trade the Buy button
+already carries and marks. The VALUE is transcribed, including the C
+truncation toward zero, and so is the Unification rule: at
+`GOVERNMENT_UNIFICATION` or above the original zeroes its own count
+and draws nothing, so the row keeps its label and shows no value. A
+drawn 0 would claim neutral morale where the original is claiming
+that morale does not apply.
+
+**An empty selection draws NOTHING** — no dash, no zero, no label
+with a blank beside it — because the original's box is simply not
+drawn. A smoke check renders the panel with no selection and asserts
+the surface is untouched, which is the one form of this that a table
+of values cannot check.
+
+**Growth is printed RAW.** It is the sum of `s_colony.pop_growth[10]`
+that colsum.cpp:1179-1182 accumulates, and the format string that
+labels it lives in the player's `estrings.lbx` and is not shipped, so
+its unit is unknown here: a live colony of 8 pops decoded 73 on
+3 September 2026, plainly an accumulator and not a per-turn head
+count. Printing the engine's own number under our own label is the
+honest form; inventing a division to make it look like people would
+not be. The original also sums `pop_roundoff[10]` in the same loop
+and then passes it to nothing — there is no transcription to make.
+
+**The word lists are OURS, and the note says so.** The original fills
+four tables — `_planet_size_string`, `_mineral_class_string` and
+`_planet_gravity_string` at estrings.cpp:155-169,
+`_planet_climate_string` at estrings.cpp:204-213 — and every entry is
+an `E_Strings_(id)` call, so the strings come from the player's own
+`estrings.lbx`, loaded at runtime, one file per language
+(`Load_E_Strings_`). They are not in the orion2re source and are not
+shipped. So `layout.json` carries English words this project chose to
+match what the game prints, in a `words` block, under decision 15.
+Three of them have a second source of a sort: the original's own
+planet description for Ixion II read "Small Ocean, Normal Gravity,
+Mineral Abundant" on 31 August 2026, which also fixes the direction
+of all three enums. The rest are the enum names in title case and are
+unconfirmed.
+
+**Climate is deliberately NOT in that block.** It already had a home
+at `list.climates` with its own provenance note, and a second copy
+that agrees on the day it is made is the screen-ID-map failure
+waiting. A smoke check asserts the climate words appear in exactly
+one of the two blocks, and that none of the three new lists appears
+in the other.
+
+**What has NOT been done is the check that would settle the panel.**
+Of its ten values, five — size, climate, gravity, mineral class and
+`n_pops` — were read live against the original's own planet
+description, and `max_pop` is computed from them. Growth and morale
+rest on the header's names alone, exactly as `outpost_flag` does. The
+thing that settles them is the `--native` side-by-side in
+`tools/colony_list_preview.py`, which still has never been run.
+
 **Scrolling is deliberately not built.** The original windows ten
 rows over the sorted list — `_list_col[10]`, `Update_Col_List_`
 (colsum.cpp:348) filling from `_g_colony_list_ptr[_first + i]` — and
@@ -1130,8 +1271,9 @@ piece verified before the next.
 31 August (`core/structs/colony.py`): `owner`, `planet`, `n_pops` and
 `max_farms` each agree with the original's own colony summary, and
 `MASK_PROF` with its FARMERS column. What is still missing is the
-work, not the data. The three panels under the list are filled and
-empty.
+work, not the data. `output_panel` draws now; `galaxy_inset` and
+`spare_panel` are still fill only, and one panel per step is
+deliberate.
 
 One number the bar design depends on is **not** a struct field:
 maximum population is computed by
@@ -1145,17 +1287,19 @@ refuses the base table anywhere it appears without the climate
 factors.
 
 **The list renders — first visible step, 31 August.**
-`screens/colony_summary/colonyrows.py` (443 lines, the numbers),
-`screens/colony_summary/colonylist.py` (492, the drawing) and
+`screens/colony_summary/colonyrows.py` (514 lines, the numbers),
+`screens/colony_summary/colonylist.py` (533, the drawing),
+`screens/colony_summary/colonyoutput.py` (179, the scan box) and
 `screens/colony_summary/colonybuild.py` (207, the building column) —
 their own modules because `screen.py` was at 258 against a ~300
 guideline. One
 row per colony of the local player, sorted by name: the planet name,
 then one allocation bar, one square per colonist, three zones in ECON
 order.
-Static on purpose — no hover band, no draggable dividers, no click
-injection; the screen stays read-only. Those belong on a picture
-somebody already believes.
+The list now has a SELECTION, and it is what feeds `output_panel`.
+Still read-only towards the game: nothing the list does sends an
+injection. No hover band is drawn and no divider is draggable; those
+belong on a picture somebody already believes.
 
 **The bar is an INVENTION** and is marked as one in `colonylist.py`,
 in `layout.json` under `list._invention`, here, and in a smoke check

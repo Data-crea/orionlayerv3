@@ -101,7 +101,7 @@ from core.config import REF_W, REF_H
 from core.screen_base import ScreenBase
 from core.structs import player as player_struct
 
-from . import colonylist, colonyrows
+from . import colonylist, colonyoutput, colonyrows
 
 log = logging.getLogger("colony_summary")
 
@@ -143,6 +143,12 @@ class ColonySummaryScreen(ScreenBase):
         self._local = None          # parsed s_player of the local player
         self._sort_key = "name"     # what the original starts on
         self._state = None          # last snapshot, for the list
+        self._rows = []             # build_rows for _state + _sort_key
+        # The SELECTED colony, as its index in the snapshot's colony
+        # array — the same number the original keeps in
+        # `COLONY::_g_colony_n`, and not a row index. See
+        # `_reseat_selection`.
+        self._selected = None
 
     # ── Lifecycle ─────────────────────────────────────────
 
@@ -161,6 +167,7 @@ class ColonySummaryScreen(ScreenBase):
         # stars together; the sidebar only ever wanted the local
         # player's record.
         self._state = game_state
+        self._rebuild_rows()
         raws = getattr(game_state, "player_raw", None) or []
         players = [player_struct.parse(r) for r in raws
                    if len(r) >= player_struct.SIZE]
@@ -170,6 +177,72 @@ class ColonySummaryScreen(ScreenBase):
     def on_resize(self):
         super().on_resize()
         self._scale_frame()
+
+    # ── Selection ─────────────────────────────────────────
+
+    def _rebuild_rows(self):
+        """The rows for the current snapshot and sort key, once.
+
+        `_render_list` used to call `build_rows` every frame. It is
+        called here instead because the hover has to hit-test the
+        SAME list the renderer drew — two lists built from one
+        snapshot agree today and would not the first time anything
+        about the build depended on when it ran.
+        """
+        self._rows = colonyrows.build_rows(self._state, self._sort_key)
+        self._reseat_selection()
+
+    def _reseat_selection(self):
+        """Entry lands on row 0; after that the colony is kept.
+
+        TRANSCRIBED, and the two halves have different sources.
+
+        **Entry is row 0 of the sorted list.** colsum.cpp:139 sets
+        `COLONY::_g_colony_n = COLSUM::_list_col[0]` in the screen's
+        setup, before the input loop runs — and `_list_col` is filled
+        from the sorted `_g_colony_list_ptr` by `Update_Col_List_`
+        (colsum.cpp:348-351), so it is the first row as SORTED and
+        not the first colony in the array.
+
+        **A sort does not reseat it.** The sort handler
+        (colsum.cpp:830-837) re-sorts, clears the window array and
+        resets `_first`, and never touches `_g_colony_n`. So the
+        selected COLONY is kept and moves to wherever the new order
+        puts it — which is why the selection is stored as a colony
+        index and not as a row. Storing the row would keep the
+        HIGHLIGHT still and change the colony under it, which is the
+        opposite behaviour and would look identical on entry.
+
+        A selection whose colony has left the list — it was lost, or
+        the snapshot changed under us — falls back to row 0 rather
+        than to nothing, because the original has no state in which
+        this screen is up and no colony is scanned. Nothing is
+        selected only when there are no colonies at all.
+        """
+        if not self._rows:
+            self._selected = None
+            return
+        if any(row["index"] == self._selected for row in self._rows):
+            return
+        self._selected = self._rows[0]["index"]
+
+    def selected_row(self):
+        """The selected row dict, or None. The panel's whole input."""
+        for row in self._rows:
+            if row["index"] == self._selected:
+                return row
+        return None
+
+    def selected_position(self):
+        """Where the selection sits in the CURRENT order, or None.
+
+        Only the renderer's highlight and the smoke test want this;
+        the selection itself is never stored this way.
+        """
+        for i, row in enumerate(self._rows):
+            if row["index"] == self._selected:
+                return i
+        return None
 
     # ── Frame ─────────────────────────────────────────────
 
@@ -196,6 +269,7 @@ class ColonySummaryScreen(ScreenBase):
         self._render_background(surface)
         self._render_panels(surface)
         self._render_list(surface)
+        self._render_output(surface)
         self._render_sidebar(surface)
         self._render_buttons(surface)
         self._render_frame_image(surface)
@@ -242,10 +316,37 @@ class ColonySummaryScreen(ScreenBase):
         if not box:
             return
         cfg = self._data.get("list", {})
-        rows = colonyrows.build_rows(self._state, self._sort_key)
-        colonylist.render(surface, rows,
+        colonylist.render(surface, self._rows,
                           pygame.Rect(*self.layout.rect(box)),
                           cfg, self.layout, self.style)
+
+    def _render_output(self, surface):
+        """The original's scan box for the selected colony.
+
+        A TRANSCRIPTION — see `colonyoutput`, and fundament 43 for
+        why that marking is worth stating rather than assuming. The
+        panel draws NOTHING when nothing is selected, which is the
+        original's own guard (`_g_colony_n != -1`, colsum.cpp:1165)
+        and not a placeholder waiting to be filled.
+
+        The climate words come from the `list` block and the other
+        three lists from `words`. They are not merged into one block
+        because `list.climates` already had a home and its own
+        provenance note, and a second copy that agrees today is the
+        screen-ID-map failure waiting to happen. A smoke check
+        asserts the ten climate words appear in exactly one of the
+        two.
+        """
+        box = self.box_rect("output_panel")
+        if not box:
+            return
+        colonyoutput.render(
+            surface, self.selected_row(),
+            pygame.Rect(*self.layout.rect(box)),
+            self._data.get("output", {}),
+            self._data.get("words", {}),
+            self._data.get("list", {}).get("climates", ()),
+            self.layout, self.style)
 
     def _render_sidebar(self, surface):
         """Six rows, label LEFT and value RIGHT — the original's.
@@ -431,6 +532,13 @@ class ColonySummaryScreen(ScreenBase):
                 # second click re-sorts identically. Assigning the
                 # same key again IS the transcription.
                 self._sort_key = spec["key"]
+                # Re-sort now, so the rows the next hover hit-tests
+                # are the rows about to be drawn. The SELECTION
+                # survives it — `_reseat_selection` keeps the colony
+                # and lets its row move, which is what the original
+                # does by not touching `_g_colony_n` here at all
+                # (colsum.cpp:830-837).
+                self._rebuild_rows()
                 # The original scrolls back to the top on any sort
                 # click — `_first = 0` at colsum.cpp:828. Nothing to
                 # reset here yet: the HD list does not scroll, it
@@ -445,7 +553,79 @@ class ColonySummaryScreen(ScreenBase):
         if self._hit("return", screen_x, screen_y):
             self._inject(self._data.get("return", {}), "return")
             return None
+        if self._row_at(screen_x, screen_y) is not None:
+            # DELIBERATELY INERT, and that is worth a comment because
+            # the original does something substantial here: clicking a
+            # row's name field sets `MOX::_current_screen =
+            # SCREEN_COLONY` and hands over the star and orbit
+            # (colsum.cpp:912-920), so the click leaves this screen
+            # for the colony screen. Clicking the PRODUCING text goes
+            # somewhere else again, to SCREEN_QUEUE_POPUP
+            # (colsum.cpp:922-944).
+            #
+            # Neither destination has an HD screen yet, and sending
+            # the injection anyway would move the game to a screen the
+            # HD side cannot draw — the fallback would take over and
+            # the player would be looking at 640x480 with no way back
+            # that this screen knows about. So the click is swallowed
+            # here rather than passed on.
+            #
+            # It is swallowed and NOT left to fall through, because
+            # falling through is the version that looks the same today
+            # and stops looking the same the moment anything else
+            # claims that area. An absence that is written down is a
+            # state; an absence that happens to work out is a bug
+            # waiting for its second cause.
+            #
+            # The hover has already moved the selection by the time a
+            # click arrives, so a player who clicks a row does see the
+            # panel change — which reads as the click working. That is
+            # the honest risk in leaving it inert, and it is the
+            # reason this comment is longer than the branch.
+            return None
         return super().handle_click(screen_x, screen_y)
+
+    def _row_at(self, screen_x, screen_y):
+        """Index into `_rows` of the row under the pointer, or None.
+
+        The geometry comes from `colonylist.row_at`, which is the same
+        function `colonylist.render` lays the rows out with — one
+        source for the rect, per decision 5. A second copy of the
+        pitch here is how a list starts highlighting the row above
+        the one it draws.
+        """
+        box = self.box_rect("list_area")
+        if not box or not self._rows:
+            return None
+        area = pygame.Rect(*self.layout.rect(box))
+        if not area.collidepoint(screen_x, screen_y):
+            return None
+        return colonylist.row_at(area, self._data.get("list", {}),
+                                 self.layout.scale, len(self._rows),
+                                 (screen_x, screen_y))
+
+    def handle_mouse_motion(self, screen_x, screen_y):
+        """Hover selects, which is the original's own behaviour.
+
+        TRANSCRIBED. `Evaluate_Colony_Pop_Input_` takes the CLICKED
+        field and the SCANNED one separately, and it is the scanned
+        one that moves the selection: over a row's name, producing or
+        buy field it assigns `COLONY::_g_colony_n = colony_id`
+        (colsum.cpp:880-890). "Scanned" is this engine's word for
+        hovered — `fields::Scan_Input_` returns the field under the
+        pointer (fields.cpp:652), with no button involved.
+
+        Leaving the list does NOT clear the selection, and that is
+        the source too: the assignment has no else branch, so
+        `_g_colony_n` keeps whatever it last held. The scan box goes
+        on showing the last colony the pointer crossed, which is what
+        makes it readable at all — a panel that emptied whenever the
+        mouse moved off the list would be blank most of the time.
+        """
+        super().handle_mouse_motion(screen_x, screen_y)
+        index = self._row_at(screen_x, screen_y)
+        if index is not None:
+            self._selected = self._rows[index]["index"]
 
     def _hit(self, name, x, y):
         box = self.box_rect(name)
