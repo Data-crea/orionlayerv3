@@ -975,25 +975,59 @@ off the wire:
 - **The sidebar agrees exactly** — 878 / +42 / 78 / 17 / -3 / 27 on
   both halves, which is an independent confirmation of the six-of-six
   reading recorded in `core/structs/player.py`.
-- **The original lists TEN rows and the HD list draws NINE.** The
-  original windows ten (`_list_col[10]`); `list_area` at 1920x1080
-  fits nine at `row_height` 62. Ours says "2 more not shown", so it
-  is honest, and it is still one row short of the original's window.
-- **The sort keys disagree, and nothing can currently fix that.** The
-  game was on Population and the HD screen on Name, because
-  `_g_sort_index` is not in the snapshot. `--live` takes the sort
-  from `--sort`, not from the game, and the two can differ without
-  either being wrong.
-- **Two of our word lists do not match the game's.** The original's
-  scan box reads "Normal Gravity" where ours reads "Normal G", and
-  "Mineral Rich" where ours reads "Rich". The words in `words` were
-  derived from the enum names and were marked as ours and
-  unconfirmed; this is the confirmation arriving and disagreeing.
-  NOT FIXED HERE — it is a separate change with its own evidence.
-- **Growth prints "+63k" in the original**, signed with a suffix,
-  where ours prints the raw sum. So the NUMBER is the same reading
-  and the wording is not, which narrows the open question in
-  `output._growth_note` rather than closing it.
+All five things it found have since been acted on; what they were,
+and what came of each, is below.
+
+**The tenth row — `row_height` 62 to 58.** The original windows ten
+(`_list_col[10]`, filled by `Update_Col_List_` at colsum.cpp:348) and
+the HD panel drew nine, because `list_area` is 619 reference px and
+`pad_y` takes 14: 605 / 62 = 9. Lowering the row was the cheaper of
+the two ways — `list_area` comes from the frame artwork through
+`frame_holes.py` (decision 3), so growing the panel means redrawing
+the frame.
+
+**60 would have fit ten and was still wrong**, which the smoke test
+caught: 10 x 60 = 600 leaves 5 px, and the "{count} more not shown"
+line is about 15, so it would have been clamped back over the last
+row it exists to account for. The two features compete for the same
+pixels and the arithmetic has to hold both. 58 leaves 25. `bar_height`
+came down 34 to 30 with it, so `row_height` minus `bar_height` stays
+28 and the band "No Farming" is drawn in is exactly as wide — at 34
+it would have been 12 px for a 14 px label.
+
+**The sort is SET, not read.** `_g_sort_index` is not on the wire, so
+the two lists could sit on different keys with neither being wrong.
+Rather than ask for it to be serialised, the screen injects its own
+key once on entry (`_push_sort_key`), and every later change goes
+through `handle_click`, which injects as it goes — so they agree by
+construction and there is no second path to drift. Idempotent by the
+original's own design: `Switched_cmp_` has no direction toggle
+(colsum.cpp:378-401), so re-sorting by the key the game already holds
+re-sorts identically. Same trade as parking the galaxy map at maximum
+zoom-out (decision 35): **a state you establish yourself does not
+have to be read**, and the alternative was four lines of C++ in
+somebody else's tree, which is decision 36's line.
+
+**The word rule: a value carries no prefix, because the label carries
+it.** The source draws this more finely than "our list is wrong".
+MINERALS: colland.cpp:60-62 puts the table value into its own format
+string, `E_Strings_(0x176)`, so the word "Mineral" belongs to the
+FORMAT — the table holds "Rich", which is what our list held, and it
+was right. GRAVITY: colland.cpp:65 prints the table entry with no
+format at all, so "Normal Gravity" really is in the table — and
+copying it verbatim would have rendered GRAVITY Normal Gravity, the
+same fault from the other side. Our "Normal G" was neither: it was
+the enum name in title case, which is how a list derived from
+identifiers instead of from the screen goes wrong. Both lists now
+carry the bare quality; the rule is in `words._note` so it is not
+re-decided one list at a time, and a smoke check refuses a value that
+repeats its own label.
+
+**Growth: the k is a UNIT.** MOO2 counts population in thousands, and
+the original prints "+63k". The panel now signs the value through
+`colonyempire.format_value` and carries the "k" in the template.
+Nothing divides or scales — the engine's number is printed as the
+engine's number, with the unit that was always implied written down.
 
 **Two deviations in the row, both kept, both marked — decision 45.**
 The colony NAME is right-aligned and the original left-aligns it:
@@ -1407,6 +1441,33 @@ count in the line equals present minus drawn, nothing is drawn when
 nothing is dropped, and a point below the last drawn row still
 hit-tests to no row, so the hidden ones cannot become selectable by
 accident.
+
+**pop_growth FALLS — 3 September 2026.** The second `--live --native`
+run put both halves on the same key and the same ten rows, and the
+scan boxes could finally be read against each other for one colony.
+For **Sadak I** the original's box reads `Huge Desert / Normal
+Gravity / Mineral Rich / Population (4/8) / +63k`, and the HD panel
+reads Size Huge, Climate Desert, Gravity Normal, Minerals Rich,
+Population 4/8, **Growth +63k**. Six of the seven `E_Strings_(74)`
+values agree with the original's own print of the same colony,
+including the one that rested on the header's name alone. The maximum
+is the seventh and is computed, not read.
+
+**morale does NOT fall, and the reason is worth writing down: it is
+blocked by an input capability, not by data.** The comparison needs
+the original's box pointed at a colony whose morale is non-zero. In
+this save exactly one of the local player's listed colonies has one —
+Draconis I, morale -4, which the panel would show as -2 and the
+original as two sprites in the negative artwork — and the original's
+`_g_colony_n` moves on HOVER (colsum.cpp:880-890), which the
+Extension API cannot inject. Every click that lands on that row does
+something else instead: the name field leaves for SCREEN_COLONY
+(colsum.cpp:912-920), the producing text opens the build popup
+(:922-944), and a job column moves population (colmove). And the game
+window is hidden while the API is on (platform.cpp:1379), so nobody
+can hover it by hand either. A save in which the colony the original
+happens to be scanning has non-zero morale would settle it without
+any of that.
 
 **Scrolling is deliberately not built.** The original windows ten
 rows over the sorted list — `_list_col[10]`, `Update_Col_List_`

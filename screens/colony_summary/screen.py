@@ -150,6 +150,44 @@ class ColonySummaryScreen(ScreenBase):
         self._sort_key = self._data.get("sort", {}).get("default", "name")
         self._load_frame()
         self.update(game_state)
+        self._push_sort_key()
+
+    def _push_sort_key(self):
+        """SET the game's sort order instead of reading it.
+
+        `_g_sort_index` is not on the wire — the snapshot carries
+        settings, players, stars, ships, colonies, planets, nebulas,
+        leaders, antarans and ship icons (ext_api.cpp:53-136) and no
+        screen state — so the HD list and the original's could sit on
+        different keys with neither being wrong. The first real
+        side-by-side showed exactly that: the game on Population, HD
+        on Name, and two correctly sorted lists that did not match.
+
+        **A state you establish yourself does not have to be read.**
+        Sending our own key once, on entry, makes the two agree by
+        construction: every later change goes through `handle_click`,
+        which injects as it goes, so there is no second path that
+        could drift them apart. That is the same trade as parking the
+        galaxy map at maximum zoom-out (decision 35) and as the
+        scroll window — the alternative was four lines of C++ in
+        somebody else's tree to report a number we can simply impose,
+        which is decision 36's line.
+
+        Idempotent by the original's own design: `Switched_cmp_` has
+        no direction toggle (colsum.cpp:378-401), so re-sorting by
+        the key the game already holds re-sorts identically. Entering
+        the screen repeatedly costs one keystroke and changes
+        nothing.
+
+        It is a no-op while disconnected, and deliberately not
+        retried: `_inject` sends nothing without a client, and a
+        screen that is up without a game has no original behind it to
+        disagree with.
+        """
+        for spec in self._data.get("sort", {}).get("buttons", []):
+            if spec["key"] == self._sort_key:
+                self._inject(spec, f"entry sort {spec['key']}")
+                return
 
     def update(self, game_state=None):
         if game_state is None:

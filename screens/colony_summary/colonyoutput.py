@@ -45,6 +45,8 @@ on trust.
 """
 from core import palette
 
+from .colonyempire import format_value
+
 LABEL_COLOR = palette.col("colony_summary", "label", (140, 155, 190))
 VALUE_COLOR = palette.col("colony_summary", "value", (220, 228, 245))
 EMPTY_COLOR = palette.col("colony_summary", "nav_text_dim",
@@ -89,7 +91,15 @@ def row_values(row, words, climates):
         "mineral": word(words.get("minerals") or (), row.get("mineral", -1)),
         "pops": row.get("pops", 0),
         "max_pop": row.get("max_pop", 0),
-        "growth": row.get("growth", 0),
+        # SIGNED, through the sidebar's own formatter rather than a
+        # second copy of the rule: growth is a net flow and a
+        # negative one means the colony is shrinking, which is the
+        # same reason Income and Food carry an explicit plus. The
+        # UNIT — MOO2 counts population in thousands, so the
+        # original prints "+63k" — is wording and lives in the
+        # value template in layout.json (decision 15). Nothing here
+        # divides or scales: see output._growth_note.
+        "growth": format_value(row.get("growth", 0), signed=True),
         "food": row.get("production", (0, 0, 0, 0))[0],
         "industry": row.get("production", (0, 0, 0, 0))[1],
         "research": row.get("production", (0, 0, 0, 0))[2],

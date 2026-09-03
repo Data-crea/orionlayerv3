@@ -1005,6 +1005,29 @@ def main():
         f"a sort button injected a click at {cap.calls} as well as (or "
         f"instead of) its hotkey — the click path is the FALLBACK now, "
         f"and taking both moves the game's pointer for nothing")
+    # ── ENTERING THE SCREEN SETS THE GAME'S SORT ──
+    # _g_sort_index is not on the wire, so the two lists could sit on
+    # different keys with neither being wrong — the first real
+    # side-by-side found exactly that. Rather than ask for it to be
+    # serialised, HD imposes its own key once on entry and every
+    # later change goes through handle_click, so they agree by
+    # construction. Idempotent: Switched_cmp_ has no toggle
+    # (colsum.cpp:378-401), so re-sorting by the key the game already
+    # holds re-sorts identically.
+    cap.calls.clear(); cap.keys.clear()
+    cs.enter(None)
+    assert cap.keys == [ord(HOTKEY[cs._sort_key])], (
+        f"entering the screen sent {cap.keys} — it must push its own "
+        f"sort key {cs._sort_key!r} to the game, because nothing on "
+        f"the wire reports the game's")
+    assert cap.calls == [], (
+        f"the entry sort used the click path ({cap.calls}); it takes "
+        f"the hotkey like every other sort")
+    # And it is the DEFAULT from layout.json, not a hardcoded key.
+    assert cs._sort_key == cs._data["sort"]["default"], (
+        "the entry sort key is not layout.json's default")
+    cap.calls.clear(); cap.keys.clear()
+
     # RETURN has no letter to press: its field carries 0x25. It keeps
     # the native_click, and this asserts the fallback still works —
     # a hotkey path that swallowed every button would look identical
@@ -2702,6 +2725,35 @@ def main():
         encoding="utf-8"))["list"]
     _ov_fits = _cl.rows_drawn(_ov_area, _ov_cfg, app.layout.scale, 99)
     assert _ov_fits > 0, "no row fits list_area at all"
+    # TEN, because that is the original's window: COLSUM::_list_col
+    # holds ten and Update_Col_List_ (colsum.cpp:348) fills exactly
+    # that many. At row_height 62 the panel held nine and nothing
+    # said so until a --live --native side-by-side put the two lists
+    # next to each other. Asserted at every shipped resolution, and
+    # with room left for the overflow line: at row_height 60 ten rows
+    # fit and the line does not, which is the interaction a change to
+    # either number alone gets wrong.
+    _ORIGINAL_WINDOW = 10
+    for _W, _H in _SIZES:
+        _lay2 = Layout(_W, _H)
+        _la2 = pygame.Rect(*_lay2.rect(d.active.box_rect("list_area")))
+        _fits2 = _cl.rows_drawn(_la2, _ov_cfg, _lay2.scale, 99)
+        assert _fits2 >= _ORIGINAL_WINDOW, (
+            f"{_W}x{_H}: the list draws {_fits2} rows and the original "
+            f"windows {_ORIGINAL_WINDOW} (_list_col[10], "
+            f"colsum.cpp:348). row_height is "
+            f"{_ov_cfg['row_height']} — lower it, or widen list_area "
+            f"in the frame artwork, but do not let the two differ "
+            f"silently")
+        _bands2 = _cl.row_bands(_la2, _ov_cfg, _lay2.scale, _fits2)
+        _left2 = _la2.bottom - (_bands2[-1][0] + _bands2[-1][1])
+        _line_h = app.style.render_text(
+            "0", _lay2.font_size(_ov_cfg.get("small_font", 15)),
+            (255, 255, 255)).get_height()
+        assert _left2 >= _line_h, (
+            f"{_W}x{_H}: {_left2} px are left under the last row and "
+            f"the overflow line needs {_line_h} — it would be clamped "
+            f"back over the row it exists to account for")
     _ov_rows = [{"index": _i, "name": f"Over {_i}", "pops": 2,
                  "jobs": [1, 1, 0], "no_farming": False, "climate": 8,
                  "max_pop": 9, "producing": "", "producing_turns": 0,
@@ -2834,12 +2886,51 @@ def main():
         f"morale")
     assert len(_shown) == len(_ocfg["rows"]), (_shown, _ocfg["rows"])
     _text = " ".join(f"{lab}={val}" for lab, val, _c in _shown)
-    for _value in ("Large", "Gaia", "Heavy G", "Ultra Rich", "17", "31",
-                   "-42", "11", "22", "33", "44"):
+    for _value in ("Large", "Gaia", "Heavy", "Ultra Rich", "17", "31",
+                   "-42k", "11", "22", "33", "44"):
         assert _value in _text, (
             f"the panel does not show {_value!r} — it is one of the "
             f"eleven the original's scan box carries. Got: {_text}")
     assert "-7" in _text, "morale is not shown"
+    # GROWTH: signed, and the k is a UNIT — MOO2 counts population in
+    # thousands and the original's scan box printed "+63k". The sign
+    # comes from colonyempire.format_value, which is the one home for
+    # that rule; the unit is wording and lives in the template.
+    _growth_shown = [_v for _l, _v, _c in _shown if _l.lower() == "growth"]
+    assert _growth_shown == ["-42k"], (
+        f"growth shows {_growth_shown!r}; it is a net flow, so it "
+        f"carries its sign, and thousands, so it carries its k")
+    _pos = _co.visible_rows(dict(_fake, growth=7), _ocfg, _words, _climates)
+    assert [_v for _l, _v, _c in _pos if _l.lower() == "growth"] == ["+7k"], (
+        "a positive growth has no explicit plus — the original prints "
+        "one, for the same reason the sidebar's Income and Food do")
+    assert "k" in _ocfg["_growth_note"] and "thousand" in \
+        _ocfg["_growth_note"], (
+        "output._growth_note no longer says the k is a unit rather "
+        "than a decoration, which is the whole of why it is there")
+
+    # ── A VALUE CARRIES NO PREFIX; THE LABEL CARRIES IT ──
+    # A rule, not three decisions. The original's box is one run-on
+    # paragraph and this panel is a table, so a word that reads
+    # correctly there reads twice here: MINERALS Mineral Rich, GRAVITY
+    # Normal Gravity. The source draws the line more finely than "our
+    # list is wrong" — colland.cpp:60-62 puts the mineral value into
+    # its own format string, so "Mineral" belongs to the FORMAT and
+    # the table holds "Rich"; colland.cpp:65 prints the gravity entry
+    # with no format at all, so "Normal Gravity" really is in the
+    # table. Both lists carry the bare quality either way.
+    for _cite in ("colland.cpp:60-62", "colland.cpp:65",
+                  "THE LABEL CARRIES IT"):
+        assert _cite in _words["_note"], (
+            f"words._note no longer carries {_cite!r} — the rule is "
+            f"what keeps this from being re-decided one list at a time")
+    for _list_name, _label in (("gravities", "Gravity"),
+                               ("minerals", "Minerals")):
+        _label_words = set(_label.lower().rstrip("s").split())
+        for _w in _words[_list_name]:
+            assert not (set(_w.lower().split()) & _label_words), (
+                f"{_list_name} carries {_w!r}, which repeats its own "
+                f"label: the panel would draw '{_label.upper()} {_w}'")
     # ALL FOUR PRODUCTION VALUES. BC was left out for a day on the
     # reading that the panel showed "food, industry and research";
     # the original draws four. ECON_COUNT is 4 (orion2_consts.h:123)

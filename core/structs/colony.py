@@ -76,7 +76,28 @@ assigns it — every other mention is a read — except
 exactly one origin and the byte cannot be carrying a second meaning
 somewhere else.
 
-WHAT IS NOT VERIFIED:
+**`pop_growth` (offset 200) is VERIFIED — 3 September 2026.** The
+colony summary sums all ten words (colsum.cpp:1179-1182) and prints
+the total; for Sadak I the original's own scan box read **+63k** and
+the same sum off the wire is 63. The "k" is a unit, not a label —
+MOO2 counts population in thousands — so the number, its sign and its
+scale all agree with the original's own print of the same colony.
+Read in the second `--live --native` side-by-side, with both halves
+on the same sort key and the same ten rows.
+
+**`morale` (offset 7) is NOT verified, and the obstacle is an input
+capability rather than the data.** The comparison needs the original's
+scan box pointed at a colony with non-zero morale. In that save
+exactly one of the local player's listed colonies has one — Draconis
+I at -4 — and `_g_colony_n` moves on HOVER (colsum.cpp:880-890),
+which the Extension API cannot inject. Every click that lands on that
+row does something else: the name field leaves for SCREEN_COLONY, the
+producing text opens the build popup, a job column moves population.
+The game window is hidden while the API is on (platform.cpp:1379), so
+it cannot be hovered by hand either. What would settle it is a save in
+which the colony the original is already scanning has non-zero morale.
+
+WHAT IS NOT VERIFIED: the bit layout inside a `pop[]` word. The
 header fixes the word's offset and width and can say nothing about
 its contents, which is the distinction decision 23 carries. Of the
 five masks below, only `MASK_PROF` has a second source — Sol II
