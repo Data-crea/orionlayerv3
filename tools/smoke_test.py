@@ -2977,7 +2977,7 @@ def main():
         "blockade marking claims a field that no longer exists")
     assert _star_spec.SPEC.verified, "star spec is no longer verified"
     # And events really are absent from the snapshot: assert it
-    # against GameState rather than against the note, so the day Joe
+    # against GameState rather than against the note, so the day Joes
     # serializes them this fails and the marking gets revisited.
     from core.game_state import GameState as _GS
     # `ng_random_events` is the New Game screen's own toggle

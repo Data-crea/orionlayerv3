@@ -503,7 +503,7 @@ a human retypes is no longer good enough and the patch comes back.
 may not.** The snapshot carries every star's galaxy coordinate, so
 zooming and panning the HD map is a client-side act the game never
 sees — no Extension API change, no scroll command, nothing to ask
-Joe for. But `INJECT_CLICK` lands in the game's own 640x480 slice, so
+Joes for. But `INJECT_CLICK` lands in the game's own 640x480 slice, so
 **every galaxy→native conversion that reaches the wire goes through
 the GAME's state, never the HD view's**, and while decoupled the game
 is parked at maximum zoom-out so that slice covers the galaxy.
@@ -671,7 +671,7 @@ about their *type* is a louder warning than the values agreeing is a
 reassurance. Filed as a question rather than a fix in
 `doc/orion2re_open_fixes.md` item 6, because it is not our tree.
 
-The same thing happened to the list of C++ fixes being asked of Joe,
+The same thing happened to the list of C++ fixes being asked of Joes,
 and there it was worse, because the drift pointed outward. The status
 document named three items and named a file as their home; the file
 contained three different items, one of which was already applied,
@@ -700,13 +700,13 @@ carrying a label.
 
 **A claim in a bug report needs a source like any other number.**
 "SendFrame drops the client, and that is the cause of every reconnect
-in the log" survived weeks and reached Joe's list as fact. The
-reconnects were OrionLayer's own watchdog firing during legitimate
-silence. Nobody had checked the one thing that separates the two: a
-server that dropped a client still answers the next connection, so
-the missing `HELLO_REPLY` after every reconnect said the server was
-not running at all. The bug may still be real; the symptom attributed
-to it was not.
+in the log" survived weeks and reached the list Joes gets as fact.
+The reconnects were OrionLayer's own watchdog firing during
+legitimate silence. Nobody had checked the one thing that separates
+the two: a server that dropped a client still answers the next
+connection, so the missing `HELLO_REPLY` after every reconnect said
+the server was not running at all. The bug may still be real; the
+symptom attributed to it was not.
 
 **Read the source before theorising.** When the API behaves
 unexpectedly, the answer is usually one function in the orion2re tree.

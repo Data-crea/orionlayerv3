@@ -1,4 +1,4 @@
-# orion2re — open fixes for Joe
+# orion2re — open fixes for Joes
 
 Rewritten 30 August 2026. **Replaces `patch_inject_click_motion.md`**,
 which had drifted: the status document listed three open fixes and

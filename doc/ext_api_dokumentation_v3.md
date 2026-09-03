@@ -1,7 +1,7 @@
 # orion2re Extension API — Patch Documentation
 
 This document describes all changes to the orion2re source code
-required for the Extension API. Target audience: Joe and anyone
+required for the Extension API. Target audience: Joes and anyone
 reviewing or integrating the patch.
 
 Rewritten: 28 August 2026, extended 29 and 30 August. Field dumps re-verified
@@ -566,7 +566,7 @@ LBX at runtime into `MOX::_ship_icon_width/_height[4]`
 
 ## Known limitations of the current server
 
-**The list of what is being asked of Joe lives in
+**The list of what is being asked of Joes lives in
 `doc/orion2re_open_fixes.md` and nowhere else.** An earlier version
 of this section described two server bugs in full — SendFrame
 dropping a client on a short write, and FIELD_LIST only being sent on

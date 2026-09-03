@@ -5,7 +5,7 @@ The version shown on the main menu is maintained by hand, because
 the Extension API does not report it: HELLO_REPLY carries only
 PROTO_VERSION and the state snapshot has no version field. A number
 copied out of somebody else's tree drifts silently, so this turns
-"did Joe bump the version?" into a command instead of a memory task.
+"did Joes bump the version?" into a command instead of a memory task.
 
 It reads the two places orion2re keeps it:
 
@@ -93,8 +93,8 @@ def main():
         problems.append(
             "GAME_VERSION_LABEL not found in src/game/consts.h")
     elif engine and label != f"Version {engine}":
-        # orion2re's own two literals disagreeing is Joe's bug, not
-        # ours, but it decides which string the main menu shows.
+        # The two literals disagreeing is a bug in orion2re, not
+        # here, but it decides which string the main menu shows.
         problems.append(
             f"orion2re disagrees with itself: label is {label!r}, "
             f"engine is {engine!r}")

@@ -228,8 +228,8 @@ to stay uncomfortable to extend.
 ├── doc/
 │   ├── v3_fundament.md                Decisions, principles, rules
 │   ├── v3_orion2re_index.md           Source-code reference
-│   ├── ext_api_dokumentation_v3.md    Extension API, for Joe
-│   ├── orion2re_open_fixes.md         What is asked of Joe — the
+│   ├── ext_api_dokumentation_v3.md    Extension API, for Joes
+│   ├── orion2re_open_fixes.md         What is asked of Joes — the
 │   │                                  ONLY home of that list
 │   ├── empire_identity_slowload.md    The 23-second gap: full
 │   │                                  investigation record, dormant
@@ -532,8 +532,9 @@ the new `text` box skin, F5-draggable like everything else.
 The Extension API does not report it — `HELLO_REPLY` carries
 `PROTO_VERSION`, which is the wire protocol's number, and the
 snapshot has no version field. Appending it to the reply would have
-been four backwards-compatible lines of C++ in Joe's tree for one
-line of cosmetic text, so the proposal was written down and withdrawn
+been four backwards-compatible lines of C++ in the tree Joes
+maintains, for one line of cosmetic text, so the proposal was
+written down and withdrawn
 (`doc/ext_api_dokumentation_v3.md`, `doc/orion2re_open_fixes.md`).
 
 It lives in `core/config.ORION2RE_VERSION`; the word "Version" is a
@@ -825,7 +826,7 @@ opposite meanings, and the trap is on the other one.
 namespaces at two declared sizes — `const char[3]` in `colsum.h` and
 `strings.h`, `const char[4]` in `estrings.h` — in two spellings, all
 producing the same bytes. Nothing misbehaves; it is item 6 in
-`doc/orion2re_open_fixes.md` as a **question** for Joe (which byte
+`doc/orion2re_open_fixes.md` as a **question** for Joes (which byte
 does the original binary emit at `0x0055110c`?), not a fix request.
 
 `E_Strings_(12)` is **OPEN, single source**: it has no entry in
@@ -1083,7 +1084,7 @@ turn of this one will not produce one.
 The missing half is written into `build_rows` as a comment with its
 source, and into `core/structs/colony.py` as what offset 6 does and
 does not rest on. It is not on `doc/orion2re_open_fixes.md`: nothing
-is being asked of Joe, the data is already on the wire, and the only
+is being asked of Joes, the data is already on the wire, and the only
 thing missing is a savegame.
 
 **Two states the original's row carries and ours does not.** Found
@@ -2264,8 +2265,8 @@ python tools/struct_probe.py colonies --records 2
 |---|---|
 | Decisions, principles, rules | `doc/v3_fundament.md` |
 | orion2re source index | `doc/v3_orion2re_index.md` |
-| Extension API (for Joe) | `doc/ext_api_dokumentation_v3.md` |
-| What is asked of Joe (ONLY home) | `doc/orion2re_open_fixes.md` |
+| Extension API (for Joes) | `doc/ext_api_dokumentation_v3.md` |
+| What is asked of Joes (ONLY home) | `doc/orion2re_open_fixes.md` |
 | Empire Identity slow-load record | `doc/empire_identity_slowload.md` |
 | Git/GitHub workflow | `doc/UMZUG.md` |
 | Working agreement for Claude Code | `CLAUDE.md` |

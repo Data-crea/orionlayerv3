@@ -319,7 +319,7 @@ under `mods/<your_mod>/`, list the mod in `settings.json`, restart.
 | `MODDING.md` | Complete modding guide |
 | `doc/v3_orion2re_index.md` | orion2re source-code reference |
 | `doc/ext_api_dokumentation_v3.md` | Extension API protocol + patch |
-| `doc/orion2re_open_fixes.md` | What is asked of Joe (the only list) |
+| `doc/orion2re_open_fixes.md` | What is asked of Joes (the only list) |
 | `doc/ship_icon_measurement.md` | Where the ship icon sizes come from |
 | `doc/starfield_measurement.md` | Background star density |
 | `doc/empire_identity_slowload.md` | The 23-second gap — open investigation |
