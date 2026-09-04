@@ -289,6 +289,37 @@ class DropPlan:
                 f", reason={self.reason!r}, at={self.stopped_at})")
 
 
+def predict_pops(pops, n_pops, max_farms, cluster, requested_job):
+    """The pop array `plan_drop` would leave behind.
+
+    Same walk, returning the state rather than the count — so a
+    caller can diff a real snapshot against it word for word instead
+    of against a summary. That is what turns "the click landed
+    somewhere" into a checkable claim.
+    """
+    work = list(pops)
+    held = set(cluster.indices if isinstance(cluster, Cluster) else cluster)
+    for i in held:
+        if 0 <= i < len(work):
+            work[i] &= ~colony_struct.POP_MASK_ASSIGNED
+    while True:
+        index = next((i for i in range(min(n_pops, len(work)))
+                      if not colony_struct.pop_is_assigned(work[i])), None)
+        if index is None:
+            return work
+        if (requested_job == -1
+                or colony_struct.pop_prof(work[index]) == requested_job):
+            work[index] |= colony_struct.POP_MASK_ASSIGNED
+            continue
+        ok, _reason = _can_take_job(work, n_pops, max_farms, index,
+                                    requested_job)
+        if not ok:
+            return work
+        work[index] = ((work[index] & ~colony_struct.POP_MASK_PROF)
+                       | (requested_job << 7)
+                       | colony_struct.POP_MASK_ASSIGNED)
+
+
 def plan_drop(pops, n_pops, max_farms, cluster, requested_job):
     """`COLMOVE::Send_Cluster_`'s same-colony branch, simulated.
 
