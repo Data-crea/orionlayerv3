@@ -298,32 +298,94 @@ def drawn_production(col, econ):
     anything referring to a branch uses — here, in the smoke test and
     in the status document.
 
-    **WHICH BRANCH HAS A LIVE WITNESS**, and which rests on the
-    source and the suite alone. Read off the reference save on
-    4 September 2026, eleven colonies of the local player:
+    **A AND D ARE THE SAME EXPRESSION, AND NO SAVEGAME CAN SEPARATE
+    THEM.** Not "unwitnessed" — indistinguishable, which is a
+    stronger and less hopeful statement and is true by inspection
+    rather than by evidence. Both are guarded by
+    `prod_type == ECON_INDUSTRY`, so the industry row is the only row
+    either can run on, and both compute
+    `max(0, production - maintenance[prod_type])` — character for
+    character the same three lines, coldraw.cpp:75-78 against :89-92.
+    Only the `(int8_t)` cast decides which one is entered, and the
+    cast cannot change the number that comes out. An experiment that
+    cannot come out two ways is not an experiment waiting for data.
 
-      B  production - abs(imports)     NINE colonies, through a
+    **AND C COLLAPSES INTO THEM ON THAT ROW TOO**, which needs one
+    fact from outside this file. `COLCALC::Pre_Import_Computing_`
+    (colcalc.cpp:487) ends with, unconditionally for every colony it
+    is called on,
+
+        imports[ECON_INDUSTRY] = min((uint8)maintenance[ECON_INDUSTRY],
+                                     production[ECON_INDUSTRY])
+
+    (colcalc.cpp:507-511), and that is the ONLY write to
+    `imports[ECON_INDUSTRY]` anywhere in the engine — verified by
+    grepping every assignment to `imports[`, which finds ECON_FOOD in
+    colcalc_main.cpp at :222, :229, :335 and :1408, ECON_BC at
+    colcalc.cpp:1265, ECON_INDUSTRY only here, and ECON_RESEARCH
+    never. So on the industry row:
+
+        maintenance == 0 -> imports == 0 -> byte non-negative -> C,
+                            which returns production, and that IS
+                            max(0, production - 0)
+        maintenance != 0 -> A or D depending on the cast, and both
+                            return max(0, production - maintenance)
+
+    All four paths therefore compute
+    `max(0, production[INDUSTRY] - maintenance[INDUSTRY])`.
+
+    **THE ASSUMPTION IS `production[ECON_INDUSTRY] >= 0`, and it is
+    load-bearing.** With a negative production the collapse fails at
+    the top line: `min(0, production)` is then the negative
+    production rather than 0, and depending on its low byte the row
+    reaches either A — which clamps to 0 — or C, which returns the
+    negative value. Nothing in this file enforces it and nothing in
+    the engine was found clamping it; the tax step that rewrites
+    production after the imports assignment
+    (`Colony_Industry_To_Tax_`, colcalc.cpp:1111, reached from
+    colcalc.cpp:514) cannot make a non-negative production negative,
+    because it only runs when production already exceeds
+    maintenance.
+
+    **WHAT A SAVE COULD STILL SETTLE: D AGAINST C.** That is a real
+    distinction — `production` against `max(0, production -
+    maintenance)` — and it is the one the reference save cannot make
+    for the rows this screen draws.
+
+    **THE LIVE EVIDENCE**, 4 September 2026, reference save. Eleven
+    colonies belong to the local player and are the ones drawn; the
+    snapshot carries 55 records in all, and reading the other 44 is
+    what the second block below rests on.
+
+      B  production - abs(imports)     NINE of the eleven, through a
                                        negative imports[BC]. Wolf
                                        II's BC reads 18 stored
                                        against 10 drawn.
-      C  production[t]                 every other row on that save.
-      A  industry, byte-negative       NO WITNESS. Not reached:
-         imports                       imports[ECON_INDUSTRY] is 0 on
-                                       all eleven, so the byte is
-                                       never negative on the only row
-                                       that can take this branch.
-      D  industry, maintenance         NO WITNESS. Not reached:
-                                       maintenance[ECON_INDUSTRY] is
-                                       0 on all eleven, which is D's
-                                       own condition inverted.
+      C  production[t]                 every other drawn row.
+      A  and D                         NOT REACHED on any drawn row:
+                                       imports[ECON_INDUSTRY] and
+                                       maintenance[ECON_INDUSTRY] are
+                                       both 0 on all eleven. Nor
+                                       would reaching them show
+                                       anything, per the two blocks
+                                       above.
 
-    A and D are the two that subtract maintenance, and on this save
-    both would return `production` unchanged even if they were
-    reached, because the number they subtract is 0 — so the save
-    cannot distinguish them from C either. They are transcribed from
-    the source and asserted in the smoke test, and that is all they
-    have. One save with an industry-maintenance building settles both
-    at once.
+    Across all 55 records, `maintenance[ECON_INDUSTRY]` runs 0..7 and
+    `imports[ECON_INDUSTRY]` runs 0..7 — never negative, never
+    exceeding maintenance, which is `min(maintenance, production)`
+    behaving exactly as colcalc.cpp:507-511 says. So D IS reached in
+    this save, on other players' colonies; it is only unreachable
+    from what this screen draws.
+
+    **A IS COVERED BY THE TRANSCRIPTION AND NOT BY A TEST**, and that
+    is stated rather than papered over. Deleting branch A and letting
+    the industry row fall through to D leaves the suite GREEN, tried
+    on 4 September 2026 — which is not a hole in the check but the
+    same fact as the first block, arriving from the direction of the
+    tests. The suite asserts the VALUE the industry row produces, and
+    that value is right whichever of the two computes it. What it
+    cannot assert is which one ran, and no test can, so none pretends
+    to.
 
     Stated per branch rather than left to "the function is
     transcribed", which is the same distinction `core/structs/

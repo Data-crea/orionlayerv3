@@ -28,7 +28,7 @@ section for what was found where.
 | 5 | `racesel.lbx [entry 138]` crash on Custom Race Accept | **Applied** in the 30 Aug tree — that is why it stopped reproducing | Nothing |
 | — | Custom Race reports screen ID 50 | **Applied** | — |
 | 6 | `s_0_0055110c` / `s_1_00551110` declared `[3]` and `[4]`, defined three times | **Question, not a fix** | Nothing today |
-| 7 | `Draw_Colony_Prod_Both_` sign-tests `imports[t]` as a byte once and as a word once | **Question, not a fix** | Nothing at realistic import values |
+| 7 | `Draw_Colony_Prod_Both_` sign-tests `imports[t]` as a byte once and as a word once | **Question, not a fix** | Nothing today; changes the FOOD/RESEARCH/BC rows, never INDUSTRY |
 
 Items 3 and 4 are both about INJECT_CLICK and both live in the same
 code path, but they are separate faults: 3 is where the coordinates
@@ -448,6 +448,77 @@ decompilation — a `movsx`/`cmp al` read as a narrowing cast — and
 
 What would settle it from your side is the comparison width at the
 original's own address for this function.
+
+### WHICH ROWS THE ANSWER CAN CHANGE — not the industry one
+
+Worth stating, because it decides how much this matters and it turns
+the question from a curiosity into a narrow one.
+
+**On the INDUSTRY row the answer changes nothing.** The cast picks
+between the two branches at `coldraw.cpp:74-78` and `:88-92`, and
+those are the same three lines: both are guarded by
+`prod_type == ECON_INDUSTRY` and both compute
+`max(0, production - maintenance[prod_type])`. So on that row the
+byte and the word reach one expression by two routes, and no
+savegame can tell them apart.
+
+**On FOOD, RESEARCH and BC it changes the number.** There the cast
+picks between `production - abs(imports[t])` and `production`, which
+differ by the whole import amount.
+
+### The example, and it is 18 BC away from our reference save
+
+`imports[ECON_BC]` is `(uint8)maintenance[ECON_BC] - production[ECON_BC]`
+(`colcalc.cpp:1265`) and is **not clamped**, so it can leave the range
+where the byte and the word agree. Which direction it can leave in is
+the whole of how much this matters, and we got it wrong twice before
+checking, so here is the arithmetic.
+
+The two tests agree except where the low byte's sign differs from the
+word's. For a NEGATIVE `imports[ECON_BC]` that window opens at
+**-129**, not at -256: `(int8_t)(-128)` is -128 and still negative,
+`(int8_t)(-129)` is **+127** and is not.
+
+    imports   -1   -111   -128   -129   -130   -255   -256   -257
+    (int8_t)  -1   -111   -128   +127   +126     +1      0     -1
+    branch     B      B      B      C      C      C      C      B
+
+**So one BC of production flips the drawn number by the whole import
+amount.** With `maintenance[ECON_BC]` 17, which is a value our
+reference save actually holds:
+
+    production 145 -> imports -128 -> byte NEGATIVE     -> B
+                   -> production - abs(imports) = 17
+    production 146 -> imports -129 -> byte +127         -> C
+                   -> production = 146
+
+The row goes from 17 to 146 because production went up by one. The
+uncast reading draws 17 in both cases, which is the colony's BC after
+its own upkeep and is the number the row is evidently for.
+
+**This is close, not theoretical.** Across all 55 colony records of
+our reference save at stardate 3502: `production[ECON_BC]` runs
+0..128, `maintenance[ECON_BC]` runs 0..20, and `imports[ECON_BC]`
+runs -111..7. The most negative is **-111** against a boundary of
+-129 — eighteen away. The colony holding it has maintenance 17 and
+production 128; at production 146 it crosses.
+
+**The POSITIVE direction looks out of reach, and saying so is itself
+half an answer.** A positive `imports[ECON_BC]` of 128 or more needs
+`maintenance[ECON_BC]` of at least 128, since production cannot be
+negative. That field is a `uint8` written by a truncating cast
+(`colcalc.cpp:1261`) and the largest value in those 55 records is
+**20**. We first proposed 200 as the example and withdrew it for that
+reason: for a positive disagreement the field would have to hold a
+value we cannot make it hold.
+
+For completeness on the other two rows: `imports[ECON_FOOD]` is
+written at `colcalc_main.cpp:222`, `:229`, `:335` and `:1408` and
+runs -28..15 in that save, and `imports[ECON_RESEARCH]` is **never
+assigned anywhere in the engine** — grepping every write to
+`imports[` finds ECON_FOOD, ECON_INDUSTRY and ECON_BC and no fourth —
+so the research row is on `production` unless a savegame carries a
+value into it.
 
 ### Why we are asking rather than picking
 

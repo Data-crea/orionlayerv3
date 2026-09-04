@@ -3296,9 +3296,20 @@ def main():
     #   C  otherwise, maint[INDUSTRY] == 0 or t != INDUSTRY -> prod
     #   D  otherwise                          -> max(0, prod - maint[t])
     _bA = _col([20, 30, 40, 50], [3, 7, 0, 0], [-5, -2, 0, 0])
+    # NOT "branch A", and the name is corrected rather than kept.
+    # A and D are the SAME expression (coldraw.cpp:75-78 against
+    # :89-92) and both are guarded by prod_type == ECON_INDUSTRY, so
+    # nothing here or anywhere can tell which one ran — deleting A
+    # and letting this case fall through to D leaves the suite green,
+    # tried on 4 September 2026. What this asserts is the VALUE the
+    # industry row produces with byte-negative imports, which is
+    # right whichever branch computes it. See
+    # colonyrows.drawn_production, which records that A is covered by
+    # the transcription and not by a test.
     assert _crw.drawn_production(_bA, _crw.ECON_INDUSTRY) == 23, (
-        "branch A: industry with byte-negative imports is "
-        "production - maintenance (coldraw.cpp:74-78)")
+        "the industry row with byte-negative imports must be "
+        "production - maintenance (coldraw.cpp:74-78, and :88-92, "
+        "which are the same three lines)")
     assert _crw.drawn_production(_bA, _crw.ECON_FOOD) == 15, (
         "branch B: a non-industry row with byte-negative imports is "
         "production - abs(imports) (coldraw.cpp:80)")
@@ -3324,6 +3335,32 @@ def main():
         _crw.ECON_INDUSTRY) == 0, (
         "production below maintenance must clamp at 0, not go "
         "negative (coldraw.cpp:76)")
+
+    # THE INDUSTRY ROW COLLAPSES TO ONE EXPRESSION, and asserting
+    # that is worth more than pretending to separate A from D. The
+    # engine writes imports[ECON_INDUSTRY] in exactly one place —
+    # COLCALC::Pre_Import_Computing_ (colcalc.cpp:487) ends with
+    # imports = min((uint8)maintenance, production) at :507-511, and
+    # grepping every assignment to `imports[` finds no other. Feed
+    # the function inputs that satisfy that invariant, as a real
+    # snapshot always does, and all four branches agree on
+    # max(0, production - maintenance).
+    #
+    # ASSUMPTION, load-bearing and the same one the docstring names:
+    # production[ECON_INDUSTRY] >= 0. The sweep only covers that
+    # case, because below it the collapse genuinely fails.
+    for _p in (0, 1, 7, 30, 127, 128, 200, 255, 400):
+        for _m in (0, 1, 7, 100, 127, 128, 200, 255):
+            _imp = min(_m, _p)                    # colcalc.cpp:507-511
+            _got = _crw.drawn_production(
+                _col([0, _p, 0, 0], [0, _m, 0, 0], [0, _imp, 0, 0]),
+                _crw.ECON_INDUSTRY)
+            assert _got == max(0, _p - _m), (
+                f"industry row with production {_p}, maintenance {_m} "
+                f"and the engine's own imports {_imp} drew {_got}, "
+                f"not {max(0, _p - _m)}. On engine-consistent input "
+                f"all four branches compute that one expression — see "
+                f"colonyrows.drawn_production for the derivation")
 
     # THE (int8_t) CAST, AND IT IS DELIBERATE. coldraw.cpp:73 tests
     # the LOW BYTE of imports[t]; coldraw.cpp:152, deciding whether

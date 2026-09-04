@@ -26,14 +26,22 @@ production rows drew the wrong number and now draw the original's** —
 anything, in four branches (coldraw.cpp:73-94, labelled A to D in
 `colonyrows.drawn_production`) of which only one is `production[t]`,
 and on the reference save the two differ on NINE colonies of eleven,
-Wolf II's BC reading 18 stored against 10 drawn; **two of those four
-branches have a live witness and two do not** — B and C are confirmed
-against a running game, while A and D are transcribed and tested and
-have never been reached by a save, because both need the industry row
-and `imports[ECON_INDUSTRY]` and `maintenance[ECON_INDUSTRY]` are 0
-on all eleven colonies, so the distinction is recorded per branch the
-way `core/structs/player.py` records it per field rather than left to
-one word covering all four;
+Wolf II's BC reading 18 stored against 10 drawn; **B and C are
+confirmed against a running game, and A and D cannot be confirmed by
+any game** — they are the same three lines (coldraw.cpp:75-78 against
+:89-92), both guarded by the industry row, so only the `(int8_t)`
+cast picks between them and the cast cannot change the result; the
+suite is GREEN with branch A deleted and the note now says so rather
+than letting a check named after A appear to hold it up; what a save
+COULD still settle is D against C, and on the industry row even that
+collapses, because `COLCALC::Pre_Import_Computing_` writes
+`imports[ECON_INDUSTRY] = min(maintenance, production)`
+(colcalc.cpp:507-511, the only write to that field in the engine) so
+all four paths compute `max(0, production - maintenance)` given a
+non-negative production — an assumption recorded where the conclusion
+is; the distinction is kept per branch the way
+`core/structs/player.py` keeps it per field rather than left to one
+word covering all four;
 the SHORTAGE is drawn beside it with both of the original's refusals
 mirrored (never on the industry row, never with negative imports,
 coldraw.cpp:152), Wolf II's single food marker confirmed live;
