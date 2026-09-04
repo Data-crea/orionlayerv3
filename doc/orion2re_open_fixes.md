@@ -189,6 +189,43 @@ those are the places where no field ID exists and INJECT_CLICK is the
 only option. OrionLayer prefers ACTIVATE_FIELD wherever a field ID
 exists precisely to avoid this.
 
+### Confirmed again 4 September 2026, on the colony summary
+
+The population move needs two clicks at computed positions and there
+is no field id for "icon 7 of the farmers" (decision 39), so it is
+the first thing in OrionLayer that actually depends on this. The
+first attempt picked up **nothing**: `Get_Cluster_` clears bit 0x200
+on exactly the pops it takes and that is on the wire, so "nothing
+held" is a reading rather than a guess.
+
+**The measured example above predicts that shape.** A click sent at
+game (230, 49) on a window of width W arrives near
+`(230 * 640 / W, 49 * 480 / H)` — for the 1828 px window in the
+symptom that is about (80, 17), which is in the title bar and hits
+no field at all. Picking up nothing is what landing outside every
+field looks like.
+
+**And the other three things that "work live" are not evidence
+against it**, which is worth stating because it looked like they
+were:
+
+  the sort tabs go through `INJECT_KEY` and carry no coordinate at
+  all — verified in OrionLayer's own log, `Action: entry sort name ->
+  hotkey 'n'`, not the `native_click` fallback;
+  the HD list's scrolling is viewing-only and sends nothing to the
+  game at all (fundament 46, asserted by a smoke check);
+  the detail panel is drawing.
+
+So every path that avoids coordinates works and the one path that
+uses them does not. RETURN is the only other coordinate user in the
+tree and has never been exercised live.
+
+**A client cannot work around it blind.** The mapping needs the
+window size, and nothing on the wire reports it — neither
+`HELLO_REPLY` nor the snapshot. A client can pre-scale its
+coordinates only if a human tells it how big the window is, which is
+not a fix so much as a note about what the missing number costs.
+
 ---
 
 ## 4. INJECT_CLICK pushes no MOUSEMOTION before the button events
