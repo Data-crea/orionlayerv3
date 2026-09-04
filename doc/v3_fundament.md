@@ -245,10 +245,27 @@ DEVIATION, and the clamp that absorbs it must be able to expire.**
 The colony summary's sidebar draws its six values right-justified
 against a column whose width the original states: 104 native px of
 640 (`colsum.cpp:418`), which is 312 reference px. The `sidebar`
-cutout gives 286. The renderer takes the smaller, so **the clamp
-fires at every resolution** and the original's proportion is never
-the one drawn — 8.3 % of the column, every value 26 reference px
-left of where the transcription puts it.
+cutout gives 286, less 8 reference px of `text_inset` on each side,
+so 270. The renderer takes the smaller, so **the clamp fires at
+every resolution** and the original's proportion is never the one
+drawn — 13.5 % of the column, every value 42 reference px left of
+where the transcription puts it.
+
+**The inset is not a widening of the deviation; it is the deviation
+being measured properly** — corrected 4 September 2026. The 286 was
+never a column a reader could see: `frame_holes.to_ref` adds
+`BLEED = 2` reference px outward on each side so panel FILLS cover
+the anti-aliased rim, and the artwork's rim reaches further in still,
+so 7 or 8 reference px of that 286 were always under metal. Every
+label on the panel was drawn with part of its first letter beneath
+the frame and every value lost its last pixels at the other end, at
+every resolution, for as long as the panel existed. It was reported
+as a resolution-dependent glitch — clear at one window size, clipping
+the R of RESERVE five pixels later — and it was not: what changes
+with the window is the font size meeting a constant overlap. Now the
+inset is declared, the number above is what is legible, and a check
+asserts against the frame's own alpha that no glyph starts or ends
+under it.
 
 The alignment is transcribed and the width is not, and those are
 marked separately. A deviation that is live in every single frame is

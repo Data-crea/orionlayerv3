@@ -20,6 +20,32 @@ production row, because the groups are separated by an EMPTY SLOT and
 a negative-imports group shares the net's sprites, which is how Wolf
 II's BC row was read as 18 when it was 10 plus 8.
 
+This session (4 September 2026), three from the side-by-side, in one
+line each: **the sidebar labels were drawn under the frame at every
+resolution** — `value_column` returned the cutout's own edges, and
+`frame_holes.to_ref` adds 2 reference px of BLEED outward so panel
+FILLS cover the anti-aliased rim, which is right for a fill and wrong
+for a glyph, with the artwork's rim reaching further in on top; it was
+reported as size-dependent and is not, the overlap being 2 to 4.5
+reference px at every size measured from 1280x720 to 3840x2160 and
+only the font size meeting it changing, so 18 px keeps the R of
+RESERVE and 16 px does not; the right-aligned VALUES were losing their
+last pixels to the same rim; fixed with a measured `text_inset` on
+both edges, which does not widen decision 44's deviation but states it
+honestly — 286 was never a column a reader could see — and a check now
+asserts against the frame's OWN ALPHA that no glyph starts or ends
+under it; **the shortage marker moved to the right of the value**,
+which is the order the original draws its groups in (net, secondary,
+imports, shortage LAST, coldraw.cpp:170-177) and also ends the "-1 12"
+misreading, the pair right-aligned as a group because the widest
+structural marker does not fit in `column_gap` at any shipped size;
+and **which of the inset's ten colour indices has been seen is now
+recorded at the colour table**, seven read off a live frame and three
+— silver, blue, brown — carried by no player in the reference save,
+with the obvious recovery route written down as a dead end because
+`_main_palette_player_colors` (mox.cpp:903) indexes the MAIN screen's
+palette and this screen runs its own.
+
 This session (4 September 2026), the galaxy inset, in one line each:
 **the small galaxy map draws** — `COLSUM::Draw_Galaxy_Map_`
 (colsum.cpp:415) is one call into `MOVEBOX::Draw_Galaxy_Map_Box_` at
@@ -197,7 +223,7 @@ files under `doc/` and are only summarised here.
 | | |
 |---|---|
 | Python | 21,642 lines across 94 modules (core, screens, tools) |
-| Smoke test | `python tools/smoke_test.py` — **68 checks**, headless |
+| Smoke test | `python tools/smoke_test.py` — **69 checks**, headless |
 | Assets | 170 MB (select_race 68, galaxy_map 51, shared 23, new_game 21, colony_summary 1) |
 | Screens in HD | 7 of ~20–22 (colony summary is frame + sidebar only) |
 | Setup from clone | `python tools/setup.py` (deps via the system package manager) |

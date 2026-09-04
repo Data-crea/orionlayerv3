@@ -274,20 +274,33 @@ def render(surface, row, area, cfg, words, climates, layout, style):
                                     LABEL_COLOR[:3])
             val = style.render_text(str(entry.value), value_px,
                                     VALUE_COLOR[:3])
+            sht = (style.render_text(entry.shortage, label_px,
+                                     SHORTAGE_COLOR[:3])
+                   if entry.shortage else None)
             block_h = max(lab.get_height(), val.get_height())
             y = top + max(0, (row_h - block_h) // 2)
             surface.blit(lab, (left, y + (block_h - lab.get_height())))
-            surface.blit(val, (right - val.get_width(),
+            # THE SHORTAGE FOLLOWS THE VALUE, because that is the
+            # order the original draws them in: net, gap, secondary,
+            # gap, imports, shortage — the shortage is the LAST group
+            # (coldraw.cpp:170-177, after the import loops). It sat
+            # to the LEFT until 4 September 2026, which inverted the
+            # only two groups this panel draws.
+            #
+            # The pair is right-aligned AS A GROUP rather than the
+            # marker being hung past the value's right edge. Two
+            # reasons and the second is the one that decided it: the
+            # widest structural marker does not fit in `column_gap`
+            # at any shipped size, and the space beyond that gap is
+            # the panel's own margin, where the frame's rim sits —
+            # the fault just fixed in the sidebar. So the value moves
+            # left on a row that has a marker, which is also closer
+            # to the original: its row is anchored at x and grows
+            # rightward, not pinned to a right edge.
+            end = right
+            if sht is not None:
+                surface.blit(sht, (right - sht.get_width(),
+                                   y + (block_h - sht.get_height())))
+                end = right - sht.get_width() - short_gap
+            surface.blit(val, (end - val.get_width(),
                                y + (block_h - val.get_height())))
-            if not entry.shortage:
-                continue
-            # LEFT of the value, not right of it. The value is what
-            # is right-aligned against the column edge and stays
-            # there; `column_gap` on the other side is the 34 px that
-            # stopped "Huge GROWTH" reading as one phrase (see
-            # output._geometry_note) and is not free space.
-            sht = style.render_text(entry.shortage, label_px,
-                                    SHORTAGE_COLOR[:3])
-            surface.blit(sht, (right - val.get_width() - short_gap
-                               - sht.get_width(),
-                               y + (block_h - sht.get_height())))

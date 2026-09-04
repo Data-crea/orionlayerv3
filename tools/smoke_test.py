@@ -3455,6 +3455,36 @@ def main():
     assert _sh_ink[1] > _sh_ink[0], (
         f"the panel put no more ink on a colony with two shortages "
         f"({_sh_ink[1]}) than on one with none ({_sh_ink[0]})")
+
+    # AND THE MARKER FOLLOWS THE VALUE, which is the order the
+    # original draws its groups in: net, secondary, imports,
+    # shortage — the shortage is LAST (coldraw.cpp:170-177, after the
+    # import loops). It was drawn to the LEFT until 4 September 2026.
+    # Asserted by colour: the marker is the only thing on the panel
+    # in the warn red, so its columns can be found without knowing
+    # where the renderer decided to put it.
+    _sh_surf.fill((0, 0, 0))
+    _co.render(_sh_surf, dict(_fake, shortage=[3, 0, 0, 0]), _sh_area,
+               _ocfg, _words, _climates, app.layout, app.style)
+    _sh_px = pygame.surfarray.array3d(
+        _sh_surf.subsurface(_sh_area)).transpose(1, 0, 2).astype(int)
+    _red = _np.array(_co.SHORTAGE_COLOR[:3], dtype=int)
+    _val = _np.array(_co.VALUE_COLOR[:3], dtype=int)
+    _is_red = (_np.abs(_sh_px - _red).sum(axis=2) < 60)
+    _is_val = (_np.abs(_sh_px - _val).sum(axis=2) < 60)
+    _rows_red = _np.where(_is_red.any(axis=1))[0]
+    assert len(_rows_red), "the shortage marker put no red on the panel"
+    # The value on the SAME row as the marker.
+    _band = slice(max(0, _rows_red.min() - 2), _rows_red.max() + 3)
+    _red_x = _np.where(_is_red[_band].any(axis=0))[0]
+    _val_x = _np.where(_is_val[_band].any(axis=0))[0]
+    assert len(_val_x), "no value ink on the shortage row"
+    assert _red_x.min() > _val_x.max(), (
+        f"the shortage marker (x {_red_x.min()}..{_red_x.max()}) is not "
+        f"to the right of the value (x {_val_x.min()}..{_val_x.max()}). "
+        f"The original draws the shortage as the LAST group in the row "
+        f"(coldraw.cpp:170-177); drawing it first inverts the only two "
+        f"groups this panel has")
     ok("colony summary production net (four branches, the (int8_t) "
        "cast, the shortage and both of its refusals)")
 
@@ -3556,6 +3586,16 @@ def main():
                   "FRAMEBUFFER"):
         assert _cite in _icfg["_note"], (
             f"inset._note no longer carries {_cite!r}")
+    # And the witness record survives where the table is, not only
+    # in a session report — the shape drawn_production uses.
+    for _cite in ("NO WITNESS", "mox.cpp:903", "silver"):
+        assert _cite in (_ci.__doc__ or "") or _cite in open(
+            os.path.join(SCREENS_DIR, "colony_summary",
+                         "colonyinset.py"), encoding="utf-8").read(), (
+            f"colonyinset no longer records {_cite!r} at INSET_COLORS "
+            f"— which of the ten colour indices has been seen on a "
+            f"live frame, and why the main-palette table does not "
+            f"recover the three that have not")
     for _cite in ("gstar.lbx", "OWNER_COLORS", "3, 4 and 5"):
         assert _cite in _icfg["_deviation_note"], (
             f"inset._deviation_note no longer carries {_cite!r} — the "
@@ -3909,12 +3949,16 @@ def main():
     for _W, _H in _SIZES:
         _lay = Layout(_W, _H)
         _rect = pygame.Rect(*_lay.rect(_sb_ref[0]))
-        # The column, derived here from the box and the native width
-        # in layout.json — NOT by calling _value_column.
+        # The column, derived here from the box, the native width and
+        # the inset in layout.json — NOT by calling _value_column.
+        # text_inset keeps both edges out from under the frame's rim;
+        # see empire._text_inset_note.
         _native = _emp.get("native_width", 104)
-        _col_w = min(_rect.w,
+        _inset = int(_emp.get("text_inset", 8) * _lay.scale)
+        _col_w = min(max(1, _rect.w - 2 * _inset),
                      int(_native * (1920 / _emp_mod0.NATIVE_W) * _lay.scale))
-        _col_l, _col_r = _rect.x, _rect.x + _col_w
+        _col_l = _rect.x + _inset
+        _col_r = _col_l + _col_w
 
         _sf = pygame.Surface((_W, _H))
         _sf.fill((0, 0, 0))
@@ -4070,11 +4114,14 @@ def main():
         _lay = Layout(_W, _H)
         _rect = pygame.Rect(*_lay.rect(_sb_ref[0]))
         _native = _emp_mod.native_column_width(_emp, _lay)
-        _drawn = _emp_mod.value_column(_rect, _emp, _lay)[1] - _rect.x
-        assert _drawn == min(_rect.w, _native), (
+        _l, _r = _emp_mod.value_column(_rect, _emp, _lay)
+        _drawn = _r - _l
+        _inset = int(_emp.get("text_inset", 8) * _lay.scale)
+        _usable = max(1, _rect.w - 2 * _inset)
+        assert _drawn == min(_usable, _native), (
             f"{_W}x{_H}: the drawn column {_drawn} is neither the "
-            f"cutout {_rect.w} nor the native {_native} — the clamp "
-            f"has grown a third case")
+            f"cutout less its insets {_usable} nor the native "
+            f"{_native} — the clamp has grown a third case")
         # The marking is only true while the clamp actually fires.
         # If this ever fails, the cutout has caught up with the
         # original's proportion: delete decision 44 and this check
@@ -4086,6 +4133,53 @@ def main():
             f"is good news: retire the marking, do not restore it.")
     ok("colony summary sidebar column (clamp is a marked DEVIATION, "
        "native width still carried and still larger)")
+
+    # ── NO SIDEBAR TEXT UNDER THE FRAME'S RIM ──
+    # The fault this exists for was live at every resolution and read
+    # as a resolution-dependent one: the labels started at the
+    # cutout's own left edge, the frame's metal rim covers the first
+    # few reference px of that edge, and whether the R of RESERVE
+    # survived came down to the font size at that scale. Found on a
+    # side-by-side, not by any check — every check here looked at
+    # coordinates, and the frame is drawn AFTER the sidebar.
+    #
+    # Asserted against the frame's OWN ALPHA rather than against a
+    # number, so redrawing the artwork with a fatter rim fails here
+    # instead of quietly eating another letter. The corners are
+    # excluded on purpose: they are opaque far into the box, which is
+    # correct and is not where text goes — measuring there reports a
+    # 388 px rim and means nothing.
+    import numpy as _np
+    from PIL import Image
+    _rim_png = res.screen_file("colony_summary", "assets", "frame.png")
+    _rim_img = Image.open(_rim_png).convert("RGBA")
+    for _W, _H in _SIZES:
+        _lay = Layout(_W, _H)
+        _rect = pygame.Rect(*_lay.rect(_sb_ref[0]))
+        _fx, _fy, _fw, _fh = _lay.rect((0, 0, 1920, 1080))
+        _alpha = _np.array(_rim_img.resize((_fw, _fh),
+                                           Image.BILINEAR))[:, :, 3]
+        _l, _r = _emp_mod.value_column(_rect, _emp, _lay)
+        _rows = _emp.get("rows", [])
+        _pad = int(_rect.h * _emp.get("row_pad", 0.10))
+        _rh = (_rect.h - 2 * _pad) / max(1, len(_rows))
+        for _i in range(len(_rows)):
+            _y = int(_rect.y + _pad + _i * _rh + _rh / 2) - _fy
+            _line = _alpha[_y]
+            assert _line[_l - _fx] < 16, (
+                f"{_W}x{_H} row {_i}: the label starts at x={_l}, which "
+                f"is under the frame (alpha {_line[_l - _fx]}). Raise "
+                f"empire.text_inset — the rim was measured at up to "
+                f"4.5 reference px and the inset is what keeps glyphs "
+                f"out of it")
+            assert _line[_r - 1 - _fx] < 16, (
+                f"{_W}x{_H} row {_i}: a right-aligned value ends at "
+                f"x={_r - 1}, under the frame (alpha "
+                f"{_line[_r - 1 - _fx]}). The values lose their last "
+                f"pixels to the same rim the labels lose their first "
+                f"to; the inset applies to both edges")
+    ok("colony summary sidebar text clears the frame's rim at every "
+       "shipped size")
 
     ok("colony summary sidebar layout (label flush left, value flush "
        "right, ink-measured at 12 resolutions)")

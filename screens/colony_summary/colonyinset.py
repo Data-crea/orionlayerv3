@@ -38,11 +38,11 @@ pairs the reference save exposed, as palette RGB:
     idx 8  (104,132,156) / (172,212,240)      unowned, visited
     idx 9  ( 96, 56,128) / (152, 96,196)      black hole
 
-**Colours 3, 4 and 5 have no witness.** No player in the reference
-save carries them, so their pairs were never read. The HD colours do
-not come from that table anyway — see `INSET_COLORS` — but the table
-is what the HD ones were checked against, and three of the ten were
-not checkable.
+**Colours 3, 4 and 5 have no witness**, and which index has been seen
+is recorded at `INSET_COLORS` rather than only here — the same shape
+`colonyrows.drawn_production` uses for its four branches. Seven of
+the ten indices were read off a live frame; three could not be,
+because no player in the reference save carries those colours.
 
 **DEVIATIONS, all three of them marked here and in layout.json:**
 
@@ -51,12 +51,14 @@ not checkable.
    in the user's LBX. Same trade as `list._buy_note`.
 2. **The colours are the skin's, not the game's palette.** The eight
    owner colours already exist in `galaxy_map.renderer.OWNER_COLORS`,
-   checked against the original once and skin-overridable; a second
-   hardcoded table read off one savegame would be the third copy of a
-   name table this project has already been bitten by twice. The dark
-   shade is the bright one dimmed by one factor, where the original
-   has a hand-picked palette pair per colour — the measured ratios
-   run 0.5 to 0.78 and this uses one number for all of them.
+   skin-overridable, and a second hardcoded table read off one
+   savegame would be the third copy of a name table this project has
+   already been bitten by twice. FIVE of those eight have since been
+   compared against the original's own palette and agree in hue;
+   three have not been comparable at all. The dark shade is the
+   bright one dimmed by one factor, where the original has a
+   hand-picked palette pair per colour — the measured ratios run 0.5
+   to 0.78 and this uses one number for all of them.
 3. **The map does not fill the hole.** See `map_rect`.
 
 **NOT DRAWN, and recorded rather than left to be noticed:**
@@ -98,6 +100,44 @@ from screens.galaxy_map.renderer import OWNER_COLORS
 #: from the galaxy map's table, which is the one home for them
 #: (decision 15, and the name-table lesson in the fundament). 8 and 9
 #: are this panel's own and are skin-overridable beside them.
+#:
+#: **WHICH INDEX HAS A LIVE WITNESS**, in the shape
+#: `colonyrows.drawn_production` uses for its branches. Read off the
+#: original's own framebuffer on 4 September 2026, reference save,
+#: 99 stars over 8 players — the pair is (dark, bright) as palette
+#: RGB, and the HD colour beside it is what this table draws:
+#:
+#:   0 red     (148, 12,  4)/(236, 24, 12)   SEEN, 9 stars
+#:   1 yellow  (168,140,  8)/(224,200, 56)   SEEN, 9 stars
+#:   2 green   ( 24,120, 20)/( 48,196, 36)   SEEN, 10 stars
+#:   3 silver  NO WITNESS
+#:   4 blue    NO WITNESS
+#:   5 brown   NO WITNESS
+#:   6 purple  ( 68, 36, 92)/(140, 72,140)   SEEN, 11 stars
+#:   7 orange  (184, 96, 16)/(236,140, 48)   SEEN, 8 stars
+#:   8 neutral (104,132,156)/(172,212,240)   SEEN, 47 stars
+#:   9 b.hole  ( 96, 56,128)/(152, 96,196)   SEEN, 5 stars
+#:
+#: Five of the eight player colours are unreachable in that save
+#: because no player carries them: the five owners present hold
+#: colours 2, 7, 0, 1 and 6. The five that WERE seen agree in hue
+#: with this table's entries, which is the only check the HD colours
+#: have; 3, 4 and 5 are drawn from entries nothing has compared
+#: against the original.
+#:
+#: **The obvious way to recover them does not work, and that is
+#: written down so nobody spends the afternoon on it twice.**
+#: `MOX::_main_palette_player_colors[8] = {73, 98, 110, 32, 62, 148,
+#: 45, 85}` (mox.cpp:903) maps a player colour to a palette index,
+#: and it is where the names above come from — the order red,
+#: yellow, green, silver, blue, brown, purple, orange, the same one
+#: `galaxy_map.ships.SHIP_COLORS` cites. But those indices are into
+#: the MAIN screen's palette. Resolved against the colony screen's
+#: live palette they give black, grey, near-white and dark grey for
+#: the five whose true colours are known from the sprites above, so
+#: the table does not transfer: this screen runs its own palette
+#: (`COLONY::_using_colony_screen_palette`). A save with a silver,
+#: blue or brown player is what would settle those three.
 INSET_COLORS = dict(OWNER_COLORS)
 INSET_COLORS[8] = palette.col("colony_summary", "inset_star",
                               (172, 212, 240))

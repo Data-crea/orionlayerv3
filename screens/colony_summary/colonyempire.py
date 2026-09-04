@@ -115,9 +115,45 @@ def value_column(rect, cfg, layout):
     disappearing once somebody notices it never wins. The smoke
     check asserts `native_width` is still read and still larger
     than what gets drawn, so deleting it as dead weight fails.
+
+    **`text_inset` KEEPS THE TEXT OUT FROM UNDER THE FRAME, and
+    it is measured rather than chosen.** Until 4 September 2026
+    this returned `rect.x` and `rect.x + min(...)` — the cutout's
+    own edges — and every label on this panel was drawn partly
+    beneath the frame's metal rim. It looked like a
+    resolution-dependent glitch, clear at one window size and
+    clipping the R of RESERVE five pixels later, and it was
+    neither: the overlap is there at EVERY size, and what changes
+    with the window is only the font size meeting it, so at 18 px
+    the stem survives and at 16 px it does not.
+
+    Two things put text under the frame. `frame_holes.to_ref`
+    adds `BLEED = 2` reference px OUTWARD on each side so that
+    panel FILLS cover the anti-aliased rim — right for a fill and
+    wrong for a glyph — and the artwork's rim then reaches a
+    little further in. Measured at the six label rows across
+    eight window sizes from 1280x720 to 3840x2160, the opaque
+    frame reaches at most 4.5 reference px past the box's left
+    edge and 3.0 past its right.
+
+    So the inset is applied to BOTH edges: the values are right
+    -aligned against the cutout's right edge and were losing their
+    last pixels to the same rim, which is the same fault seen
+    from the other end.
+
+    **IT DOES NOT MAKE THE DEVIATION WORSE; IT MAKES IT HONEST.**
+    286 was never the column a reader could see — some 7 or 8 of
+    it was always under metal — so the drawn width was already
+    about 278 and was being reported as 286. The number below is
+    what is actually legible.
     """
     native_w = native_column_width(cfg, layout)
-    return rect.x, rect.x + min(rect.w, native_w)
+    inset = int(cfg.get("text_inset", 8) * layout.scale)
+    usable = max(1, rect.w - 2 * inset)
+    # Still `min`, and still for decision 44's reason: the cutout
+    # can move and 104 cannot, so a wider hole ends the deviation
+    # with nobody remembering to come back.
+    return rect.x + inset, rect.x + inset + min(usable, native_w)
 
 
 def render(surface, box, cfg, local, layout, style, font_scale):
