@@ -103,7 +103,9 @@ mods/                   file-level overrides; example_mod works
 ```
 
 Seven screens exist: main menu, new game, select race, custom race,
-empire identity, galaxy map, colony summary (frame + sidebar only).
+empire identity, galaxy map, colony summary (list, sidebar, scan
+box and galaxy inset; sort and RETURN wired, scrolling for
+viewing only).
 Screens without an HD version fall back to the original framebuffer,
 so the game is always playable.
 
