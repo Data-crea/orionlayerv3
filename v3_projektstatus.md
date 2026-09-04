@@ -2,6 +2,24 @@
 
 Updated: 4 September 2026
 
+This session (4 September 2026), after that, in one line each: **the
+exceptions list was measuring the wrong number** — decision 6 was
+enforced on `wc -l`, which counts this project's own docstrings, so
+of 25 files over 300 TOTAL lines only 8 are over 300 lines of CODE
+and **sixteen entries left the list without a line being edited**;
+three of those sixteen had been added by the three packages
+immediately before and were never exceptions, `colonyrows.py` most
+plainly at 141 code of 629; the ranking also INVERTED, which is what
+made `colony_summary/screen.py` get split ahead of
+`custom_race/screen.py` (241 code against 400) — the split is kept
+for the seam it actually has and the retired reason is written down
+rather than left standing; `tools/linecount.py` is now the measure
+and a smoke check holds the list to it in both directions; and a note
+went into `output._deviation_note` about how to read a native
+production row, because the groups are separated by an EMPTY SLOT and
+a negative-imports group shares the net's sprites, which is how Wolf
+II's BC row was read as 18 when it was 10 plus 8.
+
 This session (4 September 2026), last, in one line each: **the
 production rows drew the wrong number and now draw the original's** —
 `COLDRAW::Draw_Colony_Prod_Both_` computes a net before it draws
@@ -137,7 +155,7 @@ files under `doc/` and are only summarised here.
 | | |
 |---|---|
 | Python | 21,642 lines across 94 modules (core, screens, tools) |
-| Smoke test | `python tools/smoke_test.py` — **66 checks**, headless |
+| Smoke test | `python tools/smoke_test.py` — **67 checks**, headless |
 | Assets | 170 MB (select_race 68, galaxy_map 51, shared 23, new_game 21, colony_summary 1) |
 | Screens in HD | 7 of ~20–22 (colony summary is frame + sidebar only) |
 | Setup from clone | `python tools/setup.py` (deps via the system package manager) |
@@ -378,48 +396,84 @@ reason the repository exists.
 
 ---
 
-**Over 300 lines, knowingly** — recounted 4 September 2026, because
-several entries had drifted and a list of counts that is wrong is
-worse than no list. Only the two files the scroll package touched had
-moved since the 3 September recount; the other eighteen were exact.
-`galaxy_map/screen.py` (805), `tools/struct_probe.py` (753),
-`galaxy_map/renderer.py` (747), `tools/colony_list_preview.py` (669),
-`colony_summary/colonylist.py` (657), `colony_summary/colonyrows.py`
-(629), `colony_summary/screen.py` (627), `custom_race/screen.py`
-(558), `galaxy_map/ships.py` (529), `zoomtables.py` (515),
-`tools/ext_diag.py` (473),
-`style.py` (453), `screen_base.py` (390), `editor/editor.py` (390),
-`empire_identity/renderer.py` (383), `new_game/screen.py` (382),
-`empire_identity/screen.py` (372), `game_client.py` (372),
-`helppopup.py` (349), `main.py` (328), `select_race/screen.py`
-(322), `injection.py` (307), `galaxy_map/sidebar.py` (301).
+**Over 300 CODE lines, knowingly** — re-measured 4 September 2026,
+and the measure itself changed. Decision 6 counts CODE now: total
+minus blank, minus whole-line comments, minus docstrings, each line
+in exactly ONE bucket. The numbers below are produced by
+`python tools/linecount.py` and transcribed, not typed, and a smoke
+check asserts this list still agrees with it — the same trade the
+check count makes, for the same reason.
+
+`galaxy_map/screen.py` (**529** code, 805 total), `tools/struct_probe.py`
+(**478** code, 753 total), `custom_race/screen.py` (**400** code,
+558 total), `tools/colony_list_preview.py` (**343** code, 669 total),
+`core/editor/editor.py` (**340** code, 390 total),
+`galaxy_map/renderer.py` (**333** code, 747 total), `tools/ext_diag.py`
+(**325** code, 473 total), `core/style.py` (**306** code, 453 total).
 `smoke_test.py` is exempt by nature.
 
-`colony_summary/screen.py` came down 666 -> 627 on 4 September 2026
-and is STILL ON THIS LIST, which is the honest report: the split was
-taken for the seam, not for the number. `_row_at` and `_visible_rows`
-moved onto `colonyselect.Window` because both are about the OFFSET —
-one is a band number plus it, the other is the count the window needs
-in order to clamp itself — and neither was a new concern, so no
-fourth module was made. The screen kept `_list_view`, which resolves
-`list_area` to screen pixels and hands over (area, cfg, scale,
-n_rows): taking the input stays with the screen, interpreting it does
-not. `colonyselect.py` went 199 -> 275 and is under the guideline.
-The cost, written down because it was a stated property: that module
-said it never imported pygame, and it now reaches `colonylist` for
-`rows_drawn` and `row_at` — the alternative was a second copy of the
-row pitch, which is the fault decision 5 exists for.
+**SIXTEEN ENTRIES LEFT THE LIST and none of them was edited**, which
+is the finding rather than a side effect. They were never exceptions;
+`wc -l` was counting the project's own documentation habit. In
+descending total: `colony_summary/colonylist.py` (204 code of 657),
+`colony_summary/colonyrows.py` (141/629), `colony_summary/screen.py`
+(241/627), `galaxy_map/ships.py` (242/529), `core/zoomtables.py`
+(169/515), `core/screen_base.py` (257/390),
+`empire_identity/renderer.py` (247/383), `new_game/screen.py`
+(277/382), `core/game_client.py` (224/372),
+`empire_identity/screen.py` (278/372), `core/helppopup.py` (191/349),
+`main.py` (246/328), `select_race/screen.py` (211/322),
+`core/structs/colony.py` (86/310), `core/injection.py` (170/307),
+`galaxy_map/sidebar.py` (167/301).
 
-`colony_summary/colonyrows.py` crossed the line on 3 September and is
-listed rather than split: it went 234 -> 508 across three commits and
-then to 629 on 4 September with `drawn_production` and
-`production_shortage`. The growth is the tie-break block, the NOT DRAWN
-section, the two comments around the row filter and now the four net
-branches with their C++ line numbers — all of it the sources
-for numbers that are already there. Splitting on that would put a
-value in one file and the evidence for it in another, which is the
-thing the guideline exists to prevent, not an instance of it. If the
-file grows CODE, that is a different conversation.
+**Three of those sixteen were added by the last three packages** —
+`colonylist.py`, `colonyrows.py` and `colony_summary/screen.py` — and
+none of the three was ever an exception. Each was noted as
+"knowingly over" with a justification for why the length was earned;
+the justifications were true and the premise was not. `colonyrows.py`
+is the plainest case: 629 total, **141** code, and 456 of the rest is
+docstring and comment.
+
+**THE RANKING INVERTED, and that cost something.**
+`custom_race/screen.py` is 558 total against `colony_summary/
+screen.py`'s 627 — so it sat LOWER on the old list — and 400 code
+against 241. A reader working the list from the top splits the wrong
+file first, and one did: see below.
+
+`colony_summary/screen.py` was split on 4 September (a53a730) BECAUSE
+IT READ 666 LINES, and that number never applied to it. Measured
+properly the file was **252** code before the split and 241 after —
+under the guideline both times. The split bought 39 lines of a file
+that was never over.
+
+**It is kept, and the reason recorded for it is corrected rather than
+left standing.** The seam is real independently of any line count:
+`_row_at` is a band number plus the offset and `visible` is the
+number `Window` needs in order to clamp itself, so both are the
+offset's business and neither was a new concern — and the screen
+kept `_list_view`, which resolves `list_area` to screen pixels, so
+taking the input stayed with the screen. That is the reason it has.
+The reason it was DONE for has been retired, and this paragraph is
+here so nobody reconstructs it from the commit message.
+
+The cost was checked before deciding rather than argued about: the
+one property the split gave up is that `colonyselect` imported no
+pygame, and nothing in the tree depends on it. Only `screen.py`
+imports the module — in the same statement that already imported
+`colonylist`, listed before it, so no import order changed — and
+`smoke_test.py`, deep inside `main()` long after the display is up.
+No check asserts the property; the three "no pygame" notes in the
+tree name `core.wire_protocol`, `ext_diag.py` and `zoom_probe.py`.
+The module is still importable headless in any case, since importing
+pygame needs no display. Had any of that come back positive, the two
+methods would have gone back to `screen.py`.
+
+`colony_summary/colonyrows.py` is no longer listed at all, and the
+paragraph that defended its length is gone with it: at 141 code lines
+there is nothing to defend. What that paragraph said remains true and
+is the general rule — splitting a file to separate a value from the
+evidence for it is the thing the guideline exists to prevent, not an
+instance of it — and it now lives where it belongs, in decision 6.
 
 `screen_base.py` reached 572 lines while the help code sat in it and
 was split rather than listed higher: `core/screenhelp.py` is a mixin,

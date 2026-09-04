@@ -54,7 +54,15 @@ the symptom is a button that looks right and clicks wrong.
 
 **6. One folder per screen, files under ~300 lines.** Exceptions are
 allowed but must be listed in the status document, so the list itself
-stays uncomfortable to extend.
+stays uncomfortable to extend. **The ~300 counts CODE lines** —
+amended 4 September 2026, when the list was measured properly for the
+first time and 17 of its 25 entries turned out to be over on
+documentation alone; a file long only because it explains itself is
+not an exception and does not belong on the list. Measuring the whole
+file makes the guideline a tax on the very habit the rest of this
+document is built on, and the entries it produces crowd out the ones
+that are real. `tools/linecount.py` is the measure, and the smoke test
+holds the list to it.
 
 **7. Screens are auto-discovered** in `screens/` and
 `mods/*/screens/`, and **self-describe via `GAME_SCREEN_ID`**. There
@@ -1074,6 +1082,28 @@ none. The guard now keys on the absence of panel-skin boxes, which is
 what it always meant, plus an assertion that at least one resolution
 does define them, so the skip cannot quietly become universal. A
 proxy condition holds only until something else changes the proxy.
+
+**And a proxy can be broken by your own habits, not by an edit.**
+The ~300-line guideline was read off `wc -l` for as long as it
+existed, on the proxy that a long file does a lot. This project
+writes the reason for every value next to the value, so its files
+grew long in DOCUMENTATION — and the proxy came apart quietly and in
+one direction. Measured on 4 September 2026: of 25 files over 300
+total lines, 17 were under 300 lines of code, and the ranking
+INVERTED — `custom_race/screen.py` was 558 total against
+`colony_summary/screen.py`'s 666, and 400 code against 252. A reader
+working the list from the top would split the wrong file first, and
+one did: `colony_summary/screen.py` was split for a number that never
+applied to it.
+
+Same shape as the entry above and worth stating separately, because
+the trigger is different. There, something else moved the proxy;
+here, nothing moved at all — the proxy was measuring a quantity that
+had slowly stopped meaning what it was chosen to mean. The tell was
+available the whole time and nobody asked for it: **the number a
+guideline is enforced on has to be the number the guideline is
+about**, and if it is a proxy, something has to re-check the proxy
+occasionally rather than the values it produces.
 
 **A diagnostic should degrade, not crash.** `star_icon_check.py` once
 died with an AttributeError, which reads like a broken script when it

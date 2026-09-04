@@ -3021,8 +3021,16 @@ def main():
     # (coldraw.cpp:51-58). Both are REACHABLE, so the note must not
     # read as a data limitation, and an omission nobody wrote down is
     # indistinguishable from one nobody saw.
+    # AND HOW TO READ A NATIVE SCREENSHOT OF ONE. The groups are
+    # separated by an empty SLOT (a bare drawn_count++ at
+    # coldraw.cpp:150, budgeted at :100), and a negative-imports group
+    # is drawn with the NET's own sprites (coldraw.cpp:154 against
+    # :118) — so two groups look like one long run. That is exactly
+    # how Wolf II's BC row was read as 18 when it was 10 plus 8, and
+    # the note is the only place that mistake is written down.
     for _cite in ("coldraw.cpp:73-94", "coldraw.cpp:46",
-                  "coldraw.cpp:51-58", "pollution", "REACHABLE"):
+                  "coldraw.cpp:51-58", "pollution", "REACHABLE",
+                  "coldraw.cpp:150", "empty slot", "10 plus 8"):
         assert _cite in _ocfg["_deviation_note"], (
             f"output._deviation_note no longer carries {_cite!r} — it "
             f"is the record of which of the original's four groups "
@@ -4933,6 +4941,81 @@ def main():
     _dupes = sorted({n for n in _nums if _nums.count(n) > 1})
     assert not _dupes, f"duplicate decision numbers: {_dupes}"
     ok(f"fundament decision numbers unique ({len(_nums)} decisions)")
+
+    # THE EXCEPTIONS LIST IS COMPUTED, NOT TYPED. Decision 6 counts
+    # CODE lines as of 4 September 2026, and the reason it had to
+    # change is the reason this check exists: the guideline was
+    # enforced on `wc -l` for as long as it existed, which counts
+    # this project's own docstrings, and 16 of the 24 non-exempt
+    # entries turned out never to have been exceptions at all. Three
+    # of those 16 had been ADDED by the three packages immediately
+    # before, each with a paragraph defending a length that was not
+    # there.
+    #
+    # So the list is held to `tools/linecount.py` rather than to a
+    # human's arithmetic, both ways: every file over the guideline is
+    # named, and every file named is over it. The one-directional
+    # version — "everything listed is over" — is the one that lets a
+    # new exception go unlisted, which is the whole failure the list
+    # exists to prevent.
+    import importlib.util as _lcu
+    _lc_spec = _lcu.spec_from_file_location(
+        "_probe_linecount",
+        os.path.join(os.path.dirname(SCREENS_DIR), "tools",
+                     "linecount.py"))
+    _lc = _lcu.module_from_spec(_lc_spec)
+    _lc_spec.loader.exec_module(_lc)
+    # The measure itself, on a file whose buckets are known by hand.
+    # Each line lands in exactly ONE bucket: a blank line inside a
+    # docstring is docstring, not blank. Summing overlapping buckets
+    # and taking code as the residual undercounts code by exactly the
+    # number of blank lines inside docstrings, which is how the
+    # pre-split screen.py was measured at 218 when it was 252.
+    _lc_probe = os.path.join(os.path.dirname(SCREENS_DIR), "tools",
+                             "linecount.py")
+    _lt, _lco, _ld, _lm, _lb = _lc.measure(_lc_probe)
+    assert _lco + _ld + _lm + _lb == _lt, (
+        f"linecount's buckets overlap: {_lco}+{_ld}+{_lm}+{_lb} != "
+        f"{_lt}. Each line must land in exactly one, or `code` as a "
+        f"residual is wrong by the size of the overlap")
+    _status = os.path.join(os.path.dirname(SCREENS_DIR),
+                           "v3_projektstatus.md")
+    import re as _lre
+    with open(_status, encoding="utf-8") as _fh:
+        # Whitespace-collapsed, because the list is prose and wraps:
+        # `tools/struct_probe.py`\n(**478** code, ...) is one entry
+        # and a newline in the middle of it is a line break, not a
+        # different claim.
+        _st = _lre.sub(r"\s+", " ", _fh.read())
+    _over = _lc.over_guideline()
+    for _rel, (_t, _c, _d, _m, _b) in _over:
+        # Listed under its path as the document spells it — the tail
+        # after screens/ or core/, which is what a reader greps for.
+        _short = _rel.split("/", 1)[1] if _rel.startswith(("screens/",
+                                                          "core/")) else _rel
+        assert (f"`{_rel}` (**{_c}** code" in _st
+                or f"`{_short}` (**{_c}** code" in _st), (
+            f"{_rel} is {_c} CODE lines, over the {_lc.GUIDELINE} "
+            f"guideline, and v3_projektstatus.md's exceptions list "
+            f"does not name it at that count. Decision 6: an "
+            f"exception is allowed and must be LISTED")
+    # And nothing is listed that is not over — a list that keeps
+    # entries after they stop qualifying is the state this package
+    # found, sixteen deep.
+    _listed = set(_lre.findall(r"`([\w./]+\.py)` \(\*\*(\d+)\*\* code", _st))
+    _real = {_r.split("/", 1)[1] if _r.startswith(("screens/", "core/"))
+             else _r: _c for _r, (_t, _c, _d, _m, _b) in _over}
+    _real.update({_r: _c for _r, (_t, _c, _d, _m, _b) in _over})
+    for _name, _claim in _listed:
+        assert _name in _real and str(_real[_name]) == _claim, (
+            f"the exceptions list names {_name} at {_claim} code "
+            f"lines; linecount says "
+            f"{_real.get(_name, 'it is not over the guideline')}")
+    assert len(_listed) == len(_over), (
+        f"the list has {len(_listed)} entries and {len(_over)} files "
+        f"are over the guideline")
+    ok(f"exceptions list == tools/linecount.py ({len(_over)} over "
+       f"{_lc.GUIDELINE} code lines)")
 
 
     # Every tool that WRITES into the tree must anchor its default
