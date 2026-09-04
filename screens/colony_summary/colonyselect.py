@@ -34,6 +34,14 @@ else branch, so `_g_colony_n` holds whatever it last held. It is
 also the only thing that makes the panel readable — one that emptied
 whenever the pointer left the rows would be blank most of the time.
 
+**THERE ARE TWO WINDOWS IN THIS FILE AND THEY ARE NOT THE SAME
+NUMBER.** `Window` is HD's viewing offset over the rows it draws, and
+how many it draws comes from `list_area` and `row_height`.
+`GameWindow` is the ORIGINAL's ten slots. They are adjacent on
+purpose: decision 46's corollary is precisely that confusing the two
+is the available mistake, and a reader who meets only one of them is
+the person who makes it.
+
 **A SORT TOUCHES BOTH OF THIS MODULE'S OBJECTS, AND DIFFERENTLY.**
 That is why the scroll window lives here beside the selection rather
 than in a module of its own. `Sort_Col_List_`'s handler re-sorts,
@@ -273,3 +281,147 @@ class Window:
         first = self.top(area, cfg, scale, n_rows)
         band = colonylist.row_at(area, cfg, scale, n_rows - first, point)
         return None if band is None else first + band
+
+
+class FirstPlan:
+    """A step sequence for the game's window, and why it is that long.
+
+    `down` activations of `_x_fields[1]` then `up` of `_x_fields[2]`.
+    `refused` names a target the game would not reach, in which case
+    both counts are 0 — a plan that cannot be carried out is not
+    shortened, it is refused.
+    """
+
+    __slots__ = ("down", "up", "first", "refused")
+
+    def __init__(self, down=0, up=0, first=0, refused=None):
+        self.down = down
+        self.up = up
+        self.first = first
+        self.refused = refused
+
+    @property
+    def steps(self):
+        return self.down + self.up
+
+    def __repr__(self):
+        return (f"FirstPlan(down={self.down}, up={self.up}, "
+                f"first={self.first}, refused={self.refused!r})")
+
+
+class GameWindow:
+    """The original's ten-slot list window — `COLSUM::_first`.
+
+    **NOT `Window`.** That one is how far HD has scrolled its own
+    drawing; this one is where the GAME's list starts, and it is the
+    only one an injected click cares about. Decision 46: the row a
+    click names is a POSITION IN THE GAME'S WINDOW, so `_first` has
+    to agree with the HD row before anything is sent.
+
+    **ESTABLISHED, NEVER REMEMBERED.** Nothing on the wire reports
+    `_first`, and the game's window is visible to a human whenever
+    `ext::g_hide_window` is unset (platform.cpp:1379) — which is how
+    this screen was compared against the original in the first place
+    — so a remembered value is a lie the caller cannot detect. The
+    plan therefore always starts by driving the window to a known
+    end: `Decrement_First_` clamps at 0 (colsum.cpp:211-214), so
+    enough decrements reach the top from wherever it was, and the
+    increments then walk it to the target.
+
+    **THE REFUSALS ARE MIRRORED BEFORE THE STEPS ARE COUNTED**
+    (decision 33), because counting a step the game declined is
+    exactly how the two windows come apart:
+
+      below ten colonies, NEITHER stepper runs at all. Both are
+      guarded by `colonies_count >= num_items` (colsum.cpp:210
+      and :226), and `Update_First_` additionally forces `_first = 0`
+      whenever the count is under the window (colsum.cpp:194-197).
+      So the right plan is no steps, and the only reachable target
+      is 0.
+
+      the last page is FULL. `_x_fields[2]` only calls
+      `Increment_First_` while `_g_colony_list_ptr[_first + 10] !=
+      -1` (colsum.cpp:796), and that array is padded with -1 past
+      the colony count, so `_first` stops at `n - 10`.
+
+    **`n` IS THE GAME'S COUNT AND IT AGREES WITH HD'S ROWS.**
+    `COLXPORT::N_Colonies_` (colxport.cpp:67) counts colonies whose
+    `owner` is the player and whose `outpost_flag` is 0, which is the
+    same pair `colonyrows.build_rows` filters on. One caveat that is
+    not ours to fix: that function returns a table entry instead when
+    `_cheezy_hack_col_count_state` is set, so a game in that state
+    would count differently and nothing on the wire would say so.
+
+    **THE POSITIONS MUST BE THE SAME ORDER.** A plan maps an HD row
+    to a game slot by position, which only holds while both lists are
+    sorted alike — which is why this screen pushes its own sort key
+    to the game on entry rather than reading one (`screen.
+    _push_sort_key`).
+    """
+
+    #: `COLSUM::_list_col[10]`, filled by `Update_Col_List_`
+    #: (colsum.cpp:348-351). **This is not HD's row count**, which is
+    #: derived from `list_area` and happens to be ten today; see
+    #: `Window.visible` and decision 46's corollary.
+    SLOTS = 10
+
+    #: Reasons a target is unreachable. Wording is layout.json's.
+    REFUSE_WINDOW_FIXED = "window_fixed"
+    REFUSE_PAST_END = "past_end"
+
+    @classmethod
+    def max_first(cls, n_colonies):
+        """The largest `_first` the game will hold.
+
+        `n - 10`, from the guard at colsum.cpp:796 rather than from a
+        clamp inside the stepper: the increment is refused when slot
+        ten would be empty, so the last page is always full.
+        """
+        return max(0, int(n_colonies) - cls.SLOTS)
+
+    @classmethod
+    def scrolls(cls, n_colonies):
+        """False when the window cannot move at all — under ten."""
+        return int(n_colonies) >= cls.SLOTS
+
+    @classmethod
+    def plan(cls, n_colonies, target_first):
+        """Steps to put the game's window at `target_first`.
+
+        Safe direction first and unconditionally: `down` is the
+        largest `_first` the game can hold, so the sequence reaches
+        the top from any state without needing to know which one it
+        was in.
+        """
+        n = int(n_colonies)
+        target = int(target_first)
+        if not cls.scrolls(n):
+            if target != 0:
+                return FirstPlan(refused=cls.REFUSE_WINDOW_FIXED)
+            return FirstPlan(0, 0, 0)
+        if target < 0 or target > cls.max_first(n):
+            return FirstPlan(refused=cls.REFUSE_PAST_END)
+        return FirstPlan(cls.max_first(n), target, target)
+
+    @classmethod
+    def slot_for(cls, n_colonies, position):
+        """(plan, slot) putting the row at `position` in the window.
+
+        The window is placed as early as it will go — `first =
+        min(position, max_first)` — so a row near the end of a long
+        list lands in the last full page rather than off it. `slot`
+        is where the row then sits, and it is the number a click
+        names.
+        """
+        n = int(n_colonies)
+        pos = int(position)
+        if pos < 0 or pos >= n:
+            return FirstPlan(refused=cls.REFUSE_PAST_END), None
+        first = min(pos, cls.max_first(n)) if cls.scrolls(n) else 0
+        plan = cls.plan(n, first)
+        if plan.refused:
+            return plan, None
+        slot = pos - plan.first
+        if not 0 <= slot < cls.SLOTS:
+            return FirstPlan(refused=cls.REFUSE_PAST_END), None
+        return plan, slot

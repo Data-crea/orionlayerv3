@@ -20,6 +20,33 @@ production row, because the groups are separated by an EMPTY SLOT and
 a negative-imports group shares the net's sprites, which is how Wolf
 II's BC row was read as 18 when it was 10 plus 8.
 
+This session (4 September 2026), phase 2, in one line each:
+**`colonyselect.GameWindow` plans the game's ten-slot window** —
+`COLSUM::_first` — and it sits beside `Window` on purpose, because
+decision 46's corollary is that confusing HD's viewing offset with
+the original's window is the available mistake and a reader who meets
+only one of them is the person who makes it; the plan **establishes
+rather than remembers**, always leading with enough decrements to
+reach the top from any state, since nothing on the wire reports
+`_first` and a visible game window lets a human move it
+(platform.cpp:1379); the window's own refusals are mirrored BEFORE
+the steps are counted — below ten colonies neither stepper runs at
+all (colsum.cpp:210 and :226) and the increment stops at `n - 10`
+because slot ten must hold a real colony (colsum.cpp:796), so the
+last page is FULL and a target past it is refused rather than
+clamped; **the check simulates the original's steppers and runs the
+plan from EVERY reachable `_first`**, which is the only way "establish
+rather than remember" is a claim and not a wish, and it verifies the
+acceptance case directly: under ten colonies the plan is zero steps,
+not steps that happen to be refused; `SLOTS` is pinned to the game's
+ten and asserted independent of the layout, since HD's visible count
+is ten only by arithmetic; and `COLXPORT::N_Colonies_`
+(colxport.cpp:67) was checked to count `owner == player` and
+`outpost_flag == 0`, the same pair `build_rows` filters on, so the
+two lists bind — with the one caveat that it returns a table entry
+instead when `_cheezy_hack_col_count_state` is set, which nothing on
+the wire would report.
+
 This session (4 September 2026), phase 1 of pop movement, in one line
 each: **the four drop rules and the pick-up refusal are mirrored** in
 `screens/colony_summary/colonymove.py`, and decision 33 still carries
@@ -278,7 +305,7 @@ files under `doc/` and are only summarised here.
 | | |
 |---|---|
 | Python | 21,642 lines across 94 modules (core, screens, tools) |
-| Smoke test | `python tools/smoke_test.py` — **71 checks**, headless |
+| Smoke test | `python tools/smoke_test.py` — **72 checks**, headless |
 | Assets | 170 MB (select_race 68, galaxy_map 51, shared 23, new_game 21, colony_summary 1) |
 | Screens in HD | 7 of ~20–22 (colony summary draws list, sidebar, scan box and galaxy inset) |
 | Setup from clone | `python tools/setup.py` (deps via the system package manager) |

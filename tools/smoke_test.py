@@ -3771,6 +3771,112 @@ def main():
     ok("colony summary pop-movement rules mirrored (four rules, the "
        "pick-up refusal, and the count a partial drop lands)")
 
+    # ── The game's list window, established not remembered ──
+    # Decision 46. An injected click names a POSITION IN THE GAME'S
+    # WINDOW, so `_first` has to agree with the HD row before
+    # anything is sent, and nothing on the wire reports `_first`.
+    #
+    # THE PLAN IS CHECKED BY SIMULATING THE ORIGINAL'S OWN STEPPERS,
+    # transcribed here from colsum.cpp rather than reasoned about,
+    # and it is run FROM EVERY REACHABLE STARTING STATE — which is
+    # the whole claim: "establish, do not remember" is only true if
+    # the sequence lands on the target from wherever the window was.
+    from screens.colony_summary.colonyselect import GameWindow as _GW
+
+    def _sim_dec(first, n):
+        # Decrement_First_, colsum.cpp:207-221. The stepper refuses
+        # entirely below the window; the clamp is `< 1`, which for a
+        # non-negative _first is max(0, _first - 1).
+        if n >= _GW.SLOTS:
+            return max(0, first - 1)
+        return first
+
+    def _sim_inc(first, n):
+        # The CALLER's guard first (colsum.cpp:796): the increment is
+        # only offered while _g_colony_list_ptr[_first + 10] is a real
+        # colony, and that array is padded with -1 past the count.
+        if not (first + _GW.SLOTS < n):
+            return first
+        # Increment_First_, colsum.cpp:223-232.
+        if n >= _GW.SLOTS:
+            return first + 1
+        return first
+
+    # SLOTS is the ORIGINAL's ten and is not read from the layout.
+    # Decision 46's corollary: HD's visible row count is derived from
+    # list_area and happens to be ten today, and every k is counted
+    # against the game's window instead.
+    assert _GW.SLOTS == 10, _GW.SLOTS
+    for _n in range(0, 40):
+        assert _GW.max_first(_n) == max(0, _n - 10), _n
+
+    for _n in (0, 1, 5, 9, 10, 11, 12, 25, 37):
+        _reachable = list(range(0, _GW.max_first(_n) + 1))
+        for _target in range(0, max(2, _GW.max_first(_n) + 3)):
+            _plan = _GW.plan(_n, _target)
+            if _plan.refused:
+                # A refused target is one the game cannot hold, and
+                # it is refused rather than silently clamped.
+                assert _target > _GW.max_first(_n) or not _GW.scrolls(_n), (
+                    f"n={_n} target={_target} refused ({_plan.refused}) "
+                    f"but max_first is {_GW.max_first(_n)}")
+                assert _plan.steps == 0, _plan
+                continue
+            for _start in _reachable:
+                _f = _start
+                for _ in range(_plan.down):
+                    _f = _sim_dec(_f, _n)
+                assert _f == 0 or not _GW.scrolls(_n), (
+                    f"n={_n}: {_plan.down} decrements from {_start} "
+                    f"left the window at {_f}, not at the top — the "
+                    f"safe direction is what makes this establish "
+                    f"rather than remember")
+                for _ in range(_plan.up):
+                    _f = _sim_inc(_f, _n)
+                assert _f == _target, (
+                    f"n={_n} start={_start} target={_target}: the plan "
+                    f"{_plan} lands on {_f}. Counting a step the game "
+                    f"refuses is how the two windows come apart")
+
+    # FEWER COLONIES THAN SLOTS DOES NOTHING, which is the acceptance
+    # case: both steppers are guarded by colonies_count >= num_items
+    # (colsum.cpp:210 and :226) and Update_First_ forces _first = 0
+    # below the window (colsum.cpp:194-197). So the plan is no steps,
+    # not "some steps that happen to be refused".
+    for _n in range(0, 10):
+        assert not _GW.scrolls(_n), _n
+        _p = _GW.plan(_n, 0)
+        assert (_p.down, _p.up, _p.refused) == (0, 0, None), (_n, _p)
+        assert _GW.plan(_n, 1).refused == _GW.REFUSE_WINDOW_FIXED, _n
+        # and every row is already in the window, at its own index
+        for _pos in range(_n):
+            _p2, _slot = _GW.slot_for(_n, _pos)
+            assert (_p2.steps, _slot) == (0, _pos), (_n, _pos, _p2, _slot)
+
+    # A ROW MAPS TO A SLOT, and the last page is full rather than
+    # short: at n = 25 the window stops at 15, so row 24 is slot 9
+    # and not slot 14 of a half-empty page.
+    _p3, _slot3 = _GW.slot_for(25, 24)
+    assert (_p3.first, _slot3) == (15, 9), (_p3, _slot3)
+    _p4, _slot4 = _GW.slot_for(25, 20)
+    assert (_p4.first, _slot4) == (15, 5), (_p4, _slot4)
+    # Exactly ten colonies: the guard passes but the window still
+    # cannot move, because slot ten would be empty.
+    assert _GW.max_first(10) == 0 and _GW.scrolls(10)
+    assert _GW.slot_for(10, 9)[1] == 9
+    # Off the end is refused, not clamped.
+    assert _GW.slot_for(11, 11)[0].refused == _GW.REFUSE_PAST_END
+    assert _GW.slot_for(11, -1)[0].refused == _GW.REFUSE_PAST_END
+
+    # The refusals carry OUR wording (decision 15), like the move
+    # rules — a window that will not go where HD wants it is a reason
+    # to show, not a silence.
+    for _r in (_GW.REFUSE_WINDOW_FIXED, _GW.REFUSE_PAST_END):
+        assert _out_cfg["move"].get(_r), (
+            f"move.{_r} has no wording")
+    ok("colony summary game window (plan lands from every reachable "
+       "_first, and does nothing below ten colonies)")
+
     # ── The list SCROLLS, for viewing only (fundament 46) ──
     # Fifteen colonies against a panel that holds ten, so the offset
     # has somewhere to go. The synthetic empire ships five, which is
