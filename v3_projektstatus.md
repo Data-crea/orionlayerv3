@@ -20,6 +20,33 @@ production row, because the groups are separated by an EMPTY SLOT and
 a negative-imports group shares the net's sprites, which is how Wolf
 II's BC row was read as 18 when it was 10 plus 8.
 
+This session (4 September 2026), phase 1 of pop movement, in one line
+each: **the four drop rules and the pick-up refusal are mirrored** in
+`screens/colony_summary/colonymove.py`, and decision 33 still carries
+because all five decide from `pop[]`, `n_pops` and `max_farms`, every
+one in the verified `s_colony`; **the mirror answers a COUNT, not a
+boolean**, because `Send_Cluster_` returns mid-cluster on a refusal
+(colmove.cpp:168-173) — forty pops already in industry and a cluster
+of five lands TWO and carries three, and a yes/no mirror would have
+said "this works"; the conditions are transcribed AS WRITTEN
+including `|| pop_state == 6`, which cannot fire today, because
+transcribing costs one `or` and being right about dead code is a
+claim nobody has to make — and the check for it is BEHAVIOURAL, since
+the first version searched the file text and passed on this module's
+own docstring; `max_farms` turned out to hold only 0 or 255
+(colcalc.cpp:691-695), so rule 4 is binary in practice — a planet
+that cannot farm refuses its FIRST farmer — which the fundament's
+"farmers at most max_farms" reads as a capacity and is not; **the
+native rule is unreachable in the original**, since
+`Give_Colonist_New_Job_`'s only two callers need a cluster and
+`Get_Cluster_` refuses a native before one exists, so ESTR 522
+("natives can only farm or mine") cannot be shown while ESTR 382
+("natives cannot be moved") can — filed as **open fix 8, a question**,
+with no guess about which side is right; our own refusal wording is
+in `layout.json` under `move` per decision 15, because we refuse
+BEFORE injecting and the sentence is therefore ours to own; and each
+of the five rules was verified to bite on its own by deleting it.
+
 This session (4 September 2026), the rim survey closed, in one line
 each: the one rule became **two** — **class A**, text this tree places
 at a cutout edge, zero pixels under opaque frame alpha at every
@@ -251,7 +278,7 @@ files under `doc/` and are only summarised here.
 | | |
 |---|---|
 | Python | 21,642 lines across 94 modules (core, screens, tools) |
-| Smoke test | `python tools/smoke_test.py` — **70 checks**, headless |
+| Smoke test | `python tools/smoke_test.py` — **71 checks**, headless |
 | Assets | 170 MB (select_race 68, galaxy_map 51, shared 23, new_game 21, colony_summary 1) |
 | Screens in HD | 7 of ~20–22 (colony summary draws list, sidebar, scan box and galaxy inset) |
 | Setup from clone | `python tools/setup.py` (deps via the system package manager) |

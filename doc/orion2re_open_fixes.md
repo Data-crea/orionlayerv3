@@ -29,6 +29,7 @@ section for what was found where.
 | — | Custom Race reports screen ID 50 | **Applied** | — |
 | 6 | `s_0_0055110c` / `s_1_00551110` declared `[3]` and `[4]`, defined three times | **Question, not a fix** | Nothing today |
 | 7 | `Draw_Colony_Prod_Both_` sign-tests `imports[t]` as a byte once and as a word once | **Question, not a fix** | Nothing today; changes the FOOD/RESEARCH/BC rows, never INDUSTRY |
+| 8 | Two native messages in `colmove.cpp` disagree, and the one describing a capability is on an unreachable branch | **Question, not a fix** | Nothing today; decides which refusal HD shows |
 
 Items 3 and 4 are both about INJECT_CLICK and both live in the same
 code path, but they are separate faults: 3 is where the coordinates
@@ -539,3 +540,72 @@ Because we cannot tell you which is right. If the byte is correct,
 `:152` is the one missing a cast; if the word is correct, `:73` has
 one too many. Either way it is one line in your tree and the choice
 is yours.
+
+---
+
+## 8. Two native messages that disagree, one of them unreachable — a question, not a fix request
+
+**This asks for an answer, not a patch.** Nothing misbehaves and
+OrionLayer is not blocked. It is here for the same reason as items 6
+and 7: we are about to mirror this rule so a refusal can be shown
+before a click is sent, and the two strings the original carries say
+different things about what natives may do.
+
+### What we found (orion2re 1.60, `src/version.h`)
+
+Natives are refused twice, in two functions, with two different
+messages:
+
+| Where | Test | String |
+|---|---|---|
+| `Get_Cluster_`, `colmove.cpp:59-64` | `pop[i] & 0x0F == 9` | ESTR **382** — *"Natives cannot be moved to another job or planet!"* |
+| `Give_Colonist_New_Job_`, `colmove.cpp:524-529` | `pop_state == 3 \|\| pop_state == 6` and the new job is `ECON_RESEARCH` or `ECON_INDUSTRY` | ESTR **522** — *"This colonist is a native, natives can only farm or mine."* |
+
+Three things do not line up.
+
+**The two strings contradict each other.** 382 says natives cannot be
+moved to another job at all. 522 says they can, to two of the three
+jobs.
+
+**522's code does not match its own text.** It refuses
+`ECON_RESEARCH` and `ECON_INDUSTRY`, which leaves only `ECON_FOOD` —
+farming. The string offers farming *or mining*, and mining is the
+industry job it refuses.
+
+**And 522 looks unreachable.** `Give_Colonist_New_Job_` has exactly
+two callers (`colmove.cpp:168` and `:262`), both inside
+`Send_Cluster_`, which needs a cluster. `_cluster_colony_n` is
+assigned a colony in exactly one place — `colmove.cpp:66`, inside
+`Get_Cluster_`, after the check at `:59` has already returned for a
+native. So a native can never be in a cluster, and a rule that only
+fires on a native in a cluster can never fire.
+
+### The question
+
+**Which of the two describes the intended rule?** If 382 does, then
+522 and its branch are dead weight and the "or mine" text has never
+been true. If 522 does, then `Get_Cluster_`'s blanket refusal is too
+strong and natives were meant to be movable between farming and
+industry — in which case the refusal at pick-up is the bug, not the
+message.
+
+There is a third possibility we cannot rule out from outside: that
+`pop_state == 6` was reachable in the original and is not here.
+`Pop_To_Pop_State_` (`colony.cpp:1240`) returns only 2, 3 or 4 and is
+defined once, so a state 6 would have to come from somewhere this
+tree no longer has.
+
+### What we did with it
+
+**We mirrored the code, not either string**, because the code is what
+runs — including the `== 6` arm, which costs one `or` to transcribe
+and saves us being right about an unreachable branch. Our own refusal
+wording is ours and lives in `layout.json` (decision 15): we refuse
+*before* injecting, so the sentence a player reads is a thing this
+project chose and has to own, and copying an ESTRING that may be
+describing a rule the code does not implement would be the worst of
+both.
+
+If the answer is "382 is the rule", nothing changes for us. If it is
+"522 is the rule", our mirror is currently stricter than the game
+intends and we would want to know.
