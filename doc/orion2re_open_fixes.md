@@ -23,7 +23,7 @@ section for what was found where.
 |---|---|---|---|
 | 1 | `Server::SendFrame` drops a client on a short write | **Applied** in the 30 Aug tree — verify | Nothing, if applied |
 | 2 | FIELD_LIST only sent on a field-count change | **Applied** in the 30 Aug tree — verify | Nothing, if applied |
-| 3 | INJECT_CLICK: coordinates mapped as window coordinates, AND the real mouse overwrites the injected pointer every frame | Open upstream; **patched locally** 4 Sep 2026 (`doc/ext_inject_pointer.patch`) | Without the patch, any injected click whose handler reads the POINTER does nothing |
+| 3 | INJECT_CLICK: coordinates mapped as window coordinates, AND the real mouse overwrites the injected pointer every frame | Pointer half **patched locally** 4 Sep 2026 (`doc/ext_inject_pointer.patch`); **coordinate half still open, and it blocks the move** | Without the patch, an injected click whose handler reads the POINTER does nothing; without the coordinate half, the click is only aimed correctly at a 640x480 window, and that size is not measurable under Wayland |
 | 4 | INJECT_CLICK pushes no MOUSEMOTION before the buttons | Open | Radio buttons toggle unreliably |
 | 5 | `racesel.lbx [entry 138]` crash on Custom Race Accept | **Applied** in the 30 Aug tree — that is why it stopped reproducing | Nothing |
 | — | Custom Race reports screen ID 50 | **Applied** | — |
@@ -321,6 +321,61 @@ know whether it is in that state, and a rule of "click only while
 unfocused" would be a behaviour depending on something invisible.
 Recorded because it explains why an injected click may appear to work
 intermittently, not because it is a way to live with the bug.
+
+### THE FIRST HALF IS STILL OPEN, and it now blocks the move
+
+The applied patch fixes the *pointer* half. The **coordinate** half —
+the original subject of this item — is untouched, and on 4 September
+2026 it stopped the population-move sequence one step before the
+click.
+
+`MSG_INJECT_CLICK` (ext_api.cpp:205) pushes the SDL event with
+`down.button.x = (float)cmd.param1` verbatim, and the game then runs
+it through `Map_Window_Point_To_Game_Point_` (platform.cpp:219) like
+any real event — which calls `SDL_RenderCoordinatesFromWindow`, i.e.
+**window space -> logical 640x480 space**. So the client's game
+coordinates are read as window coordinates. The mapping is the
+identity only when the window happens to be exactly 640x480, which is
+its creation size (`k_windowed_logical_width/height`,
+platform.cpp:893) — and a resizable, *visible* window that a human
+can drag.
+
+Visible: `SDL_ShowWindow` is guarded by `if (!ext::g_hide_window)`
+(platform.cpp:1391), but `ext::Init()` — which sets that flag — is
+called from `mox2.cpp:382`, long after `Run_Main_Loop_` has created
+and shown the window. The flag therefore never suppresses anything.
+The fundament said the game window is hidden; it is not.
+
+**And the size cannot be measured from outside on this machine.** The
+session is GNOME Shell on Wayland: `xdotool` and `xwininfo` see only
+X clients and report nothing, `org.gnome.Shell.Eval` answers
+`(false, '')` because unsafe-mode is off, and
+`org.gnome.Shell.Introspect.GetWindows` answers `AccessDenied`. So a
+client cannot establish the number it would have to divide by. Asking
+a human for it is exactly the hand-copied constant decision 36
+forbids once behaviour depends on it.
+
+### The fix stays inside the ORION2RE_EXT boundary — Case A
+
+The engine already owns the inverse mapping and exports what is
+needed to reach it, so no `platform.cpp` change is required:
+
+    platform::g_main_window                platform.h:31 (void*)
+    SDL_GetRenderer(window)                SDL_render.h:434
+    SDL_RenderCoordinatesToWindow(...)     SDL_render.h:1680
+
+`MSG_INJECT_CLICK` converts its 640x480 point to window coordinates
+with those three calls before pushing the event, and the comment
+already above it — *"Push a mouse click at (x, y) in 640x480 space"* —
+becomes true. The window size is then answered by the engine at the
+moment of the click, at whatever size the window currently is, and no
+number is typed by anyone. Letterboxing and non-integer scales come
+out right because it is the exact inverse of the function the event
+will be read back through.
+
+Not applied. It is a second local divergence in someone else's tree
+and the first one was authorised specifically; this is written down
+and asked for rather than taken.
 
 ---
 

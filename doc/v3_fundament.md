@@ -563,6 +563,20 @@ after the thing it would have prevented is not a guard, and reading
 it as one cost a wrong sentence here.
 Saying which half was measured is the point of writing it down.
 
+**A new message is not a new picture — 4 September 2026.** The
+population-move probe stepped the game's list window down, read
+`_first` back off the scroll thumb, got the same value it had before,
+and stopped with "established 1, wanted 0". The step had in fact
+worked. Its `settle()` waited for a new STATE snapshot and then
+merely checked that *a* framebuffer existed, so it read the thumb out
+of the frame from before the step. The two channels are separate and
+the visual one lags: waiting on the wrong counter turns a success
+into a reported failure, which is the cheap direction — the same
+mistake pointed the other way would have aimed a click at a window
+position that had already moved. Anything read out of the
+framebuffer waits on the framebuffer's own counter.
+
+
 **36. A value the API does not report is copied by hand — and gets a
 checker, not a reminder.** The engine version is on orion2re's main
 menu and nowhere on the wire: `HELLO_REPLY` carries `PROTO_VERSION`,

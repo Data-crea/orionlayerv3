@@ -84,12 +84,23 @@ RIGHT_MARGIN = 4
 SORT_KEY, SORT_HOTKEY = "name", ord("n")
 
 
-def settle(client, tries=40):
-    """One fresh snapshot AND framebuffer, or None."""
-    seen = client.stats.get("state", 0)
+def settle(client, tries=60):
+    """A fresh snapshot AND a freshly DRAWN frame, or None.
+
+    Both counters, not just the state one. `_first` is read off the
+    scroll thumb, which lives in the framebuffer, so accepting a new
+    STATE message with the previous VISUAL frame reads the window
+    where it was before the step. That is not hypothetical: the first
+    run of this sequence reported "_first 1 -> 1, stopping" for a
+    decrement that had in fact worked, because the frame had not been
+    redrawn yet.
+    """
+    seen_state = client.stats.get("state", 0)
+    seen_visual = client.stats.get("visual", 0)
     for _ in range(tries):
         client.poll()
-        if (client.stats.get("state", 0) > seen
+        if (client.stats.get("state", 0) > seen_state
+                and client.stats.get("visual", 0) > seen_visual
                 and client.state.framebuffer is not None):
             return client.state
         time.sleep(0.05)
