@@ -107,6 +107,7 @@ depends on the unverified part; the zone split is built as a list of
 runs so the shading can be added inside a run later without moving
 anything else.
 """
+from core import zoomtables
 from core.structs import colony as colony_struct
 from core.structs import planet as planet_struct
 from core.structs import player as player_struct
@@ -260,6 +261,141 @@ def planet_name(colony, planets, stars):
             number += 1
     numeral = ROMAN[number] if number < len(ROMAN) else str(number + 1)
     return f"{star.name} {numeral}"
+
+
+#: MAX_PLAYERS, consts.h:7. The bound `Draw_Galaxy_Map_Box_` tests
+#: `owner` against before treating a star as unowned.
+MAX_PLAYERS = 8
+
+#: The galaxy inset's own box, native, as `COLSUM::Draw_Galaxy_Map_`
+#: passes it: MOVEBOX::Draw_Galaxy_Map_Box_(nullptr, 0, 0x17c, 0x15d,
+#: 0x80, 0x5b, 0, 0, 0, 0, 3, 0) at colsum.cpp:415 — x 380, y 349,
+#: width 128, height 91, view_mode 3. Second source for the same
+#: four: Colsum_Connect_Galaxy_Map_Stars_ (colsum.cpp:734-735).
+INSET_NATIVE = (380, 349, 128, 91)
+
+#: The two constants the original divides by, movebox.cpp:19-20. They
+#: are not arbitrary: 506000 is MAP_MAX_X per scale unit (50.6, see
+#: `zoomtables.MAP_MAX_X_PER_SCALE`) times 10000, and 400000 is the
+#: same for y at 40 per unit — so the division below reduces to
+#: `star.x / MAP_MAX_X * width`, i.e. the whole galaxy across the
+#: box. Transcribed as the integer arithmetic the original writes,
+#: NOT as that algebraic form: three of the four divisions truncate
+#: and the simplified version lands a pixel out.
+INSET_SCALE_X = 506000
+INSET_SCALE_Y = 400000
+
+
+def galaxy_inset_stars(game_state):
+    """Every star as (native_x, native_y, colour_index).
+
+    Transcribed from `MOVEBOX::Draw_Galaxy_Map_Box_` (movebox.cpp:4)
+    under view_mode 3, which is the mode `COLSUM::Draw_Galaxy_Map_`
+    asks for. Native pixels, because that is the space the original's
+    arithmetic is in; scaling to the panel is the renderer's job.
+
+    THE POSITION (movebox.cpp:62-64), with x_start 380, y_start 349
+    and both map offsets 0:
+
+        scale_x = 506000 / width          (movebox.cpp:19)
+        sx = x_start + ((star.x * 1000 / max_map_scale) * 10) / scale_x
+
+    and the same for y over 400000 / height. `max_map_scale` is not on
+    the wire and is recovered from MAP_MAX_X by
+    `zoomtables.max_map_scale` — one home for that, already used by
+    the galaxy map.
+
+    **VERIFIED AGAINST THE ORIGINAL'S OWN FRAMEBUFFER**, 4 September
+    2026: all 99 stars of the reference save land within 2 px of ink
+    in the native frame the Extension API reports, at stardate 3502.
+    That is the transform checked against the thing it is a transform
+    of, rather than against a screenshot measured by eye.
+
+    THE COLOUR INDEX (movebox.cpp:67-79), which selects a sprite from
+    `MOX::_colony_galaxy_star_seg[10]` — gstar.lbx entries 23..32,
+    loaded by `COLONY::Load_Galaxy_Map_Anims_` (colony.cpp:329-338):
+
+        black hole                      -> 9 on this screen
+        unowned, and visited or -1/-2   -> 8
+        unowned otherwise               -> 0
+        owned                           -> _player[owner].color
+
+    The black-hole line is `_using_colony_screen_palette ? 9 : 10`,
+    and 10 would be off the end of a ten-entry array; this screen sets
+    that flag, so 9 is the one that runs and 10 is not our problem.
+
+    **TWO THINGS ABOUT INDEX 0 WORTH KNOWING BEFORE READING A
+    SCREENSHOT.** It is both "unowned and unvisited" AND player colour
+    0, so those two draw the same sprite in the original. And the
+    unvisited branch is nearly unreachable: it needs an unowned star
+    whose `owner` is neither -1 nor -2, and all 52 unowned stars in
+    the reference save carry -1. Every index 0 in that save is a
+    colour-0 player's star, not a dark one.
+    """
+    stars = getattr(game_state, "stars", None) or []
+    if not stars:
+        return []
+    raws = getattr(game_state, "player_raw", None) or []
+    players = [player_struct.parse(r) for r in raws
+               if len(r) >= player_struct.SIZE]
+    local = getattr(game_state, "player_num", 0)
+    scale = zoomtables.max_map_scale(getattr(game_state, "map_max_x", 0))
+    if not scale:
+        return []
+    _x, _y, width, height = INSET_NATIVE
+    div_x = INSET_SCALE_X // width
+    div_y = INSET_SCALE_Y // height
+    out = []
+    for star in stars:
+        sx = ((int(star.x) * 1000 // scale) * 10) // div_x
+        sy = ((int(star.y) * 1000 // scale) * 10) // div_y
+        out.append((sx, sy, _inset_color_index(star, players, local)))
+    return out
+
+
+def _inset_color_index(star, players, local):
+    """movebox.cpp:67-79, in order."""
+    if star_struct.is_black_hole(star):
+        return 9
+    owner = int(star.owner)
+    if owner < 0 or owner >= MAX_PLAYERS:
+        if star_struct.visited_by(star, local) or owner in (-1, -2):
+            return 8
+        return 0
+    return players[owner].color if owner < len(players) else 0
+
+
+def galaxy_inset_label(game_state, colony_index):
+    """The star name the original prints under the inset, or "".
+
+    TRANSCRIBED. `Draw_Scan_Info_` (colsum.cpp:80) prints
+    `_star[_galaxy_map_scanned_star]` centred at native (444, 431)
+    — colsum.cpp:86 — which is the inset box's own horizontal centre
+    (380 + 64) near its bottom edge.
+
+    `_galaxy_map_scanned_star` follows the SELECTED colony: it is set
+    from that colony's planet's star on entry (colsum.cpp:141) and
+    again whenever a row is scanned (colsum.cpp:1001). The original
+    also sets it by hovering a star IN the inset — those stars are
+    fields, `_galaxy_map_star_field[]` (colsum.cpp:69-75) — and that
+    path is NOT DRAWN here; see `colonyinset`.
+
+    So on this screen the label names the selected colony's star,
+    which is the same selection `colonyselect` already holds.
+    """
+    if colony_index is None:
+        return ""
+    colonies = getattr(game_state, "colonies_raw", None) or []
+    planets = getattr(game_state, "planets_raw", None) or []
+    stars = getattr(game_state, "stars", None) or []
+    if not (0 <= colony_index < len(colonies)):
+        return ""
+    colony = colony_struct.parse(colonies[colony_index])
+    if not (0 <= colony.planet < len(planets)):
+        return ""
+    planet = planet_struct.parse(planets[colony.planet])
+    idx = int(planet.star_index)
+    return stars[idx].name if 0 <= idx < len(stars) else ""
 
 
 def _low_byte_signed(value):

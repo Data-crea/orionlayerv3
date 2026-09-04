@@ -3458,6 +3458,147 @@ def main():
     ok("colony summary production net (four branches, the (int8_t) "
        "cast, the shortage and both of its refusals)")
 
+    # ── galaxy_inset: the original's small galaxy map ──
+    # COLSUM::Draw_Galaxy_Map_ (colsum.cpp:415) is one call into
+    # MOVEBOX::Draw_Galaxy_Map_Box_ at native (380, 349, 128, 91),
+    # view_mode 3. The transform was verified against the original's
+    # OWN framebuffer on 4 September 2026 — all 99 stars of the
+    # reference save within 2 px of ink — and what is asserted here
+    # is the arithmetic that verification passed, so a retyped
+    # constant fails without a game running.
+    from screens.colony_summary import colonyinset as _ci
+    import struct as _ist
+    from core.structs import star as _istar
+
+    def _fake_star(x, y, owner=-1, spectral=0, visited=0, name=b"S"):
+        b = bytearray(_istar.SIZE)
+        b[0:len(name)] = name
+        _ist.pack_into("<hh", b, 15, x, y)
+        _ist.pack_into("<b", b, 20, owner)
+        b[22] = spectral
+        b[171] = visited
+        return _istar.parse(bytes(b))
+
+    class _FakeGS:
+        def __init__(self, stars, players=(), num=0, max_x=1800):
+            self.stars = stars; self.player_raw = list(players)
+            self.player_num = num; self.map_max_x = max_x
+            self.colonies_raw = []; self.planets_raw = []
+
+    # THE POSITION, transcribed: movebox.cpp:19-20 and :62-64.
+    # max_map_scale 36 comes from MAP_MAX_X 1800 through
+    # zoomtables.max_map_scale, which is the one home for it.
+    _iscale = zt.max_map_scale(1800)
+    assert _iscale == 36, _iscale
+    for _sx_in, _sy_in in ((0, 0), (1740, 1285), (900, 600)):
+        _want_x = ((_sx_in * 1000 // 36) * 10) // (506000 // 128)
+        _want_y = ((_sy_in * 1000 // 36) * 10) // (400000 // 91)
+        _got = _crw.galaxy_inset_stars(
+            _FakeGS([_fake_star(_sx_in, _sy_in)]))[0]
+        assert _got[:2] == (_want_x, _want_y), (_got, _want_x, _want_y)
+    # Every star of the reference galaxy lands INSIDE the box. Not a
+    # tautology: the divisors are per-axis and a swapped pair would
+    # still produce plausible numbers, off the box in one direction.
+    _ibox = _crw.INSET_NATIVE
+    for _gx, _gy in ((0, 0), (1740, 1285), (1800, 1350)):
+        _px, _py, _ = _crw.galaxy_inset_stars(
+            _FakeGS([_fake_star(_gx, _gy)]))[0]
+        assert 0 <= _px <= _ibox[2] and 0 <= _py <= _ibox[3], (
+            f"galaxy ({_gx}, {_gy}) maps to ({_px}, {_py}), outside "
+            f"the original's {_ibox[2]}x{_ibox[3]} box")
+
+    # THE COLOUR RULE, movebox.cpp:67-79, all four branches.
+    _COLOR_OFF = next(f[1] for f in _ps.SPEC.fields if f[0] == "color")
+
+    def _player_with_color(c):
+        b = bytearray(_ps.SIZE)
+        b[_COLOR_OFF] = c
+        return bytes(b)
+
+    _iplayers = [_player_with_color(5)]
+    assert _crw.galaxy_inset_stars(_FakeGS(
+        [_fake_star(0, 0, spectral=_istar.CLASS_BLACK_HOLE)]))[0][2] == 9, \
+        "a black hole must take index 9 on this screen (movebox.cpp:69)"
+    assert _crw.galaxy_inset_stars(_FakeGS(
+        [_fake_star(0, 0, owner=-1)]))[0][2] == 8, \
+        "an unowned star with owner -1 takes 8 (movebox.cpp:73)"
+    assert _crw.galaxy_inset_stars(_FakeGS(
+        [_fake_star(0, 0, owner=-3, visited=1)]))[0][2] == 8, \
+        "an unowned star the player has visited takes 8"
+    assert _crw.galaxy_inset_stars(_FakeGS(
+        [_fake_star(0, 0, owner=-3, visited=0)]))[0][2] == 0, \
+        "unowned, unvisited and not -1/-2 takes 0 (movebox.cpp:75)"
+    assert _crw.galaxy_inset_stars(_FakeGS(
+        [_fake_star(0, 0, owner=0)], _iplayers))[0][2] == 5, \
+        "an owned star takes _player[owner].color (movebox.cpp:78)"
+
+    # THE GEOMETRY IS A RULE, not a rect: uniform scale, centred,
+    # letterboxed — the same rule core.mapcoords.MapView applies, and
+    # the reason the map does not fill this cutout. Asserted at
+    # several box shapes so a hole that changes shape cannot start
+    # stretching the galaxy silently.
+    for _bw, _bh in ((451, 203), (203, 203), (128, 91), (900, 400)):
+        _r = _ci.map_rect(pygame.Rect(10, 20, _bw, _bh))
+        assert _r.w <= _bw and _r.h <= _bh, (_r, _bw, _bh)
+        assert abs(_r.w / _r.h - 128 / 91.0) < 0.02, (
+            f"map_rect({_bw}x{_bh}) gave {_r.w}x{_r.h}, aspect "
+            f"{_r.w / _r.h:.3f} against the original's "
+            f"{128 / 91.0:.3f} — a galaxy is a shape, and the box it "
+            f"goes in does not have to be the shape the original's "
+            f"box was (mapcoords.MapView applies the same rule)")
+        assert abs((_r.x - 10) - (_bw - _r.w) / 2) <= 1, "not centred"
+        assert abs((_r.y - 20) - (_bh - _r.h) / 2) <= 1, "not centred"
+
+    # THE MARKINGS. Three deviations and three omissions, and a
+    # marking without a check is an intention.
+    _icfg = _out_cfg["inset"]
+    for _cite in ("colsum.cpp:415", "colsum.cpp:86", "view_mode 3",
+                  "FRAMEBUFFER"):
+        assert _cite in _icfg["_note"], (
+            f"inset._note no longer carries {_cite!r}")
+    for _cite in ("gstar.lbx", "OWNER_COLORS", "3, 4 and 5"):
+        assert _cite in _icfg["_deviation_note"], (
+            f"inset._deviation_note no longer carries {_cite!r} — the "
+            f"sprite is not shipped, the colours are the skin's, and "
+            f"three of the ten were never measured")
+    for _cite in ("451", "128 x 91", "LETTERBOXED", "MapView",
+                  "artwork decision"):
+        assert _cite in _icfg["_geometry_note"], (
+            f"inset._geometry_note no longer carries {_cite!r}")
+    for _cite in ("movebox.cpp:98-101", "colsum.cpp:69-75",
+                  "colsum.cpp:731", "_cluster_colony_n"):
+        assert _cite in _icfg["_not_drawn_note"], (
+            f"inset._not_drawn_note no longer carries {_cite!r} — the "
+            f"animation, the star fields and the population-transfer "
+            f"connect line are what the original does here and this "
+            f"does not")
+    for _cite in ("NOT DRAWN", "gstar.lbx", "Colsum_Connect"):
+        assert _cite in (_ci.__doc__ or ""), (
+            f"colonyinset no longer records {_cite!r}")
+
+    # IT DRAWS, AND IT SENDS NOTHING. Same guard as the scroll path
+    # (decision 46): this panel is display only.
+    class _InsetCap(_Cap):
+        def __init__(self):
+            super().__init__(); self.fields = []
+        def activate_field(self, f): self.fields.append(f)
+    _icap = _InsetCap()
+    _icl, _icon = app.client, app.connected
+    app.client, app.connected = _icap, True
+    _isnap = _pv._Snapshot(_pv.COLONIES)
+    _scr_op.update(_isnap)
+    _isurf = pygame.Surface((1920, 1080))
+    _iarea = pygame.Rect(*app.layout.rect(_scr_op.box_rect("galaxy_inset")))
+    _isurf.fill((0, 0, 0))
+    _scr_op._render_inset(_isurf)
+    app.client, app.connected = _icl, _icon
+    assert _icap.calls == [] and _icap.keys == [] and _icap.fields == [], (
+        f"the galaxy inset reached the game: {_icap.calls}/"
+        f"{_icap.keys}/{_icap.fields}. It is display only — the "
+        f"original's stars are fields and ours are not (fundament 46)")
+    ok("colony_summary galaxy_inset (transform, the four colour "
+       "branches, uniform-scale geometry, markings, sends nothing)")
+
     # ── The list SCROLLS, for viewing only (fundament 46) ──
     # Fifteen colonies against a panel that holds ten, so the offset
     # has somewhere to go. The synthetic empire ships five, which is

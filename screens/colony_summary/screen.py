@@ -15,8 +15,9 @@ boxes in boxes.json ARE the cutouts, derived by tools/frame_holes.py:
                   the earlier HD EXTENSION marking is withdrawn, see
                   below and fundament 43
   galaxy_inset    the original's small galaxy map, the RIGHTMOST of
-                  the three bottom holes — colsum.cpp:415 draws it at
-                  native (380, 349, 128, 91) (later)
+                  the three bottom holes — TRANSCRIPTION, drawn from
+                  colsum.cpp:415, native (380, 349, 128, 91); see
+                  `colonyinset` for what it does NOT draw
   spare_panel     reserved; the MIDDLE hole, over the native column
                   output_panel already answers for
   return          RETURN
@@ -103,8 +104,8 @@ from core.config import REF_W, REF_H
 from core.screen_base import ScreenBase
 from core.structs import player as player_struct
 
-from . import (colonyempire, colonylist, colonyoutput,
-               colonyrows, colonyselect)
+from . import (colonyempire, colonyinset, colonylist,
+               colonyoutput, colonyrows, colonyselect)
 
 log = logging.getLogger("colony_summary")
 
@@ -284,6 +285,7 @@ class ColonySummaryScreen(ScreenBase):
         self._render_panels(surface)
         self._render_list(surface)
         self._render_output(surface)
+        self._render_inset(surface)
         self._render_sidebar(surface)
         self._render_buttons(surface)
         self._render_frame_image(surface)
@@ -333,6 +335,29 @@ class ColonySummaryScreen(ScreenBase):
         colonylist.render(surface, self._rows,
                           pygame.Rect(*self.layout.rect(box)),
                           cfg, self.layout, self.style, self._first)
+
+    def _render_inset(self, surface):
+        """The original's small galaxy map — a TRANSCRIPTION.
+
+        `COLSUM::Draw_Galaxy_Map_` (colsum.cpp:415) is one call into
+        `MOVEBOX::Draw_Galaxy_Map_Box_` with view_mode 3, and the
+        label under it is `Draw_Scan_Info_`'s (colsum.cpp:86). The
+        positions and the colour rule are `colonyrows`', the drawing
+        is `colonyinset`'s, and what is NOT drawn — the scanned
+        star's animation, the star fields, the population-transfer
+        connect line — is recorded there.
+
+        Display only. Nothing here reaches the game, which on this
+        screen is a rule and not an accident (decision 46).
+        """
+        box = self.box_rect("galaxy_inset")
+        if not box or self._state is None:
+            return
+        colonyinset.render(
+            surface, colonyrows.galaxy_inset_stars(self._state),
+            colonyrows.galaxy_inset_label(self._state, self._selected),
+            pygame.Rect(*self.layout.rect(box)),
+            self._data.get("inset", {}), self.layout, self.style)
 
     def _render_output(self, surface):
         """The original's scan box for the selected colony.

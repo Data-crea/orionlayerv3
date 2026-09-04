@@ -20,6 +20,32 @@ production row, because the groups are separated by an EMPTY SLOT and
 a negative-imports group shares the net's sprites, which is how Wolf
 II's BC row was read as 18 when it was 10 plus 8.
 
+This session (4 September 2026), the galaxy inset, in one line each:
+**the small galaxy map draws** — `COLSUM::Draw_Galaxy_Map_`
+(colsum.cpp:415) is one call into `MOVEBOX::Draw_Galaxy_Map_Box_` at
+native (380, 349, 128, 91) with view_mode 3, and under that mode it
+draws one sprite per star and nothing else, plus the scanned star's
+name centred at native (444, 431) (colsum.cpp:86) which names the
+SELECTED colony's star; **the transform was verified against the
+original's own framebuffer**, all 99 stars of the reference save
+within 2 px of ink in the 640x480 frame the Extension API reports,
+and the HD render puts 99 of 99 at a worst error of 0.44 native px;
+the star SPRITE cannot be shipped — `gstar.lbx` entries 23..32 — so
+its shape was measured off that framebuffer instead of guessed, a 3x3
+plus with a bright centre and a 3x3 ring for a black hole, which is
+why the original's draw call offsets by (-1, -1); **the map does not
+fill its hole and that is the visible deviation** — 128:91 uniform
+scaled and letterboxed into a 451x203 cutout, the rule
+`mapcoords.MapView` already applies, after the fill-the-hole version
+was built and rejected on the side-by-side for stretching the galaxy
+33 %; three things the original does here are NOT DRAWN and are
+recorded — the scanned star's animation, the stars being hoverable
+fields, and `Colsum_Connect_Galaxy_Map_Stars_`, which turns out to
+fire only while a population transfer is being dragged
+(`COLMOVE::_cluster_colony_n != -1`, colsum.cpp:487-498) and so has
+no state in this project at all; and the panel sends NOTHING to the
+game, asserted, per decision 46.
+
 This session (4 September 2026), last, in one line each: **the
 production rows drew the wrong number and now draw the original's** —
 `COLDRAW::Draw_Colony_Prod_Both_` computes a net before it draws
@@ -171,7 +197,7 @@ files under `doc/` and are only summarised here.
 | | |
 |---|---|
 | Python | 21,642 lines across 94 modules (core, screens, tools) |
-| Smoke test | `python tools/smoke_test.py` — **67 checks**, headless |
+| Smoke test | `python tools/smoke_test.py` — **68 checks**, headless |
 | Assets | 170 MB (select_race 68, galaxy_map 51, shared 23, new_game 21, colony_summary 1) |
 | Screens in HD | 7 of ~20–22 (colony summary is frame + sidebar only) |
 | Setup from clone | `python tools/setup.py` (deps via the system package manager) |
