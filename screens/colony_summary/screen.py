@@ -142,6 +142,9 @@ class ColonySummaryScreen(ScreenBase):
         # selected — a colony index and never a row index, which is
         # `colonyselect`'s whole subject.
         self._selection = colonyselect.Selection()
+        # Which slice of those rows is on screen. VIEWING ONLY —
+        # nothing on this screen sends it anywhere (decision 46).
+        self._window = colonyselect.Window()
 
     # ── Lifecycle ─────────────────────────────────────────
 
@@ -228,6 +231,39 @@ class ColonySummaryScreen(ScreenBase):
     def _selected(self):
         return self._selection.colony
 
+    @property
+    def _first(self):
+        """The topmost drawn row, re-established against the rows
+        there are now.
+
+        Reading CLAMPS, because the original does: `Update_First_`
+        runs from `Draw_Bar_Indicator_` every frame and forces
+        `_first = 0` whenever the colony count has fallen below the
+        window (colsum.cpp:193-205, :749). A snapshot that loses
+        colonies must not leave the HD list scrolled past its own
+        end, and a property is the one place every reader goes
+        through.
+        """
+        return self._window.clamp(len(self._rows), self._visible_rows())
+
+    def _visible_rows(self):
+        """How many rows `list_area` holds at this resolution.
+
+        DERIVED, never ten. It is ten today — `layout.json`'s
+        `_row_height_note` is where that arithmetic lives — and that
+        is a property of the frame artwork, not a transcription of
+        the original's `_list_col[10]`. Decision 46's corollary: any
+        future synchronisation counts against the GAME's ten, not
+        against this.
+        """
+        box = self.box_rect("list_area")
+        if not box:
+            return 0
+        return colonylist.rows_drawn(
+            pygame.Rect(*self.layout.rect(box)),
+            self._data.get("list", {}), self.layout.scale,
+            len(self._rows))
+
     def selected_row(self):
         return self._selection.row()
 
@@ -309,7 +345,7 @@ class ColonySummaryScreen(ScreenBase):
         cfg = self._data.get("list", {})
         colonylist.render(surface, self._rows,
                           pygame.Rect(*self.layout.rect(box)),
-                          cfg, self.layout, self.style)
+                          cfg, self.layout, self.style, self._first)
 
     def _render_output(self, surface):
         """The original's scan box for the selected colony.
@@ -419,10 +455,12 @@ class ColonySummaryScreen(ScreenBase):
                 # (colsum.cpp:830-837).
                 self._rebuild_rows()
                 # The original scrolls back to the top on any sort
-                # click — `_first = 0` at colsum.cpp:828. Nothing to
-                # reset here yet: the HD list does not scroll, it
-                # draws every row that fits. When scrolling arrives
-                # this is where the reset goes.
+                # click — `_first = 0` at colsum.cpp:832, inside the
+                # same handler that deliberately does NOT touch
+                # `_g_colony_n` (colsum.cpp:830-837). Two rules for
+                # one event: the window goes home, the selection
+                # keeps its colony and moves with the new order.
+                self._window.reset()
                 why = colonyrows.SORT_UNAVAILABLE.get(spec["key"])
                 if why:
                     log.info("Sort %r not applied to the HD rows: %s",
@@ -472,6 +510,14 @@ class ColonySummaryScreen(ScreenBase):
         source for the rect, per decision 5. A second copy of the
         pitch here is how a list starts highlighting the row above
         the one it draws.
+
+        `row_at` answers in BAND numbers, which is what `render`
+        draws in; the scroll offset is added here, because it is this
+        file that owns it and `colonylist` is deliberately unaware of
+        it. Getting that addition wrong is the exact fault decision 5
+        exists for — every row correct, the highlight `first` rows
+        off — so the offset comes from the same property `render` was
+        handed, not from a second read.
         """
         box = self.box_rect("list_area")
         if not box or not self._rows:
@@ -479,9 +525,12 @@ class ColonySummaryScreen(ScreenBase):
         area = pygame.Rect(*self.layout.rect(box))
         if not area.collidepoint(screen_x, screen_y):
             return None
-        return colonylist.row_at(area, self._data.get("list", {}),
-                                 self.layout.scale, len(self._rows),
+        first = self._first
+        band = colonylist.row_at(area, self._data.get("list", {}),
+                                 self.layout.scale,
+                                 len(self._rows) - first,
                                  (screen_x, screen_y))
+        return None if band is None else first + band
 
     def handle_mouse_motion(self, screen_x, screen_y):
         """Hover selects, which is the original's own behaviour.
@@ -503,6 +552,55 @@ class ColonySummaryScreen(ScreenBase):
         """
         super().handle_mouse_motion(screen_x, screen_y)
         self._selection.hover(self._row_at(screen_x, screen_y))
+
+    def handle_mousewheel(self, direction, mx, my):
+        """Scroll the colony list, one row per notch.
+
+        **HD EXTENSION.** MOO2 has no wheel here at all: the original
+        moves its window with two step buttons either side of a
+        proportional slider (`_x_fields[1]` and `_x_fields[2]`,
+        colsum.cpp:790-800; `Draw_Bar_Indicator_`, colsum.cpp:747-753),
+        and that slider is NOT DRAWN by this screen — see
+        `colonylist`'s module docstring, where the omission is
+        recorded. Marked here, in `layout.json` under
+        `list._hd_extension_wheel`, and in a smoke check.
+
+        **IT SENDS NOTHING TO THE GAME, and that is what makes this
+        safe to ship** (decision 46). The original's rows are ten
+        SLOTS over the sorted array, so an injected click names a
+        position in the GAME's window and `_first` decides which
+        colony it reaches; ours is a viewing offset the game has
+        never heard of. Every colony is already in the snapshot, so
+        scrolling needs nothing from it. What must not happen is an
+        injection while the two windows disagree — synchronising them
+        is decision 46's other half and is not built. A smoke check
+        asserts that no scroll path calls `inject_click`,
+        `activate_field` or `inject_key`, so the first edit that adds
+        one fails rather than silently sending a click to the wrong
+        colony.
+
+        Wheel up is `direction` +1 and moves the window towards row
+        0, matching every other scrolling surface in the tree.
+
+        The clamps are `colonyselect.Window`'s and are transcribed
+        there; the visible count is derived from `list_area` and is
+        never the game's ten.
+        """
+        if super().handle_mousewheel(direction, mx, my):
+            return True        # an open help popup took it
+        box = self.box_rect("list_area")
+        if not box or not self._rows:
+            return False
+        if not pygame.Rect(*self.layout.rect(box)).collidepoint(mx, my):
+            return False
+        self._window.scroll(-direction, len(self._rows),
+                            self._visible_rows())
+        # The SELECTION is deliberately not touched. It holds a
+        # COLONY, not a row index (colsum.cpp:830-837 and
+        # `colonyselect`), so moving the window past it changes what
+        # is on screen and not what the scan box is showing — the
+        # same asymmetry a sort has.
+        return True
 
     def _hit(self, name, x, y):
         box = self.box_rect(name)

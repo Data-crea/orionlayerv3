@@ -34,6 +34,16 @@ else branch, so `_g_colony_n` holds whatever it last held. It is
 also the only thing that makes the panel readable — one that emptied
 whenever the pointer left the rows would be blank most of the time.
 
+**A SORT TOUCHES BOTH OF THIS MODULE'S OBJECTS, AND DIFFERENTLY.**
+That is why the scroll window lives here beside the selection rather
+than in a module of its own. `Sort_Col_List_`'s handler re-sorts,
+clears the window array and sets `_first = 0` (colsum.cpp:830-837) —
+so the WINDOW goes back to the top — and it never assigns
+`_g_colony_n`, so the SELECTION keeps its colony and simply moves to
+wherever the new order puts it. Two rules for one event, opposite in
+what they preserve, and a reader who sees only one of them will
+guess the other wrong.
+
 Split out of `screen.py` on 3 September 2026, when that file reached
 691 lines against a ~300 guideline (decision 6). Nothing here draws
 or hit-tests: geometry stays with the screen, which owns the boxes,
@@ -105,3 +115,85 @@ class Selection:
             if row["index"] == self.colony:
                 return i
         return None
+
+
+class Window:
+    """Which slice of the rows is on screen — the HD side of `_first`.
+
+    **It scrolls for VIEWING ONLY, and nothing here reaches the game**
+    (decision 46). The original's list is ten SLOTS over the sorted
+    array, `_list_col[i] = _g_colony_list_ptr[_first + i]`
+    (colsum.cpp:348-351), and every clickable field in a row is built
+    per slot (`Add_Fields_Pop_For_`, colsum.cpp:312-346) — so an
+    injected click names a position in the GAME's window, which this
+    number is not. Every colony is already in the snapshot, so HD can
+    show any of them without the game knowing; what it must not do is
+    inject while the two windows disagree. Synchronising them is
+    decision 46's other half and is not built yet, which is why a
+    smoke check asserts that no scroll path sends anything at all.
+
+    **THE CLAMPS ARE TRANSCRIBED, not chosen.** All three:
+
+      lower bound 0    `Decrement_First_` computes `_first - 1` and
+                       floors it (colsum.cpp:211-214).
+      upper bound      `Increment_First_` is reached only when
+                       `_g_colony_list_ptr[_first + 10] != -1`
+                       (colsum.cpp:796) — the original refuses the
+                       step that would leave the window's last slot
+                       empty, so its last page is FULL. That is
+                       `first <= n_rows - visible`.
+      too few rows     neither step runs at all when
+                       `colonies_count < num_items` (colsum.cpp:210
+                       and :226), and `Update_First_` additionally
+                       forces `_first = 0` in that case every draw
+                       (colsum.cpp:194-197).
+
+    That third source is why `clamp` MUTATES and is called on the way
+    in rather than only when the offset moves: `Update_First_` runs
+    from `Draw_Bar_Indicator_` (colsum.cpp:749) on every frame, so
+    re-establishing the offset against the current row count is the
+    original's own shape and not a defensive habit. A window left
+    pointing past a shrunken list would otherwise spring back into
+    range the moment the colonies returned.
+
+    `visible` is always passed IN, never computed here: it is derived
+    from `list_area` and `row_height` at the current resolution
+    (`colonylist.rows_drawn`). It is ten today, which is the original's
+    number, and that is arithmetic out of the frame artwork rather
+    than a transcription — see `layout.json._row_height_note`, and
+    decision 46's corollary for why the coincidence must not be
+    leaned on.
+    """
+
+    def __init__(self):
+        #: Index into the sorted rows of the topmost DRAWN row.
+        self.first = 0
+
+    def limit(self, n_rows, visible):
+        """The largest `first` the original would allow."""
+        return max(0, n_rows - visible)
+
+    def clamp(self, n_rows, visible):
+        """Re-establish the offset against the rows there are now."""
+        self.first = min(max(0, self.first), self.limit(n_rows, visible))
+        return self.first
+
+    def scroll(self, delta, n_rows, visible):
+        """Move by `delta` rows and return the resulting `first`.
+
+        The refusals are mirrored before the move, not after
+        (decision 33): with fewer rows than fit, the original's two
+        steppers do nothing at all, so neither does this.
+        """
+        if n_rows <= visible:
+            self.first = 0
+            return self.first
+        self.first = min(max(0, self.first + delta),
+                         self.limit(n_rows, visible))
+        return self.first
+
+    def reset(self):
+        """Back to the top — what a sort does (`_first = 0`,
+        colsum.cpp:832). The selection is deliberately not touched;
+        see the module docstring."""
+        self.first = 0

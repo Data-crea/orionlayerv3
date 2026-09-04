@@ -37,6 +37,24 @@ against, something its screen had no room for. Marked here, in
 `layout.json` under `list._hd_extension`, in `doc/v3_fundament.md`,
 in `v3_projektstatus.md`, and in a smoke check.
 
+**NOT DRAWN — the original's SLIDER.** The list scrolls (mouse
+wheel, see `screen.handle_mousewheel`) and the only thing on screen
+saying so is the overflow line. The original draws a real indicator:
+`Draw_Bar_Indicator_` (colsum.cpp:747-753) fills a bar at native x
+621..626 whose ends are `271 * _first / n` and `271 * (_first + 10)
+/ n`, offset 40 — a proportional thumb, so its LENGTH reports how
+much of the list the window covers, which a text count does not.
+Above and below it sit `_x_fields[1]` and `_x_fields[2]`, the two
+step buttons (colsum.cpp:790-800).
+
+Not drawn because nothing has been built for it, not because the
+data is missing: `first`, the row count and `list_area` are all
+here, and the frame artwork has no hole for it — a slider would be
+an artwork decision as well as a code one (decision 3). Recorded
+rather than left to be noticed, in the same form as the blockade and
+the colony event in `colonyrows`: an omission nobody has written
+down is indistinguishable from an omission nobody saw.
+
 **It is a SUBSET, and the omission is deliberate.** That one call
 substitutes SEVEN values, in order: planet size, climate, gravity
 class, mineral class, `n_pops`, the computed maximum, and population
@@ -212,13 +230,20 @@ def row_regions(row):
 
 # ── The drawing ───────────────────────────────────────────────────
 
-def render(surface, rows, area, cfg, layout, style):
+def render(surface, rows, area, cfg, layout, style, first=0):
     """Draw the rows into `area`. Everything sized from `cfg`.
 
     `area` is the `list_area` box in screen coordinates, `cfg` the
     `list` block of layout.json. No geometry constant lives here —
     `POP_LIMIT_CAP` is a population count the engine enforces, not a
     tuned size, and it is the one number the track is measured from.
+
+    `first` is the index of the topmost row to draw. THIS MODULE DOES
+    NOT OWN IT and does not clamp it: it is handed plain dicts and an
+    integer, the same way it is handed rows, and where the offset
+    lives, what bounds it and whether the game agrees with it are
+    `colonyselect.Window`'s business (decision 46). Out of range
+    simply draws nothing, which is what slicing already does.
 
     Text goes through `Style.render_text`, which takes a pixel size
     and returns a surface — it can mix two fonts inside one string,
@@ -242,7 +267,9 @@ def render(surface, rows, area, cfg, layout, style):
     name_px = layout.font_size(cfg.get("name_font", 20))
     small_px = layout.font_size(cfg.get("small_font", 15))
 
-    for row, (y, row_h) in zip(rows, row_bands(area, cfg, scale, len(rows))):
+    window = rows[first:]
+    for row, (y, row_h) in zip(window,
+                               row_bands(area, cfg, scale, len(window))):
         # The name block is handed `name_w`, the TEXT BUDGET, and is
         # unaware of `slack`: it right-aligns, clips and ellipsises
         # against that and nothing else, so the threshold does not
@@ -261,40 +288,53 @@ def render(surface, rows, area, cfg, layout, style):
                 surface, row, bar_x + track.width + track.build_gap, y,
                 track.build_w, row_h, cfg, style, layout)
 
-    _draw_overflow(surface, rows, area, cfg, scale, layout, style)
+    _draw_overflow(surface, rows, area, cfg, scale, layout, style, first)
 
 
-def _draw_overflow(surface, rows, area, cfg, scale, layout, style):
-    """Say how many rows did not fit, because otherwise nothing does.
+def _draw_overflow(surface, rows, area, cfg, scale, layout, style,
+                   first=0):
+    """Say how many rows are not on screen, because otherwise nothing
+    does.
 
     **This is the fault it exists for, and it was live.** `render`
     stops at the first row that would cross `area.bottom`, so a list
-    longer than the panel simply ends — no ellipsis, no count, no
-    scrollbar, and the rows that are drawn are all correct. At
-    1920x1080 the panel holds nine of them; a twelve-colony empire
-    lost three, and the way it was found was somebody noticing a
-    colony they knew they owned was not on a screenshot. Every check
-    in the suite was green, because every check looked at rows that
-    were drawn.
+    longer than the panel simply ended — no ellipsis, no count, no
+    scrollbar, and the rows that were drawn were all correct. At
+    1920x1080 the panel held NINE rows then — `row_height` was 62 —
+    so a twelve-colony empire lost three, and the way it was found
+    was somebody noticing a colony they knew they owned was not on a
+    screenshot. Every check in the suite was green, because every
+    check looked at rows that were drawn. The panel holds ten now
+    and the fault is the same one at thirteen colonies.
 
-    The line is NOT a scrollbar and is not a step towards one. What
-    scrolling should look like here is a separate question with its
-    own source — the original windows ten rows over the sorted list
-    and keeps `_first` (colsum.cpp:348, and `_first = 0` on every
-    sort click at colsum.cpp:828) — and deciding it under the
-    pressure of a visible bug is how the wrong thing gets built. What
-    this does is make the absence a STATE instead of a silence, which
-    is the same rule the dimmed Producing header follows.
+    **The list scrolls now, and this line counts BOTH directions.**
+    It used to say "not a scrollbar and not a step towards one";
+    that step has since been taken, and the sentence was rewritten
+    rather than left to contradict the code under it. `hidden` is
+    the rows above the window plus the rows below it, so the number
+    is the honest one at every offset: it is the whole of what the
+    panel is not showing, not the tail alone. The layout.json
+    template is unchanged — "{count} more not shown" was already
+    true of both.
+
+    It counts against the ROW TOTAL and not against the game's ten
+    (decision 46's corollary): how many rows fit is derived from
+    `list_area` and `row_height` at this resolution and is ten only
+    by arithmetic.
 
     Drawn in the strip the bands could not use, so it cannot cover a
     row: the bands stop when the next one would cross `area.bottom`,
     which leaves at least `row_height` minus one pixel of unused
-    height whenever anything was dropped at all.
+    height whenever anything was dropped at all. At an offset with a
+    full window and nothing below, that strip is where the count of
+    the rows ABOVE goes.
     """
     template = cfg.get("overflow", "")
     if not template:
         return
-    bands = row_bands(area, cfg, scale, len(rows))
+    bands = row_bands(area, cfg, scale, max(0, len(rows) - first))
+    # Above plus below, in one subtraction: `first` rows are off the
+    # top and `len(rows) - first - len(bands)` are off the bottom.
     hidden = len(rows) - len(bands)
     if hidden <= 0:
         return
@@ -328,13 +368,21 @@ def row_bands(area, cfg, scale, count):
     Decision 5: one function makes the rect and both the drawing and
     the hit-test call it. The hover selection reads the same bands
     `render` lays out, so a row that is hovered is by construction a
-    row that is on screen — the list has no scrolling, and the last
-    row is dropped rather than clipped, which is exactly the case a
-    second copy of this arithmetic would get wrong.
+    row that is on screen — the last row is dropped rather than
+    clipped, which is exactly the case a second copy of this
+    arithmetic would get wrong.
 
-    Fewer bands than `count` therefore means the tail of the list is
-    not drawn. That is the honest shape: nothing off the bottom can
-    be selected because nothing off the bottom is there.
+    **`count` is the length of the WINDOW, not of the list.** Since
+    the list scrolls, both callers pass `len(rows) - first`, and the
+    band index this returns is a position on screen. Turning that
+    back into an index into the rows is the screen's job, in
+    `screen._row_at`, because the screen is where the offset lives —
+    a band number used as a row number is the fault decision 5 exists
+    for, one scroll offset removed.
+
+    Fewer bands than `count` therefore means the tail of the window
+    is not drawn. That is still the honest shape: nothing below the
+    last band can be selected because nothing below it is there.
     """
     # No defaults here either — see `track_metrics`.
     row_h = int(cfg["row_height"] * scale)

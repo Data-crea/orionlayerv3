@@ -2,6 +2,21 @@
 
 Updated: 4 September 2026
 
+This session (4 September 2026), later, in one line each: **the
+colony list scrolls**, one row per wheel notch, with all three clamps
+transcribed from the original's own steppers and the visible count
+derived from `list_area` rather than assumed to be the game's ten;
+the wheel is an **HD EXTENSION** and the original's proportional
+slider is recorded as **NOT DRAWN**; the overflow line stayed and now
+counts rows above the window as well as below; **nothing is sent to
+the game**, which is `doc/v3_fundament.md` decision 46 — the
+original's rows are ten SLOTS, so an injected click names a position
+in the GAME's window — and a smoke check drives the list to its
+bottom and back and asserts zero injections, which is what lets this
+ship before the synchronisation exists; and the check count stopped
+having two homes and one checker, the Snapshot table below having
+said 55 against a suite of 63 for four sessions.
+
 This session (4 September 2026), in one line each: a live
 side-by-side of the HD colony summary against orion2re 1.60 confirmed
 **ten of ten** allocation tracks against the original's three pop
@@ -105,7 +120,7 @@ files under `doc/` and are only summarised here.
 | | |
 |---|---|
 | Python | 21,642 lines across 94 modules (core, screens, tools) |
-| Smoke test | `python tools/smoke_test.py` — **63 checks**, headless |
+| Smoke test | `python tools/smoke_test.py` — **65 checks**, headless |
 | Assets | 170 MB (select_race 68, galaxy_map 51, shared 23, new_game 21, colony_summary 1) |
 | Screens in HD | 7 of ~20–22 (colony summary is frame + sidebar only) |
 | Setup from clone | `python tools/setup.py` (deps via the system package manager) |
@@ -346,13 +361,15 @@ reason the repository exists.
 
 ---
 
-**Over 300 lines, knowingly** — recounted 3 September 2026, because
+**Over 300 lines, knowingly** — recounted 4 September 2026, because
 several entries had drifted and a list of counts that is wrong is
-worse than no list: `galaxy_map/screen.py` (805),
-`tools/struct_probe.py` (753), `galaxy_map/renderer.py` (747),
-`tools/colony_list_preview.py` (669), `colony_summary/colonylist.py`
-(598), `custom_race/screen.py` (558), `galaxy_map/ships.py` (529),
-`colony_summary/screen.py` (528), `zoomtables.py` (515),
+worse than no list. Only the two files the scroll package touched had
+moved since the 3 September recount; the other eighteen were exact.
+`galaxy_map/screen.py` (805), `tools/struct_probe.py` (753),
+`galaxy_map/renderer.py` (747), `tools/colony_list_preview.py` (669),
+`colony_summary/screen.py` (666), `colony_summary/colonylist.py`
+(657), `custom_race/screen.py` (558), `galaxy_map/ships.py` (529),
+`zoomtables.py` (515),
 `colony_summary/colonyrows.py` (508), `tools/ext_diag.py` (473),
 `style.py` (453), `screen_base.py` (390), `editor/editor.py` (390),
 `empire_identity/renderer.py` (383), `new_game/screen.py` (382),
@@ -1449,16 +1466,14 @@ per decision 37. `colonylist.rows_drawn` exports the number so a
 caller can ask the question at all, which is the part that was
 missing: nothing could compare drawn against present.
 
-**It is not a scrollbar and not a step towards one.** What scrolling
-should look like has its own source — the original windows ten rows
-over the sorted list (`Update_Col_List_`, colsum.cpp:348) and resets
-`_first` on every sort click (colsum.cpp:828) — and that decision
-belongs on its own evidence rather than under the pressure of a
-visible bug. A smoke check holds the three things that matter: the
-count in the line equals present minus drawn, nothing is drawn when
-nothing is dropped, and a point below the last drawn row still
-hit-tests to no row, so the hidden ones cannot become selectable by
-accident.
+**It was not a scrollbar and not a step towards one; the step was
+taken separately on 4 September 2026** — see "The list scrolls, for
+viewing only" below. The line stayed and now counts BOTH directions,
+rows above the window plus rows below it, which needed no change to
+the wording. A smoke check holds the three things that mattered
+then and still matter: the count in the line equals present minus
+drawn, nothing is drawn when nothing is dropped, and a point below
+the last drawn band still hit-tests to no row.
 
 **pop_growth FALLS — 3 September 2026.** The second `--live --native`
 run put both halves on the same key and the same ten rows, and the
@@ -1487,13 +1502,35 @@ can hover it by hand either. A save in which the colony the original
 happens to be scanning has non-zero morale would settle it without
 any of that.
 
-**Scrolling is deliberately not built.** The original windows ten
-rows over the sorted list — `_list_col[10]`, `Update_Col_List_`
-(colsum.cpp:348) filling from `_g_colony_list_ptr[_first + i]` — and
-resets `_first = 0` on every sort click (colsum.cpp:828). The HD list
-draws every row that fits and has no `_first`, so there is nothing to
-reset yet; the place the reset goes is marked in `handle_click`. One
-piece verified before the next.
+**Scrolling is built, for VIEWING ONLY — 4 September 2026, and the
+half that is missing is written down as decision 46.** The original
+windows ten rows over the sorted list — `_list_col[10]`,
+`Update_Col_List_` (colsum.cpp:348) filling from
+`_g_colony_list_ptr[_first + i]` — and resets `_first = 0` on every
+sort click (colsum.cpp:832), which `handle_click` now mirrors.
+
+The HD offset lives in `colonyselect.Window`, beside the selection
+because a sort touches both and in opposite directions: the window
+goes home, the colony keeps its identity. All three clamps are the
+original's (`Decrement_First_` colsum.cpp:211-214, the refusal at
+colsum.cpp:796 that keeps the last page full, and the two steppers
+declining outright below `num_items` at colsum.cpp:210 and :226,
+with `Update_First_` forcing 0 every draw at colsum.cpp:194-197).
+The mouse wheel is an **HD EXTENSION** — MOO2 has two step buttons
+and a proportional slider (`_x_fields[1]`/`[2]`, colsum.cpp:790-800;
+`Draw_Bar_Indicator_`, colsum.cpp:747-753) — and that **slider is
+NOT DRAWN**, recorded in `colonylist`'s docstring beside the
+blockade and the colony event.
+
+**NOTHING IS SENT TO THE GAME, and that is what makes it safe to
+ship.** The original's rows are ten SLOTS, so an injected click names
+a position in the game's window and `_first` decides which colony it
+reaches — decision 46. A smoke check drives the list to its bottom
+and back with a capturing client and asserts `inject_click`,
+`activate_field` and `inject_key` were called zero times, so the
+first edit that adds an injection to a scroll path fails instead of
+reaching the wrong colony. Synchronising `_first` is decision 46's
+other half and is not started.
 
 **The list is no longer blocked.** `s_colony` is verified as of
 31 August (`core/structs/colony.py`): `owner`, `planet`, `n_pops` and

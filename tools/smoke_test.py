@@ -2862,9 +2862,12 @@ def main():
         _ov_area.x, _ov_top2, _ov_area.w,
         _ov_area.bottom - _ov_top2))).sum() == 0, (
         "the list drew an overflow line with nothing overflowing")
-    # It is not a scrollbar and must not quietly become one. Nothing
-    # off the bottom can be selected, because row_at only knows the
-    # bands render laid out.
+    # Nothing below the last drawn band can be selected, because
+    # row_at only knows the bands render laid out. That held when
+    # there was no scrolling and it still holds with it: row_at
+    # answers in BAND numbers over the window it was given, and the
+    # offset is added by the screen (screen._row_at), so a hidden row
+    # is unreachable here by construction rather than by luck.
     assert _cl.row_at(_ov_area, _ov_cfg, app.layout.scale,
                       len(_ov_rows),
                       (_ov_area.x + 4, _ov_top + 2)) is None, (
@@ -3202,6 +3205,181 @@ def main():
     ok("colony summary output_panel (ten values drawn, BC deviation "
        "marked, empty selection draws nothing, columns clear at 12 "
        "resolutions, hover selects and the sort keeps the colony)")
+
+    # ── The list SCROLLS, for viewing only (fundament 46) ──
+    # Fifteen colonies against a panel that holds ten, so the offset
+    # has somewhere to go. The synthetic empire ships five, which is
+    # why this builds its own rather than reusing _sel_snap.
+    from screens.colony_summary import colonyselect as _cs_sel
+    _sc_cols = [dict(_c, star=f"{_c['star']}{_i}")
+                for _i, _c in enumerate(_pv.COLONIES * 3)]
+    _sc_snap = _pv._Snapshot(_sc_cols)
+    _scr_op._sort_key = "name"
+    _scr_op.update(_sc_snap)
+    _sc_n = len(_scr_op._rows)
+    _sc_vis = _scr_op._visible_rows()
+    assert _sc_vis == _cl.rows_drawn(_la, _lcfg, app.layout.scale, _sc_n), (
+        "the screen and colonylist disagree about how many rows fit")
+    assert 0 < _sc_vis < _sc_n, (
+        f"{_sc_n} rows into a panel that holds {_sc_vis} — this block "
+        f"cannot test scrolling if everything fits")
+
+    # THE CLAMPS ARE THE ORIGINAL'S, all three of them, and they are
+    # asserted on the Window rather than through the screen so a
+    # failure names the rule rather than a pixel.
+    _w = _cs_sel.Window()
+    # Lower bound 0: Decrement_First_ floors it (colsum.cpp:211-214).
+    _w.scroll(-99, _sc_n, _sc_vis)
+    assert _w.first == 0, _w.first
+    # Upper bound: Increment_First_ is reached only while
+    # _g_colony_list_ptr[_first + 10] != -1 (colsum.cpp:796), so the
+    # original's LAST PAGE IS FULL and first stops at n - visible.
+    _w.scroll(99, _sc_n, _sc_vis)
+    assert _w.first == _sc_n - _sc_vis, (
+        f"first ran to {_w.first}; the original stops at "
+        f"{_sc_n - _sc_vis} because it refuses the step that would "
+        f"leave the window's last slot empty (colsum.cpp:796)")
+    # Fewer rows than fit: neither stepper runs at all
+    # (colsum.cpp:210 and :226) and Update_First_ forces 0 every draw
+    # (colsum.cpp:194-197).
+    _w2 = _cs_sel.Window()
+    _w2.scroll(5, _sc_vis - 1, _sc_vis)
+    assert _w2.first == 0, (
+        f"a list shorter than the window scrolled to {_w2.first}; the "
+        f"original's steppers refuse it outright")
+    _w2.first = 7
+    assert _w2.clamp(_sc_vis - 1, _sc_vis) == 0, (
+        "a window left pointing past a shrunken list did not "
+        "re-establish itself; Update_First_ does that every frame")
+
+    # THE OVERFLOW LINE COUNTS BOTH DIRECTIONS. The count is the whole
+    # of what the panel is not showing, so it is n - visible at EVERY
+    # offset — including the bottom, where nothing is below and a
+    # naive count of the tail alone would say nothing is missing.
+    _sc_hidden = _sc_n - _sc_vis
+    _sc_expect = _ov_cfg["overflow"].replace("{count}", str(_sc_hidden))
+    _sc_txt = app.style.render_text(
+        _sc_expect, app.layout.font_size(_ov_cfg.get("small_font", 15)),
+        _cl.OVERFLOW_COLOR[:3])
+    _sc_surf = pygame.Surface((_la.right + 8, _la.bottom + 8))
+    for _sc_first in (0, _sc_hidden // 2, _sc_hidden):
+        _sc_surf.fill((0, 0, 0))
+        _cl.render(_sc_surf, _scr_op._rows, _la, _lcfg, app.layout,
+                   app.style, _sc_first)
+        _sc_bands = _cl.row_bands(_la, _lcfg, app.layout.scale,
+                                  _sc_n - _sc_first)
+        _sc_top = _sc_bands[-1][0] + _sc_bands[-1][1]
+        _sc_strip = pygame.Rect(_la.x, _sc_top, _la.w,
+                                _la.bottom - _sc_top)
+        _sc_ref = pygame.Surface((_sc_strip.w, _sc_strip.h))
+        _sc_ref.fill((0, 0, 0))
+        _sc_ref.blit(_sc_txt, (int(_lcfg["pad_x"] * app.layout.scale), 0))
+        _sc_ink = pygame.surfarray.array3d(
+            _sc_surf.subsurface(_sc_strip)).sum()
+        assert abs(_sc_ink - pygame.surfarray.array3d(_sc_ref).sum()) \
+            < max(1, _sc_ink) * 0.02, (
+            f"at first={_sc_first} the overflow line does not read "
+            f"{_sc_expect!r}. It must count the rows ABOVE the window "
+            f"as well as below — at the bottom offset the tail alone "
+            f"is zero and {_sc_hidden} rows are still not shown")
+
+    # And the window really is a different slice: the top row drawn
+    # at the bottom offset is not the top row drawn at 0.
+    assert _scr_op._rows[0] is not _scr_op._rows[_sc_hidden], "no slice"
+
+    # THE MARKINGS. The wheel is an HD EXTENSION — MOO2 has no wheel
+    # on this screen — and the original's slider is NOT DRAWN. Both
+    # are recorded in three places and a marking with no check is an
+    # intention, which is the failure the help panel's marking taught.
+    assert "HD EXTENSION" in (_scr_op.handle_mousewheel.__doc__ or ""), (
+        "screen.handle_mousewheel no longer marks the wheel as an HD "
+        "EXTENSION; MOO2 scrolls this list with two step buttons and "
+        "a slider (colsum.cpp:790-800), never a wheel")
+    assert "HD EXTENSION" in _lcfg.get("_hd_extension_wheel", ""), (
+        "layout.json list._hd_extension_wheel no longer marks the "
+        "wheel")
+    for _cite in ("NOT DRAWN", "Draw_Bar_Indicator_",
+                  "colsum.cpp:747-753"):
+        assert _cite in (_cl.__doc__ or ""), (
+            f"colonylist no longer records {_cite!r} — the original "
+            f"draws a proportional slider and this screen does not, "
+            f"and an omission nobody wrote down is indistinguishable "
+            f"from one nobody saw")
+    ok("colony summary list scrolls (clamps transcribed, overflow "
+       "counts above and below, wheel marked, slider recorded)")
+
+    # ── A SCROLL SENDS NOTHING TO THE GAME (fundament 46) ──
+    # This is what lets the package ship without the synchronisation.
+    # The original's rows are ten SLOTS over the sorted array
+    # (_list_col[i] = _g_colony_list_ptr[_first + i],
+    # colsum.cpp:348-351) and every clickable field is built per slot
+    # (Add_Fields_Pop_For_, colsum.cpp:312-346), so an injected click
+    # names a position in the GAME's window and _first decides which
+    # colony it reaches. Ours is a viewing offset the game has never
+    # heard of. Scrolling is therefore safe precisely as long as it
+    # injects NOTHING, and the day somebody adds an injection to this
+    # path it must fail here rather than send a click to the wrong
+    # colony — which is invisible, because every value on both
+    # screens stays correct.
+    class _CapAll(_Cap):
+        def __init__(self):
+            super().__init__(); self.fields = []
+        def activate_field(self, f): self.fields.append(f)
+    _sc_cap = _CapAll()
+    _sc_client, _sc_conn = app.client, app.connected
+    app.client, app.connected = _sc_cap, True
+    _sc_pt = (_la.x + 4, _la.y + 4)
+    _sc_before = _scr_op._selected
+    for _ in range(_sc_n + 5):
+        _scr_op.handle_mousewheel(-1, *_sc_pt)      # down, past the end
+    assert _scr_op._first == _sc_hidden, (
+        f"scrolling to the end left first at {_scr_op._first}, not "
+        f"{_sc_hidden}")
+    for _ in range(_sc_n + 5):
+        _scr_op.handle_mousewheel(1, *_sc_pt)       # and back up
+    assert _scr_op._first == 0, _scr_op._first
+    assert _sc_cap.calls == [] and _sc_cap.keys == [] \
+        and _sc_cap.fields == [], (
+        f"a scroll reached the game: clicks {_sc_cap.calls}, keys "
+        f"{_sc_cap.keys}, fields {_sc_cap.fields}. The HD list scrolls "
+        f"for VIEWING ONLY — the game's _first is not synchronised "
+        f"yet (fundament 46), so an injection now names a row in the "
+        f"game's window and reaches the wrong colony")
+    # A wheel outside list_area is not ours either.
+    _scr_op.handle_mousewheel(-1, _la.x - 40, _la.y - 40)
+    assert _scr_op._first == 0, (
+        "a wheel event outside list_area scrolled the list")
+
+    # SCROLLING DOES NOT MOVE THE SELECTION. It holds a COLONY, not a
+    # row index (colsum.cpp:830-837, colonyselect), so the window may
+    # travel past it and the scan box goes on showing the same colony.
+    assert _scr_op._selected == _sc_before, (
+        f"a scroll moved the selection from {_sc_before} to "
+        f"{_scr_op._selected}")
+
+    # A SORT RESETS THE WINDOW AND KEEPS THE SELECTION — one handler,
+    # two opposite rules. colsum.cpp:832 sets _first = 0; the same
+    # block (colsum.cpp:830-837) never assigns _g_colony_n.
+    for _ in range(3):
+        _scr_op.handle_mousewheel(-1, *_sc_pt)
+    assert _scr_op._first == 3, _scr_op._first
+    _sc_sel_before = _scr_op._selected
+    _sc_bx, _sc_by, _sc_bw, _sc_bh = app.layout.rect(
+        _scr_op.box_rect("sort_population"))
+    _scr_op.handle_click(_sc_bx + _sc_bw // 2, _sc_by + _sc_bh // 2)
+    assert _scr_op._first == 0, (
+        f"the sort left the window at {_scr_op._first}; the original "
+        f"puts it back at the top (_first = 0, colsum.cpp:832)")
+    assert _scr_op._selected == _sc_sel_before, (
+        f"the sort moved the selection from {_sc_sel_before} to "
+        f"{_scr_op._selected}; colsum.cpp:830-837 never touches "
+        f"_g_colony_n, so the colony keeps its identity and only its "
+        f"ROW moves")
+    app.client, app.connected = _sc_client, _sc_conn
+    _scr_op._sort_key = "name"
+    _scr_op.update(_sel_snap)
+    ok("colony summary scroll injects nothing and moves no selection; "
+       "a sort resets the window and keeps the colony")
 
     # ── The sidebar's six s_player scalars ──
     # ONE home for these offsets: the verified spec in
