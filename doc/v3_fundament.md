@@ -1309,6 +1309,26 @@ references in `doc/v3_orion2re_index.md`.
   the galaxy to within 1-3 units on the far edge (Small 1, Medium 2,
   Large 2, Huge 3). That margin is what lets a parked game serve
   clicks for a decoupled HD view.
+- **A sequence of `ACTIVATE_FIELD`s must be sent one at a time and
+  confirmed; a batch is silently collapsed to the last one.**
+  `ext::g_pending_field` is a single `int16_t`, and `ProcessInput()`
+  drains the whole input queue in one loop before the game consumes
+  it — so *n* activations sent together leave *n-1* discarded, with
+  no refusal and no report. `INJECT_CLICK` queues properly through
+  SDL and is unaffected; only field activation has the single slot.
+  The mechanism is in `doc/ext_api_dokumentation_v3.md`, which owns
+  it; the rule is here because it decides the SHAPE of every
+  multi-step injection.
+
+  Both existing multi-step users already have it right and are the
+  pattern: `galaxy_map/viewctl.park_game` sends one throttled step
+  and re-reads `map_scale`, and `tools/zoom_probe.py` activates,
+  waits for a fresh snapshot, compares, and stops when nothing moved.
+  **Observe the effect, do not count the sends.** Where the effect is
+  not on the wire, it may still be on the screen — the colony
+  summary's `_first` is not serialised but is drawn, as the scroll
+  thumb's position (`Draw_Bar_Indicator_`, colsum.cpp:747-771).
+
 - **Population moves on the colony screens are click-click, not
   drag** (`colsum.cpp:851`). The first click on an icon calls
   `COLMOVE::Get_Cluster_`, which unassigns that pop and every

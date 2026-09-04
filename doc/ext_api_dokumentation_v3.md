@@ -275,6 +275,25 @@ A separate variable is required. `_last_button_number` is also set
 by normal game input, so an early exit keyed on it would re-fire a
 user's own click on the next poll.
 
+**IT IS ONE SLOT, NOT A QUEUE, AND A BATCH IS SILENTLY COLLAPSED.**
+`g_pending_field` is a single `int16_t` (ext_api.cpp:15), and
+`ProcessInput()` drains the WHOLE input queue in one
+`while (g_server.PopInput(cmd))` loop, assigning it once per
+`MSG_ACTIVATE`. So *n* activations that arrive before the game next
+runs `ProcessInput` leave only the last one — the other *n-1* are
+discarded, not refused, and nothing reports it.
+
+`INJECT_CLICK` does not have this problem: it pushes SDL events,
+which queue properly. Only field activation has a single slot.
+
+A caller that needs several activations must therefore send one,
+observe that it took effect, and only then send the next. Two places
+in OrionLayer already do this and are the pattern to copy:
+`galaxy_map/viewctl.park_game` sends one throttled step per frame and
+re-reads `map_scale` from the snapshot, and `tools/zoom_probe.py`
+activates, calls `settle()` for a fresh snapshot, compares, and stops
+if nothing moved.
+
 ### Field types and which command to use
 
 | Type | Name | ACTIVATE_FIELD |

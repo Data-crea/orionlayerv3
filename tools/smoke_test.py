@@ -3877,6 +3877,101 @@ def main():
     ok("colony summary game window (plan lands from every reachable "
        "_first, and does nothing below ten colonies)")
 
+    # ── Reading _first back off the game's own screen ──
+    # _first is not on the wire, and ACTIVATE_FIELD has a single slot
+    # (ext::g_pending_field), so a batch of window steps is silently
+    # collapsed to the last one. The steps therefore have to be sent
+    # one at a time and CONFIRMED — and the game draws the number:
+    # Draw_Bar_Indicator_ (colsum.cpp:747-771) fills palette 229 from
+    # 271*_first/n + 40 to 271*(_first+10)/n + 40 across x 621..626.
+    #
+    # ONE MATCH IS A POINT, NOT A CURVE. The formula is transcribed
+    # and then exercised over EVERY (n, _first) the engine can hold:
+    # each pair is rendered the way colsum.cpp draws it, borders over
+    # the fill's edges included, and read back.
+    from screens.colony_summary import colonyfirst as _cf
+
+    def _render_thumb(n, first):
+        _fb = [[0] * 640 for _ in range(480)]
+        _b = _cf.thumb_bounds(n, first)
+        if _b is None:
+            return _fb
+        _y1, _y2 = _b
+        for _y in range(_y1, _y2 + 1):
+            for _x in range(_cf.THUMB_X0, _cf.THUMB_X1 + 1):
+                _fb[_y][_x] = _cf.THUMB_FILL
+        # colsum.cpp:762-765 — the borders overwrite the fill's own
+        # first and last row, which is why the run is inset by one.
+        for _x in range(_cf.THUMB_X0, _cf.THUMB_X1 + 1):
+            _fb[_y1][_x] = _cf.THUMB_BORDER_LIGHT
+            _fb[_y2][_x] = _cf.THUMB_BORDER_DARK
+        for _y in range(_y1, _y2 + 1):
+            _fb[_y][_cf.THUMB_X0] = _cf.THUMB_BORDER_LIGHT
+            _fb[_y][_cf.THUMB_X1] = _cf.THUMB_BORDER_DARK
+        return _fb
+
+    # THE CONSTANTS ARE ANCHORED TO LITERALS FIRST, because the
+    # sweep below renders and reads through the SAME thumb_bounds and
+    # is therefore blind to a wrong constant — changing 271 to 270
+    # moves the drawing and the reader together and the sweep stays
+    # green. These pairs are worked out from colsum.cpp:752-753 by
+    # hand: 271*first/n + 40 and 271*(first+10)/n + 40, C integer
+    # division, so n=11 first=0 gives 2710//11 = 246 for the lower
+    # edge and n=20 first=5 gives 1355//20 = 67 for the upper.
+    assert _cf.thumb_bounds(11, 0) == (40, 286), _cf.thumb_bounds(11, 0)
+    assert _cf.thumb_bounds(11, 1) == (64, 311), _cf.thumb_bounds(11, 1)
+    assert _cf.thumb_bounds(20, 5) == (107, 243), _cf.thumb_bounds(20, 5)
+    assert _cf.thumb_bounds(250, 0) == (40, 50), _cf.thumb_bounds(250, 0)
+    assert (_cf.THUMB_FILL, _cf.THUMB_X0, _cf.THUMB_X1) == (229, 621, 626)
+
+    _pairs = 0
+    for _n in list(range(10, 60)) + [72, 100, 135, 136, 200, 259]:
+        for _f in range(0, max(0, _n - _cf.WINDOW) + 1):
+            assert _cf.read_first(_render_thumb(_n, _f), _n) == _f, (
+                f"n={_n}, _first={_f} read back as "
+                f"{_cf.read_first(_render_thumb(_n, _f), _n)!r}")
+            _pairs += 1
+    assert _pairs > 1500, _pairs
+
+    # THE TOLERANCE IS TRANSCRIBED, NOT TUNED, and a wider one is not
+    # safer. The thumb moves 271/n px per step, so at 2 two
+    # candidates fit one run from n = 136 and the reader must refuse.
+    assert _cf.read_first(_render_thumb(136, 1), 136, tolerance=2) is None, (
+        "at tolerance 2 and 136 colonies the thumb moves 1.993 px per "
+        "step, so _first = 1 has two candidates fitting one run — the "
+        "reader must return None rather than pick the nearer")
+    assert _cf.read_first(_render_thumb(136, 1), 136) == 1, (
+        "and at the transcribed tolerance of 1 the same state is exact")
+
+    # THE NULL STATE IS ITS OWN ANSWER. Below ten colonies the bar is
+    # not drawn at all (colsum.cpp:751) and Update_First_ has already
+    # forced _first = 0 — so the reader must say NOT_DRAWN and never
+    # 0. A channel that idles as a valid reading is the rim survey's
+    # green-run-in-a-null-state, one domain over.
+    for _n in range(0, 10):
+        assert _cf.thumb_bounds(_n, 0) is None, _n
+        assert _cf.read_first(_render_thumb(_n, 0), _n) == _cf.NOT_DRAWN, (
+            f"with {_n} colonies the bar is not drawn and the reader "
+            f"returned something other than NOT_DRAWN — a reading of 0 "
+            f"there is indistinguishable from a real _first of 0")
+    assert _cf.NOT_DRAWN != 0 and _cf.NOT_DRAWN is not None
+    # A blank screen with enough colonies is also NOT_DRAWN: the
+    # colony summary is simply not up.
+    assert _cf.read_first([[0] * 640 for _ in range(480)], 25) == \
+        _cf.NOT_DRAWN
+
+    # AND A RUN THAT FITS NOTHING IS NOT A READING EITHER. None and
+    # NOT_DRAWN are different answers and a caller must stop on both.
+    _junk = [[0] * 640 for _ in range(480)]
+    for _y in range(200, 210):
+        for _x in range(_cf.THUMB_X0, _cf.THUMB_X1 + 1):
+            _junk[_y][_x] = _cf.THUMB_FILL
+    assert _cf.read_first(_junk, 25) is None, (
+        "a 229 run matching no candidate must read as None — the "
+        "channel spoke and was not understood")
+    ok(f"colony summary _first read back from the scroll thumb "
+       f"({_pairs} states, null state distinct from zero)")
+
     # ── The list SCROLLS, for viewing only (fundament 46) ──
     # Fifteen colonies against a panel that holds ten, so the offset
     # has somewhere to go. The synthetic empire ships five, which is
