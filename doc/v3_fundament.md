@@ -907,6 +907,62 @@ size becomes unreadable when zoomed out, in the original too.
 
 ### Delivery
 
+**Who owns a detail, and who owns a direction.** Agreed 4 September
+2026, after three claims written in chat reached packages and did not
+survive a check: a sprite group read as one number, two conditions
+treated as one gate, and a field value assumed to reach 200 where its
+source caps it at 20.
+
+The session at the tree has the source, the repository and a running
+game, and therefore owns every DETAIL — line numbers, offsets, values,
+branch tables, worked examples, live data. A number in a package is a
+starting point. Verify it before building on it and correct it in the
+same commit.
+
+The chat side owns DIRECTION and ACCEPTANCE: what to build, where it
+lives — file, function, box — and how it will be judged. It names
+WHERE, not WHAT is there.
+
+**The evidence, because it is unambiguous.** Of the seven packages
+delivered that day, six asserted a detail and every one of the six was
+wrong somewhere: a namespace, `colsum.cpp:209` for `:210`, four line
+numbers in `coldraw.cpp` at once, a line count computed from
+overlapping buckets, a reason two branches were unreachable, and an
+example needing an import value the field cannot hold. The seventh
+asserted nothing — it said "read the source, I have not" — and needed
+no correction at all.
+
+**And it is not "the chat side is unreliable", which is the reading
+that would make this useless.** In those same sessions the tree side
+published a wrong cast boundary and a first `map_rect` that broke a
+rule already in `mapcoords`, both for the identical reason: a numeric
+claim written in prose before the arithmetic was run. The rule is
+about the ORDER, not the author. Run it, then write it, whoever is
+writing.
+
+**Package length follows the work.** Evidence, markings, and choices
+that are expensive to reverse — names, module seams, deviations,
+anything entering this file — arrive long and specific, because the
+precision is the deliverable. Drawing work arrives short: what, where,
+and "render it beside a native screenshot of the same save". If it
+does not match, say what differs rather than adjusting until it does.
+
+**A screenshot comparison from chat is a QUESTION, not a finding.**
+"The BC row looks like two groups — verify" is the shape, and it was
+the right shape: it was two groups. Treat it as a lead.
+
+**When something does not work, report it and stop.** It gets fixed
+against the result, not talked out beforehand.
+
+**This entry is KNOWINGLY duplicated**, in the memory a chat session
+loads, because that session has no tree to read a pointer into — the
+one case where this project's "exactly one home, everything else a
+pointer" rule cannot be applied. That makes it the exact shape of the
+oldest recurring fault here, so: the two move together or the
+agreement is void, and each copy says the other exists. If you are
+reading this and cannot confirm the other copy matches, that is the
+thing to fix first.
+
 **Verify against a pristine tree, not the working one.** Unpack the
 last known upload fresh, apply only the new package, run the smoke
 test. Testing in a tree that already has everything proves nothing.

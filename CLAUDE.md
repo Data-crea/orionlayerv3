@@ -150,6 +150,14 @@ drifted from a second copy twice.
 
 ## Working with the maintainer
 
+**You own every detail; the package owns the direction.** Line
+numbers, offsets, values, branch tables and worked examples are
+yours to verify — a number in a package is a starting point, and
+correcting it belongs in the same commit. See "Who owns a detail,
+and who owns a direction" in `doc/v3_fundament.md`, which is the
+whole agreement and also records that a second copy of it lives in
+chat-session memory and has to move with it.
+
 Terminal instructions should be **self-contained, copy-ready blocks**
 with the expected output stated, and file counts plus an abort
 condition where something could go wrong. No explanatory prose inside
