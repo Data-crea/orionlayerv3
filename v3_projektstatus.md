@@ -367,8 +367,8 @@ worse than no list. Only the two files the scroll package touched had
 moved since the 3 September recount; the other eighteen were exact.
 `galaxy_map/screen.py` (805), `tools/struct_probe.py` (753),
 `galaxy_map/renderer.py` (747), `tools/colony_list_preview.py` (669),
-`colony_summary/screen.py` (666), `colony_summary/colonylist.py`
-(657), `custom_race/screen.py` (558), `galaxy_map/ships.py` (529),
+`colony_summary/colonylist.py` (657), `colony_summary/screen.py`
+(627), `custom_race/screen.py` (558), `galaxy_map/ships.py` (529),
 `zoomtables.py` (515),
 `colony_summary/colonyrows.py` (508), `tools/ext_diag.py` (473),
 `style.py` (453), `screen_base.py` (390), `editor/editor.py` (390),
@@ -377,6 +377,21 @@ moved since the 3 September recount; the other eighteen were exact.
 `helppopup.py` (349), `main.py` (328), `select_race/screen.py`
 (322), `injection.py` (307), `galaxy_map/sidebar.py` (301).
 `smoke_test.py` is exempt by nature.
+
+`colony_summary/screen.py` came down 666 -> 627 on 4 September 2026
+and is STILL ON THIS LIST, which is the honest report: the split was
+taken for the seam, not for the number. `_row_at` and `_visible_rows`
+moved onto `colonyselect.Window` because both are about the OFFSET —
+one is a band number plus it, the other is the count the window needs
+in order to clamp itself — and neither was a new concern, so no
+fourth module was made. The screen kept `_list_view`, which resolves
+`list_area` to screen pixels and hands over (area, cfg, scale,
+n_rows): taking the input stays with the screen, interpreting it does
+not. `colonyselect.py` went 199 -> 275 and is under the guideline.
+The cost, written down because it was a stated property: that module
+said it never imported pygame, and it now reaches `colonylist` for
+`rows_drawn` and `row_at` — the alternative was a second copy of the
+row pitch, which is the fault decision 5 exists for.
 
 `colony_summary/colonyrows.py` crossed the line this session and is
 listed rather than split: it went 234 -> 508 across three commits and

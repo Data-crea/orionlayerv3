@@ -3217,7 +3217,8 @@ def main():
     _scr_op._sort_key = "name"
     _scr_op.update(_sc_snap)
     _sc_n = len(_scr_op._rows)
-    _sc_vis = _scr_op._visible_rows()
+    _sc_view = _scr_op._list_view()
+    _sc_vis = _scr_op._window.visible(*_sc_view)
     assert _sc_vis == _cl.rows_drawn(_la, _lcfg, app.layout.scale, _sc_n), (
         "the screen and colonylist disagree about how many rows fit")
     assert 0 < _sc_vis < _sc_n, (

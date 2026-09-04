@@ -45,10 +45,26 @@ what they preserve, and a reader who sees only one of them will
 guess the other wrong.
 
 Split out of `screen.py` on 3 September 2026, when that file reached
-691 lines against a ~300 guideline (decision 6). Nothing here draws
-or hit-tests: geometry stays with the screen, which owns the boxes,
-and this module never imports pygame.
+691 lines against a ~300 guideline (decision 6), and grown on
+4 September when `Window` took the two methods that were only ever
+about the offset.
+
+**Nothing here draws.** It hit-tests now, which it did not before:
+`Window.row_at` turns a point into a row index, because that answer
+is a band number PLUS the offset and the offset is the whole of what
+this module is for. The rect and the config are handed in — the
+screen still owns the boxes and resolves `list_area` itself — so
+this module reaches no box, no style and no surface.
+
+It does reach `colonylist` for two pure functions of
+(area, cfg, scale, count), `rows_drawn` and `row_at`, which is where
+the row pitch is computed once for the drawing and the hit-test alike
+(decision 5). That import brings pygame in transitively, and the
+sentence that used to stand here — *this module never imports
+pygame* — is no longer true and is not worth preserving by keeping a
+second copy of the pitch instead.
 """
+from . import colonylist
 from . import colonyrows
 
 
@@ -197,3 +213,63 @@ class Window:
         colsum.cpp:832). The selection is deliberately not touched;
         see the module docstring."""
         self.first = 0
+
+    # ── What the screen asks, in its own coordinates ──────
+    #
+    # These three take (area, cfg, scale, n_rows) and nothing else:
+    # `area` is `list_area` already resolved to screen pixels, `cfg`
+    # the `list` block of layout.json. The screen owns the boxes and
+    # hands the rect over; what is done with it is the offset's
+    # business, which is why they live here and not there.
+
+    def visible(self, area, cfg, scale, n_rows):
+        """How many rows `area` holds at this resolution.
+
+        DERIVED, never ten. It is ten today — `layout.json`'s
+        `_row_height_note` is where that arithmetic lives — and that
+        is a property of the frame artwork, not a transcription of
+        the original's `_list_col[10]`. Decision 46's corollary: any
+        future synchronisation counts against the GAME's ten, not
+        against this.
+
+        It is also the number `clamp` and `scroll` need, which is the
+        reason this is a method here rather than a helper on the
+        screen: the window cannot bound itself without it.
+        """
+        return colonylist.rows_drawn(area, cfg, scale, n_rows)
+
+    def top(self, area, cfg, scale, n_rows):
+        """The topmost drawn row, re-established against the rows
+        there are now.
+
+        Reading CLAMPS, because the original does: `Update_First_`
+        runs from `Draw_Bar_Indicator_` every frame and forces
+        `_first = 0` whenever the colony count has fallen below the
+        window (colsum.cpp:193-205, :749). A snapshot that loses
+        colonies must not leave the HD list scrolled past its own
+        end, and one method is the place every reader goes through.
+        """
+        return self.clamp(n_rows, self.visible(area, cfg, scale, n_rows))
+
+    def row_at(self, area, cfg, scale, n_rows, point):
+        """Index into the ROWS of the row under `point`, or None.
+
+        The geometry comes from `colonylist.row_at`, which is the same
+        function `colonylist.render` lays the rows out with — one
+        source for the rect, per decision 5. A second copy of the
+        pitch is how a list starts highlighting the row above the one
+        it draws.
+
+        `colonylist.row_at` answers in BAND numbers, which is what
+        `render` draws in; the offset is added HERE, and that
+        addition is the reason this method is on `Window` rather than
+        on the screen. Getting it wrong is the exact fault decision 5
+        exists for, one scroll offset removed — every row correct and
+        the highlight `first` rows off — so `first` comes from the
+        same `top` the renderer was handed, not from a second read.
+        """
+        if not n_rows or not area.collidepoint(*point):
+            return None
+        first = self.top(area, cfg, scale, n_rows)
+        band = colonylist.row_at(area, cfg, scale, n_rows - first, point)
+        return None if band is None else first + band
