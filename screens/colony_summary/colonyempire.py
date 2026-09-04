@@ -66,6 +66,14 @@ def empire_value(row, local):
     return format_value(value, row.get("signed", False)), warn
 
 
+#: Fallback only. The real number is `frame_inset` at the TOP LEVEL
+#: of layout.json, because `colonylist` needs the same one for the
+#: colony name's leftward overflow and two copies of a number that
+#: must agree is this project's oldest fault. See
+#: `_frame_inset_note` there for the measurement.
+FRAME_INSET_DEFAULT = 8
+
+
 def native_column_width(cfg, layout):
     """The original's 104 px paragraph, in this screen's pixels.
 
@@ -77,7 +85,7 @@ def native_column_width(cfg, layout):
                * (REF_W / NATIVE_W) * layout.scale)
 
 
-def value_column(rect, cfg, layout):
+def value_column(rect, cfg, layout, frame_inset=FRAME_INSET_DEFAULT):
     """(left, right) of the row — right is where a value ends.
 
     The alignment is TRANSCRIBED: the value ends at the column's
@@ -116,8 +124,10 @@ def value_column(rect, cfg, layout):
     check asserts `native_width` is still read and still larger
     than what gets drawn, so deleting it as dead weight fails.
 
-    **`text_inset` KEEPS THE TEXT OUT FROM UNDER THE FRAME, and
-    it is measured rather than chosen.** Until 4 September 2026
+    **`frame_inset` KEEPS THE TEXT OUT FROM UNDER THE FRAME, and
+    it is measured rather than chosen.** It is a screen-level key,
+    shared with `colonylist`, which needs the same number to bound
+    the colony name's leftward overflow. Until 4 September 2026
     this returned `rect.x` and `rect.x + min(...)` — the cutout's
     own edges — and every label on this panel was drawn partly
     beneath the frame's metal rim. It looked like a
@@ -148,7 +158,7 @@ def value_column(rect, cfg, layout):
     what is actually legible.
     """
     native_w = native_column_width(cfg, layout)
-    inset = int(cfg.get("text_inset", 8) * layout.scale)
+    inset = int(frame_inset * layout.scale)
     usable = max(1, rect.w - 2 * inset)
     # Still `min`, and still for decision 44's reason: the cutout
     # can move and 104 cannot, so a wider hole ends the deviation
@@ -156,7 +166,8 @@ def value_column(rect, cfg, layout):
     return rect.x + inset, rect.x + inset + min(usable, native_w)
 
 
-def render(surface, box, cfg, local, layout, style, font_scale):
+def render(surface, box, cfg, local, layout, style, font_scale,
+           frame_inset=FRAME_INSET_DEFAULT):
     """Six rows, label LEFT and value RIGHT — the original's.
 
     TRANSCRIBED, and it took two passes to read correctly. Each
@@ -195,7 +206,7 @@ def render(surface, box, cfg, local, layout, style, font_scale):
         return
     rect = pygame.Rect(*layout.rect(box))
     surface.fill(PANEL_BG[:3], rect)
-    left, right = value_column(rect, cfg, layout)
+    left, right = value_column(rect, cfg, layout, frame_inset)
     label_size = layout.font_size(int(cfg.get("label_font", 18) * font_scale))
     value_size = layout.font_size(int(cfg.get("value_font", 26) * font_scale))
     pad = int(rect.h * cfg.get("row_pad", 0.10))

@@ -20,6 +20,34 @@ production row, because the groups are separated by an EMPTY SLOT and
 a negative-imports group shares the net's sprites, which is how Wolf
 II's BC row was read as 18 when it was 10 plus 8.
 
+This session (4 September 2026), the rim survey closed, in one line
+each: the one rule became **two** — **class A**, text this tree places
+at a cutout edge, zero pixels under opaque frame alpha at every
+shipped size with no tolerance, and **class B**, how far the frame
+ARTWORK reaches into each hole, budgeted per cutout at today's
+measurement with the corners and the non-rectangular `title` excluded;
+the two are separated MECHANICALLY and not by a list — a glyph whose
+clip at blit time IS one of that screen's cutouts is class B — so no
+screen needs an exception; **the bleed question was measured and the
+answer is "mostly"**, `bleed=0` halves the intrusion (map_area L4.2 ->
+L2.0 reference px) but does not remove it, because what remains is the
+bilinear rescale widening the rim's alpha ramp plus find_holes'
+bounding box over a not-quite-rectangular hole — at SOURCE resolution
+the intrusion is 0 to 2 px, which is what class B budgets; **class A
+found a second instance the sidebar-only check could not**, one pixel
+of a fifteen-character colony name at 1600x900 whose right-aligned
+overflow was bounded by `list_area`'s own edge rather than by the rim,
+so `text_inset` moved out of `empire` and became a screen-level
+`frame_inset` that both `colonyempire` and `colonylist` read — one
+number, two readers, no helper, because the third copy is the signal
+and this is the second; two survey lessons went into the fundament
+beside the "wrong object" entry — measure what survives the clip, and
+a check's force is a property of the state it runs in (22 blits
+against 65, and no star names at all in this save); and
+**`doc/plntsum_reading.md`** commits the Planets reading with its
+three acceptance points, since the screen waits on frame artwork this
+tree cannot produce.
+
 This session (4 September 2026), three from the side-by-side, in one
 line each: **the sidebar labels were drawn under the frame at every
 resolution** — `value_column` returned the cutout's own edges, and
@@ -223,7 +251,7 @@ files under `doc/` and are only summarised here.
 | | |
 |---|---|
 | Python | 21,642 lines across 94 modules (core, screens, tools) |
-| Smoke test | `python tools/smoke_test.py` — **69 checks**, headless |
+| Smoke test | `python tools/smoke_test.py` — **70 checks**, headless |
 | Assets | 170 MB (select_race 68, galaxy_map 51, shared 23, new_game 21, colony_summary 1) |
 | Screens in HD | 7 of ~20–22 (colony summary draws list, sidebar, scan box and galaxy inset) |
 | Setup from clone | `python tools/setup.py` (deps via the system package manager) |

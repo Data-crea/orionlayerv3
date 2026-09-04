@@ -1063,6 +1063,30 @@ package must never carry the project's own name**, and the count has
 to be taken on the path that was just unpacked, not on a name that
 could already exist.
 
+**Measure what survives, not what was asked for** — 4 September 2026,
+a rendering check, and the same class one layer down. A tree-wide
+check for text drawn under the cockpit frame recorded where each
+glyph was *blitted*. It reported three star names under the frame on
+the galaxy map, one of them 330 px outside the map area. All three
+were fiction: `_render_map` wraps its whole render in
+`set_clip(map_area)`, exactly as the original wraps
+`Print_Star_Names_` in `Set_Window_`/`Clip_On_` (mainscr.cpp:519), so
+those glyphs never reached the screen. Honouring the clip at blit
+time took the same screen from 4862 reported pixels to 98 real ones.
+A drawing call is a request; the surface decides what happens to it.
+
+**And the force of a check is a property of the state it runs in.**
+The same check, run against a screen nobody had given a snapshot to,
+recorded 22 text surfaces. With a snapshot it records 65 — the list,
+the scan box and the galaxy inset are all empty until then, and every
+one of them was reported clean without ever being drawn. On the
+galaxy map it is sharper still: that save has 99 stars at scale 36,
+and `Print_Star_Names_` bails out entirely above 72 stars at that
+zoom, so **the check saw no star name at all** and said so as a pass.
+A green run in a null state is not evidence, and a check that can
+reach a null state should say how much it saw — the count of things
+examined belongs in the assertion, not just the verdict.
+
 **Identify an archive by its content, not its name.** Eighteen ZIPs in
 one download folder, three of them `orionlayerv3*.zip`, and the actual
 working state was in none of them — the download had been renamed

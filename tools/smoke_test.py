@@ -3951,10 +3951,11 @@ def main():
         _rect = pygame.Rect(*_lay.rect(_sb_ref[0]))
         # The column, derived here from the box, the native width and
         # the inset in layout.json — NOT by calling _value_column.
-        # text_inset keeps both edges out from under the frame's rim;
-        # see empire._text_inset_note.
+        # frame_inset keeps both edges out from under the frame's
+        # rim; it is a SCREEN-level key because colonylist needs the
+        # same number. See _frame_inset_note in layout.json.
         _native = _emp.get("native_width", 104)
-        _inset = int(_emp.get("text_inset", 8) * _lay.scale)
+        _inset = int(_out_cfg.get("frame_inset", 8) * _lay.scale)
         _col_w = min(max(1, _rect.w - 2 * _inset),
                      int(_native * (1920 / _emp_mod0.NATIVE_W) * _lay.scale))
         _col_l = _rect.x + _inset
@@ -4114,9 +4115,10 @@ def main():
         _lay = Layout(_W, _H)
         _rect = pygame.Rect(*_lay.rect(_sb_ref[0]))
         _native = _emp_mod.native_column_width(_emp, _lay)
-        _l, _r = _emp_mod.value_column(_rect, _emp, _lay)
+        _l, _r = _emp_mod.value_column(_rect, _emp, _lay,
+                                      _out_cfg.get("frame_inset", 8))
         _drawn = _r - _l
-        _inset = int(_emp.get("text_inset", 8) * _lay.scale)
+        _inset = int(_out_cfg.get("frame_inset", 8) * _lay.scale)
         _usable = max(1, _rect.w - 2 * _inset)
         assert _drawn == min(_usable, _native), (
             f"{_W}x{_H}: the drawn column {_drawn} is neither the "
@@ -4134,52 +4136,227 @@ def main():
     ok("colony summary sidebar column (clamp is a marked DEVIATION, "
        "native width still carried and still larger)")
 
-    # ── NO SIDEBAR TEXT UNDER THE FRAME'S RIM ──
-    # The fault this exists for was live at every resolution and read
-    # as a resolution-dependent one: the labels started at the
-    # cutout's own left edge, the frame's metal rim covers the first
-    # few reference px of that edge, and whether the R of RESERVE
-    # survived came down to the font size at that scale. Found on a
-    # side-by-side, not by any check — every check here looked at
-    # coordinates, and the frame is drawn AFTER the sidebar.
-    #
-    # Asserted against the frame's OWN ALPHA rather than against a
-    # number, so redrawing the artwork with a fatter rim fails here
-    # instead of quietly eating another letter. The corners are
-    # excluded on purpose: they are opaque far into the box, which is
-    # correct and is not where text goes — measuring there reports a
-    # 388 px rim and means nothing.
     import numpy as _np
     from PIL import Image
-    _rim_png = res.screen_file("colony_summary", "assets", "frame.png")
-    _rim_img = Image.open(_rim_png).convert("RGBA")
-    for _W, _H in _SIZES:
-        _lay = Layout(_W, _H)
-        _rect = pygame.Rect(*_lay.rect(_sb_ref[0]))
-        _fx, _fy, _fw, _fh = _lay.rect((0, 0, 1920, 1080))
-        _alpha = _np.array(_rim_img.resize((_fw, _fh),
-                                           Image.BILINEAR))[:, :, 3]
-        _l, _r = _emp_mod.value_column(_rect, _emp, _lay)
-        _rows = _emp.get("rows", [])
-        _pad = int(_rect.h * _emp.get("row_pad", 0.10))
-        _rh = (_rect.h - 2 * _pad) / max(1, len(_rows))
-        for _i in range(len(_rows)):
-            _y = int(_rect.y + _pad + _i * _rh + _rh / 2) - _fy
-            _line = _alpha[_y]
-            assert _line[_l - _fx] < 16, (
-                f"{_W}x{_H} row {_i}: the label starts at x={_l}, which "
-                f"is under the frame (alpha {_line[_l - _fx]}). Raise "
-                f"empire.text_inset — the rim was measured at up to "
-                f"4.5 reference px and the inset is what keeps glyphs "
-                f"out of it")
-            assert _line[_r - 1 - _fx] < 16, (
-                f"{_W}x{_H} row {_i}: a right-aligned value ends at "
-                f"x={_r - 1}, under the frame (alpha "
-                f"{_line[_r - 1 - _fx]}). The values lose their last "
-                f"pixels to the same rim the labels lose their first "
-                f"to; the inset applies to both edges")
-    ok("colony summary sidebar text clears the frame's rim at every "
-       "shipped size")
+    from core import style as _style_mod
+    # ── CLASS A: text OUR CODE places at a cutout edge ──
+    # Zero pixels under opaque frame alpha, every shipped size, no
+    # tolerance. This REPLACES a sidebar-only version of the same
+    # check — that one asserted the instance and this asserts the
+    # rule, and it found a second instance the first could not: one
+    # pixel of a fifteen-character colony name at 1600x900, whose
+    # right-aligned overflow was allowed to run to list_area's own
+    # edge and therefore under the rim.
+    #
+    # NO LIST OF BOXES. The renderers are asked what they drew:
+    # StyleRenderer.render_text and get_font(...).render are wrapped
+    # so every text surface is tagged, and the screen renders onto a
+    # Surface subclass that records where each tagged surface landed.
+    # A text box added tomorrow is covered without anyone editing
+    # this.
+    #
+    # TWO THINGS THIS MEASURES CAREFULLY, both learned the hard way:
+    #
+    #   what SURVIVES the clip, not what was requested. galaxy_map
+    #   wraps its whole map render in set_clip(map_area), exactly as
+    #   the original wraps Print_Star_Names_ in Set_Window_/Clip_On_
+    #   (mainscr.cpp:519). Recording the intended rectangle reports
+    #   three labels under the frame on that screen, one of them 330
+    #   px outside the map, and all three are fiction.
+    #
+    #   a POPULATED state. With no snapshot the colony summary draws
+    #   22 glyphs; with one it draws 65, because the list, the scan
+    #   box and the galaxy inset are all empty until then. A green
+    #   run over an empty screen asserts nothing.
+    #
+    # CLASS B is separated MECHANICALLY, not by a list: content
+    # clipped to a cutout is the frame's own business and is checked
+    # against the artwork below, so a glyph whose clip at blit time
+    # IS one of that screen's cutouts is not Class A.
+    class _TextRec(pygame.Surface):
+        hits = []
+        def blit(self, src, dest, *a, **k):
+            _clip = self.get_clip()
+            _r = super().blit(src, dest, *a, **k)
+            if id(src) in _TEXT_IDS:
+                _TextRec.hits.append(
+                    (int(dest[0]), int(dest[1]), src,
+                     pygame.Rect(_clip) if _clip else None))
+            return _r
+
+    _TEXT_IDS = set()
+    _TEXT_KEEP = []
+    _orig_rt = _style_mod.StyleRenderer.render_text
+    _orig_gf = _style_mod.StyleRenderer.get_font
+
+    class _TaggedFont:
+        def __init__(self, f): self._f = f
+        def __getattr__(self, n): return getattr(self._f, n)
+        def render(self, *a, **k):
+            r = self._f.render(*a, **k)
+            _TEXT_IDS.add(id(r)); _TEXT_KEEP.append(r)
+            return r
+
+    def _tagged_rt(self, *a, **k):
+        r = _orig_rt(self, *a, **k)
+        _TEXT_IDS.add(id(r)); _TEXT_KEEP.append(r)
+        return r
+
+    _FRAME_SCREENS = ("colony_summary", "galaxy_map")
+    _class_a = {}
+    _class_b_seen = 0
+    _style_mod.StyleRenderer.render_text = _tagged_rt
+    _style_mod.StyleRenderer.get_font = lambda self, sz: _TaggedFont(
+        _orig_gf(self, sz))
+    try:
+        for _name in _FRAME_SCREENS:
+            _fpng = res.screen_file(_name, "assets", "frame.png")
+            _fbase = Image.open(_fpng).convert("RGBA")
+            for _W, _H in _SIZES:
+                _a2, _ = _pv.build_screen(_W, _H)
+                _s2 = _a2.dispatcher.screens[_name]
+                _a2.dispatcher.switch_to(_name)
+                _s2.enter(None)
+                _s2.update(_pv._Snapshot(_pv.COLONIES))
+                _cuts = []
+                for _b in _s2.boxes:
+                    _br = _s2.box_rect(_b.name)
+                    if _br:
+                        _cuts.append(pygame.Rect(*_s2.layout.rect(_br)))
+                _TextRec.hits = []
+                _surf2 = _TextRec((_W, _H))
+                _surf2.fill((0, 0, 0))
+                _s2.render(_surf2)
+                assert len(_TextRec.hits) >= 10, (
+                    f"{_name} at {_W}x{_H} drew {len(_TextRec.hits)} text "
+                    f"surfaces — too few for this check to mean anything. "
+                    f"A green run over an empty screen asserts nothing")
+                _fx, _fy, _fw, _fh = _s2.layout.rect((0, 0, 1920, 1080))
+                _al = _np.array(_fbase.resize((_fw, _fh),
+                                              Image.BILINEAR))[:, :, 3]
+                for _x, _y, _src, _clip in _TextRec.hits:
+                    _rgb = pygame.surfarray.array3d(
+                        _src).transpose(1, 0, 2).astype(int)
+                    _m = _rgb.sum(axis=2) > 40
+                    if _src.get_flags() & pygame.SRCALPHA:
+                        _m &= pygame.surfarray.array_alpha(
+                            _src).transpose(1, 0) > 40
+                    _ys, _xs = _np.where(_m)
+                    if not len(_ys):
+                        continue
+                    _px, _py = _xs + _x, _ys + _y
+                    if _clip is not None:
+                        _k = ((_px >= _clip.x) & (_px < _clip.right)
+                              & (_py >= _clip.y) & (_py < _clip.bottom))
+                        _px, _py = _px[_k], _py[_k]
+                        if not len(_px):
+                            continue
+                    _gx, _gy = _px - _fx, _py - _fy
+                    _ok = ((_gx >= 0) & (_gx < _fw)
+                           & (_gy >= 0) & (_gy < _fh))
+                    if not _ok.any():
+                        continue
+                    _n = int((_al[_gy[_ok], _gx[_ok]] >= 16).sum())
+                    if not _n:
+                        continue
+                    _is_b = _clip is not None and any(
+                        abs(_clip.x - _c.x) <= 2 and abs(_clip.y - _c.y) <= 2
+                        and abs(_clip.w - _c.w) <= 4
+                        and abs(_clip.h - _c.h) <= 4 for _c in _cuts)
+                    if _is_b:
+                        _class_b_seen += _n
+                    else:
+                        _class_a[(_name, _W, _H)] = (
+                            _class_a.get((_name, _W, _H), 0) + _n)
+    finally:
+        _style_mod.StyleRenderer.render_text = _orig_rt
+        _style_mod.StyleRenderer.get_font = _orig_gf
+    assert not _class_a, (
+        f"CLASS A violations — text this tree places at a cutout edge, "
+        f"drawn under opaque frame alpha: {_class_a}. Zero tolerance: "
+        f"raise the screen's frame_inset, or stop placing the text "
+        f"against the box edge. (Content CLIPPED to a cutout is class "
+        f"B and is checked against the artwork, not here.)")
+    ok(f"class A: no glyph our code places lands under the frame "
+       f"({len(_FRAME_SCREENS)} screens, {len(_SIZES)} sizes)")
+
+    # ── CLASS B: how far the ARTWORK reaches into each cutout ──
+    # Content clipped to a cutout — the galaxy map's stars and star
+    # names — cannot be kept off the rim by an inset without cropping
+    # the content, so what is budgeted here is the FRAME, not the
+    # residue. If a redrawn frame grows a fatter rim, this fails and
+    # the clipped content stops silently losing more of itself.
+    #
+    # MEASURED ON THE SOURCE IMAGE, which is the artwork. At display
+    # sizes the bilinear rescale widens the rim's alpha ramp by one
+    # to three reference px, and that is a property of the resampler
+    # rather than of the drawing.
+    #
+    # CORNERS EXCLUDED, and `title` excluded outright: it is not a
+    # rectangle. Its hole is angled, so the bounding box find_holes
+    # returns contains real frame at both ends — 14 px on the colony
+    # summary, 29 on the galaxy map — and measuring a straight-edge
+    # intrusion there measures the shape, not the rim.
+    # Today's worst is 2, on the top edge of `list_area` and
+    # `galaxy_inset`; every other straight edge is 0 or 1. The
+    # budget IS the measurement, so any thickening fails.
+    _CLASS_B_BUDGET = 2
+    _CORNER_TRIM = 0.18
+    import frame_holes as _fhB
+
+    def _intrusion(alpha, rect):
+        _x, _y, _w, _h = rect
+        _x0, _y0 = max(0, _x), max(0, _y)
+        _x1 = min(alpha.shape[1], _x + _w)
+        _y1 = min(alpha.shape[0], _y + _h)
+        if _x1 - _x0 < 8 or _y1 - _y0 < 8:
+            return None
+        _iy = int((_y1 - _y0) * _CORNER_TRIM)
+        _ix = int((_x1 - _x0) * _CORNER_TRIM)
+        _out = []
+        for _cs, _horiz in ((range(_y0 + _iy, _y1 - _iy,
+                                   max(1, (_y1 - _y0) // 40)), True),
+                            (range(_x0 + _ix, _x1 - _ix,
+                                   max(1, (_x1 - _x0) // 40)), False)):
+            _lo = _hi = 0
+            for _c in _cs:
+                _line = (alpha[_c, _x0:_x1] if _horiz
+                         else alpha[_y0:_y1, _c])
+                _n = 0
+                while _n < len(_line) and _line[_n] >= 16:
+                    _n += 1
+                _lo = max(_lo, _n)
+                _n = 0
+                while _n < len(_line) and _line[len(_line) - 1 - _n] >= 16:
+                    _n += 1
+                _hi = max(_hi, _n)
+            _out += [_lo, _hi]
+        return _out
+
+    _b_worst = {}
+    for _name in _FRAME_SCREENS:
+        _fpng = res.screen_file(_name, "assets", "frame.png")
+        _iw, _ih, _holes = _fhB.find_holes(_fpng)
+        _named = _fhB.name_holes(_holes, _name)
+        _al = _np.array(Image.open(_fpng).convert("RGBA"))[:, :, 3]
+        for _cn, _r in _named.items():
+            if _cn == "title":
+                continue
+            _v = _intrusion(_al, _r)
+            assert _v is not None, (_name, _cn)
+            _b_worst[(_name, _cn)] = max(_v)
+            assert max(_v) <= _CLASS_B_BUDGET, (
+                f"{_name}/{_cn}: the frame's opaque alpha reaches "
+                f"{max(_v)} source px into this cutout at a straight "
+                f"edge (L{_v[0]} R{_v[1]} T{_v[2]} B{_v[3]}), over the "
+                f"budget of {_CLASS_B_BUDGET}. Content clipped to this "
+                f"hole — the galaxy map's stars and names — loses that "
+                f"much of itself with no inset able to help. Either the "
+                f"artwork grew a rim or find_holes' bounding box is no "
+                f"longer the hole's shape")
+    assert len(_b_worst) >= 20, len(_b_worst)
+    ok(f"class B: the frame reaches at most {_CLASS_B_BUDGET} px into "
+       f"any of {len(_b_worst)} cutouts")
 
     ok("colony summary sidebar layout (label flush left, value flush "
        "right, ink-measured at 12 resolutions)")

@@ -17,6 +17,7 @@ habits are non-negotiable.
 | Why is it built this way? Decisions, principles, past mistakes | `doc/v3_fundament.md` |
 | What exists today, what is missing, how to run things | `v3_projektstatus.md` |
 | What does the original C++ do? | `doc/v3_orion2re_index.md` |
+| The Planets screen, read but not built | `doc/plntsum_reading.md` |
 | The Extension API protocol | `doc/ext_api_dokumentation_v3.md` |
 | What is being asked of Joes — **the only list** | `doc/orion2re_open_fixes.md` |
 | How mods override files | `MODDING.md` |
@@ -55,7 +56,7 @@ derive world geometry.
 python tools/smoke_test.py
 ```
 
-69 checks, headless, no orion2re needed. **The count must not go
+70 checks, headless, no orion2re needed. **The count must not go
 down.** If a change makes a check obsolete, replace it — do not
 delete it. Add a check for anything a future session could silently
 break; several checks exist because a fault was invisible on screen.

@@ -232,6 +232,17 @@ class ColonySummaryScreen(ScreenBase):
     def _selected(self):
         return self._selection.colony
 
+    def _frame_inset(self):
+        """Reference px this screen keeps between text and the frame.
+
+        One key for the whole screen, not one per block: the sidebar
+        and the colony list both put text against a cutout edge and
+        both need the same number. See `_frame_inset_note` in
+        layout.json for what it was measured against.
+        """
+        return self._data.get("frame_inset",
+                              colonyempire.FRAME_INSET_DEFAULT)
+
     def _list_view(self):
         """(area, cfg, scale, n_rows) — everything `Window` needs.
 
@@ -334,7 +345,8 @@ class ColonySummaryScreen(ScreenBase):
         cfg = self._data.get("list", {})
         colonylist.render(surface, self._rows,
                           pygame.Rect(*self.layout.rect(box)),
-                          cfg, self.layout, self.style, self._first)
+                          cfg, self.layout, self.style, self._first,
+                          self._frame_inset())
 
     def _render_inset(self, surface):
         """The original's small galaxy map — a TRANSCRIPTION.
@@ -395,7 +407,8 @@ class ColonySummaryScreen(ScreenBase):
         colonyempire.render(
             surface, self.box_rect("sidebar"),
             self._data.get("empire", {}), self._local,
-            self.layout, self.style, self.box_font_scale("sidebar"))
+            self.layout, self.style, self.box_font_scale("sidebar"),
+            self._frame_inset())
 
 
     def _render_buttons(self, surface):

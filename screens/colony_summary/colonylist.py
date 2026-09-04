@@ -230,7 +230,8 @@ def row_regions(row):
 
 # ── The drawing ───────────────────────────────────────────────────
 
-def render(surface, rows, area, cfg, layout, style, first=0):
+def render(surface, rows, area, cfg, layout, style, first=0,
+           frame_inset=0):
     """Draw the rows into `area`. Everything sized from `cfg`.
 
     `area` is the `list_area` box in screen coordinates, `cfg` the
@@ -278,7 +279,7 @@ def render(surface, rows, area, cfg, layout, style, first=0):
         # one thing that column can absorb without saying anything
         # untrue.
         _draw_name_block(surface, row, area.x + pad_x, y, name_w, row_h,
-                         cfg, name_px, small_px, style)
+                         cfg, name_px, small_px, style, frame_inset)
         bar_x = area.x + pad_x + name_w + track.slack
         bar_y = y + (row_h - track.bar_h) // 2
         _render_bar(surface, row, bar_x, bar_y, track, cfg, small_px,
@@ -414,7 +415,7 @@ def row_at(area, cfg, scale, count, point):
 
 
 def _draw_name_block(surface, row, x, y, name_w, row_h, cfg,
-                     name_px, small_px, style):
+                     name_px, small_px, style, frame_inset=0):
     """The colony name, and under it climate and population.
 
     **HD EXTENSION: the original LEFT-aligns this name.** It draws it
@@ -463,7 +464,7 @@ def _draw_name_block(surface, row, x, y, name_w, row_h, cfg,
     # Everything from the left edge of `list_area` to `right` is
     # available: right-alignment sends overflow into `pad_x`, where
     # nothing is drawn. Only a name that outruns THAT is ellipsised.
-    room = right - (x - _pad_left(x, cfg, name_px))
+    room = right - (x - _pad_left(x, cfg, name_px, frame_inset))
     lines = [(style.render_text(
         _fit(row["name"], style, name_px, room, cfg), name_px, ROW_NAME), 0)]
     detail = _detail_text(row, cfg)
@@ -477,7 +478,11 @@ def _draw_name_block(surface, row, x, y, name_w, row_h, cfg,
     # overflow is now allowed to grow. Clipping to the column alone
     # would cut the very overflow this alignment exists to absorb.
     prev_clip = surface.get_clip()
-    surface.set_clip(pygame.Rect(0, y, right, row_h))
+    # Left bound is the same one `room` was computed against, so the
+    # clip agrees with the fit instead of letting an unfitted string
+    # through to the rim. It used to start at x = 0.
+    _left = x - _pad_left(x, cfg, name_px, frame_inset)
+    surface.set_clip(pygame.Rect(_left, y, max(1, right - _left), row_h))
     for surf, gap in lines:
         top += gap
         surface.blit(surf, (right - surf.get_width(), top))
@@ -485,9 +490,25 @@ def _draw_name_block(surface, row, x, y, name_w, row_h, cfg,
     surface.set_clip(prev_clip)
 
 
-def _pad_left(x, cfg, name_px):
-    """How far left of the column the name may grow: `pad_x`."""
-    return int(cfg.get("pad_x", 22) * (name_px / 21.0))
+def _pad_left(x, cfg, name_px, frame_inset=0):
+    """How far left of the column the name may grow.
+
+    `pad_x`, LESS the screen's `frame_inset` — because `pad_x` is not
+    empty all the way to the box edge. `list_area`'s outer few
+    reference px are under the frame's metal rim (see
+    `_frame_bleed_note`, and `_frame_inset_note` for the
+    measurement), so a name allowed to run to the box edge runs under
+    the frame. It did: one pixel of a fifteen-character name at
+    1600x900, which the tree-wide Class A check found and nothing
+    else could — the name has to be long enough to use the whole
+    gutter before any of it reaches the rim.
+
+    The subtraction is clamped at 0 so a screen declaring an inset
+    wider than its own padding loses the overflow rather than
+    inverting it.
+    """
+    return max(0, int((cfg.get("pad_x", 22) - frame_inset)
+                      * (name_px / 21.0)))
 
 
 def _fit(text, style, px, room, cfg):
