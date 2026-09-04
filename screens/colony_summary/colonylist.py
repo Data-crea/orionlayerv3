@@ -44,7 +44,7 @@ growth (colsum.cpp:1196-1205). The row draws three — climate,
 `n_pops`, `max_pop` — and leaves four: size, gravity, mineral class
 and growth.
 
-They are left out because a row is 62 px and the second line is one
+They are left out because a row is 58 px and the second line is one
 short string; seven values there would be a table, not a caption, and
 the row exists to carry the allocation track. The four have a home
 already, and it is the original's own: `output_panel` is the HD
@@ -153,8 +153,8 @@ def track_metrics(area, cfg, scale):
     on another. See `_draw_name_block` and `_name_width_note`.
     """
     gap = max(1, int(cfg.get("square_gap", 2) * scale))
-    name_w = int(cfg.get("name_width", 320) * scale)
-    pad_x = int(cfg.get("pad_x", 18) * scale)
+    name_w = int(cfg.get("name_width", 236) * scale)
+    pad_x = int(cfg.get("pad_x", 22) * scale)
     tail_w = int(cfg.get("tail_width", 0) * scale)
     build_w = int(cfg.get("building_width", 0) * scale)
     build_gap = int(cfg.get("building_gap", 16) * scale)
@@ -172,8 +172,18 @@ def track_metrics(area, cfg, scale):
                              + 2 * pad_x + width))
     return Track(unit=unit, gap=gap, step=unit + gap,
                  width=width, slack=slack,
-                 bar_h=int(cfg.get("bar_height", 30) * scale),
-                 row_h=int(cfg.get("row_height", 60) * scale),
+                 # NO DEFAULT, deliberately, for these three and for
+                 # `pad_y` in `row_bands`: they carry the ten-row
+                 # arithmetic, and the number that used to stand here
+                 # was 60, which `layout.json._row_height_note`
+                 # records as REJECTED — 10 x 60 = 600 leaves 5 px
+                 # and clamps the "{count} more not shown" line back
+                 # over the last row it exists to account for. A
+                 # missing key must raise, not silently draw nine
+                 # rows: an absence shaped like a result is the one
+                 # thing the fundament refuses.
+                 bar_h=int(cfg["bar_height"] * scale),
+                 row_h=int(cfg["row_height"] * scale),
                  build_w=int(cfg.get("building_width", 0) * scale),
                  build_gap=build_gap)
 
@@ -227,8 +237,8 @@ def render(surface, rows, area, cfg, layout, style):
     # the one place the row pitch is computed (decision 5). A local
     # copy of that expression is how the drawing and the hit-test
     # start to disagree.
-    pad_x = int(cfg.get("pad_x", 18) * scale)
-    name_w = int(cfg.get("name_width", 320) * scale)
+    pad_x = int(cfg.get("pad_x", 22) * scale)
+    name_w = int(cfg.get("name_width", 236) * scale)
     name_px = layout.font_size(cfg.get("name_font", 20))
     small_px = layout.font_size(cfg.get("small_font", 15))
 
@@ -298,7 +308,7 @@ def _draw_overflow(surface, rows, area, cfg, scale, layout, style):
     # the bottom edge.
     y = min(top + max(0, (area.bottom - top - surf.get_height()) // 2),
             area.bottom - surf.get_height())
-    surface.blit(surf, (area.x + int(cfg.get("pad_x", 18) * scale),
+    surface.blit(surf, (area.x + int(cfg.get("pad_x", 22) * scale),
                         max(area.y, y)))
 
 
@@ -326,8 +336,9 @@ def row_bands(area, cfg, scale, count):
     not drawn. That is the honest shape: nothing off the bottom can
     be selected because nothing off the bottom is there.
     """
-    row_h = int(cfg.get("row_height", 60) * scale)
-    y = area.y + int(cfg.get("pad_y", 12) * scale)
+    # No defaults here either — see `track_metrics`.
+    row_h = int(cfg["row_height"] * scale)
+    y = area.y + int(cfg["pad_y"] * scale)
     bands = []
     for _ in range(count):
         if y + row_h > area.bottom:
@@ -428,7 +439,7 @@ def _draw_name_block(surface, row, x, y, name_w, row_h, cfg,
 
 def _pad_left(x, cfg, name_px):
     """How far left of the column the name may grow: `pad_x`."""
-    return int(cfg.get("pad_x", 18) * (name_px / 21.0))
+    return int(cfg.get("pad_x", 22) * (name_px / 21.0))
 
 
 def _fit(text, style, px, room, cfg):

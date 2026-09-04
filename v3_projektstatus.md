@@ -1,6 +1,24 @@
 # OrionLayer v3 — Project Status
 
-Updated: 31 August 2026 (evening)
+Updated: 4 September 2026
+
+This session (4 September 2026), in one line each: a live
+side-by-side of the HD colony summary against orion2re 1.60 confirmed
+**ten of ten** allocation tracks against the original's three pop
+columns, filled and empty cells both, and **six of six** sidebar
+values, with nothing in the drawing wrong; the galaxy inset cutout had
+been named by its position among the three bottom holes and is now
+named from the source — `colsum.cpp:415` draws the small galaxy map at
+native (380, 349, 128, 91), which is the RIGHTMOST hole, so
+`galaxy_inset` and `spare_panel` swapped and a smoke check now asserts
+the rule rather than the list; and four stale statements were brought
+back in line — `output_panel`'s withdrawn HD EXTENSION tag in
+`screen.py`'s box list, the sidebar justification paragraph that is
+settled since 2 September, the rejected `row_height` 60 sitting as a
+fallback in `colonylist.py` (removed, along with `pad_y` and
+`bar_height`, so a missing key raises instead of silently drawing nine
+rows), and the 62/34 row arithmetic in four places, where the
+conclusion was right and only the operands were old.
 
 **The gap this document warned about is closed.** The previous
 version opened with a warning that the context-help work was
@@ -1045,7 +1063,7 @@ SEVEN values (colsum.cpp:1196-1205): planet size, climate, gravity
 class, mineral class, `n_pops`, computed maximum, growth. The row
 draws three — climate, `n_pops`, `max_pop` — and omits size, gravity,
 mineral class and growth. That omission is **deliberate**: a row is
-62 px and the second line is one short string, so seven values there
+58 px and the second line is one short string, so seven values there
 would be a table rather than a caption, and the row exists to carry
 the track. They have a home already and it is the original's own —
 `output_panel` is the HD equivalent of that same bottom-left box. If

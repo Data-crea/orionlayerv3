@@ -157,7 +157,7 @@ def draw(surface, row, x, y, width, row_h, cfg, style, layout):
     its own font. The two-line column is the same PLACE as the
     original's, not merely the same technique applied elsewhere. Our
     vertical reserve is the one that freed `tail_width`,
-    `row_height` 62 against `bar_height` 34.
+    `row_height` 58 against `bar_height` 30.
 
     Nothing here is squeezed horizontally into a narrower column; the
     width is the fixed side.

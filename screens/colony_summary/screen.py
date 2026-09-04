@@ -10,10 +10,15 @@ everything else — the same construction as the galaxy map. The
 boxes in boxes.json ARE the cutouts, derived by tools/frame_holes.py:
   list_area       the colony rows (population bars: next step)
   sidebar         the six empire readouts
-  output_panel    per-colony food/industry/research — HD EXTENSION,
-                  see below (later)
-  galaxy_inset    the original's small galaxy map (later)
-  spare_panel     reserved
+  output_panel    per-colony food/industry/research — TRANSCRIPTION
+                  (COLSUM::Draw_Colony_Scan_Info_, colsum.cpp:1155);
+                  the earlier HD EXTENSION marking is withdrawn, see
+                  below and fundament 43
+  galaxy_inset    the original's small galaxy map, the RIGHTMOST of
+                  the three bottom holes — colsum.cpp:415 draws it at
+                  native (380, 349, 128, 91) (later)
+  spare_panel     reserved; the MIDDLE hole, over the native column
+                  output_panel already answers for
   return          RETURN
   sort_*          the seven sort buttons
 The title cutout is not a box; it lives in layout.json ("frame").
@@ -53,16 +58,13 @@ the original's and all carry their source there. `warn_negative` on
 Food and Freighters is an HD EXTENSION and marked there — the
 original reddens Income alone.
 
-Stacking the label above its value is a deviation too, and what the
-original does instead is currently OPEN rather than known. justify=3
-is certainly inert (fmtpara.cpp:1057 drops to JUSTIFY_LEFT before the
-CR that joins the six). But the two per-line prefixes turn out to be
-justification codes themselves — bytes 1A 30 and 1A 31, and 0x1A is
-Set_Justification_, not Set_Current_Colors_ — which sets LEFT for the
-label and RIGHT for the value. So the original may well draw
-label-left/value-right, which an earlier version of this note called
-an invention. Nothing here has been changed on the strength of that;
-see `empire._justify_note` for what is settled and what is not.
+The row layout is SETTLED since 2 September 2026 and the renderer
+draws it: one row per entry, label left and value right, because the
+two per-line prefixes are justification codes (1A 30 / 1A 31). The
+argument and its sources live in `layout.json` under
+`empire._justify_note`; what is still open is the column WIDTH, not
+the alignment, and that is `colonyempire.value_column.__doc__`
+(decision 44).
 
 **`output_panel` is a TRANSCRIPTION — the earlier marking here was
 wrong and is withdrawn (fundament 43).** It is to show the selected
