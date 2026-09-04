@@ -343,6 +343,54 @@ Both are marked in `screens/colony_summary/colonylist.py`, here, and
 in smoke checks. Neither changes a pixel; the point is that the next
 person reads them as choices rather than as fidelity.
 
+**46. The list window belongs to the game, and it is re-established
+rather than remembered.** The original's colony list has ten SLOTS,
+not ten colonies: `_list_col[i] = _g_colony_list_ptr[_first + i]`
+(colsum.cpp:348-351), and every clickable field in a row is created
+per slot — `Add_Fields_Pop_For_` fills `_list_col_job_fields[slot*3+i]`
+at y = `slot * 31 + 34` (colsum.cpp:311-345). So an injected click
+names a POSITION IN THE WINDOW; which colony it reaches is `_first`'s
+answer and not ours.
+
+The HD list may therefore scroll freely for VIEWING — every colony is
+in the snapshot and the game never has to know — but `_first` must
+agree with the HD row before anything is injected. Same asymmetry as
+decision 35: the view decouples, the click frame does not. And the
+failure mode is the same one, which is why it earns its own number:
+every value on both screens stays correct and only the click's
+destination is wrong, so nothing about the picture reveals it.
+
+**`_first` is re-established, not tracked.** The tempting argument is
+the sort key's — a state you establish yourself does not have to be
+read — and it does not carry here. `platform.cpp:1379` shows the
+game's window is hidden only when `ext::g_hide_window` is set, so a
+visible window, which is how this screen was compared against the
+original in the first place, lets a human drag the original's own
+slider. A remembered `_first` would then be a lie the caller cannot
+detect.
+
+Establish with the safe direction, as in 35's corollary:
+`Decrement_First_` clamps at 0 (colsum.cpp:211-214), so N activations
+of `_x_fields[1]` put the window at the top from wherever it was, and
+k of `_x_fields[2]` walk it to the target. Both through
+`ACTIVATE_FIELD`, because the handler compares field IDs
+(colsum.cpp:790-800) — which also keeps this clear of INJECT_CLICK's
+window-coordinate constraint. Sorting is a second way the window
+returns to a known place (`_first = 0`, colsum.cpp:832) and not a
+substitute for establishing it.
+
+**The refusals are mirrored before sending** (decision 33). With
+fewer than ten colonies `_first` never moves at all
+(`colonies_count >= num_items`, colsum.cpp:210 and :226), and a step
+down is refused unless `_g_colony_list_ptr[_first + 10] != -1`
+(colsum.cpp:796). Counting a step the game refused is exactly what
+puts the two windows back out of step.
+
+Corollary for the HD side: **HD's visible row count is not the
+game's ten.** It is derived from `list_area` and `row_height` and
+happens to be ten today. Any future k is computed against the
+ORIGINAL's window of ten, never against however many rows HD draws.
+
 **42. Derived artwork ships; unmodified original artwork does not.**
 The repository is public, and OrionLayer is a modification that
 requires an installed, legally obtained copy of Master of Orion 2 —

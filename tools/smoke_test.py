@@ -4615,12 +4615,30 @@ def main():
             continue          # generic examples, not paths
         assert os.path.exists(os.path.join(_root, _ref)), \
             f"CLAUDE.md points at a missing file: {_ref}"
-    _claimed = re.search(r"(\d+) checks, headless", _cmd)
-    assert _claimed, "CLAUDE.md no longer states a check count"
-    assert int(_claimed.group(1)) == PASS + 1, (
-        f"CLAUDE.md says {_claimed.group(1)} checks, this run has "
-        f"{PASS + 1}")
-    ok("CLAUDE.md: every path resolves, check count current")
+
+    # THE COUNT IS HAND-COPIED IN TWO DOCUMENTS, so per decision 36 it
+    # needs a checker or it is an intention. CLAUDE.md had one and
+    # v3_projektstatus.md's Snapshot table did not; the table said 55
+    # against a suite of 63 for four sessions, in the file that
+    # declares itself the count's single home.
+    #
+    # BOTH ARE ASSERTED AGAINST THIS RUN, never against each other.
+    # Two documents agreeing with one another and not with the suite
+    # is precisely the state a cross-check would call green, and it is
+    # the state this replaces.
+    _counts = [("CLAUDE.md", _cmd, r"(\d+) checks, headless"),
+               ("v3_projektstatus.md", None,
+                r"smoke_test\.py` — \*\*(\d+) checks\*\*")]
+    for _doc, _text, _pat in _counts:
+        if _text is None:
+            with open(os.path.join(_root, _doc), encoding="utf-8") as _fh:
+                _text = _fh.read()
+        _claimed = re.search(_pat, _text)
+        assert _claimed, f"{_doc} no longer states a check count"
+        assert int(_claimed.group(1)) == PASS + 1, (
+            f"{_doc} says {_claimed.group(1)} checks, this run has "
+            f"{PASS + 1}")
+    ok("CLAUDE.md paths resolve; both documents' check counts current")
 
     print(f"\nSMOKE TEST PASSED — {PASS} checks green")
     return 0
