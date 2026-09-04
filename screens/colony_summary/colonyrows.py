@@ -128,6 +128,20 @@ SIZE_BASE = (5, 10, 15, 20, 25)
 #: orion2_consts.h:949. The government sits in the trait array like a
 #: racial pick, at index 0.
 TRAIT_CURRENT_GOVERNMENT = 0
+
+
+def _low_byte_signed(value):
+    """`(int8_t)` of an int16, as C does it — the LOW BYTE, signed.
+
+    Its own function so the cast is a named thing that a check can
+    aim at, rather than an `& 0xff` buried in an expression that the
+    next reader tidies into a plain comparison. It exists because
+    `COLDRAW::Draw_Colony_Prod_Both_` sign-tests `imports[t]` twice
+    and casts only once — coldraw.cpp:73 against :152. See
+    `drawn_production`.
+    """
+    byte = value & 0xFF
+    return byte - 256 if byte > 127 else byte
 #: orion2_consts.h:199-200. At or above this the original draws NO
 #: morale marks at all — Draw_Info_Morale_Both_ zeroes its own count
 #: rather than drawing an empty row, and 7 (Galactic Unification) is
@@ -261,6 +275,97 @@ def planet_name(colony, planets, stars):
     return f"{star.name} {numeral}"
 
 
+def drawn_production(col, econ):
+    """What the original DRAWS on one production row, not what it
+    stores.
+
+    **`production[t]` is not the number on screen.**
+    `COLDRAW::Draw_Colony_Prod_Both_` (coldraw.cpp:36) computes a net
+    before it draws anything, in four branches (coldraw.cpp:73-94),
+    and only one of the four is `production[t]` itself. Transcribed,
+    all four:
+
+      imports[t] byte-negative:
+        t == ECON_INDUSTRY -> max(0, production - maintenance[t])
+        otherwise          -> production - abs(imports[t])
+      otherwise:
+        maintenance[ECON_INDUSTRY] == 0 or t != ECON_INDUSTRY
+                           -> production[t]
+        otherwise          -> max(0, production - maintenance[t])
+
+    Note which `maintenance` each branch reads: the CONDITION in the
+    fourth branch tests `maintenance[ECON_INDUSTRY]` and the
+    SUBTRACTION uses `maintenance[prod_type]` (coldraw.cpp:85, :89).
+    On the industry row — the only row that reaches it — those are
+    the same slot, so nothing depends on it today; it is transcribed
+    as written because the next person to read the C++ will see two
+    different indices and wonder whether this file noticed.
+
+    **THE `(int8_t)` CAST IS THE ORIGINAL'S AND IS DELIBERATE.**
+    coldraw.cpp:73 tests `(int8_t)colony->imports[prod_type] < 0` —
+    the LOW BYTE of an int16 — while the same function tests
+    `colony->imports[prod_type] < 0` with no cast at coldraw.cpp:152,
+    where it decides whether to draw the shortage. Two sign tests on
+    one field, disagreeing for every value whose low byte and whole
+    differ in sign: 256 is positive as a word and 0 as a byte, 384 is
+    positive as a word and -128 as a byte. It changes nothing at
+    realistic import values, which is exactly why nobody would ever
+    notice it, and it is NOT normalised here. Filed as a QUESTION in
+    doc/orion2re_open_fixes.md item 7 — does the original binary sign
+    -test the byte or the word? — because it is not our tree and the
+    answer decides which of the two is the transcription.
+
+    `maintenance` (offset 239, u8[4]) and `imports` (243, i16[4]) are
+    both in the verified spec, so decision 23 is satisfied and this
+    needed no new offset work.
+    """
+    production = col.production[econ]
+    imports = col.imports[econ]
+    maintenance = col.maintenance[econ]
+    # The cast, as written. int16 -> signed low byte.
+    if _low_byte_signed(imports) < 0:
+        if econ == ECON_INDUSTRY:
+            return max(0, production - maintenance)
+        return production - abs(imports)
+    if col.maintenance[ECON_INDUSTRY] == 0 or econ != ECON_INDUSTRY:
+        return production
+    return max(0, production - maintenance)
+
+
+def production_shortage(col, econ):
+    """How much this row is short, or 0 — and 0 whenever the original
+    would not draw it at all.
+
+    THE ARITHMETIC (coldraw.cpp:61-64):
+        shortage = maintenance[t] - imports[t] - production[t]
+    clamped to 0 at anything below 1. Drawn with
+    `COLONY::Short_Anims_` (coldraw.cpp:170-177), which is the import
+    sprite outlined in palette colour 0xED (colony.cpp:2192-2199).
+
+    **THE REFUSAL IS PART OF THE TRANSCRIPTION, and it is why this
+    returns 0 rather than the raw difference.** Those `Short_Anims_`
+    loops sit in the ELSE of `if (imports[t] < 0 || t ==
+    ECON_INDUSTRY)` (coldraw.cpp:152), so the shortage is drawn only
+    when imports are non-negative AND the row is not industry. A
+    shortage computed and shown on the industry row would be an
+    invention wearing a citation — the number exists in the C++ and
+    is never drawn there. Decision 33: mirror the refusal, do not
+    just copy the sum.
+
+    Note the sign test at :152 has NO `(int8_t)` cast, and the one
+    that picks the net at :73 does. See `drawn_production`.
+
+    REFERENCE CASE, measured 4 September 2026: Wolf II, 13 pops,
+    production[FOOD] 12, imports[FOOD] 0, maintenance[FOOD] 13 — so
+    13 - 0 - 12 = 1, and the original draws exactly one red marker on
+    that row.
+    """
+    if econ == ECON_INDUSTRY or col.imports[econ] < 0:
+        return 0
+    return max(0, col.maintenance[econ] - col.imports[econ]
+               - col.production[econ])
+
+
 def build_rows(game_state, sort_key="name"):
     """One dict per colony of the local player, sorted.
 
@@ -272,7 +377,8 @@ def build_rows(game_state, sort_key="name"):
     The dict keys ARE the interface to the two renderers: index,
     name, climate, pops, jobs, no_farming, max_pop, producing,
     producing_turns, can_buy for `colonylist.render()`, and size,
-    gravity, mineral, growth, morale, morale_applies for
+    gravity, mineral, growth, morale, morale_applies,
+    drawn_production, shortage for
     `colonyoutput.render()` on top of climate, pops and max_pop,
     which both use. Nothing else crosses,
     and a smoke check holds the preview tool's fake rows to the same
@@ -366,6 +472,21 @@ def build_rows(game_state, sort_key="name"):
             # WITHDRAWN, so output_panel is a TRANSCRIPTION and this
             # comment used to say the opposite.
             "production": list(col.production),
+            # WHAT THE ORIGINAL DRAWS, which is not what it stores.
+            # `production` above stays because the four SORT keys
+            # read it (SORT_KEYS below) and the original sorts on the
+            # stored value — Switched_cmp_ compares colony records,
+            # not the scan box. The net is its own key so the two can
+            # never be confused at a call site: one is the datum, one
+            # is the drawing. See `drawn_production` for the four
+            # branches and for the (int8_t) cast that picks between
+            # them.
+            "drawn_production": [drawn_production(col, e)
+                                 for e in range(4)],
+            # 0 on every row the original refuses to draw one for —
+            # see `production_shortage`, where the refusal is the
+            # part that matters.
+            "shortage": [production_shortage(col, e) for e in range(4)],
             "max_pop": max_population(col, planet, traits),
             # ── For output_panel, and NOT drawn in the row ──
             # The original's scan box prints seven values for the

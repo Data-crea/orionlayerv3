@@ -32,9 +32,20 @@ would be a value where the original has an absence — the same
 distinction the sidebar makes with "--" while disconnected, reached
 from the other side.
 
-The two deviations this panel carries — one number per production
-row where the original draws several, and morale as a number where
-the original draws sprites — are stated in `layout.json` under
+**The production rows draw the original's NET, not the record.**
+`COLDRAW::Draw_Colony_Prod_Both_` (coldraw.cpp:36) computes what it
+draws before it draws anything, in four branches (coldraw.cpp:73-94),
+and only one of the four is `production[t]` itself. Until 4 September
+2026 this panel printed the stored value and the difference was
+called a subset; it is not a subset, it is a different number, and on
+the reference save it differed on nine colonies of eleven. The
+branches, the `(int8_t)` cast that chooses between them and the
+shortage beside the value all live in `colonyrows` — this module is
+handed the answers, per the seam above.
+
+The deviations this panel still carries — imports and the secondary
+group not drawn, and morale as a number where the original draws
+sprites — are stated in `layout.json` under
 `output._deviation_note`, with what it would take to undo each. A
 third is gone: BC was not drawn until the geometry settled it.
 `y_pos` starts at 349 and steps 18 (colsum.cpp:1170-1173) and morale
@@ -43,14 +54,40 @@ four production rows — 349, 367, 385, 403 — and not three, which
 agrees with `ECON_COUNT` being 4 without having to take the constant
 on trust.
 """
+import collections
+
 from core import palette
 
 from .colonyempire import format_value
+from .colonyrows import ECON_BC, ECON_FOOD, ECON_INDUSTRY, ECON_RESEARCH
 
 LABEL_COLOR = palette.col("colony_summary", "label", (140, 155, 190))
 VALUE_COLOR = palette.col("colony_summary", "value", (220, 228, 245))
 EMPTY_COLOR = palette.col("colony_summary", "nav_text_dim",
                           (104, 116, 142))
+#: The shortage marker. `COLONY::Short_Anims_` (colony.cpp:2192) is
+#: the import sprite outlined in palette index 0xED — a colour this
+#: project cannot resolve to RGB, because the palette comes from the
+#: player's own LBX and is not shipped. So the screen's existing
+#: `warn` is reused rather than a second red invented beside it: it
+#: is the same red the sidebar reddens a negative Income with, which
+#: IS the original's (see `colonyempire._red_note`).
+SHORTAGE_COLOR = palette.col("colony_summary", "warn", (214, 88, 74))
+
+#: Which panel row names which ECON slot. The ids are layout.json's
+#: (decision 15) and the indices are the engine's
+#: (orion2_consts.h:119-123, one home in `colonyrows`) — this map is
+#: the only place the two meet, so a renamed row loses its shortage
+#: rather than silently taking another row's.
+ECON_BY_ID = {"food": ECON_FOOD, "industry": ECON_INDUSTRY,
+              "research": ECON_RESEARCH, "bc": ECON_BC}
+
+#: What `visible_rows` answers with. A named tuple rather than a
+#: widening tuple: `shortage` is empty on most rows and a positional
+#: fourth element is how a caller ends up reading the column index as
+#: a string.
+PanelRow = collections.namedtuple("PanelRow",
+                                  "label value column shortage")
 
 
 def fill_template(template, values):
@@ -70,6 +107,27 @@ def fill_template(template, values):
     for key, value in values.items():
         template = template.replace("{" + key + "}", str(value))
     return template
+
+
+def _drawn(row, econ):
+    """The net the original would draw on one production row."""
+    return (row.get("drawn_production") or (0, 0, 0, 0))[econ]
+
+
+def row_shortage(row, spec):
+    """The shortage for one panel row, as a NUMBER, or 0.
+
+    0 covers three different things and deliberately does not tell
+    them apart: the row is not a production row, the colony is not
+    short, or the original refuses to draw a shortage there at all
+    (industry, or negative imports — `colonyrows.production_shortage`
+    is where that refusal is transcribed, from coldraw.cpp:152). All
+    three mean the same thing here, which is that no marker is drawn.
+    """
+    econ = ECON_BY_ID.get(spec.get("id"))
+    if econ is None:
+        return 0
+    return (row.get("shortage") or (0, 0, 0, 0))[econ]
 
 
 def row_values(row, words, climates):
@@ -100,10 +158,20 @@ def row_values(row, words, climates):
         # value template in layout.json (decision 15). Nothing here
         # divides or scales: see output._growth_note.
         "growth": format_value(row.get("growth", 0), signed=True),
-        "food": row.get("production", (0, 0, 0, 0))[0],
-        "industry": row.get("production", (0, 0, 0, 0))[1],
-        "research": row.get("production", (0, 0, 0, 0))[2],
-        "bc": row.get("production", (0, 0, 0, 0))[3],
+        # THE NET, NOT THE STORED VALUE. The original computes what
+        # it draws before it draws anything and only one of its four
+        # branches is `production[t]` itself — see
+        # `colonyrows.drawn_production`, which carries all four and
+        # the (int8_t) cast that chooses between them. `production`
+        # is still in the row and is still what the four SORT keys
+        # read, because the original sorts on the record and not on
+        # this. Falling back to `production` when the key is absent
+        # would hide exactly the difference this exists to show, so
+        # the fallback is a zero row.
+        "food": _drawn(row, ECON_FOOD),
+        "industry": _drawn(row, ECON_INDUSTRY),
+        "research": _drawn(row, ECON_RESEARCH),
+        "bc": _drawn(row, ECON_BC),
         "morale": row.get("morale", 0),
     }
 
@@ -117,6 +185,16 @@ def visible_rows(row, cfg, words, climates):
     stays. That is the shape of the original's own absence: the box is
     still there and the morale part of it is blank.
 
+    The SHORTAGE is a second element beside the value and is empty on
+    every row that has none. Empty and not "0": the original draws
+    `Short_Anims_` sprites, so a colony that is not short has nothing
+    on that row at all, and a zero would be a claim where the
+    original has an absence — the same rule the empty selection and
+    the Unification morale row follow. The wording is the template's
+    (decision 15) and is filled by `replace` (decision 37); the
+    decision to draw it at all is the NUMBER's, taken here, so a
+    template that renders "0" cannot bring the element back.
+
     Split out from `render` so a smoke check can ask what the panel
     would draw without needing a surface, and so the empty-selection
     rule is one `if` in one place instead of a guard per row.
@@ -125,12 +203,17 @@ def visible_rows(row, cfg, words, climates):
         return []
     values = row_values(row, words, climates)
     hidden = cfg.get("hidden_value", "")
+    template = cfg.get("shortage_value", "")
     out = []
     for spec in cfg.get("rows", []):
         text = fill_template(spec.get("value", ""), values)
         if spec.get("id") == "morale" and not row.get("morale_applies", True):
             text = hidden
-        out.append((spec.get("label", ""), text, int(spec.get("column", 0))))
+        short = row_shortage(row, spec)
+        out.append(PanelRow(
+            spec.get("label", ""), text, int(spec.get("column", 0)),
+            fill_template(template, {"shortage": short}) if short > 0
+            else ""))
     return out
 
 
@@ -169,8 +252,9 @@ def render(surface, row, area, cfg, words, climates, layout, style):
     label_px = layout.font_size(cfg.get("label_font", 14))
     value_px = layout.font_size(cfg.get("value_font", 20))
 
-    grouped = [[(lab, val) for lab, val, col in entries
-                if min(columns - 1, max(0, col)) == c]
+    short_gap = int(cfg.get("shortage_gap", 8) * layout.scale)
+    grouped = [[e for e in entries
+                if min(columns - 1, max(0, e.column)) == c]
                for c in range(columns)]
 
     # The FULLEST column sets the pitch, so both columns share one
@@ -184,12 +268,26 @@ def render(surface, row, area, cfg, words, climates, layout, style):
     for c, column_rows in enumerate(grouped):
         left = area.x + pad_x + c * col_w
         right = left + col_w - col_gap
-        for i, (label, value) in enumerate(column_rows):
+        for i, entry in enumerate(column_rows):
             top = area.y + pad_y + i * (row_h + gap)
-            lab = style.render_text(label.upper(), label_px, LABEL_COLOR[:3])
-            val = style.render_text(str(value), value_px, VALUE_COLOR[:3])
+            lab = style.render_text(entry.label.upper(), label_px,
+                                    LABEL_COLOR[:3])
+            val = style.render_text(str(entry.value), value_px,
+                                    VALUE_COLOR[:3])
             block_h = max(lab.get_height(), val.get_height())
             y = top + max(0, (row_h - block_h) // 2)
             surface.blit(lab, (left, y + (block_h - lab.get_height())))
             surface.blit(val, (right - val.get_width(),
                                y + (block_h - val.get_height())))
+            if not entry.shortage:
+                continue
+            # LEFT of the value, not right of it. The value is what
+            # is right-aligned against the column edge and stays
+            # there; `column_gap` on the other side is the 34 px that
+            # stopped "Huge GROWTH" reading as one phrase (see
+            # output._geometry_note) and is not free space.
+            sht = style.render_text(entry.shortage, label_px,
+                                    SHORTAGE_COLOR[:3])
+            surface.blit(sht, (right - val.get_width() - short_gap
+                               - sht.get_width(),
+                               y + (block_h - sht.get_height())))

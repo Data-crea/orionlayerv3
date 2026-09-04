@@ -2,6 +2,23 @@
 
 Updated: 4 September 2026
 
+This session (4 September 2026), last, in one line each: **the
+production rows drew the wrong number and now draw the original's** —
+`COLDRAW::Draw_Colony_Prod_Both_` computes a net before it draws
+anything, in four branches (coldraw.cpp:73-94) of which only one is
+`production[t]`, and on the reference save the two differ on NINE
+colonies of eleven, Wolf II's BC reading 18 stored against 10 drawn;
+the SHORTAGE is drawn beside it with both of the original's refusals
+mirrored (never on the industry row, never with negative imports,
+coldraw.cpp:152), Wolf II's single food marker confirmed live;
+`production` stays in the row because the four sort keys read it and
+the original sorts on the record, so the net is its own key; the
+`(int8_t)` cast at coldraw.cpp:73 against the uncast test at :152 is
+transcribed AS WRITTEN and filed as open fix **item 7, a question and
+not a fix request**; and `screen.py` came down 666 -> 627 by moving
+`_row_at` and `_visible_rows` onto `colonyselect.Window`, where the
+offset already lives.
+
 This session (4 September 2026), later, in one line each: **the
 colony list scrolls**, one row per wheel notch, with all three clamps
 transcribed from the original's own steppers and the visible count
@@ -120,7 +137,7 @@ files under `doc/` and are only summarised here.
 | | |
 |---|---|
 | Python | 21,642 lines across 94 modules (core, screens, tools) |
-| Smoke test | `python tools/smoke_test.py` — **65 checks**, headless |
+| Smoke test | `python tools/smoke_test.py` — **66 checks**, headless |
 | Assets | 170 MB (select_race 68, galaxy_map 51, shared 23, new_game 21, colony_summary 1) |
 | Screens in HD | 7 of ~20–22 (colony summary is frame + sidebar only) |
 | Setup from clone | `python tools/setup.py` (deps via the system package manager) |
@@ -367,10 +384,10 @@ worse than no list. Only the two files the scroll package touched had
 moved since the 3 September recount; the other eighteen were exact.
 `galaxy_map/screen.py` (805), `tools/struct_probe.py` (753),
 `galaxy_map/renderer.py` (747), `tools/colony_list_preview.py` (669),
-`colony_summary/colonylist.py` (657), `colony_summary/screen.py`
-(627), `custom_race/screen.py` (558), `galaxy_map/ships.py` (529),
-`zoomtables.py` (515),
-`colony_summary/colonyrows.py` (508), `tools/ext_diag.py` (473),
+`colony_summary/colonylist.py` (657), `colony_summary/colonyrows.py`
+(629), `colony_summary/screen.py` (627), `custom_race/screen.py`
+(558), `galaxy_map/ships.py` (529), `zoomtables.py` (515),
+`tools/ext_diag.py` (473),
 `style.py` (453), `screen_base.py` (390), `editor/editor.py` (390),
 `empire_identity/renderer.py` (383), `new_game/screen.py` (382),
 `empire_identity/screen.py` (372), `game_client.py` (372),
@@ -393,10 +410,12 @@ said it never imported pygame, and it now reaches `colonylist` for
 `rows_drawn` and `row_at` — the alternative was a second copy of the
 row pitch, which is the fault decision 5 exists for.
 
-`colony_summary/colonyrows.py` crossed the line this session and is
+`colony_summary/colonyrows.py` crossed the line on 3 September and is
 listed rather than split: it went 234 -> 508 across three commits and
-gained one function. The growth is the tie-break block, the NOT DRAWN section
-and the two comments around the row filter — all of it the sources
+then to 629 on 4 September with `drawn_production` and
+`production_shortage`. The growth is the tie-break block, the NOT DRAWN
+section, the two comments around the row filter and now the four net
+branches with their C++ line numbers — all of it the sources
 for numbers that are already there. Splitting on that would put a
 value in one file and the evidence for it in another, which is the
 thing the guideline exists to prevent, not an instance of it. If the

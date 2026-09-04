@@ -28,6 +28,7 @@ section for what was found where.
 | 5 | `racesel.lbx [entry 138]` crash on Custom Race Accept | **Applied** in the 30 Aug tree — that is why it stopped reproducing | Nothing |
 | — | Custom Race reports screen ID 50 | **Applied** | — |
 | 6 | `s_0_0055110c` / `s_1_00551110` declared `[3]` and `[4]`, defined three times | **Question, not a fix** | Nothing today |
+| 7 | `Draw_Colony_Prod_Both_` sign-tests `imports[t]` as a byte once and as a word once | **Question, not a fix** | Nothing at realistic import values |
 
 Items 3 and 4 are both about INJECT_CLICK and both live in the same
 code path, but they are separate faults: 3 is where the coordinates
@@ -407,3 +408,63 @@ places disagree about the type and two about the spelling. If the
 bytes are correct as written, the only change worth making is
 picking one home for the pair — and that is your call about your
 tree, not ours.
+
+---
+
+## 7. `Draw_Colony_Prod_Both_` sign-tests `imports[t]` twice, two different widths — a question, not a fix request
+
+**This asks for an answer, not a patch.** Nothing misbehaves today
+and OrionLayer is not blocked. It is here for the same reason item 6
+is: the answer decides which of two readings is the transcription,
+and it is the kind of disagreement that stays invisible until a value
+crosses a boundary nobody was watching.
+
+### What we found (orion2re 1.60, `src/version.h`)
+
+`COLDRAW::Draw_Colony_Prod_Both_` (`coldraw.cpp:36`) tests the sign of
+the same field, `colony->imports[prod_type]`, in two places, and casts
+in only one of them:
+
+| Where | Test | Decides |
+|---|---|---|
+| `coldraw.cpp:73` | `if ((int8_t)colony->imports[prod_type] < 0)` | which of four branches computes the NET that is drawn |
+| `coldraw.cpp:152` | `if (colony->imports[prod_type] < 0 \|\| prod_type == ECON_INDUSTRY)` | whether the row draws `Import_Anims_` plus a shortage, or `Prod_Anims_` |
+
+`imports` is `int16_t[4]` at offset 243. `(int8_t)` takes the **low
+byte**, so the two tests disagree for every value whose low byte and
+whole differ in sign — 256 is positive as a word and 0 as a byte, 384
+is positive as a word and -128 as a byte, and -256 is negative as a
+word and 0 as a byte.
+
+### The question
+
+**Does the original binary sign-test the byte or the word here?**
+
+If the byte: the cast at `:73` is the transcription and `:152` has
+lost one, or the original genuinely differs between the two and this
+is faithful. If the word: the cast at `:73` is an artefact of the
+decompilation — a `movsx`/`cmp al` read as a narrowing cast — and
+`Draw_Colony_Prod_Both_` computes the wrong net for large imports.
+
+What would settle it from your side is the comparison width at the
+original's own address for this function.
+
+### Why we are asking rather than picking
+
+We have transcribed it **as written**, cast and all
+(`screens/colony_summary/colonyrows.drawn_production`, with
+`_low_byte_signed` as a named function so it cannot be quietly tidied
+away, and a smoke check that fails if it is). That is the only
+defensible choice from outside the binary: normalising it to a plain
+comparison would be correcting the source on a guess, and the guess
+would be invisible, because **at every import value MOO2 realistically
+produces the two tests agree**. That is exactly why nobody has ever
+noticed it, and exactly why it is worth an answer rather than a
+shrug.
+
+### Not a fix request
+
+Because we cannot tell you which is right. If the byte is correct,
+`:152` is the one missing a cast; if the word is correct, `:73` has
+one too many. Either way it is one line in your tree and the choice
+is yours.

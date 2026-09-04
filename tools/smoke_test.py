@@ -2920,10 +2920,17 @@ def main():
     # THE TEN VALUES, for one fake colony. Chosen so every one of
     # them is distinguishable from every other in the output: a check
     # that asserts "0" appears ten times asserts nothing.
+    # `production` and `drawn_production` are DIFFERENT here on
+    # purpose: the panel draws the net the original computes
+    # (coldraw.cpp:73-94) and the sort keys read the stored value, so
+    # a fake that made them equal would let the panel read either one
+    # and still pass.
     _fake = {"index": 3, "name": "Probe I", "climate": 9, "pops": 17,
              "jobs": [5, 6, 6], "no_farming": False, "max_pop": 31,
              "producing": "", "producing_turns": 0, "can_buy": False,
-             "production": [11, 22, 33, 44], "size": 3, "gravity": 2,
+             "production": [90, 91, 92, 93],
+             "drawn_production": [11, 22, 33, 44],
+             "shortage": [0, 0, 0, 0], "size": 3, "gravity": 2,
              "mineral": 4, "growth": -42, "morale": -7,
              "morale_applies": True}
     _shown = _co.visible_rows(_fake, _ocfg, _words, _climates)
@@ -2932,23 +2939,30 @@ def main():
         f"E_Strings_(74) values in six, the four ECON values, and "
         f"morale")
     assert len(_shown) == len(_ocfg["rows"]), (_shown, _ocfg["rows"])
-    _text = " ".join(f"{lab}={val}" for lab, val, _c in _shown)
+    _text = " ".join(f"{e.label}={e.value}" for e in _shown)
     for _value in ("Large", "Gaia", "Heavy", "Ultra Rich", "17", "31",
                    "-42k", "11", "22", "33", "44"):
         assert _value in _text, (
             f"the panel does not show {_value!r} — it is one of the "
             f"eleven the original's scan box carries. Got: {_text}")
     assert "-7" in _text, "morale is not shown"
+    # And it is the NET that reaches the panel, not the record.
+    for _stored in ("90", "91", "92", "93"):
+        assert _stored not in _text, (
+            f"the panel drew the STORED production {_stored} — it must "
+            f"draw colonyrows.drawn_production, which is what "
+            f"COLDRAW::Draw_Colony_Prod_Both_ computes before it draws "
+            f"anything (coldraw.cpp:73-94)")
     # GROWTH: signed, and the k is a UNIT — MOO2 counts population in
     # thousands and the original's scan box printed "+63k". The sign
     # comes from colonyempire.format_value, which is the one home for
     # that rule; the unit is wording and lives in the template.
-    _growth_shown = [_v for _l, _v, _c in _shown if _l.lower() == "growth"]
+    _growth_shown = [e.value for e in _shown if e.label.lower() == "growth"]
     assert _growth_shown == ["-42k"], (
         f"growth shows {_growth_shown!r}; it is a net flow, so it "
         f"carries its sign, and thousands, so it carries its k")
     _pos = _co.visible_rows(dict(_fake, growth=7), _ocfg, _words, _climates)
-    assert [_v for _l, _v, _c in _pos if _l.lower() == "growth"] == ["+7k"], (
+    assert [e.value for e in _pos if e.label.lower() == "growth"] == ["+7k"], (
         "a positive growth has no explicit plus — the original prints "
         "one, for the same reason the sidebar's Income and Food do")
     assert "k" in _ocfg["_growth_note"] and "thousand" in \
@@ -2995,21 +3009,34 @@ def main():
                for _r in _prod_rows), (
         "the four production values are split across columns; the "
         "original draws them as one column at native x 106")
-    for _cite in ("coldraw.cpp:60", "colsum.cpp:1170-1173",
-                  "colsum.cpp:1176"):
+    for _cite in ("colsum.cpp:1170-1173", "colsum.cpp:1176"):
         assert _cite in _ocfg["_deviation_note"], (
             f"output._deviation_note no longer cites {_cite!r} — the "
             f"geometry is what settled the fourth row independently "
             f"of ECON_COUNT")
+    # WHAT IS STILL NOT DRAWN has to keep naming itself. After the
+    # net and the shortage landed, two of the original's four groups
+    # per row remain: imports[t] (coldraw.cpp:46) and the secondary
+    # group — imports[ECON_INDUSTRY] on food, pollution on industry
+    # (coldraw.cpp:51-58). Both are REACHABLE, so the note must not
+    # read as a data limitation, and an omission nobody wrote down is
+    # indistinguishable from one nobody saw.
+    for _cite in ("coldraw.cpp:73-94", "coldraw.cpp:46",
+                  "coldraw.cpp:51-58", "pollution", "REACHABLE"):
+        assert _cite in _ocfg["_deviation_note"], (
+            f"output._deviation_note no longer carries {_cite!r} — it "
+            f"is the record of which of the original's four groups "
+            f"this panel still does not draw, and why that is a "
+            f"layout question and not a missing offset")
 
     # MORALE UNDER UNIFICATION: the label stays, the value goes. The
     # original zeroes its own sprite count (Draw_Info_Morale_Both_),
     # so drawing a 0 would claim neutral morale where the original is
     # claiming that morale does not apply.
     _unified = dict(_fake, morale_applies=False)
-    _mor = [(lab, val) for lab, val, _c
+    _mor = [(e.label, e.value) for e
             in _co.visible_rows(_unified, _ocfg, _words, _climates)
-            if lab.lower() == "morale"]
+            if e.label.lower() == "morale"]
     assert _mor and _mor[0][1] == _ocfg["hidden_value"], (
         f"under Unification the morale row shows {_mor!r}; it must "
         f"show hidden_value, and a 0 is not the same statement")
@@ -3115,13 +3142,39 @@ def main():
                 _row_spec["label"].upper(),
                 _lay.font_size(_ocfg["label_font"]),
                 (255, 255, 255)).get_width()
-            for _cand in _cands:
+            # THE SHORTAGE MARKER AND A WIDE VALUE CANNOT CO-OCCUR,
+            # and that is structural rather than lucky. A shortage is
+            # drawn only when imports >= 0 and the row is not
+            # industry (coldraw.cpp:152) — which is exactly the
+            # branch where the net IS production[t] (coldraw.cpp:86)
+            # — and it is positive only when
+            # production < maintenance - imports <= maintenance,
+            # a u8[4] at offset 239. So a row that shows a marker has
+            # a value in 0..254 and a marker in 1..255; a row with a
+            # wide value has no marker at all. Pairing the widest of
+            # each would assert a case the engine cannot produce, and
+            # it fails at 1366x768 — which is how this coupling was
+            # found rather than assumed.
+            #
+            # The one assumption, stated because it is the one that
+            # could break: production is never negative.
+            _pairs = [(_c, "") for _c in _cands]
+            if _row_spec["id"] in ("food", "research", "bc"):
+                _pairs.append(
+                    ("254",
+                     _ocfg["shortage_value"].replace("{shortage}", "255")))
+            for _cand, _short in _pairs:
                 _vw = app.style.render_text(
                     _cand, _lay.font_size(_ocfg["value_font"]),
                     (255, 255, 255)).get_width()
+                if _short:
+                    _vw += app.style.render_text(
+                        _short, _lay.font_size(_ocfg["label_font"]),
+                        (255, 255, 255)).get_width() + int(
+                            _ocfg["shortage_gap"] * _lay.scale)
                 assert _lw + _vw <= _cw - _cgap - _em, (
                     f"{_W}x{_H}: {_row_spec['label']!r} ({_lw} px) and "
-                    f"{_cand!r} ({_vw} px) need {_lw + _vw} px in a "
+                    f"{_cand + _short!r} ({_vw} px) need {_lw + _vw} px in a "
                     f"column of {_cw - _cgap}, leaving less than one "
                     f"em of the label font between them — they read "
                     f"as one phrase before they touch, which is what "
@@ -3205,6 +3258,156 @@ def main():
     ok("colony summary output_panel (ten values drawn, BC deviation "
        "marked, empty selection draws nothing, columns clear at 12 "
        "resolutions, hover selects and the sort keeps the colony)")
+
+    # ── The NET the original draws, and the shortage beside it ──
+    # COLDRAW::Draw_Colony_Prod_Both_ (coldraw.cpp:36) computes what
+    # it draws BEFORE it draws anything. Until 4 September 2026 this
+    # panel printed colony->production[t], which is only one of the
+    # four branches at coldraw.cpp:73-94 — so the number a player
+    # read was wrong whenever a colony had maintenance or imports,
+    # and it looked exactly as plausible as the right one.
+    import types as _types
+    from screens.colony_summary import colonyrows as _crw
+
+    def _col(prod, maint, imps, poll=0):
+        return _types.SimpleNamespace(production=list(prod),
+                                      maintenance=list(maint),
+                                      imports=list(imps),
+                                      pollution=poll)
+
+    # ALL FOUR BRANCHES, with values chosen so each gives a DIFFERENT
+    # answer from the others. A case where every branch returns
+    # production[t] would pass against any three of the four.
+    #
+    #   A  byte(imports) < 0, t == INDUSTRY  -> max(0, prod - maint[t])
+    #   B  byte(imports) < 0, t != INDUSTRY  -> prod - abs(imports)
+    #   C  otherwise, maint[INDUSTRY] == 0 or t != INDUSTRY -> prod
+    #   D  otherwise                          -> max(0, prod - maint[t])
+    _bA = _col([20, 30, 40, 50], [3, 7, 0, 0], [-5, -2, 0, 0])
+    assert _crw.drawn_production(_bA, _crw.ECON_INDUSTRY) == 23, (
+        "branch A: industry with byte-negative imports is "
+        "production - maintenance (coldraw.cpp:74-78)")
+    assert _crw.drawn_production(_bA, _crw.ECON_FOOD) == 15, (
+        "branch B: a non-industry row with byte-negative imports is "
+        "production - abs(imports) (coldraw.cpp:80)")
+    assert _crw.drawn_production(_bA, _crw.ECON_RESEARCH) == 40, (
+        "branch C: non-negative imports on a non-industry row is the "
+        "stored production (coldraw.cpp:86)")
+    _bD = _col([20, 30, 40, 50], [0, 7, 0, 0], [0, 4, 0, 0])
+    assert _crw.drawn_production(_bD, _crw.ECON_INDUSTRY) == 23, (
+        "branch D: industry with non-negative imports and non-zero "
+        "maintenance[INDUSTRY] is production - maintenance "
+        "(coldraw.cpp:89)")
+    # …and the SAME row takes branch C when maintenance[INDUSTRY] is
+    # 0, which is the condition that separates C from D. Without this
+    # the two are indistinguishable.
+    assert _crw.drawn_production(
+        _col([20, 30, 40, 50], [0, 0, 0, 0], [0, 4, 0, 0]),
+        _crw.ECON_INDUSTRY) == 30, (
+        "maintenance[INDUSTRY] == 0 must send the industry row to the "
+        "plain production branch (coldraw.cpp:85)")
+    # The clamp is the original's and is on both maintenance branches.
+    assert _crw.drawn_production(
+        _col([3, 3, 0, 0], [10, 10, 0, 0], [-1, -1, 0, 0]),
+        _crw.ECON_INDUSTRY) == 0, (
+        "production below maintenance must clamp at 0, not go "
+        "negative (coldraw.cpp:76)")
+
+    # THE (int8_t) CAST, AND IT IS DELIBERATE. coldraw.cpp:73 tests
+    # the LOW BYTE of imports[t]; coldraw.cpp:152, deciding whether
+    # to draw the shortage, tests the WHOLE int16 with no cast. 384
+    # is positive as a word and -128 as a byte, so the two disagree —
+    # and this check is here so the next reader who "tidies" the cast
+    # into a plain comparison fails instead of silently changing a
+    # number. Filed as a QUESTION in doc/orion2re_open_fixes.md,
+    # because which of the two is the transcription is the original
+    # binary's answer and not ours.
+    _cast = _col([20, 0, 0, 0], [0, 0, 0, 0], [384, 0, 0, 0])
+    assert _crw.drawn_production(_cast, _crw.ECON_FOOD) == 20 - 384, (
+        "imports 384 has a NEGATIVE low byte, so the net takes the "
+        "byte-negative branch (coldraw.cpp:73). Getting 20 here means "
+        "the cast was normalised to a plain int16 comparison — do not "
+        "fix it, it is transcribed; see colonyrows._low_byte_signed")
+    assert _crw._low_byte_signed(384) == -128 and \
+        _crw._low_byte_signed(256) == 0 and \
+        _crw._low_byte_signed(-1) == -1, "the cast is not (int8_t)"
+
+    # THE SHORTAGE: maintenance - imports - production, clamped below
+    # 1 (coldraw.cpp:61-64).
+    assert _crw.production_shortage(
+        _col([12, 0, 0, 0], [13, 0, 0, 0], [0, 0, 0, 0]),
+        _crw.ECON_FOOD) == 1, (
+        "Wolf II is the reference case: 13 maintenance, 0 imports, 12 "
+        "production, and the original draws exactly one red marker")
+    assert _crw.production_shortage(
+        _col([12, 0, 0, 0], [11, 0, 0, 0], [0, 0, 0, 0]),
+        _crw.ECON_FOOD) == 0, "a surplus is not a negative shortage"
+
+    # THE REFUSALS, which are the part that matters. Those
+    # Short_Anims_ loops (coldraw.cpp:170-177) sit in the ELSE of
+    # `if (imports[t] < 0 || t == ECON_INDUSTRY)` (coldraw.cpp:152),
+    # so the original draws a shortage ONLY for a non-industry row
+    # with non-negative imports. The arithmetic alone would produce a
+    # number on the industry row too, and drawing it would be an
+    # invention wearing a citation — decision 33 says mirror the
+    # refusal, not just the sum.
+    _short_ind = _col([2, 2, 0, 0], [9, 9, 0, 0], [0, 0, 0, 0])
+    assert _crw.production_shortage(_short_ind, _crw.ECON_FOOD) == 7, (
+        "the food row of the refusal case must have a shortage, or "
+        "the industry half of this check proves nothing")
+    assert _crw.production_shortage(
+        _short_ind, _crw.ECON_INDUSTRY) == 0, (
+        "a shortage was computed for the INDUSTRY row; the original "
+        "never draws one there (coldraw.cpp:152)")
+    # NEGATIVE imports, the other refusal. The word is tested here,
+    # not the byte — the same field, the other comparison.
+    assert _crw.production_shortage(
+        _col([2, 0, 0, 0], [9, 0, 0, 0], [-1, 0, 0, 0]),
+        _crw.ECON_FOOD) == 0, (
+        "a shortage was computed for a row with negative imports; "
+        "that row takes the IF at coldraw.cpp:152 and draws imports "
+        "as Prod_Anims_ instead")
+
+    # ── The shortage reaches the panel, and only when it should ──
+    _sh_row = dict(_fake, shortage=[3, 5, 0, 0])
+    _sh = {e.label.lower(): e.shortage
+           for e in _co.visible_rows(_sh_row, _ocfg, _words, _climates)}
+    assert _sh["food"] == _ocfg["shortage_value"].replace("{shortage}", "3"), (
+        f"the food row's shortage element is {_sh['food']!r}; the "
+        f"wording is layout.json's shortage_value (decision 15) and "
+        f"the substitution is a replace (decision 37)")
+    assert _sh["industry"], "a non-zero shortage was dropped"
+    # ZERO DRAWS NOTHING AT ALL, not a 0 and not a dash — the same
+    # shape as the empty selection. A template that renders "0" must
+    # not be able to bring the element back, because the decision is
+    # the number's and is taken before the template.
+    assert _sh["research"] == "" and _sh["bc"] == "", (
+        f"a zero shortage produced {_sh['research']!r}; the original "
+        f"draws no sprite, and a 0 is a claim where it has an absence")
+    assert all(e.shortage == "" for e in _co.visible_rows(
+        _fake, _ocfg, _words, _climates)), (
+        "a colony with no shortage anywhere still produced elements")
+    # A non-production row can never take one, whatever it is called.
+    assert _sh["growth"] == "" and _sh["size"] == "", (
+        "a non-production row was given a shortage element")
+
+    # AND ON THE SURFACE: the marker is ink, and no shortage is no
+    # ink. Rendered twice into the same rect and differenced, so this
+    # asserts the drawing and not the tuple a second time.
+    _sh_area = pygame.Rect(*app.layout.rect(_scr_op.box_rect("output_panel")))
+    _sh_surf = pygame.Surface((_sh_area.right + 8, _sh_area.bottom + 8))
+    _sh_ink = []
+    for _r in (_fake, _sh_row):
+        _sh_surf.fill((0, 0, 0))
+        _co.render(_sh_surf, _r, _sh_area, _ocfg, _words, _climates,
+                   app.layout, app.style)
+        _sh_ink.append(int(pygame.surfarray.array3d(
+            _sh_surf.subsurface(_sh_area)).sum()))
+    assert _sh_ink[1] > _sh_ink[0], (
+        f"the panel put no more ink on a colony with two shortages "
+        f"({_sh_ink[1]}) than on one with none ({_sh_ink[0]})")
+    ok("colony summary production net (four branches, the (int8_t) "
+       "cast, the shortage and both of its refusals)")
 
     # ── The list SCROLLS, for viewing only (fundament 46) ──
     # Fifteen colonies against a panel that holds ten, so the offset
