@@ -1388,9 +1388,33 @@ references in `doc/v3_orion2re_index.md`.
   `Get_Selected_Pop_` (`colsum.cpp:1006`) calls
   `Do_Colony_Info_Pop_Stuff_For_Pop_` in its pointer mode, which
   walks the icons and takes the first whose right edge is at or past
-  the pointer. This is the one place where `INJECT_CLICK` moving the
-  game's pointer (`platform.cpp:1171-1172`) is required rather than a
-  nuisance — and it inherits open fix 3's window-coordinate limit.
+  the pointer.
+
+  **CORRECTED 4 September 2026: an injected click cannot supply that
+  pointer, and the window size is not why.** `INJECT_CLICK` does set
+  the position before enqueuing the button
+  (`Set_Present_Mouse_Position_` then `Enqueue_Mouse_Input_Event_`,
+  platform.cpp:1171-1172) — so the claim that the click carries its
+  own pointer is true of that instant and false a frame later.
+  `Sync_Mouse_State_From_SDL_` (platform.cpp:825-846) re-reads the
+  REAL mouse and calls `Set_Present_Mouse_Position_` again, from the
+  main loop (`:390`) and from the event service (`:1127`), so the
+  injected position is overwritten before the game consumes the
+  click.
+
+  The click's FIELD still resolves from the enqueued coordinates, so
+  the right row and column are hit; only the ICON lookup reads the
+  clobbered pointer, and it finds nothing where the real mouse is not
+  standing. `Get_Selected_Pop_` returns -1, `Get_Cluster_` is never
+  called, and the observable result is a click that does nothing at
+  all — measured, 4 September 2026, twice.
+
+  **The one lever is focus:** the sync returns early when
+  `g_window_focus_state == 0` (platform.cpp:826). So an injected
+  pointer survives only while the game window is NOT focused, and
+  nothing on the wire reports focus. This is `doc/orion2re_open_fixes.md`
+  item 3, and it means that item's proposed fix — bypass the
+  coordinate mapping — is not sufficient on its own.
 
   Icon x is
   `(30 - squish) * i + left_x` with `squish` from

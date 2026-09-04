@@ -23,7 +23,7 @@ section for what was found where.
 |---|---|---|---|
 | 1 | `Server::SendFrame` drops a client on a short write | **Applied** in the 30 Aug tree — verify | Nothing, if applied |
 | 2 | FIELD_LIST only sent on a field-count change | **Applied** in the 30 Aug tree — verify | Nothing, if applied |
-| 3 | INJECT_CLICK coordinates mapped as window coordinates | Open | INJECT_CLICK only reliable at a 640x480 window |
+| 3 | INJECT_CLICK: coordinates mapped as window coordinates, AND the real mouse overwrites the injected pointer every frame | Open | Any injected click whose handler reads the POINTER does nothing — the population move is blocked |
 | 4 | INJECT_CLICK pushes no MOUSEMOTION before the buttons | Open | Radio buttons toggle unreliably |
 | 5 | `racesel.lbx [entry 138]` crash on Custom Race Accept | **Applied** in the 30 Aug tree — that is why it stopped reproducing | Nothing |
 | — | Custom Race reports screen ID 50 | **Applied** | — |
@@ -225,6 +225,54 @@ window size, and nothing on the wire reports it — neither
 `HELLO_REPLY` nor the snapshot. A client can pre-scale its
 coordinates only if a human tells it how big the window is, which is
 not a fix so much as a note about what the missing number costs.
+
+### And at 640x480 it still does not work — the mapping is only half of it
+
+Run again with the game window at 640x480, where
+`Map_Window_Point_To_Game_Point_` is the identity and there is
+nothing to pre-scale, the pick-up **still picked up nothing**. So the
+coordinate mapping is not the whole cause, and the rest of it is the
+second sentence of the root cause above, which turns out to matter
+more than the first.
+
+`Sync_Mouse_State_From_SDL_` (platform.cpp:825-846) reads the REAL
+mouse with `SDL_GetMouseState` and calls
+`Set_Present_Mouse_Position_` again, from the main loop (`:390`) and
+from `Service_Pending_Window_Events_` (`:1127`). `INJECT_CLICK` sets
+the position and then enqueues the button (`:1171-1172`), so the
+injected position is correct for an instant and is overwritten before
+the game consumes the click.
+
+**Which half of a click survives, and which does not.** The button
+event carries the injected coordinates in the queue, so a handler
+that reads the EVENT sees the right place — the field is resolved
+correctly. A handler that reads the POINTER sees the real mouse. The
+colony summary's population pick-up does the second:
+`COLSUM::Get_Selected_Pop_` (colsum.cpp:1006) walks the icons against
+`mouse::Pointer_X_()`, finds none where the real cursor is not
+standing, returns -1, and `Get_Cluster_` is never called. The visible
+result is a click that does nothing whatsoever.
+
+Consistent with that, the scan box after the attempt showed a
+different row's colony — the one under the physical cursor — rather
+than the row that was clicked.
+
+**So the fix proposed above is not sufficient.** Bypassing the
+coordinate mapping for injected events leaves the sync overwriting
+the position a frame later. What an injecting client needs is for an
+injected pointer position to SURVIVE until the input is consumed —
+for instance by suppressing the sync for one frame after an injected
+event, or by carrying the position with the queued event so that
+`Pointer_X_()` answers from it while that event is being handled.
+
+**There is one accidental lever and it is not a workaround.** The
+sync returns early when `g_window_focus_state == 0`
+(platform.cpp:826), so an injected position survives while the window
+is unfocused. Nothing on the wire reports focus, so a client cannot
+know whether it is in that state, and a rule of "click only while
+unfocused" would be a behaviour depending on something invisible.
+Recorded because it explains why an injected click may appear to work
+intermittently, not because it is a way to live with the bug.
 
 ---
 
