@@ -152,6 +152,23 @@ absent from this save, so `Get_Effective_Pop_Player_`'s branch at
 colony.cpp:1261 remains transcription only. That needs a savegame
 holding androids, natives or a conquered population — not another
 turn, since the race mix does not change across one.
+
+**What DID change, 4 September 2026: the transcription now has three
+sites instead of one, and they agree.** Reading `colmove.cpp` for the
+pop-movement work found `COLONY::Pop_To_Pop_State_`
+(colony.cpp:1240), which maps low nibble **9 -> state 3** and **8 ->
+state 4** and everything else to 2; and `COLMOVE::
+Give_Colonist_New_Job_` (colmove.cpp:518-538) then keys its two
+refusals on exactly those states — state 3 may not take research or
+industry, state 4 may not change job at all — with ESTRINGs naming
+natives and androids respectively. `COLMOVE::Get_Cluster_`
+(colmove.cpp:59) is the third: it refuses `pop & 0x0F == 9` outright
+with the natives string.
+
+So **9 = native and 8 = android** is no longer one function's word
+for it. It is still not a live witness, and the sentence above stands
+unchanged: what is missing is a save that HOLDS one, and no amount of
+source agreement replaces that.
 """
 from core.structs import Spec
 

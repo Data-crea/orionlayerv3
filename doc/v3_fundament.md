@@ -1314,13 +1314,65 @@ references in `doc/v3_orion2re_index.md`.
   `COLMOVE::Get_Cluster_`, which unassigns that pop and every
   *identical* one after it in the array (same job, state, race,
   conquered flag — `Pops_Identical_`); the second click on a job
-  column calls `Send_Cluster_`. Within an identical group the icons
-  are drawn in array order, so clicking icon m of a group of size G
-  moves G-m+1 pops. The drop rules are five, all in
-  `Give_Colonist_New_Job_` (`colmove.cpp:518`): natives (race 9) only
-  farm, androids (race 8) keep their job, at most 42 per job, farmers
-  at most `max_farms` unless arriving by transport, and a click on
-  another colony is a transport with an ETA dialog. Icon x is
+  column calls `Send_Cluster_`. **Which of the two a click is comes
+  from `_cluster_colony_n`, not from where it lands**
+  (`colsum.cpp:861-870`): with no cluster held it is a pick-up, with
+  one held it is a drop, wherever it lands. `Get_Cluster_` is never
+  reached while a selection exists, so there is no "replace".
+  Within an identical group the icons are drawn in array order, so
+  clicking icon m of a group of size G moves G-m+1 pops **when the
+  group is contiguous** — `Get_Cluster_` scans to the END of the
+  array and takes every identical pop, so a group split by a
+  different pop takes more than the run under the cursor.
+
+  **The drop rules in `Give_Colonist_New_Job_` are FOUR, not five**
+  (`colmove.cpp:518-558`, corrected 4 September 2026): natives cannot
+  take research or industry, androids (`pop_state == 4`) keep their
+  job, at most 42 per job (`Sum_Colonists_ >= 42`), and farmers at
+  most `max_farms` unless the move is an inter-colony transfer. The
+  fifth — a click on another colony being a transport with an ETA
+  dialog — is not in that function at all; it is the long branch of
+  `Send_Cluster_` (`colmove.cpp:180-500`).
+
+  **A fifth refusal sits at the FIRST click**, which that count
+  missed entirely: `Get_Cluster_` rejects a native outright
+  (`pop[i] & 0x0F == 9`, `colmove.cpp:59-64`), shows its own ESTRING
+  and never sets `_cluster_colony_n`. Natives are refused twice, in
+  two places, with two different messages.
+
+  Two things about the native rule. Its test is `pop_state == 3 ||
+  pop_state == 6`, and **state 6 is unreachable**:
+  `Pop_To_Pop_State_` (`colony.cpp:1240`) returns 3 for low nibble 9,
+  4 for 8 and 2 for everything else, and there is no other
+  definition — so the `== 6` arm is dead and the rule reduces to the
+  same nibble-9 test the pick-up uses. And **its message disagrees
+  with its behaviour**: the string says natives can only farm *or
+  mine*, while the code refuses `ECON_RESEARCH` and `ECON_INDUSTRY`
+  and leaves only `ECON_FOOD`.
+
+  **A refused drop is partial, not atomic.** `Send_Cluster_` returns
+  the moment `Give_Colonist_New_Job_` says no (`colmove.cpp:168-173`),
+  leaving the pops it already moved in their new job and the rest
+  unassigned with the cluster still held.
+
+  **There is no cancel that stays on the screen.** Both
+  `Clear_Cluster_` call sites on the colony summary (`colsum.cpp:802`
+  and `:937`) are leave-the-screen paths. Clearing IS a true undo —
+  `Get_Cluster_` only clears bit `0x200` and `Clear_Cluster_` sets it
+  back, job bits untouched — but the only ways to reach it are
+  leaving the screen or dropping the pops somewhere. Any HD preview
+  that creates a real selection therefore strands the player, which
+  is why a preview must not inject.
+
+  **The pick-up reads `mouse::Pointer_X_()`, not the click point.**
+  `Get_Selected_Pop_` (`colsum.cpp:1006`) calls
+  `Do_Colony_Info_Pop_Stuff_For_Pop_` in its pointer mode, which
+  walks the icons and takes the first whose right edge is at or past
+  the pointer. This is the one place where `INJECT_CLICK` moving the
+  game's pointer (`platform.cpp:1171-1172`) is required rather than a
+  nuisance — and it inherits open fix 3's window-coordinate limit.
+
+  Icon x is
   `(30 - squish) * i + left_x` with `squish` from
   `Calculate_Squish_Step_` (`coldraw.cpp:12`), where `30 / -3` is C
   truncation toward zero — `int(a / b)` in Python, never `//`. Column
