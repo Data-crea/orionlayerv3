@@ -23,7 +23,7 @@ section for what was found where.
 |---|---|---|---|
 | 1 | `Server::SendFrame` drops a client on a short write | **Applied** in the 30 Aug tree — verify | Nothing, if applied |
 | 2 | FIELD_LIST only sent on a field-count change | **Applied** in the 30 Aug tree — verify | Nothing, if applied |
-| 3 | INJECT_CLICK: coordinates mapped as window coordinates, AND the real mouse overwrites the injected pointer every frame | Open | Any injected click whose handler reads the POINTER does nothing — the population move is blocked |
+| 3 | INJECT_CLICK: coordinates mapped as window coordinates, AND the real mouse overwrites the injected pointer every frame | Open upstream; **patched locally** 4 Sep 2026 (`doc/ext_inject_pointer.patch`) | Without the patch, any injected click whose handler reads the POINTER does nothing |
 | 4 | INJECT_CLICK pushes no MOUSEMOTION before the buttons | Open | Radio buttons toggle unreliably |
 | 5 | `racesel.lbx [entry 138]` crash on Custom Race Accept | **Applied** in the 30 Aug tree — that is why it stopped reproducing | Nothing |
 | — | Custom Race reports screen ID 50 | **Applied** | — |
@@ -279,12 +279,39 @@ Pumped, the press is handled at the injected point — which is why
 the right field is reached — and the release then walks the pointer
 away before `Get_Selected_Pop_` asks.
 
-**A patch is in OrionLayer's tree at `doc/ext_inject_pointer.patch`**,
-not applied here. It suppresses the sync while injected input is
-unconsumed, cleared when the queue drains rather than after a fixed
-number of frames, so the window is exactly as long as the events are
-in flight. Its price is written up with it: during those one or two
-frames the game does not see real mouse movement.
+**A patch is in OrionLayer's tree at `doc/ext_inject_pointer.patch`.**
+It suppresses the sync while injected input is unconsumed, cleared
+when the queue drains rather than after a fixed number of frames, so
+the window is exactly as long as the events are in flight. Its price
+is written up with it: during those one or two frames the game does
+not see real mouse movement.
+
+### APPLIED LOCALLY — 4 September 2026
+
+Applied by decision to the working tree at `~/orion2re`, engine
+**1.60.0**, git `cf4d9617`, and rebuilt. Recorded here rather than
+left implicit: **OrionLayer is now running against an engine that
+exists only on this machine.** At the next update from Joes that
+either conflicts visibly or vanishes silently, and the second is the
+one to watch for — the symptom of it vanishing is the population move
+going quiet again in exactly the way it did before.
+
+To take it back off, one line:
+
+```bash
+cd ~/orion2re && patch -R -p1 < ~/orionlayerv3/doc/ext_inject_pointer.patch
+```
+
+then rebuild. Both directions were dry-run before the real apply:
+reverse applies cleanly, and a second forward apply is refused as
+"previously applied" rather than doubling the hunks.
+
+Note the tree was **not** clean when this went in — `CMakeLists.txt`,
+`fields.cpp`, `mox2.cpp`, `platform.cpp` and `racesel.cpp` already
+carried local changes and `src/ext/` is untracked entirely, because
+the Extension API itself lives there as a local addition. So
+`git checkout -- src/game/platform.cpp` is NOT the way back: it would
+take the existing ext hooks with it. The reverse-patch line above is.
 
 **There is one accidental lever and it is not a workaround.** The
 sync returns early when `g_window_focus_state == 0`

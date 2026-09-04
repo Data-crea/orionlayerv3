@@ -6,11 +6,24 @@ POINTER rather than the event. Blocks the colony summary's
 population move today. This is `doc/orion2re_open_fixes.md` item 3,
 second half.
 
-    Not applied to orion2re's tree by OrionLayer. It is here as a
-    patch because a working patch is a better request than a
-    description, and because a locally patched engine is a version
-    that exists nowhere else — which either shows up at the next
-    update or disappears silently.
+    APPLIED LOCALLY on 4 September 2026, by decision, to the
+    orion2re working tree at ~/orion2re (engine 1.60.0, git
+    cf4d9617). Not a silent change: it is recorded here and under
+    item 3 of doc/orion2re_open_fixes.md, and it comes back off
+    with one line —
+
+        cd ~/orion2re && patch -R -p1 < \
+            ~/orionlayerv3/doc/ext_inject_pointer.patch
+
+    A locally patched engine is a version that exists nowhere
+    else, so it either shows up at the next update or disappears
+    silently. That is the cost of running it, and the reason the
+    patch is also the request to Joes.
+
+    THE HUNKS BELOW ARE GENERATED, not hand-written: the edits
+    were made and then diffed, so the line numbers are the file's
+    own. An earlier hand-written version of this patch would not
+    have applied.
 
 WHAT BREAKS TODAY
 
@@ -93,53 +106,55 @@ NOT A SOLUTION, AND DELIBERATELY NOT USED
 
 --- a/src/ext/ext_api.h
 +++ b/src/ext/ext_api.h
-@@ -22,6 +22,11 @@ extern bool g_hide_window;
+@@ -24,4 +24,10 @@
  /// Set by ProcessInput(), consumed by Get_Input_() early return.
  extern int16_t g_pending_field;
-
-+/// True while an injected mouse event is queued and not yet pumped.
-+/// Sync_Mouse_State_From_SDL_ skips itself while this is set, so the
-+/// injected position survives to whoever reads mouse::Pointer_X_().
+ 
++/// True while an injected mouse event is queued and not yet
++/// pumped. Sync_Mouse_State_From_SDL_ stands aside while this is
++/// set, so the injected position survives to whoever reads
++/// mouse::Pointer_X_(). Cleared by Pump_Game_Input_Queue_().
 +extern bool g_injected_mouse_pending;
 +
  } // namespace ext
-
 --- a/src/ext/ext_api.cpp
 +++ b/src/ext/ext_api.cpp
 @@ -13,6 +13,7 @@
- namespace ext {
-
+ 
+ bool g_hide_window = false;
  int16_t g_pending_field = 0;
 +bool g_injected_mouse_pending = false;
-
-@@ -203,6 +204,10 @@ static void ProcessInput() {
-         case MSG_INJECT_CLICK:
-             // Push a mouse click at (x, y) in 640x480 space.
+ 
+ static Server g_server;
+ static int16_t g_last_screen = -99;
+@@ -206,6 +207,13 @@
              // Must send both DOWN and UP — the game's input loop
              // waits for button release before returning.
              {
-+                // Hold off the real-mouse sync until these are
-+                // consumed, or it rewrites the release's coordinates
-+                // through the coalescing in
-+                // Enqueue_Mouse_Input_Event_.
++                // Hold the real-mouse sync off until these are
++                // consumed. Without it, Enqueue_Mouse_Input_Event_'s
++                // coalescing rewrites the injected RELEASE to the
++                // physical mouse position, and the pointer has walked
++                // away before the game reads it.
 +                g_injected_mouse_pending = true;
++
                  SDL_Event down{};
                  down.type = SDL_EVENT_MOUSE_BUTTON_DOWN;
-
+                 down.button.button = SDL_BUTTON_LEFT;
 --- a/src/game/platform.cpp
 +++ b/src/game/platform.cpp
-@@ -825,6 +825,15 @@ namespace platform {
- 		void Sync_Mouse_State_From_SDL_() {
- 			if (g_sdl_window == nullptr || g_window_focus_state == 0) {
+@@ -827,6 +827,19 @@
  				return;
  			}
-
+ 
 +#ifdef ORION2RE_EXT
-+			// An injected click carries its own position in the queued
-+			// event, and Pointer_X_() pumps before reading — but this
-+			// function would overwrite the position and, worse,
-+			// coalesce over the injected release. Stand aside until
-+			// the queue has been pumped.
++			// An injected click already carries its position in the
++			// queued event and Pointer_X_() pumps before reading, so
++			// the design is sound. What breaks it is this function:
++			// it overwrites the position, and its enqueue coalesces
++			// over the injected release (same button state), pulling
++			// the pointer back to the physical mouse. Stand aside
++			// until the queue has been pumped.
 +			if (ext::g_injected_mouse_pending) {
 +				return;
 +			}
@@ -147,18 +162,20 @@ NOT A SOLUTION, AND DELIBERATELY NOT USED
 +
  			float mouse_x = 0.0f;
  			float mouse_y = 0.0f;
-
-@@ -1490,6 +1499,13 @@ namespace platform {
+ 			const SDL_MouseButtonFlags sdl_buttons = SDL_GetMouseState(&mouse_x, &mouse_y);
+@@ -1490,6 +1503,15 @@
                  Queue_Key_Code_(event.key_code, event.scan_code);
              }
          }
 +
 +#ifdef ORION2RE_EXT
-+        // The injected events have been handled, so the real mouse
-+        // may speak again. Cleared here rather than on a frame count:
-+        // this runs from Pointer_X_(), Pointer_Y_() and the main
-+        // loop, so the suppression ends the moment anything asks.
++        // The injected events have been handled, so the real mouse may
++        // speak again. Cleared here rather than after a frame count:
++        // this runs from Pointer_X_(), Pointer_Y_() and the main loop,
++        // so the suppression ends the moment anything asks about the
++        // mouse, and it cannot outlive the events it protects.
 +        ext::g_injected_mouse_pending = false;
 +#endif
      }
-
+ 
+     void __cdecl Update_Cursor_Image_() {
