@@ -259,11 +259,32 @@ than the row that was clicked.
 
 **So the fix proposed above is not sufficient.** Bypassing the
 coordinate mapping for injected events leaves the sync overwriting
-the position a frame later. What an injecting client needs is for an
-injected pointer position to SURVIVE until the input is consumed —
-for instance by suppressing the sync for one frame after an injected
-event, or by carrying the position with the queued event so that
-`Pointer_X_()` answers from it while that event is being handled.
+the position a frame later.
+
+**And of the two ways round it, one is already how the engine
+works.** "Carry the position with the queued event" is not a change
+to make: `Enqueue_Mouse_Input_Event_` already carries x and y
+(platform.cpp:132), `mouse::Pointer_X_()` calls
+`Pump_Game_Input_Queue_()` before reading (mouse.cpp:51-54), and
+`User_Mouse_Handler_` sets the logical position from the event
+(mouse.cpp:237). The design is right and something else defeats it.
+
+**What defeats it is the coalescing, not just the overwrite.**
+`Enqueue_Mouse_Input_Event_` merges into the previous event when the
+button state matches, overwriting its coordinates rather than
+appending (platform.cpp:138-147). An injected button-up carries
+`buttons = 0` and so does the sync's position event, so the sync
+rewrites the injected release to wherever the physical mouse is.
+Pumped, the press is handled at the injected point — which is why
+the right field is reached — and the release then walks the pointer
+away before `Get_Selected_Pop_` asks.
+
+**A patch is in OrionLayer's tree at `doc/ext_inject_pointer.patch`**,
+not applied here. It suppresses the sync while injected input is
+unconsumed, cleared when the queue drains rather than after a fixed
+number of frames, so the window is exactly as long as the events are
+in flight. Its price is written up with it: during those one or two
+frames the game does not see real mouse movement.
 
 **There is one accidental lever and it is not a workaround.** The
 sync returns early when `g_window_focus_state == 0`

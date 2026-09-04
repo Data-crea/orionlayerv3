@@ -1,0 +1,164 @@
+Extension API: let an injected pointer position survive until the
+input is consumed.
+
+STATUS: NEEDED for any injected click whose handler reads the
+POINTER rather than the event. Blocks the colony summary's
+population move today. This is `doc/orion2re_open_fixes.md` item 3,
+second half.
+
+    Not applied to orion2re's tree by OrionLayer. It is here as a
+    patch because a working patch is a better request than a
+    description, and because a locally patched engine is a version
+    that exists nowhere else — which either shows up at the next
+    update or disappears silently.
+
+WHAT BREAKS TODAY
+
+    COLSUM::Get_Selected_Pop_ (colsum.cpp:1006) resolves which pop
+    icon was clicked from mouse::Pointer_X_(), not from the click
+    point. An injected click reaches the right FIELD but selects no
+    icon, so Get_Cluster_ is never called and the click does nothing
+    at all. Measured 4 September 2026, twice, at a 640x480 window
+    where the coordinate mapping is the identity — so the mapping is
+    not the cause.
+
+WHY THE OBVIOUS FIX IS NOT THE FIX
+
+    "Carry the position with the event" is already how the engine
+    works and is not the missing piece:
+
+        Enqueue_Mouse_Input_Event_(x, y, buttons)   platform.cpp:132
+            carries the position in the queued event
+        mouse::Pointer_X_()                        mouse.cpp:51
+            calls Pump_Game_Input_Queue_() FIRST, then reads
+        User_Mouse_Handler_                        mouse.cpp:237
+            sets the logical position FROM the event
+
+    So the design is already right. What defeats it is
+    Sync_Mouse_State_From_SDL_ (platform.cpp:825), which runs every
+    frame while the window has focus and does two things:
+
+        Set_Present_Mouse_Position_(real_x, real_y)   :846
+        Enqueue_Mouse_Input_Event_(real_x, real_y, …) :852
+            when the real position differs from the logical one
+
+    and the second one is the sharp edge, because
+    Enqueue_Mouse_Input_Event_ COALESCES: if the last queued event is
+    a mouse event with the same button state, it overwrites that
+    event's coordinates rather than appending (platform.cpp:138-147).
+    The injected button-up carries buttons = 0; so does the sync's
+    position event. The sync therefore rewrites the injected
+    release's coordinates to wherever the physical mouse is.
+
+    When the queue is finally pumped, the press is handled at the
+    injected point — which is why the right field is reached — and
+    the release then moves the logical pointer to the real mouse.
+    By the time Get_Selected_Pop_ asks, the pointer has already
+    walked away from the click.
+
+THE FIX
+
+    Suppress the sync while injected input is still unconsumed.
+    Deterministic rather than timed: the flag is set when a click is
+    injected and cleared when the input queue drains, so the
+    suppression lasts exactly as long as the injected events are in
+    flight and not one frame longer.
+
+PRICE
+
+    While suppressed, the game does not see real mouse movement or
+    real button changes. That window is the one or two frames between
+    injecting and pumping. It cannot leak: the clear is in
+    Pump_Game_Input_Queue_, which is called by Pointer_X_(),
+    Pointer_Y_() and the main loop, so any code that asks about the
+    mouse at all ends the suppression.
+
+    A player moving the physical mouse during those frames loses that
+    movement. On a hidden game window there is no physical mouse over
+    it to lose.
+
+    The alternative — tagging queued events with their origin and
+    refusing to coalesce across origins — is a bigger change to a
+    hot path, and it would still leave Set_Present_Mouse_Position_ at
+    :846 overwriting the position outright.
+
+NOT A SOLUTION, AND DELIBERATELY NOT USED
+    Sync_Mouse_State_From_SDL_ already returns early when
+    g_window_focus_state == 0 (platform.cpp:826), so an injected
+    pointer survives while the window is unfocused. Nothing on the
+    wire reports focus, so a client cannot know it is in that state,
+    and "inject only while unfocused" would be behaviour depending on
+    something invisible. It explains why an injected click can appear
+    to work intermittently; it is not a way to live with the bug.
+
+--- a/src/ext/ext_api.h
++++ b/src/ext/ext_api.h
+@@ -22,6 +22,11 @@ extern bool g_hide_window;
+ /// Set by ProcessInput(), consumed by Get_Input_() early return.
+ extern int16_t g_pending_field;
+
++/// True while an injected mouse event is queued and not yet pumped.
++/// Sync_Mouse_State_From_SDL_ skips itself while this is set, so the
++/// injected position survives to whoever reads mouse::Pointer_X_().
++extern bool g_injected_mouse_pending;
++
+ } // namespace ext
+
+--- a/src/ext/ext_api.cpp
++++ b/src/ext/ext_api.cpp
+@@ -13,6 +13,7 @@
+ namespace ext {
+
+ int16_t g_pending_field = 0;
++bool g_injected_mouse_pending = false;
+
+@@ -203,6 +204,10 @@ static void ProcessInput() {
+         case MSG_INJECT_CLICK:
+             // Push a mouse click at (x, y) in 640x480 space.
+             // Must send both DOWN and UP — the game's input loop
+             // waits for button release before returning.
+             {
++                // Hold off the real-mouse sync until these are
++                // consumed, or it rewrites the release's coordinates
++                // through the coalescing in
++                // Enqueue_Mouse_Input_Event_.
++                g_injected_mouse_pending = true;
+                 SDL_Event down{};
+                 down.type = SDL_EVENT_MOUSE_BUTTON_DOWN;
+
+--- a/src/game/platform.cpp
++++ b/src/game/platform.cpp
+@@ -825,6 +825,15 @@ namespace platform {
+ 		void Sync_Mouse_State_From_SDL_() {
+ 			if (g_sdl_window == nullptr || g_window_focus_state == 0) {
+ 				return;
+ 			}
+
++#ifdef ORION2RE_EXT
++			// An injected click carries its own position in the queued
++			// event, and Pointer_X_() pumps before reading — but this
++			// function would overwrite the position and, worse,
++			// coalesce over the injected release. Stand aside until
++			// the queue has been pumped.
++			if (ext::g_injected_mouse_pending) {
++				return;
++			}
++#endif
++
+ 			float mouse_x = 0.0f;
+ 			float mouse_y = 0.0f;
+
+@@ -1490,6 +1499,13 @@ namespace platform {
+                 Queue_Key_Code_(event.key_code, event.scan_code);
+             }
+         }
++
++#ifdef ORION2RE_EXT
++        // The injected events have been handled, so the real mouse
++        // may speak again. Cleared here rather than on a frame count:
++        // this runs from Pointer_X_(), Pointer_Y_() and the main
++        // loop, so the suppression ends the moment anything asks.
++        ext::g_injected_mouse_pending = false;
++#endif
+     }
+
