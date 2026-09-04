@@ -3287,6 +3287,10 @@ def main():
     # answer from the others. A case where every branch returns
     # production[t] would pass against any three of the four.
     #
+    # A to D are `colonyrows.drawn_production.__doc__`'s names for
+    # them, which is also where the record of WHICH of the four has
+    # ever been seen on a live save lives — B and C have, A and D
+    # have not, and the assertions below are all A and D have.
     #   A  byte(imports) < 0, t == INDUSTRY  -> max(0, prod - maint[t])
     #   B  byte(imports) < 0, t != INDUSTRY  -> prod - abs(imports)
     #   C  otherwise, maint[INDUSTRY] == 0 or t != INDUSTRY -> prod

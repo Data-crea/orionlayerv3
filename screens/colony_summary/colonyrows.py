@@ -129,19 +129,6 @@ SIZE_BASE = (5, 10, 15, 20, 25)
 #: racial pick, at index 0.
 TRAIT_CURRENT_GOVERNMENT = 0
 
-
-def _low_byte_signed(value):
-    """`(int8_t)` of an int16, as C does it — the LOW BYTE, signed.
-
-    Its own function so the cast is a named thing that a check can
-    aim at, rather than an `& 0xff` buried in an expression that the
-    next reader tidies into a plain comparison. It exists because
-    `COLDRAW::Draw_Colony_Prod_Both_` sign-tests `imports[t]` twice
-    and casts only once — coldraw.cpp:73 against :152. See
-    `drawn_production`.
-    """
-    byte = value & 0xFF
-    return byte - 256 if byte > 127 else byte
 #: orion2_consts.h:199-200. At or above this the original draws NO
 #: morale marks at all — Draw_Info_Morale_Both_ zeroes its own count
 #: rather than drawing an empty row, and 7 (Galactic Unification) is
@@ -275,6 +262,20 @@ def planet_name(colony, planets, stars):
     return f"{star.name} {numeral}"
 
 
+def _low_byte_signed(value):
+    """`(int8_t)` of an int16, as C does it — the LOW BYTE, signed.
+
+    Its own function so the cast is a named thing that a check can
+    aim at, rather than an `& 0xff` buried in an expression that the
+    next reader tidies into a plain comparison. It exists because
+    `COLDRAW::Draw_Colony_Prod_Both_` sign-tests `imports[t]` twice
+    and casts only once — coldraw.cpp:73 against :152. See
+    `drawn_production`.
+    """
+    byte = value & 0xFF
+    return byte - 256 if byte > 127 else byte
+
+
 def drawn_production(col, econ):
     """What the original DRAWS on one production row, not what it
     stores.
@@ -286,16 +287,53 @@ def drawn_production(col, econ):
     all four:
 
       imports[t] byte-negative:
-        t == ECON_INDUSTRY -> max(0, production - maintenance[t])
-        otherwise          -> production - abs(imports[t])
+        A  t == ECON_INDUSTRY -> max(0, production - maintenance[t])
+        B  otherwise          -> production - abs(imports[t])
       otherwise:
-        maintenance[ECON_INDUSTRY] == 0 or t != ECON_INDUSTRY
-                           -> production[t]
-        otherwise          -> max(0, production - maintenance[t])
+        C  maintenance[ECON_INDUSTRY] == 0 or t != ECON_INDUSTRY
+                              -> production[t]
+        D  otherwise          -> max(0, production - maintenance[t])
 
-    Note which `maintenance` each branch reads: the CONDITION in the
-    fourth branch tests `maintenance[ECON_INDUSTRY]` and the
-    SUBTRACTION uses `maintenance[prod_type]` (coldraw.cpp:85, :89).
+    A to D are the order the C++ writes them in and are the names
+    anything referring to a branch uses — here, in the smoke test and
+    in the status document.
+
+    **WHICH BRANCH HAS A LIVE WITNESS**, and which rests on the
+    source and the suite alone. Read off the reference save on
+    4 September 2026, eleven colonies of the local player:
+
+      B  production - abs(imports)     NINE colonies, through a
+                                       negative imports[BC]. Wolf
+                                       II's BC reads 18 stored
+                                       against 10 drawn.
+      C  production[t]                 every other row on that save.
+      A  industry, byte-negative       NO WITNESS. Not reached:
+         imports                       imports[ECON_INDUSTRY] is 0 on
+                                       all eleven, so the byte is
+                                       never negative on the only row
+                                       that can take this branch.
+      D  industry, maintenance         NO WITNESS. Not reached:
+                                       maintenance[ECON_INDUSTRY] is
+                                       0 on all eleven, which is D's
+                                       own condition inverted.
+
+    A and D are the two that subtract maintenance, and on this save
+    both would return `production` unchanged even if they were
+    reached, because the number they subtract is 0 — so the save
+    cannot distinguish them from C either. They are transcribed from
+    the source and asserted in the smoke test, and that is all they
+    have. One save with an industry-maintenance building settles both
+    at once.
+
+    Stated per branch rather than left to "the function is
+    transcribed", which is the same distinction `core/structs/
+    player.py` makes per FIELD: one flag covering a whole spec
+    implies evidence it does not have. This is that question a level
+    down — not which field, but which branch.
+
+    Note which `maintenance` each branch reads: the CONDITION on D
+    tests `maintenance[ECON_INDUSTRY]` and the SUBTRACTION uses
+    `maintenance[prod_type]` (coldraw.cpp:85, :89).
     On the industry row — the only row that reaches it — those are
     the same slot, so nothing depends on it today; it is transcribed
     as written because the next person to read the C++ will see two

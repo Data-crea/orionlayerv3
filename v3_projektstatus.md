@@ -23,9 +23,17 @@ II's BC row was read as 18 when it was 10 plus 8.
 This session (4 September 2026), last, in one line each: **the
 production rows drew the wrong number and now draw the original's** —
 `COLDRAW::Draw_Colony_Prod_Both_` computes a net before it draws
-anything, in four branches (coldraw.cpp:73-94) of which only one is
-`production[t]`, and on the reference save the two differ on NINE
-colonies of eleven, Wolf II's BC reading 18 stored against 10 drawn;
+anything, in four branches (coldraw.cpp:73-94, labelled A to D in
+`colonyrows.drawn_production`) of which only one is `production[t]`,
+and on the reference save the two differ on NINE colonies of eleven,
+Wolf II's BC reading 18 stored against 10 drawn; **two of those four
+branches have a live witness and two do not** — B and C are confirmed
+against a running game, while A and D are transcribed and tested and
+have never been reached by a save, because both need the industry row
+and `imports[ECON_INDUSTRY]` and `maintenance[ECON_INDUSTRY]` are 0
+on all eleven colonies, so the distinction is recorded per branch the
+way `core/structs/player.py` records it per field rather than left to
+one word covering all four;
 the SHORTAGE is drawn beside it with both of the original's refusals
 mirrored (never on the industry row, never with negative imports,
 coldraw.cpp:152), Wolf II's single food marker confirmed live;
