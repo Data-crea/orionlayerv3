@@ -506,10 +506,19 @@ grep against the source, needs no live session, and survives a field
 list that shifts — the scroll field is only added when there are ten
 or more colonies, which renumbers everything after it.
 
-The trade-off is the known one: `INJECT_CLICK` carries window
-coordinates (open fix 3), so this holds at a 640x480 window, which is
-what OrionLayer runs the original at. It is also the path the
-population bars will need anyway — a pop move is two clicks at
+The trade-off used to be the known one: `INJECT_CLICK` carried
+window coordinates (open fix 3), so this only held at a 640x480
+window. **That is gone as of 4 September 2026** — the command now
+converts with the renderer's own inverse before pushing the event
+(`doc/ext_inject_click.patch`), so a `native_click` point is a game
+coordinate at any window size. Worth naming the reason the
+constraint could not simply be lived with: the window size is on no
+wire message and, under Wayland, cannot be measured from outside at
+all, so "just run it at 640x480" was a precondition nobody could
+check — and an unverifiable precondition is one that goes missing
+quietly, taking the click to the wrong row with every number on
+screen still correct. It is also the path the population bars will
+need anyway — a pop move is two clicks at
 computed positions, and there is no field id for "icon 7 of the
 farmers".
 
