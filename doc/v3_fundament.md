@@ -548,8 +548,19 @@ after the key was byte-identical to one taken after the equivalent
 click. The pointer half of the claim was NOT observed and rests on
 the source alone: the cursor is composited onto the ARGB present
 surface (platform.cpp:794-822) and the Extension API sends the
-indexed one (ext_api.cpp:165), so no cursor is on the wire, and the
-game's window is hidden while the API is on (platform.cpp:1379).
+indexed one (ext_api.cpp:165), so no cursor is on the wire.
+
+**And the second half of that sentence was wrong — corrected
+4 September 2026.** It said the game's window is hidden while the API
+is on. It is not: `ext::Init()` sets `g_hide_window = true` from
+`mox2.cpp:382`, immediately before `Screen_Control_()`, which is long
+AFTER the platform layer has already called `SDL_ShowWindow`
+(platform.cpp:1394) with the flag still false. So the window is
+created 640x480, `SDL_WINDOW_RESIZABLE`, and SHOWN — a human can
+focus it, drag it and move the pointer across it, which is precisely
+the mechanism behind open fix 3's second half. A flag that is set
+after the thing it would have prevented is not a guard, and reading
+it as one cost a wrong sentence here.
 Saying which half was measured is the point of writing it down.
 
 **36. A value the API does not report is copied by hand — and gets a
