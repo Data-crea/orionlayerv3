@@ -954,6 +954,50 @@ def main():
             for i in range(6)]
     assert max(gaps) - min(gaps) <= 6, gaps
 
+    # WHICH of the three bottom cutouts is the galaxy map is derived
+    # from the original, not from left-to-right position — the name
+    # was assigned by index until 4 September 2026 and was on the
+    # wrong hole the whole time (the same failure as the field dump
+    # that labelled _races_button "Research").
+    #
+    # The original draws its small galaxy map with
+    # MOVEBOX::Draw_Galaxy_Map_Box_(nullptr, 0, 0x17c, 0x15d, 0x80,
+    # 0x5b, ...) at colsum.cpp:415 — x_base 380, y_base 349, width
+    # 128, height 91 of 640x480 (movebox.cpp:4-9), confirmed by
+    # Colsum_Connect_Galaxy_Map_Stars_ passing the same four to
+    # Get_Galaxy_Map_Star_XY_ (colsum.cpp:734-735). The native
+    # numbers are literals here so a retyped one fails.
+    #
+    # The RULE is asserted, not the instance: whichever of
+    # fh.PANEL_KEYS lands nearest the original's rect must be the one
+    # called "galaxy_inset". The three holes share a y, so the
+    # discriminating axis is the centre x alone.
+    _GMAP_NATIVE = (380, 349, 128, 91)          # colsum.cpp:415
+    from core.config import REF_W as _GREF_W, REF_H as _GREF_H
+    _gsx, _gsy = _GREF_W / 640.0, _GREF_H / 480.0
+    _gref = (_GMAP_NATIVE[0] * _gsx, _GMAP_NATIVE[1] * _gsy,
+             _GMAP_NATIVE[2] * _gsx, _GMAP_NATIVE[3] * _gsy)
+    _gref_cx = _gref[0] + _gref[2] / 2.0
+    _pan = []
+    for _k in fh.PANEL_KEYS:
+        _r = cs.box_rect(_k)
+        assert _r is not None, f"colony_summary has no {_k} box"
+        _pan.append((abs(_r[0] + _r[2] / 2.0 - _gref_cx), _k))
+    _pan.sort()
+    assert _pan[0][1] == "galaxy_inset", (
+        f"the cutout nearest the original's map rect is {_pan[0][1]!r}, "
+        f"not 'galaxy_inset' (colsum.cpp:415, native {_GMAP_NATIVE}, "
+        f"reference centre x {_gref_cx:.0f}); distances {_pan}")
+    # And decisively so. A frame redrawn with three evenly spaced
+    # holes would put the runner-up close enough that "nearest" stops
+    # meaning anything, and this would then pass by a pixel rather
+    # than fail — which is the state the check exists to catch.
+    assert _pan[1][0] - _pan[0][0] >= 200, (
+        f"nearest {_pan[0]} beats runner-up {_pan[1]} by only "
+        f"{_pan[1][0] - _pan[0][0]:.0f} reference px; the frame's "
+        f"three bottom holes no longer identify the map by position")
+    ok("colony_summary galaxy_inset is the original's map hole")
+
     # Every button injects a click INSIDE the original's button
     # (colsum.cpp:265-273): the x is the field's left edge plus a
     # margin, the y sits in the 446 row. Asserting the source

@@ -18,7 +18,7 @@ one rule per screen, chosen from the path (screens/<name>/assets/):
   colony_summary  the largest hole is the list, the topmost the title,
                   the two on the right the sidebar and RETURN, the
                   bottom row the seven sort buttons, the remaining
-                  three (left to right) output / galaxy inset / spare
+                  three (left to right) output / spare / galaxy inset
 """
 import json
 import os
@@ -55,7 +55,22 @@ def find_holes(path):
 
 SORT_KEYS = ["name", "population", "food", "industry", "science",
              "producing", "bc"]
-PANEL_KEYS = ["output_panel", "galaxy_inset", "spare_panel"]
+# Left to right, so the galaxy map is the RIGHTMOST of the three —
+# derived from the source, not from position. The original draws its
+# small galaxy map with MOVEBOX::Draw_Galaxy_Map_Box_(nullptr, 0,
+# 0x17c, 0x15d, 0x80, 0x5b, ...) (colsum.cpp:415), whose signature
+# (movebox.cpp:4-9) reads those as x_base 380, y_base 349, width 128,
+# height 91; COLSUM::Colsum_Connect_Galaxy_Map_Stars_ passes the same
+# four to Get_Galaxy_Map_Star_XY_ (colsum.cpp:734-735). Scaled to the
+# reference area that native rect is (1140, 785, 384, 205) — centre x
+# 1332, which is the third hole, not the second. The middle hole
+# covers native x ~193-347, where the original draws its production
+# and morale sprite column (Draw_Colony_Wee_Prod_(..., 106, y_pos,
+# 366, 20), colsum.cpp:1171-1176) — values output_panel already
+# answers for, so that one is the spare. A smoke check asserts the
+# rule rather than this list, so a redrawn frame cannot quietly
+# reassign the names by position again.
+PANEL_KEYS = ["output_panel", "spare_panel", "galaxy_inset"]
 
 
 def _split_common(holes, main_name):
