@@ -1,0 +1,142 @@
+Extension API: report a screen ID for the two screens the game's own
+dispatcher does not route to.
+
+This is the divergence that was living as a loose file in the orion2re
+working tree (`racesel_custom_screen_id.patch`) and therefore in no
+list at all. It is here now, generated from the real diff, so it can
+be reverse-applied, counted and checked like the other one.
+
+STATUS: needed for HD routing to Select Race and to Custom Race. A
+client cannot tell which of the two is on screen without it.
+
+    APPLIED LOCALLY to the orion2re working tree at ~/orion2re
+    (engine 1.60.0, git cf4d9617), and it comes back off with
+
+        cd ~/orion2re && patch -R -p1 < \
+            ~/orionlayerv3/doc/ext_screen_id.patch
+
+    ONE FILE, AND IT IS JOES'. `src/game/racesel.cpp` is his, and
+    this patch is the whole of what we add to it. All three hunks are
+    inside `#ifdef ORION2RE_EXT`, so a build without the flag is his
+    code unchanged.
+
+    THAT FILE CARRIES A FOURTH DIVERGENCE WHICH IS NOT IN THIS
+    PATCH, deliberately. One unguarded line at racesel.cpp:305,
+
+        _old_race = static_cast<int16_t>(i);
+
+    is the crash fix of `doc/orion2re_open_fixes.md` item 5
+    (`racesel.lbx [entry 138]` on Custom Race Accept). It is a
+    different subject — a bug in his code, not a feature of ours —
+    it is unguarded on purpose, because guarding it would leave the
+    crash in a plain build, and it is Joes' to accept or refuse.
+    Reverse-applying this patch therefore leaves that one line
+    behind, which is correct and is stated here so nobody reports it
+    as a failed revert.
+
+    THE HUNKS BELOW ARE GENERATED. The three were separated from the
+    fourth by removing that single line from a scratch copy and
+    diffing against `git archive cf4d9617`; the result was applied
+    forward to a pristine export and compared byte for byte.
+
+WHY THE IDS ARE MISSING IN THE FIRST PLACE
+
+    `MOX::_current_screen` is the engine's own dispatch variable, not
+    a report: `MOX2::Screen_Control_` (mox2.cpp:35) reads it at the
+    top of every iteration and switches on it, so the value always
+    names the screen the dispatcher will run next. A screen sets it
+    when it wants to LEAVE.
+
+    Race selection and Custom Race are not in that switch. Race
+    selection is CALLED — from `newgame.cpp:108`, `netstart.cpp:33`
+    and `:388`, `hotpop.cpp:150` — and Custom Race
+    (`Racial_Option_Screen_`) is called from inside race selection.
+    So while either is on screen, `_current_screen` still names
+    whoever called them, and an external client sees New Game.
+
+THE THREE HUNKS
+
+    1. racesel.cpp:211, `Race_Selection_Screen_` entry
+       Sets `_current_screen = SCREEN_RACE` (6).
+
+    2. racesel.cpp:450, `Racial_Option_Screen_` entry
+       Saves the current value and sets the synthetic ID 50. Custom
+       Race has no ID of its own in `orion2_consts.h`; 50 is ours and
+       is documented in `doc/ext_api_dokumentation_v3.md`.
+
+    3. racesel.cpp:630, the Cancel path of `Racial_Option_Screen_`
+       Restores the saved value before `return 0`.
+
+AND ONE OF THEM HAS NO EXIT — READ THIS BEFORE TRUSTING SCREEN 6
+
+    Hunk 2 has a matching restore and hunk 1 does not, and that
+    asymmetry is a real defect rather than a tidiness question.
+
+    Custom Race is covered on BOTH of its exits, though only one of
+    them is ours. Cancel restores through hunk 3. Accept never
+    reaches hunk 3 and does not need to: the ORIGINAL's own line
+    `MOX::_current_screen = MOX::_return_screen` (racesel.cpp:692)
+    runs immediately before `finished = 1`, so from that assignment
+    on, the value names the destination. There are exactly two
+    returns in that function and both are accounted for.
+
+    Race selection is NOT. `Race_Selection_Screen_` writes
+    `_current_screen` once — hunk 1, on entry — and never again.
+    Its Cancel path (racesel.cpp:337-343) returns 0 without touching
+    it, and the caller does not either: `newgame.cpp:113-119` simply
+    reloads the New Game screen and carries on. So after cancelling
+    race selection, `_current_screen` reports **SCREEN_RACE (6) while
+    New Game (13) is on screen**, and it keeps reporting it for as
+    long as the player stays there — not for a frame, but until New
+    Game itself leaves.
+
+    For a client that routes on the screen ID, that is an HD Select
+    Race drawn over a game that is showing New Game, with no way for
+    the client to notice. CONFIRMED from source; NOT observed live,
+    because reaching it means leaving the running game. The live
+    check is one line: cancel out of race selection and read
+    `current_screen` off the next snapshot.
+
+    The fix has the same shape as hunk 2 and 3 — save on entry,
+    restore before `return 0` — and is deliberately NOT in this
+    patch. This file records what is applied; changing what is
+    applied is a decision, not a tidy-up.
+
+THE DIFF
+
+--- a/src/game/racesel.cpp
++++ b/src/game/racesel.cpp
+@@ -209,6 +209,9 @@
+     fields::Assign_Auto_Function_(Draw_Race_Selection_Screen_, 2);
+     _old_race = 0;
+     video::Set_Page_Off_();
++#ifdef ORION2RE_EXT
++        MOX::_current_screen = SCREEN_RACE;
++#endif
+     Draw_Race_Selection_Screen_();
+     palstore::Darken_Palette_(100);
+     palette::Clear_Palette_Changes_(0, 0xFF);
+@@ -447,6 +450,13 @@
+     fields::Clear_Fields_();
+     raceopt::Convert_Player_To_Flags_(player);
+     raceopt::Reload_Racial_Option_Screen_();
++#ifdef ORION2RE_EXT
++    // OrionLayer: Custom Race is a sub-screen of SCREEN_RACE without its
++    // own screen ID. Report a synthetic ID (50) while this screen is
++    // active so external clients can route to it; restore on cancel.
++    const int16_t ext_saved_screen = MOX::_current_screen;
++    MOX::_current_screen = 50;
++#endif
+     memcpy(raceopt::_cur_race_name, player_race_name, strlen(player_race_name) + 1);
+     raceopt::Calculate_Picks_();
+ 
+@@ -620,6 +630,9 @@
+                 fields::Clear_Fields_();
+                 fields::Deactivate_Auto_Function_();
+                 allocate::Pop_Block_(MOX::_screen_seg);
++#ifdef ORION2RE_EXT
++                MOX::_current_screen = ext_saved_screen;   // back to SCREEN_RACE
++#endif
+                 return 0;
+             }
+ 

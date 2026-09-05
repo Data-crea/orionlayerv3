@@ -26,7 +26,7 @@ section for what was found where.
 | 3 | INJECT_CLICK: coordinates mapped as window coordinates, AND the real mouse overwrites the injected pointer every frame | **Both halves patched locally** 4 Sep 2026 (`doc/ext_inject_click.patch`), **and both VERIFIED LIVE 5 Sep 2026**; open upstream | Without them an injected click lands on the wrong pixel on any window that is not 640x480, and the pointer walks off it before a handler that reads `Pointer_X_()` looks |
 | 4 | INJECT_CLICK pushes no MOUSEMOTION before the buttons | Open | Radio buttons toggle unreliably |
 | 5 | `racesel.lbx [entry 138]` crash on Custom Race Accept | **Applied** in the 30 Aug tree — that is why it stopped reproducing | Nothing |
-| — | Custom Race reports screen ID 50 | **Applied** | — |
+| — | Screen IDs for Select Race and Custom Race | **Applied** (`doc/ext_screen_id.patch`) | Nothing — but our own hunk leaves SCREEN_RACE standing after a cancel; see that section |
 | 6 | `s_0_0055110c` / `s_1_00551110` declared `[3]` and `[4]`, defined three times | **Question, not a fix** | Nothing today |
 | 7 | `Draw_Colony_Prod_Both_` sign-tests `imports[t]` as a byte once and as a word once | **Question, not a fix** | Nothing today; changes the FOOD/RESEARCH/BC rows, never INDUSTRY |
 | 8 | Two native messages in `colmove.cpp` disagree, and the one describing a capability is on an unreachable branch | **Question, not a fix** | Nothing today; decides which refusal HD shows |
@@ -511,17 +511,38 @@ crash that is fixed.
 
 ---
 
-## Applied: Custom Race reports screen ID 50
+## Applied: screen IDs for Select Race and Custom Race
 
-Not a request; recorded so it is not proposed again.
-`Racial_Option_Screen_()` is a sub-screen of SCREEN_RACE and the game
-never changes `MOX::_current_screen` on entry, so the API kept
-reporting 6 and no client could tell the two apart. The patch sets 50
-behind `#ifdef ORION2RE_EXT` and restores on cancel; the accept path
-was already correct. Documented in
+Not a request; recorded so it is not proposed again. **The patch is
+`doc/ext_screen_id.patch`** as of 5 September 2026 — until then it
+lived as a loose file in the orion2re working tree and was therefore
+in no list at all, which is the failure this document exists to
+prevent.
+
+`MOX::_current_screen` is the engine's dispatcher variable
+(`MOX2::Screen_Control_`, mox2.cpp:35) and neither screen is in its
+switch: race selection is CALLED from `newgame.cpp:108` and three
+other sites, and `Racial_Option_Screen_()` is called from inside it.
+So the API kept reporting the caller and no client could tell any of
+the three apart. Three hunks, all `#ifdef ORION2RE_EXT`: SCREEN_RACE
+on entry to race selection, the synthetic 50 on entry to Custom Race,
+and the restore on Custom Race's cancel. Documented in
 `doc/ext_api_dokumentation_v3.md` under "racesel.cpp — 3 insertions",
 and confirmed live: OrionLayer's Custom Race screen declares
 `GAME_SCREEN_ID = 50` and switches to it.
+
+**Custom Race is correct on both exits and Select Race is not** —
+found 5 September 2026 while writing the patch file, and it is our
+defect rather than Joes'. Cancel restores through our third hunk;
+Accept never reaches it and does not need to, because the original's
+own `MOX::_current_screen = MOX::_return_screen` (racesel.cpp:692)
+runs immediately before `finished = 1`. But `Race_Selection_Screen_`
+writes the ID once, on entry, and nothing ever clears it: its cancel
+path (racesel.cpp:337-343) returns 0 untouched and `newgame.cpp:113`
+just reloads New Game. **After cancelling race selection the API
+reports SCREEN_RACE while New Game is on screen, for as long as the
+player stays there.** The fix has the same shape as the other two and
+is not applied; the patch file carries the full argument.
 
 If it ever goes upstream, a named constant such as
 `EXT_SCREEN_CUSTOM_RACE` would be cleaner than a literal.

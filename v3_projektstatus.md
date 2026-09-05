@@ -687,6 +687,10 @@ to stay uncomfortable to extend.
 │   │                                  one recommended design
 │   ├── UMZUG.md                       Git/GitHub setup and the
 │   │                                  day-to-day workflow (German)
+│   ├── ext_screen_id.patch            Screen IDs for Select Race
+│   │                                  and Custom Race — applied,
+│   │                                  and carries the defect in
+│   │                                  its own first hunk
 │   ├── ext_ship_icon_owner.patch      Optional, not needed
 │   ├── ship_icon_measurement.md       Where the icon sizes come from
 │   └── starfield_measurement.md       Background star density
@@ -3042,6 +3046,20 @@ original mode. Cross-platform builds. Planet images for 12 of the 13
 races.
 
 ### Loose ends
+- **Select Race keeps reporting screen 6 after a cancel, and it is
+  our own patch that does it.** `Race_Selection_Screen_` writes
+  `MOX::_current_screen = SCREEN_RACE` on entry (our hunk, now in
+  `doc/ext_screen_id.patch`) and nothing clears it: the cancel path
+  returns 0 untouched and `newgame.cpp:113` reloads New Game. So a
+  player who backs out of race selection leaves the API reporting 6
+  while the game draws 13, until New Game itself exits — and the HD
+  dispatcher routes on that number, so it draws Select Race over a
+  New Game screen with no way to notice. Custom Race does not have
+  this: its cancel restores and its accept is covered by the
+  original's own line (racesel.cpp:692). CONFIRMED from source on
+  5 September 2026, NOT observed live; the check is to cancel out of
+  race selection and read `current_screen` off the next snapshot.
+  The fix is the same save-and-restore the Custom Race hunks use.
 - **`make_star_icons.py` does not reproduce the star sprites in the
   tree.** The committed 36 are trimmed to content (44 to 206 px); the
   tool emits uniform 256x256 canvases. Both render correctly — the
