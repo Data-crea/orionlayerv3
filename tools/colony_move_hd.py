@@ -50,8 +50,31 @@ from screens.colony_summary import colonylist  # noqa: E402
 from screens.colony_summary import colonymove  # noqa: E402
 from screens.colony_summary import colonypick  # noqa: E402
 from screens.colony_summary import colonysend  # noqa: E402
+from colony_list_preview import side_by_side  # noqa: E402
 
 SCREEN_COLONY_SUMMARY = 20
+
+
+def native_png(state, path):
+    """The game's own 640x480 frame, from the SAME snapshot, to PNG.
+
+    The comparison this project keeps paying for is the side-by-side
+    (fundament, "compare side by side before styling"), and it is only
+    a comparison if both halves are one moment: the HD render is made
+    from `state` and so is this. Taking the original half later would
+    photograph a different game.
+
+    Indexed pixels plus a 256-entry palette, exactly as
+    `core.original_view` reads them — the wire carries no RGB.
+    """
+    fb, pal = state.framebuffer, state.palette
+    if not fb or not pal:
+        return None
+    surf = pygame.Surface((640, 480), depth=8)
+    surf.set_palette([(r, g, b) for r, g, b in pal])
+    surf.get_buffer().write(bytes(fb[:640 * 480]))
+    pygame.image.save(surf, path)
+    return path
 
 #: Where the held-selection picture goes. `tools/colony_list_preview`
 #: uses /tmp/colony_list_preview for the same reason.
@@ -278,6 +301,17 @@ def main():
     os.makedirs(os.path.dirname(args.png) or ".", exist_ok=True)
     pygame.image.save(app.surface, args.png)
     print(f"  rendered with the selection held -> {args.png}")
+    # THE ORIGINAL HALF, from the same snapshot (see `native_png`).
+    native = os.path.join(os.path.dirname(args.png), "native.png")
+    if native_png(app.client.state, native):
+        pair_path = os.path.join(os.path.dirname(args.png), "side_by_side.png")
+        pygame.image.save(
+            side_by_side(app.surface, native), pair_path)
+        print(f"  the original at the same moment -> {native}")
+        print(f"  side by side                    -> {pair_path}")
+    else:
+        print("  NO NATIVE HALF: the snapshot carried no framebuffer, so "
+              "this is not a comparison")
 
     if args.cancel:
         click_at(app, xy[0], xy[1], button=3)
@@ -314,7 +348,14 @@ def main():
                                         target_job)
     changed = [i for i, raw in enumerate(state.colonies_raw)
                if i < len(before) and raw != before[i]]
-    print(f"colonies whose bytes changed: {changed}")
+    # THE INDEX IS BOUND TO A NAME, because an index alone is not a
+    # claim anybody can check: `[10]` says nothing about whether the
+    # right colony moved, and the whole point of diffing every record
+    # is that the wrong one is the failure being looked for.
+    named = {r["index"]: r["name"] for r in rows}
+    print("colonies whose bytes changed: "
+          + (", ".join(f"{i} = {named.get(i, '(not the player\'s)')}"
+                       for i in changed) or "none"))
     ok = changed == [row["index"]]
     if not ok:
         print(f"  EXPECTED EXACTLY [{row['index']}] — another colony "

@@ -443,7 +443,12 @@ def main():
     # 7. THE DIFF. Predicted after-state against the whole array.
     changed = [i for i, raw in enumerate(state.colonies_raw)
                if i < len(before_raw) and raw != before_raw[i]]
-    print(f"\ncolonies whose bytes changed: {changed}")
+    # Bound to names: an index alone is not a claim anybody can check,
+    # and "the wrong colony moved" is the failure this diff exists for.
+    named = {r["index"]: r["name"] for r in rows}
+    print("\ncolonies whose bytes changed: "
+          + (", ".join(f"{i} = {named.get(i, chr(40) + 'not the ' 'player' + chr(41))}"
+                       for i in changed) or "none"))
     ok = True
     if changed != [colony_index]:
         print(f"  EXPECTED EXACTLY [{colony_index}] — a different "

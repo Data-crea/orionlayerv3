@@ -2984,6 +2984,37 @@ finds.
   --spec` now decodes any record against its spec, so the 64-byte
   ceiling on the int16 column view no longer stands in the way.
 
+### Phase 3b — ACCEPTED, 5 September 2026
+
+Run against the reference save with the rebuilt binary, criterion by
+criterion, all five green:
+
+| Criterion | Result |
+|---|---|
+| full colony diff before and after one move | PASS — all 55 records compared, exactly one changed |
+| the colony index bound to a name | PASS — "10 = Blucher II"; both tools print it now, because an index alone is not a claim anybody can check |
+| abort path sends nothing on the wire | PASS — counted at the client, `activate_field=0 inject_click=0`, not "the screen looks the same" |
+| PNG render beside a native screenshot | PASS — `tools/colony_move_hd.py` now writes both halves FROM THE SAME SNAPSHOT and composes them through `colony_list_preview.side_by_side` |
+| `python tools/smoke_test.py` under `SDL_VIDEODRIVER=dummy` | PASS — 80 checks |
+
+**What the side-by-side showed that no table had.** The original
+draws its pop icons per race AND per job — orange farmers, blue
+workers, pale scientists (`People_Anim_`, colony_main.cpp:444) — in
+three FIXED, visibly boxed columns, and it fills its building column
+with "Trade Goods - 1t" where HD's is empty. The counts agree row for
+row (Blucher II 11/1/1, Blucher III 5/0/7, Draconis I 1/0/0), so the
+data is right and the two known gaps are exactly the ones already
+recorded: no building names without the `techname.lbx` extractor, and
+no identity in the cell yet. The HD zone colours are a different
+palette from the original's sprites and are already marked INVENTION.
+
+Carry-overs cleared with it: the held-cluster message now names
+RETURN — the control, not the gesture — with its reason beside it in
+`layout.json`, since pressing it runs `Clear_Cluster_`
+(colsum.cpp:804), an exact undo. The `zoom_probe` / `park_game`
+citations in fundament section 3 were already corrected in `ccf7e0c`
+and were re-read rather than re-written.
+
 ### Phase 3c — update to upstream (build 15 Aug 2026): DEFERRED
 
 Decided 5 September 2026. **Not during the colony screen work.**
