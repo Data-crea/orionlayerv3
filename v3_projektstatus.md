@@ -2984,6 +2984,29 @@ finds.
   --spec` now decodes any record against its spec, so the 64-byte
   ceiling on the int16 column view no longer stands in the way.
 
+### Acceptance fixtures — the two savegames, by name
+
+Recorded 5 September 2026. They live in **`~/orionlayer-fixtures/`**
+with a README of their own, and NOT in the repository: a savegame is
+the player's own game data, the same line decisions 40 and 42 draw
+for the help texts and the nebula sprites. What is in the repository
+is the identification, so a run can say whether it is measuring the
+save it thinks it is.
+
+| Fixture | Stardate | sha256 (first 16) | What it is for |
+|---|---|---|---|
+| `fixture_reference_3502.4.GAM` | 3502.4 | `ab70cc9ad5442335` | the move chain. 11 colonies, single race, **no native, no android, no conquered, every `max_farms` 255** — every plan it can produce predicts "all" |
+| `fixture_natives_3502.5.GAM` | 3502.5 | `b1f1aa466716d6c0` | population identity. Player 0 Elerian; 8 colonies; **Urna I is the only mixed one**, 1 pop of nibble 0 against 3 of nibble 9 |
+
+In-game names `"claude nicht lschen"` and `"2Natives"`; the originals
+were slots `SAVE8.GAM` and `SAVE2.GAM`. **Anything below that reads a
+save reads it by its fixture name**, because a test whose data lives
+only on one disk answers differently for everybody else — the
+help-file lesson, one domain over.
+
+Zhadoom III (14 pops) is the widest row in either fixture and is
+therefore the narrowest-cell case any picture has to survive.
+
 ### Phase 3b — ACCEPTED, 5 September 2026
 
 Run against the reference save with the rebuilt binary, criterion by
