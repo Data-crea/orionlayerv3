@@ -497,7 +497,7 @@ files under `doc/` and are only summarised here.
 | | |
 |---|---|
 | Python | 32,960 lines across 111 modules — `find . -name '*.py'`, `__pycache__` excluded, the smoke test's 6,400 included. The previous figure here (21,642 across 94) was carried from an unstated method and could not be reproduced |
-| Smoke test | `python tools/smoke_test.py` — **80 checks**, headless |
+| Smoke test | `python tools/smoke_test.py` — **81 checks**, headless |
 | Assets | 170 MB (select_race 68, galaxy_map 51, shared 23, new_game 21, colony_summary 1) |
 | Screens in HD | 7 of ~20–22 (colony summary draws list, sidebar, scan box and galaxy inset, and MOVES POPS — the first HD gesture that drives the game) |
 | Setup from clone | `python tools/setup.py` (deps via the system package manager) |
@@ -2996,7 +2996,7 @@ save it thinks it is.
 | Fixture | Stardate | sha256 (first 16) | What it is for |
 |---|---|---|---|
 | `fixture_reference_3502.4.GAM` | 3502.4 | `ab70cc9ad5442335` | the move chain. 11 colonies, single race, **no native, no android, no conquered, every `max_farms` 255** — every plan it can produce predicts "all" |
-| `fixture_natives_3502.5.GAM` | 3502.5 | `b1f1aa466716d6c0` | population identity. Player 0 Elerian; 8 colonies; **Urna I is the only mixed one**, 1 pop of nibble 0 against 3 of nibble 9 |
+| `fixture_natives_3502.5.GAM` | 3502.5 | `b1f1aa466716d6c0` | population identity. Player 0 Elerian; 8 colonies; **Urna I is the only mixed one**, 1 pop of nibble 0 against 3 of nibble 9. Also the only save with `max_farms == 0` colonies (Neptunus I, Piatuos I), so the `no_farming` refusal is reachable in it |
 
 In-game names `"claude nicht lschen"` and `"2Natives"`; the originals
 were slots `SAVE8.GAM` and `SAVE2.GAM`. **Anything below that reads a
@@ -3006,6 +3006,73 @@ help-file lesson, one domain over.
 
 Zhadoom III (14 pops) is the widest row in either fixture and is
 therefore the narrowest-cell case any picture has to survive.
+
+### Pop identity — HALF VERIFIED, and the halves are named
+
+5 September 2026, against `fixture_natives_3502.5.GAM`. This is the
+first pop-type value in the tree with two independent sources in
+decision 23's sense — until now every statement about nibbles 8 and 9
+rested on three source sites that could all have been wrong together.
+
+**VERIFIED: nibble 9 = native.** Three sources, one snapshot:
+
+1. **the data** — Urna I holds four pops, one of nibble 0 and three
+   of nibble 9, all four profession 0;
+2. **the picture** — that row's FARMERS column draws four sprites,
+   one thin Elerian farmer with a staff and three stocky figures
+   that are a different creature rather than a recolour. Same
+   three-to-one split, same column, same snapshot;
+3. **the game's own words** — hovering them on the colony screen
+   makes it print "Native farmers".
+
+**STILL OPEN: nibble 8 = android, and the conquered bit.** No pop in
+either fixture carries either. `Colony_Pop_Anim_` (colony.cpp:1268)
+can draw four classes and these saves witness two. So the identity
+marks in Task 4 are marked **"0 and 9 verified, 8 and conquered
+open"** — not "verified" with a footnote, because those are different
+claims and the second one invites a reader to stop reading.
+
+The evidence lives in `~/orionlayer-fixtures/evidence/` with the
+saves: the two screenshots Data captured, and a row-level HD/native
+pair rendered from one snapshot. Not in the repository — a screenshot
+of the player's game is the same category as the savegame.
+
+**A bug in the engine fell out of it**, filed as
+`doc/orion2re_open_fixes.md` item 11: `Colony_Has_Natives_`
+(colony.cpp:1391) tests nibble 8. It gates the occupation-policy
+popup, so a colony with natives is never offered the choice and one
+with androids is offered it pointlessly. Reproducible in the named
+save; the consequence for the engine is written into the item, and
+what we could NOT establish is written there too.
+
+**And the fixture closes a second shopping-list item by accident:**
+Neptunus I and Piatuos I have `max_farms == 0` and hold only
+scientists, so the `no_farming` refusal is finally reachable — a
+prediction that is not "all", which the reference save could not
+produce.
+
+### Zhadoom III — the earlier observation, resolved
+
+The step-1 report suspected the original drew visibly different
+sprites inside one job column there. It does not. Zhadoom III's 14
+pops all carry nibble 0, no conquered bit, and the picture agrees:
+ten identical orange farmers in the farmers column, four identical
+cyan workers in the workers column, scientists empty. **The
+difference is BETWEEN columns and it is the profession**, which is
+`People_Anim_(job, state, race)` indexing `race * 13 + job * 2 + 1`
+(colony_main.cpp:445).
+
+Neither candidate from the source applies: the shadow farmer needs
+`max_farms != 0xff` (coldraw.cpp:392) and Zhadoom III's is 255, and
+the darkened scanned pop blinks under the pointer rather than
+persisting. The earlier observation was about columns, and the row
+that really does differ within a column is Urna I.
+
+Worth keeping from it, for Task 4: **the original's native sprite
+does not encode the job.** Entry 0xAA is one sprite for every native
+whatever they do (colony_main.cpp:456); the job is carried by which
+COLUMN it stands in. HD's single track has no columns, so a cell must
+carry both — which is exactly what the fill-plus-mark split is for.
 
 ### Phase 3b — ACCEPTED, 5 September 2026
 

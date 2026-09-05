@@ -87,9 +87,11 @@ def pop_state(word):
     """`COLONY::Pop_To_Pop_State_` (colony.cpp:1240).
 
     Reads the low nibble, which is a PLAYER INDEX and not a race —
-    see `core/structs/colony.py`, which refuses to call it one. 8 and
-    9 are the sentinels; the meaning of those two has three agreeing
-    source sites and still no live witness.
+    see `core/structs/colony.py`, which refuses to call it one and
+    now carries the evidence. **9 = native is VERIFIED** as of
+    5 September 2026, by data, picture and the game's own label
+    together. **8 = android still has no witness**, because no save
+    this project holds contains one.
     """
     nibble = colony_struct.pop_player_index(word)
     if nibble == 9:
@@ -130,8 +132,9 @@ def _can_take_job(pops, n_pops, max_farms, index, new_job,
     1. **Natives take neither research nor industry**
        (colmove.cpp:524-529). Decides from the pop word's low nibble
        via `pop_state`. The nibble is VERIFIED live for 0..7 as a
-       player index; 9 meaning native is transcription with three
-       agreeing sites and no live witness.
+       player index, and **9 meaning native is VERIFIED too** as of
+       5 September 2026 — data, picture and the game's own label,
+       see `core/structs/colony.py`.
 
        The condition is written `state == 3 or state == 6` because
        that is what the source writes. `Pop_To_Pop_State_` cannot
@@ -149,7 +152,9 @@ def _can_take_job(pops, n_pops, max_farms, index, new_job,
        mirrored, and which side is wrong is not ours to decide.
 
     2. **Androids keep the job they have** (colmove.cpp:531-537).
-       Same nibble, value 8, same verification state. Note it
+       Same nibble, value 8, and this one is **still UNVERIFIED**:
+       no save this project holds contains an android, so the rule
+       is mirrored from the source alone. Note it
        compares against the pop's CURRENT profession, so an android
        dropped back on its own column is allowed — that path does
        not even reach here, see `plan_drop`.

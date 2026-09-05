@@ -32,6 +32,7 @@ section for what was found where.
 | 8 | Two native messages in `colmove.cpp` disagree, and the one describing a capability is on an unreachable branch | **Question, not a fix** | Nothing today; decides which refusal HD shows |
 | 9 | `Do_Colony_Info_Pop_Stuff_For_Pop_`'s second loop is named `race_idx` and iterates `MASK_CONQUERED` | **Question, not a fix** | Nothing today; decides how a pop cell is read and named in HD |
 | 10 | `ENGINE_VERSION` does not move when a serialized record layout changes | **Request** | A client cannot tell two incompatible builds apart and reads at the wrong offset |
+| 11 | `COLONY::Colony_Has_Natives_` tests nibble **8** (android), not 9 (native) | **Fix** — reproducible in a named save | Nothing for us; for the game, the occupation-policy popup is offered to the wrong colonies |
 
 Items 3 and 4 are both about INJECT_CLICK and both live in the same
 code path, but they are separate faults: 3 is where the coordinates
@@ -998,3 +999,95 @@ hash of them, additive in `src/ext/`, and the client will refuse to
 parse on a mismatch. The request stands because that only protects
 clients that use our Extension API, and the version literal protects
 everyone.
+
+---
+
+## 11. `Colony_Has_Natives_` tests the android nibble
+
+### Symptom
+
+    bool __cdecl Colony_Has_Natives_(int16_t colony_idx) {
+        ...
+        if ((MOX::_colony[colony_idx].pop[i] & 0x0F) == 8) {
+                                                     ^^^
+            return true;
+
+`colony.cpp:1391`. The function returns true for a colony holding
+ANDROIDS and false for one holding NATIVES. Its name says natives.
+
+### Why we are sure which nibble is which
+
+Not from reading the same tree three times. **Three independent
+sources, 5 September 2026**, against a savegame made for it —
+in-game name "2Natives", stardate 3502.5, sha256
+`b1f1aa466716d6c0c6b28c84fe270f430c732ec7cb3172d221be44b68708e2c8`.
+It is the player's own file and is not ours to ship; the sha256 is
+here so anyone reproducing this can say whether they have the same
+one.
+
+1. **The data.** Colony "Urna I" holds four pops: one with low
+   nibble 0 (the player, Elerian) and three with low nibble 9. All
+   four carry profession 0.
+2. **The picture.** On the colony summary, that row's FARMERS column
+   draws four sprites from the same snapshot: one thin Elerian
+   farmer with a staff, and three stocky figures that are a
+   different creature rather than a recolour. Same three-to-one
+   split, same column.
+3. **The game's own words.** Hovering those three on the colony
+   screen makes it print **"Native farmers"**.
+
+Nibble 9 is the native marker. `pop.h:15` says so
+(`RACE_NATIVE = 9u`), `Pop_To_Pop_State_` (colony.cpp:1240) agrees,
+and so does `Pop_Race_String_` (colony.cpp:948). Only
+`Colony_Has_Natives_` uses 8.
+
+### What it costs the engine
+
+One caller, `Do_Informational_And_Decision_Popups_` (colony.cpp:996):
+
+    if (colony->occupation_policy == 4) {
+        population_count = Sum_Colonists_(handle, -1, -1, -1, -1, 1);
+        if (population_count < 1) {
+            if (!Colony_Has_Natives_(handle)) goto check_production;
+        }
+        OCPOLPUP::Occupation_Policy_Popup_();
+
+`Sum_Colonists_` with `conquered_flag = 1` counts the assigned pops
+carrying the conquered bit (colony.cpp:2137-2140), so
+`population_count < 1` means "no conquered population here". The
+gate then asks whether there is a native population to decide about
+instead — and asks the wrong nibble. So:
+
+- a colony with natives and no conquered pops **never offers the
+  occupation-policy popup**;
+- a colony with androids and no conquered pops **does** offer it, for
+  a population that has nothing to decide.
+
+`occupation_policy` is what `Apply_Colony_Pop_Growth_`
+(colcalc.cpp:2106-2139) reads to decide whether to assimilate or
+remove a native or conquered pop each turn, and `OCPOLPUP` is the
+only place a player choice writes it (`ocpolpup.cpp:40`). Everything
+else that writes it writes 4, which is also the initial value
+(`initgame.cpp:458`). Consistent with that, Urna I in the save above
+sits at `occupation_policy == 4` with three natives and no conquered
+pops.
+
+**What we have NOT established:** whether a player can reach policy 0
+for such a colony by another route, and therefore whether this is a
+lost choice or only a popup that never appears. That is a question
+about intended behaviour and it is yours.
+
+### The fix
+
+One character, if the reading is right: `== 8` becomes `== 9` at
+colony.cpp:1396. We have not applied it — it is a behaviour change in
+your code with a gameplay consequence, not a compatibility shim, and
+it is not ours to decide. If you would rather the function keep its
+current test, the name is the thing that should move instead.
+
+### What it costs us
+
+Nothing. OrionLayer never calls it and does not mirror it. This is
+reported because we had the save, the picture and the label in one
+place, and a bug that can be shown three ways should not stay
+unreported.

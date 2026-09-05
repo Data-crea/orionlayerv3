@@ -266,6 +266,32 @@ POP_PROF_MAX = 2
 #: The two nibble values that are not player indices (pop.h:14-15).
 #: Named without "RACE" on purpose: they are sentinels inside the
 #: player-index nibble, and both resolve to the colony's owner.
+#:
+#: **9 = NATIVE IS VERIFIED — 5 September 2026, three sources, and it
+#: is the first pop-type value in this tree to have them.** Decision
+#: 23 asks for numeric agreement with live data, not for more reading
+#: of the same tree, and until this day every statement about 8 and 9
+#: rested on three source sites that could all be wrong together.
+#: Against `fixture_natives_3502.5.GAM` (see `v3_projektstatus.md`,
+#: sha256 b1f1aa466716d6c0...):
+#:
+#:   the DATA      Urna I holds four pops, one of nibble 0 and three
+#:                 of nibble 9, all four profession 0.
+#:   the PICTURE   the original's farmers column for that row draws
+#:                 four sprites, one thin Elerian farmer with a staff
+#:                 and three stocky figures that are a different
+#:                 creature rather than a recolour — the same
+#:                 three-to-one split, in the same column, from the
+#:                 same snapshot.
+#:   the GAME'S    hovering them on the colony screen makes the game
+#:   OWN WORDS     label them "Native farmers".
+#:
+#: **8 = ANDROID IS NOT VERIFIED.** That save carries no pop with
+#: nibble 8 and none with the conquered bit, so two of the four
+#: classes `Colony_Pop_Anim_` (colony.cpp:1268) can draw have no
+#: witness. Anything that marks its confidence must say "0 and 9
+#: verified, 8 and conquered open" and not "verified" with a
+#: footnote.
 POP_ANDROID = 8
 POP_NATIVE = 9
 #: colony.cpp:2129. At or above this the nibble is matched against a
