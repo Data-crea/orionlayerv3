@@ -42,6 +42,52 @@ the two lists in different orders with every value on both screens
 still correct; and `Clear_Cluster_`'s call sites are colsum.cpp:804
 and :938, not :802 and :937 as four documents said.
 
+**Three answers from the review, 5 September 2026, each of which
+changed something:**
+
+- **The ProcessInput finding was audited across the tree, not only
+  repaired here.** Four observe-then-send loops exist.
+  `viewctl.park_game` is safe structurally — it stops on an ABSOLUTE
+  target and never on a delta, so a stale snapshot costs it one
+  redundant step; `core/injection.py` is safe twice over, because the
+  FIELD_LIST is only sent after the game acted and the chain compares
+  against the signature it fired on; the fire-and-forget injections
+  observe nothing. `tools/zoom_probe.py` was WRONG — it drained
+  frames for a fixed 0.6 s and compared, a timed wait, while two
+  documents cited it as this project's event-driven pattern. It waits
+  for the change now, with the duration as a timeout, which also
+  repairs its conclusions: "this key does not scroll" is a finding
+  that reached the fundament and it has to rest on having waited for
+  a movement that never came. The audit and each reason are in the
+  fundament, because "it was checked" is otherwise unverifiable, and
+  the 4 September entry now points forward to the sharper one.
+- **The floor of two pairs is a count, and decision 21 refuses
+  counted waits, so the argument now stands beside the number** —
+  in `core.wire_protocol.EFFECT_PAIRS`, which is its one home
+  because the gap is a property of the API's tick ordering rather
+  than of any screen. It is a bolt against a predicate that was
+  already true before the send, not a settling time; three would
+  start skipping evidence. A smoke check refuses a reader that meets
+  the number without the reason, and the behavioural checks pin both
+  sides of the two.
+- **The sort key moved to the FRONT of the chain, and it is sent
+  unconditionally.** `Sort_Col_List_` runs at exactly two places in
+  the engine — screen entry (colsum.cpp:110) and the sort handler
+  (:830) — and never on its own, so the game's order is frozen for a
+  whole visit while HD re-sorts from every snapshot. The handler also
+  sets `_first = 0` (colsum.cpp:832), so establishing the window
+  first and sorting second would establish a window the sort then
+  moves: sort, then establish, then the two clicks. Unconditional
+  rather than "only when the key is one this move changes", because
+  the question is not what our move did — it is whether both lists
+  are still in one order, which nothing on the wire reports, and a
+  human can re-sort the game's own visible window at any time. The
+  conditional version would also need a table of which keys a pop
+  move affects, which is the shape of copy this project keeps being
+  bitten by. `_first` is still re-established from scratch afterwards
+  even though the sort just zeroed it — shortening it would be
+  remembering instead of establishing.
+
 **The three markings this phase adds, in the form the fundament
 demands — each says what the original does instead:**
 

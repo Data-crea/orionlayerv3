@@ -43,7 +43,8 @@ import time
 sys.path.insert(0, os.path.dirname(os.path.dirname(
     os.path.abspath(__file__))))
 
-from core.game_client import GameClient          # noqa: E402
+from core.game_client import GameClient
+from core.wire_protocol import EFFECT_PAIRS          # noqa: E402
 from core import mapcoords as mc                 # noqa: E402
 
 SCREEN_GALAXY_MAP = 0
@@ -56,7 +57,9 @@ ZOOM_OUT_FIELD = 9
 KEY_LEFT, KEY_RIGHT = 1073741904, 1073741903
 KEY_UP, KEY_DOWN = 1073741906, 1073741905
 
-SETTLE_S = 0.6          # generous: the game only republishes on tick
+#: How long to wait for a step's EFFECT before concluding there was
+#: none. A timeout, never the wait itself — see `settle`.
+SETTLE_S = 0.6
 
 
 def view(state):
@@ -98,13 +101,40 @@ def wait_state(client, timeout=3.0):
     return None
 
 
-def settle(client, seconds=SETTLE_S):
-    """Drain frames for a while and return the last state."""
+def settle(client, changed_from=None, seconds=SETTLE_S):
+    """(state, changed) once the view differs from `changed_from`.
+
+    CORRECTED 5 September 2026. This drained frames for a fixed 0.6 s
+    and then compared — a TIMED wait, which decision 21 refuses, and
+    which two documents were meanwhile citing as this project's
+    example of an event-driven one. It worked only because 0.6 s is
+    about twelve state/visual pairs and the effect needs two.
+
+    Two things were wrong with that, and the second is the one that
+    matters for a diagnostic. **The first message after a send cannot
+    carry the effect** — `ext::Tick()` consumes injected input before
+    it serializes anything (ext_api.cpp:341-386), so a shorter drain
+    would have compared against the world from before the step. And
+    **this tool's conclusions are findings**: "this key does not
+    scroll" reached the fundament. A conclusion of "nothing moved"
+    has to rest on having WAITED for a change that never came, not on
+    a drain that happened to be long enough.
+
+    So `changed_from` is the view before the step, the wait ends the
+    moment the view differs from it, and `changed` says which
+    happened. With no `changed_from` this is still the old drain, for
+    the one caller that only wants a current reading.
+    """
+    seen_state = client.stats.get("state", 0)
     deadline = time.monotonic() + seconds
     while time.monotonic() < deadline:
         client.poll()
+        if (changed_from is not None
+                and client.stats.get("state", 0) >= seen_state + EFFECT_PAIRS
+                and view(client.state) != changed_from):
+            return client.state, True
         time.sleep(0.02)
-    return client.state
+    return client.state, changed_from is None
 
 
 def report(label, before, after):
@@ -151,12 +181,13 @@ def main():
     for step in range(args.steps):
         before, before_c = view(state), centre(state)
         client.activate_field(ZOOM_IN_FIELD)
-        state = settle(client)
+        state, moved = settle(client, before)
         after, after_c = view(state), centre(state)
         report(f"step {step + 1}", before, after)
-        if after[2] == before[2]:
-            print("    scale did not change — already at maximum zoom, "
-                  "or field 8 is not the zoom button here")
+        if not moved or after[2] == before[2]:
+            print(f"    nothing moved in {SETTLE_S}s — already at "
+                  f"maximum zoom, or field 8 is not the zoom button "
+                  f"here")
             break
         print(f"    centre  {before_c} -> {after_c}"
               f"   {'HELD' if before_c == after_c else 'MOVED'}")
@@ -167,7 +198,7 @@ def main():
     for step in range(args.steps):
         before = view(state)
         client.activate_field(ZOOM_OUT_FIELD)
-        state = settle(client)
+        state, _moved = settle(client, before)
         report(f"step {step + 1}", before, view(state))
 
     # ── 2. Can a client move the origin at all? ──
@@ -177,18 +208,19 @@ def main():
                                 ("down", KEY_DOWN, KEY_UP)):
             before = view(state)
             client.inject_key(key)
-            state = settle(client)
+            state, moved = settle(client, before)
             after = view(state)
             report(name, before, after)
-            if before[:2] == after[:2]:
-                print("    no movement — this key does not scroll")
+            if not moved and before[:2] == after[:2]:
+                print(f"    no movement after waiting {SETTLE_S}s for "
+                      f"one — this key does not scroll")
             else:
                 dx = after[0] - before[0]
                 dy = after[1] - before[1]
                 print(f"    scroll step: ({dx}, {dy}) galaxy units "
                       f"at scale {after[2]}")
                 client.inject_key(back)
-                state = settle(client)
+                state, _restored = settle(client, after)
 
     end = view(state)
     print(f"\nEnd: origin ({end[0]}, {end[1]}) scale {end[2]}")

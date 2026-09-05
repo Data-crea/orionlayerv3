@@ -33,6 +33,33 @@ MSG_INJECT_KEY    = 0x81
 MSG_INJECT_CLICK  = 0x82
 MSG_CANCEL_FIELD  = 0x83
 
+#: How many STATE/VISUAL pairs after an injected command can still
+#: describe the world BEFORE it. One — so a caller that waits for an
+#: effect must let that one go by.
+#:
+#: `ext::Tick()` runs `ProcessInput()` first and serializes the
+#: snapshot and the frame afterwards, in the same tick
+#: (ext_api.cpp:341-386), so the message that follows a send was
+#: built from the world the send has not reached yet: the command has
+#: been handed over, not consumed. Measured 5 September 2026 — one
+#: increment of the colony summary's list window read the old `_first`
+#: at pair 1 and the new one at pair 2, every time.
+#:
+#: **IT IS NOT A SETTLING TIME, AND DECISION 21 IS WHY THAT HAS TO BE
+#: SAID.** Nothing may advance because a count or a clock ran out;
+#: what ends a wait is the caller's own predicate about the world.
+#: This is a bolt against one specific way that predicate can lie —
+#: it can have been true before the send. Two is the whole structural
+#: gap (the consuming tick, and the first tick that can show the
+#: effect); three would start skipping evidence, waiting past a step
+#: that landed on the first eligible pair.
+#:
+#: It lives here because it is a property of the PROTOCOL's tick
+#: ordering, not of any screen — and because there are two wait
+#: shapes that need it and cannot share code: a blocking one in the
+#: tools and a frame-driven one in the screens.
+EFFECT_PAIRS = 2
+
 MSG_NAMES = {
     0x01: "HELLO_REPLY", 0x10: "STATE_SNAPSHOT",
     0x11: "FIELD_LIST",  0x12: "VISUAL_FRAME",

@@ -21,6 +21,18 @@ After a step fires, the next step is only evaluated once the field
 list has CHANGED (the two name dialogs look identical) and a short
 settle time has passed.
 
+**That shape is also what makes this chain immune to the pre-effect
+snapshot, and it was immune before anybody knew to ask** — audited
+5 September 2026. Twice over: `ext_api.cpp` sends a FIELD_LIST only
+when the field count or the screen changed, which cannot happen
+before the game has acted, and the comparison is against the
+SIGNATURE this chain fired on, so an unchanged list does not advance
+it. A loop that waited for "a fresh message" instead would be
+answered by the message serialized in the very tick that consumed its
+send. See "A fresh message is not a fresh world" in the fundament;
+the settle here is a floor under that comparison, not the thing that
+ends the wait.
+
 The three dialogs are NOT evenly spaced. Ruler name and banner sit
 next to each other inside `Race_Selection_Screen_`, but the home star
 name is asked after race selection has returned and the game has

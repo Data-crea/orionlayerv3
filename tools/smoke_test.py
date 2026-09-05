@@ -877,6 +877,22 @@ def main():
         assert rec2.log == [("act", 9)], rec2.log
         gm.update(gs)                            # throttled: no repeat
         assert rec2.log == [("act", 9)], rec2.log
+        # AND A STALE SNAPSHOT DOES NOT STOP IT. The first message
+        # after any send is serialized in the tick that CONSUMED the
+        # send (ext_api.cpp:341-386), so `map_scale` still reads the
+        # old value — which is why this loop compares against an
+        # ABSOLUTE target and not against the previous reading. A
+        # delta comparison here would see "nothing moved" and park
+        # half way, at whatever zoom the game happened to be on, with
+        # every click afterwards aimed through a slice that does not
+        # cover the galaxy. Audited 5 September 2026.
+        for _ in range(3):
+            gm._viewctl._park_sent = 0.0
+            gm.update(gs)                        # same stale state
+        assert rec2.log == [("act", 9)] * 4, (
+            f"parking stopped on a stale snapshot: {rec2.log}. The "
+            f"terminating condition must be `current >= fit`, never "
+            f"a comparison with the previous reading")
         gs.map_scale = 15
         gm._viewctl._park_sent = 0.0
         rec2.log.clear()
@@ -4279,6 +4295,7 @@ def main():
     from screens.colony_summary import colonysend as _cse
     from screens.colony_summary import colonymoveui as _cmu
     from core import textfit as _textfit
+    from core import wire_protocol as _wire
 
     class _MoveCap(_CapAll):
         def __init__(self):
@@ -4512,15 +4529,33 @@ def main():
         def __init__(self):
             self.stats = {"state": 0, "visual": 0}
             self.clicks, self.fields, self.keys = [], [], []
-        def inject_click(self, x, y): self.clicks.append((x, y))
-        def activate_field(self, f): self.fields.append(f)
-        def inject_key(self, k): self.keys.append(k)
+            self.order = []          # what went out, in order
+        def inject_click(self, x, y):
+            self.clicks.append((x, y)); self.order.append(("click", (x, y)))
+        def activate_field(self, f):
+            self.fields.append(f); self.order.append(("field", f))
+        def inject_key(self, k):
+            self.keys.append(k); self.order.append(("key", k))
+
+    class _SendField:
+        def __init__(self, index, x, y):
+            self.index, self.x, self.y = index, x, y
 
     class _SendState:
-        def __init__(self, raws):
+        def __init__(self, raws, framebuffer=None, fields=()):
             self.colonies_raw = list(raws)
-            self.framebuffer = None
-            self.fields = []
+            self.framebuffer = framebuffer
+            self.fields = list(fields)
+
+    def _thumb_frame(n, first):
+        """A 640x480 index buffer with the scroll thumb drawn at
+        `first` — the channel `_first` is read back through."""
+        _y1, _y2 = _cf.thumb_bounds(n, first)
+        _buf = bytearray(640 * 480)
+        for _y in range(_y1 + 1, _y2):
+            for _x in range(_cf.THUMB_X0, _cf.THUMB_X1 + 1):
+                _buf[_y * 640 + _x] = _cf.THUMB_FILL
+        return bytes(_buf)
 
     _sd_off = dict((n, o) for n, o, _k in _cst.SPEC.fields)
 
@@ -4544,7 +4579,20 @@ def main():
                     source_job=0, slot=2, icon_count=3, target_job=1,
                     cluster=_sd_cluster, predicted=_sd_pred,
                     sort_hotkey=ord("n"))
-    assert _sd.state == _cse.ESTABLISH and _sd_c.clicks == []
+    assert _sd.state == _cse.RESORT and _sd_c.clicks == []
+    # STEP 1 IS THE SORT, and it is first because `Sort_Col_List_`'s
+    # handler sets `_first = 0` (colsum.cpp:832): established first
+    # and sorted second, the sort would move the window the chain had
+    # just placed. It also repairs drift this move did not cause —
+    # the game's list is sorted at exactly two places in the engine
+    # (colsum.cpp:110 on entry and :830 in that handler) and never on
+    # its own, while HD re-sorts from every snapshot.
+    _sd.update(_SendState([_raw_with(_sd_pops)]))
+    assert _sd.state == _cse.RESORT and _sd_c.keys == [ord("n")], (
+        f"{_sd.state}, keys {_sd_c.keys}")
+    assert _sd_c.clicks == [] and _sd_c.fields == []
+    _sd_c.stats["state"] += 2
+    _sd_c.stats["visual"] += 2
     # Under ten colonies there is no window to establish and no
     # indicator to read (colsum.cpp:751, :194-197), so the chain goes
     # straight to the pick-up rather than demanding a reading a
@@ -4578,20 +4626,18 @@ def main():
     assert _sd_c.clicks[1] == ((_sd_lx + _sd_rx) // 2,
                                _ci.row_click_y(0)), _sd_c.clicks
 
-    # The drop confirms, and the SORT KEY GOES OUT AGAIN — not
-    # housekeeping: HD re-sorts from every snapshot and the game only
-    # when a sort field is activated (colsum.cpp:829-838), so a move
-    # under a production key leaves the two lists in different orders
-    # with every value on both screens still correct.
+    # THE DROP IS THE LAST THING SENT. Nothing trails it: the sort
+    # that keeps the two lists in one order is step 1 of the NEXT
+    # move, where it can also repair drift this move did not cause.
     _sd_c.stats["state"] += 2
     _sd_c.stats["visual"] += 2
     _sd.update(_SendState([_raw_with(_sd_pred)]))
-    assert _sd.state == _cse.RESORT and _sd_c.keys == [ord("n")], (
-        f"{_sd.state}, keys {_sd_c.keys}")
-    _sd_c.stats["state"] += 2
-    _sd_c.stats["visual"] += 2
-    _sd.update(_SendState([_raw_with(_sd_pred)]))
-    assert _sd.state == _cse.DONE and _sd.finished
+    assert _sd.state == _cse.DONE and _sd.finished, _sd.state
+    assert _sd_c.keys == [ord("n")], (
+        f"keys {_sd_c.keys}: the sort is sent once, at the start")
+    assert [_k for _k, _v in _sd_c.order] == ["key", "click", "click"], (
+        f"the wire order was {[_k for _k, _v in _sd_c.order]}; it must "
+        f"be the sort, then the two clicks")
 
     # THE INTERLOCK STOPS ON A CLUSTER IT DID NOT PREDICT, and says
     # the game is HOLDING rather than that nothing happened — only
@@ -4612,6 +4658,31 @@ def main():
     assert len(_sd_c2.clicks) == 1, (
         "the chain clicked again with geometry that had just been "
         "shown wrong")
+    # THE FLOOR'S REASON HAS TO STAND BESIDE THE FLOOR. It is a
+    # count, and decision 21 refuses counted waits — so the next
+    # reader must find the argument at the constant, or they will
+    # read it as a settling time and make it three.
+    for _path, _needle in (
+            # the argument, in its one home...
+            (("core", "wire_protocol.py"),
+             "IT IS NOT A SETTLING TIME, AND DECISION 21 IS WHY"),
+            # ...and a pointer to it from each reader, so nobody
+            # meets the number without the reason.
+            (("screens", "colony_summary", "colonysend.py"),
+             "wire_protocol"),
+            (("tools", "colony_move_probe.py"),
+             "core.wire_protocol.EFFECT_PAIRS")):
+        _src = open(os.path.join(
+            os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+            *_path)).read()
+        assert _needle in _src, (
+            f"{'/'.join(_path)} no longer explains why its pre-effect "
+            f"floor is not a duration; the count is the exact "
+            f"structural gap and raising it starts skipping evidence")
+    assert _cse.EFFECT_PAIRS == _wire.EFFECT_PAIRS == 2, (
+        f"EFFECT_PAIRS is {_cse.EFFECT_PAIRS}; two is the consuming "
+        f"tick plus the first that can show the effect, and the "
+        f"assertions above pin both sides of it")
     assert _scr_op._data["move"].get("stranded"), (
         "there is no wording for a held cluster, which is the one "
         "state only the player can end")
@@ -4628,6 +4699,43 @@ def main():
         f"the plan starts with {_sd3._steps}; it must lead with "
         f"{_cs_sel.GameWindow.max_first(15)} decrements, which reach "
         f"the top from any state (colsum.cpp:211-214)")
+
+    # AND WITH A WINDOW THAT REALLY MOVES, the order is visible: the
+    # sort key must go out before the first stepper, because the sort
+    # handler sets `_first = 0` and would undo the steps. Fifteen
+    # colonies, a drawn thumb to read back, and the two stepper
+    # fields where the original puts them (colsum.cpp:263-264).
+    _sd_c4 = _SendClient()
+    _sd4 = _cse.Send(_sd_c4, n_colonies=15, position=0, colony=0,
+                     source_job=0, slot=2, icon_count=3, target_job=1,
+                     cluster=_sd_cluster, predicted=_sd_pred,
+                     sort_hotkey=ord("n"))
+    _sd4_state = _SendState(
+        [_raw_with(_sd_pops)], _thumb_frame(15, 0),
+        [_SendField(12, *_cse.STEP_UP_XY), _SendField(13, *_cse.STEP_DOWN_XY)])
+    assert _cf.read_first(_cf.rows(_sd4_state.framebuffer), 15) == 0, (
+        "the fixture's own thumb does not read back as _first = 0")
+    for _ in range(40):
+        if _sd4.state == _cse.PICK:
+            break
+        _sd4.update(_sd4_state)
+        _sd_c4.stats["state"] += 2
+        _sd_c4.stats["visual"] += 2
+    assert _sd4.state == _cse.PICK, (
+        f"the chain stalled in {_sd4.state} ({_sd4.reason})")
+    _sd4_kinds = [_k for _k, _v in _sd_c4.order]
+    assert _sd4_kinds[0] == "key", (
+        f"the wire order was {_sd4_kinds}; the sort must precede the "
+        f"window steps — Sort_Col_List_'s handler sets _first = 0 "
+        f"(colsum.cpp:832), so a window established first is a window "
+        f"the sort then moves")
+    assert _sd4_kinds.count("field") == _cs_sel.GameWindow.max_first(15), (
+        f"{_sd4_kinds.count('field')} window steps for 15 colonies; "
+        f"the plan leads with {_cs_sel.GameWindow.max_first(15)} "
+        f"decrements even though the sort has just zeroed _first — "
+        f"shortening it would be REMEMBERING the state instead of "
+        f"establishing it (decision 46)")
+    assert _sd4_kinds[-1] == "click", _sd4_kinds
     ok("pop move on the wire (the pre-effect pair is refused, the "
        "interlock stops on a cluster it did not predict)")
 

@@ -8,17 +8,21 @@ graph rather than a promise in a comment.
 
 **THE ORDER, AND WHY EACH STEP IS WHERE IT IS.**
 
-  1. `_first`, established one activation at a time and read back off
+  1. the sort key, which is not housekeeping and is not last. See
+     below.
+  2. `_first`, established one activation at a time and read back off
      the scroll thumb (`colonyfirst`). It is not on the wire, a human
      can move it (platform.cpp:1379), and `ext::g_pending_field` is a
      single slot so a batch would leave only the last (decision 46).
-  2. click 1, the pick-up. Its effect is on the wire: `Get_Cluster_`
+     It comes AFTER the sort because `Sort_Col_List_`'s handler sets
+     `_first = 0` (colsum.cpp:832) — establishing first and sorting
+     second would establish a window the sort then moves.
+  3. click 1, the pick-up. Its effect is on the wire: `Get_Cluster_`
      clears bit 0x200 on exactly the pops it takes (colmove.cpp:70).
-  3. click 2, the drop, ONLY once step 2's cluster is the predicted
+  4. click 2, the drop, ONLY once step 3's cluster is the predicted
      one. A mis-aimed pick-up takes a cluster nobody chose, and there
      is no cancel that stays on this screen — so the interlock is
-     what makes step 2 safe to attempt at all.
-  4. the sort key again, which is not housekeeping. See below.
+     what makes step 3 safe to attempt at all.
 
 **EVERY STEP WAITS FOR ITS EFFECT, AND THE FIRST SNAPSHOT AFTER A
 SEND CANNOT CARRY IT.** `ext::Tick()` calls `ProcessInput()` before it
@@ -31,23 +35,53 @@ pairs AND the caller's own predicate. Counting sends would have
 "confirmed" the step one tick early, which is the direction that
 aims the next click at a window that has not moved yet.
 
-**STEP 4 IS THE ONE THAT IS EASY TO LEAVE OUT.** A pop move changes
-food, industry and research, and HD re-sorts its rows from every
-snapshot while the GAME re-sorts only when a sort field is activated
-(`Sort_Col_List_`, colsum.cpp:829-838). So the moment a move lands
-under a production sort key, HD's order and the game's order stop
-being the same list — and the next move would map an HD row to a game
-slot that holds a different colony, with every value on both screens
-still correct. Re-pushing the key re-sorts the game with the new
-values and sets `_first = 0` in the same handler (colsum.cpp:832),
-which is also a confirmable effect. It is idempotent by the
-original's own design: `Switched_cmp_` has no direction toggle
-(colsum.cpp:378-401).
+**STEP 1 IS THE ONE THAT IS EASY TO LEAVE OUT, AND IT MOVED TO THE
+FRONT ON 5 SEPTEMBER 2026.** `COLSUM::Sort_Col_List_` runs at exactly
+two places in the whole engine: once when the screen is entered
+(colsum.cpp:110) and once in the sort handler (colsum.cpp:830). It
+never re-sorts on its own. HD, meanwhile, rebuilds and re-sorts its
+rows from every snapshot. So the game's order is frozen for a whole
+visit while HD's follows the data — and a row then maps to a game
+slot holding a different colony, with every value on both screens
+still correct. Same failure mode as decision 46's, one axis over:
+that one is about WHERE the window starts, this one about what order
+it is a window ONTO.
 
-The trap the package named — the row moving after the move because
-the list is sorted by an affected key — is the same fault seen from
-HD's side, and this is where it is answered. `_first` itself is
-re-established from scratch for every move and never carried.
+**It is sent ALWAYS, not only when the key is one this move could
+change** — the choice, since both are buildable:
+
+  the condition that matters is not "did my move change this key",
+  it is "are both lists still in the same order", and nothing on the
+  wire reports the game's order. Our own move is not the only thing
+  that can drift it: the game's window is visible and clickable
+  (platform.cpp:1379), so a human can press a sort header in it, and
+  that changes the game's order with HD's key untouched. A rule
+  keyed on our own effect would be exactly right about our effect
+  and blind to that;
+
+  the conditional version also needs a table of which sort keys a
+  pop move changes — food, industry, research and BC today, name and
+  population not. That table is a second copy of a fact about the
+  engine, in the shape this project has been bitten by repeatedly:
+  correct on the day it is written, and silently wrong the day a key
+  is added;
+
+  and it costs one keystroke, idempotently: `Switched_cmp_` has no
+  direction toggle (colsum.cpp:378-401), so re-sorting by the key
+  the game already holds re-sorts identically.
+
+**Its confirmation is weak, and that is stated rather than dressed
+up.** The effect waited on is `_first = 0`, which the sort handler
+sets (colsum.cpp:832) — but if the window was already at 0, a sort
+that never arrived looks exactly like one that did. The real guard
+is the interlock at step 3: a wrong order puts the click on another
+row, and the cluster that comes back is then not the predicted one.
+The sort makes the failure rare; the interlock makes it visible.
+
+`_first` is re-established from scratch for every move even though
+the sort has just zeroed it. Shortening the plan because we know
+what the sort did would be remembering a state instead of
+establishing it, which is the thing decision 46 exists to refuse.
 
 **A FAILURE STOPS, IT DOES NOT UNWIND.** If the pick-up lands
 somewhere unexpected, the game holds a cluster; that state is on the
@@ -60,6 +94,7 @@ the player, not for a chain that has just been surprised.
 import logging
 import time
 
+from core import wire_protocol
 from core.structs import colony as colony_struct
 from . import colonyfirst
 from . import colonyicons
@@ -75,9 +110,14 @@ log = logging.getLogger("colonysend")
 #: reports a step that worked as one that did not.
 STEP_TIMEOUT_S = 4.0
 
-#: The pre-effect floor, in state/visual pairs. Not a duration — the
-#: tick ordering above.
-EFFECT_PAIRS = 2
+#: The pre-effect floor. ONE HOME, in `core/wire_protocol`, because
+#: it is a property of the API's tick ordering rather than of this
+#: screen — and that is also where the argument lives for why a
+#: COUNT is admissible at all under decision 21: it is not a settling
+#: time, it is a bolt against a predicate that was already true
+#: before the send. Read it there before changing it; the smoke test
+#: pins both sides of the two.
+EFFECT_PAIRS = wire_protocol.EFFECT_PAIRS
 
 #: Geometry of the two window steppers, `_x_fields[1]` and
 #: `_x_fields[2]` (colsum.cpp:263-264). Matched on the reported rect
@@ -86,9 +126,10 @@ EFFECT_PAIRS = 2
 STEP_UP_XY = (619, 15)      # Decrement_First_ — towards row 0
 STEP_DOWN_XY = (619, 316)   # Increment_First_
 
-#: States. `HOLDING` is not a failure with a nicer name: it says the
-#: GAME has a cluster in hand, which is a different thing for the
-#: player to be told than "nothing happened".
+#: States, in the order they run: RESORT, ESTABLISH, PICK, DROP.
+#: `HOLDING` is not a failure with a nicer name: it says the GAME has
+#: a cluster in hand, which is a different thing for the player to be
+#: told than "nothing happened".
 IDLE, ESTABLISH, PICK, DROP, RESORT, DONE, FAILED, HOLDING = (
     "idle", "establish", "pick", "drop", "resort", "done", "failed",
     "holding")
@@ -138,9 +179,12 @@ def field_at(state, x, y, tolerance=6):
 class _Wait:
     """One send and the effect it must have, with a deadline.
 
-    The counters are the client's own monotonic message counts. Two
-    pairs is the floor described in the module docstring; the
-    predicate is what actually ends the wait.
+    The counters are the client's own monotonic message counts.
+    **The predicate is what ends the wait**; `EFFECT_PAIRS` is a bolt
+    against the one message that cannot carry the effect, and its
+    constant says at length why it is not a duration. The deadline is
+    a give-up, never a trigger — nothing here advances because time
+    passed (decision 21).
     """
 
     __slots__ = ("client", "ready", "state_at", "visual_at", "deadline",
@@ -204,7 +248,13 @@ class Send:
         self._steps = ([STEP_UP_XY] * plan.down
                        + [STEP_DOWN_XY] * plan.up)
         self._target_first = plan.first
-        self.state = ESTABLISH
+        self._resort_sent = False
+        # The sort goes FIRST, because it sets `_first = 0`
+        # (colsum.cpp:832) and would otherwise move a window this
+        # chain had just established. Without a usable hotkey the
+        # step is skipped rather than refused: the order may then be
+        # stale, and the interlock at the pick-up is what catches it.
+        self.state = RESORT if sort_hotkey is not None else ESTABLISH
 
     # ── What the screen asks ──────────────────────────────
 
@@ -242,14 +292,14 @@ class Send:
         return self._advance(state)
 
     def _advance(self, state):
+        if self.state == RESORT:
+            return self._resort(state)
         if self.state == ESTABLISH:
             return self._establish(state)
         if self.state == PICK:
             return self._pick(state)
         if self.state == DROP:
             return self._drop(state)
-        if self.state == RESORT:
-            return self._resort(state)
         return self.state
 
     def _first_now(self, state):
@@ -353,24 +403,39 @@ class Send:
         return all(col.pop[i] == self.predicted[i]
                    for i in range(min(col.n_pops, len(self.predicted))))
 
-    def _drop(self, state):
-        """The drop confirmed. Re-sort, so the two lists still bind."""
-        if self.sort_hotkey is None:
-            self.state = DONE
-            return self.state
-        self.state = RESORT
-        self.client.inject_key(self.sort_hotkey)
-        want_first = 0
-        self._wait = _Wait(
-            self.client,
-            lambda st: (self._first_now(st) == want_first
-                        or self.n_colonies < GameWindow.SLOTS),
-            "the list re-sorted")
+    def _drop(self, _state):
+        """The drop confirmed. Nothing follows it.
+
+        The sort that keeps the two lists in one order is step 1 of
+        the NEXT move, not a tail on this one — see the module
+        docstring. A trailing sort would also have been the weaker
+        placement: it can only repair drift this move caused, and the
+        drift a move has to survive is whatever happened before it.
+        """
+        self.state = DONE
         return self.state
 
     def _resort(self, _state):
-        self.state = DONE
-        return self.state
+        """Step 1: put the game's list back into HD's order.
+
+        Sent once; the second visit here is the settled wait, which
+        hands over to the window steps. The effect waited on is
+        `_first = 0` — weak by itself, because a window already at 0
+        cannot show it, which is why the module docstring says the
+        interlock is the real guard.
+        """
+        if not self._resort_sent:
+            self._resort_sent = True
+            log.info("pop move: re-sorting the game's list first")
+            self.client.inject_key(self.sort_hotkey)
+            self._wait = _Wait(
+                self.client,
+                lambda st: (self.n_colonies < GameWindow.SLOTS
+                            or self._first_now(st) == 0),
+                "the list re-sorted")
+            return self.state
+        self.state = ESTABLISH
+        return self._establish(state=_state)
 
     def _timeout(self, state):
         """A step that did not confirm. Report what IS on the wire.

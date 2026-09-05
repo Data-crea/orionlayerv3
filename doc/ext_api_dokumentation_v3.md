@@ -287,12 +287,19 @@ discarded, not refused, and nothing reports it.
 which queue properly. Only field activation has a single slot.
 
 A caller that needs several activations must therefore send one,
-observe that it took effect, and only then send the next. Two places
-in OrionLayer already do this and are the pattern to copy:
-`galaxy_map/viewctl.park_game` sends one throttled step per frame and
-re-reads `map_scale` from the snapshot, and `tools/zoom_probe.py`
-activates, calls `settle()` for a fresh snapshot, compares, and stops
-if nothing moved.
+observe that it took effect, and only then send the next. What that
+costs is in the next section, which is the part that was wrong here
+until 5 September 2026: this used to name `tools/zoom_probe.py` as
+the pattern to copy, and that tool drained frames for a fixed 0.6 s
+before comparing — a TIMED wait, which is what the injection rules
+refuse. It waits for the change now, with the duration as a timeout.
+
+The two callers that do it right today, and why each is right:
+`galaxy_map/viewctl.park_game` sends one throttled step and stops on
+an ABSOLUTE target (`map_scale >= fit`), never on a comparison with
+the previous reading — which is what makes it immune to the section
+below; and `screens/colony_summary/colonysend` waits for each step's
+own effect with the pre-effect floor.
 
 ### The first snapshot after a send cannot carry its effect
 

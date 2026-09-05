@@ -90,6 +90,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import pygame  # noqa: E402
 
 from core.game_client import GameClient  # noqa: E402
+from core.wire_protocol import EFFECT_PAIRS  # noqa: E402
 from core.structs import colony as colony_struct  # noqa: E402
 from screens.colony_summary import colonyfirst as cfirst  # noqa: E402
 from screens.colony_summary import colonymove as cmove  # noqa: E402
@@ -151,8 +152,14 @@ def after_send(client, ready, tries=60):
     after it was fixed to wait for a fresh FRAME. Both counters moved,
     and both moved one tick too early. So this waits for the EFFECT
     the caller names, with a floor of two pairs so a predicate that
-    is already true cannot be satisfied by the pre-effect frame — the
-    floor is the tick ordering above, not a guess at a duration.
+    is already true cannot be satisfied by the pre-effect frame.
+
+    **THE FLOOR IS A COUNT AND DECISION 21 REFUSES COUNTED WAITS, so
+    it has to say why it is not one.** It is not a settling time:
+    what ends this loop is `ready`. The number and the whole argument
+    live in `core.wire_protocol.EFFECT_PAIRS`, because the gap is a
+    property of the API's tick ordering and not of this tool — and
+    the smoke test pins both sides of it.
 
     Nothing here retries a send. A step that does not land inside
     `tries` is reported by its caller, which stops.
@@ -161,8 +168,8 @@ def after_send(client, ready, tries=60):
     seen_visual = client.stats.get("visual", 0)
     for _ in range(tries):
         client.poll()
-        if (client.stats.get("state", 0) >= seen_state + 2
-                and client.stats.get("visual", 0) >= seen_visual + 2
+        if (client.stats.get("state", 0) >= seen_state + EFFECT_PAIRS
+                and client.stats.get("visual", 0) >= seen_visual + EFFECT_PAIRS
                 and client.state.framebuffer is not None
                 and ready(client.state)):
             return client.state

@@ -175,6 +175,24 @@ class ViewControl:
         the game's own view IS the picture and must not be touched.
         Uses the zoom-out field exclusively, so the game can never
         end up more zoomed in than the player left it.
+
+        **THE TERMINATING CONDITION IS ABSOLUTE, AND THAT IS LOAD
+        BEARING — do not turn it into a delta.** `current >= fit`
+        compares against the target, never against the previous
+        reading. It has to: the first snapshot after any send is
+        serialized in the tick that CONSUMED the send
+        (ext_api.cpp:341-386), so `map_scale` still reads the old
+        value, and a loop that stopped on "the scale did not change"
+        would park half way — at whatever zoom the game happened to
+        be on, with every injected click afterwards aimed through a
+        slice that no longer covers the galaxy, and nothing about the
+        picture revealing it (decision 35). A stale snapshot costs
+        this loop one redundant zoom-out step, which is free because
+        the step clamps at the maximum.
+
+        Audited 5 September 2026, when the colony summary's move
+        chain paid for that rule; a smoke check now feeds this the
+        same stale state repeatedly and fails if it stops.
         """
         if not self.active or not app.connected:
             return

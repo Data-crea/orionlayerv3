@@ -610,7 +610,13 @@ after the thing it would have prevented is not a guard, and reading
 it as one cost a wrong sentence here.
 Saying which half was measured is the point of writing it down.
 
-**A new message is not a new picture — 4 September 2026.** The
+**A new message is not a new picture — 4 September 2026.**
+*(Superseded in force by "A fresh message is not a fresh world" under
+Diagnosis, 5 September 2026: waiting on the right channel's own
+counter is necessary and NOT sufficient, because the first value that
+channel produces after a send is structurally the old one. Read both;
+this one is the half that is about which channel, that one is the
+half that is about when.)* The
 population-move probe stepped the game's list window down, read
 `_first` back off the scroll thumb, got the same value it had before,
 and stopped with "established 1, wanted 0". The step had in fact
@@ -1311,12 +1317,48 @@ first state/visual pair and the new one on the second, every time.
 Waiting for "a fresh snapshot" therefore reports a step that worked
 as a step that did not, which is the cheap direction exactly once —
 the next step then aims at a state that has since moved. The rule is
-to wait for the EFFECT the step must have, with a floor of two pairs
-so a predicate that was already true cannot be answered by the
-pre-effect message. `colonysend._Wait` and
-`tools/colony_move_probe.after_send` are the two implementations, and
-the smoke test asserts the rule on both rather than assuming it
-travelled from one to the other.
+to wait for the EFFECT the step must have, with a floor of one
+pre-effect message. The floor and the whole argument for why a COUNT
+is admissible under decision 21 live in
+`core.wire_protocol.EFFECT_PAIRS`; there are two wait SHAPES, a
+blocking one in the tools and a frame-driven one in the screens, and
+they cannot share code, so the smoke test asserts the rule on both
+rather than assuming it travelled.
+
+**THE FINDING IS BIGGER THAN THE SCREEN THAT PAID FOR IT, so every
+observe-then-send loop in the tree was audited on 5 September 2026.**
+The result is written out because "it was checked" is otherwise
+unverifiable, and because three of the four survive for reasons worth
+copying rather than by luck:
+
+- `galaxy_map/viewctl.park_game` — SAFE, structurally. It stops on
+  an ABSOLUTE target (`map_scale >= fit`), never on a comparison
+  with the previous reading, so a pre-effect snapshot costs it one
+  redundant zoom-out step and cannot make it stop half way. The
+  throttle is wall-clock and only spaces the steps. A smoke check now
+  feeds it the same stale state repeatedly and fails if it ever
+  concludes "nothing moved".
+- `core/injection.py` `InjectionChain` — SAFE, twice over. It waits
+  on the FIELD_LIST, which `ext_api.cpp` only sends when the field
+  count or the screen changed, i.e. after the game acted; and it
+  compares the list's SIGNATURE against the one it fired on, so an
+  identical list does not advance it. That is the same shape as the
+  new floor-plus-predicate, arrived at from the other direction.
+- the fire-and-forget injections — the sort keys, RETURN, the New
+  Game toggles, `original_view.forward_click` — are not affected at
+  all: nothing observes to decide a next step. What they do assume
+  is that the send worked, which is a separate question and is
+  answered separately (decision 39's live check for the sort keys).
+- `tools/zoom_probe.py` — WRONG, and it was being cited as the
+  example to copy. See the entry above under decision 21's rule.
+
+Two things this audit is not. It is not a claim that nothing else
+will ever grow such a loop: the rule is the deliverable, and the
+smoke checks are what make it survive. And it is not a claim that
+the surviving three were designed against this fault — they were
+not; they are safe for their own reasons, and writing down WHICH
+reason is what lets the next reader tell a safe loop from a lucky
+one.
 
 **A wait needs its traffic, not just its duration.** "The game is
 busy" and "we are not asking it to do anything" produce the same
@@ -1413,14 +1455,25 @@ references in `doc/v3_orion2re_index.md`.
   it; the rule is here because it decides the SHAPE of every
   multi-step injection.
 
-  Both existing multi-step users already have it right and are the
-  pattern: `galaxy_map/viewctl.park_game` sends one throttled step
-  and re-reads `map_scale`, and `tools/zoom_probe.py` activates,
-  waits for a fresh snapshot, compares, and stops when nothing moved.
   **Observe the effect, do not count the sends.** Where the effect is
   not on the wire, it may still be on the screen — the colony
   summary's `_first` is not serialised but is drawn, as the scroll
   thumb's position (`Draw_Bar_Indicator_`, colsum.cpp:747-771).
+
+  **And observing is harder than it looks: see "A fresh message is
+  not a fresh world" under Diagnosis before writing one of these
+  loops.** This paragraph used to name `tools/zoom_probe.py` as an
+  example to copy — *"activates, waits for a fresh snapshot,
+  compares, and stops when nothing moved"* — and that was a
+  description of a tool that actually drained frames for a fixed
+  0.6 s. It worked, because 0.6 s is about twelve snapshots and the
+  effect needs two, and it was cited in two documents as this
+  project's event-driven pattern while being a timed one. Audited and
+  corrected 5 September 2026. `viewctl.park_game` is the one that was
+  always right, and for a reason worth naming: it stops on an
+  ABSOLUTE target rather than on a comparison with the previous
+  reading, so a stale snapshot costs it one redundant step and never
+  a wrong conclusion.
 
 - **Population moves on the colony screens are click-click, not
   drag** (`colsum.cpp:851`). The first click on an icon calls
