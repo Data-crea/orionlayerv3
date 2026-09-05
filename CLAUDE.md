@@ -18,6 +18,7 @@ habits are non-negotiable.
 | What exists today, what is missing, how to run things | `v3_projektstatus.md` |
 | What does the original C++ do? | `doc/v3_orion2re_index.md` |
 | The Planets screen, read but not built | `doc/plntsum_reading.md` |
+| The Colonies screen: capability map, leverage points, the design | `doc/colsum_design_analysis.md` |
 | The Extension API protocol | `doc/ext_api_dokumentation_v3.md` |
 | What is being asked of Joes — **the only list** | `doc/orion2re_open_fixes.md` |
 | How mods override files | `MODDING.md` |

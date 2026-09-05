@@ -2,6 +2,39 @@
 
 Updated: 5 September 2026
 
+This session (5 September 2026), the Colonies screen analysed end to
+end — no code, no drawing change, the record is
+`doc/colsum_design_analysis.md`, in one line each: **the read side is
+already solved** — the Extension API ships every `s_colony` record
+WHOLE (ext_api.cpp:126-131) and the spec is verified, so every colony
+value is a level-1 capability today and the work is presentation
+rather than exposure; **the cost boundary is not where it looks** —
+`src/ext/` is our own directory and untracked in Joes' tree, so an
+additive read command diverges from nothing and Joes' tree stays at
+the one `platform.cpp` hunk; **six leverage points**, the best of
+which is five `extern` values (`COLSUM::_first`, `_g_sort_index`,
+`_list_col[10]`, `COLONY::_g_colony_n`, `COLMOVE::_cluster_colony_n`)
+that would retire the pixel reading of the scroll thumb entirely and
+turn the row-to-slot mapping from an inference into a reading;
+`COLCALC::Colony_Job_Production_` is const-correct down the whole
+chain (colcalc.cpp:1444), so a "what would this move be worth"
+evaluation on a scratch copy is safe by the TYPE SYSTEM;
+`SETTLER::Pop_Tries_To_Settle_` already separates decision from
+action and names eleven refusals with an ETA, which is decision 33's
+shape for free; **`s_colony.max_population` is a dead field** —
+written only by the savegame reader (savegame.cpp:268, :322), so
+mirroring `Planet_Max_Population_For_Player_` was right; **the
+42-slot track spends half of every row** — measured, the best colony
+in the reference save reaches 22 of 42 and the smallest 4, and the
+"same cell size everywhere" property survives deriving the width
+from the empire's own maximum; **more screen does not buy more rows**
+— `Layout.scale = min(sx, sy)` letterboxes 440 px away on each side
+at 3440x1440 and still draws ten; and the recommended design keeps
+click-click, because `Get_Cluster_`'s "everything after the clicked
+one" already makes the group size selectable and the preview already
+teaches it. Overall impact if built: **LOW-MODERATE**, additive and
+inside our own directory.
+
 This session (5 September 2026), the order inside a job group — an
 investigation, no patch and no drawing change, in one line each:
 **`pop[]` has no order at all**, which is the answer to the question
@@ -642,6 +675,12 @@ to stay uncomfortable to extend.
 │   │                                  and what a save would have to
 │   │                                  contain to close four open
 │   │                                  points at once
+│   ├── colsum_design_analysis.md      The Colonies screen end to
+│   │                                  end: what the original is,
+│   │                                  what OrionLayer may do with
+│   │                                  it, the capability map, the
+│   │                                  six leverage points, and the
+│   │                                  one recommended design
 │   ├── UMZUG.md                       Git/GitHub setup and the
 │   │                                  day-to-day workflow (German)
 │   ├── ext_ship_icon_owner.patch      Optional, not needed
