@@ -294,6 +294,36 @@ re-reads `map_scale` from the snapshot, and `tools/zoom_probe.py`
 activates, calls `settle()` for a fresh snapshot, compares, and stops
 if nothing moved.
 
+### The first snapshot after a send cannot carry its effect
+
+**Measured 5 September 2026, and it decides the shape of every
+observe-then-send loop above.** `Tick()` runs `ProcessInput()` as its
+step 3 and serializes the state and the frame at steps 5 and 6 — the
+same tick. So the very message that follows an injected command was
+built from the world BEFORE the game acted on it: the command has
+only been handed over, not consumed. `g_pending_field` is read by
+`fields::Get_Input_()`'s early exit after `Tick()` returns, and an
+injected SDL event is pumped later still.
+
+The effect therefore appears on the SECOND state/visual pair, never
+the first. One increment of the colony summary's list window, logged
+per arriving pair against the scroll thumb the game draws `_first`
+with, read the old value at pair 1 and the new one at pair 2, every
+time.
+
+Two consequences for a client:
+
+- **waiting for "a fresh snapshot" is not waiting for an effect**,
+  and the failure is silent in the safe direction (a step that
+  worked is reported as one that did not) exactly once — the next
+  step then aims at a state that has since moved, and that failure
+  is not silent in any direction at all;
+- the fix is to wait for the EFFECT the step must have and to floor
+  the wait at two pairs, so a predicate that was already true cannot
+  be satisfied by the pre-effect message. `screens/colony_summary/
+  colonysend._Wait` and `tools/colony_move_probe.after_send` are the
+  two implementations, and the smoke test asserts the rule on both.
+
 ### Field types and which command to use
 
 | Type | Name | ACTIVATE_FIELD |
@@ -316,16 +346,28 @@ Both push SDL mouse events. **DOWN and UP are both required** —
 `Interpret_Mouse_Input_()` waits for the release, and DOWN alone
 hangs the game.
 
-### Known bug: INJECT_CLICK coordinates
+### INJECT_CLICK coordinates — PATCHED, and verified live
 
-INJECT_CLICK carries 640x480 game coordinates, but `platform.cpp`
-maps the injected SDL event through
-`Map_Window_Point_To_Game_Point_()` as *window* coordinates, and
-`Sync_Mouse_State_From_SDL_()` overwrites the position every frame.
-On a 1828 px window, (510, 326) lands near (178, 114).
+The bug was two bugs. INJECT_CLICK carries 640x480 game coordinates,
+but `platform.cpp` mapped the injected SDL event through
+`Map_Window_Point_To_Game_Point_()` as *window* coordinates — on a
+1828 px window, (510, 326) landed near (178, 114) — and
+`Sync_Mouse_State_From_SDL_()` then overwrote the pointer position
+before the game consumed the click, which broke any handler that
+resolves its target from the POINTER rather than from the event.
 
-Not patched. Clients should prefer ACTIVATE_FIELD wherever a field
-ID exists; INJECT_CLICK is only reliable at a 640x480 window size.
+Both halves are `doc/orion2re_open_fixes.md` item 3 and both are in
+`doc/ext_inject_click.patch`, applied locally to the orion2re tree on
+4 September 2026. **Exercised for the first time on 5 September
+2026**: a click injected at a computed native point picked up exactly
+the predicted cluster on the colony summary and a second click
+dropped it, at the game's own window size, with the whole colony
+array diffed against a prediction made before the clicks.
+
+Until a client can be sure of the binary it is talking to, the old
+advice still holds for the unpatched case: prefer ACTIVATE_FIELD
+wherever a field ID exists, and treat a click that lands nowhere as
+the tell.
 
 ---
 

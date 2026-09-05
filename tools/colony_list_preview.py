@@ -193,9 +193,18 @@ def _colony_bytes(owner, planet_idx, pops, jobs, max_farms, climate,
     slot = 0
     for prof, count in enumerate(jobs):
         for _ in range(count):
-            # prof lives in POP_MASK_PROF, >> 7 (pop.h:10)
+            # prof lives in POP_MASK_PROF, >> 7 (pop.h:10), and the
+            # ASSIGNED bit is set because a colonist in a live
+            # snapshot always has it: `Get_Cluster_` is the only
+            # thing that clears it (colmove.cpp:70) and it clears it
+            # for exactly as long as a cluster is in hand. A fixture
+            # without it is a state no game reaches, and it drew
+            # every row correctly while the original would have shown
+            # a column of NO icons — which is what `colonyicons`
+            # counts and what a pop move aims at.
             struct.pack_into("<I", b, off["pop"][0] + 4 * slot,
-                             (prof & 3) << 7)
+                             ((prof & 3) << 7)
+                             | spec.POP_MASK_ASSIGNED)
             slot += 1
     b[off["max_farms"][0]] = max_farms
     b[off["climate"][0]] = climate

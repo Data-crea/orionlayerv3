@@ -25,12 +25,23 @@ them afterwards.
   5. **verify the pick-up before dropping** — see below;
   6. drop.
 
+**EVERY ONE OF THOSE STEPS WAITS FOR ITS EFFECT, NEVER FOR A
+MESSAGE** — see `after_send`, which is where the reason is written
+down. The short form: `ext::Tick()` consumes injected input before it
+serializes anything, so the first snapshot after a send is the world
+from before the game acted, and a wait that accepts it reports a step
+that worked as a step that did not. That is exactly how this tool
+stopped on its first two runs.
+
 **THE INTERLOCK, which is what makes step 4 safe to attempt at all.**
-`INJECT_CLICK` coordinates are mapped as WINDOW coordinates
-(`doc/orion2re_open_fixes.md` item 3), so they are only reliable at a
-640x480 window, and this tool cannot ask the game how big its window
-is. A mis-landed pick-up is not harmless: it takes a cluster we did
-not choose, and there is no cancel that stays on the screen.
+A mis-landed pick-up is not harmless: it takes a cluster we did not
+choose, and there is no cancel that stays on the screen. Two things
+can put the click somewhere other than where it was aimed, and both
+are `doc/orion2re_open_fixes.md` item 3: the coordinates were mapped
+as WINDOW coordinates, and the injected POINTER did not survive to
+the moment the field was pushed. Both halves are patched in the
+binary this tool is run against — which is a claim about a build, not
+about the source, so it is verified here rather than assumed.
 
 So the pick-up is verified against its prediction before anything
 else happens. `Get_Cluster_` clears bit 0x200 on exactly the pops it
@@ -43,12 +54,28 @@ takes the re-flag path at colmove.cpp:165, sets 0x200 back and
 consults no rule, which is bit-for-bit what `Get_Cluster_` undid.
 
 **The first target is the LAST icon in a column**, which needs no
-squish arithmetic: the hit test walks the icons and matches the first
-whose right edge is at or past the pointer, with `*last_slot_idx_ptr
-== pop_draw_index` as the fallback (coldraw.cpp:369), so a pointer
-past every icon selects the last one. It also moves the fewest pops —
-`Get_Cluster_` takes the identical run from there to the end of the
-array, which for the last icon of its kind is one.
+squish arithmetic: the walk matches the first icon whose right edge
+is at or past the value, with `*last_slot_idx_ptr == pop_draw_index`
+as the fallback (coldraw.cpp:361), so a click past every icon
+selects the last one. It also moves the fewest pops — `Get_Cluster_`
+takes the identical run from there to the end of the array, which for
+the last icon of its kind is one.
+
+CORRECTED 5 September 2026: that walk is MODE 3 and its input is the
+SCROLL FIELD's value, not `mouse::Pointer_X_()` directly.
+`Get_Selected_Pop_` (colsum.cpp:1006) passes mode 3, whose test
+reads `*scroll_value_ptr` (coldraw.cpp:361); the value is written by
+`Find_Bar_Position_` (fields.cpp:1702-1743) out of
+`mouse::Pointer_X_() + _pointer_offset` when the field is pushed
+down, and the scroll field's range is built so that the value IS the
+pointer x, clamped to the column (`Add_Scroll_Field_(left_x, top_y,
+left_x, right_x + 8, left_x, right_x, right_x - left_x + 8, 30, …)`,
+coldraw.cpp:409). Same conclusion — the pointer decides the icon —
+through one more link than the fundament recorded, and the extra link
+is not decoration: the value SURVIVES between clicks, and
+`_pointer_offset` (the cursor picture's frame, mouse.cpp:115) is
+added to it. Neither is something to reason about here; the interlock
+below measures the result instead.
 
 Nothing here is a retry. A step that does not land is reported and
 the tool stops.
@@ -61,7 +88,6 @@ import time
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 import pygame  # noqa: E402
-import numpy as np  # noqa: E402
 
 from core.game_client import GameClient  # noqa: E402
 from core.structs import colony as colony_struct  # noqa: E402
@@ -84,16 +110,16 @@ RIGHT_MARGIN = 4
 SORT_KEY, SORT_HOTKEY = "name", ord("n")
 
 
-def settle(client, tries=60):
+def snapshot(client, tries=60):
     """A fresh snapshot AND a freshly DRAWN frame, or None.
 
     Both counters, not just the state one. `_first` is read off the
     scroll thumb, which lives in the framebuffer, so accepting a new
     STATE message with the previous VISUAL frame reads the window
-    where it was before the step. That is not hypothetical: the first
-    run of this sequence reported "_first 1 -> 1, stopping" for a
-    decrement that had in fact worked, because the frame had not been
-    redrawn yet.
+    where it was before the step.
+
+    **This is the wait for a READING, never for an EFFECT** — see
+    `after_send`, which is the one to use after anything is injected.
     """
     seen_state = client.stats.get("state", 0)
     seen_visual = client.stats.get("visual", 0)
@@ -102,6 +128,43 @@ def settle(client, tries=60):
         if (client.stats.get("state", 0) > seen_state
                 and client.stats.get("visual", 0) > seen_visual
                 and client.state.framebuffer is not None):
+            return client.state
+        time.sleep(0.05)
+    return None
+
+
+def after_send(client, ready, tries=60):
+    """Poll until `ready(state)`, having first let the pre-effect
+    snapshot go by. Returns the state, or None on a timeout.
+
+    **THE FIRST SNAPSHOT AFTER A SEND IS PRE-EFFECT BY CONSTRUCTION,
+    and no counter can fix that** — measured 5 September 2026.
+    `ext::Tick()` calls `ProcessInput()` FIRST and serializes the
+    state and the frame AFTER it (ext_api.cpp:341-386), so the very
+    tick that consumes an injected command also ships the world from
+    before the game acted on it. The effect appears on the SECOND
+    state/visual pair, never the first: one increment of the game's
+    list window, logged per arriving pair, read `_first` 0 at pair 1
+    and 1 at pair 2.
+
+    That is why waiting for "a fresh snapshot" was not enough even
+    after it was fixed to wait for a fresh FRAME. Both counters moved,
+    and both moved one tick too early. So this waits for the EFFECT
+    the caller names, with a floor of two pairs so a predicate that
+    is already true cannot be satisfied by the pre-effect frame — the
+    floor is the tick ordering above, not a guess at a duration.
+
+    Nothing here retries a send. A step that does not land inside
+    `tries` is reported by its caller, which stops.
+    """
+    seen_state = client.stats.get("state", 0)
+    seen_visual = client.stats.get("visual", 0)
+    for _ in range(tries):
+        client.poll()
+        if (client.stats.get("state", 0) >= seen_state + 2
+                and client.stats.get("visual", 0) >= seen_visual + 2
+                and client.state.framebuffer is not None
+                and ready(client.state)):
             return client.state
         time.sleep(0.05)
     return None
@@ -119,13 +182,34 @@ def local_colonies(state):
     return len(out), out
 
 
-def framebuffer_rows(state):
-    return np.frombuffer(state.framebuffer,
-                         dtype=np.uint8)[:640 * 480].reshape(480, 640)
-
-
 def read_first(state, n):
-    return cfirst.read_first(framebuffer_rows(state), n)
+    """`_first` off the scroll thumb of this snapshot's frame.
+
+    The row shaping is `colonyfirst.rows`, not a numpy reshape of its
+    own: this tool had the only copy and the screen needs the same
+    one, and a second shaping of the same buffer is a second thing to
+    get wrong by a stride.
+    """
+    return cfirst.read_first(cfirst.rows(state.framebuffer), n)
+
+
+def first_reaches(n, want):
+    """Predicate for `after_send`: the game's window is AT `want`.
+
+    Below ten colonies the bar is not drawn at all (colsum.cpp:751)
+    and `Update_First_` has already forced `_first = 0`
+    (colsum.cpp:194-197), so `NOT_DRAWN` is the honest reading and
+    the only reachable target is 0. That case is spelled out rather
+    than folded into the comparison, because a reader that treated
+    `NOT_DRAWN` as 0 would be unable to tell an idle channel from a
+    real answer.
+    """
+    def ready(state):
+        value = read_first(state, n)
+        if n < GameWindow.SLOTS:
+            return value is cfirst.NOT_DRAWN and want == 0
+        return value == want
+    return ready
 
 
 def pops_of(state, colony_index):
@@ -169,7 +253,7 @@ def main():
     if not client.connect(host=args.host, port=args.port):
         print("no game on the extension port")
         return 1
-    state = settle(client, 200)
+    state = snapshot(client, 200)
     if state is None:
         print("no snapshot")
         return 1
@@ -189,8 +273,18 @@ def main():
         return 1
 
     # 1. One sort order for both sides.
+    # A sort is not only an order: the handler sets `_first = 0`
+    # (colsum.cpp:830-837), so the window going home IS the effect
+    # this key can be waited on for. Where it was already 0 the wait
+    # falls through on the pre-effect floor alone, which is why the
+    # steps below still establish rather than assume.
     client.inject_key(SORT_HOTKEY)
-    state = settle(client) or state
+    settled = after_send(client, first_reaches(n, 0))
+    if settled is None:
+        print(f"  the sort key did not put the window at 0 "
+              f"(_first reads {read_first(client.state, n)!r}) — stopping")
+        return 1
+    state = settled
     rows = crows.build_rows(state, SORT_KEY)
     print(f"sorted by {SORT_KEY!r}: {len(rows)} rows")
 
@@ -216,18 +310,24 @@ def main():
     for direction, count in steps:
         for i in range(count):
             before = read_first(state, n)
+            if not isinstance(before, int):
+                print(f"  the thumb reads {before!r} — stopping")
+                return 1
+            # The EFFECT this step must have, named before it is sent.
+            # Decrement clamps at 0 (colsum.cpp:211-214), so a step at
+            # the top legitimately moves nothing; increment always
+            # moves, because the plan never asks for one past `n - 10`.
+            want = max(0, before - 1) if direction == "down" else before + 1
             client.activate_field(_scroll_field(state, direction))
-            state = settle(client) or state
-            after = read_first(state, n)
+            settled = after_send(client, first_reaches(n, want))
+            if settled is None:
+                print(f"  {direction} {i + 1}/{count}: _first stayed "
+                      f"{read_first(client.state, n)!r}, wanted {want} — "
+                      f"reporting and stopping rather than retrying")
+                return 1
+            state = settled
             print(f"  {direction} {i + 1}/{count}: _first {before!r} "
-                  f"-> {after!r}")
-            if not isinstance(after, int):
-                print("  the thumb stopped reading — stopping")
-                return 1
-            if direction == "up" and after == before:
-                print("  the window did not move; reporting and "
-                      "stopping rather than retrying")
-                return 1
+                  f"-> {want}")
     final = read_first(state, n)
     if final != plan.first:
         print(f"established _first = {final!r}, wanted {plan.first} — "
@@ -271,7 +371,22 @@ def main():
     px, py = pick_field
     print(f"\nclick 1 (pick up) at native ({px}, {py})")
     client.inject_click(px, py)
-    state = settle(client) or state
+    # THE EFFECT, not the send: `Get_Cluster_` clears bit 0x200 on
+    # the pops it takes (colmove.cpp:70), so a cluster in hand is
+    # visible on the wire. Waiting for ANY cluster rather than for
+    # the predicted one keeps the two failures apart — nothing was
+    # picked up, and the wrong thing was.
+    settled = after_send(client, lambda st: _held_cluster(st) is not None)
+    if settled is None:
+        print("  no cluster appeared in the snapshot. The click "
+              "reached no icon: Get_Selected_Pop_ resolves one from "
+              "the scroll field's value, which Find_Bar_Position_ "
+              "writes from mouse::Pointer_X_() (fields.cpp:1702, "
+              "reached through Draw_Field_ at fields.cpp:2837), so a "
+              "pointer that does not survive to the field push "
+              "selects nothing. Stopping.")
+        return 1
+    state = settled
 
     # 5. THE INTERLOCK. Get_Cluster_ clears bit 0x200 on exactly the
     # pops it took (colmove.cpp:70) and that is on the wire, so the
@@ -301,8 +416,22 @@ def main():
     # 6. DROP.
     dx, dy = drop_field
     print(f"click 2 (drop on column {target_job}) at native ({dx}, {dy})")
+    predicted = cmove.predict_pops(pops, col.n_pops, col.max_farms,
+                                   cluster, target_job)
     client.inject_click(dx, dy)
-    state = settle(client) or state
+    # The effect this one must have is the whole point of the tool,
+    # so it is what is waited on. A drop that lands DIFFERENTLY never
+    # satisfies it — hence the fall-through, which takes whatever the
+    # game did produce and lets the diff below say what it was. A
+    # timeout here is not a failure by itself.
+    settled = after_send(client, lambda st: _pops_are(st, colony_index,
+                                                      col.n_pops, predicted))
+    if settled is None:
+        print("  the predicted array did not appear inside the wait — "
+              "diffing what the game actually holds")
+        state = snapshot(client) or state
+    else:
+        state = settled
 
     # 7. THE DIFF. Predicted after-state against the whole array.
     changed = [i for i, raw in enumerate(state.colonies_raw)
@@ -316,8 +445,6 @@ def main():
         ok = False
     after = pops_of(state, colony_index) if colony_index < len(
         state.colonies_raw) else []
-    predicted = cmove.predict_pops(pops, col.n_pops, col.max_farms,
-                                   cluster, target_job)
     for i in range(col.n_pops):
         if after[i] != predicted[i]:
             print(f"  pop {i}: got 0x{after[i]:x}, predicted "
@@ -359,6 +486,19 @@ def _held_cluster(state):
         if loose:
             return (i, loose)
     return None
+
+
+def _pops_are(state, colony_index, n_pops, predicted):
+    """Does the colony's pop array match `predicted`, word for word?
+
+    The predicate `after_send` waits on for the drop. Word for word
+    and not a summary: `plan_drop` answers a count, and two different
+    moves can land the same count in the same column.
+    """
+    if colony_index >= len(state.colonies_raw):
+        return False
+    pops = pops_of(state, colony_index)
+    return all(pops[i] == predicted[i] for i in range(n_pops))
 
 
 def _scroll_field(state, direction):

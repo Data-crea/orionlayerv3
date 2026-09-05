@@ -58,6 +58,20 @@ WINDOW = 10
 NOT_DRAWN = "not_drawn"
 
 
+def rows(framebuffer, width=640, height=480):
+    """The framebuffer as indexable rows of palette indices.
+
+    `read_first` wants `frame[y][x]`; the wire carries one flat
+    `bytes` of 640x480 indices. This is the one place that shape is
+    made, so a caller does not reach for numpy to get it — the whole
+    read touches 480 rows and six columns, which is not a job for an
+    array library, and the tool that had its own copy of this line
+    imported one for exactly that.
+    """
+    view = memoryview(framebuffer)[:width * height]
+    return [view[y * width:(y + 1) * width] for y in range(height)]
+
+
 def thumb_bounds(n_colonies, first):
     """(y1, y2) the original would draw for this state, or None.
 
@@ -110,12 +124,15 @@ def read_first(framebuffer, n_colonies, tolerance=1):
     n = int(n_colonies)
     if n < WINDOW:
         return NOT_DRAWN
-    rows = [y for y in range(len(framebuffer))
-            if any(framebuffer[y][x] == THUMB_FILL
-                   for x in range(THUMB_X0, THUMB_X1 + 1))]
-    if not rows:
+    # Named `filled` and not `rows`: `rows` is this module's own
+    # frame-shaping function, and a local that shadows it reads as a
+    # call to it three lines later.
+    filled = [y for y in range(len(framebuffer))
+              if any(framebuffer[y][x] == THUMB_FILL
+                     for x in range(THUMB_X0, THUMB_X1 + 1))]
+    if not filled:
         return NOT_DRAWN
-    lo, hi = min(rows), max(rows)
+    lo, hi = min(filled), max(filled)
     best = None
     for candidate in range(0, max(0, n - WINDOW) + 1):
         y1, y2 = thumb_bounds(n, candidate)

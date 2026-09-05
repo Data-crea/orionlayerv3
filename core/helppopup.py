@@ -38,6 +38,7 @@ import pygame
 
 from core import helpformat
 from core import palette
+from core import textfit
 
 # The original renders title and body in the same green; only the
 # font style differs (Font_Colors2_(4, ...) vs (2, ...),
@@ -324,26 +325,13 @@ class HelpPopup:
     def _wrap(style, text, size, width, color):
         """Word-wrap one source line into rendered surfaces.
 
-        Measured by rendering, never by `font.size()`:
-        `Style.render_text` mixes two fonts inside one string wherever
-        the font substitutes a glyph, so a single font's metrics are
-        not necessarily the width that ends up on screen — true again
-        the moment a mod ships a substituting font.
+        EXTRACTED 5 September 2026 — this was the first of what
+        became three copies, and `core/textfit` is now the one home.
+        The rule it carries is unchanged and is the reason it may not
+        be inlined anywhere: measure by RENDERING, never by
+        `font.size()`, because `Style.render_text` mixes two fonts
+        inside one string wherever the font substitutes a glyph
+        (decision 30) — true again the moment a mod ships a
+        substituting font.
         """
-        col = tuple(color[:3])
-        surf = style.render_text(text, size, col)
-        if surf.get_width() <= width:
-            return [surf]
-
-        lines, current = [], ""
-        for word in text.split():
-            trial = f"{current} {word}".strip()
-            if current and style.render_text(
-                    trial, size, col).get_width() > width:
-                lines.append(current)
-                current = word
-            else:
-                current = trial
-        if current:
-            lines.append(current)
-        return [style.render_text(line, size, col) for line in lines]
+        return textfit.wrap_rendered(style, text, size, width, color)

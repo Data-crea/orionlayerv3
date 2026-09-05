@@ -80,6 +80,7 @@ one unmarked.
 import pygame
 
 from core import palette
+from core import textfit
 
 BUILD_NAME = palette.col("colony_summary", "build_name", (196, 208, 232))
 BUILD_TURNS = palette.col("colony_summary", "build_turns", (132, 148, 180))
@@ -88,63 +89,17 @@ BUY_EDGE = palette.col("colony_summary", "buy_edge", (72, 104, 160))
 BUY_TEXT = palette.col("colony_summary", "buy_text", (198, 214, 240))
 
 
-def squeeze_lines(style, text, width, max_h, sizes, color):
-    """Wrap into `width`, shrink until it fits `max_h`, never truncate.
-
-    `sizes` is tried largest first. The last one is used even when it
-    still does not fit, because the original does the same: its loop
-    ends when there is nothing left to shrink and it prints the whole
-    paragraph anyway. Losing a character is not one of the outcomes.
-
-    Measured by rendering, never by `font.size()` — `render_text` can
-    mix two fonts inside one string wherever a glyph is substituted,
-    so one font's metrics are not the width that reaches the screen
-    (decision 30). This is the SECOND word-wrap in the tree, after
-    `helppopup._wrap`; the third is the one that should be extracted
-    to a shared helper rather than pasted again.
-    """
-    rgb = tuple(color[:3])
-    size = sizes[-1]
-    for size in sizes:
-        lines = wrap_text(style, text, size, width)
-        rendered = [style.render_text(l, size, rgb) for l in lines]
-        # BOTH dimensions. Height alone is not enough: a single word
-        # wider than the column cannot be broken, so it fits the
-        # height on one line and never triggers a shrink — a 15-glyph
-        # ship design measured 225 px in a 190 px column and sat
-        # there. The width is the hard side, so it has to be part of
-        # what the reduction is trying to satisfy.
-        if (sum(s.get_height() for s in rendered) <= max_h
-                and max(s.get_width() for s in rendered) <= width):
-            return rendered, size
-    # Nothing left to shrink. Print it whole regardless, which is
-    # what the original does when its own loop runs out of steps —
-    # losing a character is not one of the outcomes.
-    return [style.render_text(l, size, rgb)
-            for l in wrap_text(style, text, size, width)], size
-
-
-def wrap_text(style, text, size, width):
-    """One source string into lines that each fit `width` if they can.
-
-    Returns TEXT, not surfaces, so a test can assert that nothing was
-    dropped. A word longer than `width` is left whole on its own line
-    rather than cut — `squeeze_lines` answers that by shrinking.
-    """
-    if style.render_text(text, size, (255, 255, 255)).get_width() <= width:
-        return [text]
-    lines, current = [], ""
-    for word in text.split():
-        trial = f"{current} {word}".strip()
-        if current and style.render_text(
-                trial, size, (255, 255, 255)).get_width() > width:
-            lines.append(current)
-            current = word
-        else:
-            current = trial
-    if current:
-        lines.append(current)
-    return lines
+#: EXTRACTED 5 September 2026 to `core/textfit.py`, which is where
+#: the reasons now live — the wrap must measure by RENDERING because
+#: `render_text` can mix two fonts in one string (decision 30), and
+#: the shrink tests BOTH dimensions because a single word wider than
+#: the column never triggers a height-only reduction. This module's
+#: own docstring had already named the rule: the second copy was
+#: here, the third would be the signal, and the colony summary's move
+#: message was the third. Re-exported under the old names so the call
+#: sites and the checks that use them keep working.
+squeeze_lines = textfit.squeeze_lines
+wrap_text = textfit.wrap_text
 
 
 def draw(surface, row, x, y, width, row_h, cfg, style, layout):

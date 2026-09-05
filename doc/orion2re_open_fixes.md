@@ -23,7 +23,7 @@ section for what was found where.
 |---|---|---|---|
 | 1 | `Server::SendFrame` drops a client on a short write | **Applied** in the 30 Aug tree — verify | Nothing, if applied |
 | 2 | FIELD_LIST only sent on a field-count change | **Applied** in the 30 Aug tree — verify | Nothing, if applied |
-| 3 | INJECT_CLICK: coordinates mapped as window coordinates, AND the real mouse overwrites the injected pointer every frame | **Both halves patched locally** 4 Sep 2026 (`doc/ext_inject_click.patch`); open upstream | Without them an injected click lands on the wrong pixel on any window that is not 640x480, and the pointer walks off it before a handler that reads `Pointer_X_()` looks |
+| 3 | INJECT_CLICK: coordinates mapped as window coordinates, AND the real mouse overwrites the injected pointer every frame | **Both halves patched locally** 4 Sep 2026 (`doc/ext_inject_click.patch`), **and both VERIFIED LIVE 5 Sep 2026**; open upstream | Without them an injected click lands on the wrong pixel on any window that is not 640x480, and the pointer walks off it before a handler that reads `Pointer_X_()` looks |
 | 4 | INJECT_CLICK pushes no MOUSEMOTION before the buttons | Open | Radio buttons toggle unreliably |
 | 5 | `racesel.lbx [entry 138]` crash on Custom Race Accept | **Applied** in the 30 Aug tree — that is why it stopped reproducing | Nothing |
 | — | Custom Race reports screen ID 50 | **Applied** | — |
@@ -822,3 +822,54 @@ both.
 If the answer is "382 is the rule", nothing changes for us. If it is
 "522 is the rule", our mirror is currently stricter than the game
 intends and we would want to know.
+
+### VERIFIED LIVE, 5 September 2026 — both halves, at the game's own window size
+
+The patch had been applied and reasoned about but never exercised:
+the binary that was running when it was written was the pre-fix one.
+It has now been run twice, against the rebuilt binary, on the
+reference save.
+
+**What was run.** `tools/colony_move_probe.py --commit` injects the
+two clicks a population move needs at computed native points, and
+`tools/colony_move_hd.py --commit` does the same thing through the
+whole HD path — a real `MOUSEBUTTONDOWN` posted into pygame's queue,
+routed by the app to the colony summary screen, which then plans and
+sends. Both predict the resulting `pop[]` words BEFORE clicking and
+diff the whole colony array afterwards.
+
+**What it showed.** The pick-up took exactly the predicted cluster —
+which is the pointer half, because `COLSUM::Get_Selected_Pop_`
+resolves the icon from a value written out of `mouse::Pointer_X_()`
+and the physical cursor was nowhere near the column. The drop landed
+exactly the predicted pop words in exactly one colony, at the window
+size the game happened to have, which is the coordinate half. Under
+the pre-fix binary the same sequence picked up nothing at all, twice.
+
+**One correction to this item's own text, while it is being
+verified.** The reading above says `Get_Selected_Pop_` "walks the
+icons against `mouse::Pointer_X_()`". It walks them against the
+SCROLL FIELD's value: `Get_Selected_Pop_` (colsum.cpp:1006) passes
+mode 3, whose test is `*scroll_value_ptr` (coldraw.cpp:361), and
+`fields::Find_Bar_Position_` (fields.cpp:1702-1743) writes that value
+from `mouse::Pointer_X_() + _pointer_offset` when the field is pushed
+down. Mode 4 is the one that reads the pointer directly
+(coldraw.cpp:367) and is not what this screen uses. The diagnosis and
+the fix are unaffected — the pointer is still what decides the icon —
+but the chain is one link longer than written, and the extra link
+carries two things worth knowing: the value persists between clicks,
+and `_pointer_offset` (the mouse picture's frame, mouse.cpp:115) is
+added to it.
+
+**A second finding from the same run, which is not a fix request.**
+Every refusal in `COLMOVE::Give_Colonist_New_Job_` (colmove.cpp:526,
+:534, :541, :555) and the native refusal in `Get_Cluster_`
+(colmove.cpp:60) call `GENDRAW::Help_`, which is
+`TEXTBOX::Do_Text_Box_` — a blocking box, `do { … } while
+(fields::Get_Input_() == 0)` (textbox.cpp:149). A client that injects
+a move the game refuses therefore parks the engine in a modal, while
+the API keeps talking because `ext::Tick()` runs from `Get_Input_()`.
+OrionLayer's answer is to mirror the rules and refuse before sending
+(fundament decision 33 and 47); it is recorded here because it is a
+property of the injection boundary rather than of our screen, and any
+other client will meet it.

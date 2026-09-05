@@ -416,6 +416,44 @@ game's ten.** It is derived from `list_area` and `row_height` and
 happens to be ten today. Any future k is computed against the
 ORIGINAL's window of ten, never against however many rows HD draws.
 
+**47. A preview does not inject; the commit sends the whole gesture.**
+Added 5 September 2026, when the population move became the first HD
+interaction that is a GESTURE rather than a button — two clicks, with
+a state in between that the player can still change their mind about.
+
+The original's first click is not a preview at all:
+`COLMOVE::Get_Cluster_` unassigns the pops there and then
+(colsum.cpp:861-870), and the only ways out of a held cluster are
+dropping it or leaving the screen, because both `Clear_Cluster_` call
+sites on that screen are leave-the-screen paths (colsum.cpp:804 and
+:938). An HD preview that mirrored the first click faithfully would
+therefore strand any player who changed their mind, on a screen whose
+own Cancel does not exist.
+
+So the HD side holds the intermediate state LOCALLY and sends
+nothing, and the second click — target known, every rule mirrored and
+passed — sends both clicks back to back with each one confirmed
+against its effect. The wire sees one atomic gesture or nothing at
+all.
+
+Two things follow, and they are the reason this is a decision rather
+than a note on one screen:
+
+- **the cancel that the original does not have is bought by the
+  first half**, not granted out of kindness. Right-click or a click
+  into empty space discards an HD selection precisely because that
+  selection is not the game's cluster. The marking has to carry that
+  sentence — "we are nicer" is not a reason and would not survive
+  the day a preview starts injecting.
+- **anything a refusal would have shown must be mirrored** (decision
+  33), because the refusal is not silent on the other side: it opens
+  a blocking message box over a screen the HD client has left up.
+  See section 3.
+
+The shape generalises to every future gesture — a drag on the galaxy
+map, a build queue reorder: decide locally, commit once, confirm each
+step, and never leave the game in a state only the player can end.
+
 **42. Derived artwork ships; unmodified original artwork does not.**
 The repository is public, and OrionLayer is a modification that
 requires an installed, legally obtained copy of Master of Orion 2 —
@@ -1259,6 +1297,27 @@ empty one is a state it can handle.
 how a 24-second gap could sit in the Empire Identity chain without
 anybody being able to say where it was.
 
+**A fresh message is not a fresh world.** The sharper form of "a new
+message is not a new picture", and it is not the same lesson: there,
+two channels were mistaken for one and the fix was to wait on the
+right counter. Here BOTH counters move and both move too early.
+`ext::Tick()` runs `ProcessInput()` before it serializes anything
+(ext_api.cpp:341-386), so the message that follows an injected
+command was built from the world before the game acted on it — the
+command has only been handed over. Measured 5 September 2026: one
+increment of the colony list's window read the old `_first` on the
+first state/visual pair and the new one on the second, every time.
+
+Waiting for "a fresh snapshot" therefore reports a step that worked
+as a step that did not, which is the cheap direction exactly once —
+the next step then aims at a state that has since moved. The rule is
+to wait for the EFFECT the step must have, with a floor of two pairs
+so a predicate that was already true cannot be answered by the
+pre-effect message. `colonysend._Wait` and
+`tools/colony_move_probe.after_send` are the two implementations, and
+the smoke test asserts the rule on both rather than assuming it
+travelled from one to the other.
+
 **A wait needs its traffic, not just its duration.** "The game is
 busy" and "we are not asking it to do anything" produce the same
 frozen screen and the same elapsed seconds. What separates them is
@@ -1409,20 +1468,61 @@ references in `doc/v3_orion2re_index.md`.
   leaving the pops it already moved in their new job and the rest
   unassigned with the cluster still held.
 
+  **AND EVERY REFUSAL OPENS A BLOCKING MESSAGE BOX — 5 September
+  2026, and this is the half that changes what a client may do.**
+  All four refusals in `Give_Colonist_New_Job_` (`colmove.cpp:526`,
+  `:534`, `:541`, `:555`) and the pick-up's native refusal
+  (`colmove.cpp:60`) answer with `GENDRAW::Help_`, which is
+  `TEXTBOX::Do_Text_Box_`, whose input step is
+  `do { … } while (fields::Get_Input_() == 0)` (`textbox.cpp:149`).
+  The game sits in that loop until something clicks or types. It
+  still TALKS — `ext::Tick()` runs from `Get_Input_()`, so snapshots
+  keep arriving — which is precisely what makes the state easy to
+  miss: the wire looks healthy and the game has left the screen the
+  client is drawing.
+
+  So a refused injection does not merely fail quietly. It parks the
+  game in a modal the HD screen does not draw, over a screen the
+  player can no longer reach, with a cluster still in hand. That is
+  the strongest form of decision 33's argument found so far, and it
+  is what makes "refuse before sending" the only state an HD screen
+  can guarantee it can leave. The box adds a hidden field over the
+  whole screen (`textbox.cpp:246`), so one injected click would
+  probably dismiss it — probably, and nothing is built on it.
+
   **There is no cancel that stays on the screen.** Both
-  `Clear_Cluster_` call sites on the colony summary (`colsum.cpp:802`
-  and `:937`) are leave-the-screen paths. Clearing IS a true undo —
+  `Clear_Cluster_` call sites on the colony summary (`colsum.cpp:804`
+  and `:938`) are leave-the-screen paths. Clearing IS a true undo —
   `Get_Cluster_` only clears bit `0x200` and `Clear_Cluster_` sets it
   back, job bits untouched — but the only ways to reach it are
   leaving the screen or dropping the pops somewhere. Any HD preview
   that creates a real selection therefore strands the player, which
   is why a preview must not inject.
 
-  **The pick-up reads `mouse::Pointer_X_()`, not the click point.**
-  `Get_Selected_Pop_` (`colsum.cpp:1006`) calls
-  `Do_Colony_Info_Pop_Stuff_For_Pop_` in its pointer mode, which
-  walks the icons and takes the first whose right edge is at or past
-  the pointer.
+  **The pick-up reads the POINTER, not the click point — and the
+  chain has one more link than this entry said until 5 September
+  2026.** `Get_Selected_Pop_` (`colsum.cpp:1006`) does NOT call
+  `Do_Colony_Info_Pop_Stuff_For_Pop_` in its pointer mode. It passes
+  **mode 3**, whose test reads `*scroll_value_ptr`
+  (`coldraw.cpp:361`); mode 4 is the one that reads
+  `mouse::Pointer_X_()` directly (`coldraw.cpp:367`) and is not what
+  this screen uses. The value comes from the SCROLL FIELD that mode 1
+  added over the column (`coldraw.cpp:409`), and
+  `fields::Find_Bar_Position_` (`fields.cpp:1702-1743`) writes it out
+  of `mouse::Pointer_X_() + _pointer_offset` when the field is pushed
+  down (through `Draw_Field_`, `fields.cpp:2837`). The field's range
+  is built so that arithmetic reduces to the identity — the value IS
+  the pointer x, clamped to `[left_x, right_x]`.
+
+  The conclusion is unchanged and the extra link is not decoration.
+  The value SURVIVES between clicks, because nothing resets it, so a
+  column carries whatever it last held; `_pointer_offset` is the
+  current mouse picture's frame number (`mouse.cpp:115`) and is added
+  to it; and `Draw_Field_` returns early while `_draw_fields_flag` is
+  0, in which case the value is not written at all. None of the three
+  is worth reasoning about from outside — which is why an injected
+  pick-up is VERIFIED against the cluster the game actually took
+  (the bit is on the wire) instead of being trusted.
 
   **CORRECTED 4 September 2026: an injected click cannot supply that
   pointer, and the window size is not why.** `INJECT_CLICK` does set
@@ -1456,6 +1556,35 @@ references in `doc/v3_orion2re_index.md`.
   truncation toward zero — `int(a / b)` in Python, never `//`. Column
   edges on the summary screen: farmers 101-226, workers 236-368,
   scientists 378-502, row y = 31*i + 34 (`colsum.cpp:311`).
+
+  **A COLUMN IS NOT `pop[]` IN ARRAY ORDER.** The icon walk is five
+  nested loops (`coldraw.cpp:325-345`): state
+  (`Pop_To_Pop_State_`, so normals, then natives, then androids),
+  then the conquered bit `0x400`, then the low nibble in the order
+  `(9, 0, 1, … 8)`, and only innermost the array. So "within an
+  identical group the icons are drawn in array order" is exactly
+  true and exactly as far as it goes — a group is (state, conquered,
+  nibble), which is what `Pops_Identical_` compares, and the icon at
+  slot m of a column is NOT the m-th pop of that job. Only ASSIGNED
+  pops are icons (`coldraw.cpp:343`), which is how a held cluster
+  disappears from the screen.
+
+  Measured on the reference save, 5 September 2026: a colony with
+  twelve farmers and one scientist held the scientist at pop 11 and
+  the last farmer at pop 12, so the column's last icon was pop 12.
+  A click past every icon took pop 12 — array order would have said
+  11. `screens/colony_summary/colonyicons.py` is that walk,
+  transcribed.
+
+  **The whole two-click move has now been driven from an HD screen**,
+  5 September 2026, with `doc/ext_inject_click.patch` in the running
+  binary: a real mouse click on a pop square, a second on a job
+  column, and the whole colony array diffed against a prediction made
+  before either. Exactly the predicted pop moved and no other colony
+  changed. What that run did NOT exercise is any refusal — see the
+  status document, because the reference save has no native, no
+  android, no colony that cannot farm and nothing near the 42 cap, so
+  every plan in it predicts "all".
 - **The displayed maximum population is computed, and the size table
   is only its base.** `MOX::_planet_max_population[] = {5, 10, 15,
   20, 25}` (mox.cpp:796) is indexed by `PLANET_SIZE`, and reading it

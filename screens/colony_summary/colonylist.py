@@ -115,6 +115,14 @@ NO_FARM_COLOR = palette.col("colony_summary", "no_farming", (150, 120, 110))
 #: for row-name ink outside the name column.
 OVERFLOW_COLOR = palette.col("colony_summary", "row_overflow",
                              (150, 120, 110))
+#: The pop move's two marks: the squares a pick would take, and the
+#: three drop bands the track reads as while one is held. Both are
+#: only ever drawn during a move — see `draw_pick` for why the second
+#: one exists at all.
+PICK_COLOR = palette.col("colony_summary", "pick_outline",
+                         (238, 232, 180))
+BAND_COLOR = palette.col("colony_summary", "drop_band",
+                         (120, 140, 180))
 
 
 # ── Geometry: computed once, drawn by either mode ──────────────────
@@ -206,6 +214,79 @@ def track_metrics(area, cfg, scale):
                  build_gap=build_gap)
 
 
+def track_x(area, cfg, scale):
+    """Where the 42-slot track starts on screen.
+
+    Decision 5, one scroll offset further in than `row_bands`: the
+    drawing and the two hit tests below have to agree about the
+    track's left edge, and the expression is `pad_x + name_width +
+    slack` — the slack included, because those are the pixels the six
+    floor divisions dropped and `track_metrics` gives them to the
+    name column's DRAWN width. A hit test that forgot the slack would
+    be one gutter to the left of the squares at every fractional
+    scale and exactly right at 1.0, which is the resolution anybody
+    checks.
+    """
+    track = track_metrics(area, cfg, scale)
+    return (area.x + int(cfg.get("pad_x", 22) * scale)
+            + int(cfg.get("name_width", 236) * scale) + track.slack)
+
+
+def slot_at_x(area, cfg, scale, x):
+    """Which of the `POP_LIMIT_CAP` slots `x` lands on, or None.
+
+    The gaps between squares belong to the square on their left,
+    which is what a floor division of the step gives without a second
+    rule. Outside the track at either end is None — a click there is
+    not a click on a pop.
+    """
+    track = track_metrics(area, cfg, scale)
+    start = track_x(area, cfg, scale)
+    if not start <= x < start + track.width:
+        return None
+    return min(POP_LIMIT_CAP - 1, int(x - start) // track.step)
+
+
+def zone_at_slot(row, slot):
+    """(zone, index within the zone) for a filled slot, or None.
+
+    The squares are laid down in ECON order (`row_regions`), so this
+    is where a click on one turns back into "the n-th icon of column
+    z" — which is the number `colonyicons` maps to a pop.
+    """
+    for zone, start, count in row_regions(row).runs:
+        if start <= slot < start + count:
+            return zone, slot - start
+    return None
+
+
+def drop_band(area, cfg, scale, x):
+    """Which job column `x` names while a pick is held, or None.
+
+    **HD EXTENSION, and it is a geometry one.** The original gives
+    every row three FIXED columns — farmers 101-226, workers 236-368,
+    scientists 378-502 (colsum.cpp:1006-1024) — so an empty job is
+    still a place you can drop pops. The HD row has one track whose
+    zones are sized by the DATA, and a job nobody holds has no width
+    at all: with the zones as targets, the one move a player most
+    wants (start a column) would be the one move they cannot make.
+
+    So while a pick is held the track reads as three equal bands, in
+    the same ECON order the zones are drawn in. It is the original's
+    three columns at HD proportions, and it exists only during a
+    move — nothing about the resting row changes.
+
+    Marked here, in `layout.json` under `move`, in
+    `v3_projektstatus.md` and in a smoke check.
+    """
+    track = track_metrics(area, cfg, scale)
+    start = track_x(area, cfg, scale)
+    if not start <= x < start + track.width:
+        return None
+    band = track.width / 3.0
+    return min(2, int((x - start) / band))
+
+
 def row_regions(row):
     """The three regions of one row, in slots.
 
@@ -280,7 +361,7 @@ def render(surface, rows, area, cfg, layout, style, first=0,
         # untrue.
         _draw_name_block(surface, row, area.x + pad_x, y, name_w, row_h,
                          cfg, name_px, small_px, style, frame_inset)
-        bar_x = area.x + pad_x + name_w + track.slack
+        bar_x = track_x(area, cfg, scale)
         bar_y = y + (row_h - track.bar_h) // 2
         _render_bar(surface, row, bar_x, bar_y, track, cfg, small_px,
                     style)
@@ -290,6 +371,51 @@ def render(surface, rows, area, cfg, layout, style, first=0,
                 track.build_w, row_h, cfg, style, layout)
 
     _draw_overflow(surface, rows, area, cfg, scale, layout, style, first)
+
+
+def draw_pick(surface, area, cfg, scale, band, slots):
+    """Outline the squares a held pick would take.
+
+    **The simplest drawing that can be SEEN, which is the whole
+    requirement for this phase** — the visualisation is phase 4. It
+    is an outline rather than a fill because a fill would sit on the
+    same axis as the zone colours and say "these are a fourth
+    profession"; an outline is off that axis, the same reasoning the
+    free slots' dashes rest on.
+
+    `band` is the (top, height) of the row as `row_bands` gave it, so
+    the mark is placed by the same function that placed the squares
+    (decision 5) rather than by a second copy of the pitch.
+    """
+    if not slots:
+        return
+    track = track_metrics(area, cfg, scale)
+    start = track_x(area, cfg, scale)
+    top, row_h = band
+    y = top + (row_h - track.bar_h) // 2
+    for slot in slots:
+        pygame.draw.rect(surface, PICK_COLOR, pygame.Rect(
+            start + slot * track.step, y, track.unit, track.bar_h), 2)
+
+
+def draw_drop_bands(surface, area, cfg, scale, band):
+    """The three drop targets, while a pick is held.
+
+    HD EXTENSION — `drop_band` carries the reason: the original's
+    three columns are fixed and always clickable, and HD's zones are
+    sized by the data, so an empty job would be a column a player
+    could not reach. Drawn only during a move, which is what keeps
+    it out of the resting row.
+    """
+    track = track_metrics(area, cfg, scale)
+    start = track_x(area, cfg, scale)
+    top, row_h = band
+    y = top + (row_h - track.bar_h) // 2
+    width = track.width / 3.0
+    for i in range(3):
+        pygame.draw.rect(surface, BAND_COLOR, pygame.Rect(
+            int(start + i * width), y - 2,
+            int(width) - 1, track.bar_h + 4), 1)
 
 
 def _draw_overflow(surface, rows, area, cfg, scale, layout, style,

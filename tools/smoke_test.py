@@ -20,6 +20,7 @@ mod, and after touching anything in core/.
 import math
 import os
 import re
+import struct
 import sys
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(
@@ -4147,6 +4148,525 @@ def main():
     _scr_op.update(_sel_snap)
     ok("colony summary scroll injects nothing and moves no selection; "
        "a sort resets the window and keeps the colony")
+
+    # ── The icons a column draws, and in whose order ──────────────
+    # A COLUMN IS NOT pop[] IN ARRAY ORDER. `Do_Colony_Info_Pop_Stuff_
+    # For_Pop_` (coldraw.cpp:325-345) walks state, then the conquered
+    # bit, then pop_order (9 first), then the array — so the icon at
+    # slot m is not the m-th pop of that job, and a click aimed by
+    # array position would take the wrong cluster with every number on
+    # both screens still correct.
+    from screens.colony_summary import colonyicons as _ci
+
+    def _icon_pop(nibble=0, job=0, assigned=True, conquered=0):
+        return (nibble | (job << 7)
+                | (_cst.POP_MASK_ASSIGNED if assigned else 0)
+                | (conquered << 10))
+
+    # THE LIVE CASE, ENCODED. Measured 5 September 2026 against the
+    # reference save: Blucher II had twelve farmers and one scientist,
+    # the scientist at pop 11 and the last farmer at pop 12. A click
+    # at native x 230 — past every icon — took pop 12, which is slot
+    # ELEVEN of the column and not pop 11. That is the whole
+    # distinction this module exists for, so it is the fixture.
+    _live = ([_icon_pop(0, 0)] * 11 + [_icon_pop(0, 2)]
+             + [_icon_pop(0, 0)])
+    assert _ci.icon_pops(_live, 13, 0) == tuple(list(range(11)) + [12]), (
+        "the food column must draw pops 0..10 and 12 — the scientist "
+        "at 11 is not in it, and the last farmer is index 12")
+    assert _ci.slot_at(0, 230, 12) == 11, (
+        "a click past every icon selects the LAST slot "
+        "(coldraw.cpp:361), which here is slot 11")
+    assert _ci.slot_pop(_live, 13, 0, 11) == 12, (
+        "slot 11 of that column is pop 12; reading it as pop 11 is "
+        "the array-order mistake this check is about")
+
+    # THE FIVE LOOPS, each asserted where it decides the order.
+    # state first (normal 2, native 3, android 4 — colony.cpp:1240),
+    # then the conquered bit, then the low nibble in pop_order's own
+    # sequence, and only then the array.
+    _mixed = [_icon_pop(9, 0), _icon_pop(0, 0), _icon_pop(8, 0),
+              _icon_pop(1, 0), _icon_pop(0, 0, conquered=1),
+              _icon_pop(0, 0)]
+    assert _ci.icon_pops(_mixed, 6, 0) == (1, 5, 3, 4, 0, 2), (
+        f"draw order is {_ci.icon_pops(_mixed, 6, 0)}; expected the "
+        f"low nibbles grouped before the array is consulted — 0s "
+        f"(1, 5), then the 1 (3), then the conquered 0 (4), then the "
+        f"native (0), then the android (2)")
+    # THE ARRAY IS THE INNERMOST TIE-BREAK AND NOTHING MORE. Pops 1
+    # and 3 are both unconquered normals and 1 comes first here only
+    # because its low nibble does — the nibble loop is OUTSIDE the
+    # array loop (coldraw.cpp:328-331). Written down because the
+    # first version of this check expected (1, 3, 5), which is what
+    # "within a group, array order" reads like until you ask what a
+    # group is.
+    assert _ci.POP_ORDER[0] == 9 and len(_ci.POP_ORDER) == 10, (
+        "pop_order is (9, 0..8) — coldraw.cpp:287-297")
+
+    # UNASSIGNED POPS ARE NOT ICONS (coldraw.cpp:343). This is the
+    # difference between the HD row, which draws a square per pop of a
+    # job, and the game, which draws one per ASSIGNED pop — and it is
+    # exactly the state a held cluster produces.
+    _held = [_icon_pop(0, 0), _icon_pop(0, 0, assigned=False)]
+    assert _ci.icon_pops(_held, 2, 0) == (0,), (
+        "a pop in a held cluster draws no icon")
+    assert _ci.slot_pop(_held, 2, 0, 1) is None, (
+        "a slot past the icons must answer None, not a guess — the "
+        "caller refuses the click on it")
+
+    # THE SECOND COPY OF pop_state IS DELIBERATE AND MUST AGREE.
+    for _n in range(16):
+        assert _ci._state(_icon_pop(_n)) == _cm.pop_state(_icon_pop(_n)), (
+            f"colonyicons._state and colonymove.pop_state disagree at "
+            f"nibble {_n}; the two copies exist so one can be "
+            f"re-read without the other silently following")
+    ok("colony icons (draw order is state/conquered/pop_order/array, "
+       "not array; unassigned pops draw nothing)")
+
+    # ── The squish, and the x that lands on a slot ────────────────
+    # Calculate_Squish_Step_ (coldraw.cpp:12-33) divides the column by
+    # the icon count, so the pitch moves with the population. The aim
+    # has to round-trip through the original's own walk, or a click
+    # takes the icon next door — which moves a different cluster and
+    # looks perfectly right.
+    for _job, (_lx, _rx) in enumerate(_ci.COLUMNS):
+        for _count in range(1, 43):
+            _pitch = _ci.column_pitch(_job, _count)
+            _want = min(_ci.ICON_SPACING,
+                        max(1, int((_rx - _lx - 10) / _count)))
+            assert _pitch == _want, (
+                f"column {_job} at {_count} icons: pitch {_pitch}, "
+                f"the source computes {_want}")
+            # Every icon inside the column, with the ten px the
+            # `spacing / -3` term reserves still to spare — which is
+            # why Find_Bar_Position_'s clamp never bites.
+            assert _lx + _pitch * _count <= _rx - 10, (
+                f"the last icon of {_count} in column {_job} reaches "
+                f"{_lx + _pitch * _count}, past {_rx - 10}")
+            for _slot in range(_count):
+                _x = _ci.slot_click_x(_job, _slot, _count)
+                assert _ci.slot_at(_job, _x, _count) == _slot, (
+                    f"aiming at slot {_slot} of {_count} in column "
+                    f"{_job} (x {_x}) selects "
+                    f"{_ci.slot_at(_job, _x, _count)}")
+    # The fallback: anything past the last icon is the last icon
+    # (coldraw.cpp:361), which is what makes a click at the column's
+    # right edge safe without any squish arithmetic at all.
+    assert _ci.slot_at(0, _ci.COLUMNS[0][1], 7) == 6
+    assert _ci.slot_at(0, _ci.COLUMNS[0][0] - 50, 7) == 0, (
+        "a value left of the column selects the first icon; "
+        "Find_Bar_Position_ clamps it to range_min (fields.cpp:1710)")
+    assert _ci.slot_at(0, 200, 0) is None, (
+        "an empty column selects nothing — Get_Selected_Pop_ returns "
+        "-1 and Get_Cluster_ is never called")
+    # The row a click names is a SLOT in the game's window, never an
+    # HD row (decision 46), and its y is the field's own middle.
+    assert _ci.row_click_y(0) == 34 + 15 and _ci.row_click_y(3) == \
+        34 + 93 + 15, "row y is slot * 31 + 34, colsum.cpp:311-345"
+    ok("colony icon geometry (squish transcribed, every slot's click "
+       "round-trips through the original's own walk)")
+
+    # ── The pop move: nothing reaches the game until both clicks ──
+    # Section 3 of this phase, and the whole of why the first click is
+    # local: there is no cancel that stays on this screen, so a
+    # preview that created the game's own cluster would strand a
+    # player who changed their mind (colsum.cpp:804 and :938 are both
+    # leave-the-screen paths). The claim is about the WIRE and is
+    # asserted on the wire — "the screen looks the same afterwards"
+    # would also be true of a screen that sent a click and redrew the
+    # old picture.
+    from screens.colony_summary import colonypick as _cp
+    from screens.colony_summary import colonysend as _cse
+    from screens.colony_summary import colonymoveui as _cmu
+    from core import textfit as _textfit
+
+    class _MoveCap(_CapAll):
+        def __init__(self):
+            super().__init__()
+            self.stats = {"state": 0, "visual": 0}
+
+    _mv_cap = _MoveCap()
+    _mv_client, _mv_conn = app.client, app.connected
+    app.client, app.connected = _mv_cap, True
+    _scr_op._sort_key = "name"
+    _scr_op.update(_sel_snap)
+    _mv_rows = _scr_op._rows
+    _mv_area, _mv_cfg, _mv_scale, _mv_n = _scr_op._list_view()
+    _mv_track = _cl.track_metrics(_mv_area, _mv_cfg, _mv_scale)
+    _mv_bands = _cl.row_bands(_mv_area, _mv_cfg, _mv_scale, _mv_n)
+
+    def _square_xy(row_index, slot):
+        _top, _h = _mv_bands[row_index]
+        return (_cl.track_x(_mv_area, _mv_cfg, _mv_scale)
+                + slot * _mv_track.step + _mv_track.unit // 2,
+                _top + _h // 2)
+
+    def _band_xy(row_index, job):
+        _top, _h = _mv_bands[row_index]
+        return (int(_cl.track_x(_mv_area, _mv_cfg, _mv_scale)
+                    + _mv_track.width / 3.0 * (job + 0.5)),
+                _top + _h // 2)
+
+    # A row with pops in at least two jobs, so a move has somewhere
+    # to go and the fixture is not the thing being tested.
+    _mv_row = next(i for i, r in enumerate(_mv_rows)
+                   if sum(1 for c in r["jobs"] if c) >= 2)
+    _mv_job = next(j for j, c in enumerate(_mv_rows[_mv_row]["jobs"]) if c)
+    _mv_slot = sum(_mv_rows[_mv_row]["jobs"][:_mv_job])
+    _mv_target = next(j for j in range(3) if j != _mv_job)
+
+    # FIRST CLICK: a selection, and NOTHING on the wire.
+    _scr_op.handle_click(*_square_xy(_mv_row, _mv_slot))
+    assert _scr_op._move.pick is not None, (
+        "a click on a filled square did not pick anything up")
+    assert _mv_cap.calls == [] and _mv_cap.keys == [] \
+        and _mv_cap.fields == [], (
+        f"the FIRST click reached the game: clicks {_mv_cap.calls}, "
+        f"keys {_mv_cap.keys}, fields {_mv_cap.fields}. It must not: "
+        f"Get_Cluster_ unassigns the pops there and then, and the "
+        f"only ways out of a held cluster are dropping it or leaving "
+        f"the screen")
+
+    # THE CANCEL — HD EXTENSION. Right click discards it, and that is
+    # free precisely because nothing was sent.
+    _scr_op.handle_right_button(True, *_square_xy(_mv_row, _mv_slot))
+    assert _scr_op._move.pick is None, (
+        "a right click did not discard the selection")
+    assert _mv_cap.calls == [] and _mv_cap.keys == [] \
+        and _mv_cap.fields == [], "the cancel path reached the game"
+    # And so does a left click that lands on neither icon nor band.
+    _scr_op.handle_click(*_square_xy(_mv_row, _mv_slot))
+    assert _scr_op._move.pick is not None
+    _scr_op.handle_click(_mv_area.x + 2, _mv_area.bottom - 2)
+    assert _scr_op._move.pick is None, (
+        "a click off the rows did not discard the selection")
+    assert _mv_cap.calls == [] and _mv_cap.fields == []
+
+    # EVERY REFUSAL SENDS NOTHING AND SAYS WHY, and the wording comes
+    # out of layout.json (decision 15). Driven through the controller
+    # rather than the rules, because the claim is about the seam.
+    _mv_words = _scr_op._data["move"]
+    _mv_pops, _mv_np, _mv_mf = _cp.pops_of(_sel_snap,
+                                           _mv_rows[_mv_row]["index"])
+
+    def _refusal(pops, n_pops, max_farms, job, slot, target,
+                 sort_key="name"):
+        _c = _cmu.MoveController()
+        _pick = _cp.pick_at(pops, n_pops, job, slot,
+                            _mv_rows[_mv_row]["index"], _mv_row,
+                            sort_key)
+        if isinstance(_pick, _cp.Refusal):
+            return _pick
+        _c.pick = _pick
+        return _cp.plan_move(_pick, pops, n_pops, max_farms,
+                             _mv_rows[_mv_row]["index"], target)
+
+    # A native is refused at the FIRST click, in a different function
+    # with a different message (colmove.cpp:59-64).
+    _nat = [_icon_pop(9, 0)] + list(_mv_pops[1:])
+    assert _refusal(_nat, _mv_np, _mv_mf, 0, 0, 1).reason == \
+        _cm.REFUSE_NATIVE_PICKUP
+    # An android keeps its job (colmove.cpp:531-537).
+    _and = [_icon_pop(8, 0)] + list(_mv_pops[1:])
+    assert _refusal(_and, _mv_np, _mv_mf, 0, 0, 1).reason == \
+        _cm.REFUSE_ANDROID
+    # A planet that cannot farm refuses its first farmer.
+    assert _refusal(list(_mv_pops), _mv_np, 0, 1, 0, 0).reason == \
+        _cm.REFUSE_NO_FARMING
+    # And a sort HD cannot honour refuses the whole thing: the two
+    # lists are not in the same order, so no row maps to a slot.
+    assert _refusal(list(_mv_pops), _mv_np, _mv_mf, 0, 0, 1,
+                    sort_key=next(iter(_cr.SORT_UNAVAILABLE))).reason \
+        == _cp.REFUSE_SORT_UNAVAILABLE
+    for _r in (_cm.REFUSE_NATIVE_PICKUP, _cm.REFUSE_ANDROID,
+               _cm.REFUSE_NO_FARMING, _cp.REFUSE_SORT_UNAVAILABLE,
+               _cp.REFUSE_NO_ICON, _cp.REFUSE_OTHER_COLONY):
+        assert _mv_words.get(_r), f"move.{_r} has no wording"
+        assert _cp.message(_mv_words, _cp.Refusal(_r)) == _mv_words[_r]
+    # A PARTIAL carries both halves: the rule that stopped it AND the
+    # count, because "this job is full" alone reads as "nothing fits"
+    # when two of twelve would have moved.
+    _part = _cp.message(_mv_words, _cp.Refusal(_cm.REFUSE_JOB_FULL,
+                                               landed=2, carried=10,
+                                               total=12))
+    assert _mv_words[_cm.REFUSE_JOB_FULL] in _part and "2" in _part \
+        and "12" in _part, _part
+    assert "{" not in _part, (
+        "a placeholder survived substitution; `message` replaces and "
+        "never formats (decision 37)")
+
+    # A REFUSED DROP SENDS NOTHING THROUGH THE SEAM EITHER.
+    _mv_cap.calls, _mv_cap.keys, _mv_cap.fields = [], [], []
+    _scr_op.handle_click(*_square_xy(_mv_row, _mv_slot))
+    _scr_op._sort_key = next(iter(_cr.SORT_UNAVAILABLE))
+    _scr_op.handle_click(*_band_xy(_mv_row, _mv_target))
+    _scr_op._sort_key = "name"
+    assert _mv_cap.calls == [] and _mv_cap.fields == [], (
+        "a refused drop reached the game")
+    _scr_op._move.cancel("test")
+
+    # NOTHING IN colonypick CAN SEND. The rule is structural, so the
+    # check is too: a client would have to arrive through an import.
+    _cp_src = open(os.path.join(
+        os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+        "screens", "colony_summary", "colonypick.py")).read()
+    for _forbidden in ("inject_click", "activate_field", "inject_key",
+                       "game_client"):
+        assert _forbidden not in _cp_src, (
+            f"colonypick mentions {_forbidden}; the module that "
+            f"DECIDES must not be able to send, which is what makes "
+            f"'a preview does not inject' a property of the import "
+            f"graph rather than a promise")
+
+    # THE MARKINGS, in every home they claim. A marking two documents
+    # assert and nobody checks is an intention (the help panel's).
+    assert "HD EXTENSION" in (_cmu.MoveController.cancel.__doc__ or "")
+    assert "HD EXTENSION" in (_cp.__doc__ or "")
+    assert "HD EXTENSION" in _mv_words.get("_hd_extension_cancel", "")
+    assert "HD EXTENSION" in _mv_words.get("_hd_extension_bands", "")
+    assert "HD EXTENSION" in (_cl.drop_band.__doc__ or "")
+    for _cite in ("colsum.cpp:804", "colsum.cpp:938"):
+        assert _cite in _mv_words["_hd_extension_cancel"], (
+            f"the cancel marking no longer names {_cite} — the "
+            f"reason it is allowed is that the original's only exits "
+            f"from a held cluster are those two, and a marking that "
+            f"does not say what the original does instead is a label")
+    # AND THE STATUS DOCUMENT, which both notes name as a home. A
+    # marking two documents claim exists is not a marking — that is
+    # the help panel's lesson, and it cost a day and a half of a
+    # tree actively defending the wrong label.
+    _mv_status = open(os.path.join(
+        os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+        "v3_projektstatus.md")).read()
+    for _mark in ("HD EXTENSION — the cancel",
+                  "HD EXTENSION — the three drop bands",
+                  "DEVIATION — a partial move is refused"):
+        assert _mark in _mv_status, (
+            f"v3_projektstatus.md does not carry {_mark!r}, which "
+            f"layout.json's move notes name as one of its homes")
+    assert "DEVIATION" in _mv_words.get("_partial_note", ""), (
+        "refusing a partial move is a deviation from the original, "
+        "which performs it and then opens a blocking box "
+        "(colmove.cpp:168-173, textbox.cpp:149)")
+    app.client, app.connected = _mv_client, _mv_conn
+    _scr_op.update(_sel_snap)
+    ok("pop move: the first click and every refusal send NOTHING, "
+       "the cancel is marked in four homes")
+
+    # ── And the sentence has to FIT the panel it is drawn in ──────
+    # Found by rendering it and looking, which is the only thing that
+    # could: at one line and 18 px the longest of these messages —
+    # a rule plus its count — ran past `spare_panel` on both sides
+    # and lost its first and last characters under the frame's metal.
+    # Every value was right and the text was drawn, so a check that
+    # asked "did it draw ink?" would have passed. Decision 44's class
+    # A rule, met from a new direction.
+    _fit_msg = _cp.message(_mv_words, _cp.Refusal(_cm.REFUSE_JOB_FULL,
+                                                  landed=2, carried=10,
+                                                  total=12))
+    _fit_box = _scr_op.box_rect("spare_panel")
+    assert _fit_box, "spare_panel is where the move message goes"
+    _fit_rect = pygame.Rect(*app.layout.rect(_fit_box))
+    _fit_px = app.layout.font_size(_mv_words.get("font", 18))
+    _fit_surf = pygame.Surface((_fit_rect.right + 8, _fit_rect.bottom + 8))
+    _fit_surf.fill((0, 0, 0))
+    _fit_ctl = _cmu.MoveController()
+    _fit_ctl.message = _fit_msg
+    _fit_ctl.draw_message(_fit_surf, _fit_rect, _fit_px, app.style,
+                          (255, 255, 255))
+    _fit_ink = pygame.surfarray.array3d(_fit_surf).sum(axis=2)
+    _fit_cols = [x for x in range(_fit_surf.get_width())
+                 if _fit_ink[x].any()]
+    _fit_rows = [y for y in range(_fit_surf.get_height())
+                 if _fit_ink[:, y].any()]
+    assert _fit_cols and _fit_rows, "the message drew nothing at all"
+    _fit_inset = max(2, _fit_px // 2)
+    _fit_in = _fit_rect.inflate(-2 * _fit_inset, -2 * _fit_inset)
+    assert (_fit_in.left <= min(_fit_cols) and max(_fit_cols) <= _fit_in.right
+            and _fit_in.top <= min(_fit_rows)
+            and max(_fit_rows) <= _fit_in.bottom), (
+        f"the move message runs from x {min(_fit_cols)}..{max(_fit_cols)}, "
+        f"y {min(_fit_rows)}..{max(_fit_rows)}, outside {_fit_in} — a "
+        f"glyph past a cutout's edge is drawn under the frame's rim "
+        f"and the panel is a cutout (fundament 44)")
+    # NOTHING IS TRUNCATED to make it fit: the wrap shrinks the size
+    # and leaves a too-wide word whole, because losing a character is
+    # not one of the outcomes.
+    _fit_lines = _textfit.wrap_text(app.style, _fit_msg, _fit_px,
+                                    _fit_rect.w - 2 * _fit_inset)
+    assert " ".join(_fit_lines).split() == _fit_msg.split(), (
+        f"the wrap dropped words: {_fit_lines}")
+    ok("pop move message fits spare_panel (wrapped and shrunk, no "
+       "glyph under the frame's rim, nothing dropped)")
+
+    # ── The send waits for an EFFECT, and the first pair is early ──
+    # ext::Tick() calls ProcessInput() BEFORE it serializes anything
+    # (ext_api.cpp:341-386), so the tick that consumes an injected
+    # command also ships the world from before the game acted on it.
+    # Measured 5 September 2026 against the running game: one
+    # increment of the list window read _first unchanged on the first
+    # state/visual pair and moved on the second. A chain that
+    # accepted the first pair would confirm every step one tick early
+    # — and then aim the next click at a window that has not moved.
+    class _SendClient:
+        def __init__(self):
+            self.stats = {"state": 0, "visual": 0}
+            self.clicks, self.fields, self.keys = [], [], []
+        def inject_click(self, x, y): self.clicks.append((x, y))
+        def activate_field(self, f): self.fields.append(f)
+        def inject_key(self, k): self.keys.append(k)
+
+    class _SendState:
+        def __init__(self, raws):
+            self.colonies_raw = list(raws)
+            self.framebuffer = None
+            self.fields = []
+
+    _sd_off = dict((n, o) for n, o, _k in _cst.SPEC.fields)
+
+    def _raw_with(pops, n_pops=3):
+        _b = bytearray(_cst.SPEC.size)
+        _b[_sd_off["owner"]] = 0
+        _b[_sd_off["n_pops"]] = n_pops
+        _b[_sd_off["max_farms"]] = 255
+        for _i, _w in enumerate(pops):
+            struct.pack_into("<I", _b, _sd_off["pop"] + 4 * _i, _w)
+        return bytes(_b)
+
+    _sd_pops = [_icon_pop(0, 0), _icon_pop(0, 0), _icon_pop(0, 0)]
+    _sd_cluster = _cm.Cluster([2])
+    _sd_pred = _cm.predict_pops(_sd_pops, 3, 255, _sd_cluster, 1)
+    _sd_held = list(_sd_pops)
+    _sd_held[2] &= ~_cst.POP_MASK_ASSIGNED
+
+    _sd_c = _SendClient()
+    _sd = _cse.Send(_sd_c, n_colonies=5, position=0, colony=0,
+                    source_job=0, slot=2, icon_count=3, target_job=1,
+                    cluster=_sd_cluster, predicted=_sd_pred,
+                    sort_hotkey=ord("n"))
+    assert _sd.state == _cse.ESTABLISH and _sd_c.clicks == []
+    # Under ten colonies there is no window to establish and no
+    # indicator to read (colsum.cpp:751, :194-197), so the chain goes
+    # straight to the pick-up rather than demanding a reading a
+    # correctly behaving game does not draw.
+    _sd.update(_SendState([_raw_with(_sd_pops)]))
+    assert _sd.state == _cse.PICK, _sd.state
+    assert _sd_c.clicks == [(_ci.slot_click_x(0, 2, 3),
+                             _ci.row_click_y(0))], _sd_c.clicks
+    assert _sd_c.fields == [], (
+        "a five-colony list needs no window steps at all")
+
+    # THE PRE-EFFECT PAIR IS REFUSED even though the predicate is
+    # already true on it. This is the whole assertion.
+    _sd_c.stats["state"] += 1
+    _sd_c.stats["visual"] += 1
+    _sd.update(_SendState([_raw_with(_sd_held)]))
+    assert _sd.state == _cse.PICK and len(_sd_c.clicks) == 1, (
+        f"the chain acted on the FIRST snapshot after its send "
+        f"({_sd.state}, {_sd_c.clicks}); that snapshot is serialized "
+        f"in the tick that consumed the send and cannot carry the "
+        f"effect")
+    _sd_c.stats["state"] += 1
+    _sd_c.stats["visual"] += 1
+    _sd.update(_SendState([_raw_with(_sd_held)]))
+    assert _sd.state == _cse.DROP and len(_sd_c.clicks) == 2, (
+        f"the interlock did not pass on the second pair: {_sd.state}")
+    # The drop lands in the middle of the target column, not on an
+    # icon: Send_Cluster_ reads no icon at all, which is what lets a
+    # player start an empty column.
+    _sd_lx, _sd_rx = _ci.COLUMNS[1]
+    assert _sd_c.clicks[1] == ((_sd_lx + _sd_rx) // 2,
+                               _ci.row_click_y(0)), _sd_c.clicks
+
+    # The drop confirms, and the SORT KEY GOES OUT AGAIN — not
+    # housekeeping: HD re-sorts from every snapshot and the game only
+    # when a sort field is activated (colsum.cpp:829-838), so a move
+    # under a production key leaves the two lists in different orders
+    # with every value on both screens still correct.
+    _sd_c.stats["state"] += 2
+    _sd_c.stats["visual"] += 2
+    _sd.update(_SendState([_raw_with(_sd_pred)]))
+    assert _sd.state == _cse.RESORT and _sd_c.keys == [ord("n")], (
+        f"{_sd.state}, keys {_sd_c.keys}")
+    _sd_c.stats["state"] += 2
+    _sd_c.stats["visual"] += 2
+    _sd.update(_SendState([_raw_with(_sd_pred)]))
+    assert _sd.state == _cse.DONE and _sd.finished
+
+    # THE INTERLOCK STOPS ON A CLUSTER IT DID NOT PREDICT, and says
+    # the game is HOLDING rather than that nothing happened — only
+    # the player can end that state, because the ways out are
+    # dropping the pops or leaving the screen.
+    _sd_c2 = _SendClient()
+    _sd2 = _cse.Send(_sd_c2, n_colonies=5, position=0, colony=0,
+                     source_job=0, slot=2, icon_count=3, target_job=1,
+                     cluster=_sd_cluster, predicted=_sd_pred)
+    _sd2.update(_SendState([_raw_with(_sd_pops)]))
+    _sd_wrong = list(_sd_pops)
+    _sd_wrong[0] &= ~_cst.POP_MASK_ASSIGNED     # a different pop
+    _sd_c2.stats["state"] += 2
+    _sd_c2.stats["visual"] += 2
+    _sd2.update(_SendState([_raw_with(_sd_wrong)]))
+    assert _sd2.state == _cse.HOLDING and _sd2.holding, _sd2.state
+    assert _sd2.reason == "wrong_pickup"
+    assert len(_sd_c2.clicks) == 1, (
+        "the chain clicked again with geometry that had just been "
+        "shown wrong")
+    assert _scr_op._data["move"].get("stranded"), (
+        "there is no wording for a held cluster, which is the one "
+        "state only the player can end")
+
+    # _first IS ESTABLISHED, NEVER REMEMBERED (decision 46). The plan
+    # always leads with enough decrements to reach the top from
+    # wherever a human left the window, so the step list is a
+    # property of the colony count and not of any reading.
+    _sd3 = _cse.Send(_SendClient(), n_colonies=15, position=0,
+                     colony=0, source_job=0, slot=0, icon_count=1,
+                     target_job=1, cluster=_cm.Cluster([0]),
+                     predicted=_sd_pops)
+    assert _sd3._steps == [_cse.STEP_UP_XY] * _cs_sel.GameWindow.max_first(15), (
+        f"the plan starts with {_sd3._steps}; it must lead with "
+        f"{_cs_sel.GameWindow.max_first(15)} decrements, which reach "
+        f"the top from any state (colsum.cpp:211-214)")
+    ok("pop move on the wire (the pre-effect pair is refused, the "
+       "interlock stops on a cluster it did not predict)")
+
+    # AND THE PROBE HAS THE SAME WAIT, because it is the tool that
+    # runs against a live game and it got this wrong twice: once by
+    # waiting for a fresh STATE while reading the FRAME, and once by
+    # waiting for a fresh frame that was still the pre-effect one.
+    # Two loops rather than one shared helper — this one blocks and
+    # the chain's is driven a frame at a time — so the rule is
+    # asserted in both places rather than assumed to have travelled.
+    import importlib.util as _ilu
+    _pb_path = os.path.join(
+        os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+        "tools", "colony_move_probe.py")
+    _pb_spec = _ilu.spec_from_file_location("_probe", _pb_path)
+    _pb = _ilu.module_from_spec(_pb_spec)
+    _pb_spec.loader.exec_module(_pb)
+
+    class _PollClient:
+        def __init__(self):
+            self.stats = {"state": 0, "visual": 0}
+            self.state = type("S", (), {"framebuffer": b"\0"})()
+        def poll(self):
+            self.stats["state"] += 1
+            self.stats["visual"] += 1
+
+    _pb_c = _PollClient()
+    _pb_seen = []
+    assert _pb.after_send(_pb_c, lambda st: _pb_seen.append(
+        _pb_c.stats["state"]) or True, tries=4) is not None
+    assert _pb_seen and min(_pb_seen) >= 2, (
+        f"the probe's after_send accepted the world at pair "
+        f"{min(_pb_seen)}; the first pair after a send is serialized "
+        f"in the tick that consumed it")
+    _pb_c2 = _PollClient()
+    assert _pb.after_send(_pb_c2, lambda st: False, tries=3) is None, (
+        "a predicate that never holds must time out, not settle")
+    ok("the live probe waits for the effect too (same rule, second "
+       "loop, asserted rather than assumed)")
 
     # ── The sidebar's six s_player scalars ──
     # ONE home for these offsets: the verified spec in

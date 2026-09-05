@@ -104,7 +104,7 @@ from core.config import REF_W, REF_H
 from core.screen_base import ScreenBase
 from core.structs import player as player_struct
 
-from . import (colonyempire, colonyinset, colonylist,
+from . import (colonyempire, colonyinset, colonylist, colonymoveui,
                colonyoutput, colonyrows, colonyselect)
 
 log = logging.getLogger("colony_summary")
@@ -117,6 +117,7 @@ NAV_TEXT_DIM = palette.col(
     "colony_summary", "nav_text_dim", (104, 116, 142))
 NAV_TEXT = palette.col("colony_summary", "nav_text", (196, 208, 236))
 TITLE_COLOR = palette.col("colony_summary", "title", (200, 210, 238))
+MOVE_TEXT = palette.col("colony_summary", "move_text", (206, 216, 238))
 
 #: The native screen the original draws under this one. Defined in
 #: `colonyempire`, which is the module that scales BY it; `_inject`
@@ -146,6 +147,10 @@ class ColonySummaryScreen(ScreenBase):
         # Which slice of those rows is on screen. VIEWING ONLY —
         # nothing on this screen sends it anywhere (decision 46).
         self._window = colonyselect.Window()
+        # The pop move, click-click. The first click is LOCAL and
+        # reaches no client — see `colonypick`, which is where the
+        # reason lives — and the second one sends both clicks.
+        self._move = colonymoveui.MoveController()
 
     # ── Lifecycle ─────────────────────────────────────────
 
@@ -155,6 +160,13 @@ class ColonySummaryScreen(ScreenBase):
             "screens/colony_summary/layout.json", {}) or {}
         self._sort_key = self._data.get("sort", {}).get("default", "name")
         self._load_frame()
+        # A selection does not survive leaving the screen, because in
+        # the game it could not: leaving is one of the two
+        # `Clear_Cluster_` paths (colsum.cpp:804 and :938), so a pick
+        # carried across would describe a state the original has
+        # already discarded — and an in-flight send would be waiting
+        # for an effect nobody is going to produce.
+        self._move = colonymoveui.MoveController()
         self.update(game_state)
         self._push_sort_key()
 
@@ -203,6 +215,7 @@ class ColonySummaryScreen(ScreenBase):
         # player's record.
         self._state = game_state
         self._rebuild_rows()
+        self._move.advance(game_state, self._move_words())
         raws = getattr(game_state, "player_raw", None) or []
         players = [player_struct.parse(r) for r in raws
                    if len(r) >= player_struct.SIZE]
@@ -270,6 +283,47 @@ class ColonySummaryScreen(ScreenBase):
         return self._selection.position()
 
 
+    # ── The pop move ──────────────────────────────────────
+    #
+    # Click-click, like the original (colsum.cpp:851-870). The state
+    # between the two clicks, the rules and the wire sequence are
+    # `colonymoveui`'s; what stays here is what the screen owns — the
+    # boxes, the wording out of layout.json, and the client.
+
+    def _move_words(self):
+        """The wording, from layout.json (decision 15)."""
+        return self._data.get("move", {})
+
+    def _render_move(self, surface):
+        """The marks on the row, and the last word in `spare_panel`.
+
+        **`spare_panel` stops being empty here, and that is a
+        decision.** It is the middle hole, over the native column
+        `output_panel` already answers for (layout.json's `panels`
+        note), and it was left blank on purpose rather than filled
+        with a second copy of those values. A move's refusal is not
+        those values: the original answers one with `GENDRAW::Help_`,
+        a BLOCKING message box centred on the whole screen
+        (textbox.cpp:149) — which HD cannot reproduce and must not,
+        since it refuses BEFORE sending and the box therefore never
+        opens. The sentence has to be somewhere a player is looking,
+        and this is the one panel on the screen that owes nothing to
+        the original.
+        """
+        area, cfg, scale, _n_rows = self._list_view()
+        if self.box_rect("list_area"):
+            self._move.draw(surface, self._rows, self._first, area, cfg,
+                            scale)
+        if not self._move.message:
+            return
+        box = self.box_rect("spare_panel")
+        if not box:
+            return
+        self._move.draw_message(
+            surface, pygame.Rect(*self.layout.rect(box)),
+            self.layout.font_size(self._move_words().get("font", 18)),
+            self.style, MOVE_TEXT)
+
     # ── Frame ─────────────────────────────────────────────
 
     def _load_frame(self):
@@ -298,6 +352,7 @@ class ColonySummaryScreen(ScreenBase):
         self._render_output(surface)
         self._render_inset(surface)
         self._render_sidebar(surface)
+        self._render_move(surface)
         self._render_buttons(surface)
         self._render_frame_image(surface)
         self._render_title(surface)
@@ -465,6 +520,15 @@ class ColonySummaryScreen(ScreenBase):
     # ── Input ─────────────────────────────────────────────
 
     def handle_click(self, screen_x, screen_y):
+        if self._move.busy:
+            # A move is on the wire. Every other button on this
+            # screen injects something — a sort re-orders the game's
+            # own list and resets `_first` (colsum.cpp:829-838), and
+            # RETURN leaves the screen, which is one of the two
+            # `Clear_Cluster_` paths — so a click accepted now would
+            # move the ground under a chain that has already sent its
+            # first click.
+            return None
         for spec in self._data.get("sort", {}).get("buttons", []):
             if self._hit(f"sort_{spec['key']}", screen_x, screen_y):
                 # No direction toggle, even on the active header:
@@ -495,8 +559,25 @@ class ColonySummaryScreen(ScreenBase):
         if self._hit("return", screen_x, screen_y):
             self._inject(self._data.get("return", {}), "return")
             return None
-        if self._window.row_at(*self._list_view(),
-                               (screen_x, screen_y)) is not None:
+        area, cfg, scale, _n_rows = self._list_view()
+        row_index = self._window.row_at(area, cfg, scale, _n_rows,
+                                        (screen_x, screen_y))
+        if row_index is not None and self._move.click(
+                rows=self._rows, row_index=row_index, x=screen_x,
+                state=self._state, area=area, cfg=cfg, scale=scale,
+                sort_key=self._sort_key, words=self._move_words(),
+                client=self.app.client, connected=self.app.connected,
+                sort_hotkey=colonymoveui.sort_hotkey(
+                    self._data.get("sort", {}).get("buttons", []),
+                    self._sort_key)):
+            return None
+        if row_index is None:
+            # Off the rows — and a held selection is DISCARDED here.
+            # HD EXTENSION, argued in `_cancel_pick` and
+            # `colonypick`: nothing has been injected, so there is
+            # nothing on the other side of the wire to undo.
+            self._move.cancel("clicked off the rows")
+        if row_index is not None:
             # DELIBERATELY INERT, and that is worth a comment because
             # the original does something substantial here: clicking a
             # row's name field sets `MOX::_current_screen =
@@ -527,6 +608,28 @@ class ColonySummaryScreen(ScreenBase):
             # reason this comment is longer than the branch.
             return None
         return super().handle_click(screen_x, screen_y)
+
+    def handle_right_button(self, down, screen_x, screen_y):
+        """Help first, then discard a held selection.
+
+        The ORDER is transcribed. `fields::Get_Input_()` checks the
+        active help list before it lets the right button mean Cancel
+        (`Check_Help_List_`, fields.cpp:2916): over a help rectangle
+        the entry is drawn and the click is swallowed, and only
+        outside one does the right button return -1. So the base
+        class's help handling runs first and this only sees the
+        clicks it did not want.
+
+        The discard itself is the **HD EXTENSION** — the original has
+        no cancel that stays on this screen at all. See
+        `colonymoveui` and `colonypick`.
+        """
+        if super().handle_right_button(down, screen_x, screen_y):
+            return True
+        if not down or self._move.pick is None:
+            return False
+        self._move.cancel("right click")
+        return True
 
     def handle_mouse_motion(self, screen_x, screen_y):
         """Hover selects, which is the original's own behaviour.

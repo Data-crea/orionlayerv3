@@ -1,6 +1,80 @@
 # OrionLayer v3 — Project Status
 
-Updated: 4 September 2026
+Updated: 5 September 2026
+
+This session (5 September 2026), phase 3b of pop movement — the
+connection to the mouse, in one line each: **a real mouse click on
+the HD colony summary now moves pops**, verified end to end with
+`tools/colony_move_hd.py --commit`, which posts a genuine
+`MOUSEBUTTONDOWN` into pygame's queue and lets the app route it, and
+which diffs the WHOLE colony array against a prediction made before
+the click — exactly the predicted pop word changed, in exactly one
+colony; **the gate was the wait, for the third time and for a new
+reason**: `ext::Tick()` runs `ProcessInput()` before it serializes
+anything (ext_api.cpp:341-386), so the first snapshot after a send is
+built from the world BEFORE the game acted, which no counter can fix
+— measured, one window increment read the old `_first` at pair 1 and
+the new one at pair 2 — and both loops now wait for the EFFECT with a
+floor of two pairs, asserted separately in each; **`colonyicons.py`
+transcribes the icon walk**, because a column is NOT `pop[]` in array
+order — five nested loops (coldraw.cpp:325-345) group by state, then
+the conquered bit, then the low nibble in `pop_order`'s sequence, and
+only innermost by the array — and the live proof is a colony whose
+last farmer icon was pop 12 while pop 11 was a scientist, so a click
+past every icon took 12 and array order would have said 11;
+**the fundament's pointer sentence was wrong in its mechanism**:
+`Get_Selected_Pop_` passes mode 3, whose test reads the SCROLL
+FIELD's value (coldraw.cpp:361), and `Find_Bar_Position_`
+(fields.cpp:1702-1743) writes that from `mouse::Pointer_X_() +
+_pointer_offset` at push-down — same conclusion, one more link, and
+the link carries that the value survives between clicks; **every
+refusal opens a BLOCKING message box** (`GENDRAW::Help_` ->
+`TEXTBOX::Do_Text_Box_`, `do { … } while (Get_Input_() == 0)`,
+textbox.cpp:149) over a screen the HD client is still drawing, which
+is the strongest form of decision 33 yet and is why a partial move is
+REFUSED here — a marked deviation, since the original performs it;
+**decision 47** says a preview does not inject and the commit sends
+the whole gesture, which is what buys the cancel MOO2 does not have;
+**the sort key goes out again after every move**, because HD re-sorts
+from every snapshot and the game only when a sort field is activated
+(colsum.cpp:829-838), so a move under a production key would leave
+the two lists in different orders with every value on both screens
+still correct; and `Clear_Cluster_`'s call sites are colsum.cpp:804
+and :938, not :802 and :937 as four documents said.
+
+**The three markings this phase adds, in the form the fundament
+demands — each says what the original does instead:**
+
+- **HD EXTENSION — the cancel.** Right click, or a left click on
+  neither an icon nor a drop band, discards the selection. MOO2 has
+  no cancel that stays on this screen: both `Clear_Cluster_` call
+  sites are leave-the-screen paths (colsum.cpp:804 and :938). It is
+  allowed because the HD selection is not the game's cluster —
+  nothing has been injected — and the day a preview does inject it
+  has to go. In `colonypick.py`, `colonymoveui.py`, `layout.json`
+  under `move._hd_extension_cancel`, and a smoke check.
+- **HD EXTENSION — the three drop bands.** While a selection is
+  held, the track reads as three equal bands, one per job. The
+  original's three columns are FIXED (farmers 101-226, workers
+  236-368, scientists 378-502, colsum.cpp:1006-1024) and always
+  clickable; HD's zones are sized by the data, so an empty job would
+  be a column nobody could drop into. In `colonylist.drop_band`,
+  `layout.json` under `move._hd_extension_bands`, and a smoke check.
+- **DEVIATION — a partial move is refused.** The original performs
+  it and then opens a blocking box. HD sends only a plan that
+  completes and says how many WOULD have moved. In
+  `layout.json` under `move._partial_note`, in `colonypick.py`, and
+  a smoke check.
+
+**What this session did NOT verify, stated rather than left to be
+assumed:** no refusal is reachable in the reference save at all. It
+has no native and no android pop, every colony's `max_farms` is 255,
+and no job is within thirty of the 42 cap — so every plan it can
+produce predicts "all", and the live runs are evidence that the click
+LANDS, not that `plan_drop`'s branches are right. Those branches are
+covered by the smoke test alone, each rule verified to bite on its
+own. A save with a native or a no-farming colony would close the gap;
+inventing one would not.
 
 This session (4 September 2026), after that, in one line each: **the
 exceptions list was measuring the wrong number** — decision 6 was
@@ -304,10 +378,10 @@ files under `doc/` and are only summarised here.
 
 | | |
 |---|---|
-| Python | 21,642 lines across 94 modules (core, screens, tools) |
-| Smoke test | `python tools/smoke_test.py` — **73 checks**, headless |
+| Python | 32,960 lines across 111 modules — `find . -name '*.py'`, `__pycache__` excluded, the smoke test's 6,400 included. The previous figure here (21,642 across 94) was carried from an unstated method and could not be reproduced |
+| Smoke test | `python tools/smoke_test.py` — **79 checks**, headless |
 | Assets | 170 MB (select_race 68, galaxy_map 51, shared 23, new_game 21, colony_summary 1) |
-| Screens in HD | 7 of ~20–22 (colony summary draws list, sidebar, scan box and galaxy inset) |
+| Screens in HD | 7 of ~20–22 (colony summary draws list, sidebar, scan box and galaxy inset, and MOVES POPS — the first HD gesture that drives the game) |
 | Setup from clone | `python tools/setup.py` (deps via the system package manager) |
 | orion2re | required for live data, not for the smoke test |
 
@@ -376,6 +450,11 @@ to stay uncomfortable to extend.
 │   │                                  render_text (glyph fallback),
 │   │                                  draw_inner_panel /
 │   │                                  draw_thin_border
+│   ├── textfit.py                     Wrap, and shrink until it fits
+│   │                                  BOTH ways. Extracted from the
+│   │                                  help popup and the building
+│   │                                  column when the move message
+│   │                                  became the third copy
 │   ├── banner.py                 233  Runtime-tinted MOO2 banners
 │   ├── injection.py              166  InjectionChain by field shape
 │   ├── mapcoords.py              183  Galaxy <-> 640x480 <-> HD,
@@ -431,11 +510,33 @@ to stay uncomfortable to extend.
 │   │   └── assets/                    frame.png, map_background.png,
 │   │                                  stars/, nebula/, icons/,
 │   │                                  ships/<kind>/0..3.png
-│   ├── colony_summary/                ID 20, frame + sidebar; list
-│   │   ├── screen.py             258  list pending; s_colony now
-│   │   │                              verified, so the data is there
+│   ├── colony_summary/                ID 20, frame, list, sidebar,
+│   │   │                              scan box, galaxy inset, and
+│   │   │                              the population move
+│   │   ├── screen.py             296  the seam only: boxes, wording,
+│   │   │                              client; everything else is a
+│   │   │                              module beside it
+│   │   ├── colonyrows.py              the numbers per colony
+│   │   ├── colonylist.py              the rows, the track, and the
+│   │   │                              two hit tests over it
+│   │   ├── colonybuild.py             the building column
+│   │   ├── colonyoutput.py            the scan box
+│   │   ├── colonyinset.py             the small galaxy map
+│   │   ├── colonyempire.py            the sidebar
+│   │   ├── colonyselect.py            which colony is selected, HD's
+│   │   │                              scroll window, and the GAME's
+│   │   ├── colonyfirst.py             reading `_first` off the thumb
+│   │   ├── colonymove.py              COLMOVE's five rules, mirrored
+│   │   ├── colonyicons.py             which pop each icon is, and
+│   │   │                              where it sits (coldraw.cpp)
+│   │   ├── colonypick.py              what a click would do. Pure,
+│   │   │                              and cannot send — decision 47
+│   │   ├── colonymoveui.py            the state between two clicks
+│   │   ├── colonysend.py              the two clicks on the wire,
+│   │   │                              each confirmed by its effect
 │   │   ├── layout.json                frame, sort/return native
-│   │   │                              click points, empire rows
+│   │   │                              click points, empire rows,
+│   │   │                              the move's own wording
 │   │   ├── boxes.json                 14 cutouts, all derived
 │   │   └── assets/                    frame.png (1672x941)
 │   └── _template/                 50  Copy to create a screen
@@ -469,6 +570,13 @@ to stay uncomfortable to extend.
     ├── make_ship_icons.py        207  Generate ship/monster steps
     ├── zoom_probe.py             205  What a zoom step does to the
     │                                  game's view origin (live)
+    ├── colony_move_probe.py           One pop move by injected
+    │                                  native clicks, predicted
+    │                                  before and diffed after (live)
+    ├── colony_move_hd.py              The same move through the HD
+    │                                  screen: a real MOUSEBUTTONDOWN
+    │                                  posted into pygame's queue and
+    │                                  routed by the app (live)
     ├── starfield_measure.py      179  Background star density
     ├── nebula_check.py           161  Nebula spec check
     ├── ship_icon_check.py        158  Live owner/kind/sprite per icon
@@ -556,7 +664,7 @@ check count makes, for the same reason.
 
 `galaxy_map/screen.py` (**529** code, 805 total), `tools/struct_probe.py`
 (**478** code, 753 total), `custom_race/screen.py` (**400** code,
-558 total), `tools/colony_list_preview.py` (**343** code, 669 total),
+558 total), `tools/colony_list_preview.py` (**344** code, 678 total),
 `core/editor/editor.py` (**340** code, 390 total),
 `galaxy_map/renderer.py` (**333** code, 747 total), `tools/ext_diag.py`
 (**325** code, 473 total), `core/style.py` (**306** code, 453 total).

@@ -56,7 +56,7 @@ derive world geometry.
 python tools/smoke_test.py
 ```
 
-73 checks, headless, no orion2re needed. **The count must not go
+79 checks, headless, no orion2re needed. **The count must not go
 down.** If a change makes a check obsolete, replace it — do not
 delete it. Add a check for anything a future session could silently
 break; several checks exist because a fault was invisible on screen.
@@ -106,7 +106,8 @@ mods/                   file-level overrides; example_mod works
 Seven screens exist: main menu, new game, select race, custom race,
 empire identity, galaxy map, colony summary (list, sidebar, scan
 box and galaxy inset; sort and RETURN wired, scrolling for
-viewing only).
+viewing only, and the population move click-click on the rows —
+the first HD gesture that drives the game, see decision 47).
 Screens without an HD version fall back to the original framebuffer,
 so the game is always playable.
 
