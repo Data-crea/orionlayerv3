@@ -465,8 +465,11 @@ letter for a foreign race, plus a corner triangle for conquered.
   sent.
 - *click a cell* — local selection; the cells that would travel with
   it light up. Nothing is sent.
-- *click a job band* — all five rules, then both clicks as one
-  gesture, each step confirmed against its effect.
+- *click a job target* — all five rules, then both clicks as one
+  gesture, each step confirmed against its effect. The target is the
+  job's own cells, or a one-cell placeholder where it has none;
+  "three equal bands" was the first shape and is gone, see the status
+  document.
 - *right click / click into empty space* — discard (marked HD
   extension).
 - *click a sort header* — the hotkey goes to the game, HD re-sorts.

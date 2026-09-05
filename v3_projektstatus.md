@@ -171,13 +171,24 @@ demands — each says what the original does instead:**
   nothing has been injected — and the day a preview does inject it
   has to go. In `colonypick.py`, `colonymoveui.py`, `layout.json`
   under `move._hd_extension_cancel`, and a smoke check.
-- **HD EXTENSION — the three drop bands.** While a selection is
-  held, the track reads as three equal bands, one per job. The
-  original's three columns are FIXED (farmers 101-226, workers
-  236-368, scientists 378-502, colsum.cpp:1006-1024) and always
-  clickable; HD's zones are sized by the data, so an empty job would
-  be a column nobody could drop into. In `colonylist.drop_band`,
+- **HD EXTENSION — a drop target per job, and the target is the
+  group.** While a selection is held, a job WITH pops is targeted by
+  the exact horizontal extent of its cells, and an empty job by a
+  placeholder one cell wide where there is room — trailing past the
+  last cell, leading at the track's left edge, inner centred on the
+  seam, taking from no neighbour more than half its width and never
+  more than half a cell. No drawn cell moves. The original's three
+  columns are FIXED (colsum.cpp:1006-1024) and always clickable;
+  HD's zones are sized by the data, so an empty job would otherwise
+  be a column nobody could drop into. In `colonylist.drop_targets`,
   `layout.json` under `move._hd_extension_bands`, and a smoke check.
+- **HD EXTENSION — a click on the held pop's own group discards the
+  selection and sends nothing.** Only the "sends nothing" half is an
+  extension: the original's outcome is the same, because
+  `Send_Cluster_` with the job the pops already hold takes the
+  re-flag path (colmove.cpp:165) and releases the cluster with the
+  array unchanged. Holding the selection instead would be the
+  deviation.
 - **DEVIATION — a partial move is refused.** The original performs
   it and then opens a blocking box. HD sends only a plan that
   completes and says how many WOULD have moved. In
@@ -497,7 +508,7 @@ files under `doc/` and are only summarised here.
 | | |
 |---|---|
 | Python | 32,960 lines across 111 modules — `find . -name '*.py'`, `__pycache__` excluded, the smoke test's 6,400 included. The previous figure here (21,642 across 94) was carried from an unstated method and could not be reproduced |
-| Smoke test | `python tools/smoke_test.py` — **81 checks**, headless |
+| Smoke test | `python tools/smoke_test.py` — **82 checks**, headless |
 | Assets | 170 MB (select_race 68, galaxy_map 51, shared 23, new_game 21, colony_summary 1) |
 | Screens in HD | 7 of ~20–22 (colony summary draws list, sidebar, scan box and galaxy inset, and MOVES POPS — the first HD gesture that drives the game) |
 | Setup from clone | `python tools/setup.py` (deps via the system package manager) |
@@ -2996,7 +3007,7 @@ save it thinks it is.
 | Fixture | Stardate | sha256 (first 16) | What it is for |
 |---|---|---|---|
 | `fixture_reference_3502.4.GAM` | 3502.4 | `ab70cc9ad5442335` | the move chain. 11 colonies, single race, **no native, no android, no conquered, every `max_farms` 255** — every plan it can produce predicts "all" |
-| `fixture_natives_3502.5.GAM` | 3502.5 | `b1f1aa466716d6c0` | population identity. Player 0 Elerian; 8 colonies; **Urna I is the only mixed one**, 1 pop of nibble 0 against 3 of nibble 9. Also the only save with `max_farms == 0` colonies (Neptunus I, Piatuos I), so the `no_farming` refusal is reachable in it |
+| `fixture_natives_3502.5.GAM` | 3502.5 | `b1f1aa466716d6c0` | population identity. Player 0 Elerian; 8 colonies; **Urna I is the only mixed one**, 1 pop of nibble 0 against 3 of nibble 9, and a real four-cell row. Also the only save with `max_farms == 0` colonies (Neptunus I, Piatuos I) — see the closed item below |
 
 In-game names `"claude nicht lschen"` and `"2Natives"`; the originals
 were slots `SAVE8.GAM` and `SAVE2.GAM`. **Anything below that reads a
@@ -3006,6 +3017,36 @@ help-file lesson, one domain over.
 
 Zhadoom III (14 pops) is the widest row in either fixture and is
 therefore the narrowest-cell case any picture has to survive.
+
+### Drop targets follow the groups — rebuilt 5 September 2026
+
+The old shape was three equal thirds of the whole 42-slot track.
+**Every job was reachable that way, but only at a place where nothing
+stood.** A colony of 13 pops has all its cells inside the first
+third, so a click on a worker cell named FOOD, while empty track two
+thirds along named research and worked — which is exactly why the
+phase 3b acceptance could move pops into industry and research while
+every cell in every row named the wrong job. `band_xy` aimed at the
+bands, and the bands were reachable; the cells were the part that
+lied. Measured across the reference save before the rewrite: every
+non-food group of every row named food.
+
+Now the target IS the group — for a job with pops, the exact extent
+of its cells — with a one-cell placeholder for an empty job, and no
+drawn cell moves. The rule and its two bounds are in
+`colonylist.drop_targets`, which is also the ONE function the
+outline is drawn from (decision 5); before, the drawing and the hit
+test each computed their own thirds and agreed with each other while
+disagreeing with the squares.
+
+**One correction to the seam rule as it was handed down.** "No more
+than half a neighbour's width" is not enough by itself: against a
+two-cell neighbour half its width is a whole cell, and Neptunus I
+`[0, 0, 2]` lost the first research cell to two leading placeholders
+outright — the same fault in a new place. The second bound is half a
+CELL, so half a drawn square always survives on its own side and the
+cell keeps its centre. A smoke check asserts the centres rather than
+the arithmetic.
 
 ### Pop identity — HALF VERIFIED, and the halves are named
 
@@ -3045,11 +3086,15 @@ with androids is offered it pointlessly. Reproducible in the named
 save; the consequence for the engine is written into the item, and
 what we could NOT establish is written there too.
 
-**And the fixture closes a second shopping-list item by accident:**
+**CLOSED — the `no_farming` test case, open since 4 September.**
 Neptunus I and Piatuos I have `max_farms == 0` and hold only
-scientists, so the `no_farming` refusal is finally reachable — a
-prediction that is not "all", which the reference save could not
-produce.
+scientists, so dropping one onto the food column is refused at the
+first pop: `plan_drop` returns `landed=0, reason=no_farming`. That is
+a prediction which is not "all" — the thing the reference save could
+not produce and the reason the phase 3b protocol had to record the
+gap in a sentence instead of testing it. Of the four items on the
+savegame shopping list, two are now closed (natives, no farming) and
+two remain open (an android, a conquered pop).
 
 ### Zhadoom III — the earlier observation, resolved
 

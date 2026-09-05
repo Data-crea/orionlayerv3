@@ -4398,9 +4398,11 @@ def main():
 
     def _band_xy(row_index, job):
         _top, _h = _mv_bands[row_index]
-        return (int(_cl.track_x(_mv_area, _mv_cfg, _mv_scale)
-                    + _mv_track.width / 3.0 * (job + 0.5)),
-                _top + _h // 2)
+        for _j, _r in _cl.drop_targets(_mv_area, _mv_cfg, _mv_scale,
+                                       _mv_rows[row_index]):
+            if _j == job and _r.width:
+                return _r.x + _r.width // 2, _top + _h // 2
+        raise AssertionError(f"no drop target for job {job}")
 
     # A row with pops in at least two jobs, so a move has somewhere
     # to go and the fixture is not the thing being tested.
@@ -4519,7 +4521,10 @@ def main():
     assert "HD EXTENSION" in (_cp.__doc__ or "")
     assert "HD EXTENSION" in _mv_words.get("_hd_extension_cancel", "")
     assert "HD EXTENSION" in _mv_words.get("_hd_extension_bands", "")
-    assert "HD EXTENSION" in (_cl.drop_band.__doc__ or "")
+    # The marking lives on the function that now carries the reason
+    # AND the shape: drop_targets. drop_band is a lookup into it.
+    assert "HD EXTENSION" in (_cl.drop_targets.__doc__ or "")
+    assert "HD EXTENSION" in (_cl.draw_drop_bands.__doc__ or "")
     for _cite in ("colsum.cpp:804", "colsum.cpp:938"):
         assert _cite in _mv_words["_hd_extension_cancel"], (
             f"the cancel marking no longer names {_cite} — the "
@@ -4534,7 +4539,8 @@ def main():
         os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
         "v3_projektstatus.md")).read()
     for _mark in ("HD EXTENSION — the cancel",
-                  "HD EXTENSION — the three drop bands",
+                  "HD EXTENSION — a drop target per job",
+                  "HD EXTENSION — a click on the held pop's own group",
                   "DEVIATION — a partial move is refused"):
         assert _mark in _mv_status, (
             f"v3_projektstatus.md does not carry {_mark!r}, which "
@@ -4545,6 +4551,96 @@ def main():
         "(colmove.cpp:168-173, textbox.cpp:149)")
     app.client, app.connected = _mv_client, _mv_conn
     _scr_op.update(_sel_snap)
+    # ── The drop target IS the group, and the outline IS the target ─
+    # Until 5 September 2026 the targets were three equal thirds of
+    # the whole 42-slot track. Every job was reachable — but only at
+    # a place where nothing stood: a colony of 13 pops has all its
+    # cells inside the first third, so a click on a WORKER cell named
+    # food while empty track two thirds along named research and
+    # worked. The picture and the hit test agreed with each other and
+    # neither agreed with the squares, which is decision 5's failure
+    # exactly. Measured then: every non-food group of every row in
+    # the reference save named food.
+    _dt_rows = [
+        # the case that was reported, and the two the fixtures added
+        {"name": "Draconis V", "pops": 9, "jobs": [4, 4, 1],
+         "no_farming": False, "climate": 8, "max_pop": 14,
+         "producing": "", "producing_turns": 0, "can_buy": False},
+        {"name": "Urna I", "pops": 4, "jobs": [4, 0, 0],
+         "no_farming": False, "climate": 5, "max_pop": 4,
+         "producing": "", "producing_turns": 0, "can_buy": False},
+        {"name": "Neptunus I", "pops": 2, "jobs": [0, 0, 2],
+         "no_farming": True, "climate": 2, "max_pop": 3,
+         "producing": "", "producing_turns": 0, "can_buy": False},
+        # an empty MIDDLE group, which no fixture happens to hold
+        {"name": "inner", "pops": 13, "jobs": [12, 0, 1],
+         "no_farming": False, "climate": 8, "max_pop": 22,
+         "producing": "", "producing_turns": 0, "can_buy": False},
+        # and a job nobody holds at all
+        {"name": "single", "pops": 1, "jobs": [1, 0, 0],
+         "no_farming": False, "climate": 8, "max_pop": 4,
+         "producing": "", "producing_turns": 0, "can_buy": False},
+    ]
+    _dt_track = _cl.track_metrics(_mv_area, _mv_cfg, _mv_scale)
+    _dt_x0 = _cl.track_x(_mv_area, _mv_cfg, _mv_scale)
+    for _r in _dt_rows:
+        _regs = _cl.row_regions(_r)
+        _targets = _cl.drop_targets(_mv_area, _mv_cfg, _mv_scale, _r)
+        assert [j for j, _ in _targets] == [0, 1, 2], _targets
+        # 1. EVERY CELL NAMES ITS OWN JOB. The one that was broken.
+        for _zone, _s0, _cnt in _regs.runs:
+            for _k in range(_cnt):
+                _cx = _dt_x0 + (_s0 + _k) * _dt_track.step \
+                    + _dt_track.unit // 2
+                _got = _cl.drop_band(_mv_area, _mv_cfg, _mv_scale, _r, _cx)
+                assert _got == _zone, (
+                    f"{_r['name']}: cell {_k} of job {_zone} names "
+                    f"{_got}. A click on a cell must name that cell's "
+                    f"job — looks right, clicks wrong is the whole "
+                    f"fault this replaced")
+        # 2. EVERY JOB HAS A TARGET, including one nobody holds.
+        for _job, _rect in _targets:
+            assert _rect.width >= 1, (
+                f"{_r['name']}: job {_job} has no target at all; an "
+                f"empty job is the one a player most wants to start")
+            _mid = _rect.x + _rect.width // 2
+            assert _cl.drop_band(_mv_area, _mv_cfg, _mv_scale, _r,
+                                 _mid) == _job
+        # 3. THE THREE TARGETS DO NOT OVERLAP, in ECON order.
+        _xs = [(r.x, r.x + r.width) for _j, r in _targets]
+        for _a, _b in zip(_xs, _xs[1:]):
+            assert _a[1] <= _b[0], (
+                f"{_r['name']}: targets overlap, {_xs}")
+        # 4. A PLACEHOLDER MOVES NO DRAWN CELL. The cells are laid out
+        #    by row_regions and the targets never write back to it.
+        assert _cl.row_regions(_r).runs == _regs.runs
+        # 5. OUTSIDE EVERY TARGET IS None, and None is a state.
+        assert _cl.drop_band(_mv_area, _mv_cfg, _mv_scale, _r,
+                             _dt_x0 - 5) is None
+        assert _cl.drop_band(_mv_area, _mv_cfg, _mv_scale, _r,
+                             _dt_x0 + _dt_track.width + 5) is None
+    # 6. THE OUTLINE IS THE TARGET, asserted rather than looked at.
+    #    draw_drop_bands takes the rects drop_targets returns, so the
+    #    check is that it is drawn where the hit test answers — done
+    #    by rendering and reading the ink back, because "they call the
+    #    same function" is what the old code could also have claimed.
+    _dt_row = _dt_rows[0]
+    _dt_surf = pygame.Surface((_mv_area.right + 8, _mv_area.bottom + 8))
+    _dt_surf.fill((0, 0, 0))
+    _cl.draw_drop_bands(_dt_surf, _mv_area, _mv_cfg, _mv_scale,
+                        _mv_bands[0], _dt_row)
+    _dt_ink = pygame.surfarray.array3d(_dt_surf).sum(axis=2)
+    _dt_cols = [x for x in range(_dt_surf.get_width()) if _dt_ink[x].any()]
+    _dt_t = _cl.drop_targets(_mv_area, _mv_cfg, _mv_scale, _dt_row)
+    assert min(_dt_cols) == _dt_t[0][1].x, (
+        f"the outlines start at {min(_dt_cols)}, the targets at "
+        f"{_dt_t[0][1].x}")
+    assert max(_dt_cols) == _dt_t[-1][1].x + _dt_t[-1][1].width - 1, (
+        f"the outlines end at {max(_dt_cols)}, the targets at "
+        f"{_dt_t[-1][1].x + _dt_t[-1][1].width - 1}")
+    ok("drop targets follow the groups (every cell names its own job, "
+       "every job has a target, the outline is the target)")
+
     ok("pop move: the first click and every refusal send NOTHING, "
        "the cancel is marked in four homes")
 

@@ -159,18 +159,24 @@ def square_xy(screen, row_index, slot):
 
 
 def band_xy(screen, row_index, job):
-    """The screen pixel of one drop band of one row."""
+    """The screen pixel of one drop target of one row.
+
+    From `drop_targets`, which is the same function the outline is
+    drawn with — so this tool aims where a player would, and cannot
+    pass a run that a player could not reproduce.
+    """
     area, cfg, scale, n_rows = screen._list_view()
     first = screen._first
     bands = colonylist.row_bands(area, cfg, scale, n_rows - first)
     band = row_index - first
     if not 0 <= band < len(bands):
         return None
-    track = colonylist.track_metrics(area, cfg, scale)
     top, row_h = bands[band]
-    width = track.width / 3.0
-    x = int(colonylist.track_x(area, cfg, scale) + width * (job + 0.5))
-    return x, top + row_h // 2
+    for target_job, rect in colonylist.drop_targets(
+            area, cfg, scale, screen._rows[row_index]):
+        if target_job == job and rect.width:
+            return rect.x + rect.width // 2, top + row_h // 2
+    return None
 
 
 def choose(screen, state):

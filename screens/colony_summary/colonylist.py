@@ -144,7 +144,13 @@ Track = collections.namedtuple(
 #: `runs` is (zone, start_slot, count) per profession — the squares
 #: fill them. `filled`..`reach` is the free region, `reach`..
 #: POP_LIMIT_CAP the unreachable one.
-Regions = collections.namedtuple("Regions", "runs filled reach")
+#:
+#: `spans` is the same thing for ALL THREE zones including the empty
+#: ones, as (start_slot, count) in ECON order. `runs` drops the
+#: empties because nothing draws them; `drop_targets` needs to know
+#: WHERE an empty group would have been, and computing that a second
+#: time is how the drawing and the hit test start to disagree.
+Regions = collections.namedtuple("Regions", "runs filled reach spans")
 
 
 def track_metrics(area, cfg, scale):
@@ -260,31 +266,144 @@ def zone_at_slot(row, slot):
     return None
 
 
-def drop_band(area, cfg, scale, x):
-    """Which job column `x` names while a pick is held, or None.
+def drop_targets(area, cfg, scale, row):
+    """(job, Rect) for each of the three drop targets of one row.
 
-    **HD EXTENSION, and it is a geometry one.** The original gives
-    every row three FIXED columns — farmers 101-226, workers 236-368,
-    scientists 378-502 (colsum.cpp:1006-1024) — so an empty job is
-    still a place you can drop pops. The HD row has one track whose
-    zones are sized by the DATA, and a job nobody holds has no width
-    at all: with the zones as targets, the one move a player most
-    wants (start a column) would be the one move they cannot make.
+    **THE ONE GEOMETRY. Drawing and hit-testing both call this**
+    (decision 5). They used to compute thirds of the track
+    separately, which is how they agreed with each other and
+    disagreed with the cells.
 
-    So while a pick is held the track reads as three equal bands, in
-    the same ECON order the zones are drawn in. It is the original's
-    three columns at HD proportions, and it exists only during a
-    move — nothing about the resting row changes.
+    **HD EXTENSION.** The original gives every row three FIXED
+    columns — farmers 101-226, workers 236-368, scientists 378-502
+    (colsum.cpp:1006-1024) — so a job nobody holds is still a place
+    to drop pops. The HD row has one track whose zones are sized by
+    the DATA, and a job nobody holds has no width at all, so a target
+    has to be invented for it. Marked here, in `layout.json` under
+    `move._hd_extension_bands`, in `v3_projektstatus.md` and in a
+    smoke check.
 
-    Marked here, in `layout.json` under `move`, in
-    `v3_projektstatus.md` and in a smoke check.
+    **WHAT THE FIRST SHAPE GOT WRONG, kept because the failure is the
+    interesting part.** Until 5 September 2026 this was three equal
+    thirds of the whole 42-slot track, and every job WAS reachable —
+    but only at a place where nothing stood. The cells of a colony
+    with 13 pops all sit inside the first third, so a click on a
+    worker cell named FOOD, while a click on empty track at two
+    thirds along named research and worked. Looks right, clicks
+    wrong: the picture and the hit test agreed with each other and
+    neither agreed with the squares. Measured across the reference
+    save, every non-food group of every row named food.
+
+    **THE TARGET IS THE GROUP.** For a job with pops it is exactly
+    the horizontal extent of its cells, so the thing the player aims
+    at is the thing they see.
+
+    **AND A PLACEHOLDER FOR AN EMPTY JOB, one cell wide where there
+    is room, taking from no neighbour more than half of that
+    neighbour's width.** Three positions, and none of them moves a
+    drawn cell:
+
+      trailing   nothing has cells after it — it lies on the track
+                 past the last cell, where there is nothing to take
+                 from. It is a TARGET, not a claim about capacity:
+                 it may sit on free slots or past `reach`, and it
+                 says nothing about growth either way.
+      leading    nothing has cells before it — it starts at the
+                 track's own left edge and takes from the right.
+      inner      cells on both sides — centred on the seam, half
+                 from each.
+
+    Consecutive empty jobs share one block at the same seam and split
+    it in ECON order, which is why the block is bounded rather than
+    each placeholder: two placeholders against a two-cell neighbour
+    may have one cell between them, not two.
     """
     track = track_metrics(area, cfg, scale)
-    start = track_x(area, cfg, scale)
-    if not start <= x < start + track.width:
-        return None
-    band = track.width / 3.0
-    return min(2, int((x - start) / band))
+    origin = track_x(area, cfg, scale)
+    step = track.step
+    spans = row_regions(row).spans
+
+    def x_of(slot):
+        return origin + slot * step
+
+    rects = {}
+    for zone, (start, count) in enumerate(spans):
+        if count:
+            rects[zone] = [float(x_of(start)), float(x_of(start + count))]
+
+    zone = 0
+    while zone < 3:
+        if spans[zone][1]:
+            zone += 1
+            continue
+        end = zone
+        while end < 3 and spans[end][1] == 0:
+            end += 1
+        block = list(range(zone, end))
+        seam = float(x_of(spans[zone][0]))
+        left = zone - 1 if zone > 0 else None
+        right = end if end < 3 else None
+        want = step * len(block)
+
+        def half(z):
+            """The most a placeholder may take from neighbour `z`.
+
+            TWO bounds and the smaller wins, and the second one was
+            added on the day the first was written down. Half the
+            neighbour's WIDTH is the stated rule and it is not
+            enough: against a two-cell neighbour half its width is a
+            whole cell, so a leading block of two placeholders ate
+            the first research cell of Neptunus I outright and a
+            click on that cell named food — the exact fault this
+            rewrite exists to remove, in a new place.
+
+            So also: never more than half a CELL, `unit / 2`. A
+            square is drawn `unit` wide at the slot's left edge, so
+            leaving half of it leaves its centre on its own side, and
+            "a click on a cell names that cell's job" survives by
+            construction rather than by the numbers happening to
+            work out. A smoke check asserts the centres.
+            """
+            if z not in rects:
+                return 0.0
+            return min((rects[z][1] - rects[z][0]) / 2.0, track.unit / 2.0)
+
+        if right is None:
+            # trailing: the rest of the track is free real estate
+            width = min(want, origin + track.width - seam)
+            x_start = seam
+        elif left is None:
+            width = min(want, half(right))
+            x_start = seam
+        else:
+            width = min(want, 2.0 * min(half(left), half(right)))
+            x_start = seam - width / 2.0
+        if left is not None and left in rects:
+            rects[left][1] = min(rects[left][1], x_start)
+        if right is not None and right in rects:
+            rects[right][0] = max(rects[right][0], x_start + width)
+        share = width / len(block) if block else 0.0
+        for i, z in enumerate(block):
+            rects[z] = [x_start + i * share, x_start + (i + 1) * share]
+        zone = end
+
+    return tuple((z, pygame.Rect(int(rects[z][0]), 0,
+                                 max(1, int(round(rects[z][1] - rects[z][0]))), 0))
+                 for z in range(3))
+
+
+def drop_band(area, cfg, scale, row, x):
+    """Which job `x` names while a pick is held, or None.
+
+    The targets are `drop_targets`', so a click lands on the job the
+    outline around it belongs to. Outside all three — the free slots
+    past a trailing placeholder, the pad either side — is None, and
+    None is a state: it discards the selection rather than dropping.
+    """
+    for job, rect in drop_targets(area, cfg, scale, row):
+        if rect.width and rect.x <= x < rect.x + rect.width:
+            return job
+    return None
 
 
 def row_regions(row):
@@ -299,14 +418,17 @@ def row_regions(row):
     visible.
     """
     runs = []
+    spans = []
     slot = 0
     for zone, count in enumerate(row["jobs"]):
         n = max(0, min(count, POP_LIMIT_CAP - slot))
+        spans.append((slot, n))
         if n:
             runs.append((zone, slot, n))
         slot += n
     return Regions(runs=tuple(runs), filled=slot,
-                   reach=max(0, min(row["max_pop"], POP_LIMIT_CAP)))
+                   reach=max(0, min(row["max_pop"], POP_LIMIT_CAP)),
+                   spans=tuple(spans))
 
 
 # ── The drawing ───────────────────────────────────────────────────
@@ -398,24 +520,25 @@ def draw_pick(surface, area, cfg, scale, band, slots):
             start + slot * track.step, y, track.unit, track.bar_h), 2)
 
 
-def draw_drop_bands(surface, area, cfg, scale, band):
+def draw_drop_bands(surface, area, cfg, scale, band, row):
     """The three drop targets, while a pick is held.
 
-    HD EXTENSION — `drop_band` carries the reason: the original's
-    three columns are fixed and always clickable, and HD's zones are
-    sized by the data, so an empty job would be a column a player
-    could not reach. Drawn only during a move, which is what keeps
-    it out of the resting row.
+    HD EXTENSION — `drop_targets` carries the reason and the shape,
+    and this draws exactly the rects it returns. One function, two
+    readers (decision 5): the outline a player aims at IS the region
+    that will be hit-tested, by construction rather than by two
+    copies of an arithmetic agreeing.
+
+    Drawn only during a move, which is what keeps it out of the
+    resting row.
     """
     track = track_metrics(area, cfg, scale)
-    start = track_x(area, cfg, scale)
     top, row_h = band
     y = top + (row_h - track.bar_h) // 2
-    width = track.width / 3.0
-    for i in range(3):
-        pygame.draw.rect(surface, BAND_COLOR, pygame.Rect(
-            int(start + i * width), y - 2,
-            int(width) - 1, track.bar_h + 4), 1)
+    for _job, rect in drop_targets(area, cfg, scale, row):
+        if rect.width:
+            pygame.draw.rect(surface, BAND_COLOR, pygame.Rect(
+                rect.x, y - 2, rect.width, track.bar_h + 4), 1)
 
 
 def _draw_overflow(surface, rows, area, cfg, scale, layout, style,

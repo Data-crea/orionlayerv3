@@ -135,9 +135,26 @@ class MoveController:
                       area, cfg, scale, words, client, connected,
                       sort_hotkey, n_colonies):
         """Drop — and this is the only path that can inject."""
-        job = colonylist.drop_band(area, cfg, scale, x)
+        job = colonylist.drop_band(area, cfg, scale, row, x)
         if job is None:
-            self.cancel("dropped outside the track")
+            self.cancel("dropped outside every target")
+            return True
+        if job == self.pick.job:
+            # THE HELD POP'S OWN GROUP. Discard and send nothing.
+            #
+            # It matches the original's OUTCOME rather than diverging
+            # from it: `Send_Cluster_` with the job the pops already
+            # hold takes the re-flag path (colmove.cpp:165), sets
+            # 0x200 back and consults no rule, so the array ends up
+            # exactly as it started and the cluster is released. Ours
+            # ends up the same way with nothing on the wire, because
+            # our selection was never the game's cluster.
+            #
+            # Holding the selection instead would be the deviation:
+            # the original ends the gesture here, so keeping it would
+            # leave HD in a state the original cannot be in. The only
+            # thing to mark is that nothing is sent.
+            self.cancel("dropped on the group it came from")
             return True
         outcome = colonypick.plan_move(self.pick, pops, n_pops, max_farms,
                                        row["index"], job)
@@ -259,6 +276,7 @@ class MoveController:
         band = position - first
         if not 0 <= band < len(bands):
             return
-        colonylist.draw_drop_bands(surface, area, cfg, scale, bands[band])
+        colonylist.draw_drop_bands(surface, area, cfg, scale, bands[band],
+                                   rows[position])
         colonylist.draw_pick(surface, area, cfg, scale, bands[band],
                              self.pick.slots())
