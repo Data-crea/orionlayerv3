@@ -357,19 +357,40 @@ two-click chains for n pops); clicking group boundaries
 
 ## 10. Contextual information
 
-**Popup under the row: no**, and the reason is technical. It reflows
-the list, and the list IS the click frame: rows below the inserted
-box move, while their position is what `GameWindow` maps onto a slot
-of the game's ten-row window. Any HD row shifting against that
-window is precisely the invisible failure decision 46 exists for.
-Expandable rows fail at the same point.
+**AMENDED 5 September 2026, and the amendment is a correction to
+this section rather than a note on it.** The paragraph below rejected
+"popup under the row" in one move. It conflated two different things,
+and only one of them is refused by the argument it gives:
 
-**Recommended: a persistent inspector in `spare_panel`, driven by
-hover.** Hover is the original's own selection semantics
-(colsum.cpp:880-890 reads the SCANNED field), the panel exists, is
-empty by decision, and owes the original nothing; and it sits
-outside the list, so it can obscure nothing and move nothing.
-Tooltips only for single values that do not need a sentence.
+- a box that INSERTS itself between two rows and pushes the rows
+  below it down — **out**, by the argument that follows;
+- a box that OVERLAYS the rows below it and moves nothing — **not
+  settled by that argument at all**. It obscures neighbouring rows
+  while it is open, which is a legibility question and is decided by
+  looking, not by citing decision 46.
+
+The distinction matters because the second variant is the one a
+reviewer is likely to mean, and this document as first written would
+have been cited to rule it out. It is not ruled out. Both it and the
+inspector go to a render comparison; see the status document's open
+design questions.
+
+**A box that reflows the list: no**, and the reason is technical. It
+moves the rows below it, and the list IS the click frame: their
+position is what `GameWindow` maps onto a slot of the game's ten-row
+window. Any HD row shifting against that window is precisely the
+invisible failure decision 46 exists for. Expandable rows fail at
+the same point, and for them the reflow is the whole idea rather
+than a side effect.
+
+**Preferred, but not decided: a persistent inspector in
+`spare_panel`, driven by hover.** Hover is the original's own
+selection semantics (colsum.cpp:880-890 reads the SCANNED field), the
+panel exists, is empty by decision, and owes the original nothing;
+and it sits outside the list, so it can obscure nothing and move
+nothing. Its cost is mouse travel: the answer appears far from the
+question, which is exactly what an overlaid tooltip buys back. That
+trade is not decidable from the source, so it is not decided here.
 
 ---
 
@@ -562,8 +583,12 @@ Three real risks, all named:
   classes as in the original.
 - **Best assignment method:** click-click, unchanged, with the group
   size chosen by which cell is clicked.
-- **Secondary information:** a persistent inspector driven by hover.
-  No popup under the row.
+- **Secondary information:** OPEN. A persistent inspector driven by
+  hover is preferred here; an OVERLAYING tooltip under the row is
+  not excluded and is decided by rendering both (section 10, as
+  amended). Only the REFLOWING variants — an inserted box, an
+  expandable row — are refused, and by decision 46 rather than by
+  taste.
 - **What survives:** the row structure, the name block, the zone
   colours, free slots, "No Farming", the sidebar, `output_panel`,
   the inset, the sort headers, the whole move chain.

@@ -2976,6 +2976,61 @@ finds.
   --spec` now decodes any record against its spec, so the 64-byte
   ceiling on the int16 column view no longer stands in the way.
 
+### Colony summary — three OPEN DESIGN QUESTIONS, not decisions
+
+Recorded 5 September 2026. `doc/colsum_design_analysis.md`
+recommends one answer to each of these; a second design exists that
+was worked out in chat and **is written down nowhere in this tree**.
+Two candidates where only one is on paper is not a comparison, and a
+recommendation in a document nobody can compare against is not a
+decision either. So all three are OPEN, and none of them may be
+cited as settled.
+
+They are decided by RENDERING both variants side by side against a
+native screenshot, at 1920x1080 and at one 4K size, with the cells at
+their real size and a dashed free slot adjacent — the collision the
+analysis predicts between a mark inside a cell and the free-slot
+outline is either visible in that picture or it is not. That is the
+tree's own rule (fundament, "render every new renderer to PNG and
+look at it before a green table counts as evidence"), and it applies
+here more than usual because both candidates are defensible in prose.
+
+1. **Identity mark.** A glyph or letter INSIDE the cell
+   (`colsum_design_analysis.md` §8) against a border or shading
+   treatment of the cell (the chat design). Both have to carry four
+   classes, because `Colony_Pop_Anim_` (colony.cpp:1268) has four:
+   conquered, native, android, and per-race-per-job. The scan
+   argument cuts both ways and is not settled by argument: over 90 %
+   of cells are "own race, normal" and must stay quiet, and a border
+   treatment is quieter than a glyph while also being the axis the
+   free-slot dashes already use.
+
+2. **Contextual information.** A hover-driven inspector in
+   `spare_panel` (§10) against a tooltip below the row. **The
+   analysis's rejection of "popup under the row" was imprecise and
+   has been amended:** it refuses a box that REFLOWS the list, which
+   decision 46 does settle, and it says nothing about a box that
+   OVERLAYS it, which is a legibility question. If the tooltip
+   variant overlays, it is a live candidate and gets rendered; if it
+   reflows, it is out without rendering.
+
+3. **Job band or blocker cell — possibly not a disagreement at
+   all.** The analysis's "job band" is a hit region derived from the
+   track (`colonylist.drop_band`, three equal thirds while a
+   selection is held, HD EXTENSION). The chat design's "blocker
+   cell" is described as one PERMANENT cell per job group that is
+   separator, drop target and icon carrier at once. Those may be the
+   same object seen from two sides, or two different things — one is
+   transient and derived, the other permanent and occupying track
+   width. **That question is answered first**, because if they are
+   the same object there is nothing to decide, and if they are not,
+   the permanent variant spends slots the track has to pay for.
+
+The two items that change the horizontal geometry — track width from
+the empire maximum, and `row_height` 58 to 46 — are deliberately NOT
+in this list. They move the click targets, so they follow the
+identity mark rather than accompanying it.
+
 ### Not built
 Colony, Research, Fleet, Ship Design, Officers, Diplomacy, the
 summary and list screens. Tactical Combat is recommended to stay in
