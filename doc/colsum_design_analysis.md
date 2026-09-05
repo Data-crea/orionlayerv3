@@ -193,7 +193,7 @@ not the boundary here:
 |---|---|
 | **1** | OrionLayer alone. Everything already in the snapshot — which is the WHOLE of `s_colony`. |
 | **2** | Additive lines in `src/ext/ext_api.cpp`. **Diverges from nothing** — that directory is ours and untracked in Joes' tree. Cost: a rebuild and a protocol version. |
-| **3** | A change to a file Joes owns. So far exactly one: the `platform.cpp` hunk of `doc/ext_inject_click.patch`. |
+| **3** | A change to a file Joes owns. **CORRECTED 5 September 2026: five files, fourteen hunks** — see `doc/orion2re_tree_comparison.md`. Thirteen of the fourteen are inside `#ifdef ORION2RE_EXT`; the fourteenth is the documented crash fix (open fix 5). The "exactly one" this table used to claim was a statement about ONE PATCH read as a statement about the whole tree. |
 | **4** | Game logic. Rejected. |
 
 | Capability | Level | Evidence |
@@ -495,7 +495,9 @@ per-pop identity, growth, pollution, buildings, transfer targets.
 | an HD build screen | significant — not recommended |
 
 **Overall: LOW-MODERATE**, and the moderate part is entirely inside
-`src/ext/`. Joes' tree stays at the one existing `platform.cpp` hunk.
+`src/ext/`. Joes' files gain nothing beyond what they already carry —
+which is five files and fourteen hunks, not one
+(`doc/orion2re_tree_comparison.md`), thirteen of them ifdef-guarded.
 
 ---
 
@@ -595,7 +597,10 @@ Three real risks, all named:
 - **What is replaced:** the 42-slot track width, `row_height`, the
   job count as the cell source, the pixel reading of `_first`.
 - **Overall impact on orion2re: LOW-MODERATE**, additive and inside
-  `src/ext/`.
+  `src/ext/` — confirmed against a real cross-tree diff on
+  5 September 2026, which also corrected this document's count of
+  existing hunks in Joes' files from one to fourteen
+  (`doc/orion2re_tree_comparison.md`).
 
 ### RECOMMENDED COLONY MANAGEMENT ARCHITECTURE
 

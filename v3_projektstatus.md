@@ -675,6 +675,10 @@ to stay uncomfortable to extend.
 │   │                                  and what a save would have to
 │   │                                  contain to close four open
 │   │                                  points at once
+│   ├── orion2re_tree_comparison.md    A / B / C: our divergence,
+│   │                                  Joes' progress, and the
+│   │                                  intersection. The one home
+│   │                                  for those facts
 │   ├── colsum_design_analysis.md      The Colonies screen end to
 │   │                                  end: what the original is,
 │   │                                  what OrionLayer may do with

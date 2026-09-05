@@ -74,6 +74,14 @@ venv/
 *.swp
 .DS_Store
 
+# --- Review leftovers ---
+# `git show <sha> > diff.txt` and its variants: a diff log is derived
+# from the history it was taken out of (decision 40), so it never
+# belongs in the tree. Ignored rather than forbidden, because reading
+# a commit into a file beside the tree is a reasonable way to review
+# one.
+diff*.txt
+
 # --- Delivery leftovers (the ZIP era; git replaces all of this) ---
 *.zip
 tools/tree_manifest.sha256
