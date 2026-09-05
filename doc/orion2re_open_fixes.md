@@ -30,6 +30,7 @@ section for what was found where.
 | 6 | `s_0_0055110c` / `s_1_00551110` declared `[3]` and `[4]`, defined three times | **Question, not a fix** | Nothing today |
 | 7 | `Draw_Colony_Prod_Both_` sign-tests `imports[t]` as a byte once and as a word once | **Question, not a fix** | Nothing today; changes the FOOD/RESEARCH/BC rows, never INDUSTRY |
 | 8 | Two native messages in `colmove.cpp` disagree, and the one describing a capability is on an unreachable branch | **Question, not a fix** | Nothing today; decides which refusal HD shows |
+| 9 | `Do_Colony_Info_Pop_Stuff_For_Pop_`'s second loop is named `race_idx` and iterates `MASK_CONQUERED` | **Question, not a fix** | Nothing today; decides how a pop cell is read and named in HD |
 
 Items 3 and 4 are both about INJECT_CLICK and both live in the same
 code path, but they are separate faults: 3 is where the coordinates
@@ -873,3 +874,60 @@ OrionLayer's answer is to mirror the rules and refuse before sending
 (fundament decision 33 and 47); it is recorded here because it is a
 property of the injection boundary rather than of our screen, and any
 other client will meet it.
+
+---
+
+## 9. `Do_Colony_Info_Pop_Stuff_For_Pop_`'s `race_idx` loop iterates the CONQUERED bit — a question, not a fix request
+
+**This asks for an answer, not a patch.** Nothing misbehaves. It is
+here for the same reason items 6 and 7 are: a name and a mask
+disagree, the name is the one a later reader will believe, and this
+particular loop decides which pop is drawn differently from its
+neighbours.
+
+### What we found (orion2re 1.60, `src/version.h`)
+
+`COLDRAW::Do_Colony_Info_Pop_Stuff_For_Pop_` (coldraw.cpp:282) picks
+the icons of one column with five nested loops. The second level is
+
+    for (int16_t race_idx = 0; race_idx < 2; race_idx++)        :327
+        ...
+        if (((pop_val & 0x400) >> 10) == race_idx)              :337
+
+`0x400` is `POP::MASK_CONQUERED` (pop.h:12). The RACE lives in the
+low nibble, `POP::MASK_RACE = 0x0F` (pop.h:8), and that one is
+iterated by a DIFFERENT loop in the same nest — the `pop_order`
+level at :329-330, which walks (9, 0, 1 … 8) from the table at
+:287-297.
+
+So as far as we can read it, the identifier is a misnomer for
+something like `conquered_idx`, and the nest groups: state, then
+conquered, then job, then race, then array order.
+
+### Why it is worth an answer rather than a rename
+
+The bit it iterates is not cosmetic. `COLONY::Colony_Pop_Anim_`
+(colony.cpp:1268) draws a conquered pop from a completely different
+sprite class — `Colony_Pop_Icon_(race)`, a static race portrait at
+RACEICON entry `race * 13 + 12` — while every other pop gets an
+animated figure from `People_Anim_` (colony_main.cpp:444). So this
+loop is what makes the drawn column read "working figures first, then
+portraits", and a client that mirrors the walk has to know whether
+that grouping is the intent or an artefact.
+
+### The question
+
+1. Is `race_idx` at coldraw.cpp:327 a decompilation misnomer for the
+   conquered flag, or was something else meant there?
+2. If it is a misnomer: is there any objection to it being named for
+   what it tests? We are not asking for the change — this is your
+   tree — only whether the reading is right, so that our own
+   transcription can be named correctly and cite this answer.
+
+### What it costs us today
+
+Nothing that moves. OrionLayer transcribes the walk in
+`screens/colony_summary/colonyicons.py` and names the level
+`conquered`, with a comment saying the source calls it `race_idx`.
+The full reading is in `doc/pop_order_reading.md`, which is ours and
+not part of this list.

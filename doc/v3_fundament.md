@@ -670,6 +670,50 @@ zoom-OUT field exclusively and throttles it. Zoom-in (field 8) puts
 the game into a rubber-band selection state a client cannot escape;
 a feature that never needs it can never trip it.
 
+**48. `pop[]` HAS NO ORDER, so the one the player sees is the
+original's draw order — and inside a job group that is not a
+preference.** Read 5 September 2026;
+`doc/pop_order_reading.md` is the reading, with every finding marked
+for how far it is carried.
+
+The array is a bag with stable indices between events. Everything
+that appears is appended at `pop[n_pops]` (growth colcalc.cpp:2387,
+androids :3802, settlers settler.cpp:49); everything that disappears
+is replaced by the LAST entry (six sites, all
+`pop[hole] = pop[--n_pops]`); a job change moves nothing, it rewrites
+the profession bits where they are; and
+`invasion::Enforce_Population_Limits_At_Colony_` SHUFFLES the whole
+array (invasion.cpp:721) on four occasions, one of which is a
+building completing — Biospheres, in a game with no war in it. The
+engine does sort `pop[]`, in `aidudes.cpp`, and only for players
+whose `objectives != PLAYER_OBJECTIVE_HUMAN`.
+
+So there is nothing to transcribe. What the ORIGINAL shows is
+imposed at draw time by `Do_Colony_Info_Pop_Stuff_For_Pop_`
+(coldraw.cpp:326-337): state, then the conquered bit, then the low
+nibble in the order (9, 0, 1 … 8), and the array only innermost.
+
+**HD keeps that order inside a job group, and the reason is not
+fidelity — it is that the selection rule depends on it.**
+`Get_Cluster_` takes every identical pop from the clicked one to the
+END OF THE ARRAY, and `Pops_Identical_` compares exactly the three
+fields the walk groups by. Those two facts together make a cluster
+one contiguous run of icons starting at the clicked one. Order the
+cells any other way — by array index, by race, by anything — and a
+click on one cell moves cells elsewhere in the row, with every count
+on screen still correct. That is this project's worst failure shape
+and it is one ordering decision away.
+
+Corollary, and it is the part a drawing session will meet first:
+**a cell may not be positioned by a property the walk does not sort
+by.** The race and android distinction is carried in the CELL —
+which is what the original does too, in the sprite rather than in a
+colour, and with four classes: a conquered pop is a static race
+portrait (colony.cpp:1278), a native and an android are one sprite
+each for every race (colony_main.cpp:456, :460), and everyone else is
+per race and per job (:445). Carrying it in the position instead
+would be re-sorting the group.
+
 ### Sizing and artwork
 
 **26. All sizing comes from `core/zoomtables.py`.** Icon dimensions,
@@ -1611,7 +1655,7 @@ references in `doc/v3_orion2re_index.md`.
   scientists 378-502, row y = 31*i + 34 (`colsum.cpp:311`).
 
   **A COLUMN IS NOT `pop[]` IN ARRAY ORDER.** The icon walk is five
-  nested loops (`coldraw.cpp:325-345`): state
+  nested loops (`coldraw.cpp:326-337`): state
   (`Pop_To_Pop_State_`, so normals, then natives, then androids),
   then the conquered bit `0x400`, then the low nibble in the order
   `(9, 0, 1, … 8)`, and only innermost the array. So "within an
@@ -1619,7 +1663,7 @@ references in `doc/v3_orion2re_index.md`.
   true and exactly as far as it goes — a group is (state, conquered,
   nibble), which is what `Pops_Identical_` compares, and the icon at
   slot m of a column is NOT the m-th pop of that job. Only ASSIGNED
-  pops are icons (`coldraw.cpp:343`), which is how a held cluster
+  pops are icons (`coldraw.cpp:336`), which is how a held cluster
   disappears from the screen.
 
   Measured on the reference save, 5 September 2026: a colony with

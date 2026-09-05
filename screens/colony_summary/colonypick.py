@@ -43,7 +43,7 @@ is about the CLICK FRAME rather than about a pop:
   `no_icon`           the square clicked has no icon behind it. The
                       HD row draws one square per pop of a job;
                       the original draws one per ASSIGNED pop
-                      (coldraw.cpp:343), so the lists differ exactly
+                      (coldraw.cpp:336), so the lists differ exactly
                       while a cluster is held.
   `other_colony`      the drop landed on a different row. That is
                       the original's inter-colony transport, whose

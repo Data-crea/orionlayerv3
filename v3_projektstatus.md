@@ -2,6 +2,45 @@
 
 Updated: 5 September 2026
 
+This session (5 September 2026), the order inside a job group — an
+investigation, no patch and no drawing change, in one line each:
+**`pop[]` has no order at all**, which is the answer to the question
+that was asked and it is answered from the WRITING side — everything
+that appears is appended at `pop[n_pops]` (growth colcalc.cpp:2387,
+androids :3802, settlers settler.cpp:49), everything that disappears
+is replaced by the LAST entry (six sites, all
+`pop[hole] = pop[--n_pops]`), a job change moves nothing at all, and
+`Enforce_Population_Limits_At_Colony_` SHUFFLES the whole array
+(invasion.cpp:721) on four occasions of which one is **a building
+completing** — Biospheres, in a game with no war in it; the engine
+DOES sort `pop[]`, in `aidudes.cpp:742`, androids and natives to the
+front, and only for players whose `objectives !=
+PLAYER_OBJECTIVE_HUMAN`, so it cannot reach a colony this screen
+draws; **the draw order is a different question and is the only
+ordering the original imposes on what a player sees** — state, then
+the conquered bit, then the low nibble in the order (9, 0, 1 … 8),
+and the array only innermost (coldraw.cpp:326-337); **HD keeps that
+order inside a job group and the reason is not fidelity** — the
+selection takes every identical pop to the END of the array while
+`Pops_Identical_` compares exactly the fields the walk groups by, so
+a cluster is one contiguous run of icons only while the grouping
+holds, and any other order would move cells the player did not click
+with every count on screen still correct (**decision 48**, and a
+smoke check that fails when the grouping breaks); **the second open
+test case is NOT closed and it was not the case it was thought to
+be** — a foreign pop between two own ones is normal in the ARRAY and
+impossible in the drawn COLUMN, so what still wants a witness is
+whether our mirror reproduces the original's column for a two-race
+colony; the original carries the race and android distinction in the
+SPRITE and in four classes, not two — a conquered pop is a static
+race portrait, a native and an android are one sprite each for every
+race; and the `race_idx` loop that iterates `MASK_CONQUERED` went to
+`doc/orion2re_open_fixes.md` as **item 9, a question**, which is the
+only part of this that belongs on Joes' list. The reading is
+`doc/pop_order_reading.md`, with every finding marked for how far it
+carries — it is ONE source, it may decide a drawing, and it verifies
+nothing.
+
 This session (5 September 2026), phase 3b of pop movement — the
 connection to the mouse, in one line each: **a real mouse click on
 the HD colony summary now moves pops**, verified end to end with
@@ -17,7 +56,7 @@ built from the world BEFORE the game acted, which no counter can fix
 the new one at pair 2 — and both loops now wait for the EFFECT with a
 floor of two pairs, asserted separately in each; **`colonyicons.py`
 transcribes the icon walk**, because a column is NOT `pop[]` in array
-order — five nested loops (coldraw.cpp:325-345) group by state, then
+order — five nested loops (coldraw.cpp:326-337) group by state, then
 the conquered bit, then the low nibble in `pop_order`'s sequence, and
 only innermost by the array — and the live proof is a colony whose
 last farmer icon was pop 12 while pop 11 was a scientist, so a click
@@ -425,7 +464,7 @@ files under `doc/` and are only summarised here.
 | | |
 |---|---|
 | Python | 32,960 lines across 111 modules — `find . -name '*.py'`, `__pycache__` excluded, the smoke test's 6,400 included. The previous figure here (21,642 across 94) was carried from an unstated method and could not be reproduced |
-| Smoke test | `python tools/smoke_test.py` — **79 checks**, headless |
+| Smoke test | `python tools/smoke_test.py` — **80 checks**, headless |
 | Assets | 170 MB (select_race 68, galaxy_map 51, shared 23, new_game 21, colony_summary 1) |
 | Screens in HD | 7 of ~20–22 (colony summary draws list, sidebar, scan box and galaxy inset, and MOVES POPS — the first HD gesture that drives the game) |
 | Setup from clone | `python tools/setup.py` (deps via the system package manager) |
@@ -598,6 +637,11 @@ to stay uncomfortable to extend.
 │   │                                  ONLY home of that list
 │   ├── empire_identity_slowload.md    The 23-second gap: full
 │   │                                  investigation record, dormant
+│   ├── pop_order_reading.md           Why pop[] has no order, what
+│   │                                  the original draws instead,
+│   │                                  and what a save would have to
+│   │                                  contain to close four open
+│   │                                  points at once
 │   ├── UMZUG.md                       Git/GitHub setup and the
 │   │                                  day-to-day workflow (German)
 │   ├── ext_ship_icon_owner.patch      Optional, not needed

@@ -28,10 +28,24 @@ icon at slot m of a column is not the m-th pop of that job.
 The source calls the second loop `race_idx`. It is the CONQUERED bit
 (`POP_MASK_CONQUERED`, pop.h:12), and this module names it that, for
 the reason `core/structs/colony.py` refuses to call the low nibble a
-race: a wrong name outlives every comment that corrects it.
+race: a wrong name outlives every comment that corrects it. Filed as
+a QUESTION for the maintainer — `doc/orion2re_open_fixes.md` item 9 —
+because it is not our tree and because the bit is not cosmetic: a
+conquered pop is drawn from a different sprite class entirely
+(`Colony_Pop_Anim_`, colony.cpp:1278), so this loop is what makes the
+column read "working figures first, then race portraits".
+
+**AND THE ARRAY IT WALKS HAS NO ORDER OF ITS OWN.** Read from the
+writing side on 5 September 2026 and recorded in
+`doc/pop_order_reading.md`: pops are appended, removed by swapping
+the last entry into the hole, and the whole array is shuffled
+outright when a colony builds Biospheres (invasion.cpp:721). So this
+walk is not one ordering among several — it is the only one the
+player ever sees, which is why decision 48 makes HD keep it inside a
+job group.
 
 **ONLY ASSIGNED POPS ARE ICONS** — `(pop_val & 0x200) != 0`,
-coldraw.cpp:343. A pop in a held cluster has that bit cleared and
+coldraw.cpp:336. A pop in a held cluster has that bit cleared and
 draws nothing, which is how the original shows a cluster in hand. The
 HD row's squares come from `colonyrows.build_rows`, which counts
 every pop of a job whether it is assigned or not, so the two lists
@@ -84,7 +98,7 @@ from core.structs import colony as colony_struct
 #: the state loop has already put them second.
 POP_ORDER = (9, 0, 1, 2, 3, 4, 5, 6, 7, 8)
 
-#: The state loop's range, coldraw.cpp:325. `Pop_To_Pop_State_` can
+#: The state loop's range, coldraw.cpp:326. `Pop_To_Pop_State_` can
 #: only return 2, 3 or 4 (colony.cpp:1240), so four of the seven
 #: passes find nothing; the range is transcribed rather than reduced,
 #: for the same reason `colonymove` keeps `state == 6`.

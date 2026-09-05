@@ -4167,7 +4167,7 @@ def main():
 
     # ── The icons a column draws, and in whose order ──────────────
     # A COLUMN IS NOT pop[] IN ARRAY ORDER. `Do_Colony_Info_Pop_Stuff_
-    # For_Pop_` (coldraw.cpp:325-345) walks state, then the conquered
+    # For_Pop_` (coldraw.cpp:326-337) walks state, then the conquered
     # bit, then pop_order (9 first), then the array — so the icon at
     # slot m is not the m-th pop of that job, and a click aimed by
     # array position would take the wrong cluster with every number on
@@ -4212,14 +4212,14 @@ def main():
     # THE ARRAY IS THE INNERMOST TIE-BREAK AND NOTHING MORE. Pops 1
     # and 3 are both unconquered normals and 1 comes first here only
     # because its low nibble does — the nibble loop is OUTSIDE the
-    # array loop (coldraw.cpp:328-331). Written down because the
+    # array loop (coldraw.cpp:329-331). Written down because the
     # first version of this check expected (1, 3, 5), which is what
     # "within a group, array order" reads like until you ask what a
     # group is.
     assert _ci.POP_ORDER[0] == 9 and len(_ci.POP_ORDER) == 10, (
         "pop_order is (9, 0..8) — coldraw.cpp:287-297")
 
-    # UNASSIGNED POPS ARE NOT ICONS (coldraw.cpp:343). This is the
+    # UNASSIGNED POPS ARE NOT ICONS (coldraw.cpp:336). This is the
     # difference between the HD row, which draws a square per pop of a
     # job, and the game, which draws one per ASSIGNED pop — and it is
     # exactly the state a held cluster produces.
@@ -4236,6 +4236,45 @@ def main():
             f"colonyicons._state and colonymove.pop_state disagree at "
             f"nibble {_n}; the two copies exist so one can be "
             f"re-read without the other silently following")
+    # A CLUSTER IS A CONTIGUOUS RUN OF ICONS, AND ONLY BECAUSE THE
+    # COLUMN IS DRAWN IN THE ORIGINAL'S ORDER (decision 48).
+    # `Get_Cluster_` takes every identical pop from the clicked one to
+    # the END OF THE ARRAY (colmove.cpp:66-71), and `Pops_Identical_`
+    # compares exactly the three fields the walk groups by — so the
+    # cluster is "this icon and every icon after it" only while the
+    # grouping holds. Ordered any other way inside a job, a click on
+    # one cell would move cells elsewhere in the row, with every count
+    # on screen still correct. Asserted here rather than trusted,
+    # because the drawing that would break it is not written yet and
+    # this is what has to fail when somebody writes it.
+    #
+    # `pop[]` itself has no order to lean on: appended on growth,
+    # replaced by the LAST entry on removal, and shuffled outright by
+    # invasion.cpp:721 when a colony builds Biospheres. The array
+    # order below is therefore deliberately hostile — a foreign pop
+    # between two own ones, which is what the engine actually
+    # produces (doc/pop_order_reading.md).
+    _mix_pops = [_icon_pop(0, 0), _icon_pop(3, 0), _icon_pop(0, 0),
+                 _icon_pop(0, 0, conquered=1), _icon_pop(9, 0),
+                 _icon_pop(0, 0)]
+    _mix_icons = _ci.icon_pops(_mix_pops, 6, 0)
+    for _start in range(6):
+        if _ci.pop_slot(_mix_pops, 6, 0, _start) is None:
+            continue
+        _cl_plan = _cm.plan_pickup(_mix_pops, 6, _start)
+        if _cl_plan.refused:
+            continue
+        _slots = sorted(_mix_icons.index(_p) for _p in _cl_plan.indices)
+        assert _slots == list(range(_slots[0], _slots[0] + len(_slots))), (
+            f"the cluster from pop {_start} is icons {_slots}, which is "
+            f"not one run — decision 48's grouping has been broken")
+        assert _slots[0] == _mix_icons.index(_start), (
+            f"the cluster starts at icon {_slots[0]}, not at the "
+            f"clicked one ({_mix_icons.index(_start)})")
+        assert _slots[-1] == _slots[0] + len(_cl_plan.indices) - 1
+    ok("a pop cluster is one contiguous run of icons (decision 48: "
+       "only because the column is drawn in the original's order)")
+
     ok("colony icons (draw order is state/conquered/pop_order/array, "
        "not array; unassigned pops draw nothing)")
 
