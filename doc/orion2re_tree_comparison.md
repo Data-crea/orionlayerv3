@@ -78,10 +78,11 @@ matters is answered as a merge test, below.
 | `src/game/fields.cpp` | 2 | ifdef-guarded — `ext::Tick()` and the `g_pending_field` early exit |
 | `src/game/mox2.cpp` | 3 | ifdef-guarded — `ext::Tick()`, `ext::Init()`, `ext::Shutdown()` |
 | `src/game/platform.cpp` | 4 | ifdef-guarded — the include, the `g_hide_window` guard on `SDL_ShowWindow`, **and two from `doc/ext_inject_click.patch`** (suppress the mouse sync while injected input is unconsumed; clear the flag when the queue is pumped) |
-| `src/game/racesel.cpp` | 4 | 3 ifdef-guarded (synthetic screen ID 50 for Custom Race) + **1 UNGUARDED: `_old_race = static_cast<int16_t>(i);`** — documented patch, `doc/orion2re_open_fixes.md` item 5, a crash fix (`racesel.lbx [entry 138]`). Unguarded on purpose: guarding it would leave the crash in a plain build |
+| `src/game/racesel.cpp` | **5** | **4 ifdef-guarded** — screen ids for Select Race and Custom Race, each with its restore, `doc/ext_screen_id.patch` (the fourth added 5 September 2026) — **+ 1 UNGUARDED: `_old_race = static_cast<int16_t>(i);`**, documented patch, `doc/orion2re_open_fixes.md` item 5, a crash fix (`racesel.lbx [entry 138]`). Unguarded on purpose: guarding it would leave the crash in a plain build. **All five are re-set by hand on a C update** — the file is re-indented upstream, so no hunk applies |
 
-**85 inserted lines, 14 hunks, 5 files. Nothing deleted, nothing
-moved.**
+**15 hunks in 5 files, nothing deleted, nothing moved** — 14 as
+measured on 5 September 2026 plus the screen-id restore added the
+same day.
 
 Untracked in A, and none of it ours except the first:
 
@@ -92,10 +93,21 @@ Untracked in A, and none of it ours except the first:
 | `src.zip` | 1.6 MB, 5 September — a snapshot somebody took |
 | `racesel_custom_screen_id.patch` | the racesel hunks as a patch file, lying loose in the tree |
 
-> **Open item:** `src.zip` and `racesel_custom_screen_id.patch` sit
-> in a source tree and are neither Joes' nor a build product. Not
-> ours to delete — reported so the next reader does not mistake them
-> for upstream.
+> **EXPLAINED, and this is their entry — do not raise them again.**
+> `src.zip` is Data's own upload archive and `mox.set` is the game
+> writing its settings next to itself; both are Data's, neither is
+> Joes' and neither is a build product.
+> `racesel_custom_screen_id.patch` is SUPERSEDED as of 5 September
+> 2026 by `doc/ext_screen_id.patch`, which carries four hunks where
+> the loose file carried two — it can go whenever Data wants, and it
+> is not ours to delete.
+>
+> They are recorded here rather than added to `~/orion2re/.gitignore`
+> ON PURPOSE. That file is TRACKED and Joes': a line in it would
+> make our divergence six files instead of five, and would itself
+> need a row in this table. An explanation costs nothing and a sixth
+> divergence costs it every time somebody diffs the trees. Tried and
+> reverted the same day.
 
 ### The line that decides the analysis's boundary section
 
@@ -224,7 +236,7 @@ this task.**
 | `src/game/fields.cpp` | 2 | 557 lines differ | **No** — applies at +12 |
 | `src/game/mox2.cpp` | 3 | changed | **No** — applies at +2 / +26 |
 | `src/game/platform.cpp` | 4 | changed | **YES, on two of four** |
-| `src/game/racesel.cpp` | 4 | 165 lines differ ignoring indentation | **YES, on all four** |
+| `src/game/racesel.cpp` | 5 | 165 lines differ ignoring indentation | **YES, on all five** |
 
 ### `platform.cpp` — the collision is semantic, not cosmetic
 

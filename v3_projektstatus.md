@@ -2984,6 +2984,65 @@ finds.
   --spec` now decodes any record against its spec, so the 64-byte
   ceiling on the int16 column view no longer stands in the way.
 
+### Phase 3c — update to upstream (build 15 Aug 2026): DEFERRED
+
+Decided 5 September 2026. **Not during the colony screen work.**
+`doc/orion2re_tree_comparison.md` is the evidence; this is the
+decision and the plan.
+
+**Why deferred.** Nothing the colony screen needs is in C. Every
+value it reads is already on the wire from the build we have, and
+`s_colony` keeps its size and every offset in C anyway — so the
+update buys the colony work nothing and costs it a rebuild of every
+citation it stands on.
+
+**Why it cannot be done in pieces.** The four are not independent:
+
+1. `platform.cpp` — the pointer fix must be **re-derived, not
+   re-anchored**. `Sync_Mouse_State_From_SDL_`'s tail now runs
+   through `Forward_Game_Mouse_State_` with a new `debug_overlay`
+   consumer, so the place our early return protects has moved. The
+   symptom of getting it wrong is the population move going quiet
+   again, which looks like nothing at all.
+2. `racesel.cpp` — the crash fix (open fix 5) plus the four
+   screen-id hunks, by hand: the file is re-indented upstream and no
+   hunk applies.
+3. `core/game_state.py` and the struct specs — `s_ship_data`
+   0x81 -> 0x87, `s_antaran` 0x42 -> 0x44, `s_player` now size
+   -configurable (0xf0e or 0x2d86 by `MAX_FREIGHTED_SETTLERS`).
+   The snapshot is a sequential concatenation, so those two wrong
+   sizes desynchronise everything after the ships block. **And in
+   `core/structs/colony.py`, `food2_per_farmer` and
+   `industry_per_worker` change `int8_t` -> `uint8_t`** — same size,
+   same offset, different meaning above 127: the `imports` sign trap
+   (open fix 7) in a second place.
+4. every line number in `doc/` and `core/structs/` re-anchored.
+   `coldraw.cpp` and `invasion.cpp` are the least trustworthy —
+   more differing lines than either file has.
+
+Skipping 3 means a client that reads garbage with no error; skipping
+1 means a feature that silently stops; skipping 2 means a crash that
+was already fixed once. So it is one piece of work or none.
+
+**Two items that do NOT wait for the update**, and are scheduled
+before H1:
+
+- **`tools/version_check.py` reads too little.** C and B carry
+  identical `ENGINE_VERSION` and `GAME_VERSION_LABEL`, so the check
+  would call this update "no change". It must also read
+  `GAME_BUILD_DATE` (May 31 -> Aug 15 2026 is what actually moved)
+  and the `sizes.h` asserts for every record our specs cite, so a
+  layout change fails the check instead of being discovered by
+  garbage on screen.
+- **`HELLO_REPLY` should carry the record sizes**, or a hash of
+  them — additive in `src/ext/`, so it diverges from nothing — and
+  the client refuses to parse on a mismatch rather than reading at
+  the wrong offset. `PROTO_VERSION` cannot do this job: the protocol
+  did not change, the structs did.
+
+And one request for Joes, filed in `doc/orion2re_open_fixes.md`:
+bump `ENGINE_VERSION` when a serialized record layout changes.
+
 ### Colony summary — three OPEN DESIGN QUESTIONS, not decisions
 
 Recorded 5 September 2026. `doc/colsum_design_analysis.md`
@@ -3046,8 +3105,15 @@ original mode. Cross-platform builds. Planet images for 12 of the 13
 races.
 
 ### Loose ends
-- **Select Race keeps reporting screen 6 after a cancel, and it is
-  our own patch that does it.** `Race_Selection_Screen_` writes
+- **Select Race kept reporting screen 6 after a cancel — FIXED and
+  live-confirmed 5 September 2026.** The fourth hunk of
+  `doc/ext_screen_id.patch` saves the caller's id on entry and
+  restores it before the cancel `return 0`, the same shape the Custom
+  Race pair already used. Verified against a rebuilt binary: main
+  menu -> New Game -> race selection (id 6) -> ESC -> the next
+  snapshot reports 13. Kept here because the SHAPE recurs: an entry
+  hunk that sets a reported value needs an exit hunk on every path
+  the caller does not cover. What it looked like before: `Race_Selection_Screen_` writes
   `MOX::_current_screen = SCREEN_RACE` on entry (our hunk, now in
   `doc/ext_screen_id.patch`) and nothing clears it: the cancel path
   returns 0 untouched and `newgame.cpp:113` reloads New Game. So a
@@ -3055,11 +3121,8 @@ races.
   while the game draws 13, until New Game itself exits — and the HD
   dispatcher routes on that number, so it draws Select Race over a
   New Game screen with no way to notice. Custom Race does not have
-  this: its cancel restores and its accept is covered by the
-  original's own line (racesel.cpp:692). CONFIRMED from source on
-  5 September 2026, NOT observed live; the check is to cancel out of
-  race selection and read `current_screen` off the next snapshot.
-  The fix is the same save-and-restore the Custom Race hunks use.
+  Custom Race never had it: its cancel restores and its accept is
+  covered by the original's own line (racesel.cpp:692).
 - **`make_star_icons.py` does not reproduce the star sprites in the
   tree.** The committed 36 are trimmed to content (44 to 206 px); the
   tool emits uniform 256x256 canvases. Both render correctly — the

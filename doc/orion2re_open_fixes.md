@@ -26,11 +26,12 @@ section for what was found where.
 | 3 | INJECT_CLICK: coordinates mapped as window coordinates, AND the real mouse overwrites the injected pointer every frame | **Both halves patched locally** 4 Sep 2026 (`doc/ext_inject_click.patch`), **and both VERIFIED LIVE 5 Sep 2026**; open upstream | Without them an injected click lands on the wrong pixel on any window that is not 640x480, and the pointer walks off it before a handler that reads `Pointer_X_()` looks |
 | 4 | INJECT_CLICK pushes no MOUSEMOTION before the buttons | Open | Radio buttons toggle unreliably |
 | 5 | `racesel.lbx [entry 138]` crash on Custom Race Accept | **Applied** in the 30 Aug tree — that is why it stopped reproducing | Nothing |
-| — | Screen IDs for Select Race and Custom Race | **Applied** (`doc/ext_screen_id.patch`) | Nothing — but our own hunk leaves SCREEN_RACE standing after a cancel; see that section |
+| — | Screen IDs for Select Race and Custom Race | **Applied** (`doc/ext_screen_id.patch`), four hunks, live-confirmed 5 Sep 2026 | Nothing |
 | 6 | `s_0_0055110c` / `s_1_00551110` declared `[3]` and `[4]`, defined three times | **Question, not a fix** | Nothing today |
 | 7 | `Draw_Colony_Prod_Both_` sign-tests `imports[t]` as a byte once and as a word once | **Question, not a fix** | Nothing today; changes the FOOD/RESEARCH/BC rows, never INDUSTRY |
 | 8 | Two native messages in `colmove.cpp` disagree, and the one describing a capability is on an unreachable branch | **Question, not a fix** | Nothing today; decides which refusal HD shows |
 | 9 | `Do_Colony_Info_Pop_Stuff_For_Pop_`'s second loop is named `race_idx` and iterates `MASK_CONQUERED` | **Question, not a fix** | Nothing today; decides how a pop cell is read and named in HD |
+| 10 | `ENGINE_VERSION` does not move when a serialized record layout changes | **Request** | A client cannot tell two incompatible builds apart and reads at the wrong offset |
 
 Items 3 and 4 are both about INJECT_CLICK and both live in the same
 code path, but they are separate faults: 3 is where the coordinates
@@ -524,25 +525,30 @@ prevent.
 switch: race selection is CALLED from `newgame.cpp:108` and three
 other sites, and `Racial_Option_Screen_()` is called from inside it.
 So the API kept reporting the caller and no client could tell any of
-the three apart. Three hunks, all `#ifdef ORION2RE_EXT`: SCREEN_RACE
-on entry to race selection, the synthetic 50 on entry to Custom Race,
-and the restore on Custom Race's cancel. Documented in
+the three apart. Four hunks, all `#ifdef ORION2RE_EXT`: SCREEN_RACE on
+entry to race selection and the restore on its cancel, the synthetic
+50 on entry to Custom Race and the restore on its cancel. Documented in
 `doc/ext_api_dokumentation_v3.md` under "racesel.cpp — 3 insertions",
 and confirmed live: OrionLayer's Custom Race screen declares
 `GAME_SCREEN_ID = 50` and switches to it.
 
-**Custom Race is correct on both exits and Select Race is not** —
-found 5 September 2026 while writing the patch file, and it is our
-defect rather than Joes'. Cancel restores through our third hunk;
-Accept never reaches it and does not need to, because the original's
-own `MOX::_current_screen = MOX::_return_screen` (racesel.cpp:692)
-runs immediately before `finished = 1`. But `Race_Selection_Screen_`
-writes the ID once, on entry, and nothing ever clears it: its cancel
-path (racesel.cpp:337-343) returns 0 untouched and `newgame.cpp:113`
-just reloads New Game. **After cancelling race selection the API
-reports SCREEN_RACE while New Game is on screen, for as long as the
-player stays there.** The fix has the same shape as the other two and
-is not applied; the patch file carries the full argument.
+**Both screens are correct on every exit as of 5 September 2026, and
+one of the four hunks exists because they were not.** Found while
+writing the patch file: `Race_Selection_Screen_` wrote the ID once,
+on entry, and nothing ever cleared it — its cancel path returned 0
+untouched and `newgame.cpp:113` just reloads New Game, so the API
+reported SCREEN_RACE while New Game was on screen for as long as the
+player stayed there. Hunk 2 closes it with the same save-and-restore
+the Custom Race pair uses. **Confirmed live the same day**: from the
+main menu into New Game, into race selection (id 6), ESC — the next
+snapshot reports 13.
+
+The Accept paths are untouched on purpose. Every accept from race
+selection passes through `Racial_Option_Screen_` (racesel.cpp:308),
+whose own accept sets `MOX::_current_screen = MOX::_return_screen`
+(racesel.cpp:692, the ORIGINAL's line) immediately before
+`finished = 1` — so the value already names the destination and a
+restore of ours would overwrite the game's intent.
 
 If it ever goes upstream, a named constant such as
 `EXT_SCREEN_CUSTOM_RACE` would be cleaner than a literal.
@@ -952,3 +958,43 @@ Nothing that moves. OrionLayer transcribes the walk in
 `conquered`, with a comment saying the source calls it `race_idx`.
 The full reading is in `doc/pop_order_reading.md`, which is ours and
 not part of this list.
+
+---
+
+## 10. Bump `ENGINE_VERSION` when a serialized record layout changes
+
+### Symptom
+
+Between the tree we build against (`cf4d9617`, `GAME_BUILD_DATE`
+"May 31 2026") and the current main (`GAME_BUILD_DATE` "Aug 15
+2026"), `s_ship_data` grew from 0x81 to 0x87 and `s_antaran` from
+0x42 to 0x44, and `s_player` became size-configurable (0xf0e or
+0x2d86 depending on `MAX_FREIGHTED_SETTLERS`). Both
+`ENGINE_VERSION[]` and `GAME_VERSION_LABEL[]` still read "1.60.0" in
+both trees.
+
+### Why it costs us
+
+The Extension API's snapshot is a sequential concatenation of raw
+records, so a client walks it with the sizes it was built against. A
+size change with an unchanged version string is therefore not a
+compile error and not a protocol error — it is a client that reads
+every record after the changed one at the wrong offset and draws
+plausible nonsense. Our own `tools/version_check.py` compares exactly
+those two literals against a hand-copied constant and would have
+reported this update as no change.
+
+### The request
+
+Move `ENGINE_VERSION_PATCH` (or whichever component you consider
+right) whenever a struct that `sizes.h` asserts a size for changes
+that size. It is a one-line change per layout change and it is the
+only signal a client outside the build can act on.
+
+### What we are doing on our side regardless
+
+Not waiting for this. `HELLO_REPLY` will carry the record sizes or a
+hash of them, additive in `src/ext/`, and the client will refuse to
+parse on a mismatch. The request stands because that only protects
+clients that use our Extension API, and the version literal protects
+everyone.
