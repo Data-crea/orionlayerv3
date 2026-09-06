@@ -83,6 +83,14 @@ def master_ring(master):
 
 #: Side of the square patch the strut texture is sampled from.
 PATCH = 64
+#: How deep the bevel strip is taken from the master, and how wide it
+#: is laid in reference px. The master's own lit edge measures ONE
+#: pixel on every hole that has one (see `bevel_source`), so three is
+#: that line plus the two pixels of falloff behind it, and no more.
+BEVEL_MASTER = 3
+BEVEL_REF = 3
+#: How far out a per-side luminance profile is measured.
+PROFILE = 12
 
 
 def strut_texture(master, _ring=None, patch=PATCH):
@@ -147,14 +155,116 @@ def device_ring(windows, width, height):
     return min(xs), width - max(rx), min(ys), height - max(by)
 
 
+def lay_border(dst, src, src_open, dst_open, dst_band):
+    """Lay `src`'s border around `dst_open`, nine-slice.
+
+    **ONE FUNCTION FOR THE RING AND FOR EVERY WINDOW'S BEVEL**, which
+    is not a coincidence worth being clever about: both are "take the
+    band a source image puts around a rectangular opening and put it
+    around another rectangle". The ring's opening is the master's own
+    inner area; a bevel's opening is one of the master's holes. Two
+    implementations of this would be the second copy, and the second
+    copy is where a difference gets in.
+
+    The corners are lifted whole and scaled ONCE; the edges stretch
+    along their own length only. A corner stretched along two axes is
+    the one thing a nine-slice exists to avoid, and it is what a
+    plain resize would do.
+
+    `src_open` and `dst_open` are (x0, y0, x1, y1); `dst_band` is
+    (left, right, top, bottom) in destination pixels.
+    """
+    sx0, sy0, sx1, sy1 = src_open
+    dx0, dy0, dx1, dy1 = dst_open
+    dl, dr, dt, db = dst_band
+    sw, sh = src.size
+    for box, dest, size in (
+            # corners
+            ((sx0 - (sx0), 0, sx0, sy0), (dx0 - dl, dy0 - dt), (dl, dt)),
+            ((sx1, 0, sw, sy0), (dx1, dy0 - dt), (dr, dt)),
+            ((0, sy1, sx0, sh), (dx0 - dl, dy1), (dl, db)),
+            ((sx1, sy1, sw, sh), (dx1, dy1), (dr, db)),
+            # edges
+            ((0, sy0, sx0, sy1), (dx0 - dl, dy0), (dl, dy1 - dy0)),
+            ((sx1, sy0, sw, sy1), (dx1, dy0), (dr, dy1 - dy0)),
+            ((sx0, 0, sx1, sy0), (dx0, dy0 - dt), (dx1 - dx0, dt)),
+            ((sx0, sy1, sx1, sh), (dx0, dy1), (dx1 - dx0, db))):
+        if size[0] > 0 and size[1] > 0 and dest[0] >= 0 and dest[1] >= 0:
+            dst.paste(src.crop(box).resize(size, Image.LANCZOS), dest)
+
+
+def bevel_source(master, depth=None):
+    """(image, opening) — the master's own light edge around one hole.
+
+    **THE HOLE IS FOUND, NOT NAMED**, the same rule as the strut
+    patch. Every hole's edge is measured on all four sides and the
+    one whose four sides AGREE best is taken: a bevel copied from a
+    hole that is bright on the left and flat on the right would put
+    that asymmetry on every window of the screen.
+
+    Measured on 7 September 2026: the master's bevel is **one pixel
+    wide** on every hole that has one — a single bright line against
+    a plateau of luminance 2 — so `depth` is small by measurement and
+    not by taste. The chosen hole and every hole's per-side ridge are
+    printed by `--profiles`.
+    """
+    depth = BEVEL_MASTER if depth is None else depth
+    a = np.array(master.convert("RGBA"))
+    lum = a[:, :, :3].mean(axis=2)
+    holes = a[:, :, 3] < 16
+    lab, n = ndimage.label(holes)
+    objs = ndimage.find_objects(lab)
+    sizes = ndimage.sum(holes, lab, range(1, n + 1))
+    h, w = holes.shape
+    best = None
+    for i, size in enumerate(sizes, 1):
+        if size < 1500:
+            continue
+        sy, sx = objs[i - 1]
+        x0, x1, y0, y1 = sx.start, sx.stop, sy.start, sy.stop
+        if x0 < PROFILE or y0 < PROFILE or x1 > w - PROFILE or y1 > h - PROFILE:
+            continue
+        prof = _profiles(lum, x0, x1, y0, y1)
+        edge = [_ridge(p) for p in prof.values()]
+        if any(wd == 0 for _ht, wd in edge):
+            continue
+        heights = np.array([ht for ht, _wd in edge])
+        score = heights.min() / (1 + heights.std())
+        if best is None or score > best[0]:
+            best = (score, (x0, y0, x1, y1), prof)
+    if best is None:
+        raise SystemExit("no hole in the master has a lit edge on all "
+                         "four sides — the bevel cannot be sampled")
+    x0, y0, x1, y1 = best[1]
+    crop = master.convert("RGB").crop(
+        (x0 - depth, y0 - depth, x1 + depth, y1 + depth))
+    return crop, (depth, depth, crop.width - depth, crop.height - depth), best
+
+
+def _profiles(lum, x0, x1, y0, y1, depth=None):
+    depth = PROFILE if depth is None else depth
+    return {"L": lum[y0 + 2:y1 - 2, x0 - depth:x0][:, ::-1].mean(axis=0),
+            "R": lum[y0 + 2:y1 - 2, x1:x1 + depth].mean(axis=0),
+            "T": lum[y0 - depth:y0, x0 + 2:x1 - 2][::-1, :].mean(axis=1),
+            "B": lum[y1:y1 + depth, x0 + 2:x1 - 2].mean(axis=1)}
+
+
+def _ridge(p):
+    """(mean height, width) of the lit run at the start of `p`."""
+    plateau = float(np.median(p[-4:]))
+    limit = max(plateau * 2.0, plateau + 8)
+    width = 0
+    while width < len(p) and p[width] >= limit:
+        width += 1
+    return float(p[:max(width, 1)].mean()), width
+
+
 def build(master, windows, width, height):
     """The frame plate at `width x height`, no holes cut yet.
 
-    A nine-slice from the master: the four corners lifted whole and
-    scaled once, the four edges stretched along their own length
-    only, and the interior filled with the strut texture. A corner
-    stretched along two axes is the one thing a nine-slice exists to
-    avoid, and it is what a plain resize of the master would do.
+    The strut texture, then the ring, then every window's bevel —
+    all three through `lay_border` except the texture, which is a
+    tile.
     """
     dl, dr, dt, db = device_ring(windows, width, height)
     ml, mr, mt, mb = master_ring(master)
@@ -162,24 +272,53 @@ def build(master, windows, width, height):
     mw, mh = src.size
 
     out = tiled(strut_texture(master), width, height)
-    inner_w, inner_h = width - dl - dr, height - dt - db
-    # corners, lifted whole
-    for box, dest, size in (
-            ((0, 0, ml, mt), (0, 0), (dl, dt)),
-            ((mw - mr, 0, mw, mt), (width - dr, 0), (dr, dt)),
-            ((0, mh - mb, ml, mh), (0, height - db), (dl, db)),
-            ((mw - mr, mh - mb, mw, mh), (width - dr, height - db), (dr, db))):
-        if size[0] > 0 and size[1] > 0:
-            out.paste(src.crop(box).resize(size, Image.LANCZOS), dest)
-    # edges, stretched along their own length only
-    for box, dest, size in (
-            ((0, mt, ml, mh - mb), (0, dt), (dl, inner_h)),
-            ((mw - mr, mt, mw, mh - mb), (width - dr, dt), (dr, inner_h)),
-            ((ml, 0, mw - mr, mt), (dl, 0), (inner_w, dt)),
-            ((ml, mh - mb, mw - mr, mh), (dl, height - db), (inner_w, db))):
-        if size[0] > 0 and size[1] > 0:
-            out.paste(src.crop(box).resize(size, Image.LANCZOS), dest)
+    lay_border(out, src, (ml, mt, mw - mr, mh - mb),
+               (dl, dt, width - dr, height - db), (dl, dr, dt, db))
+
+    scale = min(width / frame_mask.REF_W, height / frame_mask.REF_H)
+    band = max(1, round(BEVEL_REF * scale))
+    bsrc, bopen, _chosen = bevel_source(master)
+    _image, rects = frame_mask.render(windows, width, height)
+    for _name, (x, y, w, h) in sorted(rects.items()):
+        lay_border(out, bsrc, bopen, (x, y, x + w, y + h),
+                   (band, band, band, band))
     return out
+
+
+def print_profiles(master):
+    """Every hole's per-side edge, and the one the bevel comes from.
+
+    The measurement the choice rests on, printable, because "found,
+    not named" is only worth anything if the finding can be looked at.
+    """
+    a = np.array(master.convert("RGBA"))
+    lum = a[:, :, :3].mean(axis=2)
+    holes = a[:, :, 3] < 16
+    lab, n = ndimage.label(holes)
+    objs = ndimage.find_objects(lab)
+    sizes = ndimage.sum(holes, lab, range(1, n + 1))
+    h, w = holes.shape
+    print(f"{'hole':<26}" + "".join(f"{k:>13}" for k in "LRTB")
+          + "   agreement")
+    for i, size in enumerate(sizes, 1):
+        if size < 1500:
+            continue
+        sy, sx = objs[i - 1]
+        x0, x1, y0, y1 = sx.start, sx.stop, sy.start, sy.stop
+        if x0 < PROFILE or y0 < PROFILE or x1 > w - PROFILE or y1 > h - PROFILE:
+            continue
+        edge = {k: _ridge(p)
+                for k, p in _profiles(lum, x0, x1, y0, y1).items()}
+        heights = np.array([edge[k][0] for k in "LRTB"])
+        lit = all(edge[k][1] for k in "LRTB")
+        score = heights.min() / (1 + heights.std()) if lit else 0.0
+        print(f"  ({x0:>4},{y0:>4}) {x1-x0:>4}x{y1-y0:<4}"
+              + "".join(f"{edge[k][0]:8.0f}/{edge[k][1]:<4d}" for k in "LRTB")
+              + f"  {score:6.2f}"
+              + ("" if lit else "   (a side with no lit edge)"))
+    _crop, _open, chosen = bevel_source(master)
+    print(f"  -> sampled from the hole at "
+          f"({chosen[1][0]}, {chosen[1][1]}), score {chosen[0]:.2f}")
 
 
 def main():
@@ -188,10 +327,15 @@ def main():
     ap.add_argument("--out", default=DEFAULT_OUT)
     ap.add_argument("--reference", default=frame_mask.REFERENCE)
     ap.add_argument("--resolution", action="append")
+    ap.add_argument("--profiles", action="store_true",
+                    help="print every master hole's per-side edge profile "
+                         "and which one the bevel is sampled from")
     args = ap.parse_args()
 
     data, windows = frame_mask.load_reference(args.reference)
     master = Image.open(args.master)
+    if args.profiles:
+        print_profiles(master)
     os.makedirs(args.out, exist_ok=True)
     for spec in args.resolution or data["_resolutions"]:
         width, height = (int(v) for v in spec.lower().split("x"))

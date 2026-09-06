@@ -4001,6 +4001,37 @@ def main():
         assert _opaque > 0.15, (
             f"{_spec}: only {100*_opaque:.1f} % of the built frame is "
             f"opaque — the plate is not covering its own struts")
+        # EVERY WINDOW HAS THE MASTER'S LIGHT EDGE ON ALL FOUR SIDES,
+        # measured as a luminance ridge and not as "ink was drawn".
+        # The eight windows must also AGREE per side, because the
+        # bevel comes from one sampled hole through one function — if
+        # they drift apart, two code paths have got in.
+        _flum = np.array(_fbcut.convert("RGB")).mean(axis=2)
+        _band3 = max(1, round(_fb.BEVEL_REF
+                              * min(_rw / _REF_W, _rh / _REF_H)))
+        _edges = {"L": [], "R": [], "T": [], "B": []}
+        _here = _fm.render(_lr_windows, _rw, _rh)[1]
+        for _wn, (_wx, _wy, _ww, _wh) in _here.items():
+            _in = max(4, _band3 + 1)
+            _edges["L"].append(_flum[_wy+_in:_wy+_wh-_in,
+                                     _wx-_band3:_wx].mean())
+            _edges["R"].append(_flum[_wy+_in:_wy+_wh-_in,
+                                     _wx+_ww:_wx+_ww+_band3].mean())
+            _edges["T"].append(_flum[_wy-_band3:_wy,
+                                     _wx+_in:_wx+_ww-_in].mean())
+            _edges["B"].append(_flum[_wy+_wh:_wy+_wh+_band3,
+                                     _wx+_in:_wx+_ww-_in].mean())
+        _plate_med = float(np.median(_flum[_fa >= 250]))
+        for _side, _vals in _edges.items():
+            _v = np.array(_vals)
+            assert _v.min() > _plate_med + 8, (
+                f"{_spec}: the {_side} edge of some window is "
+                f"{_v.min():.0f} against the plate's own metal at "
+                f"{_plate_med:.0f} — no ridge, so no bevel")
+            assert _v.std() < 4, (
+                f"{_spec}: the eight windows' {_side} edges range "
+                f"{_v.min():.0f}..{_v.max():.0f} — they come from one "
+                f"sampled hole through one function and must agree")
     ok("colony frame built from the master (nine-slice ring matches the "
        "table at all three resolutions, struts are metal)")
 

@@ -718,8 +718,9 @@ to stay uncomfortable to extend.
     ├── help_extract.py           171  HELP.LBX -> help_<lang>.json
     ├── ext_diag.py               473  Extension API diagnostics
     ├── ext_diag_race.py          228  Race screen field diagnostics
-    ├── frame_build.py             98  the colony frame, nine-sliced
-    │                                  out of the main-screen master
+    ├── frame_build.py            194  the colony frame, nine-sliced
+    │                                  out of the main-screen master,
+    │                                  ring and per-window bevel
     ├── frame_cut.py               61  frame artwork + the mask ->
     │                                  RGBA frames, holes from the
     │                                  mask and never from the black
@@ -3036,6 +3037,65 @@ help-file lesson, one domain over.
 
 Zhadoom III (14 pops) is the widest row in either fixture and is
 therefore the narrowest-cell case any picture has to survive.
+
+### Stage A: every window gets the master's own light edge — 7 September 2026
+
+**The bevel hole is found, not named**, the same rule as the strut
+patch: every hole in `galaxy_map/assets/frame.png` is measured on all
+four sides and the one whose four sides agree best is taken, because
+a bevel copied from a hole that is bright on the left and flat on the
+right would put that asymmetry on every window of the screen.
+`python tools/frame_build.py --profiles` prints the measurement.
+
+| master hole | L | R | T | B | agreement |
+|---|---:|---:|---:|---:|---:|
+| header 548x53 | 49/0 | 51/0 | 74/0 | 86/1 | — a side with no lit edge |
+| map 1691x988 | 72/1 | 130/1 | 162/1 | 82/1 | 1.91 |
+| **sidebar 303x758** | **162/1** | **110/1** | **74/1** | **97/1** | **2.20** |
+| box 307x171 | 98/1 | 4/0 | 8/0 | 64/1 | — |
+| six slots | 60..177 / 1 | 29..180 | 44..74 | 54..120 | 0.00..2.05 |
+
+Height over width, in master pixels. **The master's bevel is ONE
+pixel wide on every hole that has one** — a single bright line
+against a plateau of luminance 2 — which is why `BEVEL_MASTER` is 3:
+that line plus the two pixels of falloff behind it, and no more.
+
+**One function lays the ring and every bevel.** They are the same
+operation — take the band a source image puts around a rectangular
+opening and put it around another rectangle — so `lay_border` does
+both, corners lifted whole and scaled once, edges stretched along
+their own length only. A second implementation would have been the
+second copy, and the second copy is where a difference gets in.
+
+**The bevel fit, every gap against two bevels (6 reference px):**
+
+| gap | px | |
+|---|---:|---|
+| header → list | 8 | ok |
+| list → lower band | 16 | ok |
+| lower band → sort row | 12 | ok |
+| the three lower-band gaps | 18 | ok |
+| sort_bar → return_button | 12 | ok |
+| band top → inset top | 10 | ok |
+| **window → ring, all four sides** | **0** | by definition |
+
+Every window-to-window gap fits, with 8 px the tightest against 6.
+The four zeroes are not a layout problem: the ring IS the metal
+between the canvas edge and the first window, so a window at the ring
+has no gap by construction, and the bevel there is laid over the
+ring's innermost 3 px — which is the master's own edge treatment
+already. Nothing was narrowed to fit and **no layout number needs to
+change.**
+
+**The check measures a ridge, not ink.** For every window, the three
+pixels next to each edge must be at least 8 above the plate's own
+metal median, and the eight windows must agree per side to within 4 —
+they come from one sampled hole through one function, so drift means
+two code paths have got in. Verified to fail: with the bevel pass
+removed it reports *"the eight windows' L edges range 15..56"*.
+
+Masks and plates regenerate byte-identical from
+`layout_reference.json` plus the master, all seven files.
 
 ### The colony frame is built, not rendered — 7 September 2026
 
