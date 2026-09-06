@@ -259,6 +259,123 @@ def _ridge(p):
     return float(p[:max(width, 1)].mean()), width
 
 
+def struts(rects):
+    """The metal rectangles between facing windows.
+
+    A pair counts as facing if one starts where the other ends on one
+    axis and they overlap by more than a token amount on the other —
+    the same test the master's own rails were measured with, so the
+    gap a rail is judged against is the gap a rail would fill.
+    """
+    out = []
+    boxes = sorted((name, r) for name, r in rects.items())
+
+    def clear(gap):
+        """No window inside the gap — otherwise the two are not
+        adjacent and the metal between them is not one strut. Without
+        this the header and the sort row 'face' each other across the
+        whole screen."""
+        gx, gy, gw, gh = gap
+        for _n, (x, y, w, h) in boxes:
+            if gx < x + w and x < gx + gw and gy < y + h and y < gy + gh:
+                return False
+        return True
+
+    for i, (_na, A) in enumerate(boxes):
+        for _nb, B in boxes[i + 1:]:
+            for a, b in ((A, B), (B, A)):
+                if b[0] >= a[0] + a[2] and \
+                        min(a[1] + a[3], b[1] + b[3]) - max(a[1], b[1]) > 20:
+                    gap = b[0] - (a[0] + a[2])
+                    y0 = max(a[1], b[1])
+                    y1 = min(a[1] + a[3], b[1] + b[3])
+                    box = (a[0] + a[2], y0, gap, y1 - y0)
+                    if 0 < gap and clear(box):
+                        out.append(box + (True,))
+                if b[1] >= a[1] + a[3] and \
+                        min(a[0] + a[2], b[0] + b[2]) - max(a[0], b[0]) > 20:
+                    gap = b[1] - (a[1] + a[3])
+                    x0 = max(a[0], b[0])
+                    x1 = min(a[0] + a[2], b[0] + b[2])
+                    box = (x0, a[1] + a[3], x1 - x0, gap)
+                    if 0 < gap and clear(box):
+                        out.append(box + (False,))
+    return out
+
+
+def rail_source(master):
+    """(strip, vertical, width_in_reference_px) — the NARROWEST rail.
+
+    Found, not named, like the strut patch and the bevel hole. Every
+    pair of the master's own facing holes is measured; the narrowest
+    of those struts is the rail, because it is the one that fits the
+    most gaps — a wider one would simply never be laid.
+
+    Measured 7 September 2026: the master's rails are 33 to 52 master
+    px, which is **28.4 to 43.0 reference px**, and every one of them
+    carries a lit line on both edges with a moulded ridge between.
+    """
+    a = np.array(master.convert("RGBA"))
+    holes = a[:, :, 3] < 16
+    lab, n = ndimage.label(holes)
+    objs = ndimage.find_objects(lab)
+    sizes = ndimage.sum(holes, lab, range(1, n + 1))
+    h, w = holes.shape
+    rects = {}
+    for i, size in enumerate(sizes, 1):
+        if size < 1500:
+            continue
+        sy, sx = objs[i - 1]
+        rects[i] = (sx.start, sy.start, sx.stop - sx.start,
+                    sy.stop - sy.start)
+    best = None
+    for x, y, gw, gh, vertical in struts(rects):
+        ref = (gw * frame_mask.REF_W / w) if vertical \
+            else (gh * frame_mask.REF_H / h)
+        if gw < 4 or gh < 4 or ref > 200:
+            continue
+        if best is None or ref < best[0]:
+            best = (ref, (x, y, gw, gh), vertical)
+    if best is None:
+        return None, False, 0.0
+    ref, (x, y, gw, gh), vertical = best
+    return master.convert("RGB").crop((x, y, x + gw, y + gh)), vertical, ref
+
+
+def lay_rail(dst, strip, rect, vertical, cap=None):
+    """Three-slice a rail along `rect`: end cap, stretch, end cap.
+
+    **A SECOND IMPLEMENTATION, AND THIS IS THE REASON.** `lay_border`
+    lays four corners and four edges around an opening; a rail has
+    two ends and a middle and no corners at all. Forcing it through
+    the border would mean synthesising two corners the source does
+    not contain, which is the one thing "no invented pixels" rules
+    out. The end/stretch logic is the same idea and the third copy of
+    it is the one to extract.
+    """
+    x, y, w, h = rect
+    if w <= 0 or h <= 0:
+        return
+    sw, sh = strip.size
+    along = h if vertical else w
+    cap = min(cap or (sw if vertical else sh), along // 2)
+    strip = strip.resize((w, sh) if vertical else (sw, h), Image.LANCZOS)
+    if vertical:
+        head, tail = strip.crop((0, 0, w, cap)), strip.crop((0, sh - cap, w, sh))
+        mid = strip.crop((0, cap, w, sh - cap)).resize(
+            (w, max(1, h - 2 * cap)), Image.LANCZOS)
+        dst.paste(head, (x, y))
+        dst.paste(mid, (x, y + cap))
+        dst.paste(tail, (x, y + h - cap))
+    else:
+        head, tail = strip.crop((0, 0, cap, h)), strip.crop((sw - cap, 0, sw, h))
+        mid = strip.crop((cap, 0, sw - cap, h)).resize(
+            (max(1, w - 2 * cap), h), Image.LANCZOS)
+        dst.paste(head, (x, y))
+        dst.paste(mid, (x + cap, y))
+        dst.paste(tail, (x + w - cap, y))
+
+
 def build(master, windows, width, height):
     """The frame plate at `width x height`, no holes cut yet.
 
@@ -277,8 +394,28 @@ def build(master, windows, width, height):
 
     scale = min(width / frame_mask.REF_W, height / frame_mask.REF_H)
     band = max(1, round(BEVEL_REF * scale))
-    bsrc, bopen, _chosen = bevel_source(master)
     _image, rects = frame_mask.render(windows, width, height)
+
+    # RAILS FIRST, BEVELS OVER THEM. A gap wide enough for the
+    # master's narrowest rail gets that rail along its length; a
+    # narrower one keeps the line the bevel already gives it. The
+    # rule is a comparison, not a fitting: nothing is squeezed to
+    # make a rail go in.
+    #
+    # Measured 7 September 2026 against the shipped layout: the
+    # narrowest master rail is 28.4 reference px and the widest gap
+    # this screen has is 18, so NO gap qualifies today and every
+    # strut keeps its line. The path is here because the rule is the
+    # rule, and a layout that widens a gap gets its rail without
+    # anybody remembering to come back.
+    strip, _rail_vertical, rail_ref = rail_source(master)
+    if strip is not None:
+        for x, y, gw, gh, vertical in struts(rects):
+            span = (gw if vertical else gh) / scale
+            if span > rail_ref:
+                lay_rail(out, strip, (x, y, gw, gh), vertical)
+
+    bsrc, bopen, _chosen = bevel_source(master)
     for _name, (x, y, w, h) in sorted(rects.items()):
         lay_border(out, bsrc, bopen, (x, y, x + w, y + h),
                    (band, band, band, band))

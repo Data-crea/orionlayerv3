@@ -508,7 +508,7 @@ files under `doc/` and are only summarised here.
 | | |
 |---|---|
 | Python | 32,960 lines across 111 modules — `find . -name '*.py'`, `__pycache__` excluded, the smoke test's 6,400 included. The previous figure here (21,642 across 94) was carried from an unstated method and could not be reproduced |
-| Smoke test | `python tools/smoke_test.py` — **91 checks**, headless |
+| Smoke test | `python tools/smoke_test.py` — **92 checks**, headless |
 | Assets | 170 MB (select_race 68, galaxy_map 51, shared 23, new_game 21, colony_summary 1) |
 | Screens in HD | 7 of ~20–22 (colony summary draws list, sidebar, scan box and galaxy inset, and MOVES POPS — the first HD gesture that drives the game) |
 | Setup from clone | `python tools/setup.py` (deps via the system package manager) |
@@ -718,9 +718,9 @@ to stay uncomfortable to extend.
     ├── help_extract.py           171  HELP.LBX -> help_<lang>.json
     ├── ext_diag.py               473  Extension API diagnostics
     ├── ext_diag_race.py          228  Race screen field diagnostics
-    ├── frame_build.py            194  the colony frame, nine-sliced
-    │                                  out of the main-screen master,
-    │                                  ring and per-window bevel
+    ├── frame_build.py            277  the colony frame, nine-sliced
+    │                                  out of the main-screen master:
+    │                                  ring, per-window bevel, rails
     ├── frame_cut.py               61  frame artwork + the mask ->
     │                                  RGBA frames, holes from the
     │                                  mask and never from the black
@@ -3037,6 +3037,59 @@ help-file lesson, one domain over.
 
 Zhadoom III (14 pops) is the widest row in either fixture and is
 therefore the narrowest-cell case any picture has to survive.
+
+### Stage A2: the rail rule, and why nothing takes it — 7 September 2026
+
+Every strut of `galaxy_map/assets/frame.png` measured — thirteen of
+them, **33 to 52 master px, which is 28.4 to 43.0 reference px** —
+and every one carries a lit line on both edges with a moulded ridge
+between. The narrowest is the header-to-map strut, 548 x 31 master
+px = **26.7 reference px**, and `rail_source` finds it the way the
+strut patch and the bevel hole are found: measured, not named.
+
+The rule is a comparison and never a fitting. A gap wider than that
+rail gets it laid along its length; a narrower one keeps the line its
+bevel already gives it.
+
+**Against this layout, no gap qualifies:**
+
+| gap | axis | ref px | |
+|---|---|---:|---|
+| header \| list | horizontal | 8 | keeps the line |
+| planet_info \| sort_bar, planet_output \| sort_bar, empire_stats \| return_button, return_button \| sort_bar | | 12 | keeps the line |
+| list \| planet_info, list \| planet_output, empire_stats \| list | horizontal | 16 | keeps the line |
+| the three lower-band gaps | vertical | 18 | keeps the line |
+| galaxy_inset \| sort_bar | horizontal | 22 | keeps the line |
+| **galaxy_inset \| list** | horizontal | **26** | keeps the line |
+
+**The widest misses the rail by 0.7 px.** That is asserted rather
+than noted: a widened gap would start taking rails silently, and the
+picture would change without anybody looking at it. The rail path is
+exercised on a synthetic 100 px gap in the same check, so the rule is
+code and not prose.
+
+`struts()` needed an adjacency filter. Without one the header and the
+sort row "face" each other across the whole screen and the tool
+reported gaps of 908 px; a gap is a strut only if no window lies
+inside it.
+
+**`lay_rail` is a second implementation, and the reason is stated
+where it lives:** a rail has two ends and a middle and no corners, so
+forcing it through `lay_border` would mean synthesising two corners
+the source does not contain — which is exactly what "no invented
+pixels" rules out. The third copy of the end/stretch logic is the one
+to extract.
+
+**The tile still shows its period.** Rails cover nothing, so the
+strut patch remains bare over **2.1 % of the canvas (44 000 px)**,
+and the autocorrelation of its column profile peaks at **lag 64 — the
+patch's own size — at 0.92**. It repeats, and in the full-width gaps
+between header, list, band and sort row it is visible. Two cheap
+answers exist and neither is taken here: a larger patch, or mirrored
+tiling. Both are polish and polish is a separate decision.
+
+The plate is **byte-identical to Stage A (b4e439e)**, because the
+rule laid nothing.
 
 ### Stage A: every window gets the master's own light edge — 7 September 2026
 

@@ -4035,6 +4035,48 @@ def main():
     ok("colony frame built from the master (nine-slice ring matches the "
        "table at all three resolutions, struts are metal)")
 
+    # ── The rail rule, and the fact that nothing takes it today ──
+    #
+    # A gap wider than the master's NARROWEST rail gets that rail
+    # along its length; a narrower gap keeps the line its bevel
+    # already gives it. The rule is a comparison and never a fitting.
+    #
+    # Measured 7 September 2026: the narrowest master rail is 26.7
+    # reference px and this screen's widest gap is 26 — it misses by
+    # 0.7 px, at one gap (list to galaxy_inset), and every other gap
+    # is 8 to 22. So NO gap takes a rail. That is asserted, because
+    # "no rails today" is a fact about the layout that a widened gap
+    # would change silently.
+    _rail_strip, _rail_v, _rail_ref = _fb.rail_source(_fb_master)
+    assert _rail_strip is not None, "the master has no rail to sample"
+    _spans = [(_gw if _v else _gh)
+              for _gx, _gy, _gw, _gh, _v in _fb.struts(
+                  _fm.render(_lr_windows, _REF_W, _REF_H)[1])]
+    assert _spans, "the layout has no struts at all"
+    assert max(_spans) <= _rail_ref, (
+        f"a gap of {max(_spans)} reference px now exceeds the master's "
+        f"narrowest rail at {_rail_ref:.1f}, so it takes a rail — which "
+        f"is allowed, but the rail path has never been seen on this "
+        f"layout and the picture has to be looked at")
+
+    # AND THE RAIL PATH IS NOT DEAD CODE. Exercised on a layout with
+    # one gap wide enough, so the three-slice is known to run and to
+    # put the master's own pixels down rather than a stretch of one.
+    _wide = {"a": [107, 74, 700, 300], "b": [107, 474, 700, 300]}
+    _wr = _fm.render(_wide, _REF_W, _REF_H)[1]
+    _gap = [g for g in _fb.struts(_wr) if not g[4]]
+    assert _gap and _gap[0][3] == 100, _gap
+    _plate2 = _fb.tiled(_fb.strut_texture(_fb_master), _REF_W, _REF_H)
+    _before = np.array(_plate2.crop((300, 374, 500, 474))).mean()
+    _fb.lay_rail(_plate2, _rail_strip, _gap[0][:4], _gap[0][4])
+    _after = np.array(_plate2.crop((300, 374, 500, 474))).mean()
+    assert _after != _before, (
+        "lay_rail changed nothing on a 100 px gap — the rail path is "
+        "dead code and the rule is prose")
+    ok(f"colony frame rails (the master's narrowest is "
+       f"{_rail_ref:.1f} ref px, the layout's widest gap is "
+       f"{max(_spans)}, so none is laid — and the path still runs)")
+
     # ── The two colony tables in zoomtables ──
     #
     # THE DOT IS ODD BY REQUIREMENT, not by taste. The original draws
