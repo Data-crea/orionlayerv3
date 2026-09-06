@@ -575,6 +575,11 @@ to stay uncomfortable to extend.
 │   ├── helptext.py               180  Extracted HELP.LBX strings,
 │   │                                  format versioning
 │   ├── helpformat.py             272  MOO2 FMTPARA control codes
+│   ├── lbx.py                    132  The LBX container and the two
+│   │                                  sprite formats, shared by the
+│   │                                  three extractors. Images
+│   │                                  nothing: Pillow stays a tool
+│   │                                  dependency
 │   ├── style.py                  448  Skins, fonts, buttons, panels,
 │   │                                  render_text (glyph fallback),
 │   │                                  draw_inner_panel /
@@ -710,10 +715,13 @@ to stay uncomfortable to extend.
 │   └── starfield_measurement.md       Background star density
 └── tools/
     ├── smoke_test.py            2374  Headless verification (47)
-    ├── help_extract.py           287  HELP.LBX -> help_<lang>.json
+    ├── help_extract.py           171  HELP.LBX -> help_<lang>.json
     ├── ext_diag.py               473  Extension API diagnostics
     ├── ext_diag_race.py          228  Race screen field diagnostics
-    ├── nebula_extract.py         249  Pull nebula sprites from LBX
+    ├── nebula_extract.py         100  Pull nebula sprites from LBX
+    ├── raceicon_extract.py       241  RACEICON.LBX -> the population
+    │                                  figures per race, grayscale by
+    │                                  index and in the game palette
     ├── nebula_asset_check.py     238  Nebula asset resolution
     ├── make_nebula_icons.py      228  Render the HD nebula shapes
     ├── make_star_icons.py        224  Generate the 36 star sprites
@@ -3020,6 +3028,98 @@ help-file lesson, one domain over.
 
 Zhadoom III (14 pops) is the widest row in either fixture and is
 therefore the narrowest-cell case any picture has to survive.
+
+### The population figures come out of RACEICON.LBX — 6 September 2026
+
+`tools/raceicon_extract.py` writes the original's own pop sprites to
+`screens/colony_summary/assets/raceicon_ref/`, per race and per
+profession. **Nothing in the tree reads it**, it is in `.gitignore`,
+and the smoke test passes with it absent — decision 38's rule, the
+same one the help texts and `nebula_ref/` live under.
+
+**The container moved into `core/lbx.py` first.** RACEICON was the
+third reader of the LBX format and the second of the sprite decoders,
+and two private copies is one too many. Proof of the refactor was
+byte-for-byte: `nebula_ref/` regenerated with 0 bytes changed across
+all 61 files, `help_en.json` identical.
+
+**The block is thirteen entries per race, and all four functions were
+needed to account for it.** `race * 13 + job * 2 (+1)` is only the
+first six:
+
+| offset | what | source |
+|---|---|---|
+| 0,1 · 2,3 · 4,5 | farmer / worker / scientist, `pop_state` 0 and 2 | `People_Anim_`, colony_main.cpp:444-450 |
+| 6…10 | five military variants | `Military_Anims_`, colony.cpp:1298 |
+| 11 | spy | `Spy_Anim_`, colony.cpp:237 |
+| 12 | race portrait, drawn for a CONQUERED pop | `Colony_Pop_Icon_`, colony.cpp:1285 |
+
+13 races (`enum STOCK_RACE`, orion2_consts.h:444-457, with a
+`static_assert` on the count at :1379) x 13, plus 0xA9 android and
+0xAA native, is 171 — exactly what the file holds. Names come from
+that enum and NOT from `MOX::_race_names[]` (estrings.cpp:108-127),
+which holds localised display strings and is a different thing from
+the identity of race index 3.
+
+**The resting figure is the ODD entry of each pair, and the even one
+is dead code.** `Pop_To_Pop_State_` (colony.cpp:1240-1255) returns
+only 2, 3 or 4, and no call site in the tree passes 0. The even
+entries are extracted anyway as `_state0`, because a reference that
+silently omits half the file cannot be used to check the half it
+kept. Recorded for the maintainer in `doc/orion2re_open_fixes.md` as
+an OBSERVATION beside the `pop_state == 6` item — same pattern,
+second site, no fix wanted.
+
+**The palette is not in RACEICON.LBX** — all 171 entries have
+`flags == 0`, so `FLAG_HAS_PALETTE` is set on none. Grayscale by
+index is the default output; a coloured set carries the `_game`
+suffix, and the suffix is that and not `_colsum` because both colony
+screens were compared:
+
+- the SUMMARY screen loads `fonts::Load_Palette_(1, 0, 255)` and then
+  COLSUM.LBX entry 0, which defines all 256 indices (colsum.cpp:128-129);
+- the MAIN screen loads the same font palette and then `C_Anims_(0)`
+  (`Update_Colony_Palette_`, colony.cpp:230-235), which resolves to
+  PLANETS.LBX and is therefore a different sprite per climate
+  (colony_main.cpp:474, colony.cpp:201).
+
+Whole palettes they are not — over their common range the 30
+PLANETS.LBX entries differ from COLSUM entry 0 in 78 to 80 of 80
+indices, none identical. But every planet entry declares
+`(start 0, count 80)` and **the people sprites use indices 81..239**,
+not one of which a planet background can touch. Those come from the
+font palette, FONTS.LBX entry 2 (fonts.cpp:72-77), on both screens,
+and COLSUM entry 0 agrees with it on **all 76** indices these sprites
+use (228 of 256 overall). The colours are the base palette's, not one
+screen's private choice.
+
+**A defect fell out of asking that question.** `read_palette` read
+`r, g, b, changed`; `s_palette_entry` is `{changed, r, g, b}` —
+**the flag first** (orion2.h:2131-2136). Every colour it returned was
+one byte to the left, and COLSUM entry 0's white came back as cyan.
+It had shipped in `nebula_extract.py` since that tool was written and
+was inherited verbatim by `core/lbx.py`, and it was invisible because
+**not one of STARBG.LBX's 48 nebula entries carries a palette at
+all** — the function had never once run on real data. Correcting it
+changes no file in the tree, which is luck; the check now pins the
+byte ORDER against the struct, with a non-zero flag byte in the
+fixture so a wrong order cannot pass.
+
+**Acceptance, and it is stronger than the question asked.** The
+question was whether Elerian's bronze farmer, teal worker and silver
+scientist match the original. The native colony summary frame is
+palette-INDEXED, so the comparison could be made on indices and never
+on colours: entries 40, 42 and 44 match **14, 4 and 8** figures in
+that frame index for index, and **every other race matches none** —
+which identifies the save's race as Elerian by measurement rather
+than by assumption. Entries 39, 41 and 43 match nothing, confirming
+the odd-entry rule live. Entry 0xAA matches 3, which is Urna I's
+three natives from the day before, and 0xA9 matches 0, which is a
+save with no androids. Rendered through the `_game` palette the three
+sprites are **pixel-for-pixel identical** to the original's frame:
+285, 256 and 239 opaque pixels each, 0 different. That is also what
+proves the palette byte-order fix, since the old reading would have
+matched nothing.
 
 ### Two live faults after the row's three groups — 6 September 2026
 

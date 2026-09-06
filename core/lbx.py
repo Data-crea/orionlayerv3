@@ -140,17 +140,36 @@ def parse_header(blob, label="entry"):
 def read_palette(blob, frame_count):
     """The embedded palette, per `Set_Animation_Palette_`.
 
-    It sits after the frame-offset table: a (start, count) pair, then
-    4 bytes per entry whose RGB are 6-bit VGA components, so they are
-    scaled by 4 and clamped. Callers must check `has_palette` first —
-    the bytes at this offset are frame data in an entry without one.
+    It sits after the frame-offset table — `Animation_Palette_Header_`
+    (orion2.h:3145) is exactly `frame_offsets + frame_count + 1` — as
+    an `s_palette_header` (start_index, count) followed by one
+    `s_palette_entry` each.
+
+    **THE FLAG COMES FIRST: `{changed, r, g, b}`, orion2.h:2131-2136.**
+    This function read `r, g, b, changed` until 6 September 2026,
+    inherited verbatim by `core/lbx.py` from `nebula_extract.py`,
+    so every colour it returned was one byte to the left — the
+    `changed` flag as red, red as green, green as blue, and blue
+    thrown away. COLSUM.LBX entry 0 came back with index 255 as
+    (0, 252, 252), a cyan where the palette's own white is
+    (252, 252, 252). Two things made it invisible for as long as it
+    existed: the only caller was the nebula extractor, and **not one
+    of STARBG.LBX's 48 nebula entries carries a palette at all**, so
+    the function had never once run on real data. The correction
+    therefore changes no file in the tree — which is luck, not
+    diligence, and is why the smoke check now pins the byte ORDER
+    against the struct rather than only the scaling.
+
+    RGB are 6-bit VGA components, scaled by 4 and clamped. Callers
+    must check `has_palette` first — the bytes at this offset are
+    frame data in an entry without one.
     """
     pos = 12 + 4 * (frame_count + 1)
     start, count = struct.unpack_from("<hh", blob, pos)
     pos += 4
     palette = {}
     for i in range(count):
-        r, g, b, _flag = struct.unpack_from("<BBBB", blob, pos + 4 * i)
+        _changed, r, g, b = struct.unpack_from("<BBBB", blob, pos + 4 * i)
         palette[start + i] = (min(r * 4, 255), min(g * 4, 255),
                               min(b * 4, 255))
     return palette

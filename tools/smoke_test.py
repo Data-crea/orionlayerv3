@@ -6760,7 +6760,14 @@ def main():
 
     # A 2x2 BITMAP frame: index 0 is transparent, 1 is in the
     # palette, 200 is not and must come back as grey 200.
-    _pal = struct.pack("<hh", 0, 2) + bytes([0, 0, 0, 0, 63, 32, 16, 0])
+    # s_palette_entry is {changed, r, g, b} — THE FLAG FIRST
+    # (orion2.h:2131-2136). The flag byte here is 1 and not 0 on
+    # purpose: a decoder that read r,g,b,changed would return
+    # (4, 252, 128) for index 1 and pass every other assertion below.
+    # That reading is what shipped in nebula_extract.py and was
+    # inherited by core/lbx.py, and it survived because STARBG.LBX
+    # has no palettes at all — the function had never run on data.
+    _pal = struct.pack("<hh", 0, 2) + bytes([0, 0, 0, 0, 1, 63, 32, 16])
     _bmp = _anim(2, 2, [bytes([0, 1, 200, 1])],
                  _lbx.DRAW_MODE_BITMAP | _lbx.FLAG_HAS_PALETTE, b"", _pal)
     # The same picture as a PACKED frame (Draw_Animated_Sprite_):
@@ -6799,7 +6806,9 @@ def main():
             f"where the bitmap decoder gives {list(_p0)}")
         # 6-bit VGA components are scaled by 4 and clamped.
         assert _lbx.read_palette(_ents[0], 1) == {0: (0, 0, 0),
-                                                  1: (252, 128, 64)}
+                                                  1: (252, 128, 64)}, (
+            f"the palette byte order moved: "
+            f"{_lbx.read_palette(_ents[0], 1)}")
         # Index 0 transparent, a palette index opaque, an index with
         # no entry GREY — never an invented colour (see rgba_bytes).
         _rgba = _lbx.rgba_bytes(_p0, _lbx.read_palette(_ents[0], 1))

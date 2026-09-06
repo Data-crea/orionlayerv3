@@ -837,6 +837,40 @@ There is a third possibility we cannot rule out from outside: that
 defined once, so a state 6 would have to come from somewhere this
 tree no longer has.
 
+### The same shape, a second site — an OBSERVATION, 6 September 2026
+
+Not a fix request and not part of the question above; it is here
+because it is the same pattern and a reader who meets one should
+meet the other.
+
+`COLONY::People_Anim_` (`colony_main.cpp:444-450`) branches on
+`pop_state` four ways: **0** and **2** pick a race sprite,
+`race * 13 + job * 2 (+ 1 for state 2)`; 3 gives the native (0xAA)
+and 4 the android (0xA9).
+
+**The `pop_state == 0` arm looks unreachable, exactly as `== 6` does
+above, and for the same reason.** `Pop_To_Pop_State_`
+(`colony.cpp:1240-1255`) returns only 2, 3 or 4, and it is the only
+thing that feeds `Colony_Pop_Anim_` (`colony.cpp:1270-1283`). The
+other eight call sites in the tree pass a literal 2 or 4
+(`colbldg.cpp:923`, `:933`, `:943`, `colony_main.cpp:930`,
+`colony.cpp:2238`, `mainpups.cpp:2658`). Nothing passes 0.
+
+The consequence is visible in the file: **the EVEN entry of every
+job pair is never drawn.** RACEICON.LBX holds both — 13 races x 13
+entries + 0xA9 + 0xAA is exactly its 171 — and only the odd one of
+each pair reaches the screen. Confirmed against the original's own
+framebuffer on 6 September 2026: Elerian entries 40, 42 and 44 match
+14, 4 and 8 figures on the colony summary index for index, entries
+39, 41 and 43 match none.
+
+So the same third possibility applies: a state 0 may have been
+reachable in the original and not here, in which case those thirteen
+even entries per race are what it drew. **No change is wanted** — we
+transcribe the code, and `tools/raceicon_extract.py` writes the even
+entries out as `_state0` so the reference shows what is being
+skipped rather than hiding it.
+
 ### What we did with it
 
 **We mirrored the code, not either string**, because the code is what

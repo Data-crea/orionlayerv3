@@ -54,6 +54,17 @@ assets/shared/help/help_*.json
 # or brightness — it says so instead of passing quietly.
 screens/galaxy_map/assets/nebula_ref/
 
+# UNMODIFIED sprites out of RACEICON.LBX — the population figures the
+# colony screens draw, per race and per profession, plus the shared
+# native and android. Same rule as nebula_ref/ and the same reason:
+# these are the original's own pixels out of somebody's installation,
+# not ours to ship. `tools/raceicon_extract.py` puts them back.
+# Unlike nebula_ref/ NOTHING IN THE TREE READS THIS ONE — it is a
+# reference for a person comparing HD icons against the original, so
+# the smoke test neither needs it nor mentions it, and must pass with
+# it absent.
+screens/colony_summary/assets/raceicon_ref/
+
 # --- Local state ---
 # settings.json is NOT ignored: it holds window size, skin, language
 # and the localhost port, no secrets, and `load_settings()` falls back
