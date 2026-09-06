@@ -328,23 +328,199 @@ own dot. No other star moved or changed.
 
 ---
 
-## 3. Ours — NOT COMPUTED
+## 3. Ours
 
-Deliberately empty. The brief's reporting stop puts Part 3 after
-Parts 1 and 2 are confirmed, and Part 3 is arithmetic on those
-inputs: the crop in world units, the world→HD scale per resolution,
-whether that scale is a rung of `core/zoomtables.py` or between rungs
-(and therefore an **HD EXTENSION** to be marked like `hd_zoom_level`),
-and the star sprite size at that scale.
+Arithmetic on Parts 1 and 2, which agree. Everything is in world
+units; the one pixel dimension that enters is the original's own
+3 px dot, and it is used to size a MARKER, never to derive geometry.
 
-Two things Part 1 already settles about it, recorded here so they are
-not re-derived:
+### 3.1 The crop is the original's COVERAGE, not the galaxy
 
-- **The crop is the whole galaxy**, `MAP_MAX_X` x `MAP_MAX_Y` world
-  units — except on orion2re's maximum size, where the box covers
-  `128 * (506000/128) * M / 10000` x `91 * (400000/91) * M / 10000`
-  and the galaxy is smaller than that (1.8). Which of the two an HD
-  inset should reproduce is a question, not a fact.
-- **The original's star is a 3x3 dot from `gstar.lbx` 23..32, not a
-  zoom-table rung** (1.5), so "which rung" may have no answer and the
-  choice may be between a dot and an HD sprite — also a question.
+"Reproduce the original's coverage" and "show the whole galaxy" are
+the same thing for the four stock sizes and are **not** the same
+thing for orion2re's Maximum (1.8). The crop that reproduces the
+coverage is the box's own reach:
+
+```
+crop_w = 128 * (506000 / 128) * M / 10000   ==  50.6 * M   world units
+crop_h =  91 * (400000 /  91) * M / 10000   ==  40.0 * M   world units
+```
+
+| galaxy | M | crop, world | galaxy, world | galaxy fills the crop |
+|---|---:|---|---|---|
+| small | 10 | 505.98 x 399.94 | 506 x 400 | 100 % x 100 % |
+| medium | 15 | 758.98 x 599.92 | 759 x 600 | 100 % x 100 % |
+| large | 20 | 1011.97 x 799.89 | 1012 x 800 | 100 % x 100 % |
+| huge | 30 | 1517.95 x 1199.84 | 1518 x 1200 | 100 % x 100 % |
+| maximum | 36 | 1821.54 x 1439.80 | 1800 x 1350 | 98.8 % x 93.8 % |
+
+(The crop is 50.6M and 40M less a rounding crumb — `506000 // 128`
+is 3953 and not 3953.125 — worth 0.02 world units at M = 10 and
+0.08 at M = 36, i.e. under a hundredth of a pixel anywhere.)
+
+**The crop's aspect is 1.2651 at EVERY galaxy size**, because both
+divisors are constants and M cancels. That is the fact everything
+below rests on: a single isotropic box can reproduce the original's
+coverage at every size, with one scale that depends only on M.
+
+### 3.2 The scale is exactly 5/M reference px per world unit
+
+For a box of `RW x RH` reference px the isotropic scale is
+`min(RW / crop_w, RH / crop_h)`.
+
+**Current box** — `boxes.json` gives `galaxy_inset` as
+`[1056, 721, 451, 203]` at both listed resolutions, so 451 x 203
+reference px, aspect **2.2217**. Against a 1.2651 crop the height
+binds at every size and the content is **256.8 x 203.0**, leaving
+**194 reference px — 43 % of the box — as margin**. The scale is
+`203 / (40 M) = 5.075 / M`.
+
+**Proposed box** — 253 x 200 reference px, aspect **1.2650** against
+the crop's 1.2651. The crop fills it at every size:
+
+| galaxy | M | scale, ref px per world | drawn | letterbox |
+|---|---:|---:|---|---|
+| small | 10 | 0.500016 | 253.0 x 200.0 | 0 x 0 |
+| medium | 15 | 0.333344 | 253.0 x 200.0 | 0 x 0 |
+| large | 20 | 0.250008 | 253.0 x 200.0 | 0 x 0 |
+| huge | 30 | 0.166672 | 253.0 x 200.0 | 0 x 0 |
+| maximum | 36 | 0.138893 | 253.0 x 200.0 | 0 x 0 |
+
+**`scale = 5 / M` reference px per world unit**, to five decimal
+places, at every size — the residue is the rounding crumb of 3.1.
+
+Per resolution (`Layout.scale` is `min(w/1920, h/1080)`):
+
+| resolution | layout scale | box, px | scale at M = 36, px per world |
+|---|---:|---|---:|
+| 1920 x 1080 | 1.0000 | 253 x 200 | 0.138889 |
+| 2560 x 1440 | 1.3333 | 337 x 266 | 0.185185 |
+| 3840 x 2160 | 2.0000 | **506 x 400** | 0.277778 |
+
+At 2160p the box is exactly 506 x 400 device pixels — the small
+galaxy's own world extent at 1:1.
+
+### 3.3 A correction to the rebuild brief's premise
+
+`brief_colony_rebuild` asks Part 3 to confirm that 253 x 200
+"reproduces the original's coverage for the four stock sizes and
+**letterboxes Maximum**". The first half holds. **The second does
+not, and the reason is a better outcome than the brief assumed:**
+Maximum letterboxes only if the crop is the GALAXY (1800 x 1350,
+aspect 1.3333). Cropped to the original's COVERAGE it fills the box
+like every other size, and the galaxy then under-fills the drawn
+area by 98.8 % x 93.8 % — which is **exactly how much it under-fills
+the original's own box** (1.8). Reproducing that under-fill *is*
+reproducing the original. An HD letterbox on top of it would be a
+second, invented margin.
+
+So: no letterbox at any size, and the Maximum case needs no special
+handling — only the crop must be `50.6M x 40M` and not `MAP_MAX`.
+
+### 3.4 It is an HD EXTENSION, and not because of a rung
+
+Expressed as a `map_scale` (native px = world x 10 / map_scale, so
+`map_scale = 10 / scale`), the inset sits at **2M**:
+
+| galaxy | M | map_scale | rungs available | on a rung? |
+|---|---:|---:|---|---|
+| small | 10 | 20 | 10, 15, 20, 30 | yes, by coincidence |
+| medium | 15 | 30 | 10, 15, 20, 30 | yes, by coincidence |
+| large | 20 | 40 | 10, 15, 20, 30 | **no** |
+| huge | 30 | 60 | 10, 15, 20, 30 | **no** |
+| maximum | 36 | 72 | 5, 9, 18, 36 | **no** |
+
+Three of five are off the ladder, so by the brief's own test this is
+an HD EXTENSION in the same class as `hd_zoom_level` and
+`nebula_native_dimension`, and must be marked as one.
+
+**But the marking's reason is not "between rungs".** The rung ladder
+is `scale_rungs` — the `map_scale` values the game can *stand on
+while zooming*. **The inset does not zoom.** Its scale is fixed by
+the galaxy size for the whole game and no input can change it; the
+original never asks the zoom question about this box at all. Two of
+the five sizes landing on a rung is arithmetic, not a relationship.
+The extension is therefore of a milder kind than `hd_zoom_level`:
+that one interpolates a ladder the original does stand on, this one
+uses a scale the original computes for itself and that no ladder was
+ever asked about.
+
+### 3.5 The DEVIATION isotropy costs, and it is not small
+
+Part 1.7: the original's inset compresses y by a constant
+`3953 / 4395 = 0.89943`. An isotropic HD box does not. So an HD
+inset drawn to 3.2 is **not the original's picture scaled up** — it
+is the original's *coverage* re-projected without the squash, and
+every constellation in it is **11.2 % taller relative to its width**
+than the one the player sees in the original.
+
+The two readings of "the same inset" differ measurably. In the
+current 451 x 203 box:
+
+| reading | content width | how |
+|---|---:|---|
+| scale the original's 128 x 91 picture uniformly | **286** ref px | keeps the squash, height binds at 203/91 |
+| map world units isotropically | **257** ref px | drops the squash, height binds at 203/(40M) |
+
+An 11 % difference in width from the same box and the same data.
+`layout.json`'s `_geometry_note` records the 286 reading, which is
+what `core.mapcoords.MapView` does today. **Choosing isotropy is a
+deliberate deviation and needs its own marking** — "the galaxy is a
+shape" is the argument for it, and it is the same argument the note
+already uses to refuse stretching the map to fill the hole.
+
+### 3.6 The star is a dot, and its size is derived
+
+The original's inset star is **not on any axis of
+`core/zoomtables.py`**: `gstar.lbx` entries 23..32 are 3 x 3 with 8
+frames whatever the galaxy size and whatever the zoom (1.5), where
+`STAR_FIELDS_DIM` and `star_dimension()` are about the galaxy map's
+zoom levels. There is no rung to read.
+
+So the size is derived, from the original's own drawn dot expressed
+in world units and re-projected:
+
+```
+dot_w = 3 * (M * 3953 / 10000)  world  =  1.1859 * M
+dot_h = 3 * (M * 4395 / 10000)  world  =  1.3185 * M
+at scale 5/M:  dot_w = 5.93 ref px,  dot_h = 6.59 ref px
+```
+
+M cancels — **the dot is 5.93 x 6.59 reference px at every galaxy
+size**, which is the same statement as "the original's dot is a
+fixed 3 px whatever the size". The two axes differ by exactly the
+0.89943 of 3.5.
+
+Taking the square dot the isotropic projection implies: **6
+reference px**, giving 6 / 8 / 12 device px at 1080p / 1440p /
+2160p — integers at all three, which is what a nearest-neighbour
+sprite wants.
+
+This is a **derived table for `core/zoomtables.py`, marked HD
+EXTENSION**, in the same form as `NEBULA_DIM`: sprite dimensions
+read from an LBX header are how that table is already sourced, and
+the 3 px never touches the world geometry — 3.1 and 3.2 are computed
+without it.
+
+**One open question, not decided here.** 6 is even, so the dot has no
+centre pixel, while the original's 3 has one and is drawn at
+`(sx - 1, sy - 1)` so that the computed pixel IS the centre (1.5).
+A 5 or 7 px dot keeps a centre; 6 does not. Whether the HD dot should
+be odd-sized, and take the half-pixel error on its size instead of on
+its position, is an artwork decision with a measurement on both
+sides.
+
+### 3.7 Summary for the rebuild
+
+| | value |
+|---|---|
+| crop | `50.6 * M` x `40 * M` world units, aspect 1.2651 at every size |
+| box | 253 x 200 reference px — **confirmed**, fills at every size |
+| scale | `5 / M` reference px per world unit |
+| per resolution | 253x200 / 337x266 / 506x400 px |
+| origin | world (0, 0) at the box's top-left, as the original |
+| letterbox | none, at any size — see 3.3 |
+| marking | **HD EXTENSION** (isotropy, 3.5) + **derived table** (dot, 3.6) |
+| star | a 6-reference-px dot, not a zoom-table rung |
+| animation | only the scanned star, 8 frames (1.5) |
+| also drawn | the scanned star's name, centred under the map (1.4) |
