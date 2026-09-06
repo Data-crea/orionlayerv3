@@ -3837,6 +3837,63 @@ def main():
        "window inside the bezel, inset aspect = the original's "
        "coverage, mask rounds exactly as Layout does)")
 
+    # ── Stage 2: holes == mask == boxes, on a frame built here ──
+    #
+    # The chain is artwork -> frame_cut -> alpha holes -> boxes.json,
+    # and decision 3 says all three must agree at every resolution.
+    # Data's artwork is not in the tree and never will be, so this
+    # builds its own plate and runs the real cutter over it — the
+    # same code path the artwork will take. A check that needed the
+    # artwork would be a check that fails for the person who followed
+    # the instructions, which is the help-file lesson.
+    _fc_spec = _ilu2.spec_from_file_location(
+        "_frame_cut", os.path.join(_proj, "tools", "frame_cut.py"))
+    _fc = _ilu2.module_from_spec(_fc_spec)
+    _fc_spec.loader.exec_module(_fc)
+    from PIL import Image as _PILImage
+    # Deliberately NOT black: if the cutter ever fell back to the
+    # artwork's own dark pixels instead of the mask, a plate with no
+    # black in it would produce no holes at all and this would fail
+    # rather than pass by coincidence.
+    _plate = _PILImage.new("RGB", (1920, 1080), (78, 80, 86))
+    for _spec in _lr["_resolutions"]:
+        _rw, _rh = (int(v) for v in _spec.split("x"))
+        _cut, _cut_rects = _fc.cut(_plate, _lr_windows, _rw, _rh)
+        assert _cut.size == (_rw, _rh) and _cut.mode == "RGBA"
+        _alpha = _cut.getchannel("A")
+        # 1. THE HOLES ARE THE MASK. Measured per window rather than
+        #    as a total, so two holes that swapped places could not
+        #    cancel out.
+        for _name, (_x, _y, _w, _h) in _cut_rects.items():
+            _inside = _alpha.crop((_x, _y, _x + _w, _y + _h))
+            assert _inside.getextrema() == (_fc.HOLE, _fc.HOLE), (
+                f"{_spec} {_name}: the window is not fully transparent, "
+                f"alpha runs {_inside.getextrema()}")
+        # 2. AND NOTHING ELSE IS. Count, so a hole one pixel too big
+        #    anywhere fails even though every window above passed.
+        _want = sum(_w * _h for _x, _y, _w, _h in _cut_rects.values())
+        _holes = sum(1 for _v in _alpha.getdata() if _v < 16)
+        assert _holes == _want, (
+            f"{_spec}: {_holes} transparent px against {_want} of "
+            f"window — the alpha and the mask disagree by "
+            f"{_holes - _want}")
+        # 3. ALPHA IS HARD. frame_holes.py thresholds at 16 and a
+        #    soft rim would make a hole's size depend on where that
+        #    threshold sits.
+        assert set(_alpha.getdata()) <= {_fc.HOLE, _fc.OPAQUE}, (
+            f"{_spec}: the alpha has values between 0 and 255")
+        # 4. THE RECTANGLES ARE THE MASK'S, name for name — the
+        #    mapping is by construction here, where frame_holes.py
+        #    has to guess it from position and had two of this
+        #    screen's names the wrong way round once.
+        _mask_img, _mask_rects = _fm.render(_lr_windows, _rw, _rh)
+        assert _cut_rects == _mask_rects, (
+            f"{_spec}: frame_cut punched {_cut_rects} and frame_mask "
+            f"drew {_mask_rects}")
+    ok("colony rebuild frame cut (holes == mask, name for name, hard "
+       "alpha, at all three resolutions — on a plate with no black "
+       "in it)")
+
     # ── The two colony tables in zoomtables ──
     #
     # THE DOT IS ODD BY REQUIREMENT, not by taste. The original draws

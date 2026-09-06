@@ -75,6 +75,11 @@ screens/colony_summary/assets/raceicon_ref/
 # to survive.
 screens/colony_summary/assets/frame_masks/
 
+# The cut frames, tools/frame_cut.py's output. The artwork is Data's
+# input and lives outside the tree; these are that plus a committed
+# JSON, and regenerating reproduces them.
+screens/colony_summary/assets/frames/
+
 # --- Local state ---
 # settings.json is NOT ignored: it holds window size, skin, language
 # and the localhost port, no secrets, and `load_settings()` falls back

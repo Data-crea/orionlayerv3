@@ -508,7 +508,7 @@ files under `doc/` and are only summarised here.
 | | |
 |---|---|
 | Python | 32,960 lines across 111 modules — `find . -name '*.py'`, `__pycache__` excluded, the smoke test's 6,400 included. The previous figure here (21,642 across 94) was carried from an unstated method and could not be reproduced |
-| Smoke test | `python tools/smoke_test.py` — **89 checks**, headless |
+| Smoke test | `python tools/smoke_test.py` — **90 checks**, headless |
 | Assets | 170 MB (select_race 68, galaxy_map 51, shared 23, new_game 21, colony_summary 1) |
 | Screens in HD | 7 of ~20–22 (colony summary draws list, sidebar, scan box and galaxy inset, and MOVES POPS — the first HD gesture that drives the game) |
 | Setup from clone | `python tools/setup.py` (deps via the system package manager) |
@@ -718,6 +718,9 @@ to stay uncomfortable to extend.
     ├── help_extract.py           171  HELP.LBX -> help_<lang>.json
     ├── ext_diag.py               473  Extension API diagnostics
     ├── ext_diag_race.py          228  Race screen field diagnostics
+    ├── frame_cut.py               61  frame artwork + the mask ->
+    │                                  RGBA frames, holes from the
+    │                                  mask and never from the black
     ├── frame_mask.py              77  layout_reference.json -> one
     │                                  window mask per resolution
     ├── nebula_extract.py         100  Pull nebula sprites from LBX
@@ -3031,6 +3034,50 @@ help-file lesson, one domain over.
 
 Zhadoom III (14 pops) is the widest row in either fixture and is
 therefore the narrowest-cell case any picture has to survive.
+
+### `max_map_scale` is estimated with 50.6 and that is wrong above 72 stars — 7 September 2026
+
+**A finding, reported and NOT fixed**, at Data's instruction.
+
+`zoomtables.max_map_scale(map_max_x)` recovers `MOX::_max_map_scale`
+as `round(map_max_x / 50.6)`, because the Extension API serializes
+`MAP_MAX_X` and not the scale. **That constant is the four stock
+sizes' and only theirs** — 506/10, 759/15, 1012/20, 1518/30. It is
+the only route in the tree: nothing transcribes
+`Maximum_Galaxy_Display_Scale_` (mapgen.cpp:64-71), which is what the
+game uses above 72 stars.
+
+That function takes the LARGER of two ceilings,
+`ceil(MAP_MAX_X * 10 / 506)` and `ceil(MAP_MAX_Y * 10 / 400)`, over a
+map built from a grid of 150-unit cells (mapgen.cpp:1112-1120). A
+ceiling and a rounding differ whenever the fraction is below a half,
+so the estimate comes out **exactly one too small** — never too
+large. Enumerated over every star count from 73 to 1023: **wrong for
+688 of the 951**, at 15 distinct map widths (2250, 2550, 2700, 2850,
+3000, 3300, 3450, 3600, 3750, 4050, 4200, 4350, 4500, 5100, 5250).
+Both ceilings matter: the x term dominates at 12 x 9, the y term at
+35 x 28.
+
+**It is right for the reference save.** 99 stars gives a 12 x 9 grid,
+`MAP_MAX_X` 1800, and `round(1800 / 50.6) = 36`, which is what
+`Maximum_Galaxy_Display_Scale_` returns. So the parked click frame
+under decision 35 is **not** wrong on the save every acceptance run
+uses — the concern is real and does not bite here.
+
+**And the parking is safe even where the estimate is wrong**, by the
+sign of the error rather than by design. `ViewController.park_game`
+stops at `current >= fit`; with `fit` one too SMALL the loop still
+reaches the game's true maximum and stops. One too large would never
+terminate, and the error is never one too large.
+
+What it would affect where it is wrong: the HD zoom-out limit sits
+one unit tighter than the game's, the extended rung ladder
+(`scale_rungs`, built by halving `max_map_scale`) shifts by a step,
+and `colonyrows.galaxy_inset_stars` — which divides by the same value
+— would place every star about 2 % off. No fix is made here; the
+snapping loop in `max_map_scale` already treats anything off the
+stock ladder as an estimate, and making it exact means transcribing
+the grid, which is its own decision.
 
 ### The colony rebuild, Stage 1: layout as data — 6 September 2026
 
