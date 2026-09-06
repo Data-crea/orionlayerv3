@@ -380,20 +380,28 @@ class ColonySummaryScreen(ScreenBase):
     def _render_panels(self, surface):
         """Every cutout that shows content gets the panel fill, so the
         frame never sits over raw background."""
-        for name in self._data.get("panels", {}):
-            if name.startswith("_"):
-                continue
-            box = self.box_rect(name)
+        # A panel may name its own fill as `<name>_fill`, BESIDE IT
+        # IN THIS BLOCK — the galaxy inset does, and
+        # `_galaxy_inset_fill_note` carries the measurement it rests
+        # on. A per-box value rather than a renderer change, because
+        # `colonyinset` draws no background at all, by transcription
+        # (movebox.cpp:36-38).
+        #
+        # **AND IT IS READ FROM `panels`, NOT FROM THE TOP LEVEL.**
+        # For a day it was `self._data.get(name + "_fill")` while the
+        # value sat in `panels` — so the lookup found nothing, every
+        # panel silently took PANEL_BG, and the status document said
+        # the inset was black on the strength of the measurement that
+        # chose the value rather than of the frame it was drawn in.
+        # A missing key here cannot raise, because most panels have
+        # none; the smoke check is what makes a stray one visible.
+        panels = self._data.get("panels", {})
+        for name in panels:
+            box = (None if name.startswith("_") or name.endswith("_fill")
+                   else self.box_rect(name))
             if box:
-                # A panel may name its own fill — the galaxy inset
-                # does, and `_galaxy_inset_fill_note` carries the
-                # measurement it rests on: the original's own inset
-                # region is black and this screen's default fill is
-                # not. A per-box value rather than a renderer change,
-                # because `colonyinset` draws no background at all,
-                # by transcription (movebox.cpp:36-38).
-                fill = self._data.get(name + "_fill") or PANEL_BG
-                surface.fill(tuple(fill)[:3], pygame.Rect(*self.layout.rect(box)))
+                fill = tuple(panels.get(name + "_fill") or PANEL_BG)[:3]
+                surface.fill(fill, pygame.Rect(*self.layout.rect(box)))
 
     def _render_list(self, surface):
         """The colony list. The bar is an INVENTION — see colonylist.

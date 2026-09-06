@@ -210,7 +210,7 @@ def render(surface, rows, area, cfg, layout, style, first=0,
     _draw_overflow(surface, rows, area, cfg, scale, layout, style, first)
 
 
-def draw_pick(surface, area, cfg, scale, band, slots):
+def draw_pick(surface, area, cfg, scale, band, row, job, slots):
     """Outline the squares a held pick would take.
 
     **The simplest drawing that can be SEEN, which is the whole
@@ -220,19 +220,35 @@ def draw_pick(surface, area, cfg, scale, band, slots):
     profession"; an outline is off that axis, the same reasoning the
     free slots' dashes rest on.
 
-    `band` is the (top, height) of the row as `row_bands` gave it, so
-    the mark is placed by the same function that placed the squares
-    (decision 5) rather than by a second copy of the pitch.
+    `slots` are icon slots WITHIN ONE JOB's column — that is what
+    `Pick.slots()` counts, because the original's icon walk is
+    per-column (coldraw.cpp:352) — so the job and the row are needed
+    to turn one into a rectangle. It takes them and asks
+    `row_boxes`, which is the same call `_render_bar` draws the cells
+    with (decision 5).
+
+    **AND THAT IS THE WHOLE OF THE FIX OF 6 SEPTEMBER 2026.** This
+    function used to compute `track_x + slot * step` for itself, on
+    the assumption that an icon slot is a track slot. It never was:
+    job 1's cells start after job 0's, so the outline sat as many
+    cells to the left as the earlier jobs held, and the three job
+    markers added one more per group. Reported live on Horus IV as
+    "one cell to the left" because food is job 0 and the F marker is
+    its only error — industry was off six and research ten, and had
+    been since this function was written (343d9ba). The docstring
+    above already claimed the mark was placed by the function that
+    placed the squares; it was not, and a comment cannot enforce
+    that. The check does, by reading both back off the render.
+
+    `band` is the (top, height) of the row as `row_bands` gave it.
     """
     if not slots:
         return
-    track = track_metrics(area, cfg, scale)
-    start = track_x(area, cfg, scale)
-    top, row_h = band
-    y = top + (row_h - track.bar_h) // 2
-    for slot in slots:
-        pygame.draw.rect(surface, PICK_COLOR, pygame.Rect(
-            start + slot * track.step, y, track.unit, track.bar_h), 2)
+    wanted = set(slots)
+    for cell_job, index, rect in row_boxes(
+            area, cfg, scale, row, band).cells:
+        if cell_job == job and index in wanted:
+            pygame.draw.rect(surface, PICK_COLOR, rect, 2)
 
 
 def draw_drop_bands(surface, area, cfg, scale, band, row):

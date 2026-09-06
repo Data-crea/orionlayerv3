@@ -137,13 +137,18 @@ def click_at(app, x, y, button=1):
     pump(app, 2)
 
 
-def square_xy(screen, row_index, slot):
-    """The screen pixel of one square of one row — the renderer's own.
+def square_xy(screen, row_index, job, index):
+    """The screen pixel of one CELL of one row — the renderer's own.
 
-    Both numbers come from the same functions `colonylist.render`
-    lays the row out with (decision 5), so a click aimed here lands
-    on the square that was drawn rather than on a second copy of the
-    pitch.
+    **It asks `row_boxes` and multiplies no pitch.** It used to
+    compute `track_x + slot * step` from a slot the caller had
+    already flattened with `sum(row["jobs"][:job]) + slot`, which is
+    a second copy of the layout in a tool whose whole job is to prove
+    the layout. The markers of 6 September moved every cell right and
+    this arithmetic did not move with them, so the acceptance run
+    would have aimed one cell short of its own target — the same
+    fault, in the tool built to catch it. Decision 5 covers tools
+    too.
     """
     area, cfg, scale, n_rows = screen._list_view()
     first = screen._first
@@ -151,11 +156,12 @@ def square_xy(screen, row_index, slot):
     band = row_index - first
     if not 0 <= band < len(bands):
         return None
-    track = colonylist.track_metrics(area, cfg, scale)
     top, row_h = bands[band]
-    x = (colonylist.track_x(area, cfg, scale) + slot * track.step
-         + track.unit // 2)
-    return x, top + row_h // 2
+    for cell_job, cell_index, rect in colonylist.row_boxes(
+            area, cfg, scale, screen._rows[row_index]).cells:
+        if (cell_job, cell_index) == (job, index):
+            return rect.x + rect.width // 2, top + row_h // 2
+    return None
 
 
 def band_xy(screen, row_index, job):
@@ -227,8 +233,7 @@ def choose(screen, state):
                                             row["index"], target)
                 if isinstance(plan, colonypick.Refusal):
                     continue
-                zone_slot = sum(row["jobs"][:job]) + slot
-                return (row_index, zone_slot, job, target,
+                return (row_index, slot, job, target,
                         pick, plan, max_farms)
     return None
 
@@ -278,17 +283,17 @@ def main():
               "the same pop composition, or no plan that completes. "
               "Stopping.")
         return 1
-    (row_index, zone_slot, job, target_job, pick, plan,
+    (row_index, cell, job, target_job, pick, plan,
      max_farms) = target
     row = rows[row_index]
     print(f"target: row {row_index} {row['name']!r} jobs={row['jobs']}, "
-          f"square {zone_slot} of column {job} -> column {target_job}")
+          f"cell {cell} of column {job} -> column {target_job}")
     print(f"  pick predicts {pick}, drop predicts {plan}")
 
     before = list(state.colonies_raw)
     sends_before = counter.total()
 
-    xy = square_xy(screen, row_index, zone_slot)
+    xy = square_xy(screen, row_index, job, cell)
     if xy is None:
         print("the row is not drawn at this resolution")
         return 1
@@ -299,6 +304,25 @@ def main():
         return 1
     print(f"  held locally: {screen._move.pick}, slots "
           f"{screen._move.pick.slots()}")
+    # THE OUTLINE IS READ BACK OFF THE FRAME, not off the geometry.
+    # A pick that names the right pop while the mark sits on the
+    # neighbouring cell is what shipped on 6 September, and every
+    # value in this run was correct while it did.
+    _area, _cfg, _scale, _n = screen._list_view()
+    _cells = {(j, i): r for j, i, r in colonylist.row_boxes(
+        _area, _cfg, _scale, row).cells}
+    _want = sorted(_cells[(job, i)].x for i in screen._move.pick.slots()
+                   if (job, i) in _cells)
+    _arr = pygame.surfarray.array3d(app.surface)
+    _rgb = list(colonylist.PICK_COLOR[:3])
+    _got = sorted({x for x in range(app.surface.get_width())
+                   if (_arr[x] == _rgb).all(axis=1).any()})
+    _left = [x for x in _got if x - 1 not in _got]
+    print(f"  outline inked at x {_left}, the cells are at {_want}")
+    if _left != _want:
+        print("  THE MARK IS NOT ON THE CELL IT NAMES")
+        return 1
+    print("  the outline sits on the cells the pick names")
     if counter.total() != sends_before:
         print(f"  THE FIRST CLICK SENT SOMETHING: {counter}")
         return 1

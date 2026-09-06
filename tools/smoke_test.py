@@ -3675,6 +3675,51 @@ def main():
         f"the galaxy inset reached the game: {_icap.calls}/"
         f"{_icap.keys}/{_icap.fields}. It is display only — the "
         f"original's stars are fields and ours are not (fundament 46)")
+    # THE FILL A PANEL NAMES IS THE FILL ON THE SCREEN, read back
+    # off a rendered frame and not off the value.
+    #
+    # For a day the inset's black was in `layout.json`, measured,
+    # documented and accepted — and the panel on screen was still
+    # PANEL_BG, because the lookup read `_data[name + "_fill"]` while
+    # the key sits inside `_data["panels"]`. Nothing raised: a panel
+    # without a fill is the normal case, so the miss looked exactly
+    # like the default. That is the help popup's lesson again — the
+    # background you see is not always the background that is set —
+    # and the only thing that can tell them apart is a sample.
+    from screens.colony_summary import screen as _cs_mod
+    _fl_panels = _scr_op._data.get("panels", {})
+    for _k in _fl_panels:
+        if not _k.endswith("_fill") or _k.startswith("_"):
+            continue
+        assert _k[:-5] in _fl_panels, (
+            f"{_k} names no panel — a fill for a panel that does not "
+            f"exist draws nothing and says nothing")
+    _fl_surf = pygame.Surface((1920, 1080))
+    _fl_surf.fill((255, 0, 255))
+    _scr_op.render(_fl_surf)
+    # Sampled as a MODE over the box and not read at one pixel: the
+    # frame image is blitted after the panels and its rim bleeds a
+    # few px inward, and the inset draws stars on top. The background
+    # is what most of the box is — the same method the (0, 8, 0)
+    # measurement of the original used.
+    for _k, _want in (("galaxy_inset", _fl_panels.get("galaxy_inset_fill")),
+                      ("spare_panel", None)):
+        _fr = pygame.Rect(*app.layout.rect(_scr_op.box_rect(_k)))
+        _fa = pygame.surfarray.array3d(_fl_surf.subsurface(_fr))
+        _hist = {}
+        for _sx in range(4, _fr.w - 4, 3):
+            for _sy in range(4, _fr.h - 4, 3):
+                _c = tuple(int(_v) for _v in _fa[_sx, _sy])
+                _hist[_c] = _hist.get(_c, 0) + 1
+        _got, _n = max(_hist.items(), key=lambda _i: _i[1])
+        _exp = tuple(_want[:3]) if _want else tuple(_cs_mod.PANEL_BG[:3])
+        assert _got == _exp and _n > sum(_hist.values()) // 2, (
+            f"{_k} is mostly {_got} ({_n} of {sum(_hist.values())} "
+            f"samples) on the rendered frame; layout.json asks for "
+            f"{_exp}")
+    ok("colony_summary panel fills reach the screen (the inset is "
+       "black in a rendered frame, not only in layout.json)")
+
     ok("colony_summary galaxy_inset (transform, the four colour "
        "branches, uniform-scale geometry, markings, sends nothing)")
 
@@ -4711,6 +4756,104 @@ def main():
     assert max(_dt_cols) == _dt_t[-1][1].x + _dt_t[-1][1].width - 1, (
         f"the outlines end at {max(_dt_cols)}, the targets at "
         f"{_dt_t[-1][1].x + _dt_t[-1][1].width - 1}")
+    # 7. THE CELL UNDER A PIXEL IS THE CELL DRAWN AT THAT PIXEL —
+    #    for every cell of every row, PICK-UP as well as drop.
+    #
+    #    Item 6 above was built for exactly this class of fault and
+    #    did not catch it, which is worth more than the fault: it
+    #    inks `draw_drop_bands` only, and only its two outermost
+    #    columns, so it can say nothing about the pick-up path and
+    #    nothing about any cell in between. `draw_pick` was never
+    #    rendered by any check at all. It computed `start + slot *
+    #    step` from the track origin, while `slot` is an index within
+    #    ONE JOB's icons — so the outline sat one marker plus every
+    #    preceding cell to the left of the cell it named. Reported
+    #    live on Horus IV as "exactly one cell" because food is job 0
+    #    and its only error is the F marker; industry was off six
+    #    cells and research ten. Born in 343d9ba, invisible on food
+    #    until the markers moved the run.
+    #
+    #    So this reads the RENDER and not the geometry: the cells are
+    #    recovered from their own ink, and both hit tests and the
+    #    pick outline are asserted against THAT. Two functions
+    #    calling a third is what the broken version could also have
+    #    claimed.
+    _pk_surf = pygame.Surface((_mv_area.right + 16, _mv_area.bottom + 16))
+    _pk_band = _mv_bands[0]
+    _mv_px = app.layout.font_size(_mv_cfg.get("small_font", 15))
+
+    def _ink_runs(_draw, _rgb):
+        """The x-runs where `_draw` put `_rgb` down, left to right."""
+        _pk_surf.fill((0, 0, 0))
+        _draw(_pk_surf)
+        _a = pygame.surfarray.array3d(_pk_surf)
+        _hit = [_x for _x in range(_pk_surf.get_width())
+                if (_a[_x] == list(_rgb[:3])).all(axis=1).any()]
+        _runs = []
+        for _x in _hit:
+            if _runs and _x == _runs[-1][1] + 1:
+                _runs[-1] = (_runs[-1][0], _x)
+            else:
+                _runs.append((_x, _x))
+        return _runs
+
+    for _r in _dt_rows:
+        _drawn = {_j: _ink_runs(
+            lambda _s, _row=_r: _cl._render_bar(
+                _s, _row, _mv_area, _mv_cfg, _mv_scale, _pk_band,
+                _dt_track, _mv_px, app.style),
+            _cl.ZONE_COLORS[_j]) for _j in range(3)}
+        _boxes = _ct.row_boxes(_mv_area, _mv_cfg, _mv_scale, _r, _pk_band)
+        for _j in range(3):
+            _want = [(_c.x, _c.x + _c.width - 1)
+                     for _job, _k, _c in _boxes.cells if _job == _j]
+            assert _drawn[_j] == _want, (
+                f"{_r['name']}: job {_j} draws its cells at "
+                f"{_drawn[_j]}, the geometry says {_want} — the "
+                f"picture and the rects disagree")
+            for _k, (_x0, _x1) in enumerate(_drawn[_j]):
+                # PICK-UP: every pixel of the drawn cell picks up
+                # that cell, and nothing else does.
+                for _x in (_x0, (_x0 + _x1) // 2, _x1):
+                    assert _cl.cell_at_x(_mv_area, _mv_cfg, _mv_scale,
+                                         _r, _x) == (_j, _k), (
+                        f"{_r['name']}: x={_x} is drawn as cell {_k} "
+                        f"of job {_j} and picks up "
+                        f"{_cl.cell_at_x(_mv_area, _mv_cfg, _mv_scale, _r, _x)}")
+                    assert _cl.drop_band(_mv_area, _mv_cfg, _mv_scale,
+                                         _r, _x) == _j, (
+                        f"{_r['name']}: x={_x} is drawn as job {_j} "
+                        f"and drops into "
+                        f"{_cl.drop_band(_mv_area, _mv_cfg, _mv_scale, _r, _x)}")
+                # AND THE MARK LANDS ON IT. The outline a player uses
+                # to see what is held must ink the same columns the
+                # cell does — this is the half that was missing.
+                _mark = _ink_runs(
+                    lambda _s, _row=_r, _job=_j, _slot=_k: _cl.draw_pick(
+                        _s, _mv_area, _mv_cfg, _mv_scale, _pk_band,
+                        _row, _job, (_slot,)),
+                    _cl.PICK_COLOR)
+                assert _mark == [(_x0, _x1)], (
+                    f"{_r['name']}: the pick outline for cell {_k} of "
+                    f"job {_j} inks {_mark}, the cell is at "
+                    f"{[(_x0, _x1)]} — an outline that names a cell "
+                    f"other than the one it is drawn on")
+        # A WHOLE CLUSTER, not only single cells: the run of a real
+        # pick is contiguous and must cover exactly its own cells.
+        _multi = next((_j for _j in range(3) if len(_drawn[_j]) >= 2), None)
+        if _multi is not None:
+            _slots = tuple(range(len(_drawn[_multi])))
+            _mark = _ink_runs(
+                lambda _s, _row=_r, _job=_multi: _cl.draw_pick(
+                    _s, _mv_area, _mv_cfg, _mv_scale, _pk_band, _row,
+                    _job, _slots),
+                _cl.PICK_COLOR)
+            assert _mark == _drawn[_multi], (
+                f"{_r['name']}: a pick of all {len(_slots)} cells of "
+                f"job {_multi} inks {_mark}, the cells are at "
+                f"{_drawn[_multi]}")
+    ok("colony summary cells: drawn, picked up and dropped are one "
+       "and the same cell (read back from the render)")
     # ── The identity letter, and the popup's two rules ───────────
     # N on a native cell and nothing on the player's own, because
     # over ninety per cent of cells are the second case and have to

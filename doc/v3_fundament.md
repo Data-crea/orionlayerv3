@@ -50,6 +50,27 @@ like any other box property.
 the rect; drawing and clicking both call it. Two copies drift, and
 the symptom is a button that looks right and clicks wrong.
 
+*Two corrections paid for on 6 September 2026, both in the colony
+row and both against a module whose docstring already claimed to
+obey this.* **An INDEX IS NOT A POSITION, and passing one where the
+other belongs is a second copy of the layout wearing a number's
+clothes.** `colonylist.draw_pick` took icon slots — indices inside
+ONE job's column, which is what the original's icon walk counts
+(coldraw.cpp:352) — and multiplied them by the track pitch as though
+they were positions in the whole track. It therefore drew the held
+selection as many cells to the left as the earlier jobs held, and
+one more per job marker once those existed. Live it read as "one
+cell to the left" on a food pick and was three on research. The
+function had no way to be right: it was never given the row or the
+job, so it could not have asked. **If a drawing function cannot name
+the thing it is drawing, it is computing a position it has no right
+to.**
+
+**And a tool is a reader too.** `tools/colony_move_hd.py`, the
+acceptance run built to catch exactly this, carried its own
+`track_x + slot * step`. Decision 5 covers `tools/`, or the run that
+proves the layout proves it against a copy of the layout.
+
 ### Structure
 
 **6. One folder per screen, files under ~300 lines.** Exceptions are
@@ -1285,6 +1306,26 @@ The consequence is the one that entry already names, stated as a
 rule rather than as a story: **render every new renderer to PNG and
 look at it before a green table counts as evidence.** A table says
 the data is right. Only the picture says it is visible.
+
+**And the third costume: the background you see is not always the
+background that is set.** The colony summary's galaxy inset was
+measured against the original, given `galaxy_inset_fill` in
+`layout.json`, marked, documented and accepted — and stayed panel
+blue in the running game for a day. The value sat inside the
+`panels` block; the lookup read the TOP level of the same file, found
+nothing, and fell back to the default. Nothing raised and nothing
+could: a panel without its own fill is the normal case, so a missed
+key is indistinguishable from the default it produces.
+
+Two things generalise. **A lookup whose miss returns the common case
+cannot report a typo, so something else has to** — the check now
+asserts that every `<name>_fill` key names a panel in the same block,
+which is the assertion the absent key could not make for itself. And
+**a measurement justifies a value, never a result.** The measurement
+here was right, the value was right, the document said the inset was
+black on the strength of both — and the only thing that could have
+told them apart was a sample of the rendered frame, which is now
+what the check takes and what the acceptance shows.
 
 **Assert the rule, not the instance.** The New Game panel-skin check
 does not list which panels carry which skin; it asserts that every

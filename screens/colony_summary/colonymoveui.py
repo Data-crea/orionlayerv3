@@ -331,4 +331,5 @@ class MoveController:
         colonylist.draw_drop_bands(surface, area, cfg, scale, bands[band],
                                    rows[position])
         colonylist.draw_pick(surface, area, cfg, scale, bands[band],
+                             rows[position], self.pick.job,
                              self.pick.slots())

@@ -172,16 +172,16 @@ demands — each says what the original does instead:**
   has to go. In `colonypick.py`, `colonymoveui.py`, `layout.json`
   under `move._hd_extension_cancel`, and a smoke check.
 - **HD EXTENSION — a drop target per job, and the target is the
-  group.** While a selection is held, a job WITH pops is targeted by
-  the exact horizontal extent of its cells, and an empty job by a
-  placeholder one cell wide where there is room — trailing past the
-  last cell, leading at the track's left edge, inner centred on the
-  seam, taking from no neighbour more than half its width and never
-  more than half a cell. No drawn cell moves. The original's three
-  columns are FIXED (colsum.cpp:1006-1024) and always clickable;
-  HD's zones are sized by the data, so an empty job would otherwise
-  be a column nobody could drop into. In `colonylist.drop_targets`,
+  group.** While a selection is held, each job is targeted by its
+  own marker plus the exact horizontal extent of its cells, as one
+  contiguous rect. No drawn cell moves. The original's three columns
+  are FIXED (colsum.cpp:1006-1024) and always clickable; HD's zones
+  are sized by the data, so an empty job would otherwise be a column
+  nobody could drop into. In `colonytrack.drop_targets`,
   `layout.json` under `move._hd_extension_bands`, and a smoke check.
+  *(Superseded once: the empty-job placeholder and its seam rule are
+  gone — the marker is the placeholder. See "The row gets its three
+  groups" below.)*
 - **HD EXTENSION — a click on the held pop's own group discards the
   selection and sends nothing.** Only the "sends nothing" half is an
   extension: the original's outcome is the same, because
@@ -508,7 +508,7 @@ files under `doc/` and are only summarised here.
 | | |
 |---|---|
 | Python | 32,960 lines across 111 modules — `find . -name '*.py'`, `__pycache__` excluded, the smoke test's 6,400 included. The previous figure here (21,642 across 94) was carried from an unstated method and could not be reproduced |
-| Smoke test | `python tools/smoke_test.py` — **83 checks**, headless |
+| Smoke test | `python tools/smoke_test.py` — **85 checks**, headless |
 | Assets | 170 MB (select_race 68, galaxy_map 51, shared 23, new_game 21, colony_summary 1) |
 | Screens in HD | 7 of ~20–22 (colony summary draws list, sidebar, scan box and galaxy inset, and MOVES POPS — the first HD gesture that drives the game) |
 | Setup from clone | `python tools/setup.py` (deps via the system package manager) |
@@ -3021,6 +3021,83 @@ help-file lesson, one domain over.
 Zhadoom III (14 pops) is the widest row in either fixture and is
 therefore the narrowest-cell case any picture has to survive.
 
+### Two live faults after the row's three groups — 6 September 2026
+
+Both were seen in the running game against the pushed build and
+neither was seen by any check, which is the more useful half of both.
+
+**The held selection was outlined on the wrong cell. The DRAWING was
+wrong; the hit test was right.** `colonylist.draw_pick` computed
+`track_x + slot * step` for itself, and `slot` is an index inside ONE
+job's icon column (`Pick.slots()`, from the original's per-column
+walk at coldraw.cpp:352) — not a position in the track. So the
+outline sat one marker plus every preceding job's cells to the left
+of the cell it named. Reported on Horus IV as "exactly one cell",
+which is what food alone shows: measured on a nine-pop row, food was
+one cell off, industry six and research ten. **It was wrong for
+industry and research from the day it was written (343d9ba) and the
+markers only made food visible too.** Nothing else was affected — the
+pick, the plan, the injected click and the pops that moved were all
+correct throughout, which is exactly why nobody saw it for three
+days. `draw_pick` now takes the row and the job and asks
+`colonytrack.row_boxes`, like everything else that draws or hits.
+
+**`tools/colony_move_hd.py` carried the same arithmetic**, in the
+`square_xy` of the run built to accept this screen. It now asks
+`row_boxes` too, and it reads the outline back off the rendered frame
+before it will proceed. Decision 5 covers `tools/`.
+
+**Why check 6 did not catch it, since it was built for this class.**
+It inks `draw_drop_bands` and only its two outermost columns, so it
+can say nothing about any cell in between and nothing at all about
+the pick-up path; `draw_pick` had never been rendered by any check.
+The replacement asserts the RULE the old one only gestured at: **the
+cell under a pixel is the cell drawn at that pixel** — the cells are
+recovered from their own ink, and `cell_at_x`, `drop_band` and the
+pick outline are all asserted against that, for every cell of every
+fixture row. It was run against the build's own arithmetic first and
+failed with `Draconis V: the pick outline for cell 0 of job 0 inks
+[(362, 379)], the cell is at [(382, 399)]`. A check that has never
+been seen to fail is a check nobody has tested.
+
+**The minimap was never black.** `galaxy_inset_fill` is inside the
+`panels` block of `layout.json`; `_render_panels` read
+`self._data[name + "_fill"]`, the top level, missed, and used
+`PANEL_BG`. Sampled on a rendered frame it was (8, 11, 20) in 9592 of
+10268 samples. The lookup now reads the block the value lives in, and
+the live HD frame samples **(0, 0, 0) in 91.4 % of the box**, the
+rest stars and the label. The measurement that chose the value was
+always right; a measurement justifies a value and never a result.
+Marked in the fundament under "the background you see is not always
+the background that is set".
+
+**Live acceptance, `tools/colony_move_hd.py --commit`.** Draconis
+III, cell 8 of column 2 (research) to column 0: the outline inked at
+x 582 and the cell is drawn at x 582 — the old arithmetic would have
+put it at 522, three cells left. Two injected clicks on the wire,
+`1 moved`, exactly colony 2's bytes changed, every pop word matching
+the prediction.
+
+**Two things reported as planned last round, answered.**
+
+- **The cell-per-icon change WAS built**, in 8ac321c, and it is a
+  behaviour change rather than a refactor: `row_regions` counts
+  `row["cells"]` — one entry per drawn ICON, from
+  `colonyicons.icon_pops` — where it used to count `row["jobs"]`, one
+  per POP. The two differ by exactly the pops of a held cluster,
+  whose `0x200` is clear and which the original does not draw either
+  (coldraw.cpp:336). **So a held cluster now leaves the HD row while
+  it is in hand, as it leaves the original's column.** Ours is only
+  visible in a state the game reaches on its own — our own pick
+  injects nothing — but the row is honest whenever it arrives there.
+- **The marker fill is ONE colour value.** `MARKER_BG` (86, 92, 104),
+  filled with a 3-tuple onto an opaque surface, so nothing blends.
+  Sampled inside every marker of a four-pop row and a fourteen-pop
+  row: (86, 92, 104) in all six. The lighter reading in one strip of
+  the acceptance picture is contrast against its neighbours — a
+  marker between long green runs against one hemmed by amber and
+  blue — and not a second value.
+
 ### The row gets its three groups, a mark and a popup — 6 September 2026
 
 Three decisions built, each narrowing the next, and all three are HD
@@ -3096,6 +3173,14 @@ moves TOWARD the original. Done as a per-box fill
 no background at all by transcription (movebox.cpp:36-38) — and the
 sentence in that module claiming the original shows a faint star
 texture there is corrected with the measurement.
+
+> **CORRECTION, 6 September 2026 — this paragraph was false for a
+> day, and the false half was "now".** The value was right and never
+> reached the box: it sits inside `panels` in `layout.json` and
+> `_render_panels` read `<name>_fill` from the TOP level of the same
+> file, so the lookup missed, the default was used, and the panel
+> stayed blue in the running game. Fixed in the entry above, and
+> sampled off a live frame rather than asserted from the value.
 
 **Two files were full, so the geometry moved out.**
 `colonylist.py` stood at exactly 300 code lines and `screen.py` at
