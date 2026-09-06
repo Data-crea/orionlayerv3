@@ -3780,6 +3780,27 @@ def main():
             f"{_name} runs under the bezel: {_x + _w} x {_y + _h} against "
             f"{_REF_W - _bez} x {_REF_H - _bez}")
 
+    # THE LOWER BAND IS EVEN, and flush with the list above it.
+    # Asserted as the rule: the four boxes sit between the list's own
+    # left and right edges and every gap between them is the same.
+    # They were 12, 12 and 32 until 7 September 2026 - flush at both
+    # ends, which is what hid it, and the inset 20 px left of where an
+    # even band puts it.
+    _band = sorted((_lr[_k] for _k in ("planet_info", "planet_output",
+                                       "galaxy_inset", "empire_stats")),
+                   key=lambda r: r[0])
+    assert _band[0][0] == _lr["list"][0], (
+        f"the lower band starts at {_band[0][0]}, the list at "
+        f"{_lr['list'][0]}")
+    assert _band[-1][0] + _band[-1][2] == _lr["list"][0] + _lr["list"][2], (
+        f"the lower band ends at {_band[-1][0] + _band[-1][2]}, the list "
+        f"at {_lr['list'][0] + _lr['list'][2]}")
+    _gaps = [b[0] - (a[0] + a[2]) for a, b in zip(_band, _band[1:])]
+    assert len(set(_gaps)) == 1 and _gaps[0] > 0, (
+        f"the lower band's gaps are {_gaps} and must all be equal - "
+        f"equalising them costs a pixel or two out of one box's width, "
+        f"and _lower_band_note says which box pays and why")
+
     # THE INSET'S ASPECT IS THE ORIGINAL'S COVERAGE, to a thousandth.
     # movebox.cpp:20-21: the crop is 128*(506000//128) by
     # 91*(400000//91) world units times M/10000, and M cancels.
