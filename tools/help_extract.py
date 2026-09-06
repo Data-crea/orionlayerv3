@@ -8,8 +8,8 @@ is not in the source at all. It sits in the game's own HELP.LBX, and
 orion2re does not put it on the Extension API — so OrionLayer reads it
 the same way `nebula_extract.py` reads STARBG.LBX.
 
-Formats implemented from the orion2re source:
-  LBX container    vfs_lbx.cpp    magic 0xFEAD, 510 uint32 offsets
+The LBX container itself is `core/lbx.py`'s, shared with the other
+two extractors. What is this tool's own, from the orion2re source:
   record array     farload.cpp:90 Farload_Library_Data_ — entry 0
                    begins uint16 total_count, uint16 element_size,
                    then count x element_size records
@@ -56,10 +56,9 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(
     os.path.abspath(__file__))))
 
 from core import helpformat  # noqa: E402
+from core import lbx  # noqa: E402
 from core.helptext import HELP_LBX, HELP_DIR, help_file  # noqa: E402
 
-LBX_MAGIC = 0xFEAD
-LBX_OFFSET_COUNT = 510          # vfs_lbx.cpp VFS_LBX_OFFSET_COUNT
 HELP_ENTRY = 0                  # textbox.cpp: Far_Reload_Next_Data_(..., 0, ...)
 RECORD_SIZE = 0x57B             # sizes.h:73
 MAX_CHAIN = 9                   # Draw_Help_Entry_: record_count <= 8
@@ -96,26 +95,6 @@ def find_lbx(explicit, filename):
     sys.exit(f"{filename} not found. Looked in:\n  {looked}\n"
              f"Pass the path explicitly:\n"
              f"  python tools/help_extract.py /path/to/{filename}")
-
-
-def read_entry(path, index):
-    """Raw bytes of one LBX entry, per vfs_lbx.cpp."""
-    with open(path, "rb") as f:
-        data = f.read()
-    if len(data) < 8 + 4 * LBX_OFFSET_COUNT:
-        sys.exit("File is too small to be an LBX container.")
-    entry_count, magic, _ = struct.unpack_from("<HHI", data, 0)
-    if magic != LBX_MAGIC:
-        sys.exit(f"Not an LBX file (magic 0x{magic:04X}).")
-    if not 0 <= index < entry_count:
-        sys.exit(f"Entry {index} is outside the file's {entry_count}.")
-    offsets = struct.unpack_from(
-        f"<{LBX_OFFSET_COUNT}I", data, 8)
-    start, end = offsets[index], offsets[index + 1]
-    if not 0 < start <= end <= len(data):
-        sys.exit(f"Entry {index} has a bad offset pair "
-                 f"({start}, {end}).")
-    return data[start:end]
 
 
 def parse_records(blob):
@@ -219,7 +198,11 @@ def main():
 
     filename = HELP_LBX[args.lang]
     path = find_lbx(args.lbx, filename)
-    records = parse_records(read_entry(path, HELP_ENTRY))
+    try:
+        blob = lbx.read_entry(path, HELP_ENTRY)
+    except lbx.LbxError as exc:
+        sys.exit(str(exc))
+    records = parse_records(blob)
     print(f"{os.path.basename(path)}: {len(records)} help records")
 
     if args.ids:

@@ -6722,6 +6722,112 @@ def main():
             _root, *_help_file(_lang).split("/")), _written
     ok("help file path: loader, extractor and setup agree (3 languages)")
 
+    # ── core/lbx.py: the container all three extractors read ──
+    #
+    # Asserted against a container built HERE, byte by byte, and not
+    # against the user's own MOO2 files: those are not in the tree,
+    # a test that needs them fails for the person who followed the
+    # instructions (that is the help-file lesson, one domain over),
+    # and a decoder checked against real data alone cannot say which
+    # of its two frame formats it got right.
+    from core import lbx as _lbx
+    import tempfile as _tf
+
+    def _make_lbx(_entries):
+        """A container per vfs_lbx.cpp, from a list of blobs."""
+        _head = struct.pack("<HHI", len(_entries), _lbx.LBX_MAGIC, 0)
+        _pos = 8 + 4 * _lbx.LBX_OFFSET_COUNT
+        _offs, _body = [], b""
+        for _b in _entries:
+            _offs.append(_pos + len(_body))
+            _body += _b
+        _offs.append(_pos + len(_body))
+        _offs += [_offs[-1]] * (_lbx.LBX_OFFSET_COUNT - len(_offs))
+        return _head + struct.pack(f"<{_lbx.LBX_OFFSET_COUNT}I",
+                                   *_offs) + _body
+
+    def _anim(_w, _h, _frames, _flags, _payload, _palette=b""):
+        _n = len(_frames)
+        _hdr = struct.pack("<hhhhbbBB", _w, _h, 0, _n, 0, 0, 0, _flags)
+        _base = 12 + 4 * (_n + 1) + len(_palette)
+        _offs, _acc = [], b""
+        for _f in _frames:
+            _offs.append(_base + len(_acc))
+            _acc += _f
+        _offs.append(_base + len(_acc))
+        return (_hdr + struct.pack(f"<{_n + 1}I", *_offs)
+                + _palette + _acc + _payload)
+
+    # A 2x2 BITMAP frame: index 0 is transparent, 1 is in the
+    # palette, 200 is not and must come back as grey 200.
+    _pal = struct.pack("<hh", 0, 2) + bytes([0, 0, 0, 0, 63, 32, 16, 0])
+    _bmp = _anim(2, 2, [bytes([0, 1, 200, 1])],
+                 _lbx.DRAW_MODE_BITMAP | _lbx.FLAG_HAS_PALETTE, b"", _pal)
+    # The same picture as a PACKED frame (Draw_Animated_Sprite_):
+    # row 0 skips 1 then writes 1 literal, row 1 writes 2 literals.
+    # The odd-length run is deliberate: the stream pads to an even
+    # offset after every literal run, and a decoder that forgets the
+    # pad reads the next run header one byte late and still produces
+    # a picture — a wrong one.
+    _packed = _anim(2, 2, [struct.pack("<HH", 0, 0)          # unk, start_y
+                           + struct.pack("<hh", 1, 1) + bytes([1])
+                           + b"\x00"                         # the pad
+                           + struct.pack("<hh", 0, 1)        # next row
+                           + struct.pack("<hh", 2, 0) + bytes([200, 1])
+                           + struct.pack("<hh", 0, 1)],      # end
+                    _lbx.DRAW_MODE_ANIMATED, b"")
+    with _tf.TemporaryDirectory() as _td:
+        _lp = os.path.join(_td, "probe.lbx")
+        with open(_lp, "wb") as _fh:
+            _fh.write(_make_lbx([_bmp, _packed]))
+        _ents = _lbx.read_entries(_lp)
+        assert len(_ents) == 2, len(_ents)
+        assert _lbx.read_entry(_lp, 1) == _ents[1], (
+            "read_entry and read_entries disagree about entry 1")
+        _h0 = _lbx.parse_header(_ents[0])
+        assert (_h0.width, _h0.height, _h0.frame_count) == (2, 2, 1), _h0
+        assert _h0.has_palette and _h0.mode == _lbx.DRAW_MODE_BITMAP, _h0
+        _p0 = _lbx.decode_frame(_ents[0], _h0)
+        assert list(_p0) == [0, 1, 200, 1], list(_p0)
+        # BOTH FRAME FORMATS MUST GIVE THE SAME PICTURE. They are two
+        # transcriptions of two different functions in draw.cpp, and
+        # nothing else in the tree can tell you one of them drifted.
+        _h1 = _lbx.parse_header(_ents[1])
+        assert _h1.mode == _lbx.DRAW_MODE_ANIMATED and not _h1.has_palette
+        assert list(_lbx.decode_frame(_ents[1], _h1)) == list(_p0), (
+            f"the RLE decoder gives {list(_lbx.decode_frame(_ents[1], _h1))} "
+            f"where the bitmap decoder gives {list(_p0)}")
+        # 6-bit VGA components are scaled by 4 and clamped.
+        assert _lbx.read_palette(_ents[0], 1) == {0: (0, 0, 0),
+                                                  1: (252, 128, 64)}
+        # Index 0 transparent, a palette index opaque, an index with
+        # no entry GREY — never an invented colour (see rgba_bytes).
+        _rgba = _lbx.rgba_bytes(_p0, _lbx.read_palette(_ents[0], 1))
+        assert _rgba[0:4] == bytes([0, 0, 0, 0]), _rgba[0:4]
+        assert _rgba[4:8] == bytes([252, 128, 64, 255]), _rgba[4:8]
+        assert _rgba[8:12] == bytes([200, 200, 200, 255]), _rgba[8:12]
+        # A FILE THAT IS NOT ONE RAISES, and does not exit: these are
+        # library calls now, and a tool that wants to try a second
+        # path must be able to catch the first one failing.
+        _bad = os.path.join(_td, "bad.lbx")
+        with open(_bad, "wb") as _fh:
+            _fh.write(b"\x00" * 4096)
+        for _call in (lambda: _lbx.read_entries(_bad),
+                      lambda: _lbx.read_entry(_bad, 0)):
+            try:
+                _call()
+            except _lbx.LbxError:
+                pass
+            else:
+                raise AssertionError("a file with no LBX magic was accepted")
+        assert not isinstance(_lbx.LbxError(), SystemExit)
+    # A frame past the end is a STATE, not an exception: an LBX holds
+    # entries of several kinds and a walk over all of them meets data
+    # that is not a sprite.
+    assert _lbx.decode_frame(_ents[0], _h0, 5) is None
+    ok("core/lbx.py (container, both frame formats agreeing, 6-bit "
+       "palette, index 0 transparent, unpalettised index stays grey)")
+
     # MOO2's help bodies are not plain text: they carry FMTPARA
     # control codes, and the column positions inside them are what
     # makes the Command Points table a table. Printing them raw put

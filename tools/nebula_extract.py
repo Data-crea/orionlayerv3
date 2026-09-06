@@ -13,13 +13,11 @@ sprite's raw pixel grid and treats palette index > 5 as "inside the
 nebula". This tool therefore also writes that mask so HD artwork can
 be shaped to match it.
 
-Formats implemented from the orion2re source:
-  LBX container      vfs_lbx.cpp   (magic 0xFEAD, 510 uint32 offsets)
-  animation header   orion2.h      s_animation_header (12 bytes)
-  bitmap frames      draw.cpp      Draw_Bitmap_Sprite_ (raw, 0 = alpha)
-  packed frames      draw.cpp      Draw_Animated_Sprite_ (RLE runs)
-  embedded palette   animate.cpp   Set_Animation_Palette_ (4 B/entry,
-                                   6-bit VGA)
+The container and the frame decoders live in `core/lbx.py` — this
+tool was one of the two that used to own a private copy, and
+`raceicon_extract.py` was the third reader that made two copies
+indefensible. The formats and their source citations are documented
+there.
 
 Usage:
   python tools/nebula_extract.py                       # search default dirs
@@ -38,26 +36,22 @@ Requires: Pillow (pip install pillow --break-system-packages).
 
 import argparse
 import os
-import struct
 import sys
+
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+from core import lbx  # noqa: E402
 
 try:
     from PIL import Image
 except ImportError:
     sys.exit("Pillow is missing. Run: pip install pillow --break-system-packages")
 
-LBX_MAGIC = 0xFEAD
-LBX_OFFSET_COUNT = 510          # vfs_lbx.cpp VFS_LBX_OFFSET_COUNT
 NEBULA_FIRST_ENTRY = 6          # mapgen.cpp: type * 4 + frame + 6
 NEBULA_TYPES = 12
 NEBULA_ZOOMS = 4
 GAMEPLAY_ZOOM = 3               # geo.cpp uses variant [3]
 GAMEPLAY_THRESHOLD = 5          # geo.cpp: pixel_data[...] > 5
-
-FLAG_DRAW_MODE_MASK = 0x03      # orion2_consts.h
-FLAG_HAS_PALETTE = 0x10
-DRAW_MODE_ANIMATED = 0
-DRAW_MODE_BITMAP = 1
 
 DEFAULT_SEARCH = [
     os.path.expanduser("~/Master of Orion 2"),
@@ -81,108 +75,6 @@ def find_lbx(explicit):
              "  python tools/nebula_extract.py /path/to/starbg.lbx")
 
 
-def read_entries(path):
-    """Return the raw bytes of every LBX entry, per vfs_lbx.cpp."""
-    with open(path, "rb") as f:
-        data = f.read()
-    if len(data) < 8 + 4 * LBX_OFFSET_COUNT:
-        sys.exit("File is too small to be an LBX container.")
-    entry_count, magic, _header_data = struct.unpack_from("<HHI", data, 0)
-    if magic != LBX_MAGIC:
-        sys.exit(f"Bad LBX magic 0x{magic:04X} (expected 0xFEAD). "
-                 "Is this really starbg.lbx?")
-    offsets = struct.unpack_from(f"<{LBX_OFFSET_COUNT}I", data, 8)
-    entries = []
-    for i in range(entry_count):
-        start, end = offsets[i], offsets[i + 1]
-        if end < start or end > len(data):
-            sys.exit(f"Entry {i}: corrupt offsets {start}..{end}.")
-        entries.append(data[start:end])
-    return entries
-
-
-def parse_header(blob, label):
-    if len(blob) < 12:
-        sys.exit(f"{label}: entry too short for an animation header.")
-    width, height, _cur, frame_count, _loop, _key, _unk, flags = \
-        struct.unpack_from("<hhhhbbBB", blob, 0)
-    if width <= 0 or height <= 0 or frame_count <= 0:
-        sys.exit(f"{label}: implausible header "
-                 f"(w={width} h={height} frames={frame_count}).")
-    frame_offsets = struct.unpack_from(f"<{frame_count + 1}I", blob, 12)
-    return width, height, frame_count, flags, frame_offsets
-
-
-def read_palette(blob, frame_count):
-    """Embedded palette per Set_Animation_Palette_: header after the
-    frame-offset table, 4 bytes per entry, 6-bit VGA components."""
-    pos = 12 + 4 * (frame_count + 1)
-    start, count = struct.unpack_from("<hh", blob, pos)
-    pos += 4
-    palette = {}
-    for i in range(count):
-        r, g, b, _flag = struct.unpack_from("<BBBB", blob, pos + 4 * i)
-        palette[start + i] = (min(r * 4, 255), min(g * 4, 255), min(b * 4, 255))
-    return palette
-
-
-def decode_bitmap(blob, offset, width, height):
-    """Raw indexed bitmap, index 0 transparent (Draw_Bitmap_Sprite_)."""
-    pixels = blob[offset:offset + width * height]
-    if len(pixels) < width * height:
-        return None
-    return bytearray(pixels)
-
-
-def decode_packed(blob, offset, width, height):
-    """RLE frame per Draw_Animated_Sprite_: 4-byte frame header
-    (unknown, start_y), then runs of (pixel_count, skip_count).
-    pixel_count == 0 advances skip_count rows; otherwise skip_count
-    advances x, pixel_count literal bytes follow, stream padded to
-    an even offset."""
-    out = bytearray(width * height)
-    _unknown, start_y = struct.unpack_from("<HH", blob, offset)
-    pos = offset + 4
-    y = start_y
-    x = 0
-    remaining = height - start_y
-    while remaining > 0:
-        if pos + 4 > len(blob):
-            return None
-        pixel_count, skip_count = struct.unpack_from("<hh", blob, pos)
-        pos += 4
-        if pixel_count == 0:
-            remaining -= skip_count
-            y += skip_count
-            x = 0
-        else:
-            x += skip_count
-            run = blob[pos:pos + pixel_count]
-            if len(run) < pixel_count or y >= height or x + pixel_count > width:
-                return None
-            out[y * width + x: y * width + x + pixel_count] = run
-            x += pixel_count
-            pos += pixel_count
-            if (pos - offset) & 1:
-                pos += 1
-    return out
-
-
-def to_rgba(pixels, width, height, palette):
-    img = Image.new("RGBA", (width, height))
-    px = img.load()
-    for y in range(height):
-        for x in range(width):
-            idx = pixels[y * width + x]
-            if idx == 0:
-                px[x, y] = (0, 0, 0, 0)
-            elif idx in palette:
-                px[x, y] = (*palette[idx], 255)
-            else:
-                px[x, y] = (idx, idx, idx, 255)   # grayscale fallback
-    return img
-
-
 #: Anchored to the project, not to the working directory. `--out`
 #: defaulted to a bare "nebula_ref" and therefore landed wherever the
 #: shell happened to be — for one run, the repository root, where git
@@ -203,7 +95,10 @@ def main():
     args = ap.parse_args()
 
     path = find_lbx(args.lbx)
-    entries = read_entries(path)
+    try:
+        entries = lbx.read_entries(path)
+    except lbx.LbxError as exc:
+        sys.exit(f"{exc} Is this really starbg.lbx?")
     needed = NEBULA_FIRST_ENTRY + NEBULA_TYPES * NEBULA_ZOOMS
     if len(entries) < needed:
         sys.exit(f"{path} has only {len(entries)} entries, "
@@ -220,25 +115,26 @@ def main():
             entry_idx = t * NEBULA_ZOOMS + z + NEBULA_FIRST_ENTRY
             label = f"type {t} zoom {z} (entry {entry_idx})"
             blob = entries[entry_idx]
-            width, height, frames, flags, offs = parse_header(blob, label)
-            palette = (read_palette(blob, frames)
-                       if flags & FLAG_HAS_PALETTE else {})
-            mode = flags & FLAG_DRAW_MODE_MASK
-            if mode == DRAW_MODE_BITMAP:
-                pixels = decode_bitmap(blob, offs[0], width, height)
-            elif mode == DRAW_MODE_ANIMATED:
-                pixels = decode_packed(blob, offs[0], width, height)
-            else:
-                lines.append(f"{label}: unsupported draw mode {mode} — skipped")
+            try:
+                hdr = lbx.parse_header(blob, label)
+            except lbx.LbxError as exc:
+                sys.exit(str(exc))
+            width, height, frames = hdr.width, hdr.height, hdr.frame_count
+            palette = lbx.read_palette(blob, frames) if hdr.has_palette else {}
+            if hdr.mode not in (lbx.DRAW_MODE_BITMAP, lbx.DRAW_MODE_ANIMATED):
+                lines.append(f"{label}: unsupported draw mode {hdr.mode} "
+                             f"— skipped")
                 continue
+            pixels = lbx.decode_frame(blob, hdr, 0)
             if pixels is None:
                 lines.append(f"{label}: frame data truncated — skipped")
                 continue
 
-            to_rgba(pixels, width, height, palette).save(
+            Image.frombytes("RGBA", (width, height),
+                            lbx.rgba_bytes(pixels, palette)).save(
                 os.path.join(type_dir, f"zoom_{z}.png"))
             lines.append(f"{label}: {width}x{height} frames={frames} "
-                         f"flags=0x{flags:02X} palette={len(palette)}")
+                         f"flags=0x{hdr.flags:02X} palette={len(palette)}")
             ok += 1
 
             if z == GAMEPLAY_ZOOM:
