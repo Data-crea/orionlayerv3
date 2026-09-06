@@ -89,7 +89,17 @@ import pygame
 from core import palette
 
 from . import colonybuild
+from . import colonytrack
 from .colonyrows import POP_LIMIT_CAP
+#: THE GEOMETRY LIVES IN `colonytrack`, and is re-exported here.
+#: Split out on 6 September 2026 (decision 6); the names stay
+#: importable from this module because every caller in the tree and
+#: in the checks reaches for them here, and moving a seam is not a
+#: reason to move a hundred call sites on the same day.
+from .colonytrack import (            # noqa: F401  (re-export)
+    Track, Regions, RowBoxes, track_metrics, track_x, row_boxes,
+    cell_at_x, drop_targets, drop_band, row_regions, rows_drawn,
+    row_bands, row_at)
 
 #: One colour per profession, in ECON order. Palette so a skin or mod
 #: can restyle the whole list without touching this file.
@@ -123,316 +133,22 @@ PICK_COLOR = palette.col("colony_summary", "pick_outline",
                          (238, 232, 180))
 BAND_COLOR = palette.col("colony_summary", "drop_band",
                          (120, 140, 180))
+#: The job markers. GREY on purpose and not a fourth accent: an
+#: amber marker in the first mockup read as a fourth job class, which
+#: is the one thing a marker must never do. The letter is light
+#: enough to carry at one slot's width; `_render_bar` centres it.
+MARKER_BG = palette.col("colony_summary", "marker_bg", (86, 92, 104))
+MARKER_EDGE = palette.col("colony_summary", "marker_edge",
+                          (196, 204, 216))
+MARKER_TEXT = palette.col("colony_summary", "marker_text",
+                          (232, 238, 246))
+#: The identity letter inside a pop cell. One colour for every class:
+#: WHICH class is the letter's job, and a second axis of colour here
+#: would fight the fill, which is the profession.
+CELL_MARK = palette.col("colony_summary", "cell_mark", (16, 18, 24))
 
 
 # ── Geometry: computed once, drawn by either mode ──────────────────
-
-#: `unit` is one slot's ink, `gap` the space after it, `step` the two
-#: together — the pitch from one slot to the next. `width` is the
-#: whole POP_LIMIT_CAP-slot track. A sprite may be at most `unit`
-#: wide, which is the step minus the gap: ink that ate its gap would
-#: touch its neighbour and the count would stop being legible.
-#:
-#: `slack` is what `list_area` has left after the building column,
-#: the two `pad_x` and the whole track have been paid for — the
-#: pixels the slot's floor division drops. It is added to the name
-#: column's DRAWN width and to nothing else, so the row ends flush at
-#: every resolution. See `track_metrics`.
-Track = collections.namedtuple(
-    "Track", "unit gap step width slack bar_h row_h build_w build_gap")
-
-#: `runs` is (zone, start_slot, count) per profession — the squares
-#: fill them. `filled`..`reach` is the free region, `reach`..
-#: POP_LIMIT_CAP the unreachable one.
-#:
-#: `spans` is the same thing for ALL THREE zones including the empty
-#: ones, as (start_slot, count) in ECON order. `runs` drops the
-#: empties because nothing draws them; `drop_targets` needs to know
-#: WHERE an empty group would have been, and computing that a second
-#: time is how the drawing and the hit test start to disagree.
-Regions = collections.namedtuple("Regions", "runs filled reach spans")
-
-
-def track_metrics(area, cfg, scale):
-    """The one geometry both modes measure from.
-
-    The slot is measured from POP_LIMIT_CAP and from nothing on
-    screen, which is what makes counting mean anything — see the
-    constant in `colonyrows.py`. `tail_width` is reserved BESIDE the
-    track, not taken out of it: a full-length track ends where the
-    panel does, and "No Farming" needs a column no slot reaches.
-
-    **`slack`, and why the name column gets it.** `unit` is a floor
-    division, so the six columns almost never spend `list_area`
-    exactly: at scale 1.0 the shipped values divide evenly, and at
-    every fractional scale the six independent `int()` calls each
-    drop a fraction. Those pixels used to land at the right edge as
-    dead air — 30 px at 1280x720, 15 at 2560x1440 — where nothing
-    claimed them and the row simply stopped short of the panel.
-
-    They go to the name column's DRAWN width instead, which is the
-    only column that can take a variable amount without lying: the
-    slot must stay `POP_LIMIT_CAP`-derived or counting stops meaning
-    anything, `building_width` is a hard transcription, and `pad_x`
-    and `square_gap` are the fixed costs.
-
-    It is drawn width and NOT text budget. The name still clips and
-    ellipsises at `name_width * scale`, so the threshold is the same
-    244 reference px everywhere; the slack becomes gutter between the
-    name and the first slot. Letting it into the text budget would
-    make the ellipsis resolution-dependent — 244 ref px at 1080p
-    against 288 at 720p, so the same name cuts on one monitor and not
-    on another. See `_draw_name_block` and `_name_width_note`.
-    """
-    gap = max(1, int(cfg.get("square_gap", 2) * scale))
-    name_w = int(cfg.get("name_width", 236) * scale)
-    pad_x = int(cfg.get("pad_x", 22) * scale)
-    tail_w = int(cfg.get("tail_width", 0) * scale)
-    build_w = int(cfg.get("building_width", 0) * scale)
-    build_gap = int(cfg.get("building_gap", 16) * scale)
-    if build_w:
-        build_w += build_gap
-    bar_space = area.w - name_w - tail_w - build_w - 2 * pad_x
-    unit = max(2, (bar_space - (POP_LIMIT_CAP - 1) * gap) // POP_LIMIT_CAP)
-    width = POP_LIMIT_CAP * unit + (POP_LIMIT_CAP - 1) * gap
-    # Clamped at 0: `unit` has a floor of 2, so a `list_area` too
-    # narrow for the columns configured would compute a NEGATIVE
-    # remainder, and adding that to the name column would drag the
-    # track left over the names. The row then overruns the panel on
-    # the right, which is the visible failure and the honest one.
-    slack = max(0, area.w - (name_w + tail_w + build_w
-                             + 2 * pad_x + width))
-    return Track(unit=unit, gap=gap, step=unit + gap,
-                 width=width, slack=slack,
-                 # NO DEFAULT, deliberately, for these three and for
-                 # `pad_y` in `row_bands`: they carry the ten-row
-                 # arithmetic, and the number that used to stand here
-                 # was 60, which `layout.json._row_height_note`
-                 # records as REJECTED — 10 x 60 = 600 leaves 5 px
-                 # and clamps the "{count} more not shown" line back
-                 # over the last row it exists to account for. A
-                 # missing key must raise, not silently draw nine
-                 # rows: an absence shaped like a result is the one
-                 # thing the fundament refuses.
-                 bar_h=int(cfg["bar_height"] * scale),
-                 row_h=int(cfg["row_height"] * scale),
-                 build_w=int(cfg.get("building_width", 0) * scale),
-                 build_gap=build_gap)
-
-
-def track_x(area, cfg, scale):
-    """Where the 42-slot track starts on screen.
-
-    Decision 5, one scroll offset further in than `row_bands`: the
-    drawing and the two hit tests below have to agree about the
-    track's left edge, and the expression is `pad_x + name_width +
-    slack` — the slack included, because those are the pixels the six
-    floor divisions dropped and `track_metrics` gives them to the
-    name column's DRAWN width. A hit test that forgot the slack would
-    be one gutter to the left of the squares at every fractional
-    scale and exactly right at 1.0, which is the resolution anybody
-    checks.
-    """
-    track = track_metrics(area, cfg, scale)
-    return (area.x + int(cfg.get("pad_x", 22) * scale)
-            + int(cfg.get("name_width", 236) * scale) + track.slack)
-
-
-def slot_at_x(area, cfg, scale, x):
-    """Which of the `POP_LIMIT_CAP` slots `x` lands on, or None.
-
-    The gaps between squares belong to the square on their left,
-    which is what a floor division of the step gives without a second
-    rule. Outside the track at either end is None — a click there is
-    not a click on a pop.
-    """
-    track = track_metrics(area, cfg, scale)
-    start = track_x(area, cfg, scale)
-    if not start <= x < start + track.width:
-        return None
-    return min(POP_LIMIT_CAP - 1, int(x - start) // track.step)
-
-
-def zone_at_slot(row, slot):
-    """(zone, index within the zone) for a filled slot, or None.
-
-    The squares are laid down in ECON order (`row_regions`), so this
-    is where a click on one turns back into "the n-th icon of column
-    z" — which is the number `colonyicons` maps to a pop.
-    """
-    for zone, start, count in row_regions(row).runs:
-        if start <= slot < start + count:
-            return zone, slot - start
-    return None
-
-
-def drop_targets(area, cfg, scale, row):
-    """(job, Rect) for each of the three drop targets of one row.
-
-    **THE ONE GEOMETRY. Drawing and hit-testing both call this**
-    (decision 5). They used to compute thirds of the track
-    separately, which is how they agreed with each other and
-    disagreed with the cells.
-
-    **HD EXTENSION.** The original gives every row three FIXED
-    columns — farmers 101-226, workers 236-368, scientists 378-502
-    (colsum.cpp:1006-1024) — so a job nobody holds is still a place
-    to drop pops. The HD row has one track whose zones are sized by
-    the DATA, and a job nobody holds has no width at all, so a target
-    has to be invented for it. Marked here, in `layout.json` under
-    `move._hd_extension_bands`, in `v3_projektstatus.md` and in a
-    smoke check.
-
-    **WHAT THE FIRST SHAPE GOT WRONG, kept because the failure is the
-    interesting part.** Until 5 September 2026 this was three equal
-    thirds of the whole 42-slot track, and every job WAS reachable —
-    but only at a place where nothing stood. The cells of a colony
-    with 13 pops all sit inside the first third, so a click on a
-    worker cell named FOOD, while a click on empty track at two
-    thirds along named research and worked. Looks right, clicks
-    wrong: the picture and the hit test agreed with each other and
-    neither agreed with the squares. Measured across the reference
-    save, every non-food group of every row named food.
-
-    **THE TARGET IS THE GROUP.** For a job with pops it is exactly
-    the horizontal extent of its cells, so the thing the player aims
-    at is the thing they see.
-
-    **AND A PLACEHOLDER FOR AN EMPTY JOB, one cell wide where there
-    is room, taking from no neighbour more than half of that
-    neighbour's width.** Three positions, and none of them moves a
-    drawn cell:
-
-      trailing   nothing has cells after it — it lies on the track
-                 past the last cell, where there is nothing to take
-                 from. It is a TARGET, not a claim about capacity:
-                 it may sit on free slots or past `reach`, and it
-                 says nothing about growth either way.
-      leading    nothing has cells before it — it starts at the
-                 track's own left edge and takes from the right.
-      inner      cells on both sides — centred on the seam, half
-                 from each.
-
-    Consecutive empty jobs share one block at the same seam and split
-    it in ECON order, which is why the block is bounded rather than
-    each placeholder: two placeholders against a two-cell neighbour
-    may have one cell between them, not two.
-    """
-    track = track_metrics(area, cfg, scale)
-    origin = track_x(area, cfg, scale)
-    step = track.step
-    spans = row_regions(row).spans
-
-    def x_of(slot):
-        return origin + slot * step
-
-    rects = {}
-    for zone, (start, count) in enumerate(spans):
-        if count:
-            rects[zone] = [float(x_of(start)), float(x_of(start + count))]
-
-    zone = 0
-    while zone < 3:
-        if spans[zone][1]:
-            zone += 1
-            continue
-        end = zone
-        while end < 3 and spans[end][1] == 0:
-            end += 1
-        block = list(range(zone, end))
-        seam = float(x_of(spans[zone][0]))
-        left = zone - 1 if zone > 0 else None
-        right = end if end < 3 else None
-        want = step * len(block)
-
-        def half(z):
-            """The most a placeholder may take from neighbour `z`.
-
-            TWO bounds and the smaller wins, and the second one was
-            added on the day the first was written down. Half the
-            neighbour's WIDTH is the stated rule and it is not
-            enough: against a two-cell neighbour half its width is a
-            whole cell, so a leading block of two placeholders ate
-            the first research cell of Neptunus I outright and a
-            click on that cell named food — the exact fault this
-            rewrite exists to remove, in a new place.
-
-            So also: never more than half a CELL, `unit / 2`. A
-            square is drawn `unit` wide at the slot's left edge, so
-            leaving half of it leaves its centre on its own side, and
-            "a click on a cell names that cell's job" survives by
-            construction rather than by the numbers happening to
-            work out. A smoke check asserts the centres.
-            """
-            if z not in rects:
-                return 0.0
-            return min((rects[z][1] - rects[z][0]) / 2.0, track.unit / 2.0)
-
-        if right is None:
-            # trailing: the rest of the track is free real estate
-            width = min(want, origin + track.width - seam)
-            x_start = seam
-        elif left is None:
-            width = min(want, half(right))
-            x_start = seam
-        else:
-            width = min(want, 2.0 * min(half(left), half(right)))
-            x_start = seam - width / 2.0
-        if left is not None and left in rects:
-            rects[left][1] = min(rects[left][1], x_start)
-        if right is not None and right in rects:
-            rects[right][0] = max(rects[right][0], x_start + width)
-        share = width / len(block) if block else 0.0
-        for i, z in enumerate(block):
-            rects[z] = [x_start + i * share, x_start + (i + 1) * share]
-        zone = end
-
-    return tuple((z, pygame.Rect(int(rects[z][0]), 0,
-                                 max(1, int(round(rects[z][1] - rects[z][0]))), 0))
-                 for z in range(3))
-
-
-def drop_band(area, cfg, scale, row, x):
-    """Which job `x` names while a pick is held, or None.
-
-    The targets are `drop_targets`', so a click lands on the job the
-    outline around it belongs to. Outside all three — the free slots
-    past a trailing placeholder, the pad either side — is None, and
-    None is a state: it discards the selection rather than dropping.
-    """
-    for job, rect in drop_targets(area, cfg, scale, row):
-        if rect.width and rect.x <= x < rect.x + rect.width:
-            return job
-    return None
-
-
-def row_regions(row):
-    """The three regions of one row, in slots.
-
-    Zones are laid down left to right in ECON order and clipped at
-    POP_LIMIT_CAP, which the engine cannot pass either. Squares past
-    `max_pop` are kept, not clipped: a pop is a fact, `max_pop` a
-    computation with two documented deviations (see
-    `colonyrows.max_population`), so they land in the unreachable
-    region where nothing else is drawn and the disagreement stays
-    visible.
-    """
-    runs = []
-    spans = []
-    slot = 0
-    for zone, count in enumerate(row["jobs"]):
-        n = max(0, min(count, POP_LIMIT_CAP - slot))
-        spans.append((slot, n))
-        if n:
-            runs.append((zone, slot, n))
-        slot += n
-    return Regions(runs=tuple(runs), filled=slot,
-                   reach=max(0, min(row["max_pop"], POP_LIMIT_CAP)),
-                   spans=tuple(spans))
-
-
-# ── The drawing ───────────────────────────────────────────────────
-
 def render(surface, rows, area, cfg, layout, style, first=0,
            frame_inset=0):
     """Draw the rows into `area`. Everything sized from `cfg`.
@@ -483,14 +199,13 @@ def render(surface, rows, area, cfg, layout, style, first=0,
         # untrue.
         _draw_name_block(surface, row, area.x + pad_x, y, name_w, row_h,
                          cfg, name_px, small_px, style, frame_inset)
-        bar_x = track_x(area, cfg, scale)
-        bar_y = y + (row_h - track.bar_h) // 2
-        _render_bar(surface, row, bar_x, bar_y, track, cfg, small_px,
-                    style)
+        _render_bar(surface, row, area, cfg, scale, (y, row_h), track,
+                    small_px, style)
         if track.build_w:
             colonybuild.draw(
-                surface, row, bar_x + track.width + track.build_gap, y,
-                track.build_w, row_h, cfg, style, layout)
+                surface, row, track_x(area, cfg, scale) + track.width
+                + track.build_gap, y, track.build_w, row_h, cfg, style,
+                layout)
 
     _draw_overflow(surface, rows, area, cfg, scale, layout, style, first)
 
@@ -600,67 +315,6 @@ def _draw_overflow(surface, rows, area, cfg, scale, layout, style,
             area.bottom - surf.get_height())
     surface.blit(surf, (area.x + int(cfg.get("pad_x", 22) * scale),
                         max(area.y, y)))
-
-
-def rows_drawn(area, cfg, scale, count):
-    """How many of `count` rows `render` would actually draw.
-
-    Exported so a caller — and the smoke test — can ask the question
-    without re-deriving the pitch. The whole fault this answers was
-    that nothing could ask it.
-    """
-    return len(row_bands(area, cfg, scale, count))
-
-
-def row_bands(area, cfg, scale, count):
-    """(top, height) for each row that FITS, in draw order.
-
-    Decision 5: one function makes the rect and both the drawing and
-    the hit-test call it. The hover selection reads the same bands
-    `render` lays out, so a row that is hovered is by construction a
-    row that is on screen — the last row is dropped rather than
-    clipped, which is exactly the case a second copy of this
-    arithmetic would get wrong.
-
-    **`count` is the length of the WINDOW, not of the list.** Since
-    the list scrolls, both callers pass `len(rows) - first`, and the
-    band index this returns is a position on screen. Turning that
-    back into an index into the rows is the screen's job, in
-    `screen._row_at`, because the screen is where the offset lives —
-    a band number used as a row number is the fault decision 5 exists
-    for, one scroll offset removed.
-
-    Fewer bands than `count` therefore means the tail of the window
-    is not drawn. That is still the honest shape: nothing below the
-    last band can be selected because nothing below it is there.
-    """
-    # No defaults here either — see `track_metrics`.
-    row_h = int(cfg["row_height"] * scale)
-    y = area.y + int(cfg["pad_y"] * scale)
-    bands = []
-    for _ in range(count):
-        if y + row_h > area.bottom:
-            break
-        bands.append((y, row_h))
-        y += row_h
-    return bands
-
-
-def row_at(area, cfg, scale, count, point):
-    """Index of the drawn row under `point`, or None.
-
-    None also covers a point inside `area` but past the last drawn
-    row — the pad and the tail the bands do not reach. The original
-    has the same dead strip: its rows are fields, and the space below
-    them belongs to no field at all.
-    """
-    px, py = point
-    if not (area.x <= px < area.right):
-        return None
-    for i, (top, height) in enumerate(row_bands(area, cfg, scale, count)):
-        if top <= py < top + height:
-            return i
-    return None
 
 
 def _draw_name_block(surface, row, x, y, name_w, row_h, cfg,
@@ -803,56 +457,112 @@ def _detail_text(row, cfg):
     return template
 
 
-def _render_bar(surface, row, x, y, track, cfg, text_px, style):
-    """One POP_LIMIT_CAP-slot track, in three regions with three states.
+def _render_bar(surface, row, area, cfg, scale, band, track, text_px,
+                style):
+    """One row's run: three markers, their cells, then the growth.
 
-      filled       0..pops, one square per assigned pop, in its
-                   zone's colour.
-      free         pops..max_pop, a dashed outline and no fill: a
-                   slot this colony can be grown into TODAY.
-      unreachable  max_pop..POP_LIMIT_CAP, no square at all, only a
-                   faint baseline.
+        F [food cells] W [worker cells] S [scientist cells]  gap  · · ·
 
-    The third region is NOT padding, and a square there — even a dim
-    one — would say the wrong thing twice, being neither filled nor
-    free. It is room the colony does not have YET: Advanced City
-    Planning adds a flat +5, Biospheres +2, Subterranean scales with
-    size, terraforming moves the climate factor itself.
+    Every box comes from `colonytrack.row_boxes`, which is also what
+    a click is tested against — one function, two readers
+    (decision 5). Nothing here computes a position.
 
-    Drawn back to front — baseline, dashed, filled — because a later
-    draw wins where regions overlap. Not hypothetical: the "No
-    Farming" label was painted over by the worker squares once, every
-    number correct and nothing on screen. It sits AFTER the track now,
-    in the reserved `tail_width` column, because a collapsed food zone
-    has no width to hold a label and the free tail is no home either
-    — Sol IV has one free slot, about 50 reference pixels.
+      markers      grey, light border, the job's letter. ALWAYS all
+                   three, whether or not the job holds pops. HD
+                   EXTENSION; `row_boxes` carries the reason.
+      cells        one per pop, in its job's colour, with an identity
+                   letter where the pop is not one of the player's
+                   own — see `_cell_mark`.
+      growth       `max_pop` less the pops, dashed, after the gap.
+                   They belong to the COLONY and not to any job,
+                   which is why they are past all three groups
+                   instead of trailing the last one.
+      beyond       the faint line for track the colony cannot reach
+                   yet. NOT padding, and not a dim square either: a
+                   square there would be neither filled nor free.
+
+    Drawn back to front — beyond, growth, markers, cells — because a
+    later draw wins where boxes touch. Not hypothetical: the "No
+    Farming" label was painted over by the worker squares once, with
+    every number correct and nothing on screen.
     """
-    regions = row_regions(row)
+    boxes = colonytrack.row_boxes(area, cfg, scale, row, band)
 
-    # 3. unreachable: one faint line along the foot of the tail. Not
-    #    per slot — a slot tick would read as an empty square, which
-    #    is exactly what this region is not.
-    if regions.reach < POP_LIMIT_CAP:
+    if boxes.beyond is not None:
         thick = max(1, track.bar_h // 16)
-        x0 = x + regions.reach * track.step
         pygame.draw.rect(surface, BAR_BEYOND, pygame.Rect(
-            x0, y + track.bar_h - thick, track.width - (x0 - x), thick))
+            boxes.beyond.x, boxes.beyond.y + track.bar_h - thick,
+            boxes.beyond.width, thick))
 
-    # 2. free
-    for i in range(regions.filled, regions.reach):
+    for rect in boxes.growth:
         _dashed_rect(surface, BAR_FREE,
-                     pygame.Rect(x + i * track.step, y + 1,
-                                 track.unit, track.bar_h - 2),
+                     pygame.Rect(rect.x, rect.y + 1, track.unit,
+                                 track.bar_h - 2),
                      max(1, track.unit // 4))
 
-    # 1. filled
-    _draw_squares(surface, regions, track, x, y)
+    letters = cfg.get("marker_letters", ["F", "W", "S"])
+    for job, rect in boxes.markers:
+        surface.fill(MARKER_BG[:3], rect)
+        pygame.draw.rect(surface, MARKER_EDGE[:3], rect, 1)
+        if job < len(letters):
+            _blit_centered(surface, rect, str(letters[job]), text_px,
+                           MARKER_TEXT, style)
+
+    cells = row.get("cells")
+    for job, index, rect in boxes.cells:
+        pygame.draw.rect(surface, ZONE_COLORS[job], rect)
+        mark = _cell_mark(cfg, cells, job, index)
+        if mark:
+            _blit_centered(surface, rect, mark, text_px, CELL_MARK, style)
 
     if row["no_farming"]:
-        _draw_no_farming(surface, x, y, track, cfg, text_px, style)
+        _draw_no_farming(surface, boxes, track, cfg, text_px, style)
 
 
-def _draw_no_farming(surface, x, y, track, cfg, text_px, style):
+def _cell_mark(cfg, cells, job, index):
+    """The identity letter for one cell, or "" for the common case.
+
+    **HD EXTENSION, and the reason is a sprite the original cannot
+    reuse.** The original draws a pop as `race * 13 + job * 2 + 1`
+    (colony_main.cpp:445) — profession AND race in one figure —
+    except for the three classes that get one sprite each: a native
+    is entry 0xAA whatever it does, an android 0xA9, a conquered pop
+    a static race portrait (colony.cpp:1278). In the original the
+    profession is carried by WHICH COLUMN the sprite stands in. The
+    HD row has one track and no columns, so a cell has to carry both:
+    the FILL carries the profession and the letter carries the
+    identity, and the letter may not disturb the fill.
+
+    **The player's own pops carry no letter.** Over ninety per cent
+    of cells are that case and they have to stay quiet, or scanning
+    twenty rows dies.
+
+    Verification, split and stated (decision 23): **N for a native is
+    confirmed** against `fixture_natives_3502.5.GAM` by three
+    independent sources — the data, the original's own picture and
+    the label the game prints. **A for an android and C for a
+    conquered pop are UNVERIFIED**: no save this project holds
+    contains either, so those two letters rest on the source alone.
+
+    **A fifth class is deliberately NOT marked and it is a known
+    gap.** A pop of another player's race with the conquered bit
+    CLEAR — an assimilated one, which `invasion.cpp:672-676` produces
+    when the conquering player is Assimilative — draws here exactly
+    like one of the player's own, and the original draws it with its
+    own race's figure. The mark it wants is a race initial, which
+    collides with the marker alphabet (Sakkra begins with the same
+    letter as Scientist), and no fixture contains the case to judge
+    that collision on. Marking it from a guessed mapping is the thing
+    a picture of the wrong thing is made of; it is recorded in
+    `v3_projektstatus.md` instead.
+    """
+    if not cells or job >= len(cells) or index >= len(cells[job]):
+        return ""
+    marks = cfg.get("cell_marks", {})
+    return marks.get(cells[job][index], "")
+
+
+def _draw_no_farming(surface, boxes, track, cfg, text_px, style):
     """The label, in the tail column or under the track.
 
     BELOW is the cheaper of the two, and not by a little: the tail
@@ -877,10 +587,8 @@ def _draw_no_farming(surface, x, y, track, cfg, text_px, style):
     if not label:
         return
     surf = style.render_text(label, text_px, NO_FARM_COLOR)
-    if cfg.get("no_farming_placement", "below") == "tail":
-        surface.blit(surf, (x + track.width + track.gap * 4,
-                            y + (track.bar_h - surf.get_height()) // 2))
-        return
+    x = boxes.markers[0][1].x
+    y = boxes.markers[0][1].y
     # `y` is the BAR's top; the row extends half the spare height
     # above and below it. Bottom-aligned in the band that leaves, so
     # any rounding slack sits between the label and the bar, where it
@@ -888,15 +596,6 @@ def _draw_no_farming(surface, x, y, track, cfg, text_px, style):
     # as a taller row.
     row_bottom = y + track.bar_h + (track.row_h - track.bar_h) // 2
     surface.blit(surf, (x, row_bottom - surf.get_height()))
-
-
-def _draw_squares(surface, regions, track, x, y):
-    """One filled square per pop, the zone colour as the fill."""
-    for zone, start, count in regions.runs:
-        for i in range(count):
-            pygame.draw.rect(surface, ZONE_COLORS[zone], pygame.Rect(
-                x + (start + i) * track.step, y + 1,
-                track.unit, track.bar_h - 2))
 
 
 def _dashed_rect(surface, color, rect, dash):

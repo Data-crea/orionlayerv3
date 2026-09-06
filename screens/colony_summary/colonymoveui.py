@@ -32,6 +32,7 @@ import logging
 from core import textfit
 
 from . import colonylist
+from . import colonypopup
 from . import colonymove
 from . import colonypick
 from . import colonysend
@@ -71,6 +72,9 @@ class MoveController:
     def __init__(self):
         #: The local selection. Never reaches the game.
         self.pick = None
+        #: (row index, job) the pointer is over, or None. Cleared the
+        #: moment a pick exists — see `hover`.
+        self.over = None
         #: The wire sequence, or None. Exists only between the second
         #: click and its confirmation.
         self.send = None
@@ -115,12 +119,10 @@ class MoveController:
     def _first_click(self, row, row_index, pops, n_pops, x, area, cfg,
                      scale, sort_key, words):
         """Pick up — locally. Nothing is sent, whatever the answer."""
-        slot = colonylist.slot_at_x(area, cfg, scale, x)
-        zone = (colonylist.zone_at_slot(row, slot)
-                if slot is not None else None)
-        if zone is None:
-            return False         # not a pop square
-        job, index = zone
+        cell = colonylist.cell_at_x(area, cfg, scale, row, x)
+        if cell is None:
+            return False         # a marker, a growth box, or bare track
+        job, index = cell
         outcome = colonypick.pick_at(pops, n_pops, job, index,
                                      row["index"], row_index, sort_key)
         if isinstance(outcome, colonypick.Refusal):
@@ -179,6 +181,45 @@ class MoveController:
             predicted=predicted, sort_hotkey=sort_hotkey)
         log.info("pop move: %r -> column %d, %r", self.pick, job, outcome)
         return True
+
+    def hover(self, rows, row_index, x, area, cfg, scale):
+        """Remember which job group the pointer is over, or nothing.
+
+        **Nothing while a selection is held**, which is the popup's
+        own rule and is enforced here rather than at the draw so a
+        reader cannot find a second answer: aiming happens on the
+        hovered row, and a popup that followed the pointer would
+        flicker under the gesture it interrupts.
+        """
+        if self.pick is not None or self.busy:
+            self.over = None
+            return
+        if row_index is None or not 0 <= row_index < len(rows):
+            self.over = None
+            return
+        job = colonylist.drop_band(area, cfg, scale, rows[row_index], x)
+        self.over = None if job is None else (row_index, job)
+
+    def draw_popup(self, surface, rows, first, area, cfg, scale, style,
+                   layout, data):
+        """The hover popup, or nothing. Returns its rect or None.
+
+        It takes `data` rather than the wording, because which block
+        of `layout.json` the words come from is this class's business
+        and not the screen's — the screen owns the boxes.
+        """
+        if self.over is None or self.pick is not None:
+            return None
+        row_index, job = self.over
+        bands = colonylist.row_bands(area, cfg, scale, len(rows) - first)
+        band = row_index - first
+        if not 0 <= band < len(bands):
+            return None
+        words = data.get("popup", {})
+        return colonypopup.draw(surface, area, cfg, scale,
+                                rows[row_index], job, bands[band],
+                                style, layout.font_size(
+                                    words.get("font", 15)), words)
 
     def cancel(self, why):
         """Discard the selection — **HD EXTENSION**, see the module
@@ -257,8 +298,16 @@ class MoveController:
             surface.blit(surf, (rect.x + (rect.w - surf.get_width()) // 2, y))
             y += surf.get_height()
 
-    def draw(self, surface, rows, first, area, cfg, scale):
-        """The held selection and its three drop targets.
+    def draw(self, surface, rows, first, area, cfg, scale, style=None,
+             layout=None, data=None):
+        """The held selection, its drop targets, and the hover popup.
+
+        One call because they are one layer: the marks go over the
+        row and the popup goes over the marks, both under the frame
+        image, and a caller that could order them wrongly is a caller
+        that will. `style`, `layout` and `data` are only needed for
+        the popup and are optional so a check can ask for the marks
+        alone.
 
         The simplest drawing that can be seen, which is all this
         phase asks for — the visualisation is phase 4. Both marks
@@ -267,6 +316,9 @@ class MoveController:
         second copy of the pitch (decision 5).
         """
         if self.pick is None:
+            if style is not None:
+                self.draw_popup(surface, rows, first, area, cfg, scale,
+                                style, layout, data)
             return
         position = next((i for i, row in enumerate(rows)
                          if row["index"] == self.pick.colony), None)

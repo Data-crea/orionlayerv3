@@ -113,6 +113,8 @@ from core.structs import planet as planet_struct
 from core.structs import player as player_struct
 from core.structs import star as star_struct
 
+from . import colonyicons
+
 ROMAN = ("I", "II", "III", "IV", "V")
 
 #: orion2_consts.h:119-123. `s_colony.production[4]` is indexed by
@@ -602,6 +604,29 @@ def production_shortage(col, econ):
                - col.production[econ])
 
 
+def _pop_class(word, owner):
+    """Which identity class one pop word belongs to, or "" for own.
+
+    Four classes, and they are the original's own — see
+    `COLONY::Colony_Pop_Anim_` (colony.cpp:1268), which switches on
+    exactly these before it picks a sprite. The fifth case, an
+    assimilated pop of another race, deliberately answers "" and is
+    a recorded gap; see `colonylist._cell_mark`.
+
+    `native` is VERIFIED against `fixture_natives_3502.5.GAM` three
+    ways; `android` and `conquered` are the source alone, because no
+    save this project holds contains either.
+    """
+    if colony_struct.pop_is_conquered(word):
+        return "conquered"
+    nibble = colony_struct.pop_player_index(word)
+    if nibble == colony_struct.POP_NATIVE:
+        return "native"
+    if nibble == colony_struct.POP_ANDROID:
+        return "android"
+    return ""
+
+
 def build_rows(game_state, sort_key="name"):
     """One dict per colony of the local player, sorted.
 
@@ -666,6 +691,10 @@ def build_rows(game_state, sort_key="name"):
             prof = colony_struct.pop_prof(col.pop[i])
             if 0 <= prof < len(jobs):
                 jobs[prof] += 1
+        cells = tuple(tuple(_pop_class(col.pop[p], col.owner)
+                            for p in colonyicons.icon_pops(
+                                col.pop, col.n_pops, job))
+                      for job in range(3))
         rows.append({
             # The colony's index in the snapshot's own array, which is
             # the engine's `MOX::_colony[]` index and therefore the
@@ -684,6 +713,17 @@ def build_rows(game_state, sort_key="name"):
             "name": planet_name(col, planets, stars),
             "pops": col.n_pops,
             "jobs": jobs,
+            # ONE ENTRY PER DRAWN CELL, in the ORIGINAL'S OWN ORDER
+            # (decision 48): `colonyicons.icon_pops` is the walk the
+            # game draws its column with, so cell m of a job is the
+            # pop a click on cell m picks up. Identity and click
+            # therefore cannot disagree — which they would the moment
+            # this was built from `jobs` and array order instead.
+            #
+            # It counts ICONS and `jobs` counts POPS, and the two
+            # differ by exactly the pops of a held cluster, which the
+            # original does not draw either (coldraw.cpp:336).
+            "cells": cells,
             "no_farming": col.max_farms == 0,
             "climate": col.climate,
             # The building column's content. `producing` is a display

@@ -258,9 +258,18 @@ def render(surface, stars, label, area, cfg, layout, style):
     fills its box with black only when
     `_using_colony_screen_palette == 0` (movebox.cpp:36-38), and this
     screen sets that flag — so the original leaves whatever the
-    screen background put there showing through, which on a native
-    capture is the faint star texture of `_anims[0]`. Here the panel
-    fill `screen._render_panels` already laid down plays that part.
+    screen background put there showing through, and the panel fill
+    `screen._render_panels` laid down plays that part here.
+
+    **MEASURED 6 September 2026, correcting the sentence that used to
+    stand here.** It said the original shows "the faint star texture
+    of `_anims[0]`". It does not: sampling the native frame over the
+    inset's own rect (380, 349, 128, 91) gives (0, 8, 0) in 2475 of
+    about 2700 samples — black, to within a hair. Ours was PANEL_BG
+    (8, 11, 20), a dark blue. `layout.json`'s `galaxy_inset_fill` now
+    says black, which is a move TOWARD the original and not away from
+    it, and it is a per-box fill because this function still draws no
+    background of its own.
     """
     if not stars:
         return

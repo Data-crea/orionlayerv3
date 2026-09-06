@@ -508,7 +508,7 @@ files under `doc/` and are only summarised here.
 | | |
 |---|---|
 | Python | 32,960 lines across 111 modules — `find . -name '*.py'`, `__pycache__` excluded, the smoke test's 6,400 included. The previous figure here (21,642 across 94) was carried from an unstated method and could not be reproduced |
-| Smoke test | `python tools/smoke_test.py` — **82 checks**, headless |
+| Smoke test | `python tools/smoke_test.py` — **83 checks**, headless |
 | Assets | 170 MB (select_race 68, galaxy_map 51, shared 23, new_game 21, colony_summary 1) |
 | Screens in HD | 7 of ~20–22 (colony summary draws list, sidebar, scan box and galaxy inset, and MOVES POPS — the first HD gesture that drives the game) |
 | Setup from clone | `python tools/setup.py` (deps via the system package manager) |
@@ -646,8 +646,11 @@ to stay uncomfortable to extend.
 │   │   │                              client; everything else is a
 │   │   │                              module beside it
 │   │   ├── colonyrows.py              the numbers per colony
-│   │   ├── colonylist.py              the rows, the track, and the
-│   │   │                              two hit tests over it
+│   │   ├── colonylist.py              the rows: markers, cells,
+│   │   │                              growth, the name block
+│   │   ├── colonytrack.py             the row's geometry, and
+│   │   │                              decision 5's one home
+│   │   ├── colonypopup.py             the hover popup
 │   │   ├── colonybuild.py             the building column
 │   │   ├── colonyoutput.py            the scan box
 │   │   ├── colonyinset.py             the small galaxy map
@@ -3017,6 +3020,91 @@ help-file lesson, one domain over.
 
 Zhadoom III (14 pops) is the widest row in either fixture and is
 therefore the narrowest-cell case any picture has to survive.
+
+### The row gets its three groups, a mark and a popup — 6 September 2026
+
+Three decisions built, each narrowing the next, and all three are HD
+EXTENSIONS with their markings.
+
+- **HD EXTENSION — three job markers, always.** Every row carries a
+  marker per job in ECON order, each introducing its own cells:
+  `F [food] W [worker] S [scientist]`, flush, no gap inside the run.
+  The original does not need them because it draws three FIXED
+  columns under three headings (colsum.cpp:1006-1024); **a row
+  without columns cannot carry a heading**, and before this a colony
+  with everyone farming showed a run of squares and then nothing,
+  with nothing on screen saying the other two jobs existed. Grey, not
+  a fourth accent — an amber marker in the first mockup read as a
+  fourth job class. In `colonytrack.row_boxes`, `layout.json` under
+  `list._hd_extension_markers`, and a check.
+- **HD EXTENSION — an identity letter in the cell, fill untouched.**
+  The original carries profession AND race in one sprite
+  (`race * 13 + job * 2 + 1`, colony_main.cpp:445) and carries the
+  profession by WHICH COLUMN the sprite stands in. One track, no
+  columns, so the cell carries both: fill for the profession, letter
+  for the identity. The player's own pops carry none. `N` is
+  confirmed three ways; `A` and `C` rest on the source alone. In
+  `colonylist._cell_mark`, `layout.json` under `_cell_marks_note`,
+  and a check.
+- **HD EXTENSION — a hover popup below the row.** It overlays and
+  never reflows (decision 46: the list is the click frame). It flips
+  above in a row at the panel's bottom, and that is not a preference
+  — `screen.render` draws the frame image AFTER the content, so a box
+  outside the cutout is covered by metal and the only place left is
+  above. **And it does not appear at all while a selection is held**,
+  because aiming happens on the hovered row and a popup following the
+  pointer would flicker under the gesture it interrupts. In
+  `colonypopup`, `layout.json` under `_hd_extension_popup`, and a
+  check.
+
+**What it collapsed.** No job is ever empty now, so the empty-group
+placeholder in `drop_targets` — the seam rule with its two bounds,
+written the day before — is GONE rather than bypassed. The marker is
+that placeholder, made permanent and visible. One layout path, and a
+check that fails if a job's target is ever thinner than a marker.
+
+**One geometry for the whole row.** `colonytrack.row_boxes` returns
+markers, cells, targets, growth boxes and the beyond-line in pixels,
+and everything that draws or hits calls it. The growth boxes moved to
+the END, past a fixed `growth_gap` from `layout.json`: they belong to
+the COLONY and not to any job.
+
+**The cost, for Task 6.** The track is now measured from
+`POP_LIMIT_CAP + 3` slots plus the gap, so a slot is about a
+fifteenth narrower than before. Irrelevant at 42 slots and
+**relevant the day the track is shortened to the empire maximum** —
+at a maximum of 22 the three markers are an eighth of the row, not a
+fifteenth. The trade belongs in that decision, not before it.
+
+**A fifth identity class is deliberately unmarked, and it is a gap
+rather than an oversight.** An assimilated pop of another race —
+conquered bit clear, nibble not the owner's, which
+`invasion.cpp:672-676` produces when the conqueror is Assimilative —
+draws exactly like one of the player's own, while the original draws
+it with its own race's figure. Its natural mark is a race initial,
+which collides with the marker alphabet (Sakkra and Scientist share
+a letter), and no fixture holds the case to judge that collision on.
+Marking it from a guessed mapping is what a picture of the wrong
+thing is made of.
+
+**The minimap is black now, and that is a measurement.** The panel
+already had a fill — the cockpit texture was never showing through —
+but it was `PANEL_BG` (8, 11, 20) while the original's own inset
+region measures (0, 8, 0) over 2475 of about 2700 samples. So black
+moves TOWARD the original. Done as a per-box fill
+(`galaxy_inset_fill`), not as a change to `colonyinset`, which draws
+no background at all by transcription (movebox.cpp:36-38) — and the
+sentence in that module claiming the original shows a faint star
+texture there is corrected with the measurement.
+
+**Two files were full, so the geometry moved out.**
+`colonylist.py` stood at exactly 300 code lines and `screen.py` at
+299. `colonytrack.py` is the new home for the row's arithmetic — the
+seam this tree already had between the NUMBERS (`colonyrows`) and the
+DRAWING (`colonylist`), with the ARITHMETIC unnamed in the middle. It
+is also decision 5's home: one function produces the rect, and the
+day the drop targets were two copies of a thirds calculation is what
+that costs when the geometry is scattered through a drawing module.
 
 ### Drop targets follow the groups — rebuilt 5 September 2026
 

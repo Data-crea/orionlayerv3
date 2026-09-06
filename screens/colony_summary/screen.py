@@ -310,14 +310,15 @@ class ColonySummaryScreen(ScreenBase):
         and this is the one panel on the screen that owes nothing to
         the original.
         """
-        area, cfg, scale, _n_rows = self._list_view()
+        area, cfg, scale, _n = self._list_view()
         if self.box_rect("list_area"):
+            # Marks, targets and the hover popup are one layer, over
+            # the rows and under the frame image — which is why the
+            # popup has to stay inside the cutout, see `colonypopup`.
             self._move.draw(surface, self._rows, self._first, area, cfg,
-                            scale)
-        if not self._move.message:
-            return
+                            scale, self.style, self.layout, self._data)
         box = self.box_rect("spare_panel")
-        if not box:
+        if not (self._move.message and box):
             return
         self._move.draw_message(
             surface, pygame.Rect(*self.layout.rect(box)),
@@ -384,7 +385,15 @@ class ColonySummaryScreen(ScreenBase):
                 continue
             box = self.box_rect(name)
             if box:
-                surface.fill(PANEL_BG[:3], pygame.Rect(*self.layout.rect(box)))
+                # A panel may name its own fill — the galaxy inset
+                # does, and `_galaxy_inset_fill_note` carries the
+                # measurement it rests on: the original's own inset
+                # region is black and this screen's default fill is
+                # not. A per-box value rather than a renderer change,
+                # because `colonyinset` draws no background at all,
+                # by transcription (movebox.cpp:36-38).
+                fill = self._data.get(name + "_fill") or PANEL_BG
+                surface.fill(tuple(fill)[:3], pygame.Rect(*self.layout.rect(box)))
 
     def _render_list(self, surface):
         """The colony list. The bar is an INVENTION — see colonylist.
@@ -650,9 +659,13 @@ class ColonySummaryScreen(ScreenBase):
         mouse moved off the list would be blank most of the time.
         """
         super().handle_mouse_motion(screen_x, screen_y)
-        self._selection.hover(
-            self._window.row_at(*self._list_view(),
-                                (screen_x, screen_y)))
+        area, cfg, scale, n_rows = self._list_view()
+        row = self._window.row_at(area, cfg, scale, n_rows,
+                                  (screen_x, screen_y))
+        self._selection.hover(row)
+        # The popup rides the same hover the original scans with; the
+        # controller is what refuses one while a selection is up.
+        self._move.hover(self._rows, row, screen_x, area, cfg, scale)
 
     def handle_mousewheel(self, direction, mx, my):
         """Scroll the colony list, one row per notch.

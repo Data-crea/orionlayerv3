@@ -2347,16 +2347,38 @@ def main():
         "this row drew no dashed free slots, so it cannot test the "
         "overlap it exists for — pops, max_pop or POP_LIMIT_CAP moved")
     # The columns really are shared — assert it, because everything
-    # below is about the y and would be vacuous otherwise. If the
-    # label or the slot ever changes width enough that they stop
-    # overlapping, this check has quietly stopped testing anything
-    # and should say so rather than go on passing.
+    # below is about the y and would be vacuous otherwise.
+    #
+    # AMENDED 6 September 2026, when the row grew job markers and the
+    # growth boxes moved past a fixed gap to the end. The label and
+    # the DASHED boxes no longer share a column at all, and that is
+    # the new layout working rather than the check failing: they are
+    # separated in x by construction now. What the label still shares
+    # a column with is the RUN — it starts at the run's own left edge
+    # — so the run is what makes the y-test non-vacuous, and the
+    # label must share a pixel with neither.
     _label_x = set(x for x, _y in _label)
     _hatch_x = set(x for x, _y in _hatch)
-    assert _label_x & _hatch_x, (
-        "the label and the dashed slots share no columns, so this "
-        "check cannot see an overlap even if there is one — widen the "
-        "gap between pops and max_pop in the row above")
+    _run_rgb = set(tuple(c[:3]) for c in _cl.ZONE_COLORS)
+    _run_rgb.add(tuple(_cl.MARKER_BG[:3]))
+    _run = [(x, y) for x in range(_area.x, _area.right)
+            for y in range(_area.y, _area.bottom)
+            if tuple(_px[x, y]) in _run_rgb]
+    assert _run, "the row drew no markers and no cells at all"
+    _run_x = set(x for x, _y in _run)
+    assert _label_x & _run_x, (
+        "the label and the run share no columns, so this check "
+        "cannot see an overlap even if there is one — the label no "
+        "longer starts at the run's left edge")
+    assert not (set(_label) & set(_run)), (
+        "'No Farming' and the run ink the same pixels — the label is "
+        "painting over the markers or the cells, which are drawn "
+        "first and therefore lose silently")
+    assert not (_label_x & _hatch_x), (
+        "the label and the dashed growth boxes share a column again. "
+        "Since 6 September the growth boxes sit past the run and a "
+        "fixed gap, so this means the gap or the run length moved "
+        "and the two can collide once more")
     # Sharing no pixel is necessary but not sufficient: two things
     # interleaved row for row share no pixel and still collide. So
     # the bands have to be disjoint in y as well, with the label
@@ -4372,6 +4394,8 @@ def main():
     from screens.colony_summary import colonypick as _cp
     from screens.colony_summary import colonysend as _cse
     from screens.colony_summary import colonymoveui as _cmu
+    from screens.colony_summary import colonytrack as _ct
+    from screens.colony_summary import colonypopup as _cpop
     from core import textfit as _textfit
     from core import wire_protocol as _wire
 
@@ -4390,11 +4414,21 @@ def main():
     _mv_track = _cl.track_metrics(_mv_area, _mv_cfg, _mv_scale)
     _mv_bands = _cl.row_bands(_mv_area, _mv_cfg, _mv_scale, _mv_n)
 
-    def _square_xy(row_index, slot):
+    def _square_xy(row_index, job, index=0):
+        """The centre of one CELL, from the row's own geometry.
+
+        Since 6 September a slot index is not a cell index — the job
+        markers sit between the groups — so this asks `row_boxes`
+        rather than multiplying a pitch, which is the same reason
+        `drop_targets` exists.
+        """
         _top, _h = _mv_bands[row_index]
-        return (_cl.track_x(_mv_area, _mv_cfg, _mv_scale)
-                + slot * _mv_track.step + _mv_track.unit // 2,
-                _top + _h // 2)
+        for _j, _i, _r in _cl.row_boxes(_mv_area, _mv_cfg, _mv_scale,
+                                        _mv_rows[row_index]).cells:
+            if (_j, _i) == (job, index):
+                return _r.x + _r.width // 2, _top + _h // 2
+        raise AssertionError(f"row {row_index} has no cell {index} of "
+                             f"job {job}")
 
     def _band_xy(row_index, job):
         _top, _h = _mv_bands[row_index]
@@ -4409,11 +4443,11 @@ def main():
     _mv_row = next(i for i, r in enumerate(_mv_rows)
                    if sum(1 for c in r["jobs"] if c) >= 2)
     _mv_job = next(j for j, c in enumerate(_mv_rows[_mv_row]["jobs"]) if c)
-    _mv_slot = sum(_mv_rows[_mv_row]["jobs"][:_mv_job])
+    _mv_slot = 0    # the first cell of that job
     _mv_target = next(j for j in range(3) if j != _mv_job)
 
     # FIRST CLICK: a selection, and NOTHING on the wire.
-    _scr_op.handle_click(*_square_xy(_mv_row, _mv_slot))
+    _scr_op.handle_click(*_square_xy(_mv_row, _mv_job, _mv_slot))
     assert _scr_op._move.pick is not None, (
         "a click on a filled square did not pick anything up")
     assert _mv_cap.calls == [] and _mv_cap.keys == [] \
@@ -4426,13 +4460,13 @@ def main():
 
     # THE CANCEL — HD EXTENSION. Right click discards it, and that is
     # free precisely because nothing was sent.
-    _scr_op.handle_right_button(True, *_square_xy(_mv_row, _mv_slot))
+    _scr_op.handle_right_button(True, *_square_xy(_mv_row, _mv_job, _mv_slot))
     assert _scr_op._move.pick is None, (
         "a right click did not discard the selection")
     assert _mv_cap.calls == [] and _mv_cap.keys == [] \
         and _mv_cap.fields == [], "the cancel path reached the game"
     # And so does a left click that lands on neither icon nor band.
-    _scr_op.handle_click(*_square_xy(_mv_row, _mv_slot))
+    _scr_op.handle_click(*_square_xy(_mv_row, _mv_job, _mv_slot))
     assert _scr_op._move.pick is not None
     _scr_op.handle_click(_mv_area.x + 2, _mv_area.bottom - 2)
     assert _scr_op._move.pick is None, (
@@ -4494,7 +4528,7 @@ def main():
 
     # A REFUSED DROP SENDS NOTHING THROUGH THE SEAM EITHER.
     _mv_cap.calls, _mv_cap.keys, _mv_cap.fields = [], [], []
-    _scr_op.handle_click(*_square_xy(_mv_row, _mv_slot))
+    _scr_op.handle_click(*_square_xy(_mv_row, _mv_job, _mv_slot))
     _scr_op._sort_key = next(iter(_cr.SORT_UNAVAILABLE))
     _scr_op.handle_click(*_band_xy(_mv_row, _mv_target))
     _scr_op._sort_key = "name"
@@ -4521,10 +4555,15 @@ def main():
     assert "HD EXTENSION" in (_cp.__doc__ or "")
     assert "HD EXTENSION" in _mv_words.get("_hd_extension_cancel", "")
     assert "HD EXTENSION" in _mv_words.get("_hd_extension_bands", "")
-    # The marking lives on the function that now carries the reason
-    # AND the shape: drop_targets. drop_band is a lookup into it.
-    assert "HD EXTENSION" in (_cl.drop_targets.__doc__ or "")
+    # The marking lives on the function that carries the reason AND
+    # the shape. Since 6 September that is `row_boxes`, which lays
+    # out markers, cells, targets and growth in one place;
+    # drop_targets and drop_band are lookups into it.
+    assert "HD EXTENSION" in (_ct.row_boxes.__doc__ or "")
     assert "HD EXTENSION" in (_cl.draw_drop_bands.__doc__ or "")
+    assert "HD EXTENSION" in (_cl._cell_mark.__doc__ or "")
+    assert "IT DOES NOT APPEAR WHILE A SELECTION IS HELD" in (
+        _cpop.__doc__ or "")
     for _cite in ("colsum.cpp:804", "colsum.cpp:938"):
         assert _cite in _mv_words["_hd_extension_cancel"], (
             f"the cancel marking no longer names {_cite} — the "
@@ -4541,6 +4580,9 @@ def main():
     for _mark in ("HD EXTENSION — the cancel",
                   "HD EXTENSION — a drop target per job",
                   "HD EXTENSION — a click on the held pop's own group",
+                  "HD EXTENSION — three job markers, always",
+                  "HD EXTENSION — an identity letter in the cell",
+                  "HD EXTENSION — a hover popup below the row",
                   "DEVIATION — a partial move is refused"):
         assert _mark in _mv_status, (
             f"v3_projektstatus.md does not carry {_mark!r}, which "
@@ -4587,17 +4629,45 @@ def main():
         _regs = _cl.row_regions(_r)
         _targets = _cl.drop_targets(_mv_area, _mv_cfg, _mv_scale, _r)
         assert [j for j, _ in _targets] == [0, 1, 2], _targets
+        _boxes = _ct.row_boxes(_mv_area, _mv_cfg, _mv_scale, _r)
         # 1. EVERY CELL NAMES ITS OWN JOB. The one that was broken.
-        for _zone, _s0, _cnt in _regs.runs:
-            for _k in range(_cnt):
-                _cx = _dt_x0 + (_s0 + _k) * _dt_track.step \
-                    + _dt_track.unit // 2
-                _got = _cl.drop_band(_mv_area, _mv_cfg, _mv_scale, _r, _cx)
-                assert _got == _zone, (
-                    f"{_r['name']}: cell {_k} of job {_zone} names "
-                    f"{_got}. A click on a cell must name that cell's "
-                    f"job — looks right, clicks wrong is the whole "
-                    f"fault this replaced")
+        for _zone, _k, _cell in _boxes.cells:
+            _cx = _cell.x + _cell.width // 2
+            _got = _cl.drop_band(_mv_area, _mv_cfg, _mv_scale, _r, _cx)
+            assert _got == _zone, (
+                f"{_r['name']}: cell {_k} of job {_zone} names "
+                f"{_got}. A click on a cell must name that cell's "
+                f"job — looks right, clicks wrong is the whole "
+                f"fault this replaced")
+        # 1b. AND SO DOES EVERY MARKER: a marker is part of its
+        #     group's target, so the letter is a drop.
+        for _zone, _marker in _boxes.markers:
+            _got = _cl.drop_band(_mv_area, _mv_cfg, _mv_scale, _r,
+                                 _marker.x + _marker.width // 2)
+            assert _got == _zone, (
+                f"{_r['name']}: the {_zone} marker names {_got}")
+        # 1c. THE RUN IS FLUSH — no gap inside it. Each marker starts
+        #     where the previous group ended, so a short colony makes
+        #     a short row and the length keeps meaning something.
+        _edge = _boxes.markers[0][1].x
+        for _zone, _marker in _boxes.markers:
+            assert abs(_marker.x - _edge) <= _dt_track.gap, (
+                f"{_r['name']}: a gap opened before the {_zone} "
+                f"marker — the run must be unbroken")
+            _edge = _marker.x + _marker.width + _dt_track.gap
+            for _j, _k, _cell in _boxes.cells:
+                if _j == _zone:
+                    _edge = _cell.x + _cell.width + _dt_track.gap
+        # 1d. THE GROWTH BOXES FOLLOW ALL THREE GROUPS, past the gap
+        #     from layout.json — they belong to the colony, not a job.
+        if _boxes.growth:
+            _gap = int(_mv_cfg.get("growth_gap", 18) * _mv_scale)
+            assert _boxes.growth[0].x == _boxes.run_right + _gap, (
+                f"{_r['name']}: the growth boxes start at "
+                f"{_boxes.growth[0].x}, not {_boxes.run_right + _gap}")
+            assert _cl.drop_band(_mv_area, _mv_cfg, _mv_scale, _r,
+                                 _boxes.growth[0].centerx) is None, (
+                f"{_r['name']}: a growth box names a job")
         # 2. EVERY JOB HAS A TARGET, including one nobody holds.
         for _job, _rect in _targets:
             assert _rect.width >= 1, (
@@ -4611,9 +4681,12 @@ def main():
         for _a, _b in zip(_xs, _xs[1:]):
             assert _a[1] <= _b[0], (
                 f"{_r['name']}: targets overlap, {_xs}")
-        # 4. A PLACEHOLDER MOVES NO DRAWN CELL. The cells are laid out
-        #    by row_regions and the targets never write back to it.
-        assert _cl.row_regions(_r).runs == _regs.runs
+        # 4. NO JOB IS EVER EMPTY, so the empty-group placeholder
+        #    path cannot come back: the marker IS the placeholder.
+        for _job, _rect in _targets:
+            assert _rect.width >= _dt_track.unit, (
+                f"{_r['name']}: job {_job}'s target is thinner than a "
+                f"marker, which means a group without one")
         # 5. OUTSIDE EVERY TARGET IS None, and None is a state.
         assert _cl.drop_band(_mv_area, _mv_cfg, _mv_scale, _r,
                              _dt_x0 - 5) is None
@@ -4638,6 +4711,92 @@ def main():
     assert max(_dt_cols) == _dt_t[-1][1].x + _dt_t[-1][1].width - 1, (
         f"the outlines end at {max(_dt_cols)}, the targets at "
         f"{_dt_t[-1][1].x + _dt_t[-1][1].width - 1}")
+    # ── The identity letter, and the popup's two rules ───────────
+    # N on a native cell and nothing on the player's own, because
+    # over ninety per cent of cells are the second case and have to
+    # stay quiet. The letters for android and conquered rest on the
+    # source alone — see the split marking check above.
+    _idm = _mv_cfg.get("cell_marks", {})
+    assert _idm.get("native") == "N", _idm
+    for _kind in ("android", "conquered"):
+        assert _idm.get(_kind), f"no letter for {_kind}"
+    assert len(set(_idm.values())) == len(_idm), (
+        f"two identity classes share a letter: {_idm}")
+    assert not (set(_idm.values())
+                & set(_mv_cfg.get("marker_letters", []))), (
+        f"an identity letter collides with a job marker: {_idm} "
+        f"against {_mv_cfg.get('marker_letters')}. They sit in "
+        f"different boxes, but a reader should not have to know that")
+    _idr = dict(_dt_rows[1])          # Urna I's shape
+    _idr["cells"] = (("", "native", "native", "native"), (), ())
+    _marks = [_cl._cell_mark(_mv_cfg, _idr["cells"], 0, _k)
+              for _k in range(4)]
+    assert _marks == ["", "N", "N", "N"], _marks
+    assert _cl._cell_mark(_mv_cfg, _idr["cells"], 1, 0) == "", (
+        "a job with no cells produced a mark")
+
+    # THE POPUP OVERLAYS AND NEVER REFLOWS, so the rows it is drawn
+    # over must be exactly where they were without it — the list is
+    # the click frame (decision 46).
+    _pop_words = _scr_op._data.get("popup", {})
+    _pop_px = app.layout.font_size(_pop_words.get("font", 15))
+    _pop_before = _cl.row_bands(_mv_area, _mv_cfg, _mv_scale,
+                                len(_mv_rows))
+    _pop_ctl = _cmu.MoveController()
+    _pop_ctl.over = (0, 0)
+    _pop_surf = pygame.Surface((_mv_area.right + 8, _mv_area.bottom + 8))
+    _pop_rect = _pop_ctl.draw_popup(_pop_surf, _mv_rows, 0, _mv_area,
+                                    _mv_cfg, _mv_scale, app.style,
+                                    app.layout, _scr_op._data)
+    assert _pop_rect is not None, "the popup drew nothing at all"
+    assert _cl.row_bands(_mv_area, _mv_cfg, _mv_scale,
+                         len(_mv_rows)) == _pop_before, (
+        "the rows moved when the popup opened — it must overlay")
+    # IT STAYS INSIDE list_area, at every row, because the frame
+    # image is drawn after the content and would cover it otherwise.
+    for _i in range(len(_pop_before)):
+        _pop_ctl.over = (_i, 0)
+        _r = _cpop.rect_for(_mv_area, _mv_cfg, _mv_scale, _mv_rows[_i],
+                            0, _pop_before[_i], app.style, _pop_px,
+                            _pop_words)
+        assert _r is not None
+        assert _mv_area.contains(_r[0]), (
+            f"row {_i}: the popup at {_r[0]} leaves {_mv_area} — "
+            f"outside the cutout it is covered by the frame's metal")
+    # AND A ROW AT THE BOTTOM OF THE PANEL FLIPS IT ABOVE rather
+    # than off the panel. The fixture list is short, so the case is
+    # made rather than waited for: a band at the last row position
+    # `list_area` can hold, which is where a full list puts one.
+    _pop_h = _pop_before[0][1]
+    _bottom_band = (_mv_area.bottom - _pop_h, _pop_h)
+    _r_last = _cpop.rect_for(_mv_area, _mv_cfg, _mv_scale, _mv_rows[0],
+                             0, _bottom_band, app.style, _pop_px,
+                             _pop_words)[0]
+    assert _r_last.bottom <= _bottom_band[0], (
+        f"a row at the panel's bottom put its popup at {_r_last}, "
+        f"not above the row at y={_bottom_band[0]}")
+    assert _mv_area.contains(_r_last), (
+        f"the flipped popup at {_r_last} still leaves {_mv_area}")
+    # NO POPUP WHILE A SELECTION IS HELD. One rule, and it lives in
+    # the controller so a reader cannot find a second answer.
+    _pop_ctl.over = (0, 0)
+    _pop_ctl.pick = object()
+    assert _pop_ctl.draw_popup(_pop_surf, _mv_rows, 0, _mv_area,
+                               _mv_cfg, _mv_scale, app.style,
+                               app.layout, _scr_op._data) is None, (
+        "the popup opened while a pick was held — it would flicker "
+        "under the aiming gesture and cover the drop targets")
+    _pop_ctl.pick = None
+    _pop_ctl.hover(_mv_rows, 0, _mv_area.x + 5, _mv_area, _mv_cfg,
+                   _mv_scale)
+    _pop_ctl.pick = object()
+    _pop_ctl.hover(_mv_rows, 0, _mv_area.x + 5, _mv_area, _mv_cfg,
+                   _mv_scale)
+    assert _pop_ctl.over is None, (
+        "hovering while a pick is held set a popup target anyway")
+    ok("identity letters and the popup (N only on natives, overlay "
+       "not reflow, flips in the last row, none while a pick is held)")
+
     ok("drop targets follow the groups (every cell names its own job, "
        "every job has a target, the outline is the target)")
 
