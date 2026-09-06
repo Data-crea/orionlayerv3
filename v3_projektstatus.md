@@ -508,7 +508,7 @@ files under `doc/` and are only summarised here.
 | | |
 |---|---|
 | Python | 32,960 lines across 111 modules — `find . -name '*.py'`, `__pycache__` excluded, the smoke test's 6,400 included. The previous figure here (21,642 across 94) was carried from an unstated method and could not be reproduced |
-| Smoke test | `python tools/smoke_test.py` — **86 checks**, headless |
+| Smoke test | `python tools/smoke_test.py` — **89 checks**, headless |
 | Assets | 170 MB (select_race 68, galaxy_map 51, shared 23, new_game 21, colony_summary 1) |
 | Screens in HD | 7 of ~20–22 (colony summary draws list, sidebar, scan box and galaxy inset, and MOVES POPS — the first HD gesture that drives the game) |
 | Setup from clone | `python tools/setup.py` (deps via the system package manager) |
@@ -718,6 +718,8 @@ to stay uncomfortable to extend.
     ├── help_extract.py           171  HELP.LBX -> help_<lang>.json
     ├── ext_diag.py               473  Extension API diagnostics
     ├── ext_diag_race.py          228  Race screen field diagnostics
+    ├── frame_mask.py              77  layout_reference.json -> one
+    │                                  window mask per resolution
     ├── nebula_extract.py         100  Pull nebula sprites from LBX
     ├── raceicon_extract.py       297  RACEICON.LBX -> the population
     │                                  figures per race and one named
@@ -3029,6 +3031,111 @@ help-file lesson, one domain over.
 
 Zhadoom III (14 pops) is the widest row in either fixture and is
 therefore the narrowest-cell case any picture has to survive.
+
+### The colony rebuild, Stage 1: layout as data — 6 September 2026
+
+`screens/colony_summary/layout_reference.json` is the **one place**
+the rebuilt screen's rectangles are typed, and `tools/frame_mask.py`
+renders them into one window mask per supported resolution. The frame
+artwork is drawn from the 1080p mask, `frame_holes.py` will derive
+the cutouts back out of the artwork, and `boxes.json` is asserted
+against both — decision 3's chain, with a committed JSON at the top
+of it and everything below generated (decision 40; the masks are in
+`.gitignore`).
+
+**The arithmetic holds.** 300 + 394x3 + 314 + 36 = 1832, which is the
+list's own width exactly — the columns ARE the list, with no slack to
+distribute, unlike the single-track row where six floor divisions
+dropped pixels that had to be given to the name column. Every window
+sits inside the 36 px bezel, asserted as the rule rather than as a
+list of coordinates. And the mask rounds with `Layout.rect`'s own
+truncation rather than a second rounding rule, checked at all three
+resolutions — that is the class of one-pixel disagreement decision 3
+exists to make impossible.
+
+**The inset box is confirmed and the crop is the coverage.** 253 x
+200 against the original's coverage aspect of 1.2651 — which is the
+same at every galaxy size, because both divisors in
+`Draw_Galaxy_Map_Box_` are constants and `_max_map_scale` cancels. So
+the crop fills the box with **no letterbox at any size, Maximum
+included**; the earlier expectation that Maximum letterboxes is
+WITHDRAWN and only held if the crop were the galaxy rather than the
+original's reach. At 3840x2160 the box is 506 x 400 device px, the
+small galaxy's own world extent at 1:1.
+
+**Two markings, three homes each.**
+
+- **HD EXTENSION — the inset's scale is fixed and off the rung
+  ladder.** As a `map_scale` it sits at `2M`: 20, 30, 40, 60, 72, and
+  three of the five are not values `zoomtables.scale_rungs` can stand
+  on. The reason is *not* "between rungs" — the inset does not zoom
+  at all, so it never stands on one, and the two sizes that land on a
+  rung do so by arithmetic coincidence. Milder than `hd_zoom_level`,
+  which interpolates a ladder the original does stand on. In
+  `colonyinset.py`, `layout.json`'s `inset._geometry_note`, here, and
+  a check.
+- **DEVIATION — isotropic where the original is not.** The original
+  compresses y by a constant 3953/4395 = 0.89943, so an isotropic HD
+  inset is not the original's picture scaled but its COVERAGE
+  re-projected without the squash: every constellation is **11.2 %
+  taller relative to its width**. Chosen because a galaxy is a shape,
+  the same argument that already refuses stretching the map to fill
+  the hole. Same four homes.
+
+**And the 286 px reading is gone.** `inset._geometry_note` recorded
+it — the original's own 128 x 91 picture scaled uniformly, which
+keeps the squash — against the isotropic reading's 257 px of content
+in the same box. An 11 % difference from the same data, and the tree
+may hold one of the two. The numbers live in
+`doc/colony_inset_geometry.md` 3.5 and are deliberately not repeated
+in the note; the check that used to hold the note to `451`,
+`128 x 91` and `LETTERBOXED` now holds it to the decided reading and
+fails if `286` comes back.
+
+**The star dot is odd, and the requirement picks it.** The acceptance
+is that the computed star pixel is the CENTRE of the drawn dot at all
+three resolutions — and an even dot has no centre pixel, so the
+position could only be placed half a pixel off and the property would
+stop being checkable. `zoomtables.INSET_DOT_DIM` is **5 / 7 / 11**,
+the nearest odd number to the derived 5.93 / 7.91 / 11.86, as a
+DERIVED table with `INSET_DOT_TARGET` beside it in the form
+`NEBULA_DIM` uses. The cost, stated: the dot does not scale with the
+layout (1.0 / 1.4 / 2.2 against 1.0 / 1.333 / 2.0) and runs up to
+10 % large at 2160p — less than the half pixel it buys. The check
+**renders** a dot at each size and reads its ink back, so the
+centring is asserted on the picture.
+
+**`zoomtables.FIGURE_STEP` is 2 / 3 / 4**, also an HD EXTENSION: a
+figure is 28 px native, and the proportional answer is fractional
+from either end — 2.667 against the layout scales, or 2.25 and 4.5
+against the original's own 640 x 480 — and in one axis only, which
+would make the figure anisotropic as well. Integer steps put the
+deviation in the SIZE instead of in the pixels: 56 / 84 / 112 against
+the proportional 63 / 84 / 126, exact at 1440p and 11 % small at the
+other two.
+
+**A new check, and it caught something on its first run.** The
+fundament asks a marking to live in its module, in this document and
+in a check. The third home is the one that rots: a check greps a
+FILE, and a marking that moves to a file no check reads goes on being
+true and stops being watched. The marker inventory now walks the tree
+for `HD EXTENSION` and `DEVIATION`, and fails if a file carries one
+and is not declared — or is declared and no longer carries one. On
+its first run it failed on `layout_reference.json`, whose figure-step
+marking had gone in minutes earlier with nothing reading the file.
+
+**Three of `doc/pop_stacking.md`'s seven open questions are closed**,
+by Data at this stop: HD reproduces the original's overlap with the
+squish formula transcribed and multiplied by the integer figure step,
+so no replacement formula arises; the extra HD width goes into the
+building column's reservation and never into wider figure spacing
+(any wider spacing later is a marked HD EXTENSION, not the default);
+and the drop target and popup anchor move to the FIGURE SLOT under
+one geometry function, while **the identity letter is dropped** —
+the original's own sprite carries identity, which is exactly what the
+single-track row could not do and what the letter was invented for.
+
+86 -> 89 checks.
 
 ### The population figures come out of RACEICON.LBX — 6 September 2026
 

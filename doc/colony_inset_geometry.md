@@ -502,13 +502,34 @@ read from an LBX header are how that table is already sourced, and
 the 3 px never touches the world geometry — 3.1 and 3.2 are computed
 without it.
 
-**One open question, not decided here.** 6 is even, so the dot has no
-centre pixel, while the original's 3 has one and is drawn at
-`(sx - 1, sy - 1)` so that the computed pixel IS the centre (1.5).
-A 5 or 7 px dot keeps a centre; 6 does not. Whether the HD dot should
-be odd-sized, and take the half-pixel error on its size instead of on
-its position, is an artwork decision with a measurement on both
-sides.
+**Decided 6 September 2026: ODD, and the requirement picks it, not
+taste.** The acceptance is that the computed star pixel is the CENTRE
+of the drawn dot at all three resolutions — and an even dot has no
+centre pixel, so the position could only be placed half a pixel off
+and "the star is drawn where the transform says" would stop being
+checkable at all. What is left is which odd number is nearest, per
+resolution, because one reference number cannot stay odd through
+1.0 / 1.333 / 2.0:
+
+| resolution | target | nearest odd | error |
+|---|---:|---:|---:|
+| 1920 x 1080 | 5.93 | **5** | -0.93 (7 would be +1.07) |
+| 2560 x 1440 | 7.91 | **7** | -0.91 (9 would be +1.09) |
+| 3840 x 2160 | 11.86 | **11** | -0.86 (13 would be +1.14) |
+
+`core/zoomtables.INSET_DOT_DIM`, a DERIVED table with the derivation
+beside it in the form `NEBULA_DIM` uses, and `INSET_DOT_TARGET` keeps
+what it was rounded from so the choice can be re-checked without
+being re-derived. The placement rule is one function,
+`inset_dot_origin(centre, dim) = centre - (dim - 1) // 2`, which is
+`sx - 1` for the original's 3 px (movebox.cpp:103) and generalises it.
+
+**The cost, stated:** 5 / 7 / 11 is 1.0 / 1.4 / 2.2 where the layout
+is 1.0 / 1.333 / 2.0, so the dot runs up to 10 % large at 2160p
+relative to 1080p. That is what a centre pixel at every resolution
+costs, and it is less than the half pixel it buys. A smoke check
+renders a dot at each size and reads its ink back, so the centring is
+asserted on the picture and not on the arithmetic that produced it.
 
 ### 3.7 Summary for the rebuild
 

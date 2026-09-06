@@ -1,0 +1,34 @@
+{
+  "_note": "THE COLONY MANAGEMENT SCREEN'S GEOMETRY, AND THE ONLY PLACE IT IS TYPED. Every rectangle is in the 1920x1080 reference space (core/layout.py). tools/frame_mask.py reads this file and renders one mask per supported resolution; the frame artwork is drawn from the 1080p mask, tools/frame_holes.py derives the cutout boxes from the artwork, and a smoke check asserts holes == mask == boxes.json at every resolution (decision 3). So a rectangle changes HERE and nowhere else, and everything downstream is generated - decision 1 and decision 40. These are Data's design inputs of 6 September 2026; where a number is derived rather than chosen, the derivation is in the _*_note beside it.",
+
+  "bezel": 36,
+  "_bezel_note": "The metal border outside every window. 36 reference px at 1080p. It is not a rectangle in the list below because nothing is drawn into it - it is what the frame artwork occupies where no window is cut.",
+
+  "header": [44, 44, 1832, 48],
+  "list": [44, 100, 1832, 660],
+
+  "list_columns": {
+    "name": 300,
+    "farmers": 394,
+    "workers": 394,
+    "scientists": 394,
+    "building": 314,
+    "scroll": 36
+  },
+  "_list_columns_note": "300 + 394*3 + 314 + 36 = 1832, which is the list's own width exactly - the columns are the list, with no slack to distribute (contrast the old single-track row, where six floor divisions dropped pixels that had to be given to the name column). PROVISIONAL until doc/pop_stacking.md's open questions are closed: the figure columns must fit at least as many unsquished figures as the original's 128 px does at the chosen figure scale. THE BUILDING COLUMN IS DERIVED, NOT CHOSEN: the original prints the producing text with BILL::Squeeze_Print_Formatted_Paragraph_(0x200, y, 0x55, 0x16, ...) at colsum.cpp:621 - 85 px of a 640 px screen, 13.3 % - and 13.3 % of 1832 is 244. 314 is wider than the transcription requires; the surplus is the extra HD width that Data's Stage 1 decision sends to the column reservation rather than to wider figure spacing. See colonybuild.py for why the width is a RESERVATION and never a squeeze target.",
+
+  "planet_info": [44, 776, 320, 220],
+  "planet_output": [376, 776, 883, 220],
+  "galaxy_inset": [1271, 786, 253, 200],
+  "empire_stats": [1556, 776, 320, 220],
+  "_lower_band_note": "Four boxes, flush at 44 on the left and 1876 on the right, with gaps 12, 12 and 32. THE 32 IS NOT A TYPO AND NOT SYMMETRY: 44 + 320 + 12 + 883 + 12 + 253 + 32 + 320 = 1876. The inset is 20 px shorter than its neighbours and is centred against them (776 + (220-200)/2 = 786), because its height is fixed by its own aspect and not by the band.",
+  "_galaxy_inset_note": "253 x 200 IS DERIVED AND CONFIRMED - doc/colony_inset_geometry.md Part 3. The original's inset covers 50.6*M x 40*M world units, whose aspect is 1.2651 at EVERY galaxy size because both divisors are constants and M cancels (movebox.cpp:20-21). 253/200 = 1.2650 against that, so the crop fills the box with no letterbox at any size INCLUDING orion2re's Maximum - the earlier expectation that Maximum letterboxes is WITHDRAWN, and it only did so if the crop were the galaxy rather than the original's coverage. The scale that follows is exactly 5/M reference px per world unit. At 3840x2160 the box is 506 x 400 device px, which is the small galaxy's own world extent at 1:1.",
+
+  "sort_bar": [44, 1008, 1532, 32],
+  "return_button": [1588, 1008, 288, 32],
+
+  "figure_scale": {"1920x1080": 2, "2560x1440": 3, "3840x2160": 4},
+  "_figure_scale_note": "INTEGER STEPS, and that is the whole reason the table exists. A population figure is 28 x 28 native px (RACEICON.LBX, every people entry), and the layout scales are 1, 4/3 and 2 - so proportional scaling would want 2, 2.667 and 4, and 2.667 is not an integer. Nearest-neighbour at a fractional step invents pixels the original does not have, which a reference figure may not do. 2 / 3 / 4 gives 56 / 84 / 112 px. The list height of 660 assumes the 1080p step is 2; at 3 the list grows and the lower band shrinks, and THIS FILE is the only place that changes. Marked HD EXTENSION in core/zoomtables.py.",
+
+  "_resolutions": ["1920x1080", "2560x1440", "3840x2160"]
+}

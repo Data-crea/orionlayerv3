@@ -65,6 +65,16 @@ screens/galaxy_map/assets/nebula_ref/
 # it absent.
 screens/colony_summary/assets/raceicon_ref/
 
+# The colony screen's window masks, rendered from
+# layout_reference.json by tools/frame_mask.py. Generated, so
+# decision 40 keeps them out: the licence is that regenerating
+# reproduces them byte for byte, and a smoke check asserts exactly
+# that. The frame artwork is DRAWN from the 1080p mask, so the mask
+# is an input to a human step and still not a committed file — the
+# rectangle it comes from is committed, which is the thing that has
+# to survive.
+screens/colony_summary/assets/frame_masks/
+
 # --- Local state ---
 # settings.json is NOT ignored: it holds window size, skin, language
 # and the localhost port, no secrets, and `load_settings()` falls back

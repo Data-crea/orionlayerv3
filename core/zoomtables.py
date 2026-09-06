@@ -199,6 +199,93 @@ MAP_MAX_X_PER_SCALE = 50.6
 MAX_ZOOM_BY_SCALE = {10: 0, 15: 1, 20: 2, 30: 3}
 
 
+#: ── THE COLONY SUMMARY'S OWN TWO TABLES ────────────────────
+#:
+#: Both are **HD EXTENSIONS** and neither is a rung of anything
+#: above. They live here because this is where a size a renderer may
+#: use is allowed to come from, and because a literal in a draw call
+#: is a defect.
+
+#: The population figure's integer step, per resolution.
+#: **HD EXTENSION, DERIVED.**
+#:
+#: A figure is 28 x 28 native px — every people entry of
+#: RACEICON.LBX carries that header, and `raceicon_ref/summary.txt`
+#: is the receipt. The layout scales are 1, 4/3 and 2
+#: (`core/layout.py`, min(w/1920, h/1080)), so a step of 2 at 1080p
+#: scales to 2.667 and 4 — and **2.667 is not an integer**. Read the
+#: other way round, against the original's own screen, 1920/640 is 3
+#: and 1080/480 is **2.25**, 3840/640 is 6 and 2160/480 is **4.5**:
+#: the proportional answer is fractional whichever end it is taken
+#: from, and in one axis only, which would also make the figure
+#: anisotropic.
+#:
+#: Nearest-neighbour at a fractional step invents pixels the original
+#: does not have, and a reference figure may not do that. So the
+#: steps are integers and the deviation is in the SIZE rather than in
+#: the pixels: 56 / 84 / 112 px against the proportional 63 / 84 /
+#: 126. 1440p is exact; 1080p draws 11 % small and 2160p 11 % small.
+#:
+#: `screens/colony_summary/layout_reference.json` holds the same
+#: table as a design input and its list height depends on it — that
+#: file is where a change is made, and this is where a renderer reads
+#: it.
+FIGURE_STEP = {"1920x1080": 2, "2560x1440": 3, "3840x2160": 4}
+
+#: The galaxy inset's star dot, per resolution, in device pixels.
+#: **HD EXTENSION, DERIVED — and ODD BY REQUIREMENT.**
+#:
+#: The original's inset star is not on any axis above: `gstar.lbx`
+#: entries 23..32 are 3 x 3 with 8 frames whatever the galaxy size
+#: and whatever the zoom (`COLONY::Load_Galaxy_Map_Anims_`,
+#: colony.cpp:329-339), where `STAR_FIELDS_DIM` and
+#: `star_dimension()` answer about the galaxy map's zoom levels.
+#: There is no rung to read, so the size is derived.
+#:
+#: The derivation, in world units, from `doc/colony_inset_geometry.md`
+#: Part 3: the original's dot is 3 native px, which is
+#: `3 * M * 3953/10000` world units wide and `3 * M * 4395/10000`
+#: tall; at the HD inset's scale of `5/M` reference px per world unit
+#: that is **5.93 x 6.59 reference px at every galaxy size** — M
+#: cancels, which is the same statement as "the original's dot is a
+#: fixed 3 px whatever the size". Times the layout scale: 5.93, 7.91,
+#: 11.86.
+#:
+#: **ODD, AND NOT BY TASTE.** The original draws the dot at
+#: `(sx - 1, sy - 1)` (movebox.cpp:103) so that the computed pixel IS
+#: the centre — a 3 px dot has one. An even size has no centre pixel,
+#: so the computed star position could only be placed half a pixel
+#: off, and "the star is drawn where the transform says" would stop
+#: being checkable. The requirement therefore picks the size, and
+#: what is left is which odd number is nearest: 5 over 7 (0.93 against
+#: 1.07), 7 over 9 (0.91 against 1.09), 11 over 13 (0.86 against
+#: 1.14).
+#:
+#: The consequence, stated rather than hidden: the dot does NOT scale
+#: with the layout. 5 / 7 / 11 is 1.0 / 1.4 / 2.2 where the layout is
+#: 1.0 / 1.333 / 2.0, so the dot is up to 10 % large at 2160p
+#: relative to 1080p. That is the price of a centre pixel at every
+#: resolution, and it is smaller than the half-pixel it buys.
+INSET_DOT_DIM = {"1920x1080": 5, "2560x1440": 7, "3840x2160": 11}
+
+#: What INSET_DOT_DIM was rounded FROM, kept beside it so the choice
+#: can be re-checked without re-deriving it — the same reason
+#: NEBULA_DIM keeps its zoom columns.
+INSET_DOT_TARGET = {"1920x1080": 5.93, "2560x1440": 7.91,
+                    "3840x2160": 11.86}
+
+
+def inset_dot_origin(centre, dim):
+    """Top-left of a dot of `dim` px whose CENTRE pixel is `centre`.
+
+    `movebox.cpp:103` draws at `(sx - 1, sy - 1)` for a 3 px sprite,
+    which is `(dim - 1) // 2`. One function so the renderer and the
+    check cannot disagree about where a dot goes — decision 5, in the
+    smallest thing it applies to.
+    """
+    return centre - (int(dim) - 1) // 2
+
+
 def max_map_scale(map_max_x):
     """Recover MOX::_max_map_scale from MAP_MAX_X.
 

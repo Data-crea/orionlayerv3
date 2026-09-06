@@ -11,6 +11,30 @@ The positions and the colour rule are in `colonyrows`, with this
 screen's seam: all struct reading lives there and this module is
 handed plain tuples.
 
+**TWO MARKINGS DECIDED ON 6 SEPTEMBER 2026, ahead of the geometry
+they describe** — `doc/colony_inset_geometry.md` Part 3, and
+`layout.json`'s `inset._geometry_note` carries the same two:
+
+**HD EXTENSION — the inset's scale is fixed and off the rung
+ladder.** As a `map_scale` it sits at `2M`: 20, 30, 40, 60, 72 for
+the five galaxy sizes, three of which `zoomtables.scale_rungs`
+cannot stand on. The reason is not "between rungs" — **the inset
+does not zoom at all**, so it never stands on one, and the two sizes
+that land on a rung do so by arithmetic coincidence.
+
+**DEVIATION — isotropic where the original is not.** The original
+compresses y by a constant `3953 / 4395 = 0.89943`
+(movebox.cpp:20-21). An isotropic HD inset is therefore not the
+original's picture scaled but its COVERAGE re-projected without the
+squash, and every constellation is 11.2 % taller relative to its
+width. Chosen because a galaxy is a shape.
+
+**Neither is implemented here yet.** The box is still the old
+451 x 203 and this module still letterboxes the original's own
+picture through `MapView`; the rebuild's Stage 4 replaces both. That
+is a debt with a date on it, not a second opinion about what the
+right picture is.
+
 **THE SPRITE IS MEASURED, because it cannot be shipped.** view_mode 3
 draws `MOX::_colony_galaxy_star_seg[color_idx]` at (sx - 1, sy - 1)
 (movebox.cpp:99-102), and those are gstar.lbx entries 23..32

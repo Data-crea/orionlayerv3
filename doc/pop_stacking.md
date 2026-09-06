@@ -494,10 +494,30 @@ against pixels rather than against a re-reading of the same source.
 
 ---
 
-## 9. Open for HD
+## 9. Open for HD — **three of seven answered, 6 September 2026**
 
-Questions the rules leave open. No recommendation is made here; each
-of these is a decision with costs on both sides.
+Questions the rules leave open. No recommendation was made here; the
+answers below are Data's, taken at the colony-rebuild Stage 1 stop,
+and they are recorded rather than argued.
+
+> **1. Reproduce the overlap.** The squish formula is TRANSCRIBED —
+> computed in native units, then multiplied by the same integer step
+> the sprites are (`zoomtables.FIGURE_STEP`, 2 / 3 / 4). The extra
+> HD width goes into the COLUMN RESERVATION (`colonybuild`), not into
+> wider figure spacing. Any wider spacing later is a marked HD
+> EXTENSION and never the default.
+>
+> **2. Therefore no replacement formula.** Question 2 does not arise.
+>
+> **5. The drop target and the popup anchor move to the FIGURE
+> SLOT**, and one geometry function serves the draw, the hit test and
+> the popup (decision 5). **The identity letter is dropped** — the
+> original's own sprite carries identity, which is exactly what the
+> single-track row could not do and what the letter was invented for.
+> Which field gives the race index for a conquered pop is settled at
+> the sprites-assets brief's stop, not here.
+
+The remaining four stand as written.
 
 1. **Reproduce the overlap, or use the HD width?** The original
    overlaps because 640x480 gave it 115 px for up to 42 figures. An

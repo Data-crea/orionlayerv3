@@ -3640,10 +3640,26 @@ def main():
             f"inset._deviation_note no longer carries {_cite!r} — the "
             f"sprite is not shipped, the colours are the skin's, and "
             f"three of the ten were never measured")
-    for _cite in ("451", "128 x 91", "LETTERBOXED", "MapView",
-                  "artwork decision"):
+    # THE NOTE'S SUBJECT CHANGED ON 6 SEPTEMBER 2026 AND SO DID THIS
+    # CHECK. It used to hold the note to the 451 x 203 box and the
+    # 286 px reading — the original's own 128 x 91 picture scaled
+    # uniformly, which keeps the original's 0.89943 vertical squash.
+    # The rebuild's decided reading is 253 x 200, isotropic, scale
+    # 5/M, no letterbox at any galaxy size, and the two readings
+    # differ by 11 % of content width from the same data. Keeping the
+    # old citations would have held the note to the reading that was
+    # withdrawn, which is worse than not checking it.
+    for _cite in ("253 x 200", "50.6*M", "NO LETTERBOX AT ANY SIZE",
+                  "HD EXTENSION", "DEVIATION", "0.89943",
+                  "decision 44"):
         assert _cite in _icfg["_geometry_note"], (
             f"inset._geometry_note no longer carries {_cite!r}")
+    # AND THE 286 READING MAY NOT COME BACK. Two readings of one
+    # inset in one tree is what this note used to be.
+    assert "286" not in _icfg["_geometry_note"], (
+        "the 286 px reading is back in inset._geometry_note — that is "
+        "the anisotropy-preserving reading the isotropic decision "
+        "replaced, and the tree may hold one of the two")
     for _cite in ("movebox.cpp:98-101", "colsum.cpp:69-75",
                   "colsum.cpp:731", "_cluster_colony_n"):
         assert _cite in _icfg["_not_drawn_note"], (
@@ -3722,6 +3738,211 @@ def main():
 
     ok("colony_summary galaxy_inset (transform, the four colour "
        "branches, uniform-scale geometry, markings, sends nothing)")
+
+    # ── The rebuild's layout reference, and the mask cut from it ──
+    #
+    # layout_reference.json is the ONE place the new screen's
+    # rectangles are typed; tools/frame_mask.py renders them, the
+    # frame artwork is drawn from the 1080p render, frame_holes.py
+    # derives the cutouts back out of the artwork and boxes.json is
+    # asserted against both (decision 3). This checks the end of that
+    # chain that exists today: the file's own arithmetic, and that
+    # rendering it twice gives the same pixels.
+    import importlib.util as _ilu2
+    _proj = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    _fm_spec = _ilu2.spec_from_file_location(
+        "_frame_mask", os.path.join(_proj, "tools", "frame_mask.py"))
+    _fm = _ilu2.module_from_spec(_fm_spec)
+    _fm_spec.loader.exec_module(_fm)
+    _lr_path = os.path.join(SCREENS_DIR, "colony_summary",
+                            "layout_reference.json")
+    _lr, _lr_windows = _fm.load_reference(_lr_path)
+
+    # The reference space is the app's, not a second copy of it.
+    from core.config import REF_W as _REF_W, REF_H as _REF_H
+    assert (_fm.REF_W, _fm.REF_H) == (_REF_W, _REF_H), (
+        f"frame_mask works in {_fm.REF_W}x{_fm.REF_H} and the app in "
+        f"{_REF_W}x{_REF_H}")
+
+    # THE COLUMNS ARE THE LIST. No slack to distribute, unlike the
+    # single-track row where six floor divisions dropped pixels that
+    # had to be given away.
+    assert sum(_lr["list_columns"].values()) == _lr["list"][2], (
+        f"list_columns sum to {sum(_lr['list_columns'].values())}, the "
+        f"list is {_lr['list'][2]} wide")
+
+    # EVERY WINDOW IS INSIDE THE BEZEL. Asserted as the rule and not
+    # as a list of coordinates, so a new rectangle obeys it too.
+    _bez = _lr["bezel"]
+    for _name, (_x, _y, _w, _h) in _lr_windows.items():
+        assert _x >= _bez and _y >= _bez, f"{_name} starts inside the bezel"
+        assert _x + _w <= _REF_W - _bez and _y + _h <= _REF_H - _bez, (
+            f"{_name} runs under the bezel: {_x + _w} x {_y + _h} against "
+            f"{_REF_W - _bez} x {_REF_H - _bez}")
+
+    # THE INSET'S ASPECT IS THE ORIGINAL'S COVERAGE, to a thousandth.
+    # movebox.cpp:20-21: the crop is 128*(506000//128) by
+    # 91*(400000//91) world units times M/10000, and M cancels.
+    _ix, _iy, _iw, _ih = _lr["galaxy_inset"]
+    _crop = (128 * (506000 // 128)) / (91 * (400000 // 91))
+    assert abs(_iw / _ih - _crop) < 0.001, (
+        f"the inset box is {_iw / _ih:.4f} against the original's "
+        f"coverage aspect {_crop:.4f} — a letterbox at every galaxy "
+        f"size is the cost, and Part 3 says there is none")
+    # 3840x2160 makes it the small galaxy's world extent at 1:1.
+    assert (_iw * 2, _ih * 2) == (506, 400), (_iw * 2, _ih * 2)
+
+    # RENDERING IS REPRODUCIBLE, which is the licence to gitignore it
+    # (decision 40): the same rectangles rendered twice are the same
+    # pixels, and the device rects come from Layout's own truncation
+    # rather than a second rounding rule.
+    for _spec in _lr["_resolutions"]:
+        _rw, _rh = (int(v) for v in _spec.split("x"))
+        _img_a, _rects_a = _fm.render(_lr_windows, _rw, _rh)
+        _img_b, _rects_b = _fm.render(_lr_windows, _rw, _rh)
+        assert _img_a.tobytes() == _img_b.tobytes(), f"{_spec} not stable"
+        assert _rects_a == _rects_b
+        _lay = Layout(_rw, _rh)
+        for _name, _rect in _lr_windows.items():
+            assert tuple(_rects_a[_name]) == _lay.rect(_rect), (
+                f"{_spec} {_name}: the mask says {_rects_a[_name]} and "
+                f"Layout.rect says {_lay.rect(_rect)} — the mask and "
+                f"the running screen must round identically")
+        # Only two values, and white is a window. A soft edge would
+        # need a threshold nobody wrote down.
+        assert set(_img_a.getdata()) <= {_fm.WINDOW, _fm.METAL}, (
+            f"{_spec}: the mask has more than two values")
+    ok("colony rebuild layout reference (columns are the list, every "
+       "window inside the bezel, inset aspect = the original's "
+       "coverage, mask rounds exactly as Layout does)")
+
+    # ── The two colony tables in zoomtables ──
+    #
+    # THE DOT IS ODD BY REQUIREMENT, not by taste. The original draws
+    # its 3 px dot at (sx - 1, sy - 1) so the computed pixel IS the
+    # centre (movebox.cpp:103); an even size has no centre pixel, so
+    # "the star is drawn where the transform says" would stop being
+    # checkable. This asserts the property on a RENDER rather than on
+    # the arithmetic that produced it.
+    from core import zoomtables as _zt2
+    assert set(_zt2.INSET_DOT_DIM) == set(_lr["_resolutions"])
+    assert set(_zt2.FIGURE_STEP) == set(_lr["_resolutions"])
+    assert _zt2.FIGURE_STEP == _lr["figure_scale"], (
+        f"zoomtables.FIGURE_STEP {_zt2.FIGURE_STEP} and "
+        f"layout_reference.figure_scale {_lr['figure_scale']} disagree")
+    for _spec, _dim in _zt2.INSET_DOT_DIM.items():
+        assert _dim % 2 == 1, (
+            f"{_spec}: a {_dim} px dot has no centre pixel, so the "
+            f"computed star position cannot be its centre")
+        # Rendered, then read back: place the dot by the module's own
+        # origin rule and measure where its ink actually is.
+        _cx, _cy = 40, 30
+        _dot = pygame.Surface((80, 60))
+        _dot.fill((0, 0, 0))
+        _dot.fill((255, 255, 255), pygame.Rect(
+            _zt2.inset_dot_origin(_cx, _dim),
+            _zt2.inset_dot_origin(_cy, _dim), _dim, _dim))
+        _arr = pygame.surfarray.array3d(_dot).sum(axis=2)
+        _xs = [x for x in range(80) if _arr[x].any()]
+        _ys = [y for y in range(60) if _arr[:, y].any()]
+        assert (min(_xs) + max(_xs)) / 2 == _cx and \
+               (min(_ys) + max(_ys)) / 2 == _cy, (
+            f"{_spec}: a {_dim} px dot placed for centre "
+            f"({_cx}, {_cy}) inks x {min(_xs)}..{max(_xs)} y "
+            f"{min(_ys)}..{max(_ys)}, whose centre is "
+            f"({(min(_xs) + max(_xs)) / 2}, {(min(_ys) + max(_ys)) / 2})")
+        assert len(_xs) == _dim and len(_ys) == _dim
+        # And it is the NEAREST odd number to the derivation, so the
+        # table cannot drift from what Part 3 computed.
+        _target = _zt2.INSET_DOT_TARGET[_spec]
+        assert abs(_dim - _target) < 1.5 and \
+            abs(_dim - _target) <= abs(_dim + 2 - _target) and \
+            abs(_dim - _target) <= abs(_dim - 2 - _target), (
+            f"{_spec}: {_dim} is not the nearest odd number to "
+            f"{_target}")
+    # The original's own rule, which the HD one generalises.
+    assert _zt2.inset_dot_origin(50, 3) == 49, "movebox.cpp:103 is sx - 1"
+    ok("colony inset dot + figure step (odd by requirement, centred on "
+       "the computed pixel at all three resolutions, nearest to the "
+       "derivation, and the figure step matches layout_reference)")
+
+    # ── THE MARKER INVENTORY ──────────────────────────────────
+    #
+    # The fundament's rule is that a marked invention says so in its
+    # module, in the status document AND in a check that fails if the
+    # marking disappears. The third home is the one that rots: a
+    # check greps a FILE, and a marking that moves to a file no check
+    # reads goes on being true and stops being watched. Nothing in
+    # the tree could see that happen.
+    #
+    # So this is the inventory. Every file carrying an HD EXTENSION
+    # or DEVIATION marking must be listed here with one string that
+    # has to survive in it. A marking added to a new file fails until
+    # it is declared; a marking deleted from a declared file fails
+    # too. It does not replace the per-subject checks above — those
+    # assert what the marking SAYS — it asserts that no marking is
+    # unwatched.
+    #
+    # smoke_test.py itself is excluded and only it: a check that
+    # quotes the words it looks for would otherwise have to declare
+    # itself, and the exclusion is by exact path so a marking in any
+    # other tool is still caught.
+    _MARKED = {
+        "core/helppopup.py": "the panel auto-sizes to its text",
+        "core/zoomtables.py": "INSET_DOT_DIM",
+        "screens/colony_summary/colonybuild.py": "Buy",
+        "screens/colony_summary/colonyempire.py": "decision 44",
+        "screens/colony_summary/colonyinset.py": "isotropic",
+        "screens/colony_summary/colonylist.py": "identity",
+        "screens/colony_summary/colonymoveui.py": "discard",
+        "screens/colony_summary/colonyoutput.py": "decision 43",
+        "screens/colony_summary/colonypick.py": "partial",
+        "screens/colony_summary/colonyrows.py": "layout.json",
+        "screens/colony_summary/colonytrack.py": "marker",
+        "screens/colony_summary/layout.json": "_hd_extension_markers",
+        # Caught by this check on its first run, which is the whole
+        # point of it: the figure step's marking went in with Stage 1
+        # and nothing was reading the file it went into.
+        "screens/colony_summary/layout_reference.json": "figure_scale",
+        "screens/colony_summary/screen.py": "cancel",
+    }
+    _MARKS = ("HD EXTENSION", "DEVIATION")
+    _SELF = os.path.join("tools", "smoke_test.py")
+    _found = {}
+    for _dirpath, _dirnames, _filenames in os.walk(_proj):
+        _dirnames[:] = [d for d in _dirnames
+                        if d not in ("__pycache__", ".git", ".venv", "venv")]
+        for _fn in _filenames:
+            if not _fn.endswith((".py", ".json")):
+                continue
+            _full = os.path.join(_dirpath, _fn)
+            _rel = os.path.relpath(_full, _proj)
+            if _rel == _SELF:
+                continue
+            try:
+                _text = open(_full, encoding="utf-8").read()
+            except (UnicodeDecodeError, OSError):
+                continue
+            if any(_m in _text for _m in _MARKS):
+                _found[_rel.replace(os.sep, "/")] = _text
+    _undeclared = sorted(set(_found) - set(_MARKED))
+    _stale = sorted(set(_MARKED) - set(_found))
+    assert not _undeclared, (
+        f"these files carry an HD EXTENSION or DEVIATION marking that "
+        f"no check reads: {_undeclared}. Add the marking's own check, "
+        f"then list the file in _MARKED — the inventory is the net, "
+        f"not the check")
+    assert not _stale, (
+        f"these files are listed as carrying a marking and no longer "
+        f"do: {_stale}. Either the marking was removed, in which case "
+        f"the status document says so too, or it moved to a file the "
+        f"inventory does not know about")
+    for _rel, _cite in _MARKED.items():
+        assert _cite in _found[_rel], (
+            f"{_rel} still carries a marking but no longer says "
+            f"{_cite!r} — the marking survived and its subject did not")
+    ok(f"marker inventory ({len(_MARKED)} files carry an HD EXTENSION "
+       f"or DEVIATION and every one of them is read by a check)")
 
     # ── The pop-movement rules, mirrored (decision 33) ──
     # Four drop rules plus a refusal at the pick-up, each asserted
