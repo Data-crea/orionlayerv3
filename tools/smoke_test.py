@@ -3757,6 +3757,8 @@ def main():
     _lr_path = os.path.join(SCREENS_DIR, "colony_summary",
                             "layout_reference.json")
     _lr, _lr_windows = _fm.load_reference(_lr_path)
+    import numpy as np
+    from PIL import Image as _PILImage
 
     # The reference space is the app's, not a second copy of it.
     from core.config import REF_W as _REF_W, REF_H as _REF_H
@@ -3771,14 +3773,74 @@ def main():
         f"list_columns sum to {sum(_lr['list_columns'].values())}, the "
         f"list is {_lr['list'][2]} wide")
 
-    # EVERY WINDOW IS INSIDE THE BEZEL. Asserted as the rule and not
-    # as a list of coordinates, so a new rectangle obeys it too.
-    _bez = _lr["bezel"]
+    # ── THE RING, AND THE CHECKER A HAND-COPIED NUMBER GETS ──
+    #
+    # `bezel: 36` was one number for a border that is 107 px wide at
+    # the sides and 18 at the top. It described nothing that is
+    # drawn, and the tree held it beside window margins of 44 that
+    # disagreed with it. It is gone; `ring` is four values taken off
+    # the master, and decision 36 says a number copied from
+    # somewhere else gets something that re-measures it.
+    _ring = _lr["ring"]
+    _rsrc = _lr["_ring_source"]
+    _rimg = os.path.join(_proj, *_rsrc["file"].split("/"))
+    assert os.path.isfile(_rimg), (
+        f"the ring names {_rsrc['file']} as its source and that file is "
+        f"not there — the table would be a number nobody can re-derive")
+    _ra = np.array(_PILImage.open(_rimg).convert("RGBA"))[:, :, 3]
+    _rh, _rw = _ra.shape
+    _sweep = set()
+    for _t in (8, 16, 64):
+        _ys, _xs = np.where(_ra < _t)
+        _sweep.add((int(_xs.min()), int(_xs.max()),
+                    int(_ys.min()), int(_ys.max())))
+    assert len(_sweep) == 1, (
+        f"{_rsrc['file']}: the metal bbox is not stable across the "
+        f"threshold sweep, {_sweep} — the ring would depend on where "
+        f"the threshold sits")
+    _mx0, _mx1, _my0, _my1 = _sweep.pop()
+    # The frame is stretched over the whole reference area
+    # (screen._scale_frame), so each axis maps independently.
+    _measured = {
+        "left": round(_mx0 * _REF_W / _rw),
+        "right": round((_rw - 1 - _mx1) * _REF_W / _rw),
+        "top": round(_my0 * _REF_H / _rh),
+        "bottom": round((_rh - 1 - _my1) * _REF_H / _rh),
+    }
+    assert _measured == _ring, (
+        f"the ring table says {_ring} and {_rsrc['file']} measures "
+        f"{_measured} — one of the two was edited without the other")
+
+    # EVERY WINDOW IS INSIDE THE RING, per side. Asserted as the rule
+    # and not as a list of coordinates, so a new rectangle obeys it.
     for _name, (_x, _y, _w, _h) in _lr_windows.items():
-        assert _x >= _bez and _y >= _bez, f"{_name} starts inside the bezel"
-        assert _x + _w <= _REF_W - _bez and _y + _h <= _REF_H - _bez, (
-            f"{_name} runs under the bezel: {_x + _w} x {_y + _h} against "
-            f"{_REF_W - _bez} x {_REF_H - _bez}")
+        assert _x >= _ring["left"] and _y >= _ring["top"], (
+            f"{_name} at ({_x}, {_y}) starts under the ring "
+            f"({_ring['left']}, {_ring['top']})")
+        assert _x + _w <= _REF_W - _ring["right"], (
+            f"{_name} ends at {_x + _w}, the ring starts at "
+            f"{_REF_W - _ring['right']}")
+        assert _y + _h <= _REF_H - _ring["bottom"], (
+            f"{_name} ends at {_y + _h}, the ring starts at "
+            f"{_REF_H - _ring['bottom']}")
+
+    # FIGURE CAPACITY IS ASSERTED, NOT NOTED. A column must fit at
+    # least as many unsqueezed figures as the original's widest does
+    # — industry, reach 122 at pitch 30, which is four. The column
+    # and the pitch both scale with the resolution, so the count is
+    # the same at all three, and asserting all three is what proves
+    # that rather than assuming it.
+    _orig_fit = max((r - l - 10) // 30 for l, r in
+                    ((101, 226), (236, 368), (378, 502)))
+    for _spec, _step in _lr["figure_scale"].items():
+        _lscale = min(int(_spec.split("x")[0]) / _REF_W,
+                      int(_spec.split("x")[1]) / _REF_H)
+        _colw = _lr["list_columns"]["farmers"] * _lscale
+        _fits = int((_colw - 28 * _step) // (30 * _step) + 1)
+        assert _fits >= _orig_fit, (
+            f"{_spec}: a figure column of {_colw:.0f} px at step "
+            f"{_step} fits {_fits} unsqueezed figures, the original's "
+            f"widest column fits {_orig_fit}")
 
     # THE LOWER BAND IS EVEN, and flush with the list above it.
     # Asserted as the rule: the four boxes sit between the list's own

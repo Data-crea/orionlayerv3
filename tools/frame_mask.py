@@ -52,11 +52,15 @@ REF_W, REF_H = 1920, 1080
 
 WINDOW, METAL = (255, 255, 255), (0, 0, 0)
 
-#: Every key of `layout_reference.json` that is a window. `bezel` is
-#: not a rectangle and `list_columns` divides one that is already
-#: here, so neither appears; a key that is neither a window nor
-#: explicitly excluded is an error rather than a silent omission.
-NOT_A_WINDOW = ("bezel", "list_columns", "figure_scale", "_resolutions")
+#: Every key of `layout_reference.json` that is a window. `ring` is
+#: four named values rather than a rectangle and `list_columns`
+#: divides one that is already here, so neither appears; a key that
+#: is neither a window nor explicitly excluded is an error rather
+#: than a silent omission. (`bezel` was here until 7 September 2026,
+#: when the single number was replaced by the four-value ring: a
+#: border that is 107 wide at the sides and 18 at the top cannot be
+#: described by one number.)
+NOT_A_WINDOW = ("ring", "list_columns", "figure_scale", "_resolutions")
 
 
 def load_reference(path=REFERENCE):
