@@ -719,8 +719,9 @@ to stay uncomfortable to extend.
     ├── ext_diag.py               473  Extension API diagnostics
     ├── ext_diag_race.py          228  Race screen field diagnostics
     ├── nebula_extract.py         100  Pull nebula sprites from LBX
-    ├── raceicon_extract.py       241  RACEICON.LBX -> the population
-    │                                  figures per race, grayscale by
+    ├── raceicon_extract.py       297  RACEICON.LBX -> the population
+    │                                  figures per race and one named
+    │                                  file per entry, grayscale by
     │                                  index and in the game palette
     ├── nebula_asset_check.py     238  Nebula asset resolution
     ├── make_nebula_icons.py      228  Render the HD nebula shapes
@@ -3120,6 +3121,58 @@ sprites are **pixel-for-pixel identical** to the original's frame:
 285, 256 and 239 opaque pixels each, 0 different. That is also what
 proves the palette byte-order fix, since the old reading would have
 matched nothing.
+
+### One named file per RACEICON entry — 6 September 2026
+
+`raceicon_extract.py` gained two outputs. `figures/` holds **every
+entry once**, named by the verified block layout —
+`e040_race03_elerian_farmer_game.png` — in the game palette,
+**uncropped**, at 1x. `_labelled_sheet.png` is the layout as a
+picture: one row per race, the 13 block offsets across, entry number
+and role under each figure, 4x nearest-neighbour, android and native
+as a last row.
+
+**Uncropped is the point, not an omission.** The canvas is the
+animation header's own, so every figure of a race shares one origin
+and the baseline sits where the original puts it. Cropping to the ink
+would destroy exactly that — so the opaque bounding box is REPORTED
+in `summary.txt` beside each file and never applied.
+
+**`figures/` and the per-race directories overlap on purpose.** The
+directories answer "what does a Sakkra scientist look like" and hold
+six files; `figures/` answers "what IS entry 47", which is the
+question the 13-entry block raises and which neither the raw dump
+(numbered and nothing else) nor the directories (the six people
+entries only) can answer.
+
+**`_contact_sheet.png` stays what it was, and that is deliberate.**
+It is the raw file in file order with nothing but a number, and it is
+what the block layout was CHECKED against; checking the layout
+against a picture that already applies it would be circular. Verified
+byte-for-byte: of the 504 files this package found, **only
+`summary.txt` changed** and none was lost.
+
+**The military variants are numbered 1..5 in file names, not 0..4.**
+`Military_Anims_(variant, race)` (colony.cpp:1298) is reached through
+`Military_Anim_` (colony.cpp:1309-1330), which picks variant 0 for
+militia, 1 or 2 for troops depending on Powered Armor and 3 or 4 for
+the second class depending on Battleoids. A file called `military_0`
+would read as "the first one" where the source's 0 is a specific
+thing; 1..5 counts files, which is what a file name can honestly do.
+
+**Two things the size pressure produced, both improvements.** The
+tool crossed 300 code lines, so the two sheets — which had become two
+copies of the same "lay sprites in a grid and label them" — collapsed
+into one `sprite_grid`, and `palette_note` shed a 25-line comparison
+that already lives in this document, because a second copy of a
+finding is what goes stale. It is at **297** now.
+
+**And a defect the merge exposed.** `summary.txt` named
+`<stem>.png` for every entry, including the 171 in `figures/`, where
+only `<stem>_game.png` is written — so the summary pointed at 171
+files that do not exist. It names the file it wrote now, and a check
+of the run confirms all 251 named files are present. A summary is a
+claim about the directory.
 
 ### Two live faults after the row's three groups — 6 September 2026
 

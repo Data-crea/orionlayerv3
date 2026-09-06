@@ -22,8 +22,19 @@ Output, under `screens/colony_summary/assets/raceicon_ref/`:
                     farmer_state0.png the unreachable one (see below)
                     worker*, scientist*
   shared/native.png  android.png
+  figures/e<NNN>_<race>_<role>_game.png   every entry ONCE, named by
+                                      the block layout, uncropped, 1x
+  _labelled_sheet.png                 the block layout as a picture:
+                                      one row per race, 13 columns
   summary.txt                         entry -> file, dimensions,
                                       flags, palette source
+
+`figures/` and the per-race directories overlap on purpose and answer
+different questions. The directories answer "what does a Sakkra
+scientist look like" and hold six files; `figures/` answers "what IS
+entry 47", which is the question the 13-entry block raises and which
+neither the raw dump (numbered and nothing else) nor the directories
+(the six people entries only) can answer.
 
 **NOTHING HERE IS COMMITTED** (decision 38 and `.gitignore`): it is
 extracted from somebody's own copy of the game and is not ours to
@@ -78,19 +89,31 @@ ANDROID_ENTRY = 0xA9
 #: (orion2_consts.h:119-121).
 JOBS = ((0, "farmer"), (1, "worker"), (2, "scientist"))
 
-#: **THE RESTING FIGURE IS THE ODD ENTRY OF EACH PAIR.**
-#: `People_Anim_` takes `pop_state`, and the only source of that on a
-#: colony is `Pop_To_Pop_State_` (colony.cpp:1240-1255), which returns
-#: 3 for a native, 4 for an android and **2 for everything else** — it
-#: cannot return 0. No caller in the tree passes 0 either: all nine
-#: call sites pass 2 or 4. So the `+1` entry is the one the game
-#: draws and the even entry is dead in this code.
+#: The 13 offsets of a race block, named. Same four citations as
+#: `RACE_STRIDE` above — this is that comment turned into data so the
+#: figure files can be labelled without a second reading of it.
 #:
-#: The even ones are written out anyway, as `_state0`, because a
-#: reference that silently omits half the file cannot be used to check
-#: that the half it kept is the right one. Recorded for the
-#: maintainer in `doc/orion2re_open_fixes.md`.
-RESTING_STATE, DEAD_STATE = 2, 0
+#: The military variants are numbered 1..5 and not 0..4 because
+#: `Military_Anims_(variant, race)` (colony.cpp:1298) is reached
+#: through `Military_Anim_` (colony.cpp:1309-1330), which picks
+#: variant 0 for militia, 1 or 2 for troops depending on Powered
+#: Armor and 3 or 4 for the second class depending on Battleoids. A
+#: file called `military_0` would read as "the first one" where the
+#: source's 0 is a specific thing; 1..5 counts files, which is what a
+#: file name can honestly do.
+#:
+#: **THE `_state0` HALF IS DEAD IN THIS CODE.** `People_Anim_` takes
+#: `pop_state`, and the only source of it on a colony is
+#: `Pop_To_Pop_State_` (colony.cpp:1240-1255), which returns 3, 4 or
+#: 2 and cannot return 0; no call site passes 0 either. The even
+#: entry of each pair is therefore never drawn. It is extracted
+#: anyway, because a reference that silently omits half the file
+#: cannot be used to check that the half it kept is the right one.
+#: Recorded for the maintainer in `doc/orion2re_open_fixes.md`.
+ROLES = ("farmer_state0", "farmer", "worker_state0", "worker",
+         "scientist_state0", "scientist",
+         "military_1", "military_2", "military_3", "military_4",
+         "military_5", "spy", "portrait")
 
 #: The palette these sprites are drawn in. NOT in RACEICON.LBX: all
 #: 171 entries have `flags == 0`, so none carries one
@@ -155,44 +178,25 @@ def game_palette(raceicon_path):
 
 
 def palette_note():
-    """Why the coloured set is `_game` and not `_colsum`.
+    """Where the colours come from, written into summary.txt.
 
-    Written into summary.txt so the file carries its own provenance —
-    a PNG whose colours came from somewhere else is exactly the kind
-    of thing that gets believed later.
+    A PNG whose colours came from somewhere else is exactly the kind
+    of thing that gets believed later, so the extracted files carry
+    their own provenance — they travel without this repository.
+
+    SHORT ON PURPOSE. The full comparison of the two colony screens'
+    palettes lives in `v3_projektstatus.md` under "The population
+    figures come out of RACEICON.LBX"; repeating it here would be a
+    second copy of a finding, which is what goes stale.
     """
     return [
         "palette source: COLSUM.LBX entry 0 via animate::Draw_Palette_",
-        "  (colsum.cpp:128-129, inside COLSUM::Colony_Summary_Screen_)",
-        "",
-        "RACEICON.LBX carries NO palette of its own: all 171 entries",
-        "have flags == 0, so FLAG_HAS_PALETTE is set on none of them.",
-        "The figures are drawn in whatever the screen last set.",
-        "",
-        "BOTH COLONY SCREENS WERE COMPARED, and the colours these",
-        "sprites use are the same on both:",
-        "  - the colony SUMMARY screen loads fonts::Load_Palette_(1,",
-        "    0, 255) and then COLSUM.LBX entry 0, which defines all",
-        "    256 indices (colsum.cpp:128-129);",
-        "  - the colony MAIN screen loads the same font palette and",
-        "    then C_Anims_(0) (COLONY::Update_Colony_Palette_,",
-        "    colony.cpp:230-235), which is Cache_Load_Planet_ ->",
-        "    PLANETS.LBX (colony_main.cpp:474, colony.cpp:201) and",
-        "    therefore a DIFFERENT sprite per climate.",
-        "",
-        "Whole palettes they are not: over their common range the 30",
-        "PLANETS.LBX entries differ from COLSUM entry 0 in 78 to 80",
-        "of 80 indices, and none of the 30 is identical. But every",
-        "one of them declares (start 0, count 80), and the people",
-        "sprites use indices 81..239 — not one index in the range a",
-        "planet background can touch. Those come from the font",
-        "palette, FONTS.LBX entry 2 (fonts.cpp:72-77, palette_id + 1),",
-        "on both screens, and COLSUM entry 0 agrees with FONTS entry 2",
-        "on ALL 76 indices these sprites use (228 of 256 overall).",
-        "",
-        "So the suffix is _game: the colours are the base font",
-        "palette's, which every screen loads, and not one screen's",
-        "private choice.",
+        "  (colsum.cpp:128-129, in COLSUM::Colony_Summary_Screen_)",
+        "RACEICON.LBX carries none: all 171 entries have flags == 0, so",
+        "FLAG_HAS_PALETTE is set on none. The figures are drawn in",
+        "whatever the screen last set, and both colony screens set the",
+        "same colours over the indices these sprites use (81..239).",
+        "Suffix _game, not _colsum, for that reason.",
     ]
 
 
@@ -201,30 +205,87 @@ def save(pixels, header, palette, path):
                     lbx.rgba_bytes(pixels, palette)).save(path)
 
 
+def sprite_grid(entries, headers, palette, path, cells, columns,
+                pad, label_h, scale=1, name_w=0, row_names=()):
+    """Lay sprites out in a grid and write their labels under them.
+
+    Both sheets are this, and they were two copies of it for half a
+    day. `cells` is (row, column, entry, [lines]) — the caller owns
+    which entry goes where and what it is called, this owns the
+    geometry and the compositing. Nothing here decides anything.
+
+    NEAREST only, and only where the caller asks for a scale: these
+    are 28 px sprites and smoothing would invent pixels the original
+    does not have, which is the one thing a reference picture may not
+    do.
+    """
+    cell_w = scale * max(h.width for h in headers if h) + 2 * pad
+    cell_h = scale * max(h.height for h in headers if h) + 2 * pad + label_h
+    rows = max(r for r, *_ in cells) + 1
+    sheet = Image.new("RGB", (name_w + columns * cell_w, rows * cell_h),
+                      (24, 24, 28))
+    draw = ImageDraw.Draw(sheet)
+    for row, name in enumerate(row_names):
+        draw.text((6, row * cell_h + cell_h // 2 - 4), name,
+                  fill=(226, 226, 236))
+    for row, column, entry, labels in cells:
+        x, y = name_w + column * cell_w, row * cell_h
+        header = headers[entry] if entry < len(headers) else None
+        pixels = (lbx.decode_frame(entries[entry], header, 0)
+                  if header is not None else None)
+        if pixels is not None:
+            sprite = Image.frombytes("RGBA", (header.width, header.height),
+                                     lbx.rgba_bytes(pixels, palette))
+            if scale != 1:
+                sprite = sprite.resize(
+                    (sprite.width * scale, sprite.height * scale),
+                    Image.NEAREST)
+            sheet.paste(sprite, (x + pad, y + pad), sprite)
+        for i, text in enumerate(labels):
+            draw.text((x + pad, y + cell_h - label_h + 9 * i), text,
+                      fill=(210, 210, 220) if i == 0 else (150, 160, 180))
+    sheet.save(path)
+
+
 def contact_sheet(entries, headers, palette, path, columns=16):
-    """Every entry with its NUMBER under it.
+    """Every entry with its NUMBER under it, in FILE order.
 
     The number is the point of the sheet: it is what the block layout
-    above gets checked against, and a sheet of unlabelled figures
-    proves nothing about which entry is which.
+    was checked against, and a sheet of unlabelled figures proves
+    nothing about which entry is which. It stays unlabelled by role
+    on purpose — checking the layout against a picture that already
+    applies it would be circular.
     """
-    pad, label_h = 4, 11
-    cell_w = max(h.width for h in headers if h) + 2 * pad
-    cell_h = max(h.height for h in headers if h) + 2 * pad + label_h
-    rows = (len(entries) + columns - 1) // columns
-    sheet = Image.new("RGB", (columns * cell_w, rows * cell_h), (24, 24, 28))
-    draw = ImageDraw.Draw(sheet)
-    for i, (blob, header) in enumerate(zip(entries, headers)):
-        x, y = (i % columns) * cell_w, (i // columns) * cell_h
-        if header is not None:
-            pixels = lbx.decode_frame(blob, header, 0)
-            if pixels is not None:
-                sprite = Image.frombytes(
-                    "RGBA", (header.width, header.height),
-                    lbx.rgba_bytes(pixels, palette))
-                sheet.paste(sprite, (x + pad, y + pad), sprite)
-        draw.text((x + pad, y + cell_h - label_h), str(i), fill=(210, 210, 220))
-    sheet.save(path)
+    sprite_grid(entries, headers, palette, path,
+                [(i // columns, i % columns, i, [str(i)])
+                 for i in range(len(entries))],
+                columns, 4, 11)
+
+
+#: The labelled sheet's scale, its padding and the width of the
+#: race-name column at the start of each row.
+SHEET_SCALE = 4
+SHEET_PAD = 6
+SHEET_LABEL_H = 20
+SHEET_NAME_W = 116
+
+
+def labelled_sheet(entries, headers, palette, path):
+    """One row per race, 13 columns in block order, everything named.
+
+    A different picture from `_contact_sheet.png` and not a
+    replacement for it — see there.
+    """
+    races = min(len(RACE_NAMES), len(entries) // RACE_STRIDE)
+    cells = [(race, offset, race * RACE_STRIDE + offset, [
+                  str(race * RACE_STRIDE + offset), role])
+             for race in range(races) for offset, role in enumerate(ROLES)]
+    cells += [(races, 0, ANDROID_ENTRY, [str(ANDROID_ENTRY), "android"]),
+              (races, 1, NATIVE_ENTRY, [str(NATIVE_ENTRY), "native"])]
+    names = [f"{race:2d} {RACE_NAMES[race]}" for race in range(races)]
+    sprite_grid(entries, headers, palette, path, cells, len(ROLES),
+                SHEET_PAD, SHEET_LABEL_H, SHEET_SCALE, SHEET_NAME_W,
+                names + ["shared"])
 
 
 def dump_raw(entries, headers, palette, out, lines):
@@ -256,41 +317,114 @@ def dump_raw(entries, headers, palette, out, lines):
     return written
 
 
-def dump_races(entries, headers, palette, out, lines):
-    """Stage 2: the block layout, applied."""
-    written = 0
-
-    def one(entry, directory, stem):
-        nonlocal written
-        header = headers[entry]
-        if header is None:
-            lines.append(f"  entry {entry}: no header, {stem} not written")
-            return
-        pixels = lbx.decode_frame(entries[entry], header, 0)
-        if pixels is None:
-            lines.append(f"  entry {entry}: undecodable, {stem} not written")
-            return
-        os.makedirs(directory, exist_ok=True)
+def write_figure(entries, headers, palette, directory, stem, entry,
+                 lines, grayscale, note=""):
+    """One entry to one PNG (two, with the grayscale set), or a line
+    saying why not. Both dumps below go through it, so they cannot
+    drift apart about what an undecodable entry does."""
+    header = headers[entry] if entry < len(headers) else None
+    pixels = (lbx.decode_frame(entries[entry], header, 0)
+              if header is not None else None)
+    if pixels is None:
+        lines.append(f"  entry {entry}: no figure, {stem} not written")
+        return 0
+    os.makedirs(directory, exist_ok=True)
+    if grayscale:
         save(pixels, header, {}, os.path.join(directory, f"{stem}.png"))
-        if palette:
-            save(pixels, header, palette,
-                 os.path.join(directory, f"{stem}{COLOUR_SUFFIX}.png"))
-        written += 1
-        lines.append(f"  entry {entry:3d} -> "
-                     f"{os.path.basename(directory)}/{stem}.png "
-                     f"({header.width}x{header.height})")
+    if palette:
+        save(pixels, header, palette,
+             os.path.join(directory, f"{stem}{COLOUR_SUFFIX}.png"))
+    # THE LINE NAMES THE FILE THAT EXISTS. It said `<stem>.png` for
+    # every entry until the figures dump, which writes only the
+    # coloured one — so summary.txt pointed at 171 files that were
+    # never written. A summary is a claim about the directory.
+    written_stem = stem if grayscale else stem + COLOUR_SUFFIX
+    lines.append(f"  entry {entry:3d} -> {os.path.basename(directory)}/"
+                 f"{written_stem}.png ({header.width}x{header.height})"
+                 f"{note}")
+    return 1
 
+
+def dump_races(entries, headers, palette, out, lines):
+    """Stage 2: the block layout, applied — six people files per race
+    plus the two shared ones, under readable directory names."""
+    written = 0
     races = min(len(RACE_NAMES), len(entries) // RACE_STRIDE)
     for race in range(races):
         directory = os.path.join(out, f"race_{race}_{RACE_NAMES[race]}")
         lines.append(f"race {race} {RACE_NAMES[race]}:")
         for job, stem in JOBS:
-            one(race * RACE_STRIDE + job * 2 + 1, directory, stem)
-            one(race * RACE_STRIDE + job * 2, directory, f"{stem}_state0")
+            for offset, suffix in ((1, ""), (0, "_state0")):
+                written += write_figure(
+                    entries, headers, palette, directory, stem + suffix,
+                    race * RACE_STRIDE + job * 2 + offset, lines, True)
     shared = os.path.join(out, "shared")
     lines.append("shared (pop_state 3 and 4 ignore the race):")
-    one(NATIVE_ENTRY, shared, "native")
-    one(ANDROID_ENTRY, shared, "android")
+    written += write_figure(entries, headers, palette, shared, "native",
+                            NATIVE_ENTRY, lines, True)
+    written += write_figure(entries, headers, palette, shared, "android",
+                            ANDROID_ENTRY, lines, True)
+    return written
+
+
+def figure_name(entry):
+    """(race stem, role) for one entry, or None if it is neither.
+
+    `race<II>_<name>` matches the per-race directories' `<idx>_<name>`
+    with the index zero-padded, so a directory listing of `figures/`
+    sorts into block order by itself.
+    """
+    if entry == NATIVE_ENTRY:
+        return "shared", "native"
+    if entry == ANDROID_ENTRY:
+        return "shared", "android"
+    race, offset = divmod(entry, RACE_STRIDE)
+    if race < len(RACE_NAMES) and offset < len(ROLES):
+        return f"race{race:02d}_{RACE_NAMES[race]}", ROLES[offset]
+    return None
+
+
+def opaque_box(pixels, header):
+    """The bounding box of the non-transparent indices, or None.
+
+    Index 0 is the alpha (`Draw_Bitmap_Sprite_`, draw.cpp), so this is
+    where the figure actually is inside a canvas that is NOT cropped —
+    the canvas is the header's own, so every figure of a race shares
+    one origin and the baseline stays where the original puts it.
+    Cropping would destroy exactly that, which is why the box is
+    REPORTED rather than applied.
+    """
+    on = [i for i, v in enumerate(pixels) if v]
+    if not on:
+        return None
+    xs, ys = [i % header.width for i in on], [i // header.width for i in on]
+    return min(xs), min(ys), max(xs), max(ys)
+
+
+def dump_figures(entries, headers, palette, out, lines):
+    """One labelled PNG per entry, in the game palette.
+
+    Uncropped and 1x. The per-race directories answer "what does a
+    farmer look like"; this answers "what is entry 47", which is the
+    question the 13-entry block raises and which the raw dump cannot
+    answer because its files are numbered and nothing else.
+    """
+    if not palette:
+        lines.append("figures/: NOT written — no game palette, and the "
+                     "file names claim one (see above).")
+        return 0
+    directory = os.path.join(out, "figures")
+    written = 0
+    for entry, header in enumerate(headers):
+        named = figure_name(entry)
+        if header is None or named is None:
+            continue
+        pixels = lbx.decode_frame(entries[entry], header, 0)
+        box = opaque_box(pixels, header) if pixels is not None else None
+        written += write_figure(
+            entries, headers, palette, directory,
+            f"e{entry:03d}_{named[0]}_{named[1]}", entry, lines, False,
+            f"  {named[1]}  opaque {box if box else 'none'}")
     return written
 
 
@@ -335,22 +469,27 @@ def main():
                      f"coloured set was NOT written. Every PNG here is "
                      f"GRAYSCALE BY PALETTE INDEX: the grey level IS "
                      f"the index and is not a colour.")
-    lines.append("")
-    lines.append("Every file without the "
-                 f"'{COLOUR_SUFFIX}' suffix is grayscale by index.")
-    lines.append("")
-    lines.append("--- stage 1: raw ---")
+    lines += ["", f"Every file without the '{COLOUR_SUFFIX}' suffix is "
+              "grayscale by index.", "", "--- stage 1: raw ---"]
 
     written = dump_raw(entries, headers, palette, args.out, lines)
     contact_sheet(entries, headers, palette,
                   os.path.join(args.out, "_contact_sheet.png"))
-    lines.append("")
-    lines.append("_contact_sheet.png: every entry with its number, in "
-                 + ("the game palette." if palette else "grayscale."))
+    lines += ["", "_contact_sheet.png: every entry with its number, in "
+              + ("the game palette." if palette else "grayscale.")]
+
+    if palette:
+        labelled_sheet(entries, headers, palette,
+                       os.path.join(args.out, "_labelled_sheet.png"))
+        lines.append("_labelled_sheet.png: one row per race, the 13 block "
+                     "offsets across, entry number and role under each, "
+                     f"{SHEET_SCALE}x nearest-neighbour.")
+    else:
+        lines.append("_labelled_sheet.png: NOT written — it is the game "
+                     "palette's picture and there is no palette.")
 
     if not args.raw_only:
-        lines.append("")
-        lines.append("--- stage 2: per race ---")
+        lines += ["", "--- stage 2: per race ---"]
         lines.append("block layout, People_Anim_ (colony_main.cpp:444-450), "
                      "Military_Anims_ (colony.cpp:1298), Spy_Anim_ "
                      "(colony.cpp:237), Colony_Pop_Icon_ (colony.cpp:1285):")
@@ -362,6 +501,12 @@ def main():
                      "Pop_To_Pop_State_ (colony.cpp:1240-1255) cannot "
                      "return 0, so _state0 is unreachable in this code")
         written += dump_races(entries, headers, palette, args.out, lines)
+        lines += ["", "--- stage 2: one labelled file per entry ---"]
+        lines.append("uncropped: the canvas is the animation header's own, "
+                     "so every figure of a race shares one origin and the "
+                     "baseline stays where the original puts it. The "
+                     "opaque box below is where the ink is inside it.")
+        written += dump_figures(entries, headers, palette, args.out, lines)
 
     summary = os.path.join(args.out, "summary.txt")
     with open(summary, "w") as fh:
