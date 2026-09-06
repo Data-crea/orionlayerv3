@@ -3967,6 +3967,10 @@ def main():
         "_frame_build", os.path.join(_proj, "tools", "frame_build.py"))
     _fb = _ilu2.module_from_spec(_fb_spec)
     _fb_spec.loader.exec_module(_fb)
+    _fm2_spec = _ilu2.spec_from_file_location(
+        "_frame_master", os.path.join(_proj, "tools", "frame_master.py"))
+    _fm2 = _ilu2.module_from_spec(_fm2_spec)
+    _fm2_spec.loader.exec_module(_fm2)
     _fb_master = _PILImage.open(os.path.join(_proj, *_rsrc["file"].split("/")))
     for _spec in _lr["_resolutions"]:
         _rw, _rh = (int(v) for v in _spec.split("x"))
@@ -4035,47 +4039,78 @@ def main():
     ok("colony frame built from the master (nine-slice ring matches the "
        "table at all three resolutions, struts are metal)")
 
-    # ── The rail rule, and the fact that nothing takes it today ──
+    # ── Every gap is one of the master's own struts ──────────
     #
-    # A gap wider than the master's NARROWEST rail gets that rail
-    # along its length; a narrower gap keeps the line its bevel
-    # already gives it. The rule is a comparison and never a fitting.
-    #
-    # Measured 7 September 2026: the narrowest master rail is 26.7
-    # reference px and this screen's widest gap is 26 — it misses by
-    # 0.7 px, at one gap (list to galaxy_inset), and every other gap
-    # is 8 to 22. So NO gap takes a rail. That is asserted, because
-    # "no rails today" is a fact about the layout that a widened gap
-    # would change silently.
-    _rail_strip, _rail_v, _rail_ref = _fb.rail_source(_fb_master)
-    assert _rail_strip is not None, "the master has no rail to sample"
-    _spans = [(_gw if _v else _gh)
-              for _gx, _gy, _gw, _gh, _v in _fb.struts(
-                  _fm.render(_lr_windows, _REF_W, _REF_H)[1])]
-    assert _spans, "the layout has no struts at all"
-    assert max(_spans) <= _rail_ref, (
-        f"a gap of {max(_spans)} reference px now exceeds the master's "
-        f"narrowest rail at {_rail_ref:.1f}, so it takes a rail — which "
-        f"is allowed, but the rail path has never been seen on this "
-        f"layout and the picture has to be looked at")
+    # Stage A3: the gaps are no longer a spacing chosen here, they are
+    # the master's struts mapped by role, so `layout_reference.gaps`
+    # is a hand-copied number and gets a checker (decision 36). Every
+    # value must be the ROUNDED-DOWN reference width of the strut its
+    # role names, so a rail is never wider than the strut it came
+    # from and never squeezed into a gap that is narrower.
+    _rails = _fm2.master_rails(_fb_master)
+    assert set(_rails) == set(_fm2.RAIL_ROLES), (
+        f"the master no longer offers every rail role: {sorted(_rails)} "
+        f"against {sorted(_fm2.RAIL_ROLES)}")
+    _mw, _mh = _fb_master.size
+    for _role, (_strip, _vert) in _rails.items():
+        _ref = (_strip.width * _REF_W / _mw) if _vert \
+            else (_strip.height * _REF_H / _mh)
+        assert _lr["gaps"][_role] == int(_ref), (
+            f"gaps.{_role} is {_lr['gaps'][_role]} and the master's "
+            f"{_role} strut measures {_ref:.1f} reference px, so the "
+            f"gap should be {int(_ref)}")
 
-    # AND THE RAIL PATH IS NOT DEAD CODE. Exercised on a layout with
-    # one gap wide enough, so the three-slice is known to run and to
-    # put the master's own pixels down rather than a stretch of one.
-    _wide = {"a": [107, 74, 700, 300], "b": [107, 474, 700, 300]}
-    _wr = _fm.render(_wide, _REF_W, _REF_H)[1]
-    _gap = [g for g in _fb.struts(_wr) if not g[4]]
-    assert _gap and _gap[0][3] == 100, _gap
-    _plate2 = _fb.tiled(_fb.strut_texture(_fb_master), _REF_W, _REF_H)
-    _before = np.array(_plate2.crop((300, 374, 500, 474))).mean()
-    _fb.lay_rail(_plate2, _rail_strip, _gap[0][:4], _gap[0][4])
-    _after = np.array(_plate2.crop((300, 374, 500, 474))).mean()
-    assert _after != _before, (
-        "lay_rail changed nothing on a 100 px gap — the rail path is "
-        "dead code and the rule is prose")
-    ok(f"colony frame rails (the master's narrowest is "
-       f"{_rail_ref:.1f} ref px, the layout's widest gap is "
-       f"{max(_spans)}, so none is laid — and the path still runs)")
+    # AND EVERY GAP TAKES ONE. A gap with no rail is bare tile, which
+    # is the thing Stage A3 exists to remove.
+    _gaps = _fm.render(_lr_windows, _REF_W, _REF_H)[1]
+    _struts = _fm2.struts(_gaps)
+    assert _struts, "the layout has no struts at all"
+    for _gx, _gy, _gw, _gh, _gv in _struts:
+        _role = _fb.gap_role(_fb._facing(_gaps, _gx, _gy, _gw, _gh, _gv), _gv)
+        assert _role in _rails, (
+            f"the gap at ({_gx}, {_gy}) resolves to role {_role!r}, "
+            f"which the master does not offer")
+        _span = _gw if _gv else _gh
+        # THE INSET IS 20 PX SHORTER THAN ITS BAND and is centred in
+        # it, so its two horizontal gaps carry half that shortfall
+        # each on top of their role's width. The 20 has to go
+        # somewhere — its height is fixed by its own aspect — and
+        # splitting it is the least-wrong place to put it. The rail
+        # is laid at the gap's own width either way, so the picture
+        # is a slightly deeper rail at those two and nothing else.
+        _extra = 10 if ("galaxy_inset" in _fb._facing(
+            _gaps, _gx, _gy, _gw, _gh, _gv) and not _gv) else 0
+        assert _span == _lr["gaps"][_role] + _extra, (
+            f"the gap at ({_gx}, {_gy}) is {_span} px and its role "
+            f"{_role} calls for {_lr['gaps'][_role] + _extra}")
+
+    # THE TILE'S PERIOD IS GONE. Before the rails the bare strut
+    # texture covered 2.1 % of the canvas and its column profile
+    # autocorrelated at lag 64 — the patch's own size — at 0.92. The
+    # rails cover it, and what is left must neither be large nor
+    # repeat at the patch size.
+    _p1080 = _fb.build(_fb_master, _lr_windows, _REF_W, _REF_H)
+    _cut1080 = _fc.cut(_p1080, _lr_windows, _REF_W, _REF_H)[0]
+    _ca = np.array(_cut1080)
+    _cmetal = _ca[:, :, 3] >= 250
+    _clum = _ca[:, :, :3].mean(axis=2).astype(float)
+    _covered = np.zeros_like(_cmetal)
+    _covered[:_ring["top"], :] = True
+    _covered[_REF_H - _ring["bottom"]:, :] = True
+    _covered[:, :_ring["left"]] = True
+    _covered[:, _REF_W - _ring["right"]:] = True
+    for _wx, _wy, _ww, _wh in _gaps.values():
+        _covered[max(0, _wy - 3):_wy + _wh + 3,
+                 max(0, _wx - 3):_wx + _ww + 3] = True
+    for _gx, _gy, _gw, _gh, _gv in _struts:
+        _covered[_gy:_gy + _gh, _gx:_gx + _gw] = True
+    _bare = _cmetal & ~_covered
+    assert _bare.mean() < 0.01, (
+        f"{100*_bare.mean():.2f} % of the canvas is still bare strut "
+        f"texture; the rails are meant to cover it")
+    ok(f"colony frame rails (every gap is the master's strut for its "
+       f"role, {len(_struts)} of them, and the bare tile is down to "
+       f"{100*_bare.mean():.2f} %)")
 
     # ── The two colony tables in zoomtables ──
     #

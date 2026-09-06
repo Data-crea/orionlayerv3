@@ -718,9 +718,11 @@ to stay uncomfortable to extend.
     ├── help_extract.py           171  HELP.LBX -> help_<lang>.json
     ├── ext_diag.py               473  Extension API diagnostics
     ├── ext_diag_race.py          228  Race screen field diagnostics
-    ├── frame_build.py            277  the colony frame, nine-sliced
-    │                                  out of the main-screen master:
-    │                                  ring, per-window bevel, rails
+    ├── frame_build.py            165  assembles the colony frame:
+    │                                  ring, rails, junctions, bevel
+    ├── frame_master.py           209  what the master CONTAINS -
+    │                                  ring, material, bevel hole,
+    │                                  rails, crossings, all found
     ├── frame_cut.py               61  frame artwork + the mask ->
     │                                  RGBA frames, holes from the
     │                                  mask and never from the black
@@ -3037,6 +3039,62 @@ help-file lesson, one domain over.
 
 Zhadoom III (14 pops) is the widest row in either fixture and is
 therefore the narrowest-cell case any picture has to survive.
+
+### Stage A3: every gap became one of the master's rails — 7 September 2026
+
+Stage A2 measured the master's struts and found that no gap was wide
+enough for one. **Stage A3 widens the gaps to the struts instead** —
+mapped by role, so a gap is no longer a spacing chosen here.
+
+| colony gap | master strut | role | ref px |
+|---|---|---|---:|
+| header → list | header \| map | a title bar above the main content | 31 px → **26** |
+| list → lower band | map \| slot | the main content above the row beneath it | 33 px → **28** |
+| lower band → sort row | box \| slot | a **panel** above a button row, which is what this gap is and what map\|slot is not | 34 px → **29** |
+| the three band gaps, and sort_bar → return_button | the slot divider | two elements of one row, side by side | 47 px → **38** |
+
+**Rounded DOWN in every case**, so a rail is never wider than the
+strut it was measured from. `layout_reference.gaps` holds the four
+numbers and a check re-measures the master against them — the same
+pattern the ring already uses (decision 36).
+
+**The cost, paid where it is cheapest:**
+
+| | before | after | |
+|---|---:|---:|---|
+| list height | 652 | **605** | −47 px |
+| planet_output width | 746 | **686** | −60 px |
+| sort_bar width | 1393 | **1367** | −26 px |
+| planet_info, empire_stats, inset | 320 / 320 / 253 | unchanged | fixed by pair and by aspect |
+| box heights | 220 / 200 | unchanged | |
+| **figure capacity** | 5 | **5** | asserted at all three resolutions |
+
+**The list's width did not change**, so the figure columns did not:
+the rails that grew are horizontal, so they cost height. At row
+height 58 the list still shows ten rows, which is the game's own
+window. The two gaps around the inset are 10 px wider than their role
+because the inset is 20 px shorter than its band and centred in it;
+that 20 has to go somewhere and splitting it is the least-wrong
+place, and the check knows the exception by name rather than
+tolerating a range.
+
+**Junctions come from the master's own crossing.** Where a vertical
+rail meets a horizontal one, the pixels are the metal between two of
+the master's slot buttons where it meets the strip under the map. The
+other orientation is that same crop MIRRORED — still only the
+master's pixels. **No corner is drawn to fit.**
+
+**The tile's period is gone.** Bare strut texture fell from **2.10 %
+of the canvas (44 000 px) to 0.38 % (7 938)**, and the autocorrelation
+of its column profile from **lag 64 at 0.92** — the patch's own size —
+to **lag 8 at 0.22**. The 64-px repeat that was visible across every
+full-width gap is covered by rails.
+
+**And the tool split.** `frame_build.py` passed 300 code lines, so
+everything that answers *"what does the master look like"* — ring,
+material, bevel hole, rails, crossings, all of it found and none of
+it named — is now `tools/frame_master.py` (209), and
+`frame_build.py` (165) answers *"how is a plate put together"*.
 
 ### Stage A2: the rail rule, and why nothing takes it — 7 September 2026
 

@@ -60,7 +60,8 @@ WINDOW, METAL = (255, 255, 255), (0, 0, 0)
 #: when the single number was replaced by the four-value ring: a
 #: border that is 107 wide at the sides and 18 at the top cannot be
 #: described by one number.)
-NOT_A_WINDOW = ("ring", "list_columns", "figure_scale", "_resolutions")
+NOT_A_WINDOW = ("ring", "gaps", "list_columns", "figure_scale",
+                "_resolutions")
 
 
 def load_reference(path=REFERENCE):

@@ -57,6 +57,9 @@ except ImportError:
 
 import frame_cut  # noqa: E402
 import frame_mask  # noqa: E402
+from frame_master import (  # noqa: E402
+    RAIL_ROLES, bevel_source, junction_source, master_rails,
+    master_ring, print_profiles, strut_texture, struts)
 
 MASTER = os.path.join(frame_mask.ROOT, "screens", "galaxy_map", "assets",
                       "frame.png")
@@ -66,19 +69,6 @@ DEFAULT_OUT = os.path.join(frame_mask.ROOT, "screens", "colony_summary",
 #: for it to carry no bevel. 12 was measured: the master's moulded
 #: edges reach about 10 px in from a hole.
 BEVEL_CLEARANCE = 12
-
-
-def master_ring(master):
-    """The master's own metal border, in its own pixels.
-
-    Measured rather than declared: the same threshold sweep the smoke
-    test runs on it, so the tool and the check read one thing.
-    """
-    alpha = np.array(master.convert("RGBA"))[:, :, 3]
-    h, w = alpha.shape
-    ys, xs = np.where(alpha < 16)
-    return (int(xs.min()), int(w - 1 - xs.max()),
-            int(ys.min()), int(h - 1 - ys.max()))
 
 
 #: Side of the square patch the strut texture is sampled from.
@@ -91,41 +81,6 @@ BEVEL_MASTER = 3
 BEVEL_REF = 3
 #: How far out a per-side luminance profile is measured.
 PROFILE = 12
-
-
-def strut_texture(master, _ring=None, patch=PATCH):
-    """The flattest bevel-free patch of the master's metal.
-
-    **SEARCHED, NOT A MAGIC COORDINATE.** The patch has to be metal,
-    at least `BEVEL_CLEARANCE` from any hole so it carries no
-    moulding, and the FLATTEST such patch — lowest luminance variance
-    — because what is wanted is the material and not the ornament.
-    A named coordinate would go stale the day the master is redrawn;
-    a search re-derives it.
-
-    The first attempt took the master's bottom band, which is the
-    widest hole-free run it has and therefore looked like the obvious
-    source. It contains the band's own ornamental lines, and tiling
-    it printed those lines across the interior every 64 px. Widest is
-    not flattest.
-    """
-    a = np.array(master.convert("RGBA"))
-    opaque = a[:, :, 3] >= 128
-    lum = a[:, :, :3].mean(axis=2)
-    free = ndimage.binary_erosion(
-        opaque, np.ones((2 * BEVEL_CLEARANCE + 1,) * 2, bool))
-    best, at = None, (0, 0)
-    for y in range(0, a.shape[0] - patch, patch // 4):
-        for x in range(0, a.shape[1] - patch, patch // 4):
-            if not free[y:y + patch, x:x + patch].all():
-                continue
-            spread = float(lum[y:y + patch, x:x + patch].std())
-            if best is None or spread < best:
-                best, at = spread, (x, y)
-    if best is None:                       # no hole-free patch at all
-        return master.convert("RGB").crop((0, 0, patch, patch))
-    x, y = at
-    return master.convert("RGB").crop((x, y, x + patch, y + patch))
 
 
 def tiled(patch, width, height):
@@ -193,155 +148,6 @@ def lay_border(dst, src, src_open, dst_open, dst_band):
             dst.paste(src.crop(box).resize(size, Image.LANCZOS), dest)
 
 
-def bevel_source(master, depth=None):
-    """(image, opening) — the master's own light edge around one hole.
-
-    **THE HOLE IS FOUND, NOT NAMED**, the same rule as the strut
-    patch. Every hole's edge is measured on all four sides and the
-    one whose four sides AGREE best is taken: a bevel copied from a
-    hole that is bright on the left and flat on the right would put
-    that asymmetry on every window of the screen.
-
-    Measured on 7 September 2026: the master's bevel is **one pixel
-    wide** on every hole that has one — a single bright line against
-    a plateau of luminance 2 — so `depth` is small by measurement and
-    not by taste. The chosen hole and every hole's per-side ridge are
-    printed by `--profiles`.
-    """
-    depth = BEVEL_MASTER if depth is None else depth
-    a = np.array(master.convert("RGBA"))
-    lum = a[:, :, :3].mean(axis=2)
-    holes = a[:, :, 3] < 16
-    lab, n = ndimage.label(holes)
-    objs = ndimage.find_objects(lab)
-    sizes = ndimage.sum(holes, lab, range(1, n + 1))
-    h, w = holes.shape
-    best = None
-    for i, size in enumerate(sizes, 1):
-        if size < 1500:
-            continue
-        sy, sx = objs[i - 1]
-        x0, x1, y0, y1 = sx.start, sx.stop, sy.start, sy.stop
-        if x0 < PROFILE or y0 < PROFILE or x1 > w - PROFILE or y1 > h - PROFILE:
-            continue
-        prof = _profiles(lum, x0, x1, y0, y1)
-        edge = [_ridge(p) for p in prof.values()]
-        if any(wd == 0 for _ht, wd in edge):
-            continue
-        heights = np.array([ht for ht, _wd in edge])
-        score = heights.min() / (1 + heights.std())
-        if best is None or score > best[0]:
-            best = (score, (x0, y0, x1, y1), prof)
-    if best is None:
-        raise SystemExit("no hole in the master has a lit edge on all "
-                         "four sides — the bevel cannot be sampled")
-    x0, y0, x1, y1 = best[1]
-    crop = master.convert("RGB").crop(
-        (x0 - depth, y0 - depth, x1 + depth, y1 + depth))
-    return crop, (depth, depth, crop.width - depth, crop.height - depth), best
-
-
-def _profiles(lum, x0, x1, y0, y1, depth=None):
-    depth = PROFILE if depth is None else depth
-    return {"L": lum[y0 + 2:y1 - 2, x0 - depth:x0][:, ::-1].mean(axis=0),
-            "R": lum[y0 + 2:y1 - 2, x1:x1 + depth].mean(axis=0),
-            "T": lum[y0 - depth:y0, x0 + 2:x1 - 2][::-1, :].mean(axis=1),
-            "B": lum[y1:y1 + depth, x0 + 2:x1 - 2].mean(axis=1)}
-
-
-def _ridge(p):
-    """(mean height, width) of the lit run at the start of `p`."""
-    plateau = float(np.median(p[-4:]))
-    limit = max(plateau * 2.0, plateau + 8)
-    width = 0
-    while width < len(p) and p[width] >= limit:
-        width += 1
-    return float(p[:max(width, 1)].mean()), width
-
-
-def struts(rects):
-    """The metal rectangles between facing windows.
-
-    A pair counts as facing if one starts where the other ends on one
-    axis and they overlap by more than a token amount on the other —
-    the same test the master's own rails were measured with, so the
-    gap a rail is judged against is the gap a rail would fill.
-    """
-    out = []
-    boxes = sorted((name, r) for name, r in rects.items())
-
-    def clear(gap):
-        """No window inside the gap — otherwise the two are not
-        adjacent and the metal between them is not one strut. Without
-        this the header and the sort row 'face' each other across the
-        whole screen."""
-        gx, gy, gw, gh = gap
-        for _n, (x, y, w, h) in boxes:
-            if gx < x + w and x < gx + gw and gy < y + h and y < gy + gh:
-                return False
-        return True
-
-    for i, (_na, A) in enumerate(boxes):
-        for _nb, B in boxes[i + 1:]:
-            for a, b in ((A, B), (B, A)):
-                if b[0] >= a[0] + a[2] and \
-                        min(a[1] + a[3], b[1] + b[3]) - max(a[1], b[1]) > 20:
-                    gap = b[0] - (a[0] + a[2])
-                    y0 = max(a[1], b[1])
-                    y1 = min(a[1] + a[3], b[1] + b[3])
-                    box = (a[0] + a[2], y0, gap, y1 - y0)
-                    if 0 < gap and clear(box):
-                        out.append(box + (True,))
-                if b[1] >= a[1] + a[3] and \
-                        min(a[0] + a[2], b[0] + b[2]) - max(a[0], b[0]) > 20:
-                    gap = b[1] - (a[1] + a[3])
-                    x0 = max(a[0], b[0])
-                    x1 = min(a[0] + a[2], b[0] + b[2])
-                    box = (x0, a[1] + a[3], x1 - x0, gap)
-                    if 0 < gap and clear(box):
-                        out.append(box + (False,))
-    return out
-
-
-def rail_source(master):
-    """(strip, vertical, width_in_reference_px) — the NARROWEST rail.
-
-    Found, not named, like the strut patch and the bevel hole. Every
-    pair of the master's own facing holes is measured; the narrowest
-    of those struts is the rail, because it is the one that fits the
-    most gaps — a wider one would simply never be laid.
-
-    Measured 7 September 2026: the master's rails are 33 to 52 master
-    px, which is **28.4 to 43.0 reference px**, and every one of them
-    carries a lit line on both edges with a moulded ridge between.
-    """
-    a = np.array(master.convert("RGBA"))
-    holes = a[:, :, 3] < 16
-    lab, n = ndimage.label(holes)
-    objs = ndimage.find_objects(lab)
-    sizes = ndimage.sum(holes, lab, range(1, n + 1))
-    h, w = holes.shape
-    rects = {}
-    for i, size in enumerate(sizes, 1):
-        if size < 1500:
-            continue
-        sy, sx = objs[i - 1]
-        rects[i] = (sx.start, sy.start, sx.stop - sx.start,
-                    sy.stop - sy.start)
-    best = None
-    for x, y, gw, gh, vertical in struts(rects):
-        ref = (gw * frame_mask.REF_W / w) if vertical \
-            else (gh * frame_mask.REF_H / h)
-        if gw < 4 or gh < 4 or ref > 200:
-            continue
-        if best is None or ref < best[0]:
-            best = (ref, (x, y, gw, gh), vertical)
-    if best is None:
-        return None, False, 0.0
-    ref, (x, y, gw, gh), vertical = best
-    return master.convert("RGB").crop((x, y, x + gw, y + gh)), vertical, ref
-
-
 def lay_rail(dst, strip, rect, vertical, cap=None):
     """Three-slice a rail along `rect`: end cap, stretch, end cap.
 
@@ -352,28 +158,59 @@ def lay_rail(dst, strip, rect, vertical, cap=None):
     not contain, which is the one thing "no invented pixels" rules
     out. The end/stretch logic is the same idea and the third copy of
     it is the one to extract.
+
+    The strip is scaled ACROSS its width to the gap and sliced ALONG
+    its length, so the moulding keeps its profile and only the plain
+    run in the middle is stretched.
     """
     x, y, w, h = rect
     if w <= 0 or h <= 0:
         return
-    sw, sh = strip.size
-    along = h if vertical else w
-    cap = min(cap or (sw if vertical else sh), along // 2)
-    strip = strip.resize((w, sh) if vertical else (sw, h), Image.LANCZOS)
     if vertical:
-        head, tail = strip.crop((0, 0, w, cap)), strip.crop((0, sh - cap, w, sh))
-        mid = strip.crop((0, cap, w, sh - cap)).resize(
-            (w, max(1, h - 2 * cap)), Image.LANCZOS)
-        dst.paste(head, (x, y))
-        dst.paste(mid, (x, y + cap))
-        dst.paste(tail, (x, y + h - cap))
+        strip = strip.resize((w, max(4, strip.height)), Image.LANCZOS)
+        length, run = h, strip.height
     else:
-        head, tail = strip.crop((0, 0, cap, h)), strip.crop((sw - cap, 0, sw, h))
-        mid = strip.crop((cap, 0, sw - cap, h)).resize(
-            (max(1, w - 2 * cap), h), Image.LANCZOS)
-        dst.paste(head, (x, y))
-        dst.paste(mid, (x + cap, y))
-        dst.paste(tail, (x + w - cap, y))
+        strip = strip.resize((max(4, strip.width), h), Image.LANCZOS)
+        length, run = w, strip.width
+    cap = max(1, min(cap or run // 3, run // 2, length // 2))
+    if vertical:
+        dst.paste(strip.crop((0, 0, w, cap)), (x, y))
+        dst.paste(strip.crop((0, run - cap, w, run)), (x, y + h - cap))
+        mid = strip.crop((0, cap, w, run - cap))
+        if h - 2 * cap > 0:
+            dst.paste(mid.resize((w, h - 2 * cap), Image.LANCZOS),
+                      (x, y + cap))
+    else:
+        dst.paste(strip.crop((0, 0, cap, h)), (x, y))
+        dst.paste(strip.crop((run - cap, 0, run, h)), (x + w - cap, y))
+        mid = strip.crop((cap, 0, run - cap, h))
+        if w - 2 * cap > 0:
+            dst.paste(mid.resize((w - 2 * cap, h), Image.LANCZOS),
+                      (x + cap, y))
+
+
+def _facing(rects, gx, gy, gw, gh, vertical):
+    """The names of the two windows a gap lies between."""
+    out = set()
+    for name, (x, y, w, h) in rects.items():
+        if vertical and (x + w == gx or x == gx + gw) and \
+                min(y + h, gy + gh) - max(y, gy) > 20:
+            out.add(name)
+        if not vertical and (y + h == gy or y == gy + gh) and \
+                min(x + w, gx + gw) - max(x, gx) > 20:
+            out.add(name)
+    return out
+
+
+def gap_role(names, vertical):
+    """Which rail a colony gap gets, from the windows it separates."""
+    if vertical:
+        return "in_row"
+    if "header" in names:
+        return "header_list"
+    if names & {"sort_bar", "return_button"}:
+        return "band_sort"
+    return "list_band"
 
 
 def build(master, windows, width, height):
@@ -396,66 +233,43 @@ def build(master, windows, width, height):
     band = max(1, round(BEVEL_REF * scale))
     _image, rects = frame_mask.render(windows, width, height)
 
-    # RAILS FIRST, BEVELS OVER THEM. A gap wide enough for the
-    # master's narrowest rail gets that rail along its length; a
-    # narrower one keeps the line the bevel already gives it. The
-    # rule is a comparison, not a fitting: nothing is squeezed to
-    # make a rail go in.
-    #
-    # Measured 7 September 2026 against the shipped layout: the
-    # narrowest master rail is 28.4 reference px and the widest gap
-    # this screen has is 18, so NO gap qualifies today and every
-    # strut keeps its line. The path is here because the rule is the
-    # rule, and a layout that widens a gap gets its rail without
-    # anybody remembering to come back.
-    strip, _rail_vertical, rail_ref = rail_source(master)
-    if strip is not None:
-        for x, y, gw, gh, vertical in struts(rects):
-            span = (gw if vertical else gh) / scale
-            if span > rail_ref:
-                lay_rail(out, strip, (x, y, gw, gh), vertical)
+    # RAILS FIRST, JUNCTIONS OVER THEM, BEVELS LAST. Every gap gets
+    # the master's strut for its ROLE (see RAIL_ROLES), laid at the
+    # gap's own width — layout_reference.gaps was set to those widths
+    # in Stage A3, so nothing is squeezed either way.
+    rails = master_rails(master)
+    junction = junction_source(master)
+    laid = []
+    for x, y, gw, gh, vertical in struts(rects):
+        names = _facing(rects, x, y, gw, gh, vertical)
+        strip_v = rails.get(gap_role(names, vertical))
+        if strip_v is None:
+            continue
+        lay_rail(out, strip_v[0], (x, y, gw, gh), vertical)
+        laid.append((x, y, gw, gh, vertical))
+    # THE CROSSINGS. Where a vertical rail meets a horizontal one the
+    # two overwrite each other's ends; the master's own crossing goes
+    # back over the corner, mirrored when the vertical arm comes from
+    # the other side. Only the master's pixels, never a drawn corner.
+    if junction is not None:
+        for vx, vy, vw, vh, vv in laid:
+            if not vv:
+                continue
+            for hx, hy, hw, hh, hv in laid:
+                if hv or min(vx + vw, hx + hw) - max(vx, hx) <= 0:
+                    continue
+                if abs(vy - (hy + hh)) <= 1:          # rail from below
+                    out.paste(junction.resize((vw, hh), Image.LANCZOS),
+                              (vx, hy))
+                elif abs((vy + vh) - hy) <= 1:        # rail from above
+                    out.paste(junction.transpose(Image.FLIP_TOP_BOTTOM)
+                              .resize((vw, hh), Image.LANCZOS), (vx, hy))
 
     bsrc, bopen, _chosen = bevel_source(master)
     for _name, (x, y, w, h) in sorted(rects.items()):
         lay_border(out, bsrc, bopen, (x, y, x + w, y + h),
                    (band, band, band, band))
     return out
-
-
-def print_profiles(master):
-    """Every hole's per-side edge, and the one the bevel comes from.
-
-    The measurement the choice rests on, printable, because "found,
-    not named" is only worth anything if the finding can be looked at.
-    """
-    a = np.array(master.convert("RGBA"))
-    lum = a[:, :, :3].mean(axis=2)
-    holes = a[:, :, 3] < 16
-    lab, n = ndimage.label(holes)
-    objs = ndimage.find_objects(lab)
-    sizes = ndimage.sum(holes, lab, range(1, n + 1))
-    h, w = holes.shape
-    print(f"{'hole':<26}" + "".join(f"{k:>13}" for k in "LRTB")
-          + "   agreement")
-    for i, size in enumerate(sizes, 1):
-        if size < 1500:
-            continue
-        sy, sx = objs[i - 1]
-        x0, x1, y0, y1 = sx.start, sx.stop, sy.start, sy.stop
-        if x0 < PROFILE or y0 < PROFILE or x1 > w - PROFILE or y1 > h - PROFILE:
-            continue
-        edge = {k: _ridge(p)
-                for k, p in _profiles(lum, x0, x1, y0, y1).items()}
-        heights = np.array([edge[k][0] for k in "LRTB"])
-        lit = all(edge[k][1] for k in "LRTB")
-        score = heights.min() / (1 + heights.std()) if lit else 0.0
-        print(f"  ({x0:>4},{y0:>4}) {x1-x0:>4}x{y1-y0:<4}"
-              + "".join(f"{edge[k][0]:8.0f}/{edge[k][1]:<4d}" for k in "LRTB")
-              + f"  {score:6.2f}"
-              + ("" if lit else "   (a side with no lit edge)"))
-    _crop, _open, chosen = bevel_source(master)
-    print(f"  -> sampled from the hole at "
-          f"({chosen[1][0]}, {chosen[1][1]}), score {chosen[0]:.2f}")
 
 
 def main():
