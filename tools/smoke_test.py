@@ -3956,6 +3956,54 @@ def main():
        "alpha, at all three resolutions — on a plate with no black "
        "in it)")
 
+    # ── The built frame carries the ring it was built for ──
+    #
+    # frame_build assembles the plate from the master's own nine
+    # slices and hands it to frame_cut. This measures the RESULT with
+    # the same sweep the ring table is measured with, so the number in
+    # layout_reference.json, the master it came from and the frame
+    # that ships all say one thing (decision 36, decision 3).
+    _fb_spec = _ilu2.spec_from_file_location(
+        "_frame_build", os.path.join(_proj, "tools", "frame_build.py"))
+    _fb = _ilu2.module_from_spec(_fb_spec)
+    _fb_spec.loader.exec_module(_fb)
+    _fb_master = _PILImage.open(os.path.join(_proj, *_rsrc["file"].split("/")))
+    for _spec in _lr["_resolutions"]:
+        _rw, _rh = (int(v) for v in _spec.split("x"))
+        _plate = _fb.build(_fb_master, _lr_windows, _rw, _rh)
+        assert _plate.size == (_rw, _rh) and _plate.mode == "RGB"
+        _fbcut, _ = _fb_cut = _fc.cut(_plate, _lr_windows, _rw, _rh)
+        # COMPARED IN DEVICE PIXELS, and that is not fussiness. The
+        # holes are placed by Layout.rect's truncation, so converting
+        # a device edge back to reference and comparing there asks
+        # round(int(107 * 4/3) / (4/3)) to be 107, and at 1440p it is
+        # 106. The ring in device px is what device_ring computes from
+        # those same rectangles; the reference table is checked
+        # against it at 1080p, where the mapping is the identity.
+        _fa = np.array(_fbcut)[:, :, 3]
+        _ys, _xs = np.where(_fa < 16)
+        _want_ring = _fb.device_ring(_lr_windows, _rw, _rh)
+        _got = (int(_xs.min()), _rw - 1 - int(_xs.max()),
+                int(_ys.min()), _rh - 1 - int(_ys.max()))
+        assert _got == tuple(_want_ring), (
+            f"{_spec}: the built frame's metal is {_got} px from the "
+            f"edges, the rectangles put the ring at {_want_ring}")
+        if _spec == "1920x1080":
+            assert _want_ring == (_ring["left"], _ring["right"],
+                                  _ring["top"], _ring["bottom"]), (
+                f"at 1080p the rectangles give a ring of {_want_ring} "
+                f"and the table says {_ring} — the two must be the "
+                f"same number, the scale there is 1")
+        # AND THE STRUT TEXTURE IS METAL, not a hole. A plate whose
+        # interior came out transparent would still pass the ring
+        # test above and be a frame with nothing between its windows.
+        _opaque = (_fa >= 250).mean()
+        assert _opaque > 0.15, (
+            f"{_spec}: only {100*_opaque:.1f} % of the built frame is "
+            f"opaque — the plate is not covering its own struts")
+    ok("colony frame built from the master (nine-slice ring matches the "
+       "table at all three resolutions, struts are metal)")
+
     # ── The two colony tables in zoomtables ──
     #
     # THE DOT IS ODD BY REQUIREMENT, not by taste. The original draws

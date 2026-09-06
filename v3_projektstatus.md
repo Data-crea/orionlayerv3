@@ -508,7 +508,7 @@ files under `doc/` and are only summarised here.
 | | |
 |---|---|
 | Python | 32,960 lines across 111 modules — `find . -name '*.py'`, `__pycache__` excluded, the smoke test's 6,400 included. The previous figure here (21,642 across 94) was carried from an unstated method and could not be reproduced |
-| Smoke test | `python tools/smoke_test.py` — **90 checks**, headless |
+| Smoke test | `python tools/smoke_test.py` — **91 checks**, headless |
 | Assets | 170 MB (select_race 68, galaxy_map 51, shared 23, new_game 21, colony_summary 1) |
 | Screens in HD | 7 of ~20–22 (colony summary draws list, sidebar, scan box and galaxy inset, and MOVES POPS — the first HD gesture that drives the game) |
 | Setup from clone | `python tools/setup.py` (deps via the system package manager) |
@@ -718,6 +718,8 @@ to stay uncomfortable to extend.
     ├── help_extract.py           171  HELP.LBX -> help_<lang>.json
     ├── ext_diag.py               473  Extension API diagnostics
     ├── ext_diag_race.py          228  Race screen field diagnostics
+    ├── frame_build.py             98  the colony frame, nine-sliced
+    │                                  out of the main-screen master
     ├── frame_cut.py               61  frame artwork + the mask ->
     │                                  RGBA frames, holes from the
     │                                  mask and never from the black
@@ -3034,6 +3036,62 @@ help-file lesson, one domain over.
 
 Zhadoom III (14 pops) is the widest row in either fixture and is
 therefore the narrowest-cell case any picture has to survive.
+
+### The colony frame is built, not rendered — 7 September 2026
+
+Six image-tool renders were measured and none was usable
+(`~/Bilder/rahmen/manifest.md`, which is the only place their
+original names survive). Five had near-white metal 30 degrees off the
+master's hue and **no interior windows at all**; the sixth was the
+right frame at aspect 2.0163 — 13.4 % wider than 16:9 — letterboxed
+into a 16:9 canvas, and **88 px short** of what a crop to 16:9 needs,
+so every such crop cuts into its windows. `background.png` is a
+derivative of `colony_summary/assets/frame.png`, stretched 13.4 %
+horizontally: its header and its **seven** bottom slots match that
+file's to three decimals. Nothing is derived from it.
+
+So `tools/frame_build.py` builds the frame instead. A nine-slice out
+of `galaxy_map/assets/frame.png`: the four corners lifted whole and
+scaled once, the four edges stretched along their own length only,
+the interior tiled with a strut texture, and the eight windows cut by
+`frame_cut` from the mask.
+
+**The strut patch is searched, not a coordinate.** It has to be metal
+and at least 12 px from any hole so it carries no moulding, and among
+those the FLATTEST — lowest luminance variance — because what is
+wanted is the material and not the ornament. The first attempt took
+the master's bottom band, which is the widest hole-free run it has
+and therefore looked obvious; it contains that band's own ornamental
+lines and tiling printed them across the interior every 64 px.
+**Widest is not flattest.**
+
+**The device ring comes from the windows, not from the table.**
+`round(ring * scale)` put the plate's ring one pixel inside its own
+first hole at 1440p — 106 where the table says 107 — because the
+holes are placed by `Layout.rect`'s truncation. `device_ring` takes
+it from the rectangles the holes are cut from, so the two agree by
+construction. The check compares in DEVICE pixels for the same
+reason: converting an edge back to reference asks
+`round(int(107 * 4/3) / (4/3))` to be 107, and at 1440p it is 106.
+
+**Resolution reach, and it is worse than expected.** The master is
+2322 px wide, so 1920 is a **downscale** (×0.827) and **both** 2560
+(×1.102) and 3840 (×1.654) are **upscaled interim variants**. Not
+just 2160p: 1440p too. The tool says so per resolution when it runs.
+A master at 3840 or wider would serve all three natively; until one
+exists, two of the three ship upscaled and this paragraph is the
+dated entry that says so.
+
+**And the picture answers the question it was made for.** Laid at 2x
+beside the frame shipped today: the ring, the corner plates and the
+amber lamps come through and read as the master. The **plain struts
+do not** — the master's metal has a median luminance of **2**, it is
+dark material carrying bright ornament, so a strut with no bevel is a
+slightly lighter black and is not distinguishable from the window
+beside it. The frame shipped today looks like structure because every
+strut has a highlight along its edge. Plain struts are what was
+asked for and the picture is what they give; polish is a decision for
+Data with the picture in hand.
 
 ### `max_map_scale` is estimated with 50.6 and that is wrong above 72 stars — 7 September 2026
 
