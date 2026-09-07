@@ -508,7 +508,7 @@ files under `doc/` and are only summarised here.
 | | |
 |---|---|
 | Python | 32,960 lines across 111 modules — `find . -name '*.py'`, `__pycache__` excluded, the smoke test's 6,400 included. The previous figure here (21,642 across 94) was carried from an unstated method and could not be reproduced |
-| Smoke test | `python tools/smoke_test.py` — **100 checks**, headless |
+| Smoke test | `python tools/smoke_test.py` — **102 checks**, headless |
 | Assets | 170 MB (select_race 68, galaxy_map 51, shared 23, new_game 21, colony_summary 1) |
 | Screens in HD | 7 of ~20–22 (colony summary draws list, sidebar, scan box and galaxy inset, and MOVES POPS — the first HD gesture that drives the game) |
 | Setup from clone | `python tools/setup.py` (deps via the system package manager) |
@@ -3340,6 +3340,125 @@ what the arrows add is the two ends of it.
 98 checks, unchanged: the two overflow checks became the two arrow
 checks in place.
 
+### Stage 3: the population figures are the game's own — 7 September 2026
+
+**THE COLONISTS ARE SPRITES NOW, at three resolutions, beside the
+original** (`figures_vs_original_{1920x1080,2560x1440,3840x2160}_3502.4.png`,
+one snapshot each of the running game with the reference save loaded
+— stardate 3502.4, 99 stars, 55 colony records, 11 the local
+player's and not outposts, 10 drawn; save hash `ab70cc9ad5442335`
+before and after, `~/Master of Orion 2` and the orion2re tree
+unwritten). The species track the original's: Draconis V's four blue
+Trilarian workers sit where the original puts them, and Blucher II's
+thirteen farmers squish and overlap the same way.
+
+**DECISION 50, extended in the same commit.** The figures come out of
+the player's own `RACEICON.LBX` at an integer nearest-neighbour step
+and are never scaled (decision 28). HD figure artwork is not a
+project deliverable and `brief_pop_sprites_assets.md` is **retired**.
+A mod replaces figures per file — master or step, each alone.
+
+**54 FIGURES, EVERY ONE 28 x 28**, and that is a measurement, not a
+convention: across all 171 entries the six job sprites of every race
+block and both shared sprites are 28 x 28 without exception, and only
+`military_4` (35x28) and `military_5` (24x35) differ — neither drawn
+here. 13 races x three jobs, 13 race portraits for a conquered pop,
+plus native and android.
+
+**THE STEP IS MADE IN THE LOADER, and that is the mod path's doing.**
+A mod ships a 28 x 28 master and it has to arrive at the same size as
+the base figure it replaces; a pre-stepping extractor would need a
+second path to the same pixel (decision 5). And `figure_step` is now
+the ONE home for the number — `colonytrack` took it from its own
+`closest_resolution` call until this commit, and a track laid at 3x
+holding sprites loaded at 2x is a picture neither module would report.
+
+**THE MOD PATH: one PNG, one name, one folder, restart.**
+`assets/shared/figures/<race>_<role>.png`, race keys from the
+SOURCE's `STOCK_RACE` and never the localised `_race_names[]`, so a
+mod keeps working on a translated install. Beside the master,
+`<name>@2x/@3x/@4x.png` at exactly 56/84/112. For one figure at one
+step: **explicit step file, then stepped master, then the next
+root** — resolved inside each root before moving on, which is what
+`Resources.roots()` was added for. Two `resolve` calls would let a
+base step file outrank a mod's master, and then a one-file mod is not
+one file. A wrong size is refused with one log line and the base
+figure is drawn; nothing is ever stretched to fit.
+`doc/modding_figures.md` is GENERATED from the loader's table and
+compared byte for byte.
+
+**I WAS ABOUT TO CENTRE THE FIGURE IN ITS CELL. The original does
+not.** `animate::Draw_((30 - _step_squish) * pop_draw_index + left_x,
+top_y, anim)` (coldraw.cpp:349) places the sprite at the slot's own
+left edge and at `top_y`, the ROW's top. Centring looked obviously
+right and was an invention, and it had a visible cost: the HD cell is
+2:1 (the pitch is stepped, the bar height is not), so a 56 px figure
+sat 13 px above and below a 30 px bar and, at 1440p, four px into the
+rows either side. Top-left, transcribed, is both correct and the fix.
+
+**THE ONE RESOLUTION WHERE THE FIGURE DOES NOT FIT ITS ROW IS
+2560x1440, and the reason is the integer step itself.** 1440p takes
+step 3 where proportion wants 2.67, so the figure is 12.5 % larger
+there relative to the layout than at 1080p or 2160p: 84 px against a
+77 px row, where the other two are 56-in-58 and 112-in-116. That is
+decision 28's known cost arriving somewhere specific. The row clips
+vertically — never horizontally, because horizontal overflow IS the
+overlap — and **the clip is measured to be lossless**: every master
+carries at least three transparent rows below its ink (the tallest
+ink is `alkari_farmer`, 24 of 28 rows), which is nine px at step 3
+against seven px to find. A smoke check recomputes that margin from
+the files, so a future sprite set with a fuller canvas fails here
+instead of losing feet on screen.
+
+**THE OVERLAP DRAWS LEFT TO RIGHT**, asserted in pixels:
+`pop_draw_index++` is at coldraw.cpp:377, AFTER the draw at :349, so
+each figure covers its LEFT neighbour's right edge.
+
+**THE CLICK DID NOT MOVE, AND IT FOLLOWS THE SLOT, NOT THE INK.**
+`case 4` (coldraw.cpp:367) takes the first slot whose right edge is
+at or past the pointer — the LEFTMOST, which at an overlap is the
+figure partly underneath. The original's own click and ink disagree
+there. `colonyicons.slot_at` already transcribed it; "the click
+should follow the visible figure" is the invention, and a check now
+says so.
+
+**Stage 5's deletion list, with one exclusion.** Stage 5 deletes the
+superseded frame and its flag, and re-targets the old markers. **The
+coloured cell renderer stays.** Criterion 5 of this stage makes the
+cells the picture an install without the extraction sees — the
+loader reports `missing`, the row renderer takes `None` and draws
+what it always drew, and the screen names the command. That is a
+state of the figures feature, not superseded code, and the list is
+drawn with it excluded so nobody has to re-derive that later. Also
+recorded beside the frame-flag sentence, where a reader of Stage 5
+meets it.
+
+**`tools/raceicon_extract.py` was never in `setup.py`** — help,
+nebula, techname and estrings all were. It is now, checked by the
+FIRST file of the set rather than by the directory, because an
+interrupted extraction leaves a directory that exists and is short.
+The tool also went over the 300-line guideline, so the three
+reference-sheet composers moved to `tools/raceicon_sheets.py` along
+a seam its own docstring had already named: `assets/shared/figures/`
+is the set the tree LOADS and `raceicon_ref/` is a set nothing loads.
+The exceptions list is unchanged.
+
+**The row dict carries a `Cell`, not a string.** A cell now holds
+its identity class AND the figure it draws, because both are
+branches of the same `Colony_Pop_Anim_` read (colony.cpp:1268-1283)
+and two parallel tuples indexed alike is one rebuild away from a cell
+that wears an N and draws an android. The conquered test comes FIRST
+in that function, so a conquered native draws a portrait — reordering
+it reads as a simplification and changes the picture.
+
+**`colonyrows` still imports no pygame.** It imports `colonyfigures`
+for `figure_for`, which would have pulled pygame in transitively and
+quietly ended the property its docstring claims. The naming half of
+that module is pure arithmetic; the loading half imports pygame where
+it uses it.
+
+100 -> 102 checks.
+
 ### The BUILDING column fills: ESTRINGS, and three things it exposed — 7 September 2026
 
 **IT SAYS "Trade Goods" NOW, on all ten visible rows, matching the
@@ -3914,7 +4033,11 @@ opaque frame alpha, reports **5822 violating pixels at 1080p and
 31654 at 2160p** with the flag off, because the old frame's metal
 sits exactly where the new list is. The flag is kept for one stage so
 the two can be compared side by side; **Stage 5 deletes the old
-frame and the flag together**. Both checkers now read the frame the
+frame and the flag together**. **THE COLOURED CELL RENDERER IS NOT
+ON THAT LIST** — see "Stage 5's deletion list, with one exclusion"
+in the Stage 3 entry: it is what an install without
+`tools/raceicon_extract.py` sees, so it is a state of the figures
+feature and not superseded code. Both checkers now read the frame the
 screen actually DREW rather than a path they assumed — that
 assumption is what produced those numbers against artwork nobody
 blitted.

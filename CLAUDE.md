@@ -22,6 +22,7 @@ habits are non-negotiable.
 | The Extension API protocol | `doc/ext_api_dokumentation_v3.md` |
 | What is being asked of Joes — **the only list** | `doc/orion2re_open_fixes.md` |
 | How mods override files | `MODDING.md` |
+| The 54 figure names, generated | `doc/modding_figures.md` |
 
 ---
 
@@ -57,7 +58,7 @@ derive world geometry.
 python tools/smoke_test.py
 ```
 
-100 checks, headless, no orion2re needed. **The count must not go
+102 checks, headless, no orion2re needed. **The count must not go
 down.** If a change makes a check obsolete, replace it — do not
 delete it. Add a check for anything a future session could silently
 break; several checks exist because a fault was invisible on screen.
@@ -139,6 +140,9 @@ the repository — neither is required to start:
 ```bash
 python tools/help_extract.py                        # context-help texts
 python tools/nebula_extract.py /path/to/starbg.lbx  # nebula sprites
+python tools/techname_extract.py                    # building names
+python tools/estrings_extract.py                    # option strings
+python tools/raceicon_extract.py                    # population figures
 ```
 
 Without the first, every right click opens a panel naming that

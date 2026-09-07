@@ -75,6 +75,25 @@ class Resources:
         p = os.path.join(BASE_DIR, relpath)
         return p if os.path.exists(p) else None
 
+    def roots(self):
+        """Every search root in priority order: mods first, base last.
+
+        `resolve` answers "which file wins"; this answers "which
+        SOURCE would answer", which a caller needs when one logical
+        asset has several file forms and the choice between them must
+        be made INSIDE a source rather than across sources. The
+        figures are the case (decision 50): a mod that ships a 28x28
+        master and no step files must beat the base project's step
+        files, so the step/master preference is resolved per root and
+        the roots are then tried in order. Doing it with two
+        `resolve` calls would let a base step file outrank a mod's
+        master, which is the opposite of what a mod is for.
+
+        Still decision 16 — the caller gets roots from here and never
+        builds a path from `BASE_DIR` itself.
+        """
+        return list(self.mod_dirs) + [BASE_DIR]
+
     def resolve_dir(self, relpath):
         """Return the first existing DIRECTORY for relpath, mods first.
 

@@ -67,7 +67,11 @@ def lines_for(row, job, words):
     # Identity, only when there is any — the common case says nothing
     # extra, which is the same rule the cell marks follow.
     kinds = {}
-    for kind in cells:
+    for cell in cells:
+        # `.kind`, not the cell — a cell is `colonyrows.Cell(kind,
+        # figure)` since the figures arrived, and the popup counts
+        # identities, never sprites.
+        kind = cell.kind
         if kind:
             kinds[kind] = kinds.get(kind, 0) + 1
     for kind, count in sorted(kinds.items()):

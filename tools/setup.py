@@ -29,6 +29,7 @@ separate, deliberate steps:
     python tools/nebula_extract.py /path/to/starbg.lbx
     python tools/techname_extract.py                # building names
     python tools/estrings_extract.py                # option strings
+    python tools/raceicon_extract.py                # population figures
 
 Missing help texts are not an error — the popup says so and names the
 command. The script reports their state and moves on.
@@ -43,6 +44,8 @@ sys.path.insert(0, ROOT)
 
 from core.buildnames import name_file as build_name_file
 from core.estrings import string_file as estrings_file  # noqa: E402
+from screens.colony_summary.colonyfigures import (  # noqa: E402
+    FIGURE_DIR, all_names)
 from core.config import load_settings      # noqa: E402
 from core.helptext import help_file        # noqa: E402
 
@@ -127,6 +130,16 @@ def from_game(settings=None):
          f"non-building the game can produce",
          "python tools/estrings_extract.py"
          + (f" --lang {lang}" if lang != "en" else "")),
+        # THE POPULATION FIGURES (decision 50). Checked by the FIRST
+        # file of the set rather than by the directory: an interrupted
+        # extraction leaves a directory that exists and is short, and
+        # a check on the directory would call that done. The loader
+        # reports "partial" for the same reason.
+        (os.path.join(ROOT, FIGURE_DIR, all_names()[0]),
+         f"population figures ({len(all_names())} sprites) — without "
+         f"them the colony summary draws coloured cells instead of "
+         f"the game's own colonists",
+         "python tools/raceicon_extract.py"),
     ]
 
 

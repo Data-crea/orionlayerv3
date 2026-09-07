@@ -104,10 +104,10 @@ from core.config import REF_W, REF_H
 from core.screen_base import ScreenBase
 from core.structs import player as player_struct
 
-from . import (colonybuild, colonyempire, colonyframe, colonyheader,
-               colonyinset, colonylist, colonymoveui, colonyoutput,
-               colonyrows, colonyscroll, colonyselect, colonysort,
-               colonytrack)
+from . import (colonybuild, colonyempire, colonyfigures,
+               colonyframe, colonyheader, colonyinset, colonylist,
+               colonymoveui, colonyoutput, colonyrows, colonyscroll,
+               colonyselect, colonysort, colonytrack)
 
 log = logging.getLogger("colony_summary")
 
@@ -449,7 +449,8 @@ class ColonySummaryScreen(ScreenBase):
         colonylist.render(surface, self._rows,
                           pygame.Rect(*self.layout.rect(box)),
                           cfg, self.layout, self.style, self._first,
-                          self._frame_inset())
+                          self._frame_inset(),
+                          colonyfigures.set_for(self, self._list_view()[2]))
 
     def _render_inset(self, surface):
         """The original's small galaxy map — a TRANSCRIPTION.

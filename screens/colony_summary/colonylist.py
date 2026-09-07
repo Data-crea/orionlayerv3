@@ -155,7 +155,7 @@ CELL_MARK = palette.col("colony_summary", "cell_mark", (16, 18, 24))
 
 # ── Geometry: computed once, drawn by either mode ──────────────────
 def render(surface, rows, area, cfg, layout, style, first=0,
-           frame_inset=0):
+           frame_inset=0, figures=None):
     """Draw the rows into `area`. Everything sized from `cfg`.
 
     `area` is the `list_area` box in screen coordinates, `cfg` the
@@ -205,7 +205,7 @@ def render(surface, rows, area, cfg, layout, style, first=0,
         _draw_name_block(surface, row, area.x + pad_x, y, name_w, row_h,
                          cfg, name_px, small_px, style, frame_inset)
         _render_bar(surface, row, area, cfg, scale, (y, row_h), track,
-                    small_px, style)
+                    small_px, style, figures)
         # THE PRODUCING TEXT SITS IN ITS OWN COLUMN when there is a
         # column table, and after the track when there is not. Same
         # call, same width, one place that decides where — a second
@@ -497,7 +497,7 @@ def _detail_text(row, cfg):
 
 
 def _render_bar(surface, row, area, cfg, scale, band, track, text_px,
-                style):
+                style, figures=None):
     """One row's run: three markers, their cells, then the growth.
 
         F [food cells] W [worker cells] S [scientist cells]  gap  · · ·
@@ -526,6 +526,7 @@ def _render_bar(surface, row, area, cfg, scale, band, track, text_px,
     every number correct and nothing on screen.
     """
     boxes = colonytrack.row_boxes(area, cfg, scale, row, band)
+    top, band_h = band
 
     if boxes.beyond is not None:
         thick = max(1, track.bar_h // 16)
@@ -548,14 +549,84 @@ def _render_bar(surface, row, area, cfg, scale, band, track, text_px,
                            MARKER_TEXT, style)
 
     cells = row.get("cells")
+    # **CLIPPED TO THE ROW, VERTICALLY ONLY.** A stepped figure is
+    # 28 x step tall — 56, 84, 112 — against a row of 58, 77 and 116
+    # reference-scaled px, so at 2560x1440 alone the figure is seven
+    # px taller than its row. That is the integer step's known cost
+    # (decision 28): 1440p takes step 3 where proportion wants 2.67,
+    # which makes the figure 12.5 % larger there relative to the
+    # layout than at the other two resolutions.
+    #
+    # **THE CLIP IS LOSSLESS, AND THAT IS MEASURED, NOT HOPED.**
+    # Every one of the 54 masters carries at least 3 transparent rows
+    # below its ink (measured across the whole set; the tallest ink
+    # is `alkari_farmer` at 24 of 28 rows), so at step 3 there are at
+    # least 9 px of empty canvas to give up and 7 px to find. The
+    # figure is TOP-aligned, which is where the original draws it, so
+    # what the clip removes is always the empty bottom of the canvas
+    # and never a head.
+    #
+    # Horizontal overflow is NOT clipped: it is the overlap.
+    _clip = surface.get_clip()
+    if figures is not None:
+        surface.set_clip(pygame.Rect(area.x, top, area.width, band_h))
     for job, index, rect in boxes.cells:
+        # THE FIGURE IS THE CELL WHEN THERE IS ONE (decision 50).
+        # `figures` is a `colonyfigures.FigureSet` or None, and None
+        # is the ordinary state of an install that has not run the
+        # extractor — the coloured cell is what it falls back to, and
+        # the screen names the command elsewhere. It is a state of
+        # this feature, not dead code, which is why the cell path
+        # stays.
+        surf = _figure_for_cell(figures, cells, job, index)
+        if surf is not None:
+            # **AT THE SLOT'S LEFT AND THE ROW'S TOP — TRANSCRIBED,
+            # NOT CENTRED.** `animate::Draw_((30 - _step_squish) *
+            # pop_draw_index + left_x, top_y, anim)` (coldraw.cpp:349)
+            # places the sprite at the slot's own left edge and at
+            # `top_y`, the ROW's top. Centring it in the cell was the
+            # obvious-looking thing and it is an invention: the cell
+            # is 2:1 here (the pitch is stepped, the bar height is
+            # not), so centring pushed a 56 px figure 13 px above and
+            # below a 30 px bar and, at 1440p, four px into the rows
+            # either side.
+            #
+            # NEVER SCALED TO THE CELL. Where the cell is narrower
+            # than the figure — a squished column — the overflow is
+            # the OVERLAP the original has at the same squish, and
+            # fitting the sprite to the slot would remove exactly the
+            # thing being transcribed (decision 28).
+            surface.blit(surf, (rect.x, top))
+            continue
         pygame.draw.rect(surface, ZONE_COLORS[job], rect)
         mark = _cell_mark(cfg, cells, job, index)
         if mark:
             _blit_centered(surface, rect, mark, text_px, CELL_MARK, style)
+    surface.set_clip(_clip)
 
+    # LAST, SO IT WINS. The original prints "No Farming" INSIDE the
+    # farmers column at `top_y + 5` (coldraw.cpp:314-320), in place of
+    # the farmer figures a colony with `max_farms == 0` does not have.
+    # Drawing it after the figures is that same order.
     if row["no_farming"]:
         _draw_no_farming(surface, boxes, track, cfg, text_px, style)
+
+
+def _figure_for_cell(figures, cells, job, index):
+    """The stepped sprite for one cell, or None.
+
+    None for four different things and the caller treats them alike:
+    no figure set, a set that does not hold this name, a cell whose
+    race could not be read from the snapshot, and a row built before
+    the set existed. All four draw the coloured cell, which is a
+    complete picture rather than a gap.
+    """
+    if figures is None or not cells:
+        return None
+    if job >= len(cells) or index >= len(cells[job]):
+        return None
+    name = cells[job][index].figure
+    return None if name is None else figures.get(name)
 
 
 def _cell_mark(cfg, cells, job, index):
@@ -598,7 +669,11 @@ def _cell_mark(cfg, cells, job, index):
     if not cells or job >= len(cells) or index >= len(cells[job]):
         return ""
     marks = cfg.get("cell_marks", {})
-    return marks.get(cells[job][index], "")
+    # `.kind`, not the cell itself: a cell carries its identity class
+    # AND the figure it draws (`colonyrows.Cell`), because both are
+    # branches of the same `Colony_Pop_Anim_` read and must be
+    # computed from one word in one place.
+    return marks.get(cells[job][index].kind, "")
 
 
 def _draw_no_farming(surface, boxes, track, cfg, text_px, style):

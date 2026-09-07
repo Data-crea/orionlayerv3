@@ -107,6 +107,8 @@ depends on the unverified part; the zone split is built as a list of
 runs so the shading can be added inside a run later without moving
 anything else.
 """
+import collections
+
 from core import prodname
 from core import zoomtables
 from core.structs import colony as colony_struct
@@ -114,6 +116,7 @@ from core.structs import planet as planet_struct
 from core.structs import player as player_struct
 from core.structs import star as star_struct
 
+from . import colonyfigures
 from . import colonyicons
 
 ROMAN = ("I", "II", "III", "IV", "V")
@@ -616,6 +619,29 @@ def production_shortage(col, econ):
                - col.production[econ])
 
 
+#: One drawn cell. TWO FIELDS AND NOT TWO PARALLEL TUPLES: the
+#: identity letter and the figure are both per cell, and the moment
+#: they live in two lists indexed the same way, one of them can be
+#: rebuilt without the other. `kind` is what `_cell_mark` reads;
+#: `figure` is the file name `colonyfigures` resolves, or None where
+#: the race is not knowable from the snapshot.
+Cell = collections.namedtuple("Cell", "kind figure")
+
+
+def _pop_cell(word, owner_race, races):
+    """One `Cell` for one pop word.
+
+    Both halves come from the SAME word in the SAME place, which is
+    the point: `_pop_class` answers "what letter" and
+    `colonyfigures.figure_for` answers "what sprite", and both are
+    branches of `COLONY::Colony_Pop_Anim_` (colony.cpp:1268-1283).
+    Computing them apart would let a cell wear an N and draw an
+    android.
+    """
+    return Cell(_pop_class(word, owner_race),
+                colonyfigures.figure_for(word, owner_race, races))
+
+
 def _pop_class(word, owner):
     """Which identity class one pop word belongs to, or "" for own.
 
@@ -676,6 +702,20 @@ def build_rows(game_state, sort_key="name", names=None):
     if 0 <= me < len(game_state.player_raw):
         traits = player_struct.traits(
             player_struct.parse(game_state.player_raw[me]))
+    # PLAYER INDEX -> RACE INDEX, for the figures.
+    # `Colony_Pop_Anim_` reads `_player[Get_Effective_Pop_Player_(..)]
+    # .race` (colony.cpp:1272-1275), and the effective player is the
+    # pop word's own low nibble unless that nibble is 8 or 9 — so a
+    # conquered or assimilated pop draws ITS OWN race's figure and
+    # not the colony owner's. Every player is parsed, not just ours,
+    # because that is exactly the case this map exists for. `race` is
+    # offset 37 in the verified spec (decision 23).
+    races = {}
+    for _pi, _raw in enumerate(game_state.player_raw):
+        try:
+            races[_pi] = int(player_struct.parse(_raw).race)
+        except (AttributeError, ValueError, TypeError):
+            continue
 
     rows = []
     for index, raw in enumerate(game_state.colonies_raw):
@@ -714,7 +754,8 @@ def build_rows(game_state, sort_key="name", names=None):
             prof = colony_struct.pop_prof(col.pop[i])
             if 0 <= prof < len(jobs):
                 jobs[prof] += 1
-        cells = tuple(tuple(_pop_class(col.pop[p], col.owner)
+        cells = tuple(tuple(_pop_cell(col.pop[p], races.get(col.owner),
+                                      races)
                             for p in colonyicons.icon_pops(
                                 col.pop, col.n_pops, job))
                       for job in range(3))

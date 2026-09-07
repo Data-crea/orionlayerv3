@@ -37,6 +37,23 @@ mods/my_mod/assets/shared/fonts/Aldrich-Regular.ttf
 mods/my_mod/assets/shared/cursor.png
 ```
 
+### Population figures (per file, master or step)
+
+```
+mods/my_mod/assets/shared/figures/human_farmer.png       28 x 28
+mods/my_mod/assets/shared/figures/human_farmer@3x.png    84 x 84
+```
+
+One PNG, one documented name, one documented folder, restart. Each
+figure and each step resolves on its own, so a mod that supplies one
+file changes one figure. A file of the wrong size is refused with a
+line in the log and the original is drawn.
+
+**The 54 names, the sizes and the resolution order are in
+`doc/modding_figures.md`**, which is generated from the loader's own
+table — copy the names from there rather than typing them, because a
+file whose name nothing looks for fails silently.
+
 ### Banners (whole directory)
 
 ```

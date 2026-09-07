@@ -36,10 +36,17 @@ entry 47", which is the question the 13-entry block raises and which
 neither the raw dump (numbered and nothing else) nor the directories
 (the six people entries only) can answer.
 
-**NOTHING HERE IS COMMITTED** (decision 38 and `.gitignore`): it is
-extracted from somebody's own copy of the game and is not ours to
-ship. The tree must not need it — nothing in `screens/` reads this
-directory, and the smoke test passes with it absent.
+It also writes the BASE FIGURE SET the screens actually draw, into
+`assets/shared/figures/` — 54 masters at 28x28, named the way a mod
+names them (decision 50). That directory is the only output anything
+in `screens/` opens; everything under `raceicon_ref/` is a reference
+for reading by eye.
+
+**NOTHING HERE IS COMMITTED** (decisions 38, 40, 42 and `.gitignore`):
+both outputs are extracted from somebody's own copy of the game and
+are not ours to ship. The tree must not need either — the smoke test
+passes with both absent, and the colony summary falls back to its
+coloured cells and names this command.
 
 Requires: Pillow (pip install pillow --break-system-packages).
 """
@@ -50,6 +57,14 @@ import sys
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from core import lbx  # noqa: E402
+from tools.raceicon_sheets import (  # noqa: E402
+    SHEET_SCALE, contact_sheet, labelled_sheet, opaque_box, sprite_grid)
+from core.config import BASE_DIR  # noqa: E402
+from screens.colony_summary import colonyfigures as figures  # noqa: E402
+
+#: The loader's own constants, imported and never repeated here.
+FIGURE_DIR = figures.FIGURE_DIR
+MASTER_SIZE = figures.MASTER_SIZE
 
 try:
     from PIL import Image, ImageDraw
@@ -205,87 +220,14 @@ def save(pixels, header, palette, path):
                     lbx.rgba_bytes(pixels, palette)).save(path)
 
 
-def sprite_grid(entries, headers, palette, path, cells, columns,
-                pad, label_h, scale=1, name_w=0, row_names=()):
-    """Lay sprites out in a grid and write their labels under them.
-
-    Both sheets are this, and they were two copies of it for half a
-    day. `cells` is (row, column, entry, [lines]) — the caller owns
-    which entry goes where and what it is called, this owns the
-    geometry and the compositing. Nothing here decides anything.
-
-    NEAREST only, and only where the caller asks for a scale: these
-    are 28 px sprites and smoothing would invent pixels the original
-    does not have, which is the one thing a reference picture may not
-    do.
-    """
-    cell_w = scale * max(h.width for h in headers if h) + 2 * pad
-    cell_h = scale * max(h.height for h in headers if h) + 2 * pad + label_h
-    rows = max(r for r, *_ in cells) + 1
-    sheet = Image.new("RGB", (name_w + columns * cell_w, rows * cell_h),
-                      (24, 24, 28))
-    draw = ImageDraw.Draw(sheet)
-    for row, name in enumerate(row_names):
-        draw.text((6, row * cell_h + cell_h // 2 - 4), name,
-                  fill=(226, 226, 236))
-    for row, column, entry, labels in cells:
-        x, y = name_w + column * cell_w, row * cell_h
-        header = headers[entry] if entry < len(headers) else None
-        pixels = (lbx.decode_frame(entries[entry], header, 0)
-                  if header is not None else None)
-        if pixels is not None:
-            sprite = Image.frombytes("RGBA", (header.width, header.height),
-                                     lbx.rgba_bytes(pixels, palette))
-            if scale != 1:
-                sprite = sprite.resize(
-                    (sprite.width * scale, sprite.height * scale),
-                    Image.NEAREST)
-            sheet.paste(sprite, (x + pad, y + pad), sprite)
-        for i, text in enumerate(labels):
-            draw.text((x + pad, y + cell_h - label_h + 9 * i), text,
-                      fill=(210, 210, 220) if i == 0 else (150, 160, 180))
-    sheet.save(path)
 
 
-def contact_sheet(entries, headers, palette, path, columns=16):
-    """Every entry with its NUMBER under it, in FILE order.
-
-    The number is the point of the sheet: it is what the block layout
-    was checked against, and a sheet of unlabelled figures proves
-    nothing about which entry is which. It stays unlabelled by role
-    on purpose — checking the layout against a picture that already
-    applies it would be circular.
-    """
-    sprite_grid(entries, headers, palette, path,
-                [(i // columns, i % columns, i, [str(i)])
-                 for i in range(len(entries))],
-                columns, 4, 11)
 
 
 #: The labelled sheet's scale, its padding and the width of the
 #: race-name column at the start of each row.
-SHEET_SCALE = 4
-SHEET_PAD = 6
-SHEET_LABEL_H = 20
-SHEET_NAME_W = 116
 
 
-def labelled_sheet(entries, headers, palette, path):
-    """One row per race, 13 columns in block order, everything named.
-
-    A different picture from `_contact_sheet.png` and not a
-    replacement for it — see there.
-    """
-    races = min(len(RACE_NAMES), len(entries) // RACE_STRIDE)
-    cells = [(race, offset, race * RACE_STRIDE + offset, [
-                  str(race * RACE_STRIDE + offset), role])
-             for race in range(races) for offset, role in enumerate(ROLES)]
-    cells += [(races, 0, ANDROID_ENTRY, [str(ANDROID_ENTRY), "android"]),
-              (races, 1, NATIVE_ENTRY, [str(NATIVE_ENTRY), "native"])]
-    names = [f"{race:2d} {RACE_NAMES[race]}" for race in range(races)]
-    sprite_grid(entries, headers, palette, path, cells, len(ROLES),
-                SHEET_PAD, SHEET_LABEL_H, SHEET_SCALE, SHEET_NAME_W,
-                names + ["shared"])
 
 
 def dump_raw(entries, headers, palette, out, lines):
@@ -384,21 +326,6 @@ def figure_name(entry):
     return None
 
 
-def opaque_box(pixels, header):
-    """The bounding box of the non-transparent indices, or None.
-
-    Index 0 is the alpha (`Draw_Bitmap_Sprite_`, draw.cpp), so this is
-    where the figure actually is inside a canvas that is NOT cropped —
-    the canvas is the header's own, so every figure of a race shares
-    one origin and the baseline stays where the original puts it.
-    Cropping would destroy exactly that, which is why the box is
-    REPORTED rather than applied.
-    """
-    on = [i for i, v in enumerate(pixels) if v]
-    if not on:
-        return None
-    xs, ys = [i % header.width for i in on], [i // header.width for i in on]
-    return min(xs), min(ys), max(xs), max(ys)
 
 
 def dump_figures(entries, headers, palette, out, lines):
@@ -426,6 +353,81 @@ def dump_figures(entries, headers, palette, out, lines):
             f"e{entry:03d}_{named[0]}_{named[1]}", entry, lines, False,
             f"  {named[1]}  opaque {box if box else 'none'}")
     return written
+
+
+def dump_base_set(entries, headers, palette, lines):
+    """The 54 figures the colony screens actually draw, under
+    `assets/shared/figures/`, named the way a MOD names them.
+
+    **THIS IS THE ONLY STAGE THE TREE READS.** The three stages above
+    are a reference for reading by eye — numbered dumps, contact
+    sheets, per-race directories — and nothing in `screens/` opens
+    any of them. This one writes the file names
+    `screens/colony_summary/colonyfigures.py` resolves and a mod
+    overrides, one PNG at a time (decision 50).
+
+    THE NAMES COME FROM THE LOADER'S OWN TABLE, imported rather than
+    repeated. A second list of 54 names here would be a second home
+    for the mod convention, and `doc/modding_figures.md` is generated
+    from that same table — three copies of a naming rule is how the
+    screen-ID map went wrong.
+
+    Only entries the SCREEN can draw are written: the three job
+    sprites at `pop_state == 2` (the ODD entry of each pair, since
+    `Pop_To_Pop_State_` cannot return 0), the race portrait for a
+    conquered pop, and the two race-independent sprites. Military,
+    spy and the unreachable `_state0` half stay in the reference
+    dumps, where they are useful, and out of the set the game loads.
+    """
+    if not palette:
+        lines.append(f"{FIGURE_DIR}/: NOT written — no game palette. "
+                     f"The screen would draw grayscale figures, which "
+                     f"is worse than the coloured cells it falls back "
+                     f"to.")
+        return 0
+    directory = os.path.join(BASE_DIR, FIGURE_DIR)
+    os.makedirs(directory, exist_ok=True)
+    written = 0
+    for entry, name in base_set_entries():
+        header = headers[entry] if entry < len(headers) else None
+        pixels = (lbx.decode_frame(entries[entry], header, 0)
+                  if header is not None else None)
+        if pixels is None:
+            lines.append(f"  entry {entry:3d}: no figure, {name} not "
+                         f"written")
+            continue
+        if (header.width, header.height) != (MASTER_SIZE, MASTER_SIZE):
+            # REFUSED, NOT RESIZED. The loader refuses a wrong-sized
+            # mod file for the same reason and with the same words:
+            # a figure one step out of line with its neighbours reads
+            # as a rendering fault, not as a bad file.
+            lines.append(f"  entry {entry:3d}: {header.width}x"
+                         f"{header.height}, not {MASTER_SIZE}x"
+                         f"{MASTER_SIZE} — {name} not written")
+            continue
+        save(pixels, header, palette, os.path.join(directory, name))
+        lines.append(f"  entry {entry:3d} -> {FIGURE_DIR}/{name}")
+        written += 1
+    return written
+
+
+def base_set_entries():
+    """(RACEICON entry, file name) for the 54, in the loader's order.
+
+    The entry arithmetic is `People_Anim_` and `Colony_Pop_Icon_`
+    (colony_main.cpp:444-450, colony.cpp:1285) — `race * 13 + job * 2
+    + 1` for a job at pop_state 2 and `race * 13 + 12` for the
+    portrait — computed here from RACE_STRIDE rather than tabulated,
+    so it cannot disagree with the block layout above it.
+    """
+    for race, _key in enumerate(figures.RACE_KEYS):
+        for job, _role in enumerate(figures.ROLE_KEYS):
+            yield race * RACE_STRIDE + job * 2 + 1, \
+                figures.master_name(race=race, role=job)
+        yield race * RACE_STRIDE + 12, \
+            figures.master_name(race=race, portrait=True)
+    yield NATIVE_ENTRY, figures.master_name(shared=figures.NATIVE)
+    yield ANDROID_ENTRY, figures.master_name(shared=figures.ANDROID)
 
 
 def main():
@@ -480,7 +482,9 @@ def main():
 
     if palette:
         labelled_sheet(entries, headers, palette,
-                       os.path.join(args.out, "_labelled_sheet.png"))
+                       os.path.join(args.out, "_labelled_sheet.png"),
+                       RACE_NAMES, RACE_STRIDE, ROLES,
+                       NATIVE_ENTRY, ANDROID_ENTRY)
         lines.append("_labelled_sheet.png: one row per race, the 13 block "
                      "offsets across, entry number and role under each, "
                      f"{SHEET_SCALE}x nearest-neighbour.")
@@ -507,6 +511,16 @@ def main():
                      "baseline stays where the original puts it. The "
                      "opaque box below is where the ink is inside it.")
         written += dump_figures(entries, headers, palette, args.out, lines)
+        lines += ["", "--- stage 3: the base set the SCREEN reads ---"]
+        lines.append(f"written to {FIGURE_DIR}/ — this is the ONLY stage "
+                     f"anything in screens/ loads. Everything above is a "
+                     f"reference for reading by eye.")
+        lines.append("masters at 28x28, 1x. The STEP is made in the "
+                     "loader (colonyfigures.py), not here: a mod ships a "
+                     "28x28 master and it must arrive at the same size as "
+                     "the base figure it replaces, so there is one path "
+                     "to the stepped pixel and not two (decision 5).")
+        written += dump_base_set(entries, headers, palette, lines)
 
     summary = os.path.join(args.out, "summary.txt")
     with open(summary, "w") as fh:
@@ -516,8 +530,11 @@ def main():
     if not palette:
         print(f"No {PALETTE_LBX} beside the LBX: everything is grayscale "
               f"by palette index. See summary.txt.")
-    print("Nothing in the tree reads this directory; it is a reference "
-          "and it is not committed (.gitignore).")
+    print(f"raceicon_ref/ is a reference and nothing in the tree reads "
+          f"it. {FIGURE_DIR}/ IS read — by the colony summary, one file "
+          f"at a time. Neither is committed (.gitignore).")
+    print("OrionLayer reads the figures on start; restart it to pick "
+          "them up.")
 
 
 if __name__ == "__main__":

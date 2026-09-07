@@ -369,6 +369,7 @@ def _column_boxes(cols, cfg, scale, row, y, h, track, marker_slots):
     """
     from core import box
     from core import zoomtables
+    from . import colonyfigures
     from . import colonyicons
     regions = row_regions(row)
     markers, cells, targets = [], [], []
@@ -405,9 +406,10 @@ def _column_boxes(cols, cfg, scale, row, y, h, track, marker_slots):
         # drop target would move again the day Stage 3 draws sprites
         # at the step. Corrected 7 September 2026; it was the ratio
         # for one stop.
-        step = zoomtables.FIGURE_STEP[box.closest_resolution(
-            zoomtables.FIGURE_STEP, round(1920 * scale),
-            round(1080 * scale))]
+        # ONE HOME for the step: `colonyfigures.figure_step` also
+        # loads the sprites at it, and a pitch and a sprite that
+        # disagree are a picture nothing would report.
+        step = colonyfigures.figure_step(scale)
         pitch = min(colonyicons.column_pitch(job, max(count, 1)),
                     colonyicons.ICON_SPACING) * step
         # AND A CLAMP THAT CAN EXPIRE, decision 44's shape. The

@@ -74,6 +74,14 @@ screens/galaxy_map/assets/nebula_ref/
 # it absent.
 screens/colony_summary/assets/raceicon_ref/
 
+# The BASE FIGURE SET the colony screens draw: 54 masters at 28x28,
+# cut from the same RACEICON.LBX by the same tool. Decision 50 — the
+# shipped product DRAWS the game's own figures; the repository does
+# not HOLD them. A mod overrides them one file at a time here, and a
+# mod's own figures live in mods/<name>/assets/shared/figures/ and
+# are the mod author's to commit.
+assets/shared/figures/
+
 # The colony screen's window masks, rendered from
 # layout_reference.json by tools/frame_mask.py. Generated, so
 # decision 40 keeps them out: the licence is that regenerating

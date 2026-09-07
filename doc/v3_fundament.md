@@ -224,6 +224,31 @@ untouched by this**: skins still resolve as whole directories, and a
 figure is not a skin. The two rules cover different things and the
 easy mistake is to read 50 as loosening 17.
 
+**MASTER OR STEP, and each replaceable alone.** Data, 7 September
+2026, extending this decision rather than opening a new number for
+the same rule. Beside the 28x28 master a mod may ship
+`<name>@2x.png`, `@3x` and `@4x` at exactly 56, 84 and 112 — the
+sizes the integer step produces — so an author who wants HD artwork
+at one resolution supplies one file and does not have to redraw the
+other two. For one figure at one step the order is **explicit step
+file, then stepped master, then the next root**, resolved INSIDE each
+root before moving on: a mod that ships only a master must beat the
+base project's step files, which two `resolve` calls would get
+backwards. A step file of the wrong size is refused exactly as a
+wrong master is, with one line in the log, and the base figure is
+drawn.
+
+Both conventions are in `doc/modding_figures.md`, which is GENERATED
+from the loader's own name table and checked byte for byte — a
+hand-written list of 54 names is wrong within a month, and a modder
+following a stale name gets silence rather than an error.
+
+**THE COLOURED CELLS ARE NOT DEAD CODE.** An install that has not run
+`tools/raceicon_extract.py` has no figures, and the colony list draws
+the cells it always drew and names the command. That is the stated
+state of this feature, not a leftover, so the cell renderer is
+excluded from Stage 5's deletion list.
+
 ### The orion2re boundary
 
 **20. Field IDs for input.** `ACTIVATE_FIELD` for field types 0, 7 and

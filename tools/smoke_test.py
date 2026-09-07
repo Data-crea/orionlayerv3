@@ -5089,6 +5089,302 @@ def main():
     ok(f"colony row dict pinned ({len(_row_expected)} keys, docstring "
        f"and AST agree)")
 
+    # ── THE POPULATION FIGURES (decision 50) ──
+    #
+    # The colony screens draw the player's own RACEICON sprites at an
+    # integer step. Seven things are asserted here and each is a way
+    # this has already gone wrong somewhere in this project: a scale
+    # pretending to be a step, two homes for one number, a hit test
+    # that follows the ink instead of the slot, and a fallback that
+    # stops being exercised and rots.
+    from screens.colony_summary import colonyfigures as _fig
+    import tempfile as _tf
+
+    # 1. THE NAME TABLE IS THE ONE HOME. 54 figures — 13 races x
+    # three jobs, 13 portraits, native and android — and the count is
+    # computed from the key tuples, so adding a race moves it.
+    _fig_names = _fig.all_names()
+    assert len(_fig_names) == len(_fig.RACE_KEYS) * 4 + 2 == 54, \
+        len(_fig_names)
+    assert len(set(_fig_names)) == len(_fig_names), "duplicate figure name"
+    assert _fig.RACE_KEYS[5] == "human" and _fig.ROLE_KEYS == (
+        "farmer", "worker", "scientist"), (
+            "the race or role keys moved. They are enum STOCK_RACE "
+            "(orion2_consts.h:444-457) and ECON_FOOD/INDUSTRY/RESEARCH "
+            "(:119-121) — the SOURCE's identifiers, never "
+            "MOX::_race_names[], which is localised and would make a "
+            "mod stop working on a translated install")
+
+    # 2. THE STEP IS A SWAP, NOT A SCALE (decision 28). Sizes exactly
+    # 28 x step, and the step comes from ONE function — the same one
+    # colonytrack lays the cell pitch with, because a track at 3x
+    # holding sprites at 2x is a picture nothing would report.
+    assert _fig.STEPS == (2, 3, 4), _fig.STEPS
+    # 1280x720 is scale 0.667 and is BELOW the table's smallest key,
+    # so it falls to 1920x1080's step — decision 1's chain, and the
+    # case a `round()` on the scale would get wrong.
+    for _sc, _want in ((0.667, 2), (1.0, 2), (4 / 3, 3), (2.0, 4)):
+        assert _fig.figure_step(_sc) == _want, (
+            f"figure_step({_sc}) is {_fig.figure_step(_sc)}, expected "
+            f"{_want} — the step is box.closest_resolution over "
+            f"zoomtables.FIGURE_STEP and nothing else")
+    for _st in _fig.STEPS:
+        assert _fig.step_size(_st) == 28 * _st, _fig.step_size(_st)
+        assert _fig.step_name("human_farmer.png", _st) == \
+            f"human_farmer@{_st}x.png"
+    _tk_src = open(os.path.join(_proj, "screens", "colony_summary",
+                                "colonytrack.py"), encoding="utf-8").read()
+    assert "colonyfigures.figure_step(scale)" in _tk_src, (
+        "colonytrack no longer takes the sprite step from "
+        "colonyfigures.figure_step. Two places computing one step is "
+        "how the pitch and the sprite drift apart by a growing amount "
+        "with nothing on either side reporting it")
+
+    # 3. WHICH SPRITE A POP GETS — `Colony_Pop_Anim_` transcribed
+    # (colony.cpp:1268-1283), including the ORDER. The conquered test
+    # is FIRST, so a conquered native draws a portrait and not the
+    # native sprite; swapping the two reads as a simplification and
+    # changes the picture.
+    _races = {0: 5, 1: 10}          # player 0 human, player 1 sakkra
+    assert _fig.figure_for(0, 5, _races) == "human_farmer.png"
+    assert _fig.figure_for((2 << 7) | 0, 5, _races) == \
+        "human_scientist.png"
+    assert _fig.figure_for(9, 5, _races) == "native.png"
+    assert _fig.figure_for(8, 5, _races) == "android.png"
+    assert _fig.figure_for(0x400 | 1, 5, _races) == "sakkra_portrait.png", (
+        "a conquered pop no longer draws ITS OWN race's portrait. "
+        "Colony_Pop_Anim_ reads _player[Get_Effective_Pop_Player_(..)]"
+        ".race, and the effective player is the pop word's own nibble "
+        "— not the colony owner's")
+    assert _fig.figure_for(0x400 | 9, 5, _races) == "human_portrait.png", (
+        "a CONQUERED NATIVE no longer draws a portrait. The 0x400 "
+        "test comes before the state dispatch in Colony_Pop_Anim_ "
+        "(colony.cpp:1277-1282); reordering them is a one-line "
+        "simplification that changes what is on screen")
+    assert _fig.figure_for(3, 5, {}) is None, (
+        "an unknown race no longer answers None. Guessing a race "
+        "draws the wrong species, which looks like data and is not")
+
+    # 4. AN ABSENT SET IS A STATE, AND THE COLOURED CELLS ARE ITS
+    # PICTURE. Pointed at an empty root, the loader reports "missing"
+    # and holds nothing; the renderer takes None and draws the cells
+    # it has always drawn. **This is why the cell renderer is not on
+    # Stage 5's deletion list** — it is what an install without the
+    # extraction sees, not a leftover.
+    with _tf.TemporaryDirectory() as _empty:
+        _none = _fig.FigureSet(app.res, 2, root=_empty)
+        assert _none.state == "missing" and not _none.figures, _none.state
+        assert _none.get("human_farmer.png") is None
+    _cell_surf = pygame.Surface((1920, 1080))
+    _cell_surf.fill((0, 0, 0))
+    # The row is BUILT here rather than borrowed from `_rows`, whose
+    # job split comes from the fixture and could stop having a farmer
+    # in it without this check saying anything useful.
+    _cell_row = dict(_rows[1])
+    _cell_row["jobs"] = [2, 1, 0]
+    _cell_row["pops"] = 3
+    _cell_row["cells"] = ((_crw.Cell("", None), _crw.Cell("", None)),
+                          (_crw.Cell("", None),), ())
+    _cl.render(_cell_surf, [_cell_row], _area, _cfg, app.layout,
+               app.style, 0, 0, None)
+    _cell_px = pygame.surfarray.array3d(_cell_surf)
+    assert any(tuple(_cell_px[x, y]) == tuple(_cl.ZONE_COLORS[0][:3])
+               for x in range(_area.x, _area.right)
+               for y in range(_area.y, _area.bottom)), (
+        "with no figure set the farmer cells are not drawn in their "
+        "own colour. The coloured cell IS the absent-set state and a "
+        "screen that draws neither is the worst of the three")
+
+    # 5. A WRONG SIZE IS REFUSED, NOT FITTED — master and step file
+    # alike, one log line each, and the search moves on to the next
+    # root so the base figure is what gets drawn.
+    with _tf.TemporaryDirectory() as _bad:
+        _bd = os.path.join(_bad, _fig.FIGURE_DIR)
+        os.makedirs(_bd)
+        pygame.image.save(pygame.Surface((32, 32), pygame.SRCALPHA),
+                          os.path.join(_bd, "human_farmer.png"))
+        pygame.image.save(pygame.Surface((99, 99), pygame.SRCALPHA),
+                          os.path.join(_bd, "human_worker@2x.png"))
+        _bad_set = _fig.FigureSet(app.res, 2, root=_bad)
+        assert len(_bad_set.refused) == 2, _bad_set.refused
+        assert _bad_set.state == "missing", (
+            "a directory of refused files is not a figure set. "
+            "Refusing a file and then reporting the set as usable is "
+            "the failure this state exists to name")
+
+    # 6. THE ONE-FILE MOD, both conventions, and the ORDER between
+    # them. A mod that ships ONLY a master must beat the base
+    # project's step files — which is what `Resources.roots()` is
+    # for, and what two `resolve` calls would get backwards.
+    _figs_present = os.path.isdir(os.path.join(_proj, _fig.FIGURE_DIR))
+    if _figs_present:
+        with _tf.TemporaryDirectory() as _mod:
+            _md = os.path.join(_mod, _fig.FIGURE_DIR)
+            os.makedirs(_md)
+            _m = pygame.Surface((28, 28), pygame.SRCALPHA)
+            _m.fill((255, 0, 0, 255))
+            pygame.image.save(_m, os.path.join(_md, "human_farmer.png"))
+            _s3 = pygame.Surface((84, 84), pygame.SRCALPHA)
+            _s3.fill((0, 255, 0, 255))
+            pygame.image.save(_s3, os.path.join(_md, "human_worker@3x.png"))
+            from core.resources import Resources as _Res
+            _modres = _Res()
+            _modres.mod_dirs = [_mod]
+            _set3 = _fig.FigureSet(_modres, 3)
+            assert _set3.state == "ok" and len(_set3.figures) == 54, (
+                f"a two-file mod broke the other 52 figures "
+                f"({_set3.state}, {len(_set3.figures)})")
+            _got = _set3.get("human_farmer.png")
+            assert _got.get_size() == (84, 84), _got.get_size()
+            assert _got.get_at((42, 42))[:3] == (255, 0, 0), (
+                "the mod's MASTER did not win at step 3. A mod that "
+                "ships one 28x28 file must beat the base project's "
+                "own step files, or a one-file mod is not one file")
+            _gotw = _set3.get("human_worker@3x.png".replace("@3x", ""))
+            assert _gotw.get_at((42, 42))[:3] == (0, 255, 0), (
+                "the mod's explicit @3x file did not win. An author "
+                "who draws HD artwork for one resolution supplies one "
+                "file and must not have to redraw the other two")
+            # AND THE STEP FILE IS PER STEP: at 2x the same mod falls
+            # back to the base worker, because it shipped no @2x.
+            _set2 = _fig.FigureSet(_modres, 2)
+            _gotw2 = _set2.get("human_worker.png")
+            assert _gotw2.get_size() == (56, 56)
+            assert _gotw2.get_at((28, 28))[:3] != (0, 255, 0), (
+                "the @3x file leaked into step 2. Each step is "
+                "replaceable ALONE")
+
+    # 7. THE OVERLAP DRAWS LEFT TO RIGHT. `pop_draw_index++` is at
+    # coldraw.cpp:377, AFTER the draw at :349, so the walk paints
+    # ascending and each figure covers its left neighbour's right
+    # edge. At a squished pitch ours must do the same, or the overlap
+    # is a mirror image of the original's at the same squish.
+    class _StubSet:
+        """Two solid colours, so an overlap is readable in one pixel."""
+
+        def __init__(self, size):
+            self._s = {}
+            for _n, _c in (("human_farmer.png", (255, 0, 0)),
+                           ("native.png", (0, 0, 255))):
+                _surf2 = pygame.Surface((size, size))
+                _surf2.fill(_c)
+                self._s[_n] = _surf2
+
+        def get(self, name):
+            return self._s.get(name)
+
+    _ov = pygame.Surface((1920, 1080))
+    _ov.fill((0, 0, 0))
+    _ovrow = dict(_rows[1])
+    _ovrow["jobs"] = [8, 0, 0]
+    _ovrow["pops"] = 8
+    _ovrow["cells"] = ((_crw.Cell("", "human_farmer.png"),
+                        _crw.Cell("native", "native.png")) * 4, (), ())
+    _cl.render(_ov, [_ovrow], _area, _cfg, app.layout, app.style, 0, 0,
+               _StubSet(_fig.step_size(2)))
+    _ovpx = pygame.surfarray.array3d(_ov)
+    _red = [x for x in range(_area.x, _area.right)
+            for y in [_area.y + 30]
+            if tuple(_ovpx[x, y]) == (255, 0, 0)]
+    _blue = [x for x in range(_area.x, _area.right)
+             for y in [_area.y + 30]
+             if tuple(_ovpx[x, y]) == (0, 0, 255)]
+    if _red and _blue:
+        assert max(_blue) > max(_red), (
+            "the last figure drawn is not the rightmost on the "
+            "surface. coldraw.cpp:349 draws and :377 increments, so "
+            "the walk is ascending and a later figure covers an "
+            "earlier one's right edge")
+
+    # 8. THE CLICK IS UNMOVED, AND IT FOLLOWS THE SLOT AND NOT THE
+    # INK. `case 4` (coldraw.cpp:367) takes the FIRST slot whose
+    # right edge is at or past the pointer — the LEFTMOST slot, which
+    # at an overlap is the figure that is partly underneath. The
+    # original's own click and ink disagree there; transcribing it is
+    # right and "the click should follow the visible figure" is the
+    # invention.
+    from screens.colony_summary import colonyicons as _ci
+    _cnt = 8
+    _pitch = _ci.column_pitch(0, _cnt)
+    assert _pitch < _ci.ICON_SPACING, (
+        f"eight farmers no longer squish (pitch {_pitch}); the "
+        f"overlap case this asserts does not arise")
+    _edge0 = _ci.slot_right_edge(0, 0, _cnt)
+    assert _ci.slot_at(0, _edge0, _cnt) == 0 and \
+        _ci.slot_at(0, _edge0 + 1, _cnt) == 1, (
+            "slot_at no longer answers by slot boundary. A click one "
+            "px past slot 0's right edge belongs to slot 1 even where "
+            "slot 0's sprite is still drawn over it")
+    # 9. THE CLIP IS LOSSLESS, MEASURED ACROSS THE WHOLE SET. A
+    # stepped figure is taller than its row at 2560x1440 — 84 px
+    # against 77 — and the row clip has to take that out of empty
+    # canvas. Every master must therefore carry enough transparent
+    # rows BELOW its ink, which is why the figure is top-aligned:
+    # what the clip removes is the bottom of the canvas, never a head.
+    if _figs_present:
+        _worst_bottom = 28
+        for _fn in _fig_names:
+            _img = pygame.image.load(
+                os.path.join(_proj, _fig.FIGURE_DIR, _fn)).convert_alpha()
+            assert _img.get_size() == (28, 28), (
+                f"{_fn} is {_img.get_size()} — every RACEICON job "
+                f"sprite and both shared sprites are 28x28, measured "
+                f"across all 171 entries")
+            _worst_bottom = min(_worst_bottom,
+                                28 - _img.get_bounding_rect().bottom)
+        for _st in _fig.STEPS:
+            _rowpx = round(58 * (1.0 if _st == 2 else
+                                 (4 / 3 if _st == 3 else 2.0)))
+            _over = max(0, _fig.step_size(_st) - _rowpx)
+            assert _over <= _worst_bottom * _st, (
+                f"at step {_st}x a figure overhangs its row by "
+                f"{_over}px and the emptiest master has only "
+                f"{_worst_bottom * _st}px of transparent canvas below "
+                f"its ink — the row clip would cut a figure's feet")
+    ok(f"population figures: {len(_fig_names)} names, step is a swap "
+       f"(28x2/3/4), mod master and per-step files with the order "
+       f"per root, absent set draws cells, row clip loses no ink)")
+
+    # ── `doc/modding_figures.md` IS GENERATED, AND CHECKED ──
+    #
+    # A hand-written list of 54 names is wrong within a month, and a
+    # modder following a stale name gets SILENCE — a file nothing
+    # looks for is indistinguishable from a file that is not there.
+    # Regenerated here and compared byte for byte, the same trade the
+    # check count makes.
+    import importlib.util as _ilu
+    _mdspec = _ilu.spec_from_file_location(
+        "_make_modding_doc", os.path.join(_proj, "tools",
+                                          "make_modding_doc.py"))
+    _mdmod = _ilu.module_from_spec(_mdspec)
+    _mdspec.loader.exec_module(_mdmod)
+    _mdpath = os.path.join(_proj, "doc", "modding_figures.md")
+    assert os.path.exists(_mdpath), (
+        "doc/modding_figures.md is absent — run "
+        "`python tools/make_modding_doc.py`")
+    _mdtext = open(_mdpath, encoding="utf-8").read()
+    assert _mdtext == _mdmod.render(), (
+        "doc/modding_figures.md no longer matches the loader's table. "
+        "It is GENERATED — run `python tools/make_modding_doc.py` "
+        "rather than editing it, or the names a modder copies stop "
+        "being the names the loader looks for")
+    for _need in ("@2x.png", "@3x.png", "@4x.png", "28 x 28",
+                  "refused", "human_farmer.png"):
+        assert _need in _mdtext, (
+            f"the generated modding document no longer carries "
+            f"{_need!r} — both conventions, the master size and the "
+            f"refusal have to reach the person writing the mod")
+    # AND THE EXTRACTOR IS IN setup.py, which it was not until now:
+    # help, nebula, techname and estrings were all listed and this
+    # one had never been added.
+    _sp = open(os.path.join(_proj, "tools", "setup.py"),
+               encoding="utf-8").read()
+    assert "raceicon_extract.py" in _sp, (
+        "tools/setup.py does not name the figure extractor, so an "
+        "install without figures is never told what to run")
+    ok("modding_figures.md regenerates byte for byte; the figure "
+       "extractor is in setup.py")
+
     ok("colony header plates (the window is a marked DEVIATION, the "
        "plate height is a transcribed number that does not fit, the "
        "job columns are colsum.cpp's unequal three)")
@@ -6282,7 +6578,15 @@ def main():
         f"against {_mv_cfg.get('marker_letters')}. They sit in "
         f"different boxes, but a reader should not have to know that")
     _idr = dict(_dt_rows[1])          # Urna I's shape
-    _idr["cells"] = (("", "native", "native", "native"), (), ())
+    # `colonyrows.Cell(kind, figure)` — a cell carries its identity
+    # class AND the figure it draws, both from one `Colony_Pop_Anim_`
+    # read. The fake carries the same shape as the real row, which is
+    # what the AST pin on the row dict exists to keep true.
+    _Cell = _crw.Cell
+    _idr["cells"] = ((_Cell("", "human_farmer.png"),
+                      _Cell("native", "native.png"),
+                      _Cell("native", "native.png"),
+                      _Cell("native", "native.png")), (), ())
     _marks = [_cl._cell_mark(_mv_cfg, _idr["cells"], 0, _k)
               for _k in range(4)]
     assert _marks == ["", "N", "N", "N"], _marks
