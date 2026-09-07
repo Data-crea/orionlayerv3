@@ -508,7 +508,7 @@ files under `doc/` and are only summarised here.
 | | |
 |---|---|
 | Python | 32,960 lines across 111 modules — `find . -name '*.py'`, `__pycache__` excluded, the smoke test's 6,400 included. The previous figure here (21,642 across 94) was carried from an unstated method and could not be reproduced |
-| Smoke test | `python tools/smoke_test.py` — **98 checks**, headless |
+| Smoke test | `python tools/smoke_test.py` — **100 checks**, headless |
 | Assets | 170 MB (select_race 68, galaxy_map 51, shared 23, new_game 21, colony_summary 1) |
 | Screens in HD | 7 of ~20–22 (colony summary draws list, sidebar, scan box and galaxy inset, and MOVES POPS — the first HD gesture that drives the game) |
 | Setup from clone | `python tools/setup.py` (deps via the system package manager) |
@@ -3339,6 +3339,113 @@ what the arrows add is the two ends of it.
 
 98 checks, unchanged: the two overflow checks became the two arrow
 checks in place.
+
+### The BUILDING column fills: ESTRINGS, and three things it exposed — 7 September 2026
+
+**IT SAYS "Trade Goods" NOW, on all ten visible rows, matching the
+original word for word beside it** (`estrings_building_column_3502.4.png`,
+one snapshot of the running game with the reference save loaded —
+stardate 3502.4, 99 stars, 55 colony records, 11 the local player's
+and not outposts, 10 drawn; save hash `ab70cc9ad5442335`, unchanged
+before and after). The `- 1t` suffix the original appends stays off
+and stays OPEN, for the reason `build._turns_note` already carries.
+
+**THE COLUMN WAS READING THE WRONG TABLE FOR EVERY ROW IT HAD.**
+`COLBLDG::Selection_Name_` (colbldg.cpp:796) has THREE branches. A
+BUILDING id goes to techname.lbx; everything that is not a queued
+ship goes to `Option_String_` (colbldg.cpp:2338), a seventeen-case
+switch of `E_Strings_` indices out of the player's own **estrings.lbx**;
+a queued ship goes to `_ship[i].d.name`. The reference save takes the
+OPTION branch on every row — `producing[0]` is -2, TRADE_GOODS,
+`E_Strings_(0x21D)`. Widening the techname walk would never have
+reached it. `core/prodname.py` is now the ONE function both the
+column and the sort key call (decision 5); the third branch is
+answered with a stated absence, not a guess, because ship names are
+not on the wire (`core/structs/ship.py` verifies five fields, and a
+name at a guessed offset is decision 23).
+
+**`tools/estrings_extract.py`, the help-text pattern's third use**
+(decision 38). The language picks the FILE here — estrings /
+estrGERM / estrFREN / estrSPAN / estrITAL / estrPOLI — and it is
+always entry 0, where TECHNAME is one file whose ENTRY is the
+language. The walk is `Load_E_Strings_`'s own (estrings.cpp:11-37):
+`strlen + 1`, **no NUL-run skipping**, so an empty string is a valid
+entry. `Advance_To_Next_String_` skips runs and is TECHNAME's; a
+check now shows the two walks disagreeing on the same bytes rather
+than asserting in prose that they differ.
+
+**THE OFF-BY-ONE, and how it was caught.** The first walk started at
+byte 0 and produced 812 plausible strings — but Trade Goods sat at
+`0x21E`, which is Transport Ship. `Farload_Library_Data_` reads
+`total_count` and `element_size` as two uint16s and seeks to
+`sizeof(total_count) + sizeof(element_size) + element_size *
+start_idx` (farload.cpp:88-92, :107): a **4-byte header**. The entry
+is 21004 bytes, the header says 21000, and 21004 - 4 = 21000. With
+it skipped, THIRTEEN of the thirteen non-empty option ids land on the
+exact word their enum names — including the crossing pair, -5 WORKER
+to 0x0B2 'Android Worker' and -6 SCIENTIST to 0x0B1 'Android
+Scientist', which is out of numeric order in the source too and which
+no shifted or self-consistent table could reproduce. Three anchors
+would have been an argument; the crossing is the proof.
+
+**`is_building(0)` WAS WRONG AND NOTHING COULD SEE IT.**
+`Colony_Production_Is_Building_` is `id > BUILDING_NO_BUILDING && id <
+BUILDING_COUNT` (colbldg.h:16) — 1..48. Ours said `0 <= id < 49`, and
+`Option_String_` claims 0 with an explicit `case 0:` returning the
+empty string. A colony producing 0 would have shown `_buildings[0]`,
+"No Building", where the original shows nothing. The smoke check
+asserted `is_building(0)` and passed, because it had been written
+from the same range the code had rather than from the predicate. It
+became visible only when a second branch existed to disagree. Both
+bounds now spell the named constants.
+
+**An empty string is a VALUE here, so the derived file is a dense
+list.** `E_Strings_(0x00C)` is `""` — what NONE, SEPARATOR and 0
+resolve to — so a table that stored only non-empty entries could not
+tell "the original prints nothing" from "no such index". 812 entries,
+length checked at load, `None` reserved for out-of-range.
+
+**The `producing` sort key no longer falls back to the planet name,
+and stays declared unavailable.** `cmp_Prod_` (colsum.cpp:1091) is
+three levels, and `Switched_cmp_` case 5 does NOT negate while
+`cmp_Prod_` negates twice internally — so producing is DESCENDING on
+tier and DESCENDING on name (`strcmp`, case-sensitive, unlike
+`cmp_Alpha_`'s `strcasecmp`), not ascending as this project's table
+said. `Prod_To_Sort_Type_` transcribes completely except for
+`_buildings[].cost`, which is not extracted; since cost >= 0 the
+building band still sits where the source puts it, above every option
+and below FREIGHTERS and every ship. So the key is RIGHT on the
+reference save and would order two buildings by name where the
+original orders them by cost. Right on one save and wrong on the next
+is worse than a control that says it cannot do the job, so
+`SORT_UNAVAILABLE` keeps it with a narrowed reason.
+
+**The word lists are NOT switched, and 23 of 26 agree anyway.**
+Reported, not changed: `words.sizes` (0x2AB, 0x1E0, 0x173, 0x168,
+0x143), `words.minerals` (0x2AC, 0x1A7, 0x2AD, 0x1C2, 0x2AE),
+`words.gravities` (0x2AF, 0x2B0, 0x2B1) and `list.climates` (0x21B,
+0x2CF, 0x2D0, 0x2D1, 0x2D2, 0x18F, 0x1F5, 0x0B8, 0x2D3, 0x12F) are
+all readable now. Every size, mineral and climate is letter for
+letter ours already. **The three gravities differ, and they falsify a
+claim this project had written down.** `words._note` said
+colland.cpp:65 prints the table entry with no format, so "Normal
+Gravity" must be in the table. The first half is right; the table
+holds **"Normal G"**. The scan box's own format, `E_Strings_(0x4A)`,
+is `'%s%s %s \n%sravity\nMineral %s\n...'` (colsum.cpp:1194-1200) —
+the slot is `%sravity` and the table supplies the G. The note is
+corrected and both halves are pinned. A footnote worth keeping:
+"Normal G" was once rejected here as an enum name in title case, and
+it is also, letter for letter, the game's own string — the rejection
+was right for the wrong reason.
+
+**The row dict's docstring claimed a check that did not exist.** It
+said a smoke check held the fake rows to the same key set; nothing
+did, which is how `producing_id` and `producing_state` could have
+been added without the fixtures following. The 22 keys are read off
+`build_rows` with AST and pinned, and the docstring is asserted to
+list the new two.
+
+98 -> 100 checks.
 
 ### The BUILDING column: the names are extracted, and the reference save needs a second source — 7 September 2026
 

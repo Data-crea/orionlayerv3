@@ -4857,8 +4857,24 @@ def main():
     # ship or one of Option_String_'s options, which is the other
     # branch of Selection_Name_ (colbldg.cpp:796-802) and a different
     # string source. -2 is COLONY_PRODUCTION_TRADE_GOODS.
-    assert _bn.is_building(0) and _bn.is_building(48)
-    assert not _bn.is_building(49) and not _bn.is_building(-2)
+    #
+    # **ID 0 IS THE BOUND THAT WAS WRONG, and this assertion is why
+    # it stayed wrong.** It read `is_building(0)` and passed, because
+    # it had been written from the same range the code had rather
+    # than from the predicate. `Colony_Production_Is_Building_` is
+    # `id > BUILDING_NO_BUILDING && id < BUILDING_COUNT`
+    # (colbldg.h:16) — 1..48 — and `Option_String_` claims 0 with an
+    # explicit `case 0:` returning the empty string
+    # (colbldg.cpp:2356-2359). Both bounds are now spelled with the
+    # named constants, so a check and the code cannot agree with each
+    # other while both disagree with the source.
+    assert not _bn.is_building(_bn.BUILDING_NO_BUILDING), (
+        "is_building(0) is True again. 0 is BUILDING_NO_BUILDING and "
+        "belongs to Option_String_, which returns the empty string "
+        "for it; treating it as a building prints _buildings[0], "
+        "'No Building', where the original prints nothing")
+    assert _bn.is_building(1) and _bn.is_building(_bn.BUILDING_COUNT - 1)
+    assert not _bn.is_building(_bn.BUILDING_COUNT) and not _bn.is_building(-2)
     assert not _bn.is_building(None)
     _bn_names = _bn.BuildingNames(settings.get("language", "en"))
     assert _bn_names.state in ("ok", "missing", "stale"), _bn_names.state
@@ -4867,7 +4883,7 @@ def main():
         # Three names at known ids, so a walk that slipped by one
         # string fails here rather than showing a plausible wrong
         # word — the failure this kind of table produces.
-        for _id, _want in ((0, "No Building"), (7, "Automated Factory"),
+        for _id, _want in ((1, None), (7, "Automated Factory"),
                            (48, None)):
             _got = _bn_names.building(_id)
             if _want is not None:
@@ -4897,6 +4913,181 @@ def main():
             f"with the omission")
     ok(f"building names, derived from the user's TECHNAME.LBX "
        f"({_bn_note})")
+
+    # ── THE OPTION STRINGS ARE A SECOND FILE AND A SECOND WALK ──
+    #
+    # `COLBLDG::Selection_Name_` (colbldg.cpp:796) sends a BUILDING id
+    # to techname.lbx and an OPTION id to estrings.lbx, and the
+    # reference save takes the OPTION branch on every row —
+    # producing[0] is -2, TRADE_GOODS. The column was blank for that
+    # reason, not for want of a wider techname walk.
+    from core import estrings as _es
+    assert _es.ESTRINGS_COUNT == 812, (
+        "ESTRINGS_COUNT moved. It is estrings.h:4 and Load_E_Strings_ "
+        "walks exactly that many strings (estrings.cpp:11-37), so it "
+        "is asserted against the file rather than taken from it")
+    # THE SIXTEEN OPTION IDS ARE Option_String_'s OWN CASES, and the
+    # table is pinned entry by entry rather than spot-checked: a
+    # switch transcribed into a dict is exactly the kind of table
+    # that goes stale one case at a time.
+    assert len(_es.OPTION_STRINGS) == 17, (
+        f"{len(_es.OPTION_STRINGS)} option ids, expected 17 — the "
+        f"count is Option_String_'s CASE LABELS, not its distinct "
+        f"return values: SEPARATOR, NONE and 0 are three labels "
+        f"falling through to one E_Strings_ call (colbldg.cpp:2356)")
+    assert len(set(_es.OPTION_STRINGS.values())) == 15, (
+        "15 distinct E_Strings_ indices behind 17 ids — the "
+        "three-way fall-through is the only sharing in the switch")
+    assert _es.OPTION_STRINGS[-2] == 0x21D and _es.OPTION_STRINGS[-3] == 0x142
+    assert _es.OPTION_STRINGS[0] == _es.OPTION_STRINGS[-1] == \
+        _es.OPTION_STRINGS[-9] == 0x00C, (
+            "NONE, SEPARATOR and 0 no longer share E_Strings_(0x00C). "
+            "They share it in the source (colbldg.cpp:2356-2359) and "
+            "that string is EMPTY, which is why an empty cell in the "
+            "BUILDING column is correct and not a missing file")
+    assert _es.OPTION_STRINGS[-5] == 0x0B2 and _es.OPTION_STRINGS[-6] == 0x0B1, (
+        "WORKER/SCIENTIST no longer cross. -5 is WORKER -> 0x0B2 and "
+        "-6 is SCIENTIST -> 0x0B1, and the pair is out of numeric "
+        "order in the source too — it is the crossing that proves the "
+        "table was transcribed from Option_String_ and not sorted "
+        "into agreement with itself")
+    _es_strings = _es.EStrings(settings.get("language", "en"))
+    assert _es_strings.state in ("ok", "missing", "stale"), _es_strings.state
+    if _es_strings.state == "ok":
+        assert len(_es_strings.strings) == _es.ESTRINGS_COUNT
+        # PINNED, AND THIS IS THE CHECK THAT CATCHES THE HEADER.
+        # Walking the LBX entry from offset 0 instead of from 4 put
+        # every string ONE INDEX LATE and still produced 812 plausible
+        # strings — Trade Goods sat at 0x21E, which is Transport Ship.
+        # `Farload_Library_Data_` reads total_count and element_size,
+        # two uint16s, then seeks past them (farload.cpp:88-92, :107).
+        # Three anchors from Option_String_'s own switch; a walk off
+        # by one fails all three.
+        for _entry, _want in ((0x142, "Housing"), (0x21D, "Trade Goods"),
+                              (0x21E, "Transport Ship")):
+            _got = _es_strings.string(_entry)
+            assert _got == _want, (
+                f"E_Strings_({_entry:#05x}) is {_got!r}, expected "
+                f"{_want!r} — the walk has slipped, most likely past "
+                f"the 4-byte entry header (farload.cpp:107)")
+        assert _es_strings.string(0x00C) == "", (
+            "E_Strings_(0x00C) is not the empty string any more. It "
+            "is what NONE, SEPARATOR and 0 resolve to, and an empty "
+            "entry that reads as absent makes 'the original prints "
+            "nothing' indistinguishable from 'no such index'")
+        assert _es_strings.string(_es.ESTRINGS_COUNT) is None, (
+            "an out-of-range index returns something. None must mean "
+            "NO SUCH ENTRY and '' must mean a blank entry")
+        # THE WORD LISTS ARE NOT SWITCHED, AND THIS IS WHY THEY
+        # STAY. 23 of the 26 entries in layout.json's four
+        # enum-indexed lists are letter for letter the game's own
+        # (estrings.cpp:155-169, :204-213); the three that differ are
+        # the gravities, and they differ because the COLONY SUMMARY
+        # supplies half the word. E_Strings_(0x4A)'s gravity slot is
+        # `%sravity` and the table holds 'Normal G'
+        # (colsum.cpp:1194-1200), so 'Normal Gravity' exists only
+        # once the two are joined. Pinned because a future reader who
+        # sees 'Low G' in the table and 'Low' in layout.json will
+        # otherwise "fix" one of them.
+        assert "%sravity" in (_es_strings.string(0x4A) or ""), (
+            "E_Strings_(0x4A) no longer splits the word 'Gravity'. "
+            "The scan box's format supplies 'ravity' and "
+            "_planet_gravity_string supplies 'Normal G'; that split "
+            "is why words.gravities holds the bare quality")
+        assert _es_strings.string(0x2B0) == "Normal G", (
+            "_planet_gravity_string[NORMAL_G] is not 'Normal G'. It "
+            "looks like an enum name in title case and is in fact the "
+            "game's own string — see words._note")
+        _es_note = (f"{sum(1 for t in _es_strings.strings if t)} "
+                    f"non-empty of {_es.ESTRINGS_COUNT}")
+    else:
+        _es_note = (f"{_es_strings.state} — run "
+                    f"`python tools/estrings_extract.py`")
+
+    # THE TWO LOADERS MUST NEVER READ EACH OTHER'S FILE. The walks
+    # are different — `Advance_To_Next_String_` (techinit.cpp:11-21)
+    # skips a whole run of NULs, `Load_E_Strings_` (estrings.cpp:33-36)
+    # steps `strlen + 1` and keeps empties — so crossing them
+    # mis-indexes the result SILENTLY, which is the failure mode this
+    # commit already met once. Asserted three ways: the paths differ,
+    # neither module names the other's file, and the two walks are
+    # shown to disagree on the same bytes.
+    assert _es.string_file("en") != _bn.name_file("en")
+    import tools.estrings_extract as _ee
+    import tools.techname_extract as _te
+    for _mod, _forbidden in ((_es, "techname"), (_ee, "techname"),
+                             (_bn, "estrings"), (_te, "estrings")):
+        _text = open(_mod.__file__, encoding="utf-8").read().lower()
+        # The DOCSTRINGS compare the two on purpose, so only the code
+        # is searched — a mention in prose is what keeps the two
+        # walks from being confused, not what confuses them.
+        _code = "\n".join(l for l in _text.splitlines()
+                           if not l.strip().startswith("#"))
+        _code = _code.split('"""')
+        _code = "".join(_code[i] for i in range(0, len(_code), 2))
+        assert _forbidden + ".lbx" not in _code, (
+            f"{os.path.basename(_mod.__file__)} names "
+            f"{_forbidden}.lbx in its code. The two string tables "
+            f"live in different files and are walked differently; a "
+            f"loader that reaches for the other's file mis-indexes "
+            f"every entry after the first gap and looks like data")
+    _probe = b"A\x00\x00B\x00"
+    _te_walk = [b.decode() for b in _te.split_block(_probe)]
+    _ee_walk = [b.decode() for b in
+                _ee.split_block(b"\x00\x00\x00\x00" + _probe, 4)]
+    assert _te_walk[:2] == ["A", "B"], _te_walk
+    assert _ee_walk[:3] == ["A", "", "B"], (
+        f"the ESTRINGS walk swallowed the empty string ({_ee_walk!r}). "
+        f"`Load_E_Strings_` steps strlen+1 and an empty entry is "
+        f"valid; skipping NUL runs is TECHNAME's walk and would shift "
+        f"every index after the first gap")
+    assert _ee.HEADER_SIZE == 4, (
+        "the LBX entry header is not 4 bytes any more. "
+        "Farload_Library_Data_ reads total_count and element_size as "
+        "two uint16s and seeks past both (farload.cpp:88-92, :107)")
+    ok(f"option strings, derived from the user's ESTRINGS.LBX "
+       f"({_es_note}); the TECHNAME and ESTRINGS walks stay apart")
+
+    # ── THE ROW DICT IS THE INTERFACE, AND IT IS PINNED ──
+    #
+    # `build_rows` hands the two renderers plain dicts and its
+    # docstring lists the keys. The list was PROSE until 7 September
+    # 2026 — the docstring claimed a check held it and no such check
+    # existed, which is how `producing_id` and `producing_state`
+    # could have been added without the fake rows in this file
+    # following. Read off the source with AST rather than by running
+    # `build_rows`, which needs a colony blob.
+    import ast as _ast
+    _cr_src = open(os.path.join(_proj, "screens", "colony_summary",
+                                "colonyrows.py"), encoding="utf-8").read()
+    _fn = next(n for n in _ast.walk(_ast.parse(_cr_src))
+               if isinstance(n, _ast.FunctionDef) and n.name == "build_rows")
+    _dicts = [n for n in _ast.walk(_fn) if isinstance(n, _ast.Dict)
+              and len(n.keys) > 8]
+    assert len(_dicts) == 1, (
+        f"{len(_dicts)} candidate row dicts in build_rows — the pin "
+        f"below cannot tell which is the interface any more")
+    _row_keys = {k.value for k in _dicts[0].keys
+                 if isinstance(k, _ast.Constant)}
+    _row_expected = {
+        "index", "name", "climate", "pops", "jobs", "cells",
+        "no_farming", "max_pop", "producing", "producing_id",
+        "producing_state", "producing_turns", "can_buy", "production",
+        "drawn_production", "shortage", "size", "gravity", "mineral",
+        "growth", "morale", "morale_applies",
+    }
+    assert _row_keys == _row_expected, (
+        f"the row dict's keys changed. Added: "
+        f"{sorted(_row_keys - _row_expected)}; removed: "
+        f"{sorted(_row_expected - _row_keys)}. Both renderers and "
+        f"every fake row in this file read this set — update them in "
+        f"the same commit, which is what this pin is for")
+    for _doc_key in ("producing_id", "producing_state"):
+        assert _doc_key in _fn.body[0].value.value, (
+            f"build_rows' docstring no longer lists {_doc_key!r}; the "
+            f"docstring IS the interface document for these dicts")
+    ok(f"colony row dict pinned ({len(_row_expected)} keys, docstring "
+       f"and AST agree)")
 
     ok("colony header plates (the window is a marked DEVIATION, the "
        "plate height is a transcribed number that does not fit, the "

@@ -46,7 +46,10 @@ screens/galaxy_map/assets/icons/*.png
 # Extracted by tools/help_extract.py. Not ours to ship.
 assets/shared/help/help_*.json
 
-# The original's building names, tools/techname_extract.py's output.
+# The original's PRODUCTION NAMES, from the player's own install:
+# building names (tools/techname_extract.py, techname.lbx) and
+# option strings (tools/estrings_extract.py, estrings.lbx). Both
+# feed one column through core/prodname.py and neither is ours.
 # The user's own TECHNAME.LBX, so it is theirs and not ours to ship
 # (decisions 38, 40, 42); the loader carries a format version and the
 # colony screen explains an absent file rather than drawing nothing.

@@ -52,6 +52,13 @@ TECH_FIELD_COUNT = 83
 TECH_APP_COUNT = 212
 BUILDING_COUNT = 49
 
+#: orion2_consts.h:13. **NOT A BUILDING**, and the constant is named
+#: here rather than written as 0 because that is the whole of the
+#: correction below: `Colony_Production_Is_Building_` compares against
+#: this name, and a literal 0 in an `is_building` is what let the
+#: bound drift in the first place.
+BUILDING_NO_BUILDING = 0
+
 #: The first building's index in the string walk: string 0 is
 #: `_technology_fields[0]`, so the fields consume `TECH_FIELD_COUNT`
 #: strings in total and the applications `TECH_APP_COUNT` after them.
@@ -117,13 +124,26 @@ class BuildingNames:
 def is_building(production_id):
     """Whether `producing[0]` names a building at all.
 
-    `COLBLDG::Colony_Production_Is_Building_` is the original's test;
-    the range is what `_buildings[]` has (BUILDING_COUNT entries), and
-    an id outside it is a ship or an option and belongs to a different
-    branch of `Selection_Name_`.
+    **CORRECTED 7 September 2026, and it was a real defect.** This
+    read `0 <= value < BUILDING_COUNT`. The original is
+
+        production_id > BUILDING_NO_BUILDING &&
+        production_id < BUILDING_COUNT                (colbldg.h:16)
+
+    — id 0 is EXCLUDED. `Option_String_` claims it instead, with an
+    explicit `case 0:` returning `E_Strings_(0x00C)`, the empty
+    string (colbldg.cpp:2356-2359). So a colony producing 0 draws
+    nothing in the original and would have drawn `_buildings[0].name`
+    here, which the extracted table gives as "No Building".
+
+    It could not be seen until `core.estrings` existed, because 0 was
+    the ONE id both branches claimed and there was no second branch to
+    disagree with. That is the argument for transcribing a function's
+    neighbours and not only the function: the bound is in the
+    predicate, and the predicate had never been read.
     """
     try:
         value = int(production_id)
     except (TypeError, ValueError):
         return False
-    return 0 <= value < BUILDING_COUNT
+    return BUILDING_NO_BUILDING < value < BUILDING_COUNT

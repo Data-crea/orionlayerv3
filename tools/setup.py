@@ -27,6 +27,8 @@ separate, deliberate steps:
 
     python tools/help_extract.py                    # help texts
     python tools/nebula_extract.py /path/to/starbg.lbx
+    python tools/techname_extract.py                # building names
+    python tools/estrings_extract.py                # option strings
 
 Missing help texts are not an error — the popup says so and names the
 command. The script reports their state and moves on.
@@ -40,6 +42,7 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, ROOT)
 
 from core.buildnames import name_file as build_name_file
+from core.estrings import string_file as estrings_file  # noqa: E402
 from core.config import load_settings      # noqa: E402
 from core.helptext import help_file        # noqa: E402
 
@@ -107,7 +110,23 @@ def from_game(settings=None):
          f"building names ({lang}) — without them the colony summary's "
          f"BUILDING column says so instead of naming what is being "
          f"built",
-         "python tools/techname_extract.py"),
+         "python tools/techname_extract.py"
+         + (f" --lang {lang}" if lang != "en" else "")),
+        # TWO FILES FOR ONE COLUMN, and the second is the one that
+        # matters more often. `COLBLDG::Selection_Name_` sends a
+        # BUILDING id to techname.lbx and an OPTION id to
+        # estrings.lbx, and Trade Goods — what an idle colony
+        # produces, and what every row of the reference save produces
+        # — is an option. Extracting only the names above leaves the
+        # column blank on exactly the saves a player is most likely
+        # to open, which is how it stayed blank until 7 September
+        # 2026.
+        (os.path.join(ROOT, *estrings_file(lang).split("/")),
+         f"option strings ({lang}) — without them the BUILDING column "
+         f"is blank for Trade Goods, Housing and every other "
+         f"non-building the game can produce",
+         "python tools/estrings_extract.py"
+         + (f" --lang {lang}" if lang != "en" else "")),
     ]
 
 

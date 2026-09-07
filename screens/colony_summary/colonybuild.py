@@ -119,15 +119,32 @@ def draw(surface, row, x, y, width, row_h, cfg, style, layout):
     """
     name = row.get("producing") or ""
     if not name:
-        # ABSENT IS A STATE THE COLUMN EXPLAINS, not an empty cell.
-        # `producing` is None both when the id is not a building and
-        # when the extraction has not been run, and those are
-        # different things: the first is normal and draws nothing,
-        # the second is the user missing a command. The screen passes
-        # the loader's own state so the column can tell them apart —
-        # the same rule the help popup follows (decision 38).
-        note = cfg.get("names_missing") if cfg.get("names_state") in (
-            "missing", "stale") else ""
+        # ABSENT IS A STATE THE COLUMN EXPLAINS, and there are now
+        # THREE of them, per row, from `Selection_Name_`'s own
+        # branches (`core.prodname`):
+        #
+        #   "ok"         the original prints nothing here either —
+        #                E_Strings_(0x00C) is the empty string, which
+        #                is what NONE, SEPARATOR and 0 resolve to.
+        #                Draw nothing. This is the common case and it
+        #                is NOT a fault.
+        #   "missing"    a name file is absent or stale. The user is
+        #                missing a command; name it.
+        #   "unsourced"  a queued ship or a ship design, whose name
+        #                is not on the wire. NO COMMAND FIXES IT, so
+        #                offering the extractor here would send the
+        #                reader to run something that cannot help.
+        #
+        # The old code had two states and read the SCREEN-wide
+        # loader state, so an ordinary empty row on a fully extracted
+        # install and a ship whose name we cannot reach looked alike.
+        state = row.get("producing_state", "ok")
+        note = ""
+        if state == "missing" and cfg.get("names_state") in (
+                "missing", "stale"):
+            note = cfg.get("names_missing", "")
+        elif state == "unsourced":
+            note = cfg.get("names_unsourced", "")
         if note:
             _blit_note(surface, note, x, y, width, row_h, style, layout, cfg)
         return
@@ -189,18 +206,22 @@ def _blit_note(surface, text, x, y, width, row_h, style, layout, cfg):
 
 
 def names_for(screen):
-    """The extracted building names for a screen, loaded once per App.
+    """The production-name resolver for a screen, loaded once per App.
 
-    Held on the app the way the help texts are: every screen that
-    ever needs a building name reads one object, and the file is the
-    user's own game data (decision 38).
+    TWO FILES BEHIND ONE OBJECT (`core.prodname.Resolver`), because
+    `COLBLDG::Selection_Name_` reads two: building names out of
+    techname.lbx and option strings out of estrings.lbx. Held on the
+    app the way the help texts are — every screen that ever needs a
+    production name reads one object, and both files are the user's
+    own game data (decision 38).
     """
-    from core import buildnames
-    holder = getattr(screen.app, "building_names", None)
+    from core import buildnames, estrings, prodname
+    holder = getattr(screen.app, "production_names", None)
     if holder is None:
-        holder = buildnames.BuildingNames(
-            screen.app.settings.get("language", "en"))
-        screen.app.building_names = holder
+        lang = screen.app.settings.get("language", "en")
+        holder = prodname.Resolver(buildnames.BuildingNames(lang),
+                                   estrings.EStrings(lang))
+        screen.app.production_names = holder
     return holder
 
 
@@ -216,4 +237,6 @@ def list_cfg(screen):
     cfg["names_state"] = names_for(screen).state
     cfg["names_missing"] = screen._data.get("build", {}).get(
         "names_missing", "")
+    cfg["names_unsourced"] = screen._data.get("build", {}).get(
+        "names_unsourced", "")
     return cfg

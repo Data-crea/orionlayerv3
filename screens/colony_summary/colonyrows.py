@@ -107,6 +107,7 @@ depends on the unverified part; the zone split is built as a list of
 runs so the shading can be added inside a run later without moving
 anything else.
 """
+from core import prodname
 from core import zoomtables
 from core.structs import colony as colony_struct
 from core.structs import planet as planet_struct
@@ -641,10 +642,13 @@ def _pop_class(word, owner):
 def build_rows(game_state, sort_key="name", names=None):
     """One dict per colony of the local player, sorted.
 
-    `names` is a `core.buildnames.BuildingNames` or None. None and an
-    absent file give the same `producing` — None — because the ROW
-    cannot distinguish them usefully; the screen holds the object and
-    reports its state on the column.
+    `names` is a `core.prodname.Resolver` or None — the two name
+    files behind one object, because `COLBLDG::Selection_Name_` reads
+    both and the row builder should not have to know that. None reads
+    as an absent file. The row carries the branch it took in
+    `producing_state`, which the ROW CAN now distinguish and the
+    column needs it to: an unextracted file and a ship name that is
+    not on the wire have different fixes and one of them has none.
 
     Only `owner`, `planet`, `n_pops`, `max_farms`, `climate` and
     `buildings` are read, plus `pop_prof` — every one of them backed
@@ -653,7 +657,8 @@ def build_rows(game_state, sort_key="name", names=None):
 
     The dict keys ARE the interface to the two renderers: index,
     name, climate, pops, jobs, no_farming, max_pop, producing,
-    producing_turns, can_buy for `colonylist.render()`, and size,
+    producing_id, producing_state, producing_turns, can_buy for
+    `colonylist.render()`, and size,
     gravity, mineral, growth, morale, morale_applies,
     drawn_production, shortage for
     `colonyoutput.render()` on top of climate, pops and max_pop,
@@ -675,6 +680,8 @@ def build_rows(game_state, sort_key="name", names=None):
     rows = []
     for index, raw in enumerate(game_state.colonies_raw):
         col = colony_struct.parse(raw)
+        _producing = (names.name(col.producing[0])
+                      if names is not None else (None, "missing"))
         # TRANSCRIBED, both halves. `Build_Global_Colony_List_`
         # (colxport.cpp:91-99) walks the colony array in order and
         # keeps the ones whose `owner` is the local player and whose
@@ -761,8 +768,29 @@ def build_rows(game_state, sort_key="name", names=None):
             # table nor the accumulated production is established on
             # the wire yet. Approximating it would put a number on
             # screen that no source backs.
-            "producing": (names.building(col.producing[0])
-                          if names is not None else None),
+            # THREE KEYS, not one, because the column now has three
+            # things to say and used to be able to say two. `names`
+            # is a `core.prodname.Resolver`; `name()` is
+            # `COLBLDG::Selection_Name_` transcribed, and it reports
+            # WHICH branch it took as well as what it found:
+            #   ok         the text is the original's own word, and
+            #              "" is a legitimate one — E_Strings_(0x00C)
+            #   missing    the branch is known, its file is not
+            #              extracted
+            #   unsourced  a queued ship or a ship design, whose name
+            #              is `_ship[i].d.name` / a design record and
+            #              is NOT ON THE WIRE
+            # The third is why the state is per ROW and not per
+            # screen: no extraction fixes it, so the column must not
+            # offer a command for it.
+            #
+            # `producing_id` is the raw `producing[0]` and it is here
+            # for the SORT — `cmp_Prod_` orders on
+            # `Prod_To_Sort_Type_(id)` before it ever looks at a
+            # name, so the key needs the id and not only the word.
+            "producing_id": col.producing[0],
+            "producing": _producing[0] or "",
+            "producing_state": _producing[1],
             "producing_turns": 0,
             "can_buy": False,
             # production[4] in ECON order, orion2_consts.h:119-123.
@@ -902,15 +930,12 @@ def _by(field, econ=None):
     return lambda r: -r["production"][econ]
 
 
-#: `producing` is absent on purpose. `cmp_Prod_` (colsum.cpp:1091)
-#: orders by `Prod_To_Sort_Type_`, which reads
-#: `TECHDATA::_buildings[].cost` and then breaks ties on
-#: `COLBLDG::Selection_Name_` — a cost table and a name table both
-#: loaded at runtime from the player's own techname.lbx
-#: (techinit.cpp:43-73) and neither shipped. It is the same absence
-#: that leaves the building column empty. Sorting by it would need
-#: an invented order, so the key falls back to the name and the
-#: screen says so rather than pretending.
+#: `producing` NO LONGER FALLS BACK TO THE PLANET NAME. It is
+#: `core.prodname.sort_key` — `cmp_Prod_`'s first two levels,
+#: transcribed — and the module block there says exactly which part
+#: is still missing. It stays in SORT_UNAVAILABLE below; see that
+#: entry for why a key that is right on the reference save is still
+#: declared unavailable.
 SORT_KEYS = {
     "name": _alpha,
     "population": _by("pops"),
@@ -918,7 +943,7 @@ SORT_KEYS = {
     "industry": _by("production", ECON_INDUSTRY),
     "science": _by("production", ECON_RESEARCH),
     "bc": _by("production", ECON_BC),
-    "producing": _alpha,
+    "producing": prodname.sort_key,
 }
 
 #: Keys that do not do what their button says. The screen reads this
@@ -926,6 +951,19 @@ SORT_KEYS = {
 #: worked — an absence that is visible is a state, an absence that is
 #: silent is a bug.
 SORT_UNAVAILABLE = {
-    "producing": "needs the building cost and name tables from "
-                 "techname.lbx, which are not shipped",
+    # NARROWED 7 September 2026, and the old reason was half wrong.
+    # The NAME table is no longer missing — `core.prodname` resolves
+    # both of `Selection_Name_`'s answerable branches. What is still
+    # missing is `TECHDATA::_buildings[].cost`, which
+    # `Prod_To_Sort_Type_` (colsum.cpp:1224) adds 10 to, and
+    # `Calculate_Current_Production_Turn_Count_`, `cmp_Prod_`'s third
+    # level. The key is therefore RIGHT on any set where no colony is
+    # building a building — the reference save is one, every row
+    # produces Trade Goods — and orders buildings among themselves by
+    # name where the original orders them by cost. A control that is
+    # correct on one save and wrong on the next is worse than one
+    # that says it cannot do the job, so it stays declared.
+    "producing": "orders buildings among themselves by name; the "
+                 "original orders them by cost, and the cost table "
+                 "in techname.lbx is not extracted",
 }
