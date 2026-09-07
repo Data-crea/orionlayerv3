@@ -326,6 +326,10 @@ def build_screen(width, height):
             self.win_w, self.win_h = width, height
             self.res = res
             self.colors = colors
+            # Decision 5 applies to tools: the preview must read the
+            # same settings the app reads, or it renders a frame the
+            # app would not draw.
+            self.settings = settings
             self.layout = Layout(width, height)
             self.style = StyleRenderer(res.skin_dir(), res.font(), colors)
             self.screens_dir = SCREENS_DIR

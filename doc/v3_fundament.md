@@ -784,6 +784,43 @@ write a master that fails; the smoke test re-checks them against the
 shipped asset. Rotate with `rotozoom`, never `rotate`: the latter does
 not filter, and centre by surface size with `round`, never `//`.
 
+**49. The colony frame plates are DERIVED, and both halves of that
+word are part of the decision.** `tools/frame_build.py` nine-slices
+`screens/galaxy_map/assets/frame.png` into three plates
+(1920x1080, 2560x1440, 3840x2160) under
+`screens/colony_summary/assets/frames/`. They are not committed. Both
+inputs are — the master and `layout_reference.json` — so a rebuild
+reproduces all three byte for byte, and a smoke check asserts exactly
+that rather than trusting the tool's existence (decision 40, whose
+`stars/` lesson was this mistake in the other direction).
+
+**Committing them was the alternative and it was rejected on
+history, not on taste.** As an asset the plates would render in a
+clone that had not run `tools/setup.py`, which is the whole of what
+that option buys, and the preview is off by default so nearly nobody
+would collect it. The cost is permanent: git stores images as whole
+blobs rather than diffs, the three plates are 3.6 MB, and the master
+is *expected* to be replaced by a >=3840 family master. Every future
+revision would leave another full copy in the history forever, to
+save 1.7 s that `setup.py` already spends. Derived changes ONE
+committed file when the master changes; asset changes four.
+
+The measurements the decision was taken on: the plates rebuild in
+1.66 s for all three, the smoke suite **already builds them in
+memory** on every run, so the byte-for-byte check costs **0.28 s** on
+a 27 s suite — the licence for the word "derived" is close to free
+here, which is not true everywhere and is why it is worth writing
+down that it was checked.
+
+**Two conditions are part of the decision, not follow-up work.**
+`frame_build.py` is a step in `tools/setup.py`, because a derived
+file with no step in the setup run is one a clone can never get —
+which is what the tree actually had for a day, gitignored as
+"generated" with nothing that generated it. And the check **reports
+absence rather than skipping**: no plates means it names the command
+and still counts, so "the check count must not go down" stays a rule
+anybody can follow (decision 42's pattern, second use).
+
 **30. Blocked font glyphs are detected, never listed in code.**
 `Style.blocked_glyphs()` finds the characters a font maps onto one
 shared bitmap and substitutes the proportional font for exactly
@@ -878,6 +915,41 @@ the real sprite is 12x11. A low brightness threshold had bridged it
 into two background stars. Every other sprite held steady across a
 threshold sweep and only that one moved by 45 %, which is the whole
 tell — sweep the parameter before trusting the number.
+
+**A measurement anchored on the wrong feature is stable, repeatable
+and wrong — and a threshold sweep will not find it.** The sibling of
+the rule above, and the reason it is a separate line: there the
+parameter was too permissive and moving it exposed the fault, here
+the parameter is fine and nothing about it moves. `frame_master`'s
+`--profiles` walks each hole's edge OUTWARD FROM ITS BOUNDING BOX.
+For the master's eight rectangular holes that is the same edge. For
+its one chamfered hole — the header cartouche — it is not: the bbox
+starts at y=21 and the lit lip sits at y=21..22, so the band sampled
+above the box is three rows of plain metal and the tool printed
+**"a side with no lit edge"** for a hole whose every side carries a
+one-pixel lip of 147..222 against metal at 2. Stable at any
+threshold, because the band contains no lit pixel to threshold.
+
+**The tell is the SHAPE, not the number**: fill against the bounding
+box, 91.4 % for that hole against 94.4-99.9 % for the eight others.
+That ratio is now the gate, and `bevel_source` refuses a hole below
+it — which was always required and had never been stated, because
+the function CROPS A RECTANGLE and a chamfered source would print
+its own slanted corners onto every window of the screen. It was
+excluded by accident, by scoring 0.00 from a measurement that could
+not see it. **An exclusion that happens to hold is not a rule**, and
+the day a chamfered hole measures well is the day it silently wins.
+
+**And the first diagnosis of it was wrong, which is the half worth
+keeping.** The cause was reported as "the chamfered corners put hole
+pixels into the metal band and flatten the average" — plausible,
+mechanical, and false: masking every hole pixel out of the band
+changes **not one of the forty numbers** the tool prints, because
+the bands lie outside the box and contain none. An explanation that
+predicts nothing is not a diagnosis, and the cheapest test of one is
+to apply the fix it implies and see whether anything moves. A tool
+may report that it cannot measure something. It may not report the
+thing as absent.
 
 **Establish the ruler's own error before believing an improvement.**
 Rotation drift was measured at 0.37 px and the obvious next move was

@@ -43,6 +43,7 @@ from core.config import load_settings      # noqa: E402
 from core.helptext import help_file        # noqa: E402
 
 GM = os.path.join(ROOT, "screens", "galaxy_map", "assets")
+CS = os.path.join(ROOT, "screens", "colony_summary", "assets")
 
 #: (tool, arguments, a path that must exist afterwards, what it is)
 STEPS = [
@@ -55,12 +56,22 @@ STEPS = [
     ("make_black_hole_master.py", [],
      os.path.join(GM, "black_hole.png"),
      "rotatable black hole master"),
+    # DECISION 49. The colony frame plates are derived, so they need a
+    # step here — until 7 September 2026 they were gitignored with
+    # nothing that rebuilt them, which is the word "derived" without
+    # the licence decision 40 attaches to it. Three plates, ~1.7 s.
+    ("frame_build.py", [],
+     os.path.join(CS, "frames", "frame_1920x1080.png"),
+     "colony frame plates, built from the galaxy map's master"),
 ]
 
 #: Inputs that must be in the repository for the steps to work. If one
 #: of these is missing the clone is broken, not merely incomplete.
 REQUIRED_INPUTS = [
     (os.path.join(GM, "ships", "_src"), "HD ship masters"),
+    (os.path.join(GM, "frame.png"), "galaxy map frame master"),
+    (os.path.join(ROOT, "screens", "colony_summary",
+                  "layout_reference.json"), "colony layout reference"),
     (os.path.join(GM, "icons", "_source_sheet.png"), "sidebar icon sheet"),
     (os.path.join(GM, "_black_hole_src.png"), "black hole source"),
     (os.path.join(GM, "stars"), "star sprites (committed, see .gitignore)"),

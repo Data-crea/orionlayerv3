@@ -66,6 +66,13 @@ def load_settings():
             "min_height": 720,
         },
         "render_mode": "hd",
+        #: Draw the colony screen's BUILT frame plate instead of the
+        #: shipped artwork (decision 49). Off, and the default has to
+        #: be stated in both places: this dict is what a clone with no
+        #: settings.json gets, and a flag that is absent here but
+        #: present in the file would mean the two disagree about what
+        #: "not configured" looks like.
+        "frame_preview": False,
         "skin": "default",
         "active_mods": [],
     }

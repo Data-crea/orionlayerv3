@@ -508,7 +508,7 @@ files under `doc/` and are only summarised here.
 | | |
 |---|---|
 | Python | 32,960 lines across 111 modules — `find . -name '*.py'`, `__pycache__` excluded, the smoke test's 6,400 included. The previous figure here (21,642 across 94) was carried from an unstated method and could not be reproduced |
-| Smoke test | `python tools/smoke_test.py` — **93 checks**, headless |
+| Smoke test | `python tools/smoke_test.py` — **94 checks**, headless |
 | Assets | 170 MB (select_race 68, galaxy_map 51, shared 23, new_game 21, colony_summary 1) |
 | Screens in HD | 7 of ~20–22 (colony summary draws list, sidebar, scan box and galaxy inset, and MOVES POPS — the first HD gesture that drives the game) |
 | Setup from clone | `python tools/setup.py` (deps via the system package manager) |
@@ -834,7 +834,7 @@ check count makes, for the same reason.
 
 `galaxy_map/screen.py` (**531** code, 807 total), `tools/struct_probe.py`
 (**478** code, 753 total), `custom_race/screen.py` (**400** code,
-558 total), `tools/colony_list_preview.py` (**344** code, 678 total),
+558 total), `tools/colony_list_preview.py` (**345** code, 682 total),
 `core/editor/editor.py` (**340** code, 390 total),
 `galaxy_map/renderer.py` (**335** code, 753 total), `tools/ext_diag.py`
 (**325** code, 473 total), `core/style.py` (**306** code, 453 total).
@@ -3263,6 +3263,150 @@ beside it. The frame shipped today looks like structure because every
 strut has a highlight along its edge. Plain struts are what was
 asked for and the picture is what they give; polish is a decision for
 Data with the picture in hand.
+
+### Stage B: the preview switch, and Stage C: the plates are derived — 7 September 2026
+
+**One flag, one place, no second code path.** `frame_preview` in
+`settings.json` (default **false**, stated there and in
+`core.config.load_settings`'s fallback so a clone with no settings
+file and a clone with one agree about what "not configured" means).
+`screens/colony_summary/colonyframe.py` turns it into a path;
+`screen._load_frame` loads that path, `_scale_frame` scales it and
+`_render_frame_image` blits it, exactly as before. **The switch
+selects a source, not a code path** — the built plate and the shipped
+artwork are both one RGBA image stretched over the reference area, so
+nothing downstream learns which it got. If it ever needs a second
+drawing routine, the switch is the wrong shape and the plate is not
+a frame; that sentence is in the module.
+
+Its own module rather than eleven more lines in `screen.py`: that
+file was 316 code lines and would have been 329, and decision 6 says
+split rather than extend the exceptions list. It is 299 now, and the
+list is still eight entries.
+
+**Nothing about the flag touches `boxes.json`.** It is runtime state,
+`Box.to_dict` serializes a fixed key set and would drop it the first
+time F5 saved (decision 37), and a render toggle is not layout in any
+case.
+
+**Which plate: `core.box.closest_resolution`,** which is decision 1's
+exact-then-closest-by-area chain called in its one home. It was
+`_find_best_fallback`, private, one caller; it is public now with the
+second caller named in its docstring. Not copied — a screen choosing
+an image and a screen choosing a box list ask one question, and two
+answers drift the day somebody changes "closest by area" to "closest
+by width" in one of them. Resolutions come from
+`layout_reference.json`'s `_resolutions`, the file `frame_build.py`
+and `frame_mask.py` already read.
+
+**Flag off is the tree as it was, asserted and not eyeballed.** Two
+halves, both needed: the flag-off path resolves to
+`screens/colony_summary/assets/frame.png` (committed, sha256
+`6656ac0e34869c48`), and the surface that reaches the screen hashes
+identically to that file loaded and scaled the way `_scale_frame`
+scales it. Verified to fail: with the flag's gate removed the check
+reports *"flag off must draw …/assets/frame.png, got
+…/assets/frames/frame_1920x1080.png"*.
+
+**Flag on names the build.** One line at screen load, from
+`colony_summary.frame`, silent when off:
+
+    INFO colony_summary.frame: PREVIEW: built plate
+    screens/colony_summary/assets/frames/frame_1920x1080.png
+    (1920x1080 for a 1920x1080 window), sha256 33f1531d10fc1f4a
+
+The hash is in the line so a screenshot can be matched to the build
+that made it, and the check refuses a line without it. At 1280x720
+the same line reads `(1920x1080 for a 1280x720 window)` — the
+closest-by-area plate, scaled, which is what the shipped 1672x941
+frame already does at every size.
+
+**Stage C: derived, decision 49**, with committing them recorded as
+the rejected option and permanent history growth as the reason. Both
+conditions are in: `frame_build.py` is a step in `tools/setup.py`,
+and the check **reports absence rather than skipping** — with
+`frames/` moved away the suite still passes at the same count and
+the line reads *"plates absent (3 of 3): run `python
+tools/frame_build.py`"*. Verified to fail on a changed plate: one
+red pixel gives *"the plate on disk is not what frame_build.py
+produces … 664456 bytes on disk, 664448 rebuilt"*.
+
+**Two stale claims fixed, and the second is the finding.** The
+`.gitignore` entry still called `frames/` "tools/frame_cut.py's
+output" whose artwork "lives outside the tree" — both true when
+written, neither true since `frame_build.py` replaced the hand-made
+plate with a nine-slice of a committed master. And `setup.py` had no
+frame step at all, so **the tree had a file gitignored as generated
+with nothing that generated it**: decision 40's word without decision
+40's licence, for as long as the plates have existed. An ignore rule
+is a claim about a file, and this one had gone stale where nothing
+reads it.
+
+**The header is an INTERIM and is named as one.** The preview draws
+`header` as `[107, 18, 1693, 48]` — full width, flush to the ring on
+three sides, which is why it reads as a light line: three of its four
+bevels are laid over the ring's innermost 3 px. **That is not the
+intended header and must not be mistaken for it.** The master's own
+header opening is a 546 px chamfered cartouche at top centre, and the
+ORIGINAL colony summary has no header window at all — its top band is
+five raised column plates (NAME, FARMERS, WORKERS, SCIENTISTS,
+BUILDING) with their own rounded bevels, plus the scroll arrow;
+measured live against the reference save, picture in
+`~/Bilder/rahmen/`. Deferred to Stage 4 Stop 1, where the list
+columns and the sort row are laid out, with two questions attached:
+whether the column reservation (302 + 347x3 + 314 + 36) maps onto
+five plates plus the scroll arrow, and whether the master carries a
+raised-plate element with a rounded bevel or one has to come from
+elsewhere.
+
+**And what the flag-on picture is NOT.** `boxes.json` still comes
+from the OLD frame's holes, so the sidebar readouts, the lower band
+and the sort row sit where the old artwork's holes were rather than
+where the plate's windows are. Stage 4 moves the content; this is a
+frame preview and nothing else.
+
+**`--profiles` stopped claiming a hole has no lit edge when it has
+one.** The tool printed *"(a side with no lit edge)"* for the header
+cartouche, whose every side carries a one-pixel lip of 147..222
+against metal at 2. The reading walks outward from the BOUNDING BOX,
+which for a chamfered hole is not the hole's edge — the bbox starts
+at y=21 and the lip sits at y=21..22, so the band above it is three
+rows of plain metal. Labelled as bounding-box-based, with a fill
+column beside it (91.4 % for that hole against 94.4-99.9 % for the
+eight rectangular ones) and an annotation that now says the reading
+cannot see the edge rather than that the edge is absent.
+`bevel_source` gained the rectangularity gate it always needed —
+it CROPS A RECTANGLE, so a chamfered source would print slanted
+corners onto every window — and the plates rebuild byte-identical,
+so the gate changed no pixel.
+
+**The first diagnosis of that was wrong and the correction is the
+part worth keeping.** It was reported at Stop 1 as "the chamfered
+corners put hole pixels into the metal band and flatten the average".
+Masking every hole pixel out of the band changes **not one of the
+forty numbers** the tool prints: the bands lie outside the box and
+contain none. Plausible, mechanical, false — and the cheapest test
+was to apply the fix it implied and see whether anything moved. In
+the fundament under Evidence, as its own line rather than under "a
+measurement not stable under its own threshold": there the parameter
+was too permissive and sweeping it exposed the fault, here the
+parameter is fine and no sweep can find it.
+
+**Carried over from the galaxy-scale commit**: the `max_map_scale`
+check now also asserts that no key of `STOCK_MAX_MAP_SCALE` is a
+whole number of `MAXIMUM_GALAXY_CELL`s. The two arms of the mapgen
+switch are told apart by MAP_MAX_X alone, so an overlap would route
+a Maximum galaxy of that width to the literal arm. Added to the
+existing check; the count did not move for it.
+
+**`FakeApp` gained `settings`**, and so did `colony_list_preview`'s
+`_App`. `main.py:25` sets it and screens read it, so a fake without
+it meant no screen could be tested through a settings-driven branch
+at all — the same shape as the fake game states that were missing
+MAP_MAX_Y, one commit earlier.
+
+93 -> 94 checks. `tools/colony_list_preview.py` 344 -> 345 code
+lines, already on the exceptions list and re-measured there.
 
 ### `Maximum_Galaxy_Display_Scale_` is transcribed; the 50.6 estimate is retired — 7 September 2026
 

@@ -91,6 +91,21 @@ def strut_texture(master, _ring=None, patch=PATCH):
     return master.convert("RGB").crop((x, y, x + patch, y + patch))
 
 
+#: How much of its own bounding box a hole must fill to count as
+#: RECTANGULAR. The master's eight rectangular holes measure 94.4 to
+#: 99.9 %; its one chamfered hole — the header cartouche — measures
+#: 91.4 %. 0.94 sits in that gap. See `bevel_source` for why the
+#: distinction is load-bearing and `print_profiles` for what it does
+#: to a reading.
+RECT_FILL = 0.94
+
+
+def hole_fill(size, x0, x1, y0, y1):
+    """What share of its bounding box a hole's own pixels occupy."""
+    area = (x1 - x0) * (y1 - y0)
+    return float(size) / area if area else 0.0
+
+
 def bevel_source(master, depth=None):
     """(image, opening) — the master's own light edge around one hole.
 
@@ -105,6 +120,18 @@ def bevel_source(master, depth=None):
     a plateau of luminance 2 — so `depth` is small by measurement and
     not by taste. The chosen hole and every hole's per-side ridge are
     printed by `--profiles`.
+
+    **AND THE HOLE HAS TO BE RECTANGULAR** (`RECT_FILL`), which was
+    implicit until 7 September 2026 and is now a gate. This function
+    CROPS A RECTANGLE — `master.crop((x0-d, y0-d, x1+d, y1+d))` — and
+    `lay_border` lays that band around a rectangular window, so a
+    chamfered source would print its own slanted corners onto every
+    window of the screen. The master has exactly one such hole, the
+    header cartouche, and it was excluded by accident rather than by
+    rule: it scores 0.00 because the measurement cannot see its edge
+    (see `print_profiles`), not because the check knew its shape. An
+    exclusion that happens to hold is not a rule, and the day a
+    chamfered hole measures well is the day it silently wins.
     """
     depth = BEVEL_MASTER if depth is None else depth
     a = np.array(master.convert("RGBA"))
@@ -121,6 +148,8 @@ def bevel_source(master, depth=None):
         sy, sx = objs[i - 1]
         x0, x1, y0, y1 = sx.start, sx.stop, sy.start, sy.stop
         if x0 < PROFILE or y0 < PROFILE or x1 > w - PROFILE or y1 > h - PROFILE:
+            continue
+        if hole_fill(size, x0, x1, y0, y1) < RECT_FILL:
             continue
         prof = _profiles(lum, x0, x1, y0, y1)
         edge = [_ridge(p) for p in prof.values()]
@@ -140,6 +169,23 @@ def bevel_source(master, depth=None):
 
 
 def _profiles(lum, x0, x1, y0, y1, depth=None):
+    """Per-side luminance walking OUTWARD FROM THE BOUNDING BOX.
+
+    **The anchor is the bounding box, not the hole**, and for a
+    rectangular hole those are the same edge. For a chamfered one
+    they are not: the header cartouche's bbox starts at y=21 while
+    its lit lip sits at y=21..22 in the flanks and y=22 in the middle,
+    so the T band (rows 18..20) is three rows of plain metal and the
+    ridge reads as absent. Callers must gate on `hole_fill` before
+    treating a zero here as a fact about the artwork.
+
+    (Recorded because the first diagnosis was wrong: the cause was
+    read as "the chamfered corners put hole pixels into the metal
+    band and flatten the average". Masking hole pixels out of the
+    band changes not one of the forty numbers `--profiles` prints —
+    the bands lie outside the box and contain none. The band is
+    simply looking in the wrong place.)
+    """
     depth = PROFILE if depth is None else depth
     return {"L": lum[y0 + 2:y1 - 2, x0 - depth:x0][:, ::-1].mean(axis=0),
             "R": lum[y0 + 2:y1 - 2, x1:x1 + depth].mean(axis=0),
@@ -329,7 +375,11 @@ def print_profiles(master):
     objs = ndimage.find_objects(lab)
     sizes = ndimage.sum(holes, lab, range(1, n + 1))
     h, w = holes.shape
-    print(f"{'hole':<26}" + "".join(f"{k:>13}" for k in "LRTB")
+    print("  per-side edge, measured OUTWARD FROM THE BOUNDING BOX "
+          "(see _profiles).")
+    print(f"  A hole below {100*RECT_FILL:.0f} % fill is not rectangular "
+          f"and this reading cannot see its edge.")
+    print(f"{'hole':<26}{'fill':>7}" + "".join(f"{k:>13}" for k in "LRTB")
           + "   agreement")
     for i, size in enumerate(sizes, 1):
         if size < 1500:
@@ -342,11 +392,24 @@ def print_profiles(master):
                 for k, p in _profiles(lum, x0, x1, y0, y1).items()}
         heights = np.array([edge[k][0] for k in "LRTB"])
         lit = all(edge[k][1] for k in "LRTB")
-        score = heights.min() / (1 + heights.std()) if lit else 0.0
-        print(f"  ({x0:>4},{y0:>4}) {x1-x0:>4}x{y1-y0:<4}"
+        fill = hole_fill(size, x0, x1, y0, y1)
+        rect = fill >= RECT_FILL
+        score = heights.min() / (1 + heights.std()) if (lit and rect) else 0.0
+        # THE ANNOTATION IS ABOUT THE READING, NOT ABOUT THE ARTWORK.
+        # "no lit edge" used to be printed for the header cartouche,
+        # which has a one-pixel lit lip of 147..222 against metal at
+        # 2 on every side — the measurement simply looks three rows
+        # too high. A tool may report that it cannot measure something;
+        # it may not report the thing as absent.
+        if not rect:
+            note = "   (not rectangular — this reading cannot see its edge)"
+        elif not lit:
+            note = "   (a side with no lit edge)"
+        else:
+            note = ""
+        print(f"  ({x0:>4},{y0:>4}) {x1-x0:>4}x{y1-y0:<4}{100*fill:6.1f}%"
               + "".join(f"{edge[k][0]:8.0f}/{edge[k][1]:<4d}" for k in "LRTB")
-              + f"  {score:6.2f}"
-              + ("" if lit else "   (a side with no lit edge)"))
+              + f"  {score:6.2f}" + note)
     _crop, _open, chosen = bevel_source(master)
     print(f"  -> sampled from the hole at "
           f"({chosen[1][0]}, {chosen[1][1]}), score {chosen[0]:.2f}")

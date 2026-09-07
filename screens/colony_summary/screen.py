@@ -104,8 +104,8 @@ from core.config import REF_W, REF_H
 from core.screen_base import ScreenBase
 from core.structs import player as player_struct
 
-from . import (colonyempire, colonyinset, colonylist, colonymoveui,
-               colonyoutput, colonyrows, colonyselect)
+from . import (colonyempire, colonyframe, colonyinset, colonylist,
+               colonymoveui, colonyoutput, colonyrows, colonyselect)
 
 log = logging.getLogger("colony_summary")
 
@@ -329,9 +329,14 @@ class ColonySummaryScreen(ScreenBase):
 
     def _load_frame(self):
         """The cutout frame; stretched over the reference area so the
-        cutouts coincide with the boxes derived from them."""
-        cfg = self._data.get("frame", {})
-        path = self.asset_path("assets", cfg.get("image", "frame.png"))
+        cutouts coincide with the boxes derived from them.
+
+        WHICH file is `colonyframe.frame_source` — see there for the
+        preview flag and why the switch picks a source rather than a
+        code path. This function is unchanged by it: one load, one
+        scale, one blit, whatever it was handed.
+        """
+        path = colonyframe.resolve(self)
         self._frame = (pygame.image.load(path).convert_alpha()
                        if path else None)
         self._scale_frame()

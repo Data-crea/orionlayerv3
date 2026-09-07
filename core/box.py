@@ -177,12 +177,26 @@ def _resolution_key(win_w, win_h):
     return f"{win_w}x{win_h}"
 
 
-def _find_best_fallback(res_dict, target_w, target_h):
-    """Find the closest resolution key by pixel count difference."""
+def closest_resolution(keys, target_w, target_h):
+    """The closest "WxH" key to a window, by pixel-count difference.
+
+    Decision 1's fallback chain, in its one home. `keys` is anything
+    iterable of "WxH" strings — a boxes.json dict, or the resolution
+    list a per-resolution ASSET set exists at, which is the second
+    caller (`colony_summary` picking a built frame plate). Malformed
+    keys are skipped rather than raising, because the same file may
+    carry a `_comment`.
+
+    Made public 7 September 2026 when the second caller arrived. It
+    was never copied: a screen choosing an image and a screen choosing
+    a box list are asking one question, and two answers to it would
+    drift the day somebody changes "closest by area" to "closest by
+    width" in one of them.
+    """
     target_pixels = target_w * target_h
     best_key = None
     best_diff = float("inf")
-    for key in res_dict:
+    for key in keys:
         parts = key.split("x")
         if len(parts) != 2:
             continue
@@ -234,7 +248,7 @@ def load_boxes(source, win_w=1920, win_h=1080):
         return [Box(entry) for entry in raw[key]]
 
     # Fallback: find closest resolution
-    fallback = _find_best_fallback(raw, win_w, win_h)
+    fallback = closest_resolution(raw, win_w, win_h)
     if fallback and raw[fallback]:
         return [Box(_copy_entry(entry)) for entry in raw[fallback]]
     return []

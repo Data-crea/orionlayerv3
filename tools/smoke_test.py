@@ -18,6 +18,8 @@ Exit code 0 = all good. Run this before shipping a ZIP or a
 mod, and after touching anything in core/.
 """
 import ast
+import hashlib
+import io
 import math
 import os
 import re
@@ -89,6 +91,12 @@ def main():
         def __init__(self):
             self.res = res
             self.colors = colors
+            # THE FAKE CARRIES WHAT THE REAL APP CARRIES. main.py:25
+            # sets this and screens read it; a FakeApp without it
+            # meant no screen could be tested through a settings-
+            # driven branch at all — the same shape as the fake game
+            # states that were missing MAP_MAX_Y.
+            self.settings = settings
             self.layout = Layout(1920, 1080)
             self.style = StyleRenderer(res.skin_dir(), res.font(),
                                        colors)
@@ -1217,6 +1225,19 @@ def main():
     # is why the save could not settle the question by itself.
     assert _mgds(99)[:2] == (1800, 1350), _mgds(99)
     assert zt.max_map_scale(1800, 1350) == 36 == _retired(1800)
+
+    # AND NO STOCK WIDTH IS A GRID PRODUCT. The two arms of the
+    # switch are told apart by MAP_MAX_X alone, so they must not
+    # overlap: if any of 506/759/1012/1518 were a whole number of
+    # 150-unit cells, a Maximum galaxy of exactly that width would be
+    # routed to the literal arm and answered with a stock scale
+    # instead of its own ceiling.
+    for _sw in zt.STOCK_MAX_MAP_SCALE:
+        assert _sw % zt.MAXIMUM_GALAXY_CELL != 0, (
+            f"MAP_MAX_X {_sw} is both a stock literal and {_sw // 150} "
+            f"cells of {zt.MAXIMUM_GALAXY_CELL} — a Maximum galaxy that "
+            f"wide would take the stock arm and be given "
+            f"{zt.STOCK_MAX_MAP_SCALE[_sw]} instead of its own ceiling")
 
     # FIXED POINT 4 — THE Y TERM IS LOAD BEARING. At 35 x 28 cells
     # the height ceiling is the larger one, so a recovery that
@@ -4133,6 +4154,7 @@ def main():
         "_frame_master", os.path.join(_proj, "tools", "frame_master.py"))
     _fm2 = _ilu2.module_from_spec(_fm2_spec)
     _fm2_spec.loader.exec_module(_fm2)
+    from screens.colony_summary import colonyframe as _cframe
     _fb_master = _PILImage.open(os.path.join(_proj, *_rsrc["file"].split("/")))
     for _spec in _lr["_resolutions"]:
         _rw, _rh = (int(v) for v in _spec.split("x"))
@@ -4201,6 +4223,124 @@ def main():
     ok("colony frame built from the master (nine-slice ring matches the "
        "table at all three resolutions, struts are metal)")
 
+    # ── DECISION 49: the plates are DERIVED, and this is the licence ──
+    #
+    # The word "derived" is earned by a byte-for-byte rebuild, never
+    # by the existence of a tool that looks like it made the file
+    # (decision 40, which was written about exactly this mistake).
+    # Until 7 September 2026 `frames/` was gitignored as generated
+    # with NOTHING in setup.py that rebuilt it and NOTHING that
+    # compared it — the claim without the licence.
+    #
+    # **ABSENT IS REPORTED, NOT SKIPPED.** A clone that has not run
+    # setup.py has no plates, and this check still runs and still
+    # counts: it names the command instead of measuring, so "the
+    # count must not go down" stays a rule anybody can follow
+    # (decision 42's pattern, second use).
+    _plate_dir = os.path.join(SCREENS_DIR, "colony_summary", "assets",
+                              "frames")
+    _plate_paths = {_spec: os.path.join(_plate_dir, f"frame_{_spec}.png")
+                    for _spec in _lr["_resolutions"]}
+    _present = [s for s, p in _plate_paths.items() if os.path.exists(p)]
+    if len(_present) != len(_plate_paths):
+        _missing = sorted(set(_plate_paths) - set(_present))
+        _plate_note = (f"absent ({len(_missing)} of {len(_plate_paths)}): "
+                       f"run `{_cframe.BUILD_COMMAND}`")
+    else:
+        for _spec, _ppath in sorted(_plate_paths.items()):
+            _rw, _rh = (int(v) for v in _spec.split("x"))
+            _fresh = _fc.cut(_fb.build(_fb_master, _lr_windows, _rw, _rh),
+                             _lr_windows, _rw, _rh)[0]
+            _buf = io.BytesIO()
+            _fresh.save(_buf, "PNG")
+            with open(_ppath, "rb") as _fh:
+                _ondisk = _fh.read()
+            assert _buf.getvalue() == _ondisk, (
+                f"{_spec}: the plate on disk is not what frame_build.py "
+                f"produces from the committed master and "
+                f"layout_reference.json today ({len(_ondisk)} bytes on "
+                f"disk, {len(_buf.getvalue())} rebuilt). A generator "
+                f"that does not reproduce its own output is not a "
+                f"generator yet, and its output is authored state "
+                f"(decision 40) — rebuild with `{_cframe.BUILD_COMMAND}` "
+                f"or find out what changed under it")
+        _plate_note = f"{len(_present)} rebuilt byte for byte"
+
+    # AND setup.py HAS TO MAKE THEM. A derived file with no step in
+    # the setup run is one a clone can never get; that was the state
+    # this check was written to end, so it is asserted and not
+    # remembered.
+    _setup_src = open(os.path.join(_proj, "tools", "setup.py"),
+                      encoding="utf-8").read()
+    assert "frame_build.py" in _setup_src, (
+        "tools/setup.py has no frame_build step, so a fresh clone gets "
+        "no colony frame plates and nothing tells it how — decision 49 "
+        "makes the step part of the decision, not an optional extra")
+
+    # ── STAGE B: THE FLAG OFF IS THE TREE AS IT WAS ──────────
+    #
+    # The acceptance is not "it still looks right", it is that the
+    # surface is the SAME surface. Two halves, and both are needed:
+    # the flag-off path must resolve to the committed artwork, and
+    # what reaches the screen must be that file through the same
+    # scale, pixel for pixel.
+    _cs = d.screens["colony_summary"]
+    d.switch_to("colony_summary")
+    assert app.settings.get("frame_preview") is False, (
+        "settings.json ships with frame_preview on — the preview is a "
+        "preview and the shipped configuration is the shipped frame")
+    _off_path, _off_note = _cframe.frame_source(_cs)
+    _shipped = os.path.join(SCREENS_DIR, "colony_summary", "assets",
+                            "frame.png")
+    assert os.path.realpath(_off_path) == os.path.realpath(_shipped), (
+        f"flag off must draw {_shipped}, got {_off_path}")
+    assert _off_note is None, (
+        f"the log must say nothing when the flag is off, got {_off_note!r}")
+
+    # The rendered surface, against the same file loaded and scaled
+    # the way _scale_frame does it. Hashed, so a changed scale or a
+    # swapped source fails here rather than in somebody's screenshot.
+    _cs._load_frame()
+    _want_surf = pygame.transform.smoothscale(
+        pygame.image.load(_shipped).convert_alpha(),
+        app.layout.rect((0, 0, _REF_W, _REF_H))[2:])
+    _got_h = hashlib.sha256(
+        pygame.image.tostring(_cs._frame_scaled, "RGBA")).hexdigest()
+    _want_h = hashlib.sha256(
+        pygame.image.tostring(_want_surf, "RGBA")).hexdigest()
+    assert _got_h == _want_h, (
+        f"with frame_preview off the colony frame surface is {_got_h[:16]} "
+        f"and loading {os.path.relpath(_shipped, _proj)} through the same "
+        f"scale gives {_want_h[:16]} — the switch changed the shipped "
+        f"path, which it may not")
+
+    # THE FLAG ON PICKS A PLATE AND SAYS SO, or names the command.
+    app.settings["frame_preview"] = True
+    try:
+        _on_path, _on_note = _cframe.frame_source(_cs)
+        assert _on_note, "the flag is on and the log says nothing"
+        if _present:
+            assert _plate_dir in os.path.realpath(_on_path), _on_path
+            assert _on_note.startswith("PREVIEW: built plate"), _on_note
+            # The line has to identify the BUILD, not just the file:
+            # a screenshot is matched to it by the hash.
+            _digest = hashlib.sha256(
+                open(_on_path, "rb").read()).hexdigest()[:16]
+            assert _digest in _on_note, (
+                f"the preview line does not carry the plate's hash, so a "
+                f"screenshot cannot be matched to the build: {_on_note}")
+            # Same one code path: the switch changed the file and
+            # nothing else, so the frame still loads and scales.
+            _cs._load_frame()
+            assert _cs._frame_scaled is not None
+        else:
+            assert _cframe.BUILD_COMMAND in _on_note, _on_note
+            assert os.path.realpath(_on_path) == os.path.realpath(_shipped)
+    finally:
+        app.settings["frame_preview"] = False
+        _cs._load_frame()
+    ok(f"colony frame preview switch (flag off is the shipped surface "
+       f"byte for byte; plates {_plate_note})")
 
     # ── Every gap is one of the master's own struts ──────────
     #

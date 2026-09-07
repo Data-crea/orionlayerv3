@@ -75,9 +75,20 @@ screens/colony_summary/assets/raceicon_ref/
 # to survive.
 screens/colony_summary/assets/frame_masks/
 
-# The cut frames, tools/frame_cut.py's output. The artwork is Data's
-# input and lives outside the tree; these are that plus a committed
-# JSON, and regenerating reproduces them.
+# The colony frame plates, tools/frame_build.py's output — DECISION
+# 49, derived. Both inputs are committed: the master is
+# screens/galaxy_map/assets/frame.png (in the tree, not outside it)
+# and the geometry is layout_reference.json, so a rebuild reproduces
+# all three byte for byte and a smoke check asserts exactly that.
+# tools/setup.py builds them; a clone that has not run it renders the
+# shipped frame.png instead and the check names the command.
+#
+# Corrected 7 September 2026. This entry used to say "tools/frame_cut
+# .py's output" and "the artwork is Data's input and lives outside
+# the tree" — both true when it was written and neither true since
+# frame_build.py replaced the hand-made plate with a nine-slice of a
+# committed master. An ignore rule is a claim about a file, and this
+# one had gone stale where nothing reads it.
 screens/colony_summary/assets/frames/
 
 # --- Local state ---
