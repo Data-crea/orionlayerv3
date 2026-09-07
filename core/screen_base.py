@@ -241,19 +241,38 @@ class ScreenBase(HelpMixin):
                 return box.ref_rect
         return None
 
-    def box_font_scale(self, name):
-        """Get font_scale from a named box, auto-adjusted for resolution.
+    def box_font_scale_stored(self, name):
+        """A box's `font_scale` as boxes.json holds it. No auto-factor.
 
-        The stored value is relative to 1080p. At higher resolutions
-        an auto-factor is applied so text stays proportional.
+        **USE THIS WHEREVER `Layout.font_size` IS APPLIED AFTERWARDS.**
+        `box_font_scale` multiplies by `win_h / 1080` and `font_size`
+        multiplies by the window scale as well, so the two together
+        square the resolution factor: 1.0 at 1080p, 1.78 at 1440p and
+        **4.0 at 2160p against an intended 2.0**. Where a box carries
+        a value that was tuned by eye with both in place, that is what
+        makes the tuning land; where it carries none — every box on
+        the colony summary — there is nothing to cancel it and the
+        text comes out twice the size at 4K.
+
+        Extracted 7 September 2026 from `screenhelp._help_font_scale`,
+        which had worked this out for the help popup and solved it
+        privately. The colony summary's empire readouts were the
+        second case, and a second private copy is how the third one
+        gets written too.
         """
-        base = 1.0
         for box in self.boxes:
             if box.name == name:
-                base = box.style.get("font_scale", 1.0)
-                break
-        auto = self.app.win_h / 1080.0
-        return base * auto
+                return box.style.get("font_scale", 1.0)
+        return 1.0
+
+    def box_font_scale(self, name):
+        """A box's font_scale times the resolution auto-factor.
+
+        For a caller that sizes text DIRECTLY. A caller that then goes
+        through `Layout.font_size` wants `box_font_scale_stored` —
+        see there for what taking both does.
+        """
+        return self.box_font_scale_stored(name) * (self.app.win_h / 1080.0)
 
     # --- Internal ---
 

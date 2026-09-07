@@ -201,7 +201,17 @@ def render(surface, rows, area, cfg, layout, style, first=0,
                          cfg, name_px, small_px, style, frame_inset)
         _render_bar(surface, row, area, cfg, scale, (y, row_h), track,
                     small_px, style)
-        if track.build_w:
+        # THE PRODUCING TEXT SITS IN ITS OWN COLUMN when there is a
+        # column table, and after the track when there is not. Same
+        # call, same width, one place that decides where — a second
+        # `colonybuild.draw` for the column case would be the second
+        # copy of a position (decision 5).
+        _cols = colonytrack.columns(area, cfg)
+        if _cols:
+            _bx, _bw = _cols["building"]
+            colonybuild.draw(surface, row, _bx, y, _bw, row_h, cfg,
+                             style, layout)
+        elif track.build_w:
             colonybuild.draw(
                 surface, row, track_x(area, cfg, scale) + track.width
                 + track.build_gap, y, track.build_w, row_h, cfg, style,

@@ -508,7 +508,7 @@ files under `doc/` and are only summarised here.
 | | |
 |---|---|
 | Python | 32,960 lines across 111 modules — `find . -name '*.py'`, `__pycache__` excluded, the smoke test's 6,400 included. The previous figure here (21,642 across 94) was carried from an unstated method and could not be reproduced |
-| Smoke test | `python tools/smoke_test.py` — **94 checks**, headless |
+| Smoke test | `python tools/smoke_test.py` — **96 checks**, headless |
 | Assets | 170 MB (select_race 68, galaxy_map 51, shared 23, new_game 21, colony_summary 1) |
 | Screens in HD | 7 of ~20–22 (colony summary draws list, sidebar, scan box and galaxy inset, and MOVES POPS — the first HD gesture that drives the game) |
 | Setup from clone | `python tools/setup.py` (deps via the system package manager) |
@@ -3263,6 +3263,471 @@ beside it. The frame shipped today looks like structure because every
 strut has a highlight along its edge. Plain struts are what was
 asked for and the picture is what they give; polish is a decision for
 Data with the picture in hand.
+
+### Stage 4 closed: the pitch, the 4K readouts, and three readings — 7 September 2026
+
+**A1. THE CELL PITCH WAS THE COLUMN RATIO. It is the sprite step
+now.** Stop 3 laid cells at `column_pitch(job, count)` times
+`room / native_column_width` — about **2.7** at 1080p for farmers
+(342 reference px over 125 native). That is the case the stacking
+decision excludes: HD's extra width goes into the column RESERVATION
+and never into figure spacing, and a ratio spends the reservation on
+spacing. Left alone, Stage 3's sprites at the integer step would have
+moved every cell and every drop target a second time.
+
+The factor is `zoomtables.FIGURE_STEP` (decision 26), picked by
+`core.box.closest_resolution` over the table's own keys:
+
+| window | layout scale | table key | step |
+|---|---:|---|---:|
+| 1920x1080 | 1.000 | 1920x1080 | **2** |
+| 2560x1440 | 1.333 | 2560x1440 | **3** |
+| 3840x2160 | 2.000 | 3840x2160 | **4** |
+| 1280x720 | 0.667 | 1920x1080 | 2 |
+
+**One function feeds both paths** (decision 5):
+`colonyicons.column_pitch` is what `slot_click_x` multiplies for the
+NATIVE click and what `_column_boxes` multiplies by the step for the
+HD rect. The step is applied on the HD side only; the wire never sees
+it.
+
+**AND IT OVERFLOWS AT ONE WINDOW — a finding, not a reason to go
+back.** The original's own run is at most `right_x - left_x - 10`
+native px (the `spacing / -3` term in `Calculate_Squish_Step_`), so
+at the step it needs that times the step. Room is the column less the
+marker and the gap:
+
+| window | column | marker | room | needs | |
+|---|---:|---:|---:|---:|---|
+| 1920x1080 | 343 | 30 | 311 | 230 | fits |
+| 2560x1440 | 457 | 40 | 415 | 345 | fits |
+| 3840x2160 | 686 | 60 | 622 | 460 | fits |
+| **1280x720** | 229 | 20 | **208** | **230** | **clamp fires** |
+
+(farmers; workers and scientists behave the same.) The worst count is
+**6** for scientists, **5** for farmers and **11** for workers — the
+pitch clamps at `ICON_SPACING` below four pops, so the widest run is
+just past that. 1280x720 resolves to the 1080p step and gets a column
+two thirds the width, so the run needs 230 device px in 208.
+
+**What the original does at that count is fill and stop**: its column
+is fixed too and `squish_step` divides `right - left - 10` by the
+count, so the run never leaves the column. Ours now does the same —
+a `min` in the shape of decision 44, so the clamp ends the day the
+reservation is wide enough rather than being a special case for one
+window.
+
+**A2. THE 4K EMPIRE READOUTS READ THE SCALE TWICE.** Confirmed by
+arithmetic and by the picture. `ScreenBase.box_font_scale` multiplies
+the stored value by `win_h / 1080`, and `colonyempire` then went
+through `Layout.font_size`, which multiplies by the window scale
+again:
+
+| window | auto | layout scale | net | intended |
+|---|---:|---:|---:|---:|
+| 1920x1080 | 1.000 | 1.000 | 1.000 | 1.000 |
+| 2560x1440 | 1.333 | 1.333 | 1.778 | 1.333 |
+| 3840x2160 | 2.000 | 2.000 | **4.000** | 2.000 |
+
+**The colony summary carries no tuned `font_scale` on any box**, so
+there was nothing to cancel it: the six values came out at twice
+their size at 4K and collided with their labels. This is the help
+popup's fault a second time — the fundament already says "anything
+that must work at an untuned resolution reads the stored scale
+directly", and `screenhelp` had solved it privately with
+`_help_font_scale`. **A second private copy is how the third one gets
+written**, so the accessor is extracted:
+`ScreenBase.box_font_scale_stored`, and `screenhelp` now calls it.
+
+The check renders the box at all three resolutions and reads INK, not
+the renderer's own expression: value ink must stay inside the box and
+every row's label must end left of where its value starts. Verified
+to fail — with `box_font_scale` put back it reports *"3840x2160: on
+row y=57 the label reaches x=361 and the value starts at x=337"*, and
+1080p and 1440p still pass, which is the shape of the whole fault.
+
+**The grep found more, and it is NOT all fixable here.** 68 boxes
+carry a hand-tuned `font_scale`, and **not one of them is tuned at
+3840x2160** — every screen's list stops at 1440p, so at 4K they
+resolve by pixel area to the 1440p list and take the same 4.0 net
+factor. Custom Race, Select Race, Empire Identity and the galaxy map
+all pass `box_font_scale` into a `Layout.font_size` afterwards. They
+are NOT changed here, and the reason is the trap: those values were
+tuned BY EYE with the double factor already in place, so they encode
+it, and un-doubling them without re-tuning would shrink every one.
+Colony summary is the clean case — no tuning to break. **Re-tuning
+the other four screens for 2160p is a separate decision and is not
+Stage 4's.**
+
+**A3. Three readings from the Stop 3 images.**
+
+- **The list window is OURS, by decision 46, and the two images were
+  taken at different moments.** Our first drawn row is
+  `Window.top(...)` — HD's own scroll state, 0 — while the game's
+  `_first` was 1 when the native was captured, which is why ours
+  begins at Blucher II and the native at Blucher III. Decision 46
+  allows exactly this: the HD list scrolls freely for VIEWING, and
+  `_first` is re-established before anything is injected, which
+  `colonysend` does on every move. **Not a Stage 3 or Stage 5 item —
+  it is settled behaviour**, and the manifest now names the moment
+  each image was taken.
+- **The empire values are transcribed struct fields, not our
+  computation.** Rendered from ONE snapshot, ours reads 878 / +42 /
+  78 / 17 / -3 / 27 and the original's own panel in the same frame
+  reads 878 / +42 / 78 / 17 / -3 / 27 — six for six. The earlier
+  disagreement (+45, -1, 25) was the PICK/DROP runs having moved
+  pops between the two captures. The second source for each is the
+  original's own screen at the same moment, and the fields are
+  `s_player`'s `bc`, `surplus_bc`, `total_pop`,
+  `surplus_freighters`, `surplus_food`, `research_produced`, which a
+  check already holds to `Draw_Empire_Info_`'s print order.
+  **Nothing here is ours by computation and nothing goes to this
+  document as unverified.**
+- **The scroll control is MISSING, not interim, and this entry is
+  where it stops being silent.** The header's 36 px slot is empty
+  and the overflow is the text "N more not shown" at the list's
+  bottom-left. The original has a scroll bar with arrows in that
+  column — `_x_fields[1]` and `[2]`, `Decrement_First_` /
+  `Increment_First_` (colsum.cpp:211-226), the same two fields
+  `colonysend` already activates to establish `_first`. HD scrolls
+  on the wheel and by hover, so nothing is unreachable; what is
+  missing is the CONTROL and the affordance. **It belongs to the
+  stage that draws the list's furniture — Stage 3** — and it is
+  named here so it is not mistaken for a decision.
+
+**A4/A5.** The wrong-game runs are in the fundament under Evidence as
+their own line, beside "a test that reads the user's disk" and not
+merged with it: that one is about a result that varies with the
+reader, this one about a result that is perfectly stable and silent
+about its subject.
+
+95 -> 96 checks.
+
+### Stage 4, Stop 3: the rows move into the columns — 7 September 2026
+
+The list draws in the five columns now, in cells, each group under
+its own heading. The name column, the ellipsis threshold and "No
+Farming" are unchanged; what moved is where a job's cells are.
+
+**THE PITCH IS THE ORIGINAL'S OWN, SCALED.** Each job column lays its
+cells at `colonyicons.column_pitch(job, count)` —
+`COLDRAW::Calculate_Squish_Step_` (coldraw.cpp:12-33), already
+transcribed in the tree for the click path — multiplied by that
+column's HD width over its NATIVE width. A column that squeezes in
+the original squeezes here by the same amount. The HD row is the
+original's own walk under a scale factor, not a second layout that
+resembles it.
+
+**IDENTITY IS BY INDEX, WHICH IS WHAT MAKES THE DRAWING FREE.** Cell
+k of job j is slot k of the game's column j: `colonysend` injects
+`colonyicons.slot_click_x(j, k, count)`, a native x from the same
+`column_pitch`. Nothing is transferred from the HD rect into that
+call — the two share an index and a count and each works in its own
+pixels. **A third source for the column bounds arrived live**: the
+colony summary's own FIELD_LIST reports fields 28/29/30 at x 101,
+236, 378 — the literals from `Get_Selected_Pop_`, on the wire.
+
+**AND THE CHECK CAUGHT A REAL ONE, of exactly the kind it exists
+for.** The marker's width was `min(h, cw // 8)`, and `h` is 0 when
+`row_boxes` is called without a band — which is how `cell_at_x` calls
+it. So the marker was 2 px wide in the hit test and a full square on
+screen, and every cell in the row sat at a different x in the two.
+The picture and the click would have disagreed by one marker's width,
+with every count on screen correct. It is `track.bar_h` now, which is
+band-independent. Found by the check that samples each DRAWN cell's
+own pixels and asks what picks up there — the one written because
+"they call the same function" is not the same as "they get the same
+answer".
+
+**No growth boxes in this layout.** They belong to the COLONY, not to
+a job, so in a row of three job columns there is nowhere for them
+that is not a lie — a dashed box inside the scientists column says
+"scientists". The headroom is already on screen where the original
+puts it (`Population (13/22)`, colsum.cpp:1196-1205). The code and
+its marking stay; Stage 5 decides whether they return somewhere
+honest.
+
+**The markers stay, and their reason has been overtaken.** They were
+an HD EXTENSION because "a row without columns cannot carry a
+heading"; the row has columns and headings now. They are not removed
+here because a marking is re-targeted in the commit that deletes what
+it marks — Stage 5 — and until then the marker is still drawn and
+still marked.
+
+---
+
+**THE LIVE PROOF, AND IT IS NOT CLEAN.**
+
+**Columns 0 and 1 pass.** On the reference save, one PICK and one
+DROP each through the real `App` and a real `MOUSEBUTTONDOWN`:
+*"colonies whose bytes changed: 10 = Blucher II"* and *"every pop
+word matches the prediction"*, with the first click sending nothing
+and the outline sitting on the cells the pick names.
+
+**Column 2 MISMATCHES, reproducibly. THIS BLOCKS STAGE 3.** A
+research-to-food move on Blucher II reports "1 moved" and the
+predicted pop word is right, but a SECOND colony's bytes change —
+always the next index. Reproduced on a freshly loaded reference save
+with nothing before it. The exact lines, from both tools:
+
+    tools/colony_move_hd.py --job 2 --commit
+      fixture: reference (99 stars, stardate 3502.4) — the run is
+        about this save
+      target: row 0 'Blucher II' jobs=[12, 0, 1], cell 0 of column 2
+        -> column 0
+      held locally: Pick(colony=10, job=2, slot=0, pop=11, size=1),
+        slots (0,)
+      the outline sits on the cells the pick names
+      the first click sent nothing, which is the whole design
+      finished: '1 moved'
+      sends: activate_field=1, inject_click=2, inject_key=2
+      colonies whose bytes changed: 10 = Blucher II, 11 = Blucher III
+        EXPECTED EXACTLY [10] — another colony changing is the
+        invisible failure this run is built against
+        MISMATCH
+
+    tools/colony_move_probe.py --commit          (no HD geometry)
+      _first read off the scroll thumb: 1
+      target: row 0 'Blucher II' jobs=[13, 0, 0] column 0
+      pick-up field (230, 49), drop field (372, 49)
+      held cluster matches the prediction: colony 10 pops [12]
+      colonies whose bytes changed: 10 = Blucher II, 12 = Wolf II
+        EXPECTED EXACTLY [10] — a different colony changing is the
+        invisible failure this whole sequence is built against
+        MISMATCH
+
+**It is NOT the HD geometry.** The probe computes a native click from
+`colonyicons` and injects it without touching a single HD rect, and
+shows the same shape — on a FARMER move, which is why the second
+listing is column 0. So either the game rewrites another colony's
+record on a pop move — decision 48 already records that
+`Enforce_Population_Limits_At_Colony_` shuffles a whole array on four
+occasions, one of them a building completing — or both tools' "exactly
+one colony" rule is too strict and is measuring the wrong thing.
+
+**Not diagnosed, not loosened, not assumed benign.** The diagnosis is
+its own task: which bytes of the second colony changed BY FIELD
+through the struct specs rather than by offset, whether the same move
+as a farmer and as a worker at the same colony separates the cases,
+and the function that writes — read the one that writes, not the ones
+that read. The rule then becomes a rule with a source: either
+"exactly one colony" with the reason the game guarantees it, or "the
+moved colony plus the fields the game rewrites" with the file:line
+that rewrites them. **Not a widened tolerance and not a special case
+for one save.**
+
+---
+
+**AND THREE ACCEPTANCE RUNS WERE MADE AGAINST THE WRONG GAME, which
+is the finding worth the most here.** The first set of column proofs
+was clean: clicks landed, pop words matched predictions, no other
+colony changed. Every line of it was true and none of it was evidence
+about the reference save — the game had a 71-star galaxy loaded, and
+nothing in the run said so. The status document already required that
+"anything below that reads a save reads it by its fixture name"; this
+tool did not. `colony_move_hd.py` now identifies the fixture before
+it claims anything — stardate AND star count AND colony count,
+because 3502.4 and 3502.5 are one tick apart and any game reaches
+them — and a wrong save stops the run with what it saw:
+
+    WRONG SAVE. This run claims reference {...}, the game has
+    {...} — which is the natives fixture
+
+**Two open items, neither introduced here, both to be decided before
+Stage 3 draws:**
+
+- **The producing text is empty.** Every row carries
+  `producing=''`, so the BUILDING column draws nothing, while the
+  original shows "Trade Goods - 1t" per row. The column is placed
+  and its width is the transcribed reservation; what is missing is
+  the value. Pre-Stage 4 — the single-track row drew nothing there
+  either.
+- **`planet_info` is still empty**, as recorded above.
+
+95 checks, unchanged: this stop added no check. The column rule
+replaced the flush-run rule inside the existing drop-target check,
+which is the same check watching the same failure under new geometry.
+
+### Stage 4: the screen moves onto the new geometry — 7 September 2026
+
+Everything except the list's columns. `boxes.json` now comes from the
+built plate, the four lower panels, the sort row and RETURN are in
+their new places, the inset is the 253x200 box with its dot table,
+and the five column headings exist. The list still draws its OLD
+single-track row inside the new `list_area`; putting it in the five
+columns is Stop 3.
+
+**THE BOX NAMES CHANGED, and that is the swap.** The superseded frame
+cut 14 holes; the plate cuts 8. `output_panel` -> `planet_output`,
+`spare_panel` -> `planet_info` (and it moved to the LEFT of the
+band), `sidebar` -> `empire_stats` (out of the right-hand column and
+into the band), the seven `sort_*` boxes -> one `sort_bar`, and a
+`header` window appeared where the title hole was. Twelve of the
+thirteen names went; every reader was re-pointed in this commit —
+`screen.py`, `colony_list_preview.py` and `smoke_test.py`.
+
+**`frame_holes.name_holes_colony_summary` was rewritten, not
+adapted.** The old rule looked for a title, a right-hand column of
+two and a bottom row of seven, and `_split_common` exists to find
+exactly that — none of which the plate has. The new rule groups holes
+into ROWS by vertical overlap and reads four: header, list, the
+band's four panels, the sort row's two. Overlap rather than a y
+tolerance, because the galaxy inset is 20 px shorter than its band
+and centred in it, so a tolerance would be a number somebody has to
+keep in step with the layout. It refuses the old frame with a message
+rather than mis-naming it.
+
+**`--write` kept 0, and the number is the point.** It reported
+`kept 10` on the first run — `sidebar`, `output_panel`, `spare_panel`
+and the seven `sort_*`. Those are not hand-placed content boxes,
+which is what the keep rule is for (the galaxy map's `sb_*`
+readouts); they are cutouts of artwork this screen no longer draws.
+Preserving them would have left ten dead boxes that nothing renders
+and every check still walks. They were deleted first, and the second
+run kept 0. **This screen has no hand-placed box: every one of its
+eight is a cutout, and decision 3's chain is unbroken.**
+
+**FLAG-OFF SEMANTICS CHANGED, AND THE DEFAULT FLIPPED WITH THEM.**
+`boxes.json` is generated from the plate's holes, so the plate IS
+this screen's frame. `frame_preview` ships **on**, and its name is
+backwards for one stage: turning it off draws the superseded artwork
+over boxes it does not fit. That is not a cosmetic difference — the
+class A checker, which asserts no glyph our code places lands under
+opaque frame alpha, reports **5822 violating pixels at 1080p and
+31654 at 2160p** with the flag off, because the old frame's metal
+sits exactly where the new list is. The flag is kept for one stage so
+the two can be compared side by side; **Stage 5 deletes the old
+frame and the flag together**. Both checkers now read the frame the
+screen actually DREW rather than a path they assumed — that
+assumption is what produced those numbers against artwork nobody
+blitted.
+
+**The title is gone, and that is a transcription.** The original's
+colony summary has no title text: its five column plates start at the
+very top (framebuffer, frame edge y 4..7, plate outlines y 11 and 32,
+first row y 35). "COLONIES" was drawn here only because the
+superseded frame cut a title hole; with the plate's header window in
+that band the two overlapped and the title sat across the WORKERS
+heading. `frame._no_title_note` records it. `FRAME_TITLE` survives
+for the framebuffer fallback, which is a different drawing.
+
+**The header: five plates inside our own window, two DEVIATIONS.**
+
+- **The window is ours.** The original has no header window — it
+  draws five raised plates straight onto the frame's metal, each a
+  recessed dark field with a light rounded outline. Measured on the
+  live framebuffer: plate interior luminance **44**, surrounding
+  metal **60**, outline **96**. We cut a window and draw the plates
+  inside it, so **the window's own panel fill stands in for the
+  original's plate recess** — one dark field behind five outlines
+  instead of five dark fields on metal. Chosen over closing the hole
+  because with the header window removed the ring-to-list gap grows
+  to about 74 ref px and the Stage A3 rail pass fills it with a
+  stretched rail; that is a change to the plate machinery plus a fill
+  under every plate, and Stage 4 is not the place for it.
+- **The outline colour is ours.** The original's line is a neutral
+  grey at luminance 114-124; ours is `panel.thin_border`
+  [55, 65, 85], luminance about 68 and blue — decision 34's own panel
+  language. The value is in `colors.json`.
+
+Both in `colonyheader.py`, in `layout.json` under
+`header._deviation_window`, here, and in a smoke check.
+
+**THE PLATE HEIGHT IS A FINDING AND IS NOT ABSORBED.** Measured, the
+original's plate is native y 11..32 = 22 px = **66 reference px**.
+The header window is **48** reference px of drawable height. The
+transcribed plate is 37 % too tall to fit. The plates fill the window
+instead and `colonyheader.PLATE_HEIGHT_REF` carries the number that
+does not fit, with a check that fails if the window ever grows to
+meet it — because that is the day the deviation ends and the note
+recording it has to go.
+
+**Growing the window to 66 was priced and REFUSED, and it misses by
+three pixels.** Taking the 18 px from the list gives 605 -> 587, and
+the row arithmetic is `colonytrack.row_bands`: rows of
+`row_height` 58 starting at `pad_y` 14 inside the box, which is the
+window plus `frame_holes.BLEED` on each side.
+
+| header | list window | box | available | ten rows need | |
+|---:|---:|---:|---:|---:|---|
+| **48** | 605 | 609 | 609 − 14 = **595** | 580 | fits, 15 px spare |
+| 66 | 587 | 591 | 591 − 14 = **577** | 580 | **short by 3** |
+
+**And it would cost the row unevenly**, which is worse than costing
+it: 9 rows at 1920x1080, **10** at 2560x1440, 9 at 3840x2160, because
+`int(58 * 4/3)` and `int(14 * 4/3)` leave a different remainder. A
+visible row count that changes with the window is the shape of fault
+this project files under decision 5 — one number, two answers — and
+ten is the game's own window (colsum.cpp:348-351), which `_first` is
+established against under decision 46.
+
+So **48 stays and the marking stays as built.** Closing it needs a
+row pitch or a `pad_y` that was chosen for it, which is a layout
+decision and not this stage's.
+
+**The plate GAP is transcribed and was invented before.** The
+original's plates share their divider: two pixels at luminance 85 and
+93 between two interiors of 44, so the gap is **0** and the divider is
+6 reference px. An earlier draft used a 9 px gap that came from
+nowhere.
+
+**The three job columns are unequal, and the source says so.**
+`COLSUM::Get_Selected_Pop_` (colsum.cpp:1006-1024) passes the column
+bounds as literals — `left_x` 101/236/378, `right_x` that minus 10 —
+giving spans **135 / 142 / 134** native px with the WORKERS column
+the widest. Second source: the separators measured on the live
+framebuffer at x 99/234/376/510, which agree to +1 px on all three.
+Over the unchanged 1041 px reservation that is **342 / 360 / 339**,
+so name, building and scroll do not move and the list is still 1693
+wide. They were three equal 347s, which was ours. The capacity
+assertion is re-run at the NARROWEST column now, not at the old
+uniform one — the check is what allows the change, not the
+arithmetic.
+
+**The sort row is one bar divided by one function.** The plate cuts
+one `sort_bar` hole where the old frame cut seven buttons, which is
+what the original has: a recessed strip with seven words laid along
+it and the ACTIVE one lit **at its own label width** — "Name" lights
+a short box, "Producing" a long one. `colonysort.layout` returns both
+the HIT rect and the HIGHLIGHT rect per key, so the renderer and
+`handle_click` cannot disagree (decision 5); a check asserts the
+seven tile the bar with no gap and that every highlight sits inside
+its own hit area. The even gap between words is **derived, not
+transcribed** — the source carries no table of positions, only the
+seven `native_click` points, which stay the authority for what gets
+injected and are still asserted to fall inside their buttons.
+
+**The class B floor moved from 20 to 17**, with the reason beside it:
+the galaxy map's ten straight-edged holes plus the plate's eight less
+the title it does not have. A floor, so a frame that stops cutting
+holes cannot pass by measuring nothing.
+
+**The inset's dot centre is shown on an image, not only asserted.**
+`~/Bilder/rahmen/stage4_inset_dot_centre_536bba387c82.png` renders a
+dot at 5 / 7 / 11 px against the derived targets 5.93 / 7.91 / 11.86
+and marks the computed pixel: the ink centre IS that pixel at all
+three resolutions, which is the property an even dot could not have.
+
+**`screens/colony_summary/screen.py` stayed under 300** — it went to
+337 and came back to under 300 by moving the sort bar's rendering and
+geometry into `colonysort.py` and the header's into
+`colonyheader.py`. Decision 6 says split rather than extend the list,
+and the list is still eight entries.
+
+**OPEN LAYOUT ITEM — `planet_info` is empty and that is not a
+decision yet.** The original splits its lower-left content across
+TWO panels: the scan text (`Huge Terran / Heavy Gravity / Mineral
+Ultra Rich / Population (13/22) / +103k`, colsum.cpp:1196-1205 into
+`E_Strings_(74)`, native 13,354,80,88) and the production icon
+column beside it (`Draw_Colony_Wee_Prod_(..., 106, y_pos, 366, 20)`,
+colsum.cpp:1171-1176). **Ours puts both in `planet_output` and leaves
+`planet_info` fill-only.** That is where Stage 1's rectangles landed,
+not a reading of the original, and nothing has decided whether the
+band should follow the original's split, keep ours, or use
+`planet_info` for something else. **Not to be assumed by whoever
+draws into that band next**: Data decides before Stage 3.
+
+94 -> 95 checks.
 
 ### Stage B: the preview switch, and Stage C: the plates are derived — 7 September 2026
 

@@ -958,27 +958,50 @@ def main():
     cs = d.active
     assert cs.GAME_SCREEN_ID == 20
     import frame_holes as fh
-    assert fh.screen_of(res.screen_file(
-        "colony_summary", "assets", "frame.png")) == "colony_summary"
-    fw, fhh, holes = fh.find_holes(
-        res.screen_file("colony_summary", "assets", "frame.png"))
-    assert len(holes) == 14, len(holes)
-    named = fh.name_holes(holes, "colony_summary")
-    assert [fw, fhh] == cs._data["frame"]["image_size"], (fw, fhh)
-    for name, r in named.items():
-        want = fh.to_ref(r, fw, fhh)
-        got = (cs._data["frame"]["title_rect"] if name == "title"
-               else list(cs.box_rect(name)))
-        assert all(abs(a - b) <= 2 for a, b in zip(got, want)), \
-            (name, got, want)
-    # Seven sort cutouts, same size within a few px, evenly spaced.
-    sorts = [cs.box_rect(f"sort_{k}") for k in fh.SORT_KEYS]
-    assert all(s is not None for s in sorts)
-    ws = [s[2] for s in sorts]
-    assert max(ws) - min(ws) <= 6, ws
-    gaps = [sorts[i + 1][0] - (sorts[i][0] + sorts[i][2])
-            for i in range(6)]
-    assert max(gaps) - min(gaps) <= 6, gaps
+    # ── THE CUTOUTS COME FROM THE BUILT PLATE NOW (Stage 4) ──
+    # Decision 3's chain is unchanged and its source moved: boxes.json
+    # is generated from the plate frame_build.py makes, not from the
+    # superseded frame.png. The old artwork has 14 holes in places the
+    # layout no longer uses, so it can no longer host these boxes —
+    # see `colonyframe` and the status document for what flag-off
+    # means now.
+    _plate = os.path.join(SCREENS_DIR, "colony_summary", "assets",
+                          "frames", "frame_1920x1080.png")
+    if os.path.exists(_plate):
+        fw, fhh, holes = fh.find_holes(_plate)
+        assert len(holes) == 8, len(holes)
+        named = fh.name_holes(holes, "colony_summary")
+        assert set(named) == {b.name for b in cs.boxes}, (
+            f"the plate's holes and boxes.json name different things: "
+            f"holes {sorted(named)}, boxes {sorted(b.name for b in cs.boxes)}")
+        for name, r in named.items():
+            want = fh.to_ref(r, fw, fhh)
+            got = list(cs.box_rect(name))
+            assert all(abs(a - b) <= 2 for a, b in zip(got, want)), \
+                (name, got, want)
+        _cut_note = f"{len(holes)} plate holes"
+    else:
+        _cut_note = (f"plate absent, run `python tools/frame_build.py`")
+    # ONE sort bar, not seven buttons, and it spans the list's width.
+    _bar = cs.box_rect("sort_bar")
+    _la = cs.box_rect("list_area")
+    assert _bar and _la, (_bar, _la)
+    assert abs(_bar[0] - _la[0]) <= 2, (_bar, _la)
+    assert cs.box_rect("return")[0] > _bar[0] + _bar[2], (
+        "RETURN must sit to the right of the sort bar")
+    # The seven keys divide it, and the SAME function answers the
+    # renderer and the click test (decision 5).
+    _sb = cs._sort_buttons()
+    assert [b.key for b in _sb] == fh.SORT_KEYS, [b.key for b in _sb]
+    _barpx = pygame.Rect(*cs.layout.rect(_bar))
+    assert _sb[0].hit.left == _barpx.left and _sb[-1].hit.right == _barpx.right
+    for _a, _b in zip(_sb, _sb[1:]):
+        assert _a.hit.right == _b.hit.left, (
+            f"the sort buttons do not tile the bar: {_a.key} ends at "
+            f"{_a.hit.right}, {_b.key} starts at {_b.hit.left}")
+    for _b in _sb:
+        assert _b.hit.contains(_b.highlight), (
+            f"{_b.key}'s highlight is wider than the area that hits it")
 
     # WHICH of the three bottom cutouts is the galaxy map is derived
     # from the original, not from left-to-right position — the name
@@ -1005,7 +1028,7 @@ def main():
              _GMAP_NATIVE[2] * _gsx, _GMAP_NATIVE[3] * _gsy)
     _gref_cx = _gref[0] + _gref[2] / 2.0
     _pan = []
-    for _k in fh.PANEL_KEYS:
+    for _k in fh.BAND_KEYS:
         _r = cs.box_rect(_k)
         assert _r is not None, f"colony_summary has no {_k} box"
         _pan.append((abs(_r[0] + _r[2] / 2.0 - _gref_cx), _k))
@@ -1067,8 +1090,8 @@ def main():
     cap = _Cap()
     app.client, was = cap, app.connected
     app.connected = True
-    bx, by, bw, bh = cs.layout.rect(cs.box_rect("sort_food"))
-    cs.handle_click(bx + bw // 2, by + bh // 2)
+    _food = next(b for b in cs._sort_buttons() if b.key == "food")
+    cs.handle_click(_food.hit.centerx, _food.hit.centery)
     assert cs._sort_key == "food"
     assert cap.keys == [ord(HOTKEY["food"])], (cap.keys, HOTKEY["food"])
     assert cap.calls == [], (
@@ -1122,8 +1145,9 @@ def main():
             f"path does not replace it, it precedes it")
     app.client, app.connected = FakeClient(), was
     cs.render(pygame.display.get_surface())
-    ok("colony_summary (frame cutouts == boxes.json, sort hotkeys with "
-       "native clicks kept as the fallback, empire rows)")
+    ok(f"colony_summary (cutouts == boxes.json [{_cut_note}], one sort "
+       f"bar divided by one function, native clicks kept as the "
+       f"fallback, empire rows)")
 
     # ── Zoom tables (transcribed from orion2re) ──
     from core import zoomtables as zt
@@ -3270,8 +3294,8 @@ def main():
     # that would silently become a column of zeroes.
     d.switch_to("colony_summary")
     _scr_op = d.active
-    _op_box = _scr_op.box_rect("output_panel")
-    assert _op_box, "output_panel has no box"
+    _op_box = _scr_op.box_rect("planet_output")
+    assert _op_box, "planet_output has no box"
     _oa = pygame.Rect(*app.layout.rect(_op_box))
     _osurf = pygame.Surface((_oa.right + 8, _oa.bottom + 8))
     _osurf.fill((0, 0, 0))
@@ -3647,7 +3671,7 @@ def main():
     # AND ON THE SURFACE: the marker is ink, and no shortage is no
     # ink. Rendered twice into the same rect and differenced, so this
     # asserts the drawing and not the tuple a second time.
-    _sh_area = pygame.Rect(*app.layout.rect(_scr_op.box_rect("output_panel")))
+    _sh_area = pygame.Rect(*app.layout.rect(_scr_op.box_rect("planet_output")))
     _sh_surf = pygame.Surface((_sh_area.right + 8, _sh_area.bottom + 8))
     _sh_ink = []
     for _r in (_fake, _sh_row):
@@ -3902,7 +3926,7 @@ def main():
     # is what most of the box is — the same method the (0, 8, 0)
     # measurement of the original used.
     for _k, _want in (("galaxy_inset", _fl_panels.get("galaxy_inset_fill")),
-                      ("spare_panel", None)):
+                      ("planet_info", None)):
         _fr = pygame.Rect(*app.layout.rect(_scr_op.box_rect(_k)))
         _fa = pygame.surfarray.array3d(_fl_surf.subsurface(_fr))
         _hist = {}
@@ -4286,36 +4310,51 @@ def main():
     # scale, pixel for pixel.
     _cs = d.screens["colony_summary"]
     d.switch_to("colony_summary")
-    assert app.settings.get("frame_preview") is False, (
-        "settings.json ships with frame_preview on — the preview is a "
-        "preview and the shipped configuration is the shipped frame")
-    _off_path, _off_note = _cframe.frame_source(_cs)
+    # ── THE FLAG'S MEANING INVERTED AT STAGE 4 ──
+    # boxes.json is generated from the plate's own holes now, so the
+    # plate IS this screen's frame and the flag ships ON. Turning it
+    # off draws the SUPERSEDED artwork over boxes it does not fit —
+    # kept for one stage so the two can be compared, and deleted with
+    # the old frame at Stage 5. The name is backwards for exactly
+    # that long, and this assertion is what makes the inversion a
+    # decision somebody took rather than a default that drifted.
+    assert app.settings.get("frame_preview") is True, (
+        "settings.json ships with frame_preview off. Since Stage 4 the "
+        "colony boxes come from the built plate's holes, so off means "
+        "the superseded artwork over boxes it does not fit — which the "
+        "cutout-edge checker catches as thousands of glyph pixels under "
+        "opaque frame alpha")
     _shipped = os.path.join(SCREENS_DIR, "colony_summary", "assets",
                             "frame.png")
-    assert os.path.realpath(_off_path) == os.path.realpath(_shipped), (
-        f"flag off must draw {_shipped}, got {_off_path}")
-    assert _off_note is None, (
-        f"the log must say nothing when the flag is off, got {_off_note!r}")
-
-    # The rendered surface, against the same file loaded and scaled
-    # the way _scale_frame does it. Hashed, so a changed scale or a
-    # swapped source fails here rather than in somebody's screenshot.
-    _cs._load_frame()
-    _want_surf = pygame.transform.smoothscale(
-        pygame.image.load(_shipped).convert_alpha(),
-        app.layout.rect((0, 0, _REF_W, _REF_H))[2:])
-    _got_h = hashlib.sha256(
-        pygame.image.tostring(_cs._frame_scaled, "RGBA")).hexdigest()
-    _want_h = hashlib.sha256(
-        pygame.image.tostring(_want_surf, "RGBA")).hexdigest()
-    assert _got_h == _want_h, (
-        f"with frame_preview off the colony frame surface is {_got_h[:16]} "
-        f"and loading {os.path.relpath(_shipped, _proj)} through the same "
-        f"scale gives {_want_h[:16]} — the switch changed the shipped "
-        f"path, which it may not")
+    app.settings["frame_preview"] = False
+    try:
+        _off_path, _off_note = _cframe.frame_source(_cs)
+        assert os.path.realpath(_off_path) == os.path.realpath(_shipped), (
+            f"flag off must draw {_shipped}, got {_off_path}")
+        assert _off_note is None, (
+            f"the log must say nothing when the flag is off, got "
+            f"{_off_note!r}")
+        # The superseded surface is still byte-for-byte what it was:
+        # the fallback stays honest until it is deleted.
+        _cs._load_frame()
+        _want_surf = pygame.transform.smoothscale(
+            pygame.image.load(_shipped).convert_alpha(),
+            app.layout.rect((0, 0, _REF_W, _REF_H))[2:])
+        _got_h = hashlib.sha256(
+            pygame.image.tostring(_cs._frame_scaled, "RGBA")).hexdigest()
+        _want_h = hashlib.sha256(
+            pygame.image.tostring(_want_surf, "RGBA")).hexdigest()
+        assert _got_h == _want_h, (
+            f"with frame_preview off the colony frame surface is "
+            f"{_got_h[:16]} and loading "
+            f"{os.path.relpath(_shipped, _proj)} through the same scale "
+            f"gives {_want_h[:16]} — the switch changed the superseded "
+            f"path, which it may not while that path still exists")
+    finally:
+        app.settings["frame_preview"] = True
+        _cs._load_frame()
 
     # THE FLAG ON PICKS A PLATE AND SAYS SO, or names the command.
-    app.settings["frame_preview"] = True
     try:
         _on_path, _on_note = _cframe.frame_source(_cs)
         assert _on_note, "the flag is on and the log says nothing"
@@ -4337,10 +4376,9 @@ def main():
             assert _cframe.BUILD_COMMAND in _on_note, _on_note
             assert os.path.realpath(_on_path) == os.path.realpath(_shipped)
     finally:
-        app.settings["frame_preview"] = False
+        app.settings["frame_preview"] = True
         _cs._load_frame()
-    ok(f"colony frame preview switch (flag off is the shipped surface "
-       f"byte for byte; plates {_plate_note})")
+    ok(f"colony frame switch (the plate ships; the superseded frame is still\n       byte for byte what it was; plates {_plate_note})")
 
     # ── Every gap is one of the master's own struts ──────────
     #
@@ -4492,6 +4530,7 @@ def main():
         "screens/colony_summary/colonybuild.py": "Buy",
         "screens/colony_summary/colonyempire.py": "decision 44",
         "screens/colony_summary/colonyinset.py": "isotropic",
+        "screens/colony_summary/colonyheader.py": "PLATE_HEIGHT_REF",
         "screens/colony_summary/colonylist.py": "identity",
         "screens/colony_summary/colonymoveui.py": "discard",
         "screens/colony_summary/colonyoutput.py": "decision 43",
@@ -4540,6 +4579,124 @@ def main():
         assert _cite in _found[_rel], (
             f"{_rel} still carries a marking but no longer says "
             f"{_cite!r} — the marking survived and its subject did not")
+    # ── THE HEADER WINDOW IS OURS, AND SO IS THE OUTLINE COLOUR ──
+    # Both markings, all three homes, and the numbers the first one
+    # rests on. The plate height is the interesting one: it is a
+    # TRANSCRIBED number that does NOT fit, so the check pins the
+    # measurement and the window it fails to fit rather than the
+    # compromise, which is the only way the gap stays visible.
+    from screens.colony_summary import colonyheader as _chdr
+    assert _chdr.PLATE_HEIGHT_REF == 66, _chdr.PLATE_HEIGHT_REF
+    assert _chdr.DIVIDER_REF == 6, _chdr.DIVIDER_REF
+    _hbox = d.screens["colony_summary"].box_rect("header")
+    assert _hbox and _hbox[3] < _chdr.PLATE_HEIGHT_REF, (
+        f"the header window is {_hbox[3]} ref px and the original's "
+        f"plate measures {_chdr.PLATE_HEIGHT_REF} — if the window has "
+        f"grown to fit, the deviation is over and the note that "
+        f"records it has to go with it")
+    _hcfg = d.screens["colony_summary"]._data.get("header", {})
+    for _cite in ("DEVIATION", "44", "60", "96", "66 reference px",
+                  "panel.thin_border", "recess"):
+        assert _cite in _hcfg.get("_deviation_window", ""), (
+            f"header._deviation_window no longer carries {_cite!r}")
+    # THE PLATES TILE THE HEADER EXACTLY, and each heads its own
+    # column: a heading that is not as wide as the column under it is
+    # a second copy of the layout (decision 5).
+    _cs4 = d.screens["colony_summary"]
+    _cols = _cs4._columns()
+    assert [k for k, _w in _cols] == ["name", "farmers", "workers",
+                                      "scientists", "building", "scroll"], _cols
+    assert sum(_w for _k, _w in _cols) == 1693, _cols
+    # The job columns are the transcribed ratio, not three equal ones.
+    _jobs = dict(_cols)
+    assert (_jobs["farmers"], _jobs["workers"], _jobs["scientists"]) \
+        == (342, 360, 339), (
+            f"the job columns are {_jobs} — COLSUM::Get_Selected_Pop_ "
+            f"(colsum.cpp:1006-1024) gives spans 135/142/134, so the "
+            f"middle column is the widest and three equal ones are ours")
+    _hpx = pygame.Rect(*_cs4.layout.rect(_hbox))
+    _plates = _chdr.plate_rects(_hpx, _cols, _cs4.layout.scale)
+    assert [k for k, _r in _plates] == [k for k, _w in _cols]
+    assert _plates[0][1].left >= _hpx.left
+    assert _plates[-1][1].right <= _hpx.right
+    # ── THE EMPIRE READOUTS SURVIVE AN UNTUNED RESOLUTION ──
+    #
+    # Rendered at all three and read back as INK, because the fault
+    # this replaces was invisible to any check that derived the
+    # expected size from the renderer's own expression. `colonyempire`
+    # took `box_font_scale`, which multiplies by `win_h / 1080`, and
+    # then went through `Layout.font_size`, which multiplies by the
+    # window scale again: 1.0 at 1080p, 1.78 at 1440p and **4.0 at
+    # 2160p against an intended 2.0**. The colony summary carries no
+    # tuned `font_scale` on any box, so nothing cancelled it and the
+    # six values came out at twice their size at 4K and collided with
+    # their labels. Same family as the help popup's, which
+    # `screenhelp` had already solved privately — see
+    # `ScreenBase.box_font_scale_stored`.
+    #
+    # Two properties, and the second is the one that fails on a double
+    # scale: the value's ink stays inside the box, and it stays clear
+    # of its own label.
+    from screens.colony_summary import colonyempire as _emp_chk
+    _emp_seen = 0
+    for _W, _H in (("1920", 1080), ("2560", 1440), ("3840", 2160)):
+        _W = int(_W)
+        _ea, _es = _pv.build_screen(_W, _H)
+        _ea.dispatcher.switch_to("colony_summary")
+        _esc = _ea.dispatcher.active
+        _esc.enter(None)
+        _esc.update(_pv._Snapshot(_pv.COLONIES))
+        _ebox = _esc.box_rect("empire_stats")
+        assert _ebox, "no empire_stats box"
+        _er = pygame.Rect(*_ea.layout.rect(_ebox))
+        _esurf = pygame.Surface((_W, _H))
+        _esurf.fill((0, 0, 0))
+        _esc.render(_esurf)
+        _epx = pygame.surfarray.array3d(
+            _esurf.subsurface(_er)).transpose(1, 0, 2).astype(int)
+        _lab_rgb = _np.array(_emp_chk.LABEL_COLOR[:3], dtype=int)
+        _val_rgb = _np.array(_emp_chk.VALUE_COLOR[:3], dtype=int)
+        # A TIGHT match on the glyph CORE. The two colours are only
+        # 248 apart summed — (140,155,190) against (220,228,245) — so
+        # a loose threshold makes each mask catch the other's
+        # antialiasing and the separation test compares noise.
+        _is_lab = (_np.abs(_epx - _lab_rgb).sum(axis=2) < 12)
+        _is_val = (_np.abs(_epx - _val_rgb).sum(axis=2) < 12)
+        assert _is_lab.any() and _is_val.any(), (
+            f"{_W}x{_H}: the empire panel drew no labels or no values, "
+            f"so this check asserts nothing")
+        # INSIDE THE BOX: no ink on the outermost column or row, which
+        # is what a value too big to fit produces first.
+        for _side, _band in (("left", _is_val[:, :1]),
+                             ("right", _is_val[:, -1:]),
+                             ("top", _is_val[:1, :]),
+                             ("bottom", _is_val[-1:, :])):
+            assert not _band.any(), (
+                f"{_W}x{_H}: value ink touches the {_side} edge of "
+                f"empire_stats — it is too large for its box")
+        # CLEAR OF THE LABEL: on every row that carries both, the
+        # rightmost label pixel is left of the leftmost value pixel.
+        _rows_both = [_y for _y in range(_er.h)
+                      if _is_lab[_y].any() and _is_val[_y].any()]
+        assert len(_rows_both) >= 6, (
+            f"{_W}x{_H}: only {len(_rows_both)} rows carry both a "
+            f"label and a value; the panel has six")
+        for _y in _rows_both:
+            _lx = int(_np.where(_is_lab[_y])[0].max())
+            _vx = int(_np.where(_is_val[_y])[0].min())
+            assert _lx < _vx, (
+                f"{_W}x{_H}: on row y={_y} the label reaches x={_lx} "
+                f"and the value starts at x={_vx} — they collide, "
+                f"which is what a doubled font scale does first")
+        _emp_seen += 1
+    assert _emp_seen == 3
+    ok("empire readouts at three resolutions (value ink inside the box "
+       "and clear of its label, so a doubled font scale fails here)")
+
+    ok("colony header plates (the window is a marked DEVIATION, the "
+       "plate height is a transcribed number that does not fit, the "
+       "job columns are colsum.cpp's unequal three)")
+
     ok(f"marker inventory ({len(_MARKED)} files carry an HD EXTENSION "
        f"or DEVIATION and every one of them is read by a check)")
 
@@ -5035,9 +5192,9 @@ def main():
         _scr_op.handle_mousewheel(-1, *_sc_pt)
     assert _scr_op._first == 3, _scr_op._first
     _sc_sel_before = _scr_op._selected
-    _sc_bx, _sc_by, _sc_bw, _sc_bh = app.layout.rect(
-        _scr_op.box_rect("sort_population"))
-    _scr_op.handle_click(_sc_bx + _sc_bw // 2, _sc_by + _sc_bh // 2)
+    _sc_btn = next(_b for _b in _scr_op._sort_buttons()
+                   if _b.key == "population")
+    _scr_op.handle_click(_sc_btn.hit.centerx, _sc_btn.hit.centery)
     assert _scr_op._first == 0, (
         f"the sort left the window at {_scr_op._first}; the original "
         f"puts it back at the top (_first = 0, colsum.cpp:832)")
@@ -5511,25 +5668,51 @@ def main():
                                  _marker.x + _marker.width // 2)
             assert _got == _zone, (
                 f"{_r['name']}: the {_zone} marker names {_got}")
-        # 1c. THE RUN IS FLUSH — no gap inside it. Each marker starts
-        #     where the previous group ended, so a short colony makes
-        #     a short row and the length keeps meaning something.
-        _edge = _boxes.markers[0][1].x
-        for _zone, _marker in _boxes.markers:
-            assert abs(_marker.x - _edge) <= _dt_track.gap, (
-                f"{_r['name']}: a gap opened before the {_zone} "
-                f"marker — the run must be unbroken")
-            _edge = _marker.x + _marker.width + _dt_track.gap
-            for _j, _k, _cell in _boxes.cells:
-                if _j == _zone:
-                    _edge = _cell.x + _cell.width + _dt_track.gap
-        # 1d. THE GROWTH BOXES FOLLOW ALL THREE GROUPS, past the gap
-        #     from layout.json — they belong to the colony, not a job.
-        if _boxes.growth:
-            _gap = int(_mv_cfg.get("growth_gap", 18) * _mv_scale)
-            assert _boxes.growth[0].x == _boxes.run_right + _gap, (
-                f"{_r['name']}: the growth boxes start at "
-                f"{_boxes.growth[0].x}, not {_boxes.run_right + _gap}")
+        # 1c. EACH GROUP SITS IN ITS OWN COLUMN, and every cell of it
+        #     inside that column. This replaced "the run is flush" at
+        #     Stage 4: a flush run was the property of ONE track, and
+        #     the row is five columns now — a marker that started
+        #     where the previous group ended would put the workers
+        #     under the FARMERS heading the moment a colony had
+        #     eleven farmers. The failure shape is the one this whole
+        #     block exists for, so the property moved with the
+        #     geometry rather than being dropped.
+        _colmap = _ct.columns(_mv_area, _mv_cfg)
+        if _colmap:
+            for _zone, _marker in _boxes.markers:
+                _cx, _cw = _colmap[_ct.JOB_KEYS[_zone]]
+                assert _marker.x == _cx, (
+                    f"{_r['name']}: the {_zone} marker is at "
+                    f"{_marker.x}, its column starts at {_cx}")
+                for _j, _k, _cell in _boxes.cells:
+                    if _j != _zone:
+                        continue
+                    assert _cx <= _cell.x and _cell.right <= _cx + _cw, (
+                        f"{_r['name']}: cell {_k} of job {_zone} "
+                        f"({_cell.x}..{_cell.right}) leaves its column "
+                        f"({_cx}..{_cx + _cw}) — a cell under the "
+                        f"wrong heading is the failure this replaced "
+                        f"the flush-run rule with")
+            # AND NO GROWTH BOXES: they belong to the colony, so in a
+            # row of three job columns there is nowhere for them that
+            # is not a lie. `_column_boxes` carries the reasoning.
+            assert not _boxes.growth, _boxes.growth
+        else:
+            _edge = _boxes.markers[0][1].x
+            for _zone, _marker in _boxes.markers:
+                assert abs(_marker.x - _edge) <= _dt_track.gap, (
+                    f"{_r['name']}: a gap opened before the {_zone} "
+                    f"marker — the single-track run must be unbroken")
+                _edge = _marker.x + _marker.width + _dt_track.gap
+                for _j, _k, _cell in _boxes.cells:
+                    if _j == _zone:
+                        _edge = _cell.x + _cell.width + _dt_track.gap
+            if _boxes.growth:
+                _gap = int(_mv_cfg.get("growth_gap", 18) * _mv_scale)
+                assert _boxes.growth[0].x == _boxes.run_right + _gap, (
+                    f"{_r['name']}: the growth boxes start at "
+                    f"{_boxes.growth[0].x}, not "
+                    f"{_boxes.run_right + _gap}")
             assert _cl.drop_band(_mv_area, _mv_cfg, _mv_scale, _r,
                                  _boxes.growth[0].centerx) is None, (
                 f"{_r['name']}: a growth box names a job")
@@ -5553,10 +5736,20 @@ def main():
                 f"{_r['name']}: job {_job}'s target is thinner than a "
                 f"marker, which means a group without one")
         # 5. OUTSIDE EVERY TARGET IS None, and None is a state.
+        # 5b. OUTSIDE THE THREE JOB COLUMNS IS None, and None is a
+        #     state — it discards a held selection rather than
+        #     dropping it. The bounds are the columns' own now, not
+        #     the single track's.
+        if _colmap:
+            _lo = min(_colmap[_k2][0] for _k2 in _ct.JOB_KEYS)
+            _hi = max(_colmap[_k2][0] + _colmap[_k2][1]
+                      for _k2 in _ct.JOB_KEYS)
+        else:
+            _lo, _hi = _dt_x0, _dt_x0 + _dt_track.width
         assert _cl.drop_band(_mv_area, _mv_cfg, _mv_scale, _r,
-                             _dt_x0 - 5) is None
+                             _lo - 5) is None
         assert _cl.drop_band(_mv_area, _mv_cfg, _mv_scale, _r,
-                             _dt_x0 + _dt_track.width + 5) is None
+                             _hi + 5) is None
     # 6. THE OUTLINE IS THE TARGET, asserted rather than looked at.
     #    draw_drop_bands takes the rects drop_targets returns, so the
     #    check is that it is drawn where the hit test answers — done
@@ -5777,7 +5970,7 @@ def main():
     _fit_msg = _cp.message(_mv_words, _cp.Refusal(_cm.REFUSE_JOB_FULL,
                                                   landed=2, carried=10,
                                                   total=12))
-    _fit_box = _scr_op.box_rect("spare_panel")
+    _fit_box = _scr_op.box_rect("planet_info")
     assert _fit_box, "spare_panel is where the move message goes"
     _fit_rect = pygame.Rect(*app.layout.rect(_fit_box))
     _fit_px = app.layout.font_size(_mv_words.get("font", 18))
@@ -6184,8 +6377,8 @@ def main():
     _sb_boxes = load_boxes(
         os.path.join(SCREENS_DIR, "colony_summary", "boxes.json"),
         1920, 1080)
-    _sb_ref = [b.ref_rect for b in _sb_boxes if b.name == "sidebar"]
-    assert _sb_ref, "boxes.json has no sidebar box"
+    _sb_ref = [b.ref_rect for b in _sb_boxes if b.name == "empire_stats"]
+    assert _sb_ref, "boxes.json has no empire_stats box"
 
     from screens.colony_summary import screen as _cs
     from screens.colony_summary import colonyempire as _emp_mod0
@@ -6254,7 +6447,7 @@ def main():
         # column edge. That is glyph metrics, not layout: it says
         # nothing about where the renderer decided to put the text,
         # which is the thing under test.
-        _fs = _scr.box_font_scale("sidebar")
+        _fs = _scr.box_font_scale_stored("empire_stats")
         _lab_px = _lay.font_size(int(_emp.get("label_font", 18) * _fs))
         _val_px = _lay.font_size(int(_emp.get("value_font", 26) * _fs))
 
@@ -6467,12 +6660,23 @@ def main():
         _orig_gf(self, sz))
     try:
         for _name in _FRAME_SCREENS:
-            _fpng = res.screen_file(_name, "assets", "frame.png")
-            _fbase = Image.open(_fpng).convert("RGBA")
             for _W, _H in _SIZES:
                 _a2, _ = _pv.build_screen(_W, _H)
                 _s2 = _a2.dispatcher.screens[_name]
                 _a2.dispatcher.switch_to(_name)
+                # THE ALPHA MUST BE THE FRAME THE SCREEN DREW, not a
+                # path this check assumes. Since Stage 4 the colony
+                # screen draws a per-resolution plate chosen by
+                # `colonyframe.frame_source`, so reading assets/
+                # frame.png here would measure glyphs against artwork
+                # nobody blitted — and it did: the superseded frame's
+                # metal sits exactly where the new list is, which is
+                # 5822 "violations" at 1080p against a frame that was
+                # not on screen.
+                _fpng = (_cframe.frame_source(_s2)[0]
+                         if _name == "colony_summary"
+                         else res.screen_file(_name, "assets", "frame.png"))
+                _fbase = Image.open(_fpng).convert("RGBA")
                 _s2.enter(None)
                 _s2.update(_pv._Snapshot(_pv.COLONIES))
                 _cuts = []
@@ -6592,7 +6796,13 @@ def main():
 
     _b_worst = {}
     for _name in _FRAME_SCREENS:
-        _fpng = res.screen_file(_name, "assets", "frame.png")
+        # The frame this screen DRAWS, same rule as class A above.
+        _fpng = (os.path.join(SCREENS_DIR, "colony_summary", "assets",
+                              "frames", "frame_1920x1080.png")
+                 if _name == "colony_summary"
+                 else res.screen_file(_name, "assets", "frame.png"))
+        if not os.path.exists(_fpng):
+            continue
         _iw, _ih, _holes = _fhB.find_holes(_fpng)
         _named = _fhB.name_holes(_holes, _name)
         _al = _np.array(Image.open(_fpng).convert("RGBA"))[:, :, 3]
@@ -6611,7 +6821,13 @@ def main():
                 f"much of itself with no inset able to help. Either the "
                 f"artwork grew a rim or find_holes' bounding box is no "
                 f"longer the hole's shape")
-    assert len(_b_worst) >= 20, len(_b_worst)
+    # 17: the galaxy map's ten straight-edged holes plus the plate's
+    # eight less `title`, which the plate does not have. It was 20+
+    # while the colony frame cut 14; the plate cuts 8 because the
+    # seven sort buttons became one bar and the sidebar moved into
+    # the band. A floor, so a frame that stops cutting holes cannot
+    # pass by measuring nothing.
+    assert len(_b_worst) >= 17, len(_b_worst)
     ok(f"class B: the frame reaches at most {_CLASS_B_BUDGET} px into "
        f"any of {len(_b_worst)} cutouts")
 

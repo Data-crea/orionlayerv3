@@ -214,10 +214,7 @@ class HelpMixin:
         resolutions are rendered side by side and invisible in
         either one alone.
         """
-        for box in self.boxes:
-            if box.name == self.HELP_BOX:
-                return box.style.get("font_scale", 1.0)
-        return 1.0
+        return self.box_font_scale_stored(self.HELP_BOX)
 
     def help_backdrop(self):
         """Surface the popup cuts its fill out of, window-aligned.

@@ -1,41 +1,92 @@
 {
   "_note": "THE COLONY MANAGEMENT SCREEN'S GEOMETRY, AND THE ONLY PLACE IT IS TYPED. Every rectangle is in the 1920x1080 reference space (core/layout.py). tools/frame_build.py builds the frame from this file plus the master's ring and texture; tools/frame_mask.py renders the windows; tools/frame_holes.py derives the cutout boxes back out of the built frame, and a smoke check asserts holes == mask == boxes.json at every resolution (decision 3). So a rectangle changes HERE and nowhere else, and everything downstream is generated - decision 1 and decision 40.",
-
-  "gaps": {"header_list": 26, "list_band": 28, "band_sort": 29, "in_row": 38},
+  "gaps": {
+    "header_list": 26,
+    "list_band": 28,
+    "band_sort": 29,
+    "in_row": 38
+  },
   "_gaps_note": "EVERY GAP IS ONE OF THE MASTER'S OWN STRUTS, MAPPED BY ROLE - not a spacing chosen here. galaxy_map/assets/frame.png has seven distinct struts and every one carries a lit line on both edges with a moulded ridge between; tools/frame_build.py --profiles measures them. header_list 26 <- the master's header|map strut (31 master px, 26.7 ref): a title bar above the main content. list_band 28 <- map|slot (33 px, 28.4 ref): the main content above the row beneath it. band_sort 29 <- box|slot (34 px, 29.2 ref): a panel above a button row, which is what this gap is and what map|slot is not. in_row 38 <- the slot divider (47 px, 38.9 ref): two elements of ONE row side by side, which is the lower band and is also sort_bar|return_button. Rounded DOWN to the integer in every case, so a rail is never wider than the strut it was measured from. The cost is in doc and in v3_projektstatus.md: the list loses 47 px of height and planet_output 60 of width, and the figure columns lose nothing because the rails that grew are horizontal.",
-  "ring": {"left": 107, "right": 120, "top": 18, "bottom": 74},
+  "ring": {
+    "left": 107,
+    "right": 120,
+    "top": 18,
+    "bottom": 74
+  },
   "_ring_source": {
     "file": "screens/galaxy_map/assets/frame.png",
     "tool": "threshold sweep, alpha < 8 / 16 / 64, bbox stable at all three",
     "date": "2026-09-06",
     "note": "THE FAMILY RING, FOUR VALUES, AND THE ASYMMETRY IS THE ARTWORK'S AND NOT AN ERROR. The master's metal is wide at the sides, thin at the top and medium at the bottom; a single number cannot describe it, which is why `bezel` is gone. Measured on the main-screen master because that is what this screen has to sit beside, and mapped to the reference space the same way the running screen maps it - the frame image is stretched over the whole reference area (screen._scale_frame), so each axis scales independently. A HAND-COPIED NUMBER GETS A CHECKER (decision 36): the smoke test re-measures that file with the same sweep and fails if the table and the artwork ever disagree. The shipped colony frame is NOT yet this ring - it measures 100/103/12/70 - and tools/frame_build.py is what makes it so."
   },
-
-  "header": [107, 18, 1693, 48],
-  "list": [107, 92, 1693, 605],
-
+  "header": [
+    107,
+    18,
+    1693,
+    48
+  ],
+  "list": [
+    107,
+    92,
+    1693,
+    605
+  ],
   "list_columns": {
     "name": 302,
-    "farmers": 347,
-    "workers": 347,
-    "scientists": 347,
+    "farmers": 342,
+    "workers": 360,
+    "scientists": 339,
     "building": 314,
     "scroll": 36
   },
-  "_list_columns_note": "302 + 347*3 + 314 + 36 = 1693, the list's own width exactly - the columns ARE the list, with no slack to distribute. THE LIST'S WIDTH DID NOT CHANGE WHEN THE GAPS BECAME RAILS on 7 September 2026: rails are horizontal there, so they cost HEIGHT and not width, and the figure capacity is untouched. CAPACITY IS ASSERTED, NOT NOTED: a figure column must fit at least four unsqueezed figures, which is what the original's widest column (industry, reach 122, pitch 30) fits; 347 reference px fits five, at every resolution, because the column and the pitch scale together. THE BUILDING COLUMN IS DERIVED: the original prints the producing text with BILL::Squeeze_Print_Formatted_Paragraph_(0x200, y, 0x55, 0x16, ...) at colsum.cpp:621 - 85 px of a 640 px screen, 13.3 % - and 13.3 % of 1693 is 225. 314 is wider than the transcription requires; the surplus is the extra HD width that Data's Stage 1 decision sends to the column reservation rather than to wider figure spacing. See colonybuild.py for why the width is a RESERVATION and never a squeeze target.",
-
-  "planet_info": [107, 725, 320, 220],
-  "planet_output": [465, 725, 686, 220],
-  "galaxy_inset": [1189, 735, 253, 200],
-  "empire_stats": [1480, 725, 320, 220],
+  "_list_columns_note": "302 + 347*3 + 314 + 36 = 1693, the list's own width exactly - the columns ARE the list, with no slack to distribute. THE LIST'S WIDTH DID NOT CHANGE WHEN THE GAPS BECAME RAILS on 7 September 2026: rails are horizontal there, so they cost HEIGHT and not width, and the figure capacity is untouched. CAPACITY IS ASSERTED, NOT NOTED: a figure column must fit at least four unsqueezed figures, which is what the original's widest column (industry, reach 122, pitch 30) fits; 347 reference px fits five, at every resolution, because the column and the pitch scale together. THE BUILDING COLUMN IS DERIVED: the original prints the producing text with BILL::Squeeze_Print_Formatted_Paragraph_(0x200, y, 0x55, 0x16, ...) at colsum.cpp:621 - 85 px of a 640 px screen, 13.3 % - and 13.3 % of 1693 is 225. 314 is wider than the transcription requires; the surplus is the extra HD width that Data's Stage 1 decision sends to the column reservation rather than to wider figure spacing. See colonybuild.py for why the width is a RESERVATION and never a squeeze target. THE THREE JOB COLUMNS ARE UNEQUAL, AND THAT IS TRANSCRIBED, corrected 7 September 2026. They were 347 each by our own choice; COLSUM::Get_Selected_Pop_ (colsum.cpp:1006-1024) passes the column bounds as literals - left_x = 101/236/378 and right_x = that - 10 - so the original's spans are 135/142/134 native px with the WORKERS column the widest. Two independent sources: those literals, and the column separators measured on the live framebuffer of screen 20 at x 99/234/376/510, which agree to +1 px on all three. The ratio 135:142:134 over the unchanged 1041 px reservation gives 342/360/339, so name, building and scroll do not move and the list width is still 1693. CAPACITY IS RE-ASSERTED AT THE NARROWEST COLUMN (339), not at the old uniform 347 - the check is what allows this change, not the arithmetic.",
+  "planet_info": [
+    107,
+    725,
+    320,
+    220
+  ],
+  "planet_output": [
+    465,
+    725,
+    686,
+    220
+  ],
+  "galaxy_inset": [
+    1189,
+    735,
+    253,
+    200
+  ],
+  "empire_stats": [
+    1480,
+    725,
+    320,
+    220
+  ],
   "_lower_band_note": "Four boxes, flush with the list's own edges at 107 and 1800, with gaps of 38 - THE MASTER'S OWN SLOT DIVIDER, 47 master px, the strut it puts between two buttons of one row. planet_output absorbs what the arithmetic leaves, because it is the only width in the band not fixed by something else: the two 320s are a pair and 253 is locked by the inset's aspect. 107 + 320 + 38 + 686 + 38 + 253 + 38 + 320 = 1800. The inset is 20 px shorter than its neighbours and centred against them (725 + 10 = 735), because its height is fixed by its own aspect and not by the band.",
   "_galaxy_inset_note": "253 x 200 IS DERIVED AND CONFIRMED - doc/colony_inset_geometry.md Part 3. The original's inset covers 50.6*M x 40*M world units, whose aspect is 1.2651 at EVERY galaxy size because both divisors are constants and M cancels (movebox.cpp:20-21). 253/200 = 1.2650 against that, so the crop fills the box with no letterbox at any size INCLUDING orion2re's Maximum - the earlier expectation that Maximum letterboxes is WITHDRAWN, and it only did so if the crop were the galaxy rather than the original's coverage. The scale that follows is exactly 5/M reference px per world unit. At 3840x2160 the box is 506 x 400 device px, which is the small galaxy's own world extent at 1:1.",
-
-  "sort_bar": [107, 974, 1367, 32],
-  "return_button": [1512, 974, 288, 32],
-
-  "figure_scale": {"1920x1080": 2, "2560x1440": 3, "3840x2160": 4},
+  "sort_bar": [
+    107,
+    974,
+    1367,
+    32
+  ],
+  "return_button": [
+    1512,
+    974,
+    288,
+    32
+  ],
+  "figure_scale": {
+    "1920x1080": 2,
+    "2560x1440": 3,
+    "3840x2160": 4
+  },
   "_figure_scale_note": "INTEGER STEPS, and that is the whole reason the table exists. A population figure is 28 x 28 native px (RACEICON.LBX, every people entry), and the layout scales are 1, 4/3 and 2 - so proportional scaling would want 2, 2.667 and 4, and 2.667 is not an integer. Nearest-neighbour at a fractional step invents pixels the original does not have, which a reference figure may not do. 2 / 3 / 4 gives 56 / 84 / 112 px. THIS FILE is the only place that changes. Marked HD EXTENSION in core/zoomtables.py.",
-
-  "_resolutions": ["1920x1080", "2560x1440", "3840x2160"]
+  "_resolutions": [
+    "1920x1080",
+    "2560x1440",
+    "3840x2160"
+  ]
 }

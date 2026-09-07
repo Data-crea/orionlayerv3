@@ -15,10 +15,11 @@ one rule per screen, chosen from the path (screens/<name>/assets/):
   galaxy_map      the largest hole is the map, the topmost narrow one
                   the title, the two on the right the sidebar and the
                   TURN button, the bottom row the six nav buttons
-  colony_summary  the largest hole is the list, the topmost the title,
-                  the two on the right the sidebar and RETURN, the
-                  bottom row the seven sort buttons, the remaining
-                  three (left to right) output / spare / galaxy inset
+  colony_summary  four rows of holes, grouped by vertical overlap:
+                  the header band, the list, the lower band's four
+                  panels (planet_info, planet_output, galaxy_inset,
+                  empire_stats, left to right) and the sort row's two
+                  (sort_bar, return)
 """
 import json
 import os
@@ -96,20 +97,70 @@ def name_holes_galaxy_map(holes):
     return named
 
 
+#: The lower band, left to right. Unlike the old frame's three, these
+#: four are named by POSITION AND CONFIRMED BY THE SOURCE: the galaxy
+#: inset's native rect (380, 349, 128, 91) is centre x 444 of 640,
+#: which is the THIRD of the four, and the empire readouts the fourth.
+BAND_KEYS = ["planet_info", "planet_output", "galaxy_inset", "empire_stats"]
+
+
 def name_holes_colony_summary(holes):
-    named, right, rest = _split_common(holes, "list_area")
-    named["sidebar"], named["return"] = right[0], right[1]
-    # The sort row sits below the three panels; split on the lowest
-    # panel bottom rather than a fixed pixel so a re-generated frame
-    # with a different bottom margin still names correctly.
-    rest = sorted(rest, key=lambda r: r[1])
-    bottom = sorted(rest[-len(SORT_KEYS):], key=lambda r: r[0])
-    panels = sorted(rest[:-len(SORT_KEYS)], key=lambda r: r[0])
-    for key, r in zip(SORT_KEYS, bottom):
-        named[f"sort_{key}"] = r
-    for key, r in zip(PANEL_KEYS, panels):
+    """The built plate's eight windows, by shape and position.
+
+    **REWRITTEN 7 September 2026 FOR THE STAGE A3 PLATE, and the old
+    rule could not have been adapted.** The shipped frame had 14
+    holes: a title, a right-hand sidebar, a right-hand RETURN, SEVEN
+    sort buttons and three bottom panels. The plate has 8: a header
+    band, the list, four panels in one lower band, ONE sort bar and
+    RETURN beside it. Nothing on the right of the list any more, one
+    sort hole instead of seven, and a header where the title was — so
+    `_split_common`, which exists to find a title and a right column,
+    does not apply here at all and is not called.
+
+    The shape is read off `layout_reference.json`'s own geometry
+    rather than off pixel thresholds: rows are found by grouping on y,
+    which is what makes the rule survive a plate rebuilt at a
+    different ring or with different gaps.
+    """
+    rows = _rows(holes)
+    if len(rows) != 4:
+        raise SystemExit(
+            f"expected 4 rows of holes (header, list, lower band, sort "
+            f"row), found {len(rows)}: {rows}")
+    header, listing, band, sort = rows
+    if len(header) != 1 or len(listing) != 1:
+        raise SystemExit("the header and the list must be one hole each")
+    if len(band) != len(BAND_KEYS):
+        raise SystemExit(
+            f"the lower band has {len(band)} holes, expected "
+            f"{len(BAND_KEYS)}: {BAND_KEYS}")
+    if len(sort) != 2:
+        raise SystemExit("the sort row must be the sort bar and RETURN")
+    named = {"header": header[0], "list_area": listing[0]}
+    for key, r in zip(BAND_KEYS, band):
         named[key] = r
+    named["sort_bar"], named["return"] = sort
     return named
+
+
+def _rows(holes):
+    """Holes grouped into rows by vertical overlap, top to bottom.
+
+    Overlap rather than a y threshold: the galaxy inset is 20 px
+    shorter than its band and centred in it (`_lower_band_note`), so
+    its top is not its neighbours' and a tolerance would be a number
+    somebody has to keep in step with the layout.
+    """
+    rows = []
+    for r in sorted(holes, key=lambda r: (r[1], r[0])):
+        top, bottom = r[1], r[1] + r[3]
+        for row in rows:
+            if any(top < q[1] + q[3] and bottom > q[1] for q in row):
+                row.append(r)
+                break
+        else:
+            rows.append([r])
+    return [sorted(row, key=lambda r: r[0]) for row in rows]
 
 
 RULES = {"galaxy_map": name_holes_galaxy_map,
@@ -150,7 +201,12 @@ def main():
 
     if "--write" not in sys.argv:
         return
-    boxes_path = os.path.join(os.path.dirname(os.path.dirname(path)), "boxes.json")
+    # The plate lives one level deeper than the shipped frame
+    # (assets/frames/frame_WxH.png), so walk up to the screen dir by
+    # name rather than by a fixed number of dirnames.
+    parts = os.path.normpath(os.path.abspath(path)).split(os.sep)
+    screen_dir = os.sep.join(parts[:parts.index("assets")])
+    boxes_path = os.path.join(screen_dir, "boxes.json")
     with open(boxes_path) as f:
         data = json.load(f)
     derived = {n for n in named if n != "title"}

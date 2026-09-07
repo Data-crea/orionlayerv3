@@ -7,16 +7,10 @@
       1672,
       941
     ],
-    "title_rect": [
-      733,
-      9,
-      447,
-      56
-    ],
     "title_font": 30,
-    "title": "Colonies",
     "_note": "One PNG with transparent cutouts, stretched over the 1920x1080 reference area and drawn above all content. Every box in boxes.json is derived from the cutouts by tools/frame_holes.py (--write regenerates them). Do not move the cutout boxes by hand. The frame was generated at 1672x941 and is upscaled at every resolution; if the metal reads soft next to the galaxy map, regenerate the art larger and re-run frame_holes.",
-    "_title_note": "The original has no title on this screen; the cutout is the same title bar the galaxy map has, so it carries the screen name."
+    "_title_note": "The original has no title on this screen; the cutout is the same title bar the galaxy map has, so it carries the screen name.",
+    "_no_title_note": "THE SCREEN HAS NO TITLE, and that is a transcription. The original's colony summary puts its five column plates at the very top - framebuffer of screen 20, reference save: frame edge at y 4..7, plate outlines at y 11 and 32, first list row at y 35. There is no title text anywhere on it. A 'COLONIES' title was drawn here until Stage 4 because the SUPERSEDED frame.png cut a title hole and frame_holes.py named it; the built plate cuts a header window in that band instead, and drawing both put the title straight over the WORKERS heading. The word survives as ScreenBase.FRAME_TITLE for the framebuffer fallback path, which is a different drawing."
   },
   "sort": {
     "_note": "The seven sort buttons of the original (colsum.cpp:267-273, Add_Multi_Button_Field_ at y=446). TWO ways in, and the hotkey is the one taken: `hotkey` is the original's own binding (ESTR 384/…: n p f i s r b), sent as INJECT_KEY, which moves nothing else. `native_click` is a point inside each native button and STAYS - as the fallback, and because it is the checkable one: the point comes from the Add_Multi_Button_Field_ call above and can be verified by a grep with no game running. A click also drags the game's own pointer onto the button (platform.cpp:1171-1172); the key does not. Second source for the hotkeys, live 3 September 2026 on orion2re 1.60: the FIELD_LIST reports fields 16-22 at y 446-469 carrying N P F I S R B - the same seven letters, UPPERCASE on the wire, and the game accepts either case.",
@@ -156,12 +150,18 @@
     "_not_drawn_note": "THREE THINGS THE ORIGINAL DOES HERE AND THIS DOES NOT, recorded rather than left to be noticed. THE SCANNED STAR ANIMATES: view_mode 3 resets every star's animation frame except the scanned one (movebox.cpp:98-101), so that one star cycles. Reachable - the selection is known - and not drawn because the frames are in the unshipped LBX. THE STARS ARE FIELDS: _galaxy_map_star_field[] (colsum.cpp:69-75), and hovering one in the original sets the scanned star AND moves _g_colony_n to the best colony there; this inset is display only. THE CONNECT LINE: Colsum_Connect_Galaxy_Map_Stars_ (colsum.cpp:731) draws an animated multi-coloured line between two stars, and its caller (colsum.cpp:487-498) fires ONLY while COLMOVE::_cluster_colony_n != -1 - a population transfer being dragged between colonies. OrionLayer has no colonist dragging, so there is no state in which that line would be drawn. Written down because 'Connect' reads like a permanent feature of the map and is not one."
   },
   "panels": {
-    "_note": "Every cutout that shows content gets the panel fill, so the frame never sits over raw background. list_area draws the colony list (see `list`) and output_panel the original's scan box for the selected colony (see `output`); galaxy_inset draws the original's small galaxy map (see `inset`) as of 4 September 2026; spare_panel is still fill only. WHICH HOLE IS WHICH IS DERIVED FROM THE SOURCE, not from left-to-right position - until 4 September 2026 frame_holes.py assigned these three names by index and had the last two the wrong way round. galaxy_inset is the RIGHTMOST of the three and is the original's own map hole: MOVEBOX::Draw_Galaxy_Map_Box_(nullptr, 0, 0x17c, 0x15d, 0x80, 0x5b, ...) at colsum.cpp:415 draws the small galaxy map at native (380, 349, 128, 91) (movebox.cpp:4-9), which is reference (1140, 785, 384, 205), centre x 1332. spare_panel is the MIDDLE one, over native x ~193-347, where the original draws its production and morale sprite column (Draw_Colony_Wee_Prod_(..., 106, y_pos, 366, 20), colsum.cpp:1171-1176) - values output_panel already answers for, which is what makes that hole the spare rather than a second place to draw the same thing. A smoke check asserts the rule (nearest hole to the native rect must be the one named galaxy_inset, and decisively nearest) rather than the list, so a re-generated frame cannot quietly reassign the names again. ONE PANEL PER STEP - spare_panel is empty on purpose and not waiting on anything in this file.",
-    "list_area": "",
-    "output_panel": "",
-    "galaxy_inset": "",
-    "spare_panel": "",
-    "galaxy_inset_fill": [0, 0, 0],
+    "_note": "Every cutout that shows content gets the panel fill, so the frame never sits over raw background. list_area draws the colony list (see `list`) and output_panel the original's scan box for the selected colony (see `output`); galaxy_inset draws the original's small galaxy map (see `inset`) as of 4 September 2026; spare_panel is still fill only. WHICH HOLE IS WHICH IS DERIVED FROM THE SOURCE, not from left-to-right position - until 4 September 2026 frame_holes.py assigned these three names by index and had the last two the wrong way round. galaxy_inset is the RIGHTMOST of the three and is the original's own map hole: MOVEBOX::Draw_Galaxy_Map_Box_(nullptr, 0, 0x17c, 0x15d, 0x80, 0x5b, ...) at colsum.cpp:415 draws the small galaxy map at native (380, 349, 128, 91) (movebox.cpp:4-9), which is reference (1140, 785, 384, 205), centre x 1332. spare_panel is the MIDDLE one, over native x ~193-347, where the original draws its production and morale sprite column (Draw_Colony_Wee_Prod_(..., 106, y_pos, 366, 20), colsum.cpp:1171-1176) - values output_panel already answers for, which is what makes that hole the spare rather than a second place to draw the same thing. A smoke check asserts the rule (nearest hole to the native rect must be the one named galaxy_inset, and decisively nearest) rather than the list, so a re-generated frame cannot quietly reassign the names again. ONE PANEL PER STEP - spare_panel is empty on purpose and not waiting on anything in this file. STAGE 4, 7 September 2026: the box names changed with the plate. output_panel -> planet_output, spare_panel -> planet_info (and it moved to the LEFT of the band), sidebar -> empire_stats (and it moved out of the right-hand column into the band), the seven sort_* boxes -> one sort_bar, and a header window appeared. The names are the plate's own windows now, from layout_reference.json through frame_holes.py, so this list and the artwork cannot drift.",
+    "header": true,
+    "list_area": true,
+    "planet_info": true,
+    "planet_output": true,
+    "galaxy_inset": true,
+    "empire_stats": true,
+    "galaxy_inset_fill": [
+      0,
+      0,
+      0
+    ],
     "_galaxy_inset_fill_note": "BLACK, and it is a measurement rather than a taste. The panel fill this screen lays down is PANEL_BG (8, 11, 20); the ORIGINAL's own inset region measures (0, 8, 0) over 2475 of about 2700 samples in the 640x480 frame at native (380, 349, 128, 91). So the box already had a fill - the cockpit texture was never showing through - and black moves TOWARD the original rather than away from it. It is a per-box fill and not a change to colonyinset, which deliberately draws no background of its own: Draw_Galaxy_Map_Box_ fills black only when _using_colony_screen_palette == 0 (movebox.cpp:36-38) and this screen sets that flag, so the original inherits whatever the screen put there and so do we."
   },
   "list": {
@@ -178,13 +178,25 @@
     "square_gap": 2,
     "no_farming_placement": "below",
     "marker_slots": 1,
-    "marker_letters": ["F", "W", "S"],
+    "marker_letters": [
+      "F",
+      "W",
+      "S"
+    ],
     "growth_gap": 18,
-    "cell_marks": {"native": "N", "android": "A", "conquered": "C"},
+    "cell_marks": {
+      "native": "N",
+      "android": "A",
+      "conquered": "C"
+    },
     "popup": {
       "_note": "WORDING FOR THE HOVER POPUP, here and not in the renderer (decision 15). Substitution is a replace and never str.format (decision 37).",
       "font": 15,
-      "job_names": ["Farmers", "Workers", "Scientists"],
+      "job_names": [
+        "Farmers",
+        "Workers",
+        "Scientists"
+      ],
       "group": "{job}: {count} of {pops}",
       "group_native": "{count} native - cannot be moved",
       "group_android": "{count} android - keeps its job",
@@ -373,5 +385,16 @@
     "_rows_note": "ELEVEN VALUES, and the split follows the original's own two halves. LEFT is the scan paragraph: the seven values E_Strings_(74) carries - planet size, climate, gravity class, mineral class, n_pops, the computed maximum and growth (colsum.cpp:1198-1205) - in six rows, because the original prints n_pops and the maximum as one pair and so does this. RIGHT is the production column: all four ECON values (colsum.cpp:1171-1174 at native x 106, y 349 stepping 18) with morale under them (colsum.cpp:1176, y 421), which is the same order and the same grouping the original draws at native x 106. Morale is the eleventh row and is not one of the ten scan-and-production values: it is a count of sprites there, and a number here only because the sprites are not ours to ship. THREE OF THE SEVEN ARE ALSO IN THE ROW. climate, n_pops and max_pop are drawn per row as well (list._hd_extension), and that is not a duplication to clean up: the per-row line is the HD EXTENSION and THIS is the original's own box, which prints all seven for one colony. Removing them here would make the transcription a subset in order to tidy an extension.",
     "column_gap": 34,
     "_geometry_note": "TUNED AGAINST THE PICTURE, not against a rule. output_panel is 464 x 201 reference px and the fuller column holds six rows, so the pitch is (201 - 2*pad_y - 5*row_gap) / 6 and a column is (464 - 2*pad_x) / 2 = 216. column_gap 34 is the one number that came out of looking: at the first render it was 12, and 'Huge GROWTH' and 'Ultra Poor RESEARCH' read as single phrases because the left column's right-aligned value ended a few pixels from the right column's left-aligned label. Every number in that render was correct and the panel was unreadable, which is the failure mode the fundament's 'render it and look at it' rule exists for. Two smoke checks hold the result, both measured by rendering per decision 30. (a) The GUTTER between the columns must be at least one em of the value font - the rule the 34 was measured against and the one the 12 broke. (b) Within a column, each row's label must clear the widest value THAT ROW can show by at least one em of the label font. Per row, and that matters: pairing the widest label in the panel with the widest value in the panel asserts a collision that cannot happen, because POPULATION never prints 'Ultra Poor', and it failed at 1280x720 on exactly that imaginary pair. The real tightest is MINERALS against 'Ultra Poor', 21 px to spare at scale 1.0. Both at twelve resolutions."
+  },
+  "header": {
+    "font_size": 20,
+    "labels": {
+      "name": "Name",
+      "farmers": "Farmers",
+      "workers": "Workers",
+      "scientists": "Scientists",
+      "building": "Building"
+    },
+    "_deviation_window": "DEVIATION - THE HEADER WINDOW IS OURS. The original has NO header window: it draws five raised plates straight onto the frame's metal, each a recessed dark field with a light rounded outline. Measured on the live framebuffer of screen 20 (reference save, 7 September 2026): plate interior luminance 44, surrounding metal 60, outline 96, and the plates SHARE their divider - two pixels at 85/93 between two interiors of 44, so the gap between plates is 0 and the divider is 6 reference px. We cut a header window and draw the plates inside it, so THE WINDOW'S OWN PANEL FILL STANDS IN FOR THE ORIGINAL'S PLATE RECESS: one dark field behind five outlines instead of five dark fields on metal. Chosen over closing the hole because with the header window removed the ring-to-list gap grows to about 74 reference px and the Stage A3 rail pass fills it with a stretched rail - buildable, but a change to the plate machinery plus a fill under every plate. DEVIATION - THE OUTLINE COLOUR: the original's line is a neutral grey at luminance 114-124; ours is panel.thin_border [55, 65, 85], luminance about 68 and blue, the project's own panel language (decision 34). The value lives in colors.json. AND THE PLATE HEIGHT IS A FINDING, NOT A CHOICE: the original's plate measures native y 11..32 = 22 px = 66 reference px, and the header window is 48 reference px of drawable height, so the transcribed plate is 37 % too tall to fit. The plates fill the window instead and colonyheader.PLATE_HEIGHT_REF records what they would be. Closing that gap means giving the header 66 px and taking 18 from the list (605 -> 587), which is a layout decision and not a drawing one."
   }
 }

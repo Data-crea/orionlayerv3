@@ -95,13 +95,16 @@ def track_metrics(area, cfg, scale):
     on another. See `_draw_name_block` and `_name_width_note`.
     """
     gap = max(1, int(cfg.get("square_gap", 2) * scale))
-    name_w = int(cfg.get("name_width", 236) * scale)
     pad_x = int(cfg.get("pad_x", 22) * scale)
     tail_w = int(cfg.get("tail_width", 0) * scale)
-    build_w = int(cfg.get("building_width", 0) * scale)
     build_gap = int(cfg.get("building_gap", 16) * scale)
     growth_gap = int(cfg.get("growth_gap", 18) * scale)
-    if build_w:
+    cols = columns(area, cfg)
+    name_w = cols["name"][1] - 2 * pad_x if cols else int(
+        cfg.get("name_width", 236) * scale)
+    build_w = cols["building"][1] if cols else int(
+        cfg.get("building_width", 0) * scale)
+    if build_w and not cols:
         build_w += build_gap
     bar_space = area.w - name_w - tail_w - build_w - 2 * pad_x
     # THE TRACK HOLDS POP_LIMIT_CAP SLOTS PLUS THREE MARKERS PLUS THE
@@ -139,6 +142,45 @@ def track_metrics(area, cfg, scale):
                  row_h=int(cfg["row_height"] * scale),
                  build_w=int(cfg.get("building_width", 0) * scale),
                  build_gap=build_gap)
+
+
+#: The key `cfg` carries the column table under. The screen merges
+#: `layout_reference.list_columns` into its `list` block on load, so
+#: the table travels with every other row number and there is no
+#: module state to leak between one caller and the next — which a
+#: global would do the moment one check rendered the real screen and
+#: the next used a synthetic fixture.
+COLUMNS_KEY = "columns"
+
+
+def columns(area, cfg):
+    """{key: (x, width)} in SCREEN px, tiling `area` exactly, or {}.
+
+    Empty when `cfg` carries no table, and the single-track
+    arithmetic runs then — which is what the synthetic fixtures in
+    the checks exercise, and what the row was before Stage 4.
+
+    The last column takes what integer division left, so the row can
+    never end short of the panel — the same rule
+    `colonyheader.plate_rects` uses for the headings above, which is
+    why the two line up at every resolution without either knowing
+    about the other.
+    """
+    table = cfg.get(COLUMNS_KEY) or ()
+    if not table:
+        return {}
+    total = sum(w for _k, w in table)
+    out, x = {}, area.x
+    for i, (key, ref_w) in enumerate(table):
+        w = (area.right - x if i == len(table) - 1
+             else round(area.w * ref_w / total))
+        out[key] = (x, w)
+        x += w
+    return out
+
+
+#: The three job columns, in ECON order, as they are keyed above.
+JOB_KEYS = ("farmers", "workers", "scientists")
 
 
 def track_x(area, cfg, scale):
@@ -251,6 +293,10 @@ def row_boxes(area, cfg, scale, row, band=None):
     top, height = band if band else (0, 0)
     y = top + (height - track.bar_h) // 2 if band else 0
     h = track.bar_h if band else 0
+    cols = columns(area, cfg)
+    if cols:
+        return _column_boxes(cols, cfg, scale, row, y, h, track,
+                             marker_slots)
 
     def box(slot, count):
         return pygame.Rect(origin + slot * track.step, y,
@@ -281,6 +327,117 @@ def row_boxes(area, cfg, scale, row, band=None):
               if band and beyond_x < right else None)
     return RowBoxes(tuple(markers), tuple(cells), tuple(targets),
                     tuple(growth), beyond, run_right)
+
+
+def _column_boxes(cols, cfg, scale, row, y, h, track, marker_slots):
+    """One row laid out in the five columns — the Stage 4 geometry.
+
+    **THE PITCH IS THE ORIGINAL'S OWN, SCALED.** Each job column's
+    cells are laid at `colonyicons.column_pitch(job, count)`, which is
+    `COLDRAW::Calculate_Squish_Step_` (coldraw.cpp:12-33) transcribed,
+    multiplied by this column's HD width over its NATIVE width. So a
+    column that squeezes in the original squeezes here, by the same
+    amount, and a column that does not is drawn at the full 30-unit
+    pitch. The HD row is the original's walk under a scale factor
+    rather than a second layout that happens to look like it.
+
+    **IDENTITY IS BY INDEX, NOT BY POSITION, and that is what makes
+    the drawing free** (decision 48). Cell k of job j is slot k of the
+    game's own column j: `colonysend` injects
+    `colonyicons.slot_click_x(j, k, count)`, a NATIVE x computed from
+    the same `column_pitch`. Nothing here is transferred into that
+    call — the two share the index and the count, and the pixel each
+    works in is its own. A cell drawn anywhere in its column would
+    still click correctly; drawn at the original's pitch it also
+    LOOKS like the thing it clicks.
+
+    The markers keep their place at the head of each column
+    (`row_boxes`' HD EXTENSION). Their original reason — a row without
+    columns cannot carry a heading — is answered by the headings above
+    as of Stage 4, and whether they stay is Stage 5's call; they are
+    not removed here because a marking is re-targeted in the commit
+    that deletes what it marks, not before.
+
+    **NO GROWTH BOXES IN THIS LAYOUT.** They belong to the COLONY and
+    not to a job, so in a row that is three job columns there is no
+    place for them that is not a lie — a dashed box inside the
+    scientists column says "scientists", which is what the colony's
+    spare capacity is not. The headroom is already on screen, in the
+    scan box the original puts it in (`Population (13/22)`,
+    colsum.cpp:1196-1205). The code and its marking stay; Stage 5
+    decides whether they come back somewhere honest.
+    """
+    from core import box
+    from core import zoomtables
+    from . import colonyicons
+    regions = row_regions(row)
+    markers, cells, targets = [], [], []
+    for job, key in enumerate(JOB_KEYS):
+        cx, cw = cols[key]
+        n_left, n_right = colonyicons.COLUMNS[job]
+        count = regions.spans[job][1]
+        # THE MARKER COMES OUT OF THE COLUMN, NOT ON TOP OF IT. A
+        # square the height of the bar, at the column's left edge;
+        # the cells then get what is left, and the scale below is
+        # computed from THAT so the last cell lands inside the
+        # column instead of one marker's width past it.
+        # `track.bar_h` AND NOT `h`: the caller may pass no band, in
+        # which case `h` is 0 and the rects carry x and width only —
+        # which is what `cell_at_x` asks for. A marker width taken
+        # from `h` was 2 px there and a full square when drawn, so
+        # every cell in the row sat at a different x in the hit test
+        # than on screen. Caught by the check that samples each drawn
+        # cell's own pixels, which is the one that exists because
+        # "they call the same function" is not the same as "they get
+        # the same answer".
+        m_w = max(2, min(track.bar_h, cw // 8))
+        m = pygame.Rect(cx, y, m_w, h)
+        markers.append((job, m))
+        start = cx + m_w + track.gap
+        room = max(1, cx + cw - start)
+        # THE FACTOR IS THE SPRITE STEP, NOT THE COLUMN RATIO.
+        # `zoomtables.FIGURE_STEP` (decision 26) is the integer 2/3/4
+        # a 28 px native figure is drawn at, and the stacking decision
+        # is that HD's extra width goes into the column RESERVATION
+        # and never into figure spacing. Scaling the pitch by the
+        # column ratio instead — 342 : 125, about 2.7 at 1080p —
+        # spends that reservation on spacing, and every cell and every
+        # drop target would move again the day Stage 3 draws sprites
+        # at the step. Corrected 7 September 2026; it was the ratio
+        # for one stop.
+        step = zoomtables.FIGURE_STEP[box.closest_resolution(
+            zoomtables.FIGURE_STEP, round(1920 * scale),
+            round(1080 * scale))]
+        pitch = min(colonyicons.column_pitch(job, max(count, 1)),
+                    colonyicons.ICON_SPACING) * step
+        # AND A CLAMP THAT CAN EXPIRE, decision 44's shape. The
+        # original's own run is at most `right_x - left_x - 10` native
+        # px (the `spacing / -3` term in Calculate_Squish_Step_), so at
+        # the step it needs that times the step. Every supported
+        # window reserves more than that except 1280x720, where the
+        # reservation is 229 device px against 230 needed — see the
+        # status document for the table. Written as a min so the
+        # deviation ends the day the reservation is wide enough,
+        # rather than as a special case for one window.
+        if count and start + count * pitch > cx + cw:
+            pitch = room / float(count)
+        # CELLS MAY NOT OVERLAP, and the arithmetic has to guarantee
+        # it rather than the numbers happening to. `int((k+1)*p) -
+        # int(k*p)` is either floor(p) or floor(p)+1, so a width of
+        # floor(p) can never reach the next cell. The gap is given up
+        # before the width is, because a cell narrower than a pixel is
+        # not a cell — at a small window a crowded column draws its
+        # squares touching, which is what the original's own squish
+        # does with its icons.
+        step_i = max(1, int(pitch))
+        gap = track.gap if step_i > track.gap + 1 else 0
+        cell_w = max(1, step_i - gap)
+        for k in range(count):
+            cells.append((job, k, pygame.Rect(
+                start + int(k * pitch), y, cell_w, h)))
+        targets.append((job, pygame.Rect(cx, y, cw, h)))
+    return RowBoxes(tuple(markers), tuple(cells), tuple(targets),
+                    (), None, cols[JOB_KEYS[-1]][0] + cols[JOB_KEYS[-1]][1])
 
 
 def drop_targets(area, cfg, scale, row):

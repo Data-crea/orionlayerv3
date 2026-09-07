@@ -15,7 +15,7 @@
     "auto_start": false
   },
   "render_mode": "hd",
-  "frame_preview": false,
+  "frame_preview": true,
   "active_mods": [],
   "language": "en",
   "skin": "default",

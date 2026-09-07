@@ -185,8 +185,60 @@ def band_xy(screen, row_index, job):
     return None
 
 
-def choose(screen, state):
+#: The acceptance fixtures, by what a SNAPSHOT can see of them —
+#: `v3_projektstatus.md`, "Acceptance fixtures — the two savegames".
+#: Stardate alone is not enough: 3502.4 and 3502.5 are one tick apart
+#: and any game reaches them.
+FIXTURES = {
+    "reference": {"stardate": 35024, "stars": 99, "colonies": 55},
+    "natives": {"stardate": 35025, "stars": 71, "colonies": 36},
+}
+
+
+def identify(state, expect):
+    """True when the game is on the fixture this run claims.
+
+    **ADDED 7 September 2026, AFTER THIS TOOL PRODUCED THREE CLEAN
+    ACCEPTANCE RUNS AGAINST THE WRONG GAME.** Every line of them was
+    true — the clicks landed, the pop words matched their predictions,
+    no other colony changed — and none of it was evidence about the
+    reference save, because the game had a different one loaded and
+    nothing in the run said so. The status document already required
+    that "anything below that reads a save reads it by its fixture
+    name"; this tool did not, and a report is only as good as the
+    thing it was measured on.
+
+    Reported, never guessed: an unknown state names what it saw.
+    """
+    if expect == "any":
+        print("fixture check skipped (--expect any)")
+        return True
+    want = FIXTURES.get(expect)
+    got = {"stardate": state.stardate,
+           "stars": len(getattr(state, "stars", None) or []),
+           "colonies": state.num_colonies}
+    if want is None:
+        print(f"unknown fixture {expect!r}; known: {sorted(FIXTURES)}")
+        return False
+    if got == want:
+        print(f"fixture: {expect} ({got['stars']} stars, stardate "
+              f"{got['stardate'] / 10:.1f}) — the run is about this save")
+        return True
+    named = [n for n, f in FIXTURES.items() if f == got]
+    print(f"WRONG SAVE. This run claims {expect} {want}, the game has "
+          f"{got}" + (f" — which is the {named[0]} fixture" if named
+                      else " — which is no acceptance fixture at all"))
+    print("  Load the right slot and re-run. A green table measured on "
+          "the wrong game is worse than no table.")
+    return False
+
+
+def choose(screen, state, only_job=None):
     """(row_index, slot, job, target_job) for a move worth making.
+
+    `only_job` restricts the SOURCE column, so the acceptance can
+    prove one pick and one drop per column instead of whichever the
+    save happened to offer first.
 
     Three conditions, and every one of them is about what the run can
     PROVE rather than about what would be convenient:
@@ -217,6 +269,8 @@ def choose(screen, state):
             continue
         pops, n_pops, max_farms = loaded
         for job in range(3):
+            if only_job is not None and job != only_job:
+                continue
             icons = colonyicons.icon_pops(pops, n_pops, job)
             if not icons:
                 continue
@@ -250,6 +304,14 @@ def main():
     # generated file (decision 40), and the two tools that once
     # defaulted to a relative path put their output wherever the
     # shell happened to be — both faults are in the fundament.
+    ap.add_argument("--expect", default="reference",
+                    help="which acceptance fixture the game must be "
+                         "on: reference, natives, or 'any' to skip the "
+                         "identification")
+    ap.add_argument("--job", type=int, default=None,
+                    help="restrict the SOURCE column (0 food, 1 "
+                         "industry, 2 research), so one run proves one "
+                         "column rather than whichever the save offers")
     ap.add_argument("--png", default=os.path.join(
         DEFAULT_OUT_DIR, "colony_move_hd.png"))
     args = ap.parse_args()
@@ -273,11 +335,13 @@ def main():
     screen = app.dispatcher.active
     state = app.client.state
     rows = screen._rows
+    if not identify(state, args.expect):
+        return 1
     print(f"colony summary is up: {len(rows)} rows, sorted by "
           f"{screen._sort_key!r}")
     print(f"sends so far (entry sort key): {counter}")
 
-    target = choose(screen, state)
+    target = choose(screen, state, args.job)
     if target is None:
         print("no row this save can prove a move on — a neighbour with "
               "the same pop composition, or no plan that completes. "

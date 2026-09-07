@@ -66,13 +66,15 @@ def load_settings():
             "min_height": 720,
         },
         "render_mode": "hd",
-        #: Draw the colony screen's BUILT frame plate instead of the
-        #: shipped artwork (decision 49). Off, and the default has to
-        #: be stated in both places: this dict is what a clone with no
-        #: settings.json gets, and a flag that is absent here but
-        #: present in the file would mean the two disagree about what
-        #: "not configured" looks like.
-        "frame_preview": False,
+        #: Draw the colony screen's BUILT frame plate (decision 49).
+        #: **ON as of Stage 4, and the name is now backwards** —
+        #: boxes.json is generated from the plate's holes, so the
+        #: plate is the frame and turning this OFF draws the
+        #: superseded artwork over boxes it does not fit. Kept for one
+        #: stage so the two can be compared; Stage 5 deletes the old
+        #: frame and this flag together. Stated in both places: this
+        #: dict is what a clone with no settings.json gets.
+        "frame_preview": True,
         "skin": "default",
         "active_mods": [],
     }

@@ -104,8 +104,9 @@ from core.config import REF_W, REF_H
 from core.screen_base import ScreenBase
 from core.structs import player as player_struct
 
-from . import (colonyempire, colonyframe, colonyinset, colonylist,
-               colonymoveui, colonyoutput, colonyrows, colonyselect)
+from . import (colonyempire, colonyframe, colonyheader, colonyinset,
+               colonylist, colonymoveui, colonyoutput, colonyrows,
+               colonyselect, colonysort, colonytrack)
 
 log = logging.getLogger("colony_summary")
 
@@ -113,6 +114,8 @@ PANEL_BG = palette.col("colony_summary", "panel_background", (8, 11, 20))
 NAV_BG = palette.col("colony_summary", "nav_background", (10, 14, 26))
 NAV_HOVER_BG = palette.col("colony_summary", "nav_hover", (22, 34, 60))
 NAV_ACTIVE_BG = palette.col("colony_summary", "nav_active", (30, 48, 88))
+HEADER_OUTLINE = palette.col("panel", "thin_border", (55, 65, 85))
+HEADER_TEXT = palette.col("colony_summary", "label", (150, 168, 200))
 NAV_TEXT_DIM = palette.col(
     "colony_summary", "nav_text_dim", (104, 116, 142))
 NAV_TEXT = palette.col("colony_summary", "nav_text", (196, 208, 236))
@@ -168,6 +171,7 @@ class ColonySummaryScreen(ScreenBase):
         # for an effect nobody is going to produce.
         self._move = colonymoveui.MoveController()
         self.update(game_state)
+        self._columns()
         self._push_sort_key()
 
     def _push_sort_key(self):
@@ -317,7 +321,7 @@ class ColonySummaryScreen(ScreenBase):
             # popup has to stay inside the cutout, see `colonypopup`.
             self._move.draw(surface, self._rows, self._first, area, cfg,
                             scale, self.style, self.layout, self._data)
-        box = self.box_rect("spare_panel")
+        box = self.box_rect("planet_info")
         if not (self._move.message and box):
             return
         self._move.draw_message(
@@ -361,7 +365,30 @@ class ColonySummaryScreen(ScreenBase):
         self._render_move(surface)
         self._render_buttons(surface)
         self._render_frame_image(surface)
+        self._render_header(surface)
         self._render_title(surface)
+
+    def _render_header(self, surface):
+        """The five column headings — see `colonyheader` for the two
+        DEVIATIONS they carry (the window is ours; the outline colour
+        is ours). Drawn AFTER the frame, because the plates sit inside
+        the header cutout and the frame's rim overlaps it."""
+        colonyheader.render_for(self, surface, HEADER_OUTLINE, HEADER_TEXT)
+
+    def _columns(self):
+        """The column table — ONE table for the headings and the rows.
+
+        `colonyheader` draws the plates from it and
+        `colonytrack.columns` lays the cells in it, so a heading is
+        over its own column by construction and not by two numbers
+        that agree today. It is merged into the `list` config block
+        rather than held here, so it reaches `colonytrack` the way
+        every other row number does.
+        """
+        table = colonyheader.columns(self.app.res, self.SCREEN_NAME)
+        self._data.setdefault("list", {})[
+            colonytrack.COLUMNS_KEY] = table
+        return table
 
     def _render_frame_image(self, surface):
         if self._frame_scaled is not None:
@@ -465,7 +492,7 @@ class ColonySummaryScreen(ScreenBase):
         asserts the ten climate words appear in exactly one of the
         two.
         """
-        box = self.box_rect("output_panel")
+        box = self.box_rect("planet_output")
         if not box:
             return
         colonyoutput.render(
@@ -482,9 +509,9 @@ class ColonySummaryScreen(ScreenBase):
         `colonyempire` — this hands over the box, the config block
         and the parsed `s_player` and nothing else."""
         colonyempire.render(
-            surface, self.box_rect("sidebar"),
+            surface, self.box_rect("empire_stats"),
             self._data.get("empire", {}), self._local,
-            self.layout, self.style, self.box_font_scale("sidebar"),
+            self.layout, self.style, self.box_font_scale_stored("empire_stats"),
             self._frame_inset())
 
 
@@ -510,28 +537,17 @@ class ColonySummaryScreen(ScreenBase):
         that is silent.
         """
         mouse = mouse_input.pos()
-        unavailable = colonyrows.SORT_UNAVAILABLE
-        specs = [(f"sort_{b['key']}", b["label"], b["key"] == self._sort_key,
-                  b["key"] in unavailable)
-                 for b in self._data.get("sort", {}).get("buttons", [])]
-        specs.append(("return",
-                      self._data.get("return", {}).get("label", "Return"),
-                      False, False))
-        for name, label, active, dim in specs:
-            box = self.box_rect(name)
-            if not box:
-                continue
-            rect = pygame.Rect(*self.layout.rect(box))
-            hovered = rect.collidepoint(mouse)
-            fill = NAV_HOVER_BG if hovered else (
-                NAV_ACTIVE_BG if active else NAV_BG)
-            surface.fill(fill[:3], rect)
-            font = self.style.get_font(self.layout.font_size(
-                self.box_style(name).get("font_size", 18)))
-            colour = NAV_TEXT_DIM if dim else NAV_TEXT
-            text = font.render(label.upper(), True, colour[:3])
-            surface.blit(text, (rect.x + (rect.w - text.get_width()) // 2,
-                                rect.y + (rect.h - text.get_height()) // 2))
+        colonysort.render(surface, self._sort_buttons(), self._sort_key,
+                          colonyrows.SORT_UNAVAILABLE, mouse, self.style,
+                          colonysort.font_size(self), NAV_ACTIVE_BG, NAV_HOVER_BG,
+                          NAV_TEXT, NAV_TEXT_DIM)
+        colonysort.render_return(surface, self, mouse, NAV_BG,
+                                 NAV_HOVER_BG, NAV_TEXT)
+
+    def _sort_buttons(self):
+        """The seven keys inside the one sort_bar box — see
+        `colonysort.for_screen`, which is their ONE geometry."""
+        return colonysort.for_screen(self)
 
     def box_style(self, name):
         for box in self.boxes:
@@ -552,7 +568,8 @@ class ColonySummaryScreen(ScreenBase):
             # first click.
             return None
         for spec in self._data.get("sort", {}).get("buttons", []):
-            if self._hit(f"sort_{spec['key']}", screen_x, screen_y):
+            if spec["key"] == colonysort.button_at(
+                    self._sort_buttons(), screen_x, screen_y):
                 # No direction toggle, even on the active header:
                 # Switched_cmp_ has none (colsum.cpp:378-401), so a
                 # second click re-sorts identically. Assigning the

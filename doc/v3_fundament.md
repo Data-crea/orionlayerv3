@@ -821,6 +821,22 @@ absence rather than skipping**: no plates means it names the command
 and still counts, so "the check count must not go down" stays a rule
 anybody can follow (decision 42's pattern, second use).
 
+**Amended 7 September 2026, Stage 4: `frame_preview` ships ON and
+its name is backwards.** This entry was written while the flag was a
+preview and flag-off was the shipped screen, byte-identical to what
+the tree had always drawn. That is no longer what off means.
+`boxes.json` is generated from the plate's own holes now, so the
+plate IS the colony screen's frame; turning the flag off draws the
+SUPERSEDED artwork over boxes it does not fit, and the class A
+checker measures that as 5822 glyph pixels under opaque frame alpha
+at 1080p and 31654 at 2160p. The old frame and the flag are kept
+together for one stage so the two pictures can be compared, and
+**Stage 5 deletes both in the same commit.** Until then the
+byte-identity that is still asserted is the SUPERSEDED surface's, not
+the shipped one's — a check that the fallback stays honest while it
+exists, which is a different claim from the one this paragraph
+originally made.
+
 **30. Blocked font glyphs are detected, never listed in code.**
 `Style.blocked_glyphs()` finds the characters a font maps onto one
 shared bitmap and substitutes the proportional font for exactly
@@ -1140,6 +1156,29 @@ the intended size at 3840x2160 and looked perfectly fine in the 4K
 screenshot on its own — the fault only exists in the comparison.
 Anything that must work at an untuned resolution reads the stored
 scale directly.
+
+**A TOOL THAT READS A SAVE IDENTIFIES IT BEFORE IT REPORTS. A proof
+that does not say what it is about is not a proof.** Three acceptance
+runs of the pop move were produced on 7 September 2026 and every line
+of them was true: the clicks landed, the held cluster matched the
+prediction, exactly one colony's bytes changed, every pop word agreed.
+None of it was evidence about the reference save — the game had a
+different galaxy loaded, and nothing in the run said so. The
+identification cost three lines of code and the run had gone without
+it since it was written.
+
+It is the sibling of the line below and NOT the same fault. That one
+is about a result that varies with the reader's disk; this one is
+about a result that is perfectly stable and silent about its subject.
+A run whose output would be identical on the wrong data is the more
+dangerous of the two, because nothing about it looks provisional.
+
+`colony_move_hd.py` now names the fixture — stardate AND star count
+AND colony count, since 3502.4 and 3502.5 are one tick apart and any
+game reaches them — and stops with what it saw. The status document
+had already required that "anything below that reads a save reads it
+by its fixture name"; the rule existed and the tool did not obey it,
+which is what makes this a line here rather than a note there.
 
 **A test that reads the user's disk answers differently for the
 user.** The check separating "no help file" from "no such entry"
