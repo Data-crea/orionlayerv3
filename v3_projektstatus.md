@@ -508,7 +508,7 @@ files under `doc/` and are only summarised here.
 | | |
 |---|---|
 | Python | 32,960 lines across 111 modules — `find . -name '*.py'`, `__pycache__` excluded, the smoke test's 6,400 included. The previous figure here (21,642 across 94) was carried from an unstated method and could not be reproduced |
-| Smoke test | `python tools/smoke_test.py` — **96 checks**, headless |
+| Smoke test | `python tools/smoke_test.py` — **97 checks**, headless |
 | Assets | 170 MB (select_race 68, galaxy_map 51, shared 23, new_game 21, colony_summary 1) |
 | Screens in HD | 7 of ~20–22 (colony summary draws list, sidebar, scan box and galaxy inset, and MOVES POPS — the first HD gesture that drives the game) |
 | Setup from clone | `python tools/setup.py` (deps via the system package manager) |
@@ -3505,16 +3505,75 @@ record on a pop move — decision 48 already records that
 occasions, one of them a building completing — or both tools' "exactly
 one colony" rule is too strict and is measuring the wrong thing.
 
-**Not diagnosed, not loosened, not assumed benign.** The diagnosis is
-its own task: which bytes of the second colony changed BY FIELD
-through the struct specs rather than by offset, whether the same move
-as a farmer and as a worker at the same colony separates the cases,
-and the function that writes — read the one that writes, not the ones
-that read. The rule then becomes a rule with a source: either
-"exactly one colony" with the reason the game guarantees it, or "the
-moved colony plus the fields the game rewrites" with the file:line
-that rewrites them. **Not a widened tolerance and not a special case
-for one save.**
+**DIAGNOSED AND CLOSED — 7 September 2026.**
+
+**By field, not by offset.** The second colony's `pop[]` is
+byte-identical; only `imports[ECON_FOOD]` and `pop_growth` change.
+The tools were diffing whole records where the claim they wanted was
+about `pop[]`.
+
+**It is not column 2.** The same colony, three moves: scientist ->
+farmer (a cluster of 7, food 10 -> 22) changed a second colony;
+farmer -> worker and worker -> farmer (one pop, food 22 -> 20 -> 22)
+did not; and a **farmer** cluster of 11 (food 22 -> 0) changed the
+same second colony in the same two fields. What separates the cases
+is the size of the food swing, not the source column.
+
+**The writer.** `Send_Cluster_` (colmove.cpp:460-463) ->
+`Col_Calc_Wrapper_` (colony.cpp:1091) -> `Colony_Calculation_`
+(colcalc.cpp:1580) -> `Recalculate_Colony_` (colcalc.cpp:519-524) ->
+`COLCALC::Pass_Out_Imports_` (colcalc_main.cpp:208), which
+redistributes the whole player's food: `imports[ECON_FOOD]` on every
+non-outpost colony of the owner (:222, :228, :254, :268), and
+`pop_growth` / `pop_roundoff` / `specialty` on every NEEDY one via
+`Post_Import_Computing_` (:341-352 -> colcalc.cpp:891).
+`Enforce_Population_Limits_At_Colony_`, decision 48's candidate, is
+not on this path; `Update_Player_Stats_` reads every colony and
+writes only to `s_player`.
+
+**"Always the next index" was coincidence.** The player has five
+needy colonies (5, 7, 10, 11, 12); `needy_colony_indices` is filled
+in index order and walked round-robin, so the colony at the margin of
+the allocation moves — one above the moved colony, three times.
+
+**The rule now has a home and a source**:
+`colonymove.move_diff_verdict`, read by BOTH acceptance tools.
+Exactly one colony's `pop[]` may change; any other colony may differ
+in `imports`, and a colony whose food balance is negative
+(`production[FOOD] - maintenance[FOOD] < 0`, colcalc_main.cpp:219)
+additionally in `pop_growth`, `pop_roundoff` and `specialty`. Nothing
+else, anywhere. It is **stricter** than the rule it replaced, which
+accepted any byte difference on the moved colony.
+
+**Two things it cannot see, stated rather than hidden**: the source
+also excludes a blockaded colony and one in a space anomaly, and
+neither flag is on the wire, so a blockaded needy colony is allowed
+here where the game would not have written it.
+
+**Proved able to fail before it was trusted.** Four synthetic diffs
+against the rule function: a second colony whose `pop[]` changed
+FAILS, one whose `production` changed FAILS, a **non-needy** colony
+whose `pop_growth` changed FAILS, and a changed record that will not
+parse FAILS; a needy colony's `pop_growth` and any colony's `imports`
+PASS. All six are in the smoke test.
+
+**Live, on the reference save, all three columns and the native-click
+probe:**
+
+    fixture: reference (99 stars, stardate 3502.4)
+    target: row 0 'Blucher II' jobs=[12, 0, 1], cell 0 of column 2
+      -> column 0
+    the outline sits on the cells the pick names
+    the first click sent nothing, which is the whole design
+    finished: '1 moved'
+    colonies whose bytes changed: 10 = Blucher II, 11 = Blucher III
+      colony 11: pop_growth — allowed, the colony is needy and
+        Post_Import_Computing_ rewrites it
+      colony 11: imports — allowed on any of the owner's colonies,
+        Pass_Out_Imports_ rewrites it
+      every pop word matches the prediction
+
+**Stage 3 is unblocked.**
 
 ---
 

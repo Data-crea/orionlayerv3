@@ -449,12 +449,18 @@ def main():
     print("\ncolonies whose bytes changed: "
           + (", ".join(f"{i} = {named.get(i, chr(40) + 'not the ' 'player' + chr(41))}"
                        for i in changed) or "none"))
-    ok = True
-    if changed != [colony_index]:
-        print(f"  EXPECTED EXACTLY [{colony_index}] — a different "
-              f"colony changing is the invisible failure this whole "
-              f"sequence is built against")
-        ok = False
+    # One home for the rule, shared with colony_move_hd.py — see
+    # `colonymove.move_diff_verdict` for the source of every field it
+    # allows on a colony that was not moved.
+    ok, verdict = cmove.move_diff_verdict(
+        before_raw, list(state.colonies_raw), colony_index,
+        colony_struct.SPEC, colony_struct.parse)
+    for line in verdict:
+        print(line)
+    if not ok:
+        print(f"  ONLY colony {colony_index} may change its pop[], and "
+              f"only imports / pop_growth / pop_roundoff / specialty "
+              f"may change anywhere else")
     after = pops_of(state, colony_index) if colony_index < len(
         state.colonies_raw) else []
     for i in range(col.n_pops):

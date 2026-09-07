@@ -705,7 +705,15 @@ is replaced by the LAST entry (six sites, all
 the profession bits where they are; and
 `invasion::Enforce_Population_Limits_At_Colony_` SHUFFLES the whole
 array (invasion.cpp:721) on four occasions, one of which is a
-building completing — Biospheres, in a game with no war in it. The
+building completing — Biospheres, in a game with no war in it.
+**It is NOT on the pop-move write path** — established 7 September
+2026 when a move looked as though it had touched a second colony and
+this function was the first suspect, because it is named here. The
+cross-colony writers are `COLCALC::Pass_Out_Imports_`
+(colcalc_main.cpp:208), which rewrites `imports[ECON_FOOD]` on every
+non-outpost colony of the owner, and `COLCALC::Post_Import_Computing_`
+(colcalc.cpp:891), which rewrites `pop_growth`, `pop_roundoff` and
+`specialty` on every NEEDY one. See section 3. The
 engine does sort `pop[]`, in `aidudes.cpp`, and only for players
 whose `objectives != PLAYER_OBJECTIVE_HUMAN`.
 
@@ -1156,6 +1164,23 @@ the intended size at 3840x2160 and looked perfectly fine in the 4K
 screenshot on its own — the fault only exists in the comparison.
 Anything that must work at an untuned resolution reads the stored
 scale directly.
+
+**A PATTERN IN THREE OBSERVATIONS IS NOT A RULE UNTIL THE WRITER
+SAYS IT IS.** A pop move appeared to change "always the next index" —
+colony 10 took 11, colony 11 took 12, three times running, which is
+the kind of regularity that invites a theory. There is no index
+relationship at all: the player has **five** needy colonies (5, 7,
+10, 11, 12), `needy_colony_indices` is filled in index order and the
+three distribution passes walk it round-robin, so whichever colony
+sits at the margin of the allocation is the one that moves — and it
+happened to be one above the moved colony each time.
+
+This is "read the function that BUILDS the thing" applied to a
+PATTERN rather than to a value, and it earns its own line because the
+failure is a different one: there, an inferred call chain stood in
+for evidence; here, a real measurement repeated three times stood in
+for a mechanism. Every observation was correct and the rule drawn
+from them did not exist.
 
 **A TOOL THAT READS A SAVE IDENTIFIES IT BEFORE IT REPORTS. A proof
 that does not say what it is about is not a proof.** Three acceptance
@@ -1699,6 +1724,30 @@ references in `doc/v3_orion2re_index.md`.
   and the tables are in `evanhelp.cpp`, `erichelp.cpp` and
   `billhelp.cpp`. Help text lives in the game's own `HELP.LBX`, not
   in the source and not on the Extension API.
+- **A POP MOVE RECALCULATES THE WHOLE PLAYER'S FOOD DISTRIBUTION, so
+  colonies nobody touched come back different.** `Send_Cluster_`
+  (colmove.cpp:460-463) always ends in `Col_Calc_Wrapper_`
+  (colony.cpp:1091) -> `Colony_Calculation_` (colcalc.cpp:1580) ->
+  `Recalculate_Colony_` (colcalc.cpp:519-524) ->
+  `COLCALC::Pass_Out_Imports_` (colcalc_main.cpp:208), which
+  redistributes food across the empire:
+
+  - `imports[ECON_FOOD]` on **every** non-outpost colony of the owner
+    that is not in a space anomaly — `= 0` for a deficit
+    (colcalc_main.cpp:222), `= -balance` for a surplus (:228), `++` in
+    the three distribution passes (:254, :268 and the third);
+  - `pop_growth`, `pop_roundoff` and `specialty` on every **NEEDY**
+    colony — food balance below zero and not blockaded
+    (colcalc_main.cpp:217-226) — because :341-352 calls
+    `Post_Import_Computing_` for each entry of `needy_colony_indices`,
+    which is `Colony_Pop_Grows_` (colcalc.cpp:760-810) plus
+    `Colony_Specialty_` (colcalc.cpp:736).
+
+  `pop[]` is written for the moved colony only. So "exactly one
+  colony's record changed" is NOT a property of a pop move, and an
+  acceptance run that asserts it fails on a real one;
+  `colonymove.move_diff_verdict` is that rule with the fields named.
+
 - Galaxy size never scales anything. It caps `_max_zoom_count`, which
   caps the reachable zoom levels — and zoom level is what scales.
 - **`_max_map_scale` is `max(ceil(MAP_MAX_X*10/506),

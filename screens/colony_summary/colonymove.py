@@ -372,3 +372,143 @@ def plan_drop(pops, n_pops, max_farms, cluster, requested_job):
                        | colony_struct.POP_MASK_ASSIGNED)
         landed += 1
     return DropPlan(landed, len(held) - landed)
+
+
+#: Fields the game rewrites on colonies OTHER than the moved one, and
+#: the condition under which it does. Read from the writer, not from
+#: the ones that read (fundament, Evidence).
+#:
+#: `COLCALC::Pass_Out_Imports_` (colcalc_main.cpp:208) is reached from
+#: every pop move — `Send_Cluster_` (colmove.cpp:460-463) ->
+#: `Col_Calc_Wrapper_` (colony.cpp:1091) -> `Colony_Calculation_`
+#: (colcalc.cpp:1580) -> `Recalculate_Colony_` (colcalc.cpp:519-524)
+#: — and it redistributes the WHOLE PLAYER'S food:
+#:
+#:   * `imports[ECON_FOOD]` on EVERY non-outpost colony of the owner
+#:     that is not in a space anomaly: `= 0` for a deficit
+#:     (colcalc_main.cpp:222), `= -balance` for a surplus (:228), then
+#:     `++` in the three distribution passes (:254, :268 and the
+#:     third).
+#:   * `pop_growth`, `pop_roundoff` and `specialty` on every NEEDY
+#:     colony — food balance below zero and not blockaded
+#:     (colcalc_main.cpp:217-226) — because :341-352 calls
+#:     `Post_Import_Computing_` for each entry of
+#:     `needy_colony_indices`, which is `Colony_Pop_Grows_`
+#:     (colcalc.cpp:760-810) plus `Colony_Specialty_` (colcalc.cpp:736).
+CROSS_COLONY_FIELDS = ("imports",)
+NEEDY_COLONY_FIELDS = ("pop_growth", "pop_roundoff", "specialty")
+
+#: Index of ECON_FOOD in the per-economy arrays, so the neediness
+#: test below reads the same slot `Pass_Out_Imports_` does.
+ECON_FOOD = 0
+
+
+def is_needy(colony):
+    """The `needy_colony_indices` test, from the record itself.
+
+    `colcalc_main.cpp:219` — `production[ECON_FOOD] -
+    maintenance[ECON_FOOD] < 0` — which is the whole of what puts a
+    colony in the list `Post_Import_Computing_` is then called for.
+
+    **TWO THINGS THIS CANNOT SEE, AND THEY ARE BOTH PERMISSIVE.** The
+    source also excludes a blockaded colony (`Colony_Is_Blockaded`)
+    and one in a space anomaly (`Event_Check_Space_Anomaly_`), and
+    neither state is on the wire. So a blockaded needy colony is
+    allowed to change `pop_growth` here where the game would not have
+    written it. That is stated rather than hidden: the test is
+    tighter than "any colony", which is what matters, and the day the
+    two flags are serialized it becomes exact.
+    """
+    try:
+        return (colony.production[ECON_FOOD]
+                - colony.maintenance[ECON_FOOD]) < 0
+    except (AttributeError, IndexError, TypeError):
+        return False
+
+
+def move_diff_verdict(before, after, moved_index, spec, parse):
+    """(ok, [lines]) — did a pop move change only what it may?
+
+    **THE RULE, AND IT HAS A SOURCE.** Exactly one colony's `pop[]`
+    changes: the move writes pops only through
+    `Give_Colonist_New_Job_` on `_cluster_colony_n`
+    (colmove.cpp:161-173), and the only cross-colony pop write is the
+    inter-colony transfer branch, which a same-colony drop never
+    reaches. Any OTHER colony may differ in `CROSS_COLONY_FIELDS`, and
+    a needy one additionally in `NEEDY_COLONY_FIELDS`, because
+    `Pass_Out_Imports_` rewrites those on every recalculation. **No
+    other field of any other colony may change.**
+
+    This replaced "exactly one colony's bytes changed", which both
+    acceptance tools asserted and which is not what the game
+    guarantees — a scientist-to-farmer move on the reference save
+    swung one colony's food from 10 to 22, the empire re-allocated a
+    unit of imports, and a colony nobody touched came back different.
+    The old rule called that a failure for a day. It is not a widened
+    tolerance: it names the fields the source writes and refuses
+    everything else, which is STRICTER than the old rule about the
+    moved colony, where "the bytes differ" was accepted whatever
+    differed.
+
+    `before` and `after` are lists of raw colony records, `spec` the
+    colony `Spec` and `parse` its parser. A record that changed and
+    will not parse is a failure, not a skip: an unreadable record is
+    exactly where a wrong write would hide.
+    """
+    lines, ok = [], True
+    for index in range(min(len(before), len(after))):
+        if before[index] == after[index]:
+            continue
+        if index == moved_index:
+            continue
+        try:
+            was, now = parse(before[index]), parse(after[index])
+        except Exception:                       # a record we cannot read
+            lines.append(f"  colony {index}: changed and does not parse")
+            ok = False
+            continue
+        # NEEDY IS JUDGED ACROSS THE PAIR. The write happens between
+        # the two snapshots and the balance is what the write
+        # changes, so a colony that was needy before or is needy
+        # after could have been in the list when it ran. Requiring
+        # both would refuse a colony the game legitimately wrote.
+        needy = is_needy(was) or is_needy(now)
+        for name in _changed_fields(spec, was, now):
+            if name in CROSS_COLONY_FIELDS:
+                lines.append(f"  colony {index}: {name} — allowed on "
+                             f"any of the owner's colonies, "
+                             f"Pass_Out_Imports_ rewrites it")
+                continue
+            if name in NEEDY_COLONY_FIELDS and needy:
+                lines.append(f"  colony {index}: {name} — allowed, the "
+                             f"colony is needy and "
+                             f"Post_Import_Computing_ rewrites it")
+                continue
+            why = ("and it is NOT needy, so Post_Import_Computing_ was "
+                   "never called for it"
+                   if name in NEEDY_COLONY_FIELDS
+                   else "and NOTHING on the pop-move path writes it there")
+            lines.append(f"  colony {index}: {name} changed {why}")
+            ok = False
+    return ok, lines
+
+
+def _changed_fields(spec, was, now):
+    """Field names that differ between two parsed colony records.
+
+    BY FIELD, THROUGH THE SPEC, never by offset — decision 23's rule
+    applied to a comparison rather than to a read. An offset diff can
+    only say "these bytes differ", which is the answer that made the
+    old rule look like a real failure.
+    """
+    out = []
+    for entry in spec.fields:
+        name = entry[0]
+        a, b = getattr(was, name, None), getattr(now, name, None)
+        try:
+            same = list(a) == list(b)
+        except TypeError:
+            same = a == b
+        if not same:
+            out.append(name)
+    return out

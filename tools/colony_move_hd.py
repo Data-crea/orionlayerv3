@@ -46,6 +46,7 @@ import pygame  # noqa: E402
 
 from core.structs import colony as colony_struct  # noqa: E402
 from screens.colony_summary import colonyicons  # noqa: E402
+from screens.colony_summary import colonymove  # noqa: E402
 from screens.colony_summary import colonylist  # noqa: E402
 from screens.colony_summary import colonymove  # noqa: E402
 from screens.colony_summary import colonypick  # noqa: E402
@@ -450,11 +451,20 @@ def main():
     print("colonies whose bytes changed: "
           + (", ".join(f"{i} = {named.get(i, '(not the player\'s)')}"
                        for i in changed) or "none"))
-    ok = changed == [row["index"]]
+    # THE RULE HAS ONE HOME — `colonymove.move_diff_verdict`, which
+    # carries the source for every field it allows. It replaced
+    # "exactly one colony's bytes changed", which is not what the game
+    # guarantees: `Pass_Out_Imports_` redistributes the whole player's
+    # food on every recalculation.
+    ok, verdict = colonymove.move_diff_verdict(
+        before, list(state.colonies_raw), row["index"],
+        colony_struct.SPEC, colony_struct.parse)
+    for line in verdict:
+        print(line)
     if not ok:
-        print(f"  EXPECTED EXACTLY [{row['index']}] — another colony "
-              f"changing is the invisible failure this run is built "
-              f"against")
+        print(f"  ONLY colony {row['index']} may change its pop[], and "
+              f"only imports / pop_growth / pop_roundoff / specialty "
+              f"may change anywhere else")
     after = colony_struct.parse(state.colonies_raw[row["index"]])
     for i in range(pick.n_pops):
         if after.pop[i] != predicted[i]:

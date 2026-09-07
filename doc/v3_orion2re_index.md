@@ -450,6 +450,38 @@ Klick–Klick, kein Ziehen (colsum.cpp:851 `Evaluate_Colony_Pop_Input_`).
   Androiden behalten den Beruf, max. 42 pro Beruf, Farmer ≤
   `max_farms` außer bei Transfer, sonst Fehlermeldung.
 
+#### Der Schreibpfad eines Pop-Zugs — wer ausser der Kolonie schreibt
+
+Gelesen am 7. September 2026, weil ein Zug so aussah, als habe er eine
+zweite Kolonie angefasst. Er hat — legitim:
+
+    COLMOVE::Send_Cluster_                    colmove.cpp:460-463
+      COLONY::Col_Calc_Wrapper_               colony.cpp:1091
+        COLCALC::Colony_Calculation_          colcalc.cpp:1580
+          COLCALC::Recalculate_Colony_        colcalc.cpp:519-524
+            Pre_Import_Computing_(colony)
+            COLCALC::Pass_Out_Imports_        colcalc_main.cpp:208
+
+`Pass_Out_Imports_` verteilt die Nahrung des **ganzen Spielers** neu:
+
+- `imports[ECON_FOOD]` auf **jeder** Nicht-Aussenposten-Kolonie des
+  Besitzers, die nicht in einer Raumanomalie liegt — `= 0` bei
+  Defizit (colcalc_main.cpp:222), `= -balance` bei Überschuss (:228),
+  danach `++` in den drei Verteilungsdurchläufen (:254, :268 und dem
+  dritten).
+- `pop_growth`, `pop_roundoff` und `specialty` auf jeder **bedürftigen**
+  Kolonie. **Bedingung:** Nahrungsbilanz
+  `production[ECON_FOOD] - maintenance[ECON_FOOD] < 0` und nicht
+  blockiert (colcalc_main.cpp:217-226) — das ist genau, was
+  `needy_colony_indices` füllt. Für jeden Eintrag ruft :341-352
+  `Post_Import_Computing_` (colcalc.cpp:891) auf, also
+  `Colony_Pop_Grows_` (760) und `Colony_Specialty_` (736).
+
+`pop[]` schreibt nur die bewegte Kolonie. `Update_Player_Stats_`
+(colcalc_main.cpp:449) liest jede Kolonie und schreibt ausschliesslich
+in `s_player`. `invasion::Enforce_Population_Limits_At_Colony_` liegt
+**nicht** auf diesem Pfad.
+
 ### Wirtschaft — `colcalc.cpp`
 
 `Colony_Food2_Per_Farmer_` (542), `Colony_Industry_Per_Worker_` (579)
