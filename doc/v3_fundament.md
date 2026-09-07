@@ -200,6 +200,30 @@ HD resolutions either wastes half the screen on two lines or clips a
 long entry. Marked in `helppopup.py`, in each `help.json`, and in a
 smoke test that fails if a long entry stops being scrollable.
 
+**50. The population figures are the GAME'S OWN, at the sprite step,
+and other figures are a mod.** Data, 7 September 2026. The colony
+screens draw the sprites out of the player's own `RACEICON.LBX`,
+extracted by `tools/raceicon_extract.py` and stepped up by
+`zoomtables.FIGURE_STEP` — an integer nearest-neighbour swap, never a
+scale (decision 28). **HD figure artwork is not a project
+deliverable**, and `brief_pop_sprites_assets.md` is retired.
+
+"Ships" means the shipped product DRAWS them, not that the repository
+holds them, and the distinction is decision 40's: the extracted PNGs
+are derived from somebody's own copy of the game and are never
+committed. Saying it here because the two readings sit one line apart
+and only one of them is legal.
+
+A user who wants different figures makes a mod, and **that path has to
+be simple: one PNG, one documented name, one documented folder,
+restart, done.** No manifest, no index file, no sheet to slice. The
+original is the fallback PER FILE — `resources.resolve` already
+resolves file by file — so a mod that supplies one figure gets one
+figure changed and everything else stays the game's. **Decision 17 is
+untouched by this**: skins still resolve as whole directories, and a
+figure is not a skin. The two rules cover different things and the
+easy mistake is to read 50 as loosening 17.
+
 ### The orion2re boundary
 
 **20. Field IDs for input.** `ACTIVATE_FIELD` for field types 0, 7 and
