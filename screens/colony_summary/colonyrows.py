@@ -276,10 +276,17 @@ MAX_PLAYERS = 8
 #: four: Colsum_Connect_Galaxy_Map_Stars_ (colsum.cpp:734-735).
 INSET_NATIVE = (380, 349, 128, 91)
 
-#: The two constants the original divides by, movebox.cpp:19-20. They
-#: are not arbitrary: 506000 is MAP_MAX_X per scale unit (50.6, see
-#: `zoomtables.MAP_MAX_X_PER_SCALE`) times 10000, and 400000 is the
-#: same for y at 40 per unit — so the division below reduces to
+#: The two constants the original divides by, movebox.cpp:19-20.
+#:
+#: They are not arbitrary, and the number in them has ONE meaning
+#: here: 506000 is the map viewport's own width — 506 native px,
+#: `MAINSCR::Draw_Influence_Overlay_`'s `map_width` (mainscr.cpp:163)
+#: and `Maximum_Galaxy_Display_Scale_`'s divisor (mapgen.cpp:68) —
+#: times 1000, and 400000 is its height the same way. **This is the
+#: viewport's REACH per scale unit, not a scale recovered from a
+#: width**; the ratio 50.6 that used to be cited here was the
+#: retired estimate's constant and pointing at it made one number
+#: carry two meanings. The division below therefore reduces to
 #: `star.x / MAP_MAX_X * width`, i.e. the whole galaxy across the
 #: box. Transcribed as the integer arithmetic the original writes,
 #: NOT as that algebraic form: three of the four divisions truncate
@@ -303,9 +310,11 @@ def galaxy_inset_stars(game_state):
         sx = x_start + ((star.x * 1000 / max_map_scale) * 10) / scale_x
 
     and the same for y over 400000 / height. `max_map_scale` is not on
-    the wire and is recovered from MAP_MAX_X by
+    the wire and is recovered from MAP_MAX_X **and MAP_MAX_Y** by
     `zoomtables.max_map_scale` — one home for that, already used by
-    the galaxy map.
+    the galaxy map. Both extents go in: the recovery transcribes
+    `MAPGEN::Maximum_Galaxy_Display_Scale_`, whose two ceilings are
+    per axis, and every dot here divides by its answer.
 
     **VERIFIED AGAINST THE ORIGINAL'S OWN FRAMEBUFFER**, 4 September
     2026: all 99 stars of the reference save land within 2 px of ink
@@ -341,7 +350,9 @@ def galaxy_inset_stars(game_state):
     players = [player_struct.parse(r) for r in raws
                if len(r) >= player_struct.SIZE]
     local = getattr(game_state, "player_num", 0)
-    scale = zoomtables.max_map_scale(getattr(game_state, "map_max_x", 0))
+    scale = zoomtables.max_map_scale(
+        getattr(game_state, "map_max_x", 0),
+        getattr(game_state, "map_max_y", 0))
     if not scale:
         return []
     _x, _y, width, height = INSET_NATIVE

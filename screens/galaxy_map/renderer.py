@@ -159,10 +159,16 @@ class MapContext:
         self.num_stars = len(getattr(state, "stars", None) or [])
 
         # _max_map_scale and _max_zoom_count are NOT in the snapshot.
-        # Both follow from MAP_MAX_X, which is — see zoomtables.
+        # Both follow from MAP_MAX_X and MAP_MAX_Y, which are — see
+        # zoomtables.max_map_scale. BOTH have to go in: the y term is
+        # the larger of the two ceilings on a tall Maximum galaxy, and
+        # dropping it was half of what the retired 50.6 estimate got
+        # wrong.
         map_max_x = getattr(state, "map_max_x", 0) or 0
-        self.max_map_scale = zt.max_map_scale(map_max_x) or self.map_scale
-        self.max_zoom = zt.max_zoom_count(map_max_x)
+        map_max_y = getattr(state, "map_max_y", 0) or 0
+        self.max_map_scale = (zt.max_map_scale(map_max_x, map_max_y)
+                              or self.map_scale)
+        self.max_zoom = zt.max_zoom_count(map_max_x, map_max_y)
 
         # max_map_scale must go in as well: above 72 stars the zoom
         # ladder is derived from it by halving, and without it every

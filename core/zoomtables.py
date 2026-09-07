@@ -7,9 +7,10 @@ THREE INDEPENDENT AXES — do not conflate them:
    changes icon and font size. It changes while playing, every
    time the user hits + or -.
 
-2. GALAXY SIZE, from MOX::_max_map_scale (recoverable from
-   MAP_MAX_X). It does NOT scale anything by itself — it only
-   caps how far out the user may zoom, via _max_zoom_count.
+2. GALAXY SIZE, from MOX::_max_map_scale (recovered from
+   MAP_MAX_X and MAP_MAX_Y — see max_map_scale). It does NOT
+   scale anything by itself — it only caps how far out the user
+   may zoom, via _max_zoom_count.
    A Huge galaxy zoomed fully IN draws exactly the same 33 px
    star as a Small galaxy, because both sit at scale 10 / zoom 0.
    The only reason a Small galaxy never shows small icons is that
@@ -28,7 +29,10 @@ Nothing here is measured or estimated. Sources:
   MAP_SCALE::Scale_Star_Dimension_       map_scale.h
   MAINSCR::Draw_Black_Holes_ zoom_dist[] mainscr.cpp
   HAROLD::Zoom_Level_Font_Style_         harold.cpp
-  MAPGEN (galaxy size -> max scale)      mapgen.cpp
+  MAPGEN::Set_Galaxy_Size_ switch        mapgen.cpp:1078-1120
+  MAPGEN::Maximum_Galaxy_Display_Scale_  mapgen.cpp:64-71
+  MAINSCR::Draw_Influence_Overlay_ (the  mainscr.cpp:161-164
+    506 x 400 map rectangle)
   MAPGEN::Load_Nebula_Pictures_          mapgen.cpp + STARBG.LBX
                                          (sprite headers, see
                                           NEBULA_DIM)
@@ -38,7 +42,9 @@ fractions of the map width instead, so each table also has a
 `*_fraction` helper dividing by MAP_WIDTH.
 """
 
-#: Visible map width in native pixels (527 - 22, see mapcoords).
+#: Visible map width in native pixels — 527 - 22, the columns a star
+#: can occupy inside the 506-wide rectangle (see GALAXY_VIEWPORT_W,
+#: and mapcoords).
 MAP_WIDTH = 505
 
 #: Star count above which orion2re switches to extended scaling.
@@ -48,7 +54,9 @@ ORIGINAL_MAX_STARS = 72
 #: _max_map_scale is initialised to and the highest zoom level it
 #: permits. This caps the zoom RANGE only — it is deliberately not
 #: consulted by any sizing function, because galaxy size does not
-#: scale icons. Kept for diagnostics and for reading MAP_MAX_X back.
+#: scale icons. Kept for diagnostics; the recovery itself reads
+#: STOCK_MAX_MAP_SCALE, which is keyed by the MAP_MAX_X that arrives
+#: on the wire rather than by a name nothing serializes.
 GALAXY_MAX_SCALE = {
     "small":  (10, 0),
     "medium": (15, 1),
@@ -188,12 +196,36 @@ MONSTER_ICON_DIM_ZOOM0 = {
 #: Smallest footprint an icon may shrink to, native pixels.
 MIN_ICON_DIM = 4
 
-#: MAP_MAX_X / max_map_scale is the same constant for every galaxy
-#: size (mapgen.cpp: 506/10, 759/15, 1012/20, 1518/30). The
-#: Extension API serializes MAP_MAX_X but NOT _max_map_scale or
-#: _max_zoom_count, so both are recovered from it rather than
-#: guessed — or than patching the C++ side for two more int16s.
-MAP_MAX_X_PER_SCALE = 50.6
+#: The galaxy viewport the two ceilings below divide by, in native
+#: 640x480 pixels. **506 x 400 is the RECTANGLE**, declared under
+#: those names by `MAINSCR::Draw_Influence_Overlay_` (mainscr.cpp:
+#: 161-164, `map_left = 22, map_top = 22, map_width = 506,
+#: map_height = 400`) and confirmed live: the galaxy map's field 23
+#: arrives on the wire as (22, 22)-(527, 421), which is 506 columns
+#: and 400 rows counted inclusively.
+#:
+#: `mapcoords.MAP_WIDTH` is 505 and the fundament says 505 x 399, and
+#: that is the SAME rectangle counted differently, not a second one:
+#: `MAINSCR::Star_On_Screen_` (mainscr.cpp:399-410) admits the near
+#: edge (`x > 0x15` passes at 22) and excludes the far one
+#: (`x < 0x20f` stops at 526), so a star reaches 505 of the 506
+#: columns and 399 of the 400 rows. The rectangle is what the scale
+#: has to cover, so the rectangle is what the ceilings divide by.
+GALAXY_VIEWPORT_W = 0x1FA        # 506, mapgen.cpp:68
+GALAXY_VIEWPORT_H = 0x190        # 400, mapgen.cpp:69
+
+#: The four stock galaxy sizes' MAP_MAX_X -> _max_map_scale, as
+#: mapgen.cpp:1078-1110 assigns them: literal constants beside a
+#: literal `_MAP_MAX_X`/`_MAP_MAX_Y`, never through the function
+#: below. Transcribed as the switch writes them, because that is what
+#: the switch is; `maximum_galaxy_display_scale` reproduces all four
+#: and a smoke check holds it to them.
+STOCK_MAX_MAP_SCALE = {506: 10, 759: 15, 1012: 20, 1518: 30}
+
+#: `raw_cell_size`, mapgen.cpp:65 and :1113 — the same expression in
+#: both places: MAXIMUM_GALAXY_CELL_SIZE 50 * MAXIMUM_GALAXY_MAP_SCALE
+#: 30 / 10. The Maximum galaxy is a grid of cells this wide.
+MAXIMUM_GALAXY_CELL = 150
 
 #: max_map_scale -> max_zoom_count (mapgen.cpp, same switch).
 MAX_ZOOM_BY_SCALE = {10: 0, 15: 1, 20: 2, 30: 3}
@@ -286,30 +318,94 @@ def inset_dot_origin(centre, dim):
     return centre - (int(dim) - 1) // 2
 
 
-def max_map_scale(map_max_x):
-    """Recover MOX::_max_map_scale from MAP_MAX_X.
+def maximum_galaxy_display_scale(map_max_x, map_max_y):
+    """MAPGEN::Maximum_Galaxy_Display_Scale_, mapgen.cpp:64-71.
 
-    Returns 0 when map_max_x is missing or nonsensical, which the
-    callers treat as "unknown" rather than substituting a value
-    that would silently change rendering.
+    The scale at which the whole galaxy fits the map viewport: per
+    axis, the smallest scale whose `HAROLD::Get_Scaled_Value_`
+    (`v * 10 / scale`, harold.cpp:169) puts the far edge inside the
+    506 x 400 rectangle — then the LARGER of the two, because an axis
+    that does not fit is an axis the player cannot see.
+
+    **A CEILING, NOT A ROUNDING**, written in the original as the
+    integer idiom `(a + b - 1) / b`. That one word is the whole of
+    the defect this function replaced: `round(map_max_x / 50.6)`
+    agreed on the four stock sizes it was measured from and came out
+    exactly one too small — never too large — for 688 of the 951 star
+    counts in 73..1023, at 15 distinct map widths.
+
+    The function in orion2re takes no arguments: it derives the
+    galaxy's extent from `_maximum_star_count` through
+    `Maximum_Galaxy_Grid_X_/Y_` (mapgen.cpp:49-59) times
+    `raw_cell_size`. **Those two products are character for character
+    what the same branch assigns to `MOX::_MAP_MAX_X` and `_MAP_MAX_Y`
+    ten lines later** (mapgen.cpp:1113-1115), and both are on the wire
+    (ext_api.cpp:113-114). So the extent is READ rather than rebuilt,
+    and no star count enters here.
+
+    Verified two ways before it replaced anything (fundament, "two
+    independent sources"): the function above, and a live probe on
+    7 September 2026 — a generated 155-star Maximum galaxy, MAP_MAX
+    2250 x 1800, whose own zoom-out limit the game reported as
+    **45**, where the retired estimate said 44.
+    """
+    if not map_max_x or not map_max_y or map_max_x <= 0 or map_max_y <= 0:
+        return 0
+    scale_x = (int(map_max_x) * 10 + GALAXY_VIEWPORT_W - 1) // GALAXY_VIEWPORT_W
+    scale_y = (int(map_max_y) * 10 + GALAXY_VIEWPORT_H - 1) // GALAXY_VIEWPORT_H
+    return max(scale_x, scale_y)
+
+
+def max_map_scale(map_max_x, map_max_y):
+    """Recover MOX::_max_map_scale, transcribing the mapgen switch.
+
+    `MAPGEN::Set_Galaxy_Size_` (mapgen.cpp:1078-1120) answers this in
+    two different ways and so does this function, in the same order:
+    the four stock sizes get a literal beside a literal MAP_MAX
+    (STOCK_MAX_MAP_SCALE), and GALAXY_SIZE_MAXIMUM gets
+    `Maximum_Galaxy_Display_Scale_()`. Nothing is estimated from a
+    ratio any more, at either size. Returns 0 for an extent no galaxy
+    size produces, which callers read as "unknown" rather than
+    substituting a value that would silently change rendering.
+
+    **MAP_MAX_Y HAS NO DEFAULT, DELIBERATELY.** It is on the wire
+    beside x (ext_api.cpp:113-114) and every caller in the tree has
+    the state object it comes from, so a default would exist only to
+    let the next caller forget it — and forgetting it is precisely
+    the defect this function replaced: the y ceiling is the larger of
+    the two at 4 of the 15 map widths where the retired estimate was
+    wrong. A missing argument is a TypeError where it is written; a
+    defaulted 0 is a wrong scale, at one galaxy size, on a screen
+    where every other number stays correct. A smoke check refuses a
+    one-argument call site anywhere in the tree, because a TypeError
+    only fires on the path that runs.
+
+    The stock branch keys on MAP_MAX_X alone and that is not an
+    exception to the above: 506, 759, 1012 and 1518 each name one arm
+    of the switch, and the switch assigns the scale as a literal
+    without consulting either extent. Their extents are literals too,
+    not grid products — 506 is not a multiple of the 150-unit cell —
+    so nothing about a stock size can be re-derived from a grid, and
+    an inversion could never have served one.
     """
     if not map_max_x or map_max_x <= 0:
         return 0
-    scale = int(round(map_max_x / MAP_MAX_X_PER_SCALE))
-    # Snap to a value the game actually uses; anything else means
-    # a modded galaxy size, and the raw estimate is the best guess.
-    for known in (10, 15, 20, 30):
-        if abs(scale - known) <= 1:
-            return known
-    return scale
+    stock = STOCK_MAX_MAP_SCALE.get(int(map_max_x))
+    if stock:
+        return stock
+    return maximum_galaxy_display_scale(map_max_x, map_max_y)
 
 
-def max_zoom_count(map_max_x):
-    """Recover MOX::_max_zoom_count from MAP_MAX_X."""
-    scale = max_map_scale(map_max_x)
-    if scale in MAX_ZOOM_BY_SCALE:
-        return MAX_ZOOM_BY_SCALE[scale]
-    return 3 if scale else 3
+def max_zoom_count(map_max_x, map_max_y):
+    """Recover MOX::_max_zoom_count, mapgen.cpp's same switch.
+
+    0/1/2/3 for the four stock sizes; GALAXY_SIZE_MAXIMUM sets 3
+    outright (mapgen.cpp:1118), which is what an unknown scale gets
+    too — the zoom RANGE is the one thing a Maximum galaxy shares
+    with Huge. Both extents required, for max_map_scale's reason.
+    """
+    scale = max_map_scale(map_max_x, map_max_y)
+    return MAX_ZOOM_BY_SCALE.get(scale, 3)
 
 
 def scale_rungs(max_zoom_count=3, num_stars=0, max_map_scale=None):

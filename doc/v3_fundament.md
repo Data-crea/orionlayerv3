@@ -824,6 +824,54 @@ source goes to `unverified.py`.
 **Numerically verify, never estimate visually.** The oldest rule in
 the project and still the most violated.
 
+**When the original states a PROPORTION, the proportion is the
+transcription and the pixel count is DERIVED from it.** The colony
+summary's producing column is `Squeeze_Print_Formatted_Paragraph_(
+0x200, y, 0x55, 0x16)` (colsum.cpp:621): width 85 of a 640 px screen,
+which is 13.3 %, which is 190 of 1408. That ratio was rejected once as
+"a scaled estimate" in favour of measuring the widest producing string
+— 311 px, on one line, at full font — and the measurement came out
+nearly twice as large and looked exactly as authoritative.
+`BILL::_Squeeze_Print_Paragraph_` (bill.cpp:147) settles it: `width`
+goes straight into `get_height(width, text)` and the loop shrinks the
+HEIGHT until it fits. **Width never moves, and the function has no
+truncation branch at all.** All three constraints in the measurement
+— one line, full font, whole string unwrapped — are ones the original
+never imposes.
+
+Worth keeping as the SHAPE of the error rather than as one column's
+number: it was not a wrong measurement, it was the right measurement
+of the wrong question. A requirement the original does not have is
+not a measurement of the original. And the direction of the rule is
+the useful half — a percentage carries across a resolution change and
+a pixel count does not, so the tree stores the one the source states
+and computes the other, never the reverse.
+
+**Ring from the artwork, window from the layout, boundary measured.**
+Generated artwork and the geometry it has to fit come from two
+different places on purpose, and the place where they meet is
+asserted in numbers. `frame_build.py` lifts the device ring out of
+the master's own rectangles rather than scaling the reference number
+— `round(ring * scale)` put the plate's ring one pixel INSIDE its own
+first hole at 1440p, 106 where the table says 107, because the holes
+are placed by `Layout.rect`'s truncation and a second rounding rule
+disagreed with the first. Taking the ring from the rectangles the
+holes are cut from makes the two agree by construction, and the check
+compares in DEVICE pixels for the same reason: converting an edge
+back to reference asks `round(int(107 * 4/3) / (4/3))` to be 107, and
+at 1440p it is 106.
+
+**Artwork that does not fit the ring fails at the checker, not at the
+eye.** A window overhanging the metal by a pixel is invisible at every
+resolution somebody looks at and wrong at the one they do not, so the
+boundary is measured — every window's three edge pixels against the
+plate's own metal median, the eight windows agreeing per side to
+within 4 — and the check is verified to FAIL, with the bevel pass
+removed, before it is trusted. This is the same statement as decision
+3 one domain over: the artwork is upstream of the geometry, the
+geometry is upstream of the boxes, and every join between them is a
+number somebody can check rather than a picture somebody approved.
+
 **A measurement that is not stable under its own threshold is not a
 measurement.** The guardian icon was measured at 17x16 and shipped;
 the real sprite is 12x11. A low brightness threshold had bridged it
@@ -1474,6 +1522,28 @@ That is the two-independent-sources rule, deliberately left alone.
 
 **Method renames need a full-project grep.**
 
+**Byte-identical output after a refactor proves only the paths that
+were EXERCISED.** It is the strongest evidence this project has and
+it is evidence about a sample, not about a function — and the sample
+is whatever the fixtures happened to reach. `core/lbx.py` inherited
+`read_palette` from `nebula_extract.py` verbatim; it read
+`r, g, b, changed` where `s_palette_entry` is `{changed, r, g, b}`
+(orion2.h:2131-2136), so every colour it returned was one byte to the
+left and COLSUM entry 0's white came back as cyan. Every regeneration
+in between was byte-identical, and the reason is the whole lesson:
+**not one of STARBG.LBX's 48 nebula entries carries a palette at
+all**, so the function had never once run on real data. Nothing was
+identical *because* the code was right; it was identical because that
+branch was never taken.
+
+So a byte-for-byte check licenses the refactor over the inputs it
+saw, and the useful question afterwards is which inputs it did NOT
+see. Where the answer is "a whole class of them", the check owes that
+class a fixture — the palette byte order is now pinned against the
+struct with a non-zero flag byte in the fixture, precisely so a wrong
+order cannot pass by being unreachable. A test whose data cannot fail
+it is a test the tree defends.
+
 **Data-driven screens are translation-ready for free.**
 
 ---
@@ -1520,15 +1590,54 @@ references in `doc/v3_orion2re_index.md`.
   in the source and not on the Extension API.
 - Galaxy size never scales anything. It caps `_max_zoom_count`, which
   caps the reachable zoom levels — and zoom level is what scales.
-- `MAP_MAX_X / _max_map_scale` is a constant 50.6 across the four
-  stock galaxy sizes, which is how `_max_map_scale` and
-  `_max_zoom_count` are recovered without serializing them. The
-  constant was measured from the stock sizes only; the community
-  Maximum size was never part of that derivation.
-- At `_max_map_scale` the game's own 505x399 native viewport covers
-  the galaxy to within 1-3 units on the far edge (Small 1, Medium 2,
-  Large 2, Huge 3). That margin is what lets a parked game serve
-  clicks for a decoupled HD view.
+- **`_max_map_scale` is `max(ceil(MAP_MAX_X*10/506),
+  ceil(MAP_MAX_Y*10/400))`**, and the community Maximum size is now
+  covered — corrected 7 September 2026. Neither `_max_map_scale` nor
+  `_max_zoom_count` is serialized; both are recovered from the two
+  extents, which are. The expression is
+  `MAPGEN::Maximum_Galaxy_Display_Scale_` (mapgen.cpp:64-71), whose
+  own `map_width`/`map_height` are character for character what the
+  same branch assigns to `_MAP_MAX_X`/`_MAP_MAX_Y` (mapgen.cpp:
+  1113-1115) — so the extent is read off the wire rather than rebuilt
+  from a star count. It reproduces the four stock sizes' literals as
+  well (506/400 → 10, 759/600 → 15, 1012/800 → 20, 1518/1200 → 30),
+  so **one expression covers all five galaxy sizes**.
+
+  **BOTH ceilings, and it is a CEILING.** What stood here was
+  `MAP_MAX_X / _max_map_scale` being "a constant 50.6", measured from
+  the four stock sizes and inverted with commercial rounding. The
+  constant is real at those four sizes; the *rounding* is not the
+  original's operation, and the y term was missing entirely. Result:
+  exactly one too small — never too large — for 688 of the 951 star
+  counts in 73…1023, at 15 distinct map widths, with the x ceiling
+  the larger at 11 of them and the y ceiling at 4. The reference save
+  is one of the counts where it happened to be right, which is why it
+  survived every acceptance run.
+
+  50.6 still appears in the tree, and it is a different fact there:
+  `506/10` is the map viewport's own reach per scale unit
+  (movebox.cpp:19-20), which is what the galaxy inset's 506000 and
+  400000 divide by. Cite it to movebox.cpp, never to a scale
+  recovered from a width.
+- **The map viewport is 506 x 400, and 505 x 399 is the same
+  rectangle counted differently.** `MAINSCR::Draw_Influence_Overlay_`
+  declares it — `map_left = 22, map_top = 22, map_width = 506,
+  map_height = 400` (mainscr.cpp:161-164) — and the galaxy map's
+  field 23 arrives on the wire as (22, 22)-(527, 421), the same
+  506 x 400 counted inclusively. `MAINSCR::Star_On_Screen_`
+  (mainscr.cpp:399-410) then admits the near edge (`x > 0x15` passes
+  at 22) and excludes the far one (`x < 0x20f` stops at 526), so a
+  STAR reaches 505 of those columns and 399 of those rows. The
+  rectangle is what a scale has to cover, so the rectangle is what
+  the two ceilings divide by; 505 x 399 is `mapcoords.MAP_WIDTH`'s
+  number and belongs to hit-testing, not to zoom. Not two constants —
+  one rectangle, inclusive against exclusive.
+- At `_max_map_scale` the game's own viewport therefore covers the
+  galaxy by construction rather than by luck, at every size including
+  Maximum: the last 1-3 units on the far edge (Small 1, Medium 2,
+  Large 2, Huge 3) fall in the column a star cannot occupy anyway.
+  That is what lets a parked game serve clicks for a decoupled HD
+  view.
 - **A sequence of `ACTIVATE_FIELD`s must be sent one at a time and
   confirmed; a batch is silently collapsed to the last one.**
   `ext::g_pending_field` is a single `int16_t`, and `ProcessInput()`

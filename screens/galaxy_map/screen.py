@@ -303,11 +303,13 @@ class GalaxyMapScreen(ScreenBase):
         """Re-anchoring info for ship icons, only when decoupled."""
         if not self._viewctl.active or self._state is None:
             return None
+        map_max_x = getattr(self._state, "map_max_x", 0) or 0
+        map_max_y = getattr(self._state, "map_max_y", 0) or 0
         game_zoom = zt.zoom_level(
             getattr(self._state, "map_scale", 10) or 10,
-            zt.max_zoom_count(getattr(self._state, "map_max_x", 0) or 0),
+            zt.max_zoom_count(map_max_x, map_max_y),
             len(self._stars),
-            zt.max_map_scale(getattr(self._state, "map_max_x", 0) or 0))
+            zt.max_map_scale(map_max_x, map_max_y))
         return ship_icons.IconAnchor(self._state, self._stars,
                                      self._ships, game_zoom)
 

@@ -17,6 +17,7 @@ Usage (from the project root):
 Exit code 0 = all good. Run this before shipping a ZIP or a
 mod, and after touching anything in core/.
 """
+import ast
 import math
 import os
 import re
@@ -1165,11 +1166,134 @@ def main():
     # An unknown type must not render at a nonsense size.
     assert zt.monster_icon_dimension("nessie", 1) == zt.ship_icon_dimension(1)
     # _max_map_scale / _max_zoom_count are not serialized by the ext
-    # API; both must be recoverable from MAP_MAX_X (mapgen.cpp).
-    for mx, exp_scale, exp_zoom in ((506, 10, 0), (759, 15, 1),
-                                    (1012, 20, 2), (1518, 30, 3)):
-        assert zt.max_map_scale(mx) == exp_scale, mx
-        assert zt.max_zoom_count(mx) == exp_zoom, mx
+    # API; both must be recoverable from MAP_MAX (mapgen.cpp).
+    #
+    # ── THE REFERENCE IS WRITTEN OUT HERE, NOT IMPORTED ──
+    # A verifier that shares its generation function is blind, so
+    # this walks the OTHER way round: from the star count through
+    # MAPGEN::Maximum_Galaxy_Grid_Y_/X_ (mapgen.cpp:49-59) to the
+    # extent, where zoomtables starts from the extent that arrives on
+    # the wire. Even the ceiling is spelled differently — `-(-a//b)`
+    # here against `(a + b - 1) // b` there — so one mistyped idiom
+    # cannot satisfy both.
+    def _mgds(star_count):
+        """(MAP_MAX_X, MAP_MAX_Y, _max_map_scale) for a Maximum galaxy."""
+        gy = 8
+        while ((gy * 5 + 3) // 4) * gy < star_count:
+            gy += 1
+        gx = (gy * 5 + 3) // 4
+        cell = (50 * 30) // 10                     # mapgen.cpp:65
+        w, h = gx * cell, gy * cell                # mapgen.cpp:1114-1115
+        return w, h, max(-(-w * 10 // 506), -(-h * 10 // 400))
+
+    def _retired(map_max_x):
+        """What stood here until 7 September 2026: round(x / 50.6)."""
+        return int(round(map_max_x / 50.6))
+
+    # FIXED POINT 1 — the four stock sizes' literals (mapgen.cpp:
+    # 1078-1110). The switch assigns these outright and never calls
+    # the function; that ONE expression reproduces all four is what
+    # lets a single recovery cover five galaxy sizes.
+    for mx, my, exp_scale, exp_zoom in ((506, 400, 10, 0),
+                                        (759, 600, 15, 1),
+                                        (1012, 800, 20, 2),
+                                        (1518, 1200, 30, 3)):
+        assert zt.max_map_scale(mx, my) == exp_scale, (mx, my)
+        assert zt.max_zoom_count(mx, my) == exp_zoom, (mx, my)
+        assert zt.maximum_galaxy_display_scale(mx, my) == exp_scale, \
+            f"the Maximum-size function must reproduce the stock literal " \
+            f"{exp_scale} for MAP_MAX {mx}x{my}"
+
+    # FIXED POINT 2 — the live probe, 7 September 2026. A generated
+    # 155-star Maximum galaxy, driven to its own zoom-out limit with
+    # field 9, reported map_scale 45 where the retired estimate said
+    # 44 (tools/zoom_check.py: "MEASURED 45 > DERIVED 44"). That run
+    # is the second source this transcription was accepted on.
+    assert _mgds(155)[:2] == (2250, 1800), _mgds(155)
+    assert zt.max_map_scale(2250, 1800) == 45, "live probe 2026-09-07, 155 stars"
+    assert _retired(2250) == 44, "the estimate this replaced"
+
+    # FIXED POINT 3 — the reference save, where the two AGREE. This
+    # is why the save could not settle the question by itself.
+    assert _mgds(99)[:2] == (1800, 1350), _mgds(99)
+    assert zt.max_map_scale(1800, 1350) == 36 == _retired(1800)
+
+    # FIXED POINT 4 — THE Y TERM IS LOAD BEARING. At 35 x 28 cells
+    # the height ceiling is the larger one, so a recovery that
+    # ceilings x alone is still one short. This is the half of the
+    # defect that a MAP_MAX_X-only reading could never have caught.
+    assert zt.max_map_scale(5250, 4200) == 105, (
+        "THE Y TERM HAS BEEN DROPPED. MAP_MAX 5250 x 4200 (35 x 28 cells) "
+        "is one of the four widths where ceil(MAP_MAX_Y*10/400) is the "
+        "LARGER ceiling: 105 against x's 104. A recovery that reads "
+        "MAP_MAX_X alone is still one short here even after it stops "
+        "rounding, and the map draws a zoom-out limit one step tighter "
+        "than the game's with every number on screen still correct.")
+    assert -(-5250 * 10 // 506) == 104, "the x ceiling alone"
+
+    # THE WHOLE RANGE, against the independent reference.
+    _differ, _widths, _below = 0, set(), 0
+    for _n in range(73, 1024):
+        _w, _h, _want = _mgds(_n)
+        assert zt.max_map_scale(_w, _h) == _want, (_n, _w, _h)
+        _old = _retired(_w)
+        if _old != _want:
+            _differ += 1
+            _widths.add(_w)
+        if _want < _old:
+            _below += 1
+    # Reported at Stop 1 and reproduced here. If these move, that is
+    # a finding about the arithmetic, not a test to loosen.
+    assert _differ == 688, f"{_differ} of 951 differ, expected 688"
+    assert len(_widths) == 15, sorted(_widths)
+    assert _below == 0, \
+        f"the transcription is BELOW the old estimate at {_below} counts; " \
+        f"it must never be — the estimate rounds down from a ceiling"
+    # NO CALL SITE MAY PASS MAP_MAX_X ALONE. Both extents are on the
+    # wire and both are required, so a one-argument call is a
+    # TypeError — but only on the path that runs, and the galaxy
+    # sizes where the y ceiling wins are exactly the ones no fixture
+    # reaches. This reads the SOURCE instead, so a forgotten y in a
+    # branch nobody exercises fails here rather than on somebody's
+    # Maximum galaxy. It is also what keeps the default from coming
+    # back: the default existed once, was justified only by a test
+    # written for it, and had no caller in the tree.
+    _need_two = ("max_map_scale", "max_zoom_count")
+    _root = os.path.dirname(SCREENS_DIR)
+    _thin = []
+    _scanned = 0
+    for _dir, _subs, _files in os.walk(_root):
+        _subs[:] = [_s2 for _s2 in _subs
+                    if _s2 not in ("__pycache__", ".git", "assets")]
+        for _f in _files:
+            if not _f.endswith(".py"):
+                continue
+            _path = os.path.join(_dir, _f)
+            _tree = ast.parse(open(_path, encoding="utf-8").read())
+            _scanned += 1
+            for _node in ast.walk(_tree):
+                if not isinstance(_node, ast.Call):
+                    continue
+                _fn = _node.func
+                _name = (_fn.attr if isinstance(_fn, ast.Attribute)
+                         else _fn.id if isinstance(_fn, ast.Name) else None)
+                if _name not in _need_two:
+                    continue
+                # `f(*pair)` passes both; ast cannot count through it.
+                if any(isinstance(_a, ast.Starred) for _a in _node.args):
+                    continue
+                if len(_node.args) + len(_node.keywords) < 2:
+                    _thin.append(f"{os.path.relpath(_path, _root)}:"
+                                 f"{_node.lineno} {_name}()")
+    assert _scanned > 40, f"only {_scanned} python files scanned"
+    assert not _thin, (
+        "these call MAP_MAX recovery with one argument, which means "
+        "MAP_MAX_Y is being dropped — the half of the retired estimate "
+        f"that no stock-size fixture can catch: {_thin}")
+    ok("max_map_scale transcribes Maximum_Galaxy_Display_Scale_ "
+       f"(73..1023: {_differ}/951 differ from the retired estimate, "
+       f"never below; 5 galaxy sizes; both extents required at "
+       f"{_scanned} source files)")
     # A big galaxy NOT at maximum zoom-out must keep its star names.
     assert zt.names_suppressed(100, 15, 30) is False
     assert zt.names_suppressed(100, 30, 30) is True
@@ -1178,16 +1302,16 @@ def main():
     # Galaxy size just caps how far out the user may zoom; it must
     # never scale anything by itself. Fully zoomed in (scale 10)
     # every galaxy size draws the identical icon.
-    for map_max_x in (506, 759, 1012, 1518):
-        z = zt.zoom_level(10, zt.max_zoom_count(map_max_x))
-        assert z == 0, map_max_x
-        assert zt.star_dimension(0, z) == 33, map_max_x
-        assert zt.black_hole_dimension(z) == 39, map_max_x
+    for map_max in ((506, 400), (759, 600), (1012, 800), (1518, 1200)):
+        z = zt.zoom_level(10, zt.max_zoom_count(*map_max))
+        assert z == 0, map_max
+        assert zt.star_dimension(0, z) == 33, map_max
+        assert zt.black_hole_dimension(z) == 39, map_max
     # Fully zoomed OUT they differ — but only because the reachable
     # zoom level differs, not because of a galaxy-size factor.
-    out = {mx: zt.star_dimension(0, zt.zoom_level(
-        zt.max_map_scale(mx), zt.max_zoom_count(mx)))
-        for mx in (506, 759, 1012, 1518)}
+    out = {mm[0]: zt.star_dimension(0, zt.zoom_level(
+        zt.max_map_scale(*mm), zt.max_zoom_count(*mm)))
+        for mm in ((506, 400), (759, 600), (1012, 800), (1518, 1200))}
     assert list(out.values()) == [33, 29, 25, 23], out
     # And within ONE galaxy, zooming in must strictly grow icons.
     huge = [zt.star_dimension(0, zt.zoom_level(s, 3))
@@ -1247,9 +1371,11 @@ def main():
         # cannot be at scale 30, and the clamp would (correctly)
         # hold the zoom down if only one of the two changed.
         sizes = {}
-        for scale, map_max, expect_zoom in ((10, 506, 0), (15, 759, 1),
-                                            (20, 1012, 2), (30, 1518, 3)):
-            gs.map_scale, gs.map_max_x = scale, map_max
+        for scale, map_max, expect_zoom in (
+                (10, (506, 400), 0), (15, (759, 600), 1),
+                (20, (1012, 800), 2), (30, (1518, 1200), 3)):
+            gs.map_scale = scale
+            gs.map_max_x, gs.map_max_y = map_max
             gm.update(gs)
             ctx = gm._map_context()
             assert ctx.zoom == expect_zoom, (scale, ctx.zoom)
@@ -1266,7 +1392,16 @@ def main():
         gs.stars = list(stock_stars) * 30           # 90 > 72
         big = {}
         for scale in (6, 12, 23, 45):
-            gs.map_scale, gs.map_max_x = scale, 2277   # max scale 45
+            # A REAL Maximum galaxy, not a synthesized width: 15 x 12
+            # cells of 150 is what 155 stars produce (mapgen.cpp:
+            # 49-59, 1113-1115), and it is the galaxy the live probe
+            # of 7 September 2026 ran on. The 2277 that stood here
+            # was reverse-engineered out of the retired estimate to
+            # make it answer 45 and is an extent no 150-unit grid can
+            # produce — a fixture that could only exist while the
+            # thing it tested was wrong.
+            gs.map_scale = scale
+            gs.map_max_x, gs.map_max_y = 2250, 1800    # max scale 45
             gm.update(gs)
             ctx = gm._map_context()
             big[scale] = (ctx.zoom, ctx.star_px(0))
@@ -1277,10 +1412,12 @@ def main():
 
         # And the clamp itself: a small galaxy stays at zoom 0 even
         # if some other scale is reported.
-        gs.map_scale, gs.map_max_x = 30, 506
+        gs.map_scale = 30
+        gs.map_max_x, gs.map_max_y = 506, 400
         gm.update(gs)
         assert gm._map_context().zoom == 0, "max_zoom_count must clamp"
-        gs.map_scale, gs.map_max_x = 15, 759
+        gs.map_scale = 15
+        gs.map_max_x, gs.map_max_y = 759, 600
 
         # Nebula size comes from the type, NEVER from the artwork.
         # Two masters of the same shape at wildly different
@@ -1292,7 +1429,8 @@ def main():
         forms = gm._data.get("nebula_forms", [])
         if forms:
             form = forms[0]
-            gs.map_scale, gs.map_max_x = 10, 506
+            gs.map_scale = 10
+            gs.map_max_x, gs.map_max_y = 506, 400
             gm.update(gs)
             ctx = gm._map_context()
             assert ctx.nebula_px(0) == max(
@@ -1309,7 +1447,7 @@ def main():
             # held its size between rungs while the world shrank
             # under it (50 % to 130 % of the footprint, snapping back
             # by up to 36 % at a rung).
-            gs.map_max_x = 1518                    # Huge: rungs 10..30
+            gs.map_max_x, gs.map_max_y = 1518, 1200  # Huge: rungs 10..30
             for t in (0, 4, 9):
                 want = zt.nebula_world_dimension(t)[0]
                 for scale10 in range(50, 301):     # scale 5.0 .. 30.0
@@ -1321,7 +1459,8 @@ def main():
                     per_unit = c.px * 10.0 / c.map_scale
                     assert abs(c.nebula_px(t) - want * per_unit) <= 1.0, \
                         (t, gs.map_scale, c.nebula_px(t), want * per_unit)
-            gs.map_scale, gs.map_max_x = 10, 506
+            gs.map_scale = 10
+            gs.map_max_x, gs.map_max_y = 506, 400
             gm.update(gs)
             ctx = gm._map_context()
 
@@ -1343,8 +1482,10 @@ def main():
 
             # Zooming out shrinks it, in every galaxy that can zoom.
             drawn = {}
-            for scale, map_max in ((10, 1518), (30, 1518)):
-                gs.map_scale, gs.map_max_x = scale, map_max
+            for scale, map_max in (((10, (1518, 1200)),
+                                    (30, (1518, 1200)))):
+                gs.map_scale = scale
+                gs.map_max_x, gs.map_max_y = map_max
                 gm.update(gs)
                 probe = pygame.Surface((app.win_w, app.win_h))
                 probe.fill((0, 0, 0))
@@ -1463,7 +1604,8 @@ def main():
                 ok("galaxy_map nebula masters (shape + weight vs the "
                    "original)")
 
-        gs.map_scale, gs.map_max_x = 15, 759
+        gs.map_scale = 15
+        gs.map_max_x, gs.map_max_y = 759, 600
 
         # Wormholes: only visited (or omniscient) origins draw.
         gs.map_scale = 15
@@ -1920,8 +2062,9 @@ def main():
         gs.ship_icons[1].set_derived("owner", 9)      # guardian
         gs.ships_raw = []
         painted = {}
-        for scale, map_max in ((10, 506), (30, 1518)):
-            gs.map_scale, gs.map_max_x = scale, map_max
+        for scale, map_max in ((10, (506, 400)), (30, (1518, 1200))):
+            gs.map_scale = scale
+            gs.map_max_x, gs.map_max_y = map_max
             gm.update(gs)
             ctx = gm._map_context()
             probe = pygame.Surface((app.win_w, app.win_h))
@@ -1944,7 +2087,8 @@ def main():
                           gm._players, gm._cache, gm._tints)
         assert not pygame.surfarray.array2d(probe).any(), \
             "unplaced ship icon must not be drawn"
-        gs.map_scale, gs.map_max_x = 15, 759
+        gs.map_scale = 15
+        gs.map_max_x, gs.map_max_y = 759, 600
         gs.ship_icons = []
         ok("galaxy_map ship icons (kinds, tinting, owner, sizing)")
 
@@ -3549,16 +3693,34 @@ def main():
         return _istar.parse(bytes(b))
 
     class _FakeGS:
-        def __init__(self, stars, players=(), num=0, max_x=1800):
+        # MAP_MAX IS A PAIR, and the default is the reference save's
+        # own 1800 x 1350 (99 stars, 12 x 9 cells). A fake that
+        # carried x alone is how the y ceiling went untested for as
+        # long as the recovery only read x.
+        def __init__(self, stars, players=(), num=0,
+                     max_x=1800, max_y=1350):
             self.stars = stars; self.player_raw = list(players)
-            self.player_num = num; self.map_max_x = max_x
+            self.player_num = num
+            self.map_max_x = max_x; self.map_max_y = max_y
             self.colonies_raw = []; self.planets_raw = []
 
     # THE POSITION, transcribed: movebox.cpp:19-20 and :62-64.
-    # max_map_scale 36 comes from MAP_MAX_X 1800 through
+    # max_map_scale 36 comes from MAP_MAX 1800 x 1350 through
     # zoomtables.max_map_scale, which is the one home for it.
-    _iscale = zt.max_map_scale(1800)
+    _iscale = zt.max_map_scale(1800, 1350)
     assert _iscale == 36, _iscale
+    # And the dots move with it: a galaxy where the retired estimate
+    # and the transcription disagree must place its stars through the
+    # transcription's answer, not the estimate's. Same star, two
+    # galaxies, and the 45-vs-44 difference has to show.
+    _probe_dot = _crw.galaxy_inset_stars(
+        _FakeGS([_fake_star(2000, 1600)], max_x=2250, max_y=1800))[0]
+    _want_45 = (((2000 * 1000 // 45) * 10) // (506000 // 128),
+                ((1600 * 1000 // 45) * 10) // (400000 // 91))
+    assert _probe_dot[:2] == _want_45, (_probe_dot, _want_45)
+    assert _want_45 != (((2000 * 1000 // 44) * 10) // (506000 // 128),
+                        ((1600 * 1000 // 44) * 10) // (400000 // 91)), \
+        "pick a star where 44 and 45 actually place differently"
     for _sx_in, _sy_in in ((0, 0), (1740, 1285), (900, 600)):
         _want_x = ((_sx_in * 1000 // 36) * 10) // (506000 // 128)
         _want_y = ((_sy_in * 1000 // 36) * 10) // (400000 // 91)
@@ -4038,6 +4200,7 @@ def main():
                 f"sampled hole through one function and must agree")
     ok("colony frame built from the master (nine-slice ring matches the "
        "table at all three resolutions, struts are metal)")
+
 
     # ── Every gap is one of the master's own struts ──────────
     #

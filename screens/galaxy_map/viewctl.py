@@ -9,12 +9,16 @@ What stays coupled, and how it is handled:
 
   * **Clicks.** INJECT_CLICK lands in the GAME's 640x480 viewport, so
     a star the game's slice does not contain is unreachable. The fix
-    is to park the game at maximum zoom-out once: at max_map_scale
-    its slice covers the whole galaxy to within 1-3 units on the far
-    edge (505*scale/10 against MAP_MAX_X, checked for all four
-    sizes). park_game() sends zoom-out steps, throttled, until the
-    game reports max_map_scale. Only the zoom-OUT field is ever used;
-    the zoom-in field is the one with the rubber-band trap.
+    is to park the game at maximum zoom-out once: max_map_scale is
+    the scale at which the galaxy fits the 506 x 400 map rectangle,
+    because that is what `Maximum_Galaxy_Display_Scale_` computes and
+    what the stock switch's literals agree with — so the slice covers
+    the galaxy at every size, Maximum included, with the last 1-3
+    units on the far edge falling in the column a star cannot occupy
+    anyway (`Star_On_Screen_` excludes the far edge). park_game()
+    sends zoom-out steps, throttled, until the game reports
+    max_map_scale. Only the zoom-OUT field is ever used; the zoom-in
+    field is the one with the rubber-band trap.
 
   * **Ship icons.** s_ship_icon.x/y are baked in the game's screen
     space — ships.py re-anchors them (see there).
@@ -142,12 +146,20 @@ class ViewControl:
     def _fit_scale(self, state):
         """The scale at which the whole galaxy fits the viewport.
 
-        max_map_scale is exactly that value by construction
-        (MAP_MAX_X / max_map_scale is a constant 50.6 across all
-        galaxy sizes), so the HD zoom-out limit and the game's are
-        the same view.
+        max_map_scale IS that value by definition rather than by
+        coincidence: `MAPGEN::Maximum_Galaxy_Display_Scale_` is the
+        smaller-of-nothing, larger-of-two-ceilings answer to "at what
+        scale does MAP_MAX fit 506 x 400", transcribed in
+        zoomtables. So the HD zoom-out limit and the game's are the
+        same view, at every galaxy size including Maximum.
+
+        This used to read `round(MAP_MAX_X / 50.6)`, which was one
+        step too far IN for 688 of the 951 star counts above 72 —
+        an HD limit tighter than the game's, on a map where the
+        game's own slice is what an injected click travels through.
         """
-        mms = zt.max_map_scale(getattr(state, "map_max_x", 0) or 0)
+        mms = zt.max_map_scale(getattr(state, "map_max_x", 0) or 0,
+                               getattr(state, "map_max_y", 0) or 0)
         return float(mms or 30)
 
     def _clamp(self, state, view):

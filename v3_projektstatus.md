@@ -508,7 +508,7 @@ files under `doc/` and are only summarised here.
 | | |
 |---|---|
 | Python | 32,960 lines across 111 modules — `find . -name '*.py'`, `__pycache__` excluded, the smoke test's 6,400 included. The previous figure here (21,642 across 94) was carried from an unstated method and could not be reproduced |
-| Smoke test | `python tools/smoke_test.py` — **92 checks**, headless |
+| Smoke test | `python tools/smoke_test.py` — **93 checks**, headless |
 | Assets | 170 MB (select_race 68, galaxy_map 51, shared 23, new_game 21, colony_summary 1) |
 | Screens in HD | 7 of ~20–22 (colony summary draws list, sidebar, scan box and galaxy inset, and MOVES POPS — the first HD gesture that drives the game) |
 | Setup from clone | `python tools/setup.py` (deps via the system package manager) |
@@ -832,11 +832,11 @@ in exactly ONE bucket. The numbers below are produced by
 check asserts this list still agrees with it — the same trade the
 check count makes, for the same reason.
 
-`galaxy_map/screen.py` (**529** code, 805 total), `tools/struct_probe.py`
+`galaxy_map/screen.py` (**531** code, 807 total), `tools/struct_probe.py`
 (**478** code, 753 total), `custom_race/screen.py` (**400** code,
 558 total), `tools/colony_list_preview.py` (**344** code, 678 total),
 `core/editor/editor.py` (**340** code, 390 total),
-`galaxy_map/renderer.py` (**333** code, 747 total), `tools/ext_diag.py`
+`galaxy_map/renderer.py` (**335** code, 753 total), `tools/ext_diag.py`
 (**325** code, 473 total), `core/style.py` (**306** code, 453 total).
 `smoke_test.py` is exempt by nature.
 
@@ -2793,21 +2793,21 @@ Everything else on the map:
   antaran (8); both fall back to the player sprite. Only zoom level 0
   has been measured — steps 1..3 are extrapolated, see
   `doc/ship_icon_measurement.md`.
-- **Maximum galaxy size (community map) — one bug fixed, one open.**
-  Above 72 stars the game leaves the 10/15/20/30 scale ladder and
-  builds one by halving `_max_map_scale`, so `zoom_level()` needs that
-  value. No caller passed it, and `_extended_zoom_level` then fell back
-  to `map_scale`, which satisfies its own top rung at every scale: an
-  extended map reported max_zoom however far the player zoomed in, and
-  drew its smallest star, ship and font step throughout. Fixed; the
-  smoke test pins the ladder at both the table and the `MapContext`
-  level. Still open: `max_map_scale` is recovered from `MAP_MAX_X`
-  through `MAP_MAX_X_PER_SCALE = 50.6`, measured from the four stock
-  sizes only — Maximum was never in that derivation. Run
-  `tools/zoom_check.py` on the live map; the widest scale the game
-  reaches *is* `_max_map_scale` and must equal the derived value. This
-  now also bounds the HD zoom-out, since the fit view is that same
-  number.
+- **Maximum galaxy size (community map) — both bugs fixed, nothing
+  open.** Above 72 stars the game leaves the 10/15/20/30 scale ladder
+  and builds one by halving `_max_map_scale`, so `zoom_level()` needs
+  that value. No caller passed it, and `_extended_zoom_level` then
+  fell back to `map_scale`, which satisfies its own top rung at every
+  scale: an extended map reported max_zoom however far the player
+  zoomed in, and drew its smallest star, ship and font step
+  throughout. Fixed; the smoke test pins the ladder at both the table
+  and the `MapContext` level. **The second one closed 7 September
+  2026**: `max_map_scale` no longer estimates. It transcribes
+  `MAPGEN::Maximum_Galaxy_Display_Scale_` from MAP_MAX_X *and*
+  MAP_MAX_Y, covers all five galaxy sizes, and was accepted on a live
+  probe against a generated 155-star Maximum galaxy — see the entry
+  below. `tools/zoom_check.py` remains the live check and now has to
+  print MEASURED == DERIVED on any galaxy at all.
   Star names vanishing and the black hole freezing at the widest view
   are NOT bugs — `Print_Star_Names_` bails at
   `Is_Extended_Max_Map_View_`, and `Advance_Black_Hole_Animation_`
@@ -3264,49 +3264,209 @@ strut has a highlight along its edge. Plain struts are what was
 asked for and the picture is what they give; polish is a decision for
 Data with the picture in hand.
 
-### `max_map_scale` is estimated with 50.6 and that is wrong above 72 stars — 7 September 2026
+### `Maximum_Galaxy_Display_Scale_` is transcribed; the 50.6 estimate is retired — 7 September 2026
 
-**A finding, reported and NOT fixed**, at Data's instruction.
+Reported as a finding the same day and **fixed here**, as its own
+commit, ahead of Stage B/C and Stage 4. The reason it goes first is
+Stage 4: it brings the 253x200 inset with the dot table onto a live
+screen, and the first side-by-side comparison of that inset would
+have attributed the offset to the dot table.
 
-`zoomtables.max_map_scale(map_max_x)` recovers `MOX::_max_map_scale`
-as `round(map_max_x / 50.6)`, because the Extension API serializes
-`MAP_MAX_X` and not the scale. **That constant is the four stock
-sizes' and only theirs** — 506/10, 759/15, 1012/20, 1518/30. It is
-the only route in the tree: nothing transcribes
-`Maximum_Galaxy_Display_Scale_` (mapgen.cpp:64-71), which is what the
-game uses above 72 stars.
+**What it was.** `zoomtables.max_map_scale(map_max_x)` recovered
+`MOX::_max_map_scale` as `round(map_max_x / 50.6)`, because the
+Extension API serializes `MAP_MAX_X` and not the scale. 50.6 is the
+four stock sizes' ratio and only theirs (506/10, 759/15, 1012/20,
+1518/30). **Two defects in one line**, and each is now held red by
+its own assertion: the original takes a CEILING, not a rounding, and
+it takes the larger of TWO of them — the second over `MAP_MAX_Y`,
+which the estimate never read although it is on the wire beside x
+(`ext_api.cpp:113-114`).
 
-That function takes the LARGER of two ceilings,
-`ceil(MAP_MAX_X * 10 / 506)` and `ceil(MAP_MAX_Y * 10 / 400)`, over a
-map built from a grid of 150-unit cells (mapgen.cpp:1112-1120). A
-ceiling and a rounding differ whenever the fraction is below a half,
-so the estimate comes out **exactly one too small** — never too
-large. Enumerated over every star count from 73 to 1023: **wrong for
-688 of the 951**, at 15 distinct map widths (2250, 2550, 2700, 2850,
-3000, 3300, 3450, 3600, 3750, 4050, 4200, 4350, 4500, 5100, 5250).
-Both ceilings matter: the x term dominates at 12 x 9, the y term at
-35 x 28.
+**What it is.** `MAPGEN::Maximum_Galaxy_Display_Scale_`
+(mapgen.cpp:64-71), transcribed into `core/zoomtables.py` per
+decision 26:
 
-**It is right for the reference save.** 99 stars gives a 12 x 9 grid,
-`MAP_MAX_X` 1800, and `round(1800 / 50.6) = 36`, which is what
-`Maximum_Galaxy_Display_Scale_` returns. So the parked click frame
-under decision 35 is **not** wrong on the save every acceptance run
-uses — the concern is real and does not bite here.
+    max(ceil(MAP_MAX_X * 10 / 506), ceil(MAP_MAX_Y * 10 / 400))
 
-**And the parking is safe even where the estimate is wrong**, by the
-sign of the error rather than by design. `ViewController.park_game`
-stops at `current >= fit`; with `fit` one too SMALL the loop still
-reaches the game's true maximum and stops. One too large would never
-terminate, and the error is never one too large.
+per axis, the smallest scale at which the galaxy fits the map
+rectangle, then the larger — an axis that does not fit is an axis the
+player cannot see. **The extent is read, not rebuilt.** The
+function's own `map_width`/`map_height` are character for character
+what the same branch assigns to `_MAP_MAX_X`/`_MAP_MAX_Y` ten lines
+later (mapgen.cpp:1113-1115), so no star count and no grid enter the
+transcription at all. `max_map_scale` transcribes the whole switch:
+the four stock sizes' literals by exact MAP_MAX_X
+(`STOCK_MAX_MAP_SCALE`), the function for GALAXY_SIZE_MAXIMUM — the
+two answers mapgen itself gives, in mapgen's order. An extent no
+galaxy size produces returns 0, which callers already read as
+"unknown".
 
-What it would affect where it is wrong: the HD zoom-out limit sits
-one unit tighter than the game's, the extended rung ladder
-(`scale_rungs`, built by halving `max_map_scale`) shifts by a step,
-and `colonyrows.galaxy_inset_stars` — which divides by the same value
-— would place every star about 2 % off. No fix is made here; the
-snapping loop in `max_map_scale` already treats anything off the
-stock ladder as an estimate, and making it exact means transcribing
-the grid, which is its own decision.
+**MAP_MAX_Y has no default, and the fallback that gave it one is
+gone.** The first cut of this shipped `max_map_scale(x, y=0)` plus a
+`maximum_galaxy_map_max_y` that inverted the Maximum galaxy's grid to
+recover y from x. Data asked which caller it served. **None** — all
+seven pass both extents, and the only single-argument calls in the
+tree were the two assertions in the smoke test that existed to
+exercise the fallback. A fallback justified by a test written for it
+is a fallback with no caller, and a `y=0` default hands the next
+caller who forgets y exactly the defect this commit retires, at one
+galaxy size, silently. Both removed: y is a required positional, and
+a missing one is a TypeError where it is written.
+
+The question also answered itself for the stock sizes: 506 is not a
+multiple of the 150-unit cell, so an inversion could never have
+served them — their extents are literals in the switch, not grid
+products. The stock branch keys on MAP_MAX_X alone because each of
+506/759/1012/1518 names one arm of that switch, which assigns the
+scale without consulting either extent.
+
+**A TypeError only fires on the path that runs, and the paths where
+the y ceiling wins are exactly the ones no fixture reaches**, so the
+check is static: it walks all 119 python files with `ast` and refuses
+any call to `max_map_scale` or `max_zoom_count` with fewer than two
+arguments (`f(*pair)` allowed, since ast cannot count through it).
+Verified to fail by dropping y in `tools/ship_icon_check.py`, which
+needs a live game and which the suite therefore never executes —
+`['tools/ship_icon_check.py:106 max_map_scale()']`. The same
+regression in `viewctl` was caught by the interpreter instead, which
+is the distinction the check exists for.
+
+**The fundament's caveat is withdrawn, not weakened.** It said the
+community Maximum size was never part of the derivation. It is now
+covered — and so are the other four, by the same expression: the
+formula reproduces 10, 15, 20 and 30 from the stock extents, which is
+asserted rather than remarked.
+
+**Two independent sources, as the rule requires.**
+
+1. `MAPGEN::Maximum_Galaxy_Display_Scale_` itself.
+2. **A live probe, and it is the one that could tell the two
+   readings apart.** The reference save could not: 99 stars gives
+   MAP_MAX 1800 x 1350 and both readings say 36. So a Maximum galaxy
+   was generated at a count where they differ — `map
+   maximum_star_count = 155;` in a cfg, New Game -> Maximum, driven
+   through race, ruler, banner and home system — giving 155 stars,
+   MAP_MAX **2250 x 1800**. Parked with field 9 only, throttled
+   (decision 35; field 8 is the rubber-band trap and was never sent),
+   the game held at **45**. `tools/zoom_check.py`, still running the
+   estimate, printed
+
+        MAP_MAX_X     : 2250
+        max_map_scale : 44  (derived)
+        widest scale seen: 45
+        MEASURED 45 > DERIVED 44: the recovery is WRONG for this
+        galaxy size. Star names would switch off at scale 44 instead
+        of 45.
+
+   That tool was written for exactly this question and had never had
+   a galaxy that could answer it. Its docstring now records the run.
+
+   **Nothing was written to disk to get it.** The game ran with its
+   CWD in a scratch directory — every LBX symlinked, the small
+   mutable files copied, one real `orion2re.cfg` — because
+   `main.cpp:123-139` roots the VFS at the working directory. The
+   orion2re tree is unmodified and so is `~/Master of Orion 2`; no
+   savegame was written at any point.
+
+**And the probe left no state behind**, which was checked rather
+than assumed: the cfg was removed, the game restarted (`configuration:
+orion2re.cfg not found; using defaults`), the reference fixture copied
+into the scratch directory as a save slot and loaded — stardate
+3502.4, 99 stars, MAP_MAX 1800 x 1350 — and `zoom_check.py` reported
+**MEASURED == DERIVED** at 36 again. `fixture_reference_3502.4.GAM`
+still hashes `ab70cc9ad5442335`.
+
+**The range, reproduced after implementation.** Over 73…1023: **688
+of 951** star counts differ from the retired estimate, at **15**
+distinct map widths, and the transcription is **never below** it —
+the estimate rounds down from a ceiling, so it can only ever be one
+short. The x ceiling is the larger at 11 of the 15 widths and the y
+ceiling at 4 (4350, 4500, 5100, 5250), which is the half of the
+defect a MAP_MAX_X-only reading could not have caught even after it
+stopped rounding.
+
+**The check goes red on each defect separately**, verified by
+reinstating each and running the suite. Both assertions name the
+defect they catch rather than failing bare:
+
+| regression | first assertion to fail |
+|---|---|
+| commercial rounding back | `assert zt.max_map_scale(2250, 1800) == 45` — *"live probe 2026-09-07, 155 stars"* |
+| ceilings on x only | `assert zt.max_map_scale(5250, 4200) == 105` — *"THE Y TERM HAS BEEN DROPPED… 105 against x's 104"* |
+| a caller drops MAP_MAX_Y | the call-site walk — *"these call MAP_MAX recovery with one argument"* |
+
+Both reverted; `zoomtables.py` is byte-identical to before the
+regressions.
+
+**The check's reference is written out in the test, not imported.**
+It walks the other way round — star count -> grid -> extent -> scale,
+where zoomtables starts from the extent — and spells the ceiling
+`-(-a//b)` against the transcription's `(a + b - 1) // b`, so one
+mistyped idiom cannot satisfy both. Four fixed points beside the
+range: the stock literals, the probed 155-star value with its source
+line, the reference save's 36 (marked as the value that AGREES, which
+is why it settles nothing), and the y-dominant 5250 x 4200.
+
+**Same numbers on the reference save, which is the expected result.**
+`galaxy_inset_stars` returns 99 dots whose digest is unchanged
+(`29d31e5bf2441027`), x range 5..122 and y range 4..81 as before;
+`viewctl._fit_scale` is 36.0 as before; the rungs are still
+5/9/18/36. **The parked zoom-out step count does not change** — 0
+from the game's own 36, and 3/2/1/0 from the four rungs — so decision
+35's corollary is untouched here. The only line that differs between
+the before and after runs is the one echoing the arguments.
+
+**Two things the inventory turned up, both worth more than the fix.**
+
+- **`smoke_test.py` carried a galaxy that cannot exist.** The
+  extended-ladder check used `map_max_x = 2277` with the comment
+  "max scale 45" — a width reverse-engineered out of the estimate to
+  make it answer 45, and not a multiple of the 150-unit cell, so no
+  Maximum galaxy has it. It is now 2250 x 1800, which is the galaxy
+  the probe actually ran on. **A fixture that could only exist while
+  the thing it tested was wrong.**
+- **Every fake game state in the tree was missing MAP_MAX_Y.**
+  `gs.map_max_y` was set once, to 600, and eleven later sites
+  reassigned `map_max_x` alone — so a medium galaxy's height sat
+  under a huge galaxy's width for the rest of the run, and the y
+  ceiling could never have been exercised. `_FakeGS` in the inset
+  check had no `map_max_y` attribute at all. All twelve carry both
+  extents now, in real pairs. **A fake that omits a field the real
+  snapshot carries is how a term goes untested.**
+
+**505x399 and 506x400 are one rectangle, not two constants** —
+checked because the ceilings divide by 506 and 400 while the
+fundament said the viewport is 505x399.
+`MAINSCR::Draw_Influence_Overlay_` declares it under those names
+(mainscr.cpp:161-164, `map_left = 22, map_top = 22, map_width = 506,
+map_height = 400`), and the galaxy map's field 23 arrives on the wire
+as (22, 22)-(527, 421) — the same 506 x 400 counted inclusively.
+`Star_On_Screen_` then admits the near edge (`x > 0x15` passes at 22)
+and excludes the far one (`x < 0x20f` stops at 526), so a STAR
+reaches 505 columns and 399 rows inside it. Inclusive against
+exclusive. The scale has to cover the rectangle, so the rectangle is
+what the ceilings divide by; the fundament bullet now says which is
+which.
+
+**50.6 survives in one place and means something else there.**
+`506/10` is the map viewport's reach per scale unit
+(movebox.cpp:19-20), which is what the inset's 506000 and 400000
+divide by. `colonyrows.py` used to source that number to
+`zoomtables.MAP_MAX_X_PER_SCALE` — the estimate's constant — which
+made one number carry two meanings in one tree. Both sites now cite
+movebox.cpp and say which meaning is theirs.
+
+**Consumers re-pointed**, all seven, and a grep proves the identifier
+is gone: `MapContext.__init__` and `GalaxyMapScreen._icon_anchor`
+(galaxy_map), `ViewControl._fit_scale` (the HD zoom-out limit and
+parking target), `colonyrows.galaxy_inset_stars`, `zoom_check.row`,
+`ship_icon_check.main`, and the smoke test. `max_zoom_count` takes
+both extents too; its answer never changes (mapgen sets 3 for
+Maximum, which is what the non-stock branch already returned).
+
+92 -> 93 checks. `galaxy_map/screen.py` 529 -> 531 code lines and
+`galaxy_map/renderer.py` 333 -> 335, both already on the exceptions
+list and both re-measured there.
 
 ### The colony rebuild, Stage 1: layout as data — 6 September 2026
 

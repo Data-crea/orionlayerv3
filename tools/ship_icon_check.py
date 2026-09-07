@@ -99,10 +99,12 @@ def main():
              if len(r) >= ship_struct.SIZE]
 
     map_max_x = getattr(state, "map_max_x", 0)
+    map_max_y = getattr(state, "map_max_y", 0)
     zoom = zt.zoom_level(state.map_scale or 10,
-                         zt.max_zoom_count(map_max_x),
+                         zt.max_zoom_count(map_max_x, map_max_y),
                          len(getattr(state, "stars", None) or []),
-                         zt.max_map_scale(map_max_x) or state.map_scale)
+                         zt.max_map_scale(map_max_x, map_max_y)
+                         or state.map_scale)
 
     print(f"screen  : {state.current_screen} "
           f"(0 = galaxy map)")

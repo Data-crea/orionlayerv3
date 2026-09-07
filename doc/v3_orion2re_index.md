@@ -208,10 +208,23 @@ es überhaupt keine Sternnamen.
 
 ### Galaxie-Größe → max_map_scale
 
-mapgen.cpp: 506/10, 759/15, 1012/20, 1518/30 — das Verhältnis
-`MAP_MAX_X / max_map_scale` ist konstant **50.6**. Damit lassen sich
-`_max_map_scale` und `_max_zoom_count` aus dem serialisierten
-`MAP_MAX_X` zurückrechnen, ohne die Ext-API zu erweitern.
+`MAPGEN::Set_Galaxy_Size_` (mapgen.cpp:1078-1120) antwortet auf zwei
+Arten: die vier Standardgrößen bekommen ein Literal neben einem
+literalen `_MAP_MAX_X`/`_MAP_MAX_Y` (506/400 → 10, 759/600 → 15,
+1012/800 → 20, 1518/1200 → 30), GALAXY_SIZE_MAXIMUM bekommt
+`Maximum_Galaxy_Display_Scale_` (mapgen.cpp:64-71):
+
+    max(ceil(MAP_MAX_X * 10 / 506), ceil(MAP_MAX_Y * 10 / 400))
+
+Beide Ausdehnungen sind serialisiert, also lassen sich
+`_max_map_scale` und `_max_zoom_count` daraus zurückrechnen, ohne die
+Ext-API zu erweitern. Ein **Ceiling**, keine Rundung, und **beide**
+Achsen — das Verhältnis `MAP_MAX_X / max_map_scale = 50.6` gilt zwar
+für die vier Standardgrößen, aber kaufmännisch invertiert liegt es
+für 688 der 951 Sternzahlen von 73 bis 1023 genau eins zu niedrig.
+Korrigiert am 7. September 2026; siehe `core/zoomtables.py`. Die
+50.6 im Galaxie-Inset ist eine ANDERE Größe: `506/10` ist die
+Reichweite des Kartenfensters pro Skalenschritt (movebox.cpp:19-20).
 
 ---
 

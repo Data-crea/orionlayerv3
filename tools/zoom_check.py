@@ -8,11 +8,10 @@ runs and step through every zoom level; each change prints a row.
 What it answers, and why the question exists:
 
 MOX::_max_map_scale and _max_zoom_count are NOT serialized. Both are
-recovered from MAP_MAX_X, on the strength of MAP_MAX_X/max_map_scale
-being 50.6 for every galaxy size — measured from the FOUR stock sizes
-in mapgen.cpp (506/10, 759/15, 1012/20, 1518/30). A community map at
-Maximum size is a fifth value that was never part of that derivation,
-and two behaviours hang off getting it right:
+recovered from MAP_MAX_X and MAP_MAX_Y by `zoomtables.max_map_scale`,
+which transcribes the mapgen switch: literals for the four stock
+sizes, `MAPGEN::Maximum_Galaxy_Display_Scale_` for a Maximum galaxy.
+Two behaviours hang off getting it right:
 
     star names    Print_Star_Names_ bails at Is_Extended_Max_Map_View_
                   (more than 72 stars AND map_scale == max_map_scale)
@@ -23,8 +22,22 @@ So on an extended map both switch off at the widest view. That is
 transcribed behaviour, not a bug — but only if max_map_scale is the
 number the game actually uses. The MEASURED column is the check: the
 largest map_scale the game will go to IS max_map_scale, and it has to
-equal the DERIVED column. If it does not, MAP_MAX_X_PER_SCALE does not
-hold for this galaxy size and the recovery needs a real source.
+equal the DERIVED column.
+
+**THIS TOOL IS THE SECOND SOURCE THE TRANSCRIPTION WAS ACCEPTED ON**,
+and it earned the sentence by failing first. Until 7 September 2026
+the recovery was `round(MAP_MAX_X / 50.6)` — 50.6 measured from the
+four stock sizes only (506/10, 759/15, 1012/20, 1518/30) — and a
+rounding where the original ceilings. Run against a generated
+155-star Maximum galaxy (MAP_MAX 2250 x 1800) it printed
+
+    MEASURED 45 > DERIVED 44: the recovery is WRONG for this galaxy
+    size. Star names would switch off at scale 44 instead of 45.
+
+which is the observation that separated the two readings; the
+reference save alone could not, because 99 stars is one of the counts
+where the estimate happens to be right. Re-run on any Maximum galaxy
+this must now print MEASURED == DERIVED.
 
 The ladder line shows the scale each zoom level should sit at
 (Extended_Scale_For_Zoom_Level_, repeated halving). Compare it against
@@ -51,14 +64,16 @@ def row(state):
     if not scale:
         return None
 
-    derived = zt.max_map_scale(map_max_x)
-    max_zoom = zt.max_zoom_count(map_max_x)
+    map_max_y = getattr(state, "map_max_y", 0) or 0
+    derived = zt.max_map_scale(map_max_x, map_max_y)
+    max_zoom = zt.max_zoom_count(map_max_x, map_max_y)
     zoom = zt.zoom_level(scale, max_zoom, stars, derived or scale)
     pct = zt.star_scale_percent(stars, scale)
     return {
         "stars": stars,
         "scale": scale,
         "map_max_x": map_max_x,
+        "map_max_y": map_max_y,
         "max_map_scale": derived,
         "max_zoom": max_zoom,
         "zoom": zoom,
@@ -104,7 +119,7 @@ def main():
                 first = r
                 print(f"stars         : {r['stars']}"
                       f"{'   EXTENDED (> 72)' if r['extended'] else ''}")
-                print(f"MAP_MAX_X     : {r['map_max_x']}")
+                print(f"MAP_MAX       : {r['map_max_x']} x {r['map_max_y']}")
                 print(f"max_map_scale : {r['max_map_scale']}  (derived)")
                 print(f"max_zoom_count: {r['max_zoom']}  (derived)")
                 if r["extended"] and r["max_map_scale"]:
@@ -138,7 +153,7 @@ def main():
     derived = first["max_map_scale"]
     if widest and derived:
         if widest == derived:
-            print("MEASURED == DERIVED — MAP_MAX_X_PER_SCALE holds here.")
+            print("MEASURED == DERIVED — the transcription holds here.")
         elif widest > derived:
             print(f"MEASURED {widest} > DERIVED {derived}: the recovery is "
                   f"WRONG for this galaxy size. Star names would switch off "

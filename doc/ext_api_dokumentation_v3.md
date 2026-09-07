@@ -458,9 +458,8 @@ Offset  Content                        Type / size
 ```
 
 Not serialized, though OrionLayer needs them: `_max_map_scale` and
-`_max_zoom_count`. Both are derivable from `MAP_MAX_X` (the ratio
-`MAP_MAX_X / max_map_scale` is 50.6 for every galaxy size), so no
-patch is required.
+`_max_zoom_count`. Both are derivable from `MAP_MAX_X` **and
+`MAP_MAX_Y`**, which are — see below — so no patch is required.
 
 ### Field list
 
@@ -526,10 +525,23 @@ patch should come back.
 
 ### `MOX::_max_map_scale` and `_max_zoom_count`
 
-Derivable from the serialized `MAP_MAX_X`: the ratio
-`MAP_MAX_X / max_map_scale` is 50.6 for every galaxy size
-(mapgen.cpp), and `max_map_scale` maps one-to-one onto
-`max_zoom_count`. No patch required.
+Derivable from the serialized `MAP_MAX_X` **and `MAP_MAX_Y`**, and
+**both are needed**. `MAPGEN::Set_Galaxy_Size_` (mapgen.cpp:
+1078-1120) gives the four stock sizes a literal and
+GALAXY_SIZE_MAXIMUM `Maximum_Galaxy_Display_Scale_`
+(mapgen.cpp:64-71), which is
+`max(ceil(MAP_MAX_X * 10 / 506), ceil(MAP_MAX_Y * 10 / 400))` — the
+same expression reproduces all five. `max_map_scale` then maps
+one-to-one onto `max_zoom_count`. No patch required.
+
+**Corrected 7 September 2026.** This section used to justify the
+absence with "the ratio `MAP_MAX_X / max_map_scale` is 50.6 for every
+galaxy size". That ratio holds at the four stock sizes it was
+measured from, but inverting it with commercial rounding is not the
+original's operation and it ignored MAP_MAX_Y, which the very list
+above serializes: one too small — never too large — for 688 of the
+951 star counts from 73 to 1023. **What was missing was never a
+patch; it was reading the second int16 already on the wire.**
 
 ### A command to move `_cur_map_x/_cur_map_y`
 
