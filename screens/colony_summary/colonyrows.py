@@ -638,8 +638,13 @@ def _pop_class(word, owner):
     return ""
 
 
-def build_rows(game_state, sort_key="name"):
+def build_rows(game_state, sort_key="name", names=None):
     """One dict per colony of the local player, sorted.
+
+    `names` is a `core.buildnames.BuildingNames` or None. None and an
+    absent file give the same `producing` — None — because the ROW
+    cannot distinguish them usefully; the screen holds the object and
+    reports its state on the column.
 
     Only `owner`, `planet`, `n_pops`, `max_farms`, `climate` and
     `buildings` are read, plus `pop_prof` — every one of them backed
@@ -738,16 +743,26 @@ def build_rows(game_state, sort_key="name"):
             "no_farming": col.max_farms == 0,
             "climate": col.climate,
             # The building column's content. `producing` is a display
-            # STRING and stays empty here: the production id at offset
-            # 277 indexes TECHDATA::_buildings[], whose names are
-            # loaded from the player's techname.lbx at runtime
-            # (techinit.cpp:43-73) and are `kEmptyName` in the orion2re
-            # source. There is no extractor for that table yet, so the
-            # column renders empty rather than inventing a name — the
-            # same "absent is a state to explain" rule the help texts
-            # and the nebulae follow. `producing_turns` needs a cost
-            # calculation that is not built either.
-            "producing": "",
+            # STRING, from `producing[0]` at offset 277 through
+            # `core.buildnames` — the id indexes
+            # `TECHDATA::_buildings[]`, whose names live in the
+            # player's own techname.lbx (techinit.cpp:43-73) and are
+            # `kEmptyName` in the orion2re source, so they are
+            # EXTRACTED like the help texts (decision 38) and decoded
+            # at load time. None when the file is absent or the id is
+            # not a building, and the SCREEN says which — inventing a
+            # name here is the thing this must not do.
+            #
+            # `producing_turns` — the "- 8t" the original appends — is
+            # still 0 and the suffix is NOT drawn. It is
+            # `COLONY::Calculate_Current_Production_Turn_Count_`
+            # (colsum.cpp:588), a cost calculation over the colony's
+            # industry and the item's price, and neither the cost
+            # table nor the accumulated production is established on
+            # the wire yet. Approximating it would put a number on
+            # screen that no source backs.
+            "producing": (names.building(col.producing[0])
+                          if names is not None else None),
             "producing_turns": 0,
             "can_buy": False,
             # production[4] in ECON order, orion2_consts.h:119-123.

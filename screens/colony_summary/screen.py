@@ -104,9 +104,9 @@ from core.config import REF_W, REF_H
 from core.screen_base import ScreenBase
 from core.structs import player as player_struct
 
-from . import (colonyempire, colonyframe, colonyheader, colonyinset,
-               colonylist, colonymoveui, colonyoutput, colonyrows,
-               colonyselect, colonysort, colonytrack)
+from . import (colonybuild, colonyempire, colonyframe, colonyheader,
+               colonyinset, colonylist, colonymoveui, colonyoutput,
+               colonyrows, colonyselect, colonysort, colonytrack)
 
 log = logging.getLogger("colony_summary")
 
@@ -239,7 +239,8 @@ class ColonySummaryScreen(ScreenBase):
     # which object holds them.
 
     def _rebuild_rows(self):
-        self._selection.rebuild(self._state, self._sort_key)
+        self._selection.rebuild(self._state, self._sort_key,
+                                colonybuild.names_for(self))
 
     @property
     def _rows(self):
@@ -446,7 +447,7 @@ class ColonySummaryScreen(ScreenBase):
         box = self.box_rect("list_area")
         if not box:
             return
-        cfg = self._data.get("list", {})
+        cfg = colonybuild.list_cfg(self)
         colonylist.render(surface, self._rows,
                           pygame.Rect(*self.layout.rect(box)),
                           cfg, self.layout, self.style, self._first,

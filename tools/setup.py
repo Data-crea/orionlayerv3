@@ -39,6 +39,7 @@ import sys
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, ROOT)
 
+from core.buildnames import name_file as build_name_file
 from core.config import load_settings      # noqa: E402
 from core.helptext import help_file        # noqa: E402
 
@@ -102,6 +103,11 @@ def from_game(settings=None):
         (os.path.join(GM, "nebula_ref"),
          "nebula reference (unlocks 2 smoke assertions)",
          "python tools/nebula_extract.py /path/to/starbg.lbx"),
+        (os.path.join(ROOT, *build_name_file(lang).split("/")),
+         f"building names ({lang}) — without them the colony summary's "
+         f"BUILDING column says so instead of naming what is being "
+         f"built",
+         "python tools/techname_extract.py"),
     ]
 
 

@@ -119,6 +119,17 @@ def draw(surface, row, x, y, width, row_h, cfg, style, layout):
     """
     name = row.get("producing") or ""
     if not name:
+        # ABSENT IS A STATE THE COLUMN EXPLAINS, not an empty cell.
+        # `producing` is None both when the id is not a building and
+        # when the extraction has not been run, and those are
+        # different things: the first is normal and draws nothing,
+        # the second is the user missing a command. The screen passes
+        # the loader's own state so the column can tell them apart —
+        # the same rule the help popup follows (decision 38).
+        note = cfg.get("names_missing") if cfg.get("names_state") in (
+            "missing", "stale") else ""
+        if note:
+            _blit_note(surface, note, x, y, width, row_h, style, layout, cfg)
         return
     small = layout.font_size(cfg.get("small_font", 15))
     floor = layout.font_size(cfg.get("build_font_min", 10))
@@ -160,3 +171,49 @@ def _buy_button(cfg, style, px):
                      border_radius=max(2, px // 5))
     surf.blit(label, (pad, pad // 2))
     return surf
+
+
+def _blit_note(surface, text, x, y, width, row_h, style, layout, cfg):
+    """The "not extracted yet" line, shrunk to fit like the name is.
+
+    Drawn once per row rather than once per column because the column
+    IS per row — there is no header cell to put it in, and a note that
+    appears on every row is what makes it read as a state of the data
+    rather than as one colony building nothing.
+    """
+    size = layout.font_size(cfg.get("build_font_min", 10))
+    surf = style.render_text(text, size, BUILD_TURNS[:3])
+    if surf.get_width() > width:
+        return
+    surface.blit(surf, (x, y + (row_h - surf.get_height()) // 2))
+
+
+def names_for(screen):
+    """The extracted building names for a screen, loaded once per App.
+
+    Held on the app the way the help texts are: every screen that
+    ever needs a building name reads one object, and the file is the
+    user's own game data (decision 38).
+    """
+    from core import buildnames
+    holder = getattr(screen.app, "building_names", None)
+    if holder is None:
+        holder = buildnames.BuildingNames(
+            screen.app.settings.get("language", "en"))
+        screen.app.building_names = holder
+    return holder
+
+
+def list_cfg(screen):
+    """The `list` config block plus what this column needs from the
+    name loader — its state, and the wording for an absent file.
+
+    Assembled here rather than in the screen so the column's two
+    extra keys travel with the column, and `colonylist` keeps taking
+    one config dict.
+    """
+    cfg = dict(screen._data.get("list", {}))
+    cfg["names_state"] = names_for(screen).state
+    cfg["names_missing"] = screen._data.get("build", {}).get(
+        "names_missing", "")
+    return cfg

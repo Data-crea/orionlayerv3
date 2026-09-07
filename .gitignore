@@ -46,6 +46,12 @@ screens/galaxy_map/assets/icons/*.png
 # Extracted by tools/help_extract.py. Not ours to ship.
 assets/shared/help/help_*.json
 
+# The original's building names, tools/techname_extract.py's output.
+# The user's own TECHNAME.LBX, so it is theirs and not ours to ship
+# (decisions 38, 40, 42); the loader carries a format version and the
+# colony screen explains an absent file rather than drawing nothing.
+assets/shared/names/
+
 # UNMODIFIED sprites out of STARBG.LBX, used as test fixtures. The
 # HD artwork in nebula/ is derived work and stays; this is the
 # original, pixel for pixel, and it is the one place in the tree

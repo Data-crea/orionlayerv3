@@ -86,7 +86,7 @@ class Selection:
         #: colonies at all.
         self.colony = None
 
-    def rebuild(self, state, sort_key):
+    def rebuild(self, state, sort_key, names=None):
         """Rebuild the rows and keep the selection pointing at a
         colony that is still in them.
 
@@ -96,7 +96,7 @@ class Selection:
         from one snapshot agree today but would stop agreeing the
         first time anything about the build depended on when it ran.
         """
-        self.rows = colonyrows.build_rows(state, sort_key)
+        self.rows = colonyrows.build_rows(state, sort_key, names)
         self.reseat()
 
     def reseat(self):

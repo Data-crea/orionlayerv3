@@ -508,7 +508,7 @@ files under `doc/` and are only summarised here.
 | | |
 |---|---|
 | Python | 32,960 lines across 111 modules — `find . -name '*.py'`, `__pycache__` excluded, the smoke test's 6,400 included. The previous figure here (21,642 across 94) was carried from an unstated method and could not be reproduced |
-| Smoke test | `python tools/smoke_test.py` — **97 checks**, headless |
+| Smoke test | `python tools/smoke_test.py` — **98 checks**, headless |
 | Assets | 170 MB (select_race 68, galaxy_map 51, shared 23, new_game 21, colony_summary 1) |
 | Screens in HD | 7 of ~20–22 (colony summary draws list, sidebar, scan box and galaxy inset, and MOVES POPS — the first HD gesture that drives the game) |
 | Setup from clone | `python tools/setup.py` (deps via the system package manager) |
@@ -3263,6 +3263,81 @@ beside it. The frame shipped today looks like structure because every
 strut has a highlight along its edge. Plain struts are what was
 asked for and the picture is what they give; polish is a decision for
 Data with the picture in hand.
+
+### The BUILDING column: the names are extracted, and the reference save needs a second source — 7 September 2026
+
+**PARTLY BUILT, AND THE STOPPING POINT IS THE POINT.**
+
+`tools/techname_extract.py` follows the help-text pattern exactly
+(decision 38): it moves the bytes out of the player's own
+TECHNAME.LBX untouched, `core/buildnames.py` decodes at load time,
+the file is format-versioned, gitignored, in `setup.py`'s report, and
+an absent file is a state the column explains rather than an empty
+cell. It reads **49 of 49** building names on the first run.
+
+**The walk is transcribed, and the offset is computed rather than
+measured.** `TECHINIT::Load_Tech_Names_` (techinit.cpp:43) loads ONE
+entry — `techname.lbx` entry `_settings.language` — as a block of
+NUL-separated strings and walks it with `Advance_To_Next_String_`
+(techinit.cpp:11-21: skip to the next NUL, then skip EVERY NUL after
+it, so a run of NULs is one separator). The order is fields,
+applications, buildings, specials, armor, shields, weapons, so
+building `id` is string `TECH_FIELD_COUNT + TECH_APP_COUNT + id` =
+`295 + id`. Those three counts are `orion2_consts.h` enums with
+`static_assert`s beside them (83, 212, 49) — the second source for
+the offset, and the reason it is a transcription rather than a
+number that happens to line up. A check pins the counts and three
+names at known ids, so a walk that slips by one string fails instead
+of showing a plausible wrong word.
+
+**AND THE COLUMN IS STILL EMPTY ON THE REFERENCE SAVE. This is where
+the part stops.** Every one of the eleven colonies carries
+`producing[0] == -2`, and −2 is `COLONY_PRODUCTION_TRADE_GOODS`
+(orion2_consts.h:67) — **not a building**.
+`COLBLDG::Selection_Name_` (colbldg.cpp:796-802) has three branches
+and only the first reads `_buildings[]`:
+
+    Colony_Production_Is_Building_(id)  -> Real_Building_Name_(id)
+                                          = _buildings[id].name
+    not a queued ship                   -> Option_String_(id)
+    otherwise                           -> the ship design's name
+
+`Option_String_` (colbldg.cpp:2338) resolves every option through
+**`ESTRINGS::E_Strings_`** — Trade Goods is `E_Strings_(0x21D)` — and
+that is a **different LBX with a different walk**:
+`Load_E_Strings_` (estrings.cpp:11-37) reads entry 0 of
+`estrings.lbx` (or `estrGERM/FREN/SPAN/ITAL/POLI.lbx` by language)
+and advances `strlen(s) + 1` per string, **without** skipping runs of
+NULs — so an empty string is a valid entry there and the TECHNAME
+walk would mis-index it.
+
+The horizon named techname.lbx as the source. It is the source for
+BUILDINGS and it is not the source for what this save actually
+builds. **Per the brief — "if the LBX is not where the pattern
+expects … report and stop this part; do not build a second
+string-format interpreter without saying so" — the ESTRINGS
+extractor is not built.** It is small and fully sourced
+(estrings.cpp:33-36 is the whole walk); it needs Data's word, and the
+question is whether one derived file should carry both tables or
+whether ESTRINGS gets its own.
+
+**What the column does meanwhile is honest, not blank-by-accident.**
+`producing` is None for an option id and for an absent file, and the
+two are told apart by the loader's `state`: the "names not extracted"
+wording appears only when the file is genuinely missing or stale, so
+Trade Goods draws nothing rather than accusing the user of not having
+run a command they have run.
+
+**The "- 8t" suffix is OPEN, not approximated.** The original appends
+it from `COLONY::Calculate_Current_Production_Turn_Count_`
+(colsum.cpp:588), a cost calculation over the colony's accumulated
+production and the item's price; neither the cost table nor the
+accumulation is established on the wire. `producing_turns` stays 0
+and the suffix is not drawn, with the reason in
+`layout.json` under `build._turns_note` and a check that holds it
+there.
+
+97 -> 98 checks.
 
 ### Stage 4 closed: the pitch, the 4K readouts, and three readings — 7 September 2026
 
