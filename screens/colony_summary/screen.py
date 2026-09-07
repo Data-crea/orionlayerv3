@@ -106,7 +106,8 @@ from core.structs import player as player_struct
 
 from . import (colonybuild, colonyempire, colonyframe, colonyheader,
                colonyinset, colonylist, colonymoveui, colonyoutput,
-               colonyrows, colonyselect, colonysort, colonytrack)
+               colonyrows, colonyscroll, colonyselect, colonysort,
+               colonytrack)
 
 log = logging.getLogger("colony_summary")
 
@@ -386,10 +387,7 @@ class ColonySummaryScreen(ScreenBase):
         rather than held here, so it reaches `colonytrack` the way
         every other row number does.
         """
-        table = colonyheader.columns(self.app.res, self.SCREEN_NAME)
-        self._data.setdefault("list", {})[
-            colonytrack.COLUMNS_KEY] = table
-        return table
+        return colonyheader.install_columns(self)
 
     def _render_frame_image(self, surface):
         if self._frame_scaled is not None:
@@ -559,6 +557,8 @@ class ColonySummaryScreen(ScreenBase):
     # ── Input ─────────────────────────────────────────────
 
     def handle_click(self, screen_x, screen_y):
+        if colonyscroll.handle(self, screen_x, screen_y):
+            return
         if self._move.busy:
             # A move is on the wire. Every other button on this
             # screen injects something — a sort re-orders the game's

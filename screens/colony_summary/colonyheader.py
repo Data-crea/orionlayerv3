@@ -106,6 +106,21 @@ def plate_rects(header_box, columns, scale):
     return out
 
 
+def install_columns(screen):
+    """Merge the column table into the screen's `list` config block.
+
+    It travels with every other row number rather than sitting on the
+    screen, so `colonytrack` reads it the way it reads `row_height` —
+    and a fixture that wants the column row installs it the same way,
+    which is what stops a check from silently exercising the
+    single-track path instead.
+    """
+    from . import colonytrack
+    table = columns(screen.app.res, screen.SCREEN_NAME)
+    screen._data.setdefault("list", {})[colonytrack.COLUMNS_KEY] = table
+    return table
+
+
 def render_for(screen, surface, outline, text_color):
     """Draw `screen`'s headings. Nothing to do without a header box."""
     box = screen.box_rect("header")

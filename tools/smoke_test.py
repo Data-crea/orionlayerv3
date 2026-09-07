@@ -2992,9 +2992,17 @@ def main():
     d.switch_to("colony_summary")
     _ov_area = pygame.Rect(*app.layout.rect(
         d.active.box_rect("list_area")))
+    from screens.colony_summary import colonyheader as _ch
+    from screens.colony_summary import colonytrack as _ct0
     _ov_cfg = _sjson.load(open(os.path.join(
         SCREENS_DIR, "colony_summary", "layout.json"),
         encoding="utf-8"))["list"]
+    # THE FIXTURE CARRIES THE COLUMN TABLE, because the screen's cfg
+    # does — `colonyheader.columns` merges it on load. A fixture
+    # without it exercises the single-track path and would say
+    # nothing about the row the screen actually draws, which is the
+    # shape of the MAP_MAX_Y omission one commit earlier.
+    _ov_cfg[_ct0.COLUMNS_KEY] = _ch.columns(res, "colony_summary")
     _ov_fits = _cl.rows_drawn(_ov_area, _ov_cfg, app.layout.scale, 99)
     assert _ov_fits > 0, "no row fits list_area at all"
     # TEN, because that is the original's window: COLSUM::_list_col
@@ -3039,57 +3047,83 @@ def main():
     # The wording is in layout.json (decision 15) and {count} is
     # substituted by replace (decision 37), so the check reads the
     # template rather than hardcoding the sentence.
-    assert "{count}" in _ov_cfg["overflow"], (
-        f"list.overflow {_ov_cfg['overflow']!r} does not carry "
-        f"{{count}}, so the line cannot say HOW MANY are missing — "
-        f"which is the whole of what it adds over silence")
-    _ov_expect = _ov_cfg["overflow"].replace("{count}", "3")
+    # ── THE ARROWS SAY IT NOW, NOT A SENTENCE ──
+    #
+    # "{count} more not shown" was text where the original has two
+    # buttons (`_x_fields[1]` and `[2]`, colsum.cpp:263-264), and it
+    # said what was off screen without offering any way to reach it.
+    # The statement is the DOWN ARROW being live, so this check moved
+    # from "ink appears under the last row" to "the arrow that can
+    # move is drawn differently from the one that cannot" — which is
+    # the same fault being watched, in the control that replaced the
+    # sentence.
+    from screens.colony_summary import colonyscroll as _cscr
     _ov_surf = pygame.Surface((_ov_area.right + 8, _ov_area.bottom + 8))
+
+    def _arrow_ink(_rows, _first):
+        """(up ink, down ink) for a list of `_rows` at `_first`."""
+        _ov_surf.fill((0, 0, 0))
+        _cl.render(_ov_surf, _rows, _ov_area, _ov_cfg, app.layout,
+                   app.style, _first)
+        _up, _down = _cscr.arrows(_ov_area, _ov_cfg, app.layout.scale)
+        assert _up is not None, (
+            "the list has no scroll arrows; the column table is what "
+            "places them and it is missing")
+        return tuple(int(pygame.surfarray.array3d(
+            _ov_surf.subsurface(_r)).sum()) for _r in (_up, _down))
+
+    # AT THE TOP OF AN OVERFLOWING LIST: down is live, up is not.
+    _ov_up0, _ov_dn0 = _arrow_ink(_ov_rows, 0)
+    assert _ov_dn0 > _ov_up0, (
+        f"{len(_ov_rows) - _ov_fits} rows are below the window and the "
+        f"down arrow is not drawn any brighter than the up one "
+        f"({_ov_dn0} against {_ov_up0}) — nothing on screen says there "
+        f"is more, which is the fault this check exists for and was "
+        f"live until 3 September 2026")
+    # SCROLLED TO THE BOTTOM: it is the other way round.
+    _ov_upN, _ov_dnN = _arrow_ink(_ov_rows, len(_ov_rows) - _ov_fits)
+    assert _ov_upN > _ov_dnN, (
+        f"at the bottom of the list the up arrow is not the live one "
+        f"({_ov_upN} against {_ov_dnN})")
+    # A LIST THAT FITS: neither is live, and both are still drawn —
+    # the original's buttons do not disappear, they stop responding.
+    _ov_upF, _ov_dnF = _arrow_ink(_ov_rows[:_ov_fits], 0)
+    assert _ov_upF == _ov_dnF and _ov_upF > 0, (
+        f"a list that fits draws its arrows {_ov_upF} and {_ov_dnF}; "
+        f"both should be dim and both should be there")
+    assert _ov_dnF < _ov_dn0, (
+        "the dim down arrow is not dimmer than the live one")
+    # AND THE OLD SENTENCE IS GONE. A renderer that drew both would
+    # pass everything above.
     _ov_surf.fill((0, 0, 0))
     _cl.render(_ov_surf, _ov_rows, _ov_area, _ov_cfg, app.layout,
                app.style)
-    # The strip below the last drawn row must now carry ink, and it
-    # is ink NOTHING ELSE puts there: the bands stop before it by
-    # construction.
     _ov_bands = _cl.row_bands(_ov_area, _ov_cfg, app.layout.scale,
                               len(_ov_rows))
     _ov_top = _ov_bands[-1][0] + _ov_bands[-1][1]
-    _ov_strip = pygame.Rect(_ov_area.x, _ov_top, _ov_area.w,
+    _ov_up1, _ = _cscr.arrows(_ov_area, _ov_cfg, app.layout.scale)
+    _ov_strip = pygame.Rect(_ov_area.x, _ov_top, _ov_up1.x - _ov_area.x,
                             _ov_area.bottom - _ov_top)
-    assert _ov_strip.h > 0, "no strip left under the last row"
+    assert _ov_strip.h > 0 and _ov_strip.w > 0
     assert pygame.surfarray.array3d(
-        _ov_surf.subsurface(_ov_strip)).sum() > 0, (
-        f"{len(_ov_rows) - _ov_fits} rows were dropped and nothing "
-        f"was drawn to say so. That is the fault this check exists "
-        f"for and it was live until 3 September 2026")
-    # The line must be the RIGHT number, measured by rendering the
-    # expected string and finding as much ink as it would put down.
-    _ov_ink = pygame.surfarray.array3d(
-        _ov_surf.subsurface(_ov_strip)).sum()
-    _ov_ref = pygame.Surface((_ov_strip.w, _ov_strip.h))
-    _ov_ref.fill((0, 0, 0))
-    _ov_txt = app.style.render_text(
-        _ov_expect, app.layout.font_size(_ov_cfg.get("small_font", 15)),
-        _cl.OVERFLOW_COLOR[:3])
-    _ov_ref.blit(_ov_txt, (int(_ov_cfg.get("pad_x", 18)
-                               * app.layout.scale), 0))
-    assert abs(_ov_ink - pygame.surfarray.array3d(_ov_ref).sum()) \
-        < _ov_ink * 0.02, (
-        f"the strip's ink does not match {_ov_expect!r} — the count "
-        f"in the line is not {len(_ov_rows) - _ov_fits}")
-    # AND THE NEGATIVE. A list that fits draws no line at all;
-    # without this the check above passes on a renderer that always
-    # draws one.
-    _ov_surf.fill((0, 0, 0))
-    _cl.render(_ov_surf, _ov_rows[:_ov_fits], _ov_area, _ov_cfg,
-               app.layout, app.style)
-    _ov_bands2 = _cl.row_bands(_ov_area, _ov_cfg, app.layout.scale,
-                               _ov_fits)
-    _ov_top2 = _ov_bands2[-1][0] + _ov_bands2[-1][1]
-    assert pygame.surfarray.array3d(_ov_surf.subsurface(pygame.Rect(
-        _ov_area.x, _ov_top2, _ov_area.w,
-        _ov_area.bottom - _ov_top2))).sum() == 0, (
-        "the list drew an overflow line with nothing overflowing")
+        _ov_surf.subsurface(_ov_strip)).sum() == 0, (
+        "there is still text under the last row. The arrows replaced "
+        "the sentence; drawing both says the same thing twice and the "
+        "second copy is the one that goes stale")
+    # THE ARROW RECTS COME FROM THE LIST'S OWN GEOMETRY, which is what
+    # keeps them over the scroll column at every resolution — the same
+    # `colonytrack.columns` the rows' hit-test uses (decision 5).
+    _ov_cols = _ct0.columns(_ov_area, _ov_cfg)
+    assert _ov_up1.x == _ov_cols["scroll"][0], (
+        f"the up arrow is at x={_ov_up1.x} and the scroll column "
+        f"starts at {_ov_cols['scroll'][0]} — the arrows must come "
+        f"from the column table, not from a second position")
+    assert _ov_up1.width == _ov_cols["scroll"][1]
+    assert _cscr.arrow_at(_ov_area, _ov_cfg, app.layout.scale,
+                          _ov_up1.center) == "up"
+    assert _cscr.arrow_at(_ov_area, _ov_cfg, app.layout.scale,
+                          (_ov_area.x + 4, _ov_area.centery)) is None
+
     # Nothing below the last drawn band can be selected, because
     # row_at only knows the bands render laid out. That held when
     # there was no scrolling and it still holds with it: row_at
@@ -3457,7 +3491,11 @@ def main():
     # The hit-test and the drawing share one geometry (decision 5):
     # every drawn band's midpoint must resolve back to its own row.
     _la = pygame.Rect(*app.layout.rect(_scr_op.box_rect("list_area")))
-    _lcfg = _out_cfg["list"]
+    _lcfg = dict(_out_cfg["list"])
+    # The column table, as the screen's own cfg carries it — see the
+    # overflow fixture above for why a fixture without it tests the
+    # path the screen does not take.
+    _lcfg[_ct0.COLUMNS_KEY] = _ch.columns(res, "colony_summary")
     _bands = _cl.row_bands(_la, _lcfg, app.layout.scale,
                            len(_scr_op._rows))
     assert _bands, "no row bands for a non-empty list"
@@ -5247,36 +5285,38 @@ def main():
         "a window left pointing past a shrunken list did not "
         "re-establish itself; Update_First_ does that every frame")
 
-    # THE OVERFLOW LINE COUNTS BOTH DIRECTIONS. The count is the whole
-    # of what the panel is not showing, so it is n - visible at EVERY
-    # offset — including the bottom, where nothing is below and a
-    # naive count of the tail alone would say nothing is missing.
+    # THE ARROWS SAY IT IN BOTH DIRECTIONS. The line this replaced
+    # counted `n - visible` at every offset, because at the bottom
+    # nothing is below and a count of the tail alone would say
+    # nothing is missing. The arrows carry the same both-ways
+    # property directly: at the top only DOWN is live, at the bottom
+    # only UP, and in the middle both.
+    from screens.colony_summary import colonyscroll as _cscr2
     _sc_hidden = _sc_n - _sc_vis
-    _sc_expect = _ov_cfg["overflow"].replace("{count}", str(_sc_hidden))
-    _sc_txt = app.style.render_text(
-        _sc_expect, app.layout.font_size(_ov_cfg.get("small_font", 15)),
-        _cl.OVERFLOW_COLOR[:3])
     _sc_surf = pygame.Surface((_la.right + 8, _la.bottom + 8))
-    for _sc_first in (0, _sc_hidden // 2, _sc_hidden):
+    _sc_up_r, _sc_dn_r = _cscr2.arrows(_la, _lcfg, app.layout.scale)
+    assert _sc_up_r is not None
+
+    def _sc_ink_at(_first):
         _sc_surf.fill((0, 0, 0))
         _cl.render(_sc_surf, _scr_op._rows, _la, _lcfg, app.layout,
-                   app.style, _sc_first)
-        _sc_bands = _cl.row_bands(_la, _lcfg, app.layout.scale,
-                                  _sc_n - _sc_first)
-        _sc_top = _sc_bands[-1][0] + _sc_bands[-1][1]
-        _sc_strip = pygame.Rect(_la.x, _sc_top, _la.w,
-                                _la.bottom - _sc_top)
-        _sc_ref = pygame.Surface((_sc_strip.w, _sc_strip.h))
-        _sc_ref.fill((0, 0, 0))
-        _sc_ref.blit(_sc_txt, (int(_lcfg["pad_x"] * app.layout.scale), 0))
-        _sc_ink = pygame.surfarray.array3d(
-            _sc_surf.subsurface(_sc_strip)).sum()
-        assert abs(_sc_ink - pygame.surfarray.array3d(_sc_ref).sum()) \
-            < max(1, _sc_ink) * 0.02, (
-            f"at first={_sc_first} the overflow line does not read "
-            f"{_sc_expect!r}. It must count the rows ABOVE the window "
-            f"as well as below — at the bottom offset the tail alone "
-            f"is zero and {_sc_hidden} rows are still not shown")
+                   app.style, _first)
+        return tuple(int(pygame.surfarray.array3d(
+            _sc_surf.subsurface(_r)).sum())
+            for _r in (_sc_up_r, _sc_dn_r))
+
+    _sc_top_up, _sc_top_dn = _sc_ink_at(0)
+    _sc_mid_up, _sc_mid_dn = _sc_ink_at(_sc_hidden // 2)
+    _sc_bot_up, _sc_bot_dn = _sc_ink_at(_sc_hidden)
+    assert _sc_top_dn > _sc_top_up, (
+        f"at the top of {_sc_n} rows with {_sc_vis} visible, the down "
+        f"arrow is not the live one ({_sc_top_dn} against {_sc_top_up})")
+    assert _sc_bot_up > _sc_bot_dn, (
+        f"at the bottom the up arrow is not the live one "
+        f"({_sc_bot_up} against {_sc_bot_dn})")
+    assert _sc_mid_up == _sc_top_dn and _sc_mid_dn == _sc_top_dn, (
+        f"in the middle both arrows should be live and equally lit; "
+        f"got up {_sc_mid_up}, down {_sc_mid_dn}, live {_sc_top_dn}")
 
     # And the window really is a different slice: the top row drawn
     # at the bottom offset is not the top row drawn at 0.

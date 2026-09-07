@@ -89,6 +89,7 @@ import pygame
 from core import palette
 
 from . import colonybuild
+from . import colonyscroll
 from . import colonytrack
 from .colonyrows import POP_LIMIT_CAP
 #: THE GEOMETRY LIVES IN `colonytrack`, and is re-exported here.
@@ -113,6 +114,10 @@ ZONE_COLORS = (
 #: they say two different things; the old single `bar_empty` fill
 #: could only say "not filled" for both.
 BAR_FREE = palette.col("colony_summary", "bar_free", (72, 88, 120))
+#: The scroll arrows. The label colour, because they are the
+#: list's own furniture and not a value.
+SCROLL_ARROW = palette.col("colony_summary", "label",
+                           (150, 168, 200))
 BAR_BEYOND = palette.col("colony_summary", "bar_beyond", (34, 42, 60))
 ROW_NAME = palette.col("colony_summary", "row_name", (206, 216, 238))
 #: The climate/population line under the name. Quieter than the
@@ -217,7 +222,15 @@ def render(surface, rows, area, cfg, layout, style, first=0,
                 + track.build_gap, y, track.build_w, row_h, cfg, style,
                 layout)
 
-    _draw_overflow(surface, rows, area, cfg, scale, layout, style, first)
+    # THE ARROWS REPLACE THE OVERFLOW LINE. "N more not shown" was
+    # text where the original has two buttons, and it said what was
+    # off screen without offering a way to reach it. The arrows say
+    # both — a live one IS the statement that there is more — so the
+    # sentence goes rather than being drawn beside them.
+    colonyscroll.render(surface, area, cfg, scale, SCROLL_ARROW, first,
+                        colonytrack.rows_drawn(area, cfg, scale,
+                                               max(0, len(rows) - first)),
+                        len(rows))
 
 
 def draw_pick(surface, area, cfg, scale, band, row, job, slots):

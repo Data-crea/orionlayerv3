@@ -3264,6 +3264,82 @@ strut has a highlight along its edge. Plain struts are what was
 asked for and the picture is what they give; polish is a decision for
 Data with the picture in hand.
 
+### The list scrolls with the original's own two buttons — 7 September 2026
+
+"N more not shown" was text where the original has controls. It is
+gone; the arrows say the same thing and offer a way to act on it.
+
+**THEY ARE NOT BOXES, and that is the decision.** The plate cuts no
+hole for them (so not decision 3's cutouts), and the alternative was
+two hand-placed boxes with a `thin_border` or `text` skin (decisions
+34/37). They are neither: the rectangles come from
+`colonytrack.columns(...)["scroll"]` — the same column table the
+headings and the cells are laid in — and the list area's own top and
+bottom. Two boxes would have been this screen's first non-cutout
+entries and, worse, **a second copy of a position the column table
+already fixes**. The cost, stated: the arrows are not F5-draggable,
+which the rest of this screen's furniture is. That is the right trade
+while the column table is the authority — move the column and the
+arrows follow.
+
+**Where the original puts them**: `_x_fields[1]` at native (619, 15)
+and `_x_fields[2]` at (619, 316), `Add_Button_Field_`
+(colsum.cpp:263-264), in the column right of BUILDING. Ours are in
+the same column relative to the list; the native x is 1857 reference
+px and our list ends at 1802, because the plate's ring is thicker
+than the original's frame edge.
+
+**A click does two things and only one of them is load-bearing.** It
+moves HD's `Window.top`, which is what scrolls the picture, and it
+activates the same field the original's button reaches — found by
+its native coordinate in the LIVE field list (`colonysend.field_at`),
+so a renumbered list cannot send the wrong one. **The send does not
+make the two agree**: decision 46 is unchanged and `colonysend`
+re-establishes `_first` from scratch before every injection, so an
+arrow the game refused leaves the two out of step and nothing breaks.
+It is a courtesy to a human watching both windows, and it is written
+down that way so nobody removes the re-establishment on the strength
+of it.
+
+**Live on the reference save**, one click each, `_first` read off the
+game's own scroll thumb:
+
+    start        HD Window.top = 0   game _first = 0
+    click DOWN   HD Window.top = 1   game _first = 1
+    click UP     HD Window.top = 0   game _first = 0
+
+**And the first measurement of that read 0 after the down click** —
+the pre-effect frame the fundament describes: `ext::Tick()` runs
+`ProcessInput()` before it serializes, so the first snapshot after a
+send carries the world before the game acted. Waiting for the effect
+rather than for a frame is what makes the table above true, and it
+caught me out once more in the writing of it.
+
+**The arrows are dimmed, not hidden, where the list cannot move.**
+The original's buttons are always drawn and always clickable; a
+control that disappears at the end of a list is a different
+affordance from one that stops responding. `Decrement_First_` clamps
+at 0 and the DOWN step is refused unless
+`_g_colony_list_ptr[_first + 10] != -1` (colsum.cpp:796), so "cannot
+move" is the original's own state.
+
+**The check moved with the control.** "Ink appears under the last
+row" became "the arrow that can move is drawn differently from the
+one that cannot", at the top, in the middle and at the bottom of the
+window — the same fault watched in the thing that replaced the
+sentence — plus an assertion that the strip under the last row is now
+EMPTY, so a renderer drawing both would fail. And the arrow rects are
+asserted to come from `colonytrack.columns`, which is the rows'
+own hit-test geometry (decision 5).
+
+**Still not drawn: the proportional slider** between the two buttons
+(`Draw_Bar_Indicator_`, colsum.cpp:747-753). That omission was
+already recorded in `colonylist`'s module docstring and is unchanged;
+what the arrows add is the two ends of it.
+
+98 checks, unchanged: the two overflow checks became the two arrow
+checks in place.
+
 ### The BUILDING column: the names are extracted, and the reference save needs a second source — 7 September 2026
 
 **PARTLY BUILT, AND THE STOPPING POINT IS THE POINT.**
