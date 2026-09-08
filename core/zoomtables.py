@@ -264,6 +264,46 @@ MAX_ZOOM_BY_SCALE = {10: 0, 15: 1, 20: 2, 30: 3}
 #: it.
 FIGURE_STEP = {"1920x1080": 2, "2560x1440": 3, "3840x2160": 4}
 
+#: Where a HELD cluster's figures sit beside the pointer, in NATIVE
+#: px, and the pitch between them when more than one is held.
+#: **TRANSCRIBED** from `COLMOVE::Draw_Cluster_` (colmove.cpp:7-37),
+#: which the colony summary calls last in its own draw with the raw
+#: pointer — `COLMOVE::Draw_Cluster_(mouse::Pointer_X_(),
+#: mouse::Pointer_Y_())` (colsum.cpp:509-511):
+#:
+#:     animate::Draw_(x, y, C_Anims_(15))     the pointer picture
+#:     current_x = x + 5                      colmove.cpp:23
+#:     animate::Draw_(current_x, y - 10, …)   colmove.cpp:27
+#:     current_x += 20                        colmove.cpp:28
+#:
+#: So the first figure sits five px right of and ten px ABOVE the
+#: pointer, overlapping it, and further held pops step 20 px — which
+#: is neither the icon spacing (30) nor the squished pitch. Only
+#: pops whose `0x200` is clear are drawn, so the cluster on the
+#: cursor and the icons missing from the row are one fact.
+#:
+#: **DEVIATION — THEY ARE MULTIPLIED BY `FIGURE_STEP`, AND NOTHING ON
+#: THIS SCREEN HAS ONE MAGNIFICATION.** The offsets are native px
+#: measured against a 28 px sprite, so the only companion that keeps
+#: the picture the original's is the sprite's own integer step
+#: (decision 28): at step 3 a figure three times the size sits three
+#: times as far out, and the overlap with the pointer is the
+#: original's. The layout scale would not do it — 1.333 against a
+#: figure at 3 would tuck the figure into the pointer at 1440p and
+#: away from it at 1080p.
+#:
+#: What makes it a DEVIATION rather than plain arithmetic is what
+#: the multiplication is NOT consistent with. The colony row's job
+#: columns are 342/360/339 reference px against the original's
+#: 135/142/134, a scale of 2.53, while the figure steps 2/3/4; the
+#: pointer itself is 4.38 % of window height (`core/cursor.py`), a
+#: third factor again. Three magnifications live on one screen and
+#: this constant picks the sprite's, because the thing it positions
+#: is a sprite. Stated here, in `colonylist.draw_held_cluster`, and
+#: in `v3_projektstatus.md`.
+CLUSTER_FIGURE_OFFSET = (5, -10)
+CLUSTER_FIGURE_PITCH = 20
+
 #: The galaxy inset's star dot, per resolution, in device pixels.
 #: **HD EXTENSION, DERIVED — and ODD BY REQUIREMENT.**
 #:

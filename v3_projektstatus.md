@@ -171,17 +171,24 @@ demands — each says what the original does instead:**
   nothing has been injected — and the day a preview does inject it
   has to go. In `colonypick.py`, `colonymoveui.py`, `layout.json`
   under `move._hd_extension_cancel`, and a smoke check.
-- **HD EXTENSION — a drop target per job, and the target is the
-  group.** While a selection is held, each job is targeted by its
-  own marker plus the exact horizontal extent of its cells, as one
-  contiguous rect. No drawn cell moves. The original's three columns
-  are FIXED (colsum.cpp:1006-1024) and always clickable; HD's zones
-  are sized by the data, so an empty job would otherwise be a column
-  nobody could drop into. In `colonytrack.drop_targets`,
-  `layout.json` under `move._hd_extension_bands`, and a smoke check.
-  *(Superseded once: the empty-job placeholder and its seam rule are
-  gone — the marker is the placeholder. See "The row gets its three
-  groups" below.)*
+- **DEVIATION — the drop rect is half the row's height.**
+  *(Replaces "HD EXTENSION — a drop target per job", withdrawn
+  8 September 2026: the target is a TRANSCRIPTION and always was.
+  `Add_Scroll_Field_(left_x, top_y, left_x, right_x + 8, left_x,
+  right_x, right_x - left_x + 8, 30, …)` (coldraw.cpp:409) is added
+  in mode 1 for every row and every job, whether or not the walk
+  before it emitted an icon — so an empty column is a drop target in
+  the original too, and nothing about it is ours.)* What IS ours is
+  its height. The original's field is 30 px of a 31 px row pitch,
+  97 % of the band; ours is `bar_h`, 30 reference px of a 58 px
+  `row_height`, 52 %. It does not change WHICH ROW a click lands in
+  — the bands do not overlap either way and `row_at` has already
+  chosen the row — but inside one row a click in the top or bottom
+  14 reference px is "outside every target" and discards the
+  selection, where the original would have dropped. In
+  `colonytrack._column_boxes`, `layout.json` under
+  `move._drop_target_note`, and a smoke check. Making the rect the
+  full band is one expression and has not been taken.
 - **HD EXTENSION — a click on the held pop's own group discards the
   selection and sends nothing.** Only the "sends nothing" half is an
   extension: the original's outcome is the same, because
@@ -508,7 +515,7 @@ files under `doc/` and are only summarised here.
 | | |
 |---|---|
 | Python | 32,960 lines across 111 modules — `find . -name '*.py'`, `__pycache__` excluded, the smoke test's 6,400 included. The previous figure here (21,642 across 94) was carried from an unstated method and could not be reproduced |
-| Smoke test | `python tools/smoke_test.py` — **102 checks**, headless |
+| Smoke test | `python tools/smoke_test.py` — **104 checks**, headless |
 | Assets | 170 MB (select_race 68, galaxy_map 51, shared 23, new_game 21, colony_summary 1) |
 | Screens in HD | 7 of ~20–22 (colony summary draws list, sidebar, scan box and galaxy inset, and MOVES POPS — the first HD gesture that drives the game) |
 | Setup from clone | `python tools/setup.py` (deps via the system package manager) |
@@ -833,12 +840,26 @@ check asserts this list still agrees with it — the same trade the
 check count makes, for the same reason.
 
 `galaxy_map/screen.py` (**531** code, 807 total), `tools/struct_probe.py`
-(**478** code, 753 total), `custom_race/screen.py` (**400** code,
-558 total), `tools/colony_list_preview.py` (**345** code, 682 total),
+(**478** code, 753 total), `tools/colony_list_preview.py` (**410**
+code, 774 total), `custom_race/screen.py` (**400** code,
+558 total), `tools/colony_move_hd.py` (**365** code, 549 total),
 `core/editor/editor.py` (**340** code, 390 total),
 `galaxy_map/renderer.py` (**335** code, 753 total), `tools/ext_diag.py`
 (**325** code, 473 total), `core/style.py` (**306** code, 453 total).
 `smoke_test.py` is exempt by nature.
+
+**TWO TOOLS JOINED THE LIST ON 8 SEPTEMBER 2026 and one thing left
+them both.** `colony_list_preview.py` (345 -> 410) gained `--hold`,
+`--pointer`, `--native-live` and `--info-style`; `colony_move_hd.py`
+(under the guideline before) gained the four drop cases and the
+shortened-row verification, and crossed at 397. What was split out
+instead of listed is `tools/fixtures.py` — the savegame fingerprint
+table, which BOTH tools now read, so the extraction removed a
+tool-imports-tool edge as well as 32 lines. What is left in each is
+genuinely one thing: drive one gesture and verify it, and render the
+screen and say where the rows came from. Splitting either further
+would be inventing a seam to satisfy a number, which is the thing
+decision 6's own amendment warns about.
 
 **SIXTEEN ENTRIES LEFT THE LIST and none of them was edited**, which
 is the finding rather than a side effect. They were never exceptions;
@@ -3040,6 +3061,124 @@ help-file lesson, one domain over.
 Zhadoom III (14 pops) is the widest row in either fixture and is
 therefore the narrowest-cell case any picture has to survive.
 
+### The pick round: both frames fall, the pops leave the row — 8 September 2026
+
+The colony row now does what the original does during a move, and
+three things it used to do went with the change.
+
+**The held pops LEAVE THE ROW, and there is no `count - n` anywhere.**
+`Get_Cluster_` clears bit `0x200` (colmove.cpp:70) and the icon walk's
+innermost test is `(pop_val & 0x200) != 0` (coldraw.cpp:336), so a
+held pop stops BEING an icon. `colonyrows.build_rows` now takes the
+HD selection and does exactly that to a COPY of the words
+(`colonymove.held_pops`), and everything else follows for free: the
+row is shorter, the squish is recomputed over what is left by the
+one function that already served the draw and both hit tests
+(`colonyicons.column_pitch`), and `cell_at_x` cannot pick a pop that
+is already in hand. **That is the whole mechanism.** A shortened
+count computed beside the full one would have had to be subtracted
+again in the pitch, again in the hit test and again in the drawing —
+four places to keep in step where the original has one bit. A smoke
+check asserts the pitch moves to `column_pitch(job, shortened)` and
+refuses a `- len(held…)` anywhere on the path.
+
+**Both marks on the row are deleted.** The yellow outline round the
+picked cells and the blue frame round the row's drop targets. The
+original marks neither: the only `Fill_`/`Line_` calls in
+`colsum.cpp` are the scroll thumb (colsum.cpp:759-765). What it draws
+instead is the cluster on the POINTER, and that is now transcribed —
+`COLMOVE::Draw_Cluster_` (colmove.cpp:7-37), called last with the raw
+pointer (colsum.cpp:509-511), each held pop at `x + 5 + 20*k, y - 10`
+in ARRAY order. The three numbers and the DEVIATION that multiplying
+them by `FIGURE_STEP` is live in `core/zoomtables.py`. **HD hides
+nothing:** `Clear_Mouse_Picture_` (colony.cpp:360) REPLACES the
+pointer picture rather than removing it, and HD's pointer is already
+its own artwork at the original's own 4.38 % of screen height
+(`core/cursor.py`), so there is nothing left to swap.
+
+*The picture cannot show the offset and the check can.* A screenshot
+of the HD screen has no cursor in it — the pointer is a hardware
+cursor and never reaches the surface — so the side-by-side answers
+"do the figures hang up and to the right, overlapping" and the smoke
+check answers "+5 and -10 times the step, 20 apart, 28*step tall, at
+all three steps".
+
+**The three F/W/S markers are gone, marking and all.** They were an
+HD EXTENSION standing in for headings a column-less row could not
+carry, and Stage 4 gave the row five real columns with those headings
+above it; the marking already said "whether they stay is Stage 5's
+call". **No invisible button was left behind**: the drop target has
+always been the whole column, which is the original's own field —
+`Add_Scroll_Field_(left_x, top_y, …, right_x - left_x + 8, 30, …)`
+(coldraw.cpp:409), added in mode 1 whether or not the walk drew an
+icon. So an empty column accepts a drop in the original too, and
+`move._hd_extension_bands` was withdrawn rather than moved: what
+survives is a DEVIATION in the rect's HEIGHT, 52 % of the row band
+against the original's 97 %. The cells moved left to their column's
+own edge, which is where the original starts its icons.
+
+**"No Farming" is centred in the column.** `Squeeze_Print_Paragraph_(
+left_x, top_y + 5, right_x - left_x, 28, E_Strings_(387), 2)` and the
+2 selects `Print_Centered_(x + width/2, y, str)`. It used to sit
+below the bar at the first marker's left edge, argued for on
+horizontal budget; the source settles it instead. Measured against
+the original's own screen to the pixel: ink centre 163 = `101 + 125/2`,
+ink top 136 = `top_y + 5`. **Its SIZE is MEASURED and single-source**
+— `Set_Colony_Font_To_(3)` is a style index and the height lives in
+the player's FONTS.LBX — so 10 px of cap height off
+`colony_summary_native_split.png` is the only number there is, and
+`colonylist.NO_FARM_FONT_REF` carries the derivation and the one
+proportion it does not reproduce. **A font extractor would turn that
+measurement into a transcription and is on the horizon**, not in this
+round.
+
+**`planet_info` stops being empty.** The original's scan box is TWO
+boxes, filled by one function: the description paragraph at native
+(13, 354, 80, 88) and the production rows from native x 106
+(colsum.cpp:1155). The description moved into the left panel, the
+production stayed in the right, and `colonyoutput.render_for` is now
+one call because the original is one call. **The form is
+PROVISIONAL**: `output.info_style` renders either the original's own
+five lines or the six-row table, both are photographed beside the
+native, and Data picks from the pictures. The default is the
+transcription because that is this project's default, not because the
+question is closed. The move's refusal message still wins that panel
+while there is one, and says so.
+
+**What the live runs proved, on the save they name.** The game that
+was up carried `~/Master of Orion 2/SAVE10.GAM` — the natives galaxy
+one turn before `fixture_natives_3502.5`, now the third entry in
+`tools/fixtures.py` as `natives_autosave` — and NOT the reference
+save, which no client can load: nothing on the Extension API loads a
+savegame and orion2re takes no load-on-start argument. Four gestures
+on Draconis III, cluster of four from eight workers: the row drew 4
+of 8 at `column_pitch(1, 4)`; a drop into the EMPTY scientists column
+moved four pops with every word matching the prediction and one
+colony changing; a drop back on the source column and a drop on the
+colony NAME each released the selection with nothing sent and no byte
+moved. The pops were moved back afterwards, so the game stands where
+it did.
+
+**The two put-back cases prove the HD side and not the original's own
+re-flag**, and that is said rather than implied: HD sends nothing
+there, because `Send_Cluster_(colony, -1)` and `Send_Cluster_(colony,
+same job)` both take the branch that sets `0x200` back and consults
+no rule (colmove.cpp:161-165), so the array ends as it started and
+injecting the pair would create the game's cluster only to release
+it. The bytes are unchanged BECAUSE nothing was injected.
+
+**The native pick-up refusal is still unreachable live, and the skip
+has a name.** `natives_autosave` has no pop with nibble 9 — Urna I,
+the only colony that ever had one, is not in it — and neither does
+the reference save. The rule is transcribed in
+`colonymove.plan_pickup` (colmove.cpp:59-64) and checked offline
+against a synthetic word; what is missing is a save that HOLDS one on
+a colony the list draws, which is `fixture_natives_3502.5` and needs
+somebody to load it.
+
+**Two tools joined the exceptions list and `tools/fixtures.py` came
+out of them.** See the list above.
+
 ### Stage A3: every gap became one of the master's rails — 7 September 2026
 
 Stage A2 measured the master's struts and found that no gap was wide
@@ -4848,17 +4987,34 @@ the prediction.
 Three decisions built, each narrowing the next, and all three are HD
 EXTENSIONS with their markings.
 
-- **HD EXTENSION — three job markers, always.** Every row carries a
-  marker per job in ECON order, each introducing its own cells:
-  `F [food] W [worker] S [scientist]`, flush, no gap inside the run.
-  The original does not need them because it draws three FIXED
-  columns under three headings (colsum.cpp:1006-1024); **a row
-  without columns cannot carry a heading**, and before this a colony
-  with everyone farming showed a run of squares and then nothing,
-  with nothing on screen saying the other two jobs existed. Grey, not
-  a fourth accent — an amber marker in the first mockup read as a
-  fourth job class. In `colonytrack.row_boxes`, `layout.json` under
-  `list._hd_extension_markers`, and a check.
+- **HD EXTENSION — three job markers, always. REMOVED 8 September
+  2026, marking and all.** Every row carried a marker per job in ECON
+  order, each introducing its own cells: `F [food] W [worker]
+  S [scientist]`, flush, no gap inside the run. The argument was that
+  the original does not need them because it draws three FIXED
+  columns under three headings (colsum.cpp:1006-1024), and **a row
+  without columns cannot carry a heading** — before them, a colony
+  with everyone farming showed a run of squares and then nothing.
+  Stage 4 gave the row five real columns with those headings above
+  them, so the stand-in had nothing left to stand in for; this entry
+  already said "whether they stay is Stage 5's call". Deleted from
+  `colonytrack`, `colonylist`, `layout.json` and the checks in ONE
+  commit, and **no invisible button was left behind**: the drop
+  target was never the marker, it is the whole column (see the
+  DEVIATION above). The cells moved left by the marker's width, to
+  the column's own left edge, which is where the original starts its
+  icons (`left_x`, coldraw.cpp:349).
+- **DEVIATION — the held cluster's figures are offset by the SPRITE
+  STEP.** `COLMOVE::Draw_Cluster_` (colmove.cpp:7-37) hangs them on
+  the pointer at +5 x, −10 y with 20 px between them, native, against
+  a 28 px sprite; HD multiplies all three by `FIGURE_STEP` so the
+  overlap with the pointer is the original's at every resolution.
+  What makes it a deviation is what it is NOT consistent with: the
+  job columns are 2.53× their native width and the pointer is
+  4.38 % of window height, so three magnifications live on this
+  screen and this constant picks the sprite's. In
+  `core/zoomtables.CLUSTER_FIGURE_OFFSET`,
+  `colonylist.draw_held_cluster`, and a smoke check.
 - **HD EXTENSION — an identity letter in the cell, fill untouched.**
   The original carries profession AND race in one sprite
   (`race * 13 + job * 2 + 1`, colony_main.cpp:445) and carries the
@@ -5235,6 +5391,36 @@ races.
   scales it. The tool is still the only path from STARBG.LBX to
   usable HD artwork, so it wants its output flattened rather than
   deleting it.
+- **The original's font sizes are MEASURED off screenshots, because
+  there is no font extractor.** `Set_Colony_Font_To_(n)` is a style
+  INDEX; the pixel height is `_font_header.font_heights[n]`, read from
+  the player's own FONTS.LBX at load (`fonts.cpp Set_Font_Style_`), so
+  it is in no source file this project can grep. Every size
+  transcribed from the original therefore rests on one picture — today
+  that is "No Farming" at 10 px of cap height off
+  `colony_summary_native_split.png` (`colonylist.NO_FARM_FONT_REF`),
+  and it is marked MEASURED rather than transcribed for exactly that
+  reason. A `tools/font_extract.py` in the shape of
+  `techname_extract.py` would turn every one of them into a
+  transcription with a second source, and would also say which style
+  index each screen uses at what height. Not scoped; recorded so the
+  next size measured off a picture is the second entry in a known gap
+  rather than a fresh surprise.
+- **68 boxes carry a hand-tuned `font_scale` that is DOUBLE-SCALED at
+  3840x2160, on four screens, and they are known-wrong rather than
+  fixed.** Custom Race, Select Race, Empire Identity and the galaxy
+  map pass `box_font_scale` into a `Layout.font_size` afterwards, and
+  not one of the 68 is tuned at 2160p — every screen's list stops at
+  1440p, so at 4K they resolve by pixel area to the 1440p list and
+  take the same 4.0 net factor. The measurement, the reason they were
+  NOT changed with the colony summary's, and the trap in changing
+  them (the values encode the double factor, because they were tuned
+  by eye with it already in place) are in "Stage 4 closed: the pitch,
+  the 4K readouts, and three readings" above — that section is their
+  one home and this is a pointer, so the two cannot drift. Recorded
+  here on 8 September 2026 because a fault that lives only inside a
+  dated stage narrative is one nobody meets again: re-tuning those
+  four screens for 2160p is its own decision and has no owner yet.
 - `new_game/boxes.json`: `panel_0`–`10` exist at 2560x1440 but the
   1920x1080 list carries only `help_popup` — so at 1080p New Game
   draws no panel frames at all, in either skin.

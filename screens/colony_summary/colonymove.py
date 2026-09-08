@@ -265,6 +265,34 @@ def plan_pickup(pops, n_pops, start):
          if pops_identical(pops, start, i)], None)
 
 
+def held_pops(pops, indices):
+    """`pop[]` with the held cluster unassigned — colmove.cpp:70.
+
+    `Get_Cluster_` does not remove anything and does not count
+    anything: it clears bit `0x200` on each pop it takes
+    (`colony->pop[i] &= 0xFFFFFDFF`), and the icon walk's innermost
+    test is `(pop_val & 0x200) != 0` (coldraw.cpp:336). The held
+    figures therefore stop BEING icons, and the row, the squish and
+    both hit tests all shorten because they read the same list.
+
+    **THIS IS WHY THERE IS NO `count - n` ANYWHERE.** A shortened
+    count computed beside the full one is a second copy of the row
+    (decision 5), and it would have to be subtracted again in the
+    pitch, again in the hit test and again in the drawing. One
+    cleared bit does all four, exactly as the original does all four
+    with it.
+
+    Returns a NEW list. The snapshot's own words are never written:
+    the HD selection is not the game's cluster (decision 47), so the
+    array it is applied to must not be the one the next frame parses.
+    """
+    out = list(pops)
+    for i in indices:
+        if 0 <= i < len(out):
+            out[i] &= ~colony_struct.POP_MASK_ASSIGNED
+    return out
+
+
 class DropPlan:
     """How much of a cluster lands, and where it stops.
 

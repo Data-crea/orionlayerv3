@@ -130,20 +130,13 @@ class Pick:
     def size(self):
         return len(self.cluster.indices)
 
-    def slots(self):
-        """The icon slots this pick would take, for the drawing.
-
-        A cluster is every identical pop from the clicked one to the
-        END of the array (colmove.cpp:66-71), and identical pops
-        share the state, the conquered bit and the low nibble — which
-        is exactly what the icon walk groups by — so they are a RUN
-        of icons starting at `slot`. Computed rather than assumed:
-        the run is read back out of the icon list, so a pop that is
-        somehow not drawn simply does not light up.
-        """
-        icons = colonyicons.icon_pops(self.pops, self.n_pops, self.job)
-        return tuple(i for i, pop in enumerate(icons)
-                     if pop in self.cluster.indices)
+    # `slots()` IS GONE — 8 September 2026. It answered "which icon
+    # slots would this pick take", for an outline the row no longer
+    # draws: the original marks nothing and the held pops leave the
+    # row instead (`colonymove.held_pops`). Nothing computes the run
+    # any more, which is the point — the picture is the shortened
+    # row and the cluster on the pointer, and a third derivation of
+    # the same set was a third thing to keep in step.
 
     def stale(self, pops, n_pops):
         """Has the colony changed since the pick was taken?"""

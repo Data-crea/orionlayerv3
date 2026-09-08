@@ -345,7 +345,27 @@ def build_screen(width, height):
 
 # ── Rendering ─────────────────────────────────────────────────────
 
-def render_screen(app, screen, state, width, height, sort_key="name"):
+def write_native(state, path):
+    """The game's own 640x480 frame, from the SAME snapshot, to PNG.
+
+    The same function `colony_move_hd.native_png` is, and the same
+    reason: a side-by-side is only a comparison if both halves are
+    one moment. Kept here as well rather than imported because that
+    module opens a window and drives a game; this one must stay
+    runnable without either.
+    """
+    fb, pal = state.framebuffer, state.palette
+    if not fb or not pal:
+        return None
+    surf = pygame.Surface((640, 480), depth=8)
+    surf.set_palette([(r, g, b) for r, g, b in pal])
+    surf.get_buffer().write(bytes(fb[:640 * 480]))
+    pygame.image.save(surf, path)
+    return path
+
+
+def render_screen(app, screen, state, width, height, sort_key="name",
+                  hold=None, pointer=None):
     """One full screen, through `ColonySummaryScreen.render`.
 
     Everything on it — background, panel fills, the list, the
@@ -361,9 +381,38 @@ def render_screen(app, screen, state, width, height, sort_key="name"):
     """
     screen._sort_key = sort_key
     screen.update(state)
+    if hold:
+        # LOCAL, AND THAT IS THE WHOLE REASON A PREVIEW MAY DO IT.
+        # The first click of a move injects nothing (decision 47), so
+        # holding a cluster here is the same act the screen performs
+        # and it leaves the running game untouched. Anything that
+        # sends would have no business in a picture tool.
+        from screens.colony_summary import colonypick
+        r_i, job, slot = (int(v) for v in str(hold).split(":"))
+        loaded = colonypick.pops_of(state, screen._rows[r_i]["index"])
+        pick = colonypick.pick_at(loaded[0], loaded[1], job, slot,
+                                  screen._rows[r_i]["index"], r_i,
+                                  sort_key)
+        if isinstance(pick, colonypick.Refusal):
+            raise SystemExit(f"--hold {hold}: {pick}")
+        screen._move.pick = pick
+        screen._rebuild_rows()
+    # THROUGH `core.mouse`, which is the one home for the pointer and
+    # its fullscreen offset — the same function the screen reads, so
+    # a picture cannot be taken against a position the screen would
+    # not use. Restored on the way out: a module-level override that
+    # outlived one render would silently move every later one.
+    from core import mouse as _mouse
+    _saved = _mouse.pos
+    if pointer:
+        _xy = tuple(int(v) for v in str(pointer).split(","))
+        _mouse.pos = lambda: _xy
     surface = pygame.Surface((width, height))
     surface.fill(tuple(app.colors.get("background", [6, 8, 16]))[:3])
-    screen.render(surface)
+    try:
+        screen.render(surface)
+    finally:
+        _mouse.pos = _saved
     return surface
 
 
@@ -407,8 +456,16 @@ def provenance(state, screen, live, sort_key):
         drawn = colonylist.rows_drawn(
             pygame.Rect(*screen.layout.rect(screen.box_rect("list_area"))),
             screen._data.get("list", {}), screen.layout.scale, len(rows))
+        # THE SAVE IS NAMED, not merely described. A run whose
+        # output would be identical on the wrong data is the more
+        # dangerous of the two identification faults (fundament,
+        # Evidence), and stardate alone does not separate the
+        # fixtures — two of the three share 3502.4. The table has ONE
+        # home, in `colony_move_hd`, and this imports it.
+        from fixtures import fixture_name
+        named = fixture_name(state) or "NO ACCEPTANCE FIXTURE"
         return ("LIVE — rows built from the running game's snapshot",
-                f"stardate {state.stardate_str}, screen "
+                f"save: {named} — stardate {state.stardate_str}, screen "
                 f"{state.current_screen}, {state.num_colonies} colony "
                 f"records, {len(rows)} of them the local player's and not "
                 f"outposts, {drawn} drawn, sorted by {sort_key}",
@@ -593,6 +650,30 @@ def main():
                          "unrelated pictures")
     ap.add_argument("--host", default="localhost")
     ap.add_argument("--port", type=int, default=17362)
+    ap.add_argument("--native-live", action="store_true",
+                    help="write the original's half from the SAME "
+                         "snapshot as the HD half, instead of taking "
+                         "a file. Two halves photographed at two "
+                         "moments is the comparison failure this "
+                         "removes rather than warns about.")
+    ap.add_argument("--info-style", default=None,
+                    choices=("paragraph", "rows"),
+                    help="override output.info_style for this render. "
+                         "The two pictures ARE the decision (see "
+                         "output._info_note); this is how both are "
+                         "taken from one snapshot.")
+    ap.add_argument("--pointer", default=None, metavar="X,Y",
+                    help="where to put the pointer for --hold. "
+                         "Without it the held figures land at "
+                         "whatever pygame reports in a headless run, "
+                         "which is the window corner — a picture of "
+                         "the mechanism and not of the gesture.")
+    ap.add_argument("--hold", default=None, metavar="ROW:JOB:SLOT",
+                    help="hold a pick before rendering — the picture "
+                         "of a cluster in hand. NOTHING IS SENT: the "
+                         "HD selection is local until the drop "
+                         "(decision 47), so a preview can take it "
+                         "without touching the game.")
     args = ap.parse_args()
 
     width, height = (int(v) for v in args.size.lower().split("x"))
@@ -615,9 +696,20 @@ def main():
     pygame.init()
     pygame.display.set_mode((32, 32))
     app, screen = build_screen(width, height)
+    if args.info_style:
+        screen._data.setdefault("output", {})["info_style"] = \
+            args.info_style
+
+    if args.native_live:
+        args.native = os.path.join(args.out_dir, "native.png")
+        if not write_native(state, args.native):
+            print("  the snapshot carried no framebuffer, so there is "
+                  "no original half")
+            args.native = None
 
     print(f"{width}x{height} -> {os.path.abspath(args.out_dir)}\n")
-    full = render_screen(app, screen, state, width, height, args.sort)
+    full = render_screen(app, screen, state, width, height, args.sort,
+                         hold=args.hold, pointer=args.pointer)
     head, detail, colour = provenance(state, screen, live, args.sort)
     print(f"{head}\n  {detail}\n")
     if live and not screen._rows:

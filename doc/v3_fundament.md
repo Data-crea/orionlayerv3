@@ -2011,7 +2011,82 @@ references in `doc/v3_orion2re_index.md`.
   `Calculate_Squish_Step_` (`coldraw.cpp:12`), where `30 / -3` is C
   truncation toward zero — `int(a / b)` in Python, never `//`. Column
   edges on the summary screen: farmers 101-226, workers 236-368,
-  scientists 378-502, row y = 31*i + 34 (`colsum.cpp:311`).
+  scientists 378-502.
+
+  **THE ROW HAS TWO Y VALUES AND THEY ARE FOUR PIXELS APART** —
+  corrected 8 September 2026, when this entry carried only the second
+  and a reader would have drawn the sprites at the field's y. The
+  ICON ROW is `31*i + 38`: `Draw_Info_Pop_For_` passes
+  `list_idx * 0x1f + 0x26` (`colsum.cpp:683`), and BOTH hit tests
+  pass the same — `Get_Selected_Pop_` (`colsum.cpp:1006`) and
+  `Get_Scanned_Pop_` (`colsum.cpp:963`). The FIELD's y is `31*i + 34`
+  with a height of 30 (`Add_Fields_Pop_For_`, `colsum.cpp:311`), so
+  the clickable band is `31*i+34 .. 31*i+64` and the sprite row
+  starts four px into it. Neither number replaces the other: the
+  first is where the icons are, the second is the drop rect, and the
+  four pixels between them are the gap.
+
+  **THE DROP RECT IS THE WHOLE COLUMN CELL, AND AN EMPTY COLUMN HAS
+  ONE.** Mode 1's post-loop ends in `fields::Add_Scroll_Field_(left_x,
+  top_y, left_x, right_x + 8, left_x, right_x, right_x - left_x + 8,
+  30, …)` (`coldraw.cpp:409`), and it runs after a walk that may have
+  drawn nothing — so x `101..234` / `236..376` / `378..510` accept a
+  drop whether or not the column holds an icon. Worth writing down
+  because the obvious reading is the opposite one: the HD side
+  carried a marked HD EXTENSION for three days on the belief that an
+  empty job needed a target of ours.
+
+  **A DROP ON THE COLONY NAME IS "PUT THEM BACK".**
+  `_list_fields[i]` with a cluster held is `Send_Cluster_(_list_col[i],
+  -1)` (`colsum.cpp:909`), and on the colony the cluster came from
+  that is the re-flag branch — `requested_job == -1` sets `0x200` back
+  and consults no rule (`colmove.cpp:161-165`), so the array ends
+  exactly as it started. It is the nearest thing this screen has to a
+  cancel that is not a leave-the-screen path.
+
+  **THE HELD CLUSTER HANGS ON THE POINTER AND THE ROW SIMPLY LOSES
+  IT.** `Get_Cluster_` clears `0x200` (`colmove.cpp:70`) and the icon
+  walk's innermost test is `(pop_val & 0x200) != 0`
+  (`coldraw.cpp:336`), so the held pops stop BEING icons — the row
+  shortens, and the squish shortens with it because every mode runs
+  the same mode-2 pre-pass over the same walk (`coldraw.cpp:301` ->
+  `:419`). There is no `count - n` anywhere in the original and there
+  must be none in a transcription of it. What is drawn instead is
+  `COLMOVE::Draw_Cluster_` (`colmove.cpp:7-37`), called last with the
+  raw pointer (`colsum.cpp:509-511`): the pointer picture is REPLACED
+  by `C_Anims_(15)` rather than hidden, and each held pop is drawn at
+  `x + 5 + 20*k, y - 10` in ARRAY order — which is not the icon
+  walk's order.
+
+  **AND THE ORIGINAL MARKS NOTHING ELSE ON THIS SCREEN.** The only
+  `Fill_`/`Line_` calls in `colsum.cpp` are the scroll thumb
+  (`colsum.cpp:759-765`). No frame round a picked cell, none round
+  the row it came from. The one per-pop state it does draw is the
+  HOVERED icon blinking dark (`coldraw.cpp:342-343`), which is a
+  hover and not a selection.
+
+  **"No Farming" is CENTRED IN THE COLUMN**, printed in mode 0 when
+  `max_farms == 0`: `Squeeze_Print_Paragraph_(left_x, top_y + 5,
+  right_x - left_x, 28, E_Strings_(387), 2)` (`coldraw.cpp:315-321`),
+  where the 2 reaches `_Print_String_Bill_` as the mode that selects
+  `fonts::Print_Centered_(x + width/2, y, str)`. Measured against the
+  original's own screen: ink centre 163 = `101 + 125/2`, ink top 136
+  = `top_y + 5`. Its SIZE is not in any source — `Set_Colony_Font_
+  To_(3)` is a style index and `_font_header.font_heights[3]` comes
+  from the player's FONTS.LBX — so 10 px of cap height off a
+  screenshot is the only number there is, and it is MEASURED, single
+  source, like `SHIP_ICON_DIM` is DERIVED.
+
+  **The scan box is TWO boxes.** `Draw_Colony_Scan_Info_`
+  (`colsum.cpp:1155`) fills a formatted paragraph at native
+  (13, 354, 80, 88) over `E_Strings_(74)` and the four production
+  rows plus morale from native x 106. The paragraph is FIVE lines and
+  not six label/value pairs — size and climate share one, growth
+  carries no label — and the format supplies the nouns (`%sravity`,
+  `Mineral %s`) while the string tables hold the bare quality. Its
+  sign string is taken TWICE, before the first word and before the
+  number, with the reset after the last, so a negative growth reddens
+  the WHOLE box.
 
   **A COLUMN IS NOT `pop[]` IN ARRAY ORDER.** The icon walk is five
   nested loops (`coldraw.cpp:326-337`): state

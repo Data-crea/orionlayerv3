@@ -45,12 +45,15 @@ os.environ.setdefault("SDL_AUDIODRIVER", "dummy")
 import pygame  # noqa: E402
 
 from core.structs import colony as colony_struct  # noqa: E402
+from fixtures import FIXTURES, identify  # noqa: E402,F401
+from screens.colony_summary import colonyfigures  # noqa: E402
 from screens.colony_summary import colonyicons  # noqa: E402
 from screens.colony_summary import colonymove  # noqa: E402
 from screens.colony_summary import colonylist  # noqa: E402
 from screens.colony_summary import colonymove  # noqa: E402
 from screens.colony_summary import colonypick  # noqa: E402
 from screens.colony_summary import colonysend  # noqa: E402
+from screens.colony_summary import colonytrack  # noqa: E402
 from colony_list_preview import side_by_side  # noqa: E402
 
 SCREEN_COLONY_SUMMARY = 20
@@ -186,54 +189,6 @@ def band_xy(screen, row_index, job):
     return None
 
 
-#: The acceptance fixtures, by what a SNAPSHOT can see of them —
-#: `v3_projektstatus.md`, "Acceptance fixtures — the two savegames".
-#: Stardate alone is not enough: 3502.4 and 3502.5 are one tick apart
-#: and any game reaches them.
-FIXTURES = {
-    "reference": {"stardate": 35024, "stars": 99, "colonies": 55},
-    "natives": {"stardate": 35025, "stars": 71, "colonies": 36},
-}
-
-
-def identify(state, expect):
-    """True when the game is on the fixture this run claims.
-
-    **ADDED 7 September 2026, AFTER THIS TOOL PRODUCED THREE CLEAN
-    ACCEPTANCE RUNS AGAINST THE WRONG GAME.** Every line of them was
-    true — the clicks landed, the pop words matched their predictions,
-    no other colony changed — and none of it was evidence about the
-    reference save, because the game had a different one loaded and
-    nothing in the run said so. The status document already required
-    that "anything below that reads a save reads it by its fixture
-    name"; this tool did not, and a report is only as good as the
-    thing it was measured on.
-
-    Reported, never guessed: an unknown state names what it saw.
-    """
-    if expect == "any":
-        print("fixture check skipped (--expect any)")
-        return True
-    want = FIXTURES.get(expect)
-    got = {"stardate": state.stardate,
-           "stars": len(getattr(state, "stars", None) or []),
-           "colonies": state.num_colonies}
-    if want is None:
-        print(f"unknown fixture {expect!r}; known: {sorted(FIXTURES)}")
-        return False
-    if got == want:
-        print(f"fixture: {expect} ({got['stars']} stars, stardate "
-              f"{got['stardate'] / 10:.1f}) — the run is about this save")
-        return True
-    named = [n for n, f in FIXTURES.items() if f == got]
-    print(f"WRONG SAVE. This run claims {expect} {want}, the game has "
-          f"{got}" + (f" — which is the {named[0]} fixture" if named
-                      else " — which is no acceptance fixture at all"))
-    print("  Load the right slot and re-run. A green table measured on "
-          "the wrong game is worse than no table.")
-    return False
-
-
 def choose(screen, state, only_job=None):
     """(row_index, slot, job, target_job) for a move worth making.
 
@@ -309,6 +264,26 @@ def main():
                     help="which acceptance fixture the game must be "
                          "on: reference, natives, or 'any' to skip the "
                          "identification")
+    ap.add_argument("--slot", type=int, default=None,
+                    help="which icon of the source column to click. "
+                         "`choose` takes the LAST on purpose, so the "
+                         "cluster is one pop and the run moves as "
+                         "little as possible; 0 takes the whole "
+                         "identical group, which is what a picture of "
+                         "a held cluster needs")
+    ap.add_argument("--target", type=int, default=None,
+                    help="which column to drop into (0 food, 1 "
+                         "industry, 2 research). Without it the "
+                         "planner takes the first that accepts the "
+                         "cluster, which is not always the one a run "
+                         "wants to photograph — or to undo.")
+    ap.add_argument("--drop", default="column",
+                    choices=("column", "empty", "source", "name"),
+                    help="which drop to make: 'column' the job the "
+                         "planner chose, 'empty' a job with no icons, "
+                         "'source' back into the column it came from, "
+                         "'name' onto the colony name — the original's "
+                         "own 'put them back' (colsum.cpp:909)")
     ap.add_argument("--job", type=int, default=None,
                     help="restrict the SOURCE column (0 food, 1 "
                          "industry, 2 research), so one run proves one "
@@ -351,6 +326,26 @@ def main():
     (row_index, cell, job, target_job, pick, plan,
      max_farms) = target
     row = rows[row_index]
+    if args.target is not None:
+        target_job = args.target
+    if args.slot is not None or args.target is not None:
+        # RE-PICKED AT THE NAMED ICON, and re-planned with it: a
+        # cluster of eight is a different plan from a cluster of one
+        # and carrying the old one over would be predicting the wrong
+        # move.
+        loaded = colonypick.pops_of(state, row["index"])
+        cell = args.slot if args.slot is not None else cell
+        pick = colonypick.pick_at(loaded[0], loaded[1], job, cell,
+                                  row["index"], row_index,
+                                  screen._sort_key)
+        if isinstance(pick, colonypick.Refusal):
+            print(f"icon {cell} of column {job} refuses the pick: {pick}")
+            return 1
+        plan = colonypick.plan_move(pick, loaded[0], loaded[1],
+                                    max_farms, row["index"], target_job)
+        if isinstance(plan, colonypick.Refusal):
+            print(f"the drop refuses that cluster: {plan}")
+            return 1
     print(f"target: row {row_index} {row['name']!r} jobs={row['jobs']}, "
           f"cell {cell} of column {job} -> column {target_job}")
     print(f"  pick predicts {pick}, drop predicts {plan}")
@@ -367,27 +362,43 @@ def main():
     if screen._move.pick is None:
         print(f"  no selection was made ({screen._move.message!r})")
         return 1
-    print(f"  held locally: {screen._move.pick}, slots "
-          f"{screen._move.pick.slots()}")
-    # THE OUTLINE IS READ BACK OFF THE FRAME, not off the geometry.
-    # A pick that names the right pop while the mark sits on the
-    # neighbouring cell is what shipped on 6 September, and every
-    # value in this run was correct while it did.
-    _area, _cfg, _scale, _n = screen._list_view()
-    _cells = {(j, i): r for j, i, r in colonylist.row_boxes(
-        _area, _cfg, _scale, row).cells}
-    _want = sorted(_cells[(job, i)].x for i in screen._move.pick.slots()
-                   if (job, i) in _cells)
-    _arr = pygame.surfarray.array3d(app.surface)
-    _rgb = list(colonylist.PICK_COLOR[:3])
-    _got = sorted({x for x in range(app.surface.get_width())
-                   if (_arr[x] == _rgb).all(axis=1).any()})
-    _left = [x for x in _got if x - 1 not in _got]
-    print(f"  outline inked at x {_left}, the cells are at {_want}")
-    if _left != _want:
-        print("  THE MARK IS NOT ON THE CELL IT NAMES")
+    print(f"  held locally: {screen._move.pick}")
+    # THE HELD POPS LEFT THE ROW, and the pitch went with them.
+    # Read off the REBUILT row rather than off the pick: the claim is
+    # that `build_rows` cleared `0x200` (colmove.cpp:70) and the icon
+    # walk stopped emitting them (coldraw.cpp:336), which is the
+    # original's own mechanism and the reason there is no `count - n`
+    # anywhere. Until 8 September 2026 this read back an outline
+    # instead; the original draws none.
+    _size = screen._move.pick.size
+    _row_now = next((r for r in screen._rows
+                     if r["index"] == row["index"]), None)
+    if _row_now is None:
+        print("  the picked row left the list")
         return 1
-    print("  the outline sits on the cells the pick names")
+    _left_n = len(_row_now["cells"][job])
+    print(f"  column {job}: {pick.icon_count} icons before, {_left_n} "
+          f"after, cluster of {_size}")
+    if _left_n != pick.icon_count - _size:
+        print("  THE ROW DID NOT SHORTEN BY THE CLUSTER")
+        return 1
+    if len(_row_now.get("held") or ()) != _size:
+        print("  the row is not carrying the held pops for the cursor")
+        return 1
+    _area, _cfg, _scale, _n = screen._list_view()
+    _now = [r for j, _i, r in colonylist.row_boxes(
+        _area, _cfg, _scale, _row_now).cells if j == job]
+    _step = colonyfigures.figure_step(_scale)
+    _want_pitch = int(min(colonyicons.column_pitch(job, max(_left_n, 1)),
+                          colonyicons.ICON_SPACING) * _step)
+    _got_pitch = (_now[1].x - _now[0].x) if len(_now) > 1 else _want_pitch
+    print(f"  pitch now {_got_pitch}, column_pitch({job}, {_left_n}) "
+          f"* step {_step} = {_want_pitch}")
+    if abs(_got_pitch - _want_pitch) > 1:
+        print("  A SECOND PITCH HAS ENTERED THE PICK PATH")
+        return 1
+    print("  the row draws without the held pops, at the shortened "
+          "pitch, from the one geometry function")
     if counter.total() != sends_before:
         print(f"  THE FIRST CLICK SENT SOMETHING: {counter}")
         return 1
@@ -420,6 +431,65 @@ def main():
     if not args.commit:
         print("\ndry run — the drop was not clicked. Re-run with --commit.")
         return 0
+
+    # ── THE TWO DROPS THAT MUST CHANGE NOTHING ───────────────────
+    # Both reproduce an OUTCOME of the original's rather than a code
+    # path of ours. A drop on the source column takes
+    # `Send_Cluster_`'s re-flag branch — `current_job == requested_job`
+    # sets `0x200` back and consults no rule (colmove.cpp:161-165) —
+    # and a drop on the colony NAME is `Send_Cluster_(colony, -1)`
+    # (colsum.cpp:909), which is the same branch by the other test.
+    # The array ends exactly as it started in both, so HD releases the
+    # selection and sends nothing: creating the game's cluster only to
+    # release it is strictly more that can go wrong for a gesture
+    # whose whole content is "nothing happened".
+    #
+    # WHAT THIS PROVES AND WHAT IT DOES NOT, said plainly: the bytes
+    # are unchanged BECAUSE nothing was injected. It is evidence about
+    # the HD side and about the wire staying quiet, not about the
+    # original's own re-flag, which no click here reaches.
+    if args.drop in ("source", "name"):
+        if args.drop == "source":
+            xy2 = band_xy(screen, row_index, job)
+            what = f"the source column {job}"
+        else:
+            area, cfg, scale, _n = screen._list_view()
+            rect = colonytrack.name_rect(area, cfg, scale, row)
+            bands = colonylist.row_bands(area, cfg, scale,
+                                         _n - screen._first)
+            top, row_h = bands[row_index - screen._first]
+            xy2 = (rect.x + rect.width // 2, top + row_h // 2)
+            what = "the colony name"
+        print(f"click 2 at screen {xy2} ({what})")
+        click_at(app, *xy2)
+        held = screen._move.pick is None
+        quiet = counter.total() == sends_before
+        after_raw = list(app.client.state.colonies_raw)
+        same = [i for i, raw in enumerate(after_raw)
+                if i < len(before) and raw != before[i]]
+        print(f"  selection released = {held}, sends = {counter}")
+        print("  colonies whose bytes changed: "
+              + (", ".join(str(i) for i in same) or "none"))
+        good = held and quiet and not same
+        print("  put back: nothing sent and no byte moved" if good
+              else "  THE PUT-BACK PATH DID SOMETHING")
+        return 0 if good else 1
+
+    if args.drop == "empty":
+        empty = [t for t in range(3)
+                 if t != job and not len(row["cells"][t])]
+        if not empty:
+            print("no empty column in this row — a drop into one "
+                  "cannot be proved here. Pick another row with --job.")
+            return 1
+        target_job = empty[0]
+        plan = colonypick.plan_move(pick, list(pick.pops), pick.n_pops,
+                                    max_farms, row["index"], target_job)
+        if isinstance(plan, colonypick.Refusal):
+            print(f"the empty column {target_job} refuses this "
+                  f"cluster: {plan}")
+            return 1
+        print(f"  retargeted at the EMPTY column {target_job}: {plan}")
 
     xy2 = band_xy(screen, row_index, target_job)
     print(f"click 2 at screen {xy2} (drop band {target_job})")

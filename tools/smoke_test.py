@@ -2465,20 +2465,34 @@ def main():
         ("list._hd_extension no longer names what the original does "
          "instead — a label without the deviation it records is a "
          "label, not a marking")
-    # ── "No Farming" survives a FULL track ──
-    # The label lives under the bar now, not in a horizontal tail: the
-    # tail cost 150 reference px of the one budget every row shares,
-    # the band under the bar is spare height row_height already pays
-    # for. What that placement has to prove is the thing its first
-    # position failed — the label was once drawn at the bar's left
-    # edge and the worker squares painted over it, every number right
-    # and nothing on screen. So: a 42-slot row, every slot filled,
-    # and the label's own colour must still be on the surface.
+    # ── "No Farming": centred in the farmers column ──
+    # TRANSCRIBED, 8 September 2026, and the check moved with the
+    # drawing. It used to sit below the bar at the left edge of the
+    # first job marker, and these checks asserted that placement's
+    # own risk — that a later draw would paint over it, which had
+    # happened once with every number right and nothing on screen.
+    # The source settles the placement instead: coldraw.cpp:315-321
+    # prints it with `Squeeze_Print_Paragraph_(left_x, top_y + 5,
+    # right_x - left_x, 28, …, 2)` and the 2 selects
+    # `Print_Centered_(x + width/2, y, str)`.
+    #
+    # THE COLUMN TABLE IS INSTALLED HERE, because "centred in the
+    # column" has no meaning in the single-track fallback that the
+    # synthetic rows above use — that geometry has no columns, and
+    # `colonyheader.install_columns` is what the real screen puts in
+    # `list` at startup. So this renders the SHIPPED geometry.
+    from screens.colony_summary import colonyheader as _chd
+    from screens.colony_summary import colonytrack as _ctk
+    _cfg_cols = dict(_cfg)
+    _cfg_cols[_ctk.COLUMNS_KEY] = _chd.columns(res, "colony_summary")
+    assert _cfg_cols[_ctk.COLUMNS_KEY], (
+        "layout_reference.json has no list_columns, so the shipped row "
+        "geometry cannot be exercised at all")
     _surf.fill((0, 0, 0))
     _cl.render(_surf, [{"name": "Full", "pops": _cl.POP_LIMIT_CAP,
                         "jobs": [0, 30, 12], "no_farming": True,
                         "max_pop": _cl.POP_LIMIT_CAP}],
-               _area, _cfg, app.layout, app.style)
+               _area, _cfg_cols, app.layout, app.style)
     _px = pygame.surfarray.array3d(_surf)
     _label_ink = [(x, y) for x in range(_area.x, _area.right)
                   for y in range(_area.y, _area.bottom)
@@ -2486,100 +2500,80 @@ def main():
     assert _label_ink, (
         "'No Farming' is not on the surface for a full 42-slot row — "
         "the squares are painted over it again")
-    # And it is BELOW the bar, not inside it: inside is where the
-    # squares are, and a label that happens to survive today because
-    # one slot is empty is the same bug waiting.
-    _t = _cl.track_metrics(_area, _cfg, app.layout.scale)
-    _bar_top = (_area.y + int(_cfg["pad_y"] * app.layout.scale)
-                + (_t.row_h - _t.bar_h) // 2)
-    assert min(y for _x, y in _label_ink) >= _bar_top + _t.bar_h, (
-        "'No Farming' is drawn inside the bar's own band, where the "
-        "filled squares are")
-
-    # ── ...and it must not touch the HATCHED slots either ──
-    # The check above uses a FULL track, which has no free slots in
-    # it, so it can only speak for the filled squares. The dashed
-    # free region is the other thing drawn in that band, it is drawn
-    # BEFORE the label, and the label would therefore win silently —
-    # the same way round as the failure that started all this. So:
-    # a No Farming row that HAS a free region, and the two inks must
-    # not share a pixel.
-    #
-    # Measured as INK, not from row_height minus bar_height. The
-    # clearance those two give is 0 px at every scale checked (14
-    # against a 14 px label at 1.0, 18 against 19 at 1.3333, 28
-    # against 28 at 2.0) — the band and the label height come out
-    # equal rather than comfortable, so what decides this is where
-    # the glyphs actually land, and only the surface knows that.
-    #
-    # pops 3 against max_pop 20, so the free region starts at slot 3
-    # and the label's own 88 px reach about five slots: the two
-    # OVERLAP IN X by construction, and only their y keeps them
-    # apart. A row whose hatching began past the label would pass
-    # this by accident and prove nothing.
+    _cols_now = _ctk.columns(_area, _cfg_cols)
+    _fx, _fw = _cols_now["farmers"]
+    _lx0 = min(x for x, _y in _label_ink)
+    _lx1 = max(x for x, _y in _label_ink)
+    assert _fx <= _lx0 and _lx1 < _fx + _fw, (
+        f"'No Farming' inks x {_lx0}..{_lx1} and the farmers column is "
+        f"{_fx}..{_fx + _fw} — the label has left its own column")
+    # CENTRED, which is the whole of what the 2 in that call means.
+    # Two px of slack for the odd-width case; anything more is a
+    # placement, not a rounding.
+    _want_c = _fx + _fw / 2.0
+    _got_c = (_lx0 + _lx1 + 1) / 2.0
+    assert abs(_got_c - _want_c) <= 2, (
+        f"'No Farming' is centred on {_got_c:.1f} and the farmers "
+        f"column's centre is {_want_c:.1f} — Print_Centered_ puts it "
+        f"at left_x + width/2 (bill.cpp, mode 2)")
+    # AND AT top_y + 5, as a proportion of the row (5 of 31, the
+    # original's own row pitch at colsum.cpp:311). The original's ink
+    # top sits ON that y — measured at 136 against top_y + 5 = 136 on
+    # colony_summary_native_split.png — so this is the ink and not a
+    # surface edge.
+    _bands = _cl.row_bands(_area, _cfg_cols, app.layout.scale, 1)
+    _btop, _bh = _bands[0]
+    _want_y = _btop + round(_cl.NATIVE_LABEL_Y_OFFSET * _bh
+                            / _cl.NATIVE_ROW_PITCH)
+    _got_y = min(y for _x, y in _label_ink)
+    assert abs(_got_y - _want_y) <= 1, (
+        f"'No Farming' inks from y={_got_y}; top_y + 5 is {_want_y} at "
+        f"a band of {_bh}")
+    # ── ...and the SIZE is the measurement, re-measured ──
+    # The only source for it is a picture: font style 3's height is in
+    # the player's FONTS.LBX. The capital N measures 10 px of cap on
+    # colony_summary_native_split.png, in a 31 px row, so the drawn
+    # cap must be 10/31 of the band. Measured by RENDERING
+    # (decision 30), because a nominal font size is not a cap height
+    # and the substitution path can mix two fonts inside one string.
+    _cap_surf = app.style.render_text(
+        "N", app.layout.font_size(_cfg_cols["no_farming_font"]),
+        (255, 255, 255))
+    _cap_box = _cap_surf.get_bounding_rect()
+    _want_cap = _cl.NATIVE_LABEL_CAP * _bh / _cl.NATIVE_ROW_PITCH
+    assert abs(_cap_box.height - _want_cap) <= 1.5, (
+        f"the 'No Farming' cap renders {_cap_box.height} px where the "
+        f"measurement wants {_want_cap:.1f} — no_farming_font "
+        f"{_cfg_cols['no_farming_font']} no longer carries the 10 px "
+        f"cap measured off the native screenshot")
+    # ── The label cannot be painted over, and now by construction ──
+    # The old placement had to PROVE this with a full track, because
+    # the label shared a band with the squares. It cannot happen any
+    # more and the reason is the data, not the drawing: the label is
+    # drawn only when `max_farms == 0`, which is exactly the state in
+    # which the food column has no farmer to draw. Asserted rather
+    # than argued — a farmers column with cells in it and the label
+    # asked for at the same time must not exist, so the row that
+    # would produce it is checked to draw no farmer cell.
     _surf.fill((0, 0, 0))
     _cl.render(_surf, [{"name": "Hatched I", "pops": 3,
                         "jobs": [0, 2, 1], "no_farming": True,
                         "climate": 1, "max_pop": 20}],
-               _area, _cfg, app.layout, app.style)
+               _area, _cfg_cols, app.layout, app.style)
     _px = pygame.surfarray.array3d(_surf)
     _nf_rgb = tuple(_cl.NO_FARM_COLOR[:3])
-    _free_rgb = tuple(_cl.BAR_FREE[:3])
+    _food_rgb = tuple(_cl.ZONE_COLORS[0][:3])
     _label = [(x, y) for x in range(_area.x, _area.right)
               for y in range(_area.y, _area.bottom)
               if tuple(_px[x, y]) == _nf_rgb]
-    _hatch = [(x, y) for x in range(_area.x, _area.right)
-              for y in range(_area.y, _area.bottom)
-              if tuple(_px[x, y]) == _free_rgb]
+    _food = [(x, y) for x in range(_area.x, _area.right)
+             for y in range(_area.y, _area.bottom)
+             if tuple(_px[x, y]) == _food_rgb]
     assert _label, "'No Farming' did not draw on a row that has free slots"
-    assert _hatch, (
-        "this row drew no dashed free slots, so it cannot test the "
-        "overlap it exists for — pops, max_pop or POP_LIMIT_CAP moved")
-    # The columns really are shared — assert it, because everything
-    # below is about the y and would be vacuous otherwise.
-    #
-    # AMENDED 6 September 2026, when the row grew job markers and the
-    # growth boxes moved past a fixed gap to the end. The label and
-    # the DASHED boxes no longer share a column at all, and that is
-    # the new layout working rather than the check failing: they are
-    # separated in x by construction now. What the label still shares
-    # a column with is the RUN — it starts at the run's own left edge
-    # — so the run is what makes the y-test non-vacuous, and the
-    # label must share a pixel with neither.
-    _label_x = set(x for x, _y in _label)
-    _hatch_x = set(x for x, _y in _hatch)
-    _run_rgb = set(tuple(c[:3]) for c in _cl.ZONE_COLORS)
-    _run_rgb.add(tuple(_cl.MARKER_BG[:3]))
-    _run = [(x, y) for x in range(_area.x, _area.right)
-            for y in range(_area.y, _area.bottom)
-            if tuple(_px[x, y]) in _run_rgb]
-    assert _run, "the row drew no markers and no cells at all"
-    _run_x = set(x for x, _y in _run)
-    assert _label_x & _run_x, (
-        "the label and the run share no columns, so this check "
-        "cannot see an overlap even if there is one — the label no "
-        "longer starts at the run's left edge")
-    assert not (set(_label) & set(_run)), (
-        "'No Farming' and the run ink the same pixels — the label is "
-        "painting over the markers or the cells, which are drawn "
-        "first and therefore lose silently")
-    assert not (_label_x & _hatch_x), (
-        "the label and the dashed growth boxes share a column again. "
-        "Since 6 September the growth boxes sit past the run and a "
-        "fixed gap, so this means the gap or the run length moved "
-        "and the two can collide once more")
-    # Sharing no pixel is necessary but not sufficient: two things
-    # interleaved row for row share no pixel and still collide. So
-    # the bands have to be disjoint in y as well, with the label
-    # below — which is where row_height's spare band is.
-    assert not (set(_label) & set(_hatch)), (
-        "'No Farming' and the dashed free slots ink the same pixels — "
-        "the label is painting over the hatching, which is drawn "
-        "first and therefore loses silently")
-    assert min(y for _x, y in _label) > max(y for _x, y in _hatch), (
-        f"'No Farming' ink runs from y={min(y for _x, y in _label)} "
-        f"while the hatched band ends at {max(y for _x, y in _hatch)} "
-        f"— the label is inside the track's band, not under it")
+    assert not _food, (
+        "a No Farming row drew farmer cells — the label and the "
+        "figures would then share the column, which is the collision "
+        "the old placement existed to avoid")
 
     # ── The budget, checked where it can actually fail ──
     # The column sum — name + tail + building + pad + 42*unit +
@@ -3231,6 +3225,89 @@ def main():
         _ocfg["_growth_note"], (
         "output._growth_note no longer says the k is a unit rather "
         "than a decoration, which is the whole of why it is there")
+
+    # ── THE SCAN BOX IS TWO BOXES, AND THEY SPLIT BY COLUMN ──
+    # `Draw_Colony_Scan_Info_` fills the description paragraph at
+    # native (13, 354, 80, 88) and the production rows from native
+    # x 106 (colsum.cpp:1171-1176, :1206). The `column` field in
+    # layout.json already said which row belongs to which half; since
+    # 8 September 2026 the two halves go into the two holes the frame
+    # gives them instead of both into the right one.
+    _left = _co.visible_rows(_fake, _ocfg, _words, _climates, only={0})
+    _right = _co.visible_rows(_fake, _ocfg, _words, _climates, only={1})
+    assert len(_left) + len(_right) == len(_shown), (
+        f"{len(_left)} + {len(_right)} rows against {len(_shown)} — "
+        f"the split must partition the panel, not sample it")
+    assert {e.label.lower() for e in _left} == {
+        "size", "climate", "gravity", "minerals", "population",
+        "growth"}, [e.label for e in _left]
+    assert {e.label.lower() for e in _right} == {
+        "food", "industry", "research", "bc", "morale"}, \
+        [e.label for e in _right]
+    # ── BOTH `info_style` VARIANTS DRAW, AND THE CHOICE IS DATA'S ──
+    # The default is the transcription, which is this project's
+    # default everywhere; the switch is one key so the two pictures
+    # can be compared beside the native before it is closed.
+    _info_box = pygame.Rect(0, 0, 324, 224)
+    for _style_name in ("paragraph", "rows"):
+        _isurf = pygame.Surface((324, 224))
+        _isurf.fill((0, 0, 0))
+        _co.render_info(_isurf, _fake, _info_box,
+                        dict(_ocfg, info_style=_style_name), _words,
+                        _climates, app.layout, app.style)
+        assert pygame.surfarray.array3d(_isurf).any(), (
+            f"output.info_style={_style_name!r} drew nothing at all")
+    # THE PARAGRAPH IS FIVE LINES, NOT SIX ROWS: size and climate
+    # share one and growth carries no label, which is what
+    # E_Strings_(74) does.
+    _para = _co.fill_template(_ocfg["info_paragraph"],
+                              _co.row_values(_fake, _words, _climates))
+    assert len(_para.split("\n")) == 5, _para
+    assert _para.split("\n")[0] == "Large Gaia", _para
+    assert "{" not in _para, (
+        "a placeholder survived substitution in the paragraph; "
+        "fill_template replaces and never formats (decision 37)")
+    # AND THE WORD-LIST RULE HOLDS FROM THIS SIDE TOO: the nouns are
+    # in the FORMAT, never in the lists — which is exactly what
+    # "%sravity" and "Mineral %s" do in the original.
+    for _noun in ("Gravity", "Mineral", "Population"):
+        assert _noun in _ocfg["info_paragraph"], (
+            f"the paragraph does not supply {_noun!r}; the word lists "
+            f"hold the bare quality and the format the noun "
+            f"(words._note)")
+        for _lst in ("sizes", "gravities", "minerals"):
+            assert not any(_noun.lower() in str(_w).lower()
+                           for _w in _words.get(_lst, ())), (
+                f"words.{_lst} carries {_noun!r} — it would render "
+                f"twice in the paragraph and twice in the table")
+    # THE WHOLE BOX REDDENS ON NEGATIVE GROWTH, because the format
+    # opens the attribute before the first word and closes it after
+    # the last (colsum.cpp:1186-1206). The value alone would be the
+    # obvious-looking reading and is not what the arguments say.
+    _red = pygame.Surface((324, 224))
+    _red.fill((0, 0, 0))
+    _co.render_info(_red, _fake, _info_box, _ocfg, _words, _climates,
+                    app.layout, app.style)
+    _blk = pygame.Surface((324, 224))
+    _blk.fill((0, 0, 0))
+    _co.render_info(_blk, dict(_fake, growth=7), _info_box, _ocfg,
+                    _words, _climates, app.layout, app.style)
+    def _count(_surface, _rgb):
+        _a = pygame.surfarray.array3d(_surface)
+        return sum(1 for x in range(324) for y in range(224)
+                   if tuple(_a[x, y]) == tuple(_rgb[:3]))
+
+    _warm = _count(_red, _co.SHORTAGE_COLOR)
+    _cool = _count(_blk, _co.VALUE_COLOR)
+    assert _warm > 50 and _count(_red, _co.VALUE_COLOR) == 0, (
+        f"negative growth inked {_warm} px of the warn colour and "
+        f"{_count(_red, _co.VALUE_COLOR)} of the value colour; the "
+        f"sign string opens the attribute before the FIRST word and "
+        f"the reset comes after the last, so the whole paragraph "
+        f"reddens rather than the number")
+    assert _cool > 50 and _count(_blk, _co.SHORTAGE_COLOR) == 0, (
+        f"positive growth inked {_count(_blk, _co.SHORTAGE_COLOR)} px "
+        f"of the warn colour — nothing should redden at all")
 
     # ── A VALUE CARRIES NO PREFIX; THE LABEL CARRIES IT ──
     # A rule, not three decisions. The original's box is one run-on
@@ -4574,8 +4651,13 @@ def main():
         "screens/colony_summary/colonyoutput.py": "decision 43",
         "screens/colony_summary/colonypick.py": "partial",
         "screens/colony_summary/colonyrows.py": "layout.json",
-        "screens/colony_summary/colonytrack.py": "marker",
-        "screens/colony_summary/layout.json": "_hd_extension_markers",
+        # RETARGETED 8 September 2026, in the commit that deleted the
+        # F/W/S markers. `colonytrack` was cited on "marker" and
+        # layout.json on `_hd_extension_markers`; both named the same
+        # removed thing. The live marking in that module is now the
+        # drop rect's height, and layout.json's is the hover popup.
+        "screens/colony_summary/colonytrack.py": "DEVIATION IN HEIGHT",
+        "screens/colony_summary/layout.json": "_hd_extension_popup",
         # Caught by this check on its first run, which is the whole
         # point of it: the figure step's marking went in with Stage 1
         # and nothing was reading the file it went into.
@@ -5070,7 +5152,7 @@ def main():
     _row_keys = {k.value for k in _dicts[0].keys
                  if isinstance(k, _ast.Constant)}
     _row_expected = {
-        "index", "name", "climate", "pops", "jobs", "cells",
+        "index", "name", "climate", "pops", "jobs", "cells", "held",
         "no_farming", "max_pop", "producing", "producing_id",
         "producing_state", "producing_turns", "can_buy", "production",
         "drawn_production", "shortage", "size", "gravity", "mineral",
@@ -6270,13 +6352,63 @@ def main():
     assert "HD EXTENSION" in (_cmu.MoveController.cancel.__doc__ or "")
     assert "HD EXTENSION" in (_cp.__doc__ or "")
     assert "HD EXTENSION" in _mv_words.get("_hd_extension_cancel", "")
-    assert "HD EXTENSION" in _mv_words.get("_hd_extension_bands", "")
-    # The marking lives on the function that carries the reason AND
-    # the shape. Since 6 September that is `row_boxes`, which lays
-    # out markers, cells, targets and growth in one place;
-    # drop_targets and drop_band are lookups into it.
-    assert "HD EXTENSION" in (_ct.row_boxes.__doc__ or "")
-    assert "HD EXTENSION" in (_cl.draw_drop_bands.__doc__ or "")
+    from core import zoomtables as _zt
+    # ── THE DROP TARGET STOPPED BEING AN EXTENSION ──
+    # `_hd_extension_bands` is gone: the target is the original's own
+    # per-row job field, added unconditionally in mode 1
+    # (coldraw.cpp:409), so an empty column is a target there too.
+    # What is left is the HEIGHT, and that is a DEVIATION with three
+    # homes. Retargeted in the same commit that took the words out.
+    assert "_hd_extension_bands" not in _mv_words, (
+        "move._hd_extension_bands is back. The drop target is a "
+        "transcription — coldraw.cpp:409 adds the field whether or "
+        "not the column drew an icon — and calling it an extension "
+        "was the marking this commit withdrew")
+    _dtn = _mv_words.get("_drop_target_note", "")
+    assert "DEVIATION" in _dtn and "coldraw.cpp:409" in _dtn, (
+        "move._drop_target_note must carry the DEVIATION and name "
+        "the call the target is transcribed from")
+    assert "colsum.cpp:909" in _dtn, (
+        "the fourth target — a drop on the colony name, which is "
+        "Send_Cluster_(colony, -1) — is not named in the note")
+    assert "DEVIATION IN HEIGHT" in (_ct._column_boxes.__doc__ or ""), (
+        "colonytrack._column_boxes no longer carries the drop rect's "
+        "height deviation")
+    # ── AND THE TWO ROW MARKS ARE GONE, WITH THEIR MARKINGS ──
+    # The pick outline and the drop-band frame. The original marks
+    # neither: its only drawing outside fields and paragraphs on this
+    # screen is the scroll thumb (colsum.cpp:759-765).
+    for _dead in ("draw_pick", "draw_drop_bands"):
+        assert not hasattr(_cl, _dead), (
+            f"colonylist.{_dead} is back — the original marks neither "
+            f"the picked cells nor the row they came from")
+    for _dead in ("PICK_COLOR", "BAND_COLOR", "MARKER_BG",
+                  "MARKER_EDGE", "MARKER_TEXT"):
+        assert not hasattr(_cl, _dead), (
+            f"colonylist.{_dead} survived its drawing — a palette key "
+            f"nothing reads is a marking that has stopped marking")
+    assert "markers" not in _ct.RowBoxes._fields, (
+        "RowBoxes carries a markers field again; the F/W/S squares "
+        "were removed with their marking on 8 September 2026")
+    assert "name" in _ct.RowBoxes._fields, (
+        "RowBoxes lost the name rect, which is the fourth drop "
+        "target (colsum.cpp:909)")
+    # ── THE HELD CLUSTER, AND THE STEP IT IS OFFSET BY ──
+    assert "colmove.cpp" in (_cl.draw_held_cluster.__doc__ or ""), (
+        "draw_held_cluster does not name Draw_Cluster_, which is the "
+        "whole of what it transcribes")
+    _zt_src = open(os.path.join(_proj, "core", "zoomtables.py"),
+                   encoding="utf-8").read()
+    _zt_note = _zt_src[:_zt_src.index("CLUSTER_FIGURE_OFFSET = ")]
+    _zt_note = _zt_note[_zt_note.rindex("FIGURE_STEP = "):]
+    assert "DEVIATION" in _zt_note and "colmove.cpp:23" in _zt_note, (
+        "CLUSTER_FIGURE_OFFSET's note must carry the DEVIATION that "
+        "multiplying by the sprite step is, and name the source line")
+    assert (_zt.CLUSTER_FIGURE_OFFSET == (5, -10)
+            and _zt.CLUSTER_FIGURE_PITCH == 20), (
+        f"the cluster offsets are {_zt.CLUSTER_FIGURE_OFFSET} / "
+        f"{_zt.CLUSTER_FIGURE_PITCH}; colmove.cpp:23-28 says "
+        f"(5, -10) and 20")
     assert "HD EXTENSION" in (_cl._cell_mark.__doc__ or "")
     assert "IT DOES NOT APPEAR WHILE A SELECTION IS HELD" in (
         _cpop.__doc__ or "")
@@ -6355,13 +6487,18 @@ def main():
                 f"{_got}. A click on a cell must name that cell's "
                 f"job — looks right, clicks wrong is the whole "
                 f"fault this replaced")
-        # 1b. AND SO DOES EVERY MARKER: a marker is part of its
-        #     group's target, so the letter is a drop.
-        for _zone, _marker in _boxes.markers:
-            _got = _cl.drop_band(_mv_area, _mv_cfg, _mv_scale, _r,
-                                 _marker.x + _marker.width // 2)
-            assert _got == _zone, (
-                f"{_r['name']}: the {_zone} marker names {_got}")
+        # 1b. THE COLONY NAME NAMES NO JOB, and answers the fourth
+        #     target instead — `Send_Cluster_(colony, -1)`,
+        #     colsum.cpp:909, which is "put them back".
+        _nrect = _ct.name_rect(_mv_area, _mv_cfg, _mv_scale, _r)
+        if _nrect is not None and _nrect.width:
+            _nmid = _nrect.x + _nrect.width // 2
+            assert _cl.drop_band(_mv_area, _mv_cfg, _mv_scale, _r,
+                                 _nmid) is None, (
+                f"{_r['name']}: the name column names a job")
+            assert _ct.on_name(_mv_area, _mv_cfg, _mv_scale, _r, _nmid), (
+                f"{_r['name']}: on_name does not recognise the middle "
+                f"of the name column")
         # 1c. EACH GROUP SITS IN ITS OWN COLUMN, and every cell of it
         #     inside that column. This replaced "the run is flush" at
         #     Stage 4: a flush run was the property of ONE track, and
@@ -6372,49 +6509,46 @@ def main():
         #     block exists for, so the property moved with the
         #     geometry rather than being dropped.
         _colmap = _ct.columns(_mv_area, _mv_cfg)
-        if _colmap:
-            for _zone, _marker in _boxes.markers:
-                _cx, _cw = _colmap[_ct.JOB_KEYS[_zone]]
-                assert _marker.x == _cx, (
-                    f"{_r['name']}: the {_zone} marker is at "
-                    f"{_marker.x}, its column starts at {_cx}")
-                for _j, _k, _cell in _boxes.cells:
-                    if _j != _zone:
-                        continue
-                    assert _cx <= _cell.x and _cell.right <= _cx + _cw, (
-                        f"{_r['name']}: cell {_k} of job {_zone} "
-                        f"({_cell.x}..{_cell.right}) leaves its column "
-                        f"({_cx}..{_cx + _cw}) — a cell under the "
-                        f"wrong heading is the failure this replaced "
-                        f"the flush-run rule with")
-            # AND NO GROWTH BOXES: they belong to the colony, so in a
-            # row of three job columns there is nowhere for them that
-            # is not a lie. `_column_boxes` carries the reasoning.
-            assert not _boxes.growth, _boxes.growth
-        else:
-            _edge = _boxes.markers[0][1].x
-            for _zone, _marker in _boxes.markers:
-                assert abs(_marker.x - _edge) <= _dt_track.gap, (
-                    f"{_r['name']}: a gap opened before the {_zone} "
-                    f"marker — the single-track run must be unbroken")
-                _edge = _marker.x + _marker.width + _dt_track.gap
-                for _j, _k, _cell in _boxes.cells:
-                    if _j == _zone:
-                        _edge = _cell.x + _cell.width + _dt_track.gap
-            if _boxes.growth:
-                _gap = int(_mv_cfg.get("growth_gap", 18) * _mv_scale)
-                assert _boxes.growth[0].x == _boxes.run_right + _gap, (
-                    f"{_r['name']}: the growth boxes start at "
-                    f"{_boxes.growth[0].x}, not "
-                    f"{_boxes.run_right + _gap}")
-            assert _cl.drop_band(_mv_area, _mv_cfg, _mv_scale, _r,
-                                 _boxes.growth[0].centerx) is None, (
-                f"{_r['name']}: a growth box names a job")
-        # 2. EVERY JOB HAS A TARGET, including one nobody holds.
+        assert _colmap, (
+            "the screen's list cfg has no column table, so this whole "
+            "block would be testing the single-track fallback that "
+            "nothing ships — colonyheader.install_columns")
+        for _zone, _key in enumerate(_ct.JOB_KEYS):
+            _cx, _cw = _colmap[_key]
+            _own = [c for j, _k, c in _boxes.cells if j == _zone]
+            # THE FIRST CELL IS AT THE COLUMN'S LEFT EDGE. It used to
+            # be one marker's width in; the markers went on
+            # 8 September 2026 and the cells moved left with them,
+            # which is where the original starts its icons —
+            # `(30 - squish) * i + left_x`, coldraw.cpp:349.
+            if _own:
+                assert _own[0].x == _cx, (
+                    f"{_r['name']}: the first cell of job {_zone} is "
+                    f"at {_own[0].x}, its column starts at {_cx}")
+            for _c in _own:
+                assert _cx <= _c.x and _c.right <= _cx + _cw, (
+                    f"{_r['name']}: a cell of job {_zone} "
+                    f"({_c.x}..{_c.right}) leaves its column "
+                    f"({_cx}..{_cx + _cw}) — a cell under the wrong "
+                    f"heading is the failure this block exists for")
+        # AND NO GROWTH BOXES: they belong to the colony, so in a
+        # row of three job columns there is nowhere for them that
+        # is not a lie. `_column_boxes` carries the reasoning.
+        assert not _boxes.growth, _boxes.growth
+        # 2. EVERY JOB HAS A TARGET, INCLUDING AN EMPTY ONE — and
+        #    since 8 September that is a TRANSCRIPTION rather than a
+        #    thing the markers bought: mode 1 adds the field after a
+        #    walk that may have drawn nothing (coldraw.cpp:409), so
+        #    the original accepts a drop on an empty column too.
         for _job, _rect in _targets:
             assert _rect.width >= 1, (
                 f"{_r['name']}: job {_job} has no target at all; an "
                 f"empty job is the one a player most wants to start")
+            assert (_rect.x, _rect.width) == _colmap[_ct.JOB_KEYS[_job]], (
+                f"{_r['name']}: job {_job}'s target is "
+                f"{(_rect.x, _rect.width)} and its column is "
+                f"{_colmap[_ct.JOB_KEYS[_job]]} — the target is the "
+                f"whole cell, which is what coldraw.cpp:409 adds")
             _mid = _rect.x + _rect.width // 2
             assert _cl.drop_band(_mv_area, _mv_cfg, _mv_scale, _r,
                                  _mid) == _job
@@ -6444,25 +6578,94 @@ def main():
                              _lo - 5) is None
         assert _cl.drop_band(_mv_area, _mv_cfg, _mv_scale, _r,
                              _hi + 5) is None
-    # 6. THE OUTLINE IS THE TARGET, asserted rather than looked at.
-    #    draw_drop_bands takes the rects drop_targets returns, so the
-    #    check is that it is drawn where the hit test answers — done
-    #    by rendering and reading the ink back, because "they call the
-    #    same function" is what the old code could also have claimed.
-    _dt_row = _dt_rows[0]
-    _dt_surf = pygame.Surface((_mv_area.right + 8, _mv_area.bottom + 8))
-    _dt_surf.fill((0, 0, 0))
-    _cl.draw_drop_bands(_dt_surf, _mv_area, _mv_cfg, _mv_scale,
-                        _mv_bands[0], _dt_row)
-    _dt_ink = pygame.surfarray.array3d(_dt_surf).sum(axis=2)
-    _dt_cols = [x for x in range(_dt_surf.get_width()) if _dt_ink[x].any()]
-    _dt_t = _cl.drop_targets(_mv_area, _mv_cfg, _mv_scale, _dt_row)
-    assert min(_dt_cols) == _dt_t[0][1].x, (
-        f"the outlines start at {min(_dt_cols)}, the targets at "
-        f"{_dt_t[0][1].x}")
-    assert max(_dt_cols) == _dt_t[-1][1].x + _dt_t[-1][1].width - 1, (
-        f"the outlines end at {max(_dt_cols)}, the targets at "
-        f"{_dt_t[-1][1].x + _dt_t[-1][1].width - 1}")
+    from screens.colony_summary import colonyicons as _ci
+    from screens.colony_summary import colonymove as _cmv2
+    from screens.colony_summary import colonyfigures as _cfig
+    from core.structs import colony as _cspec
+    # 6. A HELD CLUSTER LEAVES THE ROW, AND THE PITCH FOLLOWS IT —
+    #    which is what replaced the two marks on 8 September 2026.
+    #    The original does not outline the picked cells and does not
+    #    frame the row; it clears `0x200` (colmove.cpp:70) and the
+    #    icon walk stops emitting them (coldraw.cpp:336), so the row
+    #    is shorter and the squish is recomputed over what is left by
+    #    the SAME pre-pass that serves the draw and both hit tests
+    #    (coldraw.cpp:301 -> :419).
+    #
+    #    Asserted on the render, not on the code: the cells are
+    #    recovered from their own ink before and after, and the
+    #    surviving pitch is compared against `column_pitch` at the
+    #    SHORTENED count. A second arithmetic anywhere on this path
+    #    would show up here as a pitch that did not move.
+    _hc_pops = [((1 & 3) << 7) | _cspec.POP_MASK_ASSIGNED
+                for _ in range(6)]
+    _hc_row = {"name": "held", "pops": 6, "jobs": [0, 6, 0],
+               "no_farming": False, "climate": 8, "max_pop": 10,
+               "producing": "", "producing_turns": 0, "can_buy": False,
+               "cells": ((), tuple(range(6)), ())}
+    _hc_full = _ct.row_boxes(_mv_area, _mv_cfg, _mv_scale, _hc_row)
+    _hc_kept = dict(_hc_row, cells=((), tuple(range(4)), ()))
+    _hc_short = _ct.row_boxes(_mv_area, _mv_cfg, _mv_scale, _hc_kept)
+    assert len([c for j, _k, c in _hc_full.cells if j == 1]) == 6
+    _hc_cells = [c for j, _k, c in _hc_short.cells if j == 1]
+    assert len(_hc_cells) == 4, (
+        "holding two of six pops did not shorten the row — the cells "
+        "are built from the icon list and the icon list is built from "
+        "the assigned bit")
+    # The pitch is the shortened one, and it comes from the one home.
+    _hc_step = _cfig.figure_step(_mv_scale)
+    _hc_want = min(_ci.column_pitch(1, 4), _ci.ICON_SPACING) * _hc_step
+    assert abs((_hc_cells[1].x - _hc_cells[0].x) - int(_hc_want)) <= 1, (
+        f"the shortened row draws a pitch of "
+        f"{_hc_cells[1].x - _hc_cells[0].x}; colonyicons.column_pitch "
+        f"at 4 icons times the sprite step is {int(_hc_want)} — a "
+        f"second pitch computation has entered the pick path")
+    # AND `build_rows` IS WHAT SHORTENS IT, by clearing the bit the
+    # original clears. Not a count subtracted somewhere.
+    _hc_held = _cmv2.held_pops(_hc_pops, (4, 5))
+    assert len(_ci.icon_pops(_hc_held, 6, 1)) == 4, _hc_held
+    assert all(not (_hc_held[i] & _cspec.POP_MASK_ASSIGNED)
+               for i in (4, 5)), _hc_held
+    assert all(_hc_held[i] & _cspec.POP_MASK_ASSIGNED
+               for i in range(4)), _hc_held
+    assert _hc_pops[4] & _cspec.POP_MASK_ASSIGNED, (
+        "held_pops wrote into the array it was given; the snapshot's "
+        "own words must survive it (decision 47)")
+    # NO `count - n` ANYWHERE ON THE PATH. The rule, not the
+    # instance: the shortening is one cleared bit, so no module on
+    # this path may subtract a held size from a count.
+    for _mod in ("colonytrack.py", "colonylist.py", "colonyrows.py",
+                 "colonyicons.py"):
+        _msrc = open(os.path.join(_proj, "screens", "colony_summary",
+                                  _mod), encoding="utf-8").read()
+        for _bad in ("- len(held", "- len(self.cluster",
+                     "- pick.size", "- self.pick.size"):
+            assert _bad not in _msrc, (
+                f"{_mod} subtracts a held count ({_bad!r}). The held "
+                f"pops leave the row by losing 0x200, which is what "
+                f"the original does and what keeps one list serving "
+                f"the draw, the pitch and both hit tests")
+    # AND ONE HOME FOR THE PITCH. `squish_step` is
+    # Calculate_Squish_Step_ transcribed and must exist once.
+    _sq = []
+    for _dp, _dn, _fns in os.walk(_proj):
+        _dn[:] = [d for d in _dn if d not in ("__pycache__", ".git")]
+        for _fn in _fns:
+            if not _fn.endswith(".py"):
+                continue
+            _fp = os.path.join(_dp, _fn)
+            # This file is excluded, and only by exact path: it names
+            # the function in the assertion below, which would
+            # otherwise count as a second home. Same exclusion the
+            # marking inventory makes, for the same reason.
+            if os.path.relpath(_fp, _proj) == os.path.join(
+                    "tools", "smoke_test.py"):
+                continue
+            if "def squish_step(" in open(_fp, encoding="utf-8").read():
+                _sq.append(_fp)
+    assert len(_sq) == 1 and _sq[0].endswith("colonyicons.py"), (
+        f"Calculate_Squish_Step_ is transcribed in {_sq} — one home, "
+        f"or the render and the hit test drift (decision 5)")
+
     # 7. THE CELL UNDER A PIXEL IS THE CELL DRAWN AT THAT PIXEL —
     #    for every cell of every row, PICK-UP as well as drop.
     #
@@ -6508,7 +6711,7 @@ def main():
         _drawn = {_j: _ink_runs(
             lambda _s, _row=_r: _cl._render_bar(
                 _s, _row, _mv_area, _mv_cfg, _mv_scale, _pk_band,
-                _dt_track, _mv_px, app.style),
+                _dt_track, _mv_px, app.style, app.layout),
             _cl.ZONE_COLORS[_j]) for _j in range(3)}
         _boxes = _ct.row_boxes(_mv_area, _mv_cfg, _mv_scale, _r, _pk_band)
         for _j in range(3):
@@ -6532,33 +6735,6 @@ def main():
                         f"{_r['name']}: x={_x} is drawn as job {_j} "
                         f"and drops into "
                         f"{_cl.drop_band(_mv_area, _mv_cfg, _mv_scale, _r, _x)}")
-                # AND THE MARK LANDS ON IT. The outline a player uses
-                # to see what is held must ink the same columns the
-                # cell does — this is the half that was missing.
-                _mark = _ink_runs(
-                    lambda _s, _row=_r, _job=_j, _slot=_k: _cl.draw_pick(
-                        _s, _mv_area, _mv_cfg, _mv_scale, _pk_band,
-                        _row, _job, (_slot,)),
-                    _cl.PICK_COLOR)
-                assert _mark == [(_x0, _x1)], (
-                    f"{_r['name']}: the pick outline for cell {_k} of "
-                    f"job {_j} inks {_mark}, the cell is at "
-                    f"{[(_x0, _x1)]} — an outline that names a cell "
-                    f"other than the one it is drawn on")
-        # A WHOLE CLUSTER, not only single cells: the run of a real
-        # pick is contiguous and must cover exactly its own cells.
-        _multi = next((_j for _j in range(3) if len(_drawn[_j]) >= 2), None)
-        if _multi is not None:
-            _slots = tuple(range(len(_drawn[_multi])))
-            _mark = _ink_runs(
-                lambda _s, _row=_r, _job=_multi: _cl.draw_pick(
-                    _s, _mv_area, _mv_cfg, _mv_scale, _pk_band, _row,
-                    _job, _slots),
-                _cl.PICK_COLOR)
-            assert _mark == _drawn[_multi], (
-                f"{_r['name']}: a pick of all {len(_slots)} cells of "
-                f"job {_multi} inks {_mark}, the cells are at "
-                f"{_drawn[_multi]}")
     ok("colony summary cells: drawn, picked up and dropped are one "
        "and the same cell (read back from the render)")
     # ── The identity letter, and the popup's two rules ───────────
@@ -6660,6 +6836,125 @@ def main():
 
     ok("pop move: the first click and every refusal send NOTHING, "
        "the cancel is marked in four homes")
+
+    import tempfile as _tf
+    from screens.colony_summary import colonyfigures as _fig
+    # ── THE HELD CLUSTER HANGS ON THE POINTER, AT THE SPRITE STEP ──
+    # `COLMOVE::Draw_Cluster_` (colmove.cpp:7-37) draws each held pop
+    # at x + 5 + 20*k, y - 10, native, beside a 28 px sprite. HD
+    # multiplies all three by `FIGURE_STEP`, which is the DEVIATION
+    # marked in zoomtables — so what has to hold is that the figure
+    # is the STEP's own size (a swap, decision 28, never a scale) and
+    # that the offsets moved with it.
+    #
+    # The figures are built here rather than read from the tree: they
+    # are derived from the player's own RACEICON.LBX and are not
+    # committed (decision 50), so a check that needed them would
+    # answer differently for a clone that had not run the extractor.
+    with _tf.TemporaryDirectory() as _hcdir:
+        _hcd = os.path.join(_hcdir, _fig.FIGURE_DIR)
+        os.makedirs(_hcd)
+        _hcm = pygame.Surface((28, 28), pygame.SRCALPHA)
+        _hcm.fill((255, 0, 0, 255))
+        pygame.image.save(_hcm, os.path.join(_hcd, "human_farmer.png"))
+        from core.resources import Resources as _HcRes
+        _hcres = _HcRes()
+        _hcres.mod_dirs = [_hcdir]
+        for _sc, _step in ((1.0, 2), (4.0 / 3.0, 3), (2.0, 4)):
+            assert _cfig.figure_step(_sc) == _step, (
+                f"figure_step({_sc}) is {_cfig.figure_step(_sc)}, "
+                f"not {_step} — zoomtables.FIGURE_STEP")
+            _hcset = _cfig.FigureSet(_hcres, _step)
+            _hcsurf = pygame.Surface((600, 400), pygame.SRCALPHA)
+            _hcsurf.fill((0, 0, 0, 255))
+            _hccells = tuple(_crw.Cell("", "human_farmer.png")
+                             for _ in range(3))
+            _cl.draw_held_cluster(_hcsurf, (200, 200), _hcset, _hccells,
+                                  _sc)
+            _hca = pygame.surfarray.array3d(_hcsurf)
+            _hit = [(x, y) for x in range(600) for y in range(400)
+                    if tuple(_hca[x, y]) == (255, 0, 0)]
+            assert _hit, f"step {_step}: the held cluster drew nothing"
+            _hx = sorted({x for x, _y in _hit})
+            _hy = sorted({y for _x, y in _hit})
+            _ox, _oy = _zt.CLUSTER_FIGURE_OFFSET
+            assert _hx[0] == 200 + _ox * _step, (
+                f"step {_step}: the first figure starts at x={_hx[0]}, "
+                f"the pointer + 5*step is {200 + _ox * _step}")
+            assert _hy[0] == 200 + _oy * _step, (
+                f"step {_step}: the figures start at y={_hy[0]}, the "
+                f"pointer - 10*step is {200 + _oy * _step}")
+            # SWAP, NEVER SCALE: the drawn figure is exactly the
+            # step's size, so a fractional resize would show here as
+            # a width that is not 28 * step.
+            assert _hy[-1] - _hy[0] + 1 == 28 * _step, (
+                f"step {_step}: the held figure is "
+                f"{_hy[-1] - _hy[0] + 1} px tall, not {28 * _step} — "
+                f"a sprite is swapped by step and never scaled "
+                f"(decision 28)")
+            # AND THE PITCH IS 20 * step, not the icon spacing and
+            # not the squished column pitch.
+            _pitch = _zt.CLUSTER_FIGURE_PITCH * _step
+            assert _hx[-1] - _hx[0] + 1 == 28 * _step + 2 * _pitch, (
+                f"step {_step}: three held figures span "
+                f"{_hx[-1] - _hx[0] + 1} px; 20*step between them "
+                f"makes {28 * _step + 2 * _pitch}")
+        # AND NOTHING WITHOUT FIGURES. The coloured cell is the row's
+        # absent-set picture; a coloured square on the POINTER would
+        # be a shape the original never has.
+        _hcsurf = pygame.Surface((600, 400), pygame.SRCALPHA)
+        _hcsurf.fill((0, 0, 0, 255))
+        _cl.draw_held_cluster(_hcsurf, (200, 200), None,
+                              (_crw.Cell("", "human_farmer.png"),), 1.0)
+        assert not pygame.surfarray.array3d(_hcsurf).any(), (
+            "the held cluster drew something with no figure set")
+    ok("held cluster on the pointer (+5/-10 and 20 apart at the "
+       "sprite step, swapped never scaled, nothing without figures)")
+
+    # ── A PICK DOES NOT ROUTE THROUGH THE SLOT SEARCH ──
+    # The original never runs its icon hit test while a cluster is
+    # held: `Get_Selected_Pop_` is reached only when
+    # `_cluster_colony_n == -1` (colsum.cpp:862), and with one in hand
+    # the click goes straight to `Send_Cluster_` (:869) — the FIELD
+    # decides, not the slot. Asserted by making the search fatal and
+    # driving a real drop through the screen, because "the code does
+    # not call it" is what a reader claims and this is what a run
+    # proves.
+    _slot_calls = []
+
+    def _forbid(name, real):
+        def _fn(*a, **kw):
+            _slot_calls.append(name)
+            return real(*a, **kw)
+        return _fn
+
+    _sl_saved = (_ci.slot_at, _ci.slot_pop, _cl.cell_at_x)
+    _ci.slot_at = _forbid("slot_at", _sl_saved[0])
+    _ci.slot_pop = _forbid("slot_pop", _sl_saved[1])
+    _cl.cell_at_x = _forbid("cell_at_x", _sl_saved[2])
+    try:
+        _scr_op.handle_click(*_square_xy(_mv_row, _mv_job, _mv_slot))
+        assert _scr_op._move.pick is not None, (
+            "the pick-up did not take; the rest of this check would "
+            "be vacuous")
+        assert _slot_calls, (
+            "the PICK-UP reached no slot search at all — it is "
+            "supposed to, and a check that cannot see the call it "
+            "forbids proves nothing about the drop")
+        _slot_calls.clear()
+        _scr_op.handle_click(*_band_xy(_mv_row, _mv_target))
+    finally:
+        _ci.slot_at, _ci.slot_pop, _cl.cell_at_x = _sl_saved
+    assert not _slot_calls, (
+        f"a drop reached the slot search ({sorted(set(_slot_calls))}). "
+        f"With a cluster held the original resolves a click by FIELD "
+        f"— which job column it landed in — and never by icon "
+        f"(colsum.cpp:862-869)")
+    _scr_op._move.pick = None
+    _scr_op._move.send = None
+    _scr_op._rebuild_rows()
+    ok("a drop is resolved by column and never by slot (the icon "
+       "search is fatal while a cluster is held)")
 
     # ── And the sentence has to FIT the panel it is drawn in ──────
     # Found by rendering it and looking, which is the only thing that

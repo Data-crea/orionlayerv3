@@ -219,8 +219,12 @@ class ColonySummaryScreen(ScreenBase):
         # stars together; the sidebar only ever wanted the local
         # player's record.
         self._state = game_state
-        self._rebuild_rows()
+        # ADVANCE FIRST, THEN BUILD. A chain that finished this frame
+        # releases the pick, and the rows carry the held cluster —
+        # built in the other order they would show pops in hand that
+        # nothing is holding, for one frame, every time a move lands.
         self._move.advance(game_state, self._move_words())
+        self._rebuild_rows()
         raws = getattr(game_state, "player_raw", None) or []
         players = [player_struct.parse(r) for r in raws
                    if len(r) >= player_struct.SIZE]
@@ -240,8 +244,19 @@ class ColonySummaryScreen(ScreenBase):
     # which object holds them.
 
     def _rebuild_rows(self):
+        """Rebuild the rows, held cluster included.
+
+        `_move.held()` is what turns a local selection into the
+        original's own picture: those pops lose `0x200` and stop
+        being icons, so the row shortens, its pitch shortens with it
+        and the hit test agrees — one list, three readers
+        (decision 5). Called from every path that can CHANGE the
+        selection as well as from `update`, because the hover has to
+        hit-test the rows that were drawn.
+        """
         self._selection.rebuild(self._state, self._sort_key,
-                                colonybuild.names_for(self))
+                                colonybuild.names_for(self),
+                                held=self._move.held())
 
     @property
     def _rows(self):
@@ -301,20 +316,23 @@ class ColonySummaryScreen(ScreenBase):
         return self._data.get("move", {})
 
     def _render_move(self, surface):
-        """The marks on the row, and the last word in `spare_panel`.
+        """The hover popup, and the move's last word in `planet_info`.
 
-        **`spare_panel` stops being empty here, and that is a
-        decision.** It is the middle hole, over the native column
-        `output_panel` already answers for (layout.json's `panels`
-        note), and it was left blank on purpose rather than filled
-        with a second copy of those values. A move's refusal is not
-        those values: the original answers one with `GENDRAW::Help_`,
-        a BLOCKING message box centred on the whole screen
-        (textbox.cpp:149) — which HD cannot reproduce and must not,
-        since it refuses BEFORE sending and the box therefore never
-        opens. The sentence has to be somewhere a player is looking,
-        and this is the one panel on the screen that owes nothing to
-        the original.
+        **THE PANEL IS SHARED NOW, AND THE SENTENCE IS THE GUEST.**
+        This docstring used to argue that `planet_info` owes nothing
+        to the original and is therefore free for a refusal message.
+        That stopped being true on 8 September 2026: the panel is the
+        left half of the original's own scan box, the description
+        paragraph at native (13, 354, 80, 88). The message still
+        wins it while there is one — a refusal is the thing a player
+        needs to read, and the original answers one with
+        `GENDRAW::Help_`, a BLOCKING message box over the whole
+        screen (textbox.cpp:149) that HD must not reproduce because
+        it refuses BEFORE sending — but it is transient and
+        `_render_info` draws the paragraph back the moment it clears.
+
+        **AND THE MARKS ON THE ROW ARE GONE**; see
+        `colonymoveui.MoveController.draw`.
         """
         area, cfg, scale, _n = self._list_view()
         if self.box_rect("list_area"):
@@ -361,7 +379,7 @@ class ColonySummaryScreen(ScreenBase):
         self._render_background(surface)
         self._render_panels(surface)
         self._render_list(surface)
-        self._render_output(surface)
+        self._render_scan_box(surface)
         self._render_inset(surface)
         self._render_sidebar(surface)
         self._render_move(surface)
@@ -369,6 +387,19 @@ class ColonySummaryScreen(ScreenBase):
         self._render_frame_image(surface)
         self._render_header(surface)
         self._render_title(surface)
+        # LAST, OVER THE FRAME. `COLMOVE::Draw_Cluster_(
+        # mouse::Pointer_X_(), mouse::Pointer_Y_())` is the final
+        # call of `Draw_Colony_Summary_Screen_` (colsum.cpp:506-511),
+        # after `Draw_Visible_Fields_` and inside a window set to the
+        # whole screen (colmove.cpp:15-16). `core.mouse.pos()` and
+        # not pygame's own: in fullscreen the window is letterboxed
+        # and the raw pointer is in DESKTOP coordinates, which would
+        # hang the figures a border's width from the cursor at
+        # exactly the resolution nobody checks.
+        self._move.draw_held(
+            surface, self._rows, mouse_input.pos(),
+            colonyfigures.set_for(self, self._list_view()[2]),
+            self.layout.scale)
 
     def _render_header(self, surface):
         """The five column headings — see `colonyheader` for the two
@@ -475,8 +506,9 @@ class ColonySummaryScreen(ScreenBase):
             pygame.Rect(*self.layout.rect(box)),
             self._data.get("inset", {}), self.layout, self.style)
 
-    def _render_output(self, surface):
-        """The original's scan box for the selected colony.
+    def _render_scan_box(self, surface):
+        """The original's scan box for the selected colony — BOTH
+        halves, in the two holes the frame gives them.
 
         A TRANSCRIPTION — see `colonyoutput`, and fundament 43 for
         why that marking is worth stating rather than assuming. The
@@ -484,24 +516,18 @@ class ColonySummaryScreen(ScreenBase):
         original's own guard (`_g_colony_n != -1`, colsum.cpp:1165)
         and not a placeholder waiting to be filled.
 
-        The climate words come from the `list` block and the other
-        three lists from `words`. They are not merged into one block
-        because `list.climates` already had a home and its own
-        provenance note, and a second copy that agrees today is the
-        screen-ID-map failure waiting to happen. A smoke check
-        asserts the ten climate words appear in exactly one of the
-        two.
+        **ONE CALL, BECAUSE THE ORIGINAL IS ONE CALL.**
+        `COLSUM::Draw_Colony_Scan_Info_` (colsum.cpp:1155) fills the
+        description paragraph at native (13, 354, 80, 88) and the
+        production rows from native x 106 in the same function, and
+        splitting the HD side across two screen methods had put both
+        of them in the right-hand hole with the left one empty. The
+        box resolution moved next to the panel for the same reason
+        `colonyheader.render_for` did: the screen owns which BOX, the
+        module owns what goes in it, and the two halves of one
+        original function should not be able to drift apart here.
         """
-        box = self.box_rect("planet_output")
-        if not box:
-            return
-        colonyoutput.render(
-            surface, self.selected_row(),
-            pygame.Rect(*self.layout.rect(box)),
-            self._data.get("output", {}),
-            self._data.get("words", {}),
-            self._data.get("list", {}).get("climates", ()),
-            self.layout, self.style)
+        colonyoutput.render_for(self, surface)
 
     def _render_sidebar(self, surface):
         """The six empire readouts. Everything about them, including
@@ -611,6 +637,11 @@ class ColonySummaryScreen(ScreenBase):
                 sort_hotkey=colonymoveui.sort_hotkey(
                     self._data.get("sort", {}).get("buttons", []),
                     self._sort_key)):
+            # The selection may have appeared or gone. Rebuild NOW,
+            # not at the next snapshot: the rows carry the held
+            # cluster, so the picture and the next hover would
+            # otherwise be a frame behind the click that changed it.
+            self._rebuild_rows()
             return None
         if row_index is None:
             # Off the rows — and a held selection is DISCARDED here.
@@ -618,6 +649,7 @@ class ColonySummaryScreen(ScreenBase):
             # `colonypick`: nothing has been injected, so there is
             # nothing on the other side of the wire to undo.
             self._move.cancel("clicked off the rows")
+            self._rebuild_rows()
         if row_index is not None:
             # DELIBERATELY INERT, and that is worth a comment because
             # the original does something substantial here: clicking a
@@ -670,6 +702,7 @@ class ColonySummaryScreen(ScreenBase):
         if not down or self._move.pick is None:
             return False
         self._move.cancel("right click")
+        self._rebuild_rows()
         return True
 
     def handle_mouse_motion(self, screen_x, screen_y):

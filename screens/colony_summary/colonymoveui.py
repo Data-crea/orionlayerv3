@@ -33,6 +33,7 @@ from core import textfit
 
 from . import colonylist
 from . import colonypopup
+from . import colonytrack
 from . import colonymove
 from . import colonypick
 from . import colonysend
@@ -139,6 +140,26 @@ class MoveController:
         """Drop — and this is the only path that can inject."""
         job = colonylist.drop_band(area, cfg, scale, row, x)
         if job is None:
+            if colonytrack.on_name(area, cfg, scale, row, x):
+                # **THE NAME FIELD IS "PUT THEM BACK" — TRANSCRIBED.**
+                # `_list_fields[i]` with a cluster held is
+                # `Send_Cluster_(_list_col[i], -1)` (colsum.cpp:909),
+                # and on the colony the cluster came from that takes
+                # the re-flag branch: `requested_job == -1` sets
+                # `0x200` back and consults no rule
+                # (colmove.cpp:161-165). The array ends exactly as it
+                # started.
+                #
+                # So nothing goes on the wire, and that is the
+                # transcription rather than a shortcut: our selection
+                # was never the game's cluster (decision 47), so
+                # releasing it reproduces the original's OUTCOME with
+                # no injection at all. Injecting the pair would
+                # create the cluster in the game only to release it,
+                # which is strictly more that can go wrong for a
+                # gesture whose whole content is "nothing happened".
+                self.cancel("dropped on the colony name")
+                return True
             self.cancel("dropped outside every target")
             return True
         if job == self.pick.job:
@@ -300,36 +321,56 @@ class MoveController:
 
     def draw(self, surface, rows, first, area, cfg, scale, style=None,
              layout=None, data=None):
-        """The held selection, its drop targets, and the hover popup.
+        """The hover popup, and NOTHING ELSE ON THE ROW.
 
-        One call because they are one layer: the marks go over the
-        row and the popup goes over the marks, both under the frame
-        image, and a caller that could order them wrongly is a caller
-        that will. `style`, `layout` and `data` are only needed for
-        the popup and are optional so a check can ask for the marks
-        alone.
+        **BOTH MARKS ARE GONE — 8 September 2026.** An outline round
+        the cells a pick would take, and a frame round the three drop
+        targets while one was held. The original marks neither: the
+        only drawing `colsum.cpp` does outside its fields and its
+        paragraphs is the scroll thumb (colsum.cpp:759-765), and what
+        it does instead is take the held pops OUT of the row
+        (`0x200`, coldraw.cpp:336) and hang them on the pointer
+        (`Draw_Cluster_`, colmove.cpp:7-37). Both are now transcribed
+        — `colonyrows.build_rows` does the first and
+        `colonylist.draw_held_cluster` the second — so the marks were
+        a third statement of a thing the picture already said twice.
 
-        The simplest drawing that can be seen, which is all this
-        phase asks for — the visualisation is phase 4. Both marks
-        come from `colonylist`, which owns the track geometry, so
-        they land on the squares that were drawn rather than on a
-        second copy of the pitch (decision 5).
+        The held cluster is NOT drawn from here. It sits at the
+        POINTER and over everything, which is where the original puts
+        it (after `Draw_Visible_Fields_`, colsum.cpp:506-511), so the
+        screen draws it last rather than inside this layer.
+        """
+        if style is not None:
+            self.draw_popup(surface, rows, first, area, cfg, scale,
+                            style, layout, data)
+
+    def draw_held(self, surface, rows, pointer, figures, scale):
+        """The pops in hand, on the pointer. Nothing when none is.
+
+        The screen decides WHEN — last, over the frame, which is
+        where the original draws it (colsum.cpp:506-511) — and this
+        decides WHAT, because the held cluster is this class's state.
+        The offsets and the step are `colonylist`'s and
+        `zoomtables`'.
         """
         if self.pick is None:
-            if style is not None:
-                self.draw_popup(surface, rows, first, area, cfg, scale,
-                                style, layout, data)
             return
-        position = next((i for i, row in enumerate(rows)
-                         if row["index"] == self.pick.colony), None)
-        if position is None:
+        row = next((r for r in rows
+                    if r["index"] == self.pick.colony), None)
+        if row is None:
             return
-        bands = colonylist.row_bands(area, cfg, scale, len(rows) - first)
-        band = position - first
-        if not 0 <= band < len(bands):
-            return
-        colonylist.draw_drop_bands(surface, area, cfg, scale, bands[band],
-                                   rows[position])
-        colonylist.draw_pick(surface, area, cfg, scale, bands[band],
-                             rows[position], self.pick.job,
-                             self.pick.slots())
+        colonylist.draw_held_cluster(surface, pointer, figures,
+                                     row.get("held") or (), scale)
+
+    def held(self):
+        """(colony index, held pop indices), or None.
+
+        What `build_rows` needs to clear `0x200` on, which is the
+        whole of how a held cluster leaves the row. It survives into
+        the send: the game takes the pops at the first injected
+        click, so a row that put them back while the wire was working
+        would be showing a state neither side is in.
+        """
+        if self.pick is None:
+            return None
+        return (self.pick.colony, self.pick.cluster.indices)

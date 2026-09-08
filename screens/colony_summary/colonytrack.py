@@ -2,7 +2,8 @@
 
 Split out of `colonylist` on 6 September 2026, when that file stood
 at exactly 300 code lines against the ~300 guideline (decision 6) and
-the job markers had to go somewhere. The seam is real rather than a
+the row's box arithmetic had to go somewhere. The seam is real
+rather than a
 place to cut: this tree already separates the NUMBERS
 (`colonyrows`) from the DRAWING (`colonylist`), and what sat between
 them unnamed was the ARITHMETIC — how many rows fit, where the track
@@ -24,16 +25,6 @@ import collections
 import pygame
 
 from .colonyrows import POP_LIMIT_CAP
-
-#: One marker per job, always, in ECON order. **HD EXTENSION** — see
-#: `row_boxes`, which is where the reason is written down.
-MARKER_COUNT = 3
-#: How wide a marker is, in slots. One, decided at the real render at
-#: 1920x1080 and 3840x2160 rather than from the mockup: a letter is
-#: legible in a single slot at both, and two would cost six slots of
-#: track in every row for nothing. `layout.json` may override it.
-MARKER_SLOTS_DEFAULT = 1
-
 
 
 #: `unit` is one slot's ink, `gap` the space after it, `step` the two
@@ -107,16 +98,14 @@ def track_metrics(area, cfg, scale):
     if build_w and not cols:
         build_w += build_gap
     bar_space = area.w - name_w - tail_w - build_w - 2 * pad_x
-    # THE TRACK HOLDS POP_LIMIT_CAP SLOTS PLUS THREE MARKERS PLUS THE
-    # GAP, and that is the price of the markers stated in arithmetic
-    # rather than in prose: a row can hold 42 pops, every one of them
-    # is a slot, the three job markers are three more, and the growth
-    # boxes sit past a fixed gap. The slot therefore shrinks by about
-    # a fifteenth against the pre-marker row. What does NOT change is
-    # that one slot is the same width in every row, which is the
-    # property the whole track is measured from — see the note in
-    # `colonyrows.POP_LIMIT_CAP`.
-    slots = POP_LIMIT_CAP + MARKER_COUNT
+    # THE TRACK HOLDS POP_LIMIT_CAP SLOTS PLUS THE GROWTH GAP. It
+    # held three more until 8 September 2026, one per job marker;
+    # the markers are gone (see `RowBoxes`) and the slot got their
+    # width back — about a fifteenth wider than the marker row. What
+    # does NOT change is that one slot is the same width in every row,
+    # which is the property the whole track is measured from — see
+    # the note in `colonyrows.POP_LIMIT_CAP`.
+    slots = POP_LIMIT_CAP
     unit = max(2, (bar_space - growth_gap - (slots - 1) * gap) // slots)
     width = slots * unit + (slots - 1) * gap + growth_gap
     # Clamped at 0: `unit` has a floor of 2, so a `list_area` too
@@ -207,9 +196,9 @@ def row_regions(row):
     `runs` is (zone, first_cell_index, count) for the jobs that hold
     pops, `spans` the same for all three including the empty ones,
     `filled` the pops drawn and `reach` how many the colony could
-    hold. **None of these are slots any more** — the markers moved
-    the slots apart, so `row_boxes` is what turns a cell index into
-    a rectangle and this counts.
+    hold. **None of these are slots any more** — the column layout
+    lays each job's cells inside its own column, so `row_boxes` is
+    what turns a cell index into a rectangle and this counts.
 
     Zones are laid down in ECON order and clipped at POP_LIMIT_CAP,
     which the engine cannot pass either. Cells past `max_pop` are
@@ -240,12 +229,23 @@ def row_regions(row):
 
 #: One row's boxes, all of them, in screen pixels.
 #:
-#: `markers` and `cells` are what is drawn; `targets` is what a click
-#: is tested against, and it is built from the same two. `growth` are
-#: the dashed capacity boxes after the gap, `beyond` the faint line
-#: for the track a colony cannot reach yet, or None.
+#: `cells` is what is drawn; `targets` is the three job rects a drop
+#: is tested against, and `name` is the fourth target — the colony
+#: name's own column, which the original accepts a drop on as "put
+#: them back" (`Send_Cluster_(colony, -1)`, colsum.cpp:909). `growth`
+#: are the dashed capacity boxes after the gap, `beyond` the faint
+#: line for the track a colony cannot reach yet, or None.
+#:
+#: **THE `markers` FIELD IS GONE — 8 September 2026.** It carried the
+#: three F/W/S squares, which were an HD EXTENSION standing in for
+#: headings a column-less row could not have. Stage 4 gave the row
+#: five real columns with the original's own headings above them, so
+#: the stand-in had nothing left to stand in for, and its own marking
+#: said as much: "whether they stay is Stage 5's call". Removed with
+#: the marking, in this commit, and the drop target did not move with
+#: them — it was already the whole column (see `_column_boxes`).
 RowBoxes = collections.namedtuple(
-    "RowBoxes", "markers cells targets growth beyond run_right")
+    "RowBoxes", "name cells targets growth beyond run_right")
 
 
 def row_boxes(area, cfg, scale, row, band=None):
@@ -255,33 +255,27 @@ def row_boxes(area, cfg, scale, row, band=None):
     it the rects carry x and width only and their y is 0, which is
     what a hit test wants and what the layout checks read.
 
-    **THREE JOB MARKERS, ALWAYS — HD EXTENSION.** Every row carries a
-    marker per job in ECON order, each introducing its own cells, the
-    two forming one unbroken run:
+    **NO JOB MARKERS — REMOVED 8 September 2026.** Three grey F/W/S
+    squares used to head each group. They were an HD EXTENSION with
+    one argument behind them: a row without columns cannot carry a
+    heading, so a colony with everyone farming drew a run of squares
+    and nothing said the other two jobs existed. Stage 4's five
+    columns and the headings above them answer that, and the marking
+    itself named this as Stage 5's call. The cells now start at their
+    column's own left edge, which is where the original starts its
+    icons — `(30 - squish) * i + left_x` with `left_x` the column
+    (coldraw.cpp:349).
 
-        F [food cells] W [worker cells] S [scientist cells]   gap  · · ·
-
-    The original does not have them and does not need them: it draws
-    three FIXED columns under three headings — FARMERS, WORKERS,
-    SCIENTISTS (colsum.cpp:1006-1024 for the columns) — so an empty
-    job is a visible empty column. **A row without columns cannot
-    carry a heading.** Before the markers, a colony with everyone
-    farming drew a run of squares and then nothing, and nothing on
-    screen said the other two jobs existed; the drop placeholder
-    appeared only once a pop was held, which is one click too late.
-    Marked here, in `layout.json` under `list._hd_extension_markers`,
-    in `v3_projektstatus.md`, and in a check.
-
-    **FLUSH, NO GAPS INSIDE THE RUN.** A marker whose job holds
-    nothing is followed immediately by the next marker. Short
-    colonies make short rows, so the length of a row goes on meaning
-    something.
-
-    **AND IT COLLAPSES THE EMPTY-GROUP CASE.** `drop_targets` used to
-    invent a placeholder for a job with no cells, positioned by a
-    seam rule with two bounds. No job is ever empty now — the marker
-    is that placeholder, made permanent and visible — so the rule is
-    gone rather than bypassed. One layout path.
+    **THE EMPTY-COLUMN DROP DID NOT DEPEND ON THEM.** In the column
+    layout the target has always been the whole column rect, which is
+    what the original's own per-row job field is (`Add_Scroll_Field_(
+    left_x, top_y, …, right_x - left_x + 8, 30, …)`,
+    coldraw.cpp:409, added in mode 1 whether or not the column holds
+    an icon). This path — the single-track fallback, which only the
+    synthetic fixtures reach — cannot say that: with no marker and no
+    cells a job's target is empty, and `drop_band` answers None.
+    Stated rather than papered over, because an invisible placeholder
+    is exactly what this removal was for.
 
     **The growth boxes belong to the COLONY, not to a job**, so they
     follow all three groups after a fixed gap (`list.growth_gap`,
@@ -289,32 +283,28 @@ def row_boxes(area, cfg, scale, row, band=None):
     """
     track = track_metrics(area, cfg, scale)
     origin = track_x(area, cfg, scale)
-    marker_slots = int(cfg.get("marker_slots", MARKER_SLOTS_DEFAULT))
     top, height = band if band else (0, 0)
     y = top + (height - track.bar_h) // 2 if band else 0
     h = track.bar_h if band else 0
+    name = pygame.Rect(area.x, y, max(0, origin - area.x), h)
     cols = columns(area, cfg)
     if cols:
-        return _column_boxes(cols, cfg, scale, row, y, h, track,
-                             marker_slots)
+        return _column_boxes(cols, cfg, scale, row, y, h, track)
 
     def box(slot, count):
         return pygame.Rect(origin + slot * track.step, y,
                            count * track.step - track.gap, h)
 
     regions = row_regions(row)
-    markers, cells, targets = [], [], []
+    cells, targets = [], []
     slot = 0
     for job, (_start, count) in enumerate(regions.spans):
-        m = box(slot, marker_slots)
-        markers.append((job, m))
-        first_cell = slot + marker_slots
         for k in range(count):
-            cells.append((job, k, box(first_cell + k, 1)))
-        # the target is marker AND cells, one contiguous rect
-        targets.append((job, pygame.Rect(
-            m.x, y, (marker_slots + count) * track.step - track.gap, h)))
-        slot = first_cell + count
+            cells.append((job, k, box(slot + k, 1)))
+        targets.append((job, box(slot, count) if count
+                        else pygame.Rect(origin + slot * track.step, y,
+                                         0, h)))
+        slot += count
 
     run_right = origin + slot * track.step - track.gap
     grow_n = max(0, regions.reach - regions.filled)
@@ -325,11 +315,11 @@ def row_boxes(area, cfg, scale, row, band=None):
     right = origin + track.width
     beyond = (pygame.Rect(beyond_x, y, right - beyond_x, h)
               if band and beyond_x < right else None)
-    return RowBoxes(tuple(markers), tuple(cells), tuple(targets),
+    return RowBoxes(name, tuple(cells), tuple(targets),
                     tuple(growth), beyond, run_right)
 
 
-def _column_boxes(cols, cfg, scale, row, y, h, track, marker_slots):
+def _column_boxes(cols, cfg, scale, row, y, h, track):
     """One row laid out in the five columns — the Stage 4 geometry.
 
     **THE PITCH IS THE ORIGINAL'S OWN, SCALED.** Each job column's
@@ -351,12 +341,34 @@ def _column_boxes(cols, cfg, scale, row, y, h, track, marker_slots):
     still click correctly; drawn at the original's pitch it also
     LOOKS like the thing it clicks.
 
-    The markers keep their place at the head of each column
-    (`row_boxes`' HD EXTENSION). Their original reason — a row without
-    columns cannot carry a heading — is answered by the headings above
-    as of Stage 4, and whether they stay is Stage 5's call; they are
-    not removed here because a marking is re-targeted in the commit
-    that deletes what it marks, not before.
+    **THE CELLS START AT THE COLUMN'S OWN LEFT EDGE.** They used to
+    start one marker's width in; the markers are gone (see
+    `RowBoxes`) and the first cell moved left with them, which is
+    also where the original puts its first icon — `left_x` is the
+    column, `(30 - squish) * i + left_x` the slot (coldraw.cpp:349).
+
+    **THE DROP TARGET IS THE WHOLE COLUMN AND ALWAYS WAS**, which is
+    why removing the markers cost no click target and no invisible
+    button was kept in their place. It is the original's own field:
+    mode 1 adds `Add_Scroll_Field_(left_x, top_y, left_x, right_x + 8,
+    left_x, right_x, right_x - left_x + 8, 30, …)` (coldraw.cpp:409)
+    for every row and every job, unconditionally — the walk before it
+    may have emitted nothing, and the field is added anyway, so an
+    EMPTY column accepts a drop in the original exactly as it does
+    here.
+
+    **DEVIATION IN HEIGHT, NAMED AND NOT FIXED HERE.** The original's
+    field is 30 px of a 31 px row pitch (`top_y = 31*i + 34`,
+    colsum.cpp:311, height 30) — 97 % of the row, so anywhere in the
+    band is a drop. Ours is `track.bar_h`, 30 reference px of a 58 px
+    `row_height`, 52 %. It does NOT change which row a click lands
+    in: the bands do not overlap either way and `row_at` has already
+    chosen the row before this rect is consulted. What it changes is
+    the OUTCOME inside one row — a click in the top or bottom 14
+    reference px of a row is "outside every target" and discards the
+    selection, where the original would have dropped. Recorded here
+    and in `v3_projektstatus.md`; making the target the full band is
+    one expression and is Data's call, not this commit's.
 
     **NO GROWTH BOXES IN THIS LAYOUT.** They belong to the COLONY and
     not to a job, so in a row that is three job columns there is no
@@ -372,30 +384,13 @@ def _column_boxes(cols, cfg, scale, row, y, h, track, marker_slots):
     from . import colonyfigures
     from . import colonyicons
     regions = row_regions(row)
-    markers, cells, targets = [], [], []
+    cells, targets = [], []
     for job, key in enumerate(JOB_KEYS):
         cx, cw = cols[key]
         n_left, n_right = colonyicons.COLUMNS[job]
         count = regions.spans[job][1]
-        # THE MARKER COMES OUT OF THE COLUMN, NOT ON TOP OF IT. A
-        # square the height of the bar, at the column's left edge;
-        # the cells then get what is left, and the scale below is
-        # computed from THAT so the last cell lands inside the
-        # column instead of one marker's width past it.
-        # `track.bar_h` AND NOT `h`: the caller may pass no band, in
-        # which case `h` is 0 and the rects carry x and width only —
-        # which is what `cell_at_x` asks for. A marker width taken
-        # from `h` was 2 px there and a full square when drawn, so
-        # every cell in the row sat at a different x in the hit test
-        # than on screen. Caught by the check that samples each drawn
-        # cell's own pixels, which is the one that exists because
-        # "they call the same function" is not the same as "they get
-        # the same answer".
-        m_w = max(2, min(track.bar_h, cw // 8))
-        m = pygame.Rect(cx, y, m_w, h)
-        markers.append((job, m))
-        start = cx + m_w + track.gap
-        room = max(1, cx + cw - start)
+        start = cx
+        room = max(1, cw)
         # THE FACTOR IS THE SPRITE STEP, NOT THE COLUMN RATIO.
         # `zoomtables.FIGURE_STEP` (decision 26) is the integer 2/3/4
         # a 28 px native figure is drawn at, and the stacking decision
@@ -438,19 +433,51 @@ def _column_boxes(cols, cfg, scale, row, y, h, track, marker_slots):
             cells.append((job, k, pygame.Rect(
                 start + int(k * pitch), y, cell_w, h)))
         targets.append((job, pygame.Rect(cx, y, cw, h)))
-    return RowBoxes(tuple(markers), tuple(cells), tuple(targets),
+    name = None
+    if "name" in cols:
+        nx, nw = cols["name"]
+        name = pygame.Rect(nx, y, nw, h)
+    return RowBoxes(name, tuple(cells), tuple(targets),
                     (), None, cols[JOB_KEYS[-1]][0] + cols[JOB_KEYS[-1]][1])
 
 
 def drop_targets(area, cfg, scale, row):
-    """(job, Rect) per job — marker plus that job's cells.
+    """(job, Rect) per job — the whole column cell.
 
     One rect per job and never two boxes that look alike and behave
-    differently, which is the trap decision 5 is about: the marker is
-    part of its group's target, so a click on the letter is a drop on
-    that job.
+    differently, which is the trap decision 5 is about. It is the
+    original's own field: `Add_Scroll_Field_(left_x, top_y, …,
+    right_x - left_x + 8, 30, …)` (coldraw.cpp:409), added per row
+    and per job whether or not the column drew an icon, which is why
+    an empty column is a target here too.
     """
     return row_boxes(area, cfg, scale, row).targets
+
+
+def name_rect(area, cfg, scale, row):
+    """The colony name's own column — the FOURTH drop target, or None.
+
+    TRANSCRIBED. A drop on the name field is `Send_Cluster_(colony,
+    -1)` (colsum.cpp:909), and on the colony the cluster came from
+    that is the re-flag branch: `requested_job == -1` sets `0x200`
+    back and consults no rule (colmove.cpp:161-165), so the array
+    ends exactly as it started. It is the original's "put them back",
+    and it is the nearest thing this screen has to a cancel that is
+    not a leave-the-screen path.
+    """
+    return row_boxes(area, cfg, scale, row).name
+
+
+def on_name(area, cfg, scale, row, x):
+    """Is `x` over the colony name's column?"""
+    rect = name_rect(area, cfg, scale, row)
+    # `rect is None`, NOT `not rect`: a pygame.Rect of zero HEIGHT is
+    # falsy, and `row_boxes` is called without a band for every hit
+    # test — that is the whole point of the no-band form, and it
+    # would make this answer False for every click on the name.
+    if rect is None or not rect.width:
+        return False
+    return rect.x <= x < rect.x + rect.width
 
 
 def drop_band(area, cfg, scale, row, x):
@@ -471,8 +498,10 @@ def cell_at_x(area, cfg, scale, row, x):
 
     Index is within that job's cells, in the order they are drawn —
     which is the original's icon order (decision 48), because
-    `colonyrows` builds the row that way. A marker is not a cell and
-    answers None: there is nothing to pick up on it.
+    `colonyrows` builds the row that way. Bare column past the last
+    cell answers None: there is nothing to pick up there. A pop in a
+    HELD cluster has no cell either — `build_rows` clears its `0x200`
+    exactly as `Get_Cluster_` does — so it cannot be picked twice.
     """
     for job, index, rect in row_boxes(area, cfg, scale, row).cells:
         if rect.x <= x < rect.x + rect.width:

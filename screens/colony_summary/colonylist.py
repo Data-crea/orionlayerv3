@@ -88,7 +88,11 @@ import pygame
 
 from core import palette
 
+from core import textfit
+from core import zoomtables
+
 from . import colonybuild
+from . import colonyfigures
 from . import colonyscroll
 from . import colonytrack
 from .colonyrows import POP_LIMIT_CAP
@@ -125,28 +129,63 @@ ROW_NAME = palette.col("colony_summary", "row_name", (206, 216, 238))
 DETAIL_COLOR = palette.col("colony_summary", "row_detail",
                            (132, 148, 180))
 NO_FARM_COLOR = palette.col("colony_summary", "no_farming", (150, 120, 110))
+#: The original's own numbers for the "No Farming" label, in NATIVE
+#: px, kept as a proportion of the row rather than as HD pixels
+#: (fundament, Evidence: a percentage carries across a resolution
+#: change and a pixel count does not).
+#:
+#:   31   the row pitch, `top_y = 31*i + 34` (colsum.cpp:311)
+#:    5   `top_y + 5`, the label's y (coldraw.cpp:320)
+#:   28   the squeeze box's height, same call
+NATIVE_ROW_PITCH = 31
+NATIVE_LABEL_Y_OFFSET = 5
+NATIVE_LABEL_BOX_H = 28
+#: The cap height of the label's capital "N", MEASURED off
+#: `colony_summary_native_split.png`. See `NO_FARM_FONT_REF`.
+NATIVE_LABEL_CAP = 10
+#: **MEASURED, SINGLE SOURCE — and the source is a picture.** The
+#: original's size is font style 3, whose pixel height lives in the
+#: player's own FONTS.LBX and is in no source file this project can
+#: read. The capital "N" of "No Farming" measures 10 px of cap height
+#: on `orionlayer-fixtures/evidence/colony_summary_native_split.png`
+#: (1:1 native, row pitch 31 confirmed on it).
+#:
+#: 10 of a 31 px row is 18.7 of this screen's 58 reference px row,
+#: and Aldrich's cap is 0.70 of its nominal size (measured by
+#: rendering, decision 30), so 18.7 / 0.70 = 26.7 -> **26**, whose
+#: cap renders 18 against the wanted 18.7. 28 renders 20 and is
+#: further out. `layout.json list.no_farming_font` may override it.
+#:
+#: **THE ONE THING THIS DOES NOT REPRODUCE, stated rather than
+#: discovered later:** the label is 57 % of the original's column
+#: (77 of 135 native px) and about 45 % of ours, because the HD job
+#: column is 2.53x its native column while the row — and therefore
+#: the font — is 1.87x its native row. Three magnifications live on
+#: this screen (see `zoomtables.CLUSTER_FIGURE_OFFSET`), and this
+#: value is anchored on the one the label is made of.
+NO_FARM_FONT_REF = 26
 #: The "n not shown" line. Deliberately NOT `ROW_NAME`: it is not a
 #: colony and must not read as one, and the name-overflow check scans
 #: for row-name ink outside the name column.
 OVERFLOW_COLOR = palette.col("colony_summary", "row_overflow",
                              (150, 120, 110))
-#: The pop move's two marks: the squares a pick would take, and the
-#: three drop bands the track reads as while one is held. Both are
-#: only ever drawn during a move — see `draw_pick` for why the second
-#: one exists at all.
-PICK_COLOR = palette.col("colony_summary", "pick_outline",
-                         (238, 232, 180))
-BAND_COLOR = palette.col("colony_summary", "drop_band",
-                         (120, 140, 180))
-#: The job markers. GREY on purpose and not a fourth accent: an
-#: amber marker in the first mockup read as a fourth job class, which
-#: is the one thing a marker must never do. The letter is light
-#: enough to carry at one slot's width; `_render_bar` centres it.
-MARKER_BG = palette.col("colony_summary", "marker_bg", (86, 92, 104))
-MARKER_EDGE = palette.col("colony_summary", "marker_edge",
-                          (196, 204, 216))
-MARKER_TEXT = palette.col("colony_summary", "marker_text",
-                          (232, 238, 246))
+#: **THE POP MOVE DRAWS NO MARKS ON THE ROW — 8 September 2026.**
+#: `PICK_COLOR` outlined the cells a pick would take and `BAND_COLOR`
+#: framed the three drop targets while one was held. Both are gone,
+#: and the reason is the source rather than taste: the ONLY drawing
+#: `colsum.cpp` does outside its fields and its paragraphs is the
+#: scroll thumb (`Fill_`/`Line_`, colsum.cpp:759-765). The original
+#: marks neither the picked pops nor the row they came from — a held
+#: pop simply stops being an icon (`0x200`, coldraw.cpp:336) and
+#: hangs on the pointer instead (`Draw_Cluster_`, colmove.cpp:7-37),
+#: which says both things at once and is what `draw_held_cluster`
+#: below transcribes. The one per-pop state the original does draw is
+#: the HOVERED icon blinking dark (coldraw.cpp:342-343), which is a
+#: hover and not a selection; it is not built here either.
+#:
+#: **AND THE THREE JOB MARKERS ARE GONE WITH THEM** — see
+#: `colonytrack.RowBoxes`. The colours went with the drawings; a
+#: palette key nothing reads is a marking that has stopped marking.
 #: The identity letter inside a pop cell. One colour for every class:
 #: WHICH class is the letter's job, and a second axis of colour here
 #: would fight the fill, which is the profession.
@@ -205,7 +244,7 @@ def render(surface, rows, area, cfg, layout, style, first=0,
         _draw_name_block(surface, row, area.x + pad_x, y, name_w, row_h,
                          cfg, name_px, small_px, style, frame_inset)
         _render_bar(surface, row, area, cfg, scale, (y, row_h), track,
-                    small_px, style, figures)
+                    small_px, style, layout, figures)
         # THE PRODUCING TEXT SITS IN ITS OWN COLUMN when there is a
         # column table, and after the track when there is not. Same
         # call, same width, one place that decides where — a second
@@ -233,66 +272,56 @@ def render(surface, rows, area, cfg, layout, style, first=0,
                         len(rows))
 
 
-def draw_pick(surface, area, cfg, scale, band, row, job, slots):
-    """Outline the squares a held pick would take.
+def draw_held_cluster(surface, pointer, figures, cells, scale):
+    """The held pops, hanging on the pointer. Drawn LAST, over
+    everything, like the original's own `Draw_Cluster_`.
 
-    **The simplest drawing that can be SEEN, which is the whole
-    requirement for this phase** — the visualisation is phase 4. It
-    is an outline rather than a fill because a fill would sit on the
-    same axis as the zone colours and say "these are a fourth
-    profession"; an outline is off that axis, the same reasoning the
-    free slots' dashes rest on.
+    **TRANSCRIBED** — `COLMOVE::Draw_Cluster_` (colmove.cpp:7-37),
+    called with the raw pointer at the end of the screen's draw
+    (`COLMOVE::Draw_Cluster_(mouse::Pointer_X_(), mouse::Pointer_Y_())`,
+    colsum.cpp:509-511, after `Draw_Visible_Fields_`). The three
+    numbers — +5 x, -10 y, +20 per further pop — and the reason they
+    are multiplied by the sprite step live in `core/zoomtables.py`
+    (decision 26), which is also where the DEVIATION that produces is
+    marked. Nothing is chosen here.
 
-    `slots` are icon slots WITHIN ONE JOB's column — that is what
-    `Pick.slots()` counts, because the original's icon walk is
-    per-column (coldraw.cpp:352) — so the job and the row are needed
-    to turn one into a rectangle. It takes them and asks
-    `row_boxes`, which is the same call `_render_bar` draws the cells
-    with (decision 5).
+    **THE ORIGINAL DOES NOT HIDE A POINTER AND NEITHER DOES THIS,
+    ANSWERED FROM SOURCE.** `Clear_Mouse_Picture_` (colony.cpp:360)
+    swaps the mouse list for the variable one and `Draw_Cluster_`
+    then draws `C_Anims_(15)` at the pointer itself — the pointer
+    picture is REPLACED, not removed, and the figures sit beside the
+    replacement. HD's pointer is already its own artwork at the
+    original's own proportion of the screen (`core/cursor.py`, 4.38 %
+    of window height, hotspot at the top-left tip), so there is
+    nothing left to swap and nothing to hide: the figures go at the
+    transcribed offset from the hotspot, which is the position pygame
+    reports.
 
-    **AND THAT IS THE WHOLE OF THE FIX OF 6 SEPTEMBER 2026.** This
-    function used to compute `track_x + slot * step` for itself, on
-    the assumption that an icon slot is a track slot. It never was:
-    job 1's cells start after job 0's, so the outline sat as many
-    cells to the left as the earlier jobs held, and the three job
-    markers added one more per group. Reported live on Horus IV as
-    "one cell to the left" because food is job 0 and the F marker is
-    its only error — industry was off six and research ten, and had
-    been since this function was written (343d9ba). The docstring
-    above already claimed the mark was placed by the function that
-    placed the squares; it was not, and a comment cannot enforce
-    that. The check does, by reading both back off the render.
+    `cells` are the held pops' `colonyrows.Cell`s in the order the
+    original would draw them — `Draw_Cluster_` walks `pop[]` from 0
+    and takes every pop whose `0x200` is clear (colmove.cpp:24-29),
+    which is ARRAY order and not the icon walk's. The caller builds
+    them that way; drawing them in any other order would be a second
+    ordering rule (decision 48).
 
-    `band` is the (top, height) of the row as `row_bands` gave it.
+    Draws nothing when the figures are not extracted. The row falls
+    back to coloured cells in that state (decision 50) and a coloured
+    square on the pointer would be a shape the original never has —
+    the pops leaving the row is already the whole statement.
     """
-    if not slots:
+    if not cells or figures is None:
         return
-    wanted = set(slots)
-    for cell_job, index, rect in row_boxes(
-            area, cfg, scale, row, band).cells:
-        if cell_job == job and index in wanted:
-            pygame.draw.rect(surface, PICK_COLOR, rect, 2)
-
-
-def draw_drop_bands(surface, area, cfg, scale, band, row):
-    """The three drop targets, while a pick is held.
-
-    HD EXTENSION — `drop_targets` carries the reason and the shape,
-    and this draws exactly the rects it returns. One function, two
-    readers (decision 5): the outline a player aims at IS the region
-    that will be hit-tested, by construction rather than by two
-    copies of an arithmetic agreeing.
-
-    Drawn only during a move, which is what keeps it out of the
-    resting row.
-    """
-    track = track_metrics(area, cfg, scale)
-    top, row_h = band
-    y = top + (row_h - track.bar_h) // 2
-    for _job, rect in drop_targets(area, cfg, scale, row):
-        if rect.width:
-            pygame.draw.rect(surface, BAND_COLOR, pygame.Rect(
-                rect.x, y - 2, rect.width, track.bar_h + 4), 1)
+    off_x, off_y = zoomtables.CLUSTER_FIGURE_OFFSET
+    step = colonyfigures.figure_step(scale)
+    pitch = zoomtables.CLUSTER_FIGURE_PITCH * step
+    x = pointer[0] + off_x * step
+    y = pointer[1] + off_y * step
+    for cell in cells:
+        name = getattr(cell, "figure", None)
+        surf = None if name is None else figures.get(name)
+        if surf is not None:
+            surface.blit(surf, (x, y))
+        x += pitch
 
 
 def _draw_overflow(surface, rows, area, cfg, scale, layout, style,
@@ -497,19 +526,15 @@ def _detail_text(row, cfg):
 
 
 def _render_bar(surface, row, area, cfg, scale, band, track, text_px,
-                style, figures=None):
-    """One row's run: three markers, their cells, then the growth.
-
-        F [food cells] W [worker cells] S [scientist cells]  gap  · · ·
+                style, layout, figures=None):
+    """One row's run: the three job groups, then the growth.
 
     Every box comes from `colonytrack.row_boxes`, which is also what
     a click is tested against — one function, two readers
     (decision 5). Nothing here computes a position.
 
-      markers      grey, light border, the job's letter. ALWAYS all
-                   three, whether or not the job holds pops. HD
-                   EXTENSION; `row_boxes` carries the reason.
-      cells        one per pop, in its job's colour, with an identity
+      cells        one per DRAWN icon, in its job's colour, with an
+                   identity
                    letter where the pop is not one of the player's
                    own — see `_cell_mark`.
       growth       `max_pop` less the pops, dashed, after the gap.
@@ -520,10 +545,17 @@ def _render_bar(surface, row, area, cfg, scale, band, track, text_px,
                    yet. NOT padding, and not a dim square either: a
                    square there would be neither filled nor free.
 
-    Drawn back to front — beyond, growth, markers, cells — because a
-    later draw wins where boxes touch. Not hypothetical: the "No
-    Farming" label was painted over by the worker squares once, with
-    every number correct and nothing on screen.
+    Drawn back to front — beyond, growth, cells — because a later
+    draw wins where boxes touch. Not hypothetical: the "No Farming"
+    label was painted over by the worker squares once, with every
+    number correct and nothing on screen.
+
+    **A HELD CLUSTER IS SIMPLY NOT HERE.** `build_rows` cleared its
+    `0x200` (colmove.cpp:70) before the icon walk ran, so those pops
+    produced no cell, the column's pitch was computed over what is
+    left, and the same shortened list answers a hit test. There is no
+    `count - n` on this path and no second pitch to keep in step —
+    see `colonymove.held_pops`.
     """
     boxes = colonytrack.row_boxes(area, cfg, scale, row, band)
     top, band_h = band
@@ -539,14 +571,6 @@ def _render_bar(surface, row, area, cfg, scale, band, track, text_px,
                      pygame.Rect(rect.x, rect.y + 1, track.unit,
                                  track.bar_h - 2),
                      max(1, track.unit // 4))
-
-    letters = cfg.get("marker_letters", ["F", "W", "S"])
-    for job, rect in boxes.markers:
-        surface.fill(MARKER_BG[:3], rect)
-        pygame.draw.rect(surface, MARKER_EDGE[:3], rect, 1)
-        if job < len(letters):
-            _blit_centered(surface, rect, str(letters[job]), text_px,
-                           MARKER_TEXT, style)
 
     cells = row.get("cells")
     # **CLIPPED TO THE ROW, VERTICALLY ONLY.** A stepped figure is
@@ -609,7 +633,7 @@ def _render_bar(surface, row, area, cfg, scale, band, track, text_px,
     # the farmer figures a colony with `max_farms == 0` does not have.
     # Drawing it after the figures is that same order.
     if row["no_farming"]:
-        _draw_no_farming(surface, boxes, track, cfg, text_px, style)
+        _draw_no_farming(surface, boxes, band, cfg, layout, style)
 
 
 def _figure_for_cell(figures, cells, job, index):
@@ -676,40 +700,83 @@ def _cell_mark(cfg, cells, job, index):
     return marks.get(cells[job][index].kind, "")
 
 
-def _draw_no_farming(surface, boxes, track, cfg, text_px, style):
-    """The label, in the tail column or under the track.
+def _draw_no_farming(surface, boxes, band, cfg, layout, style):
+    """The label, CENTRED IN THE FARMERS COLUMN — transcribed.
 
-    BELOW is the cheaper of the two, and not by a little: the tail
-    column costs 150 reference px of the ONE horizontal budget every
-    row shares, while the band under the bar is 14 px that
-    `row_height` already spends and nothing occupies. At a 42-slot
-    track that is the difference between a 19 px slot and a 22 px one
-    — and 14 px against 18 px once a building column is added, which
-    is the decision this placement exists for. See
-    `_horizontal_budget` in layout.json.
+    `COLDRAW::Do_Colony_Info_Pop_Stuff_For_Pop_` prints it in mode 0
+    when `max_farms == 0`, for the food column only
+    (coldraw.cpp:315-321):
 
-    What has to hold either way: the label must not be drawn where
-    something else draws later. It was once put at the bar's left
-    edge and the worker squares painted straight over it — every
-    number right, nothing on screen. Below the bar is outside the
-    track's own band by construction (squares occupy `y+1` to
-    `y+bar_h-1`), so a full 42-slot row cannot reach it. That is a
-    property of the geometry, not of the data, which is why it is
-    also a smoke check rather than a look at one screenshot.
+        Set_Colony_Font_To_(3)
+        Squeeze_Print_Paragraph_(left_x, top_y + 5,
+                                 right_x - left_x, 28,
+                                 E_Strings_(387), 2)
+
+    and the sixth argument, 2, reaches `_Print_String_Bill_` as the
+    mode that selects `fonts::Print_Centered_(x + width/2, y, str)`
+    (bill.cpp). So: centred across the WHOLE column, in the band the
+    farmer figures would occupy, and squeezed into a box of the
+    column's width by 28 px.
+
+    **SECOND SOURCE, MEASURED, and it agrees to the pixel.** On
+    `orionlayer-fixtures/evidence/colony_summary_native_split.png` —
+    the original's own list for the natives fixture, 1:1 native, its
+    content origin at (22, 6) and its column separators landing on
+    101/236/378/512 — the label's ink centre is 163, which is exactly
+    `101 + 125/2`, and its ink TOP is 136, which is exactly
+    `top_y + 5` for that row (`top_y = 31*3 + 38`). `Print_Centered_`
+    therefore puts the ink top ON `y`, which is why the blit below
+    subtracts the surface's own ink offset instead of using its top.
+
+    **THE FONT SIZE IS MEASURED AND SINGLE-SOURCED, and it says so.**
+    `Set_Colony_Font_To_(3)` is a STYLE INDEX; the pixel height is
+    `_font_header.font_heights[3]`, loaded from the player's own
+    FONTS.LBX (fonts.cpp `Set_Font_Style_`), so it is not in the
+    orion2re source and this project has no font extractor. What can
+    be had is the picture: the label's capital "N" measures **10 px
+    of cap height** on that screenshot. `list.no_farming_font`
+    carries the derivation from it — the way `SHIP_ICON_DIM` says
+    DERIVED rather than pretending to a transcription — and the
+    check re-measures the rendered cap against it.
+
+    **THE SQUEEZE IS `core.textfit`'s**, which shrinks until BOTH
+    dimensions fit where `_Squeeze_Print_Paragraph_` loops on height
+    alone; that difference already has a home in
+    `layout.json list._width_condition_note` and is not restated
+    here.
+
+    Drawn AFTER the cells, which is the order that matters and the
+    one this label was once on the wrong side of — every number right
+    and nothing on screen. It cannot collide with a figure anyway:
+    `max_farms == 0` is exactly the case in which the food column has
+    no farmer to draw.
     """
     label = cfg.get("no_farming", "")
-    if not label:
+    if not label or not boxes.targets:
         return
-    surf = style.render_text(label, text_px, NO_FARM_COLOR)
-    x = boxes.markers[0][1].x
-    y = boxes.markers[0][1].y
-    # `y` is the BAR's top; the row extends half the spare height
-    # above and below it. Bottom-aligned in the band that leaves, so
-    # any rounding slack sits between the label and the bar, where it
-    # reads as spacing, rather than under the label, where it reads
-    # as a taller row.
-    row_bottom = y + track.bar_h + (track.row_h - track.bar_h) // 2
-    surface.blit(surf, (x, row_bottom - surf.get_height()))
+    column = boxes.targets[0][1]
+    if not column.width:
+        return
+    top, band_h = band
+    # THE BOX IS THE COLUMN BY (28 of 31) OF THE ROW, and the offset
+    # is 5 of 31 — the original's numbers against its own row pitch
+    # (`top_y = 31*i + 34`, colsum.cpp:311), turned into a proportion
+    # so they carry across a resolution change rather than a pixel
+    # count that does not (fundament, Evidence).
+    box_h = max(1, round(NATIVE_LABEL_BOX_H * band_h / NATIVE_ROW_PITCH))
+    y_off = round(NATIVE_LABEL_Y_OFFSET * band_h / NATIVE_ROW_PITCH)
+    px = layout.font_size(cfg.get("no_farming_font", NO_FARM_FONT_REF))
+    lines, _size = textfit.squeeze_lines(
+        style, label, column.width, box_h,
+        [px - n for n in range(0, max(1, px - 7))], NO_FARM_COLOR[:3])
+    y = top + y_off
+    for surf in lines:
+        ink = surf.get_bounding_rect()
+        if not ink.width:
+            continue
+        surface.blit(surf, (column.x + (column.width - ink.width) // 2
+                            - ink.x, y - ink.y))
+        y += surf.get_height()
 
 
 def _dashed_rect(surface, color, rect, dash):

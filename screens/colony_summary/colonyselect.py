@@ -86,7 +86,7 @@ class Selection:
         #: colonies at all.
         self.colony = None
 
-    def rebuild(self, state, sort_key, names=None):
+    def rebuild(self, state, sort_key, names=None, held=None):
         """Rebuild the rows and keep the selection pointing at a
         colony that is still in them.
 
@@ -96,7 +96,13 @@ class Selection:
         from one snapshot agree today but would stop agreeing the
         first time anything about the build depended on when it ran.
         """
-        self.rows = colonyrows.build_rows(state, sort_key, names)
+        # `held` passes straight through: it is the HD side's own
+        # cluster and the row builder does with it exactly what
+        # `Get_Cluster_` does, which is clear one bit. Nothing here
+        # interprets it — this class owns the SELECTION and the
+        # window, not the move.
+        self.rows = colonyrows.build_rows(state, sort_key, names,
+                                          held=held)
         self.reseat()
 
     def reseat(self):

@@ -56,7 +56,10 @@ on trust.
 """
 import collections
 
+import pygame
+
 from core import palette
+from core import textfit
 
 from .colonyempire import format_value
 from .colonyrows import ECON_BC, ECON_FOOD, ECON_INDUSTRY, ECON_RESEARCH
@@ -176,7 +179,7 @@ def row_values(row, words, climates):
     }
 
 
-def visible_rows(row, cfg, words, climates):
+def visible_rows(row, cfg, words, climates, only=None):
     """(label, value, column) per configured row, for one colony.
 
     Morale is the one row that can be present and have nothing to
@@ -198,6 +201,15 @@ def visible_rows(row, cfg, words, climates):
     Split out from `render` so a smoke check can ask what the panel
     would draw without needing a surface, and so the empty-selection
     rule is one `if` in one place instead of a guard per row.
+
+    `only` is a set of column indices, or None for all of them. It
+    exists because the original's box is TWO boxes and always was —
+    a formatted paragraph at native (13, 354, 80, 88) and a column of
+    production rows from native x 106 (colsum.cpp:1171-1176, :1206) —
+    and as of 8 September 2026 the HD screen puts them in the two
+    holes the frame gives it rather than both in the right-hand one.
+    The `column` field in `layout.json` already said which row
+    belonged to which half; this is what reads it.
     """
     if row is None:
         return []
@@ -206,6 +218,8 @@ def visible_rows(row, cfg, words, climates):
     template = cfg.get("shortage_value", "")
     out = []
     for spec in cfg.get("rows", []):
+        if only is not None and int(spec.get("column", 0)) not in only:
+            continue
         text = fill_template(spec.get("value", ""), values)
         if spec.get("id") == "morale" and not row.get("morale_applies", True):
             text = hidden
@@ -217,7 +231,119 @@ def visible_rows(row, cfg, words, climates):
     return out
 
 
-def render(surface, row, area, cfg, words, climates, layout, style):
+def render_for(screen, surface):
+    """Both halves of the scan box, into the screen's own two boxes.
+
+    `COLSUM::Draw_Colony_Scan_Info_` (colsum.cpp:1155) is ONE
+    function that fills two rectangles — the description paragraph at
+    native (13, 354, 80, 88) and the production rows from native
+    x 106 — so this is one call too. It lives here rather than in
+    `screen.py` for the seam `colonyheader.render_for` already uses:
+    the screen owns which BOX, the panel owns what goes in it.
+
+    The climate words come from the `list` block and the other three
+    lists from `words`. They are not merged into one block because
+    `list.climates` already had a home and its own provenance note,
+    and a second copy that agrees today is the screen-ID-map failure
+    waiting to happen. A smoke check asserts the ten climate words
+    appear in exactly one of the two.
+
+    **THE MOVE'S LAST WORD WINS `planet_info` WHILE THERE IS ONE.**
+    A refusal is what a player needs to read, and the original
+    answers one with a blocking box HD must not reproduce
+    (textbox.cpp:149, and see decision 33). It is transient; the
+    paragraph comes back the moment it clears. That is a change of
+    ownership rather than a collision — the panel used to owe nothing
+    to the original and now owes it a paragraph.
+    """
+    row = screen.selected_row()
+    cfg = screen._data.get("output", {})
+    words = screen._data.get("words", {})
+    climates = screen._data.get("list", {}).get("climates", ())
+    box = screen.box_rect("planet_output")
+    if box:
+        render(surface, row, pygame.Rect(*screen.layout.rect(box)), cfg,
+               words, climates, screen.layout, screen.style, only={1})
+    box = screen.box_rect("planet_info")
+    if box and not screen._move.message:
+        render_info(surface, row, pygame.Rect(*screen.layout.rect(box)),
+                    cfg, words, climates, screen.layout, screen.style)
+
+
+def render_info(surface, row, area, cfg, words, climates, layout, style):
+    """The LEFT half of the original's scan box — the description.
+
+    `COLSUM::Draw_Colony_Scan_Info_` fills two boxes, not one
+    (colsum.cpp:1155). This is the first: one formatted paragraph at
+    native (13, 354, 80, 88) over `ESTRINGS::E_Strings_(74)`, with
+    seven values substituted (colsum.cpp:1194-1206). The second — the
+    four production rows and morale from native x 106 — is `render`'s,
+    and until 8 September 2026 both were drawn into `planet_output`
+    while `planet_info`, the hole the first one belongs in, was
+    empty.
+
+    **WHICH FORM IT TAKES IS ONE KEY, AND IT IS PROVISIONAL.**
+    `output.info_style` is `paragraph` — the original's own five
+    lines — or `rows`, the label-and-value table this panel has drawn
+    since it existed. Both are built because the two pictures are the
+    decision and a screenshot is what settles it (fundament: "a
+    screenshot comparison from chat is a QUESTION"). The default is
+    the TRANSCRIPTION, which is this project's default everywhere and
+    not a preference expressed here; the choice is Data's, from
+    `doc/`-side screenshots taken beside the native.
+
+    THE PARAGRAPH IS NOT THE TABLE RE-PUNCTUATED. It is five lines
+    where the table has six rows: size and climate share a line
+    ("Medium Ocean"), and growth carries no label at all ("+0k").
+    Every noun in it — Gravity, Mineral, Population — belongs to the
+    FORMAT and not to the word lists, which is the same rule the
+    table follows from the other side (`words._note`): the list
+    holds the bare quality, the surrounding text supplies the noun.
+    """
+    if row is None:
+        return render(surface, row, area, cfg, words, climates, layout,
+                      style, only={0})
+    if str(cfg.get("info_style", "paragraph")) != "paragraph":
+        return render(surface, row, area, cfg, words, climates, layout,
+                      style, only={0})
+    template = cfg.get("info_paragraph", "")
+    if not template:
+        return
+    values = row_values(row, words, climates)
+    # THE WHOLE PARAGRAPH REDDENS ON NEGATIVE GROWTH — transcribed.
+    # E_Strings_(74) takes the sign string TWICE, once at the very
+    # front and once before the growth number, and closes with
+    # "\x1B" "0" (colsum.cpp:1186-1206); a negative total_growth makes
+    # both of them "\x1B" "2", the inline attribute that switches
+    # colour until the reset. So the attribute is opened before the
+    # first word and closed after the last: the box is red, not the
+    # number. The red is the sidebar's own `warn`, which is the
+    # original's (see `colonyempire._red_note`).
+    color = (SHORTAGE_COLOR if int(row.get("growth", 0) or 0) < 0
+             else VALUE_COLOR)
+    pad_x = int(cfg.get("pad_x", 18) * layout.scale)
+    pad_y = int(cfg.get("pad_y", 14) * layout.scale)
+    px = layout.font_size(cfg.get("value_font", 20))
+    room_w = max(1, area.w - 2 * pad_x)
+    room_h = max(1, area.h - 2 * pad_y)
+    lines = []
+    for para in fill_template(template, values).split("\n"):
+        wrapped, _size = textfit.squeeze_lines(
+            style, para, room_w, room_h,
+            [px - n for n in range(0, max(1, px - 7))], color[:3])
+        lines.extend(wrapped)
+    # LEFT-ALIGNED, which is what the original's flags argument says:
+    # Squeeze_Print_Formatted_Paragraph_(13, 354, 80, 88, buffer, 0)
+    # and 0 is JUSTIFY_LEFT (colsum.cpp:1206; the same argument
+    # decision 45 reads for the colony name).
+    y = area.y + pad_y
+    for surf in lines:
+        surface.blit(surf, (area.x + pad_x, y))
+        y += surf.get_height()
+
+
+def render(surface, row, area, cfg, words, climates, layout, style,
+           only=None):
     """Draw the panel into `area`; `row` is None when nothing is
     selected, and then nothing is drawn.
 
@@ -240,11 +366,21 @@ def render(surface, row, area, cfg, words, climates, layout, style):
                             area.y + (area.h - text.get_height()) // 2))
         return
 
-    entries = visible_rows(row, cfg, words, climates)
+    entries = visible_rows(row, cfg, words, climates, only)
     if not entries:
         return
 
-    columns = max(1, int(cfg.get("columns", 1)))
+    # ONE COLUMN PER PANEL when the caller named a set: the two
+    # halves are two boxes now, so each lays its own rows out in a
+    # single column and `columns` is only consulted for the whole
+    # panel. Renumbered to 0.. so the grouping below does not have to
+    # know which of the original's halves it is drawing.
+    columns = (len(only) if only is not None
+               else max(1, int(cfg.get("columns", 1))))
+    if only is not None:
+        order = {c: i for i, c in enumerate(sorted(only))}
+        entries = [e._replace(column=order.get(e.column, 0))
+                   for e in entries]
     pad_x = int(cfg.get("pad_x", 18) * layout.scale)
     pad_y = int(cfg.get("pad_y", 14) * layout.scale)
     gap = int(cfg.get("row_gap", 4) * layout.scale)

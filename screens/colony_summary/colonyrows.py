@@ -665,8 +665,17 @@ def _pop_class(word, owner):
     return ""
 
 
-def build_rows(game_state, sort_key="name", names=None):
+def build_rows(game_state, sort_key="name", names=None, held=None):
     """One dict per colony of the local player, sorted.
+
+    `held` is `(colony index, pop indices)` for a cluster the HD side
+    is holding, or None. It does exactly what `COLMOVE::Get_Cluster_`
+    does and nothing more: those pops lose bit `0x200`
+    (colmove.cpp:70), so the icon walk stops emitting them
+    (coldraw.cpp:336) and the row, its pitch and both hit tests
+    shorten because all three read the one list. `pops` and `jobs`
+    are NOT touched — the original does not change `n_pops` either,
+    and a colonist in hand is still a colonist of that colony.
 
     `names` is a `core.prodname.Resolver` or None — the two name
     files behind one object, because `COLBLDG::Selection_Name_` reads
@@ -682,7 +691,8 @@ def build_rows(game_state, sort_key="name", names=None):
     it is verified for 0..7 but nothing on this screen needs it.
 
     The dict keys ARE the interface to the two renderers: index,
-    name, climate, pops, jobs, no_farming, max_pop, producing,
+    name, climate, pops, jobs, cells, held, no_farming, max_pop,
+    producing,
     producing_id, producing_state, producing_turns, can_buy for
     `colonylist.render()`, and size,
     gravity, mineral, growth, morale, morale_applies,
@@ -754,10 +764,34 @@ def build_rows(game_state, sort_key="name", names=None):
             prof = colony_struct.pop_prof(col.pop[i])
             if 0 <= prof < len(jobs):
                 jobs[prof] += 1
-        cells = tuple(tuple(_pop_cell(col.pop[p], races.get(col.owner),
+        # THE HELD CLUSTER IS APPLIED TO THE WORDS, NOT SUBTRACTED
+        # FROM A COUNT. `colonymove.held_pops` is `Get_Cluster_`'s
+        # own `pop[i] &= 0xFFFFFDFF` and the walk below is
+        # `coldraw.cpp:326-337`, which already refuses an unassigned
+        # pop — so there is no second arithmetic to keep in step.
+        # Imported here rather than at the top because `colonymove`
+        # imports THIS module for the ECON order; the bit clear is a
+        # move rule and belongs beside `Get_Cluster_`, so the import
+        # yields rather than the home.
+        from . import colonymove
+        pop_words = col.pop
+        held_cells = ()
+        if held is not None and held[0] == index and held[1]:
+            pop_words = colonymove.held_pops(col.pop, held[1])
+            # ARRAY ORDER, because `Draw_Cluster_` walks `pop[]` from
+            # 0 and takes every pop whose `0x200` is clear
+            # (colmove.cpp:24-29). That is NOT the icon walk's order
+            # (coldraw.cpp:326-337), and the two must not be confused
+            # — decision 48 is about the column, this is about the
+            # cursor.
+            held_cells = tuple(
+                _pop_cell(col.pop[i], races.get(col.owner), races)
+                for i in sorted(held[1])
+                if 0 <= i < min(col.n_pops, len(col.pop)))
+        cells = tuple(tuple(_pop_cell(pop_words[p], races.get(col.owner),
                                       races)
                             for p in colonyicons.icon_pops(
-                                col.pop, col.n_pops, job))
+                                pop_words, col.n_pops, job))
                       for job in range(3))
         rows.append({
             # The colony's index in the snapshot's own array, which is
@@ -788,6 +822,11 @@ def build_rows(game_state, sort_key="name", names=None):
             # differ by exactly the pops of a held cluster, which the
             # original does not draw either (coldraw.cpp:336).
             "cells": cells,
+            # THE POPS IN HAND, empty on every row but the one a
+            # cluster was picked from. They are the same pops the
+            # `cells` above no longer hold — one `0x200`, two
+            # consequences, exactly as the original has it.
+            "held": held_cells,
             "no_farming": col.max_farms == 0,
             "climate": col.climate,
             # The building column's content. `producing` is a display
