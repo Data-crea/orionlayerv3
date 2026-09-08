@@ -3061,6 +3061,69 @@ help-file lesson, one domain over.
 Zhadoom III (14 pops) is the widest row in either fixture and is
 therefore the narrowest-cell case any picture has to survive.
 
+### The list window grows 29 px so 1440p earns step 3 — 8 September 2026
+
+**The measurement that forced it.** Ten rows is the original's window
+(`_list_col[10]`, colsum.cpp:348), so the row band is the list
+divided by ten and the figure step is the largest whose `28*step`
+fits it. At the old 605 the band was 81 device px at 2560x1440 and
+step 3 needs 84, so 1440p fell to step 2 and its figure columns
+filled **59 %** of what the original's fill, against 79 % at the
+other two.
+
+**The clearance is +8 on top of the +21, and it was measured, not
+assumed.** The cell plate is a 1 px line and **46 of the 54 figure
+masters carry ink on canvas row 0** — measured over the whole set —
+so a figure blitted at the band's top would paint over the plate's
+top line. The bottom line needs nothing: every master has at least 3
+transparent rows below its ink, which is the same measurement the
+row clip already rests on. The rule is therefore `band >= 28*step +
+1`, and the smallest list that yields steps 2/3/4 under it is **638
+cutout px**, 634 typed plus the 2 px BLEED per side. Bands 63 / 85 /
+127, with 6 / 0 / 14 px spare below the figure.
+
+**Where the 29 came from, and the constraint nobody had seen.** Not
+the `list_band` rail — Data ruled that out and the A3 numbers
+(26 / 28 / 29 / 38) are unchanged and re-asserted. Out of the lower
+band's height, 220 -> 191. **But the band's height was pinned by ONE
+box**: the galaxy inset was 253 x 200 and its height was described as
+fixed by its own aspect, so any growth past 20 px broke it. The
+screen has no slack anywhere else either — `18 + 48 + 26 + 605 + 28 +
+220 + 29 + 32 + 74 = 1080` and the last term is `ring.bottom`, the
+master's own metal, so there is no margin to take.
+
+So the inset is **239 x 189**, the largest pair under 191 whose
+aspect is still within a thousandth of the original's coverage
+(1.26455 against 1.265134). `planet_output` absorbs the 14 px it gave
+up, as `_lower_band_note` says it always does.
+
+**WHAT THAT COST, AND IT IS A MARKED PROPERTY.** At 3840x2160 the
+inset box was 506 x 400 device px — the small galaxy's own world
+extent at one device pixel per world unit — and a smoke check pinned
+it. It is 478 x 378 now and **that property is gone**. It was a
+consequence of the box's size and never a requirement of the
+drawing: `colonyinset.map_rect` fits 128:91 isotropically on
+`min(w/128, h/91)` and no 1:1 relation enters it. The check now
+asserts the rule the instance came from — the aspect, and that WIDTH
+still binds so the letterbox stays on the vertical axis. The drawn
+map shrinks 5.5 %: 257x183 -> 243x173 at 1080p, 514x365 -> 486x346 at
+2160p.
+
+**What the reduced band did NOT cost, measured by rendering at all
+three resolutions rather than by arithmetic on box heights.** The
+sidebar still draws its six rows with no ink on the box edge and no
+label touching its value; `planet_output` still draws five; the
+description still wraps to five lines and uses 138 of 260 px at
+1440p. No font shrank. The first two attempts at this measurement
+counted ink bands over the whole screen and answered about the
+instrument — they failed at the CURRENT height too, which is the
+tell.
+
+**`frame_holes.py --write` kept ZERO non-cutout boxes**, and that is
+right rather than suspicious: every box on this screen is a hole in
+the plate. The galaxy map's `sb_*` readouts are the case that rule
+exists for and they are on another screen.
+
 ### The pick round: both frames fall, the pops leave the row — 8 September 2026
 
 The colony row now does what the original does during a move, and

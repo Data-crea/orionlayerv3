@@ -29,7 +29,7 @@
     107,
     92,
     1693,
-    605
+    634
   ],
   "list_columns": {
     "name": 302,
@@ -42,30 +42,30 @@
   "_list_columns_note": "302 + 347*3 + 314 + 36 = 1693, the list's own width exactly - the columns ARE the list, with no slack to distribute. THE LIST'S WIDTH DID NOT CHANGE WHEN THE GAPS BECAME RAILS on 7 September 2026: rails are horizontal there, so they cost HEIGHT and not width, and the figure capacity is untouched. CAPACITY IS ASSERTED, NOT NOTED: a figure column must fit at least four unsqueezed figures, which is what the original's widest column (industry, reach 122, pitch 30) fits; 347 reference px fits five, at every resolution, because the column and the pitch scale together. THE BUILDING COLUMN IS DERIVED: the original prints the producing text with BILL::Squeeze_Print_Formatted_Paragraph_(0x200, y, 0x55, 0x16, ...) at colsum.cpp:621 - 85 px of a 640 px screen, 13.3 % - and 13.3 % of 1693 is 225. 314 is wider than the transcription requires; the surplus is the extra HD width that Data's Stage 1 decision sends to the column reservation rather than to wider figure spacing. See colonybuild.py for why the width is a RESERVATION and never a squeeze target. THE THREE JOB COLUMNS ARE UNEQUAL, AND THAT IS TRANSCRIBED, corrected 7 September 2026. They were 347 each by our own choice; COLSUM::Get_Selected_Pop_ (colsum.cpp:1006-1024) passes the column bounds as literals - left_x = 101/236/378 and right_x = that - 10 - so the original's spans are 135/142/134 native px with the WORKERS column the widest. Two independent sources: those literals, and the column separators measured on the live framebuffer of screen 20 at x 99/234/376/510, which agree to +1 px on all three. The ratio 135:142:134 over the unchanged 1041 px reservation gives 342/360/339, so name, building and scroll do not move and the list width is still 1693. CAPACITY IS RE-ASSERTED AT THE NARROWEST COLUMN (339), not at the old uniform 347 - the check is what allows this change, not the arithmetic.",
   "planet_info": [
     107,
-    725,
+    754,
     320,
-    220
+    191
   ],
   "planet_output": [
     465,
-    725,
-    686,
-    220
+    754,
+    700,
+    191
   ],
   "galaxy_inset": [
-    1189,
-    735,
-    253,
-    200
+    1203,
+    755,
+    239,
+    189
   ],
   "empire_stats": [
     1480,
-    725,
+    754,
     320,
-    220
+    191
   ],
-  "_lower_band_note": "Four boxes, flush with the list's own edges at 107 and 1800, with gaps of 38 - THE MASTER'S OWN SLOT DIVIDER, 47 master px, the strut it puts between two buttons of one row. planet_output absorbs what the arithmetic leaves, because it is the only width in the band not fixed by something else: the two 320s are a pair and 253 is locked by the inset's aspect. 107 + 320 + 38 + 686 + 38 + 253 + 38 + 320 = 1800. The inset is 20 px shorter than its neighbours and centred against them (725 + 10 = 735), because its height is fixed by its own aspect and not by the band.",
-  "_galaxy_inset_note": "253 x 200 IS DERIVED AND CONFIRMED - doc/colony_inset_geometry.md Part 3. The original's inset covers 50.6*M x 40*M world units, whose aspect is 1.2651 at EVERY galaxy size because both divisors are constants and M cancels (movebox.cpp:20-21). 253/200 = 1.2650 against that, so the crop fills the box with no letterbox at any size INCLUDING orion2re's Maximum - the earlier expectation that Maximum letterboxes is WITHDRAWN, and it only did so if the crop were the galaxy rather than the original's coverage. The scale that follows is exactly 5/M reference px per world unit. At 3840x2160 the box is 506 x 400 device px, which is the small galaxy's own world extent at 1:1.",
+  "_lower_band_note": "Four boxes, flush with the list's own edges at 107 and 1800, with gaps of 38 - THE MASTER'S OWN SLOT DIVIDER, 47 master px, the strut it puts between two buttons of one row. planet_output absorbs what the arithmetic leaves, because it is the only width in the band not fixed by something else: the two 320s are a pair and 253 is locked by the inset's aspect. 107 + 320 + 38 + 686 + 38 + 253 + 38 + 320 = 1800. THE INSET IS NO LONGER SHORTER THAN ITS NEIGHBOURS - 8 September 2026. It was 20 px shorter and centred (725 + 10 = 735) on the reading that its height is fixed by its own aspect; at the band's new 191 the aspect is not what binds. colonyinset.map_rect fits the map into 128:91 isotropically and takes min(w/128, h/91), and with the box 253 wide the WIDTH is the smaller term at every resolution - so the map is the same size at 200 and at 191 and the box may simply fill its band like the other three. It starts to shrink below 183.",
+  "_galaxy_inset_note": "253 x 200 IS DERIVED AND CONFIRMED - doc/colony_inset_geometry.md Part 3. The original's inset covers 50.6*M x 40*M world units, whose aspect is 1.2651 at EVERY galaxy size because both divisors are constants and M cancels (movebox.cpp:20-21). 253/200 = 1.2650 against that, so the crop fills the box with no letterbox at any size INCLUDING orion2re's Maximum - the earlier expectation that Maximum letterboxes is WITHDRAWN, and it only did so if the crop were the galaxy rather than the original's coverage. The scale that follows is exactly 5/M reference px per world unit. At 3840x2160 the box is 506 x 400 device px, which is the small galaxy's own world extent at 1:1. THE BOX IS 239 x 189 SINCE 8 September 2026, WAS 253 x 200, AND ONE STATED PROPERTY IS GONE WITH IT. The list grew 29 ref px so that 2560x1440 could take figure step 3 (see _list_height_note), the 29 came out of the lower band's height, and the band's height is what fixes this box. THE ASPECT RULE SURVIVES and is what the check still asserts: 239/189 = 1.26455 against the coverage's 1.265134, 0.00058 apart, against 253/200's 0.00013 - both inside the thousandth. 239 x 189 is the LARGEST pair under 191 that passes; 229 x 181 is the most exact and was rejected for being smaller still. WHAT IS LOST: at 3840x2160 the box was 506 x 400 device px, which is the small galaxy's own world extent at 1:1, and a smoke check pinned that. It is now 478 x 378 and the property is gone. It was a CONSEQUENCE of the box's size and never a requirement of the drawing - colonyinset.map_rect fits 128:91 isotropically and takes min(w/128, h/91), which no 1:1 relation enters - so the check now asserts the rule it was an instance of and v3_projektstatus.md records the loss. THE DRAWN MAP SHRINKS 5.5 %: 257 x 183 -> 243 x 173 at 1080p and 514 x 365 -> 486 x 346 at 2160p. Width still binds at every resolution, so the letterbox stays on the vertical axis and gets smaller. planet_output absorbs the 14 px this box gave up, as _lower_band_note says it always does.",
   "sort_bar": [
     107,
     974,
@@ -88,5 +88,6 @@
     "1920x1080",
     "2560x1440",
     "3840x2160"
-  ]
+  ],
+  "_list_height_note": "634, AND IT IS DERIVED FROM THE SPRITE STEP - 8 September 2026, was 605. The list holds ten rows at every resolution (COLSUM::_list_col[10], colsum.cpp:348), so the row band is the window divided by ten and the figure step is the largest whose 28*step fits that band. At 605 the band was 81 device px at 2560x1440 and step 3 needs 84, so 1440p fell to step 2 and its figure columns filled 59 % of what the original's fill - against 79 % at the other two. THE CLEARANCE IS THE +8 ON TOP OF THE +21: the cell plate is a 1 px line and 46 of the 54 figure masters carry ink on canvas row 0 (measured over the whole set), so a figure blitted at the band's top would paint over the plate's top line. The bottom line needs nothing - every master has at least 3 transparent rows below its ink, the same measurement the row clip already rests on. So the rule is band >= 28*step + 1, and the smallest list that yields steps 2/3/4 under it is 638 cutout px = 634 typed plus the 2 px BLEED per side. Bands 63 / 85 / 127 with 6 / 0 / 14 px spare below the figure. THE 29 PX CAME OUT OF THE LOWER BAND'S HEIGHT and not out of the list_band rail, which stays at the master's own 28 (see _gaps_note): the four band boxes go from y 725 h 220 to y 754 h 191. WHAT THAT COST, MEASURED BY RENDERING AT ALL THREE RESOLUTIONS RATHER THAN BY ARITHMETIC ON BOX HEIGHTS: nothing. The sidebar still draws its six rows with no ink on the box edge and no label touching its value; planet_output still draws five; the description still wraps to five lines and uses 138 of 260 px at 1440p. AND THE GALAXY INSET DOES NOT MOVE AT ALL: colonyinset.map_rect fits 128:91 isotropically and WIDTH binds, so the drawn map is 257x183 / 342x243 / 514x365 at both heights and only the vertical margin shrinks, 21 -> 12 px at 1080p. It would start shrinking below a 183 px cutout."
 }

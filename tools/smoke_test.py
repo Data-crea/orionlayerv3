@@ -4194,8 +4194,31 @@ def main():
         f"the inset box is {_iw / _ih:.4f} against the original's "
         f"coverage aspect {_crop:.4f} — a letterbox at every galaxy "
         f"size is the cost, and Part 3 says there is none")
-    # 3840x2160 makes it the small galaxy's world extent at 1:1.
-    assert (_iw * 2, _ih * 2) == (506, 400), (_iw * 2, _ih * 2)
+    # THE 1:1 PROPERTY IS GONE — 8 September 2026, and it is recorded
+    # rather than quietly dropped. This asserted `(_iw*2, _ih*2) ==
+    # (506, 400)`: at 3840x2160 the box was the small galaxy's own
+    # world extent at one device pixel per world unit. The list grew
+    # 29 ref px so 1440p could take figure step 3, the 29 came out of
+    # the lower band's height, and this box is what the band's height
+    # fixes — so it is 239 x 189 now and the coincidence is over.
+    #
+    # It was a CONSEQUENCE of the box's size, never a requirement of
+    # the drawing: `colonyinset.map_rect` fits 128:91 isotropically
+    # on `min(w/128, h/91)` and no 1:1 relation enters it. What was
+    # the rule underneath is the ASPECT, asserted above and still
+    # inside a thousandth. What replaces the instance is the property
+    # that actually has to hold — the map still fits its box on the
+    # axis that binds, and the box never crops it.
+    from screens.colony_summary import colonyinset as _cinset
+    _im = _cinset.map_rect(pygame.Rect(_ix, _iy, _iw, _ih))
+    assert _im.w <= _iw and _im.h <= _ih, (
+        f"the inset's map {_im.w}x{_im.h} does not fit its box "
+        f"{_iw}x{_ih} — map_rect is supposed to letterbox, not crop")
+    assert _im.w == _iw, (
+        f"the inset's map is {_im.w} of {_iw} px wide: HEIGHT has "
+        f"become the binding axis, which puts panel either side of "
+        f"the galaxy instead of above and below it. Below a box "
+        f"height of {round(_iw * 91 / 128)} that is what happens")
 
     # RENDERING IS REPRODUCIBLE, which is the licence to gitignore it
     # (decision 40): the same rectangles rendered twice are the same
@@ -4527,14 +4550,18 @@ def main():
             f"the gap at ({_gx}, {_gy}) resolves to role {_role!r}, "
             f"which the master does not offer")
         _span = _gw if _gv else _gh
-        # THE INSET IS 20 PX SHORTER THAN ITS BAND and is centred in
-        # it, so its two horizontal gaps carry half that shortfall
-        # each on top of their role's width. The 20 has to go
-        # somewhere — its height is fixed by its own aspect — and
-        # splitting it is the least-wrong place to put it. The rail
-        # is laid at the gap's own width either way, so the picture
-        # is a slightly deeper rail at those two and nothing else.
-        _extra = 10 if ("galaxy_inset" in _fb._facing(
+        # THE INSET IS SHORTER THAN ITS BAND and is centred in it, so
+        # its two horizontal gaps carry half that shortfall each on
+        # top of their role's width. The shortfall is DERIVED from
+        # the layout and not typed here: it was 20 until 8 September
+        # 2026 and is 2 now, and a hardcoded half of it was a second
+        # copy of a number that moves — which is what it did the
+        # first time the band's height changed.
+        _band_h = max(_lr[_k][3] for _k in
+                      ("planet_info", "planet_output", "galaxy_inset",
+                       "empire_stats"))
+        _short = (_band_h - _lr["galaxy_inset"][3]) // 2
+        _extra = _short if ("galaxy_inset" in _fb._facing(
             _gaps, _gx, _gy, _gw, _gh, _gv) and not _gv) else 0
         assert _span == _lr["gaps"][_role] + _extra, (
             f"the gap at ({_gx}, {_gy}) is {_span} px and its role "
