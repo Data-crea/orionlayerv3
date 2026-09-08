@@ -24,23 +24,75 @@ import collections
 
 import pygame
 
+from core import zoomtables
+
 from .colonyrows import POP_LIMIT_CAP
 
 
-#: `unit` is one slot's ink, `gap` the space after it, `step` the two
-#: together — the pitch from one slot to the next. `width` is the
-#: whole POP_LIMIT_CAP-slot track. A sprite may be at most `unit`
-#: wide, which is the step minus the gap: ink that ate its gap would
-#: touch its neighbour and the count would stop being legible.
-#:
-#: `slack` is what `list_area` has left after the building column,
-#: the two `pad_x` and the whole track have been paid for — the
-#: pixels the slot's floor division drops. It is added to the name
-#: column's DRAWN width and to nothing else, so the row ends flush at
-#: every resolution. See `track_metrics`.
-Track = collections.namedtuple(
-    "Track",
-    "unit gap step width slack growth_gap bar_h row_h build_w build_gap")
+#: What is left of the row's own measurements once the columns are
+#: boxes and the band is the window divided by the row count: the
+#: gutter between two cells, and nothing else. **NINE VALUES DIED
+#: HERE on 8 September 2026** — `row_height`, `pad_x`, `pad_y`,
+#: `name_width`, `name_gap`, `bar_height`, `tail_width`,
+#: `building_width` and `growth_gap`. Every one of them answered a
+#: question a box or the row count now answers, and a tuned number
+#: that agrees with a derived one is the second copy decision 5 is
+#: about.
+Track = collections.namedtuple("Track", "gap band_h")
+
+
+def track_metrics(area, cfg, scale):
+    """The row's two remaining measurements.
+
+    `band_h` is the window divided by `list.row_count` — TEN, the
+    original's own window (`_list_col[10]`, colsum.cpp:348) — and it
+    is what the figure step, the cell, the plate and the drop rect
+    are all derived from. `gap` is the gutter a crowded column gives
+    up first (see `_column_boxes`).
+    """
+    return Track(gap=max(1, int(cfg.get("square_gap", 2) * scale)),
+                 band_h=band_height(area, cfg))
+
+
+def band_height(area, cfg):
+    """The row band — `list_area` height divided by the row count.
+
+    One expression, one home. TEN rows at every resolution because
+    that is the original's window and not a number that looked right:
+    `COLSUM::_list_col[10]` and `Update_Col_List_` fills exactly that
+    many (colsum.cpp:348). The remainder goes to the LAST band, the
+    same rule the columns and the header plates use, so the rows tile
+    the window exactly instead of leaving a strip nothing owns.
+    """
+    return max(1, area.h // max(1, int(cfg.get("row_count", 10))))
+
+
+def figure_step(area, cfg):
+    """The largest sprite step whose figure fits one band.
+
+    **DERIVED, never declared** — the hand-written per-resolution
+    table is gone. A master is 28 px (decision 50) and a step is an
+    integer swap (decision 28), so the step is the largest whose
+    `28 * step` fits the band under the plate's own top line.
+
+    THE `+ PLATE_LINE` IS MEASURED, NOT ASSUMED. The cell plate is a
+    1 px line and 46 of the 54 masters carry ink on canvas row 0, so
+    a figure blitted at the band's top would paint over it. The
+    BOTTOM line needs nothing: every master has at least 3
+    transparent rows below its ink, which is the same measurement the
+    row clip rests on.
+    """
+    band = band_height(area, cfg)
+    fits = [s for s in zoomtables.FIGURE_STEPS
+            if 28 * s + PLATE_LINE <= band]
+    return max(fits) if fits else min(zoomtables.FIGURE_STEPS)
+
+
+#: The cell plate's line, in device px — `StyleRenderer.draw_plate`
+#: draws width 1 at every resolution. The figure clears it at the top
+#: and the masters' own bottom margin clears it at the bottom.
+PLATE_LINE = 1
+
 
 #: `runs` is (zone, start_slot, count) per profession — the squares
 #: fill them. `filled`..`reach` is the free region, `reach`..
@@ -54,140 +106,71 @@ Track = collections.namedtuple(
 Regions = collections.namedtuple("Regions", "runs filled reach spans")
 
 
-def track_metrics(area, cfg, scale):
-    """The one geometry both modes measure from.
-
-    The slot is measured from POP_LIMIT_CAP and from nothing on
-    screen, which is what makes counting mean anything — see the
-    constant in `colonyrows.py`. `tail_width` is reserved BESIDE the
-    track, not taken out of it: a full-length track ends where the
-    panel does, and "No Farming" needs a column no slot reaches.
-
-    **`slack`, and why the name column gets it.** `unit` is a floor
-    division, so the six columns almost never spend `list_area`
-    exactly: at scale 1.0 the shipped values divide evenly, and at
-    every fractional scale the six independent `int()` calls each
-    drop a fraction. Those pixels used to land at the right edge as
-    dead air — 30 px at 1280x720, 15 at 2560x1440 — where nothing
-    claimed them and the row simply stopped short of the panel.
-
-    They go to the name column's DRAWN width instead, which is the
-    only column that can take a variable amount without lying: the
-    slot must stay `POP_LIMIT_CAP`-derived or counting stops meaning
-    anything, `building_width` is a hard transcription, and `pad_x`
-    and `square_gap` are the fixed costs.
-
-    It is drawn width and NOT text budget. The name still clips and
-    ellipsises at `name_width * scale`, so the threshold is the same
-    244 reference px everywhere; the slack becomes gutter between the
-    name and the first slot. Letting it into the text budget would
-    make the ellipsis resolution-dependent — 244 ref px at 1080p
-    against 288 at 720p, so the same name cuts on one monitor and not
-    on another. See `_draw_name_block` and `_name_width_note`.
-    """
-    gap = max(1, int(cfg.get("square_gap", 2) * scale))
-    pad_x = int(cfg.get("pad_x", 22) * scale)
-    tail_w = int(cfg.get("tail_width", 0) * scale)
-    build_gap = int(cfg.get("building_gap", 16) * scale)
-    growth_gap = int(cfg.get("growth_gap", 18) * scale)
-    cols = columns(area, cfg)
-    name_w = cols["name"][1] - 2 * pad_x if cols else int(
-        cfg.get("name_width", 236) * scale)
-    build_w = cols["building"][1] if cols else int(
-        cfg.get("building_width", 0) * scale)
-    if build_w and not cols:
-        build_w += build_gap
-    bar_space = area.w - name_w - tail_w - build_w - 2 * pad_x
-    # THE TRACK HOLDS POP_LIMIT_CAP SLOTS PLUS THE GROWTH GAP. It
-    # held three more until 8 September 2026, one per job marker;
-    # the markers are gone (see `RowBoxes`) and the slot got their
-    # width back — about a fifteenth wider than the marker row. What
-    # does NOT change is that one slot is the same width in every row,
-    # which is the property the whole track is measured from — see
-    # the note in `colonyrows.POP_LIMIT_CAP`.
-    slots = POP_LIMIT_CAP
-    unit = max(2, (bar_space - growth_gap - (slots - 1) * gap) // slots)
-    width = slots * unit + (slots - 1) * gap + growth_gap
-    # Clamped at 0: `unit` has a floor of 2, so a `list_area` too
-    # narrow for the columns configured would compute a NEGATIVE
-    # remainder, and adding that to the name column would drag the
-    # track left over the names. The row then overruns the panel on
-    # the right, which is the visible failure and the honest one.
-    slack = max(0, area.w - (name_w + tail_w + build_w
-                             + 2 * pad_x + width))
-    return Track(unit=unit, gap=gap, step=unit + gap,
-                 width=width, slack=slack, growth_gap=growth_gap,
-                 # NO DEFAULT, deliberately, for these three and for
-                 # `pad_y` in `row_bands`: they carry the ten-row
-                 # arithmetic, and the number that used to stand here
-                 # was 60, which `layout.json._row_height_note`
-                 # records as REJECTED — 10 x 60 = 600 leaves 5 px
-                 # and clamps the "{count} more not shown" line back
-                 # over the last row it exists to account for. A
-                 # missing key must raise, not silently draw nine
-                 # rows: an absence shaped like a result is the one
-                 # thing the fundament refuses.
-                 bar_h=int(cfg["bar_height"] * scale),
-                 row_h=int(cfg["row_height"] * scale),
-                 build_w=int(cfg.get("building_width", 0) * scale),
-                 build_gap=build_gap)
-
-
-#: The key `cfg` carries the column table under. The screen merges
-#: `layout_reference.list_columns` into its `list` block on load, so
-#: the table travels with every other row number and there is no
-#: module state to leak between one caller and the next — which a
-#: global would do the moment one check rendered the real screen and
-#: the next used a synthetic fixture.
+#: The key `cfg` carries the column table under. The screen binds the
+#: six column BOXES into its `list` block on load
+#: (`colonyheader.install_columns`), so the table travels with every
+#: other row value and there is no module state to leak between one
+#: caller and the next — which a global would do the moment one check
+#: rendered the real screen and the next used a synthetic fixture.
 COLUMNS_KEY = "columns"
 
 
 def columns(area, cfg):
-    """{key: (x, width)} in SCREEN px, tiling `area` exactly, or {}.
+    """{key: (x, width)} in SCREEN px, from the six column BOXES.
 
-    Empty when `cfg` carries no table, and the single-track
+    Empty when `cfg` carries no column table, and the single-track
     arithmetic runs then — which is what the synthetic fixtures in
     the checks exercise, and what the row was before Stage 4.
 
-    The last column takes what integer division left, so the row can
-    never end short of the panel — the same rule
-    `colonyheader.plate_rects` uses for the headings above, which is
-    why the two line up at every resolution without either knowing
-    about the other.
+    **THE BOXES ARE THE COLUMNS — 8 September 2026.** `cfg[COLUMNS_KEY]`
+    holds `[(key, Box)]`, live objects installed once by
+    `colonyheader.install_columns`, so a column dragged in the F5
+    editor moves the cells, the plates, the drop rects and the
+    heading above it on the same frame. It used to hold
+    `[(key, ref_width)]` baked out of `layout_reference.json` at
+    screen load, tiled here, and tiled a SECOND time in
+    `plate_rects` — two arithmetics that agreed by construction and
+    could not be edited.
+
+    **ONLY THE LEFT EDGE IS READ, and the width is the distance to
+    the next column.** A box carries four numbers and three of them
+    would be a second answer: the y and height are `list_area`'s
+    because a column is a strip of the list, and the WIDTH is the
+    gap to its neighbour because the six have to tile the window
+    exactly. Reading the stored width instead opened a one-pixel seam
+    at 1280x720 and 2048x1152 — `Box.update_layout` truncates x and
+    width independently, so `int(x*s) + int(w*s)` and
+    `int((x+w)*s)` disagree wherever the fractions add up. Deriving
+    it makes the tiling true by construction, which is what the old
+    ref-width table did with "the last column takes what integer
+    division left" and is the same rule `colonyheader.plate_rects`
+    keeps.
+
+    What that means at the editor: dragging a column moves a
+    BOUNDARY, and its neighbour follows.
+    `colonyheader.sync_columns` writes the derived width and the
+    window's y and height back into the boxes, so the outline shows
+    what the geometry did rather than what was dragged.
     """
     table = cfg.get(COLUMNS_KEY) or ()
     if not table:
         return {}
-    total = sum(w for _k, w in table)
-    out, x = {}, area.x
-    for i, (key, ref_w) in enumerate(table):
-        w = (area.right - x if i == len(table) - 1
-             else round(area.w * ref_w / total))
-        out[key] = (x, w)
-        x += w
+    edges = []
+    for key, box in table:
+        rect = getattr(box, "screen_rect", None)
+        if rect is None:
+            return {}
+        edges.append((rect.x, key))
+    edges.sort()
+    out = {}
+    for i, (x, key) in enumerate(edges):
+        right = edges[i + 1][0] if i + 1 < len(edges) else area.right
+        out[key] = (x, max(1, right - x))
     return out
 
 
 #: The three job columns, in ECON order, as they are keyed above.
 JOB_KEYS = ("farmers", "workers", "scientists")
-
-
-def track_x(area, cfg, scale):
-    """Where the 42-slot track starts on screen.
-
-    Decision 5, one scroll offset further in than `row_bands`: the
-    drawing and the two hit tests below have to agree about the
-    track's left edge, and the expression is `pad_x + name_width +
-    slack` — the slack included, because those are the pixels the six
-    floor divisions dropped and `track_metrics` gives them to the
-    name column's DRAWN width. A hit test that forgot the slack would
-    be one gutter to the left of the squares at every fractional
-    scale and exactly right at 1.0, which is the resolution anybody
-    checks.
-    """
-    track = track_metrics(area, cfg, scale)
-    return (area.x + int(cfg.get("pad_x", 22) * scale)
-            + int(cfg.get("name_width", 236) * scale) + track.slack)
 
 
 def row_regions(row):
@@ -282,44 +265,20 @@ def row_boxes(area, cfg, scale, row, band=None):
     a layout value and not a side effect of some other number).
     """
     track = track_metrics(area, cfg, scale)
-    origin = track_x(area, cfg, scale)
     top, height = band if band else (0, 0)
-    y = top + (height - track.bar_h) // 2 if band else 0
-    h = track.bar_h if band else 0
-    name = pygame.Rect(area.x, y, max(0, origin - area.x), h)
     cols = columns(area, cfg)
-    if cols:
-        return _column_boxes(cols, cfg, scale, row, y, h, track)
-
-    def box(slot, count):
-        return pygame.Rect(origin + slot * track.step, y,
-                           count * track.step - track.gap, h)
-
-    regions = row_regions(row)
-    cells, targets = [], []
-    slot = 0
-    for job, (_start, count) in enumerate(regions.spans):
-        for k in range(count):
-            cells.append((job, k, box(slot + k, 1)))
-        targets.append((job, box(slot, count) if count
-                        else pygame.Rect(origin + slot * track.step, y,
-                                         0, h)))
-        slot += count
-
-    run_right = origin + slot * track.step - track.gap
-    grow_n = max(0, regions.reach - regions.filled)
-    gx = run_right + track.growth_gap
-    growth = [pygame.Rect(gx + i * track.step, y,
-                          track.unit, h) for i in range(grow_n)]
-    beyond_x = gx + grow_n * track.step
-    right = origin + track.width
-    beyond = (pygame.Rect(beyond_x, y, right - beyond_x, h)
-              if band and beyond_x < right else None)
-    return RowBoxes(name, tuple(cells), tuple(targets),
-                    tuple(growth), beyond, run_right)
+    if not cols:
+        # NO COLUMNS, NO ROW. The single-track geometry is gone with
+        # the nine tuned values it was measured from (see `Track`);
+        # a caller without the column boxes gets nothing rather than
+        # a second layout that looks almost right.
+        return RowBoxes(None, (), (), (), None, area.x)
+    return _column_boxes(cols, cfg, scale, row, top,
+                         height or track.band_h, track,
+                         figure_step(area, cfg))
 
 
-def _column_boxes(cols, cfg, scale, row, y, h, track):
+def _column_boxes(cols, cfg, scale, row, y, h, track, step):
     """One row laid out in the five columns — the Stage 4 geometry.
 
     **THE PITCH IS THE ORIGINAL'S OWN, SCALED.** Each job column's
@@ -357,18 +316,16 @@ def _column_boxes(cols, cfg, scale, row, y, h, track):
     EMPTY column accepts a drop in the original exactly as it does
     here.
 
-    **DEVIATION IN HEIGHT, NAMED AND NOT FIXED HERE.** The original's
-    field is 30 px of a 31 px row pitch (`top_y = 31*i + 34`,
-    colsum.cpp:311, height 30) — 97 % of the row, so anywhere in the
-    band is a drop. Ours is `track.bar_h`, 30 reference px of a 58 px
-    `row_height`, 52 %. It does NOT change which row a click lands
-    in: the bands do not overlap either way and `row_at` has already
-    chosen the row before this rect is consulted. What it changes is
-    the OUTCOME inside one row — a click in the top or bottom 14
-    reference px of a row is "outside every target" and discards the
-    selection, where the original would have dropped. Recorded here
-    and in `v3_projektstatus.md`; making the target the full band is
-    one expression and is Data's call, not this commit's.
+    **THE DEVIATION IN HEIGHT IS CLOSED — 8 September 2026.** The
+    drop rect was `bar_h`, 30 reference px of a 58 px row, 52 % of
+    the band, where the original's field is 30 px of a 31 px row
+    pitch (`top_y = 31*i + 34`, colsum.cpp:311, height 30) — 97 %.
+    A click in the outer 14 reference px of a row discarded the
+    selection where the original would have dropped. **The target is
+    the whole band now**, because the plate rect is the drop rect is
+    the cell rect and all three are `column x band` (decision 5).
+    Recorded as closed here, in `layout.json` under
+    `move._drop_target_note`, and in `v3_projektstatus.md`.
 
     **NO GROWTH BOXES IN THIS LAYOUT.** They belong to the COLONY and
     not to a job, so in a row that is three job columns there is no
@@ -380,8 +337,6 @@ def _column_boxes(cols, cfg, scale, row, y, h, track):
     decides whether they come back somewhere honest.
     """
     from core import box
-    from core import zoomtables
-    from . import colonyfigures
     from . import colonyicons
     regions = row_regions(row)
     cells, targets = [], []
@@ -389,11 +344,18 @@ def _column_boxes(cols, cfg, scale, row, y, h, track):
         cx, cw = cols[key]
         n_left, n_right = colonyicons.COLUMNS[job]
         count = regions.spans[job][1]
-        start = cx
-        room = max(1, cw)
+        # ONE PIXEL INSIDE THE PLATE'S LINE, and it is transcribed.
+        # The original's icons start at `left_x` — 101 / 236 / 378 —
+        # and its drawn cell boxes start at 100 / 235 / 377, measured
+        # on `colony_summary_native_split.png`. So the first icon sits
+        # exactly one pixel inside the box's own line, which is what
+        # keeps the line visible with a full column. The same `+1` at
+        # the top is what `figure_step` reserves.
+        start = cx + PLATE_LINE
+        room = max(1, cw - 2 * PLATE_LINE)
         # THE FACTOR IS THE SPRITE STEP, NOT THE COLUMN RATIO.
-        # `zoomtables.FIGURE_STEP` (decision 26) is the integer 2/3/4
-        # a 28 px native figure is drawn at, and the stacking decision
+        # The step is the integer a 28 px native figure is drawn at
+        # (decision 26), derived from the band, and the stacking decision
         # is that HD's extra width goes into the column RESERVATION
         # and never into figure spacing. Scaling the pitch by the
         # column ratio instead — 342 : 125, about 2.7 at 1080p —
@@ -401,10 +363,12 @@ def _column_boxes(cols, cfg, scale, row, y, h, track):
         # drop target would move again the day Stage 3 draws sprites
         # at the step. Corrected 7 September 2026; it was the ratio
         # for one stop.
-        # ONE HOME for the step: `colonyfigures.figure_step` also
-        # loads the sprites at it, and a pitch and a sprite that
-        # disagree are a picture nothing would report.
-        step = colonyfigures.figure_step(scale)
+        # ONE HOME for the step: `figure_step` above answers it from
+        # the band, `colonyfigures.FigureSet` loads the sprites at
+        # what it says, and a pitch and a sprite that disagree are a
+        # picture nothing would report. It was a hand-written table
+        # per resolution until 8 September 2026, which could agree
+        # with the band or not and nothing checked.
         pitch = min(colonyicons.column_pitch(job, max(count, 1)),
                     colonyicons.ICON_SPACING) * step
         # AND A CLAMP THAT CAN EXPIRE, decision 44's shape. The
@@ -416,7 +380,7 @@ def _column_boxes(cols, cfg, scale, row, y, h, track):
         # status document for the table. Written as a min so the
         # deviation ends the day the reservation is wide enough,
         # rather than as a special case for one window.
-        if count and start + count * pitch > cx + cw:
+        if count and start + count * pitch > cx + cw - PLATE_LINE:
             pitch = room / float(count)
         # CELLS MAY NOT OVERLAP, and the arithmetic has to guarantee
         # it rather than the numbers happening to. `int((k+1)*p) -
@@ -541,15 +505,18 @@ def row_bands(area, cfg, scale, count):
     is not drawn. That is still the honest shape: nothing below the
     last band can be selected because nothing below it is there.
     """
-    # No defaults here either — see `track_metrics`.
-    row_h = int(cfg["row_height"] * scale)
-    y = area.y + int(cfg["pad_y"] * scale)
-    bands = []
-    for _ in range(count):
-        if y + row_h > area.bottom:
+    band = band_height(area, cfg)
+    want = int(cfg.get("row_count", 10))
+    bands, y = [], area.y
+    for i in range(min(count, want)):
+        # THE LAST BAND TAKES THE REMAINDER, the rule the columns and
+        # the header plates already use, so the rows tile the window
+        # exactly instead of leaving a strip that belongs to nobody.
+        h = (area.bottom - y) if i == want - 1 else band
+        if h <= 0:
             break
-        bands.append((y, row_h))
-        y += row_h
+        bands.append((y, h))
+        y += h
     return bands
 
 

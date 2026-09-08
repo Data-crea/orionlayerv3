@@ -115,6 +115,25 @@ class ScreenBase(HelpMixin):
             self._render_frame(surface)
         self.render_help(surface)
 
+    def editor_note(self, box):
+        """One line about `box` for the F5 editor's info bar, or None.
+
+        **The screen owns what a box MEANS; the editor owns the
+        chrome.** A geometry value that is derived — a row band, a
+        sprite step, a lower bound the editor must report and never
+        clamp — has no rect for the editor to show, so without this
+        the person dragging is dragging blind.
+
+        It replaces a `hasattr(scr, "_race_by_id")` in
+        `core.editor.overlay.draw_info`: generic editor code that
+        named ONE screen and reached into it. A hook is the same
+        information with the knowledge on the side that has it.
+
+        Plain text. The overlay appends it to the box's own line and
+        does not parse it.
+        """
+        return None
+
     def handle_click(self, screen_x, screen_y):
         """Handle click in screen coordinates.
 

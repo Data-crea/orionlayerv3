@@ -262,7 +262,56 @@ MAX_ZOOM_BY_SCALE = {10: 0, 15: 1, 20: 2, 30: 3}
 #: table as a design input and its list height depends on it — that
 #: file is where a change is made, and this is where a renderer reads
 #: it.
-FIGURE_STEP = {"1920x1080": 2, "2560x1440": 3, "3840x2160": 4}
+#: **THE PER-RESOLUTION TABLE IS GONE — 8 September 2026.** It read
+#: `{"1920x1080": 2, "2560x1440": 3, "3840x2160": 4}`, and every one
+#: of those three was a hand-written answer to a question the LAYOUT
+#: can answer: the colony list holds ten rows (the original's own
+#: window, colsum.cpp:348), so a row band is the window divided by
+#: ten and the step is the largest whose figure fits it. At the list
+#: window this project shipped until that day, the derived answer at
+#: 2560x1440 was 2 and the table said 3 — the table was declaring a
+#: step the band could not hold, and `colonylist._render_bar` clipped
+#: the overflow every frame. The window grew 29 ref px and the table
+#: went; `colonytrack.figure_step` is the derivation and
+#: `screens/colony_summary/layout_reference._list_height_note` is
+#: the arithmetic.
+#:
+#: What stays here is the LADDER — which integer steps exist at all,
+#: because that is a property of the sprites and not of a screen.
+#:
+#: **1 IS ON IT, AND IT IS THE MASTER ITSELF.** A step is an integer
+#: nearest-neighbour swap (decision 28) and a master is 28 x 28, so
+#: step 1 is the master drawn at its own size — which is the right
+#: answer below the reference resolution: at 1280x720 the list band
+#: is 42 device px and even a 2x figure needs 57. It was left off
+#: while this was a three-entry table keyed by the three resolutions
+#: this project ships at, and a window smaller than 1920x1080 had no
+#: entry at all. **It is NOT on `colonyfigures.STEPS`**, which is the
+#: list of steps a MOD may ship as an explicit `@Nx` file: `@1x`
+#: would be a second name for the master, and decision 50's whole
+#: point is one PNG with one documented name.
+FIGURE_STEPS = (1, 2, 3, 4)
+
+#: The three job columns of the colony list, NATIVE, and what the
+#: original states about them is a RATIO. **TRANSCRIBED** from
+#: `COLSUM::Get_Selected_Pop_` (colsum.cpp:1006-1024) and
+#: `Add_Fields_Pop_For_` (colsum.cpp:311-345), which pass the bounds
+#: as literals: `left_x` 101 / 236 / 378 and `right_x` = the next
+#: `left_x` - 10. The DRAWN spans are the separators either side —
+#: 100 / 235 / 377 / 511, measured on
+#: `orionlayer-fixtures/evidence/colony_summary_native_split.png` at
+#: 1:1 — giving **135 : 142 : 134, with WORKERS the widest**.
+#:
+#: **THE RATIO IS THE TRANSCRIPTION AND THE WIDTH IS NOT.** HD's job
+#: columns are 2.53x their native ones, which is Data's Stage 1
+#: decision to send the extra HD width to the column reservation
+#: rather than to figure spacing; the absolute number is therefore
+#: ours and only the proportion among the three is the original's. A
+#: check measures every column box against this and reports the
+#: deviation into `v3_projektstatus.md`, red only where one is
+#: unmarked (decision 36's shape: a hand-editable value gets a
+#: checker, not a reminder).
+NATIVE_JOB_COLUMNS = {"farmers": 135, "workers": 142, "scientists": 134}
 
 #: Where a HELD cluster's figures sit beside the pointer, in NATIVE
 #: px, and the pitch between them when more than one is held.

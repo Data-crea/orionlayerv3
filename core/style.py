@@ -390,19 +390,37 @@ class StyleRenderer:
         panel = self.inner_panel.render(w, h)
         surface.blit(panel, (x, y))
 
+    def draw_plate(self, surface, rect, scale=1.0, color=None):
+        """One rounded 1 px plate. **Decision 51.**
+
+        The rect may come from a `Box` or be computed — the colony
+        screen's fifty cell plates and its five column headings are
+        `column x band`, derived from six boxes and a row count, and
+        there is no box for any of them. What 34 protects is the
+        APPEARANCE having one home, which is here; what it does not
+        require is that a rect come from `boxes.json`.
+
+        It exists because the arithmetic was already in two places:
+        `draw_thin_border` below and `colonyheader.render`, which had
+        pasted `max(6, int(10 * scale))` out rather than invent a box
+        per plate. `color` None takes the panel skin's own line.
+        """
+        if color is None:
+            color = self.colors.get("panel", {}).get(
+                "thin_border", [55, 65, 85])
+        pygame.draw.rect(surface, tuple(color[:3]), rect, 1,
+                         border_radius=max(6, int(10 * scale)))
+
     def draw_thin_border(self, surface, rect, scale=1.0):
         """Draw the thin rounded outline used as a light panel skin.
 
         The counterpart to `draw_inner_panel`: no texture, no fill,
         just the line. Custom Race groups its three columns with it,
         New Game its five setting boxes, and the message popup borders
-        itself with it — three call sites, which is why the arithmetic
-        lives here instead of being pasted a fourth time.
+        itself with it. The line itself is `draw_plate`'s since
+        8 September 2026 — this is the box-skin name for it.
         """
-        col = self.colors.get("panel", {}).get(
-            "thin_border", [55, 65, 85])[:3]
-        pygame.draw.rect(surface, tuple(col), rect, 1,
-                         border_radius=max(6, int(10 * scale)))
+        self.draw_plate(surface, rect, scale)
 
     def get_asset(self, rel_path):
         """Load and cache an image from the skin directory."""

@@ -101,6 +101,78 @@
       "style": {
         "font_size": 24
       }
+    },
+    {
+      "name": "col_name",
+      "rect": [
+        105,
+        90,
+        303,
+        638
+      ],
+      "role": [
+        "display"
+      ]
+    },
+    {
+      "name": "col_farmers",
+      "rect": [
+        408,
+        90,
+        343,
+        638
+      ],
+      "role": [
+        "display"
+      ]
+    },
+    {
+      "name": "col_workers",
+      "rect": [
+        751,
+        90,
+        361,
+        638
+      ],
+      "role": [
+        "display"
+      ]
+    },
+    {
+      "name": "col_scientists",
+      "rect": [
+        1112,
+        90,
+        340,
+        638
+      ],
+      "role": [
+        "display"
+      ]
+    },
+    {
+      "name": "col_building",
+      "rect": [
+        1452,
+        90,
+        315,
+        638
+      ],
+      "role": [
+        "display"
+      ]
+    },
+    {
+      "name": "col_scroll",
+      "rect": [
+        1767,
+        90,
+        35,
+        638
+      ],
+      "role": [
+        "display"
+      ]
     }
   ],
   "2560x1440": [
@@ -205,6 +277,78 @@
       "style": {
         "font_size": 24
       }
+    },
+    {
+      "name": "col_name",
+      "rect": [
+        105,
+        90,
+        303,
+        638
+      ],
+      "role": [
+        "display"
+      ]
+    },
+    {
+      "name": "col_farmers",
+      "rect": [
+        408,
+        90,
+        343,
+        638
+      ],
+      "role": [
+        "display"
+      ]
+    },
+    {
+      "name": "col_workers",
+      "rect": [
+        751,
+        90,
+        361,
+        638
+      ],
+      "role": [
+        "display"
+      ]
+    },
+    {
+      "name": "col_scientists",
+      "rect": [
+        1112,
+        90,
+        340,
+        638
+      ],
+      "role": [
+        "display"
+      ]
+    },
+    {
+      "name": "col_building",
+      "rect": [
+        1452,
+        90,
+        315,
+        638
+      ],
+      "role": [
+        "display"
+      ]
+    },
+    {
+      "name": "col_scroll",
+      "rect": [
+        1767,
+        90,
+        35,
+        638
+      ],
+      "role": [
+        "display"
+      ]
     }
   ]
 }

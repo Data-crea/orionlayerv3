@@ -121,6 +121,23 @@ class SelectRaceScreen(ScreenBase):
                 self._pending_picture_mode = False
 
 
+    def editor_note(self, box):
+        """The selected race's portrait crop, for the F5 info bar.
+
+        `core.editor.overlay.draw_info` used to reach in here by
+        `hasattr(scr, "_race_by_id")` — generic editor code naming one
+        screen. `ScreenBase.editor_note` is the hook; this is the same
+        line, asked for rather than fished out.
+        """
+        if box.name != "race_grid":
+            return None
+        race = self._race_by_id(self._selected_id)
+        if not race:
+            return None
+        crop = race.get("portrait_crop", [0.5, 0.5])
+        return (f"[{race['name']}] zoom={race.get('portrait_zoom', 1.0):.2f}"
+                f" crop=({crop[0]:.2f},{crop[1]:.2f})")
+
     def _race_by_id(self, rid):
         for r in self._races:
             if r["id"] == rid:

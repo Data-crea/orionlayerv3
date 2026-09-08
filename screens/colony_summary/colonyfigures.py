@@ -103,7 +103,14 @@ ANDROID = "android"
 #: The steps a mod may supply explicitly, and the size each must be.
 #: Derived from MASTER_SIZE rather than written out, so the three
 #: numbers in `doc/modding_figures.md` cannot drift from the check.
-STEPS = tuple(sorted(set(zoomtables.FIGURE_STEP.values())))
+#:
+#: **NOT THE WHOLE LADDER.** `zoomtables.FIGURE_STEPS` carries 1 as
+#: well — a screen may draw the master at its own size, and below the
+#: reference resolution it must — but `@1x.png` would be a second
+#: name for the master and decision 50 is one PNG with one documented
+#: name. So the mod convention starts at 2 and the drawing ladder
+#: starts at 1.
+STEPS = tuple(s for s in zoomtables.FIGURE_STEPS if s > 1)
 
 
 def step_size(step):
@@ -277,33 +284,35 @@ class FigureSet:
         return self.figures.get(name)
 
 
-def figure_step(scale):
-    """THE sprite step for a layout scale. One home, two readers.
+def figure_step(area, cfg):
+    """THE sprite step. One home, two readers — and it is DERIVED.
 
-    `colonytrack._column_boxes` lays the cell pitch at this factor and
-    this module loads the sprites at it, and they are the SAME
+    `colonytrack.figure_step` answers it from the ROW BAND: a master
+    is 28 px, the band is the list window divided by the row count,
+    and the step is the largest whose figure fits under the plate's
+    own line. This module loads the sprites at whatever that says, and
+    `colonytrack._column_boxes` lays the cell pitch at the same
     number by construction — a track laid at 3x holding sprites
     loaded at 2x is a picture where every figure is off its cell by a
     growing amount, and nothing in either module would report it.
-    The pick is `box.closest_resolution` over the table's own keys
-    (decision 1's fallback chain, decision 26's table).
 
     Made the one home 7 September 2026, when this module was about to
-    become the second place that answered it.
+    become the second place that answered it; made DERIVED on
+    8 September, when the per-resolution table it used to read turned
+    out to be declaring a step the band could not hold at 1440p.
     """
-    from core import box as box_mod
-    return zoomtables.FIGURE_STEP[box_mod.closest_resolution(
-        zoomtables.FIGURE_STEP, round(1920 * scale), round(1080 * scale))]
+    from . import colonytrack
+    return colonytrack.figure_step(area, cfg)
 
 
-def set_for(screen, scale):
+def set_for(screen, area, cfg):
     """The figure set for a screen's current scale, cached per App.
 
     Keyed by STEP and not by window size: two windows that pick the
     same `FIGURE_STEP` share one set, which is the point of the step
     being a small integer table (decision 26).
     """
-    step = figure_step(scale)
+    step = figure_step(area, cfg)
     cache = getattr(screen.app, "figure_sets", None)
     if cache is None:
         cache = {}

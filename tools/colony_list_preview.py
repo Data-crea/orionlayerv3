@@ -566,11 +566,18 @@ def colony_track_rect(app, screen, colony_index):
     if position is None or position >= len(bands):
         return None
     top, height = bands[position]
-    scale = app.layout.scale
-    track = colonylist.track_metrics(area, cfg, scale)
-    left = (area.x + int(cfg.get("pad_x", 18) * scale)
-            + int(cfg.get("name_width", 320) * scale) + track.slack)
-    return pygame.Rect(left, top, track.width, height)
+    # THE THREE JOB COLUMNS, from the boxes. It was `pad_x +
+    # name_width + track.slack` and a 42-slot track width — the
+    # shared budget that ended on 8 September 2026 when the columns
+    # became boxes. What must not move is the same thing: the figure
+    # cells of one colony, whatever else is in the list.
+    from screens.colony_summary import colonytrack
+    cols = colonytrack.columns(area, cfg)
+    if not cols:
+        return None
+    left = min(cols[k][0] for k in colonytrack.JOB_KEYS)
+    right = max(cols[k][0] + cols[k][1] for k in colonytrack.JOB_KEYS)
+    return pygame.Rect(left, top, right - left, height)
 
 
 def check_invariant(app, screen, width, height, sort_key, out_dir):

@@ -42,6 +42,8 @@ import os
 
 import pygame
 
+from core import zoomtables
+
 #: The original's plate divider: 2 native px, shared by both
 #: neighbours (framebuffer, x 99-100 between NAME and FARMERS).
 DIVIDER_REF = 6
@@ -64,61 +66,102 @@ PLATE_HEIGHT_REF = PLATE_HEIGHT_NATIVE * 3
 INSET_REF = 2
 
 
-def columns(res, screen_name):
-    """[(key, reference width)] — the list's own column table.
+#: The six column boxes, in ECON order with the name column first
+#: and the scroll slot last. **THE BOXES ARE THE COLUMNS** — one rect
+#: per column, F5-draggable (decisions 14 and 5), and the header
+#: plate, the cell column and the scroll slot all read it.
+COLUMN_BOXES = ("col_name", "col_farmers", "col_workers",
+                "col_scientists", "col_building", "col_scroll")
 
-    From `layout_reference.json`, so a heading is exactly as wide as
-    the column beneath it by construction and the two cannot drift.
-    The three JOB widths are transcribed from
-    COLSUM::Get_Selected_Pop_ (colsum.cpp:1006-1024), which passes the
-    column bounds as literals; see that file's `_list_columns_note`.
+
+def column_boxes(screen):
+    """[(key, Box)] for the six column boxes, or [] if any is absent.
+
+    **THE BOX OBJECT AND NOT ITS RECT.** A `Box` is mutable and the
+    editor mutates `ref_rect` in place while dragging
+    (`Editor._on_drag`), so handing the object over is what makes the
+    preview live: every consumer reads the rect it has THIS frame
+    rather than a copy taken when the screen loaded. That was the
+    whole reason `install_columns` baked a table at init and the
+    whole reason it could not be dragged.
+
+    All six or none: a partial set would silently fall through to the
+    single-track geometry, which is the pre-Stage-4 row and looks
+    almost right.
     """
-    data = res.load_json(
-        os.path.join("screens", screen_name, "layout_reference.json"),
-        {}) or {}
-    return list(data.get("list_columns", {}).items())
-
-
-def plate_rects(header_box, columns, scale):
-    """[(key, rect)] — one plate per column, window pixels.
-
-    `header_box` is the header cutout in WINDOW pixels and `columns`
-    the [(key, ref_width)] list `layout_reference.json` carries. The
-    plates tile the box exactly: the last one takes what integer
-    division left, so the row can never end short of the column it
-    heads.
-    """
-    box = pygame.Rect(header_box)
-    total = sum(w for _k, w in columns)
-    if total <= 0:
-        return []
-    inset = max(1, round(INSET_REF * scale))
-    half = max(1, round(DIVIDER_REF * scale / 2))
-    out = []
-    x = box.x
-    for i, (key, ref_w) in enumerate(columns):
-        w = (box.right - x if i == len(columns) - 1
-             else round(box.width * ref_w / total))
-        out.append((key, pygame.Rect(
-            x + half, box.y + inset,
-            max(1, w - 2 * half), max(1, box.height - 2 * inset))))
-        x += w
-    return out
+    by_name = {b.name: b for b in screen.boxes}
+    got = [(n[4:], by_name[n]) for n in COLUMN_BOXES if n in by_name]
+    return got if len(got) == len(COLUMN_BOXES) else []
 
 
 def install_columns(screen):
-    """Merge the column table into the screen's `list` config block.
+    """Bind the six column boxes into the screen's `list` block.
 
-    It travels with every other row number rather than sitting on the
-    screen, so `colonytrack` reads it the way it reads `row_height` —
-    and a fixture that wants the column row installs it the same way,
-    which is what stops a check from silently exercising the
+    They travel with every other row value rather than sitting on the
+    screen, so `colonytrack` reads them the way it read the baked
+    table — and a fixture that wants the column row installs the same
+    way, which is what stops a check from silently exercising the
     single-track path instead.
+
+    Called ONCE, on load: what is stored is the live objects, so
+    nothing has to be refreshed when one moves.
     """
     from . import colonytrack
-    table = columns(screen.app.res, screen.SCREEN_NAME)
+    table = column_boxes(screen)
     screen._data.setdefault("list", {})[colonytrack.COLUMNS_KEY] = table
     return table
+
+
+def sync_columns(screen):
+    """Hold the six boxes to the list window's own y and height.
+
+    **A COLUMN DRAGGED VERTICALLY IS IGNORED, and this is what makes
+    that visible rather than merely true.** Only the LEFT EDGE is
+    read (`colonytrack.columns`): y and height come from `list_area`
+    because a column is a strip of the list, and the width is the
+    distance to the next column because the six have to tile the
+    window exactly. Without this the outline would follow a drag that
+    nothing else obeyed, and a save would write the stray numbers
+    into `boxes.json`.
+    """
+    box = screen.box_rect("list_area")
+    if not box:
+        return
+    ax, y, aw, h = box
+    boxes = sorted(column_boxes(screen), key=lambda kb: kb[1].ref_rect[0])
+    for i, (_key, b) in enumerate(boxes):
+        bx = b.ref_rect[0]
+        right = (boxes[i + 1][1].ref_rect[0] if i + 1 < len(boxes)
+                 else ax + aw)
+        want = (bx, y, max(1, right - bx), h)
+        if tuple(b.ref_rect) != want:
+            b.ref_rect = want
+            b.update_layout(screen.layout)
+
+
+def plate_rects(header_box, cols, scale):
+    """[(key, rect)] — one plate per column heading, window pixels.
+
+    **THE COLUMN'S OWN RECT, NOT A SECOND TILING.** `cols` is what
+    `colonytrack.columns` answers — `{key: (x, width)}` in window
+    pixels, read off the six column boxes — so the heading above a
+    column and the cells inside it come from ONE rect (decision 5).
+    Until 8 September 2026 this tiled the header box itself from a
+    ref-width table, which is the second copy that agreed by
+    construction until somebody dragged one.
+
+    `header_box` supplies only the vertical: the plates sit in the
+    header cutout and the columns run down the list.
+    """
+    box = pygame.Rect(header_box)
+    if not cols:
+        return []
+    inset = max(1, round(INSET_REF * scale))
+    half = max(1, round(DIVIDER_REF * scale / 2))
+    return [(key, pygame.Rect(
+        x + half, box.y + inset,
+        max(1, w - 2 * half), max(1, box.height - 2 * inset)))
+        for key, (x, w) in cols.items()]
 
 
 def render_for(screen, surface, outline, text_color):
@@ -126,26 +169,31 @@ def render_for(screen, surface, outline, text_color):
     box = screen.box_rect("header")
     if not box:
         return
+    from . import colonytrack
     cfg = screen._data.get("header", {})
+    area = pygame.Rect(*screen.layout.rect(screen.box_rect("list_area")))
     render(surface, screen.layout.rect(box),
-           columns(screen.app.res, screen.SCREEN_NAME),
+           colonytrack.columns(area, screen._data.get("list", {})),
            cfg.get("labels", {}), screen.style,
            screen.layout.font_size(cfg.get("font_size", 20)),
            outline, text_color, screen.layout.scale)
 
 
-def render(surface, header_box, columns, labels, style, font_size,
+def render(surface, header_box, cols, labels, style, font_size,
            outline, text_color, scale):
     """Draw the plates and their headings.
 
-    `columns` is [(key, ref_width)], `labels` a key -> word map; a key
-    with no word (the scroll slot) gets its plate and no text, which
-    is what the original does with the column its scroll arrow sits
-    in.
+    `cols` is `colonytrack.columns`' answer, `labels` a key -> word
+    map; a key with no word (the scroll slot) gets its plate and no
+    text, which is what the original does with the column its scroll
+    arrow sits in.
+
+    The plate itself is `StyleRenderer.draw_plate` (decision 51) —
+    this used to paste `max(6, int(10 * scale))` and a 1 px rounded
+    rect, which was `draw_thin_border`'s arithmetic in a second home.
     """
-    radius = max(6, int(10 * scale))
-    for key, rect in plate_rects(header_box, columns, scale):
-        pygame.draw.rect(surface, outline[:3], rect, 1, border_radius=radius)
+    for key, rect in plate_rects(header_box, cols, scale):
+        style.draw_plate(surface, rect, scale, outline)
         word = labels.get(key)
         if not word:
             continue
@@ -154,3 +202,54 @@ def render(surface, header_box, columns, labels, style, font_size,
             continue
         surface.blit(text, (rect.x + (rect.width - text.get_width()) // 2,
                             rect.y + (rect.height - text.get_height()) // 2))
+
+
+def editor_note(screen, box):
+    """What a column box means, for the F5 info bar.
+
+    **Everything this line reports is DERIVED and has no rect the
+    editor could show**: the row band is `list_area` divided by
+    `list.row_count`, the sprite step is the largest that fits
+    that band, and the fill is what a column holds against what
+    the original's holds. Dragging a column without them is
+    dragging blind.
+
+    For `col_name` it reports the LOWER BOUND and never clamps to
+    it — the widest name the game can make is `WWWWWWW IV`,
+    because `Do_Change_Star_Name_` caps the input field at the
+    pixel width of seven W's (namestar.cpp:246-256) on top of the
+    `char[15]` buffer. **That cap is measured in FONTS.LBX style
+    3, which this project cannot read**, so the translation into
+    this font is close and not exact — which is exactly why this
+    is a report and not a clamp. Same gap as the "No Farming"
+    size; the font extractor is owed twice now.
+    """
+    if not box.name.startswith("col_"):
+        return None
+    area, cfg, _scale, _n = screen._list_view()
+    if not area.width:
+        return None
+    key = box.name[4:]
+    from . import colonyicons, colonylist, colonytrack
+    cols = colonytrack.columns(area, cfg)
+    if key not in cols:
+        return None
+    width = cols[key][1]
+    band = colonytrack.band_height(area, cfg)
+    step = colonytrack.figure_step(area, cfg)
+    px = screen.layout.font_size(cfg.get("name_font", 21))
+    if key == "name":
+        small = screen.layout.font_size(cfg.get("small_font", 15))
+        return (f"{width}px band {band} | min "
+                f"{screen.style.render_text(colonylist.NAME_BOUND_STAR, px, (255,)*3).get_width()}px "
+                f"({colonylist.NAME_BOUND_STAR}) / "
+                f"{screen.style.render_text(colonylist.NAME_BOUND_DETAIL, small, (255,)*3).get_width()}px "
+                f"({colonylist.NAME_BOUND_DETAIL}) — REPORTED, "
+                f"not clamped; {colonylist.NAME_BOUND_NOTE}")
+    native = zoomtables.NATIVE_JOB_COLUMNS.get(key)
+    if native is None:
+        return f"{width}px band {band} step {step} (no native share)"
+    fits = max(0, width // (colonyicons.ICON_SPACING * step))
+    return (f"{width}px band {band} step {step} | fits {fits} "
+            f"unsqueezed | fill {step * native / width * 100:.0f}% "
+            f"of the original's")

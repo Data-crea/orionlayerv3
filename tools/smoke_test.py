@@ -971,9 +971,22 @@ def main():
         fw, fhh, holes = fh.find_holes(_plate)
         assert len(holes) == 8, len(holes)
         named = fh.name_holes(holes, "colony_summary")
-        assert set(named) == {b.name for b in cs.boxes}, (
-            f"the plate's holes and boxes.json name different things: "
-            f"holes {sorted(named)}, boxes {sorted(b.name for b in cs.boxes)}")
+        # THE CUTOUT BOXES, AND THE SIX COLUMN BOXES THAT ARE NOT
+        # CUTOUTS. Decision 3's own second half: "Boxes that sit
+        # INSIDE a cutout are placed by hand and have no hole to
+        # derive from". The six columns are strips of `list_area` and
+        # are dragged in the editor (decision 14), so they are
+        # declared here rather than expected from the plate — the
+        # same shape the galaxy map's `sb_*` readouts have.
+        _cols_expected = {"col_name", "col_farmers", "col_workers",
+                          "col_scientists", "col_building", "col_scroll"}
+        assert set(named) | _cols_expected == {b.name for b in cs.boxes}, (
+            f"the plate's holes plus the column boxes and boxes.json "
+            f"name different things: holes {sorted(named)}, columns "
+            f"{sorted(_cols_expected)}, boxes "
+            f"{sorted(b.name for b in cs.boxes)}")
+        assert not (set(named) & _cols_expected), (
+            "a column box has the same name as a plate hole")
         for name, r in named.items():
             want = fh.to_ref(r, fw, fhh)
             got = list(cs.box_rect(name))
@@ -2483,11 +2496,45 @@ def main():
     # `list` at startup. So this renders the SHIPPED geometry.
     from screens.colony_summary import colonyheader as _chd
     from screens.colony_summary import colonytrack as _ctk
-    _cfg_cols = dict(_cfg)
-    _cfg_cols[_ctk.COLUMNS_KEY] = _chd.columns(res, "colony_summary")
+    from core.box import Box as _Box
+    with open(os.path.join(SCREENS_DIR, "colony_summary",
+                           "boxes.json"), encoding="utf-8") as _bh:
+        _boxes_json = _cjson.load(_bh)
+
+    def _column_cfg(base, layout, area=None):
+        """`base` plus the six column BOXES, laid across `area`.
+
+        The columns are boxes now, so a fixture that wants the
+        shipped row geometry has to hand over box OBJECTS — the same
+        thing `colonyheader.install_columns` binds. Built from
+        boxes.json's own rects when `area` is None, and re-laid
+        across a synthetic area when a check renders into one.
+        """
+        out = dict(base)
+        raw = {b["name"]: b["rect"] for b in _boxes_json["1920x1080"]}
+        boxes = []
+        if area is None:
+            for name in _chd.COLUMN_BOXES:
+                b = _Box({"name": name, "rect": raw[name]})
+                b.update_layout(layout)
+                boxes.append((name[4:], b))
+        else:
+            la = raw["list_area"]
+            x = area.x
+            for i, name in enumerate(_chd.COLUMN_BOXES):
+                w = (area.right - x if i == len(_chd.COLUMN_BOXES) - 1
+                     else round(area.w * raw[name][2] / la[2]))
+                b = _Box({"name": name, "rect": [0, 0, 1, 1]})
+                b.screen_rect = pygame.Rect(x, area.y, w, area.h)
+                boxes.append((name[4:], b))
+                x += w
+        out[_ctk.COLUMNS_KEY] = boxes
+        return out
+
+    _cfg_cols = _column_cfg(_cfg, app.layout, _area)
     assert _cfg_cols[_ctk.COLUMNS_KEY], (
-        "layout_reference.json has no list_columns, so the shipped row "
-        "geometry cannot be exercised at all")
+        "the six column boxes are missing from boxes.json, so the "
+        "shipped row geometry cannot be exercised at all")
     _surf.fill((0, 0, 0))
     _cl.render(_surf, [{"name": "Full", "pops": _cl.POP_LIMIT_CAP,
                         "jobs": [0, 30, 12], "no_farming": True,
@@ -2523,6 +2570,16 @@ def main():
     # surface edge.
     _bands = _cl.row_bands(_area, _cfg_cols, app.layout.scale, 1)
     _btop, _bh = _bands[0]
+    # THE SHIPPED BAND, not this check's synthetic area. The label's
+    # size is a REFERENCE value scaled by the layout, so the cap-vs-
+    # band relation only holds where the band is the real one — the
+    # `_area` above is 1200x400 to exercise the clip, and measuring
+    # the derivation against it asks the wrong question.
+    _ship_area = pygame.Rect(*app.layout.rect(
+        _boxes_json["1920x1080"] and next(
+            b["rect"] for b in _boxes_json["1920x1080"]
+            if b["name"] == "list_area")))
+    _ship_band = _ctk.band_height(_ship_area, _cfg_cols)
     _want_y = _btop + round(_cl.NATIVE_LABEL_Y_OFFSET * _bh
                             / _cl.NATIVE_ROW_PITCH)
     _got_y = min(y for _x, y in _label_ink)
@@ -2540,7 +2597,7 @@ def main():
         "N", app.layout.font_size(_cfg_cols["no_farming_font"]),
         (255, 255, 255))
     _cap_box = _cap_surf.get_bounding_rect()
-    _want_cap = _cl.NATIVE_LABEL_CAP * _bh / _cl.NATIVE_ROW_PITCH
+    _want_cap = _cl.NATIVE_LABEL_CAP * _ship_band / _cl.NATIVE_ROW_PITCH
     assert abs(_cap_box.height - _want_cap) <= 1.5, (
         f"the 'No Farming' cap renders {_cap_box.height} px where the "
         f"measurement wants {_want_cap:.1f} — no_farming_font "
@@ -2612,132 +2669,126 @@ def main():
               (1680, 1050), (1920, 1080), (1920, 1200), (2048, 1152),
               (2560, 1080), (2560, 1440), (3440, 1440), (3840, 2160)]
     _boxes_path = os.path.join(SCREENS_DIR, "colony_summary", "boxes.json")
-    # Two names that must land on opposite sides of the threshold at
-    # EVERY size: 167..179 reference px against 254..286, either side
-    # of the 244 the column pays for. The wide one is deliberately
-    # under 288, which is what the threshold becomes if the remainder
-    # leaks into the text budget — so a leak shows up as this name
-    # NOT being cut at the small sizes.
-    _NAME_FITS = "Wilhelmshaven V"
-    _NAME_CUTS = "Mmmmmmmmmmmmmmm"
 
-    def _ink_span(_surface, _rect, _rgb):
-        """First and last column in `_rect` carrying exactly `_rgb`."""
-        _a = pygame.surfarray.array3d(_surface.subsurface(_rect))
-        _cols = (_a == _rgb).all(axis=2).any(axis=1).nonzero()[0]
-        if not len(_cols):
-            return None
-        return int(_cols[0]) + _rect.x, int(_cols[-1]) + _rect.x
-
-    _name_rgb = tuple(_cl.ROW_NAME[:3])
-    _beyond_rgb = tuple(_cl.BAR_BEYOND[:3])
-    _cut_at = []
+    # ── THE SIX COLUMNS TILE list_area EXACTLY ──────────────────
+    # This replaced "the row ends flush", which was the same property
+    # under the old shared budget: a slot width was a floor division,
+    # the six columns almost never spent `list_area` exactly, and the
+    # remainder was handed to the name column's drawn width so the
+    # row could not stop short of the panel. The columns are BOXES
+    # now — there is no budget and no remainder — so the property is
+    # a rule about the boxes and it is asserted directly.
+    #
+    # It has to hold at every window because a box rect is REFERENCE
+    # space and `Box.update_layout` truncates independently per box:
+    # six `int()` calls at a fractional scale are exactly where a
+    # one-pixel seam between two columns would open.
+    _COLS = ("col_name", "col_farmers", "col_workers", "col_scientists",
+             "col_building", "col_scroll")
     for _W, _H in _SIZES:
         _lay = Layout(_W, _H)
-        _sc = _lay.scale
-        _bx = load_boxes(_boxes_path, _W, _H)
-        _lref = [b.ref_rect for b in _bx if b.name == "list_area"]
-        assert _lref, f"boxes.json has no list_area box at {_W}x{_H}"
-        _ar = pygame.Rect(*_lay.rect(_lref[0]))
-        _tk = _cl.track_metrics(_ar, _cfg, _sc)
-        _rh = int(_cfg["row_height"] * _sc)
-        _sf = pygame.Surface((_W, _H))
-        _sf.fill((0, 0, 0))
-        _cl.render(_sf, [{"name": _NAME_FITS, "pops": 2, "jobs": [1, 1, 0],
-                          "no_farming": False, "climate": 8, "max_pop": 6},
-                         {"name": _NAME_CUTS, "pops": 2, "jobs": [1, 1, 0],
-                          "no_farming": False, "climate": 8, "max_pop": 6}],
-                   _ar, _cfg, _lay, app.style)
-        _top = _ar.y + int(_cfg["pad_y"] * _sc)
-        _b0 = pygame.Rect(_ar.x, _top, _ar.w, _rh)
-        _b1 = pygame.Rect(_ar.x, _top + _rh, _ar.w, _rh)
+        _bx = {b.name: b for b in load_boxes(_boxes_path, _W, _H)}
+        assert "list_area" in _bx, f"no list_area box at {_W}x{_H}"
+        for _b in _bx.values():
+            _b.update_layout(_lay)
+        _ar = _bx["list_area"].screen_rect
+        _cc = dict(_cfg)
+        _cc[_ctk.COLUMNS_KEY] = [(n[4:], _bx[n]) for n in _COLS]
+        _got = _ctk.columns(_ar, _cc)
+        assert set(_got) == {n[4:] for n in _COLS}, sorted(_got)
+        _prev = _ar.x
+        for _name in _COLS:
+            _x, _w = _got[_name[4:]]
+            assert _x == _prev, (
+                f"{_W}x{_H}: {_name} starts at {_x} and the column "
+                f"before it ends at {_prev} — the six must tile "
+                f"list_area with no seam and no overlap")
+            _prev = _x + _w
+        assert _prev == _ar.right, (
+            f"{_W}x{_H}: the columns end at {_prev}, list_area at "
+            f"{_ar.right} — the row stops short of its panel")
 
-        # 1. FLUSH. slot 42's right edge is the last column of the
-        #    faint baseline, which is drawn to exactly `track.width`
-        #    from wherever the renderer decided the bar starts — so
-        #    this reads the bar's real position off the surface.
-        _base = _ink_span(_sf, _b0, _beyond_rgb)
-        assert _base, (
-            f"{_W}x{_H}: no unreachable baseline drawn, so slot 42's "
-            f"right edge cannot be read from the surface")
-        _slot42_r = _base[1] + 1
-        _bld_r = _slot42_r + _tk.build_gap + _tk.build_w
-        _pd = int(_cfg["pad_x"] * _sc)
-        assert _bld_r + _pd == _ar.right, (
-            f"{_W}x{_H} (scale {_sc:.4f}): the row does not end flush "
-            f"— slot 42 ends {_slot42_r}, building column to {_bld_r}, "
-            f"plus pad_x {_pd} is {_bld_r + _pd}, against "
-            f"list_area.right {_ar.right} "
-            f"({_ar.right - _bld_r - _pd:+d}). The budget's remainder "
-            f"is not reaching the name column's drawn width, or "
-            f"something else is spending it.")
+    # ── AND THE COLUMN BOXES ARE RESOLUTION-INDEPENDENT ─────────
+    # Asserted as the RULE and not as the state: a box rect lives in
+    # reference space and `core.layout` scales it, so there is no
+    # reason for the six to differ between resolution keys and every
+    # reason they must not — `core.box.save_boxes` writes only the
+    # key the editor is running at, which is how one dragged at 1080p
+    # would leave 1440p behind with every picture still looking
+    # right.
+    _by_res = {}
+    for _res, _list in _boxes_json.items():
+        _by_res[_res] = {b["name"]: tuple(b["rect"]) for b in _list
+                         if b["name"] in _COLS}
+    _keys = sorted(_by_res)
+    for _res in _keys[1:]:
+        assert _by_res[_res] == _by_res[_keys[0]], (
+            f"the column boxes differ between {_keys[0]} and {_res}: "
+            f"{ {k: (_by_res[_keys[0]][k], _by_res[_res][k]) for k in _COLS if _by_res[_keys[0]].get(k) != _by_res[_res].get(k)} }. "
+            f"They are reference-space rects and nothing about them "
+            f"is per-resolution")
 
-        # 2. THE THRESHOLD, by whether each name was actually cut.
-        _nat_fits = app.style.render_text(
-            _NAME_FITS, _lay.font_size(_cfg["name_font"]),
-            _cl.ROW_NAME).get_width()
-        _nat_cuts = app.style.render_text(
-            _NAME_CUTS, _lay.font_size(_cfg["name_font"]),
-            _cl.ROW_NAME).get_width()
-        _drawn_fits = _ink_span(_sf, _b0, _name_rgb)
-        _drawn_cuts = _ink_span(_sf, _b1, _name_rgb)
-        assert _drawn_fits and _drawn_cuts, f"{_W}x{_H}: a name did not draw"
-        _w_fits = _drawn_fits[1] - _drawn_fits[0] + 1
-        _w_cuts = _drawn_cuts[1] - _drawn_cuts[0] + 1
-        # 4 px of slack on the comparison: the span is measured from
-        # exact-colour pixels and an antialiased edge column can fall
-        # outside that. A cut removes whole glyphs, never 4 px.
-        assert _w_fits >= _nat_fits - 4, (
-            f"{_W}x{_H}: {_NAME_FITS!r} is {_nat_fits} px, inside the "
-            f"{_cfg['name_width']} the column pays for, and it was cut "
-            f"anyway (drew {_w_fits}) — the text budget has shrunk")
-        assert _w_cuts < _nat_cuts - 4, (
-            f"{_W}x{_H} (scale {_sc:.4f}): {_NAME_CUTS!r} is "
-            f"{_nat_cuts} px against a text budget of "
-            f"{_cfg['name_width']} scaled, and it was NOT cut (drew "
-            f"{_w_cuts}). The name column is clipping against its "
-            f"DRAWN width, so the budget's per-resolution remainder "
-            f"has become text budget: the ellipsis threshold now "
-            f"moves with the resolution and the same colony name cuts "
-            f"on one monitor and not on another.")
-        _cut_at.append(f"{_W}x{_H}")
+    # ── THE NAME FITS ITS CELL, AND THE BOUND IS THE GAME'S ─────
+    # The widest name the game can produce is `WWWWWWW IV`: the
+    # buffer is `char[15]` (namestar.cpp:262) AND the input field is
+    # capped at the pixel width of seven W's
+    # (`Get_String_Width_("WWWWWWW")`, namestar.cpp:246-256). It must
+    # not be ellipsised at any window; something past the bound must
+    # be. Ellipsis is the fallback for a column narrowed past what
+    # the editor reports, not the mechanism it used to be.
+    _cfg_names = _column_cfg(_cfg, app.layout)
+    for _W, _H in _SIZES:
+        _lay = Layout(_W, _H)
+        _bx = {b.name: b for b in load_boxes(_boxes_path, _W, _H)}
+        for _b in _bx.values():
+            _b.update_layout(_lay)
+        _cw = _bx["col_name"].screen_rect.width
+        _px = _lay.font_size(_cfg["name_font"])
+        _bound = app.style.render_text(
+            _cl.NAME_BOUND_STAR, _px, _cl.ROW_NAME).get_width()
+        assert _bound <= _cw, (
+            f"{_W}x{_H}: the widest name the game can make is "
+            f"{_bound} px and col_name is {_cw} — narrow the column "
+            f"and the editor is supposed to SAY so, not clamp")
+        _det = app.style.render_text(
+            _cl.NAME_BOUND_DETAIL, _lay.font_size(_cfg["small_font"]),
+            _cl.DETAIL_COLOR).get_width()
+        assert _det <= _cw, (
+            f"{_W}x{_H}: the widest second line is {_det} px against "
+            f"a {_cw} px column")
+        assert _cl._fit(_cl.NAME_BOUND_STAR, app.style, _px, _cw,
+                        _cfg) == _cl.NAME_BOUND_STAR, (
+            f"{_W}x{_H}: the widest producible name was ellipsised")
+        _over = "M" * 40
+        assert _cl._fit(_over, app.style, _px, _cw, _cfg) != _over, (
+            f"{_W}x{_H}: a name far past the bound was not cut, so "
+            f"the fallback is not there at all")
 
-    assert len(_cut_at) == len(_SIZES), (_cut_at, _SIZES)
+    # ── NAMES ARE LEFT-ALIGNED, which is the original's ─────────
+    # `Squeeze_Formatted_Paragraph_Centered_(0x0C, y, …, 0)` passes
+    # JUSTIFY_LEFT (colsum.cpp:582, bill.cpp:210); `Centered_` is the
+    # vertical axis only. Read off the surface: the name's ink starts
+    # at the column's own left edge, not against its right.
+    _lay = Layout(1920, 1080)
+    _bx = {b.name: b for b in load_boxes(_boxes_path, 1920, 1080)}
+    for _b in _bx.values():
+        _b.update_layout(_lay)
+    _ar = _bx["list_area"].screen_rect
+    _sf = pygame.Surface((1920, 1080))
+    _sf.fill((0, 0, 0))
+    _cl.render(_sf, [{"name": "Sol I", "pops": 2, "jobs": [1, 1, 0],
+                      "no_farming": False, "climate": 8, "max_pop": 6}],
+               _ar, _column_cfg(_cfg, _lay), _lay, app.style)
+    _a3 = pygame.surfarray.array3d(_sf)
+    _ncol = _bx["col_name"].screen_rect
+    _hit = [x for x in range(_ncol.x, _ncol.right)
+            if (_a3[x] == list(_cl.ROW_NAME[:3])).all(axis=1).any()]
+    assert _hit, "the colony name drew no ink at all"
+    assert _hit[0] - _ncol.x < _ncol.width // 3, (
+        f"the name's ink starts {_hit[0] - _ncol.x} px into a "
+        f"{_ncol.width} px column — that is not left-aligned, and the "
+        f"original left-aligns (colsum.cpp:582 passes JUSTIFY_LEFT)")
 
-    # ── Nothing from the name column reaches the track ──
-    # The invariant, however it is achieved. Right-alignment plus
-    # pad_x is what achieves it today and the name-block check below
-    # tests that mechanism; this one tests the property, so a later
-    # change of mechanism still has to keep it. Asserted at the
-    # structural maximum (str15, namestar.cpp:262 caps input at 15),
-    # not at a name some galaxy happened to generate.
-    _surf.fill((0, 0, 0))
-    _cl.render(_surf, [{"name": "W" * 15 + " V", "pops": 3,
-                        "jobs": [1, 1, 1], "no_farming": False,
-                        "climate": 8, "max_pop": 9}],
-               _area, _cfg, app.layout, app.style)
-    _px = pygame.surfarray.array3d(_surf)
-    _name_end = (_area.x + int(_cfg["pad_x"] * app.layout.scale)
-                 + int(_cfg["name_width"] * app.layout.scale))
-    _rgb = tuple(_cl.ROW_NAME[:3])
-    _spill = [x for x in range(_name_end, _area.right)
-              if any(tuple(_px[x, y]) == _rgb
-                     for y in range(_area.y, _area.bottom))]
-    assert not _spill, (
-        f"the longest producible name draws past its column at "
-        f"x={_spill[:5]} — name_width is not being enforced")
-
-    # The preview drives the REAL screen off a synthetic snapshot.
-    # This replaces the old check that its hand-written row dicts
-    # matched build_rows' keys — those dicts are gone, because the
-    # preview fakes the STATE now and lets build_rows produce the
-    # rows, so that particular drift is structurally impossible.
-    #
-    # What can still drift is the snapshot: a spec change, or an
-    # entry edited until it no longer produces the SHAPE its comment
-    # claims. A "nearly full track" that quietly became half full
-    # still renders, and nobody would notice from the picture that
-    # the case had stopped being covered.
     import importlib.util as _plu
     _pv_spec = _plu.spec_from_file_location(
         "_probe_colony_preview",
@@ -2991,12 +3042,11 @@ def main():
     _ov_cfg = _sjson.load(open(os.path.join(
         SCREENS_DIR, "colony_summary", "layout.json"),
         encoding="utf-8"))["list"]
-    # THE FIXTURE CARRIES THE COLUMN TABLE, because the screen's cfg
-    # does — `colonyheader.columns` merges it on load. A fixture
-    # without it exercises the single-track path and would say
-    # nothing about the row the screen actually draws, which is the
-    # shape of the MAP_MAX_Y omission one commit earlier.
-    _ov_cfg[_ct0.COLUMNS_KEY] = _ch.columns(res, "colony_summary")
+    # THE FIXTURE CARRIES THE COLUMN BOXES, because the screen's cfg
+    # does — `colonyheader.install_columns` binds them on load. A
+    # fixture without them gets NO row at all now (`row_boxes`), which
+    # is the honest answer to a caller that has no columns.
+    _ov_cfg = _column_cfg(_ov_cfg, app.layout)
     _ov_fits = _cl.rows_drawn(_ov_area, _ov_cfg, app.layout.scale, 99)
     assert _ov_fits > 0, "no row fits list_area at all"
     # TEN, because that is the original's window: COLSUM::_list_col
@@ -3015,19 +3065,43 @@ def main():
         assert _fits2 >= _ORIGINAL_WINDOW, (
             f"{_W}x{_H}: the list draws {_fits2} rows and the original "
             f"windows {_ORIGINAL_WINDOW} (_list_col[10], "
-            f"colsum.cpp:348). row_height is "
-            f"{_ov_cfg['row_height']} — lower it, or widen list_area "
-            f"in the frame artwork, but do not let the two differ "
-            f"silently")
+            f"colsum.cpp:348)")
+        # EXACTLY TEN, and it is `list.row_count` that says so — not
+        # a `row_height` that happens to divide. It was exactly that
+        # until 8 September 2026: 58 and a 14 px pad yielded ten at
+        # all three shipped resolutions by arithmetic coincidence,
+        # and nothing in the tree said which of the three numbers was
+        # load-bearing. A check that only asked ">= 10" could not see
+        # eleven either.
+        assert _fits2 == _ORIGINAL_WINDOW, (
+            f"{_W}x{_H}: the list draws {_fits2} rows, not "
+            f"{_ORIGINAL_WINDOW}. `list.row_count` is "
+            f"{_ov_cfg['row_count']} and the band is the window "
+            f"divided by it — a different count is a JSON change, "
+            f"never a side effect")
+        # AND THE BANDS TILE THE WINDOW EXACTLY, the last taking the
+        # remainder. A strip below the last row belongs to nobody:
+        # the hit test would answer None over rows that look drawn.
         _bands2 = _cl.row_bands(_la2, _ov_cfg, _lay2.scale, _fits2)
-        _left2 = _la2.bottom - (_bands2[-1][0] + _bands2[-1][1])
-        _line_h = app.style.render_text(
-            "0", _lay2.font_size(_ov_cfg.get("small_font", 15)),
-            (255, 255, 255)).get_height()
-        assert _left2 >= _line_h, (
-            f"{_W}x{_H}: {_left2} px are left under the last row and "
-            f"the overflow line needs {_line_h} — it would be clamped "
-            f"back over the row it exists to account for")
+        assert _bands2[0][0] == _la2.y, (_W, _H, _bands2[0])
+        assert _bands2[-1][0] + _bands2[-1][1] == _la2.bottom, (
+            f"{_W}x{_H}: the bands end at "
+            f"{_bands2[-1][0] + _bands2[-1][1]} and list_area at "
+            f"{_la2.bottom} — the last band takes the remainder")
+        for _b0, _b1 in zip(_bands2, _bands2[1:]):
+            assert _b0[0] + _b0[1] == _b1[0], (_W, _H, _b0, _b1)
+        # AND THE STEP IS DERIVED FROM THAT BAND, not declared. The
+        # per-resolution table is gone: the figure has to fit under
+        # the plate's own top line.
+        _st2 = _ctk.figure_step(_la2, _ov_cfg)
+        _bh2 = _ctk.band_height(_la2, _ov_cfg)
+        assert 28 * _st2 + _ctk.PLATE_LINE <= _bh2, (
+            f"{_W}x{_H}: step {_st2} needs "
+            f"{28 * _st2 + _ctk.PLATE_LINE} px and the band is {_bh2}")
+        assert _st2 == max(_ctk.zoomtables.FIGURE_STEPS) or \
+            28 * (_st2 + 1) + _ctk.PLATE_LINE > _bh2, (
+            f"{_W}x{_H}: step {_st2} was chosen and {_st2 + 1} also "
+            f"fits — the rule is the LARGEST that fits")
     _ov_rows = [{"index": _i, "name": f"Over {_i}", "pops": 2,
                  "jobs": [1, 1, 0], "no_farming": False, "climate": 8,
                  "max_pop": 9, "producing": "", "producing_turns": 0,
@@ -3096,14 +3170,17 @@ def main():
                               len(_ov_rows))
     _ov_top = _ov_bands[-1][0] + _ov_bands[-1][1]
     _ov_up1, _ = _cscr.arrows(_ov_area, _ov_cfg, app.layout.scale)
-    _ov_strip = pygame.Rect(_ov_area.x, _ov_top, _ov_up1.x - _ov_area.x,
-                            _ov_area.bottom - _ov_top)
-    assert _ov_strip.h > 0 and _ov_strip.w > 0
-    assert pygame.surfarray.array3d(
-        _ov_surf.subsurface(_ov_strip)).sum() == 0, (
-        "there is still text under the last row. The arrows replaced "
-        "the sentence; drawing both says the same thing twice and the "
-        "second copy is the one that goes stale")
+    # SINCE 8 September 2026 THERE IS NO STRIP TO INK. The bands are
+    # the window divided by `row_count` with the last taking the
+    # remainder, so they reach `list_area`'s own bottom and a
+    # sentence under the last row has nowhere to go. That is the
+    # stronger form of the same claim, so it is what is asserted —
+    # a zero-height strip cannot carry the old one.
+    assert _ov_top == _ov_area.bottom, (
+        f"the bands end at {_ov_top} and list_area at "
+        f"{_ov_area.bottom} — a strip below the last row is where "
+        f"the overflow sentence used to live, and the arrows replaced "
+        f"it")
     # THE ARROW RECTS COME FROM THE LIST'S OWN GEOMETRY, which is what
     # keeps them over the scroll column at every resolution — the same
     # `colonytrack.columns` the rows' hit-test uses (decision 5).
@@ -3572,7 +3649,7 @@ def main():
     # The column table, as the screen's own cfg carries it — see the
     # overflow fixture above for why a fixture without it tests the
     # path the screen does not take.
-    _lcfg[_ct0.COLUMNS_KEY] = _ch.columns(res, "colony_summary")
+    _lcfg = _column_cfg(_lcfg, app.layout)
     _bands = _cl.row_bands(_la, _lcfg, app.layout.scale,
                            len(_scr_op._rows))
     assert _bands, "no row bands for a non-empty list"
@@ -4154,10 +4231,30 @@ def main():
     # that rather than assuming it.
     _orig_fit = max((r - l - 10) // 30 for l, r in
                     ((101, 226), (236, 368), (378, 502)))
-    for _spec, _step in _lr["figure_scale"].items():
-        _lscale = min(int(_spec.split("x")[0]) / _REF_W,
-                      int(_spec.split("x")[1]) / _REF_H)
-        _colw = _lr["list_columns"]["farmers"] * _lscale
+    from screens.colony_summary import colonytrack as _ctk_cap
+    _cap_la = next(b["rect"] for b in
+                   _sjson.load(open(os.path.join(
+                       SCREENS_DIR, "colony_summary", "boxes.json"),
+                       encoding="utf-8"))["1920x1080"]
+                   if b["name"] == "list_area")
+    _cap_cfg = _sjson.load(open(os.path.join(
+        SCREENS_DIR, "colony_summary", "layout.json"),
+        encoding="utf-8"))["list"]
+    for _spec in _lr["_resolutions"]:
+        _sw, _sh = (int(v) for v in _spec.split("x"))
+        _slay = Layout(_sw, _sh)
+        _sarea = pygame.Rect(*_slay.rect(_cap_la))
+        # THE STEP AND THE COLUMN BOTH COME FROM THE BOXES NOW. The
+        # column was `layout_reference.list_columns` and the step a
+        # per-resolution table; both are derived, so this is measured
+        # rather than read off two files that could disagree.
+        _step = _ctk_cap.figure_step(_sarea, _cap_cfg)
+        _cbox = next(b["rect"] for b in
+                     _sjson.load(open(os.path.join(
+                         SCREENS_DIR, "colony_summary", "boxes.json"),
+                         encoding="utf-8"))["1920x1080"]
+                     if b["name"] == "col_farmers")
+        _colw = _cbox[2] * _slay.scale
         _fits = int((_colw - 28 * _step) // (30 * _step) + 1)
         assert _fits >= _orig_fit, (
             f"{_spec}: a figure column of {_colw:.0f} px at step "
@@ -4605,10 +4702,35 @@ def main():
     # the arithmetic that produced it.
     from core import zoomtables as _zt2
     assert set(_zt2.INSET_DOT_DIM) == set(_lr["_resolutions"])
-    assert set(_zt2.FIGURE_STEP) == set(_lr["_resolutions"])
-    assert _zt2.FIGURE_STEP == _lr["figure_scale"], (
-        f"zoomtables.FIGURE_STEP {_zt2.FIGURE_STEP} and "
-        f"layout_reference.figure_scale {_lr['figure_scale']} disagree")
+    # ── THE FIGURE STEP IS DERIVED, so this check derives too ──
+    # There is no `FIGURE_STEP` table and no `layout_reference.
+    # figure_scale`: the list holds `row_count` rows, the band is the
+    # window divided by that, and the step is the largest whose
+    # `28*step` fits under the plate's 1 px line. What is asserted is
+    # that the derivation still yields 2 / 3 / 4 at the three shipped
+    # resolutions — the numbers the tables used to declare — recomputed
+    # from the BOXES and the masters rather than read from either.
+    _der_la = d.active.box_rect("list_area")
+    _der_cfg = _sjson.load(open(os.path.join(
+        SCREENS_DIR, "colony_summary", "layout.json"),
+        encoding="utf-8"))["list"]
+    _der = {}
+    for _rk in _lr["_resolutions"]:
+        _rw, _rh = (int(v) for v in _rk.split("x"))
+        _der[_rk] = _ctk.figure_step(
+            pygame.Rect(*Layout(_rw, _rh).rect(_der_la)), _der_cfg)
+    assert _der == {"1920x1080": 2, "2560x1440": 3, "3840x2160": 4}, (
+        f"the derived steps are {_der}. They were a hand-written table "
+        f"until 8 September 2026 and it declared 3 at 1440p where the "
+        f"band could only hold 2 — the list window grew 29 ref px so "
+        f"the derivation and the table would agree, and if they part "
+        f"again the LIST is what moved")
+    assert not hasattr(_zt2, "FIGURE_STEP"), (
+        "the per-resolution FIGURE_STEP table is back; the step is "
+        "derived from the row band (colonytrack.figure_step)")
+    assert "figure_scale" not in _lr, (
+        "layout_reference.figure_scale is back — it was the same "
+        "table in the design input and it is derived now")
     for _spec, _dim in _zt2.INSET_DOT_DIM.items():
         assert _dim % 2 == 1, (
             f"{_spec}: a {_dim} px dot has no centre pixel, so the "
@@ -4685,10 +4807,14 @@ def main():
         # drop rect's height, and layout.json's is the hover popup.
         "screens/colony_summary/colonytrack.py": "DEVIATION IN HEIGHT",
         "screens/colony_summary/layout.json": "_hd_extension_popup",
-        # Caught by this check on its first run, which is the whole
-        # point of it: the figure step's marking went in with Stage 1
-        # and nothing was reading the file it went into.
-        "screens/colony_summary/layout_reference.json": "figure_scale",
+        # WAS `figure_scale` — caught by this check on its first run,
+        # which was the whole point of it: the figure step's marking
+        # went in with Stage 1 and nothing was reading the file it
+        # went into. The step is DERIVED from the row band since
+        # 8 September 2026 and that key is gone with the table it
+        # duplicated; what this file still carries is the inset's own
+        # deviation.
+        "screens/colony_summary/layout_reference.json": "THE BOX IS 239 x 189",
         "screens/colony_summary/screen.py": "cancel",
     }
     _MARKS = ("HD EXTENSION", "DEVIATION")
@@ -4750,22 +4876,65 @@ def main():
     # column: a heading that is not as wide as the column under it is
     # a second copy of the layout (decision 5).
     _cs4 = d.screens["colony_summary"]
-    _cols = _cs4._columns()
-    assert [k for k, _w in _cols] == ["name", "farmers", "workers",
-                                      "scientists", "building", "scroll"], _cols
-    assert sum(_w for _k, _w in _cols) == 1693, _cols
-    # The job columns are the transcribed ratio, not three equal ones.
-    _jobs = dict(_cols)
-    assert (_jobs["farmers"], _jobs["workers"], _jobs["scientists"]) \
-        == (342, 360, 339), (
-            f"the job columns are {_jobs} — COLSUM::Get_Selected_Pop_ "
-            f"(colsum.cpp:1006-1024) gives spans 135/142/134, so the "
-            f"middle column is the widest and three equal ones are ours")
+    _cs4_area = pygame.Rect(*_cs4.layout.rect(_cs4.box_rect("list_area")))
+    _chdr.sync_columns(_cs4)
+    _cols = _ctk.columns(_cs4_area, _cs4._data.get("list", {}))
+    assert set(_cols) == {"name", "farmers", "workers", "scientists",
+                          "building", "scroll"}, sorted(_cols)
+    # ── THE DEVIATION TABLE, PER COLUMN ─────────────────────────
+    # Decision 36's shape: the columns are editable now, so the
+    # transcription needs a checker rather than a reminder. What the
+    # original STATES is a RATIO — `COLSUM::Get_Selected_Pop_`
+    # (colsum.cpp:1006-1024) gives drawn spans 135 : 142 : 134 with
+    # WORKERS the widest — and not a width, because HD's columns are
+    # 2.53x their native ones by Data's Stage 1 decision. So the three
+    # job columns are held to the ratio, and every column's deviation
+    # is REPORTED into the status; red only where one is unmarked.
+    _nat = _zt2.NATIVE_JOB_COLUMNS
+    _nat_sum = sum(_nat.values())
+    _job_sum = sum(_cols[_k][1] for _k in _nat)
+    _dev = {}
+    for _k, _n in _nat.items():
+        _want = _job_sum * _n / _nat_sum
+        _dev[_k] = (_cols[_k][1] - _want) / _want
+    for _k, _v in _dev.items():
+        assert abs(_v) < 0.01, (
+            f"the {_k} column is {_v*100:+.1f} % off the transcribed "
+            f"ratio {_nat['farmers']}:{_nat['workers']}:"
+            f"{_nat['scientists']} (colsum.cpp:1006-1024). A column may "
+            f"be dragged, and a drag past one per cent is a deviation "
+            f"that has to be marked before it is kept")
+    # AND THE THREE THAT ARE NOT TRANSCRIBED AT ALL must each be
+    # named where the deviation is recorded. `col_name` and
+    # `col_building` carry reasons already; `col_scroll` has no
+    # native counterpart to be a share of.
+    _dev_note = _cs4._data.get("list", {}).get("_deviation_note", "")
+    assert "DEVIATION" in _dev_note or "deviat" in _dev_note.lower(), (
+        "list._deviation_note does not record what deviates")
+    for _k in ("col_name", "col_building"):
+        assert _k in _dev_note, (
+            f"{_k} deviates from a proportional share and "
+            f"list._deviation_note does not name it")
+    _status_txt = open(os.path.join(_proj, "v3_projektstatus.md"),
+                       encoding="utf-8").read()
+    assert "135 : 142 : 134" in _status_txt or "135:142:134" in _status_txt, (
+        "the status document does not carry the transcribed column "
+        "ratio, which is where the deviation table is reported")
+    # ── ONE RECT SOURCE: the heading reads the column ───────────
     _hpx = pygame.Rect(*_cs4.layout.rect(_hbox))
-    _plates = _chdr.plate_rects(_hpx, _cols, _cs4.layout.scale)
-    assert [k for k, _r in _plates] == [k for k, _w in _cols]
-    assert _plates[0][1].left >= _hpx.left
-    assert _plates[-1][1].right <= _hpx.right
+    _plates = dict(_chdr.plate_rects(_hpx, _cols, _cs4.layout.scale))
+    assert set(_plates) == set(_cols), sorted(_plates)
+    for _k, (_cx, _cw) in _cols.items():
+        _pr = _plates[_k]
+        assert _cx <= _pr.left and _pr.right <= _cx + _cw, (
+            f"the {_k} plate ({_pr.left}..{_pr.right}) is not inside "
+            f"its column ({_cx}..{_cx + _cw}) — the heading and the "
+            f"cells must read one rect (decision 5)")
+    _hdr_src = open(os.path.join(SCREENS_DIR, "colony_summary",
+                                 "colonyheader.py"), encoding="utf-8").read()
+    assert "border_radius" not in _hdr_src, (
+        "colonyheader draws its own rounded rect again; the plate is "
+        "StyleRenderer.draw_plate's (decision 51)")
     # ── THE EMPIRE READOUTS SURVIVE AN UNTUNED RESOLUTION ──
     #
     # Rendered at all three and read back as INK, because the fault
@@ -5228,26 +5397,43 @@ def main():
     # 28 x step, and the step comes from ONE function — the same one
     # colonytrack lays the cell pitch with, because a track at 3x
     # holding sprites at 2x is a picture nothing would report.
+    # THE MOD LADDER STARTS AT 2 and the DRAWING ladder at 1: `@1x`
+    # would be a second name for the 28 px master, and decision 50 is
+    # one PNG with one documented name.
     assert _fig.STEPS == (2, 3, 4), _fig.STEPS
-    # 1280x720 is scale 0.667 and is BELOW the table's smallest key,
-    # so it falls to 1920x1080's step — decision 1's chain, and the
-    # case a `round()` on the scale would get wrong.
-    for _sc, _want in ((0.667, 2), (1.0, 2), (4 / 3, 3), (2.0, 4)):
-        assert _fig.figure_step(_sc) == _want, (
-            f"figure_step({_sc}) is {_fig.figure_step(_sc)}, expected "
-            f"{_want} — the step is box.closest_resolution over "
-            f"zoomtables.FIGURE_STEP and nothing else")
+    assert _zt.FIGURE_STEPS == (1, 2, 3, 4), _zt.FIGURE_STEPS
+    # THE STEP IS DERIVED FROM THE BAND, at four windows including one
+    # BELOW the reference resolution, where the master's own size is
+    # the only step that fits — 1280x720 gives a 42 px band and even a
+    # 2x figure needs 57. That window used to fall to 1920x1080's
+    # entry through `box.closest_resolution`, which is how a table
+    # keyed on three resolutions answered for a fourth.
+    _fs_la = next(b["rect"] for b in _boxes_json["1920x1080"]
+                  if b["name"] == "list_area")
+    _fs_cfg = _sjson.load(open(os.path.join(
+        SCREENS_DIR, "colony_summary", "layout.json"),
+        encoding="utf-8"))["list"]
+    for _fw, _fh, _want in ((1280, 720, 1), (1920, 1080, 2),
+                            (2560, 1440, 3), (3840, 2160, 4)):
+        _fa = pygame.Rect(*Layout(_fw, _fh).rect(_fs_la))
+        _got = _fig.figure_step(_fa, _fs_cfg)
+        assert _got == _want, (
+            f"figure_step at {_fw}x{_fh} is {_got}, expected {_want} "
+            f"— the band is {_ctk.band_height(_fa, _fs_cfg)} px and "
+            f"the step is the largest whose 28*step fits it under the "
+            f"plate's line")
     for _st in _fig.STEPS:
         assert _fig.step_size(_st) == 28 * _st, _fig.step_size(_st)
         assert _fig.step_name("human_farmer.png", _st) == \
             f"human_farmer@{_st}x.png"
-    _tk_src = open(os.path.join(_proj, "screens", "colony_summary",
-                                "colonytrack.py"), encoding="utf-8").read()
-    assert "colonyfigures.figure_step(scale)" in _tk_src, (
-        "colonytrack no longer takes the sprite step from "
-        "colonyfigures.figure_step. Two places computing one step is "
-        "how the pitch and the sprite drift apart by a growing amount "
-        "with nothing on either side reporting it")
+    # ONE HOME, still: colonyfigures delegates to colonytrack rather
+    # than answering separately. Two places computing one step is how
+    # the pitch and the sprite drift apart by a growing amount with
+    # nothing on either side reporting it.
+    _cf_src = open(os.path.join(_proj, "screens", "colony_summary",
+                                "colonyfigures.py"), encoding="utf-8").read()
+    assert "colonytrack.figure_step(area, cfg)" in _cf_src, (
+        "colonyfigures no longer delegates the step to colonytrack")
 
     # 3. WHICH SPRITE A POP GETS — `Colony_Pop_Anim_` transcribed
     # (colony.cpp:1268-1283), including the ORDER. The conquered test
@@ -5294,7 +5480,8 @@ def main():
     _cell_row["pops"] = 3
     _cell_row["cells"] = ((_crw.Cell("", None), _crw.Cell("", None)),
                           (_crw.Cell("", None),), ())
-    _cl.render(_cell_surf, [_cell_row], _area, _cfg, app.layout,
+    _cl.render(_cell_surf, [_cell_row], _area,
+               _column_cfg(_cfg, app.layout, _area), app.layout,
                app.style, 0, 0, None)
     _cell_px = pygame.surfarray.array3d(_cell_surf)
     assert any(tuple(_cell_px[x, y]) == tuple(_cl.ZONE_COLORS[0][:3])
@@ -6427,7 +6614,7 @@ def main():
     _zt_src = open(os.path.join(_proj, "core", "zoomtables.py"),
                    encoding="utf-8").read()
     _zt_note = _zt_src[:_zt_src.index("CLUSTER_FIGURE_OFFSET = ")]
-    _zt_note = _zt_note[_zt_note.rindex("FIGURE_STEP = "):]
+    _zt_note = _zt_note[_zt_note.rindex("FIGURE_STEPS = "):]
     assert "DEVIATION" in _zt_note and "colmove.cpp:23" in _zt_note, (
         "CLUSTER_FIGURE_OFFSET's note must carry the DEVIATION that "
         "multiplying by the sprite step is, and name the source line")
@@ -6499,7 +6686,6 @@ def main():
          "producing": "", "producing_turns": 0, "can_buy": False},
     ]
     _dt_track = _cl.track_metrics(_mv_area, _mv_cfg, _mv_scale)
-    _dt_x0 = _cl.track_x(_mv_area, _mv_cfg, _mv_scale)
     for _r in _dt_rows:
         _regs = _cl.row_regions(_r)
         _targets = _cl.drop_targets(_mv_area, _mv_cfg, _mv_scale, _r)
@@ -6543,15 +6729,16 @@ def main():
         for _zone, _key in enumerate(_ct.JOB_KEYS):
             _cx, _cw = _colmap[_key]
             _own = [c for j, _k, c in _boxes.cells if j == _zone]
-            # THE FIRST CELL IS AT THE COLUMN'S LEFT EDGE. It used to
-            # be one marker's width in; the markers went on
-            # 8 September 2026 and the cells moved left with them,
-            # which is where the original starts its icons —
-            # `(30 - squish) * i + left_x`, coldraw.cpp:349.
+            # THE FIRST CELL IS ONE PIXEL INSIDE THE COLUMN, which
+            # is the plate's own line and is transcribed: the
+            # original's icons start at `left_x` 101/236/378 and its
+            # drawn boxes at 100/235/377. It used to be one marker's
+            # width in; the markers went on 8 September 2026.
             if _own:
-                assert _own[0].x == _cx, (
+                assert _own[0].x == _cx + _ctk.PLATE_LINE, (
                     f"{_r['name']}: the first cell of job {_zone} is "
-                    f"at {_own[0].x}, its column starts at {_cx}")
+                    f"at {_own[0].x}, its column starts at {_cx} and "
+                    f"the plate's line takes one px")
             for _c in _own:
                 assert _cx <= _c.x and _c.right <= _cx + _cw, (
                     f"{_r['name']}: a cell of job {_zone} "
@@ -6584,23 +6771,22 @@ def main():
         for _a, _b in zip(_xs, _xs[1:]):
             assert _a[1] <= _b[0], (
                 f"{_r['name']}: targets overlap, {_xs}")
-        # 4. NO JOB IS EVER EMPTY, so the empty-group placeholder
-        #    path cannot come back: the marker IS the placeholder.
+        # 4. NO JOB IS EVER EMPTY, and it cannot be: the target IS
+        #    the column box, so a job with no pops is as wide as one
+        #    that is full.
         for _job, _rect in _targets:
-            assert _rect.width >= _dt_track.unit, (
-                f"{_r['name']}: job {_job}'s target is thinner than a "
-                f"marker, which means a group without one")
+            assert _rect.width == _colmap[_ct.JOB_KEYS[_job]][1], (
+                f"{_r['name']}: job {_job}'s target is {_rect.width} "
+                f"and its column is "
+                f"{_colmap[_ct.JOB_KEYS[_job]][1]}")
         # 5. OUTSIDE EVERY TARGET IS None, and None is a state.
         # 5b. OUTSIDE THE THREE JOB COLUMNS IS None, and None is a
         #     state — it discards a held selection rather than
         #     dropping it. The bounds are the columns' own now, not
         #     the single track's.
-        if _colmap:
-            _lo = min(_colmap[_k2][0] for _k2 in _ct.JOB_KEYS)
-            _hi = max(_colmap[_k2][0] + _colmap[_k2][1]
-                      for _k2 in _ct.JOB_KEYS)
-        else:
-            _lo, _hi = _dt_x0, _dt_x0 + _dt_track.width
+        _lo = min(_colmap[_k2][0] for _k2 in _ct.JOB_KEYS)
+        _hi = max(_colmap[_k2][0] + _colmap[_k2][1]
+                  for _k2 in _ct.JOB_KEYS)
         assert _cl.drop_band(_mv_area, _mv_cfg, _mv_scale, _r,
                              _lo - 5) is None
         assert _cl.drop_band(_mv_area, _mv_cfg, _mv_scale, _r,
@@ -6639,7 +6825,7 @@ def main():
         "are built from the icon list and the icon list is built from "
         "the assigned bit")
     # The pitch is the shortened one, and it comes from the one home.
-    _hc_step = _cfig.figure_step(_mv_scale)
+    _hc_step = _cfig.figure_step(_mv_area, _mv_cfg)
     _hc_want = min(_ci.column_pitch(1, 4), _ci.ICON_SPACING) * _hc_step
     assert abs((_hc_cells[1].x - _hc_cells[0].x) - int(_hc_want)) <= 1, (
         f"the shortened row draws a pitch of "
@@ -6887,17 +7073,20 @@ def main():
         from core.resources import Resources as _HcRes
         _hcres = _HcRes()
         _hcres.mod_dirs = [_hcdir]
-        for _sc, _step in ((1.0, 2), (4.0 / 3.0, 3), (2.0, 4)):
-            assert _cfig.figure_step(_sc) == _step, (
-                f"figure_step({_sc}) is {_cfig.figure_step(_sc)}, "
-                f"not {_step} — zoomtables.FIGURE_STEP")
+        for _sw, _sh, _step in ((1920, 1080, 2), (2560, 1440, 3),
+                                (3840, 2160, 4)):
+            _sa = pygame.Rect(*Layout(_sw, _sh).rect(_fs_la))
+            _sc = Layout(_sw, _sh).scale
+            assert _cfig.figure_step(_sa, _fs_cfg) == _step, (
+                f"figure_step at {_sw}x{_sh} is "
+                f"{_cfig.figure_step(_sa, _fs_cfg)}, not {_step}")
             _hcset = _cfig.FigureSet(_hcres, _step)
             _hcsurf = pygame.Surface((600, 400), pygame.SRCALPHA)
             _hcsurf.fill((0, 0, 0, 255))
             _hccells = tuple(_crw.Cell("", "human_farmer.png")
                              for _ in range(3))
             _cl.draw_held_cluster(_hcsurf, (200, 200), _hcset, _hccells,
-                                  _sc)
+                                  _step)
             _hca = pygame.surfarray.array3d(_hcsurf)
             _hit = [(x, y) for x in range(600) for y in range(400)
                     if tuple(_hca[x, y]) == (255, 0, 0)]
@@ -6932,7 +7121,7 @@ def main():
         _hcsurf = pygame.Surface((600, 400), pygame.SRCALPHA)
         _hcsurf.fill((0, 0, 0, 255))
         _cl.draw_held_cluster(_hcsurf, (200, 200), None,
-                              (_crw.Cell("", "human_farmer.png"),), 1.0)
+                              (_crw.Cell("", "human_farmer.png"),), 2)
         assert not pygame.surfarray.array3d(_hcsurf).any(), (
             "the held cluster drew something with no figure set")
     ok("held cluster on the pointer (+5/-10 and 20 apart at the "
@@ -7873,15 +8062,26 @@ def main():
     with open(os.path.join(os.path.dirname(SCREENS_DIR), "doc",
                            "v3_fundament.md"), encoding="utf-8") as _fh:
         _fund_src = _fh.read()
-    for _cite in ("colsum.cpp:582", "bill.cpp:205", "bill.cpp:210",
-                  "JUSTIFY_LEFT"):
+    # THE FIRST IS RETIRED — 8 September 2026. The name is
+    # left-aligned now, which is what the original does; the column
+    # became a box, the widest producible name fits it, and the trade
+    # that bought right alignment is over. The READING stays cited on
+    # both sides, because that is the expensive half: `Centered_` is
+    # about the vertical axis and a reader who trusts the name of the
+    # function will file the alignment as transcribed without opening
+    # bill.cpp.
+    for _cite in ("colsum.cpp:582", "bill.cpp:210", "JUSTIFY_LEFT"):
         assert _cite in _cl_src2, (
             f"colonylist.py no longer cites {_cite} — the name's "
-            f"right alignment is a deviation and the evidence that "
-            f"it is one has to travel with the marking")
+            f"alignment is a transcription now and the evidence that "
+            f"it is one has to travel with it")
         assert _cite in _fund_src, (
-            f"the fundament no longer cites {_cite} for the "
-            f"right-aligned name")
+            f"the fundament no longer cites {_cite} for the name's "
+            f"alignment")
+    assert "RETIRED" in _fund_src or "retired" in _fund_src, (
+        "decision 45 no longer says the right-aligned name was "
+        "retired — a marking that disappears without a sentence is "
+        "indistinguishable from one nobody noticed")
     assert "**45." in _fund_src, (
         "the fundament no longer carries the colony row's two "
         "deviations as a decision")
@@ -7986,14 +8186,17 @@ def main():
     # SAME row, drawn alone and drawn beside a colony twice its size,
     # must come out identical pixel for pixel. Reimplementing the
     # unit formula here would only check it against itself.
-    _row_h = int(_cfg["row_height"] * app.layout.scale)
+    # THE BAND IS DERIVED NOW: `list_area` divided by
+    # `list.row_count`, so this reads it from the same function the
+    # renderer does rather than from two tuned values that are gone.
+    _sq_cfg = _column_cfg(_cfg, app.layout, _area)
     _band = pygame.Rect(_area.x, _area.y, _area.w,
-                        int(_cfg["pad_y"] * app.layout.scale) + _row_h)
+                        _ctk.band_height(_area, _sq_cfg))
 
     def _first_row_pixels(_rowset):
         _s = pygame.Surface((1920, 1080))
         _s.fill((0, 0, 0))
-        _cl.render(_s, _rowset, _area, _cfg, app.layout, app.style)
+        _cl.render(_s, _rowset, _area, _sq_cfg, app.layout, app.style)
         return pygame.surfarray.array3d(_s.subsurface(_band))
 
     _modest = {"name": "Alpha I", "pops": 4, "jobs": [1, 2, 1],
@@ -8006,93 +8209,276 @@ def main():
         "— the unit must come from POP_LIMIT_CAP, not from the widest "
         "max_pop currently on screen")
 
-    # ── Three regions, three visual states ──
-    # filled (zone colour) then free (dashed outline) then unreachable
-    # (a faint baseline and nothing else), left to right and never
-    # overlapping. Asserted from the picture by colour, so it holds
-    # whatever the geometry does; the unreachable region is checked
-    # for being a BASELINE — thin ink at the foot of the track — and
-    # not merely for being a different colour, because a dimmer
-    # square would pass a colour test and say the wrong thing.
+    # ── FIFTY PLATES, AND THE PLATE IS THE DROP RECT ────────────
+    # Replaces "three regions, three visual states" — the filled /
+    # free / unreachable run belonged to the single 42-slot track,
+    # which went with the nine tuned values on 8 September 2026. The
+    # count does not go down: an obsolete check is replaced, and the
+    # subject is the same one row drawn correctly.
+    #
+    # **A DEVIATION IN KIND, and that is what makes the empty rows
+    # matter.** The original has NO per-cell drawing call at all:
+    # `Draw_Colony_Summary_Screen_` blits one bitmap —
+    # `animate::Draw_(0, 0, _anims[0])`, COLSUM.LBX entry 0
+    # (colsum.cpp:461, loaded at :404-408) — and the plates are
+    # painted into it. That is why every cell has one whether or not a
+    # colony sits there. HD cannot ship that bitmap (decision 42), so
+    # it draws them, and the plate is `StyleRenderer.draw_plate`
+    # (decision 51).
+    _pl_cfg = _column_cfg(_cfg, app.layout, _area)
     _surf.fill((0, 0, 0))
     _cl.render(_surf, [{"name": "Regions I", "pops": 4,
                         "jobs": [1, 2, 1], "no_farming": False,
                         "max_pop": 9}],
-               _area, _cfg, app.layout, app.style)
+               _area, _pl_cfg, app.layout, app.style)
     _px = pygame.surfarray.array3d(_surf)
-
-    def _cols_of(_color):
-        return [_x for _x in range(_area.x, _area.right)
-                if (_px[_x] == _color).all(axis=1).any()]
-
-    def _ink_rows(_x0, _x1):
-        return [_y for _y in range(_area.y, _area.bottom)
-                if (_px[_x0:_x1 + 1, _y] != 0).any()]
-
-    _zone_cols = [c for _z in _cl.ZONE_COLORS for c in _cols_of(_z)]
-    _free_cols = _cols_of(_cl.BAR_FREE)
-    _beyond_cols = _cols_of(_cl.BAR_BEYOND)
-    assert _zone_cols and _free_cols and _beyond_cols, (
-        "a colony below the population ceiling must show all three "
-        f"regions; found filled={bool(_zone_cols)} "
-        f"free={bool(_free_cols)} unreachable={bool(_beyond_cols)}")
-    assert (max(_zone_cols) < min(_free_cols)
-            and max(_free_cols) < min(_beyond_cols)), (
-        "the colony list's three regions are out of order or overlap: "
-        f"filled ends {max(_zone_cols)}, free "
-        f"{min(_free_cols)}-{max(_free_cols)}, unreachable starts "
-        f"{min(_beyond_cols)}")
-    _free_band = _ink_rows(min(_free_cols), max(_free_cols))
-    _beyond_band = _ink_rows(min(_beyond_cols), max(_beyond_cols))
-    assert len(_beyond_band) * 4 <= len(_free_band), (
-        f"the unreachable region is {len(_beyond_band)} px tall "
-        f"against a {len(_free_band)} px free slot — it is drawing a "
-        "square, not a baseline")
-    assert min(_beyond_band) > (min(_free_band) + max(_free_band)) // 2, \
-        "the unreachable region's ink is not at the foot of the track"
-    ok("colony list track = engine cap (unit fixed, filled/free/"
-       "unreachable in order)")
-
-    # ── The name block: right-aligned, two lines ──
-    # Replaces the figure-mode check, which went when figure mode did
-    # (the count must not go down; an obsolete check is replaced, not
-    # deleted). Same subject — what the name column does with the
-    # width the budget gave it.
-    #
-    # RIGHT-ALIGNED against the column's right edge, which is where
-    # the bar starts. Left-aligned, a name too long for the column
-    # grew rightward onto the track's first slots, and since the
-    # squares draw afterwards the data won and the name was the
-    # casualty. Right-aligned it grows LEFT into pad_x, where nothing
-    # is drawn, so the clip becomes a fallback instead of the
-    # mechanism. Asserted at the structural maximum: s_star.name is
-    # str15 and namestar.cpp:262 lets a player type all fifteen.
+    _plate_rgb = list(_cl.PLATE_COLOR[:3])
+    _pl_bands = _cl.row_bands(_area, _pl_cfg, app.layout.scale, 1)
+    _pl_boxes = _ctk.row_boxes(_area, _pl_cfg, app.layout.scale,
+                               {"name": "Regions I", "pops": 4,
+                                "jobs": [1, 2, 1], "no_farming": False,
+                                "max_pop": 9}, _pl_bands[0])
+    assert len(_pl_boxes.targets) == 3, _pl_boxes.targets
+    for _job, _rect in _pl_boxes.targets:
+        # THE PLATE RECT IS THE DROP RECT. Read off the surface: the
+        # plate's own colour on every edge of the target.
+        for _side, _pt in (("left", (_rect.x, _rect.centery)),
+                           ("right", (_rect.right - 1, _rect.centery)),
+                           ("top", (_rect.centerx, _rect.y)),
+                           ("bottom", (_rect.centerx, _rect.bottom - 1))):
+            _seg = _px[max(0, _pt[0] - 2):_pt[0] + 3,
+                       max(0, _pt[1] - 2):_pt[1] + 3]
+            assert (_seg == _plate_rgb).all(axis=2).any(), (
+                f"job {_job}'s plate has no {_side} edge where its "
+                f"drop rect has one — the plate rect IS the drop rect "
+                f"(decision 5)")
+    # AND THE BAND IS THE WHOLE OF IT. The pick round left a marked
+    # DEVIATION here: the drop target was `bar_h`, 30 reference px of
+    # a 58 px row, so a click in the outer 14 px of a row discarded
+    # the selection where the original would have dropped. The target
+    # is the band now and that deviation is CLOSED.
+    _pl_top, _pl_h = _pl_bands[0]
+    for _job, _rect in _pl_boxes.targets:
+        assert (_rect.y, _rect.height) == (_pl_top, _pl_h), (
+            f"job {_job}'s drop rect is {_rect.y}..{_rect.bottom} and "
+            f"the band is {_pl_top}..{_pl_top + _pl_h} — the pick "
+            f"round's 52 %-of-the-band deviation is back")
+    # EVERY BAND, INCLUDING THE EMPTY ONES. Ten bands, three plates
+    # each, on a list of one colony.
+    _pl_all = _cl.row_bands(_area, _pl_cfg, app.layout.scale, 99)
+    assert len(_pl_all) == 10, len(_pl_all)
+    _pl_rows = [{"name": f"C{i}", "pops": 1, "jobs": [1, 0, 0],
+                 "no_farming": False, "max_pop": 4} for i in range(10)]
     _surf.fill((0, 0, 0))
-    _cl.render(_surf, [{"name": "W" * 15 + " V", "pops": 3,
+    _cl.render(_surf, _pl_rows, _area, _pl_cfg, app.layout, app.style)
+    _px = pygame.surfarray.array3d(_surf)
+    for _i, (_bt, _bh) in enumerate(_pl_all):
+        _rows_with = [_y for _y in range(_bt, _bt + _bh)
+                      if (_px[_area.x:_area.right, _y]
+                          == _plate_rgb).all(axis=1).any()]
+        assert len(_rows_with) >= 2, (
+            f"band {_i} carries plate ink on {len(_rows_with)} rows; "
+            f"every band draws its three plates, empty or not — the "
+            f"original's are in the background bitmap and are there "
+            f"whatever the row holds")
+    # ONE HOME FOR THE PLATE. The rounded-rect arithmetic existed in
+    # `draw_thin_border` AND in `colonyheader.render`; it is
+    # `draw_plate`'s now and a grep is what keeps it that way.
+    _plate_hits = []
+    for _dp, _dn, _fns in os.walk(_proj):
+        _dn[:] = [x for x in _dn if x not in ("__pycache__", ".git")]
+        for _fn in _fns:
+            if not _fn.endswith(".py"):
+                continue
+            _fp = os.path.join(_dp, _fn)
+            if os.path.relpath(_fp, _proj) == os.path.join(
+                    "tools", "smoke_test.py"):
+                continue
+            if "border_radius=max(6, int(10 * scale))" in \
+                    open(_fp, encoding="utf-8").read():
+                _plate_hits.append(os.path.relpath(_fp, _proj))
+    assert _plate_hits == [os.path.join("core", "style.py")], (
+        f"the plate's rounded-rect arithmetic lives in {_plate_hits}; "
+        f"one home, which is StyleRenderer.draw_plate (decision 51)")
+    ok("colony cells: a plate per cell of every band, the plate rect "
+       "IS the drop rect, and one home for the arithmetic")
+
+    # ── NINE VALUES DIED, AND NOTHING READS THEM ────────────────
+    # `row_height`, `pad_x`, `pad_y`, `name_width`, `name_gap`,
+    # `bar_height`, `tail_width`, `building_width`, `growth_gap`. Each
+    # answered a question a column BOX or `list.row_count` now
+    # answers, and a tuned number that agrees with a derived one is
+    # the second copy decision 5 is about. Greppped rather than
+    # asserted on the config, because a `cfg.get("row_height", 58)`
+    # would keep working off the default and nothing would say so.
+    _DEAD = ("row_height", "pad_x", "pad_y", "name_width", "name_gap",
+             "bar_height", "tail_width", "building_width", "growth_gap")
+    _dead_hits = {}
+    for _dp, _dn, _fns in os.walk(_proj):
+        _dn[:] = [x for x in _dn if x not in ("__pycache__", ".git")]
+        for _fn in _fns:
+            if not _fn.endswith(".py"):
+                continue
+            _fp = os.path.join(_dp, _fn)
+            _rel2 = os.path.relpath(_fp, _proj)
+            if _rel2 == os.path.join("tools", "smoke_test.py"):
+                continue
+            # SCOPED TO THE LIST CFG'S READERS. `colonyoutput` has
+            # its own `pad_x`/`pad_y` under the `output` block, which
+            # is a different config and a legitimate one — a
+            # tree-wide grep on the bare word would be measuring the
+            # wrong object, which is the failure the fundament names
+            # twice.
+            if os.path.basename(_fp) not in (
+                    "colonylist.py", "colonytrack.py", "colonybuild.py",
+                    "colonyscroll.py", "colonypopup.py",
+                    "colonyheader.py", "colony_list_preview.py",
+                    "colony_move_hd.py"):
+                continue
+            _txt = open(_fp, encoding="utf-8").read()
+            for _k in _DEAD:
+                # A READ, not a mention: the notes that record why
+                # each one died name them, which is the point.
+                for _form in (f'cfg["{_k}"]', f'cfg.get("{_k}"',
+                              f'"{_k}":'):
+                    if _form in _txt:
+                        _dead_hits.setdefault(_k, []).append(_rel2)
+    assert not _dead_hits, (
+        f"the retired list values are still read: {_dead_hits}. They "
+        f"are a column box or `list.row_count` now — a default that "
+        f"keeps working is exactly how the tuned copy survives")
+    _lj = _sjson.load(open(os.path.join(
+        SCREENS_DIR, "colony_summary", "layout.json"), encoding="utf-8"))
+    for _k in _DEAD:
+        assert _k not in _lj["list"], (
+            f"layout.json list.{_k} is back")
+    assert _lj["list"]["row_count"] == 10, _lj["list"]["row_count"]
+
+    # ── AN EDITOR SAVE WRITES NO DERIVED VALUE ──────────────────
+    # Save, reload, diff. The band, the step, the cell, the drop and
+    # the plate rects are computed every frame (decision 37's shape,
+    # applied to geometry), so none of them may appear in boxes.json
+    # — and the six column boxes must come back exactly as they went
+    # in, because `sync_columns` writes the derived width and y back
+    # into them and a save is where that would leak a stray drag.
+    from core.box import save_boxes as _save_boxes
+    _sd_screen = d.screens["colony_summary"]
+    _before_json = _sjson.load(open(os.path.join(
+        SCREENS_DIR, "colony_summary", "boxes.json"), encoding="utf-8"))
+    with _tf.TemporaryDirectory() as _sd_dir:
+        _sd_path = os.path.join(_sd_dir, "boxes.json")
+        io_shutil = __import__("shutil")
+        io_shutil.copy(os.path.join(SCREENS_DIR, "colony_summary",
+                                    "boxes.json"), _sd_path)
+        _chdr.sync_columns(_sd_screen)
+        _save_boxes(_sd_dir, _sd_screen.boxes, 1920, 1080)
+        _after_json = _sjson.load(open(_sd_path, encoding="utf-8"))
+    _names_before = {b["name"] for b in _before_json["1920x1080"]}
+    _names_after = {b["name"] for b in _after_json["1920x1080"]}
+    assert _names_before == _names_after, (
+        f"a save changed which boxes exist: "
+        f"{_names_before ^ _names_after}")
+    _rects_before = {b["name"]: b["rect"] for b in _before_json["1920x1080"]}
+    _rects_after = {b["name"]: b["rect"] for b in _after_json["1920x1080"]}
+    assert _rects_before == _rects_after, (
+        f"a save moved a box: "
+        f"{ {k: (_rects_before[k], _rects_after[k]) for k in _rects_before if _rects_before[k] != _rects_after[k]} }")
+    _DERIVED_KEYS = ("band", "row_count", "step", "figure_step",
+                     "cell", "drop", "plate", "pitch")
+    for _b in _after_json["1920x1080"]:
+        for _k in _DERIVED_KEYS:
+            assert _k not in _b, (
+                f"the editor wrote a derived value {_k!r} into "
+                f"{_b['name']} — the band, the step and the three "
+                f"rects are computed every frame and belong in no file")
+
+    # ── A COLUMN DRAGGED VERTICALLY IS IGNORED, and SAYS SO ─────
+    _drag_box = next(b for b in _sd_screen.boxes if b.name == "col_workers")
+    _drag_before = tuple(_drag_box.ref_rect)
+    _drag_box.ref_rect = (_drag_before[0], _drag_before[1] + 40,
+                          _drag_before[2], _drag_before[3] - 40)
+    _drag_box.update_layout(_sd_screen.layout)
+    _chdr.sync_columns(_sd_screen)
+    assert tuple(_drag_box.ref_rect) == _drag_before, (
+        f"a vertical drag survived sync_columns: "
+        f"{_drag_box.ref_rect} against {_drag_before}. y and height "
+        f"are list_area's, and a drag that is merely ignored is one "
+        f"the editor then saves")
+    _note = _sd_screen.editor_note(_drag_box)
+    assert _note and "band" in _note, (
+        f"editor_note for a column box says {_note!r} — it has to "
+        f"report the derived band, because that is what the person "
+        f"dragging cannot see")
+    _name_note = _sd_screen.editor_note(
+        next(b for b in _sd_screen.boxes if b.name == "col_name"))
+    assert _name_note and "not clamped" in _name_note, (
+        f"col_name's editor line is {_name_note!r} — it must REPORT "
+        f"the lower bound and say that it does not clamp")
+    assert "namestar.cpp" in _name_note, (
+        "the name bound's line does not name where the cap comes from")
+    # AND THE OVERLAY ASKS THE SCREEN, rather than naming one.
+    _ov_src = open(os.path.join(_proj, "core", "editor", "overlay.py"),
+                   encoding="utf-8").read()
+    assert "editor_note(b)" in _ov_src, (
+        "core/editor/overlay.py no longer asks the screen what its "
+        "box means")
+    assert "race_grid" not in _ov_src, (
+        "the race_grid special case is back in generic editor code; "
+        "Select Race implements `editor_note` now")
+    _sr = d.screens["select_race"]
+    _sr.enter(None)
+    assert _sr.editor_note(_Box({"name": "race_grid",
+                                 "rect": [0, 0, 10, 10]})) is not None, (
+        "Select Race lost the line the overlay used to fish out of it")
+    assert _sr.editor_note(_Box({"name": "info_panel",
+                                 "rect": [0, 0, 10, 10]})) is None, (
+        "Select Race answers for a box that is not the race grid")
+    ok("colony list geometry is boxes and a row count (nine tuned "
+       "values gone, a save writes nothing derived, a vertical drag "
+       "snaps back and the info bar reports what it cannot show)")
+
+    # ── The name block: LEFT-aligned in its own cell ────────────
+    # It was right-aligned, and that was a marked deviation
+    # (decision 45): a 236 px name column shared a budget with the
+    # track, so the overflow had to grow LEFT into `pad_x` where
+    # nothing was drawn instead of rightward onto the first slots.
+    # **The column is a box now**, the widest name the game can
+    # produce fits it, and the alignment goes back to the original's
+    # — `Squeeze_Formatted_Paragraph_Centered_(0x0C, y, …, 0)` passes
+    # JUSTIFY_LEFT (colsum.cpp:582, bill.cpp:210).
+    #
+    # Asserted at the game's own maximum, which is NOT fifteen
+    # arbitrary characters: `Do_Change_Star_Name_` caps the input
+    # field at the pixel width of seven W's (namestar.cpp:246-256) on
+    # top of the `char[15]` buffer.
+    _nb_cfg = _column_cfg(_cfg, app.layout, _area)
+    _surf.fill((0, 0, 0))
+    _cl.render(_surf, [{"name": _cl.NAME_BOUND_STAR, "pops": 3,
                         "jobs": [1, 1, 1], "no_farming": False,
                         "climate": 8, "max_pop": 9}],
-               _area, _cfg, app.layout, app.style)
+               _area, _nb_cfg, app.layout, app.style)
     _px = pygame.surfarray.array3d(_surf)
     _scale = app.layout.scale
-    _col_right = (_area.x + int(_cfg["pad_x"] * _scale)
-                  + int(_cfg["name_width"] * _scale))
+    _nb_cols = _ctk.columns(_area, _nb_cfg)
+    _nx, _nw = _nb_cols["name"]
     _rgb = tuple(_cl.ROW_NAME[:3])
     _name_cols = [x for x in range(_area.x, _area.right)
                   if any(tuple(_px[x, y]) == _rgb
                          for y in range(_area.y, _area.bottom))]
     assert _name_cols, "the name did not draw at all"
-    assert max(_name_cols) < _col_right, (
-        f"the longest producible name reaches x={max(_name_cols)}, past "
-        f"its column at {_col_right} — it is on the track again")
-    # It must actually USE the padding, or the alignment is not what
-    # is keeping it off the track and this check would pass on a name
-    # that simply fitted.
-    assert min(_name_cols) < _area.x + int(_cfg["pad_x"] * _scale), (
-        "the structural maximum fits inside the column, so this check "
-        "is not exercising the overflow it exists for")
-    assert min(_name_cols) >= _area.x, (
-        f"the name overflowed past the left edge of list_area to "
-        f"x={min(_name_cols)} — pad_x is not deep enough for it")
+    assert min(_name_cols) >= _nx, (
+        f"the name starts at x={min(_name_cols)}, left of its column "
+        f"at {_nx}")
+    assert max(_name_cols) < _nx + _nw, (
+        f"the widest producible name reaches x={max(_name_cols)}, past "
+        f"its column at {_nx + _nw} — it is on the farmers column")
+    # LEFT: the ink starts in the first third of the cell. Measured on
+    # the picture, because "the renderer blits at left" is what the
+    # right-aligned version could also have claimed about its own
+    # edge.
+    assert min(_name_cols) - _nx < _nw // 3, (
+        f"the name's ink starts {min(_name_cols) - _nx} px into a "
+        f"{_nw} px column — that is not left-aligned")
 
     # ── The detail line ──
     # Climate name plus n/max, from the same row dict, under the name.
@@ -8117,23 +8503,28 @@ def main():
     _out = _cl._detail_text({"climate": 9, "pops": 2, "max_pop": 3}, _braced)
     assert _out == "Gaia 2/3 {not_a_key} }{", _out
 
-    # Both lines right-align to the same edge, so the eye crosses one
-    # gap to the bar rather than a ragged one per row.
+    # Both lines start on the same edge, so the eye drops straight
+    # down rather than crossing a ragged one per row.
     _surf.fill((0, 0, 0))
     _cl.render(_surf, [{"name": "Sol", "pops": 12, "jobs": [4, 5, 3],
                         "no_farming": False, "climate": 8,
                         "max_pop": 14}],
-               _area, _cfg, app.layout, app.style)
+               _area, _nb_cfg, app.layout, app.style)
     _px = pygame.surfarray.array3d(_surf)
     _detail_rgb = tuple(_cl.DETAIL_COLOR[:3])
-    _right_of = lambda rgb: max(
+    _left_of = lambda rgb: min(
         x for x in range(_area.x, _area.right)
         if any(tuple(_px[x, y]) == rgb for y in range(_area.y, _area.bottom)))
-    assert abs(_right_of(_rgb) - _right_of(_detail_rgb)) <= 2, (
-        f"name ends at {_right_of(_rgb)}, detail at "
-        f"{_right_of(_detail_rgb)} — the two lines are not aligned")
-    ok("colony list name block (right-aligned, overflow into pad_x, "
-       "climate/pops detail line)")
+    assert abs(_left_of(_rgb) - _left_of(_detail_rgb)) <= 2, (
+        f"name starts at {_left_of(_rgb)}, detail at "
+        f"{_left_of(_detail_rgb)} — the two lines are not aligned")
+    # THE SECOND LINE IS AN HD EXTENSION, marked in three homes.
+    assert "HD EXTENSION" in (_cl._draw_name_block.__doc__ or ""), (
+        "the per-row second line is no longer marked where it is drawn")
+    assert "HD EXTENSION" in _cfg.get("_hd_extension", ""), (
+        "layout.json list._hd_extension no longer carries it")
+    ok("colony list name block (left-aligned like the original, the "
+       "game's own name bound, marked second line)")
 
     # ── The building column squeezes; it never truncates ──
     # 190 px is a HARD width, transcribed from
@@ -8144,7 +8535,10 @@ def main():
     # not the three steps — the first of those narrows the space
     # glyph, a bitmap-font trick Aldrich has no equivalent for.
     from screens.colony_summary import colonybuild as _cb
-    _bw = _cfg["building_width"]
+    # THE COLUMN IS A BOX NOW, so its width comes from the box and
+    # not from a tuned `building_width` that agreed with it.
+    _bw = int(_ctk.columns(_area, _nb_cfg)["building"][1]
+              / app.layout.scale)
     _small = app.layout.font_size(_cfg["small_font"])
     _floor = app.layout.font_size(_cfg["build_font_min"])
     _sizes = list(range(_small, _floor - 1, -1))
@@ -8152,7 +8546,9 @@ def main():
                   "Alien Control Center", "W" * 15,
                   "Refit " + "W" * 15):
         _lines, _size = _cb.squeeze_lines(
-            app.style, _text, _bw, _cfg["row_height"], _sizes, (255,) * 3)
+            app.style, _text, _bw,
+            int(_ctk.band_height(_area, _nb_cfg)
+                / app.layout.scale), _sizes, (255,) * 3)
         # Never truncate: every word of the source survives.
         _kept = " ".join(_cb.wrap_text(app.style, _text, _size, _bw)).split()
         assert _kept == _text.split(), (_text, _kept)

@@ -121,9 +121,39 @@ def render():
 
 
 def _step_table():
-    """Window key -> step, from `zoomtables.FIGURE_STEP`."""
-    from core import zoomtables
-    return dict(zoomtables.FIGURE_STEP)
+    """Window key -> step, DERIVED from the colony list's own band.
+
+    There is no per-resolution table any more: the list holds ten
+    rows, the band is the window divided by ten and the step is the
+    largest whose figure fits it (`colonytrack.figure_step`). A
+    modder asking "which window gets my @3x file" gets the answer
+    from the same arithmetic the screen uses, so the document cannot
+    describe a step the screen does not draw — which is what the
+    hand-written table did at 2560x1440 until 8 September 2026.
+    """
+    import pygame
+    from core.layout import Layout
+    from core import resources
+    from screens.colony_summary import colonytrack
+    res = resources.init({})
+    cfg = res.load_json("screens/colony_summary/layout.json", {}) or {}
+    boxes = res.load_json("screens/colony_summary/boxes.json", {}) or {}
+    ref = next(iter(boxes.values()), [])
+    la = next((b["rect"] for b in ref if b["name"] == "list_area"), None)
+    lref = res.load_json(
+        "screens/colony_summary/layout_reference.json", {}) or {}
+    if la is None:
+        return {}
+    out = {}
+    # THE SHIPPED RESOLUTIONS and not boxes.json's keys: a box rect is
+    # reference space and the fallback chain resolves 3840x2160 to the
+    # 1440p list, so that window has no key of its own and would drop
+    # out of a table keyed on the file.
+    for key in lref.get("_resolutions", ()):
+        w, h = (int(v) for v in key.split("x"))
+        area = pygame.Rect(*Layout(w, h).rect(la))
+        out[key] = colonytrack.figure_step(area, cfg.get("list", {}))
+    return out
 
 
 def main():

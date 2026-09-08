@@ -189,7 +189,7 @@ def band_xy(screen, row_index, job):
     return None
 
 
-def choose(screen, state, only_job=None):
+def choose(screen, state, only_job=None, only_row=None):
     """(row_index, slot, job, target_job) for a move worth making.
 
     `only_job` restricts the SOURCE column, so the acceptance can
@@ -216,9 +216,18 @@ def choose(screen, state, only_job=None):
         return tuple(row["jobs"])
 
     for row_index, row in enumerate(rows):
+        if only_row is not None and row["name"] != only_row:
+            continue
         near = [rows[p] for p in (row_index - 1, row_index + 1)
                 if 0 <= p < len(rows)]
-        if not near or any(shape(o) == shape(row) for o in near):
+        # THE NEIGHBOUR CONDITION IS THE RUN'S OWN EVIDENCE and is
+        # waived only when the caller NAMES the row. It exists so an
+        # off-by-one window would change a colony whose composition
+        # differs and the diff would see it; an operator who typed
+        # the colony's name has already said which one they mean, and
+        # the diff still names what changed.
+        if only_row is None and (
+                not near or any(shape(o) == shape(row) for o in near)):
             continue
         loaded = colonypick.pops_of(state, row["index"])
         if loaded is None:
@@ -271,6 +280,12 @@ def main():
                          "little as possible; 0 takes the whole "
                          "identical group, which is what a picture of "
                          "a held cluster needs")
+    ap.add_argument("--row-name", default=None,
+                    help="restrict the run to one colony by name. "
+                         "`choose` takes the first row that can prove "
+                         "a move, which is the right default and the "
+                         "wrong one when a run has to be repeated on "
+                         "the same colony — or undone.")
     ap.add_argument("--target", type=int, default=None,
                     help="which column to drop into (0 food, 1 "
                          "industry, 2 research). Without it the "
@@ -317,7 +332,17 @@ def main():
           f"{screen._sort_key!r}")
     print(f"sends so far (entry sort key): {counter}")
 
-    target = choose(screen, state, args.job)
+    if args.row_name:
+        # THE SELECTION'S OWN LIST, not a local copy: `screen._rows`
+        # is a property over `colonyselect.Selection.rows`, and every
+        # click path reads it through the screen. Narrowing anything
+        # else would aim `choose` at one list and the click at
+        # another.
+        if not any(r["name"] == args.row_name for r in screen._rows):
+            print(f"no row named {args.row_name!r}; the list has "
+                  f"{[r['name'] for r in screen._rows]}")
+            return 1
+    target = choose(screen, state, args.job, args.row_name)
     if target is None:
         print("no row this save can prove a move on — a neighbour with "
               "the same pop composition, or no plan that completes. "
@@ -388,7 +413,7 @@ def main():
     _area, _cfg, _scale, _n = screen._list_view()
     _now = [r for j, _i, r in colonylist.row_boxes(
         _area, _cfg, _scale, _row_now).cells if j == job]
-    _step = colonyfigures.figure_step(_scale)
+    _step = colonyfigures.figure_step(_area, _cfg)
     _want_pitch = int(min(colonyicons.column_pitch(job, max(_left_n, 1)),
                           colonyicons.ICON_SPACING) * _step)
     _got_pitch = (_now[1].x - _now[0].x) if len(_now) > 1 else _want_pitch

@@ -90,17 +90,18 @@ def draw_info(ed, surface, L):
                  f"pos=({off[0]},{off[1]}) rot={rot}")
         else:
             extra = ""
-            if b.name == "race_grid":
-                scr = ed.app.dispatcher.top
-                if scr and hasattr(scr, "_race_by_id"):
-                    r = scr._race_by_id(scr._selected_id)
-                    if r:
-                        c = r.get("portrait_crop", [0.5, 0.5])
-                        z = r.get("portrait_zoom", 1.0)
-                        extra = (f" [{r['name']}] "
-                                 f"zoom={z:.2f} "
-                                 f"crop=({c[0]:.2f},"
-                                 f"{c[1]:.2f})")
+            # THE SCREEN SAYS WHAT ITS BOX MEANS. This was a
+            # `hasattr(scr, "_race_by_id")` naming ONE screen from
+            # inside generic editor code; `ScreenBase.editor_note` is
+            # the same information asked for on the side that has it,
+            # and the colony list needs it for values that have no
+            # rect at all — the row band, the derived sprite step, the
+            # lower bound the editor REPORTS and must never clamp.
+            _note = None
+            if ed.app.dispatcher.top is not None:
+                _note = ed.app.dispatcher.top.editor_note(b)
+            if _note:
+                extra = " " + str(_note)
             if b.style.get("pannable"):
                 c = b.style.get("crop", [0.5, 0.5])
                 extra = (f" zoom={b.style.get('zoom', 1.0):.2f} "

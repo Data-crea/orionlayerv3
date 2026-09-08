@@ -171,7 +171,12 @@ demands — each says what the original does instead:**
   nothing has been injected — and the day a preview does inject it
   has to go. In `colonypick.py`, `colonymoveui.py`, `layout.json`
   under `move._hd_extension_cancel`, and a smoke check.
-- **DEVIATION — the drop rect is half the row's height.**
+- **DEVIATION — the drop rect is half the row's height. CLOSED
+  8 September 2026**, one round later: the row band is the list
+  window divided by `list.row_count` and the cell fills it, so the
+  plate rect is the drop rect is the cell rect and the target is the
+  whole band. A smoke check reads the plate's own four edges off the
+  rendered surface at the drop rect's own bounds. What it was:
   *(Replaces "HD EXTENSION — a drop target per job", withdrawn
   8 September 2026: the target is a TRANSCRIPTION and always was.
   `Add_Scroll_Field_(left_x, top_y, left_x, right_x + 8, left_x,
@@ -515,7 +520,7 @@ files under `doc/` and are only summarised here.
 | | |
 |---|---|
 | Python | 32,960 lines across 111 modules — `find . -name '*.py'`, `__pycache__` excluded, the smoke test's 6,400 included. The previous figure here (21,642 across 94) was carried from an unstated method and could not be reproduced |
-| Smoke test | `python tools/smoke_test.py` — **104 checks**, headless |
+| Smoke test | `python tools/smoke_test.py` — **105 checks**, headless |
 | Assets | 170 MB (select_race 68, galaxy_map 51, shared 23, new_game 21, colony_summary 1) |
 | Screens in HD | 7 of ~20–22 (colony summary draws list, sidebar, scan box and galaxy inset, and MOVES POPS — the first HD gesture that drives the game) |
 | Setup from clone | `python tools/setup.py` (deps via the system package manager) |
@@ -839,13 +844,7 @@ in exactly ONE bucket. The numbers below are produced by
 check asserts this list still agrees with it — the same trade the
 check count makes, for the same reason.
 
-`galaxy_map/screen.py` (**531** code, 807 total), `tools/struct_probe.py`
-(**478** code, 753 total), `tools/colony_list_preview.py` (**410**
-code, 774 total), `custom_race/screen.py` (**400** code,
-558 total), `tools/colony_move_hd.py` (**365** code, 549 total),
-`core/editor/editor.py` (**340** code, 390 total),
-`galaxy_map/renderer.py` (**335** code, 753 total), `tools/ext_diag.py`
-(**325** code, 473 total), `core/style.py` (**306** code, 453 total).
+`screens/galaxy_map/screen.py` (**531** code, 807 total), `tools/struct_probe.py` (**478** code, 753 total), `tools/colony_list_preview.py` (**412** code, 781 total), `screens/custom_race/screen.py` (**400** code, 558 total), `tools/colony_move_hd.py` (**379** code, 574 total), `core/editor/editor.py` (**340** code, 390 total), `screens/galaxy_map/renderer.py` (**335** code, 753 total), `tools/ext_diag.py` (**325** code, 473 total), `core/style.py` (**309** code, 471 total).
 `smoke_test.py` is exempt by nature.
 
 **TWO TOOLS JOINED THE LIST ON 8 SEPTEMBER 2026 and one thing left
@@ -3060,6 +3059,115 @@ help-file lesson, one domain over.
 
 Zhadoom III (14 pops) is the widest row in either fixture and is
 therefore the narrowest-cell case any picture has to survive.
+
+### The list geometry becomes six boxes and a row count — 8 September 2026
+
+**Six column boxes**, `col_name` / `col_farmers` / `col_workers` /
+`col_scientists` / `col_building` / `col_scroll`, in `boxes.json` and
+F5-draggable like anything else. **One rect source per column**: the
+header plate above a column, the cells inside it and the drop target
+over it all read the same box, where the header used to tile its own
+box from a ref-width table and `colonytrack` tiled a second one.
+
+**The scroll slot is a box too**, deliberately: `colonyscroll` draws
+its arrows there and `colonyheader` draws a plate there, so making it
+"the remainder" would have given one column two rect sources.
+
+**Only the LEFT EDGE is read.** A box carries four numbers and three
+would be a second answer: y and height are `list_area`'s because a
+column is a strip of the list, and the WIDTH is the distance to the
+next column because the six have to tile the window exactly. Reading
+the stored width opened a one-pixel seam at 1280x720 —
+`Box.update_layout` truncates x and width independently, so
+`int(x*s) + int(w*s)` and `int((x+w)*s)` disagree wherever the
+fractions add up. Dragging a column moves a BOUNDARY and its
+neighbour follows; `colonyheader.sync_columns` writes the derived
+width and the window's y and height back, so the outline shows what
+the geometry did rather than what was dragged.
+
+**Derived, never serialized:** the row band (`list_area` height
+divided by `list.row_count`, the last band taking the remainder), the
+figure step, the cell rect, the drop rect, the plate rect, the figure
+origin, the squish pitch and the name block. **`list.row_count = 10`**
+is the one value, and it is the original's own window
+(`_list_col[10]`, colsum.cpp:348).
+
+**Nine values died**: `row_height`, `pad_x`, `pad_y`, `name_width`,
+`name_gap`, `bar_height`, `tail_width`, `building_width`,
+`growth_gap`. Every one answered a question a box or the row count
+now answers. `row_height` 58 with a 14 px pad happened to yield ten
+rows at all three shipped resolutions — by arithmetic coincidence,
+and nothing in the tree said which of the three numbers was
+load-bearing.
+
+**The hand-written `FIGURE_STEP` table is gone too**, and so is
+`layout_reference.figure_scale`, which was the same table in the
+design input. The step is the largest whose `28*step` fits the band
+under the plate's 1 px line. **Step 1 joined the ladder**: a master
+is 28 px and below the reference resolution that is the right answer
+— at 1280x720 the band is 42 device px and even a 2x figure needs 57.
+It is NOT on `colonyfigures.STEPS`, which is what a MOD may ship as
+an explicit `@Nx` file, because `@1x` would be a second name for the
+master (decision 50).
+
+**The deviation table, per column.** The transcription is in
+`core/zoomtables.NATIVE_JOB_COLUMNS`: `COLSUM::Get_Selected_Pop_`
+(colsum.cpp:1006-1024) gives `left_x` 101 / 236 / 378 with `right_x`
+= the next `left_x` − 10, and the drawn spans measured off
+`colony_summary_native_split.png` are **135 : 142 : 134**, with
+WORKERS the widest. **What the original states is that RATIO and not
+a width** — HD's job columns are 2.53x their native ones by Data's
+Stage 1 decision, so the absolute number is ours. Today's boxes:
+
+| column | ref width | against the transcription |
+|---|---|---|
+| `col_name` | 303 | no native share — DEVIATION, reason in `_list_columns_note` |
+| `col_farmers` | 343 | −0.1 % of the 135 share |
+| `col_workers` | 361 | +0.1 % of the 142 share |
+| `col_scientists` | 340 | 0.0 % of the 134 share |
+| `col_building` | 315 | wider than the 13.3 % the original requires — DEVIATION, reason recorded |
+| `col_scroll` | 35 | no native counterpart |
+
+The check reports every column and goes red only where a deviation
+past one per cent is unmarked.
+
+**FIFTY PLATES, AND A DEVIATION IN KIND.** Every cell of every band
+draws one, including the empty rows and including the NAME and
+BUILDING columns. **The original has no per-cell drawing call at
+all**: `Draw_Colony_Summary_Screen_` blits ONE bitmap —
+`animate::Draw_(0, 0, _anims[0])`, COLSUM.LBX entry 0
+(colsum.cpp:461, loaded at :404-408) — and the plates are painted
+into it. That is why every cell has one whether or not a colony sits
+there; they are part of the picture, not a per-row decision. HD
+cannot ship that bitmap (decision 42), so it draws them. Marked in
+`colonylist._render_bar`, in `layout.json` under
+`list._columns_note`, here, and in a smoke check that reads the
+plate's own four edges off the rendered surface. **Decision 51** is
+what makes the drawing legitimate: the plate is
+`StyleRenderer.draw_plate`, the rect is computed, and the
+`max(6, int(10 * scale))` that used to exist in `draw_thin_border`
+AND in `colonyheader.render` now exists once, with a grep holding it
+there.
+
+**THE FIRST CELL IS ONE PIXEL INSIDE THE PLATE'S LINE, and that is
+transcribed too.** The original's icons start at `left_x` — 101 /
+236 / 378 — and its drawn cell boxes at 100 / 235 / 377, measured on
+`colony_summary_native_split.png`. The same `+1` at the top is what
+`figure_step` reserves, and it is why the list needed 638 px rather
+than 630.
+
+**THE 79 % RESIDUE IS ACCEPTED, and here is its arithmetic.** A
+figure column fills less of itself than the original's does, and the
+ratio is `step x native_width / hd_width`. At 1080p the farmers
+column is 343 device px against a native 135 at step 2:
+`2 x 135 / 343 = 0.787`. The same holds at 2160p (step 4, column
+686). At 1440p the list's growth bought step 3 and the ratio is
+`3 x 135 / 457 = 0.886`. **It is structural**: the columns are 2.53x
+their native width and the steps are integers, so only a step of 2.53
+would close it and there is no such step (decision 28 — a sprite is
+swapped, never scaled). No spacing is added; the residue is empty
+column to the right of each run, which is where the original has its
+own slack too, just less of it.
 
 ### The list window grows 29 px so 1440p earns step 3 — 8 September 2026
 

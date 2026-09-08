@@ -172,7 +172,14 @@ class ColonySummaryScreen(ScreenBase):
         # for an effect nobody is going to produce.
         self._move = colonymoveui.MoveController()
         self.update(game_state)
-        self._columns()
+        # THE SIX COLUMN BOXES BECOME THE COLUMN TABLE, once, on
+        # load: what is bound is the live `Box` objects, so a drag in
+        # the F5 editor moves the cells, the plates, the drop rects
+        # and the heading above them on the same frame. `colonyheader`
+        # draws the plates from the same rects `colonytrack` lays the
+        # cells in, so a heading is over its own column by
+        # construction and not by two numbers that agree today.
+        colonyheader.install_columns(self)
         self._push_sort_key()
 
     def _push_sort_key(self):
@@ -379,7 +386,13 @@ class ColonySummaryScreen(ScreenBase):
         self._render_background(surface)
         self._render_panels(surface)
         self._render_list(surface)
-        self._render_scan_box(surface)
+        # BOTH HALVES OF THE ORIGINAL'S SCAN BOX IN ONE CALL,
+        # because `Draw_Colony_Scan_Info_` (colsum.cpp:1155) is one
+        # function: the description paragraph at native
+        # (13, 354, 80, 88) and the production rows from native
+        # x 106. Splitting it across two screen methods had put both
+        # into the right-hand hole with the left one empty.
+        colonyoutput.render_for(self, surface)
         self._render_inset(surface)
         self._render_sidebar(surface)
         self._render_move(surface)
@@ -396,10 +409,11 @@ class ColonySummaryScreen(ScreenBase):
         # and the raw pointer is in DESKTOP coordinates, which would
         # hang the figures a border's width from the cursor at
         # exactly the resolution nobody checks.
+        _area, _cfg, _scale, _n = self._list_view()
         self._move.draw_held(
             surface, self._rows, mouse_input.pos(),
-            colonyfigures.set_for(self, self._list_view()[2]),
-            self.layout.scale)
+            colonyfigures.set_for(self, _area, _cfg),
+            colonytrack.figure_step(_area, _cfg))
 
     def _render_header(self, surface):
         """The five column headings — see `colonyheader` for the two
@@ -408,17 +422,10 @@ class ColonySummaryScreen(ScreenBase):
         the header cutout and the frame's rim overlaps it."""
         colonyheader.render_for(self, surface, HEADER_OUTLINE, HEADER_TEXT)
 
-    def _columns(self):
-        """The column table — ONE table for the headings and the rows.
-
-        `colonyheader` draws the plates from it and
-        `colonytrack.columns` lays the cells in it, so a heading is
-        over its own column by construction and not by two numbers
-        that agree today. It is merged into the `list` config block
-        rather than held here, so it reaches `colonytrack` the way
-        every other row number does.
-        """
-        return colonyheader.install_columns(self)
+    #: What a column box means, for the F5 info bar. Delegated to
+    #: `colonyheader`, which owns the column boxes: the line is
+    #: entirely about geometry this screen does not compute.
+    editor_note = colonyheader.editor_note
 
     def _render_frame_image(self, surface):
         if self._frame_scaled is not None:
@@ -473,6 +480,11 @@ class ColonySummaryScreen(ScreenBase):
         hover band and the draggable dividers belong on a picture
         somebody already believes.
         """
+        # THE SIX COLUMN BOXES ARE HELD TO THE WINDOW'S OWN Y AND
+        # HEIGHT here, once, before anything reads them: only x and
+        # width are the column's, and a vertical drag has to snap
+        # back visibly rather than be ignored and then saved.
+        colonyheader.sync_columns(self)
         box = self.box_rect("list_area")
         if not box:
             return
@@ -481,7 +493,9 @@ class ColonySummaryScreen(ScreenBase):
                           pygame.Rect(*self.layout.rect(box)),
                           cfg, self.layout, self.style, self._first,
                           self._frame_inset(),
-                          colonyfigures.set_for(self, self._list_view()[2]))
+                          colonyfigures.set_for(
+                              self, pygame.Rect(*self.layout.rect(box)),
+                              cfg))
 
     def _render_inset(self, surface):
         """The original's small galaxy map — a TRANSCRIPTION.
@@ -505,29 +519,6 @@ class ColonySummaryScreen(ScreenBase):
             colonyrows.galaxy_inset_label(self._state, self._selected),
             pygame.Rect(*self.layout.rect(box)),
             self._data.get("inset", {}), self.layout, self.style)
-
-    def _render_scan_box(self, surface):
-        """The original's scan box for the selected colony — BOTH
-        halves, in the two holes the frame gives them.
-
-        A TRANSCRIPTION — see `colonyoutput`, and fundament 43 for
-        why that marking is worth stating rather than assuming. The
-        panel draws NOTHING when nothing is selected, which is the
-        original's own guard (`_g_colony_n != -1`, colsum.cpp:1165)
-        and not a placeholder waiting to be filled.
-
-        **ONE CALL, BECAUSE THE ORIGINAL IS ONE CALL.**
-        `COLSUM::Draw_Colony_Scan_Info_` (colsum.cpp:1155) fills the
-        description paragraph at native (13, 354, 80, 88) and the
-        production rows from native x 106 in the same function, and
-        splitting the HD side across two screen methods had put both
-        of them in the right-hand hole with the left one empty. The
-        box resolution moved next to the panel for the same reason
-        `colonyheader.render_for` did: the screen owns which BOX, the
-        module owns what goes in it, and the two halves of one
-        original function should not be able to drift apart here.
-        """
-        colonyoutput.render_for(self, surface)
 
     def _render_sidebar(self, surface):
         """The six empire readouts. Everything about them, including

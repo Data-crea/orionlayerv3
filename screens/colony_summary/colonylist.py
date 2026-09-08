@@ -102,9 +102,9 @@ from .colonyrows import POP_LIMIT_CAP
 #: in the checks reaches for them here, and moving a seam is not a
 #: reason to move a hundred call sites on the same day.
 from .colonytrack import (            # noqa: F401  (re-export)
-    Track, Regions, RowBoxes, track_metrics, track_x, row_boxes,
-    cell_at_x, drop_targets, drop_band, row_regions, rows_drawn,
-    row_bands, row_at)
+    Track, Regions, RowBoxes, track_metrics, band_height, figure_step,
+    row_boxes, cell_at_x, drop_targets, drop_band, name_rect, on_name,
+    row_regions, rows_drawn, row_bands, row_at)
 
 #: One colour per profession, in ECON order. Palette so a skin or mod
 #: can restyle the whole list without touching this file.
@@ -113,22 +113,44 @@ ZONE_COLORS = (
     palette.col("colony_summary", "zone_industry", (176, 128, 60)),
     palette.col("colony_summary", "zone_research", (86, 122, 190)),
 )
-#: A free slot's dashed outline, and the faint baseline under the
-#: part of the track no colony can reach yet. Two colours because
-#: they say two different things; the old single `bar_empty` fill
-#: could only say "not filled" for both.
-BAR_FREE = palette.col("colony_summary", "bar_free", (72, 88, 120))
 #: The scroll arrows. The label colour, because they are the
 #: list's own furniture and not a value.
 SCROLL_ARROW = palette.col("colony_summary", "label",
                            (150, 168, 200))
-BAR_BEYOND = palette.col("colony_summary", "bar_beyond", (34, 42, 60))
 ROW_NAME = palette.col("colony_summary", "row_name", (206, 216, 238))
 #: The climate/population line under the name. Quieter than the
 #: name: it is context for the row, not its identity.
 DETAIL_COLOR = palette.col("colony_summary", "row_detail",
                            (132, 148, 180))
 NO_FARM_COLOR = palette.col("colony_summary", "no_farming", (150, 120, 110))
+#: The cell plate's line. The same key the header plates use, because
+#: they are one plate in two rows of the same table — see
+#: `colonyheader.render` and decision 51.
+PLATE_COLOR = palette.col("colony_summary", "plate_outline", (55, 65, 85))
+
+#: **THE LOWER BOUND OF THE NAME COLUMN, and the editor REPORTS it
+#: rather than clamping.** Two sources, both required, and neither
+#: is a character count on its own:
+#:
+#:   the TABLE — `STARNAME.LBX` entry 1, 829 records of `char[15]`
+#:   (`MAPGEN::Get_Star_Name_`, mapgen.cpp:1371-1386, count at :34,
+#:   loaded at :1428). Longest by rendering is "Commoriom IV";
+#:
+#:   what a PLAYER can type — `NAMESTAR::Do_Change_Star_Name_`
+#:   (namestar.cpp:236-274) passes `sizeof(_star[].name)` = 15 as the
+#:   buffer AND caps the field's pixel width at
+#:   `min(Max_Pixel_Width_Star_Name_Can_Be_,
+#:   Get_String_Width_("WWWWWWW"), 0xCD)`. So the hard bound is SEVEN
+#:   W's wide, not fourteen arbitrary characters.
+#:
+#: **THE CAP IS MEASURED IN FONTS.LBX STYLE 3, WHICH THIS PROJECT
+#: CANNOT READ** — the same gap the "No Farming" size sits in (see
+#: `NO_FARM_FONT_REF`), and the font extractor is owed twice now. So
+#: the translation into this font is close and not exact, and that is
+#: exactly why the editor reports the number and never clamps on it.
+NAME_BOUND_STAR = "WWWWWWW IV"
+NAME_BOUND_DETAIL = "Radiated 42/100"
+NAME_BOUND_NOTE = "namestar.cpp:246-256, in FONTS.LBX style 3"
 #: The original's own numbers for the "No Farming" label, in NATIVE
 #: px, kept as a proportion of the row rather than as HD pixels
 #: (fundament, Evidence: a percentage carries across a resolution
@@ -150,11 +172,14 @@ NATIVE_LABEL_CAP = 10
 #: on `orionlayer-fixtures/evidence/colony_summary_native_split.png`
 #: (1:1 native, row pitch 31 confirmed on it).
 #:
-#: 10 of a 31 px row is 18.7 of this screen's 58 reference px row,
-#: and Aldrich's cap is 0.70 of its nominal size (measured by
-#: rendering, decision 30), so 18.7 / 0.70 = 26.7 -> **26**, whose
-#: cap renders 18 against the wanted 18.7. 28 renders 20 and is
-#: further out. `layout.json list.no_farming_font` may override it.
+#: 10 of a 31 px row is 20.3 of this screen's **63 reference px band**
+#: — the band is the list window divided by `list.row_count` since
+#: 8 September 2026, not a tuned `row_height` — and Aldrich's cap is
+#: 0.70 of its nominal size (measured by rendering, decision 30), so
+#: 20.3 / 0.70 = 29 -> **28**, whose cap renders exactly 20 against
+#: the wanted 20.3. 29 renders 20 as well and 28 is the smaller of
+#: the two. It was 26 against the old 58 px row.
+#: `layout.json list.no_farming_font` may override it.
 #:
 #: **THE ONE THING THIS DOES NOT REPRODUCE, stated rather than
 #: discovered later:** the label is 57 % of the original's column
@@ -163,7 +188,7 @@ NATIVE_LABEL_CAP = 10
 #: the font — is 1.87x its native row. Three magnifications live on
 #: this screen (see `zoomtables.CLUSTER_FIGURE_OFFSET`), and this
 #: value is anchored on the one the label is made of.
-NO_FARM_FONT_REF = 26
+NO_FARM_FONT_REF = 28
 #: The "n not shown" line. Deliberately NOT `ROW_NAME`: it is not a
 #: colony and must not read as one, and the name-overflow check scans
 #: for row-name ink outside the name column.
@@ -222,12 +247,11 @@ def render(surface, rows, area, cfg, layout, style, first=0,
 
     scale = layout.scale
     track = track_metrics(area, cfg, scale)
+    cols = colonytrack.columns(area, cfg)
     # No `row_h` here: the loop takes it from `row_bands`, which is
     # the one place the row pitch is computed (decision 5). A local
     # copy of that expression is how the drawing and the hit-test
     # start to disagree.
-    pad_x = int(cfg.get("pad_x", 22) * scale)
-    name_w = int(cfg.get("name_width", 236) * scale)
     name_px = layout.font_size(cfg.get("name_font", 20))
     small_px = layout.font_size(cfg.get("small_font", 15))
 
@@ -241,25 +265,19 @@ def render(surface, rows, area, cfg, layout, style, first=0,
         # the leftover pixels read as a wider gutter — which is the
         # one thing that column can absorb without saying anything
         # untrue.
-        _draw_name_block(surface, row, area.x + pad_x, y, name_w, row_h,
+        # THE NAME CELL IS ITS OWN COLUMN BOX, and the block fills it.
+        _nx, _nw = cols["name"] if cols else (area.x, 0)
+        _draw_name_block(surface, row, _nx, y, _nw, row_h,
                          cfg, name_px, small_px, style, frame_inset)
         _render_bar(surface, row, area, cfg, scale, (y, row_h), track,
                     small_px, style, layout, figures)
-        # THE PRODUCING TEXT SITS IN ITS OWN COLUMN when there is a
-        # column table, and after the track when there is not. Same
-        # call, same width, one place that decides where — a second
-        # `colonybuild.draw` for the column case would be the second
-        # copy of a position (decision 5).
+        # THE PRODUCING TEXT SITS IN ITS OWN COLUMN, which is its own
+        # box — one rect source, like every other column.
         _cols = colonytrack.columns(area, cfg)
         if _cols:
             _bx, _bw = _cols["building"]
             colonybuild.draw(surface, row, _bx, y, _bw, row_h, cfg,
                              style, layout)
-        elif track.build_w:
-            colonybuild.draw(
-                surface, row, track_x(area, cfg, scale) + track.width
-                + track.build_gap, y, track.build_w, row_h, cfg, style,
-                layout)
 
     # THE ARROWS REPLACE THE OVERFLOW LINE. "N more not shown" was
     # text where the original has two buttons, and it said what was
@@ -272,7 +290,7 @@ def render(surface, rows, area, cfg, layout, style, first=0,
                         len(rows))
 
 
-def draw_held_cluster(surface, pointer, figures, cells, scale):
+def draw_held_cluster(surface, pointer, figures, cells, step):
     """The held pops, hanging on the pointer. Drawn LAST, over
     everything, like the original's own `Draw_Cluster_`.
 
@@ -312,7 +330,6 @@ def draw_held_cluster(surface, pointer, figures, cells, scale):
     if not cells or figures is None:
         return
     off_x, off_y = zoomtables.CLUSTER_FIGURE_OFFSET
-    step = colonyfigures.figure_step(scale)
     pitch = zoomtables.CLUSTER_FIGURE_PITCH * step
     x = pointer[0] + off_x * step
     y = pointer[1] + off_y * step
@@ -381,61 +398,50 @@ def _draw_overflow(surface, rows, area, cfg, scale, layout, style,
     # the bottom edge.
     y = min(top + max(0, (area.bottom - top - surf.get_height()) // 2),
             area.bottom - surf.get_height())
-    surface.blit(surf, (area.x + int(cfg.get("pad_x", 22) * scale),
-                        max(area.y, y)))
+    surface.blit(surf, (area.x, max(area.y, y)))
 
 
 def _draw_name_block(surface, row, x, y, name_w, row_h, cfg,
                      name_px, small_px, style, frame_inset=0):
     """The colony name, and under it climate and population.
 
-    **HD EXTENSION: the original LEFT-aligns this name.** It draws it
-    with `BILL::Squeeze_Formatted_Paragraph_Centered_(0x0C, y_pos,
-    paragraph_type, 0x17, buffer, 0)` (colsum.cpp:582), and that
-    wrapper's name is about the VERTICAL axis only — it forwards to
-    `_Squeeze_Print_Paragraph_(x, y + height/2, …, center_y=true)`
-    (bill.cpp:252), where `center_y` does nothing but
-    `y = y - height/2` (bill.cpp:205). The sixth parameter is
-    `color_or_alignment`, and for a formatted paragraph it goes
-    straight into `Print_Formatted_Paragraph_` as the JUSTIFY
-    argument (bill.cpp:210). colsum.cpp passes **0**, which is
-    JUSTIFY_LEFT.
+    **LEFT-ALIGNED, WHICH IS THE ORIGINAL'S — 8 September 2026, and
+    it retires a marked deviation.** `BILL::Squeeze_Formatted_
+    Paragraph_Centered_(0x0C, y_pos, paragraph_type, 0x17, buffer, 0)`
+    (colsum.cpp:582) passes **0** as the sixth argument, which reaches
+    `Print_Formatted_Paragraph_` as JUSTIFY_LEFT (bill.cpp:210); the
+    wrapper's `Centered_` is about the vertical axis only, which is
+    the trap that marking existed to name (decision 45).
 
-    The alignment below is therefore ours, and it is KEPT: right
-    alignment is what makes a 236 px name column affordable, because
-    overflow grows LEFT into `pad_x` where nothing is drawn instead
-    of rightward onto the track, and that trade is what bought the
-    building column. The marking does not undo the trade. It exists
-    because `Centered_` is a trap of a function name — a later reader
-    who checks the call site and sees a name agreeing with the word
-    will file this as transcribed. Marked here, in
-    `doc/v3_fundament.md` (45), and in a smoke check.
+    This was right-aligned for a real reason: a 236 px name column
+    could not hold the widest name, and right alignment sent the
+    overflow LEFT into `pad_x` where nothing was drawn, instead of
+    rightward onto the first slots of the track. **That trade is over
+    because the column is a box.** The NAME cell is 303 reference px
+    of its own, the widest name a player can produce measures 174
+    (see `NAME_BOUND_NOTE`), and there is nothing to absorb because
+    there is nothing to overflow.
 
-    RIGHT-ALIGNED to the column's right edge. Left-aligned, a name
-    too long for the column grew RIGHTWARD onto the track's first
-    slots — and the squares draw afterwards, so the data won and the
-    name was the casualty. Right-aligned it grows LEFT into `pad_x`,
-    where nothing is drawn, which turns the clip from the mechanism
-    into a fallback. `name_gap` comes out of the column, so the name
-    ends at `name_width - name_gap` and grows left across `pad_x`:
-    236 - 14 + 22 = 244 px of room, against a realistic maximum of
-    230 and a structural one of 336. The clip stays, because that
-    room is not infinite either and a column narrowed later must fail
-    towards the empty side. It also puts both lines against the bar,
-    so the eye crosses one gap rather than a ragged one per row.
+    **THE SECOND LINE IS AN HD EXTENSION.** The original prints
+    climate and n/max for the SELECTED colony only, into the scan box
+    at native (13, 354, 80, 88) — `COLSUM::Draw_Colony_Scan_Info_`,
+    colsum.cpp:1155, substituting into `E_Strings_(74)`. Drawing it
+    per row makes comparable what the original could only show one at
+    a time. Marked here, in `layout.json` under `list._hd_extension`,
+    in `v3_projektstatus.md`, and in a smoke check.
 
     The detail line is `cfg["detail"]`, substituted by REPLACE and
     not `str.format` (decision 37): a stray brace in a translated
     string cannot raise inside the render path.
     """
-    # The gutter is taken out of the column, not out of the track:
-    # right-aligned to `name_w` exactly, the name ends on the pixel
-    # the first square starts on and the two read as a collision.
-    right = x + name_w - int(cfg.get("name_gap", 14) * (name_px / 21.0))
-    # Everything from the left edge of `list_area` to `right` is
-    # available: right-alignment sends overflow into `pad_x`, where
-    # nothing is drawn. Only a name that outruns THAT is ellipsised.
-    room = right - (x - _pad_left(x, cfg, name_px, frame_inset))
+    # THE CELL'S OWN INSET, and it is the frame's. `list_area`'s
+    # outer few reference px are under the frame's metal rim (see
+    # `_frame_bleed_note`), so the first column's text starts clear
+    # of it; every other column starts at its own edge because the
+    # rim is not there. One expression, applied to the left edge.
+    inset = max(0, int(frame_inset * (name_px / 21.0)))
+    left = x + inset
+    room = max(1, name_w - 2 * inset)
     lines = [(style.render_text(
         _fit(row["name"], style, name_px, room, cfg), name_px, ROW_NAME), 0)]
     detail = _detail_text(row, cfg)
@@ -445,56 +451,31 @@ def _draw_name_block(surface, row, x, y, name_w, row_h, cfg,
 
     block_h = sum(s.get_height() + gap for s, gap in lines)
     top = y + (row_h - block_h) // 2
-    # Clipped to the column PLUS its left padding — the direction
-    # overflow is now allowed to grow. Clipping to the column alone
-    # would cut the very overflow this alignment exists to absorb.
     prev_clip = surface.get_clip()
-    # Left bound is the same one `room` was computed against, so the
-    # clip agrees with the fit instead of letting an unfitted string
-    # through to the rim. It used to start at x = 0.
-    _left = x - _pad_left(x, cfg, name_px, frame_inset)
-    surface.set_clip(pygame.Rect(_left, y, max(1, right - _left), row_h))
+    surface.set_clip(pygame.Rect(left, y, room, row_h))
     for surf, gap in lines:
         top += gap
-        surface.blit(surf, (right - surf.get_width(), top))
+        surface.blit(surf, (left, top))
         top += surf.get_height()
     surface.set_clip(prev_clip)
-
-
-def _pad_left(x, cfg, name_px, frame_inset=0):
-    """How far left of the column the name may grow.
-
-    `pad_x`, LESS the screen's `frame_inset` — because `pad_x` is not
-    empty all the way to the box edge. `list_area`'s outer few
-    reference px are under the frame's metal rim (see
-    `_frame_bleed_note`, and `_frame_inset_note` for the
-    measurement), so a name allowed to run to the box edge runs under
-    the frame. It did: one pixel of a fifteen-character name at
-    1600x900, which the tree-wide Class A check found and nothing
-    else could — the name has to be long enough to use the whole
-    gutter before any of it reaches the rim.
-
-    The subtraction is clamped at 0 so a screen declaring an inset
-    wider than its own padding loses the overflow rather than
-    inverting it.
-    """
-    return max(0, int((cfg.get("pad_x", 22) - frame_inset)
-                      * (name_px / 21.0)))
 
 
 def _fit(text, style, px, room, cfg):
     """`text`, ellipsised only if it outruns even the padding.
 
-    The reservation is the REALISTIC range, not the structural
-    maximum. A star name is str15 and a player can type all fifteen
-    (namestar.cpp:262), which renders 336 px — but the widest of the
-    54 stars in the reference galaxy is 124 px, and a realistic
-    15-character name is 190 to 230. Sizing the column for the
-    pathological case spends 100 px of the shared budget on a name
-    nobody types; sizing it for the realistic one and ellipsising the
-    rest spends nothing and degrades visibly in the one case it
-    cannot hold. Right alignment is what makes that trade available:
-    overflow grows left into `pad_x`, not right onto the track.
+    **AND SINCE 8 September 2026 IT SHOULD NEVER FIRE.** The column is
+    a box of its own — 303 reference px — and the widest name the
+    game can produce is 174 (`NAME_BOUND_NOTE`), so the ellipsis is
+    the fallback for a column somebody has narrowed past the bound
+    the editor reports. That is the shape it was always meant to
+    have; before the columns were boxes it was the mechanism, because
+    the name shared a budget with the track.
+
+    What stood here was the old trade: a str15 name renders up to
+    336 px, a realistic one 190 to 230, so the column was sized for
+    the realistic case and the rest ellipsised. Both numbers were
+    measured against a name that could be typed and the game's own
+    cap makes it narrower — see `NAME_BOUND_NOTE`.
     """
     if style.render_text(text, px, ROW_NAME).get_width() <= room:
         return text
@@ -560,17 +541,27 @@ def _render_bar(surface, row, area, cfg, scale, band, track, text_px,
     boxes = colonytrack.row_boxes(area, cfg, scale, row, band)
     top, band_h = band
 
-    if boxes.beyond is not None:
-        thick = max(1, track.bar_h // 16)
-        pygame.draw.rect(surface, BAR_BEYOND, pygame.Rect(
-            boxes.beyond.x, boxes.beyond.y + track.bar_h - thick,
-            boxes.beyond.width, thick))
-
-    for rect in boxes.growth:
-        _dashed_rect(surface, BAR_FREE,
-                     pygame.Rect(rect.x, rect.y + 1, track.unit,
-                                 track.bar_h - 2),
-                     max(1, track.unit // 4))
+    # ── FIFTY PLATES, ONE PER CELL OF EVERY BAND ────────────────
+    # **A DEVIATION IN KIND, and the original has no drawing call at
+    # all.** `Draw_Colony_Summary_Screen_` blits ONE bitmap —
+    # `animate::Draw_(0, 0, _anims[0])`, COLSUM.LBX entry 0
+    # (colsum.cpp:461, loaded at :404-408) — and the cell plates are
+    # painted into it. That is why every cell has one including the
+    # empty rows: they are part of the picture, not a per-row
+    # decision. HD cannot ship that bitmap (decision 42), so it draws
+    # them, and the plate is `StyleRenderer.draw_plate` (decision 51)
+    # rather than a rect this module invents.
+    #
+    # ALL SIX COLUMNS, not only the three that take a drop: the
+    # original's bitmap has a plate behind the name and behind the
+    # producing text too. For the three JOB columns the plate rect IS
+    # the drop rect and the cell rect — `column x band`, one
+    # expression, three readers (decision 5) — which is also what
+    # closed the pick round's drop-height DEVIATION: the target was
+    # `bar_h`, 52 % of the band, and it is the whole band now.
+    for _key, (_cx, _cw) in colonytrack.columns(area, cfg).items():
+        style.draw_plate(surface, pygame.Rect(_cx, top, _cw, band_h),
+                         scale, PLATE_COLOR)
 
     cells = row.get("cells")
     # **CLIPPED TO THE ROW, VERTICALLY ONLY.** A stepped figure is
@@ -620,7 +611,12 @@ def _render_bar(surface, row, area, cfg, scale, band, track, text_px,
             # the OVERLAP the original has at the same squish, and
             # fitting the sprite to the slot would remove exactly the
             # thing being transcribed (decision 28).
-            surface.blit(surf, (rect.x, top))
+            # ONE PIXEL INSIDE THE PLATE'S TOP LINE. 46 of the 54
+            # masters carry ink on canvas row 0, so a figure at the
+            # band's top paints over the line; the band is sized with
+            # that pixel reserved (`colonytrack.figure_step`) and the
+            # cell's x already carries the same offset.
+            surface.blit(surf, (rect.x, top + colonytrack.PLATE_LINE))
             continue
         pygame.draw.rect(surface, ZONE_COLORS[job], rect)
         mark = _cell_mark(cfg, cells, job, index)
@@ -777,26 +773,6 @@ def _draw_no_farming(surface, boxes, band, cfg, layout, style):
         surface.blit(surf, (column.x + (column.width - ink.width) // 2
                             - ink.x, y - ink.y))
         y += surf.get_height()
-
-
-def _dashed_rect(surface, color, rect, dash):
-    """A one-pixel outline drawn as dashes — pygame has no dash mode.
-
-    A free slot must read as a slot that is NOT filled. Any solid
-    treatment, however dim, is a second fill and sits on the same
-    axis as the zone colours; a broken line is off that axis, which
-    is why this is an outline and not a darker square. Dashes start
-    at each edge's start, so a corner is always inked and the square
-    keeps its shape at small `unit`.
-    """
-    for x0 in range(rect.left, rect.right, dash * 2):
-        w = min(dash, rect.right - x0)
-        surface.fill(color, pygame.Rect(x0, rect.top, w, 1))
-        surface.fill(color, pygame.Rect(x0, rect.bottom - 1, w, 1))
-    for y0 in range(rect.top, rect.bottom, dash * 2):
-        hgt = min(dash, rect.bottom - y0)
-        surface.fill(color, pygame.Rect(rect.left, y0, 1, hgt))
-        surface.fill(color, pygame.Rect(rect.right - 1, y0, 1, hgt))
 
 
 def _blit_centered(surface, area, text, px, color, style):

@@ -129,6 +129,37 @@ still lives in the JSON, as a template — `"Version {version}"` — and
 substitution is a `replace`, not `str.format`, so a stray brace in a
 translated label cannot raise inside the render path.
 
+**51. A box skin is a DRAWING, and the rect it is given may be
+computed.** Decision 34 put the panel skins in `core/box.py` so a
+screen picks one in `boxes.json` and never draws a border itself.
+What that protects is the APPEARANCE having one home. What it does
+not require, and was read as requiring, is that every rect come from
+a box.
+
+The colony list's fifty cell plates are the case that settled it.
+They are `column x band` — six column boxes and a row count — and
+there is no box for any of the fifty, nor should there be: a cell is
+a rule, and fifty rectangles in `boxes.json` would be fifty things to
+drag out of alignment with the row they belong to. The same rect is
+the cell, the drop target and the plate (decision 5), so it is
+computed once and drawn with `StyleRenderer.draw_plate`.
+
+**The evidence that 34 was already being read too narrowly** is that
+the arithmetic had ALREADY been pasted out rather than obeyed:
+`colonyheader.render` drew the five column headings with its own
+`pygame.draw.rect(..., 1, border_radius=max(6, int(10 * scale)))`,
+character for character `draw_thin_border`'s, because a heading plate
+has no box either. That is the third-copy signal in decision 10's
+sense, and it had been sitting there unmarked. `draw_plate` is the
+extraction; `draw_thin_border` is now the box-skin name for it.
+
+The line 34 draws is unchanged: a screen that reaches for
+`pygame.draw.rect` to make something look like a panel is still
+wrong, and a smoke check greps the tree for that radius expression
+and refuses a second home. The line this adds: **a skin that only a
+`Box` can call forces geometry into `boxes.json` that does not belong
+there.**
+
 **13. Frame-button clicks are handled in `ScreenBase.handle_click`.**
 
 ### Data and resources
@@ -405,9 +436,9 @@ for a day and a half, which is exactly how long a wrong marking is
 more dangerous than no marking: it was asserted in a smoke check, so
 the tree actively defended the error.
 
-**45. Two deviations in the colony row, both kept, both marked.**
+**45. Two deviations in the colony row. ONE IS RETIRED, one is kept, both stay written down.**
 
-**The colony NAME is right-aligned; the original left-aligns it.**
+**The colony NAME was right-aligned; the original left-aligns it — and as of 8 September 2026 so do we.**
 `BILL::Squeeze_Formatted_Paragraph_Centered_(0x0C, y_pos,
 paragraph_type, 0x17, buffer, 0)` (colsum.cpp:582) forwards to
 `_Squeeze_Print_Paragraph_(x, y + height/2, …, center_y=true)`
@@ -417,12 +448,21 @@ sixth parameter is `color_or_alignment`, and for a formatted
 paragraph it is handed to `Print_Formatted_Paragraph_` as the JUSTIFY
 argument (bill.cpp:210). colsum.cpp passes `0` = `JUSTIFY_LEFT`.
 
-Kept, because right alignment is what makes a 236 px name column
-affordable at all: overflow grows LEFT into `pad_x` where nothing is
-drawn, instead of rightward onto the track, and that is the trade
-that bought the building column. But a function called `Centered_`
-is a trap, and a later reader who checks the call and sees a name
-that agrees with the word will file this as transcribed.
+It was kept for a real reason: right alignment is what made a 236 px
+name column affordable, because overflow grew LEFT into `pad_x` where
+nothing was drawn instead of rightward onto the track, and that trade
+bought the building column. **The trade ended when the column became
+a box.** The NAME cell is 303 reference px of its own now, and the
+widest name the game can produce — `WWWWWWW IV`, because
+`Do_Change_Star_Name_` caps the input field at the pixel width of
+seven W's (namestar.cpp:246-256) on top of the `char[15]` buffer —
+measures 174 px. There is nothing to absorb because there is nothing
+to overflow, so the alignment goes back to the original's.
+
+What stays is the READING, because it is the expensive half: a
+function called `Centered_` is a trap, and a later reader who checks
+the call and sees a name that agrees with the word will file the
+alignment as transcribed without ever reading `bill.cpp:205`.
 
 **The per-row second line has no per-row counterpart.**
 `Draw_Colony_Scan_Info_` draws it ONCE, for `_g_colony_n`, at native
@@ -434,9 +474,12 @@ allocation bar — it makes comparable what the original could only
 show one at a time — and the other four belong in `output_panel`,
 which is the HD equivalent of that same box.
 
-Both are marked in `screens/colony_summary/colonylist.py`, here, and
-in smoke checks. Neither changes a pixel; the point is that the next
-person reads them as choices rather than as fidelity.
+The second is marked in `screens/colony_summary/colonylist.py`, here,
+and in a smoke check; the first is now a transcription and the check
+asserts the ink starts at the column's left edge. Neither ever
+changed a pixel of DATA; the point is that the next person reads a
+choice as a choice — and that a retired deviation is retired in
+writing, not by the marking quietly disappearing.
 
 **46. The list window belongs to the game, and it is re-established
 rather than remembered.** The original's colony list has ten SLOTS,
