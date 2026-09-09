@@ -306,6 +306,16 @@ class App:
         self.layout.update(self.win_w, self.win_h)
         self.style.clear_caches()
         cursor_gfx.apply(self.res, self.win_h, self.settings)
+        # DROP THE EDITOR'S SELECTION, because `dispatcher.on_resize`
+        # reaches `ScreenBase._reload_boxes`, which REPLACES every Box
+        # object — and `Editor.selected` is the one other place in the
+        # tree that holds one across frames. A stale selection draws
+        # its outline from a device rect computed for the previous
+        # window, and worse, `save_boxes` writes `scr.boxes`, so a
+        # drag on the discarded object is silently thrown away. Found
+        # by the sweep for retained Box references, 9 September 2026;
+        # same class as the colony column table one commit back.
+        self.editor.selected = None
         self.dispatcher.on_resize()
 
     def _on_resize(self, new_w, new_h):

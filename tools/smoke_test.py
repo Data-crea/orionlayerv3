@@ -9655,6 +9655,17 @@ def main():
     assert _cur.last_size() == _cur.target_size(
         app2.win_h, app2.settings, _cur._source.get_size()), \
         (_cur.last_size(), app2.win_h, _before)
+    # AND NO BOX SURVIVES THE RESIZE THAT REPLACED IT. `Editor.selected`
+    # is the one place outside a screen that holds a Box across frames,
+    # and `dispatcher.on_resize` reaches `_reload_boxes`, which builds
+    # new objects — so a selection kept over a resize outlines a device
+    # rect from the previous window and, because `save_boxes` writes
+    # `scr.boxes`, throws a drag away without a word.
+    app2.editor.selected = app2.dispatcher.active.boxes[0]
+    app2._cycle_resolution()
+    assert app2.editor.selected is None, (
+        "the editor kept a Box across a resize that replaced every "
+        "Box the screen has")
     ok("App boots standalone")
 
     # ── THE WINDOW IS WHAT WAS GRANTED, NOT WHAT WAS ASKED FOR ──
