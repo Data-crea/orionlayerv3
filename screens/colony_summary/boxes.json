@@ -16,9 +16,9 @@
       "name": "list_area",
       "rect": [
         105,
-        90,
+        82,
         1697,
-        638
+        653
       ],
       "role": [
         "display"
@@ -28,7 +28,7 @@
       "name": "planet_info",
       "rect": [
         105,
-        752,
+        759,
         324,
         195
       ],
@@ -40,7 +40,7 @@
       "name": "planet_output",
       "rect": [
         463,
-        752,
+        759,
         704,
         195
       ],
@@ -52,7 +52,7 @@
       "name": "galaxy_inset",
       "rect": [
         1201,
-        753,
+        760,
         243,
         193
       ],
@@ -64,7 +64,7 @@
       "name": "empire_stats",
       "rect": [
         1478,
-        752,
+        759,
         324,
         195
       ],
@@ -106,9 +106,9 @@
       "name": "col_name",
       "rect": [
         105,
-        90,
+        82,
         303,
-        638
+        653
       ],
       "role": [
         "display"
@@ -118,9 +118,9 @@
       "name": "col_farmers",
       "rect": [
         408,
-        90,
+        82,
         343,
-        638
+        653
       ],
       "role": [
         "display"
@@ -130,9 +130,9 @@
       "name": "col_workers",
       "rect": [
         751,
-        90,
+        82,
         361,
-        638
+        653
       ],
       "role": [
         "display"
@@ -142,9 +142,9 @@
       "name": "col_scientists",
       "rect": [
         1112,
-        90,
+        82,
         340,
-        638
+        653
       ],
       "role": [
         "display"
@@ -154,9 +154,9 @@
       "name": "col_building",
       "rect": [
         1452,
-        90,
+        82,
         323,
-        638
+        653
       ],
       "role": [
         "display"
@@ -166,9 +166,9 @@
       "name": "col_scroll",
       "rect": [
         1775,
-        90,
+        82,
         27,
-        638
+        653
       ],
       "role": [
         "display"
@@ -192,9 +192,9 @@
       "name": "list_area",
       "rect": [
         105,
-        90,
+        82,
         1697,
-        638
+        653
       ],
       "role": [
         "display"
@@ -204,7 +204,7 @@
       "name": "planet_info",
       "rect": [
         105,
-        752,
+        759,
         324,
         195
       ],
@@ -216,7 +216,7 @@
       "name": "planet_output",
       "rect": [
         463,
-        752,
+        759,
         704,
         195
       ],
@@ -228,7 +228,7 @@
       "name": "galaxy_inset",
       "rect": [
         1201,
-        753,
+        760,
         243,
         193
       ],
@@ -240,7 +240,7 @@
       "name": "empire_stats",
       "rect": [
         1478,
-        752,
+        759,
         324,
         195
       ],
@@ -282,9 +282,9 @@
       "name": "col_name",
       "rect": [
         105,
-        90,
+        82,
         303,
-        638
+        653
       ],
       "role": [
         "display"
@@ -294,9 +294,9 @@
       "name": "col_farmers",
       "rect": [
         408,
-        90,
+        82,
         343,
-        638
+        653
       ],
       "role": [
         "display"
@@ -306,9 +306,9 @@
       "name": "col_workers",
       "rect": [
         751,
-        90,
+        82,
         361,
-        638
+        653
       ],
       "role": [
         "display"
@@ -318,9 +318,9 @@
       "name": "col_scientists",
       "rect": [
         1112,
-        90,
+        82,
         340,
-        638
+        653
       ],
       "role": [
         "display"
@@ -330,9 +330,9 @@
       "name": "col_building",
       "rect": [
         1452,
-        90,
+        82,
         323,
-        638
+        653
       ],
       "role": [
         "display"
@@ -342,9 +342,9 @@
       "name": "col_scroll",
       "rect": [
         1775,
-        90,
+        82,
         27,
-        638
+        653
       ],
       "role": [
         "display"

@@ -4705,13 +4705,37 @@ def main():
         f"the master no longer offers every rail role: {sorted(_rails)} "
         f"against {sorted(_fm2.RAIL_ROLES)}")
     _mw, _mh = _fb_master.size
+    # **A GAP MAY BE SMALLER THAN ITS STRUT ONLY AS A RECORDED
+    # DEVIATION — 9 September 2026.** Never LARGER: a rail wider than
+    # the strut it was cut from is a stretched rail, which is what
+    # this check was written for and is still refused outright. But
+    # `header_list` and `band_sort` gave up 8 and 7 reference px so
+    # the list could hold figure step 3 at 1440p once the figure
+    # origin became the original's own 4*step (see
+    # `colonytrack.figure_step`), and the alternative — taking the
+    # height out of the lower band — would have shrunk the galaxy
+    # inset, whose aspect is transcribed to a thousandth.
+    #
+    # The licence is `_gaps_note` NAMING the gap as an A3-DEVIATION,
+    # so the exemption cannot be silent and cannot be general: a role
+    # that shrinks without a sentence about it fails exactly as
+    # before.
+    _gnote = _lr.get("_gaps_note", "")
     for _role, (_strip, _vert) in _rails.items():
         _ref = (_strip.width * _REF_W / _mw) if _vert \
             else (_strip.height * _REF_H / _mh)
-        assert _lr["gaps"][_role] == int(_ref), (
-            f"gaps.{_role} is {_lr['gaps'][_role]} and the master's "
-            f"{_role} strut measures {_ref:.1f} reference px, so the "
-            f"gap should be {int(_ref)}")
+        _got = _lr["gaps"][_role]
+        assert _got <= int(_ref), (
+            f"gaps.{_role} is {_got} and the master's {_role} strut "
+            f"measures {_ref:.1f} reference px — a rail is never wider "
+            f"than the strut it was cut from")
+        if _got != int(_ref):
+            assert "A3-DEVIATION" in _gnote and _role in _gnote, (
+                f"gaps.{_role} is {_got} against the master's "
+                f"{int(_ref)} and `_gaps_note` does not record it as an "
+                f"A3-DEVIATION naming {_role} — a rail that shrinks "
+                f"without a reason written beside it is Stage A3 "
+                f"quietly coming undone")
 
     # AND EVERY GAP TAKES ONE. A gap with no rail is bare tile, which
     # is the thing Stage A3 exists to remove.

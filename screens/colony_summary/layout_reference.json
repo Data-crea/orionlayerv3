@@ -1,12 +1,12 @@
 {
   "_note": "THE COLONY MANAGEMENT SCREEN'S GEOMETRY, AND THE ONLY PLACE IT IS TYPED. Every rectangle is in the 1920x1080 reference space (core/layout.py). tools/frame_build.py builds the frame from this file plus the master's ring and texture; tools/frame_mask.py renders the windows; tools/frame_holes.py derives the cutout boxes back out of the built frame, and a smoke check asserts holes == mask == boxes.json at every resolution (decision 3). So a rectangle changes HERE and nowhere else, and everything downstream is generated - decision 1 and decision 40.",
   "gaps": {
-    "header_list": 26,
+    "header_list": 18,
     "list_band": 28,
-    "band_sort": 29,
+    "band_sort": 22,
     "in_row": 38
   },
-  "_gaps_note": "EVERY GAP IS ONE OF THE MASTER'S OWN STRUTS, MAPPED BY ROLE - not a spacing chosen here. galaxy_map/assets/frame.png has seven distinct struts and every one carries a lit line on both edges with a moulded ridge between; tools/frame_build.py --profiles measures them. header_list 26 <- the master's header|map strut (31 master px, 26.7 ref): a title bar above the main content. list_band 28 <- map|slot (33 px, 28.4 ref): the main content above the row beneath it. band_sort 29 <- box|slot (34 px, 29.2 ref): a panel above a button row, which is what this gap is and what map|slot is not. in_row 38 <- the slot divider (47 px, 38.9 ref): two elements of ONE row side by side, which is the lower band and is also sort_bar|return_button. Rounded DOWN to the integer in every case, so a rail is never wider than the strut it was measured from. The cost is in doc and in v3_projektstatus.md: the list loses 47 px of height and planet_output 60 of width, and the figure columns lose nothing because the rails that grew are horizontal.",
+  "_gaps_note": "EVERY GAP IS ONE OF THE MASTER'S OWN STRUTS, MAPPED BY ROLE - not a spacing chosen here. galaxy_map/assets/frame.png has seven distinct struts and every one carries a lit line on both edges with a moulded ridge between; tools/frame_build.py --profiles measures them. header_list 26 <- the master's header|map strut (31 master px, 26.7 ref): a title bar above the main content. list_band 28 <- map|slot (33 px, 28.4 ref): the main content above the row beneath it. band_sort 29 <- box|slot (34 px, 29.2 ref): a panel above a button row, which is what this gap is and what map|slot is not. in_row 38 <- the slot divider (47 px, 38.9 ref): two elements of ONE row side by side, which is the lower band and is also sort_bar|return_button. Rounded DOWN to the integer in every case, so a rail is never wider than the strut it was measured from. The cost is in doc and in v3_projektstatus.md: the list loses 47 px of height and planet_output 60 of width, and the figure columns lose nothing because the rails that grew are horizontal. A3-DEVIATION, 9 September 2026: header_list is 18 and band_sort 22, NOT the master's 26 and 29. The 15 ref px they give up are what the list needs to hold figure step 3 at 1440p once the figure origin became the original's 4*step below the band top rather than 1 px of plate clearance (colonytrack.figure_step). WHY THESE TWO AND NOT THE LOWER BAND: galaxy_inset's aspect is TRANSCRIBED to a thousandth (128*(506000//128) / 91*(400000//91), movebox.cpp:20-21) and a smoke check holds it there, so the box cannot lose height without losing width - 189 -> 174 forces 239 -> 220 and the drawn map 243x173 -> 220x156, which is 10 % smaller and moves AWAY from an inset that is already well under the original's own. The rails cost no drawn pixel at all. AND THE DEVIATION MOVES TOWARD THE ORIGINAL, WHICH IS WHY IT IS AFFORDABLE: the original's own header-to-list gap is ONE native px (header plates end at native y 32, the first list field is at 31*0 + 34, colsum.cpp:311) = about 3 ref, and its band-to-sort gap is four native px (scan box 354 + 88 = 442, sort buttons at 446, colsum.cpp:267-273) = 12 ref. Our 26 and 29 were both wider than the thing being transcribed; 18 and 22 are still wider. The struts they were measured from are unchanged in the master - what changed is that two of the seven are no longer used at full width, and that is the deviation being recorded rather than the strut table being edited.",
   "ring": {
     "left": 107,
     "right": 120,
@@ -27,9 +27,9 @@
   ],
   "list": [
     107,
-    92,
+    84,
     1693,
-    634
+    649
   ],
   "list_columns": {
     "name": 302,
@@ -42,25 +42,25 @@
   "_list_columns_note": "302 + 347*3 + 314 + 36 = 1693, the list's own width exactly - the columns ARE the list, with no slack to distribute. THE LIST'S WIDTH DID NOT CHANGE WHEN THE GAPS BECAME RAILS on 7 September 2026: rails are horizontal there, so they cost HEIGHT and not width, and the figure capacity is untouched. CAPACITY IS ASSERTED, NOT NOTED: a figure column must fit at least four unsqueezed figures, which is what the original's widest column (industry, reach 122, pitch 30) fits; 347 reference px fits five, at every resolution, because the column and the pitch scale together. THE BUILDING COLUMN IS DERIVED: the original prints the producing text with BILL::Squeeze_Print_Formatted_Paragraph_(0x200, y, 0x55, 0x16, ...) at colsum.cpp:621 - 85 px of a 640 px screen, 13.3 % - and 13.3 % of 1693 is 225. 314 is wider than the transcription requires; the surplus is the extra HD width that Data's Stage 1 decision sends to the column reservation rather than to wider figure spacing. See colonybuild.py for why the width is a RESERVATION and never a squeeze target. THE THREE JOB COLUMNS ARE UNEQUAL, AND THAT IS TRANSCRIBED, corrected 7 September 2026. They were 347 each by our own choice; COLSUM::Get_Selected_Pop_ (colsum.cpp:1006-1024) passes the column bounds as literals - left_x = 101/236/378 and right_x = that - 10 - so the original's spans are 135/142/134 native px with the WORKERS column the widest. Two independent sources: those literals, and the column separators measured on the live framebuffer of screen 20 at x 99/234/376/510, which agree to +1 px on all three. The ratio 135:142:134 over the unchanged 1041 px reservation gives 342/360/339, so name, building and scroll do not move and the list width is still 1693. CAPACITY IS RE-ASSERTED AT THE NARROWEST COLUMN (339), not at the old uniform 347 - the check is what allows this change, not the arithmetic. THE SCROLL COLUMN IS A TRANSCRIPTION NOW, 9 September 2026, and was the last unsourced number here. It was 36 = 1693 - 302 - 342 - 360 - 339 - 314, the leftover after the other five. The original states it twice and the two agree: the track is native x 621..626 (Add_Scroll_Field_(621, 40, 0, n, 0, n-10, 5, 271, ...) at colsum.cpp:278 counts it exclusively as 5, Draw_Bar_Indicator_'s Fill_(621, y1, 626, y2, 229) at colsum.cpp:759 counts the same rectangle inclusively as 6, corner dots at 621 and 626 at colsum.cpp:767-770), and the arrows start at native x 619 (Add_Button_Field_, colsum.cpp:263-264). The arrow anim's own width is animate::Get_Width_(pic) and lives in the player's LBX, so it is MEASURED and single-source like the No Farming size: native x 619..627 off the original's framebuffer in evidence/colony_summary_native_split.png, whose LEFT edge reproduces the source's 619 exactly, which is what anchors the right one. Nine native px is 27 reference px. THE NINE FREED PX GO TO BUILDING, 314 -> 323, because building is already the declared home of this screen's surplus width (see above) - a residue put somewhere that says why, rather than somewhere that had room. And there is no residue left to distribute at all: since 9 September the six columns are fractions of the list_area cutout (colonytrack.columns), so they tile it exactly at any window size by construction rather than by the last column absorbing a mismatch.",
   "planet_info": [
     107,
-    754,
+    761,
     320,
     191
   ],
   "planet_output": [
     465,
-    754,
+    761,
     700,
     191
   ],
   "galaxy_inset": [
     1203,
-    755,
+    762,
     239,
     189
   ],
   "empire_stats": [
     1480,
-    754,
+    761,
     320,
     191
   ],
