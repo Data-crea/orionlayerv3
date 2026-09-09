@@ -4876,6 +4876,14 @@ def main():
         "screens/colony_summary/colonymoveui.py": "discard",
         "screens/colony_summary/colonyoutput.py": "decision 43",
         "screens/colony_summary/colonypick.py": "partial",
+        # ADDED 9 September 2026, and it is the inventory doing its
+        # job in the other direction: the hover popup's marking was
+        # named as living here by BOTH `layout.json`'s
+        # `_hd_extension_popup` and `v3_projektstatus.md`, and this
+        # file carried none — so the module was absent from the
+        # inventory because there was nothing to inventory, and the
+        # net could not report a hole it had never been shown.
+        "screens/colony_summary/colonypopup.py": "hover popup",
         "screens/colony_summary/colonyrows.py": "layout.json",
         # RETARGETED 8 September 2026, in the commit that deleted the
         # F/W/S markers. `colonytrack` was cited on "marker" and
@@ -6726,6 +6734,28 @@ def main():
         assert _mark in _mv_status, (
             f"v3_projektstatus.md does not carry {_mark!r}, which "
             f"layout.json's move notes name as one of its homes")
+    # ── AND THE SOURCE IS A HOME TOO, NOT ONLY A CITED ONE ──────
+    # This loop read the status document and `layout.json` and
+    # stopped there, so a marking that BOTH of them said lived in a
+    # module could be missing from that module indefinitely — which
+    # is exactly what had happened to the hover popup:
+    # `_hd_extension_popup` said "In colonypopup, here, in
+    # v3_projektstatus.md and in a check", the status entry said "In
+    # colonypopup, layout.json under _hd_extension_popup, and a
+    # check", and `colonypopup.py` described the behaviour at length
+    # without ever naming it. Two documents asserting a marking is
+    # not a marking (fundament, Evidence) — and a check that reads
+    # only the documents defends the sentence rather than the file.
+    for _mod, _why in (("colonypopup.py", "the hover popup"),
+                       ("colonymoveui.py", "the stranded notice"),
+                       ("colonypick.py", "the cancel")):
+        _mod_src = open(os.path.join(SCREENS_DIR, "colony_summary", _mod),
+                        encoding="utf-8").read()
+        assert "HD EXTENSION" in _mod_src, (
+            f"{_mod} carries no HD EXTENSION marking, and it is named "
+            f"as a home for {_why} by layout.json and by "
+            f"v3_projektstatus.md. A module that two documents say is "
+            f"marked and is not is the fault this check exists for")
     assert "DEVIATION" in _mv_words.get("_partial_note", ""), (
         "refusing a partial move is a deviation from the original, "
         "which performs it and then opens a blocking box "

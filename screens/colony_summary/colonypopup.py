@@ -1,5 +1,22 @@
 """The hover popup: what a job group is, shown below its row.
 
+**HD EXTENSION.** The original has no hover text on this screen at
+all. It answers a hover by SCANNING — `Evaluate_Colony_Pop_Input_`
+assigns `COLONY::_g_colony_n` from the scanned field
+(colsum.cpp:880-890) and the bottom-left box redraws for that colony
+— so the information exists there and appears somewhere else
+entirely. The popup is ours.
+
+*Marked here since 9 September 2026, and it is the third home
+arriving late.* `layout.json`'s `_hd_extension_popup` and
+`v3_projektstatus.md` both listed "colonypopup" as one of the places
+this is marked, and this file said nothing of the kind for as long as
+both of them did — the fundament's "a marking that two documents
+claim exists is not a marking", in a file that describes the
+behaviour at length and never names it. The smoke check that guards
+this class read only the status document, so it defended the
+sentence that was wrong. It walks the source now.
+
 **IT OVERLAYS AND IT NEVER REFLOWS.** The list is the click frame
 (decision 46): an HD row that moves against the game's ten-slot
 window is the invisible failure that decision exists for, so a box
