@@ -3199,6 +3199,73 @@ def main():
         f"starts at {_ov_cols['scroll'][0]} — the arrows must come "
         f"from the column table, not from a second position")
     assert _ov_up1.width == _ov_cols["scroll"][1]
+    # ── AN ARROW IS ONE BAND'S WORTH OF CONTROL ─────────────────
+    # Its height comes from the ROW BAND and never from the column
+    # width. It was `int(width * HEIGHT_RATIO)` at ratio 1.0 — a
+    # square whose side was the leftover of the other five columns —
+    # so at F9 4K, with `col_scroll` swollen to 1837 px, the arrows
+    # were 1837 px tall: a control the height of the whole list, in
+    # Data's screenshot of 8 September 2026.
+    #
+    # Asserted at several window sizes AND at row counts the shipped
+    # geometry does not use, because "fits in a band" is a claim
+    # about the ratio and the clamp, not about ten rows at 1080p —
+    # and a wide window with few rows is exactly where a
+    # width-derived height would reappear.
+    _ov_down1 = _cscr.arrows(_ov_area, _ov_cfg, app.layout.scale)[1]
+    for _aw, _ah in ((1920, 1080), (2560, 1440), (3440, 1440),
+                     (3840, 2160)):
+        _alay = Layout(_aw, _ah)
+        _abx = {b.name: b for b in load_boxes(_boxes_path, _aw, _ah)}
+        for _b in _abx.values():
+            _b.update_layout(_alay)
+        _aarea = _abx["list_area"].screen_rect
+        _acfg = dict(_ov_cfg)
+        _acfg[_ct0.COLUMNS_KEY] = [
+            (_n[4:], _abx[_n]) for _n in
+            ("col_name", "col_farmers", "col_workers", "col_scientists",
+             "col_building", "col_scroll")]
+        _acfg[_ct0.COLUMNS_SPAN_KEY] = (_abx["list_area"].ref_rect[0],
+                                        _abx["list_area"].ref_rect[2])
+        for _rows_n in (4, 10, 25):
+            _acfg["row_count"] = _rows_n
+            _aband = _ct0.band_height(_aarea, _acfg)
+            _aup, _adown = _cscr.arrows(_aarea, _acfg, _alay.scale)
+            for _which, _ar in (("up", _aup), ("down", _adown)):
+                assert _ar.height <= _aband, (
+                    f"{_aw}x{_ah} rows={_rows_n}: the {_which} arrow "
+                    f"is {_ar.height} px tall in a {_aband} px band — "
+                    f"an arrow is sized from the band, never from the "
+                    f"column width")
+                assert _aarea.top <= _ar.top and \
+                    _ar.bottom <= _aarea.bottom, (
+                        f"{_aw}x{_ah} rows={_rows_n}: the {_which} "
+                        f"arrow {tuple(_ar)} leaves list_area "
+                        f"{tuple(_aarea)}")
+    _ov_cfg.pop("row_count", None)
+    # AND THE COLUMN IT SITS IN IS THE TRANSCRIBED WIDTH, not the
+    # leftover of the other five. Native x 619..627 — the arrows'
+    # field x (colsum.cpp:263-264) and the anim's measured extent —
+    # is 27 reference px, and `col_scroll` carries exactly that.
+    _sc_ref = {b["name"]: b["rect"] for b in
+               _sjson.load(open(_boxes_path, encoding="utf-8")
+                           )["1920x1080"]}["col_scroll"]
+    assert _sc_ref[2] == 27, (
+        f"col_scroll is {_sc_ref[2]} reference px; the original's "
+        f"scroll column is native 619..627 = 9 px = 27 reference "
+        f"(colsum.cpp:263-264 for the x, colsum.cpp:278 and :759 for "
+        f"the track it holds). A width that is not this one is the "
+        f"leftover of the other five columns again")
+    _lr_scroll = _sjson.load(open(os.path.join(
+        SCREENS_DIR, "colony_summary", "layout_reference.json"),
+        encoding="utf-8"))
+    assert _lr_scroll["list_columns"]["scroll"] == 27, (
+        "layout_reference.list_columns disagrees with boxes.json "
+        "about the scroll column")
+    assert "621" in _lr_scroll["_list_columns_note"] and \
+        "619" in _lr_scroll["_list_columns_note"], (
+        "the scroll column's width no longer names the source it is "
+        "transcribed from — an unsourced number here is what it was")
     assert _cscr.arrow_at(_ov_area, _ov_cfg, app.layout.scale,
                           _ov_up1.center) == "up"
     assert _cscr.arrow_at(_ov_area, _ov_cfg, app.layout.scale,
@@ -8694,11 +8761,30 @@ def main():
     # the height on one line and never triggers a height-driven
     # shrink. That is exactly how a 15-glyph ship design sat at 225 px
     # in a 190 px column; the fit test has to be both dimensions.
+    #
+    # THE WORD IS GROWN AGAINST THE COLUMN, not written as a literal —
+    # corrected 9 September 2026. It was `"W" * 15`, which was wider
+    # than the column on the day it was written and stopped being so
+    # the moment `col_building` took the nine reference px that
+    # `col_scroll` gave up when its width became a transcription. The
+    # check then passed a word that FITS to an assertion about words
+    # that do not, and reported the squeeze as broken. The premise
+    # ("wider than the column") is the thing to state; how many W's
+    # that takes is a fact about a font and a box, and belongs to
+    # whichever of them changed.
+    _ww = 2
+    while (app.style.render_text("W" * _ww, _small, (255,) * 3
+                                 ).get_width() <= _bw and _ww < 200):
+        _ww += 1
+    assert _ww < 200, (
+        f"no unbreakable word overruns the {_bw} px building column, "
+        f"so the width-driven shrink cannot be exercised at all")
     _wide, _wsize = _cb.squeeze_lines(
-        app.style, "W" * 15, _bw, 999, _sizes, (255,) * 3)
+        app.style, "W" * _ww, _bw, 999, _sizes, (255,) * 3)
     assert _wsize < _small, (
-        "an unbreakable word wider than the column did not shrink — "
-        "the squeeze is driven by height alone again")
+        f"an unbreakable word of {_ww} W's, {app.style.render_text('W' * _ww, _small, (255,) * 3).get_width()} px "
+        f"in a {_bw} px column, did not shrink — the squeeze is "
+        f"driven by height alone again")
 
     # And when nothing is left to shrink it still draws everything:
     # the original prints the paragraph once its loop runs out.

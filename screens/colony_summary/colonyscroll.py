@@ -26,6 +26,47 @@ own top and bottom; the native x is 1857 reference px and our list
 ends at 1802, because the original's frame edge is thinner than the
 plate's ring.
 
+**HOW WIDE THAT COLUMN IS, AND IT IS A TRANSCRIPTION NOW —
+9 September 2026.** `col_scroll` used to be 36 reference px and the
+number had no source: it was `1693 - 302 - 342 - 360 - 339 - 314`,
+the leftover after the other five, which is precisely what a column
+must not be when something is drawn in it.
+
+The original states the column in two places and they agree:
+
+- the TRACK is native x **621..626**. `Add_Scroll_Field_(621, 40, 0,
+  n, 0, n - 10, 5, 271, …)` (colsum.cpp:278) counts it exclusively as
+  width 5; `Draw_Bar_Indicator_`'s `Fill_(621, y1, 626, y2, 229)`
+  (colsum.cpp:759) counts the same rectangle inclusively as 6, with
+  the corner dots at 621 and 626 (colsum.cpp:767-770). One rectangle,
+  two counts — the same shape as the map viewport's 506 against 505.
+- the ARROWS start at native x **619** (colsum.cpp:263-264), and
+  their extent is `animate::Get_Width_(pic)`, which lives in the
+  player's LBX and is in no source file.
+
+So the anim's width is MEASURED, off the original's own framebuffer
+in `evidence/colony_summary_native_split.png`: the up arrow's blue
+bbox is native x **619..627**, nine px. **Its left edge reproduces
+the source's 619 exactly, and that is what makes the right edge
+worth trusting** — the measurement is anchored on a feature the
+source names, rather than on the picture alone.
+
+Nine native px is **27 reference px**, and that is what the box
+carries. The nine that were freed go to `col_building`, 314 -> 323,
+because that column is already the declared home of this screen's
+surplus width (`layout_reference._list_columns_note`, Data's Stage 1
+decision) — so the residue lands somewhere that says why it is there
+instead of somewhere that merely had room.
+
+**AND THERE IS NO RESIDUE LEFT TO PLACE.** Since 9 September the six
+columns are fractions of the `list_area` cutout
+(`colonytrack.columns`), so they tile it exactly at any window size
+by construction: the first starts at the cutout's left edge, the last
+ends at its right, and a wider window widens all six in proportion
+rather than handing the difference to whichever column is last. The
+question "where does the leftover go" no longer has an answer because
+it no longer has a subject.
+
 WHAT A CLICK DOES, and why it is two things.
 `Decrement_First_` / `Increment_First_` (colsum.cpp:207-231) are what
 the fields reach, and `colonysend` already drives both to establish
@@ -52,9 +93,21 @@ from . import colonytrack
 #: The scroll column's key in `layout_reference.list_columns`.
 COLUMN = "scroll"
 
-#: How tall an arrow is, as a share of the column's own width, so the
-#: two stay square-ish at every resolution without a second table.
-HEIGHT_RATIO = 1.0
+#: The arrow anim's height against the ORIGINAL'S OWN ROW BAND:
+#: 16 native px in a 31 px band (`31*i + 34`, colsum.cpp:311). Both
+#: halves are needed — a bare 16 is a pixel count and does not
+#: survive a resolution change, so what is stored is the share the
+#: original states and the pixels are derived from it.
+#:
+#: The 16 is MEASURED and single-source, like the "No Farming" size
+#: and `SHIP_ICON_DIM`: `Add_Button_Field_` takes its extent from
+#: `animate::Get_Width_/Get_Height_(pic)` (fields.cpp), so the anim's
+#: size lives in the player's LBX and is in no source file. Measured
+#: off the original's own framebuffer
+#: (`evidence/colony_summary_native_split.png`), blue bbox y 23..38
+#: for the up arrow and 325..341 for the down one — a 301 px
+#: separation against the fields' own 316 - 15 = 301.
+BAND_SHARE = 16 / 31
 
 #: Inset from the list area's edges, reference px, so an arrow does
 #: not sit under the frame's rim (the `_frame_bleed_note` strip).
@@ -67,13 +120,35 @@ def arrows(area, cfg, scale):
     ONE function, and both the renderer and `handle_click` call it —
     decision 5, in the form the cells already take. None when the
     column table is absent, which is the single-track fixture's case.
+
+    **THE HEIGHT COMES FROM THE ROW BAND, NOT FROM THE COLUMN WIDTH
+    — 9 September 2026.** It used to be `int(width * HEIGHT_RATIO)`
+    with the ratio at 1.0, i.e. the arrow was as tall as its column
+    was wide. Two things were wrong with that. It is not a
+    transcription of anything: the original's arrow is 9 px wide and
+    16 tall, not square. And it made the arrow a function of a width
+    that was itself the leftover of the other five columns, so the
+    day `col_scroll` swelled to 1837 px the arrows became 1837 px
+    tall — a control the height of the whole list, which is what
+    Data's 4K screenshot shows.
+
+    The band is what an arrow is measured against in the original and
+    it is what HD measures against now, so an arrow is one row's
+    worth of control at every window size and cannot outgrow the list
+    however the columns are dragged. The WIDTH is still the column's,
+    which IS the transcription: the anim is 9 native px and so is the
+    column (native x 619..627).
     """
     columns = colonytrack.columns(area, cfg)
     if COLUMN not in columns:
         return None, None
     x, width = columns[COLUMN]
     inset = max(1, int(INSET_REF * scale))
-    size = max(6, int(width * HEIGHT_RATIO))
+    band = colonytrack.band_height(area, cfg)
+    # Never taller than the band it is measured against: the check
+    # asserts it, and the clamp is what makes the assertion a
+    # property rather than a hope at a row count nobody has tried.
+    size = max(6, min(band, int(round(band * BAND_SHARE))))
     up = pygame.Rect(x, area.y + inset, width, size)
     down = pygame.Rect(x, area.bottom - inset - size, width, size)
     return up, down
