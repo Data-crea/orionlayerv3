@@ -3154,24 +3154,41 @@ Stage 1 decision, so the absolute number is ours. Today's boxes:
 | `col_farmers` | 343 | −0.1 % of the 135 share |
 | `col_workers` | 361 | +0.1 % of the 142 share |
 | `col_scientists` | 340 | 0.0 % of the 134 share |
-| `col_building` | 315 | wider than the 13.3 % the original requires — DEVIATION, reason recorded |
-| `col_scroll` | 35 | no native counterpart |
+| `col_building` | 323 | wider than the 13.3 % the original requires — DEVIATION, reason recorded; **+9 on 9 September 2026**, the px `col_scroll` gave up when its width became a transcription, sent here because this column is already the declared home of this screen's surplus |
+| `col_scroll` | 27 | **TRANSCRIBED since 9 September 2026** — native 619..627. Arrow field x 619 (`Add_Button_Field_`, colsum.cpp:263-264) and the track it holds at 621..626 (`Add_Scroll_Field_`, colsum.cpp:278, counted exclusively as 5; `Fill_(621, y1, 626, y2, 229)`, colsum.cpp:759, counted inclusively as 6). The anim's own extent is `animate::Get_Width_(pic)` and lives in the player's LBX, so the right edge is MEASURED off `colony_summary_native_split.png` — its LEFT edge reproduces the source's 619 exactly, which is what anchors it. Was 36 = the leftover after the other five |
 
 The check reports every column and goes red only where a deviation
-past one per cent is unmarked.
+past one per cent is unmarked. **AND IT HOLDS THIS TABLE TO
+`boxes.json` SINCE 9 September 2026.** Every width above is a number
+somebody typed into a document, and this one went stale within the
+hour: `col_building` and `col_scroll` changed in the commit that
+transcribed the scroll column and the table still said 315 and 35,
+with the scroll row still claiming "no native counterpart" for a
+column that had just acquired a source. A hand-copied number without
+a checker is this project's oldest recurring fault and the smoke
+suite already carries two instruments against it (the engine version,
+the check count); this table now has the third.
 
-**FIFTY PLATES, AND A DEVIATION IN KIND.** Every cell of every band
-draws one, including the empty rows and including the NAME and
-BUILDING columns. **The original has no per-cell drawing call at
+**SIXTY PLATES, AND A DEVIATION IN KIND.** Six columns — the scroll
+slot included — times the ten bands of `list.row_count`. Every cell
+of every band draws one, including the empty rows and including the
+NAME and BUILDING columns. (*Written as "fifty" until 9 September
+2026, from the five columns that carry content; corrected here, in
+decision 51 and in `colonylist` together with the drawing, which had
+been plating only the OCCUPIED bands for three days while all three
+documents said otherwise.*) **The original has no per-cell drawing call at
 all**: `Draw_Colony_Summary_Screen_` blits ONE bitmap —
 `animate::Draw_(0, 0, _anims[0])`, COLSUM.LBX entry 0
 (colsum.cpp:461, loaded at :404-408) — and the plates are painted
 into it. That is why every cell has one whether or not a colony sits
 there; they are part of the picture, not a per-row decision. HD
 cannot ship that bitmap (decision 42), so it draws them. Marked in
-`colonylist._render_bar`, in `layout.json` under
-`list._columns_note`, here, and in a smoke check that reads the
-plate's own four edges off the rendered surface. **Decision 51** is
+`colonylist.render` — **not `_render_bar`, which is where the loop
+used to be and is the whole of why it plated only the rows that had
+a colony** — in `layout.json` under `list._columns_note`, here, and
+in two smoke checks: one reads the plate's own four edges off the
+rendered surface, the other COUNTS the rects at six colony counts
+from one to twenty-five. **Decision 51** is
 what makes the drawing legitimate: the plate is
 `StyleRenderer.draw_plate`, the rect is computed, and the
 `max(6, int(10 * scale))` that used to exist in `draw_thin_border`

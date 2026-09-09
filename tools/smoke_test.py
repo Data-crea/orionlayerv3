@@ -5005,6 +5005,36 @@ def main():
     assert "135 : 142 : 134" in _status_txt or "135:142:134" in _status_txt, (
         "the status document does not carry the transcribed column "
         "ratio, which is where the deviation table is reported")
+    # ── AND THE TABLE IS HELD TO boxes.json ─────────────────────
+    # Every width in that table is a number somebody typed into a
+    # document, and it went stale within the hour on 9 September
+    # 2026: `col_building` and `col_scroll` changed in the commit
+    # that transcribed the scroll column, and the table still said
+    # 315 and 35 with the scroll row still claiming "no native
+    # counterpart" for a column that had just acquired a source.
+    #
+    # A hand-copied number without a checker is this project's oldest
+    # recurring fault (decision 36's rule, the engine version, the
+    # check count in two documents). The table is the third instrument
+    # against it. Asserted per ROW rather than as a blob, so the
+    # failure names the column that drifted.
+    _dev_rows = dict(re.findall(
+        r"^\|\s*`(col_\w+)`\s*\|\s*(\d+)\s*\|", _status_txt, re.M))
+    _dev_boxes = {b["name"]: b["rect"][2] for b in
+                  _sjson.load(open(os.path.join(
+                      SCREENS_DIR, "colony_summary", "boxes.json"),
+                      encoding="utf-8"))["1920x1080"]
+                  if b["name"].startswith("col_")}
+    assert set(_dev_rows) == set(_dev_boxes), (
+        f"the deviation table lists {sorted(_dev_rows)} and boxes.json "
+        f"has {sorted(_dev_boxes)} — every column is reported or the "
+        f"table is not the report it says it is")
+    for _dc, _dw in sorted(_dev_boxes.items()):
+        assert int(_dev_rows[_dc]) == _dw, (
+            f"v3_projektstatus.md's deviation table says {_dc} is "
+            f"{_dev_rows[_dc]} reference px and boxes.json says {_dw}. "
+            f"The table is a hand-copied number and this is its "
+            f"checker; update it in the commit that moves the box")
     # ── ONE RECT SOURCE: the heading reads the column ───────────
     _hpx = pygame.Rect(*_cs4.layout.rect(_hbox))
     _plates = dict(_chdr.plate_rects(_hpx, _cols, _cs4.layout.scale))
