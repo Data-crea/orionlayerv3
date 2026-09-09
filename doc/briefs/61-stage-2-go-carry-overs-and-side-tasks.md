@@ -1,0 +1,9 @@
+Stage 2 — go. Carry-overs and side tasks.
+
+Lower band gaps: make them even (currently 12/12/32, see _lower_band_note). One commit, before the 1080p mask is used as the frame-artwork template. Regenerate masks, rects.json, confirm the "windows sit in the 36 px bezel" rule still holds.
+Stacking decisions apply as stated at the Stage 1 handover (overlap reproduced, no replacement formula, drop target and popup anchor on the figure slot, identity letter dropped). Column widths are no longer provisional once the squish transcription lands — if the transcription disagrees with 394, stop and report; do not fit the formula to the mask.
+Loader chain pop_icons/ → raceicon_ref/ → RACEICON.LBX direct → fallback cells. Each stage a named state the screen can show, never an error. Integer NN steps 2×/3×/4× read from layout_reference.json — the only place.
+Sprites-assets reporting stop (scale rule, race-index field for conquered pops: race_idx vs MASK_CONQUERED) comes before any figure is drawn to screen. Whatever it finds about coldraw.cpp's field naming goes to doc/orion2re_open_fixes.md, nothing else.
+Side task, own brief, independent of Stage 2: does the galaxy map today compute with the 50.6 constant or with the grid from Maximum_Galaxy_Display_Scale_? With the reference save (Maximum) the parked click frame under Decision 35 may be wrong. Report finding only, no fix.
+Two fundament paragraphs, follow-up commit after Stage 2, not inside it: the palette lesson ("byte-identical after refactor proves only visited paths") under Evidence, and "a percentage is the transcription, the pixel count is derived" — the column-reservation case — under the same heading.
+Reporting stop as set in the brief. Marker inventory and smoke test before the stop, as always.

@@ -256,7 +256,17 @@ screens draw the sprites out of the player's own `RACEICON.LBX`,
 extracted by `tools/raceicon_extract.py` and stepped up by
 `zoomtables.FIGURE_STEP` — an integer nearest-neighbour swap, never a
 scale (decision 28). **HD figure artwork is not a project
-deliverable**, and `brief_pop_sprites_assets.md` is retired.
+deliverable**, and the brief that had commissioned it is withdrawn.
+
+*(That brief was cited as `brief_pop_sprites_assets.md` until
+9 September 2026, when every brief this project has was imported into
+`doc/briefs/` and this was the one with no text to import: it is named
+by `doc/briefs/75-brief-four-parts-three-commits-one-stop.md`, which
+asks for an artwork inventory "against brief_pop_sprites_assets.md",
+and by nothing else. Whatever it said reached the tree only as this
+decision. The name is dropped here rather than kept as a citation of
+something a reader cannot open — the withdrawal is the fact, and it
+stands without it.)*
 
 "Ships" means the shipped product DRAWS them, not that the repository
 holds them, and the distinction is decision 40's: the extracted PNGs

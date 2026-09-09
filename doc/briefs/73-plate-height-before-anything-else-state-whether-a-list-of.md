@@ -1,0 +1,7 @@
+Plate height. Before anything else: state whether a list of 587 ref px still holds ten rows at the row pitch you carry — the arithmetic, not an estimate. If it does, grow the header window to the transcribed 66: plate rebuild, mask, --write, boxes.json, and the DEVIATION for the height retires (the window deviation stays — the original still has no window). If it costs a row, keep 48 with the marking as built and say so in the status.
+
+Decision 49's text. Its "flag off is byte-identical" no longer holds with the default flipped. The fundament entry gets a dated sentence saying what off means during Stage 4 and that Stage 5 removes the flag with the old artwork — the fundament and the status must agree.
+
+planet_info. Record as an open layout item in the status document: the original splits scan text and production icons across two panels; ours has both in planet_output and planet_info empty. Not decided, not to be assumed. Data decides before Stage 3 draws into that band.
+
+Then Stop 3 as briefed: list rows in cells in the new columns, ellipsis threshold in reference px, slack on the name only, "No Farming" after the run; one PICK and one DROP per job column on the reference save with the pop word diffed against the prediction as colony_move_hd.py --commit does; marker checks naming their files; nothing deleted from the old modules. Smoke count, --live and --native runs, evidence under ~/Bilder/rahmen/. No push.

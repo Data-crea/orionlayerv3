@@ -1,0 +1,7 @@
+Go for Part 3 against the seven criteria as written, with three additions.
+
+HD per-step mod files, beside the 28×28 master. Decision 28's structure: <name>@2x.png / @3x / @4x at exactly 56 / 84 / 112, each replaceable alone. Resolution order per figure and step: explicit step file → stepped master → base. A step file at the wrong size is refused the same way as a wrong master, one log line. Both conventions in the generated doc/modding_figures.md, both in the size check, both in the one-file-mod test (one master, one step file).
+The cell fallback survives Stage 5. Criterion 5 makes the coloured cells the state for an absent set, so the cell renderer is not on Stage 5's deletion list. Write that into the status document's Stage 5 entry now, so the list is drawn with it excluded.
+The decision. File Data's decision at the next free number under Data and resources: the game's own figures at the sprite step are the shipped set; HD figure artwork is not a deliverable; mods replace per file, master or step. brief_pop_sprites_assets.md retired in the status document.
+
+Everything else as in your Part 2: step in the loader, assets/shared/figures/, source-order race keys, click unchanged at overlap with the transcription cited, raceicon_extract into setup.py. One commit. Evidence beside the native at three resolutions, manifest updated. Smoke count; reference save hashes. No push.

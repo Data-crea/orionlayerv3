@@ -3145,6 +3145,38 @@ lives in the player's FONTS.LBX and is in no source this project can
 read. **The font extractor is owed twice**: here and for the name cap
 (`namestar.cpp:246-256`).
 
+### Where the briefs and work orders are
+
+**`doc/briefs/`** — 91 files with a README that indexes them. Data's
+decision of 9 September 2026, and it closed a gap that had been open
+since the project started.
+
+Until that evening they were not in the tree and never had been. The
+only copies were Claude Code's cache of the chat pastes,
+`~/.claude/paste-cache/<hash>.txt` — hash-named, undated inside, in a
+directory nothing in this project reads and nothing here would notice
+being pruned. A handover of that day called four of them "in the
+tree"; none was, and the tree cited nine brief filenames of which none
+existed as a file.
+
+Eight of those nine now resolve; `doc/briefs/README.md` carries the
+mapping. **The ninth never had a text to import**:
+`brief_pop_sprites_assets.md` is named by
+`doc/briefs/75-brief-four-parts-three-commits-one-stop.md` and by
+nothing else, and whatever it asked for reached the tree only as
+decision 50's withdrawal of it. Both places that cited it by name now
+say what happened instead of pointing at a file a reader cannot open.
+
+Content is byte for byte what arrived. **Dates are stated only where
+the brief's own text carries one** — six of ninety-one; everything
+else is undatiert, because a date has to come from the brief or from
+the first commit that implements it, and a cache file's timestamp is
+neither. The numeric prefix is order, not date.
+
+Two cache files were not imported: they are passages of this tree
+pasted back into chat for reference (decision 46's text, and "How work
+arrives, and who owns what"), not instructions. Named in the README.
+
 ### Acceptance fixtures — the THREE savegames, by name
 
 Recorded 5 September 2026. They live in **`~/orionlayer-fixtures/`**
@@ -3828,7 +3860,7 @@ thirteen farmers squish and overlap the same way.
 **DECISION 50, extended in the same commit.** The figures come out of
 the player's own `RACEICON.LBX` at an integer nearest-neighbour step
 and are never scaled (decision 28). HD figure artwork is not a
-project deliverable and `brief_pop_sprites_assets.md` is **retired**.
+project deliverable and the brief that had commissioned it is **withdrawn** — it is the one brief with no text to import, named only by `doc/briefs/75-brief-four-parts-three-commits-one-stop.md`; see decision 50 for why the filename is no longer cited.
 A mod replaces figures per file — master or step, each alone.
 
 **54 FIGURES, EVERY ONE 28 x 28**, and that is a measurement, not a

@@ -1,0 +1,13 @@
+Stage 1 — go. Decisions from Data after Part 3 and the Stage 0 stop.
+
+Inset box 253×200 at 1920×1080 is confirmed. Put it into layout_reference.json. Correct the premise in brief_colony_rebuild.md: crop is 50.6M × 40M world units, no letterbox at any galaxy size, Maximum gets no special case. The old stop condition ("Maximum letterboxes") is withdrawn.
+Both markings (HD EXTENSION fixed scale, DEVIATION isotropic) need all three homes — module, status document, smoke test. The _geometry_note in layout.json currently records the 286 px reading; in the same commit it moves to the 257 px reading or is removed. Two readings of the same inset in one tree is not allowed.
+Star dot: your decision, not mine. You have the running game and the native frame side by side. Acceptance: the computed star pixel is the centre of the drawn dot at all three resolutions, verified numerically; the chosen sizes go into core/zoomtables.py as a DERIVED table with the derivation beside it, like NEBULA_DIM; one sentence in colony_inset_geometry.md says why even or odd.
+Stacking, answers to the three open questions in pop_stacking.md §9:
+HD reproduces the original overlap. The squish formula is transcribed, computed in native units, multiplied by the same integer step as the sprites. Extra HD width goes into the column reservation (colonybuild), not into wider figure spacing. Any wider spacing later is a marked HD EXTENSION, not the default.
+Therefore no replacement formula.
+Drop target and popup anchor move to the figure slot, one geometry function for draw, hit-test and popup (Decision 5). The identity letter is dropped — the sprite carries identity. Which field gives the race index for conquered pops is settled at the sprites-assets brief's reporting stop, not here.
+Two acceptance criteria for Stage 1:
+Click identity is re-established by construction, not carried over: the figure run is built from icon_pops order as cells is today (Decision 48), so slot k of column j is the game's slot k. Then proven live — one PICK and one DROP per column against the running game. Two sources.
+Every marker check names the file it reads; the deletion commit updates those names. Add one check that fails if an HD EXTENSION / DEVIATION marker exists in the tree that no check reads.
+Reporting stop as set in the brief. Nothing deleted before the new modules are default; deletion and marker re-targeting in the same commit.

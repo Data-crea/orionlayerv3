@@ -1,0 +1,7 @@
+Header: (a), plates inside the existing header window. Marking: the header window is ours — the original has plates on bare metal, recessed dark fields with a light outline — so the window carries a DEVIATION in its three homes, with the sentence that the window's fill stands in for the original's plate recess. Colour deviation in colors.json, marked.
+
+Plate height and plate gap: measured from the framebuffer at ×3 and transcribed with the source, not chosen. If the measured height does not fit the 52 ref px window, report it as a finding before adjusting anything.
+
+Job columns: take the Get_Selected_Pop_ literals as reported (342 / 360 / 339), with the figure-capacity assertion at the narrowest column at all three resolutions as the gate. Cite colsum.cpp:1006-1024 and the separator measurement as the two sources in layout_reference.json.
+
+Data pushes d2bcd24 and d0abd07 before you start. Then Stop 2 as briefed: boxes.json swap with the rewritten naming rule in the same commit, readers re-pointed, --write reporting kept 0 and why, three panels, sort row and RETURN, inset with the dot image at three resolutions, flag-off semantics stated, screen beside native at three resolutions. No push.

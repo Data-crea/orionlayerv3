@@ -1,0 +1,6 @@
+Step 0 closed. Ring comes from the master.
+
+ring = galaxy_map/frame.png, L 107 R 120 T 18 B 74, source noted (file, tool, date). bezel removed. Smoke test measures the shipped colony frame with the same sweep and asserts equality; the "windows inside the ring" check runs against the table. Layout shrinks as computed: list 107..1800, columns 302 + 347·3 + 314 + 36; capacity ≥ 4 asserted at all three resolutions. Own commit.
+The colony frame is built, not rendered — tools/frame_build.py: ring and corner plates from galaxy_map/frame.png; interior filled with bezel/strut texture sampled from the same master; the eight windows cut from frame_mask_<res>.png via the existing frame_cut.py. Three variants from the master's resolution — report what that gives for 2160p (downscale, or upscaled interim with a dated status entry). Struts plain, no attempt at bevels. frame_holes.py --write and the boxes.json swap wait for the commit that makes the new modules default, as agreed.
+Output alongside: the 1080p result at 2× beside the current colony frame and the native screen, so Data can judge whether the plain struts need polish at all.
+Candidate folder and manifest stay as evidence; no file from it is an input. background.png noted as derivative of colony_summary/assets/frame.png.
