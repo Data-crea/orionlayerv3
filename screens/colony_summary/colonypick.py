@@ -225,6 +225,34 @@ def plan_move(pick, pops, n_pops, max_farms, colony, target_job):
 def message(words, outcome, total=0):
     """The sentence to draw, from `layout.json`'s `move` block.
 
+    **A MOVE THAT WORKED SAYS NOTHING — 9 September 2026.** Only a
+    REFUSAL produces a sentence; a success returns "".
+
+    The original marks nothing at all on this screen. The only
+    `Fill_`/`Line_` calls in `colsum.cpp` are the scroll thumb
+    (:759-765) — no frame round a picked cell, none round the row it
+    came from, and no notice after a drop. What it does instead is
+    redraw the row: the pops left their old column and are in the new
+    one, the squish changes with them, and that IS the feedback. HD
+    draws the same row from the same array, so it already has it.
+
+    "{landed} moved" therefore reported something the player could
+    see, in a panel where something else belonged: `planet_info` is
+    the left half of the original's own scan box, the description
+    paragraph at native (13, 354, 80, 88)
+    (`Draw_Colony_Scan_Info_`, colsum.cpp:1155), and the message
+    evicted it on every move. Both of Data's 1440p screenshots of
+    8 September 2026 are the pair — one with the paragraph, one with
+    "1 moved" where it had been.
+
+    A REFUSAL still speaks, and that is decision 33 rather than an
+    exception to this. HD refuses before injecting precisely so the
+    player reads a reason instead of meeting the silence the
+    framebuffer would answer with — and the original's own answer to
+    a refusal is `GENDRAW::Help_`, a BLOCKING text box over the whole
+    screen (textbox.cpp:149). A transient sentence in a panel is the
+    quiet version of a thing the original shouts.
+
     Substitution is `replace` and never `str.format` (decision 37):
     a brace in a translated string must not be able to raise inside
     a render path.
@@ -240,17 +268,15 @@ def message(words, outcome, total=0):
             text = text.replace("{" + key + "}", str(value))
         return text
 
-    if isinstance(outcome, Refusal):
-        text = fill(words.get(outcome.reason, outcome.reason))
-        if outcome.landed:
-            text += " — " + fill(words.get("partial", ""),
-                                 landed=outcome.landed,
-                                 carried=outcome.carried,
-                                 total=outcome.total)
-        return text
-    landed = getattr(outcome, "landed", 0)
-    return fill(words.get("complete", ""), landed=landed,
-                carried=getattr(outcome, "carried", 0), total=total or landed)
+    if not isinstance(outcome, Refusal):
+        return ""
+    text = fill(words.get(outcome.reason, outcome.reason))
+    if outcome.landed:
+        text += " — " + fill(words.get("partial", ""),
+                             landed=outcome.landed,
+                             carried=outcome.carried,
+                             total=outcome.total)
+    return text
 
 
 def column_of(pops, n_pops, job):

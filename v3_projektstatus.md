@@ -206,6 +206,35 @@ demands — each says what the original does instead:**
   completes and says how many WOULD have moved. In
   `layout.json` under `move._partial_note`, in `colonypick.py`, and
   a smoke check.
+- **A MOVE THAT WORKED SAYS NOTHING — 9 September 2026, and a
+  message went away rather than an extension arriving.** `move.
+  complete` was "{landed} moved", drawn into `planet_info` — which
+  is the LEFT HALF OF THE ORIGINAL'S OWN SCAN BOX, the description
+  paragraph at native (13, 354, 80, 88)
+  (`Draw_Colony_Scan_Info_`, colsum.cpp:1155) — so every successful
+  move evicted a transcription to report a thing already on screen.
+  The original marks nothing here at all: the only `Fill_`/`Line_`
+  calls in `colsum.cpp` are the scroll thumb (:759-765), and what it
+  does instead is redraw the row, which IS the feedback. Data's two
+  1440p screenshots of 8 September are the pair, one with the
+  paragraph and one with "1 moved" in its place. A REFUSAL still
+  speaks — decision 33, and the original's own answer to one is a
+  blocking text box (textbox.cpp:149) — but it is transient and
+  `_render_info` takes the panel back on the next frame.
+- **HD EXTENSION — the stranded notice, on its own strip.**
+  `move.stranded` ("The game is holding colonists. Press RETURN to
+  put them back.") is the one line that is neither a refusal nor a
+  result, and it stands until the player acts, so unlike a refusal it
+  would hold the description panel for an unbounded time. It is drawn
+  across the TOP BAND of the list instead, over the rows and under
+  the frame (`colonymoveui.draw_notice`). MOO2 shows no such strip —
+  its answer to a held cluster is the blocking
+  `TEXTBOX::Do_Text_Box_` that HD must not reproduce — which is what
+  makes it an extension. The top band is the place because while the
+  game holds a cluster the list is not actionable: every further drop
+  compounds the mismatch. In `colonymoveui.MoveController.__init__`,
+  in `layout.json` under `move._hd_extension_notice`, and a smoke
+  check.
 
 **What this session did NOT verify, stated rather than left to be
 assumed:** no refusal is reachable in the reference save at all. It
@@ -520,7 +549,7 @@ files under `doc/` and are only summarised here.
 | | |
 |---|---|
 | Python | 32,960 lines across 111 modules — `find . -name '*.py'`, `__pycache__` excluded, the smoke test's 6,400 included. The previous figure here (21,642 across 94) was carried from an unstated method and could not be reproduced |
-| Smoke test | `python tools/smoke_test.py` — **108 checks**, headless |
+| Smoke test | `python tools/smoke_test.py` — **109 checks**, headless |
 | Assets | 170 MB (select_race 68, galaxy_map 51, shared 23, new_game 21, colony_summary 1) |
 | Screens in HD | 7 of ~20–22 (colony summary draws list, sidebar, scan box and galaxy inset, and MOVES POPS — the first HD gesture that drives the game) |
 | Setup from clone | `python tools/setup.py` (deps via the system package manager) |

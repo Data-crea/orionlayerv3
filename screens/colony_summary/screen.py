@@ -336,38 +336,18 @@ class ColonySummaryScreen(ScreenBase):
         return self._data.get("move", {})
 
     def _render_move(self, surface):
-        """The hover popup, and the move's last word in `planet_info`.
+        """Everything the move draws — `colonymoveui.render_for`.
 
-        **THE PANEL IS SHARED NOW, AND THE SENTENCE IS THE GUEST.**
-        This docstring used to argue that `planet_info` owes nothing
-        to the original and is therefore free for a refusal message.
-        That stopped being true on 8 September 2026: the panel is the
-        left half of the original's own scan box, the description
-        paragraph at native (13, 354, 80, 88). The message still
-        wins it while there is one — a refusal is the thing a player
-        needs to read, and the original answers one with
-        `GENDRAW::Help_`, a BLOCKING message box over the whole
-        screen (textbox.cpp:149) that HD must not reproduce because
-        it refuses BEFORE sending — but it is transient and
-        `_render_info` draws the paragraph back the moment it clears.
-
-        **AND THE MARKS ON THE ROW ARE GONE**; see
-        `colonymoveui.MoveController.draw`.
+        **THE BODY MOVED OUT ON 9 September 2026.** Three layers had
+        accumulated here — the hover popup, the stranded notice and a
+        refusal in `planet_info` — each needing the same four
+        arguments assembled from this screen, and none of them
+        anything the screen decides. `colonymoveui` owns the move; it
+        owns what the move draws, the same seam `colonyoutput` and
+        `colonyheader` already take. What stays here is the boxes,
+        which is what a screen is for.
         """
-        area, cfg, scale, _n = self._list_view()
-        if self.box_rect("list_area"):
-            # Marks, targets and the hover popup are one layer, over
-            # the rows and under the frame image — which is why the
-            # popup has to stay inside the cutout, see `colonypopup`.
-            self._move.draw(surface, self._rows, self._first, area, cfg,
-                            scale, self.style, self.layout, self._data)
-        box = self.box_rect("planet_info")
-        if not (self._move.message and box):
-            return
-        self._move.draw_message(
-            surface, pygame.Rect(*self.layout.rect(box)),
-            self.layout.font_size(self._move_words().get("font", 18)),
-            self.style, MOVE_TEXT)
+        colonymoveui.render_for(self, surface, MOVE_TEXT, PANEL_BG)
 
     # ── Frame ─────────────────────────────────────────────
 

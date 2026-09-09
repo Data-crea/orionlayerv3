@@ -29,6 +29,8 @@ and in a smoke check.
 """
 import logging
 
+import pygame
+
 from core import textfit
 
 from . import colonylist
@@ -79,8 +81,24 @@ class MoveController:
         #: The wire sequence, or None. Exists only between the second
         #: click and its confirmation.
         self.send = None
-        #: What to draw. Empty is a state, not a placeholder.
+        #: A REFUSAL's sentence, and nothing else. Empty is a state,
+        #: not a placeholder. It is the guest in `planet_info` — the
+        #: original's own description paragraph owns that panel and
+        #: gets it back the moment this clears (decision 33 is why a
+        #: refusal may take it at all: the original answers one with
+        #: a blocking text box, textbox.cpp:149).
         self.message = ""
+        #: **HD EXTENSION — the stranded notice.** The one state that
+        #: is neither a refusal nor a result: the game is holding a
+        #: cluster HD did not manage to place, and only the player
+        #: can end it. It gets its OWN strip over the top of the list
+        #: (`draw_notice`) and never the description panel, because
+        #: it persists until the player acts and would sit on top of
+        #: the paragraph for as long as it did. MOO2 shows nothing
+        #: like it — its own answer is the blocking box — so it is
+        #: marked here, in `layout.json` under
+        #: `move._hd_extension_notice`, and in a smoke check.
+        self.notice = ""
         self._plan = None
         self._size = 0
 
@@ -131,6 +149,7 @@ class MoveController:
             return True
         self.pick = outcome
         self.message = ""
+        self.notice = ""
         log.info("pop move: picked %r", outcome)
         return True
 
@@ -194,6 +213,7 @@ class MoveController:
                                             self.pick.cluster, job)
         self._plan, self._size = outcome, self.pick.size
         self.message = ""
+        self.notice = ""
         self.send = colonysend.Send(
             client, n_colonies=n_colonies, position=row_index,
             colony=self.pick.colony, source_job=self.pick.job,
@@ -267,12 +287,16 @@ class MoveController:
         if not self.send.finished:
             return
         if self.send.state == colonysend.DONE:
+            # NOTHING. A move that worked is reported by the row —
+            # see `colonypick.message`, which returns "" for a
+            # success and why.
             self.message = colonypick.message(words, self._plan, self._size)
         elif self.send.holding:
-            # NOT the same sentence as a failure: the game has a
-            # cluster in hand, which is a state the player has to be
-            # told about because only they can end it.
-            self.message = words.get("stranded", "")
+            # NOT a message, and NOT in the description panel: the
+            # game has a cluster in hand, which is a state only the
+            # player can end, so it gets its own strip over the list.
+            # See `notice` and `draw_notice`.
+            self.notice = words.get("stranded", "")
         else:
             self.message = words.get(self.send.reason,
                                      self.send.reason or "")
@@ -317,6 +341,53 @@ class MoveController:
         y = rect.y + (rect.h - height) // 2
         for surf in lines:
             surface.blit(surf, (rect.x + (rect.w - surf.get_width()) // 2, y))
+            y += surf.get_height()
+
+    def draw_notice(self, surface, area, cfg, px, style, color, fill):
+        """The stranded notice, on a strip across the top of the list.
+
+        **HD EXTENSION — marked in `__init__`, in `layout.json` under
+        `move._hd_extension_notice`, and in a smoke check.** MOO2 has
+        no such strip. Its answer to a cluster it is holding is
+        `GENDRAW::Help_` -> `TEXTBOX::Do_Text_Box_`, a modal that sits
+        in `do { … } while (fields::Get_Input_() == 0)`
+        (textbox.cpp:149) until something clicks or types. HD must not
+        reproduce that — it refuses before sending precisely so the
+        player is never trapped — but the state itself is real and
+        only the player can end it, so it has to be said somewhere.
+
+        **NOT IN `planet_info`, AND THAT IS THE WHOLE REASON THIS
+        FUNCTION EXISTS.** That panel is the left half of the
+        original's own scan box, the description paragraph at native
+        (13, 354, 80, 88) (`Draw_Colony_Scan_Info_`, colsum.cpp:1155).
+        A refusal may borrow it because a refusal is transient and
+        `_render_info` draws the paragraph back on the next frame.
+        This notice is not transient: it stands until the player
+        presses RETURN, so putting it there would evict a
+        transcription for an unbounded time.
+
+        THE TOP BAND IS THE PLACE, and it costs the least true thing
+        on screen. While the game holds a cluster the list is not
+        actionable — every further drop compounds the mismatch — so a
+        strip over the first row hides a row the player must not use
+        anyway, and it is where the eye already is. It is drawn over
+        the rows and under the frame, like the hover popup, so it
+        cannot spill outside the cutout.
+        """
+        if not self.notice:
+            return
+        band = colonytrack.band_height(area, cfg)
+        strip = pygame.Rect(area.x, area.y, area.width, band)
+        surface.fill(fill[:3], strip)
+        inset = max(2, px // 2)
+        sizes = [px - step for step in range(0, max(1, px - 9))]
+        lines, _size = textfit.squeeze_lines(
+            style, self.notice, max(1, strip.w - 2 * inset),
+            strip.h - 2 * inset, sizes, color)
+        y = strip.y + (strip.h - sum(s.get_height() for s in lines)) // 2
+        for surf in lines:
+            surface.blit(surf,
+                         (strip.x + (strip.w - surf.get_width()) // 2, y))
             y += surf.get_height()
 
     def draw(self, surface, rows, first, area, cfg, scale, style=None,
@@ -374,3 +445,52 @@ class MoveController:
         if self.pick is None:
             return None
         return (self.pick.colony, self.pick.cluster.indices)
+
+
+def render_for(screen, surface, text_color, fill_color):
+    """Everything the move draws, in the order it is drawn.
+
+    Moved out of `ColonySummaryScreen._render_move` on 9 September
+    2026, when the stranded notice made it three layers. The screen
+    owns the boxes and hands them over; what is done with them is
+    this module's — the same seam `colonyoutput.render_for` and
+    `colonyheader.render_for` already take on this screen.
+
+    THREE LAYERS, AND WHERE EACH GOES:
+
+    - the hover popup, over the rows and under the frame image, which
+      is why it has to stay inside the cutout (see `colonypopup`);
+    - the stranded notice, on its own strip across the top band —
+      **never `planet_info`**, see `draw_notice`;
+    - a REFUSAL's sentence in `planet_info`.
+
+    **THE PANEL IS SHARED, AND THE SENTENCE IS THE GUEST.** This used
+    to argue that `planet_info` owes nothing to the original and is
+    therefore free. That stopped being true on 8 September 2026: the
+    panel is the left half of the original's own scan box, the
+    description paragraph at native (13, 354, 80, 88). A refusal
+    still wins it while there is one — the original answers a refusal
+    with `GENDRAW::Help_`, a BLOCKING message box over the whole
+    screen (textbox.cpp:149) that HD must not reproduce because it
+    refuses BEFORE sending — but it is transient, and
+    `_render_info` draws the paragraph back the moment it clears.
+
+    **A MOVE THAT WORKED PUTS NOTHING HERE AT ALL** since 9 September
+    2026; see `colonypick.message`. The row is the feedback, which is
+    what the original does.
+
+    **AND THE MARKS ON THE ROW ARE GONE**; see `MoveController.draw`.
+    """
+    move = screen._move
+    words = screen._move_words()
+    px = screen.layout.font_size(words.get("font", 18))
+    area, cfg, scale, _n = screen._list_view()
+    if screen.box_rect("list_area"):
+        move.draw(surface, screen._rows, screen._first, area, cfg,
+                  scale, screen.style, screen.layout, screen._data)
+        move.draw_notice(surface, area, cfg, px, screen.style,
+                         text_color, fill_color)
+    box = screen.box_rect("planet_info")
+    if move.message and box:
+        move.draw_message(surface, pygame.Rect(*screen.layout.rect(box)),
+                          px, screen.style, text_color)
