@@ -126,6 +126,21 @@ FIXTURE_FILES = {
         "colony_offset": 607,
         "colony_count": 36,
     },
+    # **THE AUTOSAVE, AND THE POINT IS THAT THIS IS THE COPY.**
+    # `~/Master of Orion 2/SAVE10.GAM` is the slot the GAME writes at
+    # every turn end, so a fixture that pointed there would name a
+    # file that stops being the fixture the first time anybody plays
+    # a turn — and `verify_colonies` would then compare a run against
+    # whatever the game had just saved and call it a match. Secured
+    # 9 September 2026, byte-identical to the slot and to the sha256
+    # `~/orionlayer-fixtures/README.md` already recorded for it.
+    "natives_autosave": {
+        "file": "fixture_natives_autosave_3502.4.GAM",
+        "sha256": "2610f39c00f68ebeea7d9e699bda0d5f3c7b65112612"
+                  "9fe220e5f6fc8fabfce4",
+        "colony_offset": 607,
+        "colony_count": 36,
+    },
 }
 
 #: `s_colony`'s packed size. Imported rather than repeated — the spec

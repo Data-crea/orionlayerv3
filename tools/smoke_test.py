@@ -10189,6 +10189,47 @@ def main():
         "Box the screen has")
     ok("App boots standalone")
 
+    # ── EVERY FIXTURE A RUN CAN NAME HAS BYTES IT CAN CHECK ─────
+    #
+    # `FIXTURES` is the fingerprint — stardate, stars, colonies — and
+    # `FIXTURE_FILES` is the file those bytes are compared against. A
+    # key in the first without an entry in the second is a save a run
+    # can claim and cannot verify, which is the exact gap that let a
+    # diagnostic make thirty pop moves while every line said "fixture:
+    # reference".
+    sys.path.insert(0, os.path.join(_root_fx := os.path.dirname(
+        SCREENS_DIR), "tools"))
+    import fixtures as _fx
+    assert set(_fx.FIXTURES) == set(_fx.FIXTURE_FILES), (
+        f"these fixtures can be named but not verified: "
+        f"{sorted(set(_fx.FIXTURES) - set(_fx.FIXTURE_FILES))}; and "
+        f"these have bytes but no fingerprint: "
+        f"{sorted(set(_fx.FIXTURE_FILES) - set(_fx.FIXTURES))}")
+    # AND NONE OF THEM POINTS INTO THE GAME'S OWN FOLDER. `SAVE10.GAM`
+    # is the autosave slot and the game rewrites it at every turn end,
+    # so a fixture that named it would silently become "whatever was
+    # saved last" — and `verify_colonies` would compare a run against
+    # that and report a match. The fixture is a COPY, kept beside the
+    # other two.
+    for _fk, _fv in _fx.FIXTURE_FILES.items():
+        _fp = _fv["file"]
+        assert not os.path.isabs(_fp) and os.sep not in _fp, (
+            f"fixture {_fk} names a path ({_fp!r}); it must be a file "
+            f"inside the fixtures directory")
+        assert "Master of Orion" not in _fp, (
+            f"fixture {_fk} points into the game's own folder, which "
+            f"the game overwrites")
+        assert len(_fv["sha256"]) == 64 and _fv["colony_count"] > 0
+    # Absence is a state: a clone has no fixtures and says so rather
+    # than skipping (decision 42's pattern), so this reports what it
+    # found instead of demanding the files exist.
+    _fx_have = [k for k in sorted(_fx.FIXTURE_FILES)
+                if _fx.fixture_colonies(k)[0] is not None]
+    print(f"      fixtures readable on this disk: "
+          f"{_fx_have or 'none — verify_colonies will say so'}")
+    ok(f"fixture table (every named save has checkable bytes, "
+       f"{len(_fx.FIXTURE_FILES)} of them, none in the game's folder)")
+
     # ── THE WINDOW IS WHAT WAS GRANTED, NOT WHAT WAS ASKED FOR ──
     #
     # `Layout`, every box, the cursor and the frame plate are built

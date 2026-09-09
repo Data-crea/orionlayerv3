@@ -564,7 +564,7 @@ files under `doc/` and are only summarised here.
 | | |
 |---|---|
 | Python | 32,960 lines across 111 modules — `find . -name '*.py'`, `__pycache__` excluded, the smoke test's 6,400 included. The previous figure here (21,642 across 94) was carried from an unstated method and could not be reproduced |
-| Smoke test | `python tools/smoke_test.py` — **109 checks**, headless |
+| Smoke test | `python tools/smoke_test.py` — **110 checks**, headless |
 | Assets | 170 MB (select_race 68, galaxy_map 51, shared 23, new_game 21, colony_summary 1) |
 | Screens in HD | 7 of ~20–22 (colony summary draws list, sidebar, scan box and galaxy inset, and MOVES POPS — the first HD gesture that drives the game) |
 | Setup from clone | `python tools/setup.py` (deps via the system package manager) |
@@ -3081,7 +3081,7 @@ finds.
   --spec` now decodes any record against its spec, so the 64-byte
   ceiling on the int16 column view no longer stands in the way.
 
-### Acceptance fixtures — the two savegames, by name
+### Acceptance fixtures — the THREE savegames, by name
 
 Recorded 5 September 2026. They live in **`~/orionlayer-fixtures/`**
 with a README of their own, and NOT in the repository: a savegame is
@@ -3093,7 +3093,8 @@ save it thinks it is.
 | Fixture | Stardate | sha256 (first 16) | What it is for |
 |---|---|---|---|
 | `fixture_reference_3502.4.GAM` | 3502.4 | `ab70cc9ad5442335` | the move chain. 11 colonies, single race, **no native, no android, no conquered, every `max_farms` 255** — every plan it can produce predicts "all" |
-| `fixture_natives_3502.5.GAM` | 3502.5 | `b1f1aa466716d6c0` | population identity. Player 0 Elerian; 8 colonies; **Urna I is the only mixed one**, 1 pop of nibble 0 against 3 of nibble 9, and a real four-cell row. Also the only save with `max_farms == 0` colonies (Neptunus I, Piatuos I) — see the closed item below |
+| `fixture_natives_3502.5.GAM` | 3502.5 | `b1f1aa466716d6c0` | population identity. Player 0 Elerian; 8 colonies; **Urna I is the only mixed one**, 1 pop of nibble 0 against 3 of nibble 9, and a real four-cell row. Also the only save with `max_farms == 0` colonies (Neptunus I, Piatuos I) — see the closed item below
+| `fixture_natives_autosave_3502.4.GAM` | 3502.4 | `2610f39c00f68ebe` | the turn BEFORE `natives`, and a COPY of the game's own `SAVE10.GAM` — **secured 9 September 2026**, because that slot is the autosave and the game rewrites it at every turn end. Seven player colonies, no Urna I, Rha IV at four pops. The `pick_round` and `pick_hd_*` evidence was taken on it, and it is the ONLY fixture that can show **No Farming** — Neptunus I and Piatuos I carry `max_farms == 0` where the reference save has 255 everywhere. `tools/fixtures` points at the copy and a smoke check refuses any fixture path that reaches into the game's folder. | |
 
 In-game names `"claude nicht lschen"` and `"2Natives"`; the originals
 were slots `SAVE8.GAM` and `SAVE2.GAM`. **Anything below that reads a
