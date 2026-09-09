@@ -2225,6 +2225,37 @@ references in `doc/v3_orion2re_index.md`.
   first is where the icons are, the second is the drop rect, and the
   four pixels between them are the gap.
 
+  **THE PICK READS A PIXEL AND THE DROP READS A FIELD — one gesture,
+  two opposite sensitivities, and only the field's MODE separates
+  them.** Measured 9 September 2026, thirteen points across two
+  columns, identical struct diff at every one.
+
+  The DROP is insensitive by construction. Mode 1's post-loop adds
+  `fields::Add_Scroll_Field_(left_x, top_y, …)` (coldraw.cpp:409) and
+  `COLSUM::Evaluate_Colony_Pop_Input_` turns a hit on it into
+  `Send_Cluster_(colony, job)` (colsum.cpp:869) — which field was hit
+  is the whole of the input. Centre, all four corners, the plate's
+  own 1 px line and a point over an existing figure all produce the
+  same bytes, in an empty column and a populated one alike.
+
+  The PICK on the SAME SCREEN, through the SAME kind of field, is
+  sensitive to a single pixel: `Get_Selected_Pop_` (colsum.cpp:1006)
+  passes mode 3, whose test reads `*scroll_value_ptr`
+  (coldraw.cpp:361), which `fields::Find_Bar_Position_`
+  (fields.cpp:1702-1743) writes out of `mouse::Pointer_X_() +
+  _pointer_offset`. The value survives between clicks because nothing
+  resets it, and it is the pointer's x clamped to the column.
+
+  **The consequence for anything that drives this screen**: a drop
+  may be aimed anywhere inside the cell and a pick may not be aimed
+  at all — it has to be verified against the cluster the game
+  actually took, because the number it depends on is not on the wire
+  and is overwritten by `Sync_Mouse_State_From_SDL_` before the game
+  consumes an injected click (decision 39's correction). Two halves
+  of one gesture with completely different failure modes is exactly
+  the shape a reader assumes away, which is why it is measured here
+  rather than argued.
+
   **THE DROP RECT IS THE WHOLE COLUMN CELL, AND AN EMPTY COLUMN HAS
   ONE.** Mode 1's post-loop ends in `fields::Add_Scroll_Field_(left_x,
   top_y, left_x, right_x + 8, left_x, right_x, right_x - left_x + 8,
