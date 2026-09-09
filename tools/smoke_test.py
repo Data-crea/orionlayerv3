@@ -6829,6 +6829,26 @@ def main():
             f"as a home for {_why} by layout.json and by "
             f"v3_projektstatus.md. A module that two documents say is "
             f"marked and is not is the fault this check exists for")
+    # ── WHY EVERY MOVE RE-SORTS, AND WHY IT IS NOT SKIPPED ──────
+    # The step costs 54 ms of a 758 ms drop (measured 9 September
+    # 2026) and the obvious saving is "skip it when the game already
+    # holds the key". It cannot be taken, because nothing on the wire
+    # says the game does: neither `SerializeState` nor
+    # `SerializeFields` carries `_g_sort_index` or any field's value.
+    # A reason that lives only in a commit message is one the next
+    # reader re-litigates, so the module carries it and this holds
+    # the module to it — including the two line ranges, because
+    # "not on the wire" without a place it was looked for is an
+    # assumption wearing a finding's clothes.
+    _cs_src = open(os.path.join(SCREENS_DIR, "colony_summary",
+                                "colonysend.py"), encoding="utf-8").read()
+    for _cite in ("ext_api.cpp:49-136", "ext_api.cpp:185-200",
+                  "decision 46"):
+        assert _cite in _cs_src, (
+            f"colonysend no longer says where the game's sort state "
+            f"was looked for ({_cite}) — an unreadable state is not a "
+            f"state to assume, and the next reader will assume it")
+
     assert "DEVIATION" in _mv_words.get("_partial_note", ""), (
         "refusing a partial move is a deviation from the original, "
         "which performs it and then opens a blocking box "

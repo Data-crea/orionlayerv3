@@ -35,6 +35,41 @@ pairs AND the caller's own predicate. Counting sends would have
 "confirmed" the step one tick early, which is the direction that
 aims the next click at a window that has not moved yet.
 
+**AND STEP 1 IS SENT ON EVERY MOVE BECAUSE THE GAME'S SORT STATE IS
+NOT ON THE WIRE — measured 9 September 2026, when the step's cost was
+measured at 54 ms of a 758 ms drop and the obvious saving was "skip it
+when the game already holds the key".**
+
+It cannot be skipped, because nothing tells us it does. Looked for in
+both places that could carry it:
+
+- `ext::SerializeState` (ext_api.cpp:49-136) writes the screen ids,
+  the stardate, the counters, `settings`, the eight players, and the
+  star / ship / colony / planet / nebula / leader / antaran /
+  ship-icon arrays. **No COLSUM state of any kind**, so no
+  `_g_sort_index`.
+- `ext::SerializeFields` (ext_api.cpp:185-200) writes exactly seven
+  values per field — index, x, y, x_end, y_end, field_type, hotkey.
+  **No value and no on-state**, so the `&_g_sort_index` that
+  `Add_Multi_Button_Field_` is given (colsum.cpp:267-273) and the
+  index each button compares against are both invisible.
+
+It IS drawn: the active sort button is highlighted in the framebuffer,
+and decision 46 reads `_first` off the scroll thumb by exactly that
+route, so the channel is admissible in principle. **It is refused
+here on decision 46's own grounds.** That decision exists because a
+row that maps to the wrong game slot leaves every value on both
+screens correct and only the click's destination wrong — the worst
+failure shape this project has — and reading which of seven buttons
+is lit is a new transcription with its own thresholds and its own
+ways to be quietly wrong. Fifty-four milliseconds of a drop whose
+game side owns 469 is not the trade.
+
+**An unreadable state is not a state to assume**, which is what
+skipping the step on HD's memory of what it last sent would be. If
+the field list ever carries a field's value, this is the first caller
+for it.
+
 **STEP 1 IS THE ONE THAT IS EASY TO LEAVE OUT, AND IT MOVED TO THE
 FRONT ON 5 SEPTEMBER 2026.** `COLSUM::Sort_Col_List_` runs at exactly
 two places in the whole engine: once when the screen is entered
