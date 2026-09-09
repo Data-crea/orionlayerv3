@@ -104,6 +104,45 @@ def name_holes_galaxy_map(holes):
 BAND_KEYS = ["planet_info", "planet_output", "galaxy_inset", "empire_stats"]
 
 
+#: WHICH BOX NAMES EACH RULE CAN PRODUCE — the vocabulary, not a
+#: second copy of the geometry.
+#:
+#: Added 9 September 2026 for the F5 editor, which has to know whether
+#: a box is a frame CUTOUT before it offers a resize handle: decision 3
+#: says a cutout's rect comes from the artwork through this tool, and
+#: dragging one by hand slides content out from under its hole. The
+#: editor must be able to ask that question without a plate on disk and
+#: without running the namer, so the answer is a name list.
+#:
+#: **BUILT FROM THE SAME CONSTANTS THE RULES BUILD FROM**, never typed
+#: out beside them — `NAV_KEYS` and `BAND_KEYS` appear once each and
+#: both the namer and this set read them. A hand-written list would be
+#: the second copy this project keeps paying for, and it would go stale
+#: the first time a plate gained a hole.
+#:
+#: THE ALTERNATIVE WAS A FLAG IN `boxes.json` AND IT WAS REFUSED.
+#: `Box.locked` exists in the data model and is serialized, and nothing
+#: has ever read it. Filling it in would mean typing which boxes are
+#: cutouts into every screen's box file — a second copy of what this
+#: module already knows, and exactly decision 3's failure.
+RULE_NAMES = {
+    "galaxy_map": {"title", "map_area", "sidebar", "nav_turn"}
+                  | {f"nav_{k}" for k in NAV_KEYS},
+    "colony_summary": {"header", "list_area", "sort_bar", "return"}
+                      | set(BAND_KEYS),
+}
+
+
+def cutout_names(screen):
+    """The names `screen`'s rule can produce, or an empty set.
+
+    A screen with no rule has no cutout-derived boxes at all — every
+    box on it is hand-placed — which is a real answer and not a
+    missing one.
+    """
+    return RULE_NAMES.get(screen, set())
+
+
 def name_holes_colony_summary(holes):
     """The built plate's eight windows, by shape and position.
 

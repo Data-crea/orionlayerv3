@@ -9,7 +9,7 @@ import time
 import pygame
 from core import mouse as mouse_input
 from core.box import Box, save_boxes
-from core.editor import overlay
+from core.editor import boxclass, overlay
 from core.editor.constants import GLOW_KEYS, H_REF
 
 log = logging.getLogger("editor")
@@ -27,6 +27,10 @@ class Editor:
         self.show_help = False
         self._glow_idx = -1
         self._save_flash = 0.0
+        #: Why the last handle was refused, for the info bar. Cleared
+        #: on the next click that is not a refusal, so it reads as an
+        #: answer to what was just tried and not as a standing state.
+        self.refusal = None
 
     @property
     def glow_key(self):
@@ -111,6 +115,12 @@ class Editor:
     def _ref(self, sx, sy):
         return self.app.layout.to_ref(sx, sy)
 
+    def _screen_name(self):
+        """Which screen is being edited, or "" — the class is a
+        property of (screen, box) and not of the box alone."""
+        scr = self.app.dispatcher.top
+        return getattr(scr, "SCREEN_NAME", "") if scr else ""
+
     def _on_click(self, sx, sy):
         rx, ry = self._ref(sx, sy)
         if self.show_fields and self._field_click(sx, sy):
@@ -118,6 +128,18 @@ class Editor:
         if self.selected:
             rh = self._hit_resize(rx, ry)
             if rh:
+                # THE CLASS DECIDES, AND A REFUSAL SAYS WHY. A cutout
+                # box and a hand-placed one look identical on screen,
+                # so a handle that silently does nothing reads as a
+                # broken editor rather than as a rule — see
+                # `core.editor.boxclass`.
+                why = boxclass.refusal(self._screen_name(),
+                                       self.selected.name, rh)
+                if why:
+                    self.refusal = why
+                    log.info("resize refused: %s", why)
+                    return True
+                self.refusal = None
                 self._drag = f"resize_{rh}"
                 self._dstart = (rx, ry)
                 self._dorig = tuple(self.selected.ref_rect)
@@ -135,12 +157,14 @@ class Editor:
                 box = None
             if box:
                 self.selected = box
+                self.refusal = None
                 self._glow_idx = -1
                 self._drag = "move"
                 self._dstart = (rx, ry)
                 self._dorig = tuple(box.ref_rect)
                 return True
         self.selected = None
+        self.refusal = None
         self._glow_idx = -1
         return True
 
@@ -158,8 +182,14 @@ class Editor:
             box.ref_rect = (ox + dx, oy + dy, ow, oh)
             box.update_layout(self.app.layout)
         elif self._drag.startswith("resize_"):
-            box.ref_rect = self._calc_resize(self._dorig, dx, dy,
-                                              self._drag[7:])
+            handle = self._drag[7:]
+            rect = self._calc_resize(self._dorig, dx, dy, handle)
+            # A BOX WITH A TRANSCRIBED ASPECT KEEPS IT ON ANY EDGE.
+            # The galaxy inset is the case and it is locked today; the
+            # rule is here so the first person to unlock it cannot
+            # break a ratio held to a thousandth by a smoke check.
+            box.ref_rect = boxclass.hold_aspect(
+                self._screen_name(), box.name, rect, handle)
             box.update_layout(self.app.layout)
 
     def _calc_resize(self, o, dx, dy, h):

@@ -177,8 +177,7 @@
       ],
       "role": [
         "display"
-      ],
-      "style": {}
+      ]
     },
     {
       "name": "sb_command_text",
@@ -206,8 +205,7 @@
       ],
       "role": [
         "display"
-      ],
-      "style": {}
+      ]
     },
     {
       "name": "sb_food_text",
@@ -235,8 +233,7 @@
       ],
       "role": [
         "display"
-      ],
-      "style": {}
+      ]
     },
     {
       "name": "sb_freighters_text",
@@ -264,8 +261,7 @@
       ],
       "role": [
         "display"
-      ],
-      "style": {}
+      ]
     },
     {
       "name": "sb_research_text",
@@ -293,8 +289,7 @@
       ],
       "role": [
         "display"
-      ],
-      "style": {}
+      ]
     },
     {
       "name": "help_popup",

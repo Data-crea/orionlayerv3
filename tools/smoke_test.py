@@ -19,6 +19,7 @@ mod, and after touching anything in core/.
 """
 import ast
 import collections
+import glob
 import hashlib
 import io
 import logging
@@ -10342,6 +10343,186 @@ def main():
         "the editor kept a Box across a resize that replaced every "
         "Box the screen has")
     ok("App boots standalone")
+
+    # ── THE EDITOR'S BOX CLASSES, DERIVED AND NOT DECLARED ──────
+    #
+    # A box is LOCKED because the screen's `frame_holes` rule produces
+    # its name — decision 3, whose failure is "moving one by hand
+    # slides content out from under its hole". `Box.locked` exists in
+    # the data model and has never been read; filling it in would be a
+    # hand-copy of what `frame_holes` already knows.
+    from core.editor import boxclass as _bcl
+    import frame_holes as _fh_mod
+
+    # 1. RULE_NAMES IS THE RULE'S OWN VOCABULARY. Run the real namer
+    #    over the real plate and require that every name it produces
+    #    is in the list — otherwise the list is a second copy that
+    #    goes stale the first time a plate gains a hole.
+    _plate = os.path.join(SCREENS_DIR, "colony_summary", "assets",
+                          "frames", "frame_1920x1080.png")
+    if os.path.exists(_plate):
+        _iw, _ih, _holes = _fh_mod.find_holes(_plate)
+        _named = set(_fh_mod.name_holes_colony_summary(_holes))
+        _listed = _fh_mod.RULE_NAMES["colony_summary"]
+        assert _named <= _listed, (
+            f"the colony rule produced names RULE_NAMES does not "
+            f"list: {sorted(_named - _listed)} — the editor would "
+            f"offer handles on a cutout")
+        assert _listed - _named == {"title"} or _listed == _named, (
+            f"RULE_NAMES lists names the rule cannot produce: "
+            f"{sorted(_listed - _named)}")
+        print(f"      frame rule produced {len(_named)} names, all listed")
+    else:
+        print("      no built plate; RULE_NAMES checked against its "
+              "own constants only (run tools/frame_build.py)")
+    # AND IT IS BUILT FROM THE CONSTANTS THE RULE USES, not typed out.
+    assert set(_fh_mod.BAND_KEYS) <= _fh_mod.RULE_NAMES["colony_summary"]
+    assert {f"nav_{k}" for k in _fh_mod.NAV_KEYS} <= \
+        _fh_mod.RULE_NAMES["galaxy_map"]
+
+    # 2. THE COLUMN NAMES AGREE WITH THE SCREEN'S OWN. `core` may not
+    #    import a screen package, so the six live in two places and
+    #    this is the checker that makes the copy legitimate.
+    from screens.colony_summary import colonyheader as _bch
+    assert all(n.startswith(_bcl.COLUMN_PREFIX)
+               for n in _bch.COLUMN_BOXES), (
+        f"colonyheader.COLUMN_BOXES no longer all start with "
+        f"{_bcl.COLUMN_PREFIX!r}, which is how the editor recognises "
+        f"a BOUND box")
+
+    # 3. THE TABLE, RE-RUN AGAINST THE CODE. Counted here rather than
+    #    carried as numbers, so a new box lands in a class by running
+    #    rather than by somebody remembering to update a total.
+    _cls_rows = []
+    for _scr_name in sorted(os.listdir(SCREENS_DIR)):
+        _bp = os.path.join(SCREENS_DIR, _scr_name, "boxes.json")
+        if not os.path.exists(_bp):
+            continue
+        _raw = _sjson.load(open(_bp, encoding="utf-8"))
+        _lst = list(_raw.values())[0] if isinstance(_raw, dict) else _raw
+        _counts = collections.Counter(
+            _bcl.classify(_scr_name, _b["name"]) for _b in _lst)
+        _cls_rows.append((_scr_name, len(_lst), _counts[_bcl.FREE],
+                          _counts[_bcl.BOUND], _counts[_bcl.LOCKED]))
+    for _n, _t, _f, _b, _l in _cls_rows:
+        assert _f + _b + _l == _t, (_n, _t, _f, _b, _l)
+        print(f"      {_n:18s} {_t:3d} boxes | free {_f:2d} "
+              f"bound {_b} locked {_l:2d}")
+    _cs_row = next(r for r in _cls_rows if r[0] == "colony_summary")
+    assert _cs_row[2] == 0 and _cs_row[3] == 6 and _cs_row[4] == 8, (
+        f"colony_summary classifies as {_cs_row[2]} free / "
+        f"{_cs_row[3]} bound / {_cs_row[4]} locked")
+
+    # 4. HANDLES PER CLASS, and a refusal that says why.
+    assert len(_bcl.HANDLES[_bcl.FREE]) == 8
+    assert _bcl.HANDLES[_bcl.BOUND] == {"l", "r"}
+    assert _bcl.HANDLES[_bcl.LOCKED] == set()
+    for _h in ("t", "b", "tl", "br"):
+        _why = _bcl.refusal("colony_summary", "col_name", _h)
+        assert _why and "list_area" in _why, _why
+    assert _bcl.refusal("colony_summary", "col_name", "l") is None
+    for _h in _bcl.HANDLES[_bcl.FREE]:
+        _why = _bcl.refusal("colony_summary", "list_area", _h)
+        assert _why and "frame_holes" in _why, _why
+        assert _bcl.refusal("galaxy_map", "sb_food_text", _h) is None
+    # AND THE OVERLAY DRAWS ONLY WHAT THE CLASS OFFERS — one table,
+    # so the picture and the hit test cannot disagree (decision 5).
+    from core.editor import overlay as _bov
+    assert set(_bov.HANDLE_AT) == _bcl.HANDLES[_bcl.FREE], (
+        "the overlay's handle table and the FREE handle set differ")
+
+    # 5. THE TRANSCRIBED ASPECT SURVIVES ANY EDGE. The galaxy inset is
+    #    locked today; the rule is in so the first person to unlock it
+    #    cannot break a ratio held to a thousandth.
+    _asp = _bcl.ASPECT["colony_summary"]["galaxy_inset"]
+    assert abs(_asp - 1.2651) < 0.001, _asp
+    for _h in ("l", "r", "t", "b", "tl", "br"):
+        _x, _y, _w, _hh = _bcl.hold_aspect(
+            "colony_summary", "galaxy_inset", (0, 0, 300, 40), _h)
+        assert abs(_w / _hh - _asp) < 0.01, (_h, _w, _hh)
+    # 6. ONE FREE BOX RESIZES, AND A SAVE WRITES ONLY ITS RECT.
+    #    The stop this part was cut at: the classification is in and
+    #    one box actually moves through it. Asserted through a real
+    #    save and reload rather than on the in-memory box, because
+    #    the failure worth catching is a writer adding a key —
+    #    `Box.to_dict` serializes a fixed set and a derived value
+    #    landing in `boxes.json` is what decision 14's F5 path must
+    #    never do.
+    # A SAVE WITH NO EDIT CHANGES NOTHING, on every screen — the
+    # premise the resize test rests on, and it was FALSE until
+    # 9 September 2026. Five galaxy_map boxes carried `"style": {}`
+    # and `Box.to_dict` writes `style` only when it is truthy, so
+    # every F5 save rewrote them: a one-box edit arrived as a six-box
+    # diff and the existing check never saw it, because that one
+    # compares rects and the difference was a dropped empty dict. The
+    # empty containers are gone from the data; this is what keeps
+    # them gone.
+    for _idem in sorted(glob.glob(os.path.join(SCREENS_DIR, "*",
+                                               "boxes.json"))):
+        _id_raw = _sjson.load(open(_idem, encoding="utf-8"))
+        if not isinstance(_id_raw, dict):
+            continue
+        _id_key = next(iter(_id_raw))
+        _id_w, _id_h = (int(v) for v in _id_key.split("x"))
+        with _tf.TemporaryDirectory() as _id_dir:
+            __import__("shutil").copy(
+                _idem, os.path.join(_id_dir, "boxes.json"))
+            _save_boxes(_id_dir, load_boxes(_idem, _id_w, _id_h),
+                        _id_w, _id_h)
+            _id_after = _sjson.load(open(
+                os.path.join(_id_dir, "boxes.json"), encoding="utf-8"))
+        _id_b = {b["name"]: b for b in _id_raw[_id_key]}
+        _id_a = {b["name"]: b for b in _id_after[_id_key]}
+        _id_moved = [n for n in _id_b if _id_b[n] != _id_a.get(n)]
+        assert not _id_moved, (
+            f"{os.path.relpath(_idem, SCREENS_DIR)}: a save with no "
+            f"edit rewrites {_id_moved} — an F5 save must be a no-op "
+            f"until something is dragged, or every edit arrives as a "
+            f"wider diff than it is")
+
+    _rz_screen = "galaxy_map"
+    _rz_src = os.path.join(SCREENS_DIR, _rz_screen, "boxes.json")
+    _rz_before = _sjson.load(open(_rz_src, encoding="utf-8"))
+    _rz_key = next(iter(_rz_before))
+    _rz_name = next(_b["name"] for _b in _rz_before[_rz_key]
+                    if _bcl.classify(_rz_screen, _b["name"]) == _bcl.FREE)
+    with _tf.TemporaryDirectory() as _rz_dir:
+        __import__("shutil").copy(_rz_src,
+                                  os.path.join(_rz_dir, "boxes.json"))
+        _rz_w, _rz_h = (int(v) for v in _rz_key.split("x"))
+        _rz_boxes = load_boxes(_rz_src, _rz_w, _rz_h)
+        _rz_box = next(b for b in _rz_boxes if b.name == _rz_name)
+        _rz_orig = tuple(_rz_box.ref_rect)
+        # Through the editor's own arithmetic, both axes, and through
+        # the aspect hook so a box with no ratio is unchanged by it.
+        _rz_new = Editor._calc_resize(None, _rz_orig, 17, 11, "br")
+        _rz_new = _bcl.hold_aspect(_rz_screen, _rz_name, _rz_new, "br")
+        assert _rz_new[2] == _rz_orig[2] + 17 and \
+            _rz_new[3] == _rz_orig[3] + 11, (
+            f"a FREE box did not take the drag: {_rz_orig} -> {_rz_new}")
+        _rz_box.ref_rect = _rz_new
+        _save_boxes(_rz_dir, _rz_boxes, _rz_w, _rz_h)
+        _rz_after = _sjson.load(
+            open(os.path.join(_rz_dir, "boxes.json"), encoding="utf-8"))
+    assert set(_rz_after) == set(_rz_before), "a save changed the keys"
+    _rz_b = {b["name"]: b for b in _rz_before[_rz_key]}
+    _rz_a = {b["name"]: b for b in _rz_after[_rz_key]}
+    assert set(_rz_a) == set(_rz_b), "a save changed which boxes exist"
+    _rz_moved = [n for n in _rz_b if _rz_b[n] != _rz_a[n]]
+    assert _rz_moved == [_rz_name], (
+        f"the save touched {_rz_moved}, wanted only [{_rz_name!r}]")
+    _rz_diff = [k for k in set(_rz_a[_rz_name]) | set(_rz_b[_rz_name])
+                if _rz_a[_rz_name].get(k) != _rz_b[_rz_name].get(k)]
+    assert _rz_diff == ["rect"], (
+        f"the save wrote {_rz_diff} for {_rz_name}; a resize changes "
+        f"ref_rect and nothing else")
+    assert _rz_a[_rz_name]["rect"] == list(_rz_new)
+
+    ok(f"editor box classes derived from the frame rule, one FREE box "
+       f"({sum(r[2] for r in _cls_rows)} free, "
+       f"{sum(r[3] for r in _cls_rows)} bound, "
+       f"{sum(r[4] for r in _cls_rows)} locked; refusals name what to "
+       f"change, the inset keeps 1.2651 on any edge)")
 
     # ── A WRITER TAKES THE FILE'S OWN FORMATTING ────────────────
     #

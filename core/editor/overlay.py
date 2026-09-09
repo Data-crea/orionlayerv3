@@ -8,6 +8,7 @@ import time
 import pygame
 
 from core.box import get_stored_resolutions
+from core.editor import boxclass
 from core.editor.constants import (
     H_REF, G_REF, C_SEL, C_GLO, C_GLO_ACT, C_OUT, C_IBG, C_ITX,
     C_ASN, C_FTX, C_HELP_BG, C_HELP_KEY, C_HELP_TXT, C_HELP_HDR,
@@ -48,16 +49,36 @@ def render(ed, surface):
                      (10, 38))
 
 
+#: Handle key -> where it sits on the box, as `Editor._hit_resize`
+#: names them. ONE table, so the drawing and the hit test cannot offer
+#: different handles (decision 5).
+HANDLE_AT = {
+    "tl": (0.0, 0.0), "tr": (1.0, 0.0), "bl": (0.0, 1.0),
+    "br": (1.0, 1.0), "t": (0.5, 0.0), "b": (0.5, 1.0),
+    "l": (0.0, 0.5), "r": (1.0, 0.5),
+}
+
+
 def draw_sel(ed, surface, L):
+    """The selection outline, and only the handles its class offers.
+
+    **A HANDLE THAT IS DRAWN AND REFUSED IS WORSE THAN NO HANDLE.**
+    Until 9 September 2026 all eight were drawn on every box, and on
+    the colony screen every one of the fourteen boxes refuses at least
+    some of them — a cutout refuses all eight. Drawing what cannot be
+    used is how an editor teaches somebody the wrong model of its own
+    rules; `core.editor.boxclass` decides, and the same function the
+    click path asks.
+    """
     box = ed.selected
     r = box.screen_rect
     pygame.draw.rect(surface, C_SEL, r, 2)
     hs = max(4, int(H_REF * L.scale))
-    bx, by, bw, bh = r.x, r.y, r.w, r.h
-    for hx, hy in [(bx, by), (bx+bw, by), (bx, by+bh),
-                    (bx+bw, by+bh), (bx+bw//2, by),
-                    (bx+bw//2, by+bh), (bx, by+bh//2),
-                    (bx+bw, by+bh//2)]:
+    kind = boxclass.classify(ed._screen_name(), box.name)
+    for key in boxclass.HANDLES[kind]:
+        fx, fy = HANDLE_AT[key]
+        hx = r.x + int(r.w * fx)
+        hy = r.y + int(r.h * fy)
         pygame.draw.rect(surface, C_SEL,
                          (hx-hs//2, hy-hs//2, hs, hs))
     if box.style.get("skin") == "button":
@@ -77,6 +98,13 @@ def draw_info(ed, surface, L):
     bg.fill(C_IBG)
     iy = ed.app.win_h - ih
     surface.blit(bg, (0, iy))
+    # A REFUSAL WINS THE LINE. It answers what was just tried, so it
+    # has to be readable at the moment of trying rather than in a log
+    # the person dragging is not watching.
+    if ed.refusal:
+        f = ed.app.style.get_font(L.font_size(16))
+        surface.blit(f.render(ed.refusal[:200], True, C_ASN), (10, iy + 4))
+        return
     if ed.selected:
         b = ed.selected
         x, y, w, h = b.ref_rect
@@ -108,7 +136,11 @@ def draw_info(ed, surface, L):
                          f"crop=({c[0]:.2f},{c[1]:.2f})")
             co = b.style.get("content_offset")
             co_str = f" co=({co[0]},{co[1]})" if co else ""
-            t = (f"'{b.name}' ({x},{y}) {w}x{h} "
+            # THE CLASS IS ON THE LINE, because it decides what the
+            # handles do and nothing on screen shows it: a cutout and
+            # a hand-placed box are the same rectangle.
+            _kind = boxclass.classify(ed._screen_name(), b.name)
+            t = (f"'{b.name}' [{_kind}] ({x},{y}) {w}x{h} "
                  f"skin={skin} field={fid} "
                  f"fs={b.style.get('font_scale', 1.0):.1f}"
                  f"{co_str}{extra}")
