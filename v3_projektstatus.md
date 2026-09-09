@@ -3081,6 +3081,35 @@ finds.
   --spec` now decodes any record against its spec, so the 64-byte
   ceiling on the int16 column view no longer stands in the way.
 
+**"No Farming" beside the original — answered 9 September 2026, and
+the Part G gap closes.** It could not be asked on the reference save,
+whose every `max_farms` is 255; it was asked on `natives_autosave`,
+where Neptunus I and Piatuos I carry 0. Both halves from one snapshot,
+the game's records verified byte for byte against the fixture before
+and after.
+
+**POSITION: transcribed, and it matches.** The original centres the
+label in `left_x..right_x` — 101..226 for farmers, `right_x` being the
+next column's `left_x` minus 10 — through
+`Squeeze_Print_Paragraph_(left_x, top_y + 5, right_x - left_x, 28,
+E_Strings_(387), 2)`, where the 2 selects
+`fonts::Print_Centered_(x + width/2, y, str)` (coldraw.cpp:315-321).
+Measured on its own framebuffer: ink centre native **162.0** against
+the 163.5 that expression computes, one glyph's rounding. HD's label
+centres at **0.4985** of its FARMERS column against the original's
+0.4962 — the two columns differ by the 10 px gap the original leaves
+between them and HD tiles over, and the centring rule is the same one.
+Vertically HD sits at band +10 of 65 against the original's +5 of 31.
+
+**SIZE: the known gap, unchanged and still owed.** HD's label is 45 %
+of its column (ink 157 px of 343) against the original's 57 % (77 of
+133). That is `colonylist.NO_FARM_FONT_REF`'s row-to-column
+magnification mismatch, and it rests on `NATIVE_LABEL_CAP` — 10 px of
+cap height measured off a picture, because font style 3's height
+lives in the player's FONTS.LBX and is in no source this project can
+read. **The font extractor is owed twice**: here and for the name cap
+(`namestar.cpp:246-256`).
+
 ### Acceptance fixtures — the THREE savegames, by name
 
 Recorded 5 September 2026. They live in **`~/orionlayer-fixtures/`**
