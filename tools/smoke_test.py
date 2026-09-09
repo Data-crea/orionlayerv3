@@ -3124,6 +3124,32 @@ def main():
         assert "typography" in _txt.lower() and "DEVIATION" in _txt, (
             f"{_home} does not carry the typography deviation")
 
+    # ── DIMMING A KEY IS OURS, AND IS MARKED AS SUCH ────────────
+    # All seven of the original's sort buttons are the same field
+    # (colsum.cpp:267-273) and it draws them alike — every inactive
+    # label measures (196, 196, 196) on its own framebuffer,
+    # PRODUCING included. The STATE was always recorded; the DRAWING
+    # of it was not marked until 9 September 2026, and an unmarked
+    # deviation is the failure the marking rules exist for.
+    for _home, _txt in (
+            ("colonysort.py", open(os.path.join(
+                SCREENS_DIR, "colony_summary", "colonysort.py"),
+                encoding="utf-8").read()),
+            ("layout.json", _sb_data["sort"].get(
+                "_unavailable_deviation", "")),
+            ("v3_projektstatus.md", open(os.path.join(
+                os.path.dirname(SCREENS_DIR), "v3_projektstatus.md"),
+                encoding="utf-8").read())):
+        assert "DEVIATION" in _txt and "196, 196, 196" in _txt, (
+            f"{_home} does not mark the dimmed sort key as a "
+            f"deviation with what the original draws instead")
+    # AND IT IS TIED TO THE REASON IT ENDS WITH: the day the cost
+    # table is extracted the key is correct and the dimming goes.
+    assert _cr.SORT_UNAVAILABLE and "cost" in "".join(
+        _cr.SORT_UNAVAILABLE.values()), (
+        "SORT_UNAVAILABLE no longer says the cost table is what is "
+        "missing, which is what makes the deviation temporary")
+
     assert _csort.HIGHLIGHT_PAD == 6, (
         f"HIGHLIGHT_PAD is {_csort.HIGHLIGHT_PAD}; the original leaves "
         f"2 native px each side of the word (lit box 92..138, ink "

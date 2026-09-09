@@ -221,6 +221,26 @@ demands — each says what the original does instead:**
   speaks — decision 33, and the original's own answer to one is a
   blocking text box (textbox.cpp:149) — but it is transient and
   `_render_info` takes the panel back on the next frame.
+- **DEVIATION — the greyed PRODUCING key.** HD dims a control the
+  original does not. All seven sort buttons are the same field there —
+  `Add_Multi_Button_Field_(x, 446, …, &_g_sort_index, 0..6, …)`,
+  colsum.cpp:267-273 — and it draws them alike: measured on its own
+  framebuffer, **every inactive label is (196, 196, 196), PRODUCING
+  included**, and only the active one differs at (196, 208, 252). HD
+  draws the keys in `colonyrows.SORT_UNAVAILABLE` in `nav_text_dim`
+  (104, 116, 142).
+  The STATE has been recorded since it was introduced, with its reason
+  — `TECHDATA::_buildings[].cost` is not extracted, so the key orders
+  buildings among themselves by name where `cmp_Prod_`
+  (colsum.cpp:1091) orders them by cost, and a control that is right
+  on one save and wrong on the next is worse than one that says it
+  cannot do the job. **What was missing until 9 September 2026 is that
+  the DRAWING of that state is ours**: the original says nothing, so
+  saying it is a deviation and not a transcription. It ends with the
+  cost-table extraction and its checker, not with a change of taste,
+  and the dimming goes with its three markings then. In
+  `colonysort.render`, `layout.json` under
+  `sort._unavailable_deviation`, here, and a check.
 - **DEVIATION — the HD frontend's typography.** Every label on this
   screen is drawn in CAPITALS, and the sidebar drops the colon the
   original's own string carries. Data's decision, 9 September 2026.
