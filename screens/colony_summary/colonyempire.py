@@ -213,6 +213,13 @@ def render(surface, box, cfg, local, layout, style, font_scale,
     row_h = (rect.h - 2 * pad) / len(rows)
     for i, row in enumerate(rows):
         top = rect.y + pad + int(i * row_h)
+        # DEVIATION — THE HD FRONTEND'S TYPOGRAPHY. Capitals, and
+        # without the colon the original's own string carries:
+        # `ESTR_SRESERVE_SD '%sReserve: %d'`, recorded in
+        # `layout.json`'s `empire._estrings_note`. Data's decision,
+        # 9 September 2026. The stored label stays the original's
+        # spelling so what is deviated from is still on record; see
+        # `colonysort.display` for the full marking.
         label = style.render_text(row["label"].upper(), label_size,
                                   LABEL_COLOR[:3])
         value, warn = empire_value(row, local)

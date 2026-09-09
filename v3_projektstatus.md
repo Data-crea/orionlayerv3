@@ -221,6 +221,21 @@ demands — each says what the original does instead:**
   speaks — decision 33, and the original's own answer to one is a
   blocking text box (textbox.cpp:149) — but it is transient and
   `_render_info` takes the panel back on the next frame.
+- **DEVIATION — the HD frontend's typography.** Every label on this
+  screen is drawn in CAPITALS, and the sidebar drops the colon the
+  original's own string carries. Data's decision, 9 September 2026.
+  The original prints its seven sort keys and its six sidebar labels
+  in mixed case — `layout.json` stores them that way, and
+  `empire._estrings_note` records the sidebar's as `orion2_str.h`
+  comments them, `ESTR_SRESERVE_SD '%sReserve: %d'`, colon included.
+  **The stored labels stay the original's spelling and a smoke check
+  holds them there**: the deviation is in the RENDERING
+  (`colonysort.display`, `colonyempire.value_row`) and must not
+  become an edit to the data, or what it deviates from stops being on
+  record. The column headings are NOT part of it — the original's own
+  headings are capitals, so `colonyheader` is a transcription. In
+  `colonysort.display`, `colonyempire.value_row`, `layout.json` under
+  `sort._typography_deviation`, here, and a check.
 - **HD EXTENSION — the stranded notice, on its own strip.**
   `move.stranded` ("The game is holding colonists. Press RETURN to
   put them back.") is the one line that is neither a refusal nor a

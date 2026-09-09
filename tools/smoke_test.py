@@ -3032,6 +3032,95 @@ def main():
         **_a, "name": "x", "pops": 1}), tuple), (
         "a descending sort key returns a tuple again, which is a "
         "tie-break by another name")
+    # ── THE HIGHLIGHT CONTAINS THE WORD IT LIGHTS ──────────────
+    #
+    # `layout` measured `label` and `render` drew `label.upper()`, so
+    # the lit box was sized for a string nobody sees: at 1080p "Name"
+    # measures 52 px and "NAME" draws 56, "Industry" 76 against 96,
+    # "Producing" 92 against 113. The active key sat behind its own
+    # text instead of around it, worst on the longest words — which
+    # is what made a dimmed PRODUCING read as a second selection
+    # rather than as an unavailable one. Both calls go through
+    # `colonysort.display` now, and this asserts the property that
+    # names, rather than the identity of the two call sites.
+    from screens.colony_summary import colonysort as _csort
+    _sb_data = app.res.load_json(
+        "screens/colony_summary/layout.json", {}) or {}
+    _sb_keys = [(b["key"], b["label"])
+                for b in _sb_data.get("sort", {}).get("buttons", [])]
+    assert _sb_keys, "the sort bar has no buttons to lay out"
+    for _sw, _sh in ((1920, 1080), (2560, 1440), (3440, 1440),
+                     (3840, 2160)):
+        _slay = Layout(_sw, _sh)
+        _sbox = {b.name: b for b in load_boxes(
+            os.path.join(SCREENS_DIR, "colony_summary", "boxes.json"),
+            _sw, _sh)}
+        for _b in _sbox.values():
+            _b.update_layout(_slay)
+        _sfs = _slay.font_size(
+            _sbox["sort_bar"].style.get("font_size", 18))
+        _btns = _csort.layout(_sbox["sort_bar"].screen_rect, _sb_keys,
+                              app.style, _sfs)
+        for _bt in _btns:
+            _drawn = app.style.render_text(
+                _csort.display(_bt.label), _sfs, (255,) * 3).get_width()
+            assert _drawn <= _bt.highlight.width, (
+                f"{_sw}x{_sh}: {_bt.label!r} draws {_drawn} px and its "
+                f"highlight is {_bt.highlight.width} — the lit box has "
+                f"to contain the word it lights, or the active key "
+                f"reads as a smudge and a dimmed key reads as a "
+                f"second selection")
+            assert _bt.highlight.width <= _bt.hit.width, (
+                f"{_sw}x{_sh}: {_bt.label!r}'s highlight is wider than "
+                f"its hit rect")
+    # AND THE PAD IS THE ORIGINAL'S, measured off its own framebuffer:
+    # the lit box is native 92..138 around ink at 94..136, two native
+    # px per side, which is six reference.
+    # ── THE TYPOGRAPHY DEVIATION IS A RENDERING, NOT AN EDIT ────
+    # Capitals and no colon are Data's decision (9 September 2026) and
+    # are marked. What the check defends is the thing that makes a
+    # deviation checkable at all: the STORED labels must still be the
+    # original's own spelling, so what is deviated from stays on
+    # record. The day somebody "tidies" layout.json to match the
+    # screen, the deviation becomes invisible and unfalsifiable.
+    for _k, _lbl in _sb_keys:
+        assert _lbl != _lbl.upper() or len(_lbl) <= 2, (
+            f"the stored sort label {_lbl!r} is already capitals — the "
+            f"original prints these in mixed case and the capitals are "
+            f"the RENDERING's deviation, not the data's")
+    _emp_rows = _sb_data.get("empire", {}).get("rows", [])
+    assert _emp_rows, "the sidebar has no rows"
+    for _r in _emp_rows:
+        _l = _r.get("label", "")
+        assert _l and _l != _l.upper(), (
+            f"the stored sidebar label {_l!r} is already capitals")
+        assert ":" not in _l, (
+            f"the stored sidebar label {_l!r} carries the colon; the "
+            f"original's string has it and ours drops it in the "
+            f"RENDERING — putting it in the data hides the deviation")
+    assert "%sReserve: " in _sb_data["empire"].get("_estrings_note", ""), (
+        "empire._estrings_note no longer records the original's own "
+        "string, which is what the colon deviation is measured against")
+    for _home, _txt in (
+            ("colonysort.py", open(os.path.join(
+                SCREENS_DIR, "colony_summary", "colonysort.py"),
+                encoding="utf-8").read()),
+            ("colonyempire.py", open(os.path.join(
+                SCREENS_DIR, "colony_summary", "colonyempire.py"),
+                encoding="utf-8").read()),
+            ("layout.json", _sb_data["sort"].get(
+                "_typography_deviation", "")),
+            ("v3_projektstatus.md", open(os.path.join(
+                os.path.dirname(SCREENS_DIR), "v3_projektstatus.md"),
+                encoding="utf-8").read())):
+        assert "typography" in _txt.lower() and "DEVIATION" in _txt, (
+            f"{_home} does not carry the typography deviation")
+
+    assert _csort.HIGHLIGHT_PAD == 6, (
+        f"HIGHLIGHT_PAD is {_csort.HIGHLIGHT_PAD}; the original leaves "
+        f"2 native px each side of the word (lit box 92..138, ink "
+        f"94..136, measured at 1080p) = 6 reference")
+
     ok("colony summary sort keys (seven, five descending, "
        "case-insensitive name, no toggle, ties in input order, "
        "producing declared unavailable)")
@@ -4927,6 +5016,7 @@ def main():
         # inventory because there was nothing to inventory, and the
         # net could not report a hole it had never been shown.
         "screens/colony_summary/colonypopup.py": "hover popup",
+        "screens/colony_summary/colonysort.py": "typography",
         "screens/colony_summary/colonyrows.py": "layout.json",
         # RETARGETED 8 September 2026, in the commit that deleted the
         # F/W/S markers. `colonytrack` was cited on "marker" and

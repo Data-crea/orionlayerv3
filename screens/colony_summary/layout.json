@@ -79,7 +79,8 @@
         ]
       }
     ],
-    "default": "name"
+    "default": "name",
+    "_typography_deviation": "DEVIATION - THE HD FRONTEND'S TYPOGRAPHY, Data's decision of 9 September 2026. Every label on this screen is drawn in CAPITALS, and the sidebar drops the colon the original's string carries. The original prints its sort keys and its sidebar labels in mixed case: 'Name', 'Population', 'Producing' as stored above, and ESTR_SRESERVE_SD '%sReserve: %d' as empire._estrings_note records it. THE STORED LABELS STAY THE ORIGINAL'S SPELLING and a smoke check holds them there - the deviation is in the RENDERING (colonysort.display, colonyempire.value_row) and must not become an edit to the data, or what it deviates from stops being on record. The column headings are NOT part of this: the original's own headings are capitals, so colonyheader is a transcription. Marked in colonysort.display, in colonyempire.value_row, here, in v3_projektstatus.md and in a check."
   },
   "return": {
     "label": "Return",

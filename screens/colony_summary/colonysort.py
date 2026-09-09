@@ -32,9 +32,73 @@ falls inside the button it belongs to.
 """
 import pygame
 
-#: Minimum breathing room around a highlighted word, reference px.
-#: The original pads its lit box by about 2 native px on each side.
+#: Breathing room around a highlighted word, reference px.
+#:
+#: MEASURED, and the "about" is gone — 9 September 2026, off the
+#: original's own framebuffer at 1080p with `name` active. The lit box
+#: is native x 92..138, y 450..466 and the word's ink inside it is
+#: x 94..136, y 452..463: **2 native px left and right**, 2 top and 3
+#: bottom. Two native px is 6 reference, which is what this was.
+#:
+#: WHAT THE ORIGINAL ACTUALLY DRAWS, because it is not this
+#: construction at all. `Add_Multi_Button_Field_` takes the field's
+#: extent from `animate::Get_Width_/Get_Height_(pic)` (fields.cpp) and
+#: `Draw_Field_`'s FIELD_TYPE_MULTI_BUTTON arm blits that anim and
+#: then prints the word with `fonts::Print_Centered_` at the field's
+#: midpoint (fields.cpp:1896-1925). So the box is ARTWORK, one sprite
+#: per button in the player's COLSUM.LBX, and the word is centred in
+#: it — the box does not follow the word, the word follows the box.
+#: The seven field origins are 89 / 140 / 219 / 262 / 326 / 393 / 480
+#: (colsum.cpp:267-273) and their spacing is not uniform, which is
+#: what says each sprite is cut to its own word.
+#:
+#: HD cannot ship those sprites (decision 42), so it fills a rect
+#: instead and sizes it from the word plus this pad. That is a
+#: DEVIATION in construction and it lands in the same place: the
+#: measured 2 px per side is exactly what the artwork leaves.
 HIGHLIGHT_PAD = 6
+
+
+def display(label):
+    """The string as it is DRAWN.
+
+    **DEVIATION — THE HD FRONTEND'S TYPOGRAPHY.** The word is drawn
+    in CAPITALS where the original prints it in mixed case, and on
+    the sidebar the original's colon is dropped as well. Decided by
+    Data on 9 September 2026 and kept: it is the HD frontend's own
+    type voice, applied to every label on this screen, and the
+    original's own column headings are capitals too.
+
+    What it deviates FROM is on record either way, which is what
+    makes this a deviation rather than a drift. `layout.json` stores
+    the labels as the original prints them — "Name", "Population",
+    "Producing" — and `empire._estrings_note` carries the sidebar's
+    strings as `orion2_str.h` comments them, colon included:
+    `ESTR_SRESERVE_SD '%sReserve: %d'`. Both are transcriptions; only
+    the rendering is ours.
+
+    Marked here, in `colonyempire.value_row` for the sidebar half, in
+    `layout.json` under `sort._typography_deviation`, in
+    `v3_projektstatus.md`, and in a smoke check that holds the stored
+    labels to the original's spelling so the deviation stays a
+    RENDERING choice and cannot become an edit to the data.
+
+    **ONE HOME, BECAUSE MEASURING ONE STRING AND DRAWING ANOTHER IS
+    HOW THE HIGHLIGHT STOPPED FITTING** — 9 September 2026. `layout`
+    measured `label` and `render` drew `label.upper()`, and Aldrich's
+    capitals are wider: at 1080p "Name" measures 52 px and "NAME"
+    draws 56, "Industry" 76 against 96, "Producing" 92 against 113.
+    So the lit box was 4 to 21 px short of the word it was supposed
+    to contain, worst on the longest words, and the active key read
+    as a smudge behind its own text rather than as a selection.
+
+    Nothing about it looked wrong in the code: both lines call
+    `Style.render_text`, both pass the same label, and the `.upper()`
+    sits at the end of one of them. This is decision 5 for a STRING
+    rather than for a rect — one function produces the thing, and
+    whoever measures and whoever draws both call it.
+    """
+    return label.upper()
 
 
 class SortButton:
@@ -61,7 +125,8 @@ def layout(bar, keys, style, font_size):
     if not keys:
         return []
     bar = pygame.Rect(bar)
-    widths = [style.render_text(label, font_size, (255, 255, 255)).get_width()
+    widths = [style.render_text(display(label), font_size,
+                                (255, 255, 255)).get_width()
               for _key, label in keys]
     slack = bar.width - sum(widths)
     # n + 1 gaps: one before the first word and one after the last, so
@@ -133,7 +198,8 @@ def render(surface, buttons, active_key, unavailable, mouse,
             surface.fill((active_bg if active else hover_bg)[:3],
                          button.highlight)
         colour = text_dim if button.key in unavailable else text
-        word = style.render_text(button.label.upper(), font_size, colour[:3])
+        word = style.render_text(display(button.label), font_size,
+                                 colour[:3])
         surface.blit(word, (
             button.highlight.x
             + (button.highlight.width - word.get_width()) // 2,
