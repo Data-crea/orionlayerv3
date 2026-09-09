@@ -246,6 +246,15 @@ def main():
     screen = app.dispatcher.active
     if not base.identify(app.client.state, args.expect):
         return 1
+    # THE SAVE IS STILL THE SAVE — see `fixtures.verify_colonies`.
+    # This tool is the reason that check exists: it is the one that
+    # drifted the fixture, and it is the one that must refuse to
+    # start from a drifted one. All eleven of the player's colonies
+    # and the forty-four it does not own, against the `.GAM`.
+    if not base.verify_colonies(
+            app.client.state, args.expect,
+            {r["index"]: r["name"] for r in screen._rows}):
+        return 1
 
     target = base.choose(screen, app.client.state, args.job, args.row_name)
     if target is None:

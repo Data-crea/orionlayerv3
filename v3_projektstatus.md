@@ -873,7 +873,7 @@ in exactly ONE bucket. The numbers below are produced by
 check asserts this list still agrees with it — the same trade the
 check count makes, for the same reason.
 
-`screens/galaxy_map/screen.py` (**531** code, 807 total), `tools/struct_probe.py` (**478** code, 753 total), `tools/colony_list_preview.py` (**412** code, 781 total), `screens/custom_race/screen.py` (**400** code, 558 total), `tools/colony_move_hd.py` (**379** code, 574 total), `core/editor/editor.py` (**340** code, 390 total), `screens/galaxy_map/renderer.py` (**335** code, 753 total), `tools/ext_diag.py` (**325** code, 473 total), `core/style.py` (**309** code, 471 total).
+`screens/galaxy_map/screen.py` (**531** code, 807 total), `tools/struct_probe.py` (**478** code, 753 total), `tools/colony_list_preview.py` (**412** code, 781 total), `screens/custom_race/screen.py` (**400** code, 558 total), `tools/colony_move_hd.py` (**383** code, 583 total), `core/editor/editor.py` (**340** code, 390 total), `screens/galaxy_map/renderer.py` (**335** code, 753 total), `tools/ext_diag.py` (**325** code, 473 total), `core/style.py` (**309** code, 471 total).
 `smoke_test.py` is exempt by nature.
 
 **TWO TOOLS JOINED THE LIST ON 8 SEPTEMBER 2026 and one thing left

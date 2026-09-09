@@ -9,8 +9,11 @@ The prose home for the files themselves — where they came from, what
 is in them, their sha256 — is `~/orionlayer-fixtures/README.md`,
 which is not in the repository because a savegame is the player's own
 game data (decisions 40 and 42). What IS here is the fingerprint a
-run can check without opening a file.
+run can check without opening a file — and, since 9 September 2026,
+the check that the loaded game still IS that file.
 """
+import hashlib
+import os
 
 #: The acceptance fixtures, by what a SNAPSHOT can see of them —
 #: `v3_projektstatus.md`, "Acceptance fixtures — the two savegames".
@@ -85,3 +88,128 @@ def identify(state, expect):
     return False
 
 
+
+
+# ── THE SAVE ON DISK IS THE AUTHORITY ────────────────────────────
+#
+# `identify` above answers "is the game on the right save" from a
+# fingerprint — stardate, star count, colony count. That is enough to
+# catch the wrong slot and not enough to catch the RIGHT slot after
+# something has written to it, which is the failure that cost a run
+# on 9 September 2026: a diagnostic made thirty real pop moves,
+# several of which did not restore, and every later run would have
+# been measured against a save that had drifted while reporting
+# "fixture: reference" on every line.
+#
+# So the records are compared against the file. MOO2 writes the
+# colony array uncompressed, and on a freshly loaded slot the
+# snapshot's `colonies_raw` is byte-for-byte what the `.GAM` holds.
+#
+# THE OFFSET IS GATED ON THE SHA256, which is what makes a stored
+# offset legitimate rather than a magic number: a different file
+# cannot be sliced at 607 and believed. It was established by
+# locating the live array in the file on a fresh load — `gam.find(
+# b"".join(colonies_raw))` — and it is re-derivable that way in one
+# line by anyone who doubts it.
+FIXTURE_FILES = {
+    "reference": {
+        "file": "fixture_reference_3502.4.GAM",
+        "sha256": "ab70cc9ad5442335a58498bf49de8c6517838826fb"
+                  "07a789e323b85c02370bd6",
+        "colony_offset": 607,
+        "colony_count": 55,
+    },
+    "natives": {
+        "file": "fixture_natives_3502.5.GAM",
+        "sha256": "b1f1aa466716d6c0c6b28c84fe270f430c732ec7cb"
+                  "3172d221be44b68708e2c8",
+        "colony_offset": 607,
+        "colony_count": 36,
+    },
+}
+
+#: `s_colony`'s packed size. Imported rather than repeated — the spec
+#: is the one home for it (decision 23).
+try:
+    from core.structs.colony import SIZE as COLONY_SIZE
+except Exception:                              # pragma: no cover
+    COLONY_SIZE = 361
+
+#: Where the fixtures live. Outside the repository, because a
+#: savegame is the player's own game data (decisions 40 and 42).
+FIXTURE_DIR = os.path.expanduser(
+    os.environ.get("ORIONLAYER_FIXTURES", "~/orionlayer-fixtures"))
+
+
+def fixture_colonies(expect, root=None):
+    """The colony records the `.GAM` holds, or (None, why).
+
+    Absence is a STATE and not an error: a clone has no fixtures, and
+    a run that cannot find one has to say so rather than skip the
+    check silently (decision 42's pattern).
+    """
+    spec = FIXTURE_FILES.get(expect)
+    if spec is None:
+        return None, f"no file is recorded for the {expect!r} fixture"
+    path = os.path.join(root or FIXTURE_DIR, spec["file"])
+    if not os.path.exists(path):
+        return None, f"the fixture is not on this disk: {path}"
+    with open(path, "rb") as fh:
+        blob = fh.read()
+    got = hashlib.sha256(blob).hexdigest()
+    if got != spec["sha256"]:
+        return None, (f"{spec['file']} has sha256 {got[:16]}…, the "
+                      f"table says {spec['sha256'][:16]}… — the stored "
+                      f"offset describes a different file")
+    off, n = spec["colony_offset"], spec["colony_count"]
+    end = off + n * COLONY_SIZE
+    if end > len(blob):
+        return None, (f"{spec['file']} is {len(blob)} bytes and the "
+                      f"array would end at {end}")
+    return [blob[off + i * COLONY_SIZE: off + (i + 1) * COLONY_SIZE]
+            for i in range(n)], None
+
+
+def verify_colonies(state, expect, names=None, root=None):
+    """True when every colony record equals the one in the `.GAM`.
+
+    **THIS IS THE CHECK THAT `identify` IS NOT.** The fingerprint says
+    which save is loaded; this says the save is still as it was
+    loaded. A tool that injects clicks writes to the player's game,
+    and the difference between "the reference fixture" and "the
+    reference fixture with three pops moved" is invisible to every
+    other line a run prints.
+
+    `names` maps a colony index to a name, for the report — the
+    eleven the player owns are the ones a reader can act on, and an
+    index alone sends them back to a struct dump.
+    """
+    want, why = fixture_colonies(expect, root)
+    if want is None:
+        print(f"COLONY CHECK SKIPPED: {why}")
+        print("  The run continues, and it is NOT evidence that the "
+              "save is unmodified.")
+        return True
+    got = [bytes(r) for r in state.colonies_raw]
+    if len(got) != len(want):
+        print(f"the game reports {len(got)} colony records and the "
+              f"file holds {len(want)}")
+        return False
+    bad = [i for i, (a, b) in enumerate(zip(got, want)) if a != b]
+    if not bad:
+        print(f"colonies: all {len(got)} records match "
+              f"{FIXTURE_FILES[expect]['file']} byte for byte")
+        return True
+    print(f"THE LOADED GAME HAS DRIFTED FROM THE SAVE. "
+          f"{len(bad)} of {len(got)} colony records differ:")
+    for i in bad[:15]:
+        label = (names or {}).get(i)
+        offs = [k for k in range(COLONY_SIZE) if got[i][k] != want[i][k]]
+        print(f"  colony {i:3d}"
+              + (f" {label!r}" if label else "")
+              + f": {len(offs)} bytes differ, first at {offs[:8]}")
+    if len(bad) > 15:
+        print(f"  … and {len(bad) - 15} more")
+    print("  RELOAD THE SLOT. Every number this run would print is "
+          "true and none of it would be about the fixture it names.")
+    return False

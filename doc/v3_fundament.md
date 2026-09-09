@@ -1316,6 +1316,55 @@ had already required that "anything below that reads a save reads it
 by its fixture name"; the rule existed and the tool did not obey it,
 which is what makes this a line here rather than a note there.
 
+**AND IDENTIFYING THE SAVE IS NOT THE SAME AS THE SAVE BEING
+UNCHANGED — 9 September 2026, and the fingerprint above is what made
+the gap invisible.** `identify` reads stardate, star count and colony
+count. Not one of the three moves when a pop changes job, so a save
+that has been written to reports "fixture: reference" on every line,
+for as long as it takes somebody to notice.
+
+Something did write to it. The drop sweep's `--scan` tries a round
+trip — move, move back — for every (row, source, target) the save
+offers, to find one it can sweep from. **Every one of those probes is
+a real move**: there is no dry run for an injected click, the game
+acts on it. Round trips that did not restore exactly were reported
+and the loop CARRIED ON, so each one left the fixture further from
+where it started; thirty configurations later Blucher II held eleven
+farmers and two scientists where the save has twelve and one.
+
+Three things generalise, and the second is the one that was actually
+missing.
+
+**A diagnostic that injects is not a reader, and the two need
+different guards.** The rule this project already had — a tool that
+reads a save identifies it — is about the INPUT. A tool that drives
+the game also has an OUTPUT into the thing it is measuring, and
+nothing covered that. `tools/fixtures.verify_colonies` now compares
+every colony record against the `.GAM` on disk before a run starts,
+and refuses to begin from a drifted one.
+
+**The authority has to be a file, not the first reading.** Comparing
+the state at the end of a run against the state at the beginning
+would have passed here, because the drift accumulated ACROSS runs.
+MOO2 writes the colony array uncompressed and a freshly loaded slot
+matches it byte for byte, so the save itself is the reference; the
+offset is stored per fixture and **gated on the file's sha256**,
+which is what separates a checkable constant from a magic number —
+a different file cannot be sliced at 607 and believed.
+
+**And a loop that reports a failure must decide whether to continue.**
+This one printed `exact=False` and went on, which reads as diligence
+and is the opposite: the first configuration a probe cannot return
+from is the last one it may try, because every further probe is
+measured on a state the previous failure created. The scan stops
+there now and says to reload, and the rows it already printed are
+still the answer it was asked for.
+
+The cost was one reload and no data: the `.GAM` on disk is never
+touched, because the game only writes it on save. That is luck about
+this particular tool, not a property of the class — the same fault in
+something that saved would have been permanent.
+
 **A test that reads the user's disk answers differently for the
 user.** The check separating "no help file" from "no such entry"
 built its two states by loading the real file, which does not exist

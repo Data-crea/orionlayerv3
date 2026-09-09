@@ -45,7 +45,8 @@ os.environ.setdefault("SDL_AUDIODRIVER", "dummy")
 import pygame  # noqa: E402
 
 from core.structs import colony as colony_struct  # noqa: E402
-from fixtures import FIXTURES, identify  # noqa: E402,F401
+from fixtures import (FIXTURES, identify,  # noqa: E402,F401
+                      verify_colonies)
 from screens.colony_summary import colonyfigures  # noqa: E402
 from screens.colony_summary import colonyicons  # noqa: E402
 from screens.colony_summary import colonymove  # noqa: E402
@@ -327,6 +328,14 @@ def main():
     state = app.client.state
     rows = screen._rows
     if not identify(state, args.expect):
+        return 1
+    # AND THE SAVE IS STILL THE SAVE. `identify` answers which slot is
+    # loaded; this answers whether anything has written to it since.
+    # A tool that injects clicks writes to the player's game, and on
+    # 9 September 2026 one of them made thirty real pop moves while
+    # every line it printed still said "fixture: reference".
+    if not verify_colonies(state, args.expect,
+                           {r["index"]: r["name"] for r in rows}):
         return 1
     print(f"colony summary is up: {len(rows)} rows, sorted by "
           f"{screen._sort_key!r}")
