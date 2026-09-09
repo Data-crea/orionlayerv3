@@ -117,7 +117,31 @@ ZONE_COLORS = (
 #: list's own furniture and not a value.
 SCROLL_ARROW = palette.col("colony_summary", "label",
                            (150, 168, 200))
+#: The SCANNED colony's name — bright. See `ROW_NAME_DIM`.
 ROW_NAME = palette.col("colony_summary", "row_name", (206, 216, 238))
+
+#: Every OTHER colony's name — dimmed. **TRANSCRIBED, and the driver
+#: is the scanned colony rather than a hover of ours.**
+#: `Draw_Colony_Summary_For_Colony_` calls
+#: `COLONY::Set_Colony_Font_To_Blue_(2, colony_idx ==
+#: COLONY::_g_colony_n)` (colsum.cpp:554), which picks
+#: `_font_bright_color_array` when that flag is set and
+#: `_font_color_array` when it is not (colony.cpp:533-546).
+#:
+#: `_g_colony_n` IS the state that fills the description panel
+#: (`Draw_Colony_Scan_Info_`, colsum.cpp:1155), so the two read one
+#: source here as well — `colonyselect.Selection.colony`, whose
+#: `row()` the panel already takes. A smoke check asserts they cannot
+#: disagree.
+#:
+#: A COLOUR AND NOTHING ELSE: no rectangle and no frame. The only
+#: `Fill_`/`Line_` calls in `colsum.cpp` are the scroll thumb
+#: (:759-765).
+#:
+#: The two values and why the RELATIONSHIP is transcribed rather than
+#: the RGB are in `colors.json` under `_row_name_note`.
+ROW_NAME_DIM = palette.col("colony_summary", "row_name_dim",
+                           (147, 154, 169))
 #: The climate/population line under the name. Quieter than the
 #: name: it is context for the row, not its identity.
 DETAIL_COLOR = palette.col("colony_summary", "row_detail",
@@ -219,7 +243,7 @@ CELL_MARK = palette.col("colony_summary", "cell_mark", (16, 18, 24))
 
 # ── Geometry: computed once, drawn by either mode ──────────────────
 def render(surface, rows, area, cfg, layout, style, first=0,
-           frame_inset=0, figures=None):
+           frame_inset=0, figures=None, scanned=None):
     """Draw the rows into `area`. Everything sized from `cfg`.
 
     `area` is the `list_area` box in screen coordinates, `cfg` the
@@ -300,8 +324,13 @@ def render(surface, rows, area, cfg, layout, style, first=0,
         # untrue.
         # THE NAME CELL IS ITS OWN COLUMN BOX, and the block fills it.
         _nx, _nw = cols["name"] if cols else (area.x, 0)
+        # THE SCANNED COLONY'S NAME IS THE BRIGHT ONE. `scanned` is a
+        # COLONY INDEX and never a row position — the same distinction
+        # `colonyselect` is built on, one sort away from being wrong.
         _draw_name_block(surface, row, _nx, y, _nw, row_h,
-                         cfg, name_px, small_px, style, frame_inset)
+                         cfg, name_px, small_px, style, frame_inset,
+                         scanned=(scanned is not None
+                                  and row["index"] == scanned))
         _render_bar(surface, row, area, cfg, scale, (y, row_h), track,
                     small_px, style, layout, figures)
         # THE PRODUCING TEXT SITS IN ITS OWN COLUMN, which is its own
@@ -435,7 +464,8 @@ def _draw_overflow(surface, rows, area, cfg, scale, layout, style,
 
 
 def _draw_name_block(surface, row, x, y, name_w, row_h, cfg,
-                     name_px, small_px, style, frame_inset=0):
+                     name_px, small_px, style, frame_inset=0,
+                     scanned=False):
     """The colony name, and under it climate and population.
 
     **LEFT-ALIGNED, WHICH IS THE ORIGINAL'S — 8 September 2026, and
@@ -475,8 +505,9 @@ def _draw_name_block(surface, row, x, y, name_w, row_h, cfg,
     inset = max(0, int(frame_inset * (name_px / 21.0)))
     left = x + inset
     room = max(1, name_w - 2 * inset)
+    colour = ROW_NAME if scanned else ROW_NAME_DIM
     lines = [(style.render_text(
-        _fit(row["name"], style, name_px, room, cfg), name_px, ROW_NAME), 0)]
+        _fit(row["name"], style, name_px, room, cfg), name_px, colour), 0)]
     detail = _detail_text(row, cfg)
     if detail:
         lines.append((style.render_text(detail, small_px, DETAIL_COLOR),

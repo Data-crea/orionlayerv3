@@ -486,7 +486,16 @@ class ColonySummaryScreen(ScreenBase):
                           self._frame_inset(),
                           colonyfigures.set_for(
                               self, pygame.Rect(*self.layout.rect(box)),
-                              cfg))
+                              cfg),
+                          # ONE SOURCE WITH THE DESCRIPTION PANEL.
+                          # `_selected` IS `_g_colony_n`'s
+                          # transcription (`colonyselect`), and it is
+                          # what `_render_info` hands the panel — the
+                          # original drives both from that one state
+                          # (colsum.cpp:554 and :1155), so giving the
+                          # name colour a hover of its own would be
+                          # two answers to one question.
+                          self._selected)
 
     def _render_inset(self, surface):
         """The original's small galaxy map — a TRANSCRIPTION.

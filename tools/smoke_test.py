@@ -2786,9 +2786,16 @@ def main():
     _ar = _bx["list_area"].screen_rect
     _sf = pygame.Surface((1920, 1080))
     _sf.fill((0, 0, 0))
-    _cl.render(_sf, [{"name": "Sol I", "pops": 2, "jobs": [1, 1, 0],
-                      "no_farming": False, "climate": 8, "max_pop": 6}],
-               _ar, _column_cfg(_cfg, _lay), _lay, app.style)
+    # `scanned` IS SET, because the original always has one: `_g_colony_n`
+    # is assigned before the input loop and its later assignment has no
+    # else branch (colsum.cpp:880-890), and `Selection.reseat` mirrors
+    # that — nothing is scanned only when the list is empty. A fixture
+    # with no scanned colony would draw every name dimmed, which is a
+    # state the screen cannot be in.
+    _cl.render(_sf, [{"name": "Sol I", "index": 4, "pops": 2,
+                      "jobs": [1, 1, 0], "no_farming": False,
+                      "climate": 8, "max_pop": 6}],
+               _ar, _column_cfg(_cfg, _lay), _lay, app.style, scanned=4)
     _a3 = pygame.surfarray.array3d(_sf)
     _ncol = _bx["col_name"].screen_rect
     _hit = [x for x in range(_ncol.x, _ncol.right)
@@ -9087,10 +9094,14 @@ def main():
     # top of the `char[15]` buffer.
     _nb_cfg = _column_cfg(_cfg, app.layout, _area)
     _surf.fill((0, 0, 0))
-    _cl.render(_surf, [{"name": _cl.NAME_BOUND_STAR, "pops": 3,
-                        "jobs": [1, 1, 1], "no_farming": False,
-                        "climate": 8, "max_pop": 9}],
-               _area, _nb_cfg, app.layout, app.style)
+    # SCANNED, like every fixture that measures the name's ink — the
+    # original always has exactly one scanned colony (colsum.cpp:
+    # 880-890 has no else branch) and `Selection.reseat` mirrors it.
+    _cl.render(_surf, [{"name": _cl.NAME_BOUND_STAR, "index": 4,
+                        "pops": 3, "jobs": [1, 1, 1],
+                        "no_farming": False, "climate": 8,
+                        "max_pop": 9}],
+               _area, _nb_cfg, app.layout, app.style, scanned=4)
     _px = pygame.surfarray.array3d(_surf)
     _scale = app.layout.scale
     _nb_cols = _ctk.columns(_area, _nb_cfg)
@@ -9140,10 +9151,10 @@ def main():
     # Both lines start on the same edge, so the eye drops straight
     # down rather than crossing a ragged one per row.
     _surf.fill((0, 0, 0))
-    _cl.render(_surf, [{"name": "Sol", "pops": 12, "jobs": [4, 5, 3],
-                        "no_farming": False, "climate": 8,
-                        "max_pop": 14}],
-               _area, _nb_cfg, app.layout, app.style)
+    _cl.render(_surf, [{"name": "Sol", "index": 4, "pops": 12,
+                        "jobs": [4, 5, 3], "no_farming": False,
+                        "climate": 8, "max_pop": 14}],
+               _area, _nb_cfg, app.layout, app.style, scanned=4)
     _px = pygame.surfarray.array3d(_surf)
     _detail_rgb = tuple(_cl.DETAIL_COLOR[:3])
     _left_of = lambda rgb: min(
@@ -9152,6 +9163,71 @@ def main():
     assert abs(_left_of(_rgb) - _left_of(_detail_rgb)) <= 2, (
         f"name starts at {_left_of(_rgb)}, detail at "
         f"{_left_of(_detail_rgb)} — the two lines are not aligned")
+    # ── THE BRIGHT NAME AND THE DESCRIPTION READ ONE STATE ──────
+    #
+    # The original drives both from `_g_colony_n`:
+    # `Set_Colony_Font_To_Blue_(2, colony_idx == _g_colony_n)` colours
+    # the name (colsum.cpp:554) and `Draw_Colony_Scan_Info_` fills the
+    # scan box for the same index (colsum.cpp:1155). So a separate
+    # hover for the colour would be two answers to one question, and
+    # the failure would be the quiet kind — a bright name over one
+    # row and a description of another, every value on screen correct.
+    #
+    # Asserted on the SURFACE and on the panel's own input, at three
+    # scanned colonies, so it holds for whichever row is scanned and
+    # not just for row 0.
+    _sc_rows = [{"name": f"Colony {i}", "index": 10 + i, "pops": 2,
+                 "jobs": [1, 1, 0], "no_farming": False, "climate": 8,
+                 "max_pop": 6} for i in range(3)]
+    from screens.colony_summary import colonyselect as _csel2
+    _sc_sel = _csel2.Selection()
+    for _pick in (10, 11, 12):
+        _sc_sel.rows = _sc_rows
+        _sc_sel.colony = _pick
+        assert _sc_sel.row()["index"] == _pick, (
+            "the panel's input is not the scanned colony")
+        _surf.fill((0, 0, 0))
+        _cl.render(_surf, _sc_rows, _area, _nb_cfg, app.layout,
+                   app.style, scanned=_sc_sel.colony)
+        _p2 = pygame.surfarray.array3d(_surf)
+        _bands = _ctk.row_bands(_area, _nb_cfg, app.layout.scale,
+                                len(_sc_rows))
+        _bright = []
+        for _i, (_top, _h) in enumerate(_bands):
+            _has = any(tuple(_p2[x, y]) == tuple(_cl.ROW_NAME[:3])
+                       for x in range(_area.x, _area.x + 300)
+                       for y in range(_top, _top + _h))
+            if _has:
+                _bright.append(_sc_rows[_i]["index"])
+        assert _bright == [_pick], (
+            f"scanned colony {_pick} but the bright name is on "
+            f"{_bright} — the name colour and the description panel "
+            f"must read one state")
+    # AND THE SCREEN HANDS THE SAME VALUE TO BOTH. A grep, because the
+    # two calls are in different methods and the drift would be a
+    # second source appearing rather than this value changing.
+    _cs_screen_src = open(os.path.join(
+        SCREENS_DIR, "colony_summary", "screen.py"), encoding="utf-8").read()
+    # SLICED TO THE METHOD, not grepped over the file. The first
+    # version of this looked for `self._selected)` anywhere in
+    # screen.py and passed against a broken tree, because
+    # `_render_inset` carries `galaxy_inset_label(self._state,
+    # self._selected),` and that substring contains it. A check
+    # anchored on the wrong feature is stable, repeatable and wrong.
+    _rl_body = _cs_screen_src.split("def _render_list(")[1].split(
+        "\n    def ")[0]
+    assert "self._selected" in _rl_body, (
+        "`_render_list` no longer hands `_selected` to "
+        "`colonylist.render` — the bright name would then have a "
+        "source of its own, and a name bright over one row with the "
+        "description of another is the quiet kind of wrong")
+    assert "_row_name_note" in open(
+        os.path.join(os.path.dirname(SCREENS_DIR), "assets", "shared",
+                     "skins", "default", "colors.json"),
+        encoding="utf-8").read(), (
+        "colors.json no longer records where the two name colours "
+        "come from")
+
     # THE SECOND LINE IS AN HD EXTENSION, marked in three homes.
     assert "HD EXTENSION" in (_cl._draw_name_block.__doc__ or ""), (
         "the per-row second line is no longer marked where it is drawn")
