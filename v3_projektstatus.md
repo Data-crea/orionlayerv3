@@ -564,7 +564,7 @@ files under `doc/` and are only summarised here.
 | | |
 |---|---|
 | Python | 32,960 lines across 111 modules — `find . -name '*.py'`, `__pycache__` excluded, the smoke test's 6,400 included. The previous figure here (21,642 across 94) was carried from an unstated method and could not be reproduced |
-| Smoke test | `python tools/smoke_test.py` — **110 checks**, headless |
+| Smoke test | `python tools/smoke_test.py` — **111 checks**, headless |
 | Assets | 170 MB (select_race 68, galaxy_map 51, shared 23, new_game 21, colony_summary 1) |
 | Screens in HD | 7 of ~20–22 (colony summary draws list, sidebar, scan box and galaxy inset, and MOVES POPS — the first HD gesture that drives the game) |
 | Setup from clone | `python tools/setup.py` (deps via the system package manager) |
@@ -3080,6 +3080,41 @@ finds.
 - `s_leader_data` for the Officers screen. `tools/struct_probe.py
   --spec` now decodes any record against its spec, so the 64-byte
   ceiling on the int16 column view no longer stands in the way.
+
+**THE SCANNED COLONY'S NAME IS BRIGHT — TRANSCRIBED, and what is
+transcribed is the RELATIONSHIP rather than the RGB.** 9 September
+2026. `COLSUM::Draw_Colony_Summary_For_Colony_` calls
+`COLONY::Set_Colony_Font_To_Blue_(2, colony_idx ==
+COLONY::_g_colony_n)` (colsum.cpp:554), which picks
+`_font_bright_color_array` or `_font_color_array`
+(colony.cpp:533-546). **The driver is the scanned colony**, the same
+`_g_colony_n` that fills the description panel
+(`Draw_Colony_Scan_Info_`, colsum.cpp:1155), so the name colour and
+the panel read ONE state — `colonyselect.Selection.colony` — and a
+smoke check asserts they cannot disagree.
+
+The original's own values, two sources agreeing exactly: the arrays
+are palette indices `{245, 253, 252}` and `{244, 133, 132}`
+(colony.cpp:139, :141), and measured off its framebuffer the scanned
+row's ink is (128, 160, 188) and every other row's (108, 104, 140) —
+indices 133 and 253, which is also what settles that slot **[1]** is
+the glyph and [0] the shadow.
+
+**THE CHOICE, because it is a choice.** This screen draws in the
+project's own palette (decision 34), and the original's dimmed value
+is 109 luma against a panel lighter than HD's `8, 11, 20`. So the
+scanned name keeps the colour the list already had, (206, 216, 238),
+and the dimmed one is that colour at the original's own dim/bright
+luma ratio — 0.7115, giving (147, 154, 169), measured back at 0.7128
+after integer rounding. Adopting the absolute values would be
+answering a different question: how bright a name should be on THIS
+panel, which is decision 34's territory and not this transcription's.
+The alternative is recorded rather than merely rejected, in
+`colors.json` under `_row_name_note`, so a later session can take it
+without re-deriving the argument.
+
+A COLOUR AND NOTHING ELSE: no rectangle, no frame — the only
+`Fill_`/`Line_` calls in `colsum.cpp` are the scroll thumb (:759-765).
 
 **"No Farming" beside the original — answered 9 September 2026, and
 the Part G gap closes.** It could not be asked on the reference save,
