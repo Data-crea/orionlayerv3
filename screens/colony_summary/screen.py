@@ -292,7 +292,20 @@ class ColonySummaryScreen(ScreenBase):
         top and which one a point lands on are all the OFFSET's
         business and live on `colonyselect.Window`. This is the whole
         of the seam between the two.
+
+        **THE COLUMN REBIND HAPPENS HERE, and that is why it is here
+        and not in `_render_list` — 9 September 2026.** `sync_columns`
+        holds the six boxes to this window and rebinds the table to
+        the boxes the screen currently HAS, which
+        `ScreenBase.on_resize` replaces wholesale. Doing it in the
+        renderer made the drawn frame right and left every hit test
+        that ran before it reading the previous window — and a click
+        arriving in the same event batch as a resize is exactly that.
+        This is the seam every reader goes through, drawing and
+        clicking alike, which is the only place decision 5 is
+        actually enforceable.
         """
+        colonyheader.sync_columns(self)
         box = self.box_rect("list_area")
         return (pygame.Rect(*self.layout.rect(box)) if box
                 else pygame.Rect(0, 0, 0, 0),
@@ -480,11 +493,9 @@ class ColonySummaryScreen(ScreenBase):
         hover band and the draggable dividers belong on a picture
         somebody already believes.
         """
-        # THE SIX COLUMN BOXES ARE HELD TO THE WINDOW'S OWN Y AND
-        # HEIGHT here, once, before anything reads them: only x and
-        # width are the column's, and a vertical drag has to snap
-        # back visibly rather than be ignored and then saved.
-        colonyheader.sync_columns(self)
+        # The six column boxes are held to the window's own y and
+        # height by `_list_view`, which every reader goes through —
+        # see there for why the rebind moved out of this renderer.
         box = self.box_rect("list_area")
         if not box:
             return

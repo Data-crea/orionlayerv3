@@ -114,6 +114,12 @@ Regions = collections.namedtuple("Regions", "runs filled reach spans")
 #: rendered the real screen and the next used a synthetic fixture.
 COLUMNS_KEY = "columns"
 
+#: The key `cfg` carries `list_area`'s own REFERENCE rect under, as
+#: `(ref_x, ref_width)`. Bound beside the table by the same call, so
+#: the cutout a column is a fraction of travels with the columns and
+#: cannot be a second lookup that misses.
+COLUMNS_SPAN_KEY = "columns_span"
+
 
 def columns(area, cfg):
     """{key: (x, width)} in SCREEN px, from the six column BOXES.
@@ -123,14 +129,37 @@ def columns(area, cfg):
     the checks exercise, and what the row was before Stage 4.
 
     **THE BOXES ARE THE COLUMNS — 8 September 2026.** `cfg[COLUMNS_KEY]`
-    holds `[(key, Box)]`, live objects installed once by
-    `colonyheader.install_columns`, so a column dragged in the F5
+    holds `[(key, Box)]`, live objects, so a column dragged in the F5
     editor moves the cells, the plates, the drop rects and the
     heading above it on the same frame. It used to hold
     `[(key, ref_width)]` baked out of `layout_reference.json` at
     screen load, tiled here, and tiled a SECOND time in
     `plate_rects` — two arithmetics that agreed by construction and
     could not be edited.
+
+    **THE COLUMN IS A FRACTION OF THE CUTOUT, NOT A POSITION IN THE
+    WINDOW — 9 September 2026.** What is read off a box is its
+    REFERENCE left edge, and it is mapped into `area`, which is
+    `list_area` resolved through the same `Layout.rect` call the
+    frame image goes through (`screen._scale_frame`). Both edges of
+    every column therefore come out of one rect that is recomputed
+    every frame.
+
+    Until this date the left edge came from `Box.screen_rect`, which
+    `Box.update_layout` writes ONCE per layout change. That is a
+    device coordinate with a lifetime, and it outlived the window:
+    `ScreenBase.on_resize` calls `_reload_boxes`, which REPLACES
+    `screen.boxes` with new objects, while the table bound at
+    `enter()` went on pointing at the discarded ones. Measured on
+    8 September 2026 at all four F9 sizes — after any resize away
+    from the start size the six columns kept the start size's device
+    x (105, 408, 751, 1112, 1452, 1767) while `list_area` and the
+    frame followed the new one. At 2560x1440 the frame's left rail
+    was then drawn over the NAME text; at 3440x1440 the columns sat
+    on the letterbox bar outside the frame entirely; and `col_scroll`,
+    being the remainder, swelled from 35 px to 635, 1075 and 1837.
+    Every value on the screen stayed correct, which is why it lived
+    a day.
 
     **ONLY THE LEFT EDGE IS READ, and the width is the distance to
     the next column.** A box carries four numbers and three of them
@@ -140,11 +169,12 @@ def columns(area, cfg):
     exactly. Reading the stored width instead opened a one-pixel seam
     at 1280x720 and 2048x1152 — `Box.update_layout` truncates x and
     width independently, so `int(x*s) + int(w*s)` and
-    `int((x+w)*s)` disagree wherever the fractions add up. Deriving
-    it makes the tiling true by construction, which is what the old
-    ref-width table did with "the last column takes what integer
-    division left" and is the same rule `colonyheader.plate_rects`
-    keeps.
+    `int((x+w)*s)` disagree wherever the fractions add up. Mapping
+    both edges through `area` with one expression makes the tiling
+    true by construction rather than by two roundings agreeing: the
+    first column starts at `area.x` because its offset into the
+    cutout is zero, and the last ends at `area.right` because the
+    span's end is the cutout's end.
 
     What that means at the editor: dragging a column moves a
     BOUNDARY, and its neighbour follows.
@@ -153,18 +183,18 @@ def columns(area, cfg):
     what the geometry did rather than what was dragged.
     """
     table = cfg.get(COLUMNS_KEY) or ()
-    if not table:
+    span = cfg.get(COLUMNS_SPAN_KEY)
+    if not table or not span:
         return {}
-    edges = []
-    for key, box in table:
-        rect = getattr(box, "screen_rect", None)
-        if rect is None:
-            return {}
-        edges.append((rect.x, key))
-    edges.sort()
+    ref_x, ref_w = span
+    if ref_w <= 0:
+        return {}
+    edges = sorted((b.ref_rect[0], key) for key, b in table)
     out = {}
-    for i, (x, key) in enumerate(edges):
-        right = edges[i + 1][0] if i + 1 < len(edges) else area.right
+    for i, (rx, key) in enumerate(edges):
+        nxt = edges[i + 1][0] if i + 1 < len(edges) else ref_x + ref_w
+        x = area.x + (max(0, rx - ref_x) * area.width) // ref_w
+        right = area.x + (max(0, nxt - ref_x) * area.width) // ref_w
         out[key] = (x, max(1, right - x))
     return out
 

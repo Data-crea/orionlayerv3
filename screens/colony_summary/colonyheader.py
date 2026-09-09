@@ -95,7 +95,8 @@ def column_boxes(screen):
 
 
 def install_columns(screen):
-    """Bind the six column boxes into the screen's `list` block.
+    """Bind the six column boxes, and `list_area`'s reference span,
+    into the screen's `list` block.
 
     They travel with every other row value rather than sitting on the
     screen, so `colonytrack` reads them the way it read the baked
@@ -103,17 +104,38 @@ def install_columns(screen):
     way, which is what stops a check from silently exercising the
     single-track path instead.
 
-    Called ONCE, on load: what is stored is the live objects, so
-    nothing has to be refreshed when one moves.
+    **IDEMPOTENT, AND CALLED AGAIN WHENEVER THE BOXES ARE — corrected
+    9 September 2026.** This used to say "called ONCE, on load: what
+    is stored is the live objects, so nothing has to be refreshed
+    when one moves". The first half was true and the second did not
+    follow. A box moving is not the only thing that happens to it:
+    `ScreenBase.on_resize` calls `_reload_boxes`, which REPLACES
+    `screen.boxes` with freshly parsed objects, and the table bound
+    at `enter()` then held six boxes that were no longer the screen's
+    — laid out for the window size the screen was entered at and
+    never touched again. `sync_columns` runs this first for exactly
+    that reason, so the table is never older than the frame it is
+    read in.
+
+    The SPAN is bound here rather than looked up where it is used,
+    because a lookup that misses returns the common case and cannot
+    report itself (fundament, "the background you see is not always
+    the background that is set"): `columns` answers `{}` without it
+    and the single-track path is a legitimate state.
     """
     from . import colonytrack
     table = column_boxes(screen)
-    screen._data.setdefault("list", {})[colonytrack.COLUMNS_KEY] = table
+    block = screen._data.setdefault("list", {})
+    block[colonytrack.COLUMNS_KEY] = table
+    area = screen.box_rect("list_area")
+    block[colonytrack.COLUMNS_SPAN_KEY] = (
+        (area[0], area[2]) if area and table else None)
     return table
 
 
 def sync_columns(screen):
-    """Hold the six boxes to the list window's own y and height.
+    """Rebind the column table, then hold the six boxes to the list
+    window's own y and height.
 
     **A COLUMN DRAGGED VERTICALLY IS IGNORED, and this is what makes
     that visible rather than merely true.** Only the LEFT EDGE is
@@ -123,7 +145,14 @@ def sync_columns(screen):
     window exactly. Without this the outline would follow a drag that
     nothing else obeyed, and a save would write the stray numbers
     into `boxes.json`.
+
+    The rebind is first because everything below reads
+    `screen.boxes`, and the table has to be the same six objects or
+    this function repairs one set while `colonytrack` reads another —
+    which is precisely the state the 8 September screenshots were
+    taken in.
     """
+    install_columns(screen)
     box = screen.box_rect("list_area")
     if not box:
         return

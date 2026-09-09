@@ -2502,33 +2502,39 @@ def main():
         _boxes_json = _cjson.load(_bh)
 
     def _column_cfg(base, layout, area=None):
-        """`base` plus the six column BOXES, laid across `area`.
+        """`base` plus the six column BOXES and `list_area`'s span.
 
         The columns are boxes now, so a fixture that wants the
         shipped row geometry has to hand over box OBJECTS — the same
-        thing `colonyheader.install_columns` binds. Built from
-        boxes.json's own rects when `area` is None, and re-laid
-        across a synthetic area when a check renders into one.
+        thing `colonyheader.install_columns` binds.
+
+        **THE `area` BRANCH IS GONE — 9 September 2026, and losing it
+        is the point.** This used to have two arms: reference rects
+        when the caller had no area, and a hand-tiled set of
+        `screen_rect`s laid across the caller's synthetic area when
+        it had one. That second arm was a second copy of the tiling
+        arithmetic living in the checker — decision 5's "a tool is a
+        reader too", one file over from where it was last paid for.
+        It agreed with `colonytrack.columns` by construction and
+        would have gone on agreeing with a broken one.
+
+        Now there is nothing to lay out: a column is a fraction of
+        the cutout, so the fixture hands over the reference rects and
+        the span, and `columns` maps them into whatever area it is
+        given — the same call the screen makes. `area` is kept only
+        so the ten call sites read the same; it is not used.
         """
+        del area                      # see above; kept for the callers
         out = dict(base)
         raw = {b["name"]: b["rect"] for b in _boxes_json["1920x1080"]}
         boxes = []
-        if area is None:
-            for name in _chd.COLUMN_BOXES:
-                b = _Box({"name": name, "rect": raw[name]})
-                b.update_layout(layout)
-                boxes.append((name[4:], b))
-        else:
-            la = raw["list_area"]
-            x = area.x
-            for i, name in enumerate(_chd.COLUMN_BOXES):
-                w = (area.right - x if i == len(_chd.COLUMN_BOXES) - 1
-                     else round(area.w * raw[name][2] / la[2]))
-                b = _Box({"name": name, "rect": [0, 0, 1, 1]})
-                b.screen_rect = pygame.Rect(x, area.y, w, area.h)
-                boxes.append((name[4:], b))
-                x += w
+        for name in _chd.COLUMN_BOXES:
+            b = _Box({"name": name, "rect": raw[name]})
+            b.update_layout(layout)
+            boxes.append((name[4:], b))
         out[_ctk.COLUMNS_KEY] = boxes
+        out[_ctk.COLUMNS_SPAN_KEY] = (raw["list_area"][0],
+                                      raw["list_area"][2])
         return out
 
     _cfg_cols = _column_cfg(_cfg, app.layout, _area)
@@ -2694,6 +2700,8 @@ def main():
         _ar = _bx["list_area"].screen_rect
         _cc = dict(_cfg)
         _cc[_ctk.COLUMNS_KEY] = [(n[4:], _bx[n]) for n in _COLS]
+        _cc[_ctk.COLUMNS_SPAN_KEY] = (_bx["list_area"].ref_rect[0],
+                                      _bx["list_area"].ref_rect[2])
         _got = _ctk.columns(_ar, _cc)
         assert set(_got) == {n[4:] for n in _COLS}, sorted(_got)
         _prev = _ar.x
@@ -8436,6 +8444,129 @@ def main():
     ok("colony list geometry is boxes and a row count (nine tuned "
        "values gone, a save writes nothing derived, a vertical drag "
        "snaps back and the info bar reports what it cannot show)")
+
+    # ── ONE COORDINATE FRAME, AND THE CHECK GOES THE WAY THE ────
+    #    FAULT WENT
+    #
+    # Every rect on this screen derives from the `list_area` cutout
+    # through the same `Layout.rect` call the frame image goes
+    # through, so the six columns tile that cutout at any window size.
+    #
+    # **BOTH STATES, AND THE SECOND ONE IS THE POINT.** A screen
+    # BUILT at 3440x1440 was correct the whole time this was broken;
+    # what was wrong was a screen built at 1920x1080 and RESIZED into
+    # it. `ScreenBase.on_resize` calls `_reload_boxes`, which replaces
+    # every Box object, and the column table bound at `enter()` went
+    # on pointing at the discarded ones — so `colonytrack.columns`
+    # answered the START size's device x while `list_area` and the
+    # frame answered the new one. Measured 8 September 2026 at all
+    # four F9 sizes: the columns stayed at 105/408/751/1112/1452/1767
+    # and `col_scroll`, being the remainder, ran to 1837 px at 4K.
+    # A fixture that constructs at one size cannot see a resize
+    # fault; this one walks the path.
+    #
+    # SIZES: every key `boxes.json` stores, plus the four `main.py`
+    # offers on F9 — which is where Data's three came from. The rule
+    # is asserted, never the numbers, so a fifth size next month
+    # fails the same way rather than needing a new branch.
+    _geo_sizes = sorted({
+        tuple(int(_v) for _v in _k.split("x"))
+        for _k in _sjson.load(open(os.path.join(
+            SCREENS_DIR, "colony_summary", "boxes.json"),
+            encoding="utf-8"))
+        if _k.count("x") == 1
+    } | {(1920, 1080), (2560, 1440), (3440, 1440), (3840, 2160)})
+    _geo_keys = {"name", "farmers", "workers", "scientists",
+                 "building", "scroll"}
+    _geo_snap = _pv._Snapshot(_pv.COLONIES)
+    _geo_scr = d.screens["colony_summary"]
+    _geo_w0, _geo_h0 = app.win_w, app.win_h
+
+    def _geo_measure(_w, _h, _how):
+        """Assert the rule at one size, in one of the two states."""
+        _area = pygame.Rect(*_geo_scr.layout.rect(
+            _geo_scr.box_rect("list_area")))
+        _chdr.sync_columns(_geo_scr)
+        _cfg = _geo_scr._data.get("list", {})
+        _c = _ctk.columns(_area, _cfg)
+        assert set(_c) == _geo_keys, (
+            f"{_how} {_w}x{_h}: columns are {sorted(_c)}")
+        _ordered = sorted(_c.values())
+        # TILE EXACTLY: first edge is the cutout's, every column's
+        # right edge IS its neighbour's left, last edge is the
+        # cutout's. No gap and no overlap, at any scale.
+        assert _ordered[0][0] == _area.x, (
+            f"{_how} {_w}x{_h}: the list starts at {_ordered[0][0]} "
+            f"and the cutout at {_area.x} — a column is a fraction "
+            f"of list_area, not a position in the window")
+        for _i, (_cx, _cw) in enumerate(_ordered[:-1]):
+            assert _cx + _cw == _ordered[_i + 1][0], (
+                f"{_how} {_w}x{_h}: column {_i} ends at {_cx + _cw} "
+                f"and the next starts at {_ordered[_i + 1][0]}")
+        assert _ordered[-1][0] + _ordered[-1][1] == _area.right, (
+            f"{_how} {_w}x{_h}: the columns end at "
+            f"{_ordered[-1][0] + _ordered[-1][1]} and the cutout at "
+            f"{_area.right} — the last column is not a remainder to "
+            f"absorb a mismatch")
+        # AND EVERY COLUMN LIES INSIDE IT. Tiling and containment are
+        # not the same claim: six columns can tile a span that has
+        # itself slid off the cutout, which is exactly what the
+        # ultrawide screenshot shows.
+        for _k, (_cx, _cw) in _c.items():
+            assert _area.x <= _cx and _cx + _cw <= _area.right, (
+                f"{_how} {_w}x{_h}: the {_k} column "
+                f"({_cx}..{_cx + _cw}) is outside list_area "
+                f"({_area.x}..{_area.right})")
+        # THE NAME BLOCK LIES INSIDE THE NAME CELL. `name_rect` is
+        # the drop target and the cell; the block is drawn into it
+        # with the frame inset applied to the left edge only.
+        _rows_g = _geo_scr._rows
+        assert _rows_g, f"{_how} {_w}x{_h}: no rows to measure"
+        _nr = _ctk.name_rect(_area, _cfg, _geo_scr.layout.scale,
+                             _rows_g[0])
+        _ncx, _ncw = _c["name"]
+        assert _nr is not None and _ncx <= _nr.x and \
+            _nr.x + _nr.width <= _ncx + _ncw, (
+                f"{_how} {_w}x{_h}: the name block {_nr} is not "
+                f"inside the NAME cell ({_ncx}..{_ncx + _ncw})")
+
+    for _gw, _gh in _geo_sizes:
+        # STATE 1 — built at the size.
+        _geo_scr.exit()
+        app.win_w, app.win_h = _gw, _gh
+        app.layout.update(_gw, _gh)
+        _geo_scr.enter(_geo_snap)
+        _geo_scr.update(_geo_snap)
+        _geo_measure(_gw, _gh, "built at")
+        # STATE 2 — built at 1920x1080, then resized into the size,
+        # which is what the app itself does: `settings.json` starts
+        # every session at 1920x1080 and F9 resizes from there.
+        _geo_scr.exit()
+        app.win_w, app.win_h = 1920, 1080
+        app.layout.update(1920, 1080)
+        _geo_scr.enter(_geo_snap)
+        _geo_scr.update(_geo_snap)
+        app.win_w, app.win_h = _gw, _gh
+        app.layout.update(_gw, _gh)
+        _geo_scr.on_resize()
+        _geo_measure(_gw, _gh, "resized into")
+    # AND THE TABLE IS THE SCREEN'S OWN BOXES, not six objects that
+    # merely look like them. This is the invariant the symptom came
+    # from, and it is cheap to state directly.
+    _geo_tbl = _geo_scr._data.get("list", {}).get(_ctk.COLUMNS_KEY) or ()
+    assert _geo_tbl and all(
+        any(_b is _sb for _sb in _geo_scr.boxes) for _k, _b in _geo_tbl), (
+        "the bound column table holds Box objects the screen no "
+        "longer has — a device coordinate with a lifetime longer "
+        "than the window it was computed for")
+    _geo_scr.exit()
+    app.win_w, app.win_h = _geo_w0, _geo_h0
+    app.layout.update(_geo_w0, _geo_h0)
+    _geo_scr.enter(_geo_snap)
+    _geo_scr.update(_geo_snap)
+    ok(f"colony columns tile list_area at {len(_geo_sizes)} window "
+       f"sizes, built AND resized into (one coordinate frame: every "
+       f"rect derives from the cutout, not from the window)")
 
     # ── The name block: LEFT-aligned in its own cell ────────────
     # It was right-aligned, and that was a marked deviation

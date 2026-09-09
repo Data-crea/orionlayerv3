@@ -1641,6 +1641,69 @@ guideline is enforced on has to be the number the guideline is
 about**, and if it is a proxy, something has to re-check the proxy
 occasionally rather than the values it produces.
 
+**A PREVIEW THAT CONSTRUCTS IN ONE SIZE CANNOT SEE A RESIZE FAULT —
+the check has to go the way the fault went.** 9 September 2026, the
+colony list's six column boxes.
+
+`colonytrack.columns` read each column's left edge off
+`Box.screen_rect`, a DEVICE coordinate that `Box.update_layout` writes
+once per layout change. `colonyheader.install_columns` bound those six
+Box objects into the screen's `list` block at `enter()`, and
+`ScreenBase.on_resize` calls `_reload_boxes`, which REPLACES
+`screen.boxes` with freshly parsed objects. So after any resize the
+table held six boxes the screen no longer had, laid out for the window
+it was entered at, while `list_area` and the frame image — both
+resolved through `Layout.rect` every frame — followed the new one.
+`settings.json` starts every session at 1920x1080 and F9 resizes from
+there, so **every window size except the start one was wrong, and the
+start one was right.**
+
+What it looked like: the NAME text clipped on the left (the column
+stayed at device x 105 and the frame's left rail was then drawn over
+it), the header plates at the 1080p x at every size, the columns
+sitting on the letterbox bar OUTSIDE the frame at 3440x1440, and
+`col_scroll` — the last column, sized as the remainder — running from
+35 px to 635, 1075 and 1837.
+
+**The suite already had a check for exactly this property, at twelve
+window sizes, and it passed throughout.** It builds a `Layout`, calls
+`load_boxes`, calls `update_layout` on each box and asserts the six
+tile `list_area` with no seam — which is true, at every one of the
+twelve, of a screen CONSTRUCTED at that size. The fault was not in
+what the geometry computes; it was in an object's lifetime. A fixture
+that constructs at its target size has no lifetime to get wrong, so it
+cannot fail the way the app failed, and twelve of them cannot either:
+the blind spot is not made smaller by more sizes, because every one of
+them is the same shape.
+
+Two things generalise, and the second is the transferable half.
+
+**A check whose setup differs from the app's own path is testing a
+different program.** The app enters at one size and resizes; the check
+entered at the size and stopped. That difference was invisible because
+both produce a correct screen — the state under test was never
+reached. So when the app has a SEQUENCE (start, resize, resize back),
+the check walks the sequence, and asserting the rule in the end state
+only is not the same claim.
+
+**And a device coordinate is a value with a lifetime, which is the
+thing to hunt for.** A reference coordinate is resolution-independent
+and cannot go stale; `int(x * scale + offset)` is true of one window
+and silently false of the next. The fix was not to refresh the cache
+but to stop holding one: a column is now a FRACTION OF THE `list_area`
+CUTOUT, mapped through the same rect the frame goes through, so both
+edges of every column are recomputed from one source every frame and
+the tiling is exact by construction rather than by two roundings
+agreeing. **Anything that stores a window coordinate across frames
+owes an answer to "what invalidates this?", and "nothing, it is
+recomputed" is the only cheap one.**
+
+The sibling failure is one file over and was found in the same pass:
+the smoke test's own column fixture carried a hand-tiled copy of the
+same arithmetic for the synthetic-area case, agreeing with
+`colonytrack` by construction and prepared to go on agreeing with a
+broken one. Decision 5's "a tool is a reader too", second instance.
+
 **A diagnostic should degrade, not crash.** `star_icon_check.py` once
 died with an AttributeError, which reads like a broken script when it
 actually meant "the update never landed".
