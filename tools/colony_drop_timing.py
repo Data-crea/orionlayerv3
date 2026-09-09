@@ -86,16 +86,32 @@ class Trace:
                            dict(self.client.stats)))
 
     def rows(self):
-        out, prev_t, prev_s = [], 0.0, self.s0
-        for label, t, s in self.marks:
+        """Time SPENT IN each state, not time until it was entered.
+
+        **THE FIRST VERSION OF THIS LABELLED THE OTHER ONE, and the
+        table read plausibly either way** — corrected 9 September
+        2026 when RESORT appeared to complete in 27 ms against a
+        53.6 ms snapshot cadence and a two-message floor, which is
+        impossible and was the tell. A mark is taken when a state is
+        ENTERED, so the interval that follows a mark belongs to the
+        state the mark names; attaching it to the mark itself
+        attributes every step's cost to the step after it. Nothing
+        about the numbers looked wrong — they summed to the total and
+        every one of them was a real interval.
+        """
+        out = []
+        for i, (label, t, s) in enumerate(self.marks):
+            if i + 1 < len(self.marks):
+                nt, ns = self.marks[i + 1][1], self.marks[i + 1][2]
+            else:
+                nt, ns = t, s
             out.append({
                 "label": label,
                 "at": t,
-                "step": t - prev_t,
-                "states": s["state"] - prev_s["state"],
-                "visuals": s["visual"] - prev_s["visual"],
+                "step": nt - t,
+                "states": ns["state"] - s["state"],
+                "visuals": ns["visual"] - s["visual"],
             })
-            prev_t, prev_s = t, s
         return out
 
 
