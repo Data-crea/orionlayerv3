@@ -41,9 +41,7 @@ class App:
         flags = pygame.RESIZABLE if win.get("resizable", True) else 0
         if win.get("fullscreen", False):
             flags |= pygame.FULLSCREEN
-        self.surface = pygame.display.set_mode(
-            (self.win_w, self.win_h), flags
-        )
+        self.surface = self._set_mode(self.win_w, self.win_h, flags)
         pygame.display.set_caption("OrionLayer v3")
 
         # Custom cursor
@@ -256,13 +254,49 @@ class App:
         self.render_mode = modes[(idx + 1) % len(modes)]
         log.info(f"Render mode: {self.render_mode}")
 
+    def _set_mode(self, w, h, flags):
+        """`set_mode`, and ADOPT the size that was actually granted.
+
+        **A REQUESTED SIZE IS NOT A WINDOW SIZE.** The window manager
+        may give less than was asked for, and on this project's own
+        machine it does: measured 9 September 2026 on a single
+        3440x1440 display, a request for 2560x1440 is granted
+        2560x1371, 3440x1440 is granted 3440x1371, and 3840x2160 —
+        which is one of the four sizes F9 offers — is granted
+        3440x1371. **No `VIDEORESIZE` event is delivered for any of
+        them**, so nothing downstream can notice on its own, and
+        `_ignore_resize` (which exists to swallow the event a
+        deliberate resolution change provokes) was never even reached.
+
+        `win_w`/`win_h` used to be the numbers we asked for, and
+        `Layout`, every box, the cursor and the frame plate are all
+        built from them. At F9 "4K" the whole screen was therefore
+        laid out for 3840x2160 inside a 3440x1371 surface: 1.12x too
+        wide, 1.58x too tall, everything past the edge simply gone.
+        Milder but live at every other size too — 2560x1440 got 69 px
+        of height it did not have. That is
+        `after_geometry_3840x2160.png` in the fixtures, whose FILE
+        NAME is the request and whose pixels are the grant.
+
+        The difference is REPORTED and not merely absorbed, because a
+        window that is quietly smaller than the one configured is a
+        state somebody has to be able to see in a log rather than
+        infer from a screenshot. The formatter carries the timestamp
+        (see `basicConfig` above), which is what makes the line
+        placeable against a resize the user remembers making.
+        """
+        surface = pygame.display.set_mode((w, h), flags)
+        got_w, got_h = surface.get_size()
+        if (got_w, got_h) != (w, h):
+            log.warning(
+                "window: asked for %dx%d, granted %dx%d — laying out "
+                "for what was granted", w, h, got_w, got_h)
+        self.win_w, self.win_h = got_w, got_h
+        return surface
+
     def _apply_resolution(self, w, h, caption=None):
         """Set windowed mode at (w, h) and refresh layout/caches/screens."""
-        self.win_w = w
-        self.win_h = h
-        self.surface = pygame.display.set_mode(
-            (w, h), pygame.RESIZABLE
-        )
+        self.surface = self._set_mode(w, h, pygame.RESIZABLE)
         if caption:
             pygame.display.set_caption(f"OrionLayer v3 — {caption}")
         self._after_resolution_change()
@@ -293,10 +327,26 @@ class App:
                 info = pygame.display.Info()
                 native_w = info.current_w
                 native_h = info.current_h
-            # Open fullscreen at native resolution
+            # Open fullscreen at native resolution.
+            #
+            # NOT through `_set_mode`: that adopts the granted size
+            # into `win_w`/`win_h`, and here those must stay the F9
+            # CONTENT size — the surface below is a plain Surface of
+            # exactly that size, blitted into the middle of the
+            # display. What is read back is the DISPLAY, because the
+            # centring offset and `_fs_native` are about it and a
+            # refused native size would put the content off centre
+            # by half the difference.
             self._fs_surface = pygame.display.set_mode(
                 (native_w, native_h), pygame.FULLSCREEN
             )
+            got_w, got_h = self._fs_surface.get_size()
+            if (got_w, got_h) != (native_w, native_h):
+                log.warning(
+                    "fullscreen: asked for %dx%d, granted %dx%d — "
+                    "centring on what was granted",
+                    native_w, native_h, got_w, got_h)
+            native_w, native_h = got_w, got_h
             # Content rendered at F9 resolution, centered
             w, h, label = self._resolutions[self._res_index]
             self.win_w = w

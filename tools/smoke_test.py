@@ -20,6 +20,7 @@ mod, and after touching anything in core/.
 import ast
 import hashlib
 import io
+import logging
 import math
 import os
 import re
@@ -9655,6 +9656,83 @@ def main():
         app2.win_h, app2.settings, _cur._source.get_size()), \
         (_cur.last_size(), app2.win_h, _before)
     ok("App boots standalone")
+
+    # ── THE WINDOW IS WHAT WAS GRANTED, NOT WHAT WAS ASKED FOR ──
+    #
+    # `Layout`, every box, the cursor and the frame plate are built
+    # from `win_w`/`win_h`, so if those are the REQUESTED size and the
+    # window manager gave less, the whole screen is laid out for a
+    # window that does not exist. Measured 9 September 2026 on a
+    # single 3440x1440 display: 2560x1440 is granted 2560x1371,
+    # 3840x2160 — one of the four sizes F9 offers — is granted
+    # 3440x1371, and **no `VIDEORESIZE` is delivered for either**, so
+    # nothing downstream could notice. That is the second fault
+    # behind Data's screenshots, and the one that made every panel
+    # overflow at F9 "4K".
+    #
+    # THE STATE IS FORCED, because it cannot be reached here: the
+    # dummy video driver grants every request exactly, so a check
+    # that merely called `_set_mode` would pass against the bug. Same
+    # shape as the help-file check that builds both of its states
+    # rather than reading the tester's disk.
+    _grant = [None]
+    _real_set_mode = pygame.display.set_mode
+
+    def _stingy_set_mode(size, *a, **kw):
+        _real_set_mode((64, 64), *a, **kw)
+        return pygame.Surface(_grant[0] or size)
+
+    class _WinStub:
+        win_w = win_h = 0
+
+    _logged = []
+
+    class _Catch(logging.Handler):
+        def emit(self, record):
+            _logged.append(record.getMessage())
+
+    _mlog = logging.getLogger("orionlayer")
+    _catch = _Catch()
+    _mlog.addHandler(_catch)
+    try:
+        pygame.display.set_mode = _stingy_set_mode
+        _stub = _WinStub()
+        _grant[0] = (3440, 1371)
+        main_module.App._set_mode(_stub, 3840, 2160, 0)
+        assert (_stub.win_w, _stub.win_h) == (3440, 1371), (
+            f"_set_mode kept the REQUESTED size {_stub.win_w}x"
+            f"{_stub.win_h} — the layout would be built for a window "
+            f"that does not exist")
+        assert any("3840x2160" in _m and "3440x1371" in _m
+                   for _m in _logged), (
+            f"a window smaller than the one asked for was not "
+            f"reported: {_logged}")
+        # AND IT IS SILENT WHEN THE REQUEST IS GRANTED, or the line
+        # is noise and stops being read.
+        _logged.clear()
+        _grant[0] = (1920, 1080)
+        main_module.App._set_mode(_stub, 1920, 1080, 0)
+        assert (_stub.win_w, _stub.win_h) == (1920, 1080)
+        assert not _logged, (
+            f"a granted request still logged: {_logged}")
+    finally:
+        pygame.display.set_mode = _real_set_mode
+        _mlog.removeHandler(_catch)
+        _real_set_mode((1920, 1080))
+    # AND NOBODY READS THE REQUEST BACK OUT OF THE TABLE. The fault
+    # was `_apply_resolution` assigning `win_w`/`win_h` itself from
+    # its arguments; a future edit that reinstates that assignment
+    # puts the whole thing back with every check above still green.
+    _main_src = open(os.path.join(_root_main := os.path.dirname(
+        SCREENS_DIR), "main.py"), encoding="utf-8").read()
+    _apply_body = _main_src.split("def _apply_resolution(")[1].split(
+        "\n    def ")[0]
+    assert "self.win_w = w" not in _apply_body, (
+        "_apply_resolution assigns win_w from its argument again — "
+        "the window size has to come from the surface that was "
+        "actually created")
+    ok("window size is the surface's, not the request's (a refused "
+       "size is adopted and reported, a granted one is silent)")
 
     # CLAUDE.md is what a Claude Code session reads before touching
     # anything, so a stale pointer in it misleads at exactly the
