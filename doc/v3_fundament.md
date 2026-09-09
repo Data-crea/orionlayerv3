@@ -1365,6 +1365,31 @@ touched, because the game only writes it on save. That is luck about
 this particular tool, not a property of the class — the same fault in
 something that saved would have been permanent.
 
+**And the obvious fix was tried and is only half a fix, which is the
+part worth keeping.** Predicting whether a round trip can return —
+instead of moving to find out — is cheap: the restore takes the
+target column's last icon, `Get_Cluster_` scans to the end of the
+array, so it returns the pop that went only when that pop's index is
+above every one already there. Measured against the probing run's own
+results, **17 of 19 agreed and both misses were in the unsafe
+direction**: predicted returnable, measured not, both scientists to
+farmers, both leaving bytes changed OUTSIDE `pop[]`.
+
+The leading explanation is already in section 3 — `Send_Cluster_`
+always ends in `Pass_Out_Imports_`, which rewrites `imports[
+ECON_FOOD]` on every non-outpost colony and three more fields on
+every needy one, and an undone move need not land the distribution
+passes back on the same numbers. **It is an explanation and not a
+measurement**, because separating the two costs a run on a save that
+is already drifting, and that was not spent.
+
+So: a predictor that models one cause of a failure is a FILTER and
+never a guarantee, and the thing it is a filter for still has to be
+checked afterwards. Writing it as `may_return` rather than `returns`
+is not pedantry — the first name states what was proven, and a tool
+that acts on the second would have drifted the fixture on exactly the
+two cases the predictor got wrong.
+
 **A test that reads the user's disk answers differently for the
 user.** The check separating "no help file" from "no such entry"
 built its two states by loading the real file, which does not exist

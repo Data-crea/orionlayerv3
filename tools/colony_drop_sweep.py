@@ -61,6 +61,9 @@ import pygame  # noqa: E402
 from screens.colony_summary import (colonyicons, colonylist,  # noqa: E402
                                     colonypick)
 import colony_move_hd as base  # noqa: E402
+from colony_roundtrip import (bytes_of, cell_and_figure,  # noqa: E402
+                              colony_diff, diff_signature,
+                              restore_returns, _round_trip_for)
 
 
 #: The points swept inside one drop cell, in the order they are run.
@@ -87,125 +90,6 @@ def sweep_points(rect, figure_rect):
         points.append(
             ("over a figure", (figure_rect.centerx, figure_rect.centery)))
     return points
-
-
-def colony_diff(before, after):
-    """[(index, [byte offsets])] for every colony record that moved."""
-    out = []
-    for i, (b, a) in enumerate(zip(before, after)):
-        if b != a:
-            out.append((i, [k for k in range(min(len(b), len(a)))
-                            if b[k] != a[k]]))
-    return out
-
-
-def diff_signature(before, after, colony):
-    """A one-line, comparable description of what a drop did.
-
-    Deliberately NOT the raw bytes: `COLCALC::Pass_Out_Imports_`
-    rewrites `imports[ECON_FOOD]` on every non-outpost colony of the
-    owner and `Post_Import_Computing_` rewrites three more fields on
-    every NEEDY one (fundament, section 3), so "exactly one colony
-    changed" is not a property of a pop move and a byte-equality test
-    would fail on a correct one. What has to be identical between two
-    drops is the MOVED COLONY's own record and the SET of other
-    colonies the recalculation touched.
-    """
-    changed = colony_diff(before, after)
-    others = sorted(i for i, _ in changed if i != colony)
-    mine = next((offs for i, offs in changed if i == colony), [])
-    return (tuple(mine), tuple(others),
-            bytes(after[colony]) if colony < len(after) else b"")
-
-
-def drop_at(app, screen, row_index, job, cell, target_job, point,
-            counter, label):
-    """One pick and one drop at `point`. (ok, note)."""
-    xy = base.square_xy(screen, row_index, job, cell)
-    if xy is None:
-        return False, "the row is not drawn"
-    base.click_at(app, *xy)
-    if screen._move.pick is None:
-        return False, f"no selection ({screen._move.message!r})"
-    base.click_at(app, *point)
-    if not base.wait_for(app, lambda: not screen._move.busy, 20.0, label):
-        return False, "the send never finished"
-    if screen._move.pick is not None:
-        return False, "the selection is still held"
-    return True, screen._move.message or ""
-
-
-def cell_and_figure(screen, row_index, target_job):
-    """(drop rect, an existing figure's rect or None) for one column."""
-    area, cfg, scale, n_rows = screen._list_view()
-    first = screen._first
-    bands = colonylist.row_bands(area, cfg, scale, n_rows - first)
-    band = row_index - first
-    if not 0 <= band < len(bands):
-        return None, None
-    top, row_h = bands[band]
-    row = screen._rows[row_index]
-    rect = None
-    for tj, r in colonylist.drop_targets(area, cfg, scale, row):
-        if tj == target_job and r.width:
-            rect = pygame.Rect(r.x, top, r.width, row_h)
-    fig = None
-    for cj, _ci, r in colonylist.row_boxes(area, cfg, scale, row).cells:
-        if cj == target_job:
-            fig = pygame.Rect(r.x, top, r.width, row_h)
-            break
-    return rect, fig
-
-
-def bytes_of(app):
-    return [bytes(b) for b in app.client.state.colonies_raw]
-
-
-def _round_trip_for(app, screen, row_index, job, cell, target_job,
-                    colony, point, label):
-    """Move at `point`, move it back, return (signature, restored, note).
-
-    `restored` is None when the round trip could not be completed, and
-    the caller must treat "not byte-exact" and "did not complete" the
-    same way: neither leaves a state two drops can be compared from.
-
-    **THE RESTORE IS NOT ALWAYS POSSIBLE, AND THAT IS A PROPERTY OF
-    THE SAVE.** `Get_Cluster_` takes every identical pop from the
-    clicked one to the END of the array, so taking the target column's
-    LAST icon takes exactly one pop only when that pop is the last
-    identical one in the array. Move a pop into a column that already
-    holds one with a higher array index and the pop that comes back is
-    the OTHER one — the array ends with the two swapped, every count
-    on screen still correct and the bytes different. That is the
-    fundament's worst failure shape, and here it is a measurement
-    rather than a bug: `--scan` reports which configurations return
-    exactly, and the sweep refuses the ones that do not.
-    """
-    before = bytes_of(app)
-    ok, note = drop_at(app, screen, row_index, job, cell, target_job,
-                       point, None, label)
-    if not ok:
-        return None, None, note
-    after = bytes_of(app)
-    sig = diff_signature(before, after, colony)
-    row_now = next((r for r in screen._rows if r["index"] == colony), None)
-    if row_now is None:
-        return sig, None, "the row left the list"
-    back_cell = len(row_now["cells"][target_job]) - 1
-    if back_cell < 0:
-        return sig, None, "the target column drew no icon to take back"
-    bxy = base.square_xy(screen, row_index, target_job, back_cell)
-    rect, _fig = cell_and_figure(screen, row_index, job)
-    if bxy is None or rect is None:
-        return sig, None, "the row is not drawn for the restore"
-    base.click_at(app, *bxy)
-    if screen._move.pick is None:
-        return sig, None, f"restore pick refused ({screen._move.message!r})"
-    base.click_at(app, rect.centerx, rect.centery)
-    if not base.wait_for(app, lambda: not screen._move.busy, 20.0,
-                         "restore"):
-        return sig, None, "the restore never finished"
-    return sig, bytes_of(app), note
 
 
 def main():
@@ -305,45 +189,36 @@ def main():
                     if rect_t is None:
                         continue
                     # bind the module-level closure to THIS candidate
-                    globals()["_scan_ctx"] = (ri, sj, sc, tj, r["index"])
-                    st0 = bytes_now()
-                    sg, rs, nt = _round_trip_for(
-                        app, screen, ri, sj, sc, tj, r["index"],
-                        (rect_t.centerx, rect_t.centery), "scan")
-                    exact = rs is not None and rs == st0
+                    # PREDICTED, NOT PROBED — see `restore_returns`.
+                    # This loop used to make a real move per row to
+                    # find out, and the ones that could not return
+                    # left the fixture drifted. It now answers from
+                    # the pop array and moves nothing at all.
+                    exact, nt = restore_returns(pops, n_pops, sj, sc, tj)
                     print(f"  {ri:2d} {r['name']:<14s} {sj} -> {tj} : "
-                          f"{held} icons, exact={exact}"
+                          f"{held} icons, may-return={exact}"
                           + ("" if exact else f"  ({nt})"))
-                    if not exact:
-                        # ── STOP. EVERY PROBE IS A REAL MOVE. ──────
-                        # This loop used to carry on, and each
-                        # inexact round trip left the save further
-                        # from where it started: run on the reference
-                        # fixture on 9 September 2026 it walked
-                        # thirty configurations, and Blucher II ended
-                        # with one pop permanently in scientists that
-                        # had begun in farmers. The scan is a
-                        # DIAGNOSTIC and it writes to the player's
-                        # loaded game — so the first configuration it
-                        # cannot return from is the last one it may
-                        # try. What it reports is still useful: the
-                        # rows above it are the ones a sweep can run
-                        # on.
-                        print()
-                        print("  STOPPED. A round trip that does not")
-                        print("  restore has CHANGED THE LOADED GAME,")
-                        print("  and every further probe would change")
-                        print("  it again. Reload the save before any")
-                        print("  acceptance run.")
-                        return 1
-        print("\n  every configuration above restored exactly; the "
-              "save is as it was loaded")
+        print("\n  nothing was moved: every line above is PREDICTED "
+              "from the pop array. `may-return=False` is certain; "
+              "`True` means no reason was found in pop[], and the "
+              "recalculated fields are not modelled — 17 of 19 agreed "
+              "with a probing run, both misses in the unsafe "
+              "direction.")
         return 0
 
     # ── PROBE: is the restore byte-exact on this save at all? ────
     rect, fig = cell_and_figure(screen, row_index, target_job)
     if rect is None:
         print("the target column has no drop rect at this resolution")
+        return 1
+    _loaded = colonypick.pops_of(app.client.state, colony)
+    _ok, _why = restore_returns(_loaded[0], _loaded[1], job, cell,
+                               target_job)
+    if not _ok:
+        print(f"\ncolumn {target_job} cannot be swept from a state "
+              f"this tool can return to: {_why}")
+        print("  Nothing was moved. `--scan` lists the configurations "
+              "that can.")
         return 1
     start = bytes_now()
     sig0, restored, note = round_trip((rect.centerx, rect.centery),
@@ -399,6 +274,14 @@ def main():
     empty_results = []
     if empty_job is not None:
         erect, _ = cell_and_figure(screen, row_index, empty_job)
+        _l2 = colonypick.pops_of(app.client.state, colony)
+        _ok2, _why2 = restore_returns(_l2[0], _l2[1], job, cell, empty_job)
+        if erect is not None and not _ok2:
+            print(f"\ncolumn {empty_job} SKIPPED, nothing moved: {_why2}")
+            print("  The second half of the sweep is a gap in the "
+                  "evidence and not a pass. Run it on a row where the "
+                  "round trip returns — `--scan` lists them.")
+            erect = None
         if erect is not None:
             _h2 = len(screen._rows[row_index]["cells"][empty_job])
             print(f"\nsweeping the {'POPULATED' if _h2 else 'EMPTY'} "
