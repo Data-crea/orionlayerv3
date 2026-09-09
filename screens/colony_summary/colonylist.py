@@ -37,23 +37,22 @@ against, something its screen had no room for. Marked here, in
 `layout.json` under `list._hd_extension`, in `doc/v3_fundament.md`,
 in `v3_projektstatus.md`, and in a smoke check.
 
-**NOT DRAWN — the original's SLIDER.** The list scrolls (mouse
-wheel, see `screen.handle_mousewheel`) and the only thing on screen
-saying so is the overflow line. The original draws a real indicator:
-`Draw_Bar_Indicator_` (colsum.cpp:747-753) fills a bar at native x
-621..626 whose ends are `271 * _first / n` and `271 * (_first + 10)
-/ n`, offset 40 — a proportional thumb, so its LENGTH reports how
-much of the list the window covers, which a text count does not.
-Above and below it sit `_x_fields[1]` and `_x_fields[2]`, the two
-step buttons (colsum.cpp:790-800).
+**THE SLIDER IS DRAWN — since 9 September 2026**, and the marker
+that stood here saying it was not is gone with it.
+`COLSUM::Draw_Bar_Indicator_` (colsum.cpp:747-771) fills a bar at
+native x 621..626 whose ends are `271 * _first / n + 40` and
+`271 * (_first + 10) / n + 40` — a proportional thumb, so its LENGTH
+reports how much of the list the window covers, which a text count
+does not. Above and below it sit `_x_fields[1]` and `_x_fields[2]`,
+the two step buttons (colsum.cpp:790-800). It is
+`colonyscroll.slider`, and the track it runs in is
+`colonyscroll.track` — one channel where this column used to draw ten
+stacked plates.
 
-Not drawn because nothing has been built for it, not because the
-data is missing: `first`, the row count and `list_area` are all
-here, and the frame artwork has no hole for it — a slider would be
-an artwork decision as well as a code one (decision 3). Recorded
-rather than left to be noticed, in the same form as the blockade and
-the colony event in `colonyrows`: an omission nobody has written
-down is indistinguishable from an omission nobody saw.
+WHAT IS STILL NOT DRAWN, and stays a recorded omission at three
+homes: the per-row BUY button the original adds at native x 599
+(`_list_buy_fields`, colsum.cpp:302). See `layout.json`'s
+`list._buy_note`.
 
 **It is a SUBSET, and the omission is deliberate.** That one call
 substitutes SEVEN values, in order: planet size, climate, gravity
@@ -300,15 +299,24 @@ def render(surface, rows, area, cfg, layout, style, first=0,
     # original plates ten with eight colonies — counted on its own
     # framebuffer, `evidence/colony_summary_native_split.png`.
     #
-    # ALL SIX COLUMNS, not only the three that take a drop: the
+    # FIVE COLUMNS, NOT SIX — corrected 9 September 2026. The
     # original's bitmap has a plate behind the name and behind the
-    # producing text too. For the three JOB columns the plate rect IS
-    # the drop rect and the cell rect — `column x band`, one
-    # expression, three readers (decision 5) — which is also what
-    # closed the pick round's drop-height DEVIATION: the target was
-    # `bar_h`, 52 % of the band, and it is the whole band now.
+    # producing text as well as behind the three job columns, so all
+    # five of those are plated. The SCROLL column is not one of them:
+    # what the original has there is a single continuous track with a
+    # slider in it (`Draw_Bar_Indicator_`, colsum.cpp:747-771), and
+    # ten stacked cells was this screen treating the scroll slot as a
+    # sixth column of the row. `colonyscroll.track` draws it now.
+    #
+    # For the three JOB columns the plate rect IS the drop rect and
+    # the cell rect — `column x band`, one expression, three readers
+    # (decision 5) — which is also what closed the pick round's
+    # drop-height DEVIATION: the target was `bar_h`, 52 % of the band,
+    # and it is the whole band now.
     for _by, _bh in colonytrack.all_bands(area, cfg):
         for _key, (_cx, _cw) in cols.items():
+            if _key == colonyscroll.COLUMN:
+                continue
             style.draw_plate(surface, pygame.Rect(_cx, _by, _cw, _bh),
                              scale, PLATE_COLOR)
 

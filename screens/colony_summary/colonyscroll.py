@@ -88,6 +88,9 @@ later removes the re-establishment on the strength of it.
 """
 import pygame
 
+from core import palette
+
+from . import colonyfirst
 from . import colonytrack
 
 #: The scroll column's key in `layout_reference.list_columns`.
@@ -112,6 +115,80 @@ BAND_SHARE = 16 / 31
 #: Inset from the list area's edges, reference px, so an arrow does
 #: not sit under the frame's rim (the `_frame_bleed_note` strip).
 INSET_REF = 4
+
+#: The slider's four colours, transcribed from
+#: `COLSUM::Draw_Bar_Indicator_` (colsum.cpp:747-771) and resolved
+#: from the game's own palette — see `colors.json._slider_note`.
+#: `colonyfirst` carries the INDICES (229 / 230 / 228) because it
+#: reads them back off the framebuffer; these are the same indices
+#: resolved, and the two must not drift, which a check asserts.
+SLIDER_FILL = palette.col("colony_summary", "slider_fill", (28, 28, 164))
+SLIDER_LIGHT = palette.col("colony_summary", "slider_light", (60, 60, 212))
+SLIDER_DARK = palette.col("colony_summary", "slider_dark", (0, 0, 108))
+TRACK_DOT = palette.col("colony_summary", "slider_track_dot", (0, 0, 0))
+
+
+def track(area, cfg, scale):
+    """The slider's track: one rect between the two arrows, or None.
+
+    **ONE TRACK, NOT TEN CELLS — 9 September 2026.** `col_scroll` was
+    plated per band like every other column, which drew ten stacked
+    boxes where the original has a single continuous channel. The
+    original's track is native x 621..626 running y 40..311, marked
+    by four corner `Dot_`s (colsum.cpp:767-770) and matching the
+    `Add_Scroll_Field_(621, 40, …, 5, 271)` that owns it
+    (colsum.cpp:278). Its extent is exactly the span between the two
+    step buttons at y 15 and y 316 (colsum.cpp:263-264), which is
+    what this reproduces: the arrows' own inner edges.
+    """
+    up, down = arrows(area, cfg, scale)
+    if up is None:
+        return None
+    return pygame.Rect(up.x, up.bottom, up.width, down.top - up.bottom)
+
+
+def slider(area, cfg, scale, first, total):
+    """The thumb's rect inside the track, or None when none is drawn.
+
+    **NONE IS A STATE AND IT IS THE ORIGINAL'S.**
+    `Draw_Bar_Indicator_` draws nothing at all — not even the track's
+    corner dots — while `num_colonies < 10` (colsum.cpp:751), because
+    below the window size there is nothing to scroll. `colonyfirst`
+    already encodes that as `NOT_DRAWN` for the reading direction;
+    this is the same fact for the drawing direction.
+
+    THE ARITHMETIC IS THE ORIGINAL'S, with its line:
+
+        y1 = 271 * _first / n + 40
+        y2 = 271 * (_first + 10) / n + 40          colsum.cpp:752-753
+
+    271 is the track's own height and 40 its top, so the expression
+    is `track.h * first / n + track.y` — position from `first`,
+    EXTENT from the visible-to-total ratio, which is what makes the
+    thumb's LENGTH say how much of the list the window covers. The
+    divisions are C integer division; both operands are non-negative
+    here so `//` is the same truncation.
+
+    **THE 10 IS THE ORIGINAL'S WINDOW, NOT HD'S ROW COUNT.**
+    `colonyfirst.WINDOW`, from `_list_col[10]` (colsum.cpp:348). They
+    are the same number today and they are not the same fact — the
+    fundament's decision 46 corollary says any future k is computed
+    against the original's ten.
+
+    **AND `first` IS HD'S OWN VIEW, which decision 46 permits.** The
+    original's slider reports the window its own rows are drawn from;
+    so does this one. While the two windows are decoupled — HD scrolls
+    freely for viewing and `_first` is re-established before anything
+    is injected — the two sliders can differ, and a slider reporting
+    the OTHER window would be the one that disagreed with the rows
+    beside it.
+    """
+    tr = track(area, cfg, scale)
+    if tr is None or total < colonyfirst.WINDOW or tr.height <= 0:
+        return None
+    y1 = tr.y + tr.height * max(0, first) // total
+    y2 = tr.y + tr.height * min(total, first + colonyfirst.WINDOW) // total
+    return pygame.Rect(tr.x, y1, tr.width, max(1, y2 - y1))
 
 
 def arrows(area, cfg, scale):
@@ -179,6 +256,28 @@ def render(surface, area, cfg, scale, colour, first, rows_drawn, total):
     up, down = arrows(area, cfg, scale)
     if up is None:
         return
+    # THE TRACK AND ITS THUMB, under the arrows. Nothing at all below
+    # ten colonies — see `slider`.
+    thumb = slider(area, cfg, scale, first, total)
+    if thumb is not None:
+        tr = track(area, cfg, scale)
+        # The four corner dots mark the track's own ends
+        # (colsum.cpp:767-770); they are the only thing the original
+        # draws for the track itself.
+        for cx in (tr.left, tr.right - 1):
+            for cy in (tr.top, tr.bottom - 1):
+                surface.fill(TRACK_DOT[:3], pygame.Rect(cx, cy, 1, 1))
+        surface.fill(SLIDER_FILL[:3], thumb)
+        # Borders drawn OVER the fill's own edge rows, light on top
+        # and left, dark on bottom and right (colsum.cpp:762-765).
+        surface.fill(SLIDER_LIGHT[:3],
+                     pygame.Rect(thumb.left, thumb.top, thumb.width, 1))
+        surface.fill(SLIDER_LIGHT[:3],
+                     pygame.Rect(thumb.left, thumb.top, 1, thumb.height))
+        surface.fill(SLIDER_DARK[:3],
+                     pygame.Rect(thumb.left, thumb.bottom - 1, thumb.width, 1))
+        surface.fill(SLIDER_DARK[:3],
+                     pygame.Rect(thumb.right - 1, thumb.top, 1, thumb.height))
     can_up = first > 0
     can_down = first + rows_drawn < total
     for rect, pointing_up, live in ((up, True, can_up),

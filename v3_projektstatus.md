@@ -3249,8 +3249,45 @@ a checker is this project's oldest recurring fault and the smoke
 suite already carries two instruments against it (the engine version,
 the check count); this table now has the third.
 
-**SIXTY PLATES, AND A DEVIATION IN KIND.** Six columns — the scroll
-slot included — times the ten bands of `list.row_count`. Every cell
+**FIFTY PLATES, AND A DEVIATION IN KIND.** FIVE columns times the ten
+bands of `list.row_count` — **corrected 9 September 2026, and the
+scroll slot is the one that left.** It was plated per band like every
+other column, which drew ten stacked boxes where the original has a
+single continuous channel with a slider in it
+(`COLSUM::Draw_Bar_Indicator_`, colsum.cpp:747-771). That is
+`colonyscroll.track` and `colonyscroll.slider` now, and the marker in
+`colonylist` that said the slider was NOT DRAWN went with it. (*Sixty
+for one day, between the plate fix and the slider; fifty before that,
+which was five columns times ten and right for the wrong reason —
+`col_scroll` was not being counted because empty bands were not being
+plated at all.*)
+
+**THE SLIDER IS TRANSCRIBED.** Position from `_first`, extent from the
+visible-to-total ratio: `y1 = 271 * _first / n + 40` and
+`y2 = 271 * (_first + 10) / n + 40` (colsum.cpp:752-753), where 271 is
+the track's own height and 40 its top, so the expression is
+`track.h * first / n + track.y`. The 10 is `colonyfirst.WINDOW`, the
+ORIGINAL's window from `_list_col[10]` — the same number as HD's
+`row_count` today and not the same fact (decision 46's corollary).
+**Nothing at all is drawn below ten colonies**, not even the track's
+four corner dots, because the original's whole block sits inside
+`if (num_colonies >= 10)` (colsum.cpp:751); `colonyfirst.NOT_DRAWN`
+already encoded that for the reading direction. Colours are the
+palette indices 229 / 230 / 228 and the dots' 80, resolved against the
+game's own live palette — and they are ABSOLUTE rather than a
+relationship, unlike the name colours, because `colonyfirst` reads
+index 229 back off the framebuffer to recover `_first` and a different
+blue would make the drawing and the reading disagree.
+
+**`first` IS HD'S OWN VIEW**, which decision 46 permits: the original's
+slider reports the window its own rows come from, and so does this
+one. While the two windows are decoupled they can differ, and a slider
+reporting the other one would be the one that disagreed with the rows
+beside it.
+
+**STILL NOT DRAWN, and still recorded at three homes:** the per-row
+BUY button the original adds at native x 599 (`_list_buy_fields`,
+colsum.cpp:302). See `layout.json`'s `list._buy_note`. Every cell
 of every band draws one, including the empty rows and including the
 NAME and BUILDING columns. (*Written as "fifty" until 9 September
 2026, from the five columns that carry content; corrected here, in

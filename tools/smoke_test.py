@@ -6371,15 +6371,76 @@ def main():
     assert "HD EXTENSION" in _lcfg.get("_hd_extension_wheel", ""), (
         "layout.json list._hd_extension_wheel no longer marks the "
         "wheel")
-    for _cite in ("NOT DRAWN", "Draw_Bar_Indicator_",
-                  "colsum.cpp:747-753"):
-        assert _cite in (_cl.__doc__ or ""), (
-            f"colonylist no longer records {_cite!r} — the original "
-            f"draws a proportional slider and this screen does not, "
-            f"and an omission nobody wrote down is indistinguishable "
-            f"from one nobody saw")
+    # ── THE SLIDER IS DRAWN, AND ITS ARITHMETIC IS THE ORIGINAL'S ─
+    #
+    # This block used to assert the OMISSION — that `colonylist` still
+    # said "NOT DRAWN" about `Draw_Bar_Indicator_`. The slider is
+    # transcribed since 9 September 2026, so the marker went and this
+    # asserts the drawing instead, which is the stronger claim.
+    for _cite in ("Draw_Bar_Indicator_", "colsum.cpp:747-771"):
+        assert _cite in (_cl.__doc__ or "") or _cite in (
+                _cscr2.slider.__doc__ or "") or _cite in (
+                _cscr2.track.__doc__ or ""), (
+            f"neither colonylist nor colonyscroll cites {_cite!r}")
+    # WHAT IS STILL OMITTED stays recorded: the per-row BUY button.
+    assert "_buy_note" in _lcfg or "buy" in (_cl.__doc__ or "").lower(), (
+        "the omitted per-row buy button is no longer recorded")
+    # THE ARITHMETIC, at several windows. `y1 = h*first/n + top` and
+    # `y2 = h*(first+WINDOW)/n + top` (colsum.cpp:752-753), with the
+    # ORIGINAL's window of ten and not HD's row count.
+    _sl_area = _ov_area
+    _sl_cfg = _ov_cfg
+    _tr = _cscr2.track(_sl_area, _sl_cfg, app.layout.scale)
+    assert _tr is not None and _tr.height > 0, "no slider track"
+    _up_a, _dn_a = _cscr2.arrows(_sl_area, _sl_cfg, app.layout.scale)
+    assert _tr.top == _up_a.bottom and _tr.bottom == _dn_a.top, (
+        f"the track {tuple(_tr)} does not span the gap between the "
+        f"arrows {tuple(_up_a)}..{tuple(_dn_a)}")
+    for _n in (10, 11, 17, 40):
+        for _f in (0, 1, _n - 10):
+            _th = _cscr2.slider(_sl_area, _sl_cfg, app.layout.scale, _f, _n)
+            assert _th is not None, f"no thumb at first={_f} of {_n}"
+            _wy1 = _tr.y + _tr.height * _f // _n
+            _wy2 = _tr.y + _tr.height * min(_n, _f + _cf.WINDOW) // _n
+            assert _th.top == _wy1 and _th.height == max(1, _wy2 - _wy1), (
+                f"first={_f} of {_n}: thumb {tuple(_th)} against the "
+                f"original's {_wy1}..{_wy2}")
+            assert _tr.contains(_th) or _th.height >= _tr.height, (
+                f"the thumb leaves its track at first={_f} of {_n}")
+        # AND ITS LENGTH IS THE VISIBLE-TO-TOTAL RATIO, which is the
+        # whole reason the original draws a bar and not a marker.
+        _t0 = _cscr2.slider(_sl_area, _sl_cfg, app.layout.scale, 0, _n)
+        assert abs(_t0.height / _tr.height
+                   - _cf.WINDOW / _n) < 2.0 / _tr.height, (
+            f"at {_n} colonies the thumb covers "
+            f"{_t0.height / _tr.height:.3f} of the track and the "
+            f"window is {_cf.WINDOW / _n:.3f} of the list")
+    # NOTHING AT ALL BELOW THE WINDOW, which is the original's own
+    # `if (num_colonies >= 10)` (colsum.cpp:751) — not even the
+    # track's corner dots.
+    for _n in (0, 1, 9):
+        assert _cscr2.slider(_sl_area, _sl_cfg, app.layout.scale,
+                            0, _n) is None, (
+            f"a thumb was drawn for {_n} colonies; the original draws "
+            f"nothing below {_cf.WINDOW}")
+    # THE DRAWING AND THE READING AGREE ABOUT THE COLOUR. `colonyfirst`
+    # recovers `_first` by looking for palette index 229 in the
+    # framebuffer; if this screen drew a different blue the two would
+    # disagree about what the same control looks like.
+    assert _cf.THUMB_FILL == 229 and _cf.THUMB_X0 == 621, (
+        "colonyfirst's transcribed indices moved")
+    _sl_colors = _sjson.load(open(os.path.join(
+        os.path.dirname(SCREENS_DIR), "assets", "shared", "skins",
+        "default", "colors.json"), encoding="utf-8"))["colony_summary"]
+    assert tuple(_sl_colors["slider_fill"]) == tuple(_cscr2.SLIDER_FILL[:3]), (
+        "colors.json and colonyscroll disagree about the thumb's fill")
+    assert "747-771" in _sl_colors.get("_slider_note", ""), (
+        "colors.json no longer says where the slider's colours come "
+        "from")
     ok("colony summary list scrolls (clamps transcribed, overflow "
-       "counts above and below, wheel marked, slider recorded)")
+       "counts above and below, wheel marked, slider TRANSCRIBED: "
+       "position from first, length from the visible/total ratio, "
+       "nothing below ten colonies)")
 
     # ── A SCROLL SENDS NOTHING TO THE GAME (fundament 46) ──
     # This is what lets the package ship without the synchronisation.
@@ -8653,7 +8714,13 @@ def main():
             _cl.render(_plate_surf, _plate_rows, _area, _plate_cfg,
                        app.layout, app.style)
             _want_rows = int(_plate_cfg.get("row_count", 10))
-            _want = _want_rows * 6
+            # FIVE COLUMNS, not six — 9 September 2026. The scroll
+            # slot stopped being a column of the row when the slider
+            # was transcribed: the original has one continuous track
+            # there (`Draw_Bar_Indicator_`, colsum.cpp:747-771), not
+            # ten stacked cells. The other five are plated because
+            # the original's bitmap plates them.
+            _want = _want_rows * 5
             # An EMPTY list draws the "no colonies" word and no row
             # geometry at all, which is the original's own blank
             # screen; every other count owes the full grid.
@@ -8661,10 +8728,10 @@ def main():
                 continue
             assert len(_plate_seen) == _want, (
                 f"{_n_col} colonies drew {len(_plate_seen)} cell "
-                f"plates; the window has {_want_rows} bands and six "
-                f"columns, so it owes {_want} whatever the list "
-                f"holds — the original's are in a bitmap and cannot "
-                f"be conditional on anything")
+                f"plates; the window has {_want_rows} bands and five "
+                f"plated columns, so it owes {_want} whatever the "
+                f"list holds — the original's are in a bitmap and "
+                f"cannot be conditional on anything")
             # AND THEY TILE THE WINDOW: every band's plates share one
             # top and one height, and the bands reach list_area's own
             # bottom. Counting alone would pass on six plates drawn
@@ -8689,9 +8756,20 @@ def main():
                     f"next starts at {_tops[_i + 1][0]}")
     finally:
         app.style.draw_plate = _real_plate
-    ok("a cell plate on every band, six per band, whatever the "
+    # AND THE SCROLL COLUMN IS NOT AMONG THEM: it carries one track,
+    # drawn once, not a plate per band.
+    _plate_scroll_x = _plate_cfg and _ctk.columns(
+        _area, _plate_cfg).get(_cscr.COLUMN)
+    if _plate_scroll_x:
+        _sx, _sw = _plate_scroll_x
+        assert not any(_r.x == _sx and _r.width == _sw
+                       for _r in _plate_seen), (
+            "the scroll column is being plated per band again; the "
+            "original has one continuous track there")
+    ok("a cell plate on every band, FIVE per band, whatever the "
        "colony count (the original's are in COLSUM.LBX entry 0 and "
-       "cannot be conditional; ten plated with eight colonies)")
+       "cannot be conditional; the scroll slot carries one track "
+       "instead of ten cells)")
 
     # ── The square is a fixed unit, not a ruler that moves ──
     # The unit used to be derived from the widest max_pop in the

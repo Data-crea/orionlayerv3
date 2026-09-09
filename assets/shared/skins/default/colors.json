@@ -690,6 +690,27 @@
       154,
       169
     ],
-    "_row_name_note": "TRANSCRIBED - the scanned colony's name is BRIGHT and the others are dimmed. COLSUM::Draw_Colony_Summary_For_Colony_ calls COLONY::Set_Colony_Font_To_Blue_(2, colony_idx == COLONY::_g_colony_n) (colsum.cpp:554), and that function picks _font_bright_color_array when the flag is set and _font_color_array when it is not (colony.cpp:533-546). THE DRIVER IS THE SCANNED COLONY, _g_colony_n - the same state that fills the description panel (Draw_Colony_Scan_Info_, colsum.cpp:1155) - and NOT a separate hover, so the two cannot be given different sources. A COLOUR AND NOTHING ELSE: no rectangle, no frame; the only Fill_/Line_ calls in colsum.cpp are the scroll thumb (:759-765). THE ORIGINAL'S OWN VALUES, two independent sources agreeing: the arrays are palette indices {245, 253, 252} normal and {244, 133, 132} bright (colony.cpp:139 and :141) with slot [1] the glyph and [0] the shadow, and measured off the original's own framebuffer on natives_autosave the scanned row's ink is (128, 160, 188) = index 133 and every other row's is (108, 104, 140) = index 253. WHAT IS TRANSCRIBED HERE IS THE RELATIONSHIP, NOT THE RGB: this screen draws in the project's own palette (decision 34), so the scanned name keeps the colour the list already had and the dimmed one is that colour at the original's own dim/bright luma ratio, 0.712. Adopting the original's absolute values would put a 109-luma name on an 8,11,20 panel that is darker than the original's, which is a different question from the one being transcribed."
+    "_row_name_note": "TRANSCRIBED - the scanned colony's name is BRIGHT and the others are dimmed. COLSUM::Draw_Colony_Summary_For_Colony_ calls COLONY::Set_Colony_Font_To_Blue_(2, colony_idx == COLONY::_g_colony_n) (colsum.cpp:554), and that function picks _font_bright_color_array when the flag is set and _font_color_array when it is not (colony.cpp:533-546). THE DRIVER IS THE SCANNED COLONY, _g_colony_n - the same state that fills the description panel (Draw_Colony_Scan_Info_, colsum.cpp:1155) - and NOT a separate hover, so the two cannot be given different sources. A COLOUR AND NOTHING ELSE: no rectangle, no frame; the only Fill_/Line_ calls in colsum.cpp are the scroll thumb (:759-765). THE ORIGINAL'S OWN VALUES, two independent sources agreeing: the arrays are palette indices {245, 253, 252} normal and {244, 133, 132} bright (colony.cpp:139 and :141) with slot [1] the glyph and [0] the shadow, and measured off the original's own framebuffer on natives_autosave the scanned row's ink is (128, 160, 188) = index 133 and every other row's is (108, 104, 140) = index 253. WHAT IS TRANSCRIBED HERE IS THE RELATIONSHIP, NOT THE RGB: this screen draws in the project's own palette (decision 34), so the scanned name keeps the colour the list already had and the dimmed one is that colour at the original's own dim/bright luma ratio, 0.712. Adopting the original's absolute values would put a 109-luma name on an 8,11,20 panel that is darker than the original's, which is a different question from the one being transcribed.",
+    "slider_fill": [
+      28,
+      28,
+      164
+    ],
+    "slider_light": [
+      60,
+      60,
+      212
+    ],
+    "slider_dark": [
+      0,
+      0,
+      108
+    ],
+    "slider_track_dot": [
+      0,
+      0,
+      0
+    ],
+    "_slider_note": "TRANSCRIBED from COLSUM::Draw_Bar_Indicator_ (colsum.cpp:747-771). The thumb is Fill_(621, y1, 626, y2, 229) with Line_ borders in 230 on the top and left edges and 228 on the bottom and right (:762-765), and the track's four corners are Dot_(...,80) at y 40 and y 311 (:767-770). The palette indices resolved against the game's own live palette on natives_autosave: 229 -> (28,28,164), 230 -> (60,60,212), 228 -> (0,0,108), 80 -> (0,0,0). These are ABSOLUTE values and not a relationship, unlike the name colours above: the slider is a control with no counterpart in this project's palette to keep faith with, and colonyfirst already reads index 229 back off the framebuffer to recover _first - so a different blue here would make the drawing and the reading disagree about what the same thing looks like."
   }
 }
