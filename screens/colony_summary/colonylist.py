@@ -255,6 +255,39 @@ def render(surface, rows, area, cfg, layout, style, first=0,
     name_px = layout.font_size(cfg.get("name_font", 20))
     small_px = layout.font_size(cfg.get("small_font", 15))
 
+    # ── ONE PLATE PER CELL OF EVERY BAND, COLONIES OR NOT ───────
+    # **A DEVIATION IN KIND, and the original has no drawing call at
+    # all.** `Draw_Colony_Summary_Screen_` blits ONE bitmap —
+    # `animate::Draw_(0, 0, _anims[0])`, COLSUM.LBX entry 0
+    # (colsum.cpp:461, loaded at :404-408) — and the cell plates are
+    # painted into it. That is why every cell has one including the
+    # empty rows: they are part of the picture, not a per-row
+    # decision. HD cannot ship that bitmap (decision 42), so it draws
+    # them, and the plate is `StyleRenderer.draw_plate` (decision 51)
+    # rather than a rect this module invents.
+    #
+    # **AND IT IS DRAWN HERE, NOT IN THE ROW — 9 September 2026.**
+    # This loop used to sit inside `_render_bar`, which runs once per
+    # COLONY, so a player with seven colonies got seven plated bands
+    # and bare panel below them. Every document said otherwise: the
+    # comment above, decision 51 and the status document all claimed
+    # a plate on every band including the empty ones, and the
+    # drawing was the only one of the four that disagreed. The
+    # original plates ten with eight colonies — counted on its own
+    # framebuffer, `evidence/colony_summary_native_split.png`.
+    #
+    # ALL SIX COLUMNS, not only the three that take a drop: the
+    # original's bitmap has a plate behind the name and behind the
+    # producing text too. For the three JOB columns the plate rect IS
+    # the drop rect and the cell rect — `column x band`, one
+    # expression, three readers (decision 5) — which is also what
+    # closed the pick round's drop-height DEVIATION: the target was
+    # `bar_h`, 52 % of the band, and it is the whole band now.
+    for _by, _bh in colonytrack.all_bands(area, cfg):
+        for _key, (_cx, _cw) in cols.items():
+            style.draw_plate(surface, pygame.Rect(_cx, _by, _cw, _bh),
+                             scale, PLATE_COLOR)
+
     window = rows[first:]
     for row, (y, row_h) in zip(window,
                                row_bands(area, cfg, scale, len(window))):
@@ -540,28 +573,6 @@ def _render_bar(surface, row, area, cfg, scale, band, track, text_px,
     """
     boxes = colonytrack.row_boxes(area, cfg, scale, row, band)
     top, band_h = band
-
-    # ── FIFTY PLATES, ONE PER CELL OF EVERY BAND ────────────────
-    # **A DEVIATION IN KIND, and the original has no drawing call at
-    # all.** `Draw_Colony_Summary_Screen_` blits ONE bitmap —
-    # `animate::Draw_(0, 0, _anims[0])`, COLSUM.LBX entry 0
-    # (colsum.cpp:461, loaded at :404-408) — and the cell plates are
-    # painted into it. That is why every cell has one including the
-    # empty rows: they are part of the picture, not a per-row
-    # decision. HD cannot ship that bitmap (decision 42), so it draws
-    # them, and the plate is `StyleRenderer.draw_plate` (decision 51)
-    # rather than a rect this module invents.
-    #
-    # ALL SIX COLUMNS, not only the three that take a drop: the
-    # original's bitmap has a plate behind the name and behind the
-    # producing text too. For the three JOB columns the plate rect IS
-    # the drop rect and the cell rect — `column x band`, one
-    # expression, three readers (decision 5) — which is also what
-    # closed the pick round's drop-height DEVIATION: the target was
-    # `bar_h`, 52 % of the band, and it is the whole band now.
-    for _key, (_cx, _cw) in colonytrack.columns(area, cfg).items():
-        style.draw_plate(surface, pygame.Rect(_cx, top, _cw, band_h),
-                         scale, PLATE_COLOR)
 
     cells = row.get("cells")
     # **CLIPPED TO THE ROW, VERTICALLY ONLY.** A stepped figure is

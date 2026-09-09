@@ -18,6 +18,7 @@ Exit code 0 = all good. Run this before shipping a ZIP or a
 mod, and after touching anything in core/.
 """
 import ast
+import collections
 import hashlib
 import io
 import logging
@@ -8250,6 +8251,85 @@ def main():
        "the hatching, horizontal budget balances to the pixel, name "
        "clipped to its column, INVENTION + HD EXTENSION marked, "
        "preview rows match build_rows and carry a provenance band)")
+
+    # ── A PLATE PER CELL OF EVERY BAND, WHATEVER THE COLONY ─────
+    #    COUNT
+    #
+    # The original has no per-row plate decision to make: the cells
+    # are painted into COLSUM.LBX entry 0, the one bitmap
+    # `Draw_Colony_Summary_Screen_` blits (`animate::Draw_(0, 0,
+    # _anims[0])`, colsum.cpp:461), so a plate is part of the picture.
+    # Counted on its own framebuffer, `colony_summary_native_split.png`
+    # in the fixtures: eight colonies, TEN plated bands.
+    #
+    # HD drew them inside the per-ROW renderer until 9 September 2026,
+    # so seven colonies gave seven plated bands and 197 reference px
+    # of bare panel. The claim that every band is plated was in the
+    # code comment, in decision 51 and in the status document, and
+    # was true in none of the three — a marking that three documents
+    # assert is still not the behaviour, which is the fundament's own
+    # lesson one domain over. Nothing could see it because no check
+    # counted the rects.
+    _plate_cfg = _column_cfg(_cfg, app.layout, _area)
+    _plate_seen = []
+    _real_plate = app.style.draw_plate
+
+    def _spy_plate(_surf, _rect, _scale, _colour, *a, **kw):
+        _plate_seen.append(pygame.Rect(_rect))
+        return _real_plate(_surf, _rect, _scale, _colour, *a, **kw)
+
+    _plate_surf = pygame.Surface((1920, 1080))
+    try:
+        app.style.draw_plate = _spy_plate
+        for _n_col in (0, 1, 3, 7, 10, 25):
+            _plate_rows = _pv_rows[:_n_col] if _n_col <= len(_pv_rows) else (
+                (_pv_rows * 30)[:_n_col])
+            if _n_col and not _plate_rows:
+                continue
+            _plate_seen.clear()
+            _plate_surf.fill((0, 0, 0))
+            _cl.render(_plate_surf, _plate_rows, _area, _plate_cfg,
+                       app.layout, app.style)
+            _want_rows = int(_plate_cfg.get("row_count", 10))
+            _want = _want_rows * 6
+            # An EMPTY list draws the "no colonies" word and no row
+            # geometry at all, which is the original's own blank
+            # screen; every other count owes the full grid.
+            if _n_col == 0:
+                continue
+            assert len(_plate_seen) == _want, (
+                f"{_n_col} colonies drew {len(_plate_seen)} cell "
+                f"plates; the window has {_want_rows} bands and six "
+                f"columns, so it owes {_want} whatever the list "
+                f"holds — the original's are in a bitmap and cannot "
+                f"be conditional on anything")
+            # AND THEY TILE THE WINDOW: every band's plates share one
+            # top and one height, and the bands reach list_area's own
+            # bottom. Counting alone would pass on six plates drawn
+            # ten times in the same place.
+            _by_top = collections.defaultdict(list)
+            for _r in _plate_seen:
+                _by_top[(_r.top, _r.height)].append(_r)
+            assert len(_by_top) == _want_rows, (
+                f"{_n_col} colonies: {len(_plate_seen)} plates in "
+                f"{len(_by_top)} distinct bands, wanted {_want_rows}")
+            _tops = sorted(_by_top)
+            assert _tops[0][0] == _area.y, (
+                f"the first band starts at {_tops[0][0]}, list_area "
+                f"at {_area.y}")
+            assert _tops[-1][0] + _tops[-1][1] == _area.bottom, (
+                f"the last band ends at {_tops[-1][0] + _tops[-1][1]}, "
+                f"list_area at {_area.bottom} — a strip below the "
+                f"last band belongs to nobody")
+            for _i, _key in enumerate(_tops[:-1]):
+                assert _key[0] + _key[1] == _tops[_i + 1][0], (
+                    f"band {_i} ends at {_key[0] + _key[1]} and the "
+                    f"next starts at {_tops[_i + 1][0]}")
+    finally:
+        app.style.draw_plate = _real_plate
+    ok("a cell plate on every band, six per band, whatever the "
+       "colony count (the original's are in COLSUM.LBX entry 0 and "
+       "cannot be conditional; ten plated with eight colonies)")
 
     # ── The square is a fixed unit, not a ruler that moves ──
     # The unit used to be derived from the widest max_pop in the

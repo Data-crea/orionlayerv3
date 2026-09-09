@@ -136,11 +136,30 @@ What that protects is the APPEARANCE having one home. What it does
 not require, and was read as requiring, is that every rect come from
 a box.
 
-The colony list's fifty cell plates are the case that settled it.
-They are `column x band` — six column boxes and a row count — and
-there is no box for any of the fifty, nor should there be: a cell is
-a rule, and fifty rectangles in `boxes.json` would be fifty things to
-drag out of alignment with the row they belong to. The same rect is
+The colony list's SIXTY cell plates are the case that settled it.
+They are `column x band` — six column boxes and a row count of ten —
+and there is no box for any of the sixty, nor should there be: a cell
+is a rule, and sixty rectangles in `boxes.json` would be sixty things
+to drag out of alignment with the row they belong to.
+
+(*Written as "fifty" until 9 September 2026, from the five columns
+that carry content; the scroll slot is a column and takes its plate
+like the rest, so the number is 6 x 10. Corrected while fixing the
+drawing, because a count nobody could check is how the next
+paragraph's fault survived — see below.*)
+
+**AND FOR THREE DAYS THE DRAWING PLATED ONLY THE OCCUPIED BANDS.**
+This entry, the code comment above the loop and the status document
+all said "every cell including the empty rows", and the renderer put
+the loop inside the per-ROW function, so a player with seven colonies
+saw seven plated bands and 197 reference px of bare panel. Three
+documents asserting a behaviour is not the behaviour — the same
+shape as the help panel's HD EXTENSION marking that two documents
+claimed and no file carried — and here there was a fourth witness
+nobody consulted: the original's own framebuffer, which plates ten
+bands with eight colonies. What was missing was a check that COUNTED
+the rects. There is one now, at six colony counts from one to
+twenty-five. The same rect is
 the cell, the drop target and the plate (decision 5), so it is
 computed once and drawn with `StyleRenderer.draw_plate`.
 

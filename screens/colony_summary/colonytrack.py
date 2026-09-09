@@ -534,11 +534,46 @@ def row_bands(area, cfg, scale, count):
     Fewer bands than `count` therefore means the tail of the window
     is not drawn. That is still the honest shape: nothing below the
     last band can be selected because nothing below it is there.
+
+    **THE WINDOW'S BANDS ARE `all_bands` CUT TO `count`**, so a band
+    is the same rectangle whether a colony sits in it or not — see
+    there for why the empty ones have to exist.
+    """
+    return all_bands(area, cfg)[:max(0, count)]
+
+
+def all_bands(area, cfg):
+    """(top, height) for every band of the window — `row_count` of
+    them, ALWAYS, whatever the colony count is.
+
+    **A BAND IS A PROPERTY OF THE WINDOW, NOT OF THE LIST — 9
+    September 2026.** The original's ten slots exist before any
+    colony is put in them (`_list_col[10]`, colsum.cpp:348), and its
+    cell plates are painted into COLSUM.LBX entry 0, the single
+    bitmap `Draw_Colony_Summary_Screen_` blits at colsum.cpp:461 —
+    so a plate is part of the picture and cannot be conditional on
+    anything. Counted on the original's own framebuffer
+    (`evidence/colony_summary_native_split.png`): eight colonies,
+    **ten plated bands**, the last two empty.
+
+    HD drew its plates inside the per-ROW renderer, so a player with
+    seven colonies got seven plated bands and 197 reference px of
+    bare panel below them — visible in every one of Data's four
+    screenshots of 8 September 2026 and in `list_geometry_vs_original`
+    before them. The claim that every band is plated was written in
+    the code, in the fundament under decision 51 and in the status
+    document, and was true in none of them; the drawing was the odd
+    one out and it is the drawing that moved.
+
+    The two functions are separate because the two questions are:
+    this one says where the bands ARE, `row_bands` says which of them
+    have a colony to draw. One arithmetic, so a plate and the row it
+    frames cannot land in different places (decision 5).
     """
     band = band_height(area, cfg)
     want = int(cfg.get("row_count", 10))
     bands, y = [], area.y
-    for i in range(min(count, want)):
+    for i in range(want):
         # THE LAST BAND TAKES THE REMAINDER, the rule the columns and
         # the header plates already use, so the rows tile the window
         # exactly instead of leaving a strip that belongs to nobody.
