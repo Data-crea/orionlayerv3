@@ -3101,17 +3101,36 @@ def main():
         for _b0, _b1 in zip(_bands2, _bands2[1:]):
             assert _b0[0] + _b0[1] == _b1[0], (_W, _H, _b0, _b1)
         # AND THE STEP IS DERIVED FROM THAT BAND, not declared. The
-        # per-resolution table is gone: the figure has to fit under
-        # the plate's own top line.
+        # per-resolution table is gone: the figure's INK has to fit
+        # the band with the origin where the original puts it.
+        #
+        # THE NEED IS BUILT FROM THE MODULE'S OWN CONSTANTS, never
+        # spelled out here — `FIGURE_TOP_NATIVE` is a transcription
+        # (colsum.cpp:683 against :311) and `INK_BOTTOM_MIN` is a
+        # measurement over all 54 masters, and a checker that
+        # rewrites either as a literal is the second copy decision 5
+        # is about. Until 9 September 2026 this said `28 * step +
+        # PLATE_LINE`, which was the whole rule then and is one of
+        # its two halves now.
+        _need2 = _ctk.FIGURE_TOP_NATIVE + 28 - _ctk.INK_BOTTOM_MIN
         _st2 = _ctk.figure_step(_la2, _ov_cfg)
         _bh2 = _ctk.band_height(_la2, _ov_cfg)
-        assert 28 * _st2 + _ctk.PLATE_LINE <= _bh2, (
-            f"{_W}x{_H}: step {_st2} needs "
-            f"{28 * _st2 + _ctk.PLATE_LINE} px and the band is {_bh2}")
+        assert _need2 * _st2 <= _bh2, (
+            f"{_W}x{_H}: step {_st2} needs {_need2 * _st2} px and the "
+            f"band is {_bh2}")
         assert _st2 == max(_ctk.zoomtables.FIGURE_STEPS) or \
-            28 * (_st2 + 1) + _ctk.PLATE_LINE > _bh2, (
+            _need2 * (_st2 + 1) > _bh2, (
             f"{_W}x{_H}: step {_st2} was chosen and {_st2 + 1} also "
             f"fits — the rule is the LARGEST that fits")
+        # AND THE ORIGIN CLEARS THE PLATE'S LINE, which is the other
+        # fact and the one that no longer binds. Kept because the two
+        # are different claims: if the transcription is ever revised,
+        # this is the floor underneath it.
+        assert _ctk.FIGURE_TOP_NATIVE * _st2 >= _ctk.PLATE_LINE, (
+            f"{_W}x{_H}: the figure starts "
+            f"{_ctk.FIGURE_TOP_NATIVE * _st2} px into the band and the "
+            f"plate's line is {_ctk.PLATE_LINE} px — 46 of the 54 "
+            f"masters carry ink on canvas row 0")
     _ov_rows = [{"index": _i, "name": f"Over {_i}", "pops": 2,
                  "jobs": [1, 1, 0], "no_farming": False, "climate": 8,
                  "max_pop": 9, "producing": "", "producing_turns": 0,

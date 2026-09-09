@@ -68,30 +68,71 @@ def band_height(area, cfg):
 
 
 def figure_step(area, cfg):
-    """The largest sprite step whose figure fits one band.
+    """The largest sprite step whose figure's INK fits one band.
 
     **DERIVED, never declared** — the hand-written per-resolution
     table is gone. A master is 28 px (decision 50) and a step is an
-    integer swap (decision 28), so the step is the largest whose
-    `28 * step` fits the band under the plate's own top line.
+    integer swap (decision 28).
 
-    THE `+ PLATE_LINE` IS MEASURED, NOT ASSUMED. The cell plate is a
-    1 px line and 46 of the 54 masters carry ink on canvas row 0, so
-    a figure blitted at the band's top would paint over it. The
-    BOTTOM line needs nothing: every master has at least 3
-    transparent rows below its ink, which is the same measurement the
-    row clip rests on.
+    **THE RULE CARRIES TWO SEPARATE FACTS AND THEY MUST NOT BE
+    MERGED.** One is a transcription of where the original puts the
+    figure; the other is a measurement of what the plate needs. They
+    happen to point the same way today, which is exactly why the
+    weaker one would be "simplified" away by a later reader.
+
+    1. THE ORIGIN IS `FIGURE_TOP_NATIVE * step` BELOW THE BAND TOP —
+       TRANSCRIBED. The original's ICON ROW is `31*i + 38`
+       (`Draw_Info_Pop_For_`, colsum.cpp:683, and both hit tests pass
+       the same: `Get_Selected_Pop_` colsum.cpp:1006 and
+       `Get_Scanned_Pop_` colsum.cpp:963), while the FIELD — the band
+       — is at `31*i + 34` with height 30 (`Add_Fields_Pop_For_`,
+       colsum.cpp:311). Four native px, and they are the gap between
+       where a row can be clicked and where its icons are drawn.
+
+    2. THE PLATE'S TOP LINE NEEDS ONE PIXEL — MEASURED. The cell
+       plate is a 1 px line and 46 of the 54 masters carry ink on
+       canvas row 0 (re-measured over the whole set, 9 September
+       2026), so a figure blitted at the band's own top would paint
+       over it.
+
+    Fact 1 subsumes fact 2 at every step the tree can produce —
+    `4 * step >= 1` for all of them — so the clearance is not what
+    binds today. **It is still true and it is still why a step of
+    zero would be wrong**, and if the transcription is ever revisited
+    the clearance is the floor underneath it.
+
+    THE BOTTOM NEEDS NOTHING, and that is the same measurement the
+    row clip rests on: every master has at least `INK_BOTTOM_MIN`
+    transparent rows below its ink, so the canvas may overhang the
+    band by that much and lose no ink. The ORIGINAL overhangs too —
+    `4 + 28 = 32` against a pitch of 31 — so requiring the whole
+    canvas to fit would be stricter than the thing being transcribed.
+
+    So the band must hold `4 + 28 - 3 = 29` master rows per step.
     """
     band = band_height(area, cfg)
-    fits = [s for s in zoomtables.FIGURE_STEPS
-            if 28 * s + PLATE_LINE <= band]
+    need = FIGURE_TOP_NATIVE + 28 - INK_BOTTOM_MIN
+    fits = [s for s in zoomtables.FIGURE_STEPS if need * s <= band]
     return max(fits) if fits else min(zoomtables.FIGURE_STEPS)
 
 
 #: The cell plate's line, in device px — `StyleRenderer.draw_plate`
-#: draws width 1 at every resolution. The figure clears it at the top
-#: and the masters' own bottom margin clears it at the bottom.
+#: draws width 1 at every resolution. Kept because it is a different
+#: fact from `FIGURE_TOP_NATIVE` and only one of the two is a
+#: transcription; see `figure_step`.
 PLATE_LINE = 1
+
+#: How far below the BAND's top the figure starts, in native px, per
+#: step. TRANSCRIBED: icon row `31*i + 38` (colsum.cpp:683, :1006,
+#: :963) against field top `31*i + 34` (colsum.cpp:311).
+FIGURE_TOP_NATIVE = 4
+
+#: Transparent canvas rows below the ink, over all 54 masters, worst
+#: case. MEASURED 9 September 2026 (min 3, on the three Bulrathi;
+#: max 4). The canvas may overhang the band by this much and lose
+#: nothing — which is what lets the band be 29 rows rather than 32,
+#: and is the same measurement the row clip already rests on.
+INK_BOTTOM_MIN = 3
 
 
 #: `runs` is (zone, start_slot, count) per profession — the squares

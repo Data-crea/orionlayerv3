@@ -622,12 +622,21 @@ def _render_bar(surface, row, area, cfg, scale, band, track, text_px,
             # the OVERLAP the original has at the same squish, and
             # fitting the sprite to the slot would remove exactly the
             # thing being transcribed (decision 28).
-            # ONE PIXEL INSIDE THE PLATE'S TOP LINE. 46 of the 54
-            # masters carry ink on canvas row 0, so a figure at the
-            # band's top paints over the line; the band is sized with
-            # that pixel reserved (`colonytrack.figure_step`) and the
-            # cell's x already carries the same offset.
-            surface.blit(surf, (rect.x, top + colonytrack.PLATE_LINE))
+            # FOUR NATIVE PX BELOW THE BAND'S TOP, PER STEP —
+            # TRANSCRIBED, 9 September 2026. The original's icon row
+            # is `31*i + 38` (colsum.cpp:683, and both hit tests pass
+            # the same at :1006 and :963) while the field it sits in
+            # starts at `31*i + 34` (colsum.cpp:311). Those four px
+            # are the gap between where a row is clickable and where
+            # its icons are drawn, and until this date HD put the
+            # figure at the band's top + 1 — which was CLEARANCE for
+            # the plate's line, measured, and never a transcription
+            # of anything. The two facts are both kept, in
+            # `colonytrack.figure_step`, because 4*step happens to
+            # clear the 1 px line and a later reader would otherwise
+            # delete the weaker one.
+            surface.blit(surf, (rect.x, top + colonytrack.FIGURE_TOP_NATIVE
+                                * colonytrack.figure_step(area, cfg)))
             continue
         pygame.draw.rect(surface, ZONE_COLORS[job], rect)
         mark = _cell_mark(cfg, cells, job, index)
