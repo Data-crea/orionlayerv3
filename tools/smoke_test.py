@@ -5539,7 +5539,7 @@ def main():
             "an out-of-range index returns something. None must mean "
             "NO SUCH ENTRY and '' must mean a blank entry")
         # THE WORD LISTS ARE NOT SWITCHED, AND THIS IS WHY THEY
-        # STAY. 23 of the 26 entries in layout.json's four
+        # STAY. 20 of the 23 entries in layout.json's four
         # enum-indexed lists are letter for letter the game's own
         # (estrings.cpp:155-169, :204-213); the three that differ are
         # the gravities, and they differ because the COLONY SUMMARY
@@ -5549,6 +5549,79 @@ def main():
         # once the two are joined. Pinned because a future reader who
         # sees 'Low G' in the table and 'Low' in layout.json will
         # otherwise "fix" one of them.
+        #
+        # WRITTEN AS "23 of the 26" UNTIL 10 SEPTEMBER 2026, when the
+        # comparison stopped being prose and became the loop below.
+        # The four tables hold 5 + 5 + 3 + 10 = 23 entries, of which
+        # the three gravities differ, so it is 20 of 23 — and the
+        # count nobody could run was wrong in BOTH halves. Decision
+        # 36's rule: a number a document carries and no check reads
+        # is an intention. This is the same shape as decision 51's
+        # "fifty" cell plates, in the same file, four days apart.
+        _es_tables = {
+            # MOX::_planet_size_string, estrings.cpp:155-159
+            ("words", "sizes"): (0x2AB, 0x1E0, 0x173, 0x168, 0x143),
+            # MOX::_mineral_class_string, estrings.cpp:161-165
+            ("words", "minerals"): (0x2AC, 0x1A7, 0x2AD, 0x1C2, 0x2AE),
+            # MOX::_planet_gravity_string, estrings.cpp:167-169
+            ("words", "gravities"): (0x2AF, 0x2B0, 0x2B1),
+            # MOX::_planet_climate_string, estrings.cpp:204-213.
+            # NOT under `words` — climate has one home at
+            # list.climates, and it is read from there by the row
+            # renderer and the output panel alike (words._note).
+            ("list", "climates"): (0x21B, 0x2CF, 0x2D0, 0x2D1, 0x2D2,
+                                   0x18F, 0x1F5, 0x0B8, 0x2D3, 0x12F),
+        }
+        _es_lay = _sjson.load(open(os.path.join(
+            SCREENS_DIR, "colony_summary", "layout.json"),
+            encoding="utf-8"))
+        _es_same, _es_split, _es_total = 0, [], 0
+        for (_blk, _key), _ids in _es_tables.items():
+            _ours = _es_lay[_blk][_key]
+            assert len(_ours) == len(_ids), (
+                f"{_blk}.{_key} holds {len(_ours)} words against "
+                f"{len(_ids)} E_Strings_ calls in the original's "
+                f"table. ORDER IS THE ENUM (words._note), so a list "
+                f"that has gained or lost an entry is indexed wrong "
+                f"from that entry on and draws a neighbour's word")
+            for _i, (_id, _word) in enumerate(zip(_ids, _ours)):
+                _game = _es_strings.string(_id)
+                _es_total += 1
+                assert _game, (
+                    f"E_Strings_({_id:#05x}) is {_game!r} — "
+                    f"{_blk}.{_key}[{_i}] has no game string behind "
+                    f"it any more, so nothing here can be compared")
+                if _game == _word:
+                    _es_same += 1
+                    continue
+                # THE ONLY LEGAL DIFFERENCE IS THE SPLIT WORD. The
+                # colony summary's format supplies 'ravity' and the
+                # table supplies the 'G', so our list holds the bare
+                # quality and the game's string carries a suffix we
+                # must NOT repeat. Anything else is a wording drift
+                # and is what this loop is here to catch.
+                assert (_blk, _key) == ("words", "gravities"), (
+                    f"{_blk}.{_key}[{_i}] is {_word!r} where the "
+                    f"game's E_Strings_({_id:#05x}) is {_game!r}. "
+                    f"These lists are our own wording (decision 15) "
+                    f"and they are allowed to differ — but only "
+                    f"where a reason is written down, and the "
+                    f"gravities are the only entry that has one")
+                assert _game == _word + " G", (
+                    f"gravities[{_i}] is {_word!r} and the game's "
+                    f"string is {_game!r}; the split is exactly the "
+                    f"' G' that E_Strings_(0x4A)'s `%sravity` slot "
+                    f"completes (colsum.cpp:1194-1200). A different "
+                    f"suffix means the split moved and 'Normal "
+                    f"Gravity' no longer assembles")
+                _es_split.append(_word)
+        assert _es_total == 23 and _es_same == 20 and \
+            len(_es_split) == 3, (
+                f"{_es_same} of {_es_total} words identical, "
+                f"{len(_es_split)} split — the pinned shape is 20 of "
+                f"23 with the three gravities split. Both numbers "
+                f"are asserted, because a table that grows and a "
+                f"table that drifts are different faults")
         assert "%sravity" in (_es_strings.string(0x4A) or ""), (
             "E_Strings_(0x4A) no longer splits the word 'Gravity'. "
             "The scan box's format supplies 'ravity' and "
@@ -5559,10 +5632,22 @@ def main():
             "looks like an enum name in title case and is in fact the "
             "game's own string — see words._note")
         _es_note = (f"{sum(1 for t in _es_strings.strings if t)} "
-                    f"non-empty of {_es.ESTRINGS_COUNT}")
+                    f"non-empty of {_es.ESTRINGS_COUNT}, "
+                    f"{_es_same}/{_es_total} words identical")
+        ok(f"word lists onto estrings ({_es_same} of {_es_total} "
+           f"letter for letter, {len(_es_split)} gravities split by "
+           f"`%sravity`)")
     else:
         _es_note = (f"{_es_strings.state} — run "
                     f"`python tools/estrings_extract.py`")
+        # AND THE COMPARISON IS NOT SILENTLY SKIPPED. Without the
+        # player's estrings.lbx there is nothing to compare against,
+        # which is a legal state — but a check that reports nothing
+        # in it is indistinguishable from one that passed, and that
+        # is the fault the figure clip check carried below.
+        ok(f"word lists onto estrings NOT COMPARED "
+           f"({_es_strings.state}: no estrings_<lang>.json on this "
+           f"disk — run `python tools/estrings_extract.py`)")
 
     # THE TWO LOADERS MUST NEVER READ EACH OTHER'S FILE. The walks
     # are different — `Advance_To_Next_String_` (techinit.cpp:11-21)
@@ -5648,6 +5733,117 @@ def main():
             f"docstring IS the interface document for these dicts")
     ok(f"colony row dict pinned ({len(_row_expected)} keys, docstring "
        f"and AST agree)")
+
+    # ── `colonyrows` IMPORTS NO pygame, AND NOW SOMETHING CHECKS ──
+    #
+    # Two files say so and neither could enforce it: `colonyrows`'
+    # own docstring ("this module imports no pygame and knows
+    # nothing about pixels"), and `colonyfigures`' header, which
+    # promises in as many words that "a smoke check walks the import
+    # graph, because the property had been prose for as long as it
+    # had been true". It had been prose for exactly that long. Two
+    # documents asserting a behaviour is not the behaviour —
+    # decision 51's shape, and the third time this file has met it.
+    #
+    # WHY THE GRAPH AND NOT THE FILE. A grep of `colonyrows.py` is
+    # already green and always would be; the way this property dies
+    # is TRANSITIVE, through `from . import colonyfigures` at
+    # colonyrows.py:119. colonyfigures imports pygame INSIDE
+    # `_load` (colonyfigures.py:256) precisely so it does not reach
+    # back — move that one line to the top of the file and nothing
+    # in the tree would have said a word.
+    #
+    # MODULE LEVEL ONLY, and that is the whole distinction: an
+    # import inside a function does not run when the module is
+    # imported, so it cannot make the importer need pygame. Walking
+    # `ast.walk` instead of `tree.body` would flag colonyfigures'
+    # deliberate arrangement as the fault it was built to avoid.
+    def _import_graph(_start):
+        """Project-local modules reachable from `_start` AT IMPORT
+        TIME, and every module-level pygame import found on the way.
+
+        Resolves `from core import prodname` — where the name is a
+        SUBMODULE and not an attribute — by enqueuing both `core`
+        and `core.prodname`; a walk that took only the package would
+        stop at `core/__init__.py` and report three clean modules.
+        """
+        def _path(_m):
+            _b = os.path.join(_proj, *_m.split("."))
+            for _c in (_b + ".py", os.path.join(_b, "__init__.py")):
+                if os.path.exists(_c):
+                    return _c
+            return None
+
+        _seen, _found, _queue = {}, [], [_start]
+        while _queue:
+            _m = _queue.pop()
+            _p = _path(_m)
+            if _p is None or _p in _seen:
+                continue
+            _seen[_p] = _m
+            _parts = _m.split(".")
+            for _st in _ast.parse(
+                    open(_p, encoding="utf-8").read()).body:
+                if isinstance(_st, _ast.Import):
+                    _tg = [(_a.name, ()) for _a in _st.names]
+                elif isinstance(_st, _ast.ImportFrom):
+                    _base = _st.module or ""
+                    if _st.level:          # `from . import x`
+                        _up = _parts[:len(_parts) - _st.level]
+                        _base = ".".join(
+                            _up + ([_base] if _base else []))
+                    _tg = [(_base, tuple(_a.name for _a in _st.names))]
+                else:
+                    continue
+                for _name, _subs in _tg:
+                    if _name.split(".")[0] == "pygame":
+                        _found.append((_m, _st.lineno, _name))
+                        continue
+                    for _cand in (_name,) + tuple(
+                            f"{_name}.{_s}" for _s in _subs):
+                        if _path(_cand):
+                            _queue.append(_cand)
+        return _seen, _found
+
+    _cr_mod = "screens.colony_summary.colonyrows"
+    _cr_seen, _cr_pygame = _import_graph(_cr_mod)
+    assert not _cr_pygame, (
+        "the colony row data path reaches pygame at import time: " +
+        "; ".join(f"{_m} line {_ln} imports {_n}"
+                  for _m, _ln, _n in _cr_pygame) +
+        ". colonyrows hands the renderer plain dicts and knows "
+        "nothing about pixels — that seam is what keeps both halves "
+        "under the 300-line guideline (decision 6) and what stops "
+        "the renderer reaching back into a struct. If the import is "
+        "wanted, move it inside the function that needs a surface, "
+        "the way colonyfigures._load does")
+    # THE WALK HAS TEETH, shown against a module that really does
+    # import pygame at the top. A graph walk that silently resolved
+    # nothing would pass the assertion above for the wrong reason,
+    # and this is the cheapest way to tell the two apart — no
+    # synthetic file, no temp dir, just a second module in the same
+    # folder whose answer is known.
+    _cl_seen, _cl_pygame = _import_graph(
+        "screens.colony_summary.colonylist")
+    assert any(_m == "screens.colony_summary.colonylist"
+               for _m, _ln, _n in _cl_pygame), (
+        "the import-graph walk did not find pygame in colonylist.py, "
+        "which imports it at module level. The walk resolves "
+        "nothing, so the colonyrows assertion above is green for no "
+        "reason")
+    # AND IT REACHES PAST THE FIRST HOP. colonyfigures is the module
+    # the transitive fault would come through, so its presence in
+    # the reached set is asserted by name rather than by a count
+    # that any refactor would move.
+    _cr_files = set(_cr_seen.values())
+    for _want in (_cr_mod, "screens.colony_summary.colonyfigures",
+                  "core.prodname", "core.structs.colony"):
+        assert _want in _cr_files, (
+            f"the walk did not reach {_want}, which colonyrows "
+            f"imports. An unreached module is an unchecked one")
+    ok(f"colonyrows imports no pygame at import time "
+       f"({len(_cr_seen)} modules on the graph, function-level "
+       f"imports excluded, walk shown to find colonylist's)")
 
     # ── THE POPULATION FIGURES (decision 50) ──
     #
@@ -5899,29 +6095,118 @@ def main():
     # canvas. Every master must therefore carry enough transparent
     # rows BELOW its ink, which is why the figure is top-aligned:
     # what the clip removes is the bottom of the canvas, never a head.
-    if _figs_present:
-        _worst_bottom = 28
-        for _fn in _fig_names:
-            _img = pygame.image.load(
-                os.path.join(_proj, _fig.FIGURE_DIR, _fn)).convert_alpha()
-            assert _img.get_size() == (28, 28), (
-                f"{_fn} is {_img.get_size()} — every RACEICON job "
+    #
+    # THE RESERVE ROWS are those transparent rows, and the rule is
+    # one line: at every step, the overhang must fit in them.
+    #
+    # UNTIL 10 SEPTEMBER 2026 THIS WHOLE BLOCK SAT UNDER
+    # `if _figs_present:` AND THE ok() LINE BELOW CLAIMED "row clip
+    # loses no ink" EITHER WAY. The figures are extracted from the
+    # player's own RACEICON.LBX and are not committed (decision 40,
+    # decision 50), so on a fresh clone — which is every CI machine
+    # and every new contributor — the measurement did not happen and
+    # the report said it had. A check that reports a pass it did not
+    # perform is worse than no check: it is the state decision 51
+    # calls three documents asserting a behaviour, with nobody left
+    # to consult. Two things change. The rule is now a function, so
+    # it can be run against masters that are NOT on this disk; and
+    # it is run against a synthetic set every time, so the arithmetic
+    # is exercised on a machine with no figures at all.
+    def _reserve_rows(_dirpath, _names):
+        """Fewest transparent rows below the ink, over `_names`.
+
+        Loaded through `pygame.image.load` and measured with
+        `get_bounding_rect`, which is the same pair the drawing path
+        uses — a measurement off the file's declared height would
+        not see ink that reaches the last row.
+        """
+        _worst = 28
+        for _n in _names:
+            _im = pygame.image.load(
+                os.path.join(_dirpath, _n)).convert_alpha()
+            assert _im.get_size() == (28, 28), (
+                f"{_n} is {_im.get_size()} — every RACEICON job "
                 f"sprite and both shared sprites are 28x28, measured "
                 f"across all 171 entries")
-            _worst_bottom = min(_worst_bottom,
-                                28 - _img.get_bounding_rect().bottom)
+            _worst = min(_worst, 28 - _im.get_bounding_rect().bottom)
+        return _worst
+
+    def _clip_faults(_reserve):
+        """Steps at which the overhang does not fit in the reserve.
+
+        58 is the reference band; the three factors are the shipped
+        resolutions' scales. Returns (step, overhang, budget) so the
+        message can name the numbers rather than the verdict.
+        """
+        _out = []
         for _st in _fig.STEPS:
             _rowpx = round(58 * (1.0 if _st == 2 else
                                  (4 / 3 if _st == 3 else 2.0)))
             _over = max(0, _fig.step_size(_st) - _rowpx)
-            assert _over <= _worst_bottom * _st, (
-                f"at step {_st}x a figure overhangs its row by "
-                f"{_over}px and the emptiest master has only "
-                f"{_worst_bottom * _st}px of transparent canvas below "
-                f"its ink — the row clip would cut a figure's feet")
+            if _over > _reserve * _st:
+                _out.append((_st, _over, _reserve * _st))
+        return _out
+
+    # THE RED RUN, AND IT RUNS ON EVERY MACHINE. One synthetic
+    # master, ink in the LAST reserve row, is what the rule exists
+    # to refuse; if `_clip_faults` came back empty for it the green
+    # verdict below would mean nothing. Ink at (0, 27) leaves zero
+    # reserve rows, so 3x's seven-pixel overhang has nothing to fall
+    # into — the same seven pixels the real set clears with two to
+    # spare.
+    with _tf.TemporaryDirectory() as _inked:
+        _bad = pygame.Surface((28, 28), pygame.SRCALPHA)
+        _bad.fill((0, 0, 0, 0))
+        _bad.fill((255, 0, 0, 255), pygame.Rect(4, 2, 20, 14))
+        _bad.set_at((0, 27), (255, 0, 0, 255))      # in the reserve
+        pygame.image.save(_bad, os.path.join(_inked, "inked.png"))
+        _bad_reserve = _reserve_rows(_inked, ["inked.png"])
+        assert _bad_reserve == 0, _bad_reserve
+        _bad_faults = _clip_faults(_bad_reserve)
+        assert [f[0] for f in _bad_faults] == [3], (
+            f"a master with ink in its last row was not refused at "
+            f"3x ({_bad_faults}). 3x is the step that overhangs — 84 "
+            f"px of figure into a 77 px band — so a rule that passes "
+            f"this file passes anything and the green run below "
+            f"proves nothing")
+        # AND THE PAIRED GREEN: the same synthetic figure with the
+        # reserve rows left empty is accepted. Red and green one
+        # after the other is what shows the rule discriminates, and
+        # not merely that it refuses.
+        _ok_surf = pygame.Surface((28, 28), pygame.SRCALPHA)
+        _ok_surf.fill((0, 0, 0, 0))
+        _ok_surf.fill((255, 0, 0, 255), pygame.Rect(4, 2, 20, 14))
+        pygame.image.save(_ok_surf, os.path.join(_inked, "clean.png"))
+        _ok_reserve = _reserve_rows(_inked, ["clean.png"])
+        assert _ok_reserve == 12 and not _clip_faults(_ok_reserve), (
+            f"the clean synthetic master was refused (reserve "
+            f"{_ok_reserve}, faults {_clip_faults(_ok_reserve)}) — "
+            f"the rule refuses everything and the red run above is "
+            f"not evidence")
+
+    # THE GREEN RUN AGAINST THE SHIPPED MASTERS, when they are on
+    # this disk. The absence is reported in the ok() line rather
+    # than passed over, because "not measured" and "measured and
+    # clean" are the two states this check must never blur.
+    if _figs_present:
+        _clip_reserve = _reserve_rows(
+            os.path.join(_proj, _fig.FIGURE_DIR), _fig_names)
+        _clip_bad = _clip_faults(_clip_reserve)
+        assert not _clip_bad, (
+            "; ".join(f"at step {_s}x a figure overhangs its row by "
+                      f"{_o}px and the emptiest master has only "
+                      f"{_b}px of transparent canvas below its ink"
+                      for _s, _o, _b in _clip_bad) +
+            " — the row clip would cut a figure's feet")
+        _clip_note = (f"row clip loses no ink over {len(_fig_names)} "
+                      f"masters, {_clip_reserve} reserve rows spare")
+    else:
+        _clip_note = ("row clip NOT MEASURED — no figure set on this "
+                      "disk, run `python tools/raceicon_extract.py`")
     ok(f"population figures: {len(_fig_names)} names, step is a swap "
        f"(28x2/3/4), mod master and per-step files with the order "
-       f"per root, absent set draws cells, row clip loses no ink)")
+       f"per root, absent set draws cells, ink in the reserve rows "
+       f"refused at 3x; {_clip_note})")
 
     # ── `doc/modding_figures.md` IS GENERATED, AND CHECKED ──
     #
