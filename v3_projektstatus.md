@@ -13,6 +13,13 @@ right and the header had gone stale** — resolved 10 September 2026
 by dating the header to the edit and giving this session its
 paragraph, below, so the two agree again.
 
+This session (10 September 2026), last: **the sort bar's rim was
+measured and NOT rounded** — the original turns its corner on ~2
+native px, HD's rim is the master's own lit edge nine-sliced with
+flat corner tiles, and no radius in the data or the cutter can
+change that; it needs master artwork (see "The sort bar's rim
+cannot be rounded" below).
+
 This session (10 September 2026), later still: **two lessons from
 the fixtures bug went into the fundament's Diagnosis section** — a
 reader whose extent comes from the same table as its contents, and
@@ -4089,6 +4096,79 @@ removed it reports *"the eight windows' L edges range 15..56"*.
 
 Masks and plates regenerate byte-identical from
 `layout_reference.json` plus the master, all seven files.
+
+### The sort bar's rim cannot be rounded without new master artwork — 10 September 2026
+
+**Third request, and this is the dated reason it was not built.** Data
+is right about what she is seeing; the obstacle is not the hole and
+not the cutter.
+
+**WHAT THE ORIGINAL DOES.** Measured off
+`colony_summary_native_split.png` at the sort panel's top-left
+corner, native (112, 452): along the top edge the rim reaches full
+brightness at x=114, along the left edge at y=453, and the corner
+pixel itself sits at luminance 88 against the rim's 120-144. The
+bottom-left corner reads the same. So the rim **turns the corner on
+a radius of about 2 native px** — a small round, not a chamfer, and
+the lit line is continuous through it. Against the HD bar's own
+geometry (32 reference px tall where the native panel is 22-24) that
+is **≈3 reference px at 1920**, 6 device px at 3840.
+
+**WHAT HD DOES.** The rim is not drawn; it is the master's own lit
+edge, nine-sliced around each hole by `frame_build.lay_border`. The
+lit line lives in the four EDGE strips and the four CORNER tiles are
+`BEVEL_REF` square — 3x3 at 1920, 6x6 at 3840 — of **flat luminance
+2**, checked directly out of `bevel_source`. Measured on the shipped
+plate, the sort_bar hole's four bevel sides read top 73, bottom 96,
+left 162, right 110, which is the master's own per-side profile
+exactly; and each of those lines **stops 3 device px short of the
+corner**, where the flat tile sits. HD's rim is therefore four bright
+lines with a dark notch at every corner, and the original's is one
+line that turns.
+
+**WHY THE OBVIOUS CHANGE DOES NOTHING.** `layout_reference.json`
+carries `[x, y, w, h]` per hole and no radius, and `frame_cut.cut`
+(`tools/frame_cut.py:82-84`) builds the alpha by pasting a solid
+rectangle per hole. Adding a per-hole `corner_radius` and a
+`rounded_rectangle` paste is a small, contained change — and it is
+**cosmetically inert here**. The pixels a rounded alpha would newly
+expose at the corner are the flat dark metal that is already there;
+what a viewer reads as the rim is the RGB lit line, which the alpha
+does not touch. The hole would become rounded and the rim would
+still look square.
+
+**AND THE MASTER HAS NO ROUNDED CORNER TO LIFT.** `bevel_source`
+requires a rectangular hole (`RECT_FILL`) and says why: it crops a
+rectangle and `lay_border` lays it around a rectangle, so a
+chamfered source would print its own slanted corners onto every
+window of the screen. The master has exactly one non-rectangular
+hole — the header cartouche at (882, 21), 548x53, 91.4 % fill — and
+it is a **45-degree chamfer roughly 20 px long**, not a radius;
+`--profiles` scores it 0.00 because its edge cannot be measured.
+Nothing in the master supplies a curved lit corner at any radius.
+Synthesising one is refused by the pipeline's own rule, written at
+`tools/frame_build.py:253`: *"Only the master's pixels, never a
+drawn corner."*
+
+**AND ONE BEVEL SERVES ALL EIGHT HOLES.** `bevel_source` picks a
+single source and `build` lays it around every window, so rounding
+it rounds the header, the list, all four lower panels and RETURN as
+well. Rounding **only** the sort bar needs a per-hole bevel source,
+which is a larger change than the radius and a different decision.
+
+**WHAT WOULD ACTUALLY BUILD IT.** Artwork, in the master
+(`screens/galaxy_map/assets/frame.png`): the holes' corners rounded
+so the lit edge line turns through them, at about **3.6 master px**
+(3 reference px at the 0.827 downscale the master ships at). With
+that in the master the existing nine-slice picks it up with no code
+change at all — the corner tiles would simply stop being flat. If
+the rounding should apply to the sort bar alone, the per-hole bevel
+source is the second half of the job.
+
+**This is also the moment the >= 3840 master would settle**, since
+the holes are re-cut against it anyway — see "Resolution reach" in
+the section below, and Brief 87 Part 3b, which is deferred on the
+same trigger.
 
 ### The colony frame is built, not rendered — 7 September 2026
 
