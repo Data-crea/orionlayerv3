@@ -2,6 +2,32 @@
 
 Updated: 10 September 2026
 
+**How to read the date above.** The header names the day this file
+was last edited; the "This session (…)" paragraphs below it run
+newest first, and the top one should carry the same date. Between
+5 and 10 September 2026 they did not: five sessions edited sections
+deeper in this file and left both the header and the lead paragraph
+at 5 September, so the document appeared four days out of date while
+carrying entries dated 9 September inside it. **The convention is
+right and the header had gone stale** — resolved 10 September 2026
+by dating the header to the edit and giving this session its
+paragraph, below, so the two agree again.
+
+This session (10 September 2026), in one line each: **three prose
+claims became checks** — the word lists are compared onto the
+player's own estrings entry by entry (and the comment's "23 of the
+26" was wrong twice over: it is 20 of 23), `colonyrows` is held
+pygame-free by a walk of its import graph rather than by two
+docstrings claiming it, and the figure clip check stopped reporting
+a pass it had not performed on any tree without an extracted figure
+set; **the sort bar's outer outline was investigated and not
+changed** — it is baked into the frame plate, so rounding it is
+Part 3b territory and Part 3b is deferred (see its section below);
+and **Run A is answered** — the ten-drop table is now in this
+document rather than only in a commit message, with what a direct
+pop-move command can and cannot remove beside it, the four source
+answers and a proposed command shape (see "Run A" below).
+
 This session (5 September 2026), the Colonies screen analysed end to
 end — no code, no drawing change, the record is
 `doc/colsum_design_analysis.md`, in one line each: **the read side is
@@ -3220,6 +3246,189 @@ help-file lesson, one domain over.
 
 Zhadoom III (14 pops) is the widest row in either fixture and is
 therefore the narrowest-cell case any picture has to survive.
+
+### Run A — what one command would buy, and the four source answers — 10 September 2026
+
+`doc/briefs/91-colony-runs-and-doc-audit.md`, Run A. Source reading
+only: **no patch, no HD code, and fundament entry 52 is not written
+here** — it is written after Data has read this, with its number
+re-checked at that moment.
+
+**THE PART I TEN-DROP TABLE, BROUGHT IN FROM THE COMMIT MESSAGE.**
+Run A asks for a paragraph "filed beside the table in the status
+document" and the table was not in this document — it lived only in
+`ec6fd98`'s commit message. A measurement that can only be found by
+knowing which commit to read is not filed. Reproduced verbatim, not
+re-measured (Run A: do not re-measure):
+
+| step | before ms | after ms | states | visuals | floor? |
+|---|---|---|---|---|---|
+| pick click (local) | 57 | 57 | 1 | 1 | yes |
+| held | 0 | 0 | 0 | 0 | yes |
+| drop click | 84 | 84 | 1 | 1 | yes |
+| RESORT | 54 | 28 | 1 | 1 | yes |
+| ESTABLISH | 163 | 162 | 2 | 2 | yes |
+| PICK | 194 | 193 | 3 | 3 | past |
+| DROP | 217 | 214 | 3 | 3 | past |
+| finished | 0 | 0 | 0 | 0 | yes |
+| **total median** | **758** | **725** | | | |
+| **HD share** | 289 (38 %) | 274 (38 %) | | | |
+| **GAME share** | 469 (62 %) | 451 (62 %) | | | |
+
+**3a — WHAT A DIRECT COMMAND REMOVES, AND WHAT IT CANNOT.** Four of
+the eight rows are the click chain's own and exist only because the
+move is addressed by a click into the game's ten-row window:
+**RESORT 28 ms** (injects the sort key so HD's row order matches the
+game's, needed only because a click addresses a SLOT and not a
+colony), **ESTABLISH 162 ms over two messages** (steps `_first`
+until the target row is inside that window — decision 46's
+machinery), and **PICK 193 and DROP 214, three messages each** (the
+two injected clicks and their waits). Together **597 ms of the
+725 ms median**, and they go away with the chain, not with a faster
+wire. What does NOT go: the **57 ms local pick** and the **84 ms
+from the drop click to the send's first state** are HD's own
+scheduling on this side of the socket and are untouched by anything
+in Joes' tree; the **recalculation** is one
+`COLONY::Col_Calc_Wrapper_` per affected colony
+(`colmove.cpp:461-464`) and costs the same however the job change
+arrives; and the **snapshot cadence** still owes one state round
+trip before HD may draw the result, because HD does not draw
+optimistically. The floor is therefore **one send plus one
+confirming snapshot** — the table's own single-message steps sit at
+57 to 84 ms — on top of the 141 ms of HD front-end that stays.
+**The 62 % the game holds is not what this patch is buying**: it is
+buying the four chain states, and the honest claim is a drop that
+costs roughly one step instead of four, not a fast drop.
+
+**3b — THE FOUR ANSWERS, each from the function that builds the
+thing.**
+
+**(1) What `Give_Colonist_New_Job_` reads besides its arguments:
+nothing that belongs to a screen.** `colmove.cpp:518-557`. It takes
+`colony_idx, pop_idx, new_job, inter_colony_transfer` and reaches
+only for state those arguments address —
+`MOX::_colony[colony_idx].pop[pop_idx]` and `.max_farms`,
+`COLONY::Pop_To_Pop_State_` (`colony.cpp:1240-1255`, pure: the pop
+word's low nibble and nothing else) and `COLONY::Sum_Colonists_`
+(`colony.cpp:2112-2149`, walks that colony's own `pop[]` and
+`MOX::_player[]`). **`COLMOVE::_cluster_colony_n` is not read, no
+COLSUM or COLMOVE global is read, and no screen state is read.** It
+writes exactly two bit-fields, `POP::Set_Prof` and
+`POP::Set_Assigned` (`colmove.cpp:549-551`). Addressed by index, it
+is already the function a command wants.
+
+**AND THE ONE THING THAT DISQUALIFIES CALLING IT BLIND: all three
+refusals are BLOCKING UI.** `colmove.cpp:527`, `:534`, `:541` and
+`:556` each call `GENDRAW::Help_`, which is `Message_Box_`
+(`gendraw.cpp:18-24`) -> `TEXTBOX::Do_Text_Box_(nullptr, text, 0)`
+(`textbox.cpp:175`) -> `Text_Box_Get_Input_(0)` (`textbox.cpp:251`),
+whose zero-ticks path is a spin loop that **waits for a human**:
+`do { … } while (fields::Get_Input_() == 0)` at
+`textbox.cpp:145-149`. A handler that called
+`Give_Colonist_New_Job_` on a refusable move would stop the engine
+until somebody dismissed a box the HD player cannot see — and worse,
+that inner `Get_Input_()` re-enters `ext::Tick` and drains further
+commands from inside the refusal. So the command must decide the
+three refusals ITSELF and answer over the wire, or call a
+refusal-free inner form. This is decision 33 arriving as a hard
+requirement rather than a preference: HD already refuses before
+sending, and now the engine side cannot afford it not to.
+
+**(2) The recalculation is PER BATCH, and the source is explicit
+about it.** `Give_Colonist_New_Job_` never calls it. `Send_Cluster_`
+runs its whole `while` loop over the cluster and only then calls
+`COLONY::Col_Calc_Wrapper_(_cluster_colony_n)` and, if the
+destination differs, again for it — `colmove.cpp:461-464`, after
+the loop closes at `:459`; the early-exit path does the same at
+`:145-148`. `Col_Calc_Wrapper_` (`colony.cpp:1091-1106`) is
+`COLCALC::Colony_Calculation_` plus a branch guarded by
+`COLONY::_move_colonist != -1 && COLONY::_field_mode == 1` — the
+click chain's own state, which a command handler never sets, so
+only the calculation runs. **A list command is therefore correct
+and cheaper: N job changes, one recalculation per affected
+colony.**
+
+**(3) A new command byte goes in `ProcessInput()`'s drain loop as
+its own `case`, and it does NOT need `g_pending_field`.**
+`src/ext/ext_api.cpp:223-319`; the loop is
+`while (g_server.PopInput(cmd))` at `:224`, so **five commands in
+one tick already all land**. `g_pending_field` exists for one
+reason and it is not write safety: `MSG_ACTIVATE` has to impersonate
+a field click, and the value must come back as `Get_Input_`'s RETURN
+value — the comment at `:229-230` says not to set
+`_last_button_number` directly because `Interpret_Mouse_Input_()`
+overwrites it. A job change returns nothing to the game's input
+machinery, so it writes and is done. **Timing is favourable:**
+`ProcessInput` runs from `ext::Tick` (`ext_api.cpp:341-349`), which
+`fields::Get_Input_` calls at `fields.cpp:167` — and the colony
+summary's loop is `Get_Input_()` at `colsum.cpp:159` followed by
+`Draw_Colony_Summary_Screen_()` at `:171`, so a write in the drain
+loop is drawn in the **same** iteration.
+
+**(4) The game's own screen redraws from `pop[]` with no cluster
+state, and nothing caches the row.** `colsum.cpp:468-470` calls
+`Draw_Colony_Summary_For_Colony_(i)` for all ten slots
+**unconditionally** — outside both `if (COLONY::_full_draw != 0)`
+guards at `:458` and `:474` — so the rows are redrawn every pass
+whatever the dirty flag says. The pop drawing itself
+(`COLDRAW::Do_Colony_Info_Pop_Stuff_For_Pop_`,
+`coldraw.cpp:281-444`) reads `MOX::_colony[colony_idx].pop[pop_idx]`
+at `:332` and filters on that word's own bits — `0xf`, `0x180`,
+`0x200`, `0x400` at `:333-337`. **`_cluster_colony_n` does not
+appear in `coldraw.cpp` at all** (zero occurrences). The only screen
+globals in the loop are `COLONY::_scanned_pop` and
+`COLONY::_g_colony_n` at `:341`, and they choose a hover
+highlight, not what is drawn or where. `pop_index_by_slot[]`
+(`:354`) is filled BY the draw and rebuilt each call — an output,
+not a cache. Corroboration from the other side: the plain
+same-colony job change in `Send_Cluster_` sets no `_full_draw` and
+the row still updates.
+
+**3c — PROPOSED COMMAND SHAPE: a LIST, one message, one colony.**
+
+    MSG_SET_JOBS   colony_idx : i16
+                   count      : u8
+                   [ pop_idx : i16, new_job : u8 ] x count
+
+**Why a list and not one pop per command.** (2) is the reason: the
+recalculation is per batch in the original, so a list reproduces the
+engine's own grouping, while N single commands would run
+`Colony_Calculation_` N times — that is not merely slower, it is a
+different sequence of intermediate states than the original ever
+produces, and this project's rule is to transcribe the shape and not
+just the outcome. A five-pop cluster is the common case and it is
+one move to the player.
+
+**Why one colony per command.** `Col_Calc_Wrapper_` is called per
+colony and the inter-colony path is not a job change at all — it is
+`SETTLER::Pop_Tries_To_Settle_` and `Settle_Pop_`
+(`colmove.cpp:278-279`), with eleven refusals, an ETA and two
+confirmation boxes. Folding that into this command would smuggle a
+second, blocking feature in behind a field. Population TRANSFER
+stays out and gets its own decision if it is ever wanted.
+
+**Why the handler must carry the refusal checks.** From (1): the
+three refusals inside `Give_Colonist_New_Job_` are blocking text
+boxes and re-enter the drain loop. The handler validates first —
+native to research or industry, android reconfigure, the 42 cap,
+and the `max_farms` food rule, all four readable from `pop[]`,
+`max_farms` and `Sum_Colonists_` without drawing anything — and
+either applies the WHOLE list or applies none and answers with the
+refusal. All-or-nothing is the honest half: the original's
+`Send_Cluster_` `return`s mid-cluster on a refusal
+(`colmove.cpp:168-173`), leaving some pops moved, which is the
+behaviour HD already mirrors as a COUNT rather than a boolean — but
+that partial state exists because a click chain cannot ask first,
+and a command can. Answering "moved 0, refused by rule 1" is
+strictly better than reproducing a half-move, and it is the one
+place this proposal deliberately does not transcribe. **Flagged as
+such rather than slipped in: it is Data's call, and if she wants
+the original's partial move the handler returns the count instead.**
+
+**What this does NOT propose.** No framebuffer change, no new
+serialization, no field-list change. `MSG_SET_JOBS` writes `pop[]`
+and calls `Col_Calc_Wrapper_` once per touched colony; everything
+HD learns afterwards it learns from the snapshot it already reads.
 
 ### The list geometry becomes six boxes and a row count — 8 September 2026
 
