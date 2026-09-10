@@ -13,6 +13,13 @@ right and the header had gone stale** — resolved 10 September 2026
 by dating the header to the edit and giving this session its
 paragraph, below, so the two agree again.
 
+This session (10 September 2026), later: **the pop move became one
+command** — `MSG_SET_JOBS`, applied whole or not at all
+(fundament 52), the four click-chain states deleted, 725 ms of drop
+down to 55; and **the `natives` fixture turned out to have natives
+after all**, hidden by a colony count of 36 where the engine reports
+38 (see "The pop move is one command" below).
+
 This session (10 September 2026), in one line each: **three prose
 claims became checks** — the word lists are compared onto the
 player's own estrings entry by entry (and the comment's "23 of the
@@ -3246,6 +3253,110 @@ help-file lesson, one domain over.
 
 Zhadoom III (14 pops) is the widest row in either fixture and is
 therefore the narrowest-cell case any picture has to survive.
+
+### The pop move is one command, and the click chain is gone — 10 September 2026
+
+Brief 90 Session 2, after Data read Run A and decided all-or-nothing
+(fundament 52). `doc/ext_move_pop.patch` is applied to the local
+orion2re tree and the engine is rebuilt; the patch is a REQUEST
+upstream, filed as item 12 in `doc/orion2re_open_fixes.md`.
+
+**MEASURED, on the reference save, ten runs each.**
+
+| | click chain (Part I) | one command |
+|---|---|---|
+| five-pop move, last row | **725 ms** median | **55.4 ms** median |
+| snapshot rounds | 4 (RESORT, ESTABLISH, PICK, DROP) | **1** |
+| same move, FIRST row | faster — ESTABLISH is shorter | **55.4 ms**, identical |
+
+The first/last row figures are the finding, not the headline number:
+the whole difference between a near row and a far one WAS the
+window-stepping, and there is no window to step now.
+
+**LIVE VERIFICATION — WHICH RULE ON WHICH SAVE.** Every run began
+from a freshly loaded slot with `fixtures.verify_colonies` green,
+and ended with it green again.
+
+| rule | save | slot | result |
+|---|---|---|---|
+| 1 — native to research/industry | `fixture_natives_3502.5.GAM` | 2 | **VERIFIED**: refused, colony 37 (Urna I) unchanged, all 38 records still match the `.GAM` |
+| 2 — android reconfigure | — | — | **NOT VERIFIED, no fixture has an android pop.** Nibble 8 appears nowhere in any of the three saves, across all 42 pop slots of every colony. Stays on the open acceptance list |
+| 3 — the 42-job cap | — | — | **NOT VERIFIED, not reachable.** The biggest single-job count on any player colony is 12 of 42 (reference) and 10 (natives) |
+| 4 — `max_farms == 0` into food | `fixture_natives_3502.5.GAM` | 2 | **VERIFIED**: refused on colony 22, nothing moved |
+| all-or-nothing | `fixture_natives_3502.5.GAM` | 2 | **VERIFIED**, and the engine log shows it: a list of one legal entry plus one native refusal logged `refused after 1, rolling back` — the legal pop HAD been moved and was put back |
+| a legal multi-pop move | both | 2, 8 | **VERIFIED**: three farmers to industry on natives; five pops both directions, ten times, on reference |
+
+**AND THE `natives` FIXTURE HAD NO NATIVES, because the table was
+cutting them off.** `FIXTURE_FILES["natives"]["colony_count"]` and
+`FIXTURES["natives"]["colonies"]` both said **36**; the engine
+reports `num_colonies` **38** on a fresh load, and record 37 —
+`607 + 37 * 361` in the file — is **Urna I**, four pops, nibbles
+`[0, 9, 9, 9]`, which is exactly what open fix 11 and this
+document's own fixture table describe. So:
+
+- `fixture_colonies` returned 36 of 38 records with no error, and
+  `verify_colonies` — run before every measuring run since it was
+  written — was checking 36 of 38 colonies and calling that a match;
+- `fixture_name` could not identify the save AT ALL while the number
+  was wrong, which is how it went unnoticed: it failed by returning
+  `None`, and nothing treats `None` as a fault;
+- rule 1 was about to be filed as "no fixture has a native", which
+  would have been a false entry on the open list derived from a
+  wrong count rather than from the save.
+
+Both numbers corrected to 38 against the running game. The two
+other fixtures were checked the same way and are right.
+
+**WHAT THIS SESSION DECIDED THAT DATA DID NOT**, each with its
+reason, because a decision recorded only in a report is one the next
+reader re-litigates:
+
+- **The wire shape is `int16 colony_idx, uint8 count, count x (uint8
+  pop_idx, uint8 job)`.** Fundament 52 fixed the SHAPE — one colony,
+  a list — and not the encoding. Bytes for the pairs because
+  `s_colony::pop[42]` (orion2.h:497) caps both fields well under
+  255, and `int16` for the colony because that is the type
+  `Give_Colonist_New_Job_` takes.
+- **The parse buffer went from 8 bytes to 256.** The worst case is
+  3 + 42*2 = 87. 256 is that with room and no arithmetic to get
+  wrong later; the oversize branch still drops the client rather
+  than reading on, so the cap is a guard and not a limit anybody
+  should be near.
+- **Three guards in the handler are OURS, not transcriptions**, and
+  are marked as such in the patch: the colony must belong to the
+  local player, the indices must be in range, and the game must not
+  be holding a cluster. The original reaches this code from a screen
+  that cannot show another player's colony and cannot have a cluster
+  in hand at the same time. An API can be sent anything.
+- **The rollback saves the whole `pop[]` array, not just the listed
+  pops.** Data's instruction, and the reason is in the handler's
+  header: 42 words is nothing, and a rollback that covered less than
+  the call can touch would have a hole in it — what
+  `Give_Colonist_New_Job_` writes is the engine's business to change.
+- **The sort-state finding moved rather than died.** The sort STEP
+  went with the chain; the finding that `_g_sort_index` is on
+  neither channel is about the API, so it is now in
+  `colonyselect.py` beside decision 46's other not-on-the-wire
+  state, and the smoke check that held it was retargeted, not
+  deleted.
+- **`STEP_UP_XY` / `STEP_DOWN_XY` became `colonyscroll.ARROW_UP_XY` /
+  `ARROW_DOWN_XY`.** They are the original's own two list arrows and
+  `colonyscroll` is the only caller left; leaving them in
+  `colonysend` would have been a second home for coordinates whose
+  feature had moved.
+- **`tools/colony_drop_timing.py` is kept, with a dated note.** It
+  measures the ENGINE's click path, which still exists, and it
+  produced the before-value the command is judged against. A
+  measurement tool whose output is still cited is not dead code.
+
+**WHAT THE HD SIDE LOST.** `colonysend.py` went 509 -> 279 lines.
+`RESORT`, `ESTABLISH`, `PICK`, `DROP`, the window-stepping plan and
+the pick-up interlock are deleted — not kept as a fallback, because
+two paths that move pops is the duplicate this project keeps paying
+for. `held_cluster` stays: nothing HD does can create a held cluster
+now, and the engine refuses the command while one exists, so it is
+what lets HD name that state instead of reporting a move that
+quietly did nothing.
 
 ### Run A — what one command would buy, and the four source answers — 10 September 2026
 

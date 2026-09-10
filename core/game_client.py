@@ -16,6 +16,7 @@ from core.wire_protocol import (
     MSG_HELLO, MSG_HELLO_REPLY, MSG_STATE, MSG_FIELDS,
     MSG_VISUAL, MSG_EVENT,
     MSG_ACTIVATE, MSG_INJECT_KEY, MSG_INJECT_CLICK, MSG_CANCEL_FIELD,
+    MSG_SET_JOBS,
     SUB_STATE, SUB_FIELDS, SUB_VISUAL, SUB_EVENTS,
 )
 
@@ -309,6 +310,22 @@ class GameClient:
         """Send a mouse click at (x,y) in 640x480 space."""
         self._send_message(MSG_INJECT_CLICK,
                            struct.pack('<hh', x, y))
+
+    def set_jobs(self, colony_index, pairs):
+        """Set the job of one or more pops in ONE colony.
+
+        `pairs` is [(pop_index, job), …]. The engine applies the
+        whole list or none of it (fundament 52), so a caller gets
+        one outcome and never a half-applied move. Nothing is
+        returned here: the result is read off the next snapshot, by
+        diffing the pop words `colonymove.predict_pops` predicted —
+        which is the same check the click chain used and the reason
+        that tooling still applies.
+        """
+        payload = struct.pack('<hB', colony_index, len(pairs))
+        for pop_index, job in pairs:
+            payload += struct.pack('<BB', pop_index, job)
+        self._send_message(MSG_SET_JOBS, payload)
 
     def cancel_field(self, field_id):
         """Right-click on a field."""

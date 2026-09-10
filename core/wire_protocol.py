@@ -32,6 +32,12 @@ MSG_ACTIVATE      = 0x80
 MSG_INJECT_KEY    = 0x81
 MSG_INJECT_CLICK  = 0x82
 MSG_CANCEL_FIELD  = 0x83
+#: Set the job of one or more pops in ONE colony, applied whole
+#: or not at all. `doc/ext_move_pop.patch` adds it engine-side;
+#: `tools/version_check.py` fails on a tree without it, because
+#: an unpatched engine drops the message and moves nothing.
+#: Fundament 52.
+MSG_SET_JOBS      = 0x84
 
 #: How many STATE/VISUAL pairs after an injected command can still
 #: describe the world BEFORE it. One — so a caller that waits for an

@@ -33,6 +33,7 @@ section for what was found where.
 | 9 | `Do_Colony_Info_Pop_Stuff_For_Pop_`'s second loop is named `race_idx` and iterates `MASK_CONQUERED` | **Question, not a fix** | Nothing today; decides how a pop cell is read and named in HD |
 | 10 | `ENGINE_VERSION` does not move when a serialized record layout changes | **Request** | A client cannot tell two incompatible builds apart and reads at the wrong offset |
 | 11 | `COLONY::Colony_Has_Natives_` tests nibble **8** (android), not 9 (native) | **Fix** — reproducible in a named save | Nothing for us; for the game, the occupation-policy popup is offered to the wrong colonies |
+| 12 | A pop move has no command: it has to be a click choreography into the game's own list window | **Request**, and **patched locally** 10 September 2026 (`doc/ext_move_pop.patch`), **VERIFIED LIVE** the same day; open upstream | Without it a move costs four snapshot round trips instead of one — 725 ms against 55 ms measured — and every one of them is a click that can land on the wrong row |
 
 Items 3 and 4 are both about INJECT_CLICK and both live in the same
 code path, but they are separate faults: 3 is where the coordinates
@@ -1125,3 +1126,69 @@ Nothing. OrionLayer never calls it and does not mirror it. This is
 reported because we had the save, the picture and the label in one
 place, and a bug that can be shown three ways should not stay
 unreported.
+
+
+---
+
+## 12. A pop move has no command, only a click choreography
+
+**Request.** Patched locally as `doc/ext_move_pop.patch` and verified
+live on 10 September 2026; open upstream. The brief is
+`doc/briefs/90-pop-move-one-command-instead-of-a-click-chain.md`
+and the decision is fundament entry 52.
+
+### What we need
+
+One message that moves pops by INDEX: a colony, and a list of
+(pop index, job). `MSG_SET_JOBS` (0x84) in our own `src/ext/`, plus
+the one thing it needs from your code — see below.
+
+### Why the click path is not enough
+
+`COLMOVE::Give_Colonist_New_Job_` (colmove.cpp:518-557) already
+takes exactly the arguments a command would: colony, pop, job. It
+reads no screen state and no `_cluster_colony_n`. But it can only
+be *reached* by a click, and a click names a SLOT in the game's own
+ten-row list window — so a client that wants to move a pop must
+first push a sort key, then step `_first` until the target row is
+inside that window, then click twice. Measured over ten drops:
+597 ms of a 725 ms move is that apparatus, and none of it is
+arithmetic anybody wants to do. With a command the same five-pop
+move measures **55 ms and one snapshot round**, and costs the same
+whether the row is the first or the last.
+
+### What the patch needs from YOUR code, and it is four lines
+
+Everything else is in `src/ext/`, which is ours. The one thing that
+is yours: **all four refusals in `Give_Colonist_New_Job_` answer
+with `GENDRAW::Help_`** (colmove.cpp:527, :534, :541, :556), which
+is `TEXTBOX::Do_Text_Box_` -> `Text_Box_Get_Input_(0)`, whose
+zero-ticks path spins waiting for a human
+(`do { … } while (fields::Get_Input_() == 0)`, textbox.cpp:145-149).
+
+Called from the Extension API's drain loop that stops the engine —
+and worse, the inner `Get_Input_()` calls `ext::Tick`
+(fields.cpp:167), so a refusal recurses into the command queue it
+was called from. The patch adds `COLMOVE::_ext_suppress_refusal_help`
+and routes the four calls through one `Refusal_Help_` wrapper. The
+refusal still happens and still returns 0; only the box is skipped,
+and only while the flag is set. Every line is inside
+`#ifdef ORION2RE_EXT` or is a rename to an unconditional wrapper, so
+a build without the flag is your code unchanged — verified by
+compiling `colmove.cpp` both ways.
+
+### What we would rather have
+
+A refusal-free inner form of `Give_Colonist_New_Job_` — the checks
+returning a reason code, with the message box moved to the caller
+that has a human in front of it. Then the flag is unnecessary and
+the split is yours rather than ours. We did not write that, because
+it changes the shape of your function and that is your call.
+
+### What it costs us
+
+Today, nothing: the patch is applied locally and
+`tools/version_check.py` fails on a tree without it, so an
+unpatched engine is caught by a check rather than by a move that
+silently does nothing. Upstream it decides whether OrionLayer has
+to carry a patch for the one gesture that drives the game.

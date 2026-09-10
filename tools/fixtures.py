@@ -21,7 +21,14 @@ import os
 #: and any game reaches them.
 FIXTURES = {
     "reference": {"stardate": 35024, "stars": 99, "colonies": 55},
-    "natives": {"stardate": 35025, "stars": 71, "colonies": 36},
+    # 38, NOT 36 — corrected 10 September 2026 against the running
+    # game. Both counts here and in FIXTURE_FILES were 36, and the
+    # two records they cut off were colony 37: URNA I, the colony
+    # this fixture is NAMED for and the only one in any fixture
+    # with native pops. `fixture_name` could not identify this save
+    # at all while the number was wrong, and `fixture_colonies`
+    # returned 36 of 38 records with no error.
+    "natives": {"stardate": 35025, "stars": 71, "colonies": 38},
     # THE AUTOSAVE ONE TURN BEFORE `natives`, added 8 September 2026
     # because it is the state the pick-round evidence was taken on
     # and it was reachable only as "no acceptance fixture at all".
@@ -124,7 +131,10 @@ FIXTURE_FILES = {
         "sha256": "b1f1aa466716d6c0c6b28c84fe270f430c732ec7cb"
                   "3172d221be44b68708e2c8",
         "colony_offset": 607,
-        "colony_count": 36,
+        # 38: the engine reports `num_colonies` 38 on a fresh load of
+        # this slot, and record 37 at 607 + 37*361 is Urna I. See the
+        # note on FIXTURES["natives"] above.
+        "colony_count": 38,
     },
     # **THE AUTOSAVE, AND THE POINT IS THAT THIS IS THE COPY.**
     # `~/Master of Orion 2/SAVE10.GAM` is the slot the GAME writes at

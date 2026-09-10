@@ -1,0 +1,417 @@
+Extension API: move pops with one command instead of a click chain.
+
+Adds `MSG_SET_JOBS` (0x84) — one colony, a list of (pop_idx,
+new_job), applied whole or not at all. Fundament entry 52 is the
+decision; `doc/briefs/90-pop-move-one-command-instead-of-a-click-chain.md`
+is the brief; Run A (`d98a96d` in the OrionLayer tree) is the source
+reading it rests on.
+
+STATUS: needed to retire the RESORT / ESTABLISH / PICK / DROP click
+chain, which costs four snapshot round trips per drop and has to
+steer the game's own ten-row window first. NOT YET APPLIED.
+
+    TO APPLY, to the orion2re working tree at ~/orion2re
+    (engine 1.60.0, git cf4d9617):
+
+        cd ~/orion2re && patch -p1 < \
+            ~/orionlayerv3/doc/ext_move_pop.patch
+
+    and it comes back off with
+
+        cd ~/orion2re && patch -R -p1 < \
+            ~/orionlayerv3/doc/ext_move_pop.patch
+
+    FIVE FILES, AND ONLY TWO OF THEM ARE JOES'. `src/ext/` is our
+    own directory and is untracked in his tree, so the three files
+    there diverge from nothing. What touches his code is
+    `src/game/colmove.h` and `src/game/colmove.cpp`, five hunks
+    between them, and every line either sits inside
+    `#ifdef ORION2RE_EXT` or is a rename of a call site to a
+    wrapper that is unconditional. A build without the flag is his
+    code doing exactly what it did: verified by compiling the
+    patched `colmove.cpp` with and without `-DORION2RE_EXT`.
+
+    THE HUNKS BELOW ARE GENERATED, never hand-edited. They were
+    produced by diffing a scratch copy against the pristine files
+    (`git show cf4d9617:` for the two of Joes'; the on-disk state
+    for the three of ours), then applied forward to a fresh export
+    and compared byte for byte. The result also reverse-applies
+    cleanly.
+
+WHAT THE COMMAND DOES, AND WHY IT IS SHAPED THIS WAY
+
+    ONE COLONY, A LIST OF POPS. The recalculation in the original
+    is per batch, not per pop: `Send_Cluster_` runs its whole
+    cluster loop and only then calls `COLONY::Col_Calc_Wrapper_`
+    (colmove.cpp:461-464, and the early-exit path at :145-148). A
+    list therefore reproduces the engine's own grouping; N single
+    commands would run `Colony_Calculation_` N times and produce a
+    sequence of intermediate states the original never produces.
+
+    THE RULES ARE NOT RE-IMPLEMENTED. `Give_Colonist_New_Job_` is
+    called unchanged, once per entry. A second copy of its four
+    refusal conditions inside `src/ext/` is exactly the duplicate
+    this project keeps paying for, and it would go stale the first
+    time Joes touches the function.
+
+    WHAT THE PATCH DOES REMOVE IS THE MESSAGE BOX, NEVER A CHECK.
+    All four refusals answer with `GENDRAW::Help_`
+    (colmove.cpp:527, :534, :541, :556), which is
+    `TEXTBOX::Do_Text_Box_` -> `Text_Box_Get_Input_(0)`, whose
+    zero-ticks path is `do { … } while (fields::Get_Input_() == 0)`
+    (textbox.cpp:145-149) — a spin waiting for a human. Reached
+    from the Extension API's own drain loop that would stop the
+    engine, and worse: the inner `Get_Input_()` calls `ext::Tick`
+    (fields.cpp:167), so the refusal would recurse into the command
+    queue it was called from. `_ext_suppress_refusal_help` turns the
+    drawing off for the duration of one command. The refusal still
+    happens, still returns 0, and is still the engine's own.
+
+    ALL-OR-NOTHING, AND THIS IS A MARKED DEVIATION. The original
+    moves pops until the first refusal and leaves the earlier ones
+    moved (colmove.cpp:168-173), because a human is standing at the
+    box and can decide whether to continue. A command has nobody to
+    ask, so it does not start: the colony's pop words are saved
+    before the list is applied and restored whole if any entry is
+    refused. The game therefore behaves differently under the
+    command than under the click, deliberately. Fundament 52.
+
+    THE PICK-UP IS TRANSCRIBED, not skipped. `Get_Cluster_` clears
+    the assigned bit on every pop it takes, and `Send_Cluster_`
+    re-flags them one at a time, so `Sum_Colonists_` never counts a
+    pop that is in the air. The handler clears the bit on the whole
+    list first for the same reason — without it, a list that moves
+    one pop out of Food and another in would check the second
+    against a Food count that still included the first.
+
+    A POP ALREADY IN THE JOB IT WAS ASKED FOR is re-flagged and NOT
+    rule-checked, which is colmove.cpp:165-166 and is why an
+    android returning to its own column lands where rule 2 would
+    refuse it. Transcribed, not tidied.
+
+    THREE GUARDS ARE OURS AND ARE NOT TRANSCRIPTIONS: the colony
+    must be the local player's, the indices must be in range, and
+    the game must not be holding a cluster. The original reaches
+    this code from a screen that cannot show another player's
+    colony and cannot have a cluster in hand at the same time; an
+    API can be sent anything.
+
+WHAT IS NOT IN THIS PATCH
+
+    No serialization change. Nothing new is reported back: the
+    client learns the result from the state snapshot it already
+    reads, by diffing the pop words it predicted. No field-list
+    change, no framebuffer change, no `PROTO_VERSION` bump — the
+    protocol did not change shape, one message id was added, and
+    `tools/version_check.py` is what fails on an engine that does
+    not have it.
+
+THE HUNKS
+
+--- a/src/ext/ext_server.h
++++ b/src/ext/ext_server.h
+@@ -26,6 +26,10 @@
+ constexpr uint16_t MSG_INJECT_KEY    = 0x81;
+ constexpr uint16_t MSG_INJECT_CLICK  = 0x82;
+ constexpr uint16_t MSG_CANCEL_FIELD  = 0x83;
++// OrionLayer: set the job of one or more pops in ONE colony.
++// Payload: int16 colony_idx, uint8 count, then count pairs of
++// (uint8 pop_idx, uint8 new_job). See doc/ext_move_pop.patch.
++constexpr uint16_t MSG_SET_JOBS      = 0x84;
+ 
+ // Subscription flags (bitmask)
+ constexpr uint16_t SUB_STATE         = 0x01;
+@@ -42,8 +46,12 @@
+ // Input command from a client
+ struct InputCommand {
+     uint16_t type;     // MSG_ACTIVATE, MSG_INJECT_KEY, etc.
+-    int16_t  param1;   // field_id or keysym or x
+-    int16_t  param2;   // 0 or y
++    int16_t  param1;   // field_id or keysym or x or colony_idx
++    int16_t  param2;   // 0 or y or pop count
++    // MSG_SET_JOBS only: count x (pop_idx, new_job) byte pairs.
++    // Empty for every other command, which keeps all of those on
++    // the two fixed fields exactly as before.
++    std::vector<uint8_t> pairs;
+ };
+ 
+ // Per-client state
+--- a/src/ext/ext_server.cpp
++++ b/src/ext/ext_server.cpp
+@@ -159,8 +159,12 @@
+ 
+     uint32_t payload_len = fh.length - sizeof(mh);
+ 
+-    // Read payload (small, max 8 bytes for our commands)
+-    uint8_t payload[8]{};
++    // Read payload. Eight bytes covered every fixed-field command;
++    // MSG_SET_JOBS carries a list, and its worst case is one entry
++    // per pop of a full colony — s_colony::pop[42] (orion2.h:497) —
++    // so 3 + 42*2 = 87. 256 is that with room, and the oversize
++    // branch below still drops the client rather than reading on.
++    uint8_t payload[256]{};
+     if (payload_len > 0) {
+         if (payload_len > sizeof(payload)) {
+             client.alive = false;
+@@ -227,6 +231,26 @@
+         }
+         break;
+     }
++    case MSG_SET_JOBS: {
++        // int16 colony_idx, uint8 count, count x (pop_idx, job).
++        // A malformed list is DROPPED here rather than half-queued:
++        // the command is all-or-nothing (fundament 52) and the
++        // cheapest place to hold that is before it is a command.
++        if (payload_len >= 3) {
++            const uint8_t count = payload[2];
++            if (count > 0 && count <= 42 &&
++                    (size_t)3 + (size_t)count * 2 <= payload_len) {
++                InputCommand cmd{};
++                cmd.type = MSG_SET_JOBS;
++                memcpy(&cmd.param1, payload, 2);
++                cmd.param2 = (int16_t)count;
++                cmd.pairs.assign(payload + 3,
++                                 payload + 3 + (size_t)count * 2);
++                input_queue_.push_back(cmd);
++            }
++        }
++        break;
++    }
+     default:
+         break;
+     }
+--- a/src/ext/ext_api.cpp
++++ b/src/ext/ext_api.cpp
+@@ -218,6 +218,131 @@
+     }
+ }
+ 
++// ── The pop-move command ─────────────────────────────────
++
++/// Apply a list of (pop_idx, new_job) to ONE colony, or apply none.
++///
++/// **WHY THIS IS NOT A CLICK CHAIN.** Fundament 52. Addressing a
++/// move by clicks costs four round trips (RESORT, ESTABLISH, PICK,
++/// DROP — 597 of the 725 ms measured per drop) and needs the game's
++/// own ten-row window to be steered first. Every one of those exists
++/// only because a click names a SLOT and this names a colony.
++///
++/// **WHY THE RULES ARE NOT RE-IMPLEMENTED HERE.** They stay in
++/// `COLMOVE::Give_Colonist_New_Job_`, which is called unchanged.
++/// A second copy of four refusal conditions in our own directory is
++/// the duplicate this project keeps paying for; what the flag below
++/// removes is the message box, never a check.
++///
++/// **WHY ALL-OR-NOTHING.** `Send_Cluster_` stops at the first
++/// refusal and leaves the earlier pops moved (colmove.cpp:168-173),
++/// because a human is standing at the message box and can decide
++/// whether to go on. A command has nobody to ask, so it does not
++/// start: the colony's pop words are saved, the list is applied, and
++/// a single refusal puts every one of them back. This is a marked
++/// DEVIATION from the original and it is fundament 52's, not this
++/// file's.
++///
++/// **THE SAVE COVERS THE WHOLE ARRAY, not just the listed pops.**
++/// Forty-two words is nothing, and a rollback that covered less
++/// than the call can touch would be a rollback with a hole in it:
++/// `Give_Colonist_New_Job_` is the engine's function, not ours, and
++/// what it writes is its business to change. Saving only the pops
++/// we name would be an assumption about somebody else's code that
++/// nothing here would notice going stale.
++///
++/// Returns the number of pops moved, or -1 if the list was refused.
++static int Set_Jobs_(int16_t colony_idx, const uint8_t* pairs,
++                     int count) {
++    // MOX::_colony is a POINTER, not a fixed array (mox.h:616), so
++    // the bound is the engine's own count (mox.h:381) and not a
++    // constant we could get wrong on our side.
++    if (colony_idx < 0 || colony_idx >= MOX::_NUM_COLONIES) {
++        return -1;
++    }
++    s_colony& colony = MOX::_colony[colony_idx];
++    // Only the local player's own colonies. The original reaches
++    // this code from a screen that cannot show anyone else's, so the
++    // guard is the API's to add, not a transcription.
++    if (colony.owner != MOX::_PLAYER_NUM || colony.n_pops == 0) {
++        return -1;
++    }
++    const int n_pops = (int)(uint8_t)colony.n_pops;
++
++    // AND THE GAME MUST NOT BE HOLDING A CLUSTER. Those pops have
++    // their assigned bit clear and belong to a gesture in progress;
++    // writing pop[] underneath one would strand them, and the
++    // rollback below would then restore a state the gesture no
++    // longer matches. With the click chain gone from the HD client
++    // this can only be a human at the game's own window, which
++    // platform.cpp:1379 hides while the API is on — so it is a
++    // precondition that should never fire, stated rather than
++    // assumed.
++    if (COLMOVE::_cluster_colony_n != -1) {
++        return -1;
++    }
++
++    for (int i = 0; i < count; i++) {
++        const int pop_idx = pairs[i * 2];
++        const int new_job = pairs[i * 2 + 1];
++        if (pop_idx >= n_pops || new_job > ECON_RESEARCH) {
++            return -1;
++        }
++    }
++
++    uint32_t saved[42];
++    for (int i = 0; i < n_pops; i++) {
++        saved[i] = colony.pop[i];
++    }
++
++    // THE PICK-UP, transcribed. `Get_Cluster_` clears the assigned
++    // bit on every pop it takes (colmove.cpp:60-100) and the walk in
++    // `Send_Cluster_` then re-flags them one at a time, so the caps
++    // in `Sum_Colonists_` do not count a pop that is in the air.
++    // Clearing the whole list first is what makes a two-way swap
++    // inside one list behave the way the same swap behaves as two
++    // drops.
++    for (int i = 0; i < count; i++) {
++        colony.pop[pairs[i * 2]] &= ~POP::MASK_ASSIGNED;
++    }
++
++    COLMOVE::_ext_suppress_refusal_help = true;
++    int moved = 0;
++    bool refused = false;
++    for (int i = 0; i < count && !refused; i++) {
++        const int16_t pop_idx = (int16_t)pairs[i * 2];
++        const int16_t new_job = (int16_t)pairs[i * 2 + 1];
++        // A pop already in the job it was asked for is re-flagged
++        // and NOT rule-checked — colmove.cpp:165-166, and the reason
++        // an android returning to its own column lands where rule 2
++        // would refuse it. Transcribed, not tidied.
++        if ((int16_t)POP::Get_Prof(colony.pop[pop_idx]) == new_job) {
++            colony.pop[pop_idx] |= POP::MASK_ASSIGNED;
++            continue;
++        }
++        if (COLMOVE::Give_Colonist_New_Job_(colony_idx, pop_idx,
++                                            new_job, false) == 0) {
++            refused = true;
++        } else {
++            moved++;
++        }
++    }
++    COLMOVE::_ext_suppress_refusal_help = false;
++
++    if (refused) {
++        for (int i = 0; i < n_pops; i++) {
++            colony.pop[i] = saved[i];
++        }
++        return -1;
++    }
++
++    // ONCE, AFTER THE WHOLE LIST. `Send_Cluster_` recalculates after
++    // its loop and not inside it (colmove.cpp:461-464), so a list is
++    // the original's own grouping and not a shortcut.
++    COLONY::Col_Calc_Wrapper_(colony_idx);
++    return moved;
++}
++
+ // ── Input injection ──────────────────────────────────────
+ 
+ static void ProcessInput() {
+@@ -285,6 +410,20 @@
+             }
+             break;
+ 
++        case MSG_SET_JOBS:
++            // Written straight from the drain loop. Unlike
++            // MSG_ACTIVATE this returns nothing to the game's input
++            // machinery, so it needs no g_pending_field: that
++            // indirection exists because Get_Input_ has to RETURN a
++            // field number and Interpret_Mouse_Input_ would
++            // overwrite _last_button_number. Nothing here is read
++            // back by Get_Input_. ProcessInput runs from
++            // fields::Get_Input_ (fields.cpp:167) and the colony
++            // summary draws right after it (colsum.cpp:159, :171),
++            // so the write lands in the same loop iteration.
++            Set_Jobs_(cmd.param1, cmd.pairs.data(), (int)cmd.param2);
++            break;
++
+         case MSG_CANCEL_FIELD:
+             // Right-click on field (DOWN + UP)
+             if (cmd.param1 >= 0 && cmd.param1 < fields::_fields_count) {
+--- a/src/game/colmove.h
++++ b/src/game/colmove.h
+@@ -5,6 +5,17 @@
+     extern int16_t _cluster_colony_n;
+     extern uint8_t _g_hacky_dont_draw_cluster_flag;
+ 
++#ifdef ORION2RE_EXT
++    // When set, Give_Colonist_New_Job_ still REFUSES exactly as it
++    // does otherwise and still returns 0 — it just does not open the
++    // message box on the way out. That box waits for a human
++    // (textbox.cpp:145-149) and the wait re-enters ext::Tick, so a
++    // refusal reached from the Extension API's own drain loop would
++    // stop the engine and recurse into itself. Nothing else reads
++    // this flag and it is never set outside ext::ProcessInput.
++    extern bool _ext_suppress_refusal_help;
++#endif
++
+     // Draws the currently selected population cluster near the cursor.
+     // @param x Screen-space X position for the cluster widget.
+     // @param y Screen-space Y position for the cluster widget.
+--- a/src/game/colmove.cpp
++++ b/src/game/colmove.cpp
+@@ -4,6 +4,23 @@
+     int16_t _cluster_colony_n = -1;
+     uint8_t _g_hacky_dont_draw_cluster_flag;
+ 
++#ifdef ORION2RE_EXT
++    bool _ext_suppress_refusal_help = false;
++#endif
++
++    // The four refusals in Give_Colonist_New_Job_ each answer with
++    // GENDRAW::Help_. This is that call in ONE place instead of
++    // four, so the refusal LOGIC keeps its single home in that
++    // function and only the drawing became optional.
++    static void Refusal_Help_(const char* message) {
++#ifdef ORION2RE_EXT
++        if (_ext_suppress_refusal_help) {
++            return;
++        }
++#endif
++        GENDRAW::Help_(message);
++    }
++
+     void __cdecl Draw_Cluster_(int16_t x, int16_t y) {
+         if (_cluster_colony_n != -1 && !COLONY::_full_draw) {
+             if (Get_First_Unemployed_(_cluster_colony_n) != -1) {
+@@ -524,21 +541,21 @@
+ 
+         if ((pop_state == 3 || pop_state == 6)
+                 && (new_job == ECON_RESEARCH || new_job == ECON_INDUSTRY)) {
+-            GENDRAW::Help_(ESTRINGS::E_Strings_(ESTR_THIS_COLONIST_IS_A_NATIVE_NATIVES_CAN_ONLY_FARM_OR_MINE));
++            Refusal_Help_(ESTRINGS::E_Strings_(ESTR_THIS_COLONIST_IS_A_NATIVE_NATIVES_CAN_ONLY_FARM_OR_MINE));
+             return 0;
+         }
+ 
+         if (pop_state == 4) {
+             int16_t current_job = (int16_t)POP::Get_Prof(MOX::_colony[colony_idx].pop[pop_idx]);
+             if (current_job != new_job) {
+-                GENDRAW::Help_(ESTRINGS::E_Strings_(ESTR_THIS_COLONIST_IS_AN_ANDROID_AND_CANNOT_BE_RECONFIGURED_FOR_ANOTHER_JOB));
++                Refusal_Help_(ESTRINGS::E_Strings_(ESTR_THIS_COLONIST_IS_AN_ANDROID_AND_CANNOT_BE_RECONFIGURED_FOR_ANOTHER_JOB));
+                 return 0;
+             }
+         }
+ 
+         int16_t sum_colonists = COLONY::Sum_Colonists_(colony_idx, new_job, -1, -1, 0, -1);
+         if (sum_colonists >= 42) {
+-            GENDRAW::Help_(ESTRINGS::E_Strings_(ESTR_NO_ROOM_FOR_ANOTHER_COLONIST_IN_THIS_JOB_FIELD));
++            Refusal_Help_(ESTRINGS::E_Strings_(ESTR_NO_ROOM_FOR_ANOTHER_COLONIST_IN_THIS_JOB_FIELD));
+             return 0;
+         }
+ 
+@@ -553,7 +570,7 @@
+             return 1;
+         }
+ 
+-        GENDRAW::Help_(ESTRINGS::E_Strings_(ESTR_NO_ROOM_FOR_ANOTHER_COLONIST_IN_THIS_JOB_FIELD));
++        Refusal_Help_(ESTRINGS::E_Strings_(ESTR_NO_ROOM_FOR_ANOTHER_COLONIST_IN_THIS_JOB_FIELD));
+         return 0;
+     }
+ 

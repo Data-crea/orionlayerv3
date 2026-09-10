@@ -7310,12 +7310,19 @@ def main():
     # the module to it — including the two line ranges, because
     # "not on the wire" without a place it was looked for is an
     # assumption wearing a finding's clothes.
+    # RETARGETED 10 September 2026: the sort STEP went with the click
+    # chain (fundament 52) and the FINDING did not. It is about the
+    # API, not about that chain, so it lives with decision 46's other
+    # not-on-the-wire state in `colonyselect` — and this holds it
+    # there, including the two line ranges, because "not on the wire"
+    # without a place it was looked for is an assumption wearing a
+    # finding's clothes.
     _cs_src = open(os.path.join(SCREENS_DIR, "colony_summary",
-                                "colonysend.py"), encoding="utf-8").read()
+                                "colonyselect.py"), encoding="utf-8").read()
     for _cite in ("ext_api.cpp:49-136", "ext_api.cpp:185-200",
-                  "decision 46"):
+                  "decision 46", "_g_sort_index"):
         assert _cite in _cs_src, (
-            f"colonysend no longer says where the game's sort state "
+            f"colonyselect no longer says where the game's sort state "
             f"was looked for ({_cite}) — an unreadable state is not a "
             f"state to assume, and the next reader will assume it")
 
@@ -8043,6 +8050,7 @@ def main():
         def __init__(self):
             self.stats = {"state": 0, "visual": 0}
             self.clicks, self.fields, self.keys = [], [], []
+            self.jobs = []
             self.order = []          # what went out, in order
         def inject_click(self, x, y):
             self.clicks.append((x, y)); self.order.append(("click", (x, y)))
@@ -8050,6 +8058,9 @@ def main():
             self.fields.append(f); self.order.append(("field", f))
         def inject_key(self, k):
             self.keys.append(k); self.order.append(("key", k))
+        def set_jobs(self, colony, pairs):
+            self.jobs.append((colony, list(pairs)))
+            self.order.append(("jobs", (colony, list(pairs))))
 
     class _SendField:
         def __init__(self, index, x, y):
@@ -8089,89 +8100,84 @@ def main():
     _sd_held[2] &= ~_cst.POP_MASK_ASSIGNED
 
     _sd_c = _SendClient()
-    _sd = _cse.Send(_sd_c, n_colonies=5, position=0, colony=0,
-                    source_job=0, slot=2, icon_count=3, target_job=1,
-                    cluster=_sd_cluster, predicted=_sd_pred,
-                    sort_hotkey=ord("n"))
-    assert _sd.state == _cse.RESORT and _sd_c.clicks == []
-    # STEP 1 IS THE SORT, and it is first because `Sort_Col_List_`'s
-    # handler sets `_first = 0` (colsum.cpp:832): established first
-    # and sorted second, the sort would move the window the chain had
-    # just placed. It also repairs drift this move did not cause —
-    # the game's list is sorted at exactly two places in the engine
-    # (colsum.cpp:110 on entry and :830 in that handler) and never on
-    # its own, while HD re-sorts from every snapshot.
-    _sd.update(_SendState([_raw_with(_sd_pops)]))
-    assert _sd.state == _cse.RESORT and _sd_c.keys == [ord("n")], (
-        f"{_sd.state}, keys {_sd_c.keys}")
-    assert _sd_c.clicks == [] and _sd_c.fields == []
-    _sd_c.stats["state"] += 2
-    _sd_c.stats["visual"] += 2
-    # Under ten colonies there is no window to establish and no
-    # indicator to read (colsum.cpp:751, :194-197), so the chain goes
-    # straight to the pick-up rather than demanding a reading a
-    # correctly behaving game does not draw.
-    _sd.update(_SendState([_raw_with(_sd_pops)]))
-    assert _sd.state == _cse.PICK, _sd.state
-    assert _sd_c.clicks == [(_ci.slot_click_x(0, 2, 3),
-                             _ci.row_click_y(0))], _sd_c.clicks
-    assert _sd_c.fields == [], (
-        "a five-colony list needs no window steps at all")
+    _sd = _cse.Send(_sd_c, colony=0, target_job=1,
+                    cluster=_sd_cluster, predicted=_sd_pred)
+
+    # ONE MESSAGE, SENT IN THE CONSTRUCTOR, and nothing else on the
+    # wire. Until 10 September 2026 this was RESORT -> ESTABLISH ->
+    # PICK -> DROP: a sort key, a run of window steps and two clicks,
+    # because a click names a SLOT and the game's ten-row window had
+    # to be steered under the target row first. `MSG_SET_JOBS` names
+    # the colony (fundament 52), so all four are gone and the only
+    # thing that goes out is the list.
+    assert _sd.state == _cse.SENT, _sd.state
+    assert _sd_c.jobs == [(0, [(2, 1)])], _sd_c.jobs
+    assert _sd_c.clicks == [] and _sd_c.keys == [] and _sd_c.fields == [], (
+        f"the move put something other than one command on the wire: "
+        f"clicks {_sd_c.clicks}, keys {_sd_c.keys}, "
+        f"fields {_sd_c.fields}")
+    assert [_k for _k, _v in _sd_c.order] == ["jobs"], _sd_c.order
 
     # THE PRE-EFFECT PAIR IS REFUSED even though the predicate is
-    # already true on it. This is the whole assertion.
+    # already true on it. This is the whole assertion, and it did not
+    # change with the transport: ext::Tick() consumes input before it
+    # serializes, so the first snapshot after a send is the world
+    # from before the game acted.
     _sd_c.stats["state"] += 1
     _sd_c.stats["visual"] += 1
-    _sd.update(_SendState([_raw_with(_sd_held)]))
-    assert _sd.state == _cse.PICK and len(_sd_c.clicks) == 1, (
-        f"the chain acted on the FIRST snapshot after its send "
-        f"({_sd.state}, {_sd_c.clicks}); that snapshot is serialized "
-        f"in the tick that consumed the send and cannot carry the "
-        f"effect")
+    _sd.update(_SendState([_raw_with(_sd_pred)]))
+    assert _sd.state == _cse.SENT, (
+        f"the send was confirmed by the FIRST snapshot after it "
+        f"({_sd.state}); that snapshot is serialized in the tick that "
+        f"consumed the command and cannot carry its effect")
     _sd_c.stats["state"] += 1
     _sd_c.stats["visual"] += 1
-    _sd.update(_SendState([_raw_with(_sd_held)]))
-    assert _sd.state == _cse.DROP and len(_sd_c.clicks) == 2, (
-        f"the interlock did not pass on the second pair: {_sd.state}")
-    # The drop lands in the middle of the target column, not on an
-    # icon: Send_Cluster_ reads no icon at all, which is what lets a
-    # player start an empty column.
-    _sd_lx, _sd_rx = _ci.COLUMNS[1]
-    assert _sd_c.clicks[1] == ((_sd_lx + _sd_rx) // 2,
-                               _ci.row_click_y(0)), _sd_c.clicks
-
-    # THE DROP IS THE LAST THING SENT. Nothing trails it: the sort
-    # that keeps the two lists in one order is step 1 of the NEXT
-    # move, where it can also repair drift this move did not cause.
-    _sd_c.stats["state"] += 2
-    _sd_c.stats["visual"] += 2
     _sd.update(_SendState([_raw_with(_sd_pred)]))
     assert _sd.state == _cse.DONE and _sd.finished, _sd.state
-    assert _sd_c.keys == [ord("n")], (
-        f"keys {_sd_c.keys}: the sort is sent once, at the start")
-    assert [_k for _k, _v in _sd_c.order] == ["key", "click", "click"], (
-        f"the wire order was {[_k for _k, _v in _sd_c.order]}; it must "
-        f"be the sort, then the two clicks")
+    assert len(_sd_c.jobs) == 1, (
+        f"the move went out more than once: {_sd_c.jobs}")
 
-    # THE INTERLOCK STOPS ON A CLUSTER IT DID NOT PREDICT, and says
-    # the game is HOLDING rather than that nothing happened — only
-    # the player can end that state, because the ways out are
-    # dropping the pops or leaving the screen.
-    _sd_c2 = _SendClient()
-    _sd2 = _cse.Send(_sd_c2, n_colonies=5, position=0, colony=0,
-                     source_job=0, slot=2, icon_count=3, target_job=1,
+    # THE LIST IS ASCENDING, because the engine applies it in order
+    # and `predict_pops` walks the pop array from index 0
+    # (colmove.cpp:160-176). A cluster handed over out of order would
+    # make the command and the prediction two different walks.
+    _sd_c5 = _SendClient()
+    _cse.Send(_sd_c5, colony=3, target_job=2,
+              cluster=_cm.Cluster([5, 1, 4]), predicted=_sd_pred)
+    assert _sd_c5.jobs == [(3, [(1, 2), (4, 2), (5, 2)])], _sd_c5.jobs
+
+    # AN UNCONFIRMED MOVE IS REPORTED, NOT RETRIED. The engine rolls
+    # a refused list back whole (fundament 52), so the predicted pops
+    # never appear and the wait runs out. HD checks the same rules
+    # before sending (decision 33), so this is a DISAGREEMENT between
+    # the two sides and not a normal outcome — and an unpatched
+    # engine, which drops the message entirely, looks the same from
+    # here. `tools/version_check.py` is what tells those apart.
+    _sd_c3 = _SendClient()
+    _sd3 = _cse.Send(_sd_c3, colony=0, target_job=1,
                      cluster=_sd_cluster, predicted=_sd_pred)
-    _sd2.update(_SendState([_raw_with(_sd_pops)]))
+    _sd3._wait.deadline = 0.0                  # expire it
+    _sd3.update(_SendState([_raw_with(_sd_pops)]))
+    assert _sd3.state == _cse.FAILED and _sd3.reason == "move_unconfirmed", (
+        f"{_sd3.state}, {_sd3.reason}")
+    assert len(_sd_c3.jobs) == 1, "an unconfirmed move was sent again"
+
+    # A CLUSTER THE GAME HOLDS IS ITS OWN STATE, still. Nothing HD
+    # does can create one now — the command never picks a pop up, and
+    # the engine refuses MSG_SET_JOBS outright while
+    # `_cluster_colony_n != -1` — so this can only come from the
+    # game's own window. It is reported as HOLDING rather than as
+    # "nothing happened", because only the player can end it.
+    _sd_c2 = _SendClient()
+    _sd2 = _cse.Send(_sd_c2, colony=0, target_job=1,
+                     cluster=_sd_cluster, predicted=_sd_pred)
     _sd_wrong = list(_sd_pops)
-    _sd_wrong[0] &= ~_cst.POP_MASK_ASSIGNED     # a different pop
-    _sd_c2.stats["state"] += 2
-    _sd_c2.stats["visual"] += 2
+    _sd_wrong[0] &= ~_cst.POP_MASK_ASSIGNED     # a pop in the air
+    _sd2._wait.deadline = 0.0
     _sd2.update(_SendState([_raw_with(_sd_wrong)]))
     assert _sd2.state == _cse.HOLDING and _sd2.holding, _sd2.state
-    assert _sd2.reason == "wrong_pickup"
-    assert len(_sd_c2.clicks) == 1, (
-        "the chain clicked again with geometry that had just been "
-        "shown wrong")
+    assert _sd2.reason == "game_holds_cluster", _sd2.reason
+
     # THE FLOOR'S REASON HAS TO STAND BESIDE THE FLOOR. It is a
     # count, and decision 21 refuses counted waits — so the next
     # reader must find the argument at the constant, or they will
@@ -8201,57 +8207,30 @@ def main():
         "there is no wording for a held cluster, which is the one "
         "state only the player can end")
 
-    # _first IS ESTABLISHED, NEVER REMEMBERED (decision 46). The plan
-    # always leads with enough decrements to reach the top from
-    # wherever a human left the window, so the step list is a
-    # property of the colony count and not of any reading.
-    _sd3 = _cse.Send(_SendClient(), n_colonies=15, position=0,
-                     colony=0, source_job=0, slot=0, icon_count=1,
-                     target_job=1, cluster=_cm.Cluster([0]),
-                     predicted=_sd_pops)
-    assert _sd3._steps == [_cse.STEP_UP_XY] * _cs_sel.GameWindow.max_first(15), (
-        f"the plan starts with {_sd3._steps}; it must lead with "
-        f"{_cs_sel.GameWindow.max_first(15)} decrements, which reach "
-        f"the top from any state (colsum.cpp:211-214)")
-
-    # AND WITH A WINDOW THAT REALLY MOVES, the order is visible: the
-    # sort key must go out before the first stepper, because the sort
-    # handler sets `_first = 0` and would undo the steps. Fifteen
-    # colonies, a drawn thumb to read back, and the two stepper
-    # fields where the original puts them (colsum.cpp:263-264).
-    _sd_c4 = _SendClient()
-    _sd4 = _cse.Send(_sd_c4, n_colonies=15, position=0, colony=0,
-                     source_job=0, slot=2, icon_count=3, target_job=1,
-                     cluster=_sd_cluster, predicted=_sd_pred,
-                     sort_hotkey=ord("n"))
-    _sd4_state = _SendState(
-        [_raw_with(_sd_pops)], _thumb_frame(15, 0),
-        [_SendField(12, *_cse.STEP_UP_XY), _SendField(13, *_cse.STEP_DOWN_XY)])
-    assert _cf.read_first(_cf.rows(_sd4_state.framebuffer), 15) == 0, (
-        "the fixture's own thumb does not read back as _first = 0")
-    for _ in range(40):
-        if _sd4.state == _cse.PICK:
-            break
-        _sd4.update(_sd4_state)
-        _sd_c4.stats["state"] += 2
-        _sd_c4.stats["visual"] += 2
-    assert _sd4.state == _cse.PICK, (
-        f"the chain stalled in {_sd4.state} ({_sd4.reason})")
-    _sd4_kinds = [_k for _k, _v in _sd_c4.order]
-    assert _sd4_kinds[0] == "key", (
-        f"the wire order was {_sd4_kinds}; the sort must precede the "
-        f"window steps — Sort_Col_List_'s handler sets _first = 0 "
-        f"(colsum.cpp:832), so a window established first is a window "
-        f"the sort then moves")
-    assert _sd4_kinds.count("field") == _cs_sel.GameWindow.max_first(15), (
-        f"{_sd4_kinds.count('field')} window steps for 15 colonies; "
-        f"the plan leads with {_cs_sel.GameWindow.max_first(15)} "
-        f"decrements even though the sort has just zeroed _first — "
-        f"shortening it would be REMEMBERING the state instead of "
-        f"establishing it (decision 46)")
-    assert _sd4_kinds[-1] == "click", _sd4_kinds
-    ok("pop move on the wire (the pre-effect pair is refused, the "
-       "interlock stops on a cluster it did not predict)")
+    # THE WINDOW-STEPPING TESTS ARE GONE WITH THE CODE. Until
+    # 10 September 2026 this block asserted that a Send led with
+    # `GameWindow.max_first(n)` decrements before every pick-up, so
+    # `_first` was ESTABLISHED and never remembered (decision 46).
+    # A command addressed by colony index steers no window, so
+    # there is nothing left here to assert — the decision is not
+    # retired, it moved to the only caller that still has a window:
+    # `colonyscroll`, and `colonyselect.GameWindow` keeps its own
+    # checks above. Recorded rather than silently dropped, because
+    # a check that disappears with no note is indistinguishable
+    # from one nobody noticed breaking.
+    assert not hasattr(_cse, "STEP_UP_XY"), (
+        "colonysend still carries the window steppers; they belong "
+        "to colonyscroll now (ARROW_UP_XY/ARROW_DOWN_XY) and two "
+        "homes for one pair of coordinates is how they drift")
+    for _gone in ("RESORT", "ESTABLISH", "PICK", "DROP"):
+        assert not hasattr(_cse, _gone), (
+            f"colonysend still defines the chain state {_gone}; the "
+            f"click chain is deleted, not kept as a fallback — two "
+            f"paths that move pops is the duplicate fundament 52 "
+            f"exists to refuse")
+    ok("pop move on the wire (ONE command, the pre-effect pair is "
+       "refused, a refusal is reported and not retried, the four "
+       "chain states and the window stepping are gone)")
 
     # AND THE PROBE HAS THE SAME WAIT, because it is the tool that
     # runs against a live game and it got this wrong twice: once by

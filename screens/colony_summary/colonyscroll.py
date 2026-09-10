@@ -231,6 +231,20 @@ def arrows(area, cfg, scale):
     return up, down
 
 
+#: The original's own two list arrows, `_x_fields[1]` and
+#: `_x_fields[2]` (colsum.cpp:263-264). Matched on the reported rect
+#: rather than on a field index, because an index is a field dump's
+#: word for it and those have been wrong before.
+#:
+#: THEY LIVED IN `colonysend` UNTIL 10 SEPTEMBER 2026, as
+#: STEP_UP_XY / STEP_DOWN_XY, because the pop-move click chain
+#: steered the game's window with them. The chain is gone
+#: (fundament 52) and this module is the only caller left, so the
+#: coordinates moved to the feature that still uses them.
+ARROW_UP_XY = (619, 15)      # Decrement_First_ — towards row 0
+ARROW_DOWN_XY = (619, 316)   # Increment_First_
+
+
 def arrow_at(area, cfg, scale, point):
     """"up", "down" or None for a window point."""
     up, down = arrows(area, cfg, scale)
@@ -319,7 +333,7 @@ def click(screen, direction):
                           screen._window.visible(area, cfg, scale, n_rows))
     if not screen.app.connected or screen._state is None:
         return
-    xy = colonysend.STEP_UP_XY if direction == "up" else colonysend.STEP_DOWN_XY
+    xy = ARROW_UP_XY if direction == "up" else ARROW_DOWN_XY
     field = colonysend.field_at(screen._state, *xy)
     if field is not None:
         screen.app.client.activate_field(field)

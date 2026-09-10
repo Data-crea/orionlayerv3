@@ -628,20 +628,6 @@ the new message id. The click chain is deleted in the same session
 the command lands — two paths that move pops is the same fault as
 two copies of a table.
 
-(*None of those three is in the tree on 10 September 2026, the day
-this entry was written: there is no `doc/ext_move_pop.patch`,
-`doc/orion2re_open_fixes.md` carries no pop-move entry, and
-`tools/version_check.py` reads no message id at all. The paragraph
-above is the REQUIREMENT, written before the work rather than after
-it, and it is flagged because an entry in the present tense reads as
-a description of the tree. This project has been caught twice by a
-document asserting a state no file carried — the amendment to
-decision 49, and the three prose claims turned into checks in
-`b214582` — and the fix both times was a check, not a rewording. The
-session that writes the patch deletes this note; until then the
-sentence above is a plan and this parenthesis is what makes that
-readable.*)
-
 **42. Derived artwork ships; unmodified original artwork does not.**
 The repository is public, and OrionLayer is a modification that
 requires an installed, legally obtained copy of Master of Orion 2 —

@@ -214,12 +214,13 @@ class MoveController:
         self._plan, self._size = outcome, self.pick.size
         self.message = ""
         self.notice = ""
+        # ONE COMMAND, ADDRESSED BY COLONY (fundament 52). The row's
+        # position, the game's ten-row window and the sort key were
+        # all arguments to a click chain that named a SLOT; a command
+        # names the colony, so none of them is an input any more.
         self.send = colonysend.Send(
-            client, n_colonies=n_colonies, position=row_index,
-            colony=self.pick.colony, source_job=self.pick.job,
-            slot=self.pick.slot, icon_count=self.pick.icon_count,
-            target_job=job, cluster=self.pick.cluster,
-            predicted=predicted, sort_hotkey=sort_hotkey)
+            client, colony=self.pick.colony, target_job=job,
+            cluster=self.pick.cluster, predicted=predicted)
         log.info("pop move: %r -> column %d, %r", self.pick, job, outcome)
         return True
 

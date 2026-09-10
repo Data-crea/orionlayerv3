@@ -16,6 +16,18 @@ Those two are separate literals in orion2re, not one derived from
 the other, so they can disagree with each other as well as with us.
 All three are reported.
 
+IT ALSO CHECKS THE LOCAL PATCHES, and `doc/ext_move_pop.patch` is
+the one that matters: the pop-move command is a LOCAL divergence in
+Joes' tree, and an engine without it accepts `MSG_SET_JOBS` by
+throwing it away — `ProcessInput`'s switch has no case for an
+unknown type and falls through to `default: break`. Nothing fails,
+nothing moves, and the client waits for a snapshot that will never
+differ. That is the silent failure decision 33 exists to refuse, so
+an unpatched tree has to fail a CHECK instead. Detected by the
+marker each patch leaves in the source, never by re-reading the
+patch file: a `.patch` on disk says what was written down, not
+what was built.
+
 Usage (from the project root):
     python tools/version_check.py
     python tools/version_check.py ~/some/other/orion2re
@@ -40,6 +52,18 @@ RE_ENGINE = re.compile(
 RE_LABEL = re.compile(
     r'GAME_VERSION_LABEL\s*\[\s*\]\s*=\s*"([^"]+)"')
 
+#: Local patches that must be present in the tree, and the marker
+#: that proves each one was applied — a symbol the patch introduces
+#: and nothing else in orion2re defines. `file: (relative path,
+#: marker, what breaks without it)`.
+LOCAL_PATCHES = {
+    "doc/ext_move_pop.patch": (
+        os.path.join("src", "game", "colmove.h"),
+        "_ext_suppress_refusal_help",
+        "MSG_SET_JOBS is dropped by ProcessInput's default case, so "
+        "every pop move silently does nothing"),
+}
+
 
 def find_tree(argv):
     """First existing candidate tree, or None."""
@@ -49,6 +73,15 @@ def find_tree(argv):
         if os.path.isfile(os.path.join(path, "src", "version.h")):
             return path
     return None
+
+
+def has_marker(tree, rel, marker):
+    """True when `marker` appears in `tree/rel`. None if unreadable."""
+    path = os.path.join(tree, rel)
+    if not os.path.isfile(path):
+        return None
+    with open(path, "r", errors="replace") as f:
+        return marker in f.read()
 
 
 def grep(path, pattern):
@@ -98,6 +131,18 @@ def main():
         problems.append(
             f"orion2re disagrees with itself: label is {label!r}, "
             f"engine is {engine!r}")
+
+    print()
+    for patch, (rel, marker, breaks) in sorted(LOCAL_PATCHES.items()):
+        found = has_marker(tree, rel, marker)
+        state = ("APPLIED" if found else
+                 "MISSING" if found is False else "NO SUCH FILE")
+        print(f"            {patch:28} : {state}")
+        if not found:
+            problems.append(
+                f"{patch} is not applied to {tree} (no {marker!r} in "
+                f"{rel}) — without it {breaks}. Apply with: "
+                f"cd {tree} && patch -p1 < {patch}")
 
     if problems:
         print("\nMISMATCH")

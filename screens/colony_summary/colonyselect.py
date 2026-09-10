@@ -324,7 +324,35 @@ class GameWindow:
     click names is a POSITION IN THE GAME'S WINDOW, so `_first` has
     to agree with the HD row before anything is sent.
 
-    **ESTABLISHED, NEVER REMEMBERED.** Nothing on the wire reports
+    **AND THE SORT KEY IS NOT ON THE WIRE EITHER — kept here when the
+click chain that needed it was deleted (fundament 52,
+10 September 2026).** `colonysend` used to push a sort key before
+every move so HD's row order and the game's list order were the
+same one; a command addressed by colony index needs no such thing,
+and the step went with the chain. **The FINDING did not**, because
+it is about the API and not about that chain: nothing tells us
+which key the game holds. Looked for in both places that could
+carry it —
+
+- `ext::SerializeState` (ext_api.cpp:49-136) writes the screen ids,
+  the stardate, the counters, `settings`, the eight players and the
+  star / ship / colony / planet / nebula / leader / antaran /
+  ship-icon arrays. **No COLSUM state of any kind**, so no
+  `_g_sort_index`.
+- `ext::SerializeFields` (ext_api.cpp:185-200) writes exactly seven
+  values per field — index, x, y, x_end, y_end, field_type, hotkey.
+  **No value and no on-state**, so the `&_g_sort_index` that
+  `Add_Multi_Button_Field_` is given (colsum.cpp:267-273) and the
+  index each button compares against are both invisible.
+
+It IS drawn, and this module reads `_first` off the scroll thumb by
+exactly that route, so the framebuffer is admissible in principle
+and is refused on **decision 46**'s own grounds: reading which of
+seven buttons is lit is a new transcription with its own thresholds
+and its own ways to be quietly wrong. If the field list ever
+carries a field's value, this is the first caller for it.
+
+**ESTABLISHED, NEVER REMEMBERED.** Nothing on the wire reports
     `_first`, and the game's window is visible to a human whenever
     `ext::g_hide_window` is unset (platform.cpp:1379) — which is how
     this screen was compared against the original in the first place

@@ -3,6 +3,18 @@
 
     python tools/colony_drop_timing.py --expect reference --drops 10
 
+**THIS MEASURES THE CLICK CHAIN, WHICH THE HD SCREEN NO LONGER
+USES — 10 September 2026.** Fundament 52 replaced it with one
+`MSG_SET_JOBS` command; `colonysend` sends that and steers no
+window. The chain still exists in the ENGINE, and this tool drives
+it directly through injected clicks (via `colony_move_hd`), so it
+still runs and still measures what it always did. What it no longer
+measures is what OrionLayer does. Kept, because it is what produced
+the before-value the command is judged against — the ten-drop table
+in `v3_projektstatus.md` — and a measurement tool whose output is
+still cited is not dead code. The step names below are the ENGINE's
+path, not HD's.
+
 **MEASURE BEFORE OPTIMISING.** Data sees a delay on the drop and none
 on the pick. That asymmetry is predicted by the design and says
 nothing about its size: the first click is LOCAL and sends nothing
