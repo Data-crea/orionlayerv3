@@ -596,6 +596,52 @@ The shape generalises to every future gesture — a drag on the galaxy
 map, a build queue reorder: decide locally, commit once, confirm each
 step, and never leave the game in a state only the player can end.
 
+**52. Pop moves go over the wire as one command per colony, and the
+command is all-or-nothing.** `MSG_SET_JOBS`: one colony, a list of
+(pop_idx, new_job). Run A (brief 91, commit d98a96d) settled the
+three facts this rests on. The click chain owned 597 of the 725 ms
+per drop (RESORT, ESTABLISH, PICK, DROP) — that is the part a command
+removes; the game's own recalculation and one snapshot round trip
+stay whatever the transport. The recalculation is per batch, not per
+pop: `Send_Cluster_` runs the whole cluster and only then calls
+`Col_Calc_Wrapper_` (colmove.cpp:461-464), so a list is the
+original's shape, not a convenience. And `Give_Colonist_New_Job_`
+answers each of its refusals with a text box that spins waiting for
+a human (textbox.cpp:145-149) — a loop that re-enters `ext::Tick`
+from inside the refusal, which a command must never reach.
+
+That last fact decides the rest. The handler checks the refusal
+conditions itself, before touching a pop, and rejects the whole list
+if any entry fails; HD checks the same conditions before sending
+(decision 33), so a rejection on the wire is the exception. The
+original moves pops until the first refusal and leaves the earlier
+ones moved (colmove.cpp:168-173), because a human at the box decides
+whether to continue. A command cannot ask, so it does not start.
+**This is a marked DEVIATION**: the game behaves differently under
+the command than under the click. Data's decision, 10 September
+2026.
+
+The command lives in `src/ext/`, our own directory in Joes' tree;
+the patch is `doc/ext_move_pop.patch`, its entry is in
+`doc/orion2re_open_fixes.md`, and `tools/version_check.py` covers
+the new message id. The click chain is deleted in the same session
+the command lands — two paths that move pops is the same fault as
+two copies of a table.
+
+(*None of those three is in the tree on 10 September 2026, the day
+this entry was written: there is no `doc/ext_move_pop.patch`,
+`doc/orion2re_open_fixes.md` carries no pop-move entry, and
+`tools/version_check.py` reads no message id at all. The paragraph
+above is the REQUIREMENT, written before the work rather than after
+it, and it is flagged because an entry in the present tense reads as
+a description of the tree. This project has been caught twice by a
+document asserting a state no file carried — the amendment to
+decision 49, and the three prose claims turned into checks in
+`b214582` — and the fix both times was a check, not a rewording. The
+session that writes the patch deletes this note; until then the
+sentence above is a plan and this parenthesis is what makes that
+readable.*)
+
 **42. Derived artwork ships; unmodified original artwork does not.**
 The repository is public, and OrionLayer is a modification that
 requires an installed, legally obtained copy of Master of Orion 2 —

@@ -3317,7 +3317,7 @@ writes exactly two bit-fields, `POP::Set_Prof` and
 `POP::Set_Assigned` (`colmove.cpp:549-551`). Addressed by index, it
 is already the function a command wants.
 
-**AND THE ONE THING THAT DISQUALIFIES CALLING IT BLIND: all three
+**AND THE ONE THING THAT DISQUALIFIES CALLING IT BLIND: all four
 refusals are BLOCKING UI.** `colmove.cpp:527`, `:534`, `:541` and
 `:556` each call `GENDRAW::Help_`, which is `Message_Box_`
 (`gendraw.cpp:18-24`) -> `TEXTBOX::Do_Text_Box_(nullptr, text, 0)`
@@ -3329,7 +3329,7 @@ whose zero-ticks path is a spin loop that **waits for a human**:
 until somebody dismissed a box the HD player cannot see — and worse,
 that inner `Get_Input_()` re-enters `ext::Tick` and drains further
 commands from inside the refusal. So the command must decide the
-three refusals ITSELF and answer over the wire, or call a
+four refusals ITSELF and answer over the wire, or call a
 refusal-free inner form. This is decision 33 arriving as a hard
 requirement rather than a preference: HD already refuses before
 sending, and now the engine side cannot afford it not to.
@@ -3408,7 +3408,7 @@ second, blocking feature in behind a field. Population TRANSFER
 stays out and gets its own decision if it is ever wanted.
 
 **Why the handler must carry the refusal checks.** From (1): the
-three refusals inside `Give_Colonist_New_Job_` are blocking text
+four refusals inside `Give_Colonist_New_Job_` are blocking text
 boxes and re-enter the drain loop. The handler validates first —
 native to research or industry, android reconfigure, the 42 cap,
 and the `max_farms` food rule, all four readable from `pop[]`,
