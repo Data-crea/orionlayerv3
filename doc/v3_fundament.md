@@ -1931,6 +1931,55 @@ the elapsed time, and `GameClient` keeps monotonic counters for it.
 every step, not only at the end — a change touching six files breaks
 screen loading in a way the test catches in seconds.
 
+**A READER WHOSE EXTENT COMES FROM THE SAME TABLE AS ITS CONTENTS
+CANNOT REPORT A WRONG EXTENT.** `fixtures.fixture_colonies`
+(`tools/fixtures.py:169-196`) slices `colony_count` colony records
+out of a savegame and returns them. The count is the input AND the
+implicit expectation, so a wrong count returns fewer records and no
+error at all — not a warning, not a short read, a clean answer of
+the wrong length. `FIXTURE_FILES["natives"]["colony_count"]` said
+36 where the file holds 38, and record 37 was **Urna I**, the only
+colony in any fixture with native pops and the colony the fixture is
+NAMED for. On 10 September 2026 that produced the finding "no
+fixture has a native pop, so the native refusal cannot be
+live-tested", from a file with three of them, and it was one
+sentence away from being filed on the open acceptance list as a
+missing savegame. **What caught it was a second source and nothing
+else**: the running engine's own `num_colonies`, which reports 38 on
+a fresh load. The rule is not "count more carefully". It is that a
+number describing a file must be checkable against something that is
+not the same table — and where the only honest second source is the
+running game, the offline path has to say it is unverified rather
+than answer as if it were.
+
+**AND THE GUARD THAT WOULD HAVE CAUGHT IT EXISTED AND HAD NEVER
+RUN.** `verify_colonies` (`tools/fixtures.py:210-213`) compares the
+engine's record count against the file's and refuses on a mismatch;
+pointed at this save it says "the game reports 38 colony records and
+the file holds 36" and returns False, which is exactly right and was
+true from the day the number was written. It had simply never been
+run against a loaded `natives` save — the measuring runs all used
+the reference fixture, whose count was correct. **A guard that
+exists is not a guard that ran, and a fixture nobody verifies is a
+fixture nobody has checked.** The check now runs on every fixture
+the smoke test can reach, offline, against the file's own length.
+
+**A FUNCTION THAT FAILS BY RETURNING `None` FAILS INVISIBLY.**
+`fixtures.fixture_name` (`tools/fixtures.py:45-57`) fingerprints a
+snapshot against the fixture table and returns the name, "or None".
+While the count above was wrong it returned `None` for the natives
+save — it could not identify a save that was sitting right in front
+of it — and **nothing treated that as a fault**. Callers print it,
+put it on a provenance band, and carry on; `None` renders as "not a
+known fixture", which is a legitimate state a caller has no way to
+tell apart from "the table is broken". That is why the wrong count
+survived: the one function positioned to notice it reported the
+problem in the one way nobody reads. The rule: **where a caller
+cannot distinguish "no answer" from "not asked", do not return the
+absence.** Raise, or make a check demand the answer. A sentinel is
+only honest when the caller is known to branch on it, and "or None"
+in a docstring is not evidence that anybody does.
+
 **Revert to a known-good baseline when regressions pile up.**
 
 ### Refactoring

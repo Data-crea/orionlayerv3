@@ -13,6 +13,14 @@ right and the header had gone stale** — resolved 10 September 2026
 by dating the header to the edit and giving this session its
 paragraph, below, so the two agree again.
 
+This session (10 September 2026), later still: **two lessons from
+the fixtures bug went into the fundament's Diagnosis section** — a
+reader whose extent comes from the same table as its contents, and
+a function that fails by returning `None` — both now with smoke
+checks that bite on the exact fault; and **Data decided Claude Code
+may load saves and restart the game itself**, on two conditions
+(see below).
+
 This session (10 September 2026), later: **the pop move became one
 command** — `MSG_SET_JOBS`, applied whole or not at all
 (fundament 52), the four click-chain states deleted, 725 ms of drop
@@ -3253,6 +3261,35 @@ help-file lesson, one domain over.
 
 Zhadoom III (14 pops) is the widest row in either fixture and is
 therefore the narrowest-cell case any picture has to survive.
+
+### Claude Code loads saves and restarts the game — 10 September 2026
+
+**Data's decision.** Until now the convention was that Data loaded
+the save and Claude Code measured against whatever was in front of
+it; every brief that touches the game says "reference save loaded as
+slot 8" as a precondition somebody else arranged. Session 2 needed
+two different saves and four engine restarts — a patch cannot be
+live-verified without rebuilding and restarting — so the convention
+was in the way of the work rather than protecting anything.
+
+**Two conditions, and they are the whole of it.**
+
+- **The report names the slot and the fixture for every live step.**
+  Not "on the reference save": slot 8, `fixture_reference_3502.4.GAM`,
+  `verify_colonies` green before and after. A measurement whose save
+  a reader has to infer is a measurement they cannot repeat.
+- **`SAVE10.GAM` is checked against the secured fixture copy before
+  and after.** That slot is the game's autosave and it is rewritten
+  at every turn end, which is why the fixture is a COPY at
+  `~/orionlayer-fixtures/` and why `tools/fixtures.py` refuses any
+  fixture path reaching into the game's folder. A session that
+  restarts the game repeatedly is exactly the one that could lose
+  it without noticing.
+
+Loading is done through the Extension API's own field activation —
+the main menu's Load Game field, the slot, then `L` — and not by
+writing save files. Nothing in the tree writes into
+`~/Master of Orion 2/`.
 
 ### The pop move is one command, and the click chain is gone — 10 September 2026
 

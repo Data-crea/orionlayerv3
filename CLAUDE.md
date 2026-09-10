@@ -175,6 +175,13 @@ a command block.
 Do not chain a verifier behind `&&` — it exits non-zero when it finds
 something, which is the point.
 
+**Loading a save and restarting the game are yours to do** (Data's
+decision, 10 September 2026) — on two conditions: the report says
+which slot and which fixture was loaded for each live step, and it
+states that `~/Master of Orion 2/SAVE10.GAM` was checked against the
+secured fixture copy before and after, because that slot is the
+autosave and the game rewrites it at every turn end.
+
 State findings plainly, including the unwelcome ones. A wrong
 assumption caught early is worth more than a smooth answer: most of
 this project's best moments came from someone saying "that is not

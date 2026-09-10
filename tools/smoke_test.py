@@ -10922,6 +10922,105 @@ def main():
             f"fixture {_fk} points into the game's own folder, which "
             f"the game overwrites")
         assert len(_fv["sha256"]) == 64 and _fv["colony_count"] > 0
+    # ── THE COUNT IS CHECKED AGAINST THE FILE, NOT AGAINST ITSELF ──
+    #
+    # `fixture_colonies` slices `colony_count` records and returns
+    # them; the count is the input AND the implicit expectation, so a
+    # wrong one returns fewer records and NO error. It happened:
+    # natives said 36 where the file holds 38, and the two it cut off
+    # included Urna I — the only colony in any fixture with native
+    # pops, and the one the fixture is named for. See "A READER WHOSE
+    # EXTENT COMES FROM THE SAME TABLE AS ITS CONTENTS" in the
+    # fundament's Diagnosis section.
+    #
+    # The second source here is the FILE'S OWN STRUCTURE: the record
+    # one past the end must NOT look like a colony. Past the array
+    # the bytes are some other structure, and on all three fixtures
+    # they read as owner -5 or -84 with planet -1 — outside any legal
+    # range — while every record inside reads as a real colony. A
+    # count that is too small leaves a plausible record sitting just
+    # past its own end, which is exactly what 36 did.
+    def _fx_plausible(_blob, _off, _i):
+        """Does record `_i` read as a colony? (owner, planet, n_pops)"""
+        _s = _off + _i * _fx.COLONY_SIZE
+        if _s + _fx.COLONY_SIZE > len(_blob):
+            return False
+        _owner = struct.unpack_from("<b", _blob, _s)[0]
+        _planet = struct.unpack_from("<h", _blob, _s + 2)[0]
+        _n = _blob[_s + 10]
+        return -1 <= _owner <= 7 and _n <= 42 and -1 <= _planet <= 2000
+
+    for _fk, _fv in sorted(_fx.FIXTURE_FILES.items()):
+        _fpath = os.path.join(_fx.FIXTURE_DIR, _fv["file"])
+        if not os.path.exists(_fpath):
+            continue                      # absence is a state
+        with open(_fpath, "rb") as _fh:
+            _fblob = _fh.read()
+        _fn, _foff = _fv["colony_count"], _fv["colony_offset"]
+        assert _fx_plausible(_fblob, _foff, _fn - 1), (
+            f"fixture {_fk}: record {_fn - 1}, the last one "
+            f"colony_count claims, does not read as a colony — the "
+            f"count is too BIG or the offset is wrong")
+        assert not _fx_plausible(_fblob, _foff, _fn), (
+            f"fixture {_fk}: record {_fn} reads as a colony and "
+            f"colony_count says the array ended at {_fn}. The count "
+            f"is TOO SMALL and `fixture_colonies` is returning a "
+            f"short array with no error — this is the natives/Urna I "
+            f"fault, which cost a false 'no fixture has a native pop'")
+        # AND THE TWO TABLES AGREE. `FIXTURES` fingerprints a live
+        # snapshot and `FIXTURE_FILES` slices the file; they carry
+        # the same number for different reasons, and the fingerprint
+        # is what a running game is matched against.
+        assert _fx.FIXTURES[_fk]["colonies"] == _fn, (
+            f"fixture {_fk}: the fingerprint says "
+            f"{_fx.FIXTURES[_fk]['colonies']} colonies and the file "
+            f"table says {_fn}; a snapshot cannot match both")
+
+    # ── `fixture_name` NEVER ANSWERS None FOR A FIXTURE ON DISK ──
+    #
+    # It returns "the name, or None", and while the count above was
+    # wrong it returned None for a save sitting right in front of
+    # it — which nothing treats as a fault, because None is also the
+    # legitimate answer for an unknown save. That is why the wrong
+    # count survived: the one function positioned to notice reported
+    # it in the one way nobody reads. So the answer is DEMANDED here
+    # rather than left to a caller that has no way to tell the two
+    # apart. See "A FUNCTION THAT FAILS BY RETURNING None" in the
+    # fundament.
+    class _FxState:
+        """The three fields `fixture_name` fingerprints on.
+
+        **ONLY `colonies` IS A SECOND SOURCE HERE** — it comes from
+        `fixture_colonies`, i.e. from the file, which is what makes
+        the natives/Urna I fault reachable offline. `stardate` and
+        `stars` are echoed back out of `FIXTURES`, so this check
+        cannot say they are right; it says the lookup ANSWERS. Those
+        two are verified only against a running game, and the live
+        runs in `v3_projektstatus.md` are where that happened.
+        Written out because a check that looks like it validates
+        three fields and validates one is worse than a check that
+        says so.
+        """
+
+        def __init__(self, _recs, _stardate, _stars):
+            self.colonies_raw = _recs
+            self.num_colonies = len(_recs)
+            self.stardate = _stardate
+            self.stars = [None] * _stars
+
+    for _fk in sorted(_fx.FIXTURE_FILES):
+        _frecs, _fwhy = _fx.fixture_colonies(_fk)
+        if _frecs is None:
+            continue                      # absence is a state
+        _fstate = _FxState(_frecs, _fx.FIXTURES[_fk]["stardate"],
+                           _fx.FIXTURES[_fk]["stars"])
+        assert _fx.fixture_name(_fstate) == _fk, (
+            f"fixture_name answered {_fx.fixture_name(_fstate)!r} for "
+            f"{_fk} built from its own file. It fails by returning "
+            f"None, which every caller renders as 'not a known "
+            f"fixture' — so a broken table looks exactly like an "
+            f"unknown save")
+
     # Absence is a state: a clone has no fixtures and says so rather
     # than skipping (decision 42's pattern), so this reports what it
     # found instead of demanding the files exist.
