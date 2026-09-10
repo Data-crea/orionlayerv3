@@ -2181,9 +2181,9 @@ references in `doc/v3_orion2re_index.md`.
 
   **AND EVERY REFUSAL OPENS A BLOCKING MESSAGE BOX — 5 September
   2026, and this is the half that changes what a client may do.**
-  All four refusals in `Give_Colonist_New_Job_` (`colmove.cpp:526`,
-  `:534`, `:541`, `:555`) and the pick-up's native refusal
-  (`colmove.cpp:60`) answer with `GENDRAW::Help_`, which is
+  All four refusals in `Give_Colonist_New_Job_` (`colmove.cpp:527`,
+  `:534`, `:541`, `:556`) and the pick-up's native refusal
+  (`colmove.cpp:61`) answer with `GENDRAW::Help_`, which is
   `TEXTBOX::Do_Text_Box_`, whose input step is
   `do { … } while (fields::Get_Input_() == 0)` (`textbox.cpp:149`).
   The game sits in that loop until something clicks or types. It
