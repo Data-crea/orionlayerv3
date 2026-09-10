@@ -1,6 +1,6 @@
 # OrionLayer v3 — Project Status
 
-Updated: 5 September 2026
+Updated: 10 September 2026
 
 This session (5 September 2026), the Colonies screen analysed end to
 end — no code, no drawing change, the record is
@@ -5610,6 +5610,44 @@ RETURN — the control, not the gesture — with its reason beside it in
 citations in fundament section 3 were already corrected in `ccf7e0c`
 and were re-read rather than re-written.
 
+### Brief 87 Part 3b — the editor writing frame holes: DEFERRED
+
+Data's decision, 10 September 2026. **NOT `phase 3b` of pop
+movement**, the section directly above this one, which is ACCEPTED
+— the numbering collides and the two have nothing to do with each
+other. This is the open item Part 3 stopped on: whether the F5 box
+editor should let a cutout be dragged, writing
+`layout_reference.json` and rebuilding the plate through
+`frame_build.py`.
+
+**Deferred, and the reason verbatim: "a second writer for a derived
+file".**
+
+The plates are DERIVED (decision 49) and the licence to call them
+that is a byte-for-byte regeneration, not the existence of a tool
+that looks like it made them (decision 40). `frame_build.py` is that
+one writer today, so the regeneration either reproduces the tree or
+it does not, and the answer is a single check. A second writer with
+a mouse on it does not break that property so much as make it
+unanswerable: an edit that changed the plate and an edit that
+changed nothing would leave the same tree, and "the plate is what
+the tool produces" would depend on which writer ran last.
+
+**Resubmit trigger: a frame master at 3840 or wider.** The master is
+2322 px, so 1920 is a downscale and 2560 and 3840 are both upscaled
+interim variants — the dated entry is under "the colony frame is
+built, not rendered". Until a native master exists, dragging a
+cutout moves a hole in artwork that is itself provisional at two of
+the three shipped resolutions, which is the wrong order to do the
+two pieces of work in. When the master lands, the holes are re-cut
+against it anyway, and that is the moment to ask whether a mouse
+should be one of the things that cuts them.
+
+Nothing in Part 3 depends on this. The editor classifies cutouts as
+LOCKED, offers no handle on one, and the info bar names
+`tools/frame_holes.py` as the place to change it — which is the
+behaviour whether or not 3b is ever built.
+
 ### Phase 3c — update to upstream (build 15 Aug 2026): DEFERRED
 
 Decided 5 September 2026. **Not during the colony screen work.**
@@ -5731,6 +5769,29 @@ original mode. Cross-platform builds. Planet images for 12 of the 13
 races.
 
 ### Loose ends
+- **`doc/v3_fundament.md` vanished from the working tree on
+  9 September 2026 and the cause was never established.** It was
+  restored with `git checkout` and the restored file is
+  **byte-identical** to the committed one, so nothing in the
+  document was lost and no commit is affected — the file had not
+  been edited since its last commit, which is the only reason the
+  restore could be clean. **What is NOT known is why it went.** No
+  commit removes it, `git reflog` shows no HEAD movement that could
+  have taken it (and `git checkout -- <path>` leaves no reflog entry
+  either way), and nothing in the shell history names it. Re-checked
+  10 September 2026: the file is present and matches HEAD.
+  Kept here rather than closed, for two reasons. The first is that
+  an unexplained disappearance is not a fixed one, and the same
+  event on a file with uncommitted work in it would be a real loss
+  — the fundament is the document every session is told to read
+  first, and it is long, hand-written and not derived from anything
+  that could rebuild it. The second is the shape: this project's own
+  rule is that a fault nobody wrote down is indistinguishable from
+  one nobody saw, and a near-miss with no cause is exactly the entry
+  that gets dropped because nothing is broken today. What would
+  settle it is any second occurrence with the shell history or an
+  editor's session log intact — until then it is one event, recorded
+  and open.
 - **Select Race kept reporting screen 6 after a cancel — FIXED and
   live-confirmed 5 September 2026.** The fourth hunk of
   `doc/ext_screen_id.patch` saves the caller's id on entry and
