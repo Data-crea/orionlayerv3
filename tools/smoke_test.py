@@ -45,6 +45,27 @@ def ok(msg):
     print(f"  ok  {msg}")
 
 
+def report(msg):
+    """A measured value with no pass/fail, and NOT a check.
+
+    Added 11 September 2026 with the "chosen rules become Data's
+    choices" entry in the fundament. A layout rule that was CHOSEN by
+    us — the lower band flush with the list, the panel gaps equal, a
+    gap equal to its role's strut, the ring pinned to the main-screen
+    master — stops being enforced when Data draws her own frame, and
+    every one of them lands here instead. The value is still measured
+    on every run, so a change is visible in the output; it simply does
+    not decide whether the suite passes.
+
+    **It deliberately does not touch PASS.** A report is not a check
+    and must not inflate the count the two documents are held to; the
+    count went UP by one in the same commit, for the validator that
+    replaces these enforcements where the artwork actually is
+    (`tools/colony_frame_check.py`).
+    """
+    print(f"  --  {msg}")
+
+
 def main():
     pygame.init()
     pygame.display.set_mode((1920, 1080))
@@ -4425,12 +4446,27 @@ def main():
         "top": round(_my0 * _REF_H / _rh),
         "bottom": round((_rh - 1 - _my1) * _REF_H / _rh),
     }
-    assert _measured == _ring, (
-        f"the ring table says {_ring} and {_rsrc['file']} measures "
-        f"{_measured} — one of the two was edited without the other")
+    # DROPPED AS A CHECK, 11 September 2026 — it was a CHOSEN rule.
+    # `_ring_source` says why the number came off the main-screen
+    # master: "because that is what this screen has to sit beside".
+    # That is a design decision of ours, not anything transcribed
+    # from MOO2, and Data is drawing her own frame. Reported, so the
+    # two numbers are still in front of anyone who changes one.
+    #
+    # WHAT REPLACES IT IS NOT NOTHING. `ring` is now a typed number
+    # with no checker in this suite, which is the fault this project
+    # keeps paying for — so the re-measurement moved to where the
+    # artwork actually is: `tools/colony_frame_check.py` measures the
+    # ring off the PNG it is handed and holds every window against
+    # it. The suite has no artwork by design (see the frame-cut block
+    # below), so it could never have done that job for Data's file.
+    report(f"ring table {_ring} | {_rsrc['file']} measures {_measured}"
+           f"{'' if _measured == _ring else '  <-- DIFFERENT'}")
 
-    # EVERY WINDOW IS INSIDE THE RING, per side. Asserted as the rule
-    # and not as a list of coordinates, so a new rectangle obeys it.
+    # EVERY WINDOW IS INSIDE THE RING, per side. KEPT: a hole outside
+    # the metal is not a layout preference, it is a hole in the edge
+    # of the screen. Asserted as the rule and not as a list of
+    # coordinates, so a new rectangle obeys it.
     for _name, (_x, _y, _w, _h) in _lr_windows.items():
         assert _x >= _ring["left"] and _y >= _ring["top"], (
             f"{_name} at ({_x}, {_y}) starts under the ring "
@@ -4480,26 +4516,31 @@ def main():
             f"{_step} fits {_fits} unsqueezed figures, the original's "
             f"widest column fits {_orig_fit}")
 
-    # THE LOWER BAND IS EVEN, and flush with the list above it.
-    # Asserted as the rule: the four boxes sit between the list's own
-    # left and right edges and every gap between them is the same.
-    # They were 12, 12 and 32 until 7 September 2026 - flush at both
-    # ends, which is what hid it, and the inset 20 px left of where an
-    # even band puts it.
+    # THE LOWER BAND WAS EVEN AND FLUSH, AND THAT IS NOW DATA'S CALL
+    # — 11 September 2026. Three enforcements dropped here: the band
+    # flush with the list on the left, flush on the right, and its
+    # three gaps equal. Every one of them is CHOSEN: `_lower_band_note`
+    # traces the gap to "THE MASTER'S OWN SLOT DIVIDER", which is our
+    # own artwork, and the flushness to nothing but our own eye. MOO2
+    # has no lower band of four panels at all — the shape is an HD
+    # EXTENSION, so there is nothing here to transcribe and nothing
+    # for the suite to defend.
+    #
+    # They stay MEASURED. The numbers below still come out on every
+    # run, so a band that drifts is visible; it just no longer fails.
     _band = sorted((_lr[_k] for _k in ("planet_info", "planet_output",
                                        "galaxy_inset", "empire_stats")),
                    key=lambda r: r[0])
-    assert _band[0][0] == _lr["list"][0], (
-        f"the lower band starts at {_band[0][0]}, the list at "
-        f"{_lr['list'][0]}")
-    assert _band[-1][0] + _band[-1][2] == _lr["list"][0] + _lr["list"][2], (
-        f"the lower band ends at {_band[-1][0] + _band[-1][2]}, the list "
-        f"at {_lr['list'][0] + _lr['list'][2]}")
     _gaps = [b[0] - (a[0] + a[2]) for a, b in zip(_band, _band[1:])]
-    assert len(set(_gaps)) == 1 and _gaps[0] > 0, (
-        f"the lower band's gaps are {_gaps} and must all be equal - "
-        f"equalising them costs a pixel or two out of one box's width, "
-        f"and _lower_band_note says which box pays and why")
+    _l0, _l1 = _lr["list"][0], _lr["list"][0] + _lr["list"][2]
+    report(f"lower band x {_band[0][0]}..{_band[-1][0] + _band[-1][2]} "
+           f"against the list's {_l0}..{_l1} "
+           f"(left {_band[0][0] - _l0:+d}, "
+           f"right {_band[-1][0] + _band[-1][2] - _l1:+d}) | "
+           f"panel gaps {_gaps}")
+    _sb, _rb = _lr["sort_bar"], _lr["return_button"]
+    report(f"sort row: sort_bar {_sb} + gap "
+           f"{_rb[0] - (_sb[0] + _sb[2])} + return {_rb}")
 
     # THE INSET'S ASPECT IS THE ORIGINAL'S COVERAGE, to a thousandth.
     # movebox.cpp:20-21: the crop is 128*(506000//128) by
@@ -4617,6 +4658,66 @@ def main():
        "alpha, at all three resolutions — on a plate with no black "
        "in it)")
 
+    # ── The validator that took the dropped enforcements over ──
+    #
+    # NEW 11 September 2026, and it is what makes this commit's four
+    # dropped enforcements affordable. `tools/colony_frame_check.py`
+    # holds a PNG against the rules that SURVIVED — the transcribed
+    # ones — where the suite cannot: on Data's own artwork, which is
+    # not in the tree and never will be.
+    #
+    # A VALIDATOR THAT CANNOT FAIL IS NOT A VALIDATOR, so this runs
+    # it twice: once on a mask rendered from the current reference,
+    # which must pass and must report the mask's own rectangles name
+    # for name, and once on a mask with RETURN nudged up into the
+    # lower band's row, which must fail the four-row rule. Without
+    # the second half a tool that printed PASS unconditionally would
+    # sail through here.
+    import subprocess as _sp
+    import tempfile as _tf
+    _cfc = os.path.join(_proj, "tools", "colony_frame_check.py")
+    assert os.path.isfile(_cfc), "tools/colony_frame_check.py is gone"
+    _good_img, _good_rects = _fm.render(_lr_windows, _REF_W, _REF_H)
+    _broken = dict(_lr_windows)
+    _broken["return_button"] = [_lr["return_button"][0],
+                                _lr["galaxy_inset"][1] + 4,
+                                _lr["return_button"][2],
+                                _lr["return_button"][3]]
+    with _tf.TemporaryDirectory() as _td:
+        _gp = os.path.join(_td, "good.png")
+        _bp = os.path.join(_td, "broken.png")
+        _good_img.save(_gp)
+        _fm.render(_broken, _REF_W, _REF_H)[0].save(_bp)
+        _run = _sp.run([sys.executable, _cfc, _gp], capture_output=True,
+                       text=True)
+        assert _run.returncode == 0, (
+            f"the validator fails its own reference mask:\n{_run.stdout}"
+            f"{_run.stderr}")
+        # IT MUST HAVE READ THE RECTANGLES, not merely printed PASS.
+        # Name for name against frame_mask's own answer, which is the
+        # "hole rect == frame_mask rect" rule arriving in the tool
+        # that will meet the artwork.
+        # layout_reference names the rectangles and frame_holes names
+        # the BOXES, and two of them differ — the mapping is the
+        # tool's own, so it is written out here rather than assumed.
+        _alias = {"return_button": "return", "list": "list_area"}
+        for _n, _r in _good_rects.items():
+            _key = _alias.get(_n, _n)
+            assert f"{_key:14s} {tuple(_r)}" in _run.stdout, (
+                f"the validator did not report {_key} as {tuple(_r)}:\n"
+                f"{_run.stdout}")
+        assert "convention: light" in _run.stdout, (
+            "frame_mask writes windows WHITE and the validator no "
+            "longer recognises that reading")
+        _bad = _sp.run([sys.executable, _cfc, _bp], capture_output=True,
+                       text=True)
+        assert _bad.returncode == 1, (
+            f"RETURN moved into the lower band's row and the validator "
+            f"still passed:\n{_bad.stdout}")
+    ok("colony frame validator (passes the reference mask and reports "
+       "its eight rects\n       name for name, fails a mask whose "
+       "RETURN left the sort row)")
+
     # ── The built frame carries the ring it was built for ──
     #
     # frame_build assembles the plate from the master's own nine
@@ -4654,12 +4755,19 @@ def main():
         assert _got == tuple(_want_ring), (
             f"{_spec}: the built frame's metal is {_got} px from the "
             f"edges, the rectangles put the ring at {_want_ring}")
+        # DROPPED AS A CHECK, 11 September 2026. `_got == _want_ring`
+        # above STAYS: it says the built metal reaches exactly as far
+        # as the rectangles put it, which is "hole inside the ring"
+        # and holds wherever Data moves a box. What goes is pinning
+        # that derived ring to the TYPED table — a fixed number, and
+        # the table's own origin is the chosen one (see the report at
+        # the ring block above).
         if _spec == "1920x1080":
-            assert _want_ring == (_ring["left"], _ring["right"],
-                                  _ring["top"], _ring["bottom"]), (
-                f"at 1080p the rectangles give a ring of {_want_ring} "
-                f"and the table says {_ring} — the two must be the "
-                f"same number, the scale there is 1")
+            _tbl = (_ring["left"], _ring["right"],
+                    _ring["top"], _ring["bottom"])
+            report(f"1080p ring from the rectangles {tuple(_want_ring)} | "
+                   f"table {_tbl}"
+                   f"{'' if tuple(_want_ring) == _tbl else '  <-- DIFFERENT'}")
         # AND THE STRUT TEXTURE IS METAL, not a hole. A plate whose
         # interior came out transparent would still pass the ring
         # test above and be a frame with nothing between its windows.
@@ -4890,22 +4998,34 @@ def main():
             f"the gap at ({_gx}, {_gy}) resolves to role {_role!r}, "
             f"which the master does not offer")
         _span = _gw if _gv else _gh
+        # DROPPED AS A CHECK, 11 September 2026 — "every gap is
+        # exactly its role's strut" is the single rule that pinned
+        # the sort_bar|return gap and the three panel gaps at once,
+        # and it is CHOSEN. `_gaps_note` traces each width to one of
+        # OUR master's struts and records in the same breath that the
+        # original's own gaps are about 3 and 12 reference px, so the
+        # rule is wider than what it deviates from, by our decision.
+        # `layout_reference.gaps` is documentation from here on: no
+        # code reads it (grep, 11 September 2026 — only this suite
+        # did), and `lay_rail` scales the strip to whatever gap the
+        # rectangles leave.
+        #
         # THE INSET IS SHORTER THAN ITS BAND and is centred in it, so
         # its two horizontal gaps carry half that shortfall each on
-        # top of their role's width. The shortfall is DERIVED from
-        # the layout and not typed here: it was 20 until 8 September
-        # 2026 and is 2 now, and a hardcoded half of it was a second
-        # copy of a number that moves — which is what it did the
-        # first time the band's height changed.
+        # top of their role's width. Kept in the REPORT so the number
+        # still explains itself: the shortfall is derived from the
+        # layout, it was 20 until 8 September 2026 and is 2 now, and a
+        # hardcoded half of it was a second copy of a moving number.
         _band_h = max(_lr[_k][3] for _k in
                       ("planet_info", "planet_output", "galaxy_inset",
                        "empire_stats"))
         _short = (_band_h - _lr["galaxy_inset"][3]) // 2
         _extra = _short if ("galaxy_inset" in _fb._facing(
             _gaps, _gx, _gy, _gw, _gh, _gv) and not _gv) else 0
-        assert _span == _lr["gaps"][_role] + _extra, (
-            f"the gap at ({_gx}, {_gy}) is {_span} px and its role "
-            f"{_role} calls for {_lr['gaps'][_role] + _extra}")
+        _calls = _lr["gaps"][_role] + _extra
+        report(f"gap at ({_gx}, {_gy}) span {_span} | role {_role} "
+               f"calls for {_calls}"
+               f"{'' if _span == _calls else '  <-- DIFFERENT'}")
 
     # THE TILE'S PERIOD IS GONE. Before the rails the bare strut
     # texture covered 2.1 % of the canvas and its column profile
