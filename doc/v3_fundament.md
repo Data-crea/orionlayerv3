@@ -1011,6 +1011,57 @@ Consequence for anything that *measures* text: measure by rendering.
 word wrap does exactly that and caches the result per
 (text, pixel size, width).
 
+**53. A layout rule we CHOSE is Data's to change; a rule TRANSCRIBED
+from the original stays a check.** 11 September 2026, when the colony
+screen's top and bottom band were freed so a new frame could be
+drawn. The suite had grown to hold both kinds at the same strength,
+and that is what made the artwork unmovable: a picture could not be
+redrawn without breaking assertions that were never about MOO2 at
+all.
+
+The test is the SOURCE REFERENCE, not the feeling. A transcription in
+this project carries `file.cpp:line`; an invention or a deviation
+carries its label. A rule with neither is ours, and ours means Data's.
+
+**Chosen — dropped as checks, still reported every run:**
+
+| rule | where its origin is written |
+|---|---|
+| lower band flush with `list_area`, left and right | `_lower_band_note`: our own eye; MOO2 has no band of four panels |
+| the band's three gaps equal | `_lower_band_note`: "THE MASTER'S OWN SLOT DIVIDER" — our artwork |
+| every gap equal to its role's strut | `_gaps_note`: our master's struts, and it records that the original's own gaps are ~3 and ~12 ref px, so the rule is WIDER than what it deviates from |
+| `ring` pinned to `galaxy_map/assets/frame.png`, and the built plate's ring pinned to that table | `_ring_source`: measured there "because that is what this screen has to sit beside" |
+
+**Transcribed — still checks:**
+
+| rule | source |
+|---|---|
+| every hole inside the ring | not a preference: a hole outside the metal is a hole in the edge of the screen. The DERIVED form stays asserted — the built metal reaches exactly as far as the rectangles put it — and only the pin to the typed table went |
+| `galaxy_inset` aspect | movebox.cpp:20-21; the coverage is 128*(506000//128) by 91*(400000//91) and the galaxy size cancels |
+| inset minimum height | `colonyinset.map_rect` fits 128:91 isotropically; below `w*91/128` the height binds and the map gets panel either side |
+| figure column >= 4 unsquashed figures, all three resolutions | the original's widest column — industry, reach 122 at pitch 30, colsum.cpp:1006-1024 for the bounds |
+| list height -> `figure_step` | band >= `28*step + 1`, measured off the 54 figure masters' own ink |
+| hole alpha exactly rectangular; hole rect == `frame_mask` rect | decision 3's chain, and a soft rim would make a hole's size depend on where the threshold sits |
+
+**A DROPPED CHECK BECOMES A REPORT, NEVER A SILENCE.** `smoke_test.report()`
+prints the measured value with no pass/fail and does not touch `PASS`,
+so a band that drifts is still visible in the output and the count the
+two documents are held to stays honest. And an enforcement that leaves
+the suite has to arrive somewhere: `tools/colony_frame_check.py` holds
+the surviving rules against a PNG, which is where they can actually
+meet Data's file. The suite cannot do that job and should not try —
+*"Data's artwork is not in the tree and never will be"*, and a check
+that needed it would fail for anyone who cloned the repository.
+
+**WHAT THIS ENTRY DOES NOT LICENCE.** Dropping a check because it is
+inconvenient. The four above were each traced to a sentence already in
+the tree saying where the number came from. Two further rules turned up
+in the same session that block the same work and were NOT dropped,
+because their origin is not marked either way and deciding that is not
+a session's call — they are named in the status document under the same
+date, which is the shape a rule of unknown parentage gets: written
+down, not resolved in passing.
+
 ### Process
 
 **31. Verification via `tools/smoke_test.py` before every handoff.**

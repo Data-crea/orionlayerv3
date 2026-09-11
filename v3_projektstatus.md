@@ -1,6 +1,6 @@
 # OrionLayer v3 — Project Status
 
-Updated: 10 September 2026
+Updated: 11 September 2026
 
 **How to read the date above.** The header names the day this file
 was last edited; the "This session (…)" paragraphs below it run
@@ -12,6 +12,21 @@ carrying entries dated 9 September inside it. **The convention is
 right and the header had gone stale** — resolved 10 September 2026
 by dating the header to the edit and giving this session its
 paragraph, below, so the two agree again.
+
+This session (11 September 2026): **the colony screen's top and
+bottom band were freed, by splitting the layout rules into the ones
+we CHOSE and the ones we TRANSCRIBED** (fundament decision 53). Four
+enforcements left `tools/smoke_test.py` and became report lines —
+the lower band flush with the list, its three gaps equal, every gap
+equal to its role's strut, and the ring pinned to the main-screen
+master. Six stayed, each with a source reference. The count went UP,
+114 -> 115: `tools/colony_frame_check.py` is new, read-only, and
+holds the surviving rules against a PNG, which is where they can
+meet artwork the suite will never have. **Verified by perturbation,
+not by reading**: the lower band non-flush with unequal gaps is
+green, and the sort row at a different width and split is green.
+**TWO RULES THAT BLOCK THE REST WERE NOT DROPPED** — see "Two rules
+of unknown parentage" below.
 
 This session (10 September 2026), last: **the sort bar's rim was
 measured and NOT rounded** — the original turns its corner on ~2
@@ -4169,6 +4184,52 @@ source is the second half of the job.
 the holes are re-cut against it anyway — see "Resolution reach" in
 the section below, and Brief 87 Part 3b, which is deferred on the
 same trigger.
+
+### Two rules of unknown parentage — 11 September 2026
+
+Freeing the top and bottom band (fundament decision 53) dropped four
+enforcements whose origin was written down. **Two more block the same
+work and were deliberately NOT touched, because nothing in the tree
+says where they came from and a session does not get to decide that.**
+
+**1. `sort_bar.x` must equal `list_area.x` within 2 px**
+(`tools/smoke_test.py`, "ONE sort bar, not seven buttons, and it
+spans the list's width"). The comment states it as a property of our
+bar and carries no `file.cpp:line`, which by decision 53's own test
+makes it ours — but the original DOES put its sort buttons and its
+list against the same left edge, and nobody has measured whether that
+is where the rule came from. Two sources would settle it: the native
+framebuffer of screen 20, and `Add_Multi_Button_Field_` at
+colsum.cpp:267-273 beside the first list field at colsum.cpp:311.
+Until then it stands. **Measured effect: the sort bar's WIDTH and its
+split with RETURN are free; its LEFT EDGE is not.**
+
+**2. `_bare.mean() < 0.01` — no bare strut texture on the built
+plate.** This one is not a layout rule at all, which is why it is
+here rather than in the dropped set: it measures `frame_build`'s
+output quality, and Stage A3's goal that rails cover the tiling. It
+fires on a narrower HEADER because `frame_master.struts` only finds
+rectangles between FACING windows, so metal beside a header that does
+not span the list is covered by nothing. **Measured: a header of
+`[200, 24, 1500, 40]` leaves 1.06 % bare and fails; the same header
+with the lower band also moved leaves 2.04 %.**
+
+**AND THE HONEST READING OF (2) IS THAT IT IS NOT THE SUITE'S RULE TO
+DROP.** What it exposes is that `frame_build` — not the smoke test —
+is what actually requires a flush, evenly gapped layout: it can only
+fill gaps it can see as rectangles between facing windows. A frame
+Data draws herself does not go through it at all (`frame_preview`
+false, the artwork used directly), and then the check is measuring a
+plate nobody draws. **Which of the two paths the colony screen takes
+is the open decision**, and it is upstream of this check rather than
+settled by it.
+
+**A third thing worth knowing before either is resolved**: now that
+the ring table is no longer asserted against the master, this same
+bare-texture check still builds its coverage mask out of
+`_lr["ring"]`. If the table and the artwork ever diverge, its mask is
+wrong in a way nothing reports. It is correct today — the report line
+at the ring block prints both numbers on every run.
 
 ### The colony frame is built, not rendered — 7 September 2026
 
