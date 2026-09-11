@@ -1019,11 +1019,43 @@ def main():
         _cut_note = f"{len(holes)} plate holes"
     else:
         _cut_note = (f"plate absent, run `python tools/frame_build.py`")
-    # ONE sort bar, not seven buttons, and it spans the list's width.
+    # ONE sort bar, not seven buttons.
+    #
+    # **IT NO LONGER SPANS THE LIST'S WIDTH, and "sort_bar.x ==
+    # list_area.x" is settled and dropped — 11 September 2026.** It
+    # was the first of the two rules of unknown parentage that
+    # decision 53 left standing, and the measurement that settles it
+    # says OURS, twice over:
+    #
+    #   colsum.cpp:265-271 — the seven Add_Multi_Button_Field_ calls
+    #     start at native x 89 (140, 219, 262, 326, 393, 480 after it)
+    #   colsum.cpp:291 — the first list field is
+    #     Add_Hidden_Field_(12, y1, 101, y_row_end), and the colony
+    #     name is PRINTED at x 12 too
+    #     (Squeeze_Formatted_Paragraph_Centered_(0x0C, ...),
+    #     colsum.cpp:582)
+    #   live FIELD_LIST, orion2re 1.60, screen 20, stardate 3502.4 —
+    #     the same seven x, y 446..469, the last ending at x_end 515
+    #
+    # The original puts its sort strip 77 native px — 231 reference
+    # px — to the RIGHT of its list. Ours started at the same x as
+    # the list because we chose that, and the comment here said so
+    # without a source, which is exactly the signature decision 53
+    # made the test. Reported now, not enforced.
+    #
+    # The work order cited colsum.cpp:267-273 and :311 for these; in
+    # this tree they are :265-271 and :291, and :311 is the
+    # full-screen Add_Hidden_Field_(0, 0, 639, 479) catch-all.
     _bar = cs.box_rect("sort_bar")
     _la = cs.box_rect("list_area")
     assert _bar and _la, (_bar, _la)
-    assert abs(_bar[0] - _la[0]) <= 2, (_bar, _la)
+    report(f"sort_bar x {_bar[0]} w {_bar[2]} | list_area x {_la[0]} "
+           f"w {_la[2]} | the original's own offset is 231 ref px "
+           f"(native 89 against 12)")
+    # KEPT, and this one IS transcribed: the original draws RETURN as
+    # a separate raised plate to the right of the bar, native x 531
+    # (Add_Button_Field_(531, 445, ...), colsum.cpp:265) against the
+    # strip ending at 515.
     assert cs.box_rect("return")[0] > _bar[0] + _bar[2], (
         "RETURN must sit to the right of the sort bar")
     # The seven keys divide it, and the SAME function answers the

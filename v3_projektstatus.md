@@ -4185,24 +4185,36 @@ the holes are re-cut against it anyway — see "Resolution reach" in
 the section below, and Brief 87 Part 3b, which is deferred on the
 same trigger.
 
-### Two rules of unknown parentage — 11 September 2026
+### Two rules of unknown parentage — 11 September 2026, one settled the same day
 
 Freeing the top and bottom band (fundament decision 53) dropped four
 enforcements whose origin was written down. **Two more block the same
 work and were deliberately NOT touched, because nothing in the tree
 says where they came from and a session does not get to decide that.**
 
-**1. `sort_bar.x` must equal `list_area.x` within 2 px**
-(`tools/smoke_test.py`, "ONE sort bar, not seven buttons, and it
-spans the list's width"). The comment states it as a property of our
-bar and carries no `file.cpp:line`, which by decision 53's own test
-makes it ours — but the original DOES put its sort buttons and its
-list against the same left edge, and nobody has measured whether that
-is where the rule came from. Two sources would settle it: the native
-framebuffer of screen 20, and `Add_Multi_Button_Field_` at
-colsum.cpp:267-273 beside the first list field at colsum.cpp:311.
-Until then it stands. **Measured effect: the sort bar's WIDTH and its
-split with RETURN are free; its LEFT EDGE is not.**
+**1. `sort_bar.x` must equal `list_area.x` within 2 px — SETTLED
+11 September 2026, and the answer is OURS.** Dropped to a report line
+the same day. The premise the rule rested on is simply false: the
+original does NOT put its sort strip and its list against one left
+edge, it puts them **77 native px apart**.
+
+| | native | source |
+|---|---|---|
+| sort strip left | 89 | `Add_Multi_Button_Field_`, colsum.cpp:265 (then 140, 219, 262, 326, 393, 480) |
+| sort strip right | 515 | live FIELD_LIST, orion2re 1.60, screen 20, stardate 3502.4 — the width is `animate::Get_Width_(pic)` and lives in the player's LBX, so the source alone cannot give it |
+| sort strip height | 24 | y 446..469, both sources |
+| first list field left | 12 | `Add_Hidden_Field_(12, y1, 101, y_row_end)`, colsum.cpp:291 |
+| colony name printed at | 12 | `Squeeze_Formatted_Paragraph_Centered_(0x0C, …)`, colsum.cpp:582 |
+
+77 native px is **231 reference px**. Two independent sources for
+every number: the C++ literals and the live field list, agreeing on
+all seven button x and on y 446..469.
+
+**THE WORK ORDER'S TWO CITATIONS WERE BOTH OFF, and the correction
+belongs here.** `Add_Multi_Button_Field_` is at colsum.cpp:**265-271**
+in this tree, not 267-273; and colsum.cpp:311 is
+`Add_Hidden_Field_(0, 0, 639, 479, …)`, the full-screen catch-all —
+the first list field is at :291.
 
 **2. `_bare.mean() < 0.01` — no bare strut texture on the built
 plate.** This one is not a layout rule at all, which is why it is
@@ -4223,6 +4235,36 @@ false, the artwork used directly), and then the check is measuring a
 plate nobody draws. **Which of the two paths the colony screen takes
 is the open decision**, and it is upstream of this check rather than
 settled by it.
+
+### The sort bar takes the original's proportion — 11 September 2026
+
+`sort_bar` is **1281 reference px wide**, was 1367. Derived, not
+chosen: the original's strip is native x 89..515, **427 of 640**, and
+427/640 x 1920 = 1281 exactly. RETURN is unchanged at
+`[1512, 974, 288, 32]`, so the gap between them is **124 ref px**,
+which is what the arithmetic leaves and not a number anybody picked.
+The fill follows the hole and the seven labels redistribute across
+the shorter bar; both were accepted in advance.
+
+**THE HEIGHT WAS MEASURED AND NOT APPLIED.** The strip is 24 native
+px, y 446..469, which is **54 reference px** against our 32 — our bar
+is a good deal SHORTER than the original's proportion, and changing
+it was not asked for. Recorded here so the next person does not have
+to measure it again.
+
+**AND THE GAP IS FILLED BY A STRETCHED MOULDING, which is visible.**
+`lay_rail` scales a strut ACROSS its width to whatever gap it is
+given, and the `in_row` strut is 47 master px — 38 ref. At 124 ref px
+it is stretched **3.3x**, and the moulding's vertical ridges smear
+into wide bands. The suite says so on every run now
+(`gap at (1388, 974) span 124 | role in_row calls for 38 <-- DIFFERENT`)
+because that enforcement became a report the same day. It is the
+exact failure the dropped rule guarded — "a rail is never wider than
+the strut it was cut from" — and it is now a picture to judge rather
+than an assertion to pass. Three ways out if it should not stand, none
+of them taken here: a wider strut sampled from the master for this
+role, RETURN moved left so the gap returns to 38, or the gap left as
+plain strut texture with no rail at all.
 
 **A third thing worth knowing before either is resolved**: now that
 the ring table is no longer asserted against the master, this same
