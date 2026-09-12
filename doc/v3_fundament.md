@@ -982,6 +982,14 @@ absence rather than skipping**: no plates means it names the command
 and still counts, so "the check count must not go down" stays a rule
 anybody can follow (decision 42's pattern, second use).
 
+**SUPERSEDED FOR THE COLONY SCREEN — 12 September 2026, decision 55.**
+There are no derived plates on that screen any more: it wears one
+fixed image and its rectangles are measured off it. Everything below
+is the record of what was built and why it was right at the time; the
+machinery it describes is deleted. This entry still stands for
+anything else that becomes a derived file — the byte-for-byte rebuild
+IS the licence, and that part did not change.
+
 **Amended 7 September 2026, Stage 4: `frame_preview` ships ON and
 its name is backwards.** This entry was written while the flag was a
 preview and flag-off was the shipped screen, byte-identical to what
@@ -1117,6 +1125,81 @@ ran 4 px past the ring and lost 4 px of height. Both are in
 `_sort_slots_note` with their arithmetic. **Shrink the slot, not the
 thing that is checked** — RETURN's position and "every hole inside the
 ring" are both on decision 53's transcribed side.
+
+**55. The colony screen wears ONE FIXED IMAGE, and its rectangles
+are measured off it.** 12 September 2026, Data's decision after seeing
+all three paths rendered. **This supersedes decision 49 for this
+screen** — there are no derived plates here any more, and nothing is
+generated on this screen at all.
+
+**What 49 said and why it stops applying.** Decision 49 made the
+colony frame a DERIVED file: `layout_reference.json` rendered to a
+mask, the mask nine-sliced out of the galaxy map's master into a
+plate, the plate cut, and `boxes.json` measured back out of the
+plate's own holes. The licence for calling that derived was a
+byte-for-byte rebuild, and it held. What it could not do was BE the
+picture Data wanted: the rim was the master's lit edge with flat
+corner tiles, so c5977cf's "the sort bar's rim cannot be rounded"
+was a verdict about the machinery and not about the drawing, and the
+rails only covered gaps `frame_master.struts` could see as
+rectangles between facing windows.
+
+**What replaces it.** `screens/colony_summary/assets/frame.png`,
+authored artwork, committed, scaled to the reference area and
+blitted. Every rectangle in `layout_reference.json` is one of its
+holes. `tools/boxes_from_reference.py` writes `boxes.json` from that
+file plus `BLEED` and `colonyplates.reseat` rebuilds the same rects
+at every load, so the written file is a cache and never the
+authority — which is the fault this project walked into on the day
+it became possible, a reference edited without running the tool
+leaving yesterday's fills behind today's frame.
+
+**DECISION 3 IS NOT WEAKENED, IT IS SHORTER.** Its guarantee was
+that the holes, the mask and the boxes all say one thing. The mask is
+gone because the artwork is no longer generated FROM the rectangles —
+it was drawn first and they were measured off it — so the chain is two
+links. What holds them together is stronger than what it replaces:
+every rectangle must match a transparent hole by OVERLAP, the match
+must be a clean bijection, and every window must sit inside its own
+hole at all three shipped resolutions, measured against the alpha. The
+ring — one rectangle standing for the whole artwork — is gone with the
+master it was measured off; "a hole is not a hole in the edge of the
+screen" is now asserted per hole, which also catches a window inside
+the metal but over the WRONG hole, which the ring never could.
+
+**THE ORDER OF WORK REVERSES, and that is the real change.** It was:
+type a rectangle, regenerate the plate, look. It is now: draw the
+frame, and move the rectangles to its holes. `tools/frame_holes.py`
+prints what a new frame's holes would be called and which of them
+nothing claims; the geometry follows the picture instead of the
+picture following the geometry.
+
+**WHAT IT COSTS, ON RECORD.** The colony screen no longer wears the
+same border as the galaxy map, and nothing checks that it does. The
+list is shorter than the Stage-A3 cutout, so 2560x1440 draws its
+figures at sprite step 2 where it drew them at 3. One hole — the
+pre-Stage-4 title cartouche — is claimed by nothing and shows the
+background. All three are measured, all three are in
+`v3_projektstatus.md`, and none of them was discovered afterwards.
+
+**FOUR PARKED ITEMS CLOSE AS SUPERSEDED**, not as done:
+
+| item | why it is closed |
+|---|---|
+| corner tiles | `frame_master.bevel_source` and the four flat tiles are deleted. There is no nine-slice to give a corner to. |
+| per-hole bevel | wanted so the sort bar's rim could be rounded without rounding every window; the rim is the artwork's now and each hole already has its own. |
+| master >= 3840 | the master was needed because the plate was assembled from it and upscaled; nothing is assembled. The colony frame is 1672x941 and is scaled like any other image. |
+| Brief 87 Part 3b | "should the F5 editor edit holes — drag a cutout, write `layout_reference.json`, rebuild the plate". There is no plate to rebuild. The question that is left is whether the editor may write the reference at all, which is a different question and is not parked here. |
+
+**AND THE CHECK COUNT WENT DOWN, which it may do in this shape only.**
+Seven checks were deleted because their SUBJECT was deleted — the
+frame cut, the validator, the built ring and bevel, the byte-for-byte
+plates, the preview switch, the strut rails, and the plateless
+renderer's own two. Each one's replacement is named in the status
+document. A check may not be deleted because it is inconvenient, and
+it may not be deleted because it is failing; it may be deleted when
+the thing it measures no longer exists, and then the commit says so
+and the two count documents move with it.
 
 ### Process
 

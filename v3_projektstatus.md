@@ -13,6 +13,18 @@ right and the header had gone stale** — resolved 10 September 2026
 by dating the header to the edit and giving this session its
 paragraph, below, so the two agree again.
 
+This session (12 September 2026), PHASE B: **the plate machinery is
+deleted and the static frame is the only path** (fundament decision
+55, superseding 49 for this screen). Six tools, one screen module, the
+three generated plates, the rendered masks, both `.gitignore` entries,
+`setup.py`'s build step and `layout_reference`'s ring and gap tables
+are gone; `frame_preview` and `colony_plateless` are gone from
+`settings.json` and from `load_settings`. Stage 5 folded in:
+`info_style` removed. **The check count went DOWN, 122 -> 115**, which
+it may do only in this shape — seven checks whose subject was deleted,
+each with its replacement named. See "Phase B: what was deleted and
+what replaced it" below.
+
 This session (12 September 2026), last: **the colony screen wears one
 fixed image** — Data's decision, and it is the path that ships.
 `screens/colony_summary/assets/frame.png` is Data's retouched copy of
@@ -824,7 +836,7 @@ to stay uncomfortable to extend.
 │   ├── colony_summary/                ID 20, frame, list, sidebar,
 │   │   │                              scan box, galaxy inset, and
 │   │   │                              the population move
-│   │   ├── screen.py             295  the seam only: boxes, wording,
+│   │   ├── screen.py             291  the seam only: boxes, wording,
 │   │   │                              client; everything else is a
 │   │   │                              module beside it
 │   │   ├── colonyrows.py              the numbers per colony
@@ -848,19 +860,19 @@ to stay uncomfortable to extend.
 │   │   ├── colonymoveui.py            the state between two clicks
 │   │   ├── colonysend.py              the two clicks on the wire,
 │   │   │                              each confirmed by its effect
-│   │   ├── colonyframe.py             WHICH frame image, if any
-│   │   ├── colonyplates.py         84  what a window IS: the rule,
+│   │   ├── colonyplates.py         50  what a window IS: the rule,
 │   │   │                              the rects derived at startup,
-│   │   │                              the fills, and the drawn
-│   │   │                              fill / rim / lit line when
-│   │   │                              there is no artwork at all
+│   │   │                              and the panel fills
 │   │   ├── layout.json                frame, sort/return native
 │   │   │                              click points, empire rows,
 │   │   │                              the move's own wording
-│   │   ├── boxes.json                 14 cutouts, all derived — from
-│   │   │                              the plate's holes, or straight
-│   │   │                              from layout_reference.json
-│   │   └── assets/                    frame.png (1672x941)
+│   │   ├── boxes.json                 14 cutouts + 6 columns; the
+│   │   │                              cutouts are a CACHE of
+│   │   │                              layout_reference.json, rebuilt
+│   │   │                              at every load
+│   │   └── assets/                    frame.png (1672x941) — the
+│   │                                  frame, and the artwork every
+│   │                                  rect is measured off
 │   └── _template/                 50  Copy to create a screen
 ├── assets/shared/                     fonts, banner, cursor, skins,
 │                                      help/ (labels.json + the
@@ -938,23 +950,16 @@ to stay uncomfortable to extend.
     ├── zoom_check.py             153  Zoom ladder against a live map
     ├── struct_probe.py           144  Live offset verification
     ├── make_sidebar_icons.py     129  Cut the five sidebar icons
-    ├── frame_holes.py            220  Boxes from frame cutouts, one
-    │                                  naming rule per screen; the
-    │                                  colony rule matches holes to
-    │                                  layout_reference.json by
-    │                                  OVERLAP, never by order
-    ├── colony_frame_check.py     208  Read-only: holds a colony
-    │                                  frame PNG against the rules
-    │                                  that survived decision 53,
-    │                                  where the artwork actually is
-    ├── gimp_fixtures.py          152  The layer mask and the named
-    │                                  guide Data cuts against, into
-    │                                  ~/orionlayer-fixtures/gimp/
-    ├── boxes_from_reference.py   139  layout_reference.json + BLEED
-    │                                  -> boxes.json, with no artwork
-    │                                  on the path. --check asserts
+    ├── frame_holes.py            197  WHICH hole is which box: the
+    │                                  colony rule matches every rect
+    │                                  to a hole of assets/frame.png
+    │                                  by OVERLAP, never by order;
+    │                                  galaxy_map still derives its
+    │                                  boxes here
+    ├── boxes_from_reference.py   129  layout_reference.json + BLEED
+    │                                  -> boxes.json. --check asserts
     │                                  the file IS that derivation
-    ├── setup.py                  158  Rebuild generated artwork
+    ├── setup.py                  138  Rebuild generated artwork
     │                                  after a clone, then verify
     ├── star_icon_check.py        109  Which star sprite resolves
     ├── version_check.py               Engine version vs orion2re src
@@ -4248,10 +4253,21 @@ change at all — the corner tiles would simply stop being flat. If
 the rounding should apply to the sort bar alone, the per-hole bevel
 source is the second half of the job.
 
-**This is also the moment the >= 3840 master would settle**, since
-the holes are re-cut against it anyway — see "Resolution reach" in
-the section below, and Brief 87 Part 3b, which is deferred on the
-same trigger.
+**ALL OF IT CLOSES AS SUPERSEDED — 12 September 2026, decision 55**,
+and the verdict above was never wrong; it stopped having a subject.
+The colony screen wears one fixed image and the rim is the artwork's
+own, so:
+
+| parked item | closed because |
+|---|---|
+| corner tiles | `bevel_source` and the four flat tiles are deleted with `frame_master.py`. There is no nine-slice to give a corner to. |
+| per-hole bevel | it was wanted so the sort bar could be rounded without rounding every window. Each hole carries its own rim now, drawn by hand. |
+| master >= 3840 | the master was needed because the plate was assembled from it and upscaled to 2160p. Nothing is assembled. `assets/frame.png` is 1672x941 and is scaled like any other image; whether THAT is enough at 2160p is a question about one file and is answered by looking at it. |
+| the rim cannot be rounded | it can. Data chamfered these holes' corners in GIMP on 10 September, which is the file the screen now wears — 1 724 alpha pixels changed, concentrated at the corners. The obstacle was never the radius, it was that the rim was RGB the alpha never touched. |
+
+The measurement that produced all four — the original turns its rim
+corner on ~2 native px, ~3 reference — is not superseded and is the
+number any future rounding uses.
 
 ### Two rules of unknown parentage — 11 September 2026, one settled the same day
 
@@ -4318,6 +4334,122 @@ false, the artwork used directly), and then the check is measuring a
 plate nobody draws. **Which of the two paths the colony screen takes
 is the open decision**, and it is upstream of this check rather than
 settled by it.
+
+### Phase B: what was deleted and what replaced it — 12 September 2026
+
+**Data's decision after seeing all three paths rendered.** Fundament
+decision 55 supersedes 49 for this screen. The colony screen wears
+`screens/colony_summary/assets/frame.png`, scaled to the reference
+area and blitted, and there is nothing to choose.
+
+**Deleted.**
+
+| gone | what it did |
+|---|---|
+| `tools/frame_build.py` | assembled the plate: ring, rails, junctions, bevel |
+| `tools/frame_master.py` | `bevel_source`, the corner tiles, the rail table — what the master CONTAINED |
+| `tools/frame_mask.py` | rendered the window mask the plate was cut against |
+| `tools/frame_cut.py` | punched the alpha from the mask |
+| `tools/colony_frame_check.py` | the read-only validator for Data's working files |
+| `tools/gimp_fixtures.py` | wrote the layer mask and the labelled guide |
+| `screens/colony_summary/colonyframe.py` | chose between a plate and the shipped artwork |
+| `assets/frames/`, `assets/frame_masks/` | the three plates and the masks, with both `.gitignore` entries |
+| `setup.py`'s `frame_build` step | rebuilt the plates after a clone |
+| `layout_reference`: `ring`, `_ring_source`, `gaps`, `_gaps_note` | the master's metal border and its seven struts |
+| `settings.frame_preview`, `settings.colony_plateless` | and their `load_settings` defaults |
+| `colonyplates`' drawn fill / rim / lit line, `draw_plate`'s `fill` / `rim` / `radius` | the plateless prototype; every other caller always passed the defaults |
+| `output.info_style` | Stage 5 — the switch, not the renderer |
+| `frame_holes`: `PANEL_KEYS`, `ROW_SHAPE`, the order fallback | naming by position, which is the fault the overlap match exists to prevent |
+
+**What `tools/frame_holes.py` keeps, and why.** `find_holes` is the
+alpha reading every check that measures artwork goes through.
+`name_holes` with the colony rule and `_rows` is what holds
+`layout_reference.json` to `assets/frame.png` — every rectangle
+matched to a hole by OVERLAP, no clean bijection no answer, the holes
+nothing claims reported — and the smoke test runs it on the shipped
+file. `RULE_NAMES` and `cutout_names` are the vocabulary
+`core/editor/boxclass.py` asks for: which boxes are cutouts and
+therefore LOCKED in the F5 editor. `to_ref`, `--write` and the
+galaxy_map rule are there because **the galaxy map still derives its
+boxes from its own `frame.png` that way**, and nothing about that
+screen changed. Its own reference loader went: the rule for what
+counts as a window now lives in `colonyplates`, which is the side that
+has to answer it with no tool on the path.
+
+**galaxy_map is untouched, and this is what was shared.** Its
+`assets/frame.png` was the MASTER the colony plate was nine-sliced out
+of — `setup.py` called it one and required it for a build step. It is
+now simply that screen's own frame, and the line in `REQUIRED_INPUTS`
+says so. `core/style.draw_plate` is shared by every screen through
+`draw_thin_border` and is back to the one line it was before Phase A.
+
+**The seven deleted checks, and what replaced each.**
+
+| deleted | replaced by |
+|---|---|
+| colony rebuild frame cut (holes == mask, hard alpha) | every window inside its own hole, measured against `assets/frame.png`'s alpha at three resolutions |
+| colony frame validator (passes the reference mask, fails a broken one) | the same check — the validator existed because the suite had no artwork, and now it has |
+| colony frame built from the master (nine-slice ring, bevel, struts are metal) | nothing, and nothing is needed: no plate is assembled |
+| colony frame switch + decision 49's byte-for-byte plates | nothing generated is left on this screen to reproduce |
+| colony frame rails (every gap the master's strut, bare tile) | nothing. The rails covered gaps `frame_master.struts` could see; the artwork covers its own |
+| colony_summary draws its own boxes with no artwork | the prototype is deleted |
+| the plateless rim is a marked DEVIATION | the marking is deleted with the rim |
+
+Three checks that survived were re-pointed rather than lost: `holes ==
+mask == boxes` became `boxes.json` IS `layout_reference.json` plus
+BLEED, byte for byte, PLUS an assertion against the LIVE boxes that
+`reseat` ran; "every window inside the ring" became "inside its own
+hole", which also catches a window inside the metal but over the wrong
+hole; and the mask-reproducibility check became "every rectangle
+resolves to the box the screen holds".
+
+**Stage 5, folded in.** `info_style` is gone: the two pictures were
+rendered beside the native, Data took the paragraph, and a switch with
+one live setting is a branch nobody takes (brief 87; brief 81's "if
+the paragraph stays the only user"). The `rows` RENDERER stays because
+`planet_output` draws it, and the coloured cell renderer stays as it
+always was going to (the exclusion recorded above). The smoke check
+that asserted "both `info_style` variants draw" was a tautology with
+one variant left and now asserts that a stray key cannot bring the
+branch back. **The old modules' markers needed no retargeting** — the
+marking inventory is green because none of the deleted files carried
+one; `gimp_fixtures.py` did, and its entry went with the file. **The
+443aff1 tautology was already rewritten** in an earlier commit and
+still reads its edges from `boxes.json` rather than from the
+renderer's own expression; re-checked, unchanged.
+
+**Green at 1920x1080, 2560x1440, 3840x2160 and 3440x1371**, the last
+of which letterboxes 501 px each side.
+
+### Open, not built: the title hole
+
+The pre-Stage-4 title cartouche — image `(640, 10, 386, 45)`,
+reference `[735, 11, 443, 52]` — is the one hole no rectangle claims.
+It shows the background. `frame.title_rect` is absent and
+`frame._no_title_note` says why: this screen has drawn no title since
+Stage 4. Candidates, none of them chosen and none of them started:
+
+- **The SORT label.** The original prints SORT in the 77 native px
+  between its list and its first sort field — ink at native x 23..74,
+  y 456..462, which is 156 x 16 reference px. The cartouche is 443
+  wide and 52 high, so it FITS at the transcribed proportion, which no
+  other place on this screen does. It is in the wrong place — the
+  original's is beside the sort row, not above the list — so it would
+  be a DEVIATION in position with a transcription in size. The item
+  has been parked since brief 78.
+- **The screen's own title.** What the hole was cut for. It would be
+  an INVENTION: MOO2 draws no title on this screen, and `_no_title_note`
+  is the record of that being noticed.
+- **The empire name, or the stardate.** Both are on the wire and
+  neither is drawn here. Same objection as the title, plus they
+  duplicate the galaxy map.
+- **Nothing, and retouch the hole away.** The cheapest, and it is a
+  GIMP edit rather than a code change: fill the cartouche with metal
+  in `assets/frame.png`, and the smoke test's spare-hole line goes
+  from one to none with no rectangle moving.
+
+Whatever goes there is Data's, and the fourth option is the only one
+that needs no decision about what this screen says.
 
 ### The colony screen wears one fixed image — 12 September 2026
 
@@ -4939,6 +5071,13 @@ figure partly underneath. The original's own click and ink disagree
 there. `colonyicons.slot_at` already transcribed it; "the click
 should follow the visible figure" is the invention, and a check now
 says so.
+
+**Stage 5's deletion list, with one exclusion. DONE 12 September 2026,
+and what it deleted was not what it expected** — the "superseded
+frame" turned out to be the frame this screen wears, and it is the
+PLATE machinery that went (decision 55). The exclusion held exactly as
+written: the coloured cell renderer stays. The re-targeting turned out
+to be nothing to do — none of the deleted files carried a marking.**
 
 **Stage 5's deletion list, with one exclusion.** Stage 5 deletes the
 superseded frame and its flag, and re-targets the old markers. **The
@@ -6603,7 +6742,24 @@ RETURN — the control, not the gesture — with its reason beside it in
 citations in fundament section 3 were already corrected in `ccf7e0c`
 and were re-read rather than re-written.
 
-### Brief 87 Part 3b — the editor writing frame holes: DEFERRED
+### Brief 87 Part 3b — the editor writing frame holes: CLOSED AS SUPERSEDED, 12 September 2026
+
+**There is no plate to rebuild.** This item asked whether the F5
+editor should let a cutout be dragged, write `layout_reference.json`
+and rebuild the plate through `frame_build.py`; the plate machinery is
+deleted (decision 55) and `frame_build.py` with it. The reason it was
+deferred — *"a second writer for a derived file"* — has no referent:
+nothing on this screen is derived any more.
+
+**What is LEFT of the question is a different one and is not parked
+here.** Whether the editor may write `layout_reference.json` at all is
+still open, and the objection has changed shape: the file is not a
+derived artefact, it is the geometry, and the thing that would have to
+survive a drag is not a byte-for-byte rebuild but the rule that every
+rectangle lands inside a hole of the artwork. A drag that broke that
+would be caught by the smoke test rather than being unanswerable. It
+is a smaller question than this one was. The record below is what was
+decided on 10 September and why.
 
 Data's decision, 10 September 2026. **NOT `phase 3b` of pop
 movement**, the section directly above this one, which is ACCEPTED
