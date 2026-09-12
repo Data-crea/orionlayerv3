@@ -31,6 +31,12 @@ used in a pipeline — but there is no `--fix`, no writing, and no
 guessing at what she meant. A hole that is 3 px off is reported as 3
 px off.
 
+**FOURTEEN WINDOWS SINCE 12 September 2026**, not eight: the one
+`sort_bar` is seven slots again, one per sort key, because Data's
+artwork cuts one per key. Every rule below is per BOX and none of
+them counts to eight — `frame_holes.ROW_SHAPE` is where the shape is
+stated, derived from the key lists rather than typed here.
+
 THE HOLE CONVENTION IS FOUND, NOT ASSUMED, and that is not politeness
 — the two mask conventions in this project are opposites.
 `tools/frame_mask.py` writes WINDOWS WHITE on black; a GIMP layer
@@ -111,7 +117,7 @@ def read(path, forced=None):
         rows = frame_holes._rows(holes)
         shape = [len(r) for r in rows]
         tried.append((how, f"{len(holes)} holes, rows {shape}"))
-        if shape == [1, 1, 4, 2] or forced:
+        if shape == frame_holes.ROW_SHAPE or forced:
             return arr, how, holes, rows, tried
     return arr, None, [], [], tried
 
@@ -121,21 +127,30 @@ def rule(name, ok_, detail):
     return 0 if ok_ else 1
 
 
-def check_rows(rows):
-    """The naming rule: 4 rows of 1 / 1 / 4 / 2, named by order."""
+def check_rows(rows, holes, size):
+    """The naming rule: four rows of 1 / 1 / 4 / 8, then the namer.
+
+    **THE SHAPE IS THE RULE AND THE ORDER IS NOT** — 12 September
+    2026, when the sort row went from two holes to eight. The row
+    counts still say the file is structurally the colony screen, and
+    a RETURN that has drifted up into the lower band still fails
+    here. WHICH hole is which is `frame_holes.name_holes`'s answer
+    now, matched against `layout_reference.json` by overlap, so the
+    two slots Data swaps in GIMP come back named correctly instead of
+    quietly trading keys. The tool prints which way the match went.
+    """
     shape = [len(r) for r in rows]
-    bad = rule("four rows 1-1-4-2", shape == [1, 1, 4, 2],
-               f"found {shape}")
-    if shape != [1, 1, 4, 2]:
+    want = frame_holes.ROW_SHAPE
+    bad = rule(f"four rows {'-'.join(str(v) for v in want)}",
+               shape == want, f"found {shape}")
+    if shape != want:
         for i, r in enumerate(rows):
             print(f"          row {i}: {r}")
         return {}, bad
-    names = {"header": rows[0][0], "list_area": rows[1][0]}
-    for key, r in zip(frame_holes.BAND_KEYS, rows[2]):
-        names[key] = r
-    names["sort_bar"], names["return"] = rows[3]
+    names = frame_holes.name_holes(holes, "colony_summary", size)
+    print(f"          matched by {frame_holes.LAST_MATCH}")
     for key, r in names.items():
-        print(f"          {key:14s} {r}")
+        print(f"          {key:14s} {tuple(r)}")
     return names, bad
 
 
@@ -241,6 +256,34 @@ def check_list(names, w_img, h_img, lr):
     return bad
 
 
+def report_sort_rails(names, w_img, h_img):
+    """The metal between the slots, per gap. A REPORT AND NO RULE.
+
+    The suite dropped "every gap is exactly its role's strut" on
+    11 September 2026 because that width is one WE chose, and the
+    seven slots make the point again from the other end: their gaps
+    are whatever Data's cut-outs leave, and `frame_build.lay_rail`
+    stretches the master's `in_row` divider across each one. So the
+    numbers come out on every run and none of them decides anything.
+
+    A gap that is much narrower than the 38 ref px the divider was
+    measured at is a STRETCHED rail — visible as a flattened
+    moulding, not as a failure — which is exactly the judgement that
+    has to be made on the picture rather than in a tool.
+    """
+    row = [(k, to_ref(r, w_img, h_img)) for k, r in names.items()
+           if k in frame_holes.SORT_BOX_KEYS or k == "return"]
+    row.sort(key=lambda kv: kv[1][0])
+    print(f"          sort row, {len(row)} boxes, gaps as ref px "
+          f"(in_row divider measures 38):")
+    for (ka, a), (kb, b) in zip(row, row[1:]):
+        print(f"            {ka:15s} -> {kb:15s} "
+              f"{b[0] - (a[0] + a[2]):6.1f}")
+    for key, r in row:
+        print(f"            {key:15s} x {r[0]:7.1f} w {r[2]:6.1f} "
+              f"y {r[1]:7.1f} h {r[3]:5.1f}")
+
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("png", help="a mask or a frame/master PNG")
@@ -258,13 +301,15 @@ def main():
     for name, why in tried:
         print(f"    {name:6s} {why}")
     if how is None:
-        print("\n  No reading gives four rows of 1/1/4/2. Nothing below "
+        print(f"\n  No reading gives four rows of "
+              f"{'/'.join(str(v) for v in frame_holes.ROW_SHAPE)}."
+              " Nothing below "
               "can be measured.\n  Force one with --holes to see what it "
               "does find.")
         return 1
     print(f"  convention: {how}\n")
 
-    names, bad = check_rows(rows)
+    names, bad = check_rows(rows, holes, (w_img, h_img))
     if not names:
         return 1
     mask = hole_mask(arr, how)
@@ -272,6 +317,7 @@ def main():
     bad |= check_ring(arr, how, names, (w_img, h_img))
     bad |= check_inset(names, w_img, h_img)
     bad |= check_list(names, w_img, h_img, lr)
+    report_sort_rails(names, w_img, h_img)
     print(f"\n{'FAILED' if bad else 'ALL RULES HOLD'} — "
           f"chosen rules are not checked here or in the suite; see the "
           f"suite's report lines for their measured values.\n")

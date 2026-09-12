@@ -56,6 +56,7 @@ except ImportError:
     sys.exit("Pillow is missing. Run: pip install pillow --break-system-packages")
 
 import frame_cut  # noqa: E402
+import frame_holes  # noqa: E402
 import frame_mask  # noqa: E402
 from frame_master import (  # noqa: E402
     RAIL_ROLES, bevel_source, junction_source, master_rails,
@@ -202,13 +203,28 @@ def _facing(rects, gx, gy, gw, gh, vertical):
     return out
 
 
+#: The windows of the bottom row, by their `layout_reference.json`
+#: names — seven sort slots and RETURN. Taken from `frame_holes` so
+#: the row's membership is stated once; `return_button` is that file's
+#: spelling, which `frame_holes.BOX_NAME` maps to the box called
+#: `return`.
+#:
+#: IT WAS `{"sort_bar", "return_button"}` UNTIL 12 September 2026, and
+#: the failure of leaving it would have been quiet: a gap whose
+#: windows it does not recognise falls through to `list_band`, so the
+#: whole band-to-sort seam would have been laid with the wrong strut
+#: and nothing would have failed — the rail would simply have been the
+#: master's map|slot divider instead of its box|slot one.
+SORT_ROW = {"return_button"} | set(frame_holes.SORT_BOX_KEYS)
+
+
 def gap_role(names, vertical):
     """Which rail a colony gap gets, from the windows it separates."""
     if vertical:
         return "in_row"
     if "header" in names:
         return "header_list"
-    if names & {"sort_bar", "return_button"}:
+    if names & SORT_ROW:
         return "band_sort"
     return "list_band"
 

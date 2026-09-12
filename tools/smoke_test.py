@@ -982,6 +982,15 @@ def main():
     cs = d.active
     assert cs.GAME_SCREEN_ID == 20
     import frame_holes as fh
+    from screens.colony_summary import colonysort as _csort_mod
+    #: The original's seven sort fields, native x — the literals of
+    #: Add_Multi_Button_Field_(x, 446, ...) at colsum.cpp:267-273 in
+    #: ~/orion2re/src/game/colsum.cpp, so a retyped one fails. ONE
+    #: COPY: the injection check below and the `_sort_slots` pointer
+    #: check both read this.
+    NATIVE_X_SORT = {"name": 89, "population": 140, "food": 219,
+                     "industry": 262, "science": 326, "producing": 393,
+                     "bc": 480}
     # ── THE CUTOUTS COME FROM THE BUILT PLATE NOW (Stage 4) ──
     # Decision 3's chain is unchanged and its source moved: boxes.json
     # is generated from the plate frame_build.py makes, not from the
@@ -993,8 +1002,12 @@ def main():
                           "frames", "frame_1920x1080.png")
     if os.path.exists(_plate):
         fw, fhh, holes = fh.find_holes(_plate)
-        assert len(holes) == 8, len(holes)
-        named = fh.name_holes(holes, "colony_summary")
+        # FOURTEEN, DERIVED FROM THE ROW SHAPE and not typed: a header,
+        # the list, the lower band's four and the sort row's seven
+        # slots plus RETURN. It was 8 until 12 September 2026, when the
+        # one sort_bar became a slot per key.
+        assert len(holes) == sum(fh.ROW_SHAPE), (len(holes), fh.ROW_SHAPE)
+        named = fh.name_holes(holes, "colony_summary", (fw, fhh))
         # THE CUTOUT BOXES, AND THE SIX COLUMN BOXES THAT ARE NOT
         # CUTOUTS. Decision 3's own second half: "Boxes that sit
         # INSIDE a cutout are placed by hand and have no hole to
@@ -1019,58 +1032,218 @@ def main():
         _cut_note = f"{len(holes)} plate holes"
     else:
         _cut_note = (f"plate absent, run `python tools/frame_build.py`")
-    # ONE sort bar, not seven buttons.
+    # ── SEVEN SLOTS AGAIN, ONE BOX PER KEY ──────────────────────
     #
-    # **IT NO LONGER SPANS THE LIST'S WIDTH, and "sort_bar.x ==
-    # list_area.x" is settled and dropped — 11 September 2026.** It
-    # was the first of the two rules of unknown parentage that
-    # decision 53 left standing, and the measurement that settles it
-    # says OURS, twice over:
+    # **DEVIATION, 12 September 2026, reversing "THE BAR IS ONE HOLE
+    # NOW" (Stage A3).** Stage A3 cut one `sort_bar` and put the
+    # division in `colonysort.layout`, on the reading that the
+    # original has ONE recessed strip with seven words laid along it.
+    # That reading is unchanged and is still what colsum.cpp says.
+    # What changed is the artwork: Data's frame cuts a slot per key
+    # and he places them by hand, so the division is geometry again.
+    # `layout_reference._sort_slots_note` carries the whole entry.
     #
-    #   colsum.cpp:265-271 — the seven Add_Multi_Button_Field_ calls
-    #     start at native x 89 (140, 219, 262, 326, 393, 480 after it)
-    #   colsum.cpp:291 — the first list field is
-    #     Add_Hidden_Field_(12, y1, 101, y_row_end), and the colony
-    #     name is PRINTED at x 12 too
-    #     (Squeeze_Formatted_Paragraph_Centered_(0x0C, ...),
-    #     colsum.cpp:582)
-    #   live FIELD_LIST, orion2re 1.60, screen 20, stardate 3502.4 —
-    #     the same seven x, y 446..469, the last ending at x_end 515
+    # "sort_bar.x == list_area.x" was settled and dropped on
+    # 11 September 2026 and does not come back per slot — the
+    # original's own strip starts 77 native px (231 reference) to the
+    # RIGHT of its list (Add_Multi_Button_Field_ at native x 89,
+    # colsum.cpp:267-273, against the first list field's
+    # Add_Hidden_Field_(12, y1, 101, y_row_end) at colsum.cpp:291),
+    # and where ours starts is Data's. Reported, not enforced.
     #
-    # The original puts its sort strip 77 native px — 231 reference
-    # px — to the RIGHT of its list. Ours started at the same x as
-    # the list because we chose that, and the comment here said so
-    # without a source, which is exactly the signature decision 53
-    # made the test. Reported now, not enforced.
-    #
-    # The work order cited colsum.cpp:267-273 and :311 for these; in
-    # this tree they are :265-271 and :291, and :311 is the
-    # full-screen Add_Hidden_Field_(0, 0, 639, 479) catch-all.
-    _bar = cs.box_rect("sort_bar")
+    # THE CITATION IS :267-273 AND NOT :265-271. The work order that
+    # asked for this said :265-271, and so did the comment that stood
+    # here; ~/orion2re/src/game/colsum.cpp puts the seven
+    # Add_Multi_Button_Field_ calls at 267-273 and RETURN's
+    # Add_Button_Field_(531, 445, ...) at 265, which is where the
+    # older number came from. doc/v3_orion2re_index.md:517 agrees.
+    _slots = {}
+    for _key in fh.SORT_KEYS:
+        _name = _csort_mod.box_name(_key)
+        assert _name in fh.SORT_BOX_KEYS, (
+            f"colonysort.box_name({_key!r}) is {_name!r} and "
+            f"frame_holes does not know that box — the two build the "
+            f"same string from opposite ends and must not drift")
+        _r = cs.box_rect(_name)
+        assert _r, f"colony_summary has no {_name} box"
+        _slots[_key] = _r
     _la = cs.box_rect("list_area")
-    assert _bar and _la, (_bar, _la)
-    report(f"sort_bar x {_bar[0]} w {_bar[2]} | list_area x {_la[0]} "
-           f"w {_la[2]} | the original's own offset is 231 ref px "
-           f"(native 89 against 12)")
+    _ordered = sorted(_slots.items(), key=lambda kv: kv[1][0])
+    report(f"sort slots x {_ordered[0][1][0]}.."
+           f"{_ordered[-1][1][0] + _ordered[-1][1][2]} | list_area x "
+           f"{_la[0]} w {_la[2]} | the original's own offset is 231 "
+           f"ref px (native 89 against 12)")
+    report("sort row gaps, ref px (the in_row divider measures 38): "
+           + ", ".join(
+               f"{_a[0]}->{_b[0]} {_b[1][0] - (_a[1][0] + _a[1][2])}"
+               for _a, _b in zip(_ordered, _ordered[1:])))
     # KEPT, and this one IS transcribed: the original draws RETURN as
-    # a separate raised plate to the right of the bar, native x 531
-    # (Add_Button_Field_(531, 445, ...), colsum.cpp:265) against the
-    # strip ending at 515.
-    assert cs.box_rect("return")[0] > _bar[0] + _bar[2], (
-        "RETURN must sit to the right of the sort bar")
-    # The seven keys divide it, and the SAME function answers the
-    # renderer and the click test (decision 5).
+    # a separate raised plate to the right of the whole strip, native
+    # x 531 (Add_Button_Field_(531, 445, ...), colsum.cpp:265) against
+    # the last sort field ending at x_end 515 (live FIELD_LIST,
+    # orion2re 1.60, screen 20). It is now asserted against EVERY
+    # slot rather than against one bar's right edge — a per-box rule
+    # for a per-box layout, and the thing that catches a slot Data
+    # drags past RETURN.
+    _rb = cs.box_rect("return")
+    for _key, _r in _ordered:
+        assert _r[0] + _r[2] <= _rb[0], (
+            f"the {_key} slot runs to x {_r[0] + _r[2]} and RETURN "
+            f"starts at {_rb[0]} — RETURN sits to the right of the "
+            f"whole sort row (colsum.cpp:265), and a slot that "
+            f"overlaps it is a slot to shrink, never a RETURN to move")
+    # THE SLOTS DO NOT OVERLAP EACH OTHER EITHER. They are separate
+    # holes in a plate, so this is a property of the artwork and not
+    # of any arithmetic here — and two slots that overlap would give
+    # one key a hit rect it shares, where the FIRST in layout.json's
+    # order silently wins every click in the shared strip.
+    for (_ka, _ra), (_kb, _rb2) in zip(_ordered, _ordered[1:]):
+        assert _ra[0] + _ra[2] <= _rb2[0], (
+            f"the {_ka} and {_kb} slots overlap: {_ra} and {_rb2}")
+    # The seven keys, and the SAME function answers the renderer and
+    # the click test (decision 5).
     _sb = cs._sort_buttons()
     assert [b.key for b in _sb] == fh.SORT_KEYS, [b.key for b in _sb]
-    _barpx = pygame.Rect(*cs.layout.rect(_bar))
-    assert _sb[0].hit.left == _barpx.left and _sb[-1].hit.right == _barpx.right
-    for _a, _b in zip(_sb, _sb[1:]):
-        assert _a.hit.right == _b.hit.left, (
-            f"the sort buttons do not tile the bar: {_a.key} ends at "
-            f"{_a.hit.right}, {_b.key} starts at {_b.hit.left}")
+    # **THE HIT RECT IS THE BOX.** Not a share of a bar: a click
+    # anywhere in a cut-out sorts by the key drawn in it.
+    for _b in _sb:
+        _want = pygame.Rect(*cs.layout.rect(_slots[_b.key]))
+        assert _b.hit == _want, (
+            f"{_b.key}'s hit rect is {_b.hit} and its box is {_want} "
+            f"— the hole is the button")
+    # **AND THE HIGHLIGHT IS THE WORD PLUS THE PAD, NOT THE BOX.**
+    # The transcription that had to survive the rewrite: the original
+    # lights a rectangle around the WORD (native 92..138 for ink at
+    # 94..136) inside a field that is wider (89..139), so the lit box
+    # grows with the word. Filling the slot would be one line shorter
+    # and would make all seven highlights the same width, which the
+    # original's never are. The tell is asserted rather than the
+    # construction: no two DIFFERENT words may light the same width.
+    _lit = {}
     for _b in _sb:
         assert _b.hit.contains(_b.highlight), (
-            f"{_b.key}'s highlight is wider than the area that hits it")
+            f"{_b.key}'s highlight is outside the box that hits it")
+        # Within a pixel: both edges are placed by integer division,
+        # so an odd leftover puts the centres one apart and that is
+        # the truncation and not a drift.
+        assert abs(_b.highlight.centerx - _b.hit.centerx) <= 1, (
+            f"{_b.key}'s highlight is not centred in its box: "
+            f"{_b.highlight} in {_b.hit}")
+        _lit[_b.label] = _b.highlight.width
+    _clamped = [b.key for b in _sb if b.highlight.width == b.hit.width]
+    assert len(set(_lit.values())) > 1, (
+        f"all seven highlights are {sorted(set(_lit.values()))} px "
+        f"wide — the lit box follows the WORD (colsum.cpp's own is "
+        f"native 92..138 for 'Name'), and seven equal ones mean it "
+        f"has quietly become the box")
+    report(f"sort highlights, window px at 1920x1080: "
+           + ", ".join(f"{k} {v}" for k, v in sorted(_lit.items()))
+           + (f" | clamped to the box: {_clamped}" if _clamped
+              else " | none clamped to its box"))
+    ok("colony_summary sort slots (one box per key, RETURN right of "
+       "all seven, hit == the hole, highlight == the word + pad)")
+
+    # ── `_sort_slots` IS A POINTER, NOT A SECOND COPY ───────────
+    #
+    # `layout_reference.json` types the seven rects, and beside each
+    # one it names the sort key, the label and the original's own
+    # field x — so somebody reading the geometry file knows which box
+    # is which without opening `layout.json`. That is a HAND-COPIED
+    # NUMBER IN A SECOND FILE, which is decision 36's whole subject
+    # and this project's most expensive recurring fault, so it gets a
+    # checker the same day it is written.
+    #
+    # The key and the label are held to `layout.json`, which is the
+    # one home for both; `native_x` is held to the source constants
+    # the injection check already asserts. And the ORDER is held too:
+    # the file lists them left to right, which is what makes reading
+    # it beside the picture possible at all.
+    _slot_meta = _lr_slots = app.res.load_json(
+        "screens/colony_summary/layout_reference.json", {}).get(
+            "_sort_slots", {})
+    assert list(_slot_meta) == fh.SORT_BOX_KEYS, (
+        f"layout_reference._sort_slots lists {list(_slot_meta)}, the "
+        f"boxes are {fh.SORT_BOX_KEYS} — same seven, same order")
+    for _bname, _meta in _slot_meta.items():
+        _key = _meta["key"]
+        assert _csort_mod.box_name(_key) == _bname, (_bname, _key)
+        _btn = next(b for b in cs._data["sort"]["buttons"]
+                    if b["key"] == _key)
+        assert _meta["label"] == _btn["label"], (
+            f"{_bname}'s label is {_meta['label']!r} here and "
+            f"{_btn['label']!r} in layout.json — layout.json is the "
+            f"home, this is the pointer")
+        assert _meta["native_x"] == NATIVE_X_SORT[_key], (
+            f"{_bname}'s native_x is {_meta['native_x']}, the original's "
+            f"field is at {NATIVE_X_SORT[_key]} (colsum.cpp:267-273)")
+        assert _meta["native_x"] <= _btn["native_click"][0] <= \
+            _meta["native_x"] + 12, (
+            f"{_bname}'s injection point is outside the field it names")
+    _slot_x = [cs.box_rect(_n)[0] for _n in _slot_meta]
+    assert _slot_x == sorted(_slot_x), (
+        f"layout_reference lists the slots in the order {list(_slot_meta)} "
+        f"and their x are {_slot_x} — the file is read beside the "
+        f"picture, so the order is left to right")
+    ok("layout_reference._sort_slots is a pointer to layout.json and "
+       "to colsum.cpp:267-273, not a second copy")
+
+    # ── A SWAPPED SLOT KEEPS ITS NAME ───────────────────────────
+    #
+    # The reason the namer matches by OVERLAP and not by order. Seven
+    # hand-placed holes in one row is a lot of chances to drag one
+    # past its neighbour, and an index-based namer answers that
+    # silently: PRODUCING would sort by science and every other thing
+    # on the screen would still be right. This project already paid
+    # for that once, with the last two bottom panels the wrong way
+    # round for a fortnight (`layout.json`, `panels._note`).
+    #
+    # Asserted by MOVING THE RECTANGLES rather than by reading the
+    # code: two slots are exchanged in a copy of the reference, a
+    # plate is rendered from it, and each name has to come back on
+    # the hole the reference now puts it on.
+    import tempfile as _sw_tf
+    import frame_build as _sw_fb
+    import frame_cut as _sw_fc
+    import frame_mask as _sw_fm
+    from PIL import Image as _sw_img
+    from core.config import REF_W as _SW_W, REF_H as _SW_H
+    _sw_windows = dict(_sw_fm.load_reference(_sw_fm.REFERENCE)[1])
+    _a, _b = fh.SORT_BOX_KEYS[1], fh.SORT_BOX_KEYS[4]
+    _sw_windows[_a], _sw_windows[_b] = _sw_windows[_b], _sw_windows[_a]
+    with _sw_tf.TemporaryDirectory() as _swd:
+        _swp = os.path.join(_swd, "swapped.png")
+        _sw_master = _sw_img.open(_sw_fb.MASTER)
+        _sw_fc.cut(_sw_fb.build(_sw_master, _sw_windows, _SW_W, _SW_H),
+                   _sw_windows, _SW_W, _SW_H)[0].save(_swp)
+        _sw_w, _sw_h, _sw_holes = fh.find_holes(_swp)
+        # The swapped geometry is handed in, because that is the case:
+        # Data moves two slots in GIMP and `layout_reference.json`
+        # moves with them. The file on disk is untouched.
+        _sw_named = fh.name_holes(
+            _sw_holes, "colony_summary", (_sw_w, _sw_h),
+            {_n: tuple(_r) for _n, _r in _sw_windows.items()})
+    assert "overlap" in (fh.LAST_MATCH or ""), fh.LAST_MATCH
+    # AND ORDER WOULD HAVE GOT IT WRONG, which is what makes this a
+    # test: after the swap the second slot from the left is where
+    # `sort_population` used to be, and an index-based namer calls it
+    # `sort_population` because it is second. It has to come back as
+    # the key the geometry now puts there.
+    _sw_row = sorted((tuple(_r) for _r in _sw_holes if _r[1] > 900),
+                     key=lambda _r: _r[0])
+    _sw_at = {tuple(_r): _n for _n, _r in _sw_named.items()}
+    assert _sw_at[_sw_row[1]] == _b, (
+        f"the second slot from the left came back as "
+        f"{_sw_at[_sw_row[1]]!r}; the swapped geometry puts {_b!r} "
+        f"there and {_a!r} is the name an INDEX would have given it")
+    for _n in (_a, _b):
+        assert list(_sw_named[_n])[:2] == list(_sw_windows[_n])[:2], (
+            f"{_n} was matched to {_sw_named[_n]} and the swapped "
+            f"reference puts it at {_sw_windows[_n]} — the namer is "
+            f"following ORDER again, and two slots Data exchanges in "
+            f"GIMP would trade their sort keys with nothing failing")
+    ok("frame_holes names the colony plate by overlap (two exchanged "
+       "sort slots keep their own names)")
+
 
     # WHICH of the three bottom cutouts is the galaxy map is derived
     # from the original, not from left-to-right position — the name
@@ -1120,9 +1293,7 @@ def main():
     # (colsum.cpp:265-273): the x is the field's left edge plus a
     # margin, the y sits in the 446 row. Asserting the source
     # constants rather than "some point", so a retyped number fails.
-    NATIVE_X = {"name": 89, "population": 140, "food": 219,
-                "industry": 262, "science": 326, "producing": 393,
-                "bc": 480}
+    NATIVE_X = NATIVE_X_SORT
     HOTKEY = {"name": "n", "population": "p", "food": "f",
               "industry": "i", "science": "s", "producing": "r",
               "bc": "b"}
@@ -3118,10 +3289,25 @@ def main():
             _sw, _sh)}
         for _b in _sbox.values():
             _b.update_layout(_slay)
+        # ONE BOX PER KEY since 12 September 2026. The row's font
+        # size is the first slot's, the way `colonysort.font_size`
+        # reads it — asserted here at four resolutions including one
+        # that is not 16:9, because the highlight has to contain its
+        # word at every one of them and 3440x1440 is where a letterbox
+        # offset would show up.
+        _slot_boxes = {}
+        for _k, _lbl in _sb_keys:
+            _bx = _sbox.get(_csort.box_name(_k))
+            assert _bx is not None, (
+                f"{_sw}x{_sh}: no {_csort.box_name(_k)} box")
+            _slot_boxes[_k] = _bx.screen_rect
         _sfs = _slay.font_size(
-            _sbox["sort_bar"].style.get("font_size", 18))
-        _btns = _csort.layout(_sbox["sort_bar"].screen_rect, _sb_keys,
-                              app.style, _sfs)
+            _sbox[_csort.box_name(_sb_keys[0][0])]
+            .style.get("font_size", 18))
+        _btns = _csort.layout(_slot_boxes, _sb_keys, app.style, _sfs)
+        assert len(_btns) == len(_sb_keys), (
+            f"{_sw}x{_sh}: {len(_btns)} buttons for "
+            f"{len(_sb_keys)} keys — a key lost its box")
         for _bt in _btns:
             _drawn = app.style.render_text(
                 _csort.display(_bt.label), _sfs, (255,) * 3).get_width()
@@ -4560,9 +4746,9 @@ def main():
     #
     # They stay MEASURED. The numbers below still come out on every
     # run, so a band that drifts is visible; it just no longer fails.
-    _band = sorted((_lr[_k] for _k in ("planet_info", "planet_output",
-                                       "galaxy_inset", "empire_stats")),
-                   key=lambda r: r[0])
+    import frame_holes as _fh_mod
+    _band_keys = _fh_mod.BAND_KEYS
+    _band = sorted((_lr[_k] for _k in _band_keys), key=lambda r: r[0])
     _gaps = [b[0] - (a[0] + a[2]) for a, b in zip(_band, _band[1:])]
     _l0, _l1 = _lr["list"][0], _lr["list"][0] + _lr["list"][2]
     report(f"lower band x {_band[0][0]}..{_band[-1][0] + _band[-1][2]} "
@@ -4570,9 +4756,25 @@ def main():
            f"(left {_band[0][0] - _l0:+d}, "
            f"right {_band[-1][0] + _band[-1][2] - _l1:+d}) | "
            f"panel gaps {_gaps}")
-    _sb, _rb = _lr["sort_bar"], _lr["return_button"]
-    report(f"sort row: sort_bar {_sb} + gap "
-           f"{_rb[0] - (_sb[0] + _sb[2])} + return {_rb}")
+    # THE SORT ROW IS EIGHT BOXES since 12 September 2026, and every
+    # width and gap in it is Data's. Reported per box, because the
+    # one number this used to print ("bar + gap + return") described a
+    # layout that no longer exists and a mean gap would hide exactly
+    # what a hand-placed row goes wrong in: one slot out of line.
+    _row = sorted(([_k] + list(_lr[_k])
+                   for _k in _fh_mod.SORT_BOX_KEYS + ["return_button"]),
+                  key=lambda r: r[1])
+    report("sort row, left to right: "
+           + " | ".join(f"{_r[0]} {_r[1:]}" for _r in _row))
+    report("sort row gaps: "
+           + ", ".join(f"{_a[0]}->{_b[0]} {_b[1] - (_a[1] + _a[3])}"
+                       for _a, _b in zip(_row, _row[1:]))
+           + f" | gaps.in_row documents {_lr['gaps']['in_row']}, "
+             f"gaps.band_sort {_lr['gaps']['band_sort']}")
+    report(f"band bottom {max(_lr[_k][1] + _lr[_k][3] for _k in _band_keys)}"
+           f" -> sort row top {min(_r[2] for _r in _row)} | sort row "
+           f"bottom {max(_r[2] + _r[4] for _r in _row)}, the ring's "
+           f"inner edge is at {_REF_H - _ring['bottom']}")
 
     # THE INSET'S ASPECT IS THE ORIGINAL'S COVERAGE, to a thousandth.
     # movebox.cpp:20-21: the crop is 128*(506000//128) by
@@ -4746,9 +4948,9 @@ def main():
         assert _bad.returncode == 1, (
             f"RETURN moved into the lower band's row and the validator "
             f"still passed:\n{_bad.stdout}")
-    ok("colony frame validator (passes the reference mask and reports "
-       "its eight rects\n       name for name, fails a mask whose "
-       "RETURN left the sort row)")
+    ok(f"colony frame validator (passes the reference mask and reports "
+       f"its {len(_good_rects)} rects\n       name for name, fails a "
+       f"mask whose RETURN left the sort row)")
 
     # ── The built frame carries the ring it was built for ──
     #
@@ -4809,9 +5011,12 @@ def main():
             f"opaque — the plate is not covering its own struts")
         # EVERY WINDOW HAS THE MASTER'S LIGHT EDGE ON ALL FOUR SIDES,
         # measured as a luminance ridge and not as "ink was drawn".
-        # The eight windows must also AGREE per side, because the
-        # bevel comes from one sampled hole through one function — if
-        # they drift apart, two code paths have got in.
+        # The windows must also AGREE per side, because the bevel
+        # comes from one sampled hole through one function — if they
+        # drift apart, two code paths have got in. (It was "the eight
+        # windows" until 12 September 2026; there are fourteen, and
+        # the narrowest is sort_bc at 57 ref px, which is where a
+        # per-side sample that is too wide would first show.)
         _flum = np.array(_fbcut.convert("RGB")).mean(axis=2)
         _band3 = max(1, round(_fb.BEVEL_REF
                               * min(_rw / _REF_W, _rh / _REF_H)))
@@ -4835,7 +5040,7 @@ def main():
                 f"{_v.min():.0f} against the plate's own metal at "
                 f"{_plate_med:.0f} — no ridge, so no bevel")
             assert _v.std() < 4, (
-                f"{_spec}: the eight windows' {_side} edges range "
+                f"{_spec}: the {len(_here)} windows' {_side} edges range "
                 f"{_v.min():.0f}..{_v.max():.0f} — they come from one "
                 f"sampled hole through one function and must agree")
     ok("colony frame built from the master (nine-slice ring matches the "
@@ -5220,6 +5425,17 @@ def main():
         # deviation.
         "screens/colony_summary/layout_reference.json": "THE BOX IS 239 x 189",
         "screens/colony_summary/screen.py": "cancel",
+        # ADDED 12 September 2026 with decision 54. The namer carries
+        # the seven sort slots' DEVIATION because it is where the
+        # reversal shows in code that is not the screen's: `sort_bar`
+        # became `sort_<key>` and the naming became an overlap match.
+        # Its check is the marking block in the colony_summary section,
+        # which names all five homes.
+        "tools/frame_holes.py": "sort_<key>",
+        # The generator of the guide PNG Data places the slots against
+        # — the sixth home of decision 54's marking, checked in the
+        # same block as the other five.
+        "tools/gimp_fixtures.py": "sort_<key>",
     }
     _MARKS = ("HD EXTENSION", "DEVIATION")
     _SELF = os.path.join("tools", "smoke_test.py")
@@ -10850,10 +11066,19 @@ def main():
         assert _f + _b + _l == _t, (_n, _t, _f, _b, _l)
         print(f"      {_n:18s} {_t:3d} boxes | free {_f:2d} "
               f"bound {_b} locked {_l:2d}")
+    # DERIVED, NOT TYPED: every cutout the rule can name is LOCKED
+    # and the six columns are BOUND, so the expected counts come out
+    # of the same two constants the classifier reads. It was
+    # `0 / 6 / 8` as literals and went stale the moment the sort bar
+    # became seven slots — which is the fault this file writes down
+    # about every hand-copied number.
     _cs_row = next(r for r in _cls_rows if r[0] == "colony_summary")
-    assert _cs_row[2] == 0 and _cs_row[3] == 6 and _cs_row[4] == 8, (
+    _cs_locked = len(_fh_mod.RULE_NAMES["colony_summary"])
+    assert _cs_row[2] == 0 and _cs_row[3] == len(_bch.COLUMN_BOXES) \
+        and _cs_row[4] == _cs_locked, (
         f"colony_summary classifies as {_cs_row[2]} free / "
-        f"{_cs_row[3]} bound / {_cs_row[4]} locked")
+        f"{_cs_row[3]} bound / {_cs_row[4]} locked, expected 0 / "
+        f"{len(_bch.COLUMN_BOXES)} / {_cs_locked}")
 
     # 4. HANDLES PER CLASS, and a refusal that says why.
     assert len(_bcl.HANDLES[_bcl.FREE]) == 8

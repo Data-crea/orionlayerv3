@@ -535,7 +535,11 @@ class ColonySummaryScreen(ScreenBase):
     def _render_buttons(self, surface):
         """Sort buttons and RETURN: the frame provides the bezel, so
         each box gets a fill plus its label; hover brightens it and
-        the active sort key stays lit.
+        the active sort key stays lit. The seven sort keys have a
+        cut-out each since 12 September 2026, and their panel fill
+        arrives with every other cutout's through `_render_panels` —
+        this method draws the highlight and the word and nothing
+        underneath them.
 
         **The active header does not indicate a direction, because
         the original has none.** `Switched_cmp_` (colsum.cpp:378-401)
@@ -562,7 +566,7 @@ class ColonySummaryScreen(ScreenBase):
                                  NAV_HOVER_BG, NAV_TEXT)
 
     def _sort_buttons(self):
-        """The seven keys inside the one sort_bar box — see
+        """The seven keys, one `sort_<key>` box each — see
         `colonysort.for_screen`, which is their ONE geometry."""
         return colonysort.for_screen(self)
 

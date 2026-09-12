@@ -73,12 +73,102 @@
       ]
     },
     {
-      "name": "sort_bar",
+      "name": "sort_name",
       "rect": [
-        105,
-        972,
-        1285,
-        36
+        160,
+        959,
+        202,
+        49
+      ],
+      "role": [
+        "click"
+      ],
+      "style": {
+        "font_size": 18
+      }
+    },
+    {
+      "name": "sort_population",
+      "rect": [
+        376,
+        959,
+        197,
+        49
+      ],
+      "role": [
+        "click"
+      ],
+      "style": {
+        "font_size": 18
+      }
+    },
+    {
+      "name": "sort_food",
+      "rect": [
+        586,
+        960,
+        198,
+        48
+      ],
+      "role": [
+        "click"
+      ],
+      "style": {
+        "font_size": 18
+      }
+    },
+    {
+      "name": "sort_industry",
+      "rect": [
+        796,
+        959,
+        200,
+        49
+      ],
+      "role": [
+        "click"
+      ],
+      "style": {
+        "font_size": 18
+      }
+    },
+    {
+      "name": "sort_science",
+      "rect": [
+        1009,
+        960,
+        199,
+        48
+      ],
+      "role": [
+        "click"
+      ],
+      "style": {
+        "font_size": 18
+      }
+    },
+    {
+      "name": "sort_producing",
+      "rect": [
+        1221,
+        960,
+        200,
+        48
+      ],
+      "role": [
+        "click"
+      ],
+      "style": {
+        "font_size": 18
+      }
+    },
+    {
+      "name": "sort_bc",
+      "rect": [
+        1436,
+        960,
+        61,
+        48
       ],
       "role": [
         "click"
@@ -249,12 +339,102 @@
       ]
     },
     {
-      "name": "sort_bar",
+      "name": "sort_name",
       "rect": [
-        105,
-        972,
-        1285,
-        36
+        160,
+        959,
+        202,
+        49
+      ],
+      "role": [
+        "click"
+      ],
+      "style": {
+        "font_size": 18
+      }
+    },
+    {
+      "name": "sort_population",
+      "rect": [
+        376,
+        959,
+        197,
+        49
+      ],
+      "role": [
+        "click"
+      ],
+      "style": {
+        "font_size": 18
+      }
+    },
+    {
+      "name": "sort_food",
+      "rect": [
+        586,
+        960,
+        198,
+        48
+      ],
+      "role": [
+        "click"
+      ],
+      "style": {
+        "font_size": 18
+      }
+    },
+    {
+      "name": "sort_industry",
+      "rect": [
+        796,
+        959,
+        200,
+        49
+      ],
+      "role": [
+        "click"
+      ],
+      "style": {
+        "font_size": 18
+      }
+    },
+    {
+      "name": "sort_science",
+      "rect": [
+        1009,
+        960,
+        199,
+        48
+      ],
+      "role": [
+        "click"
+      ],
+      "style": {
+        "font_size": 18
+      }
+    },
+    {
+      "name": "sort_producing",
+      "rect": [
+        1221,
+        960,
+        200,
+        48
+      ],
+      "role": [
+        "click"
+      ],
+      "style": {
+        "font_size": 18
+      }
+    },
+    {
+      "name": "sort_bc",
+      "rect": [
+        1436,
+        960,
+        61,
+        48
       ],
       "role": [
         "click"

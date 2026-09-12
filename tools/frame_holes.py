@@ -15,11 +15,12 @@ one rule per screen, chosen from the path (screens/<name>/assets/):
   galaxy_map      the largest hole is the map, the topmost narrow one
                   the title, the two on the right the sidebar and the
                   TURN button, the bottom row the six nav buttons
-  colony_summary  four rows of holes, grouped by vertical overlap:
-                  the header band, the list, the lower band's four
-                  panels (planet_info, planet_output, galaxy_inset,
-                  empire_stats, left to right) and the sort row's two
-                  (sort_bar, return)
+  colony_summary  MATCHED TO `layout_reference.json` BY OVERLAP, and
+                  the four rows (header, list, the lower band's four
+                  panels, the sort row's eight) are checked as a
+                  SHAPE rather than used as an order. Left-to-right
+                  order is the fallback for a plate with no reference
+                  beside it, and it says so when it falls back.
 """
 import json
 import os
@@ -29,7 +30,14 @@ import numpy as np
 from PIL import Image
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+# ITS OWN DIRECTORY, EXPLICITLY — the same fault `frame_cut` records:
+# `import frame_mask` resolves from a shell run because the script's
+# directory is on the path, and not from a loader that addresses this
+# file by path, which is how the smoke test reaches it.
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from core.config import REF_W, REF_H  # noqa: E402
+
+import frame_mask  # noqa: E402  (same directory)
 
 MIN_AREA = 2000
 ALPHA_LIMIT = 16
@@ -56,6 +64,22 @@ def find_holes(path):
 
 SORT_KEYS = ["name", "population", "food", "industry", "science",
              "producing", "bc"]
+#: One box per sort key, named `sort_<key>` — DEVIATION, 12 September
+#: 2026, reversing Stage A3's single `sort_bar`. Data's artwork cuts a
+#: slot per key, so the division is geometry again; see
+#: `layout_reference._sort_slots_note` and `colonysort`.
+#:
+#: DERIVED FROM `SORT_KEYS` AND NOT TYPED OUT, so the spelling rule
+#: lives once. `colonysort.box_name` builds the same string from the
+#: other end and a smoke check holds the two to each other.
+SORT_BOX_KEYS = [f"sort_{k}" for k in SORT_KEYS]
+
+#: `layout_reference.json` names a RECTANGLE, `boxes.json` names a
+#: BOX, and two of them differ. The mapping is this module's own —
+#: it is what `--write` writes and what the overlap match has to go
+#: through — so it is stated once here rather than inferred at each
+#: use. Anything absent maps to itself.
+BOX_NAME = {"return_button": "return", "list": "list_area"}
 # Left to right, so the galaxy map is the RIGHTMOST of the three —
 # derived from the source, not from position. The original draws its
 # small galaxy map with MOVEBOX::Draw_Galaxy_Map_Box_(nullptr, 0,
@@ -88,7 +112,7 @@ def _split_common(holes, main_name):
     return named, right, rest
 
 
-def name_holes_galaxy_map(holes):
+def name_holes_galaxy_map(holes, size=None, reference=None):
     named, right, rest = _split_common(holes, "map_area")
     named["sidebar"], named["nav_turn"] = right[0], right[1]
     bottom = sorted(rest, key=lambda r: r[0])
@@ -102,6 +126,11 @@ def name_holes_galaxy_map(holes):
 #: inset's native rect (380, 349, 128, 91) is centre x 444 of 640,
 #: which is the THIRD of the four, and the empire readouts the fourth.
 BAND_KEYS = ["planet_info", "planet_output", "galaxy_inset", "empire_stats"]
+
+#: The colony plate's four rows, by hole count. DERIVED from the key
+#: lists above so it cannot disagree with them: a header, the list,
+#: the lower band, and the sort row's seven slots plus RETURN.
+ROW_SHAPE = [1, 1, len(BAND_KEYS), len(SORT_BOX_KEYS) + 1]
 
 
 #: WHICH BOX NAMES EACH RULE CAN PRODUCE — the vocabulary, not a
@@ -128,8 +157,8 @@ BAND_KEYS = ["planet_info", "planet_output", "galaxy_inset", "empire_stats"]
 RULE_NAMES = {
     "galaxy_map": {"title", "map_area", "sidebar", "nav_turn"}
                   | {f"nav_{k}" for k in NAV_KEYS},
-    "colony_summary": {"header", "list_area", "sort_bar", "return"}
-                      | set(BAND_KEYS),
+    "colony_summary": {"header", "list_area", "return"}
+                      | set(BAND_KEYS) | set(SORT_BOX_KEYS),
 }
 
 
@@ -143,42 +172,145 @@ def cutout_names(screen):
     return RULE_NAMES.get(screen, set())
 
 
-def name_holes_colony_summary(holes):
-    """The built plate's eight windows, by shape and position.
+#: How the last colony naming was done, for whoever wants to print it.
+#: A REPORT CHANNEL AND NOT STATE: nothing reads it to decide
+#: anything, and the naming does not consult it. It exists because
+#: "which rule named these holes" is the first question to ask of a
+#: plate that came out wrong, and the answer was previously nowhere.
+LAST_MATCH = None
 
-    **REWRITTEN 7 September 2026 FOR THE STAGE A3 PLATE, and the old
-    rule could not have been adapted.** The shipped frame had 14
-    holes: a title, a right-hand sidebar, a right-hand RETURN, SEVEN
-    sort buttons and three bottom panels. The plate has 8: a header
-    band, the list, four panels in one lower band, ONE sort bar and
-    RETURN beside it. Nothing on the right of the list any more, one
-    sort hole instead of seven, and a header where the title was — so
-    `_split_common`, which exists to find a title and a right column,
-    does not apply here at all and is not called.
 
-    The shape is read off `layout_reference.json`'s own geometry
-    rather than off pixel thresholds: rows are found by grouping on y,
-    which is what makes the rule survive a plate rebuilt at a
-    different ring or with different gaps.
+def _overlap(a, b):
+    x = min(a[0] + a[2], b[0] + b[2]) - max(a[0], b[0])
+    y = min(a[1] + a[3], b[1] + b[3]) - max(a[1], b[1])
+    return x * y if x > 0 and y > 0 else 0
+
+
+def reference_windows(screen, size):
+    """`layout_reference.json`'s rectangles in IMAGE px, box-named.
+
+    Returns {} when the file is not there — a plate can be handed to
+    this module from anywhere, and a missing reference is a reason to
+    fall back rather than to fail.
     """
+    path = os.path.join(
+        os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+        "screens", screen, "layout_reference.json")
+    if not os.path.isfile(path) or not size:
+        return {}
+    _data, windows = frame_mask.load_reference(path)
+    img_w, img_h = size
+    sx, sy = img_w / REF_W, img_h / REF_H
+    return {BOX_NAME.get(name, name):
+            (x * sx, y * sy, w * sx, h * sy)
+            for name, (x, y, w, h) in windows.items()}
+
+
+def _match_by_overlap(holes, screen, size, want=None):
+    """{name: hole} matched by area overlap, or None.
+
+    **BY OVERLAP AND NOT BY ORDER, and the sort row is why** —
+    12 September 2026. Order-and-count was adequate while the
+    colony plate had two holes on its bottom row; it has eight now,
+    every one of them hand-placed in GIMP, and the failure mode of
+    an index is silent: two slots swapped left to right give a
+    frame where PRODUCING sorts by science and everything else on
+    the screen is still correct. That is the same fault this
+    project already paid for once, when `frame_holes` had the last
+    two bottom panels the wrong way round for a fortnight
+    (`layout.json`, `panels._note`, 4 September 2026).
+
+    A hole takes the reference rectangle it overlaps MOST, and the
+    match is rejected wholesale unless it is a bijection in which
+    every hole's best rectangle also ranks that hole first. A
+    partial match is not used for the holes it did get right: a
+    plate that half-matches is a plate whose geometry has moved, and
+    naming half of it would hide that.
+
+    `want` is {box name: rect in IMAGE px} and defaults to reading
+    `layout_reference.json` off the disk. It is a parameter because
+    that makes the matcher a pure function of the two things it
+    compares — the caller that wants to ask "what would these holes be
+    called against THAT geometry" can, without a file on disk.
+    """
+    want = reference_windows(screen, size) if want is None else want
+    if len(want) != len(holes):
+        return None
+    names = sorted(want)
+    best = {}
+    for hole in holes:
+        scored = sorted(names, key=lambda n: -_overlap(hole, want[n]))
+        if not _overlap(hole, want[scored[0]]):
+            return None
+        best[tuple(hole)] = scored[0]
+    if len(set(best.values())) != len(holes):
+        return None
+    # READING ORDER, BY ROW AND THEN BY X — and the row is `_rows`'
+    # overlap grouping, not the raw y. The matcher has no order of its
+    # own (it walks the holes as `find_holes` found them) and `--write`
+    # writes `boxes.json` in whatever order it is handed, so an
+    # unsorted answer reshuffles that file whenever scipy labels the
+    # blobs differently — a diff nobody can read, which is the fault
+    # the JSON formatting rule exists for. Sorting on the raw y is not
+    # enough either: the sort slots sit at y 961 and 962 because that
+    # is where the artwork cut them, so a plain y sort interleaves the
+    # row. Grouping first puts them in one row and x orders it.
+    order = {}
+    for i, row in enumerate(_rows(holes)):
+        for j, hole in enumerate(row):
+            order[tuple(hole)] = (i, j)
+    return {name: list(hole) for hole, name in
+            sorted(best.items(), key=lambda kv: order[kv[0]])}
+
+
+def name_holes_colony_summary(holes, size=None, reference=None):
+    """The built plate's fourteen windows.
+
+    **THE ROW SHAPE IS A CHECK, NOT THE NAMING** — 12 September 2026.
+    It was both until the sort row grew to eight hand-placed slots.
+    Now the rows say the plate is structurally the colony screen —
+    a header, the list, four panels in one band, eight controls in
+    the sort row — and `_match_by_overlap` says which hole is which,
+    against the rectangles `layout_reference.json` types. So a slot
+    Data drags past its neighbour still gets its own name, and a
+    plate that has genuinely lost a window still fails here.
+
+    **REWRITTEN 7 September 2026 FOR THE STAGE A3 PLATE**, and again
+    on 12 September. The shipped frame had 14 holes: a title, a
+    right-hand sidebar, a right-hand RETURN, seven sort buttons and
+    three bottom panels. Stage A3's plate had 8: a header band, the
+    list, four panels in one lower band, ONE sort bar and RETURN.
+    This plate has 14 again and they are not the old 14 — nothing on
+    the right of the list, a header where the title was, and the
+    seven sort buttons back as slots on the bottom row beside
+    RETURN. `_split_common`, which exists to find a title and a
+    right column, applies to none of it and is not called.
+    """
+    global LAST_MATCH
     rows = _rows(holes)
-    if len(rows) != 4:
+    shape = [len(r) for r in rows]
+    if shape != ROW_SHAPE:
         raise SystemExit(
-            f"expected 4 rows of holes (header, list, lower band, sort "
-            f"row), found {len(rows)}: {rows}")
+            f"expected rows of {ROW_SHAPE} holes (header, list, the "
+            f"lower band's {len(BAND_KEYS)}, the sort row's "
+            f"{len(SORT_BOX_KEYS) + 1}), found {shape}: {rows}")
+    named = _match_by_overlap(holes, "colony_summary", size, reference)
+    if named is not None:
+        LAST_MATCH = (
+            "overlap against layout_reference.json — a hand-placed "
+            "slot keeps its name whatever order it sits in")
+        return named
+    LAST_MATCH = (
+        "row order, left to right — no usable layout_reference.json "
+        "for this image size, so the sort slots are named by POSITION "
+        "and two swapped slots would be named the wrong way round")
     header, listing, band, sort = rows
-    if len(header) != 1 or len(listing) != 1:
-        raise SystemExit("the header and the list must be one hole each")
-    if len(band) != len(BAND_KEYS):
-        raise SystemExit(
-            f"the lower band has {len(band)} holes, expected "
-            f"{len(BAND_KEYS)}: {BAND_KEYS}")
-    if len(sort) != 2:
-        raise SystemExit("the sort row must be the sort bar and RETURN")
     named = {"header": header[0], "list_area": listing[0]}
     for key, r in zip(BAND_KEYS, band):
         named[key] = r
-    named["sort_bar"], named["return"] = sort
+    for key, r in zip(SORT_BOX_KEYS, sort[:-1]):
+        named[key] = r
+    named["return"] = sort[-1]
     return named
 
 
@@ -214,8 +346,11 @@ def screen_of(path):
     return None
 
 
-def name_holes(holes, screen="galaxy_map"):
-    return RULES[screen](holes)
+def name_holes(holes, screen="galaxy_map", size=None, reference=None):
+    """{box name: hole}. `size` is (img_w, img_h) and is what lets a
+    rule match against `layout_reference.json` instead of counting;
+    `reference` substitutes a geometry for that file's."""
+    return RULES[screen](holes, size, reference)
 
 
 def to_ref(rect, img_w, img_h, bleed=BLEED):
@@ -233,8 +368,10 @@ def main():
               + ", ".join(RULES))
         return
     img_w, img_h, holes = find_holes(path)
-    named = name_holes(holes, screen)
+    named = name_holes(holes, screen, (img_w, img_h))
     print(f"image {img_w}x{img_h}, {len(holes)} holes")
+    if LAST_MATCH:
+        print(f"  matched by {LAST_MATCH}")
     for k, r in named.items():
         print(f"  {k:14s} img={r}  ref={to_ref(r, img_w, img_h)}")
 

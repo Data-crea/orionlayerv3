@@ -66,12 +66,128 @@
   ],
   "_lower_band_note": "Four boxes, flush with the list's own edges at 107 and 1800, with gaps of 38 - THE MASTER'S OWN SLOT DIVIDER, 47 master px, the strut it puts between two buttons of one row. planet_output absorbs what the arithmetic leaves, because it is the only width in the band not fixed by something else: the two 320s are a pair and 253 is locked by the inset's aspect. 107 + 320 + 38 + 686 + 38 + 253 + 38 + 320 = 1800. THE INSET IS NO LONGER SHORTER THAN ITS NEIGHBOURS - 8 September 2026. It was 20 px shorter and centred (725 + 10 = 735) on the reading that its height is fixed by its own aspect; at the band's new 191 the aspect is not what binds. colonyinset.map_rect fits the map into 128:91 isotropically and takes min(w/128, h/91), and with the box 253 wide the WIDTH is the smaller term at every resolution - so the map is the same size at 200 and at 191 and the box may simply fill its band like the other three. It starts to shrink below 183.",
   "_galaxy_inset_note": "253 x 200 IS DERIVED AND CONFIRMED - doc/colony_inset_geometry.md Part 3. The original's inset covers 50.6*M x 40*M world units, whose aspect is 1.2651 at EVERY galaxy size because both divisors are constants and M cancels (movebox.cpp:20-21). 253/200 = 1.2650 against that, so the crop fills the box with no letterbox at any size INCLUDING orion2re's Maximum - the earlier expectation that Maximum letterboxes is WITHDRAWN, and it only did so if the crop were the galaxy rather than the original's coverage. The scale that follows is exactly 5/M reference px per world unit. At 3840x2160 the box is 506 x 400 device px, which is the small galaxy's own world extent at 1:1. DEVIATION - THE BOX IS 239 x 189 SINCE 8 September 2026, WAS 253 x 200, AND ONE STATED PROPERTY IS GONE WITH IT. The list grew 29 ref px so that 2560x1440 could take figure step 3 (see _list_height_note), the 29 came out of the lower band's height, and the band's height is what fixes this box. THE ASPECT RULE SURVIVES and is what the check still asserts: 239/189 = 1.26455 against the coverage's 1.265134, 0.00058 apart, against 253/200's 0.00013 - both inside the thousandth. 239 x 189 is the LARGEST pair under 191 that passes; 229 x 181 is the most exact and was rejected for being smaller still. WHAT IS LOST: at 3840x2160 the box was 506 x 400 device px, which is the small galaxy's own world extent at 1:1, and a smoke check pinned that. It is now 478 x 378 and the property is gone. It was a CONSEQUENCE of the box's size and never a requirement of the drawing - colonyinset.map_rect fits 128:91 isotropically and takes min(w/128, h/91), which no 1:1 relation enters - so the check now asserts the rule it was an instance of and v3_projektstatus.md records the loss. THE DRAWN MAP SHRINKS 5.5 %: 257 x 183 -> 243 x 173 at 1080p and 514 x 365 -> 486 x 346 at 2160p. Width still binds at every resolution, so the letterbox stays on the vertical axis and gets smaller. planet_output absorbs the 14 px this box gave up, as _lower_band_note says it always does.",
-  "sort_bar": [
-    107,
-    974,
-    1281,
-    32
+  "sort_name": [
+    162,
+    961,
+    198,
+    45
   ],
+  "sort_population": [
+    378,
+    961,
+    193,
+    45
+  ],
+  "sort_food": [
+    588,
+    962,
+    194,
+    44
+  ],
+  "sort_industry": [
+    798,
+    961,
+    196,
+    45
+  ],
+  "sort_science": [
+    1011,
+    962,
+    195,
+    44
+  ],
+  "sort_producing": [
+    1223,
+    962,
+    196,
+    44
+  ],
+  "sort_bc": [
+    1438,
+    962,
+    57,
+    44
+  ],
+  "_sort_slots": {
+    "sort_name": {
+      "key": "name",
+      "label": "Name",
+      "native_x": 89,
+      "source_hole": [
+        141,
+        837,
+        172,
+        43
+      ]
+    },
+    "sort_population": {
+      "key": "population",
+      "label": "Population",
+      "native_x": 140,
+      "source_hole": [
+        329,
+        837,
+        168,
+        43
+      ]
+    },
+    "sort_food": {
+      "key": "food",
+      "label": "Food",
+      "native_x": 219,
+      "source_hole": [
+        512,
+        838,
+        169,
+        42
+      ]
+    },
+    "sort_industry": {
+      "key": "industry",
+      "label": "Industry",
+      "native_x": 262,
+      "source_hole": [
+        695,
+        837,
+        171,
+        43
+      ]
+    },
+    "sort_science": {
+      "key": "science",
+      "label": "Science",
+      "native_x": 326,
+      "source_hole": [
+        880,
+        838,
+        170,
+        42
+      ]
+    },
+    "sort_producing": {
+      "key": "producing",
+      "label": "Producing",
+      "native_x": 393,
+      "source_hole": [
+        1065,
+        838,
+        171,
+        42
+      ]
+    },
+    "sort_bc": {
+      "key": "bc",
+      "label": "BC",
+      "native_x": 480,
+      "source_hole": [
+        1252,
+        838,
+        170,
+        42
+      ]
+    }
+  },
+  "_sort_slots_note": "SEVEN BOXES, ONE PER SORT KEY - DEVIATION, 12 September 2026, and it reverses \"THE BAR IS ONE HOLE NOW\" (Stage A3, 7 September 2026). Stage A3 cut ONE sort_bar because the original has one recessed strip with seven words laid along it, and put the division in colonysort.layout. THE ARTWORK HAS SLOTS: Data places each key in its own cut-out, so the division goes back into the geometry and colonysort reads a rect per key instead of distributing along a bar. WHAT IT DEVIATES FROM IS UNCHANGED AND IS STILL THE SOURCE: fields::Add_Multi_Button_Field_(x, 446, ...) at colsum.cpp:267-273, seven calls at native x 89 / 140 / 219 / 262 / 326 / 393 / 480, the strip spanning native y 446..469 (live FIELD_LIST, orion2re 1.60, screen 20, fields 16-22). `native_x` above is that call's own x and is the checkable half; `key` and `label` are layout.json's own and a smoke check holds the two files to each other so this is a POINTER and not a second copy (decision 36). The labels are the original's mixed-case spelling - the capitals on screen are colonysort.display's marked typography deviation and must never be written into the data. INITIAL VALUES ARE MEASURED, NOT INVENTED, and they do not come from the galaxy master: that file's bottom edge carries SIX slot holes, not seven (x 143 / 444 / 752 / 1051 / 1365 / 1666 at y 1126 of 2322x1256, stable at alpha < 8 / 16 / 64 / 128), because they are the main screen's six nav buttons. The seven come from the SUPERSEDED COLONY FRAME, ~/orionlayer-fixtures/gimp/frame_1920_retouched_2026-09-10.png at 1672x941, whose bottom row is the seven sort buttons this order restores - `source_hole` is each one's own rect in that image, mapped with sx = 1920/1672, sy = 1080/941, which is the whole-canvas stretch frame_holes.to_ref applies. Data's own artwork is the only seven-slot measurement that exists, and it is not in the tree and never will be, so the mapped rects are typed here and the image is cited. SORT_BC IS SHRUNK AND RETURN DID NOT MOVE: mapped at its source width the box is [1438, 962, 195, 48] and runs to x 1633, 121 px INTO return_button at 1512 - the old frame carried RETURN in its right-hand column, not on this row. The order is to shrink the slot and not RETURN, so the width is 57: its right edge sits 17 px short of RETURN, 17 being the median of the six gaps the source's own slots leave (18 / 17 / 16 / 17 / 17 / 19). THE ROW IS 4 PX SHORTER THAN ITS SOURCE, AND THE RING IS WHY. Mapped as measured the slots are 49 and 48 ref px high and end at y 1010; `ring.bottom` 74 puts the metal's inner edge at 1006, and \"every window is inside the ring, per side\" is one of the rules the suite KEPT on 11 September 2026 when it let the chosen ones go - a hole outside the metal is not a layout preference, it is a hole in the edge of the screen. The source frame's own bottom band measures 61 px of 941, which is 70 ref, so its row sat 4 px lower than this ring allows. The 4 px come off the BOTTOM and the top edge stays where the artwork put it, so the heights are 45 and 44: the same resolution the order gives for the RETURN overlap - shrink the slot, move nothing that is fixed. The band-to-slot gap is 9 ref px as a result, against the 22 `gaps.band_sort` documents; that gap is reported by the suite and ruled on by nobody since 11 September 2026, and it is Data's when he places the boxes.",
   "return_button": [
     1512,
     974,
