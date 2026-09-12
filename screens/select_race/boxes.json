@@ -8,9 +8,6 @@
         1070,
         735
       ],
-      "role": [
-        "layout"
-      ],
       "style": {
         "label": "Race Grid",
         "font_scale": 1.0,
@@ -24,9 +21,6 @@
         115,
         610,
         735
-      ],
-      "role": [
-        "layout"
       ],
       "style": {
         "label": "Info Panel",
@@ -42,9 +36,6 @@
         580,
         60
       ],
-      "role": [
-        "layout"
-      ],
       "style": {
         "label": "Race Name",
         "font_scale": 1.0
@@ -58,9 +49,6 @@
         580,
         340
       ],
-      "role": [
-        "layout"
-      ],
       "style": {
         "label": "Description",
         "font_scale": 1.0
@@ -73,9 +61,6 @@
         555,
         580,
         280
-      ],
-      "role": [
-        "layout"
       ],
       "style": {
         "label": "Race Traits",
@@ -92,9 +77,6 @@
         1070,
         837
       ],
-      "role": [
-        "layout"
-      ],
       "style": {
         "label": "Race Grid",
         "font_scale": 1.0,
@@ -108,9 +90,6 @@
         115,
         610,
         834
-      ],
-      "role": [
-        "layout"
       ],
       "style": {
         "label": "Info Panel",
@@ -126,9 +105,6 @@
         580,
         60
       ],
-      "role": [
-        "layout"
-      ],
       "style": {
         "label": "Race Name",
         "font_scale": 1.0
@@ -142,9 +118,6 @@
         580,
         400
       ],
-      "role": [
-        "layout"
-      ],
       "style": {
         "label": "Description",
         "font_scale": 1.0
@@ -157,9 +130,6 @@
         618,
         580,
         310
-      ],
-      "role": [
-        "layout"
       ],
       "style": {
         "label": "Race Traits",

@@ -137,11 +137,15 @@ def _step_table():
     from screens.colony_summary import colonytrack
     res = resources.init({})
     cfg = res.load_json("screens/colony_summary/layout.json", {}) or {}
-    boxes = res.load_json("screens/colony_summary/boxes.json", {}) or {}
-    ref = next(iter(boxes.values()), [])
-    la = next((b["rect"] for b in ref if b["name"] == "list_area"), None)
+    # THE LIST'S RECT COMES FROM THE REFERENCE, not from boxes.json —
+    # 12 September 2026. That file carries no rectangle for this
+    # screen any more: the fourteen cutouts and the six columns are
+    # derived at load by `colonyplates.reseat`, and this asks the same
+    # pure function the screen goes through.
+    from screens.colony_summary import colonyplates
     lref = res.load_json(
         "screens/colony_summary/layout_reference.json", {}) or {}
+    la = colonyplates.all_rects(lref).get("list_area") if lref else None
     if la is None:
         return {}
     out = {}

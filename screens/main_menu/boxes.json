@@ -10,9 +10,6 @@
       ],
       "field_id": 1,
       "anchor": "right",
-      "role": [
-        "click"
-      ],
       "style": {
         "skin": "button",
         "label": "Continue",
@@ -47,9 +44,6 @@
       ],
       "field_id": 2,
       "anchor": "right",
-      "role": [
-        "click"
-      ],
       "style": {
         "skin": "button",
         "label": "Load Game",
@@ -84,9 +78,6 @@
       ],
       "field_id": 3,
       "anchor": "right",
-      "role": [
-        "click"
-      ],
       "style": {
         "skin": "button",
         "label": "New Game",
@@ -121,9 +112,6 @@
       ],
       "field_id": 4,
       "anchor": "right",
-      "role": [
-        "click"
-      ],
       "style": {
         "skin": "button",
         "label": "Multiplayer",
@@ -158,9 +146,6 @@
       ],
       "field_id": 5,
       "anchor": "right",
-      "role": [
-        "click"
-      ],
       "style": {
         "skin": "button",
         "label": "Hall of Fame",
@@ -195,9 +180,6 @@
       ],
       "field_id": 6,
       "anchor": "right",
-      "role": [
-        "click"
-      ],
       "style": {
         "skin": "button",
         "label": "Quit",
@@ -231,9 +213,6 @@
         28
       ],
       "anchor": "right",
-      "role": [
-        "display"
-      ],
       "style": {
         "skin": "text",
         "label": "Version {version}",
@@ -243,9 +222,6 @@
     },
     {
       "name": "help_popup",
-      "role": [
-        "display"
-      ],
       "hidden": true,
       "style": {
         "font_scale": 1.0
@@ -269,9 +245,6 @@
       ],
       "field_id": 1,
       "anchor": "right",
-      "role": [
-        "click"
-      ],
       "style": {
         "skin": "button",
         "label": "Continue",
@@ -306,9 +279,6 @@
       ],
       "field_id": 2,
       "anchor": "right",
-      "role": [
-        "click"
-      ],
       "style": {
         "skin": "button",
         "label": "Load Game",
@@ -343,9 +313,6 @@
       ],
       "field_id": 3,
       "anchor": "right",
-      "role": [
-        "click"
-      ],
       "style": {
         "skin": "button",
         "label": "New Game",
@@ -380,9 +347,6 @@
       ],
       "field_id": 4,
       "anchor": "right",
-      "role": [
-        "click"
-      ],
       "style": {
         "skin": "button",
         "label": "Multiplayer",
@@ -417,9 +381,6 @@
       ],
       "field_id": 5,
       "anchor": "right",
-      "role": [
-        "click"
-      ],
       "style": {
         "skin": "button",
         "label": "Hall of Fame",
@@ -454,9 +415,6 @@
       ],
       "field_id": 6,
       "anchor": "right",
-      "role": [
-        "click"
-      ],
       "style": {
         "skin": "button",
         "label": "Quit",
@@ -490,9 +448,6 @@
         28
       ],
       "anchor": "right",
-      "role": [
-        "display"
-      ],
       "style": {
         "skin": "text",
         "label": "Version {version}",
@@ -502,9 +457,6 @@
     },
     {
       "name": "help_popup",
-      "role": [
-        "display"
-      ],
       "hidden": true,
       "style": {
         "font_scale": 1.0

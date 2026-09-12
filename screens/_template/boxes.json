@@ -2,7 +2,6 @@
   {
     "name": "title",
     "rect": [660, 60, 600, 70],
-    "role": ["display"],
     "style": {
       "skin": "panel",
       "label": "Screen Title",
@@ -13,7 +12,6 @@
     "name": "back",
     "rect": [860, 950, 200, 40],
     "field_id": 1,
-    "role": ["click"],
     "style": {
       "skin": "button",
       "label": "Back",

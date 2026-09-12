@@ -178,10 +178,12 @@ def row_shape(screen="colony_summary"):
 #: the first time a plate gained a hole.
 #:
 #: THE ALTERNATIVE WAS A FLAG IN `boxes.json` AND IT WAS REFUSED.
-#: `Box.locked` exists in the data model and is serialized, and nothing
-#: has ever read it. Filling it in would mean typing which boxes are
-#: cutouts into every screen's box file — a second copy of what this
-#: module already knows, and exactly decision 3's failure.
+#: `Box.locked` existed in the data model, was serialized and was never
+#: read by anything; it is deleted (12 September 2026, the redundancy
+#: audit) and so is `Box.role`. Filling either in would have meant
+#: typing which boxes are cutouts into every screen's box file — a
+#: second copy of what this module already knows, and exactly
+#: decision 3's failure.
 RULE_NAMES = {
     "galaxy_map": {"title", "map_area", "sidebar", "nav_turn"}
                   | {f"nav_{k}" for k in NAV_KEYS},

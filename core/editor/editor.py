@@ -375,11 +375,11 @@ class Editor:
         rx, ry = self._ref(*mouse_input.pos())
         n = len(scr.boxes)
         if skin == "inner_panel":
-            data = {"name": f"panel_{n}", "role": ["layout"],
+            data = {"name": f"panel_{n}",
                     "rect": [rx - 100, ry - 75, 200, 150],
                     "style": {"skin": "inner_panel"}}
         else:
-            data = {"name": f"btn_{n}", "role": ["click"],
+            data = {"name": f"btn_{n}",
                     "rect": [rx - 75, ry - 25, 150, 50],
                     "style": {"skin": "button", "label": "NEW",
                               "font_size": 16}}

@@ -1,534 +1,174 @@
 {
   "1920x1080": [
     {
-      "name": "header",
-      "rect": [
-        98,
-        84,
-        1408,
-        36
-      ],
-      "role": [
-        "display"
-      ]
+      "name": "header"
     },
     {
-      "name": "list_area",
-      "rect": [
-        98,
-        123,
-        1408,
-        580
-      ],
-      "role": [
-        "display"
-      ]
+      "name": "list_area"
     },
     {
-      "name": "planet_info",
-      "rect": [
-        579,
-        722,
-        461,
-        201
-      ],
-      "role": [
-        "display"
-      ]
+      "name": "planet_info"
     },
     {
-      "name": "planet_output",
-      "rect": [
-        98,
-        722,
-        464,
-        201
-      ],
-      "role": [
-        "display"
-      ]
+      "name": "planet_output"
     },
     {
-      "name": "galaxy_inset",
-      "rect": [
-        1155,
-        722,
-        252,
-        200
-      ],
-      "role": [
-        "display"
-      ]
+      "name": "galaxy_inset"
     },
     {
-      "name": "empire_stats",
-      "rect": [
-        1532,
-        85,
-        285,
-        663
-      ],
-      "role": [
-        "display"
-      ]
+      "name": "empire_stats"
     },
     {
       "name": "sort_name",
-      "rect": [
-        160,
-        959,
-        202,
-        53
-      ],
-      "role": [
-        "click"
-      ],
       "style": {
         "font_size": 18
       }
     },
     {
       "name": "sort_population",
-      "rect": [
-        376,
-        959,
-        197,
-        53
-      ],
-      "role": [
-        "click"
-      ],
       "style": {
         "font_size": 18
       }
     },
     {
       "name": "sort_food",
-      "rect": [
-        586,
-        960,
-        198,
-        52
-      ],
-      "role": [
-        "click"
-      ],
       "style": {
         "font_size": 18
       }
     },
     {
       "name": "sort_industry",
-      "rect": [
-        796,
-        959,
-        200,
-        53
-      ],
-      "role": [
-        "click"
-      ],
       "style": {
         "font_size": 18
       }
     },
     {
       "name": "sort_science",
-      "rect": [
-        1009,
-        960,
-        199,
-        52
-      ],
-      "role": [
-        "click"
-      ],
       "style": {
         "font_size": 18
       }
     },
     {
       "name": "sort_producing",
-      "rect": [
-        1221,
-        960,
-        200,
-        52
-      ],
-      "role": [
-        "click"
-      ],
       "style": {
         "font_size": 18
       }
     },
     {
       "name": "sort_bc",
-      "rect": [
-        1436,
-        960,
-        199,
-        52
-      ],
-      "role": [
-        "click"
-      ],
       "style": {
         "font_size": 18
       }
     },
     {
       "name": "return",
-      "rect": [
-        1532,
-        765,
-        286,
-        159
-      ],
-      "role": [
-        "click"
-      ],
       "style": {
         "font_size": 24
       }
     },
     {
-      "name": "col_name",
-      "rect": [
-        98,
-        123,
-        251,
-        580
-      ],
-      "role": [
-        "display"
-      ]
+      "name": "col_name"
     },
     {
-      "name": "col_farmers",
-      "rect": [
-        349,
-        123,
-        284,
-        580
-      ],
-      "role": [
-        "display"
-      ]
+      "name": "col_farmers"
     },
     {
-      "name": "col_workers",
-      "rect": [
-        633,
-        123,
-        297,
-        580
-      ],
-      "role": [
-        "display"
-      ]
+      "name": "col_workers"
     },
     {
-      "name": "col_scientists",
-      "rect": [
-        930,
-        123,
-        281,
-        580
-      ],
-      "role": [
-        "display"
-      ]
+      "name": "col_scientists"
     },
     {
-      "name": "col_building",
-      "rect": [
-        1211,
-        123,
-        268,
-        580
-      ],
-      "role": [
-        "display"
-      ]
+      "name": "col_building"
     },
     {
-      "name": "col_scroll",
-      "rect": [
-        1479,
-        123,
-        27,
-        580
-      ],
-      "role": [
-        "display"
-      ]
+      "name": "col_scroll"
     }
   ],
   "2560x1440": [
     {
-      "name": "header",
-      "rect": [
-        98,
-        84,
-        1408,
-        36
-      ],
-      "role": [
-        "display"
-      ]
+      "name": "header"
     },
     {
-      "name": "list_area",
-      "rect": [
-        98,
-        123,
-        1408,
-        580
-      ],
-      "role": [
-        "display"
-      ]
+      "name": "list_area"
     },
     {
-      "name": "planet_info",
-      "rect": [
-        579,
-        722,
-        461,
-        201
-      ],
-      "role": [
-        "display"
-      ]
+      "name": "planet_info"
     },
     {
-      "name": "planet_output",
-      "rect": [
-        98,
-        722,
-        464,
-        201
-      ],
-      "role": [
-        "display"
-      ]
+      "name": "planet_output"
     },
     {
-      "name": "galaxy_inset",
-      "rect": [
-        1155,
-        722,
-        252,
-        200
-      ],
-      "role": [
-        "display"
-      ]
+      "name": "galaxy_inset"
     },
     {
-      "name": "empire_stats",
-      "rect": [
-        1532,
-        85,
-        285,
-        663
-      ],
-      "role": [
-        "display"
-      ]
+      "name": "empire_stats"
     },
     {
       "name": "sort_name",
-      "rect": [
-        160,
-        959,
-        202,
-        53
-      ],
-      "role": [
-        "click"
-      ],
       "style": {
         "font_size": 18
       }
     },
     {
       "name": "sort_population",
-      "rect": [
-        376,
-        959,
-        197,
-        53
-      ],
-      "role": [
-        "click"
-      ],
       "style": {
         "font_size": 18
       }
     },
     {
       "name": "sort_food",
-      "rect": [
-        586,
-        960,
-        198,
-        52
-      ],
-      "role": [
-        "click"
-      ],
       "style": {
         "font_size": 18
       }
     },
     {
       "name": "sort_industry",
-      "rect": [
-        796,
-        959,
-        200,
-        53
-      ],
-      "role": [
-        "click"
-      ],
       "style": {
         "font_size": 18
       }
     },
     {
       "name": "sort_science",
-      "rect": [
-        1009,
-        960,
-        199,
-        52
-      ],
-      "role": [
-        "click"
-      ],
       "style": {
         "font_size": 18
       }
     },
     {
       "name": "sort_producing",
-      "rect": [
-        1221,
-        960,
-        200,
-        52
-      ],
-      "role": [
-        "click"
-      ],
       "style": {
         "font_size": 18
       }
     },
     {
       "name": "sort_bc",
-      "rect": [
-        1436,
-        960,
-        199,
-        52
-      ],
-      "role": [
-        "click"
-      ],
       "style": {
         "font_size": 18
       }
     },
     {
       "name": "return",
-      "rect": [
-        1532,
-        765,
-        286,
-        159
-      ],
-      "role": [
-        "click"
-      ],
       "style": {
         "font_size": 24
       }
     },
     {
-      "name": "col_name",
-      "rect": [
-        98,
-        123,
-        251,
-        580
-      ],
-      "role": [
-        "display"
-      ]
+      "name": "col_name"
     },
     {
-      "name": "col_farmers",
-      "rect": [
-        349,
-        123,
-        284,
-        580
-      ],
-      "role": [
-        "display"
-      ]
+      "name": "col_farmers"
     },
     {
-      "name": "col_workers",
-      "rect": [
-        633,
-        123,
-        297,
-        580
-      ],
-      "role": [
-        "display"
-      ]
+      "name": "col_workers"
     },
     {
-      "name": "col_scientists",
-      "rect": [
-        930,
-        123,
-        281,
-        580
-      ],
-      "role": [
-        "display"
-      ]
+      "name": "col_scientists"
     },
     {
-      "name": "col_building",
-      "rect": [
-        1211,
-        123,
-        268,
-        580
-      ],
-      "role": [
-        "display"
-      ]
+      "name": "col_building"
     },
     {
-      "name": "col_scroll",
-      "rect": [
-        1479,
-        123,
-        27,
-        580
-      ],
-      "role": [
-        "display"
-      ]
+      "name": "col_scroll"
     }
   ]
 }

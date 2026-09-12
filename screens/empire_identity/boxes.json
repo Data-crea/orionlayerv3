@@ -8,9 +8,6 @@
         1700,
         400
       ],
-      "role": [
-        "layout"
-      ],
       "style": {
         "label": "Identity Panel",
         "font_scale": 1.0,
@@ -25,9 +22,6 @@
         420,
         90
       ],
-      "role": [
-        "layout"
-      ],
       "style": {
         "label": "Ruler Header",
         "font_scale": 1.0
@@ -40,9 +34,6 @@
         300,
         360,
         84
-      ],
-      "role": [
-        "input"
       ],
       "style": {
         "label": "Ruler Input",
@@ -57,9 +48,6 @@
         610,
         72
       ],
-      "role": [
-        "layout"
-      ],
       "style": {
         "label": "Banner Header",
         "font_scale": 1.0
@@ -72,9 +60,6 @@
         212,
         610,
         300
-      ],
-      "role": [
-        "layout"
       ],
       "style": {
         "label": "Banner Grid",
@@ -90,9 +75,6 @@
         460,
         90
       ],
-      "role": [
-        "layout"
-      ],
       "style": {
         "label": "Home Header",
         "font_scale": 1.0
@@ -105,9 +87,6 @@
         300,
         400,
         84
-      ],
-      "role": [
-        "input"
       ],
       "style": {
         "label": "Home Input",
@@ -122,9 +101,6 @@
         1700,
         440
       ],
-      "role": [
-        "layout"
-      ],
       "style": {
         "label": "Preview Panel",
         "font_scale": 1.0,
@@ -138,9 +114,6 @@
         546,
         1249,
         438
-      ],
-      "role": [
-        "layout"
       ],
       "style": {
         "label": "Homeworld Artwork",
@@ -163,9 +136,6 @@
         1700,
         50
       ],
-      "role": [
-        "layout"
-      ],
       "style": {
         "label": "Preview Header",
         "font_scale": 1.0
@@ -179,9 +149,6 @@
         320,
         340
       ],
-      "role": [
-        "layout"
-      ],
       "style": {
         "label": "Preview Banner",
         "font_scale": 1.0
@@ -194,9 +161,6 @@
         660,
         700,
         260
-      ],
-      "role": [
-        "layout"
       ],
       "style": {
         "label": "Preview Text",

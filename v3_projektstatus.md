@@ -13,6 +13,18 @@ right and the header had gone stale** — resolved 10 September 2026
 by dating the header to the edit and giving this session its
 paragraph, below, so the two agree again.
 
+This session (12 September 2026), the redundancy audit's follow-up:
+**`boxes.json` carries no rectangle for the colony screen any more.**
+All twenty — the fourteen cutouts and the six columns — are derived at
+load from `layout_reference.json`, the columns from `list_columns`
+through `colonyplates.column_rects`. `Box.role` and `Box.locked` are
+gone from the data model and from all seven screens' files; neither
+was ever read. `tools/boxes_from_reference.py` is deleted, because
+with no rects in the file it had nothing to write. **Measured
+acceptance: 0 pixels differ** at 1920x1080 and 2560x1440, whole-screen
+render before against after. See "One home for every colony rect"
+below.
+
 This session (12 September 2026), PHASE B: **the plate machinery is
 deleted and the static frame is the only path** (fundament decision
 55, superseding 49 for this screen). Six tools, one screen module, the
@@ -860,16 +872,18 @@ to stay uncomfortable to extend.
 │   │   ├── colonymoveui.py            the state between two clicks
 │   │   ├── colonysend.py              the two clicks on the wire,
 │   │   │                              each confirmed by its effect
-│   │   ├── colonyplates.py         52  what a window IS: the rule,
-│   │   │                              the rects derived at startup,
+│   │   ├── colonyplates.py         90  what a window IS: the rule,
+│   │   │                              EVERY rect derived at startup
+│   │   │                              — cutouts from the reference,
+│   │   │                              columns from list_columns —
 │   │   │                              and the panel fills
 │   │   ├── layout.json                frame, sort/return native
 │   │   │                              click points, empire rows,
 │   │   │                              the move's own wording
-│   │   ├── boxes.json                 14 cutouts + 6 columns; the
-│   │   │                              cutouts are a CACHE of
-│   │   │                              layout_reference.json, rebuilt
-│   │   │                              at every load
+│   │   ├── boxes.json                 20 NAMES and 8 font sizes. No
+│   │   │                              rectangle: every one is
+│   │   │                              derived at load from
+│   │   │                              layout_reference.json
 │   │   └── assets/                    frame.png (1672x941) — the
 │   │                                  frame, and the artwork every
 │   │                                  rect is measured off
@@ -911,7 +925,7 @@ to stay uncomfortable to extend.
 │   ├── ship_icon_measurement.md       Where the icon sizes come from
 │   └── starfield_measurement.md       Background star density
 └── tools/
-    ├── smoke_test.py           11491  Headless verification (117
+    ├── smoke_test.py           11502  Headless verification (117
     │                                  checks; the count lives in
     │                                  CLAUDE.md and the Snapshot
     │                                  table, both asserted against
@@ -950,9 +964,6 @@ to stay uncomfortable to extend.
     │                                  by OVERLAP, never by order;
     │                                  galaxy_map still derives its
     │                                  boxes here
-    ├── boxes_from_reference.py   127  layout_reference.json + BLEED
-    │                                  -> boxes.json. --check asserts
-    │                                  the file IS that derivation
     ├── setup.py                  138  Rebuild generated artwork
     │                                  after a clone, then verify
     ├── star_icon_check.py        109  Which star sprite resolves
@@ -4332,6 +4343,70 @@ false, the artwork used directly), and then the check is measuring a
 plate nobody draws. **Which of the two paths the colony screen takes
 is the open decision**, and it is upstream of this check rather than
 settled by it.
+
+### One home for every colony rect — 12 September 2026
+
+**`boxes.json` held a second copy of the geometry and nothing read
+it.** `colonyplates.reseat` overwrote all fourteen cutout rects at
+`_reload_boxes`, before any reader, and the six column rects were
+seated from `list_columns` by a tool somebody had to remember to run.
+Both are derived at load now.
+
+| | before | after |
+|---|---|---|
+| 14 cutout rects | in `boxes.json`, overwritten at load | derived from `layout_reference.json` |
+| 6 column rects | in `boxes.json`, seated by `--columns` on demand | derived from `list_columns` at load |
+| `role` | on every box of all seven screens, 149 entries | gone — `core/box.py` only round-tripped it |
+| `locked` | in the data model and `to_dict` | gone — never written, never read |
+| `tools/boxes_from_reference.py` | wrote the rects and `--check`ed them | deleted; there is nothing left to write |
+
+**WHAT `boxes.json` STILL CARRIES: twenty names and eight font sizes,
+2 473 bytes.** Nothing else. The names are the screen's vocabulary and
+the font sizes are the only authored value left in it.
+
+**SHOULD THE FILE GO ENTIRELY? Yes, and it is one decision away.** The
+twenty names are derivable — fourteen from `layout_reference.json`
+through `BOX_NAME`, six from `list_columns` — so the file's whole
+remaining content is `font_size` 18 on the seven sort slots and 24 on
+RETURN, which by decision 15 belongs in `layout.json` beside the
+labels those sizes are for (`sort.font_size`, `return.font_size`).
+What stops it being done here is that `ScreenBase` reads
+`BOXES_FILE` for every screen and a screen with no box list has never
+existed; that is a change to shared machinery and to the F5 editor's
+idea of what it is editing, which is a decision and not a cleanup.
+
+**THE ACCEPTANCE WAS MEASURED, NOT REASONED.** The derivation
+reproduces the file it replaced exactly — all twenty rects identical,
+diffed before the change — and a whole-screen render before against
+after differs by **0 of 2 231 040 pixels at 1920x1080 and 0 of
+3 955 200 at 2560x1440**. The budget was "at most the bleed pixel".
+
+**`Box.derived` IS NEW AND IT IS READ.** A box seated from the
+reference is marked, and `to_dict` writes no rect for it — otherwise
+the first F5 save would put the second copy straight back. Unlike
+`role` and `locked`, which this commit removed for the opposite
+reason, it is a property of where the rect came from in THIS run and
+is never read from the file.
+
+**WHAT THE SUITE DID INSTEAD OF READING THE FILE.** Eleven checks read
+a rect out of `boxes.json`; they go through `colony_rects()` or
+`_seated()` now — the same pure functions the screen goes through — so
+a check cannot measure a geometry the screen would not use. Two
+checks changed subject rather than being deleted: `boxes.json ==
+the tool's rebuild` became "no entry carries a rect at all, and the
+screen's boxes are the reference", and "the column boxes are
+resolution-independent" became "seating the same boxes at four window
+sizes gives one answer", which is the rule the file comparison stood
+in for.
+
+**STILL BOUND IN THE EDITOR, AND THAT IS NOW ODD.** The six columns
+are classed BOUND (left and right handles live) and a drag still moves
+them for the rest of the session — but `save_boxes` writes no rect for
+them and the next load rebuilds them from `list_columns`. A handle
+whose result cannot be kept is the fault `core/editor/boxclass.py`
+was written against. Making them LOCKED is a behaviour change and is
+not in this commit; the way to move a column is to edit
+`list_columns`.
 
 ### Phase B: what was deleted and what replaced it — 12 September 2026
 

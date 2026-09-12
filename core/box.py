@@ -15,16 +15,31 @@ class Box:
 
     def __init__(self, data):
         self.name = data["name"]
-        self.ref_rect = tuple(data["rect"])  # [x, y, w, h] in 1080p
+        # **A RECT IS OPTIONAL — 12 September 2026.** A screen may
+        # DERIVE its boxes and carry only their names: the colony
+        # summary's twenty come from `layout_reference.json` and
+        # `list_columns` through `colonyplates.reseat`, which runs in
+        # `_reload_boxes` before anything reads a rect. `None` until
+        # then, and `update_layout` draws nothing for a box that still
+        # has none rather than inventing one.
+        self.ref_rect = tuple(data["rect"]) if "rect" in data else None
         self.field_id = data.get("field_id")
         self.anchor = data.get("anchor")  # None, "right", "left"
-        self.role = data.get("role", [])
         self.style = data.get("style", {})
         self.data_field = data.get("data_field")
         self.hidden = data.get("hidden", False)
-        self.locked = data.get("locked", False)
         self.screen_rect = None
         self.hover = False
+        # **SET BY WHOEVER SEATS THE BOX, AND IT KEEPS THE FILE
+        # HONEST.** A screen may derive its rectangles — the colony
+        # summary's come from `layout_reference.json` and
+        # `list_columns` through `colonyplates.seat` — and a box that
+        # got its rect that way must not have it written back by an
+        # editor save, or the second copy this removed reappears the
+        # first time somebody presses F5 and S. Not read from the
+        # file and never written to it: it is a property of where the
+        # rect came from in THIS run.
+        self.derived = False
         # Runtime overrides for the "text" skin. Never serialized: a
         # value a screen computes this frame must not end up in
         # boxes.json when the editor saves.
@@ -32,7 +47,10 @@ class Box:
         self.text_color = None
 
     def update_layout(self, layout):
-        """Compute window rect from reference rect."""
+        """Compute window rect from reference rect, if it has one."""
+        if self.ref_rect is None:
+            self.screen_rect = None
+            return
         x, y, w, h = self.ref_rect
         sw = int(w * layout.scale)
         sh = int(h * layout.scale)
@@ -150,21 +168,26 @@ class Box:
 
     def to_dict(self):
         """Serialize box back to dict for saving."""
-        d = {"name": self.name, "rect": list(self.ref_rect)}
+        # **`role` AND `locked` ARE GONE — 12 September 2026, the
+        # redundancy audit.** Both were in the data model, both were
+        # serialized, and nothing in the tree ever branched on either:
+        # `role` was written by the editor for a new box and read back
+        # only to be written again, and `locked` was never even
+        # written. What a box IS is answered by
+        # `core/editor/boxclass.py`, from the screen's own rules.
+        d = {"name": self.name}
+        if self.ref_rect is not None and not self.derived:
+            d["rect"] = list(self.ref_rect)
         if self.field_id is not None:
             d["field_id"] = self.field_id
         if self.anchor:
             d["anchor"] = self.anchor
-        if self.role:
-            d["role"] = self.role
         if self.style:
             d["style"] = self.style
         if self.data_field:
             d["data_field"] = self.data_field
         if self.hidden:
             d["hidden"] = True
-        if self.locked:
-            d["locked"] = True
         return d
 
     def __repr__(self):

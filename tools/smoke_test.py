@@ -45,6 +45,39 @@ def ok(msg):
     print(f"  ok  {msg}")
 
 
+def colony_rects():
+    """{box name: reference rect} for colony_summary, DERIVED.
+
+    `boxes.json` carries no rectangle for that screen since
+    12 September 2026 — the fourteen cutouts come from
+    `layout_reference.json` and the six columns from `list_columns`,
+    both seated at load by `colonyplates.reseat`. Every check that
+    used to read a rect out of the file asks here instead, through the
+    same pure function the screen itself goes through.
+    """
+    from core.config import SCREENS_DIR as _sd
+    from screens.colony_summary import colonyplates as _c
+    data, _w = _c.load_reference(_c.reference_path(os.path.dirname(_sd)))
+    return _c.all_rects(data)
+
+
+def _seated(path, win_w, win_h):
+    """colony_summary's boxes, loaded AND given their rectangles.
+
+    `load_boxes` returns them with none: the geometry is
+    `layout_reference.json`'s and `colonyplates.seat` is what puts it
+    on a box. Every check that used to load and lay out by hand goes
+    through the screen's own seating, so a check cannot measure a
+    geometry the screen would not use.
+    """
+    from core.box import load_boxes as _lb
+    from core.layout import Layout as _L
+    from screens.colony_summary import colonyplates as _c
+    boxes = _lb(path, win_w, win_h)
+    _c.seat(boxes, colony_rects(), _L(win_w, win_h))
+    return boxes
+
+
 def report(msg):
     """A measured value with no pass/fail, and NOT a check.
 
@@ -987,6 +1020,7 @@ def main():
     import frame_holes as fh
     _fh_no = fh.BOX_NAME
     from screens.colony_summary import colonysort as _csort_mod
+    from screens.colony_summary import colonyheader as _chdr0
     #: The original's seven sort fields, native x — the literals of
     #: Add_Multi_Button_Field_(x, 446, ...) at colsum.cpp:267-273 in
     #: ~/orion2re/src/game/colsum.cpp, so a retyped one fails. ONE
@@ -1012,31 +1046,37 @@ def main():
     # through a PNG needed. And what the artwork used to guarantee is
     # asserted separately and better: "every window sits inside its
     # own hole", below, at three resolutions against the alpha.
-    import json as _bfr_json
-    import boxes_from_reference as _bfr
+    # **NARROWED TO THE RECTS — 12 September 2026.** This compared
+    # `boxes.json` byte for byte against what a tool rebuilt from the
+    # reference, and that tool READ `boxes.json` for everything except
+    # the rects: role, style and the six columns were compared against
+    # themselves. The file carries no rectangle at all now — the
+    # fourteen cutouts and the six columns are derived at load by
+    # `colonyplates.reseat` — so what is left to assert is the thing
+    # that was ever really asserted, against the LIVE boxes.
+    from screens.colony_summary import colonyplates as _cpl
     _boxes_path = os.path.join(SCREENS_DIR, "colony_summary",
                                "boxes.json")
-    _want_boxes = (_bfr_json.dumps(_bfr.rebuild("colony_summary"),
-                                   indent=2) + "\n")
-    assert open(_boxes_path, encoding="utf-8").read() == _want_boxes, (
-        "colony_summary/boxes.json is not layout_reference.json plus "
-        "BLEED. With no artwork on the path that IS the derivation, so "
-        "run `python tools/boxes_from_reference.py colony_summary` or "
-        "find out what moved a rect by hand")
-    _derived_names = {n for n, _r in _bfr.reference_boxes(
-        "colony_summary")}
-    assert _derived_names == fh.RULE_NAMES["colony_summary"], (
+    import json as _bxjson
+    _boxes_raw = _bxjson.load(open(_boxes_path, encoding="utf-8"))
+    for _res, _blist in _boxes_raw.items():
+        for _b in _blist:
+            assert "rect" not in _b, (
+                f"{_res}/{_b['name']} carries a rect in boxes.json. "
+                f"The geometry is layout_reference.json's and is "
+                f"seated at load; a rect here is a second copy that "
+                f"nothing reads and nothing keeps current")
+    _derived_names = set(_cpl.box_rects(cs))
+    assert _derived_names == fh.RULE_NAMES["colony_summary"] | set(
+        _chdr0.COLUMN_BOXES), (
         f"the reference derives {sorted(_derived_names)} and the "
-        f"editor's cutout vocabulary is "
-        f"{sorted(fh.RULE_NAMES['colony_summary'])} — a box the editor "
-        f"would offer handles on is a box content slides out from "
-        f"under (decision 3)")
+        f"screen's own vocabulary is "
+        f"{sorted(fh.RULE_NAMES['colony_summary'] | set(_chdr0.COLUMN_BOXES))}")
     # AND THE SCREEN DOES NOT READ THE FILE IT WAS WRITTEN INTO.
     # `colonyplates.reseat` rebuilds these rects at every load, so a
     # reference edited without running the tool cannot leave a stale
     # fill behind the frame — which it did, on the day that became
     # possible. Asserted against the LIVE boxes, not against the file.
-    from screens.colony_summary import colonyplates as _cpl
     _live = {b.name: tuple(b.ref_rect) for b in cs.boxes}
     for _bn, _br in _cpl.box_rects(cs).items():
         assert _live.get(_bn) == tuple(_br), (
@@ -2895,7 +2935,7 @@ def main():
         """
         del area                      # see above; kept for the callers
         out = dict(base)
-        raw = {b["name"]: b["rect"] for b in _boxes_json["1920x1080"]}
+        raw = colony_rects()
         boxes = []
         for name in _chd.COLUMN_BOXES:
             b = _Box({"name": name, "rect": raw[name]})
@@ -2951,9 +2991,7 @@ def main():
     # `_area` above is 1200x400 to exercise the clip, and measuring
     # the derivation against it asks the wrong question.
     _ship_area = pygame.Rect(*app.layout.rect(
-        _boxes_json["1920x1080"] and next(
-            b["rect"] for b in _boxes_json["1920x1080"]
-            if b["name"] == "list_area")))
+        colony_rects()["list_area"]))
     _ship_band = _ctk.band_height(_ship_area, _cfg_cols)
     _want_y = _btop + round(_cl.NATIVE_LABEL_Y_OFFSET * _bh
                             / _cl.NATIVE_ROW_PITCH)
@@ -3062,10 +3100,8 @@ def main():
              "col_building", "col_scroll")
     for _W, _H in _SIZES:
         _lay = Layout(_W, _H)
-        _bx = {b.name: b for b in load_boxes(_boxes_path, _W, _H)}
+        _bx = {b.name: b for b in _seated(_boxes_path, _W, _H)}
         assert "list_area" in _bx, f"no list_area box at {_W}x{_H}"
-        for _b in _bx.values():
-            _b.update_layout(_lay)
         _ar = _bx["list_area"].screen_rect
         _cc = dict(_cfg)
         _cc[_ctk.COLUMNS_KEY] = [(n[4:], _bx[n]) for n in _COLS]
@@ -3086,24 +3122,26 @@ def main():
             f"{_ar.right} — the row stops short of its panel")
 
     # ── AND THE COLUMN BOXES ARE RESOLUTION-INDEPENDENT ─────────
-    # Asserted as the RULE and not as the state: a box rect lives in
-    # reference space and `core.layout` scales it, so there is no
-    # reason for the six to differ between resolution keys and every
-    # reason they must not — `core.box.save_boxes` writes only the
-    # key the editor is running at, which is how one dragged at 1080p
-    # would leave 1440p behind with every picture still looking
-    # right.
-    _by_res = {}
-    for _res, _list in _boxes_json.items():
-        _by_res[_res] = {b["name"]: tuple(b["rect"]) for b in _list
-                         if b["name"] in _COLS}
-    _keys = sorted(_by_res)
-    for _res in _keys[1:]:
-        assert _by_res[_res] == _by_res[_keys[0]], (
-            f"the column boxes differ between {_keys[0]} and {_res}: "
-            f"{ {k: (_by_res[_keys[0]][k], _by_res[_res][k]) for k in _COLS if _by_res[_keys[0]].get(k) != _by_res[_res].get(k)} }. "
-            f"They are reference-space rects and nothing about them "
-            f"is per-resolution")
+    # **THE SUBJECT MOVED, THE RULE DID NOT — 12 September 2026.**
+    # This compared the six rects between `boxes.json`'s resolution
+    # keys, because `core.box.save_boxes` writes only the key the
+    # editor is running at and one dragged at 1080p would leave 1440p
+    # behind with every picture still looking right. That file holds
+    # no rect for this screen now, so the keys cannot disagree — and
+    # the rule is still worth asserting one step earlier: a box rect
+    # lives in REFERENCE space, so seating the same boxes at four
+    # window sizes has to give one answer, and a `seat` that scaled
+    # would be caught here rather than in a screenshot.
+    _by_size = {}
+    for _W, _H in _SIZES:
+        _by_size[(_W, _H)] = {b.name: tuple(b.ref_rect)
+                              for b in _seated(_boxes_path, _W, _H)}
+    _first_size = _SIZES[0]
+    for _sz, _got in _by_size.items():
+        assert _got == _by_size[_first_size], (
+            f"seating at {_sz} gives different reference rects from "
+            f"{_first_size}: "
+            f"{ {k: (_by_size[_first_size].get(k), _got.get(k)) for k in _got if _by_size[_first_size].get(k) != _got.get(k)} }")
 
     # ── THE NAME FITS ITS CELL, AND THE BOUND IS THE GAME'S ─────
     # The widest name the game can produce is `WWWWWWW IV`: the
@@ -3116,9 +3154,7 @@ def main():
     _cfg_names = _column_cfg(_cfg, app.layout)
     for _W, _H in _SIZES:
         _lay = Layout(_W, _H)
-        _bx = {b.name: b for b in load_boxes(_boxes_path, _W, _H)}
-        for _b in _bx.values():
-            _b.update_layout(_lay)
+        _bx = {b.name: b for b in _seated(_boxes_path, _W, _H)}
         _cw = _bx["col_name"].screen_rect.width
         _px = _lay.font_size(_cfg["name_font"])
         _bound = app.style.render_text(
@@ -3147,9 +3183,7 @@ def main():
     # vertical axis only. Read off the surface: the name's ink starts
     # at the column's own left edge, not against its right.
     _lay = Layout(1920, 1080)
-    _bx = {b.name: b for b in load_boxes(_boxes_path, 1920, 1080)}
-    for _b in _bx.values():
-        _b.update_layout(_lay)
+    _bx = {b.name: b for b in _seated(_boxes_path, 1920, 1080)}
     _ar = _bx["list_area"].screen_rect
     _sf = pygame.Surface((1920, 1080))
     _sf.fill((0, 0, 0))
@@ -3426,11 +3460,9 @@ def main():
     for _sw, _sh in ((1920, 1080), (2560, 1440), (3440, 1440),
                      (3840, 2160)):
         _slay = Layout(_sw, _sh)
-        _sbox = {b.name: b for b in load_boxes(
+        _sbox = {b.name: b for b in _seated(
             os.path.join(SCREENS_DIR, "colony_summary", "boxes.json"),
             _sw, _sh)}
-        for _b in _sbox.values():
-            _b.update_layout(_slay)
         # ONE BOX PER KEY since 12 September 2026. The row's font
         # size is the first slot's, the way `colonysort.font_size`
         # reads it — asserted here at four resolutions including one
@@ -3740,9 +3772,7 @@ def main():
     for _aw, _ah in ((1920, 1080), (2560, 1440), (3440, 1440),
                      (3840, 2160)):
         _alay = Layout(_aw, _ah)
-        _abx = {b.name: b for b in load_boxes(_boxes_path, _aw, _ah)}
-        for _b in _abx.values():
-            _b.update_layout(_alay)
+        _abx = {b.name: b for b in _seated(_boxes_path, _aw, _ah)}
         _aarea = _abx["list_area"].screen_rect
         _acfg = dict(_ov_cfg)
         _acfg[_ct0.COLUMNS_KEY] = [
@@ -3771,9 +3801,7 @@ def main():
     # leftover of the other five. Native x 619..627 — the arrows'
     # field x (colsum.cpp:263-264) and the anim's measured extent —
     # is 27 reference px, and `col_scroll` carries exactly that.
-    _sc_ref = {b["name"]: b["rect"] for b in
-               _sjson.load(open(_boxes_path, encoding="utf-8")
-                           )["1920x1080"]}["col_scroll"]
+    _sc_ref = colony_rects()["col_scroll"]
     assert _sc_ref[2] == 27, (
         f"col_scroll is {_sc_ref[2]} reference px; the original's "
         f"scroll column is native 619..627 = 9 px = 27 reference "
@@ -4798,11 +4826,7 @@ def main():
     _orig_fit = max((r - l - 10) // 30 for l, r in
                     ((101, 226), (236, 368), (378, 502)))
     from screens.colony_summary import colonytrack as _ctk_cap
-    _cap_la = next(b["rect"] for b in
-                   _sjson.load(open(os.path.join(
-                       SCREENS_DIR, "colony_summary", "boxes.json"),
-                       encoding="utf-8"))["1920x1080"]
-                   if b["name"] == "list_area")
+    _cap_la = colony_rects()["list_area"]
     _cap_cfg = _sjson.load(open(os.path.join(
         SCREENS_DIR, "colony_summary", "layout.json"),
         encoding="utf-8"))["list"]
@@ -4815,11 +4839,7 @@ def main():
         # per-resolution table; both are derived, so this is measured
         # rather than read off two files that could disagree.
         _step = _ctk_cap.figure_step(_sarea, _cap_cfg)
-        _cbox = next(b["rect"] for b in
-                     _sjson.load(open(os.path.join(
-                         SCREENS_DIR, "colony_summary", "boxes.json"),
-                         encoding="utf-8"))["1920x1080"]
-                     if b["name"] == "col_farmers")
+        _cbox = colony_rects()["col_farmers"]
         _colw = _cbox[2] * _slay.scale
         _fits = int((_colw - 28 * _step) // (30 * _step) + 1)
         assert _fits >= _orig_fit, (
@@ -5215,11 +5235,8 @@ def main():
     # failure names the column that drifted.
     _dev_rows = dict(re.findall(
         r"^\|\s*`(col_\w+)`\s*\|\s*(\d+)\s*\|", _status_txt, re.M))
-    _dev_boxes = {b["name"]: b["rect"][2] for b in
-                  _sjson.load(open(os.path.join(
-                      SCREENS_DIR, "colony_summary", "boxes.json"),
-                      encoding="utf-8"))["1920x1080"]
-                  if b["name"].startswith("col_")}
+    _dev_boxes = {_n: _r[2] for _n, _r in colony_rects().items()
+                  if _n.startswith("col_")}
     assert set(_dev_rows) == set(_dev_boxes), (
         f"the deviation table lists {sorted(_dev_rows)} and boxes.json "
         f"has {sorted(_dev_boxes)} — every column is reported or the "
@@ -5914,8 +5931,7 @@ def main():
     # 2x figure needs 57. That window used to fall to 1920x1080's
     # entry through `box.closest_resolution`, which is how a table
     # keyed on three resolutions answered for a fourth.
-    _fs_la = next(b["rect"] for b in _boxes_json["1920x1080"]
-                  if b["name"] == "list_area")
+    _fs_la = colony_rects()["list_area"]
     _fs_cfg = _sjson.load(open(os.path.join(
         SCREENS_DIR, "colony_summary", "layout.json"),
         encoding="utf-8"))["list"]
@@ -7704,11 +7720,9 @@ def main():
     for _hspec2 in ("1920x1080", "2560x1440", "3840x2160"):
         _hw2, _hh2 = (int(v) for v in _hspec2.split("x"))
         _hlay2 = Layout(_hw2, _hh2)
-        _hboxes = {b.name: b for b in load_boxes(
+        _hboxes = {b.name: b for b in _seated(
             os.path.join(SCREENS_DIR, "colony_summary", "boxes.json"),
             _hw2, _hh2)}
-        for _b in _hboxes.values():
-            _b.update_layout(_hlay2)
         _harea = pygame.Rect(*_hlay2.rect(_hboxes["list_area"].ref_rect))
         _hcfg = dict(_sjson.load(open(os.path.join(
             SCREENS_DIR, "colony_summary", "layout.json"),
@@ -8581,11 +8595,11 @@ def main():
     # replaced. Centred label-over-value passes no part of it: the
     # label would not start at the left edge and the value would not
     # end at the right one.
-    _sb_boxes = load_boxes(
+    _sb_boxes = _seated(
         os.path.join(SCREENS_DIR, "colony_summary", "boxes.json"),
         1920, 1080)
     _sb_ref = [b.ref_rect for b in _sb_boxes if b.name == "empire_stats"]
-    assert _sb_ref, "boxes.json has no empire_stats box"
+    assert _sb_ref, "colony_summary has no empire_stats box"
 
     from screens.colony_summary import screen as _cs
     from screens.colony_summary import colonyempire as _emp_mod0
@@ -9487,8 +9501,8 @@ def main():
     assert _names_before == _names_after, (
         f"a save changed which boxes exist: "
         f"{_names_before ^ _names_after}")
-    _rects_before = {b["name"]: b["rect"] for b in _before_json["1920x1080"]}
-    _rects_after = {b["name"]: b["rect"] for b in _after_json["1920x1080"]}
+    _rects_before = {b["name"]: b.get("rect") for b in _before_json["1920x1080"]}
+    _rects_after = {b["name"]: b.get("rect") for b in _after_json["1920x1080"]}
     assert _rects_before == _rects_after, (
         f"a save moved a box: "
         f"{ {k: (_rects_before[k], _rects_after[k]) for k in _rects_before if _rects_before[k] != _rects_after[k]} }")
@@ -9940,11 +9954,9 @@ def main():
     for _bspec in ("1920x1080", "2560x1440"):
         _bw2, _bh2 = (int(v) for v in _bspec.split("x"))
         _blay = Layout(_bw2, _bh2)
-        _bboxes = {b.name: b for b in load_boxes(
+        _bboxes = {b.name: b for b in _seated(
             os.path.join(SCREENS_DIR, "colony_summary", "boxes.json"),
             _bw2, _bh2)}
-        for _b in _bboxes.values():
-            _b.update_layout(_blay)
         _barea = pygame.Rect(*_blay.rect(_bboxes["list_area"].ref_rect))
         _bcfg = dict(_nb_cfg)
         _bcfg[_ctk.COLUMNS_KEY] = [(n[4:], _bboxes[n]) for n in
@@ -10769,10 +10781,9 @@ def main():
     with open(os.path.join(SCREENS_DIR, "galaxy_map", "boxes.json"),
               encoding="utf-8") as _fh:
         for _res, _bl in _hjson.load(_fh).items():
-            _area = next(b["rect"] for b in _bl
-                         if b["name"] == "map_area")
-            _pop_r = next(b["rect"] for b in _bl
-                          if b["name"] == "help_popup")
+            _by = {b["name"]: b["rect"] for b in _bl}
+            _area = _by["map_area"]
+            _pop_r = _by["help_popup"]
             assert (_pop_r[0] >= _area[0]
                     and _pop_r[1] >= _area[1]
                     and _pop_r[0] + _pop_r[2] <= _area[0] + _area[2]

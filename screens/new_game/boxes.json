@@ -2,9 +2,6 @@
   "1920x1080": [
     {
       "name": "help_popup",
-      "role": [
-        "display"
-      ],
       "hidden": true,
       "style": {
         "font_scale": 1.0
@@ -26,9 +23,6 @@
         464,
         240
       ],
-      "role": [
-        "layout"
-      ],
       "style": {
         "skin": "inner_panel"
       }
@@ -40,9 +34,6 @@
         187,
         541,
         350
-      ],
-      "role": [
-        "layout"
       ],
       "style": {
         "skin": "thin_border"
@@ -56,9 +47,6 @@
         535,
         351
       ],
-      "role": [
-        "layout"
-      ],
       "style": {
         "skin": "thin_border"
       }
@@ -70,9 +58,6 @@
         239,
         467,
         244
-      ],
-      "role": [
-        "layout"
       ],
       "style": {
         "skin": "inner_panel"
@@ -86,9 +71,6 @@
         531,
         354
       ],
-      "role": [
-        "layout"
-      ],
       "style": {
         "skin": "thin_border"
       }
@@ -100,9 +82,6 @@
         234,
         476,
         249
-      ],
-      "role": [
-        "layout"
       ],
       "style": {
         "skin": "inner_panel"
@@ -116,9 +95,6 @@
         468,
         240
       ],
-      "role": [
-        "layout"
-      ],
       "style": {
         "skin": "inner_panel"
       }
@@ -130,9 +106,6 @@
         555,
         540,
         351
-      ],
-      "role": [
-        "layout"
       ],
       "style": {
         "skin": "thin_border"
@@ -146,9 +119,6 @@
         549,
         353
       ],
-      "role": [
-        "layout"
-      ],
       "style": {
         "skin": "thin_border"
       }
@@ -160,9 +130,6 @@
         601,
         469,
         245
-      ],
-      "role": [
-        "layout"
       ],
       "style": {
         "skin": "inner_panel"
@@ -176,18 +143,12 @@
         524,
         257
       ],
-      "role": [
-        "layout"
-      ],
       "style": {
         "skin": "thin_border"
       }
     },
     {
       "name": "help_popup",
-      "role": [
-        "display"
-      ],
       "hidden": true,
       "style": {
         "font_scale": 1.0

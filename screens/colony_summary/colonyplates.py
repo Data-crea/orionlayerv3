@@ -134,28 +134,120 @@ def bled(rect):
     return [x - BLEED, y - BLEED, w + 2 * BLEED, h + 2 * BLEED]
 
 
+#: The six column boxes, in `list_columns`' own order. Named here
+#: because `column_rects` has to produce a BOX name from a SPLIT key,
+#: and `colonyheader.COLUMN_BOXES` holds the same six for the screen
+#: side — a smoke check holds the two to each other, which is what
+#: makes the copy legitimate (decision 36).
+COLUMN_PREFIX = "col_"
+
+
+def column_rects(list_box, cols):
+    """{col_<key>: rect} — the six columns laid across `list_box`.
+
+    **THE SPLIT HAS ONE HOME AND IT IS `list_columns`** — 12 September
+    2026. The six rects stood in `boxes.json` as well, seated from
+    here by a tool nobody had to run; they are derived at startup now,
+    like the fourteen cutouts, so a list that moves takes its columns
+    with it and the editor cannot save a column that disagrees with
+    the reference.
+
+    THE SCROLL COLUMN IS AN ABSOLUTE WIDTH AND THE OTHER FIVE ARE
+    FRACTIONS. Native x 619..627 is 9 px, which is 27 reference px
+    (colsum.cpp:263-264 for the arrows' field x, :278 and :759 for the
+    track it holds). Scaling it with the rest put it at 22 the first
+    time the list got narrower — a transcription quietly becoming a
+    share — so it comes off the top and the remaining five split what
+    is left in their own ratios. Each column ends where the next
+    begins, and the last before the scroll ends where the scroll
+    starts, so the six tile the box exactly by construction rather
+    than by a rounding residue landing in the last one.
+    """
+    ax, ay, aw, ah = list_box
+    keys = list(cols)
+    last = keys[-1]
+    fixed = cols[last]
+    total = sum(v for k, v in cols.items() if k != last)
+    span = aw - fixed
+    out, off = {}, 0
+    for key in keys:
+        if key == last:
+            out[COLUMN_PREFIX + key] = [ax + aw - fixed, ay, fixed, ah]
+        else:
+            x = ax + round(off * span / total)
+            nxt = (ax + aw - fixed if off + cols[key] >= total
+                   else ax + round((off + cols[key]) * span / total))
+            out[COLUMN_PREFIX + key] = [x, ay, nxt - x, ah]
+        off += cols[key]
+    return out
+
+
+def all_rects(data):
+    """{box name: rect} for every box this screen has — cutouts and
+    columns alike — from an already-loaded reference dict.
+
+    Pure, so a tool or a check can ask for the geometry at any
+    resolution with no screen, no app and no pygame.
+    """
+    _data, wins = parse_reference(data)
+    out = {BOX_NAME.get(n, n): bled(r) for n, r in wins.items()}
+    cols = data.get("list_columns")
+    if cols:
+        out.update(column_rects(out["list_area"], cols))
+    return out
+
+
 def box_rects(screen):
-    """{box name: [x, y, w, h]} — the cutouts, reference px, bled."""
-    return {BOX_NAME.get(n, n): bled(r)
-            for n, r in windows(screen).items()}
+    """{box name: [x, y, w, h]} — every box, reference px."""
+    data = screen.app.res.load_json(
+        f"screens/{screen.SCREEN_NAME}/{REFERENCE}", {}) or {}
+    return all_rects(data)
 
 
 def reseat(screen):
-    """Rewrite every cutout box's `ref_rect` from the reference.
+    """Give every box its rect, from `layout_reference.json`.
 
-    THE SIX COLUMN BOXES ARE NOT TOUCHED. They are strips of
-    `list_area` placed by hand in the editor (decision 14) and have no
-    rectangle in the reference to be derived from; `list_columns`
-    declares their SPLIT and `tools/boxes_from_reference.py --columns`
-    seats them from it, which is a deliberate act and not a startup.
+    **THE COLUMNS COME THROUGH HERE TOO SINCE 12 September 2026.**
+    They were strips of `list_area` placed by hand in the editor and
+    seated from `list_columns` by a tool somebody had to remember to
+    run; the split has one home now and the six follow the list the
+    way the fourteen cutouts do. What that costs is the drag: a
+    column moved in the F5 editor is rebuilt from the reference at the
+    next load, so the way to move one is to edit `list_columns`. The
+    editor says so — `core/editor/boxclass.py` classes them from the
+    screen's rules, not from a flag in a file.
+
+    `boxes.json` carries no rectangle at all for this screen now, so
+    this is not a correction of what was loaded — it is where the
+    geometry comes from.
     """
     want = box_rects(screen)
-    for box in screen.boxes:
-        rect = want.get(box.name)
-        if rect and tuple(box.ref_rect) != tuple(rect):
-            box.ref_rect = tuple(rect)
-            box.update_layout(screen.layout)
+    seat(screen.boxes, want, screen.layout)
     return want
+
+
+def seat(boxes, rects, layout):
+    """Give each box in `boxes` its rect from `rects`, and lay it out.
+
+    Split from `reseat` so a check can seat a box list it built itself
+    — `load_boxes` returns boxes with no rectangle for this screen now,
+    and a second loop that filled them in would be a second copy of
+    the one rule that matters here.
+    """
+    for box in boxes:
+        rect = rects.get(box.name)
+        if rect is None:
+            continue
+        if box.ref_rect is None or tuple(box.ref_rect) != tuple(rect):
+            box.ref_rect = tuple(rect)
+        box.derived = True
+        box.update_layout(layout)
+    missing = [b.name for b in boxes if b.ref_rect is None]
+    assert not missing, (
+        f"{missing} have no rectangle: boxes.json names them and "
+        f"neither layout_reference.json nor list_columns places them. "
+        f"A box this screen cannot seat is a box nothing can draw")
+    return boxes
 
 
 def render_fills(screen, surface):

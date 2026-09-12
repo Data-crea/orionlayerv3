@@ -8,9 +8,6 @@
         1402,
         854
       ],
-      "role": [
-        "display"
-      ],
       "style": {
         "font_scale": 1.0
       }
@@ -22,9 +19,6 @@
         111,
         255,
         656
-      ],
-      "role": [
-        "display"
       ],
       "style": {
         "font_scale": 1.3
@@ -38,9 +32,6 @@
         258,
         151
       ],
-      "role": [
-        "click"
-      ],
       "style": {
         "font_size": 26
       }
@@ -52,9 +43,6 @@
         966,
         213,
         42
-      ],
-      "role": [
-        "click"
       ],
       "style": {
         "font_size": 18
@@ -68,9 +56,6 @@
         217,
         42
       ],
-      "role": [
-        "click"
-      ],
       "style": {
         "font_size": 18
       }
@@ -82,9 +67,6 @@
         966,
         212,
         41
-      ],
-      "role": [
-        "click"
       ],
       "style": {
         "font_size": 18
@@ -98,9 +80,6 @@
         221,
         41
       ],
-      "role": [
-        "click"
-      ],
       "style": {
         "font_size": 18
       }
@@ -112,9 +91,6 @@
         966,
         213,
         42
-      ],
-      "role": [
-        "click"
       ],
       "style": {
         "font_size": 18
@@ -128,9 +104,6 @@
         193,
         42
       ],
-      "role": [
-        "click"
-      ],
       "style": {
         "font_size": 18
       }
@@ -142,9 +115,6 @@
         119,
         235,
         93
-      ],
-      "role": [
-        "display"
       ],
       "style": {
         "font_scale": 1.3,
@@ -159,9 +129,6 @@
         138,
         93
       ],
-      "role": [
-        "display"
-      ],
       "style": {
         "font_scale": 1.3,
         "align": "center"
@@ -174,9 +141,6 @@
         228,
         91,
         93
-      ],
-      "role": [
-        "display"
       ]
     },
     {
@@ -186,9 +150,6 @@
         338,
         138,
         93
-      ],
-      "role": [
-        "display"
       ],
       "style": {
         "font_scale": 1.3,
@@ -202,9 +163,6 @@
         338,
         91,
         93
-      ],
-      "role": [
-        "display"
       ]
     },
     {
@@ -214,9 +172,6 @@
         447,
         138,
         93
-      ],
-      "role": [
-        "display"
       ],
       "style": {
         "font_scale": 1.3,
@@ -230,9 +185,6 @@
         447,
         91,
         93
-      ],
-      "role": [
-        "display"
       ]
     },
     {
@@ -242,9 +194,6 @@
         556,
         138,
         93
-      ],
-      "role": [
-        "display"
       ],
       "style": {
         "font_scale": 1.3,
@@ -258,9 +207,6 @@
         556,
         91,
         93
-      ],
-      "role": [
-        "display"
       ]
     },
     {
@@ -270,9 +216,6 @@
         666,
         138,
         93
-      ],
-      "role": [
-        "display"
       ],
       "style": {
         "font_scale": 1.3,
@@ -286,16 +229,10 @@
         666,
         91,
         93
-      ],
-      "role": [
-        "display"
       ]
     },
     {
       "name": "help_popup",
-      "role": [
-        "display"
-      ],
       "hidden": true,
       "style": {
         "font_scale": 1.0
@@ -317,9 +254,6 @@
         1402,
         854
       ],
-      "role": [
-        "display"
-      ],
       "style": {
         "font_scale": 1.1
       }
@@ -332,9 +266,6 @@
         255,
         656
       ],
-      "role": [
-        "display"
-      ],
       "style": {
         "font_scale": 1.3
       }
@@ -346,9 +277,6 @@
         790,
         258,
         151
-      ],
-      "role": [
-        "click"
       ],
       "style": {
         "font_size": 26,
@@ -363,9 +291,6 @@
         213,
         42
       ],
-      "role": [
-        "click"
-      ],
       "style": {
         "font_size": 18
       }
@@ -377,9 +302,6 @@
         966,
         217,
         42
-      ],
-      "role": [
-        "click"
       ],
       "style": {
         "font_size": 18
@@ -393,9 +315,6 @@
         212,
         41
       ],
-      "role": [
-        "click"
-      ],
       "style": {
         "font_size": 18
       }
@@ -407,9 +326,6 @@
         966,
         221,
         41
-      ],
-      "role": [
-        "click"
       ],
       "style": {
         "font_size": 18
@@ -423,9 +339,6 @@
         213,
         42
       ],
-      "role": [
-        "click"
-      ],
       "style": {
         "font_size": 18
       }
@@ -438,9 +351,6 @@
         193,
         42
       ],
-      "role": [
-        "click"
-      ],
       "style": {
         "font_size": 18
       }
@@ -452,9 +362,6 @@
         119,
         235,
         93
-      ],
-      "role": [
-        "display"
       ],
       "style": {
         "font_scale": 1.0,
@@ -469,9 +376,6 @@
         138,
         93
       ],
-      "role": [
-        "display"
-      ],
       "style": {
         "font_scale": 1.0,
         "align": "center"
@@ -484,9 +388,6 @@
         228,
         91,
         93
-      ],
-      "role": [
-        "display"
       ]
     },
     {
@@ -496,9 +397,6 @@
         338,
         138,
         93
-      ],
-      "role": [
-        "display"
       ],
       "style": {
         "font_scale": 1.1,
@@ -512,9 +410,6 @@
         338,
         91,
         93
-      ],
-      "role": [
-        "display"
       ]
     },
     {
@@ -524,9 +419,6 @@
         447,
         138,
         93
-      ],
-      "role": [
-        "display"
       ],
       "style": {
         "font_scale": 1.1,
@@ -540,9 +432,6 @@
         447,
         91,
         93
-      ],
-      "role": [
-        "display"
       ]
     },
     {
@@ -552,9 +441,6 @@
         556,
         138,
         93
-      ],
-      "role": [
-        "display"
       ],
       "style": {
         "font_scale": 1.1,
@@ -568,9 +454,6 @@
         556,
         91,
         93
-      ],
-      "role": [
-        "display"
       ]
     },
     {
@@ -580,9 +463,6 @@
         666,
         138,
         93
-      ],
-      "role": [
-        "display"
       ],
       "style": {
         "font_scale": 1.1,
@@ -597,18 +477,12 @@
         91,
         93
       ],
-      "role": [
-        "display"
-      ],
       "style": {
         "font_scale": 0.8
       }
     },
     {
       "name": "help_popup",
-      "role": [
-        "display"
-      ],
       "hidden": true,
       "style": {
         "font_scale": 1.0

@@ -8,9 +8,6 @@
         696,
         949
       ],
-      "role": [
-        "layout"
-      ],
       "style": {
         "label": "Race Picks Panel",
         "font_scale": 1.0,
@@ -24,9 +21,6 @@
         109,
         502,
         949
-      ],
-      "role": [
-        "layout"
       ],
       "style": {
         "label": "Special Abilities Panel",
@@ -42,9 +36,6 @@
         549,
         949
       ],
-      "role": [
-        "layout"
-      ],
       "style": {
         "label": "Description Panel",
         "font_scale": 1.0,
@@ -59,9 +50,6 @@
         900,
         173
       ],
-      "role": [
-        "display"
-      ],
       "style": {
         "label": "Picks/Score Bar",
         "font_scale": 1.0
@@ -74,9 +62,6 @@
         900,
         280,
         50
-      ],
-      "role": [
-        "layout"
       ],
       "style": {
         "label": "Race Picks Text",
@@ -91,9 +76,6 @@
         280,
         50
       ],
-      "role": [
-        "layout"
-      ],
       "style": {
         "label": "Score Text",
         "font_scale": 1.0
@@ -106,9 +88,6 @@
         109,
         696,
         30
-      ],
-      "role": [
-        "layout"
       ],
       "style": {
         "label": "Race Picks Header",
@@ -123,9 +102,6 @@
         502,
         30
       ],
-      "role": [
-        "layout"
-      ],
       "style": {
         "label": "Special Abilities Header",
         "font_scale": 1.0
@@ -138,9 +114,6 @@
         107,
         549,
         30
-      ],
-      "role": [
-        "layout"
       ],
       "style": {
         "label": "Description Header",
@@ -184,9 +157,6 @@
         659,
         834
       ],
-      "role": [
-        "layout"
-      ],
       "style": {
         "label": "Race Picks Panel",
         "font_scale": 0.9,
@@ -200,9 +170,6 @@
         110,
         502,
         832
-      ],
-      "role": [
-        "layout"
       ],
       "style": {
         "label": "Special Abilities Panel",
@@ -218,9 +185,6 @@
         523,
         832
       ],
-      "role": [
-        "layout"
-      ],
       "style": {
         "label": "Description Panel",
         "font_scale": 1.0,
@@ -235,9 +199,6 @@
         555,
         49
       ],
-      "role": [
-        "display"
-      ],
       "style": {
         "label": "Picks/Score Bar",
         "font_scale": 1.0
@@ -250,9 +211,6 @@
         963,
         330,
         35
-      ],
-      "role": [
-        "layout"
       ],
       "style": {
         "label": "Race Picks Text",
@@ -267,9 +225,6 @@
         290,
         35
       ],
-      "role": [
-        "layout"
-      ],
       "style": {
         "label": "Score Text",
         "font_scale": 1.0
@@ -282,9 +237,6 @@
         109,
         696,
         30
-      ],
-      "role": [
-        "layout"
       ],
       "style": {
         "label": "Race Picks Header",
@@ -299,9 +251,6 @@
         502,
         30
       ],
-      "role": [
-        "layout"
-      ],
       "style": {
         "label": "Special Abilities Header",
         "font_scale": 1.0
@@ -314,9 +263,6 @@
         107,
         524,
         30
-      ],
-      "role": [
-        "layout"
       ],
       "style": {
         "label": "Description Header",

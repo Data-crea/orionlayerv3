@@ -6,8 +6,9 @@ is wrong in two different ways on the same screen and silently.
 
 **THE CLASS IS DERIVED, NEVER DECLARED.** A box is LOCKED because the
 screen's `frame_holes` rule produces its name, not because somebody
-typed a flag next to it. `Box.locked` exists in the data model, is
-serialized by `to_dict`, and has never been read by anything — filling
+typed a flag next to it. `Box.locked` existed in the data model, was
+serialized by `to_dict`, and was never read by anything; it is
+deleted, with `Box.role`, since 12 September 2026. Filling
 it in would mean hand-copying which boxes are cutouts into every
 screen's box file, which is a second copy of what `frame_holes`
 already knows and is exactly the failure decision 3 was written
