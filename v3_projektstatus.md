@@ -13,6 +13,19 @@ right and the header had gone stale** — resolved 10 September 2026
 by dating the header to the edit and giving this session its
 paragraph, below, so the two agree again.
 
+This session (12 September 2026), last: **Data's frame gained an
+eighth slot and RETURN moved into it.** `assets/frame.png` cuts **14**
+holes now (sha256 `b95d0651…`, from `~/Downloads/frame.png`): the title
+cartouche, the list, four bottom boxes and EIGHT in the sort row.
+`return_button` is a cutout like any other again — rect from the alpha,
+`[1680, 962, 130, 47]`, drawn UNDER the frame with the seven keys, the
+panel fill through `render_fills`, hover over the whole box, and
+**LOCKED** in the F5 editor. The plate it painted over the metal for
+one day is gone with the hole that was missing, and `_editor_free` is
+an empty list — the declaration that no box on this screen may be
+dragged, not a missing key. Editor classes: **0 free / 6 bound / 14
+locked**. Smoke stays at 120. See "The eighth slot" below.
+
 This session (12 September 2026), last: **die Figur füllt die Zeile —
 the figure's SIZE is no longer always an integer step.** DEVIATION from
 decision 28, Data's decision after the A/B/C crops. The step still
@@ -4416,6 +4429,63 @@ false, the artwork used directly), and then the check is measuring a
 plate nobody draws. **Which of the two paths the colony screen takes
 is the open decision**, and it is upstream of this check rather than
 settled by it.
+
+### The eighth slot: RETURN is a cutout again — 12 September 2026
+
+Data drew a frame with a slot for RETURN the same evening the 13-hole
+one arrived. Confirmed before anything was copied: `~/Downloads/
+frame.png`, the only `frame.png` there, mtime 12 September 2026 20:42,
+sha256 `b95d0651030c8197…`, 1672x941 — and **14 holes** in the alpha,
+against the 13 of the frame it replaces.
+
+| hole | window |
+|---|---|
+| title cartouche | — SPARE, claimed by nothing, as before |
+| list | `list`, with `header` as its top band |
+| bottom 1..4 | `planet_output`, `planet_info`, `empire_stats`, `galaxy_inset` |
+| sort row, 8 | `sort_name` … `sort_bc` and **`return_button`** |
+
+Naming resolves **13 windows + 1 spare**, rows `[1, 4, 8]`, by overlap
+against `layout_reference.json`. RETURN's rect is the artwork's own,
+scaled the way every other slot's is — native (1463, 838, 113, 41) →
+reference **[1680, 962, 130, 47]**, each edge within half a pixel of
+the hole, the same convention the seven keys were measured with.
+
+**What went back.** `_render_return` after the frame is gone; RETURN is
+drawn in `_render_buttons` with the seven keys, under the frame, and
+`colonysort.render_return` keeps only the hover and the word — the
+panel fill arrives with every other cutout's through
+`colonyplates.render_fills` (`panels.return`), and the frame supplies
+the bezel. The one thing it does NOT share with a sort key is the
+highlight: a key lights the word plus `HIGHLIGHT_PAD`, because the
+original lights the word; RETURN has no lit state in the original at
+all, so the hover fills the whole button, which is what answers a
+click.
+
+**The editor.** `return_button` leaves `_windows_without_a_hole` and
+`_editor_free`, so `frame_holes.cutout_names` returns all fourteen and
+`boxclass` reads the colony screen as **0 free / 6 bound / 14 locked** —
+the fourteen cutouts LOCKED because a cutout's rect is the hole's, and
+the six columns BOUND to `list_columns`. `_editor_free` stays in the
+file as an empty list: that is "no box may be dragged", where a missing
+key would be "nobody has said", and a check now asserts the key is
+there. The write-back path (`Editor._save` → `screen.save_geometry()` →
+`colonyplates.write_back`) stays built and unused — add a name to that
+list and the box becomes draggable again, with its drag surviving a
+restart.
+
+**Checks: 120, unchanged in count and three of them re-pointed.** The
+bottom row is counted against the rule's own names instead of against
+`SORT_KEYS`, which is seven and is no longer what the row holds; the
+RETURN check asserts what holds for a cutout (panel fill, hover over
+the whole box, word inside it with `HIGHLIGHT_PAD` to spare, 19 px of
+clearance at the narrowest of twelve sizes) instead of what held for a
+plate over the metal; and the editor-class check reads the
+DECLARATION either way rather than a literal zero — which is what let
+it be right on both days. Class C is empty again and class A stays at
+zero: RETURN's word is in a hole now, so nothing this tree draws lands
+on opaque alpha. Every window still sits inside its own hole at three
+resolutions, RETURN included.
 
 ### Die Figur füllt die Zeile: fractional size — 12 September 2026
 

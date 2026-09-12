@@ -290,41 +290,38 @@ def render(surface, buttons, active_key, mouse,
             button.hit.y + (button.hit.height - word.get_height()) // 2))
 
 
-def render_return(surface, screen, mouse, bg, hover_bg, text_color,
-                  outline=None):
+def render_return(surface, screen, mouse, hover_bg, text_color):
     """RETURN, which is a button on this row and not a sort key.
 
-    **IT HAS NO HOLE SINCE DATA'S NEW FRAME — 12 September 2026.** The
-    artwork cuts thirteen holes and none of them is this button: it is
-    drawn OVER the frame, the way `colonyheader`'s plates are drawn
-    over theirs, at a rect Data places himself in the F5 editor
-    (`_editor_free`, written back to `layout_reference.json`). So this
-    function paints the whole control — fill, plate line and word —
-    where before the frame supplied the bezel around it.
+    **IT HAS THE EIGHTH SLOT — 12 September 2026, Data's frame of that
+    evening.** For one day the artwork cut thirteen holes and none of
+    them was this button: it was drawn OVER the metal on a plate this
+    function painted itself — fill, plate line and word — at a rect
+    Data placed in the F5 editor. The frame cuts fourteen now, the
+    eighth of them in the sort row, so RETURN is a cutout like the
+    seven keys beside it: the panel fill arrives with every other
+    cutout's through `colonyplates.render_fills`, the frame supplies
+    the bezel, and what is left here is the hover and the word.
 
-    It kept its own box through every frame this screen has worn,
-    because the original draws it as a separate raised plate to the
-    right of the bar (see the framebuffer at native x 523+), and it is
-    the one control here that takes the CLICK path, because its field
-    reports no letter (decision 39's fallback).
+    It keeps its own box, as it has through every frame this screen
+    has worn, because the original draws it as a separate raised plate
+    to the right of the bar (see the framebuffer at native x 523+),
+    and it is the one control here that takes the CLICK path, because
+    its field reports no letter (decision 39's fallback).
 
-    **THE FILL IS OPAQUE AND THAT IS THE POINT.** It sits on the
-    frame's metal rather than in a hole, so it covers three painted
-    lamps in the artwork; the alternative — the word alone, no plate —
-    leaves the lamps visible and the button with no hover surface,
-    and is one `surface.fill` away if Data wants it. The smoke test
-    reports the occlusion rather than asserting it away.
+    The hover fills the WHOLE box and not the word plus padding, which
+    is the one place this differs from a sort key: a key lights the
+    word because the original lights the word (`layout` above carries
+    that measurement), and RETURN has no lit state in the original at
+    all — it is a button, and the whole button is what answers a
+    click.
     """
     box = screen.box_rect("return")
     if not box:
         return
     rect = pygame.Rect(*screen.layout.rect(box))
-    # THE ONE FILL THAT IS NOT IN `panels`: RETURN draws its own,
-    # because it is the one control here that takes the CLICK path and
-    # its hover has to reach the whole plate.
-    surface.fill((hover_bg if rect.collidepoint(mouse) else bg)[:3], rect)
-    if outline is not None:
-        screen.style.draw_plate(surface, rect, screen.layout.scale, outline)
+    if rect.collidepoint(mouse):
+        surface.fill(hover_bg[:3], rect)
     label = screen._data.get("return", {}).get("label", "Return")
     word = screen.style.render_text(
         label.upper(),

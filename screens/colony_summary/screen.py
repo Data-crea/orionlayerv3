@@ -421,7 +421,6 @@ class ColonySummaryScreen(ScreenBase):
         self._render_move(surface)
         self._render_buttons(surface)
         self._render_frame_image(surface)
-        self._render_return(surface)
         self._render_header(surface)
         self._render_title(surface)
         # LAST, OVER THE FRAME. `COLMOVE::Draw_Cluster_(
@@ -445,17 +444,6 @@ class ColonySummaryScreen(ScreenBase):
             lambda _ink: colonytrack.held_figure_y(
                 _area, _cfg, _scale, _n - _first, mouse_input.pos(),
                 _fscale, _ink))
-
-    def _render_return(self, surface):
-        """RETURN, AFTER THE FRAME — 12 September 2026, Data's new
-        artwork. It is drawn with the header plates and for the same
-        reason: this frame cuts no hole for it, so a plate laid with
-        the other buttons went straight under the metal and the button
-        vanished — three lamps of artwork where the word should be.
-        The seven sort keys stay UNDER the frame, because each has a
-        hole and the frame's rim is what finishes their edges."""
-        colonysort.render_return(surface, self, mouse_input.pos(), NAV_BG,
-                                 NAV_HOVER_BG, NAV_TEXT, HEADER_OUTLINE)
 
     def _render_header(self, surface):
         """The five column headings — see `colonyheader` for the two
@@ -564,7 +552,7 @@ class ColonySummaryScreen(ScreenBase):
 
 
     def _render_buttons(self, surface):
-        """The seven sort keys: the frame provides the bezel, so
+        """The seven sort keys and RETURN: the frame provides the bezel, so
         each box gets a fill plus its label; hover brightens it and
         the active sort key stays lit. The seven sort keys have a
         cut-out each since 12 September 2026, and their panel fill
@@ -592,6 +580,11 @@ class ColonySummaryScreen(ScreenBase):
         colonysort.render(surface, self._sort_buttons(), self._sort_key,
                           mouse, self.style, colonysort.font_size(self),
                           NAV_ACTIVE_BG, NAV_HOVER_BG, SORT_TEXT)
+        # RETURN IS BACK UNDER THE FRAME — 12 September 2026, Data's
+        # eighth slot. It was drawn after the frame for one day, with
+        # the header plates, because the artwork cut no hole for it.
+        colonysort.render_return(surface, self, mouse, NAV_HOVER_BG,
+                                 NAV_TEXT)
 
     def _sort_buttons(self):
         """The seven keys, one `sort_<key>` box each — see

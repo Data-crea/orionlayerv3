@@ -1290,6 +1290,8 @@ def main():
         res.screen_file("colony_summary", "assets", "frame.png"))
     _sw_ref = dict(fh.reference_windows("colony_summary",
                                         (_sw_w, _sw_h)))
+    _sw_lr = app.res.load_json(
+        "screens/colony_summary/layout_reference.json", {}) or {}
     _a, _b = fh.SORT_BOX_KEYS[1], fh.SORT_BOX_KEYS[4]
     _sw_ref[_a], _sw_ref[_b] = _sw_ref[_b], _sw_ref[_a]
     _sw_named = fh.name_holes(_sw_holes, "colony_summary",
@@ -1300,11 +1302,20 @@ def main():
     # sits, and an index-based namer calls it that because it is
     # second. It has to come back as the key the geometry now puts
     # there.
+    # THE BOTTOM ROW IS EIGHT HOLES SINCE 12 September 2026 — the
+    # seven keys and RETURN, which took the eighth slot the evening
+    # Data's frame cut one for it. Counted against the rule's own
+    # names for that row rather than against `SORT_KEYS`, which is
+    # seven and is not what the row holds.
     _sw_row = sorted((tuple(_r) for _r in _sw_holes
                       if _r[1] > 0.85 * _sw_h), key=lambda _r: _r[0])
-    assert len(_sw_row) == len(fh.SORT_KEYS), (
+    _sw_want = len(fh.SORT_KEYS) + (
+        0 if "return_button" in _sw_lr.get(
+            "_windows_without_a_hole", ()) else 1)
+    assert len(_sw_row) == _sw_want, (
         f"{len(_sw_row)} holes in the artwork's bottom row, "
-        f"{len(fh.SORT_KEYS)} sort keys")
+        f"{len(fh.SORT_KEYS)} sort keys and "
+        f"{_sw_want - len(fh.SORT_KEYS)} for RETURN")
     _sw_at = {tuple(_r): _n for _n, _r in _sw_named.items()}
     assert _sw_at[_sw_row[1]] == _b, (
         f"the second slot from the left came back as "
@@ -9435,24 +9446,27 @@ def main():
         f"raise the screen's frame_inset, or stop placing the text "
         f"against the box edge. (Content CLIPPED to a cutout is class "
         f"B and is checked against the artwork, not here.)")
-    # ── RETURN IS A PLATE OVER THE FRAME, AND IT IS OPAQUE ──────
+    # ── RETURN IS THE EIGHTH SLOT, AND IT BEHAVES LIKE ONE ──────
     #
-    # Data's new frame cuts no hole for RETURN: the button is drawn on
-    # the metal, so what makes its word legible is the plate
-    # `colonysort.render_return` paints under it, and that plate is
-    # what the class-C exemption above rests on. A word on a plate is
-    # a button; the same word on the artwork is the class-A fault this
-    # file has held to zero since the frame arrived.
+    # **RE-POINTED 12 September 2026, the same day it was written.**
+    # For one day this frame cut no hole for RETURN: the button was
+    # drawn OVER the metal on a plate of its own, and this asserted
+    # that the plate was opaque — because a word on bare artwork is
+    # the class-A fault this file holds at zero. Data's frame of that
+    # evening cuts an eighth slot in the sort row, so the plate is
+    # gone and what has to hold is what holds for the seven keys
+    # beside it: the cutout carries the panel fill, the word sits
+    # inside the box with `HIGHLIGHT_PAD` to spare, and the hover
+    # reaches the WHOLE box, which is the one place RETURN differs
+    # from a sort key (a key lights its word, and the original gives
+    # RETURN no lit state at all).
     #
-    # THE RECT ITSELF IS NOT ASSERTED — it is the one FREE box on this
-    # screen and Data moves it in the editor, so a check that pinned
-    # its coordinates would fail on his first drag. What is asserted
-    # is what survives one: the fill reaches the rect's edges, the
-    # label fits inside it with `HIGHLIGHT_PAD` per side, and the word
-    # is centred. Where it sits, and what the plate therefore covers,
-    # is REPORTED.
+    # The rect is asserted by the hole check, not here: it is the
+    # artwork's own again, and this box is LOCKED in the editor.
     from screens.colony_summary import colonysort as _rb_sort
-    _rb_lamp = None
+    from screens.colony_summary.screen import (PANEL_BG as _rb_bg,
+                                               NAV_HOVER_BG as _rb_hov,
+                                               NAV_TEXT as _rb_fg)
     _rb_fits = []
     for _W, _H in _SIZES:
         _rb_app, _ = _pv.build_screen(_W, _H)
@@ -9460,47 +9474,58 @@ def main():
         _rb_app.dispatcher.switch_to("colony_summary")
         _rb_scr.enter(None)
         _rb_scr.update(_pv._Snapshot(_pv.COLONIES))
-        _rb_surf = pygame.Surface((_W, _H))
-        _rb_surf.fill((255, 0, 255))
-        _rb_scr.render(_rb_surf)
-        from screens.colony_summary.screen import (
-            NAV_BG as _rb_bg, NAV_TEXT as _rb_fg)
         _rb_r = pygame.Rect(*_rb_scr.layout.rect(
             _rb_scr.box_rect("return")))
-        # The plate's own line is 1 px on the border and the corners
-        # are rounded, so the fill is sampled inside both.
+        import core.mouse as _rb_m
+        _rb_saved = _rb_m.pos
+
+        def _rb_render(_ptr):
+            _rb_m.pos = lambda: _ptr
+            try:
+                _s = pygame.Surface((_W, _H))
+                _s.fill((255, 0, 255))
+                _rb_scr.render(_s)
+                return _s
+            finally:
+                _rb_m.pos = _rb_saved
+
+        # INSIDE THE ROUNDED CORNERS, INSIDE THE BLEED AND CLEAR OF
+        # THE WORD. The box is the hole grown by `colonyplates.BLEED`
+        # and the frame's rim is anti-aliased over the top of it, so a
+        # sample two pixels in reads the rim blended with the fill —
+        # (6, 8, 13) against (8, 11, 20) at 1680x1050, which is the
+        # rim at about four fifths. The word is centred and comes
+        # within 9 px of the box's width at 1280x720, so the samples
+        # stay on the top and bottom edges.
         _rb_rad = max(6, int(10 * _rb_scr.layout.scale))
-        # ALONG THE TOP AND BOTTOM EDGES, inside the rounded corners
-        # and clear of the word: the label is centred and at 1280x720
-        # it comes within 9 px of the plate's width, so a sample on
-        # the centre line reads the glyph and not the fill.
-        for _rb_p in ((_rb_r.centerx, _rb_r.y + 2),
-                      (_rb_r.centerx, _rb_r.bottom - 3),
-                      (_rb_r.x + _rb_rad, _rb_r.y + 2),
-                      (_rb_r.right - 1 - _rb_rad, _rb_r.bottom - 3)):
-            _rb_c = _rb_surf.get_at(_rb_p)[:3]
-            # THE PLATE'S OWN COLOUR, not merely "something" — and
-            # that distinction caught the fault this check was written
-            # for. `_render_buttons` ran BEFORE the frame was blitted,
-            # so RETURN's plate went straight under the metal and the
-            # button was three painted lamps with no word on them;
-            # against "not the magenta I filled with" the frame itself
-            # passed the assertion. It is drawn after the frame now,
-            # with the header plates, and this reads the fill.
+        _rb_in = max(5, int(5 * _rb_scr.layout.scale))
+        _rb_pts = ((_rb_r.centerx, _rb_r.y + _rb_in),
+                   (_rb_r.centerx, _rb_r.bottom - 1 - _rb_in),
+                   (_rb_r.x + _rb_rad, _rb_r.y + _rb_in),
+                   (_rb_r.right - 1 - _rb_rad, _rb_r.bottom - 1 - _rb_in))
+        _rb_idle = _rb_render((0, 0))
+        for _rb_p in _rb_pts:
+            _rb_c = _rb_idle.get_at(_rb_p)[:3]
             assert _rb_c == tuple(_rb_bg[:3]), (
-                f"{_W}x{_H}: {_rb_p} of RETURN's rect {tuple(_rb_r)} "
-                f"is {_rb_c} and the plate's fill is "
-                f"{tuple(_rb_bg[:3])} — the button is under the frame "
-                f"again, or something is drawn over it")
-        # AND THE WORD IS ON THE PLATE. Without this the check is
-        # satisfied by a blank button.
+                f"{_W}x{_H}: {_rb_p} of RETURN's cutout "
+                f"{tuple(_rb_r)} is {_rb_c} and the panel fill is "
+                f"{tuple(_rb_bg[:3])} — the eighth slot is not being "
+                f"filled like the other seven")
+        # AND THE HOVER REACHES THE WHOLE BOX.
+        _rb_over = _rb_render(_rb_r.center)
+        for _rb_p in _rb_pts:
+            _rb_c = _rb_over.get_at(_rb_p)[:3]
+            assert _rb_c == tuple(_rb_hov[:3]), (
+                f"{_W}x{_H}: with the pointer on RETURN, {_rb_p} is "
+                f"{_rb_c} and the hover fill is {tuple(_rb_hov[:3])} "
+                f"— the hover has to reach the whole button")
+        # AND THE WORD IS ON IT.
         _rb_ink = _np.array(pygame.surfarray.array3d(
-            _rb_surf.subsurface(_rb_r))).reshape(-1, 3)
+            _rb_idle.subsurface(_rb_r))).reshape(-1, 3)
         assert (_np.abs(_rb_ink - _np.array(_rb_fg[:3])).sum(axis=1)
                 < 30).sum() >= 20, (
-            f"{_W}x{_H}: RETURN's plate carries no pixel of the "
-            f"label's own colour {tuple(_rb_fg[:3])} — the plate is "
-            f"there and the word is not")
+            f"{_W}x{_H}: RETURN's slot carries no pixel of the "
+            f"label's own colour {tuple(_rb_fg[:3])}")
         _rb_word = _rb_scr.style.render_text(
             _rb_scr._data.get("return", {}).get("label", "Return").upper(),
             _rb_scr.layout.font_size(
@@ -9509,47 +9534,24 @@ def main():
         _rb_pad = max(1, int(_rb_sort.HIGHLIGHT_PAD * _rb_scr.layout.scale))
         assert _rb_word.get_width() + 2 * _rb_pad <= _rb_r.w, (
             f"{_W}x{_H}: RETURN's label is {_rb_word.get_width()} px "
-            f"wide in a {_rb_r.w} px plate with {_rb_pad} px of "
-            f"padding per side — Data's rect is too small for the "
-            f"word at this resolution")
+            f"wide in a {_rb_r.w} px slot with {_rb_pad} px of "
+            f"padding per side — the hole the artwork cuts is too "
+            f"small for the word at this resolution")
         assert _rb_word.get_height() <= _rb_r.h, (
             f"{_W}x{_H}: RETURN's label is {_rb_word.get_height()} px "
-            f"tall in a {_rb_r.h} px plate")
+            f"tall in a {_rb_r.h} px slot")
         _rb_fits.append(_rb_r.w - _rb_word.get_width())
-        if (_W, _H) == (1920, 1080):
-            # WHAT THE PLATE COVERS, reported and not asserted: the
-            # artwork's lit pixels — the three orange lamps on the
-            # plaque — that fall inside wherever the rect currently
-            # is. Selected by colour rather than by a typed rect, so
-            # the report follows the box when Data moves it.
-            _rb_a = _np.array(Image.open(res.screen_file(
-                "colony_summary", "assets", "frame.png")).convert(
-                "RGBA")).astype(int)
-            _rb_lit = ((_rb_a[:, :, 0] > 150) & (_rb_a[:, :, 1] > 50)
-                       & (_rb_a[:, :, 1] < 190) & (_rb_a[:, :, 2] < 90)
-                       & (_rb_a[:, :, 3] > 200))
-            _rb_ys, _rb_xs = _np.where(_rb_lit)
-            _rb_rx = _rb_xs * 1920.0 / _rb_a.shape[1]
-            _rb_ry = _rb_ys * 1080.0 / _rb_a.shape[0]
-            _rb_in = ((_rb_rx >= _rb_r.x) & (_rb_rx < _rb_r.right)
-                      & (_rb_ry >= _rb_r.y) & (_rb_ry < _rb_r.bottom))
-            _rb_lamp = (int(_rb_in.sum()), int(_rb_lit.sum()))
-    report(f"RETURN plate at 1920x1080 covers {_rb_lamp[0]} of the "
-           f"frame's {_rb_lamp[1]} lit pixels — the three lamps on the "
-           f"plaque it is centred on. The word alone, with no plate, "
-           f"is the alternative and leaves them visible")
     report(f"RETURN label clearance, narrowest of {len(_SIZES)} sizes: "
-           f"{min(_rb_fits)} px of the plate's width")
-    ok(f"RETURN is an opaque plate over the frame with its word "
-       f"inside it ({len(_SIZES)} sizes, rect not asserted — it is "
-       f"the editor-free box)")
+           f"{min(_rb_fits)} px of the slot's width")
+    ok(f"RETURN is the eighth cutout and behaves like one ({len(_SIZES)} "
+       f"sizes: panel fill, hover over the whole box, word inside it)")
 
     report("class C, text on a plate we paint over the frame: "
            + (", ".join(f"{_k} {_v} px" for _k, _v
                         in sorted(_class_c.items())) or "none"))
     ok(f"class A: no glyph our code places lands under the frame "
        f"({len(_FRAME_SCREENS)} screens, {len(_SIZES)} sizes, "
-       f"{len(_class_c)} window(s) declared to have no hole)")
+       f"{len(_class_c)} window(s) drawing text over it)")
 
     # ── CLASS B: how far the ARTWORK reaches into each cutout ──
     # Content clipped to a cutout — the galaxy map's stars and star
@@ -11646,12 +11648,14 @@ def main():
     # became seven slots — which is the fault this file writes down
     # about every hand-copied number.
     # AND THE FREE ONES ARE THE DECLARED ONES — 12 September 2026.
-    # This expected ZERO free boxes on this screen, which was true
-    # while every box was a cutout. RETURN has no hole in Data's new
-    # frame: it is drawn over the metal at a rect he places in the F5
-    # editor, `_editor_free` declares it, and `write_back` puts the
-    # drag into `layout_reference.json`. So the expectation is the
-    # declaration, not a zero.
+    # This expected ZERO free boxes as a literal, which was true while
+    # every box was a cutout; then RETURN spent a day with no hole,
+    # drawn over the metal at a rect Data placed in the editor, and
+    # the zero was wrong. Data's frame of that evening gives it the
+    # eighth slot and the count is a zero again — so what is asserted
+    # is the DECLARATION either way, and `_editor_free` is empty
+    # today rather than absent, which is the difference between "no
+    # box may be dragged" and "nobody has said".
     _cs_row = next(r for r in _cls_rows if r[0] == "colony_summary")
     _cs_free = _fh_mod.editor_free("colony_summary")
     _cs_locked = len(_fh_mod.cutout_names("colony_summary"))
@@ -11661,10 +11665,18 @@ def main():
         f"colony_summary classifies as {_cs_row[2]} free / "
         f"{_cs_row[3]} bound / {_cs_row[4]} locked, expected "
         f"{len(_cs_free)} / {len(_bch.COLUMN_BOXES)} / {_cs_locked}")
-    assert _cs_free and set(_cs_free) <= _fh_mod.RULE_NAMES[
-            "colony_summary"], (
+    assert set(_cs_free) <= _fh_mod.RULE_NAMES["colony_summary"], (
         f"the editor-free names {sorted(_cs_free)} are not boxes the "
         f"colony rule knows about")
+    assert "_editor_free" in (app.res.load_json(
+        "screens/colony_summary/layout_reference.json", {}) or {}), (
+        "layout_reference.json no longer declares `_editor_free` at "
+        "all — an empty list says NO box may be dragged and a missing "
+        "key says nobody has said, and the editor cannot tell them "
+        "apart on its own")
+    report(f"editor classes, colony_summary: {_cs_row[2]} free / "
+           f"{_cs_row[3]} bound / {_cs_row[4]} locked"
+           + (f" (free: {sorted(_cs_free)})" if _cs_free else ""))
 
     # 4. HANDLES PER CLASS, and a refusal that says why.
     assert len(_bcl.HANDLES[_bcl.FREE]) == 8
