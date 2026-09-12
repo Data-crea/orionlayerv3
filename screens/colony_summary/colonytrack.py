@@ -626,6 +626,52 @@ def all_bands(area, cfg):
     return bands
 
 
+def held_figure_y(area, cfg, scale, count, point, step):
+    """The y a HELD cluster is drawn at: the figure line of the row
+    under `point`, or the transcribed pointer offset outside the list.
+
+    **THE OFFSET IS TRANSCRIBED AND THE ANCHOR IS A DEVIATION —
+    12 September 2026.** `COLMOVE::Draw_Cluster_` hangs the cluster on
+    the raw pointer at (+5, -10) native px per sprite step
+    (colmove.cpp:7-37, called with `mouse::Pointer_X_/Y_()` at
+    colsum.cpp:509-511), and this returns the ROW's own figure line
+    instead whenever the pointer is in a row.
+
+    **WHY THE CONSTANT STOPPED WORKING, measured.** The two y agree
+    when the pointer sits half a sprite below the band top: the held
+    figure's centre is `pointer + 4*step` (`-10*step + 14*step`) and a
+    row figure's centre is `band_top + 18*step` (`4*step + 14*step`),
+    so they coincide at `pointer = band_top + 14*step`. In the
+    ORIGINAL that IS the middle of the row — its band is 30 native px
+    and its sprite 28, so half a sprite and half a band are the same
+    place. Ours is the list window divided by ten and is not the
+    sprite's height. Measured with the pointer at each band's centre,
+    held top against row-figure top:
+
+        1920x1080  band 58  step 2   190 against 189   +1
+        2560x1440  band 77  step 2   259 against 249  +10
+        3840x2160  band 116 step 4   380 against 378   +2
+
+    1080p and 2160p agree to a pixel because their bands are within
+    two px of `28*step`; 1440p is ten px out because its band is 77
+    against a 56 px sprite — the slack `figure_step` leaves when step
+    3 does not fit. That is the "figure hanging in the air over the
+    row" it was reported as.
+
+    **WHAT IS KEPT.** `CLUSTER_FIGURE_OFFSET`'s x is untouched and the
+    y is still what applies OUTSIDE the list, which is most of the
+    screen and the only place the original's own picture can be
+    compared. What changes is inside a row, where the original's
+    constant expresses "on this row's figure line" and ours no longer
+    did.
+    """
+    py = point[1]
+    for top, height in row_bands(area, cfg, scale, count):
+        if top <= py < top + height:
+            return top + FIGURE_TOP_NATIVE * step
+    return py + zoomtables.CLUSTER_FIGURE_OFFSET[1] * step
+
+
 def row_at(area, cfg, scale, count, point):
     """Index of the drawn row under `point`, or None.
 

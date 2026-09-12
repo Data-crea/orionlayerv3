@@ -7683,6 +7683,152 @@ def main():
                         f"{_r['name']}: x={_x} is drawn as job {_j} "
                         f"and drops into "
                         f"{_cl.drop_band(_mv_area, _mv_cfg, _mv_scale, _r, _x)}")
+    # ── THE HELD CLUSTER SITS ON THE ROW'S OWN FIGURE LINE ──────
+    #
+    # Reported as "at 2560x1440 the moved figure hangs in the air over
+    # the row; at 1920 and 3840 it lands correctly", and it did. The
+    # cluster hung at `pointer + CLUSTER_FIGURE_OFFSET * step`, which
+    # is `COLMOVE::Draw_Cluster_` transcribed (colmove.cpp:7-37), and
+    # that lands on the row's figure line only when the pointer is
+    # half a sprite below the band top — which is the middle of the
+    # row in the ORIGINAL, whose band is 30 native px against a 28 px
+    # sprite, and is not the middle of ours. Measured with the pointer
+    # at each band's centre: +1 px out at 1080p, +2 at 2160p, +10 at
+    # 1440p, whose band is 77 against a 56 px sprite because step 3
+    # does not fit. See `colonytrack.held_figure_y`.
+    #
+    # **THE GEOMETRY AND THE INK, because they fail differently.** A
+    # y that is right and a blit that ignores it look identical in the
+    # arithmetic and not on screen.
+    import importlib.util as _hlu
+    _plv_spec = _hlu.spec_from_file_location(
+        "_held_preview", os.path.join(os.path.dirname(SCREENS_DIR),
+                                      "tools", "colony_list_preview.py"))
+    _plv = _hlu.module_from_spec(_plv_spec)
+    _plv_spec.loader.exec_module(_plv)
+    from core import zoomtables as _hzt
+    _hf_seen = []
+    for _hspec2 in ("1920x1080", "2560x1440", "3840x2160"):
+        _hw2, _hh2 = (int(v) for v in _hspec2.split("x"))
+        _hlay2 = Layout(_hw2, _hh2)
+        _hboxes = {b.name: b for b in load_boxes(
+            os.path.join(SCREENS_DIR, "colony_summary", "boxes.json"),
+            _hw2, _hh2)}
+        for _b in _hboxes.values():
+            _b.update_layout(_hlay2)
+        _harea = pygame.Rect(*_hlay2.rect(_hboxes["list_area"].ref_rect))
+        _hcfg = dict(_sjson.load(open(os.path.join(
+            SCREENS_DIR, "colony_summary", "layout.json"),
+            encoding="utf-8"))["list"])
+        from screens.colony_summary import colonyheader as _hchdr
+        _hcfg[_ctk.COLUMNS_KEY] = [(n[4:], _hboxes[n]) for n in
+                                   _hchdr.COLUMN_BOXES]
+        _hcfg[_ctk.COLUMNS_SPAN_KEY] = (
+            _hboxes["list_area"].ref_rect[0],
+            _hboxes["list_area"].ref_rect[2])
+        _hstep = _ctk.figure_step(_harea, _hcfg)
+        _hband = _ctk.band_height(_harea, _hcfg)
+        _hbands = _ctk.row_bands(_harea, _hcfg, _hlay2.scale, 10)
+        assert _hbands, _hspec2
+        for _bi, (_btop, _bh) in enumerate(_hbands[:3]):
+            _want_y = _btop + _ctk.FIGURE_TOP_NATIVE * _hstep
+            # EVERY y INSIDE THE BAND, not just its centre: the
+            # pointer is wherever the hand is, and the whole point is
+            # that the cluster no longer depends on where in the row
+            # it happens to be.
+            for _py in (_btop, _btop + _bh // 2, _btop + _bh - 1):
+                _got = _ctk.held_figure_y(
+                    _harea, _hcfg, _hlay2.scale, 10,
+                    (_harea.x + 10, _py), _hstep)
+                assert _got == _want_y, (
+                    f"{_hspec2} band {_bi}: a pointer at y {_py} hangs "
+                    f"the cluster at {_got} and that row's figures are "
+                    f"at {_want_y} — band {_bh}, step {_hstep}")
+        # AND OUTSIDE THE LIST THE TRANSCRIPTION IS UNTOUCHED. That is
+        # most of the screen, and it is the only place the original's
+        # own picture can be compared at all.
+        _out = _harea.bottom + 40
+        assert _ctk.held_figure_y(
+            _harea, _hcfg, _hlay2.scale, 10, (_harea.x + 10, _out),
+            _hstep) == _out + _hzt.CLUSTER_FIGURE_OFFSET[1] * _hstep, (
+            f"{_hspec2}: outside the list the cluster no longer hangs "
+            f"at the transcribed offset (colmove.cpp:7-37)")
+        _hf_seen.append((_hspec2, _hband, _hstep))
+    # ── AND THE PIXELS AGREE WITH THE ARITHMETIC ────────────────
+    # One resolution is enough for the blit, and it is the one that
+    # was wrong. A held figure and a row figure of the same master
+    # must ink on the same top row.
+    _hd_app, _hd_screen = _plv.build_screen(2560, 1440)
+    _hd_app.dispatcher.switch_to("colony_summary")
+    _hd_screen.enter(None)
+    _hd_screen.update(_plv._Snapshot(_plv.COLONIES))
+    _hd_area, _hd_cfg, _hd_scale, _hd_n = _hd_screen._list_view()
+    _hd_step = _ctk.figure_step(_hd_area, _hd_cfg)
+    from screens.colony_summary import colonyfigures as _hcfig
+    _hd_set = _hcfig.set_for(_hd_screen, _hd_area, _hd_cfg)
+    if _hd_set is None or not _hd_screen._rows:
+        report("held cluster ink: the figure set is not extracted on "
+               "this disk, so only the arithmetic above is measured")
+    else:
+        from screens.colony_summary import colonypick as _hd_cp
+        _hd_loaded = _hd_cp.pops_of(_plv._Snapshot(_plv.COLONIES),
+                                    _hd_screen._rows[3]["index"])
+        _hd_pick = _hd_cp.pick_at(_hd_loaded[0], _hd_loaded[1], 0, 2,
+                                  _hd_screen._rows[3]["index"], 3, "name")
+        assert not isinstance(_hd_pick, _hd_cp.Refusal), _hd_pick
+        _hd_screen._move.pick = _hd_pick
+        _hd_screen._rebuild_rows()
+        _hd_bands = _ctk.row_bands(_hd_area, _hd_cfg, _hd_scale, 10)
+        _hd_top = _hd_bands[1][0]
+        _hd_ptr = (_ctk.columns(_hd_area, _hd_cfg)["farmers"][0] + 40,
+                   _hd_top + _hd_bands[1][1] // 2)
+        import core.mouse as _hd_m
+        _hd_saved = _hd_m.pos
+        _hd_m.pos = lambda: _hd_ptr
+        try:
+            _hd_surf = pygame.Surface((2560, 1440))
+            _hd_surf.fill((0, 0, 0))
+            _hd_screen.render(_hd_surf)
+        finally:
+            _hd_m.pos = _hd_saved
+        _hd_a = pygame.surfarray.array3d(_hd_surf).transpose(1, 0, 2)
+        # ABOVE THE PLATE, NOT ABOVE BLACK. The cell plate's own line
+        # is `panel.thin_border`, (55, 65, 85), which sums to 205 and
+        # runs along the band's top edge across the whole column — a
+        # threshold that caught it would measure the plate and call it
+        # the figure. The figure masters are the game's own palette
+        # and are far brighter.
+        _hd_lit = _hd_a.sum(axis=2) > 260
+        _want_top = _hd_top + _ctk.FIGURE_TOP_NATIVE * _hd_step
+        # The held cluster is drawn at the pointer's x, to the RIGHT
+        # of it; the row's own figures start at the column's left.
+        _hd_cols = _ctk.columns(_hd_area, _hd_cfg)
+        _rowstrip = _hd_lit[:, _hd_cols["farmers"][0]:_hd_ptr[0] - 4]
+        _heldstrip = _hd_lit[:, _hd_ptr[0] + 4:
+                             _hd_ptr[0] + 4 + 28 * _hd_step]
+        _tops = {}
+        for _what, _strip in (("row", _rowstrip), ("held", _heldstrip)):
+            _ys = np.where(_strip[_hd_top:_hd_top + _hd_bands[1][1]]
+                           .any(axis=1))[0]
+            assert len(_ys), f"no {_what} figure ink in band 1 at 2560x1440"
+            _tops[_what] = _hd_top + int(_ys.min())
+        # THE TWO AGAINST EACH OTHER, which is the property, AND both
+        # against the arithmetic, which is what says the blit read the
+        # y it was given. The tolerance is the masters' own top rows:
+        # 46 of the 54 carry ink on canvas row 0 and the rest do not.
+        assert abs(_tops["row"] - _tops["held"]) <= 2 * _hd_step, (
+            f"2560x1440: the row's figures ink from y {_tops['row']} "
+            f"and the held ones from {_tops['held']} — the cluster is "
+            f"not on the row's line")
+        assert abs(_tops["held"] - _want_top) <= 2 * _hd_step, (
+            f"2560x1440: the held figures ink from y {_tops['held']} "
+            f"and the row's figure line is {_want_top}")
+    report("held cluster: " + ", ".join(
+        f"{_s} band {_b} step {_st}" for _s, _b, _st in _hf_seen))
+    ok("a held cluster sits on the row's own figure line (three "
+       "resolutions, every y in the band; outside the list the "
+       "transcribed pointer offset is untouched)")
+
     ok("colony summary cells: drawn, picked up and dropped are one "
        "and the same cell (read back from the render)")
     # ── The identity letter, and the popup's two rules ───────────

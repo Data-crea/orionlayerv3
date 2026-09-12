@@ -414,10 +414,13 @@ class ColonySummaryScreen(ScreenBase):
         # hang the figures a border's width from the cursor at
         # exactly the resolution nobody checks.
         _area, _cfg, _scale, _n = self._list_view()
+        _step = colonytrack.figure_step(_area, _cfg)
+        _first = self._window.top(_area, _cfg, _scale, _n)
         self._move.draw_held(
             surface, self._rows, mouse_input.pos(),
-            colonyfigures.set_for(self, _area, _cfg),
-            colonytrack.figure_step(_area, _cfg))
+            colonyfigures.set_for(self, _area, _cfg), _step,
+            colonytrack.held_figure_y(_area, _cfg, _scale, _n - _first,
+                                      mouse_input.pos(), _step))
 
     def _render_header(self, surface):
         """The five column headings — see `colonyheader` for the two

@@ -416,7 +416,7 @@ class MoveController:
             self.draw_popup(surface, rows, first, area, cfg, scale,
                             style, layout, data)
 
-    def draw_held(self, surface, rows, pointer, figures, step):
+    def draw_held(self, surface, rows, pointer, figures, step, y=None):
         """The pops in hand, on the pointer. Nothing when none is.
 
         The screen decides WHEN — last, over the frame, which is
@@ -432,7 +432,7 @@ class MoveController:
         if row is None:
             return
         colonylist.draw_held_cluster(surface, pointer, figures,
-                                     row.get("held") or (), step)
+                                     row.get("held") or (), step, y)
 
     def held(self):
         """(colony index, held pop indices), or None.

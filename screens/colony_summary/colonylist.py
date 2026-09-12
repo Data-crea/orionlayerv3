@@ -368,9 +368,15 @@ def render(surface, rows, area, cfg, layout, style, first=0,
                         len(rows))
 
 
-def draw_held_cluster(surface, pointer, figures, cells, step):
+def draw_held_cluster(surface, pointer, figures, cells, step, y=None):
     """The held pops, hanging on the pointer. Drawn LAST, over
     everything, like the original's own `Draw_Cluster_`.
+
+    **THE OFFSET IS TRANSCRIBED, THE VERTICAL ANCHOR IS A DEVIATION**
+    since 12 September 2026 — see `colonytrack.held_figure_y`, which
+    computes `y` and carries the measurement. Inside a row the cluster
+    sits on that row's own figure line; outside one it is the
+    original's pointer offset, unchanged.
 
     **TRANSCRIBED** — `COLMOVE::Draw_Cluster_` (colmove.cpp:7-37),
     called with the raw pointer at the end of the screen's draw
@@ -410,7 +416,12 @@ def draw_held_cluster(surface, pointer, figures, cells, step):
     off_x, off_y = zoomtables.CLUSTER_FIGURE_OFFSET
     pitch = zoomtables.CLUSTER_FIGURE_PITCH * step
     x = pointer[0] + off_x * step
-    y = pointer[1] + off_y * step
+    # `y` is `colonytrack.held_figure_y`'s answer — the row's own
+    # figure line when the pointer is in a row, the transcribed
+    # pointer offset when it is not. None means nobody asked, and the
+    # transcription is what a caller that does not know gets.
+    if y is None:
+        y = pointer[1] + off_y * step
     for cell in cells:
         name = getattr(cell, "figure", None)
         surf = None if name is None else figures.get(name)
