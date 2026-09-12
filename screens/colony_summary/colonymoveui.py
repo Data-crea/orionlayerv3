@@ -424,6 +424,11 @@ class MoveController:
         decides WHAT, because the held cluster is this class's state.
         The offsets and the step are `colonylist`'s and
         `zoomtables`'.
+
+        `y` is a CALLABLE taking one sprite's last inked row, not a
+        number: the figures are anchored by their ink and a cluster
+        can hold two races whose ink ends on different rows. See
+        `colonytrack.figure_origin_y`.
         """
         if self.pick is None:
             return

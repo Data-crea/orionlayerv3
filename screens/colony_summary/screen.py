@@ -439,8 +439,9 @@ class ColonySummaryScreen(ScreenBase):
         self._move.draw_held(
             surface, self._rows, mouse_input.pos(),
             colonyfigures.set_for(self, _area, _cfg), _step,
-            colonytrack.held_figure_y(_area, _cfg, _scale, _n - _first,
-                                      mouse_input.pos(), _step))
+            lambda _ink: colonytrack.held_figure_y(
+                _area, _cfg, _scale, _n - _first, mouse_input.pos(),
+                _step, _ink))
 
     def _render_return(self, surface):
         """RETURN, AFTER THE FRAME — 12 September 2026, Data's new

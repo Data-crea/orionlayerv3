@@ -419,13 +419,18 @@ def draw_held_cluster(surface, pointer, figures, cells, step, y=None):
     # figure line when the pointer is in a row, the transcribed
     # pointer offset when it is not. None means nobody asked, and the
     # transcription is what a caller that does not know gets.
-    if y is None:
-        y = pointer[1] + off_y * step
     for cell in cells:
         name = getattr(cell, "figure", None)
         surf = None if name is None else figures.get(name)
         if surf is not None:
-            surface.blit(surf, (x, y))
+            # PER SPRITE, because the anchor is the INK and a cluster
+            # can hold two races whose ink ends on different rows —
+            # see `colonytrack.figure_origin_y`. `y` is a callable
+            # taking that sprite's own last inked row; None means
+            # nobody asked, and the transcription is what a caller
+            # that does not know gets.
+            surface.blit(surf, (x, pointer[1] + off_y * step if y is None
+                                else y(figures.ink_bottom(name))))
         x += pitch
 
 
@@ -679,7 +684,8 @@ def _render_bar(surface, row, area, cfg, scale, band, track, text_px,
             # the OVERLAP the original has at the same squish, and
             # fitting the sprite to the slot would remove exactly the
             # thing being transcribed (decision 28).
-            # ON THE BAND'S FLOOR, AND THAT IS A DEVIATION —
+            # THE INK ON THE PLATE'S INNER FLOOR, AND THAT IS A
+            # DEVIATION —
             # 12 September 2026, Data's decision. It was `top +
             # 4 * step`, which transcribed the original's own top
             # anchor (icon row `31*i + 38` against a band at
@@ -688,15 +694,19 @@ def _render_bar(surface, row, area, cfg, scale, band, track, text_px,
             # 1920x1080, where nobody saw it, and 17 at 3440x1371 and
             # 21 at 2560x1440, where the row's colonists floated over
             # their own row. `colonytrack.figure_origin_y` is the one
-            # home for the rule and carries the measurement it rests
-            # on — the original's canvas ends on its band's last row,
-            # so the gap it is anchored at is ZERO.
+            # home for the rule and carries the measurements it rests
+            # on. Anchoring the CANVAS there was the first attempt
+            # and it floated at every size: a master inks to row 23
+            # of 28 (24 for the three Bulrathi), so the transparent
+            # tail — 8 device px at step 2, 16 at step 4 — sat under
+            # every figure. What goes on the floor is the INK.
             #
             # The held cluster reads the same function through
             # `colonytrack.held_figure_y`, so a figure in hand and a
             # figure in the row cannot land on different lines.
             surface.blit(surf, (rect.x, colonytrack.figure_origin_y(
-                top, band_h, colonytrack.figure_step(area, cfg))))
+                top, band_h, figures.ink_bottom(
+                    cells[job][index].figure))))
             continue
         pygame.draw.rect(surface, ZONE_COLORS[job], rect)
         mark = _cell_mark(cfg, cells, job, index)

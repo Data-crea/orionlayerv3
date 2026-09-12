@@ -203,6 +203,9 @@ class FigureSet:
         self.figures = {}
         self.refused = []
         self._load(resources, root)
+        #: {name: last inked row of the stepped sprite} — see
+        #: `ink_bottom`, which is what the row anchor reads.
+        self.ink = self._measure_ink()
 
     def _load(self, resources, root):
         names = all_names()
@@ -282,6 +285,47 @@ class FigureSet:
     def get(self, name):
         """One stepped figure, or None when this set does not hold it."""
         return self.figures.get(name)
+
+    def ink_bottom(self, name):
+        """The LAST INKED ROW of that stepped sprite, or None.
+
+        **THE FIGURES ARE ANCHORED BY THIS AND NOT BY THE CANVAS** —
+        12 September 2026, see `colonytrack.figure_origin_y`. A master
+        is 28 x 28 and its ink does not reach the bottom: 51 of the 54
+        ink to row 23 and the three Bulrathi to row 24, so a canvas
+        laid on the row's floor leaves 4 transparent rows — 8 device
+        px at step 2, 16 at step 4 — under every figure, and that is
+        the float.
+
+        MEASURED ON THE SURFACE THAT IS DRAWN, once per set at load,
+        rather than on the master: the sprite is the master stepped by
+        nearest neighbour, so its ink bottom is `(row + 1) * step - 1`
+        and reading it here means the number cannot disagree with the
+        pixels for any reason — a mod's own `@2x` file included, which
+        is a different image and may ink to a different row.
+        """
+        return self.ink.get(name)
+
+    def _measure_ink(self):
+        """{name: last inked row} over the loaded sprites.
+
+        A surface with no per-pixel alpha gives its last row, which is
+        the canvas anchor — the honest answer for a sprite whose ink
+        cannot be told from its background, and one a check catches
+        because the shipped set does have alpha.
+        """
+        import pygame
+        out = {}
+        for name, surface in self.figures.items():
+            try:
+                alpha = pygame.surfarray.array_alpha(surface)
+            except (ValueError, pygame.error):
+                out[name] = surface.get_height() - 1
+                continue
+            rows = [y for y in range(surface.get_height())
+                    if int(alpha[:, y].max()) > 16]
+            out[name] = rows[-1] if rows else surface.get_height() - 1
+        return out
 
 
 def figure_step(area, cfg):

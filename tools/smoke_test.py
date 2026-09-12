@@ -7937,11 +7937,15 @@ def main():
             _hboxes["list_area"].ref_rect[0],
             _hboxes["list_area"].ref_rect[2])
         _hstep = _ctk.figure_step(_harea, _hcfg)
+        # A SPRITE'S OWN INK ROW, because that is what the anchor
+        # takes: the commonest master inks to row 23 of 28, so at
+        # this step its last inked row is `24 * step - 1`.
+        _hink = 24 * _hstep - 1
         _hband = _ctk.band_height(_harea, _hcfg)
         _hbands = _ctk.row_bands(_harea, _hcfg, _hlay2.scale, 10)
         assert _hbands, _hspec2
         for _bi, (_btop, _bh) in enumerate(_hbands[:3]):
-            _want_y = _ctk.figure_origin_y(_btop, _bh, _hstep)
+            _want_y = _ctk.figure_origin_y(_btop, _bh, _hink)
             # EVERY y INSIDE THE BAND, not just its centre: the
             # pointer is wherever the hand is, and the whole point is
             # that the cluster no longer depends on where in the row
@@ -7949,7 +7953,7 @@ def main():
             for _py in (_btop, _btop + _bh // 2, _btop + _bh - 1):
                 _got = _ctk.held_figure_y(
                     _harea, _hcfg, _hlay2.scale, 10,
-                    (_harea.x + 10, _py), _hstep)
+                    (_harea.x + 10, _py), _hstep, _hink)
                 assert _got == _want_y, (
                     f"{_hspec2} band {_bi}: a pointer at y {_py} hangs "
                     f"the cluster at {_got} and that row's figures are "
@@ -7960,7 +7964,7 @@ def main():
         _out = _harea.bottom + 40
         assert _ctk.held_figure_y(
             _harea, _hcfg, _hlay2.scale, 10, (_harea.x + 10, _out),
-            _hstep) == _out + _hzt.CLUSTER_FIGURE_OFFSET[1] * _hstep, (
+            _hstep, _hink) == _out + _hzt.CLUSTER_FIGURE_OFFSET[1] * _hstep, (
             f"{_hspec2}: outside the list the cluster no longer hangs "
             f"at the transcribed offset (colmove.cpp:7-37)")
         # ── AND THE SPRITE SITS ON THE BAND'S FLOOR, EVERY ROW ──
@@ -7976,20 +7980,21 @@ def main():
         # not the first three: a rule that held for row 0 and not for
         # row 9 is what a per-row assertion catches.
         for _bi, (_btop, _bh) in enumerate(_hbands):
-            _fb = _ctk.figure_origin_y(_btop, _bh, _hstep) + (
-                _ctk.MASTER_ROWS * _hstep)
-            assert _fb == _btop + _bh - _ctk.FIGURE_BOTTOM_NATIVE * _hstep, (
-                f"{_hspec2} band {_bi}: the sprite's canvas ends at "
-                f"{_fb} and the band at {_btop + _bh} with a "
-                f"transcribed gap of {_ctk.FIGURE_BOTTOM_NATIVE} "
-                f"native px per step")
-            # AND IT CANNOT BE PUSHED OUT OF THE TOP, which is what
-            # `figure_step` guarantees by needing one row more than a
-            # bottom anchor does.
-            assert _ctk.figure_origin_y(_btop, _bh, _hstep) >= _btop, (
-                f"{_hspec2} band {_bi}: a {_ctk.MASTER_ROWS}-row "
-                f"sprite at step {_hstep} does not fit a {_bh} px "
-                f"band — figure_step chose a step the band cannot hold")
+            _floor = _btop + _bh - 1 - _ctk.PLATE_LINE
+            # Both ink rows the set actually holds: 23 of 28 for 51
+            # masters and 24 for the three Bulrathi. Both must land on
+            # the SAME floor — that is what anchoring by ink buys and
+            # what a canvas anchor cannot give.
+            for _ink in (24 * _hstep - 1, 25 * _hstep - 1):
+                _fb = _ctk.figure_origin_y(_btop, _bh, _ink) + _ink
+                assert _fb == _floor, (
+                    f"{_hspec2} band {_bi}: a sprite inking to row "
+                    f"{_ink} ends at {_fb} and the plate's inner "
+                    f"floor is {_floor}")
+                assert _ctk.figure_origin_y(_btop, _bh, _ink) >= _btop, (
+                    f"{_hspec2} band {_bi}: a sprite inking to row "
+                    f"{_ink} at step {_hstep} does not fit a {_bh} px "
+                    f"band — figure_step chose a step it cannot hold")
         _hf_seen.append((_hspec2, _hband, _hstep))
     # ── AND THE PIXELS AGREE WITH THE ARITHMETIC ────────────────
     # A held figure and a row figure of the same master must ink on
@@ -8002,6 +8007,19 @@ def main():
     # most slack, because a y that is right and a blit that ignores it
     # look identical in the arithmetic and not on screen.
     def _held_ink_at(_W, _H):
+        """Every figure's LOWEST INKED PIXEL, out of the render.
+
+        **THE ARITHMETIC CANNOT ANSWER THIS ONE.** The anchor was
+        moved to the band's floor on 12 September 2026 and the
+        figures still floated at every size, because the canvas is
+        not the figure: a master inks to row 23 of 28 (24 for the
+        three Bulrathi) and the transparent tail — 8 device px at
+        step 2, 16 at step 4 — sat under every sprite. Every
+        arithmetic assertion was green while it did. So this reads
+        the pixels: for every band that has figures, the lowest lit
+        row inside each job column must be the plate's INNER FLOOR,
+        exactly, and the held cluster's must be the same row.
+        """
         _hd_app, _hd_screen = _plv.build_screen(_W, _H)
         _hd_app.dispatcher.switch_to("colony_summary")
         _hd_screen.enter(None)
@@ -8010,88 +8028,114 @@ def main():
         _hd_step = _ctk.figure_step(_hd_area, _hd_cfg)
         from screens.colony_summary import colonyfigures as _hcfig
         _hd_set = _hcfig.set_for(_hd_screen, _hd_area, _hd_cfg)
-        if _hd_set is None or not _hd_screen._rows:
-            report("held cluster ink: the figure set is not extracted on "
-                   "this disk, so only the arithmetic above is measured")
-        else:
-            from screens.colony_summary import colonypick as _hd_cp
-            _hd_loaded = _hd_cp.pops_of(_plv._Snapshot(_plv.COLONIES),
-                                        _hd_screen._rows[3]["index"])
-            _hd_pick = _hd_cp.pick_at(_hd_loaded[0], _hd_loaded[1], 0, 2,
-                                      _hd_screen._rows[3]["index"], 3, "name")
-            assert not isinstance(_hd_pick, _hd_cp.Refusal), _hd_pick
-            _hd_screen._move.pick = _hd_pick
-            _hd_screen._rebuild_rows()
-            _hd_bands = _ctk.row_bands(_hd_area, _hd_cfg, _hd_scale, 10)
-            _hd_top = _hd_bands[1][0]
-            _hd_ptr = (_ctk.columns(_hd_area, _hd_cfg)["farmers"][0] + 40,
-                       _hd_top + _hd_bands[1][1] // 2)
-            import core.mouse as _hd_m
+        if _hd_set is None or _hd_set.state != "ok" or not _hd_screen._rows:
+            report(f"figure floors at {_W}x{_H}: the figure set is not "
+                   f"extracted on this disk, so only the arithmetic "
+                   f"above is measured")
+            return
+        _hd_bands = _ctk.row_bands(_hd_area, _hd_cfg, _hd_scale, 10)
+        _hd_cols = _ctk.columns(_hd_area, _hd_cfg)
+        _hd_jobs = [_hd_cols[_k] for _k in ("farmers", "workers",
+                                            "scientists")]
+        import core.mouse as _hd_m
+
+        def _render(_ptr):
             _hd_saved = _hd_m.pos
-            _hd_m.pos = lambda: _hd_ptr
+            _hd_m.pos = lambda: _ptr
             try:
-                _hd_surf = pygame.Surface((_W, _H))
-                _hd_surf.fill((0, 0, 0))
-                _hd_screen.render(_hd_surf)
+                _s2 = pygame.Surface((_W, _H))
+                _s2.fill((0, 0, 0))
+                _hd_screen.render(_s2)
             finally:
                 _hd_m.pos = _hd_saved
-            _hd_a = pygame.surfarray.array3d(_hd_surf).transpose(1, 0, 2)
-            # ABOVE THE PLATE, NOT ABOVE BLACK. The cell plate's own line
-            # is `panel.thin_border`, (55, 65, 85), which sums to 205 and
-            # runs along the band's top edge across the whole column — a
-            # threshold that caught it would measure the plate and call it
-            # the figure. The figure masters are the game's own palette
-            # and are far brighter.
-            _hd_lit = _hd_a.sum(axis=2) > 260
-            _want_top = _ctk.figure_origin_y(
-                _hd_top, _hd_bands[1][1], _hd_step)
-            # The held cluster is drawn at the pointer's x, to the RIGHT
-            # of it; the row's own figures start at the column's left.
-            _hd_cols = _ctk.columns(_hd_area, _hd_cfg)
-            _rowstrip = _hd_lit[:, _hd_cols["farmers"][0]:_hd_ptr[0] - 4]
-            _heldstrip = _hd_lit[:, _hd_ptr[0] + 4:
-                                 _hd_ptr[0] + 4 + 28 * _hd_step]
-            _tops = {}
-            for _what, _strip in (("row", _rowstrip), ("held", _heldstrip)):
-                _ys = np.where(_strip[_hd_top:_hd_top + _hd_bands[1][1]]
+            # ABOVE THE PLATE, NOT ABOVE BLACK. The cell plate's own
+            # line is `panel.thin_border`, (55, 65, 85), which sums to
+            # 205 and runs along every band's edge — a threshold that
+            # caught it would measure the plate and call it a figure.
+            # The masters are the game's own palette and are brighter.
+            return pygame.surfarray.array3d(_s2).transpose(
+                1, 0, 2).sum(axis=2) > 260
+
+        # ── THE ROWS, with nothing in hand ──────────────────────
+        #
+        # PER CELL, AND ONLY WHERE A FIGURE IS DRAWN. A column is not
+        # the unit: the farmers column of a `max_farms == 0` colony
+        # carries "No Farming" and nothing else, and its text ends 23
+        # px above the floor perfectly correctly. `row_boxes` gives
+        # the same cell rects the renderer blits into, and the row's
+        # own cells say which of them have a sprite.
+        _hd_lit = _render((0, 0))
+        _hd_seen = 0
+        for _bi, (_btop, _bh) in enumerate(_hd_bands):
+            if _bi >= len(_hd_screen._rows):
+                continue
+            _row = _hd_screen._rows[_bi]
+            _boxes = _ctk.row_boxes(_hd_area, _hd_cfg, _hd_scale, _row,
+                                    (_btop, _bh))
+            _floor = _btop + _bh - 1 - _ctk.PLATE_LINE
+            _cells = _row.get("cells") or ()
+            for _job, _ix, _crect in _boxes.cells:
+                if _job >= len(_cells) or _ix >= len(_cells[_job]):
+                    continue
+                _fname = _cells[_job][_ix].figure
+                if _fname is None or _hd_set.get(_fname) is None:
+                    continue
+                _ys = np.where(_hd_lit[_btop:_btop + _bh,
+                                       _crect.x:_crect.x + _crect.w]
                                .any(axis=1))[0]
-                assert len(_ys), f"no {_what} figure ink in band 1 at {_W}x{_H}"
-                _tops[_what] = _hd_top + int(_ys.min())
-            # THE TWO AGAINST EACH OTHER, which is the property, AND both
-            # against the arithmetic, which is what says the blit read the
-            # y it was given. The tolerance is the masters' own top rows:
-            # 46 of the 54 carry ink on canvas row 0 and the rest do not.
-            assert abs(_tops["row"] - _tops["held"]) <= 2 * _hd_step, (
-                f"{_W}x{_H}: the row's figures ink from y {_tops['row']} "
-                f"and the held ones from {_tops['held']} — the cluster is "
-                f"not on the row's line")
-            assert abs(_tops["held"] - _want_top) <= 2 * _hd_step, (
-                f"{_W}x{_H}: the held figures ink from y {_tops['held']} "
-                f"and the row's figure line is {_want_top}")
-            # AND THE FLOOR IS WHERE THE SLACK IS NOT. The ink's last
-            # row against the band's: every master carries 3 to 4
-            # transparent rows below its ink, so the ink ends that far
-            # above the band's floor and no further. Before the anchor
-            # moved it was 17 px short at 3440x1371 and 21 at
-            # 2560x1440 — the float, measured.
-            _hd_floor = _hd_top + _hd_bands[1][1]
-            for _what, _strip in (("row", _rowstrip), ("held", _heldstrip)):
-                _ys = np.where(_strip[_hd_top:_hd_floor].any(axis=1))[0]
-                _hd_bot = _hd_top + int(_ys.max())
-                assert 0 < _hd_floor - _hd_bot <= 5 * _hd_step, (
-                    f"{_W}x{_H}: the {_what} figures' ink ends "
-                    f"{_hd_floor - _hd_bot} px above the band's floor "
-                    f"({_hd_floor}) — the canvas's own transparent "
-                    f"tail is 3 to 4 rows, so more than that is empty "
-                    f"band under the figures, and that is the float")
-    for _hd_W, _hd_H in ((2560, 1440), (3440, 1371)):
+                if not len(_ys):
+                    continue
+                _hd_seen += 1
+                assert _btop + int(_ys.max()) == _floor, (
+                    f"{_W}x{_H} band {_bi}, cell at x {_crect.x} "
+                    f"({_fname}): its lowest inked pixel is at "
+                    f"{_btop + int(_ys.max())} and the plate's inner "
+                    f"floor is {_floor} — "
+                    f"{_floor - _btop - int(_ys.max())} px of empty "
+                    f"band under the figure, which is the float")
+        assert _hd_seen >= 20, (
+            f"{_W}x{_H}: only {_hd_seen} figure cell(s) were measured "
+            f"— a green run over an empty list asserts nothing")
+
+        # ── AND THE CLUSTER IN HAND, on the same floor ──────────
+        from screens.colony_summary import colonypick as _hd_cp
+        _hd_loaded = _hd_cp.pops_of(_plv._Snapshot(_plv.COLONIES),
+                                    _hd_screen._rows[3]["index"])
+        _hd_pick = _hd_cp.pick_at(_hd_loaded[0], _hd_loaded[1], 0, 2,
+                                  _hd_screen._rows[3]["index"], 3, "name")
+        assert not isinstance(_hd_pick, _hd_cp.Refusal), _hd_pick
+        _hd_screen._move.pick = _hd_pick
+        _hd_screen._rebuild_rows()
+        _hd_top, _hd_bh = _hd_bands[1]
+        _hd_ptr = (_hd_cols["farmers"][0] + 40, _hd_top + _hd_bh // 2)
+        _hd_lit = _render(_hd_ptr)
+        _floor = _hd_top + _hd_bh - 1 - _ctk.PLATE_LINE
+        # To the RIGHT of the pointer, which is where `Draw_Cluster_`
+        # puts it (+5 per step); the row's own figures start at the
+        # column's left edge.
+        _held = _hd_lit[_hd_top:_hd_top + _hd_bh,
+                        _hd_ptr[0] + 4:_hd_ptr[0] + 4 + 28 * _hd_step]
+        _ys = np.where(_held.any(axis=1))[0]
+        assert len(_ys), f"{_W}x{_H}: no held figure ink beside the pointer"
+        assert _hd_top + int(_ys.max()) == _floor, (
+            f"{_W}x{_H}: the held cluster's lowest inked pixel is at "
+            f"{_hd_top + int(_ys.max())} and the row's is {_floor} — "
+            f"a figure in hand and a figure in a row are on different "
+            f"lines")
+        _hd_screen._move.pick = None
+        _hd_screen._rebuild_rows()
+        report(f"figure floors at {_W}x{_H}: {_hd_seen} cells and the "
+               f"held cluster, all on the plate's inner floor "
+               f"(band {_hd_bh}, step {_hd_step})")
+
+    for _hd_W, _hd_H in ((1920, 1080), (2560, 1440), (3440, 1371),
+                         (3840, 2160)):
         _held_ink_at(_hd_W, _hd_H)
     report("held cluster: " + ", ".join(
         f"{_s} band {_b} step {_st}" for _s, _b, _st in _hf_seen))
-    ok("a held cluster sits on the row's own figure line (four "
-       "resolutions, every y in the band; the blit measured at two of "
-       "them; outside the list the transcribed pointer offset is "
-       "untouched)")
+    ok("figures sit on the plate's inner floor, row and held alike "
+       "(four resolutions, every band, measured out of the render; "
+       "outside the list the transcribed pointer offset is untouched)")
 
     ok("colony summary cells: drawn, picked up and dropped are one "
        "and the same cell (read back from the render)")

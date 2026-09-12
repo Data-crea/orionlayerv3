@@ -13,7 +13,21 @@ right and the header had gone stale** — resolved 10 September 2026
 by dating the header to the edit and giving this session its
 paragraph, below, so the two agree again.
 
-This session (12 September 2026), after that: **the row figures sit on
+This session (12 September 2026), last: **the row figures sit on the
+plate's inner floor, by their INK.** Anchoring the CANVAS to the band's
+floor (the entry below) still floated at every size: 51 of the 54
+masters ink to row 23 of 28 and the three Bulrathi to row 24, so the
+transparent tail — 8 device px at step 2, 16 at step 4 — sat under
+every figure. `colonytrack.figure_origin_y` takes that sprite's own
+last inked row now (`colonyfigures.FigureSet.ink_bottom`, measured on
+the stepped surface at load) and puts it on the row above the cell
+plate's bottom border. The check reads the PIXELS: at four sizes, for
+every band, the lowest inked pixel of every drawn figure — 52 cells per
+size — and of the held cluster. Recorded in the same DEVIATION
+marking, not a new one. See "The row figures move to the band's floor"
+below, which now carries both halves.
+
+This session (12 September 2026), before that: **the row figures sit on
 the band's floor.** DEVIATION in the vertical anchor, top -> bottom,
 Data's decision. The original's band is 31 native px around a 28 px
 sprite — 3 px above it and **zero** below, measured from the source and
@@ -4446,6 +4460,42 @@ looking at, which is a different decision.
 | 3440x1371 | 73 | 2 | top + 8 | top + 17 | down 9 px |
 | 3840x2160 | 116 | 4 | top + 16 | top + 4 | up 12 px |
 
+**2b. THE CANVAS IS NOT THE FIGURE — the same day, one commit later.**
+The anchor above put the canvas's floor on the band's floor and the
+figures still floated at every size. A master's ink stops before its
+canvas does:
+
+| last inked row | masters |
+|---:|---|
+| 23 of 28 | 51 |
+| 24 of 28 | 3 — `bulrathi_farmer`, `bulrathi_worker`, `bulrathi_scientist` |
+
+(Top ink rows, for the record: 0 for 46 of them, 1 for five, 4 for
+three.) So a canvas on the floor hangs its sprite four master rows up —
+**8 device px at step 2, 16 at step 4** — and that tail was the float.
+
+The rule is now
+
+    origin = plate_inner_floor - ink_bottom
+    plate_inner_floor = band_bottom - 1 - PLATE_LINE
+
+with `ink_bottom` the last inked row of THAT sprite, measured on the
+stepped surface at load (`colonyfigures.FigureSet.ink_bottom`) rather
+than on the master, so a mod's own `@2x.png` — a different image, which
+may ink to a different row — is measured as what it is. The held
+cluster is anchored per sprite through the same function: `draw_held`
+takes a callable now instead of a y, because a cluster can hold two
+races whose ink ends on different rows.
+
+**At native scale the original does the same thing**, which is why this
+stays one deviation and not two: its ink ends at native 61, the row
+above its plate's border at 62-63, and the four rows of tail are spent
+on that border and the two rows under it. A step of 1 reproduces it
+exactly. The original never steps, so it never has to answer for a tail
+8 or 16 px deep. The cost is that the three Bulrathi sprites come up one
+row against their neighbours where the original leaves them one row
+lower.
+
 **3. It is a DEVIATION and it is marked** in
 `colonytrack.figure_origin_y`, in `colonylist` where the blit is, in
 `layout.json` under `list._figure_anchor_deviation`, here, and in the
@@ -4454,17 +4504,18 @@ the two anchors are the same anchor whenever a band is 28 rows per
 step, which the original's is and none of ours. It ends if our bands
 ever become the original's 31 rows per step.
 
-**4. What the check holds now.** At 1920x1080, 2560x1440, 3440x1371 and
-3840x2160, for **every** band and not the first three: the canvas's
-floor is the band's floor less `FIGURE_BOTTOM_NATIVE * step`, and the
-origin is not above the band's top. The blit is measured at two of
-those sizes, and the ink's last row must now end within 3 to 4 canvas
-rows of the band's floor — which is the assertion that would have
-caught the float in the first place, and which the old anchor fails by
-17 px at 3440x1371 and 21 at 2560x1440. `MASTER_ROWS` is held to
-`colonyfigures.MASTER_SIZE`, because a second copy of the sprite's
-height would put the row's figures and the held ones on different
-floors.
+**4. What the check holds now — and the arithmetic alone could not.**
+Every assertion about the canvas was green while the figures floated,
+because the canvas was in the right place and the figure was not. So
+the check reads the RENDER: at 1920x1080, 2560x1440, 3440x1371 and
+3840x2160, for every band and every cell that draws a sprite — 52 cells
+per size — the lowest inked pixel is exactly the plate's inner floor,
+and so is the held cluster's. The arithmetic is kept beside it for both
+ink rows the set holds, 23 and 24, which have to land on the SAME floor
+— that is what anchoring by ink buys and what no canvas anchor can
+give. `MASTER_ROWS` is held to `colonyfigures.MASTER_SIZE`, because a
+second copy of the sprite's height would put the row's figures and the
+held ones on different floors.
 
 ### The held figure at 3440x1371: not reproducible — 12 September 2026
 

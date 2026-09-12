@@ -154,8 +154,10 @@ FIGURE_TOP_NATIVE = 4
 MASTER_ROWS = 28
 
 #: Native px between the sprite's canvas BOTTOM and the band's, per
-#: step. **MEASURED, AND IT IS ZERO** — 12 September 2026, from the
-#: source and from the original's own framebuffer, which agree:
+#: step. **MEASURED, AND IT IS ZERO.** It is no longer what the
+#: anchor uses — `figure_origin_y` places the INK, not the canvas —
+#: and it is kept because it is the measurement that says the two
+#: are the same thing at native scale and only there:
 #:
 #:   the band is `31*i + 35` to `31*i + 65` INCLUSIVE — `y1 =
 #:   y_row_end - 30` with `y_row_end` starting at 65 and stepping 31
@@ -674,9 +676,14 @@ def all_bands(area, cfg):
     return bands
 
 
-def held_figure_y(area, cfg, scale, count, point, step):
-    """The y a HELD cluster is drawn at: the figure line of the row
+def held_figure_y(area, cfg, scale, count, point, step, ink_bottom):
+    """The y ONE held sprite is drawn at: the figure line of the row
     under `point`, or the transcribed pointer offset outside the list.
+
+    `ink_bottom` is that sprite's own last inked row, because inside a
+    row the answer is `figure_origin_y`'s and that is per sprite. The
+    caller passes a small lambda rather than a number, so a cluster of
+    mixed races lands on one line and not on two.
 
     **THE OFFSET IS TRANSCRIBED AND THE ANCHOR IS A DEVIATION —
     12 September 2026.** `COLMOVE::Draw_Cluster_` hangs the cluster on
@@ -734,12 +741,16 @@ def held_figure_y(area, cfg, scale, count, point, step):
     py = point[1]
     for top, height in row_bands(area, cfg, scale, count):
         if top <= py < top + height:
-            return figure_origin_y(top, height, step)
+            return figure_origin_y(top, height, ink_bottom)
     return py + zoomtables.CLUSTER_FIGURE_OFFSET[1] * step
 
 
-def figure_origin_y(top, height, step):
-    """Where a row's figures are blitted, y — the ONE home.
+def figure_origin_y(top, height, ink_bottom):
+    """Where one row figure is blitted, y — the ONE home.
+
+    `ink_bottom` is the LAST INKED ROW of the stepped sprite about to
+    be drawn (`colonyfigures.FigureSet.ink_bottom`), so the answer is
+    per sprite and not per row.
 
     **THE ANCHOR IS THE BAND'S BOTTOM — DEVIATION, 12 September 2026,
     Data's decision.** The original anchors at the TOP: its icon row
@@ -754,30 +765,47 @@ def figure_origin_y(top, height, step):
     and 21 px of it. All of that slack sat under the figures, and a
     row's colonists floated over their own row.
 
-    So the slack goes ABOVE instead, and the sprite sits on the
-    band's floor where the original's does:
+    So the slack goes ABOVE instead, and what is put on the row's
+    floor is the INK:
 
-        origin = band_bottom - (MASTER_ROWS + FIGURE_BOTTOM_NATIVE) * step
+        origin = plate_inner_floor - ink_bottom
+        plate_inner_floor = top + height - 1 - PLATE_LINE
 
-    `FIGURE_BOTTOM_NATIVE` is 0 and is measured, not chosen — the
-    original's canvas ends on its band's last row. What deviates is
-    WHICH EDGE the sprite is fixed to, and it deviates because the
-    two anchors are the same anchor only when the band is 28 rows per
-    step, which is true of the original's band and of none of ours.
+    **THE CANVAS IS NOT THE FIGURE.** Anchoring the canvas was the
+    first attempt and it still floated at every size, because a
+    master's ink stops before its canvas does: 51 of the 54 ink to
+    row 23 of 28 and the three Bulrathi to row 24, so a canvas on the
+    floor hangs its sprite 4 master rows up — 8 device px at step 2
+    and 16 at step 4. The transparent tail was the float.
+
+    **WHAT THE ORIGINAL DOES, and where this parts from it.** At
+    native scale the two anchors agree: its canvas ends on its band's
+    last row (`FIGURE_BOTTOM_NATIVE`), its ink ends on the row above
+    its plate's bottom border, and the four rows of tail are spent on
+    the border and the two rows under it. A step of 1 would reproduce
+    that exactly. At step 2 and up the tail is 8 and 16 px and there
+    is no border thick enough to hide it — the original never has to
+    answer this, because it never steps. So: our figures are placed
+    by their INK, which is the transcription of what is SEEN, and not
+    by their canvas, which is the transcription of an offset. The
+    cost is that the three Bulrathi sprites, whose ink is one row
+    taller, come up one row against their neighbours where the
+    original leaves them one row lower. That is the DEVIATION, and it
+    is one deviation with the edge it is anchored to and not two.
 
     **IT CANNOT PUSH THE SPRITE OUT OF THE TOP.** `figure_step` picks
-    a step that needs `29 * step` rows of band, so
-    `band - 28 * step >= step > 0` and the canvas always starts
-    inside. That rule is now one row more conservative than a bottom
-    anchor requires — 28 would do — and it is deliberately left
-    alone: relaxing it would change the step at window sizes nobody
-    is looking at, which is a different decision from this one.
+    a step that needs `29 * step` rows of band, and the tallest ink
+    is 25 master rows, so the sprite's ink starts at least `4 * step`
+    px below the band's top. That rule is more conservative than an
+    ink anchor requires and is deliberately left alone: relaxing it
+    would change the step at window sizes nobody is looking at, which
+    is a different decision from this one.
 
     Marked in `colonylist` where the blit is, in `layout.json` under
     `list._figure_anchor_deviation`, in `v3_projektstatus.md` and in
     a smoke check.
     """
-    return top + height - (MASTER_ROWS + FIGURE_BOTTOM_NATIVE) * step
+    return top + height - 1 - PLATE_LINE - ink_bottom
 
 
 def row_at(area, cfg, scale, count, point):
