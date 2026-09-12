@@ -7820,7 +7820,7 @@ def main():
     _plv_spec.loader.exec_module(_plv)
     from core import zoomtables as _hzt
     _hf_seen = []
-    for _hspec2 in ("1920x1080", "2560x1440", "3840x2160"):
+    for _hspec2 in ("1920x1080", "2560x1440", "3440x1371", "3840x2160"):
         _hw2, _hh2 = (int(v) for v in _hspec2.split("x"))
         _hlay2 = Layout(_hw2, _hh2)
         _hboxes = {b.name: b for b in _seated(
@@ -7865,79 +7865,89 @@ def main():
             f"at the transcribed offset (colmove.cpp:7-37)")
         _hf_seen.append((_hspec2, _hband, _hstep))
     # ── AND THE PIXELS AGREE WITH THE ARITHMETIC ────────────────
-    # One resolution is enough for the blit, and it is the one that
-    # was wrong. A held figure and a row figure of the same master
-    # must ink on the same top row.
-    _hd_app, _hd_screen = _plv.build_screen(2560, 1440)
-    _hd_app.dispatcher.switch_to("colony_summary")
-    _hd_screen.enter(None)
-    _hd_screen.update(_plv._Snapshot(_plv.COLONIES))
-    _hd_area, _hd_cfg, _hd_scale, _hd_n = _hd_screen._list_view()
-    _hd_step = _ctk.figure_step(_hd_area, _hd_cfg)
-    from screens.colony_summary import colonyfigures as _hcfig
-    _hd_set = _hcfig.set_for(_hd_screen, _hd_area, _hd_cfg)
-    if _hd_set is None or not _hd_screen._rows:
-        report("held cluster ink: the figure set is not extracted on "
-               "this disk, so only the arithmetic above is measured")
-    else:
-        from screens.colony_summary import colonypick as _hd_cp
-        _hd_loaded = _hd_cp.pops_of(_plv._Snapshot(_plv.COLONIES),
-                                    _hd_screen._rows[3]["index"])
-        _hd_pick = _hd_cp.pick_at(_hd_loaded[0], _hd_loaded[1], 0, 2,
-                                  _hd_screen._rows[3]["index"], 3, "name")
-        assert not isinstance(_hd_pick, _hd_cp.Refusal), _hd_pick
-        _hd_screen._move.pick = _hd_pick
-        _hd_screen._rebuild_rows()
-        _hd_bands = _ctk.row_bands(_hd_area, _hd_cfg, _hd_scale, 10)
-        _hd_top = _hd_bands[1][0]
-        _hd_ptr = (_ctk.columns(_hd_area, _hd_cfg)["farmers"][0] + 40,
-                   _hd_top + _hd_bands[1][1] // 2)
-        import core.mouse as _hd_m
-        _hd_saved = _hd_m.pos
-        _hd_m.pos = lambda: _hd_ptr
-        try:
-            _hd_surf = pygame.Surface((2560, 1440))
-            _hd_surf.fill((0, 0, 0))
-            _hd_screen.render(_hd_surf)
-        finally:
-            _hd_m.pos = _hd_saved
-        _hd_a = pygame.surfarray.array3d(_hd_surf).transpose(1, 0, 2)
-        # ABOVE THE PLATE, NOT ABOVE BLACK. The cell plate's own line
-        # is `panel.thin_border`, (55, 65, 85), which sums to 205 and
-        # runs along the band's top edge across the whole column — a
-        # threshold that caught it would measure the plate and call it
-        # the figure. The figure masters are the game's own palette
-        # and are far brighter.
-        _hd_lit = _hd_a.sum(axis=2) > 260
-        _want_top = _hd_top + _ctk.FIGURE_TOP_NATIVE * _hd_step
-        # The held cluster is drawn at the pointer's x, to the RIGHT
-        # of it; the row's own figures start at the column's left.
-        _hd_cols = _ctk.columns(_hd_area, _hd_cfg)
-        _rowstrip = _hd_lit[:, _hd_cols["farmers"][0]:_hd_ptr[0] - 4]
-        _heldstrip = _hd_lit[:, _hd_ptr[0] + 4:
-                             _hd_ptr[0] + 4 + 28 * _hd_step]
-        _tops = {}
-        for _what, _strip in (("row", _rowstrip), ("held", _heldstrip)):
-            _ys = np.where(_strip[_hd_top:_hd_top + _hd_bands[1][1]]
-                           .any(axis=1))[0]
-            assert len(_ys), f"no {_what} figure ink in band 1 at 2560x1440"
-            _tops[_what] = _hd_top + int(_ys.min())
-        # THE TWO AGAINST EACH OTHER, which is the property, AND both
-        # against the arithmetic, which is what says the blit read the
-        # y it was given. The tolerance is the masters' own top rows:
-        # 46 of the 54 carry ink on canvas row 0 and the rest do not.
-        assert abs(_tops["row"] - _tops["held"]) <= 2 * _hd_step, (
-            f"2560x1440: the row's figures ink from y {_tops['row']} "
-            f"and the held ones from {_tops['held']} — the cluster is "
-            f"not on the row's line")
-        assert abs(_tops["held"] - _want_top) <= 2 * _hd_step, (
-            f"2560x1440: the held figures ink from y {_tops['held']} "
-            f"and the row's figure line is {_want_top}")
+    # A held figure and a row figure of the same master must ink on
+    # the same top row. **TWO SIZES SINCE 12 September 2026** — the
+    # one the arithmetic was wrong at, and 3440x1371, which is what a
+    # single 3440x1440 display actually GRANTS for the two largest F9
+    # options (`App._set_mode` measured it), and where the float was
+    # reported a second time. The arithmetic above covers four sizes;
+    # the blit is measured at the two whose band leaves the sprite the
+    # most slack, because a y that is right and a blit that ignores it
+    # look identical in the arithmetic and not on screen.
+    def _held_ink_at(_W, _H):
+        _hd_app, _hd_screen = _plv.build_screen(_W, _H)
+        _hd_app.dispatcher.switch_to("colony_summary")
+        _hd_screen.enter(None)
+        _hd_screen.update(_plv._Snapshot(_plv.COLONIES))
+        _hd_area, _hd_cfg, _hd_scale, _hd_n = _hd_screen._list_view()
+        _hd_step = _ctk.figure_step(_hd_area, _hd_cfg)
+        from screens.colony_summary import colonyfigures as _hcfig
+        _hd_set = _hcfig.set_for(_hd_screen, _hd_area, _hd_cfg)
+        if _hd_set is None or not _hd_screen._rows:
+            report("held cluster ink: the figure set is not extracted on "
+                   "this disk, so only the arithmetic above is measured")
+        else:
+            from screens.colony_summary import colonypick as _hd_cp
+            _hd_loaded = _hd_cp.pops_of(_plv._Snapshot(_plv.COLONIES),
+                                        _hd_screen._rows[3]["index"])
+            _hd_pick = _hd_cp.pick_at(_hd_loaded[0], _hd_loaded[1], 0, 2,
+                                      _hd_screen._rows[3]["index"], 3, "name")
+            assert not isinstance(_hd_pick, _hd_cp.Refusal), _hd_pick
+            _hd_screen._move.pick = _hd_pick
+            _hd_screen._rebuild_rows()
+            _hd_bands = _ctk.row_bands(_hd_area, _hd_cfg, _hd_scale, 10)
+            _hd_top = _hd_bands[1][0]
+            _hd_ptr = (_ctk.columns(_hd_area, _hd_cfg)["farmers"][0] + 40,
+                       _hd_top + _hd_bands[1][1] // 2)
+            import core.mouse as _hd_m
+            _hd_saved = _hd_m.pos
+            _hd_m.pos = lambda: _hd_ptr
+            try:
+                _hd_surf = pygame.Surface((_W, _H))
+                _hd_surf.fill((0, 0, 0))
+                _hd_screen.render(_hd_surf)
+            finally:
+                _hd_m.pos = _hd_saved
+            _hd_a = pygame.surfarray.array3d(_hd_surf).transpose(1, 0, 2)
+            # ABOVE THE PLATE, NOT ABOVE BLACK. The cell plate's own line
+            # is `panel.thin_border`, (55, 65, 85), which sums to 205 and
+            # runs along the band's top edge across the whole column — a
+            # threshold that caught it would measure the plate and call it
+            # the figure. The figure masters are the game's own palette
+            # and are far brighter.
+            _hd_lit = _hd_a.sum(axis=2) > 260
+            _want_top = _hd_top + _ctk.FIGURE_TOP_NATIVE * _hd_step
+            # The held cluster is drawn at the pointer's x, to the RIGHT
+            # of it; the row's own figures start at the column's left.
+            _hd_cols = _ctk.columns(_hd_area, _hd_cfg)
+            _rowstrip = _hd_lit[:, _hd_cols["farmers"][0]:_hd_ptr[0] - 4]
+            _heldstrip = _hd_lit[:, _hd_ptr[0] + 4:
+                                 _hd_ptr[0] + 4 + 28 * _hd_step]
+            _tops = {}
+            for _what, _strip in (("row", _rowstrip), ("held", _heldstrip)):
+                _ys = np.where(_strip[_hd_top:_hd_top + _hd_bands[1][1]]
+                               .any(axis=1))[0]
+                assert len(_ys), f"no {_what} figure ink in band 1 at {_W}x{_H}"
+                _tops[_what] = _hd_top + int(_ys.min())
+            # THE TWO AGAINST EACH OTHER, which is the property, AND both
+            # against the arithmetic, which is what says the blit read the
+            # y it was given. The tolerance is the masters' own top rows:
+            # 46 of the 54 carry ink on canvas row 0 and the rest do not.
+            assert abs(_tops["row"] - _tops["held"]) <= 2 * _hd_step, (
+                f"{_W}x{_H}: the row's figures ink from y {_tops['row']} "
+                f"and the held ones from {_tops['held']} — the cluster is "
+                f"not on the row's line")
+            assert abs(_tops["held"] - _want_top) <= 2 * _hd_step, (
+                f"{_W}x{_H}: the held figures ink from y {_tops['held']} "
+                f"and the row's figure line is {_want_top}")
+    for _hd_W, _hd_H in ((2560, 1440), (3440, 1371)):
+        _held_ink_at(_hd_W, _hd_H)
     report("held cluster: " + ", ".join(
         f"{_s} band {_b} step {_st}" for _s, _b, _st in _hf_seen))
-    ok("a held cluster sits on the row's own figure line (three "
-       "resolutions, every y in the band; outside the list the "
-       "transcribed pointer offset is untouched)")
+    ok("a held cluster sits on the row's own figure line (four "
+       "resolutions, every y in the band; the blit measured at two of "
+       "them; outside the list the transcribed pointer offset is "
+       "untouched)")
 
     ok("colony summary cells: drawn, picked up and dropped are one "
        "and the same cell (read back from the render)")

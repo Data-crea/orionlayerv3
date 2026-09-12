@@ -650,6 +650,7 @@ def held_figure_y(area, cfg, scale, count, point, step):
 
         1920x1080  band 58  step 2   190 against 189   +1
         2560x1440  band 77  step 2   259 against 249  +10
+        3440x1371  band 73  step 2   245 against 237   +8
         3840x2160  band 116 step 4   380 against 378   +2
 
     1080p and 2160p agree to a pixel because their bands are within
@@ -657,6 +658,23 @@ def held_figure_y(area, cfg, scale, count, point, step):
     against a 56 px sprite — the slack `figure_step` leaves when step
     3 does not fit. That is the "figure hanging in the air over the
     row" it was reported as.
+
+    **3440x1371 WAS ADDED AFTER A SECOND REPORT — 12 September 2026,
+    and it was already correct.** That size is what a single 3440x1440
+    display GRANTS for the two largest F9 options (`App._set_mode`),
+    so it is the window this project is actually looked at in, and it
+    had never been measured. Re-measured live against the running game
+    on the reference save: the held cluster inks from the row's own
+    figure line at every y of every band, in the arithmetic and in the
+    pixels, exactly as at the three sizes the fix was verified at. The
+    row above shows what the OLD anchor would have done there. The
+    check covers four sizes now and the blit two.
+
+    What still hangs on the pointer at that size is everything OUTSIDE
+    the list's bands — above y 156 and below y 891 of a 3440x1371
+    window — and any band the empire has no colony for, because an
+    empty band is not a row and cannot be dropped on. Both are the
+    transcription and neither is a float.
 
     **WHAT IS KEPT.** `CLUSTER_FIGURE_OFFSET`'s x is untouched and the
     y is still what applies OUTSIDE the list, which is most of the

@@ -13,6 +13,17 @@ right and the header had gone stale** — resolved 10 September 2026
 by dating the header to the edit and giving this session its
 paragraph, below, so the two agree again.
 
+This session (12 September 2026), the held figure re-measured at
+**3440x1371** after a second report: **it is not reproducible there.**
+Live against the running game on the reference save (Slot 8), the held
+cluster inks from the row's own figure line at every y of every band —
+delta **0 px**, in the arithmetic and in the pixels, at 1920x1080,
+2560x1440, 3440x1371 and 3840x2160. The check covers four sizes now
+and measures the blit at two. **Data's window is 3440x1371** — not
+3440x1440, and not the 1920x1080 in `settings.json`, which is only the
+startup request and is never written back. See "The held figure at
+3440x1371" below.
+
 This session (12 September 2026), **Data's new frame — the right-hand
 column is gone and RETURN has no hole.** `assets/frame.png` cuts
 **13** holes where the old one cut 14: the title cartouche, the list,
@@ -4362,6 +4373,74 @@ false, the artwork used directly), and then the check is measuring a
 plate nobody draws. **Which of the two paths the colony screen takes
 is the open decision**, and it is upstream of this check rather than
 settled by it.
+
+### The held figure at 3440x1371: not reproducible — 12 September 2026
+
+Reported a second time, at Data's own window size, which the 11:25 fix
+had been verified at 1920x1080, 2560x1440 and 3840x2160 only. **It
+could not be reproduced.**
+
+**How it was measured.** Live, against the game already running on the
+patched build (orion2re pid 18737, Extension API on localhost:17362).
+Every step read a `STATE_SNAPSHOT` and nothing was injected — holding a
+cluster is local, because the first click of a move sends nothing
+(decision 47).
+
+| live step | slot | fixture | what it did |
+|---|---|---|---|
+| snapshot for the 3440x1371 render | Slot 8 (already loaded) | `fixture_reference_3502.4.GAM`, sha256 `ab70cc9ad5442335…` | 11 player colonies, 10 drawn, stardate 3502.4 |
+| snapshot for the four-size measurement | Slot 8 | same | pick row 2 farmer 0, pointer swept through the bands |
+
+`~/Master of Orion 2/SAVE10.GAM` was checked against the secured copy
+before and after: `9fb65a9d37349155…` both times, unchanged — no turn
+ended, and it is (as always) NOT the autosave fixture's
+`2610f39c00f68ebe…`, because the game has been running since 09:41.
+Slot 8 was `ab70cc9ad5442335…` before and after, byte-identical to the
+fixture.
+
+**What the numbers say.** Pointer at each band's centre, the row's own
+figures against the held cluster's, both read back out of the render:
+
+| | band | step | row figures ink | held cluster ink | delta |
+|---|---:|---:|---|---|---:|
+| 1920x1080 | 58 | 2 | 247..294 | 247..294 | **0** |
+| 2560x1440 | 77 | 2 | 326..373 | 326..373 | **0** |
+| 3440x1371 | 73 | 2 | 310..357 | 310..357 | **0** |
+| 3840x2160 | 116 | 4 | 494..589 | 494..589 | **0** |
+| 3440x1440 | 77 | 2 | 326..373 | 326..373 | **0** |
+
+Swept over every y of the window at 3440x1371, the cluster takes the
+row's line from y 156 to y 891 — the whole of the list — and the
+transcribed pointer offset above and below it. A resize from the
+startup 1920x1080 to 3440x1440 through `App._on_resize` was measured
+too, in case the fault needed the resize path: delta 0 after it.
+
+**So there is no second anchor at 3440x1371.** Nothing in the held
+path is in reference space: the bands, the pointer and the blit are
+all window coordinates, and at that size the letterbox is horizontal
+only (reference area 2437x1371, x offset 501, y offset 0), so it
+cannot move a y at all.
+
+**Two places at that size where the cluster is NOT on a row's line,
+both by transcription:** outside the list's bands (above 156, below
+891 — the header strip and the lower band), and over a band the empire
+has no colony for, because an empty band is not a row and cannot be
+dropped on. Either would read as a float in a screenshot.
+
+**What is measured now.** The check gained 3440x1371 as a fourth size
+for the arithmetic, and measures the BLIT at two sizes instead of one
+(2560x1440 and 3440x1371) — a y that is right and a blit that ignores
+it look identical in the arithmetic.
+
+**Data's window is 3440x1371.** `settings.json` asks for 1920x1080 and
+nothing in the tree writes a resize back, so the configured size says
+nothing about the running one; the display is a single 3440x1440
+(`DP-1`), and `App._set_mode`'s own measurement records that this
+machine grants 3440x1371 for a 3440x1440 request and for F9's 4K
+option. That is where the 1371 comes from. **It is not 3440x1440 and
+not 1920x1080.** The window size is not logged unless the grant
+differs from the request, which is the case that produced this
+number — the line is in the log only at the moment of the change.
 
 ### Data's new frame: 13 holes, and RETURN on top of it — 12 September 2026
 
