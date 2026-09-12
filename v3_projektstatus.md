@@ -1,6 +1,6 @@
 # OrionLayer v3 — Project Status
 
-Updated: 11 September 2026
+Updated: 12 September 2026
 
 **How to read the date above.** The header names the day this file
 was last edited; the "This session (…)" paragraphs below it run
@@ -12,6 +12,20 @@ carrying entries dated 9 September inside it. **The convention is
 right and the header had gone stale** — resolved 10 September 2026
 by dating the header to the edit and giving this session its
 paragraph, below, so the two agree again.
+
+This session (12 September 2026): **the seven sort keys are seven
+boxes again** (fundament decision 54) — a marked DEVIATION that
+reverses "THE BAR IS ONE HOLE NOW" (Stage A3, 7 September 2026),
+because Data's artwork cuts a slot per key and where a hole is, is not
+the code's to decide. `layout_reference.json` types seven rects,
+`colonysort.layout` reads one per key and distributes nothing, and the
+plate has **14 windows** where it had 8. The suite went **115 -> 119**.
+Three things that were not asked for and are reported rather than
+assumed: the galaxy master has **six** bottom slot holes and not seven,
+so the initial rects are measured off the superseded 14-hole colony
+frame instead; `sort_bc` overlapped RETURN by 121 ref px and was
+shrunk, not RETURN moved; and the row overran the ring by 4 px and lost
+4 px of height. See "The seven sort keys take seven boxes" below.
 
 This session (11 September 2026): **the colony screen's top and
 bottom band were freed, by splitting the layout rules into the ones
@@ -647,7 +661,7 @@ files under `doc/` and are only summarised here.
 | | |
 |---|---|
 | Python | 32,960 lines across 111 modules — `find . -name '*.py'`, `__pycache__` excluded, the smoke test's 6,400 included. The previous figure here (21,642 across 94) was carried from an unstated method and could not be reproduced |
-| Smoke test | `python tools/smoke_test.py` — **118 checks**, headless |
+| Smoke test | `python tools/smoke_test.py` — **119 checks**, headless |
 | Assets | 170 MB (select_race 68, galaxy_map 51, shared 23, new_game 21, colony_summary 1) |
 | Screens in HD | 7 of ~20–22 (colony summary draws list, sidebar, scan box and galaxy inset, and MOVES POPS — the first HD gesture that drives the game) |
 | Setup from clone | `python tools/setup.py` (deps via the system package manager) |
@@ -857,7 +871,7 @@ to stay uncomfortable to extend.
     ├── help_extract.py           171  HELP.LBX -> help_<lang>.json
     ├── ext_diag.py               473  Extension API diagnostics
     ├── ext_diag_race.py          228  Race screen field diagnostics
-    ├── frame_build.py            165  assembles the colony frame:
+    ├── frame_build.py            167  assembles the colony frame:
     │                                  ring, rails, junctions, bevel
     ├── frame_master.py           209  what the master CONTAINS -
     │                                  ring, material, bevel hole,
@@ -892,8 +906,18 @@ to stay uncomfortable to extend.
     ├── zoom_check.py             153  Zoom ladder against a live map
     ├── struct_probe.py           144  Live offset verification
     ├── make_sidebar_icons.py     129  Cut the five sidebar icons
-    ├── frame_holes.py            168  Boxes from frame cutouts,
-    │                                  one naming rule per screen
+    ├── frame_holes.py            191  Boxes from frame cutouts, one
+    │                                  naming rule per screen; the
+    │                                  colony rule matches holes to
+    │                                  layout_reference.json by
+    │                                  OVERLAP, never by order
+    ├── colony_frame_check.py     201  Read-only: holds a colony
+    │                                  frame PNG against the rules
+    │                                  that survived decision 53,
+    │                                  where the artwork actually is
+    ├── gimp_fixtures.py          152  The layer mask and the named
+    │                                  guide Data cuts against, into
+    │                                  ~/orionlayer-fixtures/gimp/
     ├── setup.py                  158  Rebuild generated artwork
     │                                  after a clone, then verify
     ├── star_icon_check.py        109  Which star sprite resolves
@@ -4200,7 +4224,7 @@ edge, it puts them **77 native px apart**.
 
 | | native | source |
 |---|---|---|
-| sort strip left | 89 | `Add_Multi_Button_Field_`, colsum.cpp:265 (then 140, 219, 262, 326, 393, 480) |
+| sort strip left | 89 | `Add_Multi_Button_Field_`, colsum.cpp:267 (then 140, 219, 262, 326, 393, 480 at :268-273) |
 | sort strip right | 515 | live FIELD_LIST, orion2re 1.60, screen 20, stardate 3502.4 — the width is `animate::Get_Width_(pic)` and lives in the player's LBX, so the source alone cannot give it |
 | sort strip height | 24 | y 446..469, both sources |
 | first list field left | 12 | `Add_Hidden_Field_(12, y1, 101, y_row_end)`, colsum.cpp:291 |
@@ -4210,11 +4234,23 @@ edge, it puts them **77 native px apart**.
 every number: the C++ literals and the live field list, agreeing on
 all seven button x and on y 446..469.
 
-**THE WORK ORDER'S TWO CITATIONS WERE BOTH OFF, and the correction
-belongs here.** `Add_Multi_Button_Field_` is at colsum.cpp:**265-271**
-in this tree, not 267-273; and colsum.cpp:311 is
-`Add_Hidden_Field_(0, 0, 639, 479, …)`, the full-screen catch-all —
-the first list field is at :291.
+**THE CITATIONS, RE-VERIFIED 12 September 2026 — AND THIS PARAGRAPH
+WAS ITSELF WRONG.** It said `Add_Multi_Button_Field_` is at
+colsum.cpp:**265-271** "in this tree, not 267-273". It is at
+**:267-273**. `~/orion2re/src/game/colsum.cpp` at cf4d9617, working
+tree clean for that file, puts RETURN's
+`Add_Button_Field_(531, 445, …)` at :265 and the seven multi-buttons
+at :267-273, and `doc/v3_orion2re_index.md:517` says :267-273 too. So
+the work order that was "corrected" had it right and the correction
+introduced the error — which is the same fault in the other direction,
+and the reason the rule is *run the arithmetic, then write the prose,
+whoever is writing.*
+
+The second half of that paragraph was RIGHT and its number was off by
+two: the full-screen catch-all `Add_Hidden_Field_(0, 0, 639, 479, …)`
+is at colsum.cpp:**309**, not :311. The first list field is at :291
+and the colony name is printed at :582; both verified and both
+unchanged.
 
 **2. `_bare.mean() < 0.01` — no bare strut texture on the built
 plate.** This one is not a layout rule at all, which is why it is
@@ -4236,9 +4272,144 @@ plate nobody draws. **Which of the two paths the colony screen takes
 is the open decision**, and it is upstream of this check rather than
 settled by it.
 
-### The sort bar takes the original's proportion — 11 September 2026
+### The seven sort keys take seven boxes — 12 September 2026
 
-`sort_bar` is **1281 reference px wide**, was 1367. Derived, not
+**DEVIATION, fundament decision 54.** The one `sort_bar` hole is seven
+`sort_<key>` holes: `sort_name`, `sort_population`, `sort_food`,
+`sort_industry`, `sort_science`, `sort_producing`, `sort_bc`. This
+reverses "THE BAR IS ONE HOLE NOW" (Stage A3, 7 September 2026), whose
+reading of the original is unchanged and still correct — MOO2 lays
+seven words along ONE recessed strip, `Add_Multi_Button_Field_(x, 446,
+…)` at colsum.cpp:267-273, native y 446..469. What changed is the
+artwork: Data's frame cuts a slot per key and places each by hand, so
+the division is geometry rather than arithmetic. `colonysort.layout`
+takes a rect per key and distributes nothing.
+
+**THE GALAXY MASTER HAS SIX BOTTOM SLOTS, NOT SEVEN.** The work order
+named `screens/galaxy_map/assets/frame.png` as the reference artwork
+for the slot positions. Measured: 10 holes, and its bottom row is
+**six** — (143, 1126, 253, 44), (444, …, 258, 44), (752, …, 252, 43),
+(1051, …, 263, 43), (1365, …, 253, 44), (1666, …, 229, 44) of
+2322x1256, stable at alpha < 8 / 16 / 64 / 128. They are the main
+screen's six nav buttons, which is what `frame_holes.NAV_KEYS` has
+always said. A seventh at the row's own pitch (301..314 px) would
+start at ~1967 and end at ~2220, past the metal's inner edge at 2177,
+so it is not a hole that was missed. **And there is no copy of the
+galaxy master in `~/orionlayer-fixtures/gimp/`** to compare against —
+that directory holds two colony fixtures of 11 September (the 8-hole
+Stage A3 layout) and the superseded 14-hole colony frame.
+
+**SO THE SEVEN COME FROM THE SUPERSEDED FRAME**, which is the only
+seven-slot artwork that exists and is the frame this reversal goes
+back to: `~/orionlayer-fixtures/gimp/frame_1920_retouched_2026-09-10.png`,
+1672x941, whose bottom row is the seven sort buttons at image y 837/838.
+Mapped with sx = 1920/1672, sy = 1080/941 — the whole-canvas stretch
+`frame_holes.to_ref` applies. Data's artwork is not in the tree and
+never will be, so the mapped rects are typed in `layout_reference.json`
+and the image is cited beside them.
+
+| box | rect, ref px | source hole | native x |
+|---|---|---|---|
+| `sort_name` | [162, 961, 198, 45] | (141, 837, 172, 43) | 89 |
+| `sort_population` | [378, 961, 193, 45] | (329, 837, 168, 43) | 140 |
+| `sort_food` | [588, 962, 194, 44] | (512, 838, 169, 42) | 219 |
+| `sort_industry` | [798, 961, 196, 45] | (695, 837, 171, 43) | 262 |
+| `sort_science` | [1011, 962, 195, 44] | (880, 838, 170, 42) | 326 |
+| `sort_producing` | [1223, 962, 196, 44] | (1065, 838, 171, 42) | 393 |
+| `sort_bc` | [1438, 962, **57**, 44] | (1252, 838, 170, 42) | 480 |
+| `return` | [1512, 974, 288, 32] | unchanged, not placed here | 531 |
+
+**TWO COLLISIONS, AND THE SLOT GAVE WAY BOTH TIMES.** `sort_bc` mapped
+at its source width is [1438, 962, 195, 48] and runs to x 1633, **121
+ref px into `return_button` at 1512** — the old frame carried RETURN in
+its right-hand column, not on this row, so nothing there had to clear
+it. The order is to shrink the slot and not RETURN, so the width is 57:
+its right edge sits 17 px short of RETURN, 17 being the median of the
+six gaps the source's own slots leave (18 / 17 / 16 / 17 / 17 / 19).
+And the whole row mapped 4 px past the ring — slots ending at y 1010
+against `ring.bottom` 74, whose inner edge is 1006 — so every slot lost
+4 px off the BOTTOM and the top edge stayed where the artwork put it.
+"Every window is inside the ring, per side" is on decision 53's
+transcribed side and stays a check; the source frame's own bottom band
+measures 61 px of 941, which is 70 ref against our 74, and that is the
+whole of the 4 px.
+
+**THE `in_row` RAIL BETWEEN SLOTS, REPORTED AND NOT RULED ON.**
+`frame_build.lay_rail` scales the master's slot divider — 47 master px,
+**38 ref** — across whatever gap the rectangles leave. The seven slots
+leave six, and RETURN a seventh:
+
+| gap | ref px |
+|---|---|
+| `sort_name` → `sort_population` | 18 |
+| `sort_population` → `sort_food` | 17 |
+| `sort_food` → `sort_industry` | 16 |
+| `sort_industry` → `sort_science` | 17 |
+| `sort_science` → `sort_producing` | 17 |
+| `sort_producing` → `sort_bc` | 19 |
+| `sort_bc` → `return` | 17 |
+
+All seven are UNDER-stretched, where the old single gap to RETURN was
+over-stretched 3.3x. No rule either way — "every gap equal to its
+role's strut" left the suite on 11 September 2026 — and the numbers
+come out of `tools/smoke_test.py` and `tools/colony_frame_check.py` on
+every run. The band-to-slot gap is 9 ref px against the 22
+`gaps.band_sort` documents, reported on the same terms.
+
+**WHAT STAYED TRANSCRIBED.** The highlight is still the WORD plus
+`HIGHLIGHT_PAD`, centred in its box, and explicitly **not the box's own
+width** — the original lights native 92..138 around ink at 94..136
+inside a field that runs 89..139, so the lit box grows with the word and
+"Name" lights a short one where "Producing" lights a long one. A smoke
+check asserts the tell rather than the construction: no two different
+words may light the same width. Unchanged with them: the `native_click`
+points and the hotkeys, RETURN's click path, the PRODUCING dimming
+deviation and the typography deviation.
+
+**NAMING STOPPED BEING AN INDEX.** `frame_holes` matches a hole to a
+`layout_reference.json` rectangle by OVERLAP, rejects anything that is
+not a clean bijection, and prints which way it went; the four-row SHAPE
+(1 / 1 / 4 / 8, derived from the key lists) stays a check and is what
+still catches a RETURN drifted into the band. Asserted by moving
+rectangles, not by reading code: two slots are exchanged, a plate is
+built from the swapped geometry, and each name has to come back on its
+own hole — an index would call the second-from-left `sort_population`
+and be wrong. `tools/colony_frame_check.py` handles 14 windows and
+calls the same namer.
+
+**THE ORIGINAL'S SORT LABEL NOW HAS AN OBVIOUS SLOT — REPORTED, NOT
+BUILT.** The carry-over item parked since brief 78. Measured off the
+native framebuffer (`~/Bilder/claude_scratch_2026-09-06/colsum_native.png`,
+640x480): the word SORT is ink at native **x 23..74, y 456..462**, grey,
+in the 77 native px between the list's left edge (12) and the first sort
+field (89). That is **156 x 16 reference px** inside a 231 px run. Our
+row leaves the corresponding space between the ring's inner left edge at
+107 and `sort_name` at 162: **55 ref px** at the slot row's own y. So
+the place is obvious and the size is not — the caption is 156 ref px
+wide at the original's proportion and would have to be drawn at about a
+third of it, or the first slot moved right when Data places the row.
+Nothing was done: no box, no hole, no entry in `layout.json`.
+
+### The sort bar takes the original's proportion — 11 September 2026 — SUPERSEDED 12 September 2026
+
+**CLOSED, AND THE BOX IT IS ABOUT NO LONGER EXISTS.** `sort_bar` was
+one hole; it is seven `sort_<key>` holes as of fundament decision 54,
+so "the sort bar's width" has no referent and neither the 1281 nor the
+124 px gap is a live number. Kept in full below because two of its
+measurements outlived the box and are wanted by whoever places the
+slots: **the original's strip is 24 native px high, y 446..469, which
+is 54 reference px** — our slots are 45 and 44, still well short of
+that proportion, same as the old bar's 32 was; and **`lay_rail`
+stretches the `in_row` divider across whatever gap it is given**,
+which is now six gaps of 16..19 ref px between slots and one of 17 to
+RETURN, against the divider's own 38. Under-stretch rather than the
+old 3.3x over-stretch, and the same thing to judge on the picture
+rather than in an assertion. The three ways out named below are
+unchanged and none of them is taken. What is DEAD here: the 1281, the
+124 px gap, "the fill follows the hole and the seven labels
+redistribute across the shorter bar" — nothing redistributes any more.
+
+`sort_bar` was **1281 reference px wide**, was 1367. Derived, not
 chosen: the original's strip is native x 89..515, **427 of 640**, and
 427/640 x 1920 = 1281 exactly. RETURN is unchanged at
 `[1512, 974, 288, 32]`, so the gap between them is **124 ref px**,

@@ -1245,6 +1245,40 @@ def main():
        "sort slots keep their own names)")
 
 
+    # ── THE SLOTS ARE A MARKED DEVIATION, AT EVERY HOME ─────────
+    # Reversing a recorded decision is itself a decision, and the
+    # rule is that a deviation is marked in the source, in the docs
+    # and in a check. This is the check; it names the homes so one
+    # that quietly loses its paragraph fails here.
+    for _home, _txt in (
+            ("colonysort.py", open(os.path.join(
+                SCREENS_DIR, "colony_summary", "colonysort.py"),
+                encoding="utf-8").read()),
+            ("tools/frame_holes.py", open(os.path.join(
+                os.path.dirname(SCREENS_DIR), "tools", "frame_holes.py"),
+                encoding="utf-8").read()),
+            ("layout_reference.json", app.res.load_json(
+                "screens/colony_summary/layout_reference.json", {}).get(
+                    "_sort_slots_note", "")),
+            ("v3_projektstatus.md", open(os.path.join(
+                os.path.dirname(SCREENS_DIR), "v3_projektstatus.md"),
+                encoding="utf-8").read()),
+            ("doc/v3_fundament.md", open(os.path.join(
+                os.path.dirname(SCREENS_DIR), "doc", "v3_fundament.md"),
+                encoding="utf-8").read()),
+            # THE SIXTH HOME IS A PICTURE, and it counts: the guide
+            # PNG is what Data has open while he places the slots, so
+            # the sentence that says what changed has to reach it.
+            # The generator is checked because the PNG is written
+            # outside the tree and never committed.
+            ("tools/gimp_fixtures.py", open(os.path.join(
+                os.path.dirname(SCREENS_DIR), "tools",
+                "gimp_fixtures.py"), encoding="utf-8").read())):
+        assert "DEVIATION" in _txt and "sort_bar" in _txt, (
+            f"{_home} does not mark the seven sort slots as a DEVIATION "
+            f"naming the sort_bar it reverses")
+    ok("the seven sort slots are marked a DEVIATION at all six homes "
+       "(module, namer, geometry, status, fundament, GIMP guide)")
     # WHICH of the three bottom cutouts is the galaxy map is derived
     # from the original, not from left-to-right position — the name
     # was assigned by index until 4 September 2026 and was on the

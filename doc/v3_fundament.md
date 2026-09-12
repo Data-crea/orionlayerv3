@@ -1062,6 +1062,62 @@ a session's call — they are named in the status document under the same
 date, which is the shape a rule of unknown parentage gets: written
 down, not resolved in passing.
 
+**54. The artwork may take a division back off the code, and a
+reversed decision is written down as a reversal.** 12 September 2026,
+when the seven sort keys became seven boxes again. This is the DEVIATION
+this entry exists to record, and what it deviates from is decision 53's
+own principle applied one level up: Stage A3 read the original
+correctly and drew the wrong conclusion for OUR frame.
+
+**What Stage A3 decided, on 7 September 2026, and why it was right
+about the original.** MOO2 draws its seven sort keys inside one
+recessed blue strip, native y 446..469, with the words laid along it —
+`Add_Multi_Button_Field_(x, 446, …)` seven times at colsum.cpp:267-273.
+So the plate cut ONE `sort_bar` hole and `colonysort.layout`
+distributed the keys along it: *"the division lives here rather than in
+the artwork"*. Nothing about that reading of the source has changed and
+nothing in it was wrong.
+
+**Why it is reversed.** The reading answered a question about MOO2 and
+was applied as an answer about our frame. Data's artwork cuts a slot
+per key, and where a hole is, is not ours to decide — it is decision
+3's whole chain (`layout_reference.json` → mask → plate → `boxes.json`)
+and decision 53's "a rule we chose is Data's". A screen with seven
+holes and a module that divides one bar would have had the division in
+two places and neither would have owned it.
+
+**What it costs, stated rather than discovered later.** The even gaps
+`colonysort` computed are gone, and they were the one thing in that
+module marked as a READING rather than a transcription — so what left
+is what was already labelled as ours. The `native_click` points, the
+hotkeys, the highlight at word width plus pad, the PRODUCING dimming
+and the typography deviation are all unchanged: they are transcriptions
+or marked deviations, and none of them was about where a button sits.
+
+**And the naming stopped being an index, which is the part that
+generalises.** Two holes in a row can be named left to right; eight
+hand-placed ones cannot, because the failure is silent — two slots
+exchanged in GIMP give a frame where PRODUCING sorts by science and
+every other thing on the screen is still correct. This project already
+paid for that once (`frame_holes` had the last two bottom panels the
+wrong way round for a fortnight, `layout.json`, `panels._note`). So
+`frame_holes` matches a hole to a `layout_reference.json` rectangle by
+OVERLAP, rejects a match that is not a clean bijection, and says which
+way it went. **The rule: a plate whose holes are placed by hand is
+named by geometry, never by order.** The row SHAPE stays a check — it
+is what still catches a RETURN that has drifted into the band.
+
+**Two things the artwork could not have and the tree decided.** The
+seven initial rects are measured off the superseded 14-hole colony
+frame, because the galaxy master's bottom edge carries SIX slots — its
+nav row — and there was no seventh to read; and where a slot met
+something fixed, the slot gave way, never the fixed thing. `sort_bc`
+ran 121 ref px into RETURN and is 57 px wide instead of 195; the row
+ran 4 px past the ring and lost 4 px of height. Both are in
+`_sort_slots_note` with their arithmetic. **Shrink the slot, not the
+thing that is checked** — RETURN's position and "every hole inside the
+ring" are both on decision 53's transcribed side.
+
 ### Process
 
 **31. Verification via `tools/smoke_test.py` before every handoff.**
