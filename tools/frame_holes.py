@@ -4,23 +4,46 @@ Usage:
     python tools/frame_holes.py screens/<screen>/assets/frame.png [--write]
 
 Prints every transparent hole (alpha < 16) larger than MIN_AREA in
-image pixels and as a 1920x1080 reference rect, assuming the image
-is stretched over the whole reference area. With --write, that
-screen's boxes.json is regenerated from the holes (both stored
-resolutions), keeping any style block already present per box.
+image pixels and as a 1920x1080 reference rect, assuming the image is
+stretched over the whole reference area. With --write, that screen's
+boxes.json is regenerated from the holes.
 
-Hole → box name mapping is by position, not by index, and there is
-one rule per screen, chosen from the path (screens/<name>/assets/):
+**WHAT IS LEFT OF THIS MODULE AFTER PHASE B, and what each part is
+for.** The colony screen no longer derives its boxes from an image —
+`tools/boxes_from_reference.py` writes them straight out of
+`layout_reference.json` and `colonyplates.reseat` rebuilds them at
+every load. What survives here is the other direction: given the
+frame the screen wears, WHICH hole is which box.
 
-  galaxy_map      the largest hole is the map, the topmost narrow one
-                  the title, the two on the right the sidebar and the
-                  TURN button, the bottom row the six nav buttons
-  colony_summary  MATCHED TO `layout_reference.json` BY OVERLAP, and
-                  the four rows (header, list, the lower band's four
-                  panels, the sort row's eight) are checked as a
-                  SHAPE rather than used as an order. Left-to-right
-                  order is the fallback for a plate with no reference
-                  beside it, and it says so when it falls back.
+  `find_holes`             the alpha reading, used by every check
+                           that measures the artwork
+  `name_holes` + the
+  colony rule + `_rows`    matches every rectangle to a hole by
+                           OVERLAP, refuses anything that is not a
+                           clean bijection, reports the holes nothing
+                           claims. This is what holds
+                           `layout_reference.json` to
+                           `assets/frame.png`, and the smoke test
+                           runs it on the shipped file
+  `RULE_NAMES` /
+  `cutout_names`           the vocabulary `core/editor/boxclass.py`
+                           asks for: which boxes are cutouts and
+                           therefore LOCKED in the F5 editor
+  `to_ref`, `--write`,
+  the galaxy_map rule      the GALAXY MAP still derives its boxes
+                           from its own frame.png this way, and
+                           nothing about that screen changed
+
+**Hole → box name mapping is by OVERLAP against the geometry, never
+by index.** Seven hand-placed sort slots in one row is a lot of
+chances to drag one past its neighbour, and an index-based namer
+answers that silently: PRODUCING would sort by science and every
+other thing on the screen would still be right. This project paid for
+that once already — the last two bottom panels were the wrong way
+round for a fortnight (`layout.json`, `panels._note`).
+
+The galaxy map keeps its own positional rule, which is fine there:
+its holes are not hand-placed and it has no reference file.
 """
 import json
 import os
@@ -30,14 +53,13 @@ import numpy as np
 from PIL import Image
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-# ITS OWN DIRECTORY, EXPLICITLY — the same fault `frame_cut` records:
-# `import frame_mask` resolves from a shell run because the script's
-# directory is on the path, and not from a loader that addresses this
-# file by path, which is how the smoke test reaches it.
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from core.config import REF_W, REF_H  # noqa: E402
-
-import frame_mask  # noqa: E402  (same directory)
+# THE REFERENCE RULE LIVES ON THE SCREEN SIDE since Phase B, when
+# `frame_mask` was deleted: what counts as a window, and what a
+# rectangle is called once it is a box, are the screen's own answers
+# and this module asks for them rather than keeping a second copy.
+from screens.colony_summary import colonyplates as _cplates  # noqa: E402
 
 MIN_AREA = 2000
 ALPHA_LIMIT = 16
@@ -75,29 +97,10 @@ SORT_KEYS = ["name", "population", "food", "industry", "science",
 SORT_BOX_KEYS = [f"sort_{k}" for k in SORT_KEYS]
 
 #: `layout_reference.json` names a RECTANGLE, `boxes.json` names a
-#: BOX, and two of them differ. The mapping is this module's own —
-#: it is what `--write` writes and what the overlap match has to go
-#: through — so it is stated once here rather than inferred at each
-#: use. Anything absent maps to itself.
-BOX_NAME = {"return_button": "return", "list": "list_area"}
-# Left to right, so the galaxy map is the RIGHTMOST of the three —
-# derived from the source, not from position. The original draws its
-# small galaxy map with MOVEBOX::Draw_Galaxy_Map_Box_(nullptr, 0,
-# 0x17c, 0x15d, 0x80, 0x5b, ...) (colsum.cpp:415), whose signature
-# (movebox.cpp:4-9) reads those as x_base 380, y_base 349, width 128,
-# height 91; COLSUM::Colsum_Connect_Galaxy_Map_Stars_ passes the same
-# four to Get_Galaxy_Map_Star_XY_ (colsum.cpp:734-735). Scaled to the
-# reference area that native rect is (1140, 785, 384, 205) — centre x
-# 1332, which is the third hole, not the second. The middle hole
-# covers native x ~193-347, where the original draws its production
-# and morale sprite column (Draw_Colony_Wee_Prod_(..., 106, y_pos,
-# 366, 20), colsum.cpp:1171-1176) — values output_panel already
-# answers for, so that one is the spare. A smoke check asserts the
-# rule rather than this list, so a redrawn frame cannot quietly
-# reassign the names by position again.
-PANEL_KEYS = ["output_panel", "spare_panel", "galaxy_inset"]
-
-
+#: BOX, and two of them differ. IMPORTED, not restated: the screen
+#: derives its own boxes through the same mapping at startup, so a
+#: copy here could make a tool write a name the screen does not use.
+BOX_NAME = _cplates.BOX_NAME
 def _split_common(holes, main_name):
     """The part both frames share: main area, title, right column."""
     holes = sorted(holes, key=lambda r: r[2] * r[3], reverse=True)
@@ -127,15 +130,8 @@ def name_holes_galaxy_map(holes, size=None, reference=None):
 #: which is the THIRD of the four, and the empire readouts the fourth.
 BAND_KEYS = ["planet_info", "planet_output", "galaxy_inset", "empire_stats"]
 
-#: The colony plate's rows, by hole count, when `layout_reference.json`
-#: cannot be read: a header, the list, the lower band, and the sort
-#: row's seven slots plus RETURN. Derived from the key lists above so
-#: it cannot disagree with them.
-ROW_SHAPE = [1, 1, len(BAND_KEYS), len(SORT_BOX_KEYS) + 1]
-
-
 def row_shape(screen="colony_summary"):
-    """The row shape `layout_reference.json` itself has, or ROW_SHAPE.
+    """The row shape `layout_reference.json`'s own rectangles have.
 
     **THE SHAPE IS A PROPERTY OF THE GEOMETRY, NOT A CONSTANT** —
     12 September 2026. It was `[1, 1, 4, 8]` written out of the key
@@ -151,13 +147,11 @@ def row_shape(screen="colony_summary"):
     stops being asserted is that the reference has one particular
     shape, which was never the rule and was only ever true.
     """
-    data, windows = frame_mask.load_reference(os.path.join(
+    data, windows = _cplates.load_reference(_cplates.reference_path(
         os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
-        "screens", screen, "layout_reference.json"))
+        screen))
     for name in data.get("_windows_without_a_hole", ()):
         windows.pop(name, None)
-    if not windows:
-        return list(ROW_SHAPE)
     return [len(r) for r in _rows(list(windows.values()))]
 
 
@@ -232,7 +226,7 @@ def reference_windows(screen, size):
         "screens", screen, "layout_reference.json")
     if not os.path.isfile(path) or not size:
         return {}
-    data, windows = frame_mask.load_reference(path)
+    data, windows = _cplates.load_reference(path)
     # A WINDOW MAY HAVE NO HOLE, and the file has to say so. The
     # colony header is one: the frame it wears was drawn for a screen
     # that had no column headings, so there is no band for them and
@@ -338,12 +332,13 @@ def name_holes_colony_summary(holes, size=None, reference=None):
       drifted into a neighbouring band, the thing the shape gate was
       written for
 
-    A failure to match is a hard stop and not a fallback: with a
-    reference on disk, holes that do not correspond to it mean the
-    plate and the geometry describe different screens, and naming
-    them by position would produce exactly the silent misnaming this
-    whole rule exists to prevent. The order fallback survives for the
-    case it was written for — no reference readable at all.
+    A failure to match is a HARD STOP and there is no fallback. Naming
+    by position is what produced the silent misnaming this rule exists
+    to prevent — the last two bottom panels were the wrong way round
+    for a fortnight — and a frame whose holes do not correspond to the
+    rectangles is a frame and a geometry describing different screens.
+    The order fallback was kept for "no reference readable at all"
+    until Phase B, when the reference became the only thing there is.
     """
     global LAST_MATCH
     named = _match_by_overlap(holes, "colony_summary", size, reference)
@@ -360,30 +355,11 @@ def name_holes_colony_summary(holes, size=None, reference=None):
             + (f", {len(SPARE_HOLES)} hole(s) claimed by nothing: "
                f"{SPARE_HOLES}" if SPARE_HOLES else ", every hole claimed"))
         return named
-    if reference is not None or reference_windows("colony_summary", size):
-        raise SystemExit(
-            f"{len(holes)} holes and none of the overlap matches is a "
-            f"clean one: every rectangle in layout_reference.json has "
-            f"to land on a hole of its own. Holes: "
-            f"{sorted(tuple(h) for h in holes)}")
-    rows = _rows(holes)
-    shape = [len(r) for r in rows]
-    if shape != ROW_SHAPE:
-        raise SystemExit(
-            f"no layout_reference.json to match against and the holes "
-            f"group into {shape}, not {ROW_SHAPE}: {rows}")
-    LAST_MATCH = (
-        "row order, left to right — no usable layout_reference.json "
-        "for this image size, so the sort slots are named by POSITION "
-        "and two swapped slots would be named the wrong way round")
-    header, listing, band, sort = rows
-    named = {"header": header[0], "list_area": listing[0]}
-    for key, r in zip(BAND_KEYS, band):
-        named[key] = r
-    for key, r in zip(SORT_BOX_KEYS, sort[:-1]):
-        named[key] = r
-    named["return"] = sort[-1]
-    return named
+    raise SystemExit(
+        f"{len(holes)} holes and none of the overlap matches is a "
+        f"clean one: every rectangle in layout_reference.json has to "
+        f"land on a hole of its own. Holes: "
+        f"{sorted(tuple(h) for h in holes)}")
 
 
 def _rows(holes):

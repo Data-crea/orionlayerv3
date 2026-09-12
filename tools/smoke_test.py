@@ -58,10 +58,13 @@ def report(msg):
     not decide whether the suite passes.
 
     **It deliberately does not touch PASS.** A report is not a check
-    and must not inflate the count the two documents are held to; the
-    count went UP by one in the same commit, for the validator that
-    replaces these enforcements where the artwork actually is
-    (`tools/colony_frame_check.py`).
+    and must not inflate the count the two documents are held to. The
+    enforcements that became reports on 11 September were re-homed in
+    `tools/colony_frame_check.py`, a read-only validator that met
+    Data's artwork where it actually was; that tool is deleted with
+    the rest of the plate machinery (Phase B, decision 55) and the
+    artwork it would have checked is in the tree now, so the suite
+    measures it directly.
     """
     print(f"  --  {msg}")
 
@@ -130,35 +133,6 @@ def main():
             self.dispatcher = Dispatcher()
 
     app = FakeApp()
-    #: Does the colony screen draw its own boxes, with no artwork?
-    #:
-    #: **THE SUITE RUNS GREEN BOTH WAYS AND AT THE SAME COUNT** —
-    #: 12 September 2026, Phase A. Every plate-based check below turns
-    #: into a skip that still calls `ok`, so flipping
-    #: `settings.colony_plateless` changes which checks MEASURE
-    #: something and never how many there are. That is what lets the
-    #: two documents keep one number while the screen has two possible
-    #: renderings, and it is what makes Phase B a deletion rather than
-    #: a renegotiation.
-    _PLATELESS = bool(settings.get("colony_plateless"))
-    #: The THIRD path, 12 September 2026, and it is the one that
-    #: ships: one fixed image, `assets/frame.png`, plain-scaled per
-    #: resolution. No master, no `frame_build`, no nine-slice, no
-    #: bevel, no rails — so every check that measures a BUILT plate
-    #: has nothing to measure, exactly as on the plateless path.
-    _STATIC_FRAME = not _PLATELESS and not settings.get("frame_preview")
-    _NO_PLATE = _PLATELESS or _STATIC_FRAME
-    _SKIP_FLAG = ("no plate to measure (settings.colony_plateless)"
-                  if _PLATELESS else
-                  "no built plate (settings.frame_preview is off; the "
-                  "screen wears assets/frame.png)")
-    _SKIP_WHY = (
-        "settings.colony_plateless is on: the colony screen draws "
-        "every box in layout_reference.json itself, so there is no "
-        "plate, no master and no ring to measure" if _PLATELESS else
-        "settings.frame_preview is off: the colony screen wears one "
-        "fixed image, assets/frame.png, plain-scaled — so there is no "
-        "built plate, no master and no nine-slice to measure")
     register_all(app, app.dispatcher, res)
     d = app.dispatcher
     assert d.screen_map.get(10) == "main_menu", d.screen_map
@@ -1011,9 +985,7 @@ def main():
     cs = d.active
     assert cs.GAME_SCREEN_ID == 20
     import frame_holes as fh
-    import frame_mask as _fm_early
     _fh_no = fh.BOX_NAME
-    from screens.colony_summary import colonyframe as _cframe
     from screens.colony_summary import colonysort as _csort_mod
     #: The original's seven sort fields, native x — the literals of
     #: Add_Multi_Button_Field_(x, 446, ...) at colsum.cpp:267-273 in
@@ -1023,100 +995,57 @@ def main():
     NATIVE_X_SORT = {"name": 89, "population": 140, "food": 219,
                      "industry": 262, "science": 326, "producing": 393,
                      "bc": 480}
-    # ── THE CUTOUTS COME FROM THE BUILT PLATE NOW (Stage 4) ──
-    # Decision 3's chain is unchanged and its source moved: boxes.json
-    # is generated from the plate frame_build.py makes, not from the
-    # superseded frame.png. The old artwork has 14 holes in places the
-    # layout no longer uses, so it can no longer host these boxes —
-    # see `colonyframe` and the status document for what flag-off
-    # means now.
-    _plate = os.path.join(SCREENS_DIR, "colony_summary", "assets",
-                          "frames", "frame_1920x1080.png")
-    if _NO_PLATE:
-        # ── THE MIDDLE OF THE CHAIN IS GONE ────────────────────
-        #
-        # Decision 3 said holes == mask == boxes because the artwork
-        # sat between the rectangles and the boxes. It does not any
-        # more, so the chain is `layout_reference.json` -> `boxes.json`
-        # and the check is the one that is left: boxes.json IS the
-        # reference plus BLEED, exactly, byte for byte.
-        #
-        # **THIS IS A REPLACEMENT AND NOT A RELAXATION.** The old
-        # check compared three things that could disagree; this one
-        # compares two, and it is STRICTER about them — the whole file
-        # has to match, not a rect at a time within 2 px, which is the
-        # tolerance the round-trip through a PNG needed.
-        import json as _bfr_json
-        import boxes_from_reference as _bfr
-        _boxes_path = os.path.join(SCREENS_DIR, "colony_summary",
-                                   "boxes.json")
-        _want_boxes = (_bfr_json.dumps(_bfr.rebuild("colony_summary"),
-                                       indent=2) + "\n")
-        assert open(_boxes_path, encoding="utf-8").read() == _want_boxes, (
-            "colony_summary/boxes.json is not layout_reference.json "
-            "plus BLEED. With no artwork on the path that IS the "
-            "derivation, so run `python tools/boxes_from_reference.py "
-            "colony_summary` or find out what moved a rect by hand")
-        _derived_names = {n for n, _r in _bfr.reference_boxes(
-            "colony_summary")}
-        assert _derived_names == fh.RULE_NAMES["colony_summary"], (
-            f"the reference derives {sorted(_derived_names)} and the "
-            f"editor's cutout vocabulary is "
-            f"{sorted(fh.RULE_NAMES['colony_summary'])} — a box the "
-            f"editor would offer handles on is a box content slides "
-            f"out from under (decision 3)")
-        _cut_note = (f"{len(_derived_names)} boxes from "
-                     f"layout_reference.json + {_bfr._bleed()} px, no plate")
-        report("cutouts == boxes.json: " + _SKIP_WHY)
-    elif os.path.exists(_plate):
-        fw, fhh, holes = fh.find_holes(_plate)
-        # AS MANY HOLES AS THERE ARE WINDOWS WITH A HOLE — derived
-        # from `layout_reference.json`, not typed. It was the constant
-        # `sum(ROW_SHAPE)`, which described the Stage-A3 layout; the
-        # plate is cut from whatever rectangles the reference holds,
-        # and the colony header has no hole of its own (it is a strip
-        # of the list's, so the mask merges the two into one blob).
-        # ONE HOLE PER RECTANGLE, and the plate cuts them all — a
-        # window declared to have no hole in the SHIPPED artwork still
-        # gets one here, because this plate is generated from every
-        # rectangle in the file. Derived, not typed: it was the
-        # constant `sum(ROW_SHAPE)`, which described the Stage-A3
-        # layout and nothing since.
-        _plate_want = len(_fm_early.load_reference(
-            _fm_early.REFERENCE)[1])
-        assert len(holes) == _plate_want, (len(holes), _plate_want)
-        named = fh.name_holes(holes, "colony_summary", (fw, fhh))
-        # THE CUTOUT BOXES, AND THE SIX COLUMN BOXES THAT ARE NOT
-        # CUTOUTS. Decision 3's own second half: "Boxes that sit
-        # INSIDE a cutout are placed by hand and have no hole to
-        # derive from". The six columns are strips of `list_area` and
-        # are dragged in the editor (decision 14), so they are
-        # declared here rather than expected from the plate — the
-        # same shape the galaxy map's `sb_*` readouts have.
-        _cols_expected = {"col_name", "col_farmers", "col_workers",
-                          "col_scientists", "col_building", "col_scroll"}
-        # PLUS THE WINDOWS THAT HAVE NO HOLE. The colony header is a
-        # strip of the list's hole, so the plate cuts nothing for it
-        # and the namer never produces it — but it is still a box, and
-        # still derived from `layout_reference.json`.
-        _cols_expected = _cols_expected | {
-            _fh_no.get(_n, _n) for _n in _fm_early.load_reference(
-                _fm_early.REFERENCE)[0].get("_windows_without_a_hole", ())}
-        assert set(named) | _cols_expected == {b.name for b in cs.boxes}, (
-            f"the plate's holes plus the column boxes and boxes.json "
-            f"name different things: holes {sorted(named)}, columns "
-            f"{sorted(_cols_expected)}, boxes "
-            f"{sorted(b.name for b in cs.boxes)}")
-        assert not (set(named) & _cols_expected), (
-            "a column box has the same name as a plate hole")
-        for name, r in named.items():
-            want = fh.to_ref(r, fw, fhh)
-            got = list(cs.box_rect(name))
-            assert all(abs(a - b) <= 2 for a, b in zip(got, want)), \
-                (name, got, want)
-        _cut_note = f"{len(holes)} plate holes"
-    else:
-        _cut_note = (f"plate absent, run `python tools/frame_build.py`")
+    # ── THE CHAIN IS TWO LINKS: reference -> boxes.json ─────────
+    #
+    # Decision 3 asserted holes == mask == boxes because the artwork
+    # sat BETWEEN the rectangles and the boxes: a mask was rendered
+    # from the reference, a plate cut from the mask, and the boxes
+    # measured back out of the plate. Phase B deleted the middle —
+    # the frame is a fixed image that was drawn FIRST and the
+    # rectangles were measured off it — so what is left is that
+    # `boxes.json` IS the reference plus BLEED.
+    #
+    # **THIS IS A REPLACEMENT AND NOT A RELAXATION.** The old check
+    # compared three things that could disagree; this one compares two
+    # and is stricter about them — the whole file, byte for byte,
+    # rather than a rect at a time within the 2 px the round-trip
+    # through a PNG needed. And what the artwork used to guarantee is
+    # asserted separately and better: "every window sits inside its
+    # own hole", below, at three resolutions against the alpha.
+    import json as _bfr_json
+    import boxes_from_reference as _bfr
+    _boxes_path = os.path.join(SCREENS_DIR, "colony_summary",
+                               "boxes.json")
+    _want_boxes = (_bfr_json.dumps(_bfr.rebuild("colony_summary"),
+                                   indent=2) + "\n")
+    assert open(_boxes_path, encoding="utf-8").read() == _want_boxes, (
+        "colony_summary/boxes.json is not layout_reference.json plus "
+        "BLEED. With no artwork on the path that IS the derivation, so "
+        "run `python tools/boxes_from_reference.py colony_summary` or "
+        "find out what moved a rect by hand")
+    _derived_names = {n for n, _r in _bfr.reference_boxes(
+        "colony_summary")}
+    assert _derived_names == fh.RULE_NAMES["colony_summary"], (
+        f"the reference derives {sorted(_derived_names)} and the "
+        f"editor's cutout vocabulary is "
+        f"{sorted(fh.RULE_NAMES['colony_summary'])} — a box the editor "
+        f"would offer handles on is a box content slides out from "
+        f"under (decision 3)")
+    # AND THE SCREEN DOES NOT READ THE FILE IT WAS WRITTEN INTO.
+    # `colonyplates.reseat` rebuilds these rects at every load, so a
+    # reference edited without running the tool cannot leave a stale
+    # fill behind the frame — which it did, on the day that became
+    # possible. Asserted against the LIVE boxes, not against the file.
+    from screens.colony_summary import colonyplates as _cpl
+    _live = {b.name: tuple(b.ref_rect) for b in cs.boxes}
+    for _bn, _br in _cpl.box_rects(cs).items():
+        assert _live.get(_bn) == tuple(_br), (
+            f"{_bn} is {_live.get(_bn)} on the screen and {tuple(_br)} "
+            f"in layout_reference.json — reseat did not run, or ran "
+            f"and something overwrote it")
+    _cut_note = (f"{len(_derived_names)} boxes from "
+                 f"layout_reference.json + {_cpl.BLEED} px")
+
     # ── SEVEN SLOTS AGAIN, ONE BOX PER KEY ──────────────────────
     #
     # **DEVIATION, 12 September 2026, reversing "THE BAR IS ONE HOLE
@@ -1310,56 +1239,41 @@ def main():
     # code: two slots are exchanged in a copy of the reference, a
     # plate is rendered from it, and each name has to come back on
     # the hole the reference now puts it on.
-    import tempfile as _sw_tf
-    import frame_build as _sw_fb
-    import frame_cut as _sw_fc
-    import frame_mask as _sw_fm
-    from PIL import Image as _sw_img
-    from core.config import REF_W as _SW_W, REF_H as _SW_H
-    _sw_windows = dict(_sw_fm.load_reference(_sw_fm.REFERENCE)[1])
+    # Asserted by MOVING THE RECTANGLES rather than by reading the
+    # code, and against the REAL FRAME — it used to build a plate from
+    # the galaxy master with a swapped reference, which needed
+    # `frame_build` and `frame_cut` and is gone with them. The holes
+    # are the artwork's own; what is swapped is the geometry handed to
+    # the matcher, which is the actual case: Data moves two slots in
+    # GIMP and `layout_reference.json` moves with them.
+    _sw_w, _sw_h, _sw_holes = fh.find_holes(
+        res.screen_file("colony_summary", "assets", "frame.png"))
+    _sw_ref = dict(fh.reference_windows("colony_summary",
+                                        (_sw_w, _sw_h)))
     _a, _b = fh.SORT_BOX_KEYS[1], fh.SORT_BOX_KEYS[4]
-    _sw_windows[_a], _sw_windows[_b] = _sw_windows[_b], _sw_windows[_a]
-    with _sw_tf.TemporaryDirectory() as _swd:
-        _swp = os.path.join(_swd, "swapped.png")
-        _sw_master = _sw_img.open(_sw_fb.MASTER)
-        _sw_fc.cut(_sw_fb.build(_sw_master, _sw_windows, _SW_W, _SW_H),
-                   _sw_windows, _SW_W, _SW_H)[0].save(_swp)
-        _sw_w, _sw_h, _sw_holes = fh.find_holes(_swp)
-        # The swapped geometry is handed in, because that is the case:
-        # Data moves two slots in GIMP and `layout_reference.json`
-        # moves with them. The file on disk is untouched.
-        # The declared no-hole windows come out of the reference the
-        # matcher is handed, exactly as `reference_windows` drops them
-        # when it reads the file itself: the colony header is a strip
-        # of the list's hole and has none of its own, so a mask
-        # rendered from these rectangles has thirteen blobs and not
-        # fourteen.
-        _sw_nohole = _sw_fm.load_reference(_sw_fm.REFERENCE)[0].get(
-            "_windows_without_a_hole", ())
-        _sw_ref = {_n: tuple(_r) for _n, _r in _sw_windows.items()
-                   if _n not in _sw_nohole}
-        _sw_named = fh.name_holes(
-            _sw_holes, "colony_summary", (_sw_w, _sw_h), _sw_ref)
+    _sw_ref[_a], _sw_ref[_b] = _sw_ref[_b], _sw_ref[_a]
+    _sw_named = fh.name_holes(_sw_holes, "colony_summary",
+                              (_sw_w, _sw_h), _sw_ref)
     assert "overlap" in (fh.LAST_MATCH or ""), fh.LAST_MATCH
     # AND ORDER WOULD HAVE GOT IT WRONG, which is what makes this a
-    # test: after the swap the second slot from the left is where
-    # `sort_population` used to be, and an index-based namer calls it
-    # `sort_population` because it is second. It has to come back as
-    # the key the geometry now puts there.
-    _sw_row = sorted((tuple(_r) for _r in _sw_holes if _r[1] > 900),
-                     key=lambda _r: _r[0])
+    # test: the second slot from the left is where `sort_population`
+    # sits, and an index-based namer calls it that because it is
+    # second. It has to come back as the key the geometry now puts
+    # there.
+    _sw_row = sorted((tuple(_r) for _r in _sw_holes
+                      if _r[1] > 0.85 * _sw_h), key=lambda _r: _r[0])
+    assert len(_sw_row) == len(fh.SORT_KEYS), (
+        f"{len(_sw_row)} holes in the artwork's bottom row, "
+        f"{len(fh.SORT_KEYS)} sort keys")
     _sw_at = {tuple(_r): _n for _n, _r in _sw_named.items()}
     assert _sw_at[_sw_row[1]] == _b, (
         f"the second slot from the left came back as "
         f"{_sw_at[_sw_row[1]]!r}; the swapped geometry puts {_b!r} "
         f"there and {_a!r} is the name an INDEX would have given it")
-    for _n in (_a, _b):
-        assert list(_sw_named[_n])[:2] == list(_sw_windows[_n])[:2], (
-            f"{_n} was matched to {_sw_named[_n]} and the swapped "
-            f"reference puts it at {_sw_windows[_n]} — the namer is "
-            f"following ORDER again, and two slots Data exchanges in "
-            f"GIMP would trade their sort keys with nothing failing")
-    ok("frame_holes names the colony plate by overlap (two exchanged "
+    assert _sw_at[_sw_row[4]] == _a, (
+        f"the fifth slot came back as {_sw_at[_sw_row[4]]!r}, not "
+        f"{_a!r} — the swap has to be followed in both directions")
+    ok("frame_holes names the frame's holes by overlap (two exchanged "
        "sort slots keep their own names)")
 
 
@@ -1384,134 +1298,12 @@ def main():
             ("doc/v3_fundament.md", open(os.path.join(
                 os.path.dirname(SCREENS_DIR), "doc", "v3_fundament.md"),
                 encoding="utf-8").read()),
-            # THE SIXTH HOME IS A PICTURE, and it counts: the guide
-            # PNG is what Data has open while he places the slots, so
-            # the sentence that says what changed has to reach it.
-            # The generator is checked because the PNG is written
-            # outside the tree and never committed.
-            ("tools/gimp_fixtures.py", open(os.path.join(
-                os.path.dirname(SCREENS_DIR), "tools",
-                "gimp_fixtures.py"), encoding="utf-8").read())):
+            ):
         assert "DEVIATION" in _txt and "sort_bar" in _txt, (
             f"{_home} does not mark the seven sort slots as a DEVIATION "
             f"naming the sort_bar it reverses")
-    ok("the seven sort slots are marked a DEVIATION at all six homes "
-       "(module, namer, geometry, status, fundament, GIMP guide)")
-
-    # ── THE SCREEN CAN DRAW ITS OWN BOXES, WITH NO ARTWORK ──────
-    #
-    # Data's decision of 12 September 2026, Phase A: no plate, no
-    # master, no ring — every rectangle in `layout_reference.json`
-    # drawn where it is typed. **CHECKED IN BOTH MODES, whatever the
-    # flag says**, by turning it on here for the length of this block:
-    # a prototype nobody exercises until it ships is a prototype that
-    # is broken when it ships, and the flag's default is the thing
-    # most likely to change under this check.
-    from screens.colony_summary import colonyplates as _cpl
-    # 1. THE WINDOW RULE IS THE SAME ONE THE TOOLS USE. `colonyplates`
-    #    holds its own `NOT_A_WINDOW` because Phase B deletes
-    #    `frame_mask` and a screen that draws its own boxes must be
-    #    able to say what a box is with no tool on the path. That is a
-    #    second copy, so it gets a checker the day it is written
-    #    (decision 36) — against the FILE IN THE TREE, so the two
-    #    rules are compared on real data and not on their spelling.
-    assert _cpl.windows(cs) == _fm_early.load_reference(
-        _fm_early.REFERENCE)[1], (
-        "colonyplates and frame_mask disagree about which keys of "
-        "layout_reference.json are windows")
-    assert _cpl.BOX_NAME == fh.BOX_NAME, (
-        f"the rectangle-to-box renaming differs: colonyplates says "
-        f"{_cpl.BOX_NAME}, frame_holes says {fh.BOX_NAME}")
-    # 2. THE RADIUS IS A MEASUREMENT AND IT SCALES. Two native px is
-    #    three reference px (c5977cf); 0 is allowed and means square.
-    assert _cpl.CORNER_RADIUS_REF == 3, _cpl.CORNER_RADIUS_REF
-    assert cs._data["frame"]["plate_corner_radius"] == 3, (
-        "layout.json's plate_corner_radius is no longer the original's "
-        "2 native px at x3 — if that is deliberate, the note beside it "
-        "has to say what it is now")
-    for _rw, _rh, _want_r in ((1920, 1080, 3), (3840, 2160, 6)):
-        class _L:
-            layout = Layout(_rw, _rh)
-            _data = cs._data
-        assert _cpl.radius(_L()) == _want_r, (
-            f"{_rw}x{_rh}: radius {_cpl.radius(_L())}, expected "
-            f"{_want_r}")
-    # 3. EVERY WINDOW GETS A PLATE, and the renderers are asked what
-    #    they drew rather than trusted to have drawn it. `draw_plate`
-    #    is spied on for one render, and the fourteen rects it is
-    #    handed for the rim must be the fourteen boxes — so a window
-    #    added to `layout_reference.json` tomorrow is covered here
-    #    without anyone editing this.
-    _was_flag = app.settings.get("colony_plateless")
-    _real_dp = app.style.draw_plate
-    _rims = []
-
-    def _spy_dp(surface, rect, scale=1.0, color=None, radius=None,
-                fill=None, rim=None, rim_width=0):
-        if rim is not None and rim_width > 0:
-            _rims.append(tuple(pygame.Rect(rect)))
-        return _real_dp(surface, rect, scale, color, radius, fill,
-                        rim, rim_width)
-    try:
-        app.settings["colony_plateless"] = True
-        app.style.draw_plate = _spy_dp
-        cs._load_frame()
-        assert cs._frame_scaled is None, (
-            "the screen loaded a frame with colony_plateless on — "
-            "there is no plate, no master and no ring in that mode, so "
-            "a file on the path is a file nobody draws")
-        cs.render(pygame.display.get_surface())
-        _want_rims = set()
-        for _n in _cpl.windows(cs):
-            _want_rims.add(tuple(pygame.Rect(
-                *cs.layout.rect(cs.box_rect(_cpl.BOX_NAME.get(_n, _n))))))
-        assert set(_rims) == _want_rims, (
-            f"the rims drawn are not the windows: drawn "
-            f"{len(set(_rims))}, typed {len(_want_rims)}, missing "
-            f"{sorted(_want_rims - set(_rims))}, extra "
-            f"{sorted(set(_rims) - _want_rims)}")
-        # AND NOTHING BETWEEN THEM. The frame image is not blitted and
-        # `USE_FRAME` stays off, so the only thing between two boxes is
-        # the background — which is the whole of what this mode changes
-        # and the thing to judge on the picture.
-        assert cs._frame is None and not cs.USE_FRAME, (
-            "something is still drawing a frame between the boxes")
-    finally:
-        app.style.draw_plate = _real_dp
-        app.settings["colony_plateless"] = _was_flag
-        cs._load_frame()
-    ok(f"colony_summary draws its own boxes with no artwork "
-       f"({len(_want_rims)} windows, rim + lit line, corner radius "
-       f"{_cpl.CORNER_RADIUS_REF} ref px)")
-
-    # ── AND IT IS A MARKED DEVIATION, AT ITS THREE HOMES ────────
-    # It supersedes decision 49 for this screen, which is a decision
-    # about a decision; the marking rule does not care and wants the
-    # same three places. `doc/v3_fundament.md` is NOT one of them yet
-    # and that is deliberate — Phase A is a prototype Data has not
-    # looked at, and an entry in the fundament would claim it is
-    # settled. The status document is where a prototype is recorded.
-    for _home, _txt in (
-            ("colonyplates.py", open(os.path.join(
-                SCREENS_DIR, "colony_summary", "colonyplates.py"),
-                encoding="utf-8").read()),
-            ("layout.json", cs._data["frame"].get(
-                "_plate_corner_radius_note", "")),
-            ("v3_projektstatus.md", open(os.path.join(
-                os.path.dirname(SCREENS_DIR), "v3_projektstatus.md"),
-                encoding="utf-8").read())):
-        assert "c5977cf" in _txt, (
-            f"{_home} no longer cites c5977cf, which is where the "
-            f"2 native px corner was measured — the radius is a "
-            f"measurement and loses its source without it")
-    assert "DEVIATION" in open(os.path.join(
-        SCREENS_DIR, "colony_summary", "colonyplates.py"),
-        encoding="utf-8").read(), (
-        "colonyplates no longer marks the rim as a DEVIATION; the "
-        "original has metal around every field and we draw a band "
-        "instead, which is not a transcription of anything")
-    ok("the plateless rim is marked a DEVIATION and the corner radius "
-       "keeps its source (c5977cf) at all three homes")
+    ok("the seven sort slots are marked a DEVIATION at all five homes "
+       "(module, namer, geometry, status, fundament)")
 
     # ── EVERY WINDOW SITS INSIDE ITS OWN HOLE, AT EVERY SIZE ────
     #
@@ -1534,16 +1326,18 @@ def main():
     # a per-pixel test would fail on while nothing was wrong. What is
     # asserted is containment of the RECT in the hole's extent, with
     # `BLEED` of tolerance, which is the thing the bleed exists for.
-    _hole_png = _cframe.frame_source(cs)[0] if not _PLATELESS else None
-    if not _hole_png or not os.path.exists(_hole_png):
-        report("windows inside their holes: " + _SKIP_WHY)
-        ok("windows inside their holes SKIPPED — the screen draws no "
-           "frame on this path")
-    else:
+    _hole_png = res.screen_file("colony_summary", "assets", "frame.png")
+    assert _hole_png and os.path.exists(_hole_png), (
+        "screens/colony_summary/assets/frame.png is gone — it is the "
+        "frame this screen wears and the artwork every rectangle in "
+        "layout_reference.json was measured off")
+    if True:
         from scipy import ndimage as _hnd
         import numpy as _hnp
         from PIL import Image as _hPIL
-        _hlr, _hwins = _fm_early.load_reference(_fm_early.REFERENCE)
+        from screens.colony_summary import colonyplates as _hcpl
+        _hlr, _hwins = _hcpl.load_reference(
+            _hcpl.reference_path(os.path.dirname(SCREENS_DIR)))
         _halpha = _hnp.array(_hPIL.open(_hole_png).convert(
             "RGBA"))[:, :, 3]
         _hb = _cpl.BLEED
@@ -1608,7 +1402,7 @@ def main():
     # numbers are literals here so a retyped one fails.
     #
     # The RULE is asserted, not the instance: whichever of
-    # fh.PANEL_KEYS lands nearest the original's rect must be the one
+    # fh.BAND_KEYS lands nearest the original's rect must be the one
     # called "galaxy_inset". The three holes share a y, so the
     # discriminating axis is the centre x alone.
     _GMAP_NATIVE = (380, 349, 128, 91)          # colsum.cpp:415
@@ -4127,19 +3921,30 @@ def main():
     assert {e.label.lower() for e in _right} == {
         "food", "industry", "research", "bc", "morale"}, \
         [e.label for e in _right]
-    # ── BOTH `info_style` VARIANTS DRAW, AND THE CHOICE IS DATA'S ──
-    # The default is the transcription, which is this project's
-    # default everywhere; the switch is one key so the two pictures
-    # can be compared beside the native before it is closed.
+    # ── THE DESCRIPTION PANEL DRAWS THE PARAGRAPH, AND ONLY IT ──
+    # `output.info_style` chose between the paragraph and the
+    # label-and-value table so the two pictures could be compared
+    # beside the native. They were; Data took the paragraph; Stage 5
+    # removed the key (brief 87, brief 81's "if the paragraph stays
+    # the only user"). This asserted that BOTH variants drew
+    # something, which with one variant left is a tautology — so it
+    # asserts what is actually true now: the panel draws the
+    # paragraph whatever the config says, and a stray `info_style`
+    # cannot bring the branch back by being present.
     _info_box = pygame.Rect(0, 0, 324, 224)
-    for _style_name in ("paragraph", "rows"):
+    _iink = []
+    for _stray in ({}, {"info_style": "rows"}):
         _isurf = pygame.Surface((324, 224))
         _isurf.fill((0, 0, 0))
         _co.render_info(_isurf, _fake, _info_box,
-                        dict(_ocfg, info_style=_style_name), _words,
+                        dict(_ocfg, **_stray), _words,
                         _climates, app.layout, app.style)
-        assert pygame.surfarray.array3d(_isurf).any(), (
-            f"output.info_style={_style_name!r} drew nothing at all")
+        _iarr = pygame.surfarray.array3d(_isurf)
+        assert _iarr.any(), "the description panel drew nothing at all"
+        _iink.append(_iarr.tobytes())
+    assert _iink[0] == _iink[1], (
+        "a stray output.info_style changed what the description panel "
+        "drew — the switch is gone and the key must be inert")
     # THE PARAGRAPH IS FIVE LINES, NOT SIX ROWS: size and climate
     # share one and growth carries no label, which is what
     # E_Strings_(74) does.
@@ -4944,32 +4749,21 @@ def main():
     ok("colony_summary galaxy_inset (transform, the four colour "
        "branches, uniform-scale geometry, markings, sends nothing)")
 
-    # ── The rebuild's layout reference, and the mask cut from it ──
+    # ── The layout reference, which is the whole chain now ──
     #
-    # layout_reference.json is the ONE place the new screen's
-    # rectangles are typed; tools/frame_mask.py renders them, the
-    # frame artwork is drawn from the 1080p render, frame_holes.py
-    # derives the cutouts back out of the artwork and boxes.json is
-    # asserted against both (decision 3). This checks the end of that
-    # chain that exists today: the file's own arithmetic, and that
-    # rendering it twice gives the same pixels.
-    import importlib.util as _ilu2
+    # layout_reference.json is the ONE place this screen's rectangles
+    # are typed, and since Phase B it is one link from the boxes:
+    # `tools/boxes_from_reference.py` writes them and
+    # `colonyplates.reseat` rebuilds them at every load. What this
+    # checks is the file's own arithmetic and that every rectangle in
+    # it resolves to the box the running screen holds.
     _proj = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-    _fm_spec = _ilu2.spec_from_file_location(
-        "_frame_mask", os.path.join(_proj, "tools", "frame_mask.py"))
-    _fm = _ilu2.module_from_spec(_fm_spec)
-    _fm_spec.loader.exec_module(_fm)
-    _lr_path = os.path.join(SCREENS_DIR, "colony_summary",
-                            "layout_reference.json")
-    _lr, _lr_windows = _fm.load_reference(_lr_path)
+    from screens.colony_summary import colonyplates as _cpl2
+    _lr_path = _cpl2.reference_path(_proj)
+    _lr, _lr_windows = _cpl2.load_reference(_lr_path)
     import numpy as np
     from PIL import Image as _PILImage
-
-    # The reference space is the app's, not a second copy of it.
     from core.config import REF_W as _REF_W, REF_H as _REF_H
-    assert (_fm.REF_W, _fm.REF_H) == (_REF_W, _REF_H), (
-        f"frame_mask works in {_fm.REF_W}x{_fm.REF_H} and the app in "
-        f"{_REF_W}x{_REF_H}")
 
     # THE COLUMNS ARE THE LIST. No slack to distribute, unlike the
     # single-track row where six floor divisions dropped pixels that
@@ -4978,71 +4772,22 @@ def main():
         f"list_columns sum to {sum(_lr['list_columns'].values())}, the "
         f"list is {_lr['list'][2]} wide")
 
-    # ── THE RING, AND THE CHECKER A HAND-COPIED NUMBER GETS ──
+    # ── THE RING IS GONE, AND SO IS THE RULE THAT RESTED ON IT ──
     #
-    # `bezel: 36` was one number for a border that is 107 px wide at
-    # the sides and 18 at the top. It described nothing that is
-    # drawn, and the tree held it beside window margins of 44 that
-    # disagreed with it. It is gone; `ring` is four values taken off
-    # the master, and decision 36 says a number copied from
-    # somewhere else gets something that re-measures it.
-    _ring = _lr["ring"]
-    _rsrc = _lr["_ring_source"]
-    _rimg = os.path.join(_proj, *_rsrc["file"].split("/"))
-    assert os.path.isfile(_rimg), (
-        f"the ring names {_rsrc['file']} as its source and that file is "
-        f"not there — the table would be a number nobody can re-derive")
-    _ra = np.array(_PILImage.open(_rimg).convert("RGBA"))[:, :, 3]
-    _rh, _rw = _ra.shape
-    _sweep = set()
-    for _t in (8, 16, 64):
-        _ys, _xs = np.where(_ra < _t)
-        _sweep.add((int(_xs.min()), int(_xs.max()),
-                    int(_ys.min()), int(_ys.max())))
-    assert len(_sweep) == 1, (
-        f"{_rsrc['file']}: the metal bbox is not stable across the "
-        f"threshold sweep, {_sweep} — the ring would depend on where "
-        f"the threshold sits")
-    _mx0, _mx1, _my0, _my1 = _sweep.pop()
-    # The frame is stretched over the whole reference area
-    # (screen._scale_frame), so each axis maps independently.
-    _measured = {
-        "left": round(_mx0 * _REF_W / _rw),
-        "right": round((_rw - 1 - _mx1) * _REF_W / _rw),
-        "top": round(_my0 * _REF_H / _rh),
-        "bottom": round((_rh - 1 - _my1) * _REF_H / _rh),
-    }
-    # DROPPED AS A CHECK, 11 September 2026 — it was a CHOSEN rule.
-    # `_ring_source` says why the number came off the main-screen
-    # master: "because that is what this screen has to sit beside".
-    # That is a design decision of ours, not anything transcribed
-    # from MOO2, and Data is drawing her own frame. Reported, so the
-    # two numbers are still in front of anyone who changes one.
+    # `ring` was four values measured off the main-screen master, and
+    # "every window is inside the ring, per side" was the rule it
+    # carried: a hole outside the metal is not a layout preference, it
+    # is a hole in the edge of the screen. Phase B deleted the master,
+    # the plate machinery and both `layout_reference` entries with
+    # them (decision 55).
     #
-    # WHAT REPLACES IT IS NOT NOTHING. `ring` is now a typed number
-    # with no checker in this suite, which is the fault this project
-    # keeps paying for — so the re-measurement moved to where the
-    # artwork actually is: `tools/colony_frame_check.py` measures the
-    # ring off the PNG it is handed and holds every window against
-    # it. The suite has no artwork by design (see the frame-cut block
-    # below), so it could never have done that job for Data's file.
-    report(f"ring table {_ring} | {_rsrc['file']} measures {_measured}"
-           f"{'' if _measured == _ring else '  <-- DIFFERENT'}")
-
-    # EVERY WINDOW IS INSIDE THE RING, per side. KEPT: a hole outside
-    # the metal is not a layout preference, it is a hole in the edge
-    # of the screen. Asserted as the rule and not as a list of
-    # coordinates, so a new rectangle obeys it.
-    for _name, (_x, _y, _w, _h) in _lr_windows.items():
-        assert _x >= _ring["left"] and _y >= _ring["top"], (
-            f"{_name} at ({_x}, {_y}) starts under the ring "
-            f"({_ring['left']}, {_ring['top']})")
-        assert _x + _w <= _REF_W - _ring["right"], (
-            f"{_name} ends at {_x + _w}, the ring starts at "
-            f"{_REF_W - _ring['right']}")
-        assert _y + _h <= _REF_H - _ring["bottom"], (
-            f"{_name} ends at {_y + _h}, the ring starts at "
-            f"{_REF_H - _ring['bottom']}")
+    # **THE RULE IS NOT DROPPED, IT IS SHARPER.** The ring was an
+    # approximation of the artwork — one rectangle standing for the
+    # whole of it. What replaces it is "every window sits inside its
+    # OWN hole", asserted against `assets/frame.png`'s alpha at all
+    # three shipped resolutions, in the colony_summary block above.
+    # A window outside the metal fails there, and so does one inside
+    # the metal but over the wrong hole, which the ring never caught.
 
     # FIGURE CAPACITY IS ASSERTED, NOT NOTED. A column must fit at
     # least as many unsqueezed figures as the original's widest does
@@ -5114,15 +4859,16 @@ def main():
                   key=lambda r: r[1])
     report("sort row, left to right: "
            + " | ".join(f"{_r[0]} {_r[1:]}" for _r in _row))
+    # The `gaps` table went with the rails in Phase B: it held the
+    # master's seven struts by role, and nothing lays a rail any more.
+    # The widths are still reported, because a hand-placed row is
+    # where an uneven gap shows.
     report("sort row gaps: "
            + ", ".join(f"{_a[0]}->{_b[0]} {_b[1] - (_a[1] + _a[3])}"
-                       for _a, _b in zip(_row, _row[1:]))
-           + f" | gaps.in_row documents {_lr['gaps']['in_row']}, "
-             f"gaps.band_sort {_lr['gaps']['band_sort']}")
+                       for _a, _b in zip(_row, _row[1:])))
     report(f"band bottom {max(_lr[_k][1] + _lr[_k][3] for _k in _band_keys)}"
            f" -> sort row top {min(_r[2] for _r in _row)} | sort row "
-           f"bottom {max(_r[2] + _r[4] for _r in _row)}, the ring's "
-           f"inner edge is at {_REF_H - _ring['bottom']}")
+           f"bottom {max(_r[2] + _r[4] for _r in _row)}")
 
     # THE INSET'S ASPECT IS THE ORIGINAL'S COVERAGE, to a thousandth.
     # movebox.cpp:20-21: the crop is 128*(506000//128) by
@@ -5159,585 +4905,34 @@ def main():
         f"the galaxy instead of above and below it. Below a box "
         f"height of {round(_iw * 91 / 128)} that is what happens")
 
-    # RENDERING IS REPRODUCIBLE, which is the licence to gitignore it
-    # (decision 40): the same rectangles rendered twice are the same
-    # pixels, and the device rects come from Layout's own truncation
-    # rather than a second rounding rule.
+    # THE DERIVATION IS REPRODUCIBLE AND ROUNDS LIKE THE SCREEN. This
+    # rendered the mask twice and compared the pixels, which was the
+    # licence to gitignore it (decision 40); there is no mask and
+    # nothing generated left on this screen. What the check was
+    # actually about survives and is the half that could go wrong: a
+    # rectangle read out of the reference must resolve to the same
+    # device rect the running screen resolves it to, at every
+    # resolution, through `Layout.rect`'s truncation and no second
+    # rounding rule.
     for _spec in _lr["_resolutions"]:
         _rw, _rh = (int(v) for v in _spec.split("x"))
-        _img_a, _rects_a = _fm.render(_lr_windows, _rw, _rh)
-        _img_b, _rects_b = _fm.render(_lr_windows, _rw, _rh)
-        assert _img_a.tobytes() == _img_b.tobytes(), f"{_spec} not stable"
-        assert _rects_a == _rects_b
         _lay = Layout(_rw, _rh)
+        _a1 = {_n: _lay.rect(_r) for _n, _r in _lr_windows.items()}
+        _a2 = {_n: _lay.rect(_r) for _n, _r in _lr_windows.items()}
+        assert _a1 == _a2, f"{_spec}: Layout.rect is not a function"
         for _name, _rect in _lr_windows.items():
-            assert tuple(_rects_a[_name]) == _lay.rect(_rect), (
-                f"{_spec} {_name}: the mask says {_rects_a[_name]} and "
-                f"Layout.rect says {_lay.rect(_rect)} — the mask and "
-                f"the running screen must round identically")
-        # Only two values, and white is a window. A soft edge would
-        # need a threshold nobody wrote down.
-        assert set(_img_a.getdata()) <= {_fm.WINDOW, _fm.METAL}, (
-            f"{_spec}: the mask has more than two values")
-    ok("colony rebuild layout reference (columns are the list, every "
-       "window inside the bezel, inset aspect = the original's "
-       "coverage, mask rounds exactly as Layout does)")
-
-    # **SKIPPED WITH THE PLATE, NOT DELETED WITH IT** — 12 September
-    # 2026, Phase A. With `colony_plateless` on this screen has no
-    # artwork at all, so what follows measures a picture nobody draws.
-    # It still COUNTS, because the count may not go down and because
-    # the plate is still in the tree and still checked with the flag
-    # off — Phase B is what deletes both the plate and this branch.
-    if _NO_PLATE:
-        report("colony rebuild frame cut: holes == mask == boxes on a plate built here — " + _SKIP_WHY)
-        ok("colony rebuild frame cut SKIPPED — " + _SKIP_FLAG)
-    else:
-        # ── Stage 2: holes == mask == boxes, on a frame built here ──
-        #
-        # The chain is artwork -> frame_cut -> alpha holes -> boxes.json,
-        # and decision 3 says all three must agree at every resolution.
-        # Data's artwork is not in the tree and never will be, so this
-        # builds its own plate and runs the real cutter over it — the
-        # same code path the artwork will take. A check that needed the
-        # artwork would be a check that fails for the person who followed
-        # the instructions, which is the help-file lesson.
-        _fc_spec = _ilu2.spec_from_file_location(
-            "_frame_cut", os.path.join(_proj, "tools", "frame_cut.py"))
-        _fc = _ilu2.module_from_spec(_fc_spec)
-        _fc_spec.loader.exec_module(_fc)
-        from PIL import Image as _PILImage
-        # Deliberately NOT black: if the cutter ever fell back to the
-        # artwork's own dark pixels instead of the mask, a plate with no
-        # black in it would produce no holes at all and this would fail
-        # rather than pass by coincidence.
-        _plate = _PILImage.new("RGB", (1920, 1080), (78, 80, 86))
-        for _spec in _lr["_resolutions"]:
-            _rw, _rh = (int(v) for v in _spec.split("x"))
-            _cut, _cut_rects = _fc.cut(_plate, _lr_windows, _rw, _rh)
-            assert _cut.size == (_rw, _rh) and _cut.mode == "RGBA"
-            _alpha = _cut.getchannel("A")
-            # 1. THE HOLES ARE THE MASK. Measured per window rather than
-            #    as a total, so two holes that swapped places could not
-            #    cancel out.
-            for _name, (_x, _y, _w, _h) in _cut_rects.items():
-                _inside = _alpha.crop((_x, _y, _x + _w, _y + _h))
-                assert _inside.getextrema() == (_fc.HOLE, _fc.HOLE), (
-                    f"{_spec} {_name}: the window is not fully transparent, "
-                    f"alpha runs {_inside.getextrema()}")
-            # 2. AND NOTHING ELSE IS. Count, so a hole one pixel too big
-            #    anywhere fails even though every window above passed.
-            _want = sum(_w * _h for _x, _y, _w, _h in _cut_rects.values())
-            _holes = sum(1 for _v in _alpha.getdata() if _v < 16)
-            assert _holes == _want, (
-                f"{_spec}: {_holes} transparent px against {_want} of "
-                f"window — the alpha and the mask disagree by "
-                f"{_holes - _want}")
-            # 3. ALPHA IS HARD. frame_holes.py thresholds at 16 and a
-            #    soft rim would make a hole's size depend on where that
-            #    threshold sits.
-            assert set(_alpha.getdata()) <= {_fc.HOLE, _fc.OPAQUE}, (
-                f"{_spec}: the alpha has values between 0 and 255")
-            # 4. THE RECTANGLES ARE THE MASK'S, name for name — the
-            #    mapping is by construction here, where frame_holes.py
-            #    has to guess it from position and had two of this
-            #    screen's names the wrong way round once.
-            _mask_img, _mask_rects = _fm.render(_lr_windows, _rw, _rh)
-            assert _cut_rects == _mask_rects, (
-                f"{_spec}: frame_cut punched {_cut_rects} and frame_mask "
-                f"drew {_mask_rects}")
-        ok("colony rebuild frame cut (holes == mask, name for name, hard "
-           "alpha, at all three resolutions — on a plate with no black "
-           "in it)")
-
-    # **SKIPPED WITH THE PLATE, NOT DELETED WITH IT** — 12 September
-    # 2026, Phase A. With `colony_plateless` on this screen has no
-    # artwork at all, so what follows measures a picture nobody draws.
-    # It still COUNTS, because the count may not go down and because
-    # the plate is still in the tree and still checked with the flag
-    # off — Phase B is what deletes both the plate and this branch.
-    if _NO_PLATE:
-        report("colony frame validator: the validator measures a PNG and there is none — " + _SKIP_WHY)
-        ok("colony frame validator SKIPPED — " + _SKIP_FLAG)
-    else:
-        # ── The validator that took the dropped enforcements over ──
-        #
-        # NEW 11 September 2026, and it is what makes this commit's four
-        # dropped enforcements affordable. `tools/colony_frame_check.py`
-        # holds a PNG against the rules that SURVIVED — the transcribed
-        # ones — where the suite cannot: on Data's own artwork, which is
-        # not in the tree and never will be.
-        #
-        # A VALIDATOR THAT CANNOT FAIL IS NOT A VALIDATOR, so this runs
-        # it twice: once on a mask rendered from the current reference,
-        # which must pass and must report the mask's own rectangles name
-        # for name, and once on a mask with RETURN nudged up into the
-        # lower band's row, which must fail the four-row rule. Without
-        # the second half a tool that printed PASS unconditionally would
-        # sail through here.
-        import subprocess as _sp
-        import tempfile as _tf
-        _cfc = os.path.join(_proj, "tools", "colony_frame_check.py")
-        assert os.path.isfile(_cfc), "tools/colony_frame_check.py is gone"
-        _good_img, _good_rects = _fm.render(_lr_windows, _REF_W, _REF_H)
-        # **THE PERTURBATION IS "A WINDOW OFF ITS OWN RECTANGLE"** —
-        # changed 12 September 2026. It used to nudge RETURN up into
-        # the lower band, which broke the Stage-A3 plate's row shape
-        # because RETURN lived on the sort row there. The static
-        # frame puts RETURN in the right-hand column BESIDE the band,
-        # so that nudge changes no row at all and the validator was
-        # right to pass it. Moving it clear of its own rectangle is
-        # the fault in every layout: the hole no longer overlaps the
-        # rect that names it, so the match cannot be made and naming
-        # by position is refused rather than guessed.
-        _broken = dict(_lr_windows)
-        _broken["return_button"] = [_lr["return_button"][0],
-                                    _lr["return_button"][1]
-                                    - _lr["return_button"][3] - 20,
-                                    _lr["return_button"][2],
-                                    _lr["return_button"][3]]
-        with _tf.TemporaryDirectory() as _td:
-            _gp = os.path.join(_td, "good.png")
-            _bp = os.path.join(_td, "broken.png")
-            _good_img.save(_gp)
-            _fm.render(_broken, _REF_W, _REF_H)[0].save(_bp)
-            _run = _sp.run([sys.executable, _cfc, _gp], capture_output=True,
-                           text=True)
-            assert _run.returncode == 0, (
-                f"the validator fails its own reference mask:\n{_run.stdout}"
-                f"{_run.stderr}")
-            # IT MUST HAVE READ THE RECTANGLES, not merely printed PASS.
-            # Name for name against frame_mask's own answer, which is the
-            # "hole rect == frame_mask rect" rule arriving in the tool
-            # that will meet the artwork.
-            # layout_reference names the rectangles and frame_holes names
-            # the BOXES, and two of them differ — the mapping is the
-            # tool's own, so it is written out here rather than assumed.
-            # A WINDOW WITH NO HOLE IS NOT REPORTED, because it was
-            # never named: the colony header is a strip of the list's
-            # hole and the blob the mask gives it is claimed by
-            # nothing. The validator names the spares instead, which
-            # is what a reader wants to know about them.
-            _alias = {"return_button": "return", "list": "list_area"}
-            _no_hole = _lr.get("_windows_without_a_hole", ())
-            for _n, _r in _good_rects.items():
-                if _n in _no_hole:
-                    continue
-                _key = _alias.get(_n, _n)
-                assert f"{_key:14s} {tuple(_r)}" in _run.stdout, (
-                    f"the validator did not report {_key} as {tuple(_r)}:\n"
-                    f"{_run.stdout}")
-            assert not _no_hole or "claimed by nothing" in _run.stdout, (
-                f"the validator did not say which holes nothing "
-                f"claims, and {len(_no_hole)} window(s) have "
-                f"none:\n{_run.stdout}")
-            assert "convention: light" in _run.stdout, (
-                "frame_mask writes windows WHITE and the validator no "
-                "longer recognises that reading")
-            _bad = _sp.run([sys.executable, _cfc, _bp], capture_output=True,
-                           text=True)
-            assert _bad.returncode == 1, (
-                f"RETURN moved into the lower band's row and the validator "
-                f"still passed:\n{_bad.stdout}")
-        ok(f"colony frame validator (passes the reference mask and reports "
-           f"its {len(_good_rects)} rects\n       name for name, fails a "
-           f"mask whose RETURN left the sort row)")
-
-    # **SKIPPED WITH THE PLATE, NOT DELETED WITH IT** — 12 September
-    # 2026, Phase A. With `colony_plateless` on this screen has no
-    # artwork at all, so what follows measures a picture nobody draws.
-    # It still COUNTS, because the count may not go down and because
-    # the plate is still in the tree and still checked with the flag
-    # off — Phase B is what deletes both the plate and this branch.
-    if _NO_PLATE:
-        report("colony frame built from the master: ring, bevel, corner tiles and the nine-slice — " + _SKIP_WHY)
-        ok("colony frame built from the master SKIPPED — " + _SKIP_FLAG)
-    else:
-        # ── The built frame carries the ring it was built for ──
-        #
-        # frame_build assembles the plate from the master's own nine
-        # slices and hands it to frame_cut. This measures the RESULT with
-        # the same sweep the ring table is measured with, so the number in
-        # layout_reference.json, the master it came from and the frame
-        # that ships all say one thing (decision 36, decision 3).
-        _fb_spec = _ilu2.spec_from_file_location(
-            "_frame_build", os.path.join(_proj, "tools", "frame_build.py"))
-        _fb = _ilu2.module_from_spec(_fb_spec)
-        _fb_spec.loader.exec_module(_fb)
-        _fm2_spec = _ilu2.spec_from_file_location(
-            "_frame_master", os.path.join(_proj, "tools", "frame_master.py"))
-        _fm2 = _ilu2.module_from_spec(_fm2_spec)
-        _fm2_spec.loader.exec_module(_fm2)
-        # **THE MASTER, NOT THE RING'S SOURCE.** These were the same
-        # file until 12 September 2026 and this line read the wrong
-        # one for free. The ring is measured off the frame the SCREEN
-        # wears, which is now `colony_summary/assets/frame.png`; the
-        # plate is assembled from the galaxy map's master, which is
-        # `frame_build.MASTER` and says so.
-        _fb_master = _PILImage.open(_fb.MASTER)
-        for _spec in _lr["_resolutions"]:
-            _rw, _rh = (int(v) for v in _spec.split("x"))
-            _plate = _fb.build(_fb_master, _lr_windows, _rw, _rh)
-            assert _plate.size == (_rw, _rh) and _plate.mode == "RGB"
-            _fbcut, _ = _fb_cut = _fc.cut(_plate, _lr_windows, _rw, _rh)
-            # COMPARED IN DEVICE PIXELS, and that is not fussiness. The
-            # holes are placed by Layout.rect's truncation, so converting
-            # a device edge back to reference and comparing there asks
-            # round(int(107 * 4/3) / (4/3)) to be 107, and at 1440p it is
-            # 106. The ring in device px is what device_ring computes from
-            # those same rectangles; the reference table is checked
-            # against it at 1080p, where the mapping is the identity.
-            _fa = np.array(_fbcut)[:, :, 3]
-            _ys, _xs = np.where(_fa < 16)
-            _want_ring = _fb.device_ring(_lr_windows, _rw, _rh)
-            _got = (int(_xs.min()), _rw - 1 - int(_xs.max()),
-                    int(_ys.min()), _rh - 1 - int(_ys.max()))
-            assert _got == tuple(_want_ring), (
-                f"{_spec}: the built frame's metal is {_got} px from the "
-                f"edges, the rectangles put the ring at {_want_ring}")
-            # DROPPED AS A CHECK, 11 September 2026. `_got == _want_ring`
-            # above STAYS: it says the built metal reaches exactly as far
-            # as the rectangles put it, which is "hole inside the ring"
-            # and holds wherever Data moves a box. What goes is pinning
-            # that derived ring to the TYPED table — a fixed number, and
-            # the table's own origin is the chosen one (see the report at
-            # the ring block above).
-            if _spec == "1920x1080":
-                _tbl = (_ring["left"], _ring["right"],
-                        _ring["top"], _ring["bottom"])
-                report(f"1080p ring from the rectangles {tuple(_want_ring)} | "
-                       f"table {_tbl}"
-                       f"{'' if tuple(_want_ring) == _tbl else '  <-- DIFFERENT'}")
-            # AND THE STRUT TEXTURE IS METAL, not a hole. A plate whose
-            # interior came out transparent would still pass the ring
-            # test above and be a frame with nothing between its windows.
-            _opaque = (_fa >= 250).mean()
-            assert _opaque > 0.15, (
-                f"{_spec}: only {100*_opaque:.1f} % of the built frame is "
-                f"opaque — the plate is not covering its own struts")
-            # EVERY WINDOW HAS THE MASTER'S LIGHT EDGE ON ALL FOUR SIDES,
-            # measured as a luminance ridge and not as "ink was drawn".
-            # The windows must also AGREE per side, because the bevel
-            # comes from one sampled hole through one function — if they
-            # drift apart, two code paths have got in. (It was "the eight
-            # windows" until 12 September 2026; there are fourteen, and
-            # the narrowest is sort_bc at 57 ref px, which is where a
-            # per-side sample that is too wide would first show.)
-            _flum = np.array(_fbcut.convert("RGB")).mean(axis=2)
-            _band3 = max(1, round(_fb.BEVEL_REF
-                                  * min(_rw / _REF_W, _rh / _REF_H)))
-            _edges = {"L": [], "R": [], "T": [], "B": []}
-            _here = _fm.render(_lr_windows, _rw, _rh)[1]
-            for _wn, (_wx, _wy, _ww, _wh) in _here.items():
-                _in = max(4, _band3 + 1)
-                _edges["L"].append(_flum[_wy+_in:_wy+_wh-_in,
-                                         _wx-_band3:_wx].mean())
-                _edges["R"].append(_flum[_wy+_in:_wy+_wh-_in,
-                                         _wx+_ww:_wx+_ww+_band3].mean())
-                _edges["T"].append(_flum[_wy-_band3:_wy,
-                                         _wx+_in:_wx+_ww-_in].mean())
-                _edges["B"].append(_flum[_wy+_wh:_wy+_wh+_band3,
-                                         _wx+_in:_wx+_ww-_in].mean())
-            _plate_med = float(np.median(_flum[_fa >= 250]))
-            for _side, _vals in _edges.items():
-                _v = np.array(_vals)
-                assert _v.min() > _plate_med + 8, (
-                    f"{_spec}: the {_side} edge of some window is "
-                    f"{_v.min():.0f} against the plate's own metal at "
-                    f"{_plate_med:.0f} — no ridge, so no bevel")
-                assert _v.std() < 4, (
-                    f"{_spec}: the {len(_here)} windows' {_side} edges range "
-                    f"{_v.min():.0f}..{_v.max():.0f} — they come from one "
-                    f"sampled hole through one function and must agree")
-        ok("colony frame built from the master (nine-slice ring matches the "
-           "table at all three resolutions, struts are metal)")
-
-    # **SKIPPED WITH THE PLATE, NOT DELETED WITH IT** — 12 September
-    # 2026, Phase A. With `colony_plateless` on this screen has no
-    # artwork at all, so what follows measures a picture nobody draws.
-    # It still COUNTS, because the count may not go down and because
-    # the plate is still in the tree and still checked with the flag
-    # off — Phase B is what deletes both the plate and this branch.
-    if _NO_PLATE:
-        report("colony frame switch: decision 49's byte-for-byte plates and the preview switch — " + _SKIP_WHY)
-        ok("colony frame switch SKIPPED — " + _SKIP_FLAG)
-    else:
-        # ── DECISION 49: the plates are DERIVED, and this is the licence ──
-        #
-        # The word "derived" is earned by a byte-for-byte rebuild, never
-        # by the existence of a tool that looks like it made the file
-        # (decision 40, which was written about exactly this mistake).
-        # Until 7 September 2026 `frames/` was gitignored as generated
-        # with NOTHING in setup.py that rebuilt it and NOTHING that
-        # compared it — the claim without the licence.
-        #
-        # **ABSENT IS REPORTED, NOT SKIPPED.** A clone that has not run
-        # setup.py has no plates, and this check still runs and still
-        # counts: it names the command instead of measuring, so "the
-        # count must not go down" stays a rule anybody can follow
-        # (decision 42's pattern, second use).
-        _plate_dir = os.path.join(SCREENS_DIR, "colony_summary", "assets",
-                                  "frames")
-        _plate_paths = {_spec: os.path.join(_plate_dir, f"frame_{_spec}.png")
-                        for _spec in _lr["_resolutions"]}
-        _present = [s for s, p in _plate_paths.items() if os.path.exists(p)]
-        if len(_present) != len(_plate_paths):
-            _missing = sorted(set(_plate_paths) - set(_present))
-            _plate_note = (f"absent ({len(_missing)} of {len(_plate_paths)}): "
-                           f"run `{_cframe.BUILD_COMMAND}`")
-        else:
-            for _spec, _ppath in sorted(_plate_paths.items()):
-                _rw, _rh = (int(v) for v in _spec.split("x"))
-                _fresh = _fc.cut(_fb.build(_fb_master, _lr_windows, _rw, _rh),
-                                 _lr_windows, _rw, _rh)[0]
-                _buf = io.BytesIO()
-                _fresh.save(_buf, "PNG")
-                with open(_ppath, "rb") as _fh:
-                    _ondisk = _fh.read()
-                assert _buf.getvalue() == _ondisk, (
-                    f"{_spec}: the plate on disk is not what frame_build.py "
-                    f"produces from the committed master and "
-                    f"layout_reference.json today ({len(_ondisk)} bytes on "
-                    f"disk, {len(_buf.getvalue())} rebuilt). A generator "
-                    f"that does not reproduce its own output is not a "
-                    f"generator yet, and its output is authored state "
-                    f"(decision 40) — rebuild with `{_cframe.BUILD_COMMAND}` "
-                    f"or find out what changed under it")
-            _plate_note = f"{len(_present)} rebuilt byte for byte"
-
-        # AND setup.py HAS TO MAKE THEM. A derived file with no step in
-        # the setup run is one a clone can never get; that was the state
-        # this check was written to end, so it is asserted and not
-        # remembered.
-        _setup_src = open(os.path.join(_proj, "tools", "setup.py"),
-                          encoding="utf-8").read()
-        assert "frame_build.py" in _setup_src, (
-            "tools/setup.py has no frame_build step, so a fresh clone gets "
-            "no colony frame plates and nothing tells it how — decision 49 "
-            "makes the step part of the decision, not an optional extra")
-
-        # ── STAGE B: THE FLAG OFF IS THE TREE AS IT WAS ──────────
-        #
-        # The acceptance is not "it still looks right", it is that the
-        # surface is the SAME surface. Two halves, and both are needed:
-        # the flag-off path must resolve to the committed artwork, and
-        # what reaches the screen must be that file through the same
-        # scale, pixel for pixel.
-        _cs = d.screens["colony_summary"]
-        d.switch_to("colony_summary")
-        # ── THE FLAG'S MEANING INVERTED AT STAGE 4 ──
-        # boxes.json is generated from the plate's own holes now, so the
-        # plate IS this screen's frame and the flag ships ON. Turning it
-        # off draws the SUPERSEDED artwork over boxes it does not fit —
-        # kept for one stage so the two can be compared, and deleted with
-        # the old frame at Stage 5. The name is backwards for exactly
-        # that long, and this assertion is what makes the inversion a
-        # decision somebody took rather than a default that drifted.
-        assert app.settings.get("frame_preview") is True, (
-            "settings.json ships with frame_preview off. Since Stage 4 the "
-            "colony boxes come from the built plate's holes, so off means "
-            "the superseded artwork over boxes it does not fit — which the "
-            "cutout-edge checker catches as thousands of glyph pixels under "
-            "opaque frame alpha")
-        _shipped = os.path.join(SCREENS_DIR, "colony_summary", "assets",
-                                "frame.png")
-        app.settings["frame_preview"] = False
-        try:
-            _off_path, _off_note = _cframe.frame_source(_cs)
-            assert os.path.realpath(_off_path) == os.path.realpath(_shipped), (
-                f"flag off must draw {_shipped}, got {_off_path}")
-            assert _off_note is None, (
-                f"the log must say nothing when the flag is off, got "
-                f"{_off_note!r}")
-            # The superseded surface is still byte-for-byte what it was:
-            # the fallback stays honest until it is deleted.
-            _cs._load_frame()
-            _want_surf = pygame.transform.smoothscale(
-                pygame.image.load(_shipped).convert_alpha(),
-                app.layout.rect((0, 0, _REF_W, _REF_H))[2:])
-            _got_h = hashlib.sha256(
-                pygame.image.tostring(_cs._frame_scaled, "RGBA")).hexdigest()
-            _want_h = hashlib.sha256(
-                pygame.image.tostring(_want_surf, "RGBA")).hexdigest()
-            assert _got_h == _want_h, (
-                f"with frame_preview off the colony frame surface is "
-                f"{_got_h[:16]} and loading "
-                f"{os.path.relpath(_shipped, _proj)} through the same scale "
-                f"gives {_want_h[:16]} — the switch changed the superseded "
-                f"path, which it may not while that path still exists")
-        finally:
-            app.settings["frame_preview"] = True
-            _cs._load_frame()
-
-        # THE FLAG ON PICKS A PLATE AND SAYS SO, or names the command.
-        try:
-            _on_path, _on_note = _cframe.frame_source(_cs)
-            assert _on_note, "the flag is on and the log says nothing"
-            if _present:
-                assert _plate_dir in os.path.realpath(_on_path), _on_path
-                assert _on_note.startswith("PREVIEW: built plate"), _on_note
-                # The line has to identify the BUILD, not just the file:
-                # a screenshot is matched to it by the hash.
-                _digest = hashlib.sha256(
-                    open(_on_path, "rb").read()).hexdigest()[:16]
-                assert _digest in _on_note, (
-                    f"the preview line does not carry the plate's hash, so a "
-                    f"screenshot cannot be matched to the build: {_on_note}")
-                # Same one code path: the switch changed the file and
-                # nothing else, so the frame still loads and scales.
-                _cs._load_frame()
-                assert _cs._frame_scaled is not None
-            else:
-                assert _cframe.BUILD_COMMAND in _on_note, _on_note
-                assert os.path.realpath(_on_path) == os.path.realpath(_shipped)
-        finally:
-            app.settings["frame_preview"] = True
-            _cs._load_frame()
-        ok(f"colony frame switch (the plate ships; the superseded frame is still\n       byte for byte what it was; plates {_plate_note})")
-
-    # **SKIPPED WITH THE PLATE, NOT DELETED WITH IT** — 12 September
-    # 2026, Phase A. With `colony_plateless` on this screen has no
-    # artwork at all, so what follows measures a picture nobody draws.
-    # It still COUNTS, because the count may not go down and because
-    # the plate is still in the tree and still checked with the flag
-    # off — Phase B is what deletes both the plate and this branch.
-    if _NO_PLATE:
-        report("colony frame rails: the master's struts, the rails between windows, the bare tile — " + _SKIP_WHY)
-        ok("colony frame rails SKIPPED — " + _SKIP_FLAG)
-    else:
-        # ── Every gap is one of the master's own struts ──────────
-        #
-        # Stage A3: the gaps are no longer a spacing chosen here, they are
-        # the master's struts mapped by role, so `layout_reference.gaps`
-        # is a hand-copied number and gets a checker (decision 36). Every
-        # value must be the ROUNDED-DOWN reference width of the strut its
-        # role names, so a rail is never wider than the strut it came
-        # from and never squeezed into a gap that is narrower.
-        _rails = _fm2.master_rails(_fb_master)
-        assert set(_rails) == set(_fm2.RAIL_ROLES), (
-            f"the master no longer offers every rail role: {sorted(_rails)} "
-            f"against {sorted(_fm2.RAIL_ROLES)}")
-        _mw, _mh = _fb_master.size
-        # **A GAP MAY BE SMALLER THAN ITS STRUT ONLY AS A RECORDED
-        # DEVIATION — 9 September 2026.** Never LARGER: a rail wider than
-        # the strut it was cut from is a stretched rail, which is what
-        # this check was written for and is still refused outright. But
-        # `header_list` and `band_sort` gave up 8 and 7 reference px so
-        # the list could hold figure step 3 at 1440p once the figure
-        # origin became the original's own 4*step (see
-        # `colonytrack.figure_step`), and the alternative — taking the
-        # height out of the lower band — would have shrunk the galaxy
-        # inset, whose aspect is transcribed to a thousandth.
-        #
-        # The licence is `_gaps_note` NAMING the gap as an A3-DEVIATION,
-        # so the exemption cannot be silent and cannot be general: a role
-        # that shrinks without a sentence about it fails exactly as
-        # before.
-        _gnote = _lr.get("_gaps_note", "")
-        for _role, (_strip, _vert) in _rails.items():
-            _ref = (_strip.width * _REF_W / _mw) if _vert \
-                else (_strip.height * _REF_H / _mh)
-            _got = _lr["gaps"][_role]
-            assert _got <= int(_ref), (
-                f"gaps.{_role} is {_got} and the master's {_role} strut "
-                f"measures {_ref:.1f} reference px — a rail is never wider "
-                f"than the strut it was cut from")
-            if _got != int(_ref):
-                assert "A3-DEVIATION" in _gnote and _role in _gnote, (
-                    f"gaps.{_role} is {_got} against the master's "
-                    f"{int(_ref)} and `_gaps_note` does not record it as an "
-                    f"A3-DEVIATION naming {_role} — a rail that shrinks "
-                    f"without a reason written beside it is Stage A3 "
-                    f"quietly coming undone")
-
-        # AND EVERY GAP TAKES ONE. A gap with no rail is bare tile, which
-        # is the thing Stage A3 exists to remove.
-        _gaps = _fm.render(_lr_windows, _REF_W, _REF_H)[1]
-        _struts = _fm2.struts(_gaps)
-        assert _struts, "the layout has no struts at all"
-        for _gx, _gy, _gw, _gh, _gv in _struts:
-            _role = _fb.gap_role(_fb._facing(_gaps, _gx, _gy, _gw, _gh, _gv), _gv)
-            assert _role in _rails, (
-                f"the gap at ({_gx}, {_gy}) resolves to role {_role!r}, "
-                f"which the master does not offer")
-            _span = _gw if _gv else _gh
-            # DROPPED AS A CHECK, 11 September 2026 — "every gap is
-            # exactly its role's strut" is the single rule that pinned
-            # the sort_bar|return gap and the three panel gaps at once,
-            # and it is CHOSEN. `_gaps_note` traces each width to one of
-            # OUR master's struts and records in the same breath that the
-            # original's own gaps are about 3 and 12 reference px, so the
-            # rule is wider than what it deviates from, by our decision.
-            # `layout_reference.gaps` is documentation from here on: no
-            # code reads it (grep, 11 September 2026 — only this suite
-            # did), and `lay_rail` scales the strip to whatever gap the
-            # rectangles leave.
-            #
-            # THE INSET IS SHORTER THAN ITS BAND and is centred in it, so
-            # its two horizontal gaps carry half that shortfall each on
-            # top of their role's width. Kept in the REPORT so the number
-            # still explains itself: the shortfall is derived from the
-            # layout, it was 20 until 8 September 2026 and is 2 now, and a
-            # hardcoded half of it was a second copy of a moving number.
-            _band_h = max(_lr[_k][3] for _k in
-                          ("planet_info", "planet_output", "galaxy_inset",
-                           "empire_stats"))
-            _short = (_band_h - _lr["galaxy_inset"][3]) // 2
-            _extra = _short if ("galaxy_inset" in _fb._facing(
-                _gaps, _gx, _gy, _gw, _gh, _gv) and not _gv) else 0
-            _calls = _lr["gaps"][_role] + _extra
-            report(f"gap at ({_gx}, {_gy}) span {_span} | role {_role} "
-                   f"calls for {_calls}"
-                   f"{'' if _span == _calls else '  <-- DIFFERENT'}")
-
-        # THE TILE'S PERIOD IS GONE. Before the rails the bare strut
-        # texture covered 2.1 % of the canvas and its column profile
-        # autocorrelated at lag 64 — the patch's own size — at 0.92. The
-        # rails cover it, and what is left must neither be large nor
-        # repeat at the patch size.
-        _p1080 = _fb.build(_fb_master, _lr_windows, _REF_W, _REF_H)
-        _cut1080 = _fc.cut(_p1080, _lr_windows, _REF_W, _REF_H)[0]
-        _ca = np.array(_cut1080)
-        _cmetal = _ca[:, :, 3] >= 250
-        _clum = _ca[:, :, :3].mean(axis=2).astype(float)
-        _covered = np.zeros_like(_cmetal)
-        _covered[:_ring["top"], :] = True
-        _covered[_REF_H - _ring["bottom"]:, :] = True
-        _covered[:, :_ring["left"]] = True
-        _covered[:, _REF_W - _ring["right"]:] = True
-        for _wx, _wy, _ww, _wh in _gaps.values():
-            _covered[max(0, _wy - 3):_wy + _wh + 3,
-                     max(0, _wx - 3):_wx + _ww + 3] = True
-        for _gx, _gy, _gw, _gh, _gv in _struts:
-            _covered[_gy:_gy + _gh, _gx:_gx + _gw] = True
-        _bare = _cmetal & ~_covered
-        # ── DROPPED TO A REPORT, 12 September 2026, and the status
-        # document predicted exactly this. It was one of the "two
-        # rules of unknown parentage" left standing on 11 September
-        # with the reading: *"what it exposes is that `frame_build` —
-        # not the smoke test — is what actually requires a flush,
-        # evenly gapped layout: it can only fill gaps it can see as
-        # rectangles between facing windows. A frame Data draws
-        # herself does not go through it at all, and then the check is
-        # measuring a plate nobody draws. **Which of the two paths the
-        # colony screen takes is the open decision**, and it is
-        # upstream of this check rather than settled by it."*
-        #
-        # THE DECISION IS TAKEN. The colony screen wears a fixed image
-        # and `frame_preview` ships off; the plate is an alternative
-        # path nobody is shipping. So this measures the coverage of a
-        # generator whose output this screen does not draw, and it
-        # goes the way the four enforcements of decision 53 went —
-        # reported on every run, failing nothing. The open item closes
-        # WITH ITS ANSWER rather than by being deleted.
-        report(f"built plate: {100*_bare.mean():.2f} % of the canvas is "
-               f"bare strut texture (the rails cover what "
-               f"frame_master.struts can see as a rectangle between "
-               f"FACING windows; the static frame's layout leaves more "
-               f"that it cannot)")
-        ok(f"colony frame rails (every gap is the master's strut for its "
-           f"role, {len(_struts)} of them; the bare tile is reported, "
-           f"not ruled on)")
+            _bx = _cpl2.BOX_NAME.get(_name, _name)
+            _box = next((b for b in cs.boxes if b.name == _bx), None)
+            assert _box is not None, f"no {_bx} box on the screen"
+            _bled = [_rect[0] - _cpl2.BLEED, _rect[1] - _cpl2.BLEED,
+                     _rect[2] + 2 * _cpl2.BLEED,
+                     _rect[3] + 2 * _cpl2.BLEED]
+            assert tuple(_box.ref_rect) == tuple(_bled), (
+                f"{_name}: the reference plus bleed is {_bled} and the "
+                f"box on the screen is {tuple(_box.ref_rect)}")
+    ok("colony layout reference (columns are the list, inset aspect = "
+       "the original's coverage, every rect resolves to the box the "
+       "screen holds)")
 
     # ── The two colony tables in zoomtables ──
     #
@@ -5899,11 +5094,7 @@ def main():
         # deviation.
         "screens/colony_summary/layout_reference.json": "THE BOX IS 239 x 189",
         "screens/colony_summary/screen.py": "cancel",
-        # ADDED 12 September 2026, Phase A. The rim a box gets when
-        # there is no artwork is a DEVIATION: the original has metal
-        # around every field and this band stands in for it. Its check
-        # is the plateless block in the colony_summary section.
-        "screens/colony_summary/colonyplates.py": "rim",
+
         # ADDED 12 September 2026 with decision 54. The namer carries
         # the seven sort slots' DEVIATION because it is where the
         # reversal shows in code that is not the screen's: `sort_bar`
@@ -5911,10 +5102,7 @@ def main():
         # Its check is the marking block in the colony_summary section,
         # which names all five homes.
         "tools/frame_holes.py": "sort_<key>",
-        # The generator of the guide PNG Data places the slots against
-        # — the sixth home of decision 54's marking, checked in the
-        # same block as the other five.
-        "tools/gimp_fixtures.py": "sort_<key>",
+
     }
     _MARKS = ("HD EXTENSION", "DEVIATION")
     _SELF = os.path.join("tools", "smoke_test.py")
@@ -9532,20 +8720,7 @@ def main():
         _TEXT_IDS.add(id(r)); _TEXT_KEEP.append(r)
         return r
 
-    # **A SCREEN WITH NO FRAME IS NOT MEASURED HERE, and dropping it
-    # is not the same as passing it.** With `colony_plateless` on,
-    # `colonyframe.frame_source` still RESOLVES to a plate — it has no
-    # way to know the screen stopped blitting one — so leaving
-    # colony_summary in would measure glyphs against artwork nobody
-    # drew. That is the exact fault the comment above records for the
-    # superseded frame (5822 "violations" at 1080p), arriving a second
-    # time by a different route. The reason is reported, not silent.
-    _FRAME_SCREENS = (("galaxy_map",) if _PLATELESS
-                      else ("colony_summary", "galaxy_map"))
-    if _PLATELESS:
-        report("class A/B: colony_summary not measured — " + _SKIP_WHY
-               + "; the rim it draws instead is checked by the "
-                 "plateless render check above")
+    _FRAME_SCREENS = ("colony_summary", "galaxy_map")
     _class_a = {}
     _class_b_seen = 0
     _style_mod.StyleRenderer.render_text = _tagged_rt
@@ -9557,18 +8732,15 @@ def main():
                 _a2, _ = _pv.build_screen(_W, _H)
                 _s2 = _a2.dispatcher.screens[_name]
                 _a2.dispatcher.switch_to(_name)
-                # THE ALPHA MUST BE THE FRAME THE SCREEN DREW, not a
-                # path this check assumes. Since Stage 4 the colony
-                # screen draws a per-resolution plate chosen by
-                # `colonyframe.frame_source`, so reading assets/
-                # frame.png here would measure glyphs against artwork
-                # nobody blitted — and it did: the superseded frame's
-                # metal sits exactly where the new list is, which is
-                # 5822 "violations" at 1080p against a frame that was
-                # not on screen.
-                _fpng = (_cframe.frame_source(_s2)[0]
-                         if _name == "colony_summary"
-                         else res.screen_file(_name, "assets", "frame.png"))
+                # THE ALPHA MUST BE THE FRAME THE SCREEN DREW, and
+                # since Phase B that is `assets/frame.png` for every
+                # screen with no switch anywhere. It was not always:
+                # between Stage 4 and Phase B the colony screen drew a
+                # per-resolution plate, and reading this path measured
+                # glyphs against artwork nobody blitted — 5822
+                # "violations" at 1080p against a frame that was not
+                # on screen.
+                _fpng = res.screen_file(_name, "assets", "frame.png")
                 _fbase = Image.open(_fpng).convert("RGBA")
                 _s2.enter(None)
                 _s2.update(_pv._Snapshot(_pv.COLONIES))
@@ -9689,16 +8861,11 @@ def main():
 
     _b_worst = {}
     for _name in _FRAME_SCREENS:
-        # The frame this screen DRAWS — through `frame_source`, the
-        # same rule class A above uses. It was the 1080p PLATE by
-        # path, hardcoded, which since 12 September 2026 is a file the
-        # screen does not blit: `frame_preview` ships off and the
-        # colony screen wears `assets/frame.png`. Measuring a stale
-        # plate is the exact fault the class A comment records, and
-        # this block had it in the other half of the same check.
-        _fpng = (_cframe.frame_source(d.screens[_name])[0]
-                 if _name == "colony_summary"
-                 else res.screen_file(_name, "assets", "frame.png"))
+        # ONE FILE PER SCREEN since Phase B — every screen wears its
+        # own `assets/frame.png` and none of them has a switch. This
+        # was the 1080p colony PLATE by path, hardcoded, and measured
+        # glyphs against artwork nobody blitted.
+        _fpng = res.screen_file(_name, "assets", "frame.png")
         if not _fpng or not os.path.exists(_fpng):
             continue
         _iw, _ih, _holes = _fhB.find_holes(_fpng)
@@ -9721,12 +8888,10 @@ def main():
                 f"longer the hole's shape")
     # DERIVED FROM THE SCREENS ACTUALLY MEASURED, not a literal. It
     # was 17 — the galaxy map's ten less `title` plus the Stage A3
-    # plate's eight — and a literal was wrong twice in one day: the
-    # plate went to 14 holes when the sort bar became seven slots, and
-    # then `colony_summary` left this list entirely with
-    # `colony_plateless` on. A floor exists so a frame that stops
-    # cutting holes cannot pass by measuring nothing, which is a rule
-    # about EACH screen present and not about a total.
+    # plate's eight — and a literal was wrong twice in one day. A
+    # floor exists so a frame that stops cutting holes cannot pass by
+    # measuring nothing, which is a rule about EACH screen present
+    # and not about a total.
     # A WINDOW WITH NO HOLE IS NOT A CUTOUT TO MEASURE. The colony
     # header is a strip of the list's hole (`_windows_without_a_hole`)
     # and never appears in the namer's answer, so counting it would
@@ -11572,7 +10737,7 @@ def main():
     # image size, which since the namer began matching against
     # `layout_reference.json` means "no reference": it named nothing
     # and the row check then failed on an empty answer.
-    _plate = _cframe.frame_source(d.screens["colony_summary"])[0]
+    _plate = res.screen_file("colony_summary", "assets", "frame.png")
     if _plate and os.path.exists(_plate):
         _iw, _ih, _holes = _fh_mod.find_holes(_plate)
         _named = set(_fh_mod.name_holes(_holes, "colony_summary",
@@ -11776,10 +10941,6 @@ def main():
     # anything.
     _json_root = os.path.dirname(SCREENS_DIR)
     _JSON_OTHER = {
-        # generated by `frame_mask.py`, which writes indent=1 and
-        # sort_keys — its own convention, applied consistently.
-        os.path.join("screens", "colony_summary", "assets",
-                     "frame_masks", "rects.json"),
         # extracted from the player's own LBX files; the extractors
         # own their formatting and the files are not hand-edited.
         os.path.join("assets", "shared", "help", "help_en.json"),

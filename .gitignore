@@ -82,31 +82,16 @@ screens/colony_summary/assets/raceicon_ref/
 # are the mod author's to commit.
 assets/shared/figures/
 
-# The colony screen's window masks, rendered from
-# layout_reference.json by tools/frame_mask.py. Generated, so
-# decision 40 keeps them out: the licence is that regenerating
-# reproduces them byte for byte, and a smoke check asserts exactly
-# that. The frame artwork is DRAWN from the 1080p mask, so the mask
-# is an input to a human step and still not a committed file — the
-# rectangle it comes from is committed, which is the thing that has
-# to survive.
-screens/colony_summary/assets/frame_masks/
-
-# The colony frame plates, tools/frame_build.py's output — DECISION
-# 49, derived. Both inputs are committed: the master is
-# screens/galaxy_map/assets/frame.png (in the tree, not outside it)
-# and the geometry is layout_reference.json, so a rebuild reproduces
-# all three byte for byte and a smoke check asserts exactly that.
-# tools/setup.py builds them; a clone that has not run it renders the
-# shipped frame.png instead and the check names the command.
-#
-# Corrected 7 September 2026. This entry used to say "tools/frame_cut
-# .py's output" and "the artwork is Data's input and lives outside
-# the tree" — both true when it was written and neither true since
-# frame_build.py replaced the hand-made plate with a nine-slice of a
-# committed master. An ignore rule is a claim about a file, and this
-# one had gone stale where nothing reads it.
-screens/colony_summary/assets/frames/
+# The colony screen's window masks and its built frame plates are
+# GONE — Phase B, 12 September 2026, decision 55. Both entries stood
+# here until then: the masks were rendered from layout_reference.json
+# by tools/frame_mask.py and the plates nine-sliced from the galaxy
+# map's master by tools/frame_build.py, both derived under decision 49
+# with a byte-for-byte rebuild as the licence. The screen wears one
+# fixed image now, screens/colony_summary/assets/frame.png, which is
+# AUTHORED artwork and is committed — so there is nothing generated
+# left on this screen to ignore, and the tools that made them are
+# deleted rather than merely unused.
 
 # --- Local state ---
 # settings.json is NOT ignored: it holds window size, skin, language

@@ -66,29 +66,14 @@ def load_settings():
             "min_height": 720,
         },
         "render_mode": "hd",
-        #: Draw the colony screen's BUILT frame plate (decision 49).
-        #: **ON as of Stage 4, and the name is now backwards** —
-        #: boxes.json is generated from the plate's holes, so the
-        #: plate is the frame and turning this OFF draws the
-        #: superseded artwork over boxes it does not fit. Kept for one
-        #: stage so the two can be compared; Stage 5 deletes the old
-        #: frame and this flag together. Stated in both places: this
-        #: dict is what a clone with no settings.json gets.
-        "frame_preview": True,
-        #: Draw the colony screen WITHOUT any frame artwork: every box
-        #: in `layout_reference.json` drawn by code, fill/rim/lit line
-        #: through `StyleRenderer.draw_plate`, nothing between them.
-        #: Data's decision of 12 September 2026, and it supersedes
-        #: decision 49 for this screen — see
-        #: `screens/colony_summary/colonyplates.py`.
-        #:
-        #: **PHASE A SHIPS IT OFF.** Nothing is deleted yet: the
-        #: plates, the master and every check on them are still here
-        #: and still green, so the two can be looked at side by side.
-        #: Phase B makes this the only path and deletes the other one,
-        #: and then this flag goes with it. Stated in both places:
-        #: this dict is what a clone with no settings.json gets.
-        "colony_plateless": False,
+        # THE COLONY FRAME FLAGS ARE GONE — Phase B, 12 September
+        # 2026. `frame_preview` chose between a built plate and the
+        # shipped artwork and `colony_plateless` drew every box by
+        # code with no artwork at all; the screen wears one fixed
+        # image now (decision 55) and neither has anything left to
+        # choose. Stated here because this dict is what a clone with
+        # no settings.json gets, and a stale key in it is a key
+        # somebody will try to set.
         "skin": "default",
         "active_mods": [],
     }

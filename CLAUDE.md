@@ -58,9 +58,14 @@ derive world geometry.
 python tools/smoke_test.py
 ```
 
-122 checks, headless, no orion2re needed. **The count must not go
+115 checks, headless, no orion2re needed. **The count must not go
 down.** If a change makes a check obsolete, replace it — do not
-delete it. Add a check for anything a future session could silently
+delete it. It went down exactly once, on 12 September 2026, when
+Phase B deleted the frame machinery the checks were about (decision
+55): seven checks went with the tools they measured, and the
+deletion is listed in `v3_projektstatus.md` with what replaced each
+one. That is the only shape in which it may happen — the code a
+check measures is gone, not the check. Add a check for anything a future session could silently
 break; several checks exist because a fault was invisible on screen.
 
 Prefer asserting the *rule* over the instance: "every `inner_panel`

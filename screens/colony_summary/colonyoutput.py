@@ -282,15 +282,20 @@ def render_info(surface, row, area, cfg, words, climates, layout, style):
     while `planet_info`, the hole the first one belongs in, was
     empty.
 
-    **WHICH FORM IT TAKES IS ONE KEY, AND IT IS PROVISIONAL.**
-    `output.info_style` is `paragraph` — the original's own five
-    lines — or `rows`, the label-and-value table this panel has drawn
-    since it existed. Both are built because the two pictures are the
-    decision and a screenshot is what settles it (fundament: "a
-    screenshot comparison from chat is a QUESTION"). The default is
-    the TRANSCRIPTION, which is this project's default everywhere and
-    not a preference expressed here; the choice is Data's, from
-    `doc/`-side screenshots taken beside the native.
+    **THE FORM IS SETTLED AND `info_style` IS GONE** — Stage 5,
+    12 September 2026. The key chose between `paragraph` — the
+    original's own five lines — and `rows`, the label-and-value table
+    this panel drew before it. Both were built because the two
+    pictures were the decision and a screenshot is what settles it
+    (fundament: "a screenshot comparison from chat is a QUESTION").
+    The pictures were taken, the transcription won, and a switch with
+    one live setting is a branch nobody takes: brief 87 listed its
+    removal in Stage 5 and brief 81 had already said "if the paragraph
+    stays the only user". It did.
+
+    The `rows` arm is NOT deleted code — `render` below still draws
+    the table, because it is what `planet_output` draws and what the
+    empty-selection path uses. What went is the choice.
 
     THE PARAGRAPH IS NOT THE TABLE RE-PUNCTUATED. It is five lines
     where the table has six rows: size and climate share a line
@@ -301,9 +306,6 @@ def render_info(surface, row, area, cfg, words, climates, layout, style):
     holds the bare quality, the surrounding text supplies the noun.
     """
     if row is None:
-        return render(surface, row, area, cfg, words, climates, layout,
-                      style, only={0})
-    if str(cfg.get("info_style", "paragraph")) != "paragraph":
         return render(surface, row, area, cfg, words, climates, layout,
                       style, only={0})
     template = cfg.get("info_paragraph", "")

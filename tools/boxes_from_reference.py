@@ -4,24 +4,20 @@
     python tools/boxes_from_reference.py colony_summary
     python tools/boxes_from_reference.py colony_summary --check
 
-**THE MIDDLE OF THE CHAIN IS GONE** — 12 September 2026, Data's
-decision, Phase A. Decision 3's chain was
+**THE MIDDLE OF THE CHAIN IS GONE** — 12 September 2026, decision 55.
+Decision 3's chain ran the rectangles through a rendered mask, a
+nine-sliced plate and a cutter before measuring the holes back into
+rectangles; every tool on that path is deleted. The colony frame is a
+fixed image that was DRAWN FIRST and the rectangles were measured off
+it, so the chain is `layout_reference.json -> boxes.json` and this is
+the whole of it.
 
-    layout_reference.json -> frame_mask -> frame_build -> frame_cut
-                          -> frame_holes --write -> boxes.json
-
-and the artwork in the middle of it existed to turn a rectangle into
-a hole so the hole could be measured back into a rectangle. With the
-colony screen drawing its own boxes there is no artwork, so the chain
-is `layout_reference.json -> boxes.json` and this is the whole of it.
-
-**IT PRODUCES THE SAME NUMBERS, AND THAT IS ASSERTED AND NOT HOPED.**
-`frame_holes.to_ref` maps a hole back with `int(round(x * REF_W /
-img_w)) - BLEED`, and the plate is generated at exactly the reference
-size, so the scale is 1 and the round-trip is the identity. The rects
-this writes are therefore byte-for-byte what `frame_holes --write`
-wrote, which is what lets the flag be flipped without a single content
-rect moving. `--check` is that comparison, and the smoke test runs it.
+**IT IS NOT THE ONLY READER OF ITS OWN OUTPUT.**
+`colonyplates.reseat` rebuilds these same rects in memory every time
+the screen loads its boxes, so a reference edited without running this
+tool cannot leave a stale fill behind the frame. What this writes is a
+cache; `--check` asserts the file and the derivation still agree, and
+the smoke test runs it.
 
 **WHAT IT DOES NOT TOUCH.** Boxes that are not cutouts survive
 verbatim — the six colony column boxes are strips of `list_area`,
@@ -61,41 +57,35 @@ os.environ.setdefault("PYGAME_HIDE_SUPPORT_PROMPT", "1")
 #: with its own copy could write a `boxes.json` two pixels away from
 #: what the running screen uses and nothing would report it.
 def _bleed():
-    return __import__("screens.colony_summary.colonyplates",
-                      fromlist=["colonyplates"]).BLEED
+    return _plates("colony_summary").BLEED
 
 #: The keys of `layout_reference.json` that are not windows, and the
 #: rectangle-to-box renaming. BOTH ARE THE SCREEN'S, imported rather
 #: than retyped — `screens/colony_summary/colonyplates.py` is where
 #: they live once the tools are gone, so a tool that kept its own copy
 #: would be the second copy this project keeps paying for.
-def _screen_rules(screen):
+def _plates(screen):
     sys.path.insert(0, ROOT)
-    mod = __import__(f"screens.{screen}.colonyplates",
-                     fromlist=["colonyplates"])
-    return mod.NOT_A_WINDOW, mod.BOX_NAME
+    return __import__(f"screens.{screen}.colonyplates",
+                      fromlist=["colonyplates"])
 
 
 def reference_boxes(screen):
     """[(box name, [x, y, w, h])] in `layout_reference.json`'s order."""
-    not_a_window, box_name = _screen_rules(screen)
-    BLEED = _bleed()
-    path = os.path.join(ROOT, "screens", screen, "layout_reference.json")
-    with open(path, encoding="utf-8") as fh:
-        data = json.load(fh, object_pairs_hook=collections.OrderedDict)
-    out = []
-    for key, value in data.items():
-        if key.startswith("_") or key in not_a_window:
-            continue
-        if not (isinstance(value, list) and len(value) == 4
-                and all(isinstance(v, int) for v in value)):
-            sys.exit(f"{key}: not a rectangle and not excluded — add it "
-                     f"to colonyplates.NOT_A_WINDOW or make it "
-                     f"[x, y, w, h].")
-        x, y, w, h = value
-        out.append((box_name.get(key, key),
-                    [x - BLEED, y - BLEED, w + 2 * BLEED, h + 2 * BLEED]))
-    return out
+    plates = _plates(screen)
+    bleed = plates.BLEED
+    # THE SCREEN'S OWN PARSER, not a second walk of the same file. It
+    # is the module that decides what a window is and what a box is
+    # called, and it rebuilds these exact rects at startup — two
+    # readers of one file with one rule between them.
+    try:
+        _data, windows = plates.load_reference(
+            plates.reference_path(ROOT, screen))
+    except ValueError as why:
+        sys.exit(str(why))
+    return [(plates.BOX_NAME.get(key, key),
+             [x - bleed, y - bleed, w + 2 * bleed, h + 2 * bleed])
+            for key, (x, y, w, h) in windows.items()]
 
 
 def reseat_columns(data, screen):

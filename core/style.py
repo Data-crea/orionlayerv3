@@ -390,9 +390,8 @@ class StyleRenderer:
         panel = self.inner_panel.render(w, h)
         surface.blit(panel, (x, y))
 
-    def draw_plate(self, surface, rect, scale=1.0, color=None,
-                   radius=None, fill=None, rim=None, rim_width=0):
-        """One rounded plate: fill, rim, lit line. **Decision 51.**
+    def draw_plate(self, surface, rect, scale=1.0, color=None):
+        """One rounded 1 px plate. **Decision 51.**
 
         The rect may come from a `Box` or be computed — the colony
         screen's fifty cell plates and its five column headings are
@@ -406,40 +405,17 @@ class StyleRenderer:
         pasted `max(6, int(10 * scale))` out rather than invent a box
         per plate. `color` None takes the panel skin's own line.
 
-        **THREE LAYERS SINCE 12 September 2026, AND EVERY ONE OF THEM
-        IS OPTIONAL SO THAT NOTHING MOVED.** `fill`, `rim` and
-        `radius` default to None and `rim_width` to 0, which is
-        exactly the one 1 px line at `max(6, int(10 * scale))` that
-        every existing caller has always got — the fifty cell plates,
-        the five column headings and `draw_thin_border`'s three
-        screens. They are here because the colony screen can be drawn
-        with no frame artwork at all, and a box drawn by code needs
-        what the artwork used to give it: an interior, the metal
-        around it and the line that catches the light.
-
-        The layers go on outward-last, so the lit line sits on the
-        rim's outermost pixel and the rim between it and the fill —
-        which is the order a bevel reads in, and the order the
-        original's own plates read in (interior 44, metal 60, outline
-        96 on the live framebuffer of screen 20).
-
-        `radius` is in DEVICE px and 0 is a square corner, which is a
-        real answer and not "unset": the caller decides, because the
-        measurement it comes from is in reference px and only the
-        caller knows the scale.
+        **IT GREW A FILL, A RIM AND A RADIUS FOR ONE DAY.** They were
+        for the prototype that drew every colony window by code with no
+        artwork at all, and they went with it when the static frame
+        became the only path (Phase B, 12 September 2026). Every
+        caller always passed the defaults, so nothing here changed
+        twice.
         """
         if color is None:
             color = self.colors.get("panel", {}).get(
                 "thin_border", [55, 65, 85])
-        if radius is None:
-            radius = max(6, int(10 * scale))
-        radius = max(0, int(radius))
-        if fill is not None:
-            pygame.draw.rect(surface, tuple(fill[:3]), rect, 0,
-                             border_radius=radius)
-        if rim is not None and rim_width > 0:
-            pygame.draw.rect(surface, tuple(rim[:3]), rect,
-                             int(rim_width), border_radius=radius)
+        radius = max(6, int(10 * scale))
         pygame.draw.rect(surface, tuple(color[:3]), rect, 1,
                          border_radius=radius)
 

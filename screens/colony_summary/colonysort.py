@@ -195,7 +195,7 @@ def box_name(key):
 def for_screen(screen):
     """The seven buttons of `screen`, or [].
 
-    Takes the screen the way `colonyframe.frame_source` does, so the
+    Takes the screen the way `colonyheader.render_for` does, so the
     boxes, the font size and the label list are read in ONE place and
     the renderer and the click test cannot pick up different ones
     (decision 5). Rebuilt per call rather than cached: the boxes move
@@ -307,13 +307,10 @@ def render_return(surface, screen, mouse, bg, hover_bg, text_color):
     if not box:
         return
     rect = pygame.Rect(*screen.layout.rect(box))
-    # THE ONE FILL THAT IS NOT IN `panels`, and it goes through the
-    # same call as the thirteen that are: with the plate off a fill is
-    # rounded to the rim's own radius, and RETURN is a window like the
-    # rest whatever else is special about it.
-    from . import colonyplates
-    colonyplates.fill(screen, surface, rect,
-                      (hover_bg if rect.collidepoint(mouse) else bg)[:3])
+    # THE ONE FILL THAT IS NOT IN `panels`: RETURN draws its own,
+    # because it is the one control here that takes the CLICK path and
+    # its hover has to reach the whole plate.
+    surface.fill((hover_bg if rect.collidepoint(mouse) else bg)[:3], rect)
     label = screen._data.get("return", {}).get("label", "Return")
     word = screen.style.render_text(
         label.upper(),

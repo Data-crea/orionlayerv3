@@ -105,7 +105,7 @@ from core.screen_base import ScreenBase
 from core.structs import player as player_struct
 
 from . import (colonybuild, colonyempire, colonyfigures,
-               colonyframe, colonyheader, colonyinset, colonylist,
+               colonyheader, colonyinset, colonylist,
                colonymoveui, colonyoutput, colonyrows, colonyscroll,
                colonyplates, colonyselect, colonysort, colonytrack)
 
@@ -360,25 +360,18 @@ class ColonySummaryScreen(ScreenBase):
     # ── Frame ─────────────────────────────────────────────
 
     def _load_frame(self):
-        """The cutout frame; stretched over the reference area so the
-        cutouts coincide with the boxes derived from them.
+        """The frame; stretched over the reference area so its holes
+        coincide with the boxes measured out of them.
 
-        WHICH file is `colonyframe.frame_source` — see there for the
-        preview flag and why the switch picks a source rather than a
-        code path. This function is unchanged by it: one load, one
-        scale, one blit, whatever it was handed.
+        ONE FILE AND NO SWITCH since Phase B (12 September 2026).
+        `colonyframe` chose between a built plate and this, and
+        `frame_preview` said which; both are gone with the plate
+        machinery. What is left is a load, a scale and a blit, which
+        is what that module's own docstring said the two paths shared.
         """
-        # NO FRAME AT ALL WHEN THE SCREEN DRAWS ITS OWN BOXES —
-        # 12 September 2026, Phase A. Not "load it and do not blit
-        # it": there is no plate, no master and no ring in that mode,
-        # so loading one would put a file on the path that the mode
-        # exists to remove, and `colonyframe.resolve` would log a
-        # PREVIEW line for a picture nobody draws.
-        if colonyplates.active(self):
-            self._frame = None
-            self._scale_frame()
-            return
-        path = colonyframe.resolve(self)
+        path = self.asset_path("assets",
+                               self._data.get("frame", {}).get(
+                                   "image", "frame.png"))
         self._frame = (pygame.image.load(path).convert_alpha()
                        if path else None)
         self._scale_frame()
@@ -439,17 +432,8 @@ class ColonySummaryScreen(ScreenBase):
     editor_note = colonyheader.editor_note
 
     def _render_frame_image(self, surface):
-        """The frame, or the boxes' own rims where there is no frame.
-
-        ONE SEAM AND NOT TWO. The rim goes exactly where the plate
-        went — over the content, under the header plates — because
-        that is what the plate's metal did to every cutout it
-        overlapped, and moving it would change which pixels a glyph
-        can reach.
-        """
-        if colonyplates.active(self):
-            colonyplates.render(self, surface)
-        elif self._frame_scaled is not None:
+        """The frame, over the content and under the header plates."""
+        if self._frame_scaled is not None:
             surface.blit(self._frame_scaled, self._frame_pos)
         elif self.USE_FRAME:
             self._render_frame(surface)

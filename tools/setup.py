@@ -63,20 +63,27 @@ STEPS = [
     ("make_black_hole_master.py", [],
      os.path.join(GM, "black_hole.png"),
      "rotatable black hole master"),
-    # DECISION 49. The colony frame plates are derived, so they need a
-    # step here — until 7 September 2026 they were gitignored with
-    # nothing that rebuilt them, which is the word "derived" without
-    # the licence decision 40 attaches to it. Three plates, ~1.7 s.
-    ("frame_build.py", [],
-     os.path.join(CS, "frames", "frame_1920x1080.png"),
-     "colony frame plates, built from the galaxy map's master"),
+    # THE COLONY FRAME PLATES ARE GONE — Phase B, 12 September 2026,
+    # decision 55. They were decision 49's derived files and needed a
+    # step here; the colony screen wears one fixed image now and
+    # `frame_build.py` is deleted with the rest of the plate
+    # machinery. Nothing replaces the step: `assets/frame.png` is
+    # authored artwork and is committed.
 ]
 
 #: Inputs that must be in the repository for the steps to work. If one
 #: of these is missing the clone is broken, not merely incomplete.
 REQUIRED_INPUTS = [
     (os.path.join(GM, "ships", "_src"), "HD ship masters"),
-    (os.path.join(GM, "frame.png"), "galaxy map frame master"),
+    # NOT A "MASTER" ANY MORE — Phase B. This file was the metal the
+    # colony plate was nine-sliced out of, which is why it was called
+    # one and why it was required for a STEP; the colony screen wears
+    # its own artwork now and nothing builds from this. It is still
+    # required, because it is the galaxy map's own frame and that
+    # screen derives its boxes from its holes.
+    (os.path.join(GM, "frame.png"), "galaxy map frame"),
+    (os.path.join(ROOT, "screens", "colony_summary", "assets",
+                  "frame.png"), "colony frame"),
     (os.path.join(ROOT, "screens", "colony_summary",
                   "layout_reference.json"), "colony layout reference"),
     (os.path.join(GM, "icons", "_source_sheet.png"), "sidebar icon sheet"),

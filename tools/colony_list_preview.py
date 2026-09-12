@@ -663,12 +663,6 @@ def main():
                          "a file. Two halves photographed at two "
                          "moments is the comparison failure this "
                          "removes rather than warns about.")
-    ap.add_argument("--info-style", default=None,
-                    choices=("paragraph", "rows"),
-                    help="override output.info_style for this render. "
-                         "The two pictures ARE the decision (see "
-                         "output._info_note); this is how both are "
-                         "taken from one snapshot.")
     ap.add_argument("--pointer", default=None, metavar="X,Y",
                     help="where to put the pointer for --hold. "
                          "Without it the held figures land at "
@@ -703,9 +697,6 @@ def main():
     pygame.init()
     pygame.display.set_mode((32, 32))
     app, screen = build_screen(width, height)
-    if args.info_style:
-        screen._data.setdefault("output", {})["info_style"] = \
-            args.info_style
 
     if args.native_live:
         args.native = os.path.join(args.out_dir, "native.png")
