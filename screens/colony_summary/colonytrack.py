@@ -80,14 +80,16 @@ def figure_step(area, cfg):
     happen to point the same way today, which is exactly why the
     weaker one would be "simplified" away by a later reader.
 
-    1. THE ORIGIN IS `FIGURE_TOP_NATIVE * step` BELOW THE BAND TOP —
-       TRANSCRIBED. The original's ICON ROW is `31*i + 38`
-       (`Draw_Info_Pop_For_`, colsum.cpp:683, and both hit tests pass
-       the same: `Get_Selected_Pop_` colsum.cpp:1006 and
-       `Get_Scanned_Pop_` colsum.cpp:963), while the FIELD — the band
-       — is at `31*i + 34` with height 30 (`Add_Fields_Pop_For_`,
-       colsum.cpp:311). Four native px, and they are the gap between
-       where a row can be clicked and where its icons are drawn.
+    1. THE ORIGINAL LEAVES ROOM ABOVE ITS FIGURES — TRANSCRIBED, and
+       **it is no longer where ours are anchored** (12 September 2026,
+       see `figure_origin_y`). The original's ICON ROW is `31*i + 38`
+       (`Draw_Info_Pop_For_`, colsum.cpp:685, and both hit tests pass
+       the same) against a FIELD of `31*i + 35` … `31*i + 65`
+       inclusive (colsum.cpp:283-291) — THREE native px, not the four
+       this constant says; see `FIGURE_TOP_NATIVE` for where the
+       fourth came from. The number is kept at 4 because what it does
+       here is measure the FIT, and one row of margin in the fit is
+       not a thing to trim on the day the anchor moves.
 
     2. THE PLATE'S TOP LINE NEEDS ONE PIXEL — MEASURED. The cell
        plate is a 1 px line and 46 of the 54 masters carry ink on
@@ -104,11 +106,17 @@ def figure_step(area, cfg):
     THE BOTTOM NEEDS NOTHING, and that is the same measurement the
     row clip rests on: every master has at least `INK_BOTTOM_MIN`
     transparent rows below its ink, so the canvas may overhang the
-    band by that much and lose no ink. The ORIGINAL overhangs too —
-    `4 + 28 = 32` against a pitch of 31 — so requiring the whole
-    canvas to fit would be stricter than the thing being transcribed.
+    band by that much and lose no ink.
 
     So the band must hold `4 + 28 - 3 = 29` master rows per step.
+
+    **SINCE THE ANCHOR MOVED TO THE FLOOR, 28 WOULD DO** — the canvas
+    is placed inside the band and cannot overhang either edge. 29 is
+    kept deliberately: it is one row of slack, it is what every
+    shipped step was chosen under, and relaxing it would change the
+    step at window sizes nobody has looked at. It is also what
+    guarantees `figure_origin_y` stays inside the band, since
+    `band >= 29 * step` gives `band - 28 * step >= step`.
     """
     band = band_height(area, cfg)
     need = FIGURE_TOP_NATIVE + 28 - INK_BOTTOM_MIN
@@ -123,9 +131,49 @@ def figure_step(area, cfg):
 PLATE_LINE = 1
 
 #: How far below the BAND's top the figure starts, in native px, per
-#: step. TRANSCRIBED: icon row `31*i + 38` (colsum.cpp:683, :1006,
-#: :963) against field top `31*i + 34` (colsum.cpp:311).
+#: step. **NO LONGER THE ANCHOR — 12 September 2026, see
+#: `figure_origin_y`.** It is what `figure_step` still measures the
+#: fit with, and it is kept for that and for the record.
+#:
+#: TRANSCRIBED, and the transcription was one px out: icon row
+#: `31*i + 38` (`Draw_Info_Pop_For_`, colsum.cpp:685) against a field
+#: that starts at `31*i + 35` and not 34 — `y_row_end` begins at 65
+#: and `y1 = y_row_end - 30` (colsum.cpp:283-291). The 34 is the
+#: coordinate `Add_Fields_Pop_For_` passes with MODE 1
+#: (colsum.cpp:336), and mode 1 of
+#: `Do_Colony_Info_Pop_Stuff_For_Pop_` fills `pop_index_by_slot` and
+#: never reads `top_y` (coldraw.cpp:281-380). So the original's own
+#: gap between band top and canvas top is THREE, not four.
 FIGURE_TOP_NATIVE = 4
+
+#: The master's canvas, native px. All 54 are 28 x 28 (decision 50).
+#: Declared here because both of this module's figure rules need it
+#: and `colonyfigures` imports THIS module, not the other way round;
+#: a smoke check holds this to `colonyfigures.MASTER_SIZE` so the two
+#: cannot drift (decision 36).
+MASTER_ROWS = 28
+
+#: Native px between the sprite's canvas BOTTOM and the band's, per
+#: step. **MEASURED, AND IT IS ZERO** — 12 September 2026, from the
+#: source and from the original's own framebuffer, which agree:
+#:
+#:   the band is `31*i + 35` to `31*i + 65` INCLUSIVE — `y1 =
+#:   y_row_end - 30` with `y_row_end` starting at 65 and stepping 31
+#:   (colsum.cpp:283-291), and a field's `y_end` is its LAST row, not
+#:   one past it (`field->y <= y && y <= field->y_end`,
+#:   fields.cpp:708 and :1268; `y_end = y + height - 1` at :332).
+#:   So the band is 31 rows and the rows tile the pitch exactly.
+#:
+#:   the canvas is `31*i + 38` plus 28 = `31*i + 38` to `31*i + 65`.
+#:
+#: The canvas's last row IS the band's last row. On the framebuffer
+#: (`evidence/colony_summary_native_split.png`, the natives fixture,
+#: Elerian) row 0 reads: top line at native 35, ink 38..61, the
+#: plate's border at 62-63, the next row's top line at 66 — and the
+#: Elerian farmer master inks rows 0..23 of its 28, so its canvas is
+#: 38..65 and the four rows it ends with are the transparent tail.
+#: Ink-to-border is 0 interior rows; canvas-to-band-bottom is 0.
+FIGURE_BOTTOM_NATIVE = 0
 
 #: Transparent canvas rows below the ink, over all 54 masters, worst
 #: case. MEASURED 9 September 2026 (min 3, on the three Bulrathi;
@@ -686,8 +734,50 @@ def held_figure_y(area, cfg, scale, count, point, step):
     py = point[1]
     for top, height in row_bands(area, cfg, scale, count):
         if top <= py < top + height:
-            return top + FIGURE_TOP_NATIVE * step
+            return figure_origin_y(top, height, step)
     return py + zoomtables.CLUSTER_FIGURE_OFFSET[1] * step
+
+
+def figure_origin_y(top, height, step):
+    """Where a row's figures are blitted, y — the ONE home.
+
+    **THE ANCHOR IS THE BAND'S BOTTOM — DEVIATION, 12 September 2026,
+    Data's decision.** The original anchors at the TOP: its icon row
+    is `31*i + 38`, three native px below its band's own `31*i + 35`
+    (colsum.cpp:283-291 and :685). Transcribing THAT put every figure
+    three px under the band's top and left whatever the band had over
+    28 rows as empty space BELOW it — and our bands are not the
+    original's. Its band is 31 native px against a 28 px sprite, a
+    slack of three; ours is `list_area` divided by ten and is
+    whatever the window makes it: 58 px at 1920x1080 against a 56 px
+    sprite, but 73 at 3440x1371 and 77 at 2560x1440, which leave 17
+    and 21 px of it. All of that slack sat under the figures, and a
+    row's colonists floated over their own row.
+
+    So the slack goes ABOVE instead, and the sprite sits on the
+    band's floor where the original's does:
+
+        origin = band_bottom - (MASTER_ROWS + FIGURE_BOTTOM_NATIVE) * step
+
+    `FIGURE_BOTTOM_NATIVE` is 0 and is measured, not chosen — the
+    original's canvas ends on its band's last row. What deviates is
+    WHICH EDGE the sprite is fixed to, and it deviates because the
+    two anchors are the same anchor only when the band is 28 rows per
+    step, which is true of the original's band and of none of ours.
+
+    **IT CANNOT PUSH THE SPRITE OUT OF THE TOP.** `figure_step` picks
+    a step that needs `29 * step` rows of band, so
+    `band - 28 * step >= step > 0` and the canvas always starts
+    inside. That rule is now one row more conservative than a bottom
+    anchor requires — 28 would do — and it is deliberately left
+    alone: relaxing it would change the step at window sizes nobody
+    is looking at, which is a different decision from this one.
+
+    Marked in `colonylist` where the blit is, in `layout.json` under
+    `list._figure_anchor_deviation`, in `v3_projektstatus.md` and in
+    a smoke check.
+    """
+    return top + height - (MASTER_ROWS + FIGURE_BOTTOM_NATIVE) * step
 
 
 def row_at(area, cfg, scale, count, point):

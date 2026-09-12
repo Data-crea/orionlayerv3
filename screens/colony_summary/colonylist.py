@@ -679,21 +679,24 @@ def _render_bar(surface, row, area, cfg, scale, band, track, text_px,
             # the OVERLAP the original has at the same squish, and
             # fitting the sprite to the slot would remove exactly the
             # thing being transcribed (decision 28).
-            # FOUR NATIVE PX BELOW THE BAND'S TOP, PER STEP —
-            # TRANSCRIBED, 9 September 2026. The original's icon row
-            # is `31*i + 38` (colsum.cpp:683, and both hit tests pass
-            # the same at :1006 and :963) while the field it sits in
-            # starts at `31*i + 34` (colsum.cpp:311). Those four px
-            # are the gap between where a row is clickable and where
-            # its icons are drawn, and until this date HD put the
-            # figure at the band's top + 1 — which was CLEARANCE for
-            # the plate's line, measured, and never a transcription
-            # of anything. The two facts are both kept, in
-            # `colonytrack.figure_step`, because 4*step happens to
-            # clear the 1 px line and a later reader would otherwise
-            # delete the weaker one.
-            surface.blit(surf, (rect.x, top + colonytrack.FIGURE_TOP_NATIVE
-                                * colonytrack.figure_step(area, cfg)))
+            # ON THE BAND'S FLOOR, AND THAT IS A DEVIATION —
+            # 12 September 2026, Data's decision. It was `top +
+            # 4 * step`, which transcribed the original's own top
+            # anchor (icon row `31*i + 38` against a band at
+            # `31*i + 35`) and left every pixel the band has over
+            # 28 rows as empty space UNDER the figures: 2 px at
+            # 1920x1080, where nobody saw it, and 17 at 3440x1371 and
+            # 21 at 2560x1440, where the row's colonists floated over
+            # their own row. `colonytrack.figure_origin_y` is the one
+            # home for the rule and carries the measurement it rests
+            # on — the original's canvas ends on its band's last row,
+            # so the gap it is anchored at is ZERO.
+            #
+            # The held cluster reads the same function through
+            # `colonytrack.held_figure_y`, so a figure in hand and a
+            # figure in the row cannot land on different lines.
+            surface.blit(surf, (rect.x, colonytrack.figure_origin_y(
+                top, band_h, colonytrack.figure_step(area, cfg))))
             continue
         pygame.draw.rect(surface, ZONE_COLORS[job], rect)
         mark = _cell_mark(cfg, cells, job, index)

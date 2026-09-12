@@ -2990,6 +2990,39 @@ def main():
         ("list._hd_extension no longer names what the original does "
          "instead — a label without the deviation it records is a "
          "label, not a marking")
+    # THE VERTICAL ANCHOR IS A DEVIATION — 12 September 2026. The
+    # original hangs its sprites from the row's TOP; ours sit on the
+    # band's FLOOR, because our band is `list_area` divided by ten
+    # and the slack it leaves went under the figures. Same rule as
+    # above: the marking is asserted in every home it claims, and it
+    # has to name the transcription it departs from.
+    _fa = _cfg.get("_figure_anchor_deviation", "")
+    assert "DEVIATION" in _fa and "colsum.cpp:685" in _fa, (
+        "layout.json list._figure_anchor_deviation no longer marks "
+        "the top-to-bottom anchor with the original's own icon row")
+    for _fa_home, _fa_src in (
+            ("colonylist.py", _cl_src),
+            ("colonytrack.py", open(os.path.join(
+                SCREENS_DIR, "colony_summary", "colonytrack.py"),
+                encoding="utf-8").read()),
+            ("v3_projektstatus.md", open(os.path.join(
+                os.path.dirname(SCREENS_DIR), "v3_projektstatus.md"),
+                encoding="utf-8").read())):
+        assert "DEVIATION" in _fa_src and "figure_origin_y" in _fa_src, (
+            f"{_fa_home} no longer marks the figure anchor as a "
+            f"DEVIATION, or no longer names the one function that "
+            f"owns it")
+    # AND THE SPRITE'S HEIGHT IS ONE NUMBER. `colonytrack` declares
+    # it because `colonyfigures` imports that module and not the
+    # reverse; a second copy that disagreed would put the row's
+    # figures and the held ones on different floors (decision 36).
+    from screens.colony_summary import colonyfigures as _fa_fig
+    from screens.colony_summary import colonytrack as _fa_ctk
+    assert _fa_ctk.MASTER_ROWS == _fa_fig.MASTER_SIZE == 28, (
+        f"colonytrack.MASTER_ROWS is {_fa_ctk.MASTER_ROWS} and "
+        f"colonyfigures.MASTER_SIZE is {_fa_fig.MASTER_SIZE}; the "
+        f"masters are 28 x 28 (decision 50) and the anchor is "
+        f"measured off that number")
     # ── "No Farming": centred in the farmers column ──
     # TRANSCRIBED, 8 September 2026, and the check moved with the
     # drawing. It used to sit below the bar at the left edge of the
@@ -7908,7 +7941,7 @@ def main():
         _hbands = _ctk.row_bands(_harea, _hcfg, _hlay2.scale, 10)
         assert _hbands, _hspec2
         for _bi, (_btop, _bh) in enumerate(_hbands[:3]):
-            _want_y = _btop + _ctk.FIGURE_TOP_NATIVE * _hstep
+            _want_y = _ctk.figure_origin_y(_btop, _bh, _hstep)
             # EVERY y INSIDE THE BAND, not just its centre: the
             # pointer is wherever the hand is, and the whole point is
             # that the cluster no longer depends on where in the row
@@ -7930,6 +7963,33 @@ def main():
             _hstep) == _out + _hzt.CLUSTER_FIGURE_OFFSET[1] * _hstep, (
             f"{_hspec2}: outside the list the cluster no longer hangs "
             f"at the transcribed offset (colmove.cpp:7-37)")
+        # ── AND THE SPRITE SITS ON THE BAND'S FLOOR, EVERY ROW ──
+        #
+        # **THE ANCHOR MOVED FROM THE TOP TO THE BOTTOM — 12
+        # September 2026, Data's decision, and it is a DEVIATION.**
+        # The original anchors at the top, three native px under its
+        # band's own first row; its band is 31 rows against a 28 row
+        # sprite. Ours is `list_area` divided by ten, so the slack is
+        # 2 px at 1920x1080 and 17 at 3440x1371 — and all of it used
+        # to sit UNDER the figures, which is the float. The rule is
+        # `colonytrack.figure_origin_y` and this is every band of it,
+        # not the first three: a rule that held for row 0 and not for
+        # row 9 is what a per-row assertion catches.
+        for _bi, (_btop, _bh) in enumerate(_hbands):
+            _fb = _ctk.figure_origin_y(_btop, _bh, _hstep) + (
+                _ctk.MASTER_ROWS * _hstep)
+            assert _fb == _btop + _bh - _ctk.FIGURE_BOTTOM_NATIVE * _hstep, (
+                f"{_hspec2} band {_bi}: the sprite's canvas ends at "
+                f"{_fb} and the band at {_btop + _bh} with a "
+                f"transcribed gap of {_ctk.FIGURE_BOTTOM_NATIVE} "
+                f"native px per step")
+            # AND IT CANNOT BE PUSHED OUT OF THE TOP, which is what
+            # `figure_step` guarantees by needing one row more than a
+            # bottom anchor does.
+            assert _ctk.figure_origin_y(_btop, _bh, _hstep) >= _btop, (
+                f"{_hspec2} band {_bi}: a {_ctk.MASTER_ROWS}-row "
+                f"sprite at step {_hstep} does not fit a {_bh} px "
+                f"band — figure_step chose a step the band cannot hold")
         _hf_seen.append((_hspec2, _hband, _hstep))
     # ── AND THE PIXELS AGREE WITH THE ARITHMETIC ────────────────
     # A held figure and a row figure of the same master must ink on
@@ -7983,7 +8043,8 @@ def main():
             # the figure. The figure masters are the game's own palette
             # and are far brighter.
             _hd_lit = _hd_a.sum(axis=2) > 260
-            _want_top = _hd_top + _ctk.FIGURE_TOP_NATIVE * _hd_step
+            _want_top = _ctk.figure_origin_y(
+                _hd_top, _hd_bands[1][1], _hd_step)
             # The held cluster is drawn at the pointer's x, to the RIGHT
             # of it; the row's own figures start at the column's left.
             _hd_cols = _ctk.columns(_hd_area, _hd_cfg)
@@ -8007,6 +8068,22 @@ def main():
             assert abs(_tops["held"] - _want_top) <= 2 * _hd_step, (
                 f"{_W}x{_H}: the held figures ink from y {_tops['held']} "
                 f"and the row's figure line is {_want_top}")
+            # AND THE FLOOR IS WHERE THE SLACK IS NOT. The ink's last
+            # row against the band's: every master carries 3 to 4
+            # transparent rows below its ink, so the ink ends that far
+            # above the band's floor and no further. Before the anchor
+            # moved it was 17 px short at 3440x1371 and 21 at
+            # 2560x1440 — the float, measured.
+            _hd_floor = _hd_top + _hd_bands[1][1]
+            for _what, _strip in (("row", _rowstrip), ("held", _heldstrip)):
+                _ys = np.where(_strip[_hd_top:_hd_floor].any(axis=1))[0]
+                _hd_bot = _hd_top + int(_ys.max())
+                assert 0 < _hd_floor - _hd_bot <= 5 * _hd_step, (
+                    f"{_W}x{_H}: the {_what} figures' ink ends "
+                    f"{_hd_floor - _hd_bot} px above the band's floor "
+                    f"({_hd_floor}) — the canvas's own transparent "
+                    f"tail is 3 to 4 rows, so more than that is empty "
+                    f"band under the figures, and that is the float")
     for _hd_W, _hd_H in ((2560, 1440), (3440, 1371)):
         _held_ink_at(_hd_W, _hd_H)
     report("held cluster: " + ", ".join(

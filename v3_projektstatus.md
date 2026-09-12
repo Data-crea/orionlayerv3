@@ -13,6 +13,20 @@ right and the header had gone stale** — resolved 10 September 2026
 by dating the header to the edit and giving this session its
 paragraph, below, so the two agree again.
 
+This session (12 September 2026), after that: **the row figures sit on
+the band's floor.** DEVIATION in the vertical anchor, top -> bottom,
+Data's decision. The original's band is 31 native px around a 28 px
+sprite — 3 px above it and **zero** below, measured from the source and
+from its own framebuffer — and HD transcribed the TOP anchor into a
+band that is `list_area` divided by ten, so every pixel the band had
+over 28 rows piled up UNDER the figures: 2 px at 1920x1080, where
+nobody saw it, 17 at 3440x1371 and 21 at 2560x1440, where a row's
+colonists floated over their own row. `colonytrack.figure_origin_y` is
+the one home for the rule, the held cluster reads it through
+`held_figure_y`, and the check asserts the canvas's floor against the
+band's at four sizes for **every** row. See "The row figures move to
+the band's floor" below.
+
 This session (12 September 2026), last: **the PRODUCING sort label is
 no longer dimmed.** All seven labels are drawn in one colour, and it is
 the original's own (196, 196, 196) — measured on its framebuffer, where
@@ -4376,6 +4390,81 @@ false, the artwork used directly), and then the check is measuring a
 plate nobody draws. **Which of the two paths the colony screen takes
 is the open decision**, and it is upstream of this check rather than
 settled by it.
+
+### The row figures move to the band's floor — 12 September 2026
+
+The held cluster was measured onto the row's own figure line on
+12 September and was exactly on it. **The line itself was the float.**
+At 3440x1371 the band is 73 px and the sprite 56, and all 17 px of the
+difference sat below the figures; at 1920x1080 the same rule leaves 2
+px and hides the fault where it was checked.
+
+**1. What the original does, measured twice.**
+
+| | native |
+|---|---|
+| row field | `31*i + 35` … `31*i + 65` INCLUSIVE — `y1 = y_row_end - 30`, `y_row_end` from 65 by 31 (colsum.cpp:283-291); a field's `y_end` is its LAST row (`field->y <= y && y <= field->y_end`, fields.cpp:708, :1268) |
+| band height | **31 rows**, and the rows tile the pitch exactly |
+| icon canvas | `31*i + 38`, 28 rows → `31*i + 38` … `31*i + 65` (`Draw_Info_Pop_For_`, colsum.cpp:685; mode 0 of `Do_Colony_Info_Pop_Stuff_For_Pop_` draws at `top_y`, coldraw.cpp:281-380) |
+| gap above | 3 native px |
+| **gap below** | **0 native px** — the canvas's last row IS the band's last row |
+
+Confirmed on the original's own framebuffer
+(`evidence/colony_summary_native_split.png`, the natives fixture,
+Elerian): row 0 has its top line at native 35, ink at 38..61, the
+plate's border at 62-63 and the next row's top line at 66 — and the
+Elerian farmer master inks rows 0..23 of its 28, so its canvas is
+38..65 and the four rows it ends with are the transparent tail.
+Ink-to-border is 0 interior rows; canvas-to-floor is 0.
+
+**A correction on the way past.** `FIGURE_TOP_NATIVE = 4` was derived
+from "the field starts at `31*i + 34`". It starts at 35; the 34 is the
+coordinate `Add_Fields_Pop_For_` passes with MODE 1 (colsum.cpp:336),
+and mode 1 fills `pop_index_by_slot` and never reads `top_y`. The
+original's own top gap is **three**, not four. The constant stays as
+`figure_step`'s fit measure, with the correction recorded on it.
+
+**2. The anchor.** `colonytrack.figure_origin_y(top, height, step)`:
+
+    origin = band_bottom - (MASTER_ROWS + FIGURE_BOTTOM_NATIVE) * step
+           = band_bottom - 28 * step
+
+`colonylist` blits there and `held_figure_y` returns it, so a figure in
+hand and a figure in a row cannot land on different lines. It cannot
+push the sprite out of the top: `figure_step` needs `29 * step` rows of
+band, so `band - 28 * step >= step`. That rule is now one row more
+conservative than a bottom anchor requires and is deliberately left
+alone — relaxing it would change the step at window sizes nobody is
+looking at, which is a different decision.
+
+**What moved:**
+
+| | band | step | origin before | after | figures move |
+|---|---:|---:|---:|---:|---|
+| 1920x1080 | 58 | 2 | top + 8 | top + 2 | up 6 px |
+| 2560x1440 | 77 | 2 | top + 8 | top + 21 | down 13 px |
+| 3440x1371 | 73 | 2 | top + 8 | top + 17 | down 9 px |
+| 3840x2160 | 116 | 4 | top + 16 | top + 4 | up 12 px |
+
+**3. It is a DEVIATION and it is marked** in
+`colonytrack.figure_origin_y`, in `colonylist` where the blit is, in
+`layout.json` under `list._figure_anchor_deviation`, here, and in the
+check. What deviates is WHICH EDGE the sprite is fixed to, not the gap:
+the two anchors are the same anchor whenever a band is 28 rows per
+step, which the original's is and none of ours. It ends if our bands
+ever become the original's 31 rows per step.
+
+**4. What the check holds now.** At 1920x1080, 2560x1440, 3440x1371 and
+3840x2160, for **every** band and not the first three: the canvas's
+floor is the band's floor less `FIGURE_BOTTOM_NATIVE * step`, and the
+origin is not above the band's top. The blit is measured at two of
+those sizes, and the ink's last row must now end within 3 to 4 canvas
+rows of the band's floor — which is the assertion that would have
+caught the float in the first place, and which the old anchor fails by
+17 px at 3440x1371 and 21 at 2560x1440. `MASTER_ROWS` is held to
+`colonyfigures.MASTER_SIZE`, because a second copy of the sprite's
+height would put the row's figures and the held ones on different
+floors.
 
 ### The held figure at 3440x1371: not reproducible — 12 September 2026
 
