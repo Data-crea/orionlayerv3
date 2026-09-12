@@ -367,6 +367,16 @@ class Editor:
         if hasattr(scr, "save_races"):
             scr.save_races()
             log.info("Saved races.json (portrait crops)")
+        # A SCREEN MAY OWN GEOMETRY boxes.json CANNOT HOLD. The colony
+        # summary derives every rect from `layout_reference.json` at
+        # load, so a box the editor is allowed to move has to be
+        # written back THERE or the next start rebuilds it. Same hook
+        # shape as the race crops above: the editor saves what it
+        # knows about and asks the screen for the rest.
+        if hasattr(scr, "save_geometry"):
+            for _name, _rect in scr.save_geometry() or ():
+                log.info("Saved %s %s -> layout_reference.json",
+                         _name, _rect)
         self._save_flash = time.monotonic()
 
     def _new_box(self, skin="button"):

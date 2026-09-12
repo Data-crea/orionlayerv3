@@ -95,29 +95,34 @@ def value_column(rect, cfg, layout, frame_inset=FRAME_INSET_DEFAULT):
     colsum.cpp:418). See `render` for the justification codes that
     establish it.
 
-    **The WIDTH is a DEVIATION, and it is live at every
-    resolution.** The original's paragraph is 104 native px of
-    640, which is 312 reference px once scaled by
-    `REF_W / NATIVE_W`. The `sidebar` cutout gives 286. The
-    column is `min` of the two, so the shipped column is always
-    the cutout's 286 — the clamp fires everywhere and the
-    original's proportion is never the one drawn. Marked in
-    `doc/v3_fundament.md` and in a smoke check.
+    **The WIDTH WAS a DEVIATION AND IT IS RETIRED — 12 September
+    2026, and it retired itself exactly as designed.** The
+    original's paragraph is 104 native px of 640, which is 312
+    reference px once scaled by `REF_W / NATIVE_W`. The old
+    `sidebar` cutout gave 286, so `min` always selected the
+    cutout and the original's proportion was never the one drawn
+    — 286 against 312 is 8.3 %, and every value sat 26 reference
+    px left of where the original would put it.
 
-    It is not a rounding difference: 286 against 312 is 8.3 % of
-    the column, and every value on the screen sits 26 reference
-    px left of where the original's proportion would put it.
+    Data's new frame removed the right-hand column and put the
+    empire readouts in the lower band, where the box is 451
+    reference px wide and 435 usable. `min` now selects the
+    NATIVE width at every one of the twelve shipped sizes —
+    measured, 0 of 12 clamp — so the drawn column IS the
+    original's proportion and there is nothing left to deviate
+    from. Decision 44 is marked retired rather than deleted; the
+    smoke check that held the marking now holds the retirement,
+    and reports the two widths on every run.
 
-    **Both numbers are kept, and the clamp is written to stop
-    firing on its own.** The cutout comes from the frame artwork
-    via `frame_holes.py` and can move; 104 is the transcription
-    and cannot. If a future frame gives this hole 312 reference
-    px or more, `min` selects the native width and the deviation
-    ends without anybody remembering to come back — which is the
-    only reason a clamp is the right shape here rather than a
-    note saying "286 for now". The frame art is NOT being changed
-    to suit this: that would be deriving geometry from a
-    deviation, and the artwork is a separate decision.
+    **Both numbers are kept, and the clamp was written to stop
+    firing on its own — which is what happened.** The cutout comes
+    from the frame artwork and can move; 104 is the transcription
+    and cannot. A future frame that made this box narrower than
+    312 reference px would start the clamp again and the marking
+    would be live again, which is the only reason a clamp is the
+    right shape here rather than a note saying "286 for now".
+    The frame art was NOT changed to suit this — Data removed the
+    right-hand column for his own reasons and this followed.
 
     What must not happen is the native number quietly
     disappearing once somebody notices it never wins. The smoke

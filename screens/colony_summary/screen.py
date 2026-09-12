@@ -335,6 +335,20 @@ class ColonySummaryScreen(ScreenBase):
         """The wording, from layout.json (decision 15)."""
         return self._data.get("move", {})
 
+    def save_geometry(self):
+        """The F5 editor's write-back, and the ONE path it takes.
+
+        Called by `Editor._save` the way `save_races` already is. What
+        it writes is `layout_reference.json` and never `boxes.json`:
+        that file carries no rectangle for this screen and
+        `colonyplates.reseat` rebuilds every one at the next start, so
+        a rect saved there would be overwritten before it was drawn.
+        Only the boxes `_editor_free` names — RETURN today — because
+        every other box on this screen is a cutout the editor refuses
+        to move.
+        """
+        return colonyplates.write_back(self)
+
     def _reload_boxes(self):
         """The base's load, then the cutouts re-derived from the
         reference — see `colonyplates.box_rects` for why the file on
@@ -402,6 +416,7 @@ class ColonySummaryScreen(ScreenBase):
         self._render_move(surface)
         self._render_buttons(surface)
         self._render_frame_image(surface)
+        self._render_return(surface)
         self._render_header(surface)
         self._render_title(surface)
         # LAST, OVER THE FRAME. `COLMOVE::Draw_Cluster_(
@@ -421,6 +436,17 @@ class ColonySummaryScreen(ScreenBase):
             colonyfigures.set_for(self, _area, _cfg), _step,
             colonytrack.held_figure_y(_area, _cfg, _scale, _n - _first,
                                       mouse_input.pos(), _step))
+
+    def _render_return(self, surface):
+        """RETURN, AFTER THE FRAME — 12 September 2026, Data's new
+        artwork. It is drawn with the header plates and for the same
+        reason: this frame cuts no hole for it, so a plate laid with
+        the other buttons went straight under the metal and the button
+        vanished — three lamps of artwork where the word should be.
+        The seven sort keys stay UNDER the frame, because each has a
+        hole and the frame's rim is what finishes their edges."""
+        colonysort.render_return(surface, self, mouse_input.pos(), NAV_BG,
+                                 NAV_HOVER_BG, NAV_TEXT, HEADER_OUTLINE)
 
     def _render_header(self, surface):
         """The five column headings — see `colonyheader` for the two
@@ -529,7 +555,7 @@ class ColonySummaryScreen(ScreenBase):
 
 
     def _render_buttons(self, surface):
-        """Sort buttons and RETURN: the frame provides the bezel, so
+        """The seven sort keys: the frame provides the bezel, so
         each box gets a fill plus its label; hover brightens it and
         the active sort key stays lit. The seven sort keys have a
         cut-out each since 12 September 2026, and their panel fill
@@ -558,8 +584,6 @@ class ColonySummaryScreen(ScreenBase):
                           colonyrows.SORT_UNAVAILABLE, mouse, self.style,
                           colonysort.font_size(self), NAV_ACTIVE_BG, NAV_HOVER_BG,
                           NAV_TEXT, NAV_TEXT_DIM)
-        colonysort.render_return(surface, self, mouse, NAV_BG,
-                                 NAV_HOVER_BG, NAV_TEXT)
 
     def _sort_buttons(self):
         """The seven keys, one `sort_<key>` box each — see

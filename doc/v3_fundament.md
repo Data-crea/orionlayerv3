@@ -419,9 +419,25 @@ artwork decision with its own reasons.
 
 The failure this guards against is not the clamp; it is the native
 number being deleted once somebody notices it never wins. A smoke
-check asserts `native_width` is still read and still *larger* than
-what gets drawn, so removing it as dead weight fails the suite rather
-than quietly ending the marking.
+check asserts `native_width` is still read, so removing it as dead
+weight fails the suite rather than quietly ending the marking.
+
+**RETIRED — 12 September 2026, and it retired itself the way it was
+written to.** Data's new frame removes the right-hand column
+altogether and puts the empire readouts in the lower band, where the
+box is 451 reference px wide and 435 usable against the
+transcription's 312. `min(cutout, native)` therefore selects the
+NATIVE width at all twelve shipped window sizes — measured, the clamp
+fires at 0 of 12 — so the drawn column IS the original's proportion
+and there is nothing left to deviate from. The marking in
+`colonyempire.value_column` says RETIRED and carries the measurement;
+the smoke check that held the marking now holds its converse, and
+asserts the docstring says DEVIATION again the moment the clamp fires
+at any size. The entry stays here rather than being deleted: the
+decision it records is the SHAPE — a workaround written as a `min`
+that expires on its own — and the shape is what was vindicated. That
+it took a new frame rather than a widened hole is the second half of
+the entry holding too.
 
 **43. WITHDRAWN, 3 September 2026 — it was built on a one-file word
 grep, and the grep was wrong.** (Line numbers here are orion2re

@@ -294,14 +294,30 @@ def render(surface, buttons, active_key, unavailable, mouse,
             button.hit.y + (button.hit.height - word.get_height()) // 2))
 
 
-def render_return(surface, screen, mouse, bg, hover_bg, text_color):
+def render_return(surface, screen, mouse, bg, hover_bg, text_color,
+                  outline=None):
     """RETURN, which is a button on this row and not a sort key.
 
-    It keeps its own box because the plate cuts it as its own hole —
-    the original draws it as a separate raised plate to the right of
-    the bar (see the framebuffer at native x 523+), and it is the one
-    control here that takes the CLICK path, because its field reports
-    no letter (decision 39's fallback).
+    **IT HAS NO HOLE SINCE DATA'S NEW FRAME — 12 September 2026.** The
+    artwork cuts thirteen holes and none of them is this button: it is
+    drawn OVER the frame, the way `colonyheader`'s plates are drawn
+    over theirs, at a rect Data places himself in the F5 editor
+    (`_editor_free`, written back to `layout_reference.json`). So this
+    function paints the whole control — fill, plate line and word —
+    where before the frame supplied the bezel around it.
+
+    It kept its own box through every frame this screen has worn,
+    because the original draws it as a separate raised plate to the
+    right of the bar (see the framebuffer at native x 523+), and it is
+    the one control here that takes the CLICK path, because its field
+    reports no letter (decision 39's fallback).
+
+    **THE FILL IS OPAQUE AND THAT IS THE POINT.** It sits on the
+    frame's metal rather than in a hole, so it covers three painted
+    lamps in the artwork; the alternative — the word alone, no plate —
+    leaves the lamps visible and the button with no hover surface,
+    and is one `surface.fill` away if Data wants it. The smoke test
+    reports the occlusion rather than asserting it away.
     """
     box = screen.box_rect("return")
     if not box:
@@ -311,6 +327,8 @@ def render_return(surface, screen, mouse, bg, hover_bg, text_color):
     # because it is the one control here that takes the CLICK path and
     # its hover has to reach the whole plate.
     surface.fill((hover_bg if rect.collidepoint(mouse) else bg)[:3], rect)
+    if outline is not None:
+        screen.style.draw_plate(surface, rect, screen.layout.scale, outline)
     label = screen._data.get("return", {}).get("label", "Return")
     word = screen.style.render_text(
         label.upper(),

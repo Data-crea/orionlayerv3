@@ -13,6 +13,23 @@ right and the header had gone stale** — resolved 10 September 2026
 by dating the header to the edit and giving this session its
 paragraph, below, so the two agree again.
 
+This session (12 September 2026), **Data's new frame — the right-hand
+column is gone and RETURN has no hole.** `assets/frame.png` cuts
+**13** holes where the old one cut 14: the title cartouche, the list,
+four boxes in the lower band and the seven sort slots. Twelve windows
+claim one each, the cartouche is spare, and the two that do not are
+the header (a band of the list's hole, as before) and **RETURN, which
+is drawn OVER the frame** on a plate this screen paints itself — the
+one FREE box in the F5 editor, written back to
+`layout_reference.json` by `colonyplates.write_back` so a drag
+survives `reseat`. `galaxy_inset` keeps the original's coverage
+aspect inside a hole that is wider than it, and the 34 x 3 reference
+px of remainder is painted BLACK (`_hole_galaxy_inset`).
+**Decision 44's DEVIATION is RETIRED**: the empire readouts moved
+into the lower band, the box is 451 reference px against the
+transcription's 312, and the clamp fires at 0 of 12 window sizes.
+Smoke 117 -> **119**. See "Data's new frame" below.
+
 This session (12 September 2026), the redundancy audit's follow-up:
 **`boxes.json` carries no rectangle for the colony screen any more.**
 All twenty — the fourteen cutouts and the six columns — are derived at
@@ -709,7 +726,7 @@ files under `doc/` and are only summarised here.
 | | |
 |---|---|
 | Python | 32,960 lines across 111 modules — `find . -name '*.py'`, `__pycache__` excluded, the smoke test's 6,400 included. The previous figure here (21,642 across 94) was carried from an unstated method and could not be reproduced |
-| Smoke test | `python tools/smoke_test.py` — **117 checks**, headless |
+| Smoke test | `python tools/smoke_test.py` — **119 checks**, headless |
 | Assets | 170 MB (select_race 68, galaxy_map 51, shared 23, new_game 21, colony_summary 1) |
 | Screens in HD | 7 of ~20–22 (colony summary draws list, sidebar, scan box and galaxy inset, and MOVES POPS — the first HD gesture that drives the game) |
 | Setup from clone | `python tools/setup.py` (deps via the system package manager) |
@@ -1041,7 +1058,7 @@ in exactly ONE bucket. The numbers below are produced by
 check asserts this list still agrees with it — the same trade the
 check count makes, for the same reason.
 
-`screens/galaxy_map/screen.py` (**531** code, 807 total), `tools/struct_probe.py` (**478** code, 753 total), `tools/colony_list_preview.py` (**403** code, 772 total), `screens/custom_race/screen.py` (**400** code, 558 total), `tools/colony_move_hd.py` (**383** code, 583 total), `core/editor/editor.py` (**355** code, 420 total), `screens/galaxy_map/renderer.py` (**335** code, 753 total), `tools/ext_diag.py` (**325** code, 473 total), `core/style.py` (**310** code, 479 total).
+`screens/galaxy_map/screen.py` (**531** code, 807 total), `tools/struct_probe.py` (**478** code, 753 total), `tools/colony_list_preview.py` (**403** code, 772 total), `screens/custom_race/screen.py` (**400** code, 558 total), `tools/colony_move_hd.py` (**383** code, 583 total), `core/editor/editor.py` (**359** code, 430 total), `screens/galaxy_map/renderer.py` (**335** code, 753 total), `tools/ext_diag.py` (**325** code, 473 total), `core/style.py` (**310** code, 479 total).
 `smoke_test.py` is exempt by nature.
 
 **TWO TOOLS JOINED THE LIST ON 8 SEPTEMBER 2026 and one thing left
@@ -3729,20 +3746,22 @@ WORKERS the widest. **What the original states is that RATIO and not
 a width** — HD's job columns are 2.53x their native ones by Data's
 Stage 1 decision, so the absolute number is ours. Today's boxes:
 
-**RE-SEATED 12 September 2026 for the static frame's narrower list** —
-1404 ref px where the Stage-A3 cutout was 1693, so every width below
-is new. The DERIVATION did not change and neither did a single source:
-the scroll column keeps its transcribed 27 off the top, the other five
-split what is left in the proportions they had, and the three job
-columns split their share by the original's own ratio. What changed is
-one number upstream of all of them.
+**RE-SEATED TWICE ON 12 September 2026** — first for the static
+frame's narrower list (1404 ref px), then for Data's new frame, whose
+list is **1718** because the right-hand column is gone. The DERIVATION
+did not change either time and neither did a single source: the scroll
+column keeps its transcribed 27 off the top, **the building column
+keeps its 267** (Data's decision, the width it already had), name and
+the three jobs split what is left in the proportions they had, and the
+three jobs split their share by the original's own ratio. What changed
+is one number upstream of all of them.
 
 | column | ref width | against the transcription |
 |---|---|---|
-| `col_name` | 251 | no native share — DEVIATION, reason in `_list_columns_note` |
-| `col_farmers` | 284 | +0.2 % of the 135 share |
-| `col_workers` | 297 | −0.0 % of the 142 share |
-| `col_scientists` | 281 | +0.1 % of the 134 share |
+| `col_name` | 321 | no native share — DEVIATION, reason in `_list_columns_note` |
+| `col_farmers` | 364 | +0.1 % of the 135 share |
+| `col_workers` | 382 | −0.1 % of the 142 share |
+| `col_scientists` | 360 | +0.0 % of the 134 share |
 | `col_building` | 268 | wider than the 13.3 % the original requires — DEVIATION, reason recorded; **+9 on 9 September 2026**, the px `col_scroll` gave up when its width became a transcription, sent here because this column is already the declared home of this screen's surplus |
 | `col_scroll` | 27 | **TRANSCRIBED since 9 September 2026** — native 619..627. Arrow field x 619 (`Add_Button_Field_`, colsum.cpp:263-264) and the track it holds at 621..626 (`Add_Scroll_Field_`, colsum.cpp:278, counted exclusively as 5; `Fill_(621, y1, 626, y2, 229)`, colsum.cpp:759, counted inclusively as 6). The anim's own extent is `animate::Get_Width_(pic)` and lives in the player's LBX, so the right edge is MEASURED off `colony_summary_native_split.png` — its LEFT edge reproduces the source's 619 exactly, which is what anchors it. Was 36 = the leftover after the other five |
 
@@ -4343,6 +4362,104 @@ false, the artwork used directly), and then the check is measuring a
 plate nobody draws. **Which of the two paths the colony screen takes
 is the open decision**, and it is upstream of this check rather than
 settled by it.
+
+### Data's new frame: 13 holes, and RETURN on top of it — 12 September 2026
+
+Data replaced `screens/colony_summary/assets/frame.png`. The right-hand
+column is gone, the list is wider, and the lower band carries four
+boxes instead of three. The alpha was counted before anything was
+changed: **13 holes**, against the old frame's 14.
+
+| hole | window | note |
+|---|---|---|
+| title cartouche | — | SPARE, claimed by nothing; `frame.title_rect` is absent |
+| list | `list` | `header` is its top band, as on the old frame |
+| bottom 1..4 | `planet_output`, `planet_info`, `empire_stats`, `galaxy_inset` | named by position, `galaxy_inset` confirmed against colsum.cpp:415 |
+| seven slots | `sort_name` … `sort_bc` | one per key, decision 54 |
+| — | `return_button` | **no hole at all** |
+
+**RETURN is drawn over the frame.** `screen._render_return` runs
+AFTER `_render_frame_image`, with the header plates and for the same
+reason; `colonysort.render_return` paints the fill, the plate line
+(`StyleRenderer.draw_plate`, decision 51) and the centred word. It is
+the one box on this screen the editor may move — `_editor_free` —
+and the write-back path is `Editor._save` -> `screen.save_geometry()`
+-> `colonyplates.write_back()`, which edits `layout_reference.json`
+in place and never `boxes.json`, where a rect would be overwritten by
+`reseat` before it was drawn.
+
+That plate covers the three lit lamps painted on the artwork at
+reference `[1708, 982, 75, 8]` — 115 of the frame's 1229 lit pixels
+at 1080p — because its initial rect is centred on them. The
+alternative is the word with no plate: the lamps stay visible, the
+button loses its hover surface, and it is one `surface.fill` away.
+
+**The order it is drawn in was wrong for one run and the check that
+found it had to be sharpened first.** `_render_buttons` ran before
+the frame, so the plate went under the metal and the button was three
+lamps with no word; the new check passed anyway, because it only
+asked that the pixels were not the magenta the test surface was
+filled with — and the frame is not magenta either. It reads the
+plate's own `NAV_BG` now, and asserts the label's own colour appears
+inside the rect, so neither a missing plate nor a blank one passes.
+
+**`galaxy_inset`: the hole is bigger than the box, on purpose.** The
+box is 248 x 196 reference px, whose 1.26531 is the closest any of
+the three frames has come to the original's coverage aspect of
+1.265134 (movebox.cpp:20-21). The hole is 282 x 199, so 34 px of
+width and 3 of height have no box over them. `_hole_galaxy_inset`
+declares the hole and `colonyplates.render_fills` lays the panel's
+BLACK down over it before the box's own fill — Data's decision:
+black, not the screen's background. The number is re-derived from the
+alpha by a smoke check rather than trusted (decision 36).
+
+**Decision 44 is retired, and it retired itself.** The clamp was
+`min(cutout, native)` on the empire readouts' value column, written
+so the deviation would end the day the artwork gave that hole 312
+reference px. The new frame gives it 451 (435 usable), so the clamp
+fires at **0 of 12** shipped window sizes and the drawn column IS the
+original's proportion. `colonyempire.value_column` says RETIRED with
+the measurement, the fundament entry is marked retired rather than
+deleted, and the smoke check now asserts the CONVERSE: if the clamp
+ever fires again, the docstring has to say DEVIATION again.
+
+**Smoke: 117 -> 119 checks.** Two new, none removed:
+
+| check | what it holds |
+|---|---|
+| declared hole fills | `_hole_galaxy_inset` is the artwork's own hole, re-derived from the alpha, and covers its window |
+| RETURN is an opaque plate | at 12 sizes: the fill reaches the rect's edges, the word is on it and fits with `HIGHLIGHT_PAD` per side. The rect itself is NOT asserted — Data moves it |
+
+Three existing checks changed rather than being replaced: the class-A
+glyph rule gained **class C** (text on a plate we paint over the
+frame, exempt only where `_windows_without_a_hole` declares it — 10
+427 px, all RETURN's), the class-B floor and `RULE_NAMES` now read
+the no-hole list through `BOX_NAME` (`return_button` there is
+`return` here, and the mismatch left RETURN in the floor with no hole
+to measure), and the editor's class table expects the DECLARED free
+boxes instead of a literal zero.
+
+**Measured, at the shipped sizes:**
+
+| | 1920x1080 | 2560x1440 | 3440x1371 | 3840x2160 |
+|---|---|---|---|---|
+| list box | 1722 x 580 | 2296 x 773 | 2185 x 736 | 3444 x 1160 |
+| row band | 58 | 77 | 73 | 116 |
+| figure step | 2 | 2 | 2 | 4 |
+| empire box | 451 x 201 | 601 x 268 | 572 x 255 | 902 x 402 |
+| empire row | 26.8 | 36.0 | 34.2 | 53.7 |
+| tallest ink in a row | 25 | 32 | 31 | 49 |
+
+**The 197 reference px of `empire_stats` does NOT force a smaller
+font.** Six rows with `row_pad` 0.10 give 26.8 device px per row at
+1080p and the tallest ink block — the 26 px value glyphs — is 25, so
+the rows clear by 1.8 px and by more at every larger size. The fonts
+stay 18 (label) and 26 (value), and the check that value ink stays
+inside the box and clear of its label holds at three resolutions.
+
+**Step 3 at 1440p is still out of reach**, and the list is shorter
+than it was: 576 reference px against the 638 the step needs. That is
+the same conclusion as 8 September's, with a new frame's numbers.
 
 ### One home for every colony rect — 12 September 2026
 

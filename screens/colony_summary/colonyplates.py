@@ -197,11 +197,52 @@ def all_rects(data):
     return out
 
 
+#: A key shaped `_hole_<window>` gives that window's CUTOUT, for the
+#: one window whose cutout is deliberately bigger than its rectangle.
+#: A PREFIX AND NOT A SUFFIX: `_<window>_hole` read
+#: `_windows_without_a_hole` as a rectangle for a window called
+#: "windows_without_a", and a naming rule that collides with a key
+#: already in the file is a naming rule that will collide again.
+HOLE_PREFIX = "_hole_"
+
+
+def hole_rects(data):
+    """{box name: rect} — cutouts that are larger than their box.
+
+    `galaxy_inset` is the only one and is meant to be: it keeps the
+    original's coverage aspect (movebox.cpp:20-21) inside a hole Data
+    drew wider, so 34 reference px of cutout have no box over them.
+    What goes there is the panel's own BLACK and not the screen's
+    background, which is what this rect is for — it seats nothing, the
+    editor never sees it, and `render_fills` is its only reader.
+
+    Declared rather than measured at run time on purpose: Phase B
+    ended the practice of deriving geometry from artwork while the
+    game is running. A smoke check re-measures it off the alpha.
+    """
+    out = {}
+    wins = parse_reference(data)[1]
+    for key, value in data.items():
+        if not key.startswith(HOLE_PREFIX):
+            continue
+        name = key[len(HOLE_PREFIX):]
+        if name not in wins:
+            raise ValueError(
+                f"{REFERENCE}: {key} names a hole for {name!r}, which "
+                f"is not a window in this file")
+        out[BOX_NAME.get(name, name)] = list(value)
+    return out
+
+
 def box_rects(screen):
     """{box name: [x, y, w, h]} — every box, reference px."""
-    data = screen.app.res.load_json(
+    return all_rects(reference(screen))
+
+
+def reference(screen):
+    """The reference file this screen loads, through the mod stack."""
+    return screen.app.res.load_json(
         f"screens/{screen.SCREEN_NAME}/{REFERENCE}", {}) or {}
-    return all_rects(data)
 
 
 def reseat(screen):
@@ -221,7 +262,13 @@ def reseat(screen):
     this is not a correction of what was loaded — it is where the
     geometry comes from.
     """
-    want = box_rects(screen)
+    data = reference(screen)
+    want = all_rects(data)
+    # STASHED HERE BECAUSE RENDERING MUST NOT READ JSON. `render_fills`
+    # runs every frame and `res.load_json` opens the file every call —
+    # so the hole fills are read where the rects are, once per load and
+    # per resize, and the renderer only draws them.
+    screen._hole_fills = hole_rects(data)
     seat(screen.boxes, want, screen.layout)
     return want
 
@@ -250,6 +297,63 @@ def seat(boxes, rects, layout):
     return boxes
 
 
+def editor_free(data):
+    """Box names the F5 editor may move, from a loaded reference."""
+    return {BOX_NAME.get(n, n): n
+            for n in data.get("_editor_free", ())}
+
+
+def write_back(screen):
+    """Write the editor-free boxes' rects back into the reference.
+
+    **THE ONLY WAY A DRAG SURVIVES A RESTART ON THIS SCREEN.**
+    `boxes.json` carries no rectangle and `reseat` rebuilds every one
+    at load, so a rect saved there is overwritten before it is drawn.
+    `Editor._save` calls `screen.save_geometry()` — the same hook it
+    already uses for the race portraits' crops — and this edits
+    `layout_reference.json` in place.
+
+    ONLY THE DECLARED NAMES, and the rest of the file byte for byte:
+    it is re-serialised at indent 2 with the key order preserved,
+    which is the convention the JSON formatting check holds every file
+    in this tree to. A box that is not in `_editor_free` is not
+    written even if something moved it, because the editor refuses to
+    move those in the first place and a second writer for them is
+    exactly decision 3's fault.
+
+    The BLEED comes off again on the way in: `boxes.json`'s rect is
+    the typed rect grown by what overlaps it, and what is typed here
+    is the rect itself.
+    """
+    path = os.path.join(screen._screen_dir, REFERENCE)
+    with open(path, encoding="utf-8") as fh:
+        data = json.load(fh, object_pairs_hook=_ordered())
+    free = editor_free(data)
+    if not free:
+        return []
+    by_name = {b.name: b for b in screen.boxes}
+    wrote = []
+    for box_name, ref_name in free.items():
+        box = by_name.get(box_name)
+        if box is None or box.ref_rect is None:
+            continue
+        x, y, w, h = box.ref_rect
+        rect = [x + BLEED, y + BLEED, w - 2 * BLEED, h - 2 * BLEED]
+        if data.get(ref_name) != rect:
+            data[ref_name] = rect
+            wrote.append((ref_name, rect))
+    if wrote:
+        with open(path, "w", encoding="utf-8") as fh:
+            json.dump(data, fh, indent=2)
+            fh.write("\n")
+    return wrote
+
+
+def _ordered():
+    import collections
+    return collections.OrderedDict
+
+
 def render_fills(screen, surface):
     """Every cutout that shows content gets its panel fill.
 
@@ -274,9 +378,18 @@ def render_fills(screen, surface):
     """
     from .screen import PANEL_BG
     panels = screen._data.get("panels", {})
+
+    def _fill(name, rect):
+        surface.fill(tuple(panels.get(name + "_fill") or PANEL_BG)[:3],
+                     pygame.Rect(*screen.layout.rect(rect)))
+
+    # THE HOLES THAT ARE BIGGER THAN THEIR BOX GO DOWN FIRST, so the
+    # box's own fill lands on top of the part it covers. Only
+    # `galaxy_inset` has one; see `hole_rects`.
+    for name, rect in getattr(screen, "_hole_fills", {}).items():
+        _fill(name, bled(rect))
     for name in panels:
         box = (None if name.startswith("_") or name.endswith("_fill")
                else screen.box_rect(name))
         if box:
-            surface.fill(tuple(panels.get(name + "_fill") or PANEL_BG)[:3],
-                         pygame.Rect(*screen.layout.rect(box)))
+            _fill(name, box)

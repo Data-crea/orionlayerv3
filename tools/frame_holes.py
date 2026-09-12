@@ -192,14 +192,38 @@ RULE_NAMES = {
 }
 
 
+def editor_free(screen):
+    """Box names the F5 editor may move, from the screen's own file.
+
+    Declared in `layout_reference.json` under `_editor_free`, in the
+    reference's own spelling, and returned in the BOX's. Read rather
+    than listed here because whether a box may be dragged is a fact
+    about that screen's artwork — RETURN has no hole in the colony
+    frame, so nothing slides out from under one when it moves.
+    """
+    try:
+        data, _w = _cplates.load_reference(_cplates.reference_path(
+            os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+            screen))
+    except Exception:
+        return set()
+    return {BOX_NAME.get(n, n) for n in data.get("_editor_free", ())}
+
+
 def cutout_names(screen):
-    """The names `screen`'s rule can produce, or an empty set.
+    """The names `screen`'s rule can produce AND the editor may not
+    move, which is what LOCKED means.
 
     A screen with no rule has no cutout-derived boxes at all — every
     box on it is hand-placed — which is a real answer and not a
     missing one.
+
+    **THE VOCABULARY AND THE LOCK ARE TWO QUESTIONS SINCE
+    12 September 2026.** `RULE_NAMES` stays what the namer can
+    produce; a box whose rect is derived but which Data positions
+    himself is subtracted here, because the editor asks this one.
     """
-    return RULE_NAMES.get(screen, set())
+    return RULE_NAMES.get(screen, set()) - editor_free(screen)
 
 
 #: How the last colony naming was done, for whoever wants to print it.
