@@ -117,9 +117,14 @@ NAV_HOVER_BG = palette.col("colony_summary", "nav_hover", (22, 34, 60))
 NAV_ACTIVE_BG = palette.col("colony_summary", "nav_active", (30, 48, 88))
 HEADER_OUTLINE = palette.col("panel", "thin_border", (55, 65, 85))
 HEADER_TEXT = palette.col("colony_summary", "label", (150, 168, 200))
-NAV_TEXT_DIM = palette.col(
-    "colony_summary", "nav_text_dim", (104, 116, 142))
 NAV_TEXT = palette.col("colony_summary", "nav_text", (196, 208, 236))
+#: The sort row's seven words, ALL SEVEN THE SAME — 12 September 2026.
+#: The original's own inactive label, measured on its framebuffer
+#: (colsum.cpp:267-273 draws all seven from one field). It was
+#: `NAV_TEXT` with `nav_text_dim` for a key this build cannot honour;
+#: see `colonysort.render` for why the dimming went. The palette key
+#: `nav_text_dim` stays — `colonyoutput` draws its empty rows with it.
+SORT_TEXT = palette.col("colony_summary", "sort_text", (196, 196, 196))
 TITLE_COLOR = palette.col("colony_summary", "title", (200, 210, 238))
 MOVE_TEXT = palette.col("colony_summary", "move_text", (206, 216, 238))
 
@@ -571,19 +576,18 @@ class ColonySummaryScreen(ScreenBase):
         identically. No arrow is drawn for that reason, and its
         absence is a transcription rather than an omission.
 
-        A key this build cannot honour is drawn DIMMED
-        (`colonyrows.SORT_UNAVAILABLE`). It still injects its click,
-        because the original's own list behind us sorts perfectly
-        well and the injection is what keeps the two screens
-        agreeing; what it cannot do is reorder OUR rows. Dimming is
-        the difference between an absence that is visible and one
-        that is silent.
+        A key this build cannot honour is drawn LIKE THE OTHER SIX
+        since 12 September 2026 — see `colonysort.render`. It still
+        injects its click, because the original's own list behind us
+        sorts perfectly well and the injection is what keeps the two
+        screens agreeing; what it cannot do is reorder OUR rows, and
+        `colonyrows.SORT_UNAVAILABLE` is still what says so to
+        everything that asks.
         """
         mouse = mouse_input.pos()
         colonysort.render(surface, self._sort_buttons(), self._sort_key,
-                          colonyrows.SORT_UNAVAILABLE, mouse, self.style,
-                          colonysort.font_size(self), NAV_ACTIVE_BG, NAV_HOVER_BG,
-                          NAV_TEXT, NAV_TEXT_DIM)
+                          mouse, self.style, colonysort.font_size(self),
+                          NAV_ACTIVE_BG, NAV_HOVER_BG, SORT_TEXT)
 
     def _sort_buttons(self):
         """The seven keys, one `sort_<key>` box each — see

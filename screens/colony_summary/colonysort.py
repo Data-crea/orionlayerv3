@@ -241,9 +241,29 @@ def button_at(buttons, x, y):
     return None
 
 
-def render(surface, buttons, active_key, unavailable, mouse,
-           style, font_size, active_bg, hover_bg, text, text_dim):
+def render(surface, buttons, active_key, mouse,
+           style, font_size, active_bg, hover_bg, text):
     """Draw the seven words. The renderer's half of `layout`.
+
+    **ONE COLOUR FOR ALL SEVEN — 12 September 2026, Data's decision.**
+    PRODUCING was drawn dimmed, to say that this build sorts by name
+    where the original sorts by cost. It was read as a wrong colour
+    twice, by the person who asked for it, which is a marker that has
+    failed as a marker: a reader cannot tell "this control is limited"
+    from "this control is styled oddly" without the note that explains
+    it, and the note is not on the screen. The STATE is unchanged —
+    `colonyrows.SORT_UNAVAILABLE` still carries the key and the reason,
+    the name-sort fallback still happens, and `colonypick` still
+    refuses a move made under an unavailable sort. What is gone is the
+    drawing of it, which was the invented half.
+
+    The colour is the ORIGINAL's own: measured on its framebuffer,
+    every inactive label is (196, 196, 196) — all seven buttons are
+    the same field, `Add_Multi_Button_Field_(x, 446, …,
+    &_g_sort_index, 0..6, …)` (colsum.cpp:267-273). The original's
+    ACTIVE label differs slightly, at (196, 208, 252); here the lit
+    box is the whole of the difference, as it is in the original's
+    picture.
 
     The highlight is filled only for the active key and the hovered
     one; every other word sits on its slot's own panel fill, which is
@@ -263,32 +283,8 @@ def render(surface, buttons, active_key, unavailable, mouse,
         if active or button.hit.collidepoint(mouse):
             surface.fill((active_bg if active else hover_bg)[:3],
                          button.highlight)
-        # **DEVIATION — HD DIMS A CONTROL THE ORIGINAL DOES NOT.**
-        # All seven of the original's buttons are the same field,
-        # `Add_Multi_Button_Field_(x, 446, …, &_g_sort_index, 0..6, …)`
-        # (colsum.cpp:267-273), and it draws them alike: measured on
-        # its own framebuffer, every inactive label is palette white
-        # (196, 196, 196) and PRODUCING is one of them; only the
-        # active one differs, at (196, 208, 252).
-        #
-        # HD dims the keys in `colonyrows.SORT_UNAVAILABLE` — today
-        # only `producing`, because `TECHDATA::_buildings[].cost` is
-        # not extracted, so the key orders buildings among themselves
-        # by name where `cmp_Prod_` (colsum.cpp:1091) orders them by
-        # cost. A control that is right on one save and wrong on the
-        # next is worse than one that says it cannot do the job, and
-        # that is the whole argument — but the ORIGINAL says nothing,
-        # so saying it is ours.
-        #
-        # **IT ENDS WITH THE EXTRACTION**, not by taste: once the cost
-        # table is transcribed with its checker (decision 36's
-        # pattern), the key is correct and the dimming goes with its
-        # markings. Until then it is marked here, in `layout.json`
-        # under `sort._unavailable_deviation`, in `v3_projektstatus.md`
-        # and in a smoke check.
-        colour = text_dim if button.key in unavailable else text
         word = style.render_text(display(button.label), font_size,
-                                 colour[:3])
+                                 text[:3])
         surface.blit(word, (
             button.hit.x + (button.hit.width - word.get_width()) // 2,
             button.hit.y + (button.hit.height - word.get_height()) // 2))

@@ -3640,31 +3640,98 @@ def main():
         assert "typography" in _txt.lower() and "DEVIATION" in _txt, (
             f"{_home} does not carry the typography deviation")
 
-    # ── DIMMING A KEY IS OURS, AND IS MARKED AS SUCH ────────────
-    # All seven of the original's sort buttons are the same field
-    # (colsum.cpp:267-273) and it draws them alike — every inactive
-    # label measures (196, 196, 196) on its own framebuffer,
-    # PRODUCING included. The STATE was always recorded; the DRAWING
-    # of it was not marked until 9 September 2026, and an unmarked
-    # deviation is the failure the marking rules exist for.
-    for _home, _txt in (
-            ("colonysort.py", open(os.path.join(
-                SCREENS_DIR, "colony_summary", "colonysort.py"),
-                encoding="utf-8").read()),
-            ("layout.json", _sb_data["sort"].get(
-                "_unavailable_deviation", "")),
-            ("v3_projektstatus.md", open(os.path.join(
-                os.path.dirname(SCREENS_DIR), "v3_projektstatus.md"),
-                encoding="utf-8").read())):
-        assert "DEVIATION" in _txt and "196, 196, 196" in _txt, (
-            f"{_home} does not mark the dimmed sort key as a "
-            f"deviation with what the original draws instead")
-    # AND IT IS TIED TO THE REASON IT ENDS WITH: the day the cost
-    # table is extracted the key is correct and the dimming goes.
+    # ── ALL SEVEN LABELS ARE ONE COLOUR ─────────────────────────
+    #
+    # **THIS REPLACES THE MARKING CHECK — 12 September 2026, Data's
+    # decision.** PRODUCING was drawn DIMMED to say that this build
+    # sorts by name where the original sorts by cost, and that was a
+    # marked DEVIATION with a note in four places, this check being
+    # one of them. Data read the dim word as a wrong colour twice, so
+    # the marker had failed as a marker: on the screen there is no
+    # note, only a word in a different grey. The dimming is gone and
+    # the four markings with it; what is asserted now is the property
+    # that replaced them, which is stronger than a note about a colour
+    # — the seven words are drawn in the SAME colour, and that colour
+    # is the original's own.
+    #
+    # All seven of the original's buttons are one field
+    # (`Add_Multi_Button_Field_`, colsum.cpp:267-273) and it draws
+    # them alike: every inactive label measures (196, 196, 196) on its
+    # framebuffer, PRODUCING included, and only the active one differs
+    # at (196, 208, 252) — here the lit box is the whole difference.
+    #
+    # MEASURED OFF THE RENDER, not read out of a constant: a screen
+    # that passed the colour and then dimmed the word in the blit
+    # would satisfy any check that only looked at `SORT_TEXT`.
+    from screens.colony_summary import screen as _sortscr
+    assert tuple(_sortscr.SORT_TEXT[:3]) == (196, 196, 196), (
+        f"the sort row's colour is {tuple(_sortscr.SORT_TEXT[:3])} "
+        f"and the original's inactive label is (196, 196, 196)")
+    import importlib.util as _sk_u
+    import numpy as _sk_np
+    _sk_spec = _sk_u.spec_from_file_location(
+        "_sort_preview", os.path.join(os.path.dirname(SCREENS_DIR),
+                                      "tools", "colony_list_preview.py"))
+    _plv_for_sort = _sk_u.module_from_spec(_sk_spec)
+    _sk_spec.loader.exec_module(_plv_for_sort)
+    _sk_data_sort = _sb_data["sort"]
+    _sk_app, _sk_screen = _plv_for_sort.build_screen(1920, 1080)
+    _sk_app.dispatcher.switch_to("colony_summary")
+    _sk_screen.enter(None)
+    _sk_screen.update(_plv_for_sort._Snapshot(_plv_for_sort.COLONIES))
+    _sk_inks = {}
+    for _sk_key in [_b["key"] for _b in _sk_data_sort["buttons"]]:
+        _sk_surf = pygame.Surface((1920, 1080))
+        _sk_surf.fill((0, 0, 0))
+        _sk_screen._sort_key = "name"
+        _sk_screen.render(_sk_surf)
+        _sk_box = _sk_screen.box_rect(f"sort_{_sk_key}")
+        assert _sk_box, f"no box for sort_{_sk_key}"
+        # INSIDE THE SLOT'S BLEED. The box is the hole grown by
+        # `colonyplates.BLEED`, so its outermost ring is the frame's
+        # own lit rim — bright metal, which read as 204/209/210 for
+        # FOOD and 200/201/202 for INDUSTRY and made three colours out
+        # of one.
+        _sk_r = pygame.Rect(*_sk_screen.layout.rect(_sk_box)).inflate(
+            -6 * _sk_screen.layout.scale, -6 * _sk_screen.layout.scale)
+        _sk_a = pygame.surfarray.array3d(
+            _sk_surf.subsurface(_sk_r)).transpose(1, 0, 2).astype(int)
+        # The word's own ink: the MOST COMMON bright pixel. The fills
+        # under it are dark (nav_background 10/14/26, the active
+        # 30/48/88) and the anti-aliased edges of the glyphs are every
+        # shade between, so the mode is the colour the text was
+        # rendered in and a max would be whatever one edge pixel did.
+        _sk_bright = _sk_a.reshape(-1, 3)
+        _sk_bright = _sk_bright[_sk_bright.sum(axis=1) > 400]
+        assert len(_sk_bright) >= 20, (
+            f"sort_{_sk_key} drew no word bright enough to measure")
+        _sk_vals, _sk_counts = _sk_np.unique(
+            _sk_bright, axis=0, return_counts=True)
+        _sk_inks[_sk_key] = tuple(
+            int(v) for v in _sk_vals[_sk_counts.argmax()])
+    assert len(set(_sk_inks.values())) == 1, (
+        f"the seven sort labels are drawn in {len(set(_sk_inks.values()))} "
+        f"different colours: {_sk_inks} — PRODUCING was dimmed until "
+        f"12 September 2026 and nothing may dim a key again without "
+        f"saying so on the screen rather than in a note")
+    assert set(_sk_inks.values()) == {(196, 196, 196)}, (
+        f"the sort labels ink at {set(_sk_inks.values())} against the "
+        f"original's (196, 196, 196)")
+    # AND THE STATE THE DIMMING USED TO DRAW IS STILL THERE. It is
+    # what refuses a move made under an unavailable sort
+    # (`colonypick`) and what falls the key back to a name sort; only
+    # the DRAWING of it went.
     assert _cr.SORT_UNAVAILABLE and "cost" in "".join(
         _cr.SORT_UNAVAILABLE.values()), (
         "SORT_UNAVAILABLE no longer says the cost table is what is "
-        "missing, which is what makes the deviation temporary")
+        "missing — the key still sorts by name and something has to "
+        "carry why")
+    assert "colsum.cpp:1091" in open(os.path.join(
+        os.path.dirname(SCREENS_DIR), "v3_projektstatus.md"),
+        encoding="utf-8").read(), (
+        "v3_projektstatus.md no longer carries the open item that "
+        "replaced the marking: Producing sorts by name until "
+        "TECHDATA::_buildings cost is extracted (colsum.cpp:1091)")
 
     assert _csort.HIGHLIGHT_PAD == 6, (
         f"HIGHLIGHT_PAD is {_csort.HIGHLIGHT_PAD}; the original leaves "

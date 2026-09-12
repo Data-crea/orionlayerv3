@@ -13,6 +13,23 @@ right and the header had gone stale** — resolved 10 September 2026
 by dating the header to the edit and giving this session its
 paragraph, below, so the two agree again.
 
+This session (12 September 2026), last: **the PRODUCING sort label is
+no longer dimmed.** All seven labels are drawn in one colour, and it is
+the original's own (196, 196, 196) — measured on its framebuffer, where
+all seven buttons are one field (colsum.cpp:267-273) and only the
+active one differs. The dim grey was a marker that had failed as a
+marker: Data read it as a wrong colour twice, and the note that
+explained it was never on the screen. The four markings go with it —
+the comment in `colonysort.render`, `layout.json`'s
+`sort._unavailable_deviation`, the DEVIATION bullet here, and the check
+that held the three together, which is REPLACED by a stronger one: the
+seven words are read back out of the render and must ink in the same
+colour, and in the original's. `colonyrows.SORT_UNAVAILABLE`, the
+name-sort fallback and `colonypick`'s refusal are untouched — only the
+drawing went. What replaces the marking is one line under open items:
+Producing sorts by name until `TECHDATA::_buildings` cost is extracted
+(colsum.cpp:1091).
+
 This session (12 September 2026), the held figure re-measured at
 **3440x1371** after a second report: **it is not reproducible there.**
 Live against the running game on the reference save (Slot 8), the held
@@ -374,26 +391,6 @@ demands — each says what the original does instead:**
   speaks — decision 33, and the original's own answer to one is a
   blocking text box (textbox.cpp:149) — but it is transient and
   `_render_info` takes the panel back on the next frame.
-- **DEVIATION — the greyed PRODUCING key.** HD dims a control the
-  original does not. All seven sort buttons are the same field there —
-  `Add_Multi_Button_Field_(x, 446, …, &_g_sort_index, 0..6, …)`,
-  colsum.cpp:267-273 — and it draws them alike: measured on its own
-  framebuffer, **every inactive label is (196, 196, 196), PRODUCING
-  included**, and only the active one differs at (196, 208, 252). HD
-  draws the keys in `colonyrows.SORT_UNAVAILABLE` in `nav_text_dim`
-  (104, 116, 142).
-  The STATE has been recorded since it was introduced, with its reason
-  — `TECHDATA::_buildings[].cost` is not extracted, so the key orders
-  buildings among themselves by name where `cmp_Prod_`
-  (colsum.cpp:1091) orders them by cost, and a control that is right
-  on one save and wrong on the next is worse than one that says it
-  cannot do the job. **What was missing until 9 September 2026 is that
-  the DRAWING of that state is ours**: the original says nothing, so
-  saying it is a deviation and not a transcription. It ends with the
-  cost-table extraction and its checker, not with a change of taste,
-  and the dimming goes with its three markings then. In
-  `colonysort.render`, `layout.json` under
-  `sort._unavailable_deviation`, here, and a check.
 - **DEVIATION — the HD frontend's typography.** Every label on this
   screen is drawn in CAPITALS, and the sidebar drops the colon the
   original's own string carries. Data's decision, 9 September 2026.
@@ -1873,10 +1870,12 @@ reads `TECHDATA::_buildings[].cost`, then breaks ties on
 `Selection_Name_` — a cost table and a name table both loaded at
 runtime from the player's own `techname.lbx` and neither shipped.
 That is the same absence that leaves the building column empty. The
-button is drawn DIMMED and still injects its click, because the
-original's list behind us sorts fine and the injection keeps the two
-screens agreeing; what it cannot do is reorder our rows. Falling back
-silently to the name would have looked like it worked.
+button is drawn LIKE THE OTHER SIX since 12 September 2026 — it was
+dimmed until then, which is the deviation Data ended — and it still
+injects its click, because the original's list behind us sorts fine
+and the injection keeps the two screens agreeing; what it cannot do is
+reorder our rows. `colonyrows.SORT_UNAVAILABLE` still carries the key
+and the reason, and `colonypick` still refuses a move made under it.
 
 **Ties keep the input order — 3 September 2026, and the tie-break
 that used to be here is gone.** Every key fell back to the planet
@@ -3062,6 +3061,10 @@ Everything else on the map:
   scale.
 - Popup overlays: system popup (25), build queue, colonisation (30).
 - Info panels; the influence overlay the original can draw.
+
+### Colony Summary
+- Producing sorts by name until `TECHDATA::_buildings` cost is
+  extracted (colsum.cpp:1091).
 
 ### Context help
 - **The colony summary has no help.json yet, and the original has a
