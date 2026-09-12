@@ -127,10 +127,38 @@ def name_holes_galaxy_map(holes, size=None, reference=None):
 #: which is the THIRD of the four, and the empire readouts the fourth.
 BAND_KEYS = ["planet_info", "planet_output", "galaxy_inset", "empire_stats"]
 
-#: The colony plate's four rows, by hole count. DERIVED from the key
-#: lists above so it cannot disagree with them: a header, the list,
-#: the lower band, and the sort row's seven slots plus RETURN.
+#: The colony plate's rows, by hole count, when `layout_reference.json`
+#: cannot be read: a header, the list, the lower band, and the sort
+#: row's seven slots plus RETURN. Derived from the key lists above so
+#: it cannot disagree with them.
 ROW_SHAPE = [1, 1, len(BAND_KEYS), len(SORT_BOX_KEYS) + 1]
+
+
+def row_shape(screen="colony_summary"):
+    """The row shape `layout_reference.json` itself has, or ROW_SHAPE.
+
+    **THE SHAPE IS A PROPERTY OF THE GEOMETRY, NOT A CONSTANT** —
+    12 September 2026. It was `[1, 1, 4, 8]` written out of the key
+    lists, which described the Stage-A3 layout and nothing else: on
+    the static-frame path the sidebar sits beside the list and RETURN
+    beside the lower band, so the rows are `[1, 2, 4, 7]` and a
+    constant rejected a frame that is perfectly well formed.
+
+    What the check is FOR survives intact, because the shape is still
+    compared: the plate's rows must match the rows the rectangles
+    describe. A RETURN dragged up into the lower band still changes
+    the plate's shape away from the reference's and still fails. What
+    stops being asserted is that the reference has one particular
+    shape, which was never the rule and was only ever true.
+    """
+    data, windows = frame_mask.load_reference(os.path.join(
+        os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+        "screens", screen, "layout_reference.json"))
+    for name in data.get("_windows_without_a_hole", ()):
+        windows.pop(name, None)
+    if not windows:
+        return list(ROW_SHAPE)
+    return [len(r) for r in _rows(list(windows.values()))]
 
 
 #: WHICH BOX NAMES EACH RULE CAN PRODUCE — the vocabulary, not a
@@ -179,6 +207,12 @@ def cutout_names(screen):
 #: plate that came out wrong, and the answer was previously nowhere.
 LAST_MATCH = None
 
+#: The holes the last overlap match left unclaimed, in reading order.
+#: A REPORT CHANNEL like `LAST_MATCH`: the static frame carries the
+#: pre-Stage-4 title cartouche and this screen draws no title, so one
+#: hole is spare by design and saying which is the whole point.
+SPARE_HOLES = []
+
 
 def _overlap(a, b):
     x = min(a[0] + a[2], b[0] + b[2]) - max(a[0], b[0])
@@ -198,7 +232,15 @@ def reference_windows(screen, size):
         "screens", screen, "layout_reference.json")
     if not os.path.isfile(path) or not size:
         return {}
-    _data, windows = frame_mask.load_reference(path)
+    data, windows = frame_mask.load_reference(path)
+    # A WINDOW MAY HAVE NO HOLE, and the file has to say so. The
+    # colony header is one: the frame it wears was drawn for a screen
+    # that had no column headings, so there is no band for them and
+    # the header is a strip of the LIST's hole. Declared rather than
+    # inferred — a window the matcher silently failed to place would
+    # look exactly like a frame that had lost a hole.
+    for name in data.get("_windows_without_a_hole", ()):
+        windows.pop(name, None)
     img_w, img_h = size
     sx, sy = img_w / REF_W, img_h / REF_H
     return {BOX_NAME.get(name, name):
@@ -234,16 +276,25 @@ def _match_by_overlap(holes, screen, size, want=None):
     called against THAT geometry" can, without a file on disk.
     """
     want = reference_windows(screen, size) if want is None else want
-    if len(want) != len(holes):
+    # **A FRAME MAY HAVE A HOLE NOTHING USES.** It was `len(want) !=
+    # len(holes) -> give up`, which is right for a plate GENERATED
+    # from the rectangles and wrong for artwork: the static frame
+    # carries the pre-Stage-4 title cartouche, and this screen has
+    # drawn no title since Stage 4 (`frame._no_title_note`). So every
+    # WINDOW must find a hole and the match must still be injective;
+    # a hole no window claims is reported, not refused. Fewer holes
+    # than windows is still a refusal — that is a frame that has lost
+    # one.
+    if len(want) > len(holes):
         return None
     names = sorted(want)
     best = {}
-    for hole in holes:
-        scored = sorted(names, key=lambda n: -_overlap(hole, want[n]))
-        if not _overlap(hole, want[scored[0]]):
+    for name in names:
+        scored = sorted(holes, key=lambda h: -_overlap(h, want[name]))
+        if not _overlap(scored[0], want[name]):
             return None
-        best[tuple(hole)] = scored[0]
-    if len(set(best.values())) != len(holes):
+        best[tuple(scored[0])] = name
+    if len(best) != len(want):
         return None
     # READING ORDER, BY ROW AND THEN BY X — and the row is `_rows`'
     # overlap grouping, not the raw y. The matcher has no order of its
@@ -259,47 +310,68 @@ def _match_by_overlap(holes, screen, size, want=None):
     for i, row in enumerate(_rows(holes)):
         for j, hole in enumerate(row):
             order[tuple(hole)] = (i, j)
+    global SPARE_HOLES
+    SPARE_HOLES = [list(h) for h in
+                   sorted((tuple(h) for h in holes if tuple(h) not in best),
+                          key=lambda h: order[h])]
     return {name: list(hole) for hole, name in
             sorted(best.items(), key=lambda kv: order[kv[0]])}
 
 
 def name_holes_colony_summary(holes, size=None, reference=None):
-    """The built plate's fourteen windows.
+    """The plate's windows, matched to `layout_reference.json`.
 
-    **THE ROW SHAPE IS A CHECK, NOT THE NAMING** — 12 September 2026.
-    It was both until the sort row grew to eight hand-placed slots.
-    Now the rows say the plate is structurally the colony screen —
-    a header, the list, four panels in one band, eight controls in
-    the sort row — and `_match_by_overlap` says which hole is which,
-    against the rectangles `layout_reference.json` types. So a slot
-    Data drags past its neighbour still gets its own name, and a
-    plate that has genuinely lost a window still fails here.
+    **THE MATCH IS THE CHECK, AND THE ROW SHAPE CONFIRMS IT** —
+    rewritten 12 September 2026 for the static frame. Order-and-count
+    named these holes until the sort row grew to seven hand-placed
+    slots, and a fixed row shape gated the naming until the screen
+    took a frame whose rows are not the plate's. Both were instances.
+    What is asserted now:
 
-    **REWRITTEN 7 September 2026 FOR THE STAGE A3 PLATE**, and again
-    on 12 September. The shipped frame had 14 holes: a title, a
-    right-hand sidebar, a right-hand RETURN, seven sort buttons and
-    three bottom panels. Stage A3's plate had 8: a header band, the
-    list, four panels in one lower band, ONE sort bar and RETURN.
-    This plate has 14 again and they are not the old 14 — nothing on
-    the right of the list, a header where the title was, and the
-    seven sort buttons back as slots on the bottom row beside
-    RETURN. `_split_common`, which exists to find a title and a
-    right column, applies to none of it and is not called.
+      every WINDOW finds a hole it overlaps, and no two windows find
+      the same one — a hole nothing claims is fine and is reported
+      (`SPARE_HOLES`), because this frame carries the pre-Stage-4
+      title cartouche and nothing has drawn a title since Stage 4
+
+      the holes that WERE claimed group into the same rows the
+      rectangles do — which is what still catches a window that has
+      drifted into a neighbouring band, the thing the shape gate was
+      written for
+
+    A failure to match is a hard stop and not a fallback: with a
+    reference on disk, holes that do not correspond to it mean the
+    plate and the geometry describe different screens, and naming
+    them by position would produce exactly the silent misnaming this
+    whole rule exists to prevent. The order fallback survives for the
+    case it was written for — no reference readable at all.
     """
     global LAST_MATCH
+    named = _match_by_overlap(holes, "colony_summary", size, reference)
+    if named is not None:
+        got = [len(r) for r in _rows(list(named.values()))]
+        want = row_shape()
+        if got != want:
+            raise SystemExit(
+                f"the claimed holes group into rows of {got} and "
+                f"layout_reference.json's own rectangles into {want} "
+                f"— a window has drifted into another band")
+        LAST_MATCH = (
+            f"overlap against layout_reference.json, rows {got}"
+            + (f", {len(SPARE_HOLES)} hole(s) claimed by nothing: "
+               f"{SPARE_HOLES}" if SPARE_HOLES else ", every hole claimed"))
+        return named
+    if reference is not None or reference_windows("colony_summary", size):
+        raise SystemExit(
+            f"{len(holes)} holes and none of the overlap matches is a "
+            f"clean one: every rectangle in layout_reference.json has "
+            f"to land on a hole of its own. Holes: "
+            f"{sorted(tuple(h) for h in holes)}")
     rows = _rows(holes)
     shape = [len(r) for r in rows]
     if shape != ROW_SHAPE:
         raise SystemExit(
-            f"expected rows of {ROW_SHAPE} holes (header, list, the "
-            f"lower band's {len(BAND_KEYS)}, the sort row's "
-            f"{len(SORT_BOX_KEYS) + 1}), found {shape}: {rows}")
-    named = _match_by_overlap(holes, "colony_summary", size, reference)
-    if named is not None:
-        LAST_MATCH = (
-            "overlap against layout_reference.json — a hand-placed "
-            "slot keeps its name whatever order it sits in")
-        return named
+            f"no layout_reference.json to match against and the holes "
+            f"group into {shape}, not {ROW_SHAPE}: {rows}")
     LAST_MATCH = (
         "row order, left to right — no usable layout_reference.json "
         "for this image size, so the sort slots are named by POSITION "

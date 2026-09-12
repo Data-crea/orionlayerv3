@@ -35,8 +35,8 @@ step on its own by shipping the file beside the master:
 | file | size | used at |
 |---|---:|---|
 | `<name>.png` | 28 x 28 | every step, scaled up |
-| `<name>@2x.png` | 56 x 56 | 1920x1080 |
-| `<name>@3x.png` | 84 x 84 | 2560x1440 |
+| `<name>@2x.png` | 56 x 56 | 1920x1080, 2560x1440 |
+| `<name>@3x.png` | 84 x 84 |  |
 | `<name>@4x.png` | 112 x 112 | 3840x2160 |
 
 For one figure at one step the order is

@@ -1,5 +1,6 @@
 {
   "_note": "THE COLONY MANAGEMENT SCREEN'S GEOMETRY, AND THE ONLY PLACE IT IS TYPED. Every rectangle is in the 1920x1080 reference space (core/layout.py). tools/frame_build.py builds the frame from this file plus the master's ring and texture; tools/frame_mask.py renders the windows; tools/frame_holes.py derives the cutout boxes back out of the built frame, and a smoke check asserts holes == mask == boxes.json at every resolution (decision 3). So a rectangle changes HERE and nowhere else, and everything downstream is generated - decision 1 and decision 40.",
+  "_geometry_source": "EVERY RECT ABOVE IS A HOLE OF screens/colony_summary/assets/frame.png, 12 September 2026 - Data's decision, the STATIC-FRAME path. The screen wears one fixed image, plain-scaled per resolution: no master, no frame_build, no nine-slice, no bevel, no rails. The file is Data's retouched copy of the pre-Stage-4 colony frame (~/orionlayer-fixtures/gimp/frame_1920_retouched_2026-09-10.png, 1672x941, 14 holes at alpha < 8 / 16 / 64 alike), and the rects are its holes mapped per axis with sx = 1920/1672 = 1.148325 and sy = 1080/941 = 1.147715 - the same whole-canvas stretch frame_holes.to_ref applies and screen._scale_frame draws with. THE MAPPING IS THE PRE-STAGE-4 HISTORY'S, read out of tools/frame_holes.py at 8788d55 and out of ac5b86f's own commit message, not chosen here: largest hole -> list; topmost -> title, and \"a header window appeared where the title hole was\" (ac5b86f), so title -> header; the two on the right -> sidebar and RETURN, which Stage 4 renamed sidebar -> empire_stats; the bottom row's seven -> the seven sort keys; the remaining three left to right -> output_panel, spare_panel, galaxy_inset, which Stage 4 renamed output_panel -> planet_output and spare_panel -> planet_info. NOTHING IS LEFT OVER: 14 holes, 14 windows. THE WORK ORDER EXPECTED 13 AND ONE SPARE - the history says otherwise and the tree is what decides. TWO PANELS TRADE SIDES AND THAT IS THE HISTORY DOING IT: Stage 4 moved spare_panel to the LEFT of its band when it became planet_info (layout.json, panels._note), so mapping the names back puts planet_output on the LEFT hole and planet_info on the middle one - the reverse of where they sat yesterday. The CONTENT follows its box, so the scan box's description and its production rows swap sides on screen. galaxy_inset IS THE ONE RECT THAT IS NOT ITS WHOLE HOLE, and the reason is transcribed: the third bottom hole is 447 x 197 ref px, aspect 2.269, and the inset's aspect is the original's own coverage to a thousandth - 128*(506000//128) / 91*(400000//91) = 1.265134, movebox.cpp:20-21, with the galaxy size cancelling. 248 x 196 is the largest pair INSIDE that hole whose aspect passes (1.26531, 0.00017 off; 249 x 197 is 0.00117 off and fails), centred horizontally, flush to the hole's top. The remaining 199 px of hole show background either side - visible, and Data's to place. THE NOTES BELOW STILL DESCRIBE THE SUPERSEDED STAGE-A3 GEOMETRY - the 638 px list, the four-panel lower band, the 239 x 189 inset, the master's struts as gap widths. They are kept because what they record is WHY a number was that number, and a derivation does not stop being true when the number is replaced. None of them describes a rect above.",
   "gaps": {
     "header_list": 18,
     "list_band": 28,
@@ -8,61 +9,61 @@
   },
   "_gaps_note": "EVERY GAP IS ONE OF THE MASTER'S OWN STRUTS, MAPPED BY ROLE - not a spacing chosen here. galaxy_map/assets/frame.png has seven distinct struts and every one carries a lit line on both edges with a moulded ridge between; tools/frame_build.py --profiles measures them. header_list 26 <- the master's header|map strut (31 master px, 26.7 ref): a title bar above the main content. list_band 28 <- map|slot (33 px, 28.4 ref): the main content above the row beneath it. band_sort 29 <- box|slot (34 px, 29.2 ref): a panel above a button row, which is what this gap is and what map|slot is not. in_row 38 <- the slot divider (47 px, 38.9 ref): two elements of ONE row side by side, which is the lower band and is also sort_bar|return_button. Rounded DOWN to the integer in every case, so a rail is never wider than the strut it was measured from. The cost is in doc and in v3_projektstatus.md: the list loses 47 px of height and planet_output 60 of width, and the figure columns lose nothing because the rails that grew are horizontal. A3-DEVIATION, 9 September 2026: header_list is 18 and band_sort 22, NOT the master's 26 and 29. The 15 ref px they give up are what the list needs to hold figure step 3 at 1440p once the figure origin became the original's 4*step below the band top rather than 1 px of plate clearance (colonytrack.figure_step). WHY THESE TWO AND NOT THE LOWER BAND: galaxy_inset's aspect is TRANSCRIBED to a thousandth (128*(506000//128) / 91*(400000//91), movebox.cpp:20-21) and a smoke check holds it there, so the box cannot lose height without losing width - 189 -> 174 forces 239 -> 220 and the drawn map 243x173 -> 220x156, which is 10 % smaller and moves AWAY from an inset that is already well under the original's own. The rails cost no drawn pixel at all. AND THE DEVIATION MOVES TOWARD THE ORIGINAL, WHICH IS WHY IT IS AFFORDABLE: the original's own header-to-list gap is ONE native px (header plates end at native y 32, the first list field is at 31*0 + 34, colsum.cpp:311) = about 3 ref, and its band-to-sort gap is four native px (scan box 354 + 88 = 442, sort buttons at 446, colsum.cpp:267-273) = 12 ref. Our 26 and 29 were both wider than the thing being transcribed; 18 and 22 are still wider. The struts they were measured from are unchanged in the master - what changed is that two of the seven are no longer used at full width, and that is the deviation being recorded rather than the strut table being edited.",
   "ring": {
-    "left": 107,
-    "right": 120,
-    "top": 18,
-    "bottom": 74
+    "left": 100,
+    "right": 103,
+    "top": 11,
+    "bottom": 70
   },
   "_ring_source": {
-    "file": "screens/galaxy_map/assets/frame.png",
+    "file": "screens/colony_summary/assets/frame.png",
     "tool": "threshold sweep, alpha < 8 / 16 / 64, bbox stable at all three",
-    "date": "2026-09-06",
-    "note": "THE FAMILY RING, FOUR VALUES, AND THE ASYMMETRY IS THE ARTWORK'S AND NOT AN ERROR. The master's metal is wide at the sides, thin at the top and medium at the bottom; a single number cannot describe it, which is why `bezel` is gone. Measured on the main-screen master because that is what this screen has to sit beside, and mapped to the reference space the same way the running screen maps it - the frame image is stretched over the whole reference area (screen._scale_frame), so each axis scales independently. A HAND-COPIED NUMBER GETS A CHECKER (decision 36): the smoke test re-measures that file with the same sweep and fails if the table and the artwork ever disagree. The shipped colony frame is NOT yet this ring - it measures 100/103/12/70 - and tools/frame_build.py is what makes it so."
+    "date": "2026-09-12",
+    "note": "THE RING IS THIS SCREEN'S OWN FRAME NOW, NOT THE GALAXY MASTER'S - 12 September 2026, the static-frame path. It was the main-screen master's 107/120/18/74, measured there \"because that is what this screen has to sit beside\", and that reason is gone with the master: the screen wears ONE fixed image, Data's retouched pre-Stage-4 frame, and the ring is what that image's own outermost holes leave. Measured with the same sweep and by the same definition, so the smoke test's re-measurement now agrees with the table instead of reporting a difference. THE 14 HOLES SPAN image x 87..1581, y 10..879 of 1672x941; mapped per axis over the whole reference area (screen._scale_frame) that is left 100, right 103, top 11, bottom 70. WHAT IS LOST: the family ring. The colony screen no longer wears the same border as the galaxy map, and nothing checks that it does - the suite reports both numbers on every run and stopped enforcing the pin on 11 September 2026 (decision 53), which is what made this affordable. WHAT IS KEPT: \"every window is inside the ring, per side\", which is the rule that says a hole is not a hole in the edge of the screen, and it is now asserted against the artwork the screen actually draws."
   },
   "header": [
-    107,
-    18,
-    1693,
-    48
+    100,
+    86,
+    1404,
+    32
   ],
   "list": [
-    107,
-    84,
-    1693,
-    649
+    100,
+    125,
+    1404,
+    576
   ],
   "list_columns": {
-    "name": 302,
-    "farmers": 342,
-    "workers": 360,
-    "scientists": 339,
-    "building": 323,
+    "name": 250,
+    "farmers": 283,
+    "workers": 297,
+    "scientists": 280,
+    "building": 267,
     "scroll": 27
   },
-  "_list_columns_note": "302 + 347*3 + 314 + 36 = 1693, the list's own width exactly - the columns ARE the list, with no slack to distribute. THE LIST'S WIDTH DID NOT CHANGE WHEN THE GAPS BECAME RAILS on 7 September 2026: rails are horizontal there, so they cost HEIGHT and not width, and the figure capacity is untouched. CAPACITY IS ASSERTED, NOT NOTED: a figure column must fit at least four unsqueezed figures, which is what the original's widest column (industry, reach 122, pitch 30) fits; 347 reference px fits five, at every resolution, because the column and the pitch scale together. THE BUILDING COLUMN IS DERIVED: the original prints the producing text with BILL::Squeeze_Print_Formatted_Paragraph_(0x200, y, 0x55, 0x16, ...) at colsum.cpp:621 - 85 px of a 640 px screen, 13.3 % - and 13.3 % of 1693 is 225. 314 is wider than the transcription requires; the surplus is the extra HD width that Data's Stage 1 decision sends to the column reservation rather than to wider figure spacing. See colonybuild.py for why the width is a RESERVATION and never a squeeze target. THE THREE JOB COLUMNS ARE UNEQUAL, AND THAT IS TRANSCRIBED, corrected 7 September 2026. They were 347 each by our own choice; COLSUM::Get_Selected_Pop_ (colsum.cpp:1006-1024) passes the column bounds as literals - left_x = 101/236/378 and right_x = that - 10 - so the original's spans are 135/142/134 native px with the WORKERS column the widest. Two independent sources: those literals, and the column separators measured on the live framebuffer of screen 20 at x 99/234/376/510, which agree to +1 px on all three. The ratio 135:142:134 over the unchanged 1041 px reservation gives 342/360/339, so name, building and scroll do not move and the list width is still 1693. CAPACITY IS RE-ASSERTED AT THE NARROWEST COLUMN (339), not at the old uniform 347 - the check is what allows this change, not the arithmetic. THE SCROLL COLUMN IS A TRANSCRIPTION NOW, 9 September 2026, and was the last unsourced number here. It was 36 = 1693 - 302 - 342 - 360 - 339 - 314, the leftover after the other five. The original states it twice and the two agree: the track is native x 621..626 (Add_Scroll_Field_(621, 40, 0, n, 0, n-10, 5, 271, ...) at colsum.cpp:278 counts it exclusively as 5, Draw_Bar_Indicator_'s Fill_(621, y1, 626, y2, 229) at colsum.cpp:759 counts the same rectangle inclusively as 6, corner dots at 621 and 626 at colsum.cpp:767-770), and the arrows start at native x 619 (Add_Button_Field_, colsum.cpp:263-264). The arrow anim's own width is animate::Get_Width_(pic) and lives in the player's LBX, so it is MEASURED and single-source like the No Farming size: native x 619..627 off the original's framebuffer in evidence/colony_summary_native_split.png, whose LEFT edge reproduces the source's 619 exactly, which is what anchors the right one. Nine native px is 27 reference px. THE NINE FREED PX GO TO BUILDING, 314 -> 323, because building is already the declared home of this screen's surplus width (see above) - a residue put somewhere that says why, rather than somewhere that had room. And there is no residue left to distribute at all: since 9 September the six columns are fractions of the list_area cutout (colonytrack.columns), so they tile it exactly at any window size by construction rather than by the last column absorbing a mismatch.",
+  "_list_columns_note": "RE-DERIVED FOR THE STATIC FRAME, 12 September 2026 - the list hole is 1404 ref px wide where the Stage-A3 cutout was 1693, so every width below is new and the note that follows explains where each one comes from. THE DERIVATION IS UNCHANGED AND IS THE POINT: 250 + 283 + 297 + 280 + 267 + 27 = 1404, the list's own width exactly, with no slack to distribute. SCROLL IS ABSOLUTE AND COMES OFF THE TOP: 27, because the original states it twice and the two agree - the track is native x 621..626 (Add_Scroll_Field_ at colsum.cpp:278 counts it exclusively as 5, Draw_Bar_Indicator_'s Fill_ at colsum.cpp:759 counts the same rectangle inclusively as 6) and the arrows start at native x 619 (Add_Button_Field_, colsum.cpp:263-264), measured to 619..627 off the original's framebuffer. Nine native px is 27 reference, and it is a WIDTH and not a share: scaling it with the rest put it at 22 the first time the list got narrower, which is a transcription quietly becoming a fraction. THE OTHER FIVE SPLIT WHAT IS LEFT, 1377, IN THE PROPORTIONS THEY HAD: name 302/1666, the three jobs 1041/1666, building 323/1666 -> 250, 860, 267. THE THREE JOBS THEN SPLIT THEIR 860 BY THE ORIGINAL'S OWN RATIO, 135 : 142 : 134 with WORKERS the widest (COLSUM::Get_Selected_Pop_ passes the column bounds as literals at colsum.cpp:1006-1024, left_x = 101/236/378 and right_x = that - 10) -> 283 / 297 / 280, each inside one per cent of the ratio, which is what a smoke check holds them to. WHAT IS LOST: 289 ref px of list width, 17 %. CAPACITY IS RE-ASSERTED AND STILL HOLDS - the narrowest job column (280) fits four unsqueezed figures at every shipped resolution, which is what the original's widest column fits (industry, reach 122 at pitch 30). It is now EXACTLY four at 1920x1080 where it was five, so this is the number to watch if the list gets narrower again. THE ARITHMETIC BELOW IS THE STAGE-A3 ONE and every source in it still stands; only the totals changed. 302 + 347*3 + 314 + 36 = 1693, the list's own width exactly - the columns ARE the list, with no slack to distribute. THE LIST'S WIDTH DID NOT CHANGE WHEN THE GAPS BECAME RAILS on 7 September 2026: rails are horizontal there, so they cost HEIGHT and not width, and the figure capacity is untouched. CAPACITY IS ASSERTED, NOT NOTED: a figure column must fit at least four unsqueezed figures, which is what the original's widest column (industry, reach 122, pitch 30) fits; 347 reference px fits five, at every resolution, because the column and the pitch scale together. THE BUILDING COLUMN IS DERIVED: the original prints the producing text with BILL::Squeeze_Print_Formatted_Paragraph_(0x200, y, 0x55, 0x16, ...) at colsum.cpp:621 - 85 px of a 640 px screen, 13.3 % - and 13.3 % of 1693 is 225. 314 is wider than the transcription requires; the surplus is the extra HD width that Data's Stage 1 decision sends to the column reservation rather than to wider figure spacing. See colonybuild.py for why the width is a RESERVATION and never a squeeze target. THE THREE JOB COLUMNS ARE UNEQUAL, AND THAT IS TRANSCRIBED, corrected 7 September 2026. They were 347 each by our own choice; COLSUM::Get_Selected_Pop_ (colsum.cpp:1006-1024) passes the column bounds as literals - left_x = 101/236/378 and right_x = that - 10 - so the original's spans are 135/142/134 native px with the WORKERS column the widest. Two independent sources: those literals, and the column separators measured on the live framebuffer of screen 20 at x 99/234/376/510, which agree to +1 px on all three. The ratio 135:142:134 over the unchanged 1041 px reservation gives 342/360/339, so name, building and scroll do not move and the list width is still 1693. CAPACITY IS RE-ASSERTED AT THE NARROWEST COLUMN (339), not at the old uniform 347 - the check is what allows this change, not the arithmetic. THE SCROLL COLUMN IS A TRANSCRIPTION NOW, 9 September 2026, and was the last unsourced number here. It was 36 = 1693 - 302 - 342 - 360 - 339 - 314, the leftover after the other five. The original states it twice and the two agree: the track is native x 621..626 (Add_Scroll_Field_(621, 40, 0, n, 0, n-10, 5, 271, ...) at colsum.cpp:278 counts it exclusively as 5, Draw_Bar_Indicator_'s Fill_(621, y1, 626, y2, 229) at colsum.cpp:759 counts the same rectangle inclusively as 6, corner dots at 621 and 626 at colsum.cpp:767-770), and the arrows start at native x 619 (Add_Button_Field_, colsum.cpp:263-264). The arrow anim's own width is animate::Get_Width_(pic) and lives in the player's LBX, so it is MEASURED and single-source like the No Farming size: native x 619..627 off the original's framebuffer in evidence/colony_summary_native_split.png, whose LEFT edge reproduces the source's 619 exactly, which is what anchors the right one. Nine native px is 27 reference px. THE NINE FREED PX GO TO BUILDING, 314 -> 323, because building is already the declared home of this screen's surplus width (see above) - a residue put somewhere that says why, rather than somewhere that had room. And there is no residue left to distribute at all: since 9 September the six columns are fractions of the list_area cutout (colonytrack.columns), so they tile it exactly at any window size by construction rather than by the last column absorbing a mismatch.",
   "planet_info": [
-    107,
-    761,
-    320,
-    191
+    581,
+    724,
+    457,
+    197
   ],
   "planet_output": [
-    465,
-    761,
-    700,
-    191
+    100,
+    724,
+    460,
+    197
   ],
   "galaxy_inset": [
-    1203,
-    762,
-    239,
-    189
+    1157,
+    724,
+    248,
+    196
   ],
   "empire_stats": [
-    1480,
-    761,
-    320,
-    191
+    1534,
+    87,
+    281,
+    659
   ],
   "_lower_band_note": "Four boxes, flush with the list's own edges at 107 and 1800, with gaps of 38 - THE MASTER'S OWN SLOT DIVIDER, 47 master px, the strut it puts between two buttons of one row. planet_output absorbs what the arithmetic leaves, because it is the only width in the band not fixed by something else: the two 320s are a pair and 253 is locked by the inset's aspect. 107 + 320 + 38 + 686 + 38 + 253 + 38 + 320 = 1800. THE INSET IS NO LONGER SHORTER THAN ITS NEIGHBOURS - 8 September 2026. It was 20 px shorter and centred (725 + 10 = 735) on the reading that its height is fixed by its own aspect; at the band's new 191 the aspect is not what binds. colonyinset.map_rect fits the map into 128:91 isotropically and takes min(w/128, h/91), and with the box 253 wide the WIDTH is the smaller term at every resolution - so the map is the same size at 200 and at 191 and the box may simply fill its band like the other three. It starts to shrink below 183.",
   "_galaxy_inset_note": "253 x 200 IS DERIVED AND CONFIRMED - doc/colony_inset_geometry.md Part 3. The original's inset covers 50.6*M x 40*M world units, whose aspect is 1.2651 at EVERY galaxy size because both divisors are constants and M cancels (movebox.cpp:20-21). 253/200 = 1.2650 against that, so the crop fills the box with no letterbox at any size INCLUDING orion2re's Maximum - the earlier expectation that Maximum letterboxes is WITHDRAWN, and it only did so if the crop were the galaxy rather than the original's coverage. The scale that follows is exactly 5/M reference px per world unit. At 3840x2160 the box is 506 x 400 device px, which is the small galaxy's own world extent at 1:1. DEVIATION - THE BOX IS 239 x 189 SINCE 8 September 2026, WAS 253 x 200, AND ONE STATED PROPERTY IS GONE WITH IT. The list grew 29 ref px so that 2560x1440 could take figure step 3 (see _list_height_note), the 29 came out of the lower band's height, and the band's height is what fixes this box. THE ASPECT RULE SURVIVES and is what the check still asserts: 239/189 = 1.26455 against the coverage's 1.265134, 0.00058 apart, against 253/200's 0.00013 - both inside the thousandth. 239 x 189 is the LARGEST pair under 191 that passes; 229 x 181 is the most exact and was rejected for being smaller still. WHAT IS LOST: at 3840x2160 the box was 506 x 400 device px, which is the small galaxy's own world extent at 1:1, and a smoke check pinned that. It is now 478 x 378 and the property is gone. It was a CONSEQUENCE of the box's size and never a requirement of the drawing - colonyinset.map_rect fits 128:91 isotropically and takes min(w/128, h/91), which no 1:1 relation enters - so the check now asserts the rule it was an instance of and v3_projektstatus.md records the loss. THE DRAWN MAP SHRINKS 5.5 %: 257 x 183 -> 243 x 173 at 1080p and 514 x 365 -> 486 x 346 at 2160p. Width still binds at every resolution, so the letterbox stays on the vertical axis and gets smaller. planet_output absorbs the 14 px this box gave up, as _lower_band_note says it always does.",
@@ -70,43 +71,43 @@
     162,
     961,
     198,
-    45
+    49
   ],
   "sort_population": [
     378,
     961,
     193,
-    45
+    49
   ],
   "sort_food": [
     588,
     962,
     194,
-    44
+    48
   ],
   "sort_industry": [
     798,
     961,
     196,
-    45
+    49
   ],
   "sort_science": [
     1011,
     962,
     195,
-    44
+    48
   ],
   "sort_producing": [
     1223,
     962,
     196,
-    44
+    48
   ],
   "sort_bc": [
     1438,
     962,
-    57,
-    44
+    195,
+    48
   ],
   "_sort_slots": {
     "sort_name": {
@@ -189,15 +190,19 @@
   },
   "_sort_slots_note": "SEVEN BOXES, ONE PER SORT KEY - DEVIATION, 12 September 2026, and it reverses \"THE BAR IS ONE HOLE NOW\" (Stage A3, 7 September 2026). Stage A3 cut ONE sort_bar because the original has one recessed strip with seven words laid along it, and put the division in colonysort.layout. THE ARTWORK HAS SLOTS: Data places each key in its own cut-out, so the division goes back into the geometry and colonysort reads a rect per key instead of distributing along a bar. WHAT IT DEVIATES FROM IS UNCHANGED AND IS STILL THE SOURCE: fields::Add_Multi_Button_Field_(x, 446, ...) at colsum.cpp:267-273, seven calls at native x 89 / 140 / 219 / 262 / 326 / 393 / 480, the strip spanning native y 446..469 (live FIELD_LIST, orion2re 1.60, screen 20, fields 16-22). `native_x` above is that call's own x and is the checkable half; `key` and `label` are layout.json's own and a smoke check holds the two files to each other so this is a POINTER and not a second copy (decision 36). The labels are the original's mixed-case spelling - the capitals on screen are colonysort.display's marked typography deviation and must never be written into the data. INITIAL VALUES ARE MEASURED, NOT INVENTED, and they do not come from the galaxy master: that file's bottom edge carries SIX slot holes, not seven (x 143 / 444 / 752 / 1051 / 1365 / 1666 at y 1126 of 2322x1256, stable at alpha < 8 / 16 / 64 / 128), because they are the main screen's six nav buttons. The seven come from the SUPERSEDED COLONY FRAME, ~/orionlayer-fixtures/gimp/frame_1920_retouched_2026-09-10.png at 1672x941, whose bottom row is the seven sort buttons this order restores - `source_hole` is each one's own rect in that image, mapped with sx = 1920/1672, sy = 1080/941, which is the whole-canvas stretch frame_holes.to_ref applies. Data's own artwork is the only seven-slot measurement that exists, and it is not in the tree and never will be, so the mapped rects are typed here and the image is cited. SORT_BC IS SHRUNK AND RETURN DID NOT MOVE: mapped at its source width the box is [1438, 962, 195, 48] and runs to x 1633, 121 px INTO return_button at 1512 - the old frame carried RETURN in its right-hand column, not on this row. The order is to shrink the slot and not RETURN, so the width is 57: its right edge sits 17 px short of RETURN, 17 being the median of the six gaps the source's own slots leave (18 / 17 / 16 / 17 / 17 / 19). THE ROW IS 4 PX SHORTER THAN ITS SOURCE, AND THE RING IS WHY. Mapped as measured the slots are 49 and 48 ref px high and end at y 1010; `ring.bottom` 74 puts the metal's inner edge at 1006, and \"every window is inside the ring, per side\" is one of the rules the suite KEPT on 11 September 2026 when it let the chosen ones go - a hole outside the metal is not a layout preference, it is a hole in the edge of the screen. The source frame's own bottom band measures 61 px of 941, which is 70 ref, so its row sat 4 px lower than this ring allows. The 4 px come off the BOTTOM and the top edge stays where the artwork put it, so the heights are 45 and 44: the same resolution the order gives for the RETURN overlap - shrink the slot, move nothing that is fixed. The band-to-slot gap is 9 ref px as a result, against the 22 `gaps.band_sort` documents; that gap is reported by the suite and ruled on by nobody since 11 September 2026, and it is Data's when he places the boxes.",
   "return_button": [
-    1512,
-    974,
-    288,
-    32
+    1534,
+    767,
+    282,
+    155
   ],
   "_resolutions": [
     "1920x1080",
     "2560x1440",
     "3840x2160"
   ],
-  "_list_height_note": "634, AND IT IS DERIVED FROM THE SPRITE STEP - 8 September 2026, was 605. The list holds ten rows at every resolution (COLSUM::_list_col[10], colsum.cpp:348), so the row band is the window divided by ten and the figure step is the largest whose 28*step fits that band. At 605 the band was 81 device px at 2560x1440 and step 3 needs 84, so 1440p fell to step 2 and its figure columns filled 59 % of what the original's fill - against 79 % at the other two. THE CLEARANCE IS THE +8 ON TOP OF THE +21: the cell plate is a 1 px line and 46 of the 54 figure masters carry ink on canvas row 0 (measured over the whole set), so a figure blitted at the band's top would paint over the plate's top line. The bottom line needs nothing - every master has at least 3 transparent rows below its ink, the same measurement the row clip already rests on. So the rule is band >= 28*step + 1, and the smallest list that yields steps 2/3/4 under it is 638 cutout px = 634 typed plus the 2 px BLEED per side. Bands 63 / 85 / 127 with 6 / 0 / 14 px spare below the figure. THE 29 PX CAME OUT OF THE LOWER BAND'S HEIGHT and not out of the list_band rail, which stays at the master's own 28 (see _gaps_note): the four band boxes go from y 725 h 220 to y 754 h 191. WHAT THAT COST, MEASURED BY RENDERING AT ALL THREE RESOLUTIONS RATHER THAN BY ARITHMETIC ON BOX HEIGHTS: nothing. The sidebar still draws its six rows with no ink on the box edge and no label touching its value; planet_output still draws five; the description still wraps to five lines and uses 138 of 260 px at 1440p. AND THE GALAXY INSET DOES NOT MOVE AT ALL: colonyinset.map_rect fits 128:91 isotropically and WIDTH binds, so the drawn map is 257x183 / 342x243 / 514x365 at both heights and only the vertical margin shrinks, 21 -> 12 px at 1080p. It would start shrinking below a 183 px cutout."
+  "_list_height_note": "634, AND IT IS DERIVED FROM THE SPRITE STEP - 8 September 2026, was 605. The list holds ten rows at every resolution (COLSUM::_list_col[10], colsum.cpp:348), so the row band is the window divided by ten and the figure step is the largest whose 28*step fits that band. At 605 the band was 81 device px at 2560x1440 and step 3 needs 84, so 1440p fell to step 2 and its figure columns filled 59 % of what the original's fill - against 79 % at the other two. THE CLEARANCE IS THE +8 ON TOP OF THE +21: the cell plate is a 1 px line and 46 of the 54 figure masters carry ink on canvas row 0 (measured over the whole set), so a figure blitted at the band's top would paint over the plate's top line. The bottom line needs nothing - every master has at least 3 transparent rows below its ink, the same measurement the row clip already rests on. So the rule is band >= 28*step + 1, and the smallest list that yields steps 2/3/4 under it is 638 cutout px = 634 typed plus the 2 px BLEED per side. Bands 63 / 85 / 127 with 6 / 0 / 14 px spare below the figure. THE 29 PX CAME OUT OF THE LOWER BAND'S HEIGHT and not out of the list_band rail, which stays at the master's own 28 (see _gaps_note): the four band boxes go from y 725 h 220 to y 754 h 191. WHAT THAT COST, MEASURED BY RENDERING AT ALL THREE RESOLUTIONS RATHER THAN BY ARITHMETIC ON BOX HEIGHTS: nothing. The sidebar still draws its six rows with no ink on the box edge and no label touching its value; planet_output still draws five; the description still wraps to five lines and uses 138 of 260 px at 1440p. AND THE GALAXY INSET DOES NOT MOVE AT ALL: colonyinset.map_rect fits 128:91 isotropically and WIDTH binds, so the drawn map is 257x183 / 342x243 / 514x365 at both heights and only the vertical margin shrinks, 21 -> 12 px at 1080p. It would start shrinking below a 183 px cutout.",
+  "_windows_without_a_hole": [
+    "header"
+  ],
+  "_windows_without_a_hole_note": "THE HEADER HAS NO HOLE IN THIS FRAME, AND THE HISTORY SAYS WHY: there was no header window before Stage 4 and no colonyheader.py either - the column headings did not exist, so the frame that was drawn for that screen has no band for them. tools/frame_holes.py at 8788d55 names this file's 14 holes list_area / title / sidebar / return / seven sort / output_panel / spare_panel / galaxy_inset, and `title` is the one left over: Stage 4's own commit message (ac5b86f) says \"a header window appeared where the title hole was\", which is a replacement in the LAYOUT and not an inheritance of the rect - the title cartouche is 443 ref px wide and the headings span the list's 1404. WHERE THE HEADINGS ACTUALLY GO: the top band of the LIST hole, which is where the original puts them too - above the rows and inside the same recess. Measured rather than argued: with the header over the top metal instead, the suite's class-A checker counts 1855 glyph px under opaque frame alpha at 1920x1080 and 6606 at 3840x2160 (NAME, FARMERS, WORKERS and BUILDING; SCIENTISTS happens to fall inside the cartouche), and that is a zero-tolerance rule. WHAT IT COSTS: the list gives up 39 of its 615 ref px, and 39 is DERIVED and not chosen - it is the most the header can take before the row band falls below 58 device px at 1920x1080, which is what colonytrack.figure_step needs for sprite step 2 (4 + 28 - 3 = 29 master rows per step, band = list box height // 10). At 40 the band is 57, step 1, and the figures drop to the masters' own 28 px. THE HEADER IS 32 AND THE GAP BELOW IT IS 7: header 86..118, list 125..701. The static frame does not need it - both sit inside the one list hole either way - but tools/frame_mask.py pastes rectangles, so two that touch become ONE blob and the generated plate would cut a single hole where the reference types two. That path is still in the tree and still checked. ONE PIXEL IS NOT ENOUGH EITHER: frame_build lays a BEVEL_REF band of 3 ref px inside every window edge, so two windows 1 px apart overwrite each other's bevels and the suite reads the header's bottom edge at 54 against the other thirteen's 81. Seven is 2*3 + 1, the narrowest strut that can carry both. It costs the header 7 of its 39 and the list nothing, because the list's height is what the figure step depends on. 1440p keeps figure step 2 rather than recovering the 3 it lost when the list hole itself got shorter - the 638 box px step 3 needs is beyond this hole either way, so the header is not what took it. THE TITLE HOLE IS LEFT OVER AND IS DRAWN THROUGH: nothing is placed in it, frame.title_rect is absent and frame._no_title_note says why, so it shows the background. Data's to fill or to retouch away."
 }

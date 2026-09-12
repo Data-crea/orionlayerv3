@@ -195,13 +195,21 @@ NATIVE_LABEL_CAP = 10
 #: on `orionlayer-fixtures/evidence/colony_summary_native_split.png`
 #: (1:1 native, row pitch 31 confirmed on it).
 #:
-#: 10 of a 31 px row is 20.3 of this screen's **63 reference px band**
+#: 10 of a 31 px row is 18.4 of this screen's **57 reference px band**
 #: — the band is the list window divided by `list.row_count` since
 #: 8 September 2026, not a tuned `row_height` — and Aldrich's cap is
 #: 0.70 of its nominal size (measured by rendering, decision 30), so
-#: 20.3 / 0.70 = 29 -> **28**, whose cap renders exactly 20 against
-#: the wanted 20.3. 29 renders 20 as well and 28 is the smaller of
-#: the two. It was 26 against the old 58 px row.
+#: 18.4 / 0.70 = 26.3 -> **26**, whose cap renders 18 against the
+#: wanted 18.4. 25 renders 18 as well and 26 is the larger of the
+#: two, which is the side to err on for a label that has to read.
+#:
+#: **RE-DERIVED 12 September 2026, and the arithmetic is the one that
+#: matters rather than the number.** It was 28 against a 63 px band;
+#: the static frame's list hole is shorter, the band with it, and the
+#: measurement follows the band by construction. It was 26 once
+#: before, against the old 58 px row, which is the same size arrived
+#: at from the same proportion — the value tracks the list and always
+#: has.
 #: `layout.json list.no_farming_font` may override it.
 #:
 #: **THE ONE THING THIS DOES NOT REPRODUCE, stated rather than
@@ -211,7 +219,7 @@ NATIVE_LABEL_CAP = 10
 #: the font — is 1.87x its native row. Three magnifications live on
 #: this screen (see `zoomtables.CLUSTER_FIGURE_OFFSET`), and this
 #: value is anchored on the one the label is made of.
-NO_FARM_FONT_REF = 28
+NO_FARM_FONT_REF = 26
 #: The "n not shown" line. Deliberately NOT `ROW_NAME`: it is not a
 #: colony and must not read as one, and the name-overflow check scans
 #: for row-name ink outside the name column.

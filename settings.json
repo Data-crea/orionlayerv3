@@ -15,7 +15,7 @@
     "auto_start": false
   },
   "render_mode": "hd",
-  "frame_preview": true,
+  "frame_preview": false,
   "colony_plateless": false,
   "active_mods": [],
   "language": "en",

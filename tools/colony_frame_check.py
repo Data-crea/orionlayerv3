@@ -107,6 +107,7 @@ def read(path, forced=None):
     one this screen can use.
     """
     arr = np.array(Image.open(path).convert("RGBA"))
+    size = (arr.shape[1], arr.shape[0])
     tried = []
     for how in ([forced] if forced else CONVENTIONS):
         mask = hole_mask(arr, how)
@@ -115,10 +116,22 @@ def read(path, forced=None):
             continue
         holes = find(mask)
         rows = frame_holes._rows(holes)
-        shape = [len(r) for r in rows]
-        tried.append((how, f"{len(holes)} holes, rows {shape}"))
-        if shape == frame_holes.ROW_SHAPE or forced:
+        note = f"{len(holes)} holes, rows {[len(r) for r in rows]}"
+        # **SCORED BY WHETHER THE NAMER ACCEPTS IT**, which is what
+        # the docstring always claimed and what this stopped doing
+        # when the namer began matching against `layout_reference
+        # .json`. A row shape compared here was a second, weaker copy
+        # of the namer's own gate, and the two parted the first time a
+        # window had no hole of its own: the shape of ALL the holes is
+        # not the shape of the holes a RECTANGLE claims.
+        try:
+            frame_holes.name_holes(holes, "colony_summary", size)
+            tried.append((how, note))
             return arr, how, holes, rows, tried
+        except SystemExit as why:
+            tried.append((how, f"{note} — {why}"))
+            if forced:
+                return arr, how, holes, rows, tried
     return arr, None, [], [], tried
 
 
@@ -128,26 +141,30 @@ def rule(name, ok_, detail):
 
 
 def check_rows(rows, holes, size):
-    """The naming rule: four rows of 1 / 1 / 4 / 8, then the namer.
+    """Name the holes, or say why they cannot be named.
 
-    **THE SHAPE IS THE RULE AND THE ORDER IS NOT** — 12 September
-    2026, when the sort row went from two holes to eight. The row
-    counts still say the file is structurally the colony screen, and
-    a RETURN that has drifted up into the lower band still fails
-    here. WHICH hole is which is `frame_holes.name_holes`'s answer
-    now, matched against `layout_reference.json` by overlap, so the
-    two slots Data swaps in GIMP come back named correctly instead of
-    quietly trading keys. The tool prints which way the match went.
+    **THE MATCH IS THE RULE AND THE ROW SHAPE IS NOT** — 12 September
+    2026. Order named these holes until the sort row grew to seven
+    hand-placed slots; a fixed row shape gated the naming until the
+    screen took a frame whose rows are not the plate's. What is left
+    is the thing that was always meant: every rectangle in
+    `layout_reference.json` finds a hole of its own, no two find the
+    same one, and the claimed holes group into the rows the
+    rectangles do — which is what still catches a window that has
+    drifted into a neighbouring band. `frame_holes` owns all of it;
+    this prints the answer and which way it went.
     """
     shape = [len(r) for r in rows]
-    want = frame_holes.ROW_SHAPE
-    bad = rule(f"four rows {'-'.join(str(v) for v in want)}",
-               shape == want, f"found {shape}")
-    if shape != want:
+    try:
+        names = frame_holes.name_holes(holes, "colony_summary", size)
+    except SystemExit as why:
+        bad = rule("every rectangle lands on a hole of its own", False,
+                   str(why))
         for i, r in enumerate(rows):
             print(f"          row {i}: {r}")
         return {}, bad
-    names = frame_holes.name_holes(holes, "colony_summary", size)
+    bad = rule("every rectangle lands on a hole of its own", True,
+               f"{len(names)} named, holes in rows {shape}")
     print(f"          matched by {frame_holes.LAST_MATCH}")
     for key, r in names.items():
         print(f"          {key:14s} {tuple(r)}")
@@ -301,11 +318,10 @@ def main():
     for name, why in tried:
         print(f"    {name:6s} {why}")
     if how is None:
-        print(f"\n  No reading gives four rows of "
-              f"{'/'.join(str(v) for v in frame_holes.ROW_SHAPE)}."
-              " Nothing below "
-              "can be measured.\n  Force one with --holes to see what it "
-              "does find.")
+        print("\n  No reading of this file lets every rectangle in "
+              "layout_reference.json\n  land on a hole of its own. "
+              "Nothing below can be measured.\n  Force one with "
+              "--holes to see what it does find.")
         return 1
     print(f"  convention: {how}\n")
 

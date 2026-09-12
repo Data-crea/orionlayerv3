@@ -13,6 +13,18 @@ right and the header had gone stale** — resolved 10 September 2026
 by dating the header to the edit and giving this session its
 paragraph, below, so the two agree again.
 
+This session (12 September 2026), last: **the colony screen wears one
+fixed image** — Data's decision, and it is the path that ships.
+`screens/colony_summary/assets/frame.png` is Data's retouched copy of
+the pre-Stage-4 frame, 1672x941, plain-scaled per resolution: no
+master, no `frame_build`, no nine-slice, no bevel, no rails. Its 14
+holes were mapped to the 13 windows by the PRE-STAGE-4 naming rule read
+out of the history, the title cartouche is left over, and the header —
+which had no window at all before Stage 4 — is a strip of the list's
+hole. `frame_preview` ships off; the plate and the plateless prototype
+are both still here and both still green. 121 -> 122. See "The colony
+screen wears one fixed image" below.
+
 This session (12 September 2026), later: **the colony screen can be
 drawn with NO frame artwork at all** — Data's decision, PHASE A, a
 prototype and nothing is deleted. `settings.colony_plateless` turns
@@ -673,7 +685,7 @@ files under `doc/` and are only summarised here.
 | | |
 |---|---|
 | Python | 32,960 lines across 111 modules — `find . -name '*.py'`, `__pycache__` excluded, the smoke test's 6,400 included. The previous figure here (21,642 across 94) was carried from an unstated method and could not be reproduced |
-| Smoke test | `python tools/smoke_test.py` — **121 checks**, headless |
+| Smoke test | `python tools/smoke_test.py` — **122 checks**, headless |
 | Assets | 170 MB (select_race 68, galaxy_map 51, shared 23, new_game 21, colony_summary 1) |
 | Screens in HD | 7 of ~20–22 (colony summary draws list, sidebar, scan box and galaxy inset, and MOVES POPS — the first HD gesture that drives the game) |
 | Setup from clone | `python tools/setup.py` (deps via the system package manager) |
@@ -812,7 +824,7 @@ to stay uncomfortable to extend.
 │   ├── colony_summary/                ID 20, frame, list, sidebar,
 │   │   │                              scan box, galaxy inset, and
 │   │   │                              the population move
-│   │   ├── screen.py             298  the seam only: boxes, wording,
+│   │   ├── screen.py             295  the seam only: boxes, wording,
 │   │   │                              client; everything else is a
 │   │   │                              module beside it
 │   │   ├── colonyrows.py              the numbers per colony
@@ -837,10 +849,11 @@ to stay uncomfortable to extend.
 │   │   ├── colonysend.py              the two clicks on the wire,
 │   │   │                              each confirmed by its effect
 │   │   ├── colonyframe.py             WHICH frame image, if any
-│   │   ├── colonyplates.py            the screen with NO artwork:
-│   │   │                              every box drawn from
-│   │   │                              layout_reference.json, fill /
-│   │   │                              rim / lit line (PHASE A)
+│   │   ├── colonyplates.py         84  what a window IS: the rule,
+│   │   │                              the rects derived at startup,
+│   │   │                              the fills, and the drawn
+│   │   │                              fill / rim / lit line when
+│   │   │                              there is no artwork at all
 │   │   ├── layout.json                frame, sort/return native
 │   │   │                              click points, empire rows,
 │   │   │                              the move's own wording
@@ -925,19 +938,19 @@ to stay uncomfortable to extend.
     ├── zoom_check.py             153  Zoom ladder against a live map
     ├── struct_probe.py           144  Live offset verification
     ├── make_sidebar_icons.py     129  Cut the five sidebar icons
-    ├── frame_holes.py            191  Boxes from frame cutouts, one
+    ├── frame_holes.py            220  Boxes from frame cutouts, one
     │                                  naming rule per screen; the
     │                                  colony rule matches holes to
     │                                  layout_reference.json by
     │                                  OVERLAP, never by order
-    ├── colony_frame_check.py     201  Read-only: holds a colony
+    ├── colony_frame_check.py     208  Read-only: holds a colony
     │                                  frame PNG against the rules
     │                                  that survived decision 53,
     │                                  where the artwork actually is
     ├── gimp_fixtures.py          152  The layer mask and the named
     │                                  guide Data cuts against, into
     │                                  ~/orionlayer-fixtures/gimp/
-    ├── boxes_from_reference.py    85  layout_reference.json + BLEED
+    ├── boxes_from_reference.py   139  layout_reference.json + BLEED
     │                                  -> boxes.json, with no artwork
     │                                  on the path. --check asserts
     │                                  the file IS that derivation
@@ -3706,13 +3719,21 @@ WORKERS the widest. **What the original states is that RATIO and not
 a width** — HD's job columns are 2.53x their native ones by Data's
 Stage 1 decision, so the absolute number is ours. Today's boxes:
 
+**RE-SEATED 12 September 2026 for the static frame's narrower list** —
+1404 ref px where the Stage-A3 cutout was 1693, so every width below
+is new. The DERIVATION did not change and neither did a single source:
+the scroll column keeps its transcribed 27 off the top, the other five
+split what is left in the proportions they had, and the three job
+columns split their share by the original's own ratio. What changed is
+one number upstream of all of them.
+
 | column | ref width | against the transcription |
 |---|---|---|
-| `col_name` | 303 | no native share — DEVIATION, reason in `_list_columns_note` |
-| `col_farmers` | 343 | −0.1 % of the 135 share |
-| `col_workers` | 361 | +0.1 % of the 142 share |
-| `col_scientists` | 340 | 0.0 % of the 134 share |
-| `col_building` | 323 | wider than the 13.3 % the original requires — DEVIATION, reason recorded; **+9 on 9 September 2026**, the px `col_scroll` gave up when its width became a transcription, sent here because this column is already the declared home of this screen's surplus |
+| `col_name` | 251 | no native share — DEVIATION, reason in `_list_columns_note` |
+| `col_farmers` | 284 | +0.2 % of the 135 share |
+| `col_workers` | 297 | −0.0 % of the 142 share |
+| `col_scientists` | 281 | +0.1 % of the 134 share |
+| `col_building` | 268 | wider than the 13.3 % the original requires — DEVIATION, reason recorded; **+9 on 9 September 2026**, the px `col_scroll` gave up when its width became a transcription, sent here because this column is already the declared home of this screen's surplus |
 | `col_scroll` | 27 | **TRANSCRIBED since 9 September 2026** — native 619..627. Arrow field x 619 (`Add_Button_Field_`, colsum.cpp:263-264) and the track it holds at 621..626 (`Add_Scroll_Field_`, colsum.cpp:278, counted exclusively as 5; `Fill_(621, y1, 626, y2, 229)`, colsum.cpp:759, counted inclusively as 6). The anim's own extent is `animate::Get_Width_(pic)` and lives in the player's LBX, so the right edge is MEASURED off `colony_summary_native_split.png` — its LEFT edge reproduces the source's 619 exactly, which is what anchors it. Was 36 = the leftover after the other five |
 
 The check reports every column and goes red only where a deviation
@@ -4276,7 +4297,10 @@ and the colony name is printed at :582; both verified and both
 unchanged.
 
 **2. `_bare.mean() < 0.01` — no bare strut texture on the built
-plate.** This one is not a layout rule at all, which is why it is
+plate. SETTLED 12 September 2026, and the answer is the one this entry
+said would settle it: the colony screen wears a FIXED IMAGE, so the
+check measures a generator whose output nobody draws. It is a report
+line now. The reading below is unchanged and was right.** This one is not a layout rule at all, which is why it is
 here rather than in the dropped set: it measures `frame_build`'s
 output quality, and Stage A3's goal that rails cover the tiling. It
 fires on a narrower HEADER because `frame_master.struts` only finds
@@ -4294,6 +4318,148 @@ false, the artwork used directly), and then the check is measuring a
 plate nobody draws. **Which of the two paths the colony screen takes
 is the open decision**, and it is upstream of this check rather than
 settled by it.
+
+### The colony screen wears one fixed image — 12 September 2026
+
+**DATA'S DECISION, AND IT IS THE PATH THAT SHIPS.**
+`screens/colony_summary/assets/frame.png` is Data's retouched copy of
+the pre-Stage-4 colony frame — 1672x941, 14 holes, stable at alpha
+< 8 / 16 / 64 alike — scaled to the reference area and blitted. No
+master, no `frame_build`, no nine-slice, no bevel, no rails. Boxes come
+from `layout_reference.json`; Data places them into the holes by hand.
+`frame_preview` ships **off**. The built plate and the plateless
+prototype are both still in the tree and both still green.
+
+**THE SCALE FACTOR, PER RESOLUTION.** The image covers the whole
+reference area (`screen._scale_frame`), so each axis scales
+independently and the difference between them is the 0.05 % by which
+1672:941 is not 16:9:
+
+| window | reference area | x | y | letterbox |
+|---|---|---|---|---|
+| 1920x1080 | 1920x1080 | 1.148325 | 1.147715 | — |
+| 2560x1440 | 2560x1440 | 1.531100 | 1.530287 | — |
+| 3840x2160 | 3840x2160 | 2.296651 | 2.295430 | — |
+| 3440x1371 | 2437x1371 | 1.457536 | 1.456961 | 501 px each side |
+
+A single uniform factor was NOT adopted and the reason is arithmetic:
+at `min` the image is 1 px short of the area and at `max` 1 px over,
+and `frame_holes.to_ref` maps holes to rectangles with these same two
+factors. Keeping them identical is what makes a hole and its box agree
+by construction instead of by two roundings happening to match.
+
+**THE MAPPING, READ OUT OF THE HISTORY AND NOT CHOSEN HERE.**
+`tools/frame_holes.py` at 8788d55 names this file's holes: largest is
+the list, topmost the title, the two right of the list the sidebar and
+RETURN, the bottom row the seven sort buttons, the remaining three left
+to right `output_panel` / `spare_panel` / `galaxy_inset`. Stage 4
+(ac5b86f) renamed four of them.
+
+| hole (image px) | pre-Stage-4 | today |
+|---|---|---|
+| (87, 75, 1223, 536) | `list_area` | `list` |
+| (1336, 76, 245, 574) | `sidebar` | `empire_stats` |
+| (1336, 668, 246, 135) | `return` | `return_button` |
+| (87, 631, 401, 172) | `output_panel` | `planet_output` |
+| (506, 631, 398, 172) | `spare_panel` | `planet_info` |
+| (921, 631, 389, 172) | `galaxy_inset` | `galaxy_inset` |
+| seven at y 837/838 | `sort_*` | `sort_*` |
+| **(640, 10, 386, 45)** | **`title`** | **LEFT OVER** |
+
+**THE HEADER'S ANSWER IS "NONE", AND THE HISTORY IS WHY.** There was no
+header window before Stage 4 and no `colonyheader.py` either — the
+column headings did not exist, so this frame has no band for them.
+Stage 4's own commit message says *"a header window appeared where the
+title hole was"*, which is a replacement in the layout and not an
+inheritance of the rect: the cartouche is 443 ref px wide and the
+headings span the list's 1404. **Measured rather than argued:** with
+the header over the top metal the class-A checker counts 1855 glyph px
+under opaque frame alpha at 1080p and 6606 at 2160p — NAME, FARMERS,
+WORKERS and BUILDING; SCIENTISTS happens to fall inside the cartouche
+— and that rule is zero-tolerance. So the header is the top band of the
+LIST's hole, which is where the original puts its headings too.
+
+**THREE NUMBERS IN THAT BAND ARE DERIVED, NOT CHOSEN.** header 32, gap
+7, list 576. The gap is `2 * BEVEL_REF + 1`: the generated plate lays a
+3 ref px bevel inside every window edge, and two windows 1 px apart
+overwrite each other's, which the suite reads as the header's bottom
+edge at 54 against the other thirteen's 81. The list's 576 is the
+least that keeps a row band of 58 device px at 1080p, which is what
+`colonytrack.figure_step` needs for sprite step 2 (4 transcribed + 28 −
+3 measured = 29 master rows per step). The header gets what is left.
+
+**WHAT MOVED WITH THE LIST, AND EVERY DERIVATION SURVIVED IT.** The
+list hole is 1404 x 615 ref px where the Stage-A3 cutout was 1693 x
+649, so three tables downstream were re-derived from their own
+unchanged sources: `list_columns` (scroll keeps its transcribed 27 off
+the top, the other five split what is left in the proportions they had,
+the three jobs split theirs by the original's 135 : 142 : 134),
+`no_farming_font` 28 -> 26 (10 of a 31 px row is now 18.4 of a 57 px
+band, over Aldrich's 0.70 cap ratio), and the figure step. **1440p
+loses sprite step 3** — its band is 77 device px and step 3 needs 87 —
+and that is a real cost of the frame, not of the header.
+
+**TWO THINGS SWAPPED SIDES AND ONE IS A HOLE TOO BIG.**
+`planet_output` takes the LEFT bottom hole and `planet_info` the middle
+one, because Stage 4 moved `spare_panel` left when it became
+`planet_info`, so mapping the names back reverses them: the scan box's
+production rows are on the left now and the description in the middle.
+And `galaxy_inset` is the one rect that is not its whole hole — the
+third bottom hole is 447 x 197, aspect 2.269, against the inset's
+transcribed 1.265134 (movebox.cpp:20-21, the galaxy size cancels). It
+is 248 x 196, the largest pair inside that hole whose aspect passes,
+flush to the top and centred; the remaining 199 px of hole show
+background either side, which is visible and is Data's to place.
+
+**THE RING IS THIS SCREEN'S OWN NOW.** 100 / 103 / 11 / 70, measured off
+this file with the same sweep, replacing the main-screen master's
+107 / 120 / 18 / 74. The family ring is gone and nothing checks that it
+is not — the suite reports both numbers, and stopped enforcing the pin
+on 11 September (decision 53), which is what made this affordable.
+"Every window is inside the ring, per side" is KEPT and is now asserted
+against the artwork the screen actually draws.
+
+**boxes.json IS DERIVED AT STARTUP.** `tools/boxes_from_reference.py`
+writes it, and `colonyplates.reseat` rebuilds the same rects every time
+the boxes are loaded — on entry and on every resize. That closes a trap
+this session walked into on the day it became possible: edit
+`layout_reference.json`, forget the tool, and the screen draws
+yesterday's fills behind today's frame with nothing saying so. The file
+on disk is a cache of the reference and never the authority. The six
+column boxes are NOT rebuilt at startup — they are hand-placed and
+draggable — and `--columns` re-seats them from `list_columns` when the
+list itself has moved.
+
+**SMOKE: 122, GREEN ON ALL THREE PATHS AT THE SAME COUNT.** The six
+plate checks skip with their reason whenever the screen is not wearing
+a built plate, which is now `frame_preview` off as well as
+`colony_plateless` on. The new check is item 6's: every window sits
+inside its own hole at all three resolutions, with the hole FOUND as
+the transparent component under the window's own centre — immune to
+this artwork's rounded corners, which are real and which
+`tools/colony_frame_check.py` reports on all fourteen holes, 80 to 2172
+px each. Worst overhang measured: 1 ref px, against 2 px of bleed.
+
+**FIVE CHECKS WERE ASSERTING AN INSTANCE AND NOW ASSERT THE RULE.** The
+row shape (a constant `[1, 1, 4, 8]` that described the Stage-A3 plate
+and rejected a well-formed frame), RETURN's position (an x-only rule
+that assumed RETURN is on the sort row and called a non-overlap an
+overlap), the figure-step ladder in two places, and the class-B cutout
+floor. Two more were reading a file the screen does not draw — class B
+and the editor's cutout-vocabulary check both had the 1080p plate
+hardcoded by path — and one, the editor's, was additionally calling the
+namer with no image size, which since 12 September means "no reference":
+it named nothing and the row check then failed on an empty answer.
+
+**AND ONE OPEN ITEM CLOSES WITH ITS ANSWER.** `_bare.mean() < 0.01`,
+the second of the "two rules of unknown parentage", was left standing
+on 11 September with the reading that *"which of the two paths the
+colony screen takes is the open decision, and it is upstream of this
+check rather than settled by it."* The decision is taken: this screen
+wears a fixed image, so the check measures the coverage of a generator
+whose output nobody draws. It is a report line now, the same way the
+four enforcements of decision 53 became report lines, and the static
+frame's layout leaves 7.75 % bare where the Stage-A3 one left 0.
 
 ### The colony screen without frame artwork — 12 September 2026, PHASE A
 

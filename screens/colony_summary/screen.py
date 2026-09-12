@@ -335,6 +335,14 @@ class ColonySummaryScreen(ScreenBase):
         """The wording, from layout.json (decision 15)."""
         return self._data.get("move", {})
 
+    def _reload_boxes(self):
+        """The base's load, then the cutouts re-derived from the
+        reference — see `colonyplates.box_rects` for why the file on
+        disk is a cache and not the authority."""
+        super()._reload_boxes()
+        if self.boxes:
+            colonyplates.reseat(self)
+
     def _render_move(self, surface):
         """Everything the move draws — `colonymoveui.render_for`.
 
@@ -461,34 +469,10 @@ class ColonySummaryScreen(ScreenBase):
 
     def _render_panels(self, surface):
         """Every cutout that shows content gets the panel fill, so the
-        frame never sits over raw background."""
-        # A panel may name its own fill as `<name>_fill`, BESIDE IT
-        # IN THIS BLOCK — the galaxy inset does, and
-        # `_galaxy_inset_fill_note` carries the measurement it rests
-        # on. A per-box value rather than a renderer change, because
-        # `colonyinset` draws no background at all, by transcription
-        # (movebox.cpp:36-38).
-        #
-        # **AND IT IS READ FROM `panels`, NOT FROM THE TOP LEVEL.**
-        # For a day it was `self._data.get(name + "_fill")` while the
-        # value sat in `panels` — so the lookup found nothing, every
-        # panel silently took PANEL_BG, and the status document said
-        # the inset was black on the strength of the measurement that
-        # chose the value rather than of the frame it was drawn in.
-        # A missing key here cannot raise, because most panels have
-        # none; the smoke check is what makes a stray one visible.
-        panels = self._data.get("panels", {})
-        for name in panels:
-            box = (None if name.startswith("_") or name.endswith("_fill")
-                   else self.box_rect(name))
-            if box:
-                fill = tuple(panels.get(name + "_fill") or PANEL_BG)[:3]
-                # THROUGH `colonyplates.fill` AND NOT `surface.fill`:
-                # with the plate off the fill is rounded to the same
-                # radius as the rim that goes over it, and a square
-                # fill under a rounded rim shows at every corner.
-                colonyplates.fill(self, surface,
-                                  pygame.Rect(*self.layout.rect(box)), fill)
+        frame never sits over raw background — `colonyplates
+        .render_fills`, which owns what a fill is and whether it is
+        square or rounded."""
+        colonyplates.render_fills(self, surface)
 
     def _render_list(self, surface):
         """The colony list. The bar is an INVENTION — see colonylist.

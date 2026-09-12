@@ -52,9 +52,17 @@ os.environ.setdefault("PYGAME_HIDE_SUPPORT_PROMPT", "1")
 #: **THE SAME TWO PX, AND NOT A NEW NUMBER.** With the plate it paid
 #: for an anti-aliased hole edge; with a drawn box it pays for the rim
 #: band and the lit line that sit on the rectangle's own edge
-#: (`colonyplates.RIM_REF` is 2). One number, one reason either way:
-#: the drawable rect is the typed rect grown by what overlaps it.
-BLEED = 2
+#: (`colonyplates.RIM_REF` is 2), and with the static frame for the
+#: artwork's own rim. One number, one reason every way: the drawable
+#: rect is the typed rect grown by what overlaps it.
+#:
+#: IMPORTED FROM THE SCREEN, never declared here. The screen rebuilds
+#: these same rects at startup (`colonyplates.box_rects`), so a tool
+#: with its own copy could write a `boxes.json` two pixels away from
+#: what the running screen uses and nothing would report it.
+def _bleed():
+    return __import__("screens.colony_summary.colonyplates",
+                      fromlist=["colonyplates"]).BLEED
 
 #: The keys of `layout_reference.json` that are not windows, and the
 #: rectangle-to-box renaming. BOTH ARE THE SCREEN'S, imported rather
@@ -71,6 +79,7 @@ def _screen_rules(screen):
 def reference_boxes(screen):
     """[(box name, [x, y, w, h])] in `layout_reference.json`'s order."""
     not_a_window, box_name = _screen_rules(screen)
+    BLEED = _bleed()
     path = os.path.join(ROOT, "screens", screen, "layout_reference.json")
     with open(path, encoding="utf-8") as fh:
         data = json.load(fh, object_pairs_hook=collections.OrderedDict)
@@ -87,6 +96,67 @@ def reference_boxes(screen):
         out.append((box_name.get(key, key),
                     [x - BLEED, y - BLEED, w + 2 * BLEED, h + 2 * BLEED]))
     return out
+
+
+def reseat_columns(data, screen):
+    """Lay the `col_*` boxes across `list_area` by `list_columns`.
+
+    **THE SPLIT IS ALREADY DECLARED and this is the only place that
+    reads it as geometry.** `layout_reference.list_columns` holds six
+    reference widths summing to the list's own width, which is where
+    every note about the columns argues from; `colonytrack.columns`
+    then reads each BOX's left edge as an offset into `list_area` and
+    takes the width as the distance to the next. So seating a column
+    means putting its left edge at the running sum of the split,
+    scaled into whatever width the list now has.
+
+    Order matters and is the file's: `list_columns` is written in
+    ECON order with the name column first and the scroll slot last,
+    the same order `colonyheader.COLUMN_BOXES` names them in.
+    """
+    path = os.path.join(ROOT, "screens", screen, "layout_reference.json")
+    with open(path, encoding="utf-8") as fh:
+        ref = json.load(fh, object_pairs_hook=collections.OrderedDict)
+    cols = ref.get("list_columns")
+    if not cols:
+        return 0
+    # **THE SCROLL COLUMN IS AN ABSOLUTE WIDTH AND THE OTHER FIVE ARE
+    # FRACTIONS.** Native x 619..627 is 9 px, which is 27 reference px
+    # (colsum.cpp:263-264 for the arrows' field x, :278 and :759 for
+    # the track it holds), and a smoke check holds `col_scroll` to
+    # exactly that. Scaling it with the rest put it at 22 the first
+    # time the list got narrower — the transcription quietly turned
+    # into a share. So it is taken off the top and the remaining five
+    # split what is left, in their own ratios.
+    last = list(cols)[-1]
+    fixed = cols[last]
+    total = sum(v for k, v in cols.items() if k != last)
+    moved = 0
+    for _res, boxes in data.items():
+        area = next((b["rect"] for b in boxes if b["name"] == "list_area"),
+                    None)
+        if area is None:
+            continue
+        ax, ay, aw, ah = area
+        span = aw - fixed
+        off = 0
+        for key, width in cols.items():
+            name = f"col_{key}"
+            box = next((b for b in boxes if b["name"] == name), None)
+            if box is None:
+                continue
+            if key == last:
+                want = [ax + aw - fixed, ay, fixed, ah]
+            else:
+                x = ax + round(off * span / total)
+                nxt = (ax + aw - fixed if off + width >= total
+                       else ax + round((off + width) * span / total))
+                want = [x, ay, nxt - x, ah]
+            if box["rect"] != want:
+                box["rect"] = want
+                moved += 1
+            off += width
+    return moved
 
 
 def rebuild(screen, boxes_path=None):
@@ -115,11 +185,20 @@ def rebuild(screen, boxes_path=None):
 def main():
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("screen")
+    ap.add_argument("--columns", action="store_true",
+                    help="also re-seat the six colony column boxes from "
+                         "layout_reference's `list_columns` onto "
+                         "`list_area`. NOT part of the default run: a "
+                         "column is hand-placed and draggable, and "
+                         "re-seating it throws a drag away. Run it when "
+                         "the LIST has moved and the columns no longer "
+                         "tile it.")
     ap.add_argument("--check", action="store_true",
                     help="compare against boxes.json and exit 1 on a "
                          "difference; write nothing")
     args = ap.parse_args()
 
+    BLEED = _bleed()
     path = os.path.join(ROOT, "screens", args.screen, "boxes.json")
     with open(path, encoding="utf-8") as fh:
         before = fh.read()
@@ -134,8 +213,14 @@ def main():
               f"layout_reference.json plus {BLEED} px gives. Run "
               f"without --check to rewrite it.")
         return 1
+    data = rebuild(args.screen)
+    _moved = reseat_columns(data, args.screen) if args.columns else 0
+    after = json.dumps(data, indent=2) + "\n"
     with open(path, "w", encoding="utf-8") as fh:
         fh.write(after)
+    if args.columns:
+        print(f"{args.screen}: {_moved} column box(es) re-seated from "
+              f"list_columns onto list_area")
     print(f"{args.screen}: {len(derived)} cutout boxes from "
           f"layout_reference.json + {BLEED} px -> {path}"
           + ("" if before != after else "  (unchanged)"))

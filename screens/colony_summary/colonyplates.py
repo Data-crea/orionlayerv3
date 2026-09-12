@@ -183,6 +183,57 @@ def _box_name(name):
     return BOX_NAME.get(name, name)
 
 
+#: Reference-pixel bleed, so content covers what overlaps a box's own
+#: edge — the frame's rim on the static path, the drawn rim on the
+#: plateless one. **ONE NUMBER, AND `tools/boxes_from_reference.py`
+#: IMPORTS IT FROM HERE** rather than keeping its own: the tool writes
+#: `boxes.json` and this module rebuilds the same rects at startup, so
+#: a second copy would let a file on disk and a screen in memory
+#: disagree by two pixels and nothing would say so.
+BLEED = 2
+
+
+def box_rects(screen):
+    """{box name: [x, y, w, h]} — the cutouts, reference px, bled.
+
+    **DERIVED AT STARTUP, NOT READ** — 12 September 2026. `boxes.json`
+    is written from `layout_reference.json` by
+    `tools/boxes_from_reference.py`, and until now the screen read the
+    written file: edit the reference, forget the tool, and the screen
+    draws yesterday's fills behind today's frame with nothing saying
+    so. That happened the same day it became possible. The rects are
+    rebuilt here from the reference every time the boxes are loaded,
+    so the file on disk is a cache of this and never the authority.
+
+    THE SIX COLUMN BOXES ARE NOT TOUCHED. They are strips of
+    `list_area` placed by hand in the editor (decision 14) and have no
+    rectangle in the reference to be derived from — `list_columns`
+    declares their SPLIT and `tools/boxes_from_reference.py --columns`
+    seats them from it, which is a deliberate act and not a startup.
+    """
+    return {BOX_NAME.get(n, n): [x - BLEED, y - BLEED,
+                                 w + 2 * BLEED, h + 2 * BLEED]
+            for n, (x, y, w, h) in windows(screen).items()}
+
+
+def reseat(screen):
+    """Rewrite every cutout box's `ref_rect` from the reference.
+
+    Called from `_reload_boxes`, so it runs on load AND on every
+    resize — `ScreenBase.on_resize` replaces `screen.boxes` with
+    freshly parsed objects, and a derivation that ran only at
+    `enter()` would be undone by the first F9 (the fault
+    `colonyheader.install_columns` records for the column table).
+    """
+    want = box_rects(screen)
+    for box in screen.boxes:
+        rect = want.get(box.name)
+        if rect and tuple(box.ref_rect) != tuple(rect):
+            box.ref_rect = tuple(rect)
+            box.update_layout(screen.layout)
+    return want
+
+
 def fill(screen, surface, rect, colour):
     """Lay a window's fill, rounded when this screen draws its boxes.
 
@@ -201,6 +252,42 @@ def fill(screen, surface, rect, colour):
     screen.style.draw_plate(surface, rect, screen.layout.scale,
                             color=tuple(colour)[:3],
                             radius=radius(screen), fill=colour)
+
+
+def render_fills(screen, surface):
+    """Every cutout that shows content gets its panel fill.
+
+    **THE LOOP LIVES HERE AND NOT ON THE SCREEN** — moved 12 September
+    2026, when `screen.py` crossed the 300-line guideline by two. It
+    belongs here on its own merits either way: what a fill IS, which
+    box gets one, and whether it is square or rounded are one
+    question, and `fill` below already answered the last third of it
+    from this module while the first two thirds sat in `screen.py`.
+
+    A panel may name its own fill as `<name>_fill` BESIDE IT in the
+    `panels` block — the galaxy inset does, and
+    `_galaxy_inset_fill_note` carries the measurement it rests on. A
+    per-box value rather than a renderer change, because
+    `colonyinset` draws no background at all, by transcription
+    (movebox.cpp:36-38).
+
+    **AND IT IS READ FROM `panels`, NOT FROM THE TOP LEVEL.** For a
+    day it was `screen._data.get(name + "_fill")` while the value sat
+    in `panels` — so the lookup found nothing, every panel silently
+    took `PANEL_BG`, and the status document said the inset was black
+    on the strength of the measurement that chose the value rather
+    than of the frame it was drawn in. A missing key here cannot
+    raise, because most panels have none; the smoke check is what
+    makes a stray one visible.
+    """
+    from .screen import PANEL_BG
+    panels = screen._data.get("panels", {})
+    for name in panels:
+        box = (None if name.startswith("_") or name.endswith("_fill")
+               else screen.box_rect(name))
+        if box:
+            fill(screen, surface, pygame.Rect(*screen.layout.rect(box)),
+                 tuple(panels.get(name + "_fill") or PANEL_BG)[:3])
 
 
 def render(screen, surface):
