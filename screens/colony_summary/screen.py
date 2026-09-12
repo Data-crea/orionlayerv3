@@ -107,7 +107,8 @@ from core.structs import player as player_struct
 from . import (colonybuild, colonyempire, colonyfigures,
                colonyheader, colonyinset, colonylist,
                colonymoveui, colonyoutput, colonyrows, colonyscroll,
-               colonyplates, colonyselect, colonysort, colonytrack)
+               colonyplanets, colonyplates, colonyselect, colonysort,
+               colonytrack)
 
 log = logging.getLogger("colony_summary")
 
@@ -514,7 +515,18 @@ class ColonySummaryScreen(ScreenBase):
                           # (colsum.cpp:554 and :1155), so giving the
                           # name colour a hover of its own would be
                           # two answers to one question.
-                          self._selected)
+                          self._selected,
+                          # THE PLANET DISCS, at the row icon's own
+                          # size: the band less the clearance the
+                          # figures take, square. `colonyplanets`
+                          # caches one set per pixel size, so the row
+                          # icon and the big disc in `planet_info` are
+                          # two sets and a resize does not rebuild
+                          # what it did not move.
+                          colonyplanets.set_for(
+                              self, colonyplanets.icon_size(
+                                  pygame.Rect(*self.layout.rect(box)),
+                                  cfg)))
 
     def _render_inset(self, surface):
         """The original's small galaxy map — a TRANSCRIPTION.

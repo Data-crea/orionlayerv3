@@ -8156,6 +8156,189 @@ def main():
        "(four resolutions, every band, measured out of the render; "
        "outside the list the transcribed pointer offset is untouched)")
 
+    # ── DATA'S PLANET DISCS: THE ASSETS ─────────────────────────
+    #
+    # Ten sprites, one per `PLANET_CLIMATE` (orion2_consts.h:362-374),
+    # cut from Data's sheet by `tools/planet_extract.py`. Committed
+    # artwork, like `assets/frame.png` — so what this holds is that
+    # they are what the loader expects and that they are at their TRUE
+    # size, which is the one thing an extraction can quietly get
+    # wrong: a sprite saved at 4x with 4x4 blocks looks identical on
+    # screen and is four times the file, four times the scaling work
+    # and a lie about what the art is.
+    from screens.colony_summary import colonyplanets as _pl
+    from PIL import Image as _pl_Image
+    _pl_dir = os.path.join(SCREENS_DIR, "colony_summary",
+                           _pl.PLANET_DIR)
+    assert len(_pl.NAMES) == 10, _pl.NAMES
+    # THE NAMES ARE THE ENUM'S, IN ITS ORDER — the ids are what
+    # `colonyrows` puts in every row, so a shuffled table would draw
+    # a Gaia for a Toxic world with nothing to report it.
+    assert _pl.NAMES == ("toxic", "radiated", "barren", "desert",
+                         "tundra", "ocean", "swamp", "arid", "terran",
+                         "gaia"), _pl.NAMES
+    assert _pl.name_for(8) == "terran" and _pl.name_for(0) == "toxic"
+    assert _pl.name_for(10) is None and _pl.name_for(None) is None, (
+        "a climate this build does not know has to draw NO disc "
+        "rather than the nearest one")
+    _pl_seen = []
+    for _pl_name in _pl.NAMES:
+        _pl_path = os.path.join(_pl_dir, f"{_pl_name}.png")
+        assert os.path.exists(_pl_path), (
+            f"{_pl_path} is missing — run "
+            f"`python tools/planet_extract.py`")
+        _pl_img = _pl_Image.open(_pl_path).convert("RGBA")
+        assert _pl_img.size == (_pl.MASTER_SIZE, _pl.MASTER_SIZE), (
+            f"{_pl_name}.png is {_pl_img.size} and the loader refuses "
+            f"anything but {_pl.MASTER_SIZE} square")
+        _pl_a = _np.array(_pl_img)
+        # ON THE TRUE GRID: there is no block size b >= 2 for which
+        # every b x b cell is one colour. That is exactly "no block
+        # larger than 1 px in the saved file".
+        for _pl_b in (2, 3, 4):
+            _pl_n = _pl.MASTER_SIZE // _pl_b * _pl_b
+            _pl_q = _pl_a[:_pl_n, :_pl_n].reshape(
+                _pl_n // _pl_b, _pl_b, _pl_n // _pl_b, _pl_b, 4)
+            _pl_flat = (_pl_q.min(axis=(1, 3)) == _pl_q.max(axis=(1, 3))
+                        ).all()
+            assert not _pl_flat, (
+                f"{_pl_name}.png is uniform in every {_pl_b}x{_pl_b} "
+                f"block — it was saved at {_pl_b}x and is not at its "
+                f"true size")
+        # AND IT IS A DISC: opaque in the middle, gone at the corners,
+        # and the dark limb is still there — the alpha is a circle and
+        # never a luma key, which is what would eat a Barren world's
+        # night side.
+        assert _pl_a[_pl.MASTER_SIZE // 2, _pl.MASTER_SIZE // 2, 3] == 255
+        assert _pl_a[0, 0, 3] == 0 and _pl_a[-1, -1, 3] == 0, (
+            f"{_pl_name}.png has opaque corners — the mask is not a "
+            f"circle")
+        _pl_mid = _pl_a[_pl.MASTER_SIZE // 2]
+        _pl_dark = int((_pl_mid[:, 3] == 255).sum())
+        _pl_seen.append((_pl_name, _pl_dark,
+                         int(_pl_a[:, :, 3].max())))
+    report("planet discs: " + ", ".join(
+        f"{_n} {_w}px wide" for _n, _w, _ in _pl_seen))
+    ok(f"the {len(_pl.NAMES)} planet discs are the climate enum's, "
+       f"{_pl.MASTER_SIZE} px square, on the true pixel grid and "
+       f"masked by a circle")
+
+    # ── AND WHAT IS DRAWN WITH THEM ─────────────────────────────
+    #
+    # Three properties, all measured out of the render: the disc on a
+    # row is the one its own text names, it does not touch the name's
+    # ink, and the five lines in `planet_info` stay inside their box
+    # beside the big one. The first is the whole point of the mapping
+    # being one field read twice, and it is the one a shuffled table
+    # or an off-by-one climate id would break silently.
+    _pl_climates = _sjson.load(open(os.path.join(
+        SCREENS_DIR, "colony_summary", "layout.json"),
+        encoding="utf-8"))["list"].get("climates", ())
+    for _pl_W, _pl_H in ((1920, 1080), (2560, 1440), (3440, 1371),
+                         (3840, 2160)):
+        _pl_app, _pl_scr = _plv.build_screen(_pl_W, _pl_H)
+        _pl_app.dispatcher.switch_to("colony_summary")
+        _pl_scr.enter(None)
+        _pl_scr.update(_plv._Snapshot(_plv.COLONIES))
+        _pl_surf = pygame.Surface((_pl_W, _pl_H))
+        _pl_surf.fill((0, 0, 0))
+        _pl_scr.render(_pl_surf)
+        _pl_area, _pl_cfg, _pl_scale, _pl_n = _pl_scr._list_view()
+        _pl_size = _pl.icon_size(_pl_area, _pl_cfg)
+        _pl_set = _pl.set_for(_pl_scr, _pl_size)
+        assert _pl_set is not None and _pl_set.state == "ok", (
+            f"{_pl_W}x{_pl_H}: the planet set is {_pl_set and _pl_set.state}")
+        _pl_cols = _ctk.columns(_pl_area, _pl_cfg)
+        _pl_nx, _pl_nw = _pl_cols["name"]
+        _pl_bands = _ctk.row_bands(_pl_area, _pl_cfg, _pl_scale, _pl_n)
+        _pl_inset = int(_pl_scr._frame_inset()
+                        * (_pl_scr.layout.font_size(
+                            _pl_cfg.get("name_font", 21)) / 21.0))
+        _pl_rows = 0
+        for _pl_i, (_pl_top, _pl_bh) in enumerate(_pl_bands):
+            if _pl_i >= len(_pl_scr._rows):
+                continue
+            _pl_row = _pl_scr._rows[_pl_i]
+            _pl_want = _pl_set.get(_pl_row.get("climate"))
+            assert _pl_want is not None, (
+                f"row {_pl_i} has climate {_pl_row.get('climate')!r} "
+                f"and no disc — every colony the game reports has a "
+                f"climate in the enum")
+            _pl_x = _pl_nx + _pl_inset
+            _pl_y = _pl_top + (_pl_bh - _pl_want.get_height()) // 2
+            # THE PIXELS, against the sprite the row's OWN climate
+            # selects. Comparing the drawn region to the expected
+            # sprite is what ties the picture to the text: the text
+            # comes from the same `climate` through `list.climates`.
+            _pl_got = _np.array(pygame.surfarray.array3d(
+                _pl_surf.subsurface(pygame.Rect(
+                    _pl_x, _pl_y, _pl_want.get_width(),
+                    _pl_want.get_height())))).transpose(1, 0, 2)
+            _pl_ref = _np.array(pygame.surfarray.array3d(
+                _pl_want)).transpose(1, 0, 2)
+            _pl_alpha = _np.array(pygame.surfarray.array_alpha(
+                _pl_want)).transpose(1, 0)
+            _pl_solid = _pl_alpha == 255
+            assert _pl_solid.sum() > 100, "the disc has no opaque body"
+            assert (_pl_got[_pl_solid] == _pl_ref[_pl_solid]).all(), (
+                f"{_pl_W}x{_pl_H} row {_pl_i} ({_pl_row['name']}, "
+                f"climate {_pl_row.get('climate')}): the disc drawn at "
+                f"{(_pl_x, _pl_y)} is not the sprite that climate "
+                f"selects")
+            # AND IT DOES NOT TOUCH THE NAME. The ink of the name and
+            # of the "Terran 13/22" line under it starts past the
+            # disc's right edge plus the gap that is in layout.json.
+            _pl_strip = _pl_surf.subsurface(pygame.Rect(
+                _pl_nx, _pl_top, _pl_nw, _pl_bh))
+            _pl_lit = _np.array(pygame.surfarray.array3d(
+                _pl_strip)).transpose(1, 0, 2).sum(axis=2) > 260
+            _pl_lit[:, :_pl_want.get_width() + _pl_inset] = False
+            _pl_xs = _np.where(_pl_lit.any(axis=0))[0]
+            if len(_pl_xs):
+                assert _pl_nx + int(_pl_xs.min()) >= _pl_x + \
+                    _pl_want.get_width(), (
+                    f"{_pl_W}x{_pl_H} row {_pl_i}: the name's ink "
+                    f"starts at {_pl_nx + int(_pl_xs.min())} and the "
+                    f"disc ends at {_pl_x + _pl_want.get_width()}")
+            _pl_rows += 1
+        assert _pl_rows >= 5, f"{_pl_W}x{_pl_H}: {_pl_rows} rows measured"
+        # ── AND THE PANEL'S FIVE LINES STAY IN THEIR BOX ────────
+        _pl_box = pygame.Rect(*_pl_scr.layout.rect(
+            _pl_scr.box_rect("planet_info")))
+        _pl_pad = int(_sjson.load(open(os.path.join(
+            SCREENS_DIR, "colony_summary", "layout.json"),
+            encoding="utf-8"))["output"].get("pad_x", 18)
+            * _pl_scr.layout.scale)
+        # INSIDE THE BLEED AND THE RIM. The box is the hole grown by
+        # `colonyplates.BLEED` and the frame's own lit metal sits on
+        # that edge — at 1920x1080 it reads as ink from x 450 to 460
+        # of 461 and says nothing about the text. The screen's own
+        # `frame_inset` is the number for how far that reaches (see
+        # `layout.json._frame_inset_note`), which is what the panels
+        # keep their text clear of in the first place.
+        _pl_rim = max(4, int(_pl_scr._frame_inset() * _pl_scr.layout.scale))
+        _pl_pan = _np.array(pygame.surfarray.array3d(
+            _pl_surf.subsurface(_pl_box.inflate(-2 * _pl_rim,
+                                                -2 * _pl_rim)))
+        ).transpose(1, 0, 2)
+        _pl_ink = _pl_pan.sum(axis=2) > 260
+        _pl_ys, _pl_xs = _np.where(_pl_ink)
+        assert len(_pl_ys), f"{_pl_W}x{_pl_H}: planet_info drew nothing"
+        # The right-hand padding is EMPTY: the five lines wrap inside
+        # the room the disc leaves them, and a line that did not would
+        # put ink in the strip the panel keeps clear.
+        _pl_edge = _pl_pan.shape[1] - (_pl_pad - _pl_rim)
+        assert not _pl_ink[:, max(0, _pl_edge):].any(), (
+            f"{_pl_W}x{_pl_H}: planet_info has ink in the "
+            f"{_pl_pad} px the panel keeps clear on the right — a "
+            f"line is wider than the room the disc leaves it")
+        assert int(_pl_ys.max()) < _pl_pan.shape[0], (
+            f"{_pl_W}x{_pl_H}: planet_info's content reaches "
+            f"{int(_pl_ys.max())} of {_pl_pan.shape[0]} px of height")
+    ok("every row's disc is the one its climate selects, clear of the "
+       "name's ink, and planet_info's lines stay beside the big one "
+       "(four sizes, measured out of the render)")
+
     # ── THE FIGURE'S SIZE IS NOT ALWAYS AN INTEGER STEP ─────────
     #
     # **DEVIATION FROM DECISION 28 — 12 September 2026, Data's

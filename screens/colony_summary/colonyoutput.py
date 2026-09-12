@@ -266,11 +266,20 @@ def render_for(screen, surface):
                words, climates, screen.layout, screen.style, only={1})
     box = screen.box_rect("planet_info")
     if box and not screen._move.message:
-        render_info(surface, row, pygame.Rect(*screen.layout.rect(box)),
-                    cfg, words, climates, screen.layout, screen.style)
+        _rect = pygame.Rect(*screen.layout.rect(box))
+        # THE BIG DISC, at the size this panel leaves it — see
+        # `render_info`. The set is `colonyplanets`', cached per pixel
+        # size, so this one and the row icons are two sets and neither
+        # rebuilds the other.
+        from . import colonyplanets
+        _pad_y = int(cfg.get("pad_y", 14) * screen.layout.scale)
+        _disc = colonyplanets.set_for(screen, max(1, _rect.h - 2 * _pad_y))
+        render_info(surface, row, _rect, cfg, words, climates,
+                    screen.layout, screen.style, planets=_disc)
 
 
-def render_info(surface, row, area, cfg, words, climates, layout, style):
+def render_info(surface, row, area, cfg, words, climates, layout, style,
+                planets=None):
     """The LEFT half of the original's scan box — the description.
 
     `COLSUM::Draw_Colony_Scan_Info_` fills two boxes, not one
@@ -326,7 +335,23 @@ def render_info(surface, row, area, cfg, words, climates, layout, style):
     pad_x = int(cfg.get("pad_x", 18) * layout.scale)
     pad_y = int(cfg.get("pad_y", 14) * layout.scale)
     px = layout.font_size(cfg.get("value_font", 20))
-    room_w = max(1, area.w - 2 * pad_x)
+    # ── THE PLANET, AT THE LEFT OF THE PANEL ───────────────────
+    #
+    # **THE SAME DEVIATION AS THE ROW ICON** (`layout.json`,
+    # `list._planet_icon_deviation`): the original's scan box is five
+    # lines of text and no picture. Data's decision of 12 September
+    # 2026 puts the world beside the words here too, and larger,
+    # because this panel is about one colony. The disc is square and
+    # as tall as the panel's own padding leaves it, and the five lines
+    # start past it — `output.planet_disc_gap`, reference px, data
+    # like the row's gap and for the same reason.
+    text_x = area.x + pad_x
+    disc = planets.get(row.get("climate")) if planets is not None else None
+    if disc is not None:
+        surface.blit(disc, (text_x, area.y + pad_y))
+        text_x += disc.get_width() + int(
+            cfg.get("planet_disc_gap", 12) * layout.scale)
+    room_w = max(1, area.right - pad_x - text_x)
     room_h = max(1, area.h - 2 * pad_y)
     lines = []
     for para in fill_template(template, values).split("\n"):
@@ -340,7 +365,7 @@ def render_info(surface, row, area, cfg, words, climates, layout, style):
     # decision 45 reads for the colony name).
     y = area.y + pad_y
     for surf in lines:
-        surface.blit(surf, (area.x + pad_x, y))
+        surface.blit(surf, (text_x, y))
         y += surf.get_height()
 
 

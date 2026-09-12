@@ -13,6 +13,21 @@ right and the header had gone stale** — resolved 10 September 2026
 by dating the header to the edit and giving this session its
 paragraph, below, so the two agree again.
 
+This session (12 September 2026), last: **the planets are on the
+screen.** Ten discs cut from Data's own sheet by
+`tools/planet_extract.py` — 54 x 54 RGBA under `assets/planets/`, one
+per `PLANET_CLIMATE` — drawn at the left of every row's name cell and,
+large, at the left of `planet_info`. Which disc is `s_colony.climate`,
+the same field the "Terran 13/22" line reads, so the picture and the
+word are one number read twice. DEVIATION: the original prints that
+name at native x 12 and draws no planet; the shift is
+`list.planet_icon_gap` in layout.json, data and not code. Scaled like a
+figure — nearest neighbour, one cached set per pixel size, no
+smoothscale — and 1:1 at 1920x1080, because the master's size was
+chosen from the row icon's own height there. Smoke 120 -> **122**. See
+"Data's planet discs" below, which also lists the mockup's other five
+ideas as candidates.
+
 This session (12 September 2026), last: **Data's frame gained an
 eighth slot and RETURN moved into it.** `assets/frame.png` cuts **14**
 holes now (sha256 `b95d0651…`, from `~/Downloads/frame.png`): the title
@@ -787,7 +802,7 @@ files under `doc/` and are only summarised here.
 | | |
 |---|---|
 | Python | 32,960 lines across 111 modules — `find . -name '*.py'`, `__pycache__` excluded, the smoke test's 6,400 included. The previous figure here (21,642 across 94) was carried from an unstated method and could not be reproduced |
-| Smoke test | `python tools/smoke_test.py` — **120 checks**, headless |
+| Smoke test | `python tools/smoke_test.py` — **122 checks**, headless |
 | Assets | 170 MB (select_race 68, galaxy_map 51, shared 23, new_game 21, colony_summary 1) |
 | Screens in HD | 7 of ~20–22 (colony summary draws list, sidebar, scan box and galaxy inset, and MOVES POPS — the first HD gesture that drives the game) |
 | Setup from clone | `python tools/setup.py` (deps via the system package manager) |
@@ -4429,6 +4444,122 @@ false, the artwork used directly), and then the check is measuring a
 plate nobody draws. **Which of the two paths the colony screen takes
 is the open decision**, and it is upstream of this check rather than
 settled by it.
+
+### Data's planet discs, and what else the mockup asks for — 12 September 2026
+
+Two files from Data: `planets.png`, a 5x2 sheet of the ten MOO2 planet
+types with captions (1916x821, sha256 `b08c18dc6962851a…`), and
+`mockup.png`, a target picture of the whole screen. Only the planets
+are in scope here; the rest is listed at the end.
+
+**THE SHEET HAS NO PIXEL GRID, AND THAT IS MEASURED.** The art reads
+as chunky pixel work, so the method asked for was "find the block size,
+one sample per block". There are no blocks to find:
+
+| measurement | result |
+|---|---|
+| edge positions modulo b, b in 2..8, thresholds 6 and 120 | uniform in x and y — no offset is preferred |
+| within-block variance against b | rises smoothly, no knee; best offset beats worst by 10 % at b=4, which is noise |
+| distance between consecutive strong gradient peaks | decays smoothly from 2 px, no preferred spacing |
+| Fourier of the gradient profile, per disc | strongest period between 5.8 and 9.5 px, and a different one per disc |
+
+So the sheet was painted or resampled without a grid. What survives of
+the instruction is its other half, and it is the half that matters:
+**point sampling, never an average** — one source pixel per output
+pixel, so every colour in a disc is a colour that is in the sheet.
+
+`BLOCK = 5` is therefore a choice, made from the far end: at 5 a disc
+is 46 to 50 px across and the sprite is **54 px**, which is exactly the
+height the list gives a row's icon at 1920x1080 (`band 58 - 2 * step`).
+The reference resolution draws Data's art at 1:1 and every other size
+steps from it.
+
+**The ten, measured off the sheet** (source rect is 270 x 270 around
+the disc's centre; the disc radius is the steepest drop in its own
+radial profile past r=80, which is the limb and not an interior edge):
+
+| id | type | source rect | disc r, src | disc r, true | sprite |
+|---:|---|---|---:|---:|---|
+| 0 | toxic | (80, 94, 270, 270) | 116 | 23.2 | 54 x 54 |
+| 1 | radiated | (440, 94, 270, 270) | 115 | 23.0 | 54 x 54 |
+| 2 | barren | (818, 92, 270, 270) | 122 | 24.4 | 54 x 54 |
+| 3 | desert | (1192, 95, 270, 270) | 116 | 23.2 | 54 x 54 |
+| 4 | tundra | (1558, 94, 270, 270) | 119 | 23.8 | 54 x 54 |
+| 5 | ocean | (76, 428, 270, 270) | 123 | 24.6 | 54 x 54 |
+| 6 | swamp | (439, 431, 270, 270) | 122 | 24.4 | 54 x 54 |
+| 7 | arid | (814, 430, 270, 270) | 122 | 24.4 | 54 x 54 |
+| 8 | terran | (1191, 431, 270, 270) | 124 | 24.8 | 54 x 54 |
+| 9 | gaia | (1562, 429, 270, 270) | 120 | 24.0 | 54 x 54 |
+
+Alpha is a CIRCLE on the true grid and never a luma key — the dark limb
+of a planet is the planet. Inside the disc's radius the sprite is
+opaque whatever colour it is; for three true px beyond it the sheet's
+own brightness fades the glow out. **The glow is trimmed where a
+caption is close**: the first cut carried an orange fragment of the
+word DESERT along the bottom, because that caption sits 126 source px
+under its centre and the ring reached 131. `_caption_top` measures the
+caption per cell and the mask stops a true pixel short of it.
+
+**The classes are the enum's, all ten present, none missing.**
+`PLANET_CLIMATE` (orion2_consts.h:362-374): 0 TOXIC, 1 RADIATED, 2
+BARREN, 3 DESERT, 4 TUNDRA, 5 OCEAN, 6 SWAMP, 7 ARID, 8 TERRAN, 9
+GAIA. The sheet is drawn in that order, top row then bottom, so the
+file names are the enum written once. `colonyrows` already puts
+`s_colony.climate` in every row — the COLONY's field, which
+`Colony_Calculation_` rewrites when a shield turns a Radiated world
+Barren (colcalc.cpp:682) — and the same number picks the disc.
+
+**Placement A, the list.** A square disc at the name cell's left, as
+tall as `band - 2 * figure_step` (the clearance the population figures
+already keep from the cell plate's line), vertically centred because a
+disc sitting on a floor reads as falling. The name and its "Terran
+13/22" line start past it, shifted by the disc plus
+`list.planet_icon_gap` — 6 reference px, **data in layout.json and not
+a number in `colonylist`**, which is what the order asked for and what
+lets the next gap be an edit rather than a commit. Marked as a
+DEVIATION: the original starts that text at native x 12
+(`Squeeze_Formatted_Paragraph_Centered_(0x0C, …)`, colsum.cpp:582) and
+draws no planet anywhere.
+
+**Placement B, `planet_info`.** The same sprite at the panel's own
+height less its padding — 173 px at 1920x1080 — at the left, with the
+five transcribed lines to its right (`output.planet_disc_gap`, 12
+reference px). Nothing else in that panel moved: same paragraph, same
+wrap, same colours, same red on negative growth.
+
+**Sizes per window, and the scaling.** Nearest neighbour in both
+directions, one cached set per pixel size (LRU of four, like the
+figures), and no `smoothscale` anywhere:
+
+| | row icon | panel disc |
+|---|---:|---:|
+| 1920x1080 | 54 (1:1) | 173 |
+| 2560x1440 | 73 | 231 |
+| 3440x1371 | 69 | 220 |
+| 3840x2160 | 108 | 346 |
+
+**Checks: 120 -> 122.** One holds the ASSETS — ten files, the enum's
+names in the enum's order, 54 px square, opaque at the centre and gone
+at the corners, and **no b x b block uniform for b in 2, 3, 4**, which
+is "at their true size" as something a run can fail. The other holds
+the DRAWING at four sizes: every row's disc is pixel-for-pixel the
+sprite its own climate selects, the name's ink never starts before the
+disc ends, and `planet_info`'s lines stay inside the padding beside the
+big one.
+
+---
+
+**The mockup's other five ideas — candidates, not decided.** Each with
+the one thing that blocks it:
+
+| idea | what it is | the blocker |
+|---|---|---|
+| Row highlighting | alternating row backgrounds and a lit marker on the selected colony | the original's only row state is the NAME's colour (`Set_Colony_Font_To_Blue_`, colsum.cpp:554) and the only `Fill_`/`Line_` calls on the screen are the scroll thumb's (:759-765) — a lit row is an INVENTION and needs Data's call, not a renderer change |
+| Job colours | farmers green, workers orange, scientists blue | **the figure's colour IS the race in the original** — `People_Anim_` indexes `race * 13 + job * 2` (colony_main.cpp:444) and the bronze/teal/white are that race's sprites. Tinting by job throws away the fact the sprite carries, and the identity letters (decision 48) exist because that fact is load-bearing |
+| Building icons | an icon per building instead of the bare name | **needs artwork that does not exist** — there is no icon set for 49 buildings and the game ships none; and the names themselves come from the player's TECHNAME.LBX, so a mod-shaped icon path would need the same per-name resolution the figures have |
+| Build progress | a bar and "3 Turns" in the BUILDING column | **needs the cost extraction** — `TECHDATA::_buildings[].cost` is not extracted, which is the same absence that makes Producing sort by name (colsum.cpp:1091). Turns remaining is cost against industry and neither half is on the wire yet |
+| Output icons | leaf/gear/flask/coins/face beside the five `planet_output` values | needs artwork, and less of it than the buildings — five glyphs, not 49. The values and their order are already transcribed, so this is the cheapest of the five and still an INVENTION over a paragraph the original squeezes into one box |
+| Selected colony in the galaxy inset | a marker on the scanned star | the inset is a TRANSCRIPTION — `Draw_Galaxy_Map_Box_` with view_mode 3 draws stars and nothing else (movebox.cpp:63-105), and the one thing the original adds is the connect line while a cluster is held (colsum.cpp:731-744). A marker would be an invention drawn over a transcription, which is the pairing this project keeps apart |
 
 ### The eighth slot: RETURN is a cutout again — 12 September 2026
 

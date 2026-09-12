@@ -249,7 +249,7 @@ CELL_MARK = palette.col("colony_summary", "cell_mark", (16, 18, 24))
 
 # ── Geometry: computed once, drawn by either mode ──────────────────
 def render(surface, rows, area, cfg, layout, style, first=0,
-           frame_inset=0, figures=None, scanned=None):
+           frame_inset=0, figures=None, scanned=None, planets=None):
     """Draw the rows into `area`. Everything sized from `cfg`.
 
     `area` is the `list_area` box in screen coordinates, `cfg` the
@@ -345,7 +345,10 @@ def render(surface, rows, area, cfg, layout, style, first=0,
         _draw_name_block(surface, row, _nx, y, _nw, row_h,
                          cfg, name_px, small_px, style, frame_inset,
                          scanned=(scanned is not None
-                                  and row["index"] == scanned))
+                                  and row["index"] == scanned),
+                         planets=planets,
+                         icon_gap=int(cfg.get("planet_icon_gap", 6)
+                                      * scale))
         _render_bar(surface, row, area, cfg, scale, (y, row_h), track,
                     small_px, style, layout, figures)
         # THE PRODUCING TEXT SITS IN ITS OWN COLUMN, which is its own
@@ -503,7 +506,7 @@ def _draw_overflow(surface, rows, area, cfg, scale, layout, style,
 
 def _draw_name_block(surface, row, x, y, name_w, row_h, cfg,
                      name_px, small_px, style, frame_inset=0,
-                     scanned=False):
+                     scanned=False, planets=None, icon_gap=0):
     """The colony name, and under it climate and population.
 
     **LEFT-ALIGNED, WHICH IS THE ORIGINAL'S — 8 September 2026, and
@@ -543,6 +546,29 @@ def _draw_name_block(surface, row, x, y, name_w, row_h, cfg,
     inset = max(0, int(frame_inset * (name_px / 21.0)))
     left = x + inset
     room = max(1, name_w - 2 * inset)
+    # ── THE PLANET DISC, AND THE TEXT MOVES RIGHT FOR IT ────────
+    #
+    # **DEVIATION — the original starts this text at native x 12 and
+    # draws no planet** (`Squeeze_Formatted_Paragraph_Centered_(0x0C,
+    # …)`, colsum.cpp:582; 0x0C is the 12). Data's decision of
+    # 12 September 2026: the row carries the world it is about, out of
+    # his own sheet, and the name and the "Terran 13/22" line under it
+    # start past it. THE SHIFT IS DATA AND NOT CODE — `list.
+    # planet_icon_gap` in layout.json, reference px, scaled here —
+    # because it is a layout decision and the next one may want a
+    # different gap without a commit in this file.
+    #
+    # The disc is SQUARE and as tall as the band leaves it: the icon
+    # is `row_h` less the clearance the figures already use, so it
+    # cannot touch the cell plate's line above or below. Centred
+    # vertically, because it is a disc and a disc sitting on a floor
+    # reads as falling.
+    icon = planets.get(row.get("climate")) if planets is not None else None
+    if icon is not None:
+        surface.blit(icon, (left, y + (row_h - icon.get_height()) // 2))
+        step = icon.get_width() + icon_gap
+        left += step
+        room = max(1, room - step)
     colour = ROW_NAME if scanned else ROW_NAME_DIM
     lines = [(style.render_text(
         _fit(row["name"], style, name_px, room, cfg), name_px, colour), 0)]
