@@ -16,6 +16,7 @@
   },
   "render_mode": "hd",
   "frame_preview": true,
+  "colony_plateless": false,
   "active_mods": [],
   "language": "en",
   "skin": "default",

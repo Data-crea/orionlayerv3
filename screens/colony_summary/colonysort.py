@@ -307,7 +307,13 @@ def render_return(surface, screen, mouse, bg, hover_bg, text_color):
     if not box:
         return
     rect = pygame.Rect(*screen.layout.rect(box))
-    surface.fill((hover_bg if rect.collidepoint(mouse) else bg)[:3], rect)
+    # THE ONE FILL THAT IS NOT IN `panels`, and it goes through the
+    # same call as the thirteen that are: with the plate off a fill is
+    # rounded to the rim's own radius, and RETURN is a window like the
+    # rest whatever else is special about it.
+    from . import colonyplates
+    colonyplates.fill(screen, surface, rect,
+                      (hover_bg if rect.collidepoint(mouse) else bg)[:3])
     label = screen._data.get("return", {}).get("label", "Return")
     word = screen.style.render_text(
         label.upper(),

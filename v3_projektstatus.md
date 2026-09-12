@@ -13,6 +13,18 @@ right and the header had gone stale** — resolved 10 September 2026
 by dating the header to the edit and giving this session its
 paragraph, below, so the two agree again.
 
+This session (12 September 2026), later: **the colony screen can be
+drawn with NO frame artwork at all** — Data's decision, PHASE A, a
+prototype and nothing is deleted. `settings.colony_plateless` turns
+the plate off and every rectangle in `layout_reference.json` is drawn
+where it is typed: fill, rim, lit line, all three through
+`StyleRenderer.draw_plate`. `boxes.json` is that file plus BLEED and
+nothing else, byte for byte identical to what the plate produced, so
+no content rect moved. It supersedes decision 49 for this screen when
+Phase B makes it the only path; until then the plates, the master and
+every check on them are still here and still green. See "The colony
+screen without frame artwork" below.
+
 This session (12 September 2026): **the seven sort keys are seven
 boxes again** (fundament decision 54) — a marked DEVIATION that
 reverses "THE BAR IS ONE HOLE NOW" (Stage A3, 7 September 2026),
@@ -661,7 +673,7 @@ files under `doc/` and are only summarised here.
 | | |
 |---|---|
 | Python | 32,960 lines across 111 modules — `find . -name '*.py'`, `__pycache__` excluded, the smoke test's 6,400 included. The previous figure here (21,642 across 94) was carried from an unstated method and could not be reproduced |
-| Smoke test | `python tools/smoke_test.py` — **119 checks**, headless |
+| Smoke test | `python tools/smoke_test.py` — **121 checks**, headless |
 | Assets | 170 MB (select_race 68, galaxy_map 51, shared 23, new_game 21, colony_summary 1) |
 | Screens in HD | 7 of ~20–22 (colony summary draws list, sidebar, scan box and galaxy inset, and MOVES POPS — the first HD gesture that drives the game) |
 | Setup from clone | `python tools/setup.py` (deps via the system package manager) |
@@ -800,7 +812,7 @@ to stay uncomfortable to extend.
 │   ├── colony_summary/                ID 20, frame, list, sidebar,
 │   │   │                              scan box, galaxy inset, and
 │   │   │                              the population move
-│   │   ├── screen.py             296  the seam only: boxes, wording,
+│   │   ├── screen.py             298  the seam only: boxes, wording,
 │   │   │                              client; everything else is a
 │   │   │                              module beside it
 │   │   ├── colonyrows.py              the numbers per colony
@@ -824,10 +836,17 @@ to stay uncomfortable to extend.
 │   │   ├── colonymoveui.py            the state between two clicks
 │   │   ├── colonysend.py              the two clicks on the wire,
 │   │   │                              each confirmed by its effect
+│   │   ├── colonyframe.py             WHICH frame image, if any
+│   │   ├── colonyplates.py            the screen with NO artwork:
+│   │   │                              every box drawn from
+│   │   │                              layout_reference.json, fill /
+│   │   │                              rim / lit line (PHASE A)
 │   │   ├── layout.json                frame, sort/return native
 │   │   │                              click points, empire rows,
 │   │   │                              the move's own wording
-│   │   ├── boxes.json                 14 cutouts, all derived
+│   │   ├── boxes.json                 14 cutouts, all derived — from
+│   │   │                              the plate's holes, or straight
+│   │   │                              from layout_reference.json
 │   │   └── assets/                    frame.png (1672x941)
 │   └── _template/                 50  Copy to create a screen
 ├── assets/shared/                     fonts, banner, cursor, skins,
@@ -918,6 +937,10 @@ to stay uncomfortable to extend.
     ├── gimp_fixtures.py          152  The layer mask and the named
     │                                  guide Data cuts against, into
     │                                  ~/orionlayer-fixtures/gimp/
+    ├── boxes_from_reference.py    85  layout_reference.json + BLEED
+    │                                  -> boxes.json, with no artwork
+    │                                  on the path. --check asserts
+    │                                  the file IS that derivation
     ├── setup.py                  158  Rebuild generated artwork
     │                                  after a clone, then verify
     ├── star_icon_check.py        109  Which star sprite resolves
@@ -995,7 +1018,7 @@ in exactly ONE bucket. The numbers below are produced by
 check asserts this list still agrees with it — the same trade the
 check count makes, for the same reason.
 
-`screens/galaxy_map/screen.py` (**531** code, 807 total), `tools/struct_probe.py` (**478** code, 753 total), `tools/colony_list_preview.py` (**412** code, 781 total), `screens/custom_race/screen.py` (**400** code, 558 total), `tools/colony_move_hd.py` (**383** code, 583 total), `core/editor/editor.py` (**355** code, 420 total), `screens/galaxy_map/renderer.py` (**335** code, 753 total), `tools/ext_diag.py` (**325** code, 473 total), `core/style.py` (**309** code, 471 total).
+`screens/galaxy_map/screen.py` (**531** code, 807 total), `tools/struct_probe.py` (**478** code, 753 total), `tools/colony_list_preview.py` (**412** code, 781 total), `screens/custom_race/screen.py` (**400** code, 558 total), `tools/colony_move_hd.py` (**383** code, 583 total), `core/editor/editor.py` (**355** code, 420 total), `screens/galaxy_map/renderer.py` (**335** code, 753 total), `tools/ext_diag.py` (**325** code, 473 total), `core/style.py` (**319** code, 503 total).
 `smoke_test.py` is exempt by nature.
 
 **TWO TOOLS JOINED THE LIST ON 8 SEPTEMBER 2026 and one thing left
@@ -4271,6 +4294,99 @@ false, the artwork used directly), and then the check is measuring a
 plate nobody draws. **Which of the two paths the colony screen takes
 is the open decision**, and it is upstream of this check rather than
 settled by it.
+
+### The colony screen without frame artwork — 12 September 2026, PHASE A
+
+**DATA'S DECISION, AND IT IS A PROTOTYPE.** No plate, no master, no
+ring. Every box is drawn by code from `layout_reference.json`, and
+Data moves a box by editing that file and nothing else. Phase A builds
+it beside what exists and deletes nothing; Phase B is a separate order
+and is what removes `frame_build` / `frame_mask` / `frame_holes` /
+`colony_frame_check` / `gimp_fixtures`, the three plates and the ring
+entries, and writes the fundament entry that replaces decision 49 for
+this screen. **The flag ships OFF** so a clone still gets today's
+screen; flipping `"colony_plateless": true` in `settings.json` is the
+whole of what it takes to look.
+
+| | with the plate | without it |
+|---|---|---|
+| chain to `boxes.json` | reference -> mask -> build -> cut -> holes --write | reference -> `tools/boxes_from_reference.py` |
+| what a box's edge is | the master's lit edge, nine-sliced, flat corner tiles | `draw_plate`: fill, 2 ref px rim, 1 px lit line |
+| corner | square, and c5977cf says a radius in the data is inert | `frame.plate_corner_radius`, 3 ref px, 0 allowed |
+| between two boxes | ring, struts, rails, junctions, tiled texture | the background, and nothing else |
+| smoke | 6 plate checks measure | the same 6 skip with their reason, and still count |
+
+**THE RECTS DID NOT MOVE, AND THAT IS ASSERTED.**
+`tools/boxes_from_reference.py --check` compares `boxes.json` against
+`layout_reference.json` plus 2 px of bleed and the file is byte-for-byte
+unchanged. It has to be: `frame_holes.to_ref` maps a hole back with
+`int(round(x * REF_W / img_w)) - BLEED` and the plate is generated at
+exactly the reference size, so the round trip through the PNG was the
+identity all along. Nothing in the list, the panels or the sort code
+moves, and the smoke test's own geometry checks are untouched.
+
+**THE CORNER RADIUS IS c5977cf'S MEASUREMENT, FINALLY USABLE.** The
+original turns its rim corner on about **2 native px** — at the sort
+panel's top-left the top edge reaches full brightness at x=114 and the
+left edge at y=453, with the corner pixel at luminance 88 against the
+rim's 120-144, and bottom-left reads the same. Two native px is **3
+reference px**, which is `layout.json`'s `frame.plate_corner_radius`.
+c5977cf's verdict for the PLATE stands and is not contradicted: there
+the rim is the master's own lit edge with flat corner tiles, so a
+radius in the data is inert because what reads as the rim is RGB the
+alpha never touches. A box drawn by code has no such problem. **The
+parked "corner tiles" and "sort bar's rim cannot be rounded" items are
+therefore answerable for the first time** — Phase B is where they are
+closed, not here.
+
+**THE RIM IS A DEVIATION AND IS MARKED.** The original has metal
+around every field; we have none, and a 2 ref px band of
+`panel.border` stands in for it. What IS transcribed is the
+RELATIONSHIP, the same move `_row_name_note` makes for the list's
+names: the original's plate reads interior 44, metal 60, outline 96 on
+its own framebuffer, so the outline is the brightest of the three and
+it is outermost. Ours is fill 11, rim 78, line 134 in luma — same
+direction, ratios 1.6 and 1.7 against the original's 1.4 and 1.6.
+Absolute greys were rejected for the reason decision 34 gives: this
+screen draws in the project's own palette, and a neutral metal edge
+would answer a different question from the one being transcribed.
+
+**WHAT LOOKS WORSE, MEASURED BY LOOKING AT ALL THREE RESOLUTIONS.**
+Two things, and both are the same thing:
+
+- **The screen has no outer border at all.** The ring was 107/120/18/74
+  reference px of metal and it is now background, so the boxes float on
+  the starfield with nothing holding them. At 1920 it reads as a clean
+  HUD; at 3840 the empty margin is 240 px on the right and reads as
+  unfinished rather than as deliberate. This is the one judgement worth
+  making on the picture.
+- **The band-to-sort-row gap is 9 ref px and now shows.** With the
+  plate a rail filled it and the seam read as one piece of metal; with
+  nothing between the boxes, 9 px of background between the lower band
+  and the sort slots reads as a mistake next to the 38 px gaps inside
+  the band. Not new geometry — it is the gap `_sort_slots_note` already
+  records and the suite already reports — but it was invisible before
+  and is not now.
+
+Nothing else is worse. The header plates, the fifty cell plates, the
+figure columns, the galaxy inset and the sort highlights are drawn by
+exactly the code that drew them yesterday, and the 50 % reductions show
+no new noise. The rim lands where the plate's metal landed, over the
+content and under the header plates, so no glyph moved and no clip
+changed.
+
+**SMOKE: 121 BOTH WAYS.** Six plate-based checks — the frame cut,
+the validator, the built ring and bevel, decision 49's byte-for-byte
+plates and the preview switch, the strut rails, and the `holes == mask
+== boxes` chain — become a skip that still calls `ok` and still prints
+why. Class A and class B drop `colony_summary` from their screen list
+with a report line, because `colonyframe.frame_source` still resolves
+to a plate and measuring glyphs against artwork nobody drew is the
+exact fault that block already records once. Every box check stays and
+measures: every window inside the ring, no overlap, the inset aspect,
+the figure column at three resolutions, the list height to
+`figure_step`. **The count is the same with the flag on and off by
+construction**, which is what lets the two documents keep one number.
 
 ### The seven sort keys take seven boxes — 12 September 2026
 

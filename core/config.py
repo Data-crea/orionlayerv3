@@ -75,6 +75,20 @@ def load_settings():
         #: frame and this flag together. Stated in both places: this
         #: dict is what a clone with no settings.json gets.
         "frame_preview": True,
+        #: Draw the colony screen WITHOUT any frame artwork: every box
+        #: in `layout_reference.json` drawn by code, fill/rim/lit line
+        #: through `StyleRenderer.draw_plate`, nothing between them.
+        #: Data's decision of 12 September 2026, and it supersedes
+        #: decision 49 for this screen — see
+        #: `screens/colony_summary/colonyplates.py`.
+        #:
+        #: **PHASE A SHIPS IT OFF.** Nothing is deleted yet: the
+        #: plates, the master and every check on them are still here
+        #: and still green, so the two can be looked at side by side.
+        #: Phase B makes this the only path and deletes the other one,
+        #: and then this flag goes with it. Stated in both places:
+        #: this dict is what a clone with no settings.json gets.
+        "colony_plateless": False,
         "skin": "default",
         "active_mods": [],
     }

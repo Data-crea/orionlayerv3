@@ -107,7 +107,7 @@ from core.structs import player as player_struct
 from . import (colonybuild, colonyempire, colonyfigures,
                colonyframe, colonyheader, colonyinset, colonylist,
                colonymoveui, colonyoutput, colonyrows, colonyscroll,
-               colonyselect, colonysort, colonytrack)
+               colonyplates, colonyselect, colonysort, colonytrack)
 
 log = logging.getLogger("colony_summary")
 
@@ -360,6 +360,16 @@ class ColonySummaryScreen(ScreenBase):
         code path. This function is unchanged by it: one load, one
         scale, one blit, whatever it was handed.
         """
+        # NO FRAME AT ALL WHEN THE SCREEN DRAWS ITS OWN BOXES —
+        # 12 September 2026, Phase A. Not "load it and do not blit
+        # it": there is no plate, no master and no ring in that mode,
+        # so loading one would put a file on the path that the mode
+        # exists to remove, and `colonyframe.resolve` would log a
+        # PREVIEW line for a picture nobody draws.
+        if colonyplates.active(self):
+            self._frame = None
+            self._scale_frame()
+            return
         path = colonyframe.resolve(self)
         self._frame = (pygame.image.load(path).convert_alpha()
                        if path else None)
@@ -421,7 +431,17 @@ class ColonySummaryScreen(ScreenBase):
     editor_note = colonyheader.editor_note
 
     def _render_frame_image(self, surface):
-        if self._frame_scaled is not None:
+        """The frame, or the boxes' own rims where there is no frame.
+
+        ONE SEAM AND NOT TWO. The rim goes exactly where the plate
+        went — over the content, under the header plates — because
+        that is what the plate's metal did to every cutout it
+        overlapped, and moving it would change which pixels a glyph
+        can reach.
+        """
+        if colonyplates.active(self):
+            colonyplates.render(self, surface)
+        elif self._frame_scaled is not None:
             surface.blit(self._frame_scaled, self._frame_pos)
         elif self.USE_FRAME:
             self._render_frame(surface)
@@ -463,7 +483,12 @@ class ColonySummaryScreen(ScreenBase):
                    else self.box_rect(name))
             if box:
                 fill = tuple(panels.get(name + "_fill") or PANEL_BG)[:3]
-                surface.fill(fill, pygame.Rect(*self.layout.rect(box)))
+                # THROUGH `colonyplates.fill` AND NOT `surface.fill`:
+                # with the plate off the fill is rounded to the same
+                # radius as the rim that goes over it, and a square
+                # fill under a rounded rim shows at every corner.
+                colonyplates.fill(self, surface,
+                                  pygame.Rect(*self.layout.rect(box)), fill)
 
     def _render_list(self, surface):
         """The colony list. The bar is an INVENTION — see colonylist.
