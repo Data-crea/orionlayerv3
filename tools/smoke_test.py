@@ -9754,6 +9754,100 @@ def main():
     _tiny, _tsize = _cb.squeeze_lines(
         app.style, "W" * 60, 40, 4, _sizes, (255,) * 3)
     assert _tiny and _tsize == _sizes[-1], (_tsize, len(_tiny))
+    # ── A COLONY THAT IS BUILDING SOMETHING SHOWS WHAT ──────────
+    #
+    # **THE WHOLE CHAIN, NOT THE SQUEEZE.** Everything above measures
+    # `squeeze_lines` on a string somebody typed here; nothing asserted
+    # that a production ID reaching the row builder comes out of
+    # `colonybuild.draw` as INK. Those are different failures with the
+    # same look — an empty column — and the second one is the report
+    # that prompted this check: a live screen whose BUILDING column
+    # was blank at every row, where every module on the path had in
+    # fact been untouched for a week.
+    #
+    # ID -> NAME -> PIXELS, at 1920x1080 and 2560x1440, through the
+    # real `prodname.Resolver` and the real renderer. Two ids, because
+    # `Selection_Name_` reaches two different files for them
+    # (colbldg.cpp:796-820): -2 is TRADE_GOODS through
+    # `Option_String_` and the player's ESTRINGS.LBX, and a building
+    # id goes through `Real_Building_Name_` and TECHNAME.LBX. A tree
+    # with one extracted and not the other is a real state, and the
+    # check says which half is absent instead of failing blankly.
+    #
+    # THE MEASURE IS A DELTA, not "some ink in the column": the row
+    # plates draw there too, so a cell that lost its text still has
+    # thousands of lit pixels. Empty against named, same cell, same
+    # geometry — that difference IS the text.
+    from core import prodname as _pn_mod
+    from screens.colony_summary import colonybuild as _cbuild
+    _pn = _cbuild.names_for(d.screens["colony_summary"])
+    _ids = [(-2, "an option (TRADE_GOODS, Option_String_, "
+                 "ESTRINGS.LBX)"),
+            (1, "a building (Real_Building_Name_, TECHNAME.LBX)")]
+    _named = []
+    for _pid, _what in _ids:
+        _txt, _st = _pn.name(_pid)
+        if _st == _pn_mod.STATE_OK and _txt:
+            _named.append((_pid, _txt))
+        else:
+            report(f"building column: id {_pid} is {_what} and resolves "
+                   f"to {_txt!r}/{_st!r} — not extracted on this disk, "
+                   f"so it is not measured here")
+    assert _named, (
+        "neither a building id nor an option id resolves to a name on "
+        "this disk, so the BUILDING column cannot be measured at all. "
+        "Run `python tools/techname_extract.py` and `python "
+        "tools/estrings_extract.py`")
+    for _bspec in ("1920x1080", "2560x1440"):
+        _bw2, _bh2 = (int(v) for v in _bspec.split("x"))
+        _blay = Layout(_bw2, _bh2)
+        _bboxes = {b.name: b for b in load_boxes(
+            os.path.join(SCREENS_DIR, "colony_summary", "boxes.json"),
+            _bw2, _bh2)}
+        for _b in _bboxes.values():
+            _b.update_layout(_blay)
+        _barea = pygame.Rect(*_blay.rect(_bboxes["list_area"].ref_rect))
+        _bcfg = dict(_nb_cfg)
+        _bcfg[_ctk.COLUMNS_KEY] = [(n[4:], _bboxes[n]) for n in
+                                   _chdr.COLUMN_BOXES]
+        _bcfg[_ctk.COLUMNS_SPAN_KEY] = (_bboxes["list_area"].ref_rect[0],
+                                        _bboxes["list_area"].ref_rect[2])
+        _bcol = _ctk.columns(_barea, _bcfg)["building"][1]
+        _bband = _ctk.band_height(_barea, _bcfg)
+        _empty = pygame.Surface((_bcol, _bband))
+        _empty.fill((0, 0, 0))
+        _cb.draw(_empty, {"producing": "", "producing_state": "ok"},
+                 0, 0, _bcol, _bband, _bcfg, app.style, _blay)
+        _base = int((pygame.surfarray.array3d(_empty).sum(axis=2)
+                     > 40).sum())
+        for _pid, _txt in _named:
+            _cell = pygame.Surface((_bcol, _bband))
+            _cell.fill((0, 0, 0))
+            _cb.draw(_cell, {"producing": _txt, "producing_state": "ok",
+                             "producing_turns": 3, "producing_id": _pid},
+                     0, 0, _bcol, _bband, _bcfg, app.style, _blay)
+            _arr = pygame.surfarray.array3d(_cell).sum(axis=2) > 40
+            _ink = int(_arr.sum())
+            assert _ink > _base, (
+                f"{_bspec}: a colony producing {_txt!r} (id {_pid}) "
+                f"draws {_ink} lit px in its {_bcol}x{_bband} building "
+                f"cell and an empty one draws {_base} — the name "
+                f"reached the row and no glyph reached the screen")
+            # AND THE INK IS INSIDE THE CELL, which is the other way
+            # this goes blank: text placed past the column's own edge
+            # is drawn and then clipped by the list.
+            _xs = np.where(_arr.any(axis=1))[0]
+            _ys = np.where(_arr.any(axis=0))[0]
+            assert _xs.min() >= 0 and _xs.max() < _bcol, (
+                f"{_bspec}: {_txt!r} inks x {_xs.min()}..{_xs.max()} "
+                f"in a {_bcol} px column")
+            assert _ys.min() >= 0 and _ys.max() < _bband, (
+                f"{_bspec}: {_txt!r} inks y {_ys.min()}..{_ys.max()} "
+                f"in a {_bband} px band")
+    ok(f"a colony that is building something shows what "
+       f"({len(_named)} id(s) through the real resolver, ink inside "
+       f"the cell at 1920x1080 and 2560x1440)")
+
     # ── The markings on that column ──
     # Three separate claims, three separate homes, and each one has to
     # name what the original does instead: a label that records no
