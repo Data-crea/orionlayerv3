@@ -32,6 +32,13 @@ OrionLayer draws the master at an integer step, nearest
 neighbour, picked from the window size. You may replace any
 step on its own by shipping the file beside the master:
 
+Where the row band is far from a multiple of the step the
+figure is drawn at a FRACTIONAL size, nearest neighbour, and
+the sprite it is scaled from is the step BELOW it — so your
+`<name>@2x.png` is what gets stretched at 2.6x, not the
+master. Nothing about the files below changes; the sizes are
+still exact and a wrong-sized file is still refused.
+
 | file | size | used at |
 |---|---:|---|
 | `<name>.png` | 28 x 28 | every step, scaled up |

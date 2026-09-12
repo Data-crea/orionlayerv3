@@ -3012,6 +3012,7 @@ def main():
             f"{_fa_home} no longer marks the figure anchor as a "
             f"DEVIATION, or no longer names the one function that "
             f"owns it")
+
     # AND THE SPRITE'S HEIGHT IS ONE NUMBER. `colonytrack` declares
     # it because `colonyfigures` imports that module and not the
     # reverse; a second copy that disagreed would put the row's
@@ -5319,6 +5320,13 @@ def main():
         # which names all five homes.
         "tools/frame_holes.py": "sort_<key>",
 
+        # ADDED 12 September 2026 with the fractional figure size —
+        # the DEVIATION from decision 28. The loader is where the
+        # sourcing rule lives (the step BELOW the size, a mod's own
+        # file if it ships one), so the marking is on `FigureSet` and
+        # its check is the size block below.
+        "screens/colony_summary/colonyfigures.py": "decision 28",
+
     }
     _MARKS = ("HD EXTENSION", "DEVIATION")
     _SELF = os.path.join("tools", "smoke_test.py")
@@ -6215,7 +6223,7 @@ def main():
     # Stage 5's deletion list** — it is what an install without the
     # extraction sees, not a leftover.
     with _tf.TemporaryDirectory() as _empty:
-        _none = _fig.FigureSet(app.res, 2, root=_empty)
+        _none = _fig.FigureSet(app.res, _fig.step_size(2), root=_empty)
         assert _none.state == "missing" and not _none.figures, _none.state
         assert _none.get("human_farmer.png") is None
     _cell_surf = pygame.Surface((1920, 1080))
@@ -6249,7 +6257,7 @@ def main():
                           os.path.join(_bd, "human_farmer.png"))
         pygame.image.save(pygame.Surface((99, 99), pygame.SRCALPHA),
                           os.path.join(_bd, "human_worker@2x.png"))
-        _bad_set = _fig.FigureSet(app.res, 2, root=_bad)
+        _bad_set = _fig.FigureSet(app.res, _fig.step_size(2), root=_bad)
         assert len(_bad_set.refused) == 2, _bad_set.refused
         assert _bad_set.state == "missing", (
             "a directory of refused files is not a figure set. "
@@ -6274,7 +6282,7 @@ def main():
             from core.resources import Resources as _Res
             _modres = _Res()
             _modres.mod_dirs = [_mod]
-            _set3 = _fig.FigureSet(_modres, 3)
+            _set3 = _fig.FigureSet(_modres, _fig.step_size(3))
             assert _set3.state == "ok" and len(_set3.figures) == 54, (
                 f"a two-file mod broke the other 52 figures "
                 f"({_set3.state}, {len(_set3.figures)})")
@@ -6291,7 +6299,7 @@ def main():
                 "file and must not have to redraw the other two")
             # AND THE STEP FILE IS PER STEP: at 2x the same mod falls
             # back to the base worker, because it shipped no @2x.
-            _set2 = _fig.FigureSet(_modres, 2)
+            _set2 = _fig.FigureSet(_modres, _fig.step_size(2))
             _gotw2 = _set2.get("human_worker.png")
             assert _gotw2.get_size() == (56, 56)
             assert _gotw2.get_at((28, 28))[:3] != (0, 255, 0), (
@@ -8137,6 +8145,121 @@ def main():
        "(four resolutions, every band, measured out of the render; "
        "outside the list the transcribed pointer offset is untouched)")
 
+    # ── THE FIGURE'S SIZE IS NOT ALWAYS AN INTEGER STEP ─────────
+    #
+    # **DEVIATION FROM DECISION 28 — 12 September 2026, Data's
+    # decision after the A/B/C crops.** The step is still the integer
+    # the mod contract is written in; the SIZE is the band less the
+    # plate's line, taken only when that buys at least a quarter of a
+    # master row. Asserted here as the RULE, at every shipped size,
+    # with the two properties that make it safe: the size fills the
+    # band, or it is exactly the step's own canvas.
+    _fs_dev = (_sjson.load(open(os.path.join(
+        SCREENS_DIR, "colony_summary", "layout.json"),
+        encoding="utf-8"))["list"].get("_figure_size_deviation", ""))
+    assert "DEVIATION" in _fs_dev and "decision 28" in _fs_dev, (
+        "layout.json list._figure_size_deviation no longer marks the "
+        "fractional size against the decision it deviates from")
+    for _fs_home, _fs_src in (
+            ("colonytrack.py", open(os.path.join(
+                SCREENS_DIR, "colony_summary", "colonytrack.py"),
+                encoding="utf-8").read()),
+            ("colonyfigures.py", open(os.path.join(
+                SCREENS_DIR, "colony_summary", "colonyfigures.py"),
+                encoding="utf-8").read()),
+            ("doc/v3_fundament.md", open(os.path.join(
+                os.path.dirname(SCREENS_DIR), "doc", "v3_fundament.md"),
+                encoding="utf-8").read()),
+            ("v3_projektstatus.md", open(os.path.join(
+                os.path.dirname(SCREENS_DIR), "v3_projektstatus.md"),
+                encoding="utf-8").read())):
+        assert "decision 28" in _fs_src and "DEVIATION" in _fs_src, (
+            f"{_fs_home} no longer marks the fractional figure size "
+            f"against decision 28")
+
+    _fs_seen = []
+    for _fs_spec in ("1920x1080", "2560x1440", "3440x1371", "3840x2160"):
+        _fs_W, _fs_H = (int(v) for v in _fs_spec.split("x"))
+        _fs_lay = Layout(_fs_W, _fs_H)
+        _fs_boxes = {b.name: b for b in _seated(
+            os.path.join(SCREENS_DIR, "colony_summary", "boxes.json"),
+            _fs_W, _fs_H)}
+        _fs_area = pygame.Rect(*_fs_lay.rect(
+            _fs_boxes["list_area"].ref_rect))
+        _fs_cfg = _column_cfg(dict(_sjson.load(open(os.path.join(
+            SCREENS_DIR, "colony_summary", "layout.json"),
+            encoding="utf-8"))["list"]), _fs_lay)
+        _fs_band = _ctk.band_height(_fs_area, _fs_cfg)
+        _fs_step = _ctk.figure_step(_fs_area, _fs_cfg)
+        _fs_size = _ctk.figure_size(_fs_area, _fs_cfg)
+        _fs_plain = _ctk.MASTER_ROWS * _fs_step
+        _fs_short = _fs_band - _fs_size
+        # THE RULE, BOTH BRANCHES. Filling the band to within the
+        # plate's line is the goal; keeping the step's own canvas is
+        # what happens when the fractional size would buy less than
+        # `FIGURE_SIZE_SNAP`, and then the shortfall is that snap and
+        # no more. A size that is neither is a rule nobody wrote.
+        if _fs_size == _fs_plain:
+            assert _fs_band - _fs_plain - _ctk.PLATE_LINE < \
+                _ctk.FIGURE_SIZE_SNAP, (
+                f"{_fs_spec}: the figure keeps the step's {_fs_plain} "
+                f"px canvas in a {_fs_band} px band — that is "
+                f"{_fs_band - _fs_plain} px of empty row, over the "
+                f"{_ctk.FIGURE_SIZE_SNAP} px the snap allows")
+        else:
+            assert _fs_size == _fs_band - _ctk.PLATE_LINE, (
+                f"{_fs_spec}: the figure is {_fs_size} px in a "
+                f"{_fs_band} px band — a derived size fills the band "
+                f"but for the plate's own line")
+            assert _fs_size - _fs_plain >= _ctk.FIGURE_SIZE_SNAP, (
+                f"{_fs_spec}: the pixel grid was given up for "
+                f"{_fs_size - _fs_plain} px, under the snap of "
+                f"{_ctk.FIGURE_SIZE_SNAP}")
+        # AND THE SOURCE IS THE STEP BELOW IT, which is the mod
+        # contract's half of the deviation.
+        assert _fs_size // _ctk.MASTER_ROWS == _fs_step, (
+            f"{_fs_spec}: a {_fs_size} px figure would be sourced "
+            f"from step {_fs_size // _ctk.MASTER_ROWS} and the "
+            f"step is {_fs_step} — the @Nx file a mod ships for this "
+            f"window would stop being the one that is used")
+        _fs_seen.append(f"{_fs_spec} band {_fs_band} step {_fs_step} "
+                        f"-> {_fs_size} px"
+                        + ("" if _fs_size != _fs_plain else " (snap)"))
+    report("figure size: " + ", ".join(_fs_seen))
+
+    # ── AND WHERE THE STEP WAS INTEGER, NOTHING CHANGED ─────────
+    # Data's condition on the whole deviation. Two properties, both
+    # measured: the set is not resampled at all, so the sprites are
+    # the pixels decision 28 always drew, and the cell pitch is the
+    # integer one — the pitch is the scale times the original's own
+    # squish step, and at an integer scale that is the old arithmetic
+    # exactly.
+    from screens.colony_summary import colonyfigures as _fs_fig
+    for _fs_spec in ("1920x1080", "3840x2160"):
+        _fs_W, _fs_H = (int(v) for v in _fs_spec.split("x"))
+        _fs_app, _fs_scr = _plv.build_screen(_fs_W, _fs_H)
+        _fs_app.dispatcher.switch_to("colony_summary")
+        _fs_scr.enter(None)
+        _fs_scr.update(_plv._Snapshot(_plv.COLONIES))
+        _fs_a, _fs_c, _fs_sc, _fs_n = _fs_scr._list_view()
+        _fs_set = _fs_fig.set_for(_fs_scr, _fs_a, _fs_c)
+        _fs_step = _ctk.figure_step(_fs_a, _fs_c)
+        assert _fs_set.size == _ctk.MASTER_ROWS * _fs_step, (
+            f"{_fs_spec}: the set is {_fs_set.size} px and the step's "
+            f"canvas is {_ctk.MASTER_ROWS * _fs_step}")
+        assert not _fs_set.resampled, (
+            f"{_fs_spec}: the figure set was RESAMPLED at a window "
+            f"where the step is exact — decision 28's own sizes have "
+            f"to come through untouched")
+        assert _ctk.figure_scale(_fs_a, _fs_c) == float(_fs_step), (
+            f"{_fs_spec}: the scale is "
+            f"{_ctk.figure_scale(_fs_a, _fs_c)} and the step "
+            f"{_fs_step} — every pitch on this screen is that number "
+            f"times a native constant")
+    ok("the figure fills the band or keeps the step's own canvas "
+       "(four sizes, the snap measured; at the two exact ones nothing "
+       "is resampled and every pitch is the integer's)")
+
     ok("colony summary cells: drawn, picked up and dropped are one "
        "and the same cell (read back from the render)")
     # ── The identity letter, and the popup's two rules ───────────
@@ -8275,7 +8398,7 @@ def main():
             assert _step in _fig.STEPS, (
                 f"figure_step at {_sw}x{_sh} is {_step}, which is not "
                 f"a step the figure masters ship at ({_fig.STEPS})")
-            _hcset = _cfig.FigureSet(_hcres, _step)
+            _hcset = _cfig.FigureSet(_hcres, _cfig.step_size(_step))
             _hcsurf = pygame.Surface((600, 400), pygame.SRCALPHA)
             _hcsurf.fill((0, 0, 0, 255))
             _hccells = tuple(_crw.Cell("", "human_farmer.png")

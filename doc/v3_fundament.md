@@ -944,6 +944,29 @@ pre-rendered sprites per star class and indexes them with
 zoom. HD artwork follows the same structure, so a single step can be
 replaced by hand without touching code.
 
+**ONE EXCEPTION, AND IT IS MARKED — 12 September 2026, Data's
+decision.** The colony list's population figures are drawn at a
+FRACTIONAL size where the band is far from a multiple of the step:
+the step is the largest integer that fits, and at 2560x1440 and
+3440x1371 the band is 77 and 73 px against a 56 px figure, so a
+quarter of every row was empty. The size is the band less the plate's
+own line, taken only when that buys at least a quarter of a master row
+(`colonytrack.figure_size`, `FIGURE_SIZE_SNAP`), and it is nearest
+neighbour — so every colour is still exactly the game's and what
+breaks is the pixel GRID, invisible at 1:1 and visible in a 3x zoom.
+Below that threshold the integer step stands and the sprite is bit for
+bit what this decision always drew, which is the case at 1920x1080 and
+3840x2160 and is asserted rather than assumed.
+
+**The half of this decision that did NOT move is the one the modder
+sees.** A step is still an integer, `@2x.png`/`@3x.png`/`@4x.png` is
+still the contract (decision 50), a wrong-sized file is still refused,
+and a fractional size is reached BY SCALING THE STEP BELOW IT — so a
+hand-drawn `@2x` is what gets stretched rather than being passed over
+in favour of the master it was drawn to replace. The alternative that
+keeps the grid even, an integer step up and a smoothscale down, blends
+the colours and was rejected on the side-by-side.
+
 **29. Player colours are tinted at runtime, never baked.** One
 greyscale sprite, eight tints — mirroring what the original does with
 palette-swapped LBX entries. Exports are forced to true luma so

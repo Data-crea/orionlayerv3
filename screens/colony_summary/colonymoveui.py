@@ -416,14 +416,16 @@ class MoveController:
             self.draw_popup(surface, rows, first, area, cfg, scale,
                             style, layout, data)
 
-    def draw_held(self, surface, rows, pointer, figures, step, y=None):
+    def draw_held(self, surface, rows, pointer, figures, scale, y=None):
         """The pops in hand, on the pointer. Nothing when none is.
 
         The screen decides WHEN — last, over the frame, which is
         where the original draws it (colsum.cpp:506-511) — and this
         decides WHAT, because the held cluster is this class's state.
-        The offsets and the step are `colonylist`'s and
-        `zoomtables`'.
+        The offsets are `colonylist`'s and `zoomtables`'; `scale` is
+        `colonytrack.figure_scale`, the device px a master row is
+        drawn at, which is an integer wherever the step table used to
+        answer alone.
 
         `y` is a CALLABLE taking one sprite's last inked row, not a
         number: the figures are anchored by their ink and a cluster
@@ -437,7 +439,7 @@ class MoveController:
         if row is None:
             return
         colonylist.draw_held_cluster(surface, pointer, figures,
-                                     row.get("held") or (), step, y)
+                                     row.get("held") or (), scale, y)
 
     def held(self):
         """(colony index, held pop indices), or None.

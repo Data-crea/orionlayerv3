@@ -153,6 +153,20 @@ FIGURE_TOP_NATIVE = 4
 #: cannot drift (decision 36).
 MASTER_ROWS = 28
 
+#: How much bigger than the integer step's canvas a derived size has
+#: to be before the pixel grid is given up for it: a QUARTER of a
+#: master row, `MASTER_ROWS // 4` device px.
+#:
+#: **THIS IS WHAT KEEPS THE INTEGER SIZES BYTE-IDENTICAL.** At
+#: 1920x1080 the band is 58 and the room is 57 against a 56 px canvas
+#: — one pixel, 1.8 % of the figure's height, for a sprite that stops
+#: being the game's own pixel grid. At 3840x2160 it is three of 112.
+#: Both keep the integer step and nothing about them changes. At
+#: 2560x1440 the room is 76 against 56 and at 3440x1371 72 against 56;
+#: those are 36 % and 29 %, which is the quarter-empty row this
+#: deviation exists for.
+FIGURE_SIZE_SNAP = MASTER_ROWS // 4
+
 #: Native px between the sprite's canvas BOTTOM and the band's, per
 #: step. **MEASURED, AND IT IS ZERO.** It is no longer what the
 #: anchor uses — `figure_origin_y` places the INK, not the canvas —
@@ -396,7 +410,7 @@ def row_boxes(area, cfg, scale, row, band=None):
         return RowBoxes(None, (), (), (), None, area.x)
     return _column_boxes(cols, cfg, scale, row, top,
                          height or track.band_h, track,
-                         figure_step(area, cfg))
+                         figure_scale(area, cfg))
 
 
 def _column_boxes(cols, cfg, scale, row, y, h, track, step):
@@ -743,6 +757,71 @@ def held_figure_y(area, cfg, scale, count, point, step, ink_bottom):
         if top <= py < top + height:
             return figure_origin_y(top, height, ink_bottom)
     return py + zoomtables.CLUSTER_FIGURE_OFFSET[1] * step
+
+
+def figure_size(area, cfg):
+    """The figure's CANVAS in device px — **DEVIATION from decision
+    28**, 12 September 2026, Data's decision after seeing A, B and C.
+
+    Decision 28 is "an integer swap, never scaled": a master is drawn
+    at 1x, 2x, 3x or 4x and at nothing between, so the sprite on
+    screen is the game's own pixels, larger. `figure_step` still
+    answers that integer and the mod contract is still written in it
+    (decision 50: `@2x.png`, `@3x.png`, `@4x.png`, and
+    `doc/modding_figures.md` is generated from it). What changes is
+    the SIZE the sprite is drawn at:
+
+        room = band - PLATE_LINE            the band less the plate's
+                                            own bottom line
+        size = room                         when room is at least
+                                            FIGURE_SIZE_SNAP bigger
+                                            than MASTER_ROWS * step
+             = MASTER_ROWS * step           otherwise
+
+    **WHY, measured.** The step is the largest integer whose figure
+    fits the band, and at two of the four shipped sizes the band is
+    nowhere near a multiple of it: 77 px at 2560x1440 and 73 at
+    3440x1371 against a 56 px figure, so a quarter of the row is
+    empty and the colonists sit in a strip with air above them. The
+    band at 1920x1080 is 58 against the same 56, which is why nobody
+    saw it.
+
+    **WHAT IT COSTS, and it is the whole of the cost.** Nearest
+    neighbour at a fractional size keeps every colour exactly — no
+    blending, no half-tones, still the game's palette — and breaks
+    the PIXEL GRID: some master rows become three device rows and
+    others two. At 1:1 that is invisible (Data's A/B/C crops, and the
+    3x zoom is where it can be seen at all). The alternative that
+    keeps the grid even, an integer step up and a smoothscale down,
+    blends the colours and was rejected on the same crops.
+
+    **THE SNAP IS WHAT MAKES THIS SAFE.** A size is only taken when it
+    buys at least a quarter of a master row; below that the figure
+    keeps the integer step and is bit for bit what it was. That is
+    what holds 1920x1080 and 3840x2160 unchanged, and it is asserted
+    rather than assumed.
+
+    Marked in `colonyfigures.FigureSet`, in `layout.json` under
+    `list._figure_size_deviation`, in `doc/v3_fundament.md` on
+    decision 28, in `v3_projektstatus.md` and in a smoke check.
+    """
+    step = figure_step(area, cfg)
+    room = band_height(area, cfg) - PLATE_LINE
+    plain = MASTER_ROWS * step
+    return room if room - plain >= FIGURE_SIZE_SNAP else plain
+
+
+def figure_scale(area, cfg):
+    """Device px per master row — `figure_size` over `MASTER_ROWS`.
+
+    A float, and the only reason it exists is that the PITCHES are in
+    master units: the cell pitch is the original's own squish step
+    times this, and the held cluster's `(5, -10)` and 20 are
+    `zoomtables`' native constants times this. Where the size is the
+    integer step's, this is that integer exactly and every pitch is
+    the number it was.
+    """
+    return figure_size(area, cfg) / float(MASTER_ROWS)
 
 
 def figure_origin_y(top, height, ink_bottom):

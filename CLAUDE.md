@@ -58,7 +58,7 @@ derive world geometry.
 python tools/smoke_test.py
 ```
 
-119 checks, headless, no orion2re needed. **The count must not go
+120 checks, headless, no orion2re needed. **The count must not go
 down.** If a change makes a check obsolete, replace it — do not
 delete it. It went down exactly once, on 12 September 2026, when
 Phase B deleted the frame machinery the checks were about (decision

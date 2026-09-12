@@ -13,6 +13,18 @@ right and the header had gone stale** — resolved 10 September 2026
 by dating the header to the edit and giving this session its
 paragraph, below, so the two agree again.
 
+This session (12 September 2026), last: **die Figur füllt die Zeile —
+the figure's SIZE is no longer always an integer step.** DEVIATION from
+decision 28, Data's decision after the A/B/C crops. The step still
+answers the mod contract (`@2x`/`@3x`/`@4x`, decision 50); the drawn
+size is the band less the plate's line, taken only when that buys at
+least a quarter of a master row (`FIGURE_SIZE_SNAP`). So 2560x1440
+goes 56 -> **76 px** and 3440x1371 56 -> **72 px**, while 1920x1080 and
+3840x2160 keep the integer step and are **byte-identical — 0 pixels of
+2.2 M and 8.9 M differ** against the previous commit, measured. Nearest
+neighbour, so every colour stays the game's own and only the pixel grid
+breaks. Smoke 119 -> **120**. See "Die Figur füllt die Zeile" below.
+
 This session (12 September 2026), last: **the row figures sit on the
 plate's inner floor, by their INK.** Anchoring the CANVAS to the band's
 floor (the entry below) still floated at every size: 51 of the 54
@@ -762,7 +774,7 @@ files under `doc/` and are only summarised here.
 | | |
 |---|---|
 | Python | 32,960 lines across 111 modules — `find . -name '*.py'`, `__pycache__` excluded, the smoke test's 6,400 included. The previous figure here (21,642 across 94) was carried from an unstated method and could not be reproduced |
-| Smoke test | `python tools/smoke_test.py` — **119 checks**, headless |
+| Smoke test | `python tools/smoke_test.py` — **120 checks**, headless |
 | Assets | 170 MB (select_race 68, galaxy_map 51, shared 23, new_game 21, colony_summary 1) |
 | Screens in HD | 7 of ~20–22 (colony summary draws list, sidebar, scan box and galaxy inset, and MOVES POPS — the first HD gesture that drives the game) |
 | Setup from clone | `python tools/setup.py` (deps via the system package manager) |
@@ -4404,6 +4416,91 @@ false, the artwork used directly), and then the check is measuring a
 plate nobody draws. **Which of the two paths the colony screen takes
 is the open decision**, and it is upstream of this check rather than
 settled by it.
+
+### Die Figur füllt die Zeile: fractional size — 12 September 2026
+
+The anchor work put the figures on the row's floor; it did not make
+them any bigger. The step is the largest INTEGER whose figure fits the
+band, and at two of the four shipped sizes the band is nowhere near a
+multiple of it — so a quarter of every row stayed empty. Data saw A, B
+and C side by side (today, nearest neighbour at a fractional size,
+integer step up with a smoothscale down) and chose **B**.
+
+**The rule.**
+
+    room  = band - PLATE_LINE
+    plain = MASTER_ROWS * figure_step          (today's canvas)
+    size  = room   if room - plain >= FIGURE_SIZE_SNAP
+          = plain  otherwise                   FIGURE_SIZE_SNAP = 7
+
+| | band | step | plain | room | size | scale | ink |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| 1920x1080 | 58 | 2 | 56 | 57 | **56** (snap) | 2.000 | 48 |
+| 2560x1440 | 77 | 2 | 56 | 76 | **76** | 2.714 | 66 |
+| 3440x1371 | 73 | 2 | 56 | 72 | **72** | 2.571 | 62 |
+| 3840x2160 | 116 | 4 | 112 | 115 | **112** (snap) | 4.000 | 96 |
+
+**THE SNAP IS A CORRECTION TO THE ORDER, and it is what makes the
+order's own condition true.** The order asked for `(band - PLATE_LINE)
+/ 28` at every size AND for 1920x1080 and 3840x2160 to be unchanged.
+Those two cannot both hold: the room at 1080p is 57 against a 56 px
+canvas and at 2160p 115 against 112, so the literal rule moves them by
+1 and 3 px. The threshold resolves it in favour of the invariant — the
+pixel grid is given up only when a fractional size buys at least a
+quarter of a master row, which is 36 % and 29 % of the figure at the
+two sizes that needed it and 1.8 % and 2.7 % at the two that did not.
+The order's other condition, "the derived size fills the band to
+within PLATE_LINE at all four sizes", is therefore asserted as the RULE
+with both branches rather than as one instance.
+
+**Sourced from the step BELOW the size** — 2.571 takes the `@2x` set,
+a mod's own file if it ships one, and scales THAT. Two nearest-
+neighbour maps rather than one, deliberately: what a modder drew at
+56 px is what gets stretched, instead of being passed over in favour
+of the 28 px master it was drawn to replace. `doc/modding_figures.md`
+gains exactly one paragraph saying so and nothing else changes in it.
+
+**What it costs.** Nearest neighbour keeps every colour exactly — no
+blending, no half-tones, still the game's palette — and breaks the
+pixel GRID: some master rows become three device rows, others two. At
+1:1 that is invisible; the 3x zoom of the A/B/C crops is where it can
+be seen at all. Variant C kept the grid even and blended the colours;
+it was rejected on those crops.
+
+**`FigureSet` is keyed by pixel size now, with an LRU of four.** Keyed
+by step there were four possible sets and the cache could not grow;
+keyed by size there is one per BAND, and the band tracks the window's
+height. Four covers windowed, maximised and fullscreen in one session
+and evicts the oldest beyond that. A resize that does not move the
+band rebuilds nothing. A stale caller passing a STEP where a size is
+wanted now fails loudly — `FigureSet(res, 2)` would have loaded 54
+two-pixel sprites.
+
+**Pitches follow the SIZE, not the step**: the cell pitch is the
+original's own squish step times the scale, and the held cluster's
+`(5, -10)` and 20 are `zoomtables`' native constants times the same.
+Where the scale is an integer — the two snapped sizes — every one of
+those is the number it always was, which is half of why the renders
+are identical there.
+
+**Measured, against the previous commit, whole-screen render, live
+rows:** 1920x1080 **0** pixels differ of 2 229 120; 3840x2160 **0** of
+8 904 960; 2560x1440 151 795 and 3440x1371 134 532, which is the
+figures growing. (The first attempt at this comparison said 8 312 and
+28 818 — the worktree of the old commit had no extracted building
+names, so its BUILDING column read "names not extracted". The
+difference was in the one column that has nothing to do with figures,
+which is what made it obvious.)
+
+**Checks: 119 -> 120.** The new one asserts the rule at all four sizes
+— the size fills the band but for the plate's line, or it is the
+step's own canvas and the shortfall is under the snap — plus that the
+size is sourced from the step below it, and that at the two exact
+sizes the set is **not resampled** and the scale IS the integer. The
+ink-floor check still measures 52 cells per size out of the render and
+stays green at the new sizes; `FIGURE_STEPS` membership still points
+at `figure_step`, which did not change; the mod-file check still
+refuses a wrong-sized `@Nx.png`.
 
 ### The row figures move to the band's floor — 12 September 2026
 

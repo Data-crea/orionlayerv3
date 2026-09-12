@@ -434,14 +434,17 @@ class ColonySummaryScreen(ScreenBase):
         # hang the figures a border's width from the cursor at
         # exactly the resolution nobody checks.
         _area, _cfg, _scale, _n = self._list_view()
-        _step = colonytrack.figure_step(_area, _cfg)
+        # THE FIGURE'S SCALE, not the step — `colonytrack.figure_size`
+        # is a deviation from decision 28 and the cluster follows the
+        # sprite it is made of.
+        _fscale = colonytrack.figure_scale(_area, _cfg)
         _first = self._window.top(_area, _cfg, _scale, _n)
         self._move.draw_held(
             surface, self._rows, mouse_input.pos(),
-            colonyfigures.set_for(self, _area, _cfg), _step,
+            colonyfigures.set_for(self, _area, _cfg), _fscale,
             lambda _ink: colonytrack.held_figure_y(
                 _area, _cfg, _scale, _n - _first, mouse_input.pos(),
-                _step, _ink))
+                _fscale, _ink))
 
     def _render_return(self, surface):
         """RETURN, AFTER THE FRAME — 12 September 2026, Data's new

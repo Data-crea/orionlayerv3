@@ -55,6 +55,7 @@ ships only a master beats the base project's step files. Two
 `resources.resolve` calls would give the opposite — a base step file
 outranking a mod's master — which is why `Resources.roots()` exists.
 """
+import collections
 import logging
 import os
 
@@ -197,8 +198,28 @@ class FigureSet:
     renderer is excluded from Stage 5's deletion list.
     """
 
-    def __init__(self, resources, step, root=None):
-        self.step = int(step)
+    def __init__(self, resources, size, root=None):
+        #: **KEYED BY PIXEL SIZE SINCE 12 September 2026**, not by
+        #: step — see `colonytrack.figure_size`, which is the
+        #: DEVIATION from decision 28 this serves. A size of 2 used to
+        #: mean "step 2"; it now means a two-pixel canvas, so a stale
+        #: caller has to fail rather than load 54 invisible sprites.
+        size = int(size)
+        assert size >= MASTER_SIZE, (
+            f"FigureSet takes a PIXEL SIZE and got {size}; the master "
+            f"is {MASTER_SIZE} px and nothing smaller is drawable. A "
+            f"caller passing a STEP is reading the old signature")
+        self.size = size
+        #: The integer step the sprites are SOURCED at — the one below
+        #: the size, so a fractional size takes the `@2x` set and
+        #: scales it. The mod contract is written in this number and
+        #: `doc/modding_figures.md` is generated from it.
+        self.step = size // MASTER_SIZE
+        self.scale = size / float(MASTER_SIZE)
+        #: False where the size IS the step's own canvas, and then
+        #: nothing is resampled and the sprites are bit for bit what
+        #: decision 28 always drew. A smoke check asserts it.
+        self.resampled = size != MASTER_SIZE * self.step
         self.state = "missing"
         self.figures = {}
         self.refused = []
@@ -220,9 +241,9 @@ class FigureSet:
             return
         self.state = "ok" if len(self.figures) == len(names) else "partial"
         if self.state == "partial":
-            log.warning("figures: %d of %d present at step %dx — the "
+            log.warning("figures: %d of %d present at %d px — the "
                         "rest draw as coloured cells",
-                        len(self.figures), len(names), self.step)
+                        len(self.figures), len(names), self.size)
 
     def _one(self, resources, name, root):
         """One figure at this step: step file, then stepped master.
@@ -239,13 +260,33 @@ class FigureSet:
             direct = os.path.join(base, FIGURE_DIR,
                                   step_name(name, self.step))
             surface = self._read(direct, want, want)
+            if surface is None:
+                master = os.path.join(base, FIGURE_DIR, name)
+                surface = self._read(master, MASTER_SIZE, want)
             if surface is not None:
-                return surface
-            master = os.path.join(base, FIGURE_DIR, name)
-            surface = self._read(master, MASTER_SIZE, want)
-            if surface is not None:
-                return surface
+                return self._resample(surface)
         return None
+
+    def _resample(self, surface):
+        """The step's sprite at this set's PIXEL SIZE.
+
+        **TWO STAGES ON PURPOSE, and not one.** A fractional size is
+        reached from the sprite the STEP would have drawn — a mod's
+        own `@2x.png` if it ships one, the stepped master otherwise —
+        and not from the 28 px master directly. Composing the two
+        nearest-neighbour maps is not the same as one, and the
+        difference is the point: what a mod hand-drew at 56 px is what
+        gets stretched, rather than being thrown away in favour of the
+        28 px file it was drawn to replace.
+
+        Nothing happens at all where the size is the step's own
+        canvas, which is every window whose band is within
+        `FIGURE_SIZE_SNAP` of it (`colonytrack.figure_size`).
+        """
+        if not self.resampled:
+            return surface
+        import pygame
+        return pygame.transform.scale(surface, (self.size, self.size))
 
     def _read(self, path, need, want):
         """Load `path`, refuse it unless it is `need` square, step it.
@@ -349,18 +390,43 @@ def figure_step(area, cfg):
     return colonytrack.figure_step(area, cfg)
 
 
-def set_for(screen, area, cfg):
-    """The figure set for a screen's current scale, cached per App.
+#: How many sets are kept. **FOUR, AND IT IS A BUDGET NOW** — keyed
+#: by step there were four possible sets and the cache could never
+#: grow; keyed by pixel size there is one per BAND, and the band
+#: tracks the window's height continuously. Four covers a session
+#: that moves between a windowed size, its maximised size and
+#: fullscreen, and evicts the oldest beyond that. Each set is 54
+#: surfaces of at most 116 px square.
+SET_CACHE = 4
 
-    Keyed by STEP and not by window size: two windows that pick the
-    same `FIGURE_STEP` share one set, which is the point of the step
-    being a small integer table (decision 26).
+
+def set_for(screen, area, cfg):
+    """The figure set for this screen's band, cached per App.
+
+    **KEYED BY PIXEL SIZE SINCE 12 September 2026**, not by step: the
+    size is `colonytrack.figure_size`, the deviation from decision 28
+    that fills the row, and two bands that want different sizes are
+    two different sets even where they pick the same step. Where the
+    size IS the step's own canvas nothing is resampled, so the
+    windows that were served by the integer table are served by the
+    same pixels.
+
+    A RESIZE REBUILDS NOTHING UNLESS THE BAND MOVED. The size is
+    derived from the band, so a window that grows without changing
+    the row height finds its set already here — and one that shrinks
+    back to a size it used finds it too, until four other sizes have
+    pushed it out.
     """
-    step = figure_step(area, cfg)
+    from . import colonytrack
+    size = colonytrack.figure_size(area, cfg)
     cache = getattr(screen.app, "figure_sets", None)
     if cache is None:
-        cache = {}
+        cache = collections.OrderedDict()
         screen.app.figure_sets = cache
-    if step not in cache:
-        cache[step] = FigureSet(screen.app.res, step)
-    return cache[step]
+    if size in cache:
+        cache.move_to_end(size)
+    else:
+        cache[size] = FigureSet(screen.app.res, size)
+        while len(cache) > SET_CACHE:
+            cache.popitem(last=False)
+    return cache[size]

@@ -367,7 +367,7 @@ def render(surface, rows, area, cfg, layout, style, first=0,
                         len(rows))
 
 
-def draw_held_cluster(surface, pointer, figures, cells, step, y=None):
+def draw_held_cluster(surface, pointer, figures, cells, scale, y=None):
     """The held pops, hanging on the pointer. Drawn LAST, over
     everything, like the original's own `Draw_Cluster_`.
 
@@ -412,9 +412,16 @@ def draw_held_cluster(surface, pointer, figures, cells, step, y=None):
     """
     if not cells or figures is None:
         return
+    # **THE SCALE, NOT THE STEP, SINCE 12 September 2026.** These are
+    # NATIVE constants — `(5, -10)` and 20 — and what multiplies them
+    # is however many device px a master row is drawn at
+    # (`colonytrack.figure_scale`). Where that is an integer, which is
+    # every window the step table used to serve alone, it is the
+    # number it always was; where it is not, the cluster grows with
+    # the sprite instead of hanging beside a figure a third larger.
     off_x, off_y = zoomtables.CLUSTER_FIGURE_OFFSET
-    pitch = zoomtables.CLUSTER_FIGURE_PITCH * step
-    x = pointer[0] + off_x * step
+    pitch = zoomtables.CLUSTER_FIGURE_PITCH * scale
+    x = pointer[0] + off_x * scale
     # `y` is `colonytrack.held_figure_y`'s answer — the row's own
     # figure line when the pointer is in a row, the transcribed
     # pointer offset when it is not. None means nobody asked, and the
@@ -429,7 +436,7 @@ def draw_held_cluster(surface, pointer, figures, cells, step, y=None):
             # taking that sprite's own last inked row; None means
             # nobody asked, and the transcription is what a caller
             # that does not know gets.
-            surface.blit(surf, (x, pointer[1] + off_y * step if y is None
+            surface.blit(surf, (x, pointer[1] + off_y * scale if y is None
                                 else y(figures.ink_bottom(name))))
         x += pitch
 

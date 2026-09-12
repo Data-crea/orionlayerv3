@@ -266,6 +266,7 @@ def editor_note(screen, box):
     width = cols[key][1]
     band = colonytrack.band_height(area, cfg)
     step = colonytrack.figure_step(area, cfg)
+    size = colonytrack.figure_size(area, cfg)
     px = screen.layout.font_size(cfg.get("name_font", 21))
     if key == "name":
         small = screen.layout.font_size(cfg.get("small_font", 15))
@@ -275,10 +276,18 @@ def editor_note(screen, box):
                 f"{screen.style.render_text(colonylist.NAME_BOUND_DETAIL, small, (255,)*3).get_width()}px "
                 f"({colonylist.NAME_BOUND_DETAIL}) — REPORTED, "
                 f"not clamped; {colonylist.NAME_BOUND_NOTE}")
+    # THE SIZE AS WELL AS THE STEP, since 12 September 2026: the
+    # figure is drawn at `figure_size` and the step is only what it is
+    # SOURCED from (the deviation from decision 28). An info bar that
+    # reported the step alone would name a 56 px sprite in a row
+    # drawing a 72 px one.
+    drawn = f"{step}x" if size == colonytrack.MASTER_ROWS * step \
+        else f"{size}px = {size / colonytrack.MASTER_ROWS:.2f}x"
     native = zoomtables.NATIVE_JOB_COLUMNS.get(key)
+    scale = size / float(colonytrack.MASTER_ROWS)
     if native is None:
-        return f"{width}px band {band} step {step} (no native share)"
-    fits = max(0, width // (colonyicons.ICON_SPACING * step))
-    return (f"{width}px band {band} step {step} | fits {fits} "
-            f"unsqueezed | fill {step * native / width * 100:.0f}% "
+        return f"{width}px band {band} figure {drawn} (no native share)"
+    fits = max(0, int(width // (colonyicons.ICON_SPACING * scale)))
+    return (f"{width}px band {band} figure {drawn} | fits {fits} "
+            f"unsqueezed | fill {scale * native / width * 100:.0f}% "
             f"of the original's")
