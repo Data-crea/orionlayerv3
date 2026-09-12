@@ -81,7 +81,6 @@ Everything else transcribed for this screen — the row set, the job
 split, the "No Farming" condition, the planet name, the bar length
 and the track length — is in `colonyrows.py` and marked there.
 """
-import collections
 
 import pygame
 
@@ -101,8 +100,8 @@ from .colonyrows import POP_LIMIT_CAP
 #: in the checks reaches for them here, and moving a seam is not a
 #: reason to move a hundred call sites on the same day.
 from .colonytrack import (            # noqa: F401  (re-export)
-    Track, Regions, RowBoxes, track_metrics, band_height, figure_step,
-    row_boxes, cell_at_x, drop_targets, drop_band, name_rect, on_name,
+    RowBoxes, track_metrics, figure_step,
+    row_boxes, cell_at_x, drop_targets, drop_band,
     row_regions, rows_drawn, row_bands, row_at)
 
 #: One colour per profession, in ECON order. Palette so a skin or mod

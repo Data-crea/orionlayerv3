@@ -955,6 +955,14 @@ reproduces all three byte for byte, and a smoke check asserts exactly
 that rather than trusting the tool's existence (decision 40, whose
 `stars/` lesson was this mistake in the other direction).
 
+**SUPERSEDED FOR THE COLONY SCREEN — 12 September 2026, decision 55.**
+There are no derived plates on that screen any more: it wears one
+fixed image and its rectangles are measured off it. Everything below
+is the record of what was built and why it was right at the time; the
+machinery it describes is deleted. This entry still stands for
+anything else that becomes a derived file — the byte-for-byte rebuild
+IS the licence, and that part did not change.
+
 **Committing them was the alternative and it was rejected on
 history, not on taste.** As an asset the plates would render in a
 clone that had not run `tools/setup.py`, which is the whole of what
@@ -981,14 +989,6 @@ which is what the tree actually had for a day, gitignored as
 absence rather than skipping**: no plates means it names the command
 and still counts, so "the check count must not go down" stays a rule
 anybody can follow (decision 42's pattern, second use).
-
-**SUPERSEDED FOR THE COLONY SCREEN — 12 September 2026, decision 55.**
-There are no derived plates on that screen any more: it wears one
-fixed image and its rectangles are measured off it. Everything below
-is the record of what was built and why it was right at the time; the
-machinery it describes is deleted. This entry still stands for
-anything else that becomes a derived file — the byte-for-byte rebuild
-IS the licence, and that part did not change.
 
 **Amended 7 September 2026, Stage 4: `frame_preview` ships ON and
 its name is backwards.** This entry was written while the flag was a
@@ -1030,6 +1030,17 @@ all.
 The test is the SOURCE REFERENCE, not the feeling. A transcription in
 this project carries `file.cpp:line`; an invention or a deviation
 carries its label. A rule with neither is ours, and ours means Data's.
+
+**THE PRINCIPLE STANDS; ITS EXAMPLES ARE GONE — 12 September 2026,
+decision 55.** Both tables below name `_gaps_note`, `_ring_source`,
+`frame_mask` and `tools/colony_frame_check.py`, and all four were
+deleted with the plate machinery. Nothing about the RULE changed —
+a rule we chose is Data's, a rule transcribed from MOO2 stays a check
+— and the four dropped enforcements stayed dropped. What replaced the
+last line of the second table is stronger and is in 55: every window
+must sit inside its OWN hole of the artwork, measured against the
+alpha at three resolutions, which also catches a window inside the
+metal but over the wrong hole.
 
 **Chosen — dropped as checks, still reported every run:**
 
@@ -1254,7 +1265,9 @@ and computes the other, never the reverse.
 **Ring from the artwork, window from the layout, boundary measured.**
 Generated artwork and the geometry it has to fit come from two
 different places on purpose, and the place where they meet is
-asserted in numbers. `frame_build.py` lifts the device ring out of
+asserted in numbers. (`frame_build.py` is deleted — decision 55,
+12 September 2026 — and what it did is kept here because the PRINCIPLE
+is what the paragraph is about.) `frame_build.py` lifts the device ring out of
 the master's own rectangles rather than scaling the reference number
 — `round(ring * scale)` put the plate's ring one pixel INSIDE its own
 first hole at 1440p, 106 where the table says 107, because the holes
@@ -1287,7 +1300,8 @@ tell — sweep the parameter before trusting the number.
 and wrong — and a threshold sweep will not find it.** The sibling of
 the rule above, and the reason it is a separate line: there the
 parameter was too permissive and moving it exposed the fault, here
-the parameter is fine and nothing about it moves. `frame_master`'s
+the parameter is fine and nothing about it moves. (`frame_master` is
+deleted — decision 55.) `frame_master`'s
 `--profiles` walks each hole's edge OUTWARD FROM ITS BOUNDING BOX.
 For the master's eight rectangular holes that is the same edge. For
 its one chamfered hole — the header cartouche — it is not: the bbox

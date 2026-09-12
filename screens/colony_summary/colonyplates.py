@@ -120,11 +120,24 @@ def windows(screen):
     return parse_reference(data)[1]
 
 
+def bled(rect):
+    """One rectangle grown by `BLEED` on every side.
+
+    **ONE EXPRESSION, ONE HOME** — 12 September 2026, the redundancy
+    audit. `x - b, y - b, w + 2*b, h + 2*b` stood in three places:
+    here, in `tools/boxes_from_reference.py` and open-coded in a smoke
+    check. Three copies of an arithmetic that has to agree to the
+    pixel, when what it is FOR is that the file on disk and the screen
+    in memory hold the same rect.
+    """
+    x, y, w, h = rect
+    return [x - BLEED, y - BLEED, w + 2 * BLEED, h + 2 * BLEED]
+
+
 def box_rects(screen):
     """{box name: [x, y, w, h]} — the cutouts, reference px, bled."""
-    return {BOX_NAME.get(n, n): [x - BLEED, y - BLEED,
-                                 w + 2 * BLEED, h + 2 * BLEED]
-            for n, (x, y, w, h) in windows(screen).items()}
+    return {BOX_NAME.get(n, n): bled(r)
+            for n, r in windows(screen).items()}
 
 
 def reseat(screen):

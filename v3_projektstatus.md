@@ -860,7 +860,7 @@ to stay uncomfortable to extend.
 │   │   ├── colonymoveui.py            the state between two clicks
 │   │   ├── colonysend.py              the two clicks on the wire,
 │   │   │                              each confirmed by its effect
-│   │   ├── colonyplates.py         50  what a window IS: the rule,
+│   │   ├── colonyplates.py         52  what a window IS: the rule,
 │   │   │                              the rects derived at startup,
 │   │   │                              and the panel fills
 │   │   ├── layout.json                frame, sort/return native
@@ -911,20 +911,14 @@ to stay uncomfortable to extend.
 │   ├── ship_icon_measurement.md       Where the icon sizes come from
 │   └── starfield_measurement.md       Background star density
 └── tools/
-    ├── smoke_test.py            2374  Headless verification (47)
+    ├── smoke_test.py           11491  Headless verification (117
+    │                                  checks; the count lives in
+    │                                  CLAUDE.md and the Snapshot
+    │                                  table, both asserted against
+    │                                  the run)
     ├── help_extract.py           171  HELP.LBX -> help_<lang>.json
     ├── ext_diag.py               473  Extension API diagnostics
     ├── ext_diag_race.py          228  Race screen field diagnostics
-    ├── frame_build.py            167  assembles the colony frame:
-    │                                  ring, rails, junctions, bevel
-    ├── frame_master.py           209  what the master CONTAINS -
-    │                                  ring, material, bevel hole,
-    │                                  rails, crossings, all found
-    ├── frame_cut.py               61  frame artwork + the mask ->
-    │                                  RGBA frames, holes from the
-    │                                  mask and never from the black
-    ├── frame_mask.py              77  layout_reference.json -> one
-    │                                  window mask per resolution
     ├── nebula_extract.py         100  Pull nebula sprites from LBX
     ├── raceicon_extract.py       297  RACEICON.LBX -> the population
     │                                  figures per race and one named
@@ -956,7 +950,7 @@ to stay uncomfortable to extend.
     │                                  by OVERLAP, never by order;
     │                                  galaxy_map still derives its
     │                                  boxes here
-    ├── boxes_from_reference.py   129  layout_reference.json + BLEED
+    ├── boxes_from_reference.py   127  layout_reference.json + BLEED
     │                                  -> boxes.json. --check asserts
     │                                  the file IS that derivation
     ├── setup.py                  138  Rebuild generated artwork
@@ -4133,7 +4127,11 @@ patch: every hole in `galaxy_map/assets/frame.png` is measured on all
 four sides and the one whose four sides agree best is taken, because
 a bevel copied from a hole that is bright on the left and flat on the
 right would put that asymmetry on every window of the screen.
-`python tools/frame_build.py --profiles` prints the measurement.
+`python tools/frame_build.py --profiles` printed the measurement.
+**That tool is deleted — 12 September 2026, decision 55.** The numbers
+in the table below are the record of what was measured on the master
+on 7 September; nothing re-derives them, because nothing nine-slices
+that master any more.
 
 | master hole | L | R | T | B | agreement |
 |---|---:|---:|---:|---:|---:|

@@ -48,9 +48,9 @@ os.environ.setdefault("PYGAME_HIDE_SUPPORT_PROMPT", "1")
 #: **THE SAME TWO PX, AND NOT A NEW NUMBER.** With the plate it paid
 #: for an anti-aliased hole edge; with a drawn box it pays for the rim
 #: band and the lit line that sit on the rectangle's own edge
-#: (`colonyplates.RIM_REF` is 2), and with the static frame for the
-#: artwork's own rim. One number, one reason every way: the drawable
-#: rect is the typed rect grown by what overlaps it.
+#: and with the static frame for the artwork's own rim. One number,
+#: one reason every way: the drawable rect is the typed rect grown by
+#: what overlaps it.
 #:
 #: IMPORTED FROM THE SCREEN, never declared here. The screen rebuilds
 #: these same rects at startup (`colonyplates.box_rects`), so a tool
@@ -73,7 +73,6 @@ def _plates(screen):
 def reference_boxes(screen):
     """[(box name, [x, y, w, h])] in `layout_reference.json`'s order."""
     plates = _plates(screen)
-    bleed = plates.BLEED
     # THE SCREEN'S OWN PARSER, not a second walk of the same file. It
     # is the module that decides what a window is and what a box is
     # called, and it rebuilds these exact rects at startup — two
@@ -83,9 +82,8 @@ def reference_boxes(screen):
             plates.reference_path(ROOT, screen))
     except ValueError as why:
         sys.exit(str(why))
-    return [(plates.BOX_NAME.get(key, key),
-             [x - bleed, y - bleed, w + 2 * bleed, h + 2 * bleed])
-            for key, (x, y, w, h) in windows.items()]
+    return [(plates.BOX_NAME.get(key, key), plates.bled(rect))
+            for key, rect in windows.items()]
 
 
 def reseat_columns(data, screen):

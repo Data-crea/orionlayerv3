@@ -1527,9 +1527,9 @@ def main():
             f"path does not replace it, it precedes it")
     app.client, app.connected = FakeClient(), was
     cs.render(pygame.display.get_surface())
-    ok(f"colony_summary (cutouts == boxes.json [{_cut_note}], one sort "
-       f"bar divided by one function, native clicks kept as the "
-       f"fallback, empire rows)")
+    ok(f"colony_summary (cutouts == boxes.json [{_cut_note}], the "
+       f"screen's boxes are the reference and not the file, native "
+       f"clicks kept as the fallback, empire rows)")
 
     # ── Zoom tables (transcribed from orion2re) ──
     from core import zoomtables as zt
@@ -4914,25 +4914,18 @@ def main():
     # device rect the running screen resolves it to, at every
     # resolution, through `Layout.rect`'s truncation and no second
     # rounding rule.
-    for _spec in _lr["_resolutions"]:
-        _rw, _rh = (int(v) for v in _spec.split("x"))
-        _lay = Layout(_rw, _rh)
-        _a1 = {_n: _lay.rect(_r) for _n, _r in _lr_windows.items()}
-        _a2 = {_n: _lay.rect(_r) for _n, _r in _lr_windows.items()}
-        assert _a1 == _a2, f"{_spec}: Layout.rect is not a function"
-        for _name, _rect in _lr_windows.items():
-            _bx = _cpl2.BOX_NAME.get(_name, _name)
-            _box = next((b for b in cs.boxes if b.name == _bx), None)
-            assert _box is not None, f"no {_bx} box on the screen"
-            _bled = [_rect[0] - _cpl2.BLEED, _rect[1] - _cpl2.BLEED,
-                     _rect[2] + 2 * _cpl2.BLEED,
-                     _rect[3] + 2 * _cpl2.BLEED]
-            assert tuple(_box.ref_rect) == tuple(_bled), (
-                f"{_name}: the reference plus bleed is {_bled} and the "
-                f"box on the screen is {tuple(_box.ref_rect)}")
-    ok("colony layout reference (columns are the list, inset aspect = "
-       "the original's coverage, every rect resolves to the box the "
-       "screen holds)")
+    # **TWO ASSERTIONS LEFT HERE ON 12 September 2026, AND BOTH WENT.**
+    # `assert _a1 == _a2, "Layout.rect is not a function"` called one
+    # PURE function twice with one argument and compared the results —
+    # it could not fail, and it replaced the mask double-render, which
+    # could. And "every rect resolves to the box the screen holds" is
+    # asserted in the colony_summary block above, through
+    # `colonyplates.box_rects`; this copy open-coded the bleed
+    # arithmetic instead, which made it a fourth home for an
+    # expression that has to agree to the pixel.
+    ok("colony layout reference (columns are the list, the figure "
+       "column fits the original's widest, inset aspect = the "
+       "original's coverage and the map never crops)")
 
     # ── The two colony tables in zoomtables ──
     #

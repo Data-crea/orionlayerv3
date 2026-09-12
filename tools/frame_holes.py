@@ -64,7 +64,13 @@ from screens.colony_summary import colonyplates as _cplates  # noqa: E402
 MIN_AREA = 2000
 ALPHA_LIMIT = 16
 #: Reference-pixel bleed so content covers the anti-aliased rim.
-BLEED = 2
+#: IMPORTED, not declared — 12 September 2026, the redundancy audit.
+#: It stood here AND in `colonyplates`, which is the side that has to
+#: answer it with no tool on the path and the side
+#: `tools/boxes_from_reference.py` already imports it from. Two
+#: declarations of one number that has to agree to the pixel is the
+#: fault this module already avoids for `BOX_NAME` two lines down.
+BLEED = _cplates.BLEED
 NAV_KEYS = ["colonies", "planets", "fleets", "leaders", "races", "info"]
 
 
