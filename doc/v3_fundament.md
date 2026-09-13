@@ -1251,6 +1251,38 @@ it may not be deleted because it is failing; it may be deleted when
 the thing it measures no longer exists, and then the commit says so
 and the two count documents move with it.
 
+**56. An icon beside a label is a LABEL, and its size is ours.**
+13 September 2026, Data's decisions on brief 92 Run 1. The colony
+output panel's five rows wear an icon at the left — food, industry,
+research, BC and a morale mask — and a line between consecutive rows.
+
+**The icons are a DEVIATION, not a transcription and not an
+invention.** Their shapes are the original's own (COLONY2.LBX units
+0-3 and the morale masks 0x10 / 0x11), but the original only COUNTS
+with them — `Draw_Colony_Prod_Both_` and `Draw_Info_Morale_Both_`
+draw N copies for N — and no routine on either colony screen draws one
+singly beside a word. So an icon beside a label continues the panel's
+label-and-number deviation. INVENTION stays reserved for what the
+original has nothing like at all, such as the bars the mockup also
+drew and nobody built.
+
+**A label has no zero.** The original picks its morale artwork by the
+sign of the halved value and draws nothing at zero. As a label the
+rule becomes: negative is the low mask, everything else — zero
+included — the normal one, and the icon follows the ROW, so it prints
+whenever the morale label does, Unification included.
+
+**The separator is an HD EXTENSION.** The original draws no line in
+that box, in code or in the background art.
+
+**The size is ours, so it lives beside the thing it was measured
+from.** `core/zoomtables` is for transcriptions (decision 26). A size
+we chose goes in `layout.json` next to a note that names its source —
+here `output.icon_size` 31, chosen from the row's own height at
+1920x1080 (32) so that resolution draws the master 1:1 — and
+the tool and the loader both read that one number. The art supplies a
+shape; the table supplies the size.
+
 ### Process
 
 **31. Verification via `tools/smoke_test.py` before every handoff.**

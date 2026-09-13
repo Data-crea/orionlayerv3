@@ -76,6 +76,15 @@ EMPTY_COLOR = palette.col("colony_summary", "nav_text_dim",
 #: is the same red the sidebar reddens a negative Income with, which
 #: IS the original's (see `colonyempire._red_note`).
 SHORTAGE_COLOR = palette.col("colony_summary", "warn", (214, 88, 74))
+#: The line between two rows — an HD EXTENSION, see `render` and
+#: `output._separator_note`. The skin's, like every other colour here.
+SEPARATOR_COLOR = palette.col("colony_summary", "output_separator",
+                              (38, 50, 76))
+
+#: Which row id wears which icon file. The morale row is not here: its
+#: mask depends on the value and `colonyrows.morale_icon` decides it.
+ICON_BY_ID = {"food": "food", "industry": "industry",
+              "research": "research", "bc": "bc"}
 
 #: Which panel row names which ECON slot. The ids are layout.json's
 #: (decision 15) and the indices are the engine's
@@ -90,7 +99,7 @@ ECON_BY_ID = {"food": ECON_FOOD, "industry": ECON_INDUSTRY,
 #: fourth element is how a caller ends up reading the column index as
 #: a string.
 PanelRow = collections.namedtuple("PanelRow",
-                                  "label value column shortage")
+                                  "label value column shortage icon")
 
 
 def fill_template(template, values):
@@ -224,10 +233,15 @@ def visible_rows(row, cfg, words, climates, only=None):
         if spec.get("id") == "morale" and not row.get("morale_applies", True):
             text = hidden
         short = row_shortage(row, spec)
+        # THE ICON FOLLOWS THE ROW (decision 56): a row that is listed
+        # has one, including morale under Unification, whose value is
+        # blank but whose label still prints.
+        icon = (row.get("morale_icon") if spec.get("id") == "morale"
+                else ICON_BY_ID.get(spec.get("id")))
         out.append(PanelRow(
             spec.get("label", ""), text, int(spec.get("column", 0)),
             fill_template(template, {"shortage": short}) if short > 0
-            else ""))
+            else "", icon))
     return out
 
 
@@ -262,8 +276,10 @@ def render_for(screen, surface):
     climates = screen._data.get("list", {}).get("climates", ())
     box = screen.box_rect("planet_output")
     if box:
+        from . import colonyoutputicons
         render(surface, row, pygame.Rect(*screen.layout.rect(box)), cfg,
-               words, climates, screen.layout, screen.style, only={1})
+               words, climates, screen.layout, screen.style, only={1},
+               icons=colonyoutputicons.set_for(screen, cfg))
     box = screen.box_rect("planet_info")
     if box and not screen._move.message:
         _rect = pygame.Rect(*screen.layout.rect(box))
@@ -370,9 +386,14 @@ def render_info(surface, row, area, cfg, words, climates, layout, style,
 
 
 def render(surface, row, area, cfg, words, climates, layout, style,
-           only=None):
+           only=None, icons=None):
     """Draw the panel into `area`; `row` is None when nothing is
-    selected, and then nothing is drawn.
+    selected, and then nothing is drawn — no label, no icon, no line.
+
+    `icons` is a `colonyoutputicons.IconSet` or None. With a set, each
+    row whose entry names an icon draws it at the left and its label
+    moves right by the icon and `icon_gap` — a DEVIATION, decision 56.
+    Without one the panel is what it was before the icons existed.
 
     Label left, value right, in as many columns as `columns` says —
     the same arrangement as the sidebar, and for the same reason: it
@@ -416,6 +437,15 @@ def render(surface, row, area, cfg, words, climates, layout, style,
     value_px = layout.font_size(cfg.get("value_font", 20))
 
     short_gap = int(cfg.get("shortage_gap", 8) * layout.scale)
+    # ICONS AND SEPARATORS READ `layout.scale` DIRECTLY — the stored
+    # scale, never `font_size`, which multiplies a second time for a
+    # box tuned per resolution and is how the help popup drew at twice
+    # its size at an untuned 3840x2160 (fundament, "Scaling twice").
+    has_icons = icons is not None and icons.state != "missing"
+    icon_gap = int(cfg.get("icon_gap", 0) * layout.scale) if has_icons else 0
+    sep_ref = cfg.get("separator_thickness", 0)
+    sep_px = max(1, int(round(sep_ref * layout.scale))) if sep_ref else 0
+    sep_inset = int(cfg.get("separator_inset", 0) * layout.scale)
     grouped = [[e for e in entries
                 if min(columns - 1, max(0, e.column)) == c]
                for c in range(columns)]
@@ -433,6 +463,32 @@ def render(surface, row, area, cfg, words, climates, layout, style,
         right = left + col_w - col_gap
         for i, entry in enumerate(column_rows):
             top = area.y + pad_y + i * (row_h + gap)
+            # ── THE SEPARATOR — HD EXTENSION ──────────────────────
+            # The original draws no line in this box: its only
+            # Line_/Fill_ calls are the screen clears and the scroll
+            # thumb (colsum.cpp:125, :460, :759-765), and COLSUM.LBX
+            # entry 0 is one palette index across the whole box. Data's
+            # mockup of 13 September 2026 draws one between consecutive
+            # rows, so it is drawn ABOVE every row but the first — never
+            # above the first, never under the last — centred in the
+            # row gap the geometry already leaves. See
+            # `output._separator_note`, and the smoke check that fails
+            # if it goes.
+            if i > 0 and sep_px:
+                sep_y = top - gap + max(0, (gap - sep_px) // 2)
+                surface.fill(SEPARATOR_COLOR[:3], pygame.Rect(
+                    left + sep_inset, sep_y,
+                    max(0, right - left - 2 * sep_inset), sep_px))
+            text_left = left
+            sprite = icons.get(entry.icon) if has_icons else None
+            if has_icons:
+                # The label moves by the SET's size whether or not this
+                # row has a sprite, so a missing file cannot put one
+                # label out of line with the other four.
+                text_left = left + icons.size + icon_gap
+            if sprite is not None:
+                surface.blit(sprite, (left, top + max(
+                    0, (row_h - sprite.get_height()) // 2)))
             lab = style.render_text(entry.label.upper(), label_px,
                                     LABEL_COLOR[:3])
             val = style.render_text(str(entry.value), value_px,
@@ -442,7 +498,8 @@ def render(surface, row, area, cfg, words, climates, layout, style,
                    if entry.shortage else None)
             block_h = max(lab.get_height(), val.get_height())
             y = top + max(0, (row_h - block_h) // 2)
-            surface.blit(lab, (left, y + (block_h - lab.get_height())))
+            surface.blit(lab, (text_left,
+                               y + (block_h - lab.get_height())))
             # THE SHORTAGE FOLLOWS THE VALUE, because that is the
             # order the original draws them in: net, gap, secondary,
             # gap, imports, shortage — the shortage is the LAST group

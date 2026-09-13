@@ -251,6 +251,25 @@ def colony_morale(colony, traits):
     return int(colony.morale / 2), True
 
 
+def morale_icon(value):
+    """Which mask the output panel's MORALE row wears — decision 56.
+
+    Data's rule of 13 September 2026, and it is NOT the original's.
+    `Draw_Info_Morale_Both_` picks its artwork by the sign of the
+    halved value too (coldraw.cpp:220), but draws NOTHING at zero,
+    because there it is a counter and zero copies of anything is
+    nothing. Here the icon is a row LABEL, so a row that prints has
+    one: negative is the low mask, everything else — zero included —
+    is the normal one. Under Unification the value is 0 and the row
+    still prints its label, so it wears the normal mask; the icon
+    follows the row.
+
+    Decided here and handed to the panel, the same seam as the net
+    and the shortage: `colonyoutput` does not read the record.
+    """
+    return "morale_low" if value < 0 else "morale_normal"
+
+
 def planet_name(colony, planets, stars):
     """'Sol III' — HAROLD::Planet_Number_ counts occupied slots."""
     if not 0 <= colony.planet < len(planets):
@@ -918,6 +937,7 @@ def build_rows(game_state, sort_key="name", names=None, held=None):
             "growth": sum(col.pop_growth),
             "morale": morale,
             "morale_applies": morale_applies,
+            "morale_icon": morale_icon(morale),
         })
 
     rows.sort(key=SORT_KEYS.get(sort_key, SORT_KEYS["name"]))

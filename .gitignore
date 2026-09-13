@@ -38,6 +38,13 @@ screens/galaxy_map/assets/ships/*/
 screens/galaxy_map/assets/black_hole.png
 screens/galaxy_map/assets/icons/*.png
 !screens/galaxy_map/assets/icons/_source_sheet.png
+# The colony output panel's six icons, cut from _src/output/ by
+# tools/make_output_icons.py (decision 56). The smoke test rebuilds
+# them into a scratch directory and compares bytes.
+screens/colony_summary/assets/output/
+# Brief 92's inspection crops and contact sheet of the three sheets —
+# a picture for Data to name the icons from, not an input to anything.
+screens/colony_summary/assets/_src/output/cut/
 
 # --- Contact sheets (diagnostic output of --sheet) ---
 **/_contact_sheet.png

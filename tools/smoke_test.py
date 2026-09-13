@@ -5295,6 +5295,12 @@ def main():
         "screens/colony_summary/colonylist.py": "identity",
         "screens/colony_summary/colonymoveui.py": "discard",
         "screens/colony_summary/colonyoutput.py": "decision 43",
+        # ADDED 13 September 2026, brief 92 / decision 56: the output
+        # icons (DEVIATION) and the separator's colour (HD EXTENSION).
+        # Their own check is the output-panel marking block.
+        "screens/colony_summary/colonyoutputicons.py": "decision 56",
+        "tools/make_output_icons.py": "decision 56",
+        "assets/shared/skins/default/colors.json": "output_separator",
         "screens/colony_summary/colonypick.py": "partial",
         # ADDED 9 September 2026, and it is the inventory doing its
         # job in the other direction: the hover popup's marking was
@@ -5987,6 +5993,9 @@ def main():
         "producing_state", "producing_turns", "can_buy", "production",
         "drawn_production", "shortage", "size", "gravity", "mineral",
         "growth", "morale", "morale_applies",
+        # decision 56: which mask the output panel's morale row wears,
+        # decided in colonyrows and handed to the renderer.
+        "morale_icon",
     }
     assert _row_keys == _row_expected, (
         f"the row dict's keys changed. Added: "
@@ -8338,6 +8347,253 @@ def main():
     ok("every row's disc is the one its climate selects, clear of the "
        "name's ink, and planet_info's lines stay beside the big one "
        "(four sizes, measured out of the render)")
+
+    # ── THE OUTPUT PANEL'S ICONS AND SEPARATORS — decision 56 ─────
+    #
+    # Three checks. The ASSETS: six derived files at the one size the
+    # table declares, both morale masks on one footprint, no colour
+    # hiding under a transparent pixel, and regenerating them
+    # reproduces them byte for byte — decision 40's licence to call
+    # them derived and keep them out of the repository. The DRAWING,
+    # asserted as a rule at every resolution boxes.json declares
+    # planet_output for: every row wears the icon its id or its morale
+    # sign selects, no icon is taller than its row, there is one line
+    # between each pair of rows and none anywhere else, and an empty
+    # selection draws none of it. The MARKING: DEVIATION for the icons
+    # and HD EXTENSION for the line, at every home, so neither can
+    # quietly turn into "how the panel looks".
+    import importlib.util as _oi_ilu
+    import subprocess as _oi_sp
+    import tempfile as _oi_tf
+    from screens.colony_summary import colonyoutputicons as _oi
+    from screens.colony_summary import colonyrows as _oi_cr
+    _oi_root = os.path.dirname(SCREENS_DIR)
+    _oi_cfg = _sjson.load(open(os.path.join(
+        SCREENS_DIR, "colony_summary", "layout.json"),
+        encoding="utf-8"))["output"]
+    _oi_master = _oi.master_size(_oi_cfg)
+    assert _oi_master > 0, (
+        "layout.json output.icon_size is gone or not a positive int — "
+        "the tool and the loader both read it")
+    _oi_dir = os.path.join(SCREENS_DIR, "colony_summary", _oi.ICON_DIR)
+    _oi_tool = os.path.join(_oi_root, "tools", "make_output_icons.py")
+    _oi_fit = {}
+    for _oi_name in _oi.NAMES:
+        _oi_path = os.path.join(_oi_dir, f"{_oi_name}.png")
+        assert os.path.exists(_oi_path), (
+            f"{_oi_path} is missing — run `python tools/setup.py`, which "
+            f"runs tools/make_output_icons.py")
+        _oi_a = _np.array(_pl_Image.open(_oi_path).convert("RGBA"))
+        assert _oi_a.shape[:2] == (_oi_master, _oi_master), (
+            f"{_oi_name}.png is {_oi_a.shape[1]}x{_oi_a.shape[0]} and "
+            f"output.icon_size declares {_oi_master}; the loader refuses it")
+        assert not _oi_a[_oi_a[:, :, 3] == 0, :3].any(), (
+            f"{_oi_name}.png keeps colour under transparent pixels — "
+            f"BLEND_RGB_ADD ignores alpha and would show it (fundament "
+            f"section 4)")
+        _oi_ys, _oi_xs = _np.nonzero(_oi_a[:, :, 3] > 0)
+        assert len(_oi_ys), f"{_oi_name}.png is empty"
+        _oi_fit[_oi_name] = (int(_oi_xs.max() - _oi_xs.min() + 1),
+                             int(_oi_ys.max() - _oi_ys.min() + 1))
+        assert max(_oi_fit[_oi_name]) == _oi_master, (
+            f"{_oi_name}.png's content is {_oi_fit[_oi_name]} and does "
+            f"not fill the {_oi_master} px footprint on its long edge")
+    # ONE FOOTPRINT FOR THE TWO STATES: the same canvas and the same
+    # long edge, so a morale change neither moves nor resizes the icon.
+    assert max(_oi_fit["morale_normal"]) == max(_oi_fit["morale_low"]), (
+        f"the morale masks fill {_oi_fit['morale_normal']} and "
+        f"{_oi_fit['morale_low']} — a state change would resize the icon")
+    _oi_tool_src = open(_oi_tool, encoding="utf-8").read()
+    for _oi_word in ("AI-GENERATED", "ChatGPT", "LICENCE", "decision 40",
+                     "Lanczos", "PREMULTIPLIED"):
+        assert _oi_word in _oi_tool_src, (
+            f"tools/make_output_icons.py no longer says {_oi_word!r} — "
+            f"where the sources came from and how they were resampled "
+            f"is written there and nowhere else")
+    if _oi_ilu.find_spec("scipy") is None:
+        report("output icons: the byte-for-byte rebuild was NOT checked — "
+               "tools/make_output_icons.py needs scipy and it is not "
+               "installed. The files above are unverified as derived.")
+    else:
+        with _oi_tf.TemporaryDirectory() as _oi_tmp:
+            _oi_run = _oi_sp.run([sys.executable, _oi_tool, "--out", _oi_tmp],
+                                 capture_output=True, text=True)
+            assert _oi_run.returncode == 0, (
+                f"make_output_icons.py failed: {_oi_run.stderr[-400:]}")
+            for _oi_name in _oi.NAMES:
+                with open(os.path.join(_oi_dir, f"{_oi_name}.png"),
+                          "rb") as _oi_fh:
+                    _oi_have = _oi_fh.read()
+                with open(os.path.join(_oi_tmp, f"{_oi_name}.png"),
+                          "rb") as _oi_fh:
+                    _oi_again = _oi_fh.read()
+                assert _oi_have == _oi_again, (
+                    f"{_oi_name}.png does not regenerate byte for byte — "
+                    f"it is not derived until it does (decision 40)")
+    report("output icons: " + ", ".join(
+        f"{_n} {_w}x{_h}" for _n, (_w, _h) in _oi_fit.items()))
+    ok(f"the {len(_oi.NAMES)} output icons are {_oi_master} px as "
+       f"output.icon_size declares, both morale masks on one footprint, "
+       f"blank under transparency, and rebuilt byte for byte from "
+       f"assets/_src/output/")
+
+    # ── …AND WHAT IS DRAWN WITH THEM, AT EVERY DECLARED SIZE ──────
+    assert _oi_cr.morale_icon(-1) == "morale_low"
+    assert _oi_cr.morale_icon(0) == "morale_normal", (
+        "a halved morale of 0 wears the normal mask — as a label it has "
+        "no zero, decision 56 (the original draws nothing there because "
+        "it counts)")
+    assert _oi_cr.morale_icon(7) == "morale_normal"
+    _oi_boxes = _sjson.load(open(os.path.join(
+        SCREENS_DIR, "colony_summary", "boxes.json"), encoding="utf-8"))
+    _oi_res = sorted(
+        _k for _k, _v in _oi_boxes.items() if isinstance(_v, list)
+        and any(isinstance(_b, dict) and _b.get("name") == "planet_output"
+                for _b in _v))
+    assert _oi_res, "no resolution in boxes.json declares planet_output"
+    _oi_ids = [_s["id"] for _s in _oi_cfg["rows"] if _s["column"] == 1]
+    assert _oi_cfg.get("separator_thickness", 0) > 0, (
+        "output.separator_thickness is 0 — the separator is switched "
+        "off. That is its undo, and it is made on purpose together with "
+        "this check, never on its own")
+    for _oi_spec in _oi_res:
+        _oi_W, _oi_H = (int(_v) for _v in _oi_spec.split("x"))
+        _oi_app, _oi_scr = _plv.build_screen(_oi_W, _oi_H)
+        _oi_app.dispatcher.switch_to("colony_summary")
+        _oi_scr.enter(None)
+        _oi_area = pygame.Rect(*_oi_scr.layout.rect(
+            _oi_scr.box_rect("planet_output")))
+        _oi_set = _oi.set_for(_oi_scr, _oi_cfg)
+        assert _oi_set is not None and _oi_set.state == "ok", (
+            f"{_oi_spec}: the output icon set is "
+            f"{_oi_set and _oi_set.state}")
+        _oi_s = _oi_scr.layout.scale
+        _oi_pad_x = int(_oi_cfg["pad_x"] * _oi_s)
+        _oi_pad_y = int(_oi_cfg["pad_y"] * _oi_s)
+        _oi_gap = int(_oi_cfg["row_gap"] * _oi_s)
+        _oi_n = len(_oi_ids)
+        _oi_row_h = (_oi_area.h - 2 * _oi_pad_y
+                     - _oi_gap * (_oi_n - 1)) // _oi_n
+        _oi_left = _oi_area.x + _oi_pad_x
+        _oi_right = (_oi_left + (_oi_area.w - 2 * _oi_pad_x)
+                     - int(_oi_cfg["column_gap"] * _oi_s))
+        _oi_sep = max(1, int(round(_oi_cfg["separator_thickness"] * _oi_s)))
+        _oi_ins = int(_oi_cfg.get("separator_inset", 0) * _oi_s)
+        assert _oi_set.size <= _oi_row_h, (
+            f"{_oi_spec}: the icon is {_oi_set.size} px in a row of "
+            f"{_oi_row_h}")
+        for _oi_morale in (_fake["morale"], 0):
+            _oi_row = dict(_fake, morale=_oi_morale,
+                           morale_icon=_oi_cr.morale_icon(_oi_morale))
+            _oi_surf = pygame.Surface((_oi_area.right + 8,
+                                       _oi_area.bottom + 8))
+            _oi_surf.fill((0, 0, 0))
+            _co.render(_oi_surf, _oi_row, _oi_area, _oi_cfg, _words,
+                       _climates, _oi_scr.layout, _oi_scr.style,
+                       only={1}, icons=_oi_set)
+            _oi_px = _np.array(pygame.surfarray.array3d(
+                _oi_surf)).transpose(1, 0, 2)
+            # EVERY ROW'S ICON IS THE ONE ITS ID — or, for morale, its
+            # sign — selects, compared pixel for pixel on the opaque
+            # body.
+            for _oi_i, _oi_id in enumerate(_oi_ids):
+                _oi_want = (_oi_row["morale_icon"] if _oi_id == "morale"
+                            else _co.ICON_BY_ID[_oi_id])
+                _oi_spr = _oi_set.get(_oi_want)
+                _oi_top = (_oi_area.y + _oi_pad_y
+                           + _oi_i * (_oi_row_h + _oi_gap))
+                _oi_y = _oi_top + max(0, (_oi_row_h
+                                          - _oi_spr.get_height()) // 2)
+                _oi_got = _oi_px[_oi_y:_oi_y + _oi_spr.get_height(),
+                                 _oi_left:_oi_left + _oi_spr.get_width()]
+                _oi_ref = _np.array(pygame.surfarray.array3d(
+                    _oi_spr)).transpose(1, 0, 2)
+                _oi_solid = _np.array(pygame.surfarray.array_alpha(
+                    _oi_spr)).transpose(1, 0) == 255
+                assert _oi_solid.sum() > 0 and (
+                    _oi_got[_oi_solid] == _oi_ref[_oi_solid]).all(), (
+                    f"{_oi_spec} row {_oi_id} (morale {_oi_morale}): the "
+                    f"icon drawn is not {_oi_want}")
+            # ONE LINE BETWEEN EACH PAIR OF ROWS, NONE ANYWHERE ELSE: the
+            # set of pixel rows fully in the separator colour across the
+            # content span is exactly the expected set.
+            _oi_span = _oi_px[:, _oi_left + _oi_ins:_oi_right - _oi_ins]
+            _oi_lines = set(int(_y) for _y in _np.nonzero(
+                (_oi_span == _np.array(_co.SEPARATOR_COLOR[:3])
+                 ).all(axis=(1, 2)))[0])
+            _oi_expect = set()
+            for _oi_i in range(1, _oi_n):
+                _oi_top = (_oi_area.y + _oi_pad_y
+                           + _oi_i * (_oi_row_h + _oi_gap))
+                _oi_y0 = _oi_top - _oi_gap + max(0, (_oi_gap - _oi_sep) // 2)
+                _oi_expect.update(range(_oi_y0, _oi_y0 + _oi_sep))
+            assert _oi_lines == _oi_expect, (
+                f"{_oi_spec}: separator rows {sorted(_oi_lines)} where "
+                f"{_oi_n - 1} lines of {_oi_sep} px belong at "
+                f"{sorted(_oi_expect)} — one between each pair of rows, "
+                f"none above the first or under the last")
+        # UNIFICATION: the value is hidden and the label prints, so the
+        # icon prints too.
+        _oi_uni = _co.visible_rows(
+            dict(_fake, morale=0, morale_applies=False,
+                 morale_icon=_oi_cr.morale_icon(0)),
+            _oi_cfg, _words, _climates, only={1})
+        assert _oi_uni[-1].icon == "morale_normal" and \
+            _oi_uni[-1].value == _oi_cfg.get("hidden_value", ""), (
+            f"under Unification the morale row is {_oi_uni[-1]} — the "
+            f"icon follows the row, which prints")
+        # AND NOTHING ON AN EMPTY SELECTION — no icon, no line.
+        _oi_surf.fill((0, 0, 0))
+        _co.render(_oi_surf, None, _oi_area, _oi_cfg, _words, _climates,
+                   _oi_scr.layout, _oi_scr.style, only={1}, icons=_oi_set)
+        assert pygame.surfarray.array3d(_oi_surf).sum() == 0, (
+            f"{_oi_spec}: the panel drew icons or separators with "
+            f"nothing selected")
+    ok(f"every planet_output row wears the icon its id or morale sign "
+       f"selects, no taller than its row, one separator between each "
+       f"pair of rows and none outside them, nothing when empty "
+       f"({', '.join(_oi_res)})")
+
+    # ── …AND BOTH ARE MARKED WHERE A READER WOULD LOOK ────────────
+    _oi_homes = {
+        "colonyoutput.py": (os.path.join(SCREENS_DIR, "colony_summary",
+                                         "colonyoutput.py"),
+                            ("HD EXTENSION", "decision 56")),
+        "colonyoutputicons.py": (os.path.join(
+            SCREENS_DIR, "colony_summary", "colonyoutputicons.py"),
+            ("DEVIATION", "decision 56")),
+        "colonyrows.py": (os.path.join(SCREENS_DIR, "colony_summary",
+                                       "colonyrows.py"),
+                          ("def morale_icon", "decision 56")),
+        "doc/v3_fundament.md": (os.path.join(_oi_root, "doc",
+                                             "v3_fundament.md"),
+                                ("**56.", "HD EXTENSION", "DEVIATION")),
+        "v3_projektstatus.md": (os.path.join(_oi_root,
+                                             "v3_projektstatus.md"),
+                                ("decision 56", "HD EXTENSION")),
+    }
+    for _oi_home, (_oi_path, _oi_words) in _oi_homes.items():
+        _oi_text = open(_oi_path, encoding="utf-8").read()
+        for _oi_word in _oi_words:
+            assert _oi_word in _oi_text, (
+                f"{_oi_home} no longer carries {_oi_word!r} — the output "
+                f"icons are a DEVIATION and the separators an HD "
+                f"EXTENSION, and the marking lives at every home")
+    assert _oi_cfg["_separator_note"].startswith("HD EXTENSION"), (
+        "output._separator_note no longer opens with its marking")
+    assert "DEVIATION, decision 56" in _oi_cfg["_deviation_note"], (
+        "output._deviation_note no longer lists the icons")
+    assert "An asset is not a measurement" in _oi_cfg["_icon_size_note"], (
+        "output._icon_size_note no longer says where 31 came from")
+    _oi_colors = _sjson.load(open(os.path.join(
+        _oi_root, "assets", "shared", "skins", "default", "colors.json"),
+        encoding="utf-8"))["colony_summary"]
+    assert "output_separator" in _oi_colors and \
+        "HD EXTENSION" in _oi_colors.get("_output_separator_note", ""), (
+        "the skin no longer declares the separator's colour and marking")
+    ok("the output icons are marked DEVIATION and the separators HD "
+       "EXTENSION in colonyoutput, colonyoutputicons, colonyrows, "
+       "layout.json, colors.json, the fundament and the status document")
 
     # ── THE FIGURE'S SIZE IS NOT ALWAYS AN INTEGER STEP ─────────
     #

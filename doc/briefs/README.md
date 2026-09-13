@@ -19,7 +19,7 @@ same evening: they become repository content.
 ## What the columns mean
 
 **Date** is filled only where the brief's own text states one, which
-is six of the ninety-one. Everything else is **undatiert** — not
+is seven of the ninety-four. Everything else is **undatiert** — not
 because the order is unknown but because a date has to come from the
 brief itself or from the first commit that implements it (see
 CLAUDE.md, "You own every detail"), and a cache file's timestamp is
@@ -34,7 +34,11 @@ so a pointer to one keeps working.
 
 **Source** is the cache file the content came from, or "attachment"
 for the two that arrived inside the 9 September order and had no cache
-entry of their own.
+entry of their own, or "session" for the ones given directly in a
+Claude Code session and written here in the same run (92 onward).
+
+**A picture travels with its brief** under the brief's number:
+`92-mockup.png` is the mockup brief 92 is judged against.
 
 ## Not imported
 
@@ -142,3 +146,6 @@ the tree, pasted back into chat for reference:
 | 89 | [`89-auftrag-fuer-claude-code-briefs-ins-repo.md`](89-auftrag-fuer-claude-code-briefs-ins-repo.md) | 9. September 2026 | 2026-09-09 21:29 | Auftrag für Claude Code — Briefs ins Repo | `92280a87b44ee5f8` |
 | 90 | [`90-pop-move-one-command-instead-of-a-click-chain.md`](90-pop-move-one-command-instead-of-a-click-chain.md) | *undatiert* |  | A second problem the chain carries and the fix removes: the chain must answer "which icon in the game's window", and the HD row does not lay figures o **Beginning missing** — it starts mid-sentence inside section 1; the title and head never arrived. Left exactly so. | attachment |
 | 91 | [`91-colony-runs-and-doc-audit.md`](91-colony-runs-and-doc-audit.md) | *undatiert* |  | Run A — pop-move brief, sections 3b/3c only | attachment |
+| 92 | [`92-output-panel-resource-and-morale-icons-and-a-separator.md`](92-output-panel-resource-and-morale-icons-and-a-separator.md) · [`92-mockup.png`](92-mockup.png) | 13 September 2026 |  | Output panel — resource and morale icons, and a separator between rows | session |
+| 93 | [`93-copy-the-sheets-and-cut-the-icons-report-and-stop.md`](93-copy-the-sheets-and-cut-the-icons-report-and-stop.md) | *undatiert* |  | Copy the three files … then cut the icons out of the sheets. Report and stop. | session |
+| 94 | [`94-run-1-decisions-then-run-2.md`](94-run-1-decisions-then-run-2.md) | *undatiert* |  | Data's two decision messages: the icon names and cut rules, then the Run 1 answers and "Continue with Run 2" | session |

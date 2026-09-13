@@ -711,6 +711,12 @@
       0,
       0
     ],
+    "output_separator": [
+      38,
+      50,
+      76
+    ],
+    "_output_separator_note": "HD EXTENSION - the line between two rows of planet_output (decision 56, layout.json output._separator_note). The original draws no line in that box, so there is no palette index to transcribe: this is a design value, a dim blue between panel_background (8, 11, 20) and label (128, 146, 180), chosen so the line groups a row without competing with its text. Data's to change on the side-by-side.",
     "_slider_note": "TRANSCRIBED from COLSUM::Draw_Bar_Indicator_ (colsum.cpp:747-771). The thumb is Fill_(621, y1, 626, y2, 229) with Line_ borders in 230 on the top and left edges and 228 on the bottom and right (:762-765), and the track's four corners are Dot_(...,80) at y 40 and y 311 (:767-770). The palette indices resolved against the game's own live palette on natives_autosave: 229 -> (28,28,164), 230 -> (60,60,212), 228 -> (0,0,108), 80 -> (0,0,0). These are ABSOLUTE values and not a relationship, unlike the name colours above: the slider is a control with no counterpart in this project's palette to keep faith with, and colonyfirst already reads index 229 back off the framebuffer to recover _first - so a different blue here would make the drawing and the reading disagree about what the same thing looks like."
   }
 }

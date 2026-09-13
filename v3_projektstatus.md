@@ -1,6 +1,6 @@
 # OrionLayer v3 — Project Status
 
-Updated: 12 September 2026
+Updated: 13 September 2026
 
 **How to read the date above.** The header names the day this file
 was last edited; the "This session (…)" paragraphs below it run
@@ -13,7 +13,20 @@ right and the header had gone stale** — resolved 10 September 2026
 by dating the header to the edit and giving this session its
 paragraph, below, so the two agree again.
 
-This session (12 September 2026), last: **the planets are on the
+This session (13 September 2026), last: **the output panel's rows
+wear icons, with a line between them** — brief 92, decision 56. Six
+31x31 masters cut from Data's AI-generated sheets by
+`tools/make_output_icons.py` (derived, ignored, rebuilt by setup and
+byte-checked by the suite): food, industry, research and BC beside
+those rows, and a morale mask chosen in `colonyrows.morale_icon` —
+negative halved morale low, everything else normal, following the row
+under Unification. The icons are a DEVIATION (the original's own
+counting shapes used as labels) and the separator an HD EXTENSION (the
+original's box has no line, in code or in COLSUM.LBX). Size, gap and
+line are data in `layout.json` under `output`. Smoke 122 -> **125**.
+See "Brief 92 Run 1" and "Run 2" after the 12 September mockup table.
+
+This session (12 September 2026): **the planets are on the
 screen.** Ten discs cut from Data's own sheet by
 `tools/planet_extract.py` — 54 x 54 RGBA under `assets/planets/`, one
 per `PLANET_CLIMATE` — drawn at the left of every row's name cell and,
@@ -802,7 +815,7 @@ files under `doc/` and are only summarised here.
 | | |
 |---|---|
 | Python | 32,960 lines across 111 modules — `find . -name '*.py'`, `__pycache__` excluded, the smoke test's 6,400 included. The previous figure here (21,642 across 94) was carried from an unstated method and could not be reproduced |
-| Smoke test | `python tools/smoke_test.py` — **122 checks**, headless |
+| Smoke test | `python tools/smoke_test.py` — **125 checks**, headless |
 | Assets | 170 MB (select_race 68, galaxy_map 51, shared 23, new_game 21, colony_summary 1) |
 | Screens in HD | 7 of ~20–22 (colony summary draws list, sidebar, scan box and galaxy inset, and MOVES POPS — the first HD gesture that drives the game) |
 | Setup from clone | `python tools/setup.py` (deps via the system package manager) |
@@ -3399,7 +3412,7 @@ read. **The font extractor is owed twice**: here and for the name cap
 
 ### Where the briefs and work orders are
 
-**`doc/briefs/`** — 91 files with a README that indexes them. Data's
+**`doc/briefs/`** — 94 briefs (and brief 92's mockup) with a README that indexes them. Data's
 decision of 9 September 2026, and it closed a gap that had been open
 since the project started.
 
@@ -3420,7 +3433,7 @@ decision 50's withdrawal of it. Both places that cited it by name now
 say what happened instead of pointing at a file a reader cannot open.
 
 Content is byte for byte what arrived. **Dates are stated only where
-the brief's own text carries one** — six of ninety-one; everything
+the brief's own text carries one** — seven of ninety-four; everything
 else is undatiert, because a date has to come from the brief or from
 the first commit that implements it, and a cache file's timestamp is
 neither. The numeric prefix is order, not date.
@@ -4558,8 +4571,243 @@ the one thing that blocks it:
 | Job colours | farmers green, workers orange, scientists blue | **the figure's colour IS the race in the original** — `People_Anim_` indexes `race * 13 + job * 2` (colony_main.cpp:444) and the bronze/teal/white are that race's sprites. Tinting by job throws away the fact the sprite carries, and the identity letters (decision 48) exist because that fact is load-bearing |
 | Building icons | an icon per building instead of the bare name | **needs artwork that does not exist** — there is no icon set for 49 buildings and the game ships none; and the names themselves come from the player's TECHNAME.LBX, so a mod-shaped icon path would need the same per-name resolution the figures have |
 | Build progress | a bar and "3 Turns" in the BUILDING column | **needs the cost extraction** — `TECHDATA::_buildings[].cost` is not extracted, which is the same absence that makes Producing sort by name (colsum.cpp:1091). Turns remaining is cost against industry and neither half is on the wire yet |
-| Output icons | leaf/gear/flask/coins/face beside the five `planet_output` values | needs artwork, and less of it than the buildings — five glyphs, not 49. The values and their order are already transcribed, so this is the cheapest of the five and still an INVENTION over a paragraph the original squeezes into one box |
+| Output icons | leaf/gear/flask/coins/face beside the five `planet_output` values | **BUILT 13 September 2026, brief 92, as a DEVIATION and not an invention** (decision 56): the glyphs are the original's own counting shapes, used as row labels. INVENTION in this cell is kept for the BARS the mockup draws beside the numbers, which were not built. The separator between the rows came with them, marked HD EXTENSION. See "Brief 92 Run 2" |
 | Selected colony in the galaxy inset | a marker on the scanned star | the inset is a TRANSCRIPTION — `Draw_Galaxy_Map_Box_` with view_mode 3 draws stars and nothing else (movebox.cpp:63-105), and the one thing the original adds is the connect line while a cluster is held (colsum.cpp:731-744). A marker would be an invention drawn over a transcription, which is the pairing this project keeps apart |
+
+### Brief 92 Run 1 — output icons and separators: the source answers — 13 September 2026
+
+Reporting stop, no code. `doc/briefs/92-mockup.png` is Data's mockup
+of 13 September 2026. Source tree: `~/orion2re` (the one whose line
+numbers `colonyoutput`'s docstring already cites; colsum.cpp:1155 is
+`Draw_Colony_Scan_Info_` there and 1322 in `orion2re-main-neu`).
+
+**The sources, received.** Data's three AI-generated sheets (ChatGPT)
+are under `screens/colony_summary/assets/_src/output/`:
+`symbols.png` 1983x793 (sha256 `a37a81cd…`), `normal_moral.png`
+1254x1254 (`9441ae25…`), `low_moral.png` **1374x1145** (`5bc347f5…`
+— the brief said 1130). None has alpha. The background is not one
+colour: every channel is 0 or 1 and all eight combinations occur, so
+an exact key leaves speckle and a tolerance eats the icons' own
+black (the mask eyes and mouths hold 27,740 to 34,480 pixels at
+exactly (0,0,0)). Six components, cut to `_src/output/cut/1..6.png`
+with a 4x contact sheet; eleven more specks of 1 to 27 px, none
+brighter than 2, are noise. **Data's decisions:** 1 = BC (coin),
+2 = food (corn), 3 = industry (pickaxe), 4 = research (test tube),
+5 = normal morale (green, laughing), 6 = low morale (brown, sad).
+Background = flood fill from the sheet border, any channel >= 2 is
+icon, enclosed black stays; eyes and mouths stay black. No true
+pixel grid, so ONE Lanczos downscale to the master size below, and
+from the master the figure path (nearest neighbour).
+
+**1. Morale in the original: TWO artworks, N copies of one.** The scan
+box calls `COLDRAW::Draw_Info_Wee_Morale_` (colsum.cpp:1176 →
+coldraw.cpp:724), which is `Draw_Info_Morale_Both_` with `is_mini = 1`
+(coldraw.cpp:187). It computes `morale_div2 = (int8_t)morale / 2`
+(coldraw.cpp:189, C truncation), draws `abs(morale_div2)` sprites
+capped at 20 (:212), draws none at all at `GOVERNMENT_UNIFICATION` or
+above (:197-198), and picks the sprite by SIGN alone (:220):
+`morale_div2 > 0` → `C_Anims_(8)`, otherwise `C_Anims_(9)` (:222,
+:230), which are COLONY2.LBX 0x2B and 0x2C (colony_main.cpp:512,
+:514). The full-size screen uses 0x10 / 0x11 by the same rule
+(:506, :508). Decoded from the player's COLONY2.LBX: 0x2B is a grey
+smiling mask and 0x2C a brown sad one, 16x23 each.
+
+So the original draws N sprites for +N / −N. **The two masks stand
+for the SIGN, and the number this panel already prints stands for N**
+— the same split as the rest of the panel. Two states cover
+everything the original tells apart except one case it draws as an
+absence: `morale_div2 == 0` (raw morale −1, 0 or +1) draws NOTHING,
+and so does Unification. **For Data:** at zero, (a) no icon, which
+transcribes the absence, or (b) the normal mask. Under Unification
+the value is already `hidden_value`; the proposal is no icon there
+either, whatever (a)/(b) says. Data's green-laughing / brown-sad pair
+matches the original's pair in meaning and in order.
+
+**2. Resource icons: the glyphs are the original's, the placement is
+not — a CONTINUATION OF THE LABEL+NUMBER DEVIATION.**
+`COLONY::Prod_Anims_` (colony.cpp:345-353) loads COLONY2.LBX entry
+`type + variant * 4`, +27 for the small set the box uses
+(`Draw_Colony_Wee_Prod_`, coldraw.cpp:720, frame 1). Decoded: entries
+0-3 are corn, pickaxe, test tube, coin — ECON order FOOD, INDUSTRY,
+RESEARCH, BC (orion2_consts.h:119) — and 4-7 the tens sprites. Data's
+four are recognisably these four units. **But no routine on either
+screen draws one of them singly as a legend or header:** every
+`Prod_Anims_` call is inside `Draw_Colony_Prod_Both_`'s counting
+loops (coldraw.cpp:118-158) except colbldg.cpp:960, which draws the BC
+TENS sprite once as the picture of the Trade Goods item on the build
+screen — an item picture, not a resource label. The colony screen
+draws the same counting rows (colony.cpp:757) over a background
+(COLONY2.LBX 0x31 plus COLPUPS.LBX 5/6, colony_main.cpp:111-115,
+colony.cpp:628-632) that carries no glyph beside them. So an icon
+beside a label is not a transcription; it extends the deviation this
+panel already carries (a label and a number where the original counts
+sprites), with borrowed shapes. The 12 September table above called
+it an INVENTION; DEVIATION is the proposed marking — Data's word.
+
+**3. Separators: the original draws none — HD EXTENSION.**
+`Draw_Colony_Scan_Info_` (colsum.cpp:1155-1208) draws two prod/morale
+calls and one paragraph, nothing else. The only `Line_`/`Fill_` calls
+in colsum.cpp are the two full-screen clears (:125, :460) and the
+scroll thumb (:759-765). And it is not painted into the art either:
+COLSUM.LBX entry 0, the background the screen draws (colsum.cpp:461),
+is ONE palette index (80) on every pixel of x 102-370, y 349-438.
+The native rows could not hold a line anyway: pitch 18 (:1173)
+against a 23 px sprite, so consecutive rows overlap by 5 px. The
+separator gets the HD EXTENSION marking at the three homes plus a
+check. **A question to verify, not a finding:** the colony screen's
+COLPUPS.LBX 5 paints compartment frames in its production area — a
+precedent for divided rows on the OTHER screen, if Data wants one.
+
+**4. Icon size: ours, so it lives in `layout.json` under `output`,
+not in `core/zoomtables`.** Proposed entry:
+
+```json
+"icon_size": 31,
+"icon_gap": 8,
+"_icon_size_note": "31 reference px = the output row's height at 1920x1080, (197 - 2*pad_y - 4*row_gap) // 5 in colonyoutput.render, so the reference resolution draws the master 1:1 and every other size steps from it by nearest neighbour - the rule colonyplanets.MASTER_SIZE follows for 54. NOT FROM THE PNG, and not the original's glyph: COLONY2.LBX's units are 16x23 at a pitch of 18 and overlap; an HD row is 35 px pitch. All six masters share ONE 31x31 footprint, content fitted by its longer edge and centred, so a morale change neither moves nor resizes the icon."
+```
+
+Row heights that rule produces, measured from the same formula:
+**21** px at 1280x720, **31** at 1920x1080, **42** at 2560x1440,
+**40** at 3440x1371, **62** at 3840x2160 (scale × 31, rounded down,
+within a pixel of the row). **CORRECTED IN RUN 2:** those rows were
+computed from the 197 px HOLE; the drawn box is 201 (2 px bleed each
+side), so the rows are 22 / 32 / 43 / 41 / 64 and 31 sits one pixel
+under the 1080p row. Data had confirmed 31 on the wrong arithmetic; it
+stands, because it still draws 1:1 and still fits every row.
+`boxes.json` declares the panel at
+1920x1080 and 2560x1440. The master is one file per icon; the panel
+has no steps. `icon_gap` 8 is a starting number for the side-by-side.
+The label moves right by `icon_size + icon_gap`; the per-row clearance
+check (`_geometry_note` (b)) is re-run in Run 2, not assumed.
+
+**5. Next free decision number: 56** — 1 to 55 all present in the
+fundament, 56 cited nowhere in the tree. Checked again at Run 2's end.
+
+### Brief 92 Run 2 — the icons and the line are on the panel — 13 September 2026
+
+**Data's decisions after Run 1** (the messages are
+`doc/briefs/93-…` and `94-…`): #1 BC, #2 food, #3 industry, #4
+research, #5 normal morale, #6 low morale; background by flood fill
+from the sheet border with any channel >= 2 counting as icon and
+enclosed black kept; one Lanczos downscale to the table's size and
+the figure path from there. At zero the morale icon is the NORMAL mask
+because it is a label and not a counter; the icon follows the morale
+row under Unification; DEVIATION for the icons, INVENTION kept for the
+unbuilt bars; `icon_size` 31 and `icon_gap` 8 confirmed. Filed as
+**decision 56** under Sizing and artwork.
+
+**ONE CORRECTION TO RUN 1, made here and in the three places that
+carried it.** Run 1 computed the row heights from the 197 px HOLE in
+`layout_reference.json`. The box the panel draws into is **201**,
+the hole plus 2 px of bleed each side, so the rows are **22 / 32 / 43
+/ 41 / 64** px at 1280x720 / 1920x1080 / 2560x1440 / 3440x1371 /
+3840x2160, and 31 is one px under the 1080p row, not equal to it. The
+confirmed 31 stands: it still draws 1:1 at the reference resolution
+and still fits every row (20 / 31 / 41 / 39 / 62 drawn). Corrected in
+`output._icon_size_note`, in decision 56 and inline in Run 1 above.
+
+**The tool, `tools/make_output_icons.py`.** Reads the three sheets
+(refused if a sha256 differs from the one its rectangles were measured
+on), and for each of six literal rectangles:
+
+| step | what | why |
+|---|---|---|
+| background | every channel <= 1 AND 4-connected to the sheet border | Data's rule; 4-connected so a diagonal cannot leak into an enclosed area. The masks' eyes and mouths stay |
+| body | the largest 8-connected component inside the rectangle | drops the eleven 1-27 px specks the sheets carry, none brighter than 2 |
+| de-fringe | within 3 px of the background: alpha = brightest channel / the icon's brightness 4-6 px inside; colour divided back up by alpha | the art is anti-aliased against black — measured, the brightest channel climbs over the first 2-4 px (coin 3 → 7 → 38 → 91) — so the rim is un-multiplied rather than keyed. Deeper is opaque whatever its colour |
+| blank | RGB = 0 wherever alpha = 0 | `BLEND_RGB_ADD` ignores alpha (fundament section 4) |
+| resample | **Lanczos, once, in premultiplied alpha**, longer edge to 31, centred on a 31x31 canvas | Data's filter choice. Premultiplied so the transparent black is not averaged into edge colours by the filter's support |
+| guard | refuses to write anything unless both morale outputs share the canvas and fill it on their long edge | a state change must not move or resize the icon |
+
+Result, content inside the 31x31 footprint: bc 31x31, food 26x31,
+industry 28x31, research 10x31, morale_normal 27x31, morale_low 28x31.
+From the master the renderer scales by **nearest neighbour** at
+`int(31 * layout.scale)`. **DERIVED, NOT COMMITTED**: `.gitignore`
+lists `assets/output/`, `tools/setup.py` runs the tool, and the suite
+regenerates into a scratch directory and compares bytes — equal on
+this machine. **The licence line**: the docstring says the sources are
+AI-generated (Data, ChatGPT) and the project's own artwork, committed
+as input under `_src/`. No other asset in the tree carries a written
+licence note to copy — the nearest is the planet tool's "Data's own
+artwork" — so that wording is modelled on it, and is Data's to
+replace if there is a formal one. The Run 1 crops under
+`_src/output/cut/` are ignored as well; they were a picture to name
+the icons from.
+
+**Rendering.** `layout.json` `output`: `icon_size`, `icon_gap`,
+`separator_thickness` (1), `separator_inset` (0), each with its note;
+the colour is the skin's `colony_summary.output_separator`
+(38, 50, 76). `colonyrows.morale_icon` decides the mask and puts it in
+the row as `morale_icon` (pinned key set 23 → 24);
+`colonyoutput.visible_rows` hands each entry an `icon` by row id;
+`render` draws the icon at the row's left, moves the label by the
+SET's size plus the gap (so a missing file cannot put one label out of
+line), and fills a line centred in the row gap above every row but the
+first. Both read `layout.scale` directly and never `font_size`. With
+no selection the function returns before any of it. The loader is
+`colonyoutputicons.py`, the planet loader's shape: per-root mod
+resolution, refuses a file of the wrong size, cached per pixel size.
+
+**Checks: 122 → 125.** (1) the six files exist at the declared size,
+the morale masks fill one footprint, nothing under transparency, and
+the byte-for-byte rebuild; (2) at EVERY resolution `boxes.json`
+declares `planet_output` for — the rule, not a list — each row's icon
+is pixel-for-pixel the one its id or morale sign selects, no icon is
+taller than its row, the set of pixel rows fully in the separator
+colour is exactly one line between each pair of rows, the Unification
+row keeps its icon, and an empty selection puts no ink down; (3) the
+marking — DEVIATION and HD EXTENSION in colonyoutput, colonyoutputicons,
+colonyrows, layout.json, colors.json, the fundament and here — plus the
+three new marked files in the inventory. `tools/linecount.py`: no file
+crosses 300 code lines.
+
+**ACCEPTANCE — LIVE, and which save.** Slot **8**,
+`fixture_reference_3502.4.GAM`, loaded through the GAME menu's Load
+field (the Colonies screen's RETURN → GAME field 6 → Load field 1 →
+slot field 8, which loads on selection; no `L` was needed).
+`verify_colonies`: all 55 records match, before the renders and
+again with them. `SAVE10.GAM` was `6dfcbfc991ae995c` before the first
+live step (08:42) and after the last (08:45) — already different from
+the secured copy `fixture_natives_autosave_3502.4.GAM` (`2610f39c…`,
+intact both times) because the game rewrote it at 07:48, before this
+session. **What was running before the load** was a game at stardate
+3500.0 that is not a fixture; its state is in that 07:48 autosave.
+
+Pictures in `~/orionlayer-fixtures/evidence/brief92/`, all from one
+snapshot each, HD `planet_output` beside the original's scan box cut
+from the same framebuffer: `output_{1920,2560}_Draconis_I.png`,
+`output_{1920,2560}_Blucher_II.png`, `output_{1920,2560}_Vox_IV.png`,
+`native_full.png`.
+
+**NO HIGH-MORALE COLONY EXISTS TO SHOW.** Every player colony in all
+three fixtures and in the game that was running has halved morale 0,
+except four at −2 — and on the reference save the one −2 is **Draconis
+I itself**. So Draconis I shows the LOW mask, and Blucher II and Vox
+IV show the normal mask at 0. The normal mask on a positive value is
+covered by the suite (morale 7) and not by a picture.
+
+**THE NATIVE BOX IS SCANNING VOX IV**, not row 0: its paragraph reads
+"Huge Ocean / Normal Gravity / Mineral Ultra Rich / Population (5/8) /
++61k" and the inset is labelled Vox. The scanned colony is whatever
+the pointer last rested on (colsum.cpp:880-890) and the API cannot
+move it, so Draconis I and Blucher II have no native counterpart
+in these pictures and **Vox IV is the one like-for-like pair.**
+
+**Questions for Data to verify, not findings:**
+
+- Vox IV's native food row reads five corn, a gap, one corn; its BC
+  row four coins, a gap, one coin. HD prints 5 and 4. Is the group
+  after the gap the imports or secondary group that
+  `_deviation_note` (1) says is not drawn?
+- Vox IV's native morale row is empty (zero copies) where HD shows
+  the normal mask — decision 56's rule. Does it read as intended?
+- The test tube fills 10 of 31 px across and reads lighter than the
+  other four. Acceptable, or a wider research glyph?
+- Is (38, 50, 76) at 1 px the weight the mockup's line has, and is
+  `icon_gap` 8 right against the label?
+
+**Next free decision number at Run 2's end: 57.**
 
 ### The eighth slot: RETURN is a cutout again — 12 September 2026
 

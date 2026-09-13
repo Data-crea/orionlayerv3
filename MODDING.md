@@ -515,7 +515,10 @@ Rules that keep a screen consistent with the rest:
   smoke test enforces that for the base project.
 - After any change: `python tools/smoke_test.py`.
 - Some assets are **not in the repository** — the ship steps, the cut
-  sidebar icons and the black hole master are generated, and the help
+  sidebar icons, the colony output panel's six icons
+  (`screens/colony_summary/assets/output/`, 31x31, the size in
+  `layout.json` `output.icon_size`; a replacement of any other size is
+  refused) and the black hole master are generated, and the help
   texts and nebula sprites come from your own MOO2 files. If a file
   you want to override is missing after a clone, run
   `python tools/setup.py` first. `.gitignore` lists which and why.

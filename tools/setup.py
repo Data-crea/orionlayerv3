@@ -63,6 +63,9 @@ STEPS = [
     ("make_black_hole_master.py", [],
      os.path.join(GM, "black_hole.png"),
      "rotatable black hole master"),
+    ("make_output_icons.py", [],
+     os.path.join(CS, "output", "morale_low.png"),
+     "6 output panel icons, cut from assets/_src/output/"),
     # THE COLONY FRAME PLATES ARE GONE — Phase B, 12 September 2026,
     # decision 55. They were decision 49's derived files and needed a
     # step here; the colony screen wears one fixed image now and
@@ -88,6 +91,12 @@ REQUIRED_INPUTS = [
                   "layout_reference.json"), "colony layout reference"),
     (os.path.join(GM, "icons", "_source_sheet.png"), "sidebar icon sheet"),
     (os.path.join(GM, "_black_hole_src.png"), "black hole source"),
+    (os.path.join(CS, "_src", "output", "symbols.png"),
+     "output icon sheet"),
+    (os.path.join(CS, "_src", "output", "normal_moral.png"),
+     "normal morale mask sheet"),
+    (os.path.join(CS, "_src", "output", "low_moral.png"),
+     "low morale mask sheet"),
     (os.path.join(GM, "stars"), "star sprites (committed, see .gitignore)"),
 ]
 
