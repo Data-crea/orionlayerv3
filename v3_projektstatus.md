@@ -3255,7 +3255,9 @@ No framebuffer fallback on the round trip.
 - **The five toggles are not on the wire.** HD starts with all five off;
   a toggle the game held on before the screen opened disagrees until it
   is clicked twice. Seen live in Stop 3 on the reference save (range was
-  on). How to close it is an open question for Data.
+  on). A documented gap (Data, after Stop 3); the request to put the
+  flags on the wire is `doc/orion2re_open_fixes.md` item 13. No frame
+  reading.
 - The special line's ship name in a monster system (the design part of
   the ship spec); the monster picture set; the star-click warning box
   (H 0x14F); rotating planets and the inset's animated scanned star.

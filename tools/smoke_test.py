@@ -11580,11 +11580,42 @@ def main():
             report(f"building column: id {_pid} is {_what} and resolves "
                    f"to {_txt!r}/{_st!r} — not extracted on this disk, "
                    f"so it is not measured here")
-    assert _named, (
-        "neither a building id nor an option id resolves to a name on "
-        "this disk, so the BUILDING column cannot be measured at all. "
-        "Run `python tools/techname_extract.py` and `python "
-        "tools/estrings_extract.py`")
+    if not _named:
+        # THE SAME TREATMENT AS THE JSON CHECK — 13 September 2026. The
+        # two name files are extracted from the player's install and
+        # gitignored (decision 40), so a fresh clone has neither and
+        # used to fail here before anyone had run an extractor. Absence
+        # is allowed ONLY as absence: both files missing AND ignored by
+        # git. A file that is present and still resolves nothing is a
+        # real fault and still fails. The renderer half is measured
+        # either way, with a stand-in name, so the pixels are checked
+        # even on a clone.
+        from core.buildnames import name_file as _bn_file
+        from core.estrings import string_file as _es_file
+        _bn_lang = (settings or {}).get("language", "en")
+        _bn_root = os.path.dirname(SCREENS_DIR)
+        _bn_rel = [_bn_file(_bn_lang), _es_file(_bn_lang)]
+        _bn_present = [_f for _f in _bn_rel
+                       if os.path.exists(os.path.join(_bn_root, _f))]
+        assert not _bn_present, (
+            f"neither a building id nor an option id resolves to a name, "
+            f"yet {_bn_present} exist on this disk — the files are there "
+            f"and the resolver reads nothing from them. Re-run "
+            f"`python tools/techname_extract.py` and `python "
+            f"tools/estrings_extract.py`")
+        if os.path.isdir(os.path.join(_bn_root, ".git")):
+            import subprocess as _bn_sp
+            _bn_ign = set(_bn_sp.run(
+                ["git", "-C", _bn_root, "check-ignore", "--no-index",
+                 *_bn_rel], capture_output=True, text=True).stdout.split())
+            assert set(_bn_rel) <= _bn_ign, (
+                f"the name files may be absent only because they are "
+                f"generated and gitignored; git does not ignore "
+                f"{sorted(set(_bn_rel) - _bn_ign)}")
+        report("building column: no name files on this disk (a fresh "
+               "clone) — the resolver half is not measured; the renderer "
+               "half is, with a stand-in name")
+        _named = [(-2, "Trade Goods")]
     for _bspec in ("1920x1080", "2560x1440"):
         _bw2, _bh2 = (int(v) for v in _bspec.split("x"))
         _blay = Layout(_bw2, _bh2)

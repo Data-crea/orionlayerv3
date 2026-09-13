@@ -34,6 +34,7 @@ section for what was found where.
 | 10 | `ENGINE_VERSION` does not move when a serialized record layout changes | **Request** | A client cannot tell two incompatible builds apart and reads at the wrong offset |
 | 11 | `COLONY::Colony_Has_Natives_` tests nibble **8** (android), not 9 (native) | **Fix** — reproducible in a named save | Nothing for us; for the game, the occupation-policy popup is offered to the wrong colonies |
 | 12 | A pop move has no command: it has to be a click choreography into the game's own list window | **Request**, and **patched locally** 10 September 2026 (`doc/ext_move_pop.patch`), **VERIFIED LIVE** the same day; open upstream | Without it a move costs four snapshot round trips instead of one — 725 ms against 55 ms measured — and every one of them is a click that can land on the wrong row |
+| 13 | The Planets screen's five restriction toggles (`PLNTSUM::_filter_out_*`) are not in the snapshot | **Request** | HD cannot know which filters the game already has on; seen live 13 September 2026 — the range toggle was on before the HD screen opened, and the two lists disagreed |
 
 Items 3 and 4 are both about INJECT_CLICK and both live in the same
 code path, but they are separate faults: 3 is where the coordinates
@@ -1192,3 +1193,46 @@ Today, nothing: the patch is applied locally and
 unpatched engine is caught by a check rather than by a move that
 silently does nothing. Upstream it decides whether OrionLayer has
 to carry a patch for the one gesture that drives the game.
+
+---
+
+## 13. The Planets screen's restriction toggles are not in the snapshot
+
+**A request.** Nothing in the game misbehaves; OrionLayer's Planets
+screen cannot know the state it is supposed to mirror.
+
+### What we found (orion2re 1.60)
+
+`PLNTSUM::Filter_Explored_Planets_` (plntsum.cpp:976-1053) filters the
+list on five globals — `_filter_out_enemy_controlled_planets`,
+`_filter_out_adverse_gravity_planets`,
+`_filter_out_hostile_environment_planets`,
+`_filter_out_mineral_scarcity_planets` and
+`_filter_out_planets_out_of_range` — set by five radio fields with
+hotkeys 1-5 (`Add_Plntsum_Fields_`, plntsum.cpp:697-701). They are not
+reset when the screen opens and they are not in STATE_SNAPSHOT
+(ext_api.cpp:53-136), so a client that shows the list has no way to
+read them. A radio click TOGGLES, so unlike the sort key
+(`_sort_choice`, which a client can impose by clicking the key it
+wants) a flag cannot be set by sending input without knowing its value
+first.
+
+### Seen live
+
+13 September 2026, the reference save in slot 8: the game's range
+toggle was already on when the HD Planets screen opened, and the HD
+list (all toggles off) and the game's list disagreed — 140 rows
+against 41 — until the toggle was flipped from outside the screen.
+
+### The request
+
+Carry the five flags in the snapshot — five bytes, or one bitmask in
+the order of the fields above — while the Planets screen is up, or
+always. Anything that lets a client read them before it sends a click.
+
+### Why not read the picture
+
+The radio sprites are in the framebuffer, and reading them would work
+until a skin, a palette or a sprite changed. Data's decision after
+brief 101 Stop 3: a documented gap until the flags are on the wire, and
+no frame reading.

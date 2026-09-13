@@ -757,10 +757,11 @@
   "planets": {
     "_owner_note": "The Planets list prints a row in its OWNER's colour and brighter under the pointer - PLNTSUM::Colony_Owner_Colors_ / Player_Colors_ (plntsum.cpp:2204-2252): the planet's colony owner's player colour, the neutral ramp when nobody holds it, and highlight type 1 for the scanned row (Summary_Screen_Print_Data_, plntsum.cpp:62-70). Data's decision (a), brief 101 Stop 1: owner colours and the original's highlights, keyed here; the mockup's scheme is dropped. THE BASE COLOURS ARE NOT REPEATED: an owned row reads galaxy_map.owner_<player colour>, the one home of the eight player colours. What is here is what the galaxy map has no key for - the neutral ramp and the eight hover shades. The original resolves both through Font_Colors2_ against its own palette (base = colour * 6 - 0x31, hover shade +3/+5 against +2/+4), which this project cannot read (the palette-index lesson in colonyinset.py), so the values are this skin's: the owner colour lifted toward white by about a third. Highlight type 2 (the armed send, unreachable) waits with the send brief and has no key yet.",
     "neutral": [
-      196,
-      202,
-      214
+      104,
+      128,
+      124
     ],
+    "_neutral_note": "TRANSCRIBED FROM THE PALETTE, brief 101 (Data's answer 4 after Stop 3). An unowned row prints through Colony_Owner_Colors_(-1, 0) -> Player_Colors_(-1, 0) -> MISC::Font_Colors2_(4, 0x40, 0x41) (plntsum.cpp:2204-2232, misc.cpp:71-80): colour slots 1-7 are 0x41 and slot 0 is 0x40. Measured on the native frame of screen 32 on slot 8 (fixture_reference_3502.4.GAM): the neutral climate text of row 1 is 110 px of index 65 (0x41) and 20 of index 64, nothing else. Index 0x41 in the Planets screen's own palette (fonts::Load_Palette_(6, ...), plntsum.cpp:1965) is (104, 128, 124) - the value above, read from the palette the snapshot carries, not from a screenshot by eye. neutral_hover and the owner hover shades are still this skin's values.",
     "neutral_hover": [
       240,
       244,
