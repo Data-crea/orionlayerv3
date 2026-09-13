@@ -19,7 +19,7 @@ same evening: they become repository content.
 ## What the columns mean
 
 **Date** is filled only where the brief's own text states one, which
-is eleven of the hundred. Everything else is **undatiert** — not
+is twelve of the hundred and two. Everything else is **undatiert** — not
 because the order is unknown but because a date has to come from the
 brief itself or from the first commit that implements it (see
 CLAUDE.md, "You own every detail"), and a cache file's timestamp is
@@ -155,3 +155,5 @@ the tree, pasted back into chat for reference:
 | 98 | [`98-brief-97-decisions-tiles-approved-stop-3.md`](98-brief-97-decisions-tiles-approved-stop-3.md) | *undatiert* |  | Data's three messages on brief 97: the Stop 1 decisions, the sha256 recheck, and the tile approval with the Stop 3 order | session |
 | 99 | [`99-colony-summary-right-click-context-help.md`](99-colony-summary-right-click-context-help.md) | 13 September 2026 |  | Colony Summary: right-click context help, transcribed from ERICHELP::_colony_summary_screen_help_list, on the existing popup (the chat's "Brief 98") | session |
 | 100 | [`100-brief-98-decisions-wire-stop-2.md`](100-brief-98-decisions-wire-stop-2.md) | *undatiert* |  | Data's decisions on that brief's Stop 1 and the order to wire Stop 2 | session |
+| 101 | [`101-planets-screen-build-from-mockup3.md`](101-planets-screen-build-from-mockup3.md) · [`101-frame3.png`](101-frame3.png) · [`101-mockup3.png`](101-mockup3.png) | 13 September 2026 |  | Planets screen: build from mockup3, wire into the game, in three stops (the chat's "Brief 99") | session |
+| 102 | [`102-brief-101-stop-1-decisions.md`](102-brief-101-stop-1-decisions.md) | *undatiert* |  | Data's decisions on brief 101's Stop 1: range filter a marked gap, HESTRNGS extracted, send later, owner colours, no detail panel, race name only, stable sort, shared list module | session |

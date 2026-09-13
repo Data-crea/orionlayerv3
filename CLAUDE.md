@@ -17,7 +17,7 @@ habits are non-negotiable.
 | Why is it built this way? Decisions, principles, past mistakes | `doc/v3_fundament.md` |
 | What exists today, what is missing, how to run things | `v3_projektstatus.md` |
 | What does the original C++ do? | `doc/v3_orion2re_index.md` |
-| The Planets screen, read but not built | `doc/plntsum_reading.md` |
+| The Planets screen: the source reading, and the range helper for its follow-up | `doc/plntsum_reading.md` |
 | The Colonies screen: capability map, leverage points, the design | `doc/colsum_design_analysis.md` |
 | The Extension API protocol | `doc/ext_api_dokumentation_v3.md` |
 | What is being asked of Joes — **the only list** | `doc/orion2re_open_fixes.md` |
@@ -58,7 +58,7 @@ derive world geometry.
 python tools/smoke_test.py
 ```
 
-134 checks, headless, no orion2re needed. **The count must not go
+141 checks, headless, no orion2re needed. **The count must not go
 down.** If a change makes a check obsolete, replace it — do not
 delete it. It went down exactly once, on 12 September 2026, when
 Phase B deleted the frame machinery the checks were about (decision
@@ -110,11 +110,14 @@ doc/                    the documents in the table above
 mods/                   file-level overrides; example_mod works
 ```
 
-Seven screens exist: main menu, new game, select race, custom race,
+Eight screens exist: main menu, new game, select race, custom race,
 empire identity, galaxy map, colony summary (list, sidebar, scan
 box and galaxy inset; sort and RETURN wired, scrolling for
 viewing only, and the population move click-click on the rows —
-the first HD gesture that drives the game, see decision 47).
+the first HD gesture that drives the game, see decision 47), and
+planets (brief 101: list, sort, the five restrictions and RETURN
+wired; sending ships is not built, and the range restriction is a
+marked gap in the HD list).
 Screens without an HD version fall back to the original framebuffer,
 so the game is always playable.
 
@@ -148,6 +151,7 @@ python tools/nebula_extract.py /path/to/starbg.lbx  # nebula sprites
 python tools/techname_extract.py                    # building names
 python tools/estrings_extract.py                    # option strings
 python tools/raceicon_extract.py                    # population figures
+python tools/hestrings_extract.py                   # message strings
 ```
 
 Without the first, every right click opens a panel naming that

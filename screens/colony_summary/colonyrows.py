@@ -277,10 +277,17 @@ def planet_name(colony, planets, stars):
     planet = planet_struct.parse(planets[colony.planet])
     if not 0 <= planet.star_index < len(stars):
         return "?"
-    star = stars[planet.star_index]
+    return star_planet_name(stars[planet.star_index], colony.planet)
+
+
+def star_planet_name(star, planet_index):
+    """`HACCESS::Do_Get_Planet_Name_` (haccess.cpp:208): "%s %s", the
+    star's name and the numeral of the planet's place among the
+    system's OCCUPIED slots. One home since brief 101 — the Planets
+    list names its rows through it too."""
     number = 0
     for slot in star_struct.planet_indices(star):
-        if slot == colony.planet:
+        if slot == planet_index:
             break
         if slot > -1:
             number += 1
@@ -318,7 +325,7 @@ INSET_SCALE_X = 506000
 INSET_SCALE_Y = 400000
 
 
-def galaxy_inset_stars(game_state):
+def galaxy_inset_stars(game_state, box=INSET_NATIVE):
     """Every star as (native_x, native_y, colour_index).
 
     Transcribed from `MOVEBOX::Draw_Galaxy_Map_Box_` (movebox.cpp:4)
@@ -378,7 +385,10 @@ def galaxy_inset_stars(game_state):
         getattr(game_state, "map_max_y", 0))
     if not scale:
         return []
-    _x, _y, width, height = INSET_NATIVE
+    # `box` is the native box the caller's original draws into; the
+    # Planets screen passes its own (443, 17, 180, 116), plntsum.cpp:1351
+    # (brief 101) — same function, a parameter rather than a copy.
+    _x, _y, width, height = box
     div_x = INSET_SCALE_X // width
     div_y = INSET_SCALE_Y // height
     out = []

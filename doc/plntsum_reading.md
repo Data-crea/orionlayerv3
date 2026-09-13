@@ -4,10 +4,11 @@
 4 September 2026 against **orion2re 1.60.0** (`src/version.h`); a 1.31
 archive numbers these differently.
 
-Committed because the reading is paid for and the screen is not built
-yet — it waits on frame artwork, which nothing in this tree can
-produce. Nothing here is drawn anywhere; this is the source, written
-down once so the next session does not buy it twice.
+Committed because the reading is paid for. **The screen is built since
+brief 101 (13 September 2026)** — `screens/planets/`, which cites the
+source itself; this file stays as the reading, and its last section is
+the range helper read for the follow-up brief that builds the one
+restriction the HD list does not apply yet.
 
 **`SCREEN_PLANET_SUMMARY = 32`** (`orion2_consts.h:487`). Not to be
 confused with `SCREEN_PLANET_DATA = 18`, which is a different screen.
@@ -139,4 +140,63 @@ wrong from the shape of the code alone.
    (colsum.cpp:734). That argument picks the centre offset —
    `star_center_offset = (mode == 0) ? 2 : 3` (movebox.cpp:374). Two
    sites, not three, so this is **noted and not extracted**; the
-   third is the signal.
+   third is the signal. *(Brief 101: the HD inset is the colony
+   summary's renderer with a box-size parameter, not a copy.)*
+
+---
+
+## The range filter — read for its follow-up brief (13 September 2026)
+
+Data's order in brief 101 Stop 1: the Planets In Range toggle is a
+marked gap in the HD list, and "read the unread distance helper as part
+of this stop's close-out so the follow-up brief has no unknowns". This
+is that reading, orion2re 1.60, `src/game/shipmove.cpp`.
+
+`Planet_In_Range_Of_A_Colony_` (plntsum.cpp:383) passes the planet's
+STAR to `SHIPMOVE::Star_In_Extended_Range_Of_Player_`:
+
+```
+:327  Star_In_Extended_Range_Of_Player_(star, player)
+        ext = (_player[player].ship_range * 3 + 1) / 2      150 %, rounded
+        return Star_In_Range_Of_Player_(star, player, ext)
+
+:340  Star_In_Range_Of_Player_(star, player, dist)
+        Aux2(star, player, dist)                            -> true
+        for i < _NUM_PLAYERS:
+          i != player && _player[player].treaty[i] == 2
+            && Aux2(star, i, dist)                          -> true   allies
+        false
+
+:286  Aux2(star, player, dist)
+        star.has_colony bit `player`                        -> true
+        Aux1(star, player, dist)                            -> true
+        star.wormhole_star_id != -1
+          && wormhole star's visited bit `player`
+          && Aux1(wormhole star, player, dist)              -> true
+        false
+
+:249  Aux1(star, player, dist)
+        limit = dist * dist * 900                           30 px per parsec
+        for every star S:
+          S.has_colony bit `player`
+          && !Test_Bit_Field_(S.black_hole_blocks, index of `star`)
+          && dx*dx + dy*dy <= limit   (star - S, int32)     -> true
+        false
+```
+
+**What the follow-up needs that the snapshot does not yet give as a
+verified spec (decision 23):**
+
+| Value | Where in the C++ | State in this tree |
+|---|---|---|
+| `s_player.ship_range` | `int16_t`, orion2.h:1808 | not in `core/structs/player.py` |
+| `s_player.treaty[8]` | `sbyte`, orion2.h:1836; 2 = alliance | not in the spec |
+| `s_star_data.black_hole_blocks` | `int8_t[BITMAP(MAX_STARS)]` = 128 bytes, orion2.h:2985 — **offset 31**, after the eight `last_planet_selected` bytes at 23, which is why `system_special` sits at 159 | not in the spec |
+| `s_star_data.has_colony` | offset 176 | in the spec |
+| `s_star_data.wormhole_star_id` | offset 160 | in the spec |
+| `s_star_data.visited` | offset 171 | in the spec |
+
+Two details the shape of the code hides: the black-hole test indexes
+the COLONY star's bitmap by the TARGET star, not the other way round;
+and the wormhole branch only counts when the player has visited the
+star at the far end, measured from that star.

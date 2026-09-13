@@ -1,0 +1,22 @@
+{
+  "_comment": "Right-click context help. Transcribed from EVANHELP::_plntsum_screen_help_list (evanhelp.cpp:118, 15 entries, s_help_box {help_id, x1, y1, x2, y2} orion2.h:993), installed by EVANHELP::Set_PlntSum_Screen_Help_List_ (evanhelp.cpp:298) from PLNTSUM::Planet_Summary_Screen_ (plntsum.cpp). `native` is the original's 640x480 rectangle and is provenance only - HD resolves each region from its own boxes, because the HD layout puts the controls somewhere else. Regions are tested in order and the first hit wins, like fields::Check_Help_List_ (fields.cpp:2916). THE LIST HAS NO SCREEN-WIDE ENTRY: the original's last entry, 338, is the header strip over the list, so a right click outside every region opens nothing - on this screen, as in the original, that is a Cancel and not a help box.",
+  "_source": "evanhelp.cpp:118",
+  "hd_extension": "The help popup auto-sizes to its text and scrolls when it cannot fit. The original draws a fixed box and lets FMTPARA wrap into it at a fixed 339 px (TEXTBOX::Draw_Help_Entry_, textbox.cpp:307); at four HD resolutions a fixed box either wastes half the screen on two lines or clips a long entry. Marked once per file, here, and in core/helppopup.py.",
+  "regions": [
+    { "help_id": 337, "box": "rows",              "native": [ 17,  37, 415, 469] },
+    { "help_id": 343, "box": "galaxy_inset",      "native": [441,  15, 623, 164] },
+    { "help_id": 345, "box": "scroll",            "native": [423,  14, 434, 469] },
+    { "help_id": 348, "box": "sort_climate",      "native": [442, 202, 498, 223] },
+    { "help_id": 349, "box": "sort_minerals",     "native": [502, 202, 564, 223] },
+    { "help_id": 350, "box": "sort_size",         "native": [568, 202, 623, 223] },
+    { "help_id": 351, "box": "restrict_enemy",    "native": [442, 267, 623, 287] },
+    { "help_id": 352, "box": "restrict_gravity",  "native": [442, 291, 623, 310] },
+    { "help_id": 353, "box": "restrict_hostile",  "native": [442, 314, 623, 333] },
+    { "help_id": 354, "box": "restrict_minerals", "native": [442, 337, 623, 356] },
+    { "help_id": 355, "box": "restrict_range",    "native": [442, 360, 623, 378] },
+    { "help_id": 356, "box": "send_colony",       "native": [468, 390, 605, 406] },
+    { "help_id": 357, "box": "send_outpost",      "native": [468, 418, 605, 436] },
+    { "help_id": 358, "box": "return",            "native": [452, 440, 611, 464] },
+    { "help_id": 338, "box": "header",            "native": [ 16,  12, 414,  32] }
+  ]
+}

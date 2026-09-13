@@ -170,23 +170,10 @@ def column_rects(list_box, cols):
     starts, so the six tile the box exactly by construction rather
     than by a rounding residue landing in the last one.
     """
-    ax, ay, aw, ah = list_box
-    keys = list(cols)
-    last = keys[-1]
-    fixed = cols[last]
-    total = sum(v for k, v in cols.items() if k != last)
-    span = aw - fixed
-    out, off = {}, 0
-    for key in keys:
-        if key == last:
-            out[COLUMN_PREFIX + key] = [ax + aw - fixed, ay, fixed, ah]
-        else:
-            x = ax + round(off * span / total)
-            nxt = (ax + aw - fixed if off + cols[key] >= total
-                   else ax + round((off + cols[key]) * span / total))
-            out[COLUMN_PREFIX + key] = [x, ay, nxt - x, ah]
-        off += cols[key]
-    return out
+    # `core.listgrid.column_rects` since brief 101, shared with Planets.
+    from core import listgrid
+    assert COLUMN_PREFIX == "col_"
+    return listgrid.column_rects(list_box, cols)
 
 
 def all_rects(data):

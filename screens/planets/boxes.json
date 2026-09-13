@@ -1,0 +1,652 @@
+{
+  "1920x1080": [
+    {
+      "name": "list_area",
+      "rect": [
+        72,
+        73,
+        1381,
+        733
+      ]
+    },
+    {
+      "name": "side_panel",
+      "rect": [
+        1478,
+        75,
+        369,
+        730
+      ]
+    },
+    {
+      "name": "planet_panel",
+      "rect": [
+        73,
+        821,
+        522,
+        173
+      ]
+    },
+    {
+      "name": "picture_panel",
+      "rect": [
+        615,
+        821,
+        838,
+        173
+      ]
+    },
+    {
+      "name": "button_panel",
+      "rect": [
+        1478,
+        821,
+        369,
+        173
+      ]
+    },
+    {
+      "name": "header",
+      "rect": [
+        78,
+        79,
+        1330,
+        44
+      ]
+    },
+    {
+      "name": "rows",
+      "rect": [
+        78,
+        127,
+        1330,
+        673
+      ]
+    },
+    {
+      "name": "scroll",
+      "rect": [
+        1412,
+        79,
+        36,
+        721
+      ]
+    },
+    {
+      "name": "galaxy_inset",
+      "rect": [
+        1486,
+        83,
+        353,
+        228
+      ]
+    },
+    {
+      "name": "status_line",
+      "rect": [
+        1486,
+        317,
+        353,
+        40
+      ],
+      "style": {
+        "font_size": 22
+      }
+    },
+    {
+      "name": "sort_heading",
+      "rect": [
+        1486,
+        367,
+        353,
+        34
+      ],
+      "style": {
+        "font_size": 22
+      }
+    },
+    {
+      "name": "sort_climate",
+      "rect": [
+        1486,
+        405,
+        115,
+        42
+      ],
+      "style": {
+        "font_size": 19
+      }
+    },
+    {
+      "name": "sort_minerals",
+      "rect": [
+        1605,
+        405,
+        115,
+        42
+      ],
+      "style": {
+        "font_size": 19
+      }
+    },
+    {
+      "name": "sort_size",
+      "rect": [
+        1724,
+        405,
+        115,
+        42
+      ],
+      "style": {
+        "font_size": 19
+      }
+    },
+    {
+      "name": "restrict_heading",
+      "rect": [
+        1486,
+        459,
+        353,
+        34
+      ],
+      "style": {
+        "font_size": 22
+      }
+    },
+    {
+      "name": "restrict_enemy",
+      "rect": [
+        1486,
+        499,
+        353,
+        56
+      ],
+      "style": {
+        "font_size": 19
+      }
+    },
+    {
+      "name": "restrict_gravity",
+      "rect": [
+        1486,
+        559,
+        353,
+        56
+      ],
+      "style": {
+        "font_size": 19
+      }
+    },
+    {
+      "name": "restrict_hostile",
+      "rect": [
+        1486,
+        619,
+        353,
+        56
+      ],
+      "style": {
+        "font_size": 19
+      }
+    },
+    {
+      "name": "restrict_minerals",
+      "rect": [
+        1486,
+        679,
+        353,
+        56
+      ],
+      "style": {
+        "font_size": 19
+      }
+    },
+    {
+      "name": "restrict_range",
+      "rect": [
+        1486,
+        739,
+        353,
+        56
+      ],
+      "style": {
+        "font_size": 19
+      }
+    },
+    {
+      "name": "send_colony",
+      "rect": [
+        1486,
+        829,
+        353,
+        50
+      ],
+      "style": {
+        "font_size": 21
+      }
+    },
+    {
+      "name": "send_outpost",
+      "rect": [
+        1486,
+        885,
+        353,
+        50
+      ],
+      "style": {
+        "font_size": 21
+      }
+    },
+    {
+      "name": "return",
+      "rect": [
+        1486,
+        941,
+        353,
+        46
+      ],
+      "style": {
+        "font_size": 21
+      }
+    },
+    {
+      "name": "planet_disc",
+      "rect": [
+        85,
+        829,
+        157,
+        157
+      ]
+    },
+    {
+      "name": "planet_name",
+      "rect": [
+        254,
+        845,
+        330,
+        44
+      ],
+      "style": {
+        "skin": "text",
+        "font_size": 30
+      }
+    },
+    {
+      "name": "planet_special",
+      "rect": [
+        254,
+        895,
+        330,
+        34
+      ],
+      "style": {
+        "skin": "text",
+        "font_size": 22
+      }
+    },
+    {
+      "name": "monster_picture",
+      "rect": [
+        623,
+        829,
+        600,
+        157
+      ],
+      "style": {
+        "skin": "image",
+        "zoom": 1.0,
+        "crop": [
+          0.5,
+          0.5
+        ],
+        "fade_left": 0.0,
+        "fade_right": 0.2
+      }
+    },
+    {
+      "name": "monster_race",
+      "rect": [
+        1233,
+        880,
+        212,
+        50
+      ],
+      "style": {
+        "skin": "text",
+        "font_size": 26
+      }
+    },
+    {
+      "name": "help_popup",
+      "hidden": true,
+      "style": {
+        "font_scale": 1.0
+      }
+    }
+  ],
+  "2560x1440": [
+    {
+      "name": "list_area",
+      "rect": [
+        72,
+        73,
+        1381,
+        733
+      ]
+    },
+    {
+      "name": "side_panel",
+      "rect": [
+        1478,
+        75,
+        369,
+        730
+      ]
+    },
+    {
+      "name": "planet_panel",
+      "rect": [
+        73,
+        821,
+        522,
+        173
+      ]
+    },
+    {
+      "name": "picture_panel",
+      "rect": [
+        615,
+        821,
+        838,
+        173
+      ]
+    },
+    {
+      "name": "button_panel",
+      "rect": [
+        1478,
+        821,
+        369,
+        173
+      ]
+    },
+    {
+      "name": "header",
+      "rect": [
+        78,
+        79,
+        1330,
+        44
+      ]
+    },
+    {
+      "name": "rows",
+      "rect": [
+        78,
+        127,
+        1330,
+        673
+      ]
+    },
+    {
+      "name": "scroll",
+      "rect": [
+        1412,
+        79,
+        36,
+        721
+      ]
+    },
+    {
+      "name": "galaxy_inset",
+      "rect": [
+        1486,
+        83,
+        353,
+        228
+      ]
+    },
+    {
+      "name": "status_line",
+      "rect": [
+        1486,
+        317,
+        353,
+        40
+      ],
+      "style": {
+        "font_size": 22
+      }
+    },
+    {
+      "name": "sort_heading",
+      "rect": [
+        1486,
+        367,
+        353,
+        34
+      ],
+      "style": {
+        "font_size": 22
+      }
+    },
+    {
+      "name": "sort_climate",
+      "rect": [
+        1486,
+        405,
+        115,
+        42
+      ],
+      "style": {
+        "font_size": 19
+      }
+    },
+    {
+      "name": "sort_minerals",
+      "rect": [
+        1605,
+        405,
+        115,
+        42
+      ],
+      "style": {
+        "font_size": 19
+      }
+    },
+    {
+      "name": "sort_size",
+      "rect": [
+        1724,
+        405,
+        115,
+        42
+      ],
+      "style": {
+        "font_size": 19
+      }
+    },
+    {
+      "name": "restrict_heading",
+      "rect": [
+        1486,
+        459,
+        353,
+        34
+      ],
+      "style": {
+        "font_size": 22
+      }
+    },
+    {
+      "name": "restrict_enemy",
+      "rect": [
+        1486,
+        499,
+        353,
+        56
+      ],
+      "style": {
+        "font_size": 19
+      }
+    },
+    {
+      "name": "restrict_gravity",
+      "rect": [
+        1486,
+        559,
+        353,
+        56
+      ],
+      "style": {
+        "font_size": 19
+      }
+    },
+    {
+      "name": "restrict_hostile",
+      "rect": [
+        1486,
+        619,
+        353,
+        56
+      ],
+      "style": {
+        "font_size": 19
+      }
+    },
+    {
+      "name": "restrict_minerals",
+      "rect": [
+        1486,
+        679,
+        353,
+        56
+      ],
+      "style": {
+        "font_size": 19
+      }
+    },
+    {
+      "name": "restrict_range",
+      "rect": [
+        1486,
+        739,
+        353,
+        56
+      ],
+      "style": {
+        "font_size": 19
+      }
+    },
+    {
+      "name": "send_colony",
+      "rect": [
+        1486,
+        829,
+        353,
+        50
+      ],
+      "style": {
+        "font_size": 21
+      }
+    },
+    {
+      "name": "send_outpost",
+      "rect": [
+        1486,
+        885,
+        353,
+        50
+      ],
+      "style": {
+        "font_size": 21
+      }
+    },
+    {
+      "name": "return",
+      "rect": [
+        1486,
+        941,
+        353,
+        46
+      ],
+      "style": {
+        "font_size": 21
+      }
+    },
+    {
+      "name": "planet_disc",
+      "rect": [
+        85,
+        829,
+        157,
+        157
+      ]
+    },
+    {
+      "name": "planet_name",
+      "rect": [
+        254,
+        845,
+        330,
+        44
+      ],
+      "style": {
+        "skin": "text",
+        "font_size": 30
+      }
+    },
+    {
+      "name": "planet_special",
+      "rect": [
+        254,
+        895,
+        330,
+        34
+      ],
+      "style": {
+        "skin": "text",
+        "font_size": 22
+      }
+    },
+    {
+      "name": "monster_picture",
+      "rect": [
+        623,
+        829,
+        600,
+        157
+      ],
+      "style": {
+        "skin": "image",
+        "zoom": 1.0,
+        "crop": [
+          0.5,
+          0.5
+        ],
+        "fade_left": 0.0,
+        "fade_right": 0.2
+      }
+    },
+    {
+      "name": "monster_race",
+      "rect": [
+        1233,
+        880,
+        212,
+        50
+      ],
+      "style": {
+        "skin": "text",
+        "font_size": 26
+      }
+    },
+    {
+      "name": "help_popup",
+      "hidden": true,
+      "style": {
+        "font_scale": 1.0
+      }
+    }
+  ]
+}

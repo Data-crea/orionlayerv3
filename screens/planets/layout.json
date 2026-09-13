@@ -1,0 +1,170 @@
+{
+  "_comment": "The Planets screen - orion2re SCREEN_PLANET_SUMMARY (32), PLNTSUM::Planet_Summary_Screen_ (plntsum.cpp). Brief 101, 13 September 2026, built from Data's mockup3/frame3. Words the original prints come from the user's own ESTRINGS.LBX and HESTRNGS.LBX (decision 38); the words below are only for what the original draws as PLNTSUM.LBX artwork and has no string for.",
+  "frame": {
+    "image": "frame.png",
+    "image_size": [
+      1920,
+      1080
+    ],
+    "_note": "One PNG with five transparent cutouts, stretched over the 1920x1080 reference area and drawn above all content. The five cutout boxes in boxes.json are what tools/frame_holes.py derives from it (rule `planets`, rows [2, 3]); the smoke test holds the two together. Everything else in boxes.json is placed by hand inside those five."
+  },
+  "list": {
+    "row_count": 8,
+    "_row_count_note": "TRANSCRIBED: eight rows. Summary_Screen_Print_Data_ clamps to eight (plntsum.cpp:54-56) and Add_Plntsum_Fields_ adds eight row fields (:745-748). The HD bands are equal; the original's _plntscrn_delta_y table (plntsum.cpp:11) is not, and its 54/55 pitch is native-pixel layout that the HD band replaces - the eight rows and their order are what is transcribed.",
+    "columns": {
+      "planet": 300,
+      "climate": 200,
+      "gravity": 200,
+      "minerals": 230,
+      "size": 200,
+      "scroll": 0
+    },
+    "_columns_note": "Shares of the header/rows width, laid out by core.listgrid.column_rects; the last entry is an absolute width and is 0 because the scroll column is its own box. Five columns in the original's order (plntsum.cpp:57-195 print at native x 61, 140, 217, 311, 386).",
+    "upper_font": 22,
+    "lower_font": 16,
+    "disc_share": 0.72,
+    "_disc_note": "The planet disc in the name cell, as a fraction of the band. The original draws a rotating planet per row (Draw_Rotating_Planets_, plntsum.cpp:1699-1731, _p_rotating_planet[climate * 5 + size]); HD draws the colony screen's still disc for the climate - DEVIATION: no rotation and no size variant, the same art the colony list uses.",
+    "_hd_extension_fills": "HD EXTENSION: the A/B row fills and the selected-row fill are the colony list's (decision 57), drawn through core.listgrid with the palette's one home under colony_summary. The original's list has no row backgrounds.",
+    "_hd_extension_wheel": "HD EXTENSION: the wheel scrolls the list one row per notch. The original has only its up/down buttons and bar (plntsum.cpp:2030-2045). Viewing only - nothing is sent (decision 46)."
+  },
+  "headings": {
+    "planet": "Planet",
+    "climate": "Climate",
+    "gravity": "Gravity",
+    "minerals": "Minerals",
+    "size": "Size",
+    "_note": "OUR WORDING. The original's list has no column headings at all - its header strip (help 338, native 16,12-414,32) is PLNTSUM.LBX artwork. The mockup's five words are kept because a list without them does not read at HD sizes."
+  },
+  "words": {
+    "sort_heading": "Sort Priority",
+    "restrict_heading": "Display Restrictions",
+    "food": "%s Food",
+    "_food_note": "TRANSCRIBED, and it is a literal in the source rather than a string table entry: snprintf(work_buf, ..., \"%s Food\", food_text) at plntsum.cpp:153, so it lives here and not in HESTRNGS.",
+    "_note": "OUR WORDING for the two headings: the original draws them as artwork."
+  },
+  "sort": {
+    "default": "climate",
+    "_default_note": "The original's _sort_choice is a global the snapshot does not carry. The HD screen imposes its own on entry by injecting the click, the colony summary's trade (colony_summary/screen.py _push_sort_key): Sort_Planet_Summary_ re-sorts only when the choice CHANGES (plntsum.cpp:2013-2018), so clicking the key the game already holds costs nothing.",
+    "buttons": [
+      {
+        "key": "climate",
+        "label": "Climate",
+        "value": "climate",
+        "native_click": [
+          470,
+          212
+        ]
+      },
+      {
+        "key": "minerals",
+        "label": "Minerals",
+        "value": "minerals",
+        "native_click": [
+          533,
+          212
+        ]
+      },
+      {
+        "key": "size",
+        "label": "Size",
+        "value": "max_pop",
+        "native_click": [
+          595,
+          212
+        ]
+      }
+    ],
+    "_buttons_note": "Add_Multi_Button_Field_(441, 200), (501, 200), (567, 200) (plntsum.cpp:693-695); type 3, which ACTIVATE_FIELD does not take (decision 20), so the injection is a click at `native_click`, the centre of the help box each one has (evanhelp.cpp:118 entries 348-350). `value` is the row value the key sorts on, DESCENDING: qsort_by_climate_ / qsort_by_minerals_ / qsort_by_max_population_ subtract left from right (plntsum.cpp:1216-1230). STABLE SORT: HD sorts with Python's stable sort; the original's qsort is not stable, so two planets with equal keys may stand in a different order than the game's. Same row set, same order between distinct keys - Data's acceptance, brief 101 Stop 1.",
+    "_labels_note": "OUR WORDING: the three keys are PLNTSUM.LBX artwork (pics[1..3])."
+  },
+  "restrictions": {
+    "buttons": [
+      {
+        "key": "enemy",
+        "label": "No Enemy Presence",
+        "hotkey": "1",
+        "native_click": [
+          532,
+          277
+        ]
+      },
+      {
+        "key": "gravity",
+        "label": "Normal Gravity",
+        "hotkey": "2",
+        "native_click": [
+          532,
+          300
+        ]
+      },
+      {
+        "key": "hostile",
+        "label": "Non-Hostile Environment",
+        "hotkey": "3",
+        "native_click": [
+          532,
+          323
+        ]
+      },
+      {
+        "key": "minerals",
+        "label": "Mineral Abundance",
+        "hotkey": "4",
+        "native_click": [
+          532,
+          346
+        ]
+      },
+      {
+        "key": "range",
+        "label": "Planets In Range",
+        "hotkey": "5",
+        "native_click": [
+          532,
+          369
+        ]
+      }
+    ],
+    "_buttons_note": "Add_Radio_Button_Field_ x 441, y 266/289/312/335/358, hotkeys \"1\"-\"5\" in this order (plntsum.cpp:697-701). Radio fields are type 1, which ACTIVATE_FIELD does not take (decision 20): the hotkey is sent first and native_click - the centre of each help box, evanhelp.cpp:118 entries 351-355 - is the fallback. Data, brief 101 Stop 1: try the hotkeys at HD window size in Stop 3 and prefer them if they work.",
+    "_labels_note": "OUR WORDING: the five toggles are PLNTSUM.LBX artwork (pics[4..8]).",
+    "_state_note": "THE GAME'S TOGGLES ARE NOT ON THE WIRE. The five _filter_out_* globals live in PLNTSUM and are not in the snapshot, and unlike the sort key a toggle cannot be imposed by clicking it - a click flips it. The HD screen starts with all five off and flips its own flag with every click it sends; if the game held one on before the screen opened, the two disagree until the player clicks it twice. Recorded in v3_projektstatus.md under What is missing.",
+    "_gap_range": "MARKED GAP - brief 101, Data's decision (c): the Planets In Range toggle drives the game and the HD list DOES NOT FILTER ON IT YET. Planet_In_Range_Of_A_Colony_ calls SHIPMOVE::Star_In_Extended_Range_Of_Player_ (shipmove.cpp:327), which needs s_player.ship_range, the treaty table and the star's black-hole block bitmap - none of them a verified spec (decision 23). Its own follow-up brief builds it. Asserted by a smoke check that fails if this marking disappears."
+  },
+  "send": {
+    "colony": {
+      "label": "Send Colony Ship",
+      "hotkey": "C"
+    },
+    "outpost": {
+      "label": "Send Outpost Ship",
+      "hotkey": "O"
+    },
+    "_note": "DISPLAY ONLY in brief 101. Add_Plntsum_Fields_ adds the hidden field \"C\" (386,408-609,413) only when Send_Colony_Button_Selectable_ and \"O\" (413,437-610,442) only when Send_Outpost_Button_Selectable_ (plntsum.cpp:703-713), so a button is drawn available exactly when the game's field list carries its hotkey. Clicking one does nothing: sending ships is a second brief, an event-driven chain (decision 21).",
+    "_labels_note": "OUR WORDING: the two buttons are PLNTSUM.LBX artwork."
+  },
+  "return": {
+    "label": "Return",
+    "hotkey": 27,
+    "_note": "The esc/RETURN button, Add_Button_Field_(454, 440, ..., \"\\x1B\", 40) (plntsum.cpp:724-731): type 0, so it is activated by FIELD ID, looked up in the live field list by its 0x1B hotkey. esc_button == input sets SCREEN_MAIN and leaves (plntsum.cpp:2008-2011).",
+    "_labels_note": "OUR WORDING: the button is artwork."
+  },
+  "inset": {
+    "native": [
+      180,
+      116
+    ],
+    "label_font": 15,
+    "_note": "The original's own small galaxy map, Wrapper_For_Planet_Summary_Galaxy_Map_ (plntsum.cpp:1351): MOVEBOX::Draw_Galaxy_Map_Box_(nullptr, nullptr, 443, 17, 180, 116, 0, 0, 0, 0, 2, -1) - the colony summary's renderer (colonyinset) with this box's size. The scanned star gets a 9x9 outline in its owner's colour (graphics::Box_ at star - 1, plntsum.cpp:1370-1377).",
+    "_deviation_note": "DEVIATION, three: (1) view_mode 2 blits _planet_summary_galaxy_star_seg[colour] and animates the scanned star (movebox.cpp:82-92); HD draws the colony inset's measured 3x3 sprite, still. (2) This screen does not set _using_colony_screen_palette, so the original fills the box black and gives a black hole colour index 10; HD keeps the colony inset's black-hole ring and panel fill. (3) The directional line to the nearest ship and the colony/outpost markers belong to the send mode and wait with the send brief.",
+    "_star_click_note": "TRANSCRIBED: a click on a star field scrolls the list to that star's first planet, and only when the list holds more than eight rows (plntsum.cpp:2052-2064). HD scrolls its own window (viewing only, decision 46). When the star has no planet in the list the original opens a warning box (H 0x14F); HD does not build that box - nothing happens and the log says so. Hovering a star sets the scanned field to star + 1000 (:2066-2068), which is what the status line reads. The star fields are 5x5 native boxes at Get_Galaxy_Map_Star_XY_ mode 0 (:1256-1259); HD hit-tests the drawn dot, scaled."
+  },
+  "status": {
+    "_note": "TRANSCRIBED from Summary_Screen_Print_Scanned_ (plntsum.cpp:1831-1926), the part that runs without an armed send: for a scanned star, H 325 'Black Hole' in red, H 148 'unexplored' in neutral when the player has not visited it, and otherwise the star's name in neutral. The scanned field is set by hovering a row (star + 1000, Scan_Summary_Box_Fields_ plntsum.cpp:1310-1314) or a star in the inset, and cleared by a sort change or a filter that changes the count (:1048, :2016). The blocked line (H 324, red) needs the black-hole block data and the ETA/out-of-range lines need the armed send; both wait with their briefs.",
+    "_hd_extension_coordinates": "Data's decision, brief 101 Stop 1: the mockup's X/Y coordinates are dropped."
+  },
+  "panel": {
+    "_hd_extension_panel": "HD EXTENSION: panel. The bottom-left window shows the scanned row's planet disc, name and special line, larger - only what the row already has, no computed production or research (Data's decision, brief 101 Stop 1). The original has no such window; its bottom rows are the list. The mockup's detail panel (monster description, heads, strength) is dropped.",
+    "monster_dir": "monsters",
+    "_monster_note": "The picture window shows the monster guarding the scanned planet's star - HAROLD::Star_Guarded_By_Monster_ (harold.cpp:850: a ship with status 0, owner >= 8, at the star) - as an image box from assets/monsters/<name>.png through the resource stack, and the monster's race name beside it (HACCESS::Race_Name_, haccess.cpp:683). NO PICTURE SET EXISTS YET: the box draws nothing and the screen logs the missing set once. The ship's own name waits for the design part of the ship spec (Data's decision, brief 101 Stop 1)."
+  }
+}

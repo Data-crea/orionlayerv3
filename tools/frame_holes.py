@@ -192,6 +192,8 @@ RULE_NAMES = {
                   | {f"nav_{k}" for k in NAV_KEYS},
     "colony_summary": {"header", "list_area", "return"}
                       | set(BAND_KEYS) | set(SORT_BOX_KEYS),
+    # Brief 101 — defined below with the rule; the set is its keys.
+    "planets": None,
 }
 
 
@@ -416,8 +418,37 @@ def _rows(holes):
     return [sorted(row, key=lambda r: r[0]) for row in rows]
 
 
+#: The Planets frame's five holes — brief 101. Named by POSITION on the
+#: row shape the artwork has, [2, 3]: the list and the right column on
+#: top, then three bottom windows left to right. A frame with a
+#: different shape is refused rather than named by guesswork.
+PLANETS_KEYS = [["list_area", "side_panel"],
+                ["planet_panel", "picture_panel", "button_panel"]]
+
+
+def name_holes_planets(holes, size=None, reference=None):
+    global LAST_MATCH
+    rows = _rows(holes)
+    shape = [len(r) for r in rows]
+    want = [len(r) for r in PLANETS_KEYS]
+    if shape != want:
+        raise SystemExit(
+            f"the planets frame has hole rows {shape}; the rule names "
+            f"rows {want} (list and right column, then three bottom "
+            f"windows)")
+    named = {}
+    for names, row in zip(PLANETS_KEYS, rows):
+        for name, hole in zip(names, sorted(row, key=lambda h: h[0])):
+            named[name] = list(hole)
+    LAST_MATCH = f"position, rows {shape}"
+    return named
+
+
+RULE_NAMES["planets"] = {name for row in PLANETS_KEYS for name in row}
+
 RULES = {"galaxy_map": name_holes_galaxy_map,
-         "colony_summary": name_holes_colony_summary}
+         "colony_summary": name_holes_colony_summary,
+         "planets": name_holes_planets}
 
 
 def screen_of(path):
@@ -483,8 +514,9 @@ def main():
             if screen == "colony_summary":
                 entry = {"name": name}
             else:
-                entry = {"name": name, "rect": to_ref(r, img_w, img_h),
-                         "role": old.get("role", ["display"])}
+                # NO `role` — deleted from the data model on 12 September
+                # 2026; writing it back would put a dead key in the file.
+                entry = {"name": name, "rect": to_ref(r, img_w, img_h)}
             if "style" in old:
                 entry["style"] = old["style"]
             out.append(entry)

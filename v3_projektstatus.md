@@ -830,9 +830,9 @@ files under `doc/` and are only summarised here.
 | | |
 |---|---|
 | Python | 32,960 lines across 111 modules — `find . -name '*.py'`, `__pycache__` excluded, the smoke test's 6,400 included. The previous figure here (21,642 across 94) was carried from an unstated method and could not be reproduced |
-| Smoke test | `python tools/smoke_test.py` — **134 checks**, headless |
+| Smoke test | `python tools/smoke_test.py` — **141 checks**, headless |
 | Assets | 170 MB (select_race 68, galaxy_map 51, shared 23, new_game 21, colony_summary 1) |
-| Screens in HD | 7 of ~20–22 (colony summary draws list, sidebar, scan box and galaxy inset, and MOVES POPS — the first HD gesture that drives the game) |
+| Screens in HD | 8 of ~20–22 (colony summary draws list, sidebar, scan box and galaxy inset, and MOVES POPS — the first HD gesture that drives the game; planets, brief 101, lists, sorts, restricts and returns) |
 | Setup from clone | `python tools/setup.py` (deps via the system package manager) |
 | orion2re | required for live data, not for the smoke test |
 
@@ -842,8 +842,8 @@ Three positioning systems coexist, by design:
   custom race, empire identity
 - **Background-relative cover-scale** — new game, fully driven by
   `layout.json`
-- **Frame-cutout derived** — galaxy map and colony summary, boxes
-  generated from the transparent holes in `frame.png`
+- **Frame-cutout derived** — galaxy map, colony summary and planets,
+  boxes generated from the transparent holes in `frame.png`
 
 ---
 
@@ -3111,6 +3111,53 @@ Everything else on the map:
 
 ---
 
+### Planets — brief 101, 13 September 2026
+
+**SCREEN_PLANET_SUMMARY (32) has an HD screen**, built from Data's
+`frame3.png` and `mockup3.png` (`doc/briefs/101-*`) on Data's Stop 1
+decisions (`doc/briefs/102-*`). Reached from the galaxy map's Planets
+button (field 11) by the dispatcher's own routing; RETURN activates the
+esc button by the field id the live field list carries for hotkey 0x1B.
+No framebuffer fallback on the round trip.
+
+- **Rows** — `screens/planets/planetrows.py` transcribes
+  `Filter_Explored_Planets_` in the source's order (type, own colony,
+  outpost, visited or omniscient, then the toggles), `max_pop` from
+  `Planet_Max_Population_For_Player_`, and the rebuild rule that re-sorts
+  only when the count changes. Sorting is descending and **stable**; the
+  original's `qsort` is not, so planets with equal keys may stand in a
+  different order than the game's (Data's acceptance: same set, same
+  order between distinct keys).
+- **Words** — `planetwords.py`: climate, gravity, minerals, size,
+  specials and monster races from ESTRINGS, `-%d%% prod`, `%d
+  prod/worker`, `%d max pop` and the status line from **HESTRNGS.LBX**,
+  extracted from the player's install by `tools/hestrings_extract.py`
+  (decision 38: byte for byte, decoded at load, format-versioned, never
+  committed; absent it the lower lines show their bare number).
+- **Colours** — the owner's player colour (`galaxy_map.owner_N`) or the
+  neutral ramp, brighter for the hovered row (`colors.json` `planets`),
+  as `Colony_Owner_Colors_` does. The mockup's per-column scheme is
+  dropped.
+- **Side column** — the original's inset through the colony summary's
+  renderer with a box-size parameter (`colonyinset.render(native=,
+  marker=)`, `colonyrows.galaxy_inset_stars(box=)`), the status line
+  (star name, `unexplored`, `Black Hole`), three sort keys (injected
+  clicks, type 3), five restrictions (hotkeys 1-5), the two send buttons
+  drawn available exactly when the game added their fields, RETURN.
+- **The list code is shared** — `core/listgrid.py` holds the bands,
+  columns, heading plates, row fills and cell outlines; the colony
+  modules delegate to it under their own names.
+- **Bottom windows** — HD EXTENSION: panel (disc, name, special line,
+  larger; nothing computed) and the guarding monster's race name beside
+  an image box that draws nothing until a picture set exists.
+- **Checked** — seven smoke checks (frame cutouts, row set, order, words,
+  wire, help table from `evanhelp.cpp:118`, markings). Rendered once from
+  a read-only snapshot of the running game (current_screen 32, 495
+  planets, 140 rows; Rex I / Natives / (Hydra) / Gaia 1.5 Food / Normal
+  G / Rich 5 prod/worker / Large 20 max pop — the mockup's first row).
+  The live stop (Stop 3: native side-by-side, hotkeys at HD window size,
+  every help region, `SAVE10.GAM`) is not done yet.
+
 ## What is missing
 
 ### Galaxy Map
@@ -3161,6 +3208,28 @@ Everything else on the map:
 ### Colony Summary
 - Producing sorts by name until `TECHDATA::_buildings` cost is
   extracted (colsum.cpp:1091).
+
+### Planets
+- **Planets In Range is a marked gap** — the toggle drives the game and
+  the HD list does not filter on it (brief 101, Data's decision (c)).
+  `Star_In_Extended_Range_Of_Player_` needs `s_player.ship_range`, the
+  treaty table and each star's black-hole block bitmap, none of them a
+  verified spec; `doc/plntsum_reading.md` carries the helper, read, for
+  the follow-up brief. Marked in `planetrows.FILTER_GAPS` and
+  `layout.json` `restrictions._gap_range`; a smoke check fails if the
+  marking and the behaviour disagree.
+- **Sending ships** — Send Colony / Send Outpost, the armed row click,
+  the ETA markers, send cancel, the inset's directional line and
+  markers, and the status line's ETA, out-of-range and blocked lines.
+  A second brief, an event-driven chain (decision 21).
+- **The five toggles are not on the wire.** HD starts with all five off;
+  a toggle the game held on before the screen opened disagrees until it
+  is clicked twice.
+- The special line's ship name in a monster system (the design part of
+  the ship spec); the monster picture set; the star-click warning box
+  (H 0x14F); rotating planets and the inset's animated scanned star.
+- Omniscience from a Galactic Lore leader, and Advanced City Planning's
+  +5 on `max_pop` — both read from records that are not decoded.
 
 ### Context help
 - **The colony summary has no help.json yet, and the original has a
@@ -3427,7 +3496,7 @@ read. **The font extractor is owed twice**: here and for the name cap
 
 ### Where the briefs and work orders are
 
-**`doc/briefs/`** — 100 briefs (and the pictures of briefs 92, 95 and 97) with a README that indexes them. Data's
+**`doc/briefs/`** — 102 briefs (and the pictures of briefs 92, 95, 97 and 101) with a README that indexes them. Data's
 decision of 9 September 2026, and it closed a gap that had been open
 since the project started.
 
@@ -3448,7 +3517,7 @@ decision 50's withdrawal of it. Both places that cited it by name now
 say what happened instead of pointing at a file a reader cannot open.
 
 Content is byte for byte what arrived. **Dates are stated only where
-the brief's own text carries one** — eleven of the hundred; everything
+the brief's own text carries one** — twelve of the hundred and two; everything
 else is undatiert, because a date has to come from the brief or from
 the first commit that implements it, and a cache file's timestamp is
 neither. The numeric prefix is order, not date.

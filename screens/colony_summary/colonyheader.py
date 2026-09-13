@@ -182,15 +182,10 @@ def plate_rects(header_box, cols, scale):
     `header_box` supplies only the vertical: the plates sit in the
     header cutout and the columns run down the list.
     """
-    box = pygame.Rect(header_box)
-    if not cols:
-        return []
-    inset = max(1, round(INSET_REF * scale))
-    half = max(1, round(DIVIDER_REF * scale / 2))
-    return [(key, pygame.Rect(
-        x + half, box.y + inset,
-        max(1, w - 2 * half), max(1, box.height - 2 * inset)))
-        for key, (x, w) in cols.items()]
+    from core import listgrid
+    assert (listgrid.PLATE_INSET_REF, listgrid.PLATE_DIVIDER_REF) == (
+        INSET_REF, DIVIDER_REF), "colonyheader and listgrid disagree"
+    return listgrid.plate_rects(header_box, cols, scale)
 
 
 def render_for(screen, surface, outline, text_color):
@@ -221,16 +216,9 @@ def render(surface, header_box, cols, labels, style, font_size,
     this used to paste `max(6, int(10 * scale))` and a 1 px rounded
     rect, which was `draw_thin_border`'s arithmetic in a second home.
     """
-    for key, rect in plate_rects(header_box, cols, scale):
-        style.draw_plate(surface, rect, scale, outline)
-        word = labels.get(key)
-        if not word:
-            continue
-        text = style.render_text(word.upper(), font_size, text_color[:3])
-        if text.get_width() > rect.width - 8:
-            continue
-        surface.blit(text, (rect.x + (rect.width - text.get_width()) // 2,
-                            rect.y + (rect.height - text.get_height()) // 2))
+    from core import listgrid
+    listgrid.draw_headings(surface, header_box, cols, labels, style,
+                           font_size, outline, text_color, scale)
 
 
 def editor_note(screen, box):

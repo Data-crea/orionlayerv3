@@ -346,25 +346,17 @@ def render(surface, rows, area, cfg, layout, style, first=0,
     # list whatever the sort. The selected fill reads `scanned`, the
     # same value the bright name reads below, so the two cannot
     # disagree (one variable, `colonyselect.Selection.colony`).
-    _plated = [(_cx, _cw) for _key, (_cx, _cw) in cols.items()
-               if _key != colonyscroll.COLUMN]
-    if _plated:
-        _fx = min(_cx for _cx, _cw in _plated)
-        _fw = max(_cx + _cw for _cx, _cw in _plated) - _fx
-        for _band, (_by, _bh) in enumerate(colonytrack.all_bands(area,
-                                                                 cfg)):
-            _li = first + _band
-            _sel = (scanned is not None and _li < len(rows)
-                    and rows[_li]["index"] == scanned)
-            _fill = ROW_SELECTED if _sel else (ROW_A if _li % 2 == 0
-                                               else ROW_B)
-            surface.fill(_fill[:3], pygame.Rect(_fx, _by, _fw, _bh))
-    for _by, _bh in colonytrack.all_bands(area, cfg):
-        for _key, (_cx, _cw) in cols.items():
-            if _key == colonyscroll.COLUMN:
-                continue
-            style.draw_plate(surface, pygame.Rect(_cx, _by, _cw, _bh),
-                             scale, PLATE_COLOR)
+    # The drawing is `core.listgrid` since brief 101, shared with Planets.
+    from core import listgrid
+    _bands = colonytrack.all_bands(area, cfg)
+    _skip = (colonyscroll.COLUMN,)
+    listgrid.draw_row_fills(
+        surface, _bands, cols, _skip, first,
+        lambda _li: (scanned is not None and _li < len(rows)
+                     and rows[_li]["index"] == scanned),
+        ROW_A, ROW_B, ROW_SELECTED)
+    listgrid.draw_cell_plates(surface, _bands, cols, _skip, style, scale,
+                              PLATE_COLOR)
 
     window = rows[first:]
     for row, (y, row_h) in zip(window,

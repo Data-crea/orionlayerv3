@@ -44,6 +44,7 @@ sys.path.insert(0, ROOT)
 
 from core.buildnames import name_file as build_name_file
 from core.estrings import string_file as estrings_file  # noqa: E402
+from core.hestrings import string_file as hestrings_file  # noqa: E402
 from screens.colony_summary.colonyfigures import (  # noqa: E402
     FIGURE_DIR, all_names)
 from core.config import load_settings      # noqa: E402
@@ -150,6 +151,14 @@ def from_game(settings=None):
          f"is blank for Trade Goods, Housing and every other "
          f"non-building the game can produce",
          "python tools/estrings_extract.py"
+         + (f" --lang {lang}" if lang != "en" else "")),
+        # HAROLD'S MESSAGE STRINGS (brief 101): the Planets list's
+        # "-25% prod", "%d prod/worker", "%d max pop" and its status
+        # line come from HESTRNGS.LBX, decision 38's pattern.
+        (os.path.join(ROOT, *hestrings_file(lang).split("/")),
+         f"message strings ({lang}) — without them the Planets list "
+         f"shows its values without the original's wording",
+         "python tools/hestrings_extract.py"
          + (f" --lang {lang}" if lang != "en" else "")),
         # THE POPULATION FIGURES (decision 50). Checked by the FIRST
         # file of the set rather than by the directory: an interrupted

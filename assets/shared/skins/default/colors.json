@@ -753,5 +753,100 @@
     ],
     "_output_separator_note": "HD EXTENSION - the line between two rows of planet_output (decision 56, layout.json output._separator_note). The original draws no line in that box, so there is no palette index to transcribe: this is a design value, a dim blue between panel_background (8, 11, 20) and label (128, 146, 180), chosen so the line groups a row without competing with its text. Data's to change on the side-by-side.",
     "_slider_note": "TRANSCRIBED from COLSUM::Draw_Bar_Indicator_ (colsum.cpp:747-771). The thumb is Fill_(621, y1, 626, y2, 229) with Line_ borders in 230 on the top and left edges and 228 on the bottom and right (:762-765), and the track's four corners are Dot_(...,80) at y 40 and y 311 (:767-770). The palette indices resolved against the game's own live palette on natives_autosave: 229 -> (28,28,164), 230 -> (60,60,212), 228 -> (0,0,108), 80 -> (0,0,0). These are ABSOLUTE values and not a relationship, unlike the name colours above: the slider is a control with no counterpart in this project's palette to keep faith with, and colonyfirst already reads index 229 back off the framebuffer to recover _first - so a different blue here would make the drawing and the reading disagree about what the same thing looks like."
+  },
+  "planets": {
+    "_owner_note": "The Planets list prints a row in its OWNER's colour and brighter under the pointer - PLNTSUM::Colony_Owner_Colors_ / Player_Colors_ (plntsum.cpp:2204-2252): the planet's colony owner's player colour, the neutral ramp when nobody holds it, and highlight type 1 for the scanned row (Summary_Screen_Print_Data_, plntsum.cpp:62-70). Data's decision (a), brief 101 Stop 1: owner colours and the original's highlights, keyed here; the mockup's scheme is dropped. THE BASE COLOURS ARE NOT REPEATED: an owned row reads galaxy_map.owner_<player colour>, the one home of the eight player colours. What is here is what the galaxy map has no key for - the neutral ramp and the eight hover shades. The original resolves both through Font_Colors2_ against its own palette (base = colour * 6 - 0x31, hover shade +3/+5 against +2/+4), which this project cannot read (the palette-index lesson in colonyinset.py), so the values are this skin's: the owner colour lifted toward white by about a third. Highlight type 2 (the armed send, unreachable) waits with the send brief and has no key yet.",
+    "neutral": [
+      196,
+      202,
+      214
+    ],
+    "neutral_hover": [
+      240,
+      244,
+      252
+    ],
+    "owner_hover_0": [
+      236,
+      128,
+      110
+    ],
+    "owner_hover_1": [
+      240,
+      214,
+      96
+    ],
+    "owner_hover_2": [
+      140,
+      212,
+      124
+    ],
+    "owner_hover_3": [
+      250,
+      250,
+      255
+    ],
+    "owner_hover_4": [
+      176,
+      212,
+      244
+    ],
+    "owner_hover_5": [
+      232,
+      176,
+      140
+    ],
+    "owner_hover_6": [
+      204,
+      154,
+      184
+    ],
+    "owner_hover_7": [
+      255,
+      176,
+      84
+    ],
+    "_status_note": "The status line's three colours - Summary_Screen_Print_Scanned_ (plntsum.cpp:1918-1925) picks _red_colors, _green_colors or _hi_neutral_colors by its status 1 / 2 / 0. Values are this skin's, for the same palette reason as above: red for a black hole or a blocked or unreachable system, green for a reachable one (armed send only), neutral for a star name or 'unexplored'.",
+    "status_red": [
+      222,
+      84,
+      70
+    ],
+    "status_green": [
+      104,
+      214,
+      110
+    ],
+    "status_neutral": [
+      214,
+      222,
+      240
+    ],
+    "control_text": [
+      196,
+      208,
+      236
+    ],
+    "control_active": [
+      30,
+      48,
+      88
+    ],
+    "control_hover": [
+      22,
+      34,
+      60
+    ],
+    "control_disabled_text": [
+      104,
+      112,
+      130
+    ],
+    "heading_text": [
+      200,
+      210,
+      238
+    ],
+    "_control_note": "The side column's words and fills - the sort keys, the five restrictions, the two send buttons and RETURN. The original draws those as PLNTSUM.LBX sprites with no string behind them; the fills are the colony summary's nav_active / nav_hover values, repeated under this screen's own keys so a skin can tell the two screens apart. control_disabled_text is a send button whose field the game did not add (Add_Plntsum_Fields_, plntsum.cpp:708-718)."
   }
 }

@@ -64,7 +64,8 @@ def band_height(area, cfg):
     same rule the columns and the header plates use, so the rows tile
     the window exactly instead of leaving a strip nothing owns.
     """
-    return max(1, area.h // max(1, int(cfg.get("row_count", 10))))
+    from core import listgrid
+    return listgrid.band_height(area, int(cfg.get("row_count", 10)))
 
 
 def figure_step(area, cfg):
@@ -287,21 +288,12 @@ def columns(area, cfg):
     window's y and height back into the boxes, so the outline shows
     what the geometry did rather than what was dragged.
     """
-    table = cfg.get(COLUMNS_KEY) or ()
-    span = cfg.get(COLUMNS_SPAN_KEY)
-    if not table or not span:
-        return {}
-    ref_x, ref_w = span
-    if ref_w <= 0:
-        return {}
-    edges = sorted((b.ref_rect[0], key) for key, b in table)
-    out = {}
-    for i, (rx, key) in enumerate(edges):
-        nxt = edges[i + 1][0] if i + 1 < len(edges) else ref_x + ref_w
-        x = area.x + (max(0, rx - ref_x) * area.width) // ref_w
-        right = area.x + (max(0, nxt - ref_x) * area.width) // ref_w
-        out[key] = (x, max(1, right - x))
-    return out
+    # THE ARITHMETIC IS `core.listgrid.columns` since 13 September 2026
+    # (brief 101), shared with the Planets list; this keeps the colony
+    # screen's cfg keys and its name.
+    from core import listgrid
+    return listgrid.columns(area, cfg.get(COLUMNS_KEY) or (),
+                            cfg.get(COLUMNS_SPAN_KEY))
 
 
 #: The three job columns, in ECON order, as they are keyed above.
@@ -675,19 +667,10 @@ def all_bands(area, cfg):
     have a colony to draw. One arithmetic, so a plate and the row it
     frames cannot land in different places (decision 5).
     """
-    band = band_height(area, cfg)
-    want = int(cfg.get("row_count", 10))
-    bands, y = [], area.y
-    for i in range(want):
-        # THE LAST BAND TAKES THE REMAINDER, the rule the columns and
-        # the header plates already use, so the rows tile the window
-        # exactly instead of leaving a strip that belongs to nobody.
-        h = (area.bottom - y) if i == want - 1 else band
-        if h <= 0:
-            break
-        bands.append((y, h))
-        y += h
-    return bands
+    # `core.listgrid.all_bands` since brief 101: the last band takes the
+    # remainder, so the rows tile the window exactly.
+    from core import listgrid
+    return listgrid.all_bands(area, int(cfg.get("row_count", 10)))
 
 
 def held_figure_y(area, cfg, scale, count, point, step, ink_bottom):

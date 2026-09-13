@@ -187,7 +187,7 @@ def _dark(colour):
     return tuple(int(c * DARK_FACTOR) for c in colour[:3])
 
 
-def map_rect(area):
+def map_rect(area, native=(128, 91)):
     """Where the original's 128x91 box lands inside the cutout.
 
     **UNIFORM SCALE, CENTRED, LETTERBOXED** — the same rule
@@ -221,25 +221,27 @@ def map_rect(area):
     reason, and are kept out of this function rather than being
     available to reach for.
     """
-    scale = min(area.w / 128.0, area.h / 91.0)
-    w, h = int(round(128 * scale)), int(round(91 * scale))
+    nw, nh = native
+    scale = min(area.w / float(nw), area.h / float(nh))
+    w, h = int(round(nw * scale)), int(round(nh * scale))
     return pygame.Rect(area.x + (area.w - w) // 2,
                        area.y + (area.h - h) // 2, w, h)
 
 
-def star_points(stars, rect):
+def star_points(stars, rect, native=(128, 91)):
     """(x, y, colour index, cell_w, cell_h) in screen pixels.
 
     `stars` is `colonyrows.galaxy_inset_stars` output — native
     offsets inside the 128x91 box. One function makes this and both
     the drawing and any future hit-test call it (decision 5).
     """
-    cw = max(1, int(round(rect.w / 128.0)))
-    ch = max(1, int(round(rect.h / 91.0)))
+    nw, nh = native
+    cw = max(1, int(round(rect.w / float(nw))))
+    ch = max(1, int(round(rect.h / float(nh))))
     out = []
     for nx, ny, cidx in stars:
-        out.append((rect.x + int(nx * rect.w / 128.0),
-                    rect.y + int(ny * rect.h / 91.0), cidx, cw, ch))
+        out.append((rect.x + int(nx * rect.w / float(nw)),
+                    rect.y + int(ny * rect.h / float(nh)), cidx, cw, ch))
     return out
 
 
@@ -271,7 +273,8 @@ def _blit_sprite(surface, x, y, cidx, cw, ch):
     surface.fill(dark, (left + cw, top + 2 * ch, cw, ch))
 
 
-def render(surface, stars, label, area, cfg, layout, style):
+def render(surface, stars, label, area, cfg, layout, style,
+           native=(128, 91), marker=None):
     """Draw the inset into `area`, the `galaxy_inset` cutout.
 
     `stars` is `colonyrows.galaxy_inset_stars` output and `label` is
@@ -299,9 +302,20 @@ def render(surface, stars, label, area, cfg, layout, style):
     """
     if not stars:
         return
-    rect = map_rect(area)
-    for x, y, cidx, cw, ch in star_points(stars, rect):
+    rect = map_rect(area, native)
+    points = star_points(stars, rect, native)
+    for x, y, cidx, cw, ch in points:
         _blit_sprite(surface, x, y, cidx, cw, ch)
+    # THE PLANETS SCREEN'S SCANNED-STAR BOX (brief 101): `marker` is
+    # (star index, colour), a 9x9 native outline centred on the star —
+    # graphics::Box_(star_x - 1, star_y - 1, 9, 9) over
+    # Get_Galaxy_Map_Star_XY_'s mode-2 offset of 3 (plntsum.cpp:1370-1377,
+    # movebox.cpp:374). The colony summary passes none and draws none.
+    if marker is not None and 0 <= marker[0] < len(points):
+        mx, my, _c, cw, ch = points[marker[0]]
+        pygame.draw.rect(surface, tuple(marker[1])[:3],
+                         pygame.Rect(mx - 4 * cw, my - 4 * ch, 9 * cw, 9 * ch),
+                         max(1, cw))
     if not label:
         return
     size = layout.font_size(cfg.get("label_font", 15))
