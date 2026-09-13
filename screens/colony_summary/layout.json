@@ -133,7 +133,7 @@
       }
     ],
     "native_width": 104,
-    "_native_width_note": "DEVIATION, live at every resolution. The width of the original's empire paragraph in its own 640x480 pixels: Print_Formatted_Paragraph_(520, 354, 104, buffer, 3) at colsum.cpp:418, read in orion2re 1.60. The right edge of a VALUE is x + width - 1 = 623 (para.x2, fmtpara.cpp:657), and THAT alignment is transcribed. The WIDTH is not: 104 scaled by REF_W / 640 is 312 reference px against the 286 the sidebar cutout gives, so screen.py clamps to the cutout and the clamp fires everywhere. 286 against 312 is 8.3 % of the column - every value sits 26 reference px left of the original's proportion. Both numbers are kept and the clamp is a min() rather than a hardcoded 286 so that it stops firing by itself if the frame art ever gives this hole 312 or more; the art is NOT being changed to suit it. A smoke check asserts this key is still read and still larger than what is drawn, so it cannot be deleted as dead weight once somebody notices it never wins.",
+    "_native_width_note": "DEVIATION, live at every resolution - AGAIN SINCE 13 September 2026 (brief 97): empire_stats is a 224 reference px part of colony_panel, under the 312 below, so the clamp fires at all twelve sizes; for the one day before it the readouts sat in a 451 px band box and the clamp did not fire. The width of the original's empire paragraph in its own 640x480 pixels: Print_Formatted_Paragraph_(520, 354, 104, buffer, 3) at colsum.cpp:418, read in orion2re 1.60. The right edge of a VALUE is x + width - 1 = 623 (para.x2, fmtpara.cpp:657), and THAT alignment is transcribed. The WIDTH is not: 104 scaled by REF_W / 640 is 312 reference px against the 286 the sidebar cutout gives, so screen.py clamps to the cutout and the clamp fires everywhere. 286 against 312 is 8.3 % of the column - every value sits 26 reference px left of the original's proportion. Both numbers are kept and the clamp is a min() rather than a hardcoded 286 so that it stops firing by itself if the frame art ever gives this hole 312 or more; the art is NOT being changed to suit it. A smoke check asserts this key is still read and still larger than what is drawn, so it cannot be deleted as dead weight once somebody notices it never wins.",
     "label_font": 18,
     "value_font": 26,
     "row_pad": 0.1
@@ -151,9 +151,9 @@
     "header": "header_background",
     "list_area": true,
     "planet_info": true,
-    "planet_output": true,
+    "colony_panel": true,
+    "_colony_panel_note": "13 September 2026, brief 97: Data's frame joins the two middle bottom windows into one, colony_panel, and it is the cutout that takes the panel base now. planet_output and empire_stats are boxes INSIDE it (layout_reference.json colony_panel_parts) and are not listed here: a part sits on its window's fill and has no hole of its own to fill.",
     "galaxy_inset": "galaxy_inset_fill",
-    "empire_stats": true,
     "sort_name": true,
     "sort_population": true,
     "sort_food": true,

@@ -95,24 +95,22 @@ def value_column(rect, cfg, layout, frame_inset=FRAME_INSET_DEFAULT):
     colsum.cpp:418). See `render` for the justification codes that
     establish it.
 
-    **The WIDTH WAS a DEVIATION AND IT IS RETIRED — 12 September
-    2026, and it retired itself exactly as designed.** The
-    original's paragraph is 104 native px of 640, which is 312
-    reference px once scaled by `REF_W / NATIVE_W`. The old
-    `sidebar` cutout gave 286, so `min` always selected the
-    cutout and the original's proportion was never the one drawn
-    — 286 against 312 is 8.3 %, and every value sat 26 reference
-    px left of where the original would put it.
+    **The WIDTH IS a DEVIATION, LIVE AGAIN since 13 September 2026
+    (brief 97) — decision 44.** The original's paragraph is 104
+    native px of 640, which is 312 reference px once scaled by
+    `REF_W / NATIVE_W`. The old `sidebar` cutout gave 286, so `min`
+    selected the cutout and every value sat 26 reference px left of
+    the original's proportion. For one day it stopped firing: Data's
+    frame of 12 September put the readouts in a 451 px band box and
+    `min` selected the native width at all twelve sizes.
 
-    Data's new frame removed the right-hand column and put the
-    empire readouts in the lower band, where the box is 451
-    reference px wide and 435 usable. `min` now selects the
-    NATIVE width at every one of the twelve shipped sizes —
-    measured, 0 of 12 clamp — so the drawn column IS the
-    original's proportion and there is nothing left to deviate
-    from. Decision 44 is marked retired rather than deleted; the
-    smoke check that held the marking now holds the retirement,
-    and reports the two widths on every run.
+    Data's frame of 13 September joined the two middle bottom windows
+    and made `empire_stats` a 224 px part of `colony_panel`, beside
+    the surface picture. 224 is under 312, so `min` selects the box
+    again at every shipped size and the drawn column is narrower
+    than the original's proportion — the deviation this marking
+    names. The smoke check asserts the marking is live exactly when
+    the clamp fires, and reports the two widths on every run.
 
     **Both numbers are kept, and the clamp was written to stop
     firing on its own — which is what happened.** The cutout comes

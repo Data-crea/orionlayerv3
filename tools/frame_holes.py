@@ -134,7 +134,10 @@ def name_holes_galaxy_map(holes, size=None, reference=None):
 #: four are named by POSITION AND CONFIRMED BY THE SOURCE: the galaxy
 #: inset's native rect (380, 349, 128, 91) is centre x 444 of 640,
 #: which is the THIRD of the four, and the empire readouts the fourth.
-BAND_KEYS = ["planet_info", "planet_output", "galaxy_inset", "empire_stats"]
+#: The lower band's WINDOWS — three since 13 September 2026 (brief 97).
+#: `planet_output` and `empire_stats` were holes until then; they are
+#: parts of `colony_panel` now (`colonyplates.PARTS`) and not cutouts.
+BAND_KEYS = ["planet_info", "colony_panel", "galaxy_inset"]
 
 def row_shape(screen="colony_summary"):
     """The row shape `layout_reference.json`'s own rectangles have.
@@ -236,9 +239,10 @@ def cutout_names(screen):
 LAST_MATCH = None
 
 #: The holes the last overlap match left unclaimed, in reading order.
-#: A REPORT CHANNEL like `LAST_MATCH`: the static frame carries the
-#: pre-Stage-4 title cartouche and this screen draws no title, so one
-#: hole is spare by design and saying which is the whole point.
+#: A REPORT CHANNEL like `LAST_MATCH`. Empty for Data's frame of
+#: 13 September 2026, which closed the title cartouche that used to be
+#: the one spare hole; a smoke check holds it empty, so a hole nothing
+#: claims is now a frame that grew one, and it is reported.
 SPARE_HOLES = []
 
 
@@ -304,15 +308,12 @@ def _match_by_overlap(holes, screen, size, want=None):
     called against THAT geometry" can, without a file on disk.
     """
     want = reference_windows(screen, size) if want is None else want
-    # **A FRAME MAY HAVE A HOLE NOTHING USES.** It was `len(want) !=
-    # len(holes) -> give up`, which is right for a plate GENERATED
-    # from the rectangles and wrong for artwork: the static frame
-    # carries the pre-Stage-4 title cartouche, and this screen has
-    # drawn no title since Stage 4 (`frame._no_title_note`). So every
-    # WINDOW must find a hole and the match must still be injective;
-    # a hole no window claims is reported, not refused. Fewer holes
-    # than windows is still a refusal — that is a frame that has lost
-    # one.
+    # **A HOLE NOTHING USES IS REPORTED, NOT REFUSED.** Every WINDOW
+    # must find a hole and the match must be injective; fewer holes
+    # than windows is a refusal — a frame that has lost one. A spare
+    # hole goes to `SPARE_HOLES`, which the smoke test holds empty for
+    # the shipped frame (the title cartouche that was spare until
+    # 13 September 2026 is closed in Data's frame of that day).
     if len(want) > len(holes):
         return None
     names = sorted(want)
@@ -357,9 +358,8 @@ def name_holes_colony_summary(holes, size=None, reference=None):
     What is asserted now:
 
       every WINDOW finds a hole it overlaps, and no two windows find
-      the same one — a hole nothing claims is fine and is reported
-      (`SPARE_HOLES`), because this frame carries the pre-Stage-4
-      title cartouche and nothing has drawn a title since Stage 4
+      the same one — a hole nothing claims is reported (`SPARE_HOLES`)
+      and, for the shipped frame, held empty by the smoke test
 
       the holes that WERE claimed group into the same rows the
       rectangles do — which is what still catches a window that has
@@ -475,8 +475,16 @@ def main():
             if name == "title":
                 continue
             old = styles.get(name, {})
-            entry = {"name": name, "rect": to_ref(r, img_w, img_h),
-                     "role": old.get("role", ["display"])}
+            # A SCREEN WHOSE RECTS ARE DERIVED WRITES NAMES ONLY. The
+            # colony summary seats every cutout from layout_reference.json
+            # at load (decision 55) and a smoke check refuses a rect in its
+            # boxes.json; `role` was deleted from the data model on
+            # 12 September 2026. The galaxy map still takes its rects here.
+            if screen == "colony_summary":
+                entry = {"name": name}
+            else:
+                entry = {"name": name, "rect": to_ref(r, img_w, img_h),
+                         "role": old.get("role", ["display"])}
             if "style" in old:
                 entry["style"] = old["style"]
             out.append(entry)
@@ -490,6 +498,9 @@ def main():
         data[res] = out + kept
     with open(boxes_path, "w") as f:
         json.dump(data, f, indent=2)
+        # The tree's JSON convention ends a file with a newline; the
+        # editor's save and this writer both dropped it.
+        f.write("\n")
     print("wrote", boxes_path)
 
 

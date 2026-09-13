@@ -66,6 +66,9 @@ STEPS = [
     ("make_output_icons.py", [],
      os.path.join(CS, "output", "morale_low.png"),
      "6 output panel icons, cut from assets/_src/output/"),
+    ("make_surface_tiles.py", [],
+     os.path.join(CS, "surfaces", "gaia.png"),
+     "10 planet surface pictures, cut from assets/_src/surfaces/"),
     # THE COLONY FRAME PLATES ARE GONE — Phase B, 12 September 2026,
     # decision 55. They were decision 49's derived files and needed a
     # step here; the colony screen wears one fixed image now and
@@ -97,6 +100,8 @@ REQUIRED_INPUTS = [
      "normal morale mask sheet"),
     (os.path.join(CS, "_src", "output", "low_moral.png"),
      "low morale mask sheet"),
+    (os.path.join(CS, "_src", "surfaces", "planet_surfaces.png"),
+     "planet surface sheet"),
     (os.path.join(GM, "stars"), "star sprites (committed, see .gitignore)"),
 ]
 

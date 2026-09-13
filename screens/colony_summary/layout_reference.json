@@ -23,45 +23,67 @@
   },
   "_list_columns_note": "RE-DERIVED FOR THE STATIC FRAME, 12 September 2026 - the list hole is 1404 ref px wide where the Stage-A3 cutout was 1693, so every width below is new and the note that follows explains where each one comes from. THE DERIVATION IS UNCHANGED AND IS THE POINT: 250 + 283 + 297 + 280 + 267 + 27 = 1404, the list's own width exactly, with no slack to distribute. SCROLL IS ABSOLUTE AND COMES OFF THE TOP: 27, because the original states it twice and the two agree - the track is native x 621..626 (Add_Scroll_Field_ at colsum.cpp:278 counts it exclusively as 5, Draw_Bar_Indicator_'s Fill_ at colsum.cpp:759 counts the same rectangle inclusively as 6) and the arrows start at native x 619 (Add_Button_Field_, colsum.cpp:263-264), measured to 619..627 off the original's framebuffer. Nine native px is 27 reference, and it is a WIDTH and not a share: scaling it with the rest put it at 22 the first time the list got narrower, which is a transcription quietly becoming a fraction. THE OTHER FIVE SPLIT WHAT IS LEFT, 1377, IN THE PROPORTIONS THEY HAD: name 302/1666, the three jobs 1041/1666, building 323/1666 -> 250, 860, 267. THE THREE JOBS THEN SPLIT THEIR 860 BY THE ORIGINAL'S OWN RATIO, 135 : 142 : 134 with WORKERS the widest (COLSUM::Get_Selected_Pop_ passes the column bounds as literals at colsum.cpp:1006-1024, left_x = 101/236/378 and right_x = that - 10) -> 283 / 297 / 280, each inside one per cent of the ratio, which is what a smoke check holds them to. WHAT IS LOST: 289 ref px of list width, 17 %. CAPACITY IS RE-ASSERTED AND STILL HOLDS - the narrowest job column (280) fits four unsqueezed figures at every shipped resolution, which is what the original's widest column fits (industry, reach 122 at pitch 30). It is now EXACTLY four at 1920x1080 where it was five, so this is the number to watch if the list gets narrower again. THE ARITHMETIC BELOW IS THE STAGE-A3 ONE and every source in it still stands; only the totals changed. 302 + 347*3 + 314 + 36 = 1693, the list's own width exactly - the columns ARE the list, with no slack to distribute. THE LIST'S WIDTH DID NOT CHANGE WHEN THE GAPS BECAME RAILS on 7 September 2026: rails are horizontal there, so they cost HEIGHT and not width, and the figure capacity is untouched. CAPACITY IS ASSERTED, NOT NOTED: a figure column must fit at least four unsqueezed figures, which is what the original's widest column (industry, reach 122, pitch 30) fits; 347 reference px fits five, at every resolution, because the column and the pitch scale together. THE BUILDING COLUMN IS DERIVED: the original prints the producing text with BILL::Squeeze_Print_Formatted_Paragraph_(0x200, y, 0x55, 0x16, ...) at colsum.cpp:621 - 85 px of a 640 px screen, 13.3 % - and 13.3 % of 1693 is 225. 314 is wider than the transcription requires; the surplus is the extra HD width that Data's Stage 1 decision sends to the column reservation rather than to wider figure spacing. See colonybuild.py for why the width is a RESERVATION and never a squeeze target. THE THREE JOB COLUMNS ARE UNEQUAL, AND THAT IS TRANSCRIBED, corrected 7 September 2026. They were 347 each by our own choice; COLSUM::Get_Selected_Pop_ (colsum.cpp:1006-1024) passes the column bounds as literals - left_x = 101/236/378 and right_x = that - 10 - so the original's spans are 135/142/134 native px with the WORKERS column the widest. Two independent sources: those literals, and the column separators measured on the live framebuffer of screen 20 at x 99/234/376/510, which agree to +1 px on all three. The ratio 135:142:134 over the unchanged 1041 px reservation gives 342/360/339, so name, building and scroll do not move and the list width is still 1693. CAPACITY IS RE-ASSERTED AT THE NARROWEST COLUMN (339), not at the old uniform 347 - the check is what allows this change, not the arithmetic. THE SCROLL COLUMN IS A TRANSCRIPTION NOW, 9 September 2026, and was the last unsourced number here. It was 36 = 1693 - 302 - 342 - 360 - 339 - 314, the leftover after the other five. The original states it twice and the two agree: the track is native x 621..626 (Add_Scroll_Field_(621, 40, 0, n, 0, n-10, 5, 271, ...) at colsum.cpp:278 counts it exclusively as 5, Draw_Bar_Indicator_'s Fill_(621, y1, 626, y2, 229) at colsum.cpp:759 counts the same rectangle inclusively as 6, corner dots at 621 and 626 at colsum.cpp:767-770), and the arrows start at native x 619 (Add_Button_Field_, colsum.cpp:263-264). The arrow anim's own width is animate::Get_Width_(pic) and lives in the player's LBX, so it is MEASURED and single-source like the No Farming size: native x 619..627 off the original's framebuffer in evidence/colony_summary_native_split.png, whose LEFT edge reproduces the source's 619 exactly, which is what anchors the right one. Nine native px is 27 reference px. THE NINE FREED PX GO TO BUILDING, 314 -> 323, because building is already the declared home of this screen's surplus width (see above) - a residue put somewhere that says why, rather than somewhere that had room. And there is no residue left to distribute at all: since 9 September the six columns are fractions of the list_area cutout (colonytrack.columns), so they tile it exactly at any window size by construction rather than by the last column absorbing a mismatch.",
   "planet_info": [
-    581,
-    724,
-    457,
-    197
-  ],
-  "planet_info_parts": {
-    "planet_disc": [
-      595,
-      734,
-      177,
-      177
-    ],
-    "planet_paragraph": [
-      784,
-      734,
-      240,
-      177
-    ]
-  },
-  "_planet_info_parts_note": "TWO BOXES INSIDE planet_info, NOT HOLES - brief 95 Part C, 13 September 2026. The disc and the paragraph were placed by arithmetic in colonyoutput (the panel's pad_x 16 and pad_y 12, then the disc as tall as the padded box, then planet_disc_gap 12, then the text to the right padding); these rects are that arithmetic evaluated once, at 1920x1080 against planet_info's drawn box (this hole plus colonyplates.BLEED), so the first picture is the old one. They are NOT bled and NOT windows: colonyplates.NOT_A_WINDOW keeps the hole checks from matching them to the artwork, and colonyplates.part_rects seats them as boxes. They are EDITOR-FREE BY CONSTRUCTION - drag one in F5, save, and colonyplates.write_back writes it here, never to boxes.json. RECT AND NOTHING ELSE: planet_disc names no image (the disc is the scanned colony's climate, resolved through colonyplanets and core/resources.py, so a mod's discs win - decisions 16, 17, 19), and planet_paragraph's text is Box.text at runtime and never serialised (decision 37). The renderer fits the disc into planet_disc's SHORTER side, centred, so the box does not have to stay square.",
-  "planet_output": [
     100,
     724,
     460,
     197
   ],
+  "planet_info_parts": {
+    "planet_disc": [
+      114,
+      734,
+      177,
+      177
+    ],
+    "planet_name": [
+      340,
+      737,
+      211,
+      34
+    ],
+    "planet_paragraph": [
+      340,
+      773,
+      211,
+      124
+    ]
+  },
+  "_brief_97_note": "13 September 2026, BRIEF 97 - DATA'S FRAME WITH THREE BOTTOM WINDOWS. The title cartouche is closed and the two middle bottom windows are one, so the lower band is planet_info (left), colony_panel (middle) and galaxy_inset (right). The three rects are the holes tools/frame_holes.py measured off the new frame.png (1672x941), unbled: [100, 724, 460, 197], [581, 724, 923, 197] and the inset's hole [1534, 723, 282, 199] (the smoke test re-measures it off the alpha; a first reading of 281 came from rounding the conversion and was wrong) - planet_info took the hole planet_output had, and colony_panel spans what planet_info and empire_stats had. planet_info's parts moved with it by -481 px, keeping Data's own placement of the paragraph (dragged in F5 to 240 px right of the window edge); planet_name is new, the name heading above the paragraph - an HD EXTENSION, the original's box prints no name. planet_output, planet_surface and empire_stats are PARTS of colony_panel now, not holes, placed from Data's mockup (doc/briefs/97-mockup.png): rows at the left, the surface picture in the middle, the empire readouts at the right, each the window's full height.",
+  "_planet_info_parts_note": "TWO BOXES INSIDE planet_info, NOT HOLES - brief 95 Part C, 13 September 2026. The disc and the paragraph were placed by arithmetic in colonyoutput (the panel's pad_x 16 and pad_y 12, then the disc as tall as the padded box, then planet_disc_gap 12, then the text to the right padding); these rects are that arithmetic evaluated once, at 1920x1080 against planet_info's drawn box (this hole plus colonyplates.BLEED), so the first picture is the old one. They are NOT bled and NOT windows: colonyplates.NOT_A_WINDOW keeps the hole checks from matching them to the artwork, and colonyplates.part_rects seats them as boxes. They are EDITOR-FREE BY CONSTRUCTION - drag one in F5, save, and colonyplates.write_back writes it here, never to boxes.json. RECT AND NOTHING ELSE: planet_disc names no image (the disc is the scanned colony's climate, resolved through colonyplanets and core/resources.py, so a mod's discs win - decisions 16, 17, 19), and planet_paragraph's text is Box.text at runtime and never serialised (decision 37). The renderer fits the disc into planet_disc's SHORTER side, centred, so the box does not have to stay square.",
   "galaxy_inset": [
     1550,
     724,
     248,
     196
   ],
-  "empire_stats": [
-    1058,
+  "colony_panel": [
+    581,
     724,
-    447,
+    923,
     197
   ],
-  "_lower_band_note": "Four boxes, flush with the list's own edges at 107 and 1800, with gaps of 38 - THE MASTER'S OWN SLOT DIVIDER, 47 master px, the strut it puts between two buttons of one row. planet_output absorbs what the arithmetic leaves, because it is the only width in the band not fixed by something else: the two 320s are a pair and 253 is locked by the inset's aspect. 107 + 320 + 38 + 686 + 38 + 253 + 38 + 320 = 1800. THE INSET IS NO LONGER SHORTER THAN ITS NEIGHBOURS - 8 September 2026. It was 20 px shorter and centred (725 + 10 = 735) on the reading that its height is fixed by its own aspect; at the band's new 191 the aspect is not what binds. colonyinset.map_rect fits the map into 128:91 isotropically and takes min(w/128, h/91), and with the box 253 wide the WIDTH is the smaller term at every resolution - so the map is the same size at 200 and at 191 and the box may simply fill its band like the other three. It starts to shrink below 183.",
+  "colony_panel_parts": {
+    "planet_output": [
+      581,
+      724,
+      268,
+      197
+    ],
+    "planet_surface": [
+      849,
+      724,
+      431,
+      197
+    ],
+    "empire_stats": [
+      1280,
+      724,
+      224,
+      197
+    ]
+  },
+  "_colony_panel_parts_note": "THREE BOXES INSIDE colony_panel, NOT HOLES - brief 97, 13 September 2026. Same mechanism as planet_info_parts (colonyplates.PARTS): not bled, never matched to the artwork, editor-free by construction and written back here by an F5 save. Widths from Data's mockup, 1672 px wide, scaled by 1920/1672 - rows to x 827, the picture to x 1280, the readouts to the window's right edge - WITH ONE MEASURED CORRECTION: the rows take 22 px from the picture (planet_output 246 -> 268, planet_surface starts at 849). At the mockup's 246 the widest row the original can produce - RESEARCH with a three-digit net and a three-digit shortage marker - left less than one em of the label font between label and value at every one of the twelve shipped sizes (3 to 36 px short), which is the rule output._geometry_note's check holds; 264 was the first width that cleared it everywhere and 268 clears it by at least 5 px. planet_surface is a RECT AND A STYLE: which picture fills it is the scanned colony's climate through colonysurfaces and the resource roots (decision 58), and its fade is `fade_left` / `fade_right` in boxes.json, drawn by core/imagebox.py into whatever lies under the box - the panel base.",
+  "_lower_band_note": "THREE WINDOWS SINCE 13 September 2026 (brief 97): planet_info, colony_panel, galaxy_inset, each the hole of Data's frame. Until that day the band was four boxes - planet_output, planet_info, empire_stats, galaxy_inset - and the arithmetic that fixed their widths went with the artwork that drew four holes. What still binds is the inset: colonyinset.map_rect fits the map into 128:91 isotropically and takes min(w/128, h/91), so the inset keeps the transcribed aspect inside its hole (see _galaxy_inset_note) and the other two windows are simply their holes.",
   "_galaxy_inset_note": "253 x 200 IS DERIVED AND CONFIRMED - doc/colony_inset_geometry.md Part 3. The original's inset covers 50.6*M x 40*M world units, whose aspect is 1.2651 at EVERY galaxy size because both divisors are constants and M cancels (movebox.cpp:20-21). 253/200 = 1.2650 against that, so the crop fills the box with no letterbox at any size INCLUDING orion2re's Maximum - the earlier expectation that Maximum letterboxes is WITHDRAWN, and it only did so if the crop were the galaxy rather than the original's coverage. The scale that follows is exactly 5/M reference px per world unit. At 3840x2160 the box is 506 x 400 device px, which is the small galaxy's own world extent at 1:1. DEVIATION - THE BOX IS 239 x 189 SINCE 8 September 2026, WAS 253 x 200, AND ONE STATED PROPERTY IS GONE WITH IT. The list grew 29 ref px so that 2560x1440 could take figure step 3 (see _list_height_note), the 29 came out of the lower band's height, and the band's height is what fixes this box. THE ASPECT RULE SURVIVES and is what the check still asserts: 239/189 = 1.26455 against the coverage's 1.265134, 0.00058 apart, against 253/200's 0.00013 - both inside the thousandth. 239 x 189 is the LARGEST pair under 191 that passes; 229 x 181 is the most exact and was rejected for being smaller still. WHAT IS LOST: at 3840x2160 the box was 506 x 400 device px, which is the small galaxy's own world extent at 1:1, and a smoke check pinned that. It is now 478 x 378 and the property is gone. It was a CONSEQUENCE of the box's size and never a requirement of the drawing - colonyinset.map_rect fits 128:91 isotropically and takes min(w/128, h/91), which no 1:1 relation enters - so the check now asserts the rule it was an instance of and v3_projektstatus.md records the loss. THE DRAWN MAP SHRINKS 5.5 %: 257 x 183 -> 243 x 173 at 1080p and 514 x 365 -> 486 x 346 at 2160p. Width still binds at every resolution, so the letterbox stays on the vertical axis and gets smaller. planet_output absorbs the 14 px this box gave up, as _lower_band_note says it always does. DATA'S NEW FRAME, 12 September 2026: the box is 248 x 196 and the HOLE IS BIGGER THAN THE BOX for the first time. 248/196 = 1.26531 against the coverage's 1.265134, 0.00018 apart and the tightest of the three so far; it is the largest pair inside the new hole that passes. The hole the artwork cuts is 282 x 199 reference px (_galaxy_inset_hole), so keeping the transcribed aspect leaves 34 px of width and 3 of height of HOLE with no box over it. That remainder is painted BLACK rather than left to the background - Data's decision, and it is the same black the box itself takes (panels.galaxy_inset_fill, measured off the original's own inset region). The alternative was widening the box to the hole, which stretches the galaxy 13 % horizontally and is the thing the aspect rule exists to prevent.",
   "_hole_galaxy_inset": [
     1534,

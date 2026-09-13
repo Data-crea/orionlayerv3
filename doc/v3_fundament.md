@@ -1312,6 +1312,41 @@ here `output.icon_size` 31, chosen from the row's own height at
 the tool and the loader both read that one number. The art supplies a
 shape; the table supplies the size.
 
+**58. The planet surface picture is an HD EXTENSION, and the artwork is
+AI-generated.** 13 September 2026, brief 97. The original shows no
+landscape on the Colonies screen — `Draw_Colony_Scan_Info_` draws
+production and morale sprites and one paragraph — so the picture of the
+scanned colony's world in `colony_panel` is ours, and is marked in the
+module that draws it, here, in the status document and in a smoke
+check. Data made the sheet with ChatGPT; no copyright is claimed, and
+LICENSE's scope lists it.
+
+**One picture per climate, found the way the disc is found.** The
+climate id picks the tile and the name is `colonyplanets.NAMES`'s, the
+enum's own order (orion2_consts.h:362-373), resolved through the
+resource roots so a mod replaces the directory (decisions 16, 17). A
+box that shows one says where and how big and never which file.
+
+**Derived, unscaled, and absent is a state.** `tools/make_surface_tiles.py`
+cuts each tile at sheet resolution from edges measured on all ten cards
+(a plain crop, so a rebuild is byte-identical); `tools/setup.py` runs
+it and git ignores the output (decision 40). The box scales the tile
+once where it is drawn. A clone that has not run setup has no tiles,
+and the loader says so and draws no picture — decision 38's rule.
+
+**Where it is drawn, and how it softens — brief 97, Stop 3.** The
+picture is `planet_surface`, a part of `colony_panel`, drawn by
+`core/imagebox.py`: the image-box code that was Empire Identity's own
+moved into core when a second screen needed it, and gained
+`fade_right` beside `fade_left`. Both fades are box properties in
+`boxes.json` and multiply the picture's ALPHA, so a soft edge shows the
+panel base under the box and no colour is typed for it. In the same
+stop the scan box's paragraph gained a name heading above it,
+`planet_name`, also an HD EXTENSION — the original's box prints no name
+— while the paragraph itself stays the transcription; and the
+paragraph box's `font_scale` multiplies the reference size before the
+window scale, once ("Scaling twice").
+
 ### Process
 
 **31. Verification via `tools/smoke_test.py` before every handoff.**

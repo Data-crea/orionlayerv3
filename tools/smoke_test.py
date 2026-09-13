@@ -4401,16 +4401,25 @@ def main():
     _WORDS_FOR = {"{size}": _words["sizes"], "{climate}": list(_climates),
                   "{gravity}": _words["gravities"],
                   "{mineral}": _words["minerals"]}
+    # RE-POINTED 13 September 2026, brief 97: this measured a TWO-column
+    # table of all eleven rows in `planet_output`, which has not been
+    # drawn since the paragraph moved to `planet_info` — the box draws
+    # the five column-1 rows in ONE column, each label shifted right by
+    # its icon and `icon_gap` (decision 56). What is asserted is that
+    # geometry, in the part of `colony_panel` the rows now sit in.
+    from screens.colony_summary import colonyoutputicons as _cg_oi
     for _W, _H in _SIZES:
         _lay = Layout(_W, _H)
         _r = pygame.Rect(*_lay.rect(_op_box))
-        _cols = int(_ocfg["columns"])
+        _cols = 1
         _pad = int(_ocfg["pad_x"] * _lay.scale)
         _cw = (_r.w - 2 * _pad) // _cols
         _cgap = int(_ocfg["column_gap"] * _lay.scale)
+        _icon_room = (_cg_oi.icon_px(_ocfg, _lay.scale)
+                      + int(_ocfg.get("icon_gap", 0) * _lay.scale))
         # One em of the LABEL font, scaled like everything else.
         _em = _lay.font_size(_ocfg["label_font"])
-        for _row_spec in _ocfg["rows"]:
+        for _row_spec in [_s for _s in _ocfg["rows"] if _s["column"] == 1]:
             _cands = _WORDS_FOR.get(_row_spec["value"])
             if _cands is None:
                 # Numeric. The widest a value can get: growth sums ten
@@ -4423,7 +4432,7 @@ def main():
             _lw = app.style.render_text(
                 _row_spec["label"].upper(),
                 _lay.font_size(_ocfg["label_font"]),
-                (255, 255, 255)).get_width()
+                (255, 255, 255)).get_width() + _icon_room
             # THE SHORTAGE MARKER AND A WIDE VALUE CANNOT CO-OCCUR,
             # and that is structural rather than lucky. A shortage is
             # drawn only when imports >= 0 and the row is not
@@ -5315,6 +5324,9 @@ def main():
         # Their own check is the output-panel marking block.
         "screens/colony_summary/colonyoutputicons.py": "decision 56",
         "tools/make_output_icons.py": "decision 56",
+        # ADDED 13 September 2026, brief 97 / decision 58: the planet
+        # surface loader. Its own check is the surfaces block.
+        "screens/colony_summary/colonysurfaces.py": "decision 58",
         "assets/shared/skins/default/colors.json": "output_separator",
         "screens/colony_summary/colonypick.py": "partial",
         # ADDED 9 September 2026, and it is the inventory doing its
@@ -8883,7 +8895,8 @@ def main():
             "an editor save changed boxes.json without a drag")
         for _rt_spec, _rt_list in _rt_after.items():
             for _rt_b in _rt_list:
-                if _rt_b["name"] not in ("planet_disc", "planet_paragraph"):
+                if _rt_b["name"] not in ("planet_disc", "planet_paragraph",
+                                         "planet_name", "planet_surface"):
                     continue
                 # KEYS, not substrings: the paragraph's own skin is the
                 # VALUE "text", which is exactly what it should carry.
@@ -8916,6 +8929,243 @@ def main():
     ok("an F5 save round trip leaves boxes.json and layout_reference.json "
        "unchanged, writes no text, colour, rect or image path for the two "
        "planet_info boxes, and a dragged disc lands in planet_info_parts")
+
+    # ── THE PLANET SURFACES — brief 97, decision 58 ───────────────
+    # Every climate the enum has a tile for, as a RULE over the names
+    # the disc uses; the ten files exist after setup at the size the
+    # tool's rule cuts; regenerating reproduces them byte for byte
+    # (decision 40); a root with no tiles is a state and not a crash
+    # (decision 38); and the markings — HD EXTENSION for the picture,
+    # AI-generated artwork with no claim — are at every home.
+    import importlib.util as _sf_ilu
+    import subprocess as _sf_sp
+    import tempfile as _sf_tf
+    from screens.colony_summary import colonysurfaces as _sf
+    from screens.colony_summary import colonyplanets as _sf_pl
+    _sf_root = os.path.dirname(SCREENS_DIR)
+    _sf_tool = os.path.join(_sf_root, "tools", "make_surface_tiles.py")
+    _sf_spec = _sf_ilu.spec_from_file_location("_sf_tool_mod", _sf_tool)
+    _sf_mod = _sf_ilu.module_from_spec(_sf_spec)
+    _sf_spec.loader.exec_module(_sf_mod)
+    _sf_rects = _sf_mod.tile_rects()
+    _sf_ids = [_i for _i in range(64) if _sf_pl.name_for(_i) is not None]
+    assert _sf_ids == list(range(len(_sf_pl.NAMES))) and \
+        set(_sf_rects) == set(_sf_pl.NAMES), (
+        f"the climates with a name are {_sf_ids} and the tool cuts "
+        f"{sorted(_sf_rects)} — every climate needs exactly one tile")
+    _sf_dir = os.path.join(SCREENS_DIR, "colony_summary", _sf.SURFACE_DIR)
+    for _sf_id in _sf_ids:
+        _sf_name = _sf_pl.name_for(_sf_id)
+        _sf_path = os.path.join(_sf_dir, f"{_sf_name}.png")
+        assert os.path.exists(_sf_path), (
+            f"no surface tile for climate {_sf_id} ({_sf_name}) at "
+            f"{_sf_path} — run `python tools/setup.py`")
+        assert _pl_Image.open(_sf_path).size == tuple(_sf_rects[_sf_name][2:]), (
+            f"{_sf_name}.png is {_pl_Image.open(_sf_path).size}; the tool "
+            f"cuts {_sf_rects[_sf_name][2:]} and scales nothing")
+    with _sf_tf.TemporaryDirectory() as _sf_tmp:
+        _sf_run = _sf_sp.run([sys.executable, _sf_tool, "--out", _sf_tmp],
+                             capture_output=True, text=True)
+        assert _sf_run.returncode == 0, _sf_run.stderr[-400:]
+        for _sf_name in _sf_pl.NAMES:
+            with open(os.path.join(_sf_dir, f"{_sf_name}.png"), "rb") as _fh:
+                _sf_a = _fh.read()
+            with open(os.path.join(_sf_tmp, f"{_sf_name}.png"), "rb") as _fh:
+                _sf_b = _fh.read()
+            assert _sf_a == _sf_b, (
+                f"{_sf_name}.png does not regenerate byte for byte "
+                f"(decision 40)")
+        _sf_empty = os.path.join(_sf_tmp, "no_tiles_here")
+        os.makedirs(_sf_empty)
+        _sf_none = _sf.SurfaceSet(app.res, root=_sf_empty)
+        assert _sf_none.state == "missing" and _sf_none.get(8) is None, (
+            "a root without tiles must be the 'missing' state and draw "
+            "nothing, not raise (decision 38)")
+    assert _sf.SurfaceSet(app.res).state == "ok"
+    for _sf_home, _sf_path, _sf_words in (
+            ("colonysurfaces.py", os.path.join(
+                SCREENS_DIR, "colony_summary", "colonysurfaces.py"),
+             ("HD EXTENSION, decision 58", "DEVIATION", "AI-GENERATED")),
+            ("tools/make_surface_tiles.py", _sf_tool,
+             ("AI-GENERATED", "ChatGPT", "LICENCE", "decision 40")),
+            ("LICENSE", os.path.join(_sf_root, "LICENSE"),
+             ("planet_surfaces.png", "ChatGPT", "No copyright is")),
+            ("doc/v3_fundament.md", os.path.join(
+                _sf_root, "doc", "v3_fundament.md"),
+             ("**58.", "HD EXTENSION")),
+            ("v3_projektstatus.md", os.path.join(
+                _sf_root, "v3_projektstatus.md"),
+             ("decision 58", "HD EXTENSION"))):
+        _sf_text = open(_sf_path, encoding="utf-8").read()
+        for _sf_w in _sf_words:
+            assert _sf_w in _sf_text, (
+                f"{_sf_home} no longer carries {_sf_w!r} — the surface "
+                f"picture's marking and the artwork's origin live at "
+                f"every home")
+    ok(f"every climate has a surface tile ({len(_sf_ids)}), each at the "
+       f"size the tool cuts and rebuilt byte for byte, a missing set is a "
+       f"state, and the HD EXTENSION / AI-artwork marking is at every home")
+
+    # ── THREE BOTTOM WINDOWS — brief 97, Stop 3 ───────────────────
+    # The frame's lower band is three holes and the reference names
+    # three windows; the match claims every hole (no spare since the
+    # title cartouche closed); planet_output, planet_surface and
+    # empire_stats are PARTS inside colony_panel and not cutouts; and
+    # nothing in frame_holes still explains a spare by the cartouche.
+    import json as _b3_json
+    _b3_png = os.path.join(SCREENS_DIR, "colony_summary", "assets",
+                           "frame.png")
+    _b3_w, _b3_h, _b3_holes = fh.find_holes(_b3_png)
+    _b3_named = fh.name_holes(_b3_holes, "colony_summary", (_b3_w, _b3_h))
+    assert fh.SPARE_HOLES == [], (
+        f"the frame has holes no window claims: {fh.SPARE_HOLES}")
+    assert len(fh.BAND_KEYS) == 3 and set(fh.BAND_KEYS) <= set(_b3_named), (
+        f"the band keys {fh.BAND_KEYS} are not three matched windows")
+    _b3_band_row = next(_row for _row in fh._rows(_b3_holes)
+                        if _b3_named["colony_panel"] in
+                        [list(_h) for _h in _row])
+    assert len(_b3_band_row) == 3, (
+        f"the lower band row has {len(_b3_band_row)} holes; Data's frame "
+        f"cuts three")
+    _b3_ref = _b3_json.load(open(os.path.join(
+        SCREENS_DIR, "colony_summary", "layout_reference.json"),
+        encoding="utf-8"))
+    _b3_win = pygame.Rect(*_b3_ref["colony_panel"])
+    for _b3_part in ("planet_output", "planet_surface", "empire_stats"):
+        _b3_r = pygame.Rect(*_b3_ref["colony_panel_parts"][_b3_part])
+        assert _b3_win.contains(_b3_r), (
+            f"{_b3_part} {_b3_r} is not inside colony_panel {_b3_win}")
+        assert _b3_part not in fh.RULE_NAMES["colony_summary"], (
+            f"{_b3_part} is still a cutout name in frame_holes")
+    _b3_src = open(fh.__file__, encoding="utf-8").read()
+    assert "pre-Stage-4 title cartouche" not in _b3_src, (
+        "frame_holes.py still explains a spare hole by the title "
+        "cartouche Data's frame closed")
+    ok("the lower band is three holes matched to planet_info, colony_panel "
+       "and galaxy_inset with no spare hole, and planet_output, "
+       "planet_surface and empire_stats sit inside colony_panel as parts")
+
+    # ── THE SURFACE PICTURE IS A BOX, AND ITS FADE A BOX PROPERTY ──
+    # Rendered at 1920x1080: the picture box's pixels are exactly what
+    # core/imagebox draws from the scanned colony's tile with THE BOX'S
+    # style onto the panel base; its outermost column is the panel base
+    # itself (the fade reveals what is under the box and types no
+    # colour); and zeroing `fade_left` in the box's style changes that
+    # column — so the softness comes from boxes.json and nowhere else.
+    from core import imagebox as _ib
+    _ib_boxes = _b3_json.load(open(os.path.join(
+        SCREENS_DIR, "colony_summary", "boxes.json"), encoding="utf-8"))
+    for _ib_res, _ib_list in _ib_boxes.items():
+        _ib_b = next((_b for _b in _ib_list
+                      if _b["name"] == "planet_surface"), None)
+        assert _ib_b is not None, f"{_ib_res}: no planet_surface box"
+        _ib_st = _ib_b.get("style", {})
+        assert _ib_st.get("skin") == "image" and \
+            _ib_st.get("fade_left", 0) > 0 and \
+            _ib_st.get("fade_right", 0) > 0, (
+            f"{_ib_res}: planet_surface's style {_ib_st} does not carry "
+            f"both fades as box properties")
+    _ib_app, _ib_scr = _plv.build_screen(1920, 1080)
+    _ib_app.dispatcher.switch_to("colony_summary")
+    _ib_scr.enter(None)
+    _ib_scr.update(_plv._Snapshot(_plv.COLONIES))
+    _ib_box = next(_b for _b in _ib_scr.boxes if _b.name == "planet_surface")
+    _ib_rect = pygame.Rect(*_ib_scr.layout.rect(_ib_box.ref_rect))
+    _ib_row = _ib_scr.selected_row()
+    _ib_tile = _sf.set_for(_ib_scr).get(_ib_row["climate"])
+    assert _ib_tile is not None, "the scanned colony's climate has no tile"
+
+    def _ib_frame():
+        _s = pygame.Surface((1920, 1080))
+        _s.fill((0, 0, 0))
+        _ib_scr._surface_cache = {}
+        _ib_scr.render(_s)
+        return _np.array(pygame.surfarray.array3d(
+            _s.subsurface(_ib_rect))).transpose(1, 0, 2)
+
+    _ib_got = _ib_frame()
+    _ib_exp_s = pygame.Surface((1920, 1080))
+    _ib_exp_s.fill(tuple(_cs_mod.PANEL_BG[:3]))
+    _ib.render_image_box(_ib_exp_s, _ib_scr.layout, _ib_tile,
+                         _ib_box.ref_rect, _ib_box.style, {})
+    _ib_exp = _np.array(pygame.surfarray.array3d(
+        _ib_exp_s.subsurface(_ib_rect))).transpose(1, 0, 2)
+    _ib_band = slice(8, _ib_rect.h - 8)
+    _ib_cols = slice(40, _ib_rect.w - 40)
+    assert (_ib_got[_ib_band, _ib_cols] == _ib_exp[_ib_band, _ib_cols]).all(), (
+        "planet_surface on the screen is not core/imagebox's drawing of "
+        "the scanned colony's tile with the box's own style")
+    assert (_ib_got[_ib_band, 0] == _np.array(_cs_mod.PANEL_BG[:3])).all(), (
+        f"the picture's outer column is {_ib_got[_ib_band, 0][0]} and not "
+        f"the panel base — the fade is not revealing what is under the box")
+    _ib_saved = dict(_ib_box.style)
+    try:
+        _ib_box.style["fade_left"] = 0.0
+        _ib_flat = _ib_frame()
+    finally:
+        _ib_box.style.clear()
+        _ib_box.style.update(_ib_saved)
+    assert (_ib_flat[_ib_band, 0] != _ib_got[_ib_band, 0]).any(), (
+        "zeroing fade_left in the box's style changed nothing — the fade "
+        "is not a box property")
+    ok("planet_surface is core/imagebox's cover-fill of the scanned "
+       "colony's tile with the box's own fades, fading into the panel "
+       "base, and the softness is boxes.json's (both lists)")
+
+    # ── THE NAME HEADING, AND font_scale APPLIED ONCE ─────────────
+    # planet_name is a text box whose runtime text is the scanned
+    # colony's name in header_text, marked HD EXTENSION; and
+    # planet_paragraph's font_scale multiplies the reference size
+    # before the window scale — at 2560x1440 the paragraph's first line
+    # renders at font_size(value_font * font_scale), not at a size
+    # scaled twice.
+    from core import palette as _nh_pal
+    for _nh_W, _nh_H in ((1920, 1080), (2560, 1440)):
+        _nh_app, _nh_scr = _plv.build_screen(_nh_W, _nh_H)
+        _nh_app.dispatcher.switch_to("colony_summary")
+        _nh_scr.enter(None)
+        _nh_scr.update(_plv._Snapshot(_plv.COLONIES))
+        _nh_s = pygame.Surface((_nh_W, _nh_H))
+        _nh_scr.render(_nh_s)
+        _nh_box = next(_b for _b in _nh_scr.boxes if _b.name == "planet_name")
+        _nh_row = _nh_scr.selected_row()
+        assert _nh_box.text == _nh_row["name"] and tuple(
+            _nh_box.text_color) == _nh_pal.require("colony_summary",
+                                                   "header_text"), (
+            f"{_nh_W}x{_nh_H}: planet_name reads {_nh_box.text!r} in "
+            f"{_nh_box.text_color}")
+        _nh_tb = next(_b for _b in _nh_scr.boxes
+                      if _b.name == "planet_paragraph")
+        _nh_fs = float(_nh_tb.style.get("font_scale", 1.0))
+        _nh_px = _nh_scr.layout.font_size(
+            int(round(_ocfg.get("value_font", 20) * _nh_fs)))
+        _nh_big = pygame.Rect(0, 0, 3000, 3000)
+        _nh_out = pygame.Surface((3000, 3000))
+        _nh_out.fill((0, 0, 0))
+        _co.render_info(_nh_out, _nh_row, _nh_big, _ocfg, _words,
+                        _climates, _nh_scr.layout, _nh_scr.style,
+                        text_box=_nh_tb)
+        _nh_first = _nh_tb.text.split("\n")[0]
+        _nh_want = _nh_scr.style.render_text(_nh_first, _nh_px,
+                                             (255, 255, 255)).get_width()
+        _nh_ink = pygame.surfarray.array3d(_nh_out).sum(axis=2) > 0
+        _nh_line = _nh_ink[:, :_nh_scr.style.render_text(
+            "Hg", _nh_px, (255, 255, 255)).get_height()]
+        _nh_xs = _np.nonzero(_nh_line.any(axis=1))[0]
+        assert len(_nh_xs) and abs(int(_nh_xs.max()) + 1 - _nh_want) <= 3, (
+            f"{_nh_W}x{_nh_H}: the paragraph's first line is "
+            f"{int(_nh_xs.max()) + 1 if len(_nh_xs) else 0} px wide and "
+            f"font_size(value_font x font_scale {_nh_fs}) = {_nh_px} px "
+            f"renders it {_nh_want} — scaled more or less than once")
+    _nh_src = open(os.path.join(SCREENS_DIR, "colony_summary",
+                                "colonyoutput.py"), encoding="utf-8").read()
+    assert "THE NAME HEADING — HD EXTENSION" in _nh_src and \
+        "HD EXTENSION" in _b3_ref["_brief_97_note"], (
+        "the name heading lost its HD EXTENSION marking in colonyoutput "
+        "or layout_reference.json")
+    ok("planet_name is the scanned colony's name in header_text, marked "
+       "HD EXTENSION, and planet_paragraph's font_scale is applied once "
+       "(1920x1080 and 2560x1440)")
 
     # ── THE FIGURE'S SIZE IS NOT ALWAYS AN INTEGER STEP ─────────
     #

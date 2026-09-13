@@ -42,6 +42,10 @@ screens/galaxy_map/assets/icons/*.png
 # tools/make_output_icons.py (decision 56). The smoke test rebuilds
 # them into a scratch directory and compares bytes.
 screens/colony_summary/assets/output/
+# The ten planet surface pictures, cut unscaled from
+# _src/surfaces/planet_surfaces.png by tools/make_surface_tiles.py
+# (brief 97, decision 58). The smoke test rebuilds and compares bytes.
+screens/colony_summary/assets/surfaces/
 # Brief 92's inspection crops and contact sheet of the three sheets —
 # a picture for Data to name the icons from, not an input to anything.
 screens/colony_summary/assets/_src/output/cut/

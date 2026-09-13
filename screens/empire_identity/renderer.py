@@ -129,55 +129,11 @@ def banner_hit_test(L, colors, rect, sx, sy):
 
 
 # -- Image box (cover-fill, pan/zoom, edge fade) -----------
-
-def _cover(img, tw, th, crop, zoom):
-    """Cover-fill `img` into (tw, th) with zoom and crop anchor.
-    Same semantics as the select_race portrait thumbnails."""
-    iw, ih = img.get_width(), img.get_height()
-    base = max(tw / iw, th / ih)
-    scale = base * max(0.3, zoom)
-    sw = max(tw, int(iw * scale))
-    sh = max(th, int(ih * scale))
-    scaled = pygame.transform.smoothscale(img, (sw, sh))
-    cx = int(crop[0] * max(0, sw - tw))
-    cy = int(crop[1] * max(0, sh - th))
-    return scaled.subsurface((cx, cy, tw, th)).copy()
-
-
-def _fade_mask(w, h, fade_left):
-    """Alpha mask: transparent at the left edge, opaque after
-    `fade_left` (fraction of width)."""
-    mask = pygame.Surface((w, h), pygame.SRCALPHA)
-    fw = max(1, int(w * fade_left))
-    for x in range(fw):
-        a = int(255 * (x / fw) ** 1.5)
-        pygame.draw.line(mask, (255, 255, 255, a), (x, 0), (x, h))
-    pygame.draw.rect(mask, (255, 255, 255, 255), (fw, 0, w - fw, h))
-    return mask
-
-
-def render_image_box(surface, L, img, rect, style, cache):
-    """Draw `img` cover-filled into the box; style keys:
-       zoom (float), crop ([0-1, 0-1]), fade_left (fraction, 0=off).
-    The rendered surface is cached per (size, zoom, crop, fade)."""
-    if img is None:
-        return
-    px, py = L.pos(rect[0], rect[1])
-    pw, ph = L.size(rect[2], rect[3])
-    if pw < 2 or ph < 2:
-        return
-    zoom = float(style.get("zoom", 1.0))
-    crop = tuple(style.get("crop", [0.5, 0.5]))
-    fade = float(style.get("fade_left", 0.0))
-    key = (pw, ph, zoom, crop, fade)
-    if cache.get("key") != key:
-        out = _cover(img, pw, ph, crop, zoom)
-        if fade > 0:
-            out.blit(_fade_mask(pw, ph, fade), (0, 0),
-                     special_flags=pygame.BLEND_RGBA_MULT)
-        cache["key"] = key
-        cache["surf"] = out
-    surface.blit(cache["surf"], (px, py))
+#
+# MOVED TO core/imagebox.py on 13 September 2026 (brief 97), when the
+# colony screen became the second screen with an image box. Re-exported
+# under the name this screen's `screen.py` imports.
+from core.imagebox import render_image_box  # noqa: E402,F401
 
 
 # -- Small vector icons for the preview -------------------

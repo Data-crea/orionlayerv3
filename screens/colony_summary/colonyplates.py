@@ -63,13 +63,14 @@ BLEED = 2
 #: nor named here is an ERROR and not a silent omission — a screen that
 #: quietly skipped a malformed rect would draw thirteen boxes and look
 #: almost right.
-NOT_A_WINDOW = ("list_columns", "_resolutions", "planet_info_parts")
-
 #: Boxes INSIDE a window that are not holes of the artwork — brief 95
-#: Part C, 13 September 2026. `{box name: [x, y, w, h]}`, reference px,
-#: not bled, and editor-free by construction: nothing slides out from
-#: under a box that is not a hole. See `_planet_info_parts_note`.
-PARTS = "planet_info_parts"
+#: Part C and brief 97, 13 September 2026. Each key holds
+#: `{box name: [x, y, w, h]}`, reference px, not bled, and editor-free
+#: by construction: nothing slides out from under a box that is not a
+#: hole. See `_planet_info_parts_note` and `_colony_panel_parts_note`.
+PARTS = ("planet_info_parts", "colony_panel_parts")
+
+NOT_A_WINDOW = ("list_columns", "_resolutions") + PARTS
 
 #: `layout_reference.json` names a RECTANGLE, `boxes.json` names a BOX,
 #: and two of them differ. `tools/frame_holes.BOX_NAME` holds the same
@@ -211,7 +212,8 @@ def part_rects(data):
     there is no edge for a bleed to cover.
     """
     return {name: list(rect)
-            for name, rect in (data.get(PARTS) or {}).items()}
+            for key in PARTS
+            for name, rect in (data.get(key) or {}).items()}
 
 
 #: A key shaped `_hole_<window>` gives that window's CUTOUT, for the
@@ -354,14 +356,15 @@ def write_back(screen):
     if not free:
         return []
     by_name = {b.name: b for b in screen.boxes}
-    parts = data.get(PARTS) or {}
     wrote = []
     for box_name, ref_name in free.items():
         box = by_name.get(box_name)
         if box is None or box.ref_rect is None:
             continue
         x, y, w, h = box.ref_rect
-        if ref_name in parts:
+        parts = next((data[k] for k in PARTS
+                      if ref_name in (data.get(k) or {})), None)
+        if parts is not None:
             # A PART IS TYPED AS DRAWN — no bleed came on, none comes off.
             rect = [x, y, w, h]
             if parts.get(ref_name) != rect:

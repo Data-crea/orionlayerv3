@@ -80,6 +80,10 @@ SHORTAGE_COLOR = palette.col("colony_summary", "warn", (214, 88, 74))
 #: `output._separator_note`. The skin's, like every other colour here.
 SEPARATOR_COLOR = palette.col("colony_summary", "output_separator",
                               (38, 50, 76))
+#: The name heading above the paragraph — the header's own colour,
+#: Data's #79A8E8, because it heads a panel the way the column words
+#: head the list. HD EXTENSION, brief 97; no code default (decision 14).
+HEADING_COLOR = palette.require("colony_summary", "header_text")
 
 #: Which row id wears which icon file. The morale row is not here: its
 #: mask depends on the value and `colonyrows.morale_icon` decides it.
@@ -274,6 +278,27 @@ def render_for(screen, surface):
     cfg = screen._data.get("output", {})
     words = screen._data.get("words", {})
     climates = screen._data.get("list", {}).get("climates", ())
+    # ── THE SURFACE PICTURE — HD EXTENSION, decision 58 ─────────
+    # DEVIATION IN KIND as well: AI-generated artwork (Data's ChatGPT
+    # sheet, no copyright claim). The original shows no landscape on
+    # this screen. `planet_surface` is a part of `colony_panel` and says
+    # where, how big and how soft (`fade_left` / `fade_right`); WHICH
+    # picture is the scanned colony's climate through `colonysurfaces`
+    # and the resource roots. Drawn before the rows, so a row's text
+    # can never end up under it, and onto the panel base the cutout was
+    # filled with, which is what the fade reveals. No selection, or no
+    # tiles on this clone: no picture.
+    surf_box = _box(screen, "planet_surface")
+    if row is not None and surf_box is not None and surf_box.ref_rect:
+        from core import imagebox
+        from . import colonysurfaces
+        picture = colonysurfaces.set_for(screen).get(row.get("climate"))
+        if picture is not None:
+            if not hasattr(screen, "_surface_cache"):
+                screen._surface_cache = {}
+            imagebox.render_image_box(surface, screen.layout, picture,
+                                      surf_box.ref_rect, surf_box.style,
+                                      screen._surface_cache)
     box = screen.box_rect("planet_output")
     if box:
         from . import colonyoutputicons
@@ -291,6 +316,20 @@ def render_for(screen, surface):
         # is a RECT AND NOTHING ELSE: which image fills it is the
         # climate's, resolved through `colonyplanets` and the resource
         # stack, so a mod's discs still win (decisions 16, 17, 19).
+        # ── THE NAME HEADING — HD EXTENSION, brief 97 ──────────────
+        # The original's box prints no name — `E_Strings_(74)` starts
+        # at the planet's size (colsum.cpp:1196-1206), and the name is
+        # the list row's. Data's decision of 13 September 2026 adds it
+        # as a heading ABOVE the paragraph and changes nothing in the
+        # paragraph itself. A `text`-skin box: the string is `Box.text`
+        # at runtime, never saved (decision 37), drawn in the header's
+        # own colour, and never reddened — the red belongs to the
+        # original's paragraph.
+        name_box = _box(screen, "planet_name")
+        if name_box is not None and name_box.screen_rect is not None:
+            name_box.text = row["name"] if row is not None else None
+            name_box.text_color = HEADING_COLOR
+            name_box.render(surface, screen.layout, screen.style)
         text_box = _box(screen, "planet_paragraph")
         disc_box = _box(screen, "planet_disc")
         if text_box is None or text_box.ref_rect is None:
@@ -395,7 +434,14 @@ def render_info(surface, row, area, cfg, words, climates, layout, style,
         text_box.text = text
         text_box.text_color = color
         text, color = text_box.text, text_box.text_color
-    px = layout.font_size(cfg.get("value_font", 20))
+    # THE BOX'S `font_scale` IS HONOURED, AND ONCE — brief 97. It
+    # multiplies the reference size BEFORE `layout.font_size` scales it
+    # to the window, never after: `box_font_scale` on top of
+    # `font_size` is the double scale the help popup drew at twice its
+    # size with at 3840x2160 (fundament, "Scaling twice").
+    font_scale = (float((text_box.style or {}).get("font_scale", 1.0))
+                  if text_box is not None else 1.0)
+    px = layout.font_size(int(round(cfg.get("value_font", 20) * font_scale)))
     # ── THE PLANET, IN ITS OWN BOX ─────────────────────────────
     #
     # **THE SAME DEVIATION AS THE ROW ICON** (`layout.json`,
@@ -415,12 +461,22 @@ def render_info(surface, row, area, cfg, words, climates, layout, style,
     # (decision 30) — `textfit.squeeze_lines` renders each candidate.
     room_w = max(1, area.w)
     room_h = max(1, area.h)
+    # ONE SIZE FOR THE WHOLE PARAGRAPH — brief 97. Each of the five
+    # lines used to be squeezed on its own against the WHOLE box height,
+    # so every line fitted alone and the five together could run past
+    # the box: at 2560x1440 with Data's font_scale 1.6 they wrapped to
+    # seven lines and left it. The largest size at which every line,
+    # wrapped, fits the box together is the size; measured by rendering
+    # (decision 30), smallest size if nothing fits.
+    sizes = [px - n for n in range(0, max(1, px - 7))]
     lines = []
-    for para in text.split("\n"):
-        wrapped, _size = textfit.squeeze_lines(
-            style, para, room_w, room_h,
-            [px - n for n in range(0, max(1, px - 7))], color[:3])
-        lines.extend(wrapped)
+    for size in sizes:
+        lines = [style.render_text(part, size, color[:3])
+                 for para in text.split("\n")
+                 for part in textfit.wrap_text(style, para, size, room_w)]
+        if (sum(s.get_height() for s in lines) <= room_h
+                and max(s.get_width() for s in lines) <= room_w):
+            break
     # LEFT-ALIGNED, which is what the original's flags argument says:
     # Squeeze_Print_Formatted_Paragraph_(13, 354, 80, 88, buffer, 0)
     # and 0 is JUSTIFY_LEFT (colsum.cpp:1206; the same argument

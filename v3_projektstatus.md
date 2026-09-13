@@ -830,7 +830,7 @@ files under `doc/` and are only summarised here.
 | | |
 |---|---|
 | Python | 32,960 lines across 111 modules — `find . -name '*.py'`, `__pycache__` excluded, the smoke test's 6,400 included. The previous figure here (21,642 across 94) was carried from an unstated method and could not be reproduced |
-| Smoke test | `python tools/smoke_test.py` — **129 checks**, headless |
+| Smoke test | `python tools/smoke_test.py` — **133 checks**, headless |
 | Assets | 170 MB (select_race 68, galaxy_map 51, shared 23, new_game 21, colony_summary 1) |
 | Screens in HD | 7 of ~20–22 (colony summary draws list, sidebar, scan box and galaxy inset, and MOVES POPS — the first HD gesture that drives the game) |
 | Setup from clone | `python tools/setup.py` (deps via the system package manager) |
@@ -3427,7 +3427,7 @@ read. **The font extractor is owed twice**: here and for the name cap
 
 ### Where the briefs and work orders are
 
-**`doc/briefs/`** — 96 briefs (and the pictures of briefs 92 and 95) with a README that indexes them. Data's
+**`doc/briefs/`** — 98 briefs (and the pictures of briefs 92, 95 and 97) with a README that indexes them. Data's
 decision of 9 September 2026, and it closed a gap that had been open
 since the project started.
 
@@ -3448,7 +3448,7 @@ decision 50's withdrawal of it. Both places that cited it by name now
 say what happened instead of pointing at a file a reader cannot open.
 
 Content is byte for byte what arrived. **Dates are stated only where
-the brief's own text carries one** — nine of ninety-six; everything
+the brief's own text carries one** — ten of ninety-eight; everything
 else is undatiert, because a date has to come from the brief or from
 the first commit that implements it, and a cache file's timestamp is
 neither. The numeric prefix is order, not date.
@@ -4955,6 +4955,146 @@ clone is green; the check that would catch the case is the palette
 check above, which requires all seven in the default skin only.
 
 **Next free decision number at the end of this run: 58.**
+
+### Brief 97 Stop 2 — the planet surface tiles, cut — 13 September 2026
+
+Brief 97 (`doc/briefs/97-mockup.png`, 1672x941, `7f40a815…`), after
+Data's decisions on Stop 1: names `planet_info` / `colony_panel` /
+`galaxy_inset` with `planet_output`, `planet_surface` and
+`empire_stats` as parts of `colony_panel`; the shortage figure stays;
+the paragraph keeps the original's format and whole-paragraph red,
+with only a name heading added as an HD EXTENSION; the fade on both
+sides, image-box drawing moved into core, tiles scaled up;
+`planet_paragraph` honours `font_scale`, scaled once. **Decision 58**
+filed under Sizing and artwork: the surface picture is an **HD
+EXTENSION** and the artwork is AI-generated.
+
+**Inputs.** `assets/frame.png` replaced in place (`e2cec1ec…`,
+1672x941 RGBA, three bottom holes and no title cartouche);
+`assets/_src/surfaces/planet_surfaces.png` committed as source
+(`0092f485…`, 2172x724 RGB, Data's ChatGPT sheet, no copyright claim,
+listed in LICENSE's scope).
+
+**The mapping is the enum's.** The sheet's labels run Toxic, Radiated,
+Barren, Desert, Tundra / Ocean, Swamp, Arid, Terran, Gaia, which is
+`PLANET_CLIMATE` 0..9 exactly (orion2_consts.h:362-373) and
+`colonyplanets.NAMES` — checked against the source, not assumed.
+
+**The cut, `tools/make_surface_tiles.py`.** Each card is a thin grey
+frame on a flat field of about (1, 8, 15); the picture has its own
+3 px outline (dark, bright, dark) and one anti-aliased row or column
+against it. Brightness masks could not bound the pictures — Barren's
+sky and Swamp's left edge are close to black — so the rule is the
+edges, from median profiles across all ten cards: first full column
+13 + 434·column, 411 wide; rows 124..334 (211 high) on top and
+430..643 (214 high) below, the two rows genuinely three pixels apart
+on the sheet. A plain crop at sheet resolution, no resampling, sha256
+guard on the sheet.
+
+| climate | tile (x, y, w, h) | sha256 |
+|---|---|---|
+| toxic | (13, 124, 411, 211) | `30bf6b50c989c9e0…` |
+| radiated | (447, 124, 411, 211) | `329dd4b4a336e70e…` |
+| barren | (881, 124, 411, 211) | `e0434f35a3c018c0…` |
+| desert | (1315, 124, 411, 211) | `f82fa12b258698a9…` |
+| tundra | (1749, 124, 411, 211) | `ebb9c29301e4f440…` |
+| ocean | (13, 430, 411, 214) | `4670f5e4d93edf73…` |
+| swamp | (447, 430, 411, 214) | `096e8277ae3e6d3b…` |
+| arid | (881, 430, 411, 214) | `9bd57e08c78ea2fa…` |
+| terran | (1315, 430, 411, 214) | `fa8749a2998f877a…` |
+| gaia | (1749, 430, 411, 214) | `87ac13c9d4f96a9a…` |
+
+Derived and ignored: `tools/setup.py` runs the tool, `.gitignore`
+lists `assets/surfaces/`, and a second run into a scratch directory is
+byte-identical for all ten. **The loader is `colonysurfaces.py`**, the
+planet loader's shape: by climate through the resource roots, kept at
+sheet resolution (the image box scales once, at Stop 3), and a root
+without tiles is the `missing` state with a log line naming
+`tools/setup.py` — decision 38's rule — never an exception. Marked HD
+EXTENSION (decision 58) and DEVIATION in kind there, in the fundament,
+in LICENSE and here; one new smoke check holds the tile rule over
+every climate id, the sizes, the byte rebuild, the missing state and
+the markings (**129 → 130**).
+
+**The picture beside the sheet for Data's look:**
+`~/orionlayer-fixtures/evidence/brief97/tiles_vs_sheet.png` — each
+card at 2x with the cut rectangle drawn on it in magenta, and the cut
+tile beside it at 2x.
+
+**THE SUITE IS RED UNTIL STOP 3, AND WHY.** The new frame has three
+bottom holes and `layout_reference.json` still names four rectangles,
+so the hole match stops the run before it reaches the new check; the
+check's assertions were exercised on their own against the cut tiles.
+Nothing is committed at this stop. (A copying error in the chat report
+put barren's hash tail on toxic; the files were re-hashed, they do not
+collide, and the prefixes in the table above were always right.)
+
+### Brief 97 Stop 3 — the bottom row rearranged — 13 September 2026
+
+Data approved the tiles. **The reference first, then the regenerator.**
+`layout_reference.json` names the three windows the frame cuts —
+`planet_info` [100, 724, 460, 197], `colony_panel` [581, 724, 923,
+197], `galaxy_inset` unchanged inside its hole [1534, 723, 282, 199] —
+and `tools/frame_holes.py --write` then matched all twelve holes (rows
+[1, 3, 8], **every hole claimed, `SPARE_HOLES` empty**) and kept **11
+non-cutout boxes in each of the two lists**. `--write` writes NAMES
+ONLY for the colony summary now (rects are the reference's, decision
+55; `role` was deleted from the data model) and ends the file with a
+newline, which also fixed `boxes.json`'s missing one. `BAND_KEYS` is
+the three windows; the cartouche explanations in `SPARE_HOLES`,
+`_match_by_overlap` and `name_holes_colony_summary` are retired.
+
+**Parts.** `colonyplates.PARTS` holds `planet_info_parts` and
+`colony_panel_parts`, both editor-free and written back by an F5 save.
+Inside `planet_info`: `planet_disc`, `planet_paragraph` (Data's F5
+placement kept, moved with the window by -481 px) and **`planet_name`,
+the name heading — HD EXTENSION**, a text box in `header_text`, never
+reddened. Inside `colony_panel`: `planet_output`, **`planet_surface`**
+(image skin, `fade_left` / `fade_right` 0.2 in both lists) and
+`empire_stats`. The panel fill moved to `colony_panel`.
+
+**Drawing.** `core/imagebox.py` is Empire Identity's image-box code,
+moved and given `fade_right`; the fade multiplies alpha, so the soft
+edge is the panel base under the box. The surface picture is drawn
+before the rows. `planet_paragraph` honours its `font_scale` (Data's
+1.6) once, before the window scale.
+
+**Three things the rearrangement surfaced, all measured:**
+
+| what | why | done |
+|---|---|---|
+| the rows need 22 px more than the mockup gives | at the mockup's 246 px, RESEARCH with a three-digit net and a three-digit shortage leaves less than one em between label and value at all twelve sizes (3-36 px short) | `planet_output` 268, `planet_surface` from x 849, 431 wide; 264 was the first width that cleared, 268 clears by >= 5 px. The check was re-pointed from a two-column table nobody draws to the drawn one-column rows with icons |
+| the paragraph could run out of its box | each line was squeezed against the whole box height on its own; at 2560x1440 with font_scale 1.6 five lines wrapped to seven and left the box | one size for the whole paragraph, the largest at which all lines fit together |
+| **decision 44 is live again** | `empire_stats` is 224 px, under the original's 312, so the clamp fires at every size — the day-old "retired" text was wrong from this frame on | `colonyempire.value_column` and `empire._native_width_note` say DEVIATION, live; the existing check enforces exactly that |
+
+**Checks 130 → 133:** the lower band is three holes matched to the
+three windows with no spare hole and the three parts inside
+`colony_panel`; `planet_surface` on the screen is `core/imagebox`'s
+drawing of the climate's tile with the box's own style, its outer
+column is the panel base, and zeroing `fade_left` in the style changes
+it; `planet_name` is the colony's name in `header_text` and the
+paragraph's first line renders at `font_size(value_font x font_scale)`
+at 1080p and 1440p. The brief 95 round trip now covers `planet_name`
+and `planet_surface` too.
+
+**SCREENSHOTS** in `~/orionlayer-fixtures/evidence/brief97/`:
+`stop3_vs_mockup_native_{1920,2560}.png` (HD, `97-mockup.png`, and the
+last native screenshot `evidence/brief92/native_full.png`) and
+`stop3_hd_{1920,2560}.png`. **The HD half is LIVE and the save has
+DRIFTED**: the game on screen 20 fingerprints as the reference save,
+but `verify_colonies` finds 2 of 55 records changed — Vox IV (13
+bytes) and Blucher II (2 bytes) — which matches the mockup's Vox IV
+(workers and scientists, -189k). Nothing was loaded or clicked in this
+run, and the slot was NOT reloaded, because the change is in the game
+someone is holding. The captions say so. `SAVE10.GAM` `9f9f35e4…`
+before and after; the secured copy intact.
+
+**WHAT WOULD BREAK A FRESH CLONE.** A clone that runs the smoke test
+before `tools/setup.py` fails the surface check ("no surface tile for
+climate 0 … run `python tools/setup.py`"), the same way the output
+icons do — the tiles are generated and ignored. The GAME does not
+break: `colonysurfaces` reports the missing set once and draws no
+picture (decision 38). CLAUDE.md's order is setup, then the smoke test.
 
 ### The eighth slot: RETURN is a cutout again — 12 September 2026
 
