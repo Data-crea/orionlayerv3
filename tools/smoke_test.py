@@ -13443,12 +13443,45 @@ def main():
                            "will be invisible in the diff"))
     assert not _json_bad, "JSON formatting: " + "; ".join(
         f"{_f}: {_w}" for _f, _w in _json_bad)
-    _json_missing = _JSON_OTHER - _json_seen
+    # GENERATED FROM THE PLAYER'S INSTALL, GITIGNORED, AND THEREFORE
+    # ALLOWED TO BE ABSENT — 13 September 2026. Until then every
+    # exception had to exist, so a fresh clone (which has none of the
+    # extracted files, decision 40) failed this check before anyone
+    # had run an extractor. The list is separate from _JSON_OTHER
+    # because the two answer different questions: hestrings_en.json
+    # round-trips at indent=2 and is no formatting exception, but it is
+    # just as absent from a clone. Each entry must really be ignored by
+    # git — a committed file on this list could vanish unnoticed.
+    _JSON_ABSENT_OK = {
+        os.path.join("assets", "shared", "help", "help_en.json"),
+        os.path.join("assets", "shared", "names", "buildings_en.json"),
+        os.path.join("assets", "shared", "names", "estrings_en.json"),
+        os.path.join("assets", "shared", "names", "hestrings_en.json"),
+    }
+    if os.path.isdir(os.path.join(_json_root, ".git")):
+        import subprocess as _json_sp
+        _json_ign = _json_sp.run(
+            ["git", "-C", _json_root, "check-ignore", "--no-index",
+             *sorted(_JSON_ABSENT_OK)], capture_output=True, text=True)
+        _json_tracked = _JSON_ABSENT_OK - set(
+            _json_ign.stdout.split())
+        assert not _json_tracked, (
+            f"these files may be absent from the tree but git does not "
+            f"ignore them — a committed file must not be allowed to "
+            f"go missing: {sorted(_json_tracked)}")
+    else:
+        report("JSON absent-allowed list NOT checked against .gitignore "
+               "— no .git directory")
+    _json_absent = sorted(_f for _f in _JSON_ABSENT_OK if not
+                          os.path.exists(os.path.join(_json_root, _f)))
+    _json_missing = _JSON_OTHER - _json_seen - _JSON_ABSENT_OK
     assert not _json_missing, (
         f"these files are listed as formatting exceptions and are not "
         f"in the tree: {sorted(_json_missing)}")
     ok(f"JSON files keep their own formatting ({len(_JSON_OTHER)} "
-       f"exceptions, exact in both directions)")
+       f"exceptions, exact in both directions; {len(_json_absent)} of "
+       f"{len(_JSON_ABSENT_OK)} generated files absent, which a fresh "
+       f"clone may be)")
 
     # ── EVERY FIXTURE A RUN CAN NAME HAS BYTES IT CAN CHECK ─────
     #
