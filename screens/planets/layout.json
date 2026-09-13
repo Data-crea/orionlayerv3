@@ -33,7 +33,7 @@
     "gravity": "Gravity",
     "minerals": "Minerals",
     "size": "Size",
-    "_note": "OUR WORDING. The original's list has no column headings at all - its header strip (help 338, native 16,12-414,32) is PLNTSUM.LBX artwork. The mockup's five words are kept because a list without them does not read at HD sizes."
+    "_note": "OUR WORDING for the five column headings. The original draws them as PLNTSUM.LBX artwork in its header strip (help 338, native 16,12-414,32) - there is no string behind them to extract. The five words are the ones that artwork shows (seen on the native frame in brief 101 Stop 3)."
   },
   "words": {
     "sort_heading": "Sort Priority",
@@ -74,7 +74,7 @@
         ]
       }
     ],
-    "_buttons_note": "Add_Multi_Button_Field_(441, 200), (501, 200), (567, 200) (plntsum.cpp:693-695); type 3, which ACTIVATE_FIELD does not take (decision 20), so the injection is a click at `native_click`, the centre of the help box each one has (evanhelp.cpp:118 entries 348-350). `value` is the row value the key sorts on, DESCENDING: qsort_by_climate_ / qsort_by_minerals_ / qsort_by_max_population_ subtract left from right (plntsum.cpp:1216-1230). STABLE SORT: HD sorts with Python's stable sort; the original's qsort is not stable, so two planets with equal keys may stand in a different order than the game's. Same row set, same order between distinct keys - Data's acceptance, brief 101 Stop 1.",
+    "_buttons_note": "Add_Multi_Button_Field_(441, 200), (501, 200), (567, 200) (plntsum.cpp:693-695); type 3, which ACTIVATE_FIELD does not take (decision 20), so the injection is a click at `native_click`, the centre of the help box each one has (evanhelp.cpp:118 entries 348-350). `value` is the row value the key sorts on, DESCENDING: qsort_by_climate_ / qsort_by_minerals_ / qsort_by_max_population_ subtract left from right (plntsum.cpp:1216-1230). STABLE SORT: HD sorts with Python's stable sort; the original's qsort is not stable, so two planets with equal keys may stand in a different order than the game's. Same row set, same order between distinct keys - Data's acceptance, brief 101 Stop 1. VERIFIED LIVE, brief 101 Stop 3 (13 September 2026, slot 8, fixture_reference_3502.4.GAM): the source gives these three buttons NO hotkey (the seventh argument is \"\", fields.cpp:337 stores its first byte, 0), so the click is the only path; each click re-sorted the native list at the game's own window size, through INJECT_CLICK's coordinate conversion (ext_api.cpp:373, decision 20).",
     "_labels_note": "OUR WORDING: the three keys are PLNTSUM.LBX artwork (pics[1..3])."
   },
   "restrictions": {
@@ -125,9 +125,9 @@
         ]
       }
     ],
-    "_buttons_note": "Add_Radio_Button_Field_ x 441, y 266/289/312/335/358, hotkeys \"1\"-\"5\" in this order (plntsum.cpp:697-701). Radio fields are type 1, which ACTIVATE_FIELD does not take (decision 20): the hotkey is sent first and native_click - the centre of each help box, evanhelp.cpp:118 entries 351-355 - is the fallback. Data, brief 101 Stop 1: try the hotkeys at HD window size in Stop 3 and prefer them if they work.",
+    "_buttons_note": "Add_Radio_Button_Field_ x 441, y 266/289/312/335/358, hotkeys \"1\"-\"5\" in this order (plntsum.cpp:697-701). Radio fields are type 1, which ACTIVATE_FIELD does not take (decision 20): the hotkey is sent first and native_click - the centre of each help box, evanhelp.cpp:118 entries 351-355 - is the fallback. Data, brief 101 Stop 1: try the hotkeys at HD window size in Stop 3 and prefer them if they work. THEY WORK - verified live in Stop 3 on slot 8: all five toggled the native radio (1972-2094 changed pixels each, on and off) by hotkey alone, and the native click was never needed.",
     "_labels_note": "OUR WORDING: the five toggles are PLNTSUM.LBX artwork (pics[4..8]).",
-    "_state_note": "THE GAME'S TOGGLES ARE NOT ON THE WIRE. The five _filter_out_* globals live in PLNTSUM and are not in the snapshot, and unlike the sort key a toggle cannot be imposed by clicking it - a click flips it. The HD screen starts with all five off and flips its own flag with every click it sends; if the game held one on before the screen opened, the two disagree until the player clicks it twice. Recorded in v3_projektstatus.md under What is missing.",
+    "_state_note": "THE GAME'S TOGGLES ARE NOT ON THE WIRE. The five _filter_out_* globals live in PLNTSUM and are not in the snapshot, and unlike the sort key a toggle cannot be imposed by clicking it - a click flips it. The HD screen starts with all five off and flips its own flag with every click it sends; if the game held one on before the screen opened, the two disagree until the player clicks it twice. Recorded in v3_projektstatus.md under What is missing. CONFIRMED LIVE in brief 101 Stop 3: on the reference save the game's Planets In Range toggle was already ON when the HD screen opened, so the first run compared a range-filtered native list with an unfiltered HD list; the second run flipped the game's toggle once from outside the screen before comparing.",
     "_gap_range": "MARKED GAP - brief 101, Data's decision (c): the Planets In Range toggle drives the game and the HD list DOES NOT FILTER ON IT YET. Planet_In_Range_Of_A_Colony_ calls SHIPMOVE::Star_In_Extended_Range_Of_Player_ (shipmove.cpp:327), which needs s_player.ship_range, the treaty table and the star's black-hole block bitmap - none of them a verified spec (decision 23). Its own follow-up brief builds it. Asserted by a smoke check that fails if this marking disappears."
   },
   "send": {

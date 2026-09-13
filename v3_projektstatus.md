@@ -3155,8 +3155,38 @@ No framebuffer fallback on the round trip.
   a read-only snapshot of the running game (current_screen 32, 495
   planets, 140 rows; Rex I / Natives / (Hydra) / Gaia 1.5 Food / Normal
   G / Rich 5 prod/worker / Large 20 max pop — the mockup's first row).
-  The live stop (Stop 3: native side-by-side, hotkeys at HD window size,
-  every help region, `SAVE10.GAM`) is not done yet.
+- **Stop 3, live — 13 September 2026.** Slot 8,
+  `fixture_reference_3502.4.GAM` (loaded through the game's own Load
+  dialog: fields G, L, then the slot's hidden field; `verify_colonies`
+  all 55 records byte for byte before and after). `SAVE10.GAM`
+  `9f9f35e4…` before and after — Data's own autosave from that morning,
+  not the secured copy, which was not touched. Every input went through
+  the HD screen's own handlers with the live client attached:
+  - main → Planets by the galaxy map's field 11; the dispatcher routed
+    32 to `planets` with no framebuffer fallback; RETURN by the esc
+    field id back to screen 0 (twice).
+  - The three sort keys have **no hotkey** in the source and re-sorted
+    the native list by injected click at the game's window size
+    (decision 20's coordinate fix, `ext_api.cpp:373`).
+  - **Hotkeys 1–5 work at HD window size** for all five restrictions,
+    on and off; the click fallback was never used.
+  - **Row counts agree for every restriction and the combination**
+    gravity + hostile + minerals (34), read off the native scroll thumb
+    through `Get_Vertical_Scroll_Bar_Height_`: 140, 51, 98, 56, 83, 34.
+    The eight visible native rows are all in the HD set with the same
+    key values; order differs only inside ties (the stable sort).
+    Range: native 41, HD 140 — the marked gap, as designed.
+  - **The toggle-state gap showed up for real**: the game's range
+    toggle was ON before the screen opened, so the first run compared a
+    filtered native list with an unfiltered HD one. The second run
+    flipped it once from outside the screen first.
+  - All 15 help regions opened their entry; **the first open popup
+    crashed** — `help_popup` had no rect. Fixed, and the help check now
+    renders an open popup at four sizes.
+- **Brief 101 closed.** Deferred, and listed under What is missing:
+  the range filter (its own brief), sending ships with ETA markers and
+  send cancel (the event-driven send brief), the toggle state on the
+  wire, the monster-system ship name, the monster pictures.
 
 ## What is missing
 
@@ -3224,7 +3254,8 @@ No framebuffer fallback on the round trip.
   A second brief, an event-driven chain (decision 21).
 - **The five toggles are not on the wire.** HD starts with all five off;
   a toggle the game held on before the screen opened disagrees until it
-  is clicked twice.
+  is clicked twice. Seen live in Stop 3 on the reference save (range was
+  on). How to close it is an open question for Data.
 - The special line's ship name in a monster system (the design part of
   the ship spec); the monster picture set; the star-click warning box
   (H 0x14F); rotating planets and the inset's animated scanned star.
