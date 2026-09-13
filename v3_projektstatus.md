@@ -13,7 +13,22 @@ right and the header had gone stale** — resolved 10 September 2026
 by dating the header to the edit and giving this session its
 paragraph, below, so the two agree again.
 
-This session (13 September 2026), last: **the output panel's rows
+This session (13 September 2026, briefs 95/96), last: **the colony
+list wears Data's palette, RETURN is the sort keys' size, and the scan
+box's paragraph and disc are boxes.** Rows stripe A/B by list index
+and the scanned colony's band is filled — an HD EXTENSION, decision 57,
+with no hover key because the hovered row is the scanned row
+(colsum.cpp:880-890). Panel base, header background and text, and the
+cell outlines come from Data's table; every one of those colours lives
+in `colors.json` only (`palette.require`, no code default), and
+`panels` in `layout.json` names keys instead of typing the inset's
+black. RETURN 24 → 18 in both lists. `planet_paragraph` (text skin)
+and `planet_disc` (rect only) sit inside `planet_info` under
+`layout_reference.json` `planet_info_parts`, draggable in F5 and
+written back there; `planet_disc_gap` and the padding arithmetic are
+gone. Smoke 125 -> **129**. See "Brief 95 Run 2" below.
+
+This session (13 September 2026), earlier: **the output panel's rows
 wear icons, with a line between them** — brief 92, decision 56. Six
 31x31 masters cut from Data's AI-generated sheets by
 `tools/make_output_icons.py` (derived, ignored, rebuilt by setup and
@@ -815,7 +830,7 @@ files under `doc/` and are only summarised here.
 | | |
 |---|---|
 | Python | 32,960 lines across 111 modules — `find . -name '*.py'`, `__pycache__` excluded, the smoke test's 6,400 included. The previous figure here (21,642 across 94) was carried from an unstated method and could not be reproduced |
-| Smoke test | `python tools/smoke_test.py` — **125 checks**, headless |
+| Smoke test | `python tools/smoke_test.py` — **129 checks**, headless |
 | Assets | 170 MB (select_race 68, galaxy_map 51, shared 23, new_game 21, colony_summary 1) |
 | Screens in HD | 7 of ~20–22 (colony summary draws list, sidebar, scan box and galaxy inset, and MOVES POPS — the first HD gesture that drives the game) |
 | Setup from clone | `python tools/setup.py` (deps via the system package manager) |
@@ -3412,7 +3427,7 @@ read. **The font extractor is owed twice**: here and for the name cap
 
 ### Where the briefs and work orders are
 
-**`doc/briefs/`** — 94 briefs (and brief 92's mockup) with a README that indexes them. Data's
+**`doc/briefs/`** — 96 briefs (and the pictures of briefs 92 and 95) with a README that indexes them. Data's
 decision of 9 September 2026, and it closed a gap that had been open
 since the project started.
 
@@ -3433,7 +3448,7 @@ decision 50's withdrawal of it. Both places that cited it by name now
 say what happened instead of pointing at a file a reader cannot open.
 
 Content is byte for byte what arrived. **Dates are stated only where
-the brief's own text carries one** — seven of ninety-four; everything
+the brief's own text carries one** — nine of ninety-six; everything
 else is undatiert, because a date has to come from the brief or from
 the first commit that implements it, and a cache file's timestamp is
 neither. The numeric prefix is order, not date.
@@ -4567,7 +4582,7 @@ the one thing that blocks it:
 
 | idea | what it is | the blocker |
 |---|---|---|
-| Row highlighting | alternating row backgrounds and a lit marker on the selected colony | the original's only row state is the NAME's colour (`Set_Colony_Font_To_Blue_`, colsum.cpp:554) and the only `Fill_`/`Line_` calls on the screen are the scroll thumb's (:759-765) — a lit row is an INVENTION and needs Data's call, not a renderer change |
+| Row highlighting | alternating row backgrounds and a lit marker on the selected colony | **BUILT 13 September 2026, briefs 95/96, as an HD EXTENSION** (decision 57): rows A/B by list index and the scanned colony's band filled, from Data's table. No separate hover colour — the hovered row is the scanned row (colsum.cpp:880-890). The original's facts in this cell still stand: its only row state is the NAME's colour (`Set_Colony_Font_To_Blue_`, colsum.cpp:554) and the only `Fill_`/`Line_` calls on the screen are the scroll thumb's (:759-765) |
 | Job colours | farmers green, workers orange, scientists blue | **the figure's colour IS the race in the original** — `People_Anim_` indexes `race * 13 + job * 2` (colony_main.cpp:444) and the bronze/teal/white are that race's sprites. Tinting by job throws away the fact the sprite carries, and the identity letters (decision 48) exist because that fact is load-bearing |
 | Building icons | an icon per building instead of the bare name | **needs artwork that does not exist** — there is no icon set for 49 buildings and the game ships none; and the names themselves come from the player's TECHNAME.LBX, so a mod-shaped icon path would need the same per-name resolution the figures have |
 | Build progress | a bar and "3 Turns" in the BUILDING column | **needs the cost extraction** — `TECHDATA::_buildings[].cost` is not extracted, which is the same absence that makes Producing sort by name (colsum.cpp:1091). Turns remaining is cost against industry and neither half is on the wire yet |
@@ -4808,6 +4823,138 @@ in these pictures and **Vox IV is the one like-for-like pair.**
   `icon_gap` 8 right against the label?
 
 **Next free decision number at Run 2's end: 57.**
+
+### Brief 95 Run 2 — the list palette, RETURN's size, the scan box as boxes — 13 September 2026
+
+Briefs 95 (`doc/briefs/95-…md`, with `95-palette.png`, 1114x687,
+sha256 `3c1409a3ba577a64…`) and 96 (Data's decisions on the Stop 1
+report, `a59f66f0d9a6032e…`). Decision **57** filed under
+**Structure**, beside 34, because it is the same kind of decision —
+which colours the project's own palette uses and where they live.
+
+**STOP 1, AS REPORTED.** The list had no per-row fill (one
+`panel_background` fill for `list_area` through
+`colonyplates.render_fills`, then a 1 px `draw_plate` outline per
+cell); the pointer already moves the selection
+(`handle_mouse_motion` → `Window.row_at` → `Selection.hover`,
+transcribed from colsum.cpp:880-890); the selected row is one variable,
+`colonyselect.Selection.colony`; the F5 editor's wheel writes
+`font_scale`, which neither the sort keys nor RETURN read, so Part B
+could not have been done in-game.
+
+**STOP 2 — THE PALETTE. HD EXTENSION for the row fills.**
+
+| key | value | what reads it |
+|---|---|---|
+| `panel_background` | #080E17 (8, 14, 23), was (8, 11, 20) | every panel's fill, the sidebar's own fill, the move notice |
+| `row_a` / `row_b` | #0A121E / #111E2E | `colonylist.render`, by LIST index (`first` + band) |
+| `row_selected` | #182B72 | the scanned colony's band, from the same `scanned` the bright name reads |
+| `plate_outline` | #29394C, was a code default (55, 65, 85) | the list's cell outlines only |
+| `header_background` | #09111D | `panels.header` names it |
+| `header_text` | #79A8E8 | the five column words; `label` untouched |
+| `galaxy_inset_fill` | (0, 0, 0), MOVED from `layout.json` | `panels.galaxy_inset` names it |
+
+Removed: `colony_summary.nav_background` and `screen.NAV_BG` — nothing
+on this screen read either. **NOT removed: the galaxy map's own
+`nav_background`**, which the full-project grep shows is live
+(`screens/galaxy_map/screen.py`, the nav buttons), so brief 96's
+"anywhere" is held to this screen. No `row_hover` key, deliberately,
+and a check fails if one appears. `palette.require` is new in
+`core/palette.py`: a colour with no code default raises and names the
+key. The colonylist comment that claimed the header and the cells
+share one key is corrected: the header plates are `panel.thin_border`.
+The fills are drawn under the plates, across the five plated columns,
+never behind the scroll track.
+
+**PART B — RETURN 24 → 18, both lists.** The "RETURN is an opaque
+plate" check passes at all twelve sizes. Fit and slack, measured
+(word + `HIGHLIGHT_PAD` per side against the box):
+
+| size | font | word + pads | box w | slack x (was at 24) | slack y |
+|---|---:|---:|---:|---:|---:|
+| 1280x720 | 12 | 60 | 89 | 29 (11) | 22 |
+| 1366x768 | 12 | 60 | 95 | 35 (14) | 24 |
+| 1440x900 | 13 | 63 | 100 | 37 (15) | 25 |
+| 1600x900 | 15 | 75 | 111 | 36 (16) | 28 |
+| 1680x1050 | 15 | 75 | 117 | 42 (17) | 30 |
+| 1920x1080 | 18 | 89 | 134 | 45 (19) | 34 |
+| 1920x1200 | 18 | 89 | 134 | 45 (19) | 34 |
+| 2048x1152 | 19 | 95 | 142 | 47 (21) | 36 |
+| 2560x1080 | 18 | 89 | 134 | 45 (19) | 34 |
+| 2560x1440 | 24 | 119 | 178 | 59 (24) | 45 |
+| 3440x1440 | 24 | 119 | 178 | 59 (24) | 45 |
+| 3840x2160 | 36 | 179 | 268 | 89 (37) | 68 |
+
+The word now sits in visible slack — about a third of the box's width
+at every size. The box was NOT resized; that is Data's to move.
+
+**STOP 3 — THE PARAGRAPH AND THE DISC ARE BOXES.** Both in
+`layout_reference.json` under `planet_info_parts` (a key in
+`colonyplates.NOT_A_WINDOW`, so the hole checks never match them to
+the artwork), seated by `colonyplates.part_rects`, listed by name in
+both `boxes.json` lists, and **editor-free by construction**:
+`colonyplates.editor_free` adds them and `write_back` writes a drag
+into `planet_info_parts` unbled. `planet_paragraph` is a `text`-skin
+box: the filled template is `Box.text` and its colour `Box.text_color`
+at runtime (red for negative growth), and `to_dict` writes neither.
+`planet_disc` is a rect and nothing else — the image is still the
+climate's, through `colonyplanets` and the resource stack; the one
+existing image box in the tree (empire_identity's homeworld art)
+stores zoom, crop and fade and no path. **The renderer fits the disc
+into the box's SHORTER side, centred**, so a box dragged out of square
+does not stretch the planet. The wrap width is the box's width,
+measured by rendering as before. Placement reproduces the old
+arithmetic at 1920x1080 (disc 595, 734, 177, 177; paragraph 784, 734,
+240, 177): **the set of drawn pixels inside `planet_info` is identical
+before and after at 1080p (25,859) and 1440p (45,285)**; the only
+differences are anti-aliased edges blending into the new panel base.
+`planet_disc_gap` had one reader and is deleted with the padding
+arithmetic.
+
+**Checks 125 → 129:** the palette (seven keys to Data's hex, no
+`nav_background`, no `row_hover`, the marking at every home, no typed
+row-background or plate-outline colour anywhere in
+`screens/colony_summary/`, read by AST); the stripe and selected fill
+rendered at first = 0 and 1; both boxes at every resolution declaring
+`planet_info`, inside it, the disc pixel-for-pixel and the paragraph
+as `Box.text` / `Box.text_color`; an F5 save round trip (boxes.json
+and the reference unchanged, no text, colour, rect or image path on
+either box, a dragged disc landing in `planet_info_parts`). Four
+existing checks were re-pointed, not deleted: the reference
+vocabulary and the editor-free names now include the parts, the panel
+fill check samples the header and the inset through their skin keys,
+and the hole report names keys.
+
+**SCREENSHOTS.** `~/orionlayer-fixtures/evidence/brief95/{1920x1080,
+2560x1440}/`: the HD half LIVE from the running game (slot 8's
+`fixture_reference_3502.4.GAM`, stardate 3502.4, `verify_colonies`
+all 55 records matching), the native half the LAST native screenshot
+of this screen, `evidence/brief92/native_full.png` (08:45, same
+fixture). The game was on the galaxy map, so a live native frame would
+have been the wrong screen; nothing was loaded or clicked in this run.
+`SAVE10.GAM` was `9f9f35e417947840` at 09:41 and at 09:42 — it had
+changed since brief 92's `6dfcbfc9…` (08:45), before this run touched
+anything, so the game rewrote its autosave in between; the secured
+copy `2610f39c…` is intact.
+
+**Questions for Data, not findings:** the HD half selects Blucher II
+and the native half scans Vox IV (they are not one moment), so the
+lit row has no native counterpart by construction — is #182B72 the
+weight wanted against the stripe? Does the header text at #79A8E8
+("ca.") read right? RETURN's slack, as above.
+
+**WHAT WOULD BREAK A FRESH CLONE.** Seven colours now have no code
+default, so **a skin whose `colors.json` predates them raises
+`KeyError` when the colony screen's modules import** — `plate_outline`,
+`row_a`, `row_b`, `row_selected`, `header_text` at import, and
+`header_background` / `galaxy_inset_fill` at the first frame. Decision
+17 resolves a skin as a whole directory, so a mod skin does not
+inherit them. **No shipped mod carries a skin or a `colors.json`**
+(`mods/example_mod` overrides one main-menu credits file), so a fresh
+clone is green; the check that would catch the case is the palette
+check above, which requires all seven in the default skin only.
+
+**Next free decision number at the end of this run: 58.**
 
 ### The eighth slot: RETURN is a cutout again — 12 September 2026
 

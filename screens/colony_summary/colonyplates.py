@@ -63,7 +63,13 @@ BLEED = 2
 #: nor named here is an ERROR and not a silent omission — a screen that
 #: quietly skipped a malformed rect would draw thirteen boxes and look
 #: almost right.
-NOT_A_WINDOW = ("list_columns", "_resolutions")
+NOT_A_WINDOW = ("list_columns", "_resolutions", "planet_info_parts")
+
+#: Boxes INSIDE a window that are not holes of the artwork — brief 95
+#: Part C, 13 September 2026. `{box name: [x, y, w, h]}`, reference px,
+#: not bled, and editor-free by construction: nothing slides out from
+#: under a box that is not a hole. See `_planet_info_parts_note`.
+PARTS = "planet_info_parts"
 
 #: `layout_reference.json` names a RECTANGLE, `boxes.json` names a BOX,
 #: and two of them differ. `tools/frame_holes.BOX_NAME` holds the same
@@ -194,7 +200,18 @@ def all_rects(data):
     cols = data.get("list_columns")
     if cols:
         out.update(column_rects(out["list_area"], cols))
+    out.update(part_rects(data))
     return out
+
+
+def part_rects(data):
+    """{box name: rect} — the boxes inside a window, as typed.
+
+    Not bled: they sit inside a panel, clear of the frame's rim, so
+    there is no edge for a bleed to cover.
+    """
+    return {name: list(rect)
+            for name, rect in (data.get(PARTS) or {}).items()}
 
 
 #: A key shaped `_hole_<window>` gives that window's CUTOUT, for the
@@ -298,9 +315,14 @@ def seat(boxes, rects, layout):
 
 
 def editor_free(data):
-    """Box names the F5 editor may move, from a loaded reference."""
-    return {BOX_NAME.get(n, n): n
-            for n in data.get("_editor_free", ())}
+    """Box names the F5 editor may move, from a loaded reference.
+
+    The declared windows, plus every part (`PARTS`), which is free by
+    construction and has no hole to slide out from under.
+    """
+    free = {BOX_NAME.get(n, n): n for n in data.get("_editor_free", ())}
+    free.update({n: n for n in part_rects(data)})
+    return free
 
 
 def write_back(screen):
@@ -332,12 +354,20 @@ def write_back(screen):
     if not free:
         return []
     by_name = {b.name: b for b in screen.boxes}
+    parts = data.get(PARTS) or {}
     wrote = []
     for box_name, ref_name in free.items():
         box = by_name.get(box_name)
         if box is None or box.ref_rect is None:
             continue
         x, y, w, h = box.ref_rect
+        if ref_name in parts:
+            # A PART IS TYPED AS DRAWN — no bleed came on, none comes off.
+            rect = [x, y, w, h]
+            if parts.get(ref_name) != rect:
+                parts[ref_name] = rect
+                wrote.append((ref_name, rect))
+            continue
         rect = [x + BLEED, y + BLEED, w - 2 * BLEED, h - 2 * BLEED]
         if data.get(ref_name) != rect:
             data[ref_name] = rect
@@ -361,11 +391,15 @@ def render_fills(screen, surface):
     reaches only as far as its hole lets it, and the frame's own rim
     covers the `BLEED` the rect was grown by.
 
-    A panel may name its own fill as `<name>_fill` BESIDE IT in the
-    `panels` block — the galaxy inset does, and
-    `_galaxy_inset_fill_note` carries the measurement it rests on. A
-    per-box value rather than a renderer change, because `colonyinset`
-    draws no background at all, by transcription (movebox.cpp:36-38).
+    A panel may name its own fill: its value in the `panels` block is
+    `true` for the panel base or the NAME of a `colors.json` key — the
+    header wears `header_background` and the galaxy inset
+    `galaxy_inset_fill`, whose note carries the measurement it rests
+    on. Until 13 September 2026 the inset's black was an RGB list
+    beside it as `galaxy_inset_fill` in `layout.json`; a colour there
+    was a place no skin could reach (decision 14). A per-box value
+    rather than a renderer change, because `colonyinset` draws no
+    background at all, by transcription (movebox.cpp:36-38).
 
     **AND IT IS READ FROM `panels`, NOT FROM THE TOP LEVEL.** For a day
     it was `screen._data.get(name + "_fill")` while the value sat in
@@ -376,11 +410,18 @@ def render_fills(screen, surface):
     most panels have none; the smoke check is what makes a stray one
     visible.
     """
+    from core import palette
     from .screen import PANEL_BG
     panels = screen._data.get("panels", {})
 
     def _fill(name, rect):
-        surface.fill(tuple(panels.get(name + "_fill") or PANEL_BG)[:3],
+        # A STRING NAMES A SKIN KEY — 13 September 2026, brief 96. The
+        # colour itself is the skin's (decision 14); `panels` only says
+        # which key a cutout wears. `true` is the panel base.
+        key = panels.get(name)
+        colour = (palette.require("colony_summary", key)
+                  if isinstance(key, str) else PANEL_BG)
+        surface.fill(tuple(colour)[:3],
                      pygame.Rect(*screen.layout.rect(rect)))
 
     # THE HOLES THAT ARE BIGGER THAN THEIR BOX GO DOWN FIRST, so the
@@ -389,7 +430,6 @@ def render_fills(screen, surface):
     for name, rect in getattr(screen, "_hole_fills", {}).items():
         _fill(name, bled(rect))
     for name in panels:
-        box = (None if name.startswith("_") or name.endswith("_fill")
-               else screen.box_rect(name))
+        box = None if name.startswith("_") else screen.box_rect(name)
         if box:
             _fill(name, box)

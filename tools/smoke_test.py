@@ -1067,11 +1067,14 @@ def main():
                 f"seated at load; a rect here is a second copy that "
                 f"nothing reads and nothing keeps current")
     _derived_names = set(_cpl.box_rects(cs))
-    assert _derived_names == fh.RULE_NAMES["colony_summary"] | set(
-        _chdr0.COLUMN_BOXES), (
+    # THE PARTS INSIDE A WINDOW ARE VOCABULARY TOO — brief 95 Part C,
+    # 13 September 2026: `planet_disc` and `planet_paragraph` are typed
+    # in the reference under `planet_info_parts` and are not holes.
+    _vocab = (fh.RULE_NAMES["colony_summary"] | set(_chdr0.COLUMN_BOXES)
+              | set(_cpl.part_rects(_cpl.reference(cs))))
+    assert _derived_names == _vocab, (
         f"the reference derives {sorted(_derived_names)} and the "
-        f"screen's own vocabulary is "
-        f"{sorted(fh.RULE_NAMES['colony_summary'] | set(_chdr0.COLUMN_BOXES))}")
+        f"screen's own vocabulary is {sorted(_vocab)}")
     # AND THE SCREEN DOES NOT READ THE FILE IT WAS WRITTEN INTO.
     # `colonyplates.reseat` rebuilds these rects at every load, so a
     # reference edited without running the tool cannot leave a stale
@@ -1523,7 +1526,8 @@ def main():
                 f"{_hh_win} box {_hw2}x{_hh2} in hole "
                 f"{_hh_rect[2]}x{_hh_rect[3]}, remainder "
                 f"{_hh_rect[2] - _hw2} x {_hh_rect[3] - _hh2} ref px "
-                f"painted {_hh_panels.get(_hh_box + '_fill') or 'PANEL_BG'}")
+                f"painted "
+                f"{_hh_panels.get(_hh_box) if isinstance(_hh_panels.get(_hh_box), str) else 'panel_background'}")
         report("holes wider than their window: " + "; ".join(_hh_seen))
         ok(f"the {len(_hh_declared)} declared hole fill(s) are the "
            f"artwork's own holes, re-derived from the alpha, and each "
@@ -3742,7 +3746,7 @@ def main():
         _sk_a = pygame.surfarray.array3d(
             _sk_surf.subsurface(_sk_r)).transpose(1, 0, 2).astype(int)
         # The word's own ink: the MOST COMMON bright pixel. The fills
-        # under it are dark (nav_background 10/14/26, the active
+        # under it are dark (the panel base 8/14/23, the active
         # 30/48/88) and the anti-aliased edges of the glyphs are every
         # shade between, so the mode is the colour the text was
         # rendered in and a max would be whatever one edge pixel did.
@@ -4956,13 +4960,19 @@ def main():
     # background you see is not always the background that is set —
     # and the only thing that can tell them apart is a sample.
     from screens.colony_summary import screen as _cs_mod
+    from core import palette as _fl_pal
     _fl_panels = _scr_op._data.get("panels", {})
-    for _k in _fl_panels:
-        if not _k.endswith("_fill") or _k.startswith("_"):
+    # A PANEL NAMES A SKIN KEY OR IS `true` — 13 September 2026, brief
+    # 96. A colour typed into `panels` is the second home decision 14
+    # forbids, and a key the skin lacks is a panel that cannot draw.
+    for _k, _v in _fl_panels.items():
+        if _k.startswith("_"):
             continue
-        assert _k[:-5] in _fl_panels, (
-            f"{_k} names no panel — a fill for a panel that does not "
-            f"exist draws nothing and says nothing")
+        assert _v is True or isinstance(_v, str), (
+            f"panels.{_k} is {_v!r} — a panel is `true` (the panel base) "
+            f"or the NAME of a colors.json key, never a colour")
+        if isinstance(_v, str):
+            _fl_pal.require("colony_summary", _v)
     _fl_surf = pygame.Surface((1920, 1080))
     _fl_surf.fill((255, 0, 255))
     _scr_op.render(_fl_surf)
@@ -4971,7 +4981,12 @@ def main():
     # few px inward, and the inset draws stars on top. The background
     # is what most of the box is — the same method the (0, 8, 0)
     # measurement of the original used.
-    for _k, _want in (("galaxy_inset", _fl_panels.get("galaxy_inset_fill")),
+    for _k, _want in (("galaxy_inset",
+                       _fl_pal.require("colony_summary",
+                                       _fl_panels["galaxy_inset"])),
+                      ("header",
+                       _fl_pal.require("colony_summary",
+                                       _fl_panels["header"])),
                       ("planet_info", None)):
         _fr = pygame.Rect(*app.layout.rect(_scr_op.box_rect(_k)))
         _fa = pygame.surfarray.array3d(_fl_surf.subsurface(_fr))
@@ -8595,6 +8610,313 @@ def main():
        "EXTENSION in colonyoutput, colonyoutputicons, colonyrows, "
        "layout.json, colors.json, the fundament and the status document")
 
+    # ── THE LIST PALETTE — decision 57, briefs 95 and 96 ──────────
+    #
+    # Data's table (doc/briefs/95-palette.png) is the SOURCE, so the
+    # skin is held to its hex values; the row fills are an HD
+    # EXTENSION and the marking is asserted at every home; the table's
+    # hover colour has no key on purpose; and — the rule, not the
+    # instance — no module of this screen types a colour for a row
+    # background or a plate outline.
+    import ast as _lp_ast
+    from core import palette as _lp_pal
+    from screens.colony_summary import colonylist as _lp_cl
+    from screens.colony_summary import colonytrack as _lp_ct
+    _lp_root = os.path.dirname(SCREENS_DIR)
+    _lp_skin = _sjson.load(open(os.path.join(
+        _lp_root, "assets", "shared", "skins", "default", "colors.json"),
+        encoding="utf-8"))["colony_summary"]
+    _lp_hex = {"panel_background": "080E17", "row_a": "0A121E",
+               "row_b": "111E2E", "plate_outline": "29394C",
+               "row_selected": "182B72", "header_background": "09111D",
+               "header_text": "79A8E8"}
+    for _lp_k, _lp_h in _lp_hex.items():
+        _lp_want = tuple(int(_lp_h[_i:_i + 2], 16) for _i in (0, 2, 4))
+        assert tuple(_lp_skin.get(_lp_k, ())) == _lp_want, (
+            f"colors.json colony_summary.{_lp_k} is "
+            f"{_lp_skin.get(_lp_k)} and Data's table says #{_lp_h} "
+            f"{_lp_want}")
+        assert _lp_pal.require("colony_summary", _lp_k) == _lp_want
+    assert "nav_background" not in _lp_skin, (
+        "colony_summary.nav_background is back — nothing on this screen "
+        "reads it (the galaxy map's own key is live and separate)")
+    assert "row_hover" not in _lp_skin, (
+        "a row_hover key appeared. Decision 57: the row under the "
+        "pointer IS the scanned colony (colsum.cpp:880-890), so a hover "
+        "fill could never be seen under the selected one")
+    assert _lp_skin["_row_fill_note"].startswith("HD EXTENSION") and \
+        "colsum.cpp:880-890" in _lp_skin["_row_fill_note"], (
+        "colors.json _row_fill_note no longer opens with its marking or "
+        "no longer says why there is no hover key")
+    for _lp_home, _lp_path, _lp_words in (
+            ("colonylist.py", os.path.join(SCREENS_DIR, "colony_summary",
+                                           "colonylist.py"),
+             ("HD EXTENSION, decision 57", "row_selected")),
+            ("doc/v3_fundament.md", os.path.join(_lp_root, "doc",
+                                                 "v3_fundament.md"),
+             ("**57.", "HD EXTENSION")),
+            ("v3_projektstatus.md", os.path.join(_lp_root,
+                                                 "v3_projektstatus.md"),
+             ("decision 57", "HD EXTENSION"))):
+        _lp_text = open(_lp_path, encoding="utf-8").read()
+        for _lp_w in _lp_words:
+            assert _lp_w in _lp_text, (
+                f"{_lp_home} no longer carries {_lp_w!r} — the row fills "
+                f"are an HD EXTENSION and the marking lives at every home")
+    _lp_forbidden = set(_lp_hex) - {"panel_background"} | {"galaxy_inset_fill"}
+    _lp_dir = os.path.join(SCREENS_DIR, "colony_summary")
+    for _lp_fn in sorted(os.listdir(_lp_dir)):
+        if not _lp_fn.endswith(".py"):
+            continue
+        _lp_src = open(os.path.join(_lp_dir, _lp_fn), encoding="utf-8").read()
+        assert "nav_background" not in _lp_src, (
+            f"{_lp_fn} reads nav_background, which this screen dropped")
+        for _lp_n in _lp_ast.walk(_lp_ast.parse(_lp_src)):
+            if not isinstance(_lp_n, _lp_ast.Call):
+                continue
+            _lp_f = _lp_n.func
+            _lp_name = (_lp_f.attr if isinstance(_lp_f, _lp_ast.Attribute)
+                        else getattr(_lp_f, "id", None))
+            _lp_a = _lp_n.args
+            # A CODE DEFAULT FOR ONE OF THESE KEYS is a second home for
+            # the colour — decision 14.
+            if (_lp_name == "col" and len(_lp_a) >= 2
+                    and isinstance(_lp_a[1], _lp_ast.Constant)
+                    and _lp_a[1].value in _lp_forbidden):
+                raise AssertionError(
+                    f"{_lp_fn}:{_lp_n.lineno} reads {_lp_a[1].value!r} "
+                    f"through palette.col with a code default — use "
+                    f"palette.require (decision 14)")
+
+            def _lp_literal(_node):
+                return (isinstance(_node, (_lp_ast.Tuple, _lp_ast.List))
+                        and len(_node.elts) in (3, 4)
+                        and all(isinstance(_e, _lp_ast.Constant)
+                                and isinstance(_e.value, int)
+                                for _e in _node.elts))
+            # A LITERAL COLOUR FOR A PLATE OUTLINE, anywhere on the screen.
+            if _lp_name == "draw_plate" and len(_lp_a) >= 4 \
+                    and _lp_literal(_lp_a[3]):
+                raise AssertionError(
+                    f"{_lp_fn}:{_lp_n.lineno} draws a plate in a literal "
+                    f"colour — the outline is the skin's plate_outline")
+            # A LITERAL COLOUR FOR A ROW BACKGROUND: the list's own fills.
+            if _lp_fn == "colonylist.py" and (
+                    (_lp_name == "fill" and _lp_a and _lp_literal(_lp_a[0]))
+                    or (_lp_name == "rect" and len(_lp_a) >= 2
+                        and _lp_literal(_lp_a[1]))):
+                raise AssertionError(
+                    f"colonylist.py:{_lp_n.lineno} fills in a literal "
+                    f"colour — a row background is the skin's")
+    ok("the list palette is Data's table in the default skin (seven "
+       "keys to the hex), nav_background and row_hover absent, the row "
+       "fills marked HD EXTENSION at every home, and no row-background or "
+       "plate-outline colour typed anywhere in screens/colony_summary/")
+
+    # ── …AND THE STRIPE IS THE LIST'S, THE FILL IS THE SCANNED ROW'S ──
+    # Rendered, twice: from the top and scrolled by one. Every band's
+    # background (the MODE over the band, which the fill dominates) is
+    # row_selected where the band's colony is the scanned one and
+    # otherwise A or B by LIST index — so scrolling by one swaps the
+    # colours on screen and keeps each colony's own.
+    from screens.colony_summary import colonyfigures as _lp_fig
+    from screens.colony_summary import colonyscroll as _lp_scroll
+    _lp_app, _lp_scr = _plv.build_screen(1920, 1080)
+    _lp_app.dispatcher.switch_to("colony_summary")
+    _lp_scr.enter(None)
+    _lp_scr.update(_plv._Snapshot(_plv.COLONIES))
+    _lp_area, _lp_cfg, _lp_scale, _lp_n = _lp_scr._list_view()
+    _lp_rows = _lp_scr._rows
+    assert len(_lp_rows) >= 3, "the synthetic empire has too few rows"
+    _lp_scanned = _lp_rows[2]["index"]
+    _lp_cols = [(_x, _w) for _k, (_x, _w)
+                in _lp_ct.columns(_lp_area, _lp_cfg).items()
+                if _k != _lp_scroll.COLUMN]
+    _lp_x0 = min(_x for _x, _w in _lp_cols)
+    _lp_x1 = max(_x + _w for _x, _w in _lp_cols)
+    for _lp_first in (0, 1):
+        _lp_s = pygame.Surface((1920, 1080))
+        _lp_s.fill((255, 0, 255))
+        _lp_cl.render(_lp_s, _lp_rows, _lp_area, _lp_cfg, _lp_scr.layout,
+                      _lp_scr.style, _lp_first, _lp_scr._frame_inset(),
+                      _lp_fig.set_for(_lp_scr, _lp_area, _lp_cfg),
+                      _lp_scanned, None)
+        _lp_px = _np.array(pygame.surfarray.array3d(_lp_s)).transpose(1, 0, 2)
+        for _lp_b, (_lp_by, _lp_bh) in enumerate(
+                _lp_ct.all_bands(_lp_area, _lp_cfg)):
+            _lp_li = _lp_first + _lp_b
+            _lp_sel = (_lp_li < len(_lp_rows)
+                       and _lp_rows[_lp_li]["index"] == _lp_scanned)
+            _lp_exp = (_lp_cl.ROW_SELECTED if _lp_sel else
+                       (_lp_cl.ROW_A if _lp_li % 2 == 0 else _lp_cl.ROW_B))
+            _lp_band = _lp_px[_lp_by + 2:_lp_by + _lp_bh - 2,
+                              _lp_x0 + 2:_lp_x1 - 2].reshape(-1, 3)
+            _lp_c, _lp_cnt = _np.unique(_lp_band, axis=0, return_counts=True)
+            _lp_got = tuple(int(_v) for _v in _lp_c[int(_np.argmax(_lp_cnt))])
+            assert _lp_got == tuple(_lp_exp[:3]), (
+                f"first={_lp_first} band {_lp_b} (list index {_lp_li}"
+                f"{', scanned' if _lp_sel else ''}) is mostly {_lp_got}; "
+                f"expected {tuple(_lp_exp[:3])}")
+    ok("the list stripes A/B by list index (holds under a one-row "
+       "scroll) and fills the scanned colony's band row_selected, "
+       "measured as the mode of every rendered band")
+
+    # ── THE PARAGRAPH AND THE DISC ARE BOXES — brief 95 Part C ────
+    # At every resolution boxes.json declares planet_info for: both
+    # boxes exist, the paragraph is a `text`-skin box, both sit inside
+    # planet_info and do not overlap, the disc drawn is the climate's
+    # sprite fitted into the disc box, and the paragraph's string and
+    # colour are the box's runtime `text` / `text_color` — red for
+    # negative growth, for the whole paragraph.
+    from screens.colony_summary import colonyplanets as _px_pl
+    _px_boxes = _sjson.load(open(os.path.join(
+        SCREENS_DIR, "colony_summary", "boxes.json"), encoding="utf-8"))
+    _px_res = sorted(_k for _k, _v in _px_boxes.items()
+                     if isinstance(_v, list)
+                     and any(_b.get("name") == "planet_info" for _b in _v))
+    assert _px_res, "no resolution declares planet_info"
+    for _px_spec in _px_res:
+        _px_names = {_b["name"]: _b for _b in _px_boxes[_px_spec]}
+        assert "planet_disc" in _px_names and "planet_paragraph" in _px_names, (
+            f"{_px_spec}: boxes.json lacks planet_disc or planet_paragraph")
+        assert _px_names["planet_paragraph"].get("style", {}).get(
+            "skin") == "text", (
+            f"{_px_spec}: planet_paragraph is not a text-skin box "
+            f"(decision 37)")
+        _px_W, _px_H = (int(_v) for _v in _px_spec.split("x"))
+        _px_app, _px_scr = _plv.build_screen(_px_W, _px_H)
+        _px_app.dispatcher.switch_to("colony_summary")
+        _px_scr.enter(None)
+        _px_scr.update(_plv._Snapshot(_plv.COLONIES))
+        _px_info = pygame.Rect(*_px_scr.layout.rect(
+            _px_scr.box_rect("planet_info")))
+        _px_t = pygame.Rect(*_px_scr.layout.rect(
+            _px_scr.box_rect("planet_paragraph")))
+        _px_d = pygame.Rect(*_px_scr.layout.rect(
+            _px_scr.box_rect("planet_disc")))
+        assert _px_info.contains(_px_t) and _px_info.contains(_px_d), (
+            f"{_px_spec}: paragraph {_px_t} or disc {_px_d} is not "
+            f"inside planet_info {_px_info}")
+        assert not _px_t.colliderect(_px_d), (
+            f"{_px_spec}: the paragraph {_px_t} overlaps the disc {_px_d}")
+        _px_surf = pygame.Surface((_px_W, _px_H))
+        _px_surf.fill((0, 0, 0))
+        _px_scr.render(_px_surf)
+        _px_row = _px_scr.selected_row()
+        _px_tb = next(_b for _b in _px_scr.boxes
+                      if _b.name == "planet_paragraph")
+        assert _px_tb.text == _co.fill_template(
+            _ocfg["info_paragraph"],
+            _co.row_values(_px_row, _words, _climates)), (
+            f"{_px_spec}: planet_paragraph's Box.text is {_px_tb.text!r}")
+        _px_side = min(_px_d.w, _px_d.h)
+        _px_spr = _px_pl.set_for(_px_scr, _px_side).get(_px_row["climate"])
+        _px_x = _px_d.x + (_px_d.w - _px_spr.get_width()) // 2
+        _px_y = _px_d.y + (_px_d.h - _px_spr.get_height()) // 2
+        _px_got = _np.array(pygame.surfarray.array3d(_px_surf.subsurface(
+            pygame.Rect(_px_x, _px_y, _px_spr.get_width(),
+                        _px_spr.get_height()))))
+        _px_ref = _np.array(pygame.surfarray.array3d(_px_spr))
+        _px_op = _np.array(pygame.surfarray.array_alpha(_px_spr)) == 255
+        assert _px_op.sum() > 100 and (
+            _px_got[_px_op] == _px_ref[_px_op]).all(), (
+            f"{_px_spec}: the disc drawn in planet_disc {_px_d} is not "
+            f"the climate's sprite at its shorter side")
+        # THE PARAGRAPH'S INK IS INSIDE ITS BOX.
+        _px_s2 = pygame.Surface((_px_W, _px_H))
+        _px_s2.fill((0, 0, 0))
+        _co.render_info(_px_s2, _px_row, _px_t, _ocfg, _words, _climates,
+                        _px_scr.layout, _px_scr.style, text_box=_px_tb)
+        _px_ink = pygame.surfarray.array3d(_px_s2).sum(axis=2) > 0
+        _px_xs, _px_ys = _np.nonzero(_px_ink)
+        assert len(_px_xs) and _px_t.collidepoint(int(_px_xs.min()),
+                                                  int(_px_ys.min())) \
+            and _px_xs.max() < _px_t.right and _px_ys.max() < _px_t.bottom, (
+            f"{_px_spec}: the paragraph's ink leaves planet_paragraph {_px_t}")
+        assert _px_tb.text_color == _co.VALUE_COLOR
+        _co.render_info(_px_s2, dict(_px_row, growth=-5), _px_t, _ocfg,
+                        _words, _climates, _px_scr.layout, _px_scr.style,
+                        text_box=_px_tb)
+        assert _px_tb.text_color == _co.SHORTAGE_COLOR, (
+            f"{_px_spec}: negative growth did not turn the paragraph box "
+            f"red through Box.text_color")
+    ok(f"planet_paragraph (text skin) and planet_disc sit inside "
+       f"planet_info without overlapping, the disc is the climate's "
+       f"sprite fitted to its box, and the paragraph is Box.text in "
+       f"Box.text_color ({', '.join(_px_res)})")
+
+    # ── …AND AN EDITOR ROUND TRIP WRITES NOTHING IT SHOULD NOT ────
+    # Load, render (which fills Box.text), save exactly as F5's `S`
+    # does — `save_boxes` plus the screen's `save_geometry` — into a
+    # scratch copy, and diff. boxes.json must come back equal, with no
+    # text, colour, rect or image path on either box; the reference
+    # must come back equal; and a DRAG of the disc must land in
+    # `planet_info_parts` and nowhere else.
+    import shutil as _rt_sh
+    import tempfile as _rt_tf
+    from core.box import save_boxes as _rt_save
+    _rt_src = os.path.join(SCREENS_DIR, "colony_summary")
+    with _rt_tf.TemporaryDirectory() as _rt_tmp:
+        for _rt_f in ("boxes.json", "layout_reference.json"):
+            _rt_sh.copy(os.path.join(_rt_src, _rt_f), _rt_tmp)
+        for _rt_spec in _px_res:
+            _rt_W, _rt_H = (int(_v) for _v in _rt_spec.split("x"))
+            _rt_app, _rt_scr = _plv.build_screen(_rt_W, _rt_H)
+            _rt_app.dispatcher.switch_to("colony_summary")
+            _rt_scr.enter(None)
+            _rt_scr.update(_plv._Snapshot(_plv.COLONIES))
+            _rt_s = pygame.Surface((_rt_W, _rt_H))
+            _rt_scr.render(_rt_s)
+            assert next(_b for _b in _rt_scr.boxes
+                        if _b.name == "planet_paragraph").text, (
+                "the render did not fill planet_paragraph's Box.text, so "
+                "the round trip would prove nothing")
+            _rt_scr._screen_dir = _rt_tmp
+            _rt_save(_rt_tmp, _rt_scr.boxes, _rt_W, _rt_H)
+            assert _rt_scr.save_geometry() == [], (
+                f"{_rt_spec}: an unmoved save rewrote the reference")
+        _rt_before = _sjson.load(open(os.path.join(_rt_src, "boxes.json"),
+                                      encoding="utf-8"))
+        _rt_after = _sjson.load(open(os.path.join(_rt_tmp, "boxes.json"),
+                                     encoding="utf-8"))
+        assert _rt_after == _rt_before, (
+            "an editor save changed boxes.json without a drag")
+        for _rt_spec, _rt_list in _rt_after.items():
+            for _rt_b in _rt_list:
+                if _rt_b["name"] not in ("planet_disc", "planet_paragraph"):
+                    continue
+                # KEYS, not substrings: the paragraph's own skin is the
+                # VALUE "text", which is exactly what it should carry.
+                _rt_keys = set(_rt_b) | set(_rt_b.get("style", {}))
+                _rt_bad = _rt_keys & {"text", "text_color", "rect",
+                                      "image", "asset", "path"}
+                assert not _rt_bad, (
+                    f"{_rt_spec}/{_rt_b['name']} carries {sorted(_rt_bad)} "
+                    f"in boxes.json after a save: {_rt_b}")
+                assert ".png" not in _sjson.dumps(_rt_b), (
+                    f"{_rt_spec}/{_rt_b['name']} names an image file in "
+                    f"boxes.json after a save: {_rt_b}")
+        assert _sjson.load(open(os.path.join(
+            _rt_tmp, "layout_reference.json"), encoding="utf-8")) == \
+            _sjson.load(open(os.path.join(
+                _rt_src, "layout_reference.json"), encoding="utf-8")), (
+            "an editor save changed layout_reference.json without a drag")
+        # THE DRAG: ten reference px right, then save.
+        _rt_disc = next(_b for _b in _rt_scr.boxes if _b.name == "planet_disc")
+        _rt_x, _rt_y, _rt_w, _rt_h = _rt_disc.ref_rect
+        _rt_disc.ref_rect = (_rt_x + 10, _rt_y, _rt_w, _rt_h)
+        _rt_wrote = _rt_scr.save_geometry()
+        assert _rt_wrote == [("planet_disc", [_rt_x + 10, _rt_y, _rt_w, _rt_h])], (
+            f"a dragged disc wrote {_rt_wrote}")
+        _rt_ref = _sjson.load(open(os.path.join(
+            _rt_tmp, "layout_reference.json"), encoding="utf-8"))
+        assert _cpl.all_rects(_rt_ref)["planet_disc"] == [
+            _rt_x + 10, _rt_y, _rt_w, _rt_h], (
+            "the dragged disc does not come back from the reference")
+    ok("an F5 save round trip leaves boxes.json and layout_reference.json "
+       "unchanged, writes no text, colour, rect or image path for the two "
+       "planet_info boxes, and a dragged disc lands in planet_info_parts")
+
     # ── THE FIGURE'S SIZE IS NOT ALWAYS AN INTEGER STEP ─────────
     #
     # **DEVIATION FROM DECISION 28 — 12 September 2026, Data's
@@ -12104,7 +12426,10 @@ def main():
         f"colony_summary classifies as {_cs_row[2]} free / "
         f"{_cs_row[3]} bound / {_cs_row[4]} locked, expected "
         f"{len(_cs_free)} / {len(_bch.COLUMN_BOXES)} / {_cs_locked}")
-    assert set(_cs_free) <= _fh_mod.RULE_NAMES["colony_summary"], (
+    assert set(_cs_free) <= (_fh_mod.RULE_NAMES["colony_summary"]
+                             | set(_cpl.part_rects(app.res.load_json(
+                                 "screens/colony_summary/"
+                                 "layout_reference.json", {}) or {}))), (
         f"the editor-free names {sorted(_cs_free)} are not boxes the "
         f"colony rule knows about")
     assert "_editor_free" in (app.res.load_json(

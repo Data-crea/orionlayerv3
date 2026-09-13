@@ -19,7 +19,7 @@ same evening: they become repository content.
 ## What the columns mean
 
 **Date** is filled only where the brief's own text states one, which
-is seven of the ninety-four. Everything else is **undatiert** — not
+is nine of the ninety-six. Everything else is **undatiert** — not
 because the order is unknown but because a date has to come from the
 brief itself or from the first commit that implements it (see
 CLAUDE.md, "You own every detail"), and a cache file's timestamp is
@@ -149,3 +149,5 @@ the tree, pasted back into chat for reference:
 | 92 | [`92-output-panel-resource-and-morale-icons-and-a-separator.md`](92-output-panel-resource-and-morale-icons-and-a-separator.md) · [`92-mockup.png`](92-mockup.png) | 13 September 2026 |  | Output panel — resource and morale icons, and a separator between rows | session |
 | 93 | [`93-copy-the-sheets-and-cut-the-icons-report-and-stop.md`](93-copy-the-sheets-and-cut-the-icons-report-and-stop.md) | *undatiert* |  | Copy the three files … then cut the icons out of the sheets. Report and stop. | session |
 | 94 | [`94-run-1-decisions-then-run-2.md`](94-run-1-decisions-then-run-2.md) | *undatiert* |  | Data's two decision messages: the icon names and cut rules, then the Run 1 answers and "Continue with Run 2" | session |
+| 95 | [`95-colony-summary-list-palette-return-font-and-scan-box-boxes.md`](95-colony-summary-list-palette-return-font-and-scan-box-boxes.md) · [`95-palette.png`](95-palette.png) | 13 September 2026 |  | Colony Summary: the list palette from Data's table, RETURN at the sort buttons' font size, and the scan box's paragraph and disc as boxes | session |
+| 96 | [`96-run-2-decisions-then-implement.md`](96-run-2-decisions-then-implement.md) | 13 Sep 2026 |  | Brief 95, Run 2: Data's decisions on the Stop 1 report, then Stops 2 and 3 | `~/Downloads`, copied as Data placed it |

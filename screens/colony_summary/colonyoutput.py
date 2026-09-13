@@ -282,21 +282,57 @@ def render_for(screen, surface):
                icons=colonyoutputicons.set_for(screen, cfg))
     box = screen.box_rect("planet_info")
     if box and not screen._move.message:
-        _rect = pygame.Rect(*screen.layout.rect(box))
-        # THE BIG DISC, at the size this panel leaves it — see
-        # `render_info`. The set is `colonyplanets`', cached per pixel
-        # size, so this one and the row icons are two sets and neither
-        # rebuilds the other.
+        # TWO BOXES INSIDE `planet_info` — brief 95 Part C, 13 September
+        # 2026. The paragraph and the disc were placed by arithmetic
+        # (padding, then the disc, then a gap) and neither could be
+        # dragged in F5; they are `planet_paragraph` and `planet_disc`
+        # now, seated from `layout_reference.json` like every other
+        # rect on this screen (`colonyplates.part_rects`). The disc box
+        # is a RECT AND NOTHING ELSE: which image fills it is the
+        # climate's, resolved through `colonyplanets` and the resource
+        # stack, so a mod's discs still win (decisions 16, 17, 19).
+        text_box = _box(screen, "planet_paragraph")
+        disc_box = _box(screen, "planet_disc")
+        if text_box is None or text_box.ref_rect is None:
+            return
+        text_rect = pygame.Rect(*screen.layout.rect(text_box.ref_rect))
+        disc_rect = (pygame.Rect(*screen.layout.rect(disc_box.ref_rect))
+                     if disc_box is not None and disc_box.ref_rect
+                     else None)
+        # THE BIG DISC, at the box's SHORTER side — see `render_info`.
+        # The set is `colonyplanets`', cached per pixel size, so this
+        # one and the row icons are two sets and neither rebuilds the
+        # other.
         from . import colonyplanets
-        _pad_y = int(cfg.get("pad_y", 14) * screen.layout.scale)
-        _disc = colonyplanets.set_for(screen, max(1, _rect.h - 2 * _pad_y))
-        render_info(surface, row, _rect, cfg, words, climates,
-                    screen.layout, screen.style, planets=_disc)
+        _disc = (colonyplanets.set_for(
+            screen, max(1, min(disc_rect.w, disc_rect.h)))
+            if disc_rect is not None else None)
+        render_info(surface, row, text_rect, cfg, words, climates,
+                    screen.layout, screen.style, planets=_disc,
+                    disc_rect=disc_rect, text_box=text_box)
+
+
+def _box(screen, name):
+    """The `Box` called `name` on `screen`, or None."""
+    for box in screen.boxes:
+        if box.name == name:
+            return box
+    return None
 
 
 def render_info(surface, row, area, cfg, words, climates, layout, style,
-                planets=None):
+                planets=None, disc_rect=None, text_box=None):
     """The LEFT half of the original's scan box — the description.
+
+    `area` is the PARAGRAPH's rect — the `planet_paragraph` box — and
+    `disc_rect` the `planet_disc` box's, or None for no disc. Since
+    13 September 2026 nothing here places either: the wrap width is the
+    paragraph box's width and the text starts at its corner, and the
+    disc is fitted into the disc box's shorter side and centred, so a
+    box dragged to a non-square shape still draws a round world rather
+    than a stretched one. `text_box`, when given, receives the filled
+    string and its colour as `Box.text` / `Box.text_color` (decision
+    37) — runtime values that `Box.to_dict` never writes.
 
     `COLSUM::Draw_Colony_Scan_Info_` fills two boxes, not one
     (colsum.cpp:1155). This is the first: one formatted paragraph at
@@ -331,6 +367,8 @@ def render_info(surface, row, area, cfg, words, climates, layout, style,
     holds the bare quality, the surrounding text supplies the noun.
     """
     if row is None:
+        if text_box is not None:
+            text_box.text = None
         return render(surface, row, area, cfg, words, climates, layout,
                       style, only={0})
     template = cfg.get("info_paragraph", "")
@@ -348,29 +386,37 @@ def render_info(surface, row, area, cfg, words, climates, layout, style,
     # original's (see `colonyempire._red_note`).
     color = (SHORTAGE_COLOR if int(row.get("growth", 0) or 0) < 0
              else VALUE_COLOR)
-    pad_x = int(cfg.get("pad_x", 18) * layout.scale)
-    pad_y = int(cfg.get("pad_y", 14) * layout.scale)
+    text = fill_template(template, values)
+    if text_box is not None:
+        # THE RED REACHES THE WHOLE PARAGRAPH THROUGH THE BOX: the
+        # string and its colour are the box's runtime text, and what is
+        # drawn below reads them back, so the box and the pixels cannot
+        # say two things.
+        text_box.text = text
+        text_box.text_color = color
+        text, color = text_box.text, text_box.text_color
     px = layout.font_size(cfg.get("value_font", 20))
-    # ── THE PLANET, AT THE LEFT OF THE PANEL ───────────────────
+    # ── THE PLANET, IN ITS OWN BOX ─────────────────────────────
     #
     # **THE SAME DEVIATION AS THE ROW ICON** (`layout.json`,
     # `list._planet_icon_deviation`): the original's scan box is five
     # lines of text and no picture. Data's decision of 12 September
     # 2026 puts the world beside the words here too, and larger,
-    # because this panel is about one colony. The disc is square and
-    # as tall as the panel's own padding leaves it, and the five lines
-    # start past it — `output.planet_disc_gap`, reference px, data
-    # like the row's gap and for the same reason.
-    text_x = area.x + pad_x
-    disc = planets.get(row.get("climate")) if planets is not None else None
+    # because this panel is about one colony. The disc is square, so
+    # it takes the box's SHORTER side and is centred in the other one:
+    # the renderer fits, the box does not have to be square.
+    disc = (planets.get(row.get("climate"))
+            if planets is not None and disc_rect is not None else None)
     if disc is not None:
-        surface.blit(disc, (text_x, area.y + pad_y))
-        text_x += disc.get_width() + int(
-            cfg.get("planet_disc_gap", 12) * layout.scale)
-    room_w = max(1, area.right - pad_x - text_x)
-    room_h = max(1, area.h - 2 * pad_y)
+        surface.blit(disc, (
+            disc_rect.x + (disc_rect.w - disc.get_width()) // 2,
+            disc_rect.y + (disc_rect.h - disc.get_height()) // 2))
+    # THE WRAP WIDTH IS THE BOX'S WIDTH, still measured by rendering
+    # (decision 30) — `textfit.squeeze_lines` renders each candidate.
+    room_w = max(1, area.w)
+    room_h = max(1, area.h)
     lines = []
-    for para in fill_template(template, values).split("\n"):
+    for para in text.split("\n"):
         wrapped, _size = textfit.squeeze_lines(
             style, para, room_w, room_h,
             [px - n for n in range(0, max(1, px - 7))], color[:3])
@@ -379,9 +425,9 @@ def render_info(surface, row, area, cfg, words, climates, layout, style,
     # Squeeze_Print_Formatted_Paragraph_(13, 354, 80, 88, buffer, 0)
     # and 0 is JUSTIFY_LEFT (colsum.cpp:1206; the same argument
     # decision 45 reads for the colony name).
-    y = area.y + pad_y
+    y = area.y
     for surf in lines:
-        surface.blit(surf, (text_x, y))
+        surface.blit(surf, (area.x, y))
         y += surf.get_height()
 
 

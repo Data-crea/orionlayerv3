@@ -207,7 +207,9 @@ def editor_free(screen):
             screen))
     except Exception:
         return set()
-    return {BOX_NAME.get(n, n) for n in data.get("_editor_free", ())}
+    # The parts inside a window (brief 95 Part C) are free by
+    # construction; `colonyplates.editor_free` is the one home for that.
+    return set(_cplates.editor_free(data))
 
 
 def cutout_names(screen):

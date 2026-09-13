@@ -44,6 +44,24 @@ def col(section, key, default):
     return tuple(value)
 
 
+def require(section, key):
+    """Color from skin section, with NO code default — decision 14.
+
+    For a colour that exists because the skin names it and for no
+    other reason: a default in code would be a second home for the
+    value, the one a skin edit silently fails to reach. A skin that
+    lacks the key is a broken skin, so this raises and names what to
+    add rather than drawing a colour nobody chose. The default skin
+    carries every such key, and a smoke check holds it to that.
+    """
+    value = _COLORS.get(section, {}).get(key)
+    if value is None:
+        raise KeyError(
+            f"colors.json [{section}] has no {key!r}. This colour has no "
+            f"code default (decision 14) — add it to the skin")
+    return tuple(value)
+
+
 def section(name):
     """Whole section dict (read-only use)."""
     return _COLORS.get(name, {})

@@ -28,6 +28,21 @@
     457,
     197
   ],
+  "planet_info_parts": {
+    "planet_disc": [
+      595,
+      734,
+      177,
+      177
+    ],
+    "planet_paragraph": [
+      784,
+      734,
+      240,
+      177
+    ]
+  },
+  "_planet_info_parts_note": "TWO BOXES INSIDE planet_info, NOT HOLES - brief 95 Part C, 13 September 2026. The disc and the paragraph were placed by arithmetic in colonyoutput (the panel's pad_x 16 and pad_y 12, then the disc as tall as the padded box, then planet_disc_gap 12, then the text to the right padding); these rects are that arithmetic evaluated once, at 1920x1080 against planet_info's drawn box (this hole plus colonyplates.BLEED), so the first picture is the old one. They are NOT bled and NOT windows: colonyplates.NOT_A_WINDOW keeps the hole checks from matching them to the artwork, and colonyplates.part_rects seats them as boxes. They are EDITOR-FREE BY CONSTRUCTION - drag one in F5, save, and colonyplates.write_back writes it here, never to boxes.json. RECT AND NOTHING ELSE: planet_disc names no image (the disc is the scanned colony's climate, resolved through colonyplanets and core/resources.py, so a mod's discs win - decisions 16, 17, 19), and planet_paragraph's text is Box.text at runtime and never serialised (decision 37). The renderer fits the disc into planet_disc's SHORTER side, centred, so the box does not have to stay square.",
   "planet_output": [
     100,
     724,

@@ -145,10 +145,26 @@ ROW_NAME_DIM = palette.col("colony_summary", "row_name_dim",
 DETAIL_COLOR = palette.col("colony_summary", "row_detail",
                            (132, 148, 180))
 NO_FARM_COLOR = palette.col("colony_summary", "no_farming", (150, 120, 110))
-#: The cell plate's line. The same key the header plates use, because
-#: they are one plate in two rows of the same table — see
-#: `colonyheader.render` and decision 51.
-PLATE_COLOR = palette.col("colony_summary", "plate_outline", (55, 65, 85))
+#: The cell plate's line — `plate_outline`, Data's #29394C. NOT the
+#: header's key, although both are `draw_plate` (decision 51): the
+#: header plates are drawn with `panel.thin_border`, handed in by
+#: `screen._render_header`, and only these cells read this key. That
+#: this comment said otherwise until 13 September 2026 is why it says
+#: so now. No code default (decision 14): the skin carries the value.
+PLATE_COLOR = palette.require("colony_summary", "plate_outline")
+
+#: THE ROW FILLS — HD EXTENSION, decision 57. Data's table, 13 September
+#: 2026: A and B alternate down the list and the scanned colony's row
+#: is filled. The original draws no row background at all — its only
+#: `Fill_`/`Line_` calls are the scroll thumb's (colsum.cpp:759-765)
+#: and its only per-row state is the name's colour. There is NO hover
+#: colour, although the table offers one: the row under the pointer IS
+#: the scanned colony (colsum.cpp:880-890, transcribed in
+#: `colonyselect`), so a hover fill could only ever be covered by the
+#: selected one. `colors.json` `_row_fill_note` carries the values.
+ROW_A = palette.require("colony_summary", "row_a")
+ROW_B = palette.require("colony_summary", "row_b")
+ROW_SELECTED = palette.require("colony_summary", "row_selected")
 
 #: **THE LOWER BOUND OF THE NAME COLUMN, and the editor REPORTS it
 #: rather than clamping.** Two sources, both required, and neither
@@ -320,6 +336,29 @@ def render(surface, rows, area, cfg, layout, style, first=0,
     # (decision 5) — which is also what closed the pick round's
     # drop-height DEVIATION: the target was `bar_h`, 52 % of the band,
     # and it is the whole band now.
+    #
+    # ── THE ROW FILLS GO DOWN FIRST — HD EXTENSION, decision 57 ──
+    # Under the plates, so every cell keeps its outline, and across the
+    # five plated columns only: the scroll slot is the original's own
+    # continuous track and wears no stripe. BY LIST INDEX — `first`
+    # plus the band — so a colony keeps its colour when the window
+    # scrolls and the stripe is A, B, A, B from the top of the sorted
+    # list whatever the sort. The selected fill reads `scanned`, the
+    # same value the bright name reads below, so the two cannot
+    # disagree (one variable, `colonyselect.Selection.colony`).
+    _plated = [(_cx, _cw) for _key, (_cx, _cw) in cols.items()
+               if _key != colonyscroll.COLUMN]
+    if _plated:
+        _fx = min(_cx for _cx, _cw in _plated)
+        _fw = max(_cx + _cw for _cx, _cw in _plated) - _fx
+        for _band, (_by, _bh) in enumerate(colonytrack.all_bands(area,
+                                                                 cfg)):
+            _li = first + _band
+            _sel = (scanned is not None and _li < len(rows)
+                    and rows[_li]["index"] == scanned)
+            _fill = ROW_SELECTED if _sel else (ROW_A if _li % 2 == 0
+                                               else ROW_B)
+            surface.fill(_fill[:3], pygame.Rect(_fx, _by, _fw, _bh))
     for _by, _bh in colonytrack.all_bands(area, cfg):
         for _key, (_cx, _cw) in cols.items():
             if _key == colonyscroll.COLUMN:

@@ -147,11 +147,12 @@
   },
   "panels": {
     "_note": "Every cutout that shows content gets the panel fill, so the frame never sits over raw background. list_area draws the colony list (see `list`) and output_panel the original's scan box for the selected colony (see `output`); galaxy_inset draws the original's small galaxy map (see `inset`) as of 4 September 2026; spare_panel is still fill only. WHICH HOLE IS WHICH IS DERIVED FROM THE SOURCE, not from left-to-right position - until 4 September 2026 frame_holes.py assigned these three names by index and had the last two the wrong way round. galaxy_inset is the RIGHTMOST of the three and is the original's own map hole: MOVEBOX::Draw_Galaxy_Map_Box_(nullptr, 0, 0x17c, 0x15d, 0x80, 0x5b, ...) at colsum.cpp:415 draws the small galaxy map at native (380, 349, 128, 91) (movebox.cpp:4-9), which is reference (1140, 785, 384, 205), centre x 1332. spare_panel is the MIDDLE one, over native x ~193-347, where the original draws its production and morale sprite column (Draw_Colony_Wee_Prod_(..., 106, y_pos, 366, 20), colsum.cpp:1171-1176) - values output_panel already answers for, which is what makes that hole the spare rather than a second place to draw the same thing. A smoke check asserts the rule (nearest hole to the native rect must be the one named galaxy_inset, and decisively nearest) rather than the list, so a re-generated frame cannot quietly reassign the names again. ONE PANEL PER STEP - spare_panel is empty on purpose and not waiting on anything in this file. STAGE 4, 7 September 2026: the box names changed with the plate. output_panel -> planet_output, spare_panel -> planet_info (and it moved to the LEFT of the band), sidebar -> empire_stats (and it moved out of the right-hand column into the band), the seven sort_* boxes -> one sort_bar, and a header window appeared. The names are the plate's own windows now, from layout_reference.json through frame_holes.py, so this list and the artwork cannot drift. REVERSED 12 September 2026, and the fill follows the hole: the one sort_bar is seven boxes again, sort_name / sort_population / sort_food / sort_industry / sort_science / sort_producing / sort_bc, because Data's artwork cuts a slot per key. Every one of them is listed here for the same reason the other six are - a cutout that shows content gets the panel fill, and a sort slot shows a word. It was never listed while it was one bar: the strip drew its own background through colonysort.render and the hole sat over the raw background between the lit boxes, which is a difference nobody would see until a slot is narrow enough to frame what is behind it. RETURN IS HERE SINCE 12 September 2026, and for the same reason the seven slots are: Data's frame cuts an eighth slot for it in the sort row, so it is a cutout that shows content. It filled itself until that frame arrived - first because the plate drew no hole for it, then, for one day, because it was drawn OVER the metal on a plate of its own. colonysort.render_return draws the hover and the word now and nothing underneath them.",
-    "header": true,
+    "_fill_note": "A PANEL'S VALUE SAYS WHICH COLOUR FILLS IT, and the colour itself is the skin's. true is the panel base, colony_summary.panel_background; a STRING is the name of another key in the same colors.json section. Since 13 September 2026 (brief 96): the header takes header_background, and the galaxy inset its measured black, galaxy_inset_fill, which lived here as an RGB list until that day - a colour in layout.json was a second place a skin could not reach.",
+    "header": "header_background",
     "list_area": true,
     "planet_info": true,
     "planet_output": true,
-    "galaxy_inset": true,
+    "galaxy_inset": "galaxy_inset_fill",
     "empire_stats": true,
     "sort_name": true,
     "sort_population": true,
@@ -160,13 +161,7 @@
     "sort_science": true,
     "sort_producing": true,
     "sort_bc": true,
-    "return": true,
-    "galaxy_inset_fill": [
-      0,
-      0,
-      0
-    ],
-    "_galaxy_inset_fill_note": "BLACK, and it is a measurement rather than a taste. The panel fill this screen lays down is PANEL_BG (8, 11, 20); the ORIGINAL's own inset region measures (0, 8, 0) over 2475 of about 2700 samples in the 640x480 frame at native (380, 349, 128, 91). So the box already had a fill - the cockpit texture was never showing through - and black moves TOWARD the original rather than away from it. It is a per-box fill and not a change to colonyinset, which deliberately draws no background of its own: Draw_Galaxy_Map_Box_ fills black only when _using_colony_screen_palette == 0 (movebox.cpp:36-38) and this screen sets that flag, so the original inherits whatever the screen put there and so do we."
+    "return": true
   },
   "list": {
     "_invention": "INVENTION. The original draws three columns of population sprites per row, one icon per colonist, squished when a colony outgrows its column (COLDRAW::Do_Colony_Info_Pop_Stuff_For_Pop_, coldraw.cpp:282; Calculate_Squish_Step_, coldraw.cpp:12). This draws one allocation bar per row instead: one square per colonist, three zones in ECON order. MOO2 could not draw it and does not. Marked here, in colonylist.py (the renderer), in v3_projektstatus.md and in a smoke check. WHAT THE ORIGINAL'S SPRITES ACTUALLY ARE, measured 4 September 2026 off the game's own framebuffer because RACEICON.LBX is the player's file and is not shipped. COLONY::People_Anim_ (colony_main.cpp:444) loads entry race_idx * 13 + job_type * 2 (+1 for pop_state 2), so they are RACE-SPECIFIC figures and not generic profession icons; natives are entry 0xAA and androids 0xA9, one each for every race. Drawn in a 30x31 native cell at 30 px spacing, squished by Calculate_Squish_Step_ when the column is crowded. In the reference save's race the three read as: farmer bronze with a tall hoe, worker teal with a hammer, scientist white/silver with a cyan-and-red instrument - distinct by COLOUR first and by the tool's silhouette second. Scaled to our slot they stay tellable apart from about 1920x1080 up (tile 20x30, 67 % of the sprite's width); at 1280x720 (13x20, 43 %) the colour survives and the tool does not. ONLY ONE RACE WAS SEEN - another race's set may separate less well, and nothing here has checked that. TWO THINGS THE COMPARISON IS NOT: the sprite at its own proportion does NOT fit this track, because 42 slots of 30 px need 1342 reference px against the 922 the budget has (see _horizontal_budget), so icons here would be squeezed to about two thirds width whatever else is decided; and the original's own detail is LEAST available when it matters most - at twelve farmers the figures overlap into a picket fence with only the last one fully visible, while these squares never overlap at all.",
@@ -296,7 +291,6 @@
     "value_font": 17,
     "pad_x": 16,
     "pad_y": 12,
-    "planet_disc_gap": 12,
     "row_gap": 4,
     "icon_size": 31,
     "icon_gap": 8,

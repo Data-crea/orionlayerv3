@@ -117,6 +117,35 @@ selectively must match on *both* names**; matching on `inner_panel`
 alone is how a converted box silently stops being drawn, which is
 what nearly happened to Select Race.
 
+**57. The colony list wears Data's palette: striped rows, a filled
+scanned row, and no hover colour.** 13 September 2026, briefs 95 and
+96, Data's table in `doc/briefs/95-palette.png`. Filed here, beside
+34, because it is the same kind of decision: which colours this
+project's own palette uses and where they live, not a transcription.
+
+**The row fills are an HD EXTENSION.** Rows alternate `row_a` and
+`row_b` by LIST index, and the scanned colony's band is
+`row_selected`. The original has no row background at all — its only
+`Fill_`/`Line_` calls on this screen are the scroll thumb's — and its
+only per-row state is the name's colour. The selected fill reads the
+same variable as that colour, `colonyselect.Selection.colony`, so the
+two cannot disagree.
+
+**The table's hover colour has no key, on purpose.** The row under the
+pointer is the scanned colony already, transcribed from
+colsum.cpp:880-890, so a hovered row is always the selected row and
+the selected fill wins. A hover key would be a colour nothing can
+show.
+
+**The header, the panel base and the cell outlines are palette
+choices, not extensions**: `header_background`, `header_text`,
+`panel_background` for every panel, and `plate_outline` for the list's
+cells. A colour on this screen lives in `colors.json` and nowhere else
+— `palette.require` reads a key with no code default, a panel in
+`layout.json` names its key rather than typing a colour, and a smoke
+check fails on a typed row-background or plate-outline colour anywhere
+in `screens/colony_summary/`.
+
 **37. A third box skin, `text`, draws nothing but the string.** No
 panel, no border, no background — position, size, font size and
 alignment come from `boxes.json`, so a bare label is F5-draggable

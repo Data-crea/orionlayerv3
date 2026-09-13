@@ -290,8 +290,10 @@ def render(surface, stars, label, area, cfg, layout, style):
     of `_anims[0]`". It does not: sampling the native frame over the
     inset's own rect (380, 349, 128, 91) gives (0, 8, 0) in 2475 of
     about 2700 samples — black, to within a hair. Ours was PANEL_BG
-    (8, 11, 20), a dark blue. `layout.json`'s `galaxy_inset_fill` now
-    says black, which is a move TOWARD the original and not away from
+    (8, 11, 20), a dark blue. The skin's `galaxy_inset_fill` (in
+    `layout.json` until 13 September 2026, `colors.json` since, and
+    named by `panels.galaxy_inset`) says black, which is a move TOWARD
+    the original and not away from
     it, and it is a per-box fill because this function still draws no
     background of its own.
     """

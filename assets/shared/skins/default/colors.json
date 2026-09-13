@@ -637,14 +637,10 @@
   "colony_summary": {
     "panel_background": [
       8,
-      11,
-      20
-    ],
-    "nav_background": [
-      10,
       14,
-      26
+      23
     ],
+    "_panel_background_note": "#080E17, DATA'S TABLE (doc/briefs/95-palette.png, 'Grundflaeche / Panels'), 13 September 2026, and it is EVERY panel on this screen: colonyplates.render_fills lays it into each cutout that layout.json's `panels` marks true, and colonyempire and the move notice read it too. A colour choice in the project's own palette (decision 34), not a transcription - the original's panels are whatever COLSUM.LBX entry 0 painted. The header and the galaxy inset name their own keys in `panels` and are the only two that differ. Was (8, 11, 20). `nav_background` stood beside this until the same day and nothing on this screen read it; the galaxy map's own `nav_background` is live and stays.",
     "nav_hover": [
       22,
       34,
@@ -711,6 +707,45 @@
       0,
       0
     ],
+    "row_a": [
+      10,
+      18,
+      30
+    ],
+    "row_b": [
+      17,
+      30,
+      46
+    ],
+    "row_selected": [
+      24,
+      43,
+      114
+    ],
+    "_row_fill_note": "HD EXTENSION - decision 57, Data's table of 13 September 2026 (doc/briefs/95-palette.png): row_a #0A121E and row_b #111E2E alternate down the list by LIST INDEX (A, B, A, B from the top of the sorted list, so a scroll or a sort never breaks the stripe), and the scanned colony's row is filled row_selected #182B72. THE ORIGINAL HAS NONE OF THIS: the only Fill_/Line_ calls in colsum.cpp are the scroll thumb (:759-765) and its only per-row state is the NAME's colour (Set_Colony_Font_To_Blue_, colsum.cpp:554, see _row_name_note). The selected fill is driven by the SAME variable as that name colour - colonyselect.Selection.colony, the transcription of _g_colony_n - so the fill and the bright name cannot disagree. WHY THERE IS NO row_hover KEY although the table gives a hover colour (#18345A): on this screen the row under the pointer IS the scanned colony, transcribed from colsum.cpp:880-890 (hover moves _g_colony_n), so a hovered row is always the selected row and the selected fill wins - a hover key would be a colour nothing can ever show. Drawn in colonylist.render UNDER the cell outlines. Data's decision (a), 13 September 2026.",
+    "plate_outline": [
+      41,
+      57,
+      76
+    ],
+    "_plate_outline_note": "#29394C, Data's table ('Trennlinien'), 13 September 2026: the 1 px outline around every cell of every band of the colony list (colonylist.render through StyleRenderer.draw_plate, decision 51 - a DEVIATION IN KIND, since the original paints its cell plates into the COLSUM.LBX bitmap). It had no entry here and lived as a code default (55, 65, 85) in colonylist; it has no code default now (palette.require, decision 14). ONLY THE LIST'S CELLS: the header plates are drawn with panel.thin_border, a key every screen shares, and planet_output's own line is output_separator - both unchanged.",
+    "header_background": [
+      9,
+      17,
+      29
+    ],
+    "header_text": [
+      121,
+      168,
+      232
+    ],
+    "_header_note": "Data's table, 13 September 2026: header background #09111D and header text #79A8E8 (the table says 'ca.'). Colour choices in the project's own palette (decision 34), not transcriptions and not an extension: the header window is ours already (colonyheader, a marked DEVIATION). The background reaches the header cutout through layout.json `panels.header`, which names this key instead of the panel base; the text is the five column words, and `label` - which the scan box, the sidebar and the scroll arrows also read - is untouched.",
+    "galaxy_inset_fill": [
+      0,
+      0,
+      0
+    ],
+    "_galaxy_inset_fill_note": "BLACK, and it is a measurement rather than a taste. MOVED HERE FROM layout.json's `panels` on 13 September 2026 (brief 96): a colour belongs in the skin, and `panels.galaxy_inset` now names this key. The panel fill this screen lays down elsewhere is panel_background; the ORIGINAL's own inset region measures (0, 8, 0) over 2475 of about 2700 samples in the 640x480 frame at native (380, 349, 128, 91). So the box always had a fill - the cockpit texture was never showing through - and black moves TOWARD the original rather than away from it. It is a per-box fill and not a change to colonyinset, which deliberately draws no background of its own: Draw_Galaxy_Map_Box_ fills black only when _using_colony_screen_palette == 0 (movebox.cpp:36-38) and this screen sets that flag, so the original inherits whatever the screen put there and so do we.",
     "output_separator": [
       38,
       50,
