@@ -12305,7 +12305,10 @@ def main():
         assert not any(_n.startswith("nav_") for _n in _pl_by), _pl_res
         _pl_cuts = [pygame.Rect(_pl_by[_n]["rect"]) for _n in _pl_named]
         for _b in _pl_list:
-            if _b["name"] in _pl_named or "rect" not in _b:
+            # help_popup is drawn OVER the frame (render_help is last),
+            # like on every other help screen; it needs no hole.
+            if _b["name"] in _pl_named or "rect" not in _b \
+                    or _b["name"] == "help_popup":
                 continue
             assert any(_c.contains(pygame.Rect(_b["rect"]))
                        for _c in _pl_cuts), (
@@ -12657,6 +12660,17 @@ def main():
         assert _pl_scr.handle_right_button(True, 1, 1) is False, (
             "the planets table has no screen-wide entry, so a right click "
             "on the frame's corner must open nothing")
+        # AND AN OPEN POPUP RENDERS. Found live in Stop 3: help_popup had
+        # no rect, and the first right click that opened an entry crashed
+        # render_help — every region above "answered" without ever being
+        # drawn.
+        _pl_scr.handle_right_button(True, *pygame.Rect(*_pl_scr.layout.rect(
+            _pl_scr.box_rect("rows"))).center)
+        assert _pl_scr.help.visible
+        _pl_scr.render(pygame.Surface((_pl_W, _pl_H2)))
+        assert _pl_scr.box_rect("help_popup") == (420, 170, 1080, 745) or \
+            list(_pl_scr.box_rect("help_popup")) == [420, 170, 1080, 745]
+        _pl_scr.help.close()
     ok("planets help: 15 entries in evanhelp.cpp's order, no screen-wide "
        "fallback, every region answers on its own box at four sizes")
 
