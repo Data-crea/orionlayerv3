@@ -447,6 +447,10 @@ class ColonySummaryScreen(ScreenBase):
             lambda _ink: colonytrack.held_figure_y(
                 _area, _cfg, _scale, _n - _first, mouse_input.pos(),
                 _fscale, _ink))
+        # THE HELP POPUP, LAST — the shared one (core/screenhelp.py,
+        # core/helppopup.py), over everything including a held cluster,
+        # as on every other screen that has a help.json.
+        self.render_help(surface)
 
     def _render_header(self, surface):
         """The five column headings — see `colonyheader` for the two
@@ -614,6 +618,12 @@ class ColonySummaryScreen(ScreenBase):
     # ── Input ─────────────────────────────────────────────
 
     def handle_click(self, screen_x, screen_y):
+        # AN OPEN HELP POPUP TAKES THE CLICK FIRST and closes, and the
+        # click reaches nothing else — the swallow every help screen
+        # has (`ScreenBase.handle_click` does it for screens that do
+        # not override this).
+        if self.help_consumes_click(screen_x, screen_y):
+            return None
         if colonyscroll.handle(self, screen_x, screen_y):
             return
         if self._move.busy:
@@ -712,28 +722,21 @@ class ColonySummaryScreen(ScreenBase):
             return None
         return super().handle_click(screen_x, screen_y)
 
-    def handle_right_button(self, down, screen_x, screen_y):
-        """Help first, then discard a held selection.
+    # THE RIGHT BUTTON IS HELP AND NOTHING ELSE — brief 98, Data's
+    # decision (a), 13 September 2026. `ScreenBase`'s shared walk
+    # (`core.screenhelp.HelpMixin.handle_right_button`) answers it, and
+    # this screen no longer overrides it. The original's help list ends
+    # with a SCREEN-WIDE entry, 513 {1, 1, 638, 478} (erichelp.cpp:65),
+    # so `Check_Help_List_` hits on every right click and `Get_Input_`
+    # never returns the -1 that means Cancel (fields.cpp:1240). The HD
+    # right-click discard of a held pick could therefore never fire once
+    # the table was transcribed, and it is gone; a left click off the
+    # rows still discards (`handle_click`).
 
-        The ORDER is transcribed. `fields::Get_Input_()` checks the
-        active help list before it lets the right button mean Cancel
-        (`Check_Help_List_`, fields.cpp:2916): over a help rectangle
-        the entry is drawn and the click is swallowed, and only
-        outside one does the right button return -1. So the base
-        class's help handling runs first and this only sees the
-        clicks it did not want.
-
-        The discard itself is the **HD EXTENSION** — the original has
-        no cancel that stays on this screen at all. See
-        `colonymoveui` and `colonypick`.
-        """
-        if super().handle_right_button(down, screen_x, screen_y):
-            return True
-        if not down or self._move.pick is None:
-            return False
-        self._move.cancel("right click")
-        self._rebuild_rows()
-        return True
+    def help_extra_rect(self, spec):
+        """The `column` and `scroll` help region kinds — `colonyhelp`."""
+        from . import colonyhelp
+        return colonyhelp.extra_rect(self, spec)
 
     def handle_mouse_motion(self, screen_x, screen_y):
         """Hover selects, which is the original's own behaviour.

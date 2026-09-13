@@ -830,7 +830,7 @@ files under `doc/` and are only summarised here.
 | | |
 |---|---|
 | Python | 32,960 lines across 111 modules — `find . -name '*.py'`, `__pycache__` excluded, the smoke test's 6,400 included. The previous figure here (21,642 across 94) was carried from an unstated method and could not be reproduced |
-| Smoke test | `python tools/smoke_test.py` — **133 checks**, headless |
+| Smoke test | `python tools/smoke_test.py` — **134 checks**, headless |
 | Assets | 170 MB (select_race 68, galaxy_map 51, shared 23, new_game 21, colony_summary 1) |
 | Screens in HD | 7 of ~20–22 (colony summary draws list, sidebar, scan box and galaxy inset, and MOVES POPS — the first HD gesture that drives the game) |
 | Setup from clone | `python tools/setup.py` (deps via the system package manager) |
@@ -3427,7 +3427,7 @@ read. **The font extractor is owed twice**: here and for the name cap
 
 ### Where the briefs and work orders are
 
-**`doc/briefs/`** — 98 briefs (and the pictures of briefs 92, 95 and 97) with a README that indexes them. Data's
+**`doc/briefs/`** — 100 briefs (and the pictures of briefs 92, 95 and 97) with a README that indexes them. Data's
 decision of 9 September 2026, and it closed a gap that had been open
 since the project started.
 
@@ -3448,7 +3448,7 @@ decision 50's withdrawal of it. Both places that cited it by name now
 say what happened instead of pointing at a file a reader cannot open.
 
 Content is byte for byte what arrived. **Dates are stated only where
-the brief's own text carries one** — ten of ninety-eight; everything
+the brief's own text carries one** — eleven of the hundred; everything
 else is undatiert, because a date has to come from the brief or from
 the first commit that implements it, and a cache file's timestamp is
 neither. The numeric prefix is order, not date.
@@ -5089,12 +5089,92 @@ run, and the slot was NOT reloaded, because the change is in the game
 someone is holding. The captions say so. `SAVE10.GAM` `9f9f35e4…`
 before and after; the secured copy intact.
 
-**WHAT WOULD BREAK A FRESH CLONE.** A clone that runs the smoke test
+**WHAT WOULD BREAK A FRESH CLONE (brief 97).** A clone that runs the smoke test
 before `tools/setup.py` fails the surface check ("no surface tile for
 climate 0 … run `python tools/setup.py`"), the same way the output
 icons do — the tiles are generated and ignored. The GAME does not
 break: `colonysurfaces` reports the missing set once and draws no
 picture (decision 38). CLAUDE.md's order is setup, then the smoke test.
+
+### Brief 98 — right-click help on the Colony Summary — 13 September 2026
+
+Handover item 4. **A transcription on the shared machinery, no new
+decision.** `screens/colony_summary/help.json` holds
+`ERICHELP::_colony_summary_screen_help_list` (erichelp.cpp:65, 22
+entries, `s_help_box {help_id, x1, y1, x2, y2}`, orion2.h:993),
+installed by `Set_Colony_Summary_Screen_Help_List_` (erichelp.cpp:145)
+from colsum.cpp:144 and :531, in the original's order with each entry's
+640x480 rectangle as provenance. The walk, the popup (auto-sizing, the
+marked HD EXTENSION) and the swallow are `core/screenhelp.py` /
+`core/helppopup.py`, the same the galaxy map, Main Menu and New Game
+use; the colony screen supplies the file, two region kinds and nothing
+else.
+
+**How the regions bind — the existing two routes.** `box` names for
+the bottom row (523 `planet_info`, 524 `planet_output`, 525
+`galaxy_inset`, 526 `empire_stats`), RETURN (500) and the seven sort
+slots (527-533), so they follow brief 97's rearrangement instead of a
+scaled rectangle landing on the wrong panel; `screen: true` for the
+fallback 513, last; and two screen-specific kinds through
+`help_extra_rect`, the seam New Game's `slot` uses, living in
+`colonyhelp.py` (decision 6 kept `screen.py` under 300 code lines):
+`column` (515-519) is the `col_<key>` box unioned with its heading
+plate — Data's decision, because the original's column rectangles run
+from y 1 and include the heading — and `scroll` (514, 521, 522) is
+`colonyscroll.arrows` / `track`.
+
+| class | entries |
+|---|---|
+| no HD counterpart | **520**, the Buy column (colsum.cpp:302): HD's Buy is a text button inside `col_building`, which 519 covers first. Kept for order, resolves to nothing, explained in `_no_counterpart` — Data's decision |
+| HD boxes with no entry | `planet_surface` and the rest of `colony_panel` answer the general entry 513; `planet_name` and `planet_disc` answer 523 through `planet_info`; the row fills answer their column. No help text was written for any of them |
+| the list | one region per COLUMN, heading plus ten rows — not per row |
+
+**THE RIGHT-CLICK PICK DISCARD IS GONE — Data's decision (a).** Entry
+513 covers the whole screen, so the original's `Check_Help_List_` hits
+on every right click and `Get_Input_` never returns the -1 that means
+Cancel (fields.cpp:1240) — there is no "outside every region" on this
+screen. The HD extension that discarded a held pick on a right click
+could never fire once the table was in, so `screen.handle_right_button`
+is deleted and the shared handler answers; a left click off the rows
+still discards (`_hd_extension_cancel`, `colonymoveui`, `colonypick`
+updated, and the move check re-pointed: a right click with a pick held
+opens help and keeps the pick). Two routing gaps closed with it: the
+colony `render` never called `render_help`, and its own `handle_click`
+did not let an open popup swallow the click.
+
+**The popup box** is `help_popup` at [420, 170, 1080, 745], the Main
+Menu / New Game placement, typed in `layout_reference.json` under a new
+`screen_parts` (a part: no hole, editor-free, written back like the
+others) and named in both `boxes.json` lists.
+
+**The text needs nothing new.** `tools/help_extract.py` writes
+`help_en.json`, `HelpText.missing_entry` is the "not extracted yet"
+state, and all 22 ids are in the local extraction (500 "Return Button",
+513 "Colony Summary Screen : General Help" … 533 "Sort By BC Button").
+
+**Checks 133 -> 134.** The help loop now covers four screens and
+accepts a `no_counterpart` entry only if it resolves to nothing and the
+file explains it by id; the new check asserts the file against the C++
+table's own order when `~/orion2re` is on the disk (and says so when it
+is not), the fallback last, every heading plate answering its column,
+the bottom row, the scroll arrows and track, a long entry scrolling at
+1280x720, 1920x1080, 2560x1440 and 3840x2160, and a left click closing
+the popup. `help.json` joins the hand-formatted exceptions of the JSON
+round-trip rule, like the other three.
+
+**SCREENSHOT.** `~/orionlayer-fixtures/evidence/brief98/help_516_vs_native.png`:
+a right click on the FARMERS heading at 1920x1080 opens "Farmers
+Display Window". **The original's own help box is NOT beside it**: the
+Extension API injects left clicks only (`INJECT_CLICK`, 640x480 x/y),
+so no right click can be sent to the game, and no native screenshot of
+a help box exists in the evidence. The native half is the last native
+Colonies screen (brief 92).
+
+**WHAT WOULD BREAK A FRESH CLONE (brief 98).** Nothing new: a clone
+without the HELP.LBX extraction gets `missing_entry`'s "not extracted
+yet" text in the same popup, and every help check asserts regions and
+behaviour, never the extracted strings. The order check reads
+`~/orion2re` and reports instead of failing when that tree is absent.
 
 ### The eighth slot: RETURN is a cutout again — 12 September 2026
 

@@ -68,7 +68,7 @@ BLEED = 2
 #: `{box name: [x, y, w, h]}`, reference px, not bled, and editor-free
 #: by construction: nothing slides out from under a box that is not a
 #: hole. See `_planet_info_parts_note` and `_colony_panel_parts_note`.
-PARTS = ("planet_info_parts", "colony_panel_parts")
+PARTS = ("planet_info_parts", "colony_panel_parts", "screen_parts")
 
 NOT_A_WINDOW = ("list_columns", "_resolutions") + PARTS
 

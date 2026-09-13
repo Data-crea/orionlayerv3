@@ -22,8 +22,10 @@ call sites on this screen are leave-the-screen paths
 (colsum.cpp:804, :938). So `pick` only computes, and `Send` is
 constructed at the drop, with both clicks in it.
 
-**THE SELECTION MAY BE DISCARDED — HD EXTENSION.** Right click, or a
-left click on neither an icon nor a drop band. Marked here, in
+**THE SELECTION MAY BE DISCARDED — HD EXTENSION.** A left click on
+neither an icon nor a drop band. (Not a right click since brief 98: the
+right button is context help, and the original's screen-wide help entry
+means it never reaches Cancel.) Marked here, in
 `colonypick`, in `layout.json` under `move`, in `v3_projektstatus.md`,
 and in a smoke check.
 """

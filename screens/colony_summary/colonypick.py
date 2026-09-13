@@ -23,8 +23,9 @@ names a target and every rule has passed — and then BOTH clicks go
 out, back to back, which is what `colonysend` does.
 
 **THE CANCEL IS AN HD EXTENSION, AND THIS IS THE SENTENCE IT RESTS
-ON.** Right-click, or a left click on neither an icon nor a column,
-discards the selection. MOO2 has no such thing: there is no cancel
+ON.** A left click on neither an icon nor a column discards the
+selection (the right click did too until brief 98 made the right button
+context help only). MOO2 has no such thing: there is no cancel
 that stays on this screen at all. It is not offered because it is
 kinder — it is offered because *our* selection is not the game's
 cluster, so discarding it costs nothing and changes nothing on the

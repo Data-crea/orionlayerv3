@@ -115,6 +115,13 @@
     },
     {
       "name": "col_scroll"
+    },
+    {
+      "name": "help_popup",
+      "hidden": true,
+      "style": {
+        "font_scale": 1.0
+      }
     }
   ],
   "2560x1440": [
@@ -234,6 +241,13 @@
     },
     {
       "name": "col_scroll"
+    },
+    {
+      "name": "help_popup",
+      "hidden": true,
+      "style": {
+        "font_scale": 1.0
+      }
     }
   ]
 }
