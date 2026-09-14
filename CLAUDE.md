@@ -58,7 +58,7 @@ derive world geometry.
 python tools/smoke_test.py
 ```
 
-141 checks, headless, no orion2re needed. **The count must not go
+153 checks, headless, no orion2re needed. **The count must not go
 down.** If a change makes a check obsolete, replace it — do not
 delete it. It went down exactly once, on 12 September 2026, when
 Phase B deleted the frame machinery the checks were about (decision
@@ -110,14 +110,17 @@ doc/                    the documents in the table above
 mods/                   file-level overrides; example_mod works
 ```
 
-Eight screens exist: main menu, new game, select race, custom race,
+Nine screens exist: main menu, new game, select race, custom race,
 empire identity, galaxy map, colony summary (list, sidebar, scan
 box and galaxy inset; sort and RETURN wired, scrolling for
 viewing only, and the population move click-click on the rows —
 the first HD gesture that drives the game, see decision 47), and
 planets (brief 101: list, sort, the five restrictions and RETURN
 wired; sending ships is not built, and the range restriction is a
-marked gap in the HD list).
+marked gap in the HD list), and the GAME menu overlay
+(`screens/game_menu/screen.py`: the whole tree behind the galaxy
+map's GAME button — slot names wait for `doc/ext_save_slots.patch`,
+the volume sliders are left out, decisions 59-62).
 Screens without an HD version fall back to the original framebuffer,
 so the game is always playable.
 

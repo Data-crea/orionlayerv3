@@ -66,11 +66,60 @@ MSG_SET_JOBS      = 0x84
 #: tools and a frame-driven one in the screens.
 EFFECT_PAIRS = 2
 
+#: Server -> client: the GAME popup's ten save slots, sent right after a
+#: FIELD_LIST while the Load or Save dialog is up. NOT IN THE ENGINE
+#: until `doc/ext_save_slots.patch` is applied; without it the message
+#: never arrives and the HD dialogs show slot numbers only (an HD
+#: STATE, decision 60). Open fix 14.
+MSG_SAVE_SLOTS    = 0x14
+
+#: One slot record in MSG_SAVE_SLOTS: int8 status, int8 game type,
+#: char[37] description, char[25] stardate, char[25] date.
+SAVE_SLOT_RECORD_SIZE = 1 + 1 + 37 + 25 + 25
+
 MSG_NAMES = {
     0x01: "HELLO_REPLY", 0x10: "STATE_SNAPSHOT",
     0x11: "FIELD_LIST",  0x12: "VISUAL_FRAME",
-    0x13: "EVENT",
+    0x13: "EVENT",       0x14: "SAVE_SLOTS",
 }
+
+
+def _cstr(raw):
+    """A fixed char[] as the engine holds it: up to the first NUL."""
+    return raw.split(b"\0", 1)[0].decode("latin-1")
+
+
+def parse_save_slots(data):
+    """Parse a MSG_SAVE_SLOTS payload.
+
+    Returns {"screen_data": 2|3, "slots": [dict(status, game_type,
+    description, active_marked, stardate, date)]}. The strings are the
+    engine's own, formatted by the engine — `Get_Save_Game_Date_Strings_`
+    and `Get_Star_Date_Strings_` (loadsave.cpp:645-718) — so whatever
+    they print (a year of 126, no month on a first visit) is what a
+    client draws, and nothing here reformats them.
+
+    `active_marked`: the active slot's description carries the colour
+    codes `Embed_Special_Color_Codes_` wraps it in, `\\x03 ... \\x01`
+    (loadsave.cpp:1655-1667); they are removed exactly as
+    `Remove_Embedded_Special_Codes_` removes them (:1672-1680).
+    """
+    screen_data, count = data[0], data[1]
+    slots, pos = [], 2
+    for _ in range(count):
+        status, game_type = struct.unpack_from('<bb', data, pos)
+        desc_raw = data[pos + 2:pos + 39]
+        marked = desc_raw[:1] == b"\x03"
+        desc = _cstr(desc_raw)
+        if marked:
+            desc = desc[1:].split("\x01", 1)[0]
+        slots.append(dict(
+            status=status, game_type=game_type, description=desc,
+            active_marked=marked,
+            stardate=_cstr(data[pos + 39:pos + 64]),
+            date=_cstr(data[pos + 64:pos + 89])))
+        pos += SAVE_SLOT_RECORD_SIZE
+    return {"screen_data": screen_data, "slots": slots}
 
 # Subscription flags (bitmask in HELLO)
 SUB_STATE  = 0x01

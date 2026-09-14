@@ -1,0 +1,131 @@
+Extension API: put the GAME popup's ten save slots on the wire.
+
+Adds `MSG_SAVE_SLOTS` (0x14), server -> client, sent on the FIELDS
+subscription right after a FIELD_LIST whenever the game is on
+SCREEN_GAME (8) with the Load or Save dialog up (`MOX::_screen_data`
+2 or 3). Payload: uint8 screen_data, uint8 count (10), then per slot
+int8 status, int8 game type, char[37] description, char[25] stardate,
+char[25] date — the engine's own values from `_game_popup_fields`,
+`MOX::_save_game_description`, `MOX::_save_game_stardates` and
+`MOX::_save_game_dates`, so a client draws what the dialog draws,
+formatting included.
+
+Open fix 14 in doc/orion2re_open_fixes.md; fundament decision 60 is
+why a client does not read SAVEn.GAM from a folder of its own.
+
+STATUS: REPORTED, NOT APPLIED (14 September 2026). Until it is, the
+HD Load and Save dialogs show slot numbers only, a marked HD STATE.
+
+    TO APPLY, to the orion2re working tree at ~/orion2re
+    (engine 1.60.0, git cf4d9617, with doc/ext_move_pop.patch and
+    doc/ext_inject_click.patch already in):
+
+        cd ~/orion2re && patch -p1 < \
+            ~/orionlayerv3/doc/ext_save_slots.patch
+
+    and it comes back off with
+
+        cd ~/orion2re && patch -R -p1 < \
+            ~/orionlayerv3/doc/ext_save_slots.patch
+
+    then rebuild with -DORION2RE_EXT=ON.
+
+    TWO FILES, BOTH OURS. `src/ext/` is untracked in Joes' tree;
+    nothing of his is touched. The hunks are GENERATED: the two files
+    were copied from the working tree as it stood on 14 September
+    2026, edited in a scratch copy and diffed against the copy. The
+    patched `ext_api.cpp` was compiled -fsyntax-only with the build's
+    own flags, precompiled header and -DORION2RE_EXT, and compiles.
+    It has NOT been built into a binary or run.
+
+    WHY THE POINTERS ARE SAFE is written above SerializeSaveSlots:
+    the popup's buffers are filled with no Get_Input_ in between, and
+    the one tick at screen 8 that precedes their allocation has
+    _screen_data 0.
+
+diff --color -ruN orig/src/ext/ext_api.cpp new/src/ext/ext_api.cpp
+--- a/src/ext/ext_api.cpp	2026-09-14 19:01:03.994849766 +0200
++++ b/src/ext/ext_api.cpp	2026-09-14 19:02:31.324331388 +0200
+@@ -199,6 +199,51 @@
+     }
+ }
+ 
++// ── Save slots ───────────────────────────────────────────
++
++/// The GAME popup's slot list, exactly as its Load and Save dialogs
++/// draw it: status and game type per slot, and the three strings the
++/// engine formatted itself. Sent so a client never reads SAVEn.GAM
++/// from a folder of its own, which could belong to a different game
++/// than the slots a click reaches.
++///
++/// WHEN THE DATA IS VALID. `LOADSAVE::_game_popup_fields` and the two
++/// date buffers are allocated per popup (`Allocate_Data_Space_For_
++/// Game_Popup_`, loadsave.cpp:1545) and filled for `_screen_data` 2
++/// and 3 by `Set_Up_Load_Save_Popup_` and `Add_Game_Popup_Fields_`
++/// (:1571-1578) with no `Get_Input_` in between, so a tick that sees
++/// screen 8 with `_screen_data` 2 or 3 sees them filled. The first tick
++/// at screen 8 runs before the popup allocates (mox2.cpp:41), and there
++/// `_screen_data` is 0 — the GAME handler sets it (mainscr_main.cpp:612)
++/// — so a pointer left over from an earlier popup is never followed.
++static bool SerializeSaveSlots(std::vector<uint8_t>& buf,
++                               int16_t current_screen) {
++    buf.clear();
++    if (current_screen != SCREEN_GAME) {
++        return false;
++    }
++    const int16_t screen_data = MOX::_screen_data;
++    if (screen_data != 2 && screen_data != 3) {
++        return false;
++    }
++    const s_game_popup_fields* popup = LOADSAVE::_game_popup_fields;
++    if (popup == nullptr || MOX::_save_game_dates == nullptr
++        || MOX::_save_game_stardates == nullptr) {
++        return false;
++    }
++    Write8(buf, (uint8_t)screen_data);
++    Write8(buf, 10);
++    for (int i = 0; i < 10; i++) {
++        Write8(buf, (uint8_t)popup->slot_status[i]);
++        Write8(buf, (uint8_t)popup->saved_game_types[i]);
++        WriteBytes(buf, MOX::_save_game_description[i].description,
++                   sizeof(MOX::_save_game_description[i].description));
++        WriteBytes(buf, MOX::_save_game_stardates + i * 25, 25);
++        WriteBytes(buf, MOX::_save_game_dates + i * 25, 25);
++    }
++    return true;
++}
++
+ // ── Visual frame ─────────────────────────────────────────
+ 
+ static void SerializeVisual(std::vector<uint8_t>& buf) {
+@@ -515,6 +560,14 @@
+         SerializeFields(fields_buf);
+         g_server.SendToSubscribers(SUB_FIELDS, MSG_FIELDS,
+                                     fields_buf.data(), fields_buf.size());
++        // Right after the list it belongs to: a client that gets a
++        // list with no slot message behind it knows it has none.
++        static std::vector<uint8_t> slots_buf;
++        if (SerializeSaveSlots(slots_buf, current_screen)) {
++            g_server.SendToSubscribers(SUB_FIELDS, MSG_SAVE_SLOTS,
++                                        slots_buf.data(),
++                                        slots_buf.size());
++        }
+         g_last_fields_count = fc;
+     }
+ 
+diff --color -ruN orig/src/ext/ext_server.h new/src/ext/ext_server.h
+--- a/src/ext/ext_server.h	2026-09-14 19:01:03.994834376 +0200
++++ b/src/ext/ext_server.h	2026-09-14 19:02:31.324260347 +0200
+@@ -19,6 +19,12 @@
+ constexpr uint16_t MSG_FIELDS        = 0x11;
+ constexpr uint16_t MSG_VISUAL        = 0x12;
+ constexpr uint16_t MSG_EVENT         = 0x13;
++// OrionLayer: the GAME popup's ten save slots, sent right after a
++// field list while the Load or Save dialog is up. Payload: uint8
++// screen_data, uint8 count, then count x (int8 status, int8 game type,
++// char[37] description, char[25] stardate, char[25] date).
++// See doc/ext_save_slots.patch.
++constexpr uint16_t MSG_SAVE_SLOTS    = 0x14;
+ 
+ // Client → Server message types
+ constexpr uint16_t MSG_HELLO         = 0x01;

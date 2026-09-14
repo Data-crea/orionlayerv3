@@ -849,5 +849,53 @@
       238
     ],
     "_control_note": "The side column's words and fills - the sort keys, the five restrictions, the two send buttons and RETURN. The original draws those as PLNTSUM.LBX sprites with no string behind them; the fills are the colony summary's nav_active / nav_hover values, repeated under this screen's own keys so a skin can tell the two screens apart. control_disabled_text is a send button whose field the game did not add (Add_Plntsum_Fields_, plntsum.cpp:708-718)."
+  },
+  "game_menu": {
+    "_note": "GAME menu overlay. Palette CHOICES, not transcriptions (decision 53: Data's to change): the original's words are artwork and its rows are drawn in font colour sets from MISC::Font_Colors2_ (loadsave.cpp:904-924) that no extractor reads. Picked to sit near the native screenshots \u2014 light buttons, orange rows and options, the active slot brighter, blue checkboxes.",
+    "button_text": [
+      206,
+      212,
+      226
+    ],
+    "title": [
+      206,
+      212,
+      226
+    ],
+    "row_text": [
+      222,
+      146,
+      58
+    ],
+    "row_active": [
+      255,
+      214,
+      120
+    ],
+    "row_detail": [
+      190,
+      128,
+      60
+    ],
+    "option_text": [
+      232,
+      140,
+      40
+    ],
+    "checkbox_on": [
+      80,
+      140,
+      255
+    ],
+    "message": [
+      232,
+      140,
+      40
+    ],
+    "hd_state": [
+      140,
+      150,
+      180
+    ]
   }
 }

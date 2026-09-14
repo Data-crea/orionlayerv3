@@ -253,7 +253,15 @@ class GalaxyMapScreen(ScreenBase):
         if game_state is None:
             return
         self._state = game_state
-        self._viewctl.park_game(self.app, game_state)
+        # ONLY WHILE THE GAME IS ON THIS SCREEN. This screen keeps
+        # updating under an overlay, and parking is an ACTIVATE_FIELD
+        # of field 9 by number: in the GAME popup's Load dialog field 9
+        # is the ninth slot row, and a slot row loads at once
+        # (loadsave.cpp:332-375). A number that means "zoom out" here
+        # means something else in every other list.
+        if getattr(game_state, "current_screen",
+                   self.GAME_SCREEN_ID) == self.GAME_SCREEN_ID:
+            self._viewctl.park_game(self.app, game_state)
 
         raw_nebulas = getattr(game_state, "nebulas_raw", None) or []
         self._nebulas = [nebula_struct.parse(r) for r in raw_nebulas

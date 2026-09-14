@@ -16,8 +16,9 @@ from core.wire_protocol import (
     MSG_HELLO, MSG_HELLO_REPLY, MSG_STATE, MSG_FIELDS,
     MSG_VISUAL, MSG_EVENT,
     MSG_ACTIVATE, MSG_INJECT_KEY, MSG_INJECT_CLICK, MSG_CANCEL_FIELD,
-    MSG_SET_JOBS,
+    MSG_SET_JOBS, MSG_SAVE_SLOTS,
     SUB_STATE, SUB_FIELDS, SUB_VISUAL, SUB_EVENTS,
+    parse_save_slots,
 )
 
 log = logging.getLogger("game_client")
@@ -150,6 +151,12 @@ class GameClient:
         # screen. Monotonic, never reset — callers take deltas.
         self.stats = {"state": 0, "fields": 0, "visual": 0,
                       "bytes": 0}
+        # A REQUESTED END IS NOT A LOST CONNECTION (decision 62).
+        # `expect_shutdown` is called before the GAME menu's QUIT is
+        # confirmed; after it, the socket closing ends the client
+        # instead of starting a reconnect.
+        self.shutdown_expected = False
+        self.game_ended = False
 
     def connect(self, host='localhost', port=17362,
                 subscribe_state=True, subscribe_fields=True,
@@ -218,8 +225,7 @@ class GameClient:
                 try:
                     chunk = self.sock.recv(65536)
                     if not chunk:
-                        log.warning("orion2re disconnected")
-                        self._reconnect()
+                        self._lost("orion2re disconnected")
                         return False
                     self._recv_buf.extend(chunk)
                     self._last_recv_time = time.monotonic()
@@ -231,8 +237,7 @@ class GameClient:
             now = time.monotonic()
             silent = now - self._last_recv_time
             if silent > STALE_TIMEOUT and now >= self._hold_until:
-                log.warning("No data for %.1fs — reconnecting", silent)
-                self._reconnect()
+                self._lost(f"No data for {silent:.1f}s — reconnecting")
                 return False
 
             # Parse messages from buffer
@@ -260,8 +265,7 @@ class GameClient:
                 got_message = True
 
         except (ConnectionResetError, BrokenPipeError, OSError) as e:
-            log.warning(f"Connection lost: {e}")
-            self._reconnect()
+            self._lost(f"Connection lost: {e}")
             return False
 
         return got_message
@@ -276,6 +280,30 @@ class GameClient:
         """
         self._hold_until = max(self._hold_until,
                                time.monotonic() + seconds)
+
+    def expect_shutdown(self):
+        """The next silence or close is the game ending on request.
+
+        Called by the GAME menu BEFORE it confirms QUIT
+        (`Do_Main_Game_Popup_`, loadsave.cpp:1257-1273: YES saves
+        SAVE10.GAM and returns SCREEN_EXIT). From here on no reconnect
+        is attempted: the watchdog is disarmed, and a closed socket
+        sets `game_ended` for the app to leave on.
+        """
+        self.shutdown_expected = True
+        self._hold_until = float("inf")
+        log.info("shutdown expected: the watchdog is disarmed")
+
+    def _lost(self, reason):
+        """The connection is gone or silent: end, or reconnect."""
+        if self.shutdown_expected:
+            log.info("orion2re went away after QUIT was confirmed "
+                     "(%s); not reconnecting", reason)
+            self.disconnect()
+            self.game_ended = True
+            return
+        log.warning(reason)
+        self._reconnect()
 
     def _reconnect(self):
         """Close and reopen the connection.
@@ -357,10 +385,12 @@ class GameClient:
                 old_fb = self.state.framebuffer
                 old_pal = self.state.palette
                 old_fields = self.state.fields
+                old_slots = self.state.save_slots
                 self.state = parse_state(payload)
                 self.state.framebuffer = old_fb
                 self.state.palette = old_pal
                 self.state.fields = old_fields
+                self.state.save_slots = old_slots
             except Exception as e:
                 log.error(f"State parse error: {e}")
 
@@ -368,6 +398,9 @@ class GameClient:
             self.stats["fields"] += 1
             try:
                 self.state.fields = parse_fields(payload)
+                # The engine sends MSG_SAVE_SLOTS right AFTER the list
+                # it belongs to, so a list with none has no slots.
+                self.state.save_slots = None
             except Exception as e:
                 log.error(f"Fields parse error: {e}")
 
@@ -379,6 +412,12 @@ class GameClient:
                 self.state.palette = pal
             except Exception as e:
                 log.error(f"Visual parse error: {e}")
+
+        elif msg_type == MSG_SAVE_SLOTS:
+            try:
+                self.state.save_slots = parse_save_slots(payload)
+            except Exception as e:
+                log.error(f"Save slot parse error: {e}")
 
         elif msg_type == MSG_EVENT:
             if len(payload) >= 4:

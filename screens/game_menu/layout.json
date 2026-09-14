@@ -1,0 +1,231 @@
+{
+  "_comment": "The GAME menu overlay (SCREEN_GAME, 8): wording, row rules and message ids. Geometry is boxes.json; every box there is the original's rectangle scaled by 2.25 into the centred 4:3 area of the reference frame, and `native` below says which rectangle, per box.",
+  "native": {
+    "body": [
+      144,
+      25,
+      423,
+      403
+    ],
+    "menu_save": [
+      184,
+      68,
+      274,
+      95
+    ],
+    "menu_load": [
+      291,
+      68,
+      381,
+      95
+    ],
+    "menu_new": [
+      184,
+      113,
+      274,
+      140
+    ],
+    "menu_quit": [
+      291,
+      113,
+      381,
+      140
+    ],
+    "menu_settings": [
+      184,
+      332,
+      274,
+      358
+    ],
+    "menu_return": [
+      295,
+      332,
+      385,
+      358
+    ],
+    "settings_title": [
+      154,
+      34,
+      413,
+      58
+    ],
+    "settings_rows": [
+      170,
+      64,
+      398,
+      285
+    ],
+    "settings_accept": [
+      241,
+      363,
+      315,
+      382
+    ],
+    "slot_list": [
+      170,
+      49,
+      390,
+      359
+    ],
+    "load_load": [
+      181,
+      362,
+      248,
+      383
+    ],
+    "load_cancel": [
+      315,
+      363,
+      382,
+      383
+    ],
+    "save_save": [
+      181,
+      363,
+      248,
+      383
+    ],
+    "save_cancel": [
+      315,
+      363,
+      382,
+      383
+    ],
+    "confirm_panel": [
+      161,
+      117,
+      471,
+      343
+    ],
+    "confirm_text": [
+      204,
+      145,
+      428,
+      271
+    ],
+    "confirm_yes": [
+      235,
+      302,
+      286,
+      323
+    ],
+    "confirm_no": [
+      345,
+      302,
+      396,
+      323
+    ],
+    "warning_panel": [
+      154,
+      144,
+      485,
+      335
+    ],
+    "warning_text": [
+      208,
+      172,
+      434,
+      292
+    ]
+  },
+  "_native_note": "640x480 rectangles from Add_Game_Popup_Fields_ (loadsave.cpp:176-293), Confirmation_Box_ (gendraw.cpp:153-175, CONFIRM.LBX drawn at 0xa1,0x75) and Message_Box_Exploding_ (gendraw.cpp:90-127, WARNING.LBX at 0x9a,0x90, 0x14B x 0xBF). body, settings_title and slot_list are read off the native screenshots, not the source: the popup's frame is artwork (GAME.LBX 0, 29, 11, 14).",
+  "words": {
+    "menu": {
+      "save": "SAVE GAME",
+      "load": "LOAD GAME",
+      "new": "NEW GAME",
+      "quit": "QUIT GAME",
+      "settings": "SETTINGS",
+      "return": "RETURN"
+    },
+    "settings": {
+      "title": "GAME SETTINGS",
+      "accept": "ACCEPT"
+    },
+    "load": {
+      "load": "LOAD",
+      "cancel": "CANCEL"
+    },
+    "save": {
+      "save": "SAVE",
+      "cancel": "CANCEL"
+    },
+    "confirm": {
+      "yes": "YES",
+      "no": "NO"
+    },
+    "_artwork_note": "Every word above is ARTWORK in the original \u2014 GAME.LBX entries 1-6, 10, 12, 13, 15, 29 (Load_Game_Popup_Pictures_, loadsave.cpp:1177-1207) and CONFIRM.LBX (gendraw.cpp:167-175). There is no string to extract, so they are typed here from the native screenshots, per decision 15.",
+    "slot": "Slot {n}",
+    "hd_state_slot": "HD STATE: without MSG_SAVE_SLOTS (doc/ext_save_slots.patch, not applied) HD has no slot names, stardates, dates or status, and a row shows its number only. The original shows the description from SAVEn.GAM (filedef.cpp:207-243). Decision 60.",
+    "confirm_unknown": "Confirm?",
+    "warning_unknown": "The game refused slot {n}.",
+    "_unknown_note": "HD STATE: shown only when the overlay did not see which button led here (it was opened into a confirmation or warning) or, for the warning, without MSG_SAVE_SLOTS; the original prints H 186/187 and H 178-180 (loadsave.cpp:1241, :1258, :934-940).",
+    "string_missing": "String {id}: run tools/hestrings_extract.py"
+  },
+  "settings_rows": {
+    "label_ids": [
+      166,
+      167,
+      168,
+      169,
+      170,
+      171,
+      172,
+      173,
+      174,
+      175,
+      176,
+      177,
+      391
+    ],
+    "_label_note": "HAROLD::H_Message_ 0xA6-0xB1 and 0x187, in row order (_Draw_Options_Game_Popup_, loadsave.cpp:1503-1523).",
+    "alt": [
+      "(ALT-F1)",
+      "(ALT-F2)",
+      "(ALT-F3)",
+      "",
+      "(ALT-F4)",
+      "(ALT-F5)",
+      "(ALT-F6)",
+      "(ALT-F7)",
+      "(ALT-F8)",
+      "",
+      "",
+      "",
+      ""
+    ],
+    "_alt_note": "Literals of the SCREEN path, loadsave.cpp:1504-1520, which is what the running game shows. The bitmap path used for the slide animation prints a different set (:1474-1487: F5-F8 on rows 5-8, no F4) and HD has no slide; reproduced as orion2re shows it, not repaired. Open fix 18.",
+    "checkbox": 0.706,
+    "_checkbox_note": "the checkbox field is 12 px tall on a 17 px pitch (loadsave.cpp:215, :218)",
+    "label_x": 0.114,
+    "_label_x_note": "label at draw_x + 4 + width of GAME.LBX 9 = native 196 in the 170..398 row (:1500)",
+    "alt_x": 0.772,
+    "_alt_x_note": "text_x2 = text_x1 + 0x96 = native 346 (:1501)"
+  },
+  "slot_rows": {
+    "row": 0.774,
+    "_row_note": "a slot field is 24 px on the 31 px pitch (loadsave.cpp:263)",
+    "name_x": 0.027,
+    "_name_x_note": "text_x = popup base + 0x20 = native 176 in the 170..390 list (:850)",
+    "detail_y": 0.452,
+    "_detail_y_note": "stardate and date print at text_y + 14 of 31 (:885, :894)",
+    "date_x": 0.482,
+    "_date_x_note": "the date at text_x + 100 = native 276 (:894)",
+    "invalid": "* INVALID *",
+    "_invalid_note": "literal, loadsave.cpp:856 \u2014 the engine also writes it into the description (:260, :271)",
+    "empty": 388,
+    "_empty_note": "H 388 '... empty slot ...': the stardate is not printed for a slot whose description is this string (:884)",
+    "omission_icon": "OMISSION: the game-type icon at the right of every row (GAME.LBX 16/17/18, loadsave.cpp:833-846) is not drawn \u2014 that artwork is not extracted, and a word in its place would be an invention."
+  },
+  "confirm": {
+    "new": 186,
+    "quit": 187
+  },
+  "warning": {
+    "1": 178,
+    "2": 179,
+    "3": 180
+  },
+  "omission_sliders": "OMISSION: the Music and Sound Fx sliders (loadsave.cpp:200-201, type-6 fields) are not in HD. Their value is written from the pointer by fields::Find_Bar_Position_ (fields.cpp:1702), which an activation cannot supply and decision 39's correction says an injected click loses. Data, 14 September 2026: leave out and mark. Their help regions 420 and 421 are omitted with them. Open fix 15 asks the question.",
+  "unverified_right_click": "UNVERIFIED, NOT TRANSCRIBED: a right click inside the Save dialog outside every help rectangle returns -1, which Do_Save_Game_Popup_'s `input_id < 0` branch reads as `abs(-1) = 1` inside the slot field range and leaves for the menu (loadsave.cpp:568-574). Data's order: verify live first. It could not be run: the game is a native Wayland client that xdotool cannot reach, and every field centre in that dialog lies inside a help rectangle, so MSG_CANCEL_FIELD cannot produce the case. Until it is verified, HD does nothing there."
+}

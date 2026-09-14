@@ -13745,6 +13745,274 @@ def main():
     ok("window size is the surface's, not the request's (a refused "
        "size is adopted and reported, a granted one is silent)")
 
+    # ── GAME menu overlay (work order Stop 2, 14 September 2026) ──
+    import json as _gm_json
+    from core.game_state import FieldInfo as _GmField, GameState as _GmState
+    from core import game_client as _gm_gc, injection as _gm_inj
+    from core import wire_protocol as _gm_wp
+    from core.structs import settings as _gm_set
+    from screens.game_menu import gmdraw as _gm_draw, nodes as _gm_nodes
+
+    _gm_fix = _gm_json.load(open(os.path.join(
+        os.path.dirname(SCREENS_DIR), "tools", "game_menu_fields.json")))
+
+    def _gm_fields(rows):
+        out = []
+        for _r in rows:
+            _f = _GmField()
+            (_f.index, _f.x, _f.y, _f.x_end, _f.y_end, _f.field_type,
+             _f.hotkey) = _r
+            out.append(_f)
+        return out
+
+    # 1. EVERY MEASURED LIST IS ITS OWN NODE, field 0 never counted, a
+    #    multiplayer menu (no LOAD, no NEW) still a menu, the galaxy
+    #    map's list none of them.
+    for _gm_node in ("menu", "settings", "load", "save", "confirm",
+                     "warning"):
+        assert _gm_nodes.classify(_gm_fields(_gm_fix[_gm_node])) == \
+            _gm_node, _gm_node
+    assert _gm_nodes.classify(_gm_fields(_gm_fix["galaxy_map"])) is None
+    _gm_mp = [r for r in _gm_fix["menu"] if r[6] not in (ord("L"), ord("N"))]
+    assert _gm_nodes.classify(_gm_fields(_gm_mp)) == "menu"
+    _gm_z = [[0, 999, 999, 999, 999, 0, ord("S")]] + _gm_fix["warning"][1:]
+    assert _gm_nodes.classify(_gm_fields(_gm_z)) == "warning", \
+        "field 0 decided a classification"
+    ok("GAME menu: the six measured field lists classify as their own "
+       "node, field 0 ignored, multiplayer menu kept, galaxy list none")
+
+    # 2. WHAT ESC REACHES is the first ESC field (fields.cpp:2608): RETURN
+    #    in the menu, the whole-screen field elsewhere, nothing in the
+    #    confirmation. And the row readers find their ten and thirteen.
+    _gm_esc = {n: _gm_nodes.esc_field(_gm_fields(_gm_fix[n]))
+               for n in ("menu", "settings", "load", "save", "confirm")}
+    assert _gm_esc["menu"].field_type == 0 and _gm_esc["menu"].index == 6
+    for _n in ("settings", "load", "save"):
+        assert (_gm_esc[_n].x, _gm_esc[_n].x_end) == (0, 639), _n
+    assert _gm_esc["confirm"] is None
+    assert len(_gm_nodes.option_toggles(_gm_fields(_gm_fix["settings"]))) == 13
+    assert len(_gm_nodes.slot_rows(_gm_fields(_gm_fix["load"]))) == 10
+    assert len(_gm_nodes.save_strips(_gm_fields(_gm_fix["save"]))) == 10
+    assert len(_gm_nodes.save_inputs(_gm_fields(_gm_fix["save"]))) == 10
+    ok("GAME menu: ESC targets per dialog as measured, 13 toggles, 10 "
+       "slot rows, 10 strips, 10 name inputs")
+
+    # 3. THE OVERLAY CLAIMS SCREEN 8 over the galaxy map, undimmed, and
+    #    closes itself when the game leaves 8 (decision 59).
+    _gm_scr = d.screens["game_menu"]
+    assert d.screen_map.get(8) == "game_menu" and _gm_scr.IS_OVERLAY
+    assert _gm_scr.OVERLAY_DIM == 0
+    d.switch_to("galaxy_map")
+    _gm_gs = _GmState()
+    _gm_gs.current_screen = 8
+    _gm_gs.fields = _gm_fields(_gm_fix["menu"])
+    d.update_from_game(_gm_gs)
+    assert d.overlay_name == "game_menu" and d.active_name == "galaxy_map"
+    _gm_gs0 = _GmState()
+    _gm_gs0.current_screen = 0
+    d.update_from_game(_gm_gs0)
+    assert d.overlay is None and d.active_name == "galaxy_map"
+    ok("GAME menu: overlay opens over the galaxy map at screen 8, "
+       "undimmed, and closes when the game leaves it")
+
+    # 4. EVERY NODE RENDERS, without the patch the rows are the HD STATE
+    #    ("Slot N"), with MSG_SAVE_SLOTS the engine's strings verbatim.
+    _gm_live = bytes([1, 1, 1, 0, 0, 1, 1, 0, 1, 1, 0, 1, 0, 0, 0, 0, 0,
+                      1, 50, 1, 49, 7]) + bytes(_gm_set.SIZE - 22)
+    _gm_gs.settings_raw = _gm_live
+    _gm_scr.enter(_gm_gs)
+    _gm_said = []
+    _gm_real_rt = app.style.render_text
+    app.style.render_text = lambda t, *a, **k: (_gm_said.append(t),
+                                               _gm_real_rt(t, *a, **k))[1]
+    try:
+        for _n in ("menu", "settings", "load", "save", "confirm",
+                   "warning"):
+            _gm_gs.fields = _gm_fields(_gm_fix[_n])
+            _gm_scr.update(_gm_gs)
+            _gm_scr.render(surf)
+        assert "Slot 10" in _gm_said, "no HD STATE slot label drawn"
+        _gm_said.clear()
+        _gm_rec = bytes([0, 0]) + b"\x03Test Save\x01".ljust(37, b"\0") + \
+            b"Stardate:3500.0".ljust(25, b"\0") + \
+            b"31, 126 13:52".ljust(25, b"\0")
+        _gm_gs.save_slots = _gm_wp.parse_save_slots(bytes([2, 10]) +
+                                                   _gm_rec * 10)
+        _gm_gs.fields = _gm_fields(_gm_fix["load"])
+        _gm_scr.update(_gm_gs)
+        _gm_scr.render(surf)
+        assert "Test Save" in _gm_said and "31, 126 13:52" in _gm_said, \
+            "slot strings were not drawn as the engine formatted them"
+        assert _gm_gs.save_slots["slots"][0]["active_marked"]
+    finally:
+        app.style.render_text = _gm_real_rt
+    _gm_gs.save_slots = None
+    ok("GAME menu: all six nodes render; no patch -> 'Slot N' (HD STATE), "
+       "MSG_SAVE_SLOTS -> the engine's strings verbatim, colour codes cut")
+
+    # 5. THE SKINS: panels and buttons are thin_border boxes, and nothing
+    #    in the package draws a rectangle itself (decision 34).
+    _gm_boxes = _gm_json.load(open(os.path.join(
+        SCREENS_DIR, "game_menu", "boxes.json")))["1920x1080"]
+    for _b in _gm_boxes:
+        _sk = _b.get("style", {}).get("skin")
+        if _b["name"] == "body" or _b["name"].endswith("_panel") or \
+                _b["name"].split("_")[0] in ("menu", "confirm", "load",
+                                            "save") and _sk != "area":
+            assert _sk == "thin_border", (_b["name"], _sk)
+    for _fn in os.listdir(os.path.join(SCREENS_DIR, "game_menu")):
+        if _fn.endswith(".py"):
+            _src = open(os.path.join(SCREENS_DIR, "game_menu", _fn),
+                        encoding="utf-8").read()
+            assert "draw.rect(" not in _src, f"{_fn} draws a rectangle"
+    ok("GAME menu: every panel and button is a thin_border box, no "
+       "pygame.draw.rect in the package")
+
+    # 6. HELP: the four transcribed tables, 420/421 left out WITH the
+    #    sliders and saying so, each region carrying its native rect.
+    _gm_help = _gm_json.load(open(os.path.join(
+        SCREENS_DIR, "game_menu", "help.json")))
+    _gm_ids = {}
+    for _r in _gm_help["regions"]:
+        assert "native" in _r and "node" in _r, _r
+        _gm_ids.setdefault(_r["node"], []).append(_r["help_id"])
+    assert sorted(_gm_ids["menu"]) == [415] * 4 + [416, 417, 418, 419, 422, 423]
+    assert sorted(_gm_ids["settings"]) == [415] * 4 + list(range(429, 443))
+    assert sorted(_gm_ids["load"]) == [415] * 4 + [424, 425, 426]
+    assert sorted(_gm_ids["save"]) == [415] * 4 + [425, 427, 428]
+    assert "420" in _gm_help["_omitted"] and "421" in _gm_help["_omitted"]
+    ok("GAME menu help: 42 regions over four dialogs as evanhelp.cpp:40-116, "
+       "420/421 omitted with the sliders and named")
+
+    # 7. THE MARKINGS cannot silently disappear: module, layout.json and
+    #    the status document, for each omission and the HD state.
+    _gm_doc = _gm_scr.__class__.__module__
+    _gm_mod = sys.modules[_gm_doc].__doc__
+    _gm_lay = _gm_json.load(open(os.path.join(
+        SCREENS_DIR, "game_menu", "layout.json")))
+    _gm_status = open(os.path.join(os.path.dirname(SCREENS_DIR),
+                                   "v3_projektstatus.md"),
+                      encoding="utf-8").read()
+    for _mark in ("OMISSION", "HD STATE", "UNVERIFIED"):
+        assert _mark in _gm_mod, f"screen.py lost its {_mark} marking"
+    assert _gm_lay["omission_sliders"].startswith("OMISSION")
+    assert _gm_lay["slot_rows"]["omission_icon"].startswith("OMISSION")
+    assert _gm_lay["words"]["hd_state_slot"].startswith("HD STATE")
+    assert _gm_lay["unverified_right_click"].startswith("UNVERIFIED")
+    for _mark in ("OMISSION — the Music and Sound Fx sliders",
+                  "HD STATE — slot names",
+                  "UNVERIFIED — the Save dialog's right click"):
+        assert _mark in _gm_status, f"status document lost: {_mark}"
+    ok("GAME menu markings: OMISSION (sliders, icon), HD STATE (slot "
+       "names), UNVERIFIED (Save right click) in module, layout, status")
+
+    # 8. THE GATE: a second click before the list changes sends nothing;
+    #    after the change it goes. QUIT -> YES stands the watchdog down
+    #    FIRST (decision 62).
+    class _GmClient:
+        def __init__(self):
+            self.log, self.stats = [], {"state": 0}
+        def activate_field(self, i): self.log.append(("activate", i))
+        def expect_shutdown(self): self.log.append(("shutdown",))
+        def hold_watchdog(self, s): pass
+        def inject_key(self, k): self.log.append(("key", k))
+    _gm_real_client, _gm_real_conn = app.client, app.connected
+    app.client, app.connected = _GmClient(), True
+    try:
+        _gm_scr.enter(_gm_gs)
+        _gm_gs.fields = _gm_fields(_gm_fix["menu"])
+        _gm_scr.update(_gm_gs)
+        _gm_scr.press("O")
+        _gm_scr.press("O")
+        assert app.client.log == [("activate", 5)], app.client.log
+        _gm_gs.fields = _gm_fields(_gm_fix["settings"])
+        _gm_scr.update(_gm_gs)
+        _gm_scr.press("A")
+        assert app.client.log[-1] == ("activate", 27), app.client.log
+        app.client.log.clear()
+        _gm_gs.fields = _gm_fields(_gm_fix["menu"])
+        _gm_scr.update(_gm_gs)
+        _gm_scr.press("Q")
+        _gm_gs.fields = _gm_fields(_gm_fix["confirm"])
+        _gm_scr.update(_gm_gs)
+        _gm_scr.press("Y")
+        assert app.client.log[-2:] == [("shutdown",), ("activate", 1)], \
+            app.client.log
+    finally:
+        app.client, app.connected = _gm_real_client, _gm_real_conn
+        _gm_scr.exit()
+        d.close_overlay()
+    ok("GAME menu: a double click sends once, the next dialog's field "
+       "after the list changed, QUIT -> YES disarms before YES")
+
+    # 9. A REQUESTED END IS NOT A LOST LINK: after expect_shutdown a close
+    #    ends the client and never reconnects.
+    _gm_c = _gm_gc.GameClient()
+    _gm_rc = []
+    _gm_c._reconnect = lambda: _gm_rc.append(1)
+    _gm_c._lost("before")
+    assert _gm_rc == [1] and not _gm_c.game_ended
+    _gm_c.expect_shutdown()
+    _gm_c._lost("after")
+    assert _gm_rc == [1] and _gm_c.game_ended
+    ok("game client: a close after expect_shutdown ends it, one before "
+       "reconnects")
+
+    # 10. A PACED STEP sends one item per PACE_STATES snapshots, and a
+    #     run that returns a bool (click_banner) is not paced.
+    class _GmPC:
+        def __init__(self):
+            self.stats, self.keys = {"state": 0}, []
+        def inject_key(self, k): self.keys.append(k)
+        def hold_watchdog(self, s): pass
+    _gm_pc = _GmPC()
+    _gm_ch = _gm_inj.InjectionChain(_gm_pc, [(
+        "paced", lambda f: True,
+        lambda c, f: _gm_inj.paced_keys(None, [1, 2, 3]))])
+    _gm_st = _GmState()
+    _gm_st.fields = _gm_fields(_gm_fix["save"])
+    for _tick in range(12):
+        _gm_ch.update(_gm_st)
+        _gm_pc.stats["state"] += 1
+        assert len(_gm_pc.keys) <= _tick // _gm_inj.PACE_STATES + 1
+    assert _gm_pc.keys == [1, 2, 3] and _gm_ch.done
+    _gm_ch2 = _gm_inj.InjectionChain(_gm_pc, [(
+        "bool", lambda f: True, lambda c, f: True)])
+    _gm_ch2.update(_gm_st)
+    assert _gm_ch2.done
+    ok("injection: a paced step sends one key per PACE_STATES snapshots; "
+       "a bool-returning step is not paced")
+
+    # 11. THE SETTINGS SPEC reproduces the native dialog of the live
+    #     snapshot (row order skips random_events), and row 1 reads 0
+    #     outside single player (loadsave.cpp:1147-1151).
+    assert _gm_set.SPEC.verified
+    assert _gm_set.option_flags(_gm_live, 0) == \
+        [1, 1, 0, 0, 1, 1, 0, 1, 1, 0, 1, 0, 0]
+    assert _gm_set.option_flags(_gm_live, 2)[1] == 0
+    assert _gm_set.parse(_gm_live).active_save_slot == 7
+    ok("s_settings: the live bytes give the native dialog's 13 boxes, "
+       "active slot 7, End Of Turn Wait off in multiplayer")
+
+    # 12. THE GALAXY MAP DOES NOT PARK UNDER THE OVERLAY: field 9 is a
+    #     Load slot row there.
+    _gm_gal = d.screens["galaxy_map"]
+    d.switch_to("galaxy_map")
+    _gm_parks = []
+    _gm_real_park = _gm_gal._viewctl.park_game
+    _gm_gal._viewctl.park_game = lambda a, s: _gm_parks.append(
+        s.current_screen)
+    try:
+        _gm_gs8 = _GmState()
+        _gm_gs8.current_screen = 8
+        _gm_gal.update(_gm_gs8)
+        _gm_gs8.current_screen = 0
+        _gm_gal.update(_gm_gs8)
+    finally:
+        _gm_gal._viewctl.park_game = _gm_real_park
+    assert _gm_parks == [0], _gm_parks
+    ok("galaxy map parks only while the game reports screen 0")
+
     # CLAUDE.md is what a Claude Code session reads before touching
     # anything, so a stale pointer in it misleads at exactly the
     # moment nobody is watching. Two things can rot: a path that no

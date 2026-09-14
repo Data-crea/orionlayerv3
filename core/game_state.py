@@ -76,6 +76,11 @@ class GameState:
     # Fields (from FIELD_LIST message)
     fields: list = field(default_factory=list)
 
+    # Save slot list (MSG_SAVE_SLOTS, doc/ext_save_slots.patch). None
+    # means the engine did not send one with the current field list —
+    # not in a Load/Save dialog, or an engine without the patch.
+    save_slots: Optional[list] = None
+
     # Visual (from VISUAL_FRAME message)
     framebuffer: Optional[bytes] = None
     palette: Optional[list] = None

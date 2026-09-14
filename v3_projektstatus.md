@@ -830,9 +830,9 @@ files under `doc/` and are only summarised here.
 | | |
 |---|---|
 | Python | 32,960 lines across 111 modules — `find . -name '*.py'`, `__pycache__` excluded, the smoke test's 6,400 included. The previous figure here (21,642 across 94) was carried from an unstated method and could not be reproduced |
-| Smoke test | `python tools/smoke_test.py` — **141 checks**, headless |
+| Smoke test | `python tools/smoke_test.py` — **153 checks**, headless |
 | Assets | 170 MB (select_race 68, galaxy_map 51, shared 23, new_game 21, colony_summary 1) |
-| Screens in HD | 8 of ~20–22 (colony summary draws list, sidebar, scan box and galaxy inset, and MOVES POPS — the first HD gesture that drives the game; planets, brief 101, lists, sorts, restricts and returns) |
+| Screens in HD | 9 of ~20–22 (the GAME menu overlay, work order Stop 2, every dialog of the popup; colony summary draws list, sidebar, scan box and galaxy inset, and MOVES POPS — the first HD gesture that drives the game; planets, brief 101, lists, sorts, restricts and returns) |
 | Setup from clone | `python tools/setup.py` (deps via the system package manager) |
 | orion2re | required for live data, not for the smoke test |
 
@@ -1162,7 +1162,7 @@ in exactly ONE bucket. The numbers below are produced by
 check asserts this list still agrees with it — the same trade the
 check count makes, for the same reason.
 
-`screens/galaxy_map/screen.py` (**531** code, 807 total), `tools/struct_probe.py` (**478** code, 753 total), `tools/colony_list_preview.py` (**403** code, 772 total), `screens/custom_race/screen.py` (**400** code, 558 total), `tools/colony_move_hd.py` (**383** code, 583 total), `core/editor/editor.py` (**359** code, 430 total), `screens/galaxy_map/renderer.py` (**335** code, 753 total), `tools/ext_diag.py` (**325** code, 473 total), `core/style.py` (**310** code, 479 total).
+`screens/galaxy_map/screen.py` (**533** code, 815 total), `tools/struct_probe.py` (**478** code, 753 total), `tools/colony_list_preview.py` (**403** code, 772 total), `screens/custom_race/screen.py` (**400** code, 558 total), `tools/colony_move_hd.py` (**383** code, 583 total), `core/editor/editor.py` (**359** code, 430 total), `screens/galaxy_map/renderer.py` (**335** code, 753 total), `tools/ext_diag.py` (**325** code, 473 total), `core/style.py` (**310** code, 479 total).
 `smoke_test.py` is exempt by nature.
 
 **TWO TOOLS JOINED THE LIST ON 8 SEPTEMBER 2026 and one thing left
@@ -3188,7 +3188,112 @@ No framebuffer fallback on the round trip.
   send cancel (the event-driven send brief), the toggle state on the
   wire, the monster-system ship name, the monster pictures.
 
+### GAME menu — work order Stop 2, 14 September 2026
+
+**SCREEN_GAME (8) has an HD overlay**, `screens/game_menu/`: the whole
+tree behind the galaxy map's GAME button that Stop 1 read
+(`doc/game_menu_reading.md`) — the menu, Settings, Load, Save, the
+NEW/QUIT confirmation and the slot warning. Fundament 59-62 are this
+work's decisions.
+
+- **One overlay claims screen 8** (decision 59). The dispatcher is
+  unchanged: `update_from_game` already opens an overlay bound to an id
+  over the active screen and closes it when the game leaves. Not
+  covered, and NOT changed: an HD app that starts while the game is
+  already in the popup has no galaxy map underneath and draws the
+  overlay over the empty background.
+- **Which dialog is up** is `nodes.classify` over the field list —
+  type, hotkey, size, never index, never field 0. The measured lists
+  are `tools/game_menu_fields.json`, geometry only.
+- **Input** is ACTIVATE_FIELD on the field carrying the builder's
+  hotkey, looked up at the moment of the click, through a gate that
+  sends once per list change (a double click on SETTINGS would
+  otherwise toggle a checkbox in the next dialog).
+- **Settings checkboxes** are held locally from `core/structs/settings.py`,
+  VERIFIED on two sources: the header compiled with static_asserts (one
+  deliberately wrong offset fails), and the live bytes against the
+  native dialog, 13 of 13, `random_events` skipped as
+  `Set_Current_Game_Option_Flags_` skips it. The checkboxes are type 7,
+  so decision 20 allows ACTIVATE_FIELD and nothing needed reporting.
+- **Name input** is a `TextInput`, committed through `core/injection.py`
+  as one PACED step — the strip activation, one backspace, the name,
+  Enter, one send per `EFFECT_PAIRS` snapshots. Paced because the
+  game's key ring holds TEN (`key.cpp:5`, `:67-72`): a burst of 15 keys
+  into a name kept 9 (`probe` below). `type_name` still bursts, and
+  Empire Identity's 24 backspaces plus a name overflow that ring for
+  names longer than a few characters — **a latent fault in a shipped
+  screen, not fixed here**, written down in `type_name`.
+- **The galaxy map no longer parks under the overlay.** It sent field 9
+  by number from `update()`, and field 9 of the Load dialog is slot 9,
+  which loads at once.
+- **QUIT -> YES** calls `GameClient.expect_shutdown()` before YES; the
+  app ends with the game (decision 62).
+
+**Marked, each in the module, `layout.json` and the smoke test:**
+
+- **OMISSION — the Music and Sound Fx sliders.** Their value comes from
+  the pointer (`Find_Bar_Position_`), which an activation cannot supply.
+  Help regions 420/421 go with them. Open fix 15 asks the question.
+- **OMISSION — the slot game-type icon** (GAME.LBX 16-18, not extracted).
+- **HD STATE — slot names.** Until `doc/ext_save_slots.patch` is applied
+  (reported, NOT applied, open fix 14) a Load/Save row shows "Slot N",
+  the warning says "The game refused slot N." instead of H 178-180, and
+  a name edit starts empty (decision 60).
+- **UNVERIFIED — the Save dialog's right click** outside every help
+  region, which the source sends back to the menu. It could not be run:
+  the game is a native Wayland client xdotool cannot reach, and every
+  field centre in that dialog lies inside a help rectangle, so
+  MSG_CANCEL_FIELD cannot produce the case. HD does nothing there until
+  a human right-clicks it once on the native window.
+
+**Live acceptance, 14 September 2026** — `tools/game_menu_hd.py`, the
+real `App` headless, real pygame events. The game every step ran on was
+**not a known fixture** (stardate 3500.0, 99 stars, 50 colony records)
+until the save step, and slot 10 after it. Every step hashed
+SAVE1-SAVE9 before and after — **identical on all eight steps** — and
+logged SAVE10's hash and mtime without comparing it.
+
+| step | result |
+|---|---|
+| `walk` | PASS. HD GAME click -> field list **equal** to the native GAME click's (11 fields); every node opened and pictured beside the native frame (`orionlayer-fixtures/evidence/game_menu/hd_live/`); starting a name edit sent nothing; ESC while editing -> menu; NO -> menu twice; RETURN -> the galaxy list exactly as before GAME |
+| `esc` | PASS. ESC from menu, Settings, Load and Save -> galaxy map; ESC in the confirmation ignored, nothing sent |
+| `help` | PASS. 42 of 42 regions over four dialogs open their own entry |
+| `toggle` | PASS. Expanding Help on, ESC -> `s_settings` byte 4 is 1; off, ESC -> 0. ESC COMMITS, which Stop 1 had only from the source |
+| `probe` | PASS. Native: 15 keys in one burst into slot 10's name kept 9 ("(Auto Save)ABCDEFGHI"); native ESC while editing -> menu (confirms the `-field` path) |
+| `save` | PASS on the second reading. Slot 10, "HD Save Test Slot Ten" typed through HD: all 21 characters arrived; SAVE10.GAM was written (`05446424…`) with the description **"HD Save Test Slot Ten_"** — the engine keeps its edit cursor on an Enter save, as the native list's hand-saved "ddddd_" already showed (open fix 19). Reproduced, not repaired |
+| `load` | PASS. Slot 10 loaded through HD: the game left the popup to REPORTS (39), overlay closed, stardate 3500.0 as saved |
+| `quit` | PASS. QUIT -> YES: SAVE10.GAM rewritten (mtime 19:19:27, same content), the client set `game_ended`, the app left its loop, **no reconnect line** in the run's log, the orion2re process exited. Restarted afterwards |
+
+**Deviations from the native pictures, listed, not explained away:** the
+button words are text, not GAME.LBX artwork; the popup frame is the
+thin_border skin on the cockpit texture, not the riveted metal; no
+slider box in the menu; no hover or pressed state; rows plated by
+`draw_plate` instead of recessed bars; checkboxes are filled squares,
+not the blue lamp; the confirmation and warning frames are plain
+panels (no CONFIRM.LBX / WARNING.LBX art, no animated warning lights);
+without the patch every row difference above; the Settings title and
+rows set in Aldrich with the game's colours only approximated
+(`colors.json` `game_menu`, a palette choice).
+
+**Found on the way, not this work's to fix:** `tools/colony_move_hd.py`
+cannot be imported (`palette.require` for `plate_outline` runs before
+the palette exists); `tools/game_menu_hd.py` initialises the palette
+first and reuses its helpers. The OrionLayer instance Data had running
+(`main.py`, old code) stayed connected throughout, fell back to the
+framebuffer at screen 8 as before, and will have reconnected when the
+game quit.
+
+**Next screen:** SCREEN_REPORTS (39). After a load the decision-22
+fallback shows the native framebuffer.
+
 ## What is missing
+
+### GAME menu
+- `doc/ext_save_slots.patch` is reported and NOT applied: slot rows show numbers only (HD STATE).
+- The volume sliders and the slot game-type icon are OMISSIONS.
+- The Save dialog's right click outside a help region is UNVERIFIED and not built.
+- SCREEN_REPORTS (39) is the next screen; a load falls back to the framebuffer there.
+- Empire Identity's `type_name` burst overflows the game's ten-key ring for longer names.
 
 ### Galaxy Map
 - **Anchored zoom — three things only a running game can answer.**

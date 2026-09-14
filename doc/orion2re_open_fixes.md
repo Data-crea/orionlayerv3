@@ -35,6 +35,12 @@ section for what was found where.
 | 11 | `COLONY::Colony_Has_Natives_` tests nibble **8** (android), not 9 (native) | **Fix** — reproducible in a named save | Nothing for us; for the game, the occupation-policy popup is offered to the wrong colonies |
 | 12 | A pop move has no command: it has to be a click choreography into the game's own list window | **Request**, and **patched locally** 10 September 2026 (`doc/ext_move_pop.patch`), **VERIFIED LIVE** the same day; open upstream | Without it a move costs four snapshot round trips instead of one — 725 ms against 55 ms measured — and every one of them is a click that can land on the wrong row |
 | 13 | The Planets screen's five restriction toggles (`PLNTSUM::_filter_out_*`) are not in the snapshot | **Request** | HD cannot know which filters the game already has on; seen live 13 September 2026 — the range toggle was on before the HD screen opened, and the two lists disagreed |
+| 14 | The GAME popup's save slot list (names, stardates, dates, status, type) is not on the wire | **Request**, patch written 14 September 2026 (`doc/ext_save_slots.patch`), **reported, NOT applied** | The HD Load and Save dialogs show slot numbers only; reading SAVEn.GAM from a folder of our own is refused (fundament 60) |
+| 15 | A scroll field's value can only be set by the pointer | **Question, not a request** | The GAME menu's Music and Sound Fx sliders are left out of HD |
+| 16 | Save dates print the year as `tm_year`: 126 | **Observation** | Nothing; HD shows what the engine formats |
+| 17 | The Load dialog's first visit prints dates without a month | **Observation** | Nothing; HD shows what the engine formats |
+| 18 | The Settings dialog has two different Alt-key label sets | **Observation** | Nothing; HD shows the screen path's set |
+| 19 | A save name confirmed with Enter keeps the edit cursor `_` | **Observation** | Nothing; HD reproduces it |
 
 Items 3 and 4 are both about INJECT_CLICK and both live in the same
 code path, but they are separate faults: 3 is where the coordinates
@@ -1236,3 +1242,90 @@ The radio sprites are in the framebuffer, and reading them would work
 until a skin, a palette or a sprite changed. Data's decision after
 brief 101 Stop 3: a documented gap until the flags are on the wire, and
 no frame reading.
+
+---
+
+## 14. The GAME popup's save slot list is not on the wire — a request, with a patch
+
+### What we found (orion2re 1.60, 14 September 2026)
+
+`LOADSAVE::Set_Up_Load_Save_Popup_` (loadsave.cpp:136-171) and
+`Check_For_Saved_Games_` (:599-640) read SAVE1.GAM … SAVE10.GAM into
+`MOX::_save_game_description[10]`, `MOX::_save_game_dates`,
+`MOX::_save_game_stardates` and `_game_popup_fields->slot_status` /
+`saved_game_types`. None of it is serialized, so a client drawing the
+Load or Save dialog knows neither the names nor which slots are empty.
+
+### Why not read the files
+
+A client could open the ten headers itself. It would need the game's
+working directory, which is not on the wire either, and the day the
+two folders differ the names on screen stop belonging to the slots a
+click reaches — with every name still plausible. OrionLayer's decision
+60 refuses that.
+
+### The request
+
+`MSG_SAVE_SLOTS` (0x14), sent right after a FIELD_LIST while the game
+is on SCREEN_GAME with `_screen_data` 2 or 3: the engine's own status,
+game type and three strings per slot. `doc/ext_save_slots.patch`, two
+files, both in `src/ext/`; compiled -fsyntax-only against the build's
+flags, **not built into a binary and not applied** — reported first,
+by Data's order.
+
+### What it costs us today
+
+The HD rows show "Slot N", the warning after a refused slot cannot say
+why, and the save name field starts empty.
+
+## 15. A scroll field's value can only come from the pointer — a question
+
+`Add_Game_Popup_Fields_` adds the GAME menu's two volume sliders as
+scroll fields (loadsave.cpp:200-201). Their value is written by
+`fields::Find_Bar_Position_` (fields.cpp:1702) from `mouse::Pointer_X_()`,
+and `Set_Music_For_Game_Popup_` / `Set_Sound_For_Game_Popup_` only read
+it. `ACTIVATE_FIELD` reaches the handler with the old value; an
+injected click loses its pointer to `Sync_Mouse_State_From_SDL_`
+whenever the window has focus. **Would a `SET_FIELD_VALUE(field, value)`
+command be acceptable** — the scroll field's `value` pointer written,
+then the field activated? Until there is an answer, OrionLayer leaves
+the sliders out.
+
+## 16. Save dates print the year as years since 1900 — an observation
+
+`MISC::Get_Time_Stamp_` hands over `time_info->tm_year` unchanged
+(misc.cpp:699), and `LOADSAVE::Get_File_Date_String_` prints it with
+`%-4d` (loadsave.cpp:1772). A save from 2026 reads "Sep 13, 126".
+Seen in the native Load and Save dialogs, 14 September 2026.
+
+## 17. The Load dialog's first visit has no month names — an observation
+
+`_Game_Popup_` runs `Set_Up_Load_Save_Popup_` (loadsave.cpp:1573),
+which builds the date strings through `Get_Save_Game_Date_Strings_`
+(:153) from `LOADSAVE::_months`, before `Do_Load_Game_Popup_` fills
+`_months` with `Load_Month_Names_` (:304). So the first Load of a
+session prints "31, 126 13:52" and every later one "Jul 31, 126 13:52".
+`Do_Save_Game_Popup_` calls `Load_Month_Names_` at :479, also after.
+
+## 18. Two different Alt-key label sets in the Settings dialog — an observation
+
+`_Draw_Options_Game_Popup_` prints the hotkey hints twice, once per
+path. The screen path (loadsave.cpp:1503-1523) puts `(ALT-F1)` …
+`(ALT-F3)` on rows 0-2 and `(ALT-F4)` … `(ALT-F8)` on rows 4-8. The
+bitmap path, drawn during the slide animation (:1473-1492), spells
+them `ALT_F`, has no F4, and puts F5 … F8 on rows 5-8. Which set
+matches `MAINSCR::Check_Function_Keys_` (mainscr.cpp:3055,
+`Toggle_Game_Option_(-1101 - key)`) was not checked.
+
+## 19. A save name confirmed with Enter keeps the edit cursor — an observation
+
+Measured 14 September 2026: slot 10 saved through the Save dialog's
+Enter path with the name "HD Save Test Slot Ten" holds
+"HD Save Test Slot Ten_" in SAVE10.GAM, and the native list already
+showed a hand-saved "ddddd_". `Copy_Continuous_String_` strips one
+trailing `_` (fields.cpp, the `_continuous_string[len - 1] == '_'`
+test), so that is not where it stays. The leading explanation, **not
+measured**: the Enter branch calls the auto function after the copy
+(fields.cpp:1043-1050, `Quick_Call_Auto_Function_`), the redraw puts the
+cursor back into `_continuous_string`, and `Do_Save_Game_Popup_` copies
+that string into the description (loadsave.cpp:552-553).

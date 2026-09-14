@@ -215,6 +215,15 @@ class App:
         state = None
         if self.connected:
             self.client.poll()
+            if self.client.game_ended:
+                # QUIT -> YES in the GAME menu: the player asked the
+                # game to end, the client stood its watchdog down
+                # before sending YES, and OrionLayer ends with it
+                # (decision 62). No reconnect, no "game ended" screen.
+                log.info("orion2re ended at the player's request; "
+                         "OrionLayer exits with it")
+                self.running = False
+                return
             state = self.client.state
 
             if state.framebuffer and state.palette:

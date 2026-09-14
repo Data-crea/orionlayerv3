@@ -664,6 +664,18 @@ working copy, which beats trusting this paragraph's date.
 
 ---
 
+## MSG_SAVE_SLOTS (0x14) — a patch, not applied
+
+Server -> client, on the FIELDS subscription, right after a FIELD_LIST while the game is on
+SCREEN_GAME (8) with the Load or Save dialog up (`MOX::_screen_data` 2 or 3). Payload: uint8
+screen_data, uint8 count (10), then per slot int8 status, int8 game type, char[37] description,
+char[25] stardate, char[25] date. **Not in the engine** until `doc/ext_save_slots.patch` is
+applied; the request and its status are `doc/orion2re_open_fixes.md` item 14, and the parser is
+`core.wire_protocol.parse_save_slots`. The GAME popup's field lists per dialog are in
+`doc/game_menu_reading.md` §4.
+
+---
+
 ## Live field dumps
 
 Captured from the running game. **Labels in brackets are

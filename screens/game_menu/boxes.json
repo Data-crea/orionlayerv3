@@ -1,0 +1,292 @@
+{
+  "1920x1080": [
+    {
+      "name": "body",
+      "rect": [
+        564,
+        56,
+        628,
+        850
+      ],
+      "style": {
+        "skin": "thin_border",
+        "backdrop": true
+      }
+    },
+    {
+      "name": "menu_save",
+      "rect": [
+        654,
+        153,
+        202,
+        61
+      ],
+      "style": {
+        "skin": "thin_border",
+        "font_size": 30
+      }
+    },
+    {
+      "name": "menu_load",
+      "rect": [
+        895,
+        153,
+        202,
+        61
+      ],
+      "style": {
+        "skin": "thin_border",
+        "font_size": 30
+      }
+    },
+    {
+      "name": "menu_new",
+      "rect": [
+        654,
+        254,
+        202,
+        61
+      ],
+      "style": {
+        "skin": "thin_border",
+        "font_size": 30
+      }
+    },
+    {
+      "name": "menu_quit",
+      "rect": [
+        895,
+        254,
+        202,
+        61
+      ],
+      "style": {
+        "skin": "thin_border",
+        "font_size": 30
+      }
+    },
+    {
+      "name": "menu_settings",
+      "rect": [
+        654,
+        747,
+        202,
+        58
+      ],
+      "style": {
+        "skin": "thin_border",
+        "font_size": 30
+      }
+    },
+    {
+      "name": "menu_return",
+      "rect": [
+        904,
+        747,
+        202,
+        58
+      ],
+      "style": {
+        "skin": "thin_border",
+        "font_size": 30
+      }
+    },
+    {
+      "name": "settings_title",
+      "rect": [
+        586,
+        76,
+        583,
+        54
+      ],
+      "style": {
+        "skin": "text",
+        "font_size": 34,
+        "align": "center"
+      }
+    },
+    {
+      "name": "settings_rows",
+      "rect": [
+        622,
+        144,
+        513,
+        497
+      ],
+      "style": {
+        "skin": "area",
+        "font_size": 24
+      }
+    },
+    {
+      "name": "settings_accept",
+      "rect": [
+        782,
+        817,
+        166,
+        43
+      ],
+      "style": {
+        "skin": "thin_border",
+        "font_size": 30
+      }
+    },
+    {
+      "name": "slot_list",
+      "rect": [
+        622,
+        110,
+        495,
+        698
+      ],
+      "style": {
+        "skin": "area",
+        "font_size": 28,
+        "detail_font_size": 22
+      }
+    },
+    {
+      "name": "load_load",
+      "rect": [
+        647,
+        814,
+        151,
+        47
+      ],
+      "style": {
+        "skin": "thin_border",
+        "font_size": 30
+      }
+    },
+    {
+      "name": "load_cancel",
+      "rect": [
+        949,
+        817,
+        151,
+        45
+      ],
+      "style": {
+        "skin": "thin_border",
+        "font_size": 30
+      }
+    },
+    {
+      "name": "save_save",
+      "rect": [
+        647,
+        817,
+        151,
+        45
+      ],
+      "style": {
+        "skin": "thin_border",
+        "font_size": 30
+      }
+    },
+    {
+      "name": "save_cancel",
+      "rect": [
+        949,
+        817,
+        151,
+        45
+      ],
+      "style": {
+        "skin": "thin_border",
+        "font_size": 30
+      }
+    },
+    {
+      "name": "confirm_panel",
+      "rect": [
+        602,
+        263,
+        698,
+        508
+      ],
+      "style": {
+        "skin": "thin_border",
+        "backdrop": true
+      }
+    },
+    {
+      "name": "confirm_text",
+      "rect": [
+        699,
+        326,
+        504,
+        284
+      ],
+      "style": {
+        "skin": "area",
+        "font_size": 34
+      }
+    },
+    {
+      "name": "confirm_yes",
+      "rect": [
+        769,
+        680,
+        115,
+        47
+      ],
+      "style": {
+        "skin": "thin_border",
+        "font_size": 30
+      }
+    },
+    {
+      "name": "confirm_no",
+      "rect": [
+        1016,
+        680,
+        115,
+        47
+      ],
+      "style": {
+        "skin": "thin_border",
+        "font_size": 30
+      }
+    },
+    {
+      "name": "warning_panel",
+      "rect": [
+        586,
+        324,
+        745,
+        430
+      ],
+      "style": {
+        "skin": "thin_border",
+        "backdrop": true
+      }
+    },
+    {
+      "name": "warning_text",
+      "rect": [
+        708,
+        387,
+        508,
+        270
+      ],
+      "style": {
+        "skin": "area",
+        "font_size": 34
+      }
+    },
+    {
+      "name": "help_popup",
+      "hidden": true,
+      "style": {
+        "font_scale": 1.0
+      },
+      "rect": [
+        266,
+        115,
+        1080,
+        800
+      ]
+    }
+  ]
+}

@@ -78,6 +78,15 @@ WATCHDOG_MARGIN_S = 5.0
 # How often a waiting step reports what is arriving on the socket.
 HEARTBEAT_S = 2.0
 
+# A PACED step sends one item per this many STATE snapshots. Each
+# snapshot is one `ext::Tick`, and each tick hands its input to the
+# game's queue before the game reads one key (fields.cpp:167, key.cpp),
+# so pacing on snapshots keeps the game's ten-key ring (key.cpp:5)
+# from ever holding more than a couple. It is a COUNT of ticks, the
+# admissible kind (wire_protocol.EFFECT_PAIRS says why), never a clock:
+# a busy game that sends nothing also receives nothing.
+from core.wire_protocol import EFFECT_PAIRS as PACE_STATES  # noqa: E402
+
 
 def _signature(fields):
     return tuple((f.index, f.x, f.y, f.x_end, f.y_end, f.field_type)
@@ -117,16 +126,49 @@ def describe(fields):
 
 # ── Actions ──────────────────────────────────────────────
 
+def name_keys(text, clear=CLEAR_KEYS):
+    """The keycodes that clear a string field, type `text` and Enter.
+
+    One list for both delivery shapes below, so a burst and a paced
+    run cannot come to disagree about what a name is made of.
+    """
+    keys = [pygame.K_BACKSPACE] * clear
+    keys += [ord(ch) for ch in text if 32 <= ord(ch) < 127]
+    keys.append(pygame.K_RETURN)
+    return keys
+
+
 def type_name(client, text):
     """Clear the focused string field and type `text`, then Enter.
-    All keys go into one SDL burst so the order is preserved."""
-    for _ in range(CLEAR_KEYS):
-        client.inject_key(pygame.K_BACKSPACE)
-    for ch in text:
-        code = ord(ch)
-        if 32 <= code < 127:
-            client.inject_key(code)
-    client.inject_key(pygame.K_RETURN)
+    All keys go into one SDL burst so the order is preserved.
+
+    **A BURST ONLY SURVIVES WHILE IT IS SHORT.** The game keeps typed
+    keys in a ring of TEN (`key::g_last_key_pressed[10]`, key.cpp:5),
+    `Push_Key_Code_` overwrites without moving the read index
+    (key.cpp:67-72), and `Pump_Game_Input_Queue_` moves everything
+    queued so far into that ring in one call (platform.cpp:1482).
+    A burst longer than ten keys therefore wraps, and what is read back
+    is whatever the wrap left between the read and write positions.
+    Found 14 September 2026 reading the path for save names, which run
+    to 29 characters; Empire Identity still bursts, and its 24
+    backspaces put its own names inside that limit only by luck of
+    their length. Names that must survive go through `paced_keys`.
+    """
+    for code in name_keys(text):
+        client.inject_key(code)
+
+
+def paced_keys(first, keys):
+    """Sends for an `InjectionChain` step that must arrive ONE PER TICK.
+
+    `first` is a callable(client) sent before any key — the save
+    dialog's strip activation, which must reach `Get_Input_` before the
+    first key does. Returned as a list of callables; a step whose `run`
+    returns one is paced by the chain instead of fired at once.
+    """
+    sends = [first] if first is not None else []
+    sends += [lambda c, k=k: c.inject_key(k) for k in keys]
+    return sends
 
 
 def click_banner(client, fields, color, order):
@@ -173,6 +215,9 @@ class InjectionChain:
         self._beat_stats = None
         self._chain_started = self._started
         self._setup_logged = False
+        self._pacing = None       # iterator of sends while a paced step runs
+        self._pace_sig = None
+        self._pace_mark = None
 
     @staticmethod
     def _normalise(step):
@@ -297,21 +342,56 @@ class InjectionChain:
             self._fired_sig = None
             self._started = now
 
+        if self._pacing is not None:
+            self._pace(now, name)
+            return
+
         if fields and detect(fields):
             log.info("Chain step '%s' (%d fields, %.1fs after the "
                      "previous list)", name, len(fields),
                      now - self._started)
-            run(self.client, fields)
-            self._fired_at = now
-            self._fired_sig = _signature(fields)
-            self.pos += 1
-            if self.done:
-                log.info("Chain complete in %.1fs",
-                         now - self._chain_started)
+            sends = run(self.client, fields)
+            if isinstance(sends, list):
+                # A PACED STEP: one send per PACE_STATES snapshots,
+                # and the step only counts as fired after the last.
+                # A LIST, and nothing else: `click_banner` returns a
+                # bool, which the first smoke run read as a sequence.
+                self._pacing = iter(sends)
+                self._pace_sig = _signature(fields)
+                self._pace_mark = None
+                self._pace(now, name)
+                return
+            self._fire(now, _signature(fields))
         elif now - self._started > timeout:
             self._fail("Chain step '%s' never appeared after %.1fs; "
                        "fields: %s", name, now - self._started,
                        describe(fields))
+
+    def _fire(self, now, sig):
+        self._fired_at = now
+        self._fired_sig = sig
+        self.pos += 1
+        if self.done:
+            log.info("Chain complete in %.1fs", now - self._chain_started)
+
+    def _pace(self, now, name):
+        """Send the next item of a paced step once PACE_STATES new
+        snapshots have arrived since the last one. A client without
+        traffic counters (a test double) gets one send per update."""
+        stats = self._snapshot_stats()
+        count = stats["state"] if stats else None
+        if (count is not None and self._pace_mark is not None
+                and count < self._pace_mark + PACE_STATES):
+            return
+        try:
+            send = next(self._pacing)
+        except StopIteration:
+            log.info("paced step '%s' fully sent", name)
+            self._pacing = None
+            self._fire(now, self._pace_sig)
+            return
+        send(self.client)
+        self._pace_mark = count
 
     def _fail(self, msg, *args):
         log.error(msg, *args)

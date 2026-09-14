@@ -673,6 +673,44 @@ the new message id. The click chain is deleted in the same session
 the command lands — two paths that move pops is the same fault as
 two copies of a table.
 
+**59. The GAME popup is one OVERLAY that claims SCREEN_GAME, and its
+dialog is read off the field list.** 14 September 2026, Data's decision
+on the Stop 1 reading (`doc/game_menu_reading.md`). `LOADSAVE::_Game_Popup_`
+runs four dialogs, a confirmation and a warning, and the game reports
+screen 8 for all of them; `_screen_data` is not on the wire. So
+`screens/game_menu` is `IS_OVERLAY` with `GAME_SCREEN_ID = 8` — the
+dispatcher needed no change, `update_from_game` already opens an
+overlay bound to an id and closes it when the game leaves — and which
+dialog is up is `nodes.classify` over the list: type, hotkey and size,
+never index, and **never field 0**, which after a message box carries
+whatever geometry the list held before.
+
+**The screen underneath keeps updating, and that is a hazard with a
+number in it.** The galaxy map parked the game with `ACTIVATE_FIELD 9`
+from `update()`; under the overlay field 9 is the Load dialog's ninth
+slot row, which loads at once. It now parks only while the game reports
+screen 0. The rule this adds: a screen that sends a field NUMBER from
+`update()` must check that the list it was measured against is the one
+on the wire.
+
+**60. Save slot names come from the engine, never from a folder of
+ours.** Data, 14 September 2026. HD could read the ten SAVEn.GAM headers
+itself, and the day HD's folder and the game's differ the names on
+screen stop belonging to the slots a click reaches — every name still
+plausible, which is decision 35's failure shape. So the list is a patch
+(`doc/ext_save_slots.patch`, open fix 14, `MSG_SAVE_SLOTS`), and until
+it is applied a row shows its slot number only, marked HD STATE. The
+strings the patch carries are the ones the engine formatted — a year of
+126, no month on a first visit — and HD draws them as they come.
+
+**62. A requested end is not a lost connection.** QUIT -> YES makes the
+game save SAVE10.GAM and exit (loadsave.cpp:1257-1273). The GAME menu
+calls `GameClient.expect_shutdown()` BEFORE the YES goes out: the
+watchdog is disarmed, a close or silence then sets `game_ended` instead
+of starting a reconnect, and `main.App` ends with the game. No "game
+ended" screen. Before, not after, because the silence of the save is
+exactly what an armed watchdog reads as a dead link.
+
 **42. Derived artwork ships; unmodified original artwork does not.**
 The repository is public, and OrionLayer is a modification that
 requires an installed, legally obtained copy of Master of Orion 2 —
@@ -1346,6 +1384,21 @@ stop the scan box's paragraph gained a name heading above it,
 — while the paragraph itself stays the transcription; and the
 paragraph box's `font_scale` multiplies the reference size before the
 window scale, once ("Scaling twice").
+
+**61. An OMISSION is marked like an extension, and so is a state HD
+cannot fill.** 14 September 2026, the GAME menu. HD EXTENSION and
+DEVIATION say what HD does that the original does not; nothing said
+what the original does that HD leaves out, and a thing left out is the
+easiest to stop seeing. Three labels now, each in the module, in the
+status document and in a smoke check: **OMISSION** — the original has
+it and HD does not draw it (the volume sliders, which an activation
+cannot set; the slot game-type icon, whose artwork is not extracted);
+**HD STATE** — HD draws something in place of a value the wire does not
+carry yet (slot rows show "Slot N" until the patch); **UNVERIFIED** — a
+source reading Data required to be confirmed live before it is
+transcribed, and that could not be run (the Save dialog's right click
+outside a help region). An UNVERIFIED behaviour is not built at all:
+HD does nothing there rather than guess.
 
 ### Process
 
