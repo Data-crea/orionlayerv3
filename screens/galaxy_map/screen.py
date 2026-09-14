@@ -779,13 +779,15 @@ class GalaxyMapScreen(ScreenBase):
         super().handle_key(key)
 
     def handle_right_button(self, down, mx, my):
-        """Right button: context help first, then the pan drag.
+        """Right button: context help first, then the game's cancel, then
+        the pan drag.
 
         The original's help list for this screen covers the sidebar
         readouts, the bottom bar and the title, and pointedly NOT the
-        map area (evanhelp.cpp:4) — a right click on the stars means
-        nothing to MOO2. So the two uses do not collide: help answers
-        over a control, the drag starts over the map.
+        map area (evanhelp.cpp:4). A right click on the map is not help
+        but a CANCEL — it ends the relocation-merge mode and leaves zoom
+        mode, and does nothing else (layout.json `map_cancel`). So a
+        press over the map sends that first, and the drag starts after.
         """
         if ScreenBase.handle_right_button(self, down, mx, my):
             self._pan_from = None
@@ -796,8 +798,29 @@ class GalaxyMapScreen(ScreenBase):
         view = self._map_view()
         if view is not None and pygame.Rect(*view.box).collidepoint(
                 mx, my):
+            self._send_map_cancel()
             self._pan_from = (mx, my)
         return False
+
+    def _send_map_cancel(self):
+        """CANCEL_FIELD on the map's grid field, found in the live list.
+
+        TRANSCRIBED (layout.json `map_cancel`). Returns the field index
+        sent, or None when there was nothing to send to: no connection,
+        or no field of that type and rect in the list at this moment —
+        refused rather than aimed at a remembered index (decision 20).
+        """
+        spec = self._data.get("map_cancel") or {}
+        rect = tuple(spec.get("rect") or ())
+        fields = getattr(self._state, "fields", None) or []
+        field = next((f for f in fields
+                      if f.field_type == spec.get("field_type")
+                      and (f.x, f.y, f.x_end, f.y_end) == rect), None)
+        if field is None or not self.app.connected:
+            log.debug("map cancel: no grid field in the list, nothing sent")
+            return None
+        self.app.client.cancel_field(field.index)
+        return field.index
 
     def handle_mousewheel(self, direction, mx, my):
         """Wheel over the map zooms the HD viewport, at the pointer.

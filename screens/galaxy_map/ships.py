@@ -318,6 +318,17 @@ def _resolve_sprite(cache, kind, step):
     A missing kind falls back to the player ship, so a monster the
     project has no artwork for is still visible and still in the right
     place.
+
+    **DEVIATION, kept on purpose (Data, 14 September 2026).** Today that
+    is the AMOEBA and the ANTARAN: no HD master exists for either, and
+    both draw as the untinted grey player ship in their own footprint.
+    An invented picture, and marked as one — but on the map a monster
+    that vanished would be a gap against the original, which draws it,
+    so the stand-in stays until the artwork arrives. The Planets panel
+    decides the other way (an empty sprite box is an understandable
+    state there). The smoke test holds the set of kinds that reach this
+    branch to exactly {amoeba, antaran}: a new master, or a lost one,
+    fails it.
     """
     key = sprite_key(kind, step)
     if cache.has(key):

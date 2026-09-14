@@ -132,16 +132,22 @@ def enemy_controlled(view, star_index):
                for s in view.ships)
 
 
-def monster_owner(view, star_index):
-    """`HAROLD::Star_Guarded_By_Monster_` (harold.cpp:850): the owner of a
-    ship with status 0 and owner >= 8 at the star, or None. The source walks
-    the stacks; stacks are built in ship order, so the first match by ship
+def monster_ship(view, star_index):
+    """`HAROLD::Star_Guarded_By_Monster_` (harold.cpp:850): the ship with
+    status 0 and owner >= 8 at the star, or None. The source walks the
+    stacks; stacks are built in ship order, so the first match by ship
     index is the one it finds unless two monster owners share a star."""
     for ship in view.ships:
         if (ship is not None and ship.status == 0
                 and ship.owner >= MAX_PLAYERS and ship.location == star_index):
-            return int(ship.owner)
+            return ship
     return None
+
+
+def monster_owner(view, star_index):
+    """The owner of `monster_ship`, or None."""
+    ship = monster_ship(view, star_index)
+    return int(ship.owner) if ship is not None else None
 
 
 def race_pop_limit(view, size, climate, race):

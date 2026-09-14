@@ -174,7 +174,12 @@
         "original": "Original",
         "okabe_ito": "Okabe-Ito"
       },
-      "restart": "Restart to apply colours"
+      "restart": "Restart to apply colours",
+      "monsters": "Monster values",
+      "monster_steps": {
+        "on": "On",
+        "off": "Off"
+      }
     }
   },
   "settings_rows": {
@@ -244,12 +249,14 @@
   "omission_sliders": "OMISSION: the Music and Sound Fx sliders (loadsave.cpp:200-201, type-6 fields) are not in HD. Their value is written from the pointer by fields::Find_Bar_Position_ (fields.cpp:1702), which an activation cannot supply and decision 39's correction says an injected click loses. Data, 14 September 2026: leave out and mark. Their help regions 420 and 421 are omitted with them. Open fix 15 asks the question.",
   "unverified_right_click": "UNVERIFIED, NOT TRANSCRIBED: a right click inside the Save dialog outside every help rectangle returns -1, which Do_Save_Game_Popup_'s `input_id < 0` branch reads as `abs(-1) = 1` inside the slot field range and leaves for the menu (loadsave.cpp:568-574). Data's order: verify live first. It could not be run: the game is a native Wayland client that xdotool cannot reach, and every field centre in that dialog lies inside a help rectangle, so MSG_CANCEL_FIELD cannot produce the case. Until it is verified, HD does nothing there.",
   "orionlayer_rows": {
-    "_hd_extension": "HD EXTENSION (fundament 63): four row heights below the thirteen engine rows - a divider, the OrionLayer heading, the map floor lift and the player-colour preset. The game knows nothing about them: they have no field, their clicks send nothing, and their values live in core/usersettings.py. The hotkey column stays empty for both rows.",
+    "_hd_extension": "HD EXTENSION (fundament 63, 64): five row heights below the thirteen engine rows - a divider, the OrionLayer heading, the map floor lift, the player-colour preset and the monster values switch for the Planets panel (default on). The game knows nothing about them: they have no field, their clicks send nothing, and their values live in core/usersettings.py. The hotkey column stays empty for all three rows.",
+    "_grow_note": "The box grew by one band (153 -> 191 reference px, 14 September 2026) and settings_accept moved down by the same 38 so the rows still end above ACCEPT; 38 is one band of the engine rows (497 / 13), so the new row is as tall as every other.",
     "bands": [
       "divider",
       "heading",
       "floor",
-      "colours"
+      "colours",
+      "monsters"
     ],
     "label_x": 0.114,
     "_label_x_note": "the engine rows' own label column (settings_rows.label_x), so the two lists align",

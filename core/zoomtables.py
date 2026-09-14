@@ -181,17 +181,52 @@ SHIP_ICON_DIM = ((11, 10), (10, 9), (9, 8), (8, 7))
 #: production because it was never sanity-checked against the others,
 #: and it showed on screen as a monster half again too large.
 #:
-#: UNVERIFIED for amoeba and antaran: no screenshot exists yet, so
-#: they borrow the eel and the player footprint respectively.
+#: THE AMOEBA IS MEASURED, 14 September 2026, and not off a screenshot:
+#: off its own sprite. BUFFER0.LBX entry 245 (241 + (10 - 9) * 4 + zoom
+#: 0, SHIPS::Get_Ship_Icon_Pict_Seg_, ships.cpp:383-397), all eight
+#: frames decoded through the main screen's palette as the game sent it
+#: (VISUAL_FRAME, screen 0), bounding box of the pixels above a
+#: brightness threshold:
+#:
+#:     t0 13x14   t25 13x13   t40 13x13   t60 13x13   t80 11x12
+#:
+#: stable at 13 x 13 from t25 to t60; t0 adds one dark edge pixel.
+#: The second source is that the entry IS what the game draws: at zoom
+#: 3 both live amoebas on the `natives` fixture matched entry 248
+#: pixel for pixel (29 of 29 opaque pixels), and every other monster
+#: matched its own entry the same way.
+#:
+#: THE SAME METHOD DOES NOT REPRODUCE THE OTHER FIVE, and that is
+#: recorded rather than repaired here: guardian 13x11, crystal 15x12,
+#: dragon 13x13, hydra 13x12 and eel 15x5 at t40, against the table's
+#: screenshot numbers below. Out of this brief's scope; reported to
+#: Data (doc/ship_icon_measurement.md, "The sprites disagree").
+#:
+#: UNVERIFIED for antaran still: it borrows the player footprint.
 MONSTER_ICON_DIM_ZOOM0 = {
     "guardian": (12, 11),
     "crystal":  (13, 13),
     "dragon":   (13, 10),
     "hydra":    (11, 12),
     "eel":      ( 9,  9),
-    "amoeba":   ( 9,  9),     # UNVERIFIED — copy of eel
+    "amoeba":   (13, 13),     # BUFFER0.LBX 245, threshold-swept
     "antaran":  (11, 10),     # UNVERIFIED — copy of the player ship
 }
+
+#: The monster sprite export for the Planets panel, longest edge in px.
+#: **HD EXTENSION, DERIVED** — a size for the HD artwork, not a
+#: transcription (the original shows no monster outside combat).
+#:
+#: 314 = the panel's sprite box, 157 reference px on its long edge in
+#: screens/planets/boxes.json when this was set, times 2.0, the layout
+#: scale at 3840x2160 (core/layout.py, min(w/1920, h/1080)). Designed
+#: for the 4K box so the panel only ever scales DOWN. Typed here, not
+#: read from the box: a box can be dragged, an export cannot follow it,
+#: and the smoke test says so when the box outgrows the export.
+MONSTER_PANEL_SPRITE_PX = 314
+
+#: Its file, beside the four map steps in ships/<kind>/ (derived, ignored).
+MONSTER_PANEL_SPRITE_FILE = "panel.png"
 
 #: Smallest footprint an icon may shrink to, native pixels.
 MIN_ICON_DIM = 4

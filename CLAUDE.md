@@ -58,7 +58,7 @@ derive world geometry.
 python tools/smoke_test.py
 ```
 
-169 checks, headless, no orion2re needed. **The count must not go
+177 checks, headless, no orion2re needed. **The count must not go
 down.** If a change makes a check obsolete, replace it — do not
 delete it. It went down exactly once, on 12 September 2026, when
 Phase B deleted the frame machinery the checks were about (decision
@@ -155,6 +155,7 @@ python tools/techname_extract.py                    # building names
 python tools/estrings_extract.py                    # option strings
 python tools/raceicon_extract.py                    # population figures
 python tools/hestrings_extract.py                   # message strings
+python tools/maintext_extract.py                    # system special texts
 ```
 
 Without the first, every right click opens a panel naming that

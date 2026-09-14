@@ -42,10 +42,6 @@ SPECIAL_SPACE_MONSTER, SPECIAL_ANCIENT_ARTIFACTS, SPECIAL_ORION_STAR = 9, 10, 11
 #: natives, splinter colony, ancient artifacts.
 PLANET_SPECIALS = (4, 5, 6, 7, 10)
 
-#: File names under `assets/monsters/`, by ship owner (ship.py OWNER_*).
-MONSTER_NAMES = {8: "antaran", 9: "guardian", 10: "amoeba", 11: "crystal",
-                 12: "dragon", 13: "eel", 14: "hydra"}
-
 
 class Words:
     """The two string tables and the one literal the row print uses."""

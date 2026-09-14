@@ -164,7 +164,27 @@
   },
   "panel": {
     "_hd_extension_panel": "HD EXTENSION: panel. The bottom-left window shows the scanned row's planet disc, name and special line, larger - only what the row already has, no computed production or research (Data's decision, brief 101 Stop 1). The original has no such window; its bottom rows are the list. The mockup's detail panel (monster description, heads, strength) is dropped.",
-    "monster_dir": "monsters",
-    "_monster_note": "The picture window shows the monster guarding the scanned planet's star - HAROLD::Star_Guarded_By_Monster_ (harold.cpp:850: a ship with status 0, owner >= 8, at the star) - as an image box from assets/monsters/<name>.png through the resource stack, and the monster's race name beside it (HACCESS::Race_Name_, haccess.cpp:683). NO PICTURE SET EXISTS YET: the box draws nothing and the screen logs the missing set once. The ship's own name waits for the design part of the ship spec (Data's decision, brief 101 Stop 1)."
+    "_monster_note": "The picture window is the monster panel since 14 September 2026 - see monster_values. The old monster_picture/monster_race pair (an image box waiting for a picture set under assets/monsters/ that never came) is gone with it."
+  },
+  "monster_values": {
+    "_hd_extension": "HD EXTENSION (fundament 64): the monster guarding the scanned row's star, with its values - type, stage, size, structure, armour, shield, weapons with their counts, specials. The original shows the type only ('(Amoeba)' in the list, which stays as it was); everything else is the extension. Numbers, not judgements: no rating word, no warning colour. Drawn for owners 9..14 (HAROLD::Star_Guarded_By_Monster_, harold.cpp:850) and only while the OrionLayer switch in Game Settings is on (user_settings monster_values, default on). Nothing is sent.",
+    "_deviation_sprite": "DEVIATION: the sprite is the monster's TYPE, from the galaxy map's own master (tools/make_ship_icons.py, panel.png). The original's monster picture - in a system popup no running game reaches - is chosen by star index % 5 (RUSS::Star_To_Monster_, mainpups.cpp:1082), which can show a creature that is not the one there. A type without a master (the amoeba today) leaves the box empty.",
+    "_values_note": "Stage from the drive (monsterhull.stage: ftl_type <= 0 is the stationary start monster, SHIP_CONFIG [0]; the Guardian has no stage). Structure and armour are the tactical hull points as two lines (core/monsterhull.py, held to initship.cpp by tools/monster_hull_check.py); the five monsters show 'Armour 0', which is what ARMOR_NO_ARMOR gives. Size, shield, weapon and special names from TECHNAME.LBX (core/shipparts.py); without the extracted file the numbers show as unnamed. Weapon counts are the template count, not the current count - monsters are fully repaired each turn.",
+    "stage": {
+      "start": "Start monster",
+      "event": "Event monster"
+    },
+    "structure": "Structure %d",
+    "armour": "Armour %d",
+    "count": "x%d",
+    "unnamed": "#%d",
+    "unknown": "?",
+    "weapons_heading": 157,
+    "specials_heading": 158,
+    "none": 159,
+    "_heading_note": "HESTRNGS 0x9D 'Weapons:', 0x9E 'Specials:' and 0x9F 'None' - the fleet screen's own words for the same lists (FLT2::Print_Scanned_Ship_Data_, flt2.cpp:524-750). The English words in monsterpanel.py are used only while HESTRNGS is not extracted.",
+    "weapon_rows": 6,
+    "special_rows": 9,
+    "_rows_note": "Row bands in the two list boxes, heading included: the Guardian mounts five weapons (six rows) and carries eight specials (nine rows), the most of any monster. The count column shares the weapon rows."
   }
 }

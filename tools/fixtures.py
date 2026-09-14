@@ -125,6 +125,12 @@ FIXTURE_FILES = {
                   "07a789e323b85c02370bd6",
         "colony_offset": 607,
         "colony_count": 55,
+        # THE SHIP ARRAY, 14 September 2026 (fundament 64): slot 8
+        # loaded through the game's own Load dialog, `verify_colonies`
+        # 55 of 55, then `gam.find(b"".join(ships_raw))` — 109 records
+        # at 82939 and nowhere else in the file.
+        "ship_offset": 82939,
+        "ship_count": 109,
     },
     "natives": {
         "file": "fixture_natives_3502.5.GAM",
@@ -135,6 +141,9 @@ FIXTURE_FILES = {
         # this slot, and record 37 at 607 + 37*361 is Urna I. See the
         # note on FIXTURES["natives"] above.
         "colony_count": 38,
+        # Found the same way on the same day: 71 records at 68828.
+        "ship_offset": 68828,
+        "ship_count": 71,
     },
     # **THE AUTOSAVE, AND THE POINT IS THAT THIS IS THE COPY.**
     # `~/Master of Orion 2/SAVE10.GAM` is the slot the GAME writes at
@@ -166,8 +175,8 @@ FIXTURE_DIR = os.path.expanduser(
     os.environ.get("ORIONLAYER_FIXTURES", "~/orionlayer-fixtures"))
 
 
-def fixture_colonies(expect, root=None):
-    """The colony records the `.GAM` holds, or (None, why).
+def _fixture_array(expect, key, size, root=None):
+    """`count` records of `size` bytes at the stored offset, or (None, why).
 
     Absence is a STATE and not an error: a clone has no fixtures, and
     a run that cannot find one has to say so rather than skip the
@@ -176,6 +185,8 @@ def fixture_colonies(expect, root=None):
     spec = FIXTURE_FILES.get(expect)
     if spec is None:
         return None, f"no file is recorded for the {expect!r} fixture"
+    if f"{key}_offset" not in spec:
+        return None, f"no {key} array is recorded for the {expect!r} fixture"
     path = os.path.join(root or FIXTURE_DIR, spec["file"])
     if not os.path.exists(path):
         return None, f"the fixture is not on this disk: {path}"
@@ -186,13 +197,25 @@ def fixture_colonies(expect, root=None):
         return None, (f"{spec['file']} has sha256 {got[:16]}…, the "
                       f"table says {spec['sha256'][:16]}… — the stored "
                       f"offset describes a different file")
-    off, n = spec["colony_offset"], spec["colony_count"]
-    end = off + n * COLONY_SIZE
+    off, n = spec[f"{key}_offset"], spec[f"{key}_count"]
+    end = off + n * size
     if end > len(blob):
         return None, (f"{spec['file']} is {len(blob)} bytes and the "
                       f"array would end at {end}")
-    return [blob[off + i * COLONY_SIZE: off + (i + 1) * COLONY_SIZE]
+    return [blob[off + i * size: off + (i + 1) * size]
             for i in range(n)], None
+
+
+def fixture_colonies(expect, root=None):
+    """The colony records the `.GAM` holds, or (None, why)."""
+    return _fixture_array(expect, "colony", COLONY_SIZE, root)
+
+
+def fixture_ships(expect, root=None):
+    """The ship records the `.GAM` holds, or (None, why) — the same gate:
+    the sha256 first, then the stored offset."""
+    from core.structs.ship import SIZE as ship_size
+    return _fixture_array(expect, "ship", ship_size, root)
 
 
 def verify_colonies(state, expect, names=None, root=None):

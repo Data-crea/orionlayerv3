@@ -106,9 +106,44 @@ either axis, which would have caught it in seconds.
   far are from one zoom level. The per-step shrink is an extrapolation
   from source 1. A capture of the same system after pressing `-` three
   times in a Huge galaxy would settle it.
-- **Amoeba (10) and Antaran (8)** have no reference at all and
-  currently borrow the eel and the player footprint. Marked UNVERIFIED
-  in the table, and neither has HD artwork.
+- **Antaran (8)** has no reference and borrows the player footprint,
+  marked UNVERIFIED. Neither it nor the Amoeba has HD artwork; both draw
+  as the grey player-ship stand-in on the map (a marked DEVIATION,
+  fundament 64). The **Amoeba (10)** is measured now — see below.
+
+## The sprites disagree with the screenshot table — 14 September 2026
+
+The Amoeba had no screenshot, so it was measured off its own sprite:
+BUFFER0.LBX entry `241 + (owner - 9) * 4 + zoom`
+(`SHIPS::Get_Ship_Icon_Pict_Seg_`, ships.cpp:383-397 — the monster
+entries run FORWARDS by zoom, the player entries backwards), all eight
+frames decoded through the main screen's palette as the game sent it,
+bounding box of the pixels above a brightness threshold:
+
+```
+             t0      t25     t40     t60     t80     table (screenshot)
+guardian  e241 13x11   13x11   13x11   13x11   13x11   12 x 11
+amoeba    e245 13x14   13x13   13x13   13x13   11x12   (copy of eel, 9 x 9)
+crystal   e249 15x12   15x12   15x12   15x12   15x12   13 x 13
+dragon    e253 13x15   13x15   13x13   13x13   12x13   13 x 10
+eel       e257 15x5    15x5    15x5    14x5    14x3     9 x  9
+hydra     e261 13x13   13x13   13x12   13x12   13x12   11 x 12
+player    e208 12x8    -       12x8    -       11x8    11 x 10
+```
+
+**The entries ARE what the game draws.** At zoom 3, on the `natives`
+fixture, every live monster icon in the framebuffer matched its own
+entry pixel for pixel (Amoeba 29/29 twice, Eel 17/17, Hydra 24/24,
+Guardian 24/24) and none of the other types' entries.
+
+So the Amoeba went in at **13 x 13**, stable from t25 to t60. But the
+same method does not reproduce the five screenshot numbers above — the
+eel most plainly, 15 x 5 against 9 x 9 — and the player ship neither.
+Either the 1.5x screenshot was reduced wrongly, or it was not zoom 0,
+or "the central blob" measured something narrower than the sprite.
+**Not repaired**: the five values size every monster on the map, and
+changing them is outside the brief that found this. Reported to Data
+as an open question, with the numbers.
 - **A second player colour.** The original indexes a separate LBX entry
   per colour, so a palette swap is likely but unproven. If any colour
   turns out to be a different drawing, runtime tinting is the wrong

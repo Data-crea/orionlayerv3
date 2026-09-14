@@ -285,11 +285,11 @@
       }
     },
     {
-      "name": "monster_picture",
+      "name": "monster_sprite",
       "rect": [
         623,
         829,
-        600,
+        157,
         157
       ],
       "style": {
@@ -298,22 +298,124 @@
         "crop": [
           0.5,
           0.5
-        ],
-        "fade_left": 0.0,
-        "fade_right": 0.2
+        ]
       }
     },
     {
-      "name": "monster_race",
+      "name": "monster_type",
       "rect": [
-        1233,
-        880,
-        212,
-        50
+        792,
+        829,
+        210,
+        30
       ],
       "style": {
         "skin": "text",
-        "font_size": 26
+        "font_size": 24
+      }
+    },
+    {
+      "name": "monster_stage",
+      "rect": [
+        792,
+        861,
+        210,
+        26
+      ],
+      "style": {
+        "skin": "text",
+        "font_size": 20
+      }
+    },
+    {
+      "name": "monster_size",
+      "rect": [
+        792,
+        887,
+        210,
+        26
+      ],
+      "style": {
+        "skin": "text",
+        "font_size": 20
+      }
+    },
+    {
+      "name": "monster_structure",
+      "rect": [
+        792,
+        913,
+        210,
+        26
+      ],
+      "style": {
+        "skin": "text",
+        "font_size": 20
+      }
+    },
+    {
+      "name": "monster_armour",
+      "rect": [
+        792,
+        939,
+        210,
+        26
+      ],
+      "style": {
+        "skin": "text",
+        "font_size": 20
+      }
+    },
+    {
+      "name": "monster_shield",
+      "rect": [
+        792,
+        965,
+        210,
+        26
+      ],
+      "style": {
+        "skin": "text",
+        "font_size": 20
+      }
+    },
+    {
+      "name": "monster_weapons",
+      "rect": [
+        1012,
+        829,
+        190,
+        158
+      ],
+      "style": {
+        "skin": "text",
+        "font_size": 18
+      }
+    },
+    {
+      "name": "monster_weapon_counts",
+      "rect": [
+        1204,
+        829,
+        40,
+        158
+      ],
+      "style": {
+        "skin": "text",
+        "font_size": 18
+      }
+    },
+    {
+      "name": "monster_specials",
+      "rect": [
+        1254,
+        829,
+        191,
+        158
+      ],
+      "style": {
+        "skin": "text",
+        "font_size": 16
       }
     },
     {
@@ -616,11 +718,11 @@
       }
     },
     {
-      "name": "monster_picture",
+      "name": "monster_sprite",
       "rect": [
         623,
         829,
-        600,
+        157,
         157
       ],
       "style": {
@@ -629,22 +731,124 @@
         "crop": [
           0.5,
           0.5
-        ],
-        "fade_left": 0.0,
-        "fade_right": 0.2
+        ]
       }
     },
     {
-      "name": "monster_race",
+      "name": "monster_type",
       "rect": [
-        1233,
-        880,
-        212,
-        50
+        792,
+        829,
+        210,
+        30
       ],
       "style": {
         "skin": "text",
-        "font_size": 26
+        "font_size": 24
+      }
+    },
+    {
+      "name": "monster_stage",
+      "rect": [
+        792,
+        861,
+        210,
+        26
+      ],
+      "style": {
+        "skin": "text",
+        "font_size": 20
+      }
+    },
+    {
+      "name": "monster_size",
+      "rect": [
+        792,
+        887,
+        210,
+        26
+      ],
+      "style": {
+        "skin": "text",
+        "font_size": 20
+      }
+    },
+    {
+      "name": "monster_structure",
+      "rect": [
+        792,
+        913,
+        210,
+        26
+      ],
+      "style": {
+        "skin": "text",
+        "font_size": 20
+      }
+    },
+    {
+      "name": "monster_armour",
+      "rect": [
+        792,
+        939,
+        210,
+        26
+      ],
+      "style": {
+        "skin": "text",
+        "font_size": 20
+      }
+    },
+    {
+      "name": "monster_shield",
+      "rect": [
+        792,
+        965,
+        210,
+        26
+      ],
+      "style": {
+        "skin": "text",
+        "font_size": 20
+      }
+    },
+    {
+      "name": "monster_weapons",
+      "rect": [
+        1012,
+        829,
+        190,
+        158
+      ],
+      "style": {
+        "skin": "text",
+        "font_size": 18
+      }
+    },
+    {
+      "name": "monster_weapon_counts",
+      "rect": [
+        1204,
+        829,
+        40,
+        158
+      ],
+      "style": {
+        "skin": "text",
+        "font_size": 18
+      }
+    },
+    {
+      "name": "monster_specials",
+      "rect": [
+        1254,
+        829,
+        191,
+        158
+      ],
+      "style": {
+        "skin": "text",
+        "font_size": 16
       }
     },
     {

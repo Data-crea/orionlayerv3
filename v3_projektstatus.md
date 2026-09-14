@@ -830,7 +830,7 @@ files under `doc/` and are only summarised here.
 | | |
 |---|---|
 | Python | 32,960 lines across 111 modules — `find . -name '*.py'`, `__pycache__` excluded, the smoke test's 6,400 included. The previous figure here (21,642 across 94) was carried from an unstated method and could not be reproduced |
-| Smoke test | `python tools/smoke_test.py` — **169 checks**, headless |
+| Smoke test | `python tools/smoke_test.py` — **177 checks**, headless |
 | Assets | 170 MB (select_race 68, galaxy_map 51, shared 23, new_game 21, colony_summary 1) |
 | Screens in HD | 9 of ~20–22 (the GAME menu overlay, work order Stop 2, every dialog of the popup; colony summary draws list, sidebar, scan box and galaxy inset, and MOVES POPS — the first HD gesture that drives the game; planets, brief 101, lists, sorts, restricts and returns) |
 | Setup from clone | `python tools/setup.py` (deps via the system package manager) |
@@ -924,6 +924,12 @@ to stay uncomfortable to extend.
 │   ├── game_client.py            240  TCP client (auto-reconnect)
 │   ├── game_state.py             271  Snapshot parser
 │   ├── original_view.py          150  Framebuffer view + input
+│   ├── monsterhull.py            121  Monster hull points, copied
+│   │                                  from initship.cpp (checker:
+│   │                                  tools/monster_hull_check.py)
+│   ├── shipparts.py              113  Ship part names (TECHNAME.LBX)
+│   ├── maintext.py                86  System special descriptions
+│   │                                  (MAINTEXT.LBX), not drawn yet
 │   ├── structs/                       Declarative struct specs:
 │   │                                  star, ship, ship_icon, player,
 │   │                                  planet, nebula, unverified
@@ -1089,6 +1095,8 @@ to stay uncomfortable to extend.
     │                                  after a clone, then verify
     ├── star_icon_check.py        109  Which star sprite resolves
     ├── version_check.py               Engine version vs orion2re src
+    ├── monster_hull_check.py     176  core/monsterhull.py vs src
+    ├── maintext_extract.py       128  MAINTEXT.LBX -> maintext_<lang>
     └── starfield_preview.py       94  Render the field to a PNG
 ```
 
@@ -1162,7 +1170,7 @@ in exactly ONE bucket. The numbers below are produced by
 check asserts this list still agrees with it — the same trade the
 check count makes, for the same reason.
 
-`screens/galaxy_map/screen.py` (**535** code, 818 total), `tools/struct_probe.py` (**478** code, 753 total), `tools/colony_list_preview.py` (**403** code, 772 total), `screens/custom_race/screen.py` (**400** code, 558 total), `tools/colony_move_hd.py` (**383** code, 583 total), `core/editor/editor.py` (**359** code, 430 total), `screens/galaxy_map/renderer.py` (**335** code, 753 total), `tools/ext_diag.py` (**325** code, 473 total), `core/style.py` (**310** code, 479 total).
+`screens/galaxy_map/screen.py` (**548** code, 841 total), `tools/struct_probe.py` (**478** code, 753 total), `tools/colony_list_preview.py` (**403** code, 772 total), `screens/custom_race/screen.py` (**400** code, 558 total), `tools/colony_move_hd.py` (**383** code, 583 total), `core/editor/editor.py` (**359** code, 430 total), `screens/galaxy_map/renderer.py` (**335** code, 753 total), `tools/ext_diag.py` (**325** code, 473 total), `core/style.py` (**310** code, 479 total).
 `smoke_test.py` is exempt by nature.
 
 **TWO TOOLS JOINED THE LIST ON 8 SEPTEMBER 2026 and one thing left
@@ -3148,8 +3156,8 @@ No framebuffer fallback on the round trip.
   columns, heading plates, row fills and cell outlines; the colony
   modules delegate to it under their own names.
 - **Bottom windows** — HD EXTENSION: panel (disc, name, special line,
-  larger; nothing computed) and the guarding monster's race name beside
-  an image box that draws nothing until a picture set exists.
+  larger; nothing computed). The picture window became the monster
+  values panel in brief 107 (see "Monster values in the Planets panel").
 - **Checked** — seven smoke checks (frame cutouts, row set, order, words,
   wire, help table from `evanhelp.cpp:118`, markings). Rendered once from
   a read-only snapshot of the running game (current_screen 32, 495
@@ -3336,6 +3344,68 @@ is marked in its module, here and in a smoke check.
   a deviation from the brief's "every shipped preset", because the
   original cannot meet any useful one.
 
+### Monster values in the Planets panel — fundament 64, 14 September 2026
+
+**Brief 107** (`doc/briefs/107-*`, decisions `108-*`, release `109-*`).
+When the scanned row's star is guarded by a space monster (owners 9..14,
+`planetrows.monster_ship`, the transcription of
+`HAROLD::Star_Guarded_By_Monster_`), the picture window shows the
+creature and its values. **HD EXTENSION, all of it except the type** —
+the original shows "(Amoeba)" under the planet and nothing else outside
+combat; that line is unchanged.
+
+- **Panel** — `screens/planets/monsterpanel.py`: sprite box left, text
+  boxes right, all in boxes.json at both resolutions (`monster_sprite`,
+  `monster_type`, `_stage`, `_size`, `_structure`, `_armour`, `_shield`,
+  `monster_weapons` with `monster_weapon_counts` beside it,
+  `monster_specials`); wording as templates in layout.json
+  `monster_values`, the list headings HESTRNGS 0x9D-0x9F. Numbers, no
+  judgements. Nothing is sent. The old `monster_picture`/`monster_race`
+  pair is gone.
+- **Switch** — a fifth OrionLayer row in Game Settings, "Monster values",
+  default ON (`user_settings.json` `monster_values`). The rows box grew
+  one band and ACCEPT moved down by the same 38 px.
+- **Values** — the design block of `s_ship_data` and the weapon records
+  are VERIFIED (`core/structs/ship.py`: 48 header asserts and a live
+  probe of five monsters against their templates). The damage fields are
+  not declared and not read. Stage from the drive. Structure and armour
+  as two lines, tactical, from `core/monsterhull.py`;
+  `tools/monster_hull_check.py` holds that table to initship.cpp,
+  techdata.cpp and orion2_consts.h and the smoke test runs it.
+- **Names** — `tools/techname_extract.py` writes a second file,
+  `shipparts_<lang>.json` (specials, armour, shields, weapons, hull
+  classes; `core/shipparts.py`); without it the panel shows numbers.
+- **Sprite** — the galaxy map's own master, exported once more at 314 px
+  on the long edge (`zoomtables.MONSTER_PANEL_SPRITE_PX`, DERIVED for the
+  4K box; `panel.png` beside the four steps). **DEVIATION**: chosen by
+  type, where the original's unreachable popup picks by star index % 5.
+  The Amoeba has no master and its box stays empty.
+- **Reference save** — `tools/fixtures.py` now also slices the ship
+  array (`fixture_ships`, reference 109 records at 82939, natives 71 at
+  68828, each found live on a fresh load). Every monster of the
+  reference save gives exactly its template and table values in the
+  smoke test.
+
+### Galaxy map: the right click is the game's cancel — brief 107, 14 September 2026
+
+A right click on the map (not over a help region) sends CANCEL_FIELD on
+the map's grid field, found in the live list by type 12 and rect
+22,22-527,421, before the pan drag starts. TRANSCRIBED: with the mouse
+cancel disabled the right button returns the grid field negative and
+`Main_Screen_` ends the relocation-merge mode and leaves zoom mode —
+over a star, a black hole or empty space alike, and nothing else
+(layout.json `map_cancel`). Checked live on the reference save: screen
+stays 0, field list unchanged.
+
+**Also from brief 107:** `tools/maintext_extract.py` extracts the
+system-special descriptions from MAINTEXT.LBX (the file per language
+from estrings.cpp) into `maintext_<lang>.json`, read by
+`core/maintext.py` (decision 38's pattern). Nothing draws them yet —
+they belong to the galaxy map's popups, which are their own brief. The
+Amoeba's map footprint is measured off BUFFER0.LBX (13 x 13), and the
+same measurement disagrees with the five screenshot values
+(`doc/ship_icon_measurement.md`).
+
 ## What is missing
 
 ### OLED floor lift and player-colour presets
@@ -3371,10 +3441,29 @@ is marked in its module, here and in a smoke check.
   `frame_holes.py` and two names in `layout.json` — but with the HD
   zoom on the wheel and on `+`/`-`, it is now cosmetic rather than
   functional.
-- **Ship icon artwork gaps.** No HD master for amoeba (owner 10) or
-  antaran (8); both fall back to the player sprite. Only zoom level 0
-  has been measured — steps 1..3 are extrapolated, see
+- **Ship icon artwork gaps: Amoeba and Antaran.** No HD master for the
+  amoeba (owner 10) or the antaran (8); both draw as the grey player
+  ship — a marked **DEVIATION** at `ships._resolve_sprite`, kept on the
+  map because a vanished monster would be a gap against the original
+  (Data, brief 107). The smoke test holds the stand-in set to exactly
+  these two. Artwork is Data's to make; the Planets panel leaves the
+  amoeba's sprite box empty until then. Only zoom level 0 has been
+  measured — steps 1..3 are extrapolated, see
   `doc/ship_icon_measurement.md`.
+- **The monster footprints disagree with their own sprites.** Measured
+  off BUFFER0.LBX (brief 107), guardian 13x11, crystal 15x12, dragon
+  13x13, hydra 13x12, eel 15x5 against the table's screenshot values
+  12x11, 13x13, 13x10, 11x12, 9x9; the framebuffer matched the LBX
+  entries pixel for pixel. Not changed — an open question for Data.
+- **The galaxy map's movable boxes are invisible in HD** — the system
+  window and the fleet box (brief 107, gaps 1 and 2, one gap). A star
+  or fleet click goes to the game, which opens the box on screen 0, and
+  the HD screen does not show it. The box registers its own fields
+  (live, 14 September 2026: a black-hole click added the ESC close
+  button, the title strip, the system grid and the whole-box field, and
+  ESC removed exactly those four), so the FIELD_LIST shape is the signal
+  and nothing is needed from Joes. Its own brief. Fleet icons also have
+  no HD hit test yet: a click on an icon near a star lands on the star.
 - **Maximum galaxy size (community map) — both bugs fixed, nothing
   open.** Above 72 stars the game leaves the 10/15/20/30 scale ladder
   and builds one by halving `_max_map_scale`, so `zoom_level()` needs
@@ -3424,7 +3513,8 @@ is marked in its module, here and in a smoke check.
   flags on the wire is `doc/orion2re_open_fixes.md` item 13. No frame
   reading.
 - The special line's ship name in a monster system (the design part of
-  the ship spec); the monster picture set; the star-click warning box
+  the ship spec — verified since brief 107, not yet read by the special
+  line); the amoeba's panel sprite (no master); the star-click warning box
   (H 0x14F); rotating planets and the inset's animated scanned star.
 - Omniscience from a Galactic Lore leader, and Advanced City Planning's
   +5 on `max_pop` — both read from records that are not decoded.

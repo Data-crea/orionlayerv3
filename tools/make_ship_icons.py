@@ -127,6 +127,25 @@ def render_step(master, kind, step):
     return out
 
 
+#: The Planets panel's sprite file, beside the four steps (fundament 64).
+PANEL_FILE = zt.MONSTER_PANEL_SPRITE_FILE
+
+
+def render_panel(master):
+    """The Planets panel's sprite: longest edge MONSTER_PANEL_SPRITE_PX.
+
+    **HD EXTENSION.** One more export from the SAME master as the four
+    map steps — the brief's "one source, no second set of artwork" — at
+    the size the panel's 4K box needs, so the panel only scales down.
+    Not an upscale of a step: the masters are 1536x1024 canvases with
+    the creature 434 to 1436 px across, far above 314."""
+    edge = zt.MONSTER_PANEL_SPRITE_PX
+    f = edge / max(master.width, master.height)
+    size = (max(1, int(round(master.width * f))),
+            max(1, int(round(master.height * f))))
+    return clean_alpha(master.resize(size, Image.LANCZOS))
+
+
 def is_greyscale(img):
     a = np.array(img)
     vis = a[..., 3] > ALPHA_FLOOR
@@ -186,6 +205,8 @@ def main():
             img.save(os.path.join(out_dir, f"{step}.png"))
             steps.append(img)
         rendered[kind] = steps
+        if kind != "player":
+            render_panel(master).save(os.path.join(out_dir, PANEL_FILE))
         nw, nh = native_dim(kind, 0)
         print(f"  {kind:9s} master {master.width}x{master.height} "
               f"-> 4 steps, native {nw}x{nh} at zoom 0, "

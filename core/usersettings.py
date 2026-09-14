@@ -37,9 +37,13 @@ log = logging.getLogger("usersettings")
 PATH = os.path.join(BASE_DIR, "user_settings.json")
 
 #: The original's look: no floor lift, the game's own player colours.
+#: One exception, Data's decision: the monster values in the Planets
+#: panel (fundament 64) are ON by default — they level a field newcomers
+#: and veterans do not share, and a switch nobody finds does not.
 DEFAULTS = {
     "floor_lift": "off",
     "player_colors": "original",
+    "monster_values": "on",
 }
 
 

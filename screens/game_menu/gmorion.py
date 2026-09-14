@@ -1,9 +1,9 @@
-"""The OrionLayer rows of the Game Settings dialog — an HD EXTENSION (fundament 63).
+"""The OrionLayer rows of the Game Settings dialog — an HD EXTENSION (fundament 63, 64).
 
-Below the thirteen engine rows, four row heights: a divider, the
-"OrionLayer" heading, the map floor lift and the player-colour preset.
-MOO2 has neither a user-adjustable floor nor a choice of player
-colours; the game knows nothing about these rows.
+Below the thirteen engine rows, five row heights: a divider, the
+"OrionLayer" heading, the map floor lift, the player-colour preset and
+the switch for the monster values in the Planets panel. MOO2 has none
+of the three; the game knows nothing about these rows.
 
 **TWO STATE SOURCES, NEVER MERGED.** The thirteen engine checkboxes
 keep their local copy seeded from `s_settings` (`screen.flags`). These
@@ -13,21 +13,22 @@ heading included — is handled here BEFORE the engine rows' `row_at` /
 `send`, and sends nothing on the wire.
 
 **ONE GEOMETRY FOR DRAWING AND CLICKING** (decision 5): `bands` is the
-only place the four rects and the swatch rects are computed.
+only place the five rects and the swatch rects are computed.
 
 **VALUES APPLY AT ONCE, THE FILE IS WRITTEN LATER.** The floor step
 shows on the map behind the popup on the next frame (`floorlift` reads
-it at draw time). The preset needs a restart — `palette.init` applies
-it before any screen binds a colour — and the note that says so is
-shown only while the saved preset differs from the active one. The
-file is written by `save`, which ACCEPT and the overlay's exit both
-call and which writes nothing when nothing changed.
+it at draw time), and the monster switch on the next Planets frame. The
+preset needs a restart — `palette.init` applies it before any screen
+binds a colour — and the note that says so is shown only while the
+saved preset differs from the active one. The file is written by
+`save`, which ACCEPT and the overlay's exit both call and which writes
+nothing when nothing changed.
 """
 import pygame
 
 from core import palette, playercolors, usersettings
 
-BANDS = ("divider", "heading", "floor", "colours")
+BANDS = ("divider", "heading", "floor", "colours", "monsters")
 
 COL_DIVIDER = palette.require("game_menu", "orionlayer_divider")
 COL_HEADING = palette.require("game_menu", "orionlayer_heading")
@@ -37,13 +38,16 @@ COL_STATE = palette.require("game_menu", "hd_state")
 #: Floor steps in the order a click cycles them (screens/galaxy_map/floorlift).
 FLOOR_STEPS = ("off", "light", "haze")
 
+#: The monster values switch (screens/planets/monsterpanel), default on.
+MONSTER_STEPS = ("on", "off")
+
 
 def _settings(screen):
     return getattr(screen.app, "user_settings", None)
 
 
 def bands(screen):
-    """{band name: Rect} for the four rows, plus "swatches": [Rect x 8].
+    """{band name: Rect} for the five rows, plus "swatches": [Rect x 8].
 
     None when the box is missing. Drawing and hit-testing both use this.
     """
@@ -74,26 +78,30 @@ def restart_pending(screen):
     return selected(screen, "player_colors") != palette.active_preset()
 
 
+def _cycle(settings, key, steps):
+    now = settings.get(key)
+    i = steps.index(now) if now in steps else 0
+    settings.set(key, steps[(i + 1) % len(steps)])
+
+
 def handle_click(screen, x, y):
     """True if the point is on these rows. Sends nothing, ever."""
     geo = bands(screen)
     if geo is None:
         return False
-    area = geo["divider"].union(geo["colours"])
+    area = geo["divider"].union(geo[BANDS[-1]])
     if not area.collidepoint(x, y):
         return False
     settings = _settings(screen)
     if settings is None:
         return True
     if geo["floor"].collidepoint(x, y):
-        now = settings.get("floor_lift")
-        i = FLOOR_STEPS.index(now) if now in FLOOR_STEPS else 0
-        settings.set("floor_lift", FLOOR_STEPS[(i + 1) % len(FLOOR_STEPS)])
+        _cycle(settings, "floor_lift", FLOOR_STEPS)
     elif geo["colours"].collidepoint(x, y):
-        names = playercolors.names(screen.app.colors)
-        now = settings.get("player_colors")
-        i = names.index(now) if now in names else 0
-        settings.set("player_colors", names[(i + 1) % len(names)])
+        _cycle(settings, "player_colors",
+               tuple(playercolors.names(screen.app.colors)))
+    elif geo["monsters"].collidepoint(x, y):
+        _cycle(settings, "monster_values", MONSTER_STEPS)
     return True
 
 
@@ -148,3 +156,11 @@ def render(screen, surface):
     for rect, rgb in zip(geo["swatches"], playercolors.base(screen.app.colors, shown)):
         surface.fill(tuple(rgb[:3]), rect)
         screen.style.draw_plate(surface, rect, screen.layout.scale)
+
+    mon = geo["monsters"]
+    _text(screen, surface, words.get("monsters", "Monster values"), size,
+          COL_OPTION, lx, mon)
+    value = selected(screen, "monster_values")
+    shown = value if value in MONSTER_STEPS else MONSTER_STEPS[0]
+    _text(screen, surface, words.get("monster_steps", {}).get(shown, shown),
+          size, COL_OPTION, mon.x + vx, mon)

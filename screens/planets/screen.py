@@ -27,9 +27,10 @@ import pygame
 from core import mouse as mouse_input
 from core.config import REF_W, REF_H
 from core.screen_base import ScreenBase
+from core.shipparts import ShipPartNames
 from screens.colony_summary import colonyrows
 
-from . import planetdraw, planetrows, planetwords
+from . import monsterpanel, planetdraw, planetrows, planetwords
 
 log = logging.getLogger("planets")
 
@@ -59,9 +60,9 @@ class PlanetsScreen(ScreenBase):
         self._hover = None          # list index under the pointer, or None
         self._selected = None       # planet index of the scanned row
         self._scanned = None        # star index + 1000, MOX::_scanned_field
-        self._pictures = {}
-        self._picture_cache = {}
-        self._missing_logged = False
+        self._parts = None          # ship part names, core.shipparts
+        self._monster_sprites = {}  # owner -> panel sprite or None
+        self._monster_scaled = {}   # the one scaled copy on screen
 
     # ── Lifecycle ─────────────────────────────────────────
 
@@ -73,6 +74,7 @@ class PlanetsScreen(ScreenBase):
             "language", "en")
         self._words = planetwords.Words.load(
             language, self._data.get("words", {}).get("food", "%s Food"))
+        self._parts = ShipPartNames(language)
         self._list = planetrows.PlanetList(
             self._data.get("sort", {}).get("default", "climate"))
         # MOX::_scanned_field = -1 on entry (plntsum.cpp:1945).
@@ -183,7 +185,7 @@ class PlanetsScreen(ScreenBase):
             planetdraw.render_planet_panel(
                 self, surface, row,
                 planetwords.cells(self._view, row, self._words)["planet"])
-        self._render_picture(surface, row)
+        monsterpanel.render(self, surface, row)
         if self._frame_scaled is not None:
             surface.blit(self._frame_scaled, self._frame_pos)
         self.render_help(surface)
@@ -227,34 +229,6 @@ class PlanetsScreen(ScreenBase):
         planetdraw.render_control(self, surface, "return",
                                   self._data.get("return", {}).get("label"),
                                   mouse=mouse)
-
-    def _render_picture(self, surface, row):
-        if row is None or self._view is None:
-            return
-        owner = planetrows.monster_owner(self._view, row["star"])
-        if owner is None:
-            return
-        name = planetwords.MONSTER_NAMES.get(owner)
-        planetdraw.render_picture(
-            self, surface, self._picture(name),
-            planetwords.race_name(self._view, owner, self._words))
-
-    def _picture(self, name):
-        """The monster's picture through the resource stack, or None. NO SET
-        EXISTS YET: the box draws nothing and the absence is logged once."""
-        if name is None:
-            return None
-        if name not in self._pictures:
-            folder = self._data.get("panel", {}).get("monster_dir", "monsters")
-            path = self.asset_path("assets", folder, f"{name}.png")
-            self._pictures[name] = (pygame.image.load(path).convert_alpha()
-                                    if path else None)
-            if path is None and not self._missing_logged:
-                self._missing_logged = True
-                log.info("planets: monster pictures absent (no %s.png under "
-                         "screens/planets/assets/%s/) — the picture box "
-                         "draws nothing", name, folder)
-        return self._pictures[name]
 
     # ── Input ─────────────────────────────────────────────
 

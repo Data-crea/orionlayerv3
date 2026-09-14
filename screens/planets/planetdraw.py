@@ -9,7 +9,7 @@ import logging
 
 import pygame
 
-from core import imagebox, listgrid, palette
+from core import listgrid, palette
 from screens.colony_summary import colonyinset, colonyplanets
 from screens.galaxy_map.renderer import OWNER_COLORS
 
@@ -299,20 +299,6 @@ def render_planet_panel(screen, surface, row, words):
                          colour, rect.width)
             surface.blit(surf, (rect.x, rect.y + (rect.height
                                                   - surf.get_height()) // 2))
-
-
-def render_picture(screen, surface, image, race):
-    ref = screen.box_rect("monster_picture")
-    if ref and image is not None:
-        imagebox.render_image_box(surface, screen.layout, image, ref,
-                                  _style(screen, "monster_picture"),
-                                  screen._picture_cache)
-    rect = window(screen, "monster_race")
-    if rect and race:
-        surf = _text(screen.style, race,
-                     screen.layout.font_size(_font(screen, "monster_race", 26)),
-                     CONTROL_TEXT, rect.width)
-        surface.blit(surf, surf.get_rect(center=rect.center))
 
 
 def _style(screen, name):

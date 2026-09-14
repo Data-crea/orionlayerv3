@@ -2511,6 +2511,36 @@ def main():
             key = shi._resolve_sprite(gm._cache, kind, 2)
             assert key is not None, kind
 
+        # THE STAND-IN IS FOR EXACTLY TWO KINDS (Data, 14 September 2026,
+        # fundament 64). The amoeba and the antaran have no HD master and
+        # draw as the grey player ship — a marked DEVIATION, kept because
+        # a monster that vanished from the map would be a gap against the
+        # original. A master that arrives, or one that goes missing,
+        # changes this set; then the status document's known gap and the
+        # marking change with it, in the same commit.
+        _player_prefix = shi.sprite_key(shi.PLAYER_KIND, "")
+        _stand_in = {kind for kind in shi.MONSTER_KINDS.values()
+                     if any(shi._resolve_sprite(gm._cache, kind, _st)
+                            .startswith(_player_prefix)
+                            for _st in range(zt.icon_step_count()))}
+        assert _stand_in == {"amoeba", "antaran"}, (
+            f"the player-ship stand-in is drawn for {sorted(_stand_in)}, "
+            f"marked for amoeba and antaran")
+        assert "DEVIATION" in shi._resolve_sprite.__doc__ and \
+            "AMOEBA and the ANTARAN" in shi._resolve_sprite.__doc__
+        assert "Amoeba and Antaran" in open(os.path.join(
+            os.path.dirname(SCREENS_DIR), "v3_projektstatus.md"),
+            encoding="utf-8").read(), (
+            "the status document's known gaps no longer name the two "
+            "stand-ins")
+        # AND THE AMOEBA'S FOOTPRINT IS MEASURED, off BUFFER0.LBX entry
+        # 245 with a threshold sweep; the copy of the eel is gone.
+        assert zt.MONSTER_ICON_DIM_ZOOM0["amoeba"] == (13, 13)
+        assert "copy of eel" not in open(zt.__file__, encoding="utf-8").read()
+        ok("galaxy map stand-in: exactly amoeba and antaran reach the "
+           "player-ship fallback, marked DEVIATION and named in the status "
+           "document; the amoeba's footprint is measured")
+
         # The player sprite must stay greyscale on disk: it is tinted
         # at runtime, and colour baked into the asset would multiply
         # on top of itself.
@@ -5393,6 +5423,15 @@ def main():
         "screens/planets/layout.json": "HD EXTENSION: panel",
         "screens/planets/planetdraw.py": "HD EXTENSION: panel",
         "screens/planets/screen.py": "_hd_extension_wheel",
+
+        # ADDED 14 September 2026 with fundament 64, the monster values
+        # in the Planets panel. The panel carries the HD EXTENSION and
+        # the sprite choice's DEVIATION, the generator the panel export,
+        # the galaxy map the amoeba/antaran stand-in, zoomtables the
+        # export size. Their own checks are the monster panel block.
+        "screens/planets/monsterpanel.py": "STAR INDEX % 5",
+        "tools/make_ship_icons.py": "one source, no second set of artwork",
+        "screens/galaxy_map/ships.py": "AMOEBA and the ANTARAN",
 
     }
     _MARKS = ("HD EXTENSION", "DEVIATION")
@@ -12201,6 +12240,62 @@ def main():
     _gm.handle_right_button(False, *_map.screen_rect.center)
     ok("help: galaxy map keeps its right-drag pan over the map")
 
+    # THE RIGHT CLICK ON THE MAP IS THE GAME'S CANCEL, AND NOTHING ELSE
+    # (layout.json `map_cancel`; mainscr_main.cpp:397-404, fields.cpp:
+    # 1360). CANCEL_FIELD on the grid field found in the live list, once,
+    # before the pan; a press over a help region sends nothing (decision
+    # 38); no grid field in the list, or no connection, sends nothing.
+    from core.game_state import FieldInfo as _MvField
+
+    class _MvRec:
+        def __init__(self):
+            self.log = []
+
+        def cancel_field(self, _i):
+            self.log.append(("cancel", _i))
+
+        def activate_field(self, _i):
+            self.log.append(("act", _i))
+
+        def inject_click(self, _x, _y):
+            self.log.append(("click", _x, _y))
+
+        def inject_key(self, _k):
+            self.log.append(("key", _k))
+
+    assert _gm._state is not None, "the galaxy map has no state to test on"
+    _mv_grid = _MvField(index=23, x=22, y=22, x_end=527, y_end=421,
+                        field_type=12, hotkey=0)
+    _mv_game = _MvField(index=6, x=249, y=5, x_end=300, y_end=30,
+                        field_type=0, hotkey=ord("G"))
+    _mv_real = (app.client, app.connected, _gm._state.fields)
+    _mv_c = _map.screen_rect.center
+    try:
+        app.client, app.connected = _MvRec(), True
+        _gm._state.fields = [_mv_game, _mv_grid]
+        _gm.handle_right_button(True, *_mv_c)
+        assert app.client.log == [("cancel", 23)], app.client.log
+        assert _gm._pan_from is not None, "the pan must still start"
+        _gm.handle_right_button(False, *_mv_c)
+        app.client.log.clear()
+        assert _gm.handle_right_button(True, *_nav.screen_rect.center) is True
+        assert _gm.help.visible and app.client.log == [], app.client.log
+        _gm.handle_right_button(True, *_nav.screen_rect.center)   # closes
+        _gm._state.fields = [_mv_game]
+        _gm.handle_right_button(True, *_mv_c)
+        _gm.handle_right_button(False, *_mv_c)
+        _gm._state.fields = [_mv_game, _mv_grid]
+        app.connected = False
+        _gm.handle_right_button(True, *_mv_c)
+        _gm.handle_right_button(False, *_mv_c)
+        assert app.client.log == [], app.client.log
+    finally:
+        app.client, app.connected, _gm._state.fields = _mv_real
+    assert "TRANSCRIBED" in _gm._data["map_cancel"]["_transcribed"]
+    ok("galaxy map right click: CANCEL_FIELD on the live grid field exactly "
+       "once before the pan; nothing over help, without the field or "
+       "without a connection")
+
     # Auto-sizing is an HD EXTENSION (the original draws a fixed box
     # and wraps into it at a fixed 339 px). What has to hold is that
     # the extension does not lose text: a body too tall for the panel
@@ -12758,6 +12853,285 @@ def main():
        "wheel and fills are marked HD EXTENSION and drawn, the range gap "
        "is marked in layout.json and the status document")
 
+    # ── 8. THE MONSTER VALUES IN THE PICTURE WINDOW — fundament 64 ────
+    from core import maintext as _mmt
+    from core import monsterhull as _mh
+    from core import shipparts as _msp
+    from core import usersettings as _mus
+    from core import zoomtables as _mzt
+    from core.layout import Layout as _MLayout
+    from core.structs import ship as _msh
+    from screens.planets import monsterpanel as _mp
+    import fixtures as _mfx
+    import maintext_extract as _mme
+    import monster_hull_check as _mhc
+    import techname_extract as _mte
+    import tempfile as _mtmp
+
+    # 8a. THE SPEC. The design block and the weapon records are verified
+    #     (header compile plus the live probe, ship.py's docstring), lie
+    #     inside the 129 bytes without overlapping, and the damage fields
+    #     are NOT declared: a monster's zeros confirm no offset.
+    assert _msh.SPEC.verified and _msh.WEAPON_SPEC.verified
+    _m_spans = sorted((_o, _o + _Spec.kind_width(_k), _n)
+                      for _n, _o, _k in _msh.SPEC.fields)
+    for (_a0, _a1, _an), (_b0, _b1, _bn) in zip(_m_spans, _m_spans[1:]):
+        assert _a1 <= _b0, f"s_ship_data spec: {_an} overlaps {_bn}"
+    assert _m_spans[-1][1] <= _msh.SIZE
+    _mo = {_n: _o for _n, _o, _k in _msh.SPEC.fields}
+    assert _msh.WEAPONS_OFFSET + _msh.WEAPON_SLOTS * _msh.WEAPON_SIZE == \
+        _mo["picture_num"], "the eight weapon records must end at picture_num"
+    assert sum(_Spec.kind_width(_k) for _n, _o, _k in
+               _msh.WEAPON_SPEC.fields) == _msh.WEAPON_SIZE
+    assert not set(_mo) & {"armor_damage", "structural_damage",
+                           "shield_damage_percent", "drive_damage_percent",
+                           "computer_damage"}, (
+        "a damage field was declared; it stays UNVERIFIED and unread")
+    ok("ship spec: design block and weapon records verified, inside 129 "
+       "bytes without overlaps, the damage fields undeclared")
+
+    # 8b. THE HULL TABLE IS HELD TO THE SOURCE by the checker.
+    _m_tree = _mhc.find_tree(["smoke"])
+    if _m_tree is not None:
+        _m_diff = _mhc.compare(_mhc.read_source(_m_tree))
+        assert _m_diff == [], f"core/monsterhull.py disagrees: {_m_diff}"
+    else:
+        report("monster hull table NOT checked against initship.cpp — no "
+               "orion2re tree on this disk")
+    assert (_mh._cdiv(-3000, 100), _mh._cdiv(-7, 2), _mh._cdiv(7, 2)) == \
+        (-30, -3, 3), "C division truncates toward zero"
+    ok("monster hull table == initship.cpp, techdata.cpp and "
+       "orion2_consts.h (tools/monster_hull_check.py)")
+
+    # 8c. A GUARDED SYSTEM GIVES EXACTLY WHAT THE TEMPLATE AND THE TABLE
+    #     SAY. Expectations typed from SHIP_CONFIG (ship_config.cpp:51-139,
+    #     the count is SHIP_WEAPON's last argument) and Get_Ship_Structure_
+    #     / Get_Design_Structure_ / Get_Ship_Armor_Hits_ — never from the
+    #     module under test.
+    _m_expect = {
+        9: (None, 4, 3, 800, 800, [(11, 2), (4, 10), (20, 1), (20, 1),
+                                    (13, 2)], [1, 3, 5, 13, 18, 19, 21, 25]),
+        10: ("start", 2, 0, 400, 0, [(45, 1)], [39]),
+        11: ("start", 2, 0, 500, 0, [(42, 1), (25, 5)], []),
+        12: ("start", 2, 0, 500, 0, [(41, 8), (40, 1)], []),
+        13: ("start", 2, 0, 300, 0, [(44, 1)], [19]),
+        14: ("start", 2, 0, 500, 0, [(43, 3)], [10]),
+    }
+    _m_cfg = _pl_lay["monster_values"]
+    _m_words = _plw.Words(_PlE(), _PlH({157: "Weapons:", 158: "Specials:",
+                                        159: "None"}))
+
+    class _MParts:
+        def name(self, _table, _i):
+            return f"{_table}{int(_i)}"
+
+    def _m_check(_ship, _parts=None):
+        _stage, _size, _shield, _st, _ar, _wp, _spc = _m_expect[_ship.owner]
+        _v = _mp.values(_pl_view, _ship, _m_words, _parts or _MParts(),
+                        _m_cfg)
+        assert _mh.stage(_ship) == _stage, (_ship.owner, _mh.stage(_ship))
+        _want = {
+            "monster_type": _plw.race_name(_pl_view, _ship.owner, _m_words),
+            "monster_stage": _m_cfg["stage"][_stage] if _stage else "",
+            "monster_size": f"hulls{_size}",
+            "monster_structure": _m_cfg["structure"] % _st,
+            "monster_armour": _m_cfg["armour"] % _ar,
+            "monster_shield": f"shields{_shield}",
+            "monster_weapons": ["Weapons:"] + [f"weapons{_t}"
+                                               for _t, _n in _wp],
+            "monster_weapon_counts": [""] + [_m_cfg["count"] % _n
+                                             for _t, _n in _wp],
+            "monster_specials": ["Specials:"] + (
+                [f"specials{_i}" for _i in _spc] or ["None"]),
+        }
+        assert _v == _want, (_ship.owner, _v, _want)
+        return _v
+
+    def _m_pack(_owner, _location, _size, _weapons, _flags=(0,) * 5):
+        _b = bytearray(_msh.SIZE)
+        _b[_mo["size"]] = _size
+        _b[_mo["special_device_flags"]:_mo["special_device_flags"] + 5] = \
+            bytes(_flags)
+        for _slot, (_t, _n) in enumerate(_weapons):
+            _pl_struct.pack_into("<hbbbHb", _b, _msh.WEAPONS_OFFSET
+                                 + _slot * _msh.WEAPON_SIZE, _t, _n, _n,
+                                 15, 0, 0)
+        _b[_mo["previous_owner"]] = _owner
+        _pl_struct.pack_into("<bbh", _b, _mo["owner"], _owner, 0, _location)
+        return bytes(_b)
+
+    _m_hydra = _m_pack(14, 4, 2, [(43, 3)], (0, 0x04, 0, 0, 0))
+    _m_check(_msh.parse(_m_hydra))
+    _m_recs, _m_why = _mfx.fixture_ships("reference")
+    if _m_recs is None:
+        report(f"monster values NOT checked on the reference save — {_m_why}")
+    else:
+        _m_all = _msh.parse_all(_m_recs)
+        _m_mon = [_s for _s in _m_all
+                  if _msh.is_monster(_s.owner) and _s.status == 0]
+        assert sorted({int(_s.owner) for _s in _m_mon}) == [9, 10, 11, 12, 14]
+
+        class _MView:
+            ships = _m_all
+        for _s in _m_mon:
+            _m_check(_s)
+            _g = _mp.guard(_MView, _s.location)
+            assert _g is not None and _g.index <= _s.index
+    with _mtmp.TemporaryDirectory() as _m_d:
+        _m_none = _msp.ShipPartNames("en", root=_m_d)
+        assert _m_none.state == "missing"
+        _m_v = _mp.values(_pl_view, _msh.parse(_m_hydra), _m_words, _m_none,
+                          _m_cfg)
+        assert _m_v["monster_weapons"][1] == _m_cfg["unnamed"] % 43, _m_v
+    ok("monster values: a guarded system gives exactly the template's size, "
+       "shield, weapons and specials and the hull table's structure and "
+       "armour" + ("" if _m_recs is None else
+                   f" — all {len(_m_mon)} monsters of the reference save") +
+       "; no names file shows numbers")
+
+    # 8d. ON SCREEN: drawn for the scanned guarded row while the switch is
+    #     on; with it off the picture window is pixel for pixel the one a
+    #     row without a monster draws; nothing on the wire; sprites from
+    #     the masters at the DERIVED size, none for the amoeba, and the 4K
+    #     box inside the export so the panel only scales down.
+    class _MSnap(_PlSnap):
+        def __init__(self):
+            super().__init__()
+            self.ships_raw = [_m_hydra] + list(self.ships_raw[1:])
+
+    _m_app, _ = _pv.build_screen(1920, 1080)
+    _m_rec = _PlRec()
+    _m_app.client = _m_rec
+    with _mtmp.TemporaryDirectory() as _m_d:
+        _m_app.user_settings = _mus.UserSettings(
+            path=os.path.join(_m_d, "user_settings.json"))
+        _m_app.dispatcher.switch_to("planets")
+        _m_scr = _m_app.dispatcher.active
+        _m_scr.update(_MSnap())
+        _m_rec.log.clear()
+        _m_rows = {_r["star"]: _r for _r in _m_scr._list.rows}
+        _m_said = []
+        _m_rt = _m_app.style.render_text
+        _m_app.style.render_text = lambda _t, *_a, **_k: (
+            _m_said.append(_t), _m_rt(_t, *_a, **_k))[1]
+        _m_pp = _pld.window(_m_scr, "picture_panel")
+
+        def _m_frame(_star):
+            _m_scr._selected = _m_rows[_star]["index"]
+            _m_said.clear()
+            _s = pygame.Surface((1920, 1080))
+            _m_scr.render(_s)
+            return pygame.image.tostring(_s.subsurface(_m_pp), "RGB")
+
+        try:
+            _m_on = _m_frame(4)
+            assert _m_cfg["structure"] % 500 in _m_said and \
+                _m_cfg["armour"] % 0 in _m_said, _m_said
+            assert _mp.render(_m_scr, pygame.Surface((1920, 1080)),
+                              _m_rows[4]) is True
+            _m_empty = _m_frame(0)
+            assert _m_on != _m_empty, "the panel drew nothing for the Hydra"
+            _m_app.user_settings.set("monster_values", "off")
+            assert _m_frame(4) == _m_empty, (
+                "with the switch off the picture window must be the one a "
+                "row without a monster draws")
+            assert _m_cfg["structure"] % 500 not in _m_said
+            assert _mp.render(_m_scr, pygame.Surface((1920, 1080)),
+                              _m_rows[4]) is False
+        finally:
+            _m_app.style.render_text = _m_rt
+        assert _m_rec.log == [], f"the monster panel sent {_m_rec.log}"
+        for _owner, _kind in sorted(_mp.galaxy_ships.MONSTER_KINDS.items()):
+            if not _msh.is_monster(_owner):
+                continue
+            _path = _mp.sprite_path(_m_scr, _owner)
+            if _kind == "amoeba":
+                assert _path is None, "the amoeba has no master and no sprite"
+                continue
+            assert _path, f"no panel sprite for {_kind}"
+            _img = pygame.image.load(_path)
+            assert max(_img.get_size()) == _mzt.MONSTER_PANEL_SPRITE_PX, (
+                _kind, _img.get_size())
+    _m_4k = _MLayout(3840, 2160).scale
+    for _m_res, _m_list in _pl_boxdoc.items():
+        _m_by = {_b["name"]: _b for _b in _m_list}
+        assert set(_mp.BOXES) <= set(_m_by), (_m_res, set(_mp.BOXES) - set(_m_by))
+        assert not {"monster_picture", "monster_race"} & set(_m_by)
+        _m_sb = _m_by[_mp.SPRITE_BOX]["rect"]
+        assert max(_m_sb[2], _m_sb[3]) * _m_4k <= _mzt.MONSTER_PANEL_SPRITE_PX, (
+            f"{_m_res}: the sprite box {_m_sb} is larger at 4K than the "
+            f"{_mzt.MONSTER_PANEL_SPRITE_PX} px export — re-derive the export")
+    ok("monster panel: drawn for the guarded row with the switch on, the "
+       "picture window unchanged with it off, no wire traffic, sprites at "
+       "the derived size from the masters and none for the amoeba, the 4K "
+       "box inside the export")
+
+    # 8e. THE MARKINGS, THE SWITCH'S DEFAULT, AND THE FUNDAMENT ENTRY.
+    assert (_mp.__doc__ or "").lstrip().startswith(
+        "The monster guarding a system") and "HD EXTENSION" in _mp.__doc__
+    assert "DEVIATION" in (_mp.sprite_path.__doc__ or "")
+    assert _m_cfg["_hd_extension"].startswith("HD EXTENSION")
+    assert _m_cfg["_deviation_sprite"].startswith("DEVIATION")
+    assert _mus.DEFAULTS["monster_values"] == "on"
+    _m_fund = open(os.path.join(os.path.dirname(SCREENS_DIR), "doc",
+                                "v3_fundament.md"), encoding="utf-8").read()
+    assert "**64. " in _m_fund and "star index % 5" in _m_fund, (
+        "fundament 64 does not carry the entry or the sprite deviation")
+    ok("monster values markings: HD EXTENSION in the module and layout.json, "
+       "DEVIATION at the sprite choice, switch default on, fundament 64")
+
+    # 8f. THE NAMES AND THE DESCRIPTIONS, both decision 38's pattern.
+    assert (_msp.SPECIAL_FIRST_STRING, _msp.ARMOR_FIRST_STRING,
+            _msp.SHIELD_FIRST_STRING, _msp.WEAPON_FIRST_STRING,
+            _msp.HULL_FIRST_STRING) == (344, 384, 391, 397, 542)
+    _m_rec600 = _pl_struct.pack("<HH", 1, _mmt.RECORD_SIZE) + \
+        b"Space \x82\x00junk".ljust(_mmt.RECORD_SIZE, b"\x00")
+    assert _mme.parse_entry(_m_rec600) == "Space é"
+    assert _mme.parse_entry(_pl_struct.pack("<HH", 1, 0x57B) + bytes(0x57B)) \
+        is None
+    with _mtmp.TemporaryDirectory() as _m_d:
+        for _m_loader, _m_rel, _m_ok in (
+                (_msp.ShipPartNames, _msp.name_file("en"),
+                 {_k: {"0": "x"} for _k in _msp.TABLES}),
+                (_mmt.MainText, _mmt.text_file("en"),
+                 {"entries": {"0": "No Special"}})):
+            assert _m_loader("en", root=_m_d).state == "missing"
+            _m_p = os.path.join(_m_d, *_m_rel.split("/"))
+            os.makedirs(os.path.dirname(_m_p), exist_ok=True)
+            for _m_body, _m_state in (({"format": 0}, "stale"),
+                                      (dict(_m_ok, format=1), "ok")):
+                with open(_m_p, "w", encoding="utf-8") as _fh:
+                    _hjson.dump(_m_body, _fh)
+                assert _m_loader("en", root=_m_d).state == _m_state, (
+                    _m_loader, _m_body)
+    # AGAINST THE PLAYER'S OWN FILES when they are on this disk: the first
+    # string of every table is its "No ..." entry, and entry 0 of MAINTEXT
+    # is "No Special" — the sums are right or the words say so.
+    from core import lbx as _mlbx
+    _m_tn = os.path.expanduser("~/Master of Orion 2/TECHNAME.LBX")
+    if os.path.exists(_m_tn):
+        _m_str = [_mte.decode(_x) for _x in _mte.split_block(
+            _mlbx.read_entry(_m_tn, 0))]
+        assert [_m_str[_i] for _i in (344, 384, 391, 397, 542)] == [
+            "No Special", "No Armor", "No Shield", "No Weapons", "Frigate"], \
+            [_m_str[_i] for _i in (344, 384, 391, 397, 542)]
+    else:
+        report(f"ship part indices NOT checked against a TECHNAME.LBX — "
+               f"{_m_tn} is not on this disk")
+    _m_mtx = _mme.find_lbx(None, "en")
+    if _m_mtx:
+        _m_ent, _m_skip = _mme.extract(_m_mtx)
+        assert len(_m_ent) == 14 and _m_ent[0] == "No Special" and \
+            _m_skip == 0, (len(_m_ent), _m_ent.get(0), _m_skip)
+    else:
+        report("MAINTEXT.LBX NOT parsed — not in ~/Master of Orion 2")
+    _m_setup = open(os.path.join(os.path.dirname(SCREENS_DIR), "tools",
+                                 "setup.py"), encoding="utf-8").read()
+    assert "maintext_extract.py" in _m_setup and "shipparts_file" in _m_setup
+    ok("ship part names and MAINTEXT descriptions: first strings from the "
+       "game's counts, the 600-byte record parse, missing/stale/ok loaders, "
+       "both named in setup.py")
+
     _pop = _HelpPopup()
     _box = (430, 200, 1060, 680)
     _pop.open(1, "Short", "One line.")
@@ -13175,7 +13549,28 @@ def main():
 
     # ── Full App boot (standalone, no orion2re) ──
     import main as main_module
-    app2 = main_module.App()
+    # THE PLAYER'S OWN user_settings.json STAYS OUT OF THE RUN. `App()`
+    # loads it and hands its preset to `palette.init` — right for the
+    # app, and until 14 September 2026 it leaked into this suite: a
+    # player who had picked Okabe-Ito in the dialog left every later
+    # check running under that palette, and the Game Settings restart
+    # note (drawn only while saved != active) failed on a clean tree.
+    # The boot gets an empty settings object in a scratch directory, and
+    # the palette must come out of it as the original.
+    import tempfile as _boot_tmp
+    from core import playercolors as _boot_pc
+    _boot_dir = _boot_tmp.TemporaryDirectory()
+    _boot_load = main_module.usersettings.load
+    main_module.usersettings.load = lambda *_a, **_k: \
+        main_module.usersettings.UserSettings(
+            path=os.path.join(_boot_dir.name, "user_settings.json"))
+    try:
+        app2 = main_module.App()
+    finally:
+        main_module.usersettings.load = _boot_load
+    assert palette.active_preset() == _boot_pc.ORIGINAL, (
+        f"App() booted under preset {palette.active_preset()!r} — the "
+        f"player's user_settings.json reached the smoke test")
     assert app2.dispatcher.active_name == "main_menu"
     app2._update()
     app2._render()
@@ -13456,6 +13851,10 @@ def main():
         # extracted from the player's own LBX files; the extractors
         # own their formatting and the files are not hand-edited.
         os.path.join("assets", "shared", "help", "help_en.json"),
+        # brief 107: the second techname range and MAINTEXT, both written
+        # at indent=1 like the building names.
+        os.path.join("assets", "shared", "names", "shipparts_en.json"),
+        os.path.join("assets", "shared", "names", "maintext_en.json"),
         os.path.join("assets", "shared", "names", "buildings_en.json"),
         os.path.join("assets", "shared", "names", "estrings_en.json"),
         # hand-written with inline arrays for readability; never
@@ -13513,6 +13912,8 @@ def main():
         os.path.join("assets", "shared", "names", "buildings_en.json"),
         os.path.join("assets", "shared", "names", "estrings_en.json"),
         os.path.join("assets", "shared", "names", "hestrings_en.json"),
+        os.path.join("assets", "shared", "names", "shipparts_en.json"),
+        os.path.join("assets", "shared", "names", "maintext_en.json"),
     }
     if os.path.isdir(os.path.join(_json_root, ".git")):
         import subprocess as _json_sp
@@ -14370,15 +14771,21 @@ def main():
                     (_go_geo["colours"].centerx, _go_geo["colours"].top),
                     _go_geo["swatches"][3].center]
         _go_before = (app.user_settings.get("floor_lift"),
-                      app.user_settings.get("player_colors"))
+                      app.user_settings.get("player_colors"),
+                      app.user_settings.get("monster_values"))
+        assert _go_before[2] == "on", "the monster values switch defaults on"
+        assert tuple(_go_geo) == _go.BANDS + ("swatches",), tuple(_go_geo)
         for _p in _go_pts:
             _go_scr.handle_click(*_p)
         assert app.client.log == [], app.client.log
         assert app.user_settings.get("floor_lift") != _go_before[0]
         assert app.user_settings.get("player_colors") != _go_before[1]
+        assert app.user_settings.get("monster_values") == "off", (
+            "one click on the monster row must turn the switch off")
         _go_scr.render(surf)
-        ok("OrionLayer rows: clicks on all four bands, their boundaries and a "
-           "swatch send nothing; floor and preset rows cycle their values")
+        ok("OrionLayer rows: clicks on all five bands, their boundaries and a "
+           "swatch send nothing; floor, preset and monster rows cycle their "
+           "values")
 
         # 15. EVERY ENGINE ROW STILL SENDS EXACTLY WHAT IT SENT: its own
         #     label field, once.
@@ -14396,8 +14803,8 @@ def main():
         #     saved preset differs from the active one; the swatches are the
         #     selected preset's; ACCEPT and exit write once.
         _go_acc = _gm_draw.rect(_go_scr, "settings_accept")
-        assert _go_geo["colours"].bottom <= _go_acc.top, (
-            _go_geo["colours"], _go_acc)
+        assert _go_geo[_go.BANDS[-1]].bottom <= _go_acc.top, (
+            _go_geo[_go.BANDS[-1]], _go_acc)
         assert _go_geo["divider"].top >= _gm_draw.rect(
             _go_scr, "settings_rows").bottom
         _go_said = []
@@ -14412,7 +14819,11 @@ def main():
             app.user_settings.set("player_colors", "okabe_ito")
             _go_said.clear()
             _go_scr.render(surf)
-            assert _go_note in _go_said
+            assert _go_note in _go_said, (
+                f"restart note {_go_note!r} not drawn: active preset "
+                f"{palette.active_preset()!r}, saved "
+                f"{app.user_settings.get('player_colors')!r}, node "
+                f"{_go_scr.node!r}, drawn {_go_said}")
         finally:
             app.style.render_text = _go_rt
         _go_sw = [tuple(surf.get_at(_r.center))[:3] for _r in _go_geo["swatches"]]

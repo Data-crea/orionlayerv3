@@ -68,6 +68,16 @@
     "zoom_in": 8,
     "zoom_out": 9
   },
+  "map_cancel": {
+    "field_type": 12,
+    "rect": [
+      22,
+      22,
+      527,
+      421
+    ],
+    "_transcribed": "TRANSCRIBED: a right click on the map. The main screen disables the mouse cancel (fields::Disable_Cancel_, mainscr_main.cpp:281), so the right button finds the map's grid field and Get_Input_ returns it NEGATIVE (fields.cpp:1360); Main_Screen_ then ends the relocation-merge mode and leaves zoom mode (mainscr_main.cpp:397-404). The star, ship and popup branches all want mouse_status 0 and a right click yields 1 (Get_Mouse_Field_, mainscr.cpp:1652), so nothing else happens - over a star, a black hole or empty space alike. HD sends CANCEL_FIELD on the grid field BEFORE its pan drag starts; the field is looked up in the live list by its type and rect (Add_Grid_Field_(22, 22, 1, 1, 506, 400), mainscr.cpp:1427, so x_end 527 and y_end 421) at the moment of the press (decision 20), and without it nothing is sent. A right click over a help region never gets here (decision 38)."
+  },
   "sidebar_rows": [
     "stardate",
     "treasury",

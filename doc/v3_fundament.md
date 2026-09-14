@@ -1442,6 +1442,79 @@ presets and the original is reported. Known limit, not solved: a white
 base cannot get lighter, so the white player has no visible hover mark
 in the Planets list.
 
+**64. A space monster's values in the Planets panel: all of it an HD
+EXTENSION except the type, and the reason is levelling.** 14 September
+2026, Data's decisions on brief 107 (`doc/briefs/107-*`, `108-*`, `109-*`).
+Numbered 64 after checking: the highest entry in this file was 63, and
+nothing in the tree, the status document or the briefs used 64.
+
+**The original shows the type and nothing else.** Outside combat MOO2
+names the monster — "(Amoeba)" under the planet in the Planets list, the
+"guarded by" prompts — and that is all. The fleet screen's scan, which
+prints weapons, shield and specials, never runs for a monster: its big
+icons are scanned only for the player's own stack
+(`Scan_Fltscrn_Big_Icons_`, flt1.cpp:614). The monster system popup is
+unreachable in a running game. So stage, size, structure, armour, shield,
+weapons and specials are ALL the extension, not only the hull points —
+the brief had expected the fleet screen to make half of it a
+transcription, and the source said otherwise.
+
+**Why it is here anyway.** The values are fixed per type, compiled
+templates (`SHIP_CONFIG`, ship_config.cpp:86-139), and have been public
+for years. Showing them removes a disadvantage a newcomer has and a
+veteran never had. It is not a spoiler, because a spoiler is information
+one could not have had. Numbers, not judgements: no rating, no warning
+colour, no difficulty word — a rating would be a second invention. A
+switch in the Game Settings OrionLayer rows turns it off, and it is ON by
+default, the one default in `core/usersettings.py` that is not the
+original's look.
+
+**What is read, and why each is trusted.**
+- The design block of `s_ship_data` and the weapon records, verified by
+  decision 23's two sources: the header compiled with 48 static_asserts
+  (and a deliberately wrong one that failed), and a live probe of five
+  monster records matching their templates field for field
+  (`core/structs/ship.py`).
+- **The damage fields are neither declared nor read.** Monsters are
+  repaired in full every turn, so every value the probe could see was
+  zero, and a zero confirms no offset. The panel shows maxima, which
+  outside combat are the true values. The two owner-8 "Viper VII"
+  records with non-zero structural damage on the `natives` fixture are
+  a lead for later, not evidence now.
+- Hull points: TACTICAL only, structure and armour as two lines, because
+  combat takes armour first and a sum would hide that. The five monsters
+  read "Armour 0", which is what `ARMOR_NO_ARMOR` gives. The table in
+  `core/monsterhull.py` is a copy of `Get_Ship_Structure_` and the hull
+  and armour tables, and a copy is only legitimate with a checker:
+  `tools/monster_hull_check.py` reads initship.cpp, techdata.cpp and
+  orion2_consts.h and the smoke test runs it. The strategic numbers
+  (`AIPOWER::Max_Ship_Hits_`) are AI heuristics and are not shown.
+- Names from the player's TECHNAME.LBX, decision 38's pattern, in a
+  second file beside the building names (`core/shipparts.py`). Data
+  asked for weapons, shields and armour; the specials and the hull
+  classes are read too, from the same walk, because the panel names both
+  and has no other source for either. Specials are shown for all forty
+  bits: the fleet screen's own loop stops at 39 (flt2.cpp:727), which
+  would hide the Amoeba's only special, Regeneration, bit 39.
+
+**DEVIATION: the sprite is the monster's TYPE.** The original's own
+monster picture, in the unreachable popup, is chosen by star index % 5
+(`RUSS::Star_To_Monster_`, mainpups.cpp:1082), so a star can show a
+creature that is not the one guarding it. HD shows the creature that is
+there, from the galaxy map's own master — a larger export out of the same
+`make_ship_icons.py` pipeline, 314 px on its long edge, DERIVED for the
+4K box so the panel only scales down, with the number and its source in
+`core/zoomtables.py`. One source, no second set of artwork.
+
+**Empty in the panel, a stand-in on the map — two different answers on
+purpose.** No master exists for the Amoeba (nor for the Antaran, which
+is not a monster). In the panel an empty sprite box is an understandable
+state and an invented picture would be a deviation, so it stays empty.
+On the map a monster that vanished would be a gap against the original,
+which draws it, so the grey player-ship stand-in stays — marked
+DEVIATION at `_resolve_sprite`, named in the status document's known
+gaps, and held by a smoke check to exactly {amoeba, antaran}.
+
 **61. An OMISSION is marked like an extension, and so is a state HD
 cannot fill.** 14 September 2026, the GAME menu. HD EXTENSION and
 DEVIATION say what HD does that the original does not; nothing said

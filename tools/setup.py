@@ -30,6 +30,7 @@ separate, deliberate steps:
     python tools/techname_extract.py                # building names
     python tools/estrings_extract.py                # option strings
     python tools/raceicon_extract.py                # population figures
+    python tools/maintext_extract.py                # system specials
 
 Missing help texts are not an error — the popup says so and names the
 command. The script reports their state and moves on.
@@ -43,6 +44,8 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, ROOT)
 
 from core.buildnames import name_file as build_name_file
+from core.maintext import text_file as maintext_file  # noqa: E402
+from core.shipparts import name_file as shipparts_file  # noqa: E402
 from core.estrings import string_file as estrings_file  # noqa: E402
 from core.hestrings import string_file as hestrings_file  # noqa: E402
 from screens.colony_summary.colonyfigures import (  # noqa: E402
@@ -136,6 +139,21 @@ def from_game(settings=None):
          f"BUILDING column says so instead of naming what is being "
          f"built",
          "python tools/techname_extract.py"
+         + (f" --lang {lang}" if lang != "en" else "")),
+        # THE SAME EXTRACTION WRITES A SECOND FILE (fundament 64): the
+        # ship part names for the Planets panel's monster values.
+        (os.path.join(ROOT, *shipparts_file(lang).split("/")),
+         f"ship part names ({lang}) — without them the Planets panel "
+         f"shows weapon, shield, special and hull numbers instead of "
+         f"names",
+         "python tools/techname_extract.py"
+         + (f" --lang {lang}" if lang != "en" else "")),
+        # MAINTEXT.LBX: the system-special descriptions. Nothing draws
+        # them yet — the galaxy map's popups are their own brief.
+        (os.path.join(ROOT, *maintext_file(lang).split("/")),
+         f"system special descriptions ({lang}) — not drawn yet; the "
+         f"galaxy map's popups will read them",
+         "python tools/maintext_extract.py"
          + (f" --lang {lang}" if lang != "en" else "")),
         # TWO FILES FOR ONE COLUMN, and the second is the one that
         # matters more often. `COLBLDG::Selection_Name_` sends a
