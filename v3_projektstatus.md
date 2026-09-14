@@ -830,7 +830,7 @@ files under `doc/` and are only summarised here.
 | | |
 |---|---|
 | Python | 32,960 lines across 111 modules — `find . -name '*.py'`, `__pycache__` excluded, the smoke test's 6,400 included. The previous figure here (21,642 across 94) was carried from an unstated method and could not be reproduced |
-| Smoke test | `python tools/smoke_test.py` — **153 checks**, headless |
+| Smoke test | `python tools/smoke_test.py` — **169 checks**, headless |
 | Assets | 170 MB (select_race 68, galaxy_map 51, shared 23, new_game 21, colony_summary 1) |
 | Screens in HD | 9 of ~20–22 (the GAME menu overlay, work order Stop 2, every dialog of the popup; colony summary draws list, sidebar, scan box and galaxy inset, and MOVES POPS — the first HD gesture that drives the game; planets, brief 101, lists, sorts, restricts and returns) |
 | Setup from clone | `python tools/setup.py` (deps via the system package manager) |
@@ -1162,7 +1162,7 @@ in exactly ONE bucket. The numbers below are produced by
 check asserts this list still agrees with it — the same trade the
 check count makes, for the same reason.
 
-`screens/galaxy_map/screen.py` (**533** code, 815 total), `tools/struct_probe.py` (**478** code, 753 total), `tools/colony_list_preview.py` (**403** code, 772 total), `screens/custom_race/screen.py` (**400** code, 558 total), `tools/colony_move_hd.py` (**383** code, 583 total), `core/editor/editor.py` (**359** code, 430 total), `screens/galaxy_map/renderer.py` (**335** code, 753 total), `tools/ext_diag.py` (**325** code, 473 total), `core/style.py` (**310** code, 479 total).
+`screens/galaxy_map/screen.py` (**535** code, 818 total), `tools/struct_probe.py` (**478** code, 753 total), `tools/colony_list_preview.py` (**403** code, 772 total), `screens/custom_race/screen.py` (**400** code, 558 total), `tools/colony_move_hd.py` (**383** code, 583 total), `core/editor/editor.py` (**359** code, 430 total), `screens/galaxy_map/renderer.py` (**335** code, 753 total), `tools/ext_diag.py` (**325** code, 473 total), `core/style.py` (**310** code, 479 total).
 `smoke_test.py` is exempt by nature.
 
 **TWO TOOLS JOINED THE LIST ON 8 SEPTEMBER 2026 and one thing left
@@ -3286,7 +3286,67 @@ game quit.
 **Next screen:** SCREEN_REPORTS (39). After a load the decision-22
 fallback shows the native framebuffer.
 
+### OLED floor lift and player-colour presets — two HD EXTENSIONS, 14 September 2026
+
+Brief "OLED floor lift and colour-blind palettes", Data's decisions of
+the same day; fundament 63. Both are **HD EXTENSIONS** — MOO2 has no
+adjustable floor and assigns its eight player colours fixed — and each
+is marked in its module, here and in a smoke check.
+
+- **`core/usersettings.py` / `user_settings.json`** — the player's own
+  values, ignored by git, never shipped. Absent: defaults, silent.
+  Unreadable: one error line, defaults, the file moved to `.corrupt` on
+  the next save. Unknown keys written back. Not `settings.json` (the
+  app's committed configuration), not `core/structs/settings.py` (the
+  engine's `s_settings`).
+- **Game Settings dialog, four row heights below the thirteen** (1080p
+  box `orionlayer_rows` [622, 641, 513, 153], ending at 794 against
+  ACCEPT at 817): a divider, the "OrionLayer" heading, **Map floor**
+  (Off / Light / Haze) and **Player colours** (Original / Okabe-Ito)
+  with eight swatches from the SELECTED preset. `screens/game_menu/gmorion.py`.
+  No field, no hotkey, and a click on any of the four bands sends
+  nothing; the thirteen engine rows keep their state from `s_settings`.
+  Values apply in memory at once; the file is written on ACCEPT and on
+  the overlay's exit, idempotently. **The restart note sits
+  right-aligned in the HEADING band, above the swatches** — four row
+  heights leave no fifth; shown only while saved != active preset.
+- **Floor lift** — `screens/galaxy_map/floorlift.py`, one additive fill
+  after both floor paths in `_render_map`, read at draw time (live).
+  Off = no call, byte-identical map. Light (1, 2, 5) and Haze
+  (4, 10, 20) are the floor graphic's median and 90th percentile.
+- **Presets** — `core/playercolors.py`, applied once by
+  `palette.init(preset=)`, which only `main.App` passes (after the user
+  file); every other caller gets the original. All four tables swap:
+  `owner_*`, `ship_*`, `owner_hover_*`, banner/banner_hd. `ship_*` and
+  the banner tables were moved out of code into colors.json first, each
+  checked byte for byte (32 ship tints, 24 banners).
+- **The rule is a marked DEVIATION** in colors.json [player_presets]:
+  owner = base, ship = base lifted by k_ship 0.07, hover = base lifted
+  by k_hover 0.45, banner multiply = base with no add. Both k measured,
+  with protocol: k_ship is the smallest lift that keeps every preset
+  ship at least as bright as the darkest original ship (red, 0.108) at
+  all four zoom steps — measured 0.0674, stored up; k_hover matches the
+  original's mean hover/owner luminance ratio 1.700 (1.699 at 0.45).
+- **Okabe-Ito** with black replaced by white; red -> vermilion, yellow
+  -> yellow, green -> bluish green, silver -> white, blue -> blue,
+  orange -> orange, brown -> reddish purple, purple -> sky blue (by
+  distance, and the nearer relative for a deuteranope). Smallest
+  deuteranopia distance dE 17.2 against a threshold of 10; **the
+  original's is 3.8 and it is reported, not held to the threshold** —
+  a deviation from the brief's "every shipped preset", because the
+  original cannot meet any useful one.
+
 ## What is missing
+
+### OLED floor lift and player-colour presets
+- **The white player has no visible hover mark in the Planets list**
+  under a preset: a white base cannot get lighter (ratio 1.0). Known
+  limit of the rule; if it bothers in play, an off-white base, decided
+  with a picture.
+- A player's own base table (`player_color_base` in the user file) is
+  applied and warned about, but the UI offers presets only.
+- Not seen on the real map yet: the floor steps and the preset were
+  checked numerically and in an offline render, not in a live session.
 
 ### GAME menu
 - `doc/ext_save_slots.patch` is reported and NOT applied: slot rows show numbers only (HD STATE).

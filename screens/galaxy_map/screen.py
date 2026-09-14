@@ -44,6 +44,7 @@ from screens.galaxy_map import renderer as rnd
 from screens.galaxy_map import ships as ship_icons
 from screens.galaxy_map import viewctl
 from screens.galaxy_map import starfield as sf
+from screens.galaxy_map import floorlift
 from screens.galaxy_map import sidebar as sb
 
 log = logging.getLogger("galaxy_map")
@@ -406,6 +407,8 @@ class GalaxyMapScreen(ScreenBase):
             surface.blit(self._map_bg_scaled, view.box[:2])
         else:
             surface.fill(MAP_BG[:3], pygame.Rect(*view.box))
+        # The OLED floor lift: HD EXTENSION, one point, both floor paths.
+        floorlift.apply(surface, pygame.Rect(*view.box), self.app)
 
         # Background point stars, added on top of the artwork and
         # under everything the game owns. Additive, so the value a

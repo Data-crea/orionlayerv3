@@ -119,6 +119,20 @@
       }
     },
     {
+      "name": "orionlayer_rows",
+      "rect": [
+        622,
+        641,
+        513,
+        153
+      ],
+      "style": {
+        "skin": "area",
+        "font_size": 24,
+        "heading_font_size": 20
+      }
+    },
+    {
       "name": "settings_accept",
       "rect": [
         782,

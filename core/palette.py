@@ -27,10 +27,31 @@ Changing the skin therefore requires a restart.
 _COLORS = {}
 
 
-def init(colors):
-    """Set the active skin's color dict (from colors.json)."""
-    global _COLORS
-    _COLORS = colors or {}
+_ACTIVE_PRESET = "original"
+
+
+def init(colors, preset="original", base=None):
+    """Set the active skin's colour dict, with a player-colour preset.
+
+    **THE PRESET IS READ HERE, ONCE** — decision 18: every screen binds
+    its colours at import, so a preset has to be in the dict before the
+    first screen module is imported. `main.App` therefore loads
+    `core.usersettings` BEFORE calling this and passes the player's
+    preset (and their own base table, if the file has one). Tools and
+    the smoke test pass nothing and always get the original.
+
+    `preset` other than "original" replaces the four player-colour
+    tables in a COPY of `colors` (core/playercolors.py, an HD EXTENSION,
+    fundament 63); the skin dict itself is never modified.
+    """
+    global _COLORS, _ACTIVE_PRESET
+    from core import playercolors
+    _COLORS, _ACTIVE_PRESET = playercolors.apply(colors or {}, preset, base)
+
+
+def active_preset():
+    """The preset `init` applied — what is on screen until a restart."""
+    return _ACTIVE_PRESET
 
 
 def col(section, key, default):
@@ -80,3 +101,25 @@ def for_section(name):
     def _bound(key, default):
         return col(name, key, default)
     return _bound
+
+def banner_table(section):
+    """A banner tint table, `{colour: ((multiply), (add))}`, from the skin.
+
+    For the tables that moved out of literals in `core/banner.py`
+    (14 September 2026). Like `require` it has NO code default: a skin
+    without the section is a broken skin, and this raises naming what
+    to add rather than tinting with colours nobody chose. Read when a
+    banner renderer is built, not at import, so a module that imports
+    `core.banner` before the palette exists does not fail.
+    """
+    table = _COLORS.get(section)
+    if not isinstance(table, dict):
+        raise KeyError(
+            f"colors.json has no [{section}] banner table. It has no "
+            f"code default (decision 14) — add it to the skin")
+    out = {}
+    for name, entry in table.items():
+        if name.startswith("_"):
+            continue
+        out[name] = (tuple(entry["multiply"]), tuple(entry["add"]))
+    return out

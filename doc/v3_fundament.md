@@ -1385,6 +1385,63 @@ stop the scan box's paragraph gained a name heading above it,
 paragraph box's `font_scale` multiplies the reference size before the
 window scale, once ("Scaling twice").
 
+**63. The player's display settings: an OLED floor lift and player-colour
+presets, both HD EXTENSIONS, in one user file.** 14 September 2026,
+Data's decisions on the brief "OLED floor lift and colour-blind
+palettes". MOO2 has no adjustable floor and assigns its eight player
+colours fixed; neither is something the original can do, and both are
+properties of the player's display and eyes, not of the game.
+
+**One home for the values, and it is not `settings.json`.**
+`core/usersettings.py` reads and writes `user_settings.json`: ignored by
+git, never shipped, never on the editor's save path (decision 19). An
+absent file is the defaults, silently; an unreadable one is one error
+line, the defaults, and the file moved aside on the next save; a key
+this build does not know is written back. The Game Settings dialog's
+two OrionLayer rows are the only UI; they have no field, their clicks
+send nothing, and the thirteen engine rows keep their own state source.
+
+**The floor lift is live and has one application point.** A constant
+added to the floor after it is drawn (`screens/galaxy_map/floorlift.py`),
+whichever floor path ran, before anything else on the map. Step `off`
+is no lift at all and renders byte for byte what the map always drew;
+`light` and `haze` are MEASURED against the real floor graphic — its
+median (1, 2, 5) and 90th percentile (4, 10, 20) — not against black,
+because the floor already averages (1.7, 3.7, 7.9).
+
+**A preset swaps all four colour tables or none.** `owner_*`, `ship_*`,
+`owner_hover_*` and the banner cloth tints: one empire, one colour
+everywhere. Moving `ship_*` and the banner literals into the palette
+came first, each checked byte for byte. The preset is read ONCE, by
+`palette.init(preset=)`, which `main.App` calls after loading the user
+file and every other caller calls without — tools and the smoke test
+never see the player's choice. Changing it needs a restart, and the
+dialog says so only while the saved preset differs from the active one.
+
+**THE RULE THAT FILLS A PRESET IS OURS, AND IS MARKED DEVIATION.** The
+gate before the tables measured whether the original's tables follow
+from `owner_*`: they do not (ship lift k per channel -0.22..1.00,
+hover k 0.27..1.00, the banner add constant for seven colours and not
+for orange). So a preset the game never had is filled by an invented
+rule, written next to its values: owner = base; ship and hover = base
+lifted toward white by one measured k each; banner multiply = base, add
+none. `k_ship` 0.07 is the smallest lift that keeps every preset ship at
+least as bright as the darkest ORIGINAL ship at every zoom step;
+`k_hover` 0.45 matches the original's mean hover-to-owner luminance
+ratio. The smoke test holds both criteria, so a changed base colour
+cannot quietly break them.
+
+**Okabe–Ito, with black replaced by white.** Eight colours documented
+for deuteranopia and protanopia; black is invisible on the floor and
+the original has a white player. Mapped over the original's banner
+order, each colour to its nearest relative, the last two by distance.
+Its smallest pairwise distance after a deuteranopia simulation
+(Viénot 1999) is dE 17.2; the original's is 3.8, which is the reason
+the preset exists — so the threshold is held by the colour-blind
+presets and the original is reported. Known limit, not solved: a white
+base cannot get lighter, so the white player has no visible hover mark
+in the Planets list.
+
 **61. An OMISSION is marked like an extension, and so is a state HD
 cannot fill.** 14 September 2026, the GAME menu. HD EXTENSION and
 DEVIATION say what HD does that the original does not; nothing said

@@ -34,7 +34,7 @@ from core.hestrings import HStrings, printf
 from core.screen_base import ScreenBase
 from core.structs import settings as settings_spec
 from core.wire_protocol import EFFECT_PAIRS
-from screens.game_menu import gmdraw, nodes
+from screens.game_menu import gmdraw, gmorion, nodes
 from screens.game_menu.gmsave import SaveEditor
 
 log = logging.getLogger("game_menu")
@@ -95,6 +95,9 @@ class GameMenuScreen(ScreenBase):
         self.save.reset()
 
     def exit(self):
+        # Every way out of the popup, ESC from Settings included, keeps
+        # the OrionLayer rows' values; the save writes nothing twice.
+        gmorion.save(self)
         self.save.reset()
         super().exit()
 
@@ -184,6 +187,8 @@ class GameMenuScreen(ScreenBase):
             self.pending = "new" if key == "N" else "quit"
         if node == nodes.LOAD and key == "L":
             self.app.client.hold_watchdog(LOAD_HOLD_S)
+        if node == nodes.SETTINGS and key == "A":
+            gmorion.save(self)
         self.send(field)
 
     def confirm_text(self):
@@ -217,6 +222,10 @@ class GameMenuScreen(ScreenBase):
                 self.press(key)
                 return None
         if self.node == nodes.SETTINGS:
+            # THE ORIONLAYER ROWS FIRST, and they never reach `send`:
+            # they have no field (HD EXTENSION, fundament 63).
+            if gmorion.handle_click(self, screen_x, screen_y):
+                return None
             i = gmdraw.row_at(self, "settings_rows", nodes.OPTIONS,
                               screen_x, screen_y)
             labels = nodes.option_toggles(self.fields())

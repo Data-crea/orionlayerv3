@@ -3,7 +3,7 @@ import sys
 import logging
 import pygame
 from core.config import load_settings, TARGET_FPS, SCREENS_DIR
-from core import resources, palette
+from core import resources, palette, usersettings
 from core import cursor as cursor_gfx
 from core import mouse as mouse_input
 from core.layout import Layout
@@ -28,11 +28,18 @@ class App:
         # Mod-aware resource resolver (must run before anything loads)
         self.res = resources.init(self.settings)
 
+        # The player's own OrionLayer settings BEFORE the palette: the
+        # colour preset is applied by palette.init, and every screen
+        # binds its colours at import (decision 18, fundament 63).
+        self.user_settings = usersettings.load()
+
         # Skin colors (per-screen palettes resolve at screen import)
         skin = self.settings.get("skin", "default")
         self.colors = self.res.load_json(
             f"assets/shared/skins/{skin}/colors.json", {})
-        palette.init(self.colors)
+        palette.init(self.colors,
+                     preset=self.user_settings.get("player_colors"),
+                     base=self.user_settings.get("player_color_base"))
 
         # Window
         win = self.settings.get("window", {})

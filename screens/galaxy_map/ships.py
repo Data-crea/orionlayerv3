@@ -109,16 +109,10 @@ DEFAULT_FIT = "height"
 #: Player colour -> tint multiplier. Same eight-entry order as
 #: renderer.OWNER_COLORS and core/banner.py: red, yellow, green,
 #: silver, blue, brown, purple, orange (MOX::_main_palette_player_colors).
-SHIP_COLORS = {
-    0: palette.col("galaxy_map", "ship_0", (214,  72,  52)),
-    1: palette.col("galaxy_map", "ship_1", (232, 196,  40)),
-    2: palette.col("galaxy_map", "ship_2", ( 78, 186,  76)),
-    3: palette.col("galaxy_map", "ship_3", (222, 230, 238)),
-    4: palette.col("galaxy_map", "ship_4", (108, 156, 232)),
-    5: palette.col("galaxy_map", "ship_5", (204, 132,  84)),
-    6: palette.col("galaxy_map", "ship_6", (176,  96, 204)),
-    7: palette.col("galaxy_map", "ship_7", (255, 138,  20)),
-}
+#: The values are the skin's (`galaxy_map` ship_0..7, colors.json) with NO
+#: code default — decision 14; moved out of literals here on 14 September
+#: 2026, the tinted sprites compared byte for byte.
+SHIP_COLORS = {i: palette.require("galaxy_map", f"ship_{i}") for i in range(8)}
 
 #: A pure multiply drives the highlights straight into the hue and the
 #: hull stops reading as metal. Lifting the multiplier toward white by

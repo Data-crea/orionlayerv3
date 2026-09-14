@@ -160,7 +160,22 @@
     "confirm_unknown": "Confirm?",
     "warning_unknown": "The game refused slot {n}.",
     "_unknown_note": "HD STATE: shown only when the overlay did not see which button led here (it was opened into a confirmation or warning) or, for the warning, without MSG_SAVE_SLOTS; the original prints H 186/187 and H 178-180 (loadsave.cpp:1241, :1258, :934-940).",
-    "string_missing": "String {id}: run tools/hestrings_extract.py"
+    "string_missing": "String {id}: run tools/hestrings_extract.py",
+    "orionlayer": {
+      "heading": "OrionLayer",
+      "floor": "Map floor",
+      "colours": "Player colours",
+      "floor_steps": {
+        "off": "Off",
+        "light": "Light",
+        "haze": "Haze"
+      },
+      "presets": {
+        "original": "Original",
+        "okabe_ito": "Okabe-Ito"
+      },
+      "restart": "Restart to apply colours"
+    }
   },
   "settings_rows": {
     "label_ids": [
@@ -227,5 +242,23 @@
     "3": 180
   },
   "omission_sliders": "OMISSION: the Music and Sound Fx sliders (loadsave.cpp:200-201, type-6 fields) are not in HD. Their value is written from the pointer by fields::Find_Bar_Position_ (fields.cpp:1702), which an activation cannot supply and decision 39's correction says an injected click loses. Data, 14 September 2026: leave out and mark. Their help regions 420 and 421 are omitted with them. Open fix 15 asks the question.",
-  "unverified_right_click": "UNVERIFIED, NOT TRANSCRIBED: a right click inside the Save dialog outside every help rectangle returns -1, which Do_Save_Game_Popup_'s `input_id < 0` branch reads as `abs(-1) = 1` inside the slot field range and leaves for the menu (loadsave.cpp:568-574). Data's order: verify live first. It could not be run: the game is a native Wayland client that xdotool cannot reach, and every field centre in that dialog lies inside a help rectangle, so MSG_CANCEL_FIELD cannot produce the case. Until it is verified, HD does nothing there."
+  "unverified_right_click": "UNVERIFIED, NOT TRANSCRIBED: a right click inside the Save dialog outside every help rectangle returns -1, which Do_Save_Game_Popup_'s `input_id < 0` branch reads as `abs(-1) = 1` inside the slot field range and leaves for the menu (loadsave.cpp:568-574). Data's order: verify live first. It could not be run: the game is a native Wayland client that xdotool cannot reach, and every field centre in that dialog lies inside a help rectangle, so MSG_CANCEL_FIELD cannot produce the case. Until it is verified, HD does nothing there.",
+  "orionlayer_rows": {
+    "_hd_extension": "HD EXTENSION (fundament 63): four row heights below the thirteen engine rows - a divider, the OrionLayer heading, the map floor lift and the player-colour preset. The game knows nothing about them: they have no field, their clicks send nothing, and their values live in core/usersettings.py. The hotkey column stays empty for both rows.",
+    "bands": [
+      "divider",
+      "heading",
+      "floor",
+      "colours"
+    ],
+    "label_x": 0.114,
+    "_label_x_note": "the engine rows' own label column (settings_rows.label_x), so the two lists align",
+    "value_x": 0.5,
+    "swatch_x": 0.74,
+    "swatch_gap": 0.2,
+    "_swatch_note": "eight swatches from swatch_x to the right edge of the row, drawn from the SELECTED preset's base colours (core/playercolors.base), so they cannot disagree with what a restart will produce; swatch_gap is the gap between two as a share of one swatch",
+    "divider_y": 0.5,
+    "_restart_note": "The restart note is drawn right-aligned in the HEADING band, directly above the preset row's swatches: four row heights leave no fifth for it. Shown only while the saved preset differs from the one palette.init applied (palette.active_preset), so it goes away by itself after the restart.",
+    "_value_x_note": "0.46 let 'Player colours' run into the preset name in the first offline render (14 September 2026); 0.50 leaves a gap at 1080p, and the swatches follow at 0.74"
+  }
 }

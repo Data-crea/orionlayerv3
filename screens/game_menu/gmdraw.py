@@ -15,7 +15,7 @@ from core import palette
 from core.hestrings import printf
 from core.structs import settings as settings_spec
 from core.textfit import wrap_text
-from screens.game_menu import nodes
+from screens.game_menu import gmorion, nodes
 
 COL_BUTTON = palette.require("game_menu", "button_text")
 COL_TITLE = palette.require("game_menu", "title")
@@ -185,6 +185,7 @@ def _settings(screen, surface):
             if i < len(alts) and alts[i]:
                 _blit(screen, surface, alts[i], size, COL_OPTION,
                       band.x + int(band.w * rule.get("alt_x", 0.77)), ty)
+    gmorion.render(screen, surface)
     button(screen, surface, "settings_accept",
            word(screen, "settings", "accept"))
 

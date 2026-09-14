@@ -110,6 +110,13 @@ assets/shared/figures/
 # to partial defaults without it — a fresh clone should start in the
 # state the project was last known good in, not in a half-default one.
 *.log
+# The PLAYER's own OrionLayer settings (floor lift, colour preset) —
+# user data, never shipped; core/usersettings.py is its one home. The
+# `.corrupt` copy is the unreadable file it moves aside, the `.tmp` its
+# atomic write.
+user_settings.json
+user_settings.json.corrupt
+user_settings.json.tmp
 
 # --- Python ---
 __pycache__/

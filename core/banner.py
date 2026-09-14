@@ -22,6 +22,8 @@ import os
 import glob
 import pygame
 
+from core import palette
+
 ASSET_REL = os.path.join("assets", "shared", "banner")
 EMBLEM_DIR = "emblems"
 
@@ -39,21 +41,12 @@ class BannerType:
         self.box = box                # emblem is fitted proportionally
         self.shadow = shadow          # (offset_x, offset_y, blur_factor)
         self.gloss = gloss            # optional additive highlight layer
-        self.colors = colors          # own colour table, else default
+        self.colors = colors          # palette section name, else DEFAULT_TABLE
 
 
 # The HD stand has more dynamic range than the other two assets, so it
-# carries its own table - same target hue, different mid-tone.
-COLORS_HD = {
-    "red":    ((146,   6,   6), (0, 0, 0)),
-    "yellow": ((225, 192,   6), (0, 0, 0)),
-    "green":  ((  6, 137,  39), (0, 0, 0)),
-    "silver": ((112, 141, 156), (0, 0, 0)),
-    "blue":   ((  6,   6, 173), (0, 0, 0)),
-    "brown":  ((149,  74,  44), (0, 0, 0)),
-    "purple": (( 99,   6, 141), (0, 0, 0)),
-    "orange": ((255, 121,   6), (2, 1, 0)),
-}
+# carries its own table - same target hue, different mid-tone. The
+# table is the skin's `banner_hd` section (colors.json).
 
 BANNER_TILE = BannerType(
     "banner_cloth.png", "banner_frame.png", "banner_frame_nobg.png",
@@ -66,22 +59,18 @@ BANNER_STAND = BannerType(
 BANNER_STAND_HD = BannerType(
     "stand_hd_cloth.png", "stand_hd_frame.png", "stand_hd_frame_nobg.png",
     center=(666, 526), box=(409, 504), shadow=(7, 11, 7),
-    gloss="stand_hd_gloss.png", colors=COLORS_HD)
+    gloss="stand_hd_gloss.png", colors="banner_hd")
 
 
 # --------------------------------------------------------------------
-# Colour table - measured on the reference screenshot, mid-tone +-1
+# Colour tables - IN THE PALETTE, not here (decision 14)
 # --------------------------------------------------------------------
-BANNER_COLORS = {                     # (multiply, add)
-    "red":    ((162,   6,   6), (0, 0, 0)),
-    "yellow": ((249, 213,   6), (0, 0, 0)),
-    "green":  ((  6, 152,  44), (0, 0, 0)),
-    "silver": ((124, 157, 173), (0, 0, 0)),
-    "blue":   ((  7,   6, 192), (0, 0, 0)),
-    "brown":  ((166,  82,  49), (0, 0, 0)),
-    "purple": ((110,   6, 157), (0, 0, 0)),
-    "orange": ((255, 121,   6), (18, 8, 0)),   # above the source cloth's
-}                                              # red maximum -> add needed
+# `banner` and `banner_hd` in the skin's colors.json: (multiply, add)
+# per MOO2 colour, measured by Data on the reference screenshot,
+# mid-tone +-1. Moved out of literals on 14 September 2026, values
+# unchanged (the tinted banners were compared byte for byte).
+# Read when a renderer is built, never at import.
+DEFAULT_TABLE = "banner"
 
 RACES = ["alkari", "bulrathi", "darlok", "elerian", "gnolam", "human",
          "klackon", "meklar", "mrrshan", "psilon", "sakkra", "silicoid",
@@ -165,7 +154,7 @@ class BannerRenderer:
         if btype.gloss:
             self.gloss = pygame.image.load(
                 os.path.join(asset_dir, btype.gloss)).convert()
-        self.colors = btype.colors or BANNER_COLORS
+        self.colors = palette.banner_table(btype.colors or DEFAULT_TABLE)
 
         self.emblems = {}
         for path in sorted(glob.glob(os.path.join(asset_dir, EMBLEM_DIR,

@@ -512,6 +512,17 @@
       5,
       12
     ],
+    "_floor_lift_note": "Map floor LIFT for OLED panels, an HD EXTENSION (fundament 63): MOO2 has no user-adjustable floor. Added to the floor AFTER it is drawn, whichever path ran (map_background.png or the map_background fill), by screens/galaxy_map/floorlift.py. Step `off` is (0,0,0) and means NO lift, not a black floor: the floor graphic already averages (1.7, 3.7, 7.9). The two other steps are MEASURED against that graphic, not against black (14 September 2026, all 1,573,352 pixels of map_background.png, per channel): `light` lifts pure black to the floor's MEDIAN (1, 2, 5), `haze` to its 90th PERCENTILE (4, 10, 20). Neither clips a single pixel at 255. On a non-OLED panel a lifted floor is a grey veil, which is why the default is off.",
+    "floor_lift_light": [
+      1,
+      2,
+      5
+    ],
+    "floor_lift_haze": [
+      4,
+      10,
+      20
+    ],
     "star_name": [
       150,
       152,
@@ -602,6 +613,47 @@
       238,
       132,
       12
+    ],
+    "_ship_note": "Player ship tint multipliers, MOX::_main_palette_player_colors order (red, yellow, green, silver, blue, brown, purple, orange); screens/galaxy_map/ships.py lifts each toward white by TINT_KEEP_WHITE before multiplying. Moved here from code defaults in ships.py on 14 September 2026 (decision 14), values unchanged; the tinted player sprites were compared byte for byte. NOT derivable from owner_*: no single lift reproduces them (measured, max channel error 51).",
+    "ship_0": [
+      214,
+      72,
+      52
+    ],
+    "ship_1": [
+      232,
+      196,
+      40
+    ],
+    "ship_2": [
+      78,
+      186,
+      76
+    ],
+    "ship_3": [
+      222,
+      230,
+      238
+    ],
+    "ship_4": [
+      108,
+      156,
+      232
+    ],
+    "ship_5": [
+      204,
+      132,
+      84
+    ],
+    "ship_6": [
+      176,
+      96,
+      204
+    ],
+    "ship_7": [
+      255,
+      138,
+      20
     ],
     "panel_background": [
       8,
@@ -896,6 +948,284 @@
       140,
       150,
       180
+    ],
+    "orionlayer_divider": [
+      60,
+      80,
+      120
+    ],
+    "orionlayer_heading": [
+      150,
+      175,
+      220
     ]
+  },
+  "banner": {
+    "_note": "Player banner cloth tint per MOO2 colour, (multiply, add) on the greyscale cloth - core/banner.py's table, measured by Data on the reference screenshot, mid-tone +-1 (banner_v4 package). Moved here from literals in core/banner.py on 14 September 2026 (decision 14); values unchanged. Orange carries an ADD because its target is above the source cloth's red maximum. NOT derivable from galaxy_map owner_*: the add is not constant across the eight (measured 14 September 2026), so this table stays explicit per preset.",
+    "red": {
+      "multiply": [
+        162,
+        6,
+        6
+      ],
+      "add": [
+        0,
+        0,
+        0
+      ]
+    },
+    "yellow": {
+      "multiply": [
+        249,
+        213,
+        6
+      ],
+      "add": [
+        0,
+        0,
+        0
+      ]
+    },
+    "green": {
+      "multiply": [
+        6,
+        152,
+        44
+      ],
+      "add": [
+        0,
+        0,
+        0
+      ]
+    },
+    "silver": {
+      "multiply": [
+        124,
+        157,
+        173
+      ],
+      "add": [
+        0,
+        0,
+        0
+      ]
+    },
+    "blue": {
+      "multiply": [
+        7,
+        6,
+        192
+      ],
+      "add": [
+        0,
+        0,
+        0
+      ]
+    },
+    "brown": {
+      "multiply": [
+        166,
+        82,
+        49
+      ],
+      "add": [
+        0,
+        0,
+        0
+      ]
+    },
+    "purple": {
+      "multiply": [
+        110,
+        6,
+        157
+      ],
+      "add": [
+        0,
+        0,
+        0
+      ]
+    },
+    "orange": {
+      "multiply": [
+        255,
+        121,
+        6
+      ],
+      "add": [
+        18,
+        8,
+        0
+      ]
+    }
+  },
+  "banner_hd": {
+    "_note": "Tint table of the HD banner stand, which has more dynamic range than the other two assets: same target hue, different mid-tone (core/banner.py). Moved here from literals on 14 September 2026, values unchanged; explicit per preset for the same reason as `banner`.",
+    "red": {
+      "multiply": [
+        146,
+        6,
+        6
+      ],
+      "add": [
+        0,
+        0,
+        0
+      ]
+    },
+    "yellow": {
+      "multiply": [
+        225,
+        192,
+        6
+      ],
+      "add": [
+        0,
+        0,
+        0
+      ]
+    },
+    "green": {
+      "multiply": [
+        6,
+        137,
+        39
+      ],
+      "add": [
+        0,
+        0,
+        0
+      ]
+    },
+    "silver": {
+      "multiply": [
+        112,
+        141,
+        156
+      ],
+      "add": [
+        0,
+        0,
+        0
+      ]
+    },
+    "blue": {
+      "multiply": [
+        6,
+        6,
+        173
+      ],
+      "add": [
+        0,
+        0,
+        0
+      ]
+    },
+    "brown": {
+      "multiply": [
+        149,
+        74,
+        44
+      ],
+      "add": [
+        0,
+        0,
+        0
+      ]
+    },
+    "purple": {
+      "multiply": [
+        99,
+        6,
+        141
+      ],
+      "add": [
+        0,
+        0,
+        0
+      ]
+    },
+    "orange": {
+      "multiply": [
+        255,
+        121,
+        6
+      ],
+      "add": [
+        2,
+        1,
+        0
+      ]
+    }
+  },
+  "player_presets": {
+    "_note": "Player-colour PRESETS \u2014 an HD EXTENSION (fundament 63): MOO2 assigns its eight player colours fixed. The preset `original` is not a table here: it IS the skin's own galaxy_map owner_*/ship_*, planets owner_hover_* and the banner/banner_hd sections. Every other preset is eight BASE colours in `order`, and palette.init derives the four tables from them by `rule` before any screen imports a colour (decision 18). A preset change therefore needs a restart.",
+    "order": [
+      "red",
+      "yellow",
+      "green",
+      "silver",
+      "blue",
+      "brown",
+      "purple",
+      "orange"
+    ],
+    "rule": {
+      "_deviation": "DEVIATION \u2014 OUR RULE, NOT THE ORIGINAL'S. Measured 14 September 2026: none of the original's tables follows from owner_* by one relation (ship_* vs owner_*: lift k per channel -0.22..1.00, max error 51; owner_hover_* vs owner_*: k 0.27..1.00, max error 52; the banner add is (0,0,0) for seven colours and (18,8,0) for orange). So a preset the game never had is filled by this invented rule: owner = base; ship = base + (255 - base) * k_ship; owner_hover = base + (255 - base) * k_hover; banner and banner_hd multiply = base with add (0,0,0). The original's orange add is a hand correction for one colour a preset does not have and is not reproduced. Data's decision (b), 14 September 2026.",
+      "k_ship": 0.07,
+      "_k_ship_protocol": "Criterion (Data, 14 September 2026): no preset ship darker than the darkest ORIGINAL ship, per zoom step; k_ship is the smallest k >= 0 that holds for all eight colours. Measured on screens/galaxy_map/assets/ships/player/0..3.png (88x95, 80x86, 72x77, 64x69) through ships.TintCache's own path (TINT_KEEP_WHITE lift, then BLEND_RGB_MULT), relative luminance (linearised sRGB, Rec.709 weights), alpha-weighted over the tinted sprite. Darkest original: red, 0.1085 / 0.1088 / 0.1083 / 0.1082. Okabe-Ito at k=0: blue 0.0971 / 0.0973 / 0.0969 / 0.0968 \u2014 darker, so k > 0. Bisection gives 0.0674 on all four steps; stored rounded UP to 0.07, the safe side of a floor. Mean luminance for the record only: original 0.1841, preset 0.2040 (step 0).",
+      "k_hover": 0.45,
+      "_k_hover_protocol": "Luminance ratio owner_hover / owner over the eight original colours (same luminance): red 2.033, yellow 1.578, green 1.823, silver 1.254, blue 1.584, brown 1.764, purple 2.036, orange 1.526; mean 1.6997. k_hover chosen so the Okabe-Ito mean ratio matches: 0.4503 by bisection, stored as 0.45 (Data: four decimals claim a precision a spread of 1.25..2.04 does not have); at 0.45 the mean is 1.6990, -0.04 %. KNOWN LIMIT: a WHITE base cannot get lighter, its ratio is 1.0, so the white player has no visible hover mark in the Planets list. Not solved now; if it bothers in play the answer is an off-white base, decided with a picture."
+    },
+    "deuteranopia_min_delta_e": 10.0,
+    "_deuteranopia_note": "Smallest pairwise distance of the eight base colours after a deuteranopia simulation (Vienot, Brettel & Mollon 1999, matrix in linear sRGB) in CIELAB dE76, required of every COLOUR-BLIND preset and checked on a player's own base table at load, as a warning. Measured 14 September 2026: okabe_ito 17.2 (yellow / orange); the ORIGINAL table is 3.8 (green / brown) and cannot meet any useful threshold, which is the reason the preset exists \u2014 so `original` is reported, not held to it.",
+    "okabe_ito": {
+      "_source": "Okabe, M. & Ito, K. (2002, rev. 2008), Color Universal Design (CUD): How to make figures and presentations that are friendly to colorblind people, https://jfly.uni-koeln.de/color/ \u2014 eight colours chosen to stay distinguishable for protanopia and deuteranopia.",
+      "colour_blind": true,
+      "_white": "DEVIATION FROM OKABE-ITO: its black (0,0,0) is replaced by white (255,255,255). The original has a white player (silver), and black would be invisible on the map floor.",
+      "_mapping": "Over the original's banner order, each original colour to its nearest relative: red -> vermilion, yellow -> yellow, green -> bluish green, silver -> white, blue -> blue, orange -> orange. The remaining two by distance to owner_*: brown -> reddish purple (79.9) and purple -> sky blue (144.8), total 224.7 against 243.6 the other way. Also the nearer relative for the people the preset is for: to a deuteranope purple IS a blue, the red share that makes it purple is what they do not see. The deuteranopia check cannot overturn this: the mapping only orders the same eight colours.",
+      "base": {
+        "red": [
+          213,
+          94,
+          0
+        ],
+        "yellow": [
+          240,
+          228,
+          66
+        ],
+        "green": [
+          0,
+          158,
+          115
+        ],
+        "silver": [
+          255,
+          255,
+          255
+        ],
+        "blue": [
+          0,
+          114,
+          178
+        ],
+        "brown": [
+          204,
+          121,
+          167
+        ],
+        "purple": [
+          86,
+          180,
+          233
+        ],
+        "orange": [
+          230,
+          159,
+          0
+        ]
+      }
+    }
   }
 }

@@ -5371,6 +5371,17 @@ def main():
         # its check is the size block below.
         "screens/colony_summary/colonyfigures.py": "decision 28",
 
+        # ADDED 14 September 2026 with fundament 63, the player-colour
+        # presets. Their own check is the "player colours" block: it
+        # asserts HD EXTENSION in both docstrings.
+        "core/palette.py": "fundament 63",
+        "core/playercolors.py": "fundament 63",
+        "screens/galaxy_map/floorlift.py": "fundament 63",
+        "screens/galaxy_map/screen.py": "OLED floor lift",
+        "screens/game_menu/gmorion.py": "fundament 63",
+        "screens/game_menu/screen.py": "they have no field",
+        "screens/game_menu/layout.json": "orionlayer_rows",
+
         # ADDED 13 September 2026, brief 101: the list code extracted
         # from the colony modules carries the row fills' HD EXTENSION
         # (decision 57). Its own check is the planets list block, which
@@ -13745,6 +13756,306 @@ def main():
     ok("window size is the surface's, not the request's (a refused "
        "size is adopted and reported, a granted one is silent)")
 
+    # ── User settings (brief: OLED floor lift and colour presets) ──
+    import logging as _us_logging
+    import tempfile as _us_tmp
+    from core import usersettings as _us
+
+    # 1. ABSENT IS SILENT, CORRUPT IS ONE LOUD LINE, and neither raises.
+    class _UsCatch(_us_logging.Handler):
+        def __init__(self):
+            super().__init__()
+            self.lines = []
+        def emit(self, record):
+            self.lines.append((record.levelno, record.getMessage()))
+    _us_catch = _UsCatch()
+    _us_logging.getLogger("usersettings").addHandler(_us_catch)
+    try:
+        with _us_tmp.TemporaryDirectory() as _us_dir:
+            _us_path = os.path.join(_us_dir, "user_settings.json")
+            _us_abs = _us.load(_us_path)
+            assert _us_abs.state == "absent" and not _us_catch.lines
+            assert _us_abs.get("floor_lift") == "off"
+            assert _us_abs.get("player_colors") == "original"
+            with open(_us_path, "w") as _fh:
+                _fh.write("{ this is not json")
+            _us_bad = _us.load(_us_path)
+            assert _us_bad.state == "corrupt"
+            assert _us_bad.get("player_colors") == "original"
+            assert any(_lvl >= _us_logging.ERROR for _lvl, _m in
+                       _us_catch.lines), _us_catch.lines
+            _us_bad.set("floor_lift", "light")
+            assert _us.save(_us_bad)
+            assert os.path.exists(_us_path + ".corrupt"), \
+                "the unreadable file was not kept"
+    finally:
+        _us_logging.getLogger("usersettings").removeHandler(_us_catch)
+    ok("user settings: absent file silent with defaults, corrupt file one "
+       "error line, defaults, no raise, kept aside on save")
+
+    # 2. UNKNOWN KEYS SURVIVE, AND SAVE IS IDEMPOTENT.
+    with _us_tmp.TemporaryDirectory() as _us_dir:
+        _us_path = os.path.join(_us_dir, "user_settings.json")
+        with open(_us_path, "w") as _fh:
+            _fh.write('{"from_a_newer_build": [1, 2], "floor_lift": "off"}')
+        _us_ok = _us.load(_us_path)
+        _us_ok.set("player_colors", "original")
+        assert _us.save(_us_ok) is True
+        assert _us.save(_us_ok) is False, "a second save rewrote the file"
+        _us_back = _us.load(_us_path)
+        assert _us_back.data.get("from_a_newer_build") == [1, 2]
+    ok("user settings: a key this build does not know is kept through "
+       "load and save; saving twice writes once")
+
+    # 3. THE FILE IS NEVER COMMITTED.
+    if os.path.isdir(os.path.join(os.path.dirname(SCREENS_DIR), ".git")):
+        import subprocess as _us_sp
+        _us_ign = _us_sp.run(
+            ["git", "-C", os.path.dirname(SCREENS_DIR), "check-ignore",
+             "--no-index", "user_settings.json"],
+            capture_output=True, text=True)
+        assert _us_ign.returncode == 0, "user_settings.json is not ignored"
+        assert os.path.relpath(_us.PATH, os.path.dirname(SCREENS_DIR)) == \
+            "user_settings.json"
+        ok("user settings: user_settings.json is in .gitignore and is the "
+           "path the loader uses")
+    else:
+        report("user_settings.json ignore rule NOT checked — no .git")
+        ok("user settings: ignore rule reported (no .git to ask)")
+
+    # 4. THE BANNER COLOURS LIVE IN THE PALETTE (decision 14): no colour
+    #    table left in core/banner.py, both skin tables complete.
+    _bn_src = open(os.path.join(os.path.dirname(SCREENS_DIR), "core",
+                                "banner.py"), encoding="utf-8").read()
+    for _bn_name in ("red", "yellow", "green", "silver", "blue", "brown",
+                     "purple", "orange"):
+        assert not re.search(rf'"{_bn_name}":\s*\(\(', _bn_src), \
+            f"core/banner.py carries a literal {_bn_name} tint again"
+    for _bn_sec in ("banner", "banner_hd"):
+        _bn_tab = palette.banner_table(_bn_sec)
+        assert len(_bn_tab) == 8, (_bn_sec, len(_bn_tab))
+        assert all(len(_m) == 3 and len(_a) == 3
+                   for _m, _a in _bn_tab.values()), _bn_sec
+    ok("banner tints: no literal table in core/banner.py; colors.json "
+       "[banner] and [banner_hd] each hold eight (multiply, add) pairs")
+
+    # 5. THE SHIP TINTS LIVE IN THE PALETTE TOO (decision 14): eight
+    #    ship_* keys in the skin, no literal default left in ships.py.
+    _sh_src = open(os.path.join(SCREENS_DIR, "galaxy_map", "ships.py"),
+                   encoding="utf-8").read()
+    assert not re.search(r'"ship_\d",\s*\(', _sh_src), \
+        "ships.py carries a code default for a ship tint again"
+    _sh_sec = palette.section("galaxy_map")
+    assert all(len(_sh_sec.get(f"ship_{_i}", [])) == 3 for _i in range(8)), \
+        "colors.json [galaxy_map] lacks a ship_N tint"
+    ok("ship tints: ship_0..7 are colors.json values with no code default "
+       "in ships.py")
+
+    # ── Player-colour presets (fundament 63, an HD EXTENSION) ──
+    import copy as _pc_copy
+    from core import playercolors as _pc
+    _pc_skin = _pc_copy.deepcopy(colors)
+
+    # 6. EVERY SHIPPED PRESET HAS EIGHT ENTRIES IN EACH OF THE FOUR TABLES.
+    _pc_names = _pc.names(_pc_skin)
+    assert _pc_names[0] == "original" and "okabe_ito" in _pc_names, _pc_names
+    for _pc_n in _pc_names:
+        _pc_out, _pc_act = _pc.apply(_pc_skin, _pc_n)
+        assert _pc_act == _pc_n, (_pc_n, _pc_act)
+        assert all(len(_pc_out["galaxy_map"].get(f"{_k}_{_i}", [])) == 3
+                   for _k in ("owner", "ship") for _i in range(8)), _pc_n
+        assert all(len(_pc_out["planets"].get(f"owner_hover_{_i}", [])) == 3
+                   for _i in range(8)), _pc_n
+        for _sec in ("banner", "banner_hd"):
+            assert len([_c for _c in _pc_out[_sec] if not _c.startswith("_")]) \
+                == 8, (_pc_n, _sec)
+    # THE MARKING: the presets are an HD EXTENSION, and it is said where
+    # the code is (fundament 63).
+    assert "HD EXTENSION" in (_pc.__doc__ or ""), "playercolors lost its marking"
+    assert "HD EXTENSION" in (palette.init.__doc__ or ""), \
+        "palette.init lost its marking"
+    ok(f"player colours: {len(_pc_names)} presets, each with eight owner, "
+       f"ship, hover and banner entries")
+
+    # 7. THE COLOUR-BLIND PRESETS STAY APART FOR A DEUTERANOPE; the
+    #    original is reported, not held to it (it is why the preset exists).
+    _pc_limit = _pc_skin["player_presets"]["deuteranopia_min_delta_e"]
+    for _pc_n in _pc_names[1:]:
+        if not _pc_skin["player_presets"][_pc_n].get("colour_blind"):
+            continue
+        _pc_d, _pc_a, _pc_b = _pc.deuteranopia_min(_pc.base(_pc_skin, _pc_n))
+        assert _pc_d >= _pc_limit, (
+            f"{_pc_n}: {_pc.ORDER[_pc_a]} and {_pc.ORDER[_pc_b]} are dE "
+            f"{_pc_d:.1f} apart for a deuteranope, the presets keep {_pc_limit}")
+    _pc_od = _pc.deuteranopia_min(_pc.base(_pc_skin, "original"))
+    report(f"deuteranopia, smallest dE76: original {_pc_od[0]:.1f} "
+           f"({_pc.ORDER[_pc_od[1]]}/{_pc.ORDER[_pc_od[2]]}), okabe_ito "
+           f"{_pc.deuteranopia_min(_pc.base(_pc_skin, 'okabe_ito'))[0]:.1f}")
+    ok(f"player colours: every colour-blind preset keeps dE >= {_pc_limit} "
+       f"under a deuteranopia simulation (Vienot 1999)")
+
+    # 8. THE PLAYER'S OWN TABLE IS CHECKED AT LOAD AS A WARNING, NEVER AN
+    #    ABORT; a bad table or an unknown preset falls back to the original.
+    class _PcCatch(logging.Handler if "logging" in globals() else
+                   __import__("logging").Handler):
+        def __init__(self):
+            super().__init__()
+            self.lines = []
+        def emit(self, record):
+            self.lines.append(record.getMessage())
+    _pc_catch = _PcCatch()
+    __import__("logging").getLogger("playercolors").addHandler(_pc_catch)
+    try:
+        _pc_bad = [(200, 0, 0)] * 2 + [(0, 0, 200)] * 6
+        _pc_out, _pc_act = _pc.apply(_pc_skin, "okabe_ito", _pc_bad)
+        assert _pc_act == "okabe_ito" and any("deuteranope" in _l
+                                              for _l in _pc_catch.lines)
+        assert _pc_out["galaxy_map"]["owner_0"] == [200, 0, 0]
+        _pc_same, _pc_act = _pc.apply(_pc_skin, "no_such_preset")
+        assert _pc_act == "original" and _pc_same is _pc_skin
+        assert _pc.apply(_pc_skin, "original")[0] is _pc_skin
+    finally:
+        __import__("logging").getLogger("playercolors").removeHandler(_pc_catch)
+    ok("player colours: an indistinct user table warns and still applies; an "
+       "unknown preset is the original; original leaves the skin untouched")
+
+    # 9. THE RULE HOLDS ON THE REAL SPRITES: no preset ship darker than the
+    #    darkest original ship at any zoom step (the mean is only reported).
+    _pc_dir = os.path.join(SCREENS_DIR, "galaxy_map", "assets", "ships",
+                           "player")
+    _pc_steps = [os.path.join(_pc_dir, f"{_s}.png") for _s in range(4)]
+    if all(os.path.exists(_p) for _p in _pc_steps):
+        def _pc_lum(_sprite, _tint, _keep):
+            _o = _sprite.copy()
+            _o.fill(_pc.lift(_tint, _keep), special_flags=pygame.BLEND_RGB_MULT)
+            _rgb = pygame.surfarray.array3d(_o).astype(float) / 255.0
+            _al = pygame.surfarray.array_alpha(_o).astype(float) / 255.0
+            _lin = ((_rgb <= 0.04045) * (_rgb / 12.92)
+                    + (_rgb > 0.04045) * (((_rgb + 0.055) / 1.055) ** 2.4))
+            _L = 0.2126 * _lin[..., 0] + 0.7152 * _lin[..., 1] + 0.0722 * _lin[..., 2]
+            return float((_L * _al).sum() / _al.sum())
+        from screens.galaxy_map import ships as _pc_ships
+        _pc_keep = _pc_ships.TINT_KEEP_WHITE
+        _pc_orig = _pc.apply(_pc_skin, "original")[0]["galaxy_map"]
+        for _pc_n in _pc_names[1:]:
+            _pc_g = _pc.apply(_pc_skin, _pc_n)[0]["galaxy_map"]
+            for _pc_p in _pc_steps:
+                _spr = pygame.image.load(_pc_p).convert_alpha()
+                _floor = min(_pc_lum(_spr, _pc_orig[f"ship_{_i}"], _pc_keep)
+                             for _i in range(8))
+                _low = min(_pc_lum(_spr, _pc_g[f"ship_{_i}"], _pc_keep)
+                           for _i in range(8))
+                assert _low >= _floor, (
+                    f"{_pc_n} {os.path.basename(_pc_p)}: darkest preset ship "
+                    f"{_low:.4f} below the darkest original {_floor:.4f}")
+        ok("player colours: no preset ship is darker than the darkest "
+           "original ship at any of the four zoom steps")
+    else:
+        report("preset ship floor NOT measured — the player ship sprites are "
+               "absent; run: python tools/setup.py")
+        ok("player colours: ship floor reported (sprites absent)")
+
+    # 10. THE HOVER RULE STAYS WITHIN 10 % OF THE ORIGINAL'S MEAN RATIO.
+    def _pc_rl(_c):
+        _l = [_pc._linear(_v) for _v in _c[:3]]
+        return 0.2126 * _l[0] + 0.7152 * _l[1] + 0.0722 * _l[2]
+    def _pc_ratio(_cols):
+        return sum(_pc_rl(_cols["planets"][f"owner_hover_{_i}"])
+                   / _pc_rl(_cols["galaxy_map"][f"owner_{_i}"])
+                   for _i in range(8)) / 8
+    _pc_r0 = _pc_ratio(_pc_skin)
+    for _pc_n in _pc_names[1:]:
+        _pc_r = _pc_ratio(_pc.apply(_pc_skin, _pc_n)[0])
+        assert abs(_pc_r - _pc_r0) <= 0.10 * _pc_r0, (_pc_n, _pc_r, _pc_r0)
+    ok(f"player colours: every preset's mean hover/owner luminance ratio is "
+       f"within 10 % of the original's {_pc_r0:.3f}")
+
+    # 11. ONLY main.App PASSES A PRESET; tools and this test never read the
+    #     player's file, and the user settings load before the palette.
+    _pc_root = os.path.dirname(SCREENS_DIR)
+    _pc_callers = []
+    for _dp, _dn, _fn in os.walk(_pc_root):
+        _dn[:] = [_d for _d in _dn if _d not in (".git", "__pycache__")]
+        for _f in _fn:
+            if _f.endswith(".py"):
+                _txt = open(os.path.join(_dp, _f), encoding="utf-8").read()
+                for _line in _txt.splitlines():
+                    # A CALL, not a mention: the line starts with it.
+                    # A docstring naming palette.init(preset=...) is
+                    # documentation, and counting it failed this
+                    # check on its first run.
+                    if _line.lstrip().startswith("palette.init("):
+                        _pc_callers.append((os.path.relpath(
+                            os.path.join(_dp, _f), _pc_root), _line.strip()))
+    _pc_with = {_f for _f, _l in _pc_callers if "preset" in _l or "," in _l}
+    _pc_main = open(os.path.join(_pc_root, "main.py"), encoding="utf-8").read()
+    assert _pc_main.index("usersettings.load()") < _pc_main.index("palette.init("), \
+        "main.App initialises the palette before the user settings are read"
+    assert "preset=" in _pc_main.split("palette.init(", 1)[1][:200]
+    for _f, _l in _pc_callers:
+        if _f not in ("main.py", "tools/smoke_test.py"):
+            assert "preset" not in _l and "user" not in _l, (_f, _l)
+    ok(f"palette.init: {len(_pc_callers)} call sites, only main.py passes a "
+       f"preset, after usersettings.load()")
+
+    # ── Map floor lift (fundament 63, an HD EXTENSION) ──
+    from screens.galaxy_map import floorlift as _fl
+
+    class _FlApp:
+        def __init__(self, step):
+            self.user_settings = _us.UserSettings({"floor_lift": step})
+
+    # 12. OFF IS INVISIBLE, AND THE LIFT IS EXACTLY THE LIFT, on both floor
+    #     paths: the graphic and the map_background fill.
+    assert "HD EXTENSION" in (_fl.__doc__ or ""), "floorlift lost its marking"
+    _fl_png = os.path.join(SCREENS_DIR, "galaxy_map", "assets",
+                           "map_background.png")
+    _fl_floor = pygame.image.load(_fl_png).convert()
+    _fl_fill = pygame.Surface((64, 32))
+    from screens.galaxy_map.screen import MAP_BG as _fl_bg
+    _fl_fill.fill(_fl_bg[:3])
+    for _fl_src in (_fl_floor, _fl_fill):
+        _fl_rect = _fl_src.get_rect()
+        _fl_ref = pygame.image.tobytes(_fl_src, "RGB")
+        _fl_off = _fl_src.copy()
+        assert _fl.apply(_fl_off, _fl_rect, _FlApp("off")) == (0, 0, 0)
+        assert pygame.image.tobytes(_fl_off, "RGB") == _fl_ref, \
+            "floor lift OFF changed the floor"
+        assert _fl.apply(_fl_src.copy(), _fl_rect, object()) == (0, 0, 0)
+        for _fl_step in ("light", "haze"):
+            _fl_lift = tuple(_fl.LIFT[_fl_step][:3])
+            _fl_out = _fl_src.copy()
+            _fl.apply(_fl_out, _fl_rect, _FlApp(_fl_step))
+            _fl_want = _fl_src.copy()
+            _fl_want.fill(_fl_lift)
+            _fl_want.blit(_fl_src, (0, 0), special_flags=pygame.BLEND_RGB_ADD)
+            assert pygame.image.tobytes(_fl_out, "RGB") == \
+                pygame.image.tobytes(_fl_want, "RGB"), (
+                f"floor lift {_fl_step}: the additive fill differs from fill "
+                f"plus additive blit")
+    _fl_px = _fl_fill.copy()
+    _fl.apply(_fl_px, _fl_px.get_rect(), _FlApp("light"))
+    assert tuple(_fl_px.get_at((0, 0)))[:3] == tuple(
+        min(255, a + b) for a, b in zip(_fl_bg[:3], _fl.LIFT["light"]))
+    ok("floor lift: off is byte-identical on the graphic and on the "
+       "map_background fill; light and haze equal fill + additive blit")
+
+    # 13. ONE APPLICATION POINT, after both floor paths and before the
+    #     star field — so nothing else on the map is lifted.
+    _fl_src_txt = open(os.path.join(SCREENS_DIR, "galaxy_map", "screen.py"),
+                       encoding="utf-8").read()
+    assert _fl_src_txt.count("floorlift.apply(") == 1, \
+        "the floor lift is applied at more than one point"
+    assert "OLED floor lift: HD EXTENSION" in _fl_src_txt, \
+        "the call site lost its HD EXTENSION marking"
+    _fl_body = _fl_src_txt.split("def _render_map(", 1)[1].split("\n    def ", 1)[0]
+    _fl_at = _fl_body.index("floorlift.apply(")
+    assert _fl_body.index("surface.blit(self._map_bg_scaled") < _fl_at
+    assert _fl_body.index("surface.fill(MAP_BG") < _fl_at
+    assert _fl_at < _fl_body.index("self._starfield.render(")
+    ok("floor lift: exactly one application point in _render_map, after both "
+       "floor paths and before the star field")
+
     # ── GAME menu overlay (work order Stop 2, 14 September 2026) ──
     import json as _gm_json
     from core.game_state import FieldInfo as _GmField, GameState as _GmState
@@ -14012,6 +14323,120 @@ def main():
         _gm_gal._viewctl.park_game = _gm_real_park
     assert _gm_parks == [0], _gm_parks
     ok("galaxy map parks only while the game reports screen 0")
+
+    # ── The OrionLayer rows in Game Settings (fundament 63) ──
+    from screens.game_menu import gmorion as _go
+    from core import usersettings as _go_us
+    import tempfile as _go_tmp
+
+    class _GoClient:
+        def __init__(self):
+            self.log, self.stats = [], {"state": 0}
+        def activate_field(self, i):
+            self.log.append(("activate", i))
+            self.stats["state"] += 10
+        def inject_click(self, x, y): self.log.append(("click", x, y))
+        def inject_key(self, k): self.log.append(("key", k))
+        def expect_shutdown(self): self.log.append(("shutdown",))
+        def hold_watchdog(self, s): pass
+        def cancel_field(self, i): self.log.append(("cancel", i))
+
+    _go_scr = d.screens["game_menu"]
+    _go_real = (app.client, app.connected, getattr(app, "user_settings", None))
+    _go_dir = _go_tmp.TemporaryDirectory()
+    app.client, app.connected = _GoClient(), True
+    app.user_settings = _go_us.UserSettings(
+        path=os.path.join(_go_dir.name, "user_settings.json"))
+    try:
+        _go_gs = _GmState()
+        _go_gs.current_screen = 8
+        _go_gs.settings_raw = _gm_live
+        _go_gs.fields = _gm_fields(_gm_fix["settings"])
+        _go_scr.enter(_go_gs)
+        _go_scr.update(_go_gs)
+        assert "HD EXTENSION" in (_go.__doc__ or ""), "gmorion lost its marking"
+        _go_scr_src = open(os.path.join(SCREENS_DIR, "game_menu", "screen.py"),
+                           encoding="utf-8").read()
+        assert "they have no field (HD EXTENSION, fundament 63)" in _go_scr_src, \
+            "the click branch in screen.py lost its HD EXTENSION marking"
+        _go_geo = _go.bands(_go_scr)
+
+        # 14. EVERY POINT OF THE ORIONLAYER ROWS SENDS NOTHING — the four
+        #     bands, the boundaries between them, and the swatches; the
+        #     floor and preset rows cycle their values.
+        _go_pts = [(_r.centerx, _r.centery) for _n, _r in _go_geo.items()
+                   if _n != "swatches"]
+        _go_pts += [(_go_geo["floor"].centerx, _go_geo["floor"].top),
+                    (_go_geo["colours"].centerx, _go_geo["colours"].top),
+                    _go_geo["swatches"][3].center]
+        _go_before = (app.user_settings.get("floor_lift"),
+                      app.user_settings.get("player_colors"))
+        for _p in _go_pts:
+            _go_scr.handle_click(*_p)
+        assert app.client.log == [], app.client.log
+        assert app.user_settings.get("floor_lift") != _go_before[0]
+        assert app.user_settings.get("player_colors") != _go_before[1]
+        _go_scr.render(surf)
+        ok("OrionLayer rows: clicks on all four bands, their boundaries and a "
+           "swatch send nothing; floor and preset rows cycle their values")
+
+        # 15. EVERY ENGINE ROW STILL SENDS EXACTLY WHAT IT SENT: its own
+        #     label field, once.
+        _go_labels = _gm_nodes.option_toggles(_go_gs.fields)
+        _go_rows = _gm_draw.bands(_gm_draw.rect(_go_scr, "settings_rows"), 13)
+        for _i, _r in enumerate(_go_rows):
+            app.client.log.clear()
+            _go_scr.handle_click(*_r.center)
+            assert app.client.log == [("activate", _go_labels[_i].index)], \
+                (_i, app.client.log)
+        ok("Game Settings: each of the 13 engine rows still activates its own "
+           "label field exactly once")
+
+        # 16. THE ROWS END ABOVE ACCEPT; the restart note shows only while the
+        #     saved preset differs from the active one; the swatches are the
+        #     selected preset's; ACCEPT and exit write once.
+        _go_acc = _gm_draw.rect(_go_scr, "settings_accept")
+        assert _go_geo["colours"].bottom <= _go_acc.top, (
+            _go_geo["colours"], _go_acc)
+        assert _go_geo["divider"].top >= _gm_draw.rect(
+            _go_scr, "settings_rows").bottom
+        _go_said = []
+        _go_rt = app.style.render_text
+        app.style.render_text = lambda _t, *_a, **_k: (_go_said.append(_t),
+                                                       _go_rt(_t, *_a, **_k))[1]
+        try:
+            _go_note = _go_scr.words["words"]["orionlayer"]["restart"]
+            app.user_settings.set("player_colors", palette.active_preset())
+            _go_scr.render(surf)
+            assert _go_note not in _go_said
+            app.user_settings.set("player_colors", "okabe_ito")
+            _go_said.clear()
+            _go_scr.render(surf)
+            assert _go_note in _go_said
+        finally:
+            app.style.render_text = _go_rt
+        _go_sw = [tuple(surf.get_at(_r.center))[:3] for _r in _go_geo["swatches"]]
+        assert _go_sw == [tuple(_c) for _c in
+                          _pc.base(app.colors, "okabe_ito")], _go_sw
+        app.client.log.clear()
+        _go_scr.press("A")
+        _go_path = app.user_settings.path
+        assert os.path.exists(_go_path)
+        _go_m = os.path.getmtime(_go_path)
+        assert _go_us.save(app.user_settings) is False
+        assert _go_us.load(_go_path).get("player_colors") == "okabe_ito"
+        ok("OrionLayer rows end above ACCEPT; restart note only while saved != "
+           "active; swatches are the selected preset's; ACCEPT writes, a second "
+           "save does not")
+    finally:
+        _go_scr.exit()
+        d.close_overlay()
+        app.client, app.connected = _go_real[0], _go_real[1]
+        if _go_real[2] is None:
+            del app.user_settings
+        else:
+            app.user_settings = _go_real[2]
+        _go_dir.cleanup()
 
     # CLAUDE.md is what a Claude Code session reads before touching
     # anything, so a stale pointer in it misleads at exactly the
