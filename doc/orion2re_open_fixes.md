@@ -41,6 +41,7 @@ section for what was found where.
 | 17 | The Load dialog's first visit prints dates without a month | **Observation** | Nothing; HD shows what the engine formats |
 | 18 | The Settings dialog has two different Alt-key label sets | **Observation** | Nothing; HD shows the screen path's set |
 | 19 | A save name confirmed with Enter keeps the edit cursor `_` | **Observation** | Nothing; HD reproduces it |
+| 20 | The fleet box's ship selection is not on the wire, and a single ship cannot be toggled from outside | **Request**, patch written 15 September 2026 (`doc/ext_fleet_selection.patch`, carries the owner block of `doc/ext_ship_icon_owner.patch`), **reported, NOT applied** | The HD fleet box cannot show which ships are selected, and HD cannot choose a subset of a stack to move — ALL is the only selection control a client can send |
 
 Items 3 and 4 are both about INJECT_CLICK and both live in the same
 code path, but they are separate faults: 3 is where the coordinates
@@ -1329,3 +1330,55 @@ measured**: the Enter branch calls the auto function after the copy
 (fields.cpp:1043-1050, `Quick_Call_Auto_Function_`), the redraw puts the
 cursor back into `_continuous_string`, and `Do_Save_Game_Popup_` copies
 that string into the description (loadsave.cpp:552-553).
+
+## 20. The fleet box's ship selection is not on the wire — a request, with a patch
+
+### What we found (orion2re 1.60, 15 September 2026, live)
+
+Brief 116, on a scratch save (SAVE5) with one client attached. The fleet
+box of an own three-ship stack was opened from the HD map, ALL was sent
+by field id, then ALL again. The framebuffer's ship cells went from
+30.3 % blue (selected) to 0 % and back, measured by machine per cell.
+Across twelve STATE_SNAPSHOTs in each state, **all 69 112 payload bytes
+stayed constant** — not one byte followed the selection — and the
+FIELD_LIST did not change. `MOX::_ship_node[].selected` and
+`_fleet_icon_selection_status` are not serialized; the Stop 1 reading of
+brief 110 is confirmed.
+
+An `INJECT_CLICK` at the centre of one ship field (checked to be that
+field's alone in the live list) did **not** toggle the ship: the cell
+stayed 30.3 % blue. The toggle is painted in the draw pass from the
+pointer under a held button (`mainscr_main.cpp:983-995`,
+`MAINSCR::Set_Painted_Fleet_Fields_`, mainscr.cpp:2468), and the id
+`Get_Input_` returns for a ship field is not acted on
+(mainscr.cpp:3422-3436) — so `ACTIVATE_FIELD` cannot toggle either. Open
+fix 3's pointer sync is the likely reason the injected click misses, and
+it was not separated from the draw-pass reason.
+
+### Why not read the picture
+
+The selection IS visible in the framebuffer, and this run read it. It is
+still the route open fix 14 and OrionLayer's decision 60 refuse as a
+data source: a picture says what was drawn, not what a move order will
+take, and the day the two differ every cell on the HD screen stays
+plausible.
+
+### The request
+
+Two optional trailing blocks at the end of `ext::SerializeState()`: the
+ship icon owners of `doc/ext_ship_icon_owner.patch` (carried, because
+OrionLayer reads exactly one byte per icon there as owners), then
+`"FSEL"`, the fleet box's stack (-1 while closed), the node count, and one
+byte per node — `_ship_node[i].selected`, the flag
+`HACCESS::Get_Fleet_Box_Selected_Ship_Ids_` builds a move order from.
+`doc/ext_fleet_selection.patch`, one file in `src/ext/`; compiled
+-fsyntax-only against the build's flags, **not built and not applied**.
+
+Reading the selection gives HD a correct blue/black cell per ship. It
+does not give HD a way to CHANGE one ship's selection; that would be a
+second request (a command, like open fix 12's), and is not made here.
+
+### What it costs us today
+
+The HD fleet box shows no selection, and a fleet order from HD can only
+move what the game auto-selected or what ALL selects.

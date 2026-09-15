@@ -1,0 +1,111 @@
+Extension API: put the fleet box's ship selection on the wire.
+
+Appends two OPTIONAL trailing blocks to STATE_SNAPSHOT, after the
+new-game values at the very end of ext::SerializeState():
+
+  1. one uint8 per ship icon, the icon's owner, 0xFF when no ship stands
+     behind it — doc/ext_ship_icon_owner.patch, CARRIED HERE, because
+     OrionLayer reads exactly _ship_icon_count bytes after the new-game
+     values as owners (core/game_state.py) and block 2 has to come after
+     them. A client that only knows block 1 stops there and is unaffected.
+  2. "FSEL" (4 bytes), int16 the stack the fleet box shows
+     (MOX::_fleet_box_ship_stack, -1 while box 2 is closed), int16 the
+     number of ship nodes in use (MOX::_next_free_node, clamped to
+     MAX_SHIPS), then one uint8 per node: MOX::_ship_node[i].selected
+     != 0. That is the flag HACCESS::Get_Fleet_Box_Selected_Ship_Ids_
+     builds a move order from. Node i is the i-th ship with status < 3
+     (SHIPSTAK::Find_Ship_Stacks_), which OrionLayer already rebuilds
+     (screens/galaxy_map/ships.py build_node_map).
+
+Open fix 20 in doc/orion2re_open_fixes.md; brief 116 is why.
+
+STATUS: REPORTED, NOT APPLIED (15 September 2026). Nothing in OrionLayer
+reads block 2 yet.
+
+WHY (measured live, 15 September 2026, scratch save SAVE5, one client):
+    * The selection is in NO byte of STATE_SNAPSHOT. The fleet box of an
+      own three-ship stack was opened, ALL sent by field id, and ALL sent
+      again: the framebuffer's ship cells went 30.3 % blue -> 0 % -> 30.3 %,
+      and across 12 snapshots per state all 69112 payload bytes stayed
+      constant — not one followed the selection. The FIELD_LIST does not
+      change with it either.
+    * An INJECT_CLICK on a single ship field does not toggle it (the cell
+      stayed 30.3 % blue, nothing in the snapshot moved). The toggle is
+      painted in the draw pass from the pointer under a held button
+      (mainscr_main.cpp:983-995, Set_Painted_Fleet_Fields_,
+      mainscr.cpp:2468), and the id Get_Input_ returns for a ship field is
+      not acted on (mainscr.cpp:3422-3436).
+    So a client can neither read which ships a star click would move
+    nor choose them, except ALL, and except by reading the picture —
+    which open fix 14 and OrionLayer's decision 60 refuse as a data source.
+
+    TO APPLY, to the orion2re working tree at ~/orion2re (engine 1.60.0,
+    with doc/ext_move_pop.patch and doc/ext_inject_click.patch in; NOT
+    together with doc/ext_ship_icon_owner.patch, whose block this carries):
+
+        cd ~/orion2re && patch -p1 < \
+            ~/orionlayerv3/doc/ext_fleet_selection.patch
+
+    and it comes back off with
+
+        cd ~/orion2re && patch -R -p1 < \
+            ~/orionlayerv3/doc/ext_fleet_selection.patch
+
+    then rebuild with -DORION2RE_EXT=ON.
+
+    ONE FILE, OURS: src/ext/ext_api.cpp. The hunk is GENERATED: the file
+    was copied from the working tree as it stood on 15 September 2026,
+    edited in a scratch copy and diffed against the copy. The patched copy
+    was compiled -fsyntax-only with the build's own defines
+    (-DMINIZ_STATIC_DEFINE -DORION2RE_DEBUG_BUILD=1 -DORION2RE_EXT),
+    includes and precompiled header, rc 0, and so was the unpatched copy.
+    It has NOT been built into a binary or run.
+
+    VERIFY after a build: with a fleet box open, the snapshot grows by
+    _ship_icon_count + 8 + nodes bytes and ends in "FSEL"; sending ALL by
+    id flips the node bytes of that stack.
+
+--- a/src/ext/ext_api.cpp
++++ b/src/ext/ext_api.cpp
+@@ -178,6 +178,41 @@
+     Write16(buf, NEWGAME::_civ_button_variable);
+     Write16(buf, NEWGAME::_random_events_button_variable);
+     Write16(buf, NEWGAME::_xenon_attacks_button_variable);
++
++    // OrionLayer, open fix 20. Two OPTIONAL trailing blocks, LAST in the
++    // snapshot so an older client stops reading before them.
++    //
++    // 1. Ship icon owners, one uint8 per icon, 0xFF = unresolvable —
++    //    doc/ext_ship_icon_owner.patch, carried here because a client
++    //    reads exactly _ship_icon_count bytes after the ng_* values as
++    //    owners, and block 2 has to come after them.
++    for (int i = 0; i < MOX::_ship_icon_count; i++) {
++        int16_t node = MOX::_ship_icon[i].node_idx;
++        int16_t ship = (node >= 0 && node < MAX_SHIPS)
++                     ? MOX::_ship_node[node].ship_idx : -1;
++        Write8(buf, (ship >= 0 && ship < MAX_SHIPS)
++                    ? (uint8_t)MOX::_ship[ship].owner : 0xFF);
++    }
++
++    // 2. The fleet box selection: "FSEL", the stack the fleet box shows
++    //    (-1 while box 2 is closed), the number of ship nodes in use, and
++    //    one uint8 per node, _ship_node[i].selected — the flag
++    //    HACCESS::Get_Fleet_Box_Selected_Ship_Ids_ builds a move order
++    //    from. Node i is the i-th ship with status < 3
++    //    (SHIPSTAK::Find_Ship_Stacks_), which a client can rebuild.
++    buf.push_back((uint8_t)'F');
++    buf.push_back((uint8_t)'S');
++    buf.push_back((uint8_t)'E');
++    buf.push_back((uint8_t)'L');
++    Write16(buf, MOVEBOX::Moveable_Box_Selected_(2)
++                 ? MOX::_fleet_box_ship_stack : (int16_t)-1);
++    int16_t nodes = MOX::_next_free_node;
++    if (nodes < 0) nodes = 0;
++    if (nodes > MAX_SHIPS) nodes = MAX_SHIPS;
++    Write16(buf, nodes);
++    for (int i = 0; i < nodes; i++) {
++        Write8(buf, (uint8_t)(MOX::_ship_node[i].selected != 0));
++    }
+ }
+ 
+ // ── Field list ───────────────────────────────────────────
