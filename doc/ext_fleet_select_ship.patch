@@ -8,10 +8,14 @@ OrionLayer; open fix 20 (`doc/ext_fleet_selection.patch`) is the READ
 half and stays as it is. Open fix 21 in doc/orion2re_open_fixes.md;
 briefs 116 and 117.
 
-STATUS: REPORTED, NOT APPLIED (15 September 2026). OrionLayer sends it
-only while the snapshot carries open fix 20's "FSEL" block, and reads
-the effect back off that block; an engine without this patch drops the
-message in ProcessInput's `default:` and the cell simply does not change.
+STATUS: APPLIED (15 September 2026, briefs 118 and 119) to ~/orion2re,
+unchanged, on top of open fix 20 revision 2 (60 lines lower); built
+-DORION2RE_EXT=ON; tools/version_check.py requires it. Confirmed live on
+SAVE5: one HD cell click sent one MSG_SELECT_SHIP, and the next block
+showed exactly that ship's node changed. OrionLayer sends it only while
+the snapshot carries open fix 20's "FSEL" block, and reads the effect back
+off that block; an engine without this patch drops the message in
+ProcessInput's `default:` and the cell simply does not change.
 
 WHY A COMMAND (measured live, brief 116): the toggle cannot be reached
 from outside today. `ACTIVATE_FIELD` on a ship field is not acted on

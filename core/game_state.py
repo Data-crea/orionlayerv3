@@ -72,8 +72,9 @@ class GameState:
     leaders_raw: list = field(default_factory=list)
     antaran_raw: bytes = b""
     ship_icons: list = field(default_factory=list)
-    #: Open fix 20's FSEL block: {"stack": int, "selected": [bool per
-    #: ship node]}, or None on an engine without the patch.
+    #: Open fix 20's FSEL block: {"stack": int, "ships": [ship_idx per
+    #: node], "selected": [bool per node], "chain": [node, in the fleet
+    #: box's cell order]}, or None on an engine without revision 2.
     fleet_selection: Optional[dict] = None
 
     # Fields (from FIELD_LIST message)
@@ -246,22 +247,33 @@ def parse_state(data: bytes) -> GameState:
             owner = read_u8()
             icon.set_derived("owner", None if owner == 0xFF else owner)
 
-    # Fleet box selection — OPTIONAL block after the owners, open fix 20
-    # (doc/ext_fleet_selection.patch): "FSEL", int16 the stack the fleet
-    # box shows (-1 while closed), int16 the node count, then one byte per
-    # ship node, MOX::_ship_node[i].selected. Node i is the i-th ship with
-    # status < 3 (ships.build_node_map). Absent on an unpatched engine,
-    # and then `fleet_selection` stays None — a state, not an error.
+    # Ship node table and fleet box selection — OPTIONAL block after the
+    # owners, open fix 20 revision 2 (doc/ext_fleet_selection.patch):
+    # "FSEL", int16 the stack the fleet box shows (-1 while closed), int16
+    # N nodes, N x (int16 _ship_node[i].ship_idx, uint8 selected), int16 L,
+    # L x int16 node — the box's chain in the order its cells are built.
+    # The table is read, never rebuilt: Sort_Ships_In_Stack_ rewrites
+    # ship_idx inside every chain (brief 119). Absent on an unpatched
+    # engine and short on a revision-1 one (one byte per node, no chain):
+    # then `fleet_selection` stays None — a state, not an error.
     gs.fleet_selection = None
     if data[pos:pos + 4] == b"FSEL" and pos + 8 <= len(data):
         pos += 4
         stack = read_i16()
         nodes = read_i16()
-        if 0 <= nodes and pos + nodes <= len(data):
-            gs.fleet_selection = {
-                "stack": stack,
-                "selected": [b != 0 for b in data[pos:pos + nodes]]}
-            pos += nodes
+        if 0 <= nodes and pos + 3 * nodes + 2 <= len(data):
+            ships, selected = [], []
+            for _ in range(nodes):
+                ships.append(read_i16())
+                selected.append(read_u8() != 0)
+            length = read_i16()
+            if 0 <= length and pos + 2 * length <= len(data):
+                chain = [read_i16() for _ in range(length)]
+                if all(0 <= n < nodes for n in chain) \
+                        and (stack >= 0 or not chain):
+                    gs.fleet_selection = {"stack": stack, "ships": ships,
+                                          "selected": selected,
+                                          "chain": chain}
 
     return gs
 

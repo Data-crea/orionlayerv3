@@ -41,8 +41,8 @@ section for what was found where.
 | 17 | The Load dialog's first visit prints dates without a month | **Observation** | Nothing; HD shows what the engine formats |
 | 18 | The Settings dialog has two different Alt-key label sets | **Observation** | Nothing; HD shows the screen path's set |
 | 19 | A save name confirmed with Enter keeps the edit cursor `_` | **Observation** | Nothing; HD reproduces it |
-| 20 | The fleet box's ship selection is not on the wire, and a single ship cannot be toggled from outside | **Request**, patch written 15 September 2026 (`doc/ext_fleet_selection.patch`, carries the owner block of `doc/ext_ship_icon_owner.patch`), **reported, NOT applied** | The HD fleet box cannot show which ships are selected, and HD cannot choose a subset of a stack to move — ALL is the only selection control a client can send |
-| 21 | One ship in the fleet box cannot be selected or deselected from outside | **Request**, patch written 15 September 2026 (`doc/ext_fleet_select_ship.patch`, `MSG_SELECT_SHIP` 0x85), **reported, NOT applied**; dry-run and -fsyntax-only together with 20 | Without it HD can show the selection (with 20) but not change it, so a subset of a stack cannot be sent anywhere from HD |
+| 20 | The fleet box's ship selection is not on the wire, and a single ship cannot be toggled from outside | **Applied** 15 September 2026, revision 2 (`doc/ext_fleet_selection.patch`: icon owners, then per node ship_idx and selected, then the fleet box chain; revision 1 applied and taken back out the same day, briefs 118/119), confirmed live on SAVE5; required by `tools/version_check.py` | — while applied. Without it HD draws no fleet box and cannot move a fleet from the map |
+| 21 | One ship in the fleet box cannot be selected or deselected from outside | **Applied** 15 September 2026 (`doc/ext_fleet_select_ship.patch`, `MSG_SELECT_SHIP` 0x85), confirmed live on SAVE5 (brief 119); required by `tools/version_check.py` | — while applied. Without it HD can show the selection but not change it |
 
 Items 3 and 4 are both about INJECT_CLICK and both live in the same
 code path, but they are separate faults: 3 is where the coordinates
@@ -1334,6 +1334,33 @@ that string into the description (loadsave.cpp:552-553).
 
 ## 20. The fleet box's ship selection is not on the wire — a request, with a patch
 
+### Applied (15 September 2026, briefs 118 and 119) — revision 2
+
+Applied to the working tree and built `-DORION2RE_EXT=ON`;
+`tools/version_check.py` requires it (marker `fsel_chain_len`).
+**Revision 1 was applied first and taken back out the same day**: it sent
+one selected byte per node and said node n is the n-th ship with status
+below 3. Live (brief 118) HD sent `MSG_SELECT_SHIP` for ship 13, which it
+took for node 9; the engine flipped node 11 and the original's THIRD cell.
+`SHIPSTAK::Sort_Ships_In_Stack_` (shipstak.cpp:261-278) qsorts each
+stack's ships by type and writes `ship_idx` back along the chain — the
+node places stay, the ships move — and qsort is not stable, so no client
+can rebuild the table.
+
+**Revision 2**, what went into the tree: after "FSEL" and the stack, per
+node int16 `ship_idx` and uint8 `selected`, then the fleet box stack's
+chain (int16 length, one int16 node per link from `_ship_stack_start`
+along `next_node`, the order FLEETPOP builds its cells in,
+fleetpop.cpp:643-676); the stack is -1 also for an out-of-range index.
+The first visible row of a scrolled box is not sent. Confirmed live on
+SAVE5 (brief 119): the Yoth chain 9 -> 10 -> 11 carries ships 14, 15, 13;
+a click on HD's first cell flipped exactly node 9 and the original's first
+cell; on the mixed selection HD's cells, the node bytes and the
+framebuffer agreed. OrionLayer reads the node table from here and nowhere
+else (owners, icon anchors, the fleet box).
+
+The sections below are the request as it was reported.
+
 ### What we found (orion2re 1.60, 15 September 2026, live)
 
 Brief 116, on a scratch save (SAVE5) with one client attached. The fleet
@@ -1385,6 +1412,18 @@ The HD fleet box shows no selection, and a fleet order from HD can only
 move what the game auto-selected or what ALL selects.
 
 ## 21. One ship in the fleet box cannot be (de)selected from outside — a request, with a patch
+
+### Applied (15 September 2026, briefs 118 and 119)
+
+Applied unchanged (it lands 60 lines lower on top of open fix 20
+revision 2), built `-DORION2RE_EXT=ON`; `tools/version_check.py` requires
+it (marker `Select_Ship_`). Confirmed live on SAVE5: one HD cell click
+sent one `MSG_SELECT_SHIP` and the next block showed exactly that ship's
+node changed. A star click with the fleet box open is a move order in the
+original — confirmed by hand by Data (brief 119), so fundament 65's
+premise is measured, not only read.
+
+The sections below are the request as it was reported.
 
 ### What we found (orion2re 1.60, 15 September 2026, live)
 

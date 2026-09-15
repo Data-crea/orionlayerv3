@@ -45,16 +45,20 @@ not. That asymmetry is in the original.
 OWNER
 -----
 `s_ship_icon` has no owner field. The chain in the C++ is
-node_idx -> MOX::_ship_node[] -> MOX::_ship[].owner, and `_ship_node`
-is not serialized — but it does not need to be. It is a pure function
-of `_ship[]`, which IS serialized, so build_node_map() rebuilds it
-from SHIPSTAK::Find_Ship_Stacks_ and owners_from_nodes() validates the
-result against `star_idx` before trusting it. No C++ patch required.
+node_idx -> MOX::_ship_node[] -> MOX::_ship[].owner, and the node table
+comes off the wire: open fix 20 sends `_ship_node[].ship_idx` per node
+(`wire_nodes`). It is NOT rebuilt from `_ship[]`. Until brief 119 it
+was, on the belief that node n is the n-th ship with status < 3 — true
+of `SHIPSTAK::Find_Ship_Stacks_` alone, false after it:
+`Sort_Ships_In_Stack_` (shipstak.cpp:261-278) qsorts every stack's ships
+by type and writes `ship_idx` back along the chain, and qsort is not
+stable. The owners only came out right because every ship of a stack has
+the same owner; the fleet box's per-ship selection did not (run 118).
 
 Three sources in descending order of certainty, see resolve_owners():
-the optional owner byte from doc/ext_ship_icon_owner.patch, the
-rebuilt node table, and finally a per-star guess that only answers
-when the star is unambiguous.
+the owner byte open fix 20 carries, the wire's node table validated
+against `star_idx`, and finally a per-star guess that only answers when
+the star is unambiguous.
 """
 import logging
 import math
@@ -148,75 +152,52 @@ def native_size(kind, zoom):
 
 # ── Owner resolution ─────────────────────────────────────
 
-def build_node_map(ships):
-    """Rebuild MOX::_ship_node's node_idx -> ship_idx mapping.
-
-    `_ship_node` is not serialized, but it does not have to be: it is a
-    pure function of `_ship[]`, which is. Transcribed from
-    SHIPSTAK::Find_Ship_Stacks_ (shipstak.cpp:45).
-
-    The part that is easy to get wrong: node numbers have NOTHING to do
-    with the stacking. Both branches of the loop do the same thing —
-
-        next_free = _next_free_node;
-        _ship_node[next_free].ship_idx = i;
-        _next_free_node++;
-
-    — so node N is simply the N-th ship that was not skipped, in ship
-    array order. The location/x/y/owner comparison decides which stack a
-    ship joins, never which node it occupies. Reproducing the grouping
-    here would be dead code.
-
-    Skipped ships are those with `status >= 3` (shipstak.cpp:56).
-
-    `_ship_node[].ship_idx` is written nowhere else in the source —
-    checked across all 319 .cpp files — so nothing can renumber behind
-    our back.
-    """
-    return [i for i, s in enumerate(ships)
-            if s.status < ship_struct.STATUS_STACK_SKIP]
+def wire_nodes(state):
+    """`MOX::_ship_node[n].ship_idx` for every node in use, from open fix
+    20's FSEL block (core/game_state.py), or None without it."""
+    sel = getattr(state, "fleet_selection", None)
+    return list(sel["ships"]) if sel else None
 
 
-def owners_from_nodes(icons, ships):
-    """Exact owner per icon via the rebuilt node table, or None.
+def owners_from_nodes(icons, ships, nodes):
+    """Exact owner per icon via the wire's node table, or None.
 
-    Returns None — for the WHOLE set, not per icon — when the mapping
-    cannot be validated. The check is free and exact:
+    Returns None — for the WHOLE set, not per icon — when there is no
+    table or it cannot be validated. The check is free and exact:
     SHIPSTAK::Ship_Stack_Star_Id_ (shipstak.cpp:25) is literally
 
         _ship[_ship_node[node].ship_idx].location
 
     and Build_Ship_Icons_ stores that value in `star_idx`. So every
     icon's star_idx must equal the raw (still encoded) location of the
-    ship its node points at. One mismatch means `_ship[]` moved on
-    since the last Find_Ship_Stacks_ call, and a stale map produces
+    ship its node points at. One mismatch means the table and `_ship[]`
+    do not describe the same moment, and a stale map produces
     plausible, wrong colours — the worst possible outcome. All or
     nothing.
     """
-    if not ships:
+    if not ships or nodes is None:
         return None
-    node_ship = build_node_map(ships)
     out = []
     for icon in icons:
         node = getattr(icon, "node_idx", -1)
-        if not 0 <= node < len(node_ship):
+        if not 0 <= node < len(nodes) or not 0 <= nodes[node] < len(ships):
             return None
-        s = ships[node_ship[node]]
+        s = ships[nodes[node]]
         if s.location != getattr(icon, "star_idx", None):
             return None
         out.append(s.owner)
     return out
 
 
-def resolve_owners(icons, ships):
+def resolve_owners(icons, ships, nodes=None):
     """Owner per icon. Returns a list of int or None, one per icon.
 
     Three sources, in descending order of certainty:
 
-      1. The per-icon owner byte, if orion2re carries the optional
-         doc/ext_ship_icon_owner.patch. Ground truth, no reconstruction.
-      2. owners_from_nodes() — the rebuilt node table, validated
-         against star_idx. This is the normal path and needs no patch.
+      1. The per-icon owner byte open fix 20 carries (block 1, once
+         doc/ext_ship_icon_owner.patch). Ground truth.
+      2. owners_from_nodes() — the wire's node table (`wire_nodes`),
+         validated against star_idx.
       3. A last-resort guess from the ships parked at the icon's star,
          used only where exactly one owner is present there.
 
@@ -227,7 +208,7 @@ def resolve_owners(icons, ships):
     if all(o is not None for o in owners):
         return owners
 
-    exact = owners_from_nodes(icons, ships or [])
+    exact = owners_from_nodes(icons, ships or [], nodes)
     if exact is not None:
         return [o if o is not None else e for o, e in zip(owners, exact)]
 
@@ -449,31 +430,32 @@ class IconAnchor:
         self.game_state = game_state
         self.stars = stars or []
         self.game_zoom = game_zoom
-        self._node_ship = build_node_map(ships or [])
+        self._nodes = wire_nodes(game_state) or []
         self._ships = ships or []
 
     def resolve(self, icon):
         ship = None
         node = getattr(icon, "node_idx", -1)
-        if 0 <= node < len(self._node_ship):
-            candidate = self._ships[self._node_ship[node]]
+        if 0 <= node < len(self._nodes) \
+                and 0 <= self._nodes[node] < len(self._ships):
+            candidate = self._ships[self._nodes[node]]
             if candidate.location == getattr(icon, "star_idx", None):
                 ship = candidate       # same validation as the owners
         return self.game_state, self.stars, ship, self.game_zoom
 
 
 def render(surface, ctx, icons, players, cache, tints,
-           cfg=None, ships=None, anchor=None):
+           cfg=None, ships=None, anchor=None, nodes=None):
     """Draw every placed ship icon.
 
     `players` supplies the `color` field per player index; the tint
     keys on that, not on the player index, so two players can never
     end up sharing a colour just because they sit next to each other
-    in the array.
+    in the array. `nodes` is `wire_nodes(state)`.
     """
     if not icons:
         return
-    owners = resolve_owners(icons, ships or [])
+    owners = resolve_owners(icons, ships or [], nodes)
 
     # Back to front, exactly as MAINSCR::Draw_Ship_Icons_ does
     # (`for i = _ship_icon_count - 1; i >= 0; --i`). The order is not

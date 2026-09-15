@@ -62,25 +62,30 @@ LOCAL_PATCHES = {
         "_ext_suppress_refusal_help",
         "MSG_SET_JOBS is dropped by ProcessInput's default case, so "
         "every pop move silently does nothing"),
+    # Applied 15 September 2026 (briefs 118, 119), confirmed live on SAVE5.
+    "doc/ext_fleet_selection.patch": (
+        os.path.join("src", "ext", "ext_api.cpp"),
+        # Revision 2's own identifier: revision 1 also wrote "FSEL", and a
+        # tree still carrying it must not read as the revision OrionLayer
+        # parses (brief 119).
+        "fsel_chain_len",
+        "the snapshot carries no ship node table and no fleet box "
+        "selection (open fix 20), so HD draws no fleet box and a fleet "
+        "cannot be moved from the HD map"),
+    "doc/ext_fleet_select_ship.patch": (
+        os.path.join("src", "ext", "ext_api.cpp"),
+        "Select_Ship_",
+        "MSG_SELECT_SHIP falls into ProcessInput's default case, so a "
+        "click on a ship cell silently selects nothing (open fix 21)"),
 }
 
 #: Patches that are REPORTED to Joes and not yet applied: listed with
 #: their marker so a tree that has them says so, but a tree without them
-#: is not a mismatch — OrionLayer detects them at run time from the
-#: snapshot (the FSEL block) and falls back to a stated state. The day
-#: one is applied it moves up into LOCAL_PATCHES, and from then on its
-#: absence fails. Same `file: (relative path, marker, what it enables)`.
-REPORTED_PATCHES = {
-    "doc/ext_fleet_selection.patch": (
-        os.path.join("src", "ext", "ext_api.cpp"),
-        "FSEL",
-        "the fleet box's ship selection on the wire (open fix 20)"),
-    "doc/ext_fleet_select_ship.patch": (
-        os.path.join("src", "ext", "ext_api.cpp"),
-        "Select_Ship_",
-        "MSG_SELECT_SHIP, one ship (de)selected in the fleet box "
-        "(open fix 21)"),
-}
+#: is not a mismatch. The day one is applied it moves up into
+#: LOCAL_PATCHES, and from then on its absence fails. Same
+#: `file: (relative path, marker, what it enables)`. Empty since open
+#: fixes 20 and 21 moved up (15 September 2026).
+REPORTED_PATCHES = {}
 
 
 def find_tree(argv):

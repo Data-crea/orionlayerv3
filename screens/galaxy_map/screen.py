@@ -453,7 +453,8 @@ class GalaxyMapScreen(ScreenBase):
                           self._players, self._cache, self._tints,
                           cfg=self._data.get("ship_icons") or {},
                           ships=self._ships,
-                          anchor=self._icon_anchor())
+                          anchor=self._icon_anchor(),
+                          nodes=ship_icons.wire_nodes(self._state))
 
         # Home-system ping, above the icons so it cannot be hidden by
         # a fleet parked on the star. Resolved per frame rather than
@@ -636,8 +637,10 @@ class GalaxyMapScreen(ScreenBase):
         if self._state is None:
             return
         icons = getattr(self._state, "ship_icons", None) or []
-        owners = ship_icons.resolve_owners(icons, self._ships)
+        owners = ship_icons.resolve_owners(
+            icons, self._ships, ship_icons.wire_nodes(self._state))
         gx, gy = view.to_galaxy(sx, sy)
+        orders_ok = boxdraw.orders_ok(self)
         result = mapclick.plan(
             mapboxes.classify(getattr(self._state, "fields", None)),
             self._star_at(sx, sy),
@@ -646,11 +649,11 @@ class GalaxyMapScreen(ScreenBase):
                              self._data.get("ship_icons") or {}, sx, sy),
             icons, owners, self._stars, self._state, self._game_zoom(),
             mc.galaxy_to_native(gx, gy, self._state),
-            orders_ok=boxdraw.orders_ok(self))
+            orders_ok=orders_ok)
         log.info("Map click: %s (%s)", result.what, result.detail)
         if result.send is not None and self.app.connected:
             self.app.client.inject_click(*result.send)
-            boxmodel.remember(self, result, icons, self._ships)
+            boxmodel.remember(self, result, icons, order=orders_ok)
 
     def _activate(self, field_id, what=""):
         log.info("Action: %s (field %s)", what or field_id, field_id)

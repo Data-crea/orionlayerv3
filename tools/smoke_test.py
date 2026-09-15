@@ -2590,8 +2590,8 @@ def main():
         assert shi.kind_config(None, "player") == (shi.DEFAULT_FIT, 1.0)
         assert shi.DEFAULT_FIT in shi.FIT_MODES
 
-        # Owner resolution. The node table is rebuilt from _ship[]
-        # rather than serialized, so it needs its own coverage.
+        # Owner resolution. The node table comes off the wire (open fix 20
+        # revision 2) and is validated against star_idx before it is used.
         def mkship(owner, location, x=0, y=0, status=0):
             r = bytearray(_ship.SIZE)
             _s.pack_into("<b", r, 99, owner)
@@ -2603,31 +2603,43 @@ def main():
             return ship_icon.parse(
                 _s.pack("<6h", 0, node_idx, star_idx, 0, x, y))
 
-        # build_node_map: node N is the N-th ship with status < 3.
-        # Stacking must NOT influence the numbering.
-        fleet = [mkship(0, 5), mkship(9, 7, status=4),      # skipped
-                 mkship(0, 5), mkship(3, 6), mkship(1, 9, status=3)]
-        assert shi.build_node_map(fleet) == [0, 2, 3]
+        # The rule brief 119 paid for: no node table is rebuilt from
+        # _ship[] anywhere. Sort_Ships_In_Stack_ moves ships between the
+        # nodes of a stack with an unstable qsort, so the only table is
+        # the wire's.
+        import types as _nt
+        from screens.galaxy_map import boxmodel as _nt_bm
+        assert not hasattr(shi, "build_node_map") \
+            and not hasattr(_nt_bm, "stack_of") \
+            and not hasattr(_nt_bm, "selection_of"), "a rebuilt node table"
+        assert shi.wire_nodes(None) is None
+        assert shi.wire_nodes(_nt.SimpleNamespace(fleet_selection={
+            "stack": -1, "ships": [4, 2], "selected": [False, False],
+            "chain": []})) == [4, 2]
 
         # Two players at ONE star: the per-star guess cannot answer,
         # the node table can. This is the case the whole thing exists
         # for, so assert the exact colours, not just "not None".
         mixed = [mkship(2, 11), mkship(5, 11, x=4)]
         icons = [mkicon(0, 11), mkicon(1, 11)]
-        assert shi.owners_from_nodes(icons, mixed) == [2, 5]
-        assert shi.resolve_owners(icons, mixed) == [2, 5]
+        assert shi.owners_from_nodes(icons, mixed, [0, 1]) == [2, 5]
+        assert shi.resolve_owners(icons, mixed, [0, 1]) == [2, 5]
+        # Node order is NOT array order: the table decides, not the index.
+        assert shi.owners_from_nodes(icons, mixed, [1, 0]) == [5, 2]
+        assert shi.owners_from_nodes(icons, mixed, None) is None
 
         # star_idx is the RAW encoded location (Ship_Stack_Star_Id_),
         # so a moving ship still validates.
         moving = [mkship(4, 10042)]
-        assert shi.owners_from_nodes([mkicon(0, 10042)], moving) == [4]
+        assert shi.owners_from_nodes([mkicon(0, 10042)], moving, [0]) == [4]
 
         # Validation: a node pointing at a ship whose location does not
         # match star_idx means the map is stale. Reject the WHOLE set —
         # a half-trusted map paints plausible wrong colours.
-        assert shi.owners_from_nodes([mkicon(0, 99)], mixed) is None
-        assert shi.owners_from_nodes([mkicon(7, 11)], mixed) is None
-        assert shi.owners_from_nodes(icons, []) is None
+        assert shi.owners_from_nodes([mkicon(0, 99)], mixed, [0, 1]) is None
+        assert shi.owners_from_nodes([mkicon(7, 11)], mixed, [0, 1]) is None
+        assert shi.owners_from_nodes([mkicon(0, 11)], mixed, [9]) is None
+        assert shi.owners_from_nodes(icons, [], [0, 1]) is None
 
         # ...and then the per-star fallback takes over: unambiguous
         # star answers, mixed star stays None rather than guessing.
@@ -2955,19 +2967,38 @@ def main():
         _bx_fleetbox = gmb.classify(
             _bx_fields(_bx["fleet_own"]["fields"])).fleet
         gs2.ships_raw = [_bx_ship(0, 1, 300, 100)] * 4 + [_bx_ship(0, 5, 9, 9)]
-        _bx_m, _bx_why = gbm.fleet_model(
-            gs2, gbm.Identity("fleet", ship=0, icon=(131, 39)),
-            _bx_fleetbox, None)
-        assert _bx_m is not None and _bx_m["stack"] == [0, 1, 2, 3], _bx_why
+        _bx_ident = gbm.Identity("fleet", ship=0, icon=(131, 39))
+        # The stack and its cell order are the wire's chain, after the
+        # engine's in-stack sort: node 0 carries ship 3, not ship 0.
+        gs2.fleet_selection = {"stack": 2, "ships": [3, 1, 0, 2, 4],
+                               "selected": [False] * 5, "chain": [0, 1, 2, 3]}
+        _bx_m, _bx_why = gbm.fleet_model(gs2, _bx_ident, _bx_fleetbox, None)
+        assert _bx_m is not None and _bx_m["stack"] == [3, 1, 0, 2] \
+            and _bx_m["nodes"] == [0, 1, 2, 3], (_bx_m, _bx_why)
         assert _bx_m["close"] == 27
         assert gbm.fleet_model(gs2, gbm.Identity("fleet", ship=0,
                                icon=(400, 300)), _bx_fleetbox, None)[0] is None
+        for _bx_wire, _bx_word in (
+                (None, "FSEL"),
+                ({"stack": -1, "ships": [3, 1, 0, 2, 4],
+                  "selected": [False] * 5, "chain": []}, "no fleet box"),
+                ({"stack": 2, "ships": [3, 1, 4, 2, 0],
+                  "selected": [False] * 5, "chain": [0, 1, 2, 3]},
+                 "not one stack"),
+                ({"stack": 2, "ships": [3, 1, 0, 2, 4],
+                  "selected": [False] * 5, "chain": [0, 1, 3]},
+                 "not in the stack")):
+            gs2.fleet_selection = _bx_wire
+            _bx_m, _bx_why = gbm.fleet_model(gs2, _bx_ident, _bx_fleetbox,
+                                             None)
+            assert _bx_m is None and _bx_word in _bx_why, (_bx_wire, _bx_why)
         gs2.ships_raw = [_bx_ship(0, 1, 300, 100)] * 3
-        _bx_m, _bx_why = gbm.fleet_model(
-            gs2, gbm.Identity("fleet", ship=0, icon=(131, 39)),
-            _bx_fleetbox, None)
+        gs2.fleet_selection = {"stack": 2, "ships": [2, 1, 0],
+                               "selected": [False] * 3, "chain": [0, 1, 2]}
+        _bx_m, _bx_why = gbm.fleet_model(gs2, _bx_ident, _bx_fleetbox, None)
         assert _bx_m is None and "stack of 3" in _bx_why, _bx_why
         gs2.ships_raw = []
+        gs2.fleet_selection = None
         ok("galaxy_map box identity (Popup_XY_ against the live windows, "
            "planet fields by orbit, every mismatch refused)")
 
@@ -3035,46 +3066,61 @@ def main():
             _b += _s.pack("<8h", 0, 0, 0, 0, 0, 0, 0, 0)
             return _sel_parse(bytes(_b) + tail)
 
-        def _sel_block(stack, flags):
+        def _sel_block(stack, ships, flags, chain):
             return (b"FSEL" + _s.pack("<hh", stack, len(flags))
-                    + bytes(1 if f else 0 for f in flags))
+                    + b"".join(_s.pack("<hB", i, 1 if f else 0)
+                               for i, f in zip(ships, flags))
+                    + _s.pack("<h", len(chain))
+                    + b"".join(_s.pack("<h", n) for n in chain))
 
         assert _sel_snapshot(b"").fleet_selection is None
         _sel_gs = _sel_snapshot(bytes([2, 0xFF]))
         assert _sel_gs.fleet_selection is None
         assert _sel_gs.ship_icons[0].owner == 2
-        _sel_gs = _sel_snapshot(bytes([2, 0xFF])
-                                + _sel_block(3, [True, False, True]))
+        _sel_gs = _sel_snapshot(bytes([2, 0xFF]) + _sel_block(
+            3, [7, 5, 6], [True, False, True], [2, 0]))
         assert _sel_gs.fleet_selection == {
-            "stack": 3, "selected": [True, False, True]}, \
-            _sel_gs.fleet_selection
+            "stack": 3, "ships": [7, 5, 6], "selected": [True, False, True],
+            "chain": [2, 0]}, _sel_gs.fleet_selection
         assert _sel_gs.ship_icons[0].owner == 2 and \
             _sel_gs.ship_icons[1].owner is None, "the owners moved"
+        # Open fix 20 REVISION 1 (one byte per node, no ship index, no
+        # chain) reads as no block: its table was the wrong one.
         assert _sel_snapshot(bytes([2, 0xFF]) + b"FSEL"
-                             + _s.pack("<hh", 3, 5) + bytes([1, 0, 1])
-                             ).fleet_selection is None, "a short block read"
+                             + _s.pack("<hh", 3, 3) + bytes([1, 0, 1])
+                             ).fleet_selection is None, "revision 1 read"
+        assert _sel_snapshot(bytes([2, 0xFF]) + _sel_block(
+            3, [7, 5, 6], [True] * 3, [2, 3])).fleet_selection is None, \
+            "a chain node beyond the table"
+        assert _sel_snapshot(bytes([2, 0xFF]) + _sel_block(
+            3, [7, 5, 6], [True] * 3, [0, 1, 2])[:-1]
+                             ).fleet_selection is None, "a short chain read"
 
-        # The model: one flag per NODE, node n the n-th ship below status 3.
+        # The model: the cells are the chain's nodes in order, each ship
+        # the node's ship_idx, each colour the node's byte.
         gs2.fields = _bx_fields(_bx["fleet_own"]["fields"])
         gs2.ships_raw = [_bx_ship(0, 1, 300, 100)] * 4 + \
             [_bx_ship(0, 5, 9, 9)]
         _sel_ident = gbm.Identity("fleet", ship=0, icon=(131, 39))
         _sel_box = gmb.classify(gs2.fields).fleet
-        gs2.fleet_selection = {"stack": 2,
-                               "selected": [True, False, True, True, False]}
+        _sel_wire = {"stack": 2, "ships": [3, 1, 0, 2, 4],
+                     "selected": [True, False, True, True, False],
+                     "chain": [0, 1, 2, 3]}
+        gs2.fleet_selection = _sel_wire
         _sel_m, _sel_why = gbm.fleet_model(gs2, _sel_ident, _sel_box, None)
-        assert _sel_m and _sel_m["selected"] == [True, False, True, True], \
+        assert _sel_m and _sel_m["stack"] == [3, 1, 0, 2] \
+            and _sel_m["selected"] == [True, False, True, True], \
             (_sel_m, _sel_why)
         assert _sel_m["selectable"] == [True] * 4 and _sel_m["count"] == 4
-        for _sel_bad in ({"stack": 2, "selected": [True] * 4},     # nodes
-                         {"stack": -1, "selected": [True] * 5},    # closed
+        for _sel_bad in ({"stack": -1, "ships": [3, 1, 0, 2, 4],     # closed
+                          "selected": [True] * 5, "chain": []},
                          None):                                    # no patch
             gs2.fleet_selection = _sel_bad
             _sel_m, _ = gbm.fleet_model(gs2, _sel_ident, _sel_box, None)
-            assert _sel_m and _sel_m["selected"] is None \
-                and not _sel_m["selection_known"], _sel_bad
-        ok("fleet selection on the wire (FSEL after the owners, one flag "
-           "per ship node, every unknown state is None)")
+            assert _sel_m is None, _sel_bad
+        ok("fleet selection on the wire (FSEL after the owners: ship_idx and "
+           "flag per node, the box's chain; revision 1 and every unknown "
+           "state draw no box)")
 
         class _SelRec(_BxRec):
             def select_ship(self, ship, selected):
@@ -3084,8 +3130,7 @@ def main():
         try:
             app.client, app.connected = _SelRec(), True
             gm._viewctl.reset()
-            gs2.fleet_selection = {"stack": 2, "selected":
-                                   [True, False, True, True, False]}
+            gs2.fleet_selection = _sel_wire
             gm.update(gs2)
             gm._box_identity = _sel_ident
             _sel_probe = pygame.Surface((app.win_w, app.win_h))
@@ -3093,9 +3138,10 @@ def main():
             gm._render_map(_sel_probe)
             _sel_cells = [(r, a) for r, a in gm._box_hits
                           if isinstance(a, tuple)]
+            # Cell i is chain node i: ship 3 first, as the engine sorted.
             assert [a for _, a in _sel_cells] == [
-                ("select", 0, False), ("select", 1, True),
-                ("select", 2, False), ("select", 3, False)], gm._box_hits
+                ("select", 3, False), ("select", 1, True),
+                ("select", 0, False), ("select", 2, False)], gm._box_hits
             _sel_px = pygame.PixelArray(_sel_probe)
             for (_sel_r, _), _sel_want in zip(_sel_cells, (True, False)):
                 _sel_rgb = _sel_probe.unmap_rgb(
@@ -3108,7 +3154,15 @@ def main():
             gm.handle_click(*_sel_cells[1][0].center)
             assert app.client.log == [("select", 1, True)], app.client.log
             assert gbd.orders_ok(gm)
-            # Without the block: no colour, no cell click, the guard stands.
+            # A star click sent as an ORDER keeps the fleet identity: the
+            # game keeps the box open (run 119), HD must keep drawing it.
+            _sel_star = gmc.Plan("star", (121, 79), "Yian", target=2)
+            gbm.remember(gm, _sel_star, [], order=True)
+            assert gm._box_identity is _sel_ident, gm._box_identity
+            gbm.remember(gm, _sel_star, [])
+            assert gm._box_identity.kind == "system", gm._box_identity
+            gm._box_identity = _sel_ident
+            # Without the block: no box, no cell click, the guard stands.
             gs2.fleet_selection = None
             gm.update(gs2)
             gm._render_map(_sel_probe)
@@ -3142,9 +3196,13 @@ def main():
         assert _sel_sent == [(0x85, _s.pack("<hB", 7, 1)),
                              (0x85, _s.pack("<hB", 7, 0))], _sel_sent
         import version_check as _sel_vc
-        assert {k: v[1] for k, v in _sel_vc.REPORTED_PATCHES.items()} == {
-            "doc/ext_fleet_selection.patch": "FSEL",
+        # Applied and confirmed live (briefs 118, 119): required, not
+        # reported — a tree without them fails the checker.
+        assert {k: v[1] for k, v in _sel_vc.LOCAL_PATCHES.items()
+                if "fleet" in k} == {
+            "doc/ext_fleet_selection.patch": "fsel_chain_len",
             "doc/ext_fleet_select_ship.patch": "Select_Ship_"}
+        assert not any("fleet" in k for k in _sel_vc.REPORTED_PATCHES)
         ok("fleet selection in the HD box (blue and black from the wire, "
            "MSG_SELECT_SHIP 0x85, orders only with a known selection, "
            "scroll bar as HD STATE, both patches in the checker)")

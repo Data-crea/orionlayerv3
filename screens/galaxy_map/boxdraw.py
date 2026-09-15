@@ -27,8 +27,12 @@ scroll and the Outpost / Colonize / Engage / Transport / Attack buttons;
 the space-monster branch of the system window. And three things drawn
 without a field, seen beside the original's window on 15 September 2026
 (evidence 71): the orbit rings, the asteroid belts, and the colony
-markers beside owned planets. Moving a fleet from the HD box is not
-built: decision 65 still refuses the destination click.
+markers beside owned planets.
+
+A fleet box is drawn only from open fix 20's wire data (boxmodel): its
+cells follow the engine's chain, their colour is each node's selected
+byte, and while it is drawn a star click is a move order for exactly the
+blue ships (decision 65's amendment, `orders_ok`).
 """
 import logging
 
@@ -190,11 +194,11 @@ def _draw_system(screen, surface, r, model, hits):
 
 
 def orders_ok(screen):
-    """True while HD draws a fleet box whose selection it read off the
-    wire: then a star click moves exactly the ships shown blue, and the
-    decision-65 guard steps aside (Data's path 1, brief 117)."""
-    return any(m["kind"] == "fleet" and m["selection_known"]
-               for _, _, m in drawable(screen))
+    """True while HD draws a fleet box — which it does only with the
+    chain and the selection read off the wire: then a star click moves
+    exactly the ships shown blue, and the decision-65 guard steps aside
+    (Data's path 1, brief 117)."""
+    return any(m["kind"] == "fleet" for _, _, m in drawable(screen))
 
 
 def _draw_scroll(screen, surface, grid, count):
@@ -218,13 +222,12 @@ def _draw_fleet(screen, surface, r, model, hits):
         cell = pygame.Rect(grid.x + cw * (i % 3), grid.y + ch * (i // 3),
                            cw, ch).inflate(-4, -4)
         # One box per ship, blue selected and black not, as the original
-        # draws its cells — the colour from the FSEL block only. Without
-        # it the cell is a bare outline: HD STATE, never a guessed colour.
-        if model["selection_known"]:
-            chosen = model["selected"][i]
-            surface.fill((SELECTED if chosen else DESELECTED)[:3], cell)
-            if model["selectable"][i]:
-                hits.append((cell, ("select", ship, not chosen)))
+        # draws its cells — the colour is the cell's node byte in the FSEL
+        # block, the cell's place its place in the wire's chain.
+        chosen = model["selected"][i]
+        surface.fill((SELECTED if chosen else DESELECTED)[:3], cell)
+        if model["selectable"][i]:
+            hits.append((cell, ("select", ship, not chosen)))
         screen.style.draw_thin_border(surface, cell, screen.layout.scale)
         kind = ship_icons.kind_for_owner(owner) or ship_icons.PLAYER_KIND
         key = ship_icons._resolve_sprite(screen._cache, kind, 0)

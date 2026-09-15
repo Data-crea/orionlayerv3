@@ -24,7 +24,16 @@ list agrees with that click:
     Yian: 1.015 on orbit 3 and 0.989 on orbit 4, and the orbit-3 field is
     the one that opened "Yian Prime is an outpost planet";
   * fleet box: one icon field per ship, at most nine
-    (fleetpop.cpp:648-650), 0x35 square (:164).
+    (fleetpop.cpp:648-650), 0x35 square (:164). The stack and its cell
+    order come off the wire, never out of `_ship[]` (open fix 20 revision
+    2, brief 119): FLEETPOP builds the cells along the chain from the
+    stack's head node (fleetpop.cpp:643-676), and
+    `SHIPSTAK::Sort_Ships_In_Stack_` (shipstak.cpp:261-278) has rewritten
+    which ship sits in which node with a qsort that is not stable. So a
+    box is drawn only while the FSEL block names an open box, and its
+    chain must be one stack of the snapshot's ships holding the clicked
+    one. The first visible cell is `first_visible_row * 3`
+    (fleetpop.cpp:643), not on the wire: HD shows the chain's first nine.
 
 A mismatch draws nothing and says why. A box HD did not open — the game
 reopening the system window after the colony screen, a click in the game
@@ -49,8 +58,8 @@ THE TEXTS ARE THE ORIGINAL'S (HESTRNGS, `core/hestrings.py`):
     of the order the box already says "3 turns to" — the "eta N" label on
     the MAP is the one that waits a turn (ships.cpp:472-475, run 114).
     DEVIATION: the original prints this line only while no icon is
-    selected and nothing is hovered; HD does not know the selection (not
-    on the wire), so HD prints the stack's own status always.
+    selected and nothing is hovered; HD does not follow that, and prints
+    the stack's own status always.
 """
 from dataclasses import dataclass
 
@@ -94,15 +103,24 @@ class Identity:
     icon: tuple = None          # its native (x, y) when clicked
 
 
-def remember(screen, plan, icons, ships):
-    """Keep the click the game was sent as the next box's identity."""
+def remember(screen, plan, icons, order=False):
+    """Keep the click the game was sent as the next box's identity.
+
+    A star click sent while HD draws the fleet box (`order`, decision 65's
+    amendment) is a move order, not a system window: the game keeps the
+    fleet box open for whatever it leaves in it (mainscr_main.cpp:480-530),
+    so the fleet identity stays. Measured the hard way in run 119: the
+    order was refused (out of range), the box stayed, and HD had renamed
+    it a system window and stopped drawing it."""
     if plan.send is None:
+        return
+    if plan.what == "star" and order:
         return
     if plan.what == "star":
         screen._box_identity = Identity("system", star=plan.target)
     elif plan.what == "icon":
         icon = icons[plan.target]
-        nodes = ship_icons.build_node_map(ships)
+        nodes = ship_icons.wire_nodes(getattr(screen, "_state", None)) or []
         ship = nodes[icon.node_idx] if 0 <= icon.node_idx < len(nodes) else -1
         screen._box_identity = Identity("fleet", ship=ship,
                                         icon=(icon.x, icon.y))
@@ -256,13 +274,28 @@ def system_model(state, ident, box, text, omniscient):
     return model, None
 
 
-def stack_of(ships, lead):
-    """SHIPSTAK::Find_Ship_Stacks_ (shipstak.cpp:45-100): status below 3,
-    same location, x, y and owner, in array order."""
-    key = (lead.location, lead.x, lead.y, lead.owner)
-    return [i for i, s in enumerate(ships)
-            if s.status < ship_struct.STATUS_STACK_SKIP
-            and (s.location, s.x, s.y, s.owner) == key]
+def wire_stack(state, ships):
+    """(nodes, ship indices) of the stack the engine's fleet box shows, in
+    its cell order, from the FSEL block; or (None, reason). The chain must
+    be one stack of `ships` — status below 3, same location, x, y and
+    owner (`SHIPSTAK::Find_Ship_Stacks_`, shipstak.cpp:45-100) — or the
+    block and the ships are not one moment."""
+    sel = getattr(state, "fleet_selection", None)
+    if not sel:
+        return None, "no FSEL block (open fix 20 revision 2 is not in)"
+    if sel["stack"] < 0 or not sel["chain"]:
+        return None, "the engine reports no fleet box open"
+    chain = sel["chain"]
+    stack = [sel["ships"][n] for n in chain]
+    if not all(0 <= i < len(ships) for i in stack):
+        return None, f"the wire's chain names ships {stack} beyond the snapshot"
+    head = ships[stack[0]]
+    key = (head.location, head.x, head.y, head.owner)
+    if any(ships[i].status >= ship_struct.STATUS_STACK_SKIP
+           or (ships[i].location, ships[i].x, ships[i].y, ships[i].owner)
+           != key for i in stack):
+        return None, f"the wire's chain {stack} is not one stack of the ships"
+    return (chain, stack), None
 
 
 def fleet_model(state, ident, box, text):
@@ -273,8 +306,13 @@ def fleet_model(state, ident, box, text):
     if not 0 <= ident.ship < len(raws):
         return None, f"ship {ident.ship} is not in the snapshot"
     ships = [ship_struct.parse(r) for r in raws]
-    lead = ships[ident.ship]
-    stack = stack_of(ships, lead)
+    found, why = wire_stack(state, ships)
+    if found is None:
+        return None, why
+    chain, stack = found
+    if ident.ship not in stack:
+        return None, (f"the clicked ship {ident.ship} is not in the stack "
+                      f"{stack} the engine's box shows")
     w, h = _size(box)
     want = fleet_xy(ident.icon[0], ident.icon[1], w, h)
     if want != tuple(box.rect[:2]):
@@ -287,6 +325,8 @@ def fleet_model(state, ident, box, text):
         return None, (f"{len(icon_fields)} icon fields for a stack of "
                       f"{len(stack)}")
     stars = getattr(state, "stars", None) or []
+    # The head node's ship, as FLEETPOP titles the box (fleetpop.cpp:618,
+    # :625).
     first = ships[stack[0]]
     if first.owner < 9:
         local = player_struct.parse(state.player_raw[first.owner]) \
@@ -295,12 +335,12 @@ def fleet_model(state, ident, box, text):
     else:
         title = str(first.name).upper()
     shown = stack[:FLEET_ICONS_MAX]
+    flags = state.fleet_selection["selected"]
     me = getattr(state, "player_num", 0)
-    selected = selection_of(state, ships, shown)
     return {"kind": "fleet", "ship": ident.ship, "stack": shown,
-            "count": len(stack),
+            "nodes": chain[:FLEET_ICONS_MAX], "count": len(stack),
             "owners": [ships[i].owner for i in shown],
-            "selected": selected, "selection_known": selected is not None,
+            "selected": [flags[n] for n in chain[:FLEET_ICONS_MAX]],
             "selectable": [ships[i].owner == me and ships[i].status in
                            ORDERABLE_STATUS for i in shown],
             "title": title, "status": fleet_status(state, first, stars, text),
@@ -313,30 +353,6 @@ def fleet_model(state, ident, box, text):
 #: FSEL block says whether it took (decision 33 covers one comparison,
 #: not a tech tree).
 ORDERABLE_STATUS = (0, 1, 2)
-
-
-def selection_of(state, ships, shown):
-    """Selected-or-not per shown ship from open fix 20's FSEL block.
-
-    One byte per ship NODE, and node n is the n-th ship with status
-    below 3 (`SHIPSTAK::Find_Ship_Stacks_`; `Remove_Non_Detected_Ships_`
-    only unlinks FOREIGN nodes from their chains and renumbers nothing).
-    None — the selection is not known, and HD draws no colour — when the
-    block is absent (an engine without the patch), when the engine says
-    no fleet box is open, or when its node count is not the one the
-    snapshot's ships give.
-    """
-    sel = getattr(state, "fleet_selection", None)
-    if not sel or sel.get("stack", -1) < 0:
-        return None
-    nodes = ship_icons.build_node_map(ships)
-    flags = sel.get("selected") or []
-    if len(flags) != len(nodes):
-        return None
-    node_of = {ship: n for n, ship in enumerate(nodes)}
-    if not all(i in node_of for i in shown):
-        return None
-    return [bool(flags[node_of[i]]) for i in shown]
 
 
 def fleet_status(state, ship, stars, text):

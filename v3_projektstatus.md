@@ -1170,7 +1170,7 @@ in exactly ONE bucket. The numbers below are produced by
 check asserts this list still agrees with it — the same trade the
 check count makes, for the same reason.
 
-`screens/galaxy_map/screen.py` (**563** code, 857 total), `tools/struct_probe.py` (**478** code, 753 total), `tools/colony_list_preview.py` (**403** code, 772 total), `screens/custom_race/screen.py` (**400** code, 558 total), `tools/colony_move_hd.py` (**383** code, 583 total), `core/editor/editor.py` (**359** code, 430 total), `screens/galaxy_map/renderer.py` (**335** code, 753 total), `tools/ext_diag.py` (**325** code, 473 total), `core/style.py` (**310** code, 479 total).
+`screens/galaxy_map/screen.py` (**566** code, 860 total), `tools/struct_probe.py` (**478** code, 753 total), `tools/colony_list_preview.py` (**403** code, 772 total), `screens/custom_race/screen.py` (**400** code, 558 total), `tools/colony_move_hd.py` (**383** code, 583 total), `core/editor/editor.py` (**359** code, 430 total), `screens/galaxy_map/renderer.py` (**335** code, 753 total), `tools/ext_diag.py` (**325** code, 473 total), `core/style.py` (**310** code, 479 total).
 `smoke_test.py` is exempt by nature.
 
 **TWO TOOLS JOINED THE LIST ON 8 SEPTEMBER 2026 and one thing left
@@ -3519,6 +3519,50 @@ rebuilding orion2re and a live test on scratch saves.
   the ships shown blue — variant (a); (b) is still Data's to choose.
 - **Smoke:** two checks (the block and the model; the HD box, the send,
   the guard, the scroll display, the checker); the count is 183.
+
+### Galaxy map: full fleet control, phase 2 — both patches applied, confirmed live — briefs 118-120, 15 September 2026
+
+**Briefs 118, 119, 120** (`doc/briefs/118-*`, `119-*`, `120-*`). The
+orion2re tree at `~/orion2re` is patched: a permanent change.
+
+- **Applied and built** (`-DORION2RE_EXT=ON`): open fix 21 unchanged, open
+  fix 20 as **revision 2**. Revision 1 was applied first (brief 118) and
+  taken back out: live, HD's click on ship 13 flipped node 11, because
+  `Sort_Ships_In_Stack_` rewrites `ship_idx` inside each chain (fundament
+  67). Revision 2 sends `ship_idx` and `selected` per node and the fleet
+  box's chain in cell order. `tools/version_check.py` now REQUIRES both
+  (markers `fsel_chain_len`, `Select_Ship_`).
+- **HD reads the node table off the wire** — `ships.wire_nodes`; owners,
+  icon anchors, the icon-click identity and the fleet box use it.
+  `build_node_map`, `stack_of` and `selection_of` are gone. A fleet box is
+  drawn only from the FSEL block (cells in chain order, colour per node
+  byte); without it no fleet box and the guard stands. A star click sent
+  as an order keeps the box's identity.
+- **Live, SAVE5 (scratch), one connection each run; SAVE1-9 identical,
+  SAVE10 unchanged:**
+  - check 2: the Yoth chain 9 -> 10 -> 11 carries ships 14, 15, 13; HD's
+    first cell (ship 14, node 9) sent one `MSG_SELECT_SHIP`, the engine
+    flipped exactly node 9, the original's first cell went black;
+  - check 1: on the mixed selection HD's cells, the node bytes and the
+    framebuffer's blue share agreed per cell;
+  - target click (a): confirmed by Data's hand test (brief 119) — ships
+    fly on a star click with the fleet box open; fundament 65's premise is
+    measured;
+  - check 5 (brief 120, no order sent): a box HD opened and draws gives
+    `orders_ok` and the star click plans as an order (not sent); a box
+    opened by a direct click on another stack is not drawn, and HD's star
+    click on Sol was refused — no click sent, fields and ships unchanged.
+- **Gaps, stated:**
+  - **the probe's star clicks did not move ships** (run 119): Zibbat was
+    out of range (no message, by the source); Sol was in range and the
+    original showed "4 turns to Sol", yet nothing moved. Not separated
+    from the injection path; Data's hand test is the confirmation of (a);
+  - **check 4, the scroll bar, deferred:** SAVE5's largest stack is seven.
+    The box's first visible row is not on the wire; HD shows the chain's
+    first nine and draws the bar as HD STATE;
+- **Smoke:** the count stays 183; the node-table, block, model, HD-box and
+  checker checks were rewritten to the wire data, and they fail if a
+  rebuilt table returns.
 
 ## What is missing
 

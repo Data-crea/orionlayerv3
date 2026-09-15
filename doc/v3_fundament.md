@@ -1553,6 +1553,48 @@ and a button that sends it, was not decided; it would be a DEVIATION
 where (a) transcribes. No engine carries open fix 20 today, so on every
 tree as it stands the guard holds exactly as before.
 
+**PREMISE MEASURED, 15 September 2026 (briefs 119 and 120).** Until then
+"a star click with the fleet box open is a move order" was read from the
+source (`mainscr_main.cpp:427-431`, `:480-535`), never seen. Data's hand
+test in brief 119 moved the ships: the premise is live-confirmed, and the
+guard guards against a real order. Open fixes 20 (revision 2) and 21 are
+applied, so the amendment is in force on the tree: the guard was checked
+live on SAVE5 in both directions without sending an order (brief 120) — a
+box HD opened and draws lets the star click through (planned, not sent),
+a box opened behind HD's back refuses it, nothing sent, nothing changed.
+Two things came with it. A star click sent as an order keeps the fleet
+box's identity (`boxmodel.remember(order=True)`): the game keeps the box
+open, and HD had renamed it a system window and stopped drawing it. And
+the probe's own star clicks in run 119 moved nothing — once out of range
+(no message by design, `Ships_Try_To_Move_To_`), once to Sol, in range,
+with the original showing "4 turns to Sol": not separated from the
+injection path, recorded as a gap in `v3_projektstatus.md`.
+
+**67. The ship node table comes off the wire; nothing rebuilds it.**
+15 September 2026, brief 119. Numbered 67 at the commit that carries it:
+the highest entry was 66, and nothing in the tree used 67.
+
+For a month OrionLayer rebuilt `MOX::_ship_node[]` from `_ship[]`: node n
+was the n-th ship with status below 3, transcribed from
+`SHIPSTAK::Find_Ship_Stacks_`, with a docstring that said `ship_idx` "is
+written nowhere else in the source". It is:
+`SHIPSTAK::Sort_Ships_In_Stack_` (shipstak.cpp:261-278) runs right after,
+qsorts each stack's ships by type and writes `ship_idx` back along the
+chain — node places stay, ships move — and qsort is not stable, so no
+transcription can reproduce it for two equal ships. The owners came out
+right anyway, because every ship of a stack has one owner, and a
+validation against `star_idx` cannot see a move INSIDE a stack. The fleet
+box's per-ship selection could: live (brief 118) HD's click on ship 13
+flipped the engine's node 11 and the original's third cell.
+
+So: open fix 20 revision 2 sends `ship_idx` per node and the fleet box's
+chain, `ships.wire_nodes` is the only table, and owners, icon anchors and
+the fleet box read it. Without the block there is no table — owners fall
+back to the per-star guess and HD draws no fleet box; nothing is
+reconstructed. The smoke test fails if `build_node_map`, `stack_of` or
+`selection_of` come back. "Written nowhere else" is a claim about a grep,
+and it needs the grep's output.
+
 **66. No positional right click while a box is open; a box closes
 through its own CLOSE field.** 15 September 2026, Data's decision A5 on
 brief 110. Numbered 66 after checking at the commit that carries it.

@@ -118,15 +118,17 @@ def main():
         print("\nNo ship icons in this snapshot.")
         return 0
 
-    node_map = shi.build_node_map(ships)
-    exact = shi.owners_from_nodes(icons, ships)
-    print(f"nodes   : {len(node_map)} rebuilt from _ship[]   "
-          f"validation: {'PASSED' if exact is not None else 'FAILED'}")
+    node_map = shi.wire_nodes(state)
+    exact = shi.owners_from_nodes(icons, ships, node_map)
+    print(f"nodes   : "
+          f"{'none on the wire (open fix 20 revision 2 missing)' if node_map is None else len(node_map)}"
+          f"   validation: {'PASSED' if exact is not None else 'FAILED'}")
+    node_map = node_map or []
     if exact is None:
         print("          (falling back to the per-star guess; icons at a "
               "star with\n           more than one owner will stay grey)")
 
-    owners = shi.resolve_owners(icons, ships)
+    owners = shi.resolve_owners(icons, ships, node_map or None)
 
     print()
     print(f"{'#':>3} {'node':>5} {'ship':>5} {'star':>6} {'slot':>4} "
