@@ -72,6 +72,9 @@ class GameState:
     leaders_raw: list = field(default_factory=list)
     antaran_raw: bytes = b""
     ship_icons: list = field(default_factory=list)
+    #: Open fix 20's FSEL block: {"stack": int, "selected": [bool per
+    #: ship node]}, or None on an engine without the patch.
+    fleet_selection: Optional[dict] = None
 
     # Fields (from FIELD_LIST message)
     fields: list = field(default_factory=list)
@@ -242,6 +245,23 @@ def parse_state(data: bytes) -> GameState:
         for icon in gs.ship_icons:
             owner = read_u8()
             icon.set_derived("owner", None if owner == 0xFF else owner)
+
+    # Fleet box selection — OPTIONAL block after the owners, open fix 20
+    # (doc/ext_fleet_selection.patch): "FSEL", int16 the stack the fleet
+    # box shows (-1 while closed), int16 the node count, then one byte per
+    # ship node, MOX::_ship_node[i].selected. Node i is the i-th ship with
+    # status < 3 (ships.build_node_map). Absent on an unpatched engine,
+    # and then `fleet_selection` stays None — a state, not an error.
+    gs.fleet_selection = None
+    if data[pos:pos + 4] == b"FSEL" and pos + 8 <= len(data):
+        pos += 4
+        stack = read_i16()
+        nodes = read_i16()
+        if 0 <= nodes and pos + nodes <= len(data):
+            gs.fleet_selection = {
+                "stack": stack,
+                "selected": [b != 0 for b in data[pos:pos + nodes]]}
+            pos += nodes
 
     return gs
 

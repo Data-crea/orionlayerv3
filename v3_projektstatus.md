@@ -830,7 +830,7 @@ files under `doc/` and are only summarised here.
 | | |
 |---|---|
 | Python | 32,960 lines across 111 modules — `find . -name '*.py'`, `__pycache__` excluded, the smoke test's 6,400 included. The previous figure here (21,642 across 94) was carried from an unstated method and could not be reproduced |
-| Smoke test | `python tools/smoke_test.py` — **181 checks**, headless |
+| Smoke test | `python tools/smoke_test.py` — **183 checks**, headless |
 | Assets | 170 MB (select_race 68, galaxy_map 51, shared 23, new_game 21, colony_summary 1) |
 | Screens in HD | 9 of ~20–22 (the GAME menu overlay, work order Stop 2, every dialog of the popup; colony summary draws list, sidebar, scan box and galaxy inset, and MOVES POPS — the first HD gesture that drives the game; planets, brief 101, lists, sorts, restricts and returns) |
 | Setup from clone | `python tools/setup.py` (deps via the system package manager) |
@@ -1170,7 +1170,7 @@ in exactly ONE bucket. The numbers below are produced by
 check asserts this list still agrees with it — the same trade the
 check count makes, for the same reason.
 
-`screens/galaxy_map/screen.py` (**562** code, 856 total), `tools/struct_probe.py` (**478** code, 753 total), `tools/colony_list_preview.py` (**403** code, 772 total), `screens/custom_race/screen.py` (**400** code, 558 total), `tools/colony_move_hd.py` (**383** code, 583 total), `core/editor/editor.py` (**359** code, 430 total), `screens/galaxy_map/renderer.py` (**335** code, 753 total), `tools/ext_diag.py` (**325** code, 473 total), `core/style.py` (**310** code, 479 total).
+`screens/galaxy_map/screen.py` (**563** code, 857 total), `tools/struct_probe.py` (**478** code, 753 total), `tools/colony_list_preview.py` (**403** code, 772 total), `screens/custom_race/screen.py` (**400** code, 558 total), `tools/colony_move_hd.py` (**383** code, 583 total), `core/editor/editor.py` (**359** code, 430 total), `screens/galaxy_map/renderer.py` (**335** code, 753 total), `tools/ext_diag.py` (**325** code, 473 total), `core/style.py` (**310** code, 479 total).
 `smoke_test.py` is exempt by nature.
 
 **TWO TOOLS JOINED THE LIST ON 8 SEPTEMBER 2026 and one thing left
@@ -3491,6 +3491,34 @@ The first package of Part A, the one everything else in A depends on.
   settable by field id).
 - **Smoke:** two checks (identity rules against the live windows and
   Yian's planets; drawing and the three sends); the count is 181.
+
+### Galaxy map: full fleet control, phase 1 — two patches reported, HD side built — brief 117, 15 September 2026
+
+**Briefs 116 and 117** (`doc/briefs/116-*`, `117-*`). Data's path 1.
+Nothing applied, nothing built live; phase 2 is Data applying the patches,
+rebuilding orion2re and a live test on scratch saves.
+
+- **Open fix 20 (read), `doc/ext_fleet_selection.patch`** — unchanged: the
+  icon owners, then "FSEL", the fleet box stack, one byte per ship node.
+- **Open fix 21 (write), `doc/ext_fleet_select_ship.patch`** —
+  `MSG_SELECT_SHIP` 0x85: one ship selected or not, every precondition
+  checked before a write (box open, stack, own ship,
+  `Ship_Can_Be_Selected_`, the ship in the stack's chain). Both patches
+  dry-run in both orders on a copy of the tree and compile -fsyntax-only
+  with the build's flags, alone and together. `tools/version_check.py`
+  reports both markers without failing.
+- **HD, against built data** — `core/game_state.py` reads the FSEL block
+  (`fleet_selection`, None without the patch); `boxmodel.selection_of`
+  maps it to the shown ships by node; `boxdraw` draws one box per ship,
+  blue selected, black not, and a click sends `MSG_SELECT_SHIP`
+  (`core/game_client.select_ship`). **HD STATE:** without the block the
+  cells are outlines and not clickable; past nine ships a scroll bar is
+  drawn with its thumb at the top, because the box's scroll position is
+  not on the wire — to be measured in phase 2.
+- **Fundament 65 amended:** with the selection known a star click moves
+  the ships shown blue — variant (a); (b) is still Data's to choose.
+- **Smoke:** two checks (the block and the model; the HD box, the send,
+  the guard, the scroll display, the checker); the count is 183.
 
 ## What is missing
 

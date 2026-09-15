@@ -1,0 +1,181 @@
+Extension API: select or deselect ONE ship in the open fleet box.
+
+Adds `MSG_SELECT_SHIP` (0x85), client -> server: int16 ship_idx, uint8
+selected (0 or 1). The command selects or deselects that ship in the
+stack the fleet box shows, exactly as a human painting one icon cell
+does — and nothing else. It is the WRITE half of full fleet control in
+OrionLayer; open fix 20 (`doc/ext_fleet_selection.patch`) is the READ
+half and stays as it is. Open fix 21 in doc/orion2re_open_fixes.md;
+briefs 116 and 117.
+
+STATUS: REPORTED, NOT APPLIED (15 September 2026). OrionLayer sends it
+only while the snapshot carries open fix 20's "FSEL" block, and reads
+the effect back off that block; an engine without this patch drops the
+message in ProcessInput's `default:` and the cell simply does not change.
+
+WHY A COMMAND (measured live, brief 116): the toggle cannot be reached
+from outside today. `ACTIVATE_FIELD` on a ship field is not acted on
+(mainscr.cpp:3422-3436), and an `INJECT_CLICK` on one did not toggle it:
+the original paints the selection in the draw pass from the pointer
+under a held button (mainscr_main.cpp:983-995,
+MAINSCR::Set_Painted_Fleet_Fields_, mainscr.cpp:2468). ALL is the only
+selection control a client can send.
+
+WHAT THE HANDLER DOES — the checker, all of it before anything is written:
+    * box 2 is open (MOVEBOX::Moveable_Box_Selected_(2));
+    * _fleet_box_ship_stack is a stack that exists (< _ship_stack_count);
+    * ship_idx is a ship (< _NUM_SHIPS), the local player owns it, and
+      MAINSCR::Ship_Can_Be_Selected_ allows it — the same test the painted
+      cell makes (it is HACCESS::Player_Can_Order_Ship_, so a ship in
+      transit needs the communications tech, shipmove.cpp Can_Order_Ship_);
+    * the ship is in that stack's node chain (walked from
+      _ship_stack_start[stack], bounded by MAX_SHIPS; the side-effecting
+      HACCESS::Node_Ptr_From_Ship_Stack_ is not used).
+    Then, and only then: _ship_node[node].selected = selected, and the bit
+    in _fleet_icon_selection_status that Save_Ship_Selection_Status_ keeps
+    across a stack rebuild (fleetpop.cpp:356-375). A refused command
+    changes nothing and draws nothing — no message box, so nothing can
+    spin in ext::Tick the way open fix 12's refusals had to be kept from.
+
+ONE DIFFERENCE FROM THE PAINTED CELL, stated: the command reaches a ship
+that the box has scrolled out of its nine icons. Selecting it after
+scrolling is the same state, so nothing the original could not reach is
+reachable, only reachable without the scroll.
+
+ORDER OF APPLICATION: independent of open fix 20. Both touch
+src/ext/ext_api.cpp in different places (20 the end of SerializeState,
+21 a new function before ProcessInput and a case inside it); verified
+applying 20 then 21 and 21 then 20 on a copy of the tree.
+
+    TO APPLY, to the orion2re working tree at ~/orion2re (engine 1.60.0,
+    with doc/ext_move_pop.patch and doc/ext_inject_click.patch in):
+
+        cd ~/orion2re && patch -p1 < \
+            ~/orionlayerv3/doc/ext_fleet_select_ship.patch
+
+    and it comes back off with
+
+        cd ~/orion2re && patch -R -p1 < \
+            ~/orionlayerv3/doc/ext_fleet_select_ship.patch
+
+    then rebuild with -DORION2RE_EXT=ON.
+
+    THREE FILES, ALL OURS: src/ext/ext_server.h, ext_server.cpp and
+    ext_api.cpp. `src/ext/` is untracked in Joes' tree; nothing of his is
+    touched. The hunks are GENERATED: the files were copied from the
+    working tree as it stood on 15 September 2026, edited in a scratch
+    copy and diffed against the copy. Compiled -fsyntax-only with the
+    build's own defines (-DMINIZ_STATIC_DEFINE -DORION2RE_DEBUG_BUILD=1
+    -DORION2RE_EXT), includes and precompiled header, alone and together
+    with open fix 20. NOT built into a binary and NOT run.
+
+    VERIFY after a build (brief 117 phase 2): open the fleet box of an own
+    stack of at least two ships; send MSG_SELECT_SHIP for one ship with 0;
+    the FSEL byte of that ship's node goes to 0, the framebuffer cell goes
+    black, and the other ships keep theirs. tools/version_check.py reports
+    the marker `Select_Ship_`.
+
+--- a/src/ext/ext_server.h
++++ b/src/ext/ext_server.h
+@@ -30,6 +30,10 @@
+ // Payload: int16 colony_idx, uint8 count, then count pairs of
+ // (uint8 pop_idx, uint8 new_job). See doc/ext_move_pop.patch.
+ constexpr uint16_t MSG_SET_JOBS      = 0x84;
++// OrionLayer, open fix 21: select or deselect ONE ship in the open
++// fleet box. int16 ship_idx, uint8 selected (0 or 1). Applied only if
++// every precondition holds; a refused command writes nothing.
++constexpr uint16_t MSG_SELECT_SHIP   = 0x85;
+ 
+ // Subscription flags (bitmask)
+ constexpr uint16_t SUB_STATE         = 0x01;
+--- a/src/ext/ext_server.cpp
++++ b/src/ext/ext_server.cpp
+@@ -231,6 +231,18 @@
+         }
+         break;
+     }
++    case MSG_SELECT_SHIP: {
++        // int16 ship_idx, uint8 selected (open fix 21). Shorter is
++        // dropped here rather than queued with a guessed value.
++        if (payload_len >= 3) {
++            InputCommand cmd{};
++            cmd.type = MSG_SELECT_SHIP;
++            memcpy(&cmd.param1, payload, 2);
++            cmd.param2 = payload[2] != 0 ? 1 : 0;
++            input_queue_.push_back(cmd);
++        }
++        break;
++    }
+     case MSG_SET_JOBS: {
+         // int16 colony_idx, uint8 count, count x (pop_idx, job).
+         // A malformed list is DROPPED here rather than half-queued:
+--- a/src/ext/ext_api.cpp
++++ b/src/ext/ext_api.cpp
+@@ -343,6 +343,54 @@
+     return moved;
+ }
+ 
++// ── Fleet box selection (OrionLayer, open fix 21) ────────
++
++// Select or deselect ONE ship of the stack the fleet box shows, the
++// way a human painting one icon cell does
++// (MAINSCR::Set_Painted_Fleet_Fields_, mainscr.cpp:2468): the same
++// Ship_Can_Be_Selected_ test, the same _ship_node[].selected write,
++// and the bit Save_Ship_Selection_Status_ keeps across a stack rebuild
++// (fleetpop.cpp:356-375). EVERY precondition is checked before
++// anything is written, so a refused command changes nothing. Unlike a
++// painted cell it reaches a ship scrolled out of the box's nine icons;
++// selecting it after scrolling is the same state.
++// Returns 1 applied, 0 refused.
++static int Select_Ship_(int16_t ship_idx, int16_t selected) {
++    if (!MOVEBOX::Moveable_Box_Selected_(2)) {
++        return 0;
++    }
++    const int16_t stack = MOX::_fleet_box_ship_stack;
++    if (stack < 0 || stack >= MOX::_ship_stack_count) {
++        return 0;
++    }
++    if (ship_idx < 0 || ship_idx >= MOX::_NUM_SHIPS) {
++        return 0;
++    }
++    if ((int16_t)(int8_t)MOX::_ship[ship_idx].owner != MOX::_PLAYER_NUM) {
++        return 0;
++    }
++    if (!MAINSCR::Ship_Can_Be_Selected_(ship_idx)) {
++        return 0;
++    }
++    int16_t node = MOX::_ship_stack_start[stack];
++    for (int guard = 0; node >= 0 && node < MAX_SHIPS && guard < MAX_SHIPS;
++         guard++) {
++        if (MOX::_ship_node[node].ship_idx == ship_idx) {
++            MOX::_ship_node[node].selected = (int8_t)(selected != 0 ? 1 : 0);
++            if (selected != 0) {
++                struct_::Set_Bit_Field_(MOX::_fleet_icon_selection_status,
++                                        (uint16_t)ship_idx);
++            } else {
++                struct_::Clear_Bit_Field_(MOX::_fleet_icon_selection_status,
++                                          (uint16_t)ship_idx);
++            }
++            return 1;
++        }
++        node = MOX::_ship_node[node].next_node;
++    }
++    return 0;
++}
++
+ // ── Input injection ──────────────────────────────────────
+ 
+ static void ProcessInput() {
+@@ -424,6 +472,12 @@
+             Set_Jobs_(cmd.param1, cmd.pairs.data(), (int)cmd.param2);
+             break;
+ 
++        case MSG_SELECT_SHIP:
++            // Open fix 21. From the drain loop like MSG_SET_JOBS; the
++            // fleet box reads _ship_node[].selected when it next draws.
++            Select_Ship_(cmd.param1, cmd.param2);
++            break;
++
+         case MSG_CANCEL_FIELD:
+             // Right-click on field (DOWN + UP)
+             if (cmd.param1 >= 0 && cmd.param1 < fields::_fields_count) {

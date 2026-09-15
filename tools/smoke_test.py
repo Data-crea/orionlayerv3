@@ -3012,6 +3012,143 @@ def main():
            "and a planet send their field, nothing else inside, nothing "
            "drawn against a wrong identity)")
 
+        # ── Brief 117 phase 1: the fleet selection, read and written ──
+        # No engine carries open fixes 20 and 21 yet, so the wire is built:
+        # a snapshot tail in the patches' exact layout, and the live field
+        # list of the own four-ship box recorded in brief 110 Stop 1.
+        from core import game_client as _sel_gc
+        from core.game_state import parse_state as _sel_parse
+
+        def _sel_snapshot(tail):
+            _b = bytearray()
+            _b += _s.pack("<hbihhhhhB b", 0, -1, 100, 0, 2, 0, 0, 0, 0, 0)
+            _b += _s.pack("<hhhhh", 15, 0, 0, 759, 600)
+            _b += bytes(SETTINGS_SIZE)
+            _b += bytes(PLAYER_SIZE * 8)
+            _b += _s.pack("<h", 0) * 4               # stars ships cols planets
+            _b += bytes([0])                          # nebulas
+            _b += bytes(LEADER_SIZE * 67)
+            _b += bytes(ANTARAN_SIZE)
+            _b += _s.pack("<h", 2)                    # 2 ship icons
+            _b += _s.pack("<6h", 0, 0, 5, 0, 100, 100)
+            _b += _s.pack("<6h", 0, 1, 6, 0, 140, 100)
+            _b += _s.pack("<8h", 0, 0, 0, 0, 0, 0, 0, 0)
+            return _sel_parse(bytes(_b) + tail)
+
+        def _sel_block(stack, flags):
+            return (b"FSEL" + _s.pack("<hh", stack, len(flags))
+                    + bytes(1 if f else 0 for f in flags))
+
+        assert _sel_snapshot(b"").fleet_selection is None
+        _sel_gs = _sel_snapshot(bytes([2, 0xFF]))
+        assert _sel_gs.fleet_selection is None
+        assert _sel_gs.ship_icons[0].owner == 2
+        _sel_gs = _sel_snapshot(bytes([2, 0xFF])
+                                + _sel_block(3, [True, False, True]))
+        assert _sel_gs.fleet_selection == {
+            "stack": 3, "selected": [True, False, True]}, \
+            _sel_gs.fleet_selection
+        assert _sel_gs.ship_icons[0].owner == 2 and \
+            _sel_gs.ship_icons[1].owner is None, "the owners moved"
+        assert _sel_snapshot(bytes([2, 0xFF]) + b"FSEL"
+                             + _s.pack("<hh", 3, 5) + bytes([1, 0, 1])
+                             ).fleet_selection is None, "a short block read"
+
+        # The model: one flag per NODE, node n the n-th ship below status 3.
+        gs2.fields = _bx_fields(_bx["fleet_own"]["fields"])
+        gs2.ships_raw = [_bx_ship(0, 1, 300, 100)] * 4 + \
+            [_bx_ship(0, 5, 9, 9)]
+        _sel_ident = gbm.Identity("fleet", ship=0, icon=(131, 39))
+        _sel_box = gmb.classify(gs2.fields).fleet
+        gs2.fleet_selection = {"stack": 2,
+                               "selected": [True, False, True, True, False]}
+        _sel_m, _sel_why = gbm.fleet_model(gs2, _sel_ident, _sel_box, None)
+        assert _sel_m and _sel_m["selected"] == [True, False, True, True], \
+            (_sel_m, _sel_why)
+        assert _sel_m["selectable"] == [True] * 4 and _sel_m["count"] == 4
+        for _sel_bad in ({"stack": 2, "selected": [True] * 4},     # nodes
+                         {"stack": -1, "selected": [True] * 5},    # closed
+                         None):                                    # no patch
+            gs2.fleet_selection = _sel_bad
+            _sel_m, _ = gbm.fleet_model(gs2, _sel_ident, _sel_box, None)
+            assert _sel_m and _sel_m["selected"] is None \
+                and not _sel_m["selection_known"], _sel_bad
+        ok("fleet selection on the wire (FSEL after the owners, one flag "
+           "per ship node, every unknown state is None)")
+
+        class _SelRec(_BxRec):
+            def select_ship(self, ship, selected):
+                self.log.append(("select", ship, selected))
+
+        _sel_real = (app.client, app.connected)
+        try:
+            app.client, app.connected = _SelRec(), True
+            gm._viewctl.reset()
+            gs2.fleet_selection = {"stack": 2, "selected":
+                                   [True, False, True, True, False]}
+            gm.update(gs2)
+            gm._box_identity = _sel_ident
+            _sel_probe = pygame.Surface((app.win_w, app.win_h))
+            _sel_probe.fill((0, 0, 0))
+            gm._render_map(_sel_probe)
+            _sel_cells = [(r, a) for r, a in gm._box_hits
+                          if isinstance(a, tuple)]
+            assert [a for _, a in _sel_cells] == [
+                ("select", 0, False), ("select", 1, True),
+                ("select", 2, False), ("select", 3, False)], gm._box_hits
+            _sel_px = pygame.PixelArray(_sel_probe)
+            for (_sel_r, _), _sel_want in zip(_sel_cells, (True, False)):
+                _sel_rgb = _sel_probe.unmap_rgb(
+                    _sel_px[_sel_r.x + 4, _sel_r.y + 4])[:3]
+                assert tuple(_sel_rgb) == tuple(
+                    (gbd.SELECTED if _sel_want else gbd.DESELECTED)[:3]), \
+                    (_sel_rgb, _sel_want)
+            del _sel_px
+            app.client.log.clear()
+            gm.handle_click(*_sel_cells[1][0].center)
+            assert app.client.log == [("select", 1, True)], app.client.log
+            assert gbd.orders_ok(gm)
+            # Without the block: no colour, no cell click, the guard stands.
+            gs2.fleet_selection = None
+            gm.update(gs2)
+            gm._render_map(_sel_probe)
+            assert not any(isinstance(a, tuple) for _, a in gm._box_hits)
+            assert not gbd.orders_ok(gm)
+            # The guard itself: a move-order click refused, then allowed.
+            _sel_yian = gs2.stars[2]
+            _sel_args = (gmb.classify(gs2.fields), _sel_yian, None, [], [],
+                         gs2.stars, gs2, 0, (121, 79))
+            assert gmc.plan(*_sel_args).what == "refused"
+            _sel_go = gmc.plan(*_sel_args, orders_ok=True)
+            assert _sel_go.what == "star" and _sel_go.send == (121, 79), _sel_go
+            # HD STATE: the scroll bar past nine ships is drawn, not operated.
+            _sel_probe.fill((0, 0, 0))
+            _sel_grid = pygame.Rect(400, 300, 300, 240)
+            gbd._draw_scroll(gm, _sel_probe, _sel_grid, 12)
+            assert pygame.surfarray.array3d(_sel_probe)[
+                _sel_grid.right:_sel_grid.right + 14,
+                _sel_grid.y:_sel_grid.bottom].any(), "no scroll bar drawn"
+            assert "HD STATE" in gbd._draw_scroll.__doc__
+        finally:
+            app.client, app.connected = _sel_real
+            gm._box_identity = None
+            gs2.fleet_selection = None
+            gm.update(gs)
+        _sel_sent = []
+        _sel_client = _sel_gc.GameClient()
+        _sel_client._send_message = lambda t, p: _sel_sent.append((t, p))
+        _sel_client.select_ship(7, True)
+        _sel_client.select_ship(7, False)
+        assert _sel_sent == [(0x85, _s.pack("<hB", 7, 1)),
+                             (0x85, _s.pack("<hB", 7, 0))], _sel_sent
+        import version_check as _sel_vc
+        assert {k: v[1] for k, v in _sel_vc.REPORTED_PATCHES.items()} == {
+            "doc/ext_fleet_selection.patch": "FSEL",
+            "doc/ext_fleet_select_ship.patch": "Select_Ship_"}
+        ok("fleet selection in the HD box (blue and black from the wire, "
+           "MSG_SELECT_SHIP 0x85, orders only with a known selection, "
+           "scroll bar as HD STATE, both patches in the checker)")
+
     # ── Struct specs promoted from unverified.py ──
     from core.structs import nebula as _neb, planet as _pln
     n = _neb.parse(bytes([0x76, 0x01, 0xAA, 0x00, 0x01]))

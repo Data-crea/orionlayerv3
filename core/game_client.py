@@ -16,7 +16,7 @@ from core.wire_protocol import (
     MSG_HELLO, MSG_HELLO_REPLY, MSG_STATE, MSG_FIELDS,
     MSG_VISUAL, MSG_EVENT,
     MSG_ACTIVATE, MSG_INJECT_KEY, MSG_INJECT_CLICK, MSG_CANCEL_FIELD,
-    MSG_SET_JOBS, MSG_SAVE_SLOTS,
+    MSG_SET_JOBS, MSG_SELECT_SHIP, MSG_SAVE_SLOTS,
     SUB_STATE, SUB_FIELDS, SUB_VISUAL, SUB_EVENTS,
     parse_save_slots,
 )
@@ -354,6 +354,18 @@ class GameClient:
         for pop_index, job in pairs:
             payload += struct.pack('<BB', pop_index, job)
         self._send_message(MSG_SET_JOBS, payload)
+
+    def select_ship(self, ship_index, selected):
+        """Select or deselect ONE ship in the open fleet box.
+
+        `MSG_SELECT_SHIP`, open fix 21 (`doc/ext_fleet_select_ship.patch`,
+        reported, not applied). The engine applies it only when the box is
+        open, the ship is the player's, in that box's stack and may be
+        ordered; otherwise it writes nothing. Nothing is returned here:
+        what happened is the FSEL block of a later snapshot (open fix 20).
+        """
+        payload = struct.pack('<hB', ship_index, 1 if selected else 0)
+        self._send_message(MSG_SELECT_SHIP, payload)
 
     def cancel_field(self, field_id):
         """Right-click on a field."""

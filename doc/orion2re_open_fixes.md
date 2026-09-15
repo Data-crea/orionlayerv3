@@ -42,6 +42,7 @@ section for what was found where.
 | 18 | The Settings dialog has two different Alt-key label sets | **Observation** | Nothing; HD shows the screen path's set |
 | 19 | A save name confirmed with Enter keeps the edit cursor `_` | **Observation** | Nothing; HD reproduces it |
 | 20 | The fleet box's ship selection is not on the wire, and a single ship cannot be toggled from outside | **Request**, patch written 15 September 2026 (`doc/ext_fleet_selection.patch`, carries the owner block of `doc/ext_ship_icon_owner.patch`), **reported, NOT applied** | The HD fleet box cannot show which ships are selected, and HD cannot choose a subset of a stack to move — ALL is the only selection control a client can send |
+| 21 | One ship in the fleet box cannot be selected or deselected from outside | **Request**, patch written 15 September 2026 (`doc/ext_fleet_select_ship.patch`, `MSG_SELECT_SHIP` 0x85), **reported, NOT applied**; dry-run and -fsyntax-only together with 20 | Without it HD can show the selection (with 20) but not change it, so a subset of a stack cannot be sent anywhere from HD |
 
 Items 3 and 4 are both about INJECT_CLICK and both live in the same
 code path, but they are separate faults: 3 is where the coordinates
@@ -1382,3 +1383,47 @@ second request (a command, like open fix 12's), and is not made here.
 
 The HD fleet box shows no selection, and a fleet order from HD can only
 move what the game auto-selected or what ALL selects.
+
+## 21. One ship in the fleet box cannot be (de)selected from outside — a request, with a patch
+
+### What we found (orion2re 1.60, 15 September 2026, live)
+
+The write half of open fix 20, from the same run (brief 116): an
+`INJECT_CLICK` on a single ship field does not toggle the ship, and an
+`ACTIVATE_FIELD` on it is not acted on (mainscr.cpp:3422-3436). The
+original paints the selection in the draw pass from the pointer under a
+held button (`mainscr_main.cpp:983-995`, `Set_Painted_Fleet_Fields_`,
+mainscr.cpp:2468). ALL (`mainscr.cpp:3411-3419`) is the only selection
+control a client reaches, and it selects or clears the whole stack.
+
+### The request
+
+`MSG_SELECT_SHIP` (0x85), client -> server: int16 ship_idx, uint8
+selected. The handler is the checker, modelled on open fix 12: every
+precondition before any write — the fleet box open, its stack existing,
+the ship the player's, `MAINSCR::Ship_Can_Be_Selected_` (so a ship in
+transit needs the communications tech, `SHIPMOVE::Can_Order_Ship_`), and
+the ship found in that stack's node chain. Then it writes
+`_ship_node[node].selected` and the `_fleet_icon_selection_status` bit
+`Save_Ship_Selection_Status_` keeps, exactly what a painted cell writes.
+A refused command writes nothing and draws nothing.
+`doc/ext_fleet_select_ship.patch`, three files in `src/ext/`; generated
+hunks; dry-run in both orders together with open fix 20 (the two give the
+same file); compiled -fsyntax-only with the build's flags alone and
+together with 20. **Not built, not applied.** `tools/version_check.py`
+reports both markers (`FSEL`, `Select_Ship_`) without failing while they
+are only reported; applied, they move into its LOCAL_PATCHES.
+
+### What OrionLayer does with it (built 15 September 2026, brief 117)
+
+Only while the snapshot carries open fix 20's FSEL block: the HD fleet box
+colours each ship cell blue or black from that block, a click on a cell
+sends `MSG_SELECT_SHIP` with the opposite state, and what the engine did
+is read back off the next block, never assumed. With the block, a star
+click moves exactly the ships shown blue (fundament 65, amended). Without
+it nothing changes from today.
+
+### What it costs us today
+
+Nothing more than open fix 20 already costs: no selection shown, no subset
+of a stack moved from HD.

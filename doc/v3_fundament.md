@@ -1542,6 +1542,17 @@ is chosen in it, a fleet cannot be moved from the HD map at all. That is
 the order Data set (A1): the icon hit test first, the box next. The guard
 lifts for an explicit choice made in the HD box and for nothing else.
 
+**AMENDED 15 September 2026, brief 117 (Data's path 1), in the commit
+that builds it — and one choice inside it is still Data's.** The guard
+steps aside while HD draws the fleet box with its selection READ OFF THE
+WIRE (open fix 20's FSEL block, `boxdraw.orders_ok`): the cells then show
+blue exactly the ships a star click moves, so the click is made in sight
+of what it orders. That is variant (a) of brief 115's question — the
+original's own gesture. Variant (b), a click that only marks the target
+and a button that sends it, was not decided; it would be a DEVIATION
+where (a) transcribes. No engine carries open fix 20 today, so on every
+tree as it stands the guard holds exactly as before.
+
 **66. No positional right click while a box is open; a box closes
 through its own CLOSE field.** 15 September 2026, Data's decision A5 on
 brief 110. Numbered 66 after checking at the commit that carries it.

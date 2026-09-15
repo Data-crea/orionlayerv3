@@ -38,6 +38,13 @@ MSG_CANCEL_FIELD  = 0x83
 #: an unpatched engine drops the message and moves nothing.
 #: Fundament 52.
 MSG_SET_JOBS      = 0x84
+#: Select or deselect ONE ship in the open fleet box: int16 ship_idx,
+#: uint8 selected. NOT IN THE ENGINE until
+#: `doc/ext_fleet_select_ship.patch` (open fix 21) is applied, and an
+#: engine without it drops the message — so HD sends it only while the
+#: snapshot carries open fix 20's FSEL block, and reads the effect back
+#: off that block instead of assuming it.
+MSG_SELECT_SHIP   = 0x85
 
 #: How many STATE/VISUAL pairs after an injected command can still
 #: describe the world BEFORE it. One — so a caller that waits for an

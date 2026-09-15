@@ -294,10 +294,49 @@ def fleet_model(state, ident, box, text):
         title = _msg(text, H_FLEET, getattr(local, "race_name", ""))
     else:
         title = str(first.name).upper()
-    return {"kind": "fleet", "ship": ident.ship, "stack": stack[:FLEET_ICONS_MAX],
-            "owners": [ships[i].owner for i in stack[:FLEET_ICONS_MAX]],
+    shown = stack[:FLEET_ICONS_MAX]
+    me = getattr(state, "player_num", 0)
+    selected = selection_of(state, ships, shown)
+    return {"kind": "fleet", "ship": ident.ship, "stack": shown,
+            "count": len(stack),
+            "owners": [ships[i].owner for i in shown],
+            "selected": selected, "selection_known": selected is not None,
+            "selectable": [ships[i].owner == me and ships[i].status in
+                           ORDERABLE_STATUS for i in shown],
             "title": title, "status": fleet_status(state, first, stars, text),
             "close": box.close.index if box.close is not None else None}, None
+
+
+#: `SHIPMOVE::Can_Order_Ship_`: status 0 and 2 always; status 1 (in
+#: transit) only with the communications tech — that branch is left to
+#: the engine's own check in open fix 21, so HD offers the click and the
+#: FSEL block says whether it took (decision 33 covers one comparison,
+#: not a tech tree).
+ORDERABLE_STATUS = (0, 1, 2)
+
+
+def selection_of(state, ships, shown):
+    """Selected-or-not per shown ship from open fix 20's FSEL block.
+
+    One byte per ship NODE, and node n is the n-th ship with status
+    below 3 (`SHIPSTAK::Find_Ship_Stacks_`; `Remove_Non_Detected_Ships_`
+    only unlinks FOREIGN nodes from their chains and renumbers nothing).
+    None — the selection is not known, and HD draws no colour — when the
+    block is absent (an engine without the patch), when the engine says
+    no fleet box is open, or when its node count is not the one the
+    snapshot's ships give.
+    """
+    sel = getattr(state, "fleet_selection", None)
+    if not sel or sel.get("stack", -1) < 0:
+        return None
+    nodes = ship_icons.build_node_map(ships)
+    flags = sel.get("selected") or []
+    if len(flags) != len(nodes):
+        return None
+    node_of = {ship: n for n, ship in enumerate(nodes)}
+    if not all(i in node_of for i in shown):
+        return None
+    return [bool(flags[node_of[i]]) for i in shown]
 
 
 def fleet_status(state, ship, stars, text):

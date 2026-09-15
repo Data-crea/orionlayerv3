@@ -110,11 +110,14 @@ class Plan:
 
 
 def plan(boxes, star, icon_index, icons, owners, stars, state, game_zoom,
-         pointer):
+         pointer, orders_ok=False):
     """Decide one left click on the map. Sends nothing itself.
 
     `star` is the HD star under the pointer or None, `icon_index` the HD
     icon or None, `pointer` the native point under the pointer.
+    `orders_ok` lifts the decision-65 guard: True only while HD draws the
+    fleet box with its selection read off the wire (open fix 20), so the
+    player sees which ships a star click will move.
     """
     fleet_open = boxes is not None and boxes.fleet is not None
     order = ("star", "icon") if fleet_open else ("icon", "star")
@@ -134,7 +137,7 @@ def plan(boxes, star, icon_index, icons, owners, stars, state, game_zoom,
         chosen = Plan("empty", pointer, "empty map")
     if chosen.send is None or not mc.on_screen(*chosen.send):
         return Plan("none", None, f"{chosen.detail}: no native point")
-    if fleet_open:
+    if fleet_open and not orders_ok:
         hit = star_at_native(stars, state, *chosen.send)
         if hit is not None and not star_struct.is_black_hole(stars[hit]):
             return Plan("refused", None,

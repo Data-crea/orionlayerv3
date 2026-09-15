@@ -53,6 +53,9 @@ TITLE_COLOR = palette.col("galaxy_map", "title", (200, 210, 238))
 TEXT_COLOR = palette.col("galaxy_map", "nav_text", (196, 208, 236))
 BUTTON_BG = palette.col("galaxy_map", "nav_background", (10, 14, 26))
 GAS_GIANT = palette.col("galaxy_map", "status", (140, 155, 190))
+SELECTED = palette.col("galaxy_map", "fleet_selected", (40, 72, 196))
+DESELECTED = palette.col("galaxy_map", "fleet_deselected", (0, 0, 0))
+SCROLL_THUMB = palette.col("galaxy_map", "status", (140, 155, 190))
 #: The original's map window centre, native: a box whose own centre lies
 #: left of it sits on the left, and so on (mainscr.cpp:1060-1082).
 MAP_MID = ((22 + 527) / 2, (22 + 421) / 2)
@@ -186,12 +189,43 @@ def _draw_system(screen, surface, r, model, hits):
         hits.append((rect, p["field"]))
 
 
+def orders_ok(screen):
+    """True while HD draws a fleet box whose selection it read off the
+    wire: then a star click moves exactly the ships shown blue, and the
+    decision-65 guard steps aside (Data's path 1, brief 117)."""
+    return any(m["kind"] == "fleet" and m["selection_known"]
+               for _, _, m in drawable(screen))
+
+
+def _draw_scroll(screen, surface, grid, count):
+    """HD STATE: the bar the original shows past nine ships, drawn as a
+    display only. Its position (the box's first visible row) is not on
+    the wire, so the thumb stands at the top; not measured, not clickable
+    (brief 117: measured once the patches are live)."""
+    bar = pygame.Rect(grid.right + 2, grid.y, max(6, grid.w // 30), grid.h)
+    screen.style.draw_thin_border(surface, bar, screen.layout.scale)
+    thumb = pygame.Rect(bar.x + 1, bar.y + 1, bar.w - 2,
+                        max(4, (bar.h - 2) * boxmodel.FLEET_ICONS_MAX // count))
+    surface.fill(SCROLL_THUMB[:3], thumb)
+
+
 def _draw_fleet(screen, surface, r, model, hits):
     grid = r["fleet_grid"]
     cw, ch = grid.w // 3, grid.h // 3
+    if model["count"] > boxmodel.FLEET_ICONS_MAX:
+        _draw_scroll(screen, surface, grid, model["count"])
     for i, (ship, owner) in enumerate(zip(model["stack"], model["owners"])):
         cell = pygame.Rect(grid.x + cw * (i % 3), grid.y + ch * (i // 3),
-                           cw, ch)
+                           cw, ch).inflate(-4, -4)
+        # One box per ship, blue selected and black not, as the original
+        # draws its cells — the colour from the FSEL block only. Without
+        # it the cell is a bare outline: HD STATE, never a guessed colour.
+        if model["selection_known"]:
+            chosen = model["selected"][i]
+            surface.fill((SELECTED if chosen else DESELECTED)[:3], cell)
+            if model["selectable"][i]:
+                hits.append((cell, ("select", ship, not chosen)))
+        screen.style.draw_thin_border(surface, cell, screen.layout.scale)
         kind = ship_icons.kind_for_owner(owner) or ship_icons.PLAYER_KIND
         key = ship_icons._resolve_sprite(screen._cache, kind, 0)
         if key is None:
@@ -244,11 +278,22 @@ def _activate(screen, index, what):
         screen.app.client.activate_field(index)
 
 
+def _select(screen, ship, selected):
+    log.info("Box: ship %s selected -> %s", ship, selected)
+    if screen.app.connected:
+        screen.app.client.select_ship(ship, selected)
+
+
 def handle_click(screen, x, y):
-    """True when (x, y) is inside a drawn box; fields go out by index."""
-    for rect, index in reversed(getattr(screen, "_box_hits", [])):
+    """True when (x, y) is inside a drawn box. Fields go out by index; a
+    ship cell sends MSG_SELECT_SHIP (open fix 21) with the opposite of the
+    state the FSEL block showed."""
+    for rect, action in reversed(getattr(screen, "_box_hits", [])):
         if rect.collidepoint(x, y):
-            _activate(screen, index, "field")
+            if isinstance(action, tuple):
+                _select(screen, action[1], action[2])
+            else:
+                _activate(screen, action, "field")
             return True
     return False
 

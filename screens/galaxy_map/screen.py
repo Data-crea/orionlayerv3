@@ -645,7 +645,8 @@ class GalaxyMapScreen(ScreenBase):
                              self._icon_anchor(),
                              self._data.get("ship_icons") or {}, sx, sy),
             icons, owners, self._stars, self._state, self._game_zoom(),
-            mc.galaxy_to_native(gx, gy, self._state))
+            mc.galaxy_to_native(gx, gy, self._state),
+            orders_ok=boxdraw.orders_ok(self))
         log.info("Map click: %s (%s)", result.what, result.detail)
         if result.send is not None and self.app.connected:
             self.app.client.inject_click(*result.send)

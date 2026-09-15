@@ -64,6 +64,24 @@ LOCAL_PATCHES = {
         "every pop move silently does nothing"),
 }
 
+#: Patches that are REPORTED to Joes and not yet applied: listed with
+#: their marker so a tree that has them says so, but a tree without them
+#: is not a mismatch — OrionLayer detects them at run time from the
+#: snapshot (the FSEL block) and falls back to a stated state. The day
+#: one is applied it moves up into LOCAL_PATCHES, and from then on its
+#: absence fails. Same `file: (relative path, marker, what it enables)`.
+REPORTED_PATCHES = {
+    "doc/ext_fleet_selection.patch": (
+        os.path.join("src", "ext", "ext_api.cpp"),
+        "FSEL",
+        "the fleet box's ship selection on the wire (open fix 20)"),
+    "doc/ext_fleet_select_ship.patch": (
+        os.path.join("src", "ext", "ext_api.cpp"),
+        "Select_Ship_",
+        "MSG_SELECT_SHIP, one ship (de)selected in the fleet box "
+        "(open fix 21)"),
+}
+
 
 def find_tree(argv):
     """First existing candidate tree, or None."""
@@ -143,6 +161,13 @@ def main():
                 f"{patch} is not applied to {tree} (no {marker!r} in "
                 f"{rel}) — without it {breaks}. Apply with: "
                 f"cd {tree} && patch -p1 < {patch}")
+
+    for patch, (rel, marker, enables) in sorted(REPORTED_PATCHES.items()):
+        found = has_marker(tree, rel, marker)
+        state = ("applied" if found else
+                 "not applied (reported)" if found is False
+                 else "no such file")
+        print(f"            {patch:32} : {state} — {enables}")
 
     if problems:
         print("\nMISMATCH")
