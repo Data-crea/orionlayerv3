@@ -932,10 +932,14 @@ def main():
             gm.handle_mousewheel(1, px, py2)
         # 1. A star click still lands in the GAME's frame — the native
         # point must equal the game-state transform, never the HD one.
+        # Through the real click path (brief 110: mapclick.plan), on the
+        # anchor star, which the zoomed-in view is sure to show.
         rec2.log.clear()
-        gm._click_star(gs.stars[0])
-        want = mc.galaxy_to_native(gs.stars[0].x, gs.stars[0].y, gs)
-        assert rec2.log == [("click", *want)], (rec2.log, want)
+        csx, csy = v1.to_screen(gs.stars[1].x, gs.stars[1].y)
+        gm.handle_click(int(round(csx)), int(round(csy)))
+        want = mc.galaxy_to_native(gs.stars[1].x, gs.stars[1].y, gs)
+        assert [e for e in rec2.log if e[0] == "click"] == \
+            [("click", *want)], (rec2.log, want)
         # 2. Parking uses the zoom-OUT field only, throttled; the
         # game is not yet at max scale (15 vs its 15... use a state
         # copy that is zoomed in) — simulate scale 10:
@@ -2706,6 +2710,181 @@ def main():
         gs.map_max_x, gs.map_max_y = 759, 600
         gs.ship_icons = []
         ok("galaxy_map ship icons (kinds, tinting, owner, sizing)")
+
+        # ── Brief 110 Part A: the box state and the icon hit test ──
+        # The movable boxes are read off the live field list, recorded on
+        # the reference save (tools/galaxy_box_fields.json). A click on a
+        # fleet icon must reach the FLEET and not the star it orbits
+        # (Check_Ships_XY_ before Check_Stars_XY_, mainscr_main.cpp:425-438);
+        # with the fleet box open the order flips, and a click the game
+        # would read as a move order is not sent (decision 65). No test
+        # here may send a fleet order: the guard is what this asserts.
+        import inspect as _bx_insp
+        import json as _bx_json
+        from core.game_state import FieldInfo as _BxField
+        from screens.galaxy_map import mapboxes as gmb, mapclick as gmc
+
+        _bx = _bx_json.load(open(os.path.join(
+            os.path.dirname(SCREENS_DIR), "tools", "galaxy_box_fields.json")))
+
+        def _bx_fields(rows):
+            out = []
+            for _r in rows:
+                _f = _BxField()
+                (_f.index, _f.x, _f.y, _f.x_end, _f.y_end, _f.field_type,
+                 _f.hotkey) = _r
+                out.append(_f)
+            return out
+
+        _bx_closed = gmb.classify(_bx_fields(_bx["closed"]))
+        assert _bx_closed.known and not _bx_closed.open, _bx_closed
+        _bx_own = gmb.classify(_bx_fields(_bx["fleet_own"]["fields"]))
+        assert _bx_own.known and _bx_own.fleet and not _bx_own.system
+        assert _bx_own.fleet.rect == (329, 205, 527, 421), _bx_own.fleet.rect
+        assert (_bx_own.fleet.close.index, _bx_own.fleet.close.hotkey) == \
+            (27, 0x1B), _bx_own.fleet.close
+        _bx_mon = gmb.classify(_bx_fields(_bx["fleet_monster"]["fields"]))
+        assert _bx_mon.fleet and _bx_mon.fleet.rect == (329, 261, 527, 421)
+        assert not any(f.field_type == 0 and f.hotkey == 0
+                       for f in _bx_mon.fleet.fields), \
+            "a monster's fleet box carries no ALL field (fleetpop.cpp:172)"
+        _bx_sys = gmb.classify(_bx_fields(_bx["system"]["fields"]))
+        assert _bx_sys.system and not _bx_sys.fleet
+        assert _bx_sys.system.rect == (180, 148, 527, 421)
+        assert _bx_sys.system.close.index == 21
+        assert gmb.classify(_bx_fields(_bx["modal"]["fields"])).modal
+        # A box that has moved is wherever the list says it is.
+        _bx_moved = [list(_r) for _r in _bx["fleet_own"]["fields"]]
+        for _r in _bx_moved[21:29]:
+            _r[1] -= 150
+            _r[3] -= 150
+            _r[2] -= 100
+            _r[4] -= 100
+        _bx_mv = gmb.classify(_bx_fields(_bx_moved))
+        assert _bx_mv.fleet and _bx_mv.fleet.rect == (179, 105, 377, 321), \
+            _bx_mv.fleet
+        # A list it cannot read is reported as unreadable, never guessed.
+        _bx_broken = [_r for _r in _bx["fleet_own"]["fields"] if _r[0] != 28]
+        assert not gmb.classify(_bx_fields(_bx_broken)).known
+        ok("galaxy_map box state (live lists: closed, fleet, monster, "
+           "system, modal; a moved box followed; unreadable said so)")
+
+        class _BxRec:
+            def __init__(self):
+                self.log = []
+
+            def inject_click(self, x, y):
+                self.log.append(("click", x, y))
+
+            def activate_field(self, i):
+                self.log.append(("act", i))
+
+            def inject_key(self, k):
+                self.log.append(("key", k))
+
+            def cancel_field(self, i):
+                self.log.append(("cancel", i))
+
+        def _bx_sent(kind):
+            return [e for e in app.client.log if e[0] == kind]
+
+        _bx_real = (app.client, app.connected, gs.fields, gs.ship_icons)
+        try:
+            app.client, app.connected = _BxRec(), True
+            gm._viewctl.reset()
+            gs.fields = _bx_fields(_bx["closed"])
+            gm.update(gs)
+            _bx_zoom = gm._game_zoom()
+            _bx_cfg = gm._data.get("ship_icons") or {}
+            _bx_sol = gs.stars[0]
+            _bx_scx, _bx_scy = mc.galaxy_to_native(_bx_sol.x, _bx_sol.y, gs)
+            _bx_w, _bx_h = shi.native_size(shi.PLAYER_KIND, _bx_zoom)
+            # An own fleet whose centre is 3 native px right of Sol: inside
+            # the star's click radius in both frames, the case that sent
+            # every fleet click to the star until now.
+            gs.ship_icons = ship_icon.parse_all([
+                _s.pack("<6h", 0, 0, 0, 0, _bx_scx + 3 - _bx_w // 2,
+                        _bx_scy - _bx_h // 2),
+                _s.pack("<6h", 0, 1, 0, 0, 330, 150)])
+            for _ic in gs.ship_icons:
+                _ic.set_derived("owner", 0)
+            gm.update(gs)
+            _bx_ctx = gm._map_context()
+
+            def _bx_centre(i):
+                _l, _t, _w, _h = shi.icon_box(gs.ship_icons[i], 0, _bx_ctx,
+                                              None, _bx_cfg)
+                return int(_l + _w / 2), int(_t + _h / 2)
+
+            _bx_hx, _bx_hy = _bx_centre(0)
+            assert gm._star_at(_bx_hx, _bx_hy) is _bx_sol, \
+                "the test icon must sit on Sol's HD hit area"
+            _bx_r0 = gmc.native_icon_rect(gs.ship_icons[0], 0, _bx_zoom)
+            gm.handle_click(_bx_hx, _bx_hy)
+            _bx_c = _bx_sent("click")
+            assert len(_bx_c) == 1, app.client.log
+            assert (_bx_r0[0] <= _bx_c[0][1] <= _bx_r0[2]
+                    and _bx_r0[1] <= _bx_c[0][2] <= _bx_r0[3]), (_bx_c, _bx_r0)
+            assert _bx_c[0][1:] != (_bx_scx, _bx_scy), "the star got the click"
+
+            # Fleet box open: stars first, and this click would move the
+            # fleet to Sol — decision 65, nothing goes out.
+            app.client.log.clear()
+            gs.fields = _bx_fields(_bx["fleet_own"]["fields"])
+            gm.update(gs)
+            gm.handle_click(_bx_hx, _bx_hy)
+            assert _bx_sent("click") == [], app.client.log
+            # ...an icon clear of every star still reaches its stack,
+            app.client.log.clear()
+            gm.handle_click(*_bx_centre(1))
+            _bx_r1 = gmc.native_icon_rect(gs.ship_icons[1], 0, _bx_zoom)
+            _bx_c = _bx_sent("click")
+            assert len(_bx_c) == 1 and _bx_r1[0] <= _bx_c[0][1] <= _bx_r1[2] \
+                and _bx_r1[1] <= _bx_c[0][2] <= _bx_r1[3], (_bx_c, _bx_r1)
+            # ...and a black hole is exempt: no move is ever ordered there
+            # (mainscr_main.cpp:481).
+            app.client.log.clear()
+            _bx_rift = gs.stars[3]
+            _bx_rx, _bx_ry = _bx_ctx.view.to_screen(_bx_rift.x, _bx_rift.y)
+            gm.handle_click(int(_bx_rx), int(_bx_ry))
+            assert _bx_sent("click") == [("click", *mc.galaxy_to_native(
+                _bx_rift.x, _bx_rift.y, gs))], app.client.log
+
+            # An earlier icon covering the centre is stepped around: the
+            # game takes the first icon in array order.
+            _bx_twin = ship_icon.parse_all([_s.pack("<6h", 0, 0, 0, 0, 200, 200),
+                                            _s.pack("<6h", 0, 1, 0, 0, 204, 200)])
+            _bx_p = gmc.icon_click_point(_bx_twin, [0, 0], 1, _bx_zoom)
+            _bx_ra = gmc.native_icon_rect(_bx_twin[0], 0, _bx_zoom)
+            assert _bx_p is not None and not (
+                _bx_ra[0] <= _bx_p[0] <= _bx_ra[2]
+                and _bx_ra[1] <= _bx_p[1] <= _bx_ra[3]), (_bx_p, _bx_ra)
+
+            # Decision 66: no CANCEL_FIELD while a box is open.
+            _bx_bx, _bx_by, _bx_bw, _bx_bh = _bx_ctx.view.box
+            _bx_mx, _bx_my = int(_bx_bx + _bx_bw / 2), int(_bx_by + _bx_bh / 2)
+            for _bx_name in ("system", "fleet_own"):
+                app.client.log.clear()
+                gs.fields = _bx_fields(_bx[_bx_name]["fields"])
+                gm.update(gs)
+                gm.handle_right_button(True, _bx_mx, _bx_my)
+                gm.handle_right_button(False, _bx_mx, _bx_my)
+                assert _bx_sent("cancel") == [], (_bx_name, app.client.log)
+            app.client.log.clear()
+            gs.fields = _bx_fields(_bx["closed"])
+            gm.update(gs)
+            gm.handle_right_button(True, _bx_mx, _bx_my)
+            gm.handle_right_button(False, _bx_mx, _bx_my)
+            assert _bx_sent("cancel") == [("cancel", 23)], app.client.log
+
+            assert "DEVIATION" in gmc.__doc__ and "DECISION 65" in gmc.__doc__
+            assert "DECISION 66" in _bx_insp.getsource(
+                type(gm).handle_right_button)
+        finally:
+            app.client, app.connected, gs.fields, gs.ship_icons = _bx_real
+            gm.update(gs)
+        ok("galaxy_map icon hit test (icon before star, point inside the "
+           "icon, decision 65 guard, decision 66 no cancel under a box)")
 
     # ── Struct specs promoted from unverified.py ──
     from core.structs import nebula as _neb, planet as _pln
@@ -5340,6 +5519,10 @@ def main():
     # itself, and the exclusion is by exact path so a marking in any
     # other tool is still caught.
     _MARKED = {
+        # ADDED 15 September 2026, brief 110 Part A / decision 65: the
+        # guard that sends no unchosen move order (DEVIATION). Its own
+        # check is the galaxy_map icon hit test block.
+        "screens/galaxy_map/mapclick.py": "DECISION 65",
         "core/helppopup.py": "the panel auto-sizes to its text",
         "core/zoomtables.py": "INSET_DOT_DIM",
         "screens/colony_summary/colonybuild.py": "Buy",

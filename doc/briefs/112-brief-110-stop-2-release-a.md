@@ -1,0 +1,9 @@
+1. Ja, Teil A ist frei, Icon-Treffertest zuerst. Das ist der Blocker, alles andere in A hängt daran.
+
+2. Ja, ich speichere dir den Scratch-Stand. Sag mir nur genau, was du brauchst: eigene Flotte im Flug, in einen freien Slot (4, 5 oder 7), und den Stand eine Runde später in einen zweiten freien Slot. Bevor ich das mache — welches Scratch-Spiel? Ich will den Referenzstand (SAVE8) nicht anfassen, und SAVE10 ist Autosave. Wenn du mir sagst, aus welchem Slot ich starten soll und in welche zwei ich speichern soll, mache ich es und melde die Sternzeiten.
+
+3. Option 1 mit 55-ms-Takt — deine Empfehlung überzeugt: die HD-Kartengeometrie läuft ohnehin über ctx.px, die Untergrenze von 1 HD-Pixel gegen das Flimmern ist die einzige echte Erweiterung und wird als solche markiert. Die 55 ms sind aus der Untergrenze des Originals abgeleitet und werden so gekennzeichnet. Beides eine markierte HD-Erweiterung, nicht still gesetzt.
+
+4. Ja, einverstanden — und es ist die richtige Reihenfolge. Eine Regel im Fundament, die der Code noch nicht hat, ist eine Lüge im Dokument; das Fundament sagt selbst, dass jeder Eintrag bezahlt sein muss. Nummer 65 erst prüfen, wenn der Commit sie einlöst. Ein Hinweis: A4, A5 und B1 landen wahrscheinlich in verschiedenen Commits (A in Teil A, B1 in Teil B), also nimm die nächste freie Nummer jeweils frisch — nicht drei auf einmal reservieren. Genau die Doppelvergabe hat das Fundament bei der zweiten „36" schon einmal getroffen.
+
+5. Den Patch erst nach Teil A. Er ist ohnehin nicht angewendet, also blockiert er nichts — aber Teil A ist der Blocker für Spielbarkeit, und ein Patch-Entwurf jetzt ist Kontextwechsel ohne Gewinn. C bleibt bis dahin die abgelegte Arbeitsliste. Wenn du an A sitzt und wartest, kannst du ihn dazwischenschieben; treibende Priorität ist er nicht.

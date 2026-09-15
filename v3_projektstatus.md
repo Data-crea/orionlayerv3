@@ -830,7 +830,7 @@ files under `doc/` and are only summarised here.
 | | |
 |---|---|
 | Python | 32,960 lines across 111 modules — `find . -name '*.py'`, `__pycache__` excluded, the smoke test's 6,400 included. The previous figure here (21,642 across 94) was carried from an unstated method and could not be reproduced |
-| Smoke test | `python tools/smoke_test.py` — **177 checks**, headless |
+| Smoke test | `python tools/smoke_test.py` — **179 checks**, headless |
 | Assets | 170 MB (select_race 68, galaxy_map 51, shared 23, new_game 21, colony_summary 1) |
 | Screens in HD | 9 of ~20–22 (the GAME menu overlay, work order Stop 2, every dialog of the popup; colony summary draws list, sidebar, scan box and galaxy inset, and MOVES POPS — the first HD gesture that drives the game; planets, brief 101, lists, sorts, restricts and returns) |
 | Setup from clone | `python tools/setup.py` (deps via the system package manager) |
@@ -1170,7 +1170,7 @@ in exactly ONE bucket. The numbers below are produced by
 check asserts this list still agrees with it — the same trade the
 check count makes, for the same reason.
 
-`screens/galaxy_map/screen.py` (**548** code, 841 total), `tools/struct_probe.py` (**478** code, 753 total), `tools/colony_list_preview.py` (**403** code, 772 total), `screens/custom_race/screen.py` (**400** code, 558 total), `tools/colony_move_hd.py` (**383** code, 583 total), `core/editor/editor.py` (**359** code, 430 total), `screens/galaxy_map/renderer.py` (**335** code, 753 total), `tools/ext_diag.py` (**325** code, 473 total), `core/style.py` (**310** code, 479 total).
+`screens/galaxy_map/screen.py` (**554** code, 847 total), `tools/struct_probe.py` (**478** code, 753 total), `tools/colony_list_preview.py` (**403** code, 772 total), `screens/custom_race/screen.py` (**400** code, 558 total), `tools/colony_move_hd.py` (**383** code, 583 total), `core/editor/editor.py` (**359** code, 430 total), `screens/galaxy_map/renderer.py` (**335** code, 753 total), `tools/ext_diag.py` (**325** code, 473 total), `core/style.py` (**310** code, 479 total).
 `smoke_test.py` is exempt by nature.
 
 **TWO TOOLS JOINED THE LIST ON 8 SEPTEMBER 2026 and one thing left
@@ -3406,6 +3406,42 @@ Amoeba's map footprint is measured off BUFFER0.LBX (13 x 13), and the
 same measurement disagrees with the five screenshot values
 (`doc/ship_icon_measurement.md`).
 
+### Galaxy map: fleet icons are clickable, and the boxes are read off the field list — brief 110 Part A, step 1, 15 September 2026
+
+**Brief 110** (`doc/briefs/110-*`, decisions `111-*`, release `112-*`).
+The first package of Part A, the one everything else in A depends on.
+
+- **Icon hit test** — `screens/galaxy_map/mapclick.py`. TRANSCRIBED
+  order: icon before star, star before icon while the fleet box is open
+  (mainscr_main.cpp:425-438); the first icon in ARRAY order whose
+  rectangle holds the pointer (`Check_Ships_XY_`, mainscr.cpp:1750). The
+  rectangle is `ships.icon_box`, the one `render` draws in (decision 5).
+  The click goes out at a native point inside the icon and clear of
+  every earlier icon, so the game opens that stack and not the star it
+  orbits. `_click_star` is gone: one click path for icon, star and empty
+  space.
+- **Box state** — `screens/galaxy_map/mapboxes.py`: the fleet box, the
+  system window and a modal text box, read from the live FIELD_LIST (the
+  box fields sit between the last sidebar window and the Q/V/grid tail,
+  mainscr.cpp:1405-1427). A list it cannot read is `known = False`. Test
+  data: `tools/galaxy_box_fields.json`, recorded live on the reference
+  save in brief 110 Stop 1.
+- **Decision 65, DEVIATION** — while the fleet box is open, no map click
+  the game would resolve to a star (its own radius, `Check_Stars_XY_`) is
+  sent; a black hole is exempt. **Consequence, plainly: a fleet cannot be
+  moved from the HD map yet.** A click on a fleet or monster opens its
+  box in the game (still invisible in HD), a click on another icon
+  switches it, and the destination click is refused until HD draws the
+  box and the target is chosen there — the next step of Part A.
+- **Decision 66** — no CANCEL_FIELD while a box is open: it would land at
+  the grid's centre, inside the box.
+- **Not built yet:** HD drawing of the system window and the fleet box
+  (design (a), decision A1), star identity from the last HD click (A2),
+  closing through the CLOSE field.
+- **Smoke:** two checks — the box state against the five recorded lists
+  (and a moved box followed), and the hit test with the guard; the check
+  count is 179.
+
 ## What is missing
 
 ### OLED floor lift and player-colour presets
@@ -3462,8 +3498,10 @@ same measurement disagrees with the five screenshot values
   (live, 14 September 2026: a black-hole click added the ESC close
   button, the title strip, the system grid and the whole-box field, and
   ESC removed exactly those four), so the FIELD_LIST shape is the signal
-  and nothing is needed from Joes. Its own brief. Fleet icons also have
-  no HD hit test yet: a click on an icon near a star lands on the star.
+  and nothing is needed from Joes. Brief 110 Part A: the icon hit test
+  and the box state are built (15 September 2026, section above); HD
+  still does not DRAW either box, and until it does a fleet cannot be
+  moved from the HD map — decision 65 refuses the destination click.
 - **Maximum galaxy size (community map) — both bugs fixed, nothing
   open.** Above 72 stars the game leaves the 10/15/20/30 scale ladder
   and builds one by halving `_max_map_scale`, so `zoom_level()` needs

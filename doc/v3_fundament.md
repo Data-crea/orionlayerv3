@@ -1515,6 +1515,48 @@ which draws it, so the grey player-ship stand-in stays — marked
 DEVIATION at `_resolve_sprite`, named in the status document's known
 gaps, and held by a smoke check to exactly {amoeba, antaran}.
 
+**65. HD sends no move order the player has not chosen.** 15 September
+2026, Data's decision A4 on brief 110 (`doc/briefs/110-*`, `111-*`,
+`112-*`). Numbered 65 after checking at the commit that carries it: the
+highest entry was 64, and nothing in the tree used 65.
+
+**It is the other side of decision 33.** 33 refuses input the game would
+refuse; this refuses input the game would ACCEPT as an order nobody gave.
+Opening the fleet box of a stack you own selects its ships by itself
+(`fleetpop.cpp:683-686`, when `auto_select_ships` is on), and while that
+box is open the game tests stars BEFORE ships (`mainscr_main.cpp:427-431`),
+so the next click it resolves to a star is `Ships_Try_To_Move_To_` and
+`Apply_Player_Movement_Order_` (`:480-535`). HD does not draw that box
+yet, so no such click can have been chosen.
+
+So while the FIELD_LIST shows the fleet box (`mapboxes.py`),
+`mapclick.plan` refuses every map click whose NATIVE point
+`Check_Stars_XY_` would resolve to a star — with the game's radius, not
+HD's, because a click on empty space or on an icon beside a star is the
+same order as a click on the star itself. A black hole is exempt: the
+original never orders a move there (`:481`). Marked DEVIATION in the
+module, since the original moves the fleet, and held by a smoke check.
+
+**What it costs, on record:** until HD draws the fleet box and a target
+is chosen in it, a fleet cannot be moved from the HD map at all. That is
+the order Data set (A1): the icon hit test first, the box next. The guard
+lifts for an explicit choice made in the HD box and for nothing else.
+
+**66. No positional right click while a box is open; a box closes
+through its own CLOSE field.** 15 September 2026, Data's decision A5 on
+brief 110. Numbered 66 after checking at the commit that carries it.
+
+CANCEL_FIELD does not click where the pointer is. The Extension API
+pushes the right button at the field's CENTRE (`ext_api.cpp:427-455`),
+for the map grid native (274, 221). An open box can cover that point —
+the system window at its default position does, measured live in brief
+110 Stop 1 — and the lowest-indexed field under a point wins
+(`fields.cpp:1264-1283`), so the right click goes to the box, and over a
+planet it opens `Potential_Colony_Info_Popup_`, a modal. HD therefore
+sends no CANCEL_FIELD while `mapboxes` reports a box; the pan still
+starts. A box is closed through its ESC-hotkey CLOSE field, looked up in
+the live list — which HD can offer only once it draws the boxes.
+
 **61. An OMISSION is marked like an extension, and so is a state HD
 cannot fill.** 14 September 2026, the GAME menu. HD EXTENSION and
 DEVIATION say what HD does that the original does not; nothing said

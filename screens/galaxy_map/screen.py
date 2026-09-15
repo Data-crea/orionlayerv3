@@ -39,6 +39,8 @@ from core.structs import nebula as nebula_struct
 from core.structs import planet as planet_struct
 from core.structs import player as player_struct
 from core.structs import ship as ship_struct
+from screens.galaxy_map import mapboxes
+from screens.galaxy_map import mapclick
 from screens.galaxy_map import ping as home_ping
 from screens.galaxy_map import renderer as rnd
 from screens.galaxy_map import ships as ship_icons
@@ -308,19 +310,22 @@ class GalaxyMapScreen(ScreenBase):
             return None
         return rnd.MapContext(view, self._viewctl.proxy(self._state))
 
-    def _icon_anchor(self):
-        """Re-anchoring info for ship icons, only when decoupled."""
-        if not self._viewctl.active or self._state is None:
-            return None
+    def _game_zoom(self):
+        """The GAME's zoom level, from its own snapshot (not the HD view)."""
         map_max_x = getattr(self._state, "map_max_x", 0) or 0
         map_max_y = getattr(self._state, "map_max_y", 0) or 0
-        game_zoom = zt.zoom_level(
+        return zt.zoom_level(
             getattr(self._state, "map_scale", 10) or 10,
             zt.max_zoom_count(map_max_x, map_max_y),
             len(self._stars),
             zt.max_map_scale(map_max_x, map_max_y))
+
+    def _icon_anchor(self):
+        """Re-anchoring info for ship icons, only when decoupled."""
+        if not self._viewctl.active or self._state is None:
+            return None
         return ship_icons.IconAnchor(self._state, self._stars,
-                                     self._ships, game_zoom)
+                                     self._ships, self._game_zoom())
 
     def box_style(self, name):
         for box in self.boxes:
@@ -605,44 +610,39 @@ class GalaxyMapScreen(ScreenBase):
                 self._activate(spec["field_id"], spec["key"])
                 return None
 
-        star = self._star_at(screen_x, screen_y)
-        if star is not None:
-            self._click_star(star)
-            return None
-
-        # Empty map space: forward the raw position so the game can
-        # clear its selection or place a move order. The pixel goes
-        # HD -> galaxy through WHATEVER view is on screen, then
-        # galaxy -> native through the game's view, which is the one
-        # the click has to land in.
         view = self._map_view()
         if view is not None and pygame.Rect(*view.box).collidepoint(
                 screen_x, screen_y):
-            gx, gy = view.to_galaxy(screen_x, screen_y)
-            nx, ny = mc.galaxy_to_native(gx, gy, self._state)
-            if mc.on_screen(nx, ny) and self.app.connected:
-                self.app.client.inject_click(nx, ny)
+            self._map_click(view, screen_x, screen_y)
             return None
 
         return super().handle_click(screen_x, screen_y)
 
-    def _click_star(self, star):
-        """Select a system by clicking its exact native position.
+    def _map_click(self, view, sx, sy):
+        """One left click on the map: `mapclick.plan` decides, this sends.
 
-        Always computed with the GAME's own view state, never the HD
-        one: the click has to land inside orion2re's slice, and while
-        decoupled the two are different transforms. park_game keeps
-        that slice covering the whole galaxy, so the on_screen gate
-        only ever rejects during the brief parking transition.
+        Icon or star first by the original's order, the native point the
+        game resolves to the same object, and the decision-65 guard while
+        the fleet box is open. An empty-map pixel goes HD -> galaxy through
+        WHATEVER view is on screen, then galaxy -> native through the
+        game's view, which is the one the click has to land in.
         """
-        log.info("Star clicked: %s (%d, %d)", star.name, star.x, star.y)
-        if not self.app.connected or self._state is None:
+        if self._state is None:
             return
-        nx, ny = mc.galaxy_to_native(star.x, star.y, self._state)
-        if mc.on_screen(nx, ny):
-            self.app.client.inject_click(nx, ny)
-        else:
-            log.debug("Star %s is off the original viewport", star.name)
+        icons = getattr(self._state, "ship_icons", None) or []
+        owners = ship_icons.resolve_owners(icons, self._ships)
+        gx, gy = view.to_galaxy(sx, sy)
+        result = mapclick.plan(
+            mapboxes.classify(getattr(self._state, "fields", None)),
+            self._star_at(sx, sy),
+            mapclick.icon_at(self._map_context(), icons, owners,
+                             self._icon_anchor(),
+                             self._data.get("ship_icons") or {}, sx, sy),
+            icons, owners, self._stars, self._state, self._game_zoom(),
+            mc.galaxy_to_native(gx, gy, self._state))
+        log.info("Map click: %s (%s)", result.what, result.detail)
+        if result.send is not None and self.app.connected:
+            self.app.client.inject_click(*result.send)
 
     def _activate(self, field_id, what=""):
         log.info("Action: %s (field %s)", what or field_id, field_id)
@@ -798,7 +798,13 @@ class GalaxyMapScreen(ScreenBase):
         view = self._map_view()
         if view is not None and pygame.Rect(*view.box).collidepoint(
                 mx, my):
-            self._send_map_cancel()
+            # DECISION 66: no positional right click while a box is open.
+            # CANCEL_FIELD lands at the grid's CENTRE (ext_api.cpp:427-455),
+            # which an open box may cover; a box is closed by its own
+            # CLOSE field instead, never by a right click aimed at it.
+            if not mapboxes.classify(getattr(self._state, "fields",
+                                             None)).open:
+                self._send_map_cancel()
             self._pan_from = (mx, my)
         return False
 

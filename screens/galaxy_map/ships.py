@@ -424,6 +424,19 @@ def icon_screen_pos(icon, ctx, anchor, box_w, box_h):
     return view.to_screen(gx, gy)
 
 
+def icon_box(icon, owner, ctx, anchor=None, cfg=None):
+    """(left, top, width, height) in HD pixels — the ONE rectangle an icon
+    has: `render` draws into it and `mapclick.icon_at` hit-tests it
+    (decision 5)."""
+    kind = kind_for_owner(owner)
+    _, scale = kind_config(cfg, kind or PLAYER_KIND)
+    nw, nh = native_size(kind, ctx.zoom)
+    box_w = max(2, int(round(nw * ctx.px * scale)))
+    box_h = max(2, int(round(nh * ctx.px * scale)))
+    left, top = icon_screen_pos(icon, ctx, anchor, box_w, box_h)
+    return left, top, box_w, box_h
+
+
 def _centred(pos, box_w, box_h):
     """Centre point -> top-left, matching the icon.x/y convention."""
     return (pos[0] - box_w / 2.0, pos[1] - box_h / 2.0)
@@ -460,7 +473,6 @@ def render(surface, ctx, icons, players, cache, tints,
     """
     if not icons:
         return
-    px = ctx.px
     owners = resolve_owners(icons, ships or [])
 
     # Back to front, exactly as MAINSCR::Draw_Ship_Icons_ does
@@ -473,15 +485,12 @@ def render(surface, ctx, icons, players, cache, tints,
             continue
 
         kind = kind_for_owner(owner)
-        fit, scale = kind_config(cfg, kind or PLAYER_KIND)
-        nw, nh = native_size(kind, ctx.zoom)
-        box_w = max(2, int(round(nw * px * scale)))
-        box_h = max(2, int(round(nh * px * scale)))
+        fit, _ = kind_config(cfg, kind or PLAYER_KIND)
 
         # Top-left anchor, then centre the artwork on the box so a
         # sprite whose aspect differs from the original grows evenly
         # instead of hanging off one edge.
-        left, top = icon_screen_pos(icon, ctx, anchor, box_w, box_h)
+        left, top, box_w, box_h = icon_box(icon, owner, ctx, anchor, cfg)
         cx = left + box_w / 2.0
         cy = top + box_h / 2.0
 
