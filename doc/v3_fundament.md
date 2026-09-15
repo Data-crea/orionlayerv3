@@ -1568,7 +1568,32 @@ open, and HD had renamed it a system window and stopped drawing it. And
 the probe's own star clicks in run 119 moved nothing — once out of range
 (no message by design, `Ships_Try_To_Move_To_`), once to Sol, in range,
 with the original showing "4 turns to Sol": not separated from the
-injection path, recorded as a gap in `v3_projektstatus.md`.
+injection path, recorded as a gap in `v3_projektstatus.md`. **RESOLVED
+(brief 121):** Data's hand test in the HD window alone moved the ships out
+of their orbit slot as the original does — HD's target click flies, and
+the failure of run 119 lay in the probe (its target star), not in the HD
+path.
+
+**68. Every line on the HD map follows one rule: antialiased, marked,
+through one routine.** 15 September 2026, Data's decision B1 on brief 110
+(`doc/briefs/111-*`), in brief 121's commit that draws the first line the
+rule was made for. Numbered 68 at that commit: the highest entry was 67,
+and nothing in the tree used 68.
+
+MOO2 is palette-indexed and cannot antialias; `line::Line_` and
+`line::Multi_Colored_Line_` plot hard one-pixel lines. HD's wormhole link
+was antialiased and alpha-blended long before anyone asked, unmarked, and
+the smoke test defended it — decision 43's shape, a check guarding a choice
+nobody had recorded. Stop 1 of brief 110 found it; Data chose softness for
+ALL lines instead of hardness for all, on one condition: it is one rule, not
+a property of whichever line happened to be written first.
+
+So `screens/galaxy_map/maplines.stroke` is the only place a map line is
+drawn (marked HD EXTENSION B1 there), the wormhole layer calls it, and the
+smoke test fails if `aaline` or `pygame.draw.line` appears in any other
+galaxy map module. A new line kind — the order preview, relocation lines —
+goes through `stroke`, or it is a second rule. What a line transcribes
+(colour table, wave, endpoints) stays the original's; only the edge is HD's.
 
 **67. The ship node table comes off the wire; nothing rebuilds it.**
 15 September 2026, brief 119. Numbered 67 at the commit that carries it:

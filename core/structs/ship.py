@@ -112,14 +112,20 @@ SPEC = Spec("s_ship_data", SIZE, [
     ("location", 101, "i16"),
     ("x",       103, "i16"),
     ("y",       105, "i16"),
+    # VERIFIED 15 September 2026 (brief 114), in brief 110 Part B's
+    # commit (brief 121): the header puts it after group_has_navigator 107
+    # (orion2.h:2847-2868), and live the scout at (847,334) bound for Dhira
+    # stood at (823,390) one turn later — exactly speed 2's step, where 1
+    # predicts (835,362) and 3 (811,417) (GEO::Move_Player_1_Turn_To_Star_).
+    # SHIPMOVE::Make_Ships_Move_To_ writes it with turns_left
+    # (shipmove.cpp:597).
+    ("travelling_speed", 108, "u8"),
     # VERIFIED 15 September 2026 (briefs 113/114), in the commit that
     # first reads it (the HD fleet box's "N turns to" line): the header
     # puts it at 109 after group_has_navigator 107 and travelling_speed
     # 108 (orion2.h:2847-2868), and live the byte went 3 -> 2 across one
     # played turn while the engine's own framebuffer read "eta 2",
-    # matched glyph by glyph against the player's FONTS.LBX. Offset 108
-    # is verified by the same run and joins the spec with Part B, which
-    # reads it.
+    # matched glyph by glyph against the player's FONTS.LBX.
     ("turns_left", 109, "u8"),
 ], verified=True)
 

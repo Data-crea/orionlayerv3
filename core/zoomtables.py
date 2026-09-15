@@ -170,6 +170,24 @@ ORBIT_STACK_STEP_BASE = 11
 #: four fleets at one star collide. 10 < 11 at every step.
 SHIP_ICON_DIM = ((11, 10), (10, 9), (9, 8), (8, 7))
 
+#: The header size of BUFFER0.LBX entries 205..208, index = entry - 205:
+#: what `SHIPS::Get_Ship_Icon_Dimensions_(index)` returns
+#: (`animate::Get_Width_/Get_Height_`, ships.cpp:328-335) and what the
+#: game positions with — ALWAYS colour 0's entries, whatever the owner.
+#: `Draw_Ship_Destination_Line_` asks for index 3 - zoom (the line starts at
+#: the icon corner plus half of it, ships.cpp:535-552);
+#: `Get_Ship_Icon_Coords_In_Space_` asks for index zoom (ships.cpp:516-531).
+#:
+#: MEASURED AT THE SPRITE, brief 121 (the open point of run 114), two
+#: sources: the LBX headers read with core/lbx.py, and the live framebuffer
+#: on SAVE5 — at zoom 2 entry 218 (colour 3) was drawn at s_ship_icon.x/y
+#: pixel for pixel (30/30) with its 12 x 11 header, and the green line began
+#: at the corner plus (6, 5); at zoom 0 it began at plus (8, 6), half of
+#: index 3's 16 x 12, where index 0's 11 x 11 matched 2 pixels of 74.
+#: NOT SHIP_ICON_DIM, which is 9 x 8 at zoom 2: that table sizes the HD
+#: icon and is left as it is (doc/ship_icon_measurement.md).
+SHIP_ICON_HEADER_DIM = ((11, 11), (12, 11), (12, 10), (16, 12))
+
 #: Monster icon footprints at zoom 0, measured the same way. Each
 #: type has its OWN sprite set in the original (BUFFER0.LBX
 #: 241 + (type - 9) * 4 + zoom), so the sizes genuinely differ per
@@ -696,6 +714,13 @@ def ship_icon_dimension(zoom):
     """
     zoom = max(0, min(len(SHIP_ICON_DIM) - 1, int(zoom)))
     return SHIP_ICON_DIM[zoom]
+
+
+def ship_icon_header_dimension(index):
+    """(width, height) of BUFFER0.LBX entry 205 + index's header, index
+    clamped to 0..3 as `Draw_Ship_Destination_Line_` clamps 3 - zoom."""
+    index = max(0, min(len(SHIP_ICON_HEADER_DIM) - 1, int(index)))
+    return SHIP_ICON_HEADER_DIM[index]
 
 
 def monster_icon_dimension(kind, zoom):

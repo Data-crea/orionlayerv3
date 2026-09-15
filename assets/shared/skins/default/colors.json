@@ -539,6 +539,91 @@
       190,
       90
     ],
+    "_travel_line_note": "TRANSCRIBED, not chosen: the destination line tables _ship_direction_line_green/red_colors (mainscr.cpp:105-106), indices 6E 6F 72 74 74 72 6F 6E and 49 4A 4D 4F 4F 4D 4A 49, in the order the colour wave steps through them (screens/galaxy_map/maplines.py). RGB of the main palette, read twice on 15 September 2026 (brief 121) and identical: live off VISUAL_FRAME and from FONTS.LBX entry 1 (s_palette_entry flag, r, g, b; 6-bit x 4).",
+    "travel_line_green": [
+      [
+        0,
+        20,
+        0
+      ],
+      [
+        4,
+        56,
+        4
+      ],
+      [
+        8,
+        112,
+        8
+      ],
+      [
+        72,
+        144,
+        56
+      ],
+      [
+        72,
+        144,
+        56
+      ],
+      [
+        8,
+        112,
+        8
+      ],
+      [
+        4,
+        56,
+        4
+      ],
+      [
+        0,
+        20,
+        0
+      ]
+    ],
+    "travel_line_red": [
+      [
+        48,
+        4,
+        4
+      ],
+      [
+        64,
+        8,
+        8
+      ],
+      [
+        116,
+        24,
+        24
+      ],
+      [
+        156,
+        48,
+        44
+      ],
+      [
+        156,
+        48,
+        44
+      ],
+      [
+        116,
+        24,
+        24
+      ],
+      [
+        64,
+        8,
+        8
+      ],
+      [
+        48,
+        4,
+        4
+      ]
+    ],
     "hover_ring": [
       170,
       200,

@@ -43,6 +43,7 @@ from screens.galaxy_map import boxdraw
 from screens.galaxy_map import boxmodel
 from screens.galaxy_map import mapboxes
 from screens.galaxy_map import mapclick
+from screens.galaxy_map import maplines
 from screens.galaxy_map import ping as home_ping
 from screens.galaxy_map import renderer as rnd
 from screens.galaxy_map import ships as ship_icons
@@ -431,6 +432,11 @@ class GalaxyMapScreen(ScreenBase):
         rnd.render_wormholes(surface, ctx, self._stars,
                              player_num, omniscient,
                              layer=self._wormholes)
+        # Destination lines under the stars, as the original draws them
+        # (mainscr_main.cpp:965, before Draw_Stars_).
+        maplines.render_destination_lines(
+            surface, ctx, self._state, self._ships, self._stars,
+            self._game_zoom(), self._icon_anchor(), pygame.time.get_ticks())
         heights = rnd.render_stars(surface, ctx, self._stars, self._cache)
 
         # Star name size follows the zoom level, as the original

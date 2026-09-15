@@ -524,6 +524,10 @@ def render_nebulas(surface, ctx, nebulas, cache, forms):
 class WormholeLayer:
     """Cached, antialiased overlay for the wormhole links.
 
+    Antialiased because every HD map line is: HD EXTENSION B1, one rule,
+    drawn through `maplines.stroke` (brief 111). Until brief 121 this was
+    the only antialiased line on the map, and unmarked.
+
     Two reasons this is not just a draw call:
 
     1. pygame.draw.aaline antialiases but IGNORES the alpha in its
@@ -554,12 +558,13 @@ class WormholeLayer:
         self._layer = None
 
     def _build(self, box, segments, colour):
+        from screens.galaxy_map import maplines
         w, h = max(1, int(box[2])), max(1, int(box[3]))
         layer = pygame.Surface((w, h), pygame.SRCALPHA)
         ox, oy = box[0], box[1]
         for x1, y1, x2, y2 in segments:
-            pygame.draw.aaline(layer, (255, 255, 255),
-                               (x1 - ox, y1 - oy), (x2 - ox, y2 - oy))
+            maplines.stroke(layer, (255, 255, 255),
+                            (x1 - ox, y1 - oy), (x2 - ox, y2 - oy))
         rgba = tuple(colour[:3]) + (
             colour[3] if len(colour) > 3 else 255,)
         layer.fill(rgba, special_flags=pygame.BLEND_RGBA_MULT)

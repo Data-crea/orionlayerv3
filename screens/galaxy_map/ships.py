@@ -386,6 +386,18 @@ def icon_screen_pos(icon, ctx, anchor, box_w, box_h):
         # In transit / in a wormhole: the ship's own coordinates.
         return _centred(view.to_screen(ship.x, ship.y), box_w, box_h)
 
+    return _star_anchored(icon, icon.x, icon.y, ctx, anchor)
+
+
+def _star_anchored(icon, nx, ny, ctx, anchor):
+    """A native point of an orbiting icon, re-anchored on its star: the
+    star's HD position plus the game-computed offset, scaled by ctx.px and
+    the star sprite ratio (see icon_screen_pos). Without a star, the
+    point is back-transformed through the game's slice."""
+    from core import mapcoords as mc
+
+    view = ctx.view
+    game_state, stars, _, game_zoom = anchor.resolve(icon)
     star_idx = ship_struct.absolute_location(
         getattr(icon, "star_idx", -1))
     if stars and 0 <= star_idx < len(stars):
@@ -397,12 +409,40 @@ def icon_screen_pos(icon, ctx, anchor, box_w, box_h):
                  / zt.star_dimension(0, game_zoom, ctx.num_stars,
                                      game_ms))
         sx, sy = view.to_screen(star.x, star.y)
-        return (sx + (icon.x - snx) * ctx.px * ratio,
-                sy + (icon.y - sny) * ctx.px * ratio)
+        return (sx + (nx - snx) * ctx.px * ratio,
+                sy + (ny - sny) * ctx.px * ratio)
 
     # No star, no ship — back-transform through the game's slice.
-    gx, gy = mc.native_to_galaxy(icon.x, icon.y, game_state)
+    gx, gy = mc.native_to_galaxy(nx, ny, game_state)
     return view.to_screen(gx, gy)
+
+
+def anchored_point(icon, nx, ny, ctx, anchor):
+    """HD position of a native point that belongs to a ship icon — the
+    destination line's start (maplines) — placed so it keeps its native
+    offset from the icon HD actually draws.
+
+    Coupled view: the native point maps straight, as the icon does. In
+    transit (decoupled): HD centres the icon on the ship's own galaxy
+    position, the game centres it on half the header of BUFFER0.LBX entry
+    205 + zoom (`Get_Ship_Icon_Coords_In_Space_`, ships.cpp:516-531), so
+    the point keeps its offset from that centre. Orbiting: re-anchored on
+    the star like the icon itself.
+    """
+    from core import mapcoords as mc
+
+    view = ctx.view
+    if anchor is None:
+        return (view.off_x + (nx - mc.MAP_LEFT) * view.scale,
+                view.off_y + (ny - mc.MAP_TOP) * view.scale)
+    _, _, ship, game_zoom = anchor.resolve(icon)
+    if ship is not None and ship_struct.absolute_location(
+            ship.location) != ship.location:
+        cw, ch = zt.ship_icon_header_dimension(game_zoom)
+        hx, hy = view.to_screen(ship.x, ship.y)
+        return (hx + (nx - icon.x - (cw >> 1)) * ctx.px,
+                hy + (ny - icon.y - (ch >> 1)) * ctx.px)
+    return _star_anchored(icon, nx, ny, ctx, anchor)
 
 
 def icon_box(icon, owner, ctx, anchor=None, cfg=None):

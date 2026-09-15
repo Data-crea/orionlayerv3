@@ -830,7 +830,7 @@ files under `doc/` and are only summarised here.
 | | |
 |---|---|
 | Python | 32,960 lines across 111 modules — `find . -name '*.py'`, `__pycache__` excluded, the smoke test's 6,400 included. The previous figure here (21,642 across 94) was carried from an unstated method and could not be reproduced |
-| Smoke test | `python tools/smoke_test.py` — **183 checks**, headless |
+| Smoke test | `python tools/smoke_test.py` — **186 checks**, headless |
 | Assets | 170 MB (select_race 68, galaxy_map 51, shared 23, new_game 21, colony_summary 1) |
 | Screens in HD | 9 of ~20–22 (the GAME menu overlay, work order Stop 2, every dialog of the popup; colony summary draws list, sidebar, scan box and galaxy inset, and MOVES POPS — the first HD gesture that drives the game; planets, brief 101, lists, sorts, restricts and returns) |
 | Setup from clone | `python tools/setup.py` (deps via the system package manager) |
@@ -1170,7 +1170,7 @@ in exactly ONE bucket. The numbers below are produced by
 check asserts this list still agrees with it — the same trade the
 check count makes, for the same reason.
 
-`screens/galaxy_map/screen.py` (**566** code, 860 total), `tools/struct_probe.py` (**478** code, 753 total), `tools/colony_list_preview.py` (**403** code, 772 total), `screens/custom_race/screen.py` (**400** code, 558 total), `tools/colony_move_hd.py` (**383** code, 583 total), `core/editor/editor.py` (**359** code, 430 total), `screens/galaxy_map/renderer.py` (**335** code, 753 total), `tools/ext_diag.py` (**325** code, 473 total), `core/style.py` (**310** code, 479 total).
+`screens/galaxy_map/screen.py` (**570** code, 866 total), `tools/struct_probe.py` (**478** code, 753 total), `tools/colony_list_preview.py` (**403** code, 772 total), `screens/custom_race/screen.py` (**400** code, 558 total), `tools/colony_move_hd.py` (**383** code, 583 total), `core/editor/editor.py` (**359** code, 430 total), `screens/galaxy_map/renderer.py` (**336** code, 758 total), `tools/ext_diag.py` (**325** code, 473 total), `core/style.py` (**310** code, 479 total).
 `smoke_test.py` is exempt by nature.
 
 **TWO TOOLS JOINED THE LIST ON 8 SEPTEMBER 2026 and one thing left
@@ -3553,16 +3553,64 @@ orion2re tree at `~/orion2re` is patched: a permanent change.
     opened by a direct click on another stack is not drawn, and HD's star
     click on Sol was refused — no click sent, fields and ships unchanged.
 - **Gaps, stated:**
-  - **the probe's star clicks did not move ships** (run 119): Zibbat was
+  - ~~**the probe's star clicks did not move ships** (run 119): Zibbat was
     out of range (no message, by the source); Sol was in range and the
     original showed "4 turns to Sol", yet nothing moved. Not separated
-    from the injection path; Data's hand test is the confirmation of (a);
+    from the injection path; Data's hand test is the confirmation of (a);~~
+    **RESOLVED (brief 121, Data's hand test in the HD window only, F5
+    loaded):** HD's target click flies — the ships leave their orbit slot
+    right to left as in the original, so the injected HD click with the box
+    open arrives. The failure in run 119 lay in the probe, not in the HD
+    path: the Zibbat run's target was out of range (proven by the source);
+    for the Sol run the probe-side cause was not isolated further. The
+    probe's success test itself was right — an order sets `location` and
+    `status` at once (`Make_Ships_Move_To_`, shipmove.cpp:593-600);
   - **check 4, the scroll bar, deferred:** SAVE5's largest stack is seven.
     The box's first visible row is not on the wire; HD shows the chain's
     first nine and draws the bar as HD STATE;
 - **Smoke:** the count stays 183; the node-table, block, model, HD-box and
   checker checks were rewritten to the wire data, and they fail if a
   rebuilt table returns.
+
+### Galaxy map: ship destination lines — brief 110 Part B, brief 121, 15 September 2026
+
+**Brief 121** (`doc/briefs/121-*`), with decisions B1-B3 of briefs 111/112.
+
+- **Precondition, measured at the sprite:** the game positions with the
+  HEADER size of BUFFER0.LBX entries 205..208 (colour 0), not the ink and
+  not `SHIP_ICON_DIM` — `zoomtables.SHIP_ICON_HEADER_DIM`, two sources (LBX
+  headers; live framebuffer at zoom 2 and zoom 0), recorded in
+  `doc/ship_icon_measurement.md`.
+- **`screens/galaxy_map/maplines.py`** — the destination lines, transcribed
+  from `Do_Ship_Destination_Lines_`: own ships moving, foreign ships bound
+  for a star with our colony or any outpost, the open fleet box's head;
+  encoded locations only (from the turn of the order); green/red tables
+  (mainscr.cpp:105-106, RGB from two sources, skin keys
+  `travel_line_green/red`); from the icon corner plus half the header of
+  entry 205 + (3 - zoom) to the star centre; the colour wave with
+  `Draw_Directional_Multi_Colored_Line_`'s table and offset. The start
+  point is re-anchored like the icon (`ships.anchored_point`).
+- **HD EXTENSION B1:** every map line antialiased through ONE routine,
+  `maplines.stroke`; the wormhole link goes through it.
+- **HD EXTENSION B2:** one wave step is `ctx.px` HD pixels, at least one;
+  the phase on a fixed 55 ms clock (the original's minimum pass,
+  `Release_Time_(1)`).
+- **OMISSION:** the "eta N" label, the order preview line (its colour is
+  not on the wire), relocation lines (unverified offset).
+- **Live, SAVE5 (scratch), one connection, no order; SAVE1-9 identical,
+  SAVE10 unchanged** (evidence b0/b1 pictures, `b121_lines_record.json`):
+  the scout bound for Dhira gets its green line; at zoom 2 HD's native
+  start is (432, 216), the point the original's line was measured to start
+  from, and 75 of 80 steps along the HD segment are green; at zoom 0, 93 of
+  105.
+- **`travelling_speed` (s_ship_data +108) joins the verified spec** (run
+  114), next to `turns_left` (+109).
+- **Findings, not acted on:** `SHIP_ICON_DIM` (the HD icon size) is 9 x 8
+  at zoom 2 against a 12 x 11 header and 6 x 5 of ink — which one an HD
+  icon should match is Data's question. `tools/make_nebula_icons.py` reads
+  FONTS.LBX entry 1 at offset 0; the entries are (flag, r, g, b), measured.
+- **Smoke:** three checks (who gets a line and where it starts; the wave;
+  one routine and the markings); the count is 186.
 
 ## What is missing
 

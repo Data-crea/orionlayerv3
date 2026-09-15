@@ -2226,8 +2226,12 @@ def main():
         assert drawn_pixels(seen, False) > 0, \
             "visited wormhole must be drawn"
 
-        # Wormhole links must be FAINT and ANTIALIASED. The original
-        # draws them in palette index 4 — a hint, not a border.
+        # Wormhole links are FAINT (the skin's colour, with alpha) and
+        # ANTIALIASED. The original draws a hard 1 px line in palette
+        # index 4, RGB (36,36,40) measured: the antialiasing is HD
+        # EXTENSION B1 (brief 111), one rule for every map line through
+        # maplines.stroke — marked there and held by the map-lines check,
+        # no longer an unmarked choice this check defended.
         assert len(gmr.WORMHOLE_COLOR) >= 4, \
             "wormhole colour needs an alpha component"
         assert gmr.WORMHOLE_COLOR[3] < 160, gmr.WORMHOLE_COLOR
@@ -3206,6 +3210,127 @@ def main():
         ok("fleet selection in the HD box (blue and black from the wire, "
            "MSG_SELECT_SHIP 0x85, orders only with a known selection, "
            "scroll bar as HD STATE, both patches in the checker)")
+
+        # ── Brief 110 Part B (brief 121): the destination lines ──
+        from screens.galaxy_map import maplines as gml
+        from core.structs import ship as _ml_ship_spec
+        # Who gets a line (Do_Ship_Destination_Lines_). Yian (star 2) has
+        # an outpost in gs2's planets, Bor (star 1) nothing; len(stars) is
+        # Antares.
+        _ml_raws = [_bx_ship(0, 10000, 500, 500, status=1),   # own, moving
+                    _bx_ship(0, 2, 360, 210),                 # own, parked
+                    _bx_ship(3, 10002, 600, 400, status=1),   # to our outpost
+                    _bx_ship(3, 10001, 700, 400, status=1),   # to nothing
+                    _bx_ship(0, 10003, 800, 400, status=1),   # Antares
+                    _bx_ship(0, 20001, 360, 210, status=2)]   # order turn
+        _ml_ships = [_ship.parse(r) for r in _ml_raws]
+        _ml_icons = [ship_icon.parse(_s.pack("<6h", 0, i, 0, 0, 100 + 20 * i,
+                                             100)) for i in range(6)]
+        _ml_gs = GameState()
+        _ml_gs.player_num = 0
+        _ml_gs.stars = gs2.stars
+        _ml_gs.planets_raw, _ml_gs.colonies_raw = gs2.planets_raw, \
+            gs2.colonies_raw
+        _ml_gs.ship_icons = _ml_icons
+        _ml_gs.fleet_selection = {"stack": -1, "ships": list(range(6)),
+                                  "selected": [False] * 6, "chain": []}
+
+        def _ml_lines(zoom):
+            return [(l["icon"], l["ship"], l["star"], l["colour"], l["start"])
+                    for l in gml.destination_lines(_ml_gs, _ml_ships,
+                                                   _ml_gs.stars, zoom)]
+
+        assert _ml_lines(2) == [(0, 0, 0, "green", (106, 105)),
+                                (2, 2, 2, "red", (146, 105)),
+                                (5, 5, 1, "green", (206, 105))], _ml_lines(2)
+        # The start is the icon corner plus half of BUFFER0.LBX entry
+        # 205 + (3 - zoom)'s header, measured at the sprite (brief 121).
+        assert [l[4] for l in _ml_lines(0)] == [(108, 106), (148, 106),
+                                                (208, 106)], _ml_lines(0)
+        assert [l[4] for l in _ml_lines(3)][0] == (105, 105), _ml_lines(3)
+        assert zt.SHIP_ICON_HEADER_DIM == ((11, 11), (12, 11), (12, 10),
+                                           (16, 12))
+        assert zt.ship_icon_header_dimension(-1) == (11, 11) and \
+            zt.ship_icon_header_dimension(9) == (16, 12)
+        # The open fleet box's head node gets one too, while encoded.
+        _ml_gs.fleet_selection = dict(_ml_gs.fleet_selection, stack=0,
+                                      chain=[3])
+        assert (3, 3, 1, "red", (166, 105)) in _ml_lines(2), _ml_lines(2)
+        # The node table decides which ship an icon is, never the index.
+        _ml_gs.fleet_selection = {"stack": -1, "ships": [5, 1, 2, 3, 4, 0],
+                                  "selected": [False] * 6, "chain": []}
+        assert _ml_lines(2)[0][:4] == (0, 5, 1, "green"), _ml_lines(2)
+        _ml_gs.fleet_selection = None
+        assert _ml_lines(2) == [], "a line without the wire's node table"
+        assert [n for n, _o, _k in _ml_ship_spec.SPEC.fields
+                if n in ("travelling_speed", "turns_left")] == [
+            "travelling_speed", "turns_left"]
+        ok("galaxy_map destination lines (own moving, foreign bound for our "
+           "colony or any outpost, the fleet box head; encoded locations "
+           "only; start at the measured header half)")
+
+        # The colour wave, transcribed; its step and clock, HD EXTENSION B2.
+        _ml_t = tuple(range(8))
+        _ml_r = tuple(reversed(_ml_t))
+        assert gml.directional(0, 0, 10, 10, _ml_t, 2) == (_ml_t, 5)
+        assert gml.directional(0, 10, 10, 0, _ml_t, 2) == (_ml_r, 2)
+        assert gml.directional(10, 0, 0, 10, _ml_t, 2) == (_ml_t, 5)
+        assert gml.directional(10, 10, 0, 0, _ml_t, 2) == (_ml_r, 2)
+        assert gml.directional(5, 0, 5, 10, _ml_t, 0)[1] == 7
+        _ml_p = gml.wave_pieces((0, 10), (0, 0), _ml_t, 3, 2.5)
+        assert [c for c, _a, _b in _ml_p] == [3, 4, 5, 6], _ml_p
+        assert _ml_p[0][1] == (0, 0), "the wave counts from the smaller y"
+        assert len(gml.wave_pieces((0, 0), (0, 10), _ml_t, 0, 0.3)) == 10, \
+            "a step below one HD pixel"
+        assert [gml.phase_at(ms) for ms in (0, 54, 55, 110, 440)] == \
+            [0, 0, 1, 2, 0]
+        assert gml.clip((-10, 5), (10, 5), (0, 0, 5, 10)) == ((0, 5), (5, 5))
+        assert gml.clip((-10, -5), (-1, -5), (0, 0, 5, 10)) is None
+        ok("galaxy_map colour wave (Draw_Directional_Multi_Colored_Line_ "
+           "table and offset, one step per ctx.px, at least 1 HD px, 55 ms)")
+
+        # ONE line routine for the whole map: HD EXTENSION B1.
+        # Calls, not words: renderer.py still EXPLAINS aaline in a
+        # docstring. sidebar.py's panel divider is not on the map — the
+        # one named exemption, with its reason, not a silent pass.
+        import re as _ml_re
+        _ml_dir = os.path.join(SCREENS_DIR, "galaxy_map")
+        _ml_call = _ml_re.compile(r"(?:draw|gfxdraw)\.(?:aa)?lines?\(")
+        _ml_users = sorted(
+            _f for _f in os.listdir(_ml_dir) if _f.endswith(".py")
+            and _ml_call.search(open(os.path.join(_ml_dir, _f)).read()))
+        _ml_not_map = {"sidebar.py": "the sidebar panel's band divider"}
+        assert _ml_users == sorted(["maplines.py"] + list(_ml_not_map)), \
+            _ml_users
+        assert "maplines.stroke" in open(os.path.join(
+            _ml_dir, "renderer.py")).read(), "the wormhole bypasses stroke"
+        assert "HD EXTENSION B1" in gmr.WormholeLayer.__doc__, \
+            "the wormhole layer no longer names the rule it draws under"
+        for _ml_mark in ("HD EXTENSION — B1", "HD EXTENSION — B2",
+                         "OMISSION"):
+            assert _ml_mark in gml.__doc__, _ml_mark
+        assert "maplines.py" in open(os.path.join(
+            os.path.dirname(SCREENS_DIR), "v3_projektstatus.md")).read()
+        _ml_real = (gs2.ships_raw, gs2.ship_icons, gs2.fleet_selection)
+        try:
+            gs2.ships_raw, gs2.ship_icons = _ml_raws, _ml_icons
+            gs2.fleet_selection = {"stack": -1, "ships": list(range(6)),
+                                   "selected": [False] * 6, "chain": []}
+            gm._viewctl.reset()
+            gm.update(gs2)
+            _ml_probe = pygame.Surface((app.win_w, app.win_h))
+            _ml_probe.fill((0, 0, 0))
+            gml.render_destination_lines(_ml_probe, gm._map_context(), gs2,
+                                         _ml_ships, gs2.stars, 2, None, 0)
+            _ml_lit = pygame.surfarray.array3d(_ml_probe).max(axis=2)
+            _ml_lit = _ml_lit[_ml_lit > 0]
+            assert _ml_lit.size, "no destination line drawn"
+            assert len(set(_ml_lit.tolist())) > 3, "not antialiased"
+        finally:
+            gs2.ships_raw, gs2.ship_icons, gs2.fleet_selection = _ml_real
+            gm.update(gs)
+        ok("galaxy_map map lines (one routine, maplines.stroke; the wormhole "
+           "through it; B1, B2 and the omissions marked)")
 
     # ── Struct specs promoted from unverified.py ──
     from core.structs import nebula as _neb, planet as _pln
@@ -5850,6 +5975,12 @@ def main():
         # (DEVIATION). Their check is the galaxy_map HD boxes block.
         "screens/galaxy_map/boxdraw.py": "OMISSION (decision 61)",
         "screens/galaxy_map/boxmodel.py": "DEVIATION: the original prints",
+        # ADDED 15 September 2026, brief 110 Part B (brief 121): every map
+        # line antialiased (HD EXTENSION B1), the wave's step and clock
+        # (HD EXTENSION B2), three line kinds left out (OMISSION). Their
+        # check is the galaxy_map map-lines block.
+        "screens/galaxy_map/maplines.py": "HD EXTENSION — B1",
+        "screens/galaxy_map/renderer.py": "HD EXTENSION B1",
         "core/helppopup.py": "the panel auto-sizes to its text",
         "core/zoomtables.py": "INSET_DOT_DIM",
         "screens/colony_summary/colonybuild.py": "Buy",

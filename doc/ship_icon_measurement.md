@@ -156,3 +156,53 @@ The Extension API already ships a pixel-exact 640x480 framebuffer
 Dumping one frame per zoom level from `tools/ext_diag.py` and measuring
 the sprites there would promote this whole table from derived to
 measured.
+
+## The header size the game positions with — 15 September 2026, brief 121
+
+The open point of run 114 (the "eta" label sat (+3, +3) off the point
+`SHIP_ICON_DIM` predicts), measured at the sprite before brief 110 Part B
+set its line endpoints.
+
+**What the game uses is the LBX HEADER, not the ink.**
+`SHIPS::Get_Ship_Icon_Dimensions_(index)` (ships.cpp:328-335) returns
+`animate::Get_Width_/Get_Height_` of BUFFER0.LBX entry 205 + index — always
+colour 0's entries. The destination line asks for index 3 - zoom
+(`Draw_Ship_Destination_Line_`, :535-552), an icon in space for index zoom
+(`Get_Ship_Icon_Coords_In_Space_`, :516-531), and the "eta" label uses the
+header of the owner's own entry (`Print_Eta_On_Ship_Icon_`).
+
+Headers, read with `core/lbx.py` (width x height; ink bounding box of
+frame 0 after it):
+
+```
+entry  colour  index   header    ink (x, y, w, h)
+205    0       0       11 x 11   3,3  5 x 5
+206    0       1       12 x 11   3,3  6 x 5
+207    0       2       12 x 10   2,2  8 x 6
+208    0       3       16 x 12   2,2 12 x 8
+218    3       1       12 x 11   3,3  6 x 5
+220    3       3       17 x 14   2,2 13 x 10
+```
+
+The headers differ by colour (colour 1's index 2 is 13 x 10, colours 2-7
+reach 17 x 14 at index 3), so the positioning table is colour 0's and
+nothing else: `zoomtables.SHIP_ICON_HEADER_DIM`.
+
+**Live, SAVE5 (scratch), one client, no order** (evidence `b121_icons_record.json`,
+pictures a0/a1):
+
+- zoom 2, player colour 3: entry 218 (205 + 3*4 + 1) matched the
+  framebuffer at `s_ship_icon.x/y` pixel for pixel, 30 of 30 ink pixels,
+  offset (0, 0). The green line to Dhira began at the corner plus (6, 5):
+  27 exact greens and 2 neighbours of 38 steps; from `SHIP_ICON_DIM`'s
+  9 x 8 corner, 4.
+- zoom 0 (zoom mode and a map click): entry 220 at offset (0, 0), 73 of
+  120 ink pixels — the icon stood at y = 16, above the map window's top at
+  22, clipped. The line began at plus (8, 6), half of index 3's 16 x 12:
+  56 exact greens of 74; from index 0's 11 x 11, 2.
+- The run-114 offset follows as well: 12 x 11 (colour 3's own entry at zoom
+  2) minus 9 x 8 is (+3, +3).
+
+`SHIP_ICON_DIM` still sizes the HD icon and was not changed: it is 9 x 8
+at zoom 2 against a 12 x 11 header and 6 x 5 of ink, and which of the two
+an HD icon should match is a question for Data, not a by-product of a line.
