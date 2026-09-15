@@ -830,7 +830,7 @@ files under `doc/` and are only summarised here.
 | | |
 |---|---|
 | Python | 32,960 lines across 111 modules — `find . -name '*.py'`, `__pycache__` excluded, the smoke test's 6,400 included. The previous figure here (21,642 across 94) was carried from an unstated method and could not be reproduced |
-| Smoke test | `python tools/smoke_test.py` — **179 checks**, headless |
+| Smoke test | `python tools/smoke_test.py` — **181 checks**, headless |
 | Assets | 170 MB (select_race 68, galaxy_map 51, shared 23, new_game 21, colony_summary 1) |
 | Screens in HD | 9 of ~20–22 (the GAME menu overlay, work order Stop 2, every dialog of the popup; colony summary draws list, sidebar, scan box and galaxy inset, and MOVES POPS — the first HD gesture that drives the game; planets, brief 101, lists, sorts, restricts and returns) |
 | Setup from clone | `python tools/setup.py` (deps via the system package manager) |
@@ -1170,7 +1170,7 @@ in exactly ONE bucket. The numbers below are produced by
 check asserts this list still agrees with it — the same trade the
 check count makes, for the same reason.
 
-`screens/galaxy_map/screen.py` (**554** code, 847 total), `tools/struct_probe.py` (**478** code, 753 total), `tools/colony_list_preview.py` (**403** code, 772 total), `screens/custom_race/screen.py` (**400** code, 558 total), `tools/colony_move_hd.py` (**383** code, 583 total), `core/editor/editor.py` (**359** code, 430 total), `screens/galaxy_map/renderer.py` (**335** code, 753 total), `tools/ext_diag.py` (**325** code, 473 total), `core/style.py` (**310** code, 479 total).
+`screens/galaxy_map/screen.py` (**562** code, 856 total), `tools/struct_probe.py` (**478** code, 753 total), `tools/colony_list_preview.py` (**403** code, 772 total), `screens/custom_race/screen.py` (**400** code, 558 total), `tools/colony_move_hd.py` (**383** code, 583 total), `core/editor/editor.py` (**359** code, 430 total), `screens/galaxy_map/renderer.py` (**335** code, 753 total), `tools/ext_diag.py` (**325** code, 473 total), `core/style.py` (**310** code, 479 total).
 `smoke_test.py` is exempt by nature.
 
 **TWO TOOLS JOINED THE LIST ON 8 SEPTEMBER 2026 and one thing left
@@ -3441,6 +3441,56 @@ The first package of Part A, the one everything else in A depends on.
 - **Smoke:** two checks — the box state against the five recorded lists
   (and a moved box followed), and the hit test with the guard; the check
   count is 179.
+
+### Galaxy map: HD draws the system window and the fleet box — brief 110 Part A, step 2, 15 September 2026
+
+**Brief 115** (`doc/briefs/115-*`). Design (a), Data's decision A1.
+
+- **Identity** — `screens/galaxy_map/boxmodel.py` (no pygame). The star or
+  stack is HD's own last map click that went out (A2), and a box is drawn
+  only when the live list agrees: the window stands where
+  `MAINSCR::Popup_XY_` puts it for that star or icon (mainscr.cpp:1060,
+  fleet box clamped by fleetpop.cpp:1441), and — system window — every
+  planet field lies on the orbit ellipse of one of that star's planets
+  (`GEO::_orbit_consts`, geo.cpp:5; sys.cpp:1829). The engine sorts the
+  display slots by y (sys.cpp:172, :316), so a field's ORDER says nothing
+  about its planet; the ellipse does, and the live Yian lists fit it
+  (1.015 and 0.989, the orbit-3 field being the outpost the engine opened).
+  Fleet box: one icon field per ship, at most nine. A mismatch draws
+  nothing and logs why.
+- **Texts** are HESTRNGS': "Star System %s" / "Star System Unexplored",
+  the star-class description for an unviewable system, "Wormhole links %s"
+  / "Stable Wormhole", "%s Fleet" or the monster's name, and the status
+  line "Orbiting %s" / "%d turn(s) to %s" / "ETA %d turn(s)" / Antares.
+  **DEVIATION:** the original prints the status line only with nothing
+  selected or hovered; HD cannot know the selection and prints it always.
+  The box's "N turns to" carries no 20000 condition in the source, so it
+  shows on the turn of the order; the map's "eta N" waits a turn (Part B).
+- **Drawing and input** — `screens/galaxy_map/boxdraw.py`. Boxes
+  `system_*` and `fleet_*` in boxes.json, the CLOSE label in layout.json
+  `movable_boxes`. A box sits on the side of the map the game's own
+  window is on. CLOSE and ESC send the box's close field (decision 66); a
+  planet disc sends its planet field; anything else inside is swallowed.
+  **DEVIATION:** planets in a row by orbit, ships as their map icons.
+  **OMISSION:** the system window's ship buttons, gate icons and hover
+  line; the fleet box's ALL, scroll and five order buttons; the
+  space-monster branch; and, drawn without a field, the orbit rings, the
+  asteroid belts and the colony markers.
+- **Live, SAVE5 (scratch), one connection:** HD drew "Star System Kif"
+  with its three planets matched by orbit, CLOSE restored the list
+  exactly; the scout's box read "CyberToller Fleet" / "2 turns to Dhira"
+  and ESC closed it; a planet disc opened the colony screen, and the
+  window the game reopened afterwards was drawn again through the kept
+  identity. SAVE1-9 identical, SAVE10 unchanged, no fleet order.
+- **`turns_left` (s_ship_data +109) joins the verified spec** in this
+  commit, the first that reads it (runs 113/114). `travelling_speed` (+108)
+  waits for Part B.
+- **Not built:** moving a fleet from the HD box. Decision 65 still refuses
+  the destination click; lifting it needs Data's decision on how a target
+  is chosen in the HD box (the selection is neither on the wire nor
+  settable by field id).
+- **Smoke:** two checks (identity rules against the live windows and
+  Yian's planets; drawing and the three sends); the count is 181.
 
 ## What is missing
 

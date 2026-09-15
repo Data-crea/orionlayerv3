@@ -39,6 +39,8 @@ from core.structs import nebula as nebula_struct
 from core.structs import planet as planet_struct
 from core.structs import player as player_struct
 from core.structs import ship as ship_struct
+from screens.galaxy_map import boxdraw
+from screens.galaxy_map import boxmodel
 from screens.galaxy_map import mapboxes
 from screens.galaxy_map import mapclick
 from screens.galaxy_map import ping as home_ping
@@ -467,6 +469,8 @@ class GalaxyMapScreen(ScreenBase):
             pygame.draw.circle(surface, HOVER_COLOR[:3],
                                (int(sx), int(sy)), r, 2)
             self._render_hover_name(surface, view)
+        # The movable boxes, above everything on the map (boxdraw).
+        boxdraw.render(self, surface)
         surface.set_clip(clip)
 
     def _render_sidebar(self, surface):
@@ -610,6 +614,8 @@ class GalaxyMapScreen(ScreenBase):
                 self._activate(spec["field_id"], spec["key"])
                 return None
 
+        if boxdraw.handle_click(self, screen_x, screen_y):
+            return None
         view = self._map_view()
         if view is not None and pygame.Rect(*view.box).collidepoint(
                 screen_x, screen_y):
@@ -643,6 +649,7 @@ class GalaxyMapScreen(ScreenBase):
         log.info("Map click: %s (%s)", result.what, result.detail)
         if result.send is not None and self.app.connected:
             self.app.client.inject_click(*result.send)
+            boxmodel.remember(self, result, icons, self._ships)
 
     def _activate(self, field_id, what=""):
         log.info("Action: %s (field %s)", what or field_id, field_id)
@@ -745,6 +752,8 @@ class GalaxyMapScreen(ScreenBase):
 
     def handle_key(self, key):
         if self.help_consumes_key(key):
+            return
+        if boxdraw.handle_key(self, key):
             return
         actions = self._data.get("actions", {})
         ping_key = self._ping_key()

@@ -154,5 +154,9 @@
     "enabled": true,
     "key": "home",
     "_note": "INVENTION, not a transcription: MOO2 has no home-system ping and cannot alpha-blend at all. A navigation aid for large galaxies at HD resolutions. The key is consumed by OrionLayer and never forwarded to orion2re, so it takes nothing away from the game; HOME is chosen because the original binds no such key on the galaxy map. Timing and radii live in screens/galaxy_map/ping.py."
+  },
+  "movable_boxes": {
+    "close": "Close",
+    "_note": "The system window and the fleet box, drawn by HD (brief 110 Part A step 2, screens/galaxy_map/boxdraw.py and boxmodel.py). Every other word in them is the original's, from HESTRNGS. The button's label is the one word the original draws as artwork, so it lives here (decision 15). The boxes are system_* and fleet_* in boxes.json; a box sits on the side of the map the game's own window is on."
   }
 }

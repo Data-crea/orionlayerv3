@@ -2886,6 +2886,132 @@ def main():
         ok("galaxy_map icon hit test (icon before star, point inside the "
            "icon, decision 65 guard, decision 66 no cancel under a box)")
 
+        # ── Brief 110 Part A step 2: HD draws the system window and the
+        # fleet box, and only when the live list agrees with the last HD
+        # click (decision A2). Popup_XY_ is held to the three windows
+        # measured live; Yian's two planet fields are held to the planets
+        # the engine resolves them to (field 23 opened the outpost, 239).
+        from core.game_state import PLANET_SIZE as _BX_PLANET
+        from core.structs import colony as _bx_colony
+        from screens.galaxy_map import boxdraw as gbd, boxmodel as gbm
+
+        assert gbm.popup_xy(0, 121, 79, 347, 273) == (180, 148)
+        assert gbm.fleet_xy(131, 39, 198, 216) == (329, 205)
+        assert gbm.fleet_xy(437, 183, 198, 160) == (22, 261)
+
+        def _bx_planet(star_i, orbit, colony):
+            _r = bytearray(_BX_PLANET)
+            _s.pack_into("<hhbbb", _r, 0, colony, star_i, orbit, 3, 2)
+            _r[9] = 5
+            return bytes(_r)
+
+        def _bx_ship(owner, loc, x, y, status=0):
+            _r = bytearray(_ship.SIZE)
+            _s.pack_into("<bbhhh", _r, 99, owner, status, loc, x, y)
+            return bytes(_r)
+
+        _bx_yian = bytearray(mkstar("Yian", 360, 210, 2, 1, 0, 0b1))
+        _s.pack_into("<5h", _bx_yian, 195, -1, -1, -1, 239, 240)
+        _bx_player0 = bytearray(PLAYER_SIZE)
+        _bx_player0[21:27] = b"Humans"
+        gs2 = GameState()
+        gs2.current_screen, gs2.player_num = 0, 0
+        gs2.map_scale, gs2.map_max_x, gs2.map_max_y = 36, 1518, 1200
+        # Aten in ANOTHER quadrant (native 409, 37): a star in Yian's own
+        # quadrant gets the same window, and only its planets tell it apart.
+        gs2.stars = st.parse_all([mkstar("Aten", 1400, 60, 2, 1, 0, 0b1),
+                                  mkstar("Bor", 1400, 1100, 2, 1, 0, 0b1),
+                                  bytes(_bx_yian)])
+        gs2.player_raw = [bytes(_bx_player0)] + [bytes(PLAYER_SIZE)] * 7
+        _bx_planets = [bytes(_BX_PLANET)] * 241
+        _bx_planets[239] = _bx_planet(2, 3, 54)
+        _bx_planets[240] = _bx_planet(2, 4, -1)
+        gs2.planets_raw = _bx_planets
+        _bx_col = bytearray(_bx_colony.SIZE)
+        _bx_col[6] = 1                                   # outpost, owner 0
+        gs2.colonies_raw = [bytes(_bx_colony.SIZE)] * 54 + [bytes(_bx_col)]
+        gs2.fields = _bx_fields(_bx["system"]["fields"])
+        assert mc.galaxy_to_native(360, 210, gs2) == (121, 79)
+
+        _bx_sysbox = gmb.classify(gs2.fields).system
+        _bx_m, _bx_why = gbm.system_model(
+            gs2, gbm.Identity("system", star=2), _bx_sysbox, None, False)
+        assert _bx_m is not None, _bx_why
+        assert [(p["field"], p["planet"], p["orbit"])
+                for p in _bx_m["planets"]] == [(23, 239, 3), (24, 240, 4)], \
+            _bx_m["planets"]
+        assert _bx_m["close"] == 21
+        _bx_m, _bx_why = gbm.system_model(
+            gs2, gbm.Identity("system", star=0), _bx_sysbox, None, False)
+        assert _bx_m is None and "would put it" in _bx_why, _bx_why
+        _bx_planets[239] = _bx_planet(2, 1, 54)          # wrong orbits
+        _bx_planets[240] = _bx_planet(2, 2, -1)
+        _bx_m, _bx_why = gbm.system_model(
+            gs2, gbm.Identity("system", star=2), _bx_sysbox, None, False)
+        assert _bx_m is None and "orbits" in _bx_why, _bx_why
+        _bx_planets[239] = _bx_planet(2, 3, 54)
+        _bx_planets[240] = _bx_planet(2, 4, -1)
+
+        _bx_fleetbox = gmb.classify(
+            _bx_fields(_bx["fleet_own"]["fields"])).fleet
+        gs2.ships_raw = [_bx_ship(0, 1, 300, 100)] * 4 + [_bx_ship(0, 5, 9, 9)]
+        _bx_m, _bx_why = gbm.fleet_model(
+            gs2, gbm.Identity("fleet", ship=0, icon=(131, 39)),
+            _bx_fleetbox, None)
+        assert _bx_m is not None and _bx_m["stack"] == [0, 1, 2, 3], _bx_why
+        assert _bx_m["close"] == 27
+        assert gbm.fleet_model(gs2, gbm.Identity("fleet", ship=0,
+                               icon=(400, 300)), _bx_fleetbox, None)[0] is None
+        gs2.ships_raw = [_bx_ship(0, 1, 300, 100)] * 3
+        _bx_m, _bx_why = gbm.fleet_model(
+            gs2, gbm.Identity("fleet", ship=0, icon=(131, 39)),
+            _bx_fleetbox, None)
+        assert _bx_m is None and "stack of 3" in _bx_why, _bx_why
+        gs2.ships_raw = []
+        ok("galaxy_map box identity (Popup_XY_ against the live windows, "
+           "planet fields by orbit, every mismatch refused)")
+
+        _bx_real2 = (app.client, app.connected)
+        try:
+            app.client, app.connected = _BxRec(), True
+            gm._viewctl.reset()
+            gm.update(gs2)
+            gm._box_identity = gbm.Identity("system", star=2)
+            _bx_probe = pygame.Surface((app.win_w, app.win_h))
+            _bx_probe.fill((0, 0, 0))
+            gm._render_map(_bx_probe)
+            _bx_hits = gm._box_hits
+            assert sorted(i for _, i in _bx_hits if i is not None) == \
+                [21, 23, 24], _bx_hits
+            _bx_panel = _bx_hits[0][0]
+            assert pygame.surfarray.array3d(_bx_probe)[
+                _bx_panel.x:_bx_panel.right,
+                _bx_panel.y:_bx_panel.bottom].any(), "the box drew nothing"
+            for _bx_field in (21, 23):
+                app.client.log.clear()
+                gm.handle_click(*next(r for r, i in _bx_hits
+                                      if i == _bx_field).center)
+                assert app.client.log == [("act", _bx_field)], app.client.log
+            app.client.log.clear()
+            gm.handle_key(pygame.K_ESCAPE)
+            assert app.client.log == [("act", 21)], app.client.log
+            app.client.log.clear()
+            assert gm.handle_click(_bx_panel.x + 3, _bx_panel.bottom - 3) \
+                is None and app.client.log == [], app.client.log
+            gm._box_identity = gbm.Identity("system", star=0)
+            _bx_probe.fill((0, 0, 0))
+            gm._render_map(_bx_probe)
+            assert gm._box_hits == [], "a box drawn against a wrong identity"
+            assert "OMISSION" in gbd.__doc__ and "DEVIATION" in gbd.__doc__
+            assert "DEVIATION" in gbm.__doc__
+        finally:
+            app.client, app.connected = _bx_real2
+            gm._box_identity = None
+            gm.update(gs)
+        ok("galaxy_map HD boxes (drawn when the identity holds, CLOSE, ESC "
+           "and a planet send their field, nothing else inside, nothing "
+           "drawn against a wrong identity)")
+
     # ── Struct specs promoted from unverified.py ──
     from core.structs import nebula as _neb, planet as _pln
     n = _neb.parse(bytes([0x76, 0x01, 0xAA, 0x00, 0x01]))
@@ -5523,6 +5649,12 @@ def main():
         # guard that sends no unchosen move order (DEVIATION). Its own
         # check is the galaxy_map icon hit test block.
         "screens/galaxy_map/mapclick.py": "DECISION 65",
+        # ADDED 15 September 2026, brief 110 Part A step 2: the HD boxes'
+        # layout (DEVIATION) and the fields HD leaves alone (OMISSION),
+        # and the status line HD prints regardless of the selection
+        # (DEVIATION). Their check is the galaxy_map HD boxes block.
+        "screens/galaxy_map/boxdraw.py": "OMISSION (decision 61)",
+        "screens/galaxy_map/boxmodel.py": "DEVIATION: the original prints",
         "core/helppopup.py": "the panel auto-sizes to its text",
         "core/zoomtables.py": "INSET_DOT_DIM",
         "screens/colony_summary/colonybuild.py": "Buy",

@@ -106,6 +106,7 @@ class Plan:
     what: str                 # "icon", "star", "empty", "refused", "none"
     send: tuple = None        # native (x, y) to INJECT_CLICK, or None
     detail: str = ""
+    target: int = -1          # the icon index or star index clicked
 
 
 def plan(boxes, star, icon_index, icons, owners, stars, state, game_zoom,
@@ -121,11 +122,13 @@ def plan(boxes, star, icon_index, icons, owners, stars, state, game_zoom,
     for kind in order:
         if kind == "icon" and icon_index is not None:
             point = icon_click_point(icons, owners, icon_index, game_zoom)
-            chosen = Plan("icon", point, f"icon {icon_index}")
+            chosen = Plan("icon", point, f"icon {icon_index}",
+                          target=icon_index)
             break
         if kind == "star" and star is not None:
             point = mc.galaxy_to_native(star.x, star.y, state)
-            chosen = Plan("star", point, star.name)
+            index = next((i for i, s in enumerate(stars) if s is star), -1)
+            chosen = Plan("star", point, star.name, target=index)
             break
     if chosen is None:
         chosen = Plan("empty", pointer, "empty map")

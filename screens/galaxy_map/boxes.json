@@ -243,6 +243,139 @@
         1080,
         800
       ]
+    },
+    {
+      "name": "system_box",
+      "rect": [
+        995,
+        470,
+        500,
+        460
+      ],
+      "style": {
+        "skin": "thin_border"
+      }
+    },
+    {
+      "name": "system_title",
+      "rect": [
+        1010,
+        480,
+        470,
+        44
+      ],
+      "style": {
+        "skin": "text",
+        "font_size": 22,
+        "align": "center"
+      }
+    },
+    {
+      "name": "system_view",
+      "rect": [
+        1015,
+        532,
+        460,
+        300
+      ],
+      "style": {
+        "skin": "text",
+        "font_size": 16
+      }
+    },
+    {
+      "name": "system_text",
+      "rect": [
+        1015,
+        840,
+        320,
+        40
+      ],
+      "style": {
+        "skin": "text",
+        "font_size": 16
+      }
+    },
+    {
+      "name": "system_close",
+      "rect": [
+        1350,
+        880,
+        130,
+        40
+      ],
+      "style": {
+        "skin": "text",
+        "font_size": 18,
+        "align": "center"
+      }
+    },
+    {
+      "name": "fleet_box",
+      "rect": [
+        1175,
+        560,
+        320,
+        370
+      ],
+      "style": {
+        "skin": "thin_border"
+      }
+    },
+    {
+      "name": "fleet_title",
+      "rect": [
+        1185,
+        570,
+        300,
+        40
+      ],
+      "style": {
+        "skin": "text",
+        "font_size": 22,
+        "align": "center"
+      }
+    },
+    {
+      "name": "fleet_grid",
+      "rect": [
+        1195,
+        618,
+        280,
+        230
+      ],
+      "style": {
+        "skin": "text",
+        "font_size": 16
+      }
+    },
+    {
+      "name": "fleet_status",
+      "rect": [
+        1185,
+        856,
+        300,
+        30
+      ],
+      "style": {
+        "skin": "text",
+        "font_size": 16,
+        "align": "center"
+      }
+    },
+    {
+      "name": "fleet_close",
+      "rect": [
+        1270,
+        890,
+        130,
+        34
+      ],
+      "style": {
+        "skin": "text",
+        "font_size": 18,
+        "align": "center"
+      }
     }
   ],
   "2560x1440": [
@@ -493,6 +626,139 @@
         1080,
         800
       ]
+    },
+    {
+      "name": "system_box",
+      "rect": [
+        995,
+        470,
+        500,
+        460
+      ],
+      "style": {
+        "skin": "thin_border"
+      }
+    },
+    {
+      "name": "system_title",
+      "rect": [
+        1010,
+        480,
+        470,
+        44
+      ],
+      "style": {
+        "skin": "text",
+        "font_size": 22,
+        "align": "center"
+      }
+    },
+    {
+      "name": "system_view",
+      "rect": [
+        1015,
+        532,
+        460,
+        300
+      ],
+      "style": {
+        "skin": "text",
+        "font_size": 16
+      }
+    },
+    {
+      "name": "system_text",
+      "rect": [
+        1015,
+        840,
+        320,
+        40
+      ],
+      "style": {
+        "skin": "text",
+        "font_size": 16
+      }
+    },
+    {
+      "name": "system_close",
+      "rect": [
+        1350,
+        880,
+        130,
+        40
+      ],
+      "style": {
+        "skin": "text",
+        "font_size": 18,
+        "align": "center"
+      }
+    },
+    {
+      "name": "fleet_box",
+      "rect": [
+        1175,
+        560,
+        320,
+        370
+      ],
+      "style": {
+        "skin": "thin_border"
+      }
+    },
+    {
+      "name": "fleet_title",
+      "rect": [
+        1185,
+        570,
+        300,
+        40
+      ],
+      "style": {
+        "skin": "text",
+        "font_size": 22,
+        "align": "center"
+      }
+    },
+    {
+      "name": "fleet_grid",
+      "rect": [
+        1195,
+        618,
+        280,
+        230
+      ],
+      "style": {
+        "skin": "text",
+        "font_size": 16
+      }
+    },
+    {
+      "name": "fleet_status",
+      "rect": [
+        1185,
+        856,
+        300,
+        30
+      ],
+      "style": {
+        "skin": "text",
+        "font_size": 16,
+        "align": "center"
+      }
+    },
+    {
+      "name": "fleet_close",
+      "rect": [
+        1270,
+        890,
+        130,
+        34
+      ],
+      "style": {
+        "skin": "text",
+        "font_size": 18,
+        "align": "center"
+      }
     }
   ]
 }

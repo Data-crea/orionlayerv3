@@ -112,6 +112,15 @@ SPEC = Spec("s_ship_data", SIZE, [
     ("location", 101, "i16"),
     ("x",       103, "i16"),
     ("y",       105, "i16"),
+    # VERIFIED 15 September 2026 (briefs 113/114), in the commit that
+    # first reads it (the HD fleet box's "N turns to" line): the header
+    # puts it at 109 after group_has_navigator 107 and travelling_speed
+    # 108 (orion2.h:2847-2868), and live the byte went 3 -> 2 across one
+    # played turn while the engine's own framebuffer read "eta 2",
+    # matched glyph by glyph against the player's FONTS.LBX. Offset 108
+    # is verified by the same run and joins the spec with Part B, which
+    # reads it.
+    ("turns_left", 109, "u8"),
 ], verified=True)
 
 #: s_ship_weapons (orion2.h:1723), the same two sources as the design.
