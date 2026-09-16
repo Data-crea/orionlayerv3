@@ -4060,6 +4060,24 @@ pointer is still inside — not a timed flash.
   orange with its send refused, all cleared on release, the markings).
   **191 -> 192.**
 
+### GAME menu frame against the nav bar — work order 124 F, 16 September 2026 (a measurement, no change)
+
+Since 123 the frame's slack goes below the popup. Measured on the drawn
+metal (alpha >= 16) against the galaxy map's nav boxes and the ink of their
+labels (threshold 60 and again at 10, the second so an anti-aliased edge
+cannot hide):
+
+| window | metal reaches into the nav boxes | boxes it overlaps | label ink under metal | metal's last row / labels' first ink row |
+|---|---|---|---|---|
+| 1920x1080 | 16 px (to y 985, boxes from 970) | PLANETS, FLEETS, LEADERS, RACES | 0 | 985 / 986 |
+| 2560x1440 | 23 px (to 1314-1315, boxes from 1293) | the same four | 0 | 1314 / 1315 |
+| 3840x2160 | 36 px (to 1973-1975, boxes from 1940) | the same four | 0 | 1973 / 1974 |
+
+**No label is covered, and there is no margin either:** at every size the
+metal ends on the row directly above the labels' first ink row. Not fixed,
+per the order; a font that is a pixel taller or a label moved up in F5
+would be covered.
+
 ## What is missing
 
 ### OLED floor lift and player-colour presets
