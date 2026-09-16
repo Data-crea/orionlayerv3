@@ -837,7 +837,7 @@ files under `doc/` and are only summarised here.
 | | |
 |---|---|
 | Python | 32,960 lines across 111 modules — `find . -name '*.py'`, `__pycache__` excluded, the smoke test's 6,400 included. The previous figure here (21,642 across 94) was carried from an unstated method and could not be reproduced |
-| Smoke test | `python tools/smoke_test.py` — **186 checks**, headless |
+| Smoke test | `python tools/smoke_test.py` — **187 checks**, headless |
 | Assets | 170 MB (select_race 68, galaxy_map 51, shared 23, new_game 21, colony_summary 1) |
 | Screens in HD | 9 of ~20–22 (the GAME menu overlay, work order Stop 2, every dialog of the popup; colony summary draws list, sidebar, scan box and galaxy inset, and MOVES POPS — the first HD gesture that drives the game; planets, brief 101, lists, sorts, restricts and returns) |
 | Setup from clone | `python tools/setup.py` (deps via the system package manager) |
@@ -3688,6 +3688,61 @@ the old 2322x1256 master is gone from the tree and stays in git.
 - **Smoke:** the count stays 186; the frame-cutout check, the class A
   check and the sidebar help coverage check all ran against the new
   artwork.
+
+### GAME menu: a fixed frame image around the popup — work order 122 Run 1b, decision 69, 16 September 2026
+
+**Brief 122** (`doc/briefs/122-*`). Data's `game_menu_frame.png` is
+`screens/game_menu/assets/frame.png`, byte for byte (sha256 `cb4d5ad3…`),
+and a required input in `tools/setup.py`.
+
+- **The real tool:** one hole, (115, 108, 879, 1193) in the 1108x1419
+  image — Chat's claim holds. `layout.json` `frame.opening` carries it and
+  the smoke check holds the two equal. Aspect 0.737 against the body box's
+  0.739.
+- **What changed on screen:** only the popup body. Its `thin_border`
+  outline is gone; `gmframe` scales the image with one factor so the
+  opening covers the body plus 2 ref px, centred on it, fills the opening
+  from the cockpit texture (opaque, undimmed) and draws the frame over it.
+  The buttons, slot list, settings rows and the confirmation and warning
+  panels keep `thin_border`.
+- **The anchor, from the source:** `LOADSAVE::Add_Game_Popup_Fields_`
+  (loadsave.cpp:176-293) sets `_popup_base_x/_y = 0x90, 0x19` for all
+  four in-game dialogs; `_Draw_Main_Game_Popup_` draws GAME.LBX picture 0
+  there (:1356), 279x378. Centre native (283.5, 214), which is **51.68 %
+  across and 48.0 % down the map window**, not its centre (the brief's
+  expectation) and not the window's. That proportion is applied to the
+  galaxy map's `map_area`: every overlay box moved by (-53, +10); the body
+  is (511, 66, 628, 850). `help_popup` is centred on the new map like the
+  galaxy map's own. Checked to 1 ref px by the suite.
+- **Fit, measured on drawn pixels against the scaled alpha, 1080p / 1440p
+  / 2160p:** menu, settings, load and save — 0 px outside the octagon.
+  **Confirmation and warning do NOT fit**, and nothing was shrunk:
+  CONFIRM.LBX (313 px) and WARNING.LBX (331 px) are wider than the popup
+  (279) in the original too. At 1920x1080 the confirm panel reaches x 1246
+  and the warning panel x 1277 against the opening's right edge 1141 (106
+  and 137 ref px over the metal); at 2560x1440 1661 / 1702 against 1520;
+  at 3840x2160 2493 / 2555 against 2282. The suite reports these numbers
+  every run. They are drawn over the frame with their own opaque fill, so
+  nothing is clipped, but the panel visibly lies across the right-hand
+  metal: **a clash, reported, not restyled** — Data's decision.
+- **The top rim:** at 1920x1080 the frame starts at y -16 and its metal
+  about 1-2 px above the window, because the transcribed centre is 17 px
+  above the map's.
+- **Help and hit-tests:** unchanged in code; the boxes moved as one group
+  and the GAME menu checks (help regions, the send gate, every node
+  rendering) are green against the moved boxes.
+- **Live** (one client; the game as it stood, stardate 3509.2, not a
+  fixture; SAVE7 absent, so its Load row gives the warning without
+  loading; settings left with ESC, not ACCEPT; SAVE1-9 identical, SAVE10
+  unchanged): menu, settings, load, the slot-7 warning, save and the NEW
+  confirmation at 1920x1080, 2560x1440 and 3840x2160, each beside the
+  native frame, `~/orionlayer-fixtures/evidence/work_order_16sep/1b_*`.
+  39 activations of the menu's own fields, no click or key injected.
+- **Smoke:** the body-skin check rewritten to the new rule (the body
+  wears the frame, every other panel `thin_border`), one new check (the
+  opening against the tool, loading through the resource roots, the
+  anchor, the octagon fit and the fill at three resolutions); a mutation
+  of the body by 5 px fails it. The count is 187.
 
 ## What is missing
 

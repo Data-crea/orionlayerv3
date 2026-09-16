@@ -1,9 +1,11 @@
 """Drawing for the GAME menu overlay — one function per dialog.
 
-Every panel and button is a `thin_border` box (decision 34); a panel
-with `backdrop` in its style is first filled from the shared cockpit
-texture, the same fill the help popup uses, so the popup is opaque
-without a dimmed backdrop a palette-indexed engine could not draw.
+Every panel and button is a `thin_border` box (decision 34) except
+the popup body, which wears one fixed frame image (decision 69,
+`gmframe`); a panel with `backdrop` in its style is first filled from
+the shared cockpit texture, the same fill the help popup uses, so the
+popup is opaque without a dimmed backdrop a palette-indexed engine
+could not draw.
 Rows are computed from one box and a count (decision 51) and plated
 with `draw_plate`. Every string goes through `Style.render_text`
 (decision 30); the words come from layout.json (decision 15) and the
@@ -15,7 +17,7 @@ from core import palette
 from core.hestrings import printf
 from core.structs import settings as settings_spec
 from core.textfit import wrap_text
-from screens.game_menu import gmorion, nodes
+from screens.game_menu import gmframe, gmorion, nodes
 
 COL_BUTTON = palette.require("game_menu", "button_text")
 COL_TITLE = palette.require("game_menu", "title")
@@ -89,6 +91,10 @@ def panel(screen, surface, name):
     b = box(screen, name)
     if b is None or b.screen_rect is None:
         return None
+    # The body wears Data's frame image instead of an outline (decision
+    # 69, `gmframe`); it fills its own opening, so nothing else is drawn.
+    if b.style.get("frame") and gmframe.draw(screen, surface, b.screen_rect):
+        return b
     if b.style.get("backdrop"):
         surface.blit(screen.help_backdrop(), b.screen_rect, b.screen_rect)
     b.render(surface, screen.layout, screen.style)

@@ -15203,13 +15203,21 @@ def main():
     ok("GAME menu: all six nodes render; no patch -> 'Slot N' (HD STATE), "
        "MSG_SAVE_SLOTS -> the engine's strings verbatim, colour codes cut")
 
-    # 5. THE SKINS: panels and buttons are thin_border boxes, and nothing
-    #    in the package draws a rectangle itself (decision 34).
+    # 5. THE SKINS: the body wears the frame image (decision 69) and
+    #    nothing else does; every other panel and button is a thin_border
+    #    box, and nothing in the package draws a rectangle itself
+    #    (decision 34). Rewritten 16 September 2026 when the body's
+    #    outline was replaced — the rule moved, the check did not go.
     _gm_boxes = _gm_json.load(open(os.path.join(
         SCREENS_DIR, "game_menu", "boxes.json")))["1920x1080"]
     for _b in _gm_boxes:
         _sk = _b.get("style", {}).get("skin")
-        if _b["name"] == "body" or _b["name"].endswith("_panel") or \
+        if _b["name"] == "body":
+            assert _b["style"].get("frame") is True and _sk != \
+                "thin_border", ("body", _b["style"])
+            continue
+        assert not _b.get("style", {}).get("frame"), _b["name"]
+        if _b["name"].endswith("_panel") or \
                 _b["name"].split("_")[0] in ("menu", "confirm", "load",
                                             "save") and _sk != "area":
             assert _sk == "thin_border", (_b["name"], _sk)
@@ -15218,8 +15226,125 @@ def main():
             _src = open(os.path.join(SCREENS_DIR, "game_menu", _fn),
                         encoding="utf-8").read()
             assert "draw.rect(" not in _src, f"{_fn} draws a rectangle"
-    ok("GAME menu: every panel and button is a thin_border box, no "
-       "pygame.draw.rect in the package")
+    ok("GAME menu: the body wears the frame image, every other panel and "
+       "button is a thin_border box, no pygame.draw.rect in the package")
+
+    # 5b. THE FRAME (decision 69). The opening in layout.json is the
+    #     artwork's own hole, the image comes through the resource roots,
+    #     the popup sits where the original's sits IN THE MAP WINDOW, and
+    #     every dialog's content lies inside the octagon at three
+    #     resolutions — measured on the drawn pixels against the scaled
+    #     alpha. The confirmation and warning panels are wider than the
+    #     popup in the original too (CONFIRM.LBX 313 px, WARNING.LBX 331,
+    #     the popup 279) and overhang the opening: that is REPORTED with
+    #     its numbers, Data's call, not shrunk and not passed silently.
+    import frame_holes as _gmf_fh
+    from screens.game_menu import gmframe as _gmf
+    from screens.galaxy_map import mapboxes as _gmf_mb
+    _gmf_lay = _gm_json.load(open(os.path.join(
+        SCREENS_DIR, "game_menu", "layout.json")))
+    _gmf_png = res.screen_file("game_menu", "assets", "frame.png")
+    assert _gmf_png, "screens/game_menu/assets/frame.png is missing"
+    _gmf_w, _gmf_h, _gmf_holes = _gmf_fh.find_holes(_gmf_png)
+    assert len(_gmf_holes) == 1, _gmf_holes
+    assert list(_gmf_holes[0]) == _gmf_lay["frame"]["opening"], (
+        _gmf_holes, _gmf_lay["frame"]["opening"])
+    assert [_gmf_w, _gmf_h] == _gmf_lay["frame"]["image_size"]
+    _gmf_src = open(_gmf.__file__, encoding="utf-8").read()
+    assert "asset_path(" in _gmf_src and "os.path" not in _gmf_src, \
+        "gmframe must load through the resource roots (decision 16)"
+    # The anchor: the native body's centre as a fraction of the map
+    # window (Add_Grid_Field_, the galaxy map's grid), applied to the
+    # galaxy map's own map_area box.
+    _gmf_nb = _gmf_lay["native"]["body"]
+    _gmf_g = _gmf_mb.GRID_RECT
+    _gmf_fx = ((_gmf_nb[0] + _gmf_nb[2]) / 2 - _gmf_g[0]) / (
+        _gmf_g[2] + 1 - _gmf_g[0])
+    _gmf_fy = ((_gmf_nb[1] + _gmf_nb[3]) / 2 - _gmf_g[1]) / (
+        _gmf_g[3] + 1 - _gmf_g[1])
+    _gmf_map = next(_b["rect"] for _b in _gm_json.load(open(os.path.join(
+        SCREENS_DIR, "galaxy_map", "boxes.json")))["1920x1080"]
+        if _b["name"] == "map_area")
+    _gmf_body = next(_b["rect"] for _b in _gm_boxes if _b["name"] == "body")
+    _gmf_want = (_gmf_map[0] + _gmf_fx * _gmf_map[2],
+                 _gmf_map[1] + _gmf_fy * _gmf_map[3])
+    _gmf_got = (_gmf_body[0] + _gmf_body[2] / 2,
+                _gmf_body[1] + _gmf_body[3] / 2)
+    assert all(abs(a - b) <= 1 for a, b in zip(_gmf_got, _gmf_want)), (
+        f"GAME menu body centre {_gmf_got}, the original's place in the "
+        f"map window is {_gmf_want}")
+    _gmf_nodes = ("menu", "settings", "load", "save", "confirm", "warning")
+    _gmf_over = {}
+    _gmf_real = _gmf.draw
+    for _W, _H in ((1920, 1080), (2560, 1440), (3840, 2160)):
+        _gmf_app, _ = _pv.build_screen(_W, _H)
+        _gmf_d = _gmf_app.dispatcher
+        _gmf_d.switch_to("galaxy_map")
+        _gmf_gs = _GmState()
+        _gmf_gs.current_screen = 8
+        _gmf_gs.settings_raw = _gm_live
+        _gmf_gs.fields = _gm_fields(_gm_fix["menu"])
+        _gmf_d.update_from_game(_gmf_gs)
+        _gmf_s = _gmf_d.screens["game_menu"]
+        _gmf_s.enter(_gmf_gs)
+        _gmf_br = _gm_draw.rect(_gmf_s, "body")
+        _gmf_fr, _gmf_op = _gmf.rects(_gmf_s, _gmf_br)
+        assert _gmf_op.contains(_gmf_br), (_W, _gmf_op, _gmf_br)
+        _gmf_img = pygame.transform.smoothscale(
+            pygame.image.load(_gmf_png), _gmf_fr.size)
+        _gmf_al = np.full((_H, _W), 255, dtype=np.uint8)
+        _gmf_fa = pygame.surfarray.array_alpha(_gmf_img).T
+        _gx, _gy = max(0, _gmf_fr.x), max(0, _gmf_fr.y)
+        _sx, _sy = _gx - _gmf_fr.x, _gy - _gmf_fr.y
+        _ww = min(_W - _gx, _gmf_fa.shape[1] - _sx)
+        _hh = min(_H - _gy, _gmf_fa.shape[0] - _sy)
+        _gmf_al[_gy:_gy + _hh, _gx:_gx + _ww] = \
+            _gmf_fa[_sy:_sy + _hh, _sx:_sx + _ww]
+        for _n in _gmf_nodes:
+            _gmf_gs.fields = _gm_fields(_gm_fix[_n])
+            _gmf_s.update(_gmf_gs)
+            _gmf.draw = lambda *_a: True
+            try:
+                _gmf_surf = pygame.Surface((_W, _H))
+                _gmf_surf.fill((255, 0, 255))
+                _gmf_s.render(_gmf_surf)
+            finally:
+                _gmf.draw = _gmf_real
+            _px = pygame.surfarray.array3d(_gmf_surf).transpose(1, 0, 2)
+            _content = ~((_px[:, :, 0] == 255) & (_px[:, :, 1] == 0)
+                         & (_px[:, :, 2] == 255))
+            assert _content.sum() > 2000, (_W, _n, "drew nothing")
+            _out = _content & (_gmf_al >= 16)
+            if _n in ("confirm", "warning"):
+                if _out.any():
+                    _xs = np.where(_out.any(axis=0))[0]
+                    _gmf_over.setdefault(_n, []).append(
+                        f"{_W}x{_H} {int(_out.sum())} px, x {_xs.min()}"
+                        f"..{_xs.max()} against opening right "
+                        f"{_gmf_op.right}")
+                continue
+            assert not _out.any(), (
+                f"GAME menu {_n} at {_W}x{_H}: {int(_out.sum())} px of "
+                f"content outside the frame's opening")
+            # THE FILL: the octagon is transparent, so the menu's own
+            # ground has to be under it — sampled in the drawn frame, off
+            # every box, it must not be the map underneath.
+            if _n == "menu":
+                _gmf_full = pygame.Surface((_W, _H))
+                _gmf_full.fill((255, 0, 255))
+                _gmf_s.render(_gmf_full)
+                _pt = (_gmf_op.centerx, _gmf_op.y + _gmf_op.h // 2)
+                assert _gmf_full.get_at(_pt)[:3] != (255, 0, 255), (
+                    _W, "the opening is not filled")
+    for _n in ("confirm", "warning"):
+        report(f"GAME menu {_n} panel outside the frame opening (the "
+               f"original's box is wider than its popup): "
+               + ("; ".join(_gmf_over[_n]) if _n in _gmf_over
+                  else "none"))
+    ok("GAME menu frame: opening == the artwork's one hole, loaded through "
+       "the resource roots, body centred where the original's sits in the "
+       "map window, menu/settings/load/save inside the octagon and filled "
+       "at 1080p/1440p/2160p")
 
     # 6. HELP: the four transcribed tables, 420/421 left out WITH the
     #    sliders and saying so, each region carrying its native rect.

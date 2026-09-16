@@ -94,6 +94,8 @@ REQUIRED_INPUTS = [
     (os.path.join(GM, "frame.png"), "galaxy map frame"),
     (os.path.join(ROOT, "screens", "colony_summary", "assets",
                   "frame.png"), "colony frame"),
+    (os.path.join(ROOT, "screens", "game_menu", "assets", "frame.png"),
+     "GAME menu frame (decision 69)"),
     (os.path.join(ROOT, "screens", "colony_summary",
                   "layout_reference.json"), "colony layout reference"),
     (os.path.join(GM, "icons", "_source_sheet.png"), "sidebar icon sheet"),

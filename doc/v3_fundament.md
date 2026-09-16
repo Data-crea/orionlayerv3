@@ -1318,6 +1318,65 @@ it may not be deleted because it is failing; it may be deleted when
 the thing it measures no longer exists, and then the commit says so
 and the two count documents move with it.
 
+**69. The GAME menu wears ONE FIXED FRAME IMAGE, plain-scaled, and its
+place is the original's place in the map window.** 16 September 2026,
+work order 122 Run 1b (`doc/briefs/122-*`). Numbered 69 after checking
+at the commit that carries it: the highest entry was 68, and nothing in
+the tree used 69.
+
+**What it supersedes, and only there.** The overlay drew its popup body
+as a `thin_border` box (decision 34). `screens/game_menu/assets/frame.png`
+replaces THAT outline on this screen and nothing else: the buttons, the
+slot list, the settings rows and the confirmation and warning panels
+keep their skins, and decision 34 stands everywhere else. It is decision
+55's shape, not a new one — authored artwork, committed, loaded through
+the resource roots (decision 16) and scaled as one image: no 9-slice, no
+master, no plate. The body box keeps its style name for what it is
+(`"frame": true`) and `screens/game_menu/gmframe.py` is the one place
+that draws it.
+
+**The opening is measured, not typed, and the frame goes round the
+content.** `layout.json` `frame.opening` is the image's one transparent
+hole as `tools/frame_holes.find_holes` reads it, and a smoke check holds
+the two equal. The image is scaled with ONE factor so that opening covers
+the body box plus a 2 ref px bleed, centred on it; the body box is still
+the original's rectangle, so the content decides where the frame sits
+and never the reverse. The opening's aspect is the body's to three
+decimals (0.737 against 0.739), which is why this works without a
+second placement rule.
+
+**The octagon is transparent, so the menu fills its own ground.** The
+opaque-fill rule from "A trick that works on one screen is not a rule"
+applies verbatim: the fill is the shared cockpit texture over the
+opening's bounding box, opaque, and nothing is dimmed, because a
+palette-indexed engine cannot dim what is under a popup. The chamfers
+are metal and cover the fill's corners. The check samples the drawn
+frame inside the opening.
+
+**Where it sits is TRANSCRIBED, and it is not the centre of the map.**
+`LOADSAVE::Add_Game_Popup_Fields_` (loadsave.cpp:176-293) gives all
+four in-game dialogs one fixed top-left, `_popup_base_x = 0x90`,
+`_popup_base_y = 0x19`, and `_Draw_Main_Game_Popup_` draws GAME.LBX
+picture 0 there (:1356); pictures 0, 8, 11 and 14 are 279x378 in the LBX
+headers. The popup's centre is therefore native (283.5, 214): 51.68 %
+across and 48.0 % down the map window (22,22)-(527,421), and nowhere near
+the 640x480 window's centre. The brief expected "the centre of the map
+area"; the source puts it near that and not on it, and the PROPORTION is
+what is transcribed, against the galaxy map's own `map_area` box. Every
+box of the overlay moved as one group, and a smoke check fails if the
+body's centre leaves that proportion by more than a reference pixel.
+
+**What it costs, on record.** Menu, Settings, Load and Save lie inside
+the octagon at 1080p, 1440p and 2160p, measured on the drawn pixels.
+The confirmation and the slot warning do NOT, and that is the original's
+geometry and not ours: CONFIRM.LBX is 313 and WARNING.LBX 331 native px
+wide against the popup's 279, so they overhang its right edge there too.
+At 1080p they reach 106 and 137 ref px past the opening, over the metal.
+Nothing was shrunk; the suite reports the numbers every run, and whether
+those two panels move, shrink or stay is Data's decision. At 1080p the
+frame's top rim also starts about one reference pixel above the window,
+because the transcribed centre is 17 px higher than the map's.
+
 **56. An icon beside a label is a LABEL, and its size is ours.**
 13 September 2026, Data's decisions on brief 92 Run 1. The colony
 output panel's five rows wear an icon at the left — food, industry,

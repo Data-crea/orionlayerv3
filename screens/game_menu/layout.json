@@ -1,5 +1,20 @@
 {
-  "_comment": "The GAME menu overlay (SCREEN_GAME, 8): wording, row rules and message ids. Geometry is boxes.json; every box there is the original's rectangle scaled by 2.25 into the centred 4:3 area of the reference frame, and `native` below says which rectangle, per box.",
+  "_comment": "The GAME menu overlay (SCREEN_GAME, 8): wording, row rules and message ids. Geometry is boxes.json; every box there is the original's rectangle scaled by 2.25, and `native` below says which rectangle, per box. The whole group is then placed so the body's centre sits where the original's does in the MAP WINDOW, not in the window: see `_anchor_note`.",
+  "_anchor_note": "TRANSCRIBED POSITION, 16 September 2026 (decision 69). LOADSAVE::Add_Game_Popup_Fields_ (loadsave.cpp:176-293) puts all four in-game dialogs at one fixed top-left, MOX::_popup_base_x = 0x90, _popup_base_y = 0x19 (:182-183, :205-206, :231-232; the centred branch at :225-229 is the MAIN MENU's Load), and _Draw_Main_Game_Popup_ draws GAME.LBX picture 0 there (:1356); pictures 0, 8, 11 and 14 are all 279x378, measured in the LBX headers. So the popup's centre is native (283.5, 214), which is 51.68 % across and 48.0 % down the map window (22,22)-(527,421) (Add_Grid_Field_, mainscr.cpp:1427) - near its centre and not on it, and nowhere near the 640x480 window's (320, 240). HD transcribes that PROPORTION against the galaxy map's own map_area box: in reference px the target is (90 + 0.5168 * 1422, 66 + 0.48 * 885) = (824.9, 490.8), and every box in boxes.json moved by (-53, +10) from the centred-4:3 placement, which put the body's centre at (878, 481). The smoke test holds the body's centre to the proportion within 1 ref px, so a galaxy frame that moves map_area fails it. help_popup is not part of the group: it is centred on the galaxy map's map_area, like the galaxy map's own.",
+  "frame": {
+    "image": "frame.png",
+    "image_size": [
+      1108,
+      1419
+    ],
+    "opening": [
+      115,
+      108,
+      879,
+      1193
+    ],
+    "_note": "Decision 69: Data's fixed frame image around the popup body, plain-scaled with one factor so the opening covers the body box plus gmframe.BLEED, and centred on it. `opening` is the image's one transparent hole (alpha < 16, MIN_AREA 2000) as tools/frame_holes.find_holes measures it; the smoke test holds the two equal. Its aspect, 879:1193 = 0.737, is the body's 628:850 = 0.739, so the opening is the body. The octagon's interior is transparent: gmframe fills the opening from the cockpit texture before the frame is drawn, opaque and undimmed."
+  },
   "native": {
     "body": [
       144,
