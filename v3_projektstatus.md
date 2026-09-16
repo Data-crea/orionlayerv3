@@ -4078,6 +4078,42 @@ metal ends on the row directly above the labels' first ink row. Not fixed,
 per the order; a font that is a pixel taller or a label moved up in F5
 would be covered.
 
+### Galaxy map: the research readout's source — work order 124 G, 16 September 2026 (a report, no change)
+
+HD prints `research_accumulated` RP over `+research_produced` RP; the
+original prints something else, from `MAINSCR::Print_Main_Screen_Data_`
+(mainscr_main.cpp:178-243):
+
+- breakthrough -> HESTRNGS 0x183 "Breakthrough"; no field -> 0x188 "none"
+  (HD already matches both);
+- otherwise `turns = COLCALC::Player_N_Turns_Until_Research_Complete_(plr)`
+  (colcalc.cpp:432-458): if the field's status is 3 (researched) 0; if
+  `produced == 0 && accumulated <= cost` -1; else repeat
+  `turns += 1; accumulated += produced; total += chance(accumulated,
+  produced, cost)` until `total >= 100`, where
+  `chance = (accumulated - cost) * 100 / cost` when `0 < cost < accumulated`,
+  clamped to 100 and raised to 1 if 0, else 0
+  (`Chance_For_Research_Breakthrough_Aux_`, :469-484);
+- `cost = Player_Research_Cost_(plr, field)` (:526-539) =
+  `TECHDATA::_technology_fields[field].cost` (techdata.cpp:319ff), plus
+  `hyper_advanced_tech[field - 75] * 10000` from field 75 on;
+- `turns > 0`: the chance for THIS turn as "N%" when above 0, then "@" and
+  HESTRNGS 0xE1/0xE2 "%d turn(s)", then `research_produced` and the unit;
+  `turns < 0`: "0 RP"; `turns == 0`: the chance and `research_produced`.
+  The "~" in the native picture is the "@" printed in the sidebar font.
+
+**Checked against what the screens showed:** 412 RP / 44 produced / 18
+turns (SAVE4, 3509.0) and 500 RP / 44 / 16 turns (3509.2) are both
+reproduced by that loop for any cost from 896 to 935, and the table holds
+fields at 900 (for example fields 34, 41, 45).
+
+**What HD would need, and does not have:** the cost table (a copy of
+`_technology_fields[].cost`, legitimate only with a checker against
+techdata.cpp, as `tools/monster_hull_check.py` does for the hull tables),
+the per-field status `tech_fields[]` and `hyper_advanced_tech[]` from
+`s_player` — neither is in the verified player spec (decision 23). The
+readout was not changed.
+
 ## What is missing
 
 ### OLED floor lift and player-colour presets
