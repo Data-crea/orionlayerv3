@@ -2755,6 +2755,19 @@ references in `doc/v3_orion2re_index.md`.
   hidden-field IDs.
 - **Field types are not what they look like.** Banner tiles are hidden
   fields (type 7), not radio buttons. Detect by geometry, not by type.
+- **A screen that ignores an injected click and key may still take
+  `ACTIVATE_FIELD` on its screen-filling hidden field.** Measured in work
+  order 123's eta run, 16 September 2026: the colony landing screen (screen
+  33, `COLLAND::Colony_Landing_Screen_`, a plain `Get_Input_` loop at
+  colland.cpp:203-213) listed a dummy and one type-7 field at (0, 0)-(639,
+  479) with no hotkey. An `INJECT_CLICK` at (320, 240) and an `INJECT_KEY`
+  ESC left it standing, each checked on the framebuffer; `ACTIVATE_FIELD 1`
+  ended it, and the "just colonized" message box after it (a full-screen
+  type-7 field with hotkey ESC) and the turn summary's CLOSE went the same
+  way. Why the injected input is not taken is NOT established. **The GNN
+  screen of work order 122** (screen 0 with the same two-field list, which
+  took neither a click nor ESC) **is inferred to be the same case, not
+  confirmed**: it was not re-tested with an activation.
 - `inject_key(ESC)` can cascade across sub-screens.
 - **The server only talks inside an input loop.** `ext::Tick()` is
   called from `fields::Get_Input_()`, so galaxy generation, turn
