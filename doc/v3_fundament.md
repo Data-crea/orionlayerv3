@@ -2633,6 +2633,16 @@ game is running its input loop and the client is the slow side.
 `InjectionChain` therefore reports state/s, visual/s and KB/s beside
 the elapsed time, and `GameClient` keeps monotonic counters for it.
 
+**An injected click on a live game is followed by a picture before the
+next one.** Read the framebuffer after every click and decide the next
+click from what it shows; two clicks without a picture between them are a
+blind sequence, and the game may have moved under the second — a dialog
+opened, a confirmation appeared, a turn advanced. Source: work order 122,
+16 September 2026, where a loop clicked CLOSE at a fixed native point until
+the map came back, a click turned a colony-base choice into "Really trash
+your colony base for 100BC?", and the colony base of the loaded scratch game
+was scrapped (in memory; no save file changed) before anybody looked.
+
 **A permanent smoke test pays for itself immediately.** Run it after
 every step, not only at the end — a change touching six files breaks
 screen loading in a way the test catches in seconds.

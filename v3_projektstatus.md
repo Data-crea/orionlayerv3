@@ -3925,6 +3925,17 @@ exact.
 - **Smoke:** the frame check asserts both (metal row >= 0, opening top =
   body top - bleed) at three resolutions. The count stays 190.
 
+### Live protocol: one picture per click; the scratch saves' scout — work order 123 item 3, 16 September 2026
+
+- **Fundament, Diagnosis:** "An injected click on a live game is followed by
+  a picture before the next one", beside "A wait needs its traffic", with
+  122's scrapped colony base as its source.
+- **Scratch-save fact, SAVE4 / SAVE5:** the Scout (ship 10) stands at
+  **Zin** (star 6), not at Sol, bound for Dhira. A star click on the star
+  the stack stands at is an order with `turns_left` 0 — location 6, status
+  0 — and cancels the Dhira order (`Make_Ships_Move_To_`,
+  shipmove.cpp). Measured live in work order 122.
+
 ## What is missing
 
 ### OLED floor lift and player-colour presets
