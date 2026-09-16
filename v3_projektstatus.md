@@ -837,7 +837,7 @@ files under `doc/` and are only summarised here.
 | | |
 |---|---|
 | Python | 32,960 lines across 111 modules — `find . -name '*.py'`, `__pycache__` excluded, the smoke test's 6,400 included. The previous figure here (21,642 across 94) was carried from an unstated method and could not be reproduced |
-| Smoke test | `python tools/smoke_test.py` — **192 checks**, headless |
+| Smoke test | `python tools/smoke_test.py` — **193 checks**, headless |
 | Assets | 170 MB (select_race 68, galaxy_map 51, shared 23, new_game 21, colony_summary 1) |
 | Screens in HD | 9 of ~20–22 (the GAME menu overlay, work order Stop 2, every dialog of the popup; colony summary draws list, sidebar, scan box and galaxy inset, and MOVES POPS — the first HD gesture that drives the game; planets, brief 101, lists, sorts, restricts and returns) |
 | Setup from clone | `python tools/setup.py` (deps via the system package manager) |
@@ -4178,6 +4178,32 @@ slot row's detail line at 1080p, 14 px of ink.
   two 1080p pictures show the main-menu artwork behind the frame. After one
   ESC to the map everything is as intended; the 1080p menu and Settings were
   retaken that way.
+
+### GAME menu: the frame missing on the first opening — fixed, 16 September 2026
+
+**Found by Data in the running tree at abcbab0:** the GAME menu drew its
+opaque fill and no frame. **Cause:** `GameMenuScreen.enter` called
+`super().enter()` — which reloads the boxes and seats them
+(`gmframe.seat`) — BEFORE it loaded `layout.json` into `self.words`. On the
+first entry `seat` found no `frame` block, so there was no placement:
+`gmframe.draw` returned False, `gmdraw.panel` fell back to the fill, and the
+boxes stayed at the file's unscaled positions. A second entry (the menu
+opened again, a resolution change) had the words and showed everything.
+Blit order (fill, then frame) and the scale target (the placement's frame
+rect) were right; they were never reached.
+
+**Why nothing caught it:** every frame check, and every live run, entered
+the overlay at least twice (`update_from_game` plus an explicit `enter`,
+repeated openings, resolution changes), and the checks measured geometry,
+not drawn metal.
+
+- **Fix:** the words are loaded before `super().enter()`.
+- **Smoke:** one new check — a fresh app, the overlay opened ONCE through
+  the dispatcher, rendered, and the drawn pixels compared with the scaled
+  frame image wherever it is opaque (alpha >= 250, since `smoothscale` tops
+  out at 253), 98 % required at 1080p and 1440p. It fails with the old order
+  (no placement on the first opening) and with the image blit removed
+  (0 of 145230 pixels). **192 -> 193.**
 
 ## What is missing
 

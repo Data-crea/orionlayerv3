@@ -84,9 +84,14 @@ class GameMenuScreen(ScreenBase):
     # ── Lifecycle ─────────────────────────────────────────
 
     def enter(self, game_state=None):
-        super().enter(game_state)
+        # THE WORDS FIRST: `super().enter` reloads the boxes, and seating them
+        # (`gmframe.seat`) reads `frame` out of layout.json. Loaded after, the
+        # FIRST entry found no frame, left the menu unplaced and drew the fill
+        # without the artwork; only a second entry showed it (found live,
+        # 16 September 2026, after work order 125).
         self.words = self.app.res.load_json(
             "screens/game_menu/layout.json", {}) or {}
+        super().enter(game_state)
         self.hstrings = getattr(self.app, "hstrings", None)
         if self.hstrings is None:
             settings = getattr(self.app, "settings", {}) or {}
