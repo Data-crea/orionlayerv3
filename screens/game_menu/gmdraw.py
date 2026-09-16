@@ -157,9 +157,16 @@ def render(screen, surface):
 
 
 def _menu(screen, surface):
+    """The menu, and the menu UNDER a confirmation: the original keeps the
+    popup drawn behind `Confirmation_Box_` (it is drawn at 0xa1, 0x75 over
+    the popup's own picture, gendraw.cpp:180), while the confirmation's
+    field list carries only YES and NO — so which buttons stand is taken
+    from the menu's own last list (multiplayer has no LOAD or NEW)."""
     panel(screen, surface, "body")
+    under = screen.node != nodes.MENU
     for name, key in screen.BUTTONS[nodes.MENU]:
-        if screen.present(nodes.MENU, key):
+        if (key in screen.menu_keys) if under else screen.present(nodes.MENU,
+                                                                   key):
             button(screen, surface, name,
                    word(screen, "menu", name.split("_", 1)[1]))
 

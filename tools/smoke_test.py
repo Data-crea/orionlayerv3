@@ -15319,6 +15319,9 @@ def main():
     from core.structs import settings as _gm_set
     from screens.game_menu import gmdraw as _gm_draw, nodes as _gm_nodes
 
+    def _gmd_word(_scr, _k):
+        return _gm_draw.word(_scr, "menu", _k)
+
     _gm_fix = _gm_json.load(open(os.path.join(
         os.path.dirname(SCREENS_DIR), "tools", "game_menu_fields.json")))
 
@@ -15398,6 +15401,18 @@ def main():
             _gm_scr.update(_gm_gs)
             _gm_scr.render(surf)
         assert "Slot 10" in _gm_said, "no HD STATE slot label drawn"
+        # UNDER A CONFIRMATION the menu stays drawn, as the original keeps
+        # the popup behind Confirmation_Box_ (work order 124 D): its buttons
+        # come from the menu's last list, not the confirmation's.
+        _gm_gs.fields = _gm_fields(_gm_fix["menu"])
+        _gm_scr.update(_gm_gs)
+        _gm_gs.fields = _gm_fields(_gm_fix["confirm"])
+        _gm_scr.update(_gm_gs)
+        _gm_said.clear()
+        _gm_scr.render(surf)
+        for _gm_w in ("save", "load", "settings", "return"):
+            assert _gmd_word(_gm_scr, _gm_w) in _gm_said, (
+                f"menu button {_gm_w} missing under the confirmation")
         _gm_said.clear()
         _gm_rec = bytes([0, 0]) + b"\x03Test Save\x01".ljust(37, b"\0") + \
             b"Stardate:3500.0".ljust(25, b"\0") + \

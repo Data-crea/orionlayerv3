@@ -3898,8 +3898,8 @@ body horizontally, vertical centre kept. Marked in `gmframe.py`,
   Load, slot-7 warning, after it, after CANCEL at 1920x1080, 2560x1440 and
   3840x2160 beside the native frame,
   `~/orionlayer-fixtures/evidence/work_order_123/`.
-- **Seen, not part of this item:** under the confirmation HD draws the
-  popup body without the menu's buttons (`present` asks the confirmation's
+- **Seen, not part of this item** *(the first fixed by work order 124 D)*:
+  under the confirmation HD draws the popup body without the menu's buttons (`present` asks the confirmation's
   own field list, which does not carry them), where the original shows the
   menu underneath; and the warning's text is the HD STATE line until the
   slot patch is in.
@@ -3965,6 +3965,23 @@ and Sol.
   whole-screen hidden field, which is what finished this run; 122's GNN
   screen was probably the same case and was not retried. No code change was
   needed; `mapeta` is unchanged.
+
+### GAME menu: the menu stays drawn under the confirmation — work order 124 D, 16 September 2026
+
+**Brief 124** (`doc/briefs/124-*`). The original draws `Confirmation_Box_`
+over the popup's own picture (gendraw.cpp:180) and the menu stays visible
+behind it; HD drew the body alone, because `present` asked the
+confirmation's field list, which carries only YES and NO. The screen now
+keeps the menu's buttons as its last MENU list had them (`menu_keys`, so a
+multiplayer menu without LOAD and NEW stays without them) and `gmdraw._menu`
+draws those under the box.
+
+- **Smoke:** the node-render check asserts the four menu words are drawn
+  under the confirmation; the old rule fails it. Count stays 190.
+- **Live** (Data's OrionLayer closed first; the game was found with the GAME
+  menu open; SAVE4 reloaded through it; a picture after every click; SAVE1-9
+  identical, SAVE10 unchanged): NEW confirmation at 1920x1080 and 2560x1440
+  beside the native frame, `~/orionlayer-fixtures/evidence/work_order_124/D_*`.
 
 ## What is missing
 

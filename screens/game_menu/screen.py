@@ -77,6 +77,7 @@ class GameMenuScreen(ScreenBase):
         self.hstrings = None
         self._sent = None
         self.save = SaveEditor(self)
+        self.menu_keys = set()  # the menu's buttons, as its last list had them
 
     # ── Lifecycle ─────────────────────────────────────────
 
@@ -90,6 +91,7 @@ class GameMenuScreen(ScreenBase):
             self.hstrings = HStrings(settings.get("language", "en"))
             self.app.hstrings = self.hstrings
         self.node = self.under = self.pending = self.last_slot = None
+        self.menu_keys = set()
         self._sent = None
         self.flags = self._initial_flags(game_state)
         self.save.reset()
@@ -121,6 +123,9 @@ class GameMenuScreen(ScreenBase):
         if self.flags is None:
             self.flags = self._initial_flags(game_state)
         node = nodes.classify(game_state.fields)
+        if node == nodes.MENU:
+            self.menu_keys = {key for _, key in self.BUTTONS[nodes.MENU]
+                              if self.present(nodes.MENU, key)}
         if node != self.node:
             if node in (nodes.MENU, nodes.SETTINGS, nodes.LOAD, nodes.SAVE):
                 self.under = node
