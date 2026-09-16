@@ -3728,7 +3728,7 @@ and a required input in `tools/setup.py`.
   metal: **a clash, reported, not restyled** — Data's decision.
 - **The top rim:** at 1920x1080 the frame starts at y -16 and its metal
   about 1-2 px above the window, because the transcribed centre is 17 px
-  above the map's.
+  above the map's. *(Fixed by work order 123 item 2, below.)*
 - **Help and hit-tests:** unchanged in code; the boxes moved as one group
   and the GAME menu checks (help regions, the send gate, every node
   rendering) are green against the moved boxes.
@@ -3903,6 +3903,27 @@ body horizontally, vertical centre kept. Marked in `gmframe.py`,
   own field list, which does not carry them), where the original shows the
   menu underneath; and the warning's text is the HD STATE line until the
   slot patch is in.
+
+### GAME menu: the frame's top edge inside the window — work order 123 item 2, 16 September 2026
+
+**The expression was the scale factor's slack, not a rounding.**
+`gmframe.rects` scales with `s = max(want_w / ow, want_h / oh)`; the
+opening (879:1193) is a hair narrower than body + bleed, so the WIDTH term
+wins and the opening is 3.8 / 5.0 / 7.5 px taller than the body needs at
+1080p / 1440p / 2160p. `open_y = body.centery - open_h / 2` split that
+slack, half above the body, and the 88 image px of metal over the opening
+then started at window y -1.6 / -1.8 / -2.2. The anchor arithmetic was
+exact.
+
+- **Fix:** `open_y = body.y - bleed`. The width term stays (the scaled
+  dialogs span the body's width and need the side bleed: with the height
+  term instead, the confirmation and warning had 284-649 px on the rim);
+  the slack goes below the body. The body — the transcribed anchor — does
+  not move.
+- **Measured:** first frame row with alpha >= 16 at window y 0 / 1 / 1;
+  all six dialogs still 0 px outside the opening.
+- **Smoke:** the frame check asserts both (metal row >= 0, opening top =
+  body top - bleed) at three resolutions. The count stays 190.
 
 ## What is missing
 

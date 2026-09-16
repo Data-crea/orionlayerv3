@@ -1377,8 +1377,10 @@ those two panels move, shrink or stay is Data's decision. **Amended by work
 order 123: Data decided they are scaled into the opening — one factor per
 box, the popup's width over the box's, rects and fonts alike, centred on the
 popup — an HD DEVIATION, and every dialog is now held to the octagon.** At 1080p the
-frame's top rim also starts about one reference pixel above the window,
-because the transcribed centre is 17 px higher than the map's.
+frame's top rim also started about one reference pixel above the window —
+corrected by work order 123: the scale factor takes the width term, the
+opening came out a few pixels taller than the body needs and half of that
+went above it; the slack now goes below the body.
 
 **56. An icon beside a label is a LABEL, and its size is ours.**
 13 September 2026, Data's decisions on brief 92 Run 1. The colony

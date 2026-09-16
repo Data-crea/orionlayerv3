@@ -53,7 +53,16 @@ def rects(screen, body):
     s = max(want_w / ow, want_h / oh)
     open_w, open_h = ow * s, oh * s
     open_x = body.centerx - open_w / 2
-    open_y = body.centery - open_h / 2
+    # THE SLACK GOES DOWN, NOT HALF UP (work order 123). The opening is
+    # 879:1193, a hair narrower than the body plus bleed, so `max` takes the
+    # WIDTH term and the opening comes out 3.8 / 5.0 / 7.5 px taller than the
+    # body needs at 1080p / 1440p / 2160p. Centred, half of that went above
+    # the body, and the 88 image px of metal over the opening then started
+    # 1.6 / 1.8 / 2.2 px above the window. The width term stays — the scaled
+    # dialogs span the body's width and need the bleed at the sides — and the
+    # opening's top edge sits exactly `bleed` above the body instead, so the
+    # body, which is the transcribed anchor, does not move.
+    open_y = body.y - bleed
     frame = pygame.Rect(round(open_x - ox * s), round(open_y - oy * s),
                         round(img_w * s), round(img_h * s))
     opening = pygame.Rect(int(open_x), int(open_y),

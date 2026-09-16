@@ -15507,6 +15507,13 @@ def main():
             pygame.image.load(_gmf_png), _gmf_fr.size)
         _gmf_al = np.full((_H, _W), 255, dtype=np.uint8)
         _gmf_fa = pygame.surfarray.array_alpha(_gmf_img).T
+        # THE TOP EDGE (work order 123): the metal's first row inside the
+        # window, the opening's top edge exactly the bleed above the body.
+        _gmf_top = _gmf_fr.y + int(np.where((_gmf_fa >= 16).any(axis=1))[0][0])
+        assert _gmf_top >= 0, (_W, "frame metal starts above the window",
+                               _gmf_top)
+        assert abs(_gmf_op.y - (_gmf_br.y - _gmf.BLEED * _gmf_s.layout.scale)
+                   ) <= 1, (_W, _gmf_op, _gmf_br)
         _gx, _gy = max(0, _gmf_fr.x), max(0, _gmf_fr.y)
         _sx, _sy = _gx - _gmf_fr.x, _gy - _gmf_fr.y
         _ww = min(_W - _gx, _gmf_fa.shape[1] - _sx)
