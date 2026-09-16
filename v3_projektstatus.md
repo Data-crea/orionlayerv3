@@ -1,6 +1,6 @@
 # OrionLayer v3 — Project Status
 
-Updated: 13 September 2026
+Updated: 16 September 2026
 
 **How to read the date above.** The header names the day this file
 was last edited; the "This session (…)" paragraphs below it run
@@ -12,6 +12,13 @@ carrying entries dated 9 September inside it. **The convention is
 right and the header had gone stale** — resolved 10 September 2026
 by dating the header to the edit and giving this session its
 paragraph, below, so the two agree again.
+
+This session (16 September 2026, work order 122): **Data's two new
+frames and the three items of 15 September**, one commit per item so
+each reverts alone. The sections are at the end of "What works",
+from "Galaxy map: frame v2" on. (The lead paragraphs for 14 and
+15 September were never written; those sessions' sections are
+there too, dated.)
 
 This session (13 September 2026, briefs 95/96), last: **the colony
 list wears Data's palette, RETURN is the sort keys' size, and the scan
@@ -1170,7 +1177,7 @@ in exactly ONE bucket. The numbers below are produced by
 check asserts this list still agrees with it — the same trade the
 check count makes, for the same reason.
 
-`screens/galaxy_map/screen.py` (**570** code, 866 total), `tools/struct_probe.py` (**478** code, 753 total), `tools/colony_list_preview.py` (**403** code, 772 total), `screens/custom_race/screen.py` (**400** code, 558 total), `tools/colony_move_hd.py` (**383** code, 583 total), `core/editor/editor.py` (**359** code, 430 total), `screens/galaxy_map/renderer.py` (**336** code, 758 total), `tools/ext_diag.py` (**325** code, 473 total), `core/style.py` (**310** code, 479 total).
+`screens/galaxy_map/screen.py` (**571** code, 874 total), `tools/struct_probe.py` (**478** code, 753 total), `tools/colony_list_preview.py` (**403** code, 772 total), `screens/custom_race/screen.py` (**400** code, 558 total), `tools/colony_move_hd.py` (**383** code, 583 total), `core/editor/editor.py` (**359** code, 430 total), `screens/galaxy_map/renderer.py` (**336** code, 758 total), `tools/ext_diag.py` (**325** code, 473 total), `core/style.py` (**310** code, 479 total).
 `smoke_test.py` is exempt by nature.
 
 **TWO TOOLS JOINED THE LIST ON 8 SEPTEMBER 2026 and one thing left
@@ -3612,6 +3619,76 @@ orion2re tree at `~/orion2re` is patched: a permanent change.
 - **Smoke:** three checks (who gets a line and where it starts; the wave;
   one routine and the markings); the count is 186.
 
+### Galaxy map: frame v2 installed, the boxes inside its cutouts re-derived — work order 122 Run 1a, 16 September 2026
+
+**Brief 122** (`doc/briefs/122-*`). `screens/galaxy_map/assets/frame.png`
+is Data's `galaxy_map_frame_v2.png`, byte for byte (sha256 `4e2aca76…`);
+the old 2322x1256 master is gone from the tree and stays in git.
+
+- **The real tool, before `--write`:** `tools/frame_holes.py` finds **10
+  holes** in the 1706x922 image (alpha < 16, MIN_AREA 2000) — Chat's count
+  holds. The galaxy rule names them without ambiguity: the largest is the
+  map, the topmost of the rest the title, two right of the map (sidebar
+  above TURN), six in the bottom row by x.
+
+  | box | old image px (2322x1256) | old ref | new image px (1706x922) | new ref |
+  |---|---|---|---|---|
+  | map_area | 129, 105, 1691, 988 | 105, 88, 1402, 854 | 82, 58, 1260, 752 | 90, 66, 1422, 885 |
+  | title (GAME) | 882, 21, 548, 53 | 727, 16, 457, 50 | 548, 2, 337, 51 | 615, 0, 383, 64 |
+  | sidebar | 1872, 131, 303, 758 | 1546, 111, 255, 656 | 1394, 77, 213, 723 | 1567, 88, 244, 851 |
+  | nav_turn | 1870, 921, 307, 171 | 1544, 790, 258, 151 | 1419, 840, 176, 42 | 1595, 982, 202, 53 |
+  | nav_colonies | 143, 1126, 253, 44 | 116, 966, 213, 42 | 94, 830, 186, 39 | 104, 970, 213, 50 |
+  | nav_planets | 444, 1126, 258, 44 | 365, 966, 217, 42 | 308, 830, 187, 39 | 345, 970, 214, 50 |
+  | nav_fleets | 752, 1126, 252, 43 | 620, 966, 212, 41 | 522, 830, 187, 39 | 585, 970, 214, 50 |
+  | nav_leaders | 1051, 1126, 263, 43 | 867, 966, 221, 41 | 737, 830, 188, 39 | 827, 970, 216, 50 |
+  | nav_races | 1365, 1126, 253, 44 | 1127, 966, 213, 42 | 954, 830, 190, 39 | 1072, 970, 218, 50 |
+  | nav_info | 1666, 1126, 229, 44 | 1376, 966, 193, 42 | 1180, 830, 186, 39 | 1326, 970, 213, 50 |
+
+  `layout.json` `frame.image_size` and `frame.title_rect` follow (the
+  smoke check compares both against the tool).
+- **Boxes inside cutouts, in BOTH lists (1920x1080, 2560x1440; there is
+  no empty list):**
+  - `sb_*` — re-derived from the new height, not shifted: inset 10 left
+    and right, the old gap-to-height ratio 16.4:93, and top and bottom
+    inset `pad_y + 1`. Six rows of 121 at a pitch of 142.05 from y 98;
+    text 132 wide, gap 6, icon 86 (the old 138/6/91 scaled by 224/235).
+  - `help.json` `pad_y` 7 → **9**: at 7 the right-click regions covered
+    95.6 % of the column against the original's 97.0 % and the smoke check
+    failed; 9 is again the largest pad that stays inside the cutout
+    (89..938 in 88..939), gaps 2-3 as before. The note and the stardate
+    region's numbers are rewritten.
+  - the system window and fleet box groups sat 12 ref px inside the OLD
+    map's right and bottom edges (1495 / 930 against 1507 / 942), which is
+    the gap `boxdraw._placed` mirrors on the other sides: both groups move
+    by (+5, +9). `help_popup` is centred on the new map, (261, 108).
+- **GAME centred by ink.** The label was centred by the font's line box
+  and sat 3 / 5 / 5.5 px above the hexagon's centre at 1080p / 1440p /
+  2160p; `_render_title` now centres the ink bounding rect in
+  `title_rect`, 1 px or less at all three. The hexagon is ~4.5 ref px
+  right of the map's centre in the artwork (hole centre x 716 image px
+  against the map's 712), and the word follows the hole.
+- **Nothing else derives from the old frame:** grep for 2322 / 1256 and
+  for the old sidebar and map literals — only the two `layout.json` keys
+  above and the boxes. `boxmodel.py` and `mapboxes.py` work in native
+  640x480 coordinates.
+- **Fit, measured against the frame's alpha** (ink of every string, all
+  three resolutions; 2160p uses the 2560x1440 list): no glyph under alpha
+  ≥ 16. Nav labels 13 / 17 / 25 px of ink in holes 45 / 60 / 90 px tall,
+  clearance top/bottom 13-18 / 18-25 / 29-36; TURN 18 / 24 / 36 px ink,
+  13-18 / 16-24 / 25-35. The nav and TURN labels are still centred by line
+  box and sit 2.5-5 px high — they fit, and were not changed.
+- **Live** (one client, Data's closed; the game as it stood, stardate
+  3509.2, 54 stars, not a fixture; no send; SAVE1-9 identical, SAVE10
+  unchanged): `~/orionlayer-fixtures/evidence/work_order_16sep/1a_galaxy_*`
+  at 1920x1080, 2560x1440 and 3840x2160 beside the native frame. The
+  sidebar readouts agree with the original's (157 BC +14, -3 (6), +2,
+  +12 (15)). **One difference seen and not touched:** research reads
+  "500 RP / +44 RP" in HD where the original prints "~16 turns / 44 RP".
+- **The frame blob is 2.1 MB** against the old 0.7 MB.
+- **Smoke:** the count stays 186; the frame-cutout check, the class A
+  check and the sidebar help coverage check all ran against the new
+  artwork.
+
 ## What is missing
 
 ### OLED floor lift and player-colour presets
@@ -3746,8 +3823,9 @@ orion2re tree at `~/orion2re` is patched: a permanent change.
   `frame.png`; recorded in `help.json` under `_omitted` rather than
   left silently absent.
 - **The sidebar help regions are padded vertically, not
-  horizontally.** The box union spans 1556–1791 inside a `sidebar`
-  cutout of 1546–1801, so about 10 reference pixels down each side of
+  horizontally.** The box union spans 1577–1801 inside a `sidebar`
+  cutout of 1567–1811 (galaxy frame v2, 16 September 2026; it was
+  1556–1791 in 1546–1801), so about 10 reference pixels down each side of
   the column still answer a right click with nothing. The same
   `pad_y` mechanism would take a `pad_x`; the vertical strips were
   the ones worth 12.8 % of the column, these are worth 8 % of its

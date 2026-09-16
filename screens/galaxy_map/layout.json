@@ -3,14 +3,14 @@
   "frame": {
     "image": "frame.png",
     "image_size": [
-      2322,
-      1256
+      1706,
+      922
     ],
     "title_rect": [
-      727,
-      16,
-      457,
-      50
+      615,
+      0,
+      383,
+      64
     ],
     "title_font": 30,
     "_note": "The cockpit frame is one PNG with transparent cutouts, stretched over the whole 1920x1080 reference area. Every box in boxes.json is derived from those cutouts by tools/frame_holes.py (--write regenerates boxes.json). Do not move the map/sidebar/nav boxes by hand: they would leave their cutout and be covered by the frame. title_rect is the title cutout in reference pixels. The frame is drawn ABOVE all content, so the map may bleed a few pixels under the rim.",

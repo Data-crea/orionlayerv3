@@ -400,8 +400,16 @@ class GalaxyMapScreen(ScreenBase):
         font = self.style.get_font(self.layout.font_size(
             cfg.get("title_font", 30)))
         text = font.render(title.upper(), True, TITLE_COLOR[:3])
-        surface.blit(text, (x + (w - text.get_width()) // 2,
-                            y + (h - text.get_height()) // 2))
+        # CENTRED BY INK, NOT BY THE FONT'S LINE BOX (galaxy frame v2,
+        # 16 September 2026). The line box carries the descent, so an
+        # all-caps word centred by it sat 3 to 5.5 px ABOVE the centre
+        # of the hexagon hole at 1080p..2160p. `title_rect` is the hole
+        # plus a symmetric bleed, so its centre is the hole's; the hole
+        # itself sits ~4.5 ref px right of the map's centre in the
+        # artwork, and the word follows the hole, not the map.
+        ink = text.get_bounding_rect()
+        surface.blit(text, (x + (w - ink.w) // 2 - ink.x,
+                            y + (h - ink.h) // 2 - ink.y))
 
     def _render_map(self, surface):
         ctx = self._map_context()
