@@ -119,7 +119,7 @@ planets (brief 101: list, sort, the five restrictions and RETURN
 wired; sending ships is not built, and the range restriction is a
 marked gap in the HD list), and the GAME menu overlay
 (`screens/game_menu/screen.py`: the whole tree behind the galaxy
-map's GAME button — slot names wait for `doc/ext_save_slots.patch`,
+map's GAME button — slot names from `doc/ext_save_slots.patch` (applied),
 the volume bars are built from work order 124, decisions 59-62).
 Screens without an HD version fall back to the original framebuffer,
 so the game is always playable.

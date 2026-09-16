@@ -35,7 +35,7 @@ section for what was found where.
 | 11 | `COLONY::Colony_Has_Natives_` tests nibble **8** (android), not 9 (native) | **Fix** — reproducible in a named save | Nothing for us; for the game, the occupation-policy popup is offered to the wrong colonies |
 | 12 | A pop move has no command: it has to be a click choreography into the game's own list window | **Request**, and **patched locally** 10 September 2026 (`doc/ext_move_pop.patch`), **VERIFIED LIVE** the same day; open upstream | Without it a move costs four snapshot round trips instead of one — 725 ms against 55 ms measured — and every one of them is a click that can land on the wrong row |
 | 13 | The Planets screen's five restriction toggles (`PLNTSUM::_filter_out_*`) are not in the snapshot | **Request** | HD cannot know which filters the game already has on; seen live 13 September 2026 — the range toggle was on before the HD screen opened, and the two lists disagreed |
-| 14 | The GAME popup's save slot list (names, stardates, dates, status, type) is not on the wire | **Request**, patch written 14 September 2026 (`doc/ext_save_slots.patch`), **reported, NOT applied**; re-checked 16 September: still needed, still applies | The HD Load and Save dialogs show slot numbers only; reading SAVEn.GAM from a folder of our own is refused (fundament 60) |
+| 14 | The GAME popup's save slot list (names, stardates, dates, status, type) is not on the wire | **Applied** 16 September 2026 by Data (`doc/ext_save_slots.patch`), confirmed live the same evening; required by `tools/version_check.py`; open upstream | The HD Load and Save dialogs show slot numbers only; reading SAVEn.GAM from a folder of our own is refused (fundament 60) |
 | 15 | A scroll field's value can only be set by the pointer | **Answered 16 September 2026**: with open fix 3 applied an injected click sets it (measured live); no request | Nothing while open fix 3 is applied; the HD volume bars depend on it |
 | 16 | Save dates print the year as `tm_year`: 126 | **Observation** | Nothing; HD shows what the engine formats |
 | 17 | The Load dialog's first visit prints dates without a month | **Observation** | Nothing; HD shows what the engine formats |
@@ -1307,6 +1307,19 @@ why, and the save name field starts empty.
 - **The patch still applies** to the current tree, which now carries open
   fixes 20 and 21 as well: `git apply --check` passes on both files
   (offsets 60 and 114 lines), nothing written.
+
+### APPLIED — 16 September 2026, confirmed live
+
+Data applied `doc/ext_save_slots.patch` to `~/orion2re` and rebuilt
+(preset linux-debug). Live, with SAVE4 loaded and the GAME menu's Load
+dialog open: `MSG_SAVE_SLOTS` arrived with `screen_data` 2 and the ten
+descriptions exactly as the native dialog prints them ("Darlok's colony
+destroyed" … "... empty slot ..." … "(Auto Save)"), the HD rows drew them
+with their stardates and dates, and in the Save dialog (`screen_data` 3) a
+click on a valid row started the name edit with that row's name, sending
+nothing. The main menu's own Load dialog gets no block — the patch sends on
+SCREEN_GAME only, and that dialog has no HD version. `tools/version_check.py`
+now requires the patch.
 
 ## 15. A scroll field's value can only come from the pointer — a question
 

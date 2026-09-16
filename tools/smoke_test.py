@@ -15384,8 +15384,10 @@ def main():
     ok("GAME menu: overlay opens over the galaxy map at screen 8, "
        "undimmed, and closes when the game leaves it")
 
-    # 4. EVERY NODE RENDERS, without the patch the rows are the HD STATE
-    #    ("Slot N"), with MSG_SAVE_SLOTS the engine's strings verbatim.
+    # 4. EVERY NODE RENDERS. With MSG_SAVE_SLOTS (open fix 14, applied
+    #    16 September 2026) the rows are the engine's strings verbatim;
+    #    without it — the one tick before the message — a row draws no
+    #    invented label, and "Slot N" may not come back.
     _gm_live = bytes([1, 1, 1, 0, 0, 1, 1, 0, 1, 1, 0, 1, 0, 0, 0, 0, 0,
                       1, 50, 1, 49, 7]) + bytes(_gm_set.SIZE - 22)
     _gm_gs.settings_raw = _gm_live
@@ -15400,7 +15402,8 @@ def main():
             _gm_gs.fields = _gm_fields(_gm_fix[_n])
             _gm_scr.update(_gm_gs)
             _gm_scr.render(surf)
-        assert "Slot 10" in _gm_said, "no HD STATE slot label drawn"
+        assert not any(str(_s).startswith("Slot ") for _s in _gm_said), \
+            "a slot row drew an invented 'Slot N' label"
         # UNDER A CONFIRMATION the menu stays drawn, as the original keeps
         # the popup behind Confirmation_Box_ (work order 124 D): its buttons
         # come from the menu's last list, not the confirmation's.
@@ -15428,8 +15431,8 @@ def main():
     finally:
         app.style.render_text = _gm_real_rt
     _gm_gs.save_slots = None
-    ok("GAME menu: all six nodes render; no patch -> 'Slot N' (HD STATE), "
-       "MSG_SAVE_SLOTS -> the engine's strings verbatim, colour codes cut")
+    ok("GAME menu: all six nodes render; no slot message -> no invented "
+       "label, MSG_SAVE_SLOTS -> the engine's strings verbatim, colour codes cut")
 
     # 5. THE SKINS: the body wears the frame image (decision 69) and
     #    nothing else does; every other panel and button is a thin_border
@@ -15621,18 +15624,21 @@ def main():
     _gm_status = open(os.path.join(os.path.dirname(SCREENS_DIR),
                                    "v3_projektstatus.md"),
                       encoding="utf-8").read()
-    for _mark in ("OMISSION", "HD STATE", "UNVERIFIED"):
+    for _mark in ("OMISSION", "UNVERIFIED"):
         assert _mark in _gm_mod, f"screen.py lost its {_mark} marking"
+    # The slot-name HD STATE ended with open fix 14 (16 September 2026):
+    # its marking, its label and its word are gone, and must stay gone.
+    assert "slot rows show their number" not in _gm_mod
+    assert "hd_state_slot" not in _gm_lay["words"] and \
+        "slot" not in _gm_lay["words"]
     assert "omission_sliders" not in _gm_lay, "the slider omission is back"
     assert _gm_lay["slot_rows"]["omission_icon"].startswith("OMISSION")
-    assert _gm_lay["words"]["hd_state_slot"].startswith("HD STATE")
     assert _gm_lay["unverified_right_click"].startswith("UNVERIFIED")
     for _mark in ("OMISSION — the slot game-type icon",
-                  "HD STATE — slot names",
                   "UNVERIFIED — the Save dialog's right click"):
         assert _mark in _gm_status, f"status document lost: {_mark}"
-    ok("GAME menu markings: OMISSION (slot icon), HD STATE (slot "
-       "names), UNVERIFIED (Save right click) in module, layout, status")
+    ok("GAME menu markings: OMISSION (slot icon), UNVERIFIED (Save right "
+       "click) in module, layout, status; the slot-name HD STATE gone")
 
     # 7a. THE METAL IS ON THE SCREEN, on the FIRST opening. Every other
     #     frame check measures geometry, and every one of them entered the
@@ -15794,7 +15800,12 @@ def main():
         _gm_scr.handle_left_release(*_pf_r.center)
         _gm_scr.render(surf)
         assert (_pf_word, (252, 136, 0)) not in _pf_said, "still pressed"
-        # A row, in the Load dialog: the invention.
+        # A row, in the Load dialog: the invention. The row draws the
+        # engine's name (open fix 14 applied), so the slot message is here.
+        _gm_gs.save_slots = _gm_wp.parse_save_slots(bytes([2, 10]) + (
+            bytes([0, 0]) + b"Pressed Row".ljust(37, b"\0")
+            + b"Stardate:3500.0".ljust(25, b"\0")
+            + b"31, 126 13:52".ljust(25, b"\0")) * 10)
         _gm_gs.fields = _gm_fields(_gm_fix["load"])
         _gm_scr.update(_gm_gs)
         _pf_band = _gm_draw.bands(_gm_draw.rect(_gm_scr, "slot_list"),
@@ -15805,9 +15816,10 @@ def main():
         _gm_scr.can_send = lambda: False
         _gm_scr.handle_click(*_pf_band.center)
         _gm_scr.render(surf)
-        assert any(_c == (252, 136, 0) for _, _c in _pf_said), \
+        assert ("Pressed Row", (252, 136, 0)) in _pf_said, \
             "a pressed row is not drawn pressed while the send is refused"
         _gm_scr.handle_left_release(*_pf_band.center)
+        _gm_gs.save_slots = None
         del _gm_scr.can_send
         _gm_scr._sent = None
         # The GAME word in the galaxy frame.

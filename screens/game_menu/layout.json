@@ -260,8 +260,6 @@
       "no": "NO"
     },
     "_artwork_note": "Every word above is ARTWORK in the original \u2014 GAME.LBX entries 1-6, 10, 12, 13, 15, 29 (Load_Game_Popup_Pictures_, loadsave.cpp:1177-1207) and CONFIRM.LBX (gendraw.cpp:167-175). There is no string to extract, so they are typed here from the native screenshots, per decision 15.",
-    "slot": "Slot {n}",
-    "hd_state_slot": "HD STATE: without MSG_SAVE_SLOTS (doc/ext_save_slots.patch, not applied) HD has no slot names, stardates, dates or status, and a row shows its number only. The original shows the description from SAVEn.GAM (filedef.cpp:207-243). Decision 60.",
     "confirm_unknown": "Confirm?",
     "warning_unknown": "The game refused slot {n}.",
     "_unknown_note": "HD STATE: shown only when the overlay did not see which button led here (it was opened into a confirmation or warning) or, for the warning, without MSG_SAVE_SLOTS; the original prints H 186/187 and H 178-180 (loadsave.cpp:1241, :1258, :934-940).",

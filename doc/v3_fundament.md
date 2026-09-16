@@ -698,8 +698,10 @@ ours.** Data, 14 September 2026. HD could read the ten SAVEn.GAM headers
 itself, and the day HD's folder and the game's differ the names on
 screen stop belonging to the slots a click reaches — every name still
 plausible, which is decision 35's failure shape. So the list is a patch
-(`doc/ext_save_slots.patch`, open fix 14, `MSG_SAVE_SLOTS`), and until
-it is applied a row shows its slot number only, marked HD STATE. The
+(`doc/ext_save_slots.patch`, open fix 14, `MSG_SAVE_SLOTS`) — applied
+16 September 2026 and required by `tools/version_check.py`; until then a
+row showed its slot number only, marked HD STATE, and without the block it
+now shows no invented label at all. The
 strings the patch carries are the ones the engine formatted — a year of
 126, no month on a first visit — and HD draws them as they come.
 
@@ -1719,7 +1721,8 @@ status document and in a smoke check: **OMISSION** — the original has
 it and HD does not draw it (the volume sliders, which an activation
 cannot set — built after all by work order 124 C, through an injected click; the slot game-type icon, whose artwork is not extracted);
 **HD STATE** — HD draws something in place of a value the wire does not
-carry yet (slot rows show "Slot N" until the patch); **UNVERIFIED** — a
+carry yet (slot rows showed "Slot N" until open fix 14 was applied on
+16 September 2026); **UNVERIFIED** — a
 source reading Data required to be confirmed live before it is
 transcribed, and that could not be run (the Save dialog's right click
 outside a help region). An UNVERIFIED behaviour is not built at all:

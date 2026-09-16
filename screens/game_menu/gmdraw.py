@@ -30,7 +30,6 @@ COL_DETAIL = palette.require("game_menu", "row_detail")
 COL_OPTION = palette.require("game_menu", "option_text")
 COL_CHECK = palette.require("game_menu", "checkbox_on")
 COL_MESSAGE = palette.require("game_menu", "message")
-COL_STATE = palette.require("game_menu", "hd_state")
 
 #: Which HESTRNGS id is the Load/Save status a slot message names.
 SCREEN_DATA = {nodes.LOAD: 2, nodes.SAVE: 3}
@@ -131,7 +130,9 @@ def game_string(screen, hid):
 
 
 def slots_for(screen, node):
-    """MSG_SAVE_SLOTS for THIS dialog, or None (the HD STATE)."""
+    """MSG_SAVE_SLOTS for THIS dialog, or None — open fix 14 is required
+    (tools/version_check.py); None is only the tick between the field list
+    and the slot message that follows it."""
     slots = getattr(screen.state, "save_slots", None)
     if slots and slots.get("screen_data") == SCREEN_DATA.get(node):
         return slots["slots"]
@@ -238,14 +239,8 @@ def _slots(screen, surface, node):
                     f"slot_{i}", COL_ACTIVE if i == active else COL_ROW)
                 _blit_fit(screen, surface, text, size, color, x,
                           top.y + (top.h - size) // 2, top.w)
-            else:
-                label = screen.words.get("words", {}).get(
-                    "slot", "Slot {n}").replace("{n}", str(i + 1))
-                _blit(screen, surface, label, size,
-                      screen.pressed.colour(
-                          f"slot_{i}", COL_ACTIVE if i == active
-                          else COL_STATE), x,
-                      top.y + (top.h - size) // 2)
+            # Without the slot message a row is its plate and nothing more:
+            # no number stands in for a name the engine did not send.
             if slots:
                 dy = band.y + int(band.h * rule.get("detail_y", 0.45))
                 if slots[i]["description"] != empty:

@@ -62,6 +62,13 @@ LOCAL_PATCHES = {
         "_ext_suppress_refusal_help",
         "MSG_SET_JOBS is dropped by ProcessInput's default case, so "
         "every pop move silently does nothing"),
+    # Applied 16 September 2026 by Data, confirmed live the same evening:
+    # the in-game Load dialog showed the engine's slot names (open fix 14).
+    "doc/ext_save_slots.patch": (
+        os.path.join("src", "ext", "ext_server.h"),
+        "MSG_SAVE_SLOTS",
+        "the GAME menu's Load and Save rows get no slot names, stardates or "
+        "dates, and a name edit starts empty"),
     # Applied 15 September 2026 (briefs 118, 119), confirmed live on SAVE5.
     "doc/ext_fleet_selection.patch": (
         os.path.join("src", "ext", "ext_api.cpp"),

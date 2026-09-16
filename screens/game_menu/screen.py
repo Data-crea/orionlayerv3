@@ -18,8 +18,6 @@ document and in the smoke test:
 
 - OMISSION — the game-type icon on every slot row. (The Music and Sound
   Fx bars were one until work order 124 C; they are `gmsliders`.)
-- HD STATE — slot rows show their number only until
-  `doc/ext_save_slots.patch` is in (decision 60).
 - UNVERIFIED, NOT TRANSCRIBED — a right click inside the Save dialog
   outside every help region (`layout.json` `unverified_right_click`).
 

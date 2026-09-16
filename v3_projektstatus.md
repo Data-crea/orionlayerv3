@@ -3250,10 +3250,9 @@ work's decisions.
   124 C (`gmsliders.py`), help regions 420/421 with them; the omission is
   gone from the module and `layout.json`.
 - **OMISSION — the slot game-type icon** (GAME.LBX 16-18, not extracted).
-- **HD STATE — slot names.** Until `doc/ext_save_slots.patch` is applied
-  (reported, NOT applied, open fix 14) a Load/Save row shows "Slot N",
-  the warning says "The game refused slot N." instead of H 178-180, and
-  a name edit starts empty (decision 60).
+- ~~**HD STATE — slot names.**~~ Gone since open fix 14 was applied
+  (16 September 2026): the rows show the engine's names, the warning says
+  H 178-180, and a name edit starts from the slot's name.
 - **UNVERIFIED — the Save dialog's right click** outside every help
   region, which the source sends back to the menu. It could not be run:
   the game is a native Wayland client xdotool cannot reach, and every
@@ -4205,6 +4204,34 @@ not drawn metal.
   (no placement on the first opening) and with the image blit removed
   (0 of 145230 pixels). **192 -> 193.**
 
+### GAME menu: save slot names from the engine — open fix 14 applied, 16 September 2026
+
+Data applied `doc/ext_save_slots.patch` and rebuilt orion2re (linux-debug).
+Live (orion2re started from `~/Master of Orion 2`, SAVE4 loaded from the
+main menu's Load dialog, one client, a picture after every step, SAVE1-10
+identical; evidence `~/orionlayer-fixtures/evidence/open_fix_14/`):
+
+- **Load dialog:** `MSG_SAVE_SLOTS` with `screen_data` 2 and the ten
+  descriptions as the native dialog prints them; the HD rows draw them with
+  stardates and dates. Nothing on the HD side had to change to read it.
+- **Save dialog:** `screen_data` 3; a click on a valid row starts the name
+  edit with that row's name ("new"), sending nothing — the pre-fill
+  (`gmsave.SaveEditor.start`) already existed and only lacked the data.
+  **Difference kept:** an EMPTY slot starts the HD edit empty, where the
+  original copies "... empty slot ..." into the field (loadsave.cpp:517)
+  and the first backspace clears it (fields.cpp:1177-1193); the name that
+  reaches the game is the same.
+- **The main menu's own Load dialog** gets no block (SCREEN_GAME only) and
+  has no HD version.
+- **Removed:** the "Slot N" HD STATE — label, `layout.json` words, module
+  and status markings. Without the block (only the tick between the field
+  list and the slot message) a row now draws its plate and no invented
+  label. `tools/version_check.py` requires the patch; open fix 14 reads
+  APPLIED; decisions 60 and 61 amended.
+- **Smoke:** checks 4 and 7 follow (no "Slot N" may return — fails when the
+  label is put back; the marking stays gone), and 124 B's pressed-row check
+  now presses a row carrying an engine name. The count stays 193.
+
 ## What is missing
 
 ### OLED floor lift and player-colour presets
@@ -4218,8 +4245,7 @@ not drawn metal.
   checked numerically and in an offline render, not in a live session.
 
 ### GAME menu
-- `doc/ext_save_slots.patch` is reported and NOT applied: slot rows show numbers only (HD STATE).
-- The volume sliders and the slot game-type icon are OMISSIONS.
+- The slot game-type icon is an OMISSION.
 - The Save dialog's right click outside a help region is UNVERIFIED and not built.
 - SCREEN_REPORTS (39) is the next screen; a load falls back to the framebuffer there.
 - Empire Identity's `type_name` burst overflows the game's ten-key ring for longer names.
