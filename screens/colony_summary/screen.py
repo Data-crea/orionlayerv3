@@ -676,7 +676,8 @@ class ColonySummaryScreen(ScreenBase):
                 client=self.app.client, connected=self.app.connected,
                 sort_hotkey=colonymoveui.sort_hotkey(
                     self._data.get("sort", {}).get("buttons", []),
-                    self._sort_key)):
+                    self._sort_key),
+                figures=colonyfigures.set_for(self, area, cfg)):
             # The selection may have appeared or gone. Rebuild NOW,
             # not at the next snapshot: the rows carry the held
             # cluster, so the picture and the next hover would

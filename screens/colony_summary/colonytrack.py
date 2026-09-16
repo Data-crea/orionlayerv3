@@ -584,7 +584,100 @@ def drop_band(area, cfg, scale, row, x):
     return None
 
 
-def cell_at_x(area, cfg, scale, row, x):
+def pick_zones(area, cfg, scale, row, figures=None):
+    """[(job, index, x0, x1)] — the x span a click picks each pop up in.
+
+    **THE ONE HOME FOR WHERE A FIGURE IS CLICKED, and it is built from
+    the same `row_boxes` the renderer blits at (decision 5).** Without
+    figures a zone is the coloured cell as drawn.
+
+    **WITH FIGURES A ZONE IS THE FIGURE AS SEEN.** The sprite is blitted
+    at the slot's left edge and runs past it (the overlap of a squished
+    column), its ink starts a master column or more into the canvas, and
+    a later figure hides an earlier one only where its own ink is — its
+    transparent columns let the earlier figure show through. So the
+    zones are measured on the sprites themselves, in drawing order
+    (later on top) and at the renderer's own y (`figure_origin_y`): each
+    figure's VISIBLE ink has a centre column, neighbours meet halfway
+    between their centres, the first zone starts at its slot's edge and
+    the last ends at its last inked column. A click on the centre of
+    what is visible of a figure picks up that figure, at every count and
+    every squish; the smoke test holds it for 1..20 figures.
+
+    **THE COVERING FIGURE KEEPS THE OVERLAP, AS IN THE ORIGINAL — measured
+    on the ink instead of the canvas, and that is a DEVIATION.**
+    `Do_Colony_Info_Pop_Stuff_For_Pop_` mode 3 (coldraw.cpp:362-366)
+    takes the first icon, in drawing order, with `x <= (30 - squish) *
+    (index + 1) + left_x`: a strip from each icon's left CANVAS edge to
+    the next one's, so the later-drawn icon owns from its own canvas
+    edge on. With 56 px and larger sprites that put a seen figure in its
+    neighbour's strip — a click on a figure picked up the one to its
+    right, or nothing in the gap HD left between cells (Data, 16 September
+    2026). Identity is untouched: the pick is still (job, index), and
+    `colonysend` still injects the original's own slot point for it.
+    """
+    zones = []
+    cells = row.get("cells") if isinstance(row, dict) else None
+    by_job = {}
+    for job, index, rect in row_boxes(area, cfg, scale, row).cells:
+        by_job.setdefault(job, []).append((index, rect))
+    for job, entries in by_job.items():
+        seen = _seen_centres(entries, cells, job, figures)
+        for k, (index, rect) in enumerate(entries):
+            if seen is None:
+                x0, x1 = rect.x, rect.x + rect.width
+            else:
+                centres, first, last_end = seen
+                x0 = first if k == 0 else (centres[k - 1] + centres[k]) / 2
+                x1 = (last_end if k + 1 == len(entries)
+                      else (centres[k] + centres[k + 1]) / 2)
+                x0, x1 = int(round(x0)), int(round(x1))
+            zones.append((job, index, x0, max(x0 + 1, x1)))
+    return zones
+
+
+def _seen_centres(entries, cells, job, figures):
+    """(centre column of each figure's visible ink, first zone start,
+    last zone end) for one job's cells, or None without figures."""
+    if figures is None or not cells or job >= len(cells) or not entries:
+        return None
+    import numpy as np
+    sprites = []
+    for index, rect in entries:
+        name = cells[job][index].figure if index < len(cells[job]) else None
+        surf = None if name is None else figures.get(name)
+        if surf is None:
+            return None
+        alpha = pygame.surfarray.array_alpha(surf).T > 16
+        y = figure_origin_y(0, 0, figures.ink_bottom(name))
+        sprites.append((rect.x, y, alpha))
+    left = min(x for x, _, _ in sprites)
+    top = min(y for _, y, _ in sprites)
+    width = max(x + a.shape[1] for x, _, a in sprites) - left
+    height = max(y + a.shape[0] for _, y, a in sprites) - top
+    covered = np.zeros((height, width), dtype=bool)
+    centres = [0.0] * len(sprites)
+    for k in range(len(sprites) - 1, -1, -1):      # the topmost first
+        x, y, alpha = sprites[k]
+        ox, oy = x - left, y - top
+        region = covered[oy:oy + alpha.shape[0], ox:ox + alpha.shape[1]]
+        visible = alpha & ~region
+        xs = np.nonzero(visible)[1]
+        if len(xs):
+            centres[k] = left + ox + float(xs.mean())
+        else:
+            centres[k] = x + alpha.shape[1] / 2.0
+        region |= alpha
+    for k in range(1, len(centres)):
+        centres[k] = max(centres[k], centres[k - 1] + 1)
+    last_x, _, last_alpha = sprites[-1]
+    ink_cols = np.nonzero(last_alpha.any(axis=0))[0]
+    last_end = last_x + (int(ink_cols[-1]) + 1 if len(ink_cols)
+                         else last_alpha.shape[1])
+    return centres, entries[0][1].x, max(last_end, centres[-1] + 1)
+
+
+def cell_at_x(area, cfg, scale, row, x, figures=None):
     """(job, index) of the pop cell under `x`, or None.
 
     Index is within that job's cells, in the order they are drawn —
@@ -594,8 +687,8 @@ def cell_at_x(area, cfg, scale, row, x):
     HELD cluster has no cell either — `build_rows` clears its `0x200`
     exactly as `Get_Cluster_` does — so it cannot be picked twice.
     """
-    for job, index, rect in row_boxes(area, cfg, scale, row).cells:
-        if rect.x <= x < rect.x + rect.width:
+    for job, index, x0, x1 in pick_zones(area, cfg, scale, row, figures):
+        if x0 <= x < x1:
             return job, index
     return None
 

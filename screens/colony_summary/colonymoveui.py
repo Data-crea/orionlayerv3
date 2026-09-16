@@ -112,7 +112,7 @@ class MoveController:
 
     def click(self, *, rows, row_index, x, state, area, cfg, scale,
               sort_key, words, client, connected, sort_hotkey=None,
-              n_colonies=None):
+              n_colonies=None, figures=None):
         """A left click on row `row_index`. True if it was taken.
 
         False means "this was not a click on the population track" —
@@ -130,7 +130,8 @@ class MoveController:
         pops, n_pops, max_farms = loaded
         if self.pick is None:
             return self._first_click(row, row_index, pops, n_pops, x,
-                                     area, cfg, scale, sort_key, words)
+                                     area, cfg, scale, sort_key, words,
+                                     figures)
         return self._second_click(row, row_index, pops, n_pops, max_farms,
                                   x, area, cfg, scale, words, client,
                                   connected, sort_hotkey,
@@ -138,9 +139,11 @@ class MoveController:
                                   else len(rows))
 
     def _first_click(self, row, row_index, pops, n_pops, x, area, cfg,
-                     scale, sort_key, words):
+                     scale, sort_key, words, figures=None):
         """Pick up — locally. Nothing is sent, whatever the answer."""
-        cell = colonylist.cell_at_x(area, cfg, scale, row, x)
+        # The figure as SEEN, not the slot it is blitted at
+        # (`colonytrack.pick_zones`); the same set the row is drawn with.
+        cell = colonylist.cell_at_x(area, cfg, scale, row, x, figures)
         if cell is None:
             return False         # a marker, a growth box, or bare track
         job, index = cell

@@ -9095,6 +9095,171 @@ def main():
        "(four resolutions, every band, measured out of the render; "
        "outside the list the transcribed pointer offset is untouched)")
 
+    # ── A CLICK ON A FIGURE AS SEEN PICKS UP THAT FIGURE ────────
+    #
+    # Reported 16 September 2026: "with stacked figures you have to
+    # click LEFT of the figure you want to move". Draw and hit test
+    # were never two copies — both read `row_boxes` — but the hit
+    # test answered the slot the sprite is BLITTED at (`rect.x` to
+    # `rect.x + cell_w`), and the figure is SEEN elsewhere: its ink
+    # starts a master column or more into the 28 px canvas, runs past
+    # the slot into the next one, and shows through the next figure's
+    # transparent columns. Measured on the extracted figures before
+    # the fix: 165 of 210 figure centres at 1920x1080 picked up a
+    # neighbour or nothing. `colonytrack.pick_zones` is the one home
+    # now, and this asserts its rule, not its arithmetic.
+    #
+    # READ OFF THE RENDER. Every figure is drawn through the real
+    # screen, each in its own colour (only the sprite lookup is
+    # wrapped, the blit and its geometry are the screen's), and the
+    # centre of the pixels that are still ITS colour on screen is
+    # clicked. Every count from 1 to 20, in each of the three job
+    # columns, at three resolutions.
+    #
+    # SYNTHETIC FIGURES, shaped like the game's: the extracted ones
+    # are not committed (decision 50), and a check that needs them
+    # answers differently in a clone. The silhouette is narrow at the
+    # head and legs and wide at the arms and starts one column into
+    # the canvas, which is what makes a neighbour's transparent
+    # columns show the figure behind. The extracted set is measured
+    # the same way when it is on this disk (a report, not the check).
+    from screens.colony_summary import colonyfigures as _pz_fig
+    from screens.colony_summary import colonylist as _pz_cl
+    from screens.colony_summary import colonytrack as _pz_ct
+    import numpy as _pz_np
+    _pz_src = open(os.path.join(_proj, "screens", "colony_summary",
+                                "colonytrack.py"), encoding="utf-8").read()
+    assert ("THE COVERING FIGURE KEEPS THE OVERLAP, AS IN THE ORIGINAL"
+            in _pz_src and "that is a DEVIATION" in _pz_src
+            and "coldraw.cpp:362-366" in _pz_src), (
+        "colonytrack.pick_zones lost its marking: the covering figure's "
+        "rule is the original's (coldraw.cpp:362-366), measured on the "
+        "ink instead of the canvas, and that is a DEVIATION")
+    _pz_mv = open(os.path.join(_proj, "screens", "colony_summary",
+                               "colonymoveui.py"), encoding="utf-8").read()
+    assert "cell_at_x(area, cfg, scale, row, x, figures)" in _pz_mv, (
+        "the pick-up no longer passes the figure set the row is drawn "
+        "with; without it a click answers the blit slot, not the figure")
+
+    def _pz_master():
+        _m = pygame.Surface((28, 28), pygame.SRCALPHA)
+        _m.fill((0, 0, 0, 0))
+        _ink = (200, 200, 200, 255)
+        for _r in ((8, 1, 6, 7), (4, 8, 13, 11), (1, 9, 3, 7),
+                   (17, 9, 3, 7), (5, 19, 4, 8), (11, 19, 4, 8)):
+            _m.fill(_ink, _r)
+        return _m
+
+    def _pz_colour(_job, _index):
+        return (30 + _index * 11, 40 + _job * 70, 250)
+
+    def _pz_measure(_W, _H, _set_for):
+        """[(count, job, index, visible centre, answer)] for every
+        figure that is not what a click on it picks up."""
+        _real = _pz_cl._figure_for_cell
+
+        def _tagged(_figs, _cells, _job, _index):
+            _s = _real(_figs, _cells, _job, _index)
+            if _s is None:
+                return None
+            _t = _s.copy()
+            _t.fill((255, 255, 255, 0), special_flags=pygame.BLEND_RGBA_MAX)
+            _t.fill((*_pz_colour(_job, _index), 255),
+                    special_flags=pygame.BLEND_RGBA_MULT)
+            return _t
+
+        _rows_all = [(_n, _j) for _n in range(1, 21) for _j in range(3)]
+        _bad, _seen = [], 0
+        _pz_cl._figure_for_cell = _tagged
+        try:
+            for _b in range(0, len(_rows_all), 10):
+                _batch = _rows_all[_b:_b + 10]
+                _app, _scr = _plv.build_screen(_W, _H)
+                _app.dispatcher.switch_to("colony_summary")
+                _scr.enter(None)
+                _scr.update(_plv._Snapshot([
+                    dict(star=f"P{_n}x{_j}", numeral=0, climate=5, size=4,
+                         pops=_n, jobs=tuple(_n if _k == _j else 0
+                                             for _k in range(3)),
+                         max_farms=255, production=(1, 1, 1, 1), why="pick")
+                    for _n, _j in _batch]))
+                _area, _cfg, _scale, _ = _scr._list_view()
+                _figs = _set_for(_scr, _area, _cfg)
+                if _figs is None:
+                    return None, 0
+                _surf = pygame.Surface((_W, _H))
+                _surf.fill((0, 0, 0))
+                _scr.render(_surf)
+                _px = pygame.surfarray.array3d(_surf).transpose(1, 0, 2)
+                _bands = _pz_ct.row_bands(_area, _cfg, _scale,
+                                          len(_scr._rows))
+                for (_top, _bh), _row in zip(_bands, _scr._rows):
+                    _count = sum(len(_c) for _c in _row["cells"])
+                    _band = _px[_top:_top + _bh]
+                    for _job, _index, _rect in _pz_ct.row_boxes(
+                            _area, _cfg, _scale, _row, (_top, _bh)).cells:
+                        _xs = _pz_np.where(_pz_np.all(
+                            _band == _pz_np.array(_pz_colour(_job, _index)),
+                            axis=2))[1]
+                        assert len(_xs), (
+                            f"{_W}x{_H}: figure {_index} of {_count} in job "
+                            f"{_job} is not visible at all")
+                        _cx = int(round(float(_xs.mean())))
+                        _seen += 1
+                        _got = _pz_cl.cell_at_x(_area, _cfg, _scale, _row,
+                                                _cx, _figs)
+                        if _got != (_job, _index):
+                            _bad.append((_count, _job, _index, _cx, _got))
+                _pz_counts = sorted({sum(len(_c) for _c in _r["cells"])
+                                     for _r in _scr._rows})
+                assert _pz_counts == sorted({_n for _n, _j in _batch}), (
+                    f"the screen built rows of {_pz_counts} figures, the "
+                    f"check asked for {sorted({_n for _n, _j in _batch})}")
+        finally:
+            _pz_cl._figure_for_cell = _real
+        return _bad, _seen
+
+    with _tf.TemporaryDirectory() as _pz_dir:
+        os.makedirs(os.path.join(_pz_dir, _pz_fig.FIGURE_DIR))
+        _pz_m = _pz_master()
+        for _name in _pz_fig.all_names():
+            pygame.image.save(_pz_m, os.path.join(
+                _pz_dir, _pz_fig.FIGURE_DIR, _name))
+
+        def _pz_synthetic(_scr, _area, _cfg):
+            # Seated in the app's own cache, so the RENDER draws it.
+            _size = _pz_ct.figure_size(_area, _cfg)
+            _set = _pz_fig.FigureSet(_scr.app.res, _size, root=_pz_dir)
+            assert _set.state == "ok", _set.state
+            _scr.app.figure_sets = collections.OrderedDict({_size: _set})
+            return _set
+
+        _pz_total = 0
+        for _W, _H in ((1920, 1080), (2560, 1440), (3840, 2160)):
+            _bad, _seen = _pz_measure(_W, _H, _pz_synthetic)
+            assert _seen == 3 * sum(range(1, 21)), (_W, _H, _seen)
+            assert not _bad, (
+                f"{_W}x{_H}: {len(_bad)} of {_seen} figures are not what a "
+                f"click on the centre of their visible area picks up — "
+                f"(count, job, index, x, picked) {_bad[:6]}")
+            _pz_total += _seen
+    for _W, _H in ((1920, 1080), (2560, 1440), (3840, 2160)):
+        _bad, _seen = _pz_measure(
+            _W, _H, lambda _s, _a, _c: (
+                lambda _f: _f if _f is not None and _f.state == "ok"
+                else None)(_pz_fig.set_for(_s, _a, _c)))
+        if _bad is None:
+            report("figure pick: the extracted figure set is not on this "
+                   "disk, only the synthetic silhouette is measured")
+            break
+        report(f"figure pick with the extracted figures at {_W}x{_H}: "
+               f"{_seen - len(_bad)} of {_seen} hit"
+               + (f", misses {_bad[:4]}" if _bad else ""))
+        assert not _bad, (_W, _H, _bad[:6])
+    ok(f"a click on the centre of a figure's visible area picks up that "
+       f"figure — 1 to 20 figures in every job column, three resolutions, "
+       f"{_pz_total} figures read off the render")
+
     # ── DATA'S PLANET DISCS: THE ASSETS ─────────────────────────
     #
     # Ten sprites, one per `PLANET_CLIMATE` (orion2_consts.h:362-374),

@@ -837,7 +837,7 @@ files under `doc/` and are only summarised here.
 | | |
 |---|---|
 | Python | 32,960 lines across 111 modules — `find . -name '*.py'`, `__pycache__` excluded, the smoke test's 6,400 included. The previous figure here (21,642 across 94) was carried from an unstated method and could not be reproduced |
-| Smoke test | `python tools/smoke_test.py` — **193 checks**, headless |
+| Smoke test | `python tools/smoke_test.py` — **194 checks**, headless |
 | Assets | 170 MB (select_race 68, galaxy_map 51, shared 23, new_game 21, colony_summary 1) |
 | Screens in HD | 9 of ~20–22 (the GAME menu overlay, work order Stop 2, every dialog of the popup; colony summary draws list, sidebar, scan box and galaxy inset, and MOVES POPS — the first HD gesture that drives the game; planets, brief 101, lists, sorts, restricts and returns) |
 | Setup from clone | `python tools/setup.py` (deps via the system package manager) |
@@ -4231,6 +4231,46 @@ identical; evidence `~/orionlayer-fixtures/evidence/open_fix_14/`):
 - **Smoke:** checks 4 and 7 follow (no "Slot N" may return — fails when the
   label is put back; the marking stays gone), and 124 B's pressed-row check
   now presses a row carrying an engine name. The count stays 193.
+
+### Colony list: a click on a stacked figure picks up that figure — 16 September 2026
+
+**Reported by Data:** with stacked figures one had to click LEFT of the
+figure to move. **Not two copies:** the draw (`colonylist`, `blit(surf,
+(rect.x, figure_origin_y(...)))`) and the hit test (`cell_at_x`, `rect.x <=
+x < rect.x + rect.width`, `width = int(pitch) - gap`) both read the same
+`colonytrack.row_boxes`. **The fault was what the one geometry described:**
+the slot a sprite is BLITTED at, not where the figure is SEEN. The ink starts
+a master column or more into the 28 px canvas, runs past the slot into the
+next, and shows through the next figure's transparent columns; the gap
+between cells answered nothing. Measured on the extracted figures, clicks on
+the centre of each figure's visible area: 165 of 210 missed at 1920x1080,
+156 at 2560x1440, 165 at 3840x2160.
+
+**The original** (`Do_Colony_Info_Pop_Stuff_For_Pop_` mode 3,
+coldraw.cpp:362-366) takes the first icon in drawing order with `x <= (30 -
+squish) * (index + 1) + left_x`: each icon owns the strip up to the next
+icon's left CANVAS edge, so where two overlap the COVERING (later-drawn)
+figure owns the overlap.
+
+- **DEVIATION — the zone is the figure as seen.** `colonytrack.pick_zones`
+  is the one home (decision 5): the sprites are laid out in drawing order at
+  the renderer's own x and y, each figure's visible ink gets a centre column,
+  neighbours meet halfway between their centres, the first zone starts at
+  its slot's edge and the last ends at its last inked column. The covering
+  figure still owns the overlap where its ink is; the original's canvas
+  strip is replaced by the ink. Identity is unchanged: the pick is (job,
+  index) and `colonysend` still injects the original's slot point. Without a
+  figure set the zones are the coloured cells as drawn, as before. The pick-
+  up passes the set the row is drawn with (`colonymoveui.click(figures=)`).
+- **Smoke:** one new check. Every count 1 to 20 in each of the three job
+  columns at 1920x1080, 2560x1440 and 3840x2160 is rendered through the real
+  screen, each figure in its own colour, and the centre of what is visible of
+  it must pick it up. It uses a synthetic silhouette shaped like the game's
+  (the extracted figures are not committed, decision 50) and measures the
+  extracted set too when it is on disk: 630 of 630 at each size. With the
+  old slot rule it fails (426 of 630 at 1920x1080). Count 193 -> **194**.
+- **Not live-tested:** a headless measurement; the pick-up is local and sends
+  nothing, and the drop path is unchanged.
 
 ## What is missing
 
