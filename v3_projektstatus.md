@@ -3983,6 +3983,19 @@ draws those under the box.
   identical, SAVE10 unchanged): NEW confirmation at 1920x1080 and 2560x1440
   beside the native frame, `~/orionlayer-fixtures/evidence/work_order_124/D_*`.
 
+### GAME menu: save slot names — work order 124 A, 16 September 2026 (a report)
+
+**A patch is needed, and it is already written: open fix 14,
+`doc/ext_save_slots.patch`, reported 14 September, not applied.** The
+original reads the names from the SAVEn.GAM headers into
+`MOX::_save_game_description[10]` whenever the dialog opens
+(`FILEDEF::Get_Saved_Game_Descriptions_`, filedef.cpp:207-243); the snapshot
+carries `_settings` but not that table, and the framebuffer read was
+considered and rejected (free text, colour codes, no validation). The patch
+still passes `git apply --check` on the current tree. The HD dialogs keep
+"Slot N" (HD STATE, decision 60) until Data applies it. Details under open
+fix 14.
+
 ## What is missing
 
 ### OLED floor lift and player-colour presets

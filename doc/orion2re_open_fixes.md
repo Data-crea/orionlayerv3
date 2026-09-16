@@ -35,7 +35,7 @@ section for what was found where.
 | 11 | `COLONY::Colony_Has_Natives_` tests nibble **8** (android), not 9 (native) | **Fix** — reproducible in a named save | Nothing for us; for the game, the occupation-policy popup is offered to the wrong colonies |
 | 12 | A pop move has no command: it has to be a click choreography into the game's own list window | **Request**, and **patched locally** 10 September 2026 (`doc/ext_move_pop.patch`), **VERIFIED LIVE** the same day; open upstream | Without it a move costs four snapshot round trips instead of one — 725 ms against 55 ms measured — and every one of them is a click that can land on the wrong row |
 | 13 | The Planets screen's five restriction toggles (`PLNTSUM::_filter_out_*`) are not in the snapshot | **Request** | HD cannot know which filters the game already has on; seen live 13 September 2026 — the range toggle was on before the HD screen opened, and the two lists disagreed |
-| 14 | The GAME popup's save slot list (names, stardates, dates, status, type) is not on the wire | **Request**, patch written 14 September 2026 (`doc/ext_save_slots.patch`), **reported, NOT applied** | The HD Load and Save dialogs show slot numbers only; reading SAVEn.GAM from a folder of our own is refused (fundament 60) |
+| 14 | The GAME popup's save slot list (names, stardates, dates, status, type) is not on the wire | **Request**, patch written 14 September 2026 (`doc/ext_save_slots.patch`), **reported, NOT applied**; re-checked 16 September: still needed, still applies | The HD Load and Save dialogs show slot numbers only; reading SAVEn.GAM from a folder of our own is refused (fundament 60) |
 | 15 | A scroll field's value can only be set by the pointer | **Question, not a request** | The GAME menu's Music and Sound Fx sliders are left out of HD |
 | 16 | Save dates print the year as `tm_year`: 126 | **Observation** | Nothing; HD shows what the engine formats |
 | 17 | The Load dialog's first visit prints dates without a month | **Observation** | Nothing; HD shows what the engine formats |
@@ -1279,6 +1279,34 @@ by Data's order.
 
 The HD rows show "Slot N", the warning after a refused slot cannot say
 why, and the save name field starts empty.
+
+### Re-checked 16 September 2026 (work order 124 A) — still needed, still not applied
+
+- **Where the names come from: the file headers, into an in-memory table,
+  every time the dialog opens.** `Set_Up_Load_Save_Popup_` (loadsave.cpp:136)
+  calls `FILEDEF::Get_Saved_Game_Descriptions_` (filedef.cpp:207-243), which
+  opens SAVE1.GAM … SAVE10.GAM and reads `int32 type`, `char[37]
+  description` and `int32 save time` into `MOX::_save_game_description[10]`.
+  An absent or invalid file gets HESTRNGS 0x184 ("empty slot" wording,
+  :234 and :239), slot 10 the literal "(Auto Save)" (:228), an empty
+  description "<< no description >>" (:230); a description still empty
+  with a stardate present gets HESTRNGS 203 (loadsave.cpp:162-165). The
+  dialog draws the table (`_Draw_Load_Save_Game_Popup_`, :856-884), and the
+  Save dialog's row edit starts from the same string
+  (`strlcpy(fields::_continuous_string, …)`, :517).
+- **No path reaches a client today.** The snapshot serializes
+  `MOX::_settings` (ext_api.cpp:117) — which carries `active_save_slot` and
+  nothing about names — and not the description table, the stardates, the
+  dates or the slot status. Reading SAVEn.GAM ourselves stays refused
+  (fundament 60). The one other carrier is the framebuffer, where the game
+  still renders its own dialog under HD: a glyph read with FONTS.LBX is
+  possible in principle, but a name is free text with embedded colour codes
+  (`Embed_Special_Color_Codes_`, :251) and glyphs that print alike, the Save
+  dialog needs the exact bytes to pre-fill, and nothing on the wire could
+  validate the read (decision 25). Not a reconstruction, a guess.
+- **The patch still applies** to the current tree, which now carries open
+  fixes 20 and 21 as well: `git apply --check` passes on both files
+  (offsets 60 and 114 lines), nothing written.
 
 ## 15. A scroll field's value can only come from the pointer — a question
 
