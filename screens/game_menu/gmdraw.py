@@ -5,7 +5,10 @@ the popup body, which wears one fixed frame image (decision 69,
 `gmframe`); a panel with `backdrop` in its style is first filled from
 the shared cockpit texture, the same fill the help popup uses, so the
 popup is opaque without a dimmed backdrop a palette-indexed engine
-could not draw.
+could not draw. HD DEVIATION: the confirmation and the slot warning are
+drawn at the original's layout scaled to the popup's width, inside the
+frame's opening, where the original lets them overhang the popup (work
+order 123; `gmframe`'s docstring has the sizes and the reason).
 Rows are computed from one box and a count (decision 51) and plated
 with `draw_plate`. Every string goes through `Style.render_text`
 (decision 30); the words come from layout.json (decision 15) and the

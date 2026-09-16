@@ -3870,6 +3870,40 @@ in `maplines` is gone.
   lock compared snapshot `id()`s, which a freed snapshot's address reuses —
   it holds the snapshot now. The count is 190.
 
+### GAME menu: confirmation and warning scaled into the frame — work order 123 item 1, 16 September 2026
+
+**Brief 123** (`doc/briefs/123-*`). Data's decision on 122's reported
+overhang. **HD DEVIATION:** the confirmation (native 310 px wide, at
+161, 117) and the slot warning (331 px, at 154, 144) are wider than the
+popup (279 px) and overhang it in the original; HD scales each group by one
+factor, body width over panel width — 0.8997 and 0.8430 — rects and font
+sizes alike (`boxes.json`, `layout.json` `_dialog_fit_note`), centred on the
+body horizontally, vertical centre kept. Marked in `gmframe.py`,
+`gmdraw.py`, decision 69 (amended) and the inventory.
+
+- **No extra line:** HESTRNGS 186 and 187 (the NEW and QUIT questions) stay
+  two lines, 178-180 (the slot warnings) one, one and four, at 1080p, 1440p
+  and 2160p; checked before the change.
+- **After NO:** the original stays in `Do_Main_Game_Popup_` with
+  `_screen_data` 0 and redraws the main screen under the popup
+  (loadsave.cpp:1240-1283), i.e. back to the game menu, which HD already
+  does (`confirm_no` -> MENU); the warning returns to the Load dialog.
+- **Smoke:** the frame check now holds ALL six dialogs to 0 px outside the
+  opening at three resolutions (122's report of the overhang is gone) and
+  the fit rule — panel width = body width, centred, text box in its native
+  proportion to the panel. The count stays 190.
+- **Live** (Data's OrionLayer closed first; the game as it stood, stardate
+  3509.2; no slot loaded — SAVE7 is absent; picture after every click;
+  SAVE1-9 identical, SAVE10 unchanged): menu, NEW confirmation, after NO,
+  Load, slot-7 warning, after it, after CANCEL at 1920x1080, 2560x1440 and
+  3840x2160 beside the native frame,
+  `~/orionlayer-fixtures/evidence/work_order_123/`.
+- **Seen, not part of this item:** under the confirmation HD draws the
+  popup body without the menu's buttons (`present` asks the confirmation's
+  own field list, which does not carry them), where the original shows the
+  menu underneath; and the warning's text is the HD STATE line until the
+  slot patch is in.
+
 ## What is missing
 
 ### OLED floor lift and player-colour presets

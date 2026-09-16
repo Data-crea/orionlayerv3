@@ -215,10 +215,10 @@
     {
       "name": "confirm_panel",
       "rect": [
-        549,
-        273,
-        698,
-        508
+        511,
+        298,
+        628,
+        457
       ],
       "style": {
         "skin": "thin_border",
@@ -228,49 +228,49 @@
     {
       "name": "confirm_text",
       "rect": [
-        646,
-        336,
-        504,
-        284
+        598,
+        355,
+        453,
+        256
       ],
       "style": {
         "skin": "area",
-        "font_size": 34
+        "font_size": 30.6
       }
     },
     {
       "name": "confirm_yes",
       "rect": [
-        716,
-        690,
-        115,
-        47
+        661,
+        674,
+        103,
+        42
       ],
       "style": {
         "skin": "thin_border",
-        "font_size": 30
+        "font_size": 27.0
       }
     },
     {
       "name": "confirm_no",
       "rect": [
-        963,
-        690,
-        115,
-        47
+        883,
+        674,
+        103,
+        42
       ],
       "style": {
         "skin": "thin_border",
-        "font_size": 30
+        "font_size": 27.0
       }
     },
     {
       "name": "warning_panel",
       "rect": [
-        533,
-        334,
-        745,
-        430
+        511,
+        368,
+        628,
+        362
       ],
       "style": {
         "skin": "thin_border",
@@ -280,14 +280,14 @@
     {
       "name": "warning_text",
       "rect": [
-        655,
-        397,
-        508,
-        270
+        614,
+        421,
+        428,
+        228
       ],
       "style": {
         "skin": "area",
-        "font_size": 34
+        "font_size": 28.7
       }
     },
     {

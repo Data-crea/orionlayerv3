@@ -1373,7 +1373,10 @@ geometry and not ours: CONFIRM.LBX is 313 and WARNING.LBX 331 native px
 wide against the popup's 279, so they overhang its right edge there too.
 At 1080p they reach 106 and 137 ref px past the opening, over the metal.
 Nothing was shrunk; the suite reports the numbers every run, and whether
-those two panels move, shrink or stay is Data's decision. At 1080p the
+those two panels move, shrink or stay is Data's decision. **Amended by work
+order 123: Data decided they are scaled into the opening — one factor per
+box, the popup's width over the box's, rects and fonts alike, centred on the
+popup — an HD DEVIATION, and every dialog is now held to the octagon.** At 1080p the
 frame's top rim also starts about one reference pixel above the window,
 because the transcribed centre is 17 px higher than the map's.
 

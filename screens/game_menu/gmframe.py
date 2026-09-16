@@ -19,6 +19,17 @@ from the shared cockpit texture, and no dimmed backdrop (fundament, "A
 trick that works on one screen is not a rule": a palette-indexed engine
 cannot dim what is under a popup). The fill is the opening's bounding
 box; the chamfers outside the octagon are metal and cover its corners.
+
+**HD DEVIATION — the confirmation and the warning are scaled INTO the
+opening** (Data, work order 123). In the original both are wider than the
+popup — CONFIRM.LBX's box is 310 native px at (161, 117), WARNING.LBX's 331
+at (154, 144), against the popup's 279 at (144, 25) — and overhang its right
+edge, which over this frame put them across the metal. HD scales each group
+by ONE factor, the body's width over the panel's (0.900 and 0.843), rects
+and font sizes alike, centres it on the body and keeps its vertical centre
+where the original has it; the layout is the original's, smaller. The
+factors are applied in `boxes.json` (`layout.json` `_dialog_fit_note`), and
+the smoke test holds every dialog to the opening's alpha.
 """
 import pygame
 

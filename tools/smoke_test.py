@@ -6165,6 +6165,10 @@ def main():
         # check is the galaxy_map map-lines block.
         "screens/galaxy_map/maplines.py": "HD EXTENSION — B1",
         "screens/galaxy_map/mapeta.py": "DEVIATION — two locks",
+        # ADDED 16 September 2026, work order 123: the dialogs scaled into
+        # the frame's opening. Their own check is "GAME menu frame".
+        "screens/game_menu/gmframe.py": "HD DEVIATION",
+        "screens/game_menu/gmdraw.py": "HD DEVIATION",
         "screens/galaxy_map/renderer.py": "HD EXTENSION B1",
         "core/helppopup.py": "the panel auto-sizes to its text",
         "core/zoomtables.py": "INSET_DOT_DIM",
@@ -15443,10 +15447,11 @@ def main():
     #     the popup sits where the original's sits IN THE MAP WINDOW, and
     #     every dialog's content lies inside the octagon at three
     #     resolutions — measured on the drawn pixels against the scaled
-    #     alpha. The confirmation and warning panels are wider than the
-    #     popup in the original too (CONFIRM.LBX 313 px, WARNING.LBX 331,
-    #     the popup 279) and overhang the opening: that is REPORTED with
-    #     its numbers, Data's call, not shrunk and not passed silently.
+    #     alpha — ALL SIX, since work order 123: the confirmation and the
+    #     warning are wider than the popup in the original (CONFIRM.LBX
+    #     313 px, WARNING.LBX 331, the popup 279) and overhang it there;
+    #     Data decided they are scaled into the opening (HD DEVIATION,
+    #     decision 69), so they are held to it like every other dialog.
     import frame_holes as _gmf_fh
     from screens.game_menu import gmframe as _gmf
     from screens.galaxy_map import mapboxes as _gmf_mb
@@ -15483,7 +15488,6 @@ def main():
         f"GAME menu body centre {_gmf_got}, the original's place in the "
         f"map window is {_gmf_want}")
     _gmf_nodes = ("menu", "settings", "load", "save", "confirm", "warning")
-    _gmf_over = {}
     _gmf_real = _gmf.draw
     for _W, _H in ((1920, 1080), (2560, 1440), (3840, 2160)):
         _gmf_app, _ = _pv.build_screen(_W, _H)
@@ -15524,14 +15528,6 @@ def main():
                          & (_px[:, :, 2] == 255))
             assert _content.sum() > 2000, (_W, _n, "drew nothing")
             _out = _content & (_gmf_al >= 16)
-            if _n in ("confirm", "warning"):
-                if _out.any():
-                    _xs = np.where(_out.any(axis=0))[0]
-                    _gmf_over.setdefault(_n, []).append(
-                        f"{_W}x{_H} {int(_out.sum())} px, x {_xs.min()}"
-                        f"..{_xs.max()} against opening right "
-                        f"{_gmf_op.right}")
-                continue
             assert not _out.any(), (
                 f"GAME menu {_n} at {_W}x{_H}: {int(_out.sum())} px of "
                 f"content outside the frame's opening")
@@ -15545,15 +15541,28 @@ def main():
                 _pt = (_gmf_op.centerx, _gmf_op.y + _gmf_op.h // 2)
                 assert _gmf_full.get_at(_pt)[:3] != (255, 0, 255), (
                     _W, "the opening is not filled")
-    for _n in ("confirm", "warning"):
-        report(f"GAME menu {_n} panel outside the frame opening (the "
-               f"original's box is wider than its popup): "
-               + ("; ".join(_gmf_over[_n]) if _n in _gmf_over
-                  else "none"))
+    # THE FIT RULE (work order 123): each box scaled by ONE factor, the
+    # body's width over the panel's, so the panel is the body's width and
+    # centred on it, and its fonts carry the same factor as its rects.
+    _gmf_rects = {_b["name"]: _b for _b in _gm_boxes}
+    for _grp in ("confirm", "warning"):
+        _gp = _gmf_rects[f"{_grp}_panel"]["rect"]
+        assert abs(_gp[2] - _gmf_body[2]) <= 1 and abs(
+            (_gp[0] + _gp[2] / 2) - (_gmf_body[0] + _gmf_body[2] / 2)) <= 1, (
+            _grp, _gp, _gmf_body)
+        # The text box keeps its native proportion to the panel: a text
+        # area scaled on its own would change the wrap, not the size.
+        _nat = _gmf_lay["native"]
+        _np_, _nt = _nat[f"{_grp}_panel"], _nat[f"{_grp}_text"]
+        _gt = _gmf_rects[f"{_grp}_text"]["rect"]
+        assert abs(_gt[2] / _gp[2] - (_nt[2] - _nt[0]) / (_np_[2] - _np_[0])
+                   ) < 0.01, (_grp, _gt, _gp)
+    assert "HD DEVIATION" in _gmf.__doc__ and "HD DEVIATION" in \
+        _gm_draw.__doc__, "the confirmation fit lost its marking"
     ok("GAME menu frame: opening == the artwork's one hole, loaded through "
        "the resource roots, body centred where the original's sits in the "
-       "map window, menu/settings/load/save inside the octagon and filled "
-       "at 1080p/1440p/2160p")
+       "map window, all six dialogs (confirmation and warning scaled in) "
+       "inside the octagon and filled at 1080p/1440p/2160p")
 
     # 6. HELP: the four transcribed tables, 420/421 left out WITH the
     #    sliders and saying so, each region carrying its native rect.
