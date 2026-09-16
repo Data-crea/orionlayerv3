@@ -66,6 +66,12 @@
       230,
       255,
       255
+    ],
+    "_pressed_note": "pressed_text is TRANSCRIBED (core/pressfeedback.py): the orange of every pressed button picture the GAME button and the GAME menu use, palette index 126 through the main screen's palette. The load and save rows use it too, as an HD INVENTION.",
+    "pressed_text": [
+      252,
+      136,
+      0
     ]
   },
   "text": {

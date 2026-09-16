@@ -109,7 +109,8 @@ def button(screen, surface, name, word):
     if b is None:
         return
     size = _size(screen, b, default=30)
-    img = screen.style.render_text(word, size, tuple(COL_BUTTON[:3]))
+    img = screen.style.render_text(
+        word, size, tuple(screen.pressed.colour(name, COL_BUTTON)[:3]))
     r = b.screen_rect
     surface.blit(img, (r.x + (r.w - img.get_width()) // 2,
                        r.y + (r.h - img.get_height()) // 2))
@@ -231,14 +232,17 @@ def _slots(screen, surface, node):
                 slot = slots[i]
                 text = (rule.get("invalid", "* INVALID *")
                         if slot["status"] == 2 else slot["description"])
-                color = COL_ACTIVE if i == active else COL_ROW
+                color = screen.pressed.colour(
+                    f"slot_{i}", COL_ACTIVE if i == active else COL_ROW)
                 _blit_fit(screen, surface, text, size, color, x,
                           top.y + (top.h - size) // 2, top.w)
             else:
                 label = screen.words.get("words", {}).get(
                     "slot", "Slot {n}").replace("{n}", str(i + 1))
                 _blit(screen, surface, label, size,
-                      COL_ACTIVE if i == active else COL_STATE, x,
+                      screen.pressed.colour(
+                          f"slot_{i}", COL_ACTIVE if i == active
+                          else COL_STATE), x,
                       top.y + (top.h - size) // 2)
             if slots:
                 dy = band.y + int(band.h * rule.get("detail_y", 0.45))

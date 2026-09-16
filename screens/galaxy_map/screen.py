@@ -405,7 +405,9 @@ class GalaxyMapScreen(ScreenBase):
         x, y, w, h = self.layout.rect(rect)
         font = self.style.get_font(self.layout.font_size(
             cfg.get("title_font", 30)))
-        text = font.render(title.upper(), True, TITLE_COLOR[:3])
+        # The pressed GAME word is orange, as BUFFER0.LBX 1's frame 1 is.
+        text = font.render(title.upper(), True,
+                           self.pressed.colour("title", TITLE_COLOR)[:3])
         # CENTRED BY INK, NOT BY THE FONT'S LINE BOX (galaxy frame v2,
         # 16 September 2026). The line box carries the descent, so an
         # all-caps word centred by it sat 3 to 5.5 px ABOVE the centre
@@ -626,6 +628,7 @@ class GalaxyMapScreen(ScreenBase):
         title = self._data.get("frame", {}).get("title_rect")
         if title and pygame.Rect(*self.layout.rect(title)).collidepoint(
                 screen_x, screen_y):
+            self.pressed.press("title", pygame.Rect(*self.layout.rect(title)))
             self._activate(self._data.get("actions", {}).get("game_menu"),
                            "game menu")
             return None

@@ -15704,6 +15704,85 @@ def main():
        "every value the game can produce, the live 74/50, lit width from _settings, one click on "
        "release and none on press or drag, preview held to the effect")
 
+    # 7c. THE PRESSED WORD (work order 124 B). Transcribed: a held button
+    #     draws frame 1 of its picture, the word in orange (palette 126);
+    #     the rows have no pressed state in the original, so theirs is an
+    #     HD INVENTION and has to stay marked. Drawn on the press, whatever
+    #     the game does with it, and gone on release.
+    import core.mouse as _pf_mouse
+    from core import pressfeedback as _pf
+    assert tuple(_pf.pressed_colour()[:3]) == (252, 136, 0)
+    for _pf_mark in ("TRANSCRIBED", "HD INVENTION", "OMISSION"):
+        assert _pf_mark in _pf.__doc__, _pf_mark
+    assert "HD INVENTION — the load and save rows" in open(os.path.join(
+        os.path.dirname(SCREENS_DIR), "v3_projektstatus.md"),
+        encoding="utf-8").read()
+    _pf_saved = _pf_mouse.pos
+    _pf_real = (app.client, app.connected)
+    try:
+        app.client, app.connected = _GslClient(), True
+        _gm_gs.fields = _gm_fields(_gm_fix["menu"])
+        _gm_scr.update(_gm_gs)
+        _pf_r = _gm_draw.rect(_gm_scr, "menu_settings")
+        _pf_mouse.pos = lambda: _pf_r.center
+        _pf_said = []
+        _pf_rt = app.style.render_text
+        app.style.render_text = lambda _t, _s, _c, *a, **k: (
+            _pf_said.append((_t, tuple(_c))), _pf_rt(_t, _s, _c, *a, **k))[1]
+        _gm_scr.handle_click(*_pf_r.center)
+        _gm_scr.render(surf)
+        _pf_word = _gm_draw.word(_gm_scr, "menu", "settings")
+        assert (_pf_word, (252, 136, 0)) in _pf_said, "no pressed SETTINGS"
+        _pf_said.clear()
+        _gm_scr.handle_left_release(*_pf_r.center)
+        _gm_scr.render(surf)
+        assert (_pf_word, (252, 136, 0)) not in _pf_said, "still pressed"
+        # A row, in the Load dialog: the invention.
+        _gm_gs.fields = _gm_fields(_gm_fix["load"])
+        _gm_scr.update(_gm_gs)
+        _pf_band = _gm_draw.bands(_gm_draw.rect(_gm_scr, "slot_list"),
+                                  _gm_nodes.SLOTS)[2]
+        _pf_mouse.pos = lambda: _pf_band.center
+        _pf_said.clear()
+        _gm_scr._sent = object()          # the gate closed: nothing may go
+        _gm_scr.can_send = lambda: False
+        _gm_scr.handle_click(*_pf_band.center)
+        _gm_scr.render(surf)
+        assert any(_c == (252, 136, 0) for _, _c in _pf_said), \
+            "a pressed row is not drawn pressed while the send is refused"
+        _gm_scr.handle_left_release(*_pf_band.center)
+        del _gm_scr.can_send
+        _gm_scr._sent = None
+        # The GAME word in the galaxy frame.
+        _pf_gm = d.screens["galaxy_map"]
+        _pf_title = pygame.Rect(*app.layout.rect(
+            _pf_gm._data["frame"]["title_rect"]))
+        _pf_mouse.pos = lambda: _pf_title.center
+        _pf_gm.pressed.press("title", _pf_title)
+        _pf_seen = []
+        _pf_gf = app.style.get_font
+        class _PfFont:
+            def __init__(self, f): self.f = f
+            def __getattr__(self, n): return getattr(self.f, n)
+            def render(self, txt, aa, col, *a):
+                _pf_seen.append((txt, tuple(col[:3])))
+                return self.f.render(txt, aa, col, *a)
+        app.style.get_font = lambda s: _PfFont(_pf_gf(s))
+        try:
+            _pf_gm._render_title(surf)
+        finally:
+            app.style.get_font = _pf_gf
+        assert ("GAME", (252, 136, 0)) in _pf_seen, _pf_seen
+        _pf_gm.handle_left_release(*_pf_title.center)
+        assert not _pf_gm.pressed.is_down("title")
+    finally:
+        _pf_mouse.pos = _pf_saved
+        app.style.render_text = _pf_rt
+        app.client, app.connected = _pf_real
+    ok("pressed words: SETTINGS and the GAME word orange while held "
+       "(transcribed), a Load row too with its send refused (HD INVENTION, "
+       "marked), all gone on release")
+
     # 8. THE GATE: a second click before the list changes sends nothing;
     #    after the change it goes. QUIT -> YES stands the watchdog down
     #    FIRST (decision 62).

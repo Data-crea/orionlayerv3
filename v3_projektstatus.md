@@ -837,7 +837,7 @@ files under `doc/` and are only summarised here.
 | | |
 |---|---|
 | Python | 32,960 lines across 111 modules — `find . -name '*.py'`, `__pycache__` excluded, the smoke test's 6,400 included. The previous figure here (21,642 across 94) was carried from an unstated method and could not be reproduced |
-| Smoke test | `python tools/smoke_test.py` — **191 checks**, headless |
+| Smoke test | `python tools/smoke_test.py` — **192 checks**, headless |
 | Assets | 170 MB (select_race 68, galaxy_map 51, shared 23, new_game 21, colony_summary 1) |
 | Screens in HD | 9 of ~20–22 (the GAME menu overlay, work order Stop 2, every dialog of the popup; colony summary draws list, sidebar, scan box and galaxy inset, and MOVES POPS — the first HD gesture that drives the game; planets, brief 101, lists, sorts, restricts and returns) |
 | Setup from clone | `python tools/setup.py` (deps via the system package manager) |
@@ -1177,7 +1177,7 @@ in exactly ONE bucket. The numbers below are produced by
 check asserts this list still agrees with it — the same trade the
 check count makes, for the same reason.
 
-`screens/galaxy_map/screen.py` (**581** code, 887 total), `tools/struct_probe.py` (**478** code, 753 total), `tools/colony_list_preview.py` (**403** code, 772 total), `screens/custom_race/screen.py` (**400** code, 558 total), `tools/colony_move_hd.py` (**383** code, 583 total), `core/editor/editor.py` (**359** code, 430 total), `screens/galaxy_map/renderer.py` (**336** code, 758 total), `tools/ext_diag.py` (**325** code, 473 total), `core/style.py` (**310** code, 479 total).
+`screens/galaxy_map/screen.py` (**583** code, 890 total), `tools/struct_probe.py` (**478** code, 753 total), `tools/colony_list_preview.py` (**403** code, 772 total), `screens/custom_race/screen.py` (**400** code, 558 total), `tools/colony_move_hd.py` (**383** code, 583 total), `core/editor/editor.py` (**359** code, 430 total), `screens/galaxy_map/renderer.py` (**336** code, 758 total), `tools/ext_diag.py` (**325** code, 473 total), `core/style.py` (**310** code, 479 total).
 `smoke_test.py` is exempt by nature.
 
 **TWO TOOLS JOINED THE LIST ON 8 SEPTEMBER 2026 and one thing left
@@ -4033,6 +4033,32 @@ injected click's pointer, so an `INJECT_CLICK` on the bar sets the volume.
   produce, the live 74 and 50, lit width from `_settings`, nothing on press
   or drag, one click on release, the preview released after the floor);
   the help and marking checks follow the new state. **190 -> 191.**
+
+### Pressed words: GAME and the GAME menu — work order 124 B, 16 September 2026
+
+**Mostly a TRANSCRIPTION, and orange is the original's colour.** A held
+button field draws frame 1 of its picture (`Draw_Field_`,
+fields.cpp:2710-2717; YES/NO in `Draw_Confirm_Box_`, gendraw.cpp:35-49),
+and in BUFFER0.LBX 1 (GAME), GAME.LBX's buttons and CONFIRM.LBX 1-2 that
+frame is the word in orange, palette index 126 = (252, 136, 0), measured
+through the live palette. It lasts while the press does. So HD draws the
+word in `button.pressed_text` while the left button is held on it and the
+pointer is still inside — not a timed flash.
+
+- **HD INVENTION — the load and save rows.** They are hidden fields and the
+  original colours a row by `active_save_slot` only (loadsave.cpp:852-878);
+  Data wants every click in the tree to show, so a pressed row turns the
+  same orange. Marked in `core/pressfeedback.py`, here and in the smoke test.
+- **OMISSION:** the pressed pictures also nudge the word by a native pixel
+  or two; not measured cleanly, not reproduced.
+- **One implementation:** `core/pressfeedback.Pressed` on every screen
+  (`ScreenBase.pressed`, released by `handle_left_release`); the galaxy
+  map's GAME word, `gmdraw.button` and the slot rows read it. It starts on
+  the press, before anything decides whether to send (decision 33). The
+  9-slice frame's old side-button flash is a different mechanism and stays.
+- **Smoke:** one check (SETTINGS and GAME orange while held, a Load row
+  orange with its send refused, all cleared on release, the markings).
+  **191 -> 192.**
 
 ## What is missing
 

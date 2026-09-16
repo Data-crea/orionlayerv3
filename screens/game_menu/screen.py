@@ -223,6 +223,17 @@ class GameMenuScreen(ScreenBase):
     def handle_click(self, screen_x, screen_y):
         if self.help_consumes_click(screen_x, screen_y) or self.node is None:
             return None
+        # THE PRESSED STATE FIRST, before anything decides whether to send:
+        # it shows the click landed, not that the game took it (decision 33).
+        for name, _ in self.BUTTONS.get(self.node, []):
+            if gmdraw.hit(self, name, screen_x, screen_y):
+                self.pressed.press(name, gmdraw.box(self, name).screen_rect)
+        if self.node in (nodes.LOAD, nodes.SAVE):
+            i = gmdraw.row_at(self, "slot_list", nodes.SLOTS,
+                              screen_x, screen_y)
+            if i is not None:
+                self.pressed.press(f"slot_{i}", gmdraw.bands(
+                    gmdraw.box(self, "slot_list").screen_rect, nodes.SLOTS)[i])
         if self.save.handle_click(screen_x, screen_y):
             return None
         if gmsliders.press(self, screen_x, screen_y):
@@ -260,6 +271,7 @@ class GameMenuScreen(ScreenBase):
         gmsliders.motion(self, screen_x, screen_y)
 
     def handle_left_release(self, screen_x, screen_y):
+        super().handle_left_release(screen_x, screen_y)
         gmsliders.release(self, screen_x, screen_y)
 
     def handle_key_event(self, event):

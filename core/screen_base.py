@@ -12,6 +12,8 @@ screens/<n>/assets/background.png if the file exists.
 import os
 import time
 import pygame
+
+from core.pressfeedback import Pressed
 from core.box import load_boxes
 from core.screenhelp import HelpMixin
 
@@ -55,6 +57,7 @@ class ScreenBase(HelpMixin):
         self._bg_scaled = None   # scaled to current window size
         self._bg_pos = (0, 0)
         self._btn_flash = None   # ("left"|"right", start_time)
+        self.pressed = Pressed()  # a held press on a word (pressfeedback)
 
     @property
     def layout(self):
@@ -171,6 +174,10 @@ class ScreenBase(HelpMixin):
             return
         if self.app.connected:
             self.app.client.inject_key(key)
+
+    def handle_left_release(self, screen_x, screen_y):
+        """The press ends (core.pressfeedback)."""
+        self.pressed.release()
 
     def handle_mouse_motion(self, screen_x, screen_y):
         """Update hover state for all boxes."""
