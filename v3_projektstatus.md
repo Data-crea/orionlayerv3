@@ -3936,6 +3936,36 @@ exact.
   0 — and cancels the Dhira order (`Make_Ships_Move_To_`,
   shipmove.cpp). Measured live in work order 122.
 
+### Galaxy map: the eta label on two consecutive turns of one flight — work order 123 item 4, 16 September 2026
+
+**Route:** the Scout (ship 10) in SAVE4, standing at Zin, ordered through
+the HD fleet box to **Sol**; the original's box reads **"5 turns to Sol"**
+(location 20014, turns_left 5). Turns 1 and 2 end in open space between Vox
+and Sol.
+
+| turn (stardate) | turns_left, read from the framebuffer | HD drew | match |
+|---|---|---|---|
+| 1 (3509.1), location 10014 | 4 — 36 of 36 ink px, 0 false (runner-up 9) | eta 4 | yes |
+| 2 (3509.2), location 10014 | 3 — 37 of 37, 0 false (runner-up 2) | eta 3 | yes |
+
+- **Protocol:** Data's OrionLayer closed first; one client; SAVE4 only;
+  a picture after every click or activation (fundament, Diagnosis); SAVE1-9
+  identical before and after, SAVE10 rewritten by the two turn ends
+  (logged). Evidence and scripts:
+  `~/orionlayer-fixtures/evidence/work_order_123/eta/` (`eta_record.json`,
+  one picture per step, `../scripts/`).
+- **Turn dialogs on the way, each answered on its own picture:** the
+  colony-base choice for Malus (Malus I and the next planet refused with
+  "You cannot build there", Malus II accepted — a colony in the scratch
+  game's memory only), the colony landing screen, "just colonized", the
+  colony screen's RETURN, the turn summary, the combat selection at Peren,
+  a Darlok spy message.
+- **Found:** screens that ignore an injected click or key — the colony
+  landing (colland.cpp:203-213) — answer `ACTIVATE_FIELD` on their
+  whole-screen hidden field, which is what finished this run; 122's GNN
+  screen was probably the same case and was not retried. No code change was
+  needed; `mapeta` is unchanged.
+
 ## What is missing
 
 ### OLED floor lift and player-colour presets
