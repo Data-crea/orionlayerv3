@@ -3332,6 +3332,50 @@ def main():
         ok("galaxy_map map lines (one routine, maplines.stroke; the wormhole "
            "through it; B1, B2 and the omissions marked)")
 
+        # THE ICON IS NOT THE HEADER, ON PURPOSE (work order 122, 2.2).
+        # SHIP_ICON_DIM sizes and hit-tests the HD icon (9 x 8 at zoom 2,
+        # click area live-confirmed); SHIP_ICON_HEADER_DIM is what the game
+        # positions with (12 x 11). Held three ways: the two may not become
+        # equal, as whole tables or at any zoom as they are used against
+        # each other; the DELIBERATE DEVIATION note in maplines quotes both
+        # as they are; and the comment on EACH table in zoomtables quotes
+        # the OTHER's current values — so neither can change while the
+        # other's note still describes the old one.
+        import inspect as _dd_inspect
+        assert zt.SHIP_ICON_DIM != zt.SHIP_ICON_HEADER_DIM
+        for _dd_z in range(4):
+            assert zt.ship_icon_dimension(_dd_z) != \
+                zt.ship_icon_header_dimension(3 - _dd_z), _dd_z
+        assert "DELIBERATE DEVIATION" in gml.__doc__
+        for _dd_t in (zt.SHIP_ICON_DIM, zt.SHIP_ICON_HEADER_DIM):
+            assert repr(_dd_t) in gml.__doc__, (
+                f"maplines' DELIBERATE DEVIATION note does not quote {_dd_t}")
+        _dd_lines = _dd_inspect.getsource(zt).splitlines()
+
+        def _dd_comment(name):
+            _i = next(_k for _k, _l in enumerate(_dd_lines)
+                      if _l.startswith(f"{name} = "))
+            _block = []
+            while _i > 0 and _dd_lines[_i - 1].startswith("#:"):
+                _i -= 1
+                _block.insert(0, _dd_lines[_i][2:].strip())
+            return " ".join(_block)
+
+        _dd_icon, _dd_head = (_dd_comment("SHIP_ICON_DIM"),
+                              _dd_comment("SHIP_ICON_HEADER_DIM"))
+        assert "DELIBERATE" in _dd_icon and "DEVIATION" in _dd_head
+        assert repr(zt.SHIP_ICON_HEADER_DIM) in _dd_icon, (
+            "SHIP_ICON_HEADER_DIM changed and SHIP_ICON_DIM's note was not "
+            "touched")
+        assert repr(zt.SHIP_ICON_DIM) in _dd_head, (
+            "SHIP_ICON_DIM changed and SHIP_ICON_HEADER_DIM's note was not "
+            "touched")
+        assert "DELIBERATE DEVIATION — SHIP_ICON_DIM" in open(os.path.join(
+            os.path.dirname(SCREENS_DIR), "v3_projektstatus.md"),
+            encoding="utf-8").read()
+        ok("galaxy_map icon 9 x 8 against the 12 x 11 header: a DELIBERATE "
+           "DEVIATION, the tables unequal and each note quoting the other")
+
     # ── Struct specs promoted from unverified.py ──
     from core.structs import nebula as _neb, planet as _pln
     n = _neb.parse(bytes([0x76, 0x01, 0xAA, 0x00, 0x01]))

@@ -45,6 +45,19 @@ so a far zoom does not dissolve the wave into flicker. The phase runs on a
 fixed 55 ms clock, the original's lower bound per pass, not on HD's frame
 rate.
 
+DELIBERATE DEVIATION — the HD ship icon is NOT the size this module
+positions with. Data's decision of 15 September 2026, work order 122 item
+2.2. The line starts from the icon corner plus half of the game's sprite
+HEADER, `zoomtables.SHIP_ICON_HEADER_DIM` = ((11, 11), (12, 11), (12, 10), (16, 12))
+(entry 205 + (3 - zoom), measured in brief 121), while the HD icon is drawn
+and hit-tested at `zoomtables.SHIP_ICON_DIM` = ((11, 10), (10, 9), (9, 8), (8, 7)),
+indexed by zoom: 9 x 8 at zoom 2 against a 12 x 11 header. The two tables
+answer different questions — where the game anchors its sprite, and how
+large HD draws its own artwork — and the icon's click area at 9 x 8 is
+live-confirmed, so neither is corrected towards the other. The smoke test
+fails if the tables become equal, or if either changes while this note and
+the comment on the other table still quote the old values.
+
 OMISSION, each with its reason:
   * "eta N" beside a moving icon (`Print_Eta_On_Ship_Icon_`, H 0x133): a
     label in the player's font colours at a sprite-header offset, not a

@@ -837,7 +837,7 @@ files under `doc/` and are only summarised here.
 | | |
 |---|---|
 | Python | 32,960 lines across 111 modules — `find . -name '*.py'`, `__pycache__` excluded, the smoke test's 6,400 included. The previous figure here (21,642 across 94) was carried from an unstated method and could not be reproduced |
-| Smoke test | `python tools/smoke_test.py` — **187 checks**, headless |
+| Smoke test | `python tools/smoke_test.py` — **188 checks**, headless |
 | Assets | 170 MB (select_race 68, galaxy_map 51, shared 23, new_game 21, colony_summary 1) |
 | Screens in HD | 9 of ~20–22 (the GAME menu overlay, work order Stop 2, every dialog of the popup; colony summary draws list, sidebar, scan box and galaxy inset, and MOVES POPS — the first HD gesture that drives the game; planets, brief 101, lists, sorts, restricts and returns) |
 | Setup from clone | `python tools/setup.py` (deps via the system package manager) |
@@ -3614,7 +3614,8 @@ orion2re tree at `~/orion2re` is patched: a permanent change.
   114), next to `turns_left` (+109).
 - **Findings, not acted on:** `SHIP_ICON_DIM` (the HD icon size) is 9 x 8
   at zoom 2 against a 12 x 11 header and 6 x 5 of ink — which one an HD
-  icon should match is Data's question. `tools/make_nebula_icons.py` reads
+  icon should match is Data's question. *(Answered 15 September: neither
+  moves, it is a DELIBERATE DEVIATION — work order 122 item 2.2, below.)* `tools/make_nebula_icons.py` reads
   FONTS.LBX entry 1 at offset 0; the entries are (flag, r, g, b), measured.
 - **Smoke:** three checks (who gets a line and where it starts; the wave;
   one routine and the markings); the count is 186.
@@ -3743,6 +3744,26 @@ and a required input in `tools/setup.py`.
   opening against the tool, loading through the resource roots, the
   anchor, the octagon fit and the fill at three resolutions); a mutation
   of the body by 5 px fails it. The count is 187.
+
+### Galaxy map: the icon size marked as a deliberate deviation — work order 122 item 2.2, 16 September 2026
+
+**DELIBERATE DEVIATION — SHIP_ICON_DIM stays 9 x 8 at zoom 2 against the
+12 x 11 sprite header.** Data's decision of 15 September 2026.
+`zoomtables.SHIP_ICON_DIM` ((11, 10), (10, 9), (9, 8), (8, 7), by zoom)
+sizes and hit-tests the HD icon, and its click area is live-confirmed;
+`zoomtables.SHIP_ICON_HEADER_DIM` ((11, 11), (12, 11), (12, 10), (16, 12),
+by 3 - zoom) is what the game positions its sprite and its lines with, and
+what `maplines` uses. No code changed.
+
+- **Marked** in the `maplines.py` docstring (DELIBERATE DEVIATION, quoting
+  both tables), in the comment on each table in `core/zoomtables.py`
+  (quoting the other table's values), in `doc/ship_icon_measurement.md`
+  and here.
+- **Smoke:** one check — the tables may not become equal (whole, or at any
+  zoom as they are used against each other), the maplines note must quote
+  both current tables, and each zoomtables comment must quote the other's
+  current values, so changing one without touching the other's note fails.
+  The count is 188.
 
 ## What is missing
 

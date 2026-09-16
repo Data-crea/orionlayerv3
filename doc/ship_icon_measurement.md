@@ -206,3 +206,9 @@ pictures a0/a1):
 `SHIP_ICON_DIM` still sizes the HD icon and was not changed: it is 9 x 8
 at zoom 2 against a 12 x 11 header and 6 x 5 of ink, and which of the two
 an HD icon should match is a question for Data, not a by-product of a line.
+
+**Decided 15 September 2026 (work order 122, item 2.2): neither moves.**
+The difference is a DELIBERATE DEVIATION — the HD icon keeps
+`SHIP_ICON_DIM`, whose click area is live-confirmed, and the lines keep the
+header. Marked in `screens/galaxy_map/maplines.py` and on both tables, and
+held by a smoke check.

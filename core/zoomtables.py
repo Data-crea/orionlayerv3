@@ -168,6 +168,14 @@ ORBIT_STACK_STEP_BASE = 11
 #:
 #: The height must stay below the orbit stack step (11 - zoom), or
 #: four fleets at one star collide. 10 < 11 at every step.
+#:
+#: DELIBERATE DEVIATION from the sprite header the game positions with,
+#: Data's decision of 15 September 2026 (work order 122, item 2.2): the
+#: header table below is SHIP_ICON_HEADER_DIM = ((11, 11), (12, 11), (12, 10), (16, 12)),
+#: indexed 3 - zoom, and this one stays as measured because the HD icon's
+#: click area at these sizes is live-confirmed. Marked in
+#: `screens/galaxy_map/maplines.py`; the smoke test holds this comment to
+#: the header table's current values.
 SHIP_ICON_DIM = ((11, 10), (10, 9), (9, 8), (8, 7))
 
 #: The header size of BUFFER0.LBX entries 205..208, index = entry - 205:
@@ -185,7 +193,10 @@ SHIP_ICON_DIM = ((11, 10), (10, 9), (9, 8), (8, 7))
 #: at the corner plus (6, 5); at zoom 0 it began at plus (8, 6), half of
 #: index 3's 16 x 12, where index 0's 11 x 11 matched 2 pixels of 74.
 #: NOT SHIP_ICON_DIM, which is 9 x 8 at zoom 2: that table sizes the HD
-#: icon and is left as it is (doc/ship_icon_measurement.md).
+#: icon and is left as it is (doc/ship_icon_measurement.md). DELIBERATE
+#: DEVIATION between the two, work order 122 item 2.2: SHIP_ICON_DIM =
+#: ((11, 10), (10, 9), (9, 8), (8, 7)); the smoke test holds this comment to
+#: its current values.
 SHIP_ICON_HEADER_DIM = ((11, 11), (12, 11), (12, 10), (16, 12))
 
 #: Monster icon footprints at zoom 0, measured the same way. Each
