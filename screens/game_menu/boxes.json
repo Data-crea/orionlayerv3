@@ -93,6 +93,68 @@
       }
     },
     {
+      "name": "volume_panel",
+      "rect": [
+        624,
+        426,
+        398,
+        236
+      ],
+      "style": {
+        "skin": "thin_border"
+      }
+    },
+    {
+      "name": "music_label",
+      "rect": [
+        650,
+        449,
+        338,
+        38
+      ],
+      "style": {
+        "skin": "area",
+        "font_size": 30
+      }
+    },
+    {
+      "name": "music_bar",
+      "rect": [
+        650,
+        503,
+        349,
+        27
+      ],
+      "style": {
+        "skin": "area"
+      }
+    },
+    {
+      "name": "sound_bar",
+      "rect": [
+        650,
+        552,
+        349,
+        27
+      ],
+      "style": {
+        "skin": "area"
+      }
+    },
+    {
+      "name": "sound_label",
+      "rect": [
+        650,
+        597,
+        338,
+        38
+      ],
+      "style": {
+        "skin": "area",
+        "font_size": 30
+      }
+    },
+    {
       "name": "settings_title",
       "rect": [
         533,

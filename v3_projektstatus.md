@@ -837,7 +837,7 @@ files under `doc/` and are only summarised here.
 | | |
 |---|---|
 | Python | 32,960 lines across 111 modules — `find . -name '*.py'`, `__pycache__` excluded, the smoke test's 6,400 included. The previous figure here (21,642 across 94) was carried from an unstated method and could not be reproduced |
-| Smoke test | `python tools/smoke_test.py` — **190 checks**, headless |
+| Smoke test | `python tools/smoke_test.py` — **191 checks**, headless |
 | Assets | 170 MB (select_race 68, galaxy_map 51, shared 23, new_game 21, colony_summary 1) |
 | Screens in HD | 9 of ~20–22 (the GAME menu overlay, work order Stop 2, every dialog of the popup; colony summary draws list, sidebar, scan box and galaxy inset, and MOVES POPS — the first HD gesture that drives the game; planets, brief 101, lists, sorts, restricts and returns) |
 | Setup from clone | `python tools/setup.py` (deps via the system package manager) |
@@ -3246,9 +3246,9 @@ work's decisions.
 
 **Marked, each in the module, `layout.json` and the smoke test:**
 
-- **OMISSION — the Music and Sound Fx sliders.** Their value comes from
-  the pointer (`Find_Bar_Position_`), which an activation cannot supply.
-  Help regions 420/421 go with them. Open fix 15 asks the question.
+- ~~**OMISSION — the Music and Sound Fx sliders.**~~ Built by work order
+  124 C (`gmsliders.py`), help regions 420/421 with them; the omission is
+  gone from the module and `layout.json`.
 - **OMISSION — the slot game-type icon** (GAME.LBX 16-18, not extracted).
 - **HD STATE — slot names.** Until `doc/ext_save_slots.patch` is applied
   (reported, NOT applied, open fix 14) a Load/Save row shows "Slot N",
@@ -3995,6 +3995,44 @@ considered and rejected (free text, colour codes, no validation). The patch
 still passes `git apply --check` on the current tree. The HD dialogs keep
 "Slot N" (HD STATE, decision 60) until Data applies it. Details under open
 fix 14.
+
+### GAME menu: the Music and Sound Fx bars — work order 124 C, 16 September 2026
+
+**Built, transcribed, and no patch needed.** Open fix 15's premise was
+stale: open fix 3's second half (applied since 5 September) keeps an
+injected click's pointer, so an `INJECT_CLICK` on the bar sets the volume.
+
+- **The original, read:** two scroll fields, native (206, 219) and
+  (206, 241), 155 x 12, value 0..156 from `Find_Bar_Position_` —
+  `(x - 206) * 156 / 155`, so 155 is never produced — stored as
+  `level = value * 100 / 155` in `_settings` (5 or less switches the channel
+  off), shown on opening as `value = level * 155 / 100`, which is lossy
+  (49 -> 75 -> 48). The bar is GAME.LBX picture 7 revealed up to `value`
+  pixels: ten blocks, measured off the picture, a block can be partly lit.
+  A held press follows the pointer; the level is applied when the press
+  ends. Sources in `layout.json` `sliders._note`.
+- **Live, before building** (Data's OrionLayer closed; SAVE4 reloaded;
+  GAME menu up; a picture after every click): `INJECT_CLICK` (321, 247) set
+  Sound Fx 50 -> 74, (284, 247) back to 50.
+- **HD** — `screens/game_menu/gmsliders.py`, boxes `volume_panel`,
+  `music_label`, `music_bar`, `sound_bar`, `sound_label` at the original's
+  rects; block colours measured into `colors.json` (`slider_off`,
+  `slider_on`, `slider_glow`). The drawn value is read off `_settings`. A
+  press and a drag preview locally and send nothing; the release sends ONE
+  click at the native point that gives the chosen value; the preview is held
+  until the snapshot carries it. `main.py` now routes a left-button release
+  to a screen that has `handle_left_release`. Help regions 420/421 are back.
+- **Live, HD:** a drag on the Music bar from 25 % to 75 % sent nothing while
+  held and one click on release — Music 49 -> 74, the HD bar and the native
+  bar both at seven blocks and part of the eighth; restored to 49 (value
+  76). SAVE1-9 identical, SAVE10 unchanged.
+- **Open fix 15** answered (no command needed, dependency on open fix 3
+  named); decision 61's example amended; the OMISSION is gone from the
+  module, `layout.json` and this document.
+- **Smoke:** one new check (the arithmetic over every value the game can
+  produce, the live 74 and 50, lit width from `_settings`, nothing on press
+  or drag, one click on release, the preview released after the floor);
+  the help and marking checks follow the new state. **190 -> 191.**
 
 ## What is missing
 

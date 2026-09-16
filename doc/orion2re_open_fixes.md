@@ -36,7 +36,7 @@ section for what was found where.
 | 12 | A pop move has no command: it has to be a click choreography into the game's own list window | **Request**, and **patched locally** 10 September 2026 (`doc/ext_move_pop.patch`), **VERIFIED LIVE** the same day; open upstream | Without it a move costs four snapshot round trips instead of one — 725 ms against 55 ms measured — and every one of them is a click that can land on the wrong row |
 | 13 | The Planets screen's five restriction toggles (`PLNTSUM::_filter_out_*`) are not in the snapshot | **Request** | HD cannot know which filters the game already has on; seen live 13 September 2026 — the range toggle was on before the HD screen opened, and the two lists disagreed |
 | 14 | The GAME popup's save slot list (names, stardates, dates, status, type) is not on the wire | **Request**, patch written 14 September 2026 (`doc/ext_save_slots.patch`), **reported, NOT applied**; re-checked 16 September: still needed, still applies | The HD Load and Save dialogs show slot numbers only; reading SAVEn.GAM from a folder of our own is refused (fundament 60) |
-| 15 | A scroll field's value can only be set by the pointer | **Question, not a request** | The GAME menu's Music and Sound Fx sliders are left out of HD |
+| 15 | A scroll field's value can only be set by the pointer | **Answered 16 September 2026**: with open fix 3 applied an injected click sets it (measured live); no request | Nothing while open fix 3 is applied; the HD volume bars depend on it |
 | 16 | Save dates print the year as `tm_year`: 126 | **Observation** | Nothing; HD shows what the engine formats |
 | 17 | The Load dialog's first visit prints dates without a month | **Observation** | Nothing; HD shows what the engine formats |
 | 18 | The Settings dialog has two different Alt-key label sets | **Observation** | Nothing; HD shows the screen path's set |
@@ -1320,6 +1320,17 @@ whenever the window has focus. **Would a `SET_FIELD_VALUE(field, value)`
 command be acceptable** — the scroll field's `value` pointer written,
 then the field activated? Until there is an answer, OrionLayer leaves
 the sliders out.
+
+**ANSWERED WITHOUT A COMMAND — 16 September 2026, work order 124 C.** The
+premise was stale: open fix 3's second half (`doc/ext_inject_click.patch`,
+applied and verified 5 September) already suppresses
+`Sync_Mouse_State_From_SDL_` while injected input is unconsumed, so an
+injected click on the bar keeps its pointer through `Find_Bar_Position_`.
+Measured live: with the GAME menu up, `INJECT_CLICK` at native (321, 247)
+set `_settings.sound_fx_level` 50 -> 74 and (284, 247) set it back to 50,
+exactly what `(x - 206) * 156 / 155` and `* 100 / 155` predict. HD builds
+the bars on that (`screens/game_menu/gmsliders.py`); no request remains
+here, and the dependency on open fix 3 is named in that module.
 
 ## 16. Save dates print the year as years since 1900 — an observation
 

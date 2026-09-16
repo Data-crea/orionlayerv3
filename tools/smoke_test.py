@@ -15594,13 +15594,15 @@ def main():
     for _r in _gm_help["regions"]:
         assert "native" in _r and "node" in _r, _r
         _gm_ids.setdefault(_r["node"], []).append(_r["help_id"])
-    assert sorted(_gm_ids["menu"]) == [415] * 4 + [416, 417, 418, 419, 422, 423]
+    assert sorted(_gm_ids["menu"]) == [415] * 4 + list(range(416, 424))
     assert sorted(_gm_ids["settings"]) == [415] * 4 + list(range(429, 443))
     assert sorted(_gm_ids["load"]) == [415] * 4 + [424, 425, 426]
     assert sorted(_gm_ids["save"]) == [415] * 4 + [425, 427, 428]
-    assert "420" in _gm_help["_omitted"] and "421" in _gm_help["_omitted"]
-    ok("GAME menu help: 42 regions over four dialogs as evanhelp.cpp:40-116, "
-       "420/421 omitted with the sliders and named")
+    # 420/421 came back with the volume bars (work order 124 C): nothing
+    # of the menu's table is omitted any more, and the file says so.
+    assert "_omitted" not in _gm_help, "a stale omission note in help.json"
+    ok("GAME menu help: 44 regions over four dialogs as evanhelp.cpp:40-116, "
+       "420/421 over the volume bars")
 
     # 7. THE MARKINGS cannot silently disappear: module, layout.json and
     #    the status document, for each omission and the HD state.
@@ -15613,16 +15615,94 @@ def main():
                       encoding="utf-8").read()
     for _mark in ("OMISSION", "HD STATE", "UNVERIFIED"):
         assert _mark in _gm_mod, f"screen.py lost its {_mark} marking"
-    assert _gm_lay["omission_sliders"].startswith("OMISSION")
+    assert "omission_sliders" not in _gm_lay, "the slider omission is back"
     assert _gm_lay["slot_rows"]["omission_icon"].startswith("OMISSION")
     assert _gm_lay["words"]["hd_state_slot"].startswith("HD STATE")
     assert _gm_lay["unverified_right_click"].startswith("UNVERIFIED")
-    for _mark in ("OMISSION — the Music and Sound Fx sliders",
+    for _mark in ("OMISSION — the slot game-type icon",
                   "HD STATE — slot names",
                   "UNVERIFIED — the Save dialog's right click"):
         assert _mark in _gm_status, f"status document lost: {_mark}"
-    ok("GAME menu markings: OMISSION (sliders, icon), HD STATE (slot "
+    ok("GAME menu markings: OMISSION (slot icon), HD STATE (slot "
        "names), UNVERIFIED (Save right click) in module, layout, status")
+
+    # 7b. THE VOLUME BARS (work order 124 C), transcribed. The arithmetic
+    #     against the source's own numbers, the drawing against the value
+    #     the snapshot carries, and the gesture: nothing on press or drag,
+    #     ONE injected click on release, at a native point the game turns
+    #     into the chosen value.
+    from screens.game_menu import gmsliders as _gsl
+    _gsl_cfg = _gm_lay["sliders"]
+    assert (_gsl_cfg["native_x"], _gsl_cfg["width"], _gsl_cfg["height"],
+            _gsl_cfg["range_max"], _gsl_cfg["music_y"],
+            _gsl_cfg["sound_y"]) == (144 + 0x3e, 0x9b, 0xc, 0x9c,
+                                     25 + 0xc2, 25 + 0xd8)
+    assert len(_gsl_cfg["blocks"]) == 10
+    _gsl_reach = {_gsl.native_value(_x, _gsl_cfg) for _x in range(
+        _gsl_cfg["native_x"] - 2, _gsl_cfg["native_x"] + _gsl_cfg["width"] + 3)}
+    assert 155 not in _gsl_reach and {0, 154, 156} <= _gsl_reach
+    for _v in _gsl_reach:
+        assert _gsl.native_value(_gsl.native_x_for(_v, _gsl_cfg),
+                                 _gsl_cfg) == _v, _v
+    # The live measurement of 16 September: native x 321 gave 74, 284 gave 50.
+    assert _gsl.value_to_level(_gsl.native_value(321, _gsl_cfg),
+                               _gsl_cfg) == 74
+    assert _gsl.value_to_level(_gsl.native_value(284, _gsl_cfg),
+                               _gsl_cfg) == 50
+    assert _gsl.value_to_level(8, _gsl_cfg) == 0      # 5 or less is off
+    _gsl_sent = []
+
+    class _GslClient:
+        def inject_click(self, x, y): _gsl_sent.append((x, y))
+        def activate_field(self, i): pass
+        def hold_watchdog(self, s): pass
+
+    _gsl_real = (app.client, app.connected)
+    app.client, app.connected = _GslClient(), True
+    try:
+        _gsl_raw = bytearray(_gm_live)
+        _gsl_raw[18], _gsl_raw[20] = 50, 49           # sound, music levels
+        _gm_gs.settings_raw = bytes(_gsl_raw)
+        _gm_gs.fields = _gm_fields(_gm_fix["menu"])
+        _gm_scr.update(_gm_gs)
+        assert _gsl.wire_value(_gm_scr, "sound") == 77   # 50 * 155 // 100
+        _gsl_bar = _gm_draw.rect(_gm_scr, "sound_bar")
+        _gsl_probe = pygame.Surface((app.win_w, app.win_h))
+        _gsl_probe.fill((0, 0, 0))
+        _gm_scr.render(_gsl_probe)
+        _gsl_row = pygame.surfarray.array3d(_gsl_probe)[
+            _gsl_bar.x:_gsl_bar.right, _gsl_bar.centery]
+        _gsl_on = tuple(_gsl.COL_ON[:3])
+        _gsl_lit = [i for i, c in enumerate(map(tuple, _gsl_row))
+                    if c in (_gsl_on, tuple(_gsl.COL_GLOW[:3]))]
+        assert _gsl_lit and abs(max(_gsl_lit) + 1 - round(
+            77 * _gsl_bar.w / _gsl_cfg["width"])) <= 2, (_gsl_lit[-1:],)
+        _gsl_x = _gsl_bar.x + int(_gsl_bar.w * 0.75)
+        assert _gm_scr.handle_click(_gsl_x, _gsl_bar.centery) is None
+        _gm_scr.handle_mouse_motion(_gsl_bar.x + int(_gsl_bar.w * 0.25),
+                                    _gsl_bar.centery)
+        _gm_scr.handle_mouse_motion(_gsl_x, _gsl_bar.centery)
+        assert _gsl_sent == [], "the press or the drag sent something"
+        _gm_scr.handle_left_release(_gsl_x, _gsl_bar.centery)
+        assert len(_gsl_sent) == 1, _gsl_sent
+        _gsl_want = _gsl._value_at(_gm_scr, "sound", _gsl_x)
+        assert _gsl.native_value(_gsl_sent[0][0], _gsl_cfg) == _gsl_want
+        assert _gsl_sent[0][1] == _gsl_cfg["sound_y"] + 6
+        # Held until the snapshot carries it, then the wire again.
+        assert _gsl.shown_value(_gm_scr, "sound") == _gsl_want
+        for _k in range(_gm_wp.EFFECT_PAIRS + 1):
+            _gsl_next = _GmState()
+            _gsl_next.settings_raw, _gsl_next.fields = \
+                _gm_gs.settings_raw, _gm_gs.fields
+            _gm_scr.update(_gsl_next)
+        assert _gsl.shown_value(_gm_scr, "sound") == 77
+        assert "OMISSION" not in _gsl.__doc__ and \
+            "TRANSCRIBED" in _gsl.__doc__
+    finally:
+        app.client, app.connected = _gsl_real
+    ok("GAME menu volume bars: Find_Bar_Position_ arithmetic round-trips "
+       "every value the game can produce, the live 74/50, lit width from _settings, one click on "
+       "release and none on press or drag, preview held to the effect")
 
     # 8. THE GATE: a second click before the list changes sends nothing;
     #    after the change it goes. QUIT -> YES stands the watchdog down

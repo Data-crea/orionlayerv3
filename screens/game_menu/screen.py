@@ -16,8 +16,8 @@ SETTINGS is index 5, and index 5 of the Settings list is a checkbox.
 What HD does NOT do, each marked here, in layout.json, in the status
 document and in the smoke test:
 
-- OMISSION — the Music and Sound Fx sliders (`layout.json`
-  `omission_sliders`), and the game-type icon on every slot row.
+- OMISSION — the game-type icon on every slot row. (The Music and Sound
+  Fx bars were one until work order 124 C; they are `gmsliders`.)
 - HD STATE — slot rows show their number only until
   `doc/ext_save_slots.patch` is in (decision 60).
 - UNVERIFIED, NOT TRANSCRIBED — a right click inside the Save dialog
@@ -34,7 +34,7 @@ from core.hestrings import HStrings, printf
 from core.screen_base import ScreenBase
 from core.structs import settings as settings_spec
 from core.wire_protocol import EFFECT_PAIRS
-from screens.game_menu import gmdraw, gmorion, nodes
+from screens.game_menu import gmdraw, gmorion, gmsliders, nodes
 from screens.game_menu.gmsave import SaveEditor
 
 log = logging.getLogger("game_menu")
@@ -78,6 +78,8 @@ class GameMenuScreen(ScreenBase):
         self._sent = None
         self.save = SaveEditor(self)
         self.menu_keys = set()  # the menu's buttons, as its last list had them
+        self.slider_drag = None  # gmsliders: a press on a bar, not sent yet
+        self.slider_sent = {}
 
     # ── Lifecycle ─────────────────────────────────────────
 
@@ -136,6 +138,7 @@ class GameMenuScreen(ScreenBase):
             log.info("game menu: %s -> %s", self.node, node)
             self.node = node
         self.save.update(game_state)
+        gmsliders.advance(self, game_state)
 
     def render(self, surface):
         gmdraw.render(self, surface)
@@ -222,6 +225,8 @@ class GameMenuScreen(ScreenBase):
             return None
         if self.save.handle_click(screen_x, screen_y):
             return None
+        if gmsliders.press(self, screen_x, screen_y):
+            return None
         for name, key in self.BUTTONS.get(self.node, []):
             if gmdraw.hit(self, name, screen_x, screen_y):
                 self.press(key)
@@ -249,6 +254,13 @@ class GameMenuScreen(ScreenBase):
         elif self.node == nodes.WARNING:
             self.send(nodes.esc_field(self.fields()))
         return None
+
+    def handle_mouse_motion(self, screen_x, screen_y):
+        super().handle_mouse_motion(screen_x, screen_y)
+        gmsliders.motion(self, screen_x, screen_y)
+
+    def handle_left_release(self, screen_x, screen_y):
+        gmsliders.release(self, screen_x, screen_y)
 
     def handle_key_event(self, event):
         if self.save.handle_key_event(event):

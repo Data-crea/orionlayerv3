@@ -179,6 +179,13 @@ class App:
                 pass  # editor consumed it
             elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
                 self._handle_click(*event.pos)
+            elif event.type == pygame.MOUSEBUTTONUP and event.button == 1:
+                # The end of a held press, duck-typed like the right button:
+                # screens with a drag (the GAME menu's volume bars) answer.
+                top = self.dispatcher.top
+                if top and hasattr(top, "handle_left_release") \
+                        and not self.editor.active:
+                    top.handle_left_release(*event.pos)
             elif (event.type in (pygame.MOUSEBUTTONDOWN,
                                  pygame.MOUSEBUTTONUP)
                   and event.button == 3):

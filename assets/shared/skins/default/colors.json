@@ -989,6 +989,22 @@
   },
   "game_menu": {
     "_note": "GAME menu overlay. Palette CHOICES, not transcriptions (decision 53: Data's to change): the original's words are artwork and its rows are drawn in font colour sets from MISC::Font_Colors2_ (loadsave.cpp:904-924) that no extractor reads. Picked to sit near the native screenshots \u2014 light buttons, orange rows and options, the active slot brighter, blue checkboxes.",
+    "_slider_note": "The volume bars' three block colours are MEASURED off the native framebuffer (GAME.LBX pictures 0 and 7 through the galaxy palette, work order 124 C): a lit block runs from (0, 0, 180) at its edge to (96, 136, 252) at its centre, an unlit one is (24, 28, 64).",
+    "slider_off": [
+      24,
+      28,
+      64
+    ],
+    "slider_on": [
+      0,
+      0,
+      220
+    ],
+    "slider_glow": [
+      96,
+      136,
+      252
+    ],
     "button_text": [
       206,
       212,

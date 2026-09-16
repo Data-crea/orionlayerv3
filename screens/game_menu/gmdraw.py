@@ -169,6 +169,8 @@ def _menu(screen, surface):
                                                                    key):
             button(screen, surface, name,
                    word(screen, "menu", name.split("_", 1)[1]))
+    from screens.game_menu import gmsliders
+    gmsliders.render(screen, surface)
 
 
 def _settings(screen, surface):

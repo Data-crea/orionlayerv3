@@ -2,6 +2,65 @@
   "_comment": "The GAME menu overlay (SCREEN_GAME, 8): wording, row rules and message ids. Geometry is boxes.json; every box there is the original's rectangle scaled by 2.25, and `native` below says which rectangle, per box. The whole group is then placed so the body's centre sits where the original's does in the MAP WINDOW, not in the window: see `_anchor_note`.",
   "_anchor_note": "TRANSCRIBED POSITION, 16 September 2026 (decision 69). LOADSAVE::Add_Game_Popup_Fields_ (loadsave.cpp:176-293) puts all four in-game dialogs at one fixed top-left, MOX::_popup_base_x = 0x90, _popup_base_y = 0x19 (:182-183, :205-206, :231-232; the centred branch at :225-229 is the MAIN MENU's Load), and _Draw_Main_Game_Popup_ draws GAME.LBX picture 0 there (:1356); pictures 0, 8, 11 and 14 are all 279x378, measured in the LBX headers. So the popup's centre is native (283.5, 214), which is 51.68 % across and 48.0 % down the map window (22,22)-(527,421) (Add_Grid_Field_, mainscr.cpp:1427) - near its centre and not on it, and nowhere near the 640x480 window's (320, 240). HD transcribes that PROPORTION against the galaxy map's own map_area box: in reference px the target is (90 + 0.5168 * 1422, 66 + 0.48 * 885) = (824.9, 490.8), and every box in boxes.json moved by (-53, +10) from the centred-4:3 placement, which put the body's centre at (878, 481). The smoke test holds the body's centre to the proportion within 1 ref px, so a galaxy frame that moves map_area fails it. help_popup is not part of the group: it is centred on the galaxy map's map_area, like the galaxy map's own.",
   "_dialog_fit_note": "HD DEVIATION, work order 123 (Data): the confirmation (native 310 px wide) and the slot warning (331 px) are wider than the popup (279 px) and overhang it in the original. In boxes.json each group - confirm_* and warning_* - is scaled by ONE factor, body width over panel width (628/698 = 0.8997, 628/745 = 0.8430), rects and font sizes alike, about the panel's centre, then centred horizontally on the body; the vertical centre stays the original's (confirm 527, warning 549 ref px). No question gains a line at 1080p, 1440p or 2160p (HESTRNGS 186, 187, 178-180, checked before the change). NO returns to the game menu as in the original (Do_Main_Game_Popup_, loadsave.cpp:1240-1283: the popup loop continues with _screen_data 0), the slot warning to the Load dialog.",
+  "sliders": {
+    "_note": "TRANSCRIBED, work order 124 C. Add_Game_Popup_Fields_ adds both volumes as scroll fields (loadsave.cpp:200-201): x = base + 0x3e = 206, y = base + 0xc2 = 219 (music) and base + 0xd8 = 241 (sound), width 0x9b = 155, height 0xc = 12, range 0..0x9c = 156. fields::Find_Bar_Position_ (fields.cpp:1702-1743) sets value = (pointer_x - 206) * 156 / 155, clamped; it runs while the press is held (Push_Field_Down_ -> Draw_Field_, fields.cpp:2124, 2837-2840), so dragging is the original's. The input loop then stores level = value * 100 / 155 in _settings.music_level / sound_fx_level, and 5 or less switches the channel off (Set_Music_For_Game_Popup_ / Set_Sound_For_Game_Popup_, loadsave.cpp:1685-1740); opening the dialog sets value = level * 155 / 100 (:1139-1140). The bar is GAME.LBX picture 7, 155 x 12, drawn clipped to 206 .. 206 + value (_Draw_Main_Game_Popup_, :1338-1409; picture 7 at :1385-1409): ten blocks whose x ranges and rows are measured off that picture below, so a block can show partly lit. The words are artwork of picture 0, typed here.",
+    "native_x": 206,
+    "width": 155,
+    "height": 12,
+    "range_max": 156,
+    "music_y": 219,
+    "sound_y": 241,
+    "block_rows": [
+      2,
+      9
+    ],
+    "blocks": [
+      [
+        3,
+        14
+      ],
+      [
+        18,
+        29
+      ],
+      [
+        33,
+        44
+      ],
+      [
+        48,
+        59
+      ],
+      [
+        64,
+        75
+      ],
+      [
+        79,
+        90
+      ],
+      [
+        94,
+        105
+      ],
+      [
+        109,
+        121
+      ],
+      [
+        125,
+        136
+      ],
+      [
+        140,
+        151
+      ]
+    ],
+    "words": {
+      "music": "Music",
+      "sound": "Sound Fx"
+    }
+  },
   "frame": {
     "image": "frame.png",
     "image_size": [
@@ -142,6 +201,36 @@
       172,
       434,
       292
+    ],
+    "volume_panel": [
+      194,
+      185,
+      371,
+      290
+    ],
+    "music_label": [
+      206,
+      195,
+      356,
+      212
+    ],
+    "music_bar": [
+      206,
+      219,
+      361,
+      231
+    ],
+    "sound_bar": [
+      206,
+      241,
+      361,
+      253
+    ],
+    "sound_label": [
+      206,
+      261,
+      356,
+      278
     ]
   },
   "_native_note": "640x480 rectangles from Add_Game_Popup_Fields_ (loadsave.cpp:176-293), Confirmation_Box_ (gendraw.cpp:153-175, CONFIRM.LBX drawn at 0xa1,0x75) and Message_Box_Exploding_ (gendraw.cpp:90-127, WARNING.LBX at 0x9a,0x90, 0x14B x 0xBF). body, settings_title and slot_list are read off the native screenshots, not the source: the popup's frame is artwork (GAME.LBX 0, 29, 11, 14).",
@@ -262,7 +351,6 @@
     "2": 179,
     "3": 180
   },
-  "omission_sliders": "OMISSION: the Music and Sound Fx sliders (loadsave.cpp:200-201, type-6 fields) are not in HD. Their value is written from the pointer by fields::Find_Bar_Position_ (fields.cpp:1702), which an activation cannot supply and decision 39's correction says an injected click loses. Data, 14 September 2026: leave out and mark. Their help regions 420 and 421 are omitted with them. Open fix 15 asks the question.",
   "unverified_right_click": "UNVERIFIED, NOT TRANSCRIBED: a right click inside the Save dialog outside every help rectangle returns -1, which Do_Save_Game_Popup_'s `input_id < 0` branch reads as `abs(-1) = 1` inside the slot field range and leaves for the menu (loadsave.cpp:568-574). Data's order: verify live first. It could not be run: the game is a native Wayland client that xdotool cannot reach, and every field centre in that dialog lies inside a help rectangle, so MSG_CANCEL_FIELD cannot produce the case. Until it is verified, HD does nothing there.",
   "orionlayer_rows": {
     "_hd_extension": "HD EXTENSION (fundament 63, 64): five row heights below the thirteen engine rows - a divider, the OrionLayer heading, the map floor lift, the player-colour preset and the monster values switch for the Planets panel (default on). The game knows nothing about them: they have no field, their clicks send nothing, and their values live in core/usersettings.py. The hotkey column stays empty for all three rows.",

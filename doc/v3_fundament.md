@@ -1706,7 +1706,7 @@ what the original does that HD leaves out, and a thing left out is the
 easiest to stop seeing. Three labels now, each in the module, in the
 status document and in a smoke check: **OMISSION** — the original has
 it and HD does not draw it (the volume sliders, which an activation
-cannot set; the slot game-type icon, whose artwork is not extracted);
+cannot set — built after all by work order 124 C, through an injected click; the slot game-type icon, whose artwork is not extracted);
 **HD STATE** — HD draws something in place of a value the wire does not
 carry yet (slot rows show "Slot N" until the patch); **UNVERIFIED** — a
 source reading Data required to be confirmed live before it is

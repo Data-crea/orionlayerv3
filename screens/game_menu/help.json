@@ -2,7 +2,6 @@
   "_comment": "Right-click help for the GAME menu overlay, one table per dialog, filtered by `node`. Transcribed from EVANHELP::_main_game_screen_help_list (evanhelp.cpp:40), _load_game_screen_help_list (:77), _options_game_screen_help_list (:87) and _save_game_screen_help_list (:108), installed at loadsave.cpp:1228, :317, :418 and :480. `native` is provenance. The four 415 rectangles tile the screen outside the popup; HD derives them from the `body` box (`around` + `side`), so they follow an F5 nudge. The confirmation and the warning have no table: Message_Box_Startup_ switches help off (gendraw.cpp:58).",
   "_source": "evanhelp.cpp:40-116",
   "hd_extension": "The help popup auto-sizes to its text and scrolls when it cannot fit; the original draws a fixed box and wraps at 339 px (TEXTBOX::Draw_Help_Entry_, textbox.cpp:307). Marked once per file, as on every help screen.",
-  "_omitted": "420 Change Music Volume (196,188)-(370,236) and 421 Change Sound Effects Volume (196,238)-(369,290): the sliders are an OMISSION in HD (layout.json omission_sliders), so their regions are left out with them.",
   "_unverified": "See layout.json unverified_right_click: the Save dialog's right click outside these regions is not transcribed.",
   "regions": [
     {
@@ -95,6 +94,34 @@
         113,
         382,
         144
+      ]
+    },
+    {
+      "help_id": 420,
+      "node": "menu",
+      "box": [
+        "music_label",
+        "music_bar"
+      ],
+      "native": [
+        196,
+        188,
+        370,
+        236
+      ]
+    },
+    {
+      "help_id": 421,
+      "node": "menu",
+      "box": [
+        "sound_bar",
+        "sound_label"
+      ],
+      "native": [
+        196,
+        238,
+        369,
+        290
       ]
     },
     {
