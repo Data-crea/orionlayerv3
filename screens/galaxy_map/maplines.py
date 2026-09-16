@@ -20,7 +20,8 @@ SHIP DESTINATION LINES — TRANSCRIBED from SHIPS::Do_Ship_Destination_Lines_
     first node);
   * and only while its location is encoded, 10000 <= location < 30000, and
     bound for a real star — so from the turn of the order (20000 + star)
-    on, not a turn later as the map's "eta N" (run 114);
+    on, not a turn later as the map's "eta N" (run 114), which is
+    `mapeta` (work order 122, item 2.1);
   * green table for the local player's ship, red for any other
     (`_ship_direction_line_green/red_colors`, mainscr.cpp:105-106);
   * from the icon's corner plus half the header size of BUFFER0.LBX entry
@@ -59,9 +60,6 @@ fails if the tables become equal, or if either changes while this note and
 the comment on the other table still quote the old values.
 
 OMISSION, each with its reason:
-  * "eta N" beside a moving icon (`Print_Eta_On_Ship_Icon_`, H 0x133): a
-    label in the player's font colours at a sprite-header offset, not a
-    line; not in this brief.
   * the order preview line (`Draw_ETA_Destination_Line_`,
     mainscr.cpp:535-568): its colour is the move result, which is not on
     the wire.

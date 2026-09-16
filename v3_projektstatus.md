@@ -837,7 +837,7 @@ files under `doc/` and are only summarised here.
 | | |
 |---|---|
 | Python | 32,960 lines across 111 modules — `find . -name '*.py'`, `__pycache__` excluded, the smoke test's 6,400 included. The previous figure here (21,642 across 94) was carried from an unstated method and could not be reproduced |
-| Smoke test | `python tools/smoke_test.py` — **189 checks**, headless |
+| Smoke test | `python tools/smoke_test.py` — **190 checks**, headless |
 | Assets | 170 MB (select_race 68, galaxy_map 51, shared 23, new_game 21, colony_summary 1) |
 | Screens in HD | 9 of ~20–22 (the GAME menu overlay, work order Stop 2, every dialog of the popup; colony summary draws list, sidebar, scan box and galaxy inset, and MOVES POPS — the first HD gesture that drives the game; planets, brief 101, lists, sorts, restricts and returns) |
 | Setup from clone | `python tools/setup.py` (deps via the system package manager) |
@@ -1177,7 +1177,7 @@ in exactly ONE bucket. The numbers below are produced by
 check asserts this list still agrees with it — the same trade the
 check count makes, for the same reason.
 
-`screens/galaxy_map/screen.py` (**571** code, 874 total), `tools/struct_probe.py` (**478** code, 753 total), `tools/colony_list_preview.py` (**403** code, 772 total), `screens/custom_race/screen.py` (**400** code, 558 total), `tools/colony_move_hd.py` (**383** code, 583 total), `core/editor/editor.py` (**359** code, 430 total), `screens/galaxy_map/renderer.py` (**336** code, 758 total), `tools/ext_diag.py` (**325** code, 473 total), `core/style.py` (**310** code, 479 total).
+`screens/galaxy_map/screen.py` (**581** code, 887 total), `tools/struct_probe.py` (**478** code, 753 total), `tools/colony_list_preview.py` (**403** code, 772 total), `screens/custom_race/screen.py` (**400** code, 558 total), `tools/colony_move_hd.py` (**383** code, 583 total), `core/editor/editor.py` (**359** code, 430 total), `screens/galaxy_map/renderer.py` (**336** code, 758 total), `tools/ext_diag.py` (**325** code, 473 total), `core/style.py` (**310** code, 479 total).
 `smoke_test.py` is exempt by nature.
 
 **TWO TOOLS JOINED THE LIST ON 8 SEPTEMBER 2026 and one thing left
@@ -3799,6 +3799,76 @@ on 6 September, in a second reader. It now takes bytes 1..3.
 - **Smoke:** one check — the reader against a probe FONTS.LBX whose every
   flag byte is non-zero; with the old byte order it fails. The count is
   189.
+
+### Galaxy map: the "eta N" label — work order 122 item 2.1, 16 September 2026
+
+**The source first, because it decides the label:** the original DRAWS this
+label — `SHIPS::Print_Eta_On_Ship_Icon_` (ships.cpp:482-506), called from
+`Do_Ship_Destination_Lines_` right after the line, only for 10000 <=
+location < 20000 (:471). So it is a TRANSCRIPTION, not an HD extension:
+HESTRNGS 307 "eta %d", the owner's font colours, style 1 at zoom 0/1 and 0
+beyond, `Print_Right_` with the right edge at the icon's left plus, and the
+top at the icon's top plus, the header of the OWNER's own sprite (entry
+205 + colour * 4 + (3 - zoom)). `screens/galaxy_map/mapeta.py`; the OMISSION
+in `maplines` is gone.
+
+- **The table the brief pointed at is colour 0's only.** The headers differ
+  by colour (colour 2 at index 1 is 11 x 11, colours 2-7 reach 17 x 14 at
+  index 3), so `zoomtables.SHIP_ICON_HEADER_DIM_BY_COLOUR` (8 x 4, read from
+  BUFFER0.LBX, row 0 held equal to `SHIP_ICON_HEADER_DIM`) is what the label
+  uses. The digit ink height per style, 5 and 7 native rows, is decoded from
+  FONTS.LBX entry 0 (`ETA_DIGIT_INK_ROWS`, MEASURED) — no source holds it.
+- **HD geometry from the HD viewport** (Data, decision 35): header index
+  3 - `ctx.zoom`, offsets times `ctx.px`; the icon corner is the mapped
+  native corner coupled, the ship's galaxy position less half of colour 0's
+  header decoupled. Text through `Style.render_text`, digits sized to
+  rows x px, ink right-aligned to the anchor.
+- **DEVIATION — two locks (Data, 16 September 2026, "Befehlszug"):** a label
+  only while the game is on screen 0 in the map's OWN input loop (the map's
+  field list, no modal — the fleet box and system window are part of that
+  loop); and none between an HD star-click order and its effect (a ship of
+  the ordered stack changed location or status), released without an effect
+  after more than `EFFECT_PAIRS` newer snapshots (a refused order). Parking
+  the game's zoom is NOT a lock.
+- **Live, scratch saves SAVE4/SAVE5 only, one client** (Data's OrionLayer
+  closed first). The number the original prints is read by machine: the
+  FONTS.LBX glyphs rendered at the predicted native position, scored against
+  the framebuffer's pixels (hits - false - missing); record and scripts in
+  `~/orionlayer-fixtures/evidence/work_order_16sep/2_1_eta_record.json` and
+  `scripts/`:
+
+  | case | ship | turns_left (wire) | read from the framebuffer | HD drew |
+  |---|---|---|---|---|
+  | SAVE4, order turn, location 20025 | scout 10 | 3 | no label (none expected) | nothing |
+  | SAVE5, location 10025 (to Dhira) | scout 10 | 2 | **2** — 39 of 39 ink px, 0 false | **eta 2** |
+  | SAVE5 + TURN, still 10025 | scout 10 | 1 | **not readable**: Dhira's star sprite is drawn after the label and covers it; "1" is the only digit whose every ink pixel shows (5 of 5), 3, 4 and 9 are not excluded | `labels()` gives eta 1; the drawing was not captured |
+  | SAVE4, HD order Zin -> Sol, next turn, 10014 | scout 10 | 4 | **4** — 36 of 36, 0 false (runner-up 9, one pixel short) | **eta 4** |
+  | the same + TURN | — | — | stopped: the GNN news screen took no injected click or key | nothing (not the map's loop) |
+
+  Two turns carry a clean read, and both are digit-exact; they are not two
+  consecutive turns of one flight. The consecutive pair failed once on
+  occlusion and once on the news screen.
+- **The locks, live:** under the open GAME menu HD drew 0 labels; on the
+  combat select (screen 12), the colony-base dialog and the GNN screen
+  (screen 0 with a modal list) none. Two HD orders: the lock set at the
+  click, 3 and 2 frames drawn without a label, released on the effect.
+- **Found on the way:** the scout in SAVE4/SAVE5 sits at ZIN (star 6), bound
+  for Dhira — the brief's "Sol->Dhira" is Zin->Dhira. An HD star click on
+  the star the stack stands at is an order with `turns_left` 0: location 6,
+  status 0, the Dhira order cancelled (`Make_Ships_Move_To_`, shipmove.cpp).
+- **Not clean, and said so:** clearing turn dialogs by clicking CLOSE at a
+  fixed native point repeatedly answered the colony-base selection with
+  CLOSE and its "Really trash your colony base for 100BC?" — the scratch
+  game's treasury went 143 -> 243 BC. In the game's memory only: SAVE1-9
+  identical to the session start, SAVE10 rewritten by the turn ends (logged).
+  The game was left on the GNN screen.
+- **Smoke:** one check — who gets a label (not the order-turn ship), the text
+  through `Style.render_text`, the anchor in HD pixels, no label under the
+  GAME menu, with a foreign list on screen 0 or a modal, the order lock held
+  and released on effect and after the floor, and a blocked 4 substituting
+  (a stub font); a mutation without the loop gate fails it. Found by it: the
+  lock compared snapshot `id()`s, which a freed snapshot's address reuses —
+  it holds the snapshot now. The count is 190.
 
 ## What is missing
 

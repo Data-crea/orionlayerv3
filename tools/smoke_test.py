@@ -3376,6 +3376,146 @@ def main():
         ok("galaxy_map icon 9 x 8 against the 12 x 11 header: a DELIBERATE "
            "DEVIATION, the tables unequal and each note quoting the other")
 
+        # ── Work order 122 item 2.1: the "eta N" label ──
+        # Transcribed from Print_Eta_On_Ship_Icon_ with two locks of Data's
+        # (16 September 2026): only in the map's own input loop (screen 0,
+        # the map's own field list, no modal), and not between an HD order
+        # and its effect. Position and size from the HD viewport.
+        from screens.galaxy_map import mapeta as _eta
+        from core import mapcoords as mc
+        import json as _json
+        from core.game_state import FieldInfo as _EtaField
+        from core.wire_protocol import EFFECT_PAIRS as _eta_pairs
+        _eta_fix = _json.load(open(os.path.join(
+            os.path.dirname(SCREENS_DIR), "tools", "game_menu_fields.json")))
+
+        def _eta_fields(rows):
+            _out = []
+            for _r in rows:
+                _f = _EtaField()
+                (_f.index, _f.x, _f.y, _f.x_end, _f.y_end, _f.field_type,
+                 _f.hotkey) = _r
+                _out.append(_f)
+            return _out
+
+        _eta_raws = [bytearray(_r) for _r in _ml_raws]
+        for _k, _tl in ((0, 3), (2, 4), (5, 7)):
+            _eta_raws[_k][109] = _tl                  # turns_left, +109
+        _eta_raws = [bytes(_r) for _r in _eta_raws]
+        _eta_ships = [_ship.parse(_r) for _r in _eta_raws]
+        assert zt.SHIP_ICON_HEADER_DIM_BY_COLOUR[0] == zt.SHIP_ICON_HEADER_DIM
+        _ml_gs.fleet_selection = {"stack": -1, "ships": list(range(6)),
+                                  "selected": [False] * 6, "chain": []}
+        # Who: the moving own ship and the foreign one bound for our
+        # outpost; NOT the order-turn ship at 20001 (it has its line).
+        assert [(_i, _t) for _, _i, _, _t in _eta.labels(
+            _ml_gs, _eta_ships, _ml_gs.stars, [])] == [(0, 3), (2, 4)]
+        assert any(l["ship"] == 5 for l in gml.destination_lines(
+            _ml_gs, _eta_ships, _ml_gs.stars, 2))
+        _eta_real = (gs2.ships_raw, gs2.ship_icons, gs2.fleet_selection,
+                     gs2.fields, gs2.current_screen)
+        _eta_said = []
+        _eta_rt = app.style.render_text
+        app.style.render_text = lambda _t, *_a, **_k: (
+            _eta_said.append(_t), _eta_rt(_t, *_a, **_k))[1]
+        try:
+            gs2.ships_raw, gs2.ship_icons = _eta_raws, _ml_icons
+            gs2.fleet_selection = {"stack": 0, "ships": list(range(6)),
+                                   "selected": [True] * 6, "chain": [0]}
+            gs2.fields = _eta_fields(_eta_fix["galaxy_map"])
+            gs2.current_screen = 0
+            gm._viewctl.reset()
+            gm.update(gs2)
+            _eta_ctx = gm._map_context()
+            _eta_surf = pygame.Surface((app.win_w, app.win_h))
+
+            def _eta_draw(lock=None, state=gs2):
+                return _eta.render(_eta_surf, _eta_ctx, state, _eta_ships,
+                                   state.stars, gm._players, None, app.style,
+                                   None, lock, {})
+
+            _eta_drawn = _eta_draw()
+            assert [(_s_, _t) for _s_, _t, _ in _eta_drawn] == [
+                (0, "eta 3"), (2, "eta 4")], _eta_drawn
+            assert "eta 4" in _eta_said, "the label bypassed Style.render_text"
+            # Right edge and top: the icon corner plus the OWNER's header at
+            # index 3 - ctx.zoom, in HD pixels (coupled view).
+            _eta_icon = _ml_icons[0]
+            _eta_w, _eta_h = zt.ship_icon_header_dimension_for_colour(
+                0, 3 - _eta_ctx.zoom)
+            _eta_v = _eta_ctx.view
+            assert abs(_eta_drawn[0][2][0] - (_eta_v.off_x + (
+                _eta_icon.x - mc.MAP_LEFT + _eta_w) * _eta_v.scale)) < 1e-6
+            assert abs(_eta_drawn[0][2][1] - (_eta_v.off_y + (
+                _eta_icon.y - mc.MAP_TOP + _eta_h) * _eta_v.scale)) < 1e-6
+            # THE LOOP LOCK: a command outside the map's own input loop.
+            gs2.current_screen = 8
+            gs2.fields = _eta_fields(_eta_fix["menu"])
+            assert _eta_draw() == [], "a digit under the GAME menu"
+            gs2.current_screen = 0
+            gs2.fields = _eta_fields(_eta_fix["menu"])
+            assert _eta_draw() == [], "a digit with a foreign list on screen 0"
+            gs2.fields = _eta_fields([[0, 0, 0, 0, 0, 0, 0],
+                                      [1, 0, 0, 639, 479, 7, 0x1B]])
+            assert _eta_draw() == [], "a digit under a modal box"
+            gs2.fields = _eta_fields(_eta_fix["galaxy_map"])
+            # THE ORDER LOCK: held from the order until the effect.
+            _eta_lock = _eta.hold(gs2, _eta_ships)
+            assert _eta_draw(_eta_lock) == []
+            assert _eta.advance(_eta_lock, gs2, _eta_ships) is _eta_lock
+            _eta_moved = [_ship.parse(_r) for _r in _eta_raws]
+            _eta_moved[0] = _ship.parse(_bx_ship(0, 20003, 500, 500,
+                                                 status=2))
+            _eta_next = GameState()
+            assert _eta.advance(_eta_lock, _eta_next, _eta_moved) is None, \
+                "the lock outlived the order's effect"
+            _eta_l = _eta_lock
+            for _k in range(_eta_pairs):
+                _eta_l = _eta.advance(_eta_l, GameState(), _eta_ships)
+                assert _eta_l is not None, "released before any effect"
+            assert _eta.advance(_eta_l, GameState(), _eta_ships) is None, \
+                "a refused order locks the label for ever"
+            _gm_src = open(os.path.join(_ml_dir, "screen.py")).read()
+            assert 'if orders_ok and result.what == "star":\n' \
+                '                self._eta_lock = mapeta.hold(' in _gm_src
+        finally:
+            app.style.render_text = _eta_rt
+            (gs2.ships_raw, gs2.ship_icons, gs2.fleet_selection, gs2.fields,
+             gs2.current_screen) = _eta_real
+            gm.update(gs)
+        # DECISION 30: the label is game data through Style.render_text, and
+        # the substitution fires on a blocked 4 — a stub font whose 4, X, Y
+        # and Z share one bitmap, as the DEMO Bank Gothic's did.
+        class _EtaStubFont:
+            def __init__(self, size): self.size = size
+            def render(self, ch, aa, fg, bg=None):
+                _sf = pygame.Surface((10, 10))
+                _sf.fill((0, 0, 0) if ch in "4XYZ" else (ord(ch) % 256, 1, 0))
+                return _sf
+
+        _eta_cls = app.style.__class__
+
+        class _EtaStub:
+            _GLYPH_PROBE_SIZE = _eta_cls._GLYPH_PROBE_SIZE
+            _GLYPH_COLLISION_MIN = _eta_cls._GLYPH_COLLISION_MIN
+            _blocked = None
+            get_font = staticmethod(_EtaStubFont)
+            blocked_glyphs = _eta_cls.blocked_glyphs
+            split_runs = _eta_cls.split_runs
+
+        _eta_text = _eta.printf(_eta.FALLBACK_TEXT, 4)
+        assert (True, "4") in _EtaStub().split_runs(_eta_text), \
+            _EtaStub().split_runs(_eta_text)
+        for _eta_mark in ("TRANSCRIBED from SHIPS::Print_Eta_On_Ship_Icon_",
+                          "DEVIATION — two locks"):
+            assert _eta_mark in _eta.__doc__, _eta_mark
+        assert "OMISSION" in gml.__doc__ and "eta N" not in gml.__doc__.split(
+            "OMISSION")[1], "maplines still lists the eta label as omitted"
+        ok("galaxy_map eta label (Print_Eta_On_Ship_Icon_: who, text, the "
+           "owner's header from the HD viewport; no label outside the map's "
+           "own loop or between an order and its effect; a blocked 4 "
+           "substitutes)")
+
     # ── Struct specs promoted from unverified.py ──
     from core.structs import nebula as _neb, planet as _pln
     n = _neb.parse(bytes([0x76, 0x01, 0xAA, 0x00, 0x01]))
@@ -6024,6 +6164,7 @@ def main():
         # (HD EXTENSION B2), three line kinds left out (OMISSION). Their
         # check is the galaxy_map map-lines block.
         "screens/galaxy_map/maplines.py": "HD EXTENSION — B1",
+        "screens/galaxy_map/mapeta.py": "DEVIATION — two locks",
         "screens/galaxy_map/renderer.py": "HD EXTENSION B1",
         "core/helppopup.py": "the panel auto-sizes to its text",
         "core/zoomtables.py": "INSET_DOT_DIM",

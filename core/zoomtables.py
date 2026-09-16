@@ -199,6 +199,39 @@ SHIP_ICON_DIM = ((11, 10), (10, 9), (9, 8), (8, 7))
 #: its current values.
 SHIP_ICON_HEADER_DIM = ((11, 11), (12, 11), (12, 10), (16, 12))
 
+#: The same headers for EVERY player colour: BUFFER0.LBX entry
+#: 205 + colour * 4 + index, index = 3 - zoom, [colour][index] =
+#: (width, height). `SHIPS::Print_Eta_On_Ship_Icon_` (ships.cpp:482-506)
+#: places the "eta N" label with the header of the OWNER's own sprite
+#: (`Get_Ship_Icon_Pict_Seg_(player_idx, 0)`, :337-367, colour from
+#: `_player[].color`), not colour 0's — so this table, not the one above,
+#: is what that label needs. Row 0 IS `SHIP_ICON_HEADER_DIM` (a smoke check
+#: holds the two equal). MEASURED, work order 122 item 2.1, 16 September
+#: 2026: read from the headers with core/lbx.py, and the label's position
+#: confirmed live in the framebuffer for the colours the run could see
+#: (v3_projektstatus.md, "the eta digit").
+SHIP_ICON_HEADER_DIM_BY_COLOUR = (
+    ((11, 11), (12, 11), (12, 10), (16, 12)),
+    ((11, 11), (12, 11), (13, 10), (16, 12)),
+    ((11, 11), (11, 11), (13, 12), (17, 14)),
+    ((11, 11), (12, 11), (13, 12), (17, 14)),
+    ((11, 11), (12, 11), (14, 12), (17, 14)),
+    ((11, 11), (12, 11), (14, 12), (17, 14)),
+    ((11, 11), (12, 11), (14, 12), (17, 14)),
+    ((11, 11), (11, 11), (14, 12), (16, 14)),
+)
+
+#: The "eta N" label's font style by zoom — `style_toggle <= 1 ? 1 : 0`
+#: (ships.cpp:496-497) — and the INK HEIGHT of a digit in each of the two
+#: styles, in native pixels: 5 rows in style 0, 7 in style 1. The heights
+#: are not in any source: they are glyphs of the player's FONTS.LBX entry
+#: 0 (`fonts::Load_Font_File_`, fonts.cpp:887; glyphs as
+#: `Print_Character_ASM_` walks them, :46). MEASURED, 16 September 2026,
+#: by decoding every digit of both styles, and confirmed against the live
+#: framebuffer the same day. HD sizes the label's digits to rows * px.
+ETA_FONT_STYLE_BY_ZOOM = (1, 1, 0, 0)
+ETA_DIGIT_INK_ROWS = (5, 7)
+
 #: Monster icon footprints at zoom 0, measured the same way. Each
 #: type has its OWN sprite set in the original (BUFFER0.LBX
 #: 241 + (type - 9) * 4 + zoom), so the sizes genuinely differ per
@@ -725,6 +758,14 @@ def ship_icon_dimension(zoom):
     """
     zoom = max(0, min(len(SHIP_ICON_DIM) - 1, int(zoom)))
     return SHIP_ICON_DIM[zoom]
+
+
+def ship_icon_header_dimension_for_colour(colour, index):
+    """(width, height) of BUFFER0.LBX entry 205 + colour * 4 + index's
+    header, both clamped — the owner's own sprite (Print_Eta_On_Ship_Icon_)."""
+    colour = max(0, min(len(SHIP_ICON_HEADER_DIM_BY_COLOUR) - 1, int(colour)))
+    index = max(0, min(3, int(index)))
+    return SHIP_ICON_HEADER_DIM_BY_COLOUR[colour][index]
 
 
 def ship_icon_header_dimension(index):

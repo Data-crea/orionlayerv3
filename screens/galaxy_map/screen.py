@@ -43,6 +43,7 @@ from screens.galaxy_map import boxdraw
 from screens.galaxy_map import boxmodel
 from screens.galaxy_map import mapboxes
 from screens.galaxy_map import mapclick
+from screens.galaxy_map import mapeta
 from screens.galaxy_map import maplines
 from screens.galaxy_map import ping as home_ping
 from screens.galaxy_map import renderer as rnd
@@ -107,6 +108,8 @@ class GalaxyMapScreen(ScreenBase):
         self._ping = home_ping.HomePing()
         self._viewctl = viewctl.ViewControl()   # decoupled HD viewport
         self._pan_from = None                   # right-drag anchor
+        self._eta_lock = None                   # mapeta: order pending
+        self._eta_cache = {}
 
     # ── Lifecycle ─────────────────────────────────────────
 
@@ -286,6 +289,9 @@ class GalaxyMapScreen(ScreenBase):
         idx = getattr(game_state, "player_num", 0)
         self._local = (self._players[idx]
                        if 0 <= idx < len(self._players) else None)
+        # The eta label's order lock ends on the order's effect (mapeta).
+        self._eta_lock = mapeta.advance(self._eta_lock, game_state,
+                                        self._ships)
 
     # ── Geometry ──────────────────────────────────────────
 
@@ -445,6 +451,11 @@ class GalaxyMapScreen(ScreenBase):
         maplines.render_destination_lines(
             surface, ctx, self._state, self._ships, self._stars,
             self._game_zoom(), self._icon_anchor(), pygame.time.get_ticks())
+        # "eta N" right after the lines, as Do_Ship_Destination_Lines_
+        # prints it (ships.cpp:470-475).
+        mapeta.render(surface, ctx, self._state, self._ships, self._stars,
+                      self._players, self._icon_anchor(), self.style,
+                      boxdraw._texts(self), self._eta_lock, self._eta_cache)
         heights = rnd.render_stars(surface, ctx, self._stars, self._cache)
 
         # Star name size follows the zoom level, as the original
@@ -668,6 +679,8 @@ class GalaxyMapScreen(ScreenBase):
         if result.send is not None and self.app.connected:
             self.app.client.inject_click(*result.send)
             boxmodel.remember(self, result, icons, order=orders_ok)
+            if orders_ok and result.what == "star":
+                self._eta_lock = mapeta.hold(self._state, self._ships)
 
     def _activate(self, field_id, what=""):
         log.info("Action: %s (field %s)", what or field_id, field_id)
