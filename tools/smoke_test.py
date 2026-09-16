@@ -15482,26 +15482,13 @@ def main():
     _gmf_src = open(_gmf.__file__, encoding="utf-8").read()
     assert "asset_path(" in _gmf_src and "os.path" not in _gmf_src, \
         "gmframe must load through the resource roots (decision 16)"
-    # The anchor: the native body's centre as a fraction of the map
-    # window (Add_Grid_Field_, the galaxy map's grid), applied to the
-    # galaxy map's own map_area box.
-    _gmf_nb = _gmf_lay["native"]["body"]
-    _gmf_g = _gmf_mb.GRID_RECT
-    _gmf_fx = ((_gmf_nb[0] + _gmf_nb[2]) / 2 - _gmf_g[0]) / (
-        _gmf_g[2] + 1 - _gmf_g[0])
-    _gmf_fy = ((_gmf_nb[1] + _gmf_nb[3]) / 2 - _gmf_g[1]) / (
-        _gmf_g[3] + 1 - _gmf_g[1])
-    _gmf_map = next(_b["rect"] for _b in _gm_json.load(open(os.path.join(
-        SCREENS_DIR, "galaxy_map", "boxes.json")))["1920x1080"]
-        if _b["name"] == "map_area")
+    # THE PLACEMENT (work order 125, HD DEVIATION, superseding 122's share
+    # of the map window): the frame fitted to the galaxy map's map_area as
+    # boxes.json has it — its height, centred — and every box seated by one
+    # move and one factor. The file keeps the design geometry.
     _gmf_body = next(_b["rect"] for _b in _gm_boxes if _b["name"] == "body")
-    _gmf_want = (_gmf_map[0] + _gmf_fx * _gmf_map[2],
-                 _gmf_map[1] + _gmf_fy * _gmf_map[3])
-    _gmf_got = (_gmf_body[0] + _gmf_body[2] / 2,
-                _gmf_body[1] + _gmf_body[3] / 2)
-    assert all(abs(a - b) <= 1 for a, b in zip(_gmf_got, _gmf_want)), (
-        f"GAME menu body centre {_gmf_got}, the original's place in the "
-        f"map window is {_gmf_want}")
+    assert "HD DEVIATION" in _gmf.__doc__ and "map" in _gmf.__doc__
+    from core.box import load_boxes as _gmf_lb
     _gmf_nodes = ("menu", "settings", "load", "save", "confirm", "warning")
     _gmf_real = _gmf.draw
     for _W, _H in ((1920, 1080), (2560, 1440), (3840, 2160)):
@@ -15522,13 +15509,34 @@ def main():
             pygame.image.load(_gmf_png), _gmf_fr.size)
         _gmf_al = np.full((_H, _W), 255, dtype=np.uint8)
         _gmf_fa = pygame.surfarray.array_alpha(_gmf_img).T
-        # THE TOP EDGE (work order 123): the metal's first row inside the
-        # window, the opening's top edge exactly the bleed above the body.
-        _gmf_top = _gmf_fr.y + int(np.where((_gmf_fa >= 16).any(axis=1))[0][0])
-        assert _gmf_top >= 0, (_W, "frame metal starts above the window",
-                               _gmf_top)
-        assert abs(_gmf_op.y - (_gmf_br.y - _gmf.BLEED * _gmf_s.layout.scale)
-                   ) <= 1, (_W, _gmf_op, _gmf_br)
+        # INSIDE THE MAP CUTOUT (work order 125): the frame's rect within
+        # map_area, its height the cutout's, centred on it, and its metal
+        # (alpha >= 16) clear of the GAME field above and the nav bar below.
+        _gmf_cut = pygame.Rect(*_gmf_s.layout.rect(next(
+            _b.ref_rect for _b in _gmf_lb(res.screen_file(
+                "galaxy_map", "boxes.json"), _W, _H) if _b.name == "map_area")))
+        assert _gmf_cut.inflate(2, 2).contains(_gmf_fr), (
+            _W, "the GAME menu frame reaches outside the map cutout",
+            _gmf_fr, _gmf_cut)
+        assert abs(_gmf_fr.h - _gmf_cut.h) <= 1 and abs(
+            _gmf_fr.centerx - _gmf_cut.centerx) <= 1, (_W, _gmf_fr, _gmf_cut)
+        _gmf_rows = np.where((_gmf_fa >= 16).any(axis=1))[0]
+        assert _gmf_fr.y + _gmf_rows[0] >= _gmf_cut.y and \
+            _gmf_fr.y + _gmf_rows[-1] < _gmf_cut.bottom, (_W, _gmf_fr)
+        # One factor for every box: the seated body is the file's body times
+        # content_scale, and a seated button keeps its offset in proportion.
+        _gmf_k = _gmf_s.content_scale
+        assert 0.5 < _gmf_k < 1.0, _gmf_k
+        _gmf_sb = {_b.name: _b.ref_rect for _b in _gmf_s.boxes}
+        _gmf_fb = {_b["name"]: _b["rect"] for _b in _gm_boxes}
+        for _bn in ("menu_save", "confirm_panel", "sound_bar"):
+            _exp = (_gmf_sb["body"][0] + (_gmf_fb[_bn][0] - _gmf_body[0])
+                    * _gmf_k, _gmf_fb[_bn][2] * _gmf_k)
+            assert abs(_gmf_sb[_bn][0] - _exp[0]) < 1e-6 and \
+                abs(_gmf_sb[_bn][2] - _exp[1]) < 1e-6, (_bn, _gmf_sb[_bn])
+            # An editor save writes the file's rect, never the seated one.
+            _gmf_bx = next(_b for _b in _gmf_s.boxes if _b.name == _bn)
+            assert _gmf_bx.to_dict()["rect"] == _gmf_fb[_bn], _bn
         _gx, _gy = max(0, _gmf_fr.x), max(0, _gmf_fr.y)
         _sx, _sy = _gx - _gmf_fr.x, _gy - _gmf_fr.y
         _ww = min(_W - _gx, _gmf_fa.shape[1] - _sx)
@@ -15582,9 +15590,9 @@ def main():
     assert "HD DEVIATION" in _gmf.__doc__ and "HD DEVIATION" in \
         _gm_draw.__doc__, "the confirmation fit lost its marking"
     ok("GAME menu frame: opening == the artwork's one hole, loaded through "
-       "the resource roots, body centred where the original's sits in the "
-       "map window, all six dialogs (confirmation and warning scaled in) "
-       "inside the octagon and filled at 1080p/1440p/2160p")
+       "the resource roots, fitted inside the galaxy map cutout with every "
+       "box seated by one factor, all six dialogs inside the octagon and "
+       "filled at 1080p/1440p/2160p")
 
     # 6. HELP: the four transcribed tables, 420/421 left out WITH the
     #    sliders and saying so, each region carrying its native rect.

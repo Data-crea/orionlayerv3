@@ -122,8 +122,9 @@ def render(screen, surface):
     if geo is None:
         return
     box = next(b for b in screen.boxes if b.name == "orionlayer_rows")
-    size = screen.layout.font_size(box.style.get("font_size", 24))
-    small = screen.layout.font_size(box.style.get("heading_font_size", 20))
+    k = getattr(screen, "content_scale", 1.0)
+    size = screen.layout.font_size(box.style.get("font_size", 24) * k)
+    small = screen.layout.font_size(box.style.get("heading_font_size", 20) * k)
     words = screen.words.get("words", {}).get("orionlayer", {})
     rule = screen.words.get("orionlayer_rows", {})
 

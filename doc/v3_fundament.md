@@ -1376,7 +1376,18 @@ Nothing was shrunk; the suite reports the numbers every run, and whether
 those two panels move, shrink or stay is Data's decision. **Amended by work
 order 123: Data decided they are scaled into the opening — one factor per
 box, the popup's width over the box's, rects and fonts alike, centred on the
-popup — an HD DEVIATION, and every dialog is now held to the octagon.** At 1080p the
+popup — an HD DEVIATION, and every dialog is now held to the octagon.**
+
+**AMENDED BY WORK ORDER 125, 16 September 2026 — the position is no longer
+the original's.** The anchor above transcribed a FRAMELESS popup's place,
+and with a frame it put metal across the GAME field and the nav bar. Data's
+decision: the frame is fitted to the galaxy map's own opening — the height
+of `map_area` as `boxes.json` holds it, aspect kept, centred — and every box
+of the overlay is seated into the frame's opening by one move and one
+factor (0.8666 with today's cutout), fonts included. An HD DEVIATION,
+marked in `gmframe.py` and held by a smoke check that fails the moment the
+frame reaches outside the cutout. The file keeps the unscaled geometry; an
+editor save writes back through the inverse. At 1080p the
 frame's top rim also started about one reference pixel above the window —
 corrected by work order 123: the scale factor takes the width term, the
 opening came out a few pixels taller than the body needs and half of that

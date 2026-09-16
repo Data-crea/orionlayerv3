@@ -6,13 +6,24 @@ no master, the colony screen's way (decision 55). It replaces the body's
 `thin_border` outline and nothing else; the buttons, lists and message
 panels keep their skins.
 
-**WHERE IT SITS IS THE BODY BOX, AND THE BODY BOX IS THE ORIGINAL'S.**
-The artwork has one octagonal opening, `layout.json` `frame.opening` in
-image pixels (the smoke test holds it to `tools/frame_holes.find_holes`).
-The image is scaled with ONE factor — aspect kept — so that the opening
-covers the body box grown by `BLEED` on every side, and centred on it.
-Content is not placed against the frame; the frame is placed around the
-content.
+**HD DEVIATION — WHERE IT SITS IS THE GALAXY MAP'S OPENING** (Data, work
+order 125, superseding the anchor of work order 122). The original has no
+frame: `Add_Game_Popup_Fields_` puts its frameless popup at a fixed
+(0x90, 0x19), and 122 carried that position over as a share of the map
+window, which put this frame's metal across the GAME field above and the
+nav bar below. Now the frame is FITTED TO THE MAP CUTOUT: `map_area` of the
+galaxy map's `boxes.json` (as `tools/frame_holes.py --write` wrote it, for
+the window's resolution list), the image's height equal to the cutout's,
+aspect kept, centred on it — nothing outside the cutout, and no extra
+inset: the image's own transparent margins (20 image rows at the top, 29 at
+the bottom, 34 columns each side) keep the metal about 12 and 18 reference
+px clear of the cutout's edges already. The menu follows: the body is the
+largest box of the original's 628:850 that fits the opening less `BLEED`,
+centred in it, and EVERY box of the overlay is seated by the same move and
+ONE factor (`seat`), fonts included (`content_scale`) — the original's
+geometry, smaller. `boxes.json` keeps the unscaled design geometry; an F5
+save writes a dragged box back through the inverse (`Box.to_file`), so the
+file never takes the seated rects.
 
 **THE OPENING IS TRANSPARENT, SO THE MENU FILLS ITS OWN GROUND** — opaque,
 from the shared cockpit texture, and no dimmed backdrop (fundament, "A
@@ -43,30 +54,85 @@ def spec(screen):
     return screen.words.get("frame") or {}
 
 
-def rects(screen, body):
-    """(frame rect, opening rect) in window px around the body rect."""
+def _map_cutout(screen):
+    """`map_area` of the galaxy map's boxes.json for this window, reference px."""
+    from core.box import load_boxes
+    path = screen.app.res.screen_file("galaxy_map", "boxes.json")
+    for box in load_boxes(path, screen.app.win_w, screen.app.win_h):
+        if box.name == "map_area" and box.ref_rect is not None:
+            return box.ref_rect
+    return None
+
+
+def placement(screen, design_body):
+    """{frame, opening, body: (x, y, w, h) in reference px, factor} for the
+    body box as `boxes.json` has it, or None without a map cutout."""
     cfg = spec(screen)
+    cut = _map_cutout(screen)
+    if not cfg.get("opening") or cut is None:
+        return None
     img_w, img_h = cfg["image_size"]
     ox, oy, ow, oh = cfg["opening"]
-    bleed = BLEED * screen.layout.scale
-    want_w, want_h = body.w + 2 * bleed, body.h + 2 * bleed
-    s = max(want_w / ow, want_h / oh)
-    open_w, open_h = ow * s, oh * s
-    open_x = body.centerx - open_w / 2
-    # THE SLACK GOES DOWN, NOT HALF UP (work order 123). The opening is
-    # 879:1193, a hair narrower than the body plus bleed, so `max` takes the
-    # WIDTH term and the opening comes out 3.8 / 5.0 / 7.5 px taller than the
-    # body needs at 1080p / 1440p / 2160p. Centred, half of that went above
-    # the body, and the 88 image px of metal over the opening then started
-    # 1.6 / 1.8 / 2.2 px above the window. The width term stays — the scaled
-    # dialogs span the body's width and need the bleed at the sides — and the
-    # opening's top edge sits exactly `bleed` above the body instead, so the
-    # body, which is the transcribed anchor, does not move.
-    open_y = body.y - bleed
-    frame = pygame.Rect(round(open_x - ox * s), round(open_y - oy * s),
-                        round(img_w * s), round(img_h * s))
-    opening = pygame.Rect(int(open_x), int(open_y),
-                          int(open_w + 0.999), int(open_h + 0.999))
+    mx, my, mw, mh = cut
+    s = mh / img_h
+    fx, fy = mx + (mw - img_w * s) / 2, my
+    opx, opy, opw, oph = fx + ox * s, fy + oy * s, ow * s, oh * s
+    _, _, dw, dh = design_body
+    factor = min((opw - 2 * BLEED) / dw, (oph - 2 * BLEED) / dh)
+    bw, bh = dw * factor, dh * factor
+    return {"frame": (fx, fy, img_w * s, mh),
+            "opening": (opx, opy, opw, oph),
+            "body": (opx + (opw - bw) / 2, opy + (oph - bh) / 2, bw, bh),
+            "factor": factor}
+
+
+def seat(screen):
+    """Move and scale every box of the overlay into the placement; the
+    file's rects stay the design geometry (`Box.to_file` inverts)."""
+    body = next((b for b in screen.boxes if b.name == "body"), None)
+    screen.content_scale = 1.0
+    screen.frame_place = None
+    if body is None or body.ref_rect is None:
+        return
+    place = placement(screen, body.ref_rect)
+    if place is None:
+        return
+    dx, dy = body.ref_rect[0], body.ref_rect[1]
+    nx, ny = place["body"][0], place["body"][1]
+    f = place["factor"]
+
+    def forward(r):
+        x, y, w, h = r
+        return (nx + (x - dx) * f, ny + (y - dy) * f, w * f, h * f)
+
+    def inverse(r):
+        x, y, w, h = r
+        return [round(dx + (x - nx) / f), round(dy + (y - ny) / f),
+                round(w / f), round(h / f)]
+
+    for box in screen.boxes:
+        if box.ref_rect is not None:
+            box.ref_rect = forward(box.ref_rect)
+            box.to_file = inverse
+    screen.content_scale = f
+    screen.frame_place = place
+
+
+def rects(screen, body=None):
+    """(frame rect, opening rect) in window px, from the seated placement."""
+    place = getattr(screen, "frame_place", None)
+    if place is None:
+        return None, None
+    lay = screen.layout
+    fx, fy, fw, fh = place["frame"]
+    ox, oy, ow, oh = place["opening"]
+    frame = pygame.Rect(round(fx * lay.scale + lay.offset_x),
+                        round(fy * lay.scale + lay.offset_y),
+                        round(fw * lay.scale), round(fh * lay.scale))
+    x0 = ox * lay.scale + lay.offset_x
+    y0 = oy * lay.scale + lay.offset_y
+    opening = pygame.Rect(int(x0), int(y0), int(ow * lay.scale + 0.999),
+                          int(oh * lay.scale + 0.999))
     return frame, opening
 
 
@@ -88,6 +154,8 @@ def draw(screen, surface, body):
     if not spec(screen).get("opening"):
         return False
     frame, opening = rects(screen, body)
+    if frame is None:
+        return False
     image = _image(screen, frame.size)
     if image is None:
         return False

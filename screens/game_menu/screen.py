@@ -34,7 +34,7 @@ from core.hestrings import HStrings, printf
 from core.screen_base import ScreenBase
 from core.structs import settings as settings_spec
 from core.wire_protocol import EFFECT_PAIRS
-from screens.game_menu import gmdraw, gmorion, gmsliders, nodes
+from screens.game_menu import gmdraw, gmframe, gmorion, gmsliders, nodes
 from screens.game_menu.gmsave import SaveEditor
 
 log = logging.getLogger("game_menu")
@@ -104,6 +104,12 @@ class GameMenuScreen(ScreenBase):
         gmorion.save(self)
         self.save.reset()
         super().exit()
+
+    def _reload_boxes(self):
+        """The file's boxes, then seated into the galaxy map's opening
+        (`gmframe.seat`, work order 125)."""
+        super()._reload_boxes()
+        gmframe.seat(self)
 
     def _load_background(self):
         """An overlay draws no background: the map stays underneath."""

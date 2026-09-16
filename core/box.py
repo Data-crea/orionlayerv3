@@ -40,6 +40,11 @@ class Box:
         # file and never written to it: it is a property of where the
         # rect came from in THIS run.
         self.derived = False
+        # A screen that SEATS its boxes (moves and scales the file's rects
+        # at load, the GAME menu) sets the inverse here, so an editor save
+        # writes the file's geometry and never the seated rect. None: the
+        # rect is written as it is.
+        self.to_file = None
         # Runtime overrides for the "text" skin. Never serialized: a
         # value a screen computes this frame must not end up in
         # boxes.json when the editor saves.
@@ -177,7 +182,8 @@ class Box:
         # `core/editor/boxclass.py`, from the screen's own rules.
         d = {"name": self.name}
         if self.ref_rect is not None and not self.derived:
-            d["rect"] = list(self.ref_rect)
+            d["rect"] = (self.to_file(self.ref_rect) if self.to_file
+                         else list(self.ref_rect))
         if self.field_id is not None:
             d["field_id"] = self.field_id
         if self.anchor:

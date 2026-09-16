@@ -4076,7 +4076,8 @@ cannot hide):
 **No label is covered, and there is no margin either:** at every size the
 metal ends on the row directly above the labels' first ink row. Not fixed,
 per the order; a font that is a pixel taller or a label moved up in F5
-would be covered.
+would be covered. *(Void since work order 125: the frame sits inside the map cutout
+and no longer reaches the nav bar at all — below.)*
 
 ### Galaxy map: the research readout's source — work order 124 G, 16 September 2026 (a report, no change)
 
@@ -4113,6 +4114,70 @@ techdata.cpp, as `tools/monster_hull_check.py` does for the hull tables),
 the per-field status `tech_fields[]` and `hyper_advanced_tech[]` from
 `s_player` — neither is in the verified player spec (decision 23). The
 readout was not changed.
+
+### GAME menu inside the map opening — work order 125, 16 September 2026
+
+**HD DEVIATION, superseding 122's anchor.** The frame is fitted to the
+galaxy map's `map_area` cutout (from its `boxes.json`, per resolution list):
+height = the cutout's, aspect kept, centred. No extra inset — the image's
+own transparent margins (20 rows top, 29 bottom, 34 columns each side) keep
+the metal about 12 ref px clear of the cutout at the top and 18 at the
+bottom. The body is the largest 628:850 box inside the opening less the
+bleed; every overlay box is seated by the same move and ONE factor, fonts
+through `content_scale` (`gmframe.seat`, run from `_reload_boxes`).
+`boxes.json` keeps the design geometry; `Box.to_file` makes an F5 save write
+the inverse. Decision 69 amended.
+
+**Measured before building** (rendered ink heights through
+`Style.render_text`; factor f = 0.8666 at every size, since `map_area` is
+one reference rect):
+
+| | 1920x1080 | 2560x1440 | 3840x2160 |
+|---|---|---|---|
+| frame today -> new | 426,-14,797,1020 -> 455,66,691,885 | 568,-18,1062,1360 -> 607,88,921,1180 | 853,-27,1593,2041 -> 910,132,1382,1770 |
+| size against today | 0.867 w, 0.868 h | 0.867, 0.868 | 0.868, 0.867 |
+| opening new | 527,133,548,744 | 702,177,730,992 | 1054,266,1096,1488 |
+| menu buttons / SETTINGS / RETURN, font px (ink) | 30 (21) -> 25 (18) | 40 (28) -> 34 (24) | 60 (42) -> 51 (36) |
+| slider labels | 30 (22) -> 25 (18) | 40 (29) -> 34 (24) | 60 (43) -> 51 (37) |
+| slot row / detail | 28 (20) -> 24 (17) / 22 (16) -> 19 (14) | 37 (27) -> 32 (23) / 29 (21) -> 25 (18) | 56 (40) -> 48 (35) / 44 (32) -> 38 (27) |
+| settings option | 24 (22) -> 20 (18) | 32 (30) -> 27 (26) | 48 (45) -> 41 (39) |
+| confirmation panel (after 0.900 and f) | 529,338,544,396 | 705,450,725,528 | 1058,676,1088,792 |
+| warning panel (after 0.843 and f) | 529,398,544,313 | 705,531,725,418 | 1058,797,1088,627 |
+| question lines (NEW, QUIT, slot 7 missing, multiplayer) | 2, 2, 1, 4 — unchanged | unchanged | unchanged |
+| slider blocks (device px) | 10 blocks, 27 -> 23-26 | 36 -> 31-34 | 54 -> 46-50 |
+| slider values reachable from a device pixel | all 156 before and after | all | all |
+
+Nothing fell below what the order named as a limit: no extra line, ten
+countable blocks, every value still reachable. The smallest text is the
+slot row's detail line at 1080p, 14 px of ink.
+
+- **The volume bars are in the MENU,** not in Settings: they are fields of
+  `Add_Game_Popup_Fields_` case 0 (loadsave.cpp:200-201); the pictures show
+  them there.
+- **Nav bar and GAME field:** by construction the frame lies inside the
+  cutout (y 66..951 at 1080p against the nav boxes from 970 and the GAME
+  cutout ending at 64); 124 F's measurement is void.
+- **Press feedback and help:** both checks stayed green without change —
+  they read the boxes' seated rects, the same objects the hit tests and the
+  drawing use, so there was no second rect to miss.
+- **Smoke:** the frame check retargeted (inside the cutout, height and
+  centre, metal clear of the cutout's edges, one factor, the editor save
+  writing the file's rect; it fails with the frame moved 20 px up). The
+  count stays 192.
+- **Live** (Data's OrionLayer closed first; the game as Data left it, the
+  GAME menu open on the SAVE4 state; a picture after every click; SAVE1-9
+  identical, SAVE10 unchanged; 44 menu-field activations, no click or key
+  injected into the game): menu with the volume bars, Settings, Load, the
+  slot-7 warning, Save and the NEW confirmation at 1920x1080, 2560x1440 and
+  3840x2160 beside the native frame,
+  `~/orionlayer-fixtures/evidence/work_order_125/` (the 1080p menu and
+  Settings as `42_*` and `43_*`, see the next line).
+- **Found, not fixed:** when OrionLayer connects while the game ALREADY
+  shows the GAME menu, the overlay opens over the main-menu screen instead
+  of the galaxy map (the dispatcher has never been on the map): the first
+  two 1080p pictures show the main-menu artwork behind the frame. After one
+  ESC to the map everything is as intended; the 1080p menu and Settings were
+  retaken that way.
 
 ## What is missing
 

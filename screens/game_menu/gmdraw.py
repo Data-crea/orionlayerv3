@@ -68,7 +68,9 @@ def row_at(screen, name, count, x, y):
 
 
 def _size(screen, b, key="font_size", default=24):
-    return screen.layout.font_size(b.style.get(key, default))
+    # The seated menu's ONE factor applies to type as to rects (gmframe.seat).
+    return screen.layout.font_size(b.style.get(key, default)
+                                   * getattr(screen, "content_scale", 1.0))
 
 
 def _blit(screen, surface, text, size, color, x, y, center_w=None):
