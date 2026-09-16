@@ -14017,6 +14017,30 @@ def main():
     ok("core/lbx.py (container, both frame formats agreeing, 6-bit "
        "palette, index 0 transparent, unpalettised index stays grey)")
 
+    # THE NEBULA TOOL READS FONTS.LBX'S PALETTE ITSELF, and read it one
+    # byte to the left until 16 September 2026 (work order 122, 2.3) —
+    # the same fault `core/lbx.read_palette` had and was fixed for on
+    # 6 September, in a second reader nobody looked at. Pinned the same
+    # way: entry 1 of a probe container, every entry's flag byte
+    # NON-ZERO, so the flag read as red cannot pass.
+    sys.path.insert(0, os.path.join(os.path.dirname(SCREENS_DIR), "tools"))
+    import make_nebula_icons as _mni
+    _mni_pal = b"".join(bytes([1 + (_i % 7), _i % 64, (_i * 2) % 64,
+                               (_i * 3) % 64]) for _i in range(256))
+    with _tf.TemporaryDirectory() as _td:
+        _lp = os.path.join(_td, "FONTS.LBX")
+        with open(_lp, "wb") as _fh:
+            _fh.write(_make_lbx([b"\x00" * 16, _mni_pal]))
+        _mni_got = _mni.load_game_palette(_lp)
+    for _i in (0, 1, 2, 63, 200, 255):
+        _want = (min((_i % 64) * 4, 255), min(((_i * 2) % 64) * 4, 255),
+                 min(((_i * 3) % 64) * 4, 255))
+        assert tuple(int(_v) for _v in _mni_got[_i]) == _want, (
+            f"make_nebula_icons palette entry {_i}: "
+            f"{tuple(_mni_got[_i])}, want {_want} — (flag, R, G, B)")
+    ok("tools/make_nebula_icons.py reads FONTS.LBX entries as (flag, R, G, "
+       "B), pinned with a non-zero flag byte")
+
     # MOO2's help bodies are not plain text: they carry FMTPARA
     # control codes, and the column positions inside them are what
     # makes the Command Points table a table. Printing them raw put

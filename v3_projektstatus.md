@@ -837,7 +837,7 @@ files under `doc/` and are only summarised here.
 | | |
 |---|---|
 | Python | 32,960 lines across 111 modules — `find . -name '*.py'`, `__pycache__` excluded, the smoke test's 6,400 included. The previous figure here (21,642 across 94) was carried from an unstated method and could not be reproduced |
-| Smoke test | `python tools/smoke_test.py` — **188 checks**, headless |
+| Smoke test | `python tools/smoke_test.py` — **189 checks**, headless |
 | Assets | 170 MB (select_race 68, galaxy_map 51, shared 23, new_game 21, colony_summary 1) |
 | Screens in HD | 9 of ~20–22 (the GAME menu overlay, work order Stop 2, every dialog of the popup; colony summary draws list, sidebar, scan box and galaxy inset, and MOVES POPS — the first HD gesture that drives the game; planets, brief 101, lists, sorts, restricts and returns) |
 | Setup from clone | `python tools/setup.py` (deps via the system package manager) |
@@ -1073,7 +1073,7 @@ to stay uncomfortable to extend.
     │                                  file per entry, grayscale by
     │                                  index and in the game palette
     ├── nebula_asset_check.py     238  Nebula asset resolution
-    ├── make_nebula_icons.py      228  Render the HD nebula shapes
+    ├── make_nebula_icons.py      249  Render the HD nebula shapes
     ├── make_star_icons.py        224  Generate the 36 star sprites
     ├── make_black_hole_master.py 208  Rotatable black hole master
     ├── make_ship_icons.py        207  Generate ship/monster steps
@@ -3616,7 +3616,7 @@ orion2re tree at `~/orion2re` is patched: a permanent change.
   at zoom 2 against a 12 x 11 header and 6 x 5 of ink — which one an HD
   icon should match is Data's question. *(Answered 15 September: neither
   moves, it is a DELIBERATE DEVIATION — work order 122 item 2.2, below.)* `tools/make_nebula_icons.py` reads
-  FONTS.LBX entry 1 at offset 0; the entries are (flag, r, g, b), measured.
+  FONTS.LBX entry 1 at offset 0; the entries are (flag, r, g, b), measured. *(Fixed 16 September: work order 122 item 2.3, below.)*
 - **Smoke:** three checks (who gets a line and where it starts; the wave;
   one routine and the markings); the count is 186.
 
@@ -3764,6 +3764,41 @@ what `maplines` uses. No code changed.
   both current tables, and each zoomtables comment must quote the other's
   current values, so changing one without touching the other's note fails.
   The count is 188.
+
+### Tools: the nebula tool's FONTS.LBX palette read one byte to the left — work order 122 item 2.3, 16 September 2026
+
+`tools/make_nebula_icons.py` `load_game_palette` took bytes 0..2 of each
+4-byte `s_palette_entry`; the entry is `{changed, r, g, b}`
+(orion2.h:2131-2136), the fault `core/lbx.read_palette` was corrected for
+on 6 September, in a second reader. It now takes bytes 1..3.
+
+- **Verifiable without the game:** FONTS.LBX entry 1 begins
+  `01 00 00 00  01 00 03 00  01 04 04 06`. Before, the first three entries
+  came out (4, 0, 0), (4, 0, 12), (4, 16, 16); after, (0, 0, 0),
+  (0, 12, 0), (16, 16, 24). Every flag byte in the entry is 1.
+- **Second source, live** (one client; the game as it stood, stardate
+  3509.2; no send): the palette the game sends with its galaxy-map frame
+  agrees with the fixed reading at 256 of 256 indices and with the old one
+  at 0.
+- **Visual test:** this galaxy holds ONE nebula, type 1 (zoom 2, native
+  top-left (208, 106), 86 x 88). Of its 3973 sprite pixels on screen, 3655
+  carry the sprite's own index in the framebuffer (the rest are stars, a
+  name and a line drawn over it), and all 3655 equal the fixed palette's
+  RGB, none the old one's. Picture: native crop, old palette, new palette
+  and the tool's HD output, `~/orionlayer-fixtures/evidence/work_order_16sep/2_3_nebula_0_type01_zoom2.png`.
+  **The other eleven types have no native counterpart here**: SAVE4 and
+  SAVE5, the scratch saves the protocol allows, hold this same galaxy; a
+  before/after sheet of all twelve at zoom 0 without a native half is
+  `2_3_all_types_before_after_zoom0.png`.
+- **"Regenerate the icons" changed no file in the tree.** The tool ran
+  (48 of 48, to a scratch folder), but its output layout,
+  `type_NN/zoom_N.png` at 3x, is not what the screen loads (listed under
+  "What is missing"), and the committed `assets/nebula/type_NN.png` are
+  authored masters of 1952-2208 px, not this tool's output. Overwriting
+  them with it would have replaced artwork, so nothing was copied in.
+- **Smoke:** one check — the reader against a probe FONTS.LBX whose every
+  flag byte is non-zero; with the old byte order it fails. The count is
+  189.
 
 ## What is missing
 

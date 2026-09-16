@@ -80,13 +80,25 @@ def read_lbx_entry(path, entry_idx):
 
 
 def load_game_palette(fonts_path):
-    """FONTS.LBX entry 1: s_palette_entry[256], 4 bytes each, 6-bit VGA."""
+    """FONTS.LBX entry 1: s_palette_entry[256], 4 bytes each, 6-bit VGA.
+
+    **THE FLAG COMES FIRST: `{changed, r, g, b}`** (orion2.h:2131-2136),
+    the same order `core/lbx.read_palette` was corrected to on
+    6 September 2026. This reader took bytes 0..2 until 16 September
+    2026 (work order 122, item 2.3), so every colour was one byte to the
+    left: the flag as red, red as green, green as blue. The file's first
+    twelve bytes are `01 00 00 00  01 00 03 00  01 04 04 06`; read as
+    (flag, R, G, B) and scaled by 4 they are (0, 0, 0), (0, 12, 0) and
+    (16, 16, 24), which is what the running game sends as its palette for
+    the galaxy map — all 256 entries agree, measured live that day, where
+    the old reading, (4, 0, 0), (4, 0, 12), (4, 16, 16), agreed on none.
+    """
     blob = read_lbx_entry(fonts_path, FONTS_PALETTE_ENTRY)
     if len(blob) < 256 * 4:
         sys.exit(f"{fonts_path}: palette entry is only {len(blob)} bytes, "
                  "1024 expected.")
     raw = np.frombuffer(blob[:256 * 4], dtype=np.uint8).reshape(256, 4)
-    pal = np.minimum(raw[:, :3].astype(np.uint16) * 4, 255).astype(np.uint8)
+    pal = np.minimum(raw[:, 1:4].astype(np.uint16) * 4, 255).astype(np.uint8)
     return pal  # (256, 3) RGB 0..255
 
 
