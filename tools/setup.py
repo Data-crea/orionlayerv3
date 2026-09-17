@@ -282,10 +282,12 @@ def main():
     env = dict(os.environ, SDL_VIDEODRIVER="dummy",
                SDL_AUDIODRIVER="dummy")
     proc = subprocess.run(
-        [sys.executable, os.path.join(ROOT, "tools", "smoke_test.py")],
+        [sys.executable, os.path.join(ROOT, "tools", "smoke_test.py"),
+         "--quiet"],
         cwd=ROOT, capture_output=True, text=True, env=env)
     tail = (proc.stdout or "").strip().splitlines()
-    for line in tail[-1:]:
+    # --quiet prints the summary and the peak-memory line on a pass.
+    for line in tail[-2:]:
         print(f"    {line}")
     if proc.returncode != 0:
         for line in tail[-12:]:

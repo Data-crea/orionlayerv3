@@ -12,7 +12,17 @@ Runs headless (no window, no orion2re needed) and exercises:
   - App boot in standalone mode
 
 Usage (from the project root):
-    python tools/smoke_test.py
+    python tools/smoke_test.py            # every check's sentence
+    python tools/smoke_test.py --quiet    # failures and the summary only
+
+--quiet sends everything the run prints — the check sentences, the
+reports, the log lines, anything SDL writes — to a temporary file and
+shows only the summary; on a failure it shows the last 60 lines of that
+file before the traceback. The reason is context, not time (work order
+126, part C): a green run's 300 lines land in a session's context on
+every commit. The last line of either mode is the process's peak
+resident memory, and a crash prints Python's stack through faulthandler
+to the real stderr, since a segfault never reaches any other print.
 
 Exit code 0 = all good. Run this before shipping a ZIP or a
 mod, and after touching anything in core/.
@@ -33,6 +43,9 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(
     os.path.abspath(__file__))))
 os.environ.setdefault("SDL_VIDEODRIVER", "dummy")
 os.environ.setdefault("SDL_AUDIODRIVER", "dummy")
+if "--quiet" in sys.argv[1:]:
+    # pygame greets on import, before the run can redirect anything.
+    os.environ.setdefault("PYGAME_HIDE_SUPPORT_PROMPT", "1")
 
 import pygame  # noqa: E402
 
@@ -16348,5 +16361,67 @@ def main():
     return 0
 
 
+QUIET_TAIL = 60
+
+
+def _peak_rss_line():
+    """The peak resident set of this process, read once at exit.
+
+    `ru_maxrss` is kilobytes on Linux. It is the high-water mark over the
+    whole run, which is the figure the thirty-run table needs: whether a
+    run that grows is the run that crashes.
+    """
+    import resource
+    kb = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
+    return f"peak resident memory: {kb / 1024:.0f} MB"
+
+
+def _run(quiet):
+    import faulthandler
+    import tempfile
+    # A duplicate of the REAL stderr, taken before any redirection, so a
+    # segfault's stack reaches the terminal in quiet mode too. Kept
+    # referenced for the life of the process: faulthandler writes to the
+    # descriptor, and a collected file object would close it.
+    global _FAULT_FILE
+    _FAULT_FILE = os.fdopen(os.dup(2), "w")
+    faulthandler.enable(file=_FAULT_FILE)
+    if not quiet:
+        rc = main()
+        print(_peak_rss_line())
+        return rc
+    sys.stdout.flush()
+    sys.stderr.flush()
+    log = tempfile.TemporaryFile()
+    saved = os.dup(1), os.dup(2)
+    os.dup2(log.fileno(), 1)
+    os.dup2(log.fileno(), 2)
+
+    def restore():
+        sys.stdout.flush()
+        sys.stderr.flush()
+        os.dup2(saved[0], 1)
+        os.dup2(saved[1], 2)
+        log.seek(0)
+        return log.read().decode("utf-8", "replace").splitlines()
+
+    try:
+        rc = main()
+    except BaseException:
+        lines = restore()
+        print("\n".join(lines[-QUIET_TAIL:]))
+        print(_peak_rss_line())
+        sys.stdout.flush()
+        raise
+    lines = restore()
+    if rc:
+        print("\n".join(lines[-QUIET_TAIL:]))
+    else:
+        print(next((l for l in reversed(lines)
+                    if l.startswith("SMOKE TEST PASSED")), ""))
+    print(_peak_rss_line())
+    return rc
+
+
 if __name__ == "__main__":
-    sys.exit(main())
+    sys.exit(_run("--quiet" in sys.argv[1:]))

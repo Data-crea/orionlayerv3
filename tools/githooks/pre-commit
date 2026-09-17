@@ -24,7 +24,7 @@ ROOT=$(cd "$(dirname "$0")/../.." && pwd)
 LOG="$ROOT/.git/smoke-pre-commit.log"
 [ -d "$ROOT/.git" ] || LOG="${TMPDIR:-/tmp}/orionlayer-smoke-pre-commit.log"
 cd "$ROOT" || exit 1
-python tools/smoke_test.py >"$LOG" 2>&1
+python tools/smoke_test.py --quiet >"$LOG" 2>&1
 status=$?
 if [ "$status" -ne 0 ]; then
     tail -n 30 "$LOG"

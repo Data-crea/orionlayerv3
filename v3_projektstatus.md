@@ -4293,6 +4293,27 @@ tests the working tree, not only the index. `--no-verify` bypasses it.
   figures, 165 of 210); Diagnosis gains the colony screen's right click as a
   live-protocol line; decision 31 the coupling above.
 
+### The smoke test: quiet mode, a memory line, thirty runs — work order 126 C, 17 September 2026
+
+- **`--quiet`** sends everything a run prints (check sentences, reports, log
+  lines, SDL output) to a temporary file at descriptor level and shows the
+  summary line only; on a failure the last 60 lines of that file, then the
+  traceback. Without the switch the output is as before. The hook and
+  `tools/setup.py` use it. `faulthandler` writes a crash's Python stack to
+  the REAL stderr in both modes, so a 139 leaves a stack behind.
+- **Last line, both modes:** `peak resident memory: N MB` (`ru_maxrss`).
+- **Check count unchanged: 195.**
+- **Thirty full runs** (`--quiet`, one after another, exit and peak RSS per
+  run from `wait4`, the suite's own line beside it): **30 of 30 exited 0**;
+  peak resident memory **4540 to 4836 MB**; **66.6 to 68.1 s** per run. Table
+  in `~/orionlayer-fixtures/evidence/work_order_126/C_thirty_runs.md`, logs
+  beside it. The exit-139 question has no occurrence in this sample; the
+  memory figure confirms chat's measurement in kind (a 4 GB container dies).
+- **Measured against the order:** a full run on this machine takes ~67 s, not
+  ~10 s. The order's time argument against running part of the suite is
+  therefore weaker here than it was drafted; decision 31 (full suite) is
+  unchanged and the question is parked with the memory figure.
+
 ## What is missing
 
 ### OLED floor lift and player-colour presets

@@ -29,3 +29,9 @@ running.
   check fails with the hook neutered (`B_hook_check_mutation.txt`). Fundament:
   decision 5 "agree, not right", Diagnosis right-click line, decision 31
   amended. Smoke **195**, exit 0. Parked: none.
+- **B commits:** f8be83e (hook, 194 -> 195), d4eedb5 (fundament), and 90a5af6
+  filed the orders before them.
+- **C** — done. `--quiet` and the peak-memory line; hook and setup use quiet.
+  Thirty full runs: 30/30 exit 0, peak RSS 4540–4836 MB, 66.6–68.1 s
+  (`evidence/work_order_126/C_thirty_runs.md`). Smoke **195**, exit 0.
+  Parked: item 1 (split main()).
