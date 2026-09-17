@@ -64,6 +64,14 @@ class Dispatcher:
         """
         target = self.screens.get(name)
         if target and getattr(target, "IS_OVERLAY", False):
+            # An overlay that names the screen it belongs over gets that
+            # screen underneath, whatever was active before — the GAME menu
+            # reached by connecting while it is already open would otherwise
+            # sit on the main menu's backdrop (work order 126 D).
+            parent = getattr(target, "OVERLAY_PARENT", None)
+            if (parent and parent != self.active_name
+                    and parent in self.screens):
+                self.switch_to(parent, game_state)
             self.open_overlay(name, game_state)
             return
         self.close_overlay()

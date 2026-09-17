@@ -46,6 +46,14 @@ class GameMenuScreen(ScreenBase):
     SCREEN_NAME = "game_menu"
     GAME_SCREEN_ID = 8        # SCREEN_GAME, orion2_consts.h:468
     IS_OVERLAY = True
+    #: The screen the popup belongs over. SCREEN_GAME is entered from one
+    #: place only, the galaxy map's GAME button (mainscr_main.cpp:609-613,
+    #: `_return_screen = SCREEN_MAIN`), and the original draws it over the
+    #: map. A client that connects while the menu is already up has never
+    #: been on the map, so the dispatcher enters this screen first instead
+    #: of opening the overlay over whatever was active (the main-menu
+    #: backdrop, found in work order 125, fixed in 126 D).
+    OVERLAY_PARENT = "galaxy_map"
     #: No dimming: a palette-indexed engine cannot darken what is under
     #: a popup, and the original draws its popup over the map as it is.
     OVERLAY_DIM = 0
