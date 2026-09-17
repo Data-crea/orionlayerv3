@@ -58,3 +58,8 @@ running.
 - **H** — done (Stop 1 of 127 only): report in
   `evidence/work_order_126/H_reading_budget_stop1.md`, nothing in the tree
   changed by it. Parked: item 8.
+- **H commit:** 453bee7.
+- **I** — done: `doc/redundancy_audit.md` (39 groups: 4 clear, 7 two-copy, 24
+  drifted, 4 deliberate); extracted 4c39b66 box_style, e5cb136 held_pops,
+  e845dd6 frame trio (renders byte-identical at three sizes). Smoke **197**,
+  exit 0. Parked: items 9-10.

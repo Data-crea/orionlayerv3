@@ -120,3 +120,31 @@ the budget figure (80 KB / 60 KB / other); the two kernel samples acceptable
 text-share warning threshold (the report proposes a figure).
 **Meanwhile:** nothing of Stop 2.
 
+## 9. Planets hover and drawing use two row arithmetics — a decision-5 fault (part I)
+
+**What:** `screens/planets/screen.py:293` picks the hovered row by
+`(y - area.y) * visible // area.height`; the list is drawn with
+`listgrid.all_bands` (band = h // n, the last takes the remainder). The audit
+computed 7 pixel rows where they disagree at 1920x1080 and 2560x1440, 10 at
+3840x2160, 24 at 1366x768; hover also sets the selected and scanned row.
+**Why yours:** the order says a drifted copy is a finding, not a silent pick.
+**Options:** (a) hover asks `all_bands`, one function for both — the obvious
+decision-5 fix plus a check at those sizes; (b) leave it. **Meanwhile:**
+unchanged; `doc/redundancy_audit.md` D8. **Answer:** a / b.
+
+## 10. The rest of the redundancy audit (part I)
+
+**What:** 39 groups; three extracted today (box_style, held_pops, the frame
+trio). Parked, each answerable per group in `doc/redundancy_audit.md`:
+**G3** cover-fill (value-identical blocks, not identical code — extract into
+`imagebox.cover`?); **D4** the `{key}` template fill, whose own note asked
+for extraction at the third copy (now four, drifted on None); **D5** Custom
+Race's message box still carries its own word wrap beside `textfit`; **D1**
+five versioned JSON loaders that also bypass `core/resources.py` (decision 16);
+**D17** three construction sites for HStrings (the map and the GAME menu hold
+two instances); **T3** `playercolors.lift` and `ships._lift`, which a smoke
+measurement already treats as one; the other drifted and two-copy groups as
+listed. **Why yours:** which of two drifted versions is right is a finding,
+possibly a bug. **Meanwhile:** nothing changed beyond the three extractions.
+**Answer:** per group id, "extract" / "leave".
+
