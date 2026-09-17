@@ -52,3 +52,6 @@ running.
 - **F** — done: input moved to `screens/galaxy_map/mapinput.py` (screen.py
   583 -> 461 code), exceptions list regenerated, two source-reading checks
   retargeted to where the text moved. Smoke **197**, exit 0. Parked: none.
+- **G** — done: four readings e1a07e1 (colony + queue), e120dd6 (research),
+  6e344ec (fleet), ad955b9 (races); open fix 22 DESCRIBED, NOT APPLIED; status
+  section. Smoke **197**, exit 0. Parked: items 3-7.

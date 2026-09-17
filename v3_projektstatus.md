@@ -4394,6 +4394,24 @@ be the number talking. Two checks read the moved text and follow it: decision
 66's marking now in `mapinput.right_button` (plus: the hook must call it), and
 the eta lock line in `mapinput.py`. Smoke **197**, unchanged.
 
+### Read ahead: four screens — work order 126 G, 17 September 2026
+
+Source readings, nothing built: `doc/colony_screen_reading.md` (SCREEN_COLONY 1
+and SCREEN_QUEUE_POPUP 25), `doc/tech_change_reading.md` (36),
+`doc/fleet_screen_reading.md` (4), `doc/races_screen_reading.md` (6). Written by
+read-only sub-sessions and spot-checked where each file's provenance note
+says. What they change for the tree today, all parked in
+`doc/briefs/126-parked-for-data.md` (items 3-7):
+- **Screen id 6 is two screens:** the game's Races screen and, through our
+  own `ext_screen_id.patch`, race selection; `select_race` claims 6, so the HD
+  map's RACES button is expected to open HD Select Race over diplomacy (not
+  seen live). Open fix 22, DESCRIBED, NOT APPLIED.
+- **The map's parking vs the turn-start research prompt** (screen 0, field 9
+  a choice row) — decision 59's hazard in a second place, from the source.
+- **`ship.py` `weapons()`** skips empty slots where flt2.cpp:696-701 stops.
+- Neither the colony view nor the build queue fits the draft
+  one-content-box rule; research, fleet and races do, with caveats.
+
 ## What is missing
 
 ### OLED floor lift and player-colour presets

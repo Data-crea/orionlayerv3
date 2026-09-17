@@ -43,6 +43,7 @@ section for what was found where.
 | 19 | A save name confirmed with Enter keeps the edit cursor `_` | **Observation** | Nothing; HD reproduces it |
 | 20 | The fleet box's ship selection is not on the wire, and a single ship cannot be toggled from outside | **Applied** 15 September 2026, revision 2 (`doc/ext_fleet_selection.patch`: icon owners, then per node ship_idx and selected, then the fleet box chain; revision 1 applied and taken back out the same day, briefs 118/119), confirmed live on SAVE5; required by `tools/version_check.py` | — while applied. Without it HD draws no fleet box and cannot move a fleet from the map |
 | 21 | One ship in the fleet box cannot be selected or deselected from outside | **Applied** 15 September 2026 (`doc/ext_fleet_select_ship.patch`, `MSG_SELECT_SHIP` 0x85), confirmed live on SAVE5 (brief 119); required by `tools/version_check.py` | — while applied. Without it HD can show the selection but not change it |
+| 22 | Select Race reports `SCREEN_RACE` (6), which the Races/diplomacy screen owns — our own `ext_screen_id.patch` hunk 1 | **DESCRIBED, NOT APPLIED** 17 September 2026 (work order 126 G, `doc/races_screen_reading.md` §4-5); patch or HD-side distinction is Data's | OrionLayer routes 6 to Select Race, so the HD map's RACES button would open HD Select Race over the Races screen (source reading, not seen live); the stock-race Accept also leaves 6 set |
 
 Items 3 and 4 are both about INJECT_CLICK and both live in the same
 code path, but they are separate faults: 3 is where the coordinates
@@ -1518,3 +1519,39 @@ it nothing changes from today.
 
 Nothing more than open fix 20 already costs: no selection shown, no subset
 of a stack moved from HD.
+
+## 22. Select Race borrows SCREEN_RACE, which the Races screen owns — DESCRIBED, NOT APPLIED
+
+Filed 17 September 2026 by work order 126 G from `doc/races_screen_reading.md`
+(§4 settles the id question, §5 carries this draft). **Not a request to Joes
+yet:** the fault is in OUR patch, and the choice between this change and an
+HD-side distinction is Data's (parked in `doc/briefs/126-parked-for-data.md`).
+
+**What we found (orion2re 1.60.0).** `SCREEN_RACE` (6) is the Races/diplomacy
+screen: `Screen_Control_` runs `RACESCRN::Race_Screen_` for it (mox2.cpp:61-63)
+and the galaxy map's RACES button sets it (mainscr_main.cpp:666).
+`doc/ext_screen_id.patch` hunk 1 makes `Race_Selection_Screen_` report the same
+6 (racesel.cpp:222, inside `#ifdef ORION2RE_EXT`). OrionLayer's `select_race`
+claims `GAME_SCREEN_ID = 6` (screens/select_race/screen.py:30) and the
+dispatcher routes on the id alone, so HD Select Race would be drawn over the
+Races screen and its clicks would land there (source reading, not seen live).
+The stock-race Accept returns at racesel.cpp:451 without restoring the caller's
+id; only Custom Race's accept sets `_return_screen` (racesel.cpp:704).
+
+**The change, described.** Inside `#ifdef ORION2RE_EXT` in racesel.cpp:
+(1) hunk 1 reports a synthetic 51 instead of `SCREEN_RACE` (outside 0-43, as
+Custom Race's 50 is); (2) before `return 1` at :451, restore the saved id when
+the current one is still 51. Hunks 2-4 unchanged.
+
+**What it carries.** Nothing new on the wire: STATE's existing `current_screen`.
+
+**Why no existing path gives it by id.** The snapshot's screen is
+`MOX::_current_screen` as handed to `ext::Tick`; nothing else names the running
+function. `previous_screen` (0 on the Races screen, 10/8/15 during race
+selection) and the field-list shape separate the two by inference only
+(decision 25 allows that route; see the reading §4).
+
+**What it would cost OrionLayer.** `select_race` 6 -> 51, the `lock_ids` of
+`empire_identity` and `custom_race` (and the observed 50 -> 6 hop in Custom
+Race must be re-measured), `core/screen_names.py`, and Select Race's own
+comparison against 6.

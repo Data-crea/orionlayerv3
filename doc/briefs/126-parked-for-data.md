@@ -32,3 +32,71 @@ and let the README row for 90 and a new row for 125 say so — nothing else
 changes. **Meanwhile:** 126 was numbered after 125, so 125 stays reserved.
 **Answer in one line:** a / b.
 
+## 3. Screen id 6 is Select Race in OrionLayer AND the Races screen in the game (part G)
+
+**What:** `SCREEN_RACE` (6) is the Races/diplomacy screen (mox2.cpp:61-63,
+set by the map's RACES button, mainscr_main.cpp:666). Our own
+`ext_screen_id.patch` makes race SELECTION report 6 too, and `select_race`
+claims 6. So the HD galaxy map's RACES button (field 14, hotkey r) should put
+HD Select Race over the Races screen, with its clicks landing in diplomacy —
+a source reading, checked in three files, NOT seen live. Also: the stock-race
+Accept leaves 6 set (racesel.cpp:451). Open fix 22 describes a patch.
+**Why yours:** a change to our patch in Joes' tree, or a routing rule in HD.
+**Options:** (a) open fix 22 — Select Race reports a synthetic 51, restored on
+the stock accept; four OrionLayer ids change and Custom Race's 50 -> 6 hop is
+re-measured live; (b) no patch — HD tells the two apart by `previous_screen`
+(0 on the Races screen) and the field-list shape; needs a dispatcher rule it
+does not have; (c) until either: the HD map does not send RACES (falls back
+to the framebuffer) — one line, loses nothing that works today.
+**Meanwhile:** nothing changed in code; open fix 22 filed as DESCRIBED, NOT
+APPLIED; `doc/races_screen_reading.md` §4-5. **Answer:** a / b / c (c can go
+with a or b).
+
+## 4. The galaxy map may park INTO the turn-start research prompt (part G)
+
+**What:** the map sends `ACTIVATE_FIELD 9` whenever the game reports screen 0
+and is not fully zoomed out (decision 59's guard). The research prompt at
+turn start runs under screen 0 (mainscr2.cpp:119 then report.cpp), and there
+field 9 is a choice row; the commit reads the POINTER's entry, not the field
+(tech.cpp:354-369), and with the pointer over no entry dereferences null
+(tech.cpp:367, per the reading). Source reading, not observed; at turn start
+the map is normally already zoomed out. **Why yours:** it changes when HD may
+park, and a fix wants a live check. **Options:** (a) park only while the
+field list matches the map's own shape — cheap, the same rule decision 59
+states for update(); (b) leave it until the research screen is built and
+measure then. **Meanwhile:** nothing changed; `doc/tech_change_reading.md`.
+**Answer:** a / b.
+
+## 5. DRAFT rule, not filed: a screen built before its frame hangs from ONE provisional content box (part G)
+
+**The draft as chat worded it:** a screen built before its frame exists hangs
+everything from one provisional content-area box, so the frame, when it
+comes, moves one box and not a hundred (the colony list's stale columns;
+decision 3). **What the four readings say:** colony view — does NOT fit (a
+full-bleed landscape with building anchors past the canvas, under its own
+top-band art); build queue — does NOT fit (one frame with six fixed holes);
+research — fits in change mode (every position offset from `_g_scrn_x`),
+select mode moves the panel 81 px; fleet — fits as one box (13,52)-(628,465)
+but is four panels divided by the art; races — fits only as the whole native
+screen, with uneven per-slot tables. **Why yours:** a rule for the fundament.
+**Options:** (a) file it as worded; (b) file it with the exception "unless
+the original's screen is itself one frame with fixed holes" (colony, queue);
+(c) do not file. **Meanwhile:** nothing filed. **Answer:** a / b / c.
+
+## 6. `core/structs/ship.py` `weapons()` skips empty slots; the fleet screen stops at the first (part G)
+
+**What:** `flt2.cpp:696-701` breaks the weapon list at the first slot with
+`type < 0 || count < 1`; `weapons()` returns every slot with `count > 0` and its
+docstring cites the fleet screen for that. They differ only for a design with
+a gap between used slots. **Why yours:** which reading HD transcribes (the
+Planets panel's monster values use it). **Options:** (a) transcribe the stop
+and fix the docstring — one check; (b) keep skipping, marked DEVIATION.
+**Meanwhile:** unchanged; `doc/fleet_screen_reading.md`. **Answer:** a / b.
+
+## 7. The per-screen questions of the four readings (part G)
+
+Each reading ends with its own list, every question answerable in a line:
+`doc/colony_screen_reading.md` §8 (14), `doc/tech_change_reading.md` (12),
+`doc/fleet_screen_reading.md` (17), `doc/races_screen_reading.md` §8 (15).
+They are not copied here — one home. **Meanwhile:** nothing built.
+
