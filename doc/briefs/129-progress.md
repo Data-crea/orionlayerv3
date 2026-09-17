@@ -25,3 +25,10 @@ at 2aa6af4 (pushed); orion2re `orionlayer-local` at 3305d78c.
   through `core/research.py`; the row takes up to three lines and shrinks the
   values rather than the label; both docstrings corrected. Evidence beside the
   native frame at three sizes. Smoke **205**, exit 0.
+- **E** — done, a report: `doc/research_screen_stop1.md` (the reconstruction
+  validated live — 8 of 8 categories and their offered field, the choice rows
+  not reconstructible yet and exactly why; the extractor plan; the twelve
+  questions marked; the presentation dialog in the six headings). Parked:
+  three items in `129-parked-for-data.md`. Also recorded Data's answer to
+  point 5 of `126-parked-for-data.md`: the draft one-content-box rule is NOT
+  filed.

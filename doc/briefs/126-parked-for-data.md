@@ -83,6 +83,11 @@ screen, with uneven per-slot tables. **Why yours:** a rule for the fundament.
 the original's screen is itself one frame with fixed holes" (colony, queue);
 (c) do not file. **Meanwhile:** nothing filed. **Answer:** a / b / c.
 
+**ANSWERED by Data, 17 September 2026 (work order 129): (c), do not file
+it.** The readings showed it fits two of the five screens badly (the colony
+view is a full-bleed landscape, the build queue is one frame with fixed
+holes) and two more only by force. Nothing is filed in the fundament.
+
 ## 6. `core/structs/ship.py` `weapons()` skips empty slots; the fleet screen stops at the first (part G)
 
 **What:** `flt2.cpp:696-701` breaks the weapon list at the first slot with
