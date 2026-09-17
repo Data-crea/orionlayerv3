@@ -100,7 +100,6 @@ import pygame
 
 from core import mouse as mouse_input
 from core import palette
-from core.config import REF_W, REF_H
 from core.screen_base import ScreenBase
 from core.structs import player as player_struct
 
@@ -146,9 +145,6 @@ class ColonySummaryScreen(ScreenBase):
     def __init__(self, app):
         super().__init__(app)
         self._data = {}
-        self._frame = None
-        self._frame_scaled = None
-        self._frame_pos = (0, 0)
         self._local = None          # parsed s_player of the local player
         self._sort_key = "name"     # what the original starts on
         self._state = None          # last snapshot, for the list
@@ -171,7 +167,8 @@ class ColonySummaryScreen(ScreenBase):
         self._data = self.app.res.load_json(
             "screens/colony_summary/layout.json", {}) or {}
         self._sort_key = self._data.get("sort", {}).get("default", "name")
-        self._load_frame()
+        self._load_frame(
+            self._data.get("frame", {}).get("image", "frame.png"))
         # A selection does not survive leaving the screen, because in
         # the game it could not: leaving is one of the two
         # `Clear_Cluster_` paths (colsum.cpp:804 and :938), so a pick
@@ -381,30 +378,10 @@ class ColonySummaryScreen(ScreenBase):
 
     # ── Frame ─────────────────────────────────────────────
 
-    def _load_frame(self):
-        """The frame; stretched over the reference area so its holes
-        coincide with the boxes measured out of them.
-
-        ONE FILE AND NO SWITCH since Phase B (12 September 2026).
-        `colonyframe` chose between a built plate and this, and
-        `frame_preview` said which; both are gone with the plate
-        machinery. What is left is a load, a scale and a blit, which
-        is what that module's own docstring said the two paths shared.
-        """
-        path = self.asset_path("assets",
-                               self._data.get("frame", {}).get(
-                                   "image", "frame.png"))
-        self._frame = (pygame.image.load(path).convert_alpha()
-                       if path else None)
-        self._scale_frame()
-
-    def _scale_frame(self):
-        if self._frame is None:
-            self._frame_scaled = None
-            return
-        x, y, w, h = self.layout.rect((0, 0, REF_W, REF_H))
-        self._frame_scaled = pygame.transform.smoothscale(self._frame, (w, h))
-        self._frame_pos = (x, y)
+    # The load, scale and blit are ScreenBase's (`_load_frame`). ONE FILE AND
+    # NO SWITCH since Phase B (12 September 2026): `colonyframe` chose between
+    # a built plate and this, and `frame_preview` said which; both are gone
+    # with the plate machinery.
 
     # ── Rendering ─────────────────────────────────────────
 
@@ -463,13 +440,6 @@ class ColonySummaryScreen(ScreenBase):
     #: `colonyheader`, which owns the column boxes: the line is
     #: entirely about geometry this screen does not compute.
     editor_note = colonyheader.editor_note
-
-    def _render_frame_image(self, surface):
-        """The frame, over the content and under the header plates."""
-        if self._frame_scaled is not None:
-            surface.blit(self._frame_scaled, self._frame_pos)
-        elif self.USE_FRAME:
-            self._render_frame(surface)
 
     def _render_title(self, surface):
         cfg = self._data.get("frame", {})

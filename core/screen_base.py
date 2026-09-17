@@ -15,6 +15,7 @@ import pygame
 
 from core.pressfeedback import Pressed
 from core.box import load_boxes
+from core.config import REF_W, REF_H
 from core.screenhelp import HelpMixin
 
 # Frame button click feedback
@@ -56,6 +57,9 @@ class ScreenBase(HelpMixin):
         self._bg = None          # original background surface
         self._bg_scaled = None   # scaled to current window size
         self._bg_pos = (0, 0)
+        self._frame = None         # a screen's own fixed frame image
+        self._frame_scaled = None  # scaled to the reference area
+        self._frame_pos = (0, 0)
         self._btn_flash = None   # ("left"|"right", start_time)
         self.pressed = Pressed()  # a held press on a word (pressfeedback)
 
@@ -249,6 +253,37 @@ class ScreenBase(HelpMixin):
         else:
             bg = self.colors.get("background", [6, 8, 16])
             surface.fill(bg[:3])
+
+    # --- Fixed frame image (screens that wear one PNG over their content) ---
+    #
+    # Extracted 17 September 2026 (work order 126 I): the colony summary,
+    # the galaxy map and planets each carried this load, scale and blit,
+    # identical but for spelling — and every screen still to be built with
+    # a fixed frame would have pasted it a fourth time. Opt-in: a screen
+    # calls `_load_frame` from `enter`, `_scale_frame` from `on_resize` and
+    # `_render_frame_image` where the frame goes in its draw order.
+
+    def _load_frame(self, image="frame.png"):
+        """The frame; stretched over the reference area so its holes
+        coincide with the boxes measured out of them."""
+        path = self.asset_path("assets", image)
+        self._frame = (pygame.image.load(path).convert_alpha()
+                       if path else None)
+        self._scale_frame()
+
+    def _scale_frame(self):
+        if self._frame is None:
+            self._frame_scaled = None
+            return
+        x, y, w, h = self.layout.rect((0, 0, REF_W, REF_H))
+        self._frame_scaled = pygame.transform.smoothscale(self._frame, (w, h))
+        self._frame_pos = (x, y)
+
+    def _render_frame_image(self, surface):
+        if self._frame_scaled is not None:
+            surface.blit(self._frame_scaled, self._frame_pos)
+        elif self.USE_FRAME:
+            self._render_frame(surface)
 
     # --- Box helpers ---
 

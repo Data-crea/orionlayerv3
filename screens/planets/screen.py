@@ -22,10 +22,7 @@ drawing is `planetdraw`; this file owns the boxes, the input and the wire.
 """
 import logging
 
-import pygame
-
 from core import mouse as mouse_input
-from core.config import REF_W, REF_H
 from core.screen_base import ScreenBase
 from core.shipparts import ShipPartNames
 from screens.colony_summary import colonyrows
@@ -48,9 +45,6 @@ class PlanetsScreen(ScreenBase):
     def __init__(self, app):
         super().__init__(app)
         self._data = {}
-        self._frame = None
-        self._frame_scaled = None
-        self._frame_pos = (0, 0)
         self._state = None
         self._view = None
         self._list = planetrows.PlanetList()
@@ -80,7 +74,8 @@ class PlanetsScreen(ScreenBase):
         # MOX::_scanned_field = -1 on entry (plntsum.cpp:1945).
         self._first, self._hover = 0, None
         self._selected = self._scanned = None
-        self._load_frame()
+        self._load_frame(
+            self._data.get("frame", {}).get("image", "frame.png"))
         self.update(game_state)
         self._push_sort_key()
 
@@ -149,20 +144,6 @@ class PlanetsScreen(ScreenBase):
 
     # ── Frame ─────────────────────────────────────────────
 
-    def _load_frame(self):
-        path = self.asset_path("assets", self._data.get("frame", {}).get(
-            "image", "frame.png"))
-        self._frame = pygame.image.load(path).convert_alpha() if path else None
-        self._scale_frame()
-
-    def _scale_frame(self):
-        if self._frame is None:
-            self._frame_scaled = None
-            return
-        x, y, w, h = self.layout.rect((0, 0, REF_W, REF_H))
-        self._frame_scaled = pygame.transform.smoothscale(self._frame, (w, h))
-        self._frame_pos = (x, y)
-
     # ── Rendering ─────────────────────────────────────────
 
     def render(self, surface):
@@ -186,8 +167,7 @@ class PlanetsScreen(ScreenBase):
                 self, surface, row,
                 planetwords.cells(self._view, row, self._words)["planet"])
         monsterpanel.render(self, surface, row)
-        if self._frame_scaled is not None:
-            surface.blit(self._frame_scaled, self._frame_pos)
+        self._render_frame_image(surface)
         self.render_help(surface)
 
     def _marker(self):

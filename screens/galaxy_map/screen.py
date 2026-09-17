@@ -33,7 +33,6 @@ from core import mapcoords as mc
 from core import mouse as mouse_input
 from core import palette
 from core import zoomtables as zt
-from core.config import REF_W, REF_H
 from core.screen_base import ScreenBase
 from core.structs import nebula as nebula_struct
 from core.structs import planet as planet_struct
@@ -97,9 +96,6 @@ class GalaxyMapScreen(ScreenBase):
         self._tints = ship_icons.TintCache()
         self._wormholes = rnd.WormholeLayer()
         self._local = None
-        self._frame = None          # original frame PNG
-        self._frame_scaled = None   # scaled to the reference area
-        self._frame_pos = (0, 0)
         self._map_bg = None         # gas clouds behind the map
         self._map_bg_scaled = None  # cover-scaled + cropped to map_area
         self._starfield = sf.StarfieldLayer()
@@ -116,7 +112,8 @@ class GalaxyMapScreen(ScreenBase):
         self._data = self.app.res.load_json(
             "screens/galaxy_map/layout.json", {}) or {}
         self._load_sprites()
-        self._load_frame()
+        self._load_frame(
+            self._data.get("frame", {}).get("image", "frame.png"))
         self._load_map_background()
         self._starfield.configure(self._data.get("starfield", {}))
         self._hover_star = None
@@ -186,22 +183,6 @@ class GalaxyMapScreen(ScreenBase):
                                 pygame.image.load(path).convert_alpha())
             else:
                 log.warning("Sidebar icon not found: %s", filename)
-
-    def _load_frame(self):
-        """The cutout frame; stretched over the reference area so the
-        cutouts coincide with the boxes derived from them."""
-        cfg = self._data.get("frame", {})
-        path = self.asset_path("assets", cfg.get("image", "frame.png"))
-        self._frame = pygame.image.load(path).convert_alpha() if path else None
-        self._scale_frame()
-
-    def _scale_frame(self):
-        if self._frame is None:
-            self._frame_scaled = None
-            return
-        x, y, w, h = self.layout.rect((0, 0, REF_W, REF_H))
-        self._frame_scaled = pygame.transform.smoothscale(self._frame, (w, h))
-        self._frame_pos = (x, y)
 
     def _load_map_background(self):
         """Star field artwork drawn under stars, nebulas and fleets.
@@ -380,12 +361,6 @@ class GalaxyMapScreen(ScreenBase):
         # Above the cockpit frame: the popup is a dialog, not content
         # under a cutout.
         self.render_help(surface)
-
-    def _render_frame_image(self, surface):
-        if self._frame_scaled is not None:
-            surface.blit(self._frame_scaled, self._frame_pos)
-        elif self.USE_FRAME:
-            self._render_frame(surface)
 
     def _render_title(self, surface):
         """Title text inside the frame's title cutout (layout.json)."""
