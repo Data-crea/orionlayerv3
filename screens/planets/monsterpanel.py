@@ -143,7 +143,7 @@ def _draw_sprite(screen, surface, owner):
     img = _load(screen, owner)
     if not rect or img is None:
         return
-    style = planetdraw._style(screen, SPRITE_BOX)
+    style = screen.box_style(SPRITE_BOX)
     zoom = max(0.1, min(1.0, float(style.get("zoom", 1.0))))
     ax, ay = style.get("crop", [0.5, 0.5])
     f = min(1.0, rect.width / img.get_width(),

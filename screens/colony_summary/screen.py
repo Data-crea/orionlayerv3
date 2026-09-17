@@ -609,12 +609,6 @@ class ColonySummaryScreen(ScreenBase):
         `colonysort.for_screen`, which is their ONE geometry."""
         return colonysort.for_screen(self)
 
-    def box_style(self, name):
-        for box in self.boxes:
-            if box.name == name:
-                return box.style
-        return {}
-
     # ── Input ─────────────────────────────────────────────
 
     def handle_click(self, screen_x, screen_y):

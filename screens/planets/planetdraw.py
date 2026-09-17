@@ -301,12 +301,5 @@ def render_planet_panel(screen, surface, row, words):
                                                   - surf.get_height()) // 2))
 
 
-def _style(screen, name):
-    for box in screen.boxes:
-        if box.name == name:
-            return box.style
-    return {}
-
-
 def _font(screen, name, default):
-    return _style(screen, name).get("font_size", default)
+    return screen.box_style(name).get("font_size", default)

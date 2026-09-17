@@ -194,7 +194,7 @@ class EmpireIdentityScreen(ScreenBase):
             draw_thin_box(surface, L, pr)
         ir = self.box_rect("preview_image")
         if ir:
-            style = self._box_style("preview_image")
+            style = self.box_style("preview_image")
             render_image_box(surface, L, self._homeworld, ir, style,
                              self._img_cache)
         if pr:
@@ -258,12 +258,6 @@ class EmpireIdentityScreen(ScreenBase):
         if box_name == "preview_image" and self._homeworld:
             return self._homeworld.get_size()
         return None
-
-    def _box_style(self, name):
-        for box in self.boxes:
-            if box.name == name:
-                return box.style
-        return {}
 
     # ── Input ─────────────────────────────────────────────
 

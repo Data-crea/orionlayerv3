@@ -267,6 +267,19 @@ class ScreenBase(HelpMixin):
                 return box.ref_rect
         return None
 
+    def box_style(self, name):
+        """A named box's style dict, or {} when there is no such box.
+
+        Extracted 17 September 2026 (work order 126 I): colony summary,
+        galaxy map, empire identity (`_box_style`) and planets
+        (`planetdraw._style`) each carried this loop, identical but for
+        the name — the fourth copy of a lookup whose siblings live here.
+        """
+        for box in self.boxes:
+            if box.name == name:
+                return box.style
+        return {}
+
     def box_font_scale_stored(self, name):
         """A box's `font_scale` as boxes.json holds it. No auto-factor.
 

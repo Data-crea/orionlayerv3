@@ -334,12 +334,6 @@ class GalaxyMapScreen(ScreenBase):
         return ship_icons.IconAnchor(self._state, self._stars,
                                      self._ships, self._game_zoom())
 
-    def box_style(self, name):
-        for box in self.boxes:
-            if box.name == name:
-                return box.style
-        return {}
-
     @property
     def _omniscient(self):
         """Galactic Lore from the local player's racial traits."""
