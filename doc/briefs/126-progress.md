@@ -35,3 +35,16 @@ running.
   Thirty full runs: 30/30 exit 0, peak RSS 4540–4836 MB, 66.6–68.1 s
   (`evidence/work_order_126/C_thirty_runs.md`). Smoke **195**, exit 0.
   Parked: item 1 (split main()).
+- **C commit:** 5719c70.
+- **D** — done. 3f7d45a GAME menu on connect opens over the galaxy map
+  (OVERLAY_PARENT; 195 -> 196); 79701c7 tools import again, `tools/toolenv.py`,
+  four siblings fixed with colony_move_hd, a fresh-process import check
+  (196 -> 197); 2a5e672 empty slot edit marked DEVIATION (and a source finding:
+  the original APPENDS a character typed first); b6cfbd9 SAVE11 classified —
+  nothing in the engine writes or reads it, hashed with SAVE1-9. Exit 139:
+  no occurrence in 30 runs (C). 59 ms first menu open: left, as decided.
+  Open fix 19: unchanged observation (see report). Smoke **197**, exit 0.
+  Live: none. Parked: none from D.
+- **E** — done, a report: Part 0 and Run A of the colony order are done; Run B
+  (documentation audit) is not, and belongs with 127; the missing brief texts
+  are 90's head and 125. No live run. Smoke **197**. Parked: item 2.

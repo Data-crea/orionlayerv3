@@ -4357,6 +4357,26 @@ save file. **What made the file is not in this tree:** it is dated 30 July
 description (`\x031\x01`) — from before this engine's save code as it
 stands; not investigated further. CLAUDE.md carries the rule next to SAVE10.
 
+### The colony runs order — what is open, established — work order 126 E, 17 September 2026
+
+The order chat called `workorder_colony_runs_and_doc_audit.md` is filed as
+`doc/briefs/88-*` (the full order, 9 September) and `91-*` (its runs, as an
+attachment). Against the tree:
+
+- **Part 0** (where are the briefs) — done: `doc/briefs/`, brief 89, 9 Sep.
+- **Run A** (pop-move 3a-3c) — done: d98a96d, "Run A — what one command
+  would buy" above, then decision 52 and `doc/ext_move_pop.patch` applied
+  (open fix 12).
+- **Run B, the documentation audit** — NOT done. a83e5fc (12 Sep) was a code
+  redundancy audit of the static-frame rebuild, not this. Per work order 126
+  it is not today's; it goes with the reading-budget order (127).
+- **Brief files:** the four names the 9 September handover missed are all in
+  `doc/briefs/` (78, 79, 82, and the pop-move brief as 90). Still missing:
+  **the head of brief 90** (it starts mid-sentence) and **work order 125's
+  own text** (the GAME menu order the 16 September commits cite). Parked.
+
+Nothing else remains that needs no decision; no live run was needed.
+
 ## What is missing
 
 ### OLED floor lift and player-colour presets

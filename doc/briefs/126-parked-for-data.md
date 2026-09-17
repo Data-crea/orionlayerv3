@@ -21,3 +21,14 @@ the full suite still before every commit (decision 31) — (b) plus a CLI.
 **Meanwhile:** nothing split; quiet mode and the memory line are in.
 **Answer in one line:** a / b / c.
 
+## 2. Two brief texts are still missing from `doc/briefs/` (part E)
+
+**What:** the beginning of brief 90 (the pop-move brief starts mid-sentence
+inside section 1) and work order 125 (the GAME menu order that abcbab0 and
+the status document cite; no file). **Why yours:** the texts exist only on
+the chat side; nothing in the tree can rebuild them. **Options:** (a) paste
+both and a session files them byte for byte — minutes; (b) declare them lost
+and let the README row for 90 and a new row for 125 say so — nothing else
+changes. **Meanwhile:** 126 was numbered after 125, so 125 stays reserved.
+**Answer in one line:** a / b.
+
