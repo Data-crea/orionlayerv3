@@ -26,6 +26,7 @@ quarantine.
 
 Still needed, still unverified:
   s_leader_data (59 B)  — officers screen
+  s_player.hyper_advanced_tech @640 — see HYPER_ADVANCED_TECH below
 """
 from core.structs import Spec
 
@@ -34,3 +35,17 @@ LEADER = Spec("s_leader_data", 59, [], verified=False,
               note="confirm name string offset first, it is the "
                    "cheapest ground truth")
 
+
+#: s_player.hyper_advanced_tech[MAX_PLAYERS] — eight bytes, one per
+#: technology field from 75 on, each adding 10000 to that field's research
+#: cost (`COLCALC::Player_Research_Cost_`, colcalc.cpp:526-539). Read at 640
+#: from orion2re's own headers compiled with their packing, with
+#: `sizeof(s_player)` matching sizes.h — ONE source. The live read on SAVE4
+#: and SAVE5 is eight zeros, and **a zero confirms no offset** (the same
+#: rule the monster damage fields were left under, fundament 64), so this
+#: stays here until a game that has reached hyper-advanced research can be
+#: read. Consequence, written down rather than discovered later: the
+#: sidebar's turn count is an UNDERESTIMATE for fields 75..82 while the
+#: surcharge cannot be read (work order 129 C/D).
+HYPER_ADVANCED_TECH_OFFSET = 640
+HYPER_ADVANCED_TECH_COUNT = 8

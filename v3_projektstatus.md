@@ -837,7 +837,7 @@ files under `doc/` and are only summarised here.
 | | |
 |---|---|
 | Python | 32,960 lines across 111 modules — `find . -name '*.py'`, `__pycache__` excluded, the smoke test's 6,400 included. The previous figure here (21,642 across 94) was carried from an unstated method and could not be reproduced |
-| Smoke test | `python tools/smoke_test.py` — **204 checks**, headless |
+| Smoke test | `python tools/smoke_test.py` — **205 checks**, headless |
 | Assets | 170 MB (select_race 68, galaxy_map 51, shared 23, new_game 21, colony_summary 1) |
 | Screens in HD | 9 of ~20–22 (the GAME menu overlay, work order Stop 2, every dialog of the popup; colony summary draws list, sidebar, scan box and galaxy inset, and MOVES POPS — the first HD gesture that drives the game; planets, brief 101, lists, sorts, restricts and returns) |
 | Setup from clone | `python tools/setup.py` (deps via the system package manager) |
@@ -4647,6 +4647,44 @@ evidence `~/orionlayer-fixtures/evidence/work_order_129/`):
 **Smoke:** while the state reports 52 or 53 nothing is claimed and no HD
 screen sends — with the map decoupled and zoomed in as a positive control.
 **203 -> 204** with part D's check.
+
+### The research foundations — work order 129 C, 17 September 2026
+
+Built from the reading the status document already held ("Galaxy map: the
+research readout's source", 124 G), so the sidebar can print what the
+original prints (129 D).
+
+- **`core/research.py`**, TRANSCRIBED: `FIELD_COST` (the cost column of
+  `TECHDATA::_technology_fields`, techdata.cpp:319ff), `cost()`
+  (`COLCALC::Player_Research_Cost_`, colcalc.cpp:526-539, with the
+  hyper-advanced surcharge), `chance()`
+  (`Chance_For_Research_Breakthrough_Aux_`, :469-484) and
+  `turns_until_complete()` (`Player_N_Turns_Until_Research_Complete_`,
+  :432-458).
+- **A checker, not a reminder** (decision 36): `tools/research_cost_check.py`
+  reads the 83 costs, `TECH_FIELD_COUNT`, the surcharge's first field and its
+  step out of the source and fails on any difference; it locates the cost
+  column by `s_tech_field_data`'s own member order (techdata.h:73-81). The
+  smoke test runs it.
+- **The player fields, decision 23.** `tech_fields[83]` @296 is now in the
+  verified spec: orion2re's headers compiled with their own packing put it
+  there with `sizeof(s_player) == 0xf0e` (the assert in sizes.h:21), and the
+  live read agrees — 0..3 across the array, the researched field at 2, which
+  is what makes the loop reproduce the original's own figure.
+  `hyper_advanced_tech` @640 stays in `core/structs/unverified.py`: the live
+  read is eight zeros, and a zero confirms no offset. **Consequence, on
+  record:** for fields 75..82 the turn count is an underestimate until a game
+  that has reached hyper-advanced research can be read.
+- **Validation, three points and the loop's own arithmetic.** SAVE4 (3509.0):
+  field 60, status 2, 412 RP at 44 per turn, cost 900 from the table, the loop
+  gives **18** and the native sidebar reads "~18 turns / 44 RP". SAVE5
+  (3509.1): 456 RP, **17**, and the native frame reads "~17 turns"
+  (`evidence/work_order_129/C_native_SAVE4_research.png`, `C_native_SAVE5_*`,
+  `C_probe_SAVE4.json`, `C_probe_SAVE5.json`). The two points the status
+  document already carried (412/44/18 and 500/44/16) are reproduced by the
+  same code. **A point with the chance above zero was not reached:** it needs
+  accumulated points past the cost, which neither scratch save is near, and
+  126's rule 8 keeps those saves reloaded rather than played.
 
 ## What is missing
 

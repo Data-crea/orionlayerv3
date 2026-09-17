@@ -16522,6 +16522,22 @@ def main():
             app.user_settings = _go_real[2]
         _go_dir.cleanup()
 
+    # THE COST TABLE IS A COPY, SO IT HAS A CHECKER (decision 36, work
+    # order 129 C): tools/research_cost_check.py reads the 83 costs and the
+    # surcharge out of techdata.cpp and colcalc.cpp. Run here as the hull
+    # tables' checker is, so a tree whose engine moved fails the suite.
+    import subprocess as _rc_sp
+    _rc = _rc_sp.run([sys.executable, os.path.join(
+        os.path.dirname(SCREENS_DIR), "tools", "research_cost_check.py")],
+        capture_output=True, text=True, timeout=120)
+    if _rc.returncode == 2:
+        report("research cost table NOT checked — no orion2re tree on this "
+               "disk")
+    else:
+        assert _rc.returncode == 0, _rc.stdout + _rc.stderr
+        ok("research cost table, field count and hyper-advanced surcharge "
+           "agree with techdata.cpp and colcalc.cpp")
+
     # THE SIDEBAR'S RESEARCH READOUT — the original's four cases (work
     # order 129 D), transcribed from Print_Main_Screen_Data_
     # (mainscr_main.cpp:186-247) through core/research.py. Until then HD

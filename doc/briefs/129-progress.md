@@ -16,3 +16,8 @@ at 2aa6af4 (pushed); orion2re `orionlayer-local` at 3305d78c.
   as the original picture with HD silent, HD returns to the map by itself, and
   the choice through OrionLayer is NOT reliable (three occasions recorded) —
   reported, not worked around. Smoke **203** at this point.
+- **C** — done. `core/research.py` (cost table, cost, chance, turns),
+  `tools/research_cost_check.py` (run by the suite), `tech_fields` verified
+  into the player spec, `hyper_advanced_tech` left in unverified.py with its
+  consequence written down. Three live points reproduce the native readout
+  (18, 17, and the document's 16); the chance>0 point was not reachable.

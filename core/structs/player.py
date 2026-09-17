@@ -75,8 +75,14 @@ Sidebar semantics, from mainscr_main.cpp's sidebar drawing:
                      (command_points)"
   food              surplus_food, signed
   freighters        "surplus_freighters (n_freighters)"
-  research          research_breakthrough != 0 -> "breakthrough",
-                    else current_research_field == 0 -> "none"
+  research          research_breakthrough != 0 -> "breakthrough";
+                    current_research_field == 0 -> "none"; otherwise the
+                    chance for this turn, the turns left and the points
+                    produced, through `core/research.py` and
+                    `tech_fields` below (work order 129 D). The older note
+                    here ended at the two words and the sidebar printed
+                    accumulated points, which was the unmarked deviation
+                    that order removed.
 
 `contact` is an 8-byte array indexed by player; non-zero means the
 local player has met that empire. Star names in Get_Star_Name_ use
@@ -115,6 +121,18 @@ SPEC = Spec("s_player", SIZE, [
     ("surplus_bc",            278, "i16"),
     ("research_accumulated",  591, "i32"),
     ("current_research_field", 901, "i8"),
+    # tech_fields[TECH_FIELD_COUNT] — the per-field research status, and
+    # the only one the sidebar needs: 3 means "already researched"
+    # (colcalc.cpp:436-438). TWO SOURCES, 17 September 2026 (work order
+    # 129 C): orion2re's own headers compiled with their `#pragma pack(1)`
+    # (compat.h, types.h, settler.h, consts.h, orion2_consts.h, orion2.h in
+    # a throwaway unit outside their tree) put it at 296 with
+    # `sizeof(s_player) == 0xf0e`, the assert in sizes.h:21; and live on
+    # SAVE4 and SAVE5 it reads 0..3 across the 83 entries, with the
+    # currently researched field at 2, which is what makes
+    # `Player_N_Turns_Until_Research_Complete_` reproduce the original's
+    # own "~18 turns" and "~17 turns" beside it.
+    ("tech_fields",           296, "u8[83]"),
     ("total_research",       1613, "i16"),
     ("total_ships",          1615, "i16"),
     ("total_colonies",       1649, "i16"),
