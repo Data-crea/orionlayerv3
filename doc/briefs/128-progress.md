@@ -34,3 +34,7 @@ fix 22 is what it implements.
   reading and orion2re segfaulted in TECH::_Tech_Select_ — the reading's
   null-dereference confirmed; open fix 23 (observation). SAVE1-9, 11
   identical; SAVE10 the turn's autosave.
+- **D** — done. `planetdraw.row_bands` + `listgrid.band_at`; the sweep check
+  over every pixel line at four sizes plus rendered band edges; red with the old
+  division. Neighbours T6, D19, D9 named in the status, not worked. Smoke
+  199 -> **200**. No live step (hover sends nothing).

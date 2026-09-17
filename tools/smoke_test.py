@@ -13976,6 +13976,54 @@ def main():
        "wheel and fills are marked HD EXTENSION and drawn, the range gap "
        "is marked in layout.json and the status document")
 
+    # THE HOVERED ROW IS THE DRAWN ROW, on every pixel line (work order 128
+    # D, decision 5). Hover divided the window proportionally while the rows
+    # were drawn as h // n with the remainder on the last band, and the two
+    # named different rows on single lines. Two claims, because one shared
+    # function guarantees agreement and not correctness:
+    #   1. at every device row y of the list, the hovered row is the row
+    #      whose band `row_bands` draws at y — no render needed, so EVERY
+    #      line is swept;
+    #   2. against what is visible: at the first and last line of every
+    #      drawn band (where the two arithmetics disagreed), a rendered frame
+    #      shows `row_selected` at that y — the hover lit the row the pixel
+    #      is in.
+    _hv_lines = 0
+    for _hv_W, _hv_H in ((1366, 768), (1920, 1080), (2560, 1440), (3840, 2160)):
+        _hv_app, _ = _pv.build_screen(_hv_W, _hv_H)
+        _hv_app.dispatcher.switch_to("planets")
+        _hv_scr = _hv_app.dispatcher.active
+        _hv_scr.update(_PlSnap())
+        _hv_area = _pld.window(_hv_scr, "rows")
+        _hv_bands = _pld.row_bands(_hv_scr)
+        _hv_n = len(_hv_scr._list.rows)
+        assert _hv_n >= 3 and len(_hv_bands) == _hv_scr.visible, (_hv_n, _hv_bands)
+        for _hv_y in range(_hv_area.top, _hv_area.bottom):
+            _hv_scr.handle_mouse_motion(_hv_area.x + 10, _hv_y)
+            _hv_drawn = next((_i for _i, (_t, _h) in enumerate(_hv_bands)
+                              if _t <= _hv_y < _t + _h), None)
+            _hv_want = (_hv_scr._first + _hv_drawn
+                        if _hv_drawn is not None
+                        and _hv_scr._first + _hv_drawn < _hv_n else None)
+            assert _hv_scr._hover == _hv_want, (
+                f"{_hv_W}x{_hv_H} y={_hv_y}: hover {_hv_scr._hover}, the "
+                f"row drawn there {_hv_want}")
+            _hv_lines += 1
+        _hv_surf = pygame.Surface((_hv_W, _hv_H))
+        _hv_cols = _pld.columns(_hv_scr, _hv_scr._data["list"])
+        _hv_sel = tuple(_pl_lg.row_palette()[2])[:3]
+        for _hv_i, (_hv_t, _hv_h) in enumerate(_hv_bands[:_hv_n]):
+            for _hv_y in (_hv_t, _hv_t + _hv_h - 1):
+                _hv_scr.handle_mouse_motion(_hv_area.x + 10, _hv_y)
+                _hv_scr.render(_hv_surf)
+                _hv_px = tuple(_hv_surf.get_at(
+                    (_hv_cols["climate"][0] + 4, _hv_y)))[:3]
+                assert _hv_px == _hv_sel, (
+                    f"{_hv_W}x{_hv_H} y={_hv_y} (band {_hv_i}): the pixel "
+                    f"shows {_hv_px}, the hovered row's fill is {_hv_sel}")
+    ok(f"planets: the hovered row is the drawn row on all {_hv_lines} pixel "
+       f"lines at four sizes, and a band's edge lines light that band")
+
     # ── 8. THE MONSTER VALUES IN THE PICTURE WINDOW — fundament 64 ────
     from core import maintext as _mmt
     from core import monsterhull as _mh

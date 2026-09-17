@@ -22,6 +22,7 @@ drawing is `planetdraw`; this file owns the boxes, the input and the wire.
 """
 import logging
 
+from core import listgrid
 from core import mouse as mouse_input
 from core.screen_base import ScreenBase
 from core.shipparts import ShipPartNames
@@ -290,8 +291,9 @@ class PlanetsScreen(ScreenBase):
         area = planetdraw.window(self, "rows")
         self._hover = None
         if area and area.collidepoint(pos):
-            band = (screen_y - area.y) * self.visible // max(1, area.height)
-            index = self._first + band
+            # The band the row was DRAWN in (decision 5, work order 128 D).
+            band = listgrid.band_at(planetdraw.row_bands(self), screen_y)
+            index = self._first + band if band is not None else -1
             if 0 <= index < len(self._list.rows):
                 row = self._list.rows[index]
                 self._hover = index

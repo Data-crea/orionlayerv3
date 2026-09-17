@@ -36,6 +36,21 @@ def band_height(area, row_count):
     return max(1, area.h // max(1, int(row_count)))
 
 
+def band_at(bands, y):
+    """The index of the band holding device row `y`, or None.
+
+    Takes the bands `all_bands` produced — the ones the rows were DRAWN
+    in — so a hit test cannot divide the window a second way (decision 5).
+    Planets' hover divided `(y - top) * n // height` while its rows were
+    drawn as h // n with the remainder on the last band, and the two named
+    different rows on single pixel lines (work order 128 D).
+    """
+    for index, (top, height) in enumerate(bands):
+        if top <= y < top + height:
+            return index
+    return None
+
+
 def all_bands(area, row_count):
     """(top, height) for every band of the window, the last one taking
     the remainder so the bands tile the window exactly."""

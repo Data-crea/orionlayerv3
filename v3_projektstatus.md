@@ -837,7 +837,7 @@ files under `doc/` and are only summarised here.
 | | |
 |---|---|
 | Python | 32,960 lines across 111 modules — `find . -name '*.py'`, `__pycache__` excluded, the smoke test's 6,400 included. The previous figure here (21,642 across 94) was carried from an unstated method and could not be reproduced |
-| Smoke test | `python tools/smoke_test.py` — **199 checks**, headless |
+| Smoke test | `python tools/smoke_test.py` — **200 checks**, headless |
 | Assets | 170 MB (select_race 68, galaxy_map 51, shared 23, new_game 21, colony_summary 1) |
 | Screens in HD | 9 of ~20–22 (the GAME menu overlay, work order Stop 2, every dialog of the popup; colony summary draws list, sidebar, scan box and galaxy inset, and MOVES POPS — the first HD gesture that drives the game; planets, brief 101, lists, sorts, restricts and returns) |
 | Setup from clone | `python tools/setup.py` (deps via the system package manager) |
@@ -4483,6 +4483,27 @@ index found there; `viewctl.ZOOM_OUT_FIELD = 9` is gone.
   and exactly the kind of send the guard exists to refuse. No save changed
   except SAVE10, the autosave of that turn end (logged). Not pursued further,
   as the order says. Recorded as open fix 23, an observation.
+
+### Planets: the hovered row is the drawn row — work order 128 D, 17 September 2026
+
+Hover picked its row by `(y - top) * n // height`; the rows were drawn by
+`listgrid.all_bands` (h // n, the remainder on the last band) — two
+arithmetics, disagreeing on single pixel lines (redundancy audit D8).
+`planetdraw.row_bands` is now the one source of the bands, `render_list`
+draws in them and the hover finds its row with the new `listgrid.band_at`,
+which takes the drawn bands rather than dividing again (decision 5).
+
+- **Smoke:** every pixel line of the list at 1366x768, 1920x1080, 2560x1440
+  and 3840x2160 hovers the row drawn there; and against the picture, the first
+  and last line of every drawn band, rendered, show `row_selected` at that y.
+  Red with the old division: "1366x768 y=149: hover 0, the row drawn there 1"
+  (`evidence/work_order_128/D_hover_check_red.txt`). **199 -> 200.**
+- **Neighbours read in `doc/redundancy_audit.md`, not worked:** T6 (the scroll
+  arrows' rects computed in `render_scroll` and again in `scroll_arrows` for the
+  click — they agree today, the same decision-5 shape), D19 (scroll thumb
+  arithmetic differs from the colony list's; Planets cites no source), D9
+  (window rects through `layout.rect(box_rect)` against `Box.screen_rect`).
+  Not live-tested: hover sends nothing to the game.
 
 ## What is missing
 

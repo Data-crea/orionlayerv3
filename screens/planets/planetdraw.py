@@ -94,6 +94,18 @@ def columns(screen, cfg):
     return out
 
 
+def row_bands(screen):
+    """(top, height) of every row band in the `rows` window, or [].
+
+    The ONE place the list's bands come from: `render_list` draws in them
+    and the hover finds its row in them (`listgrid.band_at`), decision 5.
+    """
+    area = window(screen, "rows")
+    if not area:
+        return []
+    return listgrid.all_bands(area, screen.visible)
+
+
 def render_list(screen, surface, rows, cells, first, hover_index,
                 selected_planet):
     cfg = screen._data.get("list", {})
@@ -104,7 +116,7 @@ def render_list(screen, surface, rows, cells, first, hover_index,
     cols = columns(screen, cfg)
     scale = screen.layout.scale
     row_a, row_b, row_sel, plate, _hbg, htext = listgrid.row_palette()
-    bands = listgrid.all_bands(area, int(cfg.get("row_count", 8)))
+    bands = row_bands(screen)
     listgrid.draw_row_fills(
         surface, bands, cols, (), first,
         lambda li: (li < len(rows) and rows[li]["index"] == selected_planet),
