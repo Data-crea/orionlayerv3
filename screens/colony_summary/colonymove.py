@@ -330,11 +330,8 @@ def predict_pops(pops, n_pops, max_farms, cluster, requested_job):
     of against a summary. That is what turns "the click landed
     somewhere" into a checkable claim.
     """
-    work = list(pops)
     held = set(cluster.indices if isinstance(cluster, Cluster) else cluster)
-    for i in held:
-        if 0 <= i < len(work):
-            work[i] &= ~colony_struct.POP_MASK_ASSIGNED
+    work = held_pops(pops, held)
     while True:
         index = next((i for i in range(min(n_pops, len(work)))
                       if not colony_struct.pop_is_assigned(work[i])), None)
@@ -375,11 +372,8 @@ def plan_drop(pops, n_pops, max_farms, cluster, requested_job):
     plan that changed the state it was planning against would be
     useful exactly once.
     """
-    work = list(pops)
     held = set(cluster.indices if isinstance(cluster, Cluster) else cluster)
-    for i in held:
-        if 0 <= i < len(work):
-            work[i] &= ~colony_struct.POP_MASK_ASSIGNED
+    work = held_pops(pops, held)
     landed = 0
     while True:
         index = next((i for i in range(min(n_pops, len(work)))
