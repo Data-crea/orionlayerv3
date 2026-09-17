@@ -4716,6 +4716,24 @@ marked: `sidebar.research_readout` is the four cases, through
   measured points, and the three-line row rendered at four sizes with its ink
   inside the row's box. **204 -> 205** with part C's checker.
 
+### The eta label under the star sprite — work order 129, an observation (no change)
+
+Data's screenshot showed white text under the star sprite at the destination
+end of a selected fleet's course line. **Where the original puts it:**
+`SHIPS::Print_Eta_On_Ship_Icon_(node, zoom, ship_x, ship_y)`
+(ships.cpp:470-473) — at the SHIP ICON, not at the star; in the native frame
+of this session's own run the digits sit clear of Zin, up and left of the
+sprite (`evidence/work_order_129/F_eta_native_zoom.png`, from
+`work_order_128/A_HEAD/00_start.png`). **Where HD puts it:**
+`mapeta.anchor_point` (screens/galaxy_map/mapeta.py:114-127) anchors on the
+same icon, plus the owner's header dimension. So the RULE is the same and the
+difference is what is drawn around it: HD's star sprites are far larger
+relative to the map than the original's handful of pixels, and `render_stars`
+runs AFTER `mapeta.render` in `_render_map`, so a ship standing next to its
+destination has its label covered. Reported only, as the order asks; a change
+would be either the draw order or an offset away from the star, and both are
+Data's.
+
 ## What is missing
 
 ### OLED floor lift and player-colour presets

@@ -32,3 +32,12 @@ at 2aa6af4 (pushed); orion2re `orionlayer-local` at 3305d78c.
   three items in `129-parked-for-data.md`. Also recorded Data's answer to
   point 5 of `126-parked-for-data.md`: the draft one-content-box rule is NOT
   filed.
+- **Observation (if there was time)** — done, report only: the original draws
+  the eta at the ship icon (ships.cpp:470-473) and so does HD
+  (`mapeta.anchor_point`); what differs is that HD's stars are drawn larger
+  and AFTER the label, so it can end up under the sprite. Nothing changed.
+- **Run closed.** Parts A-E reached. orionlayerv3: nothing pushed, smoke 201
+  at the start and **205** at the end, exit 0 on every commit. orion2re: one
+  commit (f838c754), push URL still disabled, bundle written beside the tar
+  backup. SAVE1-9 and SAVE11 identical over the whole run; SAVE10 was
+  rewritten by the games' own autosaves (logged, never compared).
