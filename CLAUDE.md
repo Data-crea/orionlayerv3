@@ -198,6 +198,10 @@ which slot and which fixture was loaded for each live step, and it
 states that `~/Master of Orion 2/SAVE10.GAM` was checked against the
 secured fixture copy before and after, because that slot is the
 autosave and the game rewrites it at every turn end.
+`SAVE11.GAM` in that folder is written and read by nothing in the engine
+(every `Save_Game_`/`Load_Game_` slot is 0-9 and the slot loops stop at ten);
+it is hashed with SAVE1-9 and must stay identical (work order 126 D,
+`v3_projektstatus.md`).
 
 State findings plainly, including the unwelcome ones. A wrong
 assumption caught early is worth more than a smooth answer: most of

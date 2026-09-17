@@ -4338,6 +4338,25 @@ tests the working tree, not only the index. `--no-verify` bypasses it.
   therefore weaker here than it was drafted; decision 31 (full suite) is
   unchanged and the question is parked with the memory figure.
 
+### SAVE11.GAM classified — work order 126 D, 17 September 2026
+
+**Nothing in orion2re 1.60.0 writes or reads it**, so in the live protocol it
+belongs with SAVE1-9: hashed before and after, identical. From the source:
+`FILEDEF::Save_Game_(slot)` writes `SAVE<slot+1>.GAM` (filedef.cpp:43-48),
+and its callers pass 9 (initgame.cpp:262, loadsave.cpp:1262, nextturn.cpp:32,
+mainscr.cpp:3067), the dialog's slot, bounded to 0-9 (loadsave.cpp:536-539),
+or `active_save_slot` behind a `< 10` guard (mainscr_main.cpp:617/628 into
+loadsave.cpp:1813). `Load_Game_` is reached with 9 (mainmenu.cpp:472), the
+dialog slot, a multiplayer slot 0-9 (multplay.cpp:767-772) or the same
+guarded `active_save_slot` (loadsave.cpp:1639). Descriptions, status and
+dates loop over ten (filedef.cpp:208, loadsave.cpp:599-640, :688-700).
+QUIT sets `active_save_slot = 10` (loadsave.cpp:1263) after saving slot 9,
+and both hotkeys that would use it refuse 10. The Extension API names no
+save file. **What made the file is not in this tree:** it is dated 30 July
+2026, 223,090 bytes like SAVE6 and SAVE9 of the same day, with a mangled
+description (`\x031\x01`) — from before this engine's save code as it
+stands; not investigated further. CLAUDE.md carries the rule next to SAVE10.
+
 ## What is missing
 
 ### OLED floor lift and player-colour presets
