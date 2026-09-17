@@ -6252,6 +6252,9 @@ def main():
         "screens/galaxy_map/floorlift.py": "fundament 63",
         "screens/galaxy_map/screen.py": "OLED floor lift",
         "screens/game_menu/gmorion.py": "fundament 63",
+        # ADDED 17 September 2026, work order 126 D: the empty save slot's
+        # edit. Its own check is the GAME menu markings block (7).
+        "screens/game_menu/gmsave.py": "DEVIATION — an EMPTY slot",
         "screens/game_menu/screen.py": "they have no field",
         "screens/game_menu/layout.json": "orionlayer_rows",
 
@@ -15812,11 +15815,23 @@ def main():
     assert "omission_sliders" not in _gm_lay, "the slider omission is back"
     assert _gm_lay["slot_rows"]["omission_icon"].startswith("OMISSION")
     assert _gm_lay["unverified_right_click"].startswith("UNVERIFIED")
+    # The empty slot's edit (work order 126 D): a deliberate DEVIATION, in
+    # the module where the edit starts, the screen's list, layout.json and
+    # the status document.
+    from screens.game_menu import gmsave as _gm_sv
+    import inspect as _gm_insp
+    assert "DEVIATION — an EMPTY slot starts the edit EMPTY" in \
+        _gm_insp.getsource(_gm_sv.SaveEditor.start)
+    assert "DEVIATION — an empty save slot" in _gm_mod
+    assert _gm_lay["save_empty_slot_deviation"].startswith("DEVIATION")
+    assert "DEVIATION — the empty save slot's name edit starts empty" in \
+        _gm_status, "status document lost the empty-slot DEVIATION"
     for _mark in ("OMISSION — the slot game-type icon",
                   "UNVERIFIED — the Save dialog's right click"):
         assert _mark in _gm_status, f"status document lost: {_mark}"
     ok("GAME menu markings: OMISSION (slot icon), UNVERIFIED (Save right "
-       "click) in module, layout, status; the slot-name HD STATE gone")
+       "click), DEVIATION (empty slot edit) in module, layout, status; the "
+       "slot-name HD STATE gone")
 
     # 7a. THE METAL IS ON THE SCREEN, on the FIRST opening. Every other
     #     frame check measures geometry, and every one of them entered the

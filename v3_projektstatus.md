@@ -3253,6 +3253,14 @@ work's decisions.
 - ~~**HD STATE — slot names.**~~ Gone since open fix 14 was applied
   (16 September 2026): the rows show the engine's names, the warning says
   H 178-180, and a name edit starts from the slot's name.
+- **DEVIATION — the empty save slot's name edit starts empty** (marked
+  17 September 2026, work order 126 D; kept since 16 September): the
+  original pre-fills "... empty slot ..." (loadsave.cpp:517), clears it on
+  the first backspace (fields.cpp:1191-1193) and APPENDS a typed character to
+  it where the field width allows (fields.cpp:1196-1216 — source reading, not measured). HD's send starts
+  with a backspace, so the game gets the typed name or its default name.
+  `gmsave.SaveEditor.start`, `layout.json` `save_empty_slot_deviation`, and
+  the GAME menu markings check.
 - **UNVERIFIED — the Save dialog's right click** outside every help
   region, which the source sends back to the menu. It could not be run:
   the game is a native Wayland client xdotool cannot reach, and every

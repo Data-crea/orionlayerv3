@@ -20,6 +20,9 @@ document and in the smoke test:
   Fx bars were one until work order 124 C; they are `gmsliders`.)
 - UNVERIFIED, NOT TRANSCRIBED — a right click inside the Save dialog
   outside every help region (`layout.json` `unverified_right_click`).
+- DEVIATION — an empty save slot starts the name edit empty, where the
+  original pre-fills "... empty slot ..." (`gmsave.SaveEditor.start`,
+  `layout.json` `save_empty_slot_deviation`).
 
 QUIT -> YES disarms the client's watchdog BEFORE the YES goes out, and
 the app ends with the game (decision 62).

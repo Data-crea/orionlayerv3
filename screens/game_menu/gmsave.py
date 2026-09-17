@@ -73,6 +73,17 @@ class SaveEditor:
         return self.chain is not None
 
     def start(self, index):
+        # DEVIATION — an EMPTY slot starts the edit EMPTY. The original
+        # copies the slot's description, "... empty slot ...", into the
+        # field (loadsave.cpp:517) and clears it on the first backspace
+        # (fields.cpp:1191-1193); a typed character instead APPENDS to it where the field width allows
+        # (fields.cpp:1196-1216, source reading, not measured). Kept on
+        # purpose (16 September 2026): the HD send starts with a backspace
+        # (`name_keys(clear=1)`), so what reaches the game is the typed name,
+        # or with nothing typed the original's own default name
+        # (loadsave.cpp:541-548), in both cases as the backspace-first path.
+        # Marked in layout.json `save_empty_slot_deviation`, the status
+        # document and the smoke test.
         slots = gmdraw.slots_for(self.screen, nodes.SAVE)
         initial = ""
         if slots and slots[index]["status"] == 0:
