@@ -14024,6 +14024,33 @@ def main():
     ok(f"planets: the hovered row is the drawn row on all {_hv_lines} pixel "
        f"lines at four sizes, and a band's edge lines light that band")
 
+    # WEAPON SLOTS END AT THE FIRST EMPTY ONE (work order 128 E),
+    # transcribed from the fleet screen's list (flt2.cpp:693-701), which
+    # stops for good at `type < 0 || count < 1`. A constructed ship with a
+    # gap: the weapon after the gap is not listed; a used type with count 0
+    # ends the list as well; a contiguous design lists every slot.
+    from core.structs import ship as _ws
+    import struct as _ws_struct
+
+    def _ws_ship(slots):
+        raw = bytearray(_ws.SIZE)
+        for _i in range(_ws.WEAPON_SLOTS):
+            _t, _c = slots[_i] if _i < len(slots) else (-1, 0)
+            _ws_struct.pack_into("<hbb", raw, _ws.WEAPONS_OFFSET
+                                 + _i * _ws.WEAPON_SIZE, _t, _c, _c)
+        return _ws.parse(bytes(raw))
+    assert [(_w.type, _w.count) for _w in _ws.weapons(
+        _ws_ship([(5, 2), (-1, 0), (7, 1)]))] == [(5, 2)]
+    assert [(_w.type, _w.count) for _w in _ws.weapons(
+        _ws_ship([(5, 2), (6, 0), (7, 1)]))] == [(5, 2)]
+    assert [(_w.type, _w.count) for _w in _ws.weapons(
+        _ws_ship([(-1, 3), (7, 1)]))] == []
+    assert [(_w.type, _w.count) for _w in _ws.weapons(
+        _ws_ship([(5, 2), (6, 4), (7, 1)]))] == [(5, 2), (6, 4), (7, 1)]
+    assert "flt2.cpp:693-701" in _ws.weapons.__doc__
+    ok("ship weapons end at the first empty slot, as the fleet screen's list "
+       "does (flt2.cpp:693-701); a weapon after a gap is not listed")
+
     # ── 8. THE MONSTER VALUES IN THE PICTURE WINDOW — fundament 64 ────
     from core import maintext as _mmt
     from core import monsterhull as _mh

@@ -145,18 +145,24 @@ def is_monster(owner):
 
 
 def weapons(view):
-    """The mounted weapon slots, in slot order: those with a count.
+    """The mounted weapon slots, in slot order, up to the FIRST empty one.
 
-    An empty slot is all zero (the templates initialise only the slots
-    they name, ship_config.cpp:86-139), so `count` is what says a slot
-    is used — the same test the fleet screen's weapon list makes
-    before it prints a line (flt2.cpp, `count > 0`)."""
+    TRANSCRIBED from the fleet screen's weapon list (flt2.cpp:693-701): it
+    walks the eight slots and stops for good at the first whose `type < 0`
+    or `count < 1` — it does not skip that slot and go on. Until work order
+    128 this function skipped empty slots and cited the same lines for
+    `count > 0`, which is the test's other half read as the whole of it.
+    The two answers differ only for a design with a gap between used slots;
+    none was found in the engine's writers or in any save on this disk
+    (work order 128 E, status document).
+    """
     out = []
     for slot in range(WEAPON_SLOTS):
         start = WEAPONS_OFFSET + slot * WEAPON_SIZE
         weapon = WEAPON_SPEC.parse(view.raw[start:start + WEAPON_SIZE])
-        if weapon.count > 0:
-            out.append(weapon)
+        if weapon.type < 0 or weapon.count < 1:
+            break
+        out.append(weapon)
     return out
 
 

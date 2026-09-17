@@ -837,7 +837,7 @@ files under `doc/` and are only summarised here.
 | | |
 |---|---|
 | Python | 32,960 lines across 111 modules — `find . -name '*.py'`, `__pycache__` excluded, the smoke test's 6,400 included. The previous figure here (21,642 across 94) was carried from an unstated method and could not be reproduced |
-| Smoke test | `python tools/smoke_test.py` — **200 checks**, headless |
+| Smoke test | `python tools/smoke_test.py` — **201 checks**, headless |
 | Assets | 170 MB (select_race 68, galaxy_map 51, shared 23, new_game 21, colony_summary 1) |
 | Screens in HD | 9 of ~20–22 (the GAME menu overlay, work order Stop 2, every dialog of the popup; colony summary draws list, sidebar, scan box and galaxy inset, and MOVES POPS — the first HD gesture that drives the game; planets, brief 101, lists, sorts, restricts and returns) |
 | Setup from clone | `python tools/setup.py` (deps via the system package manager) |
@@ -4504,6 +4504,41 @@ which takes the drawn bands rather than dividing again (decision 5).
   arithmetic differs from the colony list's; Planets cites no source), D9
   (window rects through `layout.rect(box_rect)` against `Box.screen_rect`).
   Not live-tested: hover sends nothing to the game.
+
+### `weapons()` stops at the first empty slot — work order 128 E, 17 September 2026
+
+**The two sources, before the change.**
+- **Can a gap exist? No, not in `count`.** Every writer packs from slot 0 and
+  never leaves a used slot below count 1: the player's design screen puts a new
+  weapon in the first empty row (design.cpp:869-876) and `Clear_Weapon_Slot_`
+  shifts the later rows down (design.cpp:1724-1745); the AI adders write at a
+  running index only for count > 0 (aidesign.cpp:669-704 and siblings);
+  templates list from slot 0 (ship_config.cpp:58-80); strategic designs pack
+  (initship.cpp:918-968); refit copies the design whole
+  (colbldg.cpp:1951-1960); capture changes only the owner and `current_count`
+  (combinit.cpp:2876-2913); combat writes back only `current_count`. Empty slots
+  carry type 0 (designs) or, on colony and outpost ships, -1 or a planet index
+  with count 0 (plntsum.cpp:475-478). A read-only sub-session traced the
+  writers; design.cpp:869-876 and :1724-1745 and flt2.cpp:693-701 were checked
+  by hand.
+- **Saves: 0 gaps.** Live on SAVE4 (3509.0) and SAVE5 (3509.1): 60 ship
+  records each, 21 with a weapon, 0 with a gap
+  (`evidence/work_order_128/E_probe_SAVE4.json`, `_SAVE5.json`). Offline, a
+  scan for the count-prefixed 129-byte ship array, validated against the two
+  offsets the live arrays were found at in their files, over SAVE1-11 and the
+  three fixtures: every real array with armed ships (60/21, 60/22, 71/37,
+  109/61, 31/23, …) has 0 gaps; the only "gaps" are 255-record hits at offsets
+  129 bytes apart, which are not the array (`E_offline_scan.json`).
+
+**The change.** `core/structs/ship.py` `weapons()` now stops for good at the
+first slot with `type < 0 or count < 1`, as flt2.cpp:693-701 does; its docstring
+said `count > 0` for the same lines. **Callers:** one —
+`screens/planets/monsterpanel.py:97`, the monster panel's weapon lines. Its
+result cannot change for any design the engine writes (packed, and no used slot
+with a negative type); it would differ only for a gap nothing produces.
+**Smoke:** a constructed ship with a gap, with a used type at count 0, with a
+negative type first, and a packed one; red with the old skipping loop
+(`E_weapons_check_red.txt`). **200 -> 201.**
 
 ## What is missing
 

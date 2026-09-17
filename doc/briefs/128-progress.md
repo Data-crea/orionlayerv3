@@ -38,3 +38,9 @@ fix 22 is what it implements.
   over every pixel line at four sizes plus rendered band edges; red with the old
   division. Neighbours T6, D19, D9 named in the status, not worked. Smoke
   199 -> **200**. No live step (hover sends nothing).
+- **E** — done. Writers: no gap in `count` possible (packed everywhere; only
+  `current_count` drops after combat). Saves: SAVE4 and SAVE5 live 60/21/0
+  gaps; offline scan of all saves and fixtures 0 gaps in real arrays.
+  `weapons()` stops at the first empty slot; docstring corrected; one caller
+  (monsterpanel.py:97), result unchanged for anything the engine writes.
+  Smoke 200 -> **201**, red with the old loop.
