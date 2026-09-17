@@ -1003,6 +1003,24 @@ def main():
         # game is not yet at max scale (15 vs its 15... use a state
         # copy that is zoomed in) — simulate scale 10:
         gs.map_scale = 10
+        # The galaxy map's own list, recorded live (work order 128 C: the
+        # map parks only where the zoom-out button and the grid are in the
+        # list, and to the index it finds there).
+        import json as _pk_json
+        from core.game_state import FieldInfo as _PkField
+        _pk_rec = _pk_json.load(open(os.path.join(
+            os.path.dirname(SCREENS_DIR), "tools", "galaxy_box_fields.json")))
+
+        def _pk_fields(rows):
+            out = []
+            for _r in rows:
+                _f = _PkField()
+                (_f.index, _f.x, _f.y, _f.x_end, _f.y_end, _f.field_type,
+                 _f.hotkey) = _r
+                out.append(_f)
+            return out
+        _pk_saved_fields = getattr(gs, "fields", None)
+        gs.fields = _pk_fields(_pk_rec["closed"])
         gm._viewctl._park_sent = 0.0
         rec2.log.clear()
         gm.update(gs)
@@ -1030,6 +1048,49 @@ def main():
         rec2.log.clear()
         gm.update(gs)                            # parked: nothing sent
         assert rec2.log == [], rec2.log
+        # AND NOT INTO ANOTHER LIST UNDER THE SAME SCREEN NUMBER (work order
+        # 128 C). The turn-start research prompt runs under screen 0
+        # (mainscr2.cpp:119), and in its list field 9 is a choice row whose
+        # commit reads the pointer (tech.cpp:354-369). Shaped as
+        # doc/tech_change_reading.md section 2 builds it: dummy, choice
+        # rows, eight entry blocks, category radios, the whole-screen field.
+        gs.map_scale = 10
+        _pk_research = [(0, 0, 0, 0, 0, 0, 0)]
+        for _k, (_ex, _ey) in enumerate([(176, 30), (403, 31), (176, 135),
+                                         (403, 135), (176, 240), (403, 240),
+                                         (176, 347), (403, 347)]):
+            _pk_research.append((len(_pk_research), _ex, _ey + 21,
+                                 _ex + 218, _ey + 54, 7, 0))
+        for _ex, _ey in [(176, 30), (403, 31), (176, 135), (403, 135),
+                         (176, 240), (403, 240), (176, 347), (403, 347)]:
+            _pk_research.append((len(_pk_research), _ex - 2, _ey + 18,
+                                 _ex + 215, _ey + 99, 7, 0))
+        for _ex, _ey in [(102, 30), (329, 31), (102, 135), (329, 135)]:
+            _pk_research.append((len(_pk_research), _ex, _ey, _ex + 60,
+                                 _ey + 15, 1, 0))
+        _pk_research.append((len(_pk_research), 0, 0, 639, 479, 7, 0))
+        gs.fields = _pk_fields(_pk_research)
+        assert gs.fields[9].field_type == 7          # a row, not zoom-out
+        for _ in range(3):
+            gm._viewctl._park_sent = 0.0
+            rec2.log.clear()
+            gm.update(gs)
+            assert rec2.log == [], (
+                f"the map parked into a research-shaped list at screen 0: "
+                f"{rec2.log}")
+        # The same list with the zoom-out button moved to another index
+        # parks to THAT index — the number is read, never assumed.
+        _pk_moved = [r if r[0] != 9 else (9, 244, 428, 298, 443, 0, 43)
+                     for r in _pk_rec["closed"]] + [(24, 244, 455, 298, 473, 0, 45)]
+        gs.fields = _pk_fields(_pk_moved)
+        gm._viewctl._park_sent = 0.0
+        rec2.log.clear()
+        gm.update(gs)
+        assert rec2.log == [("act", 24)], rec2.log
+        gs.fields = _pk_saved_fields
+        gs.map_scale = 15
+        ok("galaxy map parks only into its own list shape: nothing sent to a "
+           "research-shaped list at screen 0, and the zoom-out index read live")
         # 3. Right-drag pans, and the origin stays on the galaxy
         bx0, by0, bw0, bh0 = v1.box
         inside = (bx0 + bw0 // 2, by0 + bh0 // 2)
@@ -16214,11 +16275,17 @@ def main():
     d.switch_to("galaxy_map")
     _gm_parks = []
     _gm_real_park = _gm_gal._viewctl.park_game
-    _gm_gal._viewctl.park_game = lambda a, s: _gm_parks.append(
+    _gm_gal._viewctl.park_game = lambda a, s, *_i: _gm_parks.append(
         s.current_screen)
     try:
         _gm_gs8 = _GmState()
         _gm_gs8.current_screen = 8
+        # The map's own list under both screen numbers, so the screen
+        # number is the only thing that differs (work order 128 C added
+        # the list-shape condition beside it).
+        _gm_gs8.fields = _gm_fields(__import__("json").load(open(os.path.join(
+            os.path.dirname(SCREENS_DIR), "tools",
+            "galaxy_box_fields.json")))["closed"])
         _gm_gal.update(_gm_gs8)
         _gm_gs8.current_screen = 0
         _gm_gal.update(_gm_gs8)

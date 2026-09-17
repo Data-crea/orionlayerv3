@@ -39,6 +39,7 @@ from core.structs import planet as planet_struct
 from core.structs import player as player_struct
 from core.structs import ship as ship_struct
 from screens.galaxy_map import boxdraw
+from screens.galaxy_map import mapboxes
 from screens.galaxy_map import mapeta
 from screens.galaxy_map import mapinput
 from screens.galaxy_map import maplines
@@ -241,15 +242,22 @@ class GalaxyMapScreen(ScreenBase):
         if game_state is None:
             return
         self._state = game_state
-        # ONLY WHILE THE GAME IS ON THIS SCREEN. This screen keeps
-        # updating under an overlay, and parking is an ACTIVATE_FIELD
-        # of field 9 by number: in the GAME popup's Load dialog field 9
-        # is the ninth slot row, and a slot row loads at once
-        # (loadsave.cpp:332-375). A number that means "zoom out" here
-        # means something else in every other list.
-        if getattr(game_state, "current_screen",
-                   self.GAME_SCREEN_ID) == self.GAME_SCREEN_ID:
-            self._viewctl.park_game(self.app, game_state)
+        # ONLY WHILE THE GAME IS ON THIS SCREEN, AND ONLY WHILE THE LIST
+        # IS THIS SCREEN'S. This screen keeps updating under an overlay:
+        # in the GAME popup's Load dialog field 9 is the ninth slot row,
+        # which loads at once (loadsave.cpp:332-375). And the screen number
+        # alone is not enough (work order 128 C): the turn-start research
+        # prompt runs under screen 0 (mainscr2.cpp:119) and its field 9 is
+        # a choice row whose commit reads the pointer (tech.cpp:354-369).
+        # So the zoom-out button and the map grid must both be in the live
+        # list, and the send goes to the index found there.
+        fields = getattr(game_state, "fields", None)
+        zoom_out = mapboxes.live_field(fields, self._data.get("zoom_out_field"))
+        if (getattr(game_state, "current_screen",
+                    self.GAME_SCREEN_ID) == self.GAME_SCREEN_ID
+                and zoom_out is not None
+                and mapboxes.live_field(fields, self._data.get("map_cancel"))):
+            self._viewctl.park_game(self.app, game_state, zoom_out.index)
 
         raw_nebulas = getattr(game_state, "nebulas_raw", None) or []
         self._nebulas = [nebula_struct.parse(r) for r in raw_nebulas

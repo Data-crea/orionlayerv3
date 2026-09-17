@@ -26,3 +26,11 @@ fix 22 is what it implements.
   end to end; RACES falls back to the framebuffer. Stock-accept "leak": kept,
   now 51 and load-bearing for Empire Identity. Smoke 197 -> **198**. SAVE1-9
   and 11 identical; SAVE10 rewritten by the new games (logged).
+- **C** — done. Guard by live list shape (`mapboxes.live_field`, extracted
+  from the map cancel; `layout.json` `zoom_out_field`), index read live,
+  `ZOOM_OUT_FIELD` gone. Smoke 198 -> **199**, red with the old guard. Live:
+  the fault not reached (the game's own map was not zoomed in, so nothing to
+  park); my driver sent ACTIVATE_FIELD 1 into the research prompt on a stale
+  reading and orion2re segfaulted in TECH::_Tech_Select_ — the reading's
+  null-dereference confirmed; open fix 23 (observation). SAVE1-9, 11
+  identical; SAVE10 the turn's autosave.

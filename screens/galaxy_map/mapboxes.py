@@ -60,6 +60,23 @@ def rect(f):
     return (f.x, f.y, f.x_end, f.y_end)
 
 
+def live_field(fields, spec):
+    """The field `spec` names — its type and native rect — in the LIVE list.
+
+    None when the list holds no such field. A field NUMBER means something
+    else in every other list (decision 20, decision 59), so a send goes to
+    the index this returns at the moment, or does not go at all. Extracted
+    17 September 2026 (work order 128 C) from the map cancel's own lookup,
+    when parking became its second caller.
+    """
+    if not spec:
+        return None
+    want = tuple(spec.get("rect") or ())
+    return next((f for f in (fields or [])
+                 if f.field_type == spec.get("field_type")
+                 and rect(f) == want), None)
+
+
 def _contains(outer, inner):
     return (outer.x <= inner.x and outer.y <= inner.y
             and outer.x_end >= inner.x_end and outer.y_end >= inner.y_end)

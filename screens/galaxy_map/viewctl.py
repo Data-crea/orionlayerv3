@@ -53,9 +53,10 @@ WHEEL_FACTOR = 1.15
 #: turns into a flood of field activations.
 PARK_INTERVAL = 0.7
 
-#: The galaxy-map zoom-out button (field 9). The zoom-in field (8) is
-#: deliberately absent from this module.
-ZOOM_OUT_FIELD = 9
+#: The zoom-out button is no longer a number here (work order 128 C): the
+#: screen finds it in the live list (`layout.json` `zoom_out_field`) and
+#: hands its index to `park_game`. The zoom-in field is deliberately
+#: absent from this module.
 
 
 class _ViewProxy:
@@ -180,7 +181,7 @@ class ViewControl:
 
     # ── Game parking ─────────────────────────────────────
 
-    def park_game(self, app, state):
+    def park_game(self, app, state, zoom_out_index):
         """Drive the game to maximum zoom-out, one throttled step.
 
         Runs only while the HD view is decoupled; while mirroring,
@@ -216,4 +217,4 @@ class ViewControl:
         if now - self._park_sent < PARK_INTERVAL:
             return
         self._park_sent = now
-        app.client.activate_field(ZOOM_OUT_FIELD)
+        app.client.activate_field(zoom_out_index)

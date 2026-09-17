@@ -187,12 +187,8 @@ def send_map_cancel(screen):
     or no field of that type and rect in the list at this moment —
     refused rather than aimed at a remembered index (decision 20).
     """
-    spec = screen._data.get("map_cancel") or {}
-    rect = tuple(spec.get("rect") or ())
-    fields = getattr(screen._state, "fields", None) or []
-    field = next((f for f in fields
-                  if f.field_type == spec.get("field_type")
-                  and (f.x, f.y, f.x_end, f.y_end) == rect), None)
+    field = mapboxes.live_field(getattr(screen._state, "fields", None),
+                                screen._data.get("map_cancel"))
     if field is None or not screen.app.connected:
         log.debug("map cancel: no grid field in the list, nothing sent")
         return None

@@ -44,6 +44,7 @@ section for what was found where.
 | 20 | The fleet box's ship selection is not on the wire, and a single ship cannot be toggled from outside | **Applied** 15 September 2026, revision 2 (`doc/ext_fleet_selection.patch`: icon owners, then per node ship_idx and selected, then the fleet box chain; revision 1 applied and taken back out the same day, briefs 118/119), confirmed live on SAVE5; required by `tools/version_check.py` | — while applied. Without it HD draws no fleet box and cannot move a fleet from the map |
 | 21 | One ship in the fleet box cannot be selected or deselected from outside | **Applied** 15 September 2026 (`doc/ext_fleet_select_ship.patch`, `MSG_SELECT_SHIP` 0x85), confirmed live on SAVE5 (brief 119); required by `tools/version_check.py` | — while applied. Without it HD can show the selection but not change it |
 | 22 | Select Race reported `SCREEN_RACE` (6), which the Races/diplomacy screen owns — our own `ext_screen_id.patch` hunk 1 | **Applied** 17 September 2026 (work order 128 B, Data's decision: a synthetic id): race selection reports 51; orion2re 3305d78c on `orionlayer-local`; `doc/ext_screen_id.patch` revision 2; required by `tools/version_check.py`; seen live before and after | — while applied. Before: the HD map's RACES button opened HD Select Race over the Races screen (seen live on SAVE4) |
+| 23 | An activation of a research choice row with the pointer over no entry crashes the game | **Observation**, seen live 17 September 2026 (work order 128 C) | Nothing while HD sends nothing into that list (the map's parking guard); a client that activates a choice by field id kills the game |
 
 Items 3 and 4 are both about INJECT_CLICK and both live in the same
 code path, but they are separate faults: 3 is where the coordinates
@@ -1573,3 +1574,19 @@ selection) and the field-list shape separate the two by inference only
 `empire_identity` and `custom_race` (and the observed 50 -> 6 hop in Custom
 Race must be re-measured), `core/screen_names.py`, and Select Race's own
 comparison against 6.
+
+## 23. Activating a research choice row by field id crashes the game — an observation
+
+Seen live 17 September 2026 (work order 128 C), by accident: at the
+turn-start "SELECT NEW RESEARCH" prompt (reported as screen 0, 38 fields) an
+`ACTIVATE_FIELD 1` — a choice row — killed orion2re with SIGSEGV in
+`TECH::_Tech_Select_`, from `REPORT::Set_Initial_Tech_` <- `Display_Report_Aux_`
+<- `Main_Screen_Report_Handler_` (backtrace in
+`~/orionlayer-fixtures/evidence/work_order_128/C_orion2re_segfault_backtrace.txt`).
+The source reading had predicted it (`doc/tech_change_reading.md`): any
+positive input below the category buttons commits `Get_Selected_Entry_`, the
+entry under the POINTER, not the activated field (tech.cpp:354-369), and with
+the pointer over no entry the result is dereferenced (tech.cpp:367). Not a
+request: nothing in OrionLayer activates those rows, and the galaxy map's
+parking no longer can. A future HD research screen needs either a commit by
+field id or the pointer set first — that is the research screen's order.

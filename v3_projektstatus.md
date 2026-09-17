@@ -837,7 +837,7 @@ files under `doc/` and are only summarised here.
 | | |
 |---|---|
 | Python | 32,960 lines across 111 modules — `find . -name '*.py'`, `__pycache__` excluded, the smoke test's 6,400 included. The previous figure here (21,642 across 94) was carried from an unstated method and could not be reproduced |
-| Smoke test | `python tools/smoke_test.py` — **198 checks**, headless |
+| Smoke test | `python tools/smoke_test.py` — **199 checks**, headless |
 | Assets | 170 MB (select_race 68, galaxy_map 51, shared 23, new_game 21, colony_summary 1) |
 | Screens in HD | 9 of ~20–22 (the GAME menu overlay, work order Stop 2, every dialog of the popup; colony summary draws list, sidebar, scan box and galaxy inset, and MOVES POPS — the first HD gesture that drives the game; planets, brief 101, lists, sorts, restricts and returns) |
 | Setup from clone | `python tools/setup.py` (deps via the system package manager) |
@@ -1177,7 +1177,7 @@ in exactly ONE bucket. The numbers below are produced by
 check asserts this list still agrees with it — the same trade the
 check count makes, for the same reason.
 
-`tools/struct_probe.py` (**478** code, 753 total), `screens/galaxy_map/screen.py` (**436** code, 691 total), `tools/colony_list_preview.py` (**403** code, 772 total), `screens/custom_race/screen.py` (**400** code, 558 total), `tools/colony_move_hd.py` (**385** code, 586 total), `core/editor/editor.py` (**359** code, 430 total), `screens/galaxy_map/renderer.py` (**336** code, 758 total), `tools/ext_diag.py` (**325** code, 473 total), `core/style.py` (**310** code, 479 total).
+`tools/struct_probe.py` (**478** code, 753 total), `screens/galaxy_map/screen.py` (**441** code, 699 total), `tools/colony_list_preview.py` (**403** code, 772 total), `screens/custom_race/screen.py` (**400** code, 558 total), `tools/colony_move_hd.py` (**385** code, 586 total), `core/editor/editor.py` (**359** code, 430 total), `screens/galaxy_map/renderer.py` (**336** code, 758 total), `tools/ext_diag.py` (**325** code, 473 total), `core/style.py` (**310** code, 479 total).
 `smoke_test.py` is exempt by nature.
 
 **TWO TOOLS JOINED THE LIST ON 8 SEPTEMBER 2026 and one thing left
@@ -4449,6 +4449,40 @@ switched to `select_race` (`evidence/work_order_128/B_before/`).
   it, the table naming the claiming screen; red with the maximum set to 60 and
   with a mod screen also claiming 51 (`B_screen_id_check_red.txt`). The routing
   instances move 6 -> 51. **197 -> 198.**
+
+### The galaxy map parks only into its own list — work order 128 C, 17 September 2026
+
+**Decided: guard by field-list shape.** Decision 59's own shape test
+(`game_menu/nodes.classify`) classifies the GAME popup's dialogs and is not
+reusable for the map; what is, is the map cancel's lookup of a field by type
+and native rect in the LIVE list (decision 20). It is extracted to
+`mapboxes.live_field` (second caller, so named rather than a third copy) and
+`mapinput.send_map_cancel` calls it. `screen.update` parks only while the game
+reports 0 AND the list holds both the grid field and the zoom-out button
+(`layout.json` `zoom_out_field`: type 0, (244,455)-(298,473) — mainscr.cpp:1381
+and :1392 for the position and hotkey, the live list and
+`tools/galaxy_box_fields.json` for type and end corner), and it sends to the
+index found there; `viewctl.ZOOM_OUT_FIELD = 9` is gone.
+
+- **Smoke:** a research-shaped list (doc/tech_change_reading.md section 2) at
+  screen 0, zoomed in: nothing sent; the map's own list with the button at
+  another index: sent to that index. Red with the old screen-number-only
+  guard (`evidence/work_order_128/C_parking_check_red.txt`). The existing
+  parking checks now carry the recorded list. **198 -> 199.**
+- **Live — the fault itself not reached; a worse one reached by my driver.**
+  On a fresh stock-race game (3500.0), HD view zoomed in, one turn: the game
+  itself stood at full zoom-out, so the old code had nothing to park and sent
+  nothing — the original fault needs the GAME's own map zoomed in at turn
+  start, which the HD map does not do. The turn-start "SELECT NEW RESEARCH"
+  prompt came up under screen 0 with 38 fields (`C_preC/002_*.png`). **My
+  driver misread it as a message box from a stale state and sent
+  `ACTIVATE_FIELD 1` into it; orion2re died with SIGSEGV in
+  `TECH::_Tech_Select_`** (`C_orion2re_segfault_backtrace.txt`), called from
+  `REPORT::Set_Initial_Tech_`. That is the reading's null-dereference
+  (tech.cpp:354-369, a commit with the pointer over no entry) confirmed live,
+  and exactly the kind of send the guard exists to refuse. No save changed
+  except SAVE10, the autosave of that turn end (logged). Not pursued further,
+  as the order says. Recorded as open fix 23, an observation.
 
 ## What is missing
 
