@@ -71,6 +71,19 @@ acceptance run built to catch exactly this, carried its own
 `track_x + slot * step`. Decision 5 covers `tools/`, or the run that
 proves the layout proves it against a copy of the layout.
 
+**ONE FUNCTION MAKES DRAWING AND HIT-TESTING AGREE, NOT RIGHT.** Paid
+for on 16 September 2026 (commit d8006d7), filed by work order 126 from
+that day's handover. With stacked population figures 165 of 210 clicks
+on the centre of a visible figure missed it at 1920x1080 — while the
+draw and the hit test both read the same `colonytrack.row_boxes`, exactly
+as this decision asks. The one function described the SPRITE's blit slot,
+not the area the player sees: the ink starts a column or more into the
+28 px canvas and runs into the next slot. Decision 5 removes the second
+copy; it says nothing about whether the one copy describes the thing the
+player aims at. That still needs its own check against what is visible —
+here, every figure's visible centre must pick that figure
+(`colonytrack.pick_zones`).
+
 ### Structure
 
 **6. One folder per screen, files under ~300 lines.** Exceptions are
@@ -1732,6 +1745,20 @@ HD does nothing there rather than guess.
 
 **31. Verification via `tools/smoke_test.py` before every handoff.**
 
+**Amended 17 September 2026, work order 126 part B: the commit is coupled
+to the result by a mechanism, not by attention.** A commit went through
+after a smoke run had exited 139, because nothing connected the two.
+`tools/githooks/pre-commit` runs the full suite and refuses the commit on
+any exit but 0 — a failure, a segfault (139), a kill (137) — and on a zero
+exit that never printed the PASSED line; `tools/setup.py` points git's
+`core.hooksPath` at it, since a clone does not inherit git config. A hook
+rather than a wrapper, because a plain `git commit` is the habit every
+session already has. **Exit 139 is not green:** re-run once by hand, record
+both exits, never commit on the crashed run — the hook does not retry, since
+a retry would turn a sporadic crash into a green commit. The smoke test runs
+the hook against stub suites (a real SIGSEGV among them) and fails if it
+lets any of them through. `--no-verify` bypasses it, and is a deliberate act.
+
 ---
 
 ## 2. Working principles
@@ -2656,6 +2683,15 @@ opened, a confirmation appeared, a turn advanced. Source: work order 122,
 the map came back, a click turned a colony-base choice into "Really trash
 your colony base for 100BC?", and the colony base of the loaded scratch game
 was scrapped (in memory; no save file changed) before anybody looked.
+
+**On the colony screens a right click is help, not cancel.** Over a help
+region the game draws the entry and swallows the click (section 3, "A right
+click is not always Cancel"; the colony screen's table is transcribed in
+brief 99, which the chat called "Brief 98"). A live run that right-clicks
+there to back out opens a help panel instead; it is closed with a LEFT click
+beside the rows, and the picture after it confirms the panel is gone before
+the next input. Filed by work order 126 from the 16 September 2026
+handover, where it was already part of the live protocol.
 
 **A permanent smoke test pays for itself immediately.** Run it after
 every step, not only at the end — a change touching six files breaks
