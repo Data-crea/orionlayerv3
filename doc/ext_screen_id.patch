@@ -9,6 +9,17 @@ be reverse-applied, counted and checked like the other one.
 STATUS: needed for HD routing to Select Race and to Custom Race. A
 client cannot tell which of the two is on screen without it.
 
+REVISION 2, 17 September 2026 (work order 128 B, open fix 22). Hunk 1
+set SCREEN_RACE (6), and 6 is the RACES screen — `Screen_Control_` runs
+`RACESCRN::Race_Screen_` for it (mox2.cpp:61-63) and the galaxy map's
+RACES button selects it (mainscr_main.cpp:666). OrionLayer routed 6 to
+Select Race, so the RACES button put HD race selection over diplomacy;
+seen live on SAVE4 that day. Race selection now reports the synthetic 51
+(`EXT_SCREEN_RACE_SELECTION`), past the SCREEN enum's last value 43
+(orion2_consts.h:496) and beside Custom Race's 50; hunks 3 and 4 changed
+only in their comments. orion2re commit 3305d78c on `orionlayer-local`.
+The hunks below were regenerated from that commit the same way as before.
+
     APPLIED LOCALLY to the orion2re working tree at ~/orion2re
     (engine 1.60.0, git cf4d9617), and it comes back off with
 
@@ -60,8 +71,8 @@ WHY THE IDS ARE MISSING IN THE FIRST PLACE
 THE FOUR HUNKS
 
     1. racesel.cpp:212, `Race_Selection_Screen_` entry
-       Saves the caller's value and sets `_current_screen =
-       SCREEN_RACE` (6).
+       Saves the caller's value and sets `_current_screen` to the
+       synthetic 51 (SCREEN_RACE, 6, until revision 2).
 
     2. racesel.cpp:347, the Cancel path of `Race_Selection_Screen_`
        Restores the saved value before `return 0`. ADDED 5 September
@@ -76,7 +87,14 @@ THE FOUR HUNKS
     4. racesel.cpp:642, the Cancel path of `Racial_Option_Screen_`
        Restores the saved value before `return 0`.
 
-    Both Accept paths are deliberately untouched. Every accept from
+    Both Accept paths are deliberately untouched. MEASURED 17 September
+    2026 and correcting the next sentence: a STOCK race's accept does
+    NOT go through `Racial_Option_Screen_` — it returns 1 from race
+    selection with 51 still set, and the game keeps reporting 51 through
+    the ruler-name and banner dialogs until galaxy generation (39). HD
+    relies on that (Empire Identity holds its lock on 51), so it is left
+    as it is. Custom Race's accept kept reporting 50 the same way. The
+    original sentence, kept: every accept from
     race selection goes through `Racial_Option_Screen_`
     (racesel.cpp:308), and that function's accept sets
     `MOX::_current_screen = MOX::_return_screen` (racesel.cpp:692,
@@ -115,7 +133,9 @@ recurs
 
     The general shape is worth keeping: **an entry hunk that sets a
     reported value needs an exit hunk on every path the caller does
-    not cover.** Custom Race needed one exit because the original
+    not cover.**
+    (Written when the id was 6; with 51 the same leak would have shown
+    an HD race selection over New Game just the same.) Custom Race needed one exit because the original
     covered the other; race selection needed one because the original
     covers neither.
 
@@ -123,7 +143,7 @@ THE DIFF
 
 --- a/src/game/racesel.cpp
 +++ b/src/game/racesel.cpp
-@@ -209,6 +209,18 @@
+@@ -209,6 +209,27 @@
      fields::Assign_Auto_Function_(Draw_Race_Selection_Screen_, 2);
      _old_race = 0;
      video::Set_Page_Off_();
@@ -136,13 +156,22 @@ THE DIFF
 +        // the caller does not. newgame.cpp reloads its own screen
 +        // and carries on, which would leave the API reporting a
 +        // screen that is gone for as long as the player stays there.
++        //
++        // A SYNTHETIC id, not SCREEN_RACE: 6 is the Races screen, which
++        // Screen_Control_ runs (mox2.cpp) and the galaxy map's RACES
++        // button selects, and a client routing on the id could not tell
++        // the two apart (OrionLayer open fix 22). 51 lies past the
++        // engine's SCREEN enum, whose last value is 43
++        // (SCREEN_SHOW_COMMAND_POINTS, orion2_consts.h), and next to
++        // Custom Race's synthetic 50 below.
++        constexpr int16_t EXT_SCREEN_RACE_SELECTION = 51;
 +        const int16_t ext_saved_screen = MOX::_current_screen;
-+        MOX::_current_screen = SCREEN_RACE;
++        MOX::_current_screen = EXT_SCREEN_RACE_SELECTION;
 +#endif
      Draw_Race_Selection_Screen_();
      palstore::Darken_Palette_(100);
      palette::Clear_Palette_Changes_(0, 0xFF);
-@@ -335,6 +347,9 @@
+@@ -335,6 +356,9 @@
                  fields::Clear_Fields_();
                  fields::Deactivate_Auto_Function_();
                  allocate::Pop_Block_(MOX::_screen_seg);
@@ -152,12 +181,12 @@ THE DIFF
                  return 0;
              }
              _custom_flag = 0;
-@@ -447,6 +462,13 @@
+@@ -447,6 +471,13 @@
      fields::Clear_Fields_();
      raceopt::Convert_Player_To_Flags_(player);
      raceopt::Reload_Racial_Option_Screen_();
 +#ifdef ORION2RE_EXT
-+    // OrionLayer: Custom Race is a sub-screen of SCREEN_RACE without its
++    // OrionLayer: Custom Race is a sub-screen of race selection without its
 +    // own screen ID. Report a synthetic ID (50) while this screen is
 +    // active so external clients can route to it; restore on cancel.
 +    const int16_t ext_saved_screen = MOX::_current_screen;
@@ -166,12 +195,12 @@ THE DIFF
      memcpy(raceopt::_cur_race_name, player_race_name, strlen(player_race_name) + 1);
      raceopt::Calculate_Picks_();
  
-@@ -620,6 +642,9 @@
+@@ -620,6 +651,9 @@
                  fields::Clear_Fields_();
                  fields::Deactivate_Auto_Function_();
                  allocate::Pop_Block_(MOX::_screen_seg);
 +#ifdef ORION2RE_EXT
-+                MOX::_current_screen = ext_saved_screen;   // back to SCREEN_RACE
++                MOX::_current_screen = ext_saved_screen;   // back to race selection
 +#endif
                  return 0;
              }

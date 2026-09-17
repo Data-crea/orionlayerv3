@@ -27,7 +27,10 @@ from screens.select_race.info_panel import (
 
 class SelectRaceScreen(ScreenBase):
     SCREEN_NAME = "select_race"
-    GAME_SCREEN_ID = 6      # SCREEN_RACE
+    #: Synthetic, reported by `doc/ext_screen_id.patch` in
+    #: `Race_Selection_Screen_`; see `core/screen_names.py`. It was 6
+    #: (SCREEN_RACE) until work order 128, which is the Races screen.
+    GAME_SCREEN_ID = 51
     USE_FRAME = True
     FRAME_TITLE = "Select Race"
     FRAME_BTN_LEFT = None
@@ -102,7 +105,7 @@ class SelectRaceScreen(ScreenBase):
 
         Picture mode is NOT entered immediately on Custom Race click.
         Instead, _pending_picture_mode is set. On the next frame:
-        - If the game is still on screen 6 → enter picture mode
+        - If the game is still on race selection (GAME_SCREEN_ID) → picture mode
           (game stayed in picture-select, case A)
         - If the game moved to screen 50 → dispatcher handles switch,
           pending flag is cleared in enter() on re-entry (case B)
@@ -112,7 +115,7 @@ class SelectRaceScreen(ScreenBase):
         """
         if self._pending_picture_mode:
             screen = game_state.current_screen if game_state else -1
-            if screen == 6:
+            if screen == self.GAME_SCREEN_ID:
                 # Game stayed on race selection → picture mode confirmed
                 self._pending_picture_mode = False
                 self.set_mode(self.MODE_SELECT_PICTURE)
@@ -257,7 +260,7 @@ class SelectRaceScreen(ScreenBase):
             # Custom Race: send click on the Custom radio button.
             # Two outcomes depending on game state:
             # A) _custom_flag was 0 → game enters picture-select mode
-            #    (stays on screen 6) → we enter picture mode next frame
+            #    (stays on screen 51) → we enter picture mode next frame
             # B) _custom_flag was 1 → game enters Racial_Option_Screen_
             #    directly (screen 50) → dispatcher handles the switch
             # We defer picture mode to update() so we don't desync.
@@ -268,16 +271,17 @@ class SelectRaceScreen(ScreenBase):
 
         # Stock race: single click → inject click on radio button.
         # orion2re goes directly to Enter Ruler Name and keeps
-        # reporting screen 6 through all three dialogs. Show the
+        # reporting screen 51 through all three dialogs (measured, work
+        # order 128 B). Show the
         # merged HD screen on top (same as after Custom Race Accept);
         # its Accept runs the injection chain (ruler → banner → home
         # star), then the game lands on the Galaxy Map (ID 0) and
-        # the lock releases. Cancel sends ESC → back to screen 6 →
+        # the lock releases. Cancel sends ESC → back to screen 51 →
         # dispatcher returns here.
         log.info("Race selected: %d (%s)",
                  rid, self._race_by_id(rid)["name"])
         self._inject_race_click(rid)
-        self.app.dispatcher.switch_to("empire_identity", lock_ids=(6,))
+        self.app.dispatcher.switch_to("empire_identity", lock_ids=(self.GAME_SCREEN_ID,))
 
     def _inject_race_click(self, race_id):
         """Send INJECT_CLICK on the 640x480 radio button for a race."""

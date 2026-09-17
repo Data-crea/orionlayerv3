@@ -183,7 +183,10 @@ def main():
     d = app.dispatcher
     assert d.screen_map.get(10) == "main_menu", d.screen_map
     assert d.screen_map.get(13) == "new_game"
-    assert d.screen_map.get(6) == "select_race"
+    assert d.screen_map.get(51) == "select_race"
+    # 6 is the Races screen, which has no HD version: it falls back
+    # (decision 22) instead of routing to race selection (open fix 22).
+    assert d.screen_map.get(6) is None, d.screen_map.get(6)
     ok(f"discovery + game-ID map ({len(d.screens)} screens)")
 
     # ── Screen lifecycles ──
@@ -205,11 +208,54 @@ def main():
         d.update_from_game(GS50())
         assert d.active_name == "custom_race"
 
-        class GS6:
-            current_screen = 6
-        d.update_from_game(GS6())
+        class GS51:
+            current_screen = 51
+        d.update_from_game(GS51())
         assert d.active_name == "select_race"
         ok("auto-routing (custom_race ↔ select_race)")
+
+    # ── Screen ids: one screen per id, and synthetic ids outside the
+    #    engine's own range (work order 128 B, open fix 22) ──
+    # Select Race claimed 6 because our own patch borrowed SCREEN_RACE,
+    # and 6 is the Races screen: HD drew race selection over diplomacy.
+    # The rule, read off every screen module in the tree and in mods, and
+    # held against core/screen_names.py (the one home of the table):
+    # no two screens claim one id; an id the engine's enum has is <= its
+    # last value; a synthetic id lies above it; the table names the
+    # screen that claims the id.
+    import ast as _sid_ast
+    from core import screen_names as _sid_names
+    _sid_claims = {}
+    _sid_root = os.path.dirname(SCREENS_DIR)
+    for _sid_path in sorted(glob.glob(os.path.join(SCREENS_DIR, "*", "screen.py"))
+                            + glob.glob(os.path.join(_sid_root, "mods", "*",
+                                                     "screens", "*", "screen.py"))):
+        for _sid_node in _sid_ast.walk(_sid_ast.parse(open(_sid_path).read())):
+            if (isinstance(_sid_node, _sid_ast.Assign)
+                    and any(getattr(_t, "id", None) == "GAME_SCREEN_ID"
+                            for _t in _sid_node.targets)
+                    and isinstance(_sid_node.value, _sid_ast.Constant)
+                    and isinstance(_sid_node.value.value, int)):
+                _sid_claims.setdefault(_sid_node.value.value, []).append(
+                    os.path.basename(os.path.dirname(_sid_path)))
+    assert len(_sid_claims) >= 8, _sid_claims
+    _sid_dupes = {k: v for k, v in _sid_claims.items() if len(v) > 1}
+    assert not _sid_dupes, f"one screen id claimed twice: {_sid_dupes}"
+    for _sid, (_sid_engine, _sid_hd) in _sid_names.SCREENS.items():
+        if _sid_engine == "(synthetic)":
+            assert _sid > _sid_names.ENGINE_SCREEN_MAX, (
+                f"synthetic screen id {_sid} lies inside the engine's range "
+                f"(0..{_sid_names.ENGINE_SCREEN_MAX})")
+        else:
+            assert _sid <= _sid_names.ENGINE_SCREEN_MAX, (_sid, _sid_engine)
+    for _sid, _sid_who in _sid_claims.items():
+        assert _sid in _sid_names.SCREENS, f"screen id {_sid} ({_sid_who}) not in the table"
+        assert _sid_names.SCREENS[_sid][1] == _sid_who[0], (
+            f"core/screen_names.py names {_sid_names.SCREENS[_sid][1]!r} for "
+            f"id {_sid}, the tree's screen is {_sid_who[0]!r}")
+    ok(f"screen ids: {len(_sid_claims)} claimed, each by one screen, synthetic "
+       f"ones above the engine's last SCREEN value "
+       f"({_sid_names.ENGINE_SCREEN_MAX}), table agrees")
 
     # ── Editor ──
     app.editor = Editor(app)
@@ -287,21 +333,21 @@ def main():
         ei.render(surf)
         ed.toggle()
         ok("empire_identity (grid click, inputs, tab, image zoom/pan)")
-        # Custom Race Accept -> Empire Identity, held for IDs 50 and 6
+        # Custom Race Accept -> Empire Identity, held for IDs 50 and 51
         d.switch_to("custom_race")
         cr = d.active
         fr = cr._get_active_frame()
         bx, by, bw, bh = fr.button_rect_right(1920, 1080)
         cr.handle_click(bx + bw // 2, by + bh // 2)
         assert d.active_name == "empire_identity", d.active_name
-        for gid in (50, 6):
+        for gid in (50, 51):
             class GS: current_screen = gid
             d.update_from_game(GS())
             assert d.active_name == "empire_identity", (gid, d.active_name)
         class GS13: current_screen = 13
         d.update_from_game(GS13())
         assert d.active_name == "new_game", d.active_name
-        ok("custom_race Accept -> empire_identity (lock 50/6, release 13)")
+        ok("custom_race Accept -> empire_identity (lock 50/51, release 13)")
 
         # Negative picks: Accept must be refused locally. The point of
         # testing here rather than letting orion2re refuse is that the
@@ -561,7 +607,7 @@ def main():
     assert d.overlay_name == "_fake_popup", "stays open on its ID"
 
     class GSBack:
-        current_screen = 6
+        current_screen = 51
     d.update_from_game(GSBack())
     assert d.overlay is None, "overlay closes when game leaves ID"
     assert d.active_name == "select_race", "parent untouched"

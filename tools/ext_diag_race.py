@@ -2,7 +2,7 @@
 """
 ext_diag_race.py — Race Screen field diagnostic.
 
-Connects to orion2re, waits for SCREEN_RACE (ID 6),
+Connects to orion2re, waits for race selection (synthetic ID 51),
 dumps the field list, and optionally tests field activations.
 
 Usage:
@@ -32,7 +32,7 @@ from core.wire_protocol import (  # noqa: E402
     frame_header, parse_frame_header, parse_field_list_raw,
 )
 
-SCREEN_RACE = 6
+SCREEN_RACE = 51   # race selection's synthetic id (core/screen_names.py)
 
 FIELD_TYPE_NAMES = {
     0: "Button", 1: "Radio", 7: "ClickThru", 8: "Hidden/Dynamic",

@@ -2,8 +2,10 @@
 
 Merges MOO2's three small dialogs (Enter Ruler Name, Select Banner,
 Enter Home Star Name) into one HD screen. Reached on both paths:
-  - Custom Race → Accept (custom_race/screen.py, lock_ids 50+6)
-  - Stock race portrait click in Select Race (lock_ids 6)
+  - Custom Race → Accept (custom_race/screen.py, lock_ids 50+51)
+  - Stock race portrait click in Select Race (lock_ids 51, race
+    selection's synthetic id, which the game keeps reporting through
+    the dialogs — measured, work order 128 B)
 The dialogs are detected by field SHAPE (core/injection.py), so the
 same chain serves both flows unchanged:
 

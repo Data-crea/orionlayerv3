@@ -36,9 +36,9 @@ SCREENS = {
      1: ("COLONY",          "colony"),
      3: ("DESIGN",          "ship_design"),
      4: ("FLEET",           "fleet"),
-     6: ("RACE",            "select_race"),
+     6: ("RACE",            None),      # races/diplomacy; no HD version
      7: ("EXIT",            None),
-     8: ("GAME",            None),
+     8: ("GAME",            "game_menu"),  # the overlay, decision 59
      9: ("INFO",            "info"),
     10: ("MAIN_MENU",       "main_menu"),
     12: ("NEXT_TURN",       None),
@@ -58,7 +58,20 @@ SCREENS = {
     #: while Custom Race's own input loop runs. See
     #: ext_api_dokumentation_v3.md, "racesel.cpp — 3 insertions".
     50: ("(synthetic)",     "custom_race"),
+    #: 51, synthetic too: race SELECTION, reported by the same patch
+    #: (`Race_Selection_Screen_`) since work order 128 / open fix 22.
+    #: It borrowed SCREEN_RACE (6) until then, which is the Races screen
+    #: the galaxy map's RACES button opens — so HD drew Select Race over
+    #: diplomacy (seen live, 17 September 2026).
+    51: ("(synthetic)",     "select_race"),
 }
+
+#: The last value of orion2re's own SCREEN enum:
+#: SCREEN_SHOW_COMMAND_POINTS = 43 (orion2_consts.h:496). A synthetic id
+#: must lie above it, or it means a real screen too. Copied by hand, so
+#: `tools/version_check.py` reads the enum and fails on a mismatch
+#: (decision 36), and the smoke test holds every synthetic entry above it.
+ENGINE_SCREEN_MAX = 43
 
 
 def engine_name(screen_id):

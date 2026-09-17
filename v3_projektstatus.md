@@ -837,7 +837,7 @@ files under `doc/` and are only summarised here.
 | | |
 |---|---|
 | Python | 32,960 lines across 111 modules — `find . -name '*.py'`, `__pycache__` excluded, the smoke test's 6,400 included. The previous figure here (21,642 across 94) was carried from an unstated method and could not be reproduced |
-| Smoke test | `python tools/smoke_test.py` — **197 checks**, headless |
+| Smoke test | `python tools/smoke_test.py` — **198 checks**, headless |
 | Assets | 170 MB (select_race 68, galaxy_map 51, shared 23, new_game 21, colony_summary 1) |
 | Screens in HD | 9 of ~20–22 (the GAME menu overlay, work order Stop 2, every dialog of the popup; colony summary draws list, sidebar, scan box and galaxy inset, and MOVES POPS — the first HD gesture that drives the game; planets, brief 101, lists, sorts, restricts and returns) |
 | Setup from clone | `python tools/setup.py` (deps via the system package manager) |
@@ -4411,6 +4411,44 @@ says. What they change for the tree today, all parked in
 - **`ship.py` `weapons()`** skips empty slots where flt2.cpp:696-701 stops.
 - Neither the colony view nor the build queue fits the draft
   one-content-box rule; research, fleet and races do, with caveats.
+
+### Screen 6 split: race selection reports 51 — work order 128 B, 17 September 2026 (open fix 22 applied)
+
+**Seen live first** on SAVE4 (3509.0): RACES on the HD galaxy map sent
+`ACTIVATE_FIELD 14`, the game reported 6 and drew Race Relations, and HD
+switched to `select_race` (`evidence/work_order_128/B_before/`).
+
+- **Engine** (Data's decision, the one change to orion2re this order allows):
+  race selection reports the synthetic **51**, past the SCREEN enum's last
+  value 43; orion2re 3305d78c on `orionlayer-local`, `doc/ext_screen_id.patch`
+  revision 2 (hunks regenerated, forward-applied to a pristine export and
+  reverse-dry-run against the tree).
+- **OrionLayer:** `core/screen_names.py` is the one home — 6 has no HD screen,
+  51 is `select_race`, and `ENGINE_SCREEN_MAX = 43`, which
+  `tools/version_check.py` now reads from orion2_consts.h and requires with
+  the patch's new marker. `select_race` claims 51; Empire Identity's lock is
+  51 on the stock path and (50, 51) after Custom Race. The table's entry for 8
+  said "no HD screen" although `game_menu` claims 8 — corrected, found by the
+  new check. `doc/v3_orion2re_index.md` and `doc/ext_api_dokumentation_v3.md`
+  follow.
+- **Live after** (new binary, New Game from the main menu, through HD):
+  custom path 13 -> 51 select_race -> picture mode -> 50 custom_race -> Accept
+  -> Empire Identity (the game stays at 50) -> 39 -> 0 galaxy map; stock path
+  13 -> 51 -> Empire Identity (the game stays at 51) -> 39 -> 0. RACES then:
+  the game reports 6 and HD falls back to the framebuffer
+  (`use_original`), ESC back to the map (`B_after_custom/`, `B_after_stock/`,
+  `B_after/`).
+- **The stock-race accept leaving the id set:** unchanged in behaviour, changed
+  in meaning. The game keeps reporting race selection's id through the name
+  and banner dialogs until galaxy generation — 51 now, 6 before — and HD's
+  Empire Identity lock depends on it. It no longer reads as the Races screen.
+  Not widened. The patch header's claim that every accept goes through
+  `Racial_Option_Screen_` is corrected there: the stock accept does not.
+- **Smoke:** one new check reads every screen module (tree and mods) and holds
+  the rule — one screen per id, engine ids within 0..43, synthetic ids above
+  it, the table naming the claiming screen; red with the maximum set to 60 and
+  with a mod screen also claiming 51 (`B_screen_id_check_red.txt`). The routing
+  instances move 6 -> 51. **197 -> 198.**
 
 ## What is missing
 

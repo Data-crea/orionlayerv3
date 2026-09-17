@@ -183,9 +183,15 @@ the API reports a stale ID.
 
 ```cpp
 #ifdef ORION2RE_EXT
-        MOX::_current_screen = SCREEN_RACE;
+        constexpr int16_t EXT_SCREEN_RACE_SELECTION = 51;
+        const int16_t ext_saved_screen = MOX::_current_screen;
+        MOX::_current_screen = EXT_SCREEN_RACE_SELECTION;
 #endif
 ```
+
+(SCREEN_RACE, 6, until work order 128: 6 is the Races screen, and the
+galaxy map's RACES button opened HD race selection over it — open fix 22.
+`doc/ext_screen_id.patch` is the authority; this excerpt abbreviates it.)
 
 **`Racial_Option_Screen_()`** (line 454), before its `while (true)`:
 
@@ -248,7 +254,7 @@ cmake --build --preset linux-debug
 
 | Function | Called from | Screen ID | Patched |
 |---|---|---|---|
-| `Race_Selection_Screen_()` | `Newgame_Screen_()`, `hotpop.cpp`, `netstart.cpp` | 6 (SCREEN_RACE) | Yes |
+| `Race_Selection_Screen_()` | `Newgame_Screen_()`, `hotpop.cpp`, `netstart.cpp` | 51 (synthetic; 6 until work order 128) | Yes |
 | `Racial_Option_Screen_()` | `Race_Selection_Screen_()` | 50 (synthetic) | Yes |
 
 **Dialogs are not sub-screens.** `Naming_Popup_` and `Flag_Screen_`

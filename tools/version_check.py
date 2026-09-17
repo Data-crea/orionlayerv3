@@ -57,6 +57,16 @@ RE_LABEL = re.compile(
 #: and nothing else in orion2re defines. `file: (relative path,
 #: marker, what breaks without it)`.
 LOCAL_PATCHES = {
+    # Revised 17 September 2026 (work order 128 B, open fix 22): race
+    # selection reports the synthetic 51, no longer SCREEN_RACE (6), which
+    # is the Races screen. A tree with the old revision routes the galaxy
+    # map's RACES button into HD Select Race — so the marker is the new
+    # revision's own constant, not the patch's older lines.
+    "doc/ext_screen_id.patch": (
+        os.path.join("src", "game", "racesel.cpp"),
+        "EXT_SCREEN_RACE_SELECTION = 51",
+        "race selection reports 6, the Races screen's id, and HD draws "
+        "Select Race over diplomacy (open fix 22)"),
     "doc/ext_move_pop.patch": (
         os.path.join("src", "game", "colmove.h"),
         "_ext_suppress_refusal_help",
@@ -180,6 +190,24 @@ def main():
                  "not applied (reported)" if found is False
                  else "no such file")
         print(f"            {patch:32} : {state} — {enables}")
+
+    # core/screen_names.ENGINE_SCREEN_MAX is a hand copy of the enum's last
+    # value, and synthetic screen ids are only safe above it (decision 36:
+    # a copy gets a checker).
+    from core.screen_names import ENGINE_SCREEN_MAX
+    consts = os.path.join(tree, "src", "game", "orion2_consts.h")
+    if os.path.exists(consts):
+        values = [int(v) for v in re.findall(
+            r"\bSCREEN_[A-Z0-9_]+\s*=\s*(\d+)", open(consts).read())]
+        top = max(values) if values else None
+        print(f"            SCREEN enum last value       : {top} "
+              f"(OrionLayer ENGINE_SCREEN_MAX {ENGINE_SCREEN_MAX})")
+        if top != ENGINE_SCREEN_MAX:
+            problems.append(
+                f"orion2_consts.h's SCREEN enum ends at {top}, "
+                f"core/screen_names.ENGINE_SCREEN_MAX says "
+                f"{ENGINE_SCREEN_MAX} — a synthetic screen id may now "
+                f"collide with a real one")
 
     if problems:
         print("\nMISMATCH")

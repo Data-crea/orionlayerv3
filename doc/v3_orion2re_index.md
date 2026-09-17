@@ -759,7 +759,7 @@ Der Ablauf, den OrionLayers Empire-Identity-Screen ersetzt.
 Race_Selection_Screen_()                    racesel.cpp:180
   Zeile 203: 14 Radios per Add_Radio_Button_Field_
              Position (i/7)*126+351, (i%7)*48+90
-  Zeile 212: [EXT-Patch] _current_screen = SCREEN_RACE
+  Zeile 212: [EXT-Patch] _current_screen = 51 (synthetisch; bis Work Order 128 SCREEN_RACE)
 
   Klick auf Stock-Rasse, _custom_flag == 0  (Zeile 245 ff.)
     → Clear_Fields_, Traits kopieren, race setzen
@@ -805,7 +805,7 @@ fehl.
 | 1 | SCREEN_COLONY | colony |
 | 3 | SCREEN_DESIGN | ship_design |
 | 4 | SCREEN_FLEET | fleet |
-| 6 | SCREEN_RACE | select_race |
+| 6 | SCREEN_RACE | — (Races/Diplomatie; Original-Framebuffer) |
 | 9 | SCREEN_INFO | info |
 | 10 | SCREEN_MAIN_MENU | main_menu |
 | 13 | SCREEN_NEW_GAME | new_game |
@@ -819,6 +819,7 @@ fehl.
 | 39 | SCREEN_REPORTS | reports |
 | 40 | SCREEN_TURN_SUMMARY | turn_summary |
 | **50** | (kein Enum-Wert) | custom_race — synthetisch per Ext-Patch |
+| **51** | (kein Enum-Wert) | select_race — synthetisch per Ext-Patch, seit Work Order 128 (Open Fix 22); die Tabelle hat ihr Zuhause in `core/screen_names.py` |
 
 ---
 

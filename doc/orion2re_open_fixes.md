@@ -43,7 +43,7 @@ section for what was found where.
 | 19 | A save name confirmed with Enter keeps the edit cursor `_` | **Observation** | Nothing; HD reproduces it |
 | 20 | The fleet box's ship selection is not on the wire, and a single ship cannot be toggled from outside | **Applied** 15 September 2026, revision 2 (`doc/ext_fleet_selection.patch`: icon owners, then per node ship_idx and selected, then the fleet box chain; revision 1 applied and taken back out the same day, briefs 118/119), confirmed live on SAVE5; required by `tools/version_check.py` | — while applied. Without it HD draws no fleet box and cannot move a fleet from the map |
 | 21 | One ship in the fleet box cannot be selected or deselected from outside | **Applied** 15 September 2026 (`doc/ext_fleet_select_ship.patch`, `MSG_SELECT_SHIP` 0x85), confirmed live on SAVE5 (brief 119); required by `tools/version_check.py` | — while applied. Without it HD can show the selection but not change it |
-| 22 | Select Race reports `SCREEN_RACE` (6), which the Races/diplomacy screen owns — our own `ext_screen_id.patch` hunk 1 | **DESCRIBED, NOT APPLIED** 17 September 2026 (work order 126 G, `doc/races_screen_reading.md` §4-5); patch or HD-side distinction is Data's | OrionLayer routes 6 to Select Race, so the HD map's RACES button would open HD Select Race over the Races screen (source reading, not seen live); the stock-race Accept also leaves 6 set |
+| 22 | Select Race reported `SCREEN_RACE` (6), which the Races/diplomacy screen owns — our own `ext_screen_id.patch` hunk 1 | **Applied** 17 September 2026 (work order 128 B, Data's decision: a synthetic id): race selection reports 51; orion2re 3305d78c on `orionlayer-local`; `doc/ext_screen_id.patch` revision 2; required by `tools/version_check.py`; seen live before and after | — while applied. Before: the HD map's RACES button opened HD Select Race over the Races screen (seen live on SAVE4) |
 
 Items 3 and 4 are both about INJECT_CLICK and both live in the same
 code path, but they are separate faults: 3 is where the coordinates
@@ -1520,7 +1520,25 @@ it nothing changes from today.
 Nothing more than open fix 20 already costs: no selection shown, no subset
 of a stack moved from HD.
 
-## 22. Select Race borrows SCREEN_RACE, which the Races screen owns — DESCRIBED, NOT APPLIED
+## 22. Select Race borrows SCREEN_RACE, which the Races screen owns — APPLIED 17 September 2026
+
+**APPLIED by work order 128 B** (Data decided the synthetic id). Seen live
+first on SAVE4 (3509.0): RACES on the HD map made the game report 6 and draw
+Race Relations while HD drew Select Race
+(`~/orionlayer-fixtures/evidence/work_order_128/B_before/`). Race selection
+now reports **51** (`EXT_SCREEN_RACE_SELECTION`, orion2re 3305d78c,
+`doc/ext_screen_id.patch` revision 2), checked against the SCREEN enum's last
+value 43, which `tools/version_check.py` now reads and compares with
+`core/screen_names.ENGINE_SCREEN_MAX`. Live after: New Game -> race selection
+(51) -> Custom Race (50) -> Empire Identity -> galaxy map, and the stock-race
+path, both end to end; RACES then falls back to the original framebuffer
+(decision 22). **The stock-race accept (below) was NOT changed:** it still
+leaves the id set — now 51 — through the name and banner dialogs until galaxy
+generation (39), and HD's Empire Identity holds its lock on exactly that, so
+the "leak" is load-bearing; it no longer reads as the Races screen. What
+follows is the description as filed by work order 126 G.
+
+### As described (126 G)
 
 Filed 17 September 2026 by work order 126 G from `doc/races_screen_reading.md`
 (§4 settles the id question, §5 carries this draft). **Not a request to Joes

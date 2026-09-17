@@ -429,13 +429,14 @@ class CustomRaceScreen(ScreenBase):
             if self.app.connected:
                 self.app.client.activate_field(self.FRAME_BTN_RIGHT[1])
             log.info("Accept")
-            # Interim routing (no C++ patch yet): the original banner /
-            # name dialogs report no ID of their own, orion2re falls
-            # back to 6 (SCREEN_RACE) after Accept. Hold the HD screen
-            # for 50 and 6; anything else (13 New Game, 0 Galaxy Map)
-            # releases it.
+            # The name and banner dialogs report no ID of their own.
+            # MEASURED live on 17 September 2026 (work order 128 B): after
+            # Accept the game keeps reporting 50 until galaxy generation
+            # (39), then 0. Held for 50 and for race selection's synthetic
+            # 51, which the cancel path restores; NOT for 6 any more, which
+            # is the Races screen (open fix 22). 39 or 0 releases it.
             self.app.dispatcher.switch_to("empire_identity",
-                                          lock_ids=(50, 6))
+                                          lock_ids=(50, 51))
             return None
 
         L = self.layout
