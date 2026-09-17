@@ -27,6 +27,16 @@ to the real stderr, since a segfault never reaches any other print.
 Exit code 0 = all good. Run this before shipping a ZIP or a
 mod, and after touching anything in core/.
 """
+import faulthandler
+
+# AT THE TOP, BEFORE ANY OTHER IMPORT (work order 128 F). A segfault — the
+# exit 139 of 16 September — kills the process before any print or
+# traceback, so without this its output simply vanishes. Enabled here it
+# writes the Python stack of every thread to stderr for a crash anywhere,
+# imports included, which makes every ordinary run a probe. `_run` re-points
+# it at a duplicate of the real stderr before --quiet redirects descriptor 2.
+faulthandler.enable()
+
 import ast
 import collections
 import glob
@@ -10378,22 +10388,41 @@ def main():
     assert "DEVIATION" in _fs_dev and "decision 28" in _fs_dev, (
         "layout.json list._figure_size_deviation no longer marks the "
         "fractional size against the decision it deviates from")
-    for _fs_home, _fs_src in (
-            ("colonytrack.py", open(os.path.join(
-                SCREENS_DIR, "colony_summary", "colonytrack.py"),
-                encoding="utf-8").read()),
-            ("colonyfigures.py", open(os.path.join(
-                SCREENS_DIR, "colony_summary", "colonyfigures.py"),
-                encoding="utf-8").read()),
-            ("doc/v3_fundament.md", open(os.path.join(
-                os.path.dirname(SCREENS_DIR), "doc", "v3_fundament.md"),
-                encoding="utf-8").read()),
-            ("v3_projektstatus.md", open(os.path.join(
-                os.path.dirname(SCREENS_DIR), "v3_projektstatus.md"),
-                encoding="utf-8").read())):
-        assert "decision 28" in _fs_src and "DEVIATION" in _fs_src, (
-            f"{_fs_home} no longer marks the fractional figure size "
-            f"against decision 28")
+    # EACH HOME IS READ WHERE THE MARKING MEANS SOMETHING (work order 128
+    # F). This loop used to ask for "decision 28" and "DEVIATION" anywhere
+    # in each whole file, and the fundament passed on words from other
+    # entries while decision 28's own exception paragraph carried neither
+    # (found by 127's Stop 1). Now: the fundament's entry 28 itself, the
+    # docstring of the function that computes the size, the loader's
+    # constructor, and the status document's own paragraph for the change.
+    import inspect as _fs_insp
+    from screens.colony_summary import colonyfigures as _fs_cf
+    from screens.colony_summary import colonytrack as _fs_track
+    _fs_norm = lambda _t: " ".join(_t.split())  # noqa: E731
+    _fs_fund = open(os.path.join(os.path.dirname(SCREENS_DIR), "doc",
+                                 "v3_fundament.md"), encoding="utf-8").read()
+    _fs_entry = _fs_fund[_fs_fund.index("**28. Sprites are swapped by step"):]
+    _fs_entry = _fs_norm(_fs_entry[:_fs_entry.index("**29.")])
+    assert ("ONE EXCEPTION, AND IT IS MARKED" in _fs_entry
+            and "colonytrack.figure_size" in _fs_entry), (
+        "fundament decision 28 no longer states its marked exception, the "
+        "fractional figure size")
+    assert "DEVIATION from decision 28" in _fs_norm(
+        _fs_track.figure_size.__doc__ or ""), (
+        "colonytrack.figure_size no longer marks itself as the DEVIATION "
+        "from decision 28")
+    assert "DEVIATION from decision 28" in _fs_norm(
+        _fs_insp.getsource(_fs_cf.FigureSet.__init__)), (
+        "colonyfigures.FigureSet no longer names the DEVIATION from "
+        "decision 28 it is keyed for")
+    _fs_status = _fs_norm(open(os.path.join(
+        os.path.dirname(SCREENS_DIR), "v3_projektstatus.md"),
+        encoding="utf-8").read())
+    _fs_para = _fs_status[_fs_status.index("**die Figur füllt die Zeile"):]
+    _fs_para = _fs_para[:_fs_para.index("This session (")]
+    assert "DEVIATION from decision 28" in _fs_para, (
+        "the status document's paragraph for the fractional figure size "
+        "no longer marks it as the DEVIATION from decision 28")
 
     _fs_seen = []
     for _fs_spec in ("1920x1080", "2560x1440", "3440x1371", "3840x2160"):
