@@ -44,3 +44,10 @@ fix 22 is what it implements.
   `weapons()` stops at the first empty slot; docstring corrected; one caller
   (monsterpanel.py:97), result unchanged for anything the engine writes.
   Smoke 200 -> **201**, red with the old loop.
+- **F** — done. faulthandler at the top (segfault stack shown, hook refuses);
+  hook in a fresh clone via `tools/setup.py` (proven, no code change); the
+  decision-28 check reads entry 28, the docstrings and the paragraph (red
+  once). Neighbours listed. Smoke **201**.
+- **Run closed.** Every part reached. No push in either repository. Parked
+  file: not created — nothing in this run is Data's to decide beyond what the
+  order already decided (see the report).

@@ -4540,6 +4540,33 @@ with a negative type); it would differ only for a gap nothing produces.
 negative type first, and a packed one; red with the old skipping loop
 (`E_weapons_check_red.txt`). **200 -> 201.**
 
+### Three small safeguards — work order 128 F, 17 September 2026
+
+- **faulthandler at the top of `tools/smoke_test.py`,** before every other
+  import, so a segfault anywhere — imports included — prints the Python stack
+  before the process dies; `_run` still re-points it at the real stderr before
+  `--quiet` redirects. Shown in a worktree with a forced segfault at import:
+  exit 139, "Fatal Python error: Segmentation fault" and the Python and C
+  stacks on stderr; `git commit` through the hook refused, HEAD unchanged, the
+  stack in the hook's log (`evidence/work_order_128/F1_faulthandler_segfault_demo.txt`).
+- **The hook in a fresh clone:** `tools/setup.py` already sets
+  `core.hooksPath` (work order 126 B) and stays the one home. Proven: a fresh
+  clone has no hooksPath; `python tools/setup.py` rebuilds, runs the suite
+  (201 green, 5173 MB) and sets it; an `assert False` at the top of `main()`
+  makes `git commit` exit 1 with HEAD unchanged (`F2_fresh_clone_hook.txt`).
+- **The decision-28 check reads what it means.** It asked for "decision 28"
+  and "DEVIATION" anywhere in four whole files; the fundament passed on words
+  from other entries while entry 28's exception carries neither. It now reads
+  entry 28 itself ("ONE EXCEPTION, AND IT IS MARKED" and
+  `colonytrack.figure_size`), `figure_size`'s docstring, `FigureSet.__init__`
+  and the status paragraph of the change. Red with the exception heading
+  removed from entry 28, where the old condition stays true
+  (`F3_decision28_check_red.txt`). **Neighbours with the same weakness, listed
+  not swept** (from 127's Stop 1): the move-markings check (7 needles in the
+  status file; 2 match only text saying the marking was withdrawn or removed),
+  and the map-lines check's single needle `"maplines.py"`. Count unchanged:
+  201.
+
 ## What is missing
 
 ### OLED floor lift and player-colour presets
