@@ -57,6 +57,17 @@ RE_LABEL = re.compile(
 #: and nothing else in orion2re defines. `file: (relative path,
 #: marker, what breaks without it)`.
 LOCAL_PATCHES = {
+    # Applied 17 September 2026 (work order 129 B, open fix 24): the two
+    # turn-start research dialogs report synthetic ids 52 and 53 on the wire.
+    # The marker is the guard in the science room, because the override
+    # itself lives in src/ext and a tree carrying only that would report
+    # nothing new.
+    "doc/ext_research_screens.patch": (
+        os.path.join("src", "game", "science.cpp"),
+        "ext_screen_guard(52)",
+        "the science room and SELECT NEW RESEARCH both report the galaxy "
+        "map's screen 0, so HD keeps drawing the map over them and a click "
+        "can reach the research list (open fix 23's crash)"),
     # Revised 17 September 2026 (work order 128 B, open fix 22): race
     # selection reports the synthetic 51, no longer SCREEN_RACE (6), which
     # is the Races screen. A tree with the old revision routes the galaxy

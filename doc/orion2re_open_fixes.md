@@ -45,6 +45,7 @@ section for what was found where.
 | 21 | One ship in the fleet box cannot be selected or deselected from outside | **Applied** 15 September 2026 (`doc/ext_fleet_select_ship.patch`, `MSG_SELECT_SHIP` 0x85), confirmed live on SAVE5 (brief 119); required by `tools/version_check.py` | — while applied. Without it HD can show the selection but not change it |
 | 22 | Select Race reported `SCREEN_RACE` (6), which the Races/diplomacy screen owns — our own `ext_screen_id.patch` hunk 1 | **Applied** 17 September 2026 (work order 128 B, Data's decision: a synthetic id): race selection reports 51; orion2re 3305d78c on `orionlayer-local`; `doc/ext_screen_id.patch` revision 2; required by `tools/version_check.py`; seen live before and after | — while applied. Before: the HD map's RACES button opened HD Select Race over the Races screen (seen live on SAVE4) |
 | 23 | An activation of a research choice row with the pointer over no entry crashes the game | **Observation**, seen live 17 September 2026 (work order 128 C) | Nothing while HD sends nothing into that list (the map's parking guard); a client that activates a choice by field id kills the game |
+| 24 | The two turn-start research dialogs (science room, SELECT NEW RESEARCH) both report SCREEN_MAIN, so a client cannot tell them from the galaxy map | **Applied** 17 September 2026 (work order 129 B, Data's decision: synthetic ids on the wire only), orion2re f838c754 on `orionlayer-local`, `doc/ext_research_screens.patch`; required by `tools/version_check.py`; open upstream | — while applied. Without it HD draws the map with an active TURN button over both dialogs, and a field sent into the select list crashes the engine (item 23) |
 
 Items 3 and 4 are both about INJECT_CLICK and both live in the same
 code path, but they are separate faults: 3 is where the coordinates
@@ -1590,3 +1591,34 @@ the pointer over no entry the result is dereferenced (tech.cpp:367). Not a
 request: nothing in OrionLayer activates those rows, and the galaxy map's
 parking no longer can. A future HD research screen needs either a commit by
 field id or the pointer set first — that is the research screen's order.
+
+## 24. The two turn-start research dialogs report SCREEN_MAIN — a request, with a patch (APPLIED locally)
+
+Applied 17 September 2026 by work order 129 B; the reading is
+`doc/newtech_reading.md`, the patch `doc/ext_research_screens.patch`.
+
+**What we found (orion2re 1.60.0).** When a project completes,
+`TECH::Tech_Select_` runs `SCIENCE::Show_Off_Researched_Tech_` ->
+`SCIENCE::Science_Room_` (science.cpp:112-392) and then
+`TECH::_Tech_Select_(0)` (tech.cpp:103-106). `REPORT::Reports_Screen_` has
+set `MOX::_current_screen = SCREEN_MAIN` (mainscr2.cpp:119) and neither
+dialog writes it, so both are reported as screen 0. Seen live: OrionLayer
+kept the galaxy map up, with its TURN button, while the player answered in
+the game's own window — and an activation into the select list killed the
+engine (item 23).
+
+**Why not the path item 22 takes.** That one writes `MOX::_current_screen`.
+Here the game DRAWS from it: the description box's x is 84 on the main
+screen and 130 otherwise (textbox.cpp:40-50), and its colour group is a
+switch on the same variable (textbox.cpp:284). Reporting through it would
+move the dialog it makes visible.
+
+**The change.** `ext::g_screen_override`, read by `ext::Tick` when it
+serializes, and `ext::ScreenOverride`, which sets it for a scope and
+restores it on every exit. 52 in the science room, 53 in the select list's
+select mode, no override in change mode (which is SCREEN_TECH_CHANGE, 36).
+Nothing the game reads is touched.
+
+**What it costs us.** Nothing: no HD screen claims 52 or 53, so decision 22
+takes over and OrionLayer shows the original picture until a research screen
+is built.

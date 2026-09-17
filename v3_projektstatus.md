@@ -837,7 +837,7 @@ files under `doc/` and are only summarised here.
 | | |
 |---|---|
 | Python | 32,960 lines across 111 modules — `find . -name '*.py'`, `__pycache__` excluded, the smoke test's 6,400 included. The previous figure here (21,642 across 94) was carried from an unstated method and could not be reproduced |
-| Smoke test | `python tools/smoke_test.py` — **202 checks**, headless |
+| Smoke test | `python tools/smoke_test.py` — **204 checks**, headless |
 | Assets | 170 MB (select_race 68, galaxy_map 51, shared 23, new_game 21, colony_summary 1) |
 | Screens in HD | 9 of ~20–22 (the GAME menu overlay, work order Stop 2, every dialog of the popup; colony summary draws list, sidebar, scan box and galaxy inset, and MOVES POPS — the first HD gesture that drives the game; planets, brief 101, lists, sorts, restricts and returns) |
 | Setup from clone | `python tools/setup.py` (deps via the system package manager) |
@@ -1177,7 +1177,7 @@ in exactly ONE bucket. The numbers below are produced by
 check asserts this list still agrees with it — the same trade the
 check count makes, for the same reason.
 
-`tools/struct_probe.py` (**478** code, 753 total), `screens/galaxy_map/screen.py` (**441** code, 699 total), `tools/colony_list_preview.py` (**403** code, 772 total), `screens/custom_race/screen.py` (**400** code, 558 total), `tools/colony_move_hd.py` (**385** code, 586 total), `core/editor/editor.py` (**359** code, 430 total), `screens/galaxy_map/renderer.py` (**336** code, 758 total), `tools/ext_diag.py` (**325** code, 473 total), `core/style.py` (**310** code, 479 total).
+`tools/struct_probe.py` (**478** code, 753 total), `screens/galaxy_map/screen.py` (**442** code, 700 total), `tools/colony_list_preview.py` (**403** code, 772 total), `screens/custom_race/screen.py` (**400** code, 558 total), `tools/colony_move_hd.py` (**385** code, 586 total), `core/editor/editor.py` (**359** code, 430 total), `screens/galaxy_map/renderer.py` (**336** code, 758 total), `tools/ext_diag.py` (**325** code, 473 total), `core/style.py` (**310** code, 479 total).
 `smoke_test.py` is exempt by nature.
 
 **TWO TOOLS JOINED THE LIST ON 8 SEPTEMBER 2026 and one thing left
@@ -4593,6 +4593,60 @@ live 3 September 2026).
   three send kinds. **201 -> 202.**
 - **Fundament:** "A LIVE DRIVER IS A CLIENT" and "A COUNTER-TEST THAT RESTORES
   A FILE CAN BE MEASURING THE MUTATION", both under Diagnosis.
+
+### The two turn-start research dialogs are on the wire — work order 129 B, 17 September 2026 (open fix 24 applied)
+
+**The reading first:** `doc/newtech_reading.md`. The presentation is
+`SCIENCE::Science_Room_` (science.cpp:112-392), entered from
+`TECH::Tech_Select_` -> `Show_Off_Researched_Tech_` (tech.cpp:103), and the
+select list follows at tech.cpp:106 after `current_research_field` and
+`research_breakthrough` are zeroed (:104-105) — so which project completed is
+off the wire once the list is up. Both run under SCREEN_MAIN, which confirms
+126's claim for both. The room's list is three fields (a whole-screen hidden
+one and an ESC hotkey, science.cpp:169-171) and one activation advances ONE
+discovery; the same room shows stolen and artifact technology
+(report.cpp:814, :822), so its shape does not identify research —
+`research_breakthrough != 0` does.
+
+**THE FINDING THAT DECIDED THE PATCH.** The path open fix 22 uses — writing
+`MOX::_current_screen` — is not available here: the game DRAWS from that
+value in both dialogs' description box, for its x (textbox.cpp:40-50) and for
+its colour group (textbox.cpp:284). So the ids are reported **on the wire
+only**: `ext::g_screen_override`, read by `ext::Tick` when it serializes, set
+for a scope by `ext::ScreenOverride` — 52 in the science room, 53 in the
+select list, nothing in change mode (which is screen 36). orion2re f838c754,
+`doc/ext_research_screens.patch`, open fix 24, required by
+`tools/version_check.py`; `core/screen_names.py` carries both ids with no HD
+screen, so decision 22 takes over.
+
+**Live** (new game on the stock-race path, the game restarted for it;
+evidence `~/orionlayer-fixtures/evidence/work_order_129/`):
+- the science room reports **52** and SELECT NEW RESEARCH **53**; in both,
+  OrionLayer draws the original picture (`use_original`), has no active
+  screen, and sends nothing — a click and a motion into its window reached no
+  HD screen (`B_occasion2c_*`, `B_newgame2/005_DIALOG_52_native.png`);
+- after the choice HD returns to the galaxy map by itself;
+- **the choice itself is NOT reliable through OrionLayer, and is reported
+  rather than worked around.** Three occasions: (1) a click on the row at
+  native (176,85)-(394,99) through F12's original mode selected field 55;
+  (2) a click on (176,51)-(394,84) the same way selected NOTHING — the list
+  closed with `current_research_field` still 0; (3) the same row with a real
+  `INJECT_CLICK` selected field 78. The reason is in the reading: the commit
+  takes the entry under the POINTER (`Get_Selected_Entry_`, tech.cpp:354-369),
+  never the activated field. **And a click in the fallback view does not even
+  reach the game today:** `App._handle_click` forwards to the original view
+  only in render_mode "original" (main.py:217-225), which is F12's mode, not
+  the dispatcher's fallback — so with the dialogs up a click in OrionLayer's
+  window does nothing at all. Both are for Data; option (c) of the reading is
+  not authorised here.
+- **Seen on the way:** the colony-base planet picker (the dialog work order
+  122 scrapped a base in) also reports screen 0, and its CLOSE field means
+  "scrap the base" — the confirmation appeared and the driver refused to
+  answer it (129 A's guard doing its job).
+
+**Smoke:** while the state reports 52 or 53 nothing is claimed and no HD
+screen sends — with the map decoupled and zoomed in as a positive control.
+**203 -> 204** with part D's check.
 
 ## What is missing
 

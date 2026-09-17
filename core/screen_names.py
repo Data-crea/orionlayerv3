@@ -64,6 +64,14 @@ SCREENS = {
     #: the galaxy map's RACES button opens — so HD drew Select Race over
     #: diplomacy (seen live, 17 September 2026).
     51: ("(synthetic)",     "select_race"),
+    #: 52 and 53, synthetic and ON THE WIRE ONLY (work order 129 B, open
+    #: fix 24): the science room that presents a completed project and the
+    #: SELECT NEW RESEARCH list that follows it, both of which run under
+    #: SCREEN_MAIN and would otherwise be indistinguishable from the galaxy
+    #: map. No HD screen claims either, so the dispatcher falls back to the
+    #: original picture (decision 22).
+    52: ("(synthetic)",     None),
+    53: ("(synthetic)",     None),
 }
 
 #: The last value of orion2re's own SCREEN enum:

@@ -16522,6 +16522,151 @@ def main():
             app.user_settings = _go_real[2]
         _go_dir.cleanup()
 
+    # THE SIDEBAR'S RESEARCH READOUT — the original's four cases (work
+    # order 129 D), transcribed from Print_Main_Screen_Data_
+    # (mainscr_main.cpp:186-247) through core/research.py. Until then HD
+    # printed accumulated over produced, which was a deviation nothing
+    # marked. The row now carries up to three lines, so it is also
+    # RENDERED at all four shipped sizes and the label must survive.
+    from screens.galaxy_map import sidebar as _rr_sb
+    from core import research as _rr_research
+
+    class _RrPlayer:
+        def __init__(self, **kw):
+            self.research_breakthrough = 0
+            self.current_research_field = 60
+            self.research_accumulated = 412
+            self.research_produced = 44
+            self.tech_fields = [0] * _rr_research.FIELD_COUNT
+            self.tech_fields[60] = 2
+            for _k, _v in kw.items():
+                setattr(self, _k, _v)
+    _rr_labels = {"research": "Research", "research_unit": "RP",
+                  "breakthrough": "Breakthrough", "no_research": "None"}
+    # 1. a running project: the turns the original's own loop gives, and
+    #    the points per turn below them. 412 at 44 with cost 900 is the
+    #    pair measured beside the native frame on SAVE4 (18), 456 on
+    #    SAVE5 (17).
+    assert _rr_research.FIELD_COST[60] == 900, _rr_research.FIELD_COST[60]
+    for _rr_acc, _rr_want in ((412, "~18 turns"), (456, "~17 turns")):
+        _rr_out = _rr_sb.research_readout(
+            _RrPlayer(research_accumulated=_rr_acc), _rr_labels)
+        assert _rr_out == ("Research", (_rr_want,), "44 RP"), _rr_out
+    # 2. the chance line appears only above zero, and then above the turns
+    _rr_out = _rr_sb.research_readout(
+        _RrPlayer(research_accumulated=1000), _rr_labels)
+    assert _rr_out == ("Research", ("11%", "~5 turns"), "44 RP"), _rr_out
+    # 3. research standing still: "0 RP", and nothing else
+    assert _rr_sb.research_readout(
+        _RrPlayer(research_produced=0), _rr_labels) == \
+        ("Research", ("0 RP",), ""), "the stalled case"
+    # 4. the two words
+    assert _rr_sb.research_readout(
+        _RrPlayer(research_breakthrough=1), _rr_labels)[1] == \
+        ("Breakthrough",)
+    assert _rr_sb.research_readout(
+        _RrPlayer(current_research_field=0), _rr_labels)[1] == ("None",)
+    # 5. IT FITS, at all four shipped sizes, without eating the label:
+    #    rendered, and the label's ink must be inside the row's box and
+    #    above the first value line.
+    for _rr_W, _rr_H in ((1366, 768), (1920, 1080), (2560, 1440),
+                         (3840, 2160)):
+        _rr_app, _ = _pv.build_screen(_rr_W, _rr_H)
+        _rr_app.dispatcher.switch_to("galaxy_map")
+        _rr_scr = _rr_app.dispatcher.active
+        _rr_box = _rr_scr.box_rect("sb_research_text")
+        assert _rr_box, (_rr_W, "no sb_research_text box")
+        _rr_rect = pygame.Rect(*_rr_app.layout.rect(_rr_box))
+        _rr_surf = pygame.Surface((_rr_W, _rr_H))
+        _rr_surf.fill((0, 0, 0))
+        _rr_sb.draw_text_block(
+            _rr_surf, _rr_app.style, _rr_app.layout, _rr_app.layout.rect(_rr_box),
+            "Research", ("11%", "~18 turns"), "44 RP", False, 1.0, "center",
+            _rr_sb.DEFAULT_FONTS)
+        _rr_px = pygame.surfarray.array3d(_rr_surf).transpose(1, 0, 2)
+        _rr_rows = np.where(_rr_px.any(axis=(1, 2)))[0]
+        assert len(_rr_rows), (_rr_W, "the research row drew nothing")
+        assert _rr_rect.top <= _rr_rows.min() and \
+            _rr_rows.max() <= _rr_rect.bottom, (
+            f"{_rr_W}x{_rr_H}: the three-line research row inks rows "
+            f"{_rr_rows.min()}..{_rr_rows.max()}, its box is "
+            f"{_rr_rect.top}..{_rr_rect.bottom}")
+    ok("sidebar research readout: the original's four cases through "
+       "core/research, and three lines fit the row at four sizes")
+
+    # THE TWO TURN-START RESEARCH DIALOGS (work order 129 B, open fix 24):
+    # while the state reports 52 (the science room) or 53 (SELECT NEW
+    # RESEARCH), no HD screen may send anything. Nothing claims those ids,
+    # so decision 22 takes over and the original picture is what the player
+    # answers in — and 128 C showed what one field into that list does.
+    # Driven through the dispatcher, with the galaxy map (which is the
+    # screen that was left up before the patch) entered first.
+    _rs_app, _ = _pv.build_screen(1920, 1080)
+    _rs_d = _rs_app.dispatcher
+
+    class _RsClient:
+        def __init__(self):
+            self.log = []
+            self.state = None
+
+        def activate_field(self, i):
+            self.log.append(("act", i))
+
+        def inject_click(self, x, y):
+            self.log.append(("click", x, y))
+
+        def inject_key(self, k):
+            self.log.append(("key", k))
+
+        def cancel_field(self, i):
+            self.log.append(("cancel", i))
+    _rs_client = _RsClient()
+    _rs_app.client, _rs_app.connected = _rs_client, True
+    _rs_d.switch_to("galaxy_map")
+    _rs_gs = _GmState()
+    _rs_gs.current_screen = 0
+    _rs_gs.map_scale = 10          # zoomed in: the map would want to park
+    import json as _rs_json
+    from core.game_state import FieldInfo as _RsField
+
+    def _rs_fields(rows):
+        out = []
+        for _r in rows:
+            _f = _RsField()
+            (_f.index, _f.x, _f.y, _f.x_end, _f.y_end, _f.field_type,
+             _f.hotkey) = _r
+            out.append(_f)
+        return out
+    _rs_gs.fields = _rs_fields(_rs_json.load(open(os.path.join(
+        os.path.dirname(SCREENS_DIR), "tools",
+        "galaxy_box_fields.json")))["closed"])
+    _rs_map = _rs_d.screens["galaxy_map"]
+    _rs_map._viewctl.active = True      # decoupled: the map wants to park
+    _rs_map._viewctl._park_sent = 0.0
+    _rs_d.update_from_game(_rs_gs)
+    _rs_d.update_screens(_rs_gs)
+    assert _rs_client.log, ("the map sends nothing even at screen 0 in this "
+                            "fixture — the control below proves nothing")
+    for _rs_id in (52, 53):
+        _rs_client.log.clear()
+        _rs_gs.current_screen = _rs_id
+        assert _rs_d.update_from_game(_rs_gs) is False, (
+            f"screen {_rs_id} routed to an HD screen; nothing may claim it")
+        assert _rs_d.use_original and _rs_d.active is None, (
+            _rs_id, _rs_d.active_name)
+        for _ in range(3):
+            _rs_map._viewctl._park_sent = 0.0
+            _rs_d.update_screens(_rs_gs)
+            _rs_d.route_click(960, 540)
+            _rs_d.route_motion(960, 540)
+        assert _rs_client.log == [], (_rs_id, _rs_client.log)
+    from core import screen_names as _rs_names
+    for _rs_id in (52, 53):
+        assert _rs_names.SCREENS[_rs_id] == ("(synthetic)", None), \
+            _rs_names.SCREENS[_rs_id]
+    ok("the turn-start research dialogs (52, 53) fall back to the original "
+       "picture and no HD screen sends into them")
+
     # A LIVE TOOL IS A CLIENT (work order 129 A): `tools/livesend.py`
     # identifies the dialog from the field list of the state it is handed
     # at that moment and refuses otherwise. Twice a tool sent into a dialog
