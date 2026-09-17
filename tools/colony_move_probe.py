@@ -89,6 +89,9 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 import pygame  # noqa: E402
 
+import toolenv  # noqa: E402  (the palette before any screen module)
+toolenv.init_palette()
+
 from core.game_client import GameClient  # noqa: E402
 from core.wire_protocol import EFFECT_PAIRS  # noqa: E402
 from core.structs import colony as colony_struct  # noqa: E402

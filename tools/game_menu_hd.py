@@ -36,17 +36,10 @@ os.environ.setdefault("SDL_AUDIODRIVER", "dummy")
 
 import pygame  # noqa: E402
 
-# THE PALETTE BEFORE ANY SCREEN MODULE. Colours with no code default
-# (decision 14, `palette.require`) are read at import, and `App()` is
-# what normally initialises the palette — after the imports below.
-# `colony_move_hd.py` imports the same way without this and cannot be
-# imported at all as of 14 September 2026 (`plate_outline`); that is
-# its own fault, reported, not repaired here.
-from core import palette, resources  # noqa: E402
-from core.config import load_settings  # noqa: E402
-
-_res = resources.init(load_settings())
-palette.init(_res.load_json("assets/shared/skins/default/colors.json", {}))
+# THE PALETTE BEFORE ANY SCREEN MODULE (decision 14, `palette.require`
+# reads at import); `toolenv` is the one home since work order 126 D.
+import toolenv  # noqa: E402
+toolenv.init_palette()
 
 from colony_move_hd import (Counter, click_at, native_png,  # noqa: E402
                             pump, wait_for)

@@ -837,7 +837,7 @@ files under `doc/` and are only summarised here.
 | | |
 |---|---|
 | Python | 32,960 lines across 111 modules — `find . -name '*.py'`, `__pycache__` excluded, the smoke test's 6,400 included. The previous figure here (21,642 across 94) was carried from an unstated method and could not be reproduced |
-| Smoke test | `python tools/smoke_test.py` — **196 checks**, headless |
+| Smoke test | `python tools/smoke_test.py` — **197 checks**, headless |
 | Assets | 170 MB (select_race 68, galaxy_map 51, shared 23, new_game 21, colony_summary 1) |
 | Screens in HD | 9 of ~20–22 (the GAME menu overlay, work order Stop 2, every dialog of the popup; colony summary draws list, sidebar, scan box and galaxy inset, and MOVES POPS — the first HD gesture that drives the game; planets, brief 101, lists, sorts, restricts and returns) |
 | Setup from clone | `python tools/setup.py` (deps via the system package manager) |
@@ -1177,7 +1177,7 @@ in exactly ONE bucket. The numbers below are produced by
 check asserts this list still agrees with it — the same trade the
 check count makes, for the same reason.
 
-`screens/galaxy_map/screen.py` (**583** code, 890 total), `tools/struct_probe.py` (**478** code, 753 total), `tools/colony_list_preview.py` (**403** code, 772 total), `screens/custom_race/screen.py` (**400** code, 558 total), `tools/colony_move_hd.py` (**383** code, 583 total), `core/editor/editor.py` (**359** code, 430 total), `screens/galaxy_map/renderer.py` (**336** code, 758 total), `tools/ext_diag.py` (**325** code, 473 total), `core/style.py` (**310** code, 479 total).
+`screens/galaxy_map/screen.py` (**583** code, 890 total), `tools/struct_probe.py` (**478** code, 753 total), `tools/colony_list_preview.py` (**403** code, 772 total), `screens/custom_race/screen.py` (**400** code, 558 total), `tools/colony_move_hd.py` (**385** code, 586 total), `core/editor/editor.py` (**359** code, 430 total), `screens/galaxy_map/renderer.py` (**336** code, 758 total), `tools/ext_diag.py` (**325** code, 473 total), `core/style.py` (**310** code, 479 total).
 `smoke_test.py` is exempt by nature.
 
 **TWO TOOLS JOINED THE LIST ON 8 SEPTEMBER 2026 and one thing left
@@ -3292,7 +3292,15 @@ rows set in Aldrich with the game's colours only approximated
 **Found on the way, not this work's to fix:** `tools/colony_move_hd.py`
 cannot be imported (`palette.require` for `plate_outline` runs before
 the palette exists); `tools/game_menu_hd.py` initialises the palette
-first and reuses its helpers. The OrionLayer instance Data had running
+first and reuses its helpers. **FIXED by work order 126 D (17 September 2026)**, with the four
+siblings that had the same fault (`colony_drop_sweep`, `colony_drop_timing`,
+`colony_move_probe`, `ship_icon_check` — the last on `ship_0`):
+`tools/toolenv.py` initialises the skin palette and every one of them calls
+it before its first screen import; `game_menu_hd.py`'s own copy now calls it
+too. One new check imports every tool that has a `__main__` (40) in a fresh
+interpreter from outside the tree; it fails with the call removed from
+`ship_icon_check.py` (`evidence/work_order_126/D2_check_fails_without_fix.txt`).
+196 -> **197**. The OrionLayer instance Data had running
 (`main.py`, old code) stayed connected throughout, fell back to the
 framebuffer at screen 8 as before, and will have reconnected when the
 game quit.

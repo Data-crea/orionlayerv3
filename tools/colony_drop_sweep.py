@@ -58,6 +58,9 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 import pygame  # noqa: E402
 
+import toolenv  # noqa: E402  (the palette before any screen module)
+toolenv.init_palette()
+
 from screens.colony_summary import (colonyicons, colonylist,  # noqa: E402
                                     colonypick)
 import colony_move_hd as base  # noqa: E402

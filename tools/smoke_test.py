@@ -16285,6 +16285,45 @@ def main():
             app.user_settings = _go_real[2]
         _go_dir.cleanup()
 
+    # EVERY RUNNABLE TOOL IMPORTS IN A FRESH PROCESS (work order 126 D).
+    # Screen modules read colours with no code default at import, and five
+    # tools imported them before anything had initialised the palette —
+    # `colony_move_hd.py` could not even print --help for three days while
+    # every check stayed green, because THIS process initialised the
+    # palette long before any check touched a tool. So the import runs in a
+    # new interpreter, from outside the tree, with only `tools/` on the path
+    # (what `python tools/x.py` gives it). Libraries without `__main__`
+    # (fixtures, colony_roundtrip, raceicon_sheets) are imported by the
+    # tools that need them and are covered through those.
+    import subprocess as _ti_sp
+    import tempfile as _ti_tf
+    _ti_root = os.path.dirname(SCREENS_DIR)
+    _ti_tools = os.path.join(_ti_root, "tools")
+    _ti_env = dict(os.environ, SDL_VIDEODRIVER="dummy",
+                   SDL_AUDIODRIVER="dummy", PYGAME_HIDE_SUPPORT_PROMPT="1")
+    _ti_bad, _ti_n = [], 0
+    with _ti_tf.TemporaryDirectory() as _ti_cwd:
+        for _ti_path in sorted(glob.glob(os.path.join(_ti_tools, "*.py"))):
+            _ti_name = os.path.basename(_ti_path)[:-3]
+            if _ti_name == "smoke_test":
+                continue
+            with open(_ti_path, encoding="utf-8") as _fh:
+                if "__main__" not in _fh.read():
+                    continue
+            _ti_n += 1
+            _ti_r = _ti_sp.run(
+                [sys.executable, "-c",
+                 f"import sys; sys.path[0] = {_ti_tools!r}; import {_ti_name}"],
+                cwd=_ti_cwd, capture_output=True, text=True, env=_ti_env,
+                timeout=120)
+            if _ti_r.returncode != 0:
+                _ti_bad.append((_ti_name, (_ti_r.stderr.strip().splitlines()
+                                           or ["?"])[-1]))
+    assert _ti_n >= 30, f"only {_ti_n} runnable tools found"
+    assert not _ti_bad, f"tools that cannot be imported: {_ti_bad}"
+    ok(f"all {_ti_n} runnable tools import in a fresh process (the palette "
+       f"before any screen module, tools/toolenv.py)")
+
     # THE COMMIT IS COUPLED TO THIS SUITE (work order 126 part B, decision
     # 31). A commit once went through after a run had exited 139, because
     # nothing connected the two; `tools/githooks/pre-commit` now refuses

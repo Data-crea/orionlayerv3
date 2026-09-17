@@ -44,6 +44,9 @@ os.environ.setdefault("SDL_AUDIODRIVER", "dummy")
 
 import pygame  # noqa: E402
 
+import toolenv  # noqa: E402  (the palette before any screen module)
+toolenv.init_palette()
+
 from core.structs import colony as colony_struct  # noqa: E402
 from fixtures import (FIXTURES, identify,  # noqa: E402,F401
                       verify_colonies)

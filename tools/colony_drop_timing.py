@@ -65,6 +65,9 @@ import time
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
+import toolenv  # noqa: E402  (the palette before any screen module)
+toolenv.init_palette()
+
 from screens.colony_summary import colonypick, colonysend  # noqa: E402
 
 import colony_move_hd as base  # noqa: E402

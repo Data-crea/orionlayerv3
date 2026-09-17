@@ -29,6 +29,9 @@ import time
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
+import toolenv  # noqa: E402  (the palette before any screen module)
+toolenv.init_palette()
+
 from core import config, resources  # noqa: E402
 from core import zoomtables as zt  # noqa: E402
 from core.game_client import GameClient  # noqa: E402
