@@ -40,10 +40,8 @@ from core.structs import planet as planet_struct
 from core.structs import player as player_struct
 from core.structs import ship as ship_struct
 from screens.galaxy_map import boxdraw
-from screens.galaxy_map import boxmodel
-from screens.galaxy_map import mapboxes
-from screens.galaxy_map import mapclick
 from screens.galaxy_map import mapeta
+from screens.galaxy_map import mapinput
 from screens.galaxy_map import maplines
 from screens.galaxy_map import ping as home_ping
 from screens.galaxy_map import renderer as rnd
@@ -593,19 +591,27 @@ class GalaxyMapScreen(ScreenBase):
                             - int(8 * self.layout.scale)))
 
     # ── Input ─────────────────────────────────────────────
+    # The handling itself is `mapinput` (work order 126 F); these are the
+    # ScreenBase hooks, falling through to it where the input was not taken.
 
     def handle_mouse_motion(self, screen_x, screen_y):
         super().handle_mouse_motion(screen_x, screen_y)
-        if self._pan_from is not None:
-            view = self._map_view()
-            if view is not None:
-                dx = screen_x - self._pan_from[0]
-                dy = screen_y - self._pan_from[1]
-                if dx or dy:
-                    self._viewctl.pan(view, self._state, dx, dy)
-                    self._pan_from = (screen_x, screen_y)
-            return
-        self._hover_star = self._star_at(screen_x, screen_y)
+        mapinput.mouse_motion(self, screen_x, screen_y)
+
+    def handle_click(self, screen_x, screen_y):
+        if mapinput.click(self, screen_x, screen_y):
+            return None
+        return super().handle_click(screen_x, screen_y)
+
+    def handle_key(self, key):
+        if not mapinput.key_down(self, key):
+            super().handle_key(key)
+
+    def handle_right_button(self, down, mx, my):
+        return mapinput.right_button(self, down, mx, my)
+
+    def handle_mousewheel(self, direction, mx, my):
+        mapinput.mousewheel(self, direction, mx, my)
 
     def help_extra_rect(self, spec):
         """The title cutout, which is not a box.
@@ -620,75 +626,6 @@ class GalaxyMapScreen(ScreenBase):
             rect = self._data.get("frame", {}).get("title_rect")
             return pygame.Rect(*self.layout.rect(rect)) if rect else None
         return None
-
-    def handle_click(self, screen_x, screen_y):
-        if self.help_consumes_click(screen_x, screen_y):
-            return None
-        # Title cutout = the original's GAME button (top centre).
-        title = self._data.get("frame", {}).get("title_rect")
-        if title and pygame.Rect(*self.layout.rect(title)).collidepoint(
-                screen_x, screen_y):
-            self.pressed.press("title", pygame.Rect(*self.layout.rect(title)))
-            self._activate(self._data.get("actions", {}).get("game_menu"),
-                           "game menu")
-            return None
-
-        # Navigation buttons next — they sit outside the map area.
-        for spec in self._data.get("buttons", []):
-            box = self.box_rect(f"nav_{spec['key']}")
-            if not box:
-                continue
-            if pygame.Rect(*self.layout.rect(box)).collidepoint(
-                    screen_x, screen_y):
-                self._activate(spec["field_id"], spec["key"])
-                return None
-
-        if boxdraw.handle_click(self, screen_x, screen_y):
-            return None
-        view = self._map_view()
-        if view is not None and pygame.Rect(*view.box).collidepoint(
-                screen_x, screen_y):
-            self._map_click(view, screen_x, screen_y)
-            return None
-
-        return super().handle_click(screen_x, screen_y)
-
-    def _map_click(self, view, sx, sy):
-        """One left click on the map: `mapclick.plan` decides, this sends.
-
-        Icon or star first by the original's order, the native point the
-        game resolves to the same object, and the decision-65 guard while
-        the fleet box is open. An empty-map pixel goes HD -> galaxy through
-        WHATEVER view is on screen, then galaxy -> native through the
-        game's view, which is the one the click has to land in.
-        """
-        if self._state is None:
-            return
-        icons = getattr(self._state, "ship_icons", None) or []
-        owners = ship_icons.resolve_owners(
-            icons, self._ships, ship_icons.wire_nodes(self._state))
-        gx, gy = view.to_galaxy(sx, sy)
-        orders_ok = boxdraw.orders_ok(self)
-        result = mapclick.plan(
-            mapboxes.classify(getattr(self._state, "fields", None)),
-            self._star_at(sx, sy),
-            mapclick.icon_at(self._map_context(), icons, owners,
-                             self._icon_anchor(),
-                             self._data.get("ship_icons") or {}, sx, sy),
-            icons, owners, self._stars, self._state, self._game_zoom(),
-            mc.galaxy_to_native(gx, gy, self._state),
-            orders_ok=orders_ok)
-        log.info("Map click: %s (%s)", result.what, result.detail)
-        if result.send is not None and self.app.connected:
-            self.app.client.inject_click(*result.send)
-            boxmodel.remember(self, result, icons, order=orders_ok)
-            if orders_ok and result.what == "star":
-                self._eta_lock = mapeta.hold(self._state, self._ships)
-
-    def _activate(self, field_id, what=""):
-        log.info("Action: %s (field %s)", what or field_id, field_id)
-        if self.app.connected and field_id is not None:
-            self.app.client.activate_field(field_id)
 
     # ── Home system ping ──────────────────────────────────
 
@@ -783,108 +720,3 @@ class GalaxyMapScreen(ScreenBase):
             log.warning("home_ping.key %r is not a key name; using HOME",
                         name)
             return pygame.K_HOME
-
-    def handle_key(self, key):
-        if self.help_consumes_key(key):
-            return
-        if boxdraw.handle_key(self, key):
-            return
-        actions = self._data.get("actions", {})
-        ping_key = self._ping_key()
-        if ping_key is not None and key == ping_key:
-            # Consumed here on purpose: forwarding it would hand
-            # orion2re a key it has no binding for.
-            self.ping_home()
-            return
-        if key == pygame.K_g:
-            self._activate(actions.get("game_menu"), "game menu")
-            return
-        if key in (pygame.K_PLUS, pygame.K_EQUALS, pygame.K_KP_PLUS,
-                   pygame.K_MINUS, pygame.K_KP_MINUS):
-            view = self._map_view()
-            if view is not None:
-                bx, by, bw, bh = view.box
-                direction = (1 if key in (pygame.K_PLUS, pygame.K_EQUALS,
-                                          pygame.K_KP_PLUS) else -1)
-                self._viewctl.zoom_at(view, self._state,
-                                      bx + bw // 2, by + bh // 2,
-                                      direction)
-            return
-        if key in (pygame.K_0, pygame.K_KP0):
-            # Back to the full-galaxy view (mirror the parked game).
-            self._viewctl.reset()
-            return
-        for spec in self._data.get("buttons", []):
-            hotkey = spec.get("hotkey")
-            if hotkey and key == ord(hotkey):
-                self._activate(spec["field_id"], spec["key"])
-                return
-        super().handle_key(key)
-
-    def handle_right_button(self, down, mx, my):
-        """Right button: context help first, then the game's cancel, then
-        the pan drag.
-
-        The original's help list for this screen covers the sidebar
-        readouts, the bottom bar and the title, and pointedly NOT the
-        map area (evanhelp.cpp:4). A right click on the map is not help
-        but a CANCEL — it ends the relocation-merge mode and leaves zoom
-        mode, and does nothing else (layout.json `map_cancel`). So a
-        press over the map sends that first, and the drag starts after.
-        """
-        if ScreenBase.handle_right_button(self, down, mx, my):
-            self._pan_from = None
-            return True
-        if not down:
-            self._pan_from = None
-            return False
-        view = self._map_view()
-        if view is not None and pygame.Rect(*view.box).collidepoint(
-                mx, my):
-            # DECISION 66: no positional right click while a box is open.
-            # CANCEL_FIELD lands at the grid's CENTRE (ext_api.cpp:427-455),
-            # which an open box may cover; a box is closed by its own
-            # CLOSE field instead, never by a right click aimed at it.
-            if not mapboxes.classify(getattr(self._state, "fields",
-                                             None)).open:
-                self._send_map_cancel()
-            self._pan_from = (mx, my)
-        return False
-
-    def _send_map_cancel(self):
-        """CANCEL_FIELD on the map's grid field, found in the live list.
-
-        TRANSCRIBED (layout.json `map_cancel`). Returns the field index
-        sent, or None when there was nothing to send to: no connection,
-        or no field of that type and rect in the list at this moment —
-        refused rather than aimed at a remembered index (decision 20).
-        """
-        spec = self._data.get("map_cancel") or {}
-        rect = tuple(spec.get("rect") or ())
-        fields = getattr(self._state, "fields", None) or []
-        field = next((f for f in fields
-                      if f.field_type == spec.get("field_type")
-                      and (f.x, f.y, f.x_end, f.y_end) == rect), None)
-        if field is None or not self.app.connected:
-            log.debug("map cancel: no grid field in the list, nothing sent")
-            return None
-        self.app.client.cancel_field(field.index)
-        return field.index
-
-    def handle_mousewheel(self, direction, mx, my):
-        """Wheel over the map zooms the HD viewport, at the pointer.
-
-        The game is not told: the snapshot carries every star's
-        galaxy coordinate, so the HD view scales and pans on its
-        own. The first tick decouples from the game's slice;
-        park_game then walks the game to maximum zoom-out so every
-        click keeps resolving (see viewctl).
-        """
-        view = self._map_view()
-        if view is None:
-            return
-        if self.help_consumes_wheel(direction):
-            return
-        if not pygame.Rect(*view.box).collidepoint(mx, my):
-            return
-        self._viewctl.zoom_at(view, self._state, mx, my, direction)

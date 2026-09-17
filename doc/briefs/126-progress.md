@@ -48,3 +48,7 @@ running.
 - **E** — done, a report: Part 0 and Run A of the colony order are done; Run B
   (documentation audit) is not, and belongs with 127; the missing brief texts
   are 90's head and 125. No live run. Smoke **197**. Parked: item 2.
+- **E commit:** 5e62885.
+- **F** — done: input moved to `screens/galaxy_map/mapinput.py` (screen.py
+  583 -> 461 code), exceptions list regenerated, two source-reading checks
+  retargeted to where the text moved. Smoke **197**, exit 0. Parked: none.

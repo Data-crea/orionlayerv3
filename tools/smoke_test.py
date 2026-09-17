@@ -2907,8 +2907,12 @@ def main():
             assert _bx_sent("cancel") == [("cancel", 23)], app.client.log
 
             assert "DEVIATION" in gmc.__doc__ and "DECISION 65" in gmc.__doc__
-            assert "DECISION 66" in _bx_insp.getsource(
+            # The handling moved to `mapinput` (work order 126 F); the hook
+            # must still reach it, and the marking lives where the rule does.
+            from screens.galaxy_map import mapinput as _bx_mi
+            assert "mapinput.right_button" in _bx_insp.getsource(
                 type(gm).handle_right_button)
+            assert "DECISION 66" in _bx_insp.getsource(_bx_mi.right_button)
         finally:
             app.client, app.connected, gs.fields, gs.ship_icons = _bx_real
             gm.update(gs)
@@ -3488,9 +3492,10 @@ def main():
                 assert _eta_l is not None, "released before any effect"
             assert _eta.advance(_eta_l, GameState(), _eta_ships) is None, \
                 "a refused order locks the label for ever"
-            _gm_src = open(os.path.join(_ml_dir, "screen.py")).read()
+            # The click path moved to mapinput.py (work order 126 F).
+            _gm_src = open(os.path.join(_ml_dir, "mapinput.py")).read()
             assert 'if orders_ok and result.what == "star":\n' \
-                '                self._eta_lock = mapeta.hold(' in _gm_src
+                '            screen._eta_lock = mapeta.hold(' in _gm_src
         finally:
             app.style.render_text = _eta_rt
             (gs2.ships_raw, gs2.ship_icons, gs2.fleet_selection, gs2.fields,

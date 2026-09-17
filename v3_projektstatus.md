@@ -1177,7 +1177,7 @@ in exactly ONE bucket. The numbers below are produced by
 check asserts this list still agrees with it — the same trade the
 check count makes, for the same reason.
 
-`screens/galaxy_map/screen.py` (**583** code, 890 total), `tools/struct_probe.py` (**478** code, 753 total), `tools/colony_list_preview.py` (**403** code, 772 total), `screens/custom_race/screen.py` (**400** code, 558 total), `tools/colony_move_hd.py` (**385** code, 586 total), `core/editor/editor.py` (**359** code, 430 total), `screens/galaxy_map/renderer.py` (**336** code, 758 total), `tools/ext_diag.py` (**325** code, 473 total), `core/style.py` (**310** code, 479 total).
+`tools/struct_probe.py` (**478** code, 753 total), `screens/galaxy_map/screen.py` (**461** code, 722 total), `tools/colony_list_preview.py` (**403** code, 772 total), `screens/custom_race/screen.py` (**400** code, 558 total), `tools/colony_move_hd.py` (**385** code, 586 total), `core/editor/editor.py` (**359** code, 430 total), `screens/galaxy_map/renderer.py` (**336** code, 758 total), `tools/ext_diag.py` (**325** code, 473 total), `core/style.py` (**310** code, 479 total).
 `smoke_test.py` is exempt by nature.
 
 **TWO TOOLS JOINED THE LIST ON 8 SEPTEMBER 2026 and one thing left
@@ -4376,6 +4376,23 @@ attachment). Against the tree:
   own text** (the GAME menu order the 16 September commits cite). Parked.
 
 Nothing else remains that needs no decision; no live run was needed.
+
+### Galaxy map: input split from rendering — work order 126 F, 17 September 2026
+
+`screens/galaxy_map/screen.py` had one honest seam, and it is the one brief
+110 part C will need: INPUT (motion, click and the map click, activation,
+keys, right button and map cancel, wheel) against loading, geometry and
+drawing. The input bodies moved to `screens/galaxy_map/mapinput.py` as
+functions of the screen, `self` renamed `screen`, nothing else changed; the
+`handle_*` hooks stay on the class and delegate, falling through to
+`ScreenBase` exactly where the methods returned early before. The home ping
+and help-rect helpers stayed (the smoke test and `core/screenhelp` call them
+on the screen). **583 -> 461 code lines** (890 -> 722 total); still on the
+exceptions list, regenerated from `tools/linecount.py` — the rest is one
+thing (a screen's render orchestration and state), and a further cut would
+be the number talking. Two checks read the moved text and follow it: decision
+66's marking now in `mapinput.right_button` (plus: the hook must call it), and
+the eta lock line in `mapinput.py`. Smoke **197**, unchanged.
 
 ## What is missing
 
