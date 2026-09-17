@@ -4686,6 +4686,36 @@ original prints (129 D).
   accumulated points past the cost, which neither scratch save is near, and
   126's rule 8 keeps those saves reloaded rather than played.
 
+### The sidebar's research readout, as the original prints it — work order 129 D, 17 September 2026
+
+HD printed accumulated RP over produced RP; the original prints the chance
+for THIS turn as "N%" where it is above zero, then "~N turns", then the
+produced points — and "0 RP" when research stands still
+(`MAINSCR::Print_Main_Screen_Data_`, mainscr_main.cpp:186-247). The
+difference was seen twice on 16 September, deliberately left, described here
+and **not marked in the code**, while `sidebar.py`'s docstring claimed to
+mirror the original. With 129 C in place it is simply removed rather than
+marked: `sidebar.research_readout` is the four cases, through
+`core/research.py`.
+
+- Wording comes from the game's own strings where the extractor has them
+  (H 0x183 "Breakthrough", 0x188 "none", 0xE1/0xE2 "%d turn(s)"), with the
+  JSON label as the fallback (decision 15); the "~" is the "@" the original
+  prints, which its sidebar font draws as a tilde. Numbers stay in the
+  proportional font, as the module already required.
+- The row now carries up to three lines. `draw_text_block` takes a sequence,
+  and where the band cannot hold the block the VALUE lines shrink — the label
+  is never pushed out — measured by rendering (decision 30's consequence).
+- Both docstrings that described the old behaviour are corrected: the
+  module's row table and `core/structs/player.py`'s note.
+- **Evidence:** HD beside the native frame at 1920x1080, 2560x1440 and
+  3840x2160, for a running project (SAVE4's live values: "~18 turns" over
+  "44 RP") and for Breakthrough —
+  `evidence/work_order_129/D_sidebar_*_vs_native.png`.
+- **Smoke:** the four cases on constructed records, including the two
+  measured points, and the three-line row rendered at four sizes with its ink
+  inside the row's box. **204 -> 205** with part C's checker.
+
 ## What is missing
 
 ### OLED floor lift and player-colour presets

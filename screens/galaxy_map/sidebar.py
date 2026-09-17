@@ -1,15 +1,18 @@
 """Galaxy map sidebar — stardate plus the five resource readouts.
 
 Mirrors the original's right-hand column: the stardate box sits on
-top (as in MAINSCR), followed by what Draw_Main_Screen_Info_ prints,
-read from the local player's record instead of from pixels:
+top (as in MAINSCR), followed by what `Print_Main_Screen_Data_` prints
+(mainscr_main.cpp:178-247), read from the local player's record instead
+of from pixels:
 
   Stardate      from the snapshot (passed in via `extras`)
   Treasury      bc                    surplus_bc on a second line
   Command       cp - cp_used          (command_points) in brackets
   Food          surplus_food          signed
   Freighters    surplus_freighters    (n_freighters) in brackets
-  Research      breakthrough / none / accumulated RP
+  Research      breakthrough / none / the chance for this turn, the
+                turns left and the points produced — the original's four
+                cases, see `research_readout` (work order 129 D)
 
 Negative values render in the warning colour, matching the
 original's red pulse for a deficit.
@@ -32,7 +35,9 @@ carry a sign.
 """
 import pygame
 
+from core import hestrings
 from core import palette
+from core import research
 from core.structs import player as player_struct
 
 LABEL_COLOR = palette.col("galaxy_map", "sidebar_label", (128, 146, 180))
@@ -51,6 +56,12 @@ DEFAULT_FONTS = {"label": 15, "value": 26, "sub": 18}
 #: taking one of its own — the original prints "+14 (15)" on one
 #: line but treasury's income below the balance.
 SUB_INLINE_PREFIX = "("
+
+#: The original prints "@" before the turn count and its sidebar font draws
+#: that glyph as a tilde (mainscr_main.cpp:214-218, and the native frame
+#: beside it). HD's font has no such mapping, so it prints the tilde the
+#: player sees.
+TURNS_PREFIX = "~"
 
 #: Gap between value and inline sub, and divider offset above a row
 #: band; both in reference pixels.
@@ -73,7 +84,66 @@ def _fmt_thousands(value):
     return f"{value:,}".replace(",", " ")
 
 
-def readout(key, plr, labels, monetary="BC"):
+def research_readout(plr, labels, hstrings=None):
+    """(label, lines, sub) for the research row — the original's four cases.
+
+    TRANSCRIBED from `MAINSCR::Print_Main_Screen_Data_`
+    (mainscr_main.cpp:186-247): for a running project it prints the chance
+    for THIS turn as "N%" where that is above zero, then "@N turns" (the
+    "@" is a tilde in the game's own sidebar font), then the produced
+    points and the unit; "0 RP" when research stands still; the two words
+    otherwise. HD printed accumulated over produced instead — a difference
+    seen on 16 September, left, and never marked, which work order 129 D
+    removes rather than marks.
+
+    The arithmetic is `core/research.py`, transcribed with it. The
+    hyper-advanced surcharge is NOT applied: `hyper_advanced_tech` has one
+    source only (`core/structs/unverified.py`), so for fields 75..82 the
+    turn count is an underestimate — written here rather than papered over.
+
+    Wording comes from the game's own strings where the extractor has them
+    (H 0x183, 0x188, 0xE1/0xE2), with the JSON label as the fallback
+    (decision 15).
+    """
+    def message(index, fallback):
+        text = hstrings.message(index) if hstrings is not None else None
+        return text if text else fallback
+
+    label = labels.get("research", "Research")
+    unit = labels.get("research_unit", "RP")
+    if plr.research_breakthrough:
+        return label, (message(0x183, labels.get("breakthrough",
+                                                 "Breakthrough")),), ""
+    field = int(plr.current_research_field)
+    if field == 0:
+        return label, (message(0x188, labels.get("no_research", "None")),), ""
+    status = None
+    fields_array = getattr(plr, "tech_fields", None)
+    if fields_array is not None and 0 <= field < len(fields_array):
+        status = int(fields_array[field])
+    cost = research.cost(field)
+    turns = research.turns_until_complete(
+        field, status, int(plr.research_accumulated),
+        int(plr.research_produced), cost)
+    produced = f"{_fmt_thousands(plr.research_produced)} {unit}"
+    if turns < 0:
+        return label, (f"0 {unit}",), ""
+    chance = research.chance(int(plr.research_accumulated),
+                             int(plr.research_produced), cost)
+    if turns == 0:
+        return label, (f"{chance}%",), produced
+    lines = []
+    if chance > 0:
+        lines.append(f"{chance}%")
+    turns_text = hestrings.printf(
+        message(0xE1 if turns == 1 else 0xE2,
+                labels.get("turns_one" if turns == 1 else "turns_many",
+                           "%d turn" if turns == 1 else "%d turns")), turns)
+    lines.append(f"{TURNS_PREFIX}{turns_text}")
+    return label, tuple(lines), produced
+
+
+def readout(key, plr, labels, monetary="BC", hstrings=None):
     """(label, main, sub, warn) for one sidebar row.
 
     `plr` is a parsed s_player view, or None when disconnected —
@@ -103,12 +173,8 @@ def readout(key, plr, labels, monetary="BC"):
                 f"({plr.n_freighters})", plr.surplus_freighters < 0)
 
     if key == "research":
-        if plr.research_breakthrough:
-            return label, labels.get("breakthrough", "Breakthrough"), "", False
-        if plr.current_research_field == 0:
-            return label, labels.get("no_research", "None"), "", False
-        return (label, f"{_fmt_thousands(plr.research_accumulated)} RP",
-                f"{_fmt_signed(plr.research_produced)} RP", False)
+        _label, _lines, _sub = research_readout(plr, labels, hstrings)
+        return _label, _lines, _sub, False
 
     return label, "--", "", False
 
@@ -211,28 +277,50 @@ def draw_text_block(surface, style, layout, rect, label, main, sub,
 
     lt = _fit_width(label_font.render(label.upper(), True,
                                       LABEL_COLOR[:3]), w)
-    vt = value_font.render(main, True,
-                           (WARN_COLOR if warn else VALUE_COLOR)[:3])
+    # A row may carry more than one value line since work order 129 D —
+    # the research row prints the chance, the turns and the points — so
+    # `main` is a string or a sequence of them.
+    values = (main,) if isinstance(main, str) else tuple(main)
+    vts = [value_font.render(line, True,
+                             (WARN_COLOR if warn else VALUE_COLOR)[:3])
+           for line in values]
     st = sub_font.render(sub, True, SUB_COLOR[:3]) if sub else None
 
     if st is not None and sub.startswith(SUB_INLINE_PREFIX):
-        vt, st = _fit_width(
-            _pair_surface(vt, st, max(1, int(INLINE_GAP * layout.scale))),
-            w), None
-    else:
-        vt = _fit_width(vt, w)
-        st = _fit_width(st, w) if st is not None else None
+        vts[-1], st = _pair_surface(
+            vts[-1], st, max(1, int(INLINE_GAP * layout.scale))), None
+    vts = [_fit_width(v, w) for v in vts]
+    st = _fit_width(st, w) if st is not None else None
 
     gap = int(LABEL_GAP * layout.scale)
-    block_h = lt.get_height() + gap + vt.get_height() \
+    block_h = lt.get_height() + gap + sum(v.get_height() for v in vts) \
         + (st.get_height() if st is not None else 0)
+    # THE LABEL IS NOT PUSHED OUT. Where the band cannot hold the block,
+    # the value lines shrink until it fits — measured by rendering
+    # (decision 30's consequence), never estimated.
+    while block_h > h and len(vts) > 1 or (block_h > h and vts
+                                           and vts[0].get_height() > 6):
+        scale_to = max(1, int(min(v.get_height() for v in vts) * 0.9))
+        smaller = style.get_prop_font(max(6, scale_to))
+        vts = [_fit_width(smaller.render(line, True,
+                                         (WARN_COLOR if warn
+                                          else VALUE_COLOR)[:3]), w)
+               for line in values]
+        if st is not None:
+            st = _fit_width(sub_font.render(sub, True, SUB_COLOR[:3]), w)
+        new_h = lt.get_height() + gap + sum(v.get_height() for v in vts) \
+            + (st.get_height() if st is not None else 0)
+        if new_h >= block_h:
+            break
+        block_h = new_h
     cy = y + max(0, (h - block_h) // 2)
 
     surface.blit(lt, (_place(x, w, lt.get_width(), align), cy))
     cy += lt.get_height() + gap
-    surface.blit(vt, (_place(x, w, vt.get_width(), align), cy))
-    if st is not None:
+    for vt in vts:
+        surface.blit(vt, (_place(x, w, vt.get_width(), align), cy))
         cy += vt.get_height()
+    if st is not None:
         surface.blit(st, (_place(x, w, st.get_width(), align), cy))
 
 
@@ -259,7 +347,7 @@ def draw_dividers(surface, layout, panel_box, bands):
 def render(surface, layout, style, geometry, plr, labels, rows=None,
            font_scales=None, aligns=None, monetary="BC", extras=None,
            icons=None, cache=None, fonts=None, panel_box=None,
-           dividers=True):
+           dividers=True, hstrings=None):
     """Draw the sidebar from per-element geometry.
 
     `geometry` maps a row key to (text_ref_rect, icon_ref_rect|None),
@@ -287,7 +375,8 @@ def render(surface, layout, style, geometry, plr, labels, rows=None,
             main, sub = extras[key]
             label, warn = labels.get(key, key.title()), False
         else:
-            label, main, sub, warn = readout(key, plr, labels, monetary)
+            label, main, sub, warn = readout(key, plr, labels, monetary,
+                                             hstrings)
 
         if icon_rect is not None and key in icons:
             blit_icon(surface, cache, icons[key], layout.rect(icon_rect))

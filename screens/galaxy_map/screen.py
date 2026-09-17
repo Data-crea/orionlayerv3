@@ -495,7 +495,8 @@ class GalaxyMapScreen(ScreenBase):
                   icons=icons, cache=self._cache,
                   fonts=self._data.get("sidebar_fonts", sb.DEFAULT_FONTS),
                   panel_box=box,
-                  dividers=self._data.get("sidebar_dividers", True))
+                  dividers=self._data.get("sidebar_dividers", True),
+                  hstrings=boxdraw._texts(self))
 
     def _sidebar_icons(self):
         """Row key -> cache key, for the icons that actually loaded."""

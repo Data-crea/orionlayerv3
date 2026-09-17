@@ -21,3 +21,7 @@ at 2aa6af4 (pushed); orion2re `orionlayer-local` at 3305d78c.
   into the player spec, `hyper_advanced_tech` left in unverified.py with its
   consequence written down. Three live points reproduce the native readout
   (18, 17, and the document's 16); the chance>0 point was not reachable.
+- **D** — done. `sidebar.research_readout` is the original's four cases
+  through `core/research.py`; the row takes up to three lines and shrinks the
+  values rather than the label; both docstrings corrected. Evidence beside the
+  native frame at three sizes. Smoke **205**, exit 0.
