@@ -148,3 +148,8 @@ listed. **Why yours:** which of two drifted versions is right is a finding,
 possibly a bug. **Meanwhile:** nothing changed beyond the three extractions.
 **Answer:** per group id, "extract" / "leave".
 
+---
+
+**Closing state, checked 17 September 2026 at the end of the run: ten items,
+not empty.** Nothing on this list was acted on beyond "meanwhile". Nothing was
+pushed in either repository.

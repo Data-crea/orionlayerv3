@@ -63,3 +63,9 @@ running.
   drifted, 4 deliberate); extracted 4c39b66 box_style, e5cb136 held_pops,
   e845dd6 frame trio (renders byte-identical at three sizes). Smoke **197**,
   exit 0. Parked: items 9-10.
+- **Run closed.** Every part A-I reached. orionlayerv3: nothing pushed;
+  orion2re: branch `orionlayer-local`, push URL disabled, nothing fetched.
+  Smoke 194 at the start, **197** at the end, exit 0 on every commit (the hook
+  from part B ran on each). CLAUDE.md changed three times (the hook sentence,
+  the check count, the SAVE11 line); its division-of-labour section was not
+  touched, so the chat-side copy of that agreement does not have to move.
