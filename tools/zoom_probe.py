@@ -43,6 +43,7 @@ import time
 sys.path.insert(0, os.path.dirname(os.path.dirname(
     os.path.abspath(__file__))))
 
+import livesend  # noqa: E402  (a live tool is a client: work order 129 A)
 from core.game_client import GameClient
 from core.wire_protocol import EFFECT_PAIRS          # noqa: E402
 from core import mapcoords as mc                 # noqa: E402
@@ -180,7 +181,8 @@ def main():
     print("Zoom in:")
     for step in range(args.steps):
         before, before_c = view(state), centre(state)
-        client.activate_field(ZOOM_IN_FIELD)
+        livesend.activate(client, ZOOM_IN_FIELD, screen=0,
+                          shape=livesend.on_galaxy_map, label="zoom in")
         state, moved = settle(client, before)
         after, after_c = view(state), centre(state)
         report(f"step {step + 1}", before, after)
@@ -197,7 +199,8 @@ def main():
     print("\nZoom out (back to where we started):")
     for step in range(args.steps):
         before = view(state)
-        client.activate_field(ZOOM_OUT_FIELD)
+        livesend.activate(client, ZOOM_OUT_FIELD, screen=0,
+                          shape=livesend.on_galaxy_map, label="zoom out")
         state, _moved = settle(client, before)
         report(f"step {step + 1}", before, view(state))
 
@@ -207,7 +210,8 @@ def main():
         for name, key, back in (("right", KEY_RIGHT, KEY_LEFT),
                                 ("down", KEY_DOWN, KEY_UP)):
             before = view(state)
-            client.inject_key(key)
+            livesend.key(client, key, screen=0,
+                         shape=livesend.on_galaxy_map, label=f"arrow {name}")
             state, moved = settle(client, before)
             after = view(state)
             report(name, before, after)
@@ -219,7 +223,9 @@ def main():
                 dy = after[1] - before[1]
                 print(f"    scroll step: ({dx}, {dy}) galaxy units "
                       f"at scale {after[2]}")
-                client.inject_key(back)
+                livesend.key(client, back, screen=0,
+                             shape=livesend.on_galaxy_map,
+                             label=f"arrow {name} back")
                 state, _restored = settle(client, after)
 
     end = view(state)

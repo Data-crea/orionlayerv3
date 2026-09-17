@@ -92,6 +92,7 @@ import pygame  # noqa: E402
 import toolenv  # noqa: E402  (the palette before any screen module)
 toolenv.init_palette()
 
+import livesend  # noqa: E402  (a live tool is a client: work order 129 A)
 from core.game_client import GameClient  # noqa: E402
 from core.wire_protocol import EFFECT_PAIRS  # noqa: E402
 from core.structs import colony as colony_struct  # noqa: E402
@@ -112,6 +113,9 @@ ROW_PITCH, ROW_TOP = 31, 34
 RIGHT_MARGIN = 4
 
 SORT_KEY, SORT_HOTKEY = "name", ord("n")
+
+#: orion2_consts.h: SCREEN_COLONY_SUMMARY.
+SCREEN_COLONY_SUMMARY = 20
 
 
 def snapshot(client, tries=60):
@@ -267,7 +271,7 @@ def main():
     if state is None:
         print("no snapshot")
         return 1
-    if state.current_screen != 20:
+    if state.current_screen != SCREEN_COLONY_SUMMARY:
         print(f"the game is on screen {state.current_screen}, not the "
               f"colony summary (20). Put it there and re-run — this "
               f"tool does not navigate.")
@@ -288,7 +292,8 @@ def main():
     # this key can be waited on for. Where it was already 0 the wait
     # falls through on the pre-effect floor alone, which is why the
     # steps below still establish rather than assume.
-    client.inject_key(SORT_HOTKEY)
+    livesend.key(client, SORT_HOTKEY, screen=SCREEN_COLONY_SUMMARY,
+                 shape=livesend.on_colony_summary, label="sort key")
     settled = after_send(client, first_reaches(n, 0))
     if settled is None:
         print(f"  the sort key did not put the window at 0 "
@@ -328,7 +333,10 @@ def main():
             # the top legitimately moves nothing; increment always
             # moves, because the plan never asks for one past `n - 10`.
             want = max(0, before - 1) if direction == "down" else before + 1
-            client.activate_field(_scroll_field(state, direction))
+            livesend.activate(client, _scroll_field(client.state, direction),
+                              screen=SCREEN_COLONY_SUMMARY,
+                              shape=livesend.on_colony_summary,
+                              label=f"scroll {direction}")
             settled = after_send(client, first_reaches(n, want))
             if settled is None:
                 print(f"  {direction} {i + 1}/{count}: _first stayed "
@@ -380,7 +388,8 @@ def main():
     # squish arithmetic.
     px, py = pick_field
     print(f"\nclick 1 (pick up) at native ({px}, {py})")
-    client.inject_click(px, py)
+    livesend.click(client, px, py, screen=SCREEN_COLONY_SUMMARY,
+                   shape=livesend.on_colony_summary, label="pick up")
     # THE EFFECT, not the send: `Get_Cluster_` clears bit 0x200 on
     # the pops it takes (colmove.cpp:70), so a cluster in hand is
     # visible on the wire. Waiting for ANY cluster rather than for
@@ -428,7 +437,8 @@ def main():
     print(f"click 2 (drop on column {target_job}) at native ({dx}, {dy})")
     predicted = cmove.predict_pops(pops, col.n_pops, col.max_farms,
                                    cluster, target_job)
-    client.inject_click(dx, dy)
+    livesend.click(client, dx, dy, screen=SCREEN_COLONY_SUMMARY,
+                   shape=livesend.on_colony_summary, label="drop")
     # The effect this one must have is the whole point of the tool,
     # so it is what is waited on. A drop that lands DIFFERENTLY never
     # satisfies it — hence the fall-through, which takes whatever the

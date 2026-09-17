@@ -43,6 +43,7 @@ toolenv.init_palette()
 
 from colony_move_hd import (Counter, click_at, native_png,  # noqa: E402
                             pump, wait_for)
+import livesend  # noqa: E402  (a live tool is a client: work order 129 A)
 from fixtures import fixture_name  # noqa: E402
 from screens.game_menu import gmdraw, nodes  # noqa: E402
 
@@ -254,13 +255,18 @@ def step_toggle(app, counter):
 def step_probe(app, counter):
     ok = open_menu(app) and click_box(app, "menu_save", nodes.SAVE, "save")
     strip = nodes.save_strips(app.client.state.fields)[9]
-    app.client.activate_field(strip.index)
+    livesend.activate(app.client, strip.index, screen=8,
+                      shape=livesend.in_game_menu(nodes.SAVE),
+                      field_type=strip.field_type, label="slot 10 strip")
     pump(app, 4)
     for ch in "ABCDEFGHIJKLMNO":          # fifteen keys in ONE burst
-        app.client.inject_key(ord(ch))
+        livesend.key(app.client, ord(ch), screen=8,
+                     shape=livesend.in_game_menu(nodes.SAVE),
+                     label="burst key")
     pump(app, 20)
     snap(app, "probe_burst_of_15_into_slot_10")
-    app.client.inject_key(pygame.K_ESCAPE)
+    livesend.key(app.client, pygame.K_ESCAPE, screen=8,
+                 shape=livesend.in_game_menu(nodes.SAVE), label="native ESC")
     landed = wait_for(app, lambda: node_is(app, nodes.MENU), 30.0,
                       "native ESC while editing -> menu")
     print(f"  native ESC while editing lands in the menu: {landed}")

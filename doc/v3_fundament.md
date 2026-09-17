@@ -2684,6 +2684,44 @@ the map came back, a click turned a colony-base choice into "Really trash
 your colony base for 100BC?", and the colony base of the loaded scratch game
 was scrapped (in memory; no save file changed) before anybody looked.
 
+**A LIVE DRIVER IS A CLIENT, and is bound by the rule the product is:
+identify the dialog from the list you just read, or send nothing.** Filed
+17 September 2026 (work order 129 A) from two incidents, a month apart in
+kind and identical in shape. Work order 122: a loop clicked CLOSE at a
+fixed native point until the map came back; one click turned a
+colony-base choice into "Really trash your colony base for 100BC?" and the
+scratch game's colony base was scrapped (in memory) before anybody looked.
+Work order 128 C: a driver saw screen 0 with a message box's field list,
+decided from that reading a moment later, and sent `ACTIVATE_FIELD 1` into
+the turn-start research prompt — which commits the row under the POINTER
+(tech.cpp:354-369) and, with the pointer over none, dereferenced null:
+orion2re died with SIGSEGV (open fix 23, "Activating a research choice row
+by field id crashes the game — an observation").
+
+Neither tool was careless about reading the screen; both decided from a
+reading that was one step old. So the rule is not "read the framebuffer
+after every click" — that one already existed and both obeyed it — but
+where the DECISION comes from: the field list of the state being sent
+into, at the moment of sending. `tools/livesend.py` is the one home for
+it, over the shape tests that already exist (`mapboxes.live_field`,
+`game_menu.nodes.classify`), and it RAISES rather than returning False: a
+tool that cannot say what is on screen has nothing to send, and carrying
+on regardless is precisely what both incidents did.
+
+**A COUNTER-TEST THAT RESTORES A FILE CAN BE MEASURING THE MUTATION.**
+17 September 2026, work order 128 B. A check was shown red by editing one
+character (`GAME_SCREEN_ID = 51` -> `50`) and the file was restored with
+`cp` — same size, same second — so Python's mtime-and-size check accepted
+the stale `__pycache__`, and the next run, the one meant to prove the tree
+green again, quietly ran the mutated bytecode and failed. The rule: clear
+the caches (`find . -name __pycache__ -not -path './.git/*' -exec rm -rf
+{} +`) or run the mutated suite with `python -B`. It belongs beside "a
+measurement that is not stable under its own threshold": there the
+instrument was too coarse, here the instrument was measuring a different
+program than the one on disk — and a red/green demonstration that silently
+measures the wrong code is worse than none, because it is the evidence
+everything else rests on.
+
 **On the colony screens a right click is help, not cancel.** Over a help
 region the game draws the entry and swallows the click (section 3, "A right
 click is not always Cancel"; the colony screen's table is transcribed in

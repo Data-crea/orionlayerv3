@@ -16522,6 +16522,107 @@ def main():
             app.user_settings = _go_real[2]
         _go_dir.cleanup()
 
+    # A LIVE TOOL IS A CLIENT (work order 129 A): `tools/livesend.py`
+    # identifies the dialog from the field list of the state it is handed
+    # at that moment and refuses otherwise. Twice a tool sent into a dialog
+    # it had misread — the scrapped colony base (122) and the SIGSEGV in
+    # the research prompt (128 C, open fix 23). Handed the wrong shape, the
+    # helper must send NOTHING and say so.
+    sys.path.insert(0, os.path.join(os.path.dirname(SCREENS_DIR), "tools"))
+    import livesend as _ls
+    from core.game_state import FieldInfo as _LsField
+    from screens.game_menu import nodes as _ls_nodes
+
+    class _LsClient:
+        def __init__(self, fields, screen):
+            self.log = []
+            self.state = type("S", (), {})()
+            self.state.fields = fields
+            self.state.current_screen = screen
+
+        def activate_field(self, i):
+            self.log.append(("act", i))
+
+        def inject_click(self, x, y):
+            self.log.append(("click", x, y))
+
+        def inject_key(self, k):
+            self.log.append(("key", k))
+
+    def _ls_fields(rows):
+        out = []
+        for _r in rows:
+            _f = _LsField()
+            (_f.index, _f.x, _f.y, _f.x_end, _f.y_end, _f.field_type,
+             _f.hotkey) = _r
+            out.append(_f)
+        return out
+    import json as _ls_json
+    _ls_map = _ls_fields(_ls_json.load(open(os.path.join(
+        os.path.dirname(SCREENS_DIR), "tools",
+        "galaxy_box_fields.json")))["closed"])
+    # The research prompt's shape under the map's own screen number — the
+    # list 128 C crashed the game in.
+    _ls_research = _ls_fields(
+        [(0, 0, 0, 0, 0, 0, 0)]
+        + [(_i + 1, 176, 51 + _i * 15, 394, 84 + _i * 15, 7, 0)
+           for _i in range(8)]
+        + [(9, 102, 30, 162, 45, 1, 0), (10, 0, 0, 639, 479, 7, 0)])
+    _ls_refused = 0
+    for _ls_name, _ls_call, _ls_state in (
+            ("activate into the research prompt",
+             lambda c: _ls.activate(c, 9, screen=0,
+                                    shape=_ls.on_galaxy_map, label="probe"),
+             (_ls_research, 0)),
+            ("activate an index the list does not hold",
+             lambda c: _ls.activate(c, 99, screen=0,
+                                    shape=_ls.on_galaxy_map, label="probe"),
+             (_ls_map, 0)),
+            ("activate a field of another type",
+             lambda c: _ls.activate(c, 9, screen=0, field_type=12,
+                                    shape=_ls.on_galaxy_map, label="probe"),
+             (_ls_map, 0)),
+            ("click where no field is",
+             lambda c: _ls.click(c, 5, 5, screen=0,
+                                 shape=_ls.on_galaxy_map, label="probe"),
+             (_ls_map, 0)),
+            ("key into a list of the wrong shape",
+             lambda c: _ls.key(c, ord("n"), screen=20,
+                               shape=_ls.on_colony_summary, label="probe"),
+             (_ls_map, 20)),
+            ("key with neither screen nor shape",
+             lambda c: _ls.key(c, 27, label="probe"),
+             (_ls_map, 0)),
+            ("the game on another screen",
+             lambda c: _ls.activate(c, 9, screen=0,
+                                    shape=_ls.on_galaxy_map, label="probe"),
+             (_ls_map, 8)),
+            ("a dialog the GAME menu is not showing",
+             lambda c: _ls.activate(c, 1, screen=8,
+                                    shape=_ls.in_game_menu(_ls_nodes.SAVE),
+                                    label="probe"),
+             (_ls_map, 8))):
+        _ls_c = _LsClient(*_ls_state)
+        try:
+            _ls_call(_ls_c)
+        except _ls.WrongDialog as _ls_err:
+            _ls_refused += 1
+            assert "nothing sent" in str(_ls_err), _ls_err
+        assert _ls_c.log == [], (_ls_name, _ls_c.log)
+    assert _ls_refused == 8, _ls_refused
+    # And it does send when the shape holds: the map's own list.
+    _ls_ok = _LsClient(_ls_map, 0)
+    _ls.activate(_ls_ok, 9, screen=0, shape=_ls.on_galaxy_map,
+                 field_type=0, rect=(244, 455, 298, 473), label="probe")
+    _ls.click(_ls_ok, 300, 200, screen=0, shape=_ls.on_galaxy_map,
+              label="probe")
+    _ls.key(_ls_ok, ord("g"), screen=0, shape=_ls.on_galaxy_map,
+            label="probe")
+    assert _ls_ok.log == [("act", 9), ("click", 300, 200), ("key", ord("g"))], \
+        _ls_ok.log
+    ok(f"livesend: {_ls_refused} wrong-shape sends refused with nothing sent, "
+       f"and the map's own list passes all three send kinds")
+
     # EVERY RUNNABLE TOOL IMPORTS IN A FRESH PROCESS (work order 126 D).
     # Screen modules read colours with no code default at import, and five
     # tools imported them before anything had initialised the palette —

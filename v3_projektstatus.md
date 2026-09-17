@@ -837,7 +837,7 @@ files under `doc/` and are only summarised here.
 | | |
 |---|---|
 | Python | 32,960 lines across 111 modules — `find . -name '*.py'`, `__pycache__` excluded, the smoke test's 6,400 included. The previous figure here (21,642 across 94) was carried from an unstated method and could not be reproduced |
-| Smoke test | `python tools/smoke_test.py` — **201 checks**, headless |
+| Smoke test | `python tools/smoke_test.py` — **202 checks**, headless |
 | Assets | 170 MB (select_race 68, galaxy_map 51, shared 23, new_game 21, colony_summary 1) |
 | Screens in HD | 9 of ~20–22 (the GAME menu overlay, work order Stop 2, every dialog of the popup; colony summary draws list, sidebar, scan box and galaxy inset, and MOVES POPS — the first HD gesture that drives the game; planets, brief 101, lists, sorts, restricts and returns) |
 | Setup from clone | `python tools/setup.py` (deps via the system package manager) |
@@ -4566,6 +4566,33 @@ negative type first, and a packed one; red with the old skipping loop
   status file; 2 match only text saying the marking was withdrawn or removed),
   and the map-lines check's single needle `"maplines.py"`. Count unchanged:
   201.
+
+### A live tool is a client — work order 129 A, 17 September 2026
+
+`tools/livesend.py`: every send identifies the dialog from the FIELD LIST of
+the state it is handed at that moment, and refuses — raising — otherwise.
+`activate` requires the index to exist in the live list and, where the caller
+names them, its type and native rect; `click` resolves the field the point
+would reach (lowest index wins, fields.cpp:1264-1283) and checks its type;
+`key` needs a screen or a shape, because ESC cascades. The shape tests are the
+existing ones: `mapboxes.live_field` (work order 128 C) for a field named by
+type and rect, `game_menu.nodes.classify` for the popup's dialogs, plus the
+colony summary's seven sort buttons at native y 446..469 (colsum.cpp:267-273,
+live 3 September 2026).
+
+- **Moved onto it:** `tools/colony_move_probe.py` (sort key, both scroll
+  activations, the pick-up and drop clicks), `tools/game_menu_hd.py` (the slot
+  strip, the fifteen-key burst, the native ESC), `tools/zoom_probe.py` (both
+  zoom activations, the arrow keys). **Not moved, and why:**
+  `tools/colony_move_hd.py`, `colony_drop_sweep.py`, `colony_drop_timing.py`
+  and `colony_roundtrip.py` send nothing themselves — they post pygame events
+  into the real screens, so the product's own guards decide; `ext_diag*.py`
+  and `struct_probe.py` read only.
+- **Smoke:** eight wrong-shape sends refused with nothing sent (the research
+  prompt's shape under screen 0 among them), and the map's own list passing all
+  three send kinds. **201 -> 202.**
+- **Fundament:** "A LIVE DRIVER IS A CLIENT" and "A COUNTER-TEST THAT RESTORES
+  A FILE CAN BE MEASURING THE MUTATION", both under Diagnosis.
 
 ## What is missing
 
