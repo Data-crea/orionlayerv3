@@ -55,3 +55,6 @@ running.
 - **G** — done: four readings e1a07e1 (colony + queue), e120dd6 (research),
   6e344ec (fleet), ad955b9 (races); open fix 22 DESCRIBED, NOT APPLIED; status
   section. Smoke **197**, exit 0. Parked: items 3-7.
+- **H** — done (Stop 1 of 127 only): report in
+  `evidence/work_order_126/H_reading_budget_stop1.md`, nothing in the tree
+  changed by it. Parked: item 8.

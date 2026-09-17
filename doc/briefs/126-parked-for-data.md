@@ -100,3 +100,23 @@ Each reading ends with its own list, every question answerable in a line:
 `doc/fleet_screen_reading.md` (17), `doc/races_screen_reading.md` §8 (15).
 They are not copied here — one home. **Meanwhile:** nothing built.
 
+## 8. Work order 127 Stop 1 — the report, and Data's four decisions (part H)
+
+**What:** Stop 1 done as written, no file in the tree changed. The report is
+outside the tree: `~/orionlayer-fixtures/evidence/work_order_126/H_reading_budget_stop1.md`.
+Headlines: the mandatory reading is CLAUDE.md + the fundament, 195,162 bytes
+(the status document is not ordered read; with it, 752,296); 26 document reads
+in 20 checks, all in `tools/smoke_test.py`; a ceiling of 80 KB proposed
+(60 KB only with one-sentence entries, which lose weight); the threshold
+principle cannot be shortened (388 B against 396 B); decision 38 is five rules.
+**One finding checked by hand:** the decision-28 check (smoke_test.py:10284-10289)
+asserts "decision 28" and "DEVIATION" anywhere in the whole fundament, and
+decision 28's exception paragraph carries neither word — it passes on text
+from other entries, i.e. asserts nothing today. Not fixed (127 Stop 2 part 1
+re-proves every document check).
+**Why yours:** Stop 1 ends in Data's decisions. **Options, one line each:**
+the budget figure (80 KB / 60 KB / other); the two kernel samples acceptable
+(yes / no); archive granularity (per work order / per month / one file); the
+text-share warning threshold (the report proposes a figure).
+**Meanwhile:** nothing of Stop 2.
+
