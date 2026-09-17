@@ -16248,6 +16248,61 @@ def main():
             app.user_settings = _go_real[2]
         _go_dir.cleanup()
 
+    # THE COMMIT IS COUPLED TO THIS SUITE (work order 126 part B, decision
+    # 31). A commit once went through after a run had exited 139, because
+    # nothing connected the two; `tools/githooks/pre-commit` now refuses
+    # any exit but 0. The rule is asserted by RUNNING the hook against a
+    # stub suite in a throwaway tree — a real SIGSEGV, a plain failure, a
+    # clean exit that never printed its PASSED line, and a pass — so a
+    # hook edited into a formality fails here rather than at the next
+    # crashed run. Whether THIS clone has the hook switched on is git
+    # config, which a clone does not inherit: reported, not asserted,
+    # because `tools/setup.py` is what switches it on (decision 38's
+    # shape — a state to explain, not an error).
+    import shutil as _hk_sh
+    import subprocess as _hk_sp
+    import tempfile as _hk_tf
+    _hk_root = os.path.dirname(SCREENS_DIR)
+    _hk_src = os.path.join(_hk_root, "tools", "githooks", "pre-commit")
+    assert os.path.isfile(_hk_src) and os.access(_hk_src, os.X_OK), _hk_src
+    with open(os.path.join(_hk_root, "tools", "setup.py"),
+              encoding="utf-8") as _fh:
+        _hk_setup = _fh.read()
+    assert 'HOOKS_PATH = "tools/githooks"' in _hk_setup, (
+        "tools/setup.py no longer points core.hooksPath at tools/githooks")
+    _hk_stubs = {
+        "segfault": ("import os, signal\nprint('  ok  one')\n"
+                     "os.kill(os.getpid(), signal.SIGSEGV)\n", 139, 1),
+        "failure": ("raise AssertionError('red')\n", 1, 1),
+        "silent": ("print('nothing')\n", 0, 1),
+        "green": ("print('SMOKE TEST PASSED — 1 checks green')\n", 0, 0),
+    }
+    with _hk_tf.TemporaryDirectory() as _hk_tmp:
+        os.makedirs(os.path.join(_hk_tmp, "tools", "githooks"))
+        _hk_dst = os.path.join(_hk_tmp, "tools", "githooks", "pre-commit")
+        _hk_sh.copy2(_hk_src, _hk_dst)
+        for _hk_name, (_hk_body, _hk_suite_exit, _hk_want) in _hk_stubs.items():
+            with open(os.path.join(_hk_tmp, "tools", "smoke_test.py"), "w",
+                      encoding="utf-8") as _fh:
+                _fh.write(_hk_body)
+            _hk_suite = _hk_sp.run(
+                ["sh", "-c", "python tools/smoke_test.py >/dev/null 2>&1"],
+                cwd=_hk_tmp).returncode
+            assert _hk_suite == _hk_suite_exit, (_hk_name, _hk_suite)
+            _hk_got = _hk_sp.run(["sh", _hk_dst], cwd=_hk_tmp,
+                                 capture_output=True, text=True,
+                                 env=dict(os.environ, TMPDIR=_hk_tmp))
+            assert _hk_got.returncode == _hk_want, (
+                _hk_name, _hk_got.returncode, _hk_got.stdout[-400:])
+    _hk_cfg = _hk_sp.run(["git", "config", "--get", "core.hooksPath"],
+                         cwd=_hk_root, capture_output=True, text=True)
+    report("pre-commit hook in this clone: " + (
+        "ON (core.hooksPath = tools/githooks)"
+        if _hk_cfg.stdout.strip() == "tools/githooks"
+        else "OFF — run: python tools/setup.py"))
+    ok("pre-commit hook refuses a commit on exit 139, on a failure and on a "
+       "run without its PASSED line, and allows it on a pass")
+
     # CLAUDE.md is what a Claude Code session reads before touching
     # anything, so a stale pointer in it misleads at exactly the
     # moment nobody is watching. Two things can rot: a path that no

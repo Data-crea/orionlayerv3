@@ -1,0 +1,41 @@
+#!/bin/sh
+# The commit is coupled to the smoke test, mechanically (work order 126,
+# part B; fundament decision 31). A commit once went through after a run
+# had exited 139, because nothing connected the two. Now git itself runs
+# the FULL suite before it writes a commit, and any exit other than 0 —
+# a failed assertion, a crash, a segfault (139), a kill (137) — refuses it.
+#
+# Why a hook and not a wrapper script: a wrapper couples only the commits
+# made through it, and a plain `git commit` is the one habit every session
+# already has. The hook lives in the tree so it is versioned and reviewed
+# like the suite; `tools/setup.py` points `core.hooksPath` here, because a
+# clone does not inherit git config. `git commit --no-verify` bypasses it,
+# and that is a deliberate act, not an accident.
+#
+# What it tests is the WORKING TREE, not only the staged content: the
+# suite imports what is on disk. Commit from a tree whose unstaged state
+# you would also accept.
+#
+# Exit 139 is not retried here. The rule is to re-run once BY HAND, record
+# both exits, and never commit on the crashed run; a hook that retried
+# would turn a sporadic crash into a green commit, which is the fault this
+# file exists to close.
+ROOT=$(cd "$(dirname "$0")/../.." && pwd)
+LOG="$ROOT/.git/smoke-pre-commit.log"
+[ -d "$ROOT/.git" ] || LOG="${TMPDIR:-/tmp}/orionlayer-smoke-pre-commit.log"
+cd "$ROOT" || exit 1
+python tools/smoke_test.py >"$LOG" 2>&1
+status=$?
+if [ "$status" -ne 0 ]; then
+    tail -n 30 "$LOG"
+    echo "pre-commit: smoke test exited $status — commit refused (log: $LOG)"
+    [ "$status" -eq 139 ] && echo "pre-commit: 139 is a segfault, not green. Re-run once by hand and record both exits."
+    exit 1
+fi
+if ! grep -q "^SMOKE TEST PASSED" "$LOG"; then
+    tail -n 30 "$LOG"
+    echo "pre-commit: smoke test exited 0 without its PASSED line — commit refused (log: $LOG)"
+    exit 1
+fi
+grep "^SMOKE TEST PASSED" "$LOG"
+exit 0

@@ -837,7 +837,7 @@ files under `doc/` and are only summarised here.
 | | |
 |---|---|
 | Python | 32,960 lines across 111 modules — `find . -name '*.py'`, `__pycache__` excluded, the smoke test's 6,400 included. The previous figure here (21,642 across 94) was carried from an unstated method and could not be reproduced |
-| Smoke test | `python tools/smoke_test.py` — **194 checks**, headless |
+| Smoke test | `python tools/smoke_test.py` — **195 checks**, headless |
 | Assets | 170 MB (select_race 68, galaxy_map 51, shared 23, new_game 21, colony_summary 1) |
 | Screens in HD | 9 of ~20–22 (the GAME menu overlay, work order Stop 2, every dialog of the popup; colony summary draws list, sidebar, scan box and galaxy inset, and MOVES POPS — the first HD gesture that drives the game; planets, brief 101, lists, sorts, restricts and returns) |
 | Setup from clone | `python tools/setup.py` (deps via the system package manager) |
@@ -4271,6 +4271,27 @@ figure owns the overlap.
   old slot rule it fails (426 of 630 at 1920x1080). Count 193 -> **194**.
 - **Not live-tested:** a headless measurement; the pick-up is local and sends
   nothing, and the drop path is unchanged.
+
+### The commit is coupled to the smoke test — work order 126 B, 17 September 2026
+
+**A hook, in the tree:** `tools/githooks/pre-commit` runs the full suite
+before git writes a commit and refuses it on any exit but 0 (a failure,
+139, 137) and on a zero exit without the PASSED line. `tools/setup.py`
+sets `core.hooksPath = tools/githooks` (and `--check` reports it);
+decision 31 is amended with the rule and why a hook and not a wrapper. It
+tests the working tree, not only the index. `--no-verify` bypasses it.
+
+- **Shown** in a throwaway clone with the hook on: a suite replaced by one
+  that SIGSEGVs (shell exit 139) and by one that fails — no commit created,
+  HEAD unchanged; the real suite green — the commit created. Evidence in
+  `~/orionlayer-fixtures/evidence/work_order_126/B_hook_*.txt`.
+- **Smoke:** one new check runs the hook against four stub suites (SIGSEGV,
+  failure, silent zero exit, pass) and reports whether this clone has the
+  hook on. **194 -> 195.**
+- **Fundament, filed from the 16 September handover:** decision 5 gains
+  "one function makes drawing and hit-testing AGREE, not RIGHT" (the stacked
+  figures, 165 of 210); Diagnosis gains the colony screen's right click as a
+  live-protocol line; decision 31 the coupling above.
 
 ## What is missing
 

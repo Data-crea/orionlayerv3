@@ -53,6 +53,12 @@ from screens.colony_summary.colonyfigures import (  # noqa: E402
 from core.config import load_settings      # noqa: E402
 from core.helptext import help_file        # noqa: E402
 
+#: Where git looks for this project's hooks. The pre-commit hook runs the
+#: smoke test and refuses the commit on any exit but 0 (work order 126,
+#: decision 31). A clone does not inherit git config, so setup switches it
+#: on; the smoke test holds this line to the directory.
+HOOKS_PATH = "tools/githooks"
+
 GM = os.path.join(ROOT, "screens", "galaxy_map", "assets")
 CS = os.path.join(ROOT, "screens", "colony_summary", "assets")
 
@@ -225,6 +231,19 @@ def main():
         for path, what in missing_inputs:
             print(f"    MISSING  {what} — {os.path.relpath(path, ROOT)}")
         return 1
+
+    hooks = subprocess.run(["git", "config", "--get", "core.hooksPath"],
+                           cwd=ROOT, capture_output=True, text=True)
+    if hooks.stdout.strip() == HOOKS_PATH:
+        print(f"  Commit hook: ok ({HOOKS_PATH})\n")
+    elif args.check:
+        print(f"  Commit hook: OFF — setup sets core.hooksPath to {HOOKS_PATH}\n")
+    elif os.path.isdir(os.path.join(ROOT, ".git")):
+        subprocess.run(["git", "config", "core.hooksPath", HOOKS_PATH],
+                       cwd=ROOT, check=True)
+        print(f"  Commit hook: switched on ({HOOKS_PATH})\n")
+    else:
+        print("  Commit hook: not a git clone, nothing to switch on\n")
 
     print("  Generated artwork:")
     failed = []
