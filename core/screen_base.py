@@ -101,6 +101,22 @@ class ScreenBase(HelpMixin):
         self.boxes = load_boxes(path, self.app.win_w,
                                 self.app.win_h) if path else []
 
+    def wants_original(self):
+        """True when this screen cannot vouch for what it would draw.
+
+        Decision 22 promises the game stays playable on a screen HD
+        does not know. This is the same promise one step in: a screen
+        that DOES know the id but cannot trust its own picture — an
+        extractor file absent, a reconstruction the game's field list
+        contradicts — hands over to the original view rather than draw
+        a list it cannot vouch for.
+
+        `App._showing_original` asks this, so such a screen gets the
+        game's own picture AND the click forwarding that came with it
+        in work order 130 A. False here: a screen says so for itself.
+        """
+        return False
+
     def exit(self):
         """Screen deactivated. Clean up."""
         self.active = False

@@ -230,8 +230,18 @@ class App:
         turn-start research dialogs (52, 53) were a dead end inside
         OrionLayer's window.
         """
-        return self.connected and (
-            self.render_mode == "original" or self.dispatcher.use_original)
+        if not self.connected:
+            return False
+        if self.render_mode == "original" or self.dispatcher.use_original:
+            return True
+        # A THIRD WAY IN, work order 130 E: a screen that KNOWS the id
+        # but cannot vouch for what it would draw. The research select
+        # screen does this when the game's field list contradicts its
+        # reconstruction or the extracted names are absent — it hands
+        # over rather than draw a list it cannot stand behind, and the
+        # player answers the dialog through the picture instead.
+        top = self.dispatcher.top
+        return bool(top is not None and top.wants_original())
 
     def _handle_click(self, screen_x, screen_y):
         if self.editor.active:

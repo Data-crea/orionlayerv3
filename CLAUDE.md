@@ -62,7 +62,7 @@ Git enforces it: `tools/githooks/pre-commit` runs the suite and refuses
 the commit on any exit but 0, 139 included. `python tools/setup.py`
 switches the hook on in a clone (decision 31).
 
-210 checks, headless, no orion2re needed. **The count must not go
+212 checks, headless, no orion2re needed. **The count must not go
 down.** If a change makes a check obsolete, replace it — do not
 delete it. It went down exactly once, on 12 September 2026, when
 Phase B deleted the frame machinery the checks were about (decision
@@ -114,7 +114,7 @@ doc/                    the documents in the table above
 mods/                   file-level overrides; example_mod works
 ```
 
-Nine screens exist: main menu, new game, select race, custom race,
+Ten screens exist: main menu, new game, select race, custom race,
 empire identity, galaxy map, colony summary (list, sidebar, scan
 box and galaxy inset; sort and RETURN wired, scrolling for
 viewing only, and the population move click-click on the rows —
@@ -124,9 +124,16 @@ wired; sending ships is not built, and the range restriction is a
 marked gap in the HD list), and the GAME menu overlay
 (`screens/game_menu/screen.py`: the whole tree behind the galaxy
 map's GAME button — slot names from `doc/ext_save_slots.patch` (applied),
-the volume bars are built from work order 124, decisions 59-62).
+the volume bars are built from work order 124, decisions 59-62),
+and research select (`screens/research_select/`, wire id 53, work
+order 130: the eight category panels, their rows and the commit, with
+the frame and the artwork still to come — it hands BACK to the
+fallback whenever the game's own field list contradicts the list it
+reconstructed, or an extractor file is absent).
 Screens without an HD version fall back to the original framebuffer,
-so the game is always playable.
+so the game is always playable — and since work order 130 A that
+fallback shows the picture AND forwards clicks, so a dialog HD has no
+screen for can be answered in OrionLayer's window.
 
 **Files over 300 lines are listed in `v3_projektstatus.md` with their
 count** — the list is meant to be uncomfortable to extend. Split

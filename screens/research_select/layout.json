@@ -1,0 +1,13 @@
+{
+  "_comment": "OrionLayer's OWN wording for the research select screen. Everything the GAME says comes from the player's files instead - the field and application names from TECHNAME.LBX (core/technames.py) and the panel's words from BILLTEXT.LBX (core/billtext.py). What is here is the wording OrionLayer owns: a title the original paints into TECHSEL art rather than printing, and the sentences it says when it cannot draw the list (decision 15 - a renderer draws what it is handed and does not know the words).",
+  "title": "SELECT NEW RESEARCH",
+  "title_note": "HD EXTENSION. The original's headline is part of the TECHSEL.LBX panel art and is not a string tech.cpp prints, so there is nothing to transcribe - doc/tech_change_reading.md section 3 has the panel's own labels as NOT SETTLED. Marked in screen.py and held by a smoke check.",
+  "fallback": {
+    "names_missing": "Research names not extracted - run: python tools/techname_extract.py",
+    "wording_missing": "Research panel wording not extracted - run: python tools/billtext_extract.py",
+    "unvalidated": "The game's field list does not match the reconstructed list; showing the game's own picture instead.",
+    "no_player": "No player record on the wire yet."
+  },
+  "cost_suffix": " RP",
+  "cost_suffix_note": "DEVIATION, marked: tech.cpp:631-639 picks \"%i RP\", \"%i FP\" or \"%i PR\" from MOX::_settings.language, which is not in the settings spec (doc/tech_change_reading.md section 3, question 5). HD prints RP, which is right for English and for language 3, and wrong for 1 and 4."
+}

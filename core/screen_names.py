@@ -68,10 +68,16 @@ SCREENS = {
     #: fix 24): the science room that presents a completed project and the
     #: SELECT NEW RESEARCH list that follows it, both of which run under
     #: SCREEN_MAIN and would otherwise be indistinguishable from the galaxy
-    #: map. No HD screen claims either, so the dispatcher falls back to the
-    #: original picture (decision 22).
+    #: map.
+    #: 52 has no HD screen and falls back to the original picture
+    #: (decision 22) — which since work order 130 A is a picture that
+    #: also forwards clicks, so the presentation dialog can be answered
+    #: inside OrionLayer's window.
+    #: 53 is `screens/research_select/` since work order 130 E, and it
+    #: hands BACK to that same fallback whenever it cannot vouch for the
+    #: list it would draw (`ScreenBase.wants_original`).
     52: ("(synthetic)",     None),
-    53: ("(synthetic)",     None),
+    53: ("(synthetic)",     "research_select"),
 }
 
 #: The last value of orion2re's own SCREEN enum:

@@ -131,6 +131,22 @@ ENTRY_POS_SELECT = ((176, 30), (403, 31), (176, 135), (403, 135),
 ENTRY_POS_CHANGE = ((95, 30), (322, 31), (95, 135), (322, 135),
                     (95, 240), (322, 240), (95, 347), (322, 347))
 
+#: Where `Display_Entry_Text_` puts an entry's three kinds of text
+#: (tech.cpp:683-738), relative to the entry origin:
+#:   the cost string  right-aligned at (x + 212, y + 2), font style 3
+#:   the field name   at (x, y + 21), squeezed into 218 px, style 4
+#:   an app name k    at (x + 10, y + 21 + _app_name_y[k]), 208 px
+#: `_app_name_y` is tech.cpp:34. Note what this makes row 0: its
+#: rectangle starts at y + 21, the same line the FIELD NAME is printed
+#: on, and its own label sits 19 px below — which is why row 0 is 34 px
+#: tall and the others 15.
+COST_DX, COST_DY = 212, 2
+FIELD_NAME_DX, FIELD_NAME_DY = 0, 21
+FIELD_NAME_WIDTH = 218
+APP_LABEL_DX = 10
+APP_LABEL_WIDTH = 208
+APP_NAME_Y = (19, 34, 49, 64)
+
 #: The maximum rows one entry can show — `tech[4]` has four slots, and
 #: the placeholder row uses one of them.
 MAX_ROWS = 4
@@ -178,6 +194,28 @@ class Entry:
                 self.y + ROW_Y_BASE + ROW_Y1[row],
                 self.x + ROW_X_SPAN,
                 self.y + ROW_Y_BASE + ROW_Y2[row])
+
+    def cost_anchor(self):
+        """Where the "N RP" string ENDS — it is printed right-aligned."""
+        return (self.x + COST_DX, self.y + COST_DY)
+
+    def field_name_anchor(self):
+        """(x, y, max width) of the field name (tech.cpp:700)."""
+        return (self.x + FIELD_NAME_DX, self.y + FIELD_NAME_DY,
+                FIELD_NAME_WIDTH)
+
+    def app_label_anchor(self, row):
+        """(x, y, max width) of one row's application name.
+
+        Inside `row_rect(row)` but not at its top for row 0: the field
+        name occupies that line (tech.cpp:735, :492).
+        """
+        if not 0 <= row < len(self.apps):
+            raise IndexError(f"entry {self.index} has {len(self.apps)} "
+                             f"rows, asked for {row}")
+        return (self.x + APP_LABEL_DX,
+                self.y + ROW_Y_BASE + APP_NAME_Y[row],
+                APP_LABEL_WIDTH)
 
     def __repr__(self):
         return (f"Entry(index={self.index}, group={self.group}, "

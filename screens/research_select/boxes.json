@@ -1,0 +1,80 @@
+{
+  "1920x1080": [
+    {
+      "name": "science_room",
+      "style": {
+        "skin": "thin_border"
+      }
+    },
+    {
+      "name": "panel",
+      "style": {
+        "skin": "thin_border"
+      }
+    },
+    {
+      "name": "title",
+      "style": {
+        "skin": "text",
+        "font_size": 22,
+        "align": "center"
+      }
+    },
+    {
+      "name": "top_band",
+      "hidden": true
+    },
+    {
+      "name": "bottom_band",
+      "hidden": true
+    },
+    {
+      "name": "entry_0",
+      "style": {
+        "skin": "inner_panel"
+      }
+    },
+    {
+      "name": "entry_1",
+      "style": {
+        "skin": "inner_panel"
+      }
+    },
+    {
+      "name": "entry_2",
+      "style": {
+        "skin": "inner_panel"
+      }
+    },
+    {
+      "name": "entry_3",
+      "style": {
+        "skin": "inner_panel"
+      }
+    },
+    {
+      "name": "entry_4",
+      "style": {
+        "skin": "inner_panel"
+      }
+    },
+    {
+      "name": "entry_5",
+      "style": {
+        "skin": "inner_panel"
+      }
+    },
+    {
+      "name": "entry_6",
+      "style": {
+        "skin": "inner_panel"
+      }
+    },
+    {
+      "name": "entry_7",
+      "style": {
+        "skin": "inner_panel"
+      }
+    }
+  ]
+}
