@@ -17692,6 +17692,280 @@ def main():
        "each with its own reason, and its one HD EXTENSION says the "
        "list window is still the game's")
 
+    # ── THE FLEETS SCREEN, DRIVEN BY A REAL SNAPSHOT ──────────────
+    #
+    # Work order 134 D. The state goes in as BYTES and comes out of
+    # core.game_state.parse_state, so the FLTS block's own layout is
+    # under test and not a dict somebody typed. A dict would have proved
+    # the screen and left the parser — the half that faces the engine —
+    # untested, which is where a wrong offset lives.
+    import struct as _fl_s
+    import core.game_state as _gs_mod
+    import colony_list_preview as _fl_plv
+    from core.game_state import (parse_state as _fl_parse,
+                                 SETTINGS_SIZE as _FL_SET,
+                                 PLAYER_SIZE as _FL_PL,
+                                 LEADER_SIZE as _FL_LD,
+                                 ANTARAN_SIZE as _FL_AN)
+    from core.structs import ship as _fl_shipspec
+    from screens.fleets import fltgeom as _flg, fltwire as _flw
+
+    _FL_CELLS = _flg.native_cells()
+
+    def _fl_ship_bytes(name, owner, builder, shield=2):
+        _b = bytearray(_fl_shipspec.SIZE)
+        _b[0:len(name)] = name.encode("latin-1")
+        _b[18] = shield
+        _b[92] = 3
+        _b[93] = builder
+        _b[99] = owner
+        return bytes(_b)
+
+    def _fl_snapshot(icons=6, first_row=0, owner=1, relocate=0,
+                     selected=(1, 2), with_block=True, rows=2,
+                     shown=None):
+        """A STATE_SNAPSHOT payload with the fleet screen up.
+
+        The FLTS block sits after FSEL, exactly where the engine writes
+        it, so a parser that read it too early or too late fails here.
+        """
+        _shown = icons if shown is None else shown
+        _b = bytearray()
+        _b += _fl_s.pack("<hbihhhhhB b", 4, 0, 100, 1, 2, 0, icons, 0, 0, 0)
+        _b += _fl_s.pack("<hhhhh", 15, 0, 0, 759, 600)
+        _b += bytes(_FL_SET)
+        _b += bytes(_FL_PL * 8)
+        _b += _fl_s.pack("<h", 0)                      # stars
+        _b += _fl_s.pack("<h", icons)                  # ships
+        for _i in range(icons):
+            _b += _fl_ship_bytes(f"Ship {_i}", 1, _i % 8)
+        _b += _fl_s.pack("<h", 0)                      # colonies
+        _b += _fl_s.pack("<h", 0)                      # planets
+        _b += bytes([0])                            # nebulas
+        _b += bytes(_FL_LD * 67)
+        _b += bytes(_FL_AN)
+        _b += _fl_s.pack("<h", 0)                      # ship icons
+        _b += _fl_s.pack("<8h", 0, 0, 0, 0, 0, 0, 0, 0)   # newgame temps
+        _b += b"FSEL" + _fl_s.pack("<hhh", -1, 0, 0)   # open fix 20, empty
+        if with_block:
+            _b += b"FLTS"
+            _b += _fl_s.pack("<12h", 2, 5, owner, icons, _shown, rows,
+                          first_row, len(selected), 1, -1, 1, 1)
+            _b += bytes([relocate, 0])
+            _b += _fl_s.pack("<h", icons)
+            for _i in range(icons):
+                _b += _fl_s.pack("<hB", _i, 1 if _i in selected else 0)
+        return _fl_parse(bytes(_b))
+
+    def _fl_fields(count, hotkeys=True, first_row=0):
+        """A FIELD_LIST the way Add_Fleet_Screen_Fields_ builds it."""
+        _out = []
+        for _i in range(count):
+            _x, _y = _FL_CELLS[_i]
+            _f = _gs_mod.FieldInfo()
+            _f.index, _f.x, _f.y = 10 + _i, _x, _y
+            _f.x_end, _f.y_end = _x + 58, _y + 57
+            _f.field_type, _f.hotkey = 7, 0
+            _out.append(_f)
+        if hotkeys:
+            for _hk, _ft in ((ord("S"), 0), (ord("A"), 0), (0x1B, 0),
+                             (ord("L"), 0), (ord("R"), 7), (ord("U"), 1),
+                             (ord("C"), 1), (ord(","), 0), (ord("."), 0),
+                             (ord("-"), 0), (ord("+"), 0)):
+                _f = _gs_mod.FieldInfo()
+                _f.index = 100 + len(_out)
+                _f.x = _f.y = 0
+                _f.x_end = _f.y_end = 1
+                _f.field_type, _f.hotkey = _ft, _hk
+                _out.append(_f)
+        return _out
+
+    _fl_app, _fl_other = _fl_plv.build_screen(1920, 1080)
+    _fl_app.dispatcher.switch_to("fleets")
+    _fl_scr = _fl_app.dispatcher.screens["fleets"]
+    _fl_surf = pygame.Surface((1920, 1080))
+    _fl_sent = []
+    _fl_app.client.select_ship = lambda i, sel: _fl_sent.append((i, sel))
+    _fl_app.client.activate_field = lambda fid: _fl_sent.append(("act", fid))
+    _fl_app.client.inject_click = lambda x, y: _fl_sent.append(("click", x, y))
+
+    # 1. THE BLOCK PARSES AND THE SCREEN DRAWS IT.
+    _fl_gs = _fl_snapshot()
+    _fl_gs.fields = _fl_fields(6)
+    assert _fl_gs.fleet_screen is not None, (
+        "the FLTS block did not parse out of a real snapshot — either "
+        "the layout moved or it is no longer written after FSEL")
+    assert _fl_gs.fleet_screen["ship_idx"] == list(range(6))
+    assert _fl_gs.fleet_screen["ship_selected"] == [
+        False, True, True, False, False, False]
+    _fl_scr.update(_fl_gs)
+    assert _fl_scr._view.state == _flw.READY, _fl_scr._view.state
+    assert not _fl_scr.wants_original()
+    assert [r[1] for r in _fl_scr._view.rows] == list(range(6))
+    assert _fl_scr._view.selected_ships() == [1, 2]
+    _fl_scr.render(_fl_surf)
+
+    # 2. THE FOUR REFUSALS, EACH ON A REAL SNAPSHOT, and each says why.
+    #    A screen that hands over without a sentence is the failure
+    #    decision 22 and 61 are both about.
+    for _fl_make, _fl_want in (
+            (lambda: (_fl_snapshot(with_block=False), _fl_fields(6)),
+             _flw.NO_BLOCK),
+            (lambda: (_fl_snapshot(), None), _flw.NO_FIELDS),
+            (lambda: (_fl_snapshot(icons=0, rows=0, selected=()),
+                      _fl_fields(0)), _flw.NO_STACK),
+            (lambda: (_fl_snapshot(), _fl_fields(2)), _flw.MISMATCH)):
+        _fl_g, _fl_f = _fl_make()
+        _fl_g.fields = _fl_f
+        _fl_scr.update(_fl_g)
+        assert _fl_scr._view.state == _fl_want, (
+            _fl_want, _fl_scr._view.state)
+        assert _fl_scr.wants_original(), _fl_want
+        assert _fl_scr.fallback_reason(), (
+            f"{_fl_want}: the screen handed over and said nothing")
+        assert _fl_scr.problems
+        # AND IT SENDS NOTHING while it is refusing.
+        _fl_sent.clear()
+        _fl_scr.handle_click(960, 540)
+        _fl_scr.handle_mousewheel(1, 960, 540)
+        _fl_scr.handle_key(27)
+        assert _fl_sent == [], (_fl_want, _fl_sent)
+        _fl_scr.render(_fl_surf)
+
+    # THE MISMATCH IS NOT A BLANKET REFUSAL: a FOREIGN stack adds no
+    # big-icon fields at all (flt2.cpp:312-322), so the same missing
+    # fields must be READY when the stack is not ours.
+    _fl_g = _fl_snapshot(owner=5)
+    _fl_g.fields = _fl_fields(0)
+    _fl_scr.update(_fl_g)
+    assert _fl_scr._view.state == _flw.READY and not _fl_scr._view.own_stack, (
+        "a foreign stack was read as a mismatch; the field list is "
+        "empty there by design and the owner in the block says so")
+
+    # 3. DRAW AND HIT-TEST ARE THE SAME GEOMETRY (decision 5). Click the
+    #    centre of every drawn cell and the slot that answers must be
+    #    the slot that was drawn.
+    _fl_gs = _fl_snapshot()
+    _fl_gs.fields = _fl_fields(6)
+    _fl_scr.update(_fl_gs)
+    _fl_slots = _fl_scr.icon_slots()
+    assert len(_fl_slots) == _flg.GRID_MAX_ICONS, len(_fl_slots)
+    for _fl_i, _fl_rect in enumerate(_fl_slots):
+        assert _fl_scr._slot_at(*_fl_rect.center) == (
+            _fl_i if _fl_i < 6 else None), _fl_i
+    # ...and a click on a drawn cell sends MSG_SELECT_SHIP for the ship
+    #    that cell shows, with the selection INVERTED.
+    _fl_sent.clear()
+    _fl_scr.handle_click(*_fl_slots[1].center)
+    assert _fl_sent == [(1, False)], _fl_sent   # ship 1 was selected
+    _fl_sent.clear()
+    _fl_scr.handle_click(*_fl_slots[3].center)
+    assert _fl_sent == [(3, True)], _fl_sent
+
+    # 4. REFUSED WHERE THE ENGINE REFUSES IT (decision 33): a foreign
+    #    stack, and relocate mode 1 where the painting is off entirely
+    #    (flt1.cpp:413).
+    for _fl_g in (_fl_snapshot(owner=5), _fl_snapshot(relocate=1)):
+        _fl_g.fields = _fl_fields(6)
+        _fl_scr.update(_fl_g)
+        _fl_sent.clear()
+        _fl_scr.handle_click(*_fl_slots[3].center)
+        assert _fl_sent == [], _fl_sent
+
+    # 5. THE TWO FILTERS GET A CLICK, THE REST AN ACTIVATION. This is
+    #    not a style choice: ACTIVATE_FIELD returns a type-1 field's id
+    #    without toggling it (fields.cpp:1018-1024, :1292-1297), so an
+    #    activated filter never changes.
+    _fl_gs = _fl_snapshot()
+    _fl_gs.fields = _fl_fields(6)
+    _fl_scr.update(_fl_gs)
+    for _fl_name, _fl_kind in (("btn_support", "click"),
+                               ("btn_combat", "click"),
+                               ("btn_all", "act"), ("btn_return", "act"),
+                               ("btn_scrap", "act"), ("btn_leaders", "act"),
+                               ("btn_relocate", "act")):
+        _fl_box = _fl_scr.box_by_name(_fl_name)
+        _fl_sent.clear()
+        _fl_scr.handle_click(*_fl_box.screen_rect.center)
+        assert _fl_sent and _fl_sent[0][0] == _fl_kind, (
+            _fl_name, _fl_kind, _fl_sent)
+
+    # 6. THE SEVEN CONTROLS' LIVE STATE IS THE FIELD LIST'S ANSWER.
+    #    LEADERS is the case worth the check: with no officer the
+    #    builder adds it as a HIDDEN field with no hotkey at all
+    #    (flt1.cpp:1238-1240), so it must read as dead.
+    assert "btn_leaders" in _fl_scr.enabled_buttons()
+    _fl_gs.fields = [f for f in _fl_gs.fields if f.hotkey != ord("L")]
+    _fl_scr.update(_fl_gs)
+    assert "btn_leaders" not in _fl_scr.enabled_buttons(), (
+        "LEADERS reads as live with no L field in the list")
+
+    # 7. EVERY BOX LIES INSIDE THE FRAME'S ONE OPENING, at every
+    #    resolution the file carries. The frame is plain-scaled over the
+    #    reference area, so this is a reference-space question and the
+    #    answer must hold for a box an F5 drag moved as well.
+    _fl_open = _sjson.load(io.open(
+        os.path.join(SCREENS_DIR, "fleets", "layout.json"),
+        encoding="utf-8"))["frame"]["opening"]
+    _fl_ox, _fl_oy, _fl_ow, _fl_oh = _fl_open
+    _fl_boxfile = _sjson.load(io.open(
+        os.path.join(SCREENS_DIR, "fleets", "boxes.json"), encoding="utf-8"))
+    from core.box import load_boxes as _fl_load
+    for _fl_key in _fl_boxfile:
+        _fl_w, _fl_h = (int(v) for v in _fl_key.split("x"))
+        _fl_out = []
+        for _fl_b in _fl_load(os.path.join(SCREENS_DIR, "fleets"),
+                              _fl_w, _fl_h):
+            _bx, _by, _bw, _bh = _fl_b.ref_rect
+            if (_bx < _fl_ox or _by < _fl_oy
+                    or _bx + _bw > _fl_ox + _fl_ow
+                    or _by + _bh > _fl_oy + _fl_oh):
+                _fl_out.append(_fl_b.name)
+        assert not _fl_out, (
+            f"at {_fl_key} these boxes leave the frame's opening "
+            f"{_fl_open}: {_fl_out}. Content outside it slides under "
+            f"the ring")
+    assert len(_fl_boxfile["1920x1080"]) == (
+        len(_flg.REGIONS) + len(_flg.CONTROLS)), (
+            "boxes.json and fltgeom disagree about how many boxes this "
+            "screen has")
+
+    # 8. THE SEAT KEEPS THE ORIGINAL'S PROPORTIONS — one factor for both
+    #    axes, which is what holds the inset map at 305:182.
+    #    Box_Fleet_Screen_Scanned_Star_ hardcodes 1659 and 2197, which
+    #    are 506000/305 and 400000/182 (movebox.cpp:193-199), so a map
+    #    box of another shape puts the star boxes off the stars.
+    _fl_seated = _flg.seat_regions(_fl_open)
+    _fl_f, _, _ = _flg.seat(_fl_open)
+    for _fl_name, _fl_native in _flg.REGIONS.items():
+        _fl_r = _fl_seated[_fl_name]
+        assert abs(_fl_r[2] - _fl_native[2] * _fl_f) <= 1
+        assert abs(_fl_r[3] - _fl_native[3] * _fl_f) <= 1
+    _fl_map = _fl_seated["inset_map"]
+    assert abs(_fl_map[2] / _fl_map[3] - 305 / 182) < 0.01, (
+        f"the inset map is {_fl_map[2]}x{_fl_map[3]}, aspect "
+        f"{_fl_map[2] / _fl_map[3]:.3f} against the original's "
+        f"{305 / 182:.3f} — the star hit boxes are computed for that "
+        f"shape and nothing else")
+
+    # 9. THE TWO PATCHES ARE REQUIRED AND SAY THEY ARE NOT LIVE-TESTED.
+    for _fl_patch in ("doc/ext_fleet_screen_state.patch",
+                      "doc/ext_fleet_screen_select.patch"):
+        _fl_text = io.open(os.path.join(
+            os.path.dirname(SCREENS_DIR), *_fl_patch.split("/")),
+            encoding="utf-8").read()
+        assert "NOT CONFIRMED LIVE" in _fl_text, (
+            f"{_fl_patch} no longer says it is not confirmed live; "
+            f"work order 134's live part is parked and nothing has "
+            f"driven these two")
+        assert "diff --git" in _fl_text, f"{_fl_patch} carries no diff"
+    ok("the Fleets screen on a real snapshot: the FLTS block parses "
+       "after FSEL, the grid draws what it names, four refusals each "
+       "say why and send nothing, a foreign stack is not a mismatch, "
+       "draw and hit-test agree on all twenty cells, the filters get a "
+       "click and the rest an activation, every box fits the opening "
+       "at both resolutions and the inset keeps 305:182")
+
     # ── A BLANK WINDOW IS NOT A PICTURE, AND A FLAG IS NOT EITHER ──
     #
     # Work order 129's report said the two turn-start dialogs appeared

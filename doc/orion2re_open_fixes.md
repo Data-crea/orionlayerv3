@@ -48,6 +48,8 @@ section for what was found where.
 | 24 | The two turn-start research dialogs (science room, SELECT NEW RESEARCH) both report SCREEN_MAIN, so a client cannot tell them from the galaxy map | **Applied** 17 September 2026 (work order 129 B, Data's decision: synthetic ids on the wire only), orion2re f838c754 on `orionlayer-local`, `doc/ext_research_screens.patch`; required by `tools/version_check.py`; open upstream | — while applied. Without it HD draws the map with an active TURN button over both dialogs, and a field sent into the select list crashes the engine (item 23) |
 | 25 | The research selection commits the entry under the POINTER, not the field that was activated | **Applied** 18 September 2026 (work order 130 B, Data's decision: option (c) of `doc/tech_change_reading.md` §5.1), orion2re e9d07528 on `orionlayer-local`, `doc/ext_tech_activate.patch`; required by `tools/version_check.py`; open upstream | — while applied. Without it an HD research screen cannot choose a row at all: the choice lands on whatever the cursor rests on, or crashes the engine (item 23) |
 | 26 | SELECT NEW RESEARCH commits a row by itself, about a second and a half after the science room hands over to it | **OPEN, deferred by Data 19 September 2026.** Observation, seen three times and measured once with a send counter on 18 September (work order 130's live run). Data reproduced the counter-case on 19 September: same binary, NO client connected, the dialog clicked away with a real mouse — the list waits. So open fix 25 is not the cause | A client cannot rely on reaching the list before it has chosen; three of six attempts to choose in HD lost the occasion. The player's way round it is to click the completion dialog away in the orion2re window with a real mouse |
+| 27 | The fleet screen's view state is not in the snapshot | **Applied** 19 September 2026 (work order 134 C), orion2re `cc5ec133` on `orionlayer-local`, `doc/ext_fleet_screen_state.patch`; required by `tools/version_check.py`; **NOT CONFIRMED LIVE** — 134's live part is parked; open upstream | — while applied. Without it HD cannot know which stack the fleet screen shows, which ships are in the grid, which are selected, where the list is scrolled or which filters are on, and hands over to the original picture |
+| 28 | One ship cannot be selected on the fleet screen | **Applied** 19 September 2026 (work order 134 C), orion2re `e6199966` on `orionlayer-local`, `doc/ext_fleet_screen_select.patch`; required by `tools/version_check.py`; **NOT CONFIRMED LIVE**; open upstream | — while applied. Without it only ALL changes the selection, so a subset of a stack cannot be moved or scrapped from HD |
 
 Items 3 and 4 are both about INJECT_CLICK and both live in the same
 code path, but they are separate faults: 3 is where the coordinates
@@ -1784,3 +1786,102 @@ remember.
 **The player's way round it, while this is open:** click the completion
 dialog away in the orion2re window with the real mouse. The research
 selection then waits, and the HD screen can be used for the choice.
+
+---
+
+## 27. The fleet screen's view state is not in the snapshot
+
+**Applied locally 19 September 2026** (work order 134 C), orion2re
+`cc5ec133` on `orionlayer-local`, `doc/ext_fleet_screen_state.patch`.
+Required by `tools/version_check.py`. **NOT CONFIRMED LIVE.**
+
+### Symptom
+
+An HD client on `SCREEN_FLEET` (4) knows the screen is up and knows the
+field list, and nothing else. It cannot say which stack is shown, which
+ships are in the big-icon grid, which of them are selected, where the
+list is scrolled, or which of the two filters are on.
+
+### Why reconstruction does not reach it
+
+Followed to the end first, which is what decision 25 of the OrionLayer
+fundament requires, and closed by three separate facts:
+
+1. FSEL (item 20 revision 2) sends the whole `_ship_node` table but the
+   only CHAIN it sends is the fleet box's, and that is `-1` here because
+   the fleet screen closes box 2 (`flt1.cpp:826-832`).
+   `_ship_stack_start[]` and `next_node` are not on the wire.
+2. Walking the node table names ships the player cannot see:
+   `SHIPSTAK::Remove_Non_Detected_Ships_` (shipstak.cpp:200-250) unlinks
+   nodes of foreign stacks and `Delete_Ship_Node_` (:5-11) leaves their
+   `ship_idx` in place.
+3. Grouping own ships by `s_ship.location` gives a different list in
+   both membership and order — the two filters (flt2.cpp:130-146) and
+   `Ok_To_Add_Ship_` decide membership, the officer move-to-front
+   decides order (flt2.cpp:263-265) — and has no way to say so.
+
+What a client CAN see is how many big-icon FIELDS the screen added, at
+known grid rects. That says how many and where, never which.
+
+### Fix
+
+An optional trailing block `"FLTS"` in `ext::SerializeState`, written
+only while `MOX::_current_screen == SCREEN_FLEET` and LAST in the
+snapshot, after FSEL — so nothing above it moves and an older client is
+unaffected. Fourteen scalars, then N × (`int16 ship_idx`, `uint8
+selected`) in the screen's own DISPLAY order. One file,
+`src/ext/ext_api.cpp`. Full layout in the patch header.
+
+### Cost to us
+
+Without it the HD fleet screen draws nothing and says so
+(`screens/fleets/fltwire.py`, state `NO_BLOCK`).
+
+---
+
+## 28. One ship cannot be selected on the fleet screen
+
+**Applied locally 19 September 2026** (work order 134 C), orion2re
+`e6199966` on `orionlayer-local`,
+`doc/ext_fleet_screen_select.patch`. Required by
+`tools/version_check.py`. **NOT CONFIRMED LIVE.** The write half of 27.
+
+### Symptom
+
+On `SCREEN_FLEET` a single ship's selection cannot be changed from
+outside by any route. Only ALL, which selects or clears the whole list.
+
+### Root cause — three shut doors, three different reasons
+
+- **A click.** The per-ship toggle is painted in the DRAW pass, which
+  tests `mouse::Mouse_Button_()` for the LIVE button state
+  (`flt1.cpp:413-436`). An injected click is a buffered event and the
+  button has gone up by the time the draw pass looks. This is item 20's
+  finding on the fleet box, at a second site.
+- **`ACTIVATE_FIELD` on a big icon.** It reaches
+  `Scan_Fltscrn_Big_Icons_` result 0, which only SCANS the ship — the
+  stats panel follows, the selection does not (flt2.cpp:924-928,
+  flt1.cpp:615-620).
+- **`MSG_SELECT_SHIP`, i.e. item 21.** It refuses unless
+  `MOVEBOX::Moveable_Box_Selected_(2)`, and this screen closes box 2;
+  and it writes `_ship_node[].selected`, which this screen never reads —
+  it paints from `_fltscrn_big_icon[].selected` (flt1.cpp:429). Two
+  independent reasons, so widening one would not have been enough.
+
+### Fix
+
+`MSG_SELECT_SHIP` (0x85) branches on the screen: `SCREEN_FLEET` goes to
+a new `Select_Fltscrn_Ship_`, everything else keeps item 21's handler
+unchanged. One message id because it is one question, two handlers
+because the two screens keep the answer in different arrays. The checks
+are the original's own, in its order (screen, own stack, relocate mode
+≠ 1, ship in the list) and the write is the single line ALL writes
+(`Set_Fltscrn_Big_Icons_`, flt1.cpp:1610-1624). Nothing else is
+maintained: the loop's `Update_Selection_Flags_` (:811, :1069-1093)
+recounts `_n_big_icons_selected` and mirrors
+`_fltscrn_icon_selection_status[]` on the next iteration, exactly as it
+does after ALL.
+
+### Cost to us
+
+Without it a subset of a stack cannot be moved or scrapped from HD.

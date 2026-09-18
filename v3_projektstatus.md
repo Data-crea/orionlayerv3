@@ -22,6 +22,18 @@ with a 1 px anti-aliased edge. The six nav slots now read at exactly
 equal height and top edge. Section at the end of "What works". Smoke
 **215**.
 
+This session (19 September 2026, work order 134): **the Fleets screen,
+built in one run — frame, screen, wire and checks — and NOT ACCEPTED.**
+The frame is the Planets ring with its struts removed, one opening, cut
+by THICKNESS rather than a threshold. The screen seats the original's
+sixteen rectangles into that opening under one factor. Its content
+cannot be reconstructed — three routes were followed to the line that
+closes each — so two engine patches were written under the protocol
+(open fixes 27 and 28), and the screen refuses loudly in four named
+states when they are not there. **No live acceptance has run: the
+display server is unreachable, the live part is parked in
+`doc/briefs/134-parked-for-data.md`.** Smoke **215 -> 217**.
+
 Work order 132 (frame set of 18 Sep) built and rejected by Data,
 reverted. Number 132 stays used.
 
@@ -864,7 +876,7 @@ files under `doc/` and are only summarised here.
 | | |
 |---|---|
 | Python | 32,960 lines across 111 modules — `find . -name '*.py'`, `__pycache__` excluded, the smoke test's 6,400 included. The previous figure here (21,642 across 94) was carried from an unstated method and could not be reproduced |
-| Smoke test | `python tools/smoke_test.py` — **216 checks**, headless |
+| Smoke test | `python tools/smoke_test.py` — **217 checks**, headless |
 | Assets | 170 MB (select_race 68, galaxy_map 51, shared 23, new_game 21, colony_summary 1) |
 | Screens in HD | 9 of ~20–22 (the GAME menu overlay, work order Stop 2, every dialog of the popup; colony summary draws list, sidebar, scan box and galaxy inset, and MOVES POPS — the first HD gesture that drives the game; planets, brief 101, lists, sorts, restricts and returns) |
 | Setup from clone | `python tools/setup.py` (deps via the system package manager) |
@@ -5084,6 +5096,89 @@ content itself rather than letting it touch the ring.
 there is one opening and the regions inside it are hand-placed,
 F5-editable boxes — so `tools/frame_holes.py` gets no naming rule for
 `fleets` and `--write` is never run on it.
+
+
+### Fleets: built in one run, NOT ACCEPTED — work order 134, 19 September 2026
+
+`screens/fleets/` is orion2re's `SCREEN_FLEET` (4),
+`FLT1::Fleet_Screen_` (flt1.cpp:486-837). **HD STATE: built, NOT
+accepted.** Nothing has driven it live — `:0` is unreachable from the
+session that built it — and the same sentence stands in the module
+docstring, in `layout.json`, in the parked file and in a smoke check.
+
+**The frame** is `screens/planets/assets/frame.png` with its inner
+struts removed (decision 12's variant; its own section above). One
+opening, reference (72, 73, 1775, 921).
+
+**The seat is one factor for both axes, and that is not a preference.**
+`fltgeom` holds every native rectangle with its engine line and puts the
+union (13, 52, 616, 414) into the opening less the 2 px bleed at
+x2.214976, centred — height-bound, so the spare room is 203 reference px
+each side. One factor is what keeps the inset map at 305:182, and
+`Box_Fleet_Screen_Scanned_Star_` hardcodes 1659 and 2197, which are
+506000/305 and 400000/182 (movebox.cpp:193-199): a map box of another
+shape puts the star boxes off the stars.
+
+**Sixteen F5-editable boxes**, seeded once by `tools/fleet_boxes.py`.
+Decision 3 does NOT apply — the frame has one hole and nothing inside it
+is a cutout — so `tools/frame_holes.py` has no `fleets` rule and
+`--write` is never run on it.
+
+**Decision 34, answered: all sixteen wear `thin_border`**, because all
+sixteen GROUP. `inner_panel` frames pictures, and the one picture on
+this screen is the captain's portrait, which is deliberately not a box:
+its extent is `animate::Get_Width_/Get_Height_` of LBX art at runtime
+(flt2.cpp:848-866), not a constant, so a box would have to invent a
+size.
+
+**THE CONTENT CANNOT BE RECONSTRUCTED, and that was established before a
+patch was asked for** (decision 25). Three routes, each to the line that
+closes it: FSEL sends only the fleet box's chain and that is -1 here
+(flt1.cpp:826-832); walking the node table names undetected ships
+(shipstak.cpp:200-250, :5-11); grouping by location gives a different
+list in membership and order and cannot say so. So **open fix 27** (a
+read block) and **open fix 28** (the smallest necessary write), both
+applied to `orionlayer-local`, both required by
+`tools/version_check.py`, **neither confirmed live**.
+
+`MSG_SELECT_SHIP` was checked before anything new was designed and does
+not cover this screen on TWO independent counts: it refuses without the
+galaxy map's fleet box, and it writes an array this screen never reads
+(flt1.cpp:429). So open fix 28 is a second handler behind the same
+message id, branching on the screen.
+
+**The read carries its own validation**, which is the half a read block
+usually skips: `Add_Fltscrn_Big_Icon_Fields_` adds one hidden field per
+displayed icon at exactly `(x, y, x+58, y+57)` (flt2.cpp:288-290,
+:313-320) — the same twenty cells HD draws. The block says how many, the
+field list says where, and the screen refuses if they disagree. A
+FOREIGN stack adds no fields at all (flt2.cpp:312-322) and is
+recognised, not refused.
+
+**The fallback is loud and has four named refusals**, not one:
+`NO_BLOCK`, `NO_STACK`, `NO_FIELDS`, `MISMATCH` — each with a sentence,
+each sending nothing, each on a real snapshot in the smoke test.
+
+**Four OMISSIONs, each for its own reason**, each marked where it is
+performed and each held by a check: the ship's picture (SHIPS.LBX is
+MOO2's art), the damage bar (offsets 123/125 are hand counts the ship
+spec refuses to carry, and the bar's geometry is unsettled), the move
+preview (hover-computed, on no wire), the captain's portrait
+(`s_leader_data` unverified). Plus F5/Alt-F5, which `INJECT_KEY` cannot
+express at all.
+
+**One HD EXTENSION: the wheel** — and it is not a local scroll. The list
+window is the game's (decision 46), so the wheel activates the same
+arrow field a click would, and only above twenty icons, where the
+original has arrows at all.
+
+**No fundament entry was filed.** Every rule this screen follows was
+already there (3, 5, 12, 20, 22, 25, 33, 34, 42, 46, 55, 61, 69), and
+the order says to file one only for a decision that is actually new.
+
+Renders at 1080p, 1440p, ultrawide and 2160p in
+`~/orionlayer-fixtures/evidence/work_order_134/`. What is parked, and
+the six decisions still open, are in `doc/briefs/134-parked-for-data.md`.
 
 ## What is missing
 
