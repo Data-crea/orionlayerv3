@@ -13,6 +13,17 @@ right and the header had gone stale** — resolved 10 September 2026
 by dating the header to the edit and giving this session its
 paragraph, below, so the two agree again.
 
+This session (18 September 2026, work order 132): **the new frame set,
+measured and mostly unused.** Four assets came in; one is assigned.
+`frame_plain.png` is now `screens/select_race/assets/frame.png` — the
+only screen whose every box fits its single opening, at both resolutions
+that screen defines. The other three fit nowhere: eight openings in an
+arrangement no screen has, seven nav "buttons" that are opaque paint
+rather than holes, and a popup frame of aspect 3.71 for popups of aspect
+0.74 to 1.35. The measurements and both explicit questions are in
+`doc/briefs/132-frame-assignment.md`, the six open decisions in
+`doc/briefs/132-parked-for-data.md`. Smoke 214 -> **215**.
+
 This session (18 September 2026, work order 130): **the research
 select screen, and the two things it stands on.** The fallback view is
 a view again — it drew a flat colour and swallowed every click, so the
@@ -4942,6 +4953,60 @@ remembers.
 
 **One live number for the cost table**: field 62 read 540 accumulated of
 650 at 15 RP a turn, and `core.research.cost(62)` is 650.
+
+
+### The 18 September frame set — one of four assigned (work order 132)
+
+Four images from Chat, keyed to alpha by `key_frames.py`, copied to
+`~/orionlayer-fixtures/incoming/frames_18sep/` (sha256 checked against
+the originals) and measured there. Chat's descriptions were treated as
+claims; where they differ from the files the files won.
+
+**Assigned: `frame_plain.png` -> Select Race.** One opening
+(92, 81, 1734, 912), so the test is containment and not aspect
+agreement, and Select Race is the only screen where every box lies
+inside it at every resolution it defines. `layout.json` caches the
+artwork's opening and title plate and the suite re-measures both off
+the asset (decision 69's arrangement). `boxes.json` is untouched: this
+screen derives no cutouts, so decision 3 does not apply and
+`tools/frame_holes.py --write` was not run.
+
+It replaces the shared 9-slice, and "at least as well" is a number
+rather than a judgement: the 9-slice's own `9slice.json` declares
+`source_size` 1672x941 against the new image's 1920x1080, so at
+3840x2160 the old frame scales by 2.30 and the new one by 2.00.
+
+One thing had to be rebuilt. The 9-slice drew the screen title into its
+own title bar; a fixed image has none, so "Select Race" and "Select
+Race Picture" would have vanished silently. The title is drawn on the
+artwork's own dark plate, and a check isolates it by differencing
+against a render with no title — the plate is metal, so counting ink
+there counts the artwork.
+
+**Unused, and why (counts, not taste):**
+
+- `frame_map_sidebar.png` — 8 openings. The galaxy map needs 10 cutouts
+  including a title and seven uniform nav buttons; this has no title
+  opening and its six small ones are three wide fields plus three
+  narrow stacked rows. Nearest is Planets, one opening-split away.
+- `frame_map_4panels_7buttons.png` — 5 openings. Its seven button
+  plates are **opaque**, `rgba(20, 31, 37, 255)`;
+  `tools/frame_holes.py` reads alpha < 16 and cannot see them, so
+  decision 3 cannot derive `nav_*` from them without a second rule keyed
+  on colour. It also has no side column where the galaxy map needs a
+  `sidebar` cutout.
+- `panel.png` — opening aspect 3.710 against popups of 0.739 to 1.35.
+  Nine-slicing it would stretch the brackets at the middle of each
+  edge; using it means changing decision 34's skin meanings, which work
+  order 132 says to park.
+
+**The irregularities are real and are transcription risk.** Fields that
+look identical differ by up to 237 px in width (`frame_map_sidebar`'s
+three bottom fields) and 11 px in height (its three stacked rows); the
+four-panel asset's bottom fields spread 21 px and its button plates
+20 px. At 1920x1080 image px equal reference px, so those are reference
+pixels, doubled at 2160p. Nothing was straightened in the artwork and
+nothing was compensated in code; whether to straighten them is parked.
 
 ## What is missing
 
