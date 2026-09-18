@@ -35,7 +35,7 @@ SCREENS = {
      0: ("MAIN",            "galaxy_map"),       # SCREEN_MAIN
      1: ("COLONY",          "colony"),
      3: ("DESIGN",          "ship_design"),
-     4: ("FLEET",           "fleet"),
+     4: ("FLEET",           "fleets"),
      6: ("RACE",            None),      # races/diplomacy; no HD version
      7: ("EXIT",            None),
      8: ("GAME",            "game_menu"),  # the overlay, decision 59

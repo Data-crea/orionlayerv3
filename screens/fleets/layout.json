@@ -1,0 +1,41 @@
+{
+  "_comment": "The Fleets screen - orion2re SCREEN_FLEET (4), FLT1::Fleet_Screen_ (flt1.cpp:486-837). Work order 134, 18 September 2026. Every native rectangle this screen is laid out from lives in screens/fleets/fltgeom.py with its own source line, NOT here: a coordinate in two files is decision 5's exact failure. This file holds the frame, the wording HD has to supply because the original draws it as artwork, and the marks.",
+  "frame": {
+    "image": "frame.png",
+    "image_size": [
+      1920,
+      1080
+    ],
+    "opening": [
+      72,
+      73,
+      1775,
+      921
+    ],
+    "_note": "screens/fleets/assets/frame.png is the Planets artwork with its inner struts removed - decision 12's frame variant, one artwork and no runtime tile swapping. Plain-scaled over the 1920x1080 reference area, the colony screen's way (decision 55) and the GAME menu's (decision 69); no 9-slice, no master. ONE opening, image (74, 75, 1771, 917), grown by tools/frame_holes.BLEED = 2 reference px on each side, which is the number quoted here. Work order 134 A measured it and v3_projektstatus.md records how it was cut.",
+    "_no_cutouts_note": "DECISION 3 DOES NOT APPLY TO THIS SCREEN. It derives cutout boxes from a frame's holes; this frame has one hole and the regions inside it are hand-placed. tools/frame_holes.py has no `fleets` rule and --write is never run on it. The boxes come from fltgeom.seat_regions instead, seeded once by tools/fleet_boxes.py and F5-editable afterwards."
+  },
+  "regions": {
+    "_skin_note": "EVERY REGION AND EVERY CONTROL WEARS thin_border, and decision 34 is why. It gives the two skins one meaning each: inner_panel is the 9-slice art and FRAMES PICTURES, thin_border is the rounded blue outline and GROUPS THINGS. All sixteen boxes here group - four panels, a status strip, a scroll column, seven buttons and a text field. The one picture on this screen is the captain's portrait in the ship panel (flt2.cpp:848-866), and it is deliberately NOT a box: its extent is not a constant but animate::Get_Width_/Get_Height_ of the LBX art at (0xF2, 0x11C) = (242, 284), with the highlight frame two pixels outside it at (0xF0, 0x11A) = (240, 282). A box would have to invent a size. When the portrait is drawn it gets inner_panel, from the art's own size, and not before.",
+    "_editable_note": "All sixteen are F5-editable. The seat in fltgeom is a starting point and not a cage: it places the original's own rectangles, as one group under ONE factor, in the middle of the opening. Drag any of them and the screen follows, because nothing recomputes a rect the file holds - the scroll column's three parts and the twenty icon cells are the only derived geometry and both follow their box (fltgeom.scroll_parts, fltgeom.icon_cells)."
+  },
+  "words": {
+    "all": "All",
+    "relocate": "Relocate",
+    "scrap": "Scrap",
+    "leaders": "Leaders",
+    "support": "Support",
+    "combat": "Combat",
+    "return": "Return",
+    "_note": "OUR WORDING for the seven controls. The original has no string for any of them: Add_Button_Field_ is called with an empty label and the word is painted into the LBX artwork the field points at (flt1.cpp:1188, :1195, :1201, :1236, and the two Add_Radio_Button_Field_ calls :1257-1258). Decision 38 sends everything the game DOES have a string for through the player's own ESTRINGS/HESTRNGS; these seven have none, so they live here. The hotkeys beside them are the engine's and are not wording: S, A, ESC, -, +, comma, period, R, L, U, C."
+  },
+  "scroll": {
+    "_hd_note": "HD DRAWS ITS OWN SCROLL BAR. The original fills a 12 px column with palette colour 0xA6 between two LBX arrows (Fill_FltScrn_Scroll_Bar_, flt1.cpp:260-309) and its thumb position is a pointer value the snapshot does not carry (the reading's SS3: `scroll thumb ... NO, first_visible_row`). So the bar is drawn from the row HD is showing, in this project's own palette, inside the scroll_column box. The three parts keep the original's proportions (fltgeom.SCROLL_PARTS): arrow, 234-unit track, arrow.",
+    "visible_rows": 5,
+    "_visible_rows_note": "TRANSCRIBED: s_scroll_bar.visible_rows = 5 (Initialize_Scroll_Bar_, flt1.cpp:34), which is the grid's five rows of four."
+  },
+  "marks": {
+    "hd_state": "BUILT, NOT ACCEPTED. No live acceptance has run against this screen: work order 134's live part is parked (doc/briefs/134-parked-for-data.md).",
+    "_note": "Decision 61. The same sentence stands in the module docstring of screens/fleets/screen.py, in v3_projektstatus.md and in the parked file, and a smoke check fails if it leaves any of them."
+  }
+}

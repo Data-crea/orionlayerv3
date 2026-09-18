@@ -1334,5 +1334,44 @@
         ]
       }
     }
+  },
+  "fleets": {
+    "_note": "The Fleets screen draws everything itself: the original's slots, rails, panel surrounds and button faces are painted into FLEET.LBX 0 (Draw_Fleet_Screen_, flt1.cpp:385), which is MOO2's art and never in this tree. These are this project's own colours for them, and screens/fleets/fltdraw.py names every one of them (DEFAULTS).",
+    "slot_fill": [
+      18,
+      30,
+      38
+    ],
+    "slot_edge": [
+      58,
+      92,
+      108
+    ],
+    "scroll_track": [
+      14,
+      24,
+      31
+    ],
+    "scroll_thumb": [
+      96,
+      148,
+      172
+    ],
+    "scroll_arrow": [
+      150,
+      196,
+      214
+    ],
+    "label": [
+      198,
+      226,
+      238
+    ],
+    "label_dim": [
+      96,
+      118,
+      128
+    ],
+    "_scroll_note": "The original fills its column with palette index 0xA6 between two LBX arrows (Fill_FltScrn_Scroll_Bar_, flt1.cpp:260-309). HD cannot read a palette index and the thumb position is a pointer value the snapshot does not carry, so the bar is drawn from the row HD shows, in these colours."
   }
 }

@@ -1,0 +1,390 @@
+{
+  "1920x1080": [
+    {
+      "name": "inset_map",
+      "rect": [
+        282,
+        75,
+        676,
+        403
+      ],
+      "style": {
+        "skin": "thin_border"
+      }
+    },
+    {
+      "name": "status_band",
+      "rect": [
+        291,
+        509,
+        653,
+        47
+      ],
+      "style": {
+        "skin": "thin_border"
+      }
+    },
+    {
+      "name": "ship_panel",
+      "rect": [
+        277,
+        580,
+        680,
+        412
+      ],
+      "style": {
+        "skin": "thin_border"
+      }
+    },
+    {
+      "name": "icon_area",
+      "rect": [
+        1017,
+        77,
+        605,
+        658
+      ],
+      "style": {
+        "skin": "thin_border"
+      }
+    },
+    {
+      "name": "button_band",
+      "rect": [
+        1006,
+        802,
+        636,
+        171
+      ],
+      "style": {
+        "skin": "thin_border"
+      }
+    },
+    {
+      "name": "prev_fleet",
+      "rect": [
+        291,
+        511,
+        71,
+        42
+      ],
+      "style": {
+        "skin": "thin_border"
+      }
+    },
+    {
+      "name": "status_text",
+      "rect": [
+        395,
+        509,
+        447,
+        47
+      ],
+      "style": {
+        "skin": "thin_border"
+      }
+    },
+    {
+      "name": "next_fleet",
+      "rect": [
+        875,
+        511,
+        69,
+        42
+      ],
+      "style": {
+        "skin": "thin_border"
+      }
+    },
+    {
+      "name": "scroll_column",
+      "rect": [
+        1589,
+        91,
+        33,
+        645
+      ],
+      "style": {
+        "skin": "thin_border"
+      }
+    },
+    {
+      "name": "btn_all",
+      "rect": [
+        1019,
+        802,
+        164,
+        62
+      ],
+      "style": {
+        "skin": "thin_border"
+      }
+    },
+    {
+      "name": "btn_relocate",
+      "rect": [
+        1225,
+        802,
+        197,
+        62
+      ],
+      "style": {
+        "skin": "thin_border"
+      }
+    },
+    {
+      "name": "btn_scrap",
+      "rect": [
+        1465,
+        802,
+        162,
+        62
+      ],
+      "style": {
+        "skin": "thin_border"
+      }
+    },
+    {
+      "name": "btn_leaders",
+      "rect": [
+        1006,
+        912,
+        162,
+        60
+      ],
+      "style": {
+        "skin": "thin_border"
+      }
+    },
+    {
+      "name": "btn_support",
+      "rect": [
+        1190,
+        923,
+        135,
+        42
+      ],
+      "style": {
+        "skin": "thin_border"
+      }
+    },
+    {
+      "name": "btn_combat",
+      "rect": [
+        1327,
+        923,
+        133,
+        42
+      ],
+      "style": {
+        "skin": "thin_border"
+      }
+    },
+    {
+      "name": "btn_return",
+      "rect": [
+        1480,
+        912,
+        162,
+        60
+      ],
+      "style": {
+        "skin": "thin_border"
+      }
+    }
+  ],
+  "2560x1440": [
+    {
+      "name": "inset_map",
+      "rect": [
+        282,
+        75,
+        676,
+        403
+      ],
+      "style": {
+        "skin": "thin_border"
+      }
+    },
+    {
+      "name": "status_band",
+      "rect": [
+        291,
+        509,
+        653,
+        47
+      ],
+      "style": {
+        "skin": "thin_border"
+      }
+    },
+    {
+      "name": "ship_panel",
+      "rect": [
+        277,
+        580,
+        680,
+        412
+      ],
+      "style": {
+        "skin": "thin_border"
+      }
+    },
+    {
+      "name": "icon_area",
+      "rect": [
+        1017,
+        77,
+        605,
+        658
+      ],
+      "style": {
+        "skin": "thin_border"
+      }
+    },
+    {
+      "name": "button_band",
+      "rect": [
+        1006,
+        802,
+        636,
+        171
+      ],
+      "style": {
+        "skin": "thin_border"
+      }
+    },
+    {
+      "name": "prev_fleet",
+      "rect": [
+        291,
+        511,
+        71,
+        42
+      ],
+      "style": {
+        "skin": "thin_border"
+      }
+    },
+    {
+      "name": "status_text",
+      "rect": [
+        395,
+        509,
+        447,
+        47
+      ],
+      "style": {
+        "skin": "thin_border"
+      }
+    },
+    {
+      "name": "next_fleet",
+      "rect": [
+        875,
+        511,
+        69,
+        42
+      ],
+      "style": {
+        "skin": "thin_border"
+      }
+    },
+    {
+      "name": "scroll_column",
+      "rect": [
+        1589,
+        91,
+        33,
+        645
+      ],
+      "style": {
+        "skin": "thin_border"
+      }
+    },
+    {
+      "name": "btn_all",
+      "rect": [
+        1019,
+        802,
+        164,
+        62
+      ],
+      "style": {
+        "skin": "thin_border"
+      }
+    },
+    {
+      "name": "btn_relocate",
+      "rect": [
+        1225,
+        802,
+        197,
+        62
+      ],
+      "style": {
+        "skin": "thin_border"
+      }
+    },
+    {
+      "name": "btn_scrap",
+      "rect": [
+        1465,
+        802,
+        162,
+        62
+      ],
+      "style": {
+        "skin": "thin_border"
+      }
+    },
+    {
+      "name": "btn_leaders",
+      "rect": [
+        1006,
+        912,
+        162,
+        60
+      ],
+      "style": {
+        "skin": "thin_border"
+      }
+    },
+    {
+      "name": "btn_support",
+      "rect": [
+        1190,
+        923,
+        135,
+        42
+      ],
+      "style": {
+        "skin": "thin_border"
+      }
+    },
+    {
+      "name": "btn_combat",
+      "rect": [
+        1327,
+        923,
+        133,
+        42
+      ],
+      "style": {
+        "skin": "thin_border"
+      }
+    },
+    {
+      "name": "btn_return",
+      "rect": [
+        1480,
+        912,
+        162,
+        60
+      ],
+      "style": {
+        "skin": "thin_border"
+      }
+    }
+  ]
+}
