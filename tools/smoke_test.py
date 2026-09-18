@@ -15466,6 +15466,14 @@ def main():
         os.path.join("assets", "shared", "names", "hestrings_en.json"),
         os.path.join("assets", "shared", "names", "shipparts_en.json"),
         os.path.join("assets", "shared", "names", "maintext_en.json"),
+        # Work order 130 D's two, added here 18 September 2026 when a
+        # fresh-clone run for the push found them missing. They went
+        # into _JSON_OTHER and not into this list, and on a machine
+        # where both had been extracted the suite stayed green — which
+        # is the very trap the paragraph above describes, walked into a
+        # second time by the session that read it.
+        os.path.join("assets", "shared", "names", "techfields_en.json"),
+        os.path.join("assets", "shared", "names", "billtext_en.json"),
     }
     if os.path.isdir(os.path.join(_json_root, ".git")):
         import subprocess as _json_sp
@@ -17373,22 +17381,51 @@ def main():
         _rs_scr.handle_click(_wx + _ww // 2, _wy + _wh // 2)
         assert _rs_client.log == [], _rs_client.log
 
-    # a field list of the wrong shape -> the fallback, and no send
+    # THE REFUSALS, AND THE ORDER THEY ARE TESTED IN.
+    #
+    # `_rebuild` decides in one order: names -> wording -> player
+    # record -> validation, and the FIRST thing missing is the answer.
+    # So the state a situation produces depends on what the machine has
+    # extracted, and asserting one state per situation made this block
+    # pass where the files happened to exist and fail on a fresh clone —
+    # found by the clone run before the push, 18 September 2026, twice
+    # in a row, on this and on the NO_PLAYER case below.
+    #
+    # `_rs_expect` is `_rebuild`'s own order, once. What every case
+    # then asserts is the RULE, which holds whatever is extracted: the
+    # screen hands over, it says why, and it sends nothing.
+    def _rs_expect(want_when_ready):
+        if _rs_scr._names.state != "ok":
+            return _rss.NAMES_MISSING
+        if _rs_scr._wording.state != "ok":
+            return _rss.WORDING_MISSING
+        return want_when_ready
+
+    def _rs_refuses(label, want_when_ready):
+        assert _rs_scr.state == _rs_expect(want_when_ready), (
+            label, _rs_scr.state, _rs_scr._names.state,
+            _rs_scr._wording.state)
+        assert _rs_scr.wants_original(), label
+        assert _rs_scr.problems, (
+            f"{label}: the screen fell back and said nothing about why")
+        assert _rs_scr.fallback_reason(), (
+            f"{label}: no sentence for state {_rs_scr.state}")
+        _rs_client.log.clear()
+        _rs_scr.handle_click(960, 540)
+        _rs_scr.handle_mouse_motion(960, 540)
+        assert _rs_client.log == [], (label, _rs_client.log)
+        assert _rs_scr.row_at(960, 540) is None, (
+            f"{label}: a row was hit-tested on a list the screen "
+            f"refused to draw")
+
+    # a field list of the wrong shape
     _rs_scr.enter(_RsPlayerState(_rs_live[:-1], [_rs_record(_rs_tf, _rs_ta)]))
-    assert _rs_scr.state == _rss.UNVALIDATED, _rs_scr.state
-    assert _rs_scr.wants_original()
-    assert _rs_scr.problems, "the screen fell back and said nothing about why"
-    assert _rs_scr.fallback_reason(), "no sentence for the unvalidated state"
-    _rs_client.log.clear()
-    _rs_scr.handle_click(960, 540)
-    _rs_scr.handle_mouse_motion(960, 540)
-    assert _rs_client.log == [], _rs_client.log
-    assert _rs_scr.row_at(960, 540) is None, \
-        "a row was hit-tested on a list the screen refused to draw"
-    # no player record -> the fallback
+    _rs_refuses("wrong-shape field list", _rss.UNVALIDATED)
+    # no player record on the wire
     _rs_scr.enter(None)
-    assert _rs_scr.state == _rss.NO_PLAYER and _rs_scr.wants_original()
-    # an absent extractor file -> the fallback, with its own sentence
+    _rs_refuses("no player record", _rss.NO_PLAYER)
+    # an absent extractor file, forced regardless of what this machine
+    # has: these two do not depend on the tree, so they are exact.
     _rs_real_names = _rs_scr._names
     _rs_scr._names = _tn.TechNames("zz")
     _rs_scr.update(_rs_gs2)
@@ -17398,8 +17435,8 @@ def main():
     _rs_real_wording = _rs_scr._wording
     _rs_scr._wording = _bt.BillText("zz")
     _rs_scr.update(_rs_gs2)
-    assert _rs_scr.state == _rss.WORDING_MISSING and _rs_scr.wants_original()
-    assert _rs_scr.fallback_reason()
+    assert _rs_scr.state == _rs_expect(_rss.WORDING_MISSING)
+    assert _rs_scr.wants_original() and _rs_scr.fallback_reason()
     _rs_scr._wording = _rs_real_wording
     # ESC, and every other key, sends NOTHING: select mode has no way
     # out but a commit (tech.cpp:131, fields.cpp:983-988).
