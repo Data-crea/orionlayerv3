@@ -17552,6 +17552,145 @@ def main():
         ok("open fix 26's marking is tied to its status, and its status "
            "no longer requires it")
 
+    # ── SELECT RACE'S FRAME: THE IMAGE IS THE AUTHORITY ────────────
+    #
+    # Work order 132. `screens/select_race/assets/frame.png` replaces the
+    # shared 9-slice on this screen; `layout.json` caches the artwork's
+    # two rectangles and THIS re-measures both off the asset, so the file
+    # cannot drift from the picture (decision 69's arrangement, decision
+    # 55's rule). Replace the artwork and this says which number moved.
+    from screens.select_race import srframe as _sr
+    _sr_dir = os.path.join(SCREENS_DIR, "select_race")
+    _sr_png = os.path.join(_sr_dir, "assets", "frame.png")
+    _sr_words = _sjson.load(io.open(os.path.join(_sr_dir, "layout.json"),
+                                    encoding="utf-8"))
+    _sr_img = pygame.image.load(_sr_png)
+    _sr_w, _sr_h = _sr_img.get_size()
+
+    def _sr_measure():
+        """(opening, title plate) off the artwork, in its own pixels.
+
+        The opening is the largest alpha < 16 region — `frame_holes`'
+        own limit, so "opening" means one thing in the project. The
+        plate is the widest opaque TEAL region in the top band: keyed on
+        more-blue-than-red and not on darkness, because a luminance
+        threshold tuned for black misses this artwork's plates
+        entirely (measured, work order 132 A).
+        """
+        import numpy as _np
+        from scipy import ndimage as _nd
+        _a = pygame.surfarray.pixels_alpha(_sr_img).T.astype(int)
+        _rgb = pygame.surfarray.pixels3d(_sr_img)
+        _r = _rgb[:, :, 0].T.astype(int)
+        _g = _rgb[:, :, 1].T.astype(int)
+        _b = _rgb[:, :, 2].T.astype(int)
+
+        def _bbox(_mask):
+            _lab, _n = _nd.label(_mask)
+            if not _n:
+                return None
+            _best, _area = None, -1
+            for _sl in _nd.find_objects(_lab):
+                _yy, _xx = _sl
+                _wd = _xx.stop - _xx.start
+                if _wd > _area:
+                    _area, _best = _wd, (int(_xx.start), int(_yy.start),
+                                         int(_wd), int(_yy.stop - _yy.start))
+            return _best
+
+        _holes = _a < _sr.ALPHA_LIMIT
+        _lab, _n = _nd.label(_holes)
+        _sizes = _nd.sum(_np.ones_like(_lab), _lab, range(1, _n + 1))
+        _big = int(_np.argmax(_sizes)) + 1
+        _ys, _xs = _np.where(_lab == _big)
+        _open = (int(_xs.min()), int(_ys.min()),
+                 int(_xs.max() - _xs.min() + 1),
+                 int(_ys.max() - _ys.min() + 1))
+        _teal = ((_a > _sr.OPAQUE) & (_b > _r + _sr.PLATE_BLUE_OVER_RED)
+                 & (_r < _sr.PLATE_MAX_RED) & (_g < _sr.PLATE_MAX_GREEN))
+        _teal[int(_sr_h * _sr.PLATE_TOP_BAND):, :] = False
+        return _open, _bbox(_teal)
+
+    _sr_open_m, _sr_plate_m = _sr_measure()
+    _sr_spec = _sr.spec(_sr_words)
+    assert list(_sr_spec[_sr.OPENING]) == list(_sr_open_m), (
+        f"layout.json says the opening is {_sr_spec[_sr.OPENING]}, the "
+        f"artwork says {list(_sr_open_m)} — the file is a cache of the "
+        f"picture and the picture changed")
+    assert list(_sr_spec[_sr.TITLE_PLATE]) == list(_sr_plate_m), (
+        f"layout.json says the title plate is "
+        f"{_sr_spec[_sr.TITLE_PLATE]}, the artwork says "
+        f"{list(_sr_plate_m)}")
+
+    # THE TEST THAT DECIDED THE ASSIGNMENT: one opening means
+    # containment, and it must hold at EVERY resolution this screen
+    # defines — its rects differ between them, so one is not enough.
+    _sr_boxfile = _sjson.load(io.open(os.path.join(_sr_dir, "boxes.json"),
+                                      encoding="utf-8"))
+    from core.box import load_boxes as _sr_load
+    for _sr_res in _sr_boxfile:
+        _sw, _sh = (int(v) for v in _sr_res.split("x"))
+        _sr_boxes = _sr_load(_sr_dir, _sw, _sh)
+        _sr_open = _sr.rect(_sr_words, _sr.OPENING, 1920, 1080)
+        _sr_out = _sr.escapes(_sr_open, _sr_boxes)
+        assert not _sr_out, (
+            f"at {_sr_res} these boxes lie outside the frame's opening: "
+            f"{_sr_out}. This asset was assigned to this screen BECAUSE "
+            f"they all fit; a box moved in F5 that leaves the opening is "
+            f"content sliding under metal")
+    # And the plate is inside the frame's own top margin — a title drawn
+    # over the opening would be a title floating on the content.
+    _sr_plate = _sr.rect(_sr_words, _sr.TITLE_PLATE, 1920, 1080)
+    assert _sr_plate[1] + _sr_plate[3] <= _sr_open[1], (
+        f"the title plate {_sr_plate} reaches into the opening "
+        f"{_sr_open}")
+
+    # THE TITLE IS DRAWN, AND IN BOTH MODES. It was the 9-slice's job;
+    # a fixed image has no title bar, so without the plate renderer it
+    # would have gone silently — and "Select Race Picture" is the only
+    # thing that tells picture mode from normal mode.
+    _sr_scr = d.screens["select_race"]
+    d.switch_to("select_race")
+    _sr_surf = pygame.Surface((1920, 1080))
+    _sr_drawn = {}
+    _sr_bare = pygame.Surface((1920, 1080))
+    for _sr_mode in ("select_race", "select_picture"):
+        _sr_scr._mode = _sr_mode
+        _sr_scr._apply_mode()
+        _sr_title = _sr_scr.FRAME_TITLE
+        _sr_surf.fill((0, 0, 0))
+        _sr_scr.render(_sr_surf)
+        assert _sr_scr._frame_scaled is not None, "the frame did not load"
+        # The plate is METAL — the frame is drawn over it — so counting
+        # non-black there counts the artwork. The title is isolated by
+        # rendering the same frame with no title and differencing: what
+        # changes inside the plate is the text and nothing else.
+        _sr_scr.FRAME_TITLE = ""
+        _sr_bare.fill((0, 0, 0))
+        _sr_scr.render(_sr_bare)
+        _sr_scr.FRAME_TITLE = _sr_title
+        _px, _py, _pw, _ph = _sr_scr.layout.rect(_sr_plate)
+        _ink = sum(1 for _x in range(_px, _px + _pw)
+                   for _y in range(_py, _py + _ph)
+                   if _sr_surf.get_at((_x, _y)) != _sr_bare.get_at((_x, _y)))
+        _sr_drawn[_sr_mode] = _ink
+        assert _ink > 200, (
+            f"{_sr_mode}: nothing is drawn on the title plate — the "
+            f"screen title ({_sr_title!r}) is missing, and the 9-slice "
+            f"that used to draw it is gone from this screen")
+    # "SELECT RACE PICTURE" is half again as long as "SELECT RACE", so
+    # it must put more ink on the plate. Equal ink would mean the mode
+    # never reached the title.
+    assert _sr_drawn["select_picture"] > _sr_drawn["select_race"], (
+        f"the two modes drew {_sr_drawn} on the title plate; the longer "
+        f"title has to put more ink there, or the mode is not reaching "
+        f"the title at all")
+    _sr_scr._mode = "select_race"
+    _sr_scr._apply_mode()
+    ok("select race wears one fixed frame image: its two rectangles are "
+       "the artwork's own, every box fits the opening at both "
+       "resolutions, and the title is drawn on the plate in both modes")
+
     # ── A BLANK WINDOW IS NOT A PICTURE, AND A FLAG IS NOT EITHER ──
     #
     # Work order 129's report said the two turn-start dialogs appeared

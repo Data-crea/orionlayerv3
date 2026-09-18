@@ -23,6 +23,7 @@ from screens.select_race.renderer import render_race_grid, grid_cell_rect
 from screens.select_race.info_panel import (
     render_race_name, render_race_description, render_race_traits,
 )
+from screens.select_race import srframe
 
 
 class SelectRaceScreen(ScreenBase):
@@ -31,6 +32,12 @@ class SelectRaceScreen(ScreenBase):
     #: `Race_Selection_Screen_`; see `core/screen_names.py`. It was 6
     #: (SCREEN_RACE) until work order 128, which is the Races screen.
     GAME_SCREEN_ID = 51
+    #: Still True, and it is now the FALLBACK. `assets/frame.png`
+    #: (work order 132) is what this screen wears; `_render_frame_image`
+    #: prefers the image and drops back to the shared 9-slice only when
+    #: there is none — which a mod removing the asset would cause, and
+    #: which should look like the old screen rather than like no screen
+    #: (decision 22's habit, one level in).
     USE_FRAME = True
     FRAME_TITLE = "Select Race"
     FRAME_BTN_LEFT = None
@@ -51,9 +58,14 @@ class SelectRaceScreen(ScreenBase):
         self._custom_portrait_id = 0  # portrait index for custom race
         self._picture_mode_time = 0   # when picture mode was entered
         self._pending_picture_mode = False  # deferred picture mode entry
+        self._words = {}
 
     def enter(self, game_state=None):
         super().enter(game_state)
+        self._words = self.app.res.load_json(
+            "screens/select_race/layout.json", {}) or {}
+        self._load_frame(
+            srframe.spec(self._words).get("image", "frame.png"))
         self._load_races()
         self._load_portraits()
         self._thumb_cache.clear()
@@ -196,9 +208,46 @@ class SelectRaceScreen(ScreenBase):
                 render_race_traits(surface, L, self.style, race, tr,
                                    self.box_font_scale("race_traits"))
 
-        # Frame overlay
-        if self.USE_FRAME:
-            self._render_frame(surface)
+        # Frame overlay. `_render_frame_image` draws assets/frame.png
+        # when it loaded and falls back to the 9-slice when it did not —
+        # and the 9-slice draws the title itself, so the plate title is
+        # only for the image path.
+        self._render_frame_image(surface)
+        if self._frame_scaled is not None:
+            self._render_plate_title(surface)
+
+    def _render_plate_title(self, surface):
+        """The screen title, on the frame's own dark plate.
+
+        The 9-slice had a title bar and drew `FRAME_TITLE` into it; a
+        fixed image has none, so without this the title would have gone
+        silently when the artwork went in — including "Select Race
+        Picture", which is the only thing that tells the two modes
+        apart. Same look as `ScreenBase._render_frame_title`: upper
+        case, centred, `text.primary`, through `Style.render_text`
+        (decision 30).
+        """
+        if not self.FRAME_TITLE:
+            return
+        plate = srframe.rect(self._words, srframe.TITLE_PLATE,
+                             self.layout.ref_w, self.layout.ref_h)
+        if plate is None:
+            return
+        px, py, pw, ph = self.layout.rect(plate)
+        fill = float(srframe.spec(self._words).get("title_fill", 0.62))
+        size = max(8, int(ph * fill))
+        col = self.colors.get("text", {}).get("primary", [190, 200, 230])
+        text = self.style.render_text(self.FRAME_TITLE.upper(), size,
+                                      tuple(col[:3]))
+        # Shrink to the plate rather than overrun it: "SELECT RACE
+        # PICTURE" is half again as long as "SELECT RACE" and the plate
+        # does not grow with it.
+        while text.get_width() > pw and size > 8:
+            size -= 1
+            text = self.style.render_text(self.FRAME_TITLE.upper(), size,
+                                          tuple(col[:3]))
+        surface.blit(text, (px + (pw - text.get_width()) // 2,
+                            py + (ph - text.get_height()) // 2))
 
     # ── Input ─────────────────────────────────────────────
 
