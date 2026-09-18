@@ -13,6 +13,15 @@ right and the header had gone stale** — resolved 10 September 2026
 by dating the header to the edit and giving this session its
 paragraph, below, so the two agree again.
 
+This session (18 September 2026, work order 133): **the galaxy map
+wears frame v3, and its holes are cut from geometry rather than from a
+threshold.** The render came with no alpha and its openings painted
+solid black, so nothing could be keyed by brightness; every hole is cut
+from edges measured on the drawing at the half-way luminance crossing,
+with a 1 px anti-aliased edge. The six nav slots now read at exactly
+equal height and top edge. Section at the end of "What works". Smoke
+**215**.
+
 Work order 132 (frame set of 18 Sep) built and rejected by Data,
 reverted. Number 132 stays used.
 
@@ -4945,6 +4954,73 @@ remembers.
 
 **One live number for the cost table**: field 62 read 540 accumulated of
 650 at 15 RP a turn, and `core.research.cost(62)` is 650.
+
+
+### Galaxy map: frame v3, holes cut from measured geometry — work order 133, 18 September 2026
+
+`screens/galaxy_map/assets/frame.png` is now built from Data's render of
+18 September, `~/orionlayer-fixtures/incoming/galaxy_frame_18sep/ChatGPT
+Image Sep 18, 2026, 10_29_27 PM.png` (sha256 `ecf4a687…`). The built
+master is `galaxy_map_frame_v3.png` (sha256 `1b93c052…`), **1707x921 —
+the render's own size, not resampled**. v2's 1706x922 master stays in
+git.
+
+**THE RENDER HAD NO ALPHA AND NO CHECKERBOARD.** Mode RGB, 100 % opaque,
+openings painted solid black. `key_frames.py`, which keys BRIGHT
+near-neutral regions, returns 0 holes on it. Keying on darkness is no
+better as a rule: 58 % of the image is exactly (0,0,0) and that black is
+in the metal's own shadows as much as in the openings.
+
+**So the holes are cut from geometry.** Every edge is a half-way
+luminance crossing between a hole's own floor and the metal beside it,
+measured per scan line, then cut with a 1 px anti-aliased edge —
+`cut_holes_from_geometry.py`, kept beside the source. An edge whose scan
+lines agree is cut straight from their median; one that genuinely moves
+keeps its profile, which is why the title plate's chamfered ends survive
+as a hexagon and the nine rectangles are rectangles.
+
+**Why it matters, in one number.** A threshold key put the six nav slots
+17 px apart in height and made them swing to 26 px apart as the
+threshold moved. The drawing has them **0.42 px apart**; the spread was
+the key, not the artwork. Cut from geometry, `tools/frame_holes.py`
+reads them at **spread 0 px in both height and top edge**. Every hole
+edge is within **0.94 px** of the drawing edge it follows.
+
+Metal opacity 29.2 %, anti-aliased edge 0.6 % of the image, RGB under
+alpha 0 set to black.
+
+**The cutouts, regenerated** with `tools/frame_holes.py --write`, which
+kept **22 non-cutout boxes** at each of the two resolutions:
+
+  | box | v2 ref | v3 ref |
+  |---|---|---|
+  | map_area | 90, 66, 1422, 885 | 89, 64, 1410, 844 |
+  | sidebar | 1567, 88, 244, 851 | 1555, 93, 251, 805 |
+  | nav_turn | 1595, 982, 202, 53 | 1578, 940, 213, 61 |
+  | nav_colonies | 104, 970, 213, 50 | 109, 930, 209, 47 |
+  | nav_planets | 345, 970, 214, 50 | 348, 930, 209, 47 |
+  | nav_fleets | 585, 970, 214, 50 | 586, 930, 208, 47 |
+  | nav_leaders | 827, 970, 216, 50 | 824, 930, 209, 47 |
+  | nav_races | 1072, 970, 218, 50 | 1062, 930, 209, 47 |
+  | nav_info | 1326, 970, 213, 50 | 1304, 930, 215, 47 |
+
+**Two groups of hand-placed boxes had to follow the frame**, because the
+openings are smaller: the sidebar is 46 ref px shorter and the map area
+41. Moving only the research readout was impossible — 101 px of room
+remained for a 121 px row, so it would have overlapped the freighters
+row — so each group is reseated by the same affine as its own cutout:
+the eleven `sb_*` readouts by the sidebar's, the `system_*` and
+`fleet_*` popups by the map's. Every hand-placed box now lies inside its
+cutout at both resolutions, measured.
+
+`layout.json` `frame.image_size` and `frame.title_rect` follow the new
+master, and the existing check that boxes.json equals what
+`frame_holes` derives from the PNG holds them together.
+
+Checked at all four resolutions: the nav labels and TURN put **0 ink
+outside their holes** (found by the label's own blue tint, since the
+frame's metal is neutral). Renders in
+`~/orionlayer-fixtures/evidence/work_order_133/`.
 
 ## What is missing
 

@@ -3,14 +3,14 @@
   "frame": {
     "image": "frame.png",
     "image_size": [
-      1706,
-      922
+      1707,
+      921
     ],
     "title_rect": [
-      615,
-      0,
-      383,
-      64
+      658,
+      6,
+      316,
+      53
     ],
     "title_font": 30,
     "_note": "The cockpit frame is one PNG with transparent cutouts, stretched over the whole 1920x1080 reference area. Every box in boxes.json is derived from those cutouts by tools/frame_holes.py (--write regenerates boxes.json). Do not move the map/sidebar/nav boxes by hand: they would leave their cutout and be covered by the frame. title_rect is the title cutout in reference pixels. The frame is drawn ABOVE all content, so the map may bleed a few pixels under the rim.",
@@ -71,7 +71,12 @@
   "zoom_out_field": {
     "_source": "MAINSCR: _zoom_out_button = Add_Button_Field_(244, 455, ..., \"-\") (mainscr.cpp:1381, :1392); type 0 and the end corner (298, 473) read off the live list, 17 September 2026 (work order 128 C) and in tools/galaxy_box_fields.json. Parking looks this field up in the live list together with map_cancel's grid field and sends to the index it finds there; a list without both is not the galaxy map's, whatever screen number the game reports (the turn-start research prompt reports 0 and its field 9 is a choice row).",
     "field_type": 0,
-    "rect": [244, 455, 298, 473]
+    "rect": [
+      244,
+      455,
+      298,
+      473
+    ]
   },
   "map_cancel": {
     "field_type": 12,
