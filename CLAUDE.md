@@ -62,7 +62,7 @@ Git enforces it: `tools/githooks/pre-commit` runs the suite and refuses
 the commit on any exit but 0, 139 included. `python tools/setup.py`
 switches the hook on in a clone (decision 31).
 
-214 checks, headless, no orion2re needed. **The count must not go
+215 checks, headless, no orion2re needed. **The count must not go
 down.** If a change makes a check obsolete, replace it — do not
 delete it. It went down exactly once, on 12 September 2026, when
 Phase B deleted the frame machinery the checks were about (decision
@@ -180,6 +180,15 @@ loader reads `help_<language>.json` and no other name.
 `#ifdef ORION2RE_EXT`, and anything wanted from Joes goes in
 `doc/orion2re_open_fixes.md` — that file is the only list, and it has
 drifted from a second copy twice.
+
+**HARD RULE, NO EXCEPTIONS (Data): the orion2re project is never
+uploaded anywhere — no push, no new remote, no fork, no copy of its
+tree or bundles to GitHub or any other host. Patch files under `doc/`
+in orionlayerv3 are explicitly allowed and not covered by this rule.**
+
+The clone's push URL is disabled for that reason, and the smoke test
+holds the other half: no orion2re source file may be tracked here, by
+any name. Bundles go beside the tar backup in `~/` and stay there.
 
 ---
 

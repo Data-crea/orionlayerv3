@@ -17642,6 +17642,131 @@ def main():
     ok("a fallback window that carries one colour is blank, whatever "
        "`use_original` says — the reading work order 129 got wrong")
 
+    # ── THE orion2re TREE IS NEVER UPLOADED (Data's hard rule) ─────
+    #
+    # CLAUDE.md: "the orion2re project is never uploaded anywhere — no
+    # push, no new remote, no fork, no copy of its tree or bundles to
+    # GitHub or any other host. Patch files under doc/ in orionlayerv3
+    # are explicitly allowed and not covered by this rule."
+    #
+    # The clone's disabled push URL holds one half. This holds the
+    # other, which is the half a mistake can reach: a source file of
+    # Joes' engine committed HERE is uploaded the next time this
+    # repository is pushed, and nothing else in the tree would notice.
+    # The patches are the deliberate exception — they carry engine
+    # lines on purpose and are how the work is handed over at all.
+    import subprocess as _o2_sp
+    _o2_root = os.path.dirname(SCREENS_DIR)
+    _o2_tracked = _o2_sp.run(["git", "-C", _o2_root, "ls-files"],
+                           capture_output=True, text=True)
+    assert _o2_tracked.returncode == 0, _o2_tracked.stderr
+    _o2_files = [f for f in _o2_tracked.stdout.split("\n") if f]
+
+    def _o2_exempt(rel):
+        """The rule's own exception, and only it."""
+        return rel.startswith("doc/") and rel.endswith(".patch")
+
+    # 1. BY NAME. orionlayerv3 is Python; a C or C++ source here is
+    #    either a copy of the engine or the start of one. Checked
+    #    without needing ~/orion2re at all, so it holds on any machine.
+    _o2_src = sorted(f for f in _o2_files
+                     if f.lower().endswith((".c", ".cc", ".cpp", ".cxx",
+                                            ".h", ".hpp", ".inc"))
+                     and not _o2_exempt(f))
+    assert not _o2_src, (
+        f"C/C++ sources are tracked in orionlayerv3: {_o2_src}. The "
+        f"orion2re project is never uploaded anywhere; only *.patch "
+        f"under doc/ may carry engine lines")
+
+    # 2. AS A WHOLE TREE. A bundle or an archive of it is the same
+    #    upload in one file, and `git bundle --all` is exactly what
+    #    this project writes after every engine commit.
+    _o2_pack = sorted(f for f in _o2_files
+                      if f.lower().endswith((".bundle", ".tar", ".tgz",
+                                             ".tar.gz", ".zip", ".7z")))
+    assert not _o2_pack, (
+        f"an archive or bundle is tracked in orionlayerv3: {_o2_pack}. "
+        f"Bundles of the engine stay beside the tar backup in ~/")
+
+    # 3. BY CONTENT, when the engine tree is on this disk. Renaming a
+    #    file defeats check 1 and nothing else would catch it. Sizes
+    #    first, hashes only where a size collides, so this costs a
+    #    stat per tracked file and not a read.
+    _o2_tree = None
+    for _cand in ("~/orion2re", "~/src/orion2re", "/tmp/orion2re-main"):
+        _c = os.path.expanduser(_cand)
+        if os.path.isfile(os.path.join(_c, "src", "version.h")):
+            _o2_tree = _c
+            break
+    if _o2_tree is None:
+        report("orion2re source tree not on this disk — the name and "
+               "bundle halves of the upload rule were checked, the "
+               "content half could not be")
+    else:
+        _o2_by_size = {}
+        for _dirpath, _dirnames, _filenames in os.walk(
+                os.path.join(_o2_tree, "src")):
+            for _fn in _filenames:
+                _full = os.path.join(_dirpath, _fn)
+                try:
+                    _o2_by_size.setdefault(
+                        os.path.getsize(_full), []).append(_full)
+                except OSError:
+                    continue
+        _o2_hits = []
+        _o2_hashed = 0
+        for _rel in _o2_files:
+            if _o2_exempt(_rel):
+                continue
+            _here = os.path.join(_o2_root, _rel)
+            try:
+                _size = os.path.getsize(_here)
+            except OSError:
+                continue
+            _same = _o2_by_size.get(_size)
+            if not _same:
+                continue
+            _o2_hashed += 1
+            _mine = hashlib.sha256(
+                io.open(_here, "rb").read()).hexdigest()
+            for _theirs in _same:
+                if hashlib.sha256(io.open(_theirs, "rb").read()
+                                  ).hexdigest() == _mine:
+                    _o2_hits.append((_rel, os.path.relpath(_theirs,
+                                                           _o2_tree)))
+                    break
+        assert not _o2_hits, (
+            f"these tracked files are byte-identical to files in the "
+            f"orion2re tree: {_o2_hits}. Renaming one does not make it "
+            f"ours to upload")
+        report(f"upload rule: {len(_o2_by_size)} distinct sizes in "
+               f"{os.path.relpath(_o2_tree, os.path.expanduser('~'))}"
+               f"/src, {_o2_hashed} tracked files hashed on a size "
+               f"collision")
+
+    # AND THE RULE IS WRITTEN DOWN WHERE IT IS READ. A check without
+    # the sentence it enforces is a check nobody can act on, and the
+    # exception has to travel with it or the patches look like a
+    # violation.
+    _o2_claude = _lre.sub(r"\s+", " ", io.open(
+        os.path.join(_o2_root, "CLAUDE.md"), encoding="utf-8").read())
+    for _o2_phrase in (
+            "the orion2re project is never uploaded anywhere",
+            "no push, no new remote, no fork",
+            "patch files under `doc/` in orionlayerv3 are explicitly "
+            "allowed"):
+        assert _o2_phrase.lower() in _o2_claude.lower(), (
+            f"CLAUDE.md no longer says {_o2_phrase!r} — the rule this "
+            f"check enforces has left the only place a reader looks "
+            f"for it")
+    assert len([f for f in _o2_files if _o2_exempt(f)]) >= 1, (
+        "no doc/*.patch is tracked any more; the exemption in this "
+        "check now protects nothing and should be re-read before it "
+        "quietly widens")
+    ok("the orion2re tree is not uploaded from here: no engine source "
+       "tracked by name or by content, no bundle, and CLAUDE.md still "
+       "carries the rule and its patch exception")
+
     # A LIVE TOOL IS A CLIENT (work order 129 A): `tools/livesend.py`
     # identifies the dialog from the field list of the state it is handed
     # at that moment and refuses otherwise. Twice a tool sent into a dialog
