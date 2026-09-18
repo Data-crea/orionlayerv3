@@ -16709,6 +16709,177 @@ def main():
         ok("research cost table, field count and hyper-advanced surcharge "
            "agree with techdata.cpp and colcalc.cpp")
 
+    # AND THE HEADER ROUTE, MECHANICALLY (decision 23's first source, work
+    # order 130 C): tools/struct_header_check.py compiles orion2re's own
+    # headers with their packing and asserts every offset in every covered
+    # spec, plus each struct's size against the assert in sizes.h. It was
+    # done by hand twice — s_settings on 14 September, s_player.tech_fields
+    # on 17 — and a check done by hand is done once. Its own control moves
+    # one offset by a byte and requires the compile to fail, so a green run
+    # here is not a compiler that stopped looking.
+    _sh = _rc_sp.run([sys.executable, os.path.join(
+        os.path.dirname(SCREENS_DIR), "tools", "struct_header_check.py")],
+        capture_output=True, text=True, timeout=600)
+    if _sh.returncode == 2:
+        report("struct offsets NOT checked against the headers — no "
+               "orion2re tree and/or no C++ compiler on this disk")
+    else:
+        assert _sh.returncode == 0, _sh.stdout + _sh.stderr
+        ok("every covered core/structs spec matches orion2re's own headers, "
+           "sizes.h included, and the off-by-one control is refused")
+
+    # ── THE OFFERED RESEARCH ROWS, RECONSTRUCTED (decision 25) ──────
+    #
+    # doc/research_screen_stop1.md §1 found the categories and the offered
+    # field reconstructible and the choice ROWS not, for two reasons. Work
+    # order 130 C addressed both: tech[4] is a DERIVATION, not a table
+    # (techinit.cpp:444-474), and tech_applications @379 now has its header
+    # source. What must not rot is the rule that the reconstruction is only
+    # ever used when the game's own field list agrees with it.
+    from core import researchlist as _rl
+    from core import research as _rl_res
+    from core.structs import unverified as _rl_unv
+
+    # 1. THE DERIVATION IS THE ORIGINAL'S, INCLUDING ITS LIMIT. The engine
+    #    exits the game when a fifth application wants one of four slots
+    #    (techinit.cpp:466-468); here that is an assertion, because a
+    #    silently dropped fifth row is a list HD would draw one row short
+    #    and never notice.
+    _rl_apps = _rl.field_applications()
+    assert all(len(v) <= _rl.MAX_ROWS for v in _rl_apps.values())
+    assert all(_rl.APP_FIELD[a] == f
+               for f, apps in _rl_apps.items() for a in apps), (
+        "an application landed in a field that is not its own")
+    # Ascending app id, first free slot — so each field's apps come out
+    # sorted, and every non-sentinel app is placed exactly once.
+    assert all(list(v) == sorted(v) for v in _rl_apps.values())
+    _rl_placed = sorted(a for apps in _rl_apps.values() for a in apps)
+    _rl_want = [a for a, f in enumerate(_rl.APP_FIELD)
+                if f not in (_rl.FIELD_INVALID, _rl.FIELD_STARTING_TECH,
+                             _rl.FIELD_XENON_TECHNOLOGY)]
+    assert _rl_placed == _rl_want, (
+        len(_rl_placed), len(_rl_want),
+        set(_rl_want) ^ set(_rl_placed))
+    # The hyper-advanced fields have exactly one application each, by the
+    # switch and not by the table (tech.cpp:1063-1084).
+    for _rl_f in range(_rl.FIELD_HYPER_FIRST, _rl.FIELD_COUNT_HYPER_LAST + 1):
+        assert _rl.hyper_application(_rl_f) == \
+            _rl.APP_HYPER_FIRST + _rl_f - _rl.FIELD_HYPER_FIRST
+
+    # 2. THE WALK IS THE ORIGINAL'S WALK (tech.cpp:587-600): it tests the
+    #    chain's first field BEFORE advancing, it stops at the first field
+    #    at status 2, and it skips the field the player is already
+    #    researching — which is the whole difference between select mode
+    #    and change mode's list.
+    _rl_tf = [0] * _rl_res.FIELD_COUNT
+    _rl_first = _rl.FIRST_FIELD_IN_GROUP[4]
+    _rl_tf[_rl_first] = _rl.FIELD_STATUS_OFFERABLE
+    assert _rl.offered_field(_rl_tf, 4, 0) == _rl_first
+    assert _rl.offered_field(_rl_tf, 4, _rl_first) == 0, (
+        "the field being researched was offered anyway")
+    _rl_second = _rl.NEXT_FIELD[_rl_first]
+    _rl_tf[_rl_second] = _rl.FIELD_STATUS_OFFERABLE
+    assert _rl.offered_field(_rl_tf, 4, _rl_first) == _rl_second
+    assert _rl.offered_field([0] * _rl_res.FIELD_COUNT, 4, 0) == 0
+
+    # 3. A FIELD WITH NOTHING PICKABLE STILL HAS ONE ROW. The original adds
+    #    a field for billtext message 62 with app id 0 (tech.cpp:624-636),
+    #    so the wire carries a rectangle there. A reconstruction without it
+    #    is one row short of the game's list and fails validation — which
+    #    is the right failure, but it would fail on every such category.
+    _rl_ta = [0] * _rl_unv.TECH_APPLICATIONS_COUNT
+    _rl_rows, _rl_ph = _rl.offered_rows(_rl_first, _rl_ta, _rl_apps)
+    assert _rl_rows == (0,) and _rl_ph is True, (_rl_rows, _rl_ph)
+    for _rl_a in _rl_apps[_rl_first]:
+        _rl_ta[_rl_a] = _rl.APP_STATUS_AVAILABLE
+    _rl_rows, _rl_ph = _rl.offered_rows(_rl_first, _rl_ta, _rl_apps)
+    assert _rl_rows == _rl_apps[_rl_first] and _rl_ph is False
+
+    # 4. THE VALIDATION THE DATA PROVIDES, AND THAT IT CAN SAY NO.
+    #    Decision 25: a reconstruction without a validation the data
+    #    itself carries is a guess with extra steps. Build the field list
+    #    the reconstruction predicts, prove it validates, then break it
+    #    four ways and require each to be caught.
+    # Two categories offering, so the field list carries two radios and
+    # the empty categories' blocks sit between them — the shape the skew
+    # in §2.4 is about. Group 4 is panel entry 0, group 7 is entry 4.
+    _rl_other = _rl.FIRST_FIELD_IN_GROUP[7]
+    _rl_tf[_rl_other] = _rl.FIELD_STATUS_OFFERABLE
+    for _rl_a in _rl_apps.get(_rl_other, ()):
+        _rl_ta[_rl_a] = _rl.APP_STATUS_AVAILABLE
+    _rl_entries = _rl.reconstruct(_rl_tf, _rl_ta, current_field=0,
+                                  select_mode=True)
+    assert [_e.index for _e in _rl_entries if _e.offered] == [0, 4], \
+        [(_e.index, _e.field) for _e in _rl_entries]
+    # Every category still has an entry BLOCK, offered or not
+    # (tech.cpp:225-231) — eight of them, which is what makes the radio
+    # indices skew away from the entry indices.
+    assert sum(1 for _k, _t, _r in _rl.expected_fields(_rl_entries)
+               if _k.startswith("block ")) == 8
+
+    from core.game_state import FieldInfo as _RlField
+
+    def _rl_list(entries, select_mode=True):
+        """The FIELD_LIST the game would build for these entries."""
+        out = []
+        for _kind, _ft, _r in _rl.expected_fields(entries, select_mode):
+            _f = _RlField()
+            _f.index = len(out)
+            _f.field_type = 7 if _ft is None else _ft
+            if _r is None:
+                _f.x = _f.y = _f.x_end = _f.y_end = 0
+            elif _r[2] is None:
+                # a radio: origin from the source, end from the art
+                _f.x, _f.y = _r[0], _r[1]
+                _f.x_end, _f.y_end = _r[0] + 18, _r[1] + 18
+            else:
+                _f.x, _f.y, _f.x_end, _f.y_end = _r
+            _f.hotkey = 0
+            out.append(_f)
+        return out
+
+    _rl_fields = _rl_list(_rl_entries)
+    assert _rl.validate_against_fields(_rl_entries, _rl_fields) == [], \
+        _rl.validate_against_fields(_rl_entries, _rl_fields)
+    # one row too many
+    assert _rl.validate_against_fields(_rl_entries,
+                                       _rl_fields + _rl_fields[-1:]), \
+        "an extra field validated"
+    # a row in the wrong place — the case a remembered index would hide
+    _rl_moved = _rl_list(_rl_entries)
+    _rl_moved[1].y += 1
+    assert _rl.validate_against_fields(_rl_entries, _rl_moved), \
+        "a row one pixel out validated"
+    # a radio missing: the index skew of doc/tech_change_reading.md §2.4
+    _rl_skew = [_f for _f in _rl_list(_rl_entries) if _f.field_type != 1]
+    assert _rl.validate_against_fields(_rl_entries, _rl_skew), \
+        "a list with no radio buttons validated"
+    # and an empty list is not quietly "nothing to disagree with"
+    assert _rl.validate_against_fields(_rl_entries, [])
+    assert _rl.validate_against_fields(_rl_entries, None)
+
+    # 5. A ROW IS FOUND BY SHAPE, NEVER BY A REMEMBERED INDEX (the rule
+    #    work order 128 C put into core/livefields.live_field — which this
+    #    calls rather than carrying a second copy, and mapboxes now imports
+    #    from the same home).
+    from core import livefields as _lf
+    from screens.galaxy_map import mapboxes as _rl_mb
+    assert _rl_mb.live_field is _lf.live_field and _rl_mb.rect is _lf.rect, \
+        "mapboxes has its own copy of live_field again"
+    _rl_e = next(_e for _e in _rl_entries if _e.offered)
+    _rl_hit = _rl.row_field(_rl_fields, _rl_e, 0)
+    assert _rl_hit is not None and _lf.rect(_rl_hit) == _rl_e.row_rect(0)
+    # The same row, in a list where every index has moved.
+    _rl_shifted = _rl_list(_rl_entries)[:1] + _rl_list(_rl_entries)
+    for _i, _f in enumerate(_rl_shifted):
+        _f.index = _i
+    _rl_hit2 = _rl.row_field(_rl_shifted, _rl_e, 0)
+    assert _rl_hit2 is not None and _lf.rect(_rl_hit2) == _rl_e.row_rect(0)
+    # And absent from a list that does not hold it: no send, not a guess.
+    assert _rl.row_field([], _rl_e, 0) is None
+    ok("the offered research rows reconstruct, and the game's own field "
+       "list is what says so — four ways of disagreeing, all caught")
+
     # THE SIDEBAR'S RESEARCH READOUT — the original's four cases (work
     # order 129 D), transcribed from Print_Main_Screen_Data_
     # (mainscr_main.cpp:186-247) through core/research.py. Until then HD

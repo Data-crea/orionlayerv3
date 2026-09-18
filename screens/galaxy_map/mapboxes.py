@@ -38,6 +38,11 @@ said to be unreadable, never guessed at.
 """
 from dataclasses import dataclass, field
 
+# One home for reading a live field by its shape (core/livefields.py):
+# the research screen is the third caller, and a screen importing
+# another screen to get at a shared rule is how the rule gets copied.
+from core.livefields import live_field, rect  # noqa: F401
+
 #: `Add_Grid_Field_(22, 22, 1, 1, 506, 400, ...)`, mainscr.cpp:1427.
 GRID_RECT = (22, 22, 527, 421)
 TYPE_BUTTON = 0
@@ -56,25 +61,7 @@ FLEET_DRAG_HEIGHT = 0x23
 SYSTEM_TITLE_HEIGHT = 0x2F
 
 
-def rect(f):
-    return (f.x, f.y, f.x_end, f.y_end)
 
-
-def live_field(fields, spec):
-    """The field `spec` names — its type and native rect — in the LIVE list.
-
-    None when the list holds no such field. A field NUMBER means something
-    else in every other list (decision 20, decision 59), so a send goes to
-    the index this returns at the moment, or does not go at all. Extracted
-    17 September 2026 (work order 128 C) from the map cancel's own lookup,
-    when parking became its second caller.
-    """
-    if not spec:
-        return None
-    want = tuple(spec.get("rect") or ())
-    return next((f for f in (fields or [])
-                 if f.field_type == spec.get("field_type")
-                 and rect(f) == want), None)
 
 
 def _contains(outer, inner):
