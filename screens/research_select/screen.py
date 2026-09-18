@@ -65,6 +65,7 @@ import logging
 from core import billtext, research, researchlist, technames
 from core.screen_base import ScreenBase
 from core.structs import player as player_spec
+from core.structs import unverified
 
 from . import native, panel
 
@@ -181,28 +182,37 @@ class ResearchSelectScreen(ScreenBase):
     def _player_record(self, game_state):
         """(tech_fields, tech_applications) off the wire, or None.
 
+        THE LOCAL PLAYER IS `player_raw[player_num]`, which is how every
+        other screen reads it (colonyrows, boxmodel, planetrows). The
+        first version of this method asked for a `players` attribute
+        that `core/game_state.py` has never had, and it was a headless
+        check with a hand-made state object that let it through — the
+        fake carried the name the code expected, so both were wrong
+        together. Found by driving it live, which is the only thing
+        that would have.
+
         `tech_fields` is a verified spec field. `tech_applications` is
         NOT — it is quarantined in `core/structs/unverified.py` with one
-        of decision 23's two sources — so it is read here by its offset
-        and the screen says, through `MARKED` and the status document,
-        that the rows rest on it. The validation against the game's own
-        field list is what stands in until the second source is in: a
-        wrong offset gives a wrong row count, and a wrong row count
-        does not validate.
+        of decision 23's two sources — so it is read here by its offset,
+        and `MARKED` and the status document say the rows rest on it.
+        The validation against the game's own field list is what stands
+        in until the second source is in: a wrong offset gives a wrong
+        row count, and a wrong row count does not validate.
         """
-        players = getattr(game_state, "players", None) if game_state else None
-        if not players:
+        if game_state is None:
+            return None
+        raws = getattr(game_state, "player_raw", None) or []
+        me = getattr(game_state, "player_num", 0) or 0
+        if not 0 <= me < len(raws):
+            return None
+        raw = raws[me]
+        if raw is None or len(raw) < player_spec.SPEC.size:
             return None
         try:
-            view = player_spec.SPEC.parse(players[0]) \
-                if isinstance(players[0], (bytes, bytearray)) else players[0]
+            view = player_spec.SPEC.parse(raw)
             tech_fields = list(view.tech_fields)
         except (AttributeError, IndexError, ValueError, TypeError):
             return None
-        raw = getattr(view, "raw", None)
-        if raw is None:
-            return None
-        from core.structs import unverified
         start = unverified.TECH_APPLICATIONS_OFFSET
         end = start + unverified.TECH_APPLICATIONS_COUNT
         if len(raw) < end:

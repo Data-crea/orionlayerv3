@@ -17251,12 +17251,27 @@ def main():
     #    128 D's method for the Planets list). A shared function
     #    guarantees agreement, not correctness: the stacked colony
     #    figures shared one and missed 165 of 210 clicks (decision 5).
-    class _RsPlayerState:
-        current_screen = 53
+    # THE REAL GameState, never a hand-made object with the attribute
+    # names the screen happens to ask for. The first version of this
+    # check built its own class with a `players` list; the screen read
+    # `players`; `core/game_state.py` has only ever had `player_raw`,
+    # so the check passed and the screen fell back on every real state.
+    # Found by driving it live (work order 130's live run) — which is
+    # the one thing that could. A fake that answers the question the
+    # code asks proves the code and the fake agree, and nothing else.
+    from core.game_state import GameState as _RsGameState
+    assert hasattr(_RsGameState(), "player_raw"), \
+        "GameState has no player_raw — the screen reads a name that is gone"
+    assert not hasattr(_RsGameState(), "players"), \
+        "GameState grew a `players` attribute; the screen must read one home"
 
-        def __init__(self, fields, players):
-            self.fields = fields
-            self.players = players
+    def _RsPlayerState(fields, players):
+        _st = _RsGameState()
+        _st.current_screen = 53
+        _st.fields = fields
+        _st.player_raw = list(players)
+        _st.player_num = 0
+        return _st
 
     from core.structs import player as player_mod
 
