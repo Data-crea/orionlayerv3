@@ -1,0 +1,178 @@
+Extension API: the fleet screen's view state on the wire ("FLTS").
+
+STATUS: applied locally to ~/orion2re (branch orionlayer-local, commit
+cc5ec133) by work order 134 C, 19 September 2026. Required by
+tools/version_check.py. NOT CONFIRMED LIVE — work order 134's live part
+is parked (doc/briefs/134-parked-for-data.md); it compiles and the
+client parses it, and that is all that has been shown. It comes back off
+with
+
+    cd ~/orion2re && patch -R -p1 < \
+        ~/orionlayerv3/doc/ext_fleet_screen_state.patch
+
+then rebuild.
+
+WHAT IT IS FOR
+
+    FLT1::Fleet_Screen_ (flt1.cpp:486-837) keeps everything it shows in
+    MOX and FLT1 globals (mox.cpp:109-188, flt1.cpp:5-12), and
+    SerializeState touched none of them. Without this block an HD client
+    knows the screen is up (ext::Tick reports 4) and knows the field
+    list, and nothing else: not which stack is shown, not which ships
+    are in the grid, not which of them are selected, not where the list
+    is scrolled, not which of the two filters are on.
+
+    RECONSTRUCTION WAS TRIED FIRST (decision 25 of the OrionLayer
+    fundament) and it does not reach. The big-icon MEMBERSHIP is the
+    hard part:
+
+      - FSEL (open fix 20 revision 2) sends the whole node table, but
+        the only CHAIN it sends is the fleet box's, and that is -1 here:
+        the fleet screen closes box 2 (flt1.cpp:826-832). _ship_stack_-
+        start[] and _ship_node[].next_node are not on the wire at all.
+      - Walking the node table instead names ships the player cannot
+        see: SHIPSTAK::Remove_Non_Detected_Ships_ (shipstak.cpp:200-250)
+        unlinks nodes of foreign stacks and Delete_Ship_Node_ (:5-11)
+        leaves their ship_idx in place.
+      - Grouping own ships by s_ship.location would be a different list
+        from the engine's in both membership and order, and would have
+        no way to say so.
+
+    The one thing a client CAN see is how many big-icon fields the
+    screen added, because they are in the field list at known grid
+    rects. That says how many ships there are and where their cells sit.
+    It does not say WHICH ships, which is what the panel, the icons and
+    every command need.
+
+WHAT IT DOES
+
+    Appends an optional trailing block, written only while
+    MOX::_current_screen == SCREEN_FLEET and LAST in the snapshot —
+    after FSEL, so nothing above it moves and an older client that stops
+    reading earlier is unaffected:
+
+        'F','L','T','S'
+        int16  _small_ship_stack_ptr          (-1 if out of range)
+        int16  _ship_stack_start[ptr]         (-1 with no stack)
+        int16  _fltscrn_stack_owner
+        int16  _n_fltscrn_big_icons           (clamped)
+        int16  _n_fltscrn_big_icons_added
+        int16  _n_fltscrn_rows
+        int16  _scroll_bar->first_visible_row (0 while null)
+        int16  _n_big_icons_selected
+        int16  _scanned_big_ship
+        int16  _scanned_small_ship
+        int16  _fltscrn_support_button_status
+        int16  _fltscrn_combat_button_status
+        uint8  FLT1::_relocate_button_mode
+        uint8  FLT1::_merging_relocations
+        int16  N
+        N x  ( int16 ship_idx, uint8 selected )
+
+    The list is a snapshot of _fltscrn_big_icon[] in DISPLAY order, not
+    a rebuild: that is the order Build_Fltscrn_Big_Icon_Fields_ left
+    there (flt2.cpp:207-268, including the officer move-to-front at
+    :263-265), and the order Get_Fltscrn_Big_Icon_XY_ turns into grid
+    positions (flt2.cpp:116-128).
+
+    Nothing is dereferenced without a check: the count is clamped to
+    SHIP_LIST_CAPACITY, a null _fltscrn_big_icon writes -1 entries
+    instead of reading, and _scroll_bar is read as 0 while it is still
+    null (the pointer is set only once a list exists, flt1.cpp:1245-1248).
+
+COST IF IT IS NOT APPLIED
+
+    Nothing changes for the game: the block is written and never read by
+    it. For a client, the HD fleet screen cannot draw its grid, its ship
+    panel or its filters, and says so and hands over to the original
+    picture instead (decision 22).
+
+diff --git a/src/ext/ext_api.cpp b/src/ext/ext_api.cpp
+index 362ccf43..d1010bb7 100644
+--- a/src/ext/ext_api.cpp
++++ b/src/ext/ext_api.cpp
+@@ -239,6 +239,81 @@ static void SerializeState(std::vector<uint8_t>& buf,
+             n = MOX::_ship_node[n].next_node;
+         }
+     }
++
++    // 3. The fleet screen's view state: "FLTS", written ONLY while
++    //    SCREEN_FLEET is up, and LAST, so nothing above it moves and a
++    //    client that stops after FSEL is unaffected. OrionLayer, open
++    //    fix 27.
++    //
++    //    NOTHING IN THIS BLOCK IS REACHABLE ANY OTHER WAY. Every value
++    //    is a MOX or FLT1 global (mox.cpp:109-188, flt1.cpp:5-12) that
++    //    SerializeState never touched, and the one that matters most —
++    //    WHICH ships the screen is showing, in the order it shows them
++    //    — cannot be rebuilt from what is already sent. FSEL carries
++    //    the node table but only box 2's chain, which is -1 here
++    //    because the fleet screen closes that box; and walking the node
++    //    table instead does not work, because Remove_Non_Detected_Ships_
++    //    (shipstak.cpp:200-250) unlinks nodes of foreign stacks while
++    //    Delete_Ship_Node_ (:5-11) leaves their ship_idx in place, so a
++    //    client walking the table names ships the player cannot see.
++    //
++    //    The list is written in DISPLAY order, which is the order
++    //    Build_Fltscrn_Big_Icon_Fields_ left in _fltscrn_big_icon
++    //    (flt2.cpp:207-268, including the officer move-to-front at
++    //    :263-265) — the same order Get_Fltscrn_Big_Icon_XY_ turns into
++    //    grid positions. It is a snapshot of an array, not a rebuild.
++    if (current_screen == SCREEN_FLEET) {
++        buf.push_back((uint8_t)'F');
++        buf.push_back((uint8_t)'L');
++        buf.push_back((uint8_t)'T');
++        buf.push_back((uint8_t)'S');
++
++        int16_t stack = MOX::_small_ship_stack_ptr;
++        int16_t head = -1;
++        if (stack >= 0 && stack < MOX::_ship_stack_count) {
++            head = MOX::_ship_stack_start[stack];
++        } else {
++            stack = -1;
++        }
++        Write16(buf, stack);
++        Write16(buf, head);
++        Write16(buf, MOX::_fltscrn_stack_owner);
++
++        int16_t icons = MOX::_n_fltscrn_big_icons;
++        if (icons < 0) icons = 0;
++        if (icons > SHIP_LIST_CAPACITY) icons = SHIP_LIST_CAPACITY;
++        Write16(buf, icons);
++        Write16(buf, MOX::_n_fltscrn_big_icons_added);
++        Write16(buf, (int16_t)MOX::_n_fltscrn_rows);
++
++        // first_visible_row lives in the scroll bar the screen points
++        // MOX::_scroll_bar at (flt1.cpp:1245-1248); the pointer is null
++        // until the first list is built, and 0 is then the truth.
++        Write16(buf, MOX::_scroll_bar ? MOX::_scroll_bar->first_visible_row
++                                      : (int16_t)0);
++        Write16(buf, MOX::_n_big_icons_selected);
++        Write16(buf, MOX::_scanned_big_ship);
++        Write16(buf, MOX::_scanned_small_ship);
++
++        // The two filter radios. Their STATUS is what the screen reads
++        // (flt2.cpp:130-146); the fields carry it by pointer and it is
++        // not in the field list.
++        Write16(buf, MOX::_fltscrn_support_button_status);
++        Write16(buf, MOX::_fltscrn_combat_button_status);
++        Write8(buf, FLT1::_relocate_button_mode);
++        Write8(buf, FLT1::_merging_relocations);
++
++        Write16(buf, icons);
++        for (int16_t i = 0; i < icons; i++) {
++            if (MOX::_fltscrn_big_icon) {
++                Write16(buf, MOX::_fltscrn_big_icon[i].ship_idx);
++                Write8(buf, (uint8_t)(MOX::_fltscrn_big_icon[i].selected != 0));
++            } else {
++                Write16(buf, (int16_t)-1);
++                Write8(buf, (uint8_t)0);
++            }
++        }
++    }
+ }
+ 
+ // ── Field list ───────────────────────────────────────────
+-- 
+2.55.0
+

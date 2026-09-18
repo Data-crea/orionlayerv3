@@ -29,7 +29,11 @@ import logging
 
 from core.screen_base import ScreenBase
 
-from . import fltdraw, fltgeom
+from core import mouse as mouse_input
+from core.shipparts import ShipPartNames
+from screens.colony_summary import colonyrows
+
+from . import fltdraw, fltgeom, fltrows, fltwire
 
 log = logging.getLogger("fleets")
 
@@ -47,6 +51,12 @@ class FleetsScreen(ScreenBase):
         self._total_rows = 0     # rows the filtered list needs
         self._icon_count = 0     # big icons the grid is holding
         self._status = ""        # the line under the inset map
+        self._state = None       # the snapshot this frame was drawn from
+        self._view = None        # fltwire.View: what may be believed
+        self._cells = []         # fltrows.Cell per displayed slot
+        self._panel = []         # the scanned ship's lines
+        self._parts = None       # ship part names (shields, weapons, specials)
+        self._hover_cell = None  # slot under the pointer, HD's own hover
 
     # ── Lifecycle ─────────────────────────────────────────
 
@@ -58,6 +68,11 @@ class FleetsScreen(ScreenBase):
         # MOX::_scanned_big_ship = -1 and _scanned_small_ship = -1 on
         # entry (flt1.cpp:527-528); nothing is scanned, so no status line.
         self._first_row, self._status = 0, ""
+        language = (getattr(self.app, "settings", {}) or {}).get(
+            "language", "en")
+        self._parts = ShipPartNames(language)
+        self._view, self._cells, self._panel = None, [], []
+        self._hover_cell = None
         self._load_frame(
             self._data.get("frame", {}).get("image", "frame.png"))
         self.update(game_state)
@@ -65,6 +80,70 @@ class FleetsScreen(ScreenBase):
     def on_resize(self):
         super().on_resize()
         self._scale_frame()
+
+    def update(self, game_state=None):
+        """Read the snapshot, validate it, and keep only what survived.
+
+        `fltwire.View` does the deciding — it is the module that knows
+        why reconstruction does not reach here and what the field list
+        can confirm. This method holds no rule of its own; it turns the
+        View's answer into the four things the renderer draws.
+        """
+        if game_state is None:
+            return
+        self._state = game_state
+        self._view = fltwire.View(game_state, fltgeom.native_cells())
+        if not self._view.ok:
+            self._cells, self._panel = [], []
+            self._icon_count, self._total_rows, self._first_row = 0, 0, 0
+            return
+        block = self._view.block
+        self._icon_count = len(self._view.rows)
+        self._total_rows = max(0, int(block.get("rows", 0)))
+        self._first_row = max(0, int(block.get("first_row", 0)))
+        self._cells = fltrows.cells(self._view, game_state)
+        scanned = int(block.get("scanned_big", -1))
+        ships = block.get("ship_idx") or []
+        self._panel = (fltrows.panel_lines(ships[scanned], game_state,
+                                           self._parts)
+                       if 0 <= scanned < len(ships) else [])
+        self._status = self._status_line(game_state, block)
+
+    def _status_line(self, game_state, block):
+        """The line under the inset map.
+
+        The original prints the name of the star the POINTER is over
+        (`Print_Fltscrn_Scanned_Star_Name_`, flt2.cpp:338-522, called
+        only on hover, flt1.cpp:397-399) together with a governor and a
+        move preview. HD DRAWS THE NAME AND NOT THE PREVIEW: the
+        preview is computed on hover by `SHIPMOVE::Ships_Try_To_Move_To_`
+        and is on no wire (OMISSION, `fltwire`). The scanned SMALL stack
+        is in the block, so the name follows the game's own hover and
+        not HD's — which is the right way round while the game owns the
+        pointer.
+        """
+        scanned = int(block.get("scanned_small", -1))
+        icons = getattr(game_state, "ship_icons", None) or []
+        if not (0 <= scanned < len(icons)):
+            return ""
+        star = getattr(icons[scanned], "star_idx", None)
+        return fltrows.star_name(game_state, star) if star is not None else ""
+
+    def wants_original(self):
+        """Hand over whenever the View is not READY — decision 22's
+        promise one step in, and the same shape the research screen
+        uses. A fleet grid drawn without the block would be twenty
+        empty slots over a stack that has ships in it, which is worse
+        than the original picture and says nothing about why."""
+        return not (self._view and self._view.ok)
+
+    def fallback_reason(self):
+        """The sentence shown when this screen hands over."""
+        return self._view.reason if self._view else ""
+
+    @property
+    def problems(self):
+        return [self._view.reason] if self.wants_original() else []
 
     # ── Geometry, in one place ────────────────────────────
 
@@ -111,8 +190,12 @@ class FleetsScreen(ScreenBase):
         for box in self.boxes:
             box.render(surface, self.layout, self.style)
         fltdraw.draw_slots(surface, self)
+        fltdraw.draw_cells(surface, self, self._cells)
         fltdraw.draw_scroll(surface, self, self._first_row, self._total_rows)
         fltdraw.draw_labels(surface, self, self._words, self.enabled_buttons())
+        fltdraw.draw_panel(surface, self, self._panel)
+        fltdraw.draw_inset(surface, self, self._inset_stars(),
+                           self._inset_markers())
         fltdraw.draw_status(surface, self, self._status)
         # The frame LAST, so its metal covers the two reference px each
         # box is allowed to bleed under it (fltgeom.BLEED).
@@ -120,15 +203,203 @@ class FleetsScreen(ScreenBase):
         self.render_help(surface)
 
     def enabled_buttons(self):
-        """Which of the seven are live this frame, or None for all.
+        """The control boxes that are live, or None before a snapshot.
 
-        Part C replaces this with the field list's own answer, which is
-        where it belongs: the original adds SCRAP and ALL only under
-        conditions (flt1.cpp:1185-1199) and LEADERS as a hidden field
-        when no officer exists (:1232-1241), so the wire says which are
-        real and HD never has to guess.
+        The FIELD LIST answers it and the view state does not, which is
+        the honest way round: the original adds SCRAP and ALL only under
+        conditions (flt1.cpp:1185-1199) and turns LEADERS into a hidden
+        field with no hotkey when no officer exists (:1232-1241). So
+        "is there a field with this hotkey and this type, in the list a
+        click would go to" IS the question.
         """
+        if self._state is None or self._view is None:
+            return None
+        return self._view.enabled_buttons(
+            getattr(self._state, "fields", None))
+
+    def _inset_stars(self):
+        """Every star as (native_x, native_y, colour index) inside the
+        inset box — `colonyrows.galaxy_inset_stars` with THIS screen's
+        native box (15, 52, 305, 182), flt1.cpp:411. One transform for
+        all three inset sites, given a different box each time, rather
+        than a third copy of `MOVEBOX::Draw_Galaxy_Map_Box_`."""
+        if self._state is None:
+            return []
+        return colonyrows.galaxy_inset_stars(
+            self._state, fltgeom.REGIONS["inset_map"])
+
+    def _inset_markers(self):
+        """Every ship stack marker as (native_x, native_y, owner).
+
+        `s_ship_icon.x/y` are ALREADY in this box's space while screen 4
+        is up: `FLT::Set_Fltscrn_Small_Ship_Icon_XYs_(15, 52, 305, 182)`
+        overwrites them on entry (flt.cpp:24-55, flt1.cpp:531). So this
+        reads them and converts nothing — and it is also decision 59's
+        hazard from the other side, which is why the galaxy map must
+        ignore `s_ship_icon` while the screen id is not 0.
+
+        The box origin is subtracted because those coordinates are
+        absolute native, and `fltdraw.draw_inset` works inside the box.
+        """
+        if self._state is None:
+            return []
+        bx, by, _bw, _bh = fltgeom.REGIONS["inset_map"]
+        out = []
+        for icon in (getattr(self._state, "ship_icons", None) or []):
+            x, y = int(icon.x), int(icon.y)
+            if x < 0 or y < 0:
+                continue        # the -1 sentinel: not placed this frame
+            out.append((x - bx, y - by, getattr(icon, "owner", None)))
+        return out
+
+    # ── Input ─────────────────────────────────────────────
+    #
+    # DECISION 20, AND IT IS THE WHOLE RULE ON THIS SCREEN. The loop
+    # rebuilds its field list on EVERY iteration (flt1.cpp:582-585) and
+    # the ids shift with the icon count, the star count and every
+    # conditional button, so an index remembered from an earlier list
+    # names something else by the time it is sent. Every send below
+    # resolves its field in the list that is on the wire at the moment
+    # of the click, by hotkey and type, and does not go at all if it is
+    # not there.
+    #
+    # WHAT IS NOT SENT, and each for its own reason:
+    #   - the big-icon SELECTION goes through MSG_SELECT_SHIP, not a
+    #     field: an activation of a big icon only SCANS
+    #     (flt2.cpp:924-928), and the toggle is painted from the live
+    #     mouse button, which no injected click reaches (open fix 28).
+    #   - the scroll THUMB is a pointer value; HD scrolls with the two
+    #     arrow fields and never with the scroll field (decision 39).
+    #   - F5 and Alt-F5 (merge, clear relocations) cannot be sent at
+    #     all: INJECT_KEY's keysym is an int16 and SDLK_F5 is
+    #     0x4000003e (the reading's §2). OMISSION.
+
+    #: ESC, which the RETURN button carries as its hotkey.
+    KEY_ESC = 27
+
+    def _live(self, name):
+        """The live field for one control, or None."""
+        return fltwire.hotkey_field(
+            getattr(self._state, "fields", None), name)
+
+    def _activate(self, name, why):
+        """ACTIVATE_FIELD on one control, or nothing. True if it went."""
+        if not self.app.connected:
+            return False
+        field = self._live(name)
+        if field is None:
+            log.info("fleets: %s is not in the live field list (%s)",
+                     name, why)
+            return False
+        self.app.client.activate_field(field.index)
+        return True
+
+    def handle_click(self, screen_x, screen_y):
+        if self.help_consumes_click(screen_x, screen_y):
+            return None
+        if self.wants_original():
+            return None
+        for box in self.boxes:
+            if box.name in fltwire.HOTKEYS and box.contains(screen_x,
+                                                            screen_y):
+                # THE TWO FILTERS ARE RADIOS AND NEED A CLICK, NOT AN
+                # ACTIVATION. ACTIVATE_FIELD returns a type-1 field's id
+                # without toggling it (fields.cpp:1018-1024, :1116-1122,
+                # :1292-1297) and the handler then finds one status still
+                # 1 and only rebuilds the list — so the filter would
+                # never change. An injected click toggles (:1292-1297).
+                if box.name in ("btn_support", "btn_combat"):
+                    self._click_field(box.name)
+                else:
+                    self._activate(box.name, "clicked")
+                return box
+        slot = self._slot_at(screen_x, screen_y)
+        if slot is not None:
+            self._toggle_slot(slot)
+            return None
+        return super().handle_click(screen_x, screen_y)
+
+    def _click_field(self, name):
+        """INJECT_CLICK at a radio field's own centre.
+
+        Its rect comes from the LIVE field, not from our box: the box is
+        where HD drew the word and the field is where the game will read
+        the click (decision 35 — the click frame is the game's).
+        """
+        if not self.app.connected:
+            return False
+        field = self._live(name)
+        if field is None:
+            return False
+        self.app.client.inject_click((field.x + field.x_end) // 2,
+                                     (field.y + field.y_end) // 2)
+        return True
+
+    def _slot_at(self, screen_x, screen_y):
+        """The displayed grid slot under a point, or None."""
+        for slot, rect in enumerate(self.icon_slots()):
+            if rect.collidepoint(screen_x, screen_y):
+                return slot if slot < len(self._cells) else None
         return None
+
+    def _toggle_slot(self, slot):
+        """Select or deselect the ship in one cell — MSG_SELECT_SHIP.
+
+        Open fix 28 makes this reach the fleet screen at all; open fix
+        21's handler refuses here (it wants the galaxy map's fleet box)
+        and writes an array this screen does not read. Nothing is
+        assumed about the result: the selection HD draws next frame is
+        the one the FLTS block reports, never the one sent.
+
+        Refused where the engine would refuse it (decision 33): a
+        foreign stack cannot be selected (flt1.cpp:1185, :1193) and
+        relocate mode 1 turns the painting off entirely (flt1.cpp:413).
+        """
+        if not (self.app.connected and self._view and self._view.ok):
+            return
+        if not self._view.own_stack:
+            return
+        if int(self._view.block.get("relocate_mode", 0)) == 1:
+            return
+        cell = self._cells[slot]
+        self.app.client.select_ship(cell.ship_idx, not cell.selected)
+
+    def handle_mouse_motion(self, screen_x, screen_y):
+        self._hover_cell = self._slot_at(screen_x, screen_y)
+        return super().handle_mouse_motion(screen_x, screen_y)
+
+    def handle_mousewheel(self, direction, screen_x, screen_y):
+        """The wheel scrolls the grid through the game's own arrows.
+
+        HD EXTENSION — the original has no wheel here, only the two
+        arrow buttons and the bar (flt1.cpp:1211-1215). It is NOT a
+        local scroll either: the list window belongs to the game
+        (decision 46) and `first_visible_row` comes back in the FLTS
+        block, so the wheel activates the same field the arrow does and
+        HD waits to be told where the list now is.
+
+        Refused where the game would refuse it (decision 33): the two
+        arrows only exist above twenty icons (flt1.cpp:1212), so above
+        the grid with a shorter list the wheel does nothing, exactly as
+        a click on the absent arrow would.
+        """
+        if self.help_consumes_wheel(direction):
+            return True
+        if self.wants_original() or not (self._view and
+                                         self._view.scrollable()):
+            return False
+        return self._activate("scroll_up" if direction > 0
+                              else "scroll_down", "wheel")
+
+    def handle_key(self, key):
+        if self.help_consumes_key(key):
+            return
+        if self.wants_original():
+            return
+        if key == self.KEY_ESC:
+            self._activate("btn_return", "ESC")
+            return
+        super().handle_key(key)
 
     # ── Right-click help ──────────────────────────────────
 

@@ -133,6 +133,28 @@ LOCAL_PATCHES = {
         "Select_Ship_",
         "MSG_SELECT_SHIP falls into ProcessInput's default case, so a "
         "click on a ship cell silently selects nothing (open fix 21)"),
+    # Applied 19 September 2026 (work order 134 C, open fixes 27 and 28).
+    # NOT confirmed live — 134's live part is parked. Two entries because
+    # they are two patches and either can be taken back alone; the read
+    # half is useless without the screen and the write half is useless
+    # without the read half, but a tree can carry either.
+    "doc/ext_fleet_screen_state.patch": (
+        os.path.join("src", "ext", "ext_api.cpp"),
+        # The block's own marker. "FLTS" would not do: it is four
+        # characters pushed one at a time, so the literal is not in the
+        # source as a word.
+        "_fltscrn_stack_owner",
+        "the snapshot carries none of the fleet screen's view state "
+        "(open fix 27), so the HD screen cannot know which stack is "
+        "shown, which ships are in the grid or which of them are "
+        "selected, and hands over to the original picture"),
+    "doc/ext_fleet_screen_select.patch": (
+        os.path.join("src", "ext", "ext_api.cpp"),
+        "Select_Fltscrn_Ship_",
+        "MSG_SELECT_SHIP on screen 4 goes to open fix 21's handler, "
+        "which refuses without the fleet box and writes an array this "
+        "screen does not read (open fix 28) — so a single ship cannot "
+        "be selected and only ALL changes the selection"),
 }
 
 #: Patches that are REPORTED to Joes and not yet applied: listed with

@@ -3335,11 +3335,18 @@ def main():
                              (0x85, _s.pack("<hB", 7, 0))], _sel_sent
         import version_check as _sel_vc
         # Applied and confirmed live (briefs 118, 119): required, not
-        # reported — a tree without them fails the checker.
+        # reported — a tree without them fails the checker. The fleet
+        # SCREEN's two (work order 134 C, open fixes 27 and 28) are
+        # required as well but NOT confirmed live; they are listed here
+        # so that adding a fleet patch without a marker fails, and the
+        # two pairs are kept apart so the pairing stays visible: 20/21
+        # is the galaxy map's box, 27/28 is screen 4.
         assert {k: v[1] for k, v in _sel_vc.LOCAL_PATCHES.items()
                 if "fleet" in k} == {
             "doc/ext_fleet_selection.patch": "fsel_chain_len",
-            "doc/ext_fleet_select_ship.patch": "Select_Ship_"}
+            "doc/ext_fleet_select_ship.patch": "Select_Ship_",
+            "doc/ext_fleet_screen_state.patch": "_fltscrn_stack_owner",
+            "doc/ext_fleet_screen_select.patch": "Select_Fltscrn_Ship_"}
         assert not any("fleet" in k for k in _sel_vc.REPORTED_PATCHES)
         ok("fleet selection in the HD box (blue and black from the wire, "
            "MSG_SELECT_SHIP 0x85, orders only with a known selection, "
@@ -6410,6 +6417,17 @@ def main():
         "screens/research_select/panel.py": "SQUEEZES, HD SHRINKS",
         "screens/research_select/native.py": "part of the TECHSEL art",
         "screens/research_select/layout.json": "MOX::_settings.language",
+
+        # ADDED 19 September 2026, work order 134 C: the Fleets screen.
+        # Its own check is the fleets markings block below — four
+        # OMISSIONs and one HD EXTENSION, each in the module that
+        # performs it.
+        # fltrows.py and fltwire.py carry the four OMISSIONs and are
+        # NOT listed: this inventory nets HD EXTENSION and DEVIATION
+        # only. The omissions have their own assertions in the same
+        # block, which is what holds them.
+        "screens/fleets/screen.py": "HD EXTENSION",
+        "screens/fleets/layout.json": "HD EXTENSION",
 
     }
     _MARKS = ("HD EXTENSION", "DEVIATION")
@@ -17588,6 +17606,91 @@ def main():
                "leave the module, the open fixes and the status document")
         ok("open fix 26's marking is tied to its status, and its status "
            "no longer requires it")
+
+    # ── THE FLEETS SCREEN SAYS WHAT IT DOES NOT DRAW ──────────────
+    #
+    # Work order 134 C. Four OMISSIONs and one HD EXTENSION, each held
+    # where it is performed, so none of them can quietly become a thing
+    # the screen looks like it draws. Every one of the four is a
+    # DIFFERENT reason, and the reason is the part worth protecting:
+    # artwork this tree may not carry, offsets no second source has
+    # confirmed, a value computed on hover that is on no wire, and a key
+    # the protocol cannot express.
+    _fl_dir = os.path.join(SCREENS_DIR, "fleets")
+    _fl_src = {_fn: io.open(os.path.join(_fl_dir, _fn),
+                            encoding="utf-8").read()
+               for _fn in ("screen.py", "fltrows.py", "fltwire.py",
+                           "fltdraw.py", "fltgeom.py")}
+    _fl_layout = _sjson.load(io.open(os.path.join(_fl_dir, "layout.json"),
+                                     encoding="utf-8"))
+
+    # 1. THE SHIP PICTURE. SHIPS.LBX is MOO2's art and never in this
+    #    tree, so a grid cell shows a name and a colour and no picture.
+    assert "OMISSION" in _fl_src["fltrows.py"] and \
+        "ken.cpp:451-466" in _fl_src["fltrows.py"], (
+            "fltrows no longer marks the ship picture as an OMISSION or "
+            "no longer cites the function that draws it")
+    assert "picture" not in _fl_src["fltdraw.py"].lower() or \
+        "NO SHIP PICTURE" in _fl_src["fltdraw.py"], (
+            "fltdraw mentions a picture without saying it draws none")
+
+    # 2. THE DAMAGE BAR, for a different reason: structural_damage 125
+    #    and armor_damage 123 are hand counts the ship spec refuses to
+    #    carry (decision 23). The spec is the proof, not the comment.
+    from core.structs import ship as _fl_ship
+    _fl_names = {_f[0] for _f in _fl_ship.SPEC.fields}
+    assert "structural_damage" not in _fl_names and \
+        "armor_damage" not in _fl_names, (
+            "the ship spec now carries the damage offsets; the Fleets "
+            "screen omits its damage bar BECAUSE they were unverified, "
+            "so the omission has to be re-read rather than kept")
+    assert "fleetpop.cpp:41-81" in _fl_src["fltrows.py"]
+
+    # 3. THE MOVE PREVIEW and 4. THE CAPTAIN'S PORTRAIT.
+    _fl_reasons = _fl_src["fltrows.py"] + _fl_src["fltwire.py"]
+    for _fl_what, _fl_cite in (("move preview", "flt2.cpp:356-429"),
+                               ("captain", "unverified.py"),
+                               ("attack/defense bonus",
+                                "initship.cpp:638-687")):
+        assert _fl_cite in _fl_reasons, (
+            f"the {_fl_what} omission lost its citation ({_fl_cite})")
+    assert _fl_reasons.count("OMISSION") >= 4, (
+        "fewer than four OMISSION markings across fltrows and fltwire; "
+        "the four are the ship picture, the damage bar, the move "
+        "preview and the captain, and each has a different reason")
+
+    # 5. THE ONE HD EXTENSION: the wheel. It is an extension AND it is
+    #    not a local scroll — decision 46 — and both halves are the
+    #    marking, so both are asserted.
+    _fl_wheel = FleetsScreen = None
+    from screens.fleets.screen import FleetsScreen as _fl_cls
+    _fl_wheel = _fl_cls.handle_mousewheel.__doc__ or ""
+    assert "HD EXTENSION" in _fl_wheel, (
+        "the Fleets wheel no longer says it is an HD EXTENSION")
+    assert "decision 46" in _fl_wheel, (
+        "the Fleets wheel no longer says the list window is the "
+        "game's — without that it reads as a local scroll, which is "
+        "what decision 46 refuses")
+    assert "handle_wheel" not in _fl_src["screen.py"], (
+        "the Fleets wheel hook is named handle_wheel; main.py calls "
+        "handle_mousewheel and nothing would ever reach it")
+
+    # AND THE MARKS ARE IN THE FILE THE PLAYER-FACING DOCUMENT READS.
+    assert "HD EXTENSION" in _sjson.dumps(_fl_layout), (
+        "screens/fleets/layout.json carries no HD EXTENSION marking")
+    # The screen's own state, in the module docstring — decision 61,
+    # and the same shape the research screen's marking has.
+    import screens.fleets.screen as _fl_mod
+    assert "BUILT, NOT ACCEPTED" in (_fl_mod.__doc__ or ""), (
+        "the Fleets module docstring no longer says BUILT, NOT "
+        "ACCEPTED; no live acceptance has run against this screen")
+    assert "134-parked-for-data" in (_fl_mod.__doc__ or ""), (
+        "the Fleets module no longer names the file that holds the "
+        "parked live steps, so the marking says nothing actionable")
+    ok("the Fleets screen marks what it does not draw: the ship "
+       "picture, the damage bar, the move preview and the captain, "
+       "each with its own reason, and its one HD EXTENSION says the "
+       "list window is still the game's")
 
     # ── A BLANK WINDOW IS NOT A PICTURE, AND A FLAG IS NOT EITHER ──
     #

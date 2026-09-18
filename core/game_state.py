@@ -76,6 +76,12 @@ class GameState:
     #: node], "selected": [bool per node], "chain": [node, in the fleet
     #: box's cell order]}, or None on an engine without revision 2.
     fleet_selection: Optional[dict] = None
+    #: Open fix 27's FLTS block — the fleet SCREEN's view state, which
+    #: is a different thing from `fleet_selection` and comes from a
+    #: different array. None unless screen 4 is up on a patched engine;
+    #: `screens/fleets/fltwire.py` names every key and says why each one
+    #: could not be reconstructed.
+    fleet_screen: Optional[dict] = None
 
     # Fields (from FIELD_LIST message)
     fields: list = field(default_factory=list)
@@ -274,6 +280,38 @@ def parse_state(data: bytes) -> GameState:
                     gs.fleet_selection = {"stack": stack, "ships": ships,
                                           "selected": selected,
                                           "chain": chain}
+
+    # The fleet SCREEN's view state — OPTIONAL block after FSEL, open
+    # fix 27 (doc/ext_fleet_screen_state.patch). Written by the engine
+    # only while screen 4 is up, so its ABSENCE is three different
+    # states and the screen has to tell them apart itself: another
+    # screen, an unpatched engine, or a truncated block. All three land
+    # on None here, and `screens/fleets/fltwire.py` turns None into a
+    # named refusal rather than an empty grid.
+    #
+    # Fourteen scalars, then N x (int16 ship_idx, uint8 selected) in the
+    # screen's DISPLAY order. Read whole or not at all: a short block is
+    # None, never a half-filled dict, because a half-filled one would
+    # draw a grid that is missing its last ships without saying so.
+    gs.fleet_screen = None
+    if data[pos:pos + 4] == b"FLTS" and pos + 4 + 26 + 2 <= len(data):
+        pos += 4
+        _flt = {}
+        for _key in ("stack", "head_node", "owner", "icons", "icons_added",
+                     "rows", "first_row", "selected_count", "scanned_big",
+                     "scanned_small", "support_filter", "combat_filter"):
+            _flt[_key] = read_i16()
+        _flt["relocate_mode"] = read_u8()
+        _flt["merging_relocations"] = read_u8() != 0
+        _n = read_i16()
+        if 0 <= _n == _flt["icons"] and pos + 3 * _n <= len(data):
+            _ships, _sel = [], []
+            for _ in range(_n):
+                _ships.append(read_i16())
+                _sel.append(read_u8() != 0)
+            _flt["ship_idx"] = _ships
+            _flt["ship_selected"] = _sel
+            gs.fleet_screen = _flt
 
     return gs
 

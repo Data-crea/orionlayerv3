@@ -245,6 +245,25 @@ def icon_cells(grid_rect):
     return cells
 
 
+def native_grid():
+    """The grid's own native rectangle, (347, 53, 244, 297)."""
+    return (GRID_ORIGIN[0], GRID_ORIGIN[1],
+            (GRID_COLUMNS - 1) * GRID_STEP_X + GRID_CELL_W,
+            (GRID_ROWS - 1) * GRID_STEP_Y + GRID_CELL_H)
+
+
+def native_cells():
+    """The twenty cells in NATIVE pixels, `(x, y)` top-left each.
+
+    The field list's own coordinates: `Add_Fltscrn_Big_Icon_Fields_`
+    builds each big-icon field at `(x, y, x + 58, y + 57)` with x and y
+    from `Get_Fltscrn_Big_Icon_XY_(slot)` (flt2.cpp:288-290, :313-320),
+    so this is what `fltwire` matches a live field against.
+    """
+    return [(int(round(x)), int(round(y)))
+            for x, y, _w, _h in icon_cells(native_grid())]
+
+
 def grid_rect(icon_area, scroll_column):
     """The part of `icon_area` the icons use: everything left of the
     scroll column, by the native gap between the two (590 -> 605)."""

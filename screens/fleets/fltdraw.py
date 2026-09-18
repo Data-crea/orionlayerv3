@@ -179,3 +179,111 @@ def draw_status(surface, screen, text, color=None):
     if rect is None or not text:
         return
     _centred(surface, screen, rect, text, color or col("label"), share=0.62)
+
+
+# ── The grid's content ────────────────────────────────────
+
+def owner_colour(index):
+    """One player's colour, from the galaxy map's own eight — the one
+    home for them (`colors.json` `galaxy_map.owner_0..7`), so this
+    screen cannot drift from the map the player just came from."""
+    if index is None or not (0 <= int(index) < 8):
+        return col("label_dim")
+    return palette.col("galaxy_map", f"owner_{int(index)}", DEFAULTS["label"])
+
+
+def draw_cells(surface, screen, cells):
+    """Ship name, builder colour and the selection frame, per cell.
+
+    NO SHIP PICTURE — `fltrows` says why in full. The frame is the
+    original's own idea: `_selected_box_seg` is FLEET.LBX 17 drawn round
+    a selected icon (flt1.cpp:93-104). Ours is a line, not that art.
+    """
+    slots = icon_slots(screen)
+    if not slots:
+        return
+    for cell in cells:
+        if not (0 <= cell.slot < len(slots)):
+            continue
+        rect = slots[cell.slot]
+        # The cell is split the way the original splits it: the picture
+        # area above, the ship's name in a band along the bottom
+        # (flt2.cpp:581 prints the name under the icon). The picture is
+        # a plain block of the BUILDER's colour here — there is no
+        # picture to draw, and a block that ran under the name would
+        # make a silver hull's name unreadable, which is what the first
+        # render showed.
+        band = max(10, rect.height // 4)
+        patch = pygame.Rect(rect.x, rect.y, rect.width, rect.height - band)
+        pygame.draw.rect(surface, owner_colour(cell.builder),
+                         patch.inflate(-patch.width // 3,
+                                       -patch.height // 3))
+        if cell.name:
+            _centred(surface, screen,
+                     pygame.Rect(rect.x, rect.bottom - band,
+                                 rect.width, band),
+                     cell.name, col("label"), share=0.8)
+        if cell.selected:
+            pygame.draw.rect(surface, col("scroll_thumb"), rect,
+                             max(2, int(round(3 * screen.layout.scale))))
+
+
+def draw_panel(surface, screen, lines):
+    """The scanned ship's lines, top down inside `ship_panel`."""
+    rect = _rect(screen, "ship_panel")
+    if rect is None or not lines:
+        return
+    size = max(10, int(rect.height * 0.055))
+    y = rect.y + size // 2
+    for label, value in lines:
+        text = f"{label}: {value}" if label else str(value)
+        surf = screen.style.render_text(text, size, col("label"))
+        if y + surf.get_height() > rect.bottom:
+            break
+        surface.blit(surf, (rect.x + size // 2, y))
+        y += surf.get_height()
+
+
+def draw_inset(surface, screen, stars, markers):
+    """The galaxy inset: one dot per star, one marker per ship stack.
+
+    `stars` is `colonyrows.galaxy_inset_stars` for THIS screen's native
+    box, `markers` is `(native_x, native_y, owner)` per live ship icon.
+    Both are in the original's native pixels inside the box, so the only
+    thing done here is the scale into the `inset_map` rect.
+    """
+    rect = _rect(screen, "inset_map")
+    if rect is None:
+        return
+    from . import fltgeom
+    _nx, _ny, nw, nh = fltgeom.REGIONS["inset_map"]
+    fx, fy = rect.width / float(nw), rect.height / float(nh)
+    dot = max(2, int(round(2 * screen.layout.scale)))
+    for sx, sy, colour_index in stars:
+        x = rect.x + sx * fx
+        y = rect.y + sy * fy
+        pygame.draw.rect(surface, _star_colour(colour_index),
+                         (int(x), int(y), dot, dot))
+    for mx, my, owner in markers:
+        x = rect.x + mx * fx
+        y = rect.y + my * fy
+        pygame.draw.rect(surface, owner_colour(owner),
+                         (int(x), int(y), dot * 2, dot * 2))
+
+
+def _star_colour(index):
+    """`movebox.cpp:67-79`'s colour index, in HD's palette.
+
+    8 is "unowned, seen"; 9 and 10 are both the black hole. TEN IS AN
+    ENGINE DEFECT AND IS TREATED AS NINE: the index is
+    `_using_colony_screen_palette ? 9 : 10` (movebox.cpp:70) and the
+    fleet screen clears that flag (flt1.cpp:517), but
+    `_fleet_galaxy_star_seg` has ten entries, so the original indexes
+    one past its end here. HD draws the black hole rather than copy an
+    out-of-bounds read.
+    """
+    if index in (9, 10):
+        return col("scroll_track")
+    if index == 8:
+        return col("label_dim")
+    return owner_colour(index)
