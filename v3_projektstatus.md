@@ -13,6 +13,9 @@ right and the header had gone stale** — resolved 10 September 2026
 by dating the header to the edit and giving this session its
 paragraph, below, so the two agree again.
 
+Work order 132 (frame set of 18 Sep) built and rejected by Data,
+reverted. Number 132 stays used.
+
 This session (18 September 2026, work order 130): **the research
 select screen, and the two things it stands on.** The fallback view is
 a view again — it drew a flat colour and swallowed every click, so the
