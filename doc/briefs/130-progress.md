@@ -28,3 +28,11 @@ fallback instead, and part C's fallback is the one that matters.
   @379 has source ONE and sits in `unverified.py` until a live read agrees.
   `core/livefields.py` is the one home for `live_field`. Smoke 207 -> **209**,
   exit 0.
+- **D** — done. Research field and application names as a THIRD output of
+  `tools/techname_extract.py` (`core/technames.py`); `tools/billtext_extract.py`
+  new for the panel's wording (`core/billtext.py`), whose file is shaped by
+  entry and not by block (`Get_Text_Message_`, jim.cpp:336-359). Both wired into
+  `tools/setup.py`, both gitignored, absent/stale/short are three stated states.
+  Cross-check: field 21 "Capsule Construction" -> Battle Pods, Survival Pods,
+  Troop Pods; the eight panels name themselves BASIC..OTHER. Smoke 209 -> **210**,
+  exit 0, commit 3261264.
