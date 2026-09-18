@@ -1,0 +1,212 @@
+Extension API: an ACTIVATED research row is the row that gets chosen.
+
+STATUS: applied locally to ~/orion2re (engine 1.60.0, branch
+orionlayer-local, commit e9d07528) by work order 130 B, 18 September 2026,
+Data's decision. Required by tools/version_check.py. It comes back off with
+
+    cd ~/orion2re && patch -R -p1 < \
+        ~/orionlayerv3/doc/ext_tech_activate.patch
+
+then rebuild.
+
+WHAT IT IS FOR
+
+    TECH::_Tech_Select_ (tech.cpp:111-395) is the research selection, in
+    both its modes. Its commit branch — any positive input below the
+    radio buttons, i.e. every choice row and every entry block — does
+    NOT use the field id it was handed. It calls Get_Selected_Entry_,
+    which returns whichever of the eight entries carries
+    current_app_index != 0, and only Set_Selected_Entry_ ever sets that.
+    Set_Selected_Entry_ is called from Draw_Tech_Select_ (tech.cpp:458),
+    which reads fields::Scan_Input_() — the game POINTER — on every idle
+    frame, and clears all eight entries when the pointer is over nothing
+    selectable.
+
+    So for a client there were two outcomes and neither was the one it
+    asked for:
+
+      - the pointer rested on some other row, and THAT row's field was
+        committed as the player's research;
+      - the pointer rested on nothing selectable, Get_Selected_Entry_
+        returned nullptr, and tech.cpp:376 dereferenced it. That is the
+        SIGSEGV of doc/orion2re_open_fixes.md item 23, seen live in work
+        order 128 C.
+
+    Work order 129 B measured all of it on three occasions: a field
+    selected, nothing selected, and a different field.
+
+WHAT IT DOES
+
+    ext::g_activated_input (src/ext/ext_api.h) carries the field id of
+    the input Get_Input_ is returning THIS CALL, when that input came
+    from a client's ACTIVATE_FIELD, and 0 when it came from the mouse.
+    It is cleared at the top of every Get_Input_ call, so a handler that
+    reads it can only ever see the input it was handed.
+
+    The commit branch, when and only when the input was an activation,
+    calls Set_Selected_Entry_ for the activated field before asking
+    Get_Selected_Entry_ which entry is selected.
+
+    An entry BLOCK field is resolved to that entry's last visible row,
+    which is exactly how Draw_Tech_Select_ (tech.cpp:461-465) resolves
+    the same field for the pointer — the two must agree about the same
+    click or the patch would have introduced a second reading of it.
+
+    And Get_Selected_Entry_ returning nullptr now continues the input
+    loop instead of being dereferenced. That guard is unconditional
+    within the ext build: it is open fix 23's crash, at the one line
+    that performed it.
+
+WHY THE MOUSE PATH IS UNCHANGED
+
+    g_activated_input is 0 for every input that came from the mouse, so
+    the inserted selection never runs for one. And it would be a no-op
+    if it did: for a real click, Draw_Tech_Select_ has already selected
+    that same field from the pointer on the previous idle frame.
+
+    The only behaviour a mouse can reach that differs is the crash, and
+    it is a crash.
+
+WHY NOT ONE OF THE OTHER TWO OPTIONS
+
+    doc/tech_change_reading.md section 5.1 lists three. (a) a new
+    ext_api command writing current_research_field directly would leave
+    the game's own input loop still open, and select mode has no exit
+    but a commit. (b) placing the game pointer at the activated field's
+    centre inside the Get_Input_ early return fixes every pointer-reading
+    handler at once — and changes behaviour on every screen in the game,
+    which is too much to carry for this. (c) is this patch: it is the
+    smallest, and it is confined to the one handler that has the defect.
+
+    Decision 20 ("Field IDs for input.") reserves INJECT_CLICK for radio
+    buttons and free map clicks, which is why driving the list with
+    injected clicks was not the answer either.
+
+THE DIFF
+
+diff --git a/src/ext/ext_api.cpp b/src/ext/ext_api.cpp
+index e2175df2..362ccf43 100644
+--- a/src/ext/ext_api.cpp
++++ b/src/ext/ext_api.cpp
+@@ -14,6 +14,7 @@ namespace ext {
+ 
+ bool g_hide_window = false;
+ int16_t g_pending_field = 0;
++int16_t g_activated_input = 0;
+ bool g_injected_mouse_pending = false;
+ 
+ static Server g_server;
+diff --git a/src/ext/ext_api.h b/src/ext/ext_api.h
+index 8011a14b..c228885f 100644
+--- a/src/ext/ext_api.h
++++ b/src/ext/ext_api.h
+@@ -44,6 +44,20 @@ struct ScreenOverride {
+     ~ScreenOverride();
+ };
+ 
++/// The field id of the input Get_Input_() is returning THIS CALL when it
++/// came from a client's ACTIVATE_FIELD, and 0 when it came from the mouse.
++///
++/// Every handler that reads the game POINTER rather than the returned
++/// field id disagrees with an activation, because an activation moves no
++/// pointer. The tech selection is where that costs the most: it commits
++/// whatever `Draw_Tech_Select_` last put under the cursor, so an
++/// activation on a research row chose a different row, or dereferenced
++/// null and took the process with it (open fix 23). A handler that wants
++/// to honour the id it was handed can ask this, and leave the mouse path
++/// untouched — which is the whole point of asking rather than changing
++/// what the pointer means.
++extern int16_t g_activated_input;
++
+ /// True while an injected mouse event is queued and not yet
+ /// pumped. Sync_Mouse_State_From_SDL_ stands aside while this is
+ /// set, so the injected position survives to whoever reads
+diff --git a/src/game/fields.cpp b/src/game/fields.cpp
+index c64af0ed..014a2f6b 100644
+--- a/src/game/fields.cpp
++++ b/src/game/fields.cpp
+@@ -165,9 +165,15 @@ namespace fields {
+ 
+ #ifdef ORION2RE_EXT
+         ext::Tick(MOX::_current_screen);
++        // Whatever this call returns from here on, it is the mouse's
++        // until the early return below says otherwise. Cleared per call
++        // rather than per frame, so a handler reading it can only ever
++        // see the input it was handed.
++        ext::g_activated_input = 0;
+         if (ext::g_pending_field > 0) {
+             int16_t result = ext::g_pending_field;
+             ext::g_pending_field = 0;
++            ext::g_activated_input = result;
+             _last_button_number = result;
+             const s_field& f = _fields[result];
+             _last_button_x = (f.x + f.x_end) / 2;
+diff --git a/src/game/tech.cpp b/src/game/tech.cpp
+index 2b433b94..e0e99213 100644
+--- a/src/game/tech.cpp
++++ b/src/game/tech.cpp
+@@ -363,7 +363,64 @@ namespace TECH {
+                     }
+                     else if (input_val < first_btn_field) {
+                         int16_t blink_cnt = 3;
++#ifdef ORION2RE_EXT
++                        // AN ACTIVATED ROW IS THE CHOSEN ROW.
++                        //
++                        // This branch commits whatever entry carries
++                        // current_app_index != 0, and only
++                        // Set_Selected_Entry_ sets that — from
++                        // Draw_Tech_Select_, which reads fields::Scan_Input_(),
++                        // i.e. the game POINTER. A client's ACTIVATE_FIELD
++                        // moves no pointer, so it committed the row the
++                        // cursor happened to rest on, or — when the cursor
++                        // rested on nothing selectable — Get_Selected_Entry_
++                        // returned nullptr and the dereference below took the
++                        // process with it (open fix 23, seen live in work
++                        // order 128).
++                        //
++                        // So when the input came from an activation, select
++                        // the field that was activated before asking which is
++                        // selected. g_activated_input is 0 for every mouse
++                        // input, so the pointer path is not touched: for a
++                        // real click Draw_Tech_Select_ has already selected
++                        // this same field on the previous idle frame, and
++                        // re-selecting it would be a no-op anyway.
++                        if (ext::g_activated_input == input_val) {
++                            int16_t chosen = input_val;
++                            if (chosen >= _g_first_tech_field &&
++                                chosen <= _g_last_tech_field) {
++                                // An entry BLOCK rather than a row. The
++                                // pointer path resolves it to that entry's
++                                // last visible row (Draw_Tech_Select_), and
++                                // this has to resolve it the same way or the
++                                // two disagree on the same click. An EMPTY
++                                // category has a block field and no rows, and
++                                // its app_click_field_ids[-1] is off the front
++                                // of the array — so it is left unselected and
++                                // caught by the null guard below.
++                                s_list_item_research* block =
++                                    &_g_entries_p[chosen - _g_first_tech_field];
++                                chosen = (block->visible_app_count > 0)
++                                    ? block->app_click_field_ids[
++                                          block->visible_app_count - 1]
++                                    : 0;
++                            }
++                            if (chosen > 0) {
++                                Set_Selected_Entry_(entries, chosen);
++                            }
++                        }
++#endif
+                         _g_selected_entry_p = Get_Selected_Entry_(entries);
++#ifdef ORION2RE_EXT
++                        // AND NOTHING SELECTED IS NOT A CRASH. Whatever the
++                        // input was, if no entry is selected there is no field
++                        // to commit: stay in the loop rather than dereference
++                        // null. This is open fix 23's SIGSEGV, guarded at the
++                        // one line that performs it.
++                        if (_g_selected_entry_p == nullptr) {
++                            continue;
++                        }
++#endif
+                         do {
+                             timer::Mark_Time_();
+                             if ((blink_cnt & 1) == 0) {

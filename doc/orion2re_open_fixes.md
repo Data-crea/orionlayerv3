@@ -44,8 +44,9 @@ section for what was found where.
 | 20 | The fleet box's ship selection is not on the wire, and a single ship cannot be toggled from outside | **Applied** 15 September 2026, revision 2 (`doc/ext_fleet_selection.patch`: icon owners, then per node ship_idx and selected, then the fleet box chain; revision 1 applied and taken back out the same day, briefs 118/119), confirmed live on SAVE5; required by `tools/version_check.py` | — while applied. Without it HD draws no fleet box and cannot move a fleet from the map |
 | 21 | One ship in the fleet box cannot be selected or deselected from outside | **Applied** 15 September 2026 (`doc/ext_fleet_select_ship.patch`, `MSG_SELECT_SHIP` 0x85), confirmed live on SAVE5 (brief 119); required by `tools/version_check.py` | — while applied. Without it HD can show the selection but not change it |
 | 22 | Select Race reported `SCREEN_RACE` (6), which the Races/diplomacy screen owns — our own `ext_screen_id.patch` hunk 1 | **Applied** 17 September 2026 (work order 128 B, Data's decision: a synthetic id): race selection reports 51; orion2re 3305d78c on `orionlayer-local`; `doc/ext_screen_id.patch` revision 2; required by `tools/version_check.py`; seen live before and after | — while applied. Before: the HD map's RACES button opened HD Select Race over the Races screen (seen live on SAVE4) |
-| 23 | An activation of a research choice row with the pointer over no entry crashes the game | **Observation**, seen live 17 September 2026 (work order 128 C) | Nothing while HD sends nothing into that list (the map's parking guard); a client that activates a choice by field id kills the game |
+| 23 | An activation of a research choice row with the pointer over no entry crashes the game | **Observation**, seen live 17 September 2026 (work order 128 C); **CLOSED locally 18 September 2026 by item 25**, which guards the dereference at the line that performed it. Still open upstream | Nothing while item 25 is applied. Without it, a client that activates a choice by field id kills the game |
 | 24 | The two turn-start research dialogs (science room, SELECT NEW RESEARCH) both report SCREEN_MAIN, so a client cannot tell them from the galaxy map | **Applied** 17 September 2026 (work order 129 B, Data's decision: synthetic ids on the wire only), orion2re f838c754 on `orionlayer-local`, `doc/ext_research_screens.patch`; required by `tools/version_check.py`; open upstream | — while applied. Without it HD draws the map with an active TURN button over both dialogs, and a field sent into the select list crashes the engine (item 23) |
+| 25 | The research selection commits the entry under the POINTER, not the field that was activated | **Applied** 18 September 2026 (work order 130 B, Data's decision: option (c) of `doc/tech_change_reading.md` §5.1), orion2re e9d07528 on `orionlayer-local`, `doc/ext_tech_activate.patch`; required by `tools/version_check.py`; open upstream | — while applied. Without it an HD research screen cannot choose a row at all: the choice lands on whatever the cursor rests on, or crashes the engine (item 23) |
 
 Items 3 and 4 are both about INJECT_CLICK and both live in the same
 code path, but they are separate faults: 3 is where the coordinates
@@ -1592,6 +1593,21 @@ request: nothing in OrionLayer activates those rows, and the galaxy map's
 parking no longer can. A future HD research screen needs either a commit by
 field id or the pointer set first — that is the research screen's order.
 
+**Closed locally, 18 September 2026 — item 25, work order 130 B.** The
+research screen's order arrived, and it chose the commit by field id.
+`doc/ext_tech_activate.patch` does two things to this item. It makes an
+activation select the row it names, so the pointer is no longer what decides
+— which removes the cause. And it returns to the input loop when no entry is
+selected instead of dereferencing the null, which removes the crash itself,
+for the mouse path as well as for a client. Both are inside
+`#ifdef ORION2RE_EXT`, so this remains an OBSERVATION for Joes rather than a
+request: upstream still dereferences, and the way to reach it from outside
+the extension build is the narrow one this item describes.
+
+The observation is kept rather than deleted because the fix is ours and
+local. A tree without `doc/ext_tech_activate.patch` crashes exactly as
+described above, and `tools/version_check.py` is what notices.
+
 ## 24. The two turn-start research dialogs report SCREEN_MAIN — a request, with a patch (APPLIED locally)
 
 Applied 17 September 2026 by work order 129 B; the reading is
@@ -1622,3 +1638,61 @@ Nothing the game reads is touched.
 **What it costs us.** Nothing: no HD screen claims 52 or 53, so decision 22
 takes over and OrionLayer shows the original picture until a research screen
 is built.
+
+---
+
+## 25. The research selection commits the entry under the POINTER, not the activated field — a request, with a patch (APPLIED locally)
+
+Applied 18 September 2026 by work order 130 B, Data's decision. The reading
+is `doc/tech_change_reading.md` §2 and §5.1; the live measurement is work
+order 129 B; the patch is `doc/ext_tech_activate.patch`.
+
+**What we found (orion2re 1.60.0).** `TECH::_Tech_Select_`'s input loop
+treats any positive input below the category radio buttons — every choice
+row and every entry block — as a commit. It then ignores the field id it was
+handed: `Get_Selected_Entry_` (tech.cpp:508-520) returns whichever of the
+eight entries carries `current_app_index != 0`, and only
+`Set_Selected_Entry_` sets that. `Set_Selected_Entry_` is called from
+`Draw_Tech_Select_` (tech.cpp:458-476), which reads `fields::Scan_Input_()`
+— the game pointer — on every idle frame, and clears all eight entries when
+the pointer is over nothing selectable.
+
+An `ACTIVATE_FIELD` moves no pointer. Work order 129 B activated three rows
+on three occasions and got: the row the cursor happened to rest on, no
+commit at all, and a different row. The third outcome, with the pointer over
+nothing, is item 23's SIGSEGV.
+
+**What it costs us.** Without this, an HD research screen cannot choose a
+research at all. Decision 20 ("Field IDs for input.") reserves INJECT_CLICK
+for radio buttons and free map clicks, and an injected click into this list
+depends on the pointer surviving the frame (open fix 3's pointer half, and
+its own caveat) — so the one path HD is meant to use is the one that does
+not work here.
+
+**The change.** `ext::g_activated_input` carries the field id of the input
+`Get_Input_` is returning this call when it came from an activation, and 0
+when it came from the mouse; it is cleared at the top of every call. The
+commit branch, for an activation only, selects that field before asking
+which entry is selected. An entry BLOCK field resolves to that entry's last
+visible row, the same resolution `Draw_Tech_Select_` performs for the
+pointer. And a null selection continues the input loop instead of being
+dereferenced.
+
+**Why the mouse path is unchanged.** `g_activated_input` is 0 for every
+mouse input, so the inserted selection never runs for one — and it would be
+a no-op if it did, because for a real click `Draw_Tech_Select_` has already
+selected that same field from the pointer on the previous idle frame. The
+only behaviour a mouse can reach that this changes is the crash.
+
+**Why not the other two options.** `doc/tech_change_reading.md` §5.1 lists
+three. (a) a new `ext_api` command writing `current_research_field` directly
+leaves the game's own input loop open, and select mode has no exit but a
+commit. (b) placing the game pointer at the activated field's centre in the
+`Get_Input_` early return would fix every pointer-reading handler in the
+game at once — and change behaviour on every screen, which is far more than
+this needs. (c), this patch, is confined to the one handler with the defect.
+
+**Why it is a request and not only a local fix.** Upstream, a client of the
+Extension API cannot drive this screen, and the failure mode is a crash
+rather than a refusal. The shape of the fix is ours to choose only because
+`src/ext/` is ours; the fault is in `tech.cpp`.

@@ -78,6 +78,18 @@ LOCAL_PATCHES = {
     # The marker is the guard in the science room, because the override
     # itself lives in src/ext and a tree carrying only that would report
     # nothing new.
+    # Applied 18 September 2026 (work order 130 B, open fix 25): an
+    # ACTIVATE_FIELD into the research selection chooses the row it names.
+    # The marker is the flag itself, in src/ext, because the tech.cpp
+    # insertion reads it and a tree carrying only one of the two would
+    # not compile — so either half proves the other.
+    "doc/ext_tech_activate.patch": (
+        os.path.join("src", "ext", "ext_api.h"),
+        "g_activated_input",
+        "the research selection commits the entry under the game's own "
+        "pointer instead of the activated row, or dereferences null and "
+        "kills the engine (open fixes 25 and 23) — so the HD research "
+        "screen cannot choose a research at all"),
     "doc/ext_research_screens.patch": (
         os.path.join("src", "game", "science.cpp"),
         "ext_screen_guard(52)",
