@@ -24,7 +24,7 @@ the null dereference of open fix 23 is guarded. The offered rows
 reconstruct and validate against the game's own field list, the names
 come from the player's TECHNAME and BILLTEXT, and
 `screens/research_select/` draws them — handing BACK to the fallback
-whenever it cannot vouch for what it would draw. Smoke 205 -> **212**.
+whenever it cannot vouch for what it would draw. Smoke 205 -> **213**.
 Sections at the end of "What works", from "The fallback view is a
 view" on. **The live acceptance was NOT run** — see "What is missing".
 
@@ -852,7 +852,7 @@ files under `doc/` and are only summarised here.
 | | |
 |---|---|
 | Python | 32,960 lines across 111 modules — `find . -name '*.py'`, `__pycache__` excluded, the smoke test's 6,400 included. The previous figure here (21,642 across 94) was carried from an unstated method and could not be reproduced |
-| Smoke test | `python tools/smoke_test.py` — **212 checks**, headless |
+| Smoke test | `python tools/smoke_test.py` — **213 checks**, headless |
 | Assets | 170 MB (select_race 68, galaxy_map 51, shared 23, new_game 21, colony_summary 1) |
 | Screens in HD | 9 of ~20–22 (the GAME menu overlay, work order Stop 2, every dialog of the popup; colony summary draws list, sidebar, scan box and galaxy inset, and MOVES POPS — the first HD gesture that drives the game; planets, brief 101, lists, sorts, restricts and returns) |
 | Setup from clone | `python tools/setup.py` (deps via the system package manager) |
@@ -4911,31 +4911,70 @@ panel's visible edge. The rule that holds is narrower: no help region may
 cover an entry block or a radio, because a right click there is the
 description box or the category list, not help.
 
+### The live acceptance of work order 130 — 18 September 2026
+
+A new Psilon game against orion2re **e9d07528** (`orionlayer-local`,
+open fixes 24 and 25 applied, rebuilt and the binary checked for
+`ext::g_activated_input`). One client throughout; SAVE1-9 and SAVE11
+identical before and after, SAVE10 rewritten by the game's own autosaves
+and logged only. The driver is `tools/research_hd.py` on
+`tools/livedrive.py` and `tools/researchphases.py`.
+
+**The fallback is a view, live.** Every screen HD has no version of drew
+the game's own picture in OrionLayer's window and forwarded clicks: the
+science room (52), the colony build prompt (1), the end-of-turn report
+(39), the GNN broadcast and the leader offers. The record carries the
+number of distinct colours beside every capture, which is the check the
+129 report did not make.
+
+**The choice means the row.** Two occasions, two categories, and the
+game's pointer was never moved by this run — so a pointer standing still
+cannot explain two different rows both landing correctly. Open fix 25
+is what makes that true; before it, work order 129 measured a selected
+field, no selection, and a different field on three occasions.
+
+**And the list does not always wait — open fix 26.** Three times the
+select list committed a row BY ITSELF about a second and a half after
+the science room handed over, with a send counter proving the client
+sent nothing. It is why choosing has to happen in the same process that
+walks the room out, and why the HD screen re-reads rather than
+remembers.
+
+**One live number for the cost table**: field 62 read 540 accumulated of
+650 at 15 RP a turn, and `core.research.cost(62)` is 650.
+
 ## What is missing
 
-### Research select (work order 130) — THE LIVE ACCEPTANCE WAS NOT RUN
+### Research select (work order 130) — what the live run still owes
 
-Everything in work order 130 is built, committed and green at 212 checks.
-**None of its three live steps ran.** Data's own orion2re and OrionLayer
-client have been up since 15:29 on 18 September, and work order 126's
-rule 8 is explicit: check for a running OrionLayer before connecting, and
-if Data left his open, do NOT kill it — skip the live step and park it.
-What is parked, and what to run, is in `doc/briefs/130-parked-for-data.md`.
+The live acceptance RAN on 18 September 2026 (evidence under
+`~/orionlayer-fixtures/evidence/work_order_130/`). Parts A and B are
+proven; part F is one occasion short of what the order asks.
 
-Three consequences of that, each of which is a claim and not a
-measurement until the runs happen:
+- **Part A — PROVEN, twice.** On wire id 52 the window shows the game's
+  own picture and a click in it moves the room on: four and five clicks
+  in two separate runs, each advancing one discovery, the last handing
+  over to 53. No F12 at any point. Also proven on SCREEN_COLONY (1),
+  where a click on RETURN through the fallback took the game from
+  1/36 fields to 39/1.
+- **Part B — PROVEN, twice, on two rows in two categories.** An HD row
+  click gave field 4 (category 4) and a bare `ACTIVATE_FIELD` gave
+  field 22 (category 6); each time the wire afterwards reported THAT
+  row's field. The order asks for three rows on three occasions — the
+  third is missing (below).
+- **Part F — ONE of three.** Only the first selection (field 4,
+  category 4) was made and read back cleanly inside OrionLayer's
+  window. Two further attempts lost the occasion to open fix 26, and a
+  third could not be run: the machine's display server stopped
+  accepting new clients partway through the evening, so orion2re could
+  not be started again (`SDL_Init(SDL_INIT_VIDEO) failed: The video
+  driver did not add any displays`). HD beside the native frame exists
+  at one resolution, not three.
+- **The 128 crash case was NOT run.** It needs a category with nothing
+  left to offer, and no list reached in this run had one.
 
-- **Part A** — that a click in OrionLayer's window answers wire id 52.
-  The mapping is checked at four resolutions and the forwarding is
-  checked against the drawn pixels, headless.
-- **Part B** — that an `ACTIVATE_FIELD` on a research row sets the
-  player's field to THAT row's field, on three rows on three occasions,
-  with the game's pointer parked elsewhere; and that the 128 crash case
-  no longer crashes. The patch is applied, the build is green and
-  `version_check` requires it, but nothing has driven it.
-- **Part F** — three turn-start selections made entirely inside
-  OrionLayer's window, and HD beside the native frame at three
-  resolutions.
+Everything above is in `doc/briefs/130-parked-for-data.md` with what to
+re-run.
 
 - **`tech_applications` @379 has ONE of its two sources.** The header
   compile is in and mechanical; the live read is not. Until it is, the

@@ -47,6 +47,7 @@ section for what was found where.
 | 23 | An activation of a research choice row with the pointer over no entry crashes the game | **Observation**, seen live 17 September 2026 (work order 128 C); **CLOSED locally 18 September 2026 by item 25**, which guards the dereference at the line that performed it. Still open upstream | Nothing while item 25 is applied. Without it, a client that activates a choice by field id kills the game |
 | 24 | The two turn-start research dialogs (science room, SELECT NEW RESEARCH) both report SCREEN_MAIN, so a client cannot tell them from the galaxy map | **Applied** 17 September 2026 (work order 129 B, Data's decision: synthetic ids on the wire only), orion2re f838c754 on `orionlayer-local`, `doc/ext_research_screens.patch`; required by `tools/version_check.py`; open upstream | — while applied. Without it HD draws the map with an active TURN button over both dialogs, and a field sent into the select list crashes the engine (item 23) |
 | 25 | The research selection commits the entry under the POINTER, not the field that was activated | **Applied** 18 September 2026 (work order 130 B, Data's decision: option (c) of `doc/tech_change_reading.md` §5.1), orion2re e9d07528 on `orionlayer-local`, `doc/ext_tech_activate.patch`; required by `tools/version_check.py`; open upstream | — while applied. Without it an HD research screen cannot choose a row at all: the choice lands on whatever the cursor rests on, or crashes the engine (item 23) |
+| 26 | SELECT NEW RESEARCH commits a row by itself, about a second and a half after the science room hands over to it | **Observation**, seen three times and measured once with a send counter on 18 September 2026 (work order 130's live run) | A client cannot rely on reaching the list before it has chosen; three of six attempts to choose in HD lost the occasion |
 
 Items 3 and 4 are both about INJECT_CLICK and both live in the same
 code path, but they are separate faults: 3 is where the coordinates
@@ -1696,3 +1697,54 @@ this needs. (c), this patch, is confined to the one handler with the defect.
 Extension API cannot drive this screen, and the failure mode is a crash
 rather than a refusal. The shape of the fix is ours to choose only because
 `src/ext/` is ours; the fault is in `tech.cpp`.
+
+---
+
+## 26. SELECT NEW RESEARCH commits a row by itself after the science room — an observation
+
+Seen three times and measured once during work order 130's live
+acceptance, 18 September 2026, on a new Psilon game against orion2re
+**e9d07528** (`orionlayer-local`, open fixes 24 and 25 applied).
+
+**What happens.** The science room (wire id 52) is walked out with
+clicks forwarded through OrionLayer's fallback view; each advances one
+discovery and the last hands over to `_Tech_Select_(0)`, wire id 53.
+The list comes up correctly — 36 or 38 fields, `current_research_field`
+0, exactly as `Tech_Select_` leaves it (tech.cpp:104-105). Roughly a
+second and a half later the list commits a field and the game returns
+to the galaxy map, **with no input sent into it**.
+
+**The measurement** (`evidence/work_order_130/A_step/record.json`). The
+client's three send paths were wrapped by a counter that still calls
+the real method, so a send cannot happen unseen. After the hand-over:
+
+| frames | screen | `current_research_field` | sends from the client |
+|---|---|---|---|
+| 25 | 53 | 0 | 0 |
+| 50 | 53 | 0 | 0 |
+| 75 | 0 | **20** | **0** |
+
+Three occasions in the same run: fields 3, 21 and 20, each of them the
+first offered entry's field.
+
+**What was ruled out.** `_last_button_number`, which the ext early
+return in `Get_Input_` sets, is written in three places and **read in
+none** (`grep -rn _last_button_number src/`), so a stale value from the
+room's whole-screen field is not the path. `ext::g_pending_field` is
+cleared when it is consumed, so one activation cannot be delivered
+twice. And the count above shows the client sent nothing.
+
+**What was NOT established.** The mechanism. It is recorded as an
+observation rather than a request because nobody has read the path that
+produces it, and a fix request without one would be a guess.
+
+**What it costs us.** A client cannot assume it will be asked. Three of
+six attempts to choose a research from HD lost the occasion to this,
+and the work-around that made a choice reliable was to walk the room
+and click the row **in the same process**, without letting go between
+them — which is a timing dependency, not a design.
+
+It is also the reason the first build's screen validates on every entry
+and hands back to the fallback rather than drawing: a list that can
+commit without being asked is a list whose state HD must re-read, never
+remember.

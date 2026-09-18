@@ -52,3 +52,17 @@ fallback instead, and part C's fallback is the one that matters.
   **212** at the end, exit 0 on every commit. orion2re: one commit (e9d07528),
   push URL still disabled, bundle beside the tar backup. No save file was
   touched: no live step ran.
+- **LIVE (after Data's go-ahead).** orion2re rebuilt from `orionlayer-local`
+  (e9d07528, binary checked for `ext::g_activated_input`), a new Psilon game,
+  one client, SAVE1-9 and SAVE11 identical, SAVE10 logged.
+  **A: proven twice** — 4 and 5 clicks in OrionLayer's window walked two science
+  rooms out and handed over to 53, no F12; the same on SCREEN_COLONY.
+  **B: proven twice** — HD click -> field 4 (category 4), ACTIVATE_FIELD ->
+  field 22 (category 6), both read back off the wire.
+  **F: 1 of 3** — two occasions lost to the new open fix 26, the third blocked
+  when the machine's display server stopped accepting clients.
+  **New: open fix 26** — the select list commits by itself ~1.5 s after the
+  room hands over, measured with a send counter at 0 sends.
+  `tools/livedrive.py` + `tools/researchphases.py` + `tools/research_hd.py`.
+  Smoke 212 -> **213** (a blank window is not a picture, whatever the flag
+  says — the reading 129 got wrong).

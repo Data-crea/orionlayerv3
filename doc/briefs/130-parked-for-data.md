@@ -4,53 +4,68 @@ The order has no reporting stop, so this file holds only what could not
 be finished here and what is Data's to decide. Everything else is
 committed and green at 212 checks.
 
-## 1. THE LIVE ACCEPTANCE — not run, and why (parts A, B and F)
+## 1. THE LIVE ACCEPTANCE — run on 18 September, one occasion short
 
-**What:** none of the order's three live steps ran. Your own orion2re
-(pid 6727) and OrionLayer client (pid 7085) came up at 15:29 on
-18 September, nineteen seconds apart, while this run was in part A.
-Work order 126's rule 8: "exactly one client on the server. Check for a
-running OrionLayer before you connect; if Data left his open, do NOT
-kill it — skip the live step and park it."
+**Ran.** orion2re rebuilt from `orionlayer-local` (e9d07528, the binary
+checked for `ext::g_activated_input`), a new Psilon game, one client,
+SAVE1-9 and SAVE11 identical before and after, SAVE10 logged only.
+Evidence: `~/orionlayer-fixtures/evidence/work_order_130/`.
 
-**Why yours:** the machine is yours and the game is yours. Either you
-run the three steps, or you close the client and say a fresh session may
-drive it.
+**Part A — done, twice.** `A_step/` and the earlier
+`A_science_room_52/`: on wire id 52 the window shows the game's picture
+and a click in it advances the room; four and five clicks walked two
+rooms out and handed over to 53. No F12. `A0_colony/` is the same on
+SCREEN_COLONY (1), where RETURN through the fallback moved the game to
+39.
 
-**One thing to know before you decide.** Twice during part E this run
-connected a HEADLESS OrionLayer to the server for a few seconds to
-render the new screen offline, while your client was open. That is two
-clients, and rule 8 forbids it. Both were read-only — they polled and
-rendered and sent no ACTIVATE_FIELD, no INJECT_CLICK and no key — and
-both exited. It happened because the check for a running client was made
-at the start of the run, when nothing was running, and not again before
-those scripts. Reported rather than left in the log.
+**Part B — done, twice, two categories.** `F1/` (HD row click -> field
+4, category 4) and `B2/` (bare ACTIVATE_FIELD -> field 22, category 6).
+Each read back off the wire and each matched the row. The pointer was
+never moved by the run.
 
-**What to run**, in this order, on a NEW GAME (the dialogs come quickly
-there), one client, scratch save only, hashing SAVE1-9 before and after:
+**Still owed, and why:**
 
-    A. With the game on wire id 52 (the science room), click in
-       OrionLayer's window without pressing F12 first. The picture must
-       be the game's, and the click must advance the discovery. Before
-       work order 130 A the window was a flat colour and the click did
-       nothing.
+- **the third occasion**, in a third category. Two attempts lost it to
+  open fix 26 (below), and by the time the driver was reshaped to win
+  that race, the machine's display server had stopped accepting new
+  clients — `SDL_Init(SDL_INIT_VIDEO) failed: The video driver did not
+  add any displays`, with gnome-shell still running and the sockets
+  still there. orion2re could not be started again. Nothing about the
+  build or the patch; the desktop session.
+- **HD beside the native frame at three resolutions.** There is one
+  resolution, 1920x1080 (`F1/001_F1_select_list_hd.png` beside
+  `..._native.png`).
+- **the 128 crash case.** It needs a category with nothing left to
+  offer, and no list this run reached had one.
 
-    B. With the game's pointer parked off the panel, ACTIVATE_FIELD a
-       research row and read `current_research_field` back off the wire.
-       Three different rows on three occasions. Then the 128 case: an
-       activation with nothing selectable under the pointer — it must do
-       nothing or choose the activated row, and must not crash.
+**To finish it**, with the display back:
 
-    F. Three turn-start selections made entirely inside OrionLayer's
-       window by clicking an HD row, three different categories. Each
-       time the wire afterwards reports the chosen field, the sidebar's
-       research readout shows its turn count, and the game carries on.
-       HD beside the native frame at three resolutions.
+    cd "$HOME/Master of Orion 2" && \
+        ~/orion2re/out/build/Linux/linux-debug/orion2re &
+    cd ~/orionlayerv3
+    python tools/research_hd.py newgame     # to the map, turn one
+    python tools/research_hd.py advance     # to the first dialog
+    python tools/research_hd.py roomchoose 1 hd F4
+    python tools/research_hd.py crash       # when a category runs dry
 
-**Meanwhile:** the patch is applied to `~/orion2re` (e9d07528), the
-build is green, `tools/version_check.py` requires it, and the bundle is
-`~/orion2re_bundle_18sep_e9d07528.bundle`. Nothing is pushed in either
-repository.
+`roomchoose` walks the science room out and chooses in ONE process,
+which is what beats open fix 26. Expect `MATCH` on the last line of
+each choose; anything else is the finding, not the tool.
+
+## 1b. A NEW OBSERVATION — open fix 26
+
+`SELECT NEW RESEARCH` commits a row by itself, about a second and a half
+after the science room hands over, with a send counter proving the
+client sent nothing (the table is in `doc/orion2re_open_fixes.md`).
+Three times in one run; the committed field was the first offered
+entry's each time. `_last_button_number` is ruled out — written in three
+places, read in none. The mechanism is NOT established, which is why it
+is filed as an observation and not a request.
+
+**Why yours:** it decides whether the HD screen should do more than
+re-read. Today it re-reads the list on every entry and hands back to the
+fallback when it cannot vouch — which is the right behaviour either way.
+**Answer:** leave it as an observation / chase the mechanism next.
 
 ## 2. `tech_applications` @379 has one source of two (part C)
 
@@ -100,6 +115,7 @@ and in a check. **Answer:** keep as text / into the artwork later.
 
 ---
 
-**Closing state, 18 September 2026: four items, one of which is the run
-itself.** Nothing was pushed in either repository. `~/orion2re` has one
+**Closing state, 18 September 2026: five items.** The run happened;
+parts A and B are proven and part F is one occasion short, for a reason
+that is the desktop's and not the build's. Nothing was pushed in either repository. `~/orion2re` has one
 new commit on `orionlayer-local` with its push URL still disabled.

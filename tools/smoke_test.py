@@ -17489,6 +17489,59 @@ def main():
        "deviations are marked where they happen, and help 254's three "
        "rectangles all lie outside the panel")
 
+    # ── A BLANK WINDOW IS NOT A PICTURE, AND A FLAG IS NOT EITHER ──
+    #
+    # Work order 129's report said the two turn-start dialogs appeared
+    # "as the original picture inside OrionLayer's window". Its own
+    # screenshots were ONE COLOUR, 100% (6, 8, 16) — the fill from
+    # main.py's else-branch — and its record.json carried
+    # `use_original: true`, which is the DISPATCHER'S FLAG and not the
+    # window. The flag's name was read as the observation.
+    #
+    # So the test for "the window shows the game's picture" is the
+    # window, and this is the one place that says what that means: a
+    # framebuffer the client HAS must reach the surface, and a surface
+    # carrying one distinct colour is blank however the flag reads.
+    # The live driver (tools/research_hd.py) records the same number
+    # beside every capture for the same reason.
+    _bw_state = _FbState(52)
+    _bw_client = _FbClient(_bw_state)
+    app2._apply_resolution(1920, 1080)
+    app2.client, app2.connected = _bw_client, True
+    app2.render_mode = "hd"
+    app2._update()
+    assert app2.dispatcher.use_original, "the fixture did not fall back"
+    app2._render()
+
+    def _bw_colours(surface):
+        seen = set()
+        for _y in range(0, surface.get_height(), 17):
+            for _x in range(0, surface.get_width(), 23):
+                seen.add(surface.get_at((_x, _y))[:3])
+        return seen
+
+    _bw_seen = _bw_colours(app2.surface)
+    assert len(_bw_seen) > 1, (
+        f"the window carries one colour, {_bw_seen} — that is the state "
+        f"work order 129 reported as 'the original picture', and the "
+        f"dispatcher flag says nothing about it")
+    # And the flag ALONE must not be able to stand in for it: with the
+    # same flag set and the renderer's picture suppressed, this check
+    # has to fail. Proven by suppressing it here.
+    _bw_real_render = app2.original_view.render
+    app2.original_view.render = lambda target, layout: target.fill((6, 8, 16))
+    try:
+        app2._render()
+        assert len(_bw_colours(app2.surface)) == 1, (
+            "the control did not blank the window, so the check above "
+            "proves less than it says")
+    finally:
+        app2.original_view.render = _bw_real_render
+    app2._render()
+    assert len(_bw_colours(app2.surface)) > 1
+    ok("a fallback window that carries one colour is blank, whatever "
+       "`use_original` says — the reading work order 129 got wrong")
+
     # A LIVE TOOL IS A CLIENT (work order 129 A): `tools/livesend.py`
     # identifies the dialog from the field list of the state it is handed
     # at that moment and refuses otherwise. Twice a tool sent into a dialog
