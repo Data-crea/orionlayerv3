@@ -1,6 +1,6 @@
 # OrionLayer v3 — Project Status
 
-Updated: 16 September 2026
+Updated: 18 September 2026
 
 **How to read the date above.** The header names the day this file
 was last edited; the "This session (…)" paragraphs below it run
@@ -12,6 +12,21 @@ carrying entries dated 9 September inside it. **The convention is
 right and the header had gone stale** — resolved 10 September 2026
 by dating the header to the edit and giving this session its
 paragraph, below, so the two agree again.
+
+This session (18 September 2026, work order 130): **the research
+select screen, and the two things it stands on.** The fallback view is
+a view again — it drew a flat colour and swallowed every click, so the
+two turn-start dialogs were a dead end inside OrionLayer's window; it
+now shows the game's picture and forwards clicks by F12's own path. An
+ACTIVATED research row is now the row the game chooses (open fix 25,
+orion2re e9d07528) instead of whatever its own pointer rests on, and
+the null dereference of open fix 23 is guarded. The offered rows
+reconstruct and validate against the game's own field list, the names
+come from the player's TECHNAME and BILLTEXT, and
+`screens/research_select/` draws them — handing BACK to the fallback
+whenever it cannot vouch for what it would draw. Smoke 205 -> **212**.
+Sections at the end of "What works", from "The fallback view is a
+view" on. **The live acceptance was NOT run** — see "What is missing".
 
 This session (16 September 2026, work order 122): **Data's two new
 frames and the three items of 15 September**, one commit per item so
@@ -4734,7 +4749,204 @@ destination has its label covered. Reported only, as the order asks; a change
 would be either the draw order or an offset away from the star, and both are
 Data's.
 
+### The fallback view is a view — work order 130 A, 18 September 2026
+
+Decision 22 ("Graceful fallback.") promises the game stays playable on a
+screen HD does not know. **It was not kept, and by more than work order
+129 reported.** `dispatcher.use_original` was SET by the dispatcher and
+READ by nothing in the product: the window filled with a flat (6, 8, 16)
+and swallowed every click. 129's Stop 1 §5 and work order 130 both say
+"shows the original picture"; the tree showed the fill colour, which is
+what measuring it rather than reading it turned up.
+
+With ids 52 and 53 on the wire since open fix 24, that made every
+turn-start research a dead end inside OrionLayer's window: nothing to see
+and nothing to answer.
+
+`App._showing_original` is now the one question the renderer and the
+click handler both ask, so there is no second click path (decision 9).
+The only difference between F12 and the fallback is the status bar, which
+stays with F12 because it names the MODE and the key that leaves it —
+Data chose the plain forwarding fallback over the one with a visible hint
+(129 parked point 1, option a over option c). `OriginalView.placement` is
+the one home for where the picture lands; drawing and clicking each
+carried the same four lines of arithmetic, and this is the order that made
+them load-bearing for every screen HD does not claim (decision 5).
+
+This relies on the COORDINATE half of open fix 3, which converts the
+client's 640x480 point back to window space. `tools/version_check.py` did
+not require it; it does now. Without it a forwarded click lands at roughly
+a third of its intended distance from the top left, on a plausible wrong
+field, silently.
+
+### An activated research row is the chosen row — work order 130 B (open fix 25 applied)
+
+orion2re **e9d07528** on `orionlayer-local`, bundle
+`~/orion2re_bundle_18sep_e9d07528.bundle`, patch
+`doc/ext_tech_activate.patch`, required by `tools/version_check.py`.
+
+`TECH::_Tech_Select_`'s commit branch never used the field id it was
+handed: `Get_Selected_Entry_` returns whichever entry carries
+`current_app_index != 0`, and only `Draw_Tech_Select_` sets that, from
+`fields::Scan_Input_()` — the game POINTER. An `ACTIVATE_FIELD` moves no
+pointer, so a client's choice committed whatever the cursor rested on, or
+nothing at all and then dereferenced the null (open fix 23's SIGSEGV).
+Work order 129 B measured all three outcomes on three occasions.
+
+`ext::g_activated_input` carries the field id of the input `Get_Input_`
+is returning when it came from an activation, and 0 for every mouse
+input. The commit branch, for an activation only, selects that field
+before asking which entry is selected; an entry BLOCK resolves to that
+entry's last visible row, exactly as `Draw_Tech_Select_` resolves it for
+the pointer; and a null selection continues the input loop instead of
+being dereferenced. The mouse path is unchanged — the flag is 0 for it,
+and for a real click the selection would already be the same. Option (c)
+of `doc/tech_change_reading.md` §5.1, the only orion2re change in this
+order.
+
+### The offered research rows reconstruct — work order 130 C
+
+`doc/research_screen_stop1.md` §1 found the categories and the offered
+field reconstructible and the choice ROWS not, for two named reasons.
+Both are addressed.
+
+`s_tech_field_data.tech[4]` is all zeros in techdata.cpp because it is
+not a table: it is filled at runtime (techinit.cpp:444-474) by walking
+the applications in ascending id and dropping each into the first free
+slot of its own field. `core/researchlist.py` transcribes the app -> field
+column and runs the same loop.
+
+`tech_applications[212]` @379 now has decision 23's FIRST source —
+orion2re's headers compiled with their own packing, `sizeof(s_player) ==
+0xf0e`. **The SECOND is not in** and it is the one that matters: a live
+read whose values agree with the rows the game's own screen draws. It
+therefore sits in `core/structs/unverified.py`, and the screen falls back
+rather than draw a list it cannot vouch for.
+
+`validate_against_fields` is decision 25's validation and is not a test:
+the screen runs it on every entry. `tools/research_cost_check.py` reads
+all four transcribed tables out of the source and fails on any
+difference — one row of `_technology_applications` writes its field as
+`TECH_FIELD_INVALID` rather than -1, and a parser that only takes digits
+reads 211 rows and lines every later application up against the wrong
+field.
+
+`tools/struct_header_check.py` is new: decision 23's header route made
+mechanical for every covered spec — 133 offsets over seven structs, each
+size against `sizes.h`, with a control that moves one offset by a byte
+and requires the compile to fail. **`core/structs/ship.py` is NOT
+covered** and says so: it names `s_ship_data`'s members itself, and the
+rename map that would cover it is work nobody has done.
+
+`core/livefields.py` is the one home for reading a live field by its
+shape. The research screen is its third caller, and a screen importing
+another screen's module to get at a shared rule is how the rule gets
+copied instead.
+
+### The research names come from the player's files — work order 130 D
+
+A THIRD output of `tools/techname_extract.py` (`techfields_<lang>.json`,
+`core/technames.py`): the field and application names are the first two
+tables of the block it already walks to reach the buildings. And
+`tools/billtext_extract.py` is new (`billtext_<lang>.json`,
+`core/billtext.py`) for the panel's own wording. BILLTEXT is not shaped
+like the other string files: a message is its own six LBX entries, one
+per language (`Get_Text_Message_`, jim.cpp:336-359).
+
+`core/technames.py` refuses to name fields 75..82 from that block. The
+block DOES carry a string at 75, "Biology" in the English file, and
+`Technology_Fields_Name_` does not use it — those eight are
+`_hyper_field_title` out of ESTRINGS. Returning the block's string would
+be a plausible wrong name.
+
+Both files are gitignored, both are reported by `tools/setup.py`, and
+absent, stale and short are three stated states. Read off the English
+files, which is also the cross-check on the whole reconstruction: field
+21 "Capsule Construction" offers Battle Pods, Survival Pods and Troop
+Pods, and message 64 + group names the eight panels BASIC .. OTHER.
+
+### The research select screen — work order 130 E, wire id 53
+
+`screens/research_select/`, structure only. Frame and artwork come later
+(Data, 17 September).
+
+**The layout is the original's rectangles**, and the provenance is not on
+a box: `Box.to_dict` serializes a fixed key set, so a `native` key would
+be dropped the first time the F5 editor saved this screen — decision 38's
+trap for `help_id`, and why `colony_summary`'s `boxes.json` carries no
+rect either. `boxes.json` names the boxes, `native.py` holds every
+rectangle with its tech.cpp line, and `seat()` marks them derived. The
+eight entry boxes ARE the game's own entry-block fields.
+
+**One rectangle for drawing and clicking** (decision 5), and because a
+shared function guarantees agreement and not correctness, the check
+renders and requires every row's VISIBLE CENTRE to pick that row, as work
+order 128 D did for the Planets list.
+
+**It refuses before it sends and before it draws.** A click off a row
+sends nothing (decision 33); a row resolves by SHAPE in the list of that
+frame; a second click after the commit sends nothing; ESC and every other
+key send nothing, because select mode has no exit but a commit
+(tech.cpp:131) and `ScreenBase.handle_key` would otherwise have forwarded
+them.
+
+**`ScreenBase.wants_original`** is decision 22 one step in: a screen that
+knows the id but cannot vouch for its own picture hands back to the
+original view. Five states do it — no player record, names absent,
+wording absent, a field list of the wrong shape, a reconstruction the
+list contradicts — and each logs once, not per frame.
+
+**Marked**, each held by a check: four OMISSIONS (the science room
+animation, the category list popup, the description box a right click
+would open — so a right click inside the panel does nothing — and the
+little arrow), one HD EXTENSION (the title, which the original paints
+into TECHSEL art), three DEVIATIONS (the category label printed rather
+than painted, the RP suffix that ignores `_settings.language`, and
+shrinking where `Squeeze_Print_` compresses).
+
+Help 254's three rectangles are transcribed from billhelp.cpp:42-46.
+They are NOT "outside the panel" — they lie over the fill's own top and
+bottom edges, which is how `doc/tech_change_reading.md` §7 derives the
+panel's visible edge. The rule that holds is narrower: no help region may
+cover an entry block or a radio, because a right click there is the
+description box or the category list, not help.
+
 ## What is missing
+
+### Research select (work order 130) — THE LIVE ACCEPTANCE WAS NOT RUN
+
+Everything in work order 130 is built, committed and green at 212 checks.
+**None of its three live steps ran.** Data's own orion2re and OrionLayer
+client have been up since 15:29 on 18 September, and work order 126's
+rule 8 is explicit: check for a running OrionLayer before connecting, and
+if Data left his open, do NOT kill it — skip the live step and park it.
+What is parked, and what to run, is in `doc/briefs/130-parked-for-data.md`.
+
+Three consequences of that, each of which is a claim and not a
+measurement until the runs happen:
+
+- **Part A** — that a click in OrionLayer's window answers wire id 52.
+  The mapping is checked at four resolutions and the forwarding is
+  checked against the drawn pixels, headless.
+- **Part B** — that an `ACTIVATE_FIELD` on a research row sets the
+  player's field to THAT row's field, on three rows on three occasions,
+  with the game's pointer parked elsewhere; and that the 128 crash case
+  no longer crashes. The patch is applied, the build is green and
+  `version_check` requires it, but nothing has driven it.
+- **Part F** — three turn-start selections made entirely inside
+  OrionLayer's window, and HD beside the native frame at three
+  resolutions.
+
+- **`tech_applications` @379 has ONE of its two sources.** The header
+  compile is in and mechanical; the live read is not. Until it is, the
+  research screen's rows rest on an unverified offset, which is why the
+  validation against the game's own field list runs in the product on
+  every entry and hands over to the fallback when it disagrees.
+- **`hyper_advanced_tech` @640 stays quarantined**, as work order 130
+  says it should: a late-game save is what it needs. The consequence is
+  written down in `core/structs/unverified.py` — the sidebar's turn count
+  underestimates for fields 75..82, and an application above id 203 is
+  named without its roman numeral rather than with a guessed one.
 
 ### OLED floor lift and player-colour presets
 - **The white player has no visible hover mark in the Planets list**

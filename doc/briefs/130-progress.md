@@ -36,3 +36,19 @@ fallback instead, and part C's fallback is the one that matters.
   Cross-check: field 21 "Capsule Construction" -> Battle Pods, Survival Pods,
   Troop Pods; the eight panels name themselves BASIC..OTHER. Smoke 209 -> **210**,
   exit 0, commit 3261264.
+- **E** — done. `screens/research_select/` on wire id 53: `native.py` holds
+  every 640x480 rectangle with its tech.cpp line and seats the boxes derived
+  (the provenance is NOT a box key — `Box.to_dict` would drop it); `panel.py`
+  draws; `screen.py` owns the wire, the refusals and the hand-back.
+  `ScreenBase.wants_original` is decision 22 one step in. Four omissions, one
+  HD extension and three deviations marked and checked. Smoke 210 -> **212**,
+  exit 0, commit 366e308.
+- **F** — checks done, **LIVE NOT RUN**. Data's own orion2re (15:29) and
+  OrionLayer client were up before part F was reached, and 126's rule 8 says
+  not to touch them. Parked in `130-parked-for-data.md` with the three steps
+  to run. Status document updated: the screen count, what works, and the live
+  gap as the first entry under "What is missing".
+- **Run closed.** orionlayerv3: nothing pushed, smoke **205** at the start and
+  **212** at the end, exit 0 on every commit. orion2re: one commit (e9d07528),
+  push URL still disabled, bundle beside the tar backup. No save file was
+  touched: no live step ran.
