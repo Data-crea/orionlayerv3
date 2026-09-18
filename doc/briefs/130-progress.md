@@ -14,3 +14,17 @@ fallback instead, and part C's fallback is the one that matters.
   version_check now requires the COORDINATE half of open fix 3. Smoke
   205 -> **207**, exit 0, commit 3105f98. Live proof deferred to the one live
   session with parts B and F.
+- **B** — done bar the live proof. orion2re **e9d07528** (`ext::g_activated_input`,
+  the commit branch selects the activated field, the null selection no longer
+  dereferenced), bundle `~/orion2re_bundle_18sep_e9d07528.bundle`, build green.
+  `doc/ext_tech_activate.patch` checked in all three directions; open fix 25
+  filed, open fix 23 updated with what it closes; version_check entry. Commit
+  5ef5356, smoke 207.
+- **C** — done bar source two. `core/researchlist.py` (four transcribed tables,
+  the techinit tech[4] derivation, the walk, the rows, and decision 25's
+  validation); `tools/research_cost_check.py` extended to all four tables;
+  `tools/struct_header_check.py` new — decision 23's header route, mechanical,
+  133 offsets over seven specs with an off-by-one control. `tech_applications`
+  @379 has source ONE and sits in `unverified.py` until a live read agrees.
+  `core/livefields.py` is the one home for `live_field`. Smoke 207 -> **209**,
+  exit 0.
