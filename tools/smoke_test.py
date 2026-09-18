@@ -14846,6 +14846,177 @@ def main():
         "Box the screen has")
     ok("App boots standalone")
 
+    # ── THE FALLBACK VIEW IS A VIEW, NOT A HOLE (work order 130 A) ──
+    #
+    # Decision 22 ("Graceful fallback.") promises the game stays playable
+    # on a screen HD does not know. It was not kept. `use_original` was
+    # set by the dispatcher and read by NOTHING in the product: the
+    # window filled with a flat colour and swallowed every click, so the
+    # two turn-start research dialogs (52, 53) were a dead end inside
+    # OrionLayer's window — the player could neither see nor answer them.
+    # Work order 129's Stop 1 reported the click half of this; the
+    # picture half is worse and was found by measuring rather than
+    # reading (doc/research_screen_stop1.md §5.1 says "shows the picture",
+    # the tree showed (6, 8, 16)).
+    #
+    # Both halves now take F12's own path (decision 9), so this asserts
+    # against the DRAWN PIXELS and not only against the arithmetic —
+    # a shared function guarantees agreement, not correctness, and the
+    # stacked colony figures are what that lesson cost (decision 5).
+    class _FbState:
+        stardate = 0
+        stardate_str = ""
+        map_scale = 10
+
+        def __init__(self, screen_id):
+            self.current_screen = screen_id
+            # Left half of the native picture one colour, right half
+            # another, so a click mapping that is off by the bar's
+            # width lands in the wrong half and is caught.
+            self.framebuffer = bytes(
+                (3 if (i % 640) < 320 else 7) for i in range(640 * 480))
+            self.palette = [(0, 0, 0)] * 256
+            self.palette[3] = (0, 0, 255)
+            self.palette[7] = (255, 0, 0)
+            self.fields = []
+
+    class _FbClient:
+        game_ended = False
+
+        def __init__(self, state):
+            self.state = state
+            self.log = []
+
+        def poll(self):
+            pass
+
+        def activate_field(self, fid):
+            self.log.append(("ACTIVATE_FIELD", fid))
+
+        def inject_click(self, x, y):
+            self.log.append(("INJECT_CLICK", x, y))
+
+    _fb_state = _FbState(53)          # 53: no HD screen claims it
+    _fb_client = _FbClient(_fb_state)
+    app2._apply_resolution(1920, 1080)
+    app2.client, app2.connected = _fb_client, True
+    app2.render_mode = "hd"
+    app2._update()
+    assert app2.dispatcher.use_original and app2.dispatcher.active is None, \
+        (app2.dispatcher.use_original, app2.dispatcher.active_name)
+    assert app2._showing_original(), (
+        "the dispatcher fell back and the window still does not show the "
+        "game's picture — decision 22 is a promise, not a comment")
+    app2._render()
+    # 640x480 into 1920x1080 is pillarboxed: scale 2.25, a 1440-wide
+    # picture at x 240. The numbers come from the view's own placement,
+    # never from this check — a check that recomputes the geometry is
+    # the second copy decision 5 is about.
+    _fb_x, _fb_y, _fb_w, _fb_h, _fb_s = app2.original_view.placement(
+        1920, 1080)
+    assert (_fb_x, _fb_y, _fb_w, _fb_h) == (240, 0, 1440, 1080), \
+        (_fb_x, _fb_y, _fb_w, _fb_h, _fb_s)
+    _fb_mid = _fb_x + _fb_w // 2      # the native x=320 seam
+    for _fb_px, _fb_want, _fb_where in (
+            (_fb_x + _fb_w // 4, (0, 0, 255), "the picture's left half"),
+            (_fb_x + 3 * _fb_w // 4, (255, 0, 0), "its right half"),
+            (_fb_x // 2, (0, 0, 0), "the letterbox bar")):
+        _fb_got = app2.surface.get_at((_fb_px, 540))[:3]
+        assert _fb_got == _fb_want, (
+            f"{_fb_where} drew {_fb_got}, wanted {_fb_want} at x={_fb_px} "
+            f"— the fallback is not showing the framebuffer")
+    # AND THE CLICK LANDS IN THE HALF THE PLAYER SEES. Same two points,
+    # now through the click path: the drawn seam and the mapped seam are
+    # the same seam, which is what shared geometry has to earn.
+    for _fb_px, _fb_half in ((_fb_x + _fb_w // 4, 0),
+                             (_fb_x + 3 * _fb_w // 4, 1)):
+        _fb_nat = app2.original_view.screen_to_640(_fb_px, 540, 1920, 1080)
+        assert _fb_nat is not None and (_fb_nat[0] >= 320) == bool(_fb_half), \
+            (_fb_px, _fb_nat, _fb_half)
+    # A click reaches the game — by ACTIVATE_FIELD where a field covers
+    # the point, by INJECT_CLICK where none does (original_view's own
+    # rule, unchanged), and by NEITHER from inside the bar.
+    _fb_client.log.clear()
+    app2._handle_click(_fb_mid, 540)
+    assert _fb_client.log == [("INJECT_CLICK", 320, 240)], _fb_client.log
+    _fb_client.log.clear()
+    app2._handle_click(_fb_x // 2, 540)
+    assert _fb_client.log == [], (
+        "a click in the letterbox bar was forwarded — the game has no "
+        "pixel there", _fb_client.log)
+    # A field under the point wins, and the fallback resolves it exactly
+    # as F12 does: same call, same arguments, for the same pixel.
+    from core.game_state import FieldInfo as _FbField
+    _fb_f = _FbField()
+    (_fb_f.index, _fb_f.x, _fb_f.y, _fb_f.x_end, _fb_f.y_end,
+     _fb_f.field_type, _fb_f.hotkey) = (4, 300, 200, 400, 300, 7, 0)
+    _fb_state.fields = [_fb_f]
+    _fb_client.log.clear()
+    app2._handle_click(_fb_mid, 540)
+    _fb_fallback_call = list(_fb_client.log)
+    assert _fb_fallback_call == [("ACTIVATE_FIELD", 4)], _fb_fallback_call
+    _fb_client.log.clear()
+    app2.render_mode = "original"     # F12: the other way into one view
+    app2._handle_click(_fb_mid, 540)
+    assert _fb_client.log == _fb_fallback_call, (
+        "F12 and the fallback forward the same click differently — "
+        "there is a second click path (decision 9)",
+        _fb_client.log, _fb_fallback_call)
+    app2.render_mode = "hd"
+    # And the editor still eats every click before either of them.
+    app2.editor.active = True
+    _fb_client.log.clear()
+    app2._handle_click(_fb_mid, 540)
+    assert _fb_client.log == [], _fb_client.log
+    app2.editor.active = False
+    ok("the fallback view draws the game's picture and forwards a click "
+       "to it by F12's own path")
+
+    # ── WINDOW PIXEL -> NATIVE PIXEL, AT ALL FOUR SIZES ────────────
+    #
+    # Every forwarded click is converted here, and since work order 130 A
+    # that is every screen HD does not claim — the research dialogs among
+    # them. All four presets are WIDER than 4:3, so all four pillarbox,
+    # and the bar is where an off-by-a-bar error hides: the click still
+    # lands on a plausible field, just the wrong one.
+    _mp_view = app2.original_view
+    for _mp_w, _mp_h, _mp_name in app2._resolutions:
+        _mp_x, _mp_y, _mp_dw, _mp_dh, _mp_s = _mp_view.placement(_mp_w, _mp_h)
+        # The picture is the largest 4:3 area that fits, and it is centred.
+        assert _mp_s == min(_mp_w / 640, _mp_h / 480), (_mp_name, _mp_s)
+        assert _mp_dw <= _mp_w and _mp_dh <= _mp_h, (_mp_name,)
+        assert abs((_mp_w - _mp_dw) - 2 * _mp_x) <= 1, (
+            f"{_mp_name}: the bars are not equal ({_mp_x} left of a "
+            f"{_mp_w - _mp_dw} px remainder)")
+        assert abs((_mp_h - _mp_dh) - 2 * _mp_y) <= 1, (_mp_name,)
+        assert _mp_x > 0 or _mp_y > 0, (
+            f"{_mp_name}: no bar at all — then this check proves nothing "
+            f"about letterboxing and the case has stopped being covered")
+        # Every native pixel's own centre comes back as that pixel.
+        for _mp_nx in (0, 1, 319, 320, 638, 639):
+            for _mp_ny in (0, 1, 239, 240, 478, 479):
+                _mp_sx = _mp_x + int((_mp_nx + 0.5) * _mp_s)
+                _mp_sy = _mp_y + int((_mp_ny + 0.5) * _mp_s)
+                _mp_got = _mp_view.screen_to_640(_mp_sx, _mp_sy,
+                                                 _mp_w, _mp_h)
+                assert _mp_got == (_mp_nx, _mp_ny), (
+                    f"{_mp_name}: window ({_mp_sx}, {_mp_sy}) read back as "
+                    f"{_mp_got}, not ({_mp_nx}, {_mp_ny})")
+        # The picture's own corners are the picture's own corners.
+        assert _mp_view.screen_to_640(_mp_x, _mp_y, _mp_w, _mp_h) == (0, 0)
+        assert _mp_view.screen_to_640(_mp_x + _mp_dw - 1, _mp_y + _mp_dh - 1,
+                                      _mp_w, _mp_h) == (639, 479)
+        # And one pixel outside any edge is the bar, not pixel 0 or 639.
+        for _mp_out in ((_mp_x - 1, _mp_h // 2), (_mp_x + _mp_dw, _mp_h // 2),
+                        (_mp_w // 2, _mp_y - 1), (_mp_w // 2, _mp_y + _mp_dh)):
+            if _mp_out[0] < 0 or _mp_out[1] < 0:
+                continue          # that edge has no bar at this size
+            assert _mp_view.screen_to_640(*_mp_out, _mp_w, _mp_h) is None, (
+                f"{_mp_name}: {_mp_out} is outside the picture and mapped "
+                f"to a native pixel anyway")
+    ok("window pixel -> native pixel round-trips at all four resolutions, "
+       "letterbox bars included")
+
     # ── THE EDITOR'S BOX CLASSES, DERIVED AND NOT DECLARED ──────
     #
     # A box is LOCKED because the screen's `frame_holes` rule produces

@@ -57,6 +57,22 @@ RE_LABEL = re.compile(
 #: and nothing else in orion2re defines. `file: (relative path,
 #: marker, what breaks without it)`.
 LOCAL_PATCHES = {
+    # Applied 4 September 2026 (open fix 3, "INJECT_CLICK coordinates are
+    # mapped as window coordinates"). Two halves; the marker is the
+    # COORDINATE half, which lives wholly in src/ext and converts the
+    # client's 640x480 point back to window space before the event is
+    # pushed. Required here from work order 130 A on: the fallback view
+    # now forwards a click for every screen no HD screen claims, and it
+    # hands the game a game-space point. Without this half the engine
+    # reads that point as a window coordinate, so on a 1920x1080 window
+    # every forwarded click lands at roughly a third of its intended
+    # distance from the top left — on the wrong field, silently.
+    "doc/ext_inject_click.patch": (
+        os.path.join("src", "ext", "ext_api.cpp"),
+        "Game_Point_To_Window_Point_",
+        "INJECT_CLICK and MSG_CANCEL_FIELD read their 640x480 point as a "
+        "window coordinate, so every click the fallback view forwards "
+        "lands somewhere else (open fix 3, the coordinate half)"),
     # Applied 17 September 2026 (work order 129 B, open fix 24): the two
     # turn-start research dialogs report synthetic ids 52 and 53 on the wire.
     # The marker is the guard in the science room, because the override

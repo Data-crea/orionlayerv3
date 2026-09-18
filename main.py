@@ -214,10 +214,29 @@ class App:
         """
         return mouse_input.adjust(x, y)
 
+    def _showing_original(self):
+        """True when the window shows orion2re's own framebuffer.
+
+        TWO WAYS IN, ONE VIEW. F12's render mode is one; the
+        dispatcher's fallback for a screen id no HD screen claims
+        (decision 22) is the other. They differ in how they are
+        entered and in nothing else, so the renderer and the click
+        handler both ask this one question rather than each testing
+        for a mode (decision 9 — the framebuffer path has one home).
+
+        Work order 130 A. Until then `use_original` was set by the
+        dispatcher and read by nothing: the fallback filled the window
+        with a flat colour and swallowed every click, so the two
+        turn-start research dialogs (52, 53) were a dead end inside
+        OrionLayer's window.
+        """
+        return self.connected and (
+            self.render_mode == "original" or self.dispatcher.use_original)
+
     def _handle_click(self, screen_x, screen_y):
         if self.editor.active:
             return  # editor handles all clicks
-        if self.render_mode == "original" and self.connected:
+        if self._showing_original():
             self.original_view.forward_click(
                 self.client, screen_x, screen_y,
                 self.win_w, self.win_h)
@@ -250,13 +269,21 @@ class App:
 
     def _render(self):
         """Render based on current mode."""
-        if self.render_mode == "original" and self.connected:
+        if self._showing_original():
             self.original_view.render(self.surface, self.layout)
-            state = self.client.state
-            self.original_view.render_status_bar(
-                self.surface, self.style, self.colors, state,
-                self.dispatcher.screen_name_for(state.current_screen),
-                self.render_mode)
+            if self.render_mode == "original":
+                # The status bar belongs to the F12 MODE, not to the
+                # picture: it names the mode and the key that leaves it.
+                # The fallback is not a mode and has no key, and Data
+                # chose the plain forwarding fallback over the one with
+                # a visible hint (work order 130, decided; 129 parked
+                # point 1, option a over option c). This one line is the
+                # only difference between the two entries.
+                state = self.client.state
+                self.original_view.render_status_bar(
+                    self.surface, self.style, self.colors, state,
+                    self.dispatcher.screen_name_for(state.current_screen),
+                    self.render_mode)
         elif self.dispatcher.active:
             self.surface.fill((4, 6, 14))
             self.dispatcher.render(self.surface)

@@ -42,6 +42,28 @@ class OriginalView:
         buf.write(framebuffer[:self.FB_W * self.FB_H])
         self._dirty = True
 
+    def placement(self, target_w, target_h):
+        """Where the 640x480 picture lands in a window that size.
+
+        Returns `(dst_x, dst_y, dst_w, dst_h, scale)`: the largest 4:3
+        area that fits, centred, so the bars are shared evenly.
+
+        ONE FUNCTION, because drawing and clicking both need it
+        (decision 5). Until work order 130 A the two carried the same
+        four lines of arithmetic each; they agreed, and a second copy
+        that agrees today is the shape every drift in this project has
+        started from. It became load-bearing in that order: the
+        fallback view now forwards clicks for every screen HD does not
+        claim, so a disagreement here would put the click a bar's
+        width away from the pixel the player aimed at.
+        """
+        scale = min(target_w / self.FB_W, target_h / self.FB_H)
+        dst_w = int(self.FB_W * scale)
+        dst_h = int(self.FB_H * scale)
+        dst_x = (target_w - dst_w) // 2
+        dst_y = (target_h - dst_h) // 2
+        return dst_x, dst_y, dst_w, dst_h, scale
+
     def render(self, target, layout):
         """Draw the framebuffer scaled into the window.
 
@@ -49,13 +71,7 @@ class OriginalView:
         """
         tw = target.get_width()
         th = target.get_height()
-
-        # 4:3 scaling with letterbox
-        scale = min(tw / self.FB_W, th / self.FB_H)
-        dst_w = int(self.FB_W * scale)
-        dst_h = int(self.FB_H * scale)
-        dst_x = (tw - dst_w) // 2
-        dst_y = (th - dst_h) // 2
+        dst_x, dst_y, dst_w, dst_h, scale = self.placement(tw, th)
 
         # Only convert + rescale when framebuffer changed or size changed
         size_changed = (dst_w, dst_h) != self._last_size
@@ -75,14 +91,14 @@ class OriginalView:
     def screen_to_640(self, screen_x, screen_y, target_w, target_h):
         """Window coordinate -> 640x480 coordinate.
 
-        For click forwarding in original mode.
-        Returns (x, y) in 640x480 or None if outside.
+        For click forwarding in original mode AND in the fallback
+        view, which since work order 130 A takes the same path.
+        Returns (x, y) in 640x480 or None if outside — outside is the
+        letterbox bar, where the game has no pixel and a click has
+        nothing to mean.
         """
-        scale = min(target_w / self.FB_W, target_h / self.FB_H)
-        dst_w = int(self.FB_W * scale)
-        dst_h = int(self.FB_H * scale)
-        dst_x = (target_w - dst_w) // 2
-        dst_y = (target_h - dst_h) // 2
+        dst_x, dst_y, dst_w, dst_h, scale = self.placement(
+            target_w, target_h)
 
         rx = screen_x - dst_x
         ry = screen_y - dst_y
