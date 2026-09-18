@@ -62,7 +62,7 @@ Git enforces it: `tools/githooks/pre-commit` runs the suite and refuses
 the commit on any exit but 0, 139 included. `python tools/setup.py`
 switches the hook on in a clone (decision 31).
 
-209 checks, headless, no orion2re needed. **The count must not go
+210 checks, headless, no orion2re needed. **The count must not go
 down.** If a change makes a check obsolete, replace it — do not
 delete it. It went down exactly once, on 12 September 2026, when
 Phase B deleted the frame machinery the checks were about (decision
@@ -155,7 +155,9 @@ the repository — neither is required to start:
 ```bash
 python tools/help_extract.py                        # context-help texts
 python tools/nebula_extract.py /path/to/starbg.lbx  # nebula sprites
-python tools/techname_extract.py                    # building names
+python tools/techname_extract.py                    # building, ship-part
+                                                    #   and research names
+python tools/billtext_extract.py                    # research panel wording
 python tools/estrings_extract.py                    # option strings
 python tools/raceicon_extract.py                    # population figures
 python tools/hestrings_extract.py                   # message strings

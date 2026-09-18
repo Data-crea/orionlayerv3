@@ -14798,6 +14798,117 @@ def main():
             f"{_tool}: {_const} points outside the project: {_out}")
     ok("extractors write into the project, not the working directory")
 
+    # ── THE RESEARCH SCREEN'S WORDS COME FROM THE PLAYER'S FILES ───
+    #
+    # Work order 130 D, decision 38's pattern for the sixth time. Two
+    # loaders, two derived files, neither ever committed — so this must
+    # pass on a clean clone where both are absent, and every check below
+    # is about the RULE and not about a string in one player's copy.
+    import json as _nm_json
+    from core import billtext as _bt
+    from core import research as _nm_res
+    from core import researchlist as _nm_rl
+    from core import technames as _tn
+    from core.structs import unverified as _nm_unv
+
+    # 1. THE OFFSETS ARE SUMS OF THE GAME'S OWN COUNTS, and the three
+    #    modules that each hold one must not drift apart. TECHNAME's
+    #    block is walked by every one of them.
+    from core import buildnames as _bn
+    assert _tn.FIELD_FIRST_STRING == 0
+    assert _tn.APP_FIRST_STRING == \
+        _tn.FIELD_FIRST_STRING + _tn.TECH_FIELD_COUNT
+    assert _bn.BUILDING_FIRST_STRING == \
+        _tn.APP_FIRST_STRING + _tn.TECH_APP_COUNT, (
+            "the building names' first string is no longer the string "
+            "after the last application — one of the two walks is wrong",
+            _bn.BUILDING_FIRST_STRING, _tn.APP_FIRST_STRING,
+            _tn.TECH_APP_COUNT)
+    assert _tn.TECH_FIELD_COUNT == _nm_res.FIELD_COUNT
+    assert _tn.TECH_APP_COUNT == _nm_unv.TECH_APPLICATIONS_COUNT
+
+    # 2. AN ABSENT FILE IS A STATE, NOT AN ERROR (decision 38). Both
+    #    loaders are asked for a language nothing has ever extracted.
+    for _mod, _cls in ((_tn, _tn.TechNames), (_bt, _bt.BillText)):
+        _absent = _cls("zz")
+        assert _absent.state == "missing", (_mod.__name__, _absent.state)
+    assert _tn.TechNames("zz").field_name(21) is None
+    assert _tn.TechNames("zz").application_name(25) is None
+    assert _bt.BillText("zz").message(62) is None
+    assert _bt.BillText("zz").group_name(4) is None
+
+    # 3. AND A STALE ONE IS A THIRD STATE. A file an older extractor
+    #    wrote renders ALMOST right, which is worse than not loading —
+    #    the help texts' lesson, and the reason for the format version.
+    import tempfile as _nm_tmp
+    _nm_dir = _nm_tmp.TemporaryDirectory()
+    for _mod, _cls, _path_of, _body in (
+            (_tn, _tn.TechNames, _tn.name_file,
+             {"fields": {"21": "x"}, "applications": {"25": "y"}}),
+            (_bt, _bt.BillText, _bt.message_file,
+             {"messages": {str(i): "x" for i in _bt.RESEARCH_MESSAGES}})):
+        _nm_path = os.path.join(_nm_dir.name, *_path_of("en").split("/"))
+        os.makedirs(os.path.dirname(_nm_path), exist_ok=True)
+        with open(_nm_path, "w", encoding="utf-8") as _h:
+            _nm_json.dump(dict({"format": 0}, **_body), _h)
+        assert _cls("en", root=_nm_dir.name).state == "stale", _mod.__name__
+        with open(_nm_path, "w", encoding="utf-8") as _h:
+            _nm_json.dump(dict({"format": _mod.FORMAT_VERSION}, **_body), _h)
+        assert _cls("en", root=_nm_dir.name).state == "ok", _mod.__name__
+        with open(_nm_path, "w", encoding="utf-8") as _h:
+            _h.write("{not json")
+        assert _cls("en", root=_nm_dir.name).state == "missing", _mod.__name__
+
+    # 4. A BILLTEXT FILE SHORT OF WHAT THE PANEL READS IS NOT "ok".
+    #    Half the panel in the game's words and half in OrionLayer's
+    #    reads as a broken screen, not as an absent file.
+    _nm_path = os.path.join(_nm_dir.name, *_bt.message_file("en").split("/"))
+    with open(_nm_path, "w", encoding="utf-8") as _h:
+        _nm_json.dump({"format": _bt.FORMAT_VERSION,
+                   "messages": {str(i): "x"
+                                for i in _bt.RESEARCH_MESSAGES[1:]}}, _h)
+    assert _bt.BillText("en", root=_nm_dir.name).state == "missing", \
+        "a billtext file missing a message the panel reads passed as ok"
+    _nm_dir.cleanup()
+
+    # 5. FIELDS 75..82 ARE NOT NAMED FROM THIS BLOCK. The block DOES
+    #    carry a string at 75 — "Biology" in the English file — and
+    #    `Technology_Fields_Name_` (tech.cpp:1086-1099) does not use it:
+    #    it returns `_hyper_field_title` out of ESTRINGS. Answering with
+    #    the block's string would be a plausible wrong name.
+    _nm_names = _tn.TechNames("en")
+    for _nm_f in range(_tn.FIELD_HYPER_FIRST, _tn.TECH_FIELD_COUNT):
+        assert _nm_names.field_name(_nm_f) is None, (
+            f"field {_nm_f} was named from the TECHNAME block; the "
+            f"original names it from ESTRINGS 0x284")
+    assert _nm_names.field_name(0) is None    # the unused row
+    assert _tn.FIELD_HYPER_FIRST == _nm_rl.FIELD_HYPER_FIRST
+
+    # 6. THE ROMAN NUMERAL IS THE ORIGINAL'S, INCLUDING WHERE IT STOPS
+    #    (`Technology_Applications_Name_`, tech.cpp:1117-1136, and
+    #    `MOX::_roman_literals`, mox.cpp:426: name, space, numeral at
+    #    hyper count + 1, and a plain number above twenty).
+    assert _tn.roman(0) == "I" and _tn.roman(2) == "III"
+    assert _tn.roman(_tn.ROMAN_MAX - 1) == "XX"
+    assert _tn.roman(_tn.ROMAN_MAX) == str(_tn.ROMAN_MAX + 1)
+    assert _tn.roman(None) == ""
+    # No count means NO SUFFIX, not numeral I: hyper_advanced_tech is
+    # unverified (core/structs/unverified.py), and a screen that printed
+    # "Biology I" off an unread byte would be inventing the level.
+    if _nm_names.state == "ok":
+        _nm_bare = _nm_names.application_name(_nm_rl.APP_HYPER_FIRST)
+        assert _nm_bare and not _nm_bare.endswith(" I"), _nm_bare
+        assert _nm_names.application_name(_nm_rl.APP_HYPER_FIRST, 0) == \
+            f"{_nm_bare} I"
+        report(f"research names extracted: "
+               f"{len(_nm_names.fields)} fields, "
+               f"{len(_nm_names.applications)} applications")
+    else:
+        report("research names NOT extracted on this disk — the loaders' "
+               "absent-file behaviour is what was checked")
+    ok("the research names and the panel's wording come from the player's "
+       "own files, and absent, stale and short are three stated states")
+
     # ── Full App boot (standalone, no orion2re) ──
     import main as main_module
     # THE PLAYER'S OWN user_settings.json STAYS OUT OF THE RUN. `App()`
@@ -15279,6 +15390,11 @@ def main():
         os.path.join("assets", "shared", "names", "maintext_en.json"),
         os.path.join("assets", "shared", "names", "buildings_en.json"),
         os.path.join("assets", "shared", "names", "estrings_en.json"),
+        # work order 130 D: the research names, a third file out of the
+        # same TECHNAME block, and BILLTEXT's messages — both written at
+        # indent=1 like their siblings.
+        os.path.join("assets", "shared", "names", "techfields_en.json"),
+        os.path.join("assets", "shared", "names", "billtext_en.json"),
         # hand-written with inline arrays for readability; never
         # rewritten by a tool.
         os.path.join("screens", "_template", "boxes.json"),

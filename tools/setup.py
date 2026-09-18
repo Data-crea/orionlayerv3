@@ -48,6 +48,8 @@ from core.maintext import text_file as maintext_file  # noqa: E402
 from core.shipparts import name_file as shipparts_file  # noqa: E402
 from core.estrings import string_file as estrings_file  # noqa: E402
 from core.hestrings import string_file as hestrings_file  # noqa: E402
+from core.technames import name_file as technames_file  # noqa: E402
+from core.billtext import message_file as billtext_file  # noqa: E402
 from screens.colony_summary.colonyfigures import (  # noqa: E402
     FIGURE_DIR, all_names)
 from core.config import load_settings      # noqa: E402
@@ -155,6 +157,24 @@ def from_game(settings=None):
          f"shows weapon, shield, special and hull numbers instead of "
          f"names",
          "python tools/techname_extract.py"
+         + (f" --lang {lang}" if lang != "en" else "")),
+        # AND A THIRD FILE OUT OF THE SAME BLOCK (work order 130 D):
+        # the research field and application names, which are the first
+        # two tables TECHNAME's walk passes on its way to the buildings.
+        (os.path.join(ROOT, *technames_file(lang).split("/")),
+         f"research names ({lang}) — without them the research select "
+         f"screen cannot name a field or a choice, and hands over to "
+         f"the fallback view rather than drawing numbers",
+         "python tools/techname_extract.py"
+         + (f" --lang {lang}" if lang != "en" else "")),
+        # BILLTEXT.LBX: the research panel's own wording. A message per
+        # six LBX entries, one per language — not a block like the rest
+        # (jim.cpp:336-359).
+        (os.path.join(ROOT, *billtext_file(lang).split("/")),
+         f"research panel wording ({lang}) — without them the panel "
+         f"has no 'Pure research' row label, no 'Research cost: ' and "
+         f"no category names, and falls back",
+         "python tools/billtext_extract.py"
          + (f" --lang {lang}" if lang != "en" else "")),
         # MAINTEXT.LBX: the system-special descriptions. Nothing draws
         # them yet — the galaxy map's popups are their own brief.
