@@ -35,6 +35,29 @@ it cannot vouch for: it hands over to the fallback view, which since
 work order 130 A shows the game's own picture and forwards clicks, and
 it logs why. That is what this order has instead of a reporting stop.
 
+NOT ACCEPTED YET, and the reason is not ours: OPEN FIX 26.
+`SELECT NEW RESEARCH` commits a row BY ITSELF, about a second and a half
+after the science room hands over to it — measured 18 September 2026
+with a send counter proving the client sent nothing. Data's counter-test
+of 19 September (same binary, no client connected, the completion dialog
+clicked away with the real mouse) shows the list WAITS, so open fix 25
+is not the cause; the injected dismissal of that dialog and a connected
+client as such are both still suspect and not separated. OPEN, deferred
+by Data.
+
+**THE PLAYER'S WAY ROUND IT, while open fix 26 is open: click the
+completion dialog away in the orion2re window with the real mouse. The
+research selection then waits, and this screen can be used for the
+choice.**
+
+That sentence is here, in `doc/orion2re_open_fixes.md` and in
+`v3_projektstatus.md`, and a smoke check fails if it leaves any of them
+while open fix 26 still says OPEN. The rest of what this screen still
+owes — the third live choice, two resolutions, the work order 128 crash
+case, the promotion of `tech_applications` out of `unverified.py`, and
+the six always-open fields and uncreative races never compared against
+the original — is the status document's list.
+
 MARKED, and each held by a smoke check so the marking cannot quietly
 disappear (decision 61):
 

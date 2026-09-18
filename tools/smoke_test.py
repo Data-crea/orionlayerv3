@@ -17489,6 +17489,69 @@ def main():
        "deviations are marked where they happen, and help 254's three "
        "rectangles all lie outside the panel")
 
+    # ── THE WORKAROUND LIVES EXACTLY AS LONG AS THE FAULT ──────────
+    #
+    # Open fix 26: SELECT NEW RESEARCH commits a row by itself about a
+    # second and a half after the science room hands over. Measured 18
+    # September 2026 with a send counter at zero; Data's counter-test of
+    # 19 September (same binary, no client connected, the completion
+    # dialog clicked away with the REAL MOUSE) shows the list waits, so
+    # open fix 25 is not the cause. OPEN, deferred by Data.
+    #
+    # While it is open the player has a way round it, and a way round a
+    # fault is worth nothing where nobody finds it. So the SAME sentence
+    # stands in three places — the module that has the fault, the only
+    # list of what is asked of Joes, and the status document — and this
+    # check holds it in all three FOR AS LONG AS entry 26 says OPEN.
+    # When the entry stops saying OPEN the marking may go, and this
+    # check says so instead of failing: a check that outlives its
+    # subject is the reason decision 61 exists.
+    _wa = ("click the completion dialog away in the orion2re window "
+           "with the real mouse")
+
+    def _wa_flat(path):
+        return _lre.sub(r"\s+", " ", io.open(
+            path, encoding="utf-8").read()).lower()
+
+    _wa_root = os.path.dirname(SCREENS_DIR)
+    _wa_fixes = os.path.join(_wa_root, "doc", "orion2re_open_fixes.md")
+    _wa_files = {
+        "doc/orion2re_open_fixes.md": _wa_fixes,
+        "v3_projektstatus.md": os.path.join(_wa_root, "v3_projektstatus.md"),
+        "screens/research_select/screen.py": os.path.join(
+            SCREENS_DIR, "research_select", "screen.py"),
+    }
+    # The entry's own status, read from its row in the table at the top —
+    # one place, so the fix's state and this check cannot disagree.
+    _wa_rows = [_l for _l in io.open(_wa_fixes, encoding="utf-8")
+                if _l.startswith("| 26 |")]
+    assert len(_wa_rows) == 1, (
+        f"doc/orion2re_open_fixes.md has {len(_wa_rows)} rows for item 26 "
+        f"— this check reads its status from exactly one")
+    _wa_open = "OPEN" in _wa_rows[0]
+    if _wa_open:
+        for _name, _path in sorted(_wa_files.items()):
+            assert _wa in _wa_flat(_path), (
+                f"open fix 26 still says OPEN and {_name} no longer "
+                f"carries the workaround. Either the fix was closed — in "
+                f"which case its row says so and this check stands down — "
+                f"or the sentence was dropped from a place a player or a "
+                f"future session would look")
+        # And the fault itself is named where it is suffered, not only
+        # where it is filed.
+        assert "open fix 26" in _wa_flat(
+            _wa_files["screens/research_select/screen.py"]), (
+            "screens/research_select/screen.py no longer names open fix "
+            "26; the workaround without the fault it works round is a "
+            "sentence nobody can act on")
+        ok("open fix 26 is OPEN, and the player's workaround stands in "
+           "all three places it has to (module, open fixes, status)")
+    else:
+        report("open fix 26 no longer says OPEN — the workaround may "
+               "leave the module, the open fixes and the status document")
+        ok("open fix 26's marking is tied to its status, and its status "
+           "no longer requires it")
+
     # ── A BLANK WINDOW IS NOT A PICTURE, AND A FLAG IS NOT EITHER ──
     #
     # Work order 129's report said the two turn-start dialogs appeared

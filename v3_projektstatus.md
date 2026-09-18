@@ -852,7 +852,7 @@ files under `doc/` and are only summarised here.
 | | |
 |---|---|
 | Python | 32,960 lines across 111 modules — `find . -name '*.py'`, `__pycache__` excluded, the smoke test's 6,400 included. The previous figure here (21,642 across 94) was carried from an unstated method and could not be reproduced |
-| Smoke test | `python tools/smoke_test.py` — **213 checks**, headless |
+| Smoke test | `python tools/smoke_test.py` — **214 checks**, headless |
 | Assets | 170 MB (select_race 68, galaxy_map 51, shared 23, new_game 21, colony_summary 1) |
 | Screens in HD | 9 of ~20–22 (the GAME menu overlay, work order Stop 2, every dialog of the popup; colony summary draws list, sidebar, scan box and galaxy inset, and MOVES POPS — the first HD gesture that drives the game; planets, brief 101, lists, sorts, restricts and returns) |
 | Setup from clone | `python tools/setup.py` (deps via the system package manager) |
@@ -4945,6 +4945,1689 @@ remembers.
 
 ## What is missing
 
+### Research select — BUILT, NOT ACCEPTED
+
+`screens/research_select/` (wire id 53) is built, committed and green,
+and its live acceptance is **not complete**. It is listed here rather
+than under "What works" until it is: a screen that has been seen
+working twice is not a screen that has been accepted.
+
+**What IS proven live** (18 September 2026, evidence in
+`~/orionlayer-fixtures/evidence/work_order_130/`, index `EVIDENCE.md`):
+part A twice — on wire id 52 the window shows the game's own picture and
+a click in it advances the science room, no F12; part B twice, on two
+rows in two categories — an HD row click gave field 4 and a bare
+`ACTIVATE_FIELD` gave field 22, each the row's own field, read back off
+the wire.
+
+**The open points, all six:**
+
+1. **The list chooses by itself — open fix 26, OPEN and deferred.**
+   `SELECT NEW RESEARCH` commits a row about a second and a half after
+   the science room hands over, with a send counter proving the client
+   sent nothing. Data's counter-test of 19 September 2026 — same binary
+   (e9d07528), NO client connected, the dialog clicked away with the
+   real mouse — shows the list WAITS. So open fix 25 is not the cause.
+   Still suspect, and not separated from each other: the completion
+   dialog dismissed by INJECTED clicks, and a connected client as such.
+   Deferred by Data.
+2. **The third research choice.** The order asks for three occasions in
+   three categories; two are done (categories 4 and 6). Two further
+   attempts lost the occasion to point 1, and a third could not be run
+   — the machine's display server stopped accepting new clients
+   (`SDL_Init(SDL_INIT_VIDEO) failed: The video driver did not add any
+   displays`), so orion2re could not be restarted.
+3. **Two missing resolutions.** HD beside the native frame exists at
+   1920x1080 only; the order asks for three.
+4. **The crash case from work order 128.** An activation where nothing
+   is selectable — the entry block of a category with nothing left to
+   offer. No list reached in the run had an empty category, so it was
+   never exercised. `python tools/research_hd.py crash` runs it when one
+   comes up.
+5. **`tech_applications` @379 is still in `unverified.py`.** Decision
+   23's SECOND source did arrive on 18 September: the rows the HD screen
+   reconstructed FROM that offset matched the game's own panel exactly,
+   name for name and count for count, and `validate_against_fields`
+   passed against the live FIELD_LIST on several different lists across
+   one game. What has NOT been done is the promotion — moving it out of
+   `core/structs/unverified.py` on the strength of that. Until then the
+   screen keeps validating on every entry, which is the right behaviour
+   either way.
+6. **The six always-open fields, and creative races — never compared
+   against the original.** `Display_Entry_Text_` (tech.cpp:706-716)
+   treats a field as "all applications" when the player carries
+   `TRAIT_CREATIVE` **or** the field is one of {22, 23, 28, 29, 55, 57},
+   the six `_starting_tech_field_ids`. In SELECT mode that branch is
+   unreachable for the COLOUR, because `Tech_Select_` zeroes
+   `current_research_field` first (tech.cpp:104-105) and the branch sits
+   inside `is_current_field` — that much is read from the source and
+   written down in `panel.py`. What has NOT been checked is the
+   behaviour: the one live comparison was a **Psilon** game, and Psilons
+   ARE creative (`RACESTUF.LBX` entry 7, record 9, `traits[22] = 1`). An
+   uncreative race has never been put beside the native panel, and
+   neither have the six fields.
+
+**The player's way round point 1, while it is open:** click the
+completion dialog away in the orion2re window with the real mouse. The
+research selection then waits, and the HD screen can be used for the
+choice. The same sentence is in `screens/research_select/screen.py`'s
+docstring and in `doc/orion2re_open_fixes.md`, and a smoke check holds
+it in all three places for as long as open fix 26 says OPEN.
+
+### OLED floor lift and player-colour presets — two HD EXTENSIONS, 14 September 2026
+
+Brief "OLED floor lift and colour-blind palettes", Data's decisions of
+the same day; fundament 63. Both are **HD EXTENSIONS** — MOO2 has no
+adjustable floor and assigns its eight player colours fixed — and each
+is marked in its module, here and in a smoke check.
+
+- **`core/usersettings.py` / `user_settings.json`** — the player's own
+  values, ignored by git, never shipped. Absent: defaults, silent.
+  Unreadable: one error line, defaults, the file moved to `.corrupt` on
+  the next save. Unknown keys written back. Not `settings.json` (the
+  app's committed configuration), not `core/structs/settings.py` (the
+  engine's `s_settings`).
+- **Game Settings dialog, four row heights below the thirteen** (1080p
+  box `orionlayer_rows` [622, 641, 513, 153], ending at 794 against
+  ACCEPT at 817): a divider, the "OrionLayer" heading, **Map floor**
+  (Off / Light / Haze) and **Player colours** (Original / Okabe-Ito)
+  with eight swatches from the SELECTED preset. `screens/game_menu/gmorion.py`.
+  No field, no hotkey, and a click on any of the four bands sends
+  nothing; the thirteen engine rows keep their state from `s_settings`.
+  Values apply in memory at once; the file is written on ACCEPT and on
+  the overlay's exit, idempotently. **The restart note sits
+  right-aligned in the HEADING band, above the swatches** — four row
+  heights leave no fifth; shown only while saved != active preset.
+- **Floor lift** — `screens/galaxy_map/floorlift.py`, one additive fill
+  after both floor paths in `_render_map`, read at draw time (live).
+  Off = no call, byte-identical map. Light (1, 2, 5) and Haze
+  (4, 10, 20) are the floor graphic's median and 90th percentile.
+- **Presets** — `core/playercolors.py`, applied once by
+  `palette.init(preset=)`, which only `main.App` passes (after the user
+  file); every other caller gets the original. All four tables swap:
+  `owner_*`, `ship_*`, `owner_hover_*`, banner/banner_hd. `ship_*` and
+  the banner tables were moved out of code into colors.json first, each
+  checked byte for byte (32 ship tints, 24 banners).
+- **The rule is a marked DEVIATION** in colors.json [player_presets]:
+  owner = base, ship = base lifted by k_ship 0.07, hover = base lifted
+  by k_hover 0.45, banner multiply = base with no add. Both k measured,
+  with protocol: k_ship is the smallest lift that keeps every preset
+  ship at least as bright as the darkest original ship (red, 0.108) at
+  all four zoom steps — measured 0.0674, stored up; k_hover matches the
+  original's mean hover/owner luminance ratio 1.700 (1.699 at 0.45).
+- **Okabe-Ito** with black replaced by white; red -> vermilion, yellow
+  -> yellow, green -> bluish green, silver -> white, blue -> blue,
+  orange -> orange, brown -> reddish purple, purple -> sky blue (by
+  distance, and the nearer relative for a deuteranope). Smallest
+  deuteranopia distance dE 17.2 against a threshold of 10; **the
+  original's is 3.8 and it is reported, not held to the threshold** —
+  a deviation from the brief's "every shipped preset", because the
+  original cannot meet any useful one.
+
+### Monster values in the Planets panel — fundament 64, 14 September 2026
+
+**Brief 107** (`doc/briefs/107-*`, decisions `108-*`, release `109-*`).
+When the scanned row's star is guarded by a space monster (owners 9..14,
+`planetrows.monster_ship`, the transcription of
+`HAROLD::Star_Guarded_By_Monster_`), the picture window shows the
+creature and its values. **HD EXTENSION, all of it except the type** —
+the original shows "(Amoeba)" under the planet and nothing else outside
+combat; that line is unchanged.
+
+- **Panel** — `screens/planets/monsterpanel.py`: sprite box left, text
+  boxes right, all in boxes.json at both resolutions (`monster_sprite`,
+  `monster_type`, `_stage`, `_size`, `_structure`, `_armour`, `_shield`,
+  `monster_weapons` with `monster_weapon_counts` beside it,
+  `monster_specials`); wording as templates in layout.json
+  `monster_values`, the list headings HESTRNGS 0x9D-0x9F. Numbers, no
+  judgements. Nothing is sent. The old `monster_picture`/`monster_race`
+  pair is gone.
+- **Switch** — a fifth OrionLayer row in Game Settings, "Monster values",
+  default ON (`user_settings.json` `monster_values`). The rows box grew
+  one band and ACCEPT moved down by the same 38 px.
+- **Values** — the design block of `s_ship_data` and the weapon records
+  are VERIFIED (`core/structs/ship.py`: 48 header asserts and a live
+  probe of five monsters against their templates). The damage fields are
+  not declared and not read. Stage from the drive. Structure and armour
+  as two lines, tactical, from `core/monsterhull.py`;
+  `tools/monster_hull_check.py` holds that table to initship.cpp,
+  techdata.cpp and orion2_consts.h and the smoke test runs it.
+- **Names** — `tools/techname_extract.py` writes a second file,
+  `shipparts_<lang>.json` (specials, armour, shields, weapons, hull
+  classes; `core/shipparts.py`); without it the panel shows numbers.
+- **Sprite** — the galaxy map's own master, exported once more at 314 px
+  on the long edge (`zoomtables.MONSTER_PANEL_SPRITE_PX`, DERIVED for the
+  4K box; `panel.png` beside the four steps). **DEVIATION**: chosen by
+  type, where the original's unreachable popup picks by star index % 5.
+  The Amoeba has no master and its box stays empty.
+- **Reference save** — `tools/fixtures.py` now also slices the ship
+  array (`fixture_ships`, reference 109 records at 82939, natives 71 at
+  68828, each found live on a fresh load). Every monster of the
+  reference save gives exactly its template and table values in the
+  smoke test.
+
+### Galaxy map: the right click is the game's cancel — brief 107, 14 September 2026
+
+A right click on the map (not over a help region) sends CANCEL_FIELD on
+the map's grid field, found in the live list by type 12 and rect
+22,22-527,421, before the pan drag starts. TRANSCRIBED: with the mouse
+cancel disabled the right button returns the grid field negative and
+`Main_Screen_` ends the relocation-merge mode and leaves zoom mode —
+over a star, a black hole or empty space alike, and nothing else
+(layout.json `map_cancel`). Checked live on the reference save: screen
+stays 0, field list unchanged.
+
+**Also from brief 107:** `tools/maintext_extract.py` extracts the
+system-special descriptions from MAINTEXT.LBX (the file per language
+from estrings.cpp) into `maintext_<lang>.json`, read by
+`core/maintext.py` (decision 38's pattern). Nothing draws them yet —
+they belong to the galaxy map's popups, which are their own brief. The
+Amoeba's map footprint is measured off BUFFER0.LBX (13 x 13), and the
+same measurement disagrees with the five screenshot values
+(`doc/ship_icon_measurement.md`).
+
+### Galaxy map: fleet icons are clickable, and the boxes are read off the field list — brief 110 Part A, step 1, 15 September 2026
+
+**Brief 110** (`doc/briefs/110-*`, decisions `111-*`, release `112-*`).
+The first package of Part A, the one everything else in A depends on.
+
+- **Icon hit test** — `screens/galaxy_map/mapclick.py`. TRANSCRIBED
+  order: icon before star, star before icon while the fleet box is open
+  (mainscr_main.cpp:425-438); the first icon in ARRAY order whose
+  rectangle holds the pointer (`Check_Ships_XY_`, mainscr.cpp:1750). The
+  rectangle is `ships.icon_box`, the one `render` draws in (decision 5).
+  The click goes out at a native point inside the icon and clear of
+  every earlier icon, so the game opens that stack and not the star it
+  orbits. `_click_star` is gone: one click path for icon, star and empty
+  space.
+- **Box state** — `screens/galaxy_map/mapboxes.py`: the fleet box, the
+  system window and a modal text box, read from the live FIELD_LIST (the
+  box fields sit between the last sidebar window and the Q/V/grid tail,
+  mainscr.cpp:1405-1427). A list it cannot read is `known = False`. Test
+  data: `tools/galaxy_box_fields.json`, recorded live on the reference
+  save in brief 110 Stop 1.
+- **Decision 65, DEVIATION** — while the fleet box is open, no map click
+  the game would resolve to a star (its own radius, `Check_Stars_XY_`) is
+  sent; a black hole is exempt. **Consequence, plainly: a fleet cannot be
+  moved from the HD map yet.** A click on a fleet or monster opens its
+  box in the game (still invisible in HD), a click on another icon
+  switches it, and the destination click is refused until HD draws the
+  box and the target is chosen there — the next step of Part A.
+- **Decision 66** — no CANCEL_FIELD while a box is open: it would land at
+  the grid's centre, inside the box.
+- **Not built yet:** HD drawing of the system window and the fleet box
+  (design (a), decision A1), star identity from the last HD click (A2),
+  closing through the CLOSE field.
+- **Smoke:** two checks — the box state against the five recorded lists
+  (and a moved box followed), and the hit test with the guard; the check
+  count is 179.
+
+### Galaxy map: HD draws the system window and the fleet box — brief 110 Part A, step 2, 15 September 2026
+
+**Brief 115** (`doc/briefs/115-*`). Design (a), Data's decision A1.
+
+- **Identity** — `screens/galaxy_map/boxmodel.py` (no pygame). The star or
+  stack is HD's own last map click that went out (A2), and a box is drawn
+  only when the live list agrees: the window stands where
+  `MAINSCR::Popup_XY_` puts it for that star or icon (mainscr.cpp:1060,
+  fleet box clamped by fleetpop.cpp:1441), and — system window — every
+  planet field lies on the orbit ellipse of one of that star's planets
+  (`GEO::_orbit_consts`, geo.cpp:5; sys.cpp:1829). The engine sorts the
+  display slots by y (sys.cpp:172, :316), so a field's ORDER says nothing
+  about its planet; the ellipse does, and the live Yian lists fit it
+  (1.015 and 0.989, the orbit-3 field being the outpost the engine opened).
+  Fleet box: one icon field per ship, at most nine. A mismatch draws
+  nothing and logs why.
+- **Texts** are HESTRNGS': "Star System %s" / "Star System Unexplored",
+  the star-class description for an unviewable system, "Wormhole links %s"
+  / "Stable Wormhole", "%s Fleet" or the monster's name, and the status
+  line "Orbiting %s" / "%d turn(s) to %s" / "ETA %d turn(s)" / Antares.
+  **DEVIATION:** the original prints the status line only with nothing
+  selected or hovered; HD cannot know the selection and prints it always.
+  The box's "N turns to" carries no 20000 condition in the source, so it
+  shows on the turn of the order; the map's "eta N" waits a turn (Part B).
+- **Drawing and input** — `screens/galaxy_map/boxdraw.py`. Boxes
+  `system_*` and `fleet_*` in boxes.json, the CLOSE label in layout.json
+  `movable_boxes`. A box sits on the side of the map the game's own
+  window is on. CLOSE and ESC send the box's close field (decision 66); a
+  planet disc sends its planet field; anything else inside is swallowed.
+  **DEVIATION:** planets in a row by orbit, ships as their map icons.
+  **OMISSION:** the system window's ship buttons, gate icons and hover
+  line; the fleet box's ALL, scroll and five order buttons; the
+  space-monster branch; and, drawn without a field, the orbit rings, the
+  asteroid belts and the colony markers.
+- **Live, SAVE5 (scratch), one connection:** HD drew "Star System Kif"
+  with its three planets matched by orbit, CLOSE restored the list
+  exactly; the scout's box read "CyberToller Fleet" / "2 turns to Dhira"
+  and ESC closed it; a planet disc opened the colony screen, and the
+  window the game reopened afterwards was drawn again through the kept
+  identity. SAVE1-9 identical, SAVE10 unchanged, no fleet order.
+- **`turns_left` (s_ship_data +109) joins the verified spec** in this
+  commit, the first that reads it (runs 113/114). `travelling_speed` (+108)
+  waits for Part B.
+- **Not built:** moving a fleet from the HD box. Decision 65 still refuses
+  the destination click; lifting it needs Data's decision on how a target
+  is chosen in the HD box (the selection is neither on the wire nor
+  settable by field id).
+- **Smoke:** two checks (identity rules against the live windows and
+  Yian's planets; drawing and the three sends); the count is 181.
+
+### Galaxy map: full fleet control, phase 1 — two patches reported, HD side built — brief 117, 15 September 2026
+
+**Briefs 116 and 117** (`doc/briefs/116-*`, `117-*`). Data's path 1.
+Nothing applied, nothing built live; phase 2 is Data applying the patches,
+rebuilding orion2re and a live test on scratch saves.
+
+- **Open fix 20 (read), `doc/ext_fleet_selection.patch`** — unchanged: the
+  icon owners, then "FSEL", the fleet box stack, one byte per ship node.
+- **Open fix 21 (write), `doc/ext_fleet_select_ship.patch`** —
+  `MSG_SELECT_SHIP` 0x85: one ship selected or not, every precondition
+  checked before a write (box open, stack, own ship,
+  `Ship_Can_Be_Selected_`, the ship in the stack's chain). Both patches
+  dry-run in both orders on a copy of the tree and compile -fsyntax-only
+  with the build's flags, alone and together. `tools/version_check.py`
+  reports both markers without failing.
+- **HD, against built data** — `core/game_state.py` reads the FSEL block
+  (`fleet_selection`, None without the patch); `boxmodel.selection_of`
+  maps it to the shown ships by node; `boxdraw` draws one box per ship,
+  blue selected, black not, and a click sends `MSG_SELECT_SHIP`
+  (`core/game_client.select_ship`). **HD STATE:** without the block the
+  cells are outlines and not clickable; past nine ships a scroll bar is
+  drawn with its thumb at the top, because the box's scroll position is
+  not on the wire — to be measured in phase 2.
+- **Fundament 65 amended:** with the selection known a star click moves
+  the ships shown blue — variant (a); (b) is still Data's to choose.
+- **Smoke:** two checks (the block and the model; the HD box, the send,
+  the guard, the scroll display, the checker); the count is 183.
+
+### Galaxy map: full fleet control, phase 2 — both patches applied, confirmed live — briefs 118-120, 15 September 2026
+
+**Briefs 118, 119, 120** (`doc/briefs/118-*`, `119-*`, `120-*`). The
+orion2re tree at `~/orion2re` is patched: a permanent change.
+
+- **Applied and built** (`-DORION2RE_EXT=ON`): open fix 21 unchanged, open
+  fix 20 as **revision 2**. Revision 1 was applied first (brief 118) and
+  taken back out: live, HD's click on ship 13 flipped node 11, because
+  `Sort_Ships_In_Stack_` rewrites `ship_idx` inside each chain (fundament
+  67). Revision 2 sends `ship_idx` and `selected` per node and the fleet
+  box's chain in cell order. `tools/version_check.py` now REQUIRES both
+  (markers `fsel_chain_len`, `Select_Ship_`).
+- **HD reads the node table off the wire** — `ships.wire_nodes`; owners,
+  icon anchors, the icon-click identity and the fleet box use it.
+  `build_node_map`, `stack_of` and `selection_of` are gone. A fleet box is
+  drawn only from the FSEL block (cells in chain order, colour per node
+  byte); without it no fleet box and the guard stands. A star click sent
+  as an order keeps the box's identity.
+- **Live, SAVE5 (scratch), one connection each run; SAVE1-9 identical,
+  SAVE10 unchanged:**
+  - check 2: the Yoth chain 9 -> 10 -> 11 carries ships 14, 15, 13; HD's
+    first cell (ship 14, node 9) sent one `MSG_SELECT_SHIP`, the engine
+    flipped exactly node 9, the original's first cell went black;
+  - check 1: on the mixed selection HD's cells, the node bytes and the
+    framebuffer's blue share agreed per cell;
+  - target click (a): confirmed by Data's hand test (brief 119) — ships
+    fly on a star click with the fleet box open; fundament 65's premise is
+    measured;
+  - check 5 (brief 120, no order sent): a box HD opened and draws gives
+    `orders_ok` and the star click plans as an order (not sent); a box
+    opened by a direct click on another stack is not drawn, and HD's star
+    click on Sol was refused — no click sent, fields and ships unchanged.
+- **Gaps, stated:**
+  - ~~**the probe's star clicks did not move ships** (run 119): Zibbat was
+    out of range (no message, by the source); Sol was in range and the
+    original showed "4 turns to Sol", yet nothing moved. Not separated
+    from the injection path; Data's hand test is the confirmation of (a);~~
+    **RESOLVED (brief 121, Data's hand test in the HD window only, F5
+    loaded):** HD's target click flies — the ships leave their orbit slot
+    right to left as in the original, so the injected HD click with the box
+    open arrives. The failure in run 119 lay in the probe, not in the HD
+    path: the Zibbat run's target was out of range (proven by the source);
+    for the Sol run the probe-side cause was not isolated further. The
+    probe's success test itself was right — an order sets `location` and
+    `status` at once (`Make_Ships_Move_To_`, shipmove.cpp:593-600);
+  - **check 4, the scroll bar, deferred:** SAVE5's largest stack is seven.
+    The box's first visible row is not on the wire; HD shows the chain's
+    first nine and draws the bar as HD STATE;
+- **Smoke:** the count stays 183; the node-table, block, model, HD-box and
+  checker checks were rewritten to the wire data, and they fail if a
+  rebuilt table returns.
+
+### Galaxy map: ship destination lines — brief 110 Part B, brief 121, 15 September 2026
+
+**Brief 121** (`doc/briefs/121-*`), with decisions B1-B3 of briefs 111/112.
+
+- **Precondition, measured at the sprite:** the game positions with the
+  HEADER size of BUFFER0.LBX entries 205..208 (colour 0), not the ink and
+  not `SHIP_ICON_DIM` — `zoomtables.SHIP_ICON_HEADER_DIM`, two sources (LBX
+  headers; live framebuffer at zoom 2 and zoom 0), recorded in
+  `doc/ship_icon_measurement.md`.
+- **`screens/galaxy_map/maplines.py`** — the destination lines, transcribed
+  from `Do_Ship_Destination_Lines_`: own ships moving, foreign ships bound
+  for a star with our colony or any outpost, the open fleet box's head;
+  encoded locations only (from the turn of the order); green/red tables
+  (mainscr.cpp:105-106, RGB from two sources, skin keys
+  `travel_line_green/red`); from the icon corner plus half the header of
+  entry 205 + (3 - zoom) to the star centre; the colour wave with
+  `Draw_Directional_Multi_Colored_Line_`'s table and offset. The start
+  point is re-anchored like the icon (`ships.anchored_point`).
+- **HD EXTENSION B1:** every map line antialiased through ONE routine,
+  `maplines.stroke`; the wormhole link goes through it.
+- **HD EXTENSION B2:** one wave step is `ctx.px` HD pixels, at least one;
+  the phase on a fixed 55 ms clock (the original's minimum pass,
+  `Release_Time_(1)`).
+- **OMISSION:** the "eta N" label, the order preview line (its colour is
+  not on the wire), relocation lines (unverified offset).
+- **Live, SAVE5 (scratch), one connection, no order; SAVE1-9 identical,
+  SAVE10 unchanged** (evidence b0/b1 pictures, `b121_lines_record.json`):
+  the scout bound for Dhira gets its green line; at zoom 2 HD's native
+  start is (432, 216), the point the original's line was measured to start
+  from, and 75 of 80 steps along the HD segment are green; at zoom 0, 93 of
+  105.
+- **`travelling_speed` (s_ship_data +108) joins the verified spec** (run
+  114), next to `turns_left` (+109).
+- **Findings, not acted on:** `SHIP_ICON_DIM` (the HD icon size) is 9 x 8
+  at zoom 2 against a 12 x 11 header and 6 x 5 of ink — which one an HD
+  icon should match is Data's question. *(Answered 15 September: neither
+  moves, it is a DELIBERATE DEVIATION — work order 122 item 2.2, below.)* `tools/make_nebula_icons.py` reads
+  FONTS.LBX entry 1 at offset 0; the entries are (flag, r, g, b), measured. *(Fixed 16 September: work order 122 item 2.3, below.)*
+- **Smoke:** three checks (who gets a line and where it starts; the wave;
+  one routine and the markings); the count is 186.
+
+### Galaxy map: frame v2 installed, the boxes inside its cutouts re-derived — work order 122 Run 1a, 16 September 2026
+
+**Brief 122** (`doc/briefs/122-*`). `screens/galaxy_map/assets/frame.png`
+is Data's `galaxy_map_frame_v2.png`, byte for byte (sha256 `4e2aca76…`);
+the old 2322x1256 master is gone from the tree and stays in git.
+
+- **The real tool, before `--write`:** `tools/frame_holes.py` finds **10
+  holes** in the 1706x922 image (alpha < 16, MIN_AREA 2000) — Chat's count
+  holds. The galaxy rule names them without ambiguity: the largest is the
+  map, the topmost of the rest the title, two right of the map (sidebar
+  above TURN), six in the bottom row by x.
+
+  | box | old image px (2322x1256) | old ref | new image px (1706x922) | new ref |
+  |---|---|---|---|---|
+  | map_area | 129, 105, 1691, 988 | 105, 88, 1402, 854 | 82, 58, 1260, 752 | 90, 66, 1422, 885 |
+  | title (GAME) | 882, 21, 548, 53 | 727, 16, 457, 50 | 548, 2, 337, 51 | 615, 0, 383, 64 |
+  | sidebar | 1872, 131, 303, 758 | 1546, 111, 255, 656 | 1394, 77, 213, 723 | 1567, 88, 244, 851 |
+  | nav_turn | 1870, 921, 307, 171 | 1544, 790, 258, 151 | 1419, 840, 176, 42 | 1595, 982, 202, 53 |
+  | nav_colonies | 143, 1126, 253, 44 | 116, 966, 213, 42 | 94, 830, 186, 39 | 104, 970, 213, 50 |
+  | nav_planets | 444, 1126, 258, 44 | 365, 966, 217, 42 | 308, 830, 187, 39 | 345, 970, 214, 50 |
+  | nav_fleets | 752, 1126, 252, 43 | 620, 966, 212, 41 | 522, 830, 187, 39 | 585, 970, 214, 50 |
+  | nav_leaders | 1051, 1126, 263, 43 | 867, 966, 221, 41 | 737, 830, 188, 39 | 827, 970, 216, 50 |
+  | nav_races | 1365, 1126, 253, 44 | 1127, 966, 213, 42 | 954, 830, 190, 39 | 1072, 970, 218, 50 |
+  | nav_info | 1666, 1126, 229, 44 | 1376, 966, 193, 42 | 1180, 830, 186, 39 | 1326, 970, 213, 50 |
+
+  `layout.json` `frame.image_size` and `frame.title_rect` follow (the
+  smoke check compares both against the tool).
+- **Boxes inside cutouts, in BOTH lists (1920x1080, 2560x1440; there is
+  no empty list):**
+  - `sb_*` — re-derived from the new height, not shifted: inset 10 left
+    and right, the old gap-to-height ratio 16.4:93, and top and bottom
+    inset `pad_y + 1`. Six rows of 121 at a pitch of 142.05 from y 98;
+    text 132 wide, gap 6, icon 86 (the old 138/6/91 scaled by 224/235).
+  - `help.json` `pad_y` 7 → **9**: at 7 the right-click regions covered
+    95.6 % of the column against the original's 97.0 % and the smoke check
+    failed; 9 is again the largest pad that stays inside the cutout
+    (89..938 in 88..939), gaps 2-3 as before. The note and the stardate
+    region's numbers are rewritten.
+  - the system window and fleet box groups sat 12 ref px inside the OLD
+    map's right and bottom edges (1495 / 930 against 1507 / 942), which is
+    the gap `boxdraw._placed` mirrors on the other sides: both groups move
+    by (+5, +9). `help_popup` is centred on the new map, (261, 108).
+- **GAME centred by ink.** The label was centred by the font's line box
+  and sat 3 / 5 / 5.5 px above the hexagon's centre at 1080p / 1440p /
+  2160p; `_render_title` now centres the ink bounding rect in
+  `title_rect`, 1 px or less at all three. The hexagon is ~4.5 ref px
+  right of the map's centre in the artwork (hole centre x 716 image px
+  against the map's 712), and the word follows the hole.
+- **Nothing else derives from the old frame:** grep for 2322 / 1256 and
+  for the old sidebar and map literals — only the two `layout.json` keys
+  above and the boxes. `boxmodel.py` and `mapboxes.py` work in native
+  640x480 coordinates.
+- **Fit, measured against the frame's alpha** (ink of every string, all
+  three resolutions; 2160p uses the 2560x1440 list): no glyph under alpha
+  ≥ 16. Nav labels 13 / 17 / 25 px of ink in holes 45 / 60 / 90 px tall,
+  clearance top/bottom 13-18 / 18-25 / 29-36; TURN 18 / 24 / 36 px ink,
+  13-18 / 16-24 / 25-35. The nav and TURN labels are still centred by line
+  box and sit 2.5-5 px high — they fit, and were not changed.
+- **Live** (one client, Data's closed; the game as it stood, stardate
+  3509.2, 54 stars, not a fixture; no send; SAVE1-9 identical, SAVE10
+  unchanged): `~/orionlayer-fixtures/evidence/work_order_16sep/1a_galaxy_*`
+  at 1920x1080, 2560x1440 and 3840x2160 beside the native frame. The
+  sidebar readouts agree with the original's (157 BC +14, -3 (6), +2,
+  +12 (15)). **One difference seen and not touched:** research reads
+  "500 RP / +44 RP" in HD where the original prints "~16 turns / 44 RP".
+- **The frame blob is 2.1 MB** against the old 0.7 MB.
+- **Smoke:** the count stays 186; the frame-cutout check, the class A
+  check and the sidebar help coverage check all ran against the new
+  artwork.
+
+### GAME menu: a fixed frame image around the popup — work order 122 Run 1b, decision 69, 16 September 2026
+
+**Brief 122** (`doc/briefs/122-*`). Data's `game_menu_frame.png` is
+`screens/game_menu/assets/frame.png`, byte for byte (sha256 `cb4d5ad3…`),
+and a required input in `tools/setup.py`.
+
+- **The real tool:** one hole, (115, 108, 879, 1193) in the 1108x1419
+  image — Chat's claim holds. `layout.json` `frame.opening` carries it and
+  the smoke check holds the two equal. Aspect 0.737 against the body box's
+  0.739.
+- **What changed on screen:** only the popup body. Its `thin_border`
+  outline is gone; `gmframe` scales the image with one factor so the
+  opening covers the body plus 2 ref px, centred on it, fills the opening
+  from the cockpit texture (opaque, undimmed) and draws the frame over it.
+  The buttons, slot list, settings rows and the confirmation and warning
+  panels keep `thin_border`.
+- **The anchor, from the source:** `LOADSAVE::Add_Game_Popup_Fields_`
+  (loadsave.cpp:176-293) sets `_popup_base_x/_y = 0x90, 0x19` for all
+  four in-game dialogs; `_Draw_Main_Game_Popup_` draws GAME.LBX picture 0
+  there (:1356), 279x378. Centre native (283.5, 214), which is **51.68 %
+  across and 48.0 % down the map window**, not its centre (the brief's
+  expectation) and not the window's. That proportion is applied to the
+  galaxy map's `map_area`: every overlay box moved by (-53, +10); the body
+  is (511, 66, 628, 850). `help_popup` is centred on the new map like the
+  galaxy map's own. Checked to 1 ref px by the suite.
+- **Fit, measured on drawn pixels against the scaled alpha, 1080p / 1440p
+  / 2160p:** menu, settings, load and save — 0 px outside the octagon.
+  **Confirmation and warning do NOT fit**, and nothing was shrunk:
+  CONFIRM.LBX (313 px) and WARNING.LBX (331 px) are wider than the popup
+  (279) in the original too. At 1920x1080 the confirm panel reaches x 1246
+  and the warning panel x 1277 against the opening's right edge 1141 (106
+  and 137 ref px over the metal); at 2560x1440 1661 / 1702 against 1520;
+  at 3840x2160 2493 / 2555 against 2282. The suite reports these numbers
+  every run. They are drawn over the frame with their own opaque fill, so
+  nothing is clipped, but the panel visibly lies across the right-hand
+  metal: **a clash, reported, not restyled** — Data's decision.
+- **The top rim:** at 1920x1080 the frame starts at y -16 and its metal
+  about 1-2 px above the window, because the transcribed centre is 17 px
+  above the map's. *(Fixed by work order 123 item 2, below.)*
+- **Help and hit-tests:** unchanged in code; the boxes moved as one group
+  and the GAME menu checks (help regions, the send gate, every node
+  rendering) are green against the moved boxes.
+- **Live** (one client; the game as it stood, stardate 3509.2, not a
+  fixture; SAVE7 absent, so its Load row gives the warning without
+  loading; settings left with ESC, not ACCEPT; SAVE1-9 identical, SAVE10
+  unchanged): menu, settings, load, the slot-7 warning, save and the NEW
+  confirmation at 1920x1080, 2560x1440 and 3840x2160, each beside the
+  native frame, `~/orionlayer-fixtures/evidence/work_order_16sep/1b_*`.
+  39 activations of the menu's own fields, no click or key injected.
+- **Smoke:** the body-skin check rewritten to the new rule (the body
+  wears the frame, every other panel `thin_border`), one new check (the
+  opening against the tool, loading through the resource roots, the
+  anchor, the octagon fit and the fill at three resolutions); a mutation
+  of the body by 5 px fails it. The count is 187.
+
+### Galaxy map: the icon size marked as a deliberate deviation — work order 122 item 2.2, 16 September 2026
+
+**DELIBERATE DEVIATION — SHIP_ICON_DIM stays 9 x 8 at zoom 2 against the
+12 x 11 sprite header.** Data's decision of 15 September 2026.
+`zoomtables.SHIP_ICON_DIM` ((11, 10), (10, 9), (9, 8), (8, 7), by zoom)
+sizes and hit-tests the HD icon, and its click area is live-confirmed;
+`zoomtables.SHIP_ICON_HEADER_DIM` ((11, 11), (12, 11), (12, 10), (16, 12),
+by 3 - zoom) is what the game positions its sprite and its lines with, and
+what `maplines` uses. No code changed.
+
+- **Marked** in the `maplines.py` docstring (DELIBERATE DEVIATION, quoting
+  both tables), in the comment on each table in `core/zoomtables.py`
+  (quoting the other table's values), in `doc/ship_icon_measurement.md`
+  and here.
+- **Smoke:** one check — the tables may not become equal (whole, or at any
+  zoom as they are used against each other), the maplines note must quote
+  both current tables, and each zoomtables comment must quote the other's
+  current values, so changing one without touching the other's note fails.
+  The count is 188.
+
+### Tools: the nebula tool's FONTS.LBX palette read one byte to the left — work order 122 item 2.3, 16 September 2026
+
+`tools/make_nebula_icons.py` `load_game_palette` took bytes 0..2 of each
+4-byte `s_palette_entry`; the entry is `{changed, r, g, b}`
+(orion2.h:2131-2136), the fault `core/lbx.read_palette` was corrected for
+on 6 September, in a second reader. It now takes bytes 1..3.
+
+- **Verifiable without the game:** FONTS.LBX entry 1 begins
+  `01 00 00 00  01 00 03 00  01 04 04 06`. Before, the first three entries
+  came out (4, 0, 0), (4, 0, 12), (4, 16, 16); after, (0, 0, 0),
+  (0, 12, 0), (16, 16, 24). Every flag byte in the entry is 1.
+- **Second source, live** (one client; the game as it stood, stardate
+  3509.2; no send): the palette the game sends with its galaxy-map frame
+  agrees with the fixed reading at 256 of 256 indices and with the old one
+  at 0.
+- **Visual test:** this galaxy holds ONE nebula, type 1 (zoom 2, native
+  top-left (208, 106), 86 x 88). Of its 3973 sprite pixels on screen, 3655
+  carry the sprite's own index in the framebuffer (the rest are stars, a
+  name and a line drawn over it), and all 3655 equal the fixed palette's
+  RGB, none the old one's. Picture: native crop, old palette, new palette
+  and the tool's HD output, `~/orionlayer-fixtures/evidence/work_order_16sep/2_3_nebula_0_type01_zoom2.png`.
+  **The other eleven types have no native counterpart here**: SAVE4 and
+  SAVE5, the scratch saves the protocol allows, hold this same galaxy; a
+  before/after sheet of all twelve at zoom 0 without a native half is
+  `2_3_all_types_before_after_zoom0.png`.
+- **"Regenerate the icons" changed no file in the tree.** The tool ran
+  (48 of 48, to a scratch folder), but its output layout,
+  `type_NN/zoom_N.png` at 3x, is not what the screen loads (listed under
+  "What is missing"), and the committed `assets/nebula/type_NN.png` are
+  authored masters of 1952-2208 px, not this tool's output. Overwriting
+  them with it would have replaced artwork, so nothing was copied in.
+- **Smoke:** one check — the reader against a probe FONTS.LBX whose every
+  flag byte is non-zero; with the old byte order it fails. The count is
+  189.
+
+### Galaxy map: the "eta N" label — work order 122 item 2.1, 16 September 2026
+
+**The source first, because it decides the label:** the original DRAWS this
+label — `SHIPS::Print_Eta_On_Ship_Icon_` (ships.cpp:482-506), called from
+`Do_Ship_Destination_Lines_` right after the line, only for 10000 <=
+location < 20000 (:471). So it is a TRANSCRIPTION, not an HD extension:
+HESTRNGS 307 "eta %d", the owner's font colours, style 1 at zoom 0/1 and 0
+beyond, `Print_Right_` with the right edge at the icon's left plus, and the
+top at the icon's top plus, the header of the OWNER's own sprite (entry
+205 + colour * 4 + (3 - zoom)). `screens/galaxy_map/mapeta.py`; the OMISSION
+in `maplines` is gone.
+
+- **The table the brief pointed at is colour 0's only.** The headers differ
+  by colour (colour 2 at index 1 is 11 x 11, colours 2-7 reach 17 x 14 at
+  index 3), so `zoomtables.SHIP_ICON_HEADER_DIM_BY_COLOUR` (8 x 4, read from
+  BUFFER0.LBX, row 0 held equal to `SHIP_ICON_HEADER_DIM`) is what the label
+  uses. The digit ink height per style, 5 and 7 native rows, is decoded from
+  FONTS.LBX entry 0 (`ETA_DIGIT_INK_ROWS`, MEASURED) — no source holds it.
+- **HD geometry from the HD viewport** (Data, decision 35): header index
+  3 - `ctx.zoom`, offsets times `ctx.px`; the icon corner is the mapped
+  native corner coupled, the ship's galaxy position less half of colour 0's
+  header decoupled. Text through `Style.render_text`, digits sized to
+  rows x px, ink right-aligned to the anchor.
+- **DEVIATION — two locks (Data, 16 September 2026, "Befehlszug"):** a label
+  only while the game is on screen 0 in the map's OWN input loop (the map's
+  field list, no modal — the fleet box and system window are part of that
+  loop); and none between an HD star-click order and its effect (a ship of
+  the ordered stack changed location or status), released without an effect
+  after more than `EFFECT_PAIRS` newer snapshots (a refused order). Parking
+  the game's zoom is NOT a lock.
+- **Live, scratch saves SAVE4/SAVE5 only, one client** (Data's OrionLayer
+  closed first). The number the original prints is read by machine: the
+  FONTS.LBX glyphs rendered at the predicted native position, scored against
+  the framebuffer's pixels (hits - false - missing); record and scripts in
+  `~/orionlayer-fixtures/evidence/work_order_16sep/2_1_eta_record.json` and
+  `scripts/`:
+
+  | case | ship | turns_left (wire) | read from the framebuffer | HD drew |
+  |---|---|---|---|---|
+  | SAVE4, order turn, location 20025 | scout 10 | 3 | no label (none expected) | nothing |
+  | SAVE5, location 10025 (to Dhira) | scout 10 | 2 | **2** — 39 of 39 ink px, 0 false | **eta 2** |
+  | SAVE5 + TURN, still 10025 | scout 10 | 1 | **not readable**: Dhira's star sprite is drawn after the label and covers it; "1" is the only digit whose every ink pixel shows (5 of 5), 3, 4 and 9 are not excluded | `labels()` gives eta 1; the drawing was not captured |
+  | SAVE4, HD order Zin -> Sol, next turn, 10014 | scout 10 | 4 | **4** — 36 of 36, 0 false (runner-up 9, one pixel short) | **eta 4** |
+  | the same + TURN | — | — | stopped: the GNN news screen took no injected click or key | nothing (not the map's loop) |
+
+  Two turns carry a clean read, and both are digit-exact; they are not two
+  consecutive turns of one flight. The consecutive pair failed once on
+  occlusion and once on the news screen.
+- **The locks, live:** under the open GAME menu HD drew 0 labels; on the
+  combat select (screen 12), the colony-base dialog and the GNN screen
+  (screen 0 with a modal list) none. Two HD orders: the lock set at the
+  click, 3 and 2 frames drawn without a label, released on the effect.
+- **Found on the way:** the scout in SAVE4/SAVE5 sits at ZIN (star 6), bound
+  for Dhira — the brief's "Sol->Dhira" is Zin->Dhira. An HD star click on
+  the star the stack stands at is an order with `turns_left` 0: location 6,
+  status 0, the Dhira order cancelled (`Make_Ships_Move_To_`, shipmove.cpp).
+- **Not clean, and said so:** clearing turn dialogs by clicking CLOSE at a
+  fixed native point repeatedly answered the colony-base selection with
+  CLOSE and its "Really trash your colony base for 100BC?" — the scratch
+  game's treasury went 143 -> 243 BC. In the game's memory only: SAVE1-9
+  identical to the session start, SAVE10 rewritten by the turn ends (logged).
+  The game was left on the GNN screen.
+- **Smoke:** one check — who gets a label (not the order-turn ship), the text
+  through `Style.render_text`, the anchor in HD pixels, no label under the
+  GAME menu, with a foreign list on screen 0 or a modal, the order lock held
+  and released on effect and after the floor, and a blocked 4 substituting
+  (a stub font); a mutation without the loop gate fails it. Found by it: the
+  lock compared snapshot `id()`s, which a freed snapshot's address reuses —
+  it holds the snapshot now. The count is 190.
+
+### GAME menu: confirmation and warning scaled into the frame — work order 123 item 1, 16 September 2026
+
+**Brief 123** (`doc/briefs/123-*`). Data's decision on 122's reported
+overhang. **HD DEVIATION:** the confirmation (native 310 px wide, at
+161, 117) and the slot warning (331 px, at 154, 144) are wider than the
+popup (279 px) and overhang it in the original; HD scales each group by one
+factor, body width over panel width — 0.8997 and 0.8430 — rects and font
+sizes alike (`boxes.json`, `layout.json` `_dialog_fit_note`), centred on the
+body horizontally, vertical centre kept. Marked in `gmframe.py`,
+`gmdraw.py`, decision 69 (amended) and the inventory.
+
+- **No extra line:** HESTRNGS 186 and 187 (the NEW and QUIT questions) stay
+  two lines, 178-180 (the slot warnings) one, one and four, at 1080p, 1440p
+  and 2160p; checked before the change.
+- **After NO:** the original stays in `Do_Main_Game_Popup_` with
+  `_screen_data` 0 and redraws the main screen under the popup
+  (loadsave.cpp:1240-1283), i.e. back to the game menu, which HD already
+  does (`confirm_no` -> MENU); the warning returns to the Load dialog.
+- **Smoke:** the frame check now holds ALL six dialogs to 0 px outside the
+  opening at three resolutions (122's report of the overhang is gone) and
+  the fit rule — panel width = body width, centred, text box in its native
+  proportion to the panel. The count stays 190.
+- **Live** (Data's OrionLayer closed first; the game as it stood, stardate
+  3509.2; no slot loaded — SAVE7 is absent; picture after every click;
+  SAVE1-9 identical, SAVE10 unchanged): menu, NEW confirmation, after NO,
+  Load, slot-7 warning, after it, after CANCEL at 1920x1080, 2560x1440 and
+  3840x2160 beside the native frame,
+  `~/orionlayer-fixtures/evidence/work_order_123/`.
+- **Seen, not part of this item** *(the first fixed by work order 124 D)*:
+  under the confirmation HD draws the popup body without the menu's buttons (`present` asks the confirmation's
+  own field list, which does not carry them), where the original shows the
+  menu underneath; and the warning's text is the HD STATE line until the
+  slot patch is in.
+
+### GAME menu: the frame's top edge inside the window — work order 123 item 2, 16 September 2026
+
+**The expression was the scale factor's slack, not a rounding.**
+`gmframe.rects` scales with `s = max(want_w / ow, want_h / oh)`; the
+opening (879:1193) is a hair narrower than body + bleed, so the WIDTH term
+wins and the opening is 3.8 / 5.0 / 7.5 px taller than the body needs at
+1080p / 1440p / 2160p. `open_y = body.centery - open_h / 2` split that
+slack, half above the body, and the 88 image px of metal over the opening
+then started at window y -1.6 / -1.8 / -2.2. The anchor arithmetic was
+exact.
+
+- **Fix:** `open_y = body.y - bleed`. The width term stays (the scaled
+  dialogs span the body's width and need the side bleed: with the height
+  term instead, the confirmation and warning had 284-649 px on the rim);
+  the slack goes below the body. The body — the transcribed anchor — does
+  not move.
+- **Measured:** first frame row with alpha >= 16 at window y 0 / 1 / 1;
+  all six dialogs still 0 px outside the opening.
+- **Smoke:** the frame check asserts both (metal row >= 0, opening top =
+  body top - bleed) at three resolutions. The count stays 190.
+
+### Live protocol: one picture per click; the scratch saves' scout — work order 123 item 3, 16 September 2026
+
+- **Fundament, Diagnosis:** "An injected click on a live game is followed by
+  a picture before the next one", beside "A wait needs its traffic", with
+  122's scrapped colony base as its source.
+- **Scratch-save fact, SAVE4 / SAVE5:** the Scout (ship 10) stands at
+  **Zin** (star 6), not at Sol, bound for Dhira. A star click on the star
+  the stack stands at is an order with `turns_left` 0 — location 6, status
+  0 — and cancels the Dhira order (`Make_Ships_Move_To_`,
+  shipmove.cpp). Measured live in work order 122.
+
+### Galaxy map: the eta label on two consecutive turns of one flight — work order 123 item 4, 16 September 2026
+
+**Route:** the Scout (ship 10) in SAVE4, standing at Zin, ordered through
+the HD fleet box to **Sol**; the original's box reads **"5 turns to Sol"**
+(location 20014, turns_left 5). Turns 1 and 2 end in open space between Vox
+and Sol.
+
+| turn (stardate) | turns_left, read from the framebuffer | HD drew | match |
+|---|---|---|---|
+| 1 (3509.1), location 10014 | 4 — 36 of 36 ink px, 0 false (runner-up 9) | eta 4 | yes |
+| 2 (3509.2), location 10014 | 3 — 37 of 37, 0 false (runner-up 2) | eta 3 | yes |
+
+- **Protocol:** Data's OrionLayer closed first; one client; SAVE4 only;
+  a picture after every click or activation (fundament, Diagnosis); SAVE1-9
+  identical before and after, SAVE10 rewritten by the two turn ends
+  (logged). Evidence and scripts:
+  `~/orionlayer-fixtures/evidence/work_order_123/eta/` (`eta_record.json`,
+  one picture per step, `../scripts/`).
+- **Turn dialogs on the way, each answered on its own picture:** the
+  colony-base choice for Malus (Malus I and the next planet refused with
+  "You cannot build there", Malus II accepted — a colony in the scratch
+  game's memory only), the colony landing screen, "just colonized", the
+  colony screen's RETURN, the turn summary, the combat selection at Peren,
+  a Darlok spy message.
+- **Found:** screens that ignore an injected click or key — the colony
+  landing (colland.cpp:203-213) — answer `ACTIVATE_FIELD` on their
+  whole-screen hidden field, which is what finished this run; 122's GNN
+  screen was probably the same case and was not retried. No code change was
+  needed; `mapeta` is unchanged.
+
+### GAME menu: the menu stays drawn under the confirmation — work order 124 D, 16 September 2026
+
+**Brief 124** (`doc/briefs/124-*`). The original draws `Confirmation_Box_`
+over the popup's own picture (gendraw.cpp:180) and the menu stays visible
+behind it; HD drew the body alone, because `present` asked the
+confirmation's field list, which carries only YES and NO. The screen now
+keeps the menu's buttons as its last MENU list had them (`menu_keys`, so a
+multiplayer menu without LOAD and NEW stays without them) and `gmdraw._menu`
+draws those under the box.
+
+- **Smoke:** the node-render check asserts the four menu words are drawn
+  under the confirmation; the old rule fails it. Count stays 190.
+- **Live** (Data's OrionLayer closed first; the game was found with the GAME
+  menu open; SAVE4 reloaded through it; a picture after every click; SAVE1-9
+  identical, SAVE10 unchanged): NEW confirmation at 1920x1080 and 2560x1440
+  beside the native frame, `~/orionlayer-fixtures/evidence/work_order_124/D_*`.
+
+### GAME menu: save slot names — work order 124 A, 16 September 2026 (a report)
+
+**A patch is needed, and it is already written: open fix 14,
+`doc/ext_save_slots.patch`, reported 14 September, not applied.** The
+original reads the names from the SAVEn.GAM headers into
+`MOX::_save_game_description[10]` whenever the dialog opens
+(`FILEDEF::Get_Saved_Game_Descriptions_`, filedef.cpp:207-243); the snapshot
+carries `_settings` but not that table, and the framebuffer read was
+considered and rejected (free text, colour codes, no validation). The patch
+still passes `git apply --check` on the current tree. The HD dialogs keep
+"Slot N" (HD STATE, decision 60) until Data applies it. Details under open
+fix 14.
+
+### GAME menu: the Music and Sound Fx bars — work order 124 C, 16 September 2026
+
+**Built, transcribed, and no patch needed.** Open fix 15's premise was
+stale: open fix 3's second half (applied since 5 September) keeps an
+injected click's pointer, so an `INJECT_CLICK` on the bar sets the volume.
+
+- **The original, read:** two scroll fields, native (206, 219) and
+  (206, 241), 155 x 12, value 0..156 from `Find_Bar_Position_` —
+  `(x - 206) * 156 / 155`, so 155 is never produced — stored as
+  `level = value * 100 / 155` in `_settings` (5 or less switches the channel
+  off), shown on opening as `value = level * 155 / 100`, which is lossy
+  (49 -> 75 -> 48). The bar is GAME.LBX picture 7 revealed up to `value`
+  pixels: ten blocks, measured off the picture, a block can be partly lit.
+  A held press follows the pointer; the level is applied when the press
+  ends. Sources in `layout.json` `sliders._note`.
+- **Live, before building** (Data's OrionLayer closed; SAVE4 reloaded;
+  GAME menu up; a picture after every click): `INJECT_CLICK` (321, 247) set
+  Sound Fx 50 -> 74, (284, 247) back to 50.
+- **HD** — `screens/game_menu/gmsliders.py`, boxes `volume_panel`,
+  `music_label`, `music_bar`, `sound_bar`, `sound_label` at the original's
+  rects; block colours measured into `colors.json` (`slider_off`,
+  `slider_on`, `slider_glow`). The drawn value is read off `_settings`. A
+  press and a drag preview locally and send nothing; the release sends ONE
+  click at the native point that gives the chosen value; the preview is held
+  until the snapshot carries it. `main.py` now routes a left-button release
+  to a screen that has `handle_left_release`. Help regions 420/421 are back.
+- **Live, HD:** a drag on the Music bar from 25 % to 75 % sent nothing while
+  held and one click on release — Music 49 -> 74, the HD bar and the native
+  bar both at seven blocks and part of the eighth; restored to 49 (value
+  76). SAVE1-9 identical, SAVE10 unchanged.
+- **Open fix 15** answered (no command needed, dependency on open fix 3
+  named); decision 61's example amended; the OMISSION is gone from the
+  module, `layout.json` and this document.
+- **Smoke:** one new check (the arithmetic over every value the game can
+  produce, the live 74 and 50, lit width from `_settings`, nothing on press
+  or drag, one click on release, the preview released after the floor);
+  the help and marking checks follow the new state. **190 -> 191.**
+
+### Pressed words: GAME and the GAME menu — work order 124 B, 16 September 2026
+
+**Mostly a TRANSCRIPTION, and orange is the original's colour.** A held
+button field draws frame 1 of its picture (`Draw_Field_`,
+fields.cpp:2710-2717; YES/NO in `Draw_Confirm_Box_`, gendraw.cpp:35-49),
+and in BUFFER0.LBX 1 (GAME), GAME.LBX's buttons and CONFIRM.LBX 1-2 that
+frame is the word in orange, palette index 126 = (252, 136, 0), measured
+through the live palette. It lasts while the press does. So HD draws the
+word in `button.pressed_text` while the left button is held on it and the
+pointer is still inside — not a timed flash.
+
+- **HD INVENTION — the load and save rows.** They are hidden fields and the
+  original colours a row by `active_save_slot` only (loadsave.cpp:852-878);
+  Data wants every click in the tree to show, so a pressed row turns the
+  same orange. Marked in `core/pressfeedback.py`, here and in the smoke test.
+- **OMISSION:** the pressed pictures also nudge the word by a native pixel
+  or two; not measured cleanly, not reproduced.
+- **One implementation:** `core/pressfeedback.Pressed` on every screen
+  (`ScreenBase.pressed`, released by `handle_left_release`); the galaxy
+  map's GAME word, `gmdraw.button` and the slot rows read it. It starts on
+  the press, before anything decides whether to send (decision 33). The
+  9-slice frame's old side-button flash is a different mechanism and stays.
+- **Smoke:** one check (SETTINGS and GAME orange while held, a Load row
+  orange with its send refused, all cleared on release, the markings).
+  **191 -> 192.**
+
+### GAME menu frame against the nav bar — work order 124 F, 16 September 2026 (a measurement, no change)
+
+Since 123 the frame's slack goes below the popup. Measured on the drawn
+metal (alpha >= 16) against the galaxy map's nav boxes and the ink of their
+labels (threshold 60 and again at 10, the second so an anti-aliased edge
+cannot hide):
+
+| window | metal reaches into the nav boxes | boxes it overlaps | label ink under metal | metal's last row / labels' first ink row |
+|---|---|---|---|---|
+| 1920x1080 | 16 px (to y 985, boxes from 970) | PLANETS, FLEETS, LEADERS, RACES | 0 | 985 / 986 |
+| 2560x1440 | 23 px (to 1314-1315, boxes from 1293) | the same four | 0 | 1314 / 1315 |
+| 3840x2160 | 36 px (to 1973-1975, boxes from 1940) | the same four | 0 | 1973 / 1974 |
+
+**No label is covered, and there is no margin either:** at every size the
+metal ends on the row directly above the labels' first ink row. Not fixed,
+per the order; a font that is a pixel taller or a label moved up in F5
+would be covered. *(Void since work order 125: the frame sits inside the map cutout
+and no longer reaches the nav bar at all — below.)*
+
+### Galaxy map: the research readout's source — work order 124 G, 16 September 2026 (a report, no change)
+
+HD prints `research_accumulated` RP over `+research_produced` RP; the
+original prints something else, from `MAINSCR::Print_Main_Screen_Data_`
+(mainscr_main.cpp:178-243):
+
+- breakthrough -> HESTRNGS 0x183 "Breakthrough"; no field -> 0x188 "none"
+  (HD already matches both);
+- otherwise `turns = COLCALC::Player_N_Turns_Until_Research_Complete_(plr)`
+  (colcalc.cpp:432-458): if the field's status is 3 (researched) 0; if
+  `produced == 0 && accumulated <= cost` -1; else repeat
+  `turns += 1; accumulated += produced; total += chance(accumulated,
+  produced, cost)` until `total >= 100`, where
+  `chance = (accumulated - cost) * 100 / cost` when `0 < cost < accumulated`,
+  clamped to 100 and raised to 1 if 0, else 0
+  (`Chance_For_Research_Breakthrough_Aux_`, :469-484);
+- `cost = Player_Research_Cost_(plr, field)` (:526-539) =
+  `TECHDATA::_technology_fields[field].cost` (techdata.cpp:319ff), plus
+  `hyper_advanced_tech[field - 75] * 10000` from field 75 on;
+- `turns > 0`: the chance for THIS turn as "N%" when above 0, then "@" and
+  HESTRNGS 0xE1/0xE2 "%d turn(s)", then `research_produced` and the unit;
+  `turns < 0`: "0 RP"; `turns == 0`: the chance and `research_produced`.
+  The "~" in the native picture is the "@" printed in the sidebar font.
+
+**Checked against what the screens showed:** 412 RP / 44 produced / 18
+turns (SAVE4, 3509.0) and 500 RP / 44 / 16 turns (3509.2) are both
+reproduced by that loop for any cost from 896 to 935, and the table holds
+fields at 900 (for example fields 34, 41, 45).
+
+**What HD would need, and does not have:** the cost table (a copy of
+`_technology_fields[].cost`, legitimate only with a checker against
+techdata.cpp, as `tools/monster_hull_check.py` does for the hull tables),
+the per-field status `tech_fields[]` and `hyper_advanced_tech[]` from
+`s_player` — neither is in the verified player spec (decision 23). The
+readout was not changed.
+
+### GAME menu inside the map opening — work order 125, 16 September 2026
+
+**HD DEVIATION, superseding 122's anchor.** The frame is fitted to the
+galaxy map's `map_area` cutout (from its `boxes.json`, per resolution list):
+height = the cutout's, aspect kept, centred. No extra inset — the image's
+own transparent margins (20 rows top, 29 bottom, 34 columns each side) keep
+the metal about 12 ref px clear of the cutout at the top and 18 at the
+bottom. The body is the largest 628:850 box inside the opening less the
+bleed; every overlay box is seated by the same move and ONE factor, fonts
+through `content_scale` (`gmframe.seat`, run from `_reload_boxes`).
+`boxes.json` keeps the design geometry; `Box.to_file` makes an F5 save write
+the inverse. Decision 69 amended.
+
+**Measured before building** (rendered ink heights through
+`Style.render_text`; factor f = 0.8666 at every size, since `map_area` is
+one reference rect):
+
+| | 1920x1080 | 2560x1440 | 3840x2160 |
+|---|---|---|---|
+| frame today -> new | 426,-14,797,1020 -> 455,66,691,885 | 568,-18,1062,1360 -> 607,88,921,1180 | 853,-27,1593,2041 -> 910,132,1382,1770 |
+| size against today | 0.867 w, 0.868 h | 0.867, 0.868 | 0.868, 0.867 |
+| opening new | 527,133,548,744 | 702,177,730,992 | 1054,266,1096,1488 |
+| menu buttons / SETTINGS / RETURN, font px (ink) | 30 (21) -> 25 (18) | 40 (28) -> 34 (24) | 60 (42) -> 51 (36) |
+| slider labels | 30 (22) -> 25 (18) | 40 (29) -> 34 (24) | 60 (43) -> 51 (37) |
+| slot row / detail | 28 (20) -> 24 (17) / 22 (16) -> 19 (14) | 37 (27) -> 32 (23) / 29 (21) -> 25 (18) | 56 (40) -> 48 (35) / 44 (32) -> 38 (27) |
+| settings option | 24 (22) -> 20 (18) | 32 (30) -> 27 (26) | 48 (45) -> 41 (39) |
+| confirmation panel (after 0.900 and f) | 529,338,544,396 | 705,450,725,528 | 1058,676,1088,792 |
+| warning panel (after 0.843 and f) | 529,398,544,313 | 705,531,725,418 | 1058,797,1088,627 |
+| question lines (NEW, QUIT, slot 7 missing, multiplayer) | 2, 2, 1, 4 — unchanged | unchanged | unchanged |
+| slider blocks (device px) | 10 blocks, 27 -> 23-26 | 36 -> 31-34 | 54 -> 46-50 |
+| slider values reachable from a device pixel | all 156 before and after | all | all |
+
+Nothing fell below what the order named as a limit: no extra line, ten
+countable blocks, every value still reachable. The smallest text is the
+slot row's detail line at 1080p, 14 px of ink.
+
+- **The volume bars are in the MENU,** not in Settings: they are fields of
+  `Add_Game_Popup_Fields_` case 0 (loadsave.cpp:200-201); the pictures show
+  them there.
+- **Nav bar and GAME field:** by construction the frame lies inside the
+  cutout (y 66..951 at 1080p against the nav boxes from 970 and the GAME
+  cutout ending at 64); 124 F's measurement is void.
+- **Press feedback and help:** both checks stayed green without change —
+  they read the boxes' seated rects, the same objects the hit tests and the
+  drawing use, so there was no second rect to miss.
+- **Smoke:** the frame check retargeted (inside the cutout, height and
+  centre, metal clear of the cutout's edges, one factor, the editor save
+  writing the file's rect; it fails with the frame moved 20 px up). The
+  count stays 192.
+- **Live** (Data's OrionLayer closed first; the game as Data left it, the
+  GAME menu open on the SAVE4 state; a picture after every click; SAVE1-9
+  identical, SAVE10 unchanged; 44 menu-field activations, no click or key
+  injected into the game): menu with the volume bars, Settings, Load, the
+  slot-7 warning, Save and the NEW confirmation at 1920x1080, 2560x1440 and
+  3840x2160 beside the native frame,
+  `~/orionlayer-fixtures/evidence/work_order_125/` (the 1080p menu and
+  Settings as `42_*` and `43_*`, see the next line).
+- **Found, not fixed:** when OrionLayer connects while the game ALREADY
+  shows the GAME menu, the overlay opens over the main-menu screen instead
+  of the galaxy map (the dispatcher has never been on the map): the first
+  two 1080p pictures show the main-menu artwork behind the frame. After one
+  ESC to the map everything is as intended; the 1080p menu and Settings were
+  retaken that way.
+  **FIXED by work order 126 D (17 September 2026):** `GameMenuScreen.
+  OVERLAY_PARENT = "galaxy_map"` (SCREEN_GAME is entered only from the map's
+  GAME button, mainscr_main.cpp:609-613) and the dispatcher enters the parent
+  before it opens such an overlay. One new check (the app on the main menu,
+  a first snapshot at screen 8: the map is active under the menu; with the map
+  already active it is not re-entered); it fails without the dispatcher change
+  (`evidence/work_order_126/D1_check_fails_without_fix.txt`). 195 -> **196**.
+  Headless only; not re-run live.
+
+### GAME menu: the frame missing on the first opening — fixed, 16 September 2026
+
+**Found by Data in the running tree at abcbab0:** the GAME menu drew its
+opaque fill and no frame. **Cause:** `GameMenuScreen.enter` called
+`super().enter()` — which reloads the boxes and seats them
+(`gmframe.seat`) — BEFORE it loaded `layout.json` into `self.words`. On the
+first entry `seat` found no `frame` block, so there was no placement:
+`gmframe.draw` returned False, `gmdraw.panel` fell back to the fill, and the
+boxes stayed at the file's unscaled positions. A second entry (the menu
+opened again, a resolution change) had the words and showed everything.
+Blit order (fill, then frame) and the scale target (the placement's frame
+rect) were right; they were never reached.
+
+**Why nothing caught it:** every frame check, and every live run, entered
+the overlay at least twice (`update_from_game` plus an explicit `enter`,
+repeated openings, resolution changes), and the checks measured geometry,
+not drawn metal.
+
+- **Fix:** the words are loaded before `super().enter()`.
+- **Smoke:** one new check — a fresh app, the overlay opened ONCE through
+  the dispatcher, rendered, and the drawn pixels compared with the scaled
+  frame image wherever it is opaque (alpha >= 250, since `smoothscale` tops
+  out at 253), 98 % required at 1080p and 1440p. It fails with the old order
+  (no placement on the first opening) and with the image blit removed
+  (0 of 145230 pixels). **192 -> 193.**
+
+### GAME menu: save slot names from the engine — open fix 14 applied, 16 September 2026
+
+Data applied `doc/ext_save_slots.patch` and rebuilt orion2re (linux-debug).
+Live (orion2re started from `~/Master of Orion 2`, SAVE4 loaded from the
+main menu's Load dialog, one client, a picture after every step, SAVE1-10
+identical; evidence `~/orionlayer-fixtures/evidence/open_fix_14/`):
+
+- **Load dialog:** `MSG_SAVE_SLOTS` with `screen_data` 2 and the ten
+  descriptions as the native dialog prints them; the HD rows draw them with
+  stardates and dates. Nothing on the HD side had to change to read it.
+- **Save dialog:** `screen_data` 3; a click on a valid row starts the name
+  edit with that row's name ("new"), sending nothing — the pre-fill
+  (`gmsave.SaveEditor.start`) already existed and only lacked the data.
+  **Difference kept:** an EMPTY slot starts the HD edit empty, where the
+  original copies "... empty slot ..." into the field (loadsave.cpp:517)
+  and the first backspace clears it (fields.cpp:1177-1193); the name that
+  reaches the game is the same.
+- **The main menu's own Load dialog** gets no block (SCREEN_GAME only) and
+  has no HD version.
+- **Removed:** the "Slot N" HD STATE — label, `layout.json` words, module
+  and status markings. Without the block (only the tick between the field
+  list and the slot message) a row now draws its plate and no invented
+  label. `tools/version_check.py` requires the patch; open fix 14 reads
+  APPLIED; decisions 60 and 61 amended.
+- **Smoke:** checks 4 and 7 follow (no "Slot N" may return — fails when the
+  label is put back; the marking stays gone), and 124 B's pressed-row check
+  now presses a row carrying an engine name. The count stays 193.
+
+### Colony list: a click on a stacked figure picks up that figure — 16 September 2026
+
+**Reported by Data:** with stacked figures one had to click LEFT of the
+figure to move. **Not two copies:** the draw (`colonylist`, `blit(surf,
+(rect.x, figure_origin_y(...)))`) and the hit test (`cell_at_x`, `rect.x <=
+x < rect.x + rect.width`, `width = int(pitch) - gap`) both read the same
+`colonytrack.row_boxes`. **The fault was what the one geometry described:**
+the slot a sprite is BLITTED at, not where the figure is SEEN. The ink starts
+a master column or more into the 28 px canvas, runs past the slot into the
+next, and shows through the next figure's transparent columns; the gap
+between cells answered nothing. Measured on the extracted figures, clicks on
+the centre of each figure's visible area: 165 of 210 missed at 1920x1080,
+156 at 2560x1440, 165 at 3840x2160.
+
+**The original** (`Do_Colony_Info_Pop_Stuff_For_Pop_` mode 3,
+coldraw.cpp:362-366) takes the first icon in drawing order with `x <= (30 -
+squish) * (index + 1) + left_x`: each icon owns the strip up to the next
+icon's left CANVAS edge, so where two overlap the COVERING (later-drawn)
+figure owns the overlap.
+
+- **DEVIATION — the zone is the figure as seen.** `colonytrack.pick_zones`
+  is the one home (decision 5): the sprites are laid out in drawing order at
+  the renderer's own x and y, each figure's visible ink gets a centre column,
+  neighbours meet halfway between their centres, the first zone starts at
+  its slot's edge and the last ends at its last inked column. The covering
+  figure still owns the overlap where its ink is; the original's canvas
+  strip is replaced by the ink. Identity is unchanged: the pick is (job,
+  index) and `colonysend` still injects the original's slot point. Without a
+  figure set the zones are the coloured cells as drawn, as before. The pick-
+  up passes the set the row is drawn with (`colonymoveui.click(figures=)`).
+- **Smoke:** one new check. Every count 1 to 20 in each of the three job
+  columns at 1920x1080, 2560x1440 and 3840x2160 is rendered through the real
+  screen, each figure in its own colour, and the centre of what is visible of
+  it must pick it up. It uses a synthetic silhouette shaped like the game's
+  (the extracted figures are not committed, decision 50) and measures the
+  extracted set too when it is on disk: 630 of 630 at each size. With the
+  old slot rule it fails (426 of 630 at 1920x1080). Count 193 -> **194**.
+- **Not live-tested:** a headless measurement; the pick-up is local and sends
+  nothing, and the drop path is unchanged.
+
+### The commit is coupled to the smoke test — work order 126 B, 17 September 2026
+
+**A hook, in the tree:** `tools/githooks/pre-commit` runs the full suite
+before git writes a commit and refuses it on any exit but 0 (a failure,
+139, 137) and on a zero exit without the PASSED line. `tools/setup.py`
+sets `core.hooksPath = tools/githooks` (and `--check` reports it);
+decision 31 is amended with the rule and why a hook and not a wrapper. It
+tests the working tree, not only the index. `--no-verify` bypasses it.
+
+- **Shown** in a throwaway clone with the hook on: a suite replaced by one
+  that SIGSEGVs (shell exit 139) and by one that fails — no commit created,
+  HEAD unchanged; the real suite green — the commit created. Evidence in
+  `~/orionlayer-fixtures/evidence/work_order_126/B_hook_*.txt`.
+- **Smoke:** one new check runs the hook against four stub suites (SIGSEGV,
+  failure, silent zero exit, pass) and reports whether this clone has the
+  hook on. **194 -> 195.**
+- **Fundament, filed from the 16 September handover:** decision 5 gains
+  "one function makes drawing and hit-testing AGREE, not RIGHT" (the stacked
+  figures, 165 of 210); Diagnosis gains the colony screen's right click as a
+  live-protocol line; decision 31 the coupling above.
+
+### The smoke test: quiet mode, a memory line, thirty runs — work order 126 C, 17 September 2026
+
+- **`--quiet`** sends everything a run prints (check sentences, reports, log
+  lines, SDL output) to a temporary file at descriptor level and shows the
+  summary line only; on a failure the last 60 lines of that file, then the
+  traceback. Without the switch the output is as before. The hook and
+  `tools/setup.py` use it. `faulthandler` writes a crash's Python stack to
+  the REAL stderr in both modes, so a 139 leaves a stack behind.
+- **Last line, both modes:** `peak resident memory: N MB` (`ru_maxrss`).
+- **Check count unchanged: 195.**
+- **Thirty full runs** (`--quiet`, one after another, exit and peak RSS per
+  run from `wait4`, the suite's own line beside it): **30 of 30 exited 0**;
+  peak resident memory **4540 to 4836 MB**; **66.6 to 68.1 s** per run. Table
+  in `~/orionlayer-fixtures/evidence/work_order_126/C_thirty_runs.md`, logs
+  beside it. The exit-139 question has no occurrence in this sample; the
+  memory figure confirms chat's measurement in kind (a 4 GB container dies).
+- **Measured against the order:** a full run on this machine takes ~67 s, not
+  ~10 s. The order's time argument against running part of the suite is
+  therefore weaker here than it was drafted; decision 31 (full suite) is
+  unchanged and the question is parked with the memory figure.
+
+### SAVE11.GAM classified — work order 126 D, 17 September 2026
+
+**Nothing in orion2re 1.60.0 writes or reads it**, so in the live protocol it
+belongs with SAVE1-9: hashed before and after, identical. From the source:
+`FILEDEF::Save_Game_(slot)` writes `SAVE<slot+1>.GAM` (filedef.cpp:43-48),
+and its callers pass 9 (initgame.cpp:262, loadsave.cpp:1262, nextturn.cpp:32,
+mainscr.cpp:3067), the dialog's slot, bounded to 0-9 (loadsave.cpp:536-539),
+or `active_save_slot` behind a `< 10` guard (mainscr_main.cpp:617/628 into
+loadsave.cpp:1813). `Load_Game_` is reached with 9 (mainmenu.cpp:472), the
+dialog slot, a multiplayer slot 0-9 (multplay.cpp:767-772) or the same
+guarded `active_save_slot` (loadsave.cpp:1639). Descriptions, status and
+dates loop over ten (filedef.cpp:208, loadsave.cpp:599-640, :688-700).
+QUIT sets `active_save_slot = 10` (loadsave.cpp:1263) after saving slot 9,
+and both hotkeys that would use it refuse 10. The Extension API names no
+save file. **What made the file is not in this tree:** it is dated 30 July
+2026, 223,090 bytes like SAVE6 and SAVE9 of the same day, with a mangled
+description (`\x031\x01`) — from before this engine's save code as it
+stands; not investigated further. CLAUDE.md carries the rule next to SAVE10.
+
+### The colony runs order — what is open, established — work order 126 E, 17 September 2026
+
+The order chat called `workorder_colony_runs_and_doc_audit.md` is filed as
+`doc/briefs/88-*` (the full order, 9 September) and `91-*` (its runs, as an
+attachment). Against the tree:
+
+- **Part 0** (where are the briefs) — done: `doc/briefs/`, brief 89, 9 Sep.
+- **Run A** (pop-move 3a-3c) — done: d98a96d, "Run A — what one command
+  would buy" above, then decision 52 and `doc/ext_move_pop.patch` applied
+  (open fix 12).
+- **Run B, the documentation audit** — NOT done. a83e5fc (12 Sep) was a code
+  redundancy audit of the static-frame rebuild, not this. Per work order 126
+  it is not today's; it goes with the reading-budget order (127).
+- **Brief files:** the four names the 9 September handover missed are all in
+  `doc/briefs/` (78, 79, 82, and the pop-move brief as 90). Still missing:
+  **the head of brief 90** (it starts mid-sentence) and **work order 125's
+  own text** (the GAME menu order the 16 September commits cite). Parked.
+
+Nothing else remains that needs no decision; no live run was needed.
+
+### Galaxy map: input split from rendering — work order 126 F, 17 September 2026
+
+`screens/galaxy_map/screen.py` had one honest seam, and it is the one brief
+110 part C will need: INPUT (motion, click and the map click, activation,
+keys, right button and map cancel, wheel) against loading, geometry and
+drawing. The input bodies moved to `screens/galaxy_map/mapinput.py` as
+functions of the screen, `self` renamed `screen`, nothing else changed; the
+`handle_*` hooks stay on the class and delegate, falling through to
+`ScreenBase` exactly where the methods returned early before. The home ping
+and help-rect helpers stayed (the smoke test and `core/screenhelp` call them
+on the screen). **583 -> 461 code lines** (890 -> 722 total); still on the
+exceptions list, regenerated from `tools/linecount.py` — the rest is one
+thing (a screen's render orchestration and state), and a further cut would
+be the number talking. Two checks read the moved text and follow it: decision
+66's marking now in `mapinput.right_button` (plus: the hook must call it), and
+the eta lock line in `mapinput.py`. Smoke **197**, unchanged.
+
+### Read ahead: four screens — work order 126 G, 17 September 2026
+
+Source readings, nothing built: `doc/colony_screen_reading.md` (SCREEN_COLONY 1
+and SCREEN_QUEUE_POPUP 25), `doc/tech_change_reading.md` (36),
+`doc/fleet_screen_reading.md` (4), `doc/races_screen_reading.md` (6). Written by
+read-only sub-sessions and spot-checked where each file's provenance note
+says. What they change for the tree today, all parked in
+`doc/briefs/126-parked-for-data.md` (items 3-7):
+- **Screen id 6 is two screens:** the game's Races screen and, through our
+  own `ext_screen_id.patch`, race selection; `select_race` claims 6, so the HD
+  map's RACES button is expected to open HD Select Race over diplomacy (not
+  seen live). Open fix 22, DESCRIBED, NOT APPLIED.
+- **The map's parking vs the turn-start research prompt** (screen 0, field 9
+  a choice row) — decision 59's hazard in a second place, from the source.
+- **`ship.py` `weapons()`** skips empty slots where flt2.cpp:696-701 stops.
+- Neither the colony view nor the build queue fits the draft
+  one-content-box rule; research, fleet and races do, with caveats.
+
+### Screen 6 split: race selection reports 51 — work order 128 B, 17 September 2026 (open fix 22 applied)
+
+**Seen live first** on SAVE4 (3509.0): RACES on the HD galaxy map sent
+`ACTIVATE_FIELD 14`, the game reported 6 and drew Race Relations, and HD
+switched to `select_race` (`evidence/work_order_128/B_before/`).
+
+- **Engine** (Data's decision, the one change to orion2re this order allows):
+  race selection reports the synthetic **51**, past the SCREEN enum's last
+  value 43; orion2re 3305d78c on `orionlayer-local`, `doc/ext_screen_id.patch`
+  revision 2 (hunks regenerated, forward-applied to a pristine export and
+  reverse-dry-run against the tree).
+- **OrionLayer:** `core/screen_names.py` is the one home — 6 has no HD screen,
+  51 is `select_race`, and `ENGINE_SCREEN_MAX = 43`, which
+  `tools/version_check.py` now reads from orion2_consts.h and requires with
+  the patch's new marker. `select_race` claims 51; Empire Identity's lock is
+  51 on the stock path and (50, 51) after Custom Race. The table's entry for 8
+  said "no HD screen" although `game_menu` claims 8 — corrected, found by the
+  new check. `doc/v3_orion2re_index.md` and `doc/ext_api_dokumentation_v3.md`
+  follow.
+- **Live after** (new binary, New Game from the main menu, through HD):
+  custom path 13 -> 51 select_race -> picture mode -> 50 custom_race -> Accept
+  -> Empire Identity (the game stays at 50) -> 39 -> 0 galaxy map; stock path
+  13 -> 51 -> Empire Identity (the game stays at 51) -> 39 -> 0. RACES then:
+  the game reports 6 and HD falls back to the framebuffer
+  (`use_original`), ESC back to the map (`B_after_custom/`, `B_after_stock/`,
+  `B_after/`).
+- **The stock-race accept leaving the id set:** unchanged in behaviour, changed
+  in meaning. The game keeps reporting race selection's id through the name
+  and banner dialogs until galaxy generation — 51 now, 6 before — and HD's
+  Empire Identity lock depends on it. It no longer reads as the Races screen.
+  Not widened. The patch header's claim that every accept goes through
+  `Racial_Option_Screen_` is corrected there: the stock accept does not.
+- **Smoke:** one new check reads every screen module (tree and mods) and holds
+  the rule — one screen per id, engine ids within 0..43, synthetic ids above
+  it, the table naming the claiming screen; red with the maximum set to 60 and
+  with a mod screen also claiming 51 (`B_screen_id_check_red.txt`). The routing
+  instances move 6 -> 51. **197 -> 198.**
+
+### The galaxy map parks only into its own list — work order 128 C, 17 September 2026
+
+**Decided: guard by field-list shape.** Decision 59's own shape test
+(`game_menu/nodes.classify`) classifies the GAME popup's dialogs and is not
+reusable for the map; what is, is the map cancel's lookup of a field by type
+and native rect in the LIVE list (decision 20). It is extracted to
+`mapboxes.live_field` (second caller, so named rather than a third copy) and
+`mapinput.send_map_cancel` calls it. `screen.update` parks only while the game
+reports 0 AND the list holds both the grid field and the zoom-out button
+(`layout.json` `zoom_out_field`: type 0, (244,455)-(298,473) — mainscr.cpp:1381
+and :1392 for the position and hotkey, the live list and
+`tools/galaxy_box_fields.json` for type and end corner), and it sends to the
+index found there; `viewctl.ZOOM_OUT_FIELD = 9` is gone.
+
+- **Smoke:** a research-shaped list (doc/tech_change_reading.md section 2) at
+  screen 0, zoomed in: nothing sent; the map's own list with the button at
+  another index: sent to that index. Red with the old screen-number-only
+  guard (`evidence/work_order_128/C_parking_check_red.txt`). The existing
+  parking checks now carry the recorded list. **198 -> 199.**
+- **Live — the fault itself not reached; a worse one reached by my driver.**
+  On a fresh stock-race game (3500.0), HD view zoomed in, one turn: the game
+  itself stood at full zoom-out, so the old code had nothing to park and sent
+  nothing — the original fault needs the GAME's own map zoomed in at turn
+  start, which the HD map does not do. The turn-start "SELECT NEW RESEARCH"
+  prompt came up under screen 0 with 38 fields (`C_preC/002_*.png`). **My
+  driver misread it as a message box from a stale state and sent
+  `ACTIVATE_FIELD 1` into it; orion2re died with SIGSEGV in
+  `TECH::_Tech_Select_`** (`C_orion2re_segfault_backtrace.txt`), called from
+  `REPORT::Set_Initial_Tech_`. That is the reading's null-dereference
+  (tech.cpp:354-369, a commit with the pointer over no entry) confirmed live,
+  and exactly the kind of send the guard exists to refuse. No save changed
+  except SAVE10, the autosave of that turn end (logged). Not pursued further,
+  as the order says. Recorded as open fix 23, an observation.
+
+### Planets: the hovered row is the drawn row — work order 128 D, 17 September 2026
+
+Hover picked its row by `(y - top) * n // height`; the rows were drawn by
+`listgrid.all_bands` (h // n, the remainder on the last band) — two
+arithmetics, disagreeing on single pixel lines (redundancy audit D8).
+`planetdraw.row_bands` is now the one source of the bands, `render_list`
+draws in them and the hover finds its row with the new `listgrid.band_at`,
+which takes the drawn bands rather than dividing again (decision 5).
+
+- **Smoke:** every pixel line of the list at 1366x768, 1920x1080, 2560x1440
+  and 3840x2160 hovers the row drawn there; and against the picture, the first
+  and last line of every drawn band, rendered, show `row_selected` at that y.
+  Red with the old division: "1366x768 y=149: hover 0, the row drawn there 1"
+  (`evidence/work_order_128/D_hover_check_red.txt`). **199 -> 200.**
+- **Neighbours read in `doc/redundancy_audit.md`, not worked:** T6 (the scroll
+  arrows' rects computed in `render_scroll` and again in `scroll_arrows` for the
+  click — they agree today, the same decision-5 shape), D19 (scroll thumb
+  arithmetic differs from the colony list's; Planets cites no source), D9
+  (window rects through `layout.rect(box_rect)` against `Box.screen_rect`).
+  Not live-tested: hover sends nothing to the game.
+
+### `weapons()` stops at the first empty slot — work order 128 E, 17 September 2026
+
+**The two sources, before the change.**
+- **Can a gap exist? No, not in `count`.** Every writer packs from slot 0 and
+  never leaves a used slot below count 1: the player's design screen puts a new
+  weapon in the first empty row (design.cpp:869-876) and `Clear_Weapon_Slot_`
+  shifts the later rows down (design.cpp:1724-1745); the AI adders write at a
+  running index only for count > 0 (aidesign.cpp:669-704 and siblings);
+  templates list from slot 0 (ship_config.cpp:58-80); strategic designs pack
+  (initship.cpp:918-968); refit copies the design whole
+  (colbldg.cpp:1951-1960); capture changes only the owner and `current_count`
+  (combinit.cpp:2876-2913); combat writes back only `current_count`. Empty slots
+  carry type 0 (designs) or, on colony and outpost ships, -1 or a planet index
+  with count 0 (plntsum.cpp:475-478). A read-only sub-session traced the
+  writers; design.cpp:869-876 and :1724-1745 and flt2.cpp:693-701 were checked
+  by hand.
+- **Saves: 0 gaps.** Live on SAVE4 (3509.0) and SAVE5 (3509.1): 60 ship
+  records each, 21 with a weapon, 0 with a gap
+  (`evidence/work_order_128/E_probe_SAVE4.json`, `_SAVE5.json`). Offline, a
+  scan for the count-prefixed 129-byte ship array, validated against the two
+  offsets the live arrays were found at in their files, over SAVE1-11 and the
+  three fixtures: every real array with armed ships (60/21, 60/22, 71/37,
+  109/61, 31/23, …) has 0 gaps; the only "gaps" are 255-record hits at offsets
+  129 bytes apart, which are not the array (`E_offline_scan.json`).
+
+**The change.** `core/structs/ship.py` `weapons()` now stops for good at the
+first slot with `type < 0 or count < 1`, as flt2.cpp:693-701 does; its docstring
+said `count > 0` for the same lines. **Callers:** one —
+`screens/planets/monsterpanel.py:97`, the monster panel's weapon lines. Its
+result cannot change for any design the engine writes (packed, and no used slot
+with a negative type); it would differ only for a gap nothing produces.
+**Smoke:** a constructed ship with a gap, with a used type at count 0, with a
+negative type first, and a packed one; red with the old skipping loop
+(`E_weapons_check_red.txt`). **200 -> 201.**
+
+### Three small safeguards — work order 128 F, 17 September 2026
+
+- **faulthandler at the top of `tools/smoke_test.py`,** before every other
+  import, so a segfault anywhere — imports included — prints the Python stack
+  before the process dies; `_run` still re-points it at the real stderr before
+  `--quiet` redirects. Shown in a worktree with a forced segfault at import:
+  exit 139, "Fatal Python error: Segmentation fault" and the Python and C
+  stacks on stderr; `git commit` through the hook refused, HEAD unchanged, the
+  stack in the hook's log (`evidence/work_order_128/F1_faulthandler_segfault_demo.txt`).
+- **The hook in a fresh clone:** `tools/setup.py` already sets
+  `core.hooksPath` (work order 126 B) and stays the one home. Proven: a fresh
+  clone has no hooksPath; `python tools/setup.py` rebuilds, runs the suite
+  (201 green, 5173 MB) and sets it; an `assert False` at the top of `main()`
+  makes `git commit` exit 1 with HEAD unchanged (`F2_fresh_clone_hook.txt`).
+- **The decision-28 check reads what it means.** It asked for "decision 28"
+  and "DEVIATION" anywhere in four whole files; the fundament passed on words
+  from other entries while entry 28's exception carries neither. It now reads
+  entry 28 itself ("ONE EXCEPTION, AND IT IS MARKED" and
+  `colonytrack.figure_size`), `figure_size`'s docstring, `FigureSet.__init__`
+  and the status paragraph of the change. Red with the exception heading
+  removed from entry 28, where the old condition stays true
+  (`F3_decision28_check_red.txt`). **Neighbours with the same weakness, listed
+  not swept** (from 127's Stop 1): the move-markings check (7 needles in the
+  status file; 2 match only text saying the marking was withdrawn or removed),
+  and the map-lines check's single needle `"maplines.py"`. Count unchanged:
+  201.
+
+### A live tool is a client — work order 129 A, 17 September 2026
+
+`tools/livesend.py`: every send identifies the dialog from the FIELD LIST of
+the state it is handed at that moment, and refuses — raising — otherwise.
+`activate` requires the index to exist in the live list and, where the caller
+names them, its type and native rect; `click` resolves the field the point
+would reach (lowest index wins, fields.cpp:1264-1283) and checks its type;
+`key` needs a screen or a shape, because ESC cascades. The shape tests are the
+existing ones: `mapboxes.live_field` (work order 128 C) for a field named by
+type and rect, `game_menu.nodes.classify` for the popup's dialogs, plus the
+colony summary's seven sort buttons at native y 446..469 (colsum.cpp:267-273,
+live 3 September 2026).
+
+- **Moved onto it:** `tools/colony_move_probe.py` (sort key, both scroll
+  activations, the pick-up and drop clicks), `tools/game_menu_hd.py` (the slot
+  strip, the fifteen-key burst, the native ESC), `tools/zoom_probe.py` (both
+  zoom activations, the arrow keys). **Not moved, and why:**
+  `tools/colony_move_hd.py`, `colony_drop_sweep.py`, `colony_drop_timing.py`
+  and `colony_roundtrip.py` send nothing themselves — they post pygame events
+  into the real screens, so the product's own guards decide; `ext_diag*.py`
+  and `struct_probe.py` read only.
+- **Smoke:** eight wrong-shape sends refused with nothing sent (the research
+  prompt's shape under screen 0 among them), and the map's own list passing all
+  three send kinds. **201 -> 202.**
+- **Fundament:** "A LIVE DRIVER IS A CLIENT" and "A COUNTER-TEST THAT RESTORES
+  A FILE CAN BE MEASURING THE MUTATION", both under Diagnosis.
+
+### The two turn-start research dialogs are on the wire — work order 129 B, 17 September 2026 (open fix 24 applied)
+
+**The reading first:** `doc/newtech_reading.md`. The presentation is
+`SCIENCE::Science_Room_` (science.cpp:112-392), entered from
+`TECH::Tech_Select_` -> `Show_Off_Researched_Tech_` (tech.cpp:103), and the
+select list follows at tech.cpp:106 after `current_research_field` and
+`research_breakthrough` are zeroed (:104-105) — so which project completed is
+off the wire once the list is up. Both run under SCREEN_MAIN, which confirms
+126's claim for both. The room's list is three fields (a whole-screen hidden
+one and an ESC hotkey, science.cpp:169-171) and one activation advances ONE
+discovery; the same room shows stolen and artifact technology
+(report.cpp:814, :822), so its shape does not identify research —
+`research_breakthrough != 0` does.
+
+**THE FINDING THAT DECIDED THE PATCH.** The path open fix 22 uses — writing
+`MOX::_current_screen` — is not available here: the game DRAWS from that
+value in both dialogs' description box, for its x (textbox.cpp:40-50) and for
+its colour group (textbox.cpp:284). So the ids are reported **on the wire
+only**: `ext::g_screen_override`, read by `ext::Tick` when it serializes, set
+for a scope by `ext::ScreenOverride` — 52 in the science room, 53 in the
+select list, nothing in change mode (which is screen 36). orion2re f838c754,
+`doc/ext_research_screens.patch`, open fix 24, required by
+`tools/version_check.py`; `core/screen_names.py` carries both ids with no HD
+screen, so decision 22 takes over.
+
+**Live** (new game on the stock-race path, the game restarted for it;
+evidence `~/orionlayer-fixtures/evidence/work_order_129/`):
+- the science room reports **52** and SELECT NEW RESEARCH **53**; in both,
+  OrionLayer draws the original picture (`use_original`), has no active
+  screen, and sends nothing — a click and a motion into its window reached no
+  HD screen (`B_occasion2c_*`, `B_newgame2/005_DIALOG_52_native.png`);
+- after the choice HD returns to the galaxy map by itself;
+- **the choice itself is NOT reliable through OrionLayer, and is reported
+  rather than worked around.** Three occasions: (1) a click on the row at
+  native (176,85)-(394,99) through F12's original mode selected field 55;
+  (2) a click on (176,51)-(394,84) the same way selected NOTHING — the list
+  closed with `current_research_field` still 0; (3) the same row with a real
+  `INJECT_CLICK` selected field 78. The reason is in the reading: the commit
+  takes the entry under the POINTER (`Get_Selected_Entry_`, tech.cpp:354-369),
+  never the activated field. **And a click in the fallback view does not even
+  reach the game today:** `App._handle_click` forwards to the original view
+  only in render_mode "original" (main.py:217-225), which is F12's mode, not
+  the dispatcher's fallback — so with the dialogs up a click in OrionLayer's
+  window does nothing at all. Both are for Data; option (c) of the reading is
+  not authorised here.
+- **Seen on the way:** the colony-base planet picker (the dialog work order
+  122 scrapped a base in) also reports screen 0, and its CLOSE field means
+  "scrap the base" — the confirmation appeared and the driver refused to
+  answer it (129 A's guard doing its job).
+
+**Smoke:** while the state reports 52 or 53 nothing is claimed and no HD
+screen sends — with the map decoupled and zoomed in as a positive control.
+**203 -> 204** with part D's check.
+
+### The research foundations — work order 129 C, 17 September 2026
+
+Built from the reading the status document already held ("Galaxy map: the
+research readout's source", 124 G), so the sidebar can print what the
+original prints (129 D).
+
+- **`core/research.py`**, TRANSCRIBED: `FIELD_COST` (the cost column of
+  `TECHDATA::_technology_fields`, techdata.cpp:319ff), `cost()`
+  (`COLCALC::Player_Research_Cost_`, colcalc.cpp:526-539, with the
+  hyper-advanced surcharge), `chance()`
+  (`Chance_For_Research_Breakthrough_Aux_`, :469-484) and
+  `turns_until_complete()` (`Player_N_Turns_Until_Research_Complete_`,
+  :432-458).
+- **A checker, not a reminder** (decision 36): `tools/research_cost_check.py`
+  reads the 83 costs, `TECH_FIELD_COUNT`, the surcharge's first field and its
+  step out of the source and fails on any difference; it locates the cost
+  column by `s_tech_field_data`'s own member order (techdata.h:73-81). The
+  smoke test runs it.
+- **The player fields, decision 23.** `tech_fields[83]` @296 is now in the
+  verified spec: orion2re's headers compiled with their own packing put it
+  there with `sizeof(s_player) == 0xf0e` (the assert in sizes.h:21), and the
+  live read agrees — 0..3 across the array, the researched field at 2, which
+  is what makes the loop reproduce the original's own figure.
+  `hyper_advanced_tech` @640 stays in `core/structs/unverified.py`: the live
+  read is eight zeros, and a zero confirms no offset. **Consequence, on
+  record:** for fields 75..82 the turn count is an underestimate until a game
+  that has reached hyper-advanced research can be read.
+- **Validation, three points and the loop's own arithmetic.** SAVE4 (3509.0):
+  field 60, status 2, 412 RP at 44 per turn, cost 900 from the table, the loop
+  gives **18** and the native sidebar reads "~18 turns / 44 RP". SAVE5
+  (3509.1): 456 RP, **17**, and the native frame reads "~17 turns"
+  (`evidence/work_order_129/C_native_SAVE4_research.png`, `C_native_SAVE5_*`,
+  `C_probe_SAVE4.json`, `C_probe_SAVE5.json`). The two points the status
+  document already carried (412/44/18 and 500/44/16) are reproduced by the
+  same code. **A point with the chance above zero was not reached:** it needs
+  accumulated points past the cost, which neither scratch save is near, and
+  126's rule 8 keeps those saves reloaded rather than played.
+
+### The sidebar's research readout, as the original prints it — work order 129 D, 17 September 2026
+
+HD printed accumulated RP over produced RP; the original prints the chance
+for THIS turn as "N%" where it is above zero, then "~N turns", then the
+produced points — and "0 RP" when research stands still
+(`MAINSCR::Print_Main_Screen_Data_`, mainscr_main.cpp:186-247). The
+difference was seen twice on 16 September, deliberately left, described here
+and **not marked in the code**, while `sidebar.py`'s docstring claimed to
+mirror the original. With 129 C in place it is simply removed rather than
+marked: `sidebar.research_readout` is the four cases, through
+`core/research.py`.
+
+- Wording comes from the game's own strings where the extractor has them
+  (H 0x183 "Breakthrough", 0x188 "none", 0xE1/0xE2 "%d turn(s)"), with the
+  JSON label as the fallback (decision 15); the "~" is the "@" the original
+  prints, which its sidebar font draws as a tilde. Numbers stay in the
+  proportional font, as the module already required.
+- The row now carries up to three lines. `draw_text_block` takes a sequence,
+  and where the band cannot hold the block the VALUE lines shrink — the label
+  is never pushed out — measured by rendering (decision 30's consequence).
+- Both docstrings that described the old behaviour are corrected: the
+  module's row table and `core/structs/player.py`'s note.
+- **Evidence:** HD beside the native frame at 1920x1080, 2560x1440 and
+  3840x2160, for a running project (SAVE4's live values: "~18 turns" over
+  "44 RP") and for Breakthrough —
+  `evidence/work_order_129/D_sidebar_*_vs_native.png`.
+- **Smoke:** the four cases on constructed records, including the two
+  measured points, and the three-line row rendered at four sizes with its ink
+  inside the row's box. **204 -> 205** with part C's checker.
+
+### The eta label under the star sprite — work order 129, an observation (no change)
+
+Data's screenshot showed white text under the star sprite at the destination
+end of a selected fleet's course line. **Where the original puts it:**
+`SHIPS::Print_Eta_On_Ship_Icon_(node, zoom, ship_x, ship_y)`
+(ships.cpp:470-473) — at the SHIP ICON, not at the star; in the native frame
+of this session's own run the digits sit clear of Zin, up and left of the
+sprite (`evidence/work_order_129/F_eta_native_zoom.png`, from
+`work_order_128/A_HEAD/00_start.png`). **Where HD puts it:**
+`mapeta.anchor_point` (screens/galaxy_map/mapeta.py:114-127) anchors on the
+same icon, plus the owner's header dimension. So the RULE is the same and the
+difference is what is drawn around it: HD's star sprites are far larger
+relative to the map than the original's handful of pixels, and `render_stars`
+runs AFTER `mapeta.render` in `_render_map`, so a ship standing next to its
+destination has its label covered. Reported only, as the order asks; a change
+would be either the draw order or an offset away from the star, and both are
+Data's.
+
+### The fallback view is a view — work order 130 A, 18 September 2026
+
+Decision 22 ("Graceful fallback.") promises the game stays playable on a
+screen HD does not know. **It was not kept, and by more than work order
+129 reported.** `dispatcher.use_original` was SET by the dispatcher and
+READ by nothing in the product: the window filled with a flat (6, 8, 16)
+and swallowed every click. 129's Stop 1 §5 and work order 130 both say
+"shows the original picture"; the tree showed the fill colour, which is
+what measuring it rather than reading it turned up.
+
+With ids 52 and 53 on the wire since open fix 24, that made every
+turn-start research a dead end inside OrionLayer's window: nothing to see
+and nothing to answer.
+
+`App._showing_original` is now the one question the renderer and the
+click handler both ask, so there is no second click path (decision 9).
+The only difference between F12 and the fallback is the status bar, which
+stays with F12 because it names the MODE and the key that leaves it —
+Data chose the plain forwarding fallback over the one with a visible hint
+(129 parked point 1, option a over option c). `OriginalView.placement` is
+the one home for where the picture lands; drawing and clicking each
+carried the same four lines of arithmetic, and this is the order that made
+them load-bearing for every screen HD does not claim (decision 5).
+
+This relies on the COORDINATE half of open fix 3, which converts the
+client's 640x480 point back to window space. `tools/version_check.py` did
+not require it; it does now. Without it a forwarded click lands at roughly
+a third of its intended distance from the top left, on a plausible wrong
+field, silently.
+
+### An activated research row is the chosen row — work order 130 B (open fix 25 applied)
+
+orion2re **e9d07528** on `orionlayer-local`, bundle
+`~/orion2re_bundle_18sep_e9d07528.bundle`, patch
+`doc/ext_tech_activate.patch`, required by `tools/version_check.py`.
+
+`TECH::_Tech_Select_`'s commit branch never used the field id it was
+handed: `Get_Selected_Entry_` returns whichever entry carries
+`current_app_index != 0`, and only `Draw_Tech_Select_` sets that, from
+`fields::Scan_Input_()` — the game POINTER. An `ACTIVATE_FIELD` moves no
+pointer, so a client's choice committed whatever the cursor rested on, or
+nothing at all and then dereferenced the null (open fix 23's SIGSEGV).
+Work order 129 B measured all three outcomes on three occasions.
+
+`ext::g_activated_input` carries the field id of the input `Get_Input_`
+is returning when it came from an activation, and 0 for every mouse
+input. The commit branch, for an activation only, selects that field
+before asking which entry is selected; an entry BLOCK resolves to that
+entry's last visible row, exactly as `Draw_Tech_Select_` resolves it for
+the pointer; and a null selection continues the input loop instead of
+being dereferenced. The mouse path is unchanged — the flag is 0 for it,
+and for a real click the selection would already be the same. Option (c)
+of `doc/tech_change_reading.md` §5.1, the only orion2re change in this
+order.
+
+### The offered research rows reconstruct — work order 130 C
+
+`doc/research_screen_stop1.md` §1 found the categories and the offered
+field reconstructible and the choice ROWS not, for two named reasons.
+Both are addressed.
+
+`s_tech_field_data.tech[4]` is all zeros in techdata.cpp because it is
+not a table: it is filled at runtime (techinit.cpp:444-474) by walking
+the applications in ascending id and dropping each into the first free
+slot of its own field. `core/researchlist.py` transcribes the app -> field
+column and runs the same loop.
+
+`tech_applications[212]` @379 now has decision 23's FIRST source —
+orion2re's headers compiled with their own packing, `sizeof(s_player) ==
+0xf0e`. **The SECOND is not in** and it is the one that matters: a live
+read whose values agree with the rows the game's own screen draws. It
+therefore sits in `core/structs/unverified.py`, and the screen falls back
+rather than draw a list it cannot vouch for.
+
+`validate_against_fields` is decision 25's validation and is not a test:
+the screen runs it on every entry. `tools/research_cost_check.py` reads
+all four transcribed tables out of the source and fails on any
+difference — one row of `_technology_applications` writes its field as
+`TECH_FIELD_INVALID` rather than -1, and a parser that only takes digits
+reads 211 rows and lines every later application up against the wrong
+field.
+
+`tools/struct_header_check.py` is new: decision 23's header route made
+mechanical for every covered spec — 133 offsets over seven structs, each
+size against `sizes.h`, with a control that moves one offset by a byte
+and requires the compile to fail. **`core/structs/ship.py` is NOT
+covered** and says so: it names `s_ship_data`'s members itself, and the
+rename map that would cover it is work nobody has done.
+
+`core/livefields.py` is the one home for reading a live field by its
+shape. The research screen is its third caller, and a screen importing
+another screen's module to get at a shared rule is how the rule gets
+copied instead.
+
+### The research names come from the player's files — work order 130 D
+
+A THIRD output of `tools/techname_extract.py` (`techfields_<lang>.json`,
+`core/technames.py`): the field and application names are the first two
+tables of the block it already walks to reach the buildings. And
+`tools/billtext_extract.py` is new (`billtext_<lang>.json`,
+`core/billtext.py`) for the panel's own wording. BILLTEXT is not shaped
+like the other string files: a message is its own six LBX entries, one
+per language (`Get_Text_Message_`, jim.cpp:336-359).
+
+`core/technames.py` refuses to name fields 75..82 from that block. The
+block DOES carry a string at 75, "Biology" in the English file, and
+`Technology_Fields_Name_` does not use it — those eight are
+`_hyper_field_title` out of ESTRINGS. Returning the block's string would
+be a plausible wrong name.
+
+Both files are gitignored, both are reported by `tools/setup.py`, and
+absent, stale and short are three stated states. Read off the English
+files, which is also the cross-check on the whole reconstruction: field
+21 "Capsule Construction" offers Battle Pods, Survival Pods and Troop
+Pods, and message 64 + group names the eight panels BASIC .. OTHER.
+
+### The research select screen — work order 130 E, wire id 53
+
+`screens/research_select/`, structure only. Frame and artwork come later
+(Data, 17 September).
+
+**The layout is the original's rectangles**, and the provenance is not on
+a box: `Box.to_dict` serializes a fixed key set, so a `native` key would
+be dropped the first time the F5 editor saved this screen — decision 38's
+trap for `help_id`, and why `colony_summary`'s `boxes.json` carries no
+rect either. `boxes.json` names the boxes, `native.py` holds every
+rectangle with its tech.cpp line, and `seat()` marks them derived. The
+eight entry boxes ARE the game's own entry-block fields.
+
+**One rectangle for drawing and clicking** (decision 5), and because a
+shared function guarantees agreement and not correctness, the check
+renders and requires every row's VISIBLE CENTRE to pick that row, as work
+order 128 D did for the Planets list.
+
+**It refuses before it sends and before it draws.** A click off a row
+sends nothing (decision 33); a row resolves by SHAPE in the list of that
+frame; a second click after the commit sends nothing; ESC and every other
+key send nothing, because select mode has no exit but a commit
+(tech.cpp:131) and `ScreenBase.handle_key` would otherwise have forwarded
+them.
+
+**`ScreenBase.wants_original`** is decision 22 one step in: a screen that
+knows the id but cannot vouch for its own picture hands back to the
+original view. Five states do it — no player record, names absent,
+wording absent, a field list of the wrong shape, a reconstruction the
+list contradicts — and each logs once, not per frame.
+
+**Marked**, each held by a check: four OMISSIONS (the science room
+animation, the category list popup, the description box a right click
+would open — so a right click inside the panel does nothing — and the
+little arrow), one HD EXTENSION (the title, which the original paints
+into TECHSEL art), three DEVIATIONS (the category label printed rather
+than painted, the RP suffix that ignores `_settings.language`, and
+shrinking where `Squeeze_Print_` compresses).
+
+Help 254's three rectangles are transcribed from billhelp.cpp:42-46.
+They are NOT "outside the panel" — they lie over the fill's own top and
+bottom edges, which is how `doc/tech_change_reading.md` §7 derives the
+panel's visible edge. The rule that holds is narrower: no help region may
+cover an entry block or a radio, because a right click there is the
+description box or the category list, not help.
+
+### The live acceptance of work order 130 — 18 September 2026
+
+A new Psilon game against orion2re **e9d07528** (`orionlayer-local`,
+open fixes 24 and 25 applied, rebuilt and the binary checked for
+`ext::g_activated_input`). One client throughout; SAVE1-9 and SAVE11
+identical before and after, SAVE10 rewritten by the game's own autosaves
+and logged only. The driver is `tools/research_hd.py` on
+`tools/livedrive.py` and `tools/researchphases.py`.
+
+**The fallback is a view, live.** Every screen HD has no version of drew
+the game's own picture in OrionLayer's window and forwarded clicks: the
+science room (52), the colony build prompt (1), the end-of-turn report
+(39), the GNN broadcast and the leader offers. The record carries the
+number of distinct colours beside every capture, which is the check the
+129 report did not make.
+
+**The choice means the row.** Two occasions, two categories, and the
+game's pointer was never moved by this run — so a pointer standing still
+cannot explain two different rows both landing correctly. Open fix 25
+is what makes that true; before it, work order 129 measured a selected
+field, no selection, and a different field on three occasions.
+
+**And the list does not always wait — open fix 26.** Three times the
+select list committed a row BY ITSELF about a second and a half after
+the science room handed over, with a send counter proving the client
+sent nothing. It is why choosing has to happen in the same process that
+walks the room out, and why the HD screen re-reads rather than
+remembers.
+
+**One live number for the cost table**: field 62 read 540 accumulated of
+650 at 15 RP a turn, and `core.research.cost(62)` is 650.
+
+## What is missing
+
 ### Research select (work order 130) — what the live run still owes
 
 The live acceptance RAN on 18 September 2026 (evidence under
@@ -4976,11 +6659,6 @@ proven; part F is one occasion short of what the order asks.
 Everything above is in `doc/briefs/130-parked-for-data.md` with what to
 re-run.
 
-- **`tech_applications` @379 has ONE of its two sources.** The header
-  compile is in and mechanical; the live read is not. Until it is, the
-  research screen's rows rest on an unverified offset, which is why the
-  validation against the game's own field list runs in the product on
-  every entry and hands over to the fallback when it disagrees.
 - **`hyper_advanced_tech` @640 stays quarantined**, as work order 130
   says it should: a late-game save is what it needs. The consequence is
   written down in `core/structs/unverified.py` — the sidebar's turn count

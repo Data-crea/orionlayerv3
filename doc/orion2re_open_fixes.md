@@ -47,7 +47,7 @@ section for what was found where.
 | 23 | An activation of a research choice row with the pointer over no entry crashes the game | **Observation**, seen live 17 September 2026 (work order 128 C); **CLOSED locally 18 September 2026 by item 25**, which guards the dereference at the line that performed it. Still open upstream | Nothing while item 25 is applied. Without it, a client that activates a choice by field id kills the game |
 | 24 | The two turn-start research dialogs (science room, SELECT NEW RESEARCH) both report SCREEN_MAIN, so a client cannot tell them from the galaxy map | **Applied** 17 September 2026 (work order 129 B, Data's decision: synthetic ids on the wire only), orion2re f838c754 on `orionlayer-local`, `doc/ext_research_screens.patch`; required by `tools/version_check.py`; open upstream | — while applied. Without it HD draws the map with an active TURN button over both dialogs, and a field sent into the select list crashes the engine (item 23) |
 | 25 | The research selection commits the entry under the POINTER, not the field that was activated | **Applied** 18 September 2026 (work order 130 B, Data's decision: option (c) of `doc/tech_change_reading.md` §5.1), orion2re e9d07528 on `orionlayer-local`, `doc/ext_tech_activate.patch`; required by `tools/version_check.py`; open upstream | — while applied. Without it an HD research screen cannot choose a row at all: the choice lands on whatever the cursor rests on, or crashes the engine (item 23) |
-| 26 | SELECT NEW RESEARCH commits a row by itself, about a second and a half after the science room hands over to it | **Observation**, seen three times and measured once with a send counter on 18 September 2026 (work order 130's live run) | A client cannot rely on reaching the list before it has chosen; three of six attempts to choose in HD lost the occasion |
+| 26 | SELECT NEW RESEARCH commits a row by itself, about a second and a half after the science room hands over to it | **OPEN, deferred by Data 19 September 2026.** Observation, seen three times and measured once with a send counter on 18 September (work order 130's live run). Data reproduced the counter-case on 19 September: same binary, NO client connected, the dialog clicked away with a real mouse — the list waits. So open fix 25 is not the cause | A client cannot rely on reaching the list before it has chosen; three of six attempts to choose in HD lost the occasion. The player's way round it is to click the completion dialog away in the orion2re window with a real mouse |
 
 Items 3 and 4 are both about INJECT_CLICK and both live in the same
 code path, but they are separate faults: 3 is where the coordinates
@@ -1744,7 +1744,43 @@ and the work-around that made a choice reliable was to walk the room
 and click the row **in the same process**, without letting go between
 them — which is a timing dependency, not a design.
 
+### Data's counter-test, 19 September 2026 — and what it rules out
+
+Data ran the same binary (**e9d07528**, open fix 25 applied) with **no
+client connected at all**, clicking the completion dialog away with the
+**real mouse**. The select list WAITS. It does not choose by itself.
+
+**So open fix 25 is not the cause.** That was the first thing to
+suspect — it is the only change this project made to that handler, and
+it changes what the commit branch selects. The counter-test removes it:
+with the patch in and the two other conditions absent, the behaviour
+does not appear.
+
+**What is still suspect, and neither is settled:**
+
+1. **The completion dialog dismissed by INJECTED clicks.** Every
+   occasion on 18 September walked the science room out with
+   `ACTIVATE_FIELD` forwarded through OrionLayer's fallback view.
+   Data's run used the real mouse for exactly that step.
+2. **A connected client, as such.** `ext::Tick` runs inside
+   `Get_Input_` whenever a client is attached, and the early return for
+   a pending field sits in the same function. Data's run had no client
+   attached at all, so this is not separated from (1) yet.
+
+Separating them is one run each: the room clicked away with the real
+mouse WITH a client attached, and the room clicked away by injection
+with the client detached immediately afterwards. Neither has been done.
+
+**Status: OPEN, and deferred by Data on 19 September 2026.** It is not
+being chased now; it is written down here, in the status document and
+in `screens/research_select/`'s own docstring, and a smoke check holds
+that marking in place for as long as this entry says OPEN.
+
 It is also the reason the first build's screen validates on every entry
 and hands back to the fallback rather than drawing: a list that can
 commit without being asked is a list whose state HD must re-read, never
 remember.
+
+**The player's way round it, while this is open:** click the completion
+dialog away in the orion2re window with the real mouse. The research
+selection then waits, and the HD screen can be used for the choice.
