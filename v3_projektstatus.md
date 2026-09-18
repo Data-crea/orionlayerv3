@@ -5022,6 +5022,69 @@ outside their holes** (found by the label's own blue tint, since the
 frame's metal is neutral). Renders in
 `~/orionlayer-fixtures/evidence/work_order_133/`.
 
+
+### Fleets: the outer ring, a frame variant of the Planets artwork — work order 134 A, 18 September 2026
+
+Work order 134 built the Fleets screen's frame from the Planets artwork,
+Data's decision after 134's check: **the Planets frame does not fit
+Fleets as a whole, so only the outer ring is taken** and the Fleets
+regions are drawn inside it by the screen.
+
+`screens/fleets/assets/frame.png` (sha256 `149750cd…`), 1920x1080, is
+`screens/planets/assets/frame.png` with the inner struts removed —
+decision 12's frame variant, one artwork, no runtime tile swapping.
+Source and cutting script in
+`~/orionlayer-fixtures/incoming/fleets_frame/`.
+
+**Ring and strut are told apart by THICKNESS, not by a threshold on
+colour** (the galaxy v3 rule, one step on): the ring is about 74 px
+thick and the widest strut 29, so a morphological opening with a disc of
+radius 18 keeps the one and drops the other. What is left of the opening
+boundary is then the ring's OWN anti-aliased edge, never re-cut.
+
+**Exactly one opening remains**: image (74, 75, 1771, 917), reference
+(72, 73, 1775, 921), aspect 1.927. It is precisely the union of the five
+Planets openings.
+
+**Five joint remnants were removed and NOTHING was painted.** The struts
+met the ring through small arrow-shaped nodes that survive a
+thickness test because they are locally thick. Each was removed with its
+own fringe, and the ring behind each was then MEASURED rather than
+assumed:
+
+| spot (image px) | nearest edge | ring thickness there | 60 px along | verdict |
+|---|---|---|---|---|
+| x 1456..1475, y 79..82 | top | 79 | 77 | continuous |
+| x 1448..1482, y 796..830 | — | — | — | island in the opening, no ring to break |
+| x 1842..1844, y 804..821 | right | 75 | 75 | continuous |
+| x 1456..1474, y 984..987 | bottom | 92 | 88 | continuous |
+| x 596..613, y 988..990 | bottom | 89 | 88 | continuous |
+
+The ring is 2 to 4 px THICKER where a joint sat, which is what says the
+joint lay on top of intact ring: removing it leaves the band unbroken
+and no fill was needed.
+
+**The opening holds the Fleets union at every resolution.** The union of
+the regions in `doc/fleet_screen_reading.md` §7 is native (13,52)-(628,465),
+616x414, aspect 1.488 against the opening's 1.927 — so the fit is
+height-bound and the spare room is horizontal:
+
+| resolution | opening, window px | union at scale | margin l/r, t/b |
+|---|---|---|---|
+| 1920x1080 | 72, 73, 1775, 921 | x2.225 | 202.3 / 0.0 |
+| 2560x1440 | 96, 97, 2366, 1228 | x2.966 | 269.4 / 0.0 |
+| 3440x1440 | 536, 97, 2366, 1228 | x2.966 | 269.4 / 0.0 |
+| 3840x2160 | 144, 146, 3550, 1842 | x4.449 | 404.6 / 0.0 |
+
+The inset map keeps 305:182 = 1.676 by construction: one factor scales
+both axes. **The vertical margin is zero**, so the layout insets the
+content itself rather than letting it touch the ring.
+
+**Decision 3 does not apply to this screen.** It derives no cutouts —
+there is one opening and the regions inside it are hand-placed,
+F5-editable boxes — so `tools/frame_holes.py` gets no naming rule for
+`fleets` and `--write` is never run on it.
+
 ## What is missing
 
 ### Research select — BUILT, NOT ACCEPTED
