@@ -18000,42 +18000,65 @@ def main():
        "click and the rest an activation, every box fits the opening "
        "at both resolutions and the inset keeps 305:182")
 
-    # ── THE GALAXY MAP TAKES s_ship_icon FROM SCREEN 0 AND NO OTHER ──
+    # ── WHAT A SCREEN REWRITES IS THAT SCREEN'S, NOT THE MAP'S ──────
     #
-    # Work order 135 B, from question 15 of doc/fleet_screen_reading.md.
-    # The Fleets screen writes the SAME wire array it does not own:
-    # FLT::Set_Fltscrn_Small_Ship_Icon_XYs_ overwrites _ship_icon[i].x/y
-    # with FLEET-INSET coordinates (flt.cpp:54-55) and
-    # FLT2::Add_Fltscrn_Small_Icon_Fields_ overwrites _ship_icon[i].
-    # stack_id with the id of the hidden field it just added for that
-    # icon (flt2.cpp:34). Both are serialized like any other frame
-    # (ext_api.cpp:165-167) and only MAINSCR::Main_Screen_ puts them
-    # back (mainscr_main.cpp:314-315).
+    # Work orders 135 B and 136 B, from question 15 of
+    # doc/fleet_screen_reading.md. The Fleets screen writes wire state it
+    # does not own — FLT::Set_Fltscrn_Small_Ship_Icon_XYs_ puts every
+    # s_ship_icon.x/y into fleet-inset space (flt.cpp:54-55) and sets
+    # _cur_map_scale = _max_map_scale (flt.cpp:14), and
+    # FLT2::Add_Fltscrn_Small_Icon_Fields_ puts a FIELD ID into stack_id
+    # (flt2.cpp:34). The Officers screen does both again at its own inset
+    # (officer.cpp:905, :857/:1191). All of it is serialized like any
+    # other frame (ext_api.cpp:111, :165-167).
     #
-    # Nothing about those records says which space they are in — they
-    # parse, they are in range, and a map drawn from them puts every
-    # stack at an inset position while every other number on screen
-    # stays correct. Decision 35's failure shape exactly.
-    #
-    # THE RULE IS WHAT IS ASSERTED, not the Fleets case: the map adopts
-    # on screen id 0 and on no other id at all. And the state goes in as
-    # BYTES through core.game_state.parse_state, so what the screen is
-    # offered is a snapshot that really carries inset icons.
+    # THE RULE IS WHAT IS ASSERTED, NOT THE FIELDS. This iterates
+    # ships.GATED_FIELDS, so a field added to the gate is covered here
+    # without a line being written, and a field REMOVED from the gate
+    # stops being covered loudly rather than quietly. The state goes in
+    # as BYTES through core.game_state.parse_state, so what the screen is
+    # offered is a snapshot that really carries another screen's numbers.
     import struct as _ig_s
     import colony_list_preview as _ig_plv
+    from screens.galaxy_map import ships as _ig_ships
     from core.game_state import (parse_state as _ig_parse,
                                  SETTINGS_SIZE as _IG_SET,
                                  PLAYER_SIZE as _IG_PL,
                                  LEADER_SIZE as _IG_LD,
                                  ANTARAN_SIZE as _IG_AN)
 
-    def _ig_snapshot(screen_id, icons):
-        """A STATE_SNAPSHOT payload whose icon array is `icons`, each
+    # Every gated field must name where the engine writes it — a gate
+    # entry with no source is a rule nobody can check against the C++.
+    _ig_re_cite = re.compile(r"\.(?:cpp|h):\d+")
+    assert _ig_ships.GATED_FIELDS, "the gate has no fields at all"
+    for _ig_f, _ig_why in _ig_ships.GATED_FIELDS.items():
+        assert _ig_re_cite.search(_ig_why), (
+            f"gated field {_ig_f} cites no file:line for where the "
+            f"engine rewrites it")
+        assert _ig_f in _ig_ships.BLANK_FIELDS, (
+            f"gated field {_ig_f} has no blank value, so the map would "
+            f"read another screen's numbers before its first snapshot")
+    assert set(_ig_ships.GATED_FIELDS) == set(_ig_ships.BLANK_FIELDS)
+    # AND THE SET IS PINNED TO THE READING, because the rule iterates
+    # the set and therefore cannot notice a field taken OUT of it. Work
+    # order 136 A read every write in flt.cpp, flt1.cpp, flt2.cpp and
+    # officer.cpp against what ext_api.cpp serializes: these two are on
+    # the wire and rewritten, _cur_map_x/_cur_map_y are not written by
+    # either screen at all, and FSEL's stack is written once on exit
+    # (flt1.cpp:827). A field leaving this set is a re-reading of the
+    # engine and not a tidy-up, so it fails here and the status
+    # document moves with it.
+    assert set(_ig_ships.GATED_FIELDS) == {"ship_icons", "map_scale"}, (
+        f"the gated set is now {sorted(_ig_ships.GATED_FIELDS)}; work "
+        f"order 136 A measured it as ship_icons and map_scale")
+
+    def _ig_snapshot(screen_id, icons, map_scale=15):
+        """A STATE_SNAPSHOT payload. `icons` are
         (stack_id, node_idx, star_idx, stack_slot, x, y)."""
         _b = bytearray()
         _b += _ig_s.pack("<hbihhhhhB b", screen_id, 0, 35024,
                          0, 2, 0, 0, 0, 0, 0)
-        _b += _ig_s.pack("<hhhhh", 15, 0, 0, 759, 600)
+        _b += _ig_s.pack("<hhhhh", map_scale, 0, 0, 759, 600)
         _b += bytes(_IG_SET)
         _b += bytes(_IG_PL * 8)
         _b += _ig_s.pack("<h", 0)                     # stars
@@ -18051,51 +18074,66 @@ def main():
         _b += _ig_s.pack("<8h", 0, 0, 0, 0, 0, 0, 0, 0)
         return _ig_parse(bytes(_b))
 
+    def _ig_value(obj, name):
+        """A gated field of a state, comparable by value. Icons are
+        objects, so every field of every one of them goes in."""
+        _v = getattr(obj, name, None)
+        if name == "ship_icons":
+            return [(i.stack_id, i.node_idx, i.star_idx, i.stack_slot,
+                     i.x, i.y) for i in (_v or [])]
+        return _v
+
     def _ig_held(screen):
-        """Every field of every icon the MAP holds — what it would draw a
-        stack at and what a click on one would name."""
-        return [(i.stack_id, i.node_idx, i.star_idx, i.stack_slot, i.x, i.y)
-                for i in (getattr(screen._state, "ship_icons", None) or [])]
+        return {_n: _ig_value(screen._state, _n)
+                for _n in _ig_ships.GATED_FIELDS}
 
-    def _ig_wire(state):
-        return [(i.stack_id, i.node_idx, i.star_idx, i.stack_slot, i.x, i.y)
-                for i in state.ship_icons]
-
-    #: Two stacks on the map: orbit slot 0 right of the star, slot 2
-    #: left of it, in the 640x480 map window (22,22)-(527,421).
+    #: Two stacks on the map, at the map's own scale.
     _IG_MAP_ICONS = [(0, 0, 5, 0, 260, 210), (1, 1, 6, 2, 300, 214)]
-    #: The same two while screen 4 is up: x/y inside the Fleets inset
-    #: and a FIELD ID where stack_id was.
+    _IG_MAP_SCALE = 15
+    #: The same two while another screen is up: x/y inside that screen's
+    #: inset, a FIELD ID where stack_id was, and the scale the inset
+    #: needs to cover the galaxy (_max_map_scale for a 759x600 map).
     _IG_INSET_ICONS = [(137, 0, 5, 0, 452, 61), (138, 1, 6, 2, 468, 73)]
-    #: A later screen-0 frame, both stacks moved.
+    _IG_INSET_SCALE = 30
+    #: A later screen-0 frame: both stacks moved and the player zoomed.
     _IG_MOVED_ICONS = [(0, 0, 5, 0, 264, 218), (1, 1, 6, 2, 296, 206)]
+    _IG_MOVED_SCALE = 20
 
     _ig_app, _ = _ig_plv.build_screen(1920, 1080)
     _ig_app.dispatcher.switch_to("galaxy_map")
     _ig_map = _ig_app.dispatcher.screens["galaxy_map"]
 
     # 1. SCREEN 0 IS ADOPTED, and that is the state to be held to.
-    _ig_map.update(_ig_snapshot(0, _IG_MAP_ICONS))
-    assert _ig_held(_ig_map) == _IG_MAP_ICONS, _ig_held(_ig_map)
+    _ig_map.update(_ig_snapshot(0, _IG_MAP_ICONS, _IG_MAP_SCALE))
+    _ig_want = _ig_held(_ig_map)
+    assert _ig_want["ship_icons"] == _IG_MAP_ICONS, _ig_want
+    assert _ig_want["map_scale"] == _IG_MAP_SCALE, _ig_want
+    # The fixture has to differ from the map's in EVERY gated field, or
+    # a field would be "held" by never having changed.
+    _ig_probe = _ig_snapshot(4, _IG_INSET_ICONS, _IG_INSET_SCALE)
+    for _ig_f in _ig_ships.GATED_FIELDS:
+        assert _ig_value(_ig_probe, _ig_f) != _ig_want[_ig_f], (
+            f"the wrong-screen fixture carries the same {_ig_f} as the "
+            f"map's, so holding it proves nothing")
 
-    # 2. NO OTHER SCREEN ID CHANGES IT. Four ids: the Fleets screen this
-    #    was found on, the GAME overlay that keeps the map updating
-    #    underneath it (decision 59), the Colonies screen and Planets.
-    for _ig_id in (4, 8, 20, 32):
-        _ig_other = _ig_snapshot(_ig_id, _IG_INSET_ICONS)
-        assert _ig_wire(_ig_other) == _IG_INSET_ICONS, (
-            "the snapshot does not carry the inset icons, so the case "
-            "below is not the one this check is about")
+    # 2. NO OTHER SCREEN ID CHANGES ANY GATED FIELD. Screen 4 is the
+    #    Fleets screen this was found on, 29 the Officers screen that
+    #    does the same two writes, 8 the GAME overlay that keeps the map
+    #    updating underneath it (decision 59), 20 and 32 two ordinary
+    #    screens. The rule is "0 only", never "not 4".
+    for _ig_id in (4, 29, 8, 20, 32):
+        _ig_other = _ig_snapshot(_ig_id, _IG_INSET_ICONS, _IG_INSET_SCALE)
         _ig_map.update(_ig_other)
-        assert _ig_held(_ig_map) == _IG_MAP_ICONS, (
-            f"screen {_ig_id}'s s_ship_icon reached the map as "
-            f"{_ig_held(_ig_map)}")
-        # And the refused snapshot is not touched: the Fleets screen
-        # reads the same object in the same frame.
-        assert _ig_wire(_ig_other) == _IG_INSET_ICONS, (
-            "the gate rewrote the snapshot instead of ignoring it")
-        # Everything that is NOT s_ship_icon stays LIVE, including a
-        # field list set onto the snapshot AFTER it was parsed — which
+        assert _ig_held(_ig_map) == _ig_want, (
+            f"screen {_ig_id} reached the map: {_ig_held(_ig_map)} "
+            f"against {_ig_want}")
+        # The refused snapshot is not touched — the Fleets screen reads
+        # the same object in the same frame.
+        assert _ig_value(_ig_other, "ship_icons") == _IG_INSET_ICONS and \
+            _ig_other.map_scale == _IG_INSET_SCALE, (
+                "the gate rewrote the snapshot instead of ignoring it")
+        # Everything that is NOT gated stays LIVE, including a field
+        # list set onto the snapshot AFTER it was parsed — which
         # core/game_client.py does, and which is what decides what may
         # be sent (decision 59, work order 128 C). A copy of the state
         # would pass every assertion above and fail this one.
@@ -18104,43 +18142,72 @@ def main():
             "the map holds a COPY of the snapshot, so its field list is "
             "one frame old")
         assert _ig_map._state.stardate == 35024
-        assert _ig_map._state.ship_icons is not _ig_other.ship_icons
+        assert _ig_map._state.map_max_x == 759
 
-    # 3. A FRESH SCREEN-0 SNAPSHOT IS TAKEN. The gate freezes the array
-    #    while the id is wrong; it does not stop the map updating.
-    _ig_map.update(_ig_snapshot(0, _IG_MOVED_ICONS))
-    assert _ig_held(_ig_map) == _IG_MOVED_ICONS, _ig_held(_ig_map)
+    # 3. TWO WRONG SCREENS IN A ROW ARE STILL WRONG. A gate that held
+    #    "the previous snapshot" instead of "the last screen-0 one"
+    #    passes a single 4 and fails 0 -> 4 -> 4, which is the ordinary
+    #    case: the screen sends many frames before RETURN, and the frame
+    #    the map draws first after it is one of them.
+    _ig_map.update(_ig_snapshot(4, _IG_INSET_ICONS, _IG_INSET_SCALE))
+    _ig_map.update(_ig_snapshot(4, _IG_INSET_ICONS, _IG_INSET_SCALE))
+    assert _ig_held(_ig_map) == _ig_want, (
+        f"0 -> 4 -> 4 left {_ig_held(_ig_map)} on the map")
 
-    # 4. ENTERING THE SCREEN FORGETS THEM. An empty map is an honest
-    #    state; yesterday's stacks over a new galaxy are not.
+    # 4. A FRESH SCREEN-0 SNAPSHOT IS TAKEN, in every gated field. The
+    #    gate freezes while the id is wrong; it does not stop the map.
+    _ig_map.update(_ig_snapshot(0, _IG_MOVED_ICONS, _IG_MOVED_SCALE))
+    assert _ig_held(_ig_map) == {"ship_icons": _IG_MOVED_ICONS,
+                                 "map_scale": _IG_MOVED_SCALE}, \
+        _ig_held(_ig_map)
+
+    # 5. ENTERING THE SCREEN FORGETS EVERYTHING. An empty map is an
+    #    honest state; yesterday's stacks over a new galaxy are not.
     _ig_map.enter(None)
-    _ig_map.update(_ig_snapshot(4, _IG_INSET_ICONS))
-    assert _ig_held(_ig_map) == [], (
+    _ig_map.update(_ig_snapshot(4, _IG_INSET_ICONS, _IG_INSET_SCALE))
+    assert _ig_held(_ig_map) == {_n: _ig_ships.BLANK_FIELDS[_n]
+                                 for _n in _ig_ships.GATED_FIELDS}, (
         f"a re-entered map still holds {_ig_held(_ig_map)}")
 
-    # 5. AND THE GATE CANNOT BE WALKED AROUND. There is exactly one
-    #    adoption point in the tree, and no galaxy map module fetches a
-    #    snapshot of its own — a second one would be ungated, and every
-    #    reader (render_fleets, maplines, mapeta, mapinput/mapclick,
-    #    boxmodel.remember) would be back to needing its own rule.
+    # 6. THE GATE CANNOT BE WALKED AROUND. Exactly one adoption point in
+    #    the tree, and no galaxy map module fetches a snapshot of its
+    #    own — a second one would be ungated, and every reader
+    #    (render_fleets, maplines, mapeta, mapinput/mapclick,
+    #    boxmodel.remember, both map views) would be back to needing its
+    #    own rule.
     _ig_dir = os.path.join(SCREENS_DIR, "galaxy_map")
     _ig_src = {_f: io.open(os.path.join(_ig_dir, _f),
                            encoding="utf-8").read()
                for _f in sorted(os.listdir(_ig_dir)) if _f.endswith(".py")}
-    _ig_points = {_f: _t.count("_icon_gate.state(")
-                  for _f, _t in _ig_src.items() if "_icon_gate.state(" in _t}
+    _ig_points = {_f: _t.count("_state_gate.state(")
+                  for _f, _t in _ig_src.items() if "_state_gate.state(" in _t}
     assert _ig_points == {"screen.py": 1}, (
-        f"s_ship_icon is adopted at {_ig_points or 'no point at all'}, "
-        f"not at the one place a snapshot becomes the map's state")
+        f"the snapshot is adopted at {_ig_points or 'no point at all'}, "
+        f"not at the one place it becomes the map's state")
     _ig_own = sorted(_f for _f, _t in _ig_src.items() if "client.state" in _t)
     assert not _ig_own, (
         f"{_ig_own} read the client's snapshot directly, behind the gate")
 
-    ok("the galaxy map takes s_ship_icon from screen 0 only: real "
-       "bytes through parse_state, four wrong screen ids leave the "
-       "held icons exactly as they were, a fresh screen-0 frame is "
-       "taken, re-entry forgets, and the rest of the snapshot stays "
-       "live")
+    # 7. AND PARKING IS DELIBERATELY OUTSIDE IT. viewctl.park_game stops
+    #    on an ABSOLUTE target (`map_scale >= fit`) rather than on a
+    #    comparison with the previous reading — that is what makes it
+    #    safe against a stale snapshot (fundament, "A fresh message is
+    #    not a fresh world"). A GATED scale would turn that strength
+    #    into a target it can never reach, so it is handed the raw
+    #    snapshot. A grep, because the two differ only in a state this
+    #    branch already refuses to run in, so no fixture can tell them
+    #    apart — which is exactly why it needs saying in the file.
+    assert "park_game(self.app, game_state," in _ig_src["screen.py"], (
+        "park_game is no longer handed the raw snapshot")
+    assert "park_game(self.app, self._state" not in _ig_src["screen.py"], (
+        "park_game is handed the GATED state; it stops on an absolute "
+        "target and a frozen scale is one it can never reach")
+
+    ok(f"what a screen rewrites is that screen's: "
+       f"{sorted(_ig_ships.GATED_FIELDS)} come from screen 0 only — "
+       f"real bytes through parse_state, five wrong screen ids and "
+       f"0->4->4 leave every gated field exactly as it was, a fresh "
+       f"screen-0 frame is taken, re-entry forgets, parking stays raw")
 
     # ── A BLANK WINDOW IS NOT A PICTURE, AND A FLAG IS NOT EITHER ──
     #

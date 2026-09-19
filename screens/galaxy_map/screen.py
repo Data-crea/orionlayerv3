@@ -102,7 +102,9 @@ class GalaxyMapScreen(ScreenBase):
         self._starfield = sf.StarfieldLayer()
         self._ping = home_ping.HomePing()
         self._viewctl = viewctl.ViewControl()   # decoupled HD viewport
-        self._icon_gate = ship_icons.IconGate()  # s_ship_icon: screen 0 only
+        # State the Fleets and Officers screens rewrite for their own
+        # inset is theirs, not the map's (ships.GATED_FIELDS).
+        self._state_gate = ship_icons.ScreenStateGate()
         self._pan_from = None                   # right-drag anchor
         self._eta_lock = None                   # mapeta: order pending
         self._eta_cache = {}
@@ -120,7 +122,7 @@ class GalaxyMapScreen(ScreenBase):
         self._starfield.configure(self._data.get("starfield", {}))
         self._hover_star = None
         self._viewctl.reset()
-        self._icon_gate.reset()
+        self._state_gate.reset()
         self._pan_from = None
         self.update(game_state)
 
@@ -244,11 +246,13 @@ class GalaxyMapScreen(ScreenBase):
         if game_state is None:
             return
         # THE ONE PLACE A SNAPSHOT BECOMES THE MAP'S STATE, so it is the
-        # one place s_ship_icon is gated: the Fleets screen rewrites that
-        # array for its own inset while it is up (ships.IconGate, work
-        # order 135 B). Everything downstream reads `_state` and needs no
-        # rule of its own.
-        self._state = self._icon_gate.state(game_state)
+        # one place another screen's state is kept out: the Fleets and
+        # Officers screens rewrite `s_ship_icon` and `_cur_map_scale`
+        # for their own inset while they are up (ships.GATED_FIELDS
+        # names each with its source). Everything downstream reads
+        # `_state` and needs no rule of its own — except `park_game`
+        # below, which is handed the RAW snapshot on purpose.
+        self._state = self._state_gate.state(game_state)
         # ONLY WHILE THE GAME IS ON THIS SCREEN, AND ONLY WHILE THE LIST
         # IS THIS SCREEN'S. This screen keeps updating under an overlay:
         # in the GAME popup's Load dialog field 9 is the ninth slot row,
@@ -264,6 +268,11 @@ class GalaxyMapScreen(ScreenBase):
                     self.GAME_SCREEN_ID) == self.GAME_SCREEN_ID
                 and zoom_out is not None
                 and mapboxes.live_field(fields, self._data.get("map_cancel"))):
+            # THE RAW SNAPSHOT, never `self._state`: parking stops on
+            # an ABSOLUTE target read off `map_scale`, so a gated one
+            # would be a target it could never reach. Safe by two
+            # locks anyway — this branch runs only while the game
+            # reports screen 0, where the gate is the identity.
             self._viewctl.park_game(self.app, game_state, zoom_out.index)
 
         raw_nebulas = getattr(game_state, "nebulas_raw", None) or []

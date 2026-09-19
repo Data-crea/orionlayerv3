@@ -75,16 +75,17 @@ a second client — stop here.
     box that opens is the one clicked, by the ships it lists, not by
     the box appearing at all.
 
-    This is what work order 135 B built the gate for — `ships.IconGate`
-    takes `s_ship_icon` from screen 0 and from no other screen id, held
-    by a smoke check on real bytes through `parse_state`. The check
+    This is what work orders 135 B and 136 B built the gate for —
+    `ships.ScreenStateGate` takes `s_ship_icon` from screen 0 and from
+    no other screen id, held by a smoke check on real bytes through
+    `parse_state`. The check
     proves the rule offline; only the live run proves the array comes
     back from the engine the way `mainscr_main.cpp:314-315` says it
-    does. **`MOX::_cur_map_scale` is on the same list and is NOT
-    gated:** `flt.cpp:14` sets it to `_max_map_scale` while the screen
-    is up and `flt1.cpp:487`/`:835` save and restore it around
-    `Fleet_Screen_`, so record `map_scale` on the first snapshot after
-    RETURN and confirm it is the value the map had before.
+    does. `MOX::_cur_map_scale` is gated with it as of work order 136
+    (`flt.cpp:14`, saved and restored at `flt1.cpp:487`/`:835`), so
+    record `map_scale` on the first snapshot after RETURN and confirm
+    the engine puts back the value the map had before — the gate covers
+    HD, not the engine.
 
 ### What must NOT be sent
 
@@ -123,8 +124,9 @@ a second client — stop here.
    up, every `s_ship_icon` on the wire is in FLEET-INSET space
    (flt.cpp:24-55) and its `stack_id` holds a FIELD ID (flt2.cpp:34).
    **The galaxy map must ignore `s_ship_icon` while the screen id is not
-   0** — BUILT by work order 135 B (`ships.IconGate`, one gate in
-   `galaxy_map/screen.update`, a smoke check on real bytes). Question 15
+   0** — BUILT by work orders 135 B and 136 B (`ships.ScreenStateGate`,
+   one gate in `galaxy_map/screen.update`, a smoke check that iterates
+   the gate's own field list on real bytes). Question 15
    itself is still Data's to confirm as a rule, and the live half is
    Evidence 8 above.
 

@@ -13,6 +13,29 @@ right and the header had gone stale** — resolved 10 September 2026
 by dating the header to the edit and giving this session its
 paragraph, below, so the two agree again.
 
+This session (19 September 2026, work order 136): **state a screen
+rewrites for itself belongs to that screen, and the map takes none of
+it.** 135 gated `s_ship_icon` and left `map_scale`, so the map held
+screen-0 icons against a screen-4 scale — two reference frames in one
+picture, which is the fault decision 35 is about, one layer down. Every
+write in `flt.cpp`, `flt1.cpp`, `flt2.cpp` and `officer.cpp` was read
+against what `ext_api.cpp` serializes: exactly two snapshot fields are
+rewritten and on the wire, `_cur_map_x`/`_cur_map_y` are not written by
+either screen at all, and FSEL's stack is written once on EXIT
+(flt1.cpp:827). So `ships.IconGate` is now `ships.ScreenStateGate` with
+its fields in one dict, `GATED_FIELDS`, each carrying the engine line
+that writes it; the smoke check iterates that dict instead of naming a
+field. **The rule is "screen 0 only" and not "not screen 4"**, and that
+is not tidiness: the Officers screen (id 29) makes both writes too
+(officer.cpp:905, :857/:1191), so a list of guilty screens would have
+been wrong the day it was written. `viewctl.park_game` is deliberately
+outside the gate — it stops on an ABSOLUTE target read off `map_scale`,
+so a frozen one is a target it could never reach — and is handed the raw
+snapshot, held by a check. No fundament entry was filed; a wording is
+proposed in the report and the decision is Data's. Smoke stays **219**:
+the 135 check was replaced, not added. Work order 134 is on
+`origin/main` at `14a6db7`.
+
 This session (19 September 2026, work order 135): **the galaxy map
 takes `s_ship_icon` from screen 0 and from no other screen id.** The
 Fleets screen writes the same wire array it does not own — inset
@@ -20,7 +43,7 @@ coordinates into `x/y` (flt.cpp:54-55) and a FIELD ID into `stack_id`
 (flt2.cpp:34), both serialized like any other frame — so a map drawn
 from a screen-4 snapshot puts every stack in the inset's corner and
 resolves a click on one to a field id, with every other number on
-screen still correct. One gate, `ships.IconGate`, at the one point
+screen still correct. One gate, `ships.ScreenStateGate`, at the one point
 where a snapshot becomes the map's state; the six readers (the fleet
 render, `maplines`, `mapeta`, `mapinput`/`mapclick` and
 `boxmodel.remember`) all read that state and needed no rule of their
