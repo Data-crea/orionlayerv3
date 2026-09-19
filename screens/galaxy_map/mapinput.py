@@ -82,6 +82,24 @@ def map_click(screen, view, sx, sy):
     """
     if screen._state is None:
         return
+    # NOTHING GOES OUT WHILE THE GAME IS NOT ON THIS SCREEN. Decision 33:
+    # refuse what the game would refuse — and it would refuse all of it,
+    # because the native point this computes belongs to the map's field
+    # space and another screen's list is a different space entirely
+    # (decision 20, work order 128 C).
+    #
+    # It was already true and it was true BY ACCIDENT: the dispatcher
+    # routes input to the top screen, so the map has no clicks to send
+    # while the game is elsewhere. That is an exclusion that happens to
+    # hold, not a rule — and the gate above (ships.ScreenStateGate) made
+    # it worth saying out loud, because while the id is not 0 the state
+    # this reads is the last screen-0 one and a click computed from it
+    # would look perfectly reasonable. Work order 137 B.
+    if getattr(screen._state, "current_screen",
+               screen.GAME_SCREEN_ID) != screen.GAME_SCREEN_ID:
+        log.info("Map click ignored: the game reports screen %s",
+                 getattr(screen._state, "current_screen", None))
+        return
     icons = getattr(screen._state, "ship_icons", None) or []
     owners = ship_icons.resolve_owners(
         icons, screen._ships, ship_icons.wire_nodes(screen._state))

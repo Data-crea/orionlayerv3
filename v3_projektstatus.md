@@ -14,7 +14,8 @@ by dating the header to the edit and giving this session its
 paragraph, below, so the two agree again.
 
 This session (19 September 2026, work order 137): **a field the Fleets
-screen did not build hands back to the original.** 136 D found HD
+screen did not build hands back to the original, and the map sends nothing while the game
+is elsewhere.** 136 D found HD
 sitting `READY` over a game waiting in a native modal: SCRAP's
 confirmation box adds two hidden fields and clears nothing
 (gendraw.cpp:172-173), the screen id stays 4, the FLTS block keeps
@@ -44,6 +45,13 @@ and `research_select` already classify or validate the WHOLE list —
 `nodes.classify` returns None for a list it does not recognise and the
 caller draws nothing — which is the shape the Fleets screen has now.
 Nothing was changed on any of them.
+
+**And `mapinput.map_click` now refuses outside screen 0** (decision 33).
+It was already true and true by accident — the dispatcher routes input
+to the top screen — and 136 B's gate made saying it out loud worth
+doing: while the id is not 0 the state the click is computed from is the
+last screen-0 one, so the click would look perfectly reasonable and
+would land in another screen's field space. Smoke **220 -> 221**.
 
 This session (19 September 2026, work order 136): **state a screen
 rewrites for itself belongs to that screen, and the map takes none of
@@ -996,7 +1004,7 @@ files under `doc/` and are only summarised here.
 | | |
 |---|---|
 | Python | 32,960 lines across 111 modules — `find . -name '*.py'`, `__pycache__` excluded, the smoke test's 6,400 included. The previous figure here (21,642 across 94) was carried from an unstated method and could not be reproduced |
-| Smoke test | `python tools/smoke_test.py` — **220 checks**, headless |
+| Smoke test | `python tools/smoke_test.py` — **221 checks**, headless |
 | Assets | 170 MB (select_race 68, galaxy_map 51, shared 23, new_game 21, colony_summary 1) |
 | Screens in HD | 9 of ~20–22 (the GAME menu overlay, work order Stop 2, every dialog of the popup; colony summary draws list, sidebar, scan box and galaxy inset, and MOVES POPS — the first HD gesture that drives the game; planets, brief 101, lists, sorts, restricts and returns) |
 | Setup from clone | `python tools/setup.py` (deps via the system package manager) |

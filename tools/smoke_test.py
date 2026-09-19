@@ -18379,6 +18379,57 @@ def main():
        f"0->4->4 leave every gated field exactly as it was, a fresh "
        f"screen-0 frame is taken, re-entry forgets, parking stays raw")
 
+    # ── AND THE MAP SENDS NOTHING WHILE THE GAME IS ELSEWHERE ───────
+    #
+    # Work order 137 B. Decision 33's shape: refuse what the game would
+    # refuse. The native point `map_click` computes belongs to the MAP's
+    # field space, and another screen's list is a different space
+    # (decision 20, work order 128 C) — so every click it could send
+    # there is one the game would answer somewhere else.
+    #
+    # It was already true and it was true BY ACCIDENT, which is why it
+    # is a check now: the dispatcher routes input to the top screen, so
+    # the map has no clicks to send while the game is elsewhere. An
+    # exclusion that happens to hold is not a rule. And the gate above
+    # made saying it out loud worth doing: while the id is not 0 the
+    # state `map_click` reads is the last SCREEN-0 one, so a click
+    # computed from it would look perfectly reasonable.
+    from screens.galaxy_map import mapinput as _mi
+    _mi_sent = []
+    _ig_app.client.inject_click = lambda x, y: _mi_sent.append(("click", x, y))
+    _ig_app.client.activate_field = lambda fid: _mi_sent.append(("act", fid))
+    _ig_app.connected = True
+
+    def _mi_click(screen_id):
+        # No stars and no boxes: the click is an EMPTY-MAP one, which
+        # `mapclick.plan` still turns into a native point and a send
+        # (`Plan("empty", pointer, …)`). That is the simplest send the
+        # map has and the one this refusal has to stop.
+        _mi_gs = _ig_snapshot(screen_id, _IG_MAP_ICONS, _IG_MAP_SCALE)
+        _mi_gs.fields = []
+        _ig_map.update(_mi_gs)
+        _view = _ig_map._map_view()
+        assert _view is not None, "the map has no view to click in"
+        _mi_sent.clear()
+        _x, _y, _w, _h = _view.box
+        _mi.map_click(_ig_map, _view, _x + _w // 2, _y + _h // 2)
+        return list(_mi_sent)
+
+    # The map must be back on a screen-0 state first, or the gate is
+    # holding blanks and the view cannot be built.
+    _ig_map.enter(None)
+    _ig_map.update(_ig_snapshot(0, _IG_MAP_ICONS, _IG_MAP_SCALE))
+    assert _mi_click(0), (
+        "a click on the map at screen 0 sent nothing; the control for "
+        "this check is dead and the refusals below prove nothing")
+    for _mi_id in (4, 29, 8, 20, 32):
+        assert _mi_click(_mi_id) == [], (
+            f"the map sent something while the game reported screen "
+            f"{_mi_id}: {_mi_sent}")
+    _ig_app.connected = False
+    ok("the galaxy map sends nothing while the game is not on screen 0 "
+       "(decision 33), and still sends at screen 0")
+
     # ── A BLANK WINDOW IS NOT A PICTURE, AND A FLAG IS NOT EITHER ──
     #
     # Work order 129's report said the two turn-start dialogs appeared
