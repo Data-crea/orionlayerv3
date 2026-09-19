@@ -78,12 +78,18 @@ NO_STACK = "NO_STACK"
 NO_FIELDS = "NO_FIELDS"
 #: The block and the field list disagree about the displayed icons.
 MISMATCH = "MISMATCH"
+#: A field is in the list that `Fleet_Screen_` does not build. Something
+#: else is on screen — a native message box is the case that named this
+#: state — and HD must not go on drawing over it.
+FOREIGN_FIELDS = "FOREIGN_FIELDS"
 
 #: `Add_Hidden_Field_` type, which every big icon and the star fields
 #: use (fields.cpp; the reading's §2 table).
 TYPE_HIDDEN = 7
 #: `Add_Button_Field_` type.
 TYPE_BUTTON = 0
+#: `Add_Scroll_Field_` type (fields.cpp:605).
+TYPE_SCROLL = 6
 #: `Add_Radio_Button_Field_` type.
 TYPE_RADIO = 1
 
@@ -103,6 +109,114 @@ HOTKEYS = {
     "prev_fleet": (ord(","), TYPE_BUTTON),
     "next_fleet": (ord("."), TYPE_BUTTON),
 }
+
+
+#: EVERY FIELD `FLT1::Add_Fleet_Screen_Fields_` BUILDS (flt1.cpp:1177-1263),
+#: read out of the builders rather than off a dump, because a dump is an
+#: interpretation ("A field dump is not documentation") and because the
+#: one thing a dump cannot give is the set that is NOT there.
+#:
+#: Recognition is by GEOMETRY AND TYPE, never by index: the ids are
+#: running numbers and shift with the icon count, the star count and the
+#: officer. Three shapes of rule, for three shapes of field.
+#:
+#: 1. EXACT RECTANGLE, where the source gives all four numbers.
+#: 2. EXACT ORIGIN, where the extent comes from FLEET.LBX artwork at
+#:    runtime (`x_end = x + Get_Width_(pic) - 1`, fields.cpp:372-373) and
+#:    is therefore not in any source. The top-left IS in the source, and
+#:    a foreign field would have to land on it exactly AND carry the
+#:    right type.
+#: 3. AS A CLASS, for the two families whose members are one per star or
+#:    one per ship icon. Both are bounded by the inset window.
+
+#: Rule 1. `(x, y, x_end, y_end)` -> the types it may carry.
+EXACT_FIELDS = {
+    #: The screen-filling catcher, added last (flt1.cpp:1261).
+    (0, 0, 639, 479): (TYPE_HIDDEN,),
+    #: MAINSCR::_debug_field (flt1.cpp:1252).
+    (0, 470, 10, 479): (TYPE_HIDDEN,),
+    #: The big-icon scroll bar: Add_Scroll_Field_(605, 86, …, 14, 234)
+    #: (flt1.cpp:1246 -> flt2.cpp:106), and Add_Scroll_Field_ writes
+    #: `x_end = x + width` and `y_end = y + height` (fields.cpp:602-603)
+    #: — a PLUS, not a plus-minus-one, unlike the button builders.
+    (605, 86, 619, 320): (TYPE_SCROLL,),
+}
+
+#: Rule 2. Control -> (origin, the types it may carry). Every number is
+#: the literal in the call that adds it.
+CONTROL_ORIGINS = {
+    "btn_scrap":    ((549, 380), (TYPE_BUTTON,)),   # flt1.cpp:1187
+    "btn_all":      ((348, 380), (TYPE_BUTTON,)),   # :1195
+    "btn_return":   ((556, 430), (TYPE_BUTTON,)),   # :1201
+    "scroll_up":    ((606,  59), (TYPE_BUTTON,)),   # :1214
+    "scroll_down":  ((605, 325), (TYPE_BUTTON,)),   # :1215
+    "prev_fleet":   (( 19, 249), (TYPE_BUTTON,)),   # :1217
+    "next_fleet":   ((283, 249), (TYPE_BUTTON,)),   # :1218
+    "btn_relocate": ((441, 380), (TYPE_HIDDEN,)),   # :1229
+    #: LEADERS is a BUTTON with an officer and a HIDDEN field without
+    #: one, at the same origin (:1234, :1240) — which is why the type
+    #: alone never identifies a control here.
+    "btn_leaders":  ((342, 430), (TYPE_BUTTON, TYPE_HIDDEN)),
+    "btn_support":  ((425, 435), (TYPE_RADIO,)),    # :1256
+    "btn_combat":   ((487, 435), (TYPE_RADIO,)),    # :1257
+}
+
+#: Rule 3a. A star field of the inset: `Add_Galaxy_Map_Fields_2_` with
+#: `field_style` 1 adds `(sx-3, sy-3, sx+8, sy+9)` per star
+#: (movebox.cpp:504-511) at positions `Get_Galaxy_Map_Star_XY_` puts
+#: inside the inset window. So the SIZE is exact and the position is
+#: bounded — which is the class, and it is tight enough that nothing
+#: else in this list has that shape.
+STAR_FIELD_SIZE = (11, 12)      # x_end - x, y_end - y
+STAR_FIELD_MARGIN = 3           # the -3 in the call
+
+#: The inset window, `Set_Window_(15, 52, 320, 234)` (movebox.cpp:469
+#: with flt1.cpp:1250's four numbers). Inclusive.
+INSET_WINDOW = (15, 52, 320, 234)
+
+
+def _in_inset(x, y, margin=STAR_FIELD_MARGIN):
+    left, top, right, bottom = INSET_WINDOW
+    return (left - margin <= x <= right + margin
+            and top - margin <= y <= bottom + margin)
+
+
+def foreign_fields(fields, cells, icons):
+    """Every field in the live list that `Fleet_Screen_` does not build.
+
+    Rule 3b lives here rather than in a table: a small ship icon's field
+    is `Add_Hidden_Field_(icon.x, icon.y, icon.x + w, icon.y + h)`
+    (flt2.cpp:34-41), and while its extent comes from FLEET.LBX its
+    TOP-LEFT is `_ship_icon[i].x/y` — which is on the wire. So the class
+    is matched against the snapshot's own icon positions and needs no
+    margin at all. (Those coordinates are the fleet inset's while this
+    screen is up, which is exactly what `ships.ScreenStateGate` keeps
+    off the galaxy map; here they are what they say they are.)
+    """
+    cell_rects = {(x, y, x + 58, y + 57) for x, y in cells}
+    origins = {(icon.x, icon.y) for icon in (icons or [])}
+    control_origins = {}
+    for _origin, _types in CONTROL_ORIGINS.values():
+        control_origins[_origin] = control_origins.get(_origin, ()) + _types
+    out = []
+    for f in (fields or []):
+        r = livefields.rect(f)
+        types = EXACT_FIELDS.get(r)
+        if types is not None and f.field_type in types:
+            continue
+        if f.field_type == TYPE_HIDDEN and r in cell_rects:
+            continue
+        if f.field_type == TYPE_HIDDEN and (f.x, f.y) in origins:
+            continue
+        if (f.field_type == TYPE_HIDDEN
+                and (r[2] - r[0], r[3] - r[1]) == STAR_FIELD_SIZE
+                and _in_inset(f.x, f.y)):
+            continue
+        types = control_origins.get((f.x, f.y))
+        if types is not None and f.field_type in types:
+            continue
+        out.append(f)
+    return out
 
 
 def hotkey_field(fields, name):
@@ -180,6 +294,30 @@ class View:
                 "The game is showing no fleet. `_small_ship_stack_ptr` is "
                 "-1, which is the state before the screen has found a "
                 "stack and after the last own ship is gone.")
+            return
+
+        # A FIELD NOBODY HERE BUILT MEANS SOMETHING ELSE IS ON SCREEN.
+        # Checked before the cell validation, because it is the more
+        # actionable answer when both could fire: "the list disagrees
+        # with the block" reads as a misreading of ours, and this is
+        # not one. Work order 137 A, from the state 136 D found —
+        # SCRAP's confirmation box adds two hidden fields and clears
+        # nothing (gendraw.cpp:172-173), the screen id stays 4, the
+        # FLTS block keeps arriving, and every field this screen built
+        # is still in place, so nothing else could have noticed.
+        strangers = foreign_fields(fields, cells,
+                                   getattr(game_state, "ship_icons", None))
+        if strangers:
+            self.state = FOREIGN_FIELDS
+            where = ", ".join(f"{livefields.rect(f)} type {f.field_type}"
+                              for f in strangers[:6])
+            more = "" if len(strangers) <= 6 else f" and {len(strangers) - 6} more"
+            self.reason = (
+                f"{len(strangers)} field(s) in the live list that this "
+                f"screen does not build: {where}{more}. Something else "
+                f"is on screen — a native message box adds its own "
+                f"fields and clears none — so the original picture is "
+                f"shown until they are gone.")
             return
 
         player = getattr(game_state, "player_num", None)

@@ -17757,7 +17757,7 @@ def main():
 
     def _fl_snapshot(icons=6, first_row=0, owner=1, relocate=0,
                      selected=(1, 2), with_block=True, rows=2,
-                     shown=None):
+                     shown=None, ship_icons=()):
         """A STATE_SNAPSHOT payload with the fleet screen up.
 
         The FLTS block sits after FSEL, exactly where the engine writes
@@ -17778,8 +17778,15 @@ def main():
         _b += bytes([0])                            # nebulas
         _b += bytes(_FL_LD * 67)
         _b += bytes(_FL_AN)
-        _b += _fl_s.pack("<h", 0)                      # ship icons
+        _b += _fl_s.pack("<h", len(ship_icons))        # ship icons
+        for _ic in ship_icons:
+            _b += _fl_s.pack("<6h", *_ic)
         _b += _fl_s.pack("<8h", 0, 0, 0, 0, 0, 0, 0, 0)   # newgame temps
+        # The owner block is one byte per icon and is NOT optional once
+        # there are icons: the parser reads exactly that many before it
+        # looks for FSEL (core/game_state.py), so a fixture that skips
+        # it eats the block header and every later block goes missing.
+        _b += bytes([0xFF]) * len(ship_icons)
         _b += b"FSEL" + _fl_s.pack("<hhh", -1, 0, 0)   # open fix 20, empty
         if with_block:
             _b += b"FLTS"
@@ -17802,15 +17809,29 @@ def main():
             _f.field_type, _f.hotkey = 7, 0
             _out.append(_f)
         if hotkeys:
-            for _hk, _ft in ((ord("S"), 0), (ord("A"), 0), (0x1B, 0),
-                             (ord("L"), 0), (ord("R"), 7), (ord("U"), 1),
-                             (ord("C"), 1), (ord(","), 0), (ord("."), 0),
-                             (ord("-"), 0), (ord("+"), 0)):
+            # EACH CONTROL AT ITS OWN ORIGIN (flt1.cpp:1187-1257, via
+            # fltwire.CONTROL_ORIGINS). They used to be eleven fields at
+            # (0, 0)-(1, 1), which was enough for a lookup by hotkey and
+            # is not a field list the engine could produce — and work
+            # order 137 A's rule, which asks whether a field is one this
+            # screen builds, is exactly the rule that can tell.
+            for _name, _hk in ((("btn_scrap"), ord("S")),
+                               ("btn_all", ord("A")),
+                               ("btn_return", 0x1B),
+                               ("btn_leaders", ord("L")),
+                               ("btn_relocate", ord("R")),
+                               ("btn_support", ord("U")),
+                               ("btn_combat", ord("C")),
+                               ("prev_fleet", ord(",")),
+                               ("next_fleet", ord(".")),
+                               ("scroll_up", ord("-")),
+                               ("scroll_down", ord("+"))):
+                (_ox, _oy), _types = _flw.CONTROL_ORIGINS[_name]
                 _f = _gs_mod.FieldInfo()
                 _f.index = 100 + len(_out)
-                _f.x = _f.y = 0
-                _f.x_end = _f.y_end = 1
-                _f.field_type, _f.hotkey = _ft, _hk
+                _f.x, _f.y = _ox, _oy
+                _f.x_end, _f.y_end = _ox + 73, _oy + 27
+                _f.field_type, _f.hotkey = _types[0], _hk
                 _out.append(_f)
         return _out
 
@@ -17999,6 +18020,155 @@ def main():
        "draw and hit-test agree on all twenty cells, the filters get a "
        "click and the rest an activation, every box fits the opening "
        "at both resolutions and the inset keeps 305:182")
+
+    # ── A FIELD THIS SCREEN DID NOT BUILD HANDS BACK TO THE ORIGINAL ──
+    #
+    # Work order 137 A, from the state 136 D found by reading: SCRAP's
+    # confirmation box (FLT1::Scrap_Ships_ flt1.cpp:1512 ->
+    # HAROLD::User_Box_ mode 1 -> GENDRAW::Confirmation_Box_) adds two
+    # hidden fields at native (0xEB, 0x12E)-(0x11E, 0x143) and
+    # (0x159, 0x12E)-(0x18C, 0x143) (gendraw.cpp:172-173) and CLEARS
+    # NOTHING. The screen id stays 4, ext_api.cpp:265 keeps writing the
+    # FLTS block, every field this screen built is still at its own
+    # rect — so the validation that only asks "is each cell's field
+    # there" said READY over a game waiting in a modal loop.
+    #
+    # THE RULE, NOT THE BOX. `fltwire.foreign_fields` knows what
+    # `Add_Fleet_Screen_Fields_` builds, read out of the builders
+    # (flt1.cpp:1177-1263), and ANY field outside that set hands back.
+    # So the check feeds the two real fields AND a stranger at four
+    # other places, and it feeds a list built from the tables themselves
+    # so that a rule which called one of our own fields foreign fails
+    # here rather than in front of Data.
+    _ff_icons = [(137, 0, 5, 0, 60, 80), (138, 1, 6, 2, 90, 95)]
+
+    def _ff_field(rect, ftype, hotkey=0, index=0):
+        _f = _gs_mod.FieldInfo()
+        _f.index = index
+        _f.x, _f.y, _f.x_end, _f.y_end = rect
+        _f.field_type, _f.hotkey = ftype, hotkey
+        return _f
+
+    def _ff_ours(n_cells=6):
+        """A list holding one of EVERY field the builder can add."""
+        _out = []
+        for _i in range(n_cells):
+            _x, _y = _FL_CELLS[_i]
+            _out.append(_ff_field((_x, _y, _x + 58, _y + 57),
+                                  _flw.TYPE_HIDDEN, 0, 10 + _i))
+        for (_ox, _oy), _types in _flw.CONTROL_ORIGINS.values():
+            # The extent comes from FLEET.LBX at runtime, so any is fine
+            # and the rule must not depend on it.
+            _out.append(_ff_field((_ox, _oy, _ox + 73, _oy + 27),
+                                  _types[0], 0, 50 + len(_out)))
+        for _r, _types in _flw.EXACT_FIELDS.items():
+            _out.append(_ff_field(_r, _types[0], 0, 90 + len(_out)))
+        for _ic in _ff_icons:                      # small ship icons
+            _out.append(_ff_field((_ic[4], _ic[5], _ic[4] + 9, _ic[5] + 9),
+                                  _flw.TYPE_HIDDEN, 0x29, 120 + len(_out)))
+        for _sx, _sy in ((40, 70), (300, 220)):    # inset star fields
+            _out.append(_ff_field((_sx - 3, _sy - 3, _sx + 8, _sy + 9),
+                                  _flw.TYPE_HIDDEN, 0x29, 150 + len(_out)))
+        return _out
+
+    #: GENDRAW::Confirmation_Box_'s two, exactly as it adds them.
+    _FF_CONFIRM = [_ff_field((0xEB, 0x12E, 0x11E, 0x143),
+                             _flw.TYPE_HIDDEN, 0x29, 300),
+                   _ff_field((0x159, 0x12E, 0x18C, 0x143),
+                             _flw.TYPE_HIDDEN, 0x29, 301)]
+
+    _ff_gs = _fl_snapshot(ship_icons=_ff_icons)
+    assert _ff_gs.fleet_screen is not None, (
+        "the fixture's FLTS block did not parse with ship icons present "
+        "— the owner block sits between them and FSEL")
+
+    # 1. EVERY FIELD THE BUILDER MAKES IS ONE OF OURS.
+    _ff_gs.fields = _ff_ours()
+    assert _flw.foreign_fields(_ff_gs.fields, _FL_CELLS, _ff_gs.ship_icons) == [], (
+        "fltwire calls one of Add_Fleet_Screen_Fields_'s own fields "
+        "foreign: "
+        f"{[(f.x, f.y, f.x_end, f.y_end) for f in _flw.foreign_fields(_ff_gs.fields, _FL_CELLS, _ff_gs.ship_icons)]}")
+    _fl_scr.update(_ff_gs)
+    assert _fl_scr._view.state == _flw.READY, _fl_scr._view.state
+
+    # 2. THE CONFIRMATION BOX HANDS BACK, and says which fields.
+    _ff_gs.fields = _ff_ours() + _FF_CONFIRM
+    _fl_scr.update(_ff_gs)
+    assert _fl_scr._view.state == _flw.FOREIGN_FIELDS, _fl_scr._view.state
+    assert _fl_scr.wants_original()
+    for _r in ((0xEB, 0x12E, 0x11E, 0x143), (0x159, 0x12E, 0x18C, 0x143)):
+        assert str(_r) in _fl_scr.fallback_reason(), (
+            f"the reason does not name {_r}: {_fl_scr.fallback_reason()}")
+    assert _fl_scr.problems
+    # AND NOTHING GOES OUT while it is handing back — the game is in
+    # Confirmation_Box_'s own input loop (gendraw.cpp:205-212), which
+    # takes only its two fields, so an HD send is swallowed and the
+    # player sees a screen that did not react.
+    _fl_sent.clear()
+    _fl_scr.handle_click(*_fl_slots[1].center)
+    _fl_scr.handle_click(*_fl_scr.box_by_name("btn_scrap").screen_rect.center)
+    _fl_scr.handle_mousewheel(1, 960, 540)
+    _fl_scr.handle_key(27)
+    assert _fl_sent == [], _fl_sent
+    _fl_scr.render(_fl_surf)
+
+    # 3. AND IT COMES BACK WITHOUT A RESTART. The View is rebuilt from
+    #    the snapshot every update, so the box closing is the whole of
+    #    the recovery — no flag to reset, nothing to time out.
+    _ff_gs.fields = _ff_ours()
+    _fl_scr.update(_ff_gs)
+    assert _fl_scr._view.state == _flw.READY, _fl_scr._view.state
+    assert not _fl_scr.wants_original()
+    _fl_sent.clear()
+    _fl_scr.handle_click(*_fl_slots[1].center)
+    assert _fl_sent == [(1, False)], _fl_sent
+
+    # 4. A STRANGER ANYWHERE ELSE DOES THE SAME. Five places, each one
+    #    a near-miss of a rule rather than a random rectangle: a button
+    #    one pixel off its origin, a cell-sized field outside the grid,
+    #    a star-sized field outside the inset, an icon-sized field at no
+    #    icon's corner, and a second full-screen catcher.
+    for _ff_what, _ff_f in (
+            ("a button one px off its origin",
+             _ff_field((550, 380, 621, 407), _flw.TYPE_BUTTON, ord("S"), 400)),
+            ("a cell-sized field outside the grid",
+             _ff_field((100, 100, 158, 157), _flw.TYPE_HIDDEN, 0x29, 401)),
+            ("a star-sized field outside the inset",
+             _ff_field((400, 400, 411, 412), _flw.TYPE_HIDDEN, 0x29, 402)),
+            ("an icon-sized field at no icon's corner",
+             _ff_field((61, 80, 70, 89), _flw.TYPE_HIDDEN, 0x29, 403)),
+            ("a second full-screen catcher",
+             _ff_field((0, 0, 639, 478), _flw.TYPE_HIDDEN, 0, 404))):
+        _ff_gs.fields = _ff_ours() + [_ff_f]
+        _fl_scr.update(_ff_gs)
+        assert _fl_scr._view.state == _flw.FOREIGN_FIELDS, (
+            f"{_ff_what} was accepted as one of this screen's own")
+        assert _fl_scr.wants_original() and _fl_scr.fallback_reason()
+
+    # 5. THE SET IS PINNED TO THE BUILDER, because a rule that reads a
+    #    table cannot notice a row taken OUT of the table. Eleven
+    #    controls, three exact rects: Add_Fleet_Screen_Fields_ adds
+    #    SCRAP, ALL, RETURN, the two scroll arrows, PREV, NEXT,
+    #    RELOCATE, LEADERS and the two filter radios, plus the debug
+    #    field, the screen-filling catcher and the big-icon scroll bar.
+    assert set(_flw.CONTROL_ORIGINS) == {
+        "btn_scrap", "btn_all", "btn_return", "scroll_up", "scroll_down",
+        "prev_fleet", "next_fleet", "btn_relocate", "btn_leaders",
+        "btn_support", "btn_combat"}, sorted(_flw.CONTROL_ORIGINS)
+    assert set(_flw.EXACT_FIELDS) == {(0, 0, 639, 479), (0, 470, 10, 479),
+                                      (605, 86, 619, 320)}, _flw.EXACT_FIELDS
+    # LEADERS is the one control that legitimately carries two types —
+    # a button with an officer, a hidden field without (flt1.cpp:1234,
+    # :1240) — and it is why a control is not identified by type alone.
+    assert _flw.CONTROL_ORIGINS["btn_leaders"][1] == (
+        _flw.TYPE_BUTTON, _flw.TYPE_HIDDEN)
+
+    ok("a field the Fleets screen did not build hands back to the "
+       "original: the eleven control origins, the three exact rects, "
+       "the grid cells, the ship icons and the inset star fields are "
+       "its own, SCRAP's two confirmation fields and five near-misses "
+       "are not, nothing is sent while it hands back, and it returns "
+       "to READY when they go")
 
     # ── WHAT A SCREEN REWRITES IS THAT SCREEN'S, NOT THE MAP'S ──────
     #

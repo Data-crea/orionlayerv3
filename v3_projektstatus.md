@@ -13,6 +13,38 @@ right and the header had gone stale** — resolved 10 September 2026
 by dating the header to the edit and giving this session its
 paragraph, below, so the two agree again.
 
+This session (19 September 2026, work order 137): **a field the Fleets
+screen did not build hands back to the original.** 136 D found HD
+sitting `READY` over a game waiting in a native modal: SCRAP's
+confirmation box adds two hidden fields and clears nothing
+(gendraw.cpp:172-173), the screen id stays 4, the FLTS block keeps
+arriving, and the validation only asked whether every displayed cell HAS
+a field. `fltwire.foreign_fields` now knows the whole set
+`Add_Fleet_Screen_Fields_` builds, read out of the builders
+(flt1.cpp:1177-1263) in three shapes — exact rectangle where the source
+gives four numbers, exact ORIGIN where the extent comes from FLEET.LBX
+at runtime, and as a class for the two families that are one per star
+and one per ship icon. A field outside it is `FOREIGN_FIELDS`, which
+hands over, names the strangers with their rects, sends nothing, and
+returns to READY by itself when they go. Smoke **219 -> 220**.
+
+**Which other screens read their field list on presence alone**, as a
+reading and not a change: `colony_summary` (`colonysend.field_at`,
+colonysend.py:126), `planets` (screen.py:142 and :277) and `new_game`
+(screen.py:361) all ask "is there a field with this key / at this
+point" and nothing else. Of those, `colony_summary` and `planets` CAN
+meet a native box — every pop-move refusal answers with `GENDRAW::Help_`
+(colmove.cpp:21, :78, :156, :377, :465) and the Planets send path calls
+`Confirmation_Box_`/`Warning_Box_` (plntsum.cpp:235, :268, :287, :299) —
+and `new_game` has none in `newgame.cpp`. The galaxy map is a third
+shape: `mapboxes.classify` names the boxes it knows and ignores the
+rest, and the map can meet a box (`User_Box_` at mainscr.cpp:1456,
+:1491, :1507 and mainscr_main.cpp:462, :495, :624, :718). `game_menu`
+and `research_select` already classify or validate the WHOLE list —
+`nodes.classify` returns None for a list it does not recognise and the
+caller draws nothing — which is the shape the Fleets screen has now.
+Nothing was changed on any of them.
+
 This session (19 September 2026, work order 136): **state a screen
 rewrites for itself belongs to that screen, and the map takes none of
 it.** 135 gated `s_ship_icon` and left `map_scale`, so the map held
@@ -964,7 +996,7 @@ files under `doc/` and are only summarised here.
 | | |
 |---|---|
 | Python | 32,960 lines across 111 modules — `find . -name '*.py'`, `__pycache__` excluded, the smoke test's 6,400 included. The previous figure here (21,642 across 94) was carried from an unstated method and could not be reproduced |
-| Smoke test | `python tools/smoke_test.py` — **219 checks**, headless |
+| Smoke test | `python tools/smoke_test.py` — **220 checks**, headless |
 | Assets | 170 MB (select_race 68, galaxy_map 51, shared 23, new_game 21, colony_summary 1) |
 | Screens in HD | 9 of ~20–22 (the GAME menu overlay, work order Stop 2, every dialog of the popup; colony summary draws list, sidebar, scan box and galaxy inset, and MOVES POPS — the first HD gesture that drives the game; planets, brief 101, lists, sorts, restricts and returns) |
 | Setup from clone | `python tools/setup.py` (deps via the system package manager) |
@@ -1304,7 +1336,7 @@ in exactly ONE bucket. The numbers below are produced by
 check asserts this list still agrees with it — the same trade the
 check count makes, for the same reason.
 
-`tools/struct_probe.py` (**478** code, 753 total), `screens/galaxy_map/screen.py` (**444** code, 707 total), `tools/colony_list_preview.py` (**403** code, 772 total), `screens/custom_race/screen.py` (**400** code, 558 total), `tools/colony_move_hd.py` (**385** code, 586 total), `core/editor/editor.py` (**359** code, 430 total), `screens/galaxy_map/renderer.py` (**336** code, 758 total), `tools/ext_diag.py` (**325** code, 473 total), `core/style.py` (**310** code, 479 total).
+`tools/struct_probe.py` (**478** code, 753 total), `screens/galaxy_map/screen.py` (**444** code, 716 total), `tools/colony_list_preview.py` (**403** code, 772 total), `screens/custom_race/screen.py` (**400** code, 558 total), `tools/colony_move_hd.py` (**385** code, 586 total), `core/editor/editor.py` (**359** code, 430 total), `screens/galaxy_map/renderer.py` (**336** code, 758 total), `tools/ext_diag.py` (**325** code, 473 total), `core/style.py` (**310** code, 479 total).
 `smoke_test.py` is exempt by nature.
 
 **TWO TOOLS JOINED THE LIST ON 8 SEPTEMBER 2026 and one thing left

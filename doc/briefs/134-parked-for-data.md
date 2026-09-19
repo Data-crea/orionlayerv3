@@ -113,10 +113,10 @@ a second client — stop here.
     the four OMISSIONs. It reads as a dead area rather than as a
     refusal.
 
-12. **Evidence 10 — BEFORE THE FIRST SCRAP CLICK: the native boxes are
-    invisible to HD, and today the screen does not notice them.**
-    Read out of the code by work order 136 D, and it decides how the
-    scrap step may be run at all.
+12. **Evidence 10 — SCRAP's native box is the test for the handover.**
+    136 D read the fault; **137 A built the guard**, so this step is no
+    longer a warning to be stepped around but the one live proof the
+    guard has.
 
     **Scrap does open native boxes.** `Scrap_Ships_` (flt1.cpp:1504)
     calls `HAROLD::User_Box_(…, 1)` — `GENDRAW::Confirmation_Box_`,
@@ -125,32 +125,40 @@ a second client — stop here.
     (:1536-1550), each followed by a mode-3 warning box on a No. There
     is also the bad-ship box at flt1.cpp:930.
 
-    **HD cannot see them and does not fall back.** `Confirmation_Box_`
-    does not clear the field list: it ADDS two hidden fields, Y at
-    native (0xEB, 0x12E)-(0x11E, 0x143) and N at (0x159, 0x12E)-(0x18C,
-    0x143) (gendraw.cpp:172-173), and then spins in its own
-    `Get_Input_()` loop (:205-212) that accepts only those two. The
-    screen id stays 4, so `ext_api.cpp:265` keeps writing the FLTS
-    block, all twenty big-icon fields are still in the list at their own
-    rects, and `fltwire.View._read` only asks whether every displayed
-    cell HAS a field — it never asks whether fields it does not know
-    have appeared. The view therefore stays `READY`, HD keeps drawing
-    its grid over a game that is waiting on a modal, and every HD click
-    that is not Y or N is swallowed by that loop.
+    **Why HD could not see them, and what now catches it.**
+    `Confirmation_Box_` does not clear the field list: it ADDS two
+    hidden fields, Y at native (0xEB, 0x12E)-(0x11E, 0x143) and N at
+    (0x159, 0x12E)-(0x18C, 0x143) (gendraw.cpp:172-173), and then spins
+    in its own `Get_Input_()` loop (:205-212) that accepts only those
+    two. The screen id stays 4, so `ext_api.cpp:265` keeps writing the
+    FLTS block and all twenty big-icon fields are still at their own
+    rects. `fltwire` used to ask only whether every displayed cell HAS a
+    field; it now also asks whether anything is in the list that
+    `Add_Fleet_Screen_Fields_` does not build (`fltwire.foreign_fields`,
+    read out of flt1.cpp:1177-1263), and hands back with
+    `FOREIGN_FIELDS` when there is. It returns to READY by itself when
+    the box goes.
 
-    **So, in this order:** select one ship at a colony of the player and
-    with no officer, which is the one path that opens no box, and scrap
-    that. Read the framebuffer after the click before anything else is
-    sent, and only then try a ship that WILL raise a box — and answer it
-    in the game's own window. Do not send a second HD click while a box
-    is up.
+    **So, in this order, and the order is the evidence:**
 
-    What the run has to record either way: the field list before and
-    after the scrap click (the two extra fields are the tell), what
-    `fltwire.View.state` reported at the same moment, and whether the HD
-    picture showed anything at all. That measurement is what a refusal
-    for this case would have to be built on — see decision 5 of §2,
-    which is exactly this question and is still Data's.
+    a. Scrap one ship at a colony of the player with no officer — the
+       one path that raises no box (flt1.cpp:1512, :1536). HD must stay
+       READY throughout. Record the field list before and after.
+    b. Then scrap a ship that WILL raise one. At that moment HD must
+       show the game's own picture, `fltwire.View.state` must read
+       `FOREIGN_FIELDS`, and the reason must name the two rects above.
+       Answer the box in the game's window, or with an INJECT_CLICK at
+       the Y or N field read from the live list — nothing else will be
+       taken.
+    c. After the box closes, HD must be READY again with no restart,
+       and a cell click must work as before.
+
+    If (b) shows HD still drawing its grid, the guard has a hole and
+    the field the box added is one `foreign_fields` wrongly accepts;
+    record its rect and type, that is the whole finding.
+
+    Whether HD should DRAW those boxes instead of handing back is a
+    different question and is decision 5 of §2, still Data's.
 
 ### What must NOT be sent
 
@@ -159,9 +167,9 @@ a second client — stop here.
   int16 and `SDLK_F5` is `0x4000003e`.
 - The scroll FIELD (type 6): it is read through a pointer. Use the two
   arrow buttons.
-- SCRAP, on a scratch save, only with intent — it destroys ships, and
-  not before Evidence 10 above has been read: HD does not draw the
-  native confirmation and does not notice that it is up.
+- SCRAP, on a scratch save, only with intent — it destroys ships. Run
+  it as Evidence 10 sets it out: the box-free case first, then the one
+  that raises a box, which is what proves the handover.
 
 ---
 
