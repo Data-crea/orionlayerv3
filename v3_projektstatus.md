@@ -67,6 +67,61 @@ the build line. Both states are forced in the check, neither read off
 this machine. Smoke **227 -> 228**; `main.py` joins the over-300 list
 at 304 code lines.
 
+This session (19 September 2026, work order 142 D): **the Fleets
+screen in the original's look.** The grid cell draws the ship's own
+picture — `SHIPS.LBX ship_type + colour * 50`
+(`KEN::Do_Get_Ship_Picture_Seg`, ken.cpp:466) — on the original's own
+grid plate, cut out of FLEET.LBX 0 where the original paints it
+(flt1.cpp:1130); the inset is black because `graphics::Fill_(..., 0)`
+fills it black (movebox.cpp:38, palette index 0 read as `(0, 0, 0)`)
+and carries the original's 5x5 star sprites, FLEET.LBX 34..44 at frame
+0, offset `-2, -2` (flt1.cpp:1441-1444, movebox.cpp:84-85), clipped to
+the box as the original clips it; the screen's colours are the
+original's, from the palette `fonts::Load_Palette_(8, 0, 255)` installs
+(flt1.cpp:557), with the index and the engine line for each in
+`colors.json`'s `fleets._source` — the fleet screen's text is GREEN
+(palette 116, `FLT2::_normal_colors`), which this project had been
+drawing blue-white.
+
+**HOW THE ORIGINAL COLOURS A SHIP, read three times before it was
+right.** Not a remap table and not tinted artwork: the sprites are
+drawn in palette indices 192..239, which the screen palette leaves as
+placeholder green, and `KEN::Load_Player_Ship_Palette_` (ken.cpp:71)
+loads SHIPS.LBX `colour * 50 + 49` and installs ITS embedded ramp
+(`animate::Draw_Palette_`, ken.cpp:106). Slot 49 of every colour set —
+the 2x1 entry that looks like a placeholder — is the palette carrier
+and is the whole mechanism. The SPRITE is chosen by `previous_owner`
+and the RAMP by the current owner, so a captured ship keeps its old
+hull in its new colours; both indirections go through
+`_player[idx].color`, which this screen was not doing at all.
+
+**Two corrections to things this tree asserted.** `SHIPS.LBX` holds
+449 entries, not the 450 the index arithmetic implies, and slot 49 of
+every set is a palette carrier rather than a ship — so a picture is
+also not one size (52x48, 52x52, 55x55 and 51x49 all occur) and
+nothing may assume one. And `_fleet_galaxy_star_seg` is declared
+`[11]` (mox.h:110) with all eleven loaded, so the fleet screen's
+black-hole index 10 is **not** the out-of-bounds read `fltdraw` and
+`colonyrows` both recorded it as; 10 is the colony screen's overrun,
+and the fleet screen's own eleventh sprite. Invisible while both drew
+the same flat dot.
+
+Extraction follows decision 38: `tools/fleet_art_extract.py` hands the
+raw LBX blobs over untouched and `screens/fleets/fltart.py` decodes
+them at load time through `core/lbx`, which gained one shared palette
+decoder rather than a second transcription of `{changed, r, g, b}`.
+**The files are never committed and never shipped** (decisions 40 and
+42): gitignored, and the check refuses them tracked under any name.
+A fresh clone has none of them, so the cell falls back to the name and
+the builder's colour and the screen says how to extract — both states
+forced in the check, neither read off this machine. The ship-picture
+OMISSION is lifted and the marking records that it was ever there.
+The status strip is now EMPTY with nothing hovered, because
+`Print_Fltscrn_Scanned_Star_Name_` is called only under
+`if (_galaxy_map_scanned_star > -1)` (flt1.cpp:397) — HD had been
+inventing a line the game never prints. The two filter radios show
+their state from the FLTS block at last. Smoke **228 -> 229**.
+
 This session (19 September 2026, work order 141): **the Fleets screen
 is READY, live, for the first time** — and the fixtures now carry the
 field the engine always sends.
@@ -1367,7 +1422,7 @@ files under `doc/` and are only summarised here.
 | | |
 |---|---|
 | Python | 32,960 lines across 111 modules — `find . -name '*.py'`, `__pycache__` excluded, the smoke test's 6,400 included. The previous figure here (21,642 across 94) was carried from an unstated method and could not be reproduced |
-| Smoke test | `python tools/smoke_test.py` — **228 checks**, headless |
+| Smoke test | `python tools/smoke_test.py` — **229 checks**, headless |
 | Assets | 170 MB (select_race 68, galaxy_map 51, shared 23, new_game 21, colony_summary 1) |
 | Screens in HD | 9 of ~20–22 (the GAME menu overlay, work order Stop 2, every dialog of the popup; colony summary draws list, sidebar, scan box and galaxy inset, and MOVES POPS — the first HD gesture that drives the game; planets, brief 101, lists, sorts, restricts and returns) |
 | Setup from clone | `python tools/setup.py` (deps via the system package manager) |

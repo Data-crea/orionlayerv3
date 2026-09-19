@@ -152,11 +152,48 @@ HINTS = {
 }
 
 
+#: How tall the inset's hint strip is, in native px. The inset is a
+#: MAP and the hint is not allowed to sit on it — see `hint_rect`.
+HINT_BAND = 13
+
+
 def hint_rect(region):
-    """A hint box's native rect: its region, inset on every side."""
+    """A hint box's native rect: its region, inset on every side.
+
+    **THE INSET'S IS A STRIP ALONG THE BOTTOM EDGE, NOT THE WHOLE BOX.**
+    It used to be the region inset on all four sides, which centres the
+    words in the middle of the galaxy — across the stars the screen
+    exists to show, and over the exact area a player reads positions
+    off. The strip is `HINT_BAND` native px at the bottom edge; whether
+    it is DRAWN at all is decided per frame against the star positions
+    (`screen._fill_hints`), because an edge with a star on it is still
+    a star underneath words.
+    """
     x, y, w, h = REGIONS[region]
+    if region == "inset_map":
+        return (x + HINT_INSET, y + h - HINT_INSET - HINT_BAND,
+                w - 2 * HINT_INSET, HINT_BAND)
     return (x + HINT_INSET, y + HINT_INSET,
             w - 2 * HINT_INSET, h - 2 * HINT_INSET)
+
+
+def hint_collides(stars, region="inset_map"):
+    """True when any star falls inside that region's hint strip.
+
+    The star list is `colonyrows.galaxy_inset_stars`, in the same
+    native space `REGIONS` is in, and a star is drawn as a 5x5 sprite
+    offset `-2, -2` (movebox.cpp:85) — so the sprite's own extent is
+    tested, not its centre point. `REGIONS[region]` is the box and the
+    star coordinates are relative to it, which is why the box origin is
+    added before the comparison.
+    """
+    bx, by, _bw, _bh = REGIONS[region]
+    hx, hy, hw, hh = hint_rect(region)
+    for sx, sy, _colour in stars or []:
+        x, y = bx + sx - 2, by + sy - 2
+        if x + 5 > hx and x < hx + hw and y + 5 > hy and y < hy + hh:
+            return True
+    return False
 
 
 #: The scroll column's three parts, as fractions of the column itself —

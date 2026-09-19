@@ -142,3 +142,4 @@ diff*.txt
 # --- Delivery leftovers (the ZIP era; git replaces all of this) ---
 *.zip
 tools/tree_manifest.sha256
+screens/fleets/assets/gamedata/

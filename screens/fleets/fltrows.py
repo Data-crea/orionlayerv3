@@ -4,15 +4,21 @@ What reaches here has already been validated by `fltwire.View`: this
 module turns ship indices into things to draw and nothing else. It makes
 no decision about whether the screen may draw at all.
 
-**THE CELLS CARRY NO SHIP PICTURE, AND THAT IS AN OMISSION, NOT A GAP
-NOBODY NOTICED.** The original draws `SHIPS.LBX picture_num + 50 *
-colour` (`KEN::Get_Ship_Id_Picture_Seg_`, ken.cpp:451-466) — MOO2's
-artwork, which is never in this tree (CLAUDE.md). HD has the small map
-marker, which is derived artwork it may ship (decision 42), and no big
-design picture at all. A cell therefore shows the ship's NAME, its
-owner's colour and whether it is selected. Marked in `layout.json`
-`marks`, in the module docstring of `screen.py`, and in
-`doc/briefs/134-parked-for-data.md`.
+**THE CELLS CARRY THE SHIP'S OWN PICTURE — THE OMISSION IS LIFTED**
+(work order 142 D1). It used to read "SHIPS.LBX is MOO2's artwork,
+which is never in this tree, so a cell shows a name and a colour".
+The artwork is still never in this tree and never will be (decisions
+40 and 42); what changed is that this stopped being the same statement
+as "HD cannot draw it". `tools/fleet_art_extract.py` reads the
+player's OWN installation and `screens/fleets/fltart.py` decodes it at
+load time (decision 38), so the cell draws
+`SHIPS.LBX ship_type + colour * 50` — `KEN::Do_Get_Ship_Picture_Seg`,
+ken.cpp:451-466 — whenever the player has extracted it.
+
+WITHOUT those files, which is the state of every fresh clone, the cell
+falls back to the NAME and the builder's colour exactly as before, and
+the screen says how to get them. That fallback is not documentation:
+the smoke test forces both states.
 
 **THE DAMAGE BAR IS AN OMISSION FOR A DIFFERENT REASON.**
 `FLEETPOP::Draw_Damage_Bars_` (fleetpop.cpp:41-81) reads
@@ -36,14 +42,20 @@ undecoded.
 What IS here is what the verified spec carries: the name, the location,
 the shield, the weapon list and the specials.
 """
+from core.structs import player as player_struct
 from core.structs import ship as ship_struct
 from core.structs import star as star_struct
+
+#: `Do_Get_Ship_Picture_Seg`'s set for an owner that is not a player
+#: (ken.cpp:459-462, MAX_PLAYERS is 8 at consts.h:7).
+MONSTER_SET = 8
 
 
 class Cell:
     """One big-icon cell: what the grid draws in slot `slot`."""
 
-    def __init__(self, slot, ship_idx, selected, view):
+    def __init__(self, slot, ship_idx, selected, view, sprite_set=None,
+                 ramp=None):
         self.slot = slot
         self.ship_idx = ship_idx
         self.selected = selected
@@ -59,6 +71,39 @@ class Cell:
         self.builder = (getattr(view, "previous_owner", None)
                         if view else None)
         self.owner = getattr(view, "owner", None) if view else None
+        # WHICH PICTURE, AND WHICH COLOURS — two different owners, and
+        # they were read as one until work order 142 D1. `picture_num`
+        # (offset 92) picks the hull; `sprite_set` is the BUILDER's
+        # colour and selects the artwork set (ken.cpp:453, :466);
+        # `ramp` is the CURRENT owner's colour and selects the palette
+        # the screen installs over 192..239 (flt1.cpp:561). A captured
+        # ship therefore keeps its old hull in its new colours.
+        self.picture = getattr(view, "picture_num", None) if view else None
+        self.sprite_set = sprite_set
+        self.ramp = ramp
+
+
+def player_colour(game_state, index):
+    """`_player[index].color`, or None when there is no such player.
+
+    The indirection the original makes at ken.cpp:459-462 and that
+    this screen made nowhere: a player INDEX is not a colour, and the
+    two coincide often enough in a fresh game to hide the difference.
+
+    **A DELIBERATE DIVERGENCE, MARKED.** The original tests
+    `player_idx < MAX_PLAYERS` on a value it has already sign-extended
+    (ken.cpp:453), so `previous_owner` 0xFF reaches `_player[-1]` and
+    reads whatever is in front of the table. None comes back here
+    instead and the caller falls to the monster set. Reproducing an
+    out-of-bounds read is not transcription.
+    """
+    raws = getattr(game_state, "player_raw", None) or []
+    if index is None or not 0 <= int(index) < len(raws):
+        return None
+    try:
+        return int(player_struct.parse(raws[int(index)]).color)
+    except (AttributeError, IndexError, TypeError, ValueError):
+        return None
 
 
 def cells(fleet_view, game_state):
@@ -71,7 +116,12 @@ def cells(fleet_view, game_state):
             raw = raws[ship_idx]
             if len(raw) >= ship_struct.SIZE:
                 view = ship_struct.parse(raw)
-        out.append(Cell(slot, ship_idx, selected, view))
+        built = player_colour(game_state,
+                              getattr(view, "previous_owner", None))
+        held = player_colour(game_state, getattr(view, "owner", None))
+        out.append(Cell(slot, ship_idx, selected, view,
+                        sprite_set=MONSTER_SET if built is None else built,
+                        ramp=MONSTER_SET if held is None else held))
     return out
 
 

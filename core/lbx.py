@@ -166,13 +166,45 @@ def read_palette(blob, frame_count):
     """
     pos = 12 + 4 * (frame_count + 1)
     start, count = struct.unpack_from("<hh", blob, pos)
-    pos += 4
+    return palette_entries(blob, pos + 4, start, count)
+
+
+def palette_entries(blob, pos, start, count):
+    """`count` `s_palette_entry` at `pos` -> `{index: (r, g, b)}`.
+
+    THE ONE PLACE THE LAYOUT IS WRITTEN DOWN. `read_palette` reads a
+    palette embedded in an animation entry and `screen_palette` reads
+    one that IS the entry; both are the same four bytes, and the byte
+    order was wrong here once for as long as it had no second reader
+    (see `read_palette`). A second transcription of `{changed, r, g,
+    b}` would be a second chance to get it wrong, and only one of them
+    would be the one the smoke check pins.
+    """
     palette = {}
     for i in range(count):
         _changed, r, g, b = struct.unpack_from("<BBBB", blob, pos + 4 * i)
         palette[start + i] = (min(r * 4, 255), min(g * 4, 255),
                               min(b * 4, 255))
     return palette
+
+
+def screen_palette(blob, count=256):
+    """A palette that is the whole LBX entry, per `Load_Palette_`.
+
+    `fonts::Load_Palette_` (fonts.cpp:73) reloads FONTS.LBX entry
+    `palette_id + 1` and reads `(s_palette_entry*)loaded_palette +
+    start_index` — so the entries start at OFFSET 0 of the entry, with
+    no animation header in front of them, and the rest of the blob is
+    the mouse palette (`_mouse_palette`, the same function). This is
+    what a screen's own palette is, and it is what an entry with no
+    embedded palette of its own must be coloured with: `rgba_bytes`
+    answers a grey ramp for an index it has no colour for, which says
+    "this is an index" rather than inventing one.
+    """
+    if len(blob) < 4 * count:
+        raise LbxError(f"Palette block is {len(blob)} bytes; "
+                       f"{4 * count} needed for {count} entries.")
+    return palette_entries(blob, 0, 0, count)
 
 
 def decode_bitmap(blob, offset, width, height):

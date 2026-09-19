@@ -196,9 +196,9 @@
       "name": "inset_hint",
       "rect": [
         295,
-        88,
+        436,
         649,
-        377
+        29
       ],
       "style": {
         "skin": "text",
@@ -418,9 +418,9 @@
       "name": "inset_hint",
       "rect": [
         295,
-        88,
+        436,
         649,
-        377
+        29
       ],
       "style": {
         "skin": "text",

@@ -6458,6 +6458,12 @@ def main():
         # "a fallback says why" block.
         "core/fallbacknote.py": "HD EXTENSION",
 
+        # ADDED 19 September 2026, work order 142 D1: the integer
+        # magnification of the game's own sprites, which decision 28
+        # cannot cover because SHIPS.LBX holds one size. Its own check
+        # is the "the Fleets screen's own artwork" block.
+        "screens/fleets/fltart.py": "HD EXTENSION",
+
     }
     _MARKS = ("HD EXTENSION", "DEVIATION")
     _SELF = os.path.join("tools", "smoke_test.py")
@@ -18220,15 +18226,37 @@ def main():
     _fl_layout = _sjson.load(io.open(os.path.join(_fl_dir, "layout.json"),
                                      encoding="utf-8"))
 
-    # 1. THE SHIP PICTURE. SHIPS.LBX is MOO2's art and never in this
-    #    tree, so a grid cell shows a name and a colour and no picture.
-    assert "OMISSION" in _fl_src["fltrows.py"] and \
-        "ken.cpp:451-466" in _fl_src["fltrows.py"], (
-            "fltrows no longer marks the ship picture as an OMISSION or "
-            "no longer cites the function that draws it")
-    assert "picture" not in _fl_src["fltdraw.py"].lower() or \
-        "NO SHIP PICTURE" in _fl_src["fltdraw.py"], (
-            "fltdraw mentions a picture without saying it draws none")
+    # 1. THE SHIP PICTURE — **THE OMISSION IS LIFTED** (work order
+    #    142 D1). It was "SHIPS.LBX is MOO2's art and never in this
+    #    tree, so a cell shows a name and a colour". The art is still
+    #    never in this tree, and that has stopped being the same thing
+    #    as the picture not being drawable: `tools/fleet_art_extract.py`
+    #    reads the player's OWN installation and `fltart` decodes it at
+    #    load time, so the cell draws the original's picture whenever
+    #    the player has extracted it and falls back when they have not.
+    #
+    #    So the check changes shape rather than going away. What has to
+    #    hold now is that BOTH halves are real: the citation survives,
+    #    and the fallback is still there for the clone that has no
+    #    files — because a fallback nobody exercises is where this kind
+    #    of thing rots, and the session writing the code always has the
+    #    files.
+    assert "ken.cpp:451-466" in _fl_src["fltrows.py"] or \
+        "ken.cpp:466" in _fl_src["fltrows.py"] or \
+        "ken.cpp:466" in _fl_src["fltdraw.py"] + _fl_src["screen.py"], (
+            "the ship picture lost the citation of the function that "
+            "draws it in the original")
+    assert "fltart" in _fl_src["fltdraw.py"], (
+        "fltdraw no longer reaches the artwork loader, so the cells "
+        "cannot be drawing the original's picture")
+    assert "WITHOUT it" in _fl_src["fltdraw.py"], (
+        "draw_cells no longer documents the state a fresh clone is in")
+    # The fallback is not documentation: it runs. Forced, with the
+    # loader pointed at nothing, and it must still put something in the
+    # cell — the builder's colour block the screen drew before.
+    assert "owner_colour(cell.builder)" in _fl_src["fltdraw.py"], (
+        "the no-artwork fallback lost the builder's colour block; a "
+        "clone without the files would draw an empty grid")
 
     # 2. THE DAMAGE BAR, for a different reason: structural_damage 125
     #    and armor_damage 123 are hand counts the ship spec refuses to
@@ -19173,6 +19201,133 @@ def main():
        "with it, mode 600 read back from disk, a click arrives as a "
        "MOUSEBUTTONDOWN/UP pair at the window coordinates it was "
        "given, and main pumps it before the queue is drained")
+
+    # ── THE FLEETS SCREEN'S OWN ARTWORK ─────────────────────────────
+    #
+    # Work order 142 D1. The game's own pixels are NEVER in this tree
+    # (decisions 40 and 42), so the state a fresh clone is in is the
+    # one without them — and that is exactly the state that rots
+    # unnoticed, because the session that writes the code has the
+    # files. Both states are therefore FORCED here, neither is waited
+    # for, and the checks below run identically on a machine that has
+    # never seen a Master of Orion 2 installation.
+    from screens.fleets import fltart as _fa
+    import screens.fleets.fltdraw as _fd
+
+    # 1. THE EXTRACTED FILES ARE NOT IN THE TREE, BY ANY NAME. The
+    #    extractor's own output directory is the obvious one; the loop
+    #    after it is the real check, because a second copy under
+    #    another name is exactly how "never committed" has been broken
+    #    elsewhere in this project's history.
+    _fa_out = os.path.relpath(_fa.GAMEDATA, _root0 := os.path.dirname(SCREENS_DIR))
+    _sp0 = __import__("subprocess")
+    _fa_tracked = _sp0.run(["git", "ls-files", "-z"], cwd=_root0,
+                           capture_output=True, text=True)
+    _fa_names = [n for n in _fa_tracked.stdout.split("\0") if n]
+    assert _fa_names, "git ls-files returned nothing; the check is blind"
+    _fa_bad = [n for n in _fa_names
+               if n.startswith(_fa_out.replace(os.sep, "/") + "/")
+               or os.path.basename(n).lower() in
+               ("ships.lbx", "fleet.lbx", "fonts.lbx", "palette.bin")]
+    assert not _fa_bad, (
+        "extracted game data is TRACKED in this repository: "
+        f"{_fa_bad[:5]} — decisions 40 and 42, and the work order's "
+        "'no extracted game data in the commit'")
+
+    # 2. AND .gitignore SAYS SO, so the next `git add -A` cannot make
+    #    a liar of check 1. An exclusion that merely happens to hold
+    #    is not a rule.
+    with open(os.path.join(_root0, ".gitignore"), encoding="utf-8") as _fh:
+        _fa_ign = _fh.read()
+    assert "screens/fleets/assets/gamedata" in _fa_ign, (
+        ".gitignore does not cover the Fleets artwork output "
+        "(screens/fleets/assets/gamedata) — check 1 would then pass "
+        "only until somebody runs the extractor and commits")
+
+    # 3. THE ABSENT STATE IS A STATE, NOT AN ERROR. Forced by pointing
+    #    the loader at a directory that cannot exist.
+    _fa_none = _fa.FleetArt(os.path.join(_root0, "no-such-gamedata-dir"))
+    assert _fa_none.available is False
+    assert "fleet_art_extract" in _fa_none.reason, _fa_none.reason
+    for _call in (lambda a: a.ship(0, 0), lambda a: a.star(0),
+                  lambda a: a.selected_box(), lambda a: a.scanned_box(),
+                  lambda a: a.background(), lambda a: a.plate(347, 53),
+                  lambda a: a.radio("support", True)):
+        assert _call(_fa_none) is None, "an absent file must answer None"
+    assert _fa_none.ship_ramp(0) == {}, "no ramp without the files"
+
+    # 4. A MANIFEST FROM AN OLDER EXTRACTOR IS REFUSED rather than
+    #    decoded, which is decision 38's own reason for the version.
+    import tempfile as _fa_tf
+    with _fa_tf.TemporaryDirectory() as _fa_tmp:
+        with open(os.path.join(_fa_tmp, "manifest.json"), "w",
+                  encoding="utf-8") as _fh:
+            _fh.write('{"format": %d}' % (_fa.FORMAT_VERSION + 1))
+        _fa_old = _fa.FleetArt(_fa_tmp)
+        assert _fa_old.available is False
+        assert str(_fa.FORMAT_VERSION) in _fa_old.reason, _fa_old.reason
+
+    # 5. THE CENTRING IS THE ORIGINAL'S, INCLUDING ITS ROUNDING.
+    #    `0x39 - width` halved TOWARD ZERO (flt1.cpp:81-85), then + 1
+    #    and + 2. A sprite wider than the cell is the case that tells
+    #    Python's floor division apart from C's shift, so it is here.
+    assert _fa.NATIVE_CELL == 0x39, _fa.NATIVE_CELL
+    assert _fa.cell_offset(52, 48) == (3, 6), _fa.cell_offset(52, 48)
+    assert _fa.cell_offset(57, 57) == (1, 2)
+    assert _fa.cell_offset(59, 61) == (0, 0), _fa.cell_offset(59, 61)
+
+    # 6. THE MAGNIFICATION IS AN INTEGER, AND NOTHING ELSE. This is the
+    #    check that reads the HD EXTENSION marking in `fltart`.
+    _fa_src = open(os.path.join(SCREENS_DIR, "fleets", "fltart.py"),
+                   encoding="utf-8").read()
+    assert "HD EXTENSION" in _fa_src, "the deviation lost its marking"
+    _fa_tree = __import__("ast").parse(_fa_src)
+    _fa_scale = [n for n in __import__("ast").walk(_fa_tree)
+                 if isinstance(n, __import__("ast").Attribute)
+                 and n.attr in ("smoothscale", "rotozoom")]
+    assert not _fa_scale, (
+        "fltart resamples the game's pixels smoothly; the deviation "
+        "decision 28 allows is an INTEGER factor, nothing softer")
+    assert "int(step)" in _fa_src, (
+        "fltart.magnified must force the factor to an integer")
+
+    # 7. THE CELL SEAT IS AN INTEGER MULTIPLE OF THE NATIVE CELL,
+    #    centred — decision 54, shrink the slot. Checked as a RULE over
+    #    every slot at every resolution, not as one measured example.
+    for _fa_w, _fa_h in ((1920, 1080), (2560, 1440), (3840, 2160)):
+        _fa_rect = pygame.Rect(0, 0, _fa_w // 15, _fa_h // 8)
+        _fa_seat, _fa_step = _fd.cell_seat(_fa_rect)
+        assert _fa_seat.width == _fa_seat.height == _fa.NATIVE_CELL * _fa_step
+        assert _fa_seat.width <= _fa_rect.width
+        assert _fa_seat.height <= _fa_rect.height
+        assert abs((_fa_seat.x - _fa_rect.x)
+                   - (_fa_rect.right - _fa_seat.right)) <= 1
+        assert _fa.magnified(pygame.Surface((4, 4)), _fa_step).get_width() \
+            == 4 * _fa_step
+
+    # 8. A PLACEHOLDER IS NOT A SHIP. Slot 49 of every colour set is a
+    #    2x1 palette carrier (ken.cpp:71-77) and the monster set is
+    #    full of 1x1 stubs; drawing one would put a stray pixel in a
+    #    cell. The threshold is checked against the sizes that exist.
+    assert _fa.MIN_PICTURE > 2, _fa.MIN_PICTURE
+    assert _fa.MIN_PICTURE <= 48, "a real 52x48 picture must pass"
+    assert _fa.SHIP_PALETTE_SLOT == 49 and _fa.SHIP_STRIDE == 50
+    assert _fa.MAX_PLAYERS == 8, "consts.h:7"
+    assert set(_fa.SPECIAL_PALETTE) == {8, 9, 10, 11, 12, 13, 14}, (
+        "the owners ken.cpp:83-102 switches on")
+
+    # 9. THE FILTER RADIOS MAP TO THE FLTS FIELDS THE ENGINE POINTS AT
+    #    (flt1.cpp:1255-1256). A radio whose state came from somewhere
+    #    else would light for the wrong reason.
+    assert _fd.RADIOS == {"btn_support": ("support", "support_filter"),
+                          "btn_combat": ("combat", "combat_filter")}
+
+    ok("the Fleets screen's own artwork: never tracked and gitignored, "
+       "absent is a state that answers None everywhere, an older "
+       "format is refused, the centring keeps the original's rounding, "
+       "the magnification is integer-only and the seat an integer "
+       "multiple of the 0x39 cell, placeholders are not ships, and the "
+       "radios read the FLTS fields the engine points at")
 
     # ── WHAT A SCREEN REWRITES IS THAT SCREEN'S, NOT THE MAP'S ──────
     #

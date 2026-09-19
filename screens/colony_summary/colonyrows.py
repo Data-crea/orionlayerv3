@@ -325,7 +325,7 @@ INSET_SCALE_X = 506000
 INSET_SCALE_Y = 400000
 
 
-def galaxy_inset_stars(game_state, box=INSET_NATIVE):
+def galaxy_inset_stars(game_state, box=INSET_NATIVE, black_hole=9):
     """Every star as (native_x, native_y, colour_index).
 
     Transcribed from `MOVEBOX::Draw_Galaxy_Map_Box_` (movebox.cpp:4)
@@ -361,9 +361,21 @@ def galaxy_inset_stars(game_state, box=INSET_NATIVE):
         unowned otherwise               -> 0
         owned                           -> _player[owner].color
 
-    The black-hole line is `_using_colony_screen_palette ? 9 : 10`,
-    and 10 would be off the end of a ten-entry array; this screen sets
-    that flag, so 9 is the one that runs and 10 is not our problem.
+    The black-hole line is `_using_colony_screen_palette ? 9 : 10`
+    (movebox.cpp:70), so the index DEPENDS ON THE CALLING SCREEN and is
+    the `black_hole` parameter. This screen sets that flag and gets 9.
+    The Fleets screen clears it (flt1.cpp:522) and gets 10, which is a
+    real eleventh sprite there: `_fleet_galaxy_star_seg` is declared
+    `[11]` (mox.h:110) and `FLT1::Load_Galaxy_Stars_` fills all eleven
+    from FLEET.LBX 34..44 (flt1.cpp:1441-1444).
+
+    **THAT CORRECTS A NOTE THIS DOCSTRING USED TO CARRY**, which said
+    10 "would be off the end of a ten-entry array". It is off the end
+    of the COLONY screen's ten-entry `_colony_galaxy_star_seg`, and the
+    colony screen never asks for it; the fleet screen's array is one
+    longer and 10 is its black hole. The difference was invisible while
+    both indices drew the same flat dot, and stops being invisible the
+    moment the sprites are the original's.
 
     **TWO THINGS ABOUT INDEX 0 WORTH KNOWING BEFORE READING A
     SCREENSHOT.** It is both "unowned and unvisited" AND player colour
@@ -395,14 +407,15 @@ def galaxy_inset_stars(game_state, box=INSET_NATIVE):
     for star in stars:
         sx = ((int(star.x) * 1000 // scale) * 10) // div_x
         sy = ((int(star.y) * 1000 // scale) * 10) // div_y
-        out.append((sx, sy, _inset_color_index(star, players, local)))
+        out.append((sx, sy,
+                    _inset_color_index(star, players, local, black_hole)))
     return out
 
 
-def _inset_color_index(star, players, local):
+def _inset_color_index(star, players, local, black_hole=9):
     """movebox.cpp:67-79, in order."""
     if star_struct.is_black_hole(star):
-        return 9
+        return black_hole
     owner = int(star.owner)
     if owner < 0 or owner >= MAX_PLAYERS:
         if star_struct.visited_by(star, local) or owner in (-1, -2):

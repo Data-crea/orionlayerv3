@@ -33,6 +33,7 @@ from core import mouse as mouse_input
 from core.shipparts import ShipPartNames
 from screens.colony_summary import colonyrows
 
+from . import fltart
 from . import fltdraw, fltgeom, fltrows, fltwire
 
 log = logging.getLogger("fleets")
@@ -57,6 +58,10 @@ class FleetsScreen(ScreenBase):
         self._panel = []         # the scanned ship's lines
         self._parts = None       # ship part names (shields, weapons, specials)
         self._hover_cell = None  # slot under the pointer, HD's own hover
+        # The game's own artwork, when the player has extracted it.
+        # Never committed and never shipped, so `available` is False in
+        # a fresh clone and the cells fall back — `fltart` says why.
+        self._art = fltart.load()
 
     # ── Lifecycle ─────────────────────────────────────────
 
@@ -208,16 +213,43 @@ class FleetsScreen(ScreenBase):
 
         `Box.text` is deliberately not serialized (decision 37), so a
         value computed here can never reach `boxes.json`. The inset's
-        hint always stands — a click there sends nothing and never will
-        until relocation and move orders are built (OMISSION, 137 E5).
-        The status strip's stands only while HD has no star name to
-        put there, because the name is the part HD CAN say.
+        hint stands whenever it can be shown — a click there sends
+        nothing and never will until relocation and move orders are
+        built (OMISSION, 137 E5). The status strip's stands only while
+        HD has no star name to put there, because the name is the part
+        HD CAN say.
+
+        **AND THE INSET'S IS DROPPED WHEN A STAR IS UNDER IT.** The
+        strip sits on the map's bottom edge (`fltgeom.hint_rect`), and
+        a galaxy whose lowest stars reach that edge would have them
+        read through the words. The map is the thing this box explains;
+        covering part of it to say so is the wrong trade, so the words
+        go and the map stays whole. The OMISSION remains marked in
+        `layout.json` and in `fltwire`, which is where a marking has to
+        survive anyway — a hint that only appears sometimes was never
+        the marking (fundament: "a labelling rule without a check is an
+        intention").
         """
         for name, (_region, word) in fltgeom.HINTS.items():
             box = self.box_by_name(name)
             if box is None:
                 continue
-            if name == "status_hint" and self._status:
+            if name == "status_hint":
+                # **THE ORIGINAL SHOWS NOTHING HERE, SO NEITHER DO WE.**
+                # `Print_Fltscrn_Scanned_Star_Name_` is called only
+                # under `if (_galaxy_map_scanned_star > -1)`
+                # (flt1.cpp:397) — with nothing hovered the strip is
+                # not written at all, which is what the original's own
+                # screenshot shows. HD used to fill the emptiness with
+                # "Hover a stack in the game window", which invents a
+                # line the game never prints and makes an EMPTY state
+                # look like an explained one. The 137 E5 omission stays
+                # marked where a marking belongs, in `layout.json`
+                # `marks` and in `fltwire` — not as text on the screen.
+                box.text = None
+                continue
+            if name == "inset_hint" and fltgeom.hint_collides(
+                    self._inset_stars()):
                 box.text = None
                 continue
             box.text = self._words.get(word)
@@ -225,15 +257,18 @@ class FleetsScreen(ScreenBase):
     def render(self, surface):
         self._render_background(surface)
         self._fill_hints()
+        fltdraw.fill_inset(surface, self)
         for box in self.boxes:
             box.render(surface, self.layout, self.style)
         fltdraw.draw_slots(surface, self)
-        fltdraw.draw_cells(surface, self, self._cells)
+        fltdraw.draw_cells(surface, self, self._cells, self._art)
         fltdraw.draw_scroll(surface, self, self._first_row, self._total_rows)
-        fltdraw.draw_labels(surface, self, self._words, self.enabled_buttons())
+        fltdraw.draw_labels(surface, self, self._words,
+                            self.enabled_buttons(), self._art,
+                            self._filter_state())
         fltdraw.draw_panel(surface, self, self._panel)
         fltdraw.draw_inset(surface, self, self._inset_stars(),
-                           self._inset_markers())
+                           self._inset_markers(), self._art)
         fltdraw.draw_status(surface, self, self._status)
         # The frame LAST, so its metal covers the two reference px each
         # box is allowed to bleed under it (fltgeom.BLEED).
@@ -255,6 +290,20 @@ class FleetsScreen(ScreenBase):
         return self._view.enabled_buttons(
             getattr(self._state, "fields", None))
 
+    def _filter_state(self):
+        """Which filter radios are on, by box name.
+
+        `support_filter` and `combat_filter` come from the FLTS block
+        (open fix 27), which is the same pair of variables the original
+        hands `Add_Radio_Button_Field_` at flt1.cpp:1255-1256. Empty
+        when there is no block: a radio whose state is unknown is drawn
+        unlit rather than guessed at, which is the same answer the
+        screen gave before it could show the state at all.
+        """
+        block = getattr(self._state, "fleet_screen", None) or {}
+        return {name: bool(block.get(key))
+                for name, (_which, key) in fltdraw.RADIOS.items()}
+
     def _inset_stars(self):
         """Every star as (native_x, native_y, colour index) inside the
         inset box — `colonyrows.galaxy_inset_stars` with THIS screen's
@@ -263,8 +312,12 @@ class FleetsScreen(ScreenBase):
         than a third copy of `MOVEBOX::Draw_Galaxy_Map_Box_`."""
         if self._state is None:
             return []
+        # BLACK HOLE 10, NOT 9. `_using_colony_screen_palette ? 9 : 10`
+        # (movebox.cpp:70) and this screen clears the flag
+        # (flt1.cpp:522); the eleventh sprite exists here and is loaded
+        # (flt1.cpp:1441-1444, mox.h:110).
         return colonyrows.galaxy_inset_stars(
-            self._state, fltgeom.REGIONS["inset_map"])
+            self._state, fltgeom.REGIONS["inset_map"], black_hole=10)
 
     def _inset_markers(self):
         """Every ship stack marker as (native_x, native_y, owner).
