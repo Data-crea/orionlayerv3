@@ -14727,6 +14727,7 @@ def main():
     _bi_text = io.open(os.path.join(_bi_dir, "README.md"),
                        encoding="utf-8").read()
     _bi_linked = set(re.findall(r"\]\(([^)]+)\)", _bi_text))
+    _bi_re_num = re.compile(r"^(\d+)-")
     _bi_missing = [_f for _f in _bi_files if _f not in _bi_linked]
     assert not _bi_missing, (
         f"doc/briefs/README.md does not index {_bi_missing} — it says "
@@ -14738,8 +14739,36 @@ def main():
     assert len(_bi_files) >= 148, (
         f"the briefs folder holds {len(_bi_files)} files; it has only "
         f"ever grown, so this is a deletion rather than an import")
-    ok(f"every brief is in doc/briefs/README.md and every link resolves "
-       f"({len(_bi_files)} files)")
+
+    # AND NO NUMBER IS MISSING. The index check above asserts that every
+    # FILE is indexed; it cannot see a brief that was never imported at
+    # all, which is exactly how 125, 132, 133 and 134 went missing for a
+    # fortnight and how 135 went missing one day after the check was
+    # written. A gap is the shape of that fault.
+    #
+    # THE EXCEPTIONS ARE NAMED HERE WITH THEIR REASON, never waved
+    # through. A number that was taken and then withdrawn is a real
+    # thing and belongs on this list; a number nobody imported is not.
+    # The list is empty today, and that is the honest state: every
+    # number from 1 to the highest is in the folder.
+    _BI_ALLOWED_GAPS = {
+        # number: why it will never have a file
+    }
+    _bi_nums = {int(_m.group(1)) for _m in
+                (_bi_re_num.match(_f) for _f in _bi_files) if _m}
+    _bi_high = max(_bi_nums)
+    _bi_gaps = sorted(set(range(1, _bi_high + 1))
+                      - _bi_nums - set(_BI_ALLOWED_GAPS))
+    assert not _bi_gaps, (
+        f"doc/briefs/ has no file for {_bi_gaps} although it goes up to "
+        f"{_bi_high}. A brief that was never imported is invisible to "
+        f"the index check above, which is how 125, 132, 133, 134 and "
+        f"135 went missing. Import it, or put the number in "
+        f"_BI_ALLOWED_GAPS with the reason it will never have a file")
+    ok(f"every brief is in doc/briefs/README.md, every link resolves, "
+       f"and 1..{_bi_high} has no gap "
+       f"({len(_bi_files)} files, {len(_BI_ALLOWED_GAPS)} named "
+       f"exception(s))")
 
     # Decision numbers in the fundament are identities — references
     # elsewhere use the bare number. Two same-day sessions each took
