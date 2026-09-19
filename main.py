@@ -13,6 +13,7 @@ from core.dispatcher import Dispatcher
 from core.game_client import GameClient
 from core.original_view import OriginalView
 from core.editor import Editor
+from core import debuginput
 from core import fallbacknote
 from core import helppopup
 
@@ -108,6 +109,10 @@ class App:
         #: source as the help popup's, for the reason that entry gives
         #: (work order 139 D).
         self._note_backdrop = helppopup.Backdrop()
+        #: TOOL, off unless ORIONLAYER_DEBUG_INPUT is set: mouse and
+        #: key events from a socket, posted into the ordinary queue so
+        #: they take the same path a real click does (work order 142 C).
+        self._debug_input = debuginput.DebugInput.open()
         self._note_labels = self.res.load_json(
             "assets/shared/fallback/labels.json", {}) or {}
 
@@ -161,10 +166,17 @@ class App:
             self._render()
             self.clock.tick(TARGET_FPS)
 
+        if self._debug_input is not None:
+            self._debug_input.close()
         self.client.disconnect()
         pygame.quit()
         sys.exit()
     def _handle_events(self):
+        # BEFORE the queue is drained, so anything posted here is in
+        # this frame's events and not the next one's. It posts and
+        # stops: from here on a debug click IS a click (decision 5).
+        if self._debug_input is not None:
+            self._debug_input.pump()
         for event in pygame.event.get():
             # Adjust mouse positions for fullscreen offset
             if self._fs_offset and hasattr(event, 'pos'):
