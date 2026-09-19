@@ -18404,6 +18404,15 @@ def main():
                 _f.x_end, _f.y_end = _ox + 73, _oy + 27
                 _f.field_type, _f.hotkey = _types[0], _hk
                 _out.append(_f)
+        # AND THE CATCHER, which `Add_Fleet_Screen_Fields_` adds LAST
+        # (flt1.cpp:1262) and which is how `fltwire.has_fleet_list`
+        # knows the list is this screen's at all (work order 142 A). A
+        # fixture without it is a list that is still the map's.
+        _f = _gs_mod.FieldInfo()
+        _f.index = 100 + len(_out)
+        (_f.x, _f.y, _f.x_end, _f.y_end) = _flw.CATCHER_RECT
+        _f.field_type, _f.hotkey = _flw.TYPE_HIDDEN, 0
+        _out.append(_f)
         return _out
 
     _fl_app, _fl_other = _fl_plv.build_screen(1920, 1080)
@@ -18852,6 +18861,97 @@ def main():
        "its own, SCRAP's two confirmation fields and five near-misses "
        "are not, nothing is sent while it hands back, and it returns "
        "to READY when they go")
+
+    # ── THE ORIGINAL DOES NOT FLASH UP WHEN THE SCREEN OPENS ────────
+    #
+    # Work order 142 A. `MOX2::Screen_Control_` calls `ext::Tick` at
+    # the top of its loop (mox2.cpp:40) and dispatches to
+    # `Fleet_Screen_` after it, so the first snapshot that says screen
+    # 4 still carries the galaxy map's field list. 139 A made that
+    # visible and 140 measured it live — 24 strangers, then one — and
+    # every open showed the game's own picture for about a second.
+    #
+    # WAITING is that state. It is recognised by the field
+    # `Add_Fleet_Screen_Fields_` adds LAST,
+    # `Add_Hidden_Field_(0, 0, 639, 479, "", 0)` (flt1.cpp:1262): its
+    # presence means the whole list is built. Checked against RECORDED
+    # live lists rather than assumed — none of the galaxy map's four in
+    # `tools/galaxy_box_fields.json` carries a full-screen field, and
+    # the one list that does is a message box's own catcher with hotkey
+    # ESC (textbox.cpp:246), which is why the hotkey is part of the
+    # test.
+    assert not _flw.has_fleet_list([]), "an empty list is not ours"
+    _wt_map = _sjson.load(io.open(os.path.join(
+        os.path.dirname(SCREENS_DIR), "tools", "galaxy_box_fields.json"),
+        encoding="utf-8"))
+
+    def _wt_rows(rows):
+        # The fixture stores some entries as a bare list of rows and
+        # some as {_what, fields}; both are the same recording.
+        if isinstance(rows, dict):
+            rows = rows["fields"]
+        _out = []
+        for _r in rows:
+            _f = _gs_mod.FieldInfo()
+            (_f.index, _f.x, _f.y, _f.x_end, _f.y_end, _f.field_type,
+             _f.hotkey) = _r
+            _out.append(_f)
+        return _out
+
+    for _wt_name in ("closed", "fleet_own", "fleet_monster", "system"):
+        assert not _flw.has_fleet_list(_wt_rows(_wt_map[_wt_name])), (
+            f"the galaxy map's recorded list '{_wt_name}' reads as the "
+            f"Fleets screen's own")
+    # The message box's catcher carries ESC and must NOT pass either.
+    assert not _flw.has_fleet_list(_wt_rows(_wt_map["modal"])), (
+        "a message box's full-screen catcher (hotkey ESC, "
+        "textbox.cpp:246) reads as the Fleets list")
+    assert _flw.has_fleet_list(_fl_fields(6)), "our own list does not"
+
+    # 1. THE MAP'S LIST WITH SCREEN 4 IS **WAITING**, and WAITING keeps
+    #    HD's own picture up and sends nothing.
+    _wt_gs = _fl_snapshot(ship_icons=_ff_icons)
+    _wt_gs.fields = _wt_rows(_wt_map["closed"])
+    _fl_scr.update(_wt_gs)
+    assert _fl_scr._view.state == _flw.WAITING, _fl_scr._view.state
+    assert not _fl_scr.wants_original(), (
+        "WAITING handed over; that is the flash 142 A is about")
+    assert _fl_scr._view.waiting and not _fl_scr._view.ok
+    assert _fl_scr.fallback_reason(), "WAITING says nothing"
+    _fl_sent.clear()
+    _fl_scr.handle_click(*_fl_slots[1].center)
+    _fl_scr.handle_click(*_fl_scr.box_by_name("btn_all").screen_rect.center)
+    _fl_scr.handle_mousewheel(1, 960, 540)
+    _fl_scr.handle_key(27)
+    assert _fl_sent == [], (
+        f"WAITING sent {_fl_sent} into the previous screen's list")
+    _fl_scr.render(_fl_surf)
+
+    # 2. THE LIST ARRIVES -> READY, on the next update and nothing else
+    #    (decision 21: the state ends on the event, never on a timer).
+    _wt_gs.fields = _fl_fields(6)
+    _fl_scr.update(_wt_gs)
+    assert _fl_scr._view.state == _flw.READY, _fl_scr._view.state
+    assert not _fl_scr.wants_original()
+
+    # 3. AND FOREIGN_FIELDS IS NOW THE REAL BOX CASE ONLY: our list,
+    #    plus GENDRAW::Confirmation_Box_'s two (gendraw.cpp:172-173).
+    _wt_gs.fields = _fl_fields(6) + _FF_CONFIRM
+    _fl_scr.update(_wt_gs)
+    assert _fl_scr._view.state == _flw.FOREIGN_FIELDS, _fl_scr._view.state
+    assert _fl_scr.wants_original(), (
+        "a native box over the Fleets screen must still hand over")
+
+    # 4. EVERY LIST ABOVE CARRIES A FIELD 0, because the engine cannot
+    #    send one without (141 B). The recorded ones have their own;
+    #    the built ones get FIELD_ZERO_ROW.
+    assert _wt_rows(_wt_map["closed"])[0].index == 0
+    assert _fl_fields(6)[0].index == 0
+
+    ok("the Fleets screen waits instead of flashing the original: the "
+       "map's own recorded lists are WAITING at screen 4 and send "
+       "nothing, the catcher field (flt1.cpp:1262) ends it, and "
+       "FOREIGN_FIELDS is left for a real native box")
 
     # ── WHAT A SCREEN REWRITES IS THAT SCREEN'S, NOT THE MAP'S ──────
     #

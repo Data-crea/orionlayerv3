@@ -76,6 +76,13 @@ NO_STACK = "NO_STACK"
 #: in the list it was handed (decision 20) — so nothing may be drawn as
 #: if it could be clicked.
 NO_FIELDS = "NO_FIELDS"
+#: The list is not this screen's YET. `MOX2::Screen_Control_` calls
+#: `ext::Tick` at the top of its loop (mox2.cpp:40), before it
+#: dispatches to `Fleet_Screen_` — so the first snapshot that says
+#: screen 4 still carries the galaxy map's field list. That is a
+#: transient and not a fault, and it must NOT show the original: work
+#: order 139 A made the state visible and 142 A stops it flashing.
+WAITING = "WAITING"
 #: The block and the field list disagree about the displayed icons.
 MISMATCH = "MISMATCH"
 #: A field is in the list that `Fleet_Screen_` does not build. Something
@@ -90,6 +97,30 @@ TYPE_HIDDEN = 7
 TYPE_BUTTON = 0
 #: `Add_Scroll_Field_` type (fields.cpp:605).
 TYPE_SCROLL = 6
+
+#: THE FIELD THAT SAYS THE LIST IS THIS SCREEN'S.
+#: `Add_Fleet_Screen_Fields_` ends with
+#: `Add_Hidden_Field_(0, 0, 639, 479, "", 0)` (flt1.cpp:1262) — added
+#: LAST, so its presence means the whole list is built.
+#:
+#: Checked against recorded live lists rather than assumed: none of the
+#: galaxy map's own four (`tools/galaxy_box_fields.json`: closed,
+#: fleet_own, fleet_monster, system) carries a full-screen field at
+#: all. The one that does is a message box's own catcher
+#: (`textbox.cpp:246`), and it carries hotkey ESC — which is why the
+#: hotkey is part of the test and not only the rect. The galaxy map
+#: adds one with hotkey 0 in its zoom rubber-band branch
+#: (mainscr.cpp:1382), and HD never enters that state: field 8 is
+#: never activated (fundament, section 3), and that list is screen 0's
+#: anyway.
+CATCHER_RECT = (0, 0, 639, 479)
+
+
+def has_fleet_list(fields):
+    """True when the live list is the one `Fleet_Screen_` built."""
+    return any(f.field_type == TYPE_HIDDEN and f.hotkey == 0
+               and livefields.rect(f) == CATCHER_RECT
+               for f in (fields or []))
 #: `Add_Radio_Button_Field_` type.
 TYPE_RADIO = 1
 
@@ -311,6 +342,22 @@ class View:
                 "stack and after the last own ship is gone.")
             return
 
+        # THE LIST IS NOT OURS YET — and that is a transient, not a
+        # fault. `Screen_Control_` ticks before it dispatches
+        # (mox2.cpp:40), so the first snapshot at screen 4 still
+        # carries the galaxy map's fields. Judged as FOREIGN_FIELDS it
+        # showed the original for about a second every time the screen
+        # opened (work order 142 A). It ends when the list arrives and
+        # on nothing else — no timer, decision 21.
+        if not has_fleet_list(fields):
+            self.state = WAITING
+            self.reason = (
+                "The field list is still the previous screen's: "
+                "`Fleet_Screen_` has not added its own yet "
+                "(flt1.cpp:1262). Nothing is drawn from it and nothing "
+                "is sent until it arrives.")
+            return
+
         # A FIELD NOBODY HERE BUILT MEANS SOMETHING ELSE IS ON SCREEN.
         # Checked before the cell validation, because it is the more
         # actionable answer when both could fire: "the list disagrees
@@ -375,6 +422,17 @@ class View:
     @property
     def ok(self):
         return self.state == READY
+
+    @property
+    def waiting(self):
+        """The one non-READY state that keeps HD's own picture up.
+
+        Everything else here is a reason to hand the screen back; this
+        is a reason to wait, and it lasts a frame or two. It is still
+        not `ok`, so nothing is drawn from the block and nothing is
+        sent — see `FleetsScreen.wants_original` and `_inert`.
+        """
+        return self.state == WAITING
 
     def scrollable(self):
         """True when the original would show its two scroll arrows —

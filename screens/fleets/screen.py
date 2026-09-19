@@ -134,7 +134,25 @@ class FleetsScreen(ScreenBase):
         promise one step in, and the same shape the research screen
         uses. A fleet grid drawn without the block would be twenty
         empty slots over a stack that has ships in it, which is worse
-        than the original picture and says nothing about why."""
+        than the original picture and says nothing about why.
+
+        WAITING IS THE ONE EXCEPTION (work order 142 A). The first
+        snapshot at screen 4 still carries the galaxy map's field list,
+        and handing over for it made the original flash up every time
+        the screen opened. It is a frame or two, it ends when the list
+        arrives (decision 21, no timer), and HD stays on its own
+        picture — empty, because nothing is `ok`, but its own.
+        """
+        return not (self._view and (self._view.ok or self._view.waiting))
+
+    def _inert(self):
+        """True while nothing here may be sent.
+
+        NOT the same question as `wants_original`: WAITING keeps the
+        HD picture up AND sends nothing, because a send resolves its
+        field in the list it was handed (decision 20) and that list is
+        the previous screen's.
+        """
         return not (self._view and self._view.ok)
 
     def fallback_reason(self):
@@ -317,7 +335,7 @@ class FleetsScreen(ScreenBase):
     def handle_click(self, screen_x, screen_y):
         if self.help_consumes_click(screen_x, screen_y):
             return None
-        if self.wants_original():
+        if self._inert():
             return None
         for box in self.boxes:
             if box.name in fltwire.HOTKEYS and box.contains(screen_x,
@@ -405,8 +423,7 @@ class FleetsScreen(ScreenBase):
         """
         if self.help_consumes_wheel(direction):
             return True
-        if self.wants_original() or not (self._view and
-                                         self._view.scrollable()):
+        if self._inert() or not (self._view and self._view.scrollable()):
             return False
         return self._activate("scroll_up" if direction > 0
                               else "scroll_down", "wheel")
@@ -414,7 +431,7 @@ class FleetsScreen(ScreenBase):
     def handle_key(self, key):
         if self.help_consumes_key(key):
             return
-        if self.wants_original():
+        if self._inert():
             return
         if key == self.KEY_ESC:
             self._activate("btn_return", "ESC")
