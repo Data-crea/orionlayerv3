@@ -13,6 +13,53 @@ right and the header had gone stale** — resolved 10 September 2026
 by dating the header to the edit and giving this session its
 paragraph, below, so the two agree again.
 
+This session (19 September 2026, work order 138): **why the HD Fleets
+screen does not appear — diagnosed as far as this machine allows, and
+STOPPED at the live part.** Nothing was fixed; nothing but this
+paragraph and the brief changed.
+
+**What is NOT the cause.** orion2re is on `orionlayer-local` at
+`e6199966`, both patch commits are ancestors of HEAD, `ORION2RE_EXT` is
+ON, `cmake --build --preset linux-debug` says "ninja: no work to do",
+and the binary carries `ext::Select_Fltscrn_Ship_` — the function open
+fix 28 adds and nothing else has. `version_check.py` reports all ten
+patches APPLIED and the three version strings agreeing. OrionLayer is
+at `origin/main`. The dispatcher maps game screen 4 to `fleets`.
+**`ACTIVATE_FIELD 12` is the Fleets button**, which the parked file
+left unverified: `mainscr.cpp:1394-1399` adds colonies, planets,
+fleets, leaders, races, info consecutively, and Data's own log shows
+colonies 10, planets 11, leaders 13 and info 15 all reaching their
+screens — there is no room between 11 and 13 for anything but the
+Fleets button at 12.
+
+**How "the HD screen does not appear" is produced.** `main._showing_
+original` (main.py:245-246) asks the top screen's `wants_original()`,
+and `FleetsScreen.wants_original` (screens/fleets/screen.py:138) is
+true whenever the View is not READY. So a Fleets screen that cannot
+vouch for what it would draw shows orion2re's own picture in
+OrionLayer's window — which from the outside is indistinguishable from
+the HD screen never arriving. Data's log (10:29:11 and 10:29:41)
+carries `galaxy_map: Action: fleets (field 12)` twice and nothing from
+`fleets` after either.
+
+**AND THE REASON IS INVISIBLE, which is the finding of its own.**
+`fallback_reason()` is never logged and never drawn: its only consumer
+in the tree is `tools/researchphases.py:177`, a research-screen tool.
+The dispatcher logs no screen switch, and `screens/fleets/` holds one
+`log` call in all (screen.py:311, a send with no live field).
+`logging.basicConfig` (main.py:16) adds no file handler, so the log is
+whatever stderr is redirected to. **Not fixed** — the correction is
+proposed in the report and is Data's to release.
+
+**Part B stopped: no reachable display.** `xdpyinfo -display :0` fails
+although `DISPLAY=:0` is set (the session is Wayland). The engine was
+started once and stopped at `mox2: data space allocated`, the same
+point work order 134 recorded, before `ext::Init()` and therefore
+before port 17362 ever opens; every later attempt was killed at once.
+SAVE1-6, 8, 9, 11 and SAVE10 hash identically before and after
+(SAVE7 does not exist). Evidence in
+`~/orionlayer-fixtures/evidence/work_order_138/`.
+
 This session (19 September 2026, work order 137): **a field the Fleets
 screen did not build hands back to the original, and the map sends nothing while the game
 is elsewhere.** 136 D found HD
