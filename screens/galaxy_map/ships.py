@@ -150,6 +150,78 @@ def native_size(kind, zoom):
     return zt.monster_icon_dimension(kind, zoom)
 
 
+# ── Which snapshot's icons the map may believe ───────────
+
+#: The only screen whose `s_ship_icon` array describes the galaxy map.
+#: SCREEN_MAIN, and the same number as GalaxyMapScreen.GAME_SCREEN_ID.
+MAP_SCREEN_ID = 0
+
+
+class _GatedState:
+    """A snapshot whose `ship_icons` are the map's; everything else is
+    the game's, live.
+
+    Same shape as `viewctl._ViewProxy` and for the same reason: one
+    attribute is ours and the rest must fall through. A COPY of the
+    state would have been simpler and is wrong — `core/game_client.py`
+    sets `fields`, `framebuffer` and `save_slots` onto the snapshot
+    object after `parse_state` built it, and a copy would freeze the
+    field list, which is the thing that decides what may be sent
+    (decision 59, work order 128 C).
+    """
+
+    def __init__(self, state, icons):
+        self._state = state
+        self.ship_icons = icons
+
+    def __getattr__(self, name):
+        return getattr(self._state, name)
+
+
+class IconGate:
+    """`s_ship_icon` is adopted from screen 0 and from nowhere else.
+
+    THE FLEETS SCREEN WRITES THE SAME ARRAY. `FLT::Set_Fltscrn_Small_
+    Ship_Icon_XYs_` overwrites `_ship_icon[i].x/y` with FLEET-INSET
+    coordinates (flt.cpp:54-55) and `FLT2::Add_Fltscrn_Small_Icon_
+    Fields_` overwrites `_ship_icon[i].stack_id` with the id of the
+    hidden field it just added for that icon (flt2.cpp:34). Both are
+    serialized like any other frame (ext_api.cpp:165-167), and only
+    `MAINSCR::Main_Screen_` puts them back (mainscr_main.cpp:314-315).
+
+    Nothing about the records says which space they are in: they parse,
+    they are in range, and a map drawn from them would put every stack
+    at an inset position and resolve a click on one to a field id —
+    with every other number on screen still correct, which is this
+    project's worst failure shape (decision 35).
+
+    So the gate is HERE, at the one point where a snapshot becomes the
+    map's state, and not at each reader: `render_fleets`, `maplines`,
+    `mapeta`, `mapinput`/`mapclick` and `boxmodel.remember` all read the
+    screen's `_state` and therefore all get the same answer. Work order
+    135 B; the hazard is question 15 of `doc/fleet_screen_reading.md`.
+
+    While the id is not 0 the last screen-0 icons stay, unchanged and
+    unscaled. On screen 0 the snapshot is handed back untouched, so the
+    normal case costs one comparison and no wrapper.
+    """
+
+    def __init__(self):
+        self.icons = []
+
+    def reset(self):
+        """Forget the icons — a fresh entry to the screen has none."""
+        self.icons = []
+
+    def state(self, game_state):
+        """The snapshot as the galaxy map may read it."""
+        if getattr(game_state, "current_screen",
+                   MAP_SCREEN_ID) == MAP_SCREEN_ID:
+            self.icons = getattr(game_state, "ship_icons", None) or []
+            return game_state
+        return _GatedState(game_state, self.icons)
+
+
 # ── Owner resolution ─────────────────────────────────────
 
 def wire_nodes(state):

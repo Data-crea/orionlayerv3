@@ -1,6 +1,6 @@
 # OrionLayer v3 — Project Status
 
-Updated: 18 September 2026
+Updated: 19 September 2026
 
 **How to read the date above.** The header names the day this file
 was last edited; the "This session (…)" paragraphs below it run
@@ -12,6 +12,25 @@ carrying entries dated 9 September inside it. **The convention is
 right and the header had gone stale** — resolved 10 September 2026
 by dating the header to the edit and giving this session its
 paragraph, below, so the two agree again.
+
+This session (19 September 2026, work order 135): **the galaxy map
+takes `s_ship_icon` from screen 0 and from no other screen id.** The
+Fleets screen writes the same wire array it does not own — inset
+coordinates into `x/y` (flt.cpp:54-55) and a FIELD ID into `stack_id`
+(flt2.cpp:34), both serialized like any other frame — so a map drawn
+from a screen-4 snapshot puts every stack in the inset's corner and
+resolves a click on one to a field id, with every other number on
+screen still correct. One gate, `ships.IconGate`, at the one point
+where a snapshot becomes the map's state; the six readers (the fleet
+render, `maplines`, `mapeta`, `mapinput`/`mapclick` and
+`boxmodel.remember`) all read that state and needed no rule of their
+own. Held by a check on real bytes through `parse_state`, shown red by
+removing the gate. **`MOX::_cur_map_scale` is clobbered in the same
+window and is NOT gated** — `flt.cpp:14` sets it to `_max_map_scale`
+and `flt1.cpp:487`/`:835` restore it around `Fleet_Screen_`; recorded
+here and as Evidence 8 in `doc/briefs/134-parked-for-data.md`, not
+fixed, because the rule Data set names `s_ship_icon`. Work order 134
+is on `origin/main` at `14a6db7`. Smoke **217 -> 218**.
 
 This session (18 September 2026, work order 133): **the galaxy map
 wears frame v3, and its holes are cut from geometry rather than from a
@@ -876,7 +895,7 @@ files under `doc/` and are only summarised here.
 | | |
 |---|---|
 | Python | 32,960 lines across 111 modules — `find . -name '*.py'`, `__pycache__` excluded, the smoke test's 6,400 included. The previous figure here (21,642 across 94) was carried from an unstated method and could not be reproduced |
-| Smoke test | `python tools/smoke_test.py` — **217 checks**, headless |
+| Smoke test | `python tools/smoke_test.py` — **218 checks**, headless |
 | Assets | 170 MB (select_race 68, galaxy_map 51, shared 23, new_game 21, colony_summary 1) |
 | Screens in HD | 9 of ~20–22 (the GAME menu overlay, work order Stop 2, every dialog of the popup; colony summary draws list, sidebar, scan box and galaxy inset, and MOVES POPS — the first HD gesture that drives the game; planets, brief 101, lists, sorts, restricts and returns) |
 | Setup from clone | `python tools/setup.py` (deps via the system package manager) |
@@ -1216,7 +1235,7 @@ in exactly ONE bucket. The numbers below are produced by
 check asserts this list still agrees with it — the same trade the
 check count makes, for the same reason.
 
-`tools/struct_probe.py` (**478** code, 753 total), `screens/galaxy_map/screen.py` (**442** code, 700 total), `tools/colony_list_preview.py` (**403** code, 772 total), `screens/custom_race/screen.py` (**400** code, 558 total), `tools/colony_move_hd.py` (**385** code, 586 total), `core/editor/editor.py` (**359** code, 430 total), `screens/galaxy_map/renderer.py` (**336** code, 758 total), `tools/ext_diag.py` (**325** code, 473 total), `core/style.py` (**310** code, 479 total).
+`tools/struct_probe.py` (**478** code, 753 total), `screens/galaxy_map/screen.py` (**444** code, 707 total), `tools/colony_list_preview.py` (**403** code, 772 total), `screens/custom_race/screen.py` (**400** code, 558 total), `tools/colony_move_hd.py` (**385** code, 586 total), `core/editor/editor.py` (**359** code, 430 total), `screens/galaxy_map/renderer.py` (**336** code, 758 total), `tools/ext_diag.py` (**325** code, 473 total), `core/style.py` (**310** code, 479 total).
 `smoke_test.py` is exempt by nature.
 
 **TWO TOOLS JOINED THE LIST ON 8 SEPTEMBER 2026 and one thing left

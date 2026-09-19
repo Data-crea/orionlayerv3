@@ -65,6 +65,26 @@ a second client — stop here.
    never measured.
 9. **Evidence 7 — PREV/NEXT and the two scroll arrows** change `stack`
    and `first_visible_row` in the block.
+10. **Evidence 8 — the map is intact after RETURN.** Leave the Fleets
+    screen back to the galaxy map and check two things before anything
+    else is sent. First, that every stack is drawn where the original's
+    own framebuffer draws it, side by side at 1920x1080 — a stack still
+    carrying the inset's coordinates sits in the top-left corner of the
+    map and nothing else on the screen looks wrong. Second, that a
+    click on a stack means THAT stack: click one and confirm the fleet
+    box that opens is the one clicked, by the ships it lists, not by
+    the box appearing at all.
+
+    This is what work order 135 B built the gate for — `ships.IconGate`
+    takes `s_ship_icon` from screen 0 and from no other screen id, held
+    by a smoke check on real bytes through `parse_state`. The check
+    proves the rule offline; only the live run proves the array comes
+    back from the engine the way `mainscr_main.cpp:314-315` says it
+    does. **`MOX::_cur_map_scale` is on the same list and is NOT
+    gated:** `flt.cpp:14` sets it to `_max_map_scale` while the screen
+    is up and `flt1.cpp:487`/`:835` save and restore it around
+    `Fleet_Screen_`, so record `map_scale` on the first snapshot after
+    RETURN and confirm it is the value the map had before.
 
 ### What must NOT be sent
 
@@ -103,7 +123,10 @@ a second client — stop here.
    up, every `s_ship_icon` on the wire is in FLEET-INSET space
    (flt.cpp:24-55) and its `stack_id` holds a FIELD ID (flt2.cpp:34).
    **The galaxy map must ignore `s_ship_icon` while the screen id is not
-   0** — that is not yet enforced anywhere.
+   0** — BUILT by work order 135 B (`ships.IconGate`, one gate in
+   `galaxy_map/screen.update`, a smoke check on real bytes). Question 15
+   itself is still Data's to confirm as a rule, and the live half is
+   Evidence 8 above.
 
 ---
 

@@ -17966,6 +17966,148 @@ def main():
        "click and the rest an activation, every box fits the opening "
        "at both resolutions and the inset keeps 305:182")
 
+    # ── THE GALAXY MAP TAKES s_ship_icon FROM SCREEN 0 AND NO OTHER ──
+    #
+    # Work order 135 B, from question 15 of doc/fleet_screen_reading.md.
+    # The Fleets screen writes the SAME wire array it does not own:
+    # FLT::Set_Fltscrn_Small_Ship_Icon_XYs_ overwrites _ship_icon[i].x/y
+    # with FLEET-INSET coordinates (flt.cpp:54-55) and
+    # FLT2::Add_Fltscrn_Small_Icon_Fields_ overwrites _ship_icon[i].
+    # stack_id with the id of the hidden field it just added for that
+    # icon (flt2.cpp:34). Both are serialized like any other frame
+    # (ext_api.cpp:165-167) and only MAINSCR::Main_Screen_ puts them
+    # back (mainscr_main.cpp:314-315).
+    #
+    # Nothing about those records says which space they are in — they
+    # parse, they are in range, and a map drawn from them puts every
+    # stack at an inset position while every other number on screen
+    # stays correct. Decision 35's failure shape exactly.
+    #
+    # THE RULE IS WHAT IS ASSERTED, not the Fleets case: the map adopts
+    # on screen id 0 and on no other id at all. And the state goes in as
+    # BYTES through core.game_state.parse_state, so what the screen is
+    # offered is a snapshot that really carries inset icons.
+    import struct as _ig_s
+    import colony_list_preview as _ig_plv
+    from core.game_state import (parse_state as _ig_parse,
+                                 SETTINGS_SIZE as _IG_SET,
+                                 PLAYER_SIZE as _IG_PL,
+                                 LEADER_SIZE as _IG_LD,
+                                 ANTARAN_SIZE as _IG_AN)
+
+    def _ig_snapshot(screen_id, icons):
+        """A STATE_SNAPSHOT payload whose icon array is `icons`, each
+        (stack_id, node_idx, star_idx, stack_slot, x, y)."""
+        _b = bytearray()
+        _b += _ig_s.pack("<hbihhhhhB b", screen_id, 0, 35024,
+                         0, 2, 0, 0, 0, 0, 0)
+        _b += _ig_s.pack("<hhhhh", 15, 0, 0, 759, 600)
+        _b += bytes(_IG_SET)
+        _b += bytes(_IG_PL * 8)
+        _b += _ig_s.pack("<h", 0)                     # stars
+        _b += _ig_s.pack("<h", 0)                     # ships
+        _b += _ig_s.pack("<h", 0)                     # colonies
+        _b += _ig_s.pack("<h", 0)                     # planets
+        _b += bytes([0])                              # nebulas
+        _b += bytes(_IG_LD * 67)
+        _b += bytes(_IG_AN)
+        _b += _ig_s.pack("<h", len(icons))
+        for _ic in icons:
+            _b += _ig_s.pack("<6h", *_ic)
+        _b += _ig_s.pack("<8h", 0, 0, 0, 0, 0, 0, 0, 0)
+        return _ig_parse(bytes(_b))
+
+    def _ig_held(screen):
+        """Every field of every icon the MAP holds — what it would draw a
+        stack at and what a click on one would name."""
+        return [(i.stack_id, i.node_idx, i.star_idx, i.stack_slot, i.x, i.y)
+                for i in (getattr(screen._state, "ship_icons", None) or [])]
+
+    def _ig_wire(state):
+        return [(i.stack_id, i.node_idx, i.star_idx, i.stack_slot, i.x, i.y)
+                for i in state.ship_icons]
+
+    #: Two stacks on the map: orbit slot 0 right of the star, slot 2
+    #: left of it, in the 640x480 map window (22,22)-(527,421).
+    _IG_MAP_ICONS = [(0, 0, 5, 0, 260, 210), (1, 1, 6, 2, 300, 214)]
+    #: The same two while screen 4 is up: x/y inside the Fleets inset
+    #: and a FIELD ID where stack_id was.
+    _IG_INSET_ICONS = [(137, 0, 5, 0, 452, 61), (138, 1, 6, 2, 468, 73)]
+    #: A later screen-0 frame, both stacks moved.
+    _IG_MOVED_ICONS = [(0, 0, 5, 0, 264, 218), (1, 1, 6, 2, 296, 206)]
+
+    _ig_app, _ = _ig_plv.build_screen(1920, 1080)
+    _ig_app.dispatcher.switch_to("galaxy_map")
+    _ig_map = _ig_app.dispatcher.screens["galaxy_map"]
+
+    # 1. SCREEN 0 IS ADOPTED, and that is the state to be held to.
+    _ig_map.update(_ig_snapshot(0, _IG_MAP_ICONS))
+    assert _ig_held(_ig_map) == _IG_MAP_ICONS, _ig_held(_ig_map)
+
+    # 2. NO OTHER SCREEN ID CHANGES IT. Four ids: the Fleets screen this
+    #    was found on, the GAME overlay that keeps the map updating
+    #    underneath it (decision 59), the Colonies screen and Planets.
+    for _ig_id in (4, 8, 20, 32):
+        _ig_other = _ig_snapshot(_ig_id, _IG_INSET_ICONS)
+        assert _ig_wire(_ig_other) == _IG_INSET_ICONS, (
+            "the snapshot does not carry the inset icons, so the case "
+            "below is not the one this check is about")
+        _ig_map.update(_ig_other)
+        assert _ig_held(_ig_map) == _IG_MAP_ICONS, (
+            f"screen {_ig_id}'s s_ship_icon reached the map as "
+            f"{_ig_held(_ig_map)}")
+        # And the refused snapshot is not touched: the Fleets screen
+        # reads the same object in the same frame.
+        assert _ig_wire(_ig_other) == _IG_INSET_ICONS, (
+            "the gate rewrote the snapshot instead of ignoring it")
+        # Everything that is NOT s_ship_icon stays LIVE, including a
+        # field list set onto the snapshot AFTER it was parsed — which
+        # core/game_client.py does, and which is what decides what may
+        # be sent (decision 59, work order 128 C). A copy of the state
+        # would pass every assertion above and fail this one.
+        _ig_other.fields = [_gs_mod.FieldInfo()]
+        assert _ig_map._state.fields is _ig_other.fields, (
+            "the map holds a COPY of the snapshot, so its field list is "
+            "one frame old")
+        assert _ig_map._state.stardate == 35024
+        assert _ig_map._state.ship_icons is not _ig_other.ship_icons
+
+    # 3. A FRESH SCREEN-0 SNAPSHOT IS TAKEN. The gate freezes the array
+    #    while the id is wrong; it does not stop the map updating.
+    _ig_map.update(_ig_snapshot(0, _IG_MOVED_ICONS))
+    assert _ig_held(_ig_map) == _IG_MOVED_ICONS, _ig_held(_ig_map)
+
+    # 4. ENTERING THE SCREEN FORGETS THEM. An empty map is an honest
+    #    state; yesterday's stacks over a new galaxy are not.
+    _ig_map.enter(None)
+    _ig_map.update(_ig_snapshot(4, _IG_INSET_ICONS))
+    assert _ig_held(_ig_map) == [], (
+        f"a re-entered map still holds {_ig_held(_ig_map)}")
+
+    # 5. AND THE GATE CANNOT BE WALKED AROUND. There is exactly one
+    #    adoption point in the tree, and no galaxy map module fetches a
+    #    snapshot of its own — a second one would be ungated, and every
+    #    reader (render_fleets, maplines, mapeta, mapinput/mapclick,
+    #    boxmodel.remember) would be back to needing its own rule.
+    _ig_dir = os.path.join(SCREENS_DIR, "galaxy_map")
+    _ig_src = {_f: io.open(os.path.join(_ig_dir, _f),
+                           encoding="utf-8").read()
+               for _f in sorted(os.listdir(_ig_dir)) if _f.endswith(".py")}
+    _ig_points = {_f: _t.count("_icon_gate.state(")
+                  for _f, _t in _ig_src.items() if "_icon_gate.state(" in _t}
+    assert _ig_points == {"screen.py": 1}, (
+        f"s_ship_icon is adopted at {_ig_points or 'no point at all'}, "
+        f"not at the one place a snapshot becomes the map's state")
+    _ig_own = sorted(_f for _f, _t in _ig_src.items() if "client.state" in _t)
+    assert not _ig_own, (
+        f"{_ig_own} read the client's snapshot directly, behind the gate")
+
+    ok("the galaxy map takes s_ship_icon from screen 0 only: real "
+       "bytes through parse_state, four wrong screen ids leave the "
+       "held icons exactly as they were, a fresh screen-0 frame is "
+       "taken, re-entry forgets, and the rest of the snapshot stays "
+       "live")
+
     # ── A BLANK WINDOW IS NOT A PICTURE, AND A FLAG IS NOT EITHER ──
     #
     # Work order 129's report said the two turn-start dialogs appeared

@@ -102,6 +102,7 @@ class GalaxyMapScreen(ScreenBase):
         self._starfield = sf.StarfieldLayer()
         self._ping = home_ping.HomePing()
         self._viewctl = viewctl.ViewControl()   # decoupled HD viewport
+        self._icon_gate = ship_icons.IconGate()  # s_ship_icon: screen 0 only
         self._pan_from = None                   # right-drag anchor
         self._eta_lock = None                   # mapeta: order pending
         self._eta_cache = {}
@@ -119,6 +120,7 @@ class GalaxyMapScreen(ScreenBase):
         self._starfield.configure(self._data.get("starfield", {}))
         self._hover_star = None
         self._viewctl.reset()
+        self._icon_gate.reset()
         self._pan_from = None
         self.update(game_state)
 
@@ -241,7 +243,12 @@ class GalaxyMapScreen(ScreenBase):
         """
         if game_state is None:
             return
-        self._state = game_state
+        # THE ONE PLACE A SNAPSHOT BECOMES THE MAP'S STATE, so it is the
+        # one place s_ship_icon is gated: the Fleets screen rewrites that
+        # array for its own inset while it is up (ships.IconGate, work
+        # order 135 B). Everything downstream reads `_state` and needs no
+        # rule of its own.
+        self._state = self._icon_gate.state(game_state)
         # ONLY WHILE THE GAME IS ON THIS SCREEN, AND ONLY WHILE THE LIST
         # IS THIS SCREEN'S. This screen keeps updating under an overlay:
         # in the GAME popup's Load dialog field 9 is the ninth slot row,
