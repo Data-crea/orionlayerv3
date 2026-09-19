@@ -321,9 +321,39 @@ def parse_fields(data: bytes) -> list:
 
     Byte layout lives in core.wire_protocol.parse_field_list_raw
     (single source, also used by the standalone ext_diag* tools).
+
+    **SLOT 0 IS DROPPED HERE, ONCE.** `fields::Clear_Fields_` sets
+    `_fields_count = 1`, not 0 (fields.cpp:207), so slot 0 is never
+    cleared and no `Add_*_Field_` ever writes it — while
+    `SerializeFields` sends every field from `i = 0`
+    (ext_api.cpp:326). Nothing in the engine sets the count to 0, so a
+    real field can never land there.
+
+    Decision 59 has said "never field 0" since 14 September 2026, and
+    until work order 142 B that was an INTENTION every consumer had to
+    keep on its own — sixteen of them, of which two did not: the
+    Planets screen's `_send_available` asked the whole list for a
+    hotkey, and its `_return` took the first ESC field and ACTIVATED
+    ITS INDEX, so a stale hotkey in slot 0 would have sent
+    `ACTIVATE_FIELD 0`. Work order 141 A had already paid for the same
+    shape on the Fleets screen. "A labelling rule without a check is
+    an intention, and it decays": dropping it once makes it a property
+    instead.
+
+    **THE INDICES STAY THE ENGINE'S.** `FieldInfo.index` carries the
+    array index `ACTIVATE_FIELD` sends; leaving the entry out
+    renumbers nothing.
+
+    The per-consumer filters stay where they are. They cost nothing,
+    they document the rule where a reader meets it, and one of them —
+    `injection._signature` — legitimately wants to see the whole list.
+    `tools/ext_diag.py` builds its own list straight from the bytes,
+    deliberately redundant, and still sees slot 0.
     """
     fields = []
     for idx, x, y, xe, ye, ft, hk in wire_protocol.parse_field_list_raw(data):
+        if idx == 0:
+            continue
         f = FieldInfo()
         f.index, f.x, f.y = idx, x, y
         f.x_end, f.y_end = xe, ye

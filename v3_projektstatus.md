@@ -33,6 +33,22 @@ a full-screen field, and the one list that does is a message box's
 catcher with hotkey ESC (textbox.cpp:246) — which is why the hotkey is
 part of the test. Smoke **225 -> 226**.
 
+**Work order 142 B: field 0 is dropped once, in
+`core.game_state.parse_fields`.** Decision 59 has said "never field 0"
+since 14 September, and until now that was an INTENTION sixteen
+consumers had to keep on their own — of which two did not: the Planets
+screen's `_send_available` asked the whole list for a hotkey, and its
+`_return` took the first ESC field and ACTIVATED ITS INDEX, so a stale
+hotkey in slot 0 would have sent `ACTIVATE_FIELD 0`. 141 A had already
+paid for the same shape on the Fleets screen. Dropping it once makes
+the rule a property instead of an intention. **The indices stay the
+engine's** — `FieldInfo.index` carries the array index
+`ACTIVATE_FIELD` sends, and leaving the entry out renumbers nothing —
+and `tools/ext_diag.py`'s raw reader still sees slot 0, deliberately.
+The per-consumer filters stay: they cost nothing, they document the
+rule where a reader meets it, and `injection._signature` legitimately
+wants the whole list. Smoke **226 -> 227**.
+
 This session (19 September 2026, work order 141): **the Fleets screen
 is READY, live, for the first time** — and the fixtures now carry the
 field the engine always sends.
@@ -1333,7 +1349,7 @@ files under `doc/` and are only summarised here.
 | | |
 |---|---|
 | Python | 32,960 lines across 111 modules — `find . -name '*.py'`, `__pycache__` excluded, the smoke test's 6,400 included. The previous figure here (21,642 across 94) was carried from an unstated method and could not be reproduced |
-| Smoke test | `python tools/smoke_test.py` — **226 checks**, headless |
+| Smoke test | `python tools/smoke_test.py` — **227 checks**, headless |
 | Assets | 170 MB (select_race 68, galaxy_map 51, shared 23, new_game 21, colony_summary 1) |
 | Screens in HD | 9 of ~20–22 (the GAME menu overlay, work order Stop 2, every dialog of the popup; colony summary draws list, sidebar, scan box and galaxy inset, and MOVES POPS — the first HD gesture that drives the game; planets, brief 101, lists, sorts, restricts and returns) |
 | Setup from clone | `python tools/setup.py` (deps via the system package manager) |
