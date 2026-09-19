@@ -13,6 +13,55 @@ right and the header had gone stale** — resolved 10 September 2026
 by dating the header to the edit and giving this session its
 paragraph, below, so the two agree again.
 
+This session (19 September 2026, work order 141): **the Fleets screen
+is READY, live, for the first time** — and the fixtures now carry the
+field the engine always sends.
+
+**A.** `fltwire.foreign_fields` skips field index 0, with the reason
+from the source: `fields::Clear_Fields_` sets `_fields_count = 1`, not
+0 (fields.cpp:207), so slot 0 is never cleared and no `Add_*_Field_`
+ever writes it, while `SerializeFields` sends every field from `i = 0`
+(ext_api.cpp:326).
+
+**B. Every fixture list carries a field 0 now, and the split is the
+lesson.** The RECORDED fixtures
+(`tools/galaxy_box_fields.json`, `tools/game_menu_fields.json`) always
+had it — they were captured live, and their first row is
+`[0, 0, 0, 0, 0, 0, 0]`. The HAND-BUILT ones did not, and that is
+exactly where 137 A's fault hid for two days. `FIELD_ZERO_ROW` is one
+constant with junk geometry rather than zeros (zeros are falsy; the
+recorded fixtures already cover the all-zero shape), and both halves
+are asserted: a re-recording that loses field 0 fails, and a hand-built
+Fleets list without one fails.
+
+**Nothing else fell over**, and the reason is worth keeping rather than
+counted as luck: the only two consumers that could have been hurt
+already knew. `OriginalView.find_field_at` skips `index < 1`
+(original_view.py:127) and `game_menu.nodes.real` drops it
+(nodes.py:46). The fallback fixture now gives slot 0 a FULL-SCREEN rect
+that covers the click point, so that skip is a real test instead of a
+comment.
+
+**C. Two residual hazards, read only and NOT changed.** Both are in the
+Planets screen and both come from asking the list a question without
+excluding slot 0: `_send_available` (screen.py:142-144) answers "is
+there a field with this hotkey" over every field, and `_return`
+(screen.py:277-279) takes the first field whose hotkey is ESC **and
+activates its index** — so a slot 0 carrying a stale ESC would make HD
+send `ACTIVATE_FIELD 0`. Decision 59's "never field 0" is exactly this
+and neither line obeys it. The full table and a recommendation on
+dropping field 0 centrally are in the report.
+
+**D. Live.** `HD draws: fleets, game screen 4` — three Katana in the
+player's colour, the inset with real stars, SCRAP correctly dimmed
+where nothing is selected, and the whole screen against the original's
+own picture in
+`~/orionlayer-fixtures/evidence/work_order_141/02_native_left_hd_right.png`.
+The Fleets button came back off the live list as field 12 at
+`(167, 434)-(230, 471)` type 13 hotkey 0x46 — `mainscr.cpp:1396` to the
+pixel. SAVE1-6, 8, 9, 11 and SAVE10 byte-identical; no selection, no
+scrap, no move; the engine was left running.
+
 This session (19 September 2026, work order 140): **the Fleets screen
 live — and it is ONE FIELD.** Data started orion2re from the desktop
 session and this session connected to it as the only client.

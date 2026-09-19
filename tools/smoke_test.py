@@ -59,6 +59,30 @@ if "--quiet" in sys.argv[1:]:
 
 import pygame  # noqa: E402
 
+#: THE ENGINE ALWAYS SENDS A FIELD 0, AND IT IS NOT A FIELD.
+#: `fields::Clear_Fields_` sets `_fields_count = 1`, not 0
+#: (fields.cpp:207), so slot 0 is never cleared and no `Add_*_Field_`
+#: ever writes it — and `SerializeFields` sends every field from
+#: `i = 0` (ext_api.cpp:326). So every list on the wire opens with
+#: whatever that slot happens to hold, and decision 59 says exactly
+#: that: "never field 0, which after a message box carries whatever
+#: geometry the list held before".
+#:
+#: A FIXTURE WITHOUT IT IS A LIST THE ENGINE CANNOT PRODUCE, and that
+#: is where work order 137 A's fault hid: the RECORDED fixtures
+#: (`tools/galaxy_box_fields.json`, `tools/game_menu_fields.json`)
+#: carry it because they were captured live, the HAND-BUILT ones did
+#: not, and the rule that choked on it passed every check for two days.
+#: Live on 19 September 2026 it was the ONE stranger in a list of 92
+#: and the whole reason the Fleets screen was never seen (140).
+#:
+#: The geometry here is JUNK ON PURPOSE and not zeros. The live one
+#: read `(0, 0, 0, 0)`, but zeros are falsy and a rule that happens to
+#: survive them is not a rule that survives the slot; the recorded
+#: fixtures already cover the all-zero shape.
+#: `(index, x, y, x_end, y_end, field_type, hotkey)`.
+FIELD_ZERO_ROW = (0, 7, 9, 11, 13, 0, 0)
+
 PASS = 0
 
 
@@ -13927,6 +13951,14 @@ def main():
             self.log.append(("key", _k))
 
     assert _gm._state is not None, "the galaxy map has no state to test on"
+    # FIELD 0 FIRST — the engine cannot send a list without one
+    # (FIELD_ZERO_ROW). It matters here: `mapboxes.live_field` matches
+    # on type and rect, and slot 0 carries whatever the last list left.
+    _mv_zero = _MvField(index=FIELD_ZERO_ROW[0], x=FIELD_ZERO_ROW[1],
+                        y=FIELD_ZERO_ROW[2], x_end=FIELD_ZERO_ROW[3],
+                        y_end=FIELD_ZERO_ROW[4],
+                        field_type=FIELD_ZERO_ROW[5],
+                        hotkey=FIELD_ZERO_ROW[6])
     _mv_grid = _MvField(index=23, x=22, y=22, x_end=527, y_end=421,
                         field_type=12, hotkey=0)
     _mv_game = _MvField(index=6, x=249, y=5, x_end=300, y_end=30,
@@ -13935,7 +13967,7 @@ def main():
     _mv_c = _map.screen_rect.center
     try:
         app.client, app.connected = _MvRec(), True
-        _gm._state.fields = [_mv_game, _mv_grid]
+        _gm._state.fields = [_mv_zero, _mv_game, _mv_grid]
         _gm.handle_right_button(True, *_mv_c)
         assert app.client.log == [("cancel", 23)], app.client.log
         assert _gm._pan_from is not None, "the pan must still start"
@@ -13944,10 +13976,10 @@ def main():
         assert _gm.handle_right_button(True, *_nav.screen_rect.center) is True
         assert _gm.help.visible and app.client.log == [], app.client.log
         _gm.handle_right_button(True, *_nav.screen_rect.center)   # closes
-        _gm._state.fields = [_mv_game]
+        _gm._state.fields = [_mv_zero, _mv_game]
         _gm.handle_right_button(True, *_mv_c)
         _gm.handle_right_button(False, *_mv_c)
-        _gm._state.fields = [_mv_game, _mv_grid]
+        _gm._state.fields = [_mv_zero, _mv_game, _mv_grid]
         app.connected = False
         _gm.handle_right_button(True, *_mv_c)
         _gm.handle_right_button(False, *_mv_c)
@@ -14346,8 +14378,14 @@ def main():
         def inject_key(self, _k):
             self.log.append(("key", _k))
 
-    _pl_fields = [_PlField(index=42, hotkey=27), _PlField(index=43,
-                                                          hotkey=ord("C"))]
+    # FIELD 0 FIRST — the engine cannot send a list without one
+    # (FIELD_ZERO_ROW). Its hotkey is 0, which is what a lookup by
+    # hotkey has to survive: `_send_available` asks "is there a field
+    # with this key", and a slot 0 carrying a stale key would answer
+    # for a button the screen does not have.
+    _pl_fields = [_PlField(index=0, hotkey=0),
+                  _PlField(index=42, hotkey=27),
+                  _PlField(index=43, hotkey=ord("C"))]
     for _pl_W, _pl_H2 in ((1920, 1080), (2560, 1440)):
         _pl_app, _ = _pv.build_screen(_pl_W, _pl_H2)
         _pl_rec = _PlRec()
@@ -15639,7 +15677,19 @@ def main():
     _fb_f = _FbField()
     (_fb_f.index, _fb_f.x, _fb_f.y, _fb_f.x_end, _fb_f.y_end,
      _fb_f.field_type, _fb_f.hotkey) = (4, 300, 200, 400, 300, 7, 0)
-    _fb_state.fields = [_fb_f]
+    # FIELD 0 FIRST, AND IT COVERS THE POINT. The engine cannot send a
+    # list without slot 0 (FIELD_ZERO_ROW), and decision 59 says that
+    # slot "carries whatever geometry the list held before" — a
+    # full-screen rect is exactly what a message box leaves there. So
+    # the fixture gives it one: a resolver that walks the list and
+    # takes the first hit answers 0, and the click goes nowhere.
+    # `OriginalView.find_field_at` skips `index < 1` and is the one
+    # place in the tree that already knew (original_view.py:127).
+    _fb_zero = _FbField()
+    (_fb_zero.index, _fb_zero.x, _fb_zero.y, _fb_zero.x_end,
+     _fb_zero.y_end, _fb_zero.field_type, _fb_zero.hotkey) = \
+        (0, 0, 0, 639, 479, 7, 0)
+    _fb_state.fields = [_fb_zero, _fb_f]
     _fb_client.log.clear()
     app2._handle_click(_fb_mid, 540)
     _fb_fallback_call = list(_fb_client.log)
@@ -18310,9 +18360,18 @@ def main():
                 _b += _fl_s.pack("<hB", _i, 1 if _i in selected else 0)
         return _fl_parse(bytes(_b))
 
+    def _fl_zero():
+        """The engine's own slot 0 — see FIELD_ZERO_ROW."""
+        _f = _gs_mod.FieldInfo()
+        (_f.index, _f.x, _f.y, _f.x_end, _f.y_end, _f.field_type,
+         _f.hotkey) = FIELD_ZERO_ROW
+        return _f
+
     def _fl_fields(count, hotkeys=True, first_row=0):
-        """A FIELD_LIST the way Add_Fleet_Screen_Fields_ builds it."""
-        _out = []
+        """A FIELD_LIST the way Add_Fleet_Screen_Fields_ builds it —
+        field 0 first, because the engine cannot send a list without
+        one (FIELD_ZERO_ROW)."""
+        _out = [_fl_zero()]
         for _i in range(count):
             _x, _y = _FL_CELLS[_i]
             _f = _gs_mod.FieldInfo()
@@ -18649,8 +18708,9 @@ def main():
         return _f
 
     def _ff_ours(n_cells=6):
-        """A list holding one of EVERY field the builder can add."""
-        _out = []
+        """A list holding one of EVERY field the builder can add, and
+        the engine's own slot 0 in front of them (FIELD_ZERO_ROW)."""
+        _out = [_fl_zero()]
         for _i in range(n_cells):
             _x, _y = _FL_CELLS[_i]
             _out.append(_ff_field((_x, _y, _x + 58, _y + 57),
@@ -18675,6 +18735,30 @@ def main():
                              _flw.TYPE_HIDDEN, 0x29, 300),
                    _ff_field((0x159, 0x12E, 0x18C, 0x143),
                              _flw.TYPE_HIDDEN, 0x29, 301)]
+
+    # FIELD 0 IS IN EVERY FIXTURE, AND THAT IS THE POINT OF THIS BLOCK.
+    # The RECORDED lists carry it because they were captured live; the
+    # HAND-BUILT ones did not, and that is where 137 A's fault hid for
+    # two days. Both halves are asserted, so a re-recording that drops
+    # it and a new builder that forgets it both fail here.
+    for _ff_rec in ("galaxy_box_fields.json", "game_menu_fields.json"):
+        _ff_j = _sjson.load(io.open(os.path.join(
+            os.path.dirname(SCREENS_DIR), "tools", _ff_rec),
+            encoding="utf-8"))
+        for _ff_k, _ff_v in _ff_j.items():
+            _ff_rows = _ff_v.get("fields") if isinstance(_ff_v, dict) else _ff_v
+            if not isinstance(_ff_rows, list) or not _ff_rows \
+                    or not isinstance(_ff_rows[0], list):
+                continue
+            assert _ff_rows[0][0] == 0, (
+                f"{_ff_rec}[{_ff_k}] does not start with field 0; a "
+                f"recorded list that lost it is no longer what the "
+                f"engine sends (fields.cpp:207, ext_api.cpp:326)")
+    assert _fl_fields(6)[0].index == 0 and _ff_ours()[0].index == 0, (
+        "a hand-built Fleets field list has no field 0")
+    assert FIELD_ZERO_ROW[0] == 0 and FIELD_ZERO_ROW[1:5] != (0, 0, 0, 0), (
+        "FIELD_ZERO_ROW must be index 0 with junk geometry: zeros are "
+        "falsy and a rule that survives them has not met the slot")
 
     _ff_gs = _fl_snapshot(ship_icons=_ff_icons)
     assert _ff_gs.fleet_screen is not None, (

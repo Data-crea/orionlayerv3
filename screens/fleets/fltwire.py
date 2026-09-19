@@ -200,6 +200,21 @@ def foreign_fields(fields, cells, icons):
         control_origins[_origin] = control_origins.get(_origin, ()) + _types
     out = []
     for f in (fields or []):
+        # FIELD 0 IS NOT A FIELD. `fields::Clear_Fields_` sets
+        # `_fields_count = 1`, not 0 (fields.cpp:207), so slot 0 is
+        # never cleared and no `Add_*_Field_` ever writes it — while
+        # `SerializeFields` sends every field from `i = 0`
+        # (ext_api.cpp:326). Nothing in the engine sets the count to 0,
+        # so a real field can never land there.
+        #
+        # The fundament has said so since decision 59 — "never field 0,
+        # which after a message box carries whatever geometry the list
+        # held before" — and this rule was written without it. Measured
+        # live on 19 September 2026 (work order 140): it was the ONE
+        # stranger in a list of 92, it read `(0, 0, 0, 0)` type 0, and
+        # it was the whole reason the Fleets screen was never seen.
+        if f.index == 0:
+            continue
         r = livefields.rect(f)
         types = EXACT_FIELDS.get(r)
         if types is not None and f.field_type in types:
