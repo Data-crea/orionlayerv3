@@ -30,7 +30,19 @@ window and is NOT gated** — `flt.cpp:14` sets it to `_max_map_scale`
 and `flt1.cpp:487`/`:835` restore it around `Fleet_Screen_`; recorded
 here and as Evidence 8 in `doc/briefs/134-parked-for-data.md`, not
 fixed, because the rule Data set names `s_ship_icon`. Work order 134
-is on `origin/main` at `14a6db7`. Smoke **217 -> 218**.
+is on `origin/main` at `14a6db7`.
+
+**And the briefs index had gone stale, which is why four work orders
+were missing.** `doc/briefs/README.md` says it holds every brief this
+project has been given; its table stopped at 128 while the folder held
+six more files, and the work-order files for 125, 132, 133 and 134 had
+never been imported at all. All four were in the paste cache — the
+place that page names as the only copy there used to be — and are now
+in the tree byte for byte, with the three that arrived as bare pastes
+named from their own first line and the fourth from the name Data gave
+it, `workorder_fleets_screen.md`. The index is complete in both
+directions and a check holds it there, so the next import that is not
+indexed fails the suite. Smoke **217 -> 219**.
 
 This session (18 September 2026, work order 133): **the galaxy map
 wears frame v3, and its holes are cut from geometry rather than from a
@@ -895,7 +907,7 @@ files under `doc/` and are only summarised here.
 | | |
 |---|---|
 | Python | 32,960 lines across 111 modules — `find . -name '*.py'`, `__pycache__` excluded, the smoke test's 6,400 included. The previous figure here (21,642 across 94) was carried from an unstated method and could not be reproduced |
-| Smoke test | `python tools/smoke_test.py` — **218 checks**, headless |
+| Smoke test | `python tools/smoke_test.py` — **219 checks**, headless |
 | Assets | 170 MB (select_race 68, galaxy_map 51, shared 23, new_game 21, colony_summary 1) |
 | Screens in HD | 9 of ~20–22 (the GAME menu overlay, work order Stop 2, every dialog of the popup; colony summary draws list, sidebar, scan box and galaxy inset, and MOVES POPS — the first HD gesture that drives the game; planets, brief 101, lists, sorts, restricts and returns) |
 | Setup from clone | `python tools/setup.py` (deps via the system package manager) |

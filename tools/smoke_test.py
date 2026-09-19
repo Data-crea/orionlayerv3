@@ -14707,6 +14707,40 @@ def main():
     assert not _junk, _junk
     ok("no archives or backup copies anywhere in the tree")
 
+    # ── EVERY BRIEF IS IN THE BRIEFS INDEX, BOTH WAYS ────────────
+    #
+    # doc/briefs/README.md opens with "Every brief, work order and
+    # package this project has been given". On 19 September 2026 (work
+    # order 135) its table stopped at 128 while the folder held six more
+    # files, and four work orders — 125, 132, 133 and 134 — had never
+    # been imported at all. The index is a hand-maintained list, and
+    # this project's rule for one of those is that it is legitimate only
+    # with a checker (decision 36's shape).
+    #
+    # Both directions, because they fail differently: a file nobody
+    # indexed is a brief that is in the tree and invisible, and a link
+    # to a file that is not there is the citation fault briefs 109 and
+    # 110 already paid for — a document naming a brief by a filename
+    # that never existed.
+    _bi_dir = os.path.join(os.path.dirname(SCREENS_DIR), "doc", "briefs")
+    _bi_files = sorted(_f for _f in os.listdir(_bi_dir) if _f != "README.md")
+    _bi_text = io.open(os.path.join(_bi_dir, "README.md"),
+                       encoding="utf-8").read()
+    _bi_linked = set(re.findall(r"\]\(([^)]+)\)", _bi_text))
+    _bi_missing = [_f for _f in _bi_files if _f not in _bi_linked]
+    assert not _bi_missing, (
+        f"doc/briefs/README.md does not index {_bi_missing} — it says "
+        f"it holds every brief this project has been given")
+    _bi_dangling = sorted(_l for _l in _bi_linked
+                          if not os.path.exists(os.path.join(_bi_dir, _l)))
+    assert not _bi_dangling, (
+        f"doc/briefs/README.md links {_bi_dangling}, which are not there")
+    assert len(_bi_files) >= 148, (
+        f"the briefs folder holds {len(_bi_files)} files; it has only "
+        f"ever grown, so this is a deletion rather than an import")
+    ok(f"every brief is in doc/briefs/README.md and every link resolves "
+       f"({len(_bi_files)} files)")
+
     # Decision numbers in the fundament are identities — references
     # elsewhere use the bare number. Two same-day sessions each took
     # "the next free number" and both landed on 36, which no rule in
