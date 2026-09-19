@@ -210,6 +210,45 @@ a command block.
 Do not chain a verifier behind `&&` — it exits non-zero when it finds
 something, which is the point.
 
+**The display a live run needs, and how to find it.** Work order 139 E.
+Two sessions before it recorded "`:0` is not reachable" and parked
+their live part on it. **`xdpyinfo` was never installed** — the probe
+was reporting `command not found`, and a tool that cannot measure
+something must not be read as the thing being absent. The display was
+reachable the whole time.
+
+This session runs Wayland with Xwayland on `:0`, and SDL's wayland
+driver does not work here ("the video driver did not add any
+displays") while its x11 driver does. So a live run sets three
+variables, and **the auth file is determined, never typed** — mutter
+makes a new name at every login:
+
+```bash
+export DISPLAY=:0
+export XAUTHORITY=$(ls -t /run/user/$(id -u)/.mutter-Xwaylandauth.* | head -1)
+export SDL_VIDEODRIVER=x11
+python - <<'EOF'
+import pygame; pygame.display.init(); pygame.display.set_mode((160, 120))
+print("display OK:", pygame.display.get_driver())
+EOF
+```
+
+`display OK: x11` means the environment is right; anything else means
+it is not, and the reason is in the exception, not in a missing
+binary. `XAUTHORITY` is usually already correct in an inherited
+environment — check it before setting it. Set these for the RUN, never
+in a profile: Data's system configuration is not ours to change.
+
+**AND THAT IS NOT ENOUGH FROM INSIDE A SANDBOXED SESSION.** With all
+three set, orion2re still stops after `mox2: data space allocated`,
+and the reason is not the game: the process sits at 0 % CPU blocked in
+`rt_sigsuspend`, and the shell that launched it exits 144 (SIGUSR1).
+It is being suspended from outside. Measure it that way before
+theorising — `ps -o stat,%cpu,wchan -p <pid>` separates "the game is
+busy" from "the game has been stopped" in one line. Where that
+happens, the live part is parked and Data starts the engine from their
+own desktop session instead.
+
 **Loading a save and restarting the game are yours to do** (Data's
 decision, 10 September 2026) — on two conditions: the report says
 which slot and which fixture was loaded for each live step, and it

@@ -55,6 +55,31 @@ switch line removed, and the note placed over the picture. Renders at
 1080p, 1440p, ultrawide, 2160p and 4:3 in
 `~/orionlayer-fixtures/evidence/work_order_139/`. Smoke **224 -> 225**.
 
+**Work order 139 E: the display was reachable all along, and the probe
+was the fault.** `xdpyinfo` is not installed on this machine, so
+`xdpyinfo -display :0` was answering `command not found` — and work
+orders 134 and 138 both read that as "no display" and parked their
+live part on it. A tool may report that it cannot measure something;
+it may not report the thing as absent, and this is that entry with a
+missing binary in the role.
+
+Measured instead, with what is there: Xwayland runs on `:0`,
+`XAUTHORITY` already points at mutter's own auth file, and SDL opens a
+real window through it — `x11: OK`, while `SDL_VIDEODRIVER=wayland`
+fails with "the video driver did not add any displays". The recipe is
+in CLAUDE.md under the live-run rules, with the auth file DETERMINED
+rather than typed, because mutter renames it at every login.
+
+**F is parked all the same, and for a different reason than anyone
+thought.** With all three variables set, orion2re still stops after
+`mox2: data space allocated` — and the process is at 0 % CPU blocked
+in `rt_sigsuspend` while the shell that launched it exits 144
+(SIGUSR1). It is being suspended from outside, not hanging: a
+sandboxed session cannot keep a long-lived child alive here. What Data
+would have to do is one step and is in the report. SAVE1-6, 8, 9, 11
+and SAVE10 are byte-identical to the work order 138 run; nothing was
+loaded and nothing was sent.
+
 This session (19 September 2026, work order 138): **why the HD Fleets
 screen does not appear — diagnosed as far as this machine allows, and
 STOPPED at the live part.** Nothing was fixed; nothing but this
