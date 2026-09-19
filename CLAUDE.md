@@ -239,15 +239,28 @@ binary. `XAUTHORITY` is usually already correct in an inherited
 environment — check it before setting it. Set these for the RUN, never
 in a profile: Data's system configuration is not ours to change.
 
-**AND THAT IS NOT ENOUGH FROM INSIDE A SANDBOXED SESSION.** With all
-three set, orion2re still stops after `mox2: data space allocated`,
-and the reason is not the game: the process sits at 0 % CPU blocked in
-`rt_sigsuspend`, and the shell that launched it exits 144 (SIGUSR1).
-It is being suspended from outside. Measure it that way before
-theorising — `ps -o stat,%cpu,wchan -p <pid>` separates "the game is
-busy" from "the game has been stopped" in one line. Where that
-happens, the live part is parked and Data starts the engine from their
-own desktop session instead.
+**AND THAT IS NOT ENOUGH FROM INSIDE A SANDBOXED SESSION — CAUSE
+OPEN.** With all three set, orion2re still stops after `mox2: data
+space allocated` from a session-launched run: the process sits at 0 %
+CPU in state `S` at `rt_sigsuspend`, and the shell that launched it
+exits 144. **Why is not established.** Work order 139 E wrote it up as
+"suspended from outside" and that reading was wrong twice, corrected
+by work order 140 A:
+
+- **`S` is not stopped.** `T` is stopped. A process in `S` at
+  `rt_sigsuspend` called `sigsuspend()` ITSELF and is waiting for a
+  signal of its own — its own code's doing, not an outside stop.
+- **144 is not SIGUSR1.** `128 + n` names signal *n* as `kill -l`
+  numbers them, and on Linux 16 is **SIGSTKFLT**; SIGUSR1 is 10. The
+  number was read off a habit rather than off `kill -l`.
+
+So the two observations stand and the conclusion does not. What is
+worth keeping is the METHOD: `ps -o stat,%cpu,wchan -p <pid>`
+separates "the game is busy" from "the game is waiting" in one line,
+and `kill -l <n>` is what names a signal — neither of them is a guess,
+and the guess is what had to be withdrawn. Where the engine does not
+come up, Data starts it from their own desktop session and this
+session connects to it (work order 140).
 
 **Loading a save and restarting the game are yours to do** (Data's
 decision, 10 September 2026) — on two conditions: the report says

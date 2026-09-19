@@ -13,6 +13,60 @@ right and the header had gone stale** — resolved 10 September 2026
 by dating the header to the edit and giving this session its
 paragraph, below, so the two agree again.
 
+This session (19 September 2026, work order 140): **the Fleets screen
+live — and it is ONE FIELD.** Data started orion2re from the desktop
+session and this session connected to it as the only client.
+
+The reason 138 could not see and 139 made visible, in the log and in
+the window:
+
+```
+11:55:24.393 galaxy_map: Action: fleets (field 12)
+11:55:24.504 dispatcher: screen: galaxy_map -> fleets (game screen 4)
+11:55:24.535 orionlayer: original shown: fleets, game screen 4 — 24 field(s)
+             … (0, 0, 0, 0) type 0, (-1, -1, -1, -1) type 8 ×5 and 18 more …
+11:55:25.630 orionlayer: original shown: fleets, game screen 4 — 1 field(s)
+             in the live list that this screen does not build:
+             (0, 0, 0, 0) type 0.
+```
+
+The first line at 24 strangers is the transient 139 A predicted and
+did not suppress: the snapshot already says screen 4 while the field
+list is still the galaxy map's. **The steady state is one stranger,
+and it is field index 0.**
+
+**`fields::Clear_Fields_` sets `_fields_count = 1`, not 0**
+(fields.cpp:207), so slot 0 is never cleared and no `Add_*_Field_` ever
+writes it — while `SerializeFields` sends every field from `i = 0`
+(ext_api.cpp:326). The fundament has said so since decision 59 —
+*"never field 0, which after a message box carries whatever geometry
+the list held before"* — and work order 137 A's field-set rule did not
+know it. One dummy field made every Fleets field list foreign, which
+is exactly why the screen was never seen. **The fault is 137 A's and
+the fix is NOT applied**: it is one `continue` in
+`screens/fleets/fltwire.foreign_fields`, and the wording is in the
+report.
+
+Everything else validated on the real list: all 92 fields but slot 0
+are recognised, the three grid cells, the eleven control origins, the
+inset star fields, the small ship icons, the debug field and the
+screen-filling catcher. RETURN came back live as `(556, 430)-(628,
+456)` — exactly 73 x 27, the extent work order 137 E4 derived from
+LEADERS — and RELOCATE as `(441, 380)-(530, 408)`, 90 x 29 against the
+help rectangle's 89 x 28, which is why that rule matches on the ORIGIN
+and not on the extent. The FLTS block read stack 2, owner 0, 3 icons,
+`ship_idx [3, 4, 2]`.
+
+**Part C, named and not changed:** at 4:3 the fallback note does cover
+the picture — the bottom 24 native rows, native y 456..479, at 1024x768,
+1440x1080, 1600x1200 and 1920x1440 alike. On the Fleets screen that is
+RETURN's last row; on the galaxy map it is the lower part of the nav
+buttons (434..471). At 16:9 and ultrawide the overlap is zero.
+
+SAVE1-6, 8, 9, 11 byte-identical before and after; SAVE10 unchanged
+too. No selection, no scrap, no move. The engine was left running for
+Data. Evidence in `~/orionlayer-fixtures/evidence/work_order_140/`.
+
 This session (19 September 2026, work order 139 A-D): **a fallback
 says why — in the log and on the screen.** 138 found the Fleets screen
 handing over with nothing anywhere saying why, and `fallback_reason()`
@@ -70,13 +124,16 @@ fails with "the video driver did not add any displays". The recipe is
 in CLAUDE.md under the live-run rules, with the auth file DETERMINED
 rather than typed, because mutter renames it at every login.
 
-**F is parked all the same, and for a different reason than anyone
-thought.** With all three variables set, orion2re still stops after
-`mox2: data space allocated` — and the process is at 0 % CPU blocked
-in `rt_sigsuspend` while the shell that launched it exits 144
-(SIGUSR1). It is being suspended from outside, not hanging: a
-sandboxed session cannot keep a long-lived child alive here. What Data
-would have to do is one step and is in the report. SAVE1-6, 8, 9, 11
+**F is parked all the same, and WHY IS OPEN.** With all three
+variables set, orion2re still stops after `mox2: data space
+allocated`: the process sits at 0 % CPU in state `S` at
+`rt_sigsuspend` and the launching shell exits 144. This paragraph
+first read that as "suspended from outside", and **work order 140 A
+withdrew the reading**: `T` is stopped and `S` at `rt_sigsuspend` is a
+process waiting on a signal of its own, and 144 is `128 + 16` =
+SIGSTKFLT, not SIGUSR1 (10). The observations stand, the conclusion
+does not, and the cause is open. What Data would have to do is one
+step and is in the report. SAVE1-6, 8, 9, 11
 and SAVE10 are byte-identical to the work order 138 run; nothing was
 loaded and nothing was sent.
 
