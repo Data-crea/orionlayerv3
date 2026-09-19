@@ -214,10 +214,62 @@ def hint_collides(stars, region="inset_map"):
 #:                             14, 234), flt1.cpp:1246)
 #:   down arrow  y 325..349  — field at (605, 325) (flt1.cpp:1215) down
 #:                             to the help rectangle's bottom edge
+#: **MEASURED OFF THE v4 FRAME, because the scroll bar is PAINTED and
+#: not a hole** (work order 146). Everything else on this screen gets
+#: its rect from a transparent cutout; this one has none, so the hit
+#: rects and the thumb have to be put on the art by measurement or
+#: they will sit beside it. Source pixels in
+#: `screens/fleets/assets/frame.png` (1445x811):
+#:
+#:   housing      x 1275..1308, the two rails at 1275-1280 and
+#:                1302-1308 with the dark track channel between them
+#:   up arrow     y  76..123    (block, chamfered, triangle at 98..112)
+#:   track        y 124..512    (luma ~22 inside the channel)
+#:   down arrow   y 513..564    (block, triangle at 532..550)
+#:
+#: "An asset is not a measurement" cuts the other way here: these ARE
+#: measurements OF the asset, because the asset is where the bar is.
+#: What they must never become is a source for anything else's
+#: geometry.
+#: **THE CHAMFER, MEASURED FROM THE FRAME.** Every v4 hole has
+#: rounded/chamfered corners, so the largest axis-aligned rectangle
+#: fully inside a hole is the hole inset by this many SOURCE pixels on
+#: every side. Content drawn outside it is not clipped — it is drawn
+#: and then covered, because the frame image renders last
+#: (`_render_frame_image`), which is how the ship panel's first line
+#: disappeared under the corner the first time v4 was rendered.
+#:
+#: A HAND-COPIED VALUE WITH A CHECKER (decision 36): the smoke test
+#: re-derives every number here from `assets/frame.png` and fails if
+#: the frame and this table stop agreeing.
+#: **THE v4 FRAME IS AN HD INVENTION.** The native Fleets screen has
+#: nothing like it: FLEET.LBX entry 0 (`Draw_Fleet_Screen_`,
+#: flt1.cpp:385) is flat blue plates with thin bevels, and every
+#: measurement in this module that cites a `flt1.cpp` line describes
+#: THAT screen, not this frame. The frame's holes are Data's layout,
+#: not the original's geometry, and nothing in the original can be
+#: cited for where they are. Marked here, in `layout.json`'s
+#: `frame._note`, in `v3_projektstatus.md`, and held by a smoke check.
+CONTENT_INSET_SRC = {
+    "inset_map": 14, "ship_panel": 13, "status_band": 6,
+    "prev_fleet": 5, "next_fleet": 5,
+    "btn_all": 7, "btn_relocate": 6, "btn_scrap": 6,
+    "btn_leaders": 6, "btn_support": 6, "btn_combat": 7,
+    "btn_return": 6,
+}
+#: every cell is the same hole, so one number covers all twenty
+CONTENT_INSET_SRC.update({f"cell_{i:02d}": 6 for i in range(20)})
+
+#: The frame's own pixel size, which `to_ref` scales from. Not a
+#: layout number — the only thing it is allowed to convert is the
+#: chamfer above.
+FRAME_SRC_SIZE = (1445, 811)
+
+SCROLL_V4_COLUMN = (1275, 76, 34, 489)
 SCROLL_PARTS = {
-    "up": (0, 0, 15, 27),
-    "track": (1, 27, 12, 234),
-    "down": (0, 266, 15, 25),
+    "up": (0, 0, 34, 48),
+    "track": (6, 48, 21, 389),
+    "down": (0, 437, 34, 52),
 }
 
 #: The grid the big icons sit in — flt1.cpp:506-513, flt2.cpp:116-127,
@@ -344,7 +396,11 @@ def scroll_parts(column_rect):
     track and the down arrow can never drift apart from each other.
     """
     cx, cy, cw, ch = column_rect
-    _, _, nw, nh = CONTROLS["scroll_column"][1]
+    # v4: scaled against the COLUMN AS MEASURED ON THE FRAME, not
+    # against the native control rect — the bar is painted there and
+    # the parts have to land on it.
+    _, _, nw, nh = SCROLL_V4_COLUMN[2], SCROLL_V4_COLUMN[3], 0, 0
+    nw, nh = SCROLL_V4_COLUMN[2], SCROLL_V4_COLUMN[3]
     fx, fy = cw / nw, ch / nh
     return {name: (cx + x * fx, cy + y * fy, w * fx, h * fy)
             for name, (x, y, w, h) in SCROLL_PARTS.items()}

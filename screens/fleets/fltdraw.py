@@ -52,6 +52,7 @@ DEFAULTS = {
     "scroll_arrow": (184, 228, 136),
     "label": (72, 144, 56),
     "label_dim": (8, 112, 8),
+    "radio_on": (8, 8, 80),
 }
 
 
@@ -68,15 +69,59 @@ def _rect(screen, name):
     return None
 
 
+#: The grid, as `flt1.cpp:506-507` sizes it. Kept here as the number
+#: the CHECK compares the frame against, not as a layout the code
+#: derives anything from — the rects come from the holes.
+GRID_COLS, GRID_ROWS = 4, 5
+
+
+def content_rect(screen, name):
+    """A box's rect shrunk clear of the frame's chamfered corner.
+
+    The frame draws LAST, so anything put in the corner of a hole is
+    covered rather than clipped — silently, and only at the corners.
+    `fltgeom.CONTENT_INSET_SRC` holds the measured chamfer per hole and
+    a smoke check re-derives it from the artwork.
+    """
+    r = _rect(screen, name)
+    if r is None:
+        return None
+    k = fltgeom.CONTENT_INSET_SRC.get(name)
+    if not k:
+        return r
+    scale = screen.layout.rect((0, 0, 1920, 1080))[2] / fltgeom.FRAME_SRC_SIZE[0]
+    pad = max(1, int(round(k * scale)))
+    return r.inflate(-2 * pad, -2 * pad)
+
+
 def icon_slots(screen):
-    """The twenty slot rects in window px, in display order, or []."""
-    area = _rect(screen, "icon_area")
-    column = _rect(screen, "scroll_column")
-    if area is None or column is None:
-        return []
-    grid = fltgeom.grid_rect(tuple(area), tuple(column))
-    return [pygame.Rect(int(x), int(y), int(w), int(h))
-            for x, y, w, h in fltgeom.icon_cells(grid)]
+    """The twenty slot rects in window px, in display order, or [].
+
+    **THE CELLS ARE THE FRAME'S HOLES** (decision 3, work order 146).
+    `tools/frame_holes.py --write` cuts `cell_00`..`cell_19` out of
+    `assets/frame.png` and `boxes.json` carries them; this reads those
+    boxes and computes nothing. Before v4 the grid was seated from the
+    native geometry (`fltgeom.grid_rect` + `icon_cells`) into one
+    `icon_area` hole, which was right while the frame had one opening
+    and is wrong now that it has twenty.
+
+    **DECISION 5 IS WHY THIS FUNCTION STILL EXISTS AT ALL.** Drawing
+    and hit-testing both call it — `draw_cells` for the picture,
+    `screen._slot_at` for the click — so there is one geometry and it
+    is the artwork's. A grid widget that computed its own cell layout
+    beside the holes would be the second copy that decision is about,
+    and the symptom would be a cell that looks right and clicks wrong.
+
+    Order is row-major, which is `cell_NN`'s own order and the order
+    `Set_Fltscrn_Big_Icons_` fills the grid in (flt2.cpp:122, :126).
+    """
+    out = []
+    for i in range(GRID_COLS * GRID_ROWS):
+        r = _rect(screen, f"cell_{i:02d}")
+        if r is None:
+            return []
+        out.append(pygame.Rect(r.x, r.y, r.width, r.height))
+    return out
 
 
 def draw_slots(surface, screen):
@@ -85,8 +130,12 @@ def draw_slots(surface, screen):
     fill = col("slot_fill")
     width = max(1, int(round(screen.layout.scale)))
     for slot in icon_slots(screen):
+        # **NO EDGE UNDER v4**: the slot IS a hole and the frame paints
+        # its border. Drawing one here as well gave every cell two
+        # outlines, the inner one offset by the hole bleed. The FILL
+        # stays — it is the backdrop the plate sits on, not a border.
         pygame.draw.rect(surface, fill, slot)
-        pygame.draw.rect(surface, edge, slot, width)
+    _ = edge, width
 
 
 def scroll_rects(screen):
@@ -190,16 +239,21 @@ def draw_labels(surface, screen, words, enabled=None, art=None,
         live = enabled is None or name in enabled
         on = bool((filters or {}).get(name))
         if on:
-            face = art.radio(RADIOS[name][0], True) if (
-                art is not None and art.available) else None
-            if face is not None:
-                step = max(1, min(rect.width // face.get_width(),
-                                  rect.height // face.get_height()))
-                face = fltart.magnified(face, step)
-                surface.blit(face, (rect.centerx - face.get_width() // 2,
-                                    rect.centery - face.get_height() // 2))
-            else:
-                surface.fill(col("scroll_thumb"), rect)
+            # **THE ORIGINAL'S RADIO FACE IS NOT DRAWN ANY MORE**, and
+            # this is the fix for the doubled label work order 146 part
+            # 3 asked about. FLEET.LBX 9 and 10 are whole BUTTONS: a
+            # border, a lit blue field and the words "Support" and
+            # "Combat" baked into the pixels. Blitting one and then
+            # drawing HD's own label on top printed the word twice,
+            # offset, and the v4 hole is narrower than the art so the
+            # baked word overflowed the blue field as well.
+            #
+            # Under v4 the FRAME is the border, so a whole button blitted
+            # inside a hole is the wrong shape twice over. The state is
+            # the lit field, which is what the face's frame 1 is for;
+            # the word stays HD's, in HD's font, at HD's size.
+            fill = content_rect(screen, name) or rect
+            surface.fill(col("radio_on"), fill)
         _centred(surface, screen, rect, text,
                  col("label") if live else col("label_dim"))
 
@@ -221,7 +275,10 @@ def draw_status(surface, screen, text, color=None):
     """The one line under the inset map (FLT2::Print_Fltscrn_Scanned_Star_Name_,
     flt2.cpp:338-522). Empty when nothing is scanned, which is the
     original's state too: it prints only on hover (flt1.cpp:397-399)."""
-    rect = _rect(screen, "status_text")
+    # v4: the status line IS the arrow bar's middle hole (help 363,
+    # evanhelp.cpp:154-157) — `status_text` was a box inside the old
+    # one-opening frame and has no hole of its own any more.
+    rect = content_rect(screen, "status_band")
     if rect is None or not text:
         return
     _centred(surface, screen, rect, text, color or col("label"), share=0.62)
@@ -350,7 +407,7 @@ def draw_cells(surface, screen, cells, art=None):
 
 def draw_panel(surface, screen, lines):
     """The scanned ship's lines, top down inside `ship_panel`."""
-    rect = _rect(screen, "ship_panel")
+    rect = content_rect(screen, "ship_panel")
     if rect is None or not lines:
         return
     size = max(10, int(rect.height * 0.055))

@@ -3,16 +3,10 @@
   "frame": {
     "image": "frame.png",
     "image_size": [
-      1920,
-      1080
+      1445,
+      811
     ],
-    "opening": [
-      72,
-      73,
-      1775,
-      921
-    ],
-    "_note": "screens/fleets/assets/frame.png is the Planets artwork with its inner struts removed - decision 12's frame variant, one artwork and no runtime tile swapping. Plain-scaled over the 1920x1080 reference area, the colony screen's way (decision 55) and the GAME menu's (decision 69); no 9-slice, no master. ONE opening, image (74, 75, 1771, 917), grown by tools/frame_holes.BLEED = 2 reference px on each side, which is the number quoted here. Work order 134 A measured it and v3_projektstatus.md records how it was cut.",
+    "_note": "**HD INVENTION \u2014 the native Fleets screen has no frame like this.** FLEET.LBX entry 0 (Draw_Fleet_Screen_, flt1.cpp:385) is flat blue plates with thin bevels; this metal frame with chamfered, orange-lit holes is OrionLayer's own and is not a transcription of anything. Work order 146, Data's chosen layout (fleets_frame_v4.png, sha256 4667e86d1405555d1cddce1b5647c3ced43141bf2a2efe5260de29dab6c1b198), shipped UNMODIFIED at its own 1445x811 and stretched over the reference area by _scale_frame, so its holes coincide with the boxes measured out of them. IT CUTS 32 HOLES and the boxes come from them (decision 3): tools/frame_holes.py --write with the fleets rule. v3 had ONE opening with the native regions seated inside it, which is why frame.opening is gone from this block. The image carries its OWN outer ring, which is not the shared ring other screens wear \u2014 see doc/briefs/146-parked-for-data.md. A short bright stroke beside the text panel's bottom-left corner is a known artefact of the source and is left alone.",
     "_no_cutouts_note": "DECISION 3 DOES NOT APPLY TO THIS SCREEN. It derives cutout boxes from a frame's holes; this frame has one hole and the regions inside it are hand-placed. tools/frame_holes.py has no `fleets` rule and --write is never run on it. The boxes come from fltgeom.seat_regions instead, seeded once by tools/fleet_boxes.py and F5-editable afterwards."
   },
   "regions": {

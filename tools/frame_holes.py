@@ -446,7 +446,99 @@ def name_holes_planets(holes, size=None, reference=None):
 
 RULE_NAMES["planets"] = {name for row in PLANETS_KEYS for name in row}
 
-RULES = {"galaxy_map": name_holes_galaxy_map,
+#: The Fleets frame's holes, in the order the ORIGINAL adds the
+#: fields — not in the order they happen to be found. Every name here
+#: is a control `screens/fleets/fltwire.CONTROL_ORIGINS` already knows
+#: by its `flt1.cpp` line, so the frame and the wire cannot drift into
+#: two different vocabularies.
+FLEETS_ROW1 = ["btn_all", "btn_relocate", "btn_scrap"]        # flt1.cpp:1195, :1229, :1187
+FLEETS_ROW2 = ["btn_leaders", "btn_support", "btn_combat",    # :1234, :1256, :1257
+               "btn_return"]                                  # :1201
+FLEETS_ARROW = ["prev_fleet", "status_band", "next_fleet"]    # :1217, help 363, :1218
+FLEETS_COLS, FLEETS_ROWS = 4, 5                               # flt1.cpp:506-507
+
+
+def name_holes_fleets(holes, size=None, reference=None):
+    """Fleets v4: 32 holes, named by POSITION, refusing anything else.
+
+    The galaxy map's rule is positional because its holes are not
+    hand-placed; this frame's are not hand-placed either — the grid was
+    regularised from one template cell — so the same reasoning applies,
+    and the refusals below are what keep "positional" from meaning
+    "whatever came out of the labeller".
+
+    The shape it insists on, each part measured from the artwork and
+    not assumed:
+
+      * exactly `FLEETS_COLS * FLEETS_ROWS` cells that share one size,
+        in a clean grid -> `cell_00` .. `cell_19`, row-major
+      * the two widest holes on the left -> `inset_map` (upper) and
+        `ship_panel` (lower)
+      * the three between them, by x -> PREV, the status band, NEXT
+      * the rest, in two rows below the cells -> the seven controls
+
+    Anything else raises: a frame whose holes this cannot name is a
+    frame nobody has measured, and guessing a name here puts content
+    under the wrong hole with everything still looking right.
+    """
+    if len(holes) != 32:
+        raise ValueError(f"fleets frame: {len(holes)} holes, 32 expected "
+                         f"(1 minimap + 3 arrow bar + 1 text panel + "
+                         f"{FLEETS_COLS * FLEETS_ROWS} cells + 7 controls)")
+    by_size = {}
+    for r in holes:
+        by_size.setdefault((r[2], r[3]), []).append(r)
+    cells = None
+    for wh, group in by_size.items():
+        if len(group) == FLEETS_COLS * FLEETS_ROWS:
+            cells = sorted(group, key=lambda r: (r[1], r[0]))
+            break
+    if cells is None:
+        raise ValueError("fleets frame: no group of "
+                         f"{FLEETS_COLS * FLEETS_ROWS} equally sized holes "
+                         "— the ship grid is not regular")
+    xs = sorted({r[0] for r in cells})
+    ys = sorted({r[1] for r in cells})
+    if len(xs) != FLEETS_COLS or len(ys) != FLEETS_ROWS:
+        raise ValueError(f"fleets frame: the {len(cells)} equal holes are "
+                         f"{len(xs)}x{len(ys)}, not "
+                         f"{FLEETS_COLS}x{FLEETS_ROWS}")
+    named = {f"cell_{i:02d}": r for i, r in enumerate(cells)}
+
+    rest = [r for r in holes if r not in cells]
+    left_edge = min(r[0] for r in cells)
+    left = sorted([r for r in rest if r[0] + r[2] <= left_edge],
+                  key=lambda r: r[1])
+    if len(left) != 5:
+        raise ValueError(f"fleets frame: {len(left)} holes left of the grid, "
+                         "5 expected (minimap, three arrow-bar, text panel)")
+    named["inset_map"] = left[0]
+    named["ship_panel"] = left[-1]
+    arrow = sorted(left[1:-1], key=lambda r: r[0])
+    for name, r in zip(FLEETS_ARROW, arrow):
+        named[name] = r
+
+    controls = [r for r in rest if r not in left]
+    if len(controls) != len(FLEETS_ROW1) + len(FLEETS_ROW2):
+        raise ValueError(f"fleets frame: {len(controls)} control holes, 7 "
+                         "expected")
+    controls.sort(key=lambda r: r[1])
+    row1 = sorted(controls[:len(FLEETS_ROW1)], key=lambda r: r[0])
+    row2 = sorted(controls[len(FLEETS_ROW1):], key=lambda r: r[0])
+    for names, row in ((FLEETS_ROW1, row1), (FLEETS_ROW2, row2)):
+        for name, r in zip(names, row):
+            named[name] = r
+    return named
+
+
+RULE_NAMES["fleets"] = (set(FLEETS_ROW1) | set(FLEETS_ROW2)
+                        | set(FLEETS_ARROW)
+                        | {"inset_map", "ship_panel"}
+                        | {f"cell_{i:02d}"
+                           for i in range(FLEETS_COLS * FLEETS_ROWS)})
+
+RULES = {"fleets": name_holes_fleets,
+         "galaxy_map": name_holes_galaxy_map,
          "colony_summary": name_holes_colony_summary,
          "planets": name_holes_planets}
 

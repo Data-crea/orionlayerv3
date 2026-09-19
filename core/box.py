@@ -123,6 +123,20 @@ class Box:
         elif skin == "thin_border":
             style_renderer.draw_thin_border(
                 surface, self.screen_rect, layout.scale)
+        elif skin == "none":
+            # **THE FRAME IS THE BORDER.** A box whose rect is a
+            # transparent hole in the screen's frame image already has
+            # its outline painted around it by the artwork; drawing a
+            # skin as well gives it two, offset by the bleed. Added for
+            # the Fleets v4 frame (work order 146), where thirty-two
+            # boxes sit in holes.
+            #
+            # It has to be a NAMED skin and not a missing `style`: the
+            # default is "panel" two lines below this, so a box with no
+            # style draws a filled panel with its own chamfered
+            # outline — which is exactly what appeared inside the v4
+            # holes the first time they were rendered.
+            pass
         elif skin == "panel":
             style_renderer.draw_panel(surface, self.screen_rect)
             if label:

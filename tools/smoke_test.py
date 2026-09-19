@@ -11956,7 +11956,30 @@ def main():
             _v = _intrusion(_al, _r)
             assert _v is not None, (_name, _cn)
             _b_worst[(_name, _cn)] = max(_v)
-            assert max(_v) <= _CLASS_B_BUDGET, (
+            # **A FRAME MAY DECLARE ITS CHAMFER INSTEAD.** The budget
+            # of 2 is the measurement of frames whose holes are square:
+            # any thickening of their rim fails. The Fleets v4 frame's
+            # holes are chamfered on purpose and the chamfer is LONG —
+            # 30 of the ship panel's 142 rows, so `_CORNER_TRIM`'s 18 %
+            # does not clear it and this reads 8 at what it takes for a
+            # straight edge. That is the artwork, not a rim.
+            #
+            # So a screen that has MEASURED its chamfer and insets its
+            # content by it is held to that number instead, which is a
+            # stronger statement than the flat budget: the intrusion
+            # must fit inside the inset the screen actually uses. The
+            # inset itself is checked against the artwork separately
+            # (the Fleets v4 frame block), so neither number can drift.
+            _b_allow = _CLASS_B_BUDGET
+            if _name == "fleets":
+                from screens.fleets import fltgeom as _b_flg
+                _b_allow = _b_flg.CONTENT_INSET_SRC.get(_cn, _CLASS_B_BUDGET)
+                assert _b_allow >= max(_v), (
+                    f"fleets/{_cn}: the frame reaches {max(_v)} px into "
+                    f"this hole at a straight edge but CONTENT_INSET_SRC "
+                    f"says {_b_allow}; content inset by the declared "
+                    f"number would still be covered")
+            assert max(_v) <= _b_allow, (
                 f"{_name}/{_cn}: the frame's opaque alpha reaches "
                 f"{max(_v)} source px into this cutout at a straight "
                 f"edge (L{_v[0]} R{_v[1]} T{_v[2]} B{_v[3]}), over the "
@@ -11993,71 +12016,99 @@ def main():
 
     # ── THE FLEETS OPENING IS THE ARTWORK'S, NOT A TYPED NUMBER ─────
     #
-    # Work order 137 E2, from the draft 136 C left at
-    # doc/briefs/136-draft-fleets-opening-check.py. Decision 3 does not
-    # apply to this screen — one hole, hand-placed regions inside it —
-    # and that is exactly why this is needed: no `frame_holes` rule
-    # covers `fleets`, `--write` is never run on it, and until now
-    # nothing in the tree read that PNG at all. `layout.json`'s
-    # `frame.opening` was a correct number with no checker, which is
-    # decision 36's shape.
+    # Work order 146. **THE FRAME NOW CUTS THIRTY-TWO HOLES** and the
+    # boxes are derived from them (decision 3), where v3 had ONE
+    # opening with hand-seated regions inside it. What the old check
+    # held — one hole, `frame.opening` equal to that hole plus BLEED,
+    # the image 1920x1080, the Planets master's strut stubs — was all
+    # about that frame and none of it survives v4. This is the
+    # replacement, and it holds the thing decision 3 cares about: the
+    # holes and the boxes still agree, as they do for `map_area`.
+    import numpy as _fo_np
+    from PIL import Image as _fo_Image
+    from screens.fleets import fltgeom as _flg
     _fo_png = res.screen_file("fleets", "assets", "frame.png")
     assert _fo_png and os.path.exists(_fo_png), "the Fleets frame is gone"
     _fo_iw, _fo_ih, _fo_holes = _fhB.find_holes(_fo_png)
-    assert len(_fo_holes) == 1, (
-        f"the Fleets frame cuts {len(_fo_holes)} holes; this screen is "
-        f"built on having exactly one and seating its regions into it "
-        f"(fltgeom.seat), so a second hole is a layout question")
-    _fo_hx, _fo_hy, _fo_hw, _fo_hh = _fo_holes[0]
-    _fo_want = [_fo_hx - _fhB.BLEED, _fo_hy - _fhB.BLEED,
-                _fo_hw + 2 * _fhB.BLEED, _fo_hh + 2 * _fhB.BLEED]
-    _fo_have = list(_sjson.load(io.open(
-        os.path.join(SCREENS_DIR, "fleets", "layout.json"),
-        encoding="utf-8"))["frame"]["opening"])
-    assert _fo_have == _fo_want, (
-        f"screens/fleets/layout.json says the opening is {_fo_have}; "
-        f"the artwork's own hole is {list(_fo_holes[0])} and BLEED is "
-        f"{_fhB.BLEED}, which makes it {_fo_want}. The number is the "
-        f"frame's, not a constant")
-    # AND THE IMAGE IS THE REFERENCE AREA 1:1, or "reference px"
-    # everywhere else on this screen is a different unit from the one
-    # measured on the PNG.
-    assert (_fo_iw, _fo_ih) == (1920, 1080), (
-        f"the Fleets frame is {_fo_iw}x{_fo_ih}; it is plain-scaled "
-        f"over the 1920x1080 reference area, so a rectangle measured "
-        f"on it is only in reference px while it is that size")
-    # THE THREE STRUT STUBS ARE OUT AND STAY OUT (137 E1). What is left
-    # inside the opening is the Planets master's own two steps — its
-    # right holes start at y 77 where the left start at 75, its
-    # lower-left at x 75 where the upper starts at 74 — and nothing at
-    # the strut columns x 1451..1479 and x 593..616, which is where
-    # the stubs were.
-    _fo_al = _np.array(Image.open(_fo_png).convert("RGBA"))[:, :, 3]
-    for _fo_what, _fo_x0, _fo_x1, _fo_y0, _fo_y1 in (
-            ("the top strut stub", 1452, 1478, 77, 78),
-            ("the bottom strut stub", 1452, 1478, 988, 991),
-            ("the lower divider stub", 594, 615, 991, 991)):
-        _fo_r = _fo_al[_fo_y0:_fo_y1 + 1, _fo_x0:_fo_x1 + 1]
-        assert not (_fo_r >= 16).any(), (
-            f"{_fo_what} is back: {int((_fo_r >= 16).sum())} opaque px "
-            f"at x {_fo_x0}..{_fo_x1}, y {_fo_y0}..{_fo_y1}")
-    # ...AND THE MASTER'S TWO STEPS ARE STILL THERE, which is the other
-    # half: the cut took the stubs and nothing else. The Planets right
-    # holes start at y 77 where the left start at 75, so x 1452..1844
-    # keeps two opaque rows at the top; its lower-left hole starts at
-    # x 75 where the upper starts at 74, so x 74 keeps a column below
-    # y 805. Both are the artwork's shape and 137 E1 leaves them alone.
-    assert (_fo_al[75:77, 1452:1845] >= 16).all(), (
-        "the master's 2 px top step is gone; the cut took more than "
-        "the stubs")
-    assert (_fo_al[805:992, 74] >= 16).all(), (
-        "the master's 1 px left step is gone; the cut took more than "
-        "the stubs")
-    ok("the Fleets frame's one opening is find_holes' own hole plus "
-       "BLEED, the image is the reference area 1:1, and the three "
-       "strut stubs are out of the strut columns")
+    _fo_lay = _sjson.load(io.open(os.path.join(
+        SCREENS_DIR, "fleets", "layout.json"), encoding="utf-8"))
+    assert [_fo_iw, _fo_ih] == list(_fo_lay["frame"]["image_size"]), (
+        f"the Fleets frame is {_fo_iw}x{_fo_ih} and layout.json says "
+        f"{_fo_lay['frame']['image_size']}; `to_ref` scales from that "
+        f"number, so the two cannot differ")
+    assert len(_fo_holes) == 32, (
+        f"the Fleets frame cuts {len(_fo_holes)} holes, 32 expected "
+        "(1 minimap + 3 arrow bar + 1 text panel + 20 cells + 7 "
+        "controls). The naming rule refuses anything else, so this "
+        "says the artwork changed")
 
-    # ── NO BOX SITS ON A thin_border's OWN LINE ────────────────────
+    # 1. EVERY HOLE IS NAMED, and the namer is the one the tool uses.
+    _fo_named = _fhB.name_holes(_fo_holes, "fleets", (_fo_iw, _fo_ih))
+    assert len(_fo_named) == 32, sorted(_fo_named)
+    assert set(_fo_named) == _fhB.RULE_NAMES["fleets"], (
+        sorted(set(_fo_named) ^ _fhB.RULE_NAMES["fleets"]))
+
+    # 2. HOLES AND BOXES AGREE — the `map_area` rule, for all 32.
+    _fo_boxes = _sjson.load(io.open(os.path.join(
+        SCREENS_DIR, "fleets", "boxes.json"), encoding="utf-8"))
+    for _fo_res, _fo_list in _fo_boxes.items():
+        _fo_by = {b["name"]: b for b in _fo_list}
+        for _fo_n, _fo_r in _fo_named.items():
+            assert _fo_n in _fo_by, f"{_fo_res}: no box for hole {_fo_n}"
+            _fo_want = _fhB.to_ref(_fo_r, _fo_iw, _fo_ih)
+            assert _fo_by[_fo_n]["rect"] == _fo_want, (
+                f"{_fo_res}: box {_fo_n} is {_fo_by[_fo_n]['rect']} and its "
+                f"hole makes {_fo_want}. Run "
+                f"`python tools/frame_holes.py screens/fleets/assets/"
+                f"frame.png --write` — content would sit off its hole")
+
+    # 3. INSIDE A HOLE THE FRAME IS THE BORDER. Not one derived box may
+    #    wear a skin that draws an outline: the artwork already drew it.
+    for _fo_res, _fo_list in _fo_boxes.items():
+        for _fo_b in _fo_list:
+            if _fo_b["name"] not in _fo_named:
+                continue
+            _fo_skin = (_fo_b.get("style") or {}).get("skin")
+            assert _fo_skin == "none", (
+                f"{_fo_res}: box {_fo_b['name']} sits in a hole and wears "
+                f"skin {_fo_skin!r}; the frame is its border. A MISSING "
+                f"style is not enough — core/box.py defaults to 'panel'")
+
+    # 4. THE CHAMFER TABLE IS THE ARTWORK'S (decision 36: a hand-copied
+    #    value needs a checker). Re-derived here from the shipped PNG.
+    _fo_alpha = _fo_np.array(_fo_Image.open(_fo_png).convert("RGBA"))[:, :, 3]
+    _fo_T = _fo_alpha < _fhB.ALPHA_LIMIT
+    for _fo_n, _fo_k in _flg.CONTENT_INSET_SRC.items():
+        _fo_x, _fo_y, _fo_w, _fo_h = _fo_named[_fo_n]
+        assert _fo_T[_fo_y + _fo_k:_fo_y + _fo_h - _fo_k,
+                     _fo_x + _fo_k:_fo_x + _fo_w - _fo_k].all(), (
+            f"CONTENT_INSET_SRC[{_fo_n}] = {_fo_k} is not clear of the "
+            f"chamfer; content there is covered by the frame, which "
+            f"draws last")
+        if _fo_k:
+            assert not _fo_T[_fo_y + _fo_k - 1:_fo_y + _fo_h - _fo_k + 1,
+                             _fo_x + _fo_k - 1:_fo_x + _fo_w - _fo_k + 1] \
+                .all(), (
+                f"CONTENT_INSET_SRC[{_fo_n}] = {_fo_k} is larger than the "
+                f"chamfer needs; it is a measurement, not a margin")
+    assert tuple(_flg.FRAME_SRC_SIZE) == (_fo_iw, _fo_ih)
+
+    # 5. THE FRAME IS AN HD INVENTION and says so where it is used.
+    _fo_note = _fo_lay["frame"].get("_note", "")
+    assert "HD INVENTION" in _fo_note, (
+        "screens/fleets/layout.json frame._note no longer marks the "
+        "frame an HD INVENTION — the native Fleets screen has flat "
+        "plates and no such frame (FLEET.LBX 0)")
+    _fo_geo = io.open(os.path.join(SCREENS_DIR, "fleets", "fltgeom.py"),
+                      encoding="utf-8").read()
+    assert "HD INVENTION" in _fo_geo, (
+        "fltgeom lost the HD INVENTION marking for the v4 frame")
+
+    ok("the Fleets v4 frame: 32 holes, every one named by the rule the "
+       "tool uses, every box equal to its hole plus BLEED at both "
+       "resolutions, no box in a hole drawing its own border, the "
+       "chamfer table re-derived from the artwork, and the frame "
+       "marked an HD INVENTION")
     #
     # Work order 137 E3. `thin_border` GROUPS things (decision 34) and
     # is drawn as a 1 px rounded outline — `StyleRenderer.draw_plate`,
@@ -18563,14 +18614,12 @@ def main():
     assert "btn_leaders" not in _fl_scr.enabled_buttons(), (
         "LEADERS reads as live with no L field in the list")
 
-    # 7. EVERY BOX LIES INSIDE THE FRAME'S ONE OPENING, at every
-    #    resolution the file carries. The frame is plain-scaled over the
-    #    reference area, so this is a reference-space question and the
-    #    answer must hold for a box an F5 drag moved as well.
-    _fl_open = _sjson.load(io.open(
-        os.path.join(SCREENS_DIR, "fleets", "layout.json"),
-        encoding="utf-8"))["frame"]["opening"]
-    _fl_ox, _fl_oy, _fl_ow, _fl_oh = _fl_open
+    # 7. EVERY BOX LIES INSIDE THE FRAME IMAGE, and every DERIVED box
+    #    lies on its own hole. v3 asked whether a box was inside the
+    #    frame's ONE opening; v4 has thirty-two, and "box equals hole
+    #    plus BLEED" is asserted for all of them in the Fleets v4 frame
+    #    block, which is strictly stronger. What is left for here is
+    #    the hand-placed boxes, which have no hole to be held to.
     _fl_boxfile = _sjson.load(io.open(
         os.path.join(SCREENS_DIR, "fleets", "boxes.json"), encoding="utf-8"))
     from core.box import load_boxes as _fl_load
@@ -18580,46 +18629,71 @@ def main():
         for _fl_b in _fl_load(os.path.join(SCREENS_DIR, "fleets"),
                               _fl_w, _fl_h):
             _bx, _by, _bw, _bh = _fl_b.ref_rect
-            if (_bx < _fl_ox or _by < _fl_oy
-                    or _bx + _bw > _fl_ox + _fl_ow
-                    or _by + _bh > _fl_oy + _fl_oh):
+            if (_bx < 0 or _by < 0 or _bx + _bw > 1920
+                    or _by + _bh > 1080):
                 _fl_out.append(_fl_b.name)
         assert not _fl_out, (
-            f"at {_fl_key} these boxes leave the frame's opening "
-            f"{_fl_open}: {_fl_out}. Content outside it slides under "
-            f"the ring")
-    assert len(_fl_boxfile["1920x1080"]) == (
-        len(_flg.REGIONS) + len(_flg.CONTROLS) + len(_flg.HINTS)), (
-            "boxes.json and fltgeom disagree about how many boxes this "
-            "screen has")
+            f"at {_fl_key} these boxes leave the reference area: "
+            f"{_fl_out}")
 
-    # 8. THE SEAT KEEPS THE ORIGINAL'S PROPORTIONS — one factor for both
-    #    axes, which is what holds the inset map at 305:182.
-    #    Box_Fleet_Screen_Scanned_Star_ hardcodes 1659 and 2197, which
-    #    are 506000/305 and 400000/182 (movebox.cpp:193-199), so a map
-    #    box of another shape puts the star boxes off the stars.
-    _fl_seated = _flg.seat_regions(_fl_open)
-    _fl_f, _, _ = _flg.seat(_fl_open)
-    for _fl_name, _fl_native in _flg.REGIONS.items():
-        _fl_r = _fl_seated[_fl_name]
-        # AGAINST THE PADDED NATIVE RECT, because the two union regions
-        # are grown by GROUP_PAD before they are seated (137 E3) — and
-        # through `_padded` rather than by adding the number here, so
-        # the pad stays in one place. The FACTOR is what this checks,
-        # and the pad is in native px precisely so it cannot change it.
-        _fl_pn = _flg._padded(_fl_name, _fl_native)
-        assert abs(_fl_r[2] - _fl_pn[2] * _fl_f) <= 1, _fl_name
-        assert abs(_fl_r[3] - _fl_pn[3] * _fl_f) <= 1, _fl_name
-        if _fl_name in _flg.PADDED_REGIONS:
-            assert _fl_pn[2] == _fl_native[2] + 2 * _flg.GROUP_PAD
-        else:
-            assert _fl_pn == _fl_native, _fl_name
-    _fl_map = _fl_seated["inset_map"]
-    assert abs(_fl_map[2] / _fl_map[3] - 305 / 182) < 0.01, (
-        f"the inset map is {_fl_map[2]}x{_fl_map[3]}, aspect "
-        f"{_fl_map[2] / _fl_map[3]:.3f} against the original's "
-        f"{305 / 182:.3f} — the star hit boxes are computed for that "
-        f"shape and nothing else")
+    # 7b. THE SCROLL BAR IS PAINTED, SO ITS BOX MUST LAND ON THE PAINT.
+    #     It is the one control with no hole: `scroll_column` is placed
+    #     from `fltgeom.SCROLL_V4_COLUMN`, measured off the artwork, and
+    #     this is the checker that measurement needs (decision 36).
+    #     Everything inside the housing must be OPAQUE — a hole there
+    #     would mean the bar had become a cutout and the measurement
+    #     stale.
+    _fl_sx, _fl_sy, _fl_sw, _fl_sh = _flg.SCROLL_V4_COLUMN
+    _fl_al = _fo_np.array(_fo_Image.open(
+        res.screen_file("fleets", "assets", "frame.png")).convert("RGBA"))[:, :, 3]
+    assert (_fl_al[_fl_sy:_fl_sy + _fl_sh,
+                   _fl_sx:_fl_sx + _fl_sw] >= 16).all(), (
+        "the scroll bar's measured column contains transparent pixels; "
+        "it is painted art, not a hole, and the rects come from that")
+    _fl_col_ref = [int(round(_fl_sx * 1920 / _flg.FRAME_SRC_SIZE[0])),
+                   int(round(_fl_sy * 1080 / _flg.FRAME_SRC_SIZE[1])),
+                   int(round(_fl_sw * 1920 / _flg.FRAME_SRC_SIZE[0])),
+                   int(round(_fl_sh * 1080 / _flg.FRAME_SRC_SIZE[1]))]
+    for _fl_key, _fl_list in _fl_boxfile.items():
+        _fl_got = next(b["rect"] for b in _fl_list
+                       if b["name"] == "scroll_column")
+        assert _fl_got == _fl_col_ref, (
+            f"{_fl_key}: scroll_column is {_fl_got}, the painted bar "
+            f"makes {_fl_col_ref}")
+
+    # 8. THE MINIMAP HOLE AGAINST THE GALAXY, not against a screenshot.
+    #    v3 seated `inset_map` from the native 305x182 and this checked
+    #    the seat kept that aspect; v4 cuts the hole and Data chose its
+    #    shape, so the question is no longer "did the seat keep the
+    #    proportion" but "does the hole fit what goes in it".
+    #
+    #    EVERY GALAXY SIZE NORMALISES TO THE SAME EXTENT. The inset
+    #    transform divides by `INSET_SCALE_X // width`, and
+    #    `(MAP_MAX * 1000 // scale) * 10` is 506000 x 400000 for all
+    #    four sizes (mapgen.cpp's table, transcribed in
+    #    core/mapcoords): Small 506x400 at 10, Medium 759x600 at 15,
+    #    Large 1012x800 at 20, Huge 1518x1200 at 30. So the galaxy
+    #    always fills the box and always has intrinsic aspect 1.265,
+    #    and the fit is one answer for every galaxy size rather than
+    #    four.
+    from screens.colony_summary.colonyrows import (
+        INSET_SCALE_X as _fl_isx, INSET_SCALE_Y as _fl_isy)
+    for _fl_W, _fl_H, _fl_S in ((506, 400, 10), (759, 600, 15),
+                                (1012, 800, 20), (1518, 1200, 30)):
+        assert ((_fl_W * 1000 // _fl_S) * 10,
+                (_fl_H * 1000 // _fl_S) * 10) == (_fl_isx, _fl_isy), (
+            f"galaxy {_fl_W}x{_fl_H} at scale {_fl_S} does not normalise "
+            f"to {_fl_isx}x{_fl_isy}; the minimap fit is then a different "
+            f"answer per galaxy size and this check is too weak")
+    _fl_hole = _fo_named["inset_map"]
+    _fl_ar = _fl_hole[2] / _fl_hole[3]
+    _fl_native_ar = 305 / 182
+    assert abs(_fl_ar - _fl_native_ar) / _fl_native_ar < 0.05, (
+        f"the minimap hole is {_fl_hole[2]}x{_fl_hole[3]}, aspect "
+        f"{_fl_ar:.4f}, against the original's inset box "
+        f"{_fl_native_ar:.4f}. Both stretch the galaxy's own 1.265, "
+        f"which is the original's doing; what must not drift is HD "
+        f"stretching it by a DIFFERENT amount than the original does")
 
     # 9. THE TWO PATCHES ARE REQUIRED AND SAY THEY ARE NOT LIVE-TESTED.
     for _fl_patch in ("doc/ext_fleet_screen_state.patch",

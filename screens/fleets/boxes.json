@@ -1,39 +1,387 @@
 {
   "1920x1080": [
     {
-      "name": "inset_map",
+      "name": "cell_00",
       "rect": [
-        282,
-        75,
-        676,
-        403
+        1127,
+        106,
+        118,
+        112
       ],
       "style": {
-        "skin": "thin_border"
+        "skin": "none"
       }
     },
     {
-      "name": "status_band",
+      "name": "cell_01",
       "rect": [
-        286,
-        505,
-        662,
-        55
+        1268,
+        106,
+        118,
+        112
       ],
       "style": {
-        "skin": "thin_border"
+        "skin": "none"
+      }
+    },
+    {
+      "name": "cell_02",
+      "rect": [
+        1409,
+        106,
+        118,
+        112
+      ],
+      "style": {
+        "skin": "none"
+      }
+    },
+    {
+      "name": "cell_03",
+      "rect": [
+        1550,
+        106,
+        118,
+        112
+      ],
+      "style": {
+        "skin": "none"
+      }
+    },
+    {
+      "name": "cell_04",
+      "rect": [
+        1127,
+        238,
+        118,
+        112
+      ],
+      "style": {
+        "skin": "none"
+      }
+    },
+    {
+      "name": "cell_05",
+      "rect": [
+        1268,
+        238,
+        118,
+        112
+      ],
+      "style": {
+        "skin": "none"
+      }
+    },
+    {
+      "name": "cell_06",
+      "rect": [
+        1409,
+        238,
+        118,
+        112
+      ],
+      "style": {
+        "skin": "none"
+      }
+    },
+    {
+      "name": "cell_07",
+      "rect": [
+        1550,
+        238,
+        118,
+        112
+      ],
+      "style": {
+        "skin": "none"
+      }
+    },
+    {
+      "name": "cell_08",
+      "rect": [
+        1127,
+        370,
+        118,
+        112
+      ],
+      "style": {
+        "skin": "none"
+      }
+    },
+    {
+      "name": "cell_09",
+      "rect": [
+        1268,
+        370,
+        118,
+        112
+      ],
+      "style": {
+        "skin": "none"
+      }
+    },
+    {
+      "name": "cell_10",
+      "rect": [
+        1409,
+        370,
+        118,
+        112
+      ],
+      "style": {
+        "skin": "none"
+      }
+    },
+    {
+      "name": "cell_11",
+      "rect": [
+        1550,
+        370,
+        118,
+        112
+      ],
+      "style": {
+        "skin": "none"
+      }
+    },
+    {
+      "name": "cell_12",
+      "rect": [
+        1127,
+        501,
+        118,
+        112
+      ],
+      "style": {
+        "skin": "none"
+      }
+    },
+    {
+      "name": "cell_13",
+      "rect": [
+        1268,
+        501,
+        118,
+        112
+      ],
+      "style": {
+        "skin": "none"
+      }
+    },
+    {
+      "name": "cell_14",
+      "rect": [
+        1409,
+        501,
+        118,
+        112
+      ],
+      "style": {
+        "skin": "none"
+      }
+    },
+    {
+      "name": "cell_15",
+      "rect": [
+        1550,
+        501,
+        118,
+        112
+      ],
+      "style": {
+        "skin": "none"
+      }
+    },
+    {
+      "name": "cell_16",
+      "rect": [
+        1127,
+        633,
+        118,
+        112
+      ],
+      "style": {
+        "skin": "none"
+      }
+    },
+    {
+      "name": "cell_17",
+      "rect": [
+        1268,
+        633,
+        118,
+        112
+      ],
+      "style": {
+        "skin": "none"
+      }
+    },
+    {
+      "name": "cell_18",
+      "rect": [
+        1409,
+        633,
+        118,
+        112
+      ],
+      "style": {
+        "skin": "none"
+      }
+    },
+    {
+      "name": "cell_19",
+      "rect": [
+        1550,
+        633,
+        118,
+        112
+      ],
+      "style": {
+        "skin": "none"
+      }
+    },
+    {
+      "name": "inset_map",
+      "rect": [
+        153,
+        105,
+        862,
+        526
+      ],
+      "style": {
+        "skin": "none"
       }
     },
     {
       "name": "ship_panel",
       "rect": [
-        277,
-        580,
-        680,
-        412
+        153,
+        762,
+        862,
+        193
       ],
       "style": {
-        "skin": "thin_border"
+        "skin": "none"
+      }
+    },
+    {
+      "name": "prev_fleet",
+      "rect": [
+        153,
+        673,
+        94,
+        59
+      ],
+      "style": {
+        "skin": "none"
+      }
+    },
+    {
+      "name": "status_band",
+      "rect": [
+        278,
+        673,
+        615,
+        59
+      ],
+      "style": {
+        "skin": "none"
+      }
+    },
+    {
+      "name": "next_fleet",
+      "rect": [
+        924,
+        673,
+        92,
+        59
+      ],
+      "style": {
+        "skin": "none"
+      }
+    },
+    {
+      "name": "btn_all",
+      "rect": [
+        1105,
+        782,
+        183,
+        68
+      ],
+      "style": {
+        "skin": "none"
+      }
+    },
+    {
+      "name": "btn_relocate",
+      "rect": [
+        1320,
+        785,
+        206,
+        65
+      ],
+      "style": {
+        "skin": "none"
+      }
+    },
+    {
+      "name": "btn_scrap",
+      "rect": [
+        1559,
+        785,
+        199,
+        65
+      ],
+      "style": {
+        "skin": "none"
+      }
+    },
+    {
+      "name": "btn_leaders",
+      "rect": [
+        1105,
+        892,
+        170,
+        67
+      ],
+      "style": {
+        "skin": "none"
+      }
+    },
+    {
+      "name": "btn_support",
+      "rect": [
+        1303,
+        897,
+        113,
+        61
+      ],
+      "style": {
+        "skin": "none"
+      }
+    },
+    {
+      "name": "btn_combat",
+      "rect": [
+        1440,
+        894,
+        118,
+        63
+      ],
+      "style": {
+        "skin": "none"
+      }
+    },
+    {
+      "name": "btn_return",
+      "rect": [
+        1581,
+        892,
+        178,
+        65
+      ],
+      "style": {
+        "skin": "none"
       }
     },
     {
@@ -45,7 +393,7 @@
         658
       ],
       "style": {
-        "skin": "thin_border"
+        "skin": "none"
       }
     },
     {
@@ -57,19 +405,7 @@
         179
       ],
       "style": {
-        "skin": "thin_border"
-      }
-    },
-    {
-      "name": "prev_fleet",
-      "rect": [
-        291,
-        511,
-        71,
-        42
-      ],
-      "style": {
-        "skin": "thin_border"
+        "skin": "none"
       }
     },
     {
@@ -81,115 +417,19 @@
         47
       ],
       "style": {
-        "skin": "thin_border"
-      }
-    },
-    {
-      "name": "next_fleet",
-      "rect": [
-        875,
-        511,
-        69,
-        42
-      ],
-      "style": {
-        "skin": "thin_border"
+        "skin": "none"
       }
     },
     {
       "name": "scroll_column",
       "rect": [
-        1589,
-        91,
-        33,
-        645
+        1694,
+        101,
+        45,
+        651
       ],
       "style": {
-        "skin": "thin_border"
-      }
-    },
-    {
-      "name": "btn_all",
-      "rect": [
-        1019,
-        802,
-        164,
-        62
-      ],
-      "style": {
-        "skin": "thin_border"
-      }
-    },
-    {
-      "name": "btn_relocate",
-      "rect": [
-        1225,
-        802,
-        197,
-        62
-      ],
-      "style": {
-        "skin": "thin_border"
-      }
-    },
-    {
-      "name": "btn_scrap",
-      "rect": [
-        1465,
-        802,
-        162,
-        62
-      ],
-      "style": {
-        "skin": "thin_border"
-      }
-    },
-    {
-      "name": "btn_leaders",
-      "rect": [
-        1006,
-        912,
-        162,
-        60
-      ],
-      "style": {
-        "skin": "thin_border"
-      }
-    },
-    {
-      "name": "btn_support",
-      "rect": [
-        1190,
-        923,
-        135,
-        42
-      ],
-      "style": {
-        "skin": "thin_border"
-      }
-    },
-    {
-      "name": "btn_combat",
-      "rect": [
-        1327,
-        923,
-        133,
-        42
-      ],
-      "style": {
-        "skin": "thin_border"
-      }
-    },
-    {
-      "name": "btn_return",
-      "rect": [
-        1480,
-        912,
-        162,
-        60
-      ],
-      "style": {
-        "skin": "thin_border"
+        "skin": "none"
       }
     },
     {
@@ -223,39 +463,387 @@
   ],
   "2560x1440": [
     {
-      "name": "inset_map",
+      "name": "cell_00",
       "rect": [
-        282,
-        75,
-        676,
-        403
+        1127,
+        106,
+        118,
+        112
       ],
       "style": {
-        "skin": "thin_border"
+        "skin": "none"
       }
     },
     {
-      "name": "status_band",
+      "name": "cell_01",
       "rect": [
-        286,
-        505,
-        662,
-        55
+        1268,
+        106,
+        118,
+        112
       ],
       "style": {
-        "skin": "thin_border"
+        "skin": "none"
+      }
+    },
+    {
+      "name": "cell_02",
+      "rect": [
+        1409,
+        106,
+        118,
+        112
+      ],
+      "style": {
+        "skin": "none"
+      }
+    },
+    {
+      "name": "cell_03",
+      "rect": [
+        1550,
+        106,
+        118,
+        112
+      ],
+      "style": {
+        "skin": "none"
+      }
+    },
+    {
+      "name": "cell_04",
+      "rect": [
+        1127,
+        238,
+        118,
+        112
+      ],
+      "style": {
+        "skin": "none"
+      }
+    },
+    {
+      "name": "cell_05",
+      "rect": [
+        1268,
+        238,
+        118,
+        112
+      ],
+      "style": {
+        "skin": "none"
+      }
+    },
+    {
+      "name": "cell_06",
+      "rect": [
+        1409,
+        238,
+        118,
+        112
+      ],
+      "style": {
+        "skin": "none"
+      }
+    },
+    {
+      "name": "cell_07",
+      "rect": [
+        1550,
+        238,
+        118,
+        112
+      ],
+      "style": {
+        "skin": "none"
+      }
+    },
+    {
+      "name": "cell_08",
+      "rect": [
+        1127,
+        370,
+        118,
+        112
+      ],
+      "style": {
+        "skin": "none"
+      }
+    },
+    {
+      "name": "cell_09",
+      "rect": [
+        1268,
+        370,
+        118,
+        112
+      ],
+      "style": {
+        "skin": "none"
+      }
+    },
+    {
+      "name": "cell_10",
+      "rect": [
+        1409,
+        370,
+        118,
+        112
+      ],
+      "style": {
+        "skin": "none"
+      }
+    },
+    {
+      "name": "cell_11",
+      "rect": [
+        1550,
+        370,
+        118,
+        112
+      ],
+      "style": {
+        "skin": "none"
+      }
+    },
+    {
+      "name": "cell_12",
+      "rect": [
+        1127,
+        501,
+        118,
+        112
+      ],
+      "style": {
+        "skin": "none"
+      }
+    },
+    {
+      "name": "cell_13",
+      "rect": [
+        1268,
+        501,
+        118,
+        112
+      ],
+      "style": {
+        "skin": "none"
+      }
+    },
+    {
+      "name": "cell_14",
+      "rect": [
+        1409,
+        501,
+        118,
+        112
+      ],
+      "style": {
+        "skin": "none"
+      }
+    },
+    {
+      "name": "cell_15",
+      "rect": [
+        1550,
+        501,
+        118,
+        112
+      ],
+      "style": {
+        "skin": "none"
+      }
+    },
+    {
+      "name": "cell_16",
+      "rect": [
+        1127,
+        633,
+        118,
+        112
+      ],
+      "style": {
+        "skin": "none"
+      }
+    },
+    {
+      "name": "cell_17",
+      "rect": [
+        1268,
+        633,
+        118,
+        112
+      ],
+      "style": {
+        "skin": "none"
+      }
+    },
+    {
+      "name": "cell_18",
+      "rect": [
+        1409,
+        633,
+        118,
+        112
+      ],
+      "style": {
+        "skin": "none"
+      }
+    },
+    {
+      "name": "cell_19",
+      "rect": [
+        1550,
+        633,
+        118,
+        112
+      ],
+      "style": {
+        "skin": "none"
+      }
+    },
+    {
+      "name": "inset_map",
+      "rect": [
+        153,
+        105,
+        862,
+        526
+      ],
+      "style": {
+        "skin": "none"
       }
     },
     {
       "name": "ship_panel",
       "rect": [
-        277,
-        580,
-        680,
-        412
+        153,
+        762,
+        862,
+        193
       ],
       "style": {
-        "skin": "thin_border"
+        "skin": "none"
+      }
+    },
+    {
+      "name": "prev_fleet",
+      "rect": [
+        153,
+        673,
+        94,
+        59
+      ],
+      "style": {
+        "skin": "none"
+      }
+    },
+    {
+      "name": "status_band",
+      "rect": [
+        278,
+        673,
+        615,
+        59
+      ],
+      "style": {
+        "skin": "none"
+      }
+    },
+    {
+      "name": "next_fleet",
+      "rect": [
+        924,
+        673,
+        92,
+        59
+      ],
+      "style": {
+        "skin": "none"
+      }
+    },
+    {
+      "name": "btn_all",
+      "rect": [
+        1105,
+        782,
+        183,
+        68
+      ],
+      "style": {
+        "skin": "none"
+      }
+    },
+    {
+      "name": "btn_relocate",
+      "rect": [
+        1320,
+        785,
+        206,
+        65
+      ],
+      "style": {
+        "skin": "none"
+      }
+    },
+    {
+      "name": "btn_scrap",
+      "rect": [
+        1559,
+        785,
+        199,
+        65
+      ],
+      "style": {
+        "skin": "none"
+      }
+    },
+    {
+      "name": "btn_leaders",
+      "rect": [
+        1105,
+        892,
+        170,
+        67
+      ],
+      "style": {
+        "skin": "none"
+      }
+    },
+    {
+      "name": "btn_support",
+      "rect": [
+        1303,
+        897,
+        113,
+        61
+      ],
+      "style": {
+        "skin": "none"
+      }
+    },
+    {
+      "name": "btn_combat",
+      "rect": [
+        1440,
+        894,
+        118,
+        63
+      ],
+      "style": {
+        "skin": "none"
+      }
+    },
+    {
+      "name": "btn_return",
+      "rect": [
+        1581,
+        892,
+        178,
+        65
+      ],
+      "style": {
+        "skin": "none"
       }
     },
     {
@@ -267,7 +855,7 @@
         658
       ],
       "style": {
-        "skin": "thin_border"
+        "skin": "none"
       }
     },
     {
@@ -279,19 +867,7 @@
         179
       ],
       "style": {
-        "skin": "thin_border"
-      }
-    },
-    {
-      "name": "prev_fleet",
-      "rect": [
-        291,
-        511,
-        71,
-        42
-      ],
-      "style": {
-        "skin": "thin_border"
+        "skin": "none"
       }
     },
     {
@@ -303,115 +879,19 @@
         47
       ],
       "style": {
-        "skin": "thin_border"
-      }
-    },
-    {
-      "name": "next_fleet",
-      "rect": [
-        875,
-        511,
-        69,
-        42
-      ],
-      "style": {
-        "skin": "thin_border"
+        "skin": "none"
       }
     },
     {
       "name": "scroll_column",
       "rect": [
-        1589,
-        91,
-        33,
-        645
+        1694,
+        101,
+        45,
+        651
       ],
       "style": {
-        "skin": "thin_border"
-      }
-    },
-    {
-      "name": "btn_all",
-      "rect": [
-        1019,
-        802,
-        164,
-        62
-      ],
-      "style": {
-        "skin": "thin_border"
-      }
-    },
-    {
-      "name": "btn_relocate",
-      "rect": [
-        1225,
-        802,
-        197,
-        62
-      ],
-      "style": {
-        "skin": "thin_border"
-      }
-    },
-    {
-      "name": "btn_scrap",
-      "rect": [
-        1465,
-        802,
-        162,
-        62
-      ],
-      "style": {
-        "skin": "thin_border"
-      }
-    },
-    {
-      "name": "btn_leaders",
-      "rect": [
-        1006,
-        912,
-        162,
-        60
-      ],
-      "style": {
-        "skin": "thin_border"
-      }
-    },
-    {
-      "name": "btn_support",
-      "rect": [
-        1190,
-        923,
-        135,
-        42
-      ],
-      "style": {
-        "skin": "thin_border"
-      }
-    },
-    {
-      "name": "btn_combat",
-      "rect": [
-        1327,
-        923,
-        133,
-        42
-      ],
-      "style": {
-        "skin": "thin_border"
-      }
-    },
-    {
-      "name": "btn_return",
-      "rect": [
-        1480,
-        912,
-        162,
-        60
-      ],
-      "style": {
-        "skin": "thin_border"
+        "skin": "none"
       }
     },
     {

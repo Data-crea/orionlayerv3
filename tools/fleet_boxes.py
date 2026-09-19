@@ -1,5 +1,23 @@
 #!/usr/bin/env python3
-"""Seed `screens/fleets/boxes.json` from the original's own rectangles.
+"""SUPERSEDED by `tools/frame_holes.py` — work order 146.
+
+**THIS TOOL NO LONGER RUNS AND MUST NOT BE MADE TO.** It seeded the
+Fleets boxes by seating the original's native rectangles into the
+frame's ONE opening. The v4 frame cuts thirty-two holes, the boxes are
+derived from them (decision 3), and `screens/fleets/layout.json` has
+no `frame.opening` any more — which is the line below that would
+raise. Replaced by:
+
+    python tools/frame_holes.py screens/fleets/assets/frame.png --write
+
+Kept rather than deleted because the docstring under this one records
+where the original's sixteen rectangles came from, and that reading is
+still the source for `fltgeom.REGIONS` and `fltgeom.CONTROLS`, which
+the wire side still uses to recognise fields.
+
+--- what it did, for the record ---
+
+Seed `screens/fleets/boxes.json` from the original's own rectangles.
 
     python3 tools/fleet_boxes.py            # print what it would write
     python3 tools/fleet_boxes.py --write    # write the file

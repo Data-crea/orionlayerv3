@@ -67,6 +67,47 @@ the build line. Both states are forced in the check, neither read off
 this machine. Smoke **227 -> 228**; `main.py` joins the over-300 list
 at 304 code lines.
 
+This session (19 September 2026, work order 146): **the Fleets screen
+rebuilt in Data's v4 frame.** `screens/fleets/assets/frame.png` is
+`fleets_frame_v4.png` shipped unmodified at its own 1445x811 (sha256
+`4667e86d…`), and it cuts **32 holes** where v3 had one opening — so
+the boxes are now DERIVED from the artwork (decision 3) by a new
+`name_holes_fleets` rule in `tools/frame_holes.py`, and
+`tools/fleet_boxes.py` is superseded. `tools/frame_holes.py
+screens/fleets/assets/frame.png --write` is the command.
+
+**THE FRAME IS AN HD INVENTION** — the native Fleets screen is flat
+blue plates under a "FLEET OPERATIONS" title bar (FLEET.LBX 0,
+flt1.cpp:385) and has nothing like it. Marked in `fltgeom`, in
+`layout.json`'s `frame._note` and here, with a smoke check on all
+three.
+
+Sixteen boxes lost `thin_border` for the new `skin: "none"` in
+`core/box.py`: inside a hole the frame is the border. The skin had to
+be NAMED — removing a style defaults to `"panel"`, which drew a filled
+panel with its own chamfered outline along every rail.
+
+**The doubled Support/Combat label is explained and fixed.** FLEET.LBX
+9 and 10 are whole buttons with the words baked into the pixels, so
+blitting the lit face and drawing HD's label on top printed each word
+twice; HD now draws only the lit FIELD, colour measured from that
+frame — (8,8,80), palette 0xA1 — under its own label.
+
+Two v3 checks were REPLACED rather than deleted (both were about the
+one-opening frame): the single-hole assertion became a 32-hole block
+that names every hole and holds every box to it, and "every box inside
+the opening" became "inside the reference area, every derived box on
+its hole, and the scroll column on the painted bar". The class-B
+intrusion budget now accepts a screen's DECLARED chamfer and asserts
+the declaration covers the intrusion.
+
+Live on SAVE4 with one client: `btn_return` fired from its new
+hole-derived position and the game changed screen. `main.py` gained
+**F8**, a TOOL that saves the pygame surface, because the compositor
+placed the window at (-985, -565) and answered a fullscreen request
+with "granted 1x38" — the game rendered correctly and could not be
+photographed. Smoke stays at **230**.
+
 This session (19 September 2026, work order 142 D): **the Fleets
 screen in the original's look.** The grid cell draws the ship's own
 picture — `SHIPS.LBX ship_type + colour * 50`
@@ -1762,7 +1803,7 @@ in exactly ONE bucket. The numbers below are produced by
 check asserts this list still agrees with it — the same trade the
 check count makes, for the same reason.
 
-`tools/struct_probe.py` (**478** code, 753 total), `screens/galaxy_map/screen.py` (**444** code, 716 total), `tools/colony_list_preview.py` (**403** code, 772 total), `screens/custom_race/screen.py` (**400** code, 558 total), `tools/colony_move_hd.py` (**385** code, 586 total), `core/editor/editor.py` (**359** code, 430 total), `screens/galaxy_map/renderer.py` (**336** code, 758 total), `tools/ext_diag.py` (**325** code, 473 total), `core/style.py` (**310** code, 479 total), `main.py` (**304** code, 514 total — over since work order 142 C added the debug input switch, three lines and their reason).
+`tools/struct_probe.py` (**478** code, 753 total), `screens/galaxy_map/screen.py` (**444** code, 716 total), `tools/colony_list_preview.py` (**403** code, 772 total), `screens/custom_race/screen.py` (**400** code, 558 total), `tools/colony_move_hd.py` (**385** code, 586 total), `core/editor/editor.py` (**359** code, 430 total), `screens/galaxy_map/renderer.py` (**336** code, 758 total), `tools/ext_diag.py` (**325** code, 473 total), `core/style.py` (**310** code, 479 total), `main.py` (**323** code, 549 total — over since work order 142 C added the debug input switch; 146 added the F8 surface screenshot, a TOOL for live acceptance on a display that renders but cannot be captured).
 `smoke_test.py` is exempt by nature.
 
 **TWO TOOLS JOINED THE LIST ON 8 SEPTEMBER 2026 and one thing left

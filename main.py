@@ -1,4 +1,5 @@
 """OrionLayer v3 — HD frontend for orion2re."""
+import os
 import sys
 import logging
 import pygame
@@ -207,6 +208,8 @@ class App:
                     self._toggle_fullscreen()
                 elif event.key == pygame.K_F9 and not self._fullscreen:
                     self._cycle_resolution()
+                elif event.key == pygame.K_F8:
+                    self._save_screenshot()
                 elif event.key == pygame.K_F12:
                     self._cycle_render_mode()
                 elif not self.editor.handle_event(event):
@@ -449,6 +452,38 @@ class App:
         min_w = self.settings.get("window", {}).get("min_width", 1280)
         min_h = self.settings.get("window", {}).get("min_height", 720)
         self._apply_resolution(max(new_w, min_w), max(new_h, min_h))
+
+    def _save_screenshot(self):
+        """TOOL — the window's own surface to a PNG (F8).
+
+        **It photographs the SURFACE, not the screen**, which is the
+        whole point: a live acceptance needs a picture of what HD drew,
+        and this session has more than once had a display that renders
+        correctly and cannot be captured — work order 146 met a
+        compositor that placed the window at (-985, -565) and answered
+        a fullscreen request with "granted 1x38", so `import -window`
+        had nothing to photograph while the game was running fine.
+        Reading `pygame.display.get_surface()` sidesteps every one of
+        those, because it is the same surface the renderer just filled.
+
+        Under `$ORIONLAYER_SHOTS` when set, else the working directory,
+        named by the clock so a sequence keeps its order.
+        """
+        import datetime
+        surface = pygame.display.get_surface()
+        if surface is None:
+            log.warning("F8: no display surface to save")
+            return
+        folder = os.environ.get("ORIONLAYER_SHOTS") or os.getcwd()
+        name = datetime.datetime.now().strftime("orionlayer_%H%M%S_%f.png")
+        path = os.path.join(folder, name)
+        try:
+            pygame.image.save(surface, path)
+        except (pygame.error, OSError) as exc:
+            log.warning("F8: could not save %s (%s)", path, exc)
+            return
+        log.info("TOOL: screenshot %dx%d -> %s",
+                 surface.get_width(), surface.get_height(), path)
 
     def _toggle_fullscreen(self):
         """F11: toggle fullscreen with black bars at current F9 resolution."""
