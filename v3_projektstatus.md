@@ -53,6 +53,35 @@ doing: while the id is not 0 the state the click is computed from is the
 last screen-0 one, so the click would look perfectly reasonable and
 would land in another screen's field space. Smoke **220 -> 221**.
 
+**Fundament entry 70 was NOT filed, and the tree-wide grep is why**
+(work order 137 C, which made the entry conditional on there being no
+reader of `ship_icons` or `map_scale` outside `screens/galaxy_map/`).
+There are six, in three kinds:
+
+| file:line | field | what it is |
+|---|---|---|
+| `screens/fleets/screen.py:126`, `:248` | `ship_icons` | the Fleets inset's own ship markers — the data is THIS screen's while it is up |
+| `screens/fleets/fltwire.py:309` | `ship_icons` | 137 A's field-set rule: a small icon's field top-left IS `_ship_icon[i].x/y` |
+| `tools/ship_icon_check.py:99`, `:106-114` | both | a live diagnostic against a running game |
+| `tools/zoom_probe.py:68`, `:81`, `:99`, `tools/zoom_check.py:62`, `tools/nebula_check.py:136` | `map_scale` | live probes |
+| `tools/ext_diag.py:231` | `map_scale` | a wire dump, re-derived from the bytes rather than from `GameState` |
+| `core/mapcoords.py:72` | `map_scale` | `view_triple`, a helper on whatever state its caller hands it |
+
+`core/game_state.py` is the parser and not a reader. **The colony
+screen's galaxy inset is clean** and was the one the order named: brief
+58's inset does not zoom at all, so `colonyrows.galaxy_inset_stars`
+(colonyrows.py:383) recovers `max_map_scale` from `MAP_MAX_X`/`MAP_MAX_Y`
+through `zoomtables.max_map_scale` and reads `stars`, never `map_scale`
+and never `ship_icons`. The Planets and Fleets insets call the same
+function with their own box.
+
+Also measured while it was cheap: widening the "no module reads
+`client.state`" assert to the whole tree would FAIL today —
+`screens/new_game/screen.py:360-361`, `screens/research_select/screen.py:336`,
+`core/original_view.py:149` and the two editor modules all read it, each
+for the field list. Whether the gate grows to the Fleets screen, and
+whether that assert is worth widening on its own, is Data's.
+
 This session (19 September 2026, work order 136): **state a screen
 rewrites for itself belongs to that screen, and the map takes none of
 it.** 135 gated `s_ship_icon` and left `map_scale`, so the map held
