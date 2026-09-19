@@ -33,8 +33,42 @@ outside the gate — it stops on an ABSOLUTE target read off `map_scale`,
 so a frozen one is a target it could never reach — and is handed the raw
 snapshot, held by a check. No fundament entry was filed; a wording is
 proposed in the report and the decision is Data's. Smoke stays **219**:
-the 135 check was replaced, not added. Work order 134 is on
-`origin/main` at `14a6db7`.
+the 135 check was replaced, not added.
+
+**And the Fleets frame's opening was measured** (136 C, measurement
+only, nothing changed). The typed `opening` [72, 73, 1775, 921] IS the
+artwork's own hole plus `BLEED`, so the number is right and was simply
+unchecked. Four opaque islands sit inside it, 1147 px in all: two are
+STUBS OF THE PLANETS STRUTS, at x 1452..1478 and x 594..615, which are
+exactly the strut gaps of the Planets master (between holes ending
+1450/592 and starting 1480/617) — not ornament of the ring — and two
+are the master's own steps, the right holes starting at y 77 where the
+left start at 75 and the lower-left at x 75 where the upper starts at
+74. Cost: `icon_area` loses 170 x 2 reference px at its top right and
+`ship_panel` 22 x 1 at its bottom, the same at all four shipped
+resolutions. **The suite's class-B pass would not have seen it**: it
+samples `edge // 40` lines, which on this opening is a column every
+44 px against 27 px stubs, and reports T2 B1 where every line says
+T4 B4; `colony_summary` and `galaxy_map` measure the same either way
+(worst 1 and 0), so tightening the stride is safe and is left for the
+commit that adds this screen. The finished check is a draft at
+`doc/briefs/136-draft-fleets-opening-check.py`; `fleets` is NOT in
+`_FRAME_SCREENS` and no red check was committed.
+
+**Two readings for the live acceptance** (136 D, in
+`134-parked-for-data.md` as Evidence 9 and 10). A click in the Fleets
+inset map sends nothing, changes nothing and does not hand over to the
+framebuffer — no box on the screen carries a `field_id` and there is no
+star branch — while the original makes it a relocation or a move order
+(flt1.cpp:629-649). And SCRAP's native boxes are invisible to HD:
+`GENDRAW::Confirmation_Box_` (gendraw.cpp:153) does not clear the field
+list, it appends two hidden fields and spins in its own `Get_Input_()`
+loop, the screen id stays 4, the FLTS block keeps arriving and every
+big-icon field is still there — so `fltwire` stays READY over a game
+that is waiting on a modal. The validation only asks whether every
+displayed cell HAS a field; it never asks what else appeared.
+
+Work order 134 is on `origin/main` at `14a6db7`.
 
 This session (19 September 2026, work order 135): **the galaxy map
 takes `s_ship_icon` from screen 0 and from no other screen id.** The

@@ -87,6 +87,71 @@ a second client — stop here.
     the engine puts back the value the map had before — the gate covers
     HD, not the engine.
 
+11. **Evidence 9 — the inset map is inert, and confirm that it is.**
+    Work order 136 D read it out of the code rather than building
+    anything: a click anywhere in `inset_map`, on a star or beside one,
+    sends NOTHING and changes nothing. No box on this screen carries a
+    `field_id`, `inset_map` is not in `fltwire.HOTKEYS`, and
+    `FleetsScreen.handle_click` has no star branch, so the click falls
+    through `ScreenBase.handle_click` — past the frame buttons this
+    screen does not use and past a box list with no field ids — and
+    returns None. It does NOT hand over to the framebuffer either.
+
+    The original does three things there. `Add_Galaxy_Map_Fields_2_(15,
+    52, 305, 182, …)` (flt1.cpp:1250) puts the star and grid fields over
+    the inset, and `Scan_Galaxy_Map_Fields_` (flt1.cpp:629) turns a
+    click into a relocation (:640), a refusal on a black hole (:641) or
+    `FLT2::Fltscrn_Move_Ships_` (:649) — a move order. Parked items 2
+    and 3 are those three. **So the live run confirms the no-op, it does
+    not test a feature:** click a star in the HD inset, then read the
+    snapshot and the field list and confirm nothing moved — no order, no
+    relocation, no change in `_ship[]`. If anything DOES move, a path
+    exists that this reading did not find, and that is the finding.
+
+    Worth naming while it is open: the silence is correct under
+    decision 65 but it is **not marked** anywhere in the module, unlike
+    the four OMISSIONs. It reads as a dead area rather than as a
+    refusal.
+
+12. **Evidence 10 — BEFORE THE FIRST SCRAP CLICK: the native boxes are
+    invisible to HD, and today the screen does not notice them.**
+    Read out of the code by work order 136 D, and it decides how the
+    scrap step may be run at all.
+
+    **Scrap does open native boxes.** `Scrap_Ships_` (flt1.cpp:1504)
+    calls `HAROLD::User_Box_(…, 1)` — `GENDRAW::Confirmation_Box_`,
+    gendraw.cpp:153 — when the ships are not at a colony of the player
+    (:1512-1528) and again for every ship carrying an officer
+    (:1536-1550), each followed by a mode-3 warning box on a No. There
+    is also the bad-ship box at flt1.cpp:930.
+
+    **HD cannot see them and does not fall back.** `Confirmation_Box_`
+    does not clear the field list: it ADDS two hidden fields, Y at
+    native (0xEB, 0x12E)-(0x11E, 0x143) and N at (0x159, 0x12E)-(0x18C,
+    0x143) (gendraw.cpp:172-173), and then spins in its own
+    `Get_Input_()` loop (:205-212) that accepts only those two. The
+    screen id stays 4, so `ext_api.cpp:265` keeps writing the FLTS
+    block, all twenty big-icon fields are still in the list at their own
+    rects, and `fltwire.View._read` only asks whether every displayed
+    cell HAS a field — it never asks whether fields it does not know
+    have appeared. The view therefore stays `READY`, HD keeps drawing
+    its grid over a game that is waiting on a modal, and every HD click
+    that is not Y or N is swallowed by that loop.
+
+    **So, in this order:** select one ship at a colony of the player and
+    with no officer, which is the one path that opens no box, and scrap
+    that. Read the framebuffer after the click before anything else is
+    sent, and only then try a ship that WILL raise a box — and answer it
+    in the game's own window. Do not send a second HD click while a box
+    is up.
+
+    What the run has to record either way: the field list before and
+    after the scrap click (the two extra fields are the tell), what
+    `fltwire.View.state` reported at the same moment, and whether the HD
+    picture showed anything at all. That measurement is what a refusal
+    for this case would have to be built on — see decision 5 of §2,
+    which is exactly this question and is still Data's.
+
 ### What must NOT be sent
 
 - Anything into a field the reading marks dangerous.
@@ -94,7 +159,9 @@ a second client — stop here.
   int16 and `SDLK_F5` is `0x4000003e`.
 - The scroll FIELD (type 6): it is read through a pointer. Use the two
   arrow buttons.
-- SCRAP, on a scratch save, only with intent — it destroys ships.
+- SCRAP, on a scratch save, only with intent — it destroys ships, and
+  not before Evidence 10 above has been read: HD does not draw the
+  native confirmation and does not notice that it is up.
 
 ---
 
