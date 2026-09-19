@@ -82,6 +82,66 @@ Also measured while it was cheap: widening the "no module reads
 for the field list. Whether the gate grows to the Fleets screen, and
 whether that assert is worth widening on its own, is Data's.
 
+**The Fleets optics** (work order 137 E, same session). Seven points:
+
+- **The three strut stubs are out of the artwork.** 174 px to
+  transparent, nothing painted, the cut line measured off the adjacent
+  ring edge rather than typed
+  (`~/orionlayer-fixtures/incoming/fleets_frame/cut_strut_stubs.py`).
+  The opening now measures **L1 R0 T2 B0** against a budget of 2, where
+  it was L1 R0 T4 B4 — better than the L1 R0 T2 B1 the order asked for.
+  The master's own two steps stay, and a check holds both halves: the
+  three stub rectangles clear, the two steps present.
+- **`fleets` is in the class-B measurement** and the stride is gone —
+  every row and every column, not `edge // 40`. `colony_summary` and
+  `galaxy_map` read the same either way. It is **not** in class A:
+  that one builds each screen at twelve sizes with no snapshot, and the
+  Fleets screen then draws seven text surfaces, under the floor class A
+  refuses to measure below. Class A waits for a fixture that hands this
+  screen a snapshot; the lists are split with that reason in the file.
+- **No box sits on a `thin_border`'s own 1 px line**, tree-wide: 95
+  nested boxes in 71 groups at every resolution. Ten of them were on
+  this screen, and the cause is worth keeping — its groups AND its
+  controls are help rectangles from the same table
+  (evanhelp.cpp:154-165), and the original gives a group and its first
+  control the same left edge. It can; it draws no outline there. So
+  **the group gave way, not the control** (`fltgeom.GROUP_PAD`, 2 native
+  px), which is decision 54's rule one level up. Six named exceptions,
+  of which two are REPORTED, NOT FIXED and belong to other screens:
+  `custom_race` `picks_header` (L0 T0 R0 inside `race_picks_panel`) and
+  `empire_identity` `preview_header` (L0 R0 inside `preview_panel`).
+  The other four are boxes that are never drawn together.
+- **RETURN's box is its own field.** It always was, and the entry said
+  "right and bottom from the help strip" — and 556 + 73 - 1 IS 628, so
+  the wrong derivation produced the right rectangle and would have gone
+  on doing so until help 374 moved. It now takes LEADERS' extent, the
+  same row and the same artwork family, and a check refuses any control
+  rect equal to the help strip (decision 38).
+- **The two empty areas say what is missing.** A `text` box each
+  (decision 37) with the wording in `layout.json` (decision 15), and an
+  OMISSION marking beside the four `fltwire` already carries. The inset
+  is empty because relocation and move orders are not built
+  (flt1.cpp:640, :649) and there is **no screen-level path back to the
+  original** to send the click to — `wants_original` is the View's
+  state alone and F12 is the application's mode — so it is a hint and a
+  marking and nothing more. The status strip was the harder question:
+  `Print_Fltscrn_Scanned_Star_Name_` (flt2.cpp:338-522) prints one line
+  out of thirteen HESTRINGS, keyed on `MOX::_galaxy_map_scanned_star`,
+  which is **on no wire** (FLTS carries `scanned_small`/`scanned_big`,
+  which are icons and not the star), and on the move preview that is
+  already an OMISSION. So it cannot be filled from the wire and is
+  marked; HD keeps drawing the part it can say, the scanned stack's
+  star name.
+- **Two highlighted cells are the original's own state**, not a fault:
+  `Set_Fltscrn_Big_Icons_` (flt1.cpp:1610-1616) is the ALL button and
+  selects every icon, and SCRAP exists only while the count is above
+  zero (:1185). The panel follows the SCANNED ship and never the
+  selection, which is asserted with the two set to different ships.
+- Renders at all four resolutions and a before/after crop of every
+  changed place: `~/orionlayer-fixtures/evidence/work_order_137/`.
+
+Smoke **221 -> 224**.
+
 This session (19 September 2026, work order 136): **state a screen
 rewrites for itself belongs to that screen, and the map takes none of
 it.** 135 gated `s_ship_icon` and left `map_scale`, so the map held
@@ -1033,7 +1093,7 @@ files under `doc/` and are only summarised here.
 | | |
 |---|---|
 | Python | 32,960 lines across 111 modules — `find . -name '*.py'`, `__pycache__` excluded, the smoke test's 6,400 included. The previous figure here (21,642 across 94) was carried from an unstated method and could not be reproduced |
-| Smoke test | `python tools/smoke_test.py` — **221 checks**, headless |
+| Smoke test | `python tools/smoke_test.py` — **224 checks**, headless |
 | Assets | 170 MB (select_race 68, galaxy_map 51, shared 23, new_game 21, colony_summary 1) |
 | Screens in HD | 9 of ~20–22 (the GAME menu overlay, work order Stop 2, every dialog of the popup; colony summary draws list, sidebar, scan box and galaxy inset, and MOVES POPS — the first HD gesture that drives the game; planets, brief 101, lists, sorts, restricts and returns) |
 | Setup from clone | `python tools/setup.py` (deps via the system package manager) |

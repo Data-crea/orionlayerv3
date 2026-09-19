@@ -15,10 +15,10 @@
     {
       "name": "status_band",
       "rect": [
-        291,
-        509,
-        653,
-        47
+        286,
+        505,
+        662,
+        55
       ],
       "style": {
         "skin": "thin_border"
@@ -51,10 +51,10 @@
     {
       "name": "button_band",
       "rect": [
-        1006,
-        802,
-        636,
-        171
+        1002,
+        797,
+        645,
+        179
       ],
       "style": {
         "skin": "thin_border"
@@ -190,6 +190,34 @@
       ],
       "style": {
         "skin": "thin_border"
+      }
+    },
+    {
+      "name": "inset_hint",
+      "rect": [
+        295,
+        88,
+        649,
+        377
+      ],
+      "style": {
+        "skin": "text",
+        "align": "center",
+        "font_scale": 0.8
+      }
+    },
+    {
+      "name": "status_hint",
+      "rect": [
+        304,
+        522,
+        627,
+        20
+      ],
+      "style": {
+        "skin": "text",
+        "align": "center",
+        "font_scale": 0.8
       }
     }
   ],
@@ -209,10 +237,10 @@
     {
       "name": "status_band",
       "rect": [
-        291,
-        509,
-        653,
-        47
+        286,
+        505,
+        662,
+        55
       ],
       "style": {
         "skin": "thin_border"
@@ -245,10 +273,10 @@
     {
       "name": "button_band",
       "rect": [
-        1006,
-        802,
-        636,
-        171
+        1002,
+        797,
+        645,
+        179
       ],
       "style": {
         "skin": "thin_border"
@@ -384,6 +412,34 @@
       ],
       "style": {
         "skin": "thin_border"
+      }
+    },
+    {
+      "name": "inset_hint",
+      "rect": [
+        295,
+        88,
+        649,
+        377
+      ],
+      "style": {
+        "skin": "text",
+        "align": "center",
+        "font_scale": 0.8
+      }
+    },
+    {
+      "name": "status_hint",
+      "rect": [
+        304,
+        522,
+        627,
+        20
+      ],
+      "style": {
+        "skin": "text",
+        "align": "center",
+        "font_scale": 0.8
       }
     }
   ]

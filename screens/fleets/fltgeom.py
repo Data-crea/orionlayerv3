@@ -106,17 +106,58 @@ CONTROLS = {
     "btn_leaders": ("button_band", _r(342, 430, 414, 456)),   # help 371
     "btn_support": ("button_band", _r(425, 435, 485, 453)),   # help 372
     "btn_combat": ("button_band", _r(487, 435, 546, 453)),    # help 373
-    # RETURN IS THE ONE DERIVED RECTANGLE, and it is derived because its
-    # help entry is not its button. Help 374 is (456, 430)-(628, 456)
-    # (evanhelp.cpp:165) — a strip that reaches left across the two
-    # filter radios, which have their own entries 372 and 373 earlier in
-    # the table and therefore win the first-match test
-    # (fields.cpp:2924-2932). The BUTTON is added at (556, 430)
-    # (flt1.cpp:1201-1204). So: left and top from the field, right and
-    # bottom from the help strip. Drawing it at the help rectangle would
-    # put RETURN on top of SUPPORT and COMBAT.
-    "btn_return": ("button_band", _r(556, 430, 628, 456)),
+    # RETURN COMES FROM ITS FIELD AND FROM NOTHING ELSE — corrected by
+    # work order 137 E4, and the correction is in where the numbers come
+    # from rather than in the numbers.
+    #
+    # Help 374 is (456, 430)-(628, 456) (evanhelp.cpp:165), a strip that
+    # reaches left across the two filter radios; they have their own
+    # entries 372 and 373 earlier in the table and win the first-match
+    # test (fields.cpp:2924-2932), so the strip is not RETURN's extent
+    # and never was. Drawing it there would put RETURN over SUPPORT and
+    # COMBAT.
+    #
+    # The button is added at (556, 430) (flt1.cpp:1201-1204) and its
+    # SIZE is FLEET.LBX 12 at runtime, in no source — so the size is
+    # taken from LEADERS, the other button of the same row, added the
+    # same way from the same artwork family (:1234). That is 73 x 27.
+    #
+    # THE TRAP THIS REPLACES: the entry used to say "right and bottom
+    # from the help strip", and 556 + 73 - 1 IS 628. The two agree, so
+    # the wrong derivation produced the right rectangle and would have
+    # gone on producing it until the strip moved. Decision 38 keeps the
+    # help rectangle in `help.json` and lets it decide no box edge.
+    "btn_return": ("button_band", (556, 430) + _r(342, 430, 414, 456)[2:]),
 }
+
+#: THE TWO AREAS HD LEAVES EMPTY, and the box that says so in each.
+#:
+#: A `text` box draws the string and nothing else — no panel, no border
+#: (decision 37) — and the wording is `layout.json`'s `words`
+#: (decision 15). Both areas are marked OMISSION in `layout.json`'s
+#: `marks`, beside the four `fltwire` already carries, and a smoke
+#: check holds all six.
+#:
+#: The rectangles are INSIDE their region, not the region itself: a
+#: text box on the region's own edge would sit on its `thin_border`
+#: line, which is the fault 137 E3 is about. Each is the region's
+#: native rect inset by `HINT_INSET` native px on every side, so the
+#: two follow their region if F5 or a new opening moves it.
+HINT_INSET = 6
+
+#: hint box -> (the region it sits in, the `words` key it draws)
+HINTS = {
+    "inset_hint": ("inset_map", "inset_hint"),
+    "status_hint": ("status_band", "status_hint"),
+}
+
+
+def hint_rect(region):
+    """A hint box's native rect: its region, inset on every side."""
+    x, y, w, h = REGIONS[region]
+    return (x + HINT_INSET, y + HINT_INSET,
+            w - 2 * HINT_INSET, h - 2 * HINT_INSET)
+
 
 #: The scroll column's three parts, as fractions of the column itself —
 #: the colony summary's argument in `colonyscroll` one step on: there
@@ -197,6 +238,50 @@ def to_ref(rect, opening, bleed=BLEED):
     return (dx + x * f, dy + y * f, w * f, h * f)
 
 
+#: NATIVE PX A GROUP IS GROWN BY, so no control sits ON its outline.
+#:
+#: `status_band` and `button_band` are HELP rectangles and so are the
+#: controls inside them — 363/364/365 and 368..374, evanhelp.cpp:154-165
+#: — and the original's own table gives the group and its first control
+#: the same left edge (19, and 342). It could: the original draws no
+#: outline there at all, only the artwork. HD draws the group as a
+#: `thin_border`, which is a 1 px rounded line (`StyleRenderer.draw_plate`,
+#: core/style.py:418-420), and a control whose edge is ON that line
+#: doubles it.
+#:
+#: SO THE GROUP GIVES WAY, NEVER THE CONTROL, which is decision 54's
+#: rule for the same collision one level up ("shrink the slot, not the
+#: thing that is checked"). Every rectangle in `REGIONS` and `CONTROLS`
+#: stays the transcription it is; this pad is applied when the two
+#: UNION regions are seated, and it is ours — the unions are not drawn
+#: by the original and are named as ours in `REGIONS` already.
+#:
+#: 2 and not 1: the seat's factor is about 2.9 reference px per native
+#: px today, so one native px would be plenty — but the pad is in
+#: NATIVE px so that it survives a different opening, and a native 1
+#: rounds to a reference gap that a later, smaller opening could round
+#: back to 0. 2 native px is 5 reference px at today's seat, which is
+#: under half the 10 px corner radius the line is drawn with and
+#: therefore changes nothing anyone can see.
+GROUP_PAD = 2
+
+#: The regions the pad applies to: the two that are UNIONS of controls.
+#: `inset_map`, `ship_panel` and `icon_area` hold no control box, and
+#: `icon_area` holds `scroll_column`, which is the one case where the
+#: original itself puts a gap (help 361 starts at x 605, the area ends
+#: at 619 — the column IS the area's right edge and has 14 px of its
+#: own).
+PADDED_REGIONS = ("status_band", "button_band")
+
+
+def _padded(name, rect):
+    if name not in PADDED_REGIONS:
+        return rect
+    x, y, w, h = rect
+    return (x - GROUP_PAD, y - GROUP_PAD,
+            w + 2 * GROUP_PAD, h + 2 * GROUP_PAD)
+
+
 def seat_regions(opening, bleed=BLEED):
     """Every region and control, seated, as rounded reference rects.
 
@@ -204,9 +289,13 @@ def seat_regions(opening, bleed=BLEED):
     """
     out = {}
     for name, rect in REGIONS.items():
-        out[name] = [int(round(v)) for v in to_ref(rect, opening, bleed)]
+        out[name] = [int(round(v))
+                     for v in to_ref(_padded(name, rect), opening, bleed)]
     for name, (_parent, rect) in CONTROLS.items():
         out[name] = [int(round(v)) for v in to_ref(rect, opening, bleed)]
+    for name, (region, _word) in HINTS.items():
+        out[name] = [int(round(v))
+                     for v in to_ref(hint_rect(region), opening, bleed)]
     return out
 
 

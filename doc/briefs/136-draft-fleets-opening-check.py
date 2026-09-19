@@ -1,4 +1,15 @@
-"""DRAFT — the Fleets frame's opening, held to its own alpha.
+"""SUPERSEDED 19 September 2026 — this is in the suite now.
+
+Work order 137 E1 took the three strut stubs out of the artwork and
+137 E2 moved `check()` into `tools/smoke_test.py`, put `fleets` into
+the class-B measurement and replaced the `edge // 40` stride with a
+full scan. The opening now measures L1 R0 T2 B0 against a budget of 2.
+
+Kept as it was written, because it is brief 136's attachment and the
+measurement it records is what the correction was made against. What
+follows is the draft's own text, from the day it was red.
+
+DRAFT — the Fleets frame's opening, held to its own alpha.
 
 Work order 136 C. **This is not in the suite and must not be added on
 its own: it is RED against today's artwork.** It goes in with the

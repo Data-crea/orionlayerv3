@@ -11593,6 +11593,18 @@ def main():
         return r
 
     _FRAME_SCREENS = ("colony_summary", "galaxy_map")
+    #: CLASS B TAKES ONE MORE, and the split is not tidiness. `fleets`
+    #: joined on 19 September 2026 (work order 137 E2) once its three
+    #: strut stubs were out of the artwork — but class A builds each
+    #: screen at twelve sizes with no snapshot, and this one then draws
+    #: seven text surfaces, under the floor class A refuses to measure
+    #: below ("a green run in a null state is not evidence"). Class B
+    #: reads the PNG and needs no screen at all, so it takes it today
+    #: and class A waits for a fixture that hands the Fleets screen a
+    #: snapshot. It is also the first one-opening screen here: decision
+    #: 3 does not apply to it, so `frame_holes` has no naming rule for
+    #: it and the loop below names its single hole itself.
+    _FRAME_SCREENS_B = _FRAME_SCREENS + ("fleets",)
     _class_a = {}
     _class_b_seen = 0
     _class_c = {}
@@ -11851,10 +11863,17 @@ def main():
         _iy = int((_y1 - _y0) * _CORNER_TRIM)
         _ix = int((_x1 - _x0) * _CORNER_TRIM)
         _out = []
-        for _cs, _horiz in ((range(_y0 + _iy, _y1 - _iy,
-                                   max(1, (_y1 - _y0) // 40)), True),
-                            (range(_x0 + _ix, _x1 - _ix,
-                                   max(1, (_x1 - _x0) // 40)), False)):
+        # EVERY ROW AND EVERY COLUMN. It used to step `edge // 40`,
+        # which on the Fleets opening is a column every 44 px — wide
+        # enough to walk straight over a 27 px strut stub, and it did:
+        # work order 136 C measured T2 B1 with the stride against T4 B4
+        # without it. "A check with a scope has a blind spot exactly
+        # the size of that scope", the scope here being a sampling
+        # rate. Measured 19 September 2026 before the stride went:
+        # colony_summary and galaxy_map read the same either way (worst
+        # 1 and 0), so nothing was loosened to pay for it.
+        for _cs, _horiz in ((range(_y0 + _iy, _y1 - _iy), True),
+                            (range(_x0 + _ix, _x1 - _ix), False)):
             _lo = _hi = 0
             for _c in _cs:
                 _line = (alpha[_c, _x0:_x1] if _horiz
@@ -11871,7 +11890,7 @@ def main():
         return _out
 
     _b_worst = {}
-    for _name in _FRAME_SCREENS:
+    for _name in _FRAME_SCREENS_B:
         # ONE FILE PER SCREEN since Phase B — every screen wears its
         # own `assets/frame.png` and none of them has a switch. This
         # was the 1080p colony PLATE by path, hardcoded, and measured
@@ -11880,7 +11899,21 @@ def main():
         if not _fpng or not os.path.exists(_fpng):
             continue
         _iw, _ih, _holes = _fhB.find_holes(_fpng)
-        _named = _fhB.name_holes(_holes, _name, (_iw, _ih))
+        # A SCREEN WITH NO NAMING RULE HAS ONE HOLE, and that is a
+        # state rather than a gap: decision 3 derives cutout boxes from
+        # a frame's holes and `fleets` has none to derive — one
+        # opening, hand-placed regions inside it
+        # (screens/fleets/layout.json `_no_cutouts_note`). Naming it
+        # here rather than adding a `frame_holes` rule keeps `--write`
+        # unable to touch that screen, which is what the note promises.
+        if _name in _fhB.RULES:
+            _named = _fhB.name_holes(_holes, _name, (_iw, _ih))
+        else:
+            assert len(_holes) == 1, (
+                f"{_name} has no frame_holes rule and cuts "
+                f"{len(_holes)} holes; a multi-hole frame needs a rule "
+                f"before it can be measured hole by hole")
+            _named = {"opening": _holes[0]}
         _al = _np.array(Image.open(_fpng).convert("RGBA"))[:, :, 3]
         for _cn, _r in _named.items():
             if _cn == "title":
@@ -11914,14 +11947,200 @@ def main():
     # run, the day it stopped having one.
     _b_nohole = {_cpl.BOX_NAME.get(_n, _n)
                  for _n in _lr.get("_windows_without_a_hole", ())}
-    _b_floor = sum(len(_fh_mod.RULE_NAMES[_n]
-                       - {"title"} - _b_nohole)
-                   for _n in _FRAME_SCREENS)
+    _b_floor = sum(len(_fh_mod.RULE_NAMES[_n] - {"title"} - _b_nohole)
+                   if _n in _fh_mod.RULES else 1
+                   for _n in _FRAME_SCREENS_B)
     assert len(_b_worst) >= _b_floor, (
         f"{len(_b_worst)} cutouts measured, {_b_floor} expected from "
-        f"{list(_FRAME_SCREENS)}")
+        f"{list(_FRAME_SCREENS_B)}")
     ok(f"class B: the frame reaches at most {_CLASS_B_BUDGET} px into "
        f"any of {len(_b_worst)} cutouts")
+
+    # ── THE FLEETS OPENING IS THE ARTWORK'S, NOT A TYPED NUMBER ─────
+    #
+    # Work order 137 E2, from the draft 136 C left at
+    # doc/briefs/136-draft-fleets-opening-check.py. Decision 3 does not
+    # apply to this screen — one hole, hand-placed regions inside it —
+    # and that is exactly why this is needed: no `frame_holes` rule
+    # covers `fleets`, `--write` is never run on it, and until now
+    # nothing in the tree read that PNG at all. `layout.json`'s
+    # `frame.opening` was a correct number with no checker, which is
+    # decision 36's shape.
+    _fo_png = res.screen_file("fleets", "assets", "frame.png")
+    assert _fo_png and os.path.exists(_fo_png), "the Fleets frame is gone"
+    _fo_iw, _fo_ih, _fo_holes = _fhB.find_holes(_fo_png)
+    assert len(_fo_holes) == 1, (
+        f"the Fleets frame cuts {len(_fo_holes)} holes; this screen is "
+        f"built on having exactly one and seating its regions into it "
+        f"(fltgeom.seat), so a second hole is a layout question")
+    _fo_hx, _fo_hy, _fo_hw, _fo_hh = _fo_holes[0]
+    _fo_want = [_fo_hx - _fhB.BLEED, _fo_hy - _fhB.BLEED,
+                _fo_hw + 2 * _fhB.BLEED, _fo_hh + 2 * _fhB.BLEED]
+    _fo_have = list(_sjson.load(io.open(
+        os.path.join(SCREENS_DIR, "fleets", "layout.json"),
+        encoding="utf-8"))["frame"]["opening"])
+    assert _fo_have == _fo_want, (
+        f"screens/fleets/layout.json says the opening is {_fo_have}; "
+        f"the artwork's own hole is {list(_fo_holes[0])} and BLEED is "
+        f"{_fhB.BLEED}, which makes it {_fo_want}. The number is the "
+        f"frame's, not a constant")
+    # AND THE IMAGE IS THE REFERENCE AREA 1:1, or "reference px"
+    # everywhere else on this screen is a different unit from the one
+    # measured on the PNG.
+    assert (_fo_iw, _fo_ih) == (1920, 1080), (
+        f"the Fleets frame is {_fo_iw}x{_fo_ih}; it is plain-scaled "
+        f"over the 1920x1080 reference area, so a rectangle measured "
+        f"on it is only in reference px while it is that size")
+    # THE THREE STRUT STUBS ARE OUT AND STAY OUT (137 E1). What is left
+    # inside the opening is the Planets master's own two steps — its
+    # right holes start at y 77 where the left start at 75, its
+    # lower-left at x 75 where the upper starts at 74 — and nothing at
+    # the strut columns x 1451..1479 and x 593..616, which is where
+    # the stubs were.
+    _fo_al = _np.array(Image.open(_fo_png).convert("RGBA"))[:, :, 3]
+    for _fo_what, _fo_x0, _fo_x1, _fo_y0, _fo_y1 in (
+            ("the top strut stub", 1452, 1478, 77, 78),
+            ("the bottom strut stub", 1452, 1478, 988, 991),
+            ("the lower divider stub", 594, 615, 991, 991)):
+        _fo_r = _fo_al[_fo_y0:_fo_y1 + 1, _fo_x0:_fo_x1 + 1]
+        assert not (_fo_r >= 16).any(), (
+            f"{_fo_what} is back: {int((_fo_r >= 16).sum())} opaque px "
+            f"at x {_fo_x0}..{_fo_x1}, y {_fo_y0}..{_fo_y1}")
+    # ...AND THE MASTER'S TWO STEPS ARE STILL THERE, which is the other
+    # half: the cut took the stubs and nothing else. The Planets right
+    # holes start at y 77 where the left start at 75, so x 1452..1844
+    # keeps two opaque rows at the top; its lower-left hole starts at
+    # x 75 where the upper starts at 74, so x 74 keeps a column below
+    # y 805. Both are the artwork's shape and 137 E1 leaves them alone.
+    assert (_fo_al[75:77, 1452:1845] >= 16).all(), (
+        "the master's 2 px top step is gone; the cut took more than "
+        "the stubs")
+    assert (_fo_al[805:992, 74] >= 16).all(), (
+        "the master's 1 px left step is gone; the cut took more than "
+        "the stubs")
+    ok("the Fleets frame's one opening is find_holes' own hole plus "
+       "BLEED, the image is the reference area 1:1, and the three "
+       "strut stubs are out of the strut columns")
+
+    # ── NO BOX SITS ON A thin_border's OWN LINE ────────────────────
+    #
+    # Work order 137 E3. `thin_border` GROUPS things (decision 34) and
+    # is drawn as a 1 px rounded outline — `StyleRenderer.draw_plate`,
+    # core/style.py:418-420, `pygame.draw.rect(..., 1,
+    # border_radius=max(6, int(10 * scale)))`. A box whose edge lies ON
+    # that line draws a second line over it, and at 1080p the two are
+    # one pixel apart at best.
+    #
+    # The Fleets screen had ten of them, and the cause is worth keeping:
+    # its groups AND its controls are both help rectangles from the same
+    # table (evanhelp.cpp:154-165), and the original's table gives a
+    # group and its first control the same left edge. It could — the
+    # original draws no outline there at all, only artwork. So the GROUP
+    # gave way and not the control (`fltgeom.GROUP_PAD`), which is
+    # decision 54's rule one level up: shrink the slot, never the thing
+    # that is transcribed.
+    #
+    # THE RULE IS TREE-WIDE, at every resolution every screen carries.
+    _TB_MIN_GAP = 1          # the line is 1 px; clearing it is 1 px
+    #: PAIRS THAT ARE NOT NESTING, each with why. Two kinds, and the
+    #: difference matters: the first four are boxes that are never on
+    #: screen together, so no second line is ever drawn; the last two
+    #: are real and were REPORTED RATHER THAN FIXED (work order 137 E3
+    #: says so in as many words) — they belong to screens this order
+    #: did not open.
+    _TB_ALLOWED = {
+        ("galaxy_map", "system_box", "fleet_box"):
+            "two movable boxes at one anchor; boxmodel draws one or the "
+            "other, never both (screens/galaxy_map/boxmodel.py)",
+        ("game_menu", "save_cancel", "load_cancel"):
+            "the same rect twice, one per dialog; nodes.classify puts "
+            "exactly one dialog on screen",
+        ("game_menu", "load_cancel", "save_cancel"):
+            "the mirror of the line above",
+        ("game_menu", "confirm_panel", "warning_panel"):
+            "the confirmation and the slot warning are two dialogs, "
+            "never up together (decision 59)",
+        ("custom_race", "race_picks_panel", "picks_header"):
+            "REPORTED, NOT FIXED (137 E3): the header spans the panel "
+            "flush on three sides, L0 T0 R0. Data's screen, Data's call",
+        ("empire_identity", "preview_panel", "preview_header"):
+            "REPORTED, NOT FIXED (137 E3): the header spans the panel "
+            "flush left and right, L0 R0",
+    }
+
+    def _tb_skin(_b):
+        _s = _b.get("style")
+        return _s.get("skin") if isinstance(_s, dict) else None
+
+    _tb_bad, _tb_groups, _tb_pairs = [], 0, 0
+    for _tb_screen in sorted(os.listdir(SCREENS_DIR)):
+        _tb_path = os.path.join(SCREENS_DIR, _tb_screen, "boxes.json")
+        if not os.path.exists(_tb_path):
+            continue
+        _tb_file = _sjson.load(io.open(_tb_path, encoding="utf-8"))
+        # `_template` ships a flat list rather than the per-resolution
+        # map; it is an example and not a screen, and the rule is about
+        # what a screen draws.
+        if not isinstance(_tb_file, dict):
+            continue
+        for _tb_key, _tb_boxes in _tb_file.items():
+            _tb_real = [_b for _b in _tb_boxes
+                        if isinstance(_b, dict) and _b.get("rect")]
+            for _tb_g in [_b for _b in _tb_real
+                          if _tb_skin(_b) == "thin_border"]:
+                _gx, _gy, _gw, _gh = _tb_g["rect"]
+                _tb_groups += 1
+                for _tb_o in _tb_real:
+                    if _tb_o is _tb_g:
+                        continue
+                    _ox, _oy, _ow, _oh = _tb_o["rect"]
+                    if not (_ox >= _gx and _oy >= _gy
+                            and _ox + _ow <= _gx + _gw
+                            and _oy + _oh <= _gy + _gh):
+                        continue
+                    _tb_pairs += 1
+                    _gap = min(_ox - _gx, _oy - _gy,
+                               (_gx + _gw) - (_ox + _ow),
+                               (_gy + _gh) - (_oy + _oh))
+                    if _gap >= _TB_MIN_GAP:
+                        continue
+                    if (_tb_screen, _tb_g["name"],
+                            _tb_o["name"]) in _TB_ALLOWED:
+                        continue
+                    _tb_bad.append(
+                        f"{_tb_screen}/{_tb_key}: {_tb_o['name']} clears "
+                        f"{_tb_g['name']}'s rim by {_gap} px")
+    assert not _tb_bad, (
+        f"a box sits on a thin_border's own 1 px line: {_tb_bad}. Either "
+        f"grow the GROUP (fltgeom.GROUP_PAD is that move) or put the "
+        f"pair in _TB_ALLOWED with the reason the two are never drawn "
+        f"together")
+    # The exception list must not rot into a silence: every entry has to
+    # name a pair that EXISTS.
+    _tb_names = set()
+    for _tb_s in os.listdir(SCREENS_DIR):
+        _tb_p = os.path.join(SCREENS_DIR, _tb_s, "boxes.json")
+        if not os.path.exists(_tb_p):
+            continue
+        _tb_f = _sjson.load(io.open(_tb_p, encoding="utf-8"))
+        if not isinstance(_tb_f, dict):
+            continue
+        for _tb_bs in _tb_f.values():
+            _tb_ns = [_b["name"] for _b in _tb_bs
+                      if isinstance(_b, dict) and _b.get("name")]
+            _tb_names |= {(_tb_s, _g, _o)
+                          for _g in _tb_ns for _o in _tb_ns}
+    _tb_stale = sorted(_k for _k in _TB_ALLOWED if _k not in _tb_names)
+    assert not _tb_stale, (
+        f"_TB_ALLOWED names pairs that are not in any boxes.json: "
+        f"{_tb_stale}")
+    assert _tb_groups >= 25 and _tb_pairs >= 25, (
+        f"only {_tb_groups} thin_border group(s) and {_tb_pairs} nested "
+        f"box(es) were measured; a rule that examines almost nothing "
+        f"passes for the wrong reason")
+    ok(f"no box sits on a thin_border's 1 px line: {_tb_pairs} nested "
+       f"boxes in {_tb_groups} groups across the tree, "
+       f"{len(_TB_ALLOWED)} named exceptions")
 
     ok("colony summary sidebar layout (label flush left, value flush "
        "right, ink-measured at 12 resolutions)")
@@ -17786,7 +18005,7 @@ def main():
 
     def _fl_snapshot(icons=6, first_row=0, owner=1, relocate=0,
                      selected=(1, 2), with_block=True, rows=2,
-                     shown=None, ship_icons=()):
+                     shown=None, ship_icons=(), scanned_big=1):
         """A STATE_SNAPSHOT payload with the fleet screen up.
 
         The FLTS block sits after FSEL, exactly where the engine writes
@@ -17820,7 +18039,7 @@ def main():
         if with_block:
             _b += b"FLTS"
             _b += _fl_s.pack("<12h", 2, 5, owner, icons, _shown, rows,
-                          first_row, len(selected), 1, -1, 1, 1)
+                          first_row, len(selected), scanned_big, -1, 1, 1)
             _b += bytes([relocate, 0])
             _b += _fl_s.pack("<h", icons)
             for _i in range(icons):
@@ -18010,7 +18229,7 @@ def main():
             f"{_fl_open}: {_fl_out}. Content outside it slides under "
             f"the ring")
     assert len(_fl_boxfile["1920x1080"]) == (
-        len(_flg.REGIONS) + len(_flg.CONTROLS)), (
+        len(_flg.REGIONS) + len(_flg.CONTROLS) + len(_flg.HINTS)), (
             "boxes.json and fltgeom disagree about how many boxes this "
             "screen has")
 
@@ -18023,8 +18242,18 @@ def main():
     _fl_f, _, _ = _flg.seat(_fl_open)
     for _fl_name, _fl_native in _flg.REGIONS.items():
         _fl_r = _fl_seated[_fl_name]
-        assert abs(_fl_r[2] - _fl_native[2] * _fl_f) <= 1
-        assert abs(_fl_r[3] - _fl_native[3] * _fl_f) <= 1
+        # AGAINST THE PADDED NATIVE RECT, because the two union regions
+        # are grown by GROUP_PAD before they are seated (137 E3) — and
+        # through `_padded` rather than by adding the number here, so
+        # the pad stays in one place. The FACTOR is what this checks,
+        # and the pad is in native px precisely so it cannot change it.
+        _fl_pn = _flg._padded(_fl_name, _fl_native)
+        assert abs(_fl_r[2] - _fl_pn[2] * _fl_f) <= 1, _fl_name
+        assert abs(_fl_r[3] - _fl_pn[3] * _fl_f) <= 1, _fl_name
+        if _fl_name in _flg.PADDED_REGIONS:
+            assert _fl_pn[2] == _fl_native[2] + 2 * _flg.GROUP_PAD
+        else:
+            assert _fl_pn == _fl_native, _fl_name
     _fl_map = _fl_seated["inset_map"]
     assert abs(_fl_map[2] / _fl_map[3] - 305 / 182) < 0.01, (
         f"the inset map is {_fl_map[2]}x{_fl_map[3]}, aspect "
@@ -18049,6 +18278,83 @@ def main():
        "draw and hit-test agree on all twenty cells, the filters get a "
        "click and the rest an activation, every box fits the opening "
        "at both resolutions and the inset keeps 305:182")
+
+    # ── 137 E4/E5/E6: WHERE RETURN'S BOX COMES FROM, THE TWO EMPTY
+    #    AREAS, AND THE TWO HIGHLIGHTED CELLS ────────────────────────
+    #
+    # E4. RETURN's drawn box is its FIELD and nothing else. Help 374 is
+    # (456, 430)-(628, 456) (evanhelp.cpp:165), a strip reaching left
+    # across the two filter radios, and decision 38 lets a help
+    # rectangle decide no box edge. The entry used to take the strip's
+    # right and bottom — and 556 + 73 - 1 IS 628, so the wrong
+    # derivation produced the right rectangle. That is why this is a
+    # check and not a comment.
+    assert _flg.CONTROLS["btn_return"][1][:2] == (556, 430), (
+        "RETURN's box no longer starts at its field's own origin "
+        "(flt1.cpp:1201)")
+    assert _flg.CONTROLS["btn_return"][1][2:] == \
+        _flg.CONTROLS["btn_leaders"][1][2:], (
+            "RETURN's extent is no longer LEADERS' — the same row, the "
+            "same artwork family, and the only size in any source")
+    _fl_help374 = (456, 430, 628 - 456 + 1, 456 - 430 + 1)
+    assert not [_n for _n, (_p, _r) in _flg.CONTROLS.items()
+                if tuple(_r) == _fl_help374], (
+        "a control box equals help 374's strip; a help rectangle is not "
+        "an extent (decision 38)")
+    assert "374" in io.open(os.path.join(SCREENS_DIR, "fleets", "help.json"),
+                            encoding="utf-8").read(), (
+        "help 374 left help.json; the rectangle is still the original's "
+        "and stays where decision 38 puts it")
+
+    # E5. The two areas HD leaves empty say so, in a `text` box
+    # (decision 37) whose words are in `layout.json` (decision 15), and
+    # both are marked OMISSION beside the four fltwire already carries.
+    assert set(_flg.HINTS) == {"inset_hint", "status_hint"}, _flg.HINTS
+    _fl_boxfile_1080 = _sjson.load(io.open(
+        os.path.join(_fl_dir, "boxes.json"),
+        encoding="utf-8"))["1920x1080"]
+    for _fl_hint, (_fl_region, _fl_word) in _flg.HINTS.items():
+        assert _fl_word in _fl_layout["words"], _fl_word
+        _fl_hb = next((_b for _b in _fl_boxfile_1080
+                       if _b["name"] == _fl_hint), None)
+        assert _fl_hb and _fl_hb["style"].get("skin") == "text", (
+            f"{_fl_hint} is not a text box; a panel or a border there "
+            f"would be a second outline inside {_fl_region}'s own")
+    assert {"omission_inset_map", "omission_status_line"} <= \
+        set(_fl_layout["marks"]), sorted(_fl_layout["marks"])
+    for _fl_mark, _fl_cite in (("omission_inset_map", "flt1.cpp:649"),
+                               ("omission_status_line", "flt2.cpp:338-522")):
+        assert _fl_layout["marks"][_fl_mark].startswith("OMISSION"), _fl_mark
+        assert _fl_cite in _fl_layout["marks"][_fl_mark], (
+            f"{_fl_mark} no longer cites {_fl_cite}, so it records a "
+            f"label rather than what the original does instead")
+
+    # E6. TWO HIGHLIGHTED CELLS ARE THE ORIGINAL'S OWN STATE, not a
+    # fault: FLT1::Set_Fltscrn_Big_Icons_ (flt1.cpp:1610-1616) is the
+    # ALL button and sets `selected = 1` on every icon, and
+    # Update_Selection_Flags_ (:1069-1093) counts them — SCRAP exists
+    # only while the count is above zero (:1185). What the panel shows
+    # is a DIFFERENT variable: the SCANNED ship, never the selection.
+    _fl_multi = _fl_snapshot(selected=(1, 2), scanned_big=0)
+    _fl_multi.fields = _fl_fields(6)
+    _fl_scr.update(_fl_multi)
+    assert _fl_scr._view.state == _flw.READY, _fl_scr._view.state
+    assert [_c.selected for _c in _fl_scr._cells] == \
+        [False, True, True, False, False, False], (
+            "the grid does not draw two selected cells; multi-select is "
+            "the original's own state")
+    assert _fl_scr._view.selected_ships() == [1, 2]
+    _fl_panel_0 = list(_fl_scr._panel)
+    _fl_one = _fl_snapshot(selected=(1, 2), scanned_big=3)
+    _fl_one.fields = _fl_fields(6)
+    _fl_scr.update(_fl_one)
+    assert _fl_scr._panel != _fl_panel_0 and _fl_scr._panel, (
+        "the ship panel did not follow the SCANNED ship; it must not "
+        "follow the selection, which can be several ships at once")
+    ok("RETURN's box is its own field and not help 374, the two empty "
+       "areas say so in a text box and are marked OMISSION with the line "
+       "the original draws there, and two selected cells are the "
+       "original's own state while the panel follows the SCANNED ship")
 
     # ── A FIELD THIS SCREEN DID NOT BUILD HANDS BACK TO THE ORIGINAL ──
     #

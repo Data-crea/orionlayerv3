@@ -47,12 +47,22 @@ def opening():
         return json.load(f)["frame"]["opening"]
 
 
+#: Decision 37's third skin: a `text` box draws the string and nothing
+#: else. The two hint boxes wear it — a `thin_border` there would be a
+#: second outline inside the region's own.
+TEXT_SKIN = {"skin": "text", "align": "center", "font_scale": 0.8}
+
+
 def entries():
-    """The sixteen boxes, regions first so the F5 list reads outside-in."""
+    """The boxes, regions first so the F5 list reads outside-in, then
+    the controls, then the two hint labels."""
     seated = fltgeom.seat_regions(opening())
     order = list(fltgeom.REGIONS) + list(fltgeom.CONTROLS)
-    return [{"name": name, "rect": seated[name], "style": dict(SKIN)}
-            for name in order]
+    out = [{"name": name, "rect": seated[name], "style": dict(SKIN)}
+           for name in order]
+    out += [{"name": name, "rect": seated[name], "style": dict(TEXT_SKIN)}
+            for name in fltgeom.HINTS]
+    return out
 
 
 def main():

@@ -185,8 +185,28 @@ class FleetsScreen(ScreenBase):
 
     # ── Drawing ───────────────────────────────────────────
 
+    def _fill_hints(self):
+        """The two hint labels, set on their boxes for this frame only.
+
+        `Box.text` is deliberately not serialized (decision 37), so a
+        value computed here can never reach `boxes.json`. The inset's
+        hint always stands — a click there sends nothing and never will
+        until relocation and move orders are built (OMISSION, 137 E5).
+        The status strip's stands only while HD has no star name to
+        put there, because the name is the part HD CAN say.
+        """
+        for name, (_region, word) in fltgeom.HINTS.items():
+            box = self.box_by_name(name)
+            if box is None:
+                continue
+            if name == "status_hint" and self._status:
+                box.text = None
+                continue
+            box.text = self._words.get(word)
+
     def render(self, surface):
         self._render_background(surface)
+        self._fill_hints()
         for box in self.boxes:
             box.render(surface, self.layout, self.style)
         fltdraw.draw_slots(surface, self)
