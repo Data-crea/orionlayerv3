@@ -19322,6 +19322,121 @@ def main():
     assert _fd.RADIOS == {"btn_support": ("support", "support_filter"),
                           "btn_combat": ("combat", "combat_filter")}
 
+    # ── RELOCATION LINES: ONE FACT, TWO LOOKS ──────────────────────
+    #
+    # Work order 144 Part 2. The Fleets minimap and the galaxy map draw
+    # relocation lines from the SAME data and with DIFFERENT colours,
+    # and the original is what makes them differ. The checks below hold
+    # the parts that could drift apart silently.
+    from core.structs import star as _rl_star
+    import screens.galaxy_map.maplines as _rl_ml
+    import screens.fleets.fltdraw as _rl_fd
+
+    # 1. THE OFFSET IS THE HEADER'S, and the arithmetic that produced
+    #    it still reproduces every offset this spec already held. If a
+    #    future edit moves a field, this fails before the lines go to
+    #    the wrong stars.
+    _rl_MP, _rl_MS = 8, 1024
+    _rl_fields = [
+        ("name", 15), ("x", 2), ("y", 2), ("size", 1), ("owner", 1),
+        ("pict_type", 1), ("spectral_class", 1),
+        ("last_planet_selected", _rl_MP), ("black_hole_blocks", (_rl_MS + 7) // 8),
+        ("system_special", 1), ("wormhole_star_id", 2), ("blockaded", 1),
+        ("blockaded_by", _rl_MP), ("visited", 1), ("just_visited", 1),
+        ("ignore_colony_ships", 1), ("ignore_combat_ships", 1),
+        ("colonize_player", 1), ("has_colony", 1),
+        ("has_warp_field_interdictor", 1), ("next_wfi_in_list", 2),
+        ("has_tachyon", 1), ("has_subspace", 1), ("has_stargate", 1),
+        ("has_jumpgate", 1), ("has_artemis_net", 1),
+        ("has_dimensional_portal", 1), ("is_stagepoint", 1),
+        ("officer_index", _rl_MP), ("planet_index", 10),
+        ("relocate_ship_to", 2 * _rl_MP), ("twinkling1", 1),
+        ("twinkling2", 1), ("not_used3", 1), ("surrender_to", _rl_MP),
+        ("in_nebula", 1), ("artifacts_gave_app", 1)]
+    _rl_off, _rl_pos = {}, 0
+    for _rl_n, _rl_s in _rl_fields:
+        _rl_off[_rl_n] = _rl_pos
+        _rl_pos += _rl_s
+    assert _rl_pos == _rl_star.SIZE, (_rl_pos, _rl_star.SIZE)
+    _rl_spec = {n: o for n, o, _k in _rl_star.SPEC.fields}
+    for _rl_n, _rl_o in _rl_spec.items():
+        if _rl_n in _rl_off:
+            assert _rl_off[_rl_n] == _rl_o, (
+                f"s_star_data layout moved: {_rl_n} is {_rl_o} in the spec "
+                f"and {_rl_off[_rl_n]} in orion2.h's field order")
+    assert _rl_star.RELOCATE_OFFSET == _rl_off["relocate_ship_to"] == 205
+    assert _rl_star.PLANET_INDEX_OFFSET + 10 == _rl_star.RELOCATE_OFFSET
+
+    # 2. -1 IS "NO RELOCATION" AND MUST NOT REACH A CALLER as a star
+    #    index: `Star_Has_Relocation_` is exactly `!= -1`
+    #    (haccess.cpp:114), and -1 would index the last star in Python.
+    _rl_raw = bytearray(_rl_star.SIZE)
+    struct.pack_into("<h", _rl_raw, 205 + 2 * 3, 42)
+    struct.pack_into("<h", _rl_raw, 205 + 2 * 0, -1)
+    _rl_view = _rl_star.parse(bytes(_rl_raw))
+    assert _rl_star.relocation_target(_rl_view, 3) == 42
+    assert _rl_star.relocation_target(_rl_view, 0) is None
+    assert _rl_star.relocation_target(_rl_view, 8) is None, "out of range"
+
+    # 3. ONE FACT, NOT TWO. Both screens' lines must come from
+    #    `maplines.relocation_pairs`; a second walk over the stars
+    #    testing offset 205 is the copy decision 68 exists to stop.
+    _rl_fd_src = io.open(os.path.join(SCREENS_DIR, "fleets", "fltdraw.py"),
+                         encoding="utf-8").read()
+    # Read the CODE, not the prose: `draw_relocation_lines`' docstring
+    # explains that the gate is the galaxy map's, so a plain grep finds
+    # the word and calls it a use. Comments and string literals are
+    # stripped before the question is asked.
+    def _rl_code_only(src):
+        import io as _io, tokenize as _tk
+        out = []
+        for tok in _tk.generate_tokens(_io.StringIO(src).readline):
+            if tok.type in (_tk.COMMENT, _tk.STRING):
+                continue
+            out.append(tok.string)
+        return " ".join(out)
+    _rl_fd_code = _rl_code_only(_rl_fd_src)
+    assert "maplines.relocation_pairs" in _rl_fd_src, (
+        "the Fleets minimap no longer takes its relocations from "
+        "maplines.relocation_pairs")
+    assert "RELOCATE_OFFSET" not in _rl_fd_code and "205" not in _rl_fd_code, (
+        "fltdraw reaches for the relocation offset itself; the fact "
+        "belongs to core/structs/star through maplines")
+    # and it must draw through the one line primitive (decision 68)
+    assert "maplines.stroke" in _rl_fd_src, (
+        "the relocation lines no longer go through maplines.stroke")
+
+    # 4. THE MINIMAP'S RAMP IS THE GREY ONE. The Fleets mockup showed
+    #    GREEN lines and the mockup is not evidence: palette 6..10 of
+    #    FONTS.LBX 9 is grey, and the green table (0x6E,0x6F,0x70) is
+    #    the GALAXY MAP's, on a different screen. A green ramp here
+    #    would mean the mockup had been believed over the source.
+    for _rl_c in _rl_fd.RELOCATION_RAMP:
+        _rl_r, _rl_g, _rl_b = _rl_c[:3]
+        assert abs(_rl_r - _rl_g) <= 4 and _rl_b >= _rl_g, (
+            f"the relocation ramp entry {_rl_c} is not the grey-blue of "
+            f"palette 6..10; flt1.cpp:1460-1467")
+        assert not (_rl_g > _rl_r + 20), "green ramp — that is the mockup, not the source"
+    assert len(_rl_fd.RELOCATION_RAMP) == 8, "s_colors carries eight"
+
+    # 5. THE MINIMAP IS NOT GATED BY THE GALAXY MAP'S SETTING, and the
+    #    galaxy map's omission still says why it is still omitted.
+    assert "show_relocation_lines" not in _rl_fd_code, (
+        "the minimap consults the galaxy map's setting; flt1.cpp:1480 "
+        "has no such gate")
+    _rl_ml_src = io.open(os.path.join(SCREENS_DIR, "galaxy_map",
+                                      "maplines.py"), encoding="utf-8").read()
+    assert "show_relocation_lines" in _rl_ml_src and \
+        "144-parked-for-data" in _rl_ml_src, (
+            "the galaxy map's relocation omission lost the half of its "
+            "reason that still stands")
+
+    ok("relocation lines: offset 205 agrees with orion2.h's field order "
+       "and the spec's twelve known offsets, -1 never reaches a caller, "
+       "both screens share one fact and one stroke, the minimap's ramp "
+       "is the source's grey and not the mockup's green, and the galaxy "
+       "map's remaining gate is still recorded")
+
     ok("the Fleets screen's own artwork: never tracked and gitignored, "
        "absent is a state that answers None everywhere, an older "
        "format is refused, the centring keeps the original's rounding, "

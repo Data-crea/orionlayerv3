@@ -23,6 +23,8 @@ import pygame
 
 from core import palette
 
+from screens.galaxy_map import maplines
+
 from . import fltart
 from . import fltgeom
 
@@ -433,6 +435,73 @@ def draw_inset(surface, screen, stars, markers, art=None):
         y = rect.y + my * fy
         pygame.draw.rect(surface, owner_colour(owner),
                          (int(x), int(y), dot * 2, dot * 2))
+    surface.set_clip(previous)
+
+
+#: The relocation line's eight-step ramp, palette 6,7,7,8,8,9,9,10
+#: (flt1.cpp:1460-1467). In the skin (decision 14), with its source.
+RELOCATION_RAMP = tuple(tuple(c) for c in palette.require(
+    "fleets", "relocation_line"))
+
+#: `Draw_Ship_Destination_Line_` nudges the STAR end by +4
+#: (ships.cpp:552-553, the non-main-screen branch) and
+#: `Draw_Fltscrn_Relocation_Lines_` passes the TARGET end already
+#: nudged by +3 (flt1.cpp:1486). Native px, inside the inset box.
+RELOCATION_FROM_NUDGE = 4
+RELOCATION_TO_NUDGE = 3
+
+
+def draw_relocation_lines(surface, screen, state, stars, ms):
+    """The relocation lines on the inset, under nothing and over black.
+
+    **TRANSCRIPTION.** `FLT1::Draw_Fltscrn_Relocation_Lines_`
+    (flt1.cpp:1451-1490) walks every star, and for each one the local
+    player has relocated draws a line from that star to its target. It
+    is NOT gated by `_settings.show_relocation_lines` — that gate is
+    the galaxy map's (mainscr.cpp:690) and this screen does not consult
+    it, so neither does this.
+
+    The line goes through `maplines`: `relocation_pairs` for the fact,
+    `directional` + `phase_at` + `wave_pieces` for the wave, `clip` for
+    the box the original clips to (movebox.cpp:57-59 for the stars,
+    and this loop draws inside the same window), and `stroke` for every
+    piece — decision 68, one routine for every line on an HD map.
+
+    `stars` is `colonyrows.galaxy_inset_stars`' output for THIS box, in
+    star order, so a line's ends are the very positions the dots were
+    drawn at: no second transform, and nothing here converts galaxy
+    coordinates itself.
+    """
+    rect = _rect(screen, "inset_map")
+    if rect is None or not stars:
+        return
+    pairs = maplines.relocation_pairs(state, getattr(state, "player_num", 0))
+    if not pairs:
+        return
+    from . import fltgeom
+    _nx, _ny, nw, nh = fltgeom.REGIONS["inset_map"]
+    fx, fy = rect.width / float(nw), rect.height / float(nh)
+    phase = maplines.phase_at(ms)
+    step = max(1.0, min(fx, fy))
+    previous = surface.get_clip()
+    surface.set_clip(rect)
+    for star_idx, target_idx in pairs:
+        if not (0 <= star_idx < len(stars) and 0 <= target_idx < len(stars)):
+            continue
+        sx, sy, _c = stars[star_idx]
+        tx, ty, _c2 = stars[target_idx]
+        a = (rect.x + (sx + RELOCATION_FROM_NUDGE) * fx,
+             rect.y + (sy + RELOCATION_FROM_NUDGE) * fy)
+        b = (rect.x + (tx + RELOCATION_TO_NUDGE) * fx,
+             rect.y + (ty + RELOCATION_TO_NUDGE) * fy)
+        table, offset = maplines.directional(a[0], a[1], b[0], b[1],
+                                             RELOCATION_RAMP, phase)
+        seg = maplines.clip(a, b, (rect.x, rect.y, rect.width, rect.height))
+        if seg is None:
+            continue
+        for colour, p, q in maplines.wave_pieces(seg[0], seg[1], table,
+                                                 offset, step):
+            maplines.stroke(surface, colour, p, q)
     surface.set_clip(previous)
 
 

@@ -67,6 +67,43 @@ def planet_indices(view):
     return list(_s.unpack_from("<5h", view.raw, PLANET_INDEX_OFFSET))
 
 
+#: `relocate_ship_to[MAX_PLAYERS]`, orion2.h:3007 — one int16 per
+#: player, -1 for "no relocation". Immediately after `planet_index[5]`
+#: at 195, which this file already carried as verified: 195 + 10 = 205.
+#:
+#: **VERIFIED BY THE HEADER ROUTE** (decision 23's second route), not
+#: by a hand count. The whole struct was laid out from
+#: `src/game/orion2.h`'s field order with `MAX_PLAYERS 8` and
+#: `BITMAP(MAX_STARS 1024)`, and the result reproduces every offset
+#: this spec already held as verified — name 0, x 15, y 17, size 19,
+#: owner 20, pict_type 21, spectral_class 22, system_special 159,
+#: wormhole_star_id 160, blockaded 162, visited 171, colonize_player
+#: 175, planet_index 195 — and the total size 234. Twelve agreements
+#: and the size; the thirteenth value is this one.
+#:
+#: `screens/galaxy_map/maplines.py` recorded this offset as "not
+#: verified" and omitted the relocation lines because of it. That
+#: reason is now spent.
+RELOCATE_OFFSET = 205
+RELOCATE_SLOTS = 8
+
+
+def relocation_target(view, player_num):
+    """The star this system's ships are relocated to, or None.
+
+    `HACCESS::Star_Has_Relocation_` is `relocate_ship_to[player] != -1`
+    and `HACCESS::Relocation_` returns the value (haccess.cpp:113-119),
+    so the two are one lookup here and None carries "no relocation"
+    rather than a magic -1 the caller has to remember.
+    """
+    import struct as _s
+    if not 0 <= int(player_num) < RELOCATE_SLOTS:
+        return None
+    target = _s.unpack_from("<h", view.raw,
+                            RELOCATE_OFFSET + 2 * int(player_num))[0]
+    return None if target < 0 else target
+
+
 def is_black_hole(view):
     return view.spectral_class == CLASS_BLACK_HOLE
 

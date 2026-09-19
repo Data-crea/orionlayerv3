@@ -63,8 +63,28 @@ OMISSION, each with its reason:
   * the order preview line (`Draw_ETA_Destination_Line_`,
     mainscr.cpp:535-568): its colour is the move result, which is not on
     the wire.
-  * relocation lines (`Draw_Relocation_Links_`, mainscr.cpp:682-703): the
-    setting and `relocate_ship_to` (star offset 205) are not verified.
+  * relocation lines (`Draw_Relocation_Links_`, mainscr.cpp:682-703):
+    **HALF OF THIS REASON IS SPENT, and the omission stands on the
+    other half.** It read "the setting and `relocate_ship_to` (star
+    offset 205) are not verified". Work order 144 verified offset 205
+    by the header route with twelve agreeing offsets and the struct
+    size — `core/structs/star.RELOCATE_OFFSET` carries the derivation —
+    and the Fleets minimap now draws these lines from it
+    (`fltdraw.draw_relocation_lines`), sharing this module's
+    `relocation_pairs`, `directional`, `wave_pieces` and `stroke`.
+
+    What still blocks THIS screen is the other half:
+    `_settings.show_relocation_lines` gates the galaxy map's loop
+    (mainscr.cpp:690) and does not gate the minimap's at all
+    (flt1.cpp:1480). The byte is at offset 8 of `s_settings` — nine
+    leading `uint8_t`, unambiguous — and `settings_raw` is on the wire,
+    but nothing has confirmed that the option is reachable in this
+    build's options screen, so drawing the galaxy map's lines would
+    mean guessing at whether a player can turn them off. Parked as
+    question 4 in `doc/briefs/144-parked-for-data.md`.
+
+    Not deleted and not quietly satisfied: the data is shared, the look
+    is not, and this screen's own gate has still not been read.
 """
 import math
 
@@ -96,6 +116,47 @@ LOCATION_LIMIT = ship_struct.LOCATION_LIMIT
 def stroke(surface, colour, a, b):
     """THE line primitive of the HD map — HD EXTENSION B1, antialiased."""
     pygame.draw.aaline(surface, tuple(colour[:3]), a, b)
+
+
+def relocation_pairs(state, player_num):
+    """`(star_index, target_index)` for every relocation `player_num` has.
+
+    **THE SHARED FACT BEHIND TWO DRAWINGS.** The Fleets minimap and the
+    galaxy map draw relocation lines from the SAME data —
+    `HACCESS::Star_Has_Relocation_` is `relocate_ship_to[player] != -1`
+    and `HACCESS::Relocation_` returns the value (haccess.cpp:113-119),
+    and both `FLT1::Draw_Fltscrn_Relocation_Lines_` (flt1.cpp:1480-1487)
+    and `MAINSCR::Draw_Relocation_Links_` (mainscr.cpp:691-697) walk
+    every star testing exactly that. So the fact lives here, once, and
+    each screen supplies its own transform — which is decision 68 for
+    the part of a line that is not the stroke.
+
+    What the two screens do NOT share is the look, and that is the
+    original's doing, not ours:
+
+      * colours — the minimap's table is palette 6,7,7,8,8,9,9,10
+        (flt1.cpp:1460-1467), a GREY ramp in FONTS.LBX 9; the galaxy
+        map's is 0x6E,0x6F,0x70,0x70,... (mainscr.cpp:684), the green
+        of the travel lines
+      * direction — the minimap draws star -> target
+        (flt1.cpp:1486 through ships.cpp:558-566), the galaxy map draws
+        star -> target as well (mainscr.cpp:697); the minimap's ends
+        are nudged +4 at the star and +3 at the target
+      * gating — the galaxy map is inside
+        `if (_settings.show_relocation_lines != 0)` (mainscr.cpp:690);
+        **the minimap is not gated at all**
+
+    Underneath, both end in `SHIPS::Draw_Directional_Multi_Colored_Line_`
+    with `_multi_colored_line_start`, which `directional`, `phase_at`
+    and `wave_pieces` above already transcribe. One routine, two
+    tables.
+    """
+    out = []
+    for index, star in enumerate(state.stars or []):
+        target = star_struct.relocation_target(star, player_num)
+        if target is not None and 0 <= target < len(state.stars):
+            out.append((index, target))
+    return out
 
 
 def phase_at(ms):

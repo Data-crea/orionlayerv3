@@ -1379,7 +1379,50 @@
       "scroll_track": "palette 0xA1 = the same fill's end, which decrements every second column across width 0xC (flt1.cpp:296-300)",
       "scroll_arrow": "palette 119 = FLT2::_normal_colors.colors[1] + 3, the brightening flt2.cpp:652 applies",
       "slot_fill": "NO PALETTE INDEX EXISTS. The grid plates are painted into FLEET.LBX 0 (flt1.cpp:1130), not filled by code, so there is no index to cite. Sampled from that entry's own plate at fltgeom.native_cells()[0]; with the artwork extracted the plate itself is drawn and this is only the margin around it.",
-      "slot_edge": "NO PALETTE INDEX EXISTS \u2014 as slot_fill. The rivet highlight of the same plate."
-    }
+      "slot_edge": "NO PALETTE INDEX EXISTS \u2014 as slot_fill. The rivet highlight of the same plate.",
+      "relocation_line": "palette 6,7,7,8,8,9,9,10 \u2014 the s_colors table FLT1::Draw_Fltscrn_Relocation_Lines_ builds (flt1.cpp:1460-1467), resolved through FONTS.LBX entry 9. A GREY ramp, not green: the Fleets mockup's green lines are an invention, and the galaxy map's relocation table (0x6E,0x6F,0x70) is a different table on a different screen (mainscr.cpp:684)."
+    },
+    "relocation_line": [
+      [
+        52,
+        52,
+        60
+      ],
+      [
+        60,
+        60,
+        68
+      ],
+      [
+        60,
+        60,
+        68
+      ],
+      [
+        72,
+        72,
+        80
+      ],
+      [
+        72,
+        72,
+        80
+      ],
+      [
+        80,
+        80,
+        88
+      ],
+      [
+        80,
+        80,
+        88
+      ],
+      [
+        88,
+        88,
+        96
+      ]
+    ]
   }
 }

@@ -27,6 +27,8 @@ from there.
 """
 import logging
 
+import pygame
+
 from core.screen_base import ScreenBase
 
 from core import mouse as mouse_input
@@ -267,8 +269,11 @@ class FleetsScreen(ScreenBase):
                             self.enabled_buttons(), self._art,
                             self._filter_state())
         fltdraw.draw_panel(surface, self, self._panel)
-        fltdraw.draw_inset(surface, self, self._inset_stars(),
+        _stars = self._inset_stars()
+        fltdraw.draw_inset(surface, self, _stars,
                            self._inset_markers(), self._art)
+        fltdraw.draw_relocation_lines(surface, self, self._state, _stars,
+                                      pygame.time.get_ticks())
         fltdraw.draw_status(surface, self, self._status)
         # The frame LAST, so its metal covers the two reference px each
         # box is allowed to bleed under it (fltgeom.BLEED).
