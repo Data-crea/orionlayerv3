@@ -10,9 +10,13 @@ from each screen class's GAME_SCREEN_ID attribute. Screens
 (including screens added by mods) declare their own ID; there
 is no central list to maintain.
 """
+import logging
+
 import pygame
 
 from core.screen_names import SCREENS as _SCREEN_NAMES
+
+log = logging.getLogger("dispatcher")
 
 # Display names for orion2re screen IDs (status bar only —
 # has no effect on routing). Falls back to the ENGINE_NAME (e.g.
@@ -84,6 +88,14 @@ class Dispatcher:
 
         screen = target
         if screen:
+            # WORK ORDER 139 B. Until now a screen switch left no trace
+            # at all, so a log could not say whether HD had followed the
+            # game at all — work order 138 had to infer it from which
+            # screen sent the NEXT click. One line, here, where the
+            # switch happens, with the game's own id beside the names.
+            log.info("screen: %s -> %s (game screen %s)",
+                     self.active_name or "-", name,
+                     getattr(game_state, "current_screen", "?"))
             self.active = screen
             self.active_name = name
             self.use_original = False

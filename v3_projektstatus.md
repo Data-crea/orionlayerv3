@@ -13,6 +13,48 @@ right and the header had gone stale** — resolved 10 September 2026
 by dating the header to the edit and giving this session its
 paragraph, below, so the two agree again.
 
+This session (19 September 2026, work order 139 A-D): **a fallback
+says why — in the log and on the screen.** 138 found the Fleets screen
+handing over with nothing anywhere saying why, and `fallback_reason()`
+with one caller in the whole tree.
+
+- **One log line per change**, at `main.App._verdict` (main.py) and
+  nowhere else: every screen that hands over passes through
+  `_showing_original`, so none of them needs a rule of its own. The
+  reporting itself is `core.fallbacknote.Reporter`, beside the drawing
+  of the same sentence, so the line and the note cannot disagree. On
+  CHANGE only — the method is asked twice a frame — and the key
+  carries the REASON, so a screen that stays down for a new reason
+  still writes a line. A screen with no `fallback_reason` is written
+  as `no reason given` in as many words.
+- **Every screen switch is one line** with the game's own id
+  (`core/dispatcher.py`). Until now a switch left no trace at all, and
+  138 had to infer it from which screen sent the NEXT click.
+- **The first line of every log says which OrionLayer is running** —
+  `core.config.build_line`, git asked rather than a number written
+  into the tree, and `unknown` rather than an exception when git
+  cannot answer. 138 could not say which commit Data's run was on, and
+  the answer decided whether a rule that had never run live was even
+  in that build.
+- **The reason is drawn over the game's picture**, `core/fallbacknote.py`,
+  marked **HD EXTENSION**: the original has no second renderer to fall
+  back FROM, so it has no such state to explain. It goes in a band the
+  picture does not use — the pillarbox at 4:3 in a wide window,
+  measured 240 px at 1080p and 760 at ultrawide — takes the picture
+  rect from `OriginalView.placement` rather than repeating that
+  arithmetic (decision 5), fills from `background_cockpit.png` like
+  the help popup, wraps by rendering (decision 30), shortens with its
+  own marker rather than cutting, takes its frame wording from
+  `assets/shared/fallback/labels.json` (decision 15) and **swallows no
+  click**: `_handle_click` is untouched and knows nothing about it.
+  No reason means no note, so decision 22's plain fallback and F12's
+  mode look exactly as they did.
+
+Shown red three ways: logging per frame instead of per change, the
+switch line removed, and the note placed over the picture. Renders at
+1080p, 1440p, ultrawide, 2160p and 4:3 in
+`~/orionlayer-fixtures/evidence/work_order_139/`. Smoke **224 -> 225**.
+
 This session (19 September 2026, work order 138): **why the HD Fleets
 screen does not appear — diagnosed as far as this machine allows, and
 STOPPED at the live part.** Nothing was fixed; nothing but this
@@ -1140,7 +1182,7 @@ files under `doc/` and are only summarised here.
 | | |
 |---|---|
 | Python | 32,960 lines across 111 modules — `find . -name '*.py'`, `__pycache__` excluded, the smoke test's 6,400 included. The previous figure here (21,642 across 94) was carried from an unstated method and could not be reproduced |
-| Smoke test | `python tools/smoke_test.py` — **224 checks**, headless |
+| Smoke test | `python tools/smoke_test.py` — **225 checks**, headless |
 | Assets | 170 MB (select_race 68, galaxy_map 51, shared 23, new_game 21, colony_summary 1) |
 | Screens in HD | 9 of ~20–22 (the GAME menu overlay, work order Stop 2, every dialog of the popup; colony summary draws list, sidebar, scan box and galaxy inset, and MOVES POPS — the first HD gesture that drives the game; planets, brief 101, lists, sorts, restricts and returns) |
 | Setup from clone | `python tools/setup.py` (deps via the system package manager) |

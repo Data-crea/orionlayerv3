@@ -77,3 +77,58 @@ def load_settings():
         "skin": "default",
         "active_mods": [],
     }
+
+
+# --- Which OrionLayer is running (work order 139 C) ------------------
+#
+# A DIAGNOSTIC DEGRADES, IT DOES NOT CRASH. Work order 138 could not
+# say which commit Data's run was on, because nothing logged it — and
+# the answer decided whether a rule that had never run live was even
+# in that build. So the first line of every log says it.
+#
+# git is asked, not a file: a version written into the tree is the
+# hand-copied number decision 36 is about, and this one has no checker
+# it could be held to. Everything that can fail is a state with a
+# word: no git, no repository, a timeout, a non-zero exit — all of
+# them "unknown", never an exception out of a log call.
+
+#: What is reported when git cannot answer. One word, so a log line
+#: reads the same shape either way.
+UNKNOWN_BUILD = "unknown"
+
+
+def build_id(root=None, timeout=3.0):
+    """`(commit, dirty)` for the tree this file is in.
+
+    `commit` is the short hash or `UNKNOWN_BUILD`; `dirty` is True
+    when the working tree has changes, False when it is clean, and
+    None when git could not say. Raises nothing.
+    """
+    import subprocess
+    root = root or BASE_DIR
+    try:
+        rev = subprocess.run(
+            ["git", "-C", root, "rev-parse", "--short", "HEAD"],
+            capture_output=True, text=True, timeout=timeout)
+        if rev.returncode != 0 or not rev.stdout.strip():
+            return UNKNOWN_BUILD, None
+        status = subprocess.run(
+            ["git", "-C", root, "status", "--porcelain"],
+            capture_output=True, text=True, timeout=timeout)
+        dirty = (bool(status.stdout.strip())
+                 if status.returncode == 0 else None)
+        return rev.stdout.strip(), dirty
+    except (OSError, ValueError, subprocess.SubprocessError):
+        return UNKNOWN_BUILD, None
+
+
+def build_line():
+    """The one line a log starts with."""
+    commit, dirty = build_id()
+    if commit == UNKNOWN_BUILD:
+        state = UNKNOWN_BUILD
+    else:
+        state = ("modified" if dirty else
+                 "clean" if dirty is False else UNKNOWN_BUILD)
+    return (f"OrionLayer {commit} ({state}), "
+            f"orion2re {ORION2RE_VERSION}")

@@ -1,0 +1,5 @@
+{
+  "_comment": "Wording that belongs to OrionLayer and not to MOO2 (decision 15). The REASON itself is the screen's own sentence from fallback_reason(); this file holds only the frame around it, so a translation replaces it without touching code. Work order 139 D.",
+  "prefix": "OrionLayer is showing the game's own picture:",
+  "cut": "\u2026 (shortened)"
+}

@@ -2,7 +2,8 @@
 import sys
 import logging
 import pygame
-from core.config import load_settings, TARGET_FPS, SCREENS_DIR
+from core.config import (load_settings, TARGET_FPS, SCREENS_DIR,
+                         build_line)
 from core import resources, palette, usersettings
 from core import cursor as cursor_gfx
 from core import mouse as mouse_input
@@ -12,6 +13,8 @@ from core.dispatcher import Dispatcher
 from core.game_client import GameClient
 from core.original_view import OriginalView
 from core.editor import Editor
+from core import fallbacknote
+from core import helppopup
 
 logging.basicConfig(level=logging.INFO,
                     format="%(asctime)s.%(msecs)03d %(name)s: %(message)s",
@@ -19,9 +22,18 @@ logging.basicConfig(level=logging.INFO,
 log = logging.getLogger("orionlayer")
 
 
+
+
 class App:
     def __init__(self):
         pygame.init()
+        # FIRST LINE OF EVERY LOG (work order 139 C). 138 could not say
+        # which commit Data's run was on, and the answer decided
+        # whether a rule that had never run live was even in that
+        # build. `build_line` asks git and degrades to "unknown"; it
+        # raises nothing, because a diagnostic that takes the program
+        # down is worse than no diagnostic.
+        log.info("build: %s", build_line())
         self.settings = load_settings()
         self.screens_dir = SCREENS_DIR
 
@@ -86,6 +98,18 @@ class App:
         self._fs_offset = None
         mouse_input.set_offset(None)
         self._fs_native = None
+        #: What `_showing_original` last decided and why, so the log
+        #: carries a CHANGE and never a frame count (work order 139 A).
+        self._reporter = fallbacknote.Reporter()
+        #: The sentence to draw over the game's picture while an HD
+        #: screen with a known id is handing over, or None (139 D).
+        self._fallback_note = None
+        #: The cockpit fill the note writes on, and its wording. Same
+        #: source as the help popup's, for the reason that entry gives
+        #: (work order 139 D).
+        self._note_backdrop = helppopup.Backdrop()
+        self._note_labels = self.res.load_json(
+            "assets/shared/fallback/labels.json", {}) or {}
 
         # Resolution presets (F9 to cycle)
         self._resolutions = [
@@ -231,9 +255,9 @@ class App:
         OrionLayer's window.
         """
         if not self.connected:
-            return False
+            return self._verdict(False, None)
         if self.render_mode == "original" or self.dispatcher.use_original:
-            return True
+            return self._verdict(True, None)
         # A THIRD WAY IN, work order 130 E: a screen that KNOWS the id
         # but cannot vouch for what it would draw. The research select
         # screen does this when the game's field list contradicts its
@@ -241,7 +265,30 @@ class App:
         # over rather than draw a list it cannot stand behind, and the
         # player answers the dialog through the picture instead.
         top = self.dispatcher.top
-        return bool(top is not None and top.wants_original())
+        if top is not None and top.wants_original():
+            return self._verdict(True, top)
+        return self._verdict(False, top)
+
+    def _verdict(self, shown, top):
+        """Return the decision, and report it. Work order 139 A.
+
+        ONE PLACE, because this is the one place the question is
+        answered: every screen that hands over passes through
+        `_showing_original`, so none of them needs a rule or a log call
+        of its own. Until now `fallback_reason()` had exactly one
+        caller in the whole tree — `tools/researchphases.py` — and a
+        player saw a screen that did not appear with nothing anywhere
+        saying why (work order 138).
+
+        The reporting itself lives in `core.fallbacknote`, beside the
+        drawing of the same sentence: they are one behaviour and the
+        log line and the note must never be able to disagree.
+        """
+        sid = (getattr(self.client.state, "current_screen", -1)
+               if self.connected else -1)
+        self._fallback_note = self._reporter.note(
+            shown, top, self.dispatcher, sid)
+        return shown
 
     def _handle_click(self, screen_x, screen_y):
         if self.editor.active:
@@ -280,7 +327,14 @@ class App:
     def _render(self):
         """Render based on current mode."""
         if self._showing_original():
-            self.original_view.render(self.surface, self.layout)
+            picture = self.original_view.render(self.surface, self.layout)
+            # WORK ORDER 139 D — the reason, where the player is
+            # looking. Drawn AFTER the picture and outside it, and it
+            # is drawing only: `_handle_click` above forwards every
+            # click to the game whatever this returns.
+            fallbacknote.render(self.surface, self.style, self.res,
+                                self._note_backdrop, self._fallback_note,
+                                self._note_labels, picture)
             if self.render_mode == "original":
                 # The status bar belongs to the F12 MODE, not to the
                 # picture: it names the mode and the key that leaves it.
