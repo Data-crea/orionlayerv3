@@ -42,6 +42,7 @@ undecoded.
 What IS here is what the verified spec carries: the name, the location,
 the shield, the weapon list and the specials.
 """
+from core import hestrings
 from core.structs import player as player_struct
 from core.structs import ship as ship_struct
 from core.structs import star as star_struct
@@ -125,60 +126,166 @@ def cells(fleet_view, game_state):
     return out
 
 
-def panel_lines(ship_idx, game_state, parts):
-    """The ship panel's lines for one ship, as (label, value) pairs.
+class Panel:
+    """The scanned ship's readout, in the original's own three parts.
+
+    `head` is the full-width block, `weapons` and `specials` are the
+    two COLUMNS — `Print_Scanned_Ship_Data_` prints the weapons at
+    x 0x17 and the specials at x 0xBC, each with its own cursor from a
+    shared `base_y` (flt2.cpp:683-740). One column is not a list under
+    the other and never was.
+    """
+
+    __slots__ = ("head", "weapons", "specials",
+                 "weapons_heading", "specials_heading")
+
+    def __init__(self, head, weapons, specials,
+                 weapons_heading="", specials_heading=""):
+        self.head = head
+        self.weapons = weapons
+        self.specials = specials
+        self.weapons_heading = weapons_heading
+        self.specials_heading = specials_heading
+
+    def __bool__(self):
+        return bool(self.head or self.weapons or self.specials)
+
+    def flat(self):
+        """Everything as one column, for a caller that cannot do two."""
+        out = list(self.head)
+        for heading, column in ((self.weapons_heading, self.weapons),
+                                (self.specials_heading, self.specials)):
+            if heading:
+                out.append(heading)
+            out.extend(column)
+        return out
+
+
+#: `Crew_Description_String_` (flt2.cpp:749-773): the crew word by
+#: `crew_quality`, from the player's own HESTRNGS.
+CREW_MESSAGES = {0: 0x8A, 1: 0x8B, 2: 0x8C, 3: 0x8D}
+#: The headings and the empty-column word, same table
+#: (flt2.cpp:681-682, :719, :740).
+MSG_WEAPONS, MSG_SPECIALS, MSG_NONE = 0x9D, 0x9E, 0x9F
+#: The location line: 0x9B takes the star name, 0x9C is "no
+#: information", 0x68 is the in-transit case (flt2.cpp:645-677).
+MSG_AT_STAR, MSG_UNKNOWN_STAR, MSG_IN_TRANSIT = 0x9B, 0x9C, 0x68
+
+
+def panel_lines(ship_idx, game_state, parts, strings=None, arcs=None):
+    """The ship panel's content, as a `Panel`.
 
     `FLT2::Print_Scanned_Ship_Data_` (flt2.cpp:524-747) in the order it
-    prints, minus what this screen omits (see the module docstring).
-    Empty when nothing is scanned, which is the original's state too:
-    it prints on HOVER only (flt1.cpp:401-407).
+    prints. `strings` is a `core.hestrings.HStrings` and `arcs` a
+    `core.kentext.ArcWords`; both may be absent, and what depends on
+    them is then left out rather than invented (decision 22).
+
+    **WHAT IS STILL OMITTED, and why** — both marked in `layout.json`:
+
+    * **Beam OCV and Beam DCV.** `Get_Ship_Combat_Bonuses_`
+      (initship.cpp:638-687) needs officer skills, the crew record,
+      traits, the strategic-combat flag and the tech applications;
+      three of those are UNVERIFIED offsets and one is undecoded.
+    * **The RED for a damaged special.** The original colours a special
+      with `FLT2::_red_colors` when its bit is set in
+      `special_device_damage_flags` (flt2.cpp:724-731). That field is
+      at @118 by the header route and **is not verified**: the obvious
+      live check — a damaged device must be a fitted one — held on all
+      60 ships of the acceptance save and proved nothing, because not
+      one of them had any damage.
     """
     raws = getattr(game_state, "ships_raw", None) or []
     if not (0 <= ship_idx < len(raws)):
-        return []
+        return Panel([], [], [])
     raw = raws[ship_idx]
     if len(raw) < ship_struct.SIZE:
-        return []
+        return Panel([], [], [])
     view = ship_struct.parse(raw)
-    lines = [("", view.name)]
 
-    where = _location(view, game_state)
-    if where:
-        lines.append(("Location", where))
+    def message(index):
+        return strings.message(index) if strings is not None else None
+
+    head = [view.name]
+
+    # THE CREW LINE. crew_quality @113 and crew_experience @114 are
+    # VERIFIED by the header route (orion2.h:2847-2868, the same struct
+    # run the spec is already verified through at @109) and by a live
+    # reading over 60 ships, where the experience bands per quality do
+    # not overlap and rise — which is what MOO2 deriving the word from
+    # the points predicts and what two unrelated bytes cannot produce.
+    word = message(CREW_MESSAGES.get(int(view.crew_quality), -1))
+    if word:
+        head.append(f"{word} ({int(view.crew_experience)} EP)")
 
     shield = parts.name("shields", view.shield_type) if parts else None
     if shield:
-        lines.append(("Shields", shield))
+        head.append(shield)
 
-    # "n Name" per weapon. THE LIST STOPS AT THE FIRST EMPTY SLOT on
-    # this screen — `no_weapons` breaks the loop (flt2.cpp:696-701) —
-    # which is NOT what `ship.weapons()` does: it skips empty slots and
-    # keeps going. Transcribed here rather than changed there, because
-    # the fleet box reads the same helper and this screen's break is a
-    # property of this screen's printer.
+    where = _location(view, game_state, strings)
+    if where:
+        head.append(where)
+
+    # "n Name (arc)" per weapon. THE LIST STOPS AT THE FIRST EMPTY SLOT
+    # on this screen — `no_weapons` breaks the loop (flt2.cpp:696-701)
+    # — which is NOT what `ship.weapons()` does elsewhere.
+    weapons = []
     for slot in ship_struct.weapons(view):
         count = int(getattr(slot, "count", 0) or 0)
         if count <= 0:
             break
         label = (parts.name("weapons", slot.type) if parts else None) \
             or f"#{slot.type}"
-        lines.append(("", f"{count} {label}"))
+        # **OMISSION — THE PLURAL.** The original prints
+        # `TECHDATA::_weapons[t].name_plural` whenever the count is not
+        # one (flt2.cpp:706-711). `tools/techname_extract.py` takes the
+        # `name` field and not the plural one, so the catalogue in this
+        # tree has no plural to print; the singular stands rather than
+        # an invented "s", which is not the original's word either and
+        # would be wrong for the first irregular one. Marked in
+        # `layout.json`; lifting it is a change to the extractor and its
+        # format version, which is its own piece of work.
+        arc = arcs.arc(getattr(slot, "firing_arc", 0)) if arcs else None
+        weapons.append(f"{count} {label} ({arc})" if arc
+                       else f"{count} {label}")
 
+    specials = []
     for bit in ship_struct.special_bits(view):
         label = parts.name("specials", bit) if parts else None
         if label:
-            lines.append(("", label))
-    return lines
+            specials.append(label)
+
+    none_word = message(MSG_NONE)
+    if not weapons and none_word:
+        weapons = [none_word]
+    if not specials and none_word:
+        specials = [none_word]
+    return Panel(head, weapons, specials,
+                 message(MSG_WEAPONS) or "", message(MSG_SPECIALS) or "")
 
 
-def _location(view, game_state):
-    """The star the ship is at, or "" — `s_ship.location` through
-    `absolute_location` (flt2.cpp:645-677)."""
+def _location(view, game_state, strings=None):
+    """The location line, in the original's own wording.
+
+    **IT IS THE ORIGINAL'S LINE AND NOT AN HD ADDITION** — work order
+    152 item 7 corrected that. `Print_Scanned_Ship_Data_` prints it at
+    `(0x12, y_cursor + 0x11F)` (flt2.cpp:672) with the string from
+    `H_Message_(0x9B)` formatted with the star's name. What WAS HD's
+    own was the hardcoded English "Location: " label, and it is gone:
+    with no HESTRNGS the star's bare name stands rather than a word
+    this project made up.
+    """
     stars = getattr(game_state, "stars", None) or []
     idx = ship_struct.absolute_location(int(view.location))
     if idx is None or not (0 <= idx < len(stars)):
         return ""
-    return getattr(stars[idx], "name", "") or ""
+    name = getattr(stars[idx], "name", "") or ""
+    if not name:
+        return ""
+    if strings is not None:
+        template = strings.message(MSG_AT_STAR)
+        if template:
+            return hestrings.printf(template, name)
+    return name
 
 
 def star_name(game_state, star_idx):

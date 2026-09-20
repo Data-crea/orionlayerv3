@@ -169,6 +169,7 @@ python tools/estrings_extract.py                    # option strings
 python tools/raceicon_extract.py                    # population figures
 python tools/hestrings_extract.py                   # message strings
 python tools/maintext_extract.py                    # system special texts
+python tools/kentext_extract.py                     # weapon firing-arc words
 ```
 
 Without the first, every right click opens a panel naming that

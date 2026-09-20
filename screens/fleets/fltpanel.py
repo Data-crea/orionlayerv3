@@ -165,6 +165,67 @@ def panel_block(screen, lines, words=None, rect=None, px=None):
     return keep, size, dropped
 
 
+#: Where the specials column starts, as a fraction of the text area's
+#: width. The original prints the weapons at x 0x17 = 23 and the
+#: specials at x 0xBC = 188 inside a window that starts at x 15 and is
+#: 305 wide (`Set_Window_(15, 282, 320, 465)`, flt1.cpp:402), so the
+#: split is (188 - 15) / 305. A FRACTION and not a pixel count, because
+#: the HD panel is a hole in Data's artwork and not 305 px wide.
+SPECIALS_SPLIT = (0xBC - 15) / 305.0
+
+
+def draw_columns(surface, screen, panel, rect):
+    """The head block, then the two columns, or False if it did not fit.
+
+    ONE SIZE FOR ALL THREE. The head is full width; the two columns
+    share the rest of the height and start from the same y, which is
+    what `base_y` does in the original (flt2.cpp:683-685). The size is
+    the largest at which everything fits together, measured by
+    rendering (decision 30).
+    """
+    px = panel_font_px(screen)
+    floor = max(1, screen.layout.font_size(PANEL_MIN_FONT))
+    colour, dim = col("label"), col("label_dim")
+    split = int(rect.width * SPECIALS_SPLIT)
+    widths = (max(8, split - max(2, split // 20)),
+              max(8, rect.width - split))
+    for size in range(px, floor - 1, -1):
+        head = [screen.style.render_text(t, size, colour)
+                for t in panel.head]
+        cols = []
+        for i, (heading, items) in enumerate(
+                ((panel.weapons_heading, panel.weapons),
+                 (panel.specials_heading, panel.specials))):
+            block = []
+            if heading:
+                block.append(screen.style.render_text(heading, size, dim))
+            for t in items:
+                block.extend(textfit.wrap_rendered(
+                    screen.style, t, size, widths[i], colour))
+            cols.append(block)
+        total = (textfit.block_height(head)
+                 + max(textfit.block_height(c) for c in cols))
+        if total > rect.height:
+            continue
+        if head and max(s.get_width() for s in head) > rect.width:
+            continue
+        if any(s.get_width() > widths[i]
+               for i, c in enumerate(cols) for s in c):
+            continue
+        y = rect.y
+        for surf in head:
+            surface.blit(surf, (rect.x, y))
+            y += surf.get_height()
+        for i, block in enumerate(cols):
+            cy = y
+            cx = rect.x + (0 if i == 0 else split)
+            for surf in block:
+                surface.blit(surf, (cx, cy))
+                cy += surf.get_height()
+        return True
+    return False
+
+
 def draw_panel(surface, screen, lines, words=None):
     """The scanned ship's lines, top down inside `ship_panel_text`.
 
@@ -175,6 +236,14 @@ def draw_panel(surface, screen, lines, words=None):
     rect = panel_text_rect(screen)
     if rect is None or not lines:
         return
+    # TWO COLUMNS WHEN THE CONTENT KNOWS IT HAS TWO. A `Panel` carries
+    # the original's own split; a bare list is the older shape and is
+    # still drawn as one column, which is also what a Panel falls back
+    # to when its two columns cannot be made to fit.
+    if hasattr(lines, "flat"):
+        if draw_columns(surface, screen, lines, rect):
+            return
+        lines = [("", t) for t in lines.flat()]
     asked = panel_font_px(screen)
     rendered, size, dropped = panel_block(screen, lines, words, rect, asked)
     _log_overflow(rect, asked, size, len(rendered) - bool(dropped), dropped)

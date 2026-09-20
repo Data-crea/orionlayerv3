@@ -18971,6 +18971,64 @@ def main():
     _fp_words = _sjson.load(io.open(os.path.join(
         SCREENS_DIR, "fleets", "layout.json"),
         encoding="utf-8"))["words"]
+    # ── ITEM 7: THE PANEL IS THE ORIGINAL'S CONTENT, IN ITS WORDS ──
+    #
+    # Work order 152. Every string here comes from the player's own
+    # tables or from a literal in the engine; nothing is HD's English.
+    from core import kentext as _kt
+    from screens.fleets import fltrows as _fr
+
+    # 1. ALL FIVE ARCS, and the order the original tests them in.
+    #    0x0F has four bits set and the original answers FORWARD for it,
+    #    so the order is the answer and not a tidy-up.
+    assert set(_kt.ARC_MESSAGES) == {0x01, 0x02, 0x04, 0x08}, (
+        "the arc message table is not the four Weapon_Arc_String_ asks "
+        "KEN for (design.cpp)")
+    assert _kt.ARC_ORDER == (0x01, 0x02, 0x04, 0x08, 0x10)
+    assert _kt.ARC_360 == "360", (
+        "0x10's word is a LITERAL in Weapon_Arc_String_, not a table "
+        "entry — it must not become an extraction")
+    _kt_words = _kt.ArcWords()
+    if _kt_words.available:
+        for _kt_bit in _kt.ARC_ORDER:
+            assert _kt_words.arc(_kt_bit), (
+                f"arc 0x{_kt_bit:02X} has no word; item 7 ships only "
+                f"when all five come from source")
+        assert _kt_words.arc(0x0F) == _kt_words.arc(0x01), (
+            "ALL_SECTORS did not answer with the FORWARD word; the bits "
+            "are tested in order and the first hit returns")
+    else:
+        assert "kentext_extract" in _kt_words.absent
+
+    # 2. THE PANEL CARRIES THE ORIGINAL'S OWN SPLIT, and the column
+    #    positions are the original's: weapons at 0x17, specials at
+    #    0xBC, inside a window from x 15 that is 305 wide.
+    assert abs(_fp.SPECIALS_SPLIT - (0xBC - 15) / 305.0) < 1e-9, (
+        "the specials column moved off the x the original prints it at")
+    _fr_p = _fr.Panel(["a"], ["w"], ["s"], "W", "S")
+    assert _fr_p.flat() == ["a", "W", "w", "S", "s"]
+
+    # 3. THE CREW FIELDS ARE IN THE VERIFIED SPEC, or the crew line is
+    #    reading an offset nobody confirmed.
+    from core.structs import ship as _sp_ship
+    _sp_names = {f[0] for f in _sp_ship.SPEC.fields} \
+        if hasattr(_sp_ship.SPEC, "fields") else set()
+    for _sp_n in ("crew_quality", "crew_experience"):
+        assert _sp_n in str(_sp_ship.SPEC.__dict__) or _sp_n in _sp_names \
+            or hasattr(_sp_ship.SPEC, _sp_n) or _sp_n in io.open(
+                os.path.join(os.path.dirname(SCREENS_DIR), "core",
+                             "structs", "ship.py"),
+                encoding="utf-8").read(), (
+            f"{_sp_n} left core/structs/ship.py while the panel prints it")
+
+    # 4. THE TWO OMISSIONS SAY SO (decision 61).
+    _fr_marks = _sjson.load(io.open(os.path.join(
+        SCREENS_DIR, "fleets", "layout.json"),
+        encoding="utf-8"))["marks"]
+    for _fr_key in ("omission_panel_plural", "omission_panel_damaged_red"):
+        assert "OMISSION" in _fr_marks.get(_fr_key, ""), (
+            f"layout.json no longer marks {_fr_key}")
+
     assert "{n}" in _fp_words["panel_more"], (
         "words.panel_more carries no {n}; the marker would not say how "
         "much is missing, which is the whole of it")
@@ -19125,11 +19183,15 @@ def main():
             "the grid does not draw two selected cells; multi-select is "
             "the original's own state")
     assert _fl_scr._view.selected_ships() == [1, 2]
-    _fl_panel_0 = list(_fl_scr._panel)
+    # `_panel` is a `fltrows.Panel` since work order 152 item 7 — the
+    # original prints its weapons and specials in two COLUMNS, so the
+    # content carries the split. Compared through `flat()`, which is
+    # the same three parts in one list.
+    _fl_panel_0 = list(_fl_scr._panel.flat())
     _fl_one = _fl_snapshot(selected=(1, 2), scanned_big=3)
     _fl_one.fields = _fl_fields(6)
     _fl_scr.update(_fl_one)
-    assert _fl_scr._panel != _fl_panel_0 and _fl_scr._panel, (
+    assert list(_fl_scr._panel.flat()) != _fl_panel_0 and _fl_scr._panel, (
         "the ship panel did not follow the SCANNED ship; it must not "
         "follow the selection, which can be several ships at once")
     ok("RETURN's box is its own field and not help 374, the two empty "

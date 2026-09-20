@@ -127,6 +127,27 @@ SPEC = Spec("s_ship_data", SIZE, [
     # played turn while the engine's own framebuffer read "eta 2",
     # matched glyph by glyph against the player's FONTS.LBX.
     ("turns_left", 109, "u8"),
+    # VERIFIED 20 September 2026 (work order 152 item 7), by the two
+    # routes decision 23 names.
+    #
+    # THE HEADER. `s_ship_data` (orion2.h:2847-2868) runs owner,
+    # status, location, x, y, group_has_navigator, travelling_speed,
+    # turns_left, shield_damage_percent, drive_damage_percent,
+    # computer_damage, crew_quality, crew_experience, officer_index —
+    # so this is the same run of the same struct that already carries
+    # the two entries above it.
+    #
+    # THE LIVE READING. MOO2 derives the crew WORD from the experience
+    # points, so if both offsets are right the quality must be monotone
+    # in the experience. Over the 60 ships of the acceptance save:
+    # quality 0 on 56 ships with EP 0..44, quality 1 on 4 ships with EP
+    # 50..56 — bands that do not overlap and that rise. Two unrelated
+    # bytes do not do that sixty times. Every value was in 0..3, and
+    # `officer_index` @116 was in -1..66 on all sixty, the leader
+    # pool's own range, which is a third consistency from the same run.
+    ("crew_quality", 113, "i8"),
+    ("crew_experience", 114, "i16"),
+    ("officer_index", 116, "i16"),
 ], verified=True)
 
 #: s_ship_weapons (orion2.h:1723), the same two sources as the design.

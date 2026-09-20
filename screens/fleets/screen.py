@@ -31,6 +31,8 @@ import pygame
 
 from core.screen_base import ScreenBase
 
+from core import hestrings
+from core import kentext
 from core import mouse as mouse_input
 from core.shipparts import ShipPartNames
 from screens.colony_summary import colonyrows
@@ -79,6 +81,12 @@ class FleetsScreen(ScreenBase):
         language = (getattr(self.app, "settings", {}) or {}).get(
             "language", "en")
         self._parts = ShipPartNames(language)
+        # The original's own wording for the crew word, the two column
+        # headings, "none" and the location line (HESTRNGS), and for the
+        # weapon firing arcs (KENTEXT.LBX). Both are derived files the
+        # player extracts; absent, what depends on them is left out.
+        self._strings = hestrings.HStrings(language)
+        self._arcs = kentext.ArcWords(language)
         self._view, self._cells, self._panel = None, [], []
         self._hover_cell = None
         self._load_frame(
@@ -122,7 +130,8 @@ class FleetsScreen(ScreenBase):
         scanned = int(block.get("scanned_big", -1))
         ships = block.get("ship_idx") or []
         self._panel = (fltrows.panel_lines(ships[scanned], game_state,
-                                           self._parts)
+                                           self._parts, self._strings,
+                                           self._arcs)
                        if 0 <= scanned < len(ships) else [])
         self._status = self._status_line(game_state, block)
 

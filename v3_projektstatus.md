@@ -13,6 +13,54 @@ right and the header had gone stale** — resolved 10 September 2026
 by dating the header to the edit and giving this session its
 paragraph, below, so the two agree again.
 
+This session (20 September 2026, work order 152, item 7): **the ship
+panel is the original's content, in the original's own words, in the
+original's two columns.**
+
+**`JIM::Get_Text_Message_` READ PROPERLY, which is what unblocked it.**
+The call is
+`Farload_Data_Static_(file, message_index * 6 + language, …)` (jim.cpp)
+— **six LBX entries per message, one per language**. Reading "entry 3"
+of KENTEXT.LBX gives `"Pob:"`, which is why the arcs looked
+unreachable; message 3 in English is **entry 18**. With that, all five
+firing arcs come from source: **F, Fx, Bx, B** out of the player's own
+KENTEXT.LBX through `tools/kentext_extract.py` and `core/kentext.py`,
+and **"360"**, which is a LITERAL in `Weapon_Arc_String_` and is
+transcribed rather than extracted. The order the bits are tested in is
+the answer and not a tidy-up: 0x0F has four of them set and the
+original prints the FORWARD word for it.
+
+**THE CREW LINE GOES IN, and the spec with it.** `crew_quality` @113,
+`crew_experience` @114 and `officer_index` @116 are promoted to the
+VERIFIED spec on the two routes decision 23 names — the header
+(orion2.h:2847-2868, the same struct run already verified at @109) and
+a live reading over 60 ships where the experience bands per quality do
+not overlap and rise.
+
+**TWO COLUMNS, at the original's own x.** Weapons at 0x17 and specials
+at 0xBC inside a window that starts at x 15 and is 305 wide, so the
+split is `(0xBC - 15) / 305` — a FRACTION, because the HD panel is a
+hole in Data's artwork and not 305 px wide. Both columns start from one
+`base_y` as the original does, and one size is found for the head and
+both columns together, measured by rendering.
+
+**THE LOCATION LINE WAS THE ORIGINAL'S ALL ALONG** — the order had it
+down as an HD addition and it is not (flt2.cpp:672). What WAS HD's own
+was the hardcoded English "Location: " label, and it is gone: the line
+now comes from `H_Message_(0x9B)` formatted with the star's name.
+
+Live on SAVE4: *Rafale / Green Crew (15 EP) / No Shield / Destination,
+Yoth*, then **Weapons:** with five entries each carrying its arc, and
+**Specials:** with the table's own "None" — every string the game's.
+
+**TWO OMISSIONS, both marked.** The weapon PLURAL
+(`TECHDATA::_weapons[t].name_plural`) is not in
+`tools/techname_extract.py`'s output, so the singular stands rather
+than an invented "s". And a damaged special is not shown in red:
+`special_device_damage_flags` @118 is unverified, and the obvious live
+check — a damaged device must be a fitted one — held on all 60 ships
+and **proved nothing, because not one of them had any damage**.
+
 This session (20 September 2026, work order 152, items 1 and 2): **a
 native message box is shown by blitting the game's own pixels, and the
 screen stays up behind it.**
