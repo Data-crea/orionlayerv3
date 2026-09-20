@@ -175,8 +175,10 @@ recorded at `fleets_frame_reshape.TARGET_CELL_SIZE`.
 Renders in `~/orionlayer-fixtures/evidence/work_order_153/`:
 `acceptance_partA_1440p.png` (new beside current, 2560x1440),
 `before_1440p.png`, `new_1440p.png`, `frame_153_built.png`. The third
-panel the order asks for is missing because the mockup is not on disk
-— `153-parked-for-data.md`.
+panel the order asks for is missing because the mockup is not on disk,
+and it never was — it only ever existed off the machine (Data,
+20 September 2026), so the render stays at two panels and is not to be
+re-cut. `153-parked-for-data.md` records it.
 
 ## Live
 
