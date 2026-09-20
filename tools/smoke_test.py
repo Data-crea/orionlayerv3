@@ -18876,6 +18876,40 @@ def main():
     assert "{n}" in _fp_words["panel_more"], (
         "words.panel_more carries no {n}; the marker would not say how "
         "much is missing, which is the whole of it")
+    # AND IT SAYS NOTHING ELSE. Data, 20 September 2026: the marker is
+    # on the PLAYER's screen and the editor is not the player's
+    # business. What a developer needs goes to the log, from
+    # `fltpanel._log_overflow`.
+    for _fp_word in ("F5", "font_size", "boxes.json", "editor"):
+        assert _fp_word.lower() not in _fp_words["panel_more"].lower(), (
+            f"words.panel_more says {_fp_word!r}; that is a developer's "
+            f"instruction on a player's screen. It belongs in the log")
+    assert "log.info" in io.open(os.path.join(
+        SCREENS_DIR, "fleets", "fltpanel.py"), encoding="utf-8").read(), (
+        "fltpanel no longer logs the overflow; the player's marker is "
+        "deliberately short, so the log is the only place that says "
+        "WHICH box was too small")
+
+    # NO DEAD FONT KEY ON THIS SCREEN. `Box.render` sizes a `text` box
+    # from `font_size` alone and never reads `font_scale`
+    # (core/box.py:101), so a `font_scale` on one is a number that
+    # looks like a setting and is not. `inset_hint` and `status_hint`
+    # carried 0.8 and had always rendered at 16. The unification —
+    # making `Box.render` compose the two — is parked in
+    # `v3_projektstatus.md` under "What is missing"; until it happens
+    # this keeps the Fleets screen from growing the key back.
+    for _fp_res, _fp_list in _fp_boxfile.items():
+        for _fp_b in _fp_list:
+            _fp_bs = _fp_b.get("style") or {}
+            if _fp_bs.get("skin") != "text" or "font_scale" not in _fp_bs:
+                continue
+            raise AssertionError(
+                f"{_fp_res}: box {_fp_b['name']} is a `text` box with "
+                f"font_scale {_fp_bs['font_scale']}, which core/box.py "
+                f"never reads — it renders at font_size "
+                f"{_fp_bs.get('font_size', 16)} whatever that number "
+                f"says. Set font_size, or read font_scale the way "
+                f"fltpanel does")
     for _fp_w, _fp_h in ((1920, 1080), (2560, 1440), (3440, 1440),
                          (3840, 2160)):
         _, _fp_scr, _ = _fp_seen[(_fp_w, _fp_h)]

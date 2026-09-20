@@ -75,8 +75,10 @@ its negative as the click, and `fields.cpp:172-181` hands it in
 positively. That scanned the Sabre at Draconis — 10 lines, three
 weapon entries and four specials — and the panel drew all ten. With
 `ship_panel_text` dragged to a third of its height, the same ship
-shrank to the 8 px floor, kept five lines and printed **"+5 more —
-make the panel taller in F5"**. Evidence in
+shrank to the 8 px floor, kept five lines and printed the marker —
+**"+5 more"** in the wording that shipped a few hours later; the
+captures in the evidence folder carry the longer first version, which
+is what was on screen at the time. Evidence in
 `~/orionlayer-fixtures/evidence/work_order_151/`.
 SAVE1-6, 8, 9 and 11 byte-identical before and after; SAVE8 never
 touched; SAVE10 logged at `07b2dd62…` and unchanged.
@@ -106,15 +108,29 @@ dropped without the marker. Both red-proved — putting the old
 for 14.0 reference px"*, and removing the marker gives *"the last line
 is not the marker, so 32 lines went missing without a word"*.
 
-**ONE DEAD KEY FOUND AND NOT TOUCHED.** `inset_hint` and `status_hint`
-carry `"font_scale": 0.8` and the `text` skin never reads it —
-`Box.render` sizes from `style["font_size"]` alone (default 16), so
-both render at 16 and the 0.8 has never done anything. Three boxes are
-in that state, the third being the colony summary's
-`planet_paragraph`, which carries `font_scale: 1.6` in the 1440 set
-only — and THAT one IS read, by `colonyoutput`. Composing the two keys
-inside `Box.render` would fix the two hints and silently resize the
-colony paragraph, so it is reported here rather than done.
+**ONE DEAD KEY FOUND — REMOVED THE SAME DAY, ON DATA'S DECISION.**
+`inset_hint` and `status_hint` carried `"font_scale": 0.8` and the
+`text` skin never reads it — `Box.render` sizes from
+`style["font_size"]` alone (default 16), so both had always rendered
+at 16 and the 0.8 had never done anything. It is out of both
+resolution sets and **nothing moved on screen**, which is what makes
+it a deletion rather than a change. `Box.render` is untouched, and the
+unification is parked under "What is missing" above, with the reason:
+the third box in that state is the colony summary's
+`planet_paragraph`, whose `font_scale: 1.6` IS read, in the 1440 set
+only, and composing the keys in `Box.render` would apply it twice at
+one resolution and not the other.
+
+**AND THE MARKER LOST ITS DEVELOPER HALF.** `words.panel_more` was
+"+{n} more — make the panel taller in F5"; Data's decision of the same
+day is that the editor is not the player's business, so the player
+sees **"+{n} more"** and the rest — which box, how big it is, how many
+lines it held, at what size, and what was asked for — goes to the log
+from `fltpanel._log_overflow`, once per change rather than once per
+frame. A smoke assertion refuses F5, `font_size`, `boxes.json` and
+"editor" in the player's string, and a second one refuses a
+`font_scale` on any `text` box of this screen, so the dead key cannot
+grow back while the unification is parked.
 
 This session (20 September 2026, work order 151, Stop 2): **the
 frame canvas is 3840x2160 from now on (decision 70), and the new
@@ -5917,6 +5933,53 @@ Renders at 1080p, 1440p, ultrawide and 2160p in
 the six decisions still open, are in `doc/briefs/134-parked-for-data.md`.
 
 ## What is missing
+
+### `font_scale` and `font_size` are two mechanisms — PARKED
+
+**20 September 2026, work order 151 B. Data parked the unification;
+the dead keys it turned up are removed.**
+
+A box can carry two font keys and only one of them reaches most
+skins:
+
+* **`font_size`** is a reference size and `Box.render` scales it once
+  through `Layout.font_size` — `style.get("font_size", 16)`,
+  `core/box.py:101`. Every `text`, `button`, `area` and labelled
+  `panel` box in the tree is sized this way; there are 60 of them.
+* **`font_scale`** is what the F5 editor's Ctrl+Wheel writes
+  (`core/editor/editor.py:308-314`), and `Box.render` never reads it.
+  It works only where a SCREEN reads it for itself: the colony
+  summary's `planet_paragraph` and sidebar, Custom Race, Empire
+  Identity, Select Race — and, since this order,
+  `fleets.ship_panel_text`, which reads both.
+
+**So a `text` box is not font-editable in F5 at all**, which is
+exactly what decision 37 says it should be: *"position, size, font
+size and alignment come from boxes.json, so a bare label is
+F5-draggable like everything else"*. The wheel turns and nothing
+happens.
+
+**What was removed, and what was not.** `fleets.inset_hint` and
+`fleets.status_hint` carried `"font_scale": 0.8` on a `text` skin.
+Nothing has ever read it — both have always rendered at the default
+16 — so it was a number that looked like a setting, and it is gone
+from both resolution sets. **Nothing moved on screen**, which is the
+point: removing it is not a change of behaviour, it is the deletion of
+a value that never had any.
+
+**What the fix would be, and why it is not done here.** One line in
+`Box.render`: `style.get("font_size", 16) * style.get("font_scale",
+1.0)`. Measured across the tree, 33 boxes carry a `font_scale` that a
+core skin would then start reading. Thirty of them carry 1.0 and would
+not move. The one that would is the colony summary's
+`planet_paragraph` — `font_scale: 1.6`, **in the 2560x1440 set only**
+— and that one IS read, by `colonyoutput`, which already applies it
+once and correctly (brief 97). Composing it in `Box.render` as well
+would apply it twice, at one resolution and not the other. So the
+unification needs `planet_paragraph` resolved first, and a check that
+no box carries a key its skin ignores; it is a change to shared
+machinery and it belongs in its own order, not in the tail of a
+screen's.
 
 ### Research select — BUILT, NOT ACCEPTED
 

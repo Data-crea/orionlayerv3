@@ -17,9 +17,13 @@ What the panel shows is `fltrows.panel_lines`, which transcribes
 `FLT2::Print_Scanned_Ship_Data_` (flt2.cpp:524-747) minus what that
 module's docstring lists as omitted.
 """
+import logging
+
 from core import textfit
 
 from .fltdraw import _rect, col, content_rect
+
+log = logging.getLogger("fleets")
 
 
 #: The text area's box. NOT `ship_panel`: that one is a cutout, its
@@ -45,6 +49,35 @@ PANEL_MIN_FONT = 8
 #: the silent drop it exists to prevent. The WORDING lives in
 #: `layout.json` under `words.panel_more` (decision 15).
 PANEL_MORE_FALLBACK = "+{n} more"
+
+#: The last overflow state written to the log, so the render loop says
+#: it once instead of sixty times a second. Module level because
+#: `draw_panel` is a function and the screen should not have to carry
+#: a field for a diagnostic.
+_LAST_OVERFLOW = None
+
+
+def _log_overflow(rect, asked, size, shown, dropped):
+    """The developer's half of the marker.
+
+    **THE PLAYER'S MARKER SAYS "+n more" AND NOTHING ELSE** (Data,
+    20 September 2026): it is on the player's screen and the editor is
+    not the player's business. Which box, how big it is, how many lines
+    it held and at what size — the things somebody fixing the layout
+    needs — belong here, where only a developer looks.
+    """
+    global _LAST_OVERFLOW
+    state = (dropped, size, shown, rect.width, rect.height)
+    if state == _LAST_OVERFLOW:
+        return
+    _LAST_OVERFLOW = state
+    if not dropped:
+        return
+    log.info("ship panel: %d line(s) not shown — box '%s' is %dx%d window "
+             "px and holds %d line(s) at %d px, having asked for %d. "
+             "Move, resize or rescale it in F5, or lower its font_size.",
+             dropped, PANEL_TEXT_BOX, rect.width, rect.height, shown,
+             size, asked)
 
 
 def panel_text_rect(screen):
@@ -142,7 +175,9 @@ def draw_panel(surface, screen, lines, words=None):
     rect = panel_text_rect(screen)
     if rect is None or not lines:
         return
-    rendered, _size, _dropped = panel_block(screen, lines, words, rect)
+    asked = panel_font_px(screen)
+    rendered, size, dropped = panel_block(screen, lines, words, rect, asked)
+    _log_overflow(rect, asked, size, len(rendered) - bool(dropped), dropped)
     y = rect.y
     for surf in rendered:
         surface.blit(surf, (rect.x, y))

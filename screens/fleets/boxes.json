@@ -456,8 +456,7 @@
       ],
       "style": {
         "skin": "text",
-        "align": "center",
-        "font_scale": 0.8
+        "align": "center"
       }
     },
     {
@@ -470,8 +469,7 @@
       ],
       "style": {
         "skin": "text",
-        "align": "center",
-        "font_scale": 0.8
+        "align": "center"
       }
     }
   ],
@@ -932,8 +930,7 @@
       ],
       "style": {
         "skin": "text",
-        "align": "center",
-        "font_scale": 0.8
+        "align": "center"
       }
     },
     {
@@ -946,8 +943,7 @@
       ],
       "style": {
         "skin": "text",
-        "align": "center",
-        "font_scale": 0.8
+        "align": "center"
       }
     }
   ]
