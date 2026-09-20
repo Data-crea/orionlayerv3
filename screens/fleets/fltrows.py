@@ -392,6 +392,50 @@ def _player_knows_star(game_state, star_idx):
     return False
 
 
+#: The strip's own messages. `Print_Fltscrn_Scanned_Star_Name_`
+#: (flt2.cpp:338-522) picks one of TEN states; HD reaches two of them
+#: and `layout.json` marks the rest.
+#:   status 7 — the star's own name, and with a governor a longer form
+#:   status 8 — H 0x94, the star the player knows nothing about
+MSG_UNKNOWN_SYSTEM = 0x94
+
+
+def scanned_star_line(game_state, star_idx, strings=None):
+    """The strip under the map, for the star the pointer is over.
+
+    **THE STRIP IS NOT A STAR-NAME FIELD, AND THAT IS THE FINDING** —
+    work order 155. Help 363 calls it "information as you scan ships
+    and stars", and `Print_Fltscrn_Scanned_Star_Name_` is a ten-state
+    move preview: with ships selected it runs
+    `SHIPMOVE::Ships_Try_To_Move_To_` and prints "N turns to X", "out
+    of range", "a black hole blocks the way" and six more. The star's
+    NAME is what it prints in exactly one of those states — status 7,
+    reached when NO ships are selected (flt2.cpp:379-393) — and H 0x94
+    is status 8, the same case for a star the player knows nothing
+    about.
+
+    So this transcribes states 7 and 8 and nothing else. The other
+    eight need `_g_ship_move_info`, which is on no wire, and are the
+    OMISSION `layout.json` already carries. **What HD must not do is
+    print the name where the original would have printed a move
+    preview**: with ships selected the original is answering a
+    different question, so HD says nothing rather than something else.
+
+    Status 7 has a longer form when the player has a colony at the
+    star and an officer assigned to it — the star's name, the
+    governor's name and an ETA (H 0x92 / 0x93, flt2.cpp:478-489).
+    That reads `s_leader_data`, which `core/structs/unverified.py`
+    refuses, so HD prints the plain name and marks it.
+    """
+    stars = getattr(game_state, "stars", None) or []
+    if not (0 <= star_idx < len(stars)):
+        return ""
+    if not _player_knows_star(game_state, star_idx):
+        return (strings.message(MSG_UNKNOWN_SYSTEM)
+                if strings is not None else "")
+    return getattr(stars[star_idx], "name", "") or ""
+
+
 def star_name(game_state, star_idx):
     """One star's name, or ""."""
     stars = getattr(game_state, "stars", None) or []

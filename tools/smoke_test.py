@@ -18953,9 +18953,24 @@ def main():
         _b[99] = owner
         return bytes(_b)
 
+    from core.structs import star as _fl_starspec
+
+    def _fl_star_bytes(name, visited, x, y):
+        """One s_star_data, only the fields the strip under the map
+        reads: the name, the visited bitmask and the position that
+        decides where `galaxy_inset_stars` draws it."""
+        _b = bytearray(_fl_starspec.SIZE)
+        _b[0:len(name)] = name.encode("latin-1")
+        _b[15:17] = _fl_s.pack("<h", x)
+        _b[17:19] = _fl_s.pack("<h", y)
+        _b[20] = 0xFF                      # unowned
+        _b[171] = visited
+        return bytes(_b)
+
     def _fl_snapshot(icons=6, first_row=0, owner=1, relocate=0,
                      selected=(1, 2), with_block=True, rows=2,
-                     shown=None, ship_icons=(), scanned_big=1):
+                     shown=None, ship_icons=(), scanned_big=1,
+                     stars=()):
         """A STATE_SNAPSHOT payload with the fleet screen up.
 
         The FLTS block sits after FSEL, exactly where the engine writes
@@ -18967,7 +18982,9 @@ def main():
         _b += _fl_s.pack("<hhhhh", 15, 0, 0, 759, 600)
         _b += bytes(_FL_SET)
         _b += bytes(_FL_PL * 8)
-        _b += _fl_s.pack("<h", 0)                      # stars
+        _b += _fl_s.pack("<h", len(stars))             # stars
+        for _st in stars:
+            _b += _fl_star_bytes(*_st)
         _b += _fl_s.pack("<h", icons)                  # ships
         for _i in range(icons):
             _b += _fl_ship_bytes(f"Ship {_i}", 1, _i % 8)
@@ -19400,6 +19417,115 @@ def main():
 
     # 10. AND NOT ONE OF THE TEN MOVES SENT ANYTHING.
     assert _fl_sent == [], _fl_sent
+
+    # ── THE STRIP UNDER THE MAP NAMES THE HOVERED STAR ───────────
+    #
+    # Work order 155, and the finding is what it does NOT do.
+    # `Print_Fltscrn_Scanned_Star_Name_` (flt2.cpp:338-522) picks one
+    # of ten states: with ships selected it runs
+    # `Ships_Try_To_Move_To_` and prints a MOVE PREVIEW, and only with
+    # none selected is it state 7, the star's own name, or state 8,
+    # H 0x94 for a star the player knows nothing about. HD draws those
+    # two and stays SILENT where the original previews a move, because
+    # a name there answers a different question.
+    #
+    # The fixture's local player is 1 — the snapshot's fourth field —
+    # so bit 1 is "player 1 has been there".
+    from screens.fleets import fltmove as _mv
+    _MB_STARS = (("Sol", 0x02, 120, 90), ("Vega", 0x02, 380, 160),
+                 ("Zoctan", 0x00, 460, 260))
+    _mb_gs = _fl_snapshot(icons=6, scanned_big=-1, selected=(),
+                          stars=_MB_STARS)
+    _mb_gs.fields = _fl_fields(6)
+    _fl_scr.enter(_mb_gs)
+    assert _fl_scr._view.ok, _fl_scr._view.state
+    assert _mb_gs.player_num == 1, _mb_gs.player_num
+    assert _fl_scr._scan_star == -1 and _fl_scr._status == "", (
+        "the strip is not empty on entry; the original prints it only "
+        "under `_galaxy_map_scanned_star > -1` (flt1.cpp:397)")
+
+    _mb_box = next(b.screen_rect for b in _fl_scr.boxes
+                   if b.name == "inset_map")
+    _mb_nat = _flg.REGIONS["inset_map"]
+    _mb_drawn = _fl_scr._inset_stars()
+    assert len(_mb_drawn) == len(_MB_STARS), _mb_drawn
+    assert len({(_x, _y) for _x, _y, _c in _mb_drawn}) == len(_MB_STARS), (
+        f"the fixture's stars land on top of each other ({_mb_drawn}), "
+        f"so hovering cannot tell them apart and this proves nothing")
+
+    def _mb_point(_i):
+        _sx, _sy, _c = _mb_drawn[_i]
+        return (int(_mb_box.x + _sx * _mb_box.width / _mb_nat[2]),
+                int(_mb_box.y + _sy * _mb_box.height / _mb_nat[3]))
+
+    # 1. EACH VISITED STAR NAMES ITSELF, AND NOTHING IS SENT.
+    for _mb_i, (_mb_name, _mb_vis, _x, _y) in enumerate(_MB_STARS):
+        del _fl_sent[:]
+        _fl_scr.handle_mouse_motion(*_mb_point(_mb_i))
+        assert _fl_scr._scan_star == _mb_i, (
+            f"hovering star {_mb_i} scanned {_fl_scr._scan_star}")
+        if _mb_vis:
+            assert _fl_scr._status == _mb_name, (
+                f"star {_mb_i} shows {_fl_scr._status!r}, not "
+                f"{_mb_name!r}")
+        else:
+            # 2. AND AN UNEXPLORED ONE IS NOT NAMED — state 8.
+            assert _mb_name not in (_fl_scr._status or ""), (
+                f"the strip named {_mb_name!r}, which this player has "
+                f"not explored; the original prints H 0x94 there "
+                f"(flt2.cpp:379-393)")
+        assert _fl_sent == [], (
+            f"hovering star {_mb_i} sent {_fl_sent}; the strip is built "
+            f"from the stars HD already draws and must send nothing")
+
+    # 3. AN EMPTY PATCH OF MAP CLEARS IT.
+    del _fl_sent[:]
+    _fl_scr.handle_mouse_motion(_mb_box.x + 2, _mb_box.bottom - 2)
+    assert _fl_scr._scan_star == -1 and _fl_scr._status == "", (
+        f"an empty point left {_fl_scr._status!r} in the strip")
+    assert _fl_sent == []
+
+    # 4. THE THREE SCANS ARE MUTUALLY EXCLUSIVE, as in the original:
+    #    taking a big icon sets `_scanned_big_ship` and clears
+    #    `_galaxy_map_scanned_star` in the same branch
+    #    (flt1.cpp:616-620).
+    _fl_scr.handle_mouse_motion(*_mb_point(0))
+    assert _fl_scr._scan_star == 0
+    del _fl_sent[:]
+    _mb_cell = _fl_scr.icon_slots()[2]
+    _fl_scr.handle_mouse_motion(_mb_cell.centerx, _mb_cell.centery)
+    assert _fl_scr._scan_star == -1, (
+        "hovering a grid cell left the star scanned; the original "
+        "clears it in the same branch that takes the icon")
+    assert _fl_scr._scan.icon == 2, _fl_scr._scan.icon
+    assert _fl_sent == []
+
+    # 5. WITH SHIPS SELECTED THE ORIGINAL PREVIEWS A MOVE, AND HD SAYS
+    #    NOTHING RATHER THAN SOMETHING ELSE.
+    _mb_sel = _fl_snapshot(icons=6, scanned_big=-1, selected=(0,),
+                           stars=_MB_STARS)
+    _mb_sel.fields = _fl_fields(6)
+    _fl_scr.update(_mb_sel)
+    assert int(_mb_sel.fleet_screen["selected_count"]) == 1
+    del _fl_sent[:]
+    _fl_scr.handle_mouse_motion(*_mb_point(0))
+    assert _fl_scr._status == "", (
+        f"with a ship selected the strip shows {_fl_scr._status!r}; the "
+        f"original prints a move preview there, which is on no wire, so "
+        f"HD must print nothing rather than a name")
+    assert _fl_sent == []
+
+    # 6. ONE COPY OF "WHICH STAR IS UNDER THIS POINT". The click and
+    #    the hover ask the same question and `fltmove.star_at` is the
+    #    only answer; outside the box it says so.
+    assert _mv.star_at(_fl_scr, 2, 2) == (False, None)
+    assert _mv.star_at(_fl_scr, *_mb_point(1)) == (True, 1)
+
+    ok("the strip under the Fleets map names the star the pointer is "
+       "over, built from the stars HD already draws with nothing sent, "
+       "silent on an empty point and while ships are selected — where "
+       "the original previews a move — never naming an unexplored "
+       "star, and clearing when the pointer takes a grid cell")
 
     ok("the Fleets panel follows the pointer: the hovered ship's "
        "lines built from the snapshot HD already holds with nothing "
@@ -20119,6 +20245,14 @@ def main():
     # Update_Selection_Flags_ (:1069-1093) counts them — SCRAP exists
     # only while the count is above zero (:1185). What the panel shows
     # is a DIFFERENT variable: the SCANNED ship, never the selection.
+    # **THIS CHECK IS ABOUT THE WIRE'S `scanned_big`, so it clears
+    # HD's own hover first.** Since work order 153 B there are two
+    # sources and `fltscan.resolve` prefers HD's pointer; a check
+    # that did not say which one it was driving would answer
+    # whichever an EARLIER check happened to leave set, which is what
+    # it did the moment work order 155's block started hovering. A
+    # check states its own precondition.
+    _fl_scr._scan.clear()
     _fl_multi = _fl_snapshot(selected=(1, 2), scanned_big=0)
     _fl_multi.fields = _fl_fields(6)
     _fl_scr.update(_fl_multi)
@@ -20133,6 +20267,7 @@ def main():
     # content carries the split. Compared through `flat()`, which is
     # the same three parts in one list.
     _fl_panel_0 = list(_fl_scr._panel.flat())
+    _fl_scr._scan.clear()
     _fl_one = _fl_snapshot(selected=(1, 2), scanned_big=3)
     _fl_one.fields = _fl_fields(6)
     _fl_scr.update(_fl_one)

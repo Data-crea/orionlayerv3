@@ -73,6 +73,11 @@ class FleetsScreen(ScreenBase):
         # showing and which cell wears the hover mark. One value for
         # both, because the original has one (work order 153 B).
         self._scan = fltscan.Scan()
+        # HD's own `MOX::_galaxy_map_scanned_star`: the star under the
+        # pointer in the inset, which is what the strip under the map
+        # names (work order 155). -1 is "nothing scanned", and the
+        # original prints the strip not at all in that state.
+        self._scan_star = -1
         # The game's own artwork, when the player has extracted it.
         # Never committed and never shipped, so `available` is False in
         # a fresh clone and the cells fall back — `fltart` says why.
@@ -100,6 +105,7 @@ class FleetsScreen(ScreenBase):
         self._view, self._cells, self._panel = None, [], []
         self._hover_cell = None
         self._scan.clear()
+        self._scan_star = -1
         self._load_frame(
             self._data.get("frame", {}).get("image", "frame.png"))
         self.update(game_state)
@@ -159,24 +165,35 @@ class FleetsScreen(ScreenBase):
                                    self._strings, self._arcs)
 
     def _status_line(self, game_state, block):
-        """The line under the inset map.
+        """The strip under the inset map.
 
-        The original prints the name of the star the POINTER is over
-        (`Print_Fltscrn_Scanned_Star_Name_`, flt2.cpp:338-522, called
-        only on hover, flt1.cpp:397-399) together with a governor and a
-        move preview. HD DRAWS THE NAME AND NOT THE PREVIEW: the
-        preview is computed on hover by `SHIPMOVE::Ships_Try_To_Move_To_`
-        and is on no wire (OMISSION, `fltwire`). The scanned SMALL stack
-        is in the block, so the name follows the game's own hover and
-        not HD's — which is the right way round while the game owns the
-        pointer.
+        **IT NAMES THE STAR HD'S OWN POINTER IS OVER** — work order
+        155 — and nothing else. `Print_Fltscrn_Scanned_Star_Name_` is
+        called only under `if (_galaxy_map_scanned_star > -1)`
+        (flt1.cpp:397), so with nothing scanned the original writes
+        the strip not at all and it is empty; `self._scan_star` is
+        HD's copy of that variable and -1 means the same thing.
+
+        **WHAT IT DELIBERATELY DOES NOT DO.** With ships selected the
+        original's strip is a MOVE PREVIEW, not a name — eight of its
+        ten states come from `SHIPMOVE::Ships_Try_To_Move_To_`, which
+        is on no wire (the OMISSION `layout.json` carries). Printing
+        the star's name there would answer a different question from
+        the one the original is answering, so HD says nothing instead.
+        `fltrows.scanned_star_line` holds that rule.
+
+        The previous version read `scanned_small` — the small ship
+        icon the GAME's pointer is over — and printed that ship's
+        star. It was marked an unmarked invention by work order 152
+        and it could never move for a client anyway, because the API
+        has no mouse motion.
         """
-        scanned = int(block.get("scanned_small", -1))
-        icons = getattr(game_state, "ship_icons", None) or []
-        if not (0 <= scanned < len(icons)):
+        if self._scan_star < 0:
             return ""
-        star = getattr(icons[scanned], "star_idx", None)
-        return fltrows.star_name(game_state, star) if star is not None else ""
+        if int(block.get("selected_count", 0) or 0) > 0:
+            return ""
+        return fltrows.scanned_star_line(game_state, self._scan_star,
+                                         self._strings)
 
     def wants_original(self):
         """Hand over whenever the View is not READY — decision 22's
@@ -552,6 +569,30 @@ class FleetsScreen(ScreenBase):
                                      self._view.own_stack,
                                      self._view.rows)):
             self._panel = self._panel_for(self._state, self._view.block)
+            # **THE THREE SCANS ARE MUTUALLY EXCLUSIVE IN THE
+            # ORIGINAL**, and this is the half that clears the star:
+            # taking a big icon sets `_scanned_big_ship` and then
+            # `_galaxy_map_scanned_star = -1` in the same branch
+            # (flt1.cpp:616-620). The strip goes quiet when the
+            # pointer moves onto the grid, which is what the original
+            # does.
+            self._scan_star = -1
+        elif self._view is not None and self._view.ok:
+            # A STAR UNDER THE POINTER. The other half of the same
+            # exclusion: `if (scanned_star_id >= 0) {
+            # _galaxy_map_scanned_star = …; _scanned_small_ship = -1; }`
+            # (flt1.cpp:649-652) — and it does NOT clear
+            # `_scanned_big_ship`, so the ship panel keeps its ship
+            # while the strip names a star. HD does the same.
+            #
+            # AND IT SENDS NOTHING. `fltmove.star_at` resolves the
+            # star from the stars HD already draws, exactly as 153 B
+            # resolves the hovered ship from the block it already has.
+            _in_map, _star = fltmove.star_at(self, screen_x, screen_y)
+            if _in_map:
+                self._scan_star = -1 if _star is None else _star
+                self._status = self._status_line(self._state,
+                                                 self._view.block)
         return super().handle_mouse_motion(screen_x, screen_y)
 
     def handle_mousewheel(self, direction, screen_x, screen_y):

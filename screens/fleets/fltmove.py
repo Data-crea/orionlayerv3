@@ -142,12 +142,18 @@ def refusal(game_state, view, star_index):
     return None
 
 
-def click(screen, screen_x, screen_y):
-    """A click on a star in the inset: send the selected ships there.
+def star_at(screen, screen_x, screen_y):
+    """`(the point is in the inset, the star index or None)`.
 
-    Returns True when the click BELONGED to the map, sent or not — a
-    refusal is still an answer and must not fall through to whatever is
-    underneath it.
+    ONE COPY, because the click and the hover ask the same question —
+    work order 155. `Add_Galaxy_Map_Fields_2_` puts a hidden field on
+    every star (movebox.cpp:504-511) and the original's click and its
+    scan both go through that one field list; HD has no fields of its
+    own here, so this is the equivalent, and having it twice is
+    decision 5's failure.
+
+    The index IS the star index: `galaxy_inset_stars` emits one entry
+    per star in `game_state.stars` order and skips none.
     """
     box = None
     for b in screen.boxes:
@@ -155,10 +161,10 @@ def click(screen, screen_x, screen_y):
             box = b.screen_rect
             break
     if box is None or not box.collidepoint(screen_x, screen_y):
-        return False
+        return False, None
     stars = screen._inset_stars()
     if not stars:
-        return True
+        return True, None
     native = fltgeom.REGIONS["inset_map"]
     px = (screen_x - box.x) / (box.width / float(native[2]))
     py = (screen_y - box.y) / (box.height / float(native[3]))
@@ -168,7 +174,24 @@ def click(screen, screen_x, screen_y):
         if bestd is None or d < bestd:
             best, bestd = i, d
     if best is None or bestd > TOLERANCE:
+        return True, None
+    return True, best
+
+
+def click(screen, screen_x, screen_y):
+    """A click on a star in the inset: send the selected ships there.
+
+    Returns True when the click BELONGED to the map, sent or not — a
+    refusal is still an answer and must not fall through to whatever is
+    underneath it.
+    """
+    in_box, best = star_at(screen, screen_x, screen_y)
+    if not in_box:
+        return False
+    if best is None:
         return True
+    stars = screen._inset_stars()
+    native = fltgeom.REGIONS["inset_map"]
     why = refusal(screen._state, screen._view, best)
     if why:
         log.info("map click on star %d: not sent — %s", best, why)

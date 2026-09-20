@@ -13,6 +13,55 @@ right and the header had gone stale** — resolved 10 September 2026
 by dating the header to the edit and giving this session its
 paragraph, below, so the two agree again.
 
+This session (20 September 2026, work order 155): **the strip under
+the Fleets map names the star the pointer is over — and the finding
+is what it must NOT say.**
+
+**The strip is not a star-name field.** Help 363 calls it
+"information as you scan ships and stars", and
+`FLT2::Print_Fltscrn_Scanned_Star_Name_` (flt2.cpp:338-522) picks one
+of TEN states. The first thing it asks is whether any ships are
+selected; if they are, it runs `SHIPMOVE::Ships_Try_To_Move_To_` and
+prints a MOVE PREVIEW — "Orbiting %s", "%d turn(s) to %s", "ETA %d
+turn(s)", a black hole in the way, immobile, parsecs out of range,
+hyperspace flux. The star's NAME is state 7, reached only when
+nothing is selected, and H 0x94 is state 8 for a star the player
+knows nothing about. With nothing scanned the original does not write
+the strip at all (flt1.cpp:397).
+
+**HD draws states 7 and 8 and stays SILENT for the other eight.**
+With ships selected the original is answering "can these ships get
+there"; a name is not a worse answer to that, it is an answer to a
+different question, and `_g_ship_move_info` is on no wire. The
+alternative — name the star in all ten — is one line and is Data's
+to call; `doc/briefs/155-parked-for-data.md` §1 has it.
+
+Hover **sends nothing**: `fltmove.star_at` resolves the star out of
+the stars HD already draws (`galaxy_inset_stars` emits one per star
+in order, so the drawn index IS the star index), and it is ONE copy —
+`fltmove.click` was carrying the same arithmetic and now calls it.
+The unexplored case uses the helper work order 154 built, so HD can
+under-report and never over-report.
+
+**The three scans are mutually exclusive, as in the original**:
+taking a grid cell clears the scanned star (flt1.cpp:616-620), taking
+a star clears the small ship but NOT the big one (:649-652), so the
+ship panel keeps its ship while the strip names a star.
+
+**The two small boxes were already built.** They are PREV/NEXT FLEET
+— `Next_Ship_Icon_` / `Previous_Ship_Icon_` step the ship stack — and
+`handle_click` has activated them through the game's own field since
+work order 134. Nothing was needed. What IS missing is that they show
+nothing at all, which the acceptance capture makes plain; three ways
+to close it are in the parked file, with a recommendation.
+
+One older check had to state its own precondition: "the panel follows
+the SCANNED ship" answered whichever source an EARLIER check had left
+set, because since 153 B there are two. It clears HD's hover now and
+says which one it is driving.
+
+Smoke 242 -> 243.
+
 This session (20 September 2026, the clone-only fault, piece 4 of 4):
 **every registered path is ignored, and the two lists can no longer
 drift.**
@@ -2245,7 +2294,7 @@ files under `doc/` and are only summarised here.
 | | |
 |---|---|
 | Python | 32,960 lines across 111 modules — `find . -name '*.py'`, `__pycache__` excluded, the smoke test's 6,400 included. The previous figure here (21,642 across 94) was carried from an unstated method and could not be reproduced |
-| Smoke test | `python tools/smoke_test.py` — **242 checks**, headless |
+| Smoke test | `python tools/smoke_test.py` — **243 checks**, headless |
 | Assets | 170 MB (select_race 68, galaxy_map 51, shared 23, new_game 21, colony_summary 1) |
 | Screens in HD | 9 of ~20–22 (the GAME menu overlay, work order Stop 2, every dialog of the popup; colony summary draws list, sidebar, scan box and galaxy inset, and MOVES POPS — the first HD gesture that drives the game; planets, brief 101, lists, sorts, restricts and returns) |
 | Setup from clone | `python tools/setup.py` (deps via the system package manager) |
