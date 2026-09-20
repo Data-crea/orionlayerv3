@@ -471,6 +471,19 @@
         "skin": "text",
         "align": "center"
       }
+    },
+    {
+      "name": "help_popup",
+      "hidden": true,
+      "style": {
+        "font_scale": 1.0
+      },
+      "rect": [
+        420,
+        170,
+        1080,
+        745
+      ]
     }
   ],
   "2560x1440": [
@@ -945,6 +958,19 @@
         "skin": "text",
         "align": "center"
       }
+    },
+    {
+      "name": "help_popup",
+      "hidden": true,
+      "style": {
+        "font_scale": 1.0
+      },
+      "rect": [
+        420,
+        170,
+        1080,
+        745
+      ]
     }
   ]
 }
