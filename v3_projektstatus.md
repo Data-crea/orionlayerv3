@@ -13,6 +13,36 @@ right and the header had gone stale** — resolved 10 September 2026
 by dating the header to the edit and giving this session its
 paragraph, below, so the two agree again.
 
+This session (20 September 2026, the clone-only fault, piece 4 of 4):
+**every registered path is ignored, and the two lists can no longer
+drift.**
+
+Each of the twelve paths `setup.from_game()` registers must really be
+gitignored — a COMMITTED file on that list could vanish and nothing
+would say so, and a player's own data could be committed by
+accident. All twelve are.
+
+**And `_JSON_ABSENT_OK` is now held to the registry**, which is the
+fault `5402b7d` was: two new files went into `_JSON_OTHER` instead of
+the absent-allowed list, the suite stayed green on the machine that
+had extracted them, and a clone went red. Every `.json` the registry
+names must be on the absent-allowed list, so forgetting one fails
+here rather than in a clone.
+
+**It found two the moment it was written.** `kentext_en.json` and the
+Fleets `manifest.json` — the two entries piece 1 added to the
+registry — had never reached `_JSON_ABSENT_OK`. Two lists maintained
+by hand had already drifted within the same session; that is the
+argument for tying them together rather than keeping both.
+
+No new check: the assertions join the JSON one, which is the same
+concern. Smoke 242, unchanged.
+
+**The four pieces are done.** The rule is in the fundament, the
+registry is complete and self-checking, a check gets a stand-in
+instead of the player's catalogue, the loader rule is enforced by
+`ast` rather than remembered, and the two lists are one.
+
 This session (20 September 2026, the clone-only fault, piece 3 of 4):
 **the rule is enforced, not remembered.**
 

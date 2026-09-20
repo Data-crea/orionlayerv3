@@ -16603,6 +16603,13 @@ def main():
         # second time by the session that read it.
         os.path.join("assets", "shared", "names", "techfields_en.json"),
         os.path.join("assets", "shared", "names", "billtext_en.json"),
+        # THE TWO THE REGISTRY GAINED IN PIECE 1, and they were not
+        # here — found by piece 4's cross-check the moment it was
+        # written, which is the argument for tying the two lists
+        # together instead of maintaining both.
+        os.path.join("assets", "shared", "names", "kentext_en.json"),
+        os.path.join("screens", "fleets", "assets", "gamedata",
+                     "manifest.json"),
     }
     if os.path.isdir(os.path.join(_json_root, ".git")):
         import subprocess as _json_sp
@@ -16618,6 +16625,55 @@ def main():
     else:
         report("JSON absent-allowed list NOT checked against .gitignore "
                "— no .git directory")
+
+    # ── EVERY REGISTERED PATH IS IGNORED, AND THE TWO LISTS AGREE ──
+    #
+    # Piece 4 of the clone-only fault. `setup.from_game()` names every
+    # file derived from the player's install; each one must really be
+    # gitignored, because a COMMITTED file on that list could vanish
+    # and nothing would say so — the same argument `_JSON_ABSENT_OK`
+    # already carried, applied to the list that governs.
+    #
+    # **AND `_JSON_ABSENT_OK` IS HELD TO THE REGISTRY**, which is the
+    # fault `5402b7d` was: two new files went into `_JSON_OTHER`
+    # instead of the absent-allowed list, the suite stayed green on
+    # the machine that had extracted them, and a clone went red. The
+    # two lists are no longer independent — every .json the registry
+    # names has to be on the absent-allowed list, so forgetting one
+    # fails here rather than in a clone.
+    import importlib.util as _reg_ilu
+    _reg_spec = _reg_ilu.spec_from_file_location(
+        "_setup_registry", os.path.join(_json_root, "tools", "setup.py"))
+    _reg_mod = _reg_ilu.module_from_spec(_reg_spec)
+    _reg_spec.loader.exec_module(_reg_mod)
+    _reg_rel = [os.path.relpath(_p, _json_root)
+                for _p, _w, _c in _reg_mod.from_game()]
+    assert len(_reg_rel) >= 12, _reg_rel
+
+    if os.path.isdir(os.path.join(_json_root, ".git")):
+        _reg_out = _json_sp.run(
+            ["git", "-C", _json_root, "check-ignore", "--no-index",
+             *sorted(_reg_rel)], capture_output=True, text=True)
+        _reg_notign = sorted(set(_reg_rel) - set(_reg_out.stdout.split()))
+        assert not _reg_notign, (
+            f"these are registered as derived from the player's own "
+            f"installation and git does NOT ignore them: {_reg_notign}. "
+            f"Either the file is committed, in which case it does not "
+            f"belong in from_game(), or .gitignore has a hole and a "
+            f"player's own data could be committed by accident")
+    else:
+        report("the derived registry was NOT checked against "
+               ".gitignore — no .git directory")
+
+    #    and the two lists cannot drift: every registered .json is on
+    #    the absent-allowed list
+    _reg_json = {_r for _r in _reg_rel if _r.endswith(".json")}
+    _reg_missing = sorted(_reg_json - set(_JSON_ABSENT_OK))
+    assert not _reg_missing, (
+        f"{_reg_missing} are registered as derived from the player's "
+        f"install and are not in _JSON_ABSENT_OK, so the formatting "
+        f"check demands they exist and a fresh clone fails on them. "
+        f"That is exactly what happened in 5402b7d")
     _json_absent = sorted(_f for _f in _JSON_ABSENT_OK if not
                           os.path.exists(os.path.join(_json_root, _f)))
     _json_missing = _JSON_OTHER - _json_seen - _JSON_ABSENT_OK
@@ -16669,7 +16725,8 @@ def main():
        f"exceptions, exact in both directions; {len(_json_absent)} of "
        f"{len(_JSON_ABSENT_OK)} generated files absent, which a fresh "
        f"clone may be; {_json_newline_n} tracked files end in exactly "
-       f"one newline)")
+       f"one newline; {len(_reg_rel)} registered derived paths all "
+       f"ignored and every one of their .json on the absent list)")
 
     # ── EVERY FIXTURE A RUN CAN NAME HAS BYTES IT CAN CHECK ─────
     #
