@@ -6729,6 +6729,50 @@ is deciding how a centred paragraph behaves in a hole that is not
 305 px wide, and what a clone with no extracted help texts shows
 instead.
 
+### The Fleets ship panel: two more, from work order 155
+
+**20 September 2026, Data's decisions on the strip under the map.**
+
+**5. The strip is silent in eight of its ten states.** HD draws the
+two the original reaches with no ships selected — the star's name,
+and H 0x94 for a star the player knows nothing of. The other eight
+are the MOVE PREVIEW: H 0x67 "Orbiting %s", H 0x69/0x6A "%d turn(s)
+to %s", H 0x6B/0x6C "ETA %d turn(s)", H 0x21 a black hole in the way,
+H 0x6E immobile, H 0x6F/0x70 "%d parsecs to %s", H 0xEB, H 0x73
+hyperspace flux (flt2.cpp:394-500).
+
+**Data's decision, 20 September 2026: the strip stays as built** —
+with ships selected the original is answering a different question
+and HD should too, rather than printing a name that answers neither.
+So this is a PARITY item, not a bug, and it is here rather than in
+any order.
+
+*What lifting it costs:* `SHIPMOVE::Ships_Try_To_Move_To_` transcribed
+and `_g_ship_move_info` on the wire — the same field work order 144
+put to the C++ side, and the same one the galaxy map's own move
+preview needs. It is one piece of work for both screens, which is the
+argument for doing it once and deliberately rather than per screen.
+
+**6. PREV and NEXT wear words where the original draws arrows.** The
+original's two buttons beside the strip are FLEET.LBX arrow glyphs
+with no string at all. HD drew nothing, so for two work orders they
+were live, clickable and invisible; since 20 September 2026 they say
+"Prev" and "Next", which is what this screen already does for the
+seven other controls the original also has no string for.
+
+*What lifting it costs:* the two arrows extracted the way
+`tools/fleet_art_extract.py` already extracts the rest of this
+screen's artwork, and `draw_labels` preferring the sprite over the
+word where it has one — exactly the shape the grid cells took in work
+order 142 D1, including the fallback for a clone that has not
+extracted anything. **The words are not a stopgap to be ashamed of**:
+they are the same answer decision 15 gives everywhere else here, and
+the artwork replaces them only if it looks better.
+
+A rule holds both halves now: every name in `fltwire.HOTKEYS` that is
+also a cutout must be in `fltdraw.CONTROL_WORDS` with a non-empty
+word, so a clickable control cannot go unmarked again.
+
 ### `font_scale` and `font_size` are two mechanisms — PARKED
 
 **20 September 2026, work order 151 B. Data parked the unification;

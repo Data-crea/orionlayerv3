@@ -20250,6 +20250,26 @@ def main():
         assert _fl_hb and _fl_hb["style"].get("skin") == "text", (
             f"{_fl_hint} is not a text box; a panel or a border there "
             f"would be a second outline inside {_fl_region}'s own")
+    # E5b. EVERY CONTROL THE PLAYER CAN CLICK WEARS A WORD — the rule,
+    #      not the list. PREV and NEXT were live, clickable and drawn
+    #      as NOTHING AT ALL for two work orders, because the original
+    #      draws arrow glyphs there and `draw_labels` only knew the
+    #      seven that have painted words. A box with a field behind it
+    #      and no mark on it is a feature a player cannot find.
+    from screens.fleets import fltdraw as _fd_mod
+    _fl_clickable = set(_flw.HOTKEYS) & set(_fhB.RULE_NAMES["fleets"])
+    _fl_worded = {_n for _n, _k in _fd_mod.CONTROL_WORDS}
+    assert _fl_worded == _fl_clickable, (
+        f"these are clickable controls with a hole and no word: "
+        f"{sorted(_fl_clickable - _fl_worded)}; and these have a word "
+        f"and are not clickable controls: "
+        f"{sorted(_fl_worded - _fl_clickable)}")
+    for _fl_n, _fl_k in _fd_mod.CONTROL_WORDS:
+        assert (_fl_layout["words"].get(_fl_k) or "").strip(), (
+            f"{_fl_n} maps to words.{_fl_k}, which is missing or empty "
+            f"— the box would draw nothing and the control would be "
+            f"invisible")
+
     assert {"omission_inset_map", "omission_status_line"} <= \
         set(_fl_layout["marks"]), sorted(_fl_layout["marks"])
     for _fl_mark, _fl_cite in (("omission_inset_map", "flt1.cpp:649"),

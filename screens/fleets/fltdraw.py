@@ -213,9 +213,33 @@ RADIOS = {"btn_support": ("support", "support_filter"),
           "btn_combat": ("combat", "combat_filter")}
 
 
+#: EVERY CONTROL THE PLAYER CAN CLICK, and the `layout.json` word it
+#: wears. NINE, not seven: PREV and NEXT joined on 20 September 2026
+#: (Data, work order 155).
+#:
+#: The original draws those two as ARROW GLYPHS out of FLEET.LBX,
+#: which is MOO2's artwork and not in this tree (decision 42) — so HD
+#: drew nothing at all and a player had two live, clickable,
+#: INVISIBLE boxes. Words are what this screen already does for the
+#: seven the original also has no string for. The glyphs can replace
+#: them when the artwork is extracted; that is on the open list.
+#:
+#: A MODULE CONSTANT so the smoke test can hold the RULE rather than
+#: this list: every name in `fltwire.HOTKEYS` that is also a cutout
+#: has to be here with a word, which is what the two missing ones
+#: failed for two work orders.
+CONTROL_WORDS = (
+    ("btn_all", "all"), ("btn_relocate", "relocate"),
+    ("btn_scrap", "scrap"), ("btn_leaders", "leaders"),
+    ("btn_support", "support"), ("btn_combat", "combat"),
+    ("btn_return", "return"),
+    ("prev_fleet", "prev"), ("next_fleet", "next"),
+)
+
+
 def draw_labels(surface, screen, words, enabled=None, art=None,
                 filters=None):
-    """The seven control words, centred in their boxes.
+    """The nine control words, centred in their boxes.
 
     `enabled` is a set of box names that are live this frame; anything
     else is drawn dim. The original dims by swapping the button's
@@ -230,10 +254,7 @@ def draw_labels(surface, screen, words, enabled=None, art=None,
     (`fltart.radio`); without it, a filled backing in the screen's blue
     — which is what the original's lit frame is — and the word on top.
     """
-    for name, key in (("btn_all", "all"), ("btn_relocate", "relocate"),
-                      ("btn_scrap", "scrap"), ("btn_leaders", "leaders"),
-                      ("btn_support", "support"), ("btn_combat", "combat"),
-                      ("btn_return", "return")):
+    for name, key in CONTROL_WORDS:
         rect = _rect(screen, name)
         text = words.get(key)
         if rect is None or not text:
