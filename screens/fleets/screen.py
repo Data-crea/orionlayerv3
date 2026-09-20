@@ -39,7 +39,7 @@ from screens.colony_summary import colonyrows
 
 from . import fltart
 from . import fltdraw
-from . import fltbox, fltpanel, fltgeom, fltrows, fltwire
+from . import fltbox, fltmove, fltpanel, fltgeom, fltrows, fltwire
 
 log = logging.getLogger("fleets")
 
@@ -443,6 +443,8 @@ class FleetsScreen(ScreenBase):
         if slot is not None:
             self._toggle_slot(slot)
             return None
+        if self._map_click(screen_x, screen_y):
+            return None
         return super().handle_click(screen_x, screen_y)
 
     def _click_game_box(self, screen_x, screen_y):
@@ -456,6 +458,10 @@ class FleetsScreen(ScreenBase):
                 self.app.client.activate_field(field.index)
                 return None
         return None
+
+    def _map_click(self, screen_x, screen_y):
+        """A click on a star in the inset — `fltmove.click` decides."""
+        return fltmove.click(self, screen_x, screen_y)
 
     def _click_field(self, name):
         """INJECT_CLICK at a radio field's own centre.

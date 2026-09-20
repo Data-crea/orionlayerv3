@@ -13,6 +13,51 @@ right and the header had gone stale** — resolved 10 September 2026
 by dating the header to the edit and giving this session its
 paragraph, below, so the two agree again.
 
+This session (20 September 2026, work order 152, item 8): **ships are
+sent to a star from the Fleets map, and it needed nothing from Joes.**
+
+**THE ORIGINAL'S FLOW HAS NO BUTTON** (flt1.cpp:628-664): select ships
+in the grid, then click a star in the inset. RELOCATE is a different
+branch. The send is `ACTIVATE_FIELD` on the star's own hidden field,
+which decision 20 names for a type 7, and **decision 35 is satisfied
+outright** — the field IS the game's frame, so no HD rectangle is in
+the path and the API's missing INJECT_CLICK mapping is not in the way.
+
+**THE POLARITY IS THE TRAP AND IT IS WRITTEN DOWN.** In
+`Scan_Galaxy_Map_Fields_` the second argument is `input` and a match
+there is the CLICK (result 0); the hover is the first argument and
+answers result 4. That is the opposite way round from
+`Scan_Fltscrn_Big_Icons_` on the same screen, where a positive index
+is the HOVER. Two scanners, one screen, opposite conventions.
+
+**THE STAR-TO-FIELD MAPPING IS DERIVED FROM THE DATA, NOT TYPED.**
+HD's inset positions and the game's star fields differ by a constant
+offset, and three attempts got it wrong before the live numbers
+settled it: comparing in the wrong frame gave scattered offsets, and
+demanding that all 54 agree exactly refused a mapping that is right.
+Measured: **(-6, -6) on 46 of 54, with five at (-7, -6) and three at
+(-6, -7)** — HD's arithmetic and the game's round the same division
+differently by a pixel. So `fltmove.match` takes the majority offset
+from the data each time and allows `SLACK` of 2 around it, requires a
+clean bijection, and **returns {} otherwise, which means send
+nothing**. The rule lives on the star pitch (~30 px) exceeding the
+offset (12), which the check's fixture is built to respect.
+
+**ONE REFUSAL IS OURS, THE REST ARE THE GAME'S** (decision 33). The
+black hole is one comparison — `spectral_class ==
+STAR_CLASS_BLACK_HOLE` (flt1.cpp:640) — and refusing it in HD also
+keeps the screen out of a `User_Box_` it did not need to enter.
+`Player_Can_Order_Ship_` reads data HD does not hold and is left to
+the game.
+
+**Live on SAVE4**: one ship selected, an HD click on star 0 resolved to
+field 19, and the ship's `location` went from 32 to 20000 — the
+in-transit encoding — with `travelling_speed` 2 and `turns_left` 4.
+The ships moved. SAVE1-6, 8, 9 and 11 byte-identical, SAVE10 logged and
+unchanged, nothing saved.
+
+Smoke 234 -> 235.
+
 This session (20 September 2026, work order 152, item 7): **the ship
 panel is the original's content, in the original's own words, in the
 original's two columns.**
@@ -1730,7 +1775,7 @@ files under `doc/` and are only summarised here.
 | | |
 |---|---|
 | Python | 32,960 lines across 111 modules — `find . -name '*.py'`, `__pycache__` excluded, the smoke test's 6,400 included. The previous figure here (21,642 across 94) was carried from an unstated method and could not be reproduced |
-| Smoke test | `python tools/smoke_test.py` — **234 checks**, headless |
+| Smoke test | `python tools/smoke_test.py` — **235 checks**, headless |
 | Assets | 170 MB (select_race 68, galaxy_map 51, shared 23, new_game 21, colony_summary 1) |
 | Screens in HD | 9 of ~20–22 (the GAME menu overlay, work order Stop 2, every dialog of the popup; colony summary draws list, sidebar, scan box and galaxy inset, and MOVES POPS — the first HD gesture that drives the game; planets, brief 101, lists, sorts, restricts and returns) |
 | Setup from clone | `python tools/setup.py` (deps via the system package manager) |

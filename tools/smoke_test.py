@@ -18971,6 +18971,56 @@ def main():
     _fp_words = _sjson.load(io.open(os.path.join(
         SCREENS_DIR, "fleets", "layout.json"),
         encoding="utf-8"))["words"]
+    # ── ITEM 8: A STAR IS MATCHED TO ITS FIELD, OR NOTHING IS SENT ─
+    #
+    # Work order 152. The move is `ACTIVATE_FIELD` on the star's own
+    # hidden field, so the whole question is whether HD's drawn stars
+    # and the game's star fields are the same list. `fltmove.match`
+    # answers with a bijection or with {}, and {} means send nothing.
+    from screens.fleets import fltmove as _mv
+
+    class _MvF:
+        def __init__(self, i, x, y):
+            self.index = i
+            self.x, self.y = x, y
+            self.x_end = x + _flw.STAR_FIELD_SIZE[0]
+            self.y_end = y + _flw.STAR_FIELD_SIZE[1]
+            self.field_type = _flw.TYPE_HIDDEN
+            self.hotkey = 0
+
+    # the shape the live run measured: a majority offset of (-6, -6)
+    # with a one-pixel scatter, inside a 54-star inset
+    # Spaced the way a real inset is: the star pitch has to exceed the
+    # offset, or a star's nearest field is its NEIGHBOUR's. On SAVE4's
+    # 54 stars over a 305x182 box the pitch is ~30 px against an offset
+    # of 12, which is the margin this rule lives on.
+    _mv_drawn = [(40 + 30 * (i % 8), 60 + 25 * (i // 8)) for i in range(20)]
+    _mv_fields = []
+    for _mv_i, (_mx, _my) in enumerate(_mv_drawn):
+        _mv_dx = -6 - (1 if _mv_i % 7 == 0 else 0)
+        _mv_dy = -6 - (1 if _mv_i % 5 == 0 else 0)
+        _mv_fields.append(_MvF(_mv_i + 1, _mx + _mv_dx, _my + _mv_dy))
+    _mv_got = _mv.match(_mv_drawn, _mv_fields)
+    assert len(_mv_got) == len(_mv_drawn), (
+        "the star/field match refused a list that differs from the "
+        "majority offset by the one pixel the live run measured")
+    assert len({id(v) for v in _mv_got.values()}) == len(_mv_got), (
+        "two stars were matched to one field")
+    # and it REFUSES rather than guessing
+    assert _mv.match(_mv_drawn, _mv_fields[:-1]) == {}, (
+        "a short field list was matched anyway; a missing star field "
+        "means the two lists are not the same list")
+    _mv_far = list(_mv_fields)
+    _mv_far[3] = _MvF(4, _mv_far[3].x + 40, _mv_far[3].y)
+    assert _mv.match(_mv_drawn, _mv_far) == {}, (
+        "a star 40 px from its field was matched; outside SLACK the "
+        "mapping is not established and nothing may be sent")
+    assert _mv.SLACK < 12, "SLACK is wide enough for two stars to collide"
+
+    ok(f"a Fleets map click resolves to the star's OWN field or sends "
+       f"nothing: the offset is derived from the data, the one-pixel "
+       f"scatter is allowed, and a short or shifted list refuses")
+
     # ── ITEM 7: THE PANEL IS THE ORIGINAL'S CONTENT, IN ITS WORDS ──
     #
     # Work order 152. Every string here comes from the player's own
