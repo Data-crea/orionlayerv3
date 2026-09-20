@@ -53,6 +53,8 @@ DEFAULTS = {
     "label": (72, 144, 56),
     "label_dim": (8, 112, 8),
     "radio_on": (8, 8, 80),
+    "cell_selected": (216, 232, 255),
+    "cell_hover": (120, 152, 200),
 }
 
 
@@ -355,6 +357,67 @@ def cell_art(art, cell, rect):
     return out
 
 
+#: How far the cell hole's chamfer cuts each corner, in SOURCE pixels —
+#: the same number the content inset uses, because it is the same
+#: chamfer (`fltgeom.CONTENT_INSET_SRC["cell_00"]`). Read from there so
+#: a new frame moves both together.
+def _chamfer_px(screen):
+    src = fltgeom.CONTENT_INSET_SRC.get("cell_00", 0)
+    scale = (screen.layout.rect((0, 0, 1920, 1080))[2]
+             / fltgeom.FRAME_SRC_SIZE[0])
+    return max(1, int(round(src * scale)))
+
+
+def draw_cell_mark(surface, screen, rect, colour, width):
+    """One mark on a cell's edge, following the hole's own shape.
+
+    **THE ORIGINAL USES TWO SPRITES AND SO DOES THIS** (work order 152,
+    item 5). `_selected_box_seg` is FLEET.LBX 17, 59 x 58, drawn at
+    `(x - 2, y + 1)` for a SELECTED ship (flt1.cpp:93-103);
+    `Draw_Box_Around_Scanned_Ship_` draws `scanned_box`, 62 x 61, for the
+    HOVERED one (:89-91). Both are the original's artwork and neither is
+    in this tree, so HD draws a LINE on the same edge — and, like the
+    original, a different one for each state.
+
+    The edge is the HOLE's edge, chamfered: the cell is a cutout in the
+    frame with its corners cut, so a plain rectangle would cross the
+    metal at all four of them. The eight points below are that chamfer,
+    taken from the one place it is measured.
+    """
+    # **INSIDE THE HOLE, NOT ON THE BOX'S EDGE.** A cutout box is the
+    # hole grown by `BLEED` reference px on every side (frame_holes.to_ref)
+    # and the frame image draws LAST, so a stroke on the box's own edge is
+    # painted and then covered — which is why the old 3 px line showed as a
+    # 1 px hairline and why the first version of this showed as nothing at
+    # all. The mark is inset by the bleed and by its own width.
+    bleed = int(round(fltgeom.BLEED * screen.layout.scale))
+    rect = rect.inflate(-2 * (bleed + width), -2 * (bleed + width))
+    k = _chamfer_px(screen)
+    x, y, w, h = rect.x, rect.y, rect.width, rect.height
+    if w <= 2 * k or h <= 2 * k:
+        pygame.draw.rect(surface, colour, rect, width)
+        return
+    points = [(x + k, y), (x + w - 1 - k, y),
+              (x + w - 1, y + k), (x + w - 1, y + h - 1 - k),
+              (x + w - 1 - k, y + h - 1), (x + k, y + h - 1),
+              (x, y + h - 1 - k), (x, y + k)]
+    pygame.draw.lines(surface, colour, True, points, width)
+
+
+def _mark_cell(surface, screen, cell, rect, hover):
+    """The selected mark, the hover mark, or neither — in that order.
+
+    SELECTED WINS when a cell is both, because selection is a state the
+    player set and hover is where the mouse happens to be.
+    """
+    width = max(2, int(round(3 * screen.layout.scale)))
+    if cell.selected:
+        draw_cell_mark(surface, screen, rect, col("cell_selected"), width)
+    elif hover is not None and cell.slot == hover:
+        draw_cell_mark(surface, screen, rect, col("cell_hover"),
+                       max(2, width - 1))
+
+
 def draw_cells(surface, screen, cells, art=None):
     """The ship's picture, its name and the selection frame, per cell.
 
@@ -372,6 +435,12 @@ def draw_cells(surface, screen, cells, art=None):
     slots = icon_slots(screen)
     if not slots:
         return
+    # HOVER IS HD'S OWN, and it has to be: the Extension API has no
+    # MOUSEMOTION (open fixes 3 and 4), so the game's `_scanned_big_ship`
+    # never moves for a client. `screen._hover_cell` is set from HD's
+    # pointer in `handle_motion` and is the honest source for a mark
+    # that follows the mouse.
+    hover = getattr(screen, "_hover_cell", None)
     for cell in cells:
         if not (0 <= cell.slot < len(slots)):
             continue
@@ -386,9 +455,7 @@ def draw_cells(surface, screen, cells, art=None):
                          pygame.Rect(rect.x, rect.bottom - band,
                                      rect.width, band),
                          cell.name, col("label"), share=0.8)
-            if cell.selected:
-                pygame.draw.rect(surface, col("scroll_thumb"), rect,
-                                 max(2, int(round(3 * screen.layout.scale))))
+            _mark_cell(surface, screen, cell, rect, hover)
             continue
         # The cell is split the way the original splits it: the picture
         # area above, the ship's name in a band along the bottom
@@ -407,9 +474,7 @@ def draw_cells(surface, screen, cells, art=None):
                      pygame.Rect(rect.x, rect.bottom - band,
                                  rect.width, band),
                      cell.name, col("label"), share=0.8)
-        if cell.selected:
-            pygame.draw.rect(surface, col("scroll_thumb"), rect,
-                             max(2, int(round(3 * screen.layout.scale))))
+        _mark_cell(surface, screen, cell, rect, hover)
 
 
 #: `graphics::Fill_(..., 0)` (movebox.cpp:38) — palette index 0, which
