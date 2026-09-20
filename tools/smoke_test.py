@@ -15207,8 +15207,8 @@ def main():
     # by running the extractor, so they must not share a message.
     # Both states are forced rather than read off disk — this test has
     # to give the same answer before and after the user extracts.
-    from core.helptext import HelpText as _HelpText
-    _ht = _HelpText(res, "en")
+    from core.helptext import HelpText   # not aliased: piece 3's rule
+    _ht = HelpText(res, "en")
     _ht._entries, _ht._available, _ht._stale = {}, False, False
     _no_file = _ht.missing_entry(288)
     _ht._entries, _ht._available = {1: {"title": "x", "body": "y"}}, True
@@ -15397,6 +15397,97 @@ def main():
     }
     assert set(_REAL_DERIVED_OK) == {"BuildingNames", "EStrings",
                                      "HelpText"}, sorted(_REAL_DERIVED_OK)
+
+    # ── NO CHECK REACHES A DERIVED LOADER BY ACCIDENT ────────────
+    #
+    # Piece 3 of the clone-only fault, and the part that makes the
+    # rule enforceable instead of remembered. Every construction of a
+    # derived-data loader in this file has to be one of three things:
+    #
+    #   * `derived(Loader)`          — the committed stand-in;
+    #   * an explicit `root=`        — a scratch directory, which is
+    #                                  how a FORCED-ABSENT case is
+    #                                  written, or the stand-in root;
+    #   * a language that cannot exist ("zz") — the other way to force
+    #                                  absence;
+    #
+    # and anything else must be named in `_REAL_DERIVED_OK` with the
+    # reason it needs the player's own extraction.
+    #
+    # **READ WITH `ast`, NOT WITH A GREP.** A call can span lines and
+    # the first version of this rule was a line scan that could not
+    # see one. The alias is the other half: `Loader(...)` under
+    # another name is a construction no scan can attribute, so an
+    # aliasing import of one of these classes is refused outright.
+    import ast as _dl_ast
+
+    _DERIVED_LOADERS = {
+        "BillText", "BuildingNames", "EStrings", "HStrings",
+        "ArcWords", "MainText", "ShipPartNames", "TechNames",
+        "HelpText",
+    }
+    #: A language the player cannot have extracted, which is how a
+    #: check forces the absent state without a temporary directory.
+    _DL_IMPOSSIBLE = {"zz"}
+
+    _dl_src = io.open(os.path.abspath(__file__), encoding="utf-8").read()
+    _dl_tree = _dl_ast.parse(_dl_src)
+
+    _dl_aliased = []
+    for _dl_node in _dl_ast.walk(_dl_tree):
+        if isinstance(_dl_node, (_dl_ast.Import, _dl_ast.ImportFrom)):
+            for _dl_a in _dl_node.names:
+                if _dl_a.name in _DERIVED_LOADERS and _dl_a.asname:
+                    _dl_aliased.append(
+                        f"line {_dl_node.lineno}: {_dl_a.name} as "
+                        f"{_dl_a.asname}")
+    assert not _dl_aliased, (
+        "a derived loader is imported under another name, which hides "
+        "every construction of it from this check: "
+        + "; ".join(_dl_aliased)
+        + ". Import it under its own name and pass the class to "
+          "`derived()`")
+
+    def _dl_name(_fn):
+        """The class a Call is calling, if it is one of ours."""
+        if isinstance(_fn, _dl_ast.Attribute):
+            return _fn.attr
+        if isinstance(_fn, _dl_ast.Name):
+            return _fn.id
+        return None
+
+    _dl_bad = []
+    _dl_seen = 0
+    for _dl_node in _dl_ast.walk(_dl_tree):
+        if not isinstance(_dl_node, _dl_ast.Call):
+            continue
+        _dl_cls = _dl_name(_dl_node.func)
+        if _dl_cls not in _DERIVED_LOADERS:
+            continue
+        _dl_seen += 1
+        if _dl_cls in _REAL_DERIVED_OK:
+            continue
+        if any(_kw.arg == "root" for _kw in _dl_node.keywords):
+            continue
+        if any(isinstance(_a, _dl_ast.Constant)
+               and _a.value in _DL_IMPOSSIBLE for _a in _dl_node.args):
+            continue
+        _dl_bad.append(f"line {_dl_node.lineno}: {_dl_cls}(...)")
+    assert not _dl_bad, (
+        "these read whatever this machine has extracted, so they pass "
+        "here and can fail in a clone: " + "; ".join(_dl_bad)
+        + ". Use `derived(Loader)` for content, an explicit `root=` or "
+          "the language 'zz' to force absence, or add the class to "
+          "_REAL_DERIVED_OK with the reason it needs the real files")
+    assert _dl_seen >= 10, (
+        f"only {_dl_seen} loader constructions found; the scan has "
+        f"stopped seeing them and would pass on anything")
+
+    ok(f"no smoke check reaches a derived loader by accident: "
+       f"{_dl_seen} constructions, every one through the stand-in, an "
+       f"explicit root, an impossible language or the "
+       f"{len(_REAL_DERIVED_OK)}-entry allow-list, and no loader "
+       f"imported under another name")
 
     ok(f"the derived stand-ins are current byte for byte "
        f"({len(_sfx.files())} files), each carries the FORMAT_VERSION "
@@ -15594,7 +15685,7 @@ def main():
     # A file from the older extractor is refused rather than rendered
     # subtly wrong: it lost the trailing \t and \f codes to an
     # rstrip, which produces a plausible-looking wrong layout.
-    _ht2 = _HelpText(res, "en")
+    _ht2 = HelpText(res, "en")
     _ht2._entries, _ht2._available, _ht2._stale = {}, False, True
     _stale = _ht2.missing_entry(288)
     assert "help_extract" in _stale[1] and _stale != _no_file, _stale
@@ -19498,15 +19589,18 @@ def main():
     from screens.fleets import fltrows as _pl
     from core.structs import star as _pl_star_spec
     from core.structs import ship as _pl_ship_spec
-    from core.shipparts import ShipPartNames as _PlParts
-    from core.hestrings import HStrings as _PlStrings
+    #  NOT ALIASED. A loader class imported under another name is a
+    #  construction the piece-3 check cannot see; it refuses the
+    #  aliasing import for exactly that reason.
+    from core.shipparts import ShipPartNames
+    from core.hestrings import HStrings
     import struct as _pl_s
     import types as _pl_types
     #    THE STAND-INS, not the player's catalogues: this very block
     #    is the fourth occurrence of the clone-only fault and the
     #    reason `derived` exists.
-    _pl_parts = derived(_PlParts)
-    _pl_str = derived(_PlStrings)
+    _pl_parts = derived(ShipPartNames)
+    _pl_str = derived(HStrings)
     _pl_words = True
     _pl_layout = _sjson.load(io.open(os.path.join(
         SCREENS_DIR, "fleets", "layout.json"), encoding="utf-8"))

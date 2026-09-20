@@ -13,6 +13,29 @@ right and the header had gone stale** — resolved 10 September 2026
 by dating the header to the edit and giving this session its
 paragraph, below, so the two agree again.
 
+This session (20 September 2026, the clone-only fault, piece 3 of 4):
+**the rule is enforced, not remembered.**
+
+Every construction of a derived-data loader in `tools/smoke_test.py`
+must now be one of three things: `derived(Loader)` for the committed
+stand-in, an explicit `root=` (a scratch directory, which is how a
+forced-absent case is written), or the language `"zz"`, which cannot
+exist. Anything else has to be named in `_REAL_DERIVED_OK` with the
+reason it needs the player's own extraction.
+
+**Read with `ast`, not with a grep.** A call can span lines, and a
+line scan cannot see one. The aliasing import is the other half:
+`HelpText as _HelpText` hides every construction from any scan, so
+an aliasing import of a loader class is refused outright — the two
+that existed are gone.
+
+Fifteen constructions today: two allow-listed, six forced absent by
+`"zz"`, five by a scratch `root=`, and the rest through `derived`.
+The check refuses to pass if it sees fewer than ten, so a scan that
+has stopped recognising them says so instead of going quiet.
+
+Smoke 241 -> 242.
+
 This session (20 September 2026, the clone-only fault, piece 2 of 4):
 **a check gets a stand-in, not the player's catalogue.**
 
@@ -2192,7 +2215,7 @@ files under `doc/` and are only summarised here.
 | | |
 |---|---|
 | Python | 32,960 lines across 111 modules — `find . -name '*.py'`, `__pycache__` excluded, the smoke test's 6,400 included. The previous figure here (21,642 across 94) was carried from an unstated method and could not be reproduced |
-| Smoke test | `python tools/smoke_test.py` — **241 checks**, headless |
+| Smoke test | `python tools/smoke_test.py` — **242 checks**, headless |
 | Assets | 170 MB (select_race 68, galaxy_map 51, shared 23, new_game 21, colony_summary 1) |
 | Screens in HD | 9 of ~20–22 (the GAME menu overlay, work order Stop 2, every dialog of the popup; colony summary draws list, sidebar, scan box and galaxy inset, and MOVES POPS — the first HD gesture that drives the game; planets, brief 101, lists, sorts, restricts and returns) |
 | Setup from clone | `python tools/setup.py` (deps via the system package manager) |
