@@ -507,3 +507,70 @@ the arcs are unsampled — a warship still has to be found):
 rule 3a `(sx-3, sy-3, sx+8, sy+9)`, and one cell selected. The move is
 one `ACTIVATE_FIELD` away. Not sent: it is the one state-changing step
 and it belongs in its own commit with its own before/after.
+
+---
+
+# Stop 2, part 2 — item 7's groundwork, measured
+
+## The crew fields now have two sources, and can be promoted
+
+Decision 23 wants a header route or a probe. Both are in hand.
+
+**The header.** `s_ship_data` (orion2.h:2847-2868) runs `owner`,
+`status`, `location`, `x`, `y`, `group_has_navigator`,
+`travelling_speed`, `turns_left`, `shield_damage_percent`,
+`drive_damage_percent`, `computer_damage`, **`crew_quality`**,
+**`crew_experience`**, `officer_index`,
+`special_device_damage_flags[5]`, `armor_damage`, `structural_damage`.
+The tree's spec is already VERIFIED through `turns_left` @109 by exactly
+that header plus a live reading (briefs 113/114), so 110-116 is the
+same run of the same struct: **crew_quality @113 (i8), crew_experience
+@114 (i16), officer_index @116 (i16)**.
+
+**The live half, over SAVE4's 60 ships.** MOO2 derives the crew WORD
+from the experience points, so if both offsets are right the quality
+must be monotone in the experience — and two unrelated bytes cannot do
+that across sixty ships.
+
+| crew_quality | ships | crew_experience |
+|---|---|---|
+| 0 | 56 | 0 … 44 |
+| 1 | 4 | **50 … 56** |
+
+**The bands do not overlap and they rise.** Every value is in 0..3, and
+`officer_index` @116 is in -1..66 on all sixty, which is the leader
+pool's own range — a third consistency from the same run.
+
+**So the crew line can be shown**, with its wording from the player's
+HESTRNGS (`Crew_Description_String_` picks 0x8A-0x8D, flt2.cpp:749-773)
+and " (%d EP)" from flt2.cpp:589-591.
+
+## What still cannot be shown, and why
+
+* **The red for a damaged special.** `special_device_damage_flags` @118
+  follows in the same header run, and the obvious live check — a
+  damaged device must be a FITTED one — holds on all 60 ships. **But
+  not one ship in the save has any damage**, so the check is vacuous
+  and proves nothing. UNVERIFIED stands; the red is an OMISSION until a
+  save with a damaged ship confirms it.
+* **Four of the five firing arcs.** The values decode:
+  `firing_arc` is `WEAPON_SPEC` offset 4, VERIFIED, and SAVE4 shows a
+  real spread — 1 (FORWARD), 2 (FORWARD_EXTENDED), 15 (ALL_SECTORS),
+  16 (360). `DESIGN::Weapon_Arc_String_` (design.cpp) tests the bits in
+  order and answers with `KEN::Ken_Get_Text_Message_(3..6, …)` for the
+  first four and the **literal `"360"`** for 0x10. That literal is
+  transcribable. The other four words are in KENTEXT.LBX through
+  `JIM::Get_Text_Message_(lbx, index, buffer, arg)`, whose record
+  addressing this session did not establish — entry 3 of that file
+  holds `"Pob:"`, not an arc word, so `msg_index` is not the entry
+  index in the way the call reads. **Not guessed.** Printing "(F)" and
+  "(Fx)" from the enum names would be inventing English the game may
+  not use.
+
+So item 7 ships the arc it can transcribe and marks the other four,
+unless Data would rather it waited for the KENTEXT reading.
+
+## Item 8 is unchanged and ready
+
+54 star fields in the live list, all matching rule 3a; the send is one
+`ACTIVATE_FIELD`. Not sent.
