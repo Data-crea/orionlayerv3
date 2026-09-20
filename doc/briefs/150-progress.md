@@ -105,3 +105,63 @@ Twelve have no HD screen of that name in the tree. Two exist but were
   rect is seated from `layout_reference.json` at load (decision 55), so
   there is no 2560x1440 geometry in the file to draw. Reading it off
   the running screen would be a different source, so it was not done.
+
+---
+
+# Follow-up (same day, Data's instruction)
+
+## Class colours: the invented size rule is gone
+
+The first version coloured every box by a size rule I wrote for the
+purpose — "600x440 or larger is a screen frame, 150x120 or larger is a
+grouping panel". That is a guess wearing a colour, and 150's own parked
+file called it the weakest thing in the order. It has been replaced.
+
+**A box now gets a catalogue class only where the source says so, and
+every classed row carries a one-line reason.** What counts as evidence:
+
+| class | evidence |
+|---|---|
+| button | the field was added by `Add_Button_Field_` or `Add_Radio_Button_Field_` — work order 147 established that such a field carries art, rect, label and hit test in one record, which is what the class means |
+| popup/dialog | the piece comes from CONFIRM, WARNING, TEXTBOX or GAME, the shared dialog layer 147 identified by its `GENDRAW` / `User_Box_` callers |
+
+**Nothing else can be classed from the source as it stands**, so
+everything else is `unclassed`, drawn in one neutral colour, and listed
+per screen with the reason it has none.
+
+| | |
+|---|---|
+| classed | **47** |
+| unclassed | **322** |
+
+**Four of the catalogue's six classes — grouping panel, picture frame,
+list area, screen frame — have nothing in the source to attach them
+to.** A dark well may be any of the first three and the code does not
+say which. That is now visible in the pictures rather than hidden
+behind a colour: most boxes are one colour because most boxes cannot be
+classed, which is the true state of the evidence.
+
+For HD boxes the skin is the evidence, and only `skin: "button"` names
+a class; `thin_border` and `none` say how a box is drawn, not what
+class of box it is, so those are unclassed too.
+
+## The live field list: tool ready, run pending
+
+`capture_fields.py` is written and parses, in the evidence folder. It
+is **the single client** — it connects to orion2re itself, with
+OrionLayer not running — reads the live field list, navigates by
+`ACTIVATE_FIELD` on fields it has just read, and dumps per screen: the
+save slot, the screen id, the stardate, the ship and colony counts, and
+the whole field array with index, type, hotkey and rect. Run-time lists
+change with the data, so the state is recorded beside every capture.
+
+It **re-reads before every send**, the work order 126 rule: a driver
+that decided from a stale list is what killed orion2re in work order
+128 C. Each step finds its target in the list it is about to send into,
+or refuses and says so.
+
+**It has not been run.** OrionLayer (pid 327353) was attached to 17362
+for the whole session, including an 11-minute wait, so by the
+live-test protocol nothing of mine connected. A background waiter is
+watching the port. The moment it is free this is one command.
+
