@@ -6081,6 +6081,44 @@ the six decisions still open, are in `doc/briefs/134-parked-for-data.md`.
 
 ## What is missing
 
+### The Fleets ship panel: two things the original prints and HD does not
+
+**20 September 2026, work order 152 item 7.** Both are marked in
+`screens/fleets/layout.json` under `marks` and held by a smoke
+assertion; they are listed here because a marking in one screen's data
+is not a list anybody reads when planning the next piece of work.
+
+**1. The weapon name is always the singular.** The original prints
+`TECHDATA::_weapons[t].name_plural` whenever the count is not one
+(flt2.cpp:706-711), so it reads "5 Anti-Missile Rockets" where HD reads
+"5 Anti-Missile Rocket". `tools/techname_extract.py` takes the record's
+`name` field and not its plural one, so the catalogue in this tree has
+no plural to print, and the singular stands: an invented "s" is not the
+original's word either and is wrong for the first irregular one.
+
+*What lifting it costs:* the plural field added to the extractor, a
+`weapons_plural` table beside the five in `core/shipparts.py`, and a
+`FORMAT_VERSION` bump — which makes every player re-run the extractor,
+so it wants to travel with another change to that file rather than go
+alone. `fltrows.panel_lines` already asks for the table and falls back
+when it is not there, so nothing else moves.
+
+**2. A damaged special is not shown in red.** The original colours it
+with `FLT2::_red_colors` when its bit is set in
+`special_device_damage_flags` (flt2.cpp:724-731). That field is at @118
+by the header route (orion2.h:2847-2868, the same struct run that
+carries the crew fields promoted in the same order) and **it is not
+verified**. The obvious live check — a damaged device must be a FITTED
+one — held on all 60 ships of the acceptance save and **proved
+nothing**, because not one of them had any damage. Decision 23 keeps it
+out until there is a second source.
+
+*What lifting it costs:* one live reading on a save with a damaged
+ship. The check is already written and is two lines: the damaged bits
+must be a subset of the fitted bits, and at least one ship must
+actually carry damage or the run says so instead of passing. Nothing
+else is needed — the offset's header route is already in hand.
+
 ### `font_scale` and `font_size` are two mechanisms — PARKED
 
 **20 September 2026, work order 151 B. Data parked the unification;
