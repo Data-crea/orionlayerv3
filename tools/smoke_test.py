@@ -18758,6 +18758,104 @@ def main():
        "click and the rest an activation, every box fits the opening "
        "at both resolutions and the inset keeps 305:182")
 
+    # ── A NATIVE BOX IS RECOGNISED, AND THE LIMITATION IS MARKED ───
+    #
+    # Work order 152, items 1 and 2. `FIELDSAV::Save_Field_Stats_`
+    # re-bases the field array and clears it, so a native box leaves
+    # ONLY its own fields on the wire; HD used to read that as WAITING
+    # and keep an empty grid up. What is held here is the recognition,
+    # the equality it rests on, and the marking of the one thing HD
+    # cannot do — set the box's text in its own font.
+    from core import gamebox as _gb
+    from screens.fleets import fltbox as _fb, fltwire as _fw
+
+    class _GBField:
+        def __init__(self, i, r, hk, t=7):
+            self.index = i
+            self.x, self.y, self.x_end, self.y_end = r
+            self.hotkey = hk
+            self.field_type = t
+
+    # 1. EACH KIND IS RECOGNISED FROM ITS OWN FIELDS, and the rects are
+    #    the ones the source draws — checked against the player's LBX
+    #    when it is there, which is the second source (decision 36).
+    for _gb_kind in _gb.KINDS:
+        _gb_live = [_GBField(i + 1, r, hk, t)
+                    for i, (r, hk, t) in enumerate(sorted(_gb_kind.fields))]
+        _gb_got = _gb.detect(_gb_live)
+        assert _gb_got is not None and _gb_got.kind is _gb_kind, (
+            f"{_gb_kind.name} is not recognised from its own fields")
+        assert len(_gb_got.buttons()) == len(_gb_kind.answers), (
+            f"{_gb_kind.name}: {len(_gb_got.buttons())} answerable "
+            f"button(s), {len(_gb_kind.answers)} expected")
+        _gb_x, _gb_y, _gb_w, _gb_h = _gb_kind.rect
+        assert 0 <= _gb_x and 0 <= _gb_y and _gb_x + _gb_w <= _gb.NATIVE_W \
+            and _gb_y + _gb_h <= _gb.NATIVE_H, (
+            f"{_gb_kind.name}'s rect {_gb_kind.rect} leaves the 640x480 "
+            f"frame it is measured in")
+
+    # 2. THE EQUALITY IS THE POINT. A box REPLACES the list, so a match
+    #    on a subset would read a screen that merely contains one of
+    #    these rectangles as a box — and the fleet screen contains the
+    #    warning box's rectangle exactly, at hotkey 0 instead of ESC.
+    _gb_plus = [_GBField(i + 1, r, hk, t) for i, (r, hk, t)
+                in enumerate(sorted(_gb.CONFIRMATION.fields))]
+    _gb_plus.append(_GBField(99, (0, 0, 639, 479), 0, 7))
+    assert _gb.detect(_gb_plus) is None, (
+        "a list with an extra field was read as a confirmation box; the "
+        "match has to be an equality, not a subset")
+    assert _gb.detect([_GBField(1, (0, 0, 639, 479), 0, 7)]) is None, (
+        "the fleet screen's own catcher (same rect, hotkey 0) was read "
+        "as a warning box — the ESC hotkey is what tells them apart")
+
+    # 3. THE STATE EXISTS AND KEEPS HD'S PICTURE UP. `in_box` must not
+    #    be `waiting` and must not hand over, or the empty grid is back.
+    assert hasattr(_fw, "GAME_BOX") and _fw.GAME_BOX != _fw.WAITING, (
+        "fltwire has no GAME_BOX state distinct from WAITING; the two "
+        "are different facts and one of them keeps an empty grid up")
+
+    # 4. THE LIMITATION SAYS SO, in the module and in the status
+    #    document, and names its replacement. A limitation nobody wrote
+    #    down is one somebody will read as a bug (decision 61).
+    _gb_src = io.open(os.path.join(os.path.dirname(SCREENS_DIR),
+                                   "core", "gamebox.py"),
+                      encoding="utf-8").read()
+    assert "open fix 29" in _gb_src, (
+        "core/gamebox.py no longer names the open fix that replaces the "
+        "framebuffer crop")
+    _gb_fixes = io.open(os.path.join(os.path.dirname(SCREENS_DIR), "doc",
+                                     "orion2re_open_fixes.md"),
+                        encoding="utf-8").read()
+    assert "## 29." in _gb_fixes, (
+        "open fix 29 is gone from doc/orion2re_open_fixes.md while "
+        "core/gamebox.py still points at it")
+    _gb_status = io.open(os.path.join(os.path.dirname(SCREENS_DIR),
+                                      "v3_projektstatus.md"),
+                         encoding="utf-8").read()
+    assert "open fix 29" in _gb_status, (
+        "v3_projektstatus.md no longer marks the framebuffer crop as the "
+        "limitation it is")
+
+    # 5. AND IT IS DRAWN AT AN INTEGER MAGNIFICATION (decision 28):
+    #    these are the game's own pixels and a smooth resample of them
+    #    is a picture of something the game never drew.
+    assert _fb.MAX_SCALE >= 1 and isinstance(_fb.MAX_SCALE, int)
+    for _gb_w, _gb_h in ((1920, 1080), (2560, 1440), (3840, 2160)):
+        class _GBScreen:
+            class app:
+                win_w, win_h = _gb_w, _gb_h
+        _gb_scale, _gb_dest = _fb.placement(_GBScreen, _gb.CONFIRMATION)
+        assert int(_gb_scale) == _gb_scale and _gb_scale >= 1
+        assert _gb_dest.width == _gb.CONFIRMATION.rect[2] * _gb_scale
+        assert _gb_dest.right <= _gb_w and _gb_dest.bottom <= _gb_h, (
+            f"{_gb_w}x{_gb_h}: the box is drawn off the window")
+
+    ok(f"a native box is recognised by its whole field list ("
+       f"{len(_gb.KINDS)} kinds, rects from the draw call and the LBX), "
+       f"the fleet catcher is not mistaken for one, GAME_BOX keeps HD's "
+       f"picture up, and the framebuffer crop is marked a limitation "
+       f"with open fix 29 as its replacement")
+
     # ── THE SHIP PANEL'S WORDS COME OUT OF boxes.json ──────────────
     #
     # Work order 151 B. The panel used to size itself from

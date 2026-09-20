@@ -1383,7 +1383,9 @@
       "relocation_line": "palette 6,7,7,8,8,9,9,10 \u2014 the s_colors table FLT1::Draw_Fltscrn_Relocation_Lines_ builds (flt1.cpp:1460-1467), resolved through FONTS.LBX entry 9. A GREY ramp, not green: the Fleets mockup's green lines are an invention, and the galaxy map's relocation table (0x6E,0x6F,0x70) is a different table on a different screen (mainscr.cpp:684).",
       "radio_on": "the lit filter button's own field, measured from FLEET.LBX entry 9 frame 1 \u2014 the frame Add_Radio_Button_Field_ draws when the status is 1 (flt1.cpp:1255-1256). Its dominant pixel is (8,8,80) = palette 0xA1, the dark end of the same blue ramp Fill_FltScrn_Scroll_Bar_ runs (flt1.cpp:273-278). HD draws the FIELD and its own label, not the original's whole button: FLEET.LBX 9 and 10 carry the words baked in, and under the v4 frame the border is the frame's.",
       "cell_selected": "HD INVENTION. The original marks a selected ship with FLEET.LBX 17 (_selected_box_seg, 59x58) drawn at (x-2, y+1) (flt1.cpp:93-103) - a light frame on the well's edge. That art is MOO2's and is never in this tree, so HD draws a line of its own on the same edge, in the frame's own light metal rather than the blue it used before.",
-      "cell_hover": "HD INVENTION, and a SECOND mark: the original draws a different sprite for the HOVERED ship - Draw_Box_Around_Scanned_Ship_ with scanned_box, 62x61 (flt1.cpp:89-91). Dimmer than cell_selected, because the two must not be mistaken for each other."
+      "cell_hover": "HD INVENTION, and a SECOND mark: the original draws a different sprite for the HOVERED ship - Draw_Box_Around_Scanned_Ship_ with scanned_box, 62x61 (flt1.cpp:89-91). Dimmer than cell_selected, because the two must not be mistaken for each other.",
+      "box_panel": "HD INVENTION. The panel HD puts around the game's own message box (screens/fleets/fltbox.py). The box's PIXELS are the game's; the panel around them is ours, and it has no counterpart in the original, which draws the box straight onto its screen.",
+      "box_edge": "HD INVENTION. The same panel's outline."
     },
     "relocation_line": [
       [
@@ -1440,6 +1442,16 @@
     "cell_hover": [
       120,
       152,
+      200
+    ],
+    "box_panel": [
+      18,
+      20,
+      26
+    ],
+    "box_edge": [
+      150,
+      170,
       200
     ]
   }

@@ -13,6 +13,60 @@ right and the header had gone stale** — resolved 10 September 2026
 by dating the header to the edit and giving this session its
 paragraph, below, so the two agree again.
 
+This session (20 September 2026, work order 152, items 1 and 2): **a
+native message box is shown by blitting the game's own pixels, and the
+screen stays up behind it.**
+
+**THE FAULT, AND A READING THE TREE HAD WRONG.** `fltwire` said a
+message box "adds two hidden fields and clears nothing … every field
+this screen built is still in place". The second half is wrong.
+`GENDRAW::Message_Box_Startup_` calls `FIELDSAV::Save_Field_Stats_`,
+which RE-BASES `fields::_fields` past the screen's fields and then calls
+`Clear_Fields_` on the new base (fieldsav.cpp), and `SerializeFields`
+walks that re-based window. So the wire carries the BOX's fields and
+none of the screen's, `has_fleet_list` fails, and the state was
+`WAITING` — the one non-READY state that KEEPS HD's picture up, while
+`update()` cleared the cells and the panel. An HD frame with an empty
+grid and a blank text box, which is exactly what Data photographed.
+`FOREIGN_FIELDS`, the state named after this very box, could never be
+reached by one.
+
+**MEASURED, NOT ARGUED.** Live on SAVE4: 73 fields READY before SCRAP;
+after it exactly two, `(235,302)-(286,323)` hotkey 'Y' and
+`(345,302)-(396,323)` hotkey 'N', which is `Confirmation_Box_`'s two
+`Add_Hidden_Field_` calls to the pixel. **And the FLTS block never goes
+away** — present with `icons`, `ship_idx` and the selection intact
+through the whole sequence, which is what makes the fix possible.
+
+**`core/gamebox.py` IS GENERAL AND NOT A SCRAP SPECIAL CASE.** It knows
+box KINDS: the confirmation box (CONFIRM.LBX 0, 313x227, drawn at
+(161, 117), two fields) and the warning/message box (WARNING.LBX 0,
+331x191, at (154, 144), one ESC field). Each rectangle has two
+independent sources — the literal in the `animate::Remap_Draw_` call
+and the LBX entry's own header. Recognition is an EQUALITY against the
+whole live list, because a box replaces the list rather than adding to
+it; and the ESC hotkey is what tells the warning box's screen-filling
+field from the fleet screen's own catcher at the same rectangle with
+hotkey 0.
+
+**CHAINS ARE THE NORMAL CASE.** Answering NO to the scrap confirmation
+opens a SECOND box — `Scrap_Ships_` answers a refusal with
+`User_Box_(…, 3)` (flt1.cpp:1524-1527) — and the source read missed it
+until the live run showed the list going 2 -> 1 instead of back to 74.
+Nothing assumes a box is the last one; the detector runs on every
+snapshot. Proven end to end: SCRAP -> confirmation in HD -> HD's own NO
+-> warning in HD -> HD's own dismiss -> 74 fields, READY.
+
+**THE LIMITATION, MARKED IN THREE PLACES.** HD cannot set the box's
+text in its own font: the string is `H_Message_(n)` formatted with
+values the engine computed, and for the scrap confirmation that value
+is `Get_Scrap_Ship_Value_()`, a cost model a client does not have. So
+the crop is the game's own rendering at an integer magnification
+(decision 28's reason) inside an HD panel — the one place in an HD
+screen where the original's 640x480 type appears. It is marked in
+`core/gamebox.py`, here, and in a smoke check, and **open fix 29** is
+the replacement.
+
 This session (20 September 2026, work order 151 B): **the Fleets ship
 panel is sized and placed by a box, wraps by rendering, and says what
 it dropped.**
@@ -1628,7 +1682,7 @@ files under `doc/` and are only summarised here.
 | | |
 |---|---|
 | Python | 32,960 lines across 111 modules — `find . -name '*.py'`, `__pycache__` excluded, the smoke test's 6,400 included. The previous figure here (21,642 across 94) was carried from an unstated method and could not be reproduced |
-| Smoke test | `python tools/smoke_test.py` — **233 checks**, headless |
+| Smoke test | `python tools/smoke_test.py` — **234 checks**, headless |
 | Assets | 170 MB (select_race 68, galaxy_map 51, shared 23, new_game 21, colony_summary 1) |
 | Screens in HD | 9 of ~20–22 (the GAME menu overlay, work order Stop 2, every dialog of the popup; colony summary draws list, sidebar, scan box and galaxy inset, and MOVES POPS — the first HD gesture that drives the game; planets, brief 101, lists, sorts, restricts and returns) |
 | Setup from clone | `python tools/setup.py` (deps via the system package manager) |

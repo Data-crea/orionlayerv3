@@ -1885,3 +1885,46 @@ does after ALL.
 ### Cost to us
 
 Without it a subset of a stack cannot be moved or scrapped from HD.
+
+---
+
+## 29. A native message box's text is not in the snapshot
+
+**Asked for by work order 152. OPEN.**
+
+### Symptom
+
+An HD screen cannot say what the game is asking it. When the engine
+opens one of its own boxes — `GENDRAW::Confirmation_Box_`,
+`Message_Box_Exploding_`, anything through `HAROLD::User_Box_` — the
+question reaches a client only as PIXELS in the framebuffer. Measured
+live on 20 September 2026: SCRAP on the fleet screen left exactly two
+fields on the wire, the box's YES and NO, and no text anywhere.
+
+### Why reconstruction does not reach it
+
+The string is `HAROLD::H_Message_(n)` run through `snprintf` with values
+the engine has just computed. For the scrap confirmation that value is
+`FLT1::Get_Scrap_Ship_Value_()` (flt1.cpp:962-971), a sum of
+`maintain::Ship_Scrap_Value_` over the selected ships — a cost model a
+client does not have. Extracting HESTRNGS gives the FORMAT and not the
+number, so a client can print "…will yield ? bcs", which is the one
+fact the answer turns on.
+
+### Fix
+
+Either the formatted string itself, or the two or three values the
+formats take. The narrow version, and the one work order 152 would use
+today: **`Get_Scrap_Ship_Value_()` as an int16 in the FLTS block**,
+beside the fields open fix 27 already added. The general version is a
+`MSGB` block written whenever `_fields` has been re-based by
+`FIELDSAV::Save_Field_Stats_` — the box's id and its finished text.
+
+### Cost to us
+
+Until then HD shows the game's own rendering of the box: the
+rectangle is transcribed (`core/gamebox.py`), the crop comes out of
+the framebuffer HD already subscribes to, and it is blitted at an
+integer magnification into an HD panel. It works and it is answerable,
+and it is the one place in an HD screen where the original's 640x480
+type appears. That is the marked limitation this fix replaces.

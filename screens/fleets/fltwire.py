@@ -59,6 +59,7 @@ Every one of them is in `layout.json` under `marks` and in
 `doc/briefs/134-parked-for-data.md`, which is where decision 61 puts
 them.
 """
+from core import gamebox
 from core import livefields
 
 #: Ready to draw: the block is there and the field list agrees.
@@ -85,10 +86,28 @@ NO_FIELDS = "NO_FIELDS"
 WAITING = "WAITING"
 #: The block and the field list disagree about the displayed icons.
 MISMATCH = "MISMATCH"
-#: A field is in the list that `Fleet_Screen_` does not build. Something
-#: else is on screen — a native message box is the case that named this
-#: state — and HD must not go on drawing over it.
+#: A field is in the list that `Fleet_Screen_` does not build, and it is
+#: not one of the native boxes `core.gamebox` knows. Something else is on
+#: screen and HD must not go on drawing over it.
+#:
+#: **IT IS NOT THE MESSAGE-BOX STATE, WHICH IS WHAT IT WAS NAMED FOR.**
+#: Until work order 152 this entry said a native message box was the case
+#: that named it, and that a box "adds two hidden fields and clears
+#: nothing" so every field the screen built is still in place. The second
+#: half is wrong. `GENDRAW::Message_Box_Startup_` calls
+#: `FIELDSAV::Save_Field_Stats_`, which RE-BASES `fields::_fields` past
+#: the screen's fields and then calls `Clear_Fields_` on the new base
+#: (fieldsav.cpp) — so the wire carries the BOX's fields and none of the
+#: screen's, `has_fleet_list` fails, and this state can never be reached
+#: for a box at all. Measured live on SAVE4, 20 September 2026: SCRAP
+#: left exactly two fields on the wire, the box's own.
 FOREIGN_FIELDS = "FOREIGN_FIELDS"
+
+#: The list IS a native box's — `core.gamebox` recognised the whole of
+#: it. HD keeps its own picture, draws the box's pixels over it and
+#: answers it through the box's own fields. Nothing else may be sent:
+#: the screen's fields are not on the wire to send to.
+GAME_BOX = "GAME_BOX"
 
 #: `Add_Hidden_Field_` type, which every big icon and the star fields
 #: use (fields.cpp; the reading's §2 table).
@@ -308,6 +327,7 @@ class View:
         self.state = NO_BLOCK
         self.reason = ""
         self.block = None
+        self.box = None         # core.gamebox.GameBox while one is up
         self.rows = []          # (slot, ship_idx, selected) in display order
         self.own_stack = False
         self._read(game_state, cells)
@@ -340,6 +360,22 @@ class View:
                 "The game is showing no fleet. `_small_ship_stack_ptr` is "
                 "-1, which is the state before the screen has found a "
                 "stack and after the last own ship is gone.")
+            return
+
+        # A NATIVE BOX HAS TAKEN THE LIST. Checked BEFORE the
+        # "not ours yet" test, because it is the same symptom with a
+        # different cause and the wrong one was being reported for
+        # every message box on this screen since work order 142 A.
+        self.box = gamebox.detect(fields)
+        if self.box is not None:
+            self.state = GAME_BOX
+            self.reason = (
+                f"The game has opened its own {self.box.name} box. Its "
+                f"fields are the only ones on the wire — "
+                f"`FIELDSAV::Save_Field_Stats_` re-bases the array and "
+                f"clears it — so nothing of this screen can be clicked "
+                f"until the box is answered.")
+            self._rows_from_block(block, cells)
             return
 
         # THE LIST IS NOT OURS YET — and that is a transient, not a
@@ -386,17 +422,7 @@ class View:
         self.own_stack = (player is not None
                           and player == block.get("owner"))
 
-        first = max(0, int(block.get("first_row", 0))) * 4
-        shown = max(0, int(block.get("icons_added", 0)))
-        ships = block["ship_idx"]
-        selected = block.get("ship_selected") or []
-        rows = []
-        for slot in range(min(shown, len(cells))):
-            idx = first + slot
-            if idx >= len(ships):
-                break
-            rows.append((slot, ships[idx],
-                         bool(selected[idx]) if idx < len(selected) else False))
+        rows = self._rows_from_block(block, cells)
 
         # THE VALIDATION. One hidden field per displayed cell, at the
         # cell's own rect — but only for an OWN stack, because the
@@ -417,11 +443,42 @@ class View:
         self.rows = rows
         self.state = READY
 
+    def _rows_from_block(self, block, cells):
+        """The displayed rows, from the block alone.
+
+        **THE BLOCK IS ENOUGH TO DRAW AND NOT ENOUGH TO CLICK**, which
+        is the whole of the GAME_BOX state. It survives a native box
+        untouched — measured live, `FLTS` present with `icons`,
+        `ship_idx` and the selection intact while the confirmation was
+        up — so the grid and the panel stay on screen. What does not
+        survive is the field list, and the validation below needs it,
+        so under a box the rows are read and NOT validated.
+        """
+        first = max(0, int(block.get("first_row", 0))) * 4
+        shown = max(0, int(block.get("icons_added", 0)))
+        ships = block.get("ship_idx") or []
+        selected = block.get("ship_selected") or []
+        rows = []
+        for slot in range(min(shown, len(cells))):
+            idx = first + slot
+            if idx >= len(ships):
+                break
+            rows.append((slot, ships[idx],
+                         bool(selected[idx]) if idx < len(selected) else False))
+        self.rows = rows
+        return rows
+
     # ── What the screen asks it ───────────────────────────
 
     @property
     def ok(self):
         return self.state == READY
+
+    @property
+    def in_box(self):
+        """A native box is up: keep HD's picture, send nothing but an
+        answer to the box itself."""
+        return self.state == GAME_BOX
 
     @property
     def waiting(self):

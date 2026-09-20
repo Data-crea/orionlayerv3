@@ -37,7 +37,7 @@ from screens.colony_summary import colonyrows
 
 from . import fltart
 from . import fltdraw
-from . import fltpanel, fltgeom, fltrows, fltwire
+from . import fltbox, fltpanel, fltgeom, fltrows, fltwire
 
 log = logging.getLogger("fleets")
 
@@ -101,6 +101,15 @@ class FleetsScreen(ScreenBase):
             return
         self._state = game_state
         self._view = fltwire.View(game_state, fltgeom.native_cells())
+        # **A NATIVE BOX KEEPS THE SCREEN UP** (work order 152, items 1
+        # and 2). The FLTS block survives a box untouched, so the grid
+        # and the panel go on being drawn from it; only the clicking
+        # stops, because the screen's fields are not on the wire to
+        # send to. Falling through to the clear below is what produced
+        # the empty grid Data photographed.
+        if self._view.in_box:
+            self._cells = fltrows.cells(self._view, game_state)
+            return
         if not self._view.ok:
             self._cells, self._panel = [], []
             self._icon_count, self._total_rows, self._first_row = 0, 0, 0
@@ -151,7 +160,8 @@ class FleetsScreen(ScreenBase):
         arrives (decision 21, no timer), and HD stays on its own
         picture — empty, because nothing is `ok`, but its own.
         """
-        return not (self._view and (self._view.ok or self._view.waiting))
+        return not (self._view and (self._view.ok or self._view.waiting
+                                    or self._view.in_box))
 
     def _inert(self):
         """True while nothing here may be sent.
@@ -279,6 +289,10 @@ class FleetsScreen(ScreenBase):
         # The frame LAST, so its metal covers the two reference px each
         # box is allowed to bleed under it (fltgeom.BLEED).
         self._render_frame_image(surface)
+        # AFTER the frame: the box is the game's and it is modal, so
+        # nothing of this screen may cover it. Before the help popup,
+        # which is the player's own and may.
+        fltbox.draw(surface, self, self._state)
         self.render_help(surface)
 
     def enabled_buttons(self):
@@ -394,6 +408,12 @@ class FleetsScreen(ScreenBase):
     def handle_click(self, screen_x, screen_y):
         if self.help_consumes_click(screen_x, screen_y):
             return None
+        # **THE BOX ANSWERS FIRST, AND IT IS THE ONE SEND `_inert`
+        # DOES NOT STOP.** Its fields ARE the live list, so a send to
+        # them resolves in the list it was handed (decision 20); it is
+        # everything else on this screen that has nothing to send to.
+        if self._view is not None and self._view.in_box:
+            return self._click_game_box(screen_x, screen_y)
         if self._inert():
             return None
         for box in self.boxes:
@@ -415,6 +435,18 @@ class FleetsScreen(ScreenBase):
             self._toggle_slot(slot)
             return None
         return super().handle_click(screen_x, screen_y)
+
+    def _click_game_box(self, screen_x, screen_y):
+        """Answer the native box, through its own field. True if it went."""
+        rects = fltbox.button_rects(self)
+        for key, field, rect in rects:
+            if rect.collidepoint(screen_x, screen_y):
+                if not self.app.connected:
+                    return None
+                log.info("game box: %s -> field %d", key, field.index)
+                self.app.client.activate_field(field.index)
+                return None
+        return None
 
     def _click_field(self, name):
         """INJECT_CLICK at a radio field's own centre.
