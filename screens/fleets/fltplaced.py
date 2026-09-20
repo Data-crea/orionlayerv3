@@ -22,9 +22,23 @@ One pixel on a hand-placed text field is not worth a second rule; it
 is written down here so that nobody later reads the difference as a
 fault.
 
-`tools/fleets_place_boxes.py` writes them and a smoke check recomputes
-them, so a future reshape moves them with the frame and nobody has to
-remember that they exist.
+`tools/fleets_place_boxes.py` SEEDS them, so a future reshape moves
+them with the frame and nobody has to remember that they exist.
+
+**THE SEED IS A STARTING POINT AND NOT A CAGE** — Data,
+20 September 2026, and it is what `fltgeom`'s own docstring and
+decision 14 already promised. Until then a smoke check demanded that
+every one of these six EQUAL what this module computes, which quietly
+turned six F5-editable boxes into locked ones: the first nudge in the
+editor — one pixel of `ship_panel_text` at 2560x1440 — turned the
+suite red, and the box was never supposed to be locked. What the
+check holds now is `contained`, and nothing else. Run the seeder
+after the frame changes shape; drag afterwards and the drag stands.
+
+**WHAT THE SEEDER STILL OWES.** Re-running it OVERWRITES whatever F5
+left, because it writes the computed rect. That is the same bargain
+`tools/fleet_boxes.py` carried, and the tool says so before it
+writes.
 
 **WHAT IS NOT HERE.** `scroll_column` is placed from
 `fltgeom.SCROLL_SRC_COLUMN`, measured onto the painted bar, and has
@@ -116,11 +130,15 @@ def placed(boxes):
 
 
 #: Which placed box must stay inside which derived one. THE 151
-#: LESSON: a box that leaves its hole is drawn and then covered,
+#: LESSON, and since 20 September 2026 the ONLY thing held about
+#: these six: a box that leaves its hole is drawn and then covered,
 #: because the frame image renders last, and nothing says so on
-#: screen. `icon_area` and `button_band` are unions and contain their
-#: cutouts rather than sitting in one, so they are checked the other
-#: way round by `contained`.
+#: screen. Where it sits inside the hole is the editor's business;
+#: whether it is inside at all is not.
+#:
+#: `icon_area` and `button_band` are unions and contain their cutouts
+#: rather than sitting in one, so they are checked the other way
+#: round by `contained`.
 INSIDE = {"ship_panel_text": "ship_panel", "status_text": "status_band",
           "inset_hint": "inset_map", "status_hint": "status_band"}
 
@@ -130,7 +148,13 @@ HOLDS = {"icon_area": ("cell_00", "cell_19"),
 
 
 def contained(boxes, out=None):
-    """Every containment that must hold, as a list of failures."""
+    """Every containment that must hold, as a list of failures.
+
+    `out` is what the six ACTUALLY are — `boxes.json`'s own rects,
+    wherever F5 left them. It defaults to the seed, which is what the
+    seeder checks before it writes; the smoke test passes the file's
+    values, because the file is what the screen draws.
+    """
     out = placed(boxes) if out is None else out
     bad = []
 

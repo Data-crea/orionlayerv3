@@ -8,6 +8,14 @@ Run it after `tools/frame_holes.py screens/fleets/assets/frame.png
 --write`, which derives the thirty-two cutouts. Those two commands are
 the whole of "the boxes follow the frame" for this screen.
 
+**IT IS A SEEDER, AND RE-RUNNING IT THROWS AWAY F5's EDITS** — the
+same bargain `tools/fleet_boxes.py` carried, and it says so below
+before it writes. Run it when the frame changes SHAPE. The smoke test
+does not hold these six to what this tool computes (Data,
+20 September 2026: the seat is a starting point, not a cage); it
+holds only that each is inside the hole it belongs to, so a drag in
+the editor stands.
+
 **THIS IS NOT `tools/fleet_boxes.py`**, which seated the original's
 rectangles into one opening and must not be made to run again. Every
 rule here is a rule against a HOLE, and it lives in
@@ -62,6 +70,8 @@ def main():
     if not args.write:
         print(f"\n({changed} box(es) would move — pass --write)")
         return 0
+    print("\nOVERWRITING the six placed boxes — any F5 edit to them "
+          "is lost. The thirty-two cutouts and every style survive.")
     with open(BOXES, "w", encoding="utf-8") as fh:
         json.dump(data, fh, indent=2)
         fh.write("\n")

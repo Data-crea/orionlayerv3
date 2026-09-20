@@ -12242,24 +12242,49 @@ def main():
     # them stayed over the old layout. `screens/fleets/fltplaced.py`
     # makes each a RULE against a hole; this is the checker that rule
     # needs, and it is what makes a future reshape move them.
+    #
+    # **WHAT IS HELD IS CONTAINMENT, NOT EQUALITY** — Data,
+    # 20 September 2026. Until then this demanded that each of the six
+    # EQUAL what `fltplaced` computes, which turned six F5-editable
+    # boxes into locked ones behind everybody's back: one nudge of
+    # `ship_panel_text` in the editor, one pixel at 2560x1440, and the
+    # suite went red over a box that was never meant to be pinned.
+    # `fltgeom`'s own docstring and decision 14 say the seat is a
+    # starting point and not a cage, so the seeder seeds and the check
+    # holds the 151 lesson and nothing more.
     from screens.fleets import fltplaced as _fpl
     for _fpl_res, _fpl_list in _fo_boxes.items():
         _fpl_by = {b["name"]: b["rect"] for b in _fpl_list if "rect" in b}
-        _fpl_want = _fpl.placed(_fpl_by)
-        for _fpl_n, _fpl_r in _fpl_want.items():
-            assert _fpl_by.get(_fpl_n) == _fpl_r, (
-                f"{_fpl_res}: {_fpl_n} is {_fpl_by.get(_fpl_n)} and its "
-                f"holes make {_fpl_r}. Run `python "
+        #  1. all six are there — a placed box that vanishes takes its
+        #     content with it and nothing else would notice
+        for _fpl_n in _fpl.NAMES:
+            assert _fpl_n in _fpl_by, (
+                f"{_fpl_res}: no {_fpl_n} box. Run `python "
                 f"tools/fleets_place_boxes.py --write`")
-        _fpl_bad = _fpl.contained(_fpl_by, _fpl_want)
-        assert not _fpl_bad, f"{_fpl_res}: " + "; ".join(_fpl_bad)
+        #  2. THE 151 LESSON, against the file's own rects and not
+        #     against the seed: a box outside its hole is drawn and
+        #     then covered by the frame, which renders last
+        _fpl_bad = _fpl.contained(_fpl_by, {_fpl_n: _fpl_by[_fpl_n]
+                                            for _fpl_n in _fpl.NAMES})
+        assert not _fpl_bad, (
+            f"{_fpl_res}: " + "; ".join(_fpl_bad) + ". A box outside "
+            f"its hole is painted over by the frame — move it back in "
+            f"F5, or re-seed with `python "
+            f"tools/fleets_place_boxes.py --write`")
+        #  3. and the SEED itself is still sound, so a reshape cannot
+        #     leave the tool producing something the editor would have
+        #     to repair by hand
+        _fpl_seed_bad = _fpl.contained(_fpl_by)
+        assert not _fpl_seed_bad, (
+            f"{_fpl_res}: the seed `fltplaced.placed` computes would "
+            f"not fit: " + "; ".join(_fpl_seed_bad))
         assert set(_fpl.NAMES) & set(_fhB.RULE_NAMES["fleets"]) == set(), (
             "a placed box took a cutout's name; the editor would lock it")
 
-    ok("the six Fleets boxes with no hole are recomputed from the "
-       "holes at both resolutions, each inside the hole it belongs to "
-       "or holding the ones it is the union of, and none of them a "
-       "cutout name")
+    ok("the six Fleets boxes with no hole are all present at both "
+       "resolutions, each inside the hole it belongs to or holding "
+       "the ones it is the union of — wherever F5 left it — the seed "
+       "they came from still fits, and none of them is a cutout name")
     #
     # Work order 137 E3. `thin_border` GROUPS things (decision 34) and
     # is drawn as a 1 px rounded outline — `StyleRenderer.draw_plate`,
@@ -19257,16 +19282,30 @@ def main():
         "truncation Layout.font_size costs means a per-resolution "
         "number has crept back in")
     # and the box actually decides it: double the stored size, get
-    # double the pixels
+    # double the pixels.
+    #
+    # **THE EXPECTED VALUE CARRIES `font_scale` TOO**, and until
+    # 20 September 2026 it did not — it compared against
+    # `layout.font_size(font_size * 2)` with the scale left out, which
+    # is only right while the scale is 1.0. It was 1.0 everywhere, so
+    # the check was green and wrong at the same time; the first F5
+    # session that set `ship_panel_text` to 1.5 turned it red and the
+    # message blamed the product. `panel_font_px` is
+    # `font_size * font_scale` through `Layout.font_size`, so the
+    # expectation has to be the same product.
     _fp_px0, _fp_scr0, _ = _fp_seen[(1920, 1080)]
     _fp_style = _fp_scr0.box_style(_fp_BOX)
     _fp_keep = _fp_style.get("font_size")
+    _fp_sc = float(_fp_style.get("font_scale", 1.0))
     try:
         _fp_style["font_size"] = _fp_keep * 2
-        assert _fp.panel_font_px(_fp_scr0) == _fp_scr0.layout.font_size(
-            _fp_keep * 2) != _fp_px0, (
-            "changing the box's font_size did not change the panel — "
-            "the size is still coming from somewhere else")
+        _fp_want = _fp_scr0.layout.font_size(
+            max(1, int(round(_fp_keep * 2 * _fp_sc))))
+        assert _fp.panel_font_px(_fp_scr0) == _fp_want != _fp_px0, (
+            f"changing the box's font_size did not change the panel — "
+            f"the size is still coming from somewhere else "
+            f"(got {_fp.panel_font_px(_fp_scr0)}, expected {_fp_want}, "
+            f"was {_fp_px0}, font_scale {_fp_sc})")
     finally:
         _fp_style["font_size"] = _fp_keep
 

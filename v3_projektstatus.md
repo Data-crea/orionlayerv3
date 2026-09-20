@@ -13,6 +13,57 @@ right and the header had gone stale** — resolved 10 September 2026
 by dating the header to the edit and giving this session its
 paragraph, below, so the two agree again.
 
+This session (20 September 2026): **the six placed Fleets boxes are
+seeded, not pinned — a check of mine had locked the editor out.**
+
+Work order 153 A gave the six boxes with no hole a RULE, and a smoke
+check that demanded each one EQUAL what `fltplaced` computes. That
+quietly turned six F5-editable boxes into locked ones. It surfaced
+the first time anybody used the editor on them: Data nudged
+`ship_panel_text` one pixel at 2560x1440, set its `font_scale` to 1.5
+and moved `help_popup`, and the suite went red over the pixel.
+
+**`fltgeom`'s own docstring and decision 14 already said the seat is
+a starting point and not a cage**, so the check was wrong and not the
+edit. What is held now is the 151 lesson and nothing else — every
+placed box is INSIDE the hole it belongs to (or holds the cutouts it
+is the union of), measured against `boxes.json`'s own rects wherever
+F5 left them. Two things go with it: all six must still exist, and
+the SEED `fltplaced.placed` computes must itself fit, so a reshape
+cannot leave the tool producing something the editor has to repair by
+hand.
+
+`tools/fleets_place_boxes.py` stays a seeder, run when the frame
+changes shape, and now says before it writes that it overwrites F5's
+edits — the same bargain `tools/fleet_boxes.py` carried.
+
+**Data's three edits stand, with two repairs the pre-existing checks
+demanded and one check of theirs that was wrong.**
+
+* `help_popup` at 2560x1440 had been dragged to x 954 with a width of
+  1080 — right edge 2034, **114 reference px outside the 1920 space**,
+  so it would be clipped at every window size. The editor let it go
+  there. Pulled back to x 840, which is as far right as it fits; the
+  move stands, the overhang does not.
+* `font_scale` 1.5 was written into the 2560x1440 block only, because
+  `save_boxes` writes the block you are in. That left the panel's text
+  at 1.5x on three resolutions and 1.0x at 1080p, which the "same
+  share of the window at all four" check caught. The 1080p block now
+  carries 1.5 as well.
+* And the check that tests "the box's font_size decides the panel"
+  compared against `layout.font_size(font_size * 2)` **with
+  `font_scale` left out** — right only while the scale is 1.0, which
+  it was everywhere, so the check was green and wrong at the same
+  time. The first non-unit scale turned it red and the message blamed
+  the product. Fixed to use the same product `panel_font_px` uses.
+
+**The editor does not clamp a drag to the reference area.** That is
+how the `help_popup` overhang got written, and it is worth its own
+look — a box dragged past the edge is saved outside it and only the
+smoke test says so.
+
+Smoke 240, unchanged.
+
 This session (20 September 2026, the clone-only fault, piece 1 of 4):
 **the rule is in the fundament, and the registry it rests on had two
 holes.**

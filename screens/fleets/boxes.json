@@ -395,7 +395,7 @@
       "style": {
         "skin": "none",
         "font_size": 14,
-        "font_scale": 1.0
+        "font_scale": 1.5
       }
     },
     {
@@ -874,7 +874,7 @@
     {
       "name": "ship_panel_text",
       "rect": [
-        140,
+        139,
         698,
         694,
         242
@@ -882,7 +882,7 @@
       "style": {
         "skin": "none",
         "font_size": 14,
-        "font_scale": 1.0
+        "font_scale": 1.5
       }
     },
     {
@@ -961,16 +961,16 @@
     },
     {
       "name": "help_popup",
-      "hidden": true,
+      "rect": [
+        840,
+        161,
+        1080,
+        745
+      ],
       "style": {
         "font_scale": 1.0
       },
-      "rect": [
-        420,
-        170,
-        1080,
-        745
-      ]
+      "hidden": true
     }
   ]
 }
