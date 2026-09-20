@@ -15201,6 +15201,75 @@ def main():
             _root, *_help_file(_lang).split("/")), _written
     ok("help file path: loader, extractor and setup agree (3 languages)")
 
+    # ── EVERY EXTRACTOR IS ON THE REGISTRY, OR SAYS WHY NOT ───────
+    #
+    # **THE FOURTH TIME A CHECK PASSED HERE AND WENT RED IN A CLONE**
+    # — 13 September (`d3d0561`), twice in one run (`5402b7d`) and
+    # 20 September (`58b2808`). `tools/setup.py:from_game()` is the
+    # one list of files derived from the player's own installation:
+    # it is what tells a clone which extractor to run, and anything
+    # else keyed on that list inherits its holes.
+    #
+    # It had two, found by writing this check on 20 September 2026:
+    # `kentext_en.json`, which `ArcWords` reads for the Fleets
+    # panel's firing arcs, and the Fleets gamedata that `fltart`
+    # reads for the ship pictures. Neither had ever been reported
+    # absent, so a clone was never told to run either extractor.
+    #
+    # The rule is two-way, like the over-300-lines list: every
+    # extractor is named by a registry command, or is on the
+    # exception list AND its output is really tracked — because an
+    # exception that is wrong puts the hole back.
+    import subprocess as _reg_sp
+
+    #: Extractors whose output is COMMITTED, so a clone already has
+    #: it and it is not a "derived from the player's install" file.
+    #: The value is one file the tool writes, and it is checked.
+    _EXTRACT_COMMITTED = {
+        # Data's own sheet, not the player's MOO2: ten planet discs
+        # cut out of ~/Downloads/planets.png and committed.
+        "planet_extract.py":
+            "screens/colony_summary/assets/planets/gaia.png",
+    }
+    _reg_cmds = " ".join(_c for _p, _w, _c in _setup.from_game())
+    _extractors = sorted(
+        _f for _f in os.listdir(os.path.join(_root, "tools"))
+        if _f.endswith("_extract.py"))
+    assert len(_extractors) >= 10, _extractors
+    _reg_unlisted = [_t for _t in _extractors
+                     if _t not in _EXTRACT_COMMITTED
+                     and _t not in _reg_cmds]
+    assert not _reg_unlisted, (
+        f"{_reg_unlisted} write files nobody registers: they are in "
+        f"neither tools/setup.py's from_game() nor the committed-output "
+        f"exception list. A clone is never told to run them, setup.py "
+        f"never reports their files absent, and any check keyed on that "
+        f"list has a hole exactly their size")
+    for _t, _out in sorted(_EXTRACT_COMMITTED.items()):
+        assert _t in _extractors, (
+            f"{_t} is on the committed-output list and is not an "
+            f"extractor any more")
+        assert _t not in _reg_cmds, (
+            f"{_t} is BOTH registered in from_game() and excepted as "
+            f"committed; one of the two is wrong")
+        _reg_r = _reg_sp.run(["git", "ls-files", "--error-unmatch", _out],
+                             cwd=_root, capture_output=True, text=True)
+        assert _reg_r.returncode == 0, (
+            f"{_t} is excepted because its output is committed, and "
+            f"{_out} is not tracked. The exception is wrong and the "
+            f"file belongs in from_game()")
+    #    and the registry's own paths are distinct — a copy-paste that
+    #    registers one file twice hides the other one
+    _reg_paths = [_p for _p, _w, _c in _setup.from_game()]
+    assert len(set(_reg_paths)) == len(_reg_paths), (
+        f"from_game() registers a path twice: "
+        f"{sorted(_p for _p in _reg_paths if _reg_paths.count(_p) > 1)}")
+
+    ok(f"every extractor is on setup.py's registry or excepted with a "
+       f"tracked output ({len(_extractors)} extractors, "
+       f"{len(_reg_paths)} registered paths, "
+       f"{len(_EXTRACT_COMMITTED)} exception)")
+
     # ── core/lbx.py: the container all three extractors read ──
     #
     # Asserted against a container built HERE, byte by byte, and not

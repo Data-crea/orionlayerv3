@@ -50,6 +50,8 @@ from core.estrings import string_file as estrings_file  # noqa: E402
 from core.hestrings import string_file as hestrings_file  # noqa: E402
 from core.technames import name_file as technames_file  # noqa: E402
 from core.billtext import message_file as billtext_file  # noqa: E402
+from core.kentext import string_file as kentext_file  # noqa: E402
+from screens.fleets.fltart import GAMEDATA as _fltart_gamedata  # noqa: E402
 from screens.colony_summary.colonyfigures import (  # noqa: E402
     FIGURE_DIR, all_names)
 from core.config import load_settings      # noqa: E402
@@ -63,6 +65,9 @@ HOOKS_PATH = "tools/githooks"
 
 GM = os.path.join(ROOT, "screens", "galaxy_map", "assets")
 CS = os.path.join(ROOT, "screens", "colony_summary", "assets")
+#: IMPORTED, not spelled again — `fltart.GAMEDATA` is where the
+#: loader looks and therefore the only place that may decide it.
+FLEET_GAMEDATA = _fltart_gamedata
 
 #: (tool, arguments, a path that must exist afterwards, what it is)
 STEPS = [
@@ -216,6 +221,26 @@ def from_game(settings=None):
          f"them the colony summary draws coloured cells instead of "
          f"the game's own colonists",
          "python tools/raceicon_extract.py"),
+        # KENTEXT.LBX: the weapon firing-arc words. **REGISTERED
+        # 20 September 2026 — it had been missing since the extractor
+        # was written**, so a clone was never told to run it and this
+        # report never said the file was absent. Found by the check
+        # below, which is the whole reason the check exists.
+        (os.path.join(ROOT, *kentext_file(lang).split("/")),
+         f"weapon firing-arc words ({lang}) — without them the Fleets "
+         f"ship panel lists a weapon with no arc after its name",
+         "python tools/kentext_extract.py"
+         + (f" --lang {lang}" if lang != "en" else "")),
+        # THE FLEETS SCREEN'S OWN ARTWORK (work order 142 D1), the
+        # second one that was missing here. Checked by `manifest.json`
+        # rather than by the directory, for the reason the population
+        # figures give: an interrupted extraction leaves a directory
+        # that exists and is short.
+        (os.path.join(FLEET_GAMEDATA, "manifest.json"),
+         "Fleets ship pictures — without them a grid cell shows the "
+         "builder's colour and the ship's name instead of the "
+         "original's own picture",
+         "python tools/fleet_art_extract.py"),
     ]
 
 

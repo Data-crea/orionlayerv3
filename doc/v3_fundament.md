@@ -2534,6 +2534,42 @@ does not list which panels carry which skin; it asserts that every
 added panel still has to obey it, and nobody has to remember to
 update the test.
 
+**A CHECK THAT READS THE PLAYER'S OWN FILES PASSES ON THE MACHINE
+THAT WROTE THEM.** Four times — 13 September (`d3d0561`), twice in
+one run (`5402b7d`) and 20 September (`58b2808`) — a smoke check
+asserted on data that exists only where an extractor has been run.
+Each stayed green here and went red in a clone, and each was caught
+by the fresh-clone run before a push, never by the suite.
+
+**The finding is that prose does not stop this one.** The third
+occurrence walked into a trap described in the paragraph *immediately
+above the list it should have edited* — the session read the warning
+and added the file to the wrong list anyway. A fifth entry saying
+"remember the clone" would be the fourth thing of its kind to fail.
+
+So the shape of the answer is not a reminder, it is that the fault
+cannot be written:
+
+* **A check needs content, not the player's content.** Where a check
+  only needs a name to render, the suite hands it a committed
+  stand-in, identical on every machine. There is then no absence to
+  branch on and no machine-dependent version to write.
+* **The checks that are about the loader force both states**, present
+  and absent, the way the Fleets ship picture's fallback is forced —
+  a fallback nobody exercises is where this rots, and the session
+  writing the code always has the files.
+* **The registry is the gate and must be complete.** One list names
+  every file derived from the player's install
+  (`tools/setup.py:from_game()`), and it is two-way: every extractor
+  is named by it or is excepted with an output that is really
+  tracked. It had two holes when that check was first written —
+  `kentext_en.json` and the Fleets gamedata — so a clone was never
+  told to run either extractor, and anything keyed on the list had a
+  hole the same size.
+* **The fresh-clone run stays**, and it is the gate rather than the
+  design. It has caught every occurrence, which is the argument for
+  keeping it and not the argument for relying on it.
+
 **A skip condition is part of the assertion, and it has to name the
 right thing.** That same check skipped a resolution whose box list
 was *empty*, standing in for "1080p has no panel frames yet". Adding

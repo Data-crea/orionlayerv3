@@ -13,6 +13,44 @@ right and the header had gone stale** — resolved 10 September 2026
 by dating the header to the edit and giving this session its
 paragraph, below, so the two agree again.
 
+This session (20 September 2026, the clone-only fault, piece 1 of 4):
+**the rule is in the fundament, and the registry it rests on had two
+holes.**
+
+A check that reads the player's own extracted files passes on the
+machine that wrote them. It has happened **four** times — 13 September
+(`d3d0561`), twice in one run (`5402b7d`) and 20 September
+(`58b2808`) — and each was caught by the fresh-clone run before a
+push, never by the suite. The finding that decides the shape of the
+answer is in `5402b7d`: that session walked into a trap described in
+the paragraph *immediately above the list it should have edited*.
+**Prose has already been tried and has already failed**, so the
+fundament entry (§2, Diagnosis) says what makes the fault unwritable
+rather than asking anyone to remember it.
+
+**`tools/setup.py:from_game()` is the registry** — the one list of
+files derived from the player's install, and what tells a clone which
+extractor to run. Anything keyed on it inherits its holes, and
+writing the check found two:
+
+* **`kentext_en.json`**, which `ArcWords` reads for the Fleets
+  panel's weapon firing arcs;
+* **the Fleets gamedata**, which `fltart` reads for the ship
+  pictures.
+
+Neither had ever been reported absent, so a clone was never told to
+run `kentext_extract.py` or `fleet_art_extract.py` at all. Both are
+registered now, checked by `manifest.json` and the language-aware
+path the loader itself uses.
+
+The check is two-way, like the over-300-lines list: every
+`tools/*_extract.py` is named by a registry command, or is on the
+committed-output exception list AND its output is really tracked by
+git. One exception today — `planet_extract.py`, whose ten planet
+discs come from Data's own sheet and are committed.
+
+Smoke 239 -> 240.
+
 This session (20 September 2026, the leader record): **tried with
 struct_probe, and it does not verify — the blocker is not the struct.**
 
@@ -2029,7 +2067,7 @@ files under `doc/` and are only summarised here.
 | | |
 |---|---|
 | Python | 32,960 lines across 111 modules — `find . -name '*.py'`, `__pycache__` excluded, the smoke test's 6,400 included. The previous figure here (21,642 across 94) was carried from an unstated method and could not be reproduced |
-| Smoke test | `python tools/smoke_test.py` — **239 checks**, headless |
+| Smoke test | `python tools/smoke_test.py` — **240 checks**, headless |
 | Assets | 170 MB (select_race 68, galaxy_map 51, shared 23, new_game 21, colony_summary 1) |
 | Screens in HD | 9 of ~20–22 (the GAME menu overlay, work order Stop 2, every dialog of the popup; colony summary draws list, sidebar, scan box and galaxy inset, and MOVES POPS — the first HD gesture that drives the game; planets, brief 101, lists, sorts, restricts and returns) |
 | Setup from clone | `python tools/setup.py` (deps via the system package manager) |
