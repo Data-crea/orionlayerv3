@@ -469,14 +469,13 @@ def render_info(surface, row, area, cfg, words, climates, layout, style,
     # wrapped, fits the box together is the size; measured by rendering
     # (decision 30), smallest size if nothing fits.
     sizes = [px - n for n in range(0, max(1, px - 7))]
-    lines = []
-    for size in sizes:
-        lines = [style.render_text(part, size, color[:3])
-                 for para in text.split("\n")
-                 for part in textfit.wrap_text(style, para, size, room_w)]
-        if (sum(s.get_height() for s in lines) <= room_h
-                and max(s.get_width() for s in lines) <= room_w):
-            break
+    # **THROUGH `textfit`, NOT HERE.** This loop was the second copy of
+    # "the largest size at which every line, wrapped, fits the box
+    # together"; `core/textfit.squeeze_block` is the first and only one
+    # now, and the Fleets ship panel is its other caller. Same rule,
+    # same order of `sizes`, same fallback to the smallest.
+    lines, _size = textfit.squeeze_block(
+        style, text.split("\n"), room_w, room_h, sizes, color[:3])
     # LEFT-ALIGNED, which is what the original's flags argument says:
     # Squeeze_Print_Formatted_Paragraph_(13, 354, 80, 88, buffer, 0)
     # and 0 is JUSTIFY_LEFT (colsum.cpp:1206; the same argument

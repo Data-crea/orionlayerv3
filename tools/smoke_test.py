@@ -18758,6 +18758,176 @@ def main():
        "click and the rest an activation, every box fits the opening "
        "at both resolutions and the inset keeps 305:182")
 
+    # ── THE SHIP PANEL'S WORDS COME OUT OF boxes.json ──────────────
+    #
+    # Work order 151 B. The panel used to size itself from
+    # `int(content_rect.height * 0.055)` with a floor of 10 px — a
+    # constant in the renderer, and a floor that fired at 1080p and
+    # nowhere else, so the text was 22 % larger against its window
+    # there than at 1440p. It also wrapped nothing and stopped
+    # mid-list when it ran out of room. All three are what this holds.
+    from screens.fleets import fltpanel as _fp
+    from core import textfit as _tf
+    import importlib.util as _fp_u
+    _fp_spec = _fp_u.spec_from_file_location(
+        "_panel_preview", os.path.join(os.path.dirname(SCREENS_DIR),
+                                       "tools", "colony_list_preview.py"))
+    _prev = _fp_u.module_from_spec(_fp_spec)
+    _fp_spec.loader.exec_module(_prev)
+
+    _fp_BOX = _fp.PANEL_TEXT_BOX
+    _fp_short = [("", "I.S.S. Vengeance"), ("Location", "Sol"),
+                 ("Shields", "Class III Shield")]
+    _fp_huge = _fp_short + [("", f"{_n} Phasor Cannon (Forward)")
+                            for _n in range(8, 0, -1)] \
+        + [("", f"Special Device Number {_i}") for _i in range(1, 40)]
+
+    # 1. THE BOX IS THERE, IN EVERY RESOLUTION SET, AND IS NOT A
+    #    CUTOUT. A cutout is locked in the F5 editor and its rect is
+    #    the artwork's; this one has to be free, or none of the rest
+    #    of this is editable.
+    _fp_boxfile = _sjson.load(io.open(os.path.join(
+        SCREENS_DIR, "fleets", "boxes.json"), encoding="utf-8"))
+    for _fp_res, _fp_list in _fp_boxfile.items():
+        _fp_b = next((b for b in _fp_list if b["name"] == _fp_BOX), None)
+        assert _fp_b is not None, (
+            f"{_fp_res}: no {_fp_BOX} box — the ship panel's words "
+            f"would fall back to a renderer constant")
+        assert "rect" in _fp_b, f"{_fp_res}: {_fp_BOX} carries no rect"
+        _fp_st = _fp_b.get("style") or {}
+        assert "font_size" in _fp_st, (
+            f"{_fp_res}: {_fp_BOX} has no font_size; the size would come "
+            f"from fltpanel.PANEL_FALLBACK_FONT, which is a fallback and "
+            f"not a layout (decision 14)")
+        assert _fp_BOX not in _fhB.RULE_NAMES["fleets"], (
+            f"{_fp_BOX} became a cutout name; the editor locks cutouts "
+            f"and the point of this box is that F5 can move it")
+    # and it sits inside the hole it belongs to, at both resolutions
+    for _fp_res, _fp_list in _fp_boxfile.items():
+        _fp_by = {b["name"]: b["rect"] for b in _fp_list if "rect" in b}
+        _px, _py, _pw, _ph = _fp_by["ship_panel"]
+        _tx, _ty, _tw, _th = _fp_by[_fp_BOX]
+        assert (_tx >= _px and _ty >= _py and _tx + _tw <= _px + _pw
+                and _ty + _th <= _py + _ph), (
+            f"{_fp_res}: {_fp_BOX} {_fp_by[_fp_BOX]} leaves ship_panel "
+            f"{_fp_by['ship_panel']} — the words would be drawn on the "
+            f"frame, which covers them because it renders last")
+
+    # 2. THE SIZE IS THE BOX'S, AND SCALED EXACTLY ONCE.
+    #    `font_size * font_scale`, through `Layout.font_size` and no
+    #    second window factor. The fault this replaces is in the
+    #    fundament under "Scaling twice looks correct at the resolution
+    #    you tested" and in `ScreenBase.box_font_scale_stored`: taking
+    #    the window factor on both sides gives 4.0 at 2160p against an
+    #    intended 2.0.
+    _fp_seen = {}
+    for _fp_w, _fp_h in ((1920, 1080), (2560, 1440), (3440, 1440),
+                         (3840, 2160)):
+        _fp_app, _ = _prev.build_screen(_fp_w, _fp_h)
+        _fp_app.dispatcher.switch_to("fleets")
+        _fp_scr = _fp_app.dispatcher.screens["fleets"]
+        _fp_st = _fp_scr.box_style(_fp_BOX)
+        _fp_ref = (float(_fp_st["font_size"])
+                   * float(_fp_st.get("font_scale", 1.0)))
+        _fp_px = _fp.panel_font_px(_fp_scr)
+        assert _fp_px == _fp_scr.layout.font_size(
+            max(1, int(round(_fp_ref)))), (
+            f"{_fp_w}x{_fp_h}: panel_font_px is {_fp_px}, the box asks "
+            f"for {_fp_ref} reference px")
+        _fp_seen[(_fp_w, _fp_h)] = (_fp_px, _fp_scr, _fp_ref)
+    # the same share of the window at every one of the four, to within
+    # what `Layout.font_size`'s int() can cost — never a resolution
+    # where a floor or a squared factor changes the proportion
+    _fp_share = {k: v[0] / k[1] for k, v in _fp_seen.items()}
+    _fp_lo, _fp_hi = min(_fp_share.values()), max(_fp_share.values())
+    assert _fp_hi / _fp_lo <= 1.06, (
+        "the panel's font is a different share of the window at "
+        f"different resolutions: {_fp_share}. Anything above the "
+        "truncation Layout.font_size costs means a per-resolution "
+        "number has crept back in")
+    # and the box actually decides it: double the stored size, get
+    # double the pixels
+    _fp_px0, _fp_scr0, _ = _fp_seen[(1920, 1080)]
+    _fp_style = _fp_scr0.box_style(_fp_BOX)
+    _fp_keep = _fp_style.get("font_size")
+    try:
+        _fp_style["font_size"] = _fp_keep * 2
+        assert _fp.panel_font_px(_fp_scr0) == _fp_scr0.layout.font_size(
+            _fp_keep * 2) != _fp_px0, (
+            "changing the box's font_size did not change the panel — "
+            "the size is still coming from somewhere else")
+    finally:
+        _fp_style["font_size"] = _fp_keep
+
+    ok("the Fleets ship panel is sized by its box: ship_panel_text in "
+       "both resolution sets, inside its hole and not a cutout, "
+       "font_size x font_scale scaled once, the same share of the "
+       "window at all four resolutions")
+
+    # 3. NOTHING IS DROPPED WITHOUT SAYING SO. The original clips at
+    #    its drawing window and says nothing (Set_Window_(15, 282, 320,
+    #    465), flt1.cpp:402); HD wraps, shrinks, and when it still does
+    #    not fit replaces its last line with `words.panel_more`. A
+    #    weapon quietly missing from a ship's list is the one outcome
+    #    this screen may not have.
+    _fp_words = _sjson.load(io.open(os.path.join(
+        SCREENS_DIR, "fleets", "layout.json"),
+        encoding="utf-8"))["words"]
+    assert "{n}" in _fp_words["panel_more"], (
+        "words.panel_more carries no {n}; the marker would not say how "
+        "much is missing, which is the whole of it")
+    for _fp_w, _fp_h in ((1920, 1080), (2560, 1440), (3440, 1440),
+                         (3840, 2160)):
+        _, _fp_scr, _ = _fp_seen[(_fp_w, _fp_h)]
+        _fp_rect = _fp.panel_text_rect(_fp_scr)
+        # a list that fits: every line is there and nothing is marked
+        _fp_lines, _fp_size, _fp_drop = _fp.panel_block(
+            _fp_scr, _fp_short, _fp_words, _fp_rect)
+        assert _fp_drop == 0 and len(_fp_lines) == len(_fp_short), (
+            f"{_fp_w}x{_fp_h}: three short lines came out as "
+            f"{len(_fp_lines)} with {_fp_drop} dropped")
+        assert _tf.block_height(_fp_lines) <= _fp_rect.height
+        # the worst the struct allows: 8 weapons and 39 specials
+        _fp_lines, _fp_size, _fp_drop = _fp.panel_block(
+            _fp_scr, _fp_huge, _fp_words, _fp_rect)
+        assert _tf.block_height(_fp_lines) <= _fp_rect.height, (
+            f"{_fp_w}x{_fp_h}: the panel drew past its box — that is "
+            f"the silent clip this replaces")
+        assert _fp_drop > 0, f"{_fp_w}x{_fp_h}: 50 lines fitted?"
+        assert _fp_size >= _fp_scr.layout.font_size(_fp.PANEL_MIN_FONT), (
+            f"{_fp_w}x{_fp_h}: the panel shrank past PANEL_MIN_FONT "
+            f"({_fp_size}); below it the words stop being words and "
+            f"dropping lines is the better trade")
+        _fp_marker = _fp_scr.style.render_text(
+            _fp_words["panel_more"].replace("{n}", str(_fp_drop)),
+            _fp_size, _fp.col("label_dim"))
+        assert _fp_lines[-1].get_size() == _fp_marker.get_size(), (
+            f"{_fp_w}x{_fp_h}: the last line is not the marker, so "
+            f"{_fp_drop} lines went missing without a word")
+    # the marker is marked, where decision 61 says
+    _fp_marks = _sjson.load(io.open(os.path.join(
+        SCREENS_DIR, "fleets", "layout.json"),
+        encoding="utf-8"))["marks"]
+    assert "HD EXTENSION" in _fp_marks.get(
+        "deviation_panel_overflow", ""), (
+        "layout.json no longer marks the panel's overflow behaviour an "
+        "HD EXTENSION; the original clips silently and HD does not")
+    # and the wrap is textfit's, not a fourth private copy
+    _fp_src = io.open(os.path.join(SCREENS_DIR, "fleets",
+                                   "fltpanel.py"), encoding="utf-8").read()
+    assert "textfit.squeeze_block" in _fp_src, (
+        "fltpanel no longer goes through core/textfit — decision 30's "
+        "rule that wrapping is measured BY RENDERING lives there, in "
+        "one place, and this was the module that made it three")
+    assert ".split()" not in _fp_src, (
+        "fltpanel looks like it wraps on its own again")
+
+    ok("the Fleets ship panel never drops a line in silence: short "
+       "lists whole, the 8-weapon 39-special worst case wrapped and "
+       "shrunk to PANEL_MIN_FONT, the remainder counted in "
+       "words.panel_more, inside the box at all four resolutions, "
+       "marked HD EXTENSION")
+
     # ── 137 E4/E5/E6: WHERE RETURN'S BOX COMES FROM, THE TWO EMPTY
     #    AREAS, AND THE TWO HIGHLIGHTED CELLS ────────────────────────
     #

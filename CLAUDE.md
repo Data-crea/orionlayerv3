@@ -62,7 +62,7 @@ Git enforces it: `tools/githooks/pre-commit` runs the suite and refuses
 the commit on any exit but 0, 139 included. `python tools/setup.py`
 switches the hook on in a clone (decision 31).
 
-231 checks, headless, no orion2re needed. **The count must not go
+233 checks, headless, no orion2re needed. **The count must not go
 down.** If a change makes a check obsolete, replace it — do not
 delete it. It went down exactly once, on 12 September 2026, when
 Phase B deleted the frame machinery the checks were about (decision
@@ -238,6 +238,14 @@ it is not, and the reason is in the exception, not in a missing
 binary. `XAUTHORITY` is usually already correct in an inherited
 environment — check it before setting it. Set these for the RUN, never
 in a profile: Data's system configuration is not ours to change.
+
+**IT DID NOT STOP ON 20 SEPTEMBER 2026.** With exactly the three
+variables above, a session-launched orion2re ran through to `ext:
+server started on port 17362` and served a full live acceptance (work
+order 151 B). **Why it used to stop is still not established, so the
+paragraph below stays** — a run that works is not a cause any more
+than a run that failed was. What it does mean: try it before assuming
+it will not come up, and do not park a live part on this note.
 
 **AND THAT IS NOT ENOUGH FROM INSIDE A SANDBOXED SESSION — CAUSE
 OPEN.** With all three set, orion2re still stops after `mox2: data

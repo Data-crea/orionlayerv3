@@ -405,22 +405,6 @@ def draw_cells(surface, screen, cells, art=None):
                              max(2, int(round(3 * screen.layout.scale))))
 
 
-def draw_panel(surface, screen, lines):
-    """The scanned ship's lines, top down inside `ship_panel`."""
-    rect = content_rect(screen, "ship_panel")
-    if rect is None or not lines:
-        return
-    size = max(10, int(rect.height * 0.055))
-    y = rect.y + size // 2
-    for label, value in lines:
-        text = f"{label}: {value}" if label else str(value)
-        surf = screen.style.render_text(text, size, col("label"))
-        if y + surf.get_height() > rect.bottom:
-            break
-        surface.blit(surf, (rect.x + size // 2, y))
-        y += surf.get_height()
-
-
 #: `graphics::Fill_(..., 0)` (movebox.cpp:38) — palette index 0, which
 #: is `(0, 0, 0)` in FONTS.LBX entry 9, read rather than assumed. The
 #: fill runs because this screen clears `_using_colony_screen_palette`

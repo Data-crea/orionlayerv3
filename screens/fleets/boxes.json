@@ -265,6 +265,20 @@
       }
     },
     {
+      "name": "ship_panel_text",
+      "rect": [
+        140,
+        795,
+        854,
+        145
+      ],
+      "style": {
+        "skin": "none",
+        "font_size": 14,
+        "font_scale": 1.0
+      }
+    },
+    {
       "name": "prev_fleet",
       "rect": [
         114,
@@ -724,6 +738,20 @@
       ],
       "style": {
         "skin": "none"
+      }
+    },
+    {
+      "name": "ship_panel_text",
+      "rect": [
+        140,
+        795,
+        854,
+        145
+      ],
+      "style": {
+        "skin": "none",
+        "font_size": 14,
+        "font_scale": 1.0
       }
     },
     {

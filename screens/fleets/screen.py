@@ -36,7 +36,8 @@ from core.shipparts import ShipPartNames
 from screens.colony_summary import colonyrows
 
 from . import fltart
-from . import fltdraw, fltgeom, fltrows, fltwire
+from . import fltdraw
+from . import fltpanel, fltgeom, fltrows, fltwire
 
 log = logging.getLogger("fleets")
 
@@ -268,7 +269,7 @@ class FleetsScreen(ScreenBase):
         fltdraw.draw_labels(surface, self, self._words,
                             self.enabled_buttons(), self._art,
                             self._filter_state())
-        fltdraw.draw_panel(surface, self, self._panel)
+        fltpanel.draw_panel(surface, self, self._panel, self._words)
         _stars = self._inset_stars()
         fltdraw.draw_inset(surface, self, _stars,
                            self._inset_markers(), self._art)

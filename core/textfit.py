@@ -75,3 +75,49 @@ def squeeze_lines(style, text, width, max_h, sizes, color):
                 and max(s.get_width() for s in rendered) <= width):
             return rendered, size
     return wrap_rendered(style, text, size, width, rgb), size
+
+
+def squeeze_block(style, paragraphs, width, max_h, sizes, color, gap=0):
+    """(surfaces, size) for SEVERAL strings that have to fit together.
+
+    `squeeze_lines` answers "one string in a box"; this answers "a
+    list of them", which is not the same question and was being
+    answered privately. Each paragraph is wrapped on its own — they
+    are separate facts and must not re-flow into each other — and the
+    size that wins is the largest at which ALL of them, wrapped, fit
+    the box **together**. Measuring each line against the whole box
+    height is the fault brief 97 found on the colony summary: every
+    line fitted alone and the five together ran past the box.
+
+    `gap` is extra leading between the rendered lines, in the caller's
+    own pixels, and it counts toward the height like the glyphs do.
+
+    Both dimensions, for the reason `squeeze_lines` gives: a single
+    word wider than the box cannot be broken, so it satisfies the
+    height on one line and never triggers a shrink.
+
+    `sizes` is tried in order, largest first. If none fits, the
+    smallest is used and the block is drawn whole — the caller decides
+    what to do about the overflow, and `fits` below is how it asks.
+    """
+    rgb = tuple(color[:3])
+    size = sizes[-1]
+    rendered = []
+    for size in sizes:
+        rendered = [style.render_text(part, size, rgb)
+                    for para in paragraphs
+                    for part in wrap_text(style, para, size, width)]
+        if not rendered:
+            return [], size
+        if block_height(rendered, gap) <= max_h and max(
+                s.get_width() for s in rendered) <= width:
+            return rendered, size
+    return rendered, size
+
+
+def block_height(rendered, gap=0):
+    """How tall a list of rendered lines is, leading included."""
+    if not rendered:
+        return 0
+    return (sum(s.get_height() for s in rendered)
+            + gap * (len(rendered) - 1))

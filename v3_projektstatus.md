@@ -13,6 +13,109 @@ right and the header had gone stale** — resolved 10 September 2026
 by dating the header to the edit and giving this session its
 paragraph, below, so the two agree again.
 
+This session (20 September 2026, work order 151 B): **the Fleets ship
+panel is sized and placed by a box, wraps by rendering, and says what
+it dropped.**
+
+**WHAT IT WAS.** `fltdraw.draw_panel` sized its text
+`max(10, int(content_rect.height * 0.055))` — a constant in the
+renderer, tied to the HOLE's height, with a floor that fired at 1080p
+and nowhere else. Measured at all four resolutions before the change:
+10 / 11 / 11 / 17 window px, which against the window is 0.0093 /
+0.0076 / 0.0076 / 0.0079 — **the text was 22 % larger relative to its
+window at 1080p than at 1440p**, and the number of lines that fitted
+changed with the resolution (15 / 18 / 18 / 17), so a ship whose list
+ran to sixteen entries was complete at 1440p and cut at 1080p. There
+was no wrapping at all: one entry was one line however long, and the
+loop `break`s at the box's bottom edge — a weapon simply not on the
+list, with nothing to say so.
+
+**WHAT IT IS.** `ship_panel_text`, a free box in `boxes.json` inside
+the `ship_panel` hole — the `picks_popup` / `picks_popup_text` split
+Custom Race already uses, and the reason for it is that `ship_panel`
+is a CUTOUT: its rect is the artwork's and the F5 editor locks it.
+The size is that box's `font_size` times its `font_scale`, through
+`Layout.font_size` **once**; 0.01296 / 0.01250 / 0.01250 / 0.01296 of
+the window at the four resolutions, and the 3.5 % that is left is
+`Layout.font_size`'s `int()`, which costs every box in the tree the
+same.
+
+**WRAPPED AND SHRUNK BY RENDERING** (decision 30), through
+`core/textfit.squeeze_block` — new, and the colony summary's scan
+panel now calls it too: that loop was the second copy of "the largest
+size at which every line, wrapped, fits the box together" and
+`textfit`'s own docstring says the third is the one that gets
+extracted.
+
+**AND IT DOES NOT CLIP IN SILENCE.** Below `PANEL_MIN_FONT` (8
+reference px) the panel keeps whole lines and spends its last one on
+`words.panel_more` with the count. **HD EXTENSION**, marked in
+`layout.json` as `deviation_panel_overflow`: the original prints at a
+fixed size and lets `Set_Window_(15, 282, 320, 465)` (flt1.cpp:402)
+cut whatever does not fit, with no shrink, no wrap and no marker. It
+also uses TWO COLUMNS — weapons at x 0x17, specials at x 0xBC, each
+with its own cursor (flt2.cpp:690-740) — where HD stacks both in one,
+which is why HD runs out of room sooner than the original does. That
+column difference is now written down; it was not before.
+
+`screens/fleets/fltpanel.py` is new: `fltdraw` went over the 300-line
+guideline the moment the panel stopped being six lines of blitting,
+and it splits at a seam (decision 6) — everything left in `fltdraw`
+draws a shape at a rect; this decides a font size and a line break
+from data.
+
+**LIVE, ON A REAL SHIP.** The engine came up from this session — which
+CLAUDE.md said it would not, and that note is now wrong; it is
+recorded below. SAVE2 loaded, one client, the Fleets screen at 96
+fields with HD drawing. **The API has no MOUSEMOTION** (`ext_api`
+doc's limitations, open fixes 3 and 4), so a client cannot hover; what
+works is `ACTIVATE_FIELD` on a cell, because `Scan_Fltscrn_Big_Icons_`
+(flt2.cpp:902-935) reads the field index POSITIVELY as the hover and
+its negative as the click, and `fields.cpp:172-181` hands it in
+positively. That scanned the Sabre at Draconis — 10 lines, three
+weapon entries and four specials — and the panel drew all ten. With
+`ship_panel_text` dragged to a third of its height, the same ship
+shrank to the 8 px floor, kept five lines and printed **"+5 more —
+make the panel taller in F5"**. Evidence in
+`~/orionlayer-fixtures/evidence/work_order_151/`.
+SAVE1-6, 8, 9 and 11 byte-identical before and after; SAVE8 never
+touched; SAVE10 logged at `07b2dd62…` and unchanged.
+
+**THE LONGEST LIST IN THAT SAVE IS THE ORION GUARDIAN'S, AND IT CANNOT
+BE SCANNED.** Sixteen lines — five weapons and eight specials — but
+`flt1.cpp:614` only scans while `_PLAYER_NUM == _fltscrn_stack_owner`,
+so a monster stack has no panel. The longest the player owns is eleven,
+which fits. The overflow path is therefore exercised by the box, above,
+and by the smoke test at the struct's own maximum: 8 weapon slots
+(`ship.WEAPON_SLOTS`) and 39 specials, 50 lines.
+
+**A CORRECTION TO CLAUDE.md, EARNED BY A RUN.** "AND THAT IS NOT
+ENOUGH FROM INSIDE A SANDBOXED SESSION — CAUSE OPEN" described
+orion2re stopping after `mox2: data space allocated` when launched
+from a session. It did not stop today: with `DISPLAY=:0`, the
+determined `XAUTHORITY` and `SDL_VIDEODRIVER=x11`, it ran through to
+`ext: server started on port 17362` and served a full live acceptance.
+The note stays in CLAUDE.md as history with today's contradiction
+beside it, because what changed is not established and "it works now"
+is not a cause either.
+
+Smoke **231 -> 233**: the panel's size comes from its box and is the
+same share of the window at all four resolutions, and nothing is
+dropped without the marker. Both red-proved — putting the old
+`rect.height * 0.055` back gives *"panel_font_px is 10, the box asks
+for 14.0 reference px"*, and removing the marker gives *"the last line
+is not the marker, so 32 lines went missing without a word"*.
+
+**ONE DEAD KEY FOUND AND NOT TOUCHED.** `inset_hint` and `status_hint`
+carry `"font_scale": 0.8` and the `text` skin never reads it —
+`Box.render` sizes from `style["font_size"]` alone (default 16), so
+both render at 16 and the 0.8 has never done anything. Three boxes are
+in that state, the third being the colony summary's
+`planet_paragraph`, which carries `font_scale: 1.6` in the 1440 set
+only — and THAT one IS read, by `colonyoutput`. Composing the two keys
+inside `Box.render` would fix the two hints and silently resize the
+colony paragraph, so it is reported here rather than done.
+
 This session (20 September 2026, work order 151, Stop 2): **the
 frame canvas is 3840x2160 from now on (decision 70), and the new
 Fleets frame is built but NOT worn yet.** Data's three decisions on
@@ -1509,7 +1612,7 @@ files under `doc/` and are only summarised here.
 | | |
 |---|---|
 | Python | 32,960 lines across 111 modules — `find . -name '*.py'`, `__pycache__` excluded, the smoke test's 6,400 included. The previous figure here (21,642 across 94) was carried from an unstated method and could not be reproduced |
-| Smoke test | `python tools/smoke_test.py` — **231 checks**, headless |
+| Smoke test | `python tools/smoke_test.py` — **233 checks**, headless |
 | Assets | 170 MB (select_race 68, galaxy_map 51, shared 23, new_game 21, colony_summary 1) |
 | Screens in HD | 9 of ~20–22 (the GAME menu overlay, work order Stop 2, every dialog of the popup; colony summary draws list, sidebar, scan box and galaxy inset, and MOVES POPS — the first HD gesture that drives the game; planets, brief 101, lists, sorts, restricts and returns) |
 | Setup from clone | `python tools/setup.py` (deps via the system package manager) |
