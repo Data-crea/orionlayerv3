@@ -402,3 +402,108 @@ hashes before and after, nothing saved:
 
 Nothing above is sent twice, and every one reads the fresh field list
 first.
+
+---
+
+# Stop 2, part 1 — the live run, and what it settled
+
+**SAVE4, one client, 20 September 2026.** SAVE1-6, 8, 9 and 11
+byte-identical before and after; SAVE8 never touched; SAVE10 logged at
+`07b2dd62…` and unchanged. Nothing was saved. Evidence in
+`~/orionlayer-fixtures/evidence/work_order_152/`.
+
+## Items 1 and 2 — the prediction held, exactly
+
+| | fields | View state | cells | wants_original |
+|---|---|---|---|---|
+| on the Fleets screen | 73 | READY | 1 | False |
+| after selecting a ship | 74 | READY | 1 | False |
+| **after SCRAP** | **2** | **WAITING** | **0** | **False** |
+
+and the two fields are
+
+```
+  1 t=7 (235,302)-(286,323) hk=89 'Y'
+  2 t=7 (345,302)-(396,323) hk=78 'N'
+```
+
+— which is `Add_Hidden_Field_(0xeb, 0x12e, 0x11e, 0x143, "Y", …)` and
+`(0x159, 0x12e, 0x18c, 0x143, "N", …)` (gendraw.cpp), to the pixel. The
+wire carries three and HD sees two because `parse_fields` drops field 0
+(work order 142 B). **`WAITING` with an empty grid is confirmed as the
+fault Data photographed.**
+
+**AND THE ANSWER IS A CHAIN, WHICH THE SOURCE READ DID NOT CATCH.**
+`ACTIVATE_FIELD` on the NO field did not restore the screen: the list
+went from 2 fields to **1**, still `WAITING`. That one field is
+`(0,0,639,479)` hotkey 27 — `Warning_Box_`'s own catcher.
+`Scrap_Ships_` answers a NO with a second box (`User_Box_(…, 3)`,
+flt1.cpp:1524-1527). Dismissing that one returned all 74 fields and
+`READY`. **HD has to handle a chain of boxes, not one box.**
+
+**THE FLTS BLOCK NEVER GOES AWAY.** Measured through the whole
+sequence: `FLTS=PRESENT`, `icons=1`, `ship_idx` intact, `selected=1` —
+before, during and after. So the required result is reachable as Data
+stated it: the grid and the panel can stay up from the block, and only
+the CLICKING has to stop, because a send resolves its field in a list
+that no longer has any (decision 20).
+
+**ONE PART OF THE REQUIRED RESULT CANNOT BE MET AS WRITTEN, and the
+order says report before building.** "HD shows the game's confirmation
+text" — the text is **not on the wire as text**. It is
+`H_Message_(128)` formatted with `Get_Scrap_Ship_Value_()`, and that
+value is a sum of `maintain::Ship_Scrap_Value_` over the selected
+ships, which HD cannot compute. Three ways out, and they differ in what
+the player sees:
+
+1. **HD's own wording, no number** — "Scrap the selected ship?" from
+   `layout.json`. Nothing new needed. The player loses the figure the
+   original gives them, which is the one fact that decides the answer.
+2. **Ask for the value** — one int16 in the FLTS block, or a string in
+   a new block. `doc/orion2re_open_fixes.md`. Correct, and it waits on
+   Joes.
+3. **Blit the game's own message.** The text IS on the wire — as
+   pixels, in the framebuffer HD already subscribes to — and the box's
+   rect is known exactly from `Confirmation_Box_`. Cropping the
+   original's rendered message into the HD popup is a transcription,
+   not an invention, and it needs nothing from anybody. What it changes
+   is that the player sees 640x480 text inside an HD panel.
+
+**Not built. Data chooses, because all three change what the player
+sees.**
+
+## Item 6 — and a correction to my own Stop 1 report
+
+Right-click help **works**. Live on SAVE4: RELOCATE opens `help_id`
+**369**, title *"Fleet Screen Relocate Button"*, **7 lines** of body out
+of the player's own HELP.LBX.
+
+My first probe read `scr.help.text`, which does not exist — the popup
+keeps `_title` and `_lines` — and printed `len=0`. I nearly filed "the
+popup opens with no text" as a finding. **It was the probe, not the
+popup.** Measured properly: `open_help_at` returns True on
+`btn_relocate`, `btn_scrap` and `cell_00`, and False on `inset_map`,
+which is parity — the original has no entry over the map either. The
+only real gap was the missing `help_popup` box, and that is now in.
+
+## Item 7 — what the wire actually carries
+
+Sampled on SAVE4's stack (one Scout, so the weapon list is empty and
+the arcs are unsampled — a warship still has to be found):
+
+* **`firing_arc` is in the VERIFIED spec** — `WEAPON_SPEC` offset 4,
+  `core/structs/ship.py:137`. The arc can be printed.
+* **`crew_quality` @113 and `crew_experience` @114 are UNVERIFIED**
+  (`doc/fleet_screen_reading.md:199`). Raw bytes on the live Scout read
+  `raw[113] = 0` and `raw[114:116] = [42, 0]` — consistent with "Green
+  Crew (42 EP)", which is one sample and is **not** a second source.
+  Decision 23 says a struct offset needs one, so the crew line is an
+  OMISSION until `tools/struct_probe.py` confirms it against the
+  game's own printed line.
+
+## Item 8 — ready to send, not sent
+
+**54 star fields** in the live list, every one matching `fltwire`'s
+rule 3a `(sx-3, sy-3, sx+8, sy+9)`, and one cell selected. The move is
+one `ACTIVATE_FIELD` away. Not sent: it is the one state-changing step
+and it belongs in its own commit with its own before/after.
