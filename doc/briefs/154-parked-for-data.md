@@ -100,3 +100,84 @@ live on 20 September 2026 with the hashes recorded beside it).
 
 No save was opened, nothing was written to `~/Master of Orion 2`, and
 no client was attached to port 17362.
+
+---
+
+## 4. The leader record: tried, and it does not verify. 20 September 2026
+
+Data asked for one attempt with `struct_probe`, "the way crew_quality
+was verified: two independent sources, live readings across enough
+ships and officers to be non-vacuous", and to put the Beam OCV/DCV
+line back if it held.
+
+**It does not hold, and the reason is not the one expected.**
+
+### What ran
+
+One client, the engine already up, no OrionLayer attached (checked:
+`ss -tanp` showed 17362 in LISTEN with no established connection).
+`python tools/struct_probe.py leaders` plus a decoder over all 67
+records. Nothing was loaded, nothing was sent, nothing was saved.
+SAVE1-9 and SAVE11 hashed before and after and **identical**; SAVE10
+logged, `70f86100…`, unchanged.
+
+### What the reading gives
+
+Six of the fifteen fields corroborate against the header
+(orion2.h:1088-1104, `sizes.h:28` asserting 0x3b), and one of them
+numerically:
+
+* `type` @35 against the title on all 67 — 0 for "Rebel Pilot" and
+  "Pirate Captain", 1 for "Science Leader" and "High Priestess", no
+  counter-example;
+* `special_skills` @42 against the title — "Weapons Officer" is
+  exactly `LEADER_SHIP_SKILL_WEAPONRY`, "Trilarian Navigator" is
+  HELMSMAN|WEAPONRY, "Legendary Pilot" is HELMSMAN2;
+* **`xp` @36 numerically** — the only values in 67 records are 0, 60,
+  150, 300 and 1000, and `Get_Officer_Base_Level_` (officer.cpp:44-61)
+  steps at 60, 150, 300, 500, 1000. A wrong offset does not land on
+  another function's thresholds.
+
+`level` @52 is 0 in all 67 and `location` @53 is -1 in 65, so neither
+is corroborated by anything, and seven fields have no ground truth at
+all here.
+
+### Why it is not enough — two blockers, neither of them the struct
+
+**1. The officer path is vacuous.** The panel reaches the leader
+record only through `s_ship_data.officer_index`, and the loaded save
+has **0 of 21 ships with an officer**. Across all ten saves on this
+disk — read from the FILES, nothing loaded — only SAVE1, SAVE3, SAVE4
+and SAVE5 have one at all, and each has exactly one: **4 ships of
+185**. This is the shape of the damaged-special check that held on 60
+ships and proved nothing.
+
+**2. The ground truth cannot be read.** Even with a good save, the
+check is "does my number equal the one the game prints". The game
+prints that panel only for `_scanned_big_ship`, which it sets from its
+OWN cursor (flt1.cpp:616-620) — and the Extension API has no mouse
+motion. That is the same gap work order 153 B worked around on HD's
+side, and it cannot be worked around on the game's. An INJECT_CLICK
+would set it, at the cost of toggling that ship's selection, and would
+buy one data point on one ship.
+
+### What is NOT missing
+
+The static tables everyone assumed were the hard part are plain
+literals in the source and cost nothing: `_crew_data` (mox.cpp:780),
+`_computers[].bonus` and `_hull_data` (techdata.cpp:429 and :77), and
+`Get_Officer_Base_Level_` is five lines. `Get_Design_Combat_Bonuses_`
+(initship.cpp:1339-1378) is `_computers[].bonus` plus
+`combat_speed * 5` plus seven special-device bits. The traits are
+already decoded and their indices are now known —
+`TRAIT_SHIP_DEFENSE` 6, `TRAIT_SHIP_ATTACK` 7, `TRAIT_WARLORD` 30.
+
+### Stopped, as instructed
+
+The line stays dropped. The findings are recorded at
+`core/structs/unverified.py`'s `LEADER` entry — so the next attempt
+starts from the layout and the two blockers rather than from
+scratch — and on the open list in `v3_projektstatus.md` with the order
+the work has to happen in: **a save with several officered ships
+first, then a way to read the original's own panel for one of them,
+then the transcription.**

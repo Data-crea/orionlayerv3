@@ -13,6 +13,50 @@ right and the header had gone stale** — resolved 10 September 2026
 by dating the header to the edit and giving this session its
 paragraph, below, so the two agree again.
 
+This session (20 September 2026, the leader record): **tried with
+struct_probe, and it does not verify — the blocker is not the struct.**
+
+Data asked for one attempt, two independent sources, live readings
+across enough ships and officers to be non-vacuous, and the Beam
+OCV/DCV line back if it held.
+
+**The layout is corroborated.** orion2re's header with its `0x3b` size
+assert, and a live reading of all 67 records where `name`, `title`,
+`type`, `special_skills` and `player_index` agree — the last two
+semantically against each leader's own title — and **`xp` agrees
+numerically**: the only values present are 0, 60, 150, 300 and 1000,
+which are exactly `Get_Officer_Base_Level_`'s thresholds. A wrong
+offset does not land on another function's step points.
+
+**It is not enough, for two reasons and neither is the struct.**
+First, the officer path is VACUOUS: the panel reaches the leader
+record only through `s_ship_data.officer_index`, the loaded save has
+0 of 21 ships with an officer, and across all ten saves on this disk
+— read from the files, nothing loaded — only four ships of 185 carry
+one, never more than one per save. That is the damaged-special check
+again. Second, the ground truth cannot be read at all: the game
+prints that panel only for `_scanned_big_ship`, which it sets from
+its OWN cursor, and the API has no mouse motion. An INJECT_CLICK
+would set it at the cost of toggling that ship's selection, for one
+data point.
+
+**What is NOT missing, which is worth knowing:** every static table
+is a literal in the source — `_crew_data` (mox.cpp:780),
+`_computers[].bonus` and `_hull_data` (techdata.cpp:429, :77) — and
+`Get_Officer_Base_Level_` is five lines. The trait indices are now
+known: SHIP_DEFENSE 6, SHIP_ATTACK 7, WARLORD 30.
+
+Stopped there, as instructed. The line stays dropped and the findings
+are at `core/structs/unverified.py`'s `LEADER` entry, in
+`doc/briefs/154-parked-for-data.md` §4, and on the open list with the
+order the work has to happen in.
+
+**Live rules kept:** one client, nothing sent, nothing loaded, nothing
+saved. SAVE1-9 and SAVE11 hashed before and after and identical;
+SAVE10 logged at `70f86100…` and unchanged.
+
+Smoke 239, unchanged.
+
 This session (20 September 2026, after work order 154): **the Beam
 OCV / DCV line is gone, and two omissions are on the open list.**
 
@@ -6361,14 +6405,45 @@ one line shorter.
 `core/structs/unverified.py` refuses (decision 23). The traits and the
 strategic-combat flag are already decoded.
 
-*What lifting it costs:* `s_leader_data` verified — two sources, the
-way the crew fields were — and then four static tables transcribed
-(`_crew_data`, `_hull_data[].strat_def_bonus`, `_skill_data`, and
-`Get_Design_Combat_Bonuses_` itself). The leader record is the gate;
-the rest is transcription. **A partial answer is worse than none
-here**: a panel that prints a number for a ship with no captain and
-nothing for one with a captain would look like a bug rather than a
-gap.
+*What lifting it costs — MEASURED, 20 September 2026, not estimated.*
+The attempt is written up at `core/structs/unverified.py`'s `LEADER`
+entry; the short version:
+
+* **The static tables are not the problem.** `_crew_data`
+  (mox.cpp:780), `_computers[].bonus` and `_hull_data`
+  (techdata.cpp:429, :77) are plain literals in the source, and
+  `Get_Officer_Base_Level_` (officer.cpp:44-61) is a five-line step
+  function. All of it is transcription.
+* **The leader record's layout is corroborated but not verified.**
+  Two sources agree on it — orion2re's header with the `0x3b` size
+  assert, and a live reading of all 67 records where `name`, `title`,
+  `type`, `special_skills` and `player_index` agree semantically and
+  **`xp` agrees numerically**: the only values present are 0, 60,
+  150, 300 and 1000, which are exactly
+  `Get_Officer_Base_Level_`'s own thresholds. Seven other fields have
+  no ground truth in that reading, and `level` is 0 in all 67.
+* **THE OFFICER PATH IS VACUOUS AND THAT IS THE REAL BLOCKER.** The
+  panel reaches the leader record only through
+  `s_ship_data.officer_index`. The loaded save has 0 of 21 ships with
+  an officer; across all ten saves on this disk — read from the
+  files, nothing loaded — only SAVE1, SAVE3, SAVE4 and SAVE5 have one
+  at all, one each: **4 ships of 185**. That is the shape of the
+  damaged-special check above, which held on 60 ships and proved
+  nothing.
+* **And the ground truth itself is out of reach.** Checking a
+  computed bonus means comparing it with the number the game prints,
+  and the game prints that panel only for `_scanned_big_ship`, which
+  it sets from its OWN cursor — the Extension API has no mouse motion
+  (open fixes 3 and 4), which is the same gap work order 153 B worked
+  around for HD's side. An INJECT_CLICK would set it, at the cost of
+  toggling that ship's selection, and would give one data point on
+  one ship.
+
+*So the order is:* a save with several officered ships first, then a
+way to read the original's own panel for one of them, then the
+transcription. **A partial answer is worse than none here**: a panel
+that prints a number for a ship with no captain and nothing for one
+with a captain would look like a bug rather than a gap.
 
 **4. A colony, transport or outpost ship gets a different panel
 entirely.** `Print_Scanned_Ship_Data_` returns early for `ship_type`
