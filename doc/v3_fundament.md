@@ -117,6 +117,49 @@ either — Custom Race's message box is two boxes and a render call.
 
 **12. Frame variants only** — no runtime tile swapping.
 
+**70. 3840x2160 is the source canvas for a new or replaced frame
+image.** 20 September 2026, Data's decision on work order 151.
+Numbered 70 after checking at the commit that carries it: the highest
+entry was 69 and nothing in the tree used 70. Every frame image added
+to the tree from now on, and every frame image that REPLACES one, is
+authored and filed at 3840x2160. The frames already here keep their
+own size until something replaces them — this is not a migration
+order, and re-exporting an existing frame to satisfy it would resample
+art for nothing.
+
+**Why that number, and not "large enough".**
+`core/screen_base._scale_frame` smoothscales the frame image ONCE onto
+the 1920x1080 reference area, and `tools/frame_holes.to_ref` converts
+the hole coordinates by `1920 / image_width`. 3840x2160 is the only
+canvas that is an exact integer ratio to both ends of that: halved for
+the reference, and 1:1 at 2160p, where it is never upscaled at all.
+Measured at the commit that carries this entry, every frame in the
+tree IS upscaled at 4K — fleets v4 1445x811 (x1.329 to the reference,
+x2.657 at 2160p), planets 1920x1080, galaxy_map 1707x921,
+colony_summary 1672x941, game_menu 1108x1419.
+
+**It does not make the asset a measurement** — the principle of that
+name, and decision 26. A frame's pixels still decide nothing about
+world geometry. What this fixes is only the number `to_ref` divides
+by, and `to_ref` must go on reading the image's own size rather than a
+constant, which it does.
+
+**It does not widen decision 12.** "Frame variants only — no runtime
+tile swapping" is untouched: a screen wears one frame image, a variant
+is another whole image, and this entry says only what size that image
+is authored at.
+
+**The cost, stated rather than discovered later.** RGBA at 3840x2160
+is roughly five times the file: `screens/fleets/assets/frame.png` is
+950 KB at v4 and 5.0 MB at the 151 build. That is what never upscaling
+the frame at 2160p costs, and it is paid per frame, once.
+
+**The check** is in `tools/smoke_test.py`: every `screens/*/assets/
+frame.png` is either the size it had when this was filed or the
+canvas, and a third size fails. "New" cannot be read off a tree that
+only holds what is there now, so what is held is the replacement half
+of the sentence.
+
 **34. Two panel skins, and which one means what.** `inner_panel` is
 the 9-slice art and frames pictures — in the whole tree that is now
 only New Game's five setting images. `thin_border` is the rounded

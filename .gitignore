@@ -143,3 +143,9 @@ diff*.txt
 *.zip
 tools/tree_manifest.sha256
 screens/fleets/assets/gamedata/
+
+# --- Frame builds (decision 40) ---
+# `tools/fleets_frame_build.py` writes here by default. The BUILD is
+# reproducible from `_src/` byte for byte, and what the screen wears is
+# `frame.png`, filed deliberately — a stray build beside it is not.
+screens/fleets/assets/frame_built.png

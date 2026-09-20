@@ -1,6 +1,6 @@
 # OrionLayer v3 — Project Status
 
-Updated: 19 September 2026
+Updated: 20 September 2026
 
 **How to read the date above.** The header names the day this file
 was last edited; the "This session (…)" paragraphs below it run
@@ -12,6 +12,45 @@ carrying entries dated 9 September inside it. **The convention is
 right and the header had gone stale** — resolved 10 September 2026
 by dating the header to the edit and giving this session its
 paragraph, below, so the two agree again.
+
+This session (20 September 2026, work order 151, Stop 2): **the
+frame canvas is 3840x2160 from now on (decision 70), and the new
+Fleets frame is built but NOT worn yet.** Data's three decisions on
+151 are answered in `doc/briefs/151-stop2-progress.md`.
+
+**What is in the tree.** Decision 70 in `doc/v3_fundament.md` with its
+own check — every `screens/*/assets/frame.png` is either the size it
+had when the entry was filed or 3840x2160, and a third size fails, so
+the rule cannot quietly become an intention. Smoke **230 -> 231**, both
+count documents moved with it. `tools/fleets_frame_build.py` builds the
+frame from `screens/fleets/assets/_src/fleets_frame_4k_map165.png`: it
+rebuilds Support and Combat unlit at their own widths by a 3-slice of
+the Leaders plate (60 px of plate kept at each end, chamfer measured at
+22), and cuts the 32 openings to their own shape so the chamfers
+survive and the painted stars and labels end up INSIDE a hole rather
+than being retouched off the art. The source sha256 is verified before
+anything is written, because every constant in that module is a
+measurement of that one image.
+
+**What is NOT in the tree.** `screens/fleets/assets/frame.png` is still
+v4 at 1445x811, and `boxes.json`, `fltgeom.py` and `layout.json` still
+describe it. The swap waits for Data's acceptance; the brief's §7 lists
+the six steps it is. The whole swap was applied in a throwaway clone
+and the suite is 231 green there.
+
+**The map answers Stop 1's sharpest finding by itself.** The new
+source's hole is 1812 x 1101, aspect 1.6458, stretching the galaxy's
+own 1.265 by **1.301x** — against v4's 1.3027x and the original's
+1.3248x. The frame Stop 1 measured stretched it 1.953x; this one is
+0.13 % from what the screen already does, so no code changes and
+nothing is letterboxed.
+
+**Five boxes were stale before this order.** `status_hint` sat 151 px
+ABOVE the band it belongs to and `status_text` 164 px above it;
+`icon_area` did not contain its own cells. They were seated for the v3
+one-opening frame and never re-seated when v4 cut 32 holes. The
+regeneration keeps non-cutout boxes verbatim, which is decision 3
+working correctly and is also how they survived unnoticed.
 
 This session (19 September 2026, work order 142 A): **the Fleets
 screen waits instead of flashing the original.** `Screen_Control_`
@@ -1463,7 +1502,7 @@ files under `doc/` and are only summarised here.
 | | |
 |---|---|
 | Python | 32,960 lines across 111 modules — `find . -name '*.py'`, `__pycache__` excluded, the smoke test's 6,400 included. The previous figure here (21,642 across 94) was carried from an unstated method and could not be reproduced |
-| Smoke test | `python tools/smoke_test.py` — **230 checks**, headless |
+| Smoke test | `python tools/smoke_test.py` — **231 checks**, headless |
 | Assets | 170 MB (select_race 68, galaxy_map 51, shared 23, new_game 21, colony_summary 1) |
 | Screens in HD | 9 of ~20–22 (the GAME menu overlay, work order Stop 2, every dialog of the popup; colony summary draws list, sidebar, scan box and galaxy inset, and MOVES POPS — the first HD gesture that drives the game; planets, brief 101, lists, sorts, restricts and returns) |
 | Setup from clone | `python tools/setup.py` (deps via the system package manager) |
