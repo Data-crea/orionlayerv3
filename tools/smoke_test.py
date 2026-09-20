@@ -19215,6 +19215,14 @@ def main():
     # (evidence/work_order_152/panel/001_20_panel_native.png). Two
     # sources, which is what this tree asks for before a value is
     # trusted.
+    #
+    # **NOTHING HERE MAY NEED THE EXTRACTED NAMES.** The wording comes
+    # out of the player's own HESTRNGS and TECHNAME.LBX, which a fresh
+    # clone does not have — and the first version of this check
+    # assumed they were there, passed on the machine that wrote it and
+    # failed in a clone. So the LAYOUT is measured against a panel
+    # built here out of literals, and the two states of the wording
+    # are both exercised: with the catalogues and without.
     from screens.fleets import fltrows as _pl
     from core.structs import star as _pl_star_spec
     from core.structs import ship as _pl_ship_spec
@@ -19224,15 +19232,9 @@ def main():
     import types as _pl_types
     _pl_parts = _PlParts("en")
     _pl_str = _PlStrings("en")
+    _pl_words = _pl_str.message(0x99) is not None
     _pl_layout = _sjson.load(io.open(os.path.join(
         SCREENS_DIR, "fleets", "layout.json"), encoding="utf-8"))
-    if _pl_parts.state != "ok" or not _pl_str.message(0x99):
-        # A clone with no extracted names cannot exercise the wording,
-        # and the layout rules below are all about WHERE a line goes.
-        # Say so rather than skipping silently.
-        report("the ship panel's layout check needs the extracted "
-               "names (tools/techname_extract.py, hestrings_extract.py); "
-               "the tab stops are still checked")
 
     # 1. THE TAB STOPS ARE THE ORIGINAL'S OWN x VALUES over its own
     #    window. `Set_Window_(15, 282, 320, 465)` is the origin and
@@ -19291,37 +19293,60 @@ def main():
         _g.player_num = 0
         return _g
 
-    #    PARKED: the destination slot is BLANK and the four above it are not
-    _pl_p = _pl.panel_lines(0, _pl_state(0), _pl_parts, _pl_str, None)
-    assert len(_pl_p.head) == 5, _pl_p.head
-    assert _pl_p.head[0] == "Rafale"
-    assert _pl_p.head[4] is None, (
-        f"a parked ship got a destination line {_pl_p.head[4]!r}; the "
-        f"original prints that line only for location >= 10000 "
-        f"(flt2.cpp:644) and the native screenshot shows the slot blank")
-    assert isinstance(_pl_p.head[3], tuple) and len(_pl_p.head[3]) == 2, (
-        "the Beam OCV/DCV slot is not the two-label line it transcribes")
-    #    IN TRANSIT to a visited star: the slot is filled
-    _pl_m = _pl.panel_lines(0, _pl_state(10000 + 1), _pl_parts, _pl_str, None)
-    assert _pl_m.head[4] and "Star 1" in _pl_m.head[4], _pl_m.head[4]
-    #    IN TRANSIT to a star nobody has explored: the NAME must not leak
-    _pl_u = _pl.panel_lines(0, _pl_state(10000 + 1, visited=0x00),
-                            _pl_parts, _pl_str, None)
-    assert _pl_u.head[4] and "Star 1" not in _pl_u.head[4], (
-        f"the destination named an unexplored star ({_pl_u.head[4]!r}); "
-        f"the original prints H 0x9C there (flt2.cpp:661-666)")
-    #    ANTARES — `_NUM_STARS == star_idx`
-    _pl_a = _pl.panel_lines(0, _pl_state(10000 + 3), _pl_parts, _pl_str, None)
-    assert _pl_a.head[4] == _pl_str.message(0x68), _pl_a.head[4]
-    #    and `flat()` drops the blanks and opens the tuple
-    _pl_flat = _pl_p.flat()
-    assert None not in _pl_flat and () not in _pl_flat
-    assert _pl_str.message(0x99) in _pl_flat, (
-        "flat() lost the Beam OCV label out of the two-label slot")
+    #    BOTH STATES OF THE WORDING, so neither can rot: the panel is
+    #    built once with the player's catalogues and once with none,
+    #    and the SLOTS have to behave the same either way.
+    for _pl_have, _pl_s_arg in ((_pl_words, _pl_str), (False, None)):
+        _pl_p = _pl.panel_lines(0, _pl_state(0), _pl_parts, _pl_s_arg, None)
+        assert len(_pl_p.head) == 5, _pl_p.head
+        assert _pl_p.head[0] == "Rafale"
+        assert _pl_p.head[4] is None, (
+            f"a parked ship got a destination line {_pl_p.head[4]!r}; the "
+            f"original prints that line only for location >= 10000 "
+            f"(flt2.cpp:644) and the native screenshot shows it blank")
+        #  IN TRANSIT to a visited star: the slot is filled
+        _pl_m = _pl.panel_lines(0, _pl_state(10000 + 1), _pl_parts,
+                                _pl_s_arg, None)
+        assert _pl_m.head[4], "a ship in transit got no destination line"
+        assert "Star 1" in _pl_m.head[4], _pl_m.head[4]
+        #  IN TRANSIT to a star nobody has explored: the NAME must not
+        #  leak, with or without the wording to replace it with
+        _pl_u = _pl.panel_lines(0, _pl_state(10000 + 1, visited=0x00),
+                                _pl_parts, _pl_s_arg, None)
+        assert not _pl_u.head[4] or "Star 1" not in _pl_u.head[4], (
+            f"the destination named an unexplored star "
+            f"({_pl_u.head[4]!r}); the original prints H 0x9C there "
+            f"(flt2.cpp:661-666)")
+        if _pl_have:
+            assert isinstance(_pl_p.head[3], tuple), (
+                "the Beam OCV/DCV slot is not the two-label line it "
+                "transcribes")
+            assert len(_pl_p.head[3]) == 2, _pl_p.head[3]
+            assert _pl_u.head[4] == _pl_str.message(0x9C), _pl_u.head[4]
+            _pl_a = _pl.panel_lines(0, _pl_state(10000 + 3), _pl_parts,
+                                    _pl_str, None)
+            assert _pl_a.head[4] == _pl_str.message(0x68), _pl_a.head[4]
+            assert _pl_str.message(0x99) in _pl_p.flat(), (
+                "flat() lost the Beam OCV label out of the two-label slot")
+        else:
+            #  WITHOUT the catalogues every wording slot is blank and
+            #  none of them is invented
+            assert _pl_p.head[3] is None, _pl_p.head[3]
+            assert _pl_u.head[4] is None, (
+                f"with no HESTRNGS the unexplored destination became "
+                f"{_pl_u.head[4]!r}; it has no wording to use and must "
+                f"say nothing rather than fall back to the name")
+        #  and `flat()` never carries a blank
+        assert all(_pl_p.flat()), _pl_p.flat()
+    if not _pl_words:
+        report("the ship panel's wording checks need the extracted "
+               "names (tools/hestrings_extract.py, techname_extract.py); "
+               "the layout, the slots and the no-catalogue state are "
+               "still checked")
 
-    # 3. THE LINE GRID, MEASURED BY RECORDING WHAT IS DRAWN. Every
-    #    blit `draw_columns` makes, with its x and y, against a real
-    #    screen and a real rect.
+    # 3. THE LINE GRID, MEASURED BY RECORDING WHAT IS DRAWN — against
+    #    a panel built out of LITERALS, so a clone with no extracted
+    #    names measures exactly what this machine measures.
     class _PlRec:
         def __init__(self):
             self.at = []
@@ -19329,29 +19354,37 @@ def main():
         def blit(self, surf, pos):
             self.at.append((pos[0], pos[1], surf.get_width()))
 
+    _pl_lit = _pl.Panel(
+        ["Rafale", "Green Crew (15 EP)", "No Shield",
+         ("Beam OCV:", "Beam DCV:"), None],
+        ["1 Nuclear Missile (360)", "3 Nuclear Bomb (360)"], ["None"],
+        "Weapons:", "Specials:")
     _pl_app, _ = _prev.build_screen(2560, 1440)
     _pl_app.dispatcher.switch_to("fleets")
     _pl_scr = _pl_app.dispatcher.screens["fleets"]
     _pl_rect = _fp.panel_text_rect(_pl_scr)
     _pl_rec = _PlRec()
-    assert _fp.draw_columns(_pl_rec, _pl_scr, _pl_p, _pl_rect), (
+    assert _fp.draw_columns(_pl_rec, _pl_scr, _pl_lit, _pl_rect), (
         "the panel did not fit at 1440p for the ship the native "
         "screenshot shows")
     _pl_stops = _fp._stops(_pl_rect)
     _pl_ys = sorted({y for _x, y, _w in _pl_rec.at})
     _pl_pitch = _pl_ys[1] - _pl_ys[0]
-    #    the head's four filled slots, then a GAP of two pitches over
-    #    the blank destination slot to the headings
     _pl_rows = {y: sorted(x for x, yy, _w in _pl_rec.at if yy == y)
                 for y in _pl_ys}
     _pl_first = _pl_ys[0]
+    #    the head's four filled slots, each on its own line
     for _pl_i in range(4):
         assert _pl_first + _pl_i * _pl_pitch in _pl_rows, (
             f"head slot {_pl_i} was not drawn on its own line")
+    #    then a GAP of one blank line — the empty destination slot —
+    #    before the headings
     _pl_headings = _pl_first + 5 * _pl_pitch
     assert _pl_headings in _pl_rows, (
         "the Weapons/Specials headings are not one blank line below "
         "the head; the destination slot did not hold its place")
+    assert _pl_first + 4 * _pl_pitch not in _pl_rows, (
+        "something was drawn in the blank destination slot")
     #    the OCV/DCV line carries two labels, at the two LABEL stops
     assert _pl_rows[_pl_first + 3 * _pl_pitch] == [
         _pl_stops["label"], _pl_stops["right_label"]], (
@@ -19386,8 +19419,8 @@ def main():
        "head slots with the destination slot blank for a parked ship, "
        "the Beam OCV/DCV line holding its place, entries indented "
        "under both headings, the unexplored destination no longer "
-       "naming the star, and four markings citing what the original "
-       "does instead")
+       "naming the star with OR without the catalogues, and four "
+       "markings citing what the original does instead")
 
     # 3. NOTHING IS DROPPED WITHOUT SAYING SO. The original clips at
     #    its drawing window and says nothing (Set_Window_(15, 282, 320,
