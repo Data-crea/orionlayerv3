@@ -19206,6 +19206,189 @@ def main():
        "font_size x font_scale scaled once, the same share of the "
        "window at all four resolutions")
 
+    # ── THE PANEL IS LAID OUT THE WAY THE ORIGINAL LAYS IT OUT ─────
+    #
+    # Work order 154, formatting only. Every number below is a native
+    # x or a line rule from `Print_Scanned_Ship_Data_`
+    # (flt2.cpp:524-747) and every one of them was ALSO read off a
+    # native screenshot of the same panel, the ship "Rafale"
+    # (evidence/work_order_152/panel/001_20_panel_native.png). Two
+    # sources, which is what this tree asks for before a value is
+    # trusted.
+    from screens.fleets import fltrows as _pl
+    from core.structs import star as _pl_star_spec
+    from core.structs import ship as _pl_ship_spec
+    from core.shipparts import ShipPartNames as _PlParts
+    from core.hestrings import HStrings as _PlStrings
+    import struct as _pl_s
+    import types as _pl_types
+    _pl_parts = _PlParts("en")
+    _pl_str = _PlStrings("en")
+    _pl_layout = _sjson.load(io.open(os.path.join(
+        SCREENS_DIR, "fleets", "layout.json"), encoding="utf-8"))
+    if _pl_parts.state != "ok" or not _pl_str.message(0x99):
+        # A clone with no extracted names cannot exercise the wording,
+        # and the layout rules below are all about WHERE a line goes.
+        # Say so rather than skipping silently.
+        report("the ship panel's layout check needs the extracted "
+               "names (tools/techname_extract.py, hestrings_extract.py); "
+               "the tab stops are still checked")
+
+    # 1. THE TAB STOPS ARE THE ORIGINAL'S OWN x VALUES over its own
+    #    window. `Set_Window_(15, 282, 320, 465)` is the origin and
+    #    the width, so a stop is (native x - 15) / 305.
+    for _pl_name, _pl_frac, _pl_native in (
+            ("COL_LABEL", _fp.COL_LABEL, 0x12),
+            ("COL_ENTRY", _fp.COL_ENTRY, 0x17),
+            ("COL_RIGHT_LABEL", _fp.COL_RIGHT_LABEL, 0xAD),
+            ("COL_RIGHT_ENTRY", _fp.COL_RIGHT_ENTRY, 0xBC),
+            ("COL_OCV_VALUE_END", _fp.COL_OCV_VALUE_END, 0x85),
+            ("COL_DCV_VALUE", _fp.COL_DCV_VALUE, 0x73 + 0xAD)):
+        assert abs(_pl_frac - (_pl_native - 15) / 305.0) < 1e-9, (
+            f"{_pl_name} is {_pl_frac}, and the original prints there "
+            f"at native x {_pl_native} in a window at 15 of width 305")
+    assert _fp.SPECIALS_SPLIT == _fp.COL_RIGHT_ENTRY, (
+        "SPECIALS_SPLIT stopped being the specials column's own stop; "
+        "one number with two homes is decision 5's failure")
+    #    the entries are INDENTED under their headings, both columns
+    assert _fp.COL_ENTRY > _fp.COL_LABEL, "the weapons are not indented"
+    assert _fp.COL_RIGHT_ENTRY > _fp.COL_RIGHT_LABEL, (
+        "the specials are not indented under their heading")
+
+    # 2. THE HEAD IS FIVE SLOTS AND AN EMPTY ONE IS A BLANK LINE.
+    assert _pl.Panel.HEAD_SLOTS == (
+        "name", "crew", "shield", "bonuses", "destination")
+
+    class _PlShip:
+        """One ship's bytes, only what the panel reads."""
+
+        def __init__(self, loc=0, shield=0, crew=(0, 15)):
+            b = bytearray(_pl_ship_spec.SIZE)
+            b[0:6] = b"Rafale"
+            b[18] = shield
+            b[99] = 1
+            b[101:103] = _pl_s.pack("<h", loc)
+            b[113], b[114] = crew
+            for i, (t, n) in enumerate(((14, 1), (21, 3))):
+                o = (_pl_ship_spec.WEAPONS_OFFSET
+                     + i * _pl_ship_spec.WEAPON_SIZE)
+                b[o:o + 8] = _pl_s.pack("<hbbbHb", t, n, n, 0x10, 0, 0)
+            self.raw = bytes(b)
+
+    class _PlStar:
+        def __init__(self, name, visited):
+            b = bytearray(_pl_star_spec.SIZE)
+            b[0:len(name)] = name.encode("latin-1")
+            b[171] = visited
+            self.raw = bytes(b)
+
+    def _pl_state(loc, visited=0x01, n_stars=3):
+        _g = _pl_types.SimpleNamespace()
+        _g.ships_raw = [_PlShip(loc=loc).raw]
+        _g.stars = _pl_star_spec.parse_all(
+            [_PlStar(f"Star {i}", visited).raw for i in range(n_stars)])
+        _g.player_raw = []
+        _g.player_num = 0
+        return _g
+
+    #    PARKED: the destination slot is BLANK and the four above it are not
+    _pl_p = _pl.panel_lines(0, _pl_state(0), _pl_parts, _pl_str, None)
+    assert len(_pl_p.head) == 5, _pl_p.head
+    assert _pl_p.head[0] == "Rafale"
+    assert _pl_p.head[4] is None, (
+        f"a parked ship got a destination line {_pl_p.head[4]!r}; the "
+        f"original prints that line only for location >= 10000 "
+        f"(flt2.cpp:644) and the native screenshot shows the slot blank")
+    assert isinstance(_pl_p.head[3], tuple) and len(_pl_p.head[3]) == 2, (
+        "the Beam OCV/DCV slot is not the two-label line it transcribes")
+    #    IN TRANSIT to a visited star: the slot is filled
+    _pl_m = _pl.panel_lines(0, _pl_state(10000 + 1), _pl_parts, _pl_str, None)
+    assert _pl_m.head[4] and "Star 1" in _pl_m.head[4], _pl_m.head[4]
+    #    IN TRANSIT to a star nobody has explored: the NAME must not leak
+    _pl_u = _pl.panel_lines(0, _pl_state(10000 + 1, visited=0x00),
+                            _pl_parts, _pl_str, None)
+    assert _pl_u.head[4] and "Star 1" not in _pl_u.head[4], (
+        f"the destination named an unexplored star ({_pl_u.head[4]!r}); "
+        f"the original prints H 0x9C there (flt2.cpp:661-666)")
+    #    ANTARES — `_NUM_STARS == star_idx`
+    _pl_a = _pl.panel_lines(0, _pl_state(10000 + 3), _pl_parts, _pl_str, None)
+    assert _pl_a.head[4] == _pl_str.message(0x68), _pl_a.head[4]
+    #    and `flat()` drops the blanks and opens the tuple
+    _pl_flat = _pl_p.flat()
+    assert None not in _pl_flat and () not in _pl_flat
+    assert _pl_str.message(0x99) in _pl_flat, (
+        "flat() lost the Beam OCV label out of the two-label slot")
+
+    # 3. THE LINE GRID, MEASURED BY RECORDING WHAT IS DRAWN. Every
+    #    blit `draw_columns` makes, with its x and y, against a real
+    #    screen and a real rect.
+    class _PlRec:
+        def __init__(self):
+            self.at = []
+
+        def blit(self, surf, pos):
+            self.at.append((pos[0], pos[1], surf.get_width()))
+
+    _pl_app, _ = _prev.build_screen(2560, 1440)
+    _pl_app.dispatcher.switch_to("fleets")
+    _pl_scr = _pl_app.dispatcher.screens["fleets"]
+    _pl_rect = _fp.panel_text_rect(_pl_scr)
+    _pl_rec = _PlRec()
+    assert _fp.draw_columns(_pl_rec, _pl_scr, _pl_p, _pl_rect), (
+        "the panel did not fit at 1440p for the ship the native "
+        "screenshot shows")
+    _pl_stops = _fp._stops(_pl_rect)
+    _pl_ys = sorted({y for _x, y, _w in _pl_rec.at})
+    _pl_pitch = _pl_ys[1] - _pl_ys[0]
+    #    the head's four filled slots, then a GAP of two pitches over
+    #    the blank destination slot to the headings
+    _pl_rows = {y: sorted(x for x, yy, _w in _pl_rec.at if yy == y)
+                for y in _pl_ys}
+    _pl_first = _pl_ys[0]
+    for _pl_i in range(4):
+        assert _pl_first + _pl_i * _pl_pitch in _pl_rows, (
+            f"head slot {_pl_i} was not drawn on its own line")
+    _pl_headings = _pl_first + 5 * _pl_pitch
+    assert _pl_headings in _pl_rows, (
+        "the Weapons/Specials headings are not one blank line below "
+        "the head; the destination slot did not hold its place")
+    #    the OCV/DCV line carries two labels, at the two LABEL stops
+    assert _pl_rows[_pl_first + 3 * _pl_pitch] == [
+        _pl_stops["label"], _pl_stops["right_label"]], (
+        f"the Beam OCV/DCV line is at "
+        f"{_pl_rows[_pl_first + 3 * _pl_pitch]}, the stops are "
+        f"{_pl_stops['label']} and {_pl_stops['right_label']}")
+    #    the headings at the LABEL stops, the entries INDENTED
+    assert _pl_rows[_pl_headings] == [_pl_stops["label"],
+                                      _pl_stops["right_label"]]
+    _pl_entries = _pl_rows[_pl_headings + _pl_pitch]
+    assert _pl_entries and _pl_entries[0] == _pl_stops["entry"], (
+        f"the weapon entries start at {_pl_entries[0]} and their stop "
+        f"is {_pl_stops['entry']}")
+    assert _pl_stops["right_entry"] in _pl_entries, (
+        "the special entries are not at their own indented stop")
+    assert _pl_stops["entry"] > _pl_stops["label"]
+    assert _pl_stops["right_entry"] > _pl_stops["right_label"]
+
+    # 4. THE FOUR MARKS THIS ORDER ADDED SAY WHAT THE ORIGINAL DOES.
+    for _pl_mark, _pl_cite in (
+            ("omission_panel_beam_bonuses", "initship.cpp:638-687"),
+            ("deviation_panel_one_font", "flt2.cpp:578"),
+            ("deviation_panel_destination_info", "flt2.cpp:657-662"),
+            ("omission_panel_support_ship_help", "flt2.cpp:548-575")):
+        assert _pl_mark in _pl_layout["marks"], _pl_mark
+        assert _pl_cite in _pl_layout["marks"][_pl_mark], (
+            f"{_pl_mark} no longer cites {_pl_cite}; a marking without "
+            f"the line it describes is a label")
+
+    ok("the Fleets ship panel is laid out as the original lays it "
+       "out: six tab stops re-derived from the native x values, five "
+       "head slots with the destination slot blank for a parked ship, "
+       "the Beam OCV/DCV line holding its place, entries indented "
+       "under both headings, the unexplored destination no longer "
+       "naming the star, and four markings citing what the original "
+       "does instead")
+
     # 3. NOTHING IS DROPPED WITHOUT SAYING SO. The original clips at
     #    its drawing window and says nothing (Set_Window_(15, 282, 320,
     #    465), flt1.cpp:402); HD wraps, shrinks, and when it still does

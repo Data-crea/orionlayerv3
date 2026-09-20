@@ -13,6 +13,63 @@ right and the header had gone stale** — resolved 10 September 2026
 by dating the header to the edit and giving this session its
 paragraph, below, so the two agree again.
 
+This session (20 September 2026, work order 154): **the ship panel
+laid out the way the original lays it out.**
+
+Formatting only. `FLT2::Print_Scanned_Ship_Data_` (flt2.cpp:524-747)
+read line by line AND checked against a native screenshot of the same
+panel (`evidence/work_order_152/panel/001_20_panel_native.png`, the
+ship "Rafale"). Two sources, agreeing on every number.
+
+**THE HEAD IS FIVE SLOTS, NOT FOUR, AND AN EMPTY ONE IS A BLANK
+LINE.** The destination is an `if` that prints or does not, and the
+`y_cursor += FH + 2` after it runs either way (flt2.cpp:643-660). That
+blank IS the empty line Data saw between the head and the
+Weapons/Specials headings — it is the destination slot, empty because
+the ship was parked. A ship in transit fills it and there is no blank
+at all.
+
+**Six tab stops, transcribed as fractions of the 305 px window**
+(`fltpanel.COL_*`): labels at +3, weapon entries at +8, the OCV value
+right-aligned ending at +118, "Beam DCV:" and "Specials:" at +158,
+special entries at +173, the DCV value at +273. The two indents
+DIFFER — 5 native px on the left, 15 on the right — and both are
+transcribed rather than averaged. `SPECIALS_SPLIT` is now defined as
+`COL_RIGHT_ENTRY` instead of being a second copy of the same number.
+
+**Beam OCV / DCV: absent always, and not because of the layout.**
+`INITSHIP::Get_Ship_Combat_Bonuses_` (initship.cpp:638-687) adds the
+HELMSMAN and WEAPONRY skills of `ship->officer_index` to the design's
+own bonus, and those live in the leader record, which
+`core/structs/unverified.py` refuses (decision 23). So no number can
+be computed for a ship with a captain. **The two LABELS are drawn at
+their stops** so the line holds its place and the gap is visible
+rather than silent — the same argument `deviation_panel_overflow`
+makes. The two alternatives and why they lost are in
+`doc/briefs/154-parked-for-data.md`.
+
+**Two faults found while transcribing, both fixed.** HD printed
+"Destination, Vega" for a ship sitting at Vega: the original prints
+that line only for `location >= 10000` (flt2.cpp:644), and work order
+152 item 7 established the line without its condition. And HD named a
+star the player had not explored: the original picks H 0x9C
+"Destination, Unexplored star" unless visited, omniscient, a Galactic
+Lore leader or in contact with a colony there (:657-662), and HD now
+reads the first two through the helpers `colonyrows` and the galaxy
+map already use. It can under-report and cannot over-report, which is
+the safe half.
+
+**Found and not built:** a colony, transport or outpost ship gets a
+centred HELP.LBX paragraph in the original instead of this panel
+entirely (flt2.cpp:548-575). HD shows the data panel, which is more
+than the original rather than less. Marked, parked, buildable.
+
+Four new marks, each citing its lines, each held by the new check;
+`deviation_panel_overflow` corrected, because it still said HD stacks
+the two columns in one, which stopped being true at 152 item 7.
+
+Smoke 238 -> 239.
+
 This session (20 September 2026, work order 153, Part B):
 **hovering a ship shows its readout, and sends nothing.**
 
@@ -1900,7 +1957,7 @@ files under `doc/` and are only summarised here.
 | | |
 |---|---|
 | Python | 32,960 lines across 111 modules — `find . -name '*.py'`, `__pycache__` excluded, the smoke test's 6,400 included. The previous figure here (21,642 across 94) was carried from an unstated method and could not be reproduced |
-| Smoke test | `python tools/smoke_test.py` — **238 checks**, headless |
+| Smoke test | `python tools/smoke_test.py` — **239 checks**, headless |
 | Assets | 170 MB (select_race 68, galaxy_map 51, shared 23, new_game 21, colony_summary 1) |
 | Screens in HD | 9 of ~20–22 (the GAME menu overlay, work order Stop 2, every dialog of the popup; colony summary draws list, sidebar, scan box and galaxy inset, and MOVES POPS — the first HD gesture that drives the game; planets, brief 101, lists, sorts, restricts and returns) |
 | Setup from clone | `python tools/setup.py` (deps via the system package manager) |

@@ -134,7 +134,27 @@ class Panel:
     x 0x17 and the specials at x 0xBC, each with its own cursor from a
     shared `base_y` (flt2.cpp:683-740). One column is not a list under
     the other and never was.
+
+    **`head` IS A FIXED NUMBER OF SLOTS, NOT A LIST OF WHAT THERE IS**
+    — work order 154. The original advances its y cursor by one line
+    per slot whether or not it printed anything in it, so a slot it
+    leaves empty is a BLANK LINE and everything below it stays put.
+    That is not a detail: it is the empty line between the head and
+    the Weapons/Specials headings that Data compared against, and it
+    only exists because a parked ship has no destination to print.
+
+    A slot is one of three things:
+
+      `None`              the original printed nothing there
+      a string            one label at the left tab stop
+      a two-tuple         two labels, at the left and right stops —
+                          the "Beam OCV:" / "Beam DCV:" line
+
+    `HEAD_SLOTS` names them in order.
     """
+
+    #: The five, in the order `Print_Scanned_Ship_Data_` prints them.
+    HEAD_SLOTS = ("name", "crew", "shield", "bonuses", "destination")
 
     __slots__ = ("head", "weapons", "specials",
                  "weapons_heading", "specials_heading")
@@ -148,11 +168,27 @@ class Panel:
         self.specials_heading = specials_heading
 
     def __bool__(self):
-        return bool(self.head or self.weapons or self.specials)
+        # A head of five empty slots is not content. It can happen in a
+        # clone with no extracted names at all, and an empty panel must
+        # read as empty rather than as five blank lines.
+        return bool(any(line for line in self.head)
+                    or self.weapons or self.specials)
 
     def flat(self):
-        """Everything as one column, for a caller that cannot do two."""
-        out = list(self.head)
+        """Everything as one column, for a caller that cannot do two.
+
+        Blank slots are dropped rather than carried: the fallback is a
+        plain list of lines for a renderer that cannot place columns,
+        and a blank there would be a gap with no layout behind it.
+        """
+        out = []
+        for line in self.head:
+            if not line:
+                continue
+            if isinstance(line, tuple):
+                out.extend(part for part in line if part)
+            else:
+                out.append(line)
         for heading, column in ((self.weapons_heading, self.weapons),
                                 (self.specials_heading, self.specials)):
             if heading:
@@ -167,9 +203,15 @@ CREW_MESSAGES = {0: 0x8A, 1: 0x8B, 2: 0x8C, 3: 0x8D}
 #: The headings and the empty-column word, same table
 #: (flt2.cpp:681-682, :719, :740).
 MSG_WEAPONS, MSG_SPECIALS, MSG_NONE = 0x9D, 0x9E, 0x9F
-#: The location line: 0x9B takes the star name, 0x9C is "no
-#: information", 0x68 is the in-transit case (flt2.cpp:645-677).
+#: The DESTINATION line, and it is a destination and not a location:
+#: 0x9B is "Destination, %s", 0x9C "Destination, Unexplored star",
+#: 0x68 "Destination: Antares" (flt2.cpp:645-677, strings read out of
+#: the player's own HESTRNGS).
 MSG_AT_STAR, MSG_UNKNOWN_STAR, MSG_IN_TRANSIT = 0x9B, 0x9C, 0x68
+
+#: The two combat-bonus labels, "Beam OCV:" and "Beam DCV:"
+#: (flt2.cpp:606, :613 / :629).
+MSG_BEAM_OCV, MSG_BEAM_DCV = 0x99, 0x9A
 
 
 def panel_lines(ship_idx, game_state, parts, strings=None, arcs=None):
@@ -205,7 +247,9 @@ def panel_lines(ship_idx, game_state, parts, strings=None, arcs=None):
     def message(index):
         return strings.message(index) if strings is not None else None
 
-    head = [view.name]
+    # FIVE SLOTS, ALWAYS — see `Panel`. An empty one is a blank line
+    # in the original too, and everything below it keeps its place.
+    head = [view.name, None, None, None, None]
 
     # THE CREW LINE. crew_quality @113 and crew_experience @114 are
     # VERIFIED by the header route (orion2.h:2847-2868, the same struct
@@ -215,15 +259,26 @@ def panel_lines(ship_idx, game_state, parts, strings=None, arcs=None):
     # the points predicts and what two unrelated bytes cannot produce.
     word = message(CREW_MESSAGES.get(int(view.crew_quality), -1))
     if word:
-        head.append(f"{word} ({int(view.crew_experience)} EP)")
+        head[1] = f"{word} ({int(view.crew_experience)} EP)"
 
-    shield = parts.name("shields", view.shield_type) if parts else None
-    if shield:
-        head.append(shield)
+    # The original always has a shield name — `_shields[0].name` is
+    # "No Shield" and the native screenshot shows it. HD has one only
+    # when the player has extracted the catalogue; without it the slot
+    # stays blank rather than closing up (decision 22).
+    head[2] = (parts.name("shields", view.shield_type) if parts else None)
 
-    where = _location(view, game_state, strings)
-    if where:
-        head.append(where)
+    # **THE BEAM OCV / DCV LINE, LABELS ONLY — see `layout.json`'s
+    # `omission_panel_beam_bonuses`.** The line is the original's and
+    # is printed for every combat ship; the two NUMBERS are not
+    # reachable (`INITSHIP::Get_Ship_Combat_Bonuses_` walks the leader
+    # records) and are not invented. The labels hold the line so the
+    # gap is on screen instead of silent, which is the same argument
+    # as `deviation_panel_overflow`.
+    ocv, dcv = message(MSG_BEAM_OCV), message(MSG_BEAM_DCV)
+    if ocv or dcv:
+        head[3] = (ocv or "", dcv or "")
+
+    head[4] = _destination(view, game_state, strings)
 
     # "n Name (arc)" per weapon. THE LIST STOPS AT THE FIRST EMPTY SLOT
     # on this screen — `no_weapons` breaks the loop (flt2.cpp:696-701)
@@ -263,29 +318,86 @@ def panel_lines(ship_idx, game_state, parts, strings=None, arcs=None):
                  message(MSG_WEAPONS) or "", message(MSG_SPECIALS) or "")
 
 
-def _location(view, game_state, strings=None):
-    """The location line, in the original's own wording.
+def _destination(view, game_state, strings=None):
+    """The destination line, or None for a blank slot.
 
-    **IT IS THE ORIGINAL'S LINE AND NOT AN HD ADDITION** — work order
-    152 item 7 corrected that. `Print_Scanned_Ship_Data_` prints it at
-    `(0x12, y_cursor + 0x11F)` (flt2.cpp:672) with the string from
-    `H_Message_(0x9B)` formatted with the star's name. What WAS HD's
-    own was the hardcoded English "Location: " label, and it is gone:
-    with no HESTRNGS the star's bare name stands rather than a word
-    this project made up.
+    **IT IS A DESTINATION AND IS PRINTED ONLY WHILE THE SHIP IS ON ITS
+    WAY** — corrected by work order 154, and the correction is the
+    condition rather than the wording. The original's test is
+
+        loc >= SHIP_LOCATION_MOVING_OFFSET
+            && loc <= _NUM_STARS + SHIP_LOCATION_WORMHOLE_OFFSET
+
+    (flt2.cpp:644, the offsets 10000 and 20000 from consts.h:22-24), so
+    a ship PARKED at a star — whose `location` is the bare star index —
+    gets no line at all and the slot stays blank. HD printed
+    "Destination, Vega" for a ship sitting at Vega and going nowhere:
+    work order 152 item 7 established that the line is the original's
+    and did not carry its condition across. The blank is visible in
+    the native screenshot of the same panel
+    (`evidence/work_order_152/panel/001_20_panel_native.png`).
+
+    The three wordings are the original's own (flt2.cpp:661-673):
+
+      * `_NUM_STARS == star_idx` -> H 0x68 "Destination: Antares";
+      * the player has no information -> H 0x9C "Destination,
+        Unexplored star";
+      * otherwise H 0x9B "Destination, %s" with the star's name.
+
+    **AND THE SECOND OF THOSE IS NEW HERE.** HD printed the name
+    whatever the player knew, which shows the name of a star they have
+    not explored. The original's test is
+    `Player_Has_Visited_ || TRAIT_OMNISCIENCE ||
+    One_Leader_With_Galactic_Lore_ || Contact_With_One_Colony_`
+    (:657-662). HD can read the first two — `star.visited` is a
+    bitmask over players and `player.traits` carries the pick — and
+    has neither the leader skills nor the diplomatic contact, so it
+    can be wrong in ONE direction only: it says "Unexplored star"
+    where the original would have named it. Marked in `layout.json`
+    as `deviation_panel_destination_info`; saying too little about a
+    star is the safe half of that trade and showing its name is not.
     """
+    loc = int(view.location)
     stars = getattr(game_state, "stars", None) or []
-    idx = ship_struct.absolute_location(int(view.location))
-    if idx is None or not (0 <= idx < len(stars)):
-        return ""
+    if not (ship_struct.LOCATION_MOVING_OFFSET <= loc
+            <= len(stars) + ship_struct.LOCATION_WORMHOLE_OFFSET):
+        return None
+    idx = ship_struct.absolute_location(loc)
+    if idx == len(stars):
+        return (strings.message(MSG_IN_TRANSIT)
+                if strings is not None else None)
+    if not (0 <= idx < len(stars)):
+        return None
+    if not _player_knows_star(game_state, idx):
+        return (strings.message(MSG_UNKNOWN_STAR)
+                if strings is not None else None)
     name = getattr(stars[idx], "name", "") or ""
     if not name:
-        return ""
+        return None
     if strings is not None:
         template = strings.message(MSG_AT_STAR)
         if template:
             return hestrings.printf(template, name)
     return name
+
+
+def _player_knows_star(game_state, star_idx):
+    """The reachable half of the original's own four-way test.
+
+    `star.visited` is a bitmask over players and is read the way
+    `colonyrows` reads it; `player.has_omniscience` is the racial
+    pick, and its own docstring already says a False there is not
+    "no lore". The two routes HD cannot follow are recorded at
+    `_destination`.
+    """
+    stars = getattr(game_state, "stars", None) or []
+    me = int(getattr(game_state, "player_num", 0) or 0)
+    if star_struct.visited_by(stars[star_idx], me):
+        return True
+    raws = getattr(game_state, "player_raw", None) or []
+    if 0 <= me < len(raws):
+        return player_struct.has_omniscience(player_struct.parse(raws[me]))
+    return False
 
 
 def star_name(game_state, star_idx):

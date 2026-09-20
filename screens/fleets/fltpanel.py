@@ -165,63 +165,145 @@ def panel_block(screen, lines, words=None, rect=None, px=None):
     return keep, size, dropped
 
 
-#: Where the specials column starts, as a fraction of the text area's
-#: width. The original prints the weapons at x 0x17 = 23 and the
-#: specials at x 0xBC = 188 inside a window that starts at x 15 and is
-#: 305 wide (`Set_Window_(15, 282, 320, 465)`, flt1.cpp:402), so the
-#: split is (188 - 15) / 305. A FRACTION and not a pixel count, because
-#: the HD panel is a hole in Data's artwork and not 305 px wide.
-SPECIALS_SPLIT = (0xBC - 15) / 305.0
+#: **THE ORIGINAL'S TAB STOPS**, work order 154. Every value below is
+#: a native x from `Print_Scanned_Ship_Data_` (flt2.cpp:524-747),
+#: taken relative to the drawing window's own left edge and divided by
+#: its width — `Set_Window_(15, 282, 320, 465)` (flt1.cpp:402), so the
+#: origin is 15 and the width 305. Fractions and not pixels, because
+#: the HD hole is not 305 px wide and never will be.
+#:
+#: **MEASURED TWICE.** Each one is a constant in the source AND was
+#: read off a native screenshot of this very panel
+#: (`evidence/work_order_152/panel/001_20_panel_native.png`, the ship
+#: "Rafale"): the name starts at x 18, the weapon entries at 23,
+#: "Beam DCV:" and "Specials:" at 173, the special entries at 188, the
+#: OCV value ends at 133 and the DCV value starts at 288. A smoke
+#: check re-derives the fractions from those same native pixels.
+_WIN_X, _WIN_W = 15, 305.0
+
+#: head lines, and the "Weapons:" heading — `Print_(0x12, …)`
+COL_LABEL = (0x12 - _WIN_X) / _WIN_W
+#: weapon entries, indented under their heading — `Print_(0x17, …)`
+COL_ENTRY = (0x17 - _WIN_X) / _WIN_W
+#: "Beam DCV:" and the "Specials:" heading — `Print_(0xAD, …)`
+COL_RIGHT_LABEL = (0xAD - _WIN_X) / _WIN_W
+#: special entries, indented under their heading — `Print_(0xBC, …)`
+COL_RIGHT_ENTRY = (0xBC - _WIN_X) / _WIN_W
+
+#: THE TWO VALUE STOPS, TRANSCRIBED AND NOT YET DRAWN. The OCV value
+#: is RIGHT-aligned so that it ENDS here (`Print_Right_(0x85, …)`);
+#: the DCV value starts at `w + 0xAD` where `w` is the label's width
+#: floored at 0x73 (flt2.cpp:615-622) — the label is far narrower than
+#: 0x73 in every language this tree has seen, so the floor wins and
+#: the stop is fixed at 0x73 + 0xAD = 288. Both are here because the
+#: order asked for the positions transcribed; neither is used until
+#: the numbers themselves are reachable, and a smoke check holds them
+#: so they cannot rot in the meantime.
+COL_OCV_VALUE_END = (0x85 - _WIN_X) / _WIN_W
+COL_DCV_VALUE = (0x73 + 0xAD - _WIN_X) / _WIN_W
+
+#: Where the specials column starts. The name is kept because it is
+#: what the rest of the tree calls this stop; it IS `COL_RIGHT_ENTRY`
+#: and is not a second copy of the number.
+SPECIALS_SPLIT = COL_RIGHT_ENTRY
+
+
+def _stops(rect):
+    """The five drawing stops in window px, for a text rect."""
+    return {name: rect.x + int(rect.width * frac) for name, frac in (
+        ("label", COL_LABEL), ("entry", COL_ENTRY),
+        ("right_label", COL_RIGHT_LABEL), ("right_entry", COL_RIGHT_ENTRY),
+        ("dcv", COL_DCV_VALUE))}
+
+
+def _head_row(screen, slot, size, colour, stops):
+    """One head slot as `[(surface, x)]` — empty for a blank line."""
+    if not slot:
+        return []
+    if isinstance(slot, tuple):
+        left, right = slot
+        out = []
+        if left:
+            out.append((screen.style.render_text(left, size, colour),
+                        stops["label"]))
+        if right:
+            out.append((screen.style.render_text(right, size, colour),
+                        stops["right_label"]))
+        return out
+    return [(screen.style.render_text(slot, size, colour), stops["label"])]
 
 
 def draw_columns(surface, screen, panel, rect):
-    """The head block, then the two columns, or False if it did not fit.
+    """The head block, the two headings, then the two columns.
 
-    ONE SIZE FOR ALL THREE. The head is full width; the two columns
-    share the rest of the height and start from the same y, which is
-    what `base_y` does in the original (flt2.cpp:683-685). The size is
+    **THE LINE GRID IS THE ORIGINAL'S** (work order 154). The head is
+    five slots and an empty one is a BLANK LINE, because the original
+    advances its cursor by a line per slot whether or not it printed
+    in it (flt2.cpp:596-645) — that is the empty line above
+    Weapons/Specials, and it is there only because a parked ship has
+    no destination. The headings sit at the left and right LABEL
+    stops; the entries are INDENTED under them, to their own stops.
+
+    ONE SIZE FOR ALL OF IT, and one line height. The original uses
+    three font styles — 3 for the name, 2 for the head, 1 for the
+    entries (`Set_Font_Style_`, :578, :580, :688) — and adds 2 px of
+    leading in the head against 1 in the columns. HD has one font at
+    one size, so it draws one pitch throughout; marked in
+    `layout.json` as `deviation_panel_one_font`. The size that wins is
     the largest at which everything fits together, measured by
     rendering (decision 30).
     """
     px = panel_font_px(screen)
     floor = max(1, screen.layout.font_size(PANEL_MIN_FONT))
     colour, dim = col("label"), col("label_dim")
-    split = int(rect.width * SPECIALS_SPLIT)
-    widths = (max(8, split - max(2, split // 20)),
-              max(8, rect.width - split))
+    stops = _stops(rect)
+    # The left column runs from its own stop to where the right
+    # column's HEADING starts, so a long weapon cannot run into
+    # "Specials:"; the right one runs to the edge.
+    widths = (max(8, stops["right_label"] - stops["entry"]),
+              max(8, rect.x + rect.width - stops["right_entry"]))
     for size in range(px, floor - 1, -1):
-        head = [screen.style.render_text(t, size, colour)
-                for t in panel.head]
+        line_h = screen.style.render_text("Wg", size, colour).get_height()
+        head = [_head_row(screen, slot, size, colour, stops)
+                for slot in panel.head]
+        headings = []
+        if panel.weapons_heading:
+            headings.append((screen.style.render_text(
+                panel.weapons_heading, size, dim), stops["label"]))
+        if panel.specials_heading:
+            headings.append((screen.style.render_text(
+                panel.specials_heading, size, dim), stops["right_label"]))
         cols = []
-        for i, (heading, items) in enumerate(
-                ((panel.weapons_heading, panel.weapons),
-                 (panel.specials_heading, panel.specials))):
+        for i, items in enumerate((panel.weapons, panel.specials)):
             block = []
-            if heading:
-                block.append(screen.style.render_text(heading, size, dim))
-            for t in items:
+            for text in items:
                 block.extend(textfit.wrap_rendered(
-                    screen.style, t, size, widths[i], colour))
+                    screen.style, text, size, widths[i], colour))
             cols.append(block)
-        total = (textfit.block_height(head)
-                 + max(textfit.block_height(c) for c in cols))
-        if total > rect.height:
+        rows = len(head) + bool(headings) + max(len(c) for c in cols)
+        if rows * line_h > rect.height:
             continue
-        if head and max(s.get_width() for s in head) > rect.width:
+        if any(s.get_width() + x - rect.x > rect.width
+               for row in head for s, x in row):
             continue
         if any(s.get_width() > widths[i]
                for i, c in enumerate(cols) for s in c):
             continue
         y = rect.y
-        for surf in head:
-            surface.blit(surf, (rect.x, y))
-            y += surf.get_height()
+        for row in head:
+            for surf, x in row:
+                surface.blit(surf, (x, y))
+            y += line_h
+        if headings:
+            for surf, x in headings:
+                surface.blit(surf, (x, y))
+            y += line_h
         for i, block in enumerate(cols):
             cy = y
-            cx = rect.x + (0 if i == 0 else split)
+            cx = stops["entry" if i == 0 else "right_entry"]
             for surf in block:
                 surface.blit(surf, (cx, cy))
-                cy += surf.get_height()
+                cy += line_h
         return True
     return False
 
