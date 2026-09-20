@@ -30,8 +30,16 @@ for any ship that has a captain, and a panel that printed a number for
 some ships and nothing for others would be worse than one that prints
 none.
 
-**What was decided, and the two alternatives it was chosen over.** HD
-draws the two LABELS at the original's own tab stops and no values.
+**ANSWERED, 20 September 2026: drop the line entirely — no empty
+labels on screen.** So HD's head block is four slots where the
+original's is five, the grid is deliberately one line shorter, and the
+gap is recorded in the mark and on the open list rather than shown as
+a label with nothing after it. What follows is what was proposed and
+why Data's answer went the other way; it is kept because the next
+session will face the same choice the moment the numbers arrive.
+
+**What work order 154 did, and the two alternatives it chose over.**
+HD drew the two LABELS at the original's own tab stops and no values.
 
 * *Draw nothing at all and drop the line.* Rejected: everything below
   it would sit a line higher than the original, which is exactly what
@@ -44,8 +52,10 @@ draws the two LABELS at the original's own tab stops and no values.
   says nothing at all — the same argument `deviation_panel_overflow`
   already makes for the "+n more" marker.
 
-**Say so if you would rather have it the other way** and it is a
-two-line change either way.
+**Data did say so**, and it was a two-line change. The labels are gone;
+`Panel.HEAD_SLOTS` is four, `omission_panel_beam_bonuses` says why, and
+`v3_projektstatus.md`'s "What is missing" carries the cost of lifting
+it — the leader record first, then four static tables.
 
 Lifting it properly is a content project: verify `s_leader_data`, and
 transcribe `_crew_data`, `_hull_data[].strat_def_bonus` and
@@ -73,6 +83,10 @@ as `omission_panel_support_ship_help`.
 `tools/help_extract.py` and the ids are the same ones the context help
 uses. It is a second layout mode for this panel and its own piece of
 work; the remit here was the formatting of the data panel.
+
+**ON THE OPEN LIST, 20 September 2026** (Data), as item 4 under "The
+Fleets ship panel" in `v3_projektstatus.md`'s "What is missing" —
+explicitly not part of this order.
 
 ---
 

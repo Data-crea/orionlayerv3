@@ -13,6 +13,34 @@ right and the header had gone stale** — resolved 10 September 2026
 by dating the header to the edit and giving this session its
 paragraph, below, so the two agree again.
 
+This session (20 September 2026, after work order 154): **the Beam
+OCV / DCV line is gone, and two omissions are on the open list.**
+
+Work order 154 drew the two labels with nothing after them so the line
+would hold its place in the grid. **Data's answer: no empty labels on
+the player's screen, drop the line entirely.** So `Panel.HEAD_SLOTS`
+is four where the original's head is five, HD's grid is deliberately
+one line shorter than the original's, and
+`omission_panel_beam_bonuses` records that as a difference rather than
+an oversight.
+
+The reason is kept in three places, which is what makes it findable:
+the mark, `doc/briefs/154-parked-for-data.md` (with the two rejected
+alternatives, because the next session faces the same choice when the
+numbers arrive), and **"What is missing"**, where it is now item 3
+under the Fleets ship panel with the cost of lifting it — the leader
+record verified first, then four static tables. Item 4 is the
+colony / transport / outpost help paragraph (flt2.cpp:548-575), added
+on Data's instruction and explicitly not part of any order yet.
+
+Also fixed on the way: the layout check work order 154 added only
+passed where the extracted names are. The fresh-clone verification
+before the push caught it — the line grid is now measured against a
+panel built out of literals, and the no-catalogue state is asserted
+instead of skipped.
+
+Smoke 239, unchanged.
+
 This session (20 September 2026, work order 154): **the ship panel
 laid out the way the original lays it out.**
 
@@ -6300,6 +6328,66 @@ ship. The check is already written and is two lines: the damaged bits
 must be a subset of the fitted bits, and at least one ship must
 actually carry damage or the run says so instead of passing. Nothing
 else is needed — the offset's header route is already in hand.
+
+### The Fleets ship panel: two more, from work order 154
+
+**20 September 2026.** Both are marked in
+`screens/fleets/layout.json`, both are held by a smoke assertion, and
+both are here for the same reason the two above are.
+
+**3. Beam OCV and Beam DCV are not printed at all.** The original
+prints them between the shield line and the destination line — H 0x99
+at x 0x12 with its value right-aligned ending at 0x85, H 0x9A at
+x 0xAD with its value at 0x73 + 0xAD, one line (flt2.cpp:606-622). HD
+drew the two labels with nothing after them for the length of work
+order 154 and **Data said no to that on 20 September 2026**: no empty
+labels on the player's screen. So the line is gone, HD's head block is
+four slots where the original's is five, and the grid is deliberately
+one line shorter.
+
+*Why the numbers cannot be had.* `INITSHIP::Get_Ship_Combat_Bonuses_`
+(initship.cpp:638-687) is
+
+    Get_Design_Combat_Bonuses_(design)
+      + Helmsman_Bonus_ / Weaponry_Bonus_ of ship->officer_index
+      + MOX::_crew_data[crew_quality].attack / .defense
+      + player.traits[TRAIT_SHIP_ATTACK / TRAIT_SHIP_DEFENSE]
+      + (strategic combat) Best_Warp_Drive_ and
+        _hull_data[size].strat_def_bonus
+      + (trans-dimensional) COMBAT1::_td_combat_speed_bonus * 5
+
+`officer_index` is in HD's ship spec; the two bonuses it feeds read
+`special_skills` and `xp` out of `s_leader_data`, which
+`core/structs/unverified.py` refuses (decision 23). The traits and the
+strategic-combat flag are already decoded.
+
+*What lifting it costs:* `s_leader_data` verified — two sources, the
+way the crew fields were — and then four static tables transcribed
+(`_crew_data`, `_hull_data[].strat_def_bonus`, `_skill_data`, and
+`Get_Design_Combat_Bonuses_` itself). The leader record is the gate;
+the rest is transcription. **A partial answer is worse than none
+here**: a panel that prints a number for a ship with no captain and
+nothing for one with a captain would look like a bug rather than a
+gap.
+
+**4. A colony, transport or outpost ship gets a different panel
+entirely.** `Print_Scanned_Ship_Data_` returns early for `ship_type`
+1, 2 and 4 (flt2.cpp:548-575): it loads a HELP.LBX record — 0x29 for a
+colony ship, 0xBD for a transport, 0x6D for an outpost — sets font
+style 3 in its own colour and prints it with
+`ERIC::Print_Paragraph_Centered_Vertically_(0x12, 0x11A, 0x12B, 0xB7)`.
+A paragraph of prose about what the ship is for, and none of the crew,
+shield, bonus, destination, weapon or special lines at all. HD draws
+the data panel for these three types, which shows MORE than the
+original rather than less.
+
+*What lifting it costs:* a second layout mode for the panel, keyed on
+`ship_type`, and the three help records — which HD already loads,
+through the same `helptext` the right-click help uses, so there is no
+new extractor and no new file. It is a layout, not a value: the work
+is deciding how a centred paragraph behaves in a hole that is not
+305 px wide, and what a clone with no extracted help texts shows
+instead.
 
 ### `font_scale` and `font_size` are two mechanisms — PARKED
 

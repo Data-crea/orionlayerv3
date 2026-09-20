@@ -143,18 +143,24 @@ class Panel:
     the Weapons/Specials headings that Data compared against, and it
     only exists because a parked ship has no destination to print.
 
-    A slot is one of three things:
+    A slot is a string, or `None` where the original printed nothing.
 
-      `None`              the original printed nothing there
-      a string            one label at the left tab stop
-      a two-tuple         two labels, at the left and right stops —
-                          the "Beam OCV:" / "Beam DCV:" line
+    **THE BEAM OCV / DCV LINE IS NOT ONE OF THEM** (Data,
+    20 September 2026). The original prints it between the shield and
+    the destination; HD cannot compute either number and will not put
+    empty labels on the screen, so the line is gone entirely rather
+    than standing there with nothing after its colons. That means
+    HD's grid is one line shorter than the original's, which is a
+    deliberate difference and is marked as
+    `omission_panel_beam_bonuses`. It comes back when the numbers do.
 
     `HEAD_SLOTS` names them in order.
     """
 
-    #: The five, in the order `Print_Scanned_Ship_Data_` prints them.
-    HEAD_SLOTS = ("name", "crew", "shield", "bonuses", "destination")
+    #: The four HD draws, in the order `Print_Scanned_Ship_Data_`
+    #: prints them. The original has a fifth between `shield` and
+    #: `destination`; see the class docstring.
+    HEAD_SLOTS = ("name", "crew", "shield", "destination")
 
     __slots__ = ("head", "weapons", "specials",
                  "weapons_heading", "specials_heading")
@@ -181,14 +187,7 @@ class Panel:
         plain list of lines for a renderer that cannot place columns,
         and a blank there would be a gap with no layout behind it.
         """
-        out = []
-        for line in self.head:
-            if not line:
-                continue
-            if isinstance(line, tuple):
-                out.extend(part for part in line if part)
-            else:
-                out.append(line)
+        out = [line for line in self.head if line]
         for heading, column in ((self.weapons_heading, self.weapons),
                                 (self.specials_heading, self.specials)):
             if heading:
@@ -208,10 +207,6 @@ MSG_WEAPONS, MSG_SPECIALS, MSG_NONE = 0x9D, 0x9E, 0x9F
 #: 0x68 "Destination: Antares" (flt2.cpp:645-677, strings read out of
 #: the player's own HESTRNGS).
 MSG_AT_STAR, MSG_UNKNOWN_STAR, MSG_IN_TRANSIT = 0x9B, 0x9C, 0x68
-
-#: The two combat-bonus labels, "Beam OCV:" and "Beam DCV:"
-#: (flt2.cpp:606, :613 / :629).
-MSG_BEAM_OCV, MSG_BEAM_DCV = 0x99, 0x9A
 
 
 def panel_lines(ship_idx, game_state, parts, strings=None, arcs=None):
@@ -247,9 +242,9 @@ def panel_lines(ship_idx, game_state, parts, strings=None, arcs=None):
     def message(index):
         return strings.message(index) if strings is not None else None
 
-    # FIVE SLOTS, ALWAYS — see `Panel`. An empty one is a blank line
+    # FOUR SLOTS, ALWAYS — see `Panel`. An empty one is a blank line
     # in the original too, and everything below it keeps its place.
-    head = [view.name, None, None, None, None]
+    head = [view.name, None, None, None]
 
     # THE CREW LINE. crew_quality @113 and crew_experience @114 are
     # VERIFIED by the header route (orion2.h:2847-2868, the same struct
@@ -267,18 +262,15 @@ def panel_lines(ship_idx, game_state, parts, strings=None, arcs=None):
     # stays blank rather than closing up (decision 22).
     head[2] = (parts.name("shields", view.shield_type) if parts else None)
 
-    # **THE BEAM OCV / DCV LINE, LABELS ONLY — see `layout.json`'s
-    # `omission_panel_beam_bonuses`.** The line is the original's and
-    # is printed for every combat ship; the two NUMBERS are not
-    # reachable (`INITSHIP::Get_Ship_Combat_Bonuses_` walks the leader
-    # records) and are not invented. The labels hold the line so the
-    # gap is on screen instead of silent, which is the same argument
-    # as `deviation_panel_overflow`.
-    ocv, dcv = message(MSG_BEAM_OCV), message(MSG_BEAM_DCV)
-    if ocv or dcv:
-        head[3] = (ocv or "", dcv or "")
+    # **THE BEAM OCV / DCV LINE IS NOT DRAWN AT ALL** — the original
+    # prints it here and HD does not, because neither number can be
+    # computed (`INITSHIP::Get_Ship_Combat_Bonuses_` walks the leader
+    # records, which `core/structs/unverified.py` refuses) and Data's
+    # answer to drawing the labels with nothing after them was no.
+    # Marked `omission_panel_beam_bonuses`, and on the open list in
+    # `v3_projektstatus.md` with what lifting it needs.
 
-    head[4] = _destination(view, game_state, strings)
+    head[3] = _destination(view, game_state, strings)
 
     # "n Name (arc)" per weapon. THE LIST STOPS AT THE FIRST EMPTY SLOT
     # on this screen — `no_weapons` breaks the loop (flt2.cpp:696-701)

@@ -19257,9 +19257,14 @@ def main():
     assert _fp.COL_RIGHT_ENTRY > _fp.COL_RIGHT_LABEL, (
         "the specials are not indented under their heading")
 
-    # 2. THE HEAD IS FIVE SLOTS AND AN EMPTY ONE IS A BLANK LINE.
+    # 2. THE HEAD IS FOUR SLOTS AND AN EMPTY ONE IS A BLANK LINE.
+    #    The original has a fifth, Beam OCV / Beam DCV, between the
+    #    shield and the destination. HD does not draw it at all —
+    #    neither number is computable and Data refused empty labels on
+    #    20 September 2026 — so the grid is deliberately one line
+    #    shorter and `omission_panel_beam_bonuses` says so.
     assert _pl.Panel.HEAD_SLOTS == (
-        "name", "crew", "shield", "bonuses", "destination")
+        "name", "crew", "shield", "destination")
 
     class _PlShip:
         """One ship's bytes, only what the panel reads."""
@@ -19298,43 +19303,46 @@ def main():
     #    and the SLOTS have to behave the same either way.
     for _pl_have, _pl_s_arg in ((_pl_words, _pl_str), (False, None)):
         _pl_p = _pl.panel_lines(0, _pl_state(0), _pl_parts, _pl_s_arg, None)
-        assert len(_pl_p.head) == 5, _pl_p.head
+        assert len(_pl_p.head) == 4, _pl_p.head
         assert _pl_p.head[0] == "Rafale"
-        assert _pl_p.head[4] is None, (
+        assert not any(isinstance(_h, tuple) for _h in _pl_p.head), (
+            "a head slot is still a two-label line; the Beam OCV/DCV "
+            "line was dropped and nothing else in this panel has two")
+        assert _pl_p.head[3] is None, (
             f"a parked ship got a destination line {_pl_p.head[4]!r}; the "
             f"original prints that line only for location >= 10000 "
             f"(flt2.cpp:644) and the native screenshot shows it blank")
         #  IN TRANSIT to a visited star: the slot is filled
         _pl_m = _pl.panel_lines(0, _pl_state(10000 + 1), _pl_parts,
                                 _pl_s_arg, None)
-        assert _pl_m.head[4], "a ship in transit got no destination line"
-        assert "Star 1" in _pl_m.head[4], _pl_m.head[4]
+        assert _pl_m.head[3], "a ship in transit got no destination line"
+        assert "Star 1" in _pl_m.head[3], _pl_m.head[3]
         #  IN TRANSIT to a star nobody has explored: the NAME must not
         #  leak, with or without the wording to replace it with
         _pl_u = _pl.panel_lines(0, _pl_state(10000 + 1, visited=0x00),
                                 _pl_parts, _pl_s_arg, None)
-        assert not _pl_u.head[4] or "Star 1" not in _pl_u.head[4], (
+        assert not _pl_u.head[3] or "Star 1" not in _pl_u.head[3], (
             f"the destination named an unexplored star "
-            f"({_pl_u.head[4]!r}); the original prints H 0x9C there "
+            f"({_pl_u.head[3]!r}); the original prints H 0x9C there "
             f"(flt2.cpp:661-666)")
         if _pl_have:
-            assert isinstance(_pl_p.head[3], tuple), (
-                "the Beam OCV/DCV slot is not the two-label line it "
-                "transcribes")
-            assert len(_pl_p.head[3]) == 2, _pl_p.head[3]
-            assert _pl_u.head[4] == _pl_str.message(0x9C), _pl_u.head[4]
+            assert _pl_u.head[3] == _pl_str.message(0x9C), _pl_u.head[3]
             _pl_a = _pl.panel_lines(0, _pl_state(10000 + 3), _pl_parts,
                                     _pl_str, None)
-            assert _pl_a.head[4] == _pl_str.message(0x68), _pl_a.head[4]
-            assert _pl_str.message(0x99) in _pl_p.flat(), (
-                "flat() lost the Beam OCV label out of the two-label slot")
+            assert _pl_a.head[3] == _pl_str.message(0x68), _pl_a.head[3]
+            #  and the two labels the line WOULD have used are not on
+            #  screen anywhere, which is the whole of Data's decision
+            for _pl_lbl in (_pl_str.message(0x99), _pl_str.message(0x9A)):
+                assert _pl_lbl not in _pl_p.flat(), (
+                    f"{_pl_lbl!r} is still drawn; the Beam OCV/DCV line "
+                    f"was dropped because a label with nothing after it "
+                    f"is not wanted on the player's screen")
         else:
             #  WITHOUT the catalogues every wording slot is blank and
             #  none of them is invented
-            assert _pl_p.head[3] is None, _pl_p.head[3]
-            assert _pl_u.head[4] is None, (
+            assert _pl_u.head[3] is None, (
                 f"with no HESTRNGS the unexplored destination became "
-                f"{_pl_u.head[4]!r}; it has no wording to use and must "
+                f"{_pl_u.head[3]!r}; it has no wording to use and must "
                 f"say nothing rather than fall back to the name")
         #  and `flat()` never carries a blank
         assert all(_pl_p.flat()), _pl_p.flat()
@@ -19355,8 +19363,7 @@ def main():
             self.at.append((pos[0], pos[1], surf.get_width()))
 
     _pl_lit = _pl.Panel(
-        ["Rafale", "Green Crew (15 EP)", "No Shield",
-         ("Beam OCV:", "Beam DCV:"), None],
+        ["Rafale", "Green Crew (15 EP)", "No Shield", None],
         ["1 Nuclear Missile (360)", "3 Nuclear Bomb (360)"], ["None"],
         "Weapons:", "Specials:")
     _pl_app, _ = _prev.build_screen(2560, 1440)
@@ -19373,24 +19380,22 @@ def main():
     _pl_rows = {y: sorted(x for x, yy, _w in _pl_rec.at if yy == y)
                 for y in _pl_ys}
     _pl_first = _pl_ys[0]
-    #    the head's four filled slots, each on its own line
-    for _pl_i in range(4):
-        assert _pl_first + _pl_i * _pl_pitch in _pl_rows, (
-            f"head slot {_pl_i} was not drawn on its own line")
+    #    the head's three filled slots, each on its own line and each
+    #    at the LEFT stop
+    for _pl_i in range(3):
+        assert _pl_rows.get(_pl_first + _pl_i * _pl_pitch) == [
+            _pl_stops["label"]], (
+            f"head slot {_pl_i} is at "
+            f"{_pl_rows.get(_pl_first + _pl_i * _pl_pitch)}, its stop "
+            f"is {_pl_stops['label']}")
     #    then a GAP of one blank line — the empty destination slot —
     #    before the headings
-    _pl_headings = _pl_first + 5 * _pl_pitch
+    _pl_headings = _pl_first + 4 * _pl_pitch
     assert _pl_headings in _pl_rows, (
         "the Weapons/Specials headings are not one blank line below "
         "the head; the destination slot did not hold its place")
-    assert _pl_first + 4 * _pl_pitch not in _pl_rows, (
+    assert _pl_first + 3 * _pl_pitch not in _pl_rows, (
         "something was drawn in the blank destination slot")
-    #    the OCV/DCV line carries two labels, at the two LABEL stops
-    assert _pl_rows[_pl_first + 3 * _pl_pitch] == [
-        _pl_stops["label"], _pl_stops["right_label"]], (
-        f"the Beam OCV/DCV line is at "
-        f"{_pl_rows[_pl_first + 3 * _pl_pitch]}, the stops are "
-        f"{_pl_stops['label']} and {_pl_stops['right_label']}")
     #    the headings at the LABEL stops, the entries INDENTED
     assert _pl_rows[_pl_headings] == [_pl_stops["label"],
                                       _pl_stops["right_label"]]
@@ -19415,12 +19420,12 @@ def main():
             f"the line it describes is a label")
 
     ok("the Fleets ship panel is laid out as the original lays it "
-       "out: six tab stops re-derived from the native x values, five "
+       "out: six tab stops re-derived from the native x values, four "
        "head slots with the destination slot blank for a parked ship, "
-       "the Beam OCV/DCV line holding its place, entries indented "
-       "under both headings, the unexplored destination no longer "
-       "naming the star with OR without the catalogues, and four "
-       "markings citing what the original does instead")
+       "no Beam OCV/DCV labels anywhere, entries indented under both "
+       "headings, the unexplored destination no longer naming the "
+       "star with OR without the catalogues, and four markings citing "
+       "what the original does instead")
 
     # 3. NOTHING IS DROPPED WITHOUT SAYING SO. The original clips at
     #    its drawing window and says nothing (Set_Window_(15, 282, 320,

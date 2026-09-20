@@ -170,3 +170,36 @@ against a native capture already in the fixtures, taken live in work
 order 152 with its save hashes recorded beside it. No save was opened,
 nothing was written to `~/Master of Orion 2`, and no client was
 attached to port 17362.
+
+---
+
+# After the order — Data's answer on the Beam OCV/DCV line
+
+**20 September 2026, same day: drop the line entirely, no empty labels
+on screen.**
+
+So the head is FOUR slots, not five, and HD's grid is one line shorter
+than the original's. That is a deliberate difference and it is
+recorded in three places rather than one: the mark
+`omission_panel_beam_bonuses`, `154-parked-for-data.md` §1 — which
+keeps the two rejected alternatives, because the next session faces
+the same choice the moment the numbers exist — and
+`v3_projektstatus.md`'s **"What is missing"**, as item 3 under the
+Fleets ship panel, with what lifting it costs.
+
+The colony / transport / outpost help paragraph (flt2.cpp:548-575) is
+item 4 in the same place, on Data's instruction, and is explicitly not
+part of any order yet.
+
+`acceptance_154_1440p.png` in the evidence folder is re-cut against
+the shipped panel, so the comparison shows what the screen actually
+draws: no Beam line, and the blank destination slot still holding its
+place above Weapons/Specials.
+
+**One more fault, found by the fresh-clone check before the push.**
+The layout check this order added asserted on wording that comes out
+of the player's own HESTRNGS and TECHNAME.LBX, so it passed here and
+failed in a clone. The line grid is now measured against a panel built
+out of literals and the no-catalogue state is asserted rather than
+skipped — the same shape as the ship-picture fallback, and for the
+same reason.

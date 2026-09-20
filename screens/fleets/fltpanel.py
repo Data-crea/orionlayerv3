@@ -220,29 +220,26 @@ def _head_row(screen, slot, size, colour, stops):
     """One head slot as `[(surface, x)]` — empty for a blank line."""
     if not slot:
         return []
-    if isinstance(slot, tuple):
-        left, right = slot
-        out = []
-        if left:
-            out.append((screen.style.render_text(left, size, colour),
-                        stops["label"]))
-        if right:
-            out.append((screen.style.render_text(right, size, colour),
-                        stops["right_label"]))
-        return out
     return [(screen.style.render_text(slot, size, colour), stops["label"])]
 
 
 def draw_columns(surface, screen, panel, rect):
     """The head block, the two headings, then the two columns.
 
-    **THE LINE GRID IS THE ORIGINAL'S** (work order 154). The head is
-    five slots and an empty one is a BLANK LINE, because the original
-    advances its cursor by a line per slot whether or not it printed
-    in it (flt2.cpp:596-645) — that is the empty line above
-    Weapons/Specials, and it is there only because a parked ship has
-    no destination. The headings sit at the left and right LABEL
-    stops; the entries are INDENTED under them, to their own stops.
+    **THE LINE GRID IS THE ORIGINAL'S, LESS ONE LINE** (work order 154,
+    and Data's decision of 20 September 2026). The head is four slots and an empty one is a BLANK
+    LINE, because the original advances its cursor by a line per slot
+    whether or not it printed in it (flt2.cpp:596-645) — that is the
+    empty line above Weapons/Specials, and it is there only because a
+    parked ship has no destination. The headings sit at the left and
+    right LABEL stops; the entries are INDENTED under them, to their
+    own stops.
+
+    The line HD does not have is the original's fifth head slot, Beam
+    OCV / Beam DCV: neither number is computable and Data's answer to
+    drawing the labels with nothing after them was no, so the line is
+    not there at all (`omission_panel_beam_bonuses`). Its two value
+    stops stay transcribed below against the day it comes back.
 
     ONE SIZE FOR ALL OF IT, and one line height. The original uses
     three font styles — 3 for the name, 2 for the head, 1 for the
