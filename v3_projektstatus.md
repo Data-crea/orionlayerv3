@@ -13,6 +13,80 @@ right and the header had gone stale** — resolved 10 September 2026
 by dating the header to the edit and giving this session its
 paragraph, below, so the two agree again.
 
+This session (20 September 2026, work order 153, Part A): **the
+Fleets frame at new proportions, from the same source, with every
+corner still a copy.**
+
+Data accepted a new layout because the ship panel could not hold the
+original's readout even after font scaling (152, item 7). In 4K source
+pixels: the map hole gives **195 px of height** to the ship panel
+(1812x1101 -> **1491x906**) and **321 px of width** to the right
+column, so its aspect stays at **1.6458**; the three small boxes and
+the panel follow the map's new width; the right column takes the 321
+back and its cells, buttons and scroll-bar area are rebuilt at their
+new size. The canvas stays 3840x2160 (decision 70) and the outer ring
+is not touched.
+
+**THE METHOD IS 151's 3-SLICE, GENERALISED** —
+`tools/fleets_frame_reshape.py`, called by `fleets_frame_build`
+between the unlit rebuild and the cut. Each axis is a list of
+segments: an ANCHOR is copied pixel for pixel, an ELASTIC run is
+resampled, and every elastic run was chosen against a measured
+flatness profile, never by eye. The left column needs one x profile
+(an elastic run in [500, 1770) lies inside the map, the status strip
+and the panel at once, so all three lose 321 while PREV and NEXT keep
+their size); the right column needs three, cut at rows 1560 and 1778,
+because four cells, three buttons and four buttons divide the same
+width differently.
+
+**"No stretched corners" is a measurement.** `anchor_pairs()` is every
+region the reshape claims to translate; the smoke test compares
+**1 889 951 solid pixels** of it against the unlit source and requires
+them byte-identical. Every corner, chamfer, rivet, bracket and V-notch
+is inside one.
+
+**The galaxy stretch did not move**: 1491/906 = 1.645695 against the
+galaxy's own 1.265 is **1.300945x**, where the hole before this work
+order gave **1.301009x** — 0.005 %. In the BOX, which is what
+`galaxy_inset_stars` actually divides by, it is 1.29734x against
+1.29849x, 0.089 %. Both are inside the 0.13 % that 151 accepted.
+
+**The ship panel now fits the longest realistic entry at every
+resolution.** Four head lines plus the eight-weapon column at the
+struct's own maximum, in the real font with the real names:
+
+| | 1920x1080 | 2560x1440 | 3440x1440 | 3840x2160 |
+|---|---|---|---|---|
+| text box, window px | 694x242 | 925x322 | 925x322 | 1388x484 |
+| lines at the box's own size | 17 | 18 | 18 | 17 |
+| 8 weapons + 4 head | fits at 14 px | fits at 18 px | fits at 18 px | fits at 28 px |
+| specials still fitting beside them | 12 | 13 | 13 | 12 |
+| the same, before this work order | 10 lines, shrunk to 11 px, 0 specials | 11 lines, 15 px, 0 | 11 lines, 15 px, 0 | 10 lines, 23 px, 0 |
+
+**The cells came out 341x221 where they were 261x219**, and that is
+the opening detector catching up rather than the reshape: it grows an
+edge while the next line is 80 % dark, and at the cell's lower bevel
+that fraction depends on how wide the cell is. A column through the
+middle of a cell reads 8.7 at row 445 and 29.0 at 446, so the interior
+always ended there and the old cut was three rows short of it.
+`CONTENT_INSET_SRC` for a cell moves 9 -> 10 with it.
+
+**The six boxes with no hole are a rule now, not a memory.**
+`screens/fleets/fltplaced.py` derives `ship_panel_text`, `icon_area`,
+`button_band`, `status_text`, `inset_hint` and `status_hint` from the
+holes; run against the boxes as they stood at `fb197ac` five come out
+identical and `status_text` one pixel right. `tools/fleets_place_boxes.py
+--write` applies them and a smoke check recomputes them, so the next
+reshape moves them. Before this, a frame change left every one of them
+over the old layout — the fault 151 paid for.
+
+The mockup the order names (`~/Downloads/fleets_mockup_narrow.png`) is
+not on disk; see `doc/briefs/153-parked-for-data.md`. The acceptance
+render is new beside current, at 1440p, in
+`~/orionlayer-fixtures/evidence/work_order_153/`.
+
+Smoke 235 -> 237.
+
 This session (20 September 2026, work order 152, item 8): **ships are
 sent to a star from the Fleets map, and it needed nothing from Joes.**
 
@@ -1775,7 +1849,7 @@ files under `doc/` and are only summarised here.
 | | |
 |---|---|
 | Python | 32,960 lines across 111 modules — `find . -name '*.py'`, `__pycache__` excluded, the smoke test's 6,400 included. The previous figure here (21,642 across 94) was carried from an unstated method and could not be reproduced |
-| Smoke test | `python tools/smoke_test.py` — **235 checks**, headless |
+| Smoke test | `python tools/smoke_test.py` — **237 checks**, headless |
 | Assets | 170 MB (select_race 68, galaxy_map 51, shared 23, new_game 21, colony_summary 1) |
 | Screens in HD | 9 of ~20–22 (the GAME menu overlay, work order Stop 2, every dialog of the popup; colony summary draws list, sidebar, scan box and galaxy inset, and MOVES POPS — the first HD gesture that drives the game; planets, brief 101, lists, sorts, restricts and returns) |
 | Setup from clone | `python tools/setup.py` (deps via the system package manager) |

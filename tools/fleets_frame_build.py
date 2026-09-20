@@ -24,7 +24,14 @@ band either: the button panel's own bevel runs there, and copying it
 would draw a bright strip where nothing stands, so the left margin is
 mirrored from the clean right one.
 
-**2. THE 32 OPENINGS ARE CUT** — and that is what removes the painted
+**2. THE FRAME IS RESHAPED TO DATA'S NEW PROPORTIONS** (work order
+153): the map hole gives 195 px of height to the ship panel and 321 px
+of width to the right column. `tools/fleets_frame_reshape.py` holds
+that step and the measurements behind it — it is the same 3-slice as
+above, written as a piecewise remap of both axes so that every corner,
+chamfer, bracket and V-notch stays an anchor copied pixel for pixel.
+
+**3. THE 32 OPENINGS ARE CUT** — and that is what removes the painted
 content the order lists. The stars in the map and the words on the
 buttons are not retouched away: they are inside a hole. Each cut follows
 the interior's own shape and not its bounding rectangle, because every
@@ -49,6 +56,17 @@ from PIL import Image
 from scipy import ndimage
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, ROOT)
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+
+import fleets_frame_reshape as reshape_step        # noqa: E402
+import frame_holes as holes                        # noqa: E402
+
+#: The canvas, which does not change (decision 70). Named here because
+#: `name_holes` wants it and a literal in two files is decision 5's
+#: exact failure — `screens/fleets/fltgeom.FRAME_SRC_SIZE` is the other
+#: copy and the smoke test holds them to each other.
+FRAME_SIZE = (3840, 2160)
 
 #: Data's source art, tracked (decision 42: the derived artwork ships,
 #: and here the original does too — it is Data's own, not extracted).
@@ -230,14 +248,47 @@ def build(src=SRC):
                          "the source art changed, so every number in "
                          "this module is a measurement of something else")
     im = Image.open(src).convert("RGB")
+    # THE UNLIT REBUILD RUNS ON THE PRISTINE SOURCE, before the
+    # reshape: every constant in `_unlit` is a measurement of the art
+    # as painted, and reshaping first would leave all of them pointing
+    # at something else. The two plates it rebuilds are widened by the
+    # reshape afterwards, by the same 3-slice, so their corners are
+    # anchors in both steps.
     im = _unlit(im)
+    im = reshape_step.reshape(im)
     lum = np.asarray(im).astype(np.float32).mean(axis=2)
     rects = _openings(lum)
     if len(rects) != EXPECTED_HOLES:
         raise SystemExit(f"{len(rects)} openings found, {EXPECTED_HOLES} "
                          "expected (1 minimap + 3 arrow bar + 1 text "
                          "panel + 20 cells + 7 controls)")
+    _check_targets(rects)
     return _cut(im, rects)
+
+
+def _check_targets(rects):
+    """The reshape's own figures, asserted against what was CUT.
+
+    A segment edited by hand in `fleets_frame_reshape` moves a hole,
+    and a hole that has moved moves a box. Data's numbers are the
+    contract, so they are checked here rather than described.
+    """
+    named = holes.name_holes(rects, "fleets", FRAME_SIZE)
+    for name, want in reshape_step.TARGET_HOLES.items():
+        got = tuple(named[name])
+        if got != want:
+            raise SystemExit(f"{name} came out {got}, the reshape targets "
+                             f"{want}")
+    cells = [named[f"cell_{i:02d}"] for i in range(20)]
+    sizes = {(c[2], c[3]) for c in cells}
+    if sizes != {reshape_step.TARGET_CELL_SIZE}:
+        raise SystemExit(f"the cells are {sorted(sizes)}, the reshape "
+                         f"targets {reshape_step.TARGET_CELL_SIZE}")
+    if tuple(sorted({c[0] for c in cells})) != reshape_step.TARGET_CELL_X:
+        raise SystemExit(f"the cell columns are "
+                         f"{sorted({c[0] for c in cells})}")
+    if tuple(sorted({c[1] for c in cells})) != reshape_step.TARGET_CELL_Y:
+        raise SystemExit(f"the cell rows are {sorted({c[1] for c in cells})}")
 
 
 def main():

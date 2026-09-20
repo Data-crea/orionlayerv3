@@ -12154,6 +12154,112 @@ def main():
        "resolutions, no box in a hole drawing its own border, the "
        "chamfer table re-derived from the artwork, and the frame "
        "marked an HD INVENTION")
+
+    # ── WORK ORDER 153: THE RESHAPE, AND WHAT IT PROMISED NOT TO DO ─
+    #
+    # Data accepted a new layout for this screen: the map hole gives
+    # 195 px of height to the ship panel and 321 px of width to the
+    # right column. `tools/fleets_frame_reshape.py` is that step, and
+    # all three of its promises are measurable, so all three are
+    # measured here rather than described.
+    import fleets_frame_reshape as _rs
+
+    # 1. THE SEGMENTS TILE BOTH AXES AND MOVE NEITHER. `_validate`
+    #    raises on a gap, an overlap, an empty segment, a band whose
+    #    lengths do not add up to 3840, or a left column that does not
+    #    give the right one exactly what it took.
+    _rs._validate()
+
+    # 2. WHAT CAME OUT IS WHAT DATA ASKED FOR — the order's own
+    #    figures against the SHIPPED frame's alpha, not against the
+    #    tool that wrote it.
+    for _rs_n, _rs_want in _rs.TARGET_HOLES.items():
+        assert tuple(_fo_named[_rs_n]) == _rs_want, (
+            f"{_rs_n} is {tuple(_fo_named[_rs_n])} in the shipped frame "
+            f"and fleets_frame_reshape targets {_rs_want}")
+    _rs_cells = [_fo_named[f"cell_{_i:02d}"] for _i in range(20)]
+    assert {(_c[2], _c[3]) for _c in _rs_cells} == {_rs.TARGET_CELL_SIZE}, (
+        f"the cells are {sorted({(c[2], c[3]) for c in _rs_cells})}, not "
+        f"one size {_rs.TARGET_CELL_SIZE} — `name_holes_fleets` finds the "
+        f"grid by looking for twenty holes that share a size")
+    assert tuple(sorted({_c[0] for _c in _rs_cells})) == _rs.TARGET_CELL_X
+    assert tuple(sorted({_c[1] for _c in _rs_cells})) == _rs.TARGET_CELL_Y
+    #    and the galaxy is stretched by what it was stretched by
+    #    before, which is the acceptance criterion in Data's own words
+    from screens.colony_summary.colonyrows import (
+        INSET_SCALE_X as _rs_gx, INSET_SCALE_Y as _rs_gy)
+    _rs_gal = _rs_gx / _rs_gy
+    _rs_was = (_rs.SOURCE_MAP_HOLE[0] / _rs.SOURCE_MAP_HOLE[1]) / _rs_gal
+    _rs_now = (_fo_named["inset_map"][2] / _fo_named["inset_map"][3]) \
+        / _rs_gal
+    assert abs(_rs_now - _rs_was) / _rs_was < 0.001, (
+        f"the map hole stretches the galaxy {_rs_now:.5f}x where the hole "
+        f"before work order 153 stretched it {_rs_was:.5f}x; Data's "
+        f"acceptance is that this does not change")
+
+    # 3. NO STRETCHED CORNERS — ANYWHERE, not only in the right
+    #    column. `anchor_pairs` is every region the reshape claims to
+    #    TRANSLATE, and every corner, chamfer, rivet, bracket and
+    #    V-notch of this frame is inside one of them. The comparison
+    #    is against the unlit source, so it goes past the reshape
+    #    rather than through it; solid pixels only, because the cut
+    #    zeroes the RGB under a hole on purpose.
+    import fleets_frame_build as _rsb
+    _rs_src = _fo_np.asarray(_rsb._unlit(
+        _fo_Image.open(_rsb.SRC).convert("RGB")))
+    _rs_out = _fo_np.asarray(_fo_Image.open(_fo_png).convert("RGBA"))
+    _rs_seen = 0
+    for _sx, _sy, _w, _h, _dx, _dy in _rs.anchor_pairs():
+        _a = _rs_src[_sy:_sy + _h, _sx:_sx + _w].astype(int)
+        _b = _rs_out[_sy + _dy:_sy + _dy + _h,
+                     _sx + _dx:_sx + _dx + _w]
+        _solid = _b[:, :, 3] > 200
+        _bad = (_fo_np.abs(_a - _b[:, :, :3].astype(int)).max(axis=2) > 0) \
+            & _solid
+        _rs_seen += int(_solid.sum())
+        assert not _bad.any(), (
+            f"the anchor at {(_sx, _sy, _w, _h)} moved by {(_dx, _dy)} is "
+            f"not a copy: {int(_bad.any(axis=1).sum())} row(s) differ, the "
+            f"first at source y {_sy + int(_fo_np.where(_bad.any(axis=1))[0][0])}"
+            f". Something resampled a region the reshape calls an anchor")
+    assert _rs_seen > 1_500_000, (
+        f"only {_rs_seen} solid pixels were compared; the anchors used to "
+        f"cover 1.89 million and a shrunken set proves less than it says")
+    del _rs_src, _rs_out
+
+    ok("the Fleets reshape (work order 153): the segments tile both "
+       "axes and move neither, every hole came out at Data's figure, "
+       "the twenty cells share one size, the galaxy stretch is "
+       "unchanged, and every anchor — every corner, chamfer and "
+       f"bracket, {_rs_seen} solid pixels — is a copy and not a "
+       "resample")
+
+    # ── THE SIX BOXES WITH NO HOLE FOLLOW THE HOLES ────────────────
+    #
+    # Work order 153. Thirty-two boxes are cutouts and are held to
+    # their holes above. Six are not, and before 153 they were
+    # remembered rectangles: when the frame changed shape every one of
+    # them stayed over the old layout. `screens/fleets/fltplaced.py`
+    # makes each a RULE against a hole; this is the checker that rule
+    # needs, and it is what makes a future reshape move them.
+    from screens.fleets import fltplaced as _fpl
+    for _fpl_res, _fpl_list in _fo_boxes.items():
+        _fpl_by = {b["name"]: b["rect"] for b in _fpl_list if "rect" in b}
+        _fpl_want = _fpl.placed(_fpl_by)
+        for _fpl_n, _fpl_r in _fpl_want.items():
+            assert _fpl_by.get(_fpl_n) == _fpl_r, (
+                f"{_fpl_res}: {_fpl_n} is {_fpl_by.get(_fpl_n)} and its "
+                f"holes make {_fpl_r}. Run `python "
+                f"tools/fleets_place_boxes.py --write`")
+        _fpl_bad = _fpl.contained(_fpl_by, _fpl_want)
+        assert not _fpl_bad, f"{_fpl_res}: " + "; ".join(_fpl_bad)
+        assert set(_fpl.NAMES) & set(_fhB.RULE_NAMES["fleets"]) == set(), (
+            "a placed box took a cutout's name; the editor would lock it")
+
+    ok("the six Fleets boxes with no hole are recomputed from the "
+       "holes at both resolutions, each inside the hole it belongs to "
+       "or holding the ones it is the union of, and none of them a "
+       "cutout name")
     #
     # Work order 137 E3. `thin_border` GROUPS things (decision 34) and
     # is drawn as a 1 px rounded outline — `StyleRenderer.draw_plate`,

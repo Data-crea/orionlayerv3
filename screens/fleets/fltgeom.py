@@ -260,8 +260,12 @@ CONTENT_INSET_SRC = {
     "btn_leaders": 5, "btn_support": 5, "btn_combat": 5,
     "btn_return": 6,
 }
-#: every cell is the same hole, so one number covers all twenty
-CONTENT_INSET_SRC.update({f"cell_{i:02d}": 9 for i in range(20)})
+#: every cell is the same hole, so one number covers all twenty.
+#: 9 until work order 153: the cells are 341 x 221 now against
+#: 261 x 219, and the bounding box grew two rows further past the
+#: corner bracket than it used to (`fleets_frame_reshape`,
+#: TARGET_CELL_SIZE, says why the walk reaches them).
+CONTENT_INSET_SRC.update({f"cell_{i:02d}": 10 for i in range(20)})
 
 #: The frame's own pixel size, which `to_ref` scales from. Not a
 #: layout number — the only thing it is allowed to convert is the
