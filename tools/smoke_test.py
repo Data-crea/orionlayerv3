@@ -92,6 +92,36 @@ def ok(msg):
     print(f"  ok  {msg}")
 
 
+#: WHERE THE STAND-INS LIVE, and the one way a check gets a derived
+#: catalogue. See `tools/make_derived_fixtures.py` and the fundament
+#: under Diagnosis: a check that reads the player's own extracted
+#: files passes on the machine that wrote them, and it has done so
+#: four times. `derived` hands the loader a committed tree instead,
+#: through the loader's OWN code path — the `root=` every one of them
+#: already takes — so a clone measures exactly what this machine
+#: measures and there is no absence to branch on.
+#:
+#: A check that is ABOUT a loader still reads the real thing, and
+#: says so in `_REAL_DERIVED_OK` below.
+DERIVED_ROOT = os.path.join(os.path.dirname(os.path.dirname(
+    os.path.abspath(__file__))), "tools", "fixtures", "derived")
+
+
+def derived(loader, language="en"):
+    """A derived-data loader bound to the committed stand-ins."""
+    got = loader(language, root=DERIVED_ROOT)
+    state = getattr(got, "state", None)
+    if state is None:                      # ArcWords reports differently
+        assert not getattr(got, "absent", ""), (
+            f"{loader.__name__} could not read its stand-in: "
+            f"{got.absent} — run `python tools/make_derived_fixtures.py`")
+    else:
+        assert state == "ok", (
+            f"{loader.__name__} reports {state!r} for its stand-in — "
+            f"run `python tools/make_derived_fixtures.py`")
+    return got
+
+
 def colony_rects():
     """{box name: reference rect} for colony_summary, DERIVED.
 
@@ -15290,6 +15320,90 @@ def main():
         f"from_game() registers a path twice: "
         f"{sorted(_p for _p in _reg_paths if _reg_paths.count(_p) > 1)}")
 
+    # ── THE STAND-INS ARE CURRENT, AND EVERY SITE USES THEM ──────
+    #
+    # Piece 2 of the clone-only fault. The stand-ins are what a check
+    # gets instead of the player's extraction; they are generated
+    # from the loaders' OWN constants and carry the same
+    # `FORMAT_VERSION` the loader refuses on, so a format bump that
+    # forgets them fails here rather than in a clone six commits
+    # later.
+    import importlib.util as _sf_ilu2
+    _sf_spec2 = _sf_ilu2.spec_from_file_location(
+        "_derived_fixtures", os.path.join(_root, "tools",
+                                          "make_derived_fixtures.py"))
+    _sfx = _sf_ilu2.module_from_spec(_sf_spec2)
+    _sf_spec2.loader.exec_module(_sfx)
+
+    #  1. WHAT IS ON DISK IS WHAT THE GENERATOR MAKES — byte for byte,
+    #     which is the same licence decision 40 gives derived artwork.
+    _sfx_stale = []
+    for _sfx_rel, _sfx_doc in sorted(_sfx.files().items()):
+        _sfx_path = os.path.join(_sfx.DERIVED_ROOT, *_sfx_rel.split("/"))
+        _sfx_want = _sjson.dumps(_sfx_doc, indent=2) + "\n"
+        if not os.path.exists(_sfx_path):
+            _sfx_stale.append((_sfx_rel, "missing"))
+        elif io.open(_sfx_path, encoding="utf-8").read() != _sfx_want:
+            _sfx_stale.append((_sfx_rel, "stale"))
+    assert not _sfx_stale, (
+        "the committed stand-ins are out of date: "
+        + "; ".join(f"{_f}: {_w}" for _f, _w in _sfx_stale)
+        + ". Run `python tools/make_derived_fixtures.py`")
+    assert len(_sfx.files()) >= 8, sorted(_sfx.files())
+
+    #  2. AND EACH CARRIES THE FORMAT THE LOADER DEMANDS. The version
+    #     is read off the loader module, so bumping one without
+    #     regenerating is caught at the bump.
+    from core import billtext as _sfx_bt, buildnames as _sfx_bn
+    from core import estrings as _sfx_es, hestrings as _sfx_hs
+    from core import kentext as _sfx_kt, maintext as _sfx_mt
+    from core import shipparts as _sfx_sp, technames as _sfx_tn
+    for _sfx_mod in (_sfx_bt, _sfx_bn, _sfx_es, _sfx_hs, _sfx_kt,
+                     _sfx_mt, _sfx_sp, _sfx_tn):
+        _sfx_file = next(getattr(_sfx_mod, _n)("en")
+                         for _n in ("string_file", "name_file",
+                                    "message_file", "text_file")
+                         if hasattr(_sfx_mod, _n))
+        _sfx_doc = _sjson.load(io.open(os.path.join(
+            _sfx.DERIVED_ROOT, *_sfx_file.split("/")), encoding="utf-8"))
+        assert _sfx_doc.get("format") == _sfx_mod.FORMAT_VERSION, (
+            f"{_sfx_file} carries format {_sfx_doc.get('format')} and "
+            f"{_sfx_mod.__name__}.FORMAT_VERSION is "
+            f"{_sfx_mod.FORMAT_VERSION} — regenerate the stand-ins "
+            f"with the bump, not after it")
+        assert "STAND-IN" in (_sfx_doc.get("_comment") or ""), (
+            f"{_sfx_file} lost the note saying it is not an extraction")
+
+    #  3. AND EVERY ONE OF THEM LOADS through the loader's own path,
+    #     which is the point of keeping the directory layout.
+    for _sfx_loader in (_sfx_bt.BillText, _sfx_bn.BuildingNames,
+                        _sfx_es.EStrings, _sfx_hs.HStrings,
+                        _sfx_kt.ArcWords, _sfx_mt.MainText,
+                        _sfx_sp.ShipPartNames, _sfx_tn.TechNames):
+        derived(_sfx_loader)
+
+    #  4. THE ALLOW-LIST: which checks may still read the PLAYER's
+    #     own extraction, and why. Each of these is ABOUT the
+    #     extraction — it pins a real string so a walk that slipped by
+    #     one index fails — and each is guarded by a `state` test, so
+    #     a clone skips it instead of failing.
+    _REAL_DERIVED_OK = {
+        "BuildingNames": "pins 'Automated Factory' at id 7, which is "
+                         "what catches a TECHNAME walk off by one",
+        "EStrings": "pins three anchors from Option_String_'s switch, "
+                    "which is what catches the 4-byte header slip",
+        "HelpText": "the help-file path check IS about the loader, "
+                    "the extractor and setup.py agreeing",
+    }
+    assert set(_REAL_DERIVED_OK) == {"BuildingNames", "EStrings",
+                                     "HelpText"}, sorted(_REAL_DERIVED_OK)
+
+    ok(f"the derived stand-ins are current byte for byte "
+       f"({len(_sfx.files())} files), each carries the FORMAT_VERSION "
+       f"its loader demands, each loads through the loader's own "
+       f"path, and {len(_REAL_DERIVED_OK)} checks are allowed the "
+       f"player's own extraction with a reason")
+
     ok(f"every extractor is on setup.py's registry or excepted with a "
        f"tracked output ({len(_extractors)} extractors, "
        f"{len(_reg_paths)} registered paths, "
@@ -15790,7 +15904,15 @@ def main():
     #    `Technology_Fields_Name_` (tech.cpp:1086-1099) does not use it:
     #    it returns `_hyper_field_title` out of ESTRINGS. Answering with
     #    the block's string would be a plausible wrong name.
-    _nm_names = _tn.TechNames("en")
+    #    **AGAINST THE STAND-IN, WHICH IS WHAT MAKES THIS AN
+    #    ASSERTION.** With the player's file absent every name is
+    #    None and this passed for the wrong reason; the stand-in
+    #    carries all 83 fields, so "the hyper ones are None" now tests
+    #    `field_name`'s own boundary and nothing else.
+    _nm_names = derived(_tn.TechNames)
+    assert _nm_names.field_name(1), (
+        "the stand-in has no name for field 1, so the None checks "
+        "below would pass vacuously")
     for _nm_f in range(_tn.FIELD_HYPER_FIRST, _tn.TECH_FIELD_COUNT):
         assert _nm_names.field_name(_nm_f) is None, (
             f"field {_nm_f} was named from the TECHNAME block; the "
@@ -19380,9 +19502,12 @@ def main():
     from core.hestrings import HStrings as _PlStrings
     import struct as _pl_s
     import types as _pl_types
-    _pl_parts = _PlParts("en")
-    _pl_str = _PlStrings("en")
-    _pl_words = _pl_str.message(0x99) is not None
+    #    THE STAND-INS, not the player's catalogues: this very block
+    #    is the fourth occurrence of the clone-only fault and the
+    #    reason `derived` exists.
+    _pl_parts = derived(_PlParts)
+    _pl_str = derived(_PlStrings)
+    _pl_words = True
     _pl_layout = _sjson.load(io.open(os.path.join(
         SCREENS_DIR, "fleets", "layout.json"), encoding="utf-8"))
 
@@ -19496,11 +19621,6 @@ def main():
                 f"say nothing rather than fall back to the name")
         #  and `flat()` never carries a blank
         assert all(_pl_p.flat()), _pl_p.flat()
-    if not _pl_words:
-        report("the ship panel's wording checks need the extracted "
-               "names (tools/hestrings_extract.py, techname_extract.py); "
-               "the layout, the slots and the no-catalogue state are "
-               "still checked")
 
     # 3. THE LINE GRID, MEASURED BY RECORDING WHAT IS DRAWN — against
     #    a panel built out of LITERALS, so a clone with no extracted
@@ -19653,17 +19773,26 @@ def main():
     assert _kt.ARC_360 == "360", (
         "0x10's word is a LITERAL in Weapon_Arc_String_, not a table "
         "entry — it must not become an extraction")
-    _kt_words = _kt.ArcWords()
-    if _kt_words.available:
-        for _kt_bit in _kt.ARC_ORDER:
-            assert _kt_words.arc(_kt_bit), (
-                f"arc 0x{_kt_bit:02X} has no word; item 7 ships only "
-                f"when all five come from source")
-        assert _kt_words.arc(0x0F) == _kt_words.arc(0x01), (
-            "ALL_SECTORS did not answer with the FORWARD word; the bits "
-            "are tested in order and the first hit returns")
-    else:
-        assert "kentext_extract" in _kt_words.absent
+    #    BOTH STATES, EVERY TIME. This used to run whichever branch
+    #    the machine happened to be in — present here, absent in a
+    #    clone — so neither was ever exercised on both. The stand-in
+    #    gives the present one and a directory with nothing in it
+    #    gives the other.
+    _kt_words = derived(_kt.ArcWords)
+    for _kt_bit in _kt.ARC_ORDER:
+        assert _kt_words.arc(_kt_bit), (
+            f"arc 0x{_kt_bit:02X} has no word; item 7 ships only "
+            f"when all five come from source")
+    assert _kt_words.arc(0x0F) == _kt_words.arc(0x01), (
+        "ALL_SECTORS did not answer with the FORWARD word; the bits "
+        "are tested in order and the first hit returns")
+    import tempfile as _kt_tf          # `_tf` is core.textfit by here
+    with _kt_tf.TemporaryDirectory() as _kt_empty:
+        _kt_gone = _kt.ArcWords("en", root=_kt_empty)
+        assert not _kt_gone.available
+        assert "kentext_extract" in _kt_gone.absent, _kt_gone.absent
+        assert _kt_gone.arc(0x01) is None, (
+            "with no file an arc answered with a word anyway")
 
     # 2. THE PANEL CARRIES THE ORIGINAL'S OWN SPLIT, and the column
     #    positions are the original's: weapons at 0x17, specials at

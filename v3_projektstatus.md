@@ -13,6 +13,53 @@ right and the header had gone stale** — resolved 10 September 2026
 by dating the header to the edit and giving this session its
 paragraph, below, so the two agree again.
 
+This session (20 September 2026, the clone-only fault, piece 2 of 4):
+**a check gets a stand-in, not the player's catalogue.**
+
+`tools/fixtures/derived/` holds a committed stand-in for each of the
+eight derived catalogues, in the SAME relative layout the loaders
+use, so the suite reaches them through the loader's own `root=` and
+nothing else changes. A stand-in that bypassed the loader would test
+nothing.
+
+**They are generated from the loaders' own constants**
+(`tools/make_derived_fixtures.py`), never copied from an extraction —
+`HSTRINGS_COUNT`, `ESTRINGS_COUNT`, `BUILDING_COUNT`, the
+`shipparts.TABLES` counts, and each module's `FORMAT_VERSION`. That
+is what makes the generator runnable in a clone that has never seen
+MOO2. The values are deliberately not plausible ("Weapon 14", not
+"Nuclear Missile"): a stand-in that reads like real data invites a
+check to pin wording that is the player's and not ours.
+
+**Two checks were vacuous and are not any more**, which is the
+argument for the whole piece:
+
+* `TechNames.field_name` — "the hyper-advanced fields are None"
+  passed in a clone because EVERY field was None with no file. The
+  stand-in carries all 83, so it now tests the loader's own boundary.
+* `ArcWords` — ran whichever branch the machine was in, present here
+  and absent in a clone, so neither was exercised on both. It now
+  runs the stand-in for the words AND an empty directory for the
+  absence, every time.
+
+The 154 ship-panel layout block — the fourth occurrence, and the
+reason this exists — takes its catalogues from `derived()` too.
+
+Held by a new check: the stand-ins are byte-for-byte what the
+generator makes, each carries the `FORMAT_VERSION` its loader
+demands (so a bump that forgets them fails at the bump), each loads
+through the loader's own path, and three checks are allow-listed to
+read the PLAYER's extraction with a reason — `BuildingNames` and
+`EStrings` pin real strings that catch a walk off by one, and the
+help-file check is about the loader itself.
+
+One stand-in detail worth keeping: every HESTRNGS entry carries a
+`%s`, because many of the real ones are format strings (0x9B is
+"Destination, %s") and a placeholder-free stand-in silently drops
+whatever is substituted into it. That cost one red run to find.
+
+Smoke 240 -> 241.
+
 This session (20 September 2026): **two writers were leaving JSON
 without its trailing newline, and now none is.**
 
@@ -2145,7 +2192,7 @@ files under `doc/` and are only summarised here.
 | | |
 |---|---|
 | Python | 32,960 lines across 111 modules — `find . -name '*.py'`, `__pycache__` excluded, the smoke test's 6,400 included. The previous figure here (21,642 across 94) was carried from an unstated method and could not be reproduced |
-| Smoke test | `python tools/smoke_test.py` — **240 checks**, headless |
+| Smoke test | `python tools/smoke_test.py` — **241 checks**, headless |
 | Assets | 170 MB (select_race 68, galaxy_map 51, shared 23, new_game 21, colony_summary 1) |
 | Screens in HD | 9 of ~20–22 (the GAME menu overlay, work order Stop 2, every dialog of the popup; colony summary draws list, sidebar, scan box and galaxy inset, and MOVES POPS — the first HD gesture that drives the game; planets, brief 101, lists, sorts, restricts and returns) |
 | Setup from clone | `python tools/setup.py` (deps via the system package manager) |
