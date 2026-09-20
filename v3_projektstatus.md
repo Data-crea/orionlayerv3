@@ -32,11 +32,12 @@ than being retouched off the art. The source sha256 is verified before
 anything is written, because every constant in that module is a
 measurement of that one image.
 
-**What is NOT in the tree.** `screens/fleets/assets/frame.png` is still
-v4 at 1445x811, and `boxes.json`, `fltgeom.py` and `layout.json` still
-describe it. The swap waits for Data's acceptance; the brief's §7 lists
-the six steps it is. The whole swap was applied in a throwaway clone
-and the suite is 231 green there.
+**ACCEPTED AND SWAPPED IN**, same day, second commit.
+`screens/fleets/assets/frame.png` is now the build at 3840x2160
+(sha256 258eec69…), `boxes.json` carries the 32 derived boxes and the
+six re-seated ones, and `fltgeom.py` and `layout.json` describe the new
+canvas. The v4 frame (1445x811, sha256 4667e86d…) is out of the tree
+and in the history.
 
 **The map answers Stop 1's sharpest finding by itself.** The new
 source's hole is 1812 x 1101, aspect 1.6458, stretching the galaxy's
@@ -45,12 +46,18 @@ own 1.265 by **1.301x** — against v4's 1.3027x and the original's
 0.13 % from what the screen already does, so no code changes and
 nothing is letterboxed.
 
-**Five boxes were stale before this order.** `status_hint` sat 151 px
-ABOVE the band it belongs to and `status_text` 164 px above it;
-`icon_area` did not contain its own cells. They were seated for the v3
-one-opening frame and never re-seated when v4 cut 32 holes. The
-regeneration keeps non-cutout boxes verbatim, which is decision 3
-working correctly and is also how they survived unnoticed.
+**Five boxes were stale before this order, and the swap re-seats all
+five.** `status_hint` sat 151 px ABOVE the band it belongs to and
+`status_text` 164 px above it — neither was inside its own parent;
+`icon_area` did not contain its own twenty cells and `button_band` did
+not contain its own seven buttons; `inset_hint` sat 63 % down the map
+instead of on the bottom strip `fltgeom.hint_rect` documents. All five
+were seated for the v3 one-opening frame and never re-seated when v4
+cut 32 holes. The regenerator keeps non-cutout boxes verbatim, which is
+decision 3 working correctly and is also how they survived unnoticed
+for a frame and a half. After the swap every one of the five is inside
+its parent and `inset_hint` is at 0.895 of the map's height, which is
+the rule's own 163/182.
 
 This session (19 September 2026, work order 142 A): **the Fleets
 screen waits instead of flashing the original.** `Screen_Control_`

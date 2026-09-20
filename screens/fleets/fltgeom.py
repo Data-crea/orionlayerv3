@@ -214,18 +214,21 @@ def hint_collides(stars, region="inset_map"):
 #:                             14, 234), flt1.cpp:1246)
 #:   down arrow  y 325..349  — field at (605, 325) (flt1.cpp:1215) down
 #:                             to the help rectangle's bottom edge
-#: **MEASURED OFF THE v4 FRAME, because the scroll bar is PAINTED and
-#: not a hole** (work order 146). Everything else on this screen gets
-#: its rect from a transparent cutout; this one has none, so the hit
-#: rects and the thumb have to be put on the art by measurement or
-#: they will sit beside it. Source pixels in
-#: `screens/fleets/assets/frame.png` (1445x811):
+#: **MEASURED OFF THE FRAME, because the scroll bar is PAINTED and
+#: not a hole** (work orders 146 and 151). Everything else on this
+#: screen gets its rect from a transparent cutout; this one has none,
+#: so the hit rects and the thumb have to be put on the art by
+#: measurement or they will sit beside it. Source pixels in
+#: `screens/fleets/assets/frame.png` (3840x2160, work order 151):
 #:
-#:   housing      x 1275..1308, the two rails at 1275-1280 and
-#:                1302-1308 with the dark track channel between them
-#:   up arrow     y  76..123    (block, chamfered, triangle at 98..112)
-#:   track        y 124..512    (luma ~22 inside the channel)
-#:   down arrow   y 513..564    (block, triangle at 532..550)
+#:   housing      x 3447..3553, the two rails at 3447-3460 and
+#:                3543-3553 with the dark track channel between them
+#:   up arrow     y  206..306   (block, chamfered, triangle at 236..278)
+#:   track        y  323..1408  (x 3480..3522, the channel itself)
+#:   down arrow   y 1425..1519  (block, triangle at 1453..1494)
+#:
+#: The v4 numbers this replaces were x 1275..1308, up 76..123, track
+#: 124..512, down 513..564 on the 1445x811 canvas.
 #:
 #: "An asset is not a measurement" cuts the other way here: these ARE
 #: measurements OF the asset, because the asset is where the bar is.
@@ -251,25 +254,25 @@ def hint_collides(stars, region="inset_map"):
 #: cited for where they are. Marked here, in `layout.json`'s
 #: `frame._note`, in `v3_projektstatus.md`, and held by a smoke check.
 CONTENT_INSET_SRC = {
-    "inset_map": 14, "ship_panel": 13, "status_band": 6,
-    "prev_fleet": 5, "next_fleet": 5,
-    "btn_all": 7, "btn_relocate": 6, "btn_scrap": 6,
-    "btn_leaders": 6, "btn_support": 6, "btn_combat": 7,
+    "inset_map": 42, "ship_panel": 39, "status_band": 7,
+    "prev_fleet": 14, "next_fleet": 14,
+    "btn_all": 6, "btn_relocate": 7, "btn_scrap": 5,
+    "btn_leaders": 5, "btn_support": 5, "btn_combat": 5,
     "btn_return": 6,
 }
 #: every cell is the same hole, so one number covers all twenty
-CONTENT_INSET_SRC.update({f"cell_{i:02d}": 6 for i in range(20)})
+CONTENT_INSET_SRC.update({f"cell_{i:02d}": 9 for i in range(20)})
 
 #: The frame's own pixel size, which `to_ref` scales from. Not a
 #: layout number — the only thing it is allowed to convert is the
 #: chamfer above.
-FRAME_SRC_SIZE = (1445, 811)
+FRAME_SRC_SIZE = (3840, 2160)
 
-SCROLL_V4_COLUMN = (1275, 76, 34, 489)
+SCROLL_SRC_COLUMN = (3447, 206, 107, 1314)
 SCROLL_PARTS = {
-    "up": (0, 0, 34, 48),
-    "track": (6, 48, 21, 389),
-    "down": (0, 437, 34, 52),
+    "up": (0, 0, 107, 101),
+    "track": (33, 117, 43, 1086),
+    "down": (0, 1219, 107, 95),
 }
 
 #: The grid the big icons sit in — flt1.cpp:506-513, flt2.cpp:116-127,
@@ -399,8 +402,7 @@ def scroll_parts(column_rect):
     # v4: scaled against the COLUMN AS MEASURED ON THE FRAME, not
     # against the native control rect — the bar is painted there and
     # the parts have to land on it.
-    _, _, nw, nh = SCROLL_V4_COLUMN[2], SCROLL_V4_COLUMN[3], 0, 0
-    nw, nh = SCROLL_V4_COLUMN[2], SCROLL_V4_COLUMN[3]
+    nw, nh = SCROLL_SRC_COLUMN[2], SCROLL_SRC_COLUMN[3]
     fx, fy = cw / nw, ch / nh
     return {name: (cx + x * fx, cy + y * fy, w * fx, h * fy)
             for name, (x, y, w, h) in SCROLL_PARTS.items()}

@@ -18683,12 +18683,12 @@ def main():
 
     # 7b. THE SCROLL BAR IS PAINTED, SO ITS BOX MUST LAND ON THE PAINT.
     #     It is the one control with no hole: `scroll_column` is placed
-    #     from `fltgeom.SCROLL_V4_COLUMN`, measured off the artwork, and
+    #     from `fltgeom.SCROLL_SRC_COLUMN`, measured off the artwork, and
     #     this is the checker that measurement needs (decision 36).
     #     Everything inside the housing must be OPAQUE — a hole there
     #     would mean the bar had become a cutout and the measurement
     #     stale.
-    _fl_sx, _fl_sy, _fl_sw, _fl_sh = _flg.SCROLL_V4_COLUMN
+    _fl_sx, _fl_sy, _fl_sw, _fl_sh = _flg.SCROLL_SRC_COLUMN
     _fl_al = _fo_np.array(_fo_Image.open(
         res.screen_file("fleets", "assets", "frame.png")).convert("RGBA"))[:, :, 3]
     assert (_fl_al[_fl_sy:_fl_sy + _fl_sh,
