@@ -85,6 +85,14 @@ FORMAT_VERSION = 1
 #: sprite.
 NATIVE_CELL = 0x39
 
+#: THE WELL, relative to the icon origin, and its size — measured off
+#: FLEET.LBX 0 (work order 152 item 4; the measurement is in `plate`).
+#: The icon origin is NOT the well's origin: two rows of the chrome
+#: around the cell sit above it, and the left and bottom rims sit
+#: outside a square cut at the origin.
+WELL_OFFSET = (-1, 2)
+WELL_SIZE = (58, 56)
+
 #: `ship_type + colour * 50`, `Do_Get_Ship_Picture_Seg` (ken.cpp:466).
 SHIP_STRIDE = 50
 #: consts.h:7. A ship whose owner is not a player is drawn in set 8.
@@ -279,27 +287,59 @@ class FleetArt:
         """FLEET.LBX 0, the whole 640x480 screen (flt1.cpp:1130)."""
         return self._fleet("background")
 
-    def plate(self, native_x, native_y, size=NATIVE_CELL):
-        """One grid cell's plate, cut out of the background.
+    def plate(self, native_x, native_y, size=None):
+        """One grid cell's plate: the WELL, rim to rim, out of the background.
 
         The plate is not an entry of its own: the rails, the panel
         surrounds and the cells are PAINTED INTO FLEET.LBX 0
         (`_fleet_background_seg`, flt1.cpp:1130), so the only way to
         have the original's cell is to cut it out of the original's
-        screen at the coordinates the original puts the cell at
+        screen at the coordinates the original puts it at
         (`FLT2::Get_Fltscrn_Big_Icon_XY_`, via `fltgeom.native_cells`).
-        That is decision 3's cutout rule applied to a background
-        instead of a frame, and it is why nothing here invents a
-        rectangle: the coordinates come from the geometry module that
-        already had to agree with the engine.
+        That is decision 3's cutout rule applied to a background instead
+        of a frame.
+
+        **THE CUT IS THE WELL AND NOT A SQUARE AT THE ICON ORIGIN** —
+        work order 152, item 4. `Get_Fltscrn_Big_Icon_XY_` says where
+        the ICON goes, and the well it goes into is not at that point.
+        Measured down column x0+28 of cell 0 (icon origin 347, 53) on
+        the extracted background:
+
+            y0+0   (72, 72, 80)     chrome, the panel AROUND the cell
+            y0+1   (44, 44, 52)     chrome
+            y0+2   (0, 0, 108)      the well's rim
+            ...
+            y0+57  (0, 0, 108)      the rim's last row
+
+        and across row y0+28:
+
+            x0-1   (0, 0, 108)      the rim
+            x0+0   (4, 0, 56)       already inside
+            ...
+            x0+56  (0, 0, 108)      the rim
+            x0+57  (124, 124, 132)  chrome
+
+        So the well is `(x - 1, y + 2)` **58 x 56**. The 57 x 57 cut at
+        `(x, y)` this replaces took two rows of the surrounding chrome
+        with it and missed the left and bottom rims — and those two rows
+        are the thin grey line along the top of every occupied cell,
+        drawn INSIDE an HD hole that already has its own border from the
+        frame artwork.
+
+        The original's own geometry agrees and is the second source:
+        `_selected_box_seg` is FLEET.LBX 17 at 59 x 58 drawn at
+        `(x - 2, y + 1)` (flt1.cpp:93-103) — this well grown by one
+        pixel on every side, which is what a frame around it looks like.
         """
         source = self.background()
         if source is None:
             return None
-        rect = pygame.Rect(native_x, native_y, size, size)
+        ox, oy = WELL_OFFSET
+        w, h = WELL_SIZE if size is None else (size, size)
+        rect = pygame.Rect(native_x + ox, native_y + oy, w, h)
         if not source.get_rect().contains(rect):
             return None
-        key = ("plate", native_x, native_y, size)
+        key = ("plate", rect.x, rect.y, w, h)
         if key not in self._cache:
             self._cache[key] = source.subsurface(rect).copy()
         return self._cache[key]

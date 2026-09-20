@@ -336,7 +336,14 @@ def cell_art(art, cell, rect):
     if 0 <= cell.slot < len(native):
         plate = art.plate(*native[cell.slot])
         if plate is not None:
-            out.append((fltart.magnified(plate, step), (seat.x, seat.y)))
+            # THE WELL IS OFFSET FROM THE ICON ORIGIN (fltart.WELL_OFFSET,
+            # work order 152 item 4), so the blit carries the same offset
+            # the cut did. The ship's own `cell_offset` is unchanged and
+            # still measured from the SEAT, which is what keeps the ship
+            # where the original puts it while the plate moves under it.
+            ox, oy = fltart.WELL_OFFSET
+            out.append((fltart.magnified(plate, step),
+                        (seat.x + ox * step, seat.y + oy * step)))
     if cell.picture is not None:
         sprite = art.ship(int(cell.picture), cell.sprite_set,
                           owner=cell.ramp)
