@@ -16411,10 +16411,52 @@ def main():
     assert not _json_missing, (
         f"these files are listed as formatting exceptions and are not "
         f"in the tree: {sorted(_json_missing)}")
+    # ── AND EVERY TRACKED .json ENDS WITH EXACTLY ONE NEWLINE ─────
+    #
+    # The tree's convention, and two writers were breaking it:
+    # `core.box.save_boxes` (every F5 save) and
+    # `select_race.save_races`. Seven tracked files carried the
+    # fingerprint — two boxes.json, races.json, traits.json, a
+    # layout.json and two 9slice.json — and each showed up in a diff
+    # as "\ No newline at end of file" beside whatever had really
+    # changed. `tools/frame_holes.py` had already worked round it on
+    # its own side and its comment named `save_boxes` as the culprit;
+    # a comment is not a fix and the next writer would have done it
+    # again. Fixed at both sources, 20 September 2026, and held here
+    # so a third writer cannot reintroduce it.
+    #    TRACKED files only, which is also what makes this clone-safe
+    #    by construction: the extracted catalogues are gitignored, so
+    #    `git ls-files` never names them and their absence cannot fail
+    #    this.
+    import subprocess as _nl_sp
+    _nl_list = _nl_sp.run(["git", "ls-files", "*.json"], cwd=_json_root,
+                          capture_output=True, text=True)
+    assert _nl_list.returncode == 0, _nl_list.stderr
+    _nl_files = [_f for _f in _nl_list.stdout.split("\n") if _f]
+    assert len(_nl_files) >= 30, (
+        f"only {len(_nl_files)} tracked .json found; the newline check "
+        f"would be close to vacuous")
+    _nl_bad = []
+    for _nl_rel in _nl_files:
+        with open(os.path.join(_json_root, _nl_rel), "rb") as _nl_fh:
+            _nl_raw = _nl_fh.read()
+        if not _nl_raw.endswith(b"\n"):
+            _nl_bad.append((_nl_rel, "no trailing newline"))
+        elif _nl_raw.endswith(b"\n\n"):
+            _nl_bad.append((_nl_rel, "more than one trailing newline"))
+    assert not _nl_bad, (
+        "JSON trailing newline: " + "; ".join(
+            f"{_f}: {_w}" for _f, _w in _nl_bad)
+        + ". Every writer ends the file with exactly one; "
+          "core.box.save_boxes and select_race.save_races were the two "
+          "that did not")
+    _json_newline_n = len(_nl_files)
+
     ok(f"JSON files keep their own formatting ({len(_JSON_OTHER)} "
        f"exceptions, exact in both directions; {len(_json_absent)} of "
        f"{len(_JSON_ABSENT_OK)} generated files absent, which a fresh "
-       f"clone may be)")
+       f"clone may be; {_json_newline_n} tracked files end in exactly "
+       f"one newline)")
 
     # ── EVERY FIXTURE A RUN CAN NAME HAS BYTES IT CAN CHECK ─────
     #

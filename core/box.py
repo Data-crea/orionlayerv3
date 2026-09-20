@@ -322,6 +322,15 @@ def save_boxes(screen_dir, boxes, win_w=1920, win_h=1080):
 
     with open(path, "w") as f:
         json.dump(res_dict, f, indent=2)
+        # THE TREE'S JSON CONVENTION ENDS A FILE WITH A NEWLINE, and
+        # this writer dropped it — so every F5 save left boxes.json
+        # one byte short of it and the next hand edit showed up in the
+        # diff as "\ No newline at end of file" beside the real
+        # change. `tools/frame_holes.py` already worked round it on
+        # its own side and its comment named this line. Fixed at the
+        # source, 20 September 2026, and held by a smoke check over
+        # every tracked .json.
+        f.write("\n")
 
 
 def get_stored_resolutions(screen_dir):

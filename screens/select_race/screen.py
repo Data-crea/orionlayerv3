@@ -341,3 +341,4 @@ class SelectRaceScreen(ScreenBase):
         path = os.path.join(self._screen_dir, "races.json")
         with open(path, "w") as f:
             json.dump(self._races, f, indent=2)
+            f.write("\n")      # the tree's JSON convention, as save_boxes

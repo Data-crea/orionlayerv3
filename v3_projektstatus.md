@@ -13,6 +13,33 @@ right and the header had gone stale** — resolved 10 September 2026
 by dating the header to the edit and giving this session its
 paragraph, below, so the two agree again.
 
+This session (20 September 2026): **two writers were leaving JSON
+without its trailing newline, and now none is.**
+
+The tree's convention ends a JSON file with a newline.
+`core.box.save_boxes` — every F5 save — and
+`select_race.save_races` did not, so each save left the file one byte
+short and the next hand edit appeared in the diff beside
+`\ No newline at end of file`. **`tools/frame_holes.py` had already
+worked round it on its own side and its comment named `save_boxes` as
+the culprit**; a comment is not a fix, and the fleets `boxes.json`
+Data saved on 20 September came out without one.
+
+Seven tracked files carried the fingerprint — `custom_race` and
+`select_race` `boxes.json`, `races.json`, `traits.json`,
+`new_game/layout.json` and two `9slice.json`. Both writers fixed at
+the source, all seven normalised, and the JSON formatting check now
+also holds that **every tracked `.json` ends with exactly one**
+newline — no more, so a double newline is a fault too.
+
+It reads the list from `git ls-files`, which makes it clone-safe by
+construction: the extracted catalogues are gitignored, so they are
+never named and their absence cannot fail it. That is the piece-1
+rule applied the first time it was needed.
+
+No new check — the assertion joins the formatting one, which is the
+same concern. Smoke 240, unchanged.
+
 This session (20 September 2026): **the six placed Fleets boxes are
 seeded, not pinned — a check of mine had locked the editor out.**
 
