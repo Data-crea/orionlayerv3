@@ -16651,10 +16651,30 @@ def main():
     assert len(_reg_rel) >= 12, _reg_rel
 
     if os.path.isdir(os.path.join(_json_root, ".git")):
+        # **ASK WITH AND WITHOUT A TRAILING SLASH, and this check
+        # learned why the hard way.** `.gitignore` line 75 is
+        # `screens/galaxy_map/assets/nebula_ref/` — a DIRECTORY rule —
+        # and `git check-ignore` can only tell a bare path is a
+        # directory by looking at the disk. Here the directory exists
+        # and it matched; in a clone, where every one of these files
+        # is absent by definition, it did not, and the first version
+        # of this check went red on `nebula_ref` in the clone while
+        # staying green here.
+        #
+        # That is the fault the four pieces are about, committed
+        # inside the check that enforces the rule against it, and the
+        # fresh-clone run caught it — which is the argument the
+        # fundament entry makes for keeping that run. The
+        # trailing-slash form matches from the `.gitignore` text
+        # alone, so asking both ways is machine-independent.
+        _reg_ask = sorted(set(_reg_rel) | {_r + "/" for _r in _reg_rel})
         _reg_out = _json_sp.run(
             ["git", "-C", _json_root, "check-ignore", "--no-index",
-             *sorted(_reg_rel)], capture_output=True, text=True)
-        _reg_notign = sorted(set(_reg_rel) - set(_reg_out.stdout.split()))
+             *_reg_ask], capture_output=True, text=True)
+        _reg_hit = set(_reg_out.stdout.split())
+        _reg_notign = sorted(_r for _r in set(_reg_rel)
+                             if _r not in _reg_hit
+                             and _r + "/" not in _reg_hit)
         assert not _reg_notign, (
             f"these are registered as derived from the player's own "
             f"installation and git does NOT ignore them: {_reg_notign}. "

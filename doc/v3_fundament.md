@@ -2570,6 +2570,17 @@ cannot be written:
   design. It has caught every occurrence, which is the argument for
   keeping it and not the argument for relying on it.
 
+**AND IT CAUGHT THE CHECK THAT ENFORCES THIS RULE**, four commits
+after the rule was written. `git check-ignore` cannot tell that a
+bare path is a directory without looking at the disk, and the
+registry names one — `nebula_ref`. The ignore rule for it ends in a
+slash, so the query matched here, where the directory exists, and did
+not match in a clone, where by definition it does not. Green on the
+machine that had extracted it, red everywhere else: the exact shape
+described above, written into the checker for it. **Nothing about
+knowing the rule prevents this** — which is the whole point of the
+entry, and the reason the last bullet is not negotiable.
+
 **A skip condition is part of the assertion, and it has to name the
 right thing.** That same check skipped a resolution whose box list
 was *empty*, standing in for "1080p has no panel frames yet". Adding
