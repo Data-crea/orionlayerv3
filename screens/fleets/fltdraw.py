@@ -405,10 +405,15 @@ def draw_cell_mark(surface, screen, rect, colour, width):
 
 
 def _mark_cell(surface, screen, cell, rect, hover):
-    """The selected mark, the hover mark, or neither — in that order.
+    """The selected mark, the scanned mark, or neither — in that order.
 
     SELECTED WINS when a cell is both, because selection is a state the
-    player set and hover is where the mouse happens to be.
+    player set and the scan is where the pointer last was. The
+    original draws both sprites and lets the later one sit on top
+    (`Draw_Box_Around_Scanned_Ship_` at flt1.cpp:89-91, then
+    `_selected_box_seg` at :93-104, so selection is on top there too);
+    HD draws a line and two lines on one edge would read as one thick
+    line of neither colour, so it picks.
     """
     width = max(2, int(round(3 * screen.layout.scale)))
     if cell.selected:
@@ -435,12 +440,18 @@ def draw_cells(surface, screen, cells, art=None):
     slots = icon_slots(screen)
     if not slots:
         return
-    # HOVER IS HD'S OWN, and it has to be: the Extension API has no
-    # MOUSEMOTION (open fixes 3 and 4), so the game's `_scanned_big_ship`
-    # never moves for a client. `screen._hover_cell` is set from HD's
-    # pointer in `handle_motion` and is the honest source for a mark
-    # that follows the mouse.
-    hover = getattr(screen, "_hover_cell", None)
+    # THE MARK AND THE PANEL ARE ONE VALUE, because the original has
+    # one: `Draw_Box_Around_Scanned_Ship_` is drawn for
+    # `_scanned_big_ship` (flt1.cpp:89-91) and the panel is printed for
+    # the same index (:401-406). `screen._scan` is HD's copy of it —
+    # HD's own pointer first, since the Extension API has no
+    # MOUSEMOTION (open fixes 3 and 4) and the game's value never moves
+    # for a client. It answers None when the scanned ship has scrolled
+    # out of the five rows, which is also what the original does: the
+    # box is drawn inside the loop over the VISIBLE icons.
+    _scan = getattr(screen, "_scan", None)
+    _block = getattr(getattr(screen, "_view", None), "block", None)
+    hover = _scan.slot(_block) if (_scan is not None and _block) else None
     for cell in cells:
         if not (0 <= cell.slot < len(slots)):
             continue

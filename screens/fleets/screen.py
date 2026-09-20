@@ -16,14 +16,19 @@ an earlier one.
 full-screen image (FLEET.LBX 0) with its slots, rails and button faces
 painted in; that art is MOO2's and stays out of this tree, so `fltdraw`
 draws all of it. `fltgeom` holds every native rectangle with its source
-line and seats them, as one group under one factor, into the single
-opening of `assets/frame.png` — the frame is the Planets artwork with
-its struts removed (decision 12's variant, work order 134 A).
+line, and the wire side still recognises the game's fields by them.
 
-Decision 3 does not apply here: the frame has ONE hole and nothing
-inside it is a cutout, so `tools/frame_holes.py` has no rule for this
-screen. `tools/fleet_boxes.py` seeded `boxes.json` once and F5 owns it
-from there.
+**THE THREE PARAGRAPHS THAT USED TO STAND HERE WERE OUT OF DATE** and
+are corrected rather than deleted, because a stale sentence about
+where boxes come from is exactly what sends the next session to the
+wrong tool. The frame is NOT the Planets artwork with its struts
+removed (work order 146 replaced that), it does NOT have one hole, and
+`boxes.json` was NOT seeded by `tools/fleet_boxes.py` — that tool is
+superseded and must not be run. Decision 3 DOES apply: the frame cuts
+32 holes, `tools/frame_holes.py` has a `fleets` rule that refuses any
+other shape, and the six boxes with no hole are placed by
+`screens/fleets/fltplaced.py` (work order 153). `layout.json`'s
+`frame._note` is the full account.
 """
 import logging
 
@@ -39,7 +44,8 @@ from screens.colony_summary import colonyrows
 
 from . import fltart
 from . import fltdraw
-from . import fltbox, fltmove, fltpanel, fltgeom, fltrows, fltwire
+from . import fltbox, fltmove, fltpanel, fltgeom, fltrows, fltscan
+from . import fltwire
 
 log = logging.getLogger("fleets")
 
@@ -63,6 +69,10 @@ class FleetsScreen(ScreenBase):
         self._panel = []         # the scanned ship's lines
         self._parts = None       # ship part names (shields, weapons, specials)
         self._hover_cell = None  # slot under the pointer, HD's own hover
+        # HD's own `MOX::_scanned_big_ship`: WHICH ship the panel is
+        # showing and which cell wears the hover mark. One value for
+        # both, because the original has one (work order 153 B).
+        self._scan = fltscan.Scan()
         # The game's own artwork, when the player has extracted it.
         # Never committed and never shipped, so `available` is False in
         # a fresh clone and the cells fall back — `fltart` says why.
@@ -89,6 +99,7 @@ class FleetsScreen(ScreenBase):
         self._arcs = kentext.ArcWords(language)
         self._view, self._cells, self._panel = None, [], []
         self._hover_cell = None
+        self._scan.clear()
         self._load_frame(
             self._data.get("frame", {}).get("image", "frame.png"))
         self.update(game_state)
@@ -127,13 +138,25 @@ class FleetsScreen(ScreenBase):
         self._total_rows = max(0, int(block.get("rows", 0)))
         self._first_row = max(0, int(block.get("first_row", 0)))
         self._cells = fltrows.cells(self._view, game_state)
-        scanned = int(block.get("scanned_big", -1))
-        ships = block.get("ship_idx") or []
-        self._panel = (fltrows.panel_lines(ships[scanned], game_state,
-                                           self._parts, self._strings,
-                                           self._arcs)
-                       if 0 <= scanned < len(ships) else [])
+        self._scan.follow(block)
+        self._panel = self._panel_for(game_state, block)
         self._status = self._status_line(game_state, block)
+
+    def _panel_for(self, game_state, block):
+        """The scanned ship's lines, for whichever ship is scanned.
+
+        `fltscan` decides WHICH — HD's own hover first, then the
+        `scanned_big` on the wire — and this only reads it. Everything
+        it needs is in the snapshot the screen already holds, which is
+        why a hover costs nothing on the wire; `fltscan`'s docstring
+        has the reason that is a requirement and not a nicety.
+        """
+        icon = self._scan.resolve(block)
+        ships = block.get("ship_idx") or []
+        if not (0 <= icon < len(ships)):
+            return []
+        return fltrows.panel_lines(ships[icon], game_state, self._parts,
+                                   self._strings, self._arcs)
 
     def _status_line(self, game_state, block):
         """The line under the inset map.
@@ -509,7 +532,26 @@ class FleetsScreen(ScreenBase):
         self.app.client.select_ship(cell.ship_idx, not cell.selected)
 
     def handle_mouse_motion(self, screen_x, screen_y):
+        """The pointer over a ship shows that ship in the panel.
+
+        TRANSCRIPTION of the hover half of the original's own loop:
+        `Scan_Fltscrn_Big_Icons_` answers result 4 for the field under
+        the pointer and `_scanned_big_ship` takes it (flt1.cpp:616-620,
+        flt2.cpp:938-946). `fltscan` holds the rule, including where
+        the original refuses — a foreign stack and an empty slot.
+
+        **AND IT SENDS NOTHING.** The panel is rebuilt from the
+        snapshot this screen already has. The Extension API has no
+        mouse motion at all (open fixes 3 and 4), so there is nothing
+        to send that would help, and a send per mouse movement would
+        flood the input loop the API does have.
+        """
         self._hover_cell = self._slot_at(screen_x, screen_y)
+        if (self._view is not None and self._view.ok
+                and self._scan.hover(self._hover_cell, self._first_row,
+                                     self._view.own_stack,
+                                     self._view.rows)):
+            self._panel = self._panel_for(self._state, self._view.block)
         return super().handle_mouse_motion(screen_x, screen_y)
 
     def handle_mousewheel(self, direction, screen_x, screen_y):

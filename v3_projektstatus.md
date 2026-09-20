@@ -13,6 +13,57 @@ right and the header had gone stale** — resolved 10 September 2026
 by dating the header to the edit and giving this session its
 paragraph, below, so the two agree again.
 
+This session (20 September 2026, work order 153, Part B):
+**hovering a ship shows its readout, and sends nothing.**
+
+**WHAT THE ORIGINAL DOES, off the source.** The panel is printed for
+`_scanned_big_ship` and for nothing else (flt1.cpp:401-406), and that
+value is the HOVER: `Scan_Fltscrn_Big_Icons_` takes `scan_val.full` —
+the field under the pointer — as `btn_id1` and sets only its FIRST out
+index for it, answering result 4; a click matches `input` and sets
+both (flt2.cpp:902-950). **Selection never feeds the panel**:
+`selected` is a separate flag with its own sprite (:93-104). **With
+neither, the last hovered ship stays** — nothing clears
+`_scanned_big_ship` when the pointer leaves the grid; it goes to -1
+on entry (:528), on the bar being DRAGGED (:449, not on an arrow
+click), after SCRAP (:714) and when the stack pointer moves (:677,
+:757, :765). And it is an ICON INDEX, so a scroll keeps the same ship
+and takes the box off the grid when that ship leaves the five rows.
+
+**HD BUILDS IT LOCALLY AND THAT IS A REQUIREMENT.** Everything
+`panel_lines` needs is in the snapshot the screen already holds —
+`ship_idx` from the FLTS block, `ships_raw` from the same message —
+so no client call is on the path. It has to be: the API has no mouse
+motion to forward (open fixes 3 and 4), and a send per mouse movement
+would flood the one input path it does have. **Nothing was asked of
+Joes**; `doc/orion2re_open_fixes.md` is unchanged.
+
+`screens/fleets/fltscan.py` is HD's copy of `_scanned_big_ship`, with
+the citation for every rule, including the one reset that has no HD
+equivalent — HD's bar has no draggable thumb. **The mark and the panel
+are one value now**: `fltdraw` asked `_hover_cell`, the raw pointer
+slot, and asks `_scan.slot(block)`, which is what the order means by
+the two changing together and what the original does with one variable
+and two draw calls.
+
+Ten assertions under one check, through the real screen on the real
+fixture: the hovered ship is the one in the panel, **nothing is sent**
+(after each of nine hovers and again at the end), the marked cell is
+the panel's cell, selection does not pull it away, the pointer leaving
+changes neither, an empty slot and a foreign stack are refused, a
+scroll keeps the SHIP, the four resets fire, and the wire's own
+`scanned_big` is still the fallback.
+
+Two corrections on the way: `screens/fleets/screen.py`'s docstring
+still said the frame is the Planets art with its struts removed, has
+one hole, and that `tools/fleet_boxes.py` seeded `boxes.json` — all
+untrue since work order 146, and Part A fixed only `layout.json`'s
+copy of the same claim; and `fltwire._rows_from_block` multiplied
+`first_row` by a literal 4 where `fltgeom.GRID_COLUMNS` is the tree's
+copy of `_big_icon_display_columns`.
+
+Smoke 237 -> 238.
+
 This session (20 September 2026, work order 153, Part A): **the
 Fleets frame at new proportions, from the same source, with every
 corner still a copy.**
@@ -1849,7 +1900,7 @@ files under `doc/` and are only summarised here.
 | | |
 |---|---|
 | Python | 32,960 lines across 111 modules — `find . -name '*.py'`, `__pycache__` excluded, the smoke test's 6,400 included. The previous figure here (21,642 across 94) was carried from an unstated method and could not be reproduced |
-| Smoke test | `python tools/smoke_test.py` — **237 checks**, headless |
+| Smoke test | `python tools/smoke_test.py` — **238 checks**, headless |
 | Assets | 170 MB (select_race 68, galaxy_map 51, shared 23, new_game 21, colony_summary 1) |
 | Screens in HD | 9 of ~20–22 (the GAME menu overlay, work order Stop 2, every dialog of the popup; colony summary draws list, sidebar, scan box and galaxy inset, and MOVES POPS — the first HD gesture that drives the game; planets, brief 101, lists, sorts, restricts and returns) |
 | Setup from clone | `python tools/setup.py` (deps via the system package manager) |

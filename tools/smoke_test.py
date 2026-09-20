@@ -18864,6 +18864,144 @@ def main():
        "click and the rest an activation, every box fits the opening "
        "at both resolutions and the inset keeps 305:182")
 
+    # ── HOVER SHOWS THE SHIP, AND SENDS NOTHING ───────────────────
+    #
+    # Work order 153, Part B. In the original the panel is printed for
+    # `_scanned_big_ship` and for nothing else (flt1.cpp:401-406), and
+    # that value is the HOVER: `Scan_Fltscrn_Big_Icons_` sets its FIRST
+    # out parameter from the field under the pointer and answers result
+    # 4 (flt2.cpp:938-946), where a click matches `input` and sets both
+    # (:925-935). Selection never reaches the panel. The Extension API
+    # has no mouse motion, so HD scans with its own pointer —
+    # `screens/fleets/fltscan.py` — and the requirement that costs
+    # nothing on the wire is the one asserted first here.
+    from screens.fleets import fltscan as _hv
+
+    _hv_gs = _fl_snapshot(icons=9, scanned_big=-1, selected=(2,))
+    _hv_gs.fields = _fl_fields(9)
+    _fl_scr.enter(_hv_gs)
+    assert _fl_scr._view.ok, _fl_scr._view.state
+    assert _fl_scr._panel == [] or not _fl_scr._panel, (
+        "the panel is not empty on entry; the original sets "
+        "_scanned_big_ship = -1 there (flt1.cpp:528) and prints nothing")
+
+    def _hv_at(slot):
+        """Move HD's pointer to the middle of a displayed slot."""
+        _r = _fl_scr.icon_slots()[slot]
+        del _fl_sent[:]
+        _fl_scr.handle_mouse_motion(_r.centerx, _r.centery)
+        return _fl_scr._panel
+
+    # 1. IT SHOWS THE HOVERED SHIP, AND THE RIGHT ONE.
+    _hv_p = _hv_at(5)
+    assert getattr(_hv_p, "head", None), (
+        "hovering an occupied cell left the panel empty")
+    assert _hv_p.head[0] == "Ship 5", (
+        f"hovering slot 5 shows {_hv_p.head[0]!r}; the FLTS block's "
+        f"ship_idx[5] is ship 5")
+    assert _fl_scr._scan.icon == 5
+
+    # 2. **NOTHING WAS SENT.** This is the acceptance criterion in
+    #    Data's own words and the reason the panel is built locally:
+    #    the API has no mouse motion to forward, and a send per mouse
+    #    movement would flood the input loop it does have.
+    assert _fl_sent == [], (
+        f"hovering sent {_fl_sent} to the game; hover must never send")
+    for _hv_s in (0, 1, 2, 3, 4, 6, 7, 8):
+        _hv_at(_hv_s)
+        assert _fl_sent == [], f"hovering slot {_hv_s} sent {_fl_sent}"
+
+    # 3. THE MARK AND THE PANEL ARE ONE VALUE. `fltdraw` asks
+    #    `_scan.slot`, so the cell that is marked is the cell whose
+    #    ship is in the panel — which is what the original does with
+    #    one variable and two draw calls.
+    _hv_at(3)
+    assert _fl_scr._scan.slot(_fl_scr._view.block) == 3
+    assert _fl_scr._panel.head[0] == "Ship 3"
+
+    # 4. SELECTION DOES NOT FEED IT. Ship 2 is the selected one in
+    #    this fixture and the panel is on ship 3.
+    assert _fl_scr._view.selected_ships() == [2]
+    assert _fl_scr._panel.head[0] == "Ship 3", (
+        "the panel followed the selection; in the original `selected` "
+        "is a separate flag with its own sprite and never reaches "
+        "Print_Scanned_Ship_Data_")
+
+    # 5. THE POINTER LEAVING THE GRID CHANGES NOTHING. Nothing in the
+    #    original clears `_scanned_big_ship` when the mouse moves off
+    #    the icons, so the last hovered ship stays in the panel.
+    _fl_scr.handle_mouse_motion(5, 5)
+    assert _fl_scr._hover_cell is None
+    assert _fl_scr._scan.icon == 3 and _fl_scr._panel.head[0] == "Ship 3", (
+        "the panel emptied when the pointer left the grid; the "
+        "original keeps the last hovered ship")
+
+    # 6. THE TWO REFUSALS ARE THE ORIGINAL'S. An EMPTY slot has no
+    #    icon to match (the scan loop stops at `_n_fltscrn_big_icons`,
+    #    flt2.cpp:906-909), and a FOREIGN stack is outside the whole
+    #    `if (_PLAYER_NUM == _fltscrn_stack_owner)` (flt1.cpp:615).
+    _hv_at(15)
+    assert _fl_scr._scan.icon == 3, (
+        "hovering an empty slot moved the panel; there is no icon "
+        "there for the original's scan to match")
+    _hv_foreign = _hv.Scan()
+    assert not _hv_foreign.hover(0, 0, False, [(0, 0, False)]), (
+        "a foreign stack's grid set the scan; the original never "
+        "reaches that line for one")
+
+    # 7. IT IS AN ICON INDEX AND NOT A SLOT, so an arrow scroll keeps
+    #    the SAME SHIP in the panel and takes the mark off the grid
+    #    when that ship is no longer one of the twenty on screen —
+    #    both because `_fltscrn_big_icon` is the whole filtered list
+    #    and the box is drawn inside the loop over the visible icons.
+    _hv_scroll = _hv.Scan()
+    _hv_blk = {"stack": 2, "icons": 60, "first_row": 0, "scanned_big": -1}
+    assert _hv_scroll.hover(6, 0, True, [(6, 6, False)])
+    assert _hv_scroll.slot(_hv_blk) == 6
+    _hv_blk2 = dict(_hv_blk, first_row=3)
+    assert _hv_scroll.resolve(_hv_blk2) == 6, "the scanned SHIP moved"
+    assert _hv_scroll.slot(_hv_blk2) is None, (
+        "the mark stayed on the grid after its ship scrolled out of "
+        "the five rows")
+
+    # 8. IT CLEARS WHERE THE ORIGINAL CLEARS — the stack pointer
+    #    moving (flt1.cpp:677, :757, :765) and the list being rebuilt,
+    #    which is SCRAP (:714) and the two filters.
+    for _hv_key, _hv_val in (("stack", 7), ("icons", 4)):
+        _hv_c = _hv.Scan()
+        _hv_c.follow(_hv_blk)
+        assert _hv_c.hover(2, 0, True, [(2, 2, False)])
+        _hv_c.follow(dict(_hv_blk, **{_hv_key: _hv_val}))
+        assert _hv_c.icon == -1, (
+            f"{_hv_key} changed and the scan survived it")
+    #    and on entering the screen (:528)
+    _fl_scr.enter(_hv_gs)
+    assert _fl_scr._scan.icon == -1 and not _fl_scr._panel
+
+    # 9. THE WIRE'S OWN VALUE IS STILL THE FALLBACK. With nothing
+    #    hovered in HD, a `scanned_big` the engine did report is what
+    #    the panel shows — it is the same field, read off the game's
+    #    own cursor.
+    _hv_gs2 = _fl_snapshot(icons=9, scanned_big=4, selected=())
+    _hv_gs2.fields = _fl_fields(9)
+    _fl_scr.enter(_hv_gs2)
+    assert _fl_scr._panel.head[0] == "Ship 4", (
+        "with no HD hover the wire's scanned_big no longer reaches the "
+        "panel")
+    _hv_at(1)
+    assert _fl_scr._panel.head[0] == "Ship 1", (
+        "HD's own pointer did not win over the frozen wire value")
+
+    # 10. AND NOT ONE OF THE TEN MOVES SENT ANYTHING.
+    assert _fl_sent == [], _fl_sent
+
+    ok("the Fleets panel follows the pointer: the hovered ship's "
+       "lines built from the snapshot HD already holds with nothing "
+       "sent, one value behind the panel and the mark, selection kept "
+       "out of it, the two refusals the original makes, an icon index "
+       "that survives a scroll, the four resets, and the wire's own "
+       "scanned_big still the fallback")
+
     # ── A NATIVE BOX IS RECOGNISED, AND THE LIMITATION IS MARKED ───
     #
     # Work order 152, items 1 and 2. `FIELDSAV::Save_Field_Stats_`

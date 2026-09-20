@@ -185,3 +185,167 @@ and touches nothing the engine holds; the renders are made from the
 same fixture snapshot the smoke test drives the screen with. No save
 was opened, nothing was written to `~/Master of Orion 2`, and no
 client was attached to port 17362.
+
+---
+
+# Part B — hover shows the ship's information
+
+## What the original does, read out of the source first
+
+All of it out of `flt1.cpp` and `flt2.cpp`, before anything was
+designed.
+
+**The panel is printed under one condition and one only.**
+
+```
+if (_scanned_big_ship > -1 && _scanned_big_ship < MAX_SHIPS
+        && _current_screen == SCREEN_FLEET) {
+    Set_Window_(15, 282, 320, 465);
+    Print_Scanned_Ship_Data_(_fltscrn_big_icon[_scanned_big_ship].ship_idx);
+}
+```
+— flt1.cpp:401-406.
+
+**`_scanned_big_ship` IS THE HOVER.** flt1.cpp:615-620:
+
+```
+if (_PLAYER_NUM == _fltscrn_stack_owner) {
+    int16_t ret = Scan_Fltscrn_Big_Icons_(scan_val.full, input,
+                                          &hovered_icon_idx, &clicked_icon_idx);
+    if (hovered_icon_idx >= 0) { _scanned_big_ship = hovered_icon_idx; … }
+    if (ret == 1) { … Detailed_View_Ship_(…) }
+}
+```
+
+In the scanner itself (flt2.cpp:902-950) `btn_id1` is `scan_val.full`,
+the field under the POINTER, and `btn_id2` is `input`, the field that
+was CLICKED. A click matches `btn_id2` and sets **both** out indices
+(result 0, or 1 for the right button); a hover matches `btn_id1` and
+sets **only the first**, answering result 4. So a positive first index
+is the hover — which is what work order 151 B measured live, and the
+opposite convention from `Scan_Galaxy_Map_Fields_` on the same screen.
+
+### The three states the order asks about
+
+**Hovered** — the panel shows THAT ship, immediately, and the cell
+also gets `Draw_Box_Around_Scanned_Ship_` (flt1.cpp:89-91).
+
+**Selected** — **nothing.** `_fltscrn_big_icon[i].selected` is a
+separate flag with its own sprite (`_selected_box_seg`, flt1.cpp:93-104)
+and it never reaches `Print_Scanned_Ship_Data_`. A cell can wear both
+marks; selecting twenty ships leaves the panel on whichever one the
+pointer last crossed.
+
+**Neither** — **the last hovered ship stays.** Nothing clears
+`_scanned_big_ship` when the pointer leaves the grid. It goes back to
+-1 in exactly five places: entering the screen (:528), the scroll bar
+being DRAGGED (:449 — *not* an arrow click, which is :731-735 and
+clears nothing), after SCRAP (:714), and when the small-ship stack
+pointer moves (:677 for a click on another stack, :757 and :765 for
+NEXT/PREV). At -1 the block is skipped and the area is empty.
+
+And it is an **icon index, not a slot**: `_fltscrn_big_icon` is the
+whole filtered list and the five rows are a window on it. After an
+arrow scroll the panel still shows the same SHIP, which may no longer
+be on screen — and then no box is drawn either, because
+`Draw_Fltscrn_Big_Ship_Icons_` only walks the visible ones.
+
+## Can HD build it without sending anything? Yes.
+
+Everything `fltrows.panel_lines` reads is already in the snapshot the
+screen holds: `fleet_screen["ship_idx"]` for the icon-to-ship mapping
+and `ships_raw` for the ship itself, plus the three derived name files
+the screen already loaded. **No client call is on that path at all.**
+
+It also must be that way. The Extension API has no mouse motion to
+forward (open fixes 3 and 4 are about INJECT_CLICK, and 4 is still
+open), so there is nothing to send that would help — and a send per
+mouse movement would flood the one input path the API does have.
+**Nothing was asked of Joes for this part**; `doc/orion2re_open_fixes.md`
+is unchanged.
+
+## What was built
+
+`screens/fleets/fltscan.py` (new) is HD's own `_scanned_big_ship` — an
+absolute icon index — with the original's rules and the citation for
+each:
+
+| | |
+|---|---|
+| `hover(slot, first_row, own_stack, rows)` | sets it, refusing a FOREIGN stack (flt1.cpp:615) and an EMPTY slot (flt2.cpp:906-909) |
+| `follow(block)` | clears it where the original clears: the stack pointer moving, and the list being rebuilt (SCRAP, the two filters) |
+| `clear()` | entering the screen (flt1.cpp:528) |
+| `resolve(block)` | HD's hover first, the wire's `scanned_big` as the fallback |
+| `slot(block)` | which displayed cell wears the mark, or None once the ship has scrolled out of the five rows |
+
+**The scroll bar being dragged (:449) has no HD equivalent** and is
+written down as such: HD's bar has no draggable thumb, and its wheel
+and arrows go through the game's own arrow fields, which the original
+does not clear on.
+
+`screen.py` keeps one `Scan`, clears it on `enter`, calls `follow` on
+every snapshot, and rebuilds the panel from it — in `update` and,
+immediately, in `handle_mouse_motion`.
+
+**The mark and the panel are one value.** `fltdraw.draw_cells` asked
+`screen._hover_cell`, the raw pointer slot; it now asks
+`screen._scan.slot(block)`. That is what the order means by the two
+"changing together", and it is also what the original does: one
+variable, two draw calls.
+
+## What is held
+
+Ten assertions under one new check, driven through the real screen on
+the real fixture snapshot:
+
+1. hovering slot 5 puts ship 5 in the panel;
+2. **nothing was sent** — asserted after every one of nine hovers and
+   again at the end;
+3. the marked cell is the cell whose ship is in the panel;
+4. the selected ship (2) does not pull the panel off the hovered one (3);
+5. the pointer leaving the grid changes neither;
+6. an empty slot and a foreign stack are both refused;
+7. an arrow scroll keeps the same SHIP and takes the mark off the grid
+   when it leaves the five rows;
+8. the stack moving and the icon count changing both clear it, and so
+   does entering the screen;
+9. with no HD hover the wire's `scanned_big` still reaches the panel,
+   and HD's own pointer wins over it once there is one.
+
+Smoke 237 -> 238.
+
+## Two corrections made on the way
+
+* **`screens/fleets/screen.py`'s module docstring** said the frame is
+  the Planets artwork with its struts removed, that it has ONE hole,
+  that decision 3 does not apply and that `tools/fleet_boxes.py`
+  seeded `boxes.json`. All four stopped being true in work order 146.
+  Part A corrected the same claim in `layout.json` and missed this
+  copy; it is corrected here, in place, rather than deleted.
+* **`fltwire._rows_from_block` multiplied `first_row` by a literal 4**
+  where `fltgeom.GRID_COLUMNS` is the tree's copy of
+  `_big_icon_display_columns`. `fltscan` needed the same number, and
+  two literals that have to agree is decision 5's failure, so the
+  literal is gone.
+
+## Acceptance
+
+* **Hover shows the ship's panel without any send to the game** —
+  asserted, ten times, in the new check.
+* **The hover mark and the panel change together** — one value behind
+  both.
+* **Smoke test green before the commit** — 237 -> 238.
+
+`~/orionlayer-fixtures/evidence/work_order_153/acceptance_partB_1440p.png`:
+the same pointer position on the same fixture, before (the commit that
+closed Part A) and after. `hover_1440p.png` is the capture the order
+asks for — a hovered ship showing its readout, eight weapons in the
+left column and twelve specials in the right, at 2560x1440.
+
+## Live
+
+**No live run.** Part B adds no wire traffic — that is the point of it
+— so there is nothing a live run could show that the fixture does not,
+and the fixture drives the real screen object through the real parser.
+No save was opened, nothing was written to `~/Master of Orion 2`, and
+no client was attached to port 17362 at any point in this session.

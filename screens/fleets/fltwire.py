@@ -62,6 +62,8 @@ them.
 from core import gamebox
 from core import livefields
 
+from . import fltgeom
+
 #: Ready to draw: the block is there and the field list agrees.
 READY = "READY"
 #: No FLTS block. Three situations with one shape — another screen, an
@@ -454,7 +456,7 @@ class View:
         survive is the field list, and the validation below needs it,
         so under a box the rows are read and NOT validated.
         """
-        first = max(0, int(block.get("first_row", 0))) * 4
+        first = max(0, int(block.get("first_row", 0))) * fltgeom.GRID_COLUMNS
         shown = max(0, int(block.get("icons_added", 0)))
         ships = block.get("ship_idx") or []
         selected = block.get("ship_selected") or []
