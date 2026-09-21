@@ -2831,6 +2831,39 @@ anywhere. Kept: `_black_hole_src.png`, which is the INPUT to
 
 ## What works
 
+### Fleets is done — 21 September 2026, work order 159
+
+**Complete for the 22 November release.** The screen draws the grid,
+the selection, the scroll bar, the seven controls and PREV/NEXT, the
+inset map with its stars and relocation lines, the strip under it, and
+the ship panel in **both** of the original's modes — the data readout
+for a combat ship and, since this order, the HELP.LBX paragraph for a
+colony ship, transport or outpost.
+
+**What "done" means here, stated so nobody has to guess.** It does not
+mean nothing is left: five items stay under "What is missing" and each
+now says **AFTER RELEASE** in its own entry. It means that everything
+left needs something this project does not have yet — a C++ change, a
+field that is not on the wire, ground truth from a save nobody has, or
+extracted artwork — and that none of them is a fault a player would
+read as broken. The screen shows what it can prove and marks what it
+cannot, which is the line this project draws everywhere else.
+
+The five, with why each waits:
+
+| | item | waiting on |
+|---|---|---|
+| 1 | plural weapon names | the extractor's plural field and a `FORMAT_VERSION` bump, which wants to travel with another change to that file |
+| 2 | a damaged special in red | ground truth: a save with a damaged ship. Work order 159 settled the record layout and failed to locate the ship array in a serialised save — see the entry |
+| 3 | Beam OCV and Beam DCV | `s_leader_data`, which decision 23 refuses, and a way to read the number the original prints |
+| 5 | the strip's move preview | `_g_ship_move_info` on the wire — **one piece of work with the galaxy map's own move preview**, and it stays one |
+| 6 | arrow glyphs for PREV/NEXT | the two sprites extracted; the words are decision 15's answer meanwhile, not a stopgap |
+
+**The one thing 159 could not finish is in item 2 and is written up
+there in full**, including what it DID establish — the serialised ship
+record is the packed struct, 129 bytes, damage flags at @118 — so the
+next attempt starts from that rather than from nothing.
+
 ### Fleets: a colony ship, transport or outpost gets the original's paragraph — work order 159, 21 September 2026
 
 `Print_Scanned_Ship_Data_` **returns before it prints a single data
@@ -6754,6 +6787,9 @@ so it wants to travel with another change to that file rather than go
 alone. `fltrows.panel_lines` already asks for the table and falls back
 when it is not there, so nothing else moves.
 
+**AFTER RELEASE.** Fleets is complete for the 22 November release (see "Fleets is done" under What works); this item is not a gap in it.
+
+
 **2. A damaged special is not shown in red.** The original colours it
 with `FLT2::_red_colors` when its bit is set in
 `special_device_damage_flags` (flt2.cpp:724-731). That field is at @118
@@ -6767,8 +6803,34 @@ out until there is a second source.
 *What lifting it costs:* one live reading on a save with a damaged
 ship. The check is already written and is two lines: the damaged bits
 must be a subset of the fitted bits, and at least one ship must
-actually carry damage or the run says so instead of passing. Nothing
-else is needed — the offset's header route is already in hand.
+actually carry damage or the run says so instead of passing.
+
+**WORK ORDER 159 TRIED THE FILES AND COULD NOT GET THE COUNTS.** It
+settled one half and failed the other, and both are worth having.
+SETTLED: the serialised ship record IS the packed struct — `Read_Ship_`
+and `Read_Ship_Design_` (savegame.cpp) read the declaration order with
+no padding, so a record is 129 bytes with
+`special_device_damage_flags[5]` at **@118**, which is what this entry
+already said. FAILED: a save is a SERIAL stream
+(`Read_Game_State_`, savegame.cpp:1419) — settings, a variable number
+of colonies, planets and stars, leaders, players, then `_NUM_SHIPS`
+and the array — so the ships have no fixed file offset, and 159's
+scanner could not locate the array reliably. It was cross-checked
+against work order 154's own officer count over the same ten saves (4
+of 185) and reproduced neither number, "finding" damaged ships with
+one-character names and no fitted devices. **The counts are therefore
+not reported**, because a number that is not measuring what it names
+is worse than the check 154 said proved nothing.
+
+*What would settle it, cheapest first:* one save where Data knows a
+ship has special damage, and which one; or a reader that walks
+`Read_Game_State_` as far as the ship array, which is a tool and a
+decision rather than cleanup; or the live reading above. Filed with
+the scanner at
+`~/orionlayer-fixtures/evidence/work_order_159/part3/`.
+
+**AFTER RELEASE.** Fleets is complete for the 22 November release (see "Fleets is done" under What works); this item is not a gap in it.
+
 
 ### The Fleets ship panel: two more, from work order 154
 
@@ -6842,6 +6904,9 @@ transcription. **A partial answer is worse than none here**: a panel
 that prints a number for a ship with no captain and nothing for one
 with a captain would look like a bug rather than a gap.
 
+**AFTER RELEASE.** Fleets is complete for the 22 November release (see "Fleets is done" under What works); this item is not a gap in it.
+
+
 **4. A colony, transport or outpost ship gets a different panel
 entirely — BUILT, 21 September 2026, work order 159.** Moved to "What
 works" below; this entry is kept as the record of what it was, because
@@ -6869,8 +6934,13 @@ any order.
 *What lifting it costs:* `SHIPMOVE::Ships_Try_To_Move_To_` transcribed
 and `_g_ship_move_info` on the wire — the same field work order 144
 put to the C++ side, and the same one the galaxy map's own move
-preview needs. It is one piece of work for both screens, which is the
-argument for doing it once and deliberately rather than per screen.
+preview needs. **It is one piece of work for both screens**, which is
+the argument for doing it once and deliberately rather than per
+screen — and that note is the reason this one does not simply move to
+the Fleets list and get forgotten there.
+
+**AFTER RELEASE.** Fleets is complete for the 22 November release (see "Fleets is done" under What works); this item is not a gap in it.
+
 
 **6. PREV and NEXT wear words where the original draws arrows.** The
 original's two buttons beside the strip are FLEET.LBX arrow glyphs
@@ -6891,6 +6961,9 @@ the artwork replaces them only if it looks better.
 A rule holds both halves now: every name in `fltwire.HOTKEYS` that is
 also a cutout must be in `fltdraw.CONTROL_WORDS` with a non-empty
 word, so a clickable control cannot go unmarked again.
+
+**AFTER RELEASE.** Fleets is complete for the 22 November release (see "Fleets is done" under What works); this item is not a gap in it.
+
 
 ### `font_scale` and `font_size` are two mechanisms — PARKED
 

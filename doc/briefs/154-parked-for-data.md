@@ -64,7 +64,21 @@ here.
 
 ---
 
-## 2. A colony, transport or outpost ship has a different panel entirely
+## 2. A colony, transport or outpost ship has a different panel entirely — **BUILT**
+
+**Done in work order 159 part 1, 21 September 2026, commit `8b679c2`.**
+The panel has a second mode keyed on `ship_type`, the text comes
+through the same `helptext` the right-click help uses, and all three
+records fit their hole at every resolution (measured: colony 3 lines,
+outpost and transport 4). The colour is the one thing NOT
+transcribed — the original's is a ramp over MOO2 palette indices
+111..116 and pinning it needs the player's palette plus a native
+screenshot — so it is marked `deviation_panel_paragraph_colour` and
+parked in `doc/briefs/159-parked-for-data.md`.
+
+The entry as it was found follows, unchanged.
+
+---
 
 Found while transcribing, not asked for, and NOT built.
 
