@@ -104,3 +104,39 @@ did not also become a documentation correction.
 design decision, not a repair, so it went to
 `157-parked-for-data.md` with both options. The check no longer
 depends on them agreeing either way.
+
+---
+
+## Part 3 — D17 — **PARKED**, no code
+
+**Which way and why.** The order's rule: behaviour-neutral removal or
+correction gets done here; anything that adds behaviour, adds a check
+with a design choice in it, or closes an option gets parked. D17 hits
+all three tests, and one of them is new since the audit.
+
+**It is four construction sites now, not three** —
+`galaxy_map/boxdraw`, `game_menu/screen`, `planets/planetwords`, and
+**`screens/fleets/screen.py`**, which 157 may not touch because work
+order 151's line is active there. Consolidating the other three would
+leave the duplication standing while reporting it removed, which is
+worse than leaving it alone.
+
+**The three lifetimes are the substance.** Screen-cached, app-cached,
+and fresh per Planets `enter`. Choosing one home decides when the
+table is re-read and when it is dropped — memory and invalidation, not
+tidiness.
+
+**And unifying the language lookup would change behaviour.**
+`colonybuild` uses `screen.app.settings.get(...)`, which raises where
+the other sites' `(getattr(app, "settings", {}) or {})` defaults.
+Today a missing `settings` crashes there; making them agree decides
+whether it still does.
+
+**One thing checked and found NOT wrong:** `core/screenhelp.py`'s
+"exactly one construction site" is about `HelpText`, which genuinely
+has one. The audit's phrasing invites reading it as a claim about
+`HStrings`; it is not, so unlike 156's `FRAME_TITLE` and part 2's
+`_k_ship_protocol`, there was no false claim to correct here.
+
+Parked in `157-parked-for-data.md` with the two-sentence German
+summary the order asks for, plus what Data has to decide first.

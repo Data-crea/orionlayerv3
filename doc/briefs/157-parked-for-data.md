@@ -39,18 +39,48 @@ now fixed; what is left is taste.
 
 ---
 
-## 2. D17 — three `HStrings` construction sites (part 3)
+## 2. D17 — `HStrings` construction sites — **PARKED** (part 3)
 
-See part 3 in `157-progress.md` for which way it went and why.
+**Auf Deutsch, für die Entscheidung:** `HStrings` wird an vier Stellen
+gebaut statt an einer, mit drei verschiedenen Lebensdauern, sodass
+Galaxienkarte, Spielmenü, Planeten und Flotten die Datei HESTRNGS
+mehrfach in getrennte Objekte einlesen. Zusammenlegen ist keine reine
+Entfernung, sondern eine Entscheidung darüber, **wem** die eine
+Instanz gehört und wann sie geleert wird — und eine der vier Stellen
+liegt in `screens/fleets/`, das dieser Auftrag nicht anfassen darf.
 
-**Auf Deutsch, für die Entscheidung:** `HStrings` wird an drei Stellen
-gebaut statt an einer, und `screenhelp.py` verlangt im eigenen Text
-„genau eine Konstruktionsstelle" — Galaxienkarte und Spielmenü lesen
-die Datei HESTRNGS deshalb zweimal in zwei getrennte Objekte. Das
-zusammenzulegen ist keine reine Entfernung: es legt fest, **wem** die
-eine Instanz gehört und wann sie geleert wird, und eine der drei
-Stellen (`colonybuild`) stürzt heute ab, wenn `settings` fehlt — das
-zu ändern wäre eine Verhaltensänderung und keine Aufräumarbeit.
+**Why it was parked, in detail — and one reason the audit could not
+have known.**
+
+1. **It is not three sites any more, it is four**, and the fourth is
+   out of bounds. `screens/fleets/screen.py` builds its own
+   `HStrings` per screen; work order 151's line is active there and
+   157 may not touch it. Consolidating the other three would leave the
+   duplication standing while reporting it removed — which is worse
+   than leaving it, because the next reader would believe the claim.
+2. **The three lifetimes are the substance, not an accident.**
+   `galaxy_map/boxdraw` caches on the SCREEN, `game_menu/screen`
+   caches on the APP, and `planets/planetwords` builds a fresh one on
+   every Planets `enter`. Picking one home decides when the table is
+   re-read and when it is dropped — a memory and invalidation
+   question, not a tidy-up.
+3. **One site would change behaviour if unified.**
+   `colonybuild` reads `screen.app.settings.get("language", "en")`,
+   which raises `AttributeError` where `boxdraw` and `game_menu` use
+   the tolerant `(getattr(app, "settings", {}) or {})`. Making them
+   agree means choosing whether a missing `settings` crashes or
+   defaults — and today it crashes, so "fixing" it is a behaviour
+   change.
+
+**What is NOT wrong.** `core/screenhelp.py`'s "exactly one
+construction site" is about `HelpText`, and `HelpText` genuinely has
+one. The audit's phrasing invited reading it as a claim about
+`HStrings`; it is not, so nothing needed correcting.
+
+**If Data wants it done**, the decision to make first is where the one
+instance lives — almost certainly the App, on `screenhelp.helptext`'s
+model — and then whether the fleets site joins in the same commit,
+which needs 151's line to be clear.
 
 ---
 
