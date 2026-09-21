@@ -15588,6 +15588,61 @@ def main():
        f"{len(_REAL_DERIVED_OK)}-entry allow-list, and no loader "
        f"imported under another name")
 
+    # ── ONE CONSTRUCTION SITE, IN THE RUNNING TREE ───────────────
+    #
+    # D17, closed by work order 159. `HStrings` was built at FOUR
+    # sites with three lifetimes — galaxy_map/boxdraw per screen,
+    # game_menu/screen per app, planets/planetwords fresh on every
+    # Planets enter, fleets/screen per screen — so one session could
+    # read HESTRNGS.LBX into four objects and look its language up two
+    # different ways, one of which raised where the others defaulted.
+    # Data's decision: one instance, owned by the App, built on first
+    # use, through `hestrings.for_app`.
+    #
+    # **AND `HelpText` IS HELD THE SAME WAY, WHICH IT WAS NOT.**
+    # `screenhelp.helptext`'s docstring has claimed "exactly one
+    # construction site" since it was written and NOTHING CHECKED IT —
+    # work order 159 went looking for that check to copy its shape and
+    # there was none. A property asserted only in prose is the fault
+    # this project keeps paying for, so both are held here.
+    _oc_want = {"HStrings": "core/hestrings.py",
+                "HelpText": "core/screenhelp.py"}
+    _oc_roots = [os.path.dirname(SCREENS_DIR)]
+    _oc_found = {_k: [] for _k in _oc_want}
+    for _oc_top in ("core", "screens"):
+        for _oc_dp, _oc_dn, _oc_fn in os.walk(
+                os.path.join(_oc_roots[0], _oc_top)):
+            if "__pycache__" in _oc_dp:
+                continue
+            for _oc_f in sorted(_oc_fn):
+                if not _oc_f.endswith(".py"):
+                    continue
+                _oc_path = os.path.join(_oc_dp, _oc_f)
+                _oc_rel = os.path.relpath(_oc_path, _oc_roots[0]).replace(
+                    os.sep, "/")
+                _oc_tree = _dl_ast.parse(
+                    io.open(_oc_path, encoding="utf-8").read())
+                for _oc_n in _dl_ast.walk(_oc_tree):
+                    if not isinstance(_oc_n, _dl_ast.Call):
+                        continue
+                    _oc_c = _dl_name(_oc_n.func)
+                    if _oc_c in _oc_found:
+                        _oc_found[_oc_c].append(f"{_oc_rel}:{_oc_n.lineno}")
+    for _oc_cls, _oc_home in sorted(_oc_want.items()):
+        assert len(_oc_found[_oc_cls]) == 1, (
+            f"{_oc_cls} is constructed at {len(_oc_found[_oc_cls])} sites "
+            f"in the running tree: {_oc_found[_oc_cls]}. One instance per "
+            f"App, built on first use — {_oc_home} owns it, and a second "
+            f"site is a second read of the player's file and a second "
+            f"answer to the same lookup")
+        assert _oc_found[_oc_cls][0].startswith(_oc_home), (
+            f"{_oc_cls}'s one construction moved to "
+            f"{_oc_found[_oc_cls][0]}; it belongs in {_oc_home}")
+    ok("one construction site each for HStrings and HelpText in the "
+       "running tree, by ast: core/hestrings.for_app and "
+       "core/screenhelp.helptext own them, and a fifth HStrings or a "
+       "second HelpText fails here (D17)")
+
     ok(f"the derived stand-ins are current byte for byte "
        f"({len(_sfx.files())} files), each carries the FORMAT_VERSION "
        f"its loader demands, each loads through the loader's own "

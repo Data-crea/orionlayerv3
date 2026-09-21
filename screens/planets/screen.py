@@ -22,6 +22,7 @@ drawing is `planetdraw`; this file owns the boxes, the input and the wire.
 """
 import logging
 
+from core import hestrings
 from core import listgrid
 from core import mouse as mouse_input
 from core.screen_base import ScreenBase
@@ -68,7 +69,8 @@ class PlanetsScreen(ScreenBase):
         language = (getattr(self.app, "settings", {}) or {}).get(
             "language", "en")
         self._words = planetwords.Words.load(
-            language, self._data.get("words", {}).get("food", "%s Food"))
+            language, self._data.get("words", {}).get("food", "%s Food"),
+            hestrings.for_app(self.app))
         self._parts = ShipPartNames(language)
         self._list = planetrows.PlanetList(
             self._data.get("sort", {}).get("default", "climate"))

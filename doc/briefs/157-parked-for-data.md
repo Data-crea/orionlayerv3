@@ -39,7 +39,33 @@ now fixed; what is left is taste.
 
 ---
 
-## 2. D17 — `HStrings` construction sites — **PARKED** (part 3)
+## 2. D17 — `HStrings` construction sites — **RESOLVED**
+
+**Done in work order 159 part 2, 21 September 2026.** Data's decision:
+one instance, owned by the App, built on first use —
+`core.hestrings.for_app`. All four sites go through it, including the
+`screens/fleets/` one that made 157 park this: 159's remit was Fleets,
+so the file 157 could not touch was in scope. The per-enter re-read in
+Planets was checked for a reason first, as the order required, and has
+none in the source, in a note, or in the commit that introduced it.
+
+The two other objections 157 raised are answered rather than waved
+past: the three lifetimes are now one, and `colonybuild`'s raising
+lookup became the tolerant one — recorded as the single intended
+behaviour change, demonstrated both ways in
+`evidence/work_order_159/part2/`.
+
+**And the check 157 asked for turned out not to exist to copy.**
+`screenhelp`'s "exactly one construction site" was prose with nothing
+behind it; the new check holds `HStrings` **and** `HelpText` to one
+site each, by `ast`.
+
+The original text of this section follows, because it is what the
+decision was taken against.
+
+---
+
+## 2a. D17 — the question as it was put (part 3)
 
 **Auf Deutsch, für die Entscheidung:** `HStrings` wird an vier Stellen
 gebaut statt an einer, mit drei verschiedenen Lebensdauern, sodass

@@ -100,7 +100,9 @@ class FleetsScreen(ScreenBase):
         # headings, "none" and the location line (HESTRNGS), and for the
         # weapon firing arcs (KENTEXT.LBX). Both are derived files the
         # player extracts; absent, what depends on them is left out.
-        self._strings = hestrings.HStrings(language)
+        # ONE CONSTRUCTION SITE (D17, work order 159) — this built a
+        # fourth copy per screen.
+        self._strings = hestrings.for_app(self.app)
         self._arcs = kentext.ArcWords(language)
         self._view, self._cells, self._panel = None, [], []
         self._hover_cell = None

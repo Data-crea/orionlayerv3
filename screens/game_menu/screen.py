@@ -31,7 +31,8 @@ import logging
 
 import pygame
 
-from core.hestrings import HStrings, printf
+from core import hestrings
+from core.hestrings import printf
 from core.screen_base import ScreenBase
 from core.structs import settings as settings_spec
 from core.wire_protocol import EFFECT_PAIRS
@@ -101,11 +102,11 @@ class GameMenuScreen(ScreenBase):
         self.words = self.app.res.load_json(
             "screens/game_menu/layout.json", {}) or {}
         super().enter(game_state)
-        self.hstrings = getattr(self.app, "hstrings", None)
-        if self.hstrings is None:
-            settings = getattr(self.app, "settings", {}) or {}
-            self.hstrings = HStrings(settings.get("language", "en"))
-            self.app.hstrings = self.hstrings
+        # ONE CONSTRUCTION SITE (D17, work order 159). These four lines
+        # WERE the right shape and are now the shared one: `for_app`
+        # holds exactly them, so the galaxy map and Planets get this
+        # instance rather than building their own.
+        self.hstrings = hestrings.for_app(self.app)
         self.node = self.under = self.pending = self.last_slot = None
         self.menu_keys = set()
         self._sent = None

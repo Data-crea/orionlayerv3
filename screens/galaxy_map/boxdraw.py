@@ -66,12 +66,10 @@ MAP_MID = ((22 + 527) / 2, (22 + 421) / 2)
 
 
 def _texts(screen):
-    text = getattr(screen, "_hstrings", None)
-    if text is None:
-        lang = (getattr(screen.app, "settings", {}) or {}).get("language",
-                                                               "en")
-        text = hestrings.HStrings(lang)
-        screen._hstrings = text
+    # ONE CONSTRUCTION SITE (D17, work order 159). This cached its own
+    # copy on the SCREEN, so the galaxy map and the game menu read
+    # HESTRNGS into two objects; `hestrings.for_app` owns the one.
+    text = hestrings.for_app(screen.app)
     return text if text.state == "ok" else None
 
 

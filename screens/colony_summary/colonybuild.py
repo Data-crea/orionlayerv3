@@ -218,7 +218,18 @@ def names_for(screen):
     from core import buildnames, estrings, prodname
     holder = getattr(screen.app, "production_names", None)
     if holder is None:
-        lang = screen.app.settings.get("language", "en")
+        # THE TOLERANT LOOKUP, and this is a deliberate behaviour
+        # change — work order 159 part 2, D17. This was
+        # `screen.app.settings.get(...)`, which raises AttributeError
+        # on an app-shaped object with no `settings`: a harness, a mod
+        # host, anything that is not the real App. Every other site in
+        # the tree already used the form below and DEFAULTED; making
+        # them agree meant choosing which way, and the answer is that
+        # a missing setting is not a reason to crash a render path
+        # (decision 22). The only behaviour that changes is that this
+        # path now draws with "en" where it used to raise.
+        lang = (getattr(screen.app, "settings", {}) or {}).get(
+            "language", "en")
         holder = prodname.Resolver(buildnames.BuildingNames(lang),
                                    estrings.EStrings(lang))
         screen.app.production_names = holder

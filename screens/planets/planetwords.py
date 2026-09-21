@@ -52,9 +52,21 @@ class Words:
         self.food_template = food_template
 
     @classmethod
-    def load(cls, language, food_template):
-        return cls(EStrings(language), hestrings.HStrings(language),
-                   food_template)
+    def load(cls, language, food_template, hstrings):
+        """The two tables, with HESTRNGS handed in rather than built.
+
+        **`hstrings` IS THE APP'S** — `core.hestrings.for_app`, one
+        instance for the whole session (D17, work order 159). This
+        built a fresh one on every Planets `enter`, which was the
+        shortest-lived of the four copies; no source line and no note
+        gave a reason for the re-read, which is what work order 159
+        required to be checked before removing it.
+
+        ESTRINGS is NOT changed here. Its sites are their own question
+        and 159's decision was about HESTRNGS; widening it would have
+        been a design choice taken in passing.
+        """
+        return cls(EStrings(language), hstrings, food_template)
 
     def e(self, index):
         text = self.estrings.string(index)

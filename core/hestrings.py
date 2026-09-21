@@ -124,3 +124,40 @@ def printf(template, *values):
         out.append(ch)
         i += 1
     return "".join(out)
+
+
+def for_app(app):
+    """The one `HStrings`, owned by the App and built on first use.
+
+    **ONE CONSTRUCTION SITE — D17, Data's decision, 21 September 2026.**
+    It was built at four: `galaxy_map/boxdraw` cached it on the SCREEN,
+    `game_menu/screen` on the APP, `planets/planetwords` built a fresh
+    one on every Planets `enter`, and `screens/fleets/screen` cached it
+    per screen. So HESTRNGS.LBX's table was read into as many as four
+    separate objects in one session, and the language was looked up two
+    different ways — one of which raised where the others defaulted.
+
+    **WHY ONE IS SAFE, and it is a trade rather than an obvious win.**
+    The table is read-only game data from the player's installation and
+    does not change while the game runs; re-extracting it needs a
+    restart to be picked up, which is decision 18's trade for palettes
+    applied to text. What it buys is that the file is read once and
+    that a screen cannot disagree with another about what 0x9B says.
+
+    **THE LANGUAGE LOOKUP IS THE TOLERANT ONE.** `getattr(app,
+    "settings", {}) or {}` — the form `boxdraw` and `game_menu` already
+    used. `colonybuild`'s `app.settings.get(...)` raised on an
+    app-shaped object without `settings`, which a harness or a mod can
+    easily be; that path now defaults like the rest.
+
+    Built lazily rather than in `App.__init__`, for the reason
+    `screenhelp.helptext` gives for `HelpText`: any harness holding an
+    app-like object gets the same instance without a second copy of
+    these lines.
+    """
+    existing = getattr(app, "hstrings", None)
+    if existing is None:
+        settings = getattr(app, "settings", {}) or {}
+        existing = HStrings(settings.get("language", "en"))
+        app.hstrings = existing
+    return existing
