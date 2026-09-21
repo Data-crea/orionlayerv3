@@ -127,7 +127,6 @@ NAV_TEXT = palette.col("colony_summary", "nav_text", (196, 208, 236))
 #: see `colonysort.render` for why the dimming went. The palette key
 #: `nav_text_dim` stays — `colonyoutput` draws its empty rows with it.
 SORT_TEXT = palette.col("colony_summary", "sort_text", (196, 196, 196))
-TITLE_COLOR = palette.col("colony_summary", "title", (200, 210, 238))
 MOVE_TEXT = palette.col("colony_summary", "move_text", (206, 216, 238))
 
 #: The native screen the original draws under this one. Defined in
@@ -140,7 +139,14 @@ class ColonySummaryScreen(ScreenBase):
     SCREEN_NAME = "colony_summary"
     GAME_SCREEN_ID = 20         # SCREEN_COLONY_SUMMARY
     USE_FRAME = False           # own frame PNG, see _render_frame_image
-    FRAME_TITLE = "Colonies"
+    #: NO FRAME_TITLE, and that is the transcription (work order 156).
+    #: `_no_title_note` and `v3_projektstatus.md` both said the word
+    #: "survives as ScreenBase.FRAME_TITLE for the framebuffer fallback
+    #: path". No such reader exists: the only one is `_render_frame_title`,
+    #: reached from `_render_frame` behind `if self.USE_FRAME` — False
+    #: here — and the fallback draws the dispatcher's name
+    #: (`original_view.py:158`), never this. Both documents corrected in
+    #: the commit that removed it.
 
     def __init__(self, app):
         super().__init__(app)
@@ -402,7 +408,6 @@ class ColonySummaryScreen(ScreenBase):
         self._render_buttons(surface)
         self._render_frame_image(surface)
         self._render_header(surface)
-        self._render_title(surface)
         # LAST, OVER THE FRAME. `COLMOVE::Draw_Cluster_(
         # mouse::Pointer_X_(), mouse::Pointer_Y_())` is the final
         # call of `Draw_Colony_Summary_Screen_` (colsum.cpp:506-511),
@@ -440,19 +445,6 @@ class ColonySummaryScreen(ScreenBase):
     #: `colonyheader`, which owns the column boxes: the line is
     #: entirely about geometry this screen does not compute.
     editor_note = colonyheader.editor_note
-
-    def _render_title(self, surface):
-        cfg = self._data.get("frame", {})
-        rect = cfg.get("title_rect")
-        title = cfg.get("title", self.FRAME_TITLE)
-        if not rect or not title:
-            return
-        x, y, w, h = self.layout.rect(rect)
-        font = self.style.get_font(self.layout.font_size(
-            cfg.get("title_font", 30)))
-        text = font.render(title.upper(), True, TITLE_COLOR[:3])
-        surface.blit(text, (x + (w - text.get_width()) // 2,
-                            y + (h - text.get_height()) // 2))
 
     def _render_panels(self, surface):
         """Every cutout that shows content gets the panel fill, so the

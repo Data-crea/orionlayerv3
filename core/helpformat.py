@@ -197,12 +197,6 @@ def to_json(lines):
              "br": ln.paragraph_break} for ln in lines]
 
 
-def from_json(data):
-    """Inverse of `to_json`."""
-    return [Line([Run(r["t"], r.get("x")) for r in ln.get("runs", [])],
-                 ln.get("br", False)) for ln in data]
-
-
 # ── Internals ────────────────────────────────────────────
 
 def _read_functions(body, i, seen=None):

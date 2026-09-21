@@ -280,16 +280,6 @@ def message(words, outcome, total=0):
     return text
 
 
-def column_of(pops, n_pops, job):
-    """How many icons a column draws — the count the geometry needs.
-
-    One line, and it is here rather than at the call sites because
-    the number is `colonyicons`' and the temptation is `row["jobs"]`,
-    which counts pops rather than icons.
-    """
-    return len(colonyicons.icon_pops(pops, n_pops, job))
-
-
 def pops_of(state, colony_index):
     """(pops, n_pops, max_farms) for one colony of a snapshot, or None.
 

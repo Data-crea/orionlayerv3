@@ -11895,6 +11895,53 @@ PLATE machinery that went (decision 55). The exclusion held exactly as
 written: the coloured cell renderer stays. The re-targeting turned out
 to be nothing to do — none of the deleted files carried a marking.**
 
+**STAGE 5'S TAIL, AND IT IS SHORT — 21 September 2026, work order 156,
+commit A.** The inventory that opened that order went looking for "old
+modules that were superseded but never deleted" and found none: the
+12 September list above is the whole of it. What was left was dead code
+inside live modules, and this is everything that went, with what
+replaced each one:
+
+| removed | where | replaced by |
+|---|---|---|
+| `_render_title` and its call | `screens/colony_summary/screen.py` | nothing — it read `frame.title_rect`, absent since Stage 4, so it returned before drawing on every frame since |
+| `TITLE_COLOR` | same file | nothing — `_render_title` was its only reader |
+| `FRAME_TITLE = "Colonies"` | same file | nothing, and see the correction below: the reader both documents named does not exist |
+| `colony_summary.title` | `assets/shared/skins/default/colors.json` | nothing — `TITLE_COLOR` was its only reader |
+| `frame._title_note` | `screens/colony_summary/layout.json` | nothing — it described the SUPERSEDED frame's title bar and contradicted `_no_title_note` beside it |
+| `helpformat.from_json` | `core/helpformat.py` | nothing — the inverse of `to_json`, for a cached or exported form that never arrived |
+| `colonypick.column_of` | `screens/colony_summary/colonypick.py` | nothing — no caller in any `.py`, `.json` or `.md` in the tree |
+| `nebula_fraction`, `star_fraction`, `black_hole_fraction`, `ship_icon_fraction` | `core/zoomtables.py` | nothing — four "native px → fraction of map width" helpers with no caller. `GALAXY_MAX_SCALE` beside them STAYS: its comment says "Kept for diagnostics", which is a reason |
+
+**No marker moved, because none of these files carried one on the
+removed code.** `core/zoomtables.py` and
+`screens/colony_summary/colonytrack.py` are both in the suite's
+`_MARKED` inventory and both keep their markings (`INSET_DOT_DIM` and
+`DEVIATION IN HEIGHT`); `screens/colony_summary/screen.py`,
+`core/helpformat.py` and `colonypick.py` are not in it and did not
+become empty of one.
+
+**The evidence that nothing on screen moved.** `tools/
+colony_list_preview.py` drives the real `ColonySummaryScreen.render`,
+and all sixteen PNGs it writes at 1920x1080, 2560x1440, 3840x2160 and
+1366x768 are **byte for byte identical** before and after. That is
+weaker evidence than it looks and it is worth saying why: the
+fundament's rule is that byte-identity proves only the paths that were
+EXERCISED. Here it is not the licence — the licence is that
+`title_rect` is absent from every `layout.json` in the tree, so the
+deleted branch could not be reached by any input. The renders confirm
+that reading rather than standing in for it.
+
+**Exactly the inventory's projection: −29 CODE lines** (41 818 →
+41 789 by `tools/linecount.py`, `core/` −12 and `screens/` −17; total
+lines −43). It landed on the estimate by coincidence rather than by
+accuracy — one MORE deletion was found while the commit was being made
+(`FRAME_TITLE`, see the correction under "The title is gone"), and the
+eight-line comment that records why it went is documentation and not
+code, so `screens/` comment lines went UP by 8 in the same commit. The
+number to judge this by is the CODE column, which is decision 6's
+amendment and the reason that column exists.
+
 **Stage 5's deletion list, with one exclusion.** Stage 5 deletes the
 superseded frame and its flag, and re-targets the old markers. **The
 coloured cell renderer stays.** Criterion 5 of this stage makes the
@@ -12521,8 +12568,20 @@ very top (framebuffer, frame edge y 4..7, plate outlines y 11 and 32,
 first row y 35). "COLONIES" was drawn here only because the
 superseded frame cut a title hole; with the plate's header window in
 that band the two overlapped and the title sat across the WORKERS
-heading. `frame._no_title_note` records it. `FRAME_TITLE` survives
-for the framebuffer fallback, which is a different drawing.
+heading. `frame._no_title_note` records it.
+
+**AND `FRAME_TITLE` DID NOT SURVIVE ANYTHING — 21 September 2026, work
+order 156.** This paragraph said "`FRAME_TITLE` survives for the
+framebuffer fallback, which is a different drawing", and
+`frame._no_title_note` said it too. **There is no such reader.** The
+only one in the tree is `ScreenBase._render_frame_title`, reached from
+`_render_frame` behind `if self.USE_FRAME` — and `USE_FRAME` is False
+on this screen — while the fallback path draws the dispatcher's own
+name (`core/original_view.py:158`) and never a `FRAME_TITLE`. So the
+attribute was dead, both documents were asserting a path no file
+carries, and it went with `_render_title` in the same commit. The
+shape is the one this project keeps paying for: two copies of a claim,
+neither of them checked against the code.
 
 **The header: five plates inside our own window, two DEVIATIONS.**
 

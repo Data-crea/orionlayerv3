@@ -870,28 +870,9 @@ def nebula_native_dimension(neb_type, map_scale, num_stars=0):
     return (w, h)
 
 
-def nebula_fraction(neb_type, zoom, num_stars=0, map_scale=10):
-    return nebula_dimension(
-        neb_type, zoom, num_stars, map_scale)[0] / MAP_WIDTH
-
-
 def icon_step_count():
     """Number of pre-rendered ship sprite steps (one per zoom level)."""
     return len(SHIP_ICON_DIM)
-
-
-# ── HD helpers: native pixels -> fraction of map width ────
-
-def star_fraction(star_size, zoom, num_stars=0, map_scale=10):
-    return star_dimension(star_size, zoom, num_stars, map_scale) / MAP_WIDTH
-
-
-def black_hole_fraction(zoom, num_stars=0, map_scale=10):
-    return black_hole_dimension(zoom, num_stars, map_scale) / MAP_WIDTH
-
-
-def ship_icon_fraction(zoom):
-    return ship_icon_dimension(zoom)[0] / MAP_WIDTH
 
 
 def font_scale(zoom):
