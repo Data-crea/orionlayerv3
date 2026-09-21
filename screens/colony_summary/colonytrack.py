@@ -342,9 +342,18 @@ def row_regions(row):
 #: `cells` is what is drawn; `targets` is the three job rects a drop
 #: is tested against, and `name` is the fourth target — the colony
 #: name's own column, which the original accepts a drop on as "put
-#: them back" (`Send_Cluster_(colony, -1)`, colsum.cpp:909). `growth`
-#: are the dashed capacity boxes after the gap, `beyond` the faint
-#: line for the track a colony cannot reach yet, or None.
+#: them back" (`Send_Cluster_(colony, -1)`, colsum.cpp:909).
+#:
+#: **THE `growth` AND `beyond` FIELDS ARE GONE — 21 September 2026,
+#: work order 157.** They were the dashed capacity boxes and the faint
+#: line past `max_pop`, and both belonged to the HD allocation bar,
+#: which was an INVENTION: the original's row draws population sprites
+#: and nothing else (`Do_Colony_Info_Pop_Stuff_For_Pop_`,
+#: coldraw.cpp:282). `514ebb2` replaced the bar with six column boxes
+#: on 8 September and `row_boxes` has returned `()` and `None` for
+#: both ever since — unmarked empty fields left over from a removed
+#: invention are residue, so they went. See `_column_boxes` for the
+#: design question they used to stand for, which is still open.
 #:
 #: **THE `markers` FIELD IS GONE — 8 September 2026.** It carried the
 #: three F/W/S squares, which were an HD EXTENSION standing in for
@@ -355,7 +364,7 @@ def row_regions(row):
 #: the marking, in this commit, and the drop target did not move with
 #: them — it was already the whole column (see `_column_boxes`).
 RowBoxes = collections.namedtuple(
-    "RowBoxes", "name cells targets growth beyond run_right")
+    "RowBoxes", "name cells targets run_right")
 
 
 def row_boxes(area, cfg, scale, row, band=None):
@@ -399,7 +408,7 @@ def row_boxes(area, cfg, scale, row, band=None):
         # the nine tuned values it was measured from (see `Track`);
         # a caller without the column boxes gets nothing rather than
         # a second layout that looks almost right.
-        return RowBoxes(None, (), (), (), None, area.x)
+        return RowBoxes(None, (), (), area.x)
     return _column_boxes(cols, cfg, scale, row, top,
                          height or track.band_h, track,
                          figure_scale(area, cfg))
@@ -454,14 +463,34 @@ def _column_boxes(cols, cfg, scale, row, y, h, track, step):
     Recorded as closed here, in `layout.json` under
     `move._drop_target_note`, and in `v3_projektstatus.md`.
 
-    **NO GROWTH BOXES IN THIS LAYOUT.** They belong to the COLONY and
-    not to a job, so in a row that is three job columns there is no
-    place for them that is not a lie — a dashed box inside the
-    scientists column says "scientists", which is what the colony's
-    spare capacity is not. The headroom is already on screen, in the
-    scan box the original puts it in (`Population (13/22)`,
-    colsum.cpp:1196-1205). The code and its marking stay; Stage 5
-    decides whether they come back somewhere honest.
+    **A PER-ROW CAPACITY DISPLAY IS AN OPEN DESIGN QUESTION FOR DATA.**
+    Not a gap to be filled by whoever reads this next, and not a
+    transcription waiting to be finished — there is nothing to
+    transcribe. The original shows headroom ONLY as a number, in the
+    bottom-left scan box, and only for the colony being scanned:
+    `Population (13/22)` from `E_Strings_(74)`, drawn by
+    `Draw_Colony_Scan_Info_` (colsum.cpp:1155, values at :1196-1205).
+    A row never carries it. **So a per-row display would be an HD
+    EXTENSION and would have to be marked as one**, in the same family
+    as the per-row detail line (`colonylist`, `list._hd_extension`).
+
+    What made it a question in the first place: they belong to the
+    COLONY and not to a job, so in a row that is three job columns
+    there is no place for them that is not a lie — a dashed box inside
+    the scientists column says "scientists", which is what spare
+    capacity is not.
+
+    **If it comes, it is built new against the six column boxes**, and
+    it does not bring back `growth`, `beyond` or `growth_gap`. Those
+    were parts of the allocation bar, which was an INVENTION and is
+    gone; a display built on a track that no longer exists would be a
+    second geometry beside the columns, which is the fault decision 5
+    is about.
+
+    **Where the old code is**, for anyone who wants to look at what it
+    drew rather than re-imagine it: the bar itself at `514ebb2`'s
+    parent, the two empty fields at work order 157's commit for 156's
+    part C.
     """
     from core import box
     from . import colonyicons
@@ -529,7 +558,7 @@ def _column_boxes(cols, cfg, scale, row, y, h, track, step):
         nx, nw = cols["name"]
         name = pygame.Rect(nx, y, nw, h)
     return RowBoxes(name, tuple(cells), tuple(targets),
-                    (), None, cols[JOB_KEYS[-1]][0] + cols[JOB_KEYS[-1]][1])
+                    cols[JOB_KEYS[-1]][0] + cols[JOB_KEYS[-1]][1])
 
 
 def drop_targets(area, cfg, scale, row):

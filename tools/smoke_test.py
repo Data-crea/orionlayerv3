@@ -8691,6 +8691,16 @@ def main():
     assert "markers" not in _ct.RowBoxes._fields, (
         "RowBoxes carries a markers field again; the F/W/S squares "
         "were removed with their marking on 8 September 2026")
+    for _gone in ("growth", "beyond"):
+        assert _gone not in _ct.RowBoxes._fields, (
+            f"RowBoxes carries a {_gone} field again. It held part of "
+            f"the HD allocation bar, an INVENTION that 514ebb2 "
+            f"replaced with six column boxes on 8 September 2026, and "
+            f"both fields were empty from that day until work order "
+            f"157 removed them. A per-row capacity display is an open "
+            f"question for Data and would be a MARKED HD EXTENSION "
+            f"built against the columns — not these fields returning; "
+            f"see colonytrack._column_boxes")
     assert "name" in _ct.RowBoxes._fields, (
         "RowBoxes lost the name rect, which is the fourth drop "
         "target (colsum.cpp:909)")
@@ -8881,10 +8891,13 @@ def main():
                     f"({_c.x}..{_c.right}) leaves its column "
                     f"({_cx}..{_cx + _cw}) — a cell under the wrong "
                     f"heading is the failure this block exists for")
-        # AND NO GROWTH BOXES: they belong to the colony, so in a
-        # row of three job columns there is nowhere for them that
-        # is not a lie. `_column_boxes` carries the reasoning.
-        assert not _boxes.growth, _boxes.growth
+        # AND NO GROWTH BOXES. This asserted `not _boxes.growth`
+        # per fixture until 21 September 2026 (work order 157);
+        # the FIELD is gone now and the claim moved up to
+        # RowBoxes._fields, which is strictly stronger — it says
+        # the field cannot come back at all, where this said only
+        # that it was empty for the rows this block happens to
+        # build. `_column_boxes` carries the reasoning.
         # 2. EVERY JOB HAS A TARGET, INCLUDING AN EMPTY ONE — and
         #    since 8 September that is a TRANSCRIPTION rather than a
         #    thing the markers bought: mode 1 adds the field after a

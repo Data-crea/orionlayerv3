@@ -12340,9 +12340,33 @@ answer".
 a job, so in a row of three job columns there is nowhere for them
 that is not a lie — a dashed box inside the scientists column says
 "scientists". The headroom is already on screen where the original
-puts it (`Population (13/22)`, colsum.cpp:1196-1205). The code and
+puts it (`Population (13/22)`, colsum.cpp:1196-1205).
+
+**AND THE TWO EMPTY FIELDS ARE GONE — 21 September 2026, work order
+157, closing 156's part C.** This paragraph used to end "The code and
 its marking stay; Stage 5 decides whether they return somewhere
-honest.
+honest", and `colonytrack.py` said the same. **What stayed was not
+code with a marking.** It was `RowBoxes.growth` and `RowBoxes.beyond`,
+returned `()` and `None` by every construction site since `514ebb2`
+replaced the allocation bar with six column boxes on 8 September, and
+carrying no marking at all. Both belonged to that bar, which was an
+INVENTION — the original's row draws population sprites and nothing
+else (`Do_Colony_Info_Pop_Stuff_For_Pop_`, coldraw.cpp:282) — so with
+the bar gone there was no place left for either value. Unmarked empty
+fields left over from a removed invention are residue.
+
+**The question they stood for is NOT closed, and the note now states
+it in the terms it actually turns on.** A per-row capacity display is
+an open design question for Data. The original shows headroom only as
+a number, in the scan box, and only for the colony being scanned
+(`Draw_Colony_Scan_Info_`, colsum.cpp:1155), so a per-row display
+would be an **HD EXTENSION and would have to be marked as one** — the
+same family as the per-row detail line. If it comes, it is built new
+against the six column boxes and does **not** bring back `growth`,
+`beyond` or `growth_gap`: a display on a track that no longer exists
+would be a second geometry beside the columns, which is decision 5's
+fault. The old code is at `514ebb2`'s parent for the bar, and at work
+order 157's part-1 commit for the fields.
 
 **The markers stay, and their reason has been overtaken.** They were
 an HD EXTENSION because "a row without columns cannot carry a
