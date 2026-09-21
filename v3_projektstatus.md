@@ -2878,10 +2878,20 @@ unchanged, nothing visibly wrong, and no saving at all. Only a load
 counter showed it. A timing assertion would also have been
 machine-dependent.
 
-**What this does not explain.** Data reports 1–2 s; this accounts for
+**CONFIRMED IN PLAY, and that is a separate claim from the numbers
+above.** Every measurement here is headless, through
+`colony_list_preview.build_screen` — it says the loads stopped and the
+frame did not move, and it says nothing about how the game feels. Data
+played the built tree on 21 September 2026 and reported the return as
+**"viel besser"**. That is the half a harness cannot give.
+
+**What this does not explain.** Data reported 1–2 s; this accounts for
 ~0.43 s on top of ~0.12 s on the wire. The engine's own redraw
 (`Build_Ship_Icons_`, and on one branch `Fast_Fade_Out_` before
-`Add_Map_Fields_`) was read but not measured.
+`Add_Map_Fields_`) was read but not measured. **Whether the remainder
+is still worth chasing is now an open question rather than an
+assumption**: the complaint that started this is gone, so the next
+session should ask Data before measuring the engine side.
 
 ### Fleets is done — 21 September 2026, work order 159
 

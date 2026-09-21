@@ -88,3 +88,16 @@ redraw — `Build_Ship_Icons_`, and on one branch `Fast_Fade_Out_` before
 `Add_Map_Fields_` — which was read but **not measured**. The very first
 entry after a cold start, where the 5.1 MB Fleets frame is not yet in
 the page cache, was also not measured.
+
+
+## Confirmed in play
+
+Every number above is headless. Data ran the built tree on 21 September
+2026 and reported the return as **"viel besser"** — which is the half
+`colony_list_preview.build_screen` cannot answer, and the reason this
+line exists separately from the measurements.
+
+**So the remainder is an open question, not a queued task.** The
+complaint that started this order is gone; whether the engine's own
+redraw is still worth measuring is Data's call, not a foregone next
+step.
