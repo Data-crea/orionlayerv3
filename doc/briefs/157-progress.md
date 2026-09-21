@@ -209,3 +209,58 @@ two heavy checks' breadth (breadth is where both earned their keep —
 not offered: caching a laid-out screen across checks would save more
 than any of them, and would create a class of fault this project has
 not had.
+
+---
+
+## Finish
+
+### Line count — 157's column beside 156's
+
+`tools/linecount.py`, same method as 156: `ast` docstring spans, then
+blank, then whole-line `#`, then CODE; `linecount.walk()` over its own
+`ROOTS`; `tools/smoke_test.py` on its own row because it is
+`linecount.EXEMPT`.
+
+**CODE lines:**
+
+| folder | before 156 | after 156 | **after 157** | 157's delta |
+|---|---:|---:|---:|---:|
+| `(root)` — `main.py` | 323 | 323 | **323** | 0 |
+| `core/` | 6 372 | 6 360 | **6 360** | 0 |
+| `screens/` | 11 743 | 11 726 | **11 726** | 0 |
+| `tools/` without the suite | 8 678 | 8 678 | **8 678** | 0 |
+| `tools/smoke_test.py` | 14 702 | 14 702 | **14 719** | **+17** |
+| **TOTAL** | 41 818 | 41 789 | **41 806** | **+17** |
+| **TOTAL without the suite** | 27 116 | 27 087 | **27 087** | **0** |
+
+**157 added 17 code lines and removed none, and every one of them is
+in the suite** — the repaired tint check of part 2. Outside the suite
+the tree is byte-for-byte the same size it was after 156: part 1
+removed two namedtuple fields without removing a line (the fields were
+names in one declaration and constants at two call sites), part 3 was
+a park, and part 4 changed nothing.
+
+Total lines rose by 78 (76 311 → 76 389), which is the rewritten note
+in `colonytrack.py` and `v3_projektstatus.md` plus the repaired
+check's reasoning. **That is the shape this order had: it is not a
+line-reduction order.** 156 was, and it took 29.
+
+The over-guideline list is unchanged: 10 files over 300 CODE lines.
+
+### Fresh-clone verification, both input states
+
+`git clone` of `9b2b721`, then `python tools/setup.py`.
+
+| state | figures | result |
+|---|---:|---|
+| as a forker gets it, no player extractions | 0 | **243 checks green** |
+| with the player's figures copied in | 54 | **243 checks green** |
+
+Both states pass in a tree that was never the working tree. The second
+state matters here specifically: part 4 measured that the figure
+pick-up check takes a **different path** depending on those 54 files,
+so a clone check in one state only would have exercised one of them.
+
+### Push
+
+Everything from 156 and 157 together, as the order authorises.
