@@ -85,6 +85,89 @@ FIELD_ZERO_ROW = (0, 7, 9, 11, 13, 0, 0)
 
 PASS = 0
 
+#: THE PUSH-ONLY TIER — work order 158, implementing 157's Option A.
+#:
+#: `name -> (checks it produces, what makes it expensive)`. **This dict
+#: is the only place the slow list lives**, and a check below holds the
+#: tree to it in both directions: every `slow("x")` call site in this
+#: file must be declared here, and every name declared here must have a
+#: call site. That is the marker inventory's shape, and it is here for
+#: the marker inventory's reason — a list kept by hand is legitimate
+#: only with a checker.
+#:
+#: **Nothing here is skipped in the default run.** `python
+#: tools/smoke_test.py` runs everything, exactly as before; only an
+#: explicit `--fast` selects the reduced tier, and only the pre-commit
+#: hook passes it. The tiers change WHEN a check runs, never what it
+#: asserts — every one of these still runs, unchanged, before a push.
+#:
+#: The cost of that, accepted by Data with work order 158: a fault only
+#: these checks can see lands at push time instead of commit time. The
+#: drop-marker hit area and the colony list's plating were both found
+#: by checks on this list.
+SLOW_TIER = {
+    "figure_pick": (1,
+        "renders the colony summary and reads the drawn pixels back for "
+        "1..20 figures in every job column at three resolutions, then "
+        "again over the player's OWN extracted figures — 28.2 s, 36 % of "
+        "the suite, and the second pass is most of the 15 s by which "
+        "this machine's run is slower than a clone's (157 sections 2, 4)"),
+    "return_cutout": (1,
+        "lays the colony summary out at twelve resolutions to measure "
+        "RETURN's label clearance — the twelve sizes are the point, and "
+        "they are 13.7 s of the suite (157 section 2)"),
+    "game_menu_frame_opening": (1,
+        "loads the GAME menu frame through the resource roots and "
+        "measures its one hole against the artwork — 3.0 s"),
+    "game_menu_frame_drawn": (1,
+        "draws the GAME menu frame on a first opening and samples the "
+        "metal's opaque pixels off the result — 1.2 s"),
+    "fallback_verdict_log": (1,
+        "stands the app up repeatedly to watch main._verdict change its "
+        "decision and its reason — 2.3 s"),
+    "sidebar_research": (1,
+        "renders the galaxy map sidebar's research readout through "
+        "core/research for the original's four cases — 2.3 s"),
+    "tools_import": (1,
+        "starts 49 fresh Python processes, one per runnable tool — the "
+        "only expensive check in the suite that renders nothing, 2.0 s"),
+}
+
+#: The tier this run is in. Set from argv in `_run`; "full" unless
+#: `--fast` is given, so every path that does not ask for the fast tier
+#: gets the whole suite.
+TIER = "full"
+
+#: `name -> checks not run`, filled by `slow()` in the fast tier.
+SKIPPED = {}
+
+#: Every `slow()` name this run consulted — the runtime half of the
+#: inventory check. Both tiers consult all of them, because the guard
+#: is evaluated either way.
+SLOW_SEEN = set()
+
+
+def slow(name):
+    """True if the push-only block `name` runs in this tier.
+
+    A `slow(...)` guard wraps a whole check — its measurement AND its
+    `ok()` — and never a part of one. Each block was chosen by asking
+    what a later check would miss if it did not run: the blocks behind
+    these guards bind no name a later statement reads before rebinding
+    it, and mutate nothing defined outside them. Shared setup in front
+    of a slow check stays OUTSIDE the guard and keeps running in both
+    tiers, which is why some expensive segments in 157's table are not
+    on this list at all — their cost is setup other checks need.
+    """
+    assert name in SLOW_TIER, (
+        f"slow({name!r}) is not declared in SLOW_TIER. The list lives "
+        f"in exactly one place and a check holds the tree to it")
+    SLOW_SEEN.add(name)
+    if TIER == "fast":
+        SKIPPED[name] = SLOW_TIER[name][0]
+        return False
+    return True
+
 
 def ok(msg):
     global PASS
@@ -9463,46 +9546,47 @@ def main():
             _pz_cl._figure_for_cell = _real
         return _bad, _seen
 
-    with _tf.TemporaryDirectory() as _pz_dir:
-        os.makedirs(os.path.join(_pz_dir, _pz_fig.FIGURE_DIR))
-        _pz_m = _pz_master()
-        for _name in _pz_fig.all_names():
-            pygame.image.save(_pz_m, os.path.join(
-                _pz_dir, _pz_fig.FIGURE_DIR, _name))
+    if slow("figure_pick"):
+        with _tf.TemporaryDirectory() as _pz_dir:
+            os.makedirs(os.path.join(_pz_dir, _pz_fig.FIGURE_DIR))
+            _pz_m = _pz_master()
+            for _name in _pz_fig.all_names():
+                pygame.image.save(_pz_m, os.path.join(
+                    _pz_dir, _pz_fig.FIGURE_DIR, _name))
 
-        def _pz_synthetic(_scr, _area, _cfg):
-            # Seated in the app's own cache, so the RENDER draws it.
-            _size = _pz_ct.figure_size(_area, _cfg)
-            _set = _pz_fig.FigureSet(_scr.app.res, _size, root=_pz_dir)
-            assert _set.state == "ok", _set.state
-            _scr.app.figure_sets = collections.OrderedDict({_size: _set})
-            return _set
+            def _pz_synthetic(_scr, _area, _cfg):
+                # Seated in the app's own cache, so the RENDER draws it.
+                _size = _pz_ct.figure_size(_area, _cfg)
+                _set = _pz_fig.FigureSet(_scr.app.res, _size, root=_pz_dir)
+                assert _set.state == "ok", _set.state
+                _scr.app.figure_sets = collections.OrderedDict({_size: _set})
+                return _set
 
-        _pz_total = 0
+            _pz_total = 0
+            for _W, _H in ((1920, 1080), (2560, 1440), (3840, 2160)):
+                _bad, _seen = _pz_measure(_W, _H, _pz_synthetic)
+                assert _seen == 3 * sum(range(1, 21)), (_W, _H, _seen)
+                assert not _bad, (
+                    f"{_W}x{_H}: {len(_bad)} of {_seen} figures are not what a "
+                    f"click on the centre of their visible area picks up — "
+                    f"(count, job, index, x, picked) {_bad[:6]}")
+                _pz_total += _seen
         for _W, _H in ((1920, 1080), (2560, 1440), (3840, 2160)):
-            _bad, _seen = _pz_measure(_W, _H, _pz_synthetic)
-            assert _seen == 3 * sum(range(1, 21)), (_W, _H, _seen)
-            assert not _bad, (
-                f"{_W}x{_H}: {len(_bad)} of {_seen} figures are not what a "
-                f"click on the centre of their visible area picks up — "
-                f"(count, job, index, x, picked) {_bad[:6]}")
-            _pz_total += _seen
-    for _W, _H in ((1920, 1080), (2560, 1440), (3840, 2160)):
-        _bad, _seen = _pz_measure(
-            _W, _H, lambda _s, _a, _c: (
-                lambda _f: _f if _f is not None and _f.state == "ok"
-                else None)(_pz_fig.set_for(_s, _a, _c)))
-        if _bad is None:
-            report("figure pick: the extracted figure set is not on this "
-                   "disk, only the synthetic silhouette is measured")
-            break
-        report(f"figure pick with the extracted figures at {_W}x{_H}: "
-               f"{_seen - len(_bad)} of {_seen} hit"
-               + (f", misses {_bad[:4]}" if _bad else ""))
-        assert not _bad, (_W, _H, _bad[:6])
-    ok(f"a click on the centre of a figure's visible area picks up that "
-       f"figure — 1 to 20 figures in every job column, three resolutions, "
-       f"{_pz_total} figures read off the render")
+            _bad, _seen = _pz_measure(
+                _W, _H, lambda _s, _a, _c: (
+                    lambda _f: _f if _f is not None and _f.state == "ok"
+                    else None)(_pz_fig.set_for(_s, _a, _c)))
+            if _bad is None:
+                report("figure pick: the extracted figure set is not on this "
+                       "disk, only the synthetic silhouette is measured")
+                break
+            report(f"figure pick with the extracted figures at {_W}x{_H}: "
+                   f"{_seen - len(_bad)} of {_seen} hit"
+                   + (f", misses {_bad[:4]}" if _bad else ""))
+            assert not _bad, (_W, _H, _bad[:6])
+        ok(f"a click on the centre of a figure's visible area picks up that "
+           f"figure — 1 to 20 figures in every job column, three resolutions, "
+           f"{_pz_total} figures read off the render")
 
     # ── DATA'S PLANET DISCS: THE ASSETS ─────────────────────────
     #
@@ -11794,111 +11878,112 @@ def main():
     finally:
         _style_mod.StyleRenderer.render_text = _orig_rt
         _style_mod.StyleRenderer.get_font = _orig_gf
-    assert not _class_a, (
-        f"CLASS A violations — text this tree places at a cutout edge, "
-        f"drawn under opaque frame alpha: {_class_a}. Zero tolerance: "
-        f"raise the screen's frame_inset, or stop placing the text "
-        f"against the box edge. (Content CLIPPED to a cutout is class "
-        f"B and is checked against the artwork, not here.)")
-    # ── RETURN IS THE EIGHTH SLOT, AND IT BEHAVES LIKE ONE ──────
-    #
-    # **RE-POINTED 12 September 2026, the same day it was written.**
-    # For one day this frame cut no hole for RETURN: the button was
-    # drawn OVER the metal on a plate of its own, and this asserted
-    # that the plate was opaque — because a word on bare artwork is
-    # the class-A fault this file holds at zero. Data's frame of that
-    # evening cuts an eighth slot in the sort row, so the plate is
-    # gone and what has to hold is what holds for the seven keys
-    # beside it: the cutout carries the panel fill, the word sits
-    # inside the box with `HIGHLIGHT_PAD` to spare, and the hover
-    # reaches the WHOLE box, which is the one place RETURN differs
-    # from a sort key (a key lights its word, and the original gives
-    # RETURN no lit state at all).
-    #
-    # The rect is asserted by the hole check, not here: it is the
-    # artwork's own again, and this box is LOCKED in the editor.
-    from screens.colony_summary import colonysort as _rb_sort
-    from screens.colony_summary.screen import (PANEL_BG as _rb_bg,
-                                               NAV_HOVER_BG as _rb_hov,
-                                               NAV_TEXT as _rb_fg)
-    _rb_fits = []
-    for _W, _H in _SIZES:
-        _rb_app, _ = _pv.build_screen(_W, _H)
-        _rb_scr = _rb_app.dispatcher.screens["colony_summary"]
-        _rb_app.dispatcher.switch_to("colony_summary")
-        _rb_scr.enter(None)
-        _rb_scr.update(_pv._Snapshot(_pv.COLONIES))
-        _rb_r = pygame.Rect(*_rb_scr.layout.rect(
-            _rb_scr.box_rect("return")))
-        import core.mouse as _rb_m
-        _rb_saved = _rb_m.pos
+    if slow("return_cutout"):
+        assert not _class_a, (
+            f"CLASS A violations — text this tree places at a cutout edge, "
+            f"drawn under opaque frame alpha: {_class_a}. Zero tolerance: "
+            f"raise the screen's frame_inset, or stop placing the text "
+            f"against the box edge. (Content CLIPPED to a cutout is class "
+            f"B and is checked against the artwork, not here.)")
+        # ── RETURN IS THE EIGHTH SLOT, AND IT BEHAVES LIKE ONE ──────
+        #
+        # **RE-POINTED 12 September 2026, the same day it was written.**
+        # For one day this frame cut no hole for RETURN: the button was
+        # drawn OVER the metal on a plate of its own, and this asserted
+        # that the plate was opaque — because a word on bare artwork is
+        # the class-A fault this file holds at zero. Data's frame of that
+        # evening cuts an eighth slot in the sort row, so the plate is
+        # gone and what has to hold is what holds for the seven keys
+        # beside it: the cutout carries the panel fill, the word sits
+        # inside the box with `HIGHLIGHT_PAD` to spare, and the hover
+        # reaches the WHOLE box, which is the one place RETURN differs
+        # from a sort key (a key lights its word, and the original gives
+        # RETURN no lit state at all).
+        #
+        # The rect is asserted by the hole check, not here: it is the
+        # artwork's own again, and this box is LOCKED in the editor.
+        from screens.colony_summary import colonysort as _rb_sort
+        from screens.colony_summary.screen import (PANEL_BG as _rb_bg,
+                                                   NAV_HOVER_BG as _rb_hov,
+                                                   NAV_TEXT as _rb_fg)
+        _rb_fits = []
+        for _W, _H in _SIZES:
+            _rb_app, _ = _pv.build_screen(_W, _H)
+            _rb_scr = _rb_app.dispatcher.screens["colony_summary"]
+            _rb_app.dispatcher.switch_to("colony_summary")
+            _rb_scr.enter(None)
+            _rb_scr.update(_pv._Snapshot(_pv.COLONIES))
+            _rb_r = pygame.Rect(*_rb_scr.layout.rect(
+                _rb_scr.box_rect("return")))
+            import core.mouse as _rb_m
+            _rb_saved = _rb_m.pos
 
-        def _rb_render(_ptr):
-            _rb_m.pos = lambda: _ptr
-            try:
-                _s = pygame.Surface((_W, _H))
-                _s.fill((255, 0, 255))
-                _rb_scr.render(_s)
-                return _s
-            finally:
-                _rb_m.pos = _rb_saved
+            def _rb_render(_ptr):
+                _rb_m.pos = lambda: _ptr
+                try:
+                    _s = pygame.Surface((_W, _H))
+                    _s.fill((255, 0, 255))
+                    _rb_scr.render(_s)
+                    return _s
+                finally:
+                    _rb_m.pos = _rb_saved
 
-        # INSIDE THE ROUNDED CORNERS, INSIDE THE BLEED AND CLEAR OF
-        # THE WORD. The box is the hole grown by `colonyplates.BLEED`
-        # and the frame's rim is anti-aliased over the top of it, so a
-        # sample two pixels in reads the rim blended with the fill —
-        # (6, 8, 13) against (8, 11, 20) at 1680x1050, which is the
-        # rim at about four fifths. The word is centred and comes
-        # within 9 px of the box's width at 1280x720, so the samples
-        # stay on the top and bottom edges.
-        _rb_rad = max(6, int(10 * _rb_scr.layout.scale))
-        _rb_in = max(5, int(5 * _rb_scr.layout.scale))
-        _rb_pts = ((_rb_r.centerx, _rb_r.y + _rb_in),
-                   (_rb_r.centerx, _rb_r.bottom - 1 - _rb_in),
-                   (_rb_r.x + _rb_rad, _rb_r.y + _rb_in),
-                   (_rb_r.right - 1 - _rb_rad, _rb_r.bottom - 1 - _rb_in))
-        _rb_idle = _rb_render((0, 0))
-        for _rb_p in _rb_pts:
-            _rb_c = _rb_idle.get_at(_rb_p)[:3]
-            assert _rb_c == tuple(_rb_bg[:3]), (
-                f"{_W}x{_H}: {_rb_p} of RETURN's cutout "
-                f"{tuple(_rb_r)} is {_rb_c} and the panel fill is "
-                f"{tuple(_rb_bg[:3])} — the eighth slot is not being "
-                f"filled like the other seven")
-        # AND THE HOVER REACHES THE WHOLE BOX.
-        _rb_over = _rb_render(_rb_r.center)
-        for _rb_p in _rb_pts:
-            _rb_c = _rb_over.get_at(_rb_p)[:3]
-            assert _rb_c == tuple(_rb_hov[:3]), (
-                f"{_W}x{_H}: with the pointer on RETURN, {_rb_p} is "
-                f"{_rb_c} and the hover fill is {tuple(_rb_hov[:3])} "
-                f"— the hover has to reach the whole button")
-        # AND THE WORD IS ON IT.
-        _rb_ink = _np.array(pygame.surfarray.array3d(
-            _rb_idle.subsurface(_rb_r))).reshape(-1, 3)
-        assert (_np.abs(_rb_ink - _np.array(_rb_fg[:3])).sum(axis=1)
-                < 30).sum() >= 20, (
-            f"{_W}x{_H}: RETURN's slot carries no pixel of the "
-            f"label's own colour {tuple(_rb_fg[:3])}")
-        _rb_word = _rb_scr.style.render_text(
-            _rb_scr._data.get("return", {}).get("label", "Return").upper(),
-            _rb_scr.layout.font_size(
-                _rb_scr.box_style("return").get("font_size", 24)),
-            (255, 255, 255))
-        _rb_pad = max(1, int(_rb_sort.HIGHLIGHT_PAD * _rb_scr.layout.scale))
-        assert _rb_word.get_width() + 2 * _rb_pad <= _rb_r.w, (
-            f"{_W}x{_H}: RETURN's label is {_rb_word.get_width()} px "
-            f"wide in a {_rb_r.w} px slot with {_rb_pad} px of "
-            f"padding per side — the hole the artwork cuts is too "
-            f"small for the word at this resolution")
-        assert _rb_word.get_height() <= _rb_r.h, (
-            f"{_W}x{_H}: RETURN's label is {_rb_word.get_height()} px "
-            f"tall in a {_rb_r.h} px slot")
-        _rb_fits.append(_rb_r.w - _rb_word.get_width())
-    report(f"RETURN label clearance, narrowest of {len(_SIZES)} sizes: "
-           f"{min(_rb_fits)} px of the slot's width")
-    ok(f"RETURN is the eighth cutout and behaves like one ({len(_SIZES)} "
-       f"sizes: panel fill, hover over the whole box, word inside it)")
+            # INSIDE THE ROUNDED CORNERS, INSIDE THE BLEED AND CLEAR OF
+            # THE WORD. The box is the hole grown by `colonyplates.BLEED`
+            # and the frame's rim is anti-aliased over the top of it, so a
+            # sample two pixels in reads the rim blended with the fill —
+            # (6, 8, 13) against (8, 11, 20) at 1680x1050, which is the
+            # rim at about four fifths. The word is centred and comes
+            # within 9 px of the box's width at 1280x720, so the samples
+            # stay on the top and bottom edges.
+            _rb_rad = max(6, int(10 * _rb_scr.layout.scale))
+            _rb_in = max(5, int(5 * _rb_scr.layout.scale))
+            _rb_pts = ((_rb_r.centerx, _rb_r.y + _rb_in),
+                       (_rb_r.centerx, _rb_r.bottom - 1 - _rb_in),
+                       (_rb_r.x + _rb_rad, _rb_r.y + _rb_in),
+                       (_rb_r.right - 1 - _rb_rad, _rb_r.bottom - 1 - _rb_in))
+            _rb_idle = _rb_render((0, 0))
+            for _rb_p in _rb_pts:
+                _rb_c = _rb_idle.get_at(_rb_p)[:3]
+                assert _rb_c == tuple(_rb_bg[:3]), (
+                    f"{_W}x{_H}: {_rb_p} of RETURN's cutout "
+                    f"{tuple(_rb_r)} is {_rb_c} and the panel fill is "
+                    f"{tuple(_rb_bg[:3])} — the eighth slot is not being "
+                    f"filled like the other seven")
+            # AND THE HOVER REACHES THE WHOLE BOX.
+            _rb_over = _rb_render(_rb_r.center)
+            for _rb_p in _rb_pts:
+                _rb_c = _rb_over.get_at(_rb_p)[:3]
+                assert _rb_c == tuple(_rb_hov[:3]), (
+                    f"{_W}x{_H}: with the pointer on RETURN, {_rb_p} is "
+                    f"{_rb_c} and the hover fill is {tuple(_rb_hov[:3])} "
+                    f"— the hover has to reach the whole button")
+            # AND THE WORD IS ON IT.
+            _rb_ink = _np.array(pygame.surfarray.array3d(
+                _rb_idle.subsurface(_rb_r))).reshape(-1, 3)
+            assert (_np.abs(_rb_ink - _np.array(_rb_fg[:3])).sum(axis=1)
+                    < 30).sum() >= 20, (
+                f"{_W}x{_H}: RETURN's slot carries no pixel of the "
+                f"label's own colour {tuple(_rb_fg[:3])}")
+            _rb_word = _rb_scr.style.render_text(
+                _rb_scr._data.get("return", {}).get("label", "Return").upper(),
+                _rb_scr.layout.font_size(
+                    _rb_scr.box_style("return").get("font_size", 24)),
+                (255, 255, 255))
+            _rb_pad = max(1, int(_rb_sort.HIGHLIGHT_PAD * _rb_scr.layout.scale))
+            assert _rb_word.get_width() + 2 * _rb_pad <= _rb_r.w, (
+                f"{_W}x{_H}: RETURN's label is {_rb_word.get_width()} px "
+                f"wide in a {_rb_r.w} px slot with {_rb_pad} px of "
+                f"padding per side — the hole the artwork cuts is too "
+                f"small for the word at this resolution")
+            assert _rb_word.get_height() <= _rb_r.h, (
+                f"{_W}x{_H}: RETURN's label is {_rb_word.get_height()} px "
+                f"tall in a {_rb_r.h} px slot")
+            _rb_fits.append(_rb_r.w - _rb_word.get_width())
+        report(f"RETURN label clearance, narrowest of {len(_SIZES)} sizes: "
+               f"{min(_rb_fits)} px of the slot's width")
+        ok(f"RETURN is the eighth cutout and behaves like one ({len(_SIZES)} "
+           f"sizes: panel fill, hover over the whole box, word inside it)")
 
     report("class C, text on a plate we paint over the frame: "
            + (", ".join(f"{_k} {_v} px" for _k, _v
@@ -12464,247 +12549,248 @@ def main():
     #      and says "unknown" rather than raising when git cannot
     #   D  the reason is drawn over the game's picture, outside it,
     #      and swallows no click
-    import logging as _fb_logging
-    import tempfile
-    import types as _nt
-    import main as _fb_main
-    from core import config as _fb_config
-    from core import fallbacknote as _fb_note
+    if slow("fallback_verdict_log"):
+        import logging as _fb_logging
+        import tempfile
+        import types as _nt
+        import main as _fb_main
+        from core import config as _fb_config
+        from core import fallbacknote as _fb_note
 
-    class _FbLog(_fb_logging.Handler):
-        def __init__(self):
-            super().__init__()
-            self.lines = []
+        class _FbLog(_fb_logging.Handler):
+            def __init__(self):
+                super().__init__()
+                self.lines = []
 
-        def emit(self, record):
-            self.lines.append(f"{record.name}: {record.getMessage()}")
+            def emit(self, record):
+                self.lines.append(f"{record.name}: {record.getMessage()}")
 
-    class _FbScreen:
-        """A screen with a reason, and one without — the two shapes A
-        has to tell apart."""
-        def __init__(self, reason=None, has_method=True):
-            self._reason = reason
-            if not has_method:
-                del self.__class__.fallback_reason
+        class _FbScreen:
+            """A screen with a reason, and one without — the two shapes A
+            has to tell apart."""
+            def __init__(self, reason=None, has_method=True):
+                self._reason = reason
+                if not has_method:
+                    del self.__class__.fallback_reason
 
-        def wants_original(self):
-            return self._reason is not None
-
-        def fallback_reason(self):
-            return self._reason or ""
-
-    class _FbApp:
-        """Only what `_showing_original` reads. Built by hand rather
-        than through `build_screen`, because what is under test is a
-        DECISION and its log line, and a real app would drag a window
-        and a client in with it."""
-        connected = True
-        render_mode = "hd"
-
-        def __init__(self, screen):
-            self.client = _nt.SimpleNamespace(
-                state=_nt.SimpleNamespace(current_screen=4))
-            self.dispatcher = _nt.SimpleNamespace(
-                use_original=False, top=screen, overlay=None,
-                active_name="fleets", overlay_name="")
-            self._reporter = _fb_note.Reporter()
-            self._fallback_note = None
-
-        _verdict = _fb_main.App._verdict
-        _showing_original = _fb_main.App._showing_original
-
-    _fb_handler = _FbLog()
-    _fb_root = _fb_logging.getLogger()
-    _fb_root.addHandler(_fb_handler)
-    try:
-        # A1/A4. READY -> fallback -> READY is EXACTLY two lines, and
-        # ten identical frames in each state add nothing.
-        _fb_screen = _FbScreen(None)
-        _fb_app = _FbApp(_fb_screen)
-        for _ in range(10):
-            assert _fb_app._showing_original() is False
-        _fb_first = len(_fb_handler.lines)
-        assert _fb_first == 1, _fb_handler.lines
-        _fb_screen._reason = "the block and the field list disagree"
-        for _ in range(10):
-            assert _fb_app._showing_original() is True
-        assert len(_fb_handler.lines) == 2, _fb_handler.lines
-        assert "original shown" in _fb_handler.lines[1]
-        assert "fleets" in _fb_handler.lines[1]
-        assert "game screen 4" in _fb_handler.lines[1]
-        assert "the block and the field list disagree" in _fb_handler.lines[1]
-        _fb_screen._reason = None
-        for _ in range(10):
-            assert _fb_app._showing_original() is False
-        assert len(_fb_handler.lines) == 3, _fb_handler.lines
-        assert "HD draws" in _fb_handler.lines[2]
-
-        # A1 again: THE REASON CHANGING IS ALSO A CHANGE. A screen that
-        # stays down for a new reason has to write a second line, or a
-        # log says "it is still down" and never why it is down NOW.
-        _fb_screen._reason = "no field list"
-        _fb_app._showing_original()
-        _fb_screen._reason = "a field this screen does not build"
-        _fb_app._showing_original()
-        assert len(_fb_handler.lines) == 5, _fb_handler.lines
-        assert "a field this screen does not build" in _fb_handler.lines[4]
-
-        # A1, the other half: a screen with no `fallback_reason` at all
-        # says so IN AS MANY WORDS. An empty tail would read as though
-        # the reason were blank by accident.
-        class _FbMute:
             def wants_original(self):
-                return True
-        _fb_mute = _FbApp(_FbMute())
-        assert _fb_mute._showing_original() is True
-        assert _fb_note.NO_REASON in _fb_handler.lines[-1], _fb_handler.lines[-1]
-        # ...and it draws NO note: a panel over the game's picture
-        # saying "no reason given" is noise.
-        assert _fb_mute._fallback_note is None
+                return self._reason is not None
 
-        # A2. THE RULE IS NOT ABOUT FLEETS. Every screen with the method
-        # goes through the same place, so the check names the ones that
-        # have it rather than one of them.
-        _fb_with = sorted(
-            _f for _f in ("screens/fleets/screen.py",
-                          "screens/research_select/screen.py")
-            if "def fallback_reason" in io.open(
-                os.path.join(os.path.dirname(SCREENS_DIR), _f),
-                encoding="utf-8").read())
-        assert len(_fb_with) == 2, _fb_with
-        _fb_src = io.open(os.path.join(os.path.dirname(SCREENS_DIR),
-                                       "main.py"), encoding="utf-8").read()
-        assert _fb_src.count("def _verdict") == 1, (
-            "the fallback verdict is decided in more than one place")
-        assert "fallback_reason" not in _fb_src.replace(
-            "`fallback_reason()` had exactly one", ""), (
-            "main.py looks the reason up itself; the decision is made "
-            "here and reported in core.fallbacknote, so the log line "
-            "and the on-screen note can never disagree")
-        _fb_rep = io.open(os.path.join(os.path.dirname(SCREENS_DIR),
-                                       "core", "fallbacknote.py"),
-                          encoding="utf-8").read()
-        assert _fb_rep.count('"fallback_reason"') == 1, (
-            "the reason is looked up more than once")
+            def fallback_reason(self):
+                return self._reason or ""
 
-        # B. EVERY SCREEN SWITCH IS ONE LINE, with the game's id, and a
-        # switch to the screen already active is not a switch.
-        _fb_app2, _ = _pv.build_screen(1920, 1080)
-        # AFTER the build: `build_screen` switches to its own screen on
-        # the way up, and that line is a real one — it just is not the
-        # one under test.
-        _fb_handler.lines.clear()
-        _fb_disp = _fb_app2.dispatcher
-        _fb_gs = _nt.SimpleNamespace(current_screen=0)
-        _fb_disp.switch_to("galaxy_map", _fb_gs)
-        _fb_disp.switch_to("fleets", _nt.SimpleNamespace(current_screen=4))
-        _fb_switch = [_l for _l in _fb_handler.lines if "screen:" in _l]
-        assert len(_fb_switch) == 2, _fb_handler.lines
-        assert "-> galaxy_map (game screen 0)" in _fb_switch[0], _fb_switch[0]
-        assert "galaxy_map -> fleets (game screen 4)" in _fb_switch[1], \
-            _fb_switch[1]
-        _fb_before = len(_fb_handler.lines)
-        _fb_disp.switch_to("fleets", _nt.SimpleNamespace(current_screen=4))
-        assert len(_fb_handler.lines) == _fb_before, (
-            "switching to the screen already active wrote a line")
-    finally:
-        _fb_root.removeHandler(_fb_handler)
+        class _FbApp:
+            """Only what `_showing_original` reads. Built by hand rather
+            than through `build_screen`, because what is under test is a
+            DECISION and its log line, and a real app would drag a window
+            and a client in with it."""
+            connected = True
+            render_mode = "hd"
 
-    # C. THE BUILD LINE, both ways. The second case is FORCED rather
-    # than left to the disk: a check that depends on whether this
-    # machine happens to have git is the fault "a test that reads the
-    # user's disk answers differently for the user" is about.
-    _fb_line = _fb_config.build_line()
-    assert "OrionLayer" in _fb_line and _fb_config.ORION2RE_VERSION in _fb_line
-    _fb_commit, _fb_dirty = _fb_config.build_id()
-    assert _fb_commit == _fb_config.UNKNOWN_BUILD or (
-        len(_fb_commit) >= 7 and all(_c in "0123456789abcdef"
-                                     for _c in _fb_commit)), _fb_commit
-    # No repository: a real directory that is not one.
-    assert _fb_config.build_id(root=tempfile.gettempdir()) == \
-        (_fb_config.UNKNOWN_BUILD, None)
-    # No git at all: PATH emptied, so the call raises OSError inside.
-    _fb_path = os.environ.get("PATH", "")
-    try:
-        os.environ["PATH"] = ""
-        assert _fb_config.build_id()[0] == _fb_config.UNKNOWN_BUILD
-        assert _fb_config.UNKNOWN_BUILD in _fb_config.build_line()
-    finally:
-        os.environ["PATH"] = _fb_path
+            def __init__(self, screen):
+                self.client = _nt.SimpleNamespace(
+                    state=_nt.SimpleNamespace(current_screen=4))
+                self.dispatcher = _nt.SimpleNamespace(
+                    use_original=False, top=screen, overlay=None,
+                    active_name="fleets", overlay_name="")
+                self._reporter = _fb_note.Reporter()
+                self._fallback_note = None
 
-    # D. THE NOTE IS DRAWN, OUTSIDE THE PICTURE, AND SAYS SO.
-    from core import helppopup as _fb_help
-    from core.original_view import OriginalView as _fb_ov
-    _fb_note_backdrop = _fb_help.Backdrop()
-    # `placement` is the one function that says where the 4:3 picture
-    # lands (decision 5), so the check asks IT rather than repeating
-    # the arithmetic — the same reason `fallbacknote.render` takes the
-    # rect as a parameter.
-    _fb_view = _fb_ov()
-    assert "HD EXTENSION" in (_fb_note.__doc__ or ""), (
-        "core/fallbacknote.py no longer marks itself an HD EXTENSION; "
-        "the original has no second renderer to fall back FROM")
-    _fb_labels = _sjson.load(io.open(
-        os.path.join(os.path.dirname(SCREENS_DIR), "assets", "shared",
-                     "fallback", "labels.json"), encoding="utf-8"))
-    assert _fb_labels.get("prefix") and _fb_labels.get("cut"), _fb_labels
-    _fb_style = _fb_app2.style
-    _fb_reason = ("A long reason, because a long one is the case that "
-                  "breaks: 12 field(s) in the live list that this screen "
-                  "does not build: (235, 302, 286, 323) type 7, "
-                  "(345, 302, 396, 323) type 7 and 10 more. Something "
-                  "else is on screen.")
-    for _fb_w, _fb_h in ((1920, 1080), (2560, 1440), (3440, 1440),
-                         (3840, 2160), (1440, 1080)):
-        _fb_surf = pygame.Surface((_fb_w, _fb_h))
-        _fb_surf.fill((7, 9, 18))
-        _fb_pic = _fb_view.placement(_fb_w, _fb_h)
-        _fb_rect = _fb_note.render(_fb_surf, _fb_style, _fb_app2.res,
-                                   _fb_note_backdrop, _fb_reason,
-                                   _fb_labels, _fb_pic)
-        assert _fb_rect is not None, (_fb_w, _fb_h)
-        _nx, _ny, _nw, _nh = _fb_rect
-        _px, _py, _pw, _ph, _ = _fb_pic
-        # OUTSIDE THE PICTURE at every window that has room. 4:3 has
-        # none, and that case is allowed to overlap — it is the one the
-        # order names as the exception.
-        if _fb_w * 3 > _fb_h * 4 + 1:
-            assert (_nx + _nw <= _px or _nx >= _px + _pw
-                    or _ny + _nh <= _py or _ny >= _py + _ph), (
-                f"the note covers the game's picture at {_fb_w}x{_fb_h}: "
-                f"note {_fb_rect} over picture {_fb_pic[:4]}")
-        # AND IT DREW INK. A band filled and left empty is the "a later
-        # draw can erase an earlier one" fault with no draw at all.
-        _fb_arr = pygame.surfarray.array3d(
-            _fb_surf.subsurface(pygame.Rect(_fb_rect)))
-        assert len(_np.unique(_fb_arr.reshape(-1, 3), axis=0)) > 3, (
-            f"the note drew no text at {_fb_w}x{_fb_h}")
-    # NO REASON, NO NOTE — decision 22's fallback has no screen to quote.
-    _fb_surf = pygame.Surface((1920, 1080))
-    assert _fb_note.render(_fb_surf, _fb_style, _fb_app2.res,
-                           _fb_note_backdrop, None, _fb_labels,
-                           _fb_view.placement(1920, 1080)) is None
-    # A LONG REASON IS SHORTENED WITH ITS MARKER, never cut in silence.
-    _fb_huge = " ".join(["word"] * 400)
-    _fb_lines = _fb_note._wrap(_fb_style, _fb_huge, 20, 200,
-                              _fb_note.TEXT)
-    assert len(_fb_lines) > 1, "the wrapper did not wrap"
-    _fb_short = _fb_note._shorten(_fb_style, _fb_huge, 20, 200, 3,
-                                  _fb_note.TEXT, _fb_labels["cut"])
-    assert _fb_short.endswith(_fb_labels["cut"]), _fb_short[-40:]
-    assert len(_fb_note._wrap(_fb_style, _fb_short, 20, 200,
-                              _fb_note.TEXT)) <= 3
-    # AND IT SWALLOWS NO CLICK: `_handle_click` forwards to the game
-    # whenever the original is shown, and knows nothing about the note.
-    assert "fallbacknote" not in _fb_src.split("def _handle_click")[1][:600], (
-        "the click handler has learned about the note; it must forward "
-        "every click to the game exactly as before")
+            _verdict = _fb_main.App._verdict
+            _showing_original = _fb_main.App._showing_original
 
-    ok("a fallback says why: one log line per change of decision or "
-       "reason at main._verdict and nowhere else, one per screen "
-       "switch, the build line with git and without, and the reason "
-       "drawn outside the game's picture at five window shapes, "
-       "shortened with its marker rather than cut")
+        _fb_handler = _FbLog()
+        _fb_root = _fb_logging.getLogger()
+        _fb_root.addHandler(_fb_handler)
+        try:
+            # A1/A4. READY -> fallback -> READY is EXACTLY two lines, and
+            # ten identical frames in each state add nothing.
+            _fb_screen = _FbScreen(None)
+            _fb_app = _FbApp(_fb_screen)
+            for _ in range(10):
+                assert _fb_app._showing_original() is False
+            _fb_first = len(_fb_handler.lines)
+            assert _fb_first == 1, _fb_handler.lines
+            _fb_screen._reason = "the block and the field list disagree"
+            for _ in range(10):
+                assert _fb_app._showing_original() is True
+            assert len(_fb_handler.lines) == 2, _fb_handler.lines
+            assert "original shown" in _fb_handler.lines[1]
+            assert "fleets" in _fb_handler.lines[1]
+            assert "game screen 4" in _fb_handler.lines[1]
+            assert "the block and the field list disagree" in _fb_handler.lines[1]
+            _fb_screen._reason = None
+            for _ in range(10):
+                assert _fb_app._showing_original() is False
+            assert len(_fb_handler.lines) == 3, _fb_handler.lines
+            assert "HD draws" in _fb_handler.lines[2]
+
+            # A1 again: THE REASON CHANGING IS ALSO A CHANGE. A screen that
+            # stays down for a new reason has to write a second line, or a
+            # log says "it is still down" and never why it is down NOW.
+            _fb_screen._reason = "no field list"
+            _fb_app._showing_original()
+            _fb_screen._reason = "a field this screen does not build"
+            _fb_app._showing_original()
+            assert len(_fb_handler.lines) == 5, _fb_handler.lines
+            assert "a field this screen does not build" in _fb_handler.lines[4]
+
+            # A1, the other half: a screen with no `fallback_reason` at all
+            # says so IN AS MANY WORDS. An empty tail would read as though
+            # the reason were blank by accident.
+            class _FbMute:
+                def wants_original(self):
+                    return True
+            _fb_mute = _FbApp(_FbMute())
+            assert _fb_mute._showing_original() is True
+            assert _fb_note.NO_REASON in _fb_handler.lines[-1], _fb_handler.lines[-1]
+            # ...and it draws NO note: a panel over the game's picture
+            # saying "no reason given" is noise.
+            assert _fb_mute._fallback_note is None
+
+            # A2. THE RULE IS NOT ABOUT FLEETS. Every screen with the method
+            # goes through the same place, so the check names the ones that
+            # have it rather than one of them.
+            _fb_with = sorted(
+                _f for _f in ("screens/fleets/screen.py",
+                              "screens/research_select/screen.py")
+                if "def fallback_reason" in io.open(
+                    os.path.join(os.path.dirname(SCREENS_DIR), _f),
+                    encoding="utf-8").read())
+            assert len(_fb_with) == 2, _fb_with
+            _fb_src = io.open(os.path.join(os.path.dirname(SCREENS_DIR),
+                                           "main.py"), encoding="utf-8").read()
+            assert _fb_src.count("def _verdict") == 1, (
+                "the fallback verdict is decided in more than one place")
+            assert "fallback_reason" not in _fb_src.replace(
+                "`fallback_reason()` had exactly one", ""), (
+                "main.py looks the reason up itself; the decision is made "
+                "here and reported in core.fallbacknote, so the log line "
+                "and the on-screen note can never disagree")
+            _fb_rep = io.open(os.path.join(os.path.dirname(SCREENS_DIR),
+                                           "core", "fallbacknote.py"),
+                              encoding="utf-8").read()
+            assert _fb_rep.count('"fallback_reason"') == 1, (
+                "the reason is looked up more than once")
+
+            # B. EVERY SCREEN SWITCH IS ONE LINE, with the game's id, and a
+            # switch to the screen already active is not a switch.
+            _fb_app2, _ = _pv.build_screen(1920, 1080)
+            # AFTER the build: `build_screen` switches to its own screen on
+            # the way up, and that line is a real one — it just is not the
+            # one under test.
+            _fb_handler.lines.clear()
+            _fb_disp = _fb_app2.dispatcher
+            _fb_gs = _nt.SimpleNamespace(current_screen=0)
+            _fb_disp.switch_to("galaxy_map", _fb_gs)
+            _fb_disp.switch_to("fleets", _nt.SimpleNamespace(current_screen=4))
+            _fb_switch = [_l for _l in _fb_handler.lines if "screen:" in _l]
+            assert len(_fb_switch) == 2, _fb_handler.lines
+            assert "-> galaxy_map (game screen 0)" in _fb_switch[0], _fb_switch[0]
+            assert "galaxy_map -> fleets (game screen 4)" in _fb_switch[1], \
+                _fb_switch[1]
+            _fb_before = len(_fb_handler.lines)
+            _fb_disp.switch_to("fleets", _nt.SimpleNamespace(current_screen=4))
+            assert len(_fb_handler.lines) == _fb_before, (
+                "switching to the screen already active wrote a line")
+        finally:
+            _fb_root.removeHandler(_fb_handler)
+
+        # C. THE BUILD LINE, both ways. The second case is FORCED rather
+        # than left to the disk: a check that depends on whether this
+        # machine happens to have git is the fault "a test that reads the
+        # user's disk answers differently for the user" is about.
+        _fb_line = _fb_config.build_line()
+        assert "OrionLayer" in _fb_line and _fb_config.ORION2RE_VERSION in _fb_line
+        _fb_commit, _fb_dirty = _fb_config.build_id()
+        assert _fb_commit == _fb_config.UNKNOWN_BUILD or (
+            len(_fb_commit) >= 7 and all(_c in "0123456789abcdef"
+                                         for _c in _fb_commit)), _fb_commit
+        # No repository: a real directory that is not one.
+        assert _fb_config.build_id(root=tempfile.gettempdir()) == \
+            (_fb_config.UNKNOWN_BUILD, None)
+        # No git at all: PATH emptied, so the call raises OSError inside.
+        _fb_path = os.environ.get("PATH", "")
+        try:
+            os.environ["PATH"] = ""
+            assert _fb_config.build_id()[0] == _fb_config.UNKNOWN_BUILD
+            assert _fb_config.UNKNOWN_BUILD in _fb_config.build_line()
+        finally:
+            os.environ["PATH"] = _fb_path
+
+        # D. THE NOTE IS DRAWN, OUTSIDE THE PICTURE, AND SAYS SO.
+        from core import helppopup as _fb_help
+        from core.original_view import OriginalView as _fb_ov
+        _fb_note_backdrop = _fb_help.Backdrop()
+        # `placement` is the one function that says where the 4:3 picture
+        # lands (decision 5), so the check asks IT rather than repeating
+        # the arithmetic — the same reason `fallbacknote.render` takes the
+        # rect as a parameter.
+        _fb_view = _fb_ov()
+        assert "HD EXTENSION" in (_fb_note.__doc__ or ""), (
+            "core/fallbacknote.py no longer marks itself an HD EXTENSION; "
+            "the original has no second renderer to fall back FROM")
+        _fb_labels = _sjson.load(io.open(
+            os.path.join(os.path.dirname(SCREENS_DIR), "assets", "shared",
+                         "fallback", "labels.json"), encoding="utf-8"))
+        assert _fb_labels.get("prefix") and _fb_labels.get("cut"), _fb_labels
+        _fb_style = _fb_app2.style
+        _fb_reason = ("A long reason, because a long one is the case that "
+                      "breaks: 12 field(s) in the live list that this screen "
+                      "does not build: (235, 302, 286, 323) type 7, "
+                      "(345, 302, 396, 323) type 7 and 10 more. Something "
+                      "else is on screen.")
+        for _fb_w, _fb_h in ((1920, 1080), (2560, 1440), (3440, 1440),
+                             (3840, 2160), (1440, 1080)):
+            _fb_surf = pygame.Surface((_fb_w, _fb_h))
+            _fb_surf.fill((7, 9, 18))
+            _fb_pic = _fb_view.placement(_fb_w, _fb_h)
+            _fb_rect = _fb_note.render(_fb_surf, _fb_style, _fb_app2.res,
+                                       _fb_note_backdrop, _fb_reason,
+                                       _fb_labels, _fb_pic)
+            assert _fb_rect is not None, (_fb_w, _fb_h)
+            _nx, _ny, _nw, _nh = _fb_rect
+            _px, _py, _pw, _ph, _ = _fb_pic
+            # OUTSIDE THE PICTURE at every window that has room. 4:3 has
+            # none, and that case is allowed to overlap — it is the one the
+            # order names as the exception.
+            if _fb_w * 3 > _fb_h * 4 + 1:
+                assert (_nx + _nw <= _px or _nx >= _px + _pw
+                        or _ny + _nh <= _py or _ny >= _py + _ph), (
+                    f"the note covers the game's picture at {_fb_w}x{_fb_h}: "
+                    f"note {_fb_rect} over picture {_fb_pic[:4]}")
+            # AND IT DREW INK. A band filled and left empty is the "a later
+            # draw can erase an earlier one" fault with no draw at all.
+            _fb_arr = pygame.surfarray.array3d(
+                _fb_surf.subsurface(pygame.Rect(_fb_rect)))
+            assert len(_np.unique(_fb_arr.reshape(-1, 3), axis=0)) > 3, (
+                f"the note drew no text at {_fb_w}x{_fb_h}")
+        # NO REASON, NO NOTE — decision 22's fallback has no screen to quote.
+        _fb_surf = pygame.Surface((1920, 1080))
+        assert _fb_note.render(_fb_surf, _fb_style, _fb_app2.res,
+                               _fb_note_backdrop, None, _fb_labels,
+                               _fb_view.placement(1920, 1080)) is None
+        # A LONG REASON IS SHORTENED WITH ITS MARKER, never cut in silence.
+        _fb_huge = " ".join(["word"] * 400)
+        _fb_lines = _fb_note._wrap(_fb_style, _fb_huge, 20, 200,
+                                  _fb_note.TEXT)
+        assert len(_fb_lines) > 1, "the wrapper did not wrap"
+        _fb_short = _fb_note._shorten(_fb_style, _fb_huge, 20, 200, 3,
+                                      _fb_note.TEXT, _fb_labels["cut"])
+        assert _fb_short.endswith(_fb_labels["cut"]), _fb_short[-40:]
+        assert len(_fb_note._wrap(_fb_style, _fb_short, 20, 200,
+                                  _fb_note.TEXT)) <= 3
+        # AND IT SWALLOWS NO CLICK: `_handle_click` forwards to the game
+        # whenever the original is shown, and knows nothing about the note.
+        assert "fallbacknote" not in _fb_src.split("def _handle_click")[1][:600], (
+            "the click handler has learned about the note; it must forward "
+            "every click to the game exactly as before")
+
+        ok("a fallback says why: one log line per change of decision or "
+           "reason at main._verdict and nowhere else, one per screen "
+           "switch, the build line with git and without, and the reason "
+           "drawn outside the game's picture at five window shapes, "
+           "shortened with its marker rather than cut")
 
     ok("colony summary sidebar layout (label flush left, value flush "
        "right, ink-measured at 12 resolutions)")
@@ -17473,132 +17559,133 @@ def main():
     #     313 px, WARNING.LBX 331, the popup 279) and overhang it there;
     #     Data decided they are scaled into the opening (HD DEVIATION,
     #     decision 69), so they are held to it like every other dialog.
-    import frame_holes as _gmf_fh
-    from screens.game_menu import gmframe as _gmf
-    from screens.galaxy_map import mapboxes as _gmf_mb
-    _gmf_lay = _gm_json.load(open(os.path.join(
-        SCREENS_DIR, "game_menu", "layout.json")))
-    _gmf_png = res.screen_file("game_menu", "assets", "frame.png")
-    assert _gmf_png, "screens/game_menu/assets/frame.png is missing"
-    _gmf_w, _gmf_h, _gmf_holes = _gmf_fh.find_holes(_gmf_png)
-    assert len(_gmf_holes) == 1, _gmf_holes
-    assert list(_gmf_holes[0]) == _gmf_lay["frame"]["opening"], (
-        _gmf_holes, _gmf_lay["frame"]["opening"])
-    assert [_gmf_w, _gmf_h] == _gmf_lay["frame"]["image_size"]
-    _gmf_src = open(_gmf.__file__, encoding="utf-8").read()
-    assert "asset_path(" in _gmf_src and "os.path" not in _gmf_src, \
-        "gmframe must load through the resource roots (decision 16)"
-    # THE PLACEMENT (work order 125, HD DEVIATION, superseding 122's share
-    # of the map window): the frame fitted to the galaxy map's map_area as
-    # boxes.json has it — its height, centred — and every box seated by one
-    # move and one factor. The file keeps the design geometry.
-    _gmf_body = next(_b["rect"] for _b in _gm_boxes if _b["name"] == "body")
-    assert "HD DEVIATION" in _gmf.__doc__ and "map" in _gmf.__doc__
-    from core.box import load_boxes as _gmf_lb
-    _gmf_nodes = ("menu", "settings", "load", "save", "confirm", "warning")
-    _gmf_real = _gmf.draw
-    for _W, _H in ((1920, 1080), (2560, 1440), (3840, 2160)):
-        _gmf_app, _ = _pv.build_screen(_W, _H)
-        _gmf_d = _gmf_app.dispatcher
-        _gmf_d.switch_to("galaxy_map")
-        _gmf_gs = _GmState()
-        _gmf_gs.current_screen = 8
-        _gmf_gs.settings_raw = _gm_live
-        _gmf_gs.fields = _gm_fields(_gm_fix["menu"])
-        _gmf_d.update_from_game(_gmf_gs)
-        _gmf_s = _gmf_d.screens["game_menu"]
-        _gmf_s.enter(_gmf_gs)
-        _gmf_br = _gm_draw.rect(_gmf_s, "body")
-        _gmf_fr, _gmf_op = _gmf.rects(_gmf_s, _gmf_br)
-        assert _gmf_op.contains(_gmf_br), (_W, _gmf_op, _gmf_br)
-        _gmf_img = pygame.transform.smoothscale(
-            pygame.image.load(_gmf_png), _gmf_fr.size)
-        _gmf_al = np.full((_H, _W), 255, dtype=np.uint8)
-        _gmf_fa = pygame.surfarray.array_alpha(_gmf_img).T
-        # INSIDE THE MAP CUTOUT (work order 125): the frame's rect within
-        # map_area, its height the cutout's, centred on it, and its metal
-        # (alpha >= 16) clear of the GAME field above and the nav bar below.
-        _gmf_cut = pygame.Rect(*_gmf_s.layout.rect(next(
-            _b.ref_rect for _b in _gmf_lb(res.screen_file(
-                "galaxy_map", "boxes.json"), _W, _H) if _b.name == "map_area")))
-        assert _gmf_cut.inflate(2, 2).contains(_gmf_fr), (
-            _W, "the GAME menu frame reaches outside the map cutout",
-            _gmf_fr, _gmf_cut)
-        assert abs(_gmf_fr.h - _gmf_cut.h) <= 1 and abs(
-            _gmf_fr.centerx - _gmf_cut.centerx) <= 1, (_W, _gmf_fr, _gmf_cut)
-        _gmf_rows = np.where((_gmf_fa >= 16).any(axis=1))[0]
-        assert _gmf_fr.y + _gmf_rows[0] >= _gmf_cut.y and \
-            _gmf_fr.y + _gmf_rows[-1] < _gmf_cut.bottom, (_W, _gmf_fr)
-        # One factor for every box: the seated body is the file's body times
-        # content_scale, and a seated button keeps its offset in proportion.
-        _gmf_k = _gmf_s.content_scale
-        assert 0.5 < _gmf_k < 1.0, _gmf_k
-        _gmf_sb = {_b.name: _b.ref_rect for _b in _gmf_s.boxes}
-        _gmf_fb = {_b["name"]: _b["rect"] for _b in _gm_boxes}
-        for _bn in ("menu_save", "confirm_panel", "sound_bar"):
-            _exp = (_gmf_sb["body"][0] + (_gmf_fb[_bn][0] - _gmf_body[0])
-                    * _gmf_k, _gmf_fb[_bn][2] * _gmf_k)
-            assert abs(_gmf_sb[_bn][0] - _exp[0]) < 1e-6 and \
-                abs(_gmf_sb[_bn][2] - _exp[1]) < 1e-6, (_bn, _gmf_sb[_bn])
-            # An editor save writes the file's rect, never the seated one.
-            _gmf_bx = next(_b for _b in _gmf_s.boxes if _b.name == _bn)
-            assert _gmf_bx.to_dict()["rect"] == _gmf_fb[_bn], _bn
-        _gx, _gy = max(0, _gmf_fr.x), max(0, _gmf_fr.y)
-        _sx, _sy = _gx - _gmf_fr.x, _gy - _gmf_fr.y
-        _ww = min(_W - _gx, _gmf_fa.shape[1] - _sx)
-        _hh = min(_H - _gy, _gmf_fa.shape[0] - _sy)
-        _gmf_al[_gy:_gy + _hh, _gx:_gx + _ww] = \
-            _gmf_fa[_sy:_sy + _hh, _sx:_sx + _ww]
-        for _n in _gmf_nodes:
-            _gmf_gs.fields = _gm_fields(_gm_fix[_n])
-            _gmf_s.update(_gmf_gs)
-            _gmf.draw = lambda *_a: True
-            try:
-                _gmf_surf = pygame.Surface((_W, _H))
-                _gmf_surf.fill((255, 0, 255))
-                _gmf_s.render(_gmf_surf)
-            finally:
-                _gmf.draw = _gmf_real
-            _px = pygame.surfarray.array3d(_gmf_surf).transpose(1, 0, 2)
-            _content = ~((_px[:, :, 0] == 255) & (_px[:, :, 1] == 0)
-                         & (_px[:, :, 2] == 255))
-            assert _content.sum() > 2000, (_W, _n, "drew nothing")
-            _out = _content & (_gmf_al >= 16)
-            assert not _out.any(), (
-                f"GAME menu {_n} at {_W}x{_H}: {int(_out.sum())} px of "
-                f"content outside the frame's opening")
-            # THE FILL: the octagon is transparent, so the menu's own
-            # ground has to be under it — sampled in the drawn frame, off
-            # every box, it must not be the map underneath.
-            if _n == "menu":
-                _gmf_full = pygame.Surface((_W, _H))
-                _gmf_full.fill((255, 0, 255))
-                _gmf_s.render(_gmf_full)
-                _pt = (_gmf_op.centerx, _gmf_op.y + _gmf_op.h // 2)
-                assert _gmf_full.get_at(_pt)[:3] != (255, 0, 255), (
-                    _W, "the opening is not filled")
-    # THE FIT RULE (work order 123): each box scaled by ONE factor, the
-    # body's width over the panel's, so the panel is the body's width and
-    # centred on it, and its fonts carry the same factor as its rects.
-    _gmf_rects = {_b["name"]: _b for _b in _gm_boxes}
-    for _grp in ("confirm", "warning"):
-        _gp = _gmf_rects[f"{_grp}_panel"]["rect"]
-        assert abs(_gp[2] - _gmf_body[2]) <= 1 and abs(
-            (_gp[0] + _gp[2] / 2) - (_gmf_body[0] + _gmf_body[2] / 2)) <= 1, (
-            _grp, _gp, _gmf_body)
-        # The text box keeps its native proportion to the panel: a text
-        # area scaled on its own would change the wrap, not the size.
-        _nat = _gmf_lay["native"]
-        _np_, _nt = _nat[f"{_grp}_panel"], _nat[f"{_grp}_text"]
-        _gt = _gmf_rects[f"{_grp}_text"]["rect"]
-        assert abs(_gt[2] / _gp[2] - (_nt[2] - _nt[0]) / (_np_[2] - _np_[0])
-                   ) < 0.01, (_grp, _gt, _gp)
-    assert "HD DEVIATION" in _gmf.__doc__ and "HD DEVIATION" in \
-        _gm_draw.__doc__, "the confirmation fit lost its marking"
-    ok("GAME menu frame: opening == the artwork's one hole, loaded through "
-       "the resource roots, fitted inside the galaxy map cutout with every "
-       "box seated by one factor, all six dialogs inside the octagon and "
-       "filled at 1080p/1440p/2160p")
+    if slow("game_menu_frame_opening"):
+        import frame_holes as _gmf_fh
+        from screens.game_menu import gmframe as _gmf
+        from screens.galaxy_map import mapboxes as _gmf_mb
+        _gmf_lay = _gm_json.load(open(os.path.join(
+            SCREENS_DIR, "game_menu", "layout.json")))
+        _gmf_png = res.screen_file("game_menu", "assets", "frame.png")
+        assert _gmf_png, "screens/game_menu/assets/frame.png is missing"
+        _gmf_w, _gmf_h, _gmf_holes = _gmf_fh.find_holes(_gmf_png)
+        assert len(_gmf_holes) == 1, _gmf_holes
+        assert list(_gmf_holes[0]) == _gmf_lay["frame"]["opening"], (
+            _gmf_holes, _gmf_lay["frame"]["opening"])
+        assert [_gmf_w, _gmf_h] == _gmf_lay["frame"]["image_size"]
+        _gmf_src = open(_gmf.__file__, encoding="utf-8").read()
+        assert "asset_path(" in _gmf_src and "os.path" not in _gmf_src, \
+            "gmframe must load through the resource roots (decision 16)"
+        # THE PLACEMENT (work order 125, HD DEVIATION, superseding 122's share
+        # of the map window): the frame fitted to the galaxy map's map_area as
+        # boxes.json has it — its height, centred — and every box seated by one
+        # move and one factor. The file keeps the design geometry.
+        _gmf_body = next(_b["rect"] for _b in _gm_boxes if _b["name"] == "body")
+        assert "HD DEVIATION" in _gmf.__doc__ and "map" in _gmf.__doc__
+        from core.box import load_boxes as _gmf_lb
+        _gmf_nodes = ("menu", "settings", "load", "save", "confirm", "warning")
+        _gmf_real = _gmf.draw
+        for _W, _H in ((1920, 1080), (2560, 1440), (3840, 2160)):
+            _gmf_app, _ = _pv.build_screen(_W, _H)
+            _gmf_d = _gmf_app.dispatcher
+            _gmf_d.switch_to("galaxy_map")
+            _gmf_gs = _GmState()
+            _gmf_gs.current_screen = 8
+            _gmf_gs.settings_raw = _gm_live
+            _gmf_gs.fields = _gm_fields(_gm_fix["menu"])
+            _gmf_d.update_from_game(_gmf_gs)
+            _gmf_s = _gmf_d.screens["game_menu"]
+            _gmf_s.enter(_gmf_gs)
+            _gmf_br = _gm_draw.rect(_gmf_s, "body")
+            _gmf_fr, _gmf_op = _gmf.rects(_gmf_s, _gmf_br)
+            assert _gmf_op.contains(_gmf_br), (_W, _gmf_op, _gmf_br)
+            _gmf_img = pygame.transform.smoothscale(
+                pygame.image.load(_gmf_png), _gmf_fr.size)
+            _gmf_al = np.full((_H, _W), 255, dtype=np.uint8)
+            _gmf_fa = pygame.surfarray.array_alpha(_gmf_img).T
+            # INSIDE THE MAP CUTOUT (work order 125): the frame's rect within
+            # map_area, its height the cutout's, centred on it, and its metal
+            # (alpha >= 16) clear of the GAME field above and the nav bar below.
+            _gmf_cut = pygame.Rect(*_gmf_s.layout.rect(next(
+                _b.ref_rect for _b in _gmf_lb(res.screen_file(
+                    "galaxy_map", "boxes.json"), _W, _H) if _b.name == "map_area")))
+            assert _gmf_cut.inflate(2, 2).contains(_gmf_fr), (
+                _W, "the GAME menu frame reaches outside the map cutout",
+                _gmf_fr, _gmf_cut)
+            assert abs(_gmf_fr.h - _gmf_cut.h) <= 1 and abs(
+                _gmf_fr.centerx - _gmf_cut.centerx) <= 1, (_W, _gmf_fr, _gmf_cut)
+            _gmf_rows = np.where((_gmf_fa >= 16).any(axis=1))[0]
+            assert _gmf_fr.y + _gmf_rows[0] >= _gmf_cut.y and \
+                _gmf_fr.y + _gmf_rows[-1] < _gmf_cut.bottom, (_W, _gmf_fr)
+            # One factor for every box: the seated body is the file's body times
+            # content_scale, and a seated button keeps its offset in proportion.
+            _gmf_k = _gmf_s.content_scale
+            assert 0.5 < _gmf_k < 1.0, _gmf_k
+            _gmf_sb = {_b.name: _b.ref_rect for _b in _gmf_s.boxes}
+            _gmf_fb = {_b["name"]: _b["rect"] for _b in _gm_boxes}
+            for _bn in ("menu_save", "confirm_panel", "sound_bar"):
+                _exp = (_gmf_sb["body"][0] + (_gmf_fb[_bn][0] - _gmf_body[0])
+                        * _gmf_k, _gmf_fb[_bn][2] * _gmf_k)
+                assert abs(_gmf_sb[_bn][0] - _exp[0]) < 1e-6 and \
+                    abs(_gmf_sb[_bn][2] - _exp[1]) < 1e-6, (_bn, _gmf_sb[_bn])
+                # An editor save writes the file's rect, never the seated one.
+                _gmf_bx = next(_b for _b in _gmf_s.boxes if _b.name == _bn)
+                assert _gmf_bx.to_dict()["rect"] == _gmf_fb[_bn], _bn
+            _gx, _gy = max(0, _gmf_fr.x), max(0, _gmf_fr.y)
+            _sx, _sy = _gx - _gmf_fr.x, _gy - _gmf_fr.y
+            _ww = min(_W - _gx, _gmf_fa.shape[1] - _sx)
+            _hh = min(_H - _gy, _gmf_fa.shape[0] - _sy)
+            _gmf_al[_gy:_gy + _hh, _gx:_gx + _ww] = \
+                _gmf_fa[_sy:_sy + _hh, _sx:_sx + _ww]
+            for _n in _gmf_nodes:
+                _gmf_gs.fields = _gm_fields(_gm_fix[_n])
+                _gmf_s.update(_gmf_gs)
+                _gmf.draw = lambda *_a: True
+                try:
+                    _gmf_surf = pygame.Surface((_W, _H))
+                    _gmf_surf.fill((255, 0, 255))
+                    _gmf_s.render(_gmf_surf)
+                finally:
+                    _gmf.draw = _gmf_real
+                _px = pygame.surfarray.array3d(_gmf_surf).transpose(1, 0, 2)
+                _content = ~((_px[:, :, 0] == 255) & (_px[:, :, 1] == 0)
+                             & (_px[:, :, 2] == 255))
+                assert _content.sum() > 2000, (_W, _n, "drew nothing")
+                _out = _content & (_gmf_al >= 16)
+                assert not _out.any(), (
+                    f"GAME menu {_n} at {_W}x{_H}: {int(_out.sum())} px of "
+                    f"content outside the frame's opening")
+                # THE FILL: the octagon is transparent, so the menu's own
+                # ground has to be under it — sampled in the drawn frame, off
+                # every box, it must not be the map underneath.
+                if _n == "menu":
+                    _gmf_full = pygame.Surface((_W, _H))
+                    _gmf_full.fill((255, 0, 255))
+                    _gmf_s.render(_gmf_full)
+                    _pt = (_gmf_op.centerx, _gmf_op.y + _gmf_op.h // 2)
+                    assert _gmf_full.get_at(_pt)[:3] != (255, 0, 255), (
+                        _W, "the opening is not filled")
+        # THE FIT RULE (work order 123): each box scaled by ONE factor, the
+        # body's width over the panel's, so the panel is the body's width and
+        # centred on it, and its fonts carry the same factor as its rects.
+        _gmf_rects = {_b["name"]: _b for _b in _gm_boxes}
+        for _grp in ("confirm", "warning"):
+            _gp = _gmf_rects[f"{_grp}_panel"]["rect"]
+            assert abs(_gp[2] - _gmf_body[2]) <= 1 and abs(
+                (_gp[0] + _gp[2] / 2) - (_gmf_body[0] + _gmf_body[2] / 2)) <= 1, (
+                _grp, _gp, _gmf_body)
+            # The text box keeps its native proportion to the panel: a text
+            # area scaled on its own would change the wrap, not the size.
+            _nat = _gmf_lay["native"]
+            _np_, _nt = _nat[f"{_grp}_panel"], _nat[f"{_grp}_text"]
+            _gt = _gmf_rects[f"{_grp}_text"]["rect"]
+            assert abs(_gt[2] / _gp[2] - (_nt[2] - _nt[0]) / (_np_[2] - _np_[0])
+                       ) < 0.01, (_grp, _gt, _gp)
+        assert "HD DEVIATION" in _gmf.__doc__ and "HD DEVIATION" in \
+            _gm_draw.__doc__, "the confirmation fit lost its marking"
+        ok("GAME menu frame: opening == the artwork's one hole, loaded through "
+           "the resource roots, fitted inside the galaxy map cutout with every "
+           "box seated by one factor, all six dialogs inside the octagon and "
+           "filled at 1080p/1440p/2160p")
 
     # 6. HELP: the four transcribed tables, 420/421 left out WITH the
     #    sliders and saying so, each region carrying its native rect.
@@ -17663,46 +17750,47 @@ def main():
     #     takes the real path once — a fresh app, the dispatcher opening the
     #     overlay for screen 8 — renders it, and compares the drawn pixels
     #     with the scaled frame image wherever that image is fully opaque.
-    from screens.game_menu import gmframe as _mt_gmf
-    for _W, _H in ((1920, 1080), (2560, 1440)):
-        _mt_app, _ = _pv.build_screen(_W, _H)
-        _mt_d = _mt_app.dispatcher
-        _mt_d.switch_to("galaxy_map")
-        _mt_gs = _GmState()
-        _mt_gs.current_screen = 8
-        _mt_gs.settings_raw = _gm_live
-        _mt_gs.fields = _gm_fields(_gm_fix["menu"])
-        _mt_d.update_from_game(_mt_gs)
-        _mt_s = _mt_d.overlay
-        assert _mt_d.overlay_name == "game_menu" and _mt_s is not None
-        _mt_s.update(_mt_gs)
-        _mt_fr, _ = _mt_gmf.rects(_mt_s)
-        assert _mt_fr is not None, (
-            _W, "the first opening of the GAME menu has no frame placement")
-        _mt_surf = pygame.Surface((_W, _H))
-        _mt_surf.fill((255, 0, 255))
-        _mt_s.render(_mt_surf)
-        _mt_img = pygame.transform.smoothscale(pygame.image.load(
-            res.screen_file("game_menu", "assets", "frame.png")),
-            _mt_fr.size)
-        _mt_a = pygame.surfarray.array_alpha(_mt_img).T
-        _mt_rgb = pygame.surfarray.array3d(_mt_img).transpose(1, 0, 2)
-        # `smoothscale` tops out a hair below 255 (253 measured), so "fully
-        # opaque" is >= 250 and the colour may carry that sliver of ground.
-        _mt_ys, _mt_xs = np.where(_mt_a >= 250)
-        _mt_ys, _mt_xs = _mt_ys + _mt_fr.y, _mt_xs + _mt_fr.x
-        _mt_in = (_mt_ys >= 0) & (_mt_ys < _H) & (_mt_xs >= 0) & (_mt_xs < _W)
-        _mt_draw = pygame.surfarray.array3d(_mt_surf).transpose(1, 0, 2)[
-            _mt_ys[_mt_in], _mt_xs[_mt_in]].astype(int)
-        _mt_want = _mt_rgb[_mt_ys[_mt_in] - _mt_fr.y,
-                           _mt_xs[_mt_in] - _mt_fr.x].astype(int)
-        _mt_hit = int((np.abs(_mt_draw - _mt_want).max(axis=1) <= 4).sum())
-        _mt_n = int(_mt_in.sum())
-        assert _mt_n > 50000 and _mt_hit >= 0.98 * _mt_n, (
-            f"GAME menu frame at {_W}x{_H}: {_mt_hit} of {_mt_n} opaque "
-            f"frame pixels drawn — the artwork is not on the screen")
-    ok("GAME menu frame drawn on the first opening: the metal's opaque "
-       "pixels are on the screen at 1080p and 1440p")
+    if slow("game_menu_frame_drawn"):
+        from screens.game_menu import gmframe as _mt_gmf
+        for _W, _H in ((1920, 1080), (2560, 1440)):
+            _mt_app, _ = _pv.build_screen(_W, _H)
+            _mt_d = _mt_app.dispatcher
+            _mt_d.switch_to("galaxy_map")
+            _mt_gs = _GmState()
+            _mt_gs.current_screen = 8
+            _mt_gs.settings_raw = _gm_live
+            _mt_gs.fields = _gm_fields(_gm_fix["menu"])
+            _mt_d.update_from_game(_mt_gs)
+            _mt_s = _mt_d.overlay
+            assert _mt_d.overlay_name == "game_menu" and _mt_s is not None
+            _mt_s.update(_mt_gs)
+            _mt_fr, _ = _mt_gmf.rects(_mt_s)
+            assert _mt_fr is not None, (
+                _W, "the first opening of the GAME menu has no frame placement")
+            _mt_surf = pygame.Surface((_W, _H))
+            _mt_surf.fill((255, 0, 255))
+            _mt_s.render(_mt_surf)
+            _mt_img = pygame.transform.smoothscale(pygame.image.load(
+                res.screen_file("game_menu", "assets", "frame.png")),
+                _mt_fr.size)
+            _mt_a = pygame.surfarray.array_alpha(_mt_img).T
+            _mt_rgb = pygame.surfarray.array3d(_mt_img).transpose(1, 0, 2)
+            # `smoothscale` tops out a hair below 255 (253 measured), so "fully
+            # opaque" is >= 250 and the colour may carry that sliver of ground.
+            _mt_ys, _mt_xs = np.where(_mt_a >= 250)
+            _mt_ys, _mt_xs = _mt_ys + _mt_fr.y, _mt_xs + _mt_fr.x
+            _mt_in = (_mt_ys >= 0) & (_mt_ys < _H) & (_mt_xs >= 0) & (_mt_xs < _W)
+            _mt_draw = pygame.surfarray.array3d(_mt_surf).transpose(1, 0, 2)[
+                _mt_ys[_mt_in], _mt_xs[_mt_in]].astype(int)
+            _mt_want = _mt_rgb[_mt_ys[_mt_in] - _mt_fr.y,
+                               _mt_xs[_mt_in] - _mt_fr.x].astype(int)
+            _mt_hit = int((np.abs(_mt_draw - _mt_want).max(axis=1) <= 4).sum())
+            _mt_n = int(_mt_in.sum())
+            assert _mt_n > 50000 and _mt_hit >= 0.98 * _mt_n, (
+                f"GAME menu frame at {_W}x{_H}: {_mt_hit} of {_mt_n} opaque "
+                f"frame pixels drawn — the artwork is not on the screen")
+        ok("GAME menu frame drawn on the first opening: the metal's opaque "
+           "pixels are on the screen at 1080p and 1440p")
 
     # 7a'. A CLIENT THAT CONNECTS WHILE THE MENU IS OPEN (work order 125
     #      found it, 126 D fixed it). The app starts on the main menu; the
@@ -18321,71 +18409,72 @@ def main():
     # printed accumulated over produced, which was a deviation nothing
     # marked. The row now carries up to three lines, so it is also
     # RENDERED at all four shipped sizes and the label must survive.
-    from screens.galaxy_map import sidebar as _rr_sb
-    from core import research as _rr_research
+    if slow("sidebar_research"):
+        from screens.galaxy_map import sidebar as _rr_sb
+        from core import research as _rr_research
 
-    class _RrPlayer:
-        def __init__(self, **kw):
-            self.research_breakthrough = 0
-            self.current_research_field = 60
-            self.research_accumulated = 412
-            self.research_produced = 44
-            self.tech_fields = [0] * _rr_research.FIELD_COUNT
-            self.tech_fields[60] = 2
-            for _k, _v in kw.items():
-                setattr(self, _k, _v)
-    _rr_labels = {"research": "Research", "research_unit": "RP",
-                  "breakthrough": "Breakthrough", "no_research": "None"}
-    # 1. a running project: the turns the original's own loop gives, and
-    #    the points per turn below them. 412 at 44 with cost 900 is the
-    #    pair measured beside the native frame on SAVE4 (18), 456 on
-    #    SAVE5 (17).
-    assert _rr_research.FIELD_COST[60] == 900, _rr_research.FIELD_COST[60]
-    for _rr_acc, _rr_want in ((412, "~18 turns"), (456, "~17 turns")):
+        class _RrPlayer:
+            def __init__(self, **kw):
+                self.research_breakthrough = 0
+                self.current_research_field = 60
+                self.research_accumulated = 412
+                self.research_produced = 44
+                self.tech_fields = [0] * _rr_research.FIELD_COUNT
+                self.tech_fields[60] = 2
+                for _k, _v in kw.items():
+                    setattr(self, _k, _v)
+        _rr_labels = {"research": "Research", "research_unit": "RP",
+                      "breakthrough": "Breakthrough", "no_research": "None"}
+        # 1. a running project: the turns the original's own loop gives, and
+        #    the points per turn below them. 412 at 44 with cost 900 is the
+        #    pair measured beside the native frame on SAVE4 (18), 456 on
+        #    SAVE5 (17).
+        assert _rr_research.FIELD_COST[60] == 900, _rr_research.FIELD_COST[60]
+        for _rr_acc, _rr_want in ((412, "~18 turns"), (456, "~17 turns")):
+            _rr_out = _rr_sb.research_readout(
+                _RrPlayer(research_accumulated=_rr_acc), _rr_labels)
+            assert _rr_out == ("Research", (_rr_want,), "44 RP"), _rr_out
+        # 2. the chance line appears only above zero, and then above the turns
         _rr_out = _rr_sb.research_readout(
-            _RrPlayer(research_accumulated=_rr_acc), _rr_labels)
-        assert _rr_out == ("Research", (_rr_want,), "44 RP"), _rr_out
-    # 2. the chance line appears only above zero, and then above the turns
-    _rr_out = _rr_sb.research_readout(
-        _RrPlayer(research_accumulated=1000), _rr_labels)
-    assert _rr_out == ("Research", ("11%", "~5 turns"), "44 RP"), _rr_out
-    # 3. research standing still: "0 RP", and nothing else
-    assert _rr_sb.research_readout(
-        _RrPlayer(research_produced=0), _rr_labels) == \
-        ("Research", ("0 RP",), ""), "the stalled case"
-    # 4. the two words
-    assert _rr_sb.research_readout(
-        _RrPlayer(research_breakthrough=1), _rr_labels)[1] == \
-        ("Breakthrough",)
-    assert _rr_sb.research_readout(
-        _RrPlayer(current_research_field=0), _rr_labels)[1] == ("None",)
-    # 5. IT FITS, at all four shipped sizes, without eating the label:
-    #    rendered, and the label's ink must be inside the row's box and
-    #    above the first value line.
-    for _rr_W, _rr_H in ((1366, 768), (1920, 1080), (2560, 1440),
-                         (3840, 2160)):
-        _rr_app, _ = _pv.build_screen(_rr_W, _rr_H)
-        _rr_app.dispatcher.switch_to("galaxy_map")
-        _rr_scr = _rr_app.dispatcher.active
-        _rr_box = _rr_scr.box_rect("sb_research_text")
-        assert _rr_box, (_rr_W, "no sb_research_text box")
-        _rr_rect = pygame.Rect(*_rr_app.layout.rect(_rr_box))
-        _rr_surf = pygame.Surface((_rr_W, _rr_H))
-        _rr_surf.fill((0, 0, 0))
-        _rr_sb.draw_text_block(
-            _rr_surf, _rr_app.style, _rr_app.layout, _rr_app.layout.rect(_rr_box),
-            "Research", ("11%", "~18 turns"), "44 RP", False, 1.0, "center",
-            _rr_sb.DEFAULT_FONTS)
-        _rr_px = pygame.surfarray.array3d(_rr_surf).transpose(1, 0, 2)
-        _rr_rows = np.where(_rr_px.any(axis=(1, 2)))[0]
-        assert len(_rr_rows), (_rr_W, "the research row drew nothing")
-        assert _rr_rect.top <= _rr_rows.min() and \
-            _rr_rows.max() <= _rr_rect.bottom, (
-            f"{_rr_W}x{_rr_H}: the three-line research row inks rows "
-            f"{_rr_rows.min()}..{_rr_rows.max()}, its box is "
-            f"{_rr_rect.top}..{_rr_rect.bottom}")
-    ok("sidebar research readout: the original's four cases through "
-       "core/research, and three lines fit the row at four sizes")
+            _RrPlayer(research_accumulated=1000), _rr_labels)
+        assert _rr_out == ("Research", ("11%", "~5 turns"), "44 RP"), _rr_out
+        # 3. research standing still: "0 RP", and nothing else
+        assert _rr_sb.research_readout(
+            _RrPlayer(research_produced=0), _rr_labels) == \
+            ("Research", ("0 RP",), ""), "the stalled case"
+        # 4. the two words
+        assert _rr_sb.research_readout(
+            _RrPlayer(research_breakthrough=1), _rr_labels)[1] == \
+            ("Breakthrough",)
+        assert _rr_sb.research_readout(
+            _RrPlayer(current_research_field=0), _rr_labels)[1] == ("None",)
+        # 5. IT FITS, at all four shipped sizes, without eating the label:
+        #    rendered, and the label's ink must be inside the row's box and
+        #    above the first value line.
+        for _rr_W, _rr_H in ((1366, 768), (1920, 1080), (2560, 1440),
+                             (3840, 2160)):
+            _rr_app, _ = _pv.build_screen(_rr_W, _rr_H)
+            _rr_app.dispatcher.switch_to("galaxy_map")
+            _rr_scr = _rr_app.dispatcher.active
+            _rr_box = _rr_scr.box_rect("sb_research_text")
+            assert _rr_box, (_rr_W, "no sb_research_text box")
+            _rr_rect = pygame.Rect(*_rr_app.layout.rect(_rr_box))
+            _rr_surf = pygame.Surface((_rr_W, _rr_H))
+            _rr_surf.fill((0, 0, 0))
+            _rr_sb.draw_text_block(
+                _rr_surf, _rr_app.style, _rr_app.layout, _rr_app.layout.rect(_rr_box),
+                "Research", ("11%", "~18 turns"), "44 RP", False, 1.0, "center",
+                _rr_sb.DEFAULT_FONTS)
+            _rr_px = pygame.surfarray.array3d(_rr_surf).transpose(1, 0, 2)
+            _rr_rows = np.where(_rr_px.any(axis=(1, 2)))[0]
+            assert len(_rr_rows), (_rr_W, "the research row drew nothing")
+            assert _rr_rect.top <= _rr_rows.min() and \
+                _rr_rows.max() <= _rr_rect.bottom, (
+                f"{_rr_W}x{_rr_H}: the three-line research row inks rows "
+                f"{_rr_rows.min()}..{_rr_rows.max()}, its box is "
+                f"{_rr_rect.top}..{_rr_rect.bottom}")
+        ok("sidebar research readout: the original's four cases through "
+           "core/research, and three lines fit the row at four sizes")
 
     # THE TWO TURN-START RESEARCH DIALOGS (work order 129 B, open fix 24):
     # while the state reports 52 (the science room) or 53 (SELECT NEW
@@ -21645,34 +21734,35 @@ def main():
     # (what `python tools/x.py` gives it). Libraries without `__main__`
     # (fixtures, colony_roundtrip, raceicon_sheets) are imported by the
     # tools that need them and are covered through those.
-    import subprocess as _ti_sp
-    import tempfile as _ti_tf
-    _ti_root = os.path.dirname(SCREENS_DIR)
-    _ti_tools = os.path.join(_ti_root, "tools")
-    _ti_env = dict(os.environ, SDL_VIDEODRIVER="dummy",
-                   SDL_AUDIODRIVER="dummy", PYGAME_HIDE_SUPPORT_PROMPT="1")
-    _ti_bad, _ti_n = [], 0
-    with _ti_tf.TemporaryDirectory() as _ti_cwd:
-        for _ti_path in sorted(glob.glob(os.path.join(_ti_tools, "*.py"))):
-            _ti_name = os.path.basename(_ti_path)[:-3]
-            if _ti_name == "smoke_test":
-                continue
-            with open(_ti_path, encoding="utf-8") as _fh:
-                if "__main__" not in _fh.read():
+    if slow("tools_import"):
+        import subprocess as _ti_sp
+        import tempfile as _ti_tf
+        _ti_root = os.path.dirname(SCREENS_DIR)
+        _ti_tools = os.path.join(_ti_root, "tools")
+        _ti_env = dict(os.environ, SDL_VIDEODRIVER="dummy",
+                       SDL_AUDIODRIVER="dummy", PYGAME_HIDE_SUPPORT_PROMPT="1")
+        _ti_bad, _ti_n = [], 0
+        with _ti_tf.TemporaryDirectory() as _ti_cwd:
+            for _ti_path in sorted(glob.glob(os.path.join(_ti_tools, "*.py"))):
+                _ti_name = os.path.basename(_ti_path)[:-3]
+                if _ti_name == "smoke_test":
                     continue
-            _ti_n += 1
-            _ti_r = _ti_sp.run(
-                [sys.executable, "-c",
-                 f"import sys; sys.path[0] = {_ti_tools!r}; import {_ti_name}"],
-                cwd=_ti_cwd, capture_output=True, text=True, env=_ti_env,
-                timeout=120)
-            if _ti_r.returncode != 0:
-                _ti_bad.append((_ti_name, (_ti_r.stderr.strip().splitlines()
-                                           or ["?"])[-1]))
-    assert _ti_n >= 30, f"only {_ti_n} runnable tools found"
-    assert not _ti_bad, f"tools that cannot be imported: {_ti_bad}"
-    ok(f"all {_ti_n} runnable tools import in a fresh process (the palette "
-       f"before any screen module, tools/toolenv.py)")
+                with open(_ti_path, encoding="utf-8") as _fh:
+                    if "__main__" not in _fh.read():
+                        continue
+                _ti_n += 1
+                _ti_r = _ti_sp.run(
+                    [sys.executable, "-c",
+                     f"import sys; sys.path[0] = {_ti_tools!r}; import {_ti_name}"],
+                    cwd=_ti_cwd, capture_output=True, text=True, env=_ti_env,
+                    timeout=120)
+                if _ti_r.returncode != 0:
+                    _ti_bad.append((_ti_name, (_ti_r.stderr.strip().splitlines()
+                                               or ["?"])[-1]))
+        assert _ti_n >= 30, f"only {_ti_n} runnable tools found"
+        assert not _ti_bad, f"tools that cannot be imported: {_ti_bad}"
+        ok(f"all {_ti_n} runnable tools import in a fresh process (the palette "
+           f"before any screen module, tools/toolenv.py)")
 
     # THE COMMIT IS COUPLED TO THIS SUITE (work order 126 part B, decision
     # 31). A commit once went through after a run had exited 139, because
@@ -21756,6 +21846,42 @@ def main():
     # Two documents agreeing with one another and not with the suite
     # is precisely the state a cross-check would call green, and it is
     # the state this replaces.
+    # ── THE PUSH-ONLY LIST IS DECLARED, AND THIS HOLDS THE TREE TO IT ──
+    #
+    # Work order 158. The same shape as the marker inventory, and for
+    # the same reason: SLOW_TIER is a list kept by hand, and a list
+    # kept by hand is legitimate only with a checker. Both directions,
+    # because they fail differently — a `slow(...)` guard nobody
+    # declared is a check that leaves the commit gate silently, and a
+    # declaration with no guard is a name that says a check is slow
+    # when nothing is skipping it.
+    #
+    # This runs in BOTH tiers, and it must: the fast tier is the one a
+    # commit goes through, so it is the tier that has to notice.
+    _st_src = io.open(os.path.abspath(__file__), encoding="utf-8").read()
+    _st_used = set(re.findall(r'^\s*if slow\("([^"]+)"\):', _st_src, re.M))
+    _st_declared = set(SLOW_TIER)
+    assert _st_used == _st_declared, (
+        f"the push-only list and the guards disagree — "
+        f"guarded but undeclared: {sorted(_st_used - _st_declared)}; "
+        f"declared but unguarded: {sorted(_st_declared - _st_used)}. "
+        f"SLOW_TIER is the one place the list lives")
+    for _st_n, (_st_c, _st_why) in SLOW_TIER.items():
+        assert _st_c >= 1, f"{_st_n} declares {_st_c} checks"
+        assert len(_st_why) > 40, (
+            f"{_st_n} carries no reason. Every push-only check says "
+            f"what makes it expensive, beside its name")
+    assert SLOW_SEEN == _st_declared, (
+        f"this run never reached {sorted(_st_declared - SLOW_SEEN)} — a "
+        f"guard behind a branch that did not run cannot be tiered")
+    if TIER == "fast":
+        assert set(SKIPPED) == _st_declared, sorted(_st_declared - set(SKIPPED))
+    else:
+        assert not SKIPPED, SKIPPED
+    ok(f"the push-only tier is declared and guarded: "
+       f"{len(_st_declared)} checks, each with its reason, the guards "
+       f"and the list agreeing in both directions")
+
     _counts = [("CLAUDE.md", _cmd, r"(\d+) checks, headless"),
                ("v3_projektstatus.md", None,
                 r"smoke_test\.py` — \*\*(\d+) checks\*\*")]
@@ -21765,12 +21891,27 @@ def main():
                 _text = _fh.read()
         _claimed = re.search(_pat, _text)
         assert _claimed, f"{_doc} no longer states a check count"
-        assert int(_claimed.group(1)) == PASS + 1, (
+        # PASS + 1 for the check this loop is inside, + whatever the
+        # fast tier skipped: BOTH TIERS ASSERT THE FULL COUNT, so a
+        # fast run still holds the two documents to the whole suite
+        # and cannot go green against a number it did not reach.
+        _full = PASS + 1 + sum(SKIPPED.values())
+        assert int(_claimed.group(1)) == _full, (
             f"{_doc} says {_claimed.group(1)} checks, this run has "
-            f"{PASS + 1}")
+            f"{_full} ({PASS + 1} run"
+            + (f" + {sum(SKIPPED.values())} push-only" if SKIPPED else "")
+            + ")")
     ok("CLAUDE.md paths resolve; both documents' check counts current")
 
-    print(f"\nSMOKE TEST PASSED — {PASS} checks green")
+    # THE TIER IS IN THE LINE, so a fast pass can never be read as a
+    # full one in a log, a hook's output or a report (work order 158).
+    if TIER == "fast":
+        _sk = sum(SKIPPED.values())
+        print(f"\nSMOKE TEST PASSED (FAST TIER) — {PASS} checks green, "
+              f"{_sk} push-only checks NOT run of {PASS + _sk} total. "
+              f"The full suite runs before every push.")
+    else:
+        print(f"\nSMOKE TEST PASSED — {PASS} checks green")
     return 0
 
 
@@ -21837,4 +21978,12 @@ def _run(quiet):
 
 
 if __name__ == "__main__":
+    # FULL IS THE DEFAULT, and that is the point of the flag being
+    # opt-in (work order 158). A bare `python tools/smoke_test.py`
+    # runs everything, exactly as it did before the tiers existed, so
+    # Data, a forker, or a session that has never read work order 158
+    # gets the whole suite by doing the obvious thing. Only the
+    # pre-commit hook passes --fast; the pre-push hook does not.
+    if "--fast" in sys.argv[1:]:
+        TIER = "fast"
     sys.exit(_run("--quiet" in sys.argv[1:]))
