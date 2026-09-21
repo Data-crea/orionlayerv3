@@ -55,7 +55,7 @@ derive world geometry.
 **The smoke test must be green before every commit.**
 
 ```bash
-python tools/smoke_test.py          # everything — 246 checks, ~80 s
+python tools/smoke_test.py          # everything — 247 checks, ~80 s
 python tools/smoke_test.py --fast   # the commit gate's tier, ~39 s
 ```
 
@@ -77,7 +77,7 @@ the fast tier holds that list and the guards to each other.
 time, not at commit time. See decision 31 and
 `doc/briefs/157-suite-profile.md`.
 
-246 checks, headless, no orion2re needed. **The count must not go
+247 checks, headless, no orion2re needed. **The count must not go
 down.** If a change makes a check obsolete, replace it — do not
 delete it. It went down exactly once, on 12 September 2026, when
 Phase B deleted the frame machinery the checks were about (decision

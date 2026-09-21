@@ -89,6 +89,9 @@ class GalaxyMapScreen(ScreenBase):
         super().__init__(app)
         self._data = {}
         self._cache = rnd.SpriteCache()
+        #: What `_load_sprites` last loaded FOR. None means "nothing
+        #: yet"; see `_sprite_key` for why it is not a boolean.
+        self._sprite_key_loaded = None
         self._state = None
         self._hover_star = None
         self._nebulas = []
@@ -126,14 +129,67 @@ class GalaxyMapScreen(ScreenBase):
         self._pan_from = None
         self.update(game_state)
 
-    def _load_sprites(self):
+    def _sprite_key(self):
+        """What the loaded sprites depend on — the reload condition.
+
+        **NOT a boolean, and that is the whole point of this method.**
+        `asset_path` resolves through `res.screen_file`, so which FILE
+        a name reaches depends on the active **skin** and the active
+        **mods**; and `nebula_forms` and `sidebar_icons` come from
+        `layout.json`, which `enter` re-reads and a mod can replace.
+        A guard that only asked "loaded already?" would pin the map to
+        artwork from a skin that is no longer active — a second copy
+        nobody updates, in a new place.
+
+        So the key is those four together, and `_load_sprites` reloads
+        when any of them moves and at no other time.
+        """
+        res = self.app.res
+        return (getattr(res, "skin", None),
+                tuple(getattr(res, "mod_dirs", ()) or ()),
+                tuple(self._data.get("nebula_forms", []) or ()),
+                tuple(sorted((self._data.get("sidebar_icons", {})
+                              or {}).items())))
+
+    def _load_sprites(self, force=False):
         """Star icons, black hole and nebula shapes (mod-resolved).
 
         Six steps per class (`0.png`..`5.png`), indexed by
         zoom + star.size like the original. Any step a skin or mod
         does not ship falls back to the nearest legacy artwork
         (large/medium/small), so an incomplete set still renders.
+
+        **ONCE PER SCREEN OBJECT, not once per `enter` — work order
+        161.** This ran on every entry and cost **81
+        `pygame.image.load` calls, 409 ms of a 432 ms `enter` at
+        1920x1080**, replacing each surface in `_cache` with an
+        identical one: `SpriteCache` is built in `__init__`, resize
+        clears only the SCALED variants (`clear_scaled`), and nothing
+        in the tree calls `SpriteCache.clear()`. Because every RETURN
+        from Colonies, Planets and Fleets lands here, that was paid on
+        every return and is what Data reported on 21 September 2026 as
+        "bei return ist es definitiv langsamer". Measured after:
+        426.7 ms -> 44.2 ms, and the rendered frame byte-identical.
+
+        The reload condition is `_sprite_key`, which is about the skin
+        and the mods rather than about time.
+
+        **`force=True` reloads regardless**, and it has exactly one
+        caller: the nebula check, which puts a flat test surface into
+        `_cache` in place of the real artwork and has to put the real
+        artwork back. Without the flag that restore became a silent
+        no-op and every later check would have rendered the test
+        surface — which is why the parameter exists rather than the
+        check reaching in and clearing `_sprite_key_loaded` itself.
         """
+        # `want_key`, not `key`: the sidebar loop below binds `key` to
+        # each icon name, and the first version of this guard stored
+        # the last icon name instead of the key. It never matched, so
+        # the reload never stopped — caught by the load counter in the
+        # same run, which is why that counter is now a smoke check.
+        want_key = self._sprite_key()
+        if not force and want_key == self._sprite_key_loaded:
+            return
         for folder in rnd.CLASS_DIRS.values():
             for step in range(rnd.STEP_COUNT):
                 path = self.asset_path("assets", "stars", folder,
@@ -188,6 +244,10 @@ class GalaxyMapScreen(ScreenBase):
                                 pygame.image.load(path).convert_alpha())
             else:
                 log.warning("Sidebar icon not found: %s", filename)
+
+        # LAST, so a throw above leaves the key unset and the next
+        # `enter` tries again rather than trusting a half-filled cache.
+        self._sprite_key_loaded = want_key
 
     def _load_map_background(self):
         """Star field artwork drawn under stars, nebulas and fleets.

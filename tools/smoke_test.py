@@ -2353,8 +2353,81 @@ def main():
                     pygame.surfarray.array2d(probe).astype(bool).sum())
             assert drawn[10] > drawn[30], drawn
             gm._cache.clear_scaled()
-            gm._load_sprites()
+            # force=True: this block PUT a flat test surface over the
+            # real nebula artwork, and since work order 161 a plain
+            # `_load_sprites()` is a no-op when the skin and mods have
+            # not moved. Without the flag the fake would survive into
+            # every later check that renders a nebula.
+            gm._load_sprites(force=True)
             ok("galaxy_map nebulas (size from type, not from artwork)")
+
+    # ── THE MAP LOADS ITS SPRITES ONCE, NOT ONCE PER ENTRY ──────
+    #
+    # Work order 161. `_load_sprites` ran on every `enter` and cost 81
+    # `pygame.image.load` calls, 409 ms of a 432 ms entry at 1920x1080
+    # — and every RETURN from Colonies, Planets and Fleets lands on
+    # this screen, so it was paid on every return. `SpriteCache` is
+    # built in `__init__` and nothing ever calls its `clear()`, so the
+    # reload replaced each surface with an identical one.
+    #
+    # ASSERTED AS THE RULE, in both directions: a second entry loads
+    # NOTHING through this path, and a changed key loads again. The
+    # counter is here because the first version of the guard stored
+    # the sidebar loop's variable instead of the key — it never
+    # matched, nothing reloaded less, and only counting the loads
+    # showed it.
+    if "galaxy_map" in d.screens:
+        _sp_gm = d.screens["galaxy_map"]
+        _sp_real = pygame.image.load
+        _sp_n = [0]
+
+        def _sp_counting(*a, **k):
+            _sp_n[0] += 1
+            return _sp_real(*a, **k)
+
+        pygame.image.load = _sp_counting
+        try:
+            _sp_gm._sprite_key_loaded = None       # cold
+            _sp_n[0] = 0
+            _sp_gm._load_sprites()
+            _sp_cold = _sp_n[0]
+            assert _sp_cold > 40, (
+                f"a cold _load_sprites read {_sp_cold} files; the star, "
+                f"ship, nebula and sidebar sets should be far more, so "
+                f"this check has stopped measuring what it names")
+            _sp_n[0] = 0
+            _sp_gm._load_sprites()
+            assert _sp_n[0] == 0, (
+                f"_load_sprites re-read {_sp_n[0]} files with the skin, "
+                f"the mods and layout.json unchanged — the guard is not "
+                f"holding and every return to the map pays for it again")
+            # force= is the restore path, and it must still reload.
+            _sp_n[0] = 0
+            _sp_gm._load_sprites(force=True)
+            assert _sp_n[0] == _sp_cold, (
+                f"force=True read {_sp_n[0]} files, not {_sp_cold}; the "
+                f"nebula check restores real artwork through it")
+            # A CHANGED KEY RELOADS. `nebula_forms` is part of it
+            # because a mod can replace layout.json.
+            _sp_saved = _sp_gm._data.get("nebula_forms")
+            _sp_gm._data["nebula_forms"] = list(_sp_saved or [])[:1]
+            _sp_n[0] = 0
+            _sp_gm._load_sprites()
+            assert _sp_n[0] > 0, (
+                "nebula_forms changed and nothing reloaded — the guard "
+                "is keyed on too little, and a mod's artwork would "
+                "never reach the screen")
+            if _sp_saved is None:
+                _sp_gm._data.pop("nebula_forms", None)
+            else:
+                _sp_gm._data["nebula_forms"] = _sp_saved
+            _sp_gm._load_sprites(force=True)
+        finally:
+            pygame.image.load = _sp_real
+        ok(f"galaxy_map loads its {_sp_cold} sprites once per screen "
+           f"object, not once per entry: a second entry reads no file, "
+           f"force= still does, and a changed skin, mod list or "
+           f"layout.json reloads")
 
         # ── Every master judged against its extracted original ──
         #

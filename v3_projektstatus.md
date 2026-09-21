@@ -2294,7 +2294,7 @@ files under `doc/` and are only summarised here.
 | | |
 |---|---|
 | Python | 32,960 lines across 111 modules — `find . -name '*.py'`, `__pycache__` excluded, the smoke test's 6,400 included. The previous figure here (21,642 across 94) was carried from an unstated method and could not be reproduced |
-| Smoke test | `python tools/smoke_test.py` — **246 checks**, headless. **Two tiers since work order 158**: the bare command runs everything (~80 s here, ~64 s in a clone); `--fast` runs the commit gate's 239 (~39 s here, ~37 s in a clone). See "The gate has two tiers" below |
+| Smoke test | `python tools/smoke_test.py` — **247 checks**, headless. **Two tiers since work order 158**: the bare command runs everything (~80 s here, ~64 s in a clone); `--fast` runs the commit gate's 240 (~39 s here, ~37 s in a clone). See "The gate has two tiers" below |
 | Assets | 170 MB (select_race 68, galaxy_map 51, shared 23, new_game 21, colony_summary 1) |
 | Screens in HD | 9 of ~20–22 (the GAME menu overlay, work order Stop 2, every dialog of the popup; colony summary draws list, sidebar, scan box and galaxy inset, and MOVES POPS — the first HD gesture that drives the game; planets, brief 101, lists, sorts, restricts and returns) |
 | Setup from clone | `python tools/setup.py` (deps via the system package manager) |
@@ -2306,11 +2306,11 @@ files under `doc/` and are only summarised here.
 half of it, every one expensive for the same reason: it stands screens
 up at many sizes or counts. Data chose 157's Option A. **No check was
 deleted, weakened or thinned** — the tiers change *when* a check runs,
-never what it asserts, and all 246 run before every push.
+never what it asserts, and all 247 run before every push.
 
 | | command | checks | on this tree | in a clone |
 |---|---|---:|---:|---:|
-| **Full** — the default, and the pre-push gate | `python tools/smoke_test.py` | 246 | 79.5–80.4 s | 63.6–64.1 s |
+| **Full** — the default, and the pre-push gate | `python tools/smoke_test.py` | 247 | 79.5–80.4 s | 63.6–64.1 s |
 | **Fast** — the pre-commit gate | `python tools/smoke_test.py --fast` | 237 | 38.9–39.2 s | 37.3 s |
 
 Six runs each here, three in the clone. The commit gate falls by
@@ -2697,7 +2697,7 @@ in exactly ONE bucket. The numbers below are produced by
 check asserts this list still agrees with it — the same trade the
 check count makes, for the same reason.
 
-`tools/struct_probe.py` (**478** code, 753 total), `screens/galaxy_map/screen.py` (**444** code, 716 total), `tools/colony_list_preview.py` (**403** code, 772 total), `screens/custom_race/screen.py` (**400** code, 558 total), `tools/colony_move_hd.py` (**385** code, 586 total), `core/editor/editor.py` (**359** code, 430 total), `screens/galaxy_map/renderer.py` (**336** code, 758 total), `tools/ext_diag.py` (**325** code, 473 total), `core/style.py` (**310** code, 479 total), `main.py` (**323** code, 549 total — over since work order 142 C added the debug input switch; 146 added the F8 surface screenshot, a TOOL for live acceptance on a display that renders but cannot be captured).
+`tools/struct_probe.py` (**478** code, 753 total), `screens/galaxy_map/screen.py` (**456** code, 776 total), `tools/colony_list_preview.py` (**403** code, 772 total), `screens/custom_race/screen.py` (**400** code, 558 total), `tools/colony_move_hd.py` (**385** code, 586 total), `core/editor/editor.py` (**359** code, 430 total), `screens/galaxy_map/renderer.py` (**336** code, 758 total), `tools/ext_diag.py` (**325** code, 473 total), `core/style.py` (**310** code, 479 total), `main.py` (**323** code, 549 total — over since work order 142 C added the debug input switch; 146 added the F8 surface screenshot, a TOOL for live acceptance on a display that renders but cannot be captured).
 `smoke_test.py` is exempt by nature.
 
 **TWO TOOLS JOINED THE LIST ON 8 SEPTEMBER 2026 and one thing left
@@ -2830,6 +2830,58 @@ anywhere. Kept: `_black_hole_src.png`, which is the INPUT to
 ---
 
 ## What works
+
+### The galaxy map loads its sprites once, not once per entry — work order 161, 21 September 2026
+
+Data, 21 September 2026: returning from Colonies, Planets or Fleets to
+the galaxy map is noticeably slower than the original, while entering
+is not.
+
+**It was ours, and the wire was measured first to know that.** Over six
+live transitions the new field list arrives **0.06–0.17 s** after the
+screen id changes, **in both directions** — about two snapshots at the
+measured ~18/s. The asymmetry was `enter()`: **galaxy_map 429–439 ms
+every time**, against fleets 84, planets 31, colony_summary 27 — and
+**every RETURN lands on the galaxy map**, which is why all three
+screens felt the same.
+
+**409 of those 432 ms were 81 `pygame.image.load` calls** in
+`_load_sprites`, run unconditionally from `enter` although
+`SpriteCache` is built in `__init__`, resize clears only the scaled
+variants, and **nothing in the tree calls `SpriteCache.clear()`**.
+Every reload replaced a surface with an identical one.
+
+**The guard is keyed on the skin, the active mods, `nebula_forms` and
+`sidebar_icons` — not on "loaded already".** `asset_path` resolves
+through `res.screen_file`, so which file a name reaches depends on the
+skin and the mods, and the last two come from `layout.json`, which a
+mod can replace. A plain load-once would pin the map to artwork from an
+inactive skin. `force=True` reloads regardless and has one caller: the
+nebula check, which puts a test surface over the real artwork and has
+to restore it.
+
+| | 1st entry | re-entry | loads | render |
+|---|---:|---:|---:|---|
+| 1920x1080 | 436.5 ms | **45.3 ms** | 81 → **3** | identical |
+| 2560x1440 | 436.0 ms | **49.8 ms** | 81 → **3** | identical |
+| 3440x1440 | 437.5 ms | **53.4 ms** | 81 → **3** | identical |
+| 3840x2160 | 448.7 ms | **63.0 ms** | 81 → **3** | identical |
+
+**~385 ms off every return, 90 %**, and the frame byte-identical at all
+four resolutions. The three remaining loads are the frame, the
+background and the map background — untouched.
+
+**The check counts loads, not milliseconds, and that is deliberate.**
+The first version of the guard stored the sidebar loop's variable
+instead of the key, so it never matched: renders identical, timings
+unchanged, nothing visibly wrong, and no saving at all. Only a load
+counter showed it. A timing assertion would also have been
+machine-dependent.
+
+**What this does not explain.** Data reports 1–2 s; this accounts for
+~0.43 s on top of ~0.12 s on the wire. The engine's own redraw
+(`Build_Ship_Icons_`, and on one branch `Fast_Fade_Out_` before
+`Add_Map_Fields_`) was read but not measured.
 
 ### Fleets is done — 21 September 2026, work order 159
 
