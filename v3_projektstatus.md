@@ -2294,7 +2294,7 @@ files under `doc/` and are only summarised here.
 | | |
 |---|---|
 | Python | 32,960 lines across 111 modules — `find . -name '*.py'`, `__pycache__` excluded, the smoke test's 6,400 included. The previous figure here (21,642 across 94) was carried from an unstated method and could not be reproduced |
-| Smoke test | `python tools/smoke_test.py` — **244 checks**, headless. **Two tiers since work order 158**: the bare command runs everything (~80 s here, ~64 s in a clone); `--fast` runs the commit gate's 237 (~39 s here, ~37 s in a clone). See "The gate has two tiers" below |
+| Smoke test | `python tools/smoke_test.py` — **245 checks**, headless. **Two tiers since work order 158**: the bare command runs everything (~80 s here, ~64 s in a clone); `--fast` runs the commit gate's 238 (~39 s here, ~37 s in a clone). See "The gate has two tiers" below |
 | Assets | 170 MB (select_race 68, galaxy_map 51, shared 23, new_game 21, colony_summary 1) |
 | Screens in HD | 9 of ~20–22 (the GAME menu overlay, work order Stop 2, every dialog of the popup; colony summary draws list, sidebar, scan box and galaxy inset, and MOVES POPS — the first HD gesture that drives the game; planets, brief 101, lists, sorts, restricts and returns) |
 | Setup from clone | `python tools/setup.py` (deps via the system package manager) |
@@ -2306,11 +2306,11 @@ files under `doc/` and are only summarised here.
 half of it, every one expensive for the same reason: it stands screens
 up at many sizes or counts. Data chose 157's Option A. **No check was
 deleted, weakened or thinned** — the tiers change *when* a check runs,
-never what it asserts, and all 244 run before every push.
+never what it asserts, and all 245 run before every push.
 
 | | command | checks | on this tree | in a clone |
 |---|---|---:|---:|---:|
-| **Full** — the default, and the pre-push gate | `python tools/smoke_test.py` | 244 | 79.5–80.4 s | 63.6–64.1 s |
+| **Full** — the default, and the pre-push gate | `python tools/smoke_test.py` | 245 | 79.5–80.4 s | 63.6–64.1 s |
 | **Fast** — the pre-commit gate | `python tools/smoke_test.py --fast` | 237 | 38.9–39.2 s | 37.3 s |
 
 Six runs each here, three in the clone. The commit gate falls by
@@ -2830,6 +2830,75 @@ anywhere. Kept: `_black_hole_src.png`, which is the INPUT to
 ---
 
 ## What works
+
+### Fleets: a colony ship, transport or outpost gets the original's paragraph — work order 159, 21 September 2026
+
+`Print_Scanned_Ship_Data_` **returns before it prints a single data
+line** for `ship_type` 1, 2 and 4 (flt2.cpp:548-575): it loads one
+HELP.LBX record — `0x29` colony, `0xBD` transport, `0x6D` outpost —
+sets font style 3 in its own colour and prints it with
+`ERIC::Print_Paragraph_Centered_Vertically_`. HD drew the full data
+panel for all three, which showed **more** than the original rather
+than less. It now draws the paragraph.
+
+**THE TYPES COME FROM THE ENUM, not from a field dump.** HD had no
+`SHIP_TYPE` constants at all; `orion2_consts.h:519-526` is transcribed
+into `core/structs/ship.py` (`COMBAT=0, COLONY=1, TRANSPORT=2,
+UNUSED=3, OUTPOST=4`) and `fltrows.PARAGRAPH_HELP` is keyed off them,
+so the set cannot drift from the enum it was read out of.
+
+**THE RECTANGLE IS 299 PX, NOT 305 — a correction.** The entry this
+replaces said the original's rectangle is "305 px wide", and work
+order 159 repeated it. `eric.cpp:171` declares
+`Print_Paragraph_Centered_Vertically_(x, y, width, box_height, text,
+color)`, so `0x12B` = **299** is the width and the box is
+`(18, 282, 299, 183)`. **305 is a different number and is not wrong
+where it appears elsewhere**: it is the DRAWING WINDOW,
+`Set_Window_(15, 282, 320, 465)`, 320 − 15, which the tab-stop entries
+above correctly use. The paragraph box sits inside that window.
+
+**Vertically centred in the box, wrapped at HD's hole.** The primitive
+prints at `y + box_height/2 − paragraph_height/2`, so a short
+paragraph and a long one share a centre line. HD's hole is a different
+shape at every resolution, so the wrap width is the hole's — a scaled
+transcription, the same call `panel_block` already makes for the data
+panel.
+
+**MEASURED, ALL THREE FIT EVERYWHERE**, so nothing was built for
+overflow:
+
+| | 1920x1080 | 2560x1440 | 3440x1440 | 3840x2160 |
+|---|---|---|---|---|
+| hole | 694x242 | 925x322 | 925x322 | 1388x484 |
+| colony `0x29`, 152 chars | 3 lines / 60 px | 3 / 81 | 3 / 81 | 3 / 120 |
+| transport `0xBD`, 236 chars | 4 lines / 80 px | 4 / 108 | 4 / 108 | 4 / 160 |
+| outpost `0x6D`, 220 chars | 4 lines / 80 px | 4 / 108 | 4 / 108 | 4 / 160 |
+
+The transport is the longest and its block is 160 px of a 484 px hole
+at 2160p. If a translation ever overflows, the panel's existing
+`"+{n} more"` path takes it; no second mechanism was invented.
+
+**THE COLOUR IS NOT TRANSCRIBED, and is marked rather than claimed.**
+The original sets style 3 from `Get_Mox_Font_Colors_(3, 111, 116, …)`
+with `_mox_font_colors_offset = 0x72` — a ramp over MOO2 **palette
+indices** 111..116. The palette is in the player's own installation
+and pinning the RGB needs it plus a native screenshot of this panel;
+work order 159 was forbidden a live run. HD draws the paragraph in the
+panel's existing label colour, `colors.json` carries it as
+`fleets.panel_paragraph` with the reason beside it (decision 15),
+`layout.json` marks it `deviation_panel_paragraph_colour`, and it is
+parked in `doc/briefs/159-parked-for-data.md`.
+
+**A CLONE WITH NO EXTRACTED HELP SHOWS THE HELP POPUP'S WORDING**, not
+the data panel — falling back to the data would restore the very fault
+this removes, on the machines least able to notice. Marked
+`fallback_panel_help_missing`. The suite drives the three texts through
+a committed stand-in under `tools/fixtures/derived/`, never this
+machine's extraction.
+
+**Nothing else on the screen moved**: a combat ship's panel renders
+byte-identically at all four resolutions, before and after
+(`~/orionlayer-fixtures/evidence/work_order_159/part1/`).
 
 ### Connection
 TCP client parses the binary snapshot with auto-reconnect. F12
@@ -6774,23 +6843,10 @@ that prints a number for a ship with no captain and nothing for one
 with a captain would look like a bug rather than a gap.
 
 **4. A colony, transport or outpost ship gets a different panel
-entirely.** `Print_Scanned_Ship_Data_` returns early for `ship_type`
-1, 2 and 4 (flt2.cpp:548-575): it loads a HELP.LBX record — 0x29 for a
-colony ship, 0xBD for a transport, 0x6D for an outpost — sets font
-style 3 in its own colour and prints it with
-`ERIC::Print_Paragraph_Centered_Vertically_(0x12, 0x11A, 0x12B, 0xB7)`.
-A paragraph of prose about what the ship is for, and none of the crew,
-shield, bonus, destination, weapon or special lines at all. HD draws
-the data panel for these three types, which shows MORE than the
-original rather than less.
-
-*What lifting it costs:* a second layout mode for the panel, keyed on
-`ship_type`, and the three help records — which HD already loads,
-through the same `helptext` the right-click help uses, so there is no
-new extractor and no new file. It is a layout, not a value: the work
-is deciding how a centred paragraph behaves in a hole that is not
-305 px wide, and what a clone with no extracted help texts shows
-instead.
+entirely — BUILT, 21 September 2026, work order 159.** Moved to "What
+works" below; this entry is kept as the record of what it was, because
+the open list is where the next session looks and a silent
+disappearance reads as a forgotten item.
 
 ### The Fleets ship panel: two more, from work order 155
 

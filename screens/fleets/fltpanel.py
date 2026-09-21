@@ -21,6 +21,7 @@ import logging
 
 from core import textfit
 
+from . import fltrows
 from .fltdraw import _rect, col, content_rect
 
 log = logging.getLogger("fleets")
@@ -305,13 +306,112 @@ def draw_columns(surface, screen, panel, rect):
     return False
 
 
+def paragraph_text(helptext, para):
+    """The lines a `fltrows.Paragraph` shows, as whole paragraphs.
+
+    Separate from the drawing because WHICH WORDS APPEAR is the part a
+    check can hold cheaply and exactly, and the part that has two
+    states: the player's own HELP.LBX record, and the wording for an
+    install that has never extracted it.
+
+    **ONLY THE BODY, when there is one.** `Print_Scanned_Ship_Data_`
+    passes `lbx_data->body` and never the record's title
+    (flt2.cpp:572). The title is used only if a record somehow carries
+    one and no body, which the loader permits and the original would
+    print as an empty paragraph.
+
+    **AND THE DATA PANEL IS NOT THE FALLBACK.** Falling back to it
+    would restore exactly the "HD shows more than the original" this
+    mode exists to remove, and it would do so on the machines least
+    able to notice — the ones that have not run the extractor. What an
+    absent file gets is `HelpText.missing_entry`, the same wording the
+    right-click popup shows, which lives once in
+    `assets/shared/help/labels.json` (decision 15). Marked in
+    `layout.json` as `fallback_panel_help_missing`.
+    """
+    text = helptext.entry(para.help_id) if helptext is not None else None
+    if text is not None:
+        return [text[1]] if text[1] else [text[0]]
+    if helptext is None:
+        return []
+    title, body = helptext.missing_entry(para.help_id)
+    return [line for line in (title, body) if line]
+
+
+def draw_paragraph(surface, screen, para, words=None):
+    """A colony ship's, transport's or outpost's paragraph.
+
+    **THE SECOND PANEL MODE, AND IT IS A TRANSCRIPTION.**
+    `Print_Scanned_Ship_Data_` returns early for those three types and
+    prints one HELP.LBX record instead of the data panel
+    (flt2.cpp:548-575) — `fltrows.PARAGRAPH_HELP` carries which record
+    and why. The original's call is
+
+        ERIC::Print_Paragraph_Centered_Vertically_(0x12, 0x11A, 0x12B,
+                                                  0xB7, body, 0)
+
+    and that primitive (eric.cpp:171-174) wraps at `width` and prints at
+    `y + box_height/2 - paragraph_height/2`: the block is **centred
+    vertically in the box and not in the text**, which is why a short
+    paragraph and a long one share a centre line rather than a top edge.
+
+    **THE WRAP WIDTH IS HD'S HOLE, AND THAT IS A SCALED TRANSCRIPTION.**
+    The original's box is `(18, 282, 299, 183)` native — the width is
+    `0x12B`, **299 and not the 305 this project's own open list said**;
+    corrected here against eric.cpp's parameter order, which names the
+    third argument `width`. HD's hole is a different shape at every
+    resolution, so wrapping at 299 scaled would leave the text in a
+    column narrower than the box it sits in, which is neither the
+    original's picture nor a sensible one. Wrapping at the hole is the
+    same decision `panel_block` already takes for the data panel.
+
+    **ONLY THE BODY.** The original passes `lbx_data->body` and never
+    the record's title.
+    """
+    rect = panel_text_rect(screen)
+    if rect is None:
+        return
+    paragraphs = paragraph_text(screen.helptext, para)
+    asked = panel_font_px(screen)
+    floor = max(1, screen.layout.font_size(PANEL_MIN_FONT))
+    rendered, size = textfit.squeeze_block(
+        screen.style, paragraphs, rect.width, rect.height,
+        [n for n in range(asked, floor - 1, -1)] or [asked],
+        col("panel_paragraph"))
+    height = textfit.block_height(rendered)
+    dropped = 0
+    if height > rect.height:
+        # THE PANEL'S OWN OVERFLOW, not a second one. `panel_block`
+        # owns the "+n more" rule and the reason for it; this reuses
+        # the marker rather than inventing a way to clip.
+        rendered, size, dropped = panel_block(
+            screen, [("", p) for p in paragraphs], words, rect, asked)
+        height = textfit.block_height(rendered)
+    _log_overflow(rect, asked, size, len(rendered) - bool(dropped), dropped)
+
+    # Centred vertically in the BOX, as the original centres it.
+    y = rect.y + max(0, (rect.height - height) // 2)
+    for surf in rendered:
+        surface.blit(surf, (rect.x, y))
+        y += surf.get_height()
+
+
 def draw_panel(surface, screen, lines, words=None):
     """The scanned ship's lines, top down inside `ship_panel_text`.
 
     `words` is `layout.json`'s own dict, handed in like `draw_labels`
     takes it: the renderer draws what it is given and does not know
     the wording (decision 15).
+
+    **TWO MODES, AND THE SHIP CHOOSES.** A `fltrows.Paragraph` is a
+    colony ship, transport or outpost, which the original answers with
+    one HELP.LBX paragraph and none of the data lines; everything else
+    is the data panel below. The branch is on the TYPE the row builder
+    returned, so this renderer never asks the ship anything.
     """
+    if isinstance(lines, fltrows.Paragraph):
+        draw_paragraph(surface, screen, lines, words)
+        return
     rect = panel_text_rect(screen)
     if rect is None or not lines:
         return

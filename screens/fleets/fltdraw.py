@@ -55,6 +55,12 @@ DEFAULTS = {
     "radio_on": (8, 8, 80),
     "cell_selected": (216, 232, 255),
     "cell_hover": (120, 152, 200),
+    # The non-combat ship paragraph (work order 159). Same value as
+    # `label` on purpose: the original's own colour is a ramp over MOO2
+    # palette indices 111..116 and is NOT transcribed — see
+    # `colors.json`'s `_panel_paragraph_note` for why and where it is
+    # parked.
+    "panel_paragraph": (72, 144, 56),
 }
 
 

@@ -42,7 +42,14 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, ROOT)
 
 from core import billtext, buildnames, estrings, hestrings  # noqa: E402
-from core import kentext, maintext, shipparts, technames  # noqa: E402
+from core import helptext, kentext, maintext, shipparts  # noqa: E402
+from core import technames  # noqa: E402
+# THE IDS COME FROM THE RENDERER'S OWN TABLE, not from a second
+# list here: `PARAGRAPH_HELP` is what the Fleets panel looks up,
+# so a stand-in built from it cannot hold a record the screen
+# never asks for, or miss one it does. `fltrows` imports `core`
+# only and pulls in no pygame, which is what makes this safe.
+from screens.fleets.fltrows import PARAGRAPH_HELP  # noqa: E402
 
 #: Where they go. Named `derived` because that is what the files they
 #: stand in for are called everywhere else in the tree.
@@ -117,6 +124,21 @@ def files():
         "_comment": NOTE, "language": "en",
         "format": maintext.FORMAT_VERSION,
         "entries": _numbered("Main", 16),
+    }
+    # THE THREE HELP RECORDS THE FLEETS PANEL PRINTS for a colony ship,
+    # a transport and an outpost (work order 159). Only those three:
+    # HELP.LBX has hundreds and the right-click popup reads the real
+    # file, so a stand-in of the whole catalogue would be a second copy
+    # of something nobody checks. `title` is carried because the loader
+    # accepts a record without one and the panel prints only `body` —
+    # a stand-in whose title were absent could not catch a renderer
+    # that started printing it.
+    out[helptext.help_file("en")] = {
+        "_comment": NOTE, "language": "en",
+        "format": helptext.FORMAT_VERSION,
+        "entries": {str(help_id): {"title": f"Help {help_id} title",
+                                   "body": f"Help {help_id} body"}
+                    for help_id in sorted(PARAGRAPH_HELP.values())},
     }
     return out
 

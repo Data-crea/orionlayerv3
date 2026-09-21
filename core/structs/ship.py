@@ -68,6 +68,21 @@ OWNER_DRAGON = 12
 OWNER_EEL = 13
 OWNER_HYDRA = 14
 
+#: `s_ship_data.ship_type`, transcribed from the source's own enum
+#: (orion2_consts.h:519-526, `SHIP_TYPE`). Named here rather than
+#: written as literals at the call sites, because three of them decide
+#: which PANEL the Fleets screen draws and a bare 1, 2 or 4 there would
+#: be a number nobody could check against the enum.
+SHIP_TYPE_COMBAT = 0
+SHIP_TYPE_COLONY = 1
+SHIP_TYPE_TRANSPORT = 2
+#: 3 is `SHIP_TYPE_UNUSED` in the enum and is named for completeness:
+#: the gap is the source's, and leaving it out would make the next
+#: reader wonder whether it was missed or does not exist.
+SHIP_TYPE_UNUSED = 3
+SHIP_TYPE_OUTPOST = 4
+SHIP_TYPE_COUNT = 5
+
 #: STATUS values used on the map. 1 is in transit, which is what puts
 #: a ship icon into stack_slot 5 (SHIPS::Build_Ship_Icons_).
 STATUS_IN_TRANSIT = 1

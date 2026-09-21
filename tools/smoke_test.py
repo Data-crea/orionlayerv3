@@ -19979,9 +19979,10 @@ def main():
     class _PlShip:
         """One ship's bytes, only what the panel reads."""
 
-        def __init__(self, loc=0, shield=0, crew=(0, 15)):
+        def __init__(self, loc=0, shield=0, crew=(0, 15), ship_type=0):
             b = bytearray(_pl_ship_spec.SIZE)
             b[0:6] = b"Rafale"
+            b[17] = ship_type
             b[18] = shield
             b[99] = 1
             b[101:103] = _pl_s.pack("<h", loc)
@@ -20118,7 +20119,12 @@ def main():
             ("omission_panel_beam_bonuses", "initship.cpp:638-687"),
             ("deviation_panel_one_font", "flt2.cpp:578"),
             ("deviation_panel_destination_info", "flt2.cpp:657-662"),
-            ("omission_panel_support_ship_help", "flt2.cpp:548-575")):
+            # WORK ORDER 159 CLOSED `omission_panel_support_ship_help`
+            # and these two replace it: the mode is built, so what is
+            # left to mark is the colour that is NOT transcribed and
+            # the wording a clone with no extraction sees.
+            ("deviation_panel_paragraph_colour", "flt2.cpp:566-571"),
+            ("fallback_panel_help_missing", "labels.json")):
         assert _pl_mark in _pl_layout["marks"], _pl_mark
         assert _pl_cite in _pl_layout["marks"][_pl_mark], (
             f"{_pl_mark} no longer cites {_pl_cite}; a marking without "
@@ -20129,8 +20135,106 @@ def main():
        "head slots with the destination slot blank for a parked ship, "
        "no Beam OCV/DCV labels anywhere, entries indented under both "
        "headings, the unexplored destination no longer naming the "
-       "star with OR without the catalogues, and four markings citing "
+       "star with OR without the catalogues, and five markings citing "
        "what the original does instead")
+
+    # ── THE NON-COMBAT SHIP GETS A PARAGRAPH, NOT THE DATA PANEL ──
+    #
+    # Work order 159, closing item 4. `Print_Scanned_Ship_Data_`
+    # returns early for ship_type 1, 2 and 4 and prints one HELP.LBX
+    # record instead (flt2.cpp:548-575); HD drew the full data panel
+    # for all three, which showed MORE than the original.
+    #
+    # ASSERTED AS THE RULE. Not "type 1 draws a paragraph" three
+    # times, but: every type in the original's early-return set draws
+    # the paragraph and never a data line, and every OTHER type in the
+    # enum draws the data panel — walked over the whole enum, so a
+    # type added to `PARAGRAPH_HELP` without a reading of the source,
+    # or dropped from it, fails here rather than on somebody's screen.
+    from screens.fleets import fltpanel as _pp_panel
+    from core.helptext import HelpText
+    _pp_all = set(range(_pl_ship_spec.SHIP_TYPE_COUNT))
+    assert set(_pl.PARAGRAPH_HELP) <= _pp_all, (
+        f"PARAGRAPH_HELP has a ship_type outside the enum: "
+        f"{sorted(set(_pl.PARAGRAPH_HELP) - _pp_all)}")
+    assert set(_pl.PARAGRAPH_HELP) == {
+        _pl_ship_spec.SHIP_TYPE_COLONY,
+        _pl_ship_spec.SHIP_TYPE_TRANSPORT,
+        _pl_ship_spec.SHIP_TYPE_OUTPOST}, sorted(_pl.PARAGRAPH_HELP)
+    for _pp_t in sorted(_pp_all):
+        _pp_g = _pl_types.SimpleNamespace()
+        _pp_g.ships_raw = [_PlShip(loc=0, ship_type=_pp_t).raw]
+        _pp_g.stars, _pp_g.player_raw, _pp_g.player_num = [], [], 0
+        _pp_got = _pl.panel_lines(0, _pp_g, _pl_parts, _pl_str, None)
+        if _pp_t in _pl.PARAGRAPH_HELP:
+            assert isinstance(_pp_got, _pl.Paragraph), (
+                f"ship_type {_pp_t} still builds a {type(_pp_got).__name__}; "
+                f"the original returns before it prints a single data line")
+            assert _pp_got.help_id == _pl.PARAGRAPH_HELP[_pp_t]
+            assert not hasattr(_pp_got, "head"), (
+                "a Paragraph carries a head block — the whole point is "
+                "that none of the data lines exists for these ships")
+        else:
+            assert isinstance(_pp_got, _pl.Panel), (
+                f"ship_type {_pp_t} lost its data panel")
+    # THE THREE RECORDS ARE THE ORIGINAL'S OWN: 0x29 colony, 0xBD
+    # transport, 0x6D outpost (flt2.cpp:555-561).
+    assert _pl.PARAGRAPH_HELP == {
+        _pl_ship_spec.SHIP_TYPE_COLONY: 0x29,
+        _pl_ship_spec.SHIP_TYPE_TRANSPORT: 0xBD,
+        _pl_ship_spec.SHIP_TYPE_OUTPOST: 0x6D}, _pl.PARAGRAPH_HELP
+
+    # BOTH TEXT STATES, THROUGH COMMITTED FILES AND NEVER THIS
+    # MACHINE'S EXTRACTION — the clone-only fault, four times over.
+    #
+    # `HelpText` takes a `Resources` rather than a `root=`, so it
+    # cannot go through `derived()`. This hands it a resolver that
+    # looks in the stand-in tree FIRST and the real tree second: the
+    # help file comes from `tools/fixtures/derived/`, the labels from
+    # the committed `assets/shared/help/labels.json`, and nothing
+    # comes from whatever this machine has extracted. `HelpText` is on
+    # `_REAL_DERIVED_OK` for the path check's sake; this is not
+    # leaning on that.
+    class _PpRes:
+        skin = "default"
+
+        def load_json(self, rel, default=None):
+            for _base in (DERIVED_ROOT, os.path.dirname(SCREENS_DIR)):
+                _p = os.path.join(_base, *rel.split("/"))
+                if os.path.exists(_p):
+                    return __import__("json").load(
+                        io.open(_p, encoding="utf-8"))
+            return default
+
+    _pp_res = _PpRes()
+    _pp_have = HelpText(_pp_res, "en")
+    assert _pp_have.available, (
+        "the help stand-in did not load — run "
+        "`python tools/make_derived_fixtures.py`")
+    for _pp_t, _pp_id in sorted(_pl.PARAGRAPH_HELP.items()):
+        _pp_lines = _pp_panel.paragraph_text(_pp_have, _pl.Paragraph(_pp_id))
+        assert _pp_lines == [f"Help {_pp_id} body"], (_pp_t, _pp_lines)
+        assert "title" not in "".join(_pp_lines), (
+            "the panel is printing the record's TITLE; the original "
+            "passes lbx_data->body and nothing else (flt2.cpp:572)")
+    # ABSENT: an impossible language, which is how this file forces the
+    # missing state without a temporary directory.
+    _pp_none = HelpText(_pp_res, "zz")
+    assert not _pp_none.available, "the 'zz' help file exists?"
+    for _pp_id in sorted(_pl.PARAGRAPH_HELP.values()):
+        _pp_lines = _pp_panel.paragraph_text(_pp_none, _pl.Paragraph(_pp_id))
+        assert _pp_lines == [_pp_none.label("missing_title"),
+                             _pp_none.label("missing_body")], _pp_lines
+        # and NOT the stand-in's text, which is the whole point:
+        # an absent help file must not quietly show content.
+        assert not any(_l.endswith(" body") for _l in _pp_lines), (
+            _pp_lines)
+    ok("a colony ship, transport or outpost draws the original's "
+       "HELP.LBX paragraph and never a data line, every other "
+       f"ship_type in the enum still draws the data panel, the three "
+       f"records are 0x29/0xBD/0x6D, and with no extracted help the "
+       f"panel shows the help popup's own wording rather than falling "
+       f"back to the data it must not show")
 
     # 3. NOTHING IS DROPPED WITHOUT SAYING SO. The original clips at
     #    its drawing window and says nothing (Set_Window_(15, 282, 320,

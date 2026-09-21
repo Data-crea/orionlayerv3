@@ -1357,6 +1357,12 @@
       228,
       136
     ],
+    "_panel_paragraph_note": "The colony/transport/outpost paragraph (work order 159). THE LAYOUT IS A TRANSCRIPTION AND THIS COLOUR IS NOT. Print_Scanned_Ship_Data_ sets font style 3 with MISC::Get_Mox_Font_Colors_(3, 111, 116, ...) and _mox_font_colors_offset = 0x72 (flt2.cpp:566-571), which builds a ramp over MOO2 PALETTE INDICES 111..116 - the palette lives in the player's own installation, and resolving it to RGB needs that file plus a native screenshot of this panel to confirm against. Neither was available to work order 159, which was forbidden a live run, so the value below is the panel's existing label colour and is marked here rather than presented as the original's. Parked in doc/briefs/159-parked-for-data.md.",
+    "panel_paragraph": [
+      72,
+      144,
+      56
+    ],
     "label": [
       72,
       144,

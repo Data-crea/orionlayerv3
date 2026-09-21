@@ -199,6 +199,54 @@ class Panel:
 #: `Crew_Description_String_` (flt2.cpp:749-773): the crew word by
 #: `crew_quality`, from the player's own HESTRNGS.
 CREW_MESSAGES = {0: 0x8A, 1: 0x8B, 2: 0x8C, 3: 0x8D}
+
+#: **THE THREE SHIP TYPES THAT GET A PARAGRAPH INSTEAD OF A PANEL**, and
+#: the HELP.LBX record each one prints. Transcribed from
+#: `Print_Scanned_Ship_Data_`'s early return (flt2.cpp:548-575): it
+#: tests `ship_type` against `SHIP_TYPE_TRANSPORT`, `SHIP_TYPE_COLONY`
+#: and `SHIP_TYPE_OUTPOST`, loads the record, sets font style 3 in its
+#: own colour and calls
+#: `ERIC::Print_Paragraph_Centered_Vertically_(0x12, 0x11A, 0x12B, 0xB7)`
+#: — then RETURNS. No crew, shield, destination, weapon or special line
+#: is printed for these ships at all.
+#:
+#: The keys are `core.structs.ship`'s own constants, so the set cannot
+#: drift from the enum it was read out of (orion2_consts.h:519-526).
+#: HD drew the full data panel for all three until work order 159,
+#: which showed MORE than the original rather than less.
+PARAGRAPH_HELP = {
+    ship_struct.SHIP_TYPE_COLONY: 0x29,
+    ship_struct.SHIP_TYPE_TRANSPORT: 0xBD,
+    ship_struct.SHIP_TYPE_OUTPOST: 0x6D,
+}
+
+
+class Paragraph:
+    """What the panel shows for a colony ship, transport or outpost.
+
+    Not a `Panel` with one line in it: the two are different DRAWINGS —
+    the original centres this one vertically in its window and left-
+    aligns nothing else there, where the data panel is a head block and
+    two columns from the top. A separate type is what makes
+    `draw_panel` able to tell them apart without asking the ship again,
+    and what lets a check say "this type never draws a data line".
+
+    `help_id` is the HELP.LBX record; the text itself is the player's
+    and is fetched at draw time through the same `helptext` the
+    right-click help uses, so a clone with no extraction shows the
+    same "not extracted yet" wording the help popup shows.
+    """
+
+    __slots__ = ("help_id",)
+
+    def __init__(self, help_id):
+        self.help_id = help_id
+
+    def __bool__(self):
+        # Always content: the id is known even when the text is not,
+        # and the no-text case is a thing to DRAW (the labels' own
+        # wording), not an empty panel.
+        return True
 #: The headings and the empty-column word, same table
 #: (flt2.cpp:681-682, :719, :740).
 MSG_WEAPONS, MSG_SPECIALS, MSG_NONE = 0x9D, 0x9E, 0x9F
@@ -238,6 +286,13 @@ def panel_lines(ship_idx, game_state, parts, strings=None, arcs=None):
     if len(raw) < ship_struct.SIZE:
         return Panel([], [], [])
     view = ship_struct.parse(raw)
+
+    # **THE EARLY RETURN, IN THE ORIGINAL'S OWN PLACE.** flt2.cpp:548
+    # tests the three types before it prints anything, and returns; so
+    # does this, before the head block below. See `PARAGRAPH_HELP`.
+    help_id = PARAGRAPH_HELP.get(int(view.ship_type))
+    if help_id is not None:
+        return Paragraph(help_id)
 
     def message(index):
         return strings.message(index) if strings is not None else None
