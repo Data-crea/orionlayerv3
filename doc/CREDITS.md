@@ -33,12 +33,12 @@ thanks belong here, not into a two-column scroller.
 ## Community
 
 **The 1.50 patch team credits itself collectively, on purpose.**
-Rocco and Alexey have always signed as "The MOO2 1.50 Project team",
-from the days when Darza was the third member through to after he
-left in 2018. Darza appears by name below because their own credits
-name him. Nobody else from the team is listed individually, and that
-is their choice, not an omission to be corrected. Confirmed by Rocco,
-30 August 2026.
+Rocco and Alexey sign as "The MOO2 1.50 Project team", and the
+on-screen roll lists the team that way and names nobody individually
+— at Rocco's request, 21 September 2026. The thanks below are quoted
+from their own credits, unchanged. Nobody from the team is listed
+individually, and that is their choice, not an omission to be
+corrected.
 
 From the MOO2 1.50 patch credits, unchanged:
 

@@ -47,7 +47,6 @@ Special Thanks ...... Jenny Cowlishaw
 COMMUNITY
 
 1.50 Patch Project .. The MOO2 1.50 Project Team
-                      Darza
 1.40 Patch .......... Lord Brazen
 Additional Fixes .... Andrey Tyukov
 OCL ................. Dmitry Yulmukhametov
