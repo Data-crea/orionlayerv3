@@ -5,7 +5,25 @@ is left, in the order Data needs to answer it.
 
 ---
 
-## 1. C — awaiting your decision
+## 1. C — RESOLVED
+
+**Released by Data on 21 September 2026 and done in work order 157,
+commit `1be0af0`**, after Data asked what the two fields were, whether
+the original shows them in the colony list (it does not — its row
+draws population sprites only) and where they had last been visible
+(in the HD allocation bar, until `514ebb2` on 8 September).
+
+The note was rewritten rather than deleted. Its first line, in
+`colonytrack._column_boxes` and in `v3_projektstatus.md`:
+
+> **A PER-ROW CAPACITY DISPLAY IS AN OPEN DESIGN QUESTION FOR DATA.**
+
+The original text of this section follows, unchanged, because it is
+what the decision was taken on.
+
+---
+
+## 1a. C — the question as it was put
 
 **What it changes.** The row structure that describes one colony line
 has two compartments for things this screen does not draw. They have
