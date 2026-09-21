@@ -1,0 +1,59 @@
+#!/bin/sh
+# The PUSH is coupled to the FULL smoke test, mechanically (work order
+# 158; fundament decision 31, refined). The commit hook runs the fast
+# tier now — 157 measured that seven checks are about half the suite's
+# wall time — and the cost of that trade is stated in 157 section 6 and
+# accepted by Data: a fault only those seven can see lands HERE instead
+# of at the commit. That is only tolerable if this gate is as mechanical
+# as the commit gate, which is the whole reason this file exists rather
+# than a note asking somebody to remember.
+#
+# So: no --fast here, ever. This runs everything.
+#
+# Why a hook and not a habit: `git push` is the one action that makes a
+# mistake other people's problem. The hook lives in the tree so it is
+# versioned and reviewed like the suite; `tools/setup.py` points
+# `core.hooksPath` at this directory, because a clone does not inherit
+# git config. `git push --no-verify` bypasses it, and that is a
+# deliberate act, not an accident.
+#
+# What it tests is the WORKING TREE, not the commits being pushed: the
+# suite imports what is on disk. Push from a tree whose state you would
+# also accept — which is the same rule the pre-commit hook states, for
+# the same reason.
+#
+# Exit 139 is not retried here. The rule is to re-run once BY HAND,
+# record both exits, and never push on the crashed run; a hook that
+# retried would turn a sporadic crash into a green push, which is the
+# fault this file exists to close.
+#
+# THE FRESH-CLONE RUN IS NOT THIS. Work order 157 section 6: the four
+# faults where a check read the player's own files passed here and
+# failed in a clone, every time, and none of them was ever caught by
+# the suite in any tier. This gate does not replace that run and does
+# not pretend to.
+ROOT=$(cd "$(dirname "$0")/../.." && pwd)
+LOG="$ROOT/.git/smoke-pre-push.log"
+[ -d "$ROOT/.git" ] || LOG="${TMPDIR:-/tmp}/orionlayer-smoke-pre-push.log"
+cd "$ROOT" || exit 1
+echo "pre-push: running the FULL smoke test (the commit gate runs the fast tier)"
+python tools/smoke_test.py --quiet >"$LOG" 2>&1
+status=$?
+if [ "$status" -ne 0 ]; then
+    tail -n 30 "$LOG"
+    echo "pre-push: smoke test exited $status — push refused (log: $LOG)"
+    [ "$status" -eq 139 ] && echo "pre-push: 139 is a segfault, not green. Re-run once by hand and record both exits."
+    exit 1
+fi
+if ! grep -q "^SMOKE TEST PASSED" "$LOG"; then
+    tail -n 30 "$LOG"
+    echo "pre-push: smoke test exited 0 without its PASSED line — push refused (log: $LOG)"
+    exit 1
+fi
+if grep -q "^SMOKE TEST PASSED (FAST TIER)" "$LOG"; then
+    echo "pre-push: that was the FAST TIER, not the full suite — push refused."
+    echo "pre-push: this hook must not pass --fast. See work order 158."
+    exit 1
+fi
+grep "^SMOKE TEST PASSED" "$LOG"
+exit 0

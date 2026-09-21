@@ -57,11 +57,26 @@ from screens.colony_summary.colonyfigures import (  # noqa: E402
 from core.config import load_settings      # noqa: E402
 from core.helptext import help_file        # noqa: E402
 
-#: Where git looks for this project's hooks. The pre-commit hook runs the
-#: smoke test and refuses the commit on any exit but 0 (work order 126,
-#: decision 31). A clone does not inherit git config, so setup switches it
-#: on; the smoke test holds this line to the directory.
+#: Where git looks for this project's hooks. A clone does not inherit git
+#: config, so setup switches it on; the smoke test holds this line to the
+#: directory. ONE SETTING SWITCHES BOTH HOOKS ON, which is why there is
+#: nothing per-hook to install here.
+#:
+#:   pre-commit  the FAST tier — refuses the commit on any exit but 0
+#:               (work order 126 part B, decision 31)
+#:   pre-push    the FULL suite — refuses the push on any exit but 0, and
+#:               on a PASSED line that says FAST TIER (work order 158)
+#:
+#: The pair is the point: the commit gate got cheaper in work order 158
+#: and the checks it stopped running did not become optional, they moved
+#: one step later. A clone with only one of the two is a clone with a
+#: hole in it, so `--check` reports them separately.
 HOOKS_PATH = "tools/githooks"
+
+#: Hooks that must exist in HOOKS_PATH and be executable. Named rather
+#: than globbed: a hook that silently disappeared is the failure this
+#: list exists to make loud.
+HOOKS = ("pre-commit", "pre-push")
 
 GM = os.path.join(ROOT, "screens", "galaxy_map", "assets")
 CS = os.path.join(ROOT, "screens", "colony_summary", "assets")
@@ -279,16 +294,22 @@ def main():
 
     hooks = subprocess.run(["git", "config", "--get", "core.hooksPath"],
                            cwd=ROOT, capture_output=True, text=True)
+    _missing = [h for h in HOOKS
+                if not os.access(os.path.join(ROOT, HOOKS_PATH, h), os.X_OK)]
+    if _missing:
+        print(f"  Git hooks: MISSING OR NOT EXECUTABLE — {', '.join(_missing)}")
     if hooks.stdout.strip() == HOOKS_PATH:
-        print(f"  Commit hook: ok ({HOOKS_PATH})\n")
+        print(f"  Git hooks: ok ({HOOKS_PATH}) — pre-commit runs the fast "
+              f"tier, pre-push the full suite\n")
     elif args.check:
-        print(f"  Commit hook: OFF — setup sets core.hooksPath to {HOOKS_PATH}\n")
+        print(f"  Git hooks: OFF — setup sets core.hooksPath to {HOOKS_PATH}\n")
     elif os.path.isdir(os.path.join(ROOT, ".git")):
         subprocess.run(["git", "config", "core.hooksPath", HOOKS_PATH],
                        cwd=ROOT, check=True)
-        print(f"  Commit hook: switched on ({HOOKS_PATH})\n")
+        print(f"  Git hooks: switched on ({HOOKS_PATH}) — pre-commit runs "
+              f"the fast tier, pre-push the full suite\n")
     else:
-        print("  Commit hook: not a git clone, nothing to switch on\n")
+        print("  Git hooks: not a git clone, nothing to switch on\n")
 
     print("  Generated artwork:")
     failed = []
