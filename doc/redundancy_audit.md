@@ -4,6 +4,26 @@ Work order 126 part I, 17 September 2026. The fundament's rule: the THIRD copy
 is the signal to extract (decision 10, "Refactoring"), except where redundancy
 is the point. `tools/` is out of scope.
 
+---
+
+**THIS DOCUMENT HAS VERDICTS NOW — 21 September 2026, work order 156,
+commit B.** It was written as a list of open questions and read as one for
+four days. Every parked group was re-checked against the tree on 21 September
+and carries a verdict in the new section **"Verdicts, 21 September 2026"**
+below; the tables underneath are left exactly as the scan wrote them, because
+they are the evidence the verdicts were taken on.
+
+Three things changed with that pass, and they are folded in where they belong
+rather than only announced here:
+
+- **D8 is FIXED and this document was still leading with it.** Corrected in
+  both places it is claimed, below.
+- **Every one of the other 36 parked groups still exists**, verified by
+  locating each named symbol with `ast` and re-running this document's own
+  normaliser over it. Nothing was silently resolved.
+- **`tools/` is no longer out of scope.** It was scanned with this same method
+  for the first time on 21 September — see "The `tools/` scan" at the end.
+
 **How this was made.** A read-only sub-session ran the scan and wrote the
 tables below against the tree as it stood after part E (before part F moved
 the galaxy map's input into `mapinput.py`, and before the extractions listed
@@ -46,12 +66,91 @@ colony_summary/screen.py 271 — both under 300).
   shape whose RESULT equals `cover(…, (0.5, 0.5), 1.0)` by arithmetic
   (`int(0.5*k) == k//2`). That is not "identical or names-only", so it is a
   judgement call, not a move.
-- **D8, a decision-5 fault on Planets**: hover hit-tests with proportional
+- ~~**D8, a decision-5 fault on Planets**: hover hit-tests with proportional
   division while the list draws with `listgrid.all_bands`; the scan computed
-  7 disagreeing pixel rows at 1080p and 1440p, 10 at 2160p, 24 at 1366x768.
+  7 disagreeing pixel rows at 1080p and 1440p, 10 at 2160p, 24 at 1366x768.~~
+  **FIXED — work order 128 D, found on 21 September (156).** See the
+  correction under "Findings that are not only redundancy" below.
 - **D4**: `colonyoutput.fill_template`'s own note asks for extraction at the
   third copy; a third and a fourth exist, drifted (None handling).
 - Everything else below: two-copy groups, drifted groups, deliberate ones.
+
+---
+
+## Verdicts, 21 September 2026
+
+Work order 156, Stop 1. Every parked group re-located with `ast` and
+re-compared with this document's own normaliser (arguments and locals renamed
+positionally, docstrings and decorators stripped), `difflib` ratio against the
+first copy of each group. **All 36 still exist.** The ratio is the useful
+signal: near 1.00 means the copies could drift apart without anyone noticing,
+low means the drift IS the behaviour and merging would change a screen.
+
+### Still identical or names-only
+
+| id | ratio | verdict |
+|---|---|---|
+| **D4** `{key}` fill (4 copies) | 1.00 / 0.34 / 0.27 | **EXTRACT.** `colonypopup.fill` and `colonypick.fill` are still byte-identical after normalising, and `colonyoutput.fill_template`'s own docstring asks for extraction "at the THIRD copy" — the third and fourth are here, so the tree's own rule has already fired. Condition: each call site keeps its current `None` behaviour (the nested copies coerce `str(template or "")`, `fill_template` raises), because unifying it changes what a missing template draws. Proposed as commit D of 156; **parked by Data, 21 September.** |
+| **T1** `fallback_text_rect` / `busy_text_rect` | 1.00 | **LEAVE.** Two copies, and each reads its own module's `FALLBACK_INSET` whose values differ on purpose, with the reason at popup.py:40-41 and renderer.py:229-230. |
+| **T2** `EStrings.string` / `HStrings.message` | 1.00 | **LEAVE.** Two copies; the names follow the originals (`H_Message_`), and a merge puts one screen's text table in the other's module. |
+| **D21** `_pick` / `_table` | 1.00 | **LEAVE.** Two identical one-line table lookups; a shared home costs more lines than it saves. |
+| **P3** `slot_rows` / `save_strips` | 1.00 | **LEAVE — deliberate**, unchanged: two different original field sets, each with its own citation. |
+| **P4** `resolve` / `resolve_dir` | 0.99 | **LEAVE — deliberate**, unchanged: `exists` vs `isdir` is decision 17. |
+| **T5** `PlanetSet.get` / `SurfaceSet.get` | 0.99 | **LEAVE.** Two copies of a dict attribute lookup. |
+| **G3** cover-fill | 0.98 | **LEAVE, as 126 parked it.** The two functions are names-only but the three blocks equal `cover(…, (0.5,0.5), 1.0)` only *by arithmetic*, so it is a judgement call and not a move; new_game's drift is documented as intended. |
+| **D16** `_push_sort_key` | 0.97 | **LEAVE.** The difference is real: colony `return`s after the first match, planets does not, so merging changes what a duplicate key in `layout.json` does. |
+| **T3** `lift` / `_lift` | 0.96 | **LEAVE — and this is the one to watch.** Two copies, so the rule has not fired. But `tools/smoke_test.py:17139` uses `playercolors.lift` as the **stand-in** for `ships._lift`: if the two ever drift, that check measures the wrong function and says nothing. A check that they agree is the cheap fix — it ADDS a check rather than removing code, so it was outside 156's remit and is named here instead of done. |
+| **T4** `Window.row` / `_selected_row` | 0.94 | **LEAVE.** Two copies. |
+| **D1** versioned JSON loaders (5 + 1) | 0.97 → 0.36 | **EXTRACT THE HEAD, KEEP THE TAILS** — the largest single reduction available, ≈114 code lines → ≈65. Two conditions. The five `_load`s **bypass `core/resources.py`** (decision 16): a mod cannot override them while `HelpText` can, so the head must move AS IT IS, bypass included, or a modded install starts reading a different file — that is a behaviour change, not a cleanup. And `HelpText.load` is **not** a sixth copy: it goes through `res.load_json` and keeps `_available`/`_stale` instead of a `state`. Proposed as commit E of 156; **parked by Data, 21 September.** |
+| **D2** sprite-directory loaders (3) | 0.90 / 0.69 | **LEAVE**, although it is 94 code lines. planets and icons `break` after a refused file (the next root is not tried); surfaces does not scale, does not size-check, and uses `convert()` only when a display surface exists. Those differences are the mod-resolution and fallback behaviour of three sprite sets. |
+| **D24** `predict_pops` / `plan_drop` | 0.87 | **LEAVE.** Acknowledged in the docstring; two copies. |
+| **D23** frame-button pair | 0.86 | **EXTRACT, small** — ≈32 code lines → ≈22, in the file every click goes through. Proposed as commit G of 156; **parked by Data, 21 September.** |
+| **P1** `_state` / `pop_state` | 0.83 | **LEAVE — deliberate**, unchanged, and the suite already holds them to agreeing (smoke_test.py:8125-8128). |
+| **D15** `_render_title` | 0.81 | **DONE — the colony copy is deleted**, work order 156 commit A, 21 September 2026. It was the only parked group that was dead code rather than duplication: it read `frame.title_rect`, absent since Stage 4, so it returned before drawing. `TITLE_COLOR`, the `colony_summary.title` palette key, `frame._title_note` and `FRAME_TITLE` went with it. The galaxy map's copy is live and stays. |
+| **D20** guarded record access | 0.81 | **LEAVE.** This document says "Intent unclear; not decided here", and adding guards changes what a short record does on screen. |
+| **T7** `button_rect_left` / `_right` | names-only | **LEAVE.** Two copies. |
+
+### Still genuinely drifted — all LEAVE
+
+T6, D5, D6, D7, D8, D9, D10, D11, D12, D13, D19, D22 measured 0.07 to 0.48
+against their first copy. In every one of them **the drift is the behaviour**:
+
+- **D5** (0.38): `textfit.wrap_text` has a fast path that returns the string
+  verbatim and keeps runs of spaces; `custom_race/popup._lines` always rejoins
+  single-spaced and caches rendered lines. Pointing the popup at `textfit`
+  changes what the message box draws. It is a behaviour change, not a cleanup.
+- **D7** (0.15-0.21) and **D19** (0.07-0.17): four different rounding rules,
+  three of them transcriptions with citations (`Set_Fitted_Font_Style_`
+  plntsum.cpp:85; colsum.cpp:752-753). One shared implementation would have to
+  pick one rule and change the other three screens.
+- **D8**: the extraction already happened — `listgrid.all_bands`/`band_at` is
+  the home and Planets was moved onto it. What is left is `gmorion.bands`
+  re-deriving `gmdraw.bands` inline (two copies in one screen family) and
+  `monsterpanel._rows` deliberately not tiling.
+- **D9 / D10 / D22**: D9 has **two sources of truth** —
+  `layout.rect(box_rect(name))` honours `content_offset`, `Box.screen_rect`
+  honours `anchor` — and colonytrack.py:245-262 documents why the colony moved
+  off `screen_rect`. Merging them is a decision about box semantics, not a
+  tidy-up. D10 and D22 are the trivial ones this document already called
+  trivial.
+- **D6, D11, D12, D13**: markup wrap, hit-test loops, panel construction,
+  hover buttons — every copy differs in what it draws or what it hit-tests,
+  and the evidence per copy is in the tables below.
+
+### D3 and D17, the two this section does not settle
+
+- **D3** (per-App LRU `set_for`, 3 copies, ≈46 code lines → ≈25). The
+  third-copy rule has fired on the count, but the parameters differ per caller
+  — attribute name, key shape, factory, `SET_CACHE` (4 / 2 / 4) and the
+  pre-guard (`size <= 0` / `not size` / none) — and **no check names the LRU**,
+  so an eviction-order mistake would be invisible. Proposed as commit F of 156;
+  **parked by Data, 21 September.**
+- **D17** (three `HStrings` construction sites). Still true, still
+  uncommented, and `screenhelp.py:57-60` still argues for "exactly one
+  construction site". Not re-examined in 156 because it is a construction-site
+  question rather than a duplicated body, and the galaxy map and game menu
+  reading HESTRNGS into two objects is a memory question somebody should
+  measure before it is called a fault.
 
 ---
 
@@ -92,7 +191,7 @@ colony_summary/screen.py 271 — both under 300).
 | Judged deliberate (PARK-DELIBERATE) | **4** |
 
 Findings that are not only redundancy, flagged for Data (no fix decided):
-- **D8: a decision-5 defect.** On Planets the hover row index uses `(y - area.y) * visible // area.height` (planets/screen.py:313). The drawing uses `listgrid.all_bands` (planetdraw.py:107): band = h // n, and the last band takes the remainder. Computed offline at the `rows` box height, the two disagree on **7 px rows at 1920x1080 and 2560x1440, 10 at 3840x2160, 24 at 1366x768, and 0 at 1280x720**. Hover also sets `_selected`/`_scanned`.
+- **D8: a decision-5 defect — FIXED, and this document led with it for four days.** *The scan's finding, as written on 17 September:* "On Planets the hover row index uses `(y - area.y) * visible // area.height` (planets/screen.py:313). The drawing uses `listgrid.all_bands` (planetdraw.py:107): band = h // n, and the last band takes the remainder. Computed offline at the `rows` box height, the two disagree on **7 px rows at 1920x1080 and 2560x1440, 10 at 3840x2160, 24 at 1366x768, and 0 at 1280x720**. Hover also sets `_selected`/`_scanned`." **That formula is gone.** `screens/planets/screen.py:295` is `listgrid.band_at(planetdraw.row_bands(self), screen_y)`; `planetdraw.row_bands:98-107` returns `listgrid.all_bands` and its docstring calls itself "The ONE place the list's bands come from … `render_list` draws in them and the hover finds its row in them (`listgrid.band_at`), decision 5"; and `core/listgrid.band_at:39-51` records the fault by name — "Planets' hover divided `(y - top) * n // height` while its rows were drawn as h // n with the remainder on the last band, and the two named different rows on single pixel lines (work order 128 D)". Closed between this scan and 21 September, by the work order that repaired what 126 found, and nobody came back to strike it here. **The extraction this group wanted also happened**: `listgrid.band_at` is the shared home.
 - **D4: extraction was asked for, and it did not happen.** `colonyoutput.fill_template`'s docstring calls itself the *second* `{key}` filler and asks that the third be extracted. Two more copies (`colonypopup` and `colonypick`) already exist.
 - **D5: a leftover copy.** `textfit`'s docstring says the word-wrap was extracted at the third copy, but `custom_race/popup.MessagePopup._lines` still carries its own copy of the same algorithm.
 - **D17: three separate `HStrings` instances.** HStrings is built at three sites with three different cache homes (`app.hstrings`, `screen._hstrings`, and a fresh instance per Planets entry). `screenhelp.helptext` argues for exactly one construction site.
@@ -402,3 +501,41 @@ No pre-scan claim was refuted. Four understated the group: `_load_frame`, `_rend
 - **One-home greps.** squish_step (8794), the plate radius (12113) and `palette.init(` (15414) are asserted by tree-wide text search. None of G1-G4 touch those strings.
 - **Source-slice checks.** These are anchored on method bodies in files G1-G3 edit: `def _render_list(` in colony screen.py (12514), `def _render_map(` in galaxy screen.py (15484, which needs `surface.blit(self._map_bg_scaled`), `native_width` absent from colony screen.py (11306), and "coldraw.cpp:60" and "TRANSCRIPTION" present in colony screen.py (11865-11877). The extractions above do not touch these strings, but whoever does the work should re-read them.
 - **Line-count guideline** (decision 6, `tools/linecount.py` code lines): core/screen_base.py 262, core/imagebox.py 50, colony_summary/screen.py 298, planets/screen.py 274, galaxy_map/screen.py 583 (listed exception), colonymove.py 191.
+
+---
+
+## The `tools/` scan — 21 September 2026
+
+This document opened with "`tools/` is out of scope", and by 21 September that
+folder was the largest part of the tree. Work order 156 ran **the same method**
+over it: normalised AST over every function of 4+ statements, exact equality
+first, then `difflib` >= 0.80 cross-file.
+
+Scope: 303 functions across the 55 tools, **plus all 110 of
+`tools/smoke_test.py`'s own functions that clear the floor** — every one
+normalised, none failed, and not one paired with anything at 0.80 or above, so
+the suite shares no duplicated helper with any tool. (Its other 162 functions
+are nested closures inside `main()` and sit under the floor by nature.) Two
+passes were run and agreed exactly — one with `smoke_test.py` included and no
+size cap, one with it excluded and functions over 120 statements skipped — so
+neither the cap nor the exclusion hid a pair.
+
+**Result: 8 pairs, in 3 families, and every family is two copies**, so the
+third-copy rule has not fired on any of them.
+
+| family | pair | ratio | verdict |
+|---|---|---|---|
+| native framebuffer → PNG | `colony_list_preview.write_native:348` ↔ `colony_move_hd.native_png:66` | 1.00 | **LEAVE — the redundancy is the point and it is already written down.** `write_native`'s docstring: "Kept here as well rather than imported because that module opens a window and drives a game; this one must stay runnable without either." |
+| Extension-API socket trio | `ext_diag.connect/recv_exact/recv_frame` ↔ the same three in `ext_diag_race` | 1.00 / 0.82 / 0.81 | **LEAVE.** Two copies, and one of them is the module the fundament names as the deliberate second source. `ext_diag_race` already gave up its *third* copy of the field parser to `core/wire_protocol` and says so in its docstring; what is left is transport. |
+| live-drive harness | `colony_move_hd._wrap/pump/wait_for/click_at` ↔ `livedrive._wrap/pump/wait_for/hd_click` | 0.83-0.91 | **PARK — out of bounds.** Two copies, and `livedrive` is `research_hd`/`researchphases`' base, which is work order 131's toolchain, deferred. |
+
+**And no dead scripts.** Every `.py` in `tools/` that nothing imports has an
+`if __name__ == "__main__"` block — 39 of them. Cross-referenced against
+`setup.py`, the suite, `CLAUDE.md`, `README.md`, `v3_projektstatus.md` and
+every other tool, the 17 with no reference from `setup.py` or the suite are all
+**manual diagnostics**, each with its purpose in its own first paragraph, and a
+manual diagnostic is not dead code. `tools/galaxy_box_fields.json` is loaded by
+nothing and is **not** a leftover either: it is live field data recorded off the
+reference save and cited five times in the status document — evidence, not code.
+
+**So the folder this document excluded turns out to have been the tidy one.**
