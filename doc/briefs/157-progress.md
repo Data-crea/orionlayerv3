@@ -140,3 +140,72 @@ has one. The audit's phrasing invites reading it as a claim about
 
 Parked in `157-parked-for-data.md` with the two-sentence German
 summary the order asks for, plus what Data has to decide first.
+
+---
+
+## Part 4 — profile the suite — **DONE**, measure only
+
+**Commit below.** Nothing in the suite, the hook or the gate changed.
+Full brief: `doc/briefs/157-suite-profile.md`. Raw data and the driver:
+`~/orionlayer-fixtures/evidence/work_order_157/suite_profile/`.
+
+**Noise floor.** Five full runs: 77.92, 77.63, 77.67, 78.13, 77.78 s.
+Mean 77.83, spread 0.50 s, stdev 0.20 s — 0.64 % of the mean. Per
+check the ninetieth-percentile spread is 0.004 s, and that is the floor
+used throughout. 123 of 243 checks are measurable above it; they are
+99.9 % of the runtime, and the other 120 together are 0.1 %.
+
+**Granularity, stated as a limit.** The checks are inline blocks in one
+`main()` of about twenty-one thousand lines; the only boundary the
+suite draws is the `ok(...)` that closes each check. So every number is
+a **segment** between two `ok()` calls — that check's work plus any
+shared setup in front of it. Nothing finer is measurable without
+changing the suite, which this part was not allowed to do.
+
+**Three slowest, against the floor.**
+
+| | time | share | cumulative |
+|---|---:|---:|---:|
+| figure pick-up (1–20 figures, 3 resolutions) | 28.20 s | 36.3 % | 36.3 % |
+| RETURN cutout (12 resolutions) | 13.72 s | 17.7 % | 54.0 % |
+| GAME menu frame opening | 3.00 s | 3.9 % | 57.8 % |
+
+**Two checks are 54 % of the suite.**
+
+**THE SURPRISE, and it is the third of this run.** The suite is
+**62.42 s on a clone against 77.78 s here** — same 243 checks, both
+green. Almost all of the 15.35 s is the figure pick-up check, whose
+second pass over the player's own extracted figures reports absence and
+stops where the files are missing. 579 distinct files are touched here,
+525 without them, and the 54 in the difference are exactly the 54
+population figures. **The gate costs Data twenty per cent more than it
+costs a forker**, and the extra is a measurement that only exists where
+an extractor has been run.
+
+**The dependency question: yes, computable; unreliable in four ways,
+one of them fatal.** Imports from `ast`, opened files from an `open()`
+hook costing 0.3 % of wall time. But thirteen `os.walk` sweeps and
+sixteen `glob`/`listdir` sweeps depend on *whatever is in a directory*,
+and their job is to notice something NEW — **a map keyed on paths
+cannot list a path that is not there**. The briefs-index check went red
+on a just-added file twice in the last two work orders; under a
+computed map neither run would have happened. The other three: the map
+encodes the machine that built it (measured above), a run records only
+the branches it took, and import-level dependency pulls in most of the
+tree at once.
+
+The two cases the order names both got tested. The split delivery that
+broke the sidebar **would** have been caught, provided static imports
+are in the map — which argues for including them. The New Game
+resolution case survives at **file** granularity and breaks at anything
+finer, so file level is the floor and not a starting point.
+
+**Three options for Data**, each naming what it would have missed:
+a fast tier for the hook (misses the marker-width and plating faults at
+commit time, does not make the clone-only faults worse); change-based
+selection (misses everything a directory sweep polices); cutting the
+two heavy checks' breadth (breadth is where both earned their keep —
+1366x768 and the one-to-twenty count sweep). A fourth is described but
+not offered: caching a laid-out screen across checks would save more
+than any of them, and would create a class of fault this project has
+not had.
