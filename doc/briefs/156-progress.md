@@ -138,6 +138,11 @@ is internally identical before and after. So **both** branches of the
 figures feature were measured, which is the question the fundament says
 to ask after a byte-identity check: *which inputs did it NOT see.*
 
+The hashes are filed at
+`~/orionlayer-fixtures/evidence/work_order_156/A_colony_render_identity.txt`,
+on the pattern of 126's `I_frame_trio_render_identity.txt` — outside
+the tree, because evidence is (decision 42).
+
 Stated plainly, because the fundament is explicit that byte-identity
 proves only the paths that were exercised: **the renders confirm the
 reading, they do not license it.** The licence is that `title_rect` is
