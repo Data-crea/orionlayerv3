@@ -43,3 +43,64 @@ of either field (the suite's per-fixture assertion) and no positional
 unpacking of `RowBoxes` anywhere.
 
 C is marked resolved in `156-parked-for-data.md` with the hash.
+
+---
+
+## Part 2 — T3, the check that could go green measuring nothing — **DONE**
+
+**Commit below.** Suite green, 243, count unchanged.
+
+**The gap, shown before it was fixed.** `ships._lift` was halved —
+`c * 0.5` instead of `c + (255 - c) * keep` — which on the real screen
+draws **every player fleet on the galaxy map at half its tint**. The
+suite ran green: `SMOKE TEST PASSED — 243 checks green`. The check
+named "player colours: no preset ship is darker than the darkest
+original ship" tinted by hand with
+`_o.fill(playercolors.lift(tint, keep), BLEND_RGB_MULT)`, retyping
+**both** halves of `TintCache.get`, so it measured `playercolors.lift`
+while naming the ship tint. Nothing else in the suite called `_lift`
+or `TintCache` at all — verified by grep, and that is why the drift
+was invisible rather than merely unasserted.
+
+**The repair.** The check calls `ships.TintCache().get(...)` itself,
+with the preset colour placed in `ships.SHIP_COLORS` (which is where
+`TintCache.get` reads a colour from, by index). A **fresh cache per
+call**, because its key is `(cache_key, w, h, idx)` and the colour is
+not in it — a shared cache would hand back the first preset's sprite
+for every later one, which would be this same fault in a new place. It
+also asserts that `get` did not hand back the untinted base, which is
+what it does when `SHIP_COLORS` has no entry for the index and would
+otherwise measure the grey sprite and pass.
+
+**Caught: no before, yes after.**
+
+| run | check | result |
+|---|---|---|
+| drift applied | original | **PASSED — 243 green** |
+| drift applied | repaired | **AssertionError** — `okabe_ito 0.png: darkest preset ship 0.0182 below the darkest original 0.0188` |
+| no drift | repaired | PASSED — 243 green |
+
+The third row matters as much as the second: the repair did not change
+the verdict on correct code, only on wrong code.
+
+Evidence: `part2_step1_gap_not_caught.txt` and
+`part2_step2_drift_caught.txt` in
+`~/orionlayer-fixtures/evidence/work_order_157/`. Both drifts were
+reverted with `git checkout` and the file's SHA-256 checked back to
+its baseline each time, with every `__pycache__` cleared and every run
+made with `python -B` — the stale-bytecode trap of work order 128 B.
+
+**THE SURPRISE, and it is the same shape as 156's.**
+`assets/shared/skins/default/colors.json`, under
+`player_presets.rule._k_ship_protocol`, already said the criterion was
+*"Measured … through ships.TintCache's own path (TINT_KEEP_WHITE lift,
+then BLEND_RGB_MULT)"*. **It was not.** No check in the tree touched
+`TintCache` or `_lift`. The note was true of the intent and false of
+the code, and it had been since 14 September. The repair makes it
+true, so the note needed no edit — which is the only reason this one
+did not also become a documentation correction.
+
+**Parked:** whether the two `lift` functions should be *merged* is a
+design decision, not a repair, so it went to
+`157-parked-for-data.md` with both options. The check no longer
+depends on them agreeing either way.
