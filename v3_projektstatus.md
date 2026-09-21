@@ -2294,11 +2294,74 @@ files under `doc/` and are only summarised here.
 | | |
 |---|---|
 | Python | 32,960 lines across 111 modules — `find . -name '*.py'`, `__pycache__` excluded, the smoke test's 6,400 included. The previous figure here (21,642 across 94) was carried from an unstated method and could not be reproduced |
-| Smoke test | `python tools/smoke_test.py` — **244 checks**, headless |
+| Smoke test | `python tools/smoke_test.py` — **244 checks**, headless. **Two tiers since work order 158**: the bare command runs everything (~80 s here, ~64 s in a clone); `--fast` runs the commit gate's 237 (~39 s here, ~37 s in a clone). See "The gate has two tiers" below |
 | Assets | 170 MB (select_race 68, galaxy_map 51, shared 23, new_game 21, colony_summary 1) |
 | Screens in HD | 9 of ~20–22 (the GAME menu overlay, work order Stop 2, every dialog of the popup; colony summary draws list, sidebar, scan box and galaxy inset, and MOVES POPS — the first HD gesture that drives the game; planets, brief 101, lists, sorts, restricts and returns) |
 | Setup from clone | `python tools/setup.py` (deps via the system package manager) |
 | orion2re | required for live data, not for the smoke test |
+
+### The gate has two tiers — 21 September 2026, work order 158
+
+157 measured the suite at ~78 s and found that seven checks were about
+half of it, every one expensive for the same reason: it stands screens
+up at many sizes or counts. Data chose 157's Option A. **No check was
+deleted, weakened or thinned** — the tiers change *when* a check runs,
+never what it asserts, and all 244 run before every push.
+
+| | command | checks | on this tree | in a clone |
+|---|---|---:|---:|---:|
+| **Full** — the default, and the pre-push gate | `python tools/smoke_test.py` | 244 | 79.5–80.4 s | 63.6–64.1 s |
+| **Fast** — the pre-commit gate | `python tools/smoke_test.py --fast` | 237 | 38.9–39.2 s | 37.3 s |
+
+Six runs each here, three in the clone. The commit gate falls by
+**51 %** on this machine and peak memory with it, 6.7 GB → 4.8 GB. In a
+clone the saving is smaller, **42 %**, and the reason is 157 §4: the
+biggest push-only item is the figure pick-up's second pass over the
+player's own extracted figures, which does not run where they are
+absent. **The gate was always cheaper for a forker than for Data, and
+the fast tier narrows that gap rather than widening it.**
+
+**The hooks.** `core.hooksPath` names the directory, so `python
+tools/setup.py` switches both on at once and a clone gets the pair or
+neither.
+
+```
+tools/githooks/pre-commit   python tools/smoke_test.py --quiet --fast
+tools/githooks/pre-push     python tools/smoke_test.py --quiet
+```
+
+The push hook refuses on any exit but 0, on a missing PASSED line, and
+on a PASSED line that says FAST TIER — the two hooks differ by one
+flag, and a hook that quietly passed `--fast` would leave the project
+with two fast gates and no full one.
+
+**The seven push-only checks**, declared in `smoke_test.SLOW_TIER` with
+the reason each is expensive, and held to the `slow(...)` guards by a
+check in the *fast* tier, in both directions:
+
+| check | why it is there |
+|---|---|
+| figure pick-up, 1–20 figures × 3 resolutions | 28.2 s, 36 % of the suite; its second pass reads the player's own extracted figures |
+| RETURN's cutout at twelve resolutions | 13.7 s; the twelve sizes are the point |
+| GAME menu frame: opening, and drawn | 3.0 s + 1.2 s |
+| `main._verdict`'s fallback log | 2.3 s |
+| sidebar research readout | 2.3 s |
+| 49 tools import in fresh processes | 2.0 s; the only expensive check that renders nothing |
+
+**The threshold was not the ranking.** A check went push-only when it
+cost at least a second **and** its own block could be skipped without a
+later check noticing. The second half did the work: 157 warned that a
+segment's time includes shared setup in front of it, and ranks 6, 8 and
+10 of that table turned out to have safely-skippable blocks of five to
+nine lines, because their cost *is* setup other checks need. They
+stayed in the fast tier.
+
+**What it costs, accepted rather than discovered.** A fault only those
+seven can see now lands at push time. The drop-marker hit area and the
+colony list's plating were both found by checks on that list. Both
+gates were therefore proved by walking a real fault through them —
+`~/orionlayer-fixtures/evidence/work_order_158/gate_proofs.txt`. **The
+fresh-clone run did not move and is not replaced** (157 §6).
 
 Three positioning systems coexist, by design:
 

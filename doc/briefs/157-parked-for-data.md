@@ -92,3 +92,32 @@ sizes and the single condition each turns on are in
 `doc/briefs/156-parked-for-data.md`.
 
 **C is closed**, done in this order's part 1 (`1be0af0`).
+
+---
+
+## 4. The suite gate — **RESOLVED**
+
+*(Numbered 4 because that is how 157's final report listed it: the
+three options in `doc/briefs/157-suite-profile.md` §6. It had no
+numbered section of its own in this file, and it has one now so the
+resolution is where a reader looks for it.)*
+
+**Data chose Option A on 21 September 2026** — a fast tier on the
+commit hook, the full suite on a new pre-push hook — and rejected the
+other two in the same message: Option B (change-based selection) on
+157 §5(a), because directory sweeps police files that do not exist
+yet; Option C (thinning the heavy checks) because breadth is where
+those checks earned their keep. The caching idea from 157's closing
+note stays off the table.
+
+**Done in work order 158**, commits `2d73c66` (the tier), `8a691be`
+(the hooks) and the documentation commit that follows them. Seven
+checks are push-only, declared in `smoke_test.SLOW_TIER`; the commit
+gate fell from ~80 s to ~39 s here and from ~64 s to ~37 s in a clone.
+Decision 31 was **refined in place** rather than given a new number,
+because a decision number is an identity and the gate is one decision.
+
+**The accepted cost is on the record in three places** — decision 31,
+`CLAUDE.md` and the status document: a fault only those seven can see
+now lands at push time. Both gates were proved by walking a real fault
+through them (`evidence/work_order_158/gate_proofs.txt`).

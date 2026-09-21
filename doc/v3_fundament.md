@@ -1802,6 +1802,50 @@ a retry would turn a sporadic crash into a green commit. The smoke test runs
 the hook against stub suites (a real SIGSEGV among them) and fails if it
 lets any of them through. `--no-verify` bypasses it, and is a deliberate act.
 
+**Refined 21 September 2026, work order 158: two tiers, and git enforces
+both.** The suite reached about 78 s, and work order 157 measured where
+that went — seven checks were about half of it, all seven expensive for
+the same reason, standing screens up at many sizes or counts. So the
+commit gate runs a FAST tier and the full suite moved to a second gate
+before the push. **Amended here rather than given a new number**,
+because a decision number is an identity and this is still one
+decision: the gate. Two entries describing one mechanism is the second
+copy this project keeps paying for.
+
+- **`tools/githooks/pre-commit` runs `--fast`**, about 39 s.
+  **`tools/githooks/pre-push` runs the full suite** and refuses the push
+  on any exit but 0, on a missing PASSED line, and on a PASSED line that
+  says FAST TIER. `core.hooksPath` switches on both at once, so a clone
+  gets the pair or neither.
+- **Full is the default, and that is the point.** `python
+  tools/smoke_test.py` with no argument runs everything, exactly as
+  before. Only the pre-commit hook passes `--fast`, so Data, a forker,
+  or a session that has never read this entry gets the whole suite by
+  doing the obvious thing. A fast run prints `SMOKE TEST PASSED (FAST
+  TIER)` with the number of checks it did not run, so it cannot be read
+  as a full one in a log or a report.
+- **The slow list is declared in one place and policed.**
+  `smoke_test.SLOW_TIER` names each push-only check with the reason it
+  is expensive, and a check in the FAST tier holds the `slow(...)`
+  guards and that list to each other in both directions — the marker
+  inventory's shape, for the marker inventory's reason. Moving a check
+  into the slow tier without declaring it turns the suite red.
+- **No check was deleted, weakened or thinned.** The tiers change WHEN
+  a check runs, never what it asserts. Both tiers also assert the
+  documents' check count against the FULL number, so a fast run cannot
+  go green against a count it never reached.
+- **What it costs, accepted by Data rather than discovered later:** a
+  fault only those seven can see now lands at push time instead of
+  commit time. The drop-marker hit area and the colony list's plating
+  were both found by checks that are now push-only. That is tolerable
+  only because the push gate is mechanical too — and it is why work
+  order 158 proved both gates by walking a real fault through them
+  rather than by reading the hooks.
+- **The fresh-clone run did not move and is not replaced.** Work order
+  157: the four faults where a check read the player's own files passed
+  on the author's machine and failed in a clone, every time, and none
+  was caught by the suite in any tier.
+
 ---
 
 ## 2. Working principles

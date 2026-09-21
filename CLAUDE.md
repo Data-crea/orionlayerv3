@@ -55,12 +55,27 @@ derive world geometry.
 **The smoke test must be green before every commit.**
 
 ```bash
-python tools/smoke_test.py
+python tools/smoke_test.py          # everything — 244 checks, ~80 s
+python tools/smoke_test.py --fast   # the commit gate's tier, ~39 s
 ```
 
-Git enforces it: `tools/githooks/pre-commit` runs the suite and refuses
-the commit on any exit but 0, 139 included. `python tools/setup.py`
-switches the hook on in a clone (decision 31).
+**Two gates, both enforced by git** (decision 31, refined by work order
+158). `tools/githooks/pre-commit` runs the **fast** tier;
+`tools/githooks/pre-push` runs the **full** suite and refuses the push
+on any exit but 0, 139 included, and on a PASSED line that says FAST
+TIER. `python tools/setup.py` switches both on in a clone —
+`core.hooksPath` names the directory, so it is the pair or neither.
+
+**Full is the default.** The bare command above runs everything; only
+the pre-commit hook passes `--fast`. A fast run says so in its PASSED
+line, with the number of checks it did not run, so it cannot be mistaken
+for a full one. The seven push-only checks are declared in
+`smoke_test.SLOW_TIER` with the reason each is expensive, and a check in
+the fast tier holds that list and the guards to each other.
+
+**What the trade costs:** a fault only those seven can see lands at push
+time, not at commit time. See decision 31 and
+`doc/briefs/157-suite-profile.md`.
 
 244 checks, headless, no orion2re needed. **The count must not go
 down.** If a change makes a check obsolete, replace it — do not
