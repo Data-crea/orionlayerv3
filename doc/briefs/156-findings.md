@@ -307,8 +307,18 @@ behaviour of three sprite sets. Leave.
 
 Same scan: normalised AST over every function of 4+ statements in
 `tools/`, exact equality first, then `difflib` ≥ 0.80 cross-file.
-303 functions compared (3 oversized skipped; `smoke_test.py` reported
-separately below).
+303 functions compared across the 55 tools, **plus all 110 of
+`tools/smoke_test.py`'s own functions that clear the 4-statement floor**
+— every one of them normalised, none failed, and not one paired with
+anything at 0.80 or above. So the suite shares no duplicated helper
+with any tool, which is worth knowing before anyone proposes tidying
+it: its other 162 functions are nested closures inside `main()` and sit
+below the floor by nature.
+
+(Two passes were run and agreed exactly: one over `tools/` with
+`smoke_test.py` included and no size cap, and one with it excluded and
+functions over 120 statements skipped. Both returned the same 8 pairs,
+so neither the cap nor the exclusion hid anything.)
 
 **Result: 8 pairs, in 3 families, and every one is two copies.**
 
