@@ -105,6 +105,40 @@ assert [_e.index for _e in _rl_entries if _e.offered] == [0, 4], \
 assert sum(1 for _k, _t, _r in _rl.expected_fields(_rl_entries)
            if _k.startswith("block ")) == 8
 
+# THE RECONSTRUCTION MUST NOT EXPECT SLOT 0, and this is the one
+# assertion in this module that is NOT built from the function it
+# tests. Work order 165 part D found why that distinction is not
+# pedantry: `expected_fields` carried a leading dummy from work order
+# 130 C, when the wire still sent slot 0; work order 142 B dropped it
+# once in `core.game_state.parse_fields` and did not move this list
+# with it. The count was one too high from that day, so
+# `validate_against_fields` failed on every REAL snapshot and the
+# research screen handed over to the fallback every time it was
+# entered — while every check here stayed green, because the
+# stand-in below is built FROM `expected_fields` and carried the same
+# dummy on both sides. 131 part E's lesson, live.
+#
+# So the count is computed from the ORIGINAL's own formula instead —
+# `1 + [1] + A + 8 + R + 1` less the dummy the parser drops — and
+# from the entries, not from the thing under test.
+for _rl_mode in (True, False):
+    _rl_want = _rl.expected_fields(_rl_entries, _rl_mode)
+    _rl_rows_n = sum(len(_e.apps) for _e in _rl_entries)
+    _rl_radios_n = sum(1 for _e in _rl_entries if _e.offered)
+    _rl_formula = (_rl_rows_n + 8 + _rl_radios_n + 1
+                   + (0 if _rl_mode else 1))
+    assert len(_rl_want) == _rl_formula, (
+        f"{'select' if _rl_mode else 'change'} mode: the "
+        f"reconstruction wants {len(_rl_want)} fields, the original's "
+        f"own build order gives {_rl_formula} "
+        f"({_rl_rows_n} rows + 8 blocks + {_rl_radios_n} radios + 1 "
+        f"whole-screen" + ("" if _rl_mode else " + 1 exit") + ")")
+    assert not any(_k == "dummy" for _k, _t, _r in _rl_want), (
+        "the reconstruction expects slot 0. `parse_fields` drops it "
+        "once for every screen (work order 142 B), so a list that "
+        "expects it is one too long and validation fails on every "
+        "real snapshot")
+
 from core.game_state import FieldInfo as _RlField
 
 def _rl_list(entries, select_mode=True):

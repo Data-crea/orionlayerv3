@@ -128,7 +128,16 @@ SPEC = Spec("s_player", SIZE, [
     # techdata.cpp is 45 — which is exactly what the VERIFIED
     # `current_research_field` beside it says. A byte that is not the
     # current application has no reason to resolve to the current field.
-    ("current_research_application", 902, "i8"),
+    # …AND IT IS READ UNSIGNED, though the header says `int8_t`.
+    # Application ids run past 127 — the one live read that verified
+    # this offset was 196 — so the engine's own signed type gives -60
+    # for it and every lookup against `_technology_applications` misses.
+    # Found by running change mode live on 22 September 2026, an hour
+    # after the offset was promoted on a probe that had read the raw
+    # byte and never gone through the spec. The header route fixes the
+    # OFFSET and the WIDTH; it does not promise the C type is the one
+    # a reader wants, and this is what that looks like.
+    ("current_research_application", 902, "u8"),
     # tech_fields[TECH_FIELD_COUNT] — the per-field research status, and
     # the only one the sidebar needs: 3 means "already researched"
     # (colcalc.cpp:436-438). TWO SOURCES, 17 September 2026 (work order

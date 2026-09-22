@@ -352,8 +352,7 @@ def expected_fields(entries, select_mode=True):
 
     In the order `_Tech_Select_` adds them (tech.cpp:206-250):
 
-      0            the dummy `Clear_Fields_` leaves (fields.cpp:201)
-      [1]          change mode only: the exit button
+      [0]          change mode only: the exit button
       then         every offered entry's rows, entry by entry, row by
                    row — `Init_Entry_Data_`
       then         eight entry blocks, one per entry, EMPTY ONES TOO
@@ -364,9 +363,28 @@ def expected_fields(entries, select_mode=True):
     rectangle is not predictable (the exit button's, whose end comes
     from the art — `doc/tech_change_reading.md` §2 has it as NOT
     SETTLED).
+
+    **SLOT 0 IS NOT IN THIS LIST, and it used to be.** `Clear_Fields_`
+    leaves a dummy at slot 0 (fields.cpp:201) and `SerializeFields`
+    sends it (ext_api.cpp:326), so when this function was written in
+    work order 130 C the wire carried it and the reconstruction had to
+    expect it. Work order 142 B then dropped it ONCE, in
+    `core.game_state.parse_fields` — "a labelling rule without a check
+    is an intention, and it decays" — and this list was not moved with
+    it. The count was one too high from that day, so
+    `validate_against_fields` failed on every real snapshot and the
+    select screen handed over to the fallback every time it was
+    entered.
+
+    **The check did not catch it because the check built its stand-in
+    FROM THIS FUNCTION**, so the dummy sat on both sides of the
+    comparison. That is work order 131 part E's own lesson — a test
+    double written by the same hand as the code shares its mistakes —
+    and it is why one live run in work order 165 part D found what
+    every green run since 19 September had not.
     """
     origin = PANEL_ORIGIN_SELECT if select_mode else PANEL_ORIGIN_CHANGE
-    want = [("dummy", None, None)]
+    want = []
     if not select_mode:
         want.append(("exit", TYPE_BUTTON, None))
     for entry in entries:
