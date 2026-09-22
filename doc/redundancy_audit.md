@@ -99,13 +99,13 @@ low means the drift IS the behaviour and merging would change a screen.
 | **T5** `PlanetSet.get` / `SurfaceSet.get` | 0.99 | **LEAVE.** Two copies of a dict attribute lookup. |
 | **G3** cover-fill | 0.98 | **LEAVE, as 126 parked it.** The two functions are names-only but the three blocks equal `cover(…, (0.5,0.5), 1.0)` only *by arithmetic*, so it is a judgement call and not a move; new_game's drift is documented as intended. |
 | **D16** `_push_sort_key` | 0.97 | **LEAVE.** The difference is real: colony `return`s after the first match, planets does not, so merging changes what a duplicate key in `layout.json` does. |
-| **T3** `lift` / `_lift` | 0.96 | **LEAVE — and this is the one to watch.** Two copies, so the rule has not fired. But `tools/smoke_test.py:17139` uses `playercolors.lift` as the **stand-in** for `ships._lift`: if the two ever drift, that check measures the wrong function and says nothing. A check that they agree is the cheap fix — it ADDS a check rather than removing code, so it was outside 156's remit and is named here instead of done. |
+| **T3** `lift` / `_lift` | 0.96 | **LEAVE — and this is the one to watch.** Two copies, so the rule has not fired. But `tools/smoke_suite/065_galaxy_map_player_colours_no_preset_ship_is.py` uses `playercolors.lift` as the **stand-in** for `ships._lift`: if the two ever drift, that check measures the wrong function and says nothing. A check that they agree is the cheap fix — it ADDS a check rather than removing code, so it was outside 156's remit and is named here instead of done. |
 | **T4** `Window.row` / `_selected_row` | 0.94 | **LEAVE.** Two copies. |
 | **D1** versioned JSON loaders (5 + 1) | 0.97 → 0.36 | **EXTRACT THE HEAD, KEEP THE TAILS** — the largest single reduction available, ≈114 code lines → ≈65. Two conditions. The five `_load`s **bypass `core/resources.py`** (decision 16): a mod cannot override them while `HelpText` can, so the head must move AS IT IS, bypass included, or a modded install starts reading a different file — that is a behaviour change, not a cleanup. And `HelpText.load` is **not** a sixth copy: it goes through `res.load_json` and keeps `_available`/`_stale` instead of a `state`. Proposed as commit E of 156; **parked by Data, 21 September.** |
 | **D2** sprite-directory loaders (3) | 0.90 / 0.69 | **LEAVE**, although it is 94 code lines. planets and icons `break` after a refused file (the next root is not tried); surfaces does not scale, does not size-check, and uses `convert()` only when a display surface exists. Those differences are the mod-resolution and fallback behaviour of three sprite sets. |
 | **D24** `predict_pops` / `plan_drop` | 0.87 | **LEAVE.** Acknowledged in the docstring; two copies. |
 | **D23** frame-button pair | 0.86 | **EXTRACT, small** — ≈32 code lines → ≈22, in the file every click goes through. Proposed as commit G of 156; **parked by Data, 21 September.** |
-| **P1** `_state` / `pop_state` | 0.83 | **LEAVE — deliberate**, unchanged, and the suite already holds them to agreeing (smoke_test.py:8125-8128). |
+| **P1** `_state` / `pop_state` | 0.83 | **LEAVE — deliberate**, unchanged, and the suite already holds them to agreeing (tools/smoke_suite/028_colony_summary_a_pop_cluster_is_one_contiguous.py). |
 | **D15** `_render_title` | 0.81 | **DONE — the colony copy is deleted**, work order 156 commit A, 21 September 2026. It was the only parked group that was dead code rather than duplication: it read `frame.title_rect`, absent since Stage 4, so it returned before drawing. `TITLE_COLOR`, the `colony_summary.title` palette key, `frame._title_note` and `FRAME_TITLE` went with it. The galaxy map's copy is live and stays. |
 | **D20** guarded record access | 0.81 | **LEAVE.** This document says "Intent unclear; not decided here", and adding guards changes what a short record does on screen. |
 | **T7** `button_rect_left` / `_right` | names-only | **LEAVE.** Two copies. |
@@ -259,11 +259,11 @@ def _render_frame_image(self, surface):
 - Prose that names the method: screens/colony_summary/colonytrack.py:250 (`screen._scale_frame`); v3_projektstatus.md:7037, 8407, 8439 (historical entries); doc/colsum_rebuild_inventory.md:128.
 
 **Smoke-test references:**
-- tools/smoke_test.py:1019 `assert gm._frame_scaled is not None`: the attribute name must survive.
-- tools/smoke_test.py:16019 `_pf_gm._render_title(surf)`: galaxy's `_render_title` sits next to the trio but is NOT part of it (see D15). Do not move or rename it.
-- tools/smoke_test.py:198 and 12358 call `on_resize()` on live screens. Adding the frame rescale to `ScreenBase.on_resize` changes what they exercise.
+- tools/smoke_suite/007_galaxy_map_galaxy_map_transform_name_rules_sideba.py `assert gm._frame_scaled is not None`: the attribute name must survive.
+- tools/smoke_suite/075_core_game_menu_volume_bars_find_bar.py `_pf_gm._render_title(surf)`: galaxy's `_render_title` sits next to the trio but is NOT part of it (see D15). Do not move or rename it.
+- tools/smoke_suite/002_core_screen_lifecycles_enter_update_render.py and 12358 call `on_resize()` on live screens. Adding the frame rescale to `ScreenBase.on_resize` changes what they exercise.
 - No smoke check calls `_scale_frame`, `_load_frame` or `_render_frame_image` by name.
-- tools/smoke_test.py:1390ff re-measures the colony frame's holes against `smoothscale` output. The arithmetic must stay byte-identical, which a move preserves.
+- tools/smoke_suite/008_colony_summary_colony_summary_sort_slots_one_box.py re-measures the colony frame's holes against `smoothscale` output. The arithmetic must stay byte-identical, which a move preserves.
 
 **Home: `core/screen_base.py`.**
 - It already owns the same trio for the background: `_load_background` 207-220, `_scale_background` 222-243, `_render_background` 245-251.
@@ -273,7 +273,7 @@ def _render_frame_image(self, surface):
 
 Two constraints for whoever moves it:
 - **(a)** ScreenBase does not know `_data` (the layout.json dict is per screen), so the image name must come in as an argument or a hook.
-- **(b)** ScreenBase.on_resize runs for every screen, including the smoke test's `FakeQueuePopup(ScreenBase)` (smoke_test.py:535). Either default `_frame`/`_frame_scaled`/`_frame_pos` in `ScreenBase.__init__`, or keep the resize call opt-in. The galaxy-only `exit` release is a drift to resolve one way or the other.
+- **(b)** ScreenBase.on_resize runs for every screen, including the smoke test's `FakeQueuePopup(ScreenBase)` (tools/smoke_suite/006_core_overlay_layer_open_render_route_auto.py). Either default `_frame`/`_frame_scaled`/`_frame_pos` in `ScreenBase.__init__`, or keep the resize call opt-in. The galaxy-only `exit` release is a drift to resolve one way or the other.
 
 ### G2: `box_style(name)`: a named box's style dict
 
@@ -306,7 +306,7 @@ def box_style(self, name):
 - screens/planets/planetdraw.py:312 (`_font`) and screens/planets/monsterpanel.py:146 (`planetdraw._style(screen, SPRITE_BOX)`)
 - Optional: screens/galaxy_map/boxdraw.py:127
 
-**Smoke-test references:** tools/smoke_test.py:11624 `_rb_scr.box_style("return")`, where `_rb_scr` is the colony_summary screen (11565). If the public name `box_style` lives on ScreenBase, inheritance keeps this working. No smoke reference exists to `_box_style` or `planetdraw._style`.
+**Smoke-test references:** tools/smoke_suite/042_colony_summary_colony_summary_sidebar_column_one_clam.py `_rb_scr.box_style("return")`, where `_rb_scr` is the colony_summary screen (11565). If the public name `box_style` lives on ScreenBase, inheritance keeps this working. No smoke reference exists to `_box_style` or `planetdraw._style`.
 
 **Home: `core/screen_base.py`**, under "Box helpers" beside `box_rect` and `box_font_scale_stored`, which already walk `self.boxes` by name.
 
@@ -360,8 +360,8 @@ def cover(img, tw, th, crop, zoom):
 
 **Smoke-test references:**
 - None to `_make_thumbnail`, `cover`, `_scale_background`, `_scale_map_background` or `Backdrop`.
-- tools/smoke_test.py:15486 asserts that the SOURCE of galaxy `_render_map` contains `surface.blit(self._map_bg_scaled`. Keep the attribute name.
-- tools/smoke_test.py:10131-10192 compares `imagebox.render_image_box` pixels. `cover` stays unchanged.
+- tools/smoke_suite/067_galaxy_map_floor_lift_off_is_byte_identical.py asserts that the SOURCE of galaxy `_render_map` contains `surface.blit(self._map_bg_scaled`. Keep the attribute name.
+- tools/smoke_suite/034_core_planet_surface_is_core_imagebox_s.py compares `imagebox.render_image_box` pixels. `cover` stays unchanged.
 
 **Home: `core/imagebox.cover`** (already the named home; decision 4's module).
 
@@ -392,7 +392,7 @@ The inline form (333-337 and 378-382) is `work = list(pops); held = set(...); fo
 **Call sites:** colonymove.py:333-337 and :378-382 only.
 
 **Smoke-test references (names stay the same):**
-- tools/smoke_test.py:8755 `_cmv2.held_pops(...)`
+- tools/smoke_suite/031_core_figures_sit_on_the_plate_s.py `_cmv2.held_pops(...)`
 - :10842 `predict_pops`
 - :7518-7544 `plan_drop`
 - :7526-7532 monkeypatches `_cm.pop_state` and relies on `plan_drop` reaching it through the module global. Unaffected.
@@ -407,7 +407,7 @@ The inline form (333-337 and 378-382) is `work = list(pops); held = set(...); fo
 |---|---|---|---|---|---|
 | T1 | `fallback_text_rect` screens/custom_race/popup.py:46-50; `busy_text_rect` screens/empire_identity/renderer.py:235-239 | 2 | names-only | Each reads its own module's `FALLBACK_INSET`: popup.py:43 `(60, 50)`, renderer.py:232 `(24, 7)`. The values differ on purpose (comments at popup 40-41 and renderer 229-230). Callers: custom_race/screen.py:310, empire_identity/screen.py:228 | PARK-TWO-COPIES |
 | T2 | `EStrings.string` core/estrings.py:131-146; `HStrings.message` core/hestrings.py:93-101 | 2 | names-only | The names follow the originals (`H_Message_`). estrings' docstring explains None vs `""`. Smoke calls both (6733ff; 13667) | PARK-TWO-COPIES |
-| T3 | `playercolors.lift(rgb, k)` core/playercolors.py:48-49; `ships._lift(color, keep=TINT_KEEP_WHITE)` screens/galaxy_map/ships.py:237-238 | 2 | names-only (a default argument added) | colors.json:1283 (`_k_ship_protocol`) measures presets "through ships.TintCache's own path (TINT_KEEP_WHITE lift…)". **tools/smoke_test.py:15363 emulates `_lift` with `playercolors.lift`**, so if the two ever drift, that measurement silently measures the wrong thing | PARK-TWO-COPIES |
+| T3 | `playercolors.lift(rgb, k)` core/playercolors.py:48-49; `ships._lift(color, keep=TINT_KEEP_WHITE)` screens/galaxy_map/ships.py:237-238 | 2 | names-only (a default argument added) | colors.json:1283 (`_k_ship_protocol`) measures presets "through ships.TintCache's own path (TINT_KEEP_WHITE lift…)". **tools/smoke_suite/065_galaxy_map_player_colours_no_preset_ship_is.py emulates `_lift` with `playercolors.lift`**, so if the two ever drift, that measurement silently measures the wrong thing | PARK-TWO-COPIES |
 | T4 | `colonyselect.Window.row` screens/colony_summary/colonyselect.py:130-135; `planets._selected_row` screens/planets/screen.py:132-136 | 2 | names-only | none | PARK-TWO-COPIES |
 | T5 | `PlanetSet.get` screens/colony_summary/colonyplanets.py:123-126; `SurfaceSet.get` screens/colony_summary/colonysurfaces.py:83-86 | 2 | names-only (dict attribute) | none | PARK-TWO-COPIES |
 | T6 | `planetdraw.render_scroll` arrow placement screens/planets/planetdraw.py:186-192 (`arrow = rect.width`, tops `rect.y` / `rect.bottom - arrow`); `planetdraw.scroll_arrows` :201-208 (same `a = rect.width`, same tops) | 2 | same geometry in two functions | Decision-5 shape, draw vs `handle_click` (planets/screen.py:239-243). They agree today. colonyscroll.arrows (colony) is the one-function form | PARK-TWO-COPIES |
@@ -471,7 +471,7 @@ The inline form (333-337 and 378-382) is `work = list(pops); held = set(...); fo
 
 | id | function(s), file:line | copies | status | evidence | verdict |
 |---|---|---|---|---|---|
-| P1 | `colonyicons._state` colony_summary/colonyicons.py:124-139; `colonymove.pop_state` colonymove.py:86-101 | 2 | drifted (literal 3/4/2 vs named constants) | colonyicons' docstring: "A second copy of `colonymove.pop_state`, and deliberately not an import: … the smoke test holds them to agreeing"; smoke_test.py:8125-8128 "THE SECOND COPY OF pop_state IS DELIBERATE AND MUST AGREE" | PARK-DELIBERATE |
+| P1 | `colonyicons._state` colony_summary/colonyicons.py:124-139; `colonymove.pop_state` colonymove.py:86-101 | 2 | drifted (literal 3/4/2 vs named constants) | colonyicons' docstring: "A second copy of `colonymove.pop_state`, and deliberately not an import: … the smoke test holds them to agreeing"; tools/smoke_suite/028_colony_summary_a_pop_cluster_is_one_contiguous.py "THE SECOND COPY OF pop_state IS DELIBERATE AND MUST AGREE" | PARK-DELIBERATE |
 | P2 | Module `parse(raw)` ×8 and `parse_all(raw_list)` ×7: core/structs/planet.py:129/133, star.py:79/83, ship_icon.py:21/25, nebula.py:38/42, colony.py:348/352, player.py:207/211, ship.py:179/183, settings.py:68 | 8 / 7 | identical one-line facades over `SPEC` | core/structs/__init__.py:15-18 documents `star.parse(raw_bytes)` as the package's usage API ("one module per struct") | PARK-DELIBERATE |
 | P3 | `nodes.slot_rows` game_menu/nodes.py:124-126; `nodes.save_strips` :135-143 | 2 | identical bodies (`_rows(fields, TYPE_HIDDEN, SLOTS)`) | Two different original field sets, each with its own citation: loadsave.cpp:263 (load) and loadsave.cpp:279 (save), plus the keyboard-edit semantics in the docstring | PARK-DELIBERATE |
 | P4 | `Resources.resolve` core/resources.py:66-76; `Resources.resolve_dir` :97-108 | 2 | drifted (`exists` vs `isdir`) | resolve_dir's docstring: whole-directory override semantics (decision 17) | PARK-DELIBERATE |
@@ -491,13 +491,13 @@ The inline form (333-337 and 378-382) is `work = list(pops); held = set(...); fo
 | `fallback_text_rect` / `busy_text_rect` | **CONFIRMED** | custom_race/popup.py:46-50 = empire_identity/renderer.py:235-239 (exact normalised). Each reads its own module's `FALLBACK_INSET`, whose values differ on purpose. 2 copies, so PARK-TWO-COPIES (T1) |
 | `fill` in colonypopup and colonypick | **CONFIRMED, and understated** | colonypopup.py:72-76 = colonypick.py:266-270 (exact, nested functions). A drifted third (`colonyoutput.fill_template`, 109-125) and a fourth (`colonylist._detail_text`, 649-665) exist; fill_template's own note asks for extraction at the third (D4) |
 | `message` / `string` in core/hestrings and core/estrings | **CONFIRMED** | core/hestrings.py:93-101 = core/estrings.py:131-146 (exact after docstring). 2 copies (T2) |
-| `lift` / `_lift` in core/playercolors and galaxy_map/ships | **CONFIRMED (names-only, not byte-identical)** | playercolors.py:48-49 `tuple(int(round(c + (255 - c) * k)) for c in rgb[:3])` = ships.py:237-238 with parameter `keep=TINT_KEEP_WHITE`. My exact pass did not group them only because of the default argument. The smoke test uses `playercolors.lift` as a stand-in for `_lift` (smoke_test.py:15363) (T3) |
+| `lift` / `_lift` in core/playercolors and galaxy_map/ships | **CONFIRMED (names-only, not byte-identical)** | playercolors.py:48-49 `tuple(int(round(c + (255 - c) * k)) for c in rgb[:3])` = ships.py:237-238 with parameter `keep=TINT_KEEP_WHITE`. My exact pass did not group them only because of the default argument. The smoke test uses `playercolors.lift` as a stand-in for `_lift` (tools/smoke_suite/065_galaxy_map_player_colours_no_preset_ship_is.py) (T3) |
 
 No pre-scan claim was refuted. Four understated the group: `_load_frame`, `_render_frame_image`, `cover` and `fill`.
 
 ## Cautions for any extraction
 
-- **Marking inventory.** smoke_test.py:6280-6300 walks every `.py`/`.json` for "HD EXTENSION"/"DEVIATION" and compares the set of files against `_MARKED` (6164ff). A move that carries a marked comment into a file not on that list, or empties one that is, fails the run.
+- **Marking inventory.** tools/smoke_suite/017_core_empire_readouts_at_three_resolutions_v.py walks every `.py`/`.json` for "HD EXTENSION"/"DEVIATION" and compares the set of files against `_MARKED` (6164ff). A move that carries a marked comment into a file not on that list, or empties one that is, fails the run.
 - **One-home greps.** squish_step (8794), the plate radius (12113) and `palette.init(` (15414) are asserted by tree-wide text search. None of G1-G4 touch those strings.
 - **Source-slice checks.** These are anchored on method bodies in files G1-G3 edit: `def _render_list(` in colony screen.py (12514), `def _render_map(` in galaxy screen.py (15484, which needs `surface.blit(self._map_bg_scaled`), `native_width` absent from colony screen.py (11306), and "coldraw.cpp:60" and "TRANSCRIPTION" present in colony screen.py (11865-11877). The extractions above do not touch these strings, but whoever does the work should re-read them.
 - **Line-count guideline** (decision 6, `tools/linecount.py` code lines): core/screen_base.py 262, core/imagebox.py 50, colony_summary/screen.py 298, planets/screen.py 274, galaxy_map/screen.py 583 (listed exception), colonymove.py 191.
@@ -539,3 +539,12 @@ nothing and is **not** a leftover either: it is live field data recorded off the
 reference save and cited five times in the status document — evidence, not code.
 
 **So the folder this document excluded turns out to have been the tidy one.**
+
+> **Every `smoke_test.py:<line>` citation above was repointed on
+> 22 September 2026 (work order 162).** The suite is
+> `tools/smoke_suite/`, ninety files, and a line number inside a file
+> that grows is the kind of copy this project keeps paying for — so
+> each citation now names the MODULE the cited code is in, found by
+> grepping for the symbol the entry itself quotes, not by translating
+> the old number. Several of the old numbers were already stale
+> against the file they named, which is the other half of the reason.

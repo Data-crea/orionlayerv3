@@ -52,10 +52,17 @@ OK_PREFIX = "  ok  "
 #: NOTHING IS ADDED HERE WITHOUT A MESSAGE. See the module docstring:
 #: a normalisation rule erases whatever its pattern matches, so a rule
 #: written "just in case" is a place where a real difference can hide.
-#: Two full runs on 22 September 2026 were byte-identical, so the table
-#: is empty; the first sentence that carries a clock or a machine's own
-#: file count goes in here with its own line and its own reason.
-RULES = []
+#: Two full runs on 22 September 2026 were byte-identical, so nothing
+#: here is about the clock; the one entry is about the tree.
+RULES = [
+    (r"(both extents required at )\d+( source files)", r"\1<n>\2",
+     "max_map_scale transcribes Maximum_Galaxy_Display_Scale_ (…both "
+     "extents required at N source files). It walks every .py in the "
+     "tree to prove no call site passes MAP_MAX_X alone, and work "
+     "order 162 turned the suite's ONE file into ninety, so N went "
+     "216 -> 306. What the check asserts did not move and neither did "
+     "its code; the size of the tree it walked did."),
+]
 
 
 def normalise(msg):
@@ -168,9 +175,21 @@ def _first_difference(a, b):
 
 
 def compare(path_a, path_b):
-    """0 if two baselines agree on every sentence, the count and the skips."""
+    """0 if two baselines agree on every sentence, the count and the skips.
+
+    **Both sides go through today's `RULES` again.** A capture stores
+    the sentences it saw; a rule added afterwards therefore applies to
+    an old capture as well, which is what makes the table a rule table
+    rather than a property of whichever run was taken first. It is
+    also idempotent — a sentence already normalised does not change.
+    """
     a = json.load(open(path_a, encoding="utf-8"))
     b = json.load(open(path_b, encoding="utf-8"))
+    for side in (a, b):
+        for tier in side["tiers"].values():
+            tier["ok"] = [normalise(m) for m in tier["ok"]]
+        side["skipped"] = skipped_between(side["tiers"]["full"]["ok"],
+                                          side["tiers"]["fast"]["ok"])
     bad = []
     for tier in ("full", "fast"):
         ta, tb = a["tiers"][tier], b["tiers"][tier]

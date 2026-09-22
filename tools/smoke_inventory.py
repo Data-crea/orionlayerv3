@@ -4,7 +4,7 @@
     python tools/smoke_inventory.py                 # the table
     python tools/smoke_inventory.py --json <path>   # the same, for a script
     python tools/smoke_inventory.py --time <path>   # measure, then merge
-    python tools/smoke_inventory.py --screen <name> # what that screen runs
+    python tools/smoke_inventory.py --closure <name>  # the measurement
 
 **Why this exists (work order 162, part 2).** `tools/smoke_test.py` was
 22 221 lines and 1.2 MB, almost all of it inside one `main()` — several
@@ -45,6 +45,15 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SUITE = os.path.join(ROOT, "tools", "smoke_test.py")
 SUITE_DIR = os.path.join(ROOT, "tools", "smoke_suite")
 
+#: The suite's own run counters. A section that reads one of them is
+#: a check about THE WHOLE RUN — the two documents' check count, and
+#: the push-only guards a run must have reached — and a `--screen` run
+#: is not the whole run, so it cannot hold them and does not try. It
+#: says NOT A GATE on its first and last line for the same reason.
+#: Computed, not listed: a new bookkeeping check is caught by reading
+#: the counter, which is the only way to write one.
+COUNTERS = frozenset(("PASS", "SKIPPED", "SLOW_SEEN", "TIER"))
+
 #: A check that sweeps the tree polices files that do not exist yet, so
 #: it belongs to the core and runs for every screen — work order 162,
 #: and 157 section 5(a) for why: a selection keyed on what is there
@@ -57,12 +66,49 @@ COMMON = frozenset((
     "__init__", "reference", "frame", "icons"))
 
 
+#: A CHECK'S OWN SENTENCE SAYS WHAT IT IS ABOUT, and its code only
+#: says what it touches. The sentence therefore counts five times,
+#: which is what separates "the Fleets reshape (work order 153)" —
+#: whose code is full of galaxy stretch arithmetic — from a galaxy map
+#: check. `MIN_HITS` is then the floor on the weighted score: one
+#: mention in the sentence clears it, three in the code clear it, and a
+#: single passing mention in the code does not. The suite's very first
+#: block — `pygame.init()`, the resource root, the palette, the names
+#: every later check reads — names `select_race` exactly once, inside
+#: `palette.col("select_race", ...)`, and was filed under that screen
+#: for it.
+#:
+#: Measured, against the plain code count: the core grows from 98
+#: sections to 106 and a narrowed fast run from 13.7 s to 15.3 s. That
+#: is the price of the modules being NAMED correctly, which is what
+#: this whole split is for.
+MESSAGE_WEIGHT = 5
+MIN_HITS = 3
+
+#: The first line of every check module declares the group it belongs
+#: to. One home: the runner reads it, this tool reads it, and a file
+#: renamed by hand keeps saying what it is.
+AREA_MARK = "# smoke-suite area:"
+
+
 def suite_files():
     """The suite's own sources, in run order: the entry point, then the modules."""
     if not os.path.isdir(SUITE_DIR):
         return [SUITE]
     return [os.path.join(SUITE_DIR, n)
             for n in sorted(os.listdir(SUITE_DIR)) if n.endswith(".py")]
+
+
+def module_areas():
+    """`{suite file: its group}`, read off each module's first line."""
+    out = {}
+    for path in suite_files():
+        with open(path, encoding="utf-8") as fh:
+            first = fh.readline().strip()
+        if first.startswith(AREA_MARK):
+            out[os.path.relpath(path, ROOT).replace(os.sep, "/")] = (
+                first[len(AREA_MARK):].strip())
+    return out
 
 
 def _body(tree):
@@ -93,12 +139,14 @@ def _messages(group):
     return out
 
 
-def sections(path, glob=None):
-    """Every section of one file, with its name flow."""
-    src = open(path, encoding="utf-8").read()
-    lines = src.splitlines()
-    tree = ast.parse(src)
-    glob = names.module_names(tree) if glob is None else glob
+def group_body(tree):
+    """The statements of one suite file, cut into sections.
+
+    The ONE home for where a section begins and ends: the inventory
+    cuts here, the cutting script cut here, and `--screen` selects
+    here. A second copy of this rule would be the fault this project
+    keeps paying for, one level down.
+    """
     groups, cur = [], []
     for stmt in _body(tree):
         cur.append(stmt)
@@ -107,24 +155,39 @@ def sections(path, glob=None):
             cur = []
     if cur:
         groups.append(cur)                      # a tail with no check in it
+    return groups
+
+
+def sections(path, glob=None):
+    """Every section of one file, with its name flow."""
+    src = open(path, encoding="utf-8").read()
+    lines = src.splitlines()
+    tree = ast.parse(src)
+    glob = names.module_names(tree) if glob is None else glob
+    groups = group_body(tree)
     out = []
     for group in groups:
         start, end = group[0].lineno, group[-1].end_lineno
         reads, binds, mutates = names.free_of(group, glob)
         text = "\n".join(lines[start - 1:end])
+        counts = any(isinstance(n, ast.Name) and n.id in COUNTERS
+                     for stmt in group for n in ast.walk(stmt))
         slow = [c.args[0].value for stmt in group for c in _calls(stmt, "slow")
                 if c.args and isinstance(c.args[0], ast.Constant)]
-        brought = {(a.asname or a.name).split(".")[0]
-                   for stmt in group for n in ast.walk(stmt)
-                   if isinstance(n, (ast.Import, ast.ImportFrom))
-                   for a in n.names}
+        # TOP-LEVEL IMPORTS ONLY. A narrowed run re-executes exactly
+        # these for a section it skips — see `preludes` — so exempting
+        # a name an import bound inside an `if` or a `def` would be a
+        # promise nothing keeps.
+        brought = {(a.asname or a.name).split(".")[0] for stmt in group
+                   if isinstance(stmt, (ast.Import, ast.ImportFrom))
+                   for a in stmt.names}
         out.append({
             "file": os.path.relpath(path, ROOT).replace(os.sep, "/"),
             "start": start, "end": end, "lines": end - start + 1,
             "bytes": len(text) + 1,
             "checks": sum(len(_calls(s, "ok")) for s in group),
             "slow": slow[0] if slow else None,
-            "sweep": bool(SWEEP.search(text)),
+            "sweep": bool(SWEEP.search(text)), "counts_the_run": counts,
             "reads": reads, "binds": binds, "mutates": mutates,
             "imports": sorted(brought),
             "msgs": _messages(group), "text": text,
@@ -182,11 +245,22 @@ def attribute(row, tokens):
     the core runs for every screen, a check in the wrong screen's group
     runs for none of the right ones.
     """
-    words = collections.Counter(
+    code = collections.Counter(
         re.findall(r"[a-z_][a-z_0-9]*", row["text"].lower()))
+    said = collections.Counter(
+        re.findall(r"[a-z_][a-z_0-9]*", " ".join(row["msgs"]).lower()))
     hits = {}
     for screen, group in tokens.items():
-        got = {n: words[n.lower()] for n in group if words[n.lower()]}
+        # IN THE SENTENCE, ONLY THE SCREEN'S OWN NAME COUNTS. A
+        # sentence is English prose, and a module stem that turns up in
+        # it is usually a coincidence: `sidebar` is a galaxy map module
+        # and the colony summary has a sidebar too, which filed "colony
+        # summary sidebar layout" under the galaxy map. In CODE a stem
+        # is an import and counts.
+        own = {screen} | {w for w in screen.split("_") if len(w) > 3}
+        got = {n: code[n.lower()] + (MESSAGE_WEIGHT * said[n.lower()]
+                                     if n in own else 0)
+               for n in group if code[n.lower()] or said[n.lower()]}
         if got:
             hits[screen] = (sum(got.values()), ",".join(
                 f"{n}x{c}" for n, c in
@@ -198,13 +272,13 @@ def attribute(row, tokens):
     if not best:
         return "core", "names no screen"
     # A CLEAR WINNER, OR THE CORE. Ties go to the core — work order
-    # 162's own rule — and a margin on top of that was measured and
-    # dropped: demanding three hits and twice the runner-up moved 53
-    # more sections into the core, and since every `--screen` run
-    # carries the core, it made every narrowed run bigger (13.3 s to
-    # 17.8 s in the fast tier) to file a handful of blocks more
-    # cautiously.
-    if best[0][1][0] <= runner:
+    # 162's own rule — and so does a section that mentions its best
+    # candidate only once. A wider margin was measured and dropped:
+    # three hits and twice the runner-up moved 53 more sections into
+    # the core, and since every `--screen` run carries the core it
+    # made every narrowed run bigger (13.3 s to 17.8 s in the fast
+    # tier) to file a handful of blocks more cautiously.
+    if best[0][1][0] < MIN_HITS or best[0][1][0] <= runner:
         return "core", "ambiguous: " + " / ".join(
             f"{n}={v[0]}" for n, v in best[:3])
     return best[0][0], best[0][1][1] + (
@@ -219,6 +293,7 @@ def build(times=None, areas=None):
     it, every section is attributed by `attribute`.
     """
     tokens = screen_tokens()
+    areas = module_areas() if areas is None else areas
     rows = []
     for path in suite_files():
         for row in sections(path):
@@ -246,10 +321,15 @@ def depends(rows):
     """`i -> the earlier sections i needs`, and the reason for each.
 
     A section needs the last section that BOUND a name it reads before
-    binding it, and every section that MUTATED that name since. Names
-    an `import` statement binds anywhere in the suite are exempt: an
-    import is reproducible, so a narrowed run re-runs it rather than
-    dragging a section in for it.
+    binding it, and every section that MUTATED that name since.
+
+    **Names a top-level `import` binds are exempt**, and that is only
+    honest because a narrowed run still executes those imports where
+    the skipped section stood — not as a prelude up front, which would
+    import a screen module before `palette.init()` and break the
+    project's own rule. An import is idempotent and binds the same
+    object either way, so this can only make a narrowed run more like
+    the full one.
     """
     imported = set()
     for row in rows:
@@ -277,13 +357,28 @@ def depends(rows):
 def select(rows, screen):
     """The sections a `--screen` run executes: core, the screen, their needs.
 
-    **It can only widen.** Every core section is in, every section of
-    the named screen is in, and then the transitive closure of what
-    those read. A closure that is too large costs time; one that is too
-    small would run a check against state the run never built, which is
-    why the mutation edges are in it.
+    **THIS IS THE MEASUREMENT THAT DECIDED PART 4, not a live
+    selector.** Every core section is in, every section of the named
+    screen is in, and then the transitive closure of what those read,
+    mutation edges included. Run it and look at the size: under the
+    practical mutation net below it is about 87 % of the suite, and
+    under the only rule that is actually sound — every method call on
+    a name changes it, because `d.active.update_from_game(...)` does —
+    it is 96 %. A narrowed run built on the practical net died on the
+    galaxy map's own screen object, whose state is reached through
+    `d.active` and filled by exactly such calls.
+
+    So `tools/smoke_test.py --screen` skips nothing and narrows what
+    is PRINTED. 157 had already refused this shape once, for the
+    caching idea, in one sentence: a check that inherits another
+    check's app is a new class of fault this project has not had yet.
+
+    `COUNTERS` is out of the closure for a separate reason: a section
+    that reads the run's own `PASS`, `SKIPPED`, `SLOW_SEEN` or `TIER`
+    asserts something about the WHOLE run, which a subset is not.
     """
-    need = {r["i"] for r in rows if r["area"] in ("core", screen)}
+    need = {r["i"] for r in rows
+            if r["area"] in ("core", screen) and not r["counts_the_run"]}
     prod = depends(rows)
     stack = list(need)
     while stack:
@@ -291,7 +386,7 @@ def select(rows, screen):
             if p not in need:
                 need.add(p)
                 stack.append(p)
-    return need
+    return need - {r["i"] for r in rows if r["counts_the_run"]}
 
 
 def table(rows):
@@ -348,8 +443,8 @@ def main(argv):
         return measure(argv[1])
     times = argv[argv.index("--times") + 1] if "--times" in argv else None
     rows = build(times)
-    if "--screen" in argv:
-        want = argv[argv.index("--screen") + 1]
+    if "--closure" in argv:
+        want = argv[argv.index("--closure") + 1]
         need = select(rows, want)
         print(f"{want}: {len(need)} of {len(rows)} sections, "
               f"{sum(rows[i]['bytes'] for i in need) / 1024:.0f} KB, "

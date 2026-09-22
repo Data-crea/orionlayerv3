@@ -48,10 +48,21 @@ GUIDELINE = 300
 #: which is not walked recursively and is there for `main.py` — the
 #: first version of this scan omitted it, and the entry duly went
 #: missing from a list whose whole job is to be uncomfortable.
-#: `tools/smoke_test.py` is exempt by nature and is named here rather
-#: than filtered out silently.
+#: The smoke suite is exempt by nature and is named here rather than
+#: filtered out silently.
+#:
+#: **It became a DIRECTORY on 22 September 2026** (work order 162):
+#: `tools/smoke_test.py` runs, and `tools/smoke_suite/` holds, the
+#: checks that used to be one 21 883-line `main()`. The exemption did
+#: not widen — it is the same file, in ninety pieces — and the pieces
+#: are held to something STRICTER in its place: no check module may
+#: exceed 40 KB, half of work order 127's reading budget, which the
+#: suite itself asserts with its own listed exceptions. Decision 6 is
+#: about a file that does a lot; a suite module does exactly one thing
+#: per check and its length is the sum of them.
 ROOTS = ("", "core", "screens", "tools")
 EXEMPT = (os.path.join("tools", "smoke_test.py"),)
+EXEMPT_DIRS = (os.path.join("tools", "smoke_suite"),)
 
 
 def measure(path):
@@ -116,9 +127,11 @@ def over_guideline(root=None, limit=GUIDELINE):
     file over 300 total on documentation alone is not an exception
     and does not belong here; see decision 6.
     """
+    exempt = {e.replace(os.sep, "/") for e in EXEMPT}
+    dirs = tuple(d.replace(os.sep, "/") + "/" for d in EXEMPT_DIRS)
     rows = [(rel, m) for rel, m in walk(root)
-            if m[1] > limit and rel not in
-            {e.replace(os.sep, "/") for e in EXEMPT}]
+            if m[1] > limit and rel not in exempt
+            and not rel.startswith(dirs)]
     return sorted(rows, key=lambda r: -r[1][1])
 
 
