@@ -379,7 +379,7 @@ much of the suite is that screen's. Measured, `output_bytes.txt`.
 | `e0c2a60` | part 5 and the documentation |
 | `99fab4c` | the acceptance table, the measurements and the parked file |
 | `07c5b81`, `7bc73bb` | the four sentences that live in both `CLAUDE.md` and the fundament, made literally identical |
-| `2b9d…` (this one) | the push recorded — see the Acceptance table |
+| the commit after `7bc73bb` | the push recorded — see the Acceptance table. It names no hash of its own, because a commit cannot carry its own, and a placeholder left in a document is the stale second copy this project keeps paying for |
 
 **Pushed 22 September 2026**, all seven through
 `tools/githooks/pre-push`, which ran the full suite first:
