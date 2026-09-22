@@ -60,6 +60,26 @@ def click(screen, screen_x, screen_y):
             activate(screen, spec["field_id"], spec["key"])
             return True
 
+    # THE RESEARCH WINDOW OPENS CHANGE MODE — work order 165 part B.
+    # The sidebar's last window is the one whose handler does
+    # something: it switches the game to SCREEN_TECH_CHANGE
+    # (mainscr_main.cpp:697-713) and `screens/research_change/` is the
+    # HD screen for it. The field is found in the LIVE list by shape,
+    # never by a remembered index (decision 20) — the same rule
+    # parking follows, and for the same reason: the turn-start research
+    # prompt also reports screen 0, and its fields are choice rows.
+    for _rw_box in ("sb_research_text", "sb_research_icon"):
+        box = screen.box_rect(_rw_box)
+        if not box or not pygame.Rect(*screen.layout.rect(box)).collidepoint(
+                screen_x, screen_y):
+            continue
+        field = mapboxes.live_field(
+            getattr(screen._state, "fields", None),
+            screen._data.get("research_window_field"))
+        if field is not None and screen.app.connected:
+            activate(screen, field.index, "research window")
+        return True
+
     if boxdraw.handle_click(screen, screen_x, screen_y):
         return True
     view = screen._map_view()

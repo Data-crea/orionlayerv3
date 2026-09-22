@@ -168,5 +168,15 @@
   "movable_boxes": {
     "close": "Close",
     "_note": "The system window and the fleet box, drawn by HD (brief 110 Part A step 2, screens/galaxy_map/boxdraw.py and boxmodel.py). Every other word in them is the original's, from HESTRNGS. The button's label is the one word the original draws as artwork, so it lives here (decision 15). The boxes are system_* and fleet_* in boxes.json; a box sits on the side of the map the game's own window is on."
+  },
+  "research_window_field": {
+    "_source": "MAINSCR: _research_window_field = Add_Hidden_Field_(545, 344, 613, 415, \"\", 0x29) (mainscr.cpp:1405) - the LAST of the five sidebar windows, and the only one whose handler does anything: mainscr_main.cpp:697-713 sets _return_screen = SCREEN_MAIN and _current_screen = SCREEN_TECH_CHANGE, and Screen_Control_ then calls TECH::Tech_Change_ (mox2.cpp:177-180). The handler COMPARES THE ID (:697, guarded by _skip_fields == 0), so ACTIVATE_FIELD reaches it - unlike a radio button, which is resolved through the pointer. Looked up in the LIVE list by type and rect and never by a remembered index (decision 20), the way parking looks up its own two fields: a list without this field is not the galaxy map's, whatever the game reports.",
+    "field_type": 7,
+    "rect": [
+      545,
+      344,
+      613,
+      415
+    ]
   }
 }
