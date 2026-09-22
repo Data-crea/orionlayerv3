@@ -40,11 +40,18 @@ WHAT DIFFERS BETWEEN THE MODES, and every line of it is source:
 
 **THE EXIT BUTTON'S SIZE IS NOT IN THE SOURCE** and is not invented
 here. `Add_Button_Field_` takes the rect from the ART
-(fields.cpp:366-367) and `doc/tech_change_reading.md` §2 records the end
-as NOT SETTLED. So this module gives its ORIGIN only, and the screen
-looks the field up in the live list by shape the way every other send
-on these screens does — the rect comes off the wire or the button is
-not there to click.
+(fields.cpp:366-367), which is why `doc/tech_change_reading.md` §2 had
+the end as NOT SETTLED. So this module gives its ORIGIN only and the
+screen looks the field up in the live list by shape, the way every
+other send on these screens does — the rect comes off the wire or the
+button is not there to click.
+
+**It was measured on 22 September 2026** (work order 165 part D, change
+mode open on a live game): `(269, 452)-(360, 470)`, 91 x 18 px. That
+number is NOT typed in here, and the reason is the rule it would break.
+The wire carries it on every snapshot; a copy in this file would be the
+second copy that goes stale the day the art changes, and the lookup
+that already works would then have a constant to disagree with.
 """
 
 NATIVE_W, NATIVE_H = 640, 480

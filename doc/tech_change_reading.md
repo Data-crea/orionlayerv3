@@ -87,7 +87,7 @@ x = 176 / 403; y = 30, 31, 135, 135, 240, 240, 347, 347 for entries 0-7 (tech.cp
 
 | # | call | line | type | rect | hotkey | driven by |
 |---|---|---|---|---|---|---|
-| 1 (change only) | `Add_Button_Field_(s+189, 452, …, TECHSEL 27, "\x1B", 40)` | tech.cpp:198-200 | 0 (fields.cpp:368) | (269, 452)-(art) — **end NOT SETTLED** (art size, fields.cpp:366-367; read it off the wire) | ESC | ACTIVATE (compared, :347) or ESC key |
+| 1 (change only) | `Add_Button_Field_(s+189, 452, …, TECHSEL 27, "\x1B", 40)` | tech.cpp:198-200 | 0 (fields.cpp:368) | **(269, 452)-(360, 470)** — SETTLED 22 September 2026, work order 165 part D: read off the live list with change mode open, 91 x 18 px. It was NOT SETTLED here because the rect comes from the art (fields.cpp:366-367) | ESC | ACTIVATE (compared, :347) or ESC key |
 | per entry 0..7, per choice k | `Add_Hidden_Field_(x, y+21+y1[k], x+218, y+21+y2[k], "", 0)`, y1 = {0,34,49,64}, y2 = {33,48,63,78} (:27-29) | :545-552, :560-567, :577-584 | 7 | row 0 is 34 px tall (y+21..y+54), rows 1-3 15 px | — | see below |
 | 8 x | `Add_Hidden_Field_(x-2, y+18, x+215, y+99, "", 0)` — entry block, ALL eight entries | :217-223 | 7 | e.g. (93,48)-(310,129) | — | see below |
 | per NON-EMPTY entry | `Add_Radio_Button_Field_(s+{21\|248}, {30,31,135,135,240,240,347,347}, …, "", 40)` | :236 -> :430-446, pos :35-40 | **1** (fields.cpp:409) | change (101,30), (328,31), (101,135) … | — | ACTIVATE works (id compared, :377-388) |

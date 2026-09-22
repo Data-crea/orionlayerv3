@@ -181,7 +181,30 @@ entry that says "the header route is in" reads, three weeks later, like
 an entry that is in — and the file's whole purpose is quarantine. The
 owed work is in the parked file as four rows instead.
 
-## Part B — change mode — **NOT BUILT**, and the seam is now measured
+## Part B — change mode — **DONE**, `777a4de` `02ce4b3` `742a8e3` `889f7dc` `29225db`
+
+Four commits at the seam the last session measured, and one repair.
+
+| | |
+|---|---|
+| `777a4de` | `core/researchnative.py`: the geometry, parameterised by mode. Select mode's rectangles come out byte for byte what they were |
+| `02ce4b3` | `core/researchscreen.py`: the behaviour. `screens/research_select/screen.py` is **eighteen lines** of configuration now and every one of its checks passed unchanged |
+| `742a8e3` | `screens/research_change/`, wire id **36** — the engine's own SCREEN_TECH_CHANGE. Its slug in `core/screen_names.py` had named a folder that never existed, so 36 fell through to the framebuffer |
+| `889f7dc` | the galaxy map's research window opens it, the field found in the LIVE list by shape |
+| `29225db` | a check that asked a FILE LIST went green by absence when the behaviour moved; it asks the CLASS now |
+
+`core/researchpanel.py` took the drawing with it, and with it the
+second colour: `_tech_color[2]` marks the field being researched and
+its chosen application (tech.cpp:686-696), which select mode cannot
+reach because `Tech_Select_` zeroes the field before its list exists.
+
+**One check added** (250 -> 251), and it is about the four places the
+modes part company — a configuration that silently collapses into the
+other mode is what this shape invites. Every entry exactly 81 px
+apart, a different set of help bands, the remaining cost against the
+full one, and a way out select mode must never grow.
+
+## Part B — as first written, the seam
 
 Still not built, and the reason changed: it is no longer the live
 block, it is size. What is left is a refactor across three modules
@@ -249,7 +272,74 @@ exist. An abstraction with one caller is a guess — *the third copy is
 the signal to extract*. Built now it would be shaped by select mode
 alone and reshaped when change mode arrived.
 
-## Part D — live acceptance — **BLOCKED, parked** — except one item, which is DONE
+## Part D — live acceptance — **THREE OF FIVE DONE LIVE, and it found two faults**
+
+Run against Data's own game, read-only except for the two activations
+that open and leave change mode. **SAVE1-11 byte-identical to the
+start of the run**, SAVE10 included, and the game was left on the
+galaxy map with `current_research_field` 45 and application 196
+exactly as found.
+
+### What it proved
+
+| item | result |
+|---|---|
+| the galaxy map does not park at 36 or 53 | **done offline**, `f172a09`, with a discriminating counter-test |
+| ESC and exit leave `current_research_field` and the application unchanged | **DONE LIVE.** Field 45, application 196, before and after. The exit button was found in the live list at `(269,452)-(360,470)` |
+| one field with research accumulated: the entry shows REMAINING | **DONE LIVE.** `research_accumulated` 175 on the wire, `cost_offset()` 175 in change mode and 0 in select mode, and every offered entry showed full − 175 — field 45 at 900 showing 725 RP |
+| three changes in three categories, read back off the wire | **NOT DONE** — see below |
+| HD beside the native frame at every resolution | **one resolution**, 1920x1080, in `D_change_mode/` |
+
+And the entry path itself: an HD click on the sidebar's research
+window sent `ACTIVATE_FIELD 20`, the game moved to 36, the dispatcher
+switched to `research_change`, and the screen drew — state `ok`,
+`wants_original` False.
+
+### THE TWO FAULTS, and neither was visible to a green suite
+
+**1. The research screen has been handing over to the fallback on
+every real snapshot since 19 September.** `expected_fields` carried a
+leading dummy for slot 0. Work order 130 C wrote it when the wire
+still sent that slot; work order 142 B dropped it once in
+`parse_fields` and did not move this list with it. One field too many,
+so `validate_against_fields` failed every time and the screen showed
+the game's own picture — *which looks exactly like working*, the
+sentence work order 130 wrote about itself.
+
+**The checks were green throughout because the stand-in they compare
+against is built FROM `expected_fields`**, so the dummy sat on both
+sides of the comparison. That is work order 131 part E's own lesson
+arriving live: a test double written by the same hand as the code
+shares its mistakes. The count is now asserted against the ORIGINAL's
+build order — rows + 8 blocks + radios + whole screen, plus the exit
+in change mode — computed from the entries and not from the function
+under test. Putting the dummy back goes red (`slot0_check_red.txt`).
+
+**2. `current_research_application` was wrong an hour after part A
+promoted it.** Declared `i8` because the header says `int8_t`;
+application ids run past 127, so the live value 196 came back as −60
+and every lookup against the app table missed. The header route fixes
+the offset and the width — it does not promise the C type is the one a
+reader wants. `u8` now, with that sentence beside it.
+
+### Why item 1 is not done
+
+Three commits in three categories CHANGE the research, and the
+standing protocol is explicit: *scratch saves SAVE4/SAVE5 only,
+RELOADED, never continued*. Loading a save needs a drive through the
+GAME menu's Load dialog, and **there is no such driver in the tree** —
+`screens/game_menu/nodes.py` classifies the dialog and names the slot
+rows, but nothing assembles the chain.
+
+Building it is its own piece of work and the Load dialog is precisely
+where a wrong field loads a game (decision 59's own hazard, and the
+reason the galaxy map stopped parking under the overlay). Doing the
+commits on Data's continued game instead is what the protocol forbids,
+and the evidence would not be reproducible anyway.
+
+**Parked with the exact next step**, not skipped.
+
+## Part D — as first written — **BLOCKED, parked** — except one item, which is DONE
 
 Five items on the list. Four need the port. The fifth does not:
 
