@@ -2,7 +2,7 @@
 #
 # Part of the OrionLayer smoke suite — 050_colony_summary_colony_summary_not_drawn_markings_star.py.
 # `tools/smoke_test.py` executes this file, and every other
-# module in tools/smoke_suite/ (91 of them), in file-name
+# module in tools/smoke_suite/ (92 of them), in file-name
 # order and in ONE namespace: these statements stood inside
 # main() and still bind the names the later ones read.
 #
@@ -26,9 +26,8 @@
 #       the selected colony (colsum.cpp:1155)
 _cl_src2 = open(os.path.join(SCREENS_DIR, "colony_summary",
                              "colonylist.py"), encoding="utf-8").read()
-with open(os.path.join(os.path.dirname(SCREENS_DIR), "doc",
-                       "v3_fundament.md"), encoding="utf-8") as _fh:
-    _fund_src = _fh.read()
+_fund_src = read_doc(os.path.join(os.path.dirname(SCREENS_DIR), "doc",
+                                  "v3_fundament.md"))
 # THE FIRST IS RETIRED — 8 September 2026. The name is
 # left-aligned now, which is what the original does; the column
 # became a box, the widest producible name fits it, and the trade

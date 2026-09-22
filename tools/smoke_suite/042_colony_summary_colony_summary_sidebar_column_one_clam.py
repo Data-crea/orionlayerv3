@@ -2,7 +2,7 @@
 #
 # Part of the OrionLayer smoke suite — 042_colony_summary_colony_summary_sidebar_column_one_clam.py.
 # `tools/smoke_test.py` executes this file, and every other
-# module in tools/smoke_suite/ (91 of them), in file-name
+# module in tools/smoke_suite/ (92 of them), in file-name
 # order and in ONE namespace: these statements stood inside
 # main() and still bind the names the later ones read.
 #
@@ -272,9 +272,8 @@ assert "native_width" in _emp, (
 for _cite in ("DEVIATION", "colsum.cpp:418", "fmtpara.cpp:657"):
     assert _cite in _emp["_native_width_note"], (
         f"empire._native_width_note no longer carries {_cite!r}")
-_fund_dev = open(os.path.join(os.path.dirname(SCREENS_DIR), "doc",
-                              "v3_fundament.md"),
-                 encoding="utf-8").read()
+_fund_dev = read_doc(os.path.join(os.path.dirname(SCREENS_DIR), "doc",
+                                  "v3_fundament.md"))
 assert "**44." in _fund_dev and "native_width" in _fund_dev, (
     "the fundament no longer carries the clamped sidebar column "
     "as a decision")

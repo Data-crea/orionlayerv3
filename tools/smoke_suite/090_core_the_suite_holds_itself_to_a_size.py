@@ -2,7 +2,7 @@
 #
 # Part of the OrionLayer smoke suite — 090_core_the_suite_holds_itself_to_a_size.py.
 # `tools/smoke_test.py` executes this file, and every other
-# module in tools/smoke_suite/ (91 of them), in file-name
+# module in tools/smoke_suite/ (92 of them), in file-name
 # order and in ONE namespace: these statements stood inside
 # main() and still bind the names the later ones read.
 #

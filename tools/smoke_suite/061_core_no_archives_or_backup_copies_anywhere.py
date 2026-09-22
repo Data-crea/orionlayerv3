@@ -2,7 +2,7 @@
 #
 # Part of the OrionLayer smoke suite — 061_core_no_archives_or_backup_copies_anywhere.py.
 # `tools/smoke_test.py` executes this file, and every other
-# module in tools/smoke_suite/ (91 of them), in file-name
+# module in tools/smoke_suite/ (92 of them), in file-name
 # order and in ONE namespace: these statements stood inside
 # main() and still bind the names the later ones read.
 #
@@ -117,8 +117,7 @@ ok(f"every brief is in doc/briefs/README.md, every link resolves, "
 # other. A test can.
 _fund = os.path.join(os.path.dirname(SCREENS_DIR), "doc",
                      "v3_fundament.md")
-with open(_fund, encoding="utf-8") as _fh:
-    _nums = re.findall(r"^\*\*(\d+)\.", _fh.read(), re.M)
+_nums = re.findall(r"^\*\*(\d+)\.", read_doc(_fund), re.M)
 _dupes = sorted({n for n in _nums if _nums.count(n) > 1})
 assert not _dupes, f"duplicate decision numbers: {_dupes}"
 ok(f"fundament decision numbers unique ({len(_nums)} decisions)")

@@ -2,7 +2,7 @@
 #
 # Part of the OrionLayer smoke suite — 059_core_ship_weapons_end_at_the_first.py.
 # `tools/smoke_test.py` executes this file, and every other
-# module in tools/smoke_suite/ (91 of them), in file-name
+# module in tools/smoke_suite/ (92 of them), in file-name
 # order and in ONE namespace: these statements stood inside
 # main() and still bind the names the later ones read.
 #
@@ -279,8 +279,8 @@ assert "DEVIATION" in (_mp.sprite_path.__doc__ or "")
 assert _m_cfg["_hd_extension"].startswith("HD EXTENSION")
 assert _m_cfg["_deviation_sprite"].startswith("DEVIATION")
 assert _mus.DEFAULTS["monster_values"] == "on"
-_m_fund = open(os.path.join(os.path.dirname(SCREENS_DIR), "doc",
-                            "v3_fundament.md"), encoding="utf-8").read()
+_m_fund = read_doc(os.path.join(os.path.dirname(SCREENS_DIR), "doc",
+                                "v3_fundament.md"))
 assert "**64. " in _m_fund and "star index % 5" in _m_fund, (
     "fundament 64 does not carry the entry or the sprite deviation")
 ok("monster values markings: HD EXTENSION in the module and layout.json, "

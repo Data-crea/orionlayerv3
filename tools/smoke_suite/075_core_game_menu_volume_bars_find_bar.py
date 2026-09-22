@@ -2,7 +2,7 @@
 #
 # Part of the OrionLayer smoke suite — 075_core_game_menu_volume_bars_find_bar.py.
 # `tools/smoke_test.py` executes this file, and every other
-# module in tools/smoke_suite/ (91 of them), in file-name
+# module in tools/smoke_suite/ (92 of them), in file-name
 # order and in ONE namespace: these statements stood inside
 # main() and still bind the names the later ones read.
 #

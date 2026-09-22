@@ -2,7 +2,7 @@
 #
 # Part of the OrionLayer smoke suite — 008_colony_summary_colony_summary_sort_slots_one_box.py.
 # `tools/smoke_test.py` executes this file, and every other
-# module in tools/smoke_suite/ (91 of them), in file-name
+# module in tools/smoke_suite/ (92 of them), in file-name
 # order and in ONE namespace: these statements stood inside
 # main() and still bind the names the later ones read.
 #
@@ -357,9 +357,8 @@ for _home, _txt in (
         ("v3_projektstatus.md", open(os.path.join(
             os.path.dirname(SCREENS_DIR), "v3_projektstatus.md"),
             encoding="utf-8").read()),
-        ("doc/v3_fundament.md", open(os.path.join(
-            os.path.dirname(SCREENS_DIR), "doc", "v3_fundament.md"),
-            encoding="utf-8").read()),
+        ("doc/v3_fundament.md", read_doc(os.path.join(
+            os.path.dirname(SCREENS_DIR), "doc", "v3_fundament.md"))),
         ):
     assert "DEVIATION" in _txt and "sort_bar" in _txt, (
         f"{_home} does not mark the seven sort slots as a DEVIATION "

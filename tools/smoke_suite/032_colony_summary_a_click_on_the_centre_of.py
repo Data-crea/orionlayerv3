@@ -2,7 +2,7 @@
 #
 # Part of the OrionLayer smoke suite — 032_colony_summary_a_click_on_the_centre_of.py.
 # `tools/smoke_test.py` executes this file, and every other
-# module in tools/smoke_suite/ (91 of them), in file-name
+# module in tools/smoke_suite/ (92 of them), in file-name
 # order and in ONE namespace: these statements stood inside
 # main() and still bind the names the later ones read.
 #
@@ -595,7 +595,7 @@ _oi_homes = {
                             ("decision 56", "HD EXTENSION")),
 }
 for _oi_home, (_oi_path, _oi_words) in _oi_homes.items():
-    _oi_text = open(_oi_path, encoding="utf-8").read()
+    _oi_text = read_doc(_oi_path)
     for _oi_word in _oi_words:
         assert _oi_word in _oi_text, (
             f"{_oi_home} no longer carries {_oi_word!r} — the output "
@@ -665,7 +665,7 @@ for _lp_home, _lp_path, _lp_words in (
         ("v3_projektstatus.md", os.path.join(_lp_root,
                                              "v3_projektstatus.md"),
          ("decision 57", "HD EXTENSION"))):
-    _lp_text = open(_lp_path, encoding="utf-8").read()
+    _lp_text = read_doc(_lp_path)
     for _lp_w in _lp_words:
         assert _lp_w in _lp_text, (
             f"{_lp_home} no longer carries {_lp_w!r} — the row fills "

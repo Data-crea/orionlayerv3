@@ -2,7 +2,7 @@
 #
 # Part of the OrionLayer smoke suite — 033_colony_summary_planet_paragraph_text_skin_and_planet.py.
 # `tools/smoke_test.py` executes this file, and every other
-# module in tools/smoke_suite/ (91 of them), in file-name
+# module in tools/smoke_suite/ (92 of them), in file-name
 # order and in ONE namespace: these statements stood inside
 # main() and still bind the names the later ones read.
 #
@@ -240,7 +240,7 @@ for _sf_home, _sf_path, _sf_words in (
         ("v3_projektstatus.md", os.path.join(
             _sf_root, "v3_projektstatus.md"),
          ("decision 58", "HD EXTENSION"))):
-    _sf_text = open(_sf_path, encoding="utf-8").read()
+    _sf_text = read_doc(_sf_path)
     for _sf_w in _sf_words:
         assert _sf_w in _sf_text, (
             f"{_sf_home} no longer carries {_sf_w!r} — the surface "

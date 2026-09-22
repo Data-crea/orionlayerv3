@@ -336,6 +336,43 @@ SUITE_FILES = frozenset(
     + ["tools/smoke_suite/" + os.path.basename(p) for p in suite_modules()])
 
 
+#: THE FUNDAMENT IS A DIRECTORY NOW — work order 164.
+#:
+#: `doc/v3_fundament.md` is an INDEX since 22 September 2026 and the
+#: rules live in `doc/fundament/`, nine parts. Ten checks in this suite
+#: ask the fundament whether it still carries a marking, a decision
+#: heading or a citation, and every one of them asked by opening that
+#: one path. None of them was weakened to survive the split: they ask
+#: for the WHOLE document, and the whole document is the index plus its
+#: parts in the order the index lists them.
+#:
+#: **No check names a part.** A part name in an assertion would be the
+#: second copy this project keeps paying for — it would go stale the
+#: first time a decision moved between parts, and the move is exactly
+#: what the split makes cheap.
+FUNDAMENT = os.path.join(
+    os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+    "doc", "v3_fundament.md")
+FUNDAMENT_DIR = os.path.join(os.path.dirname(FUNDAMENT), "fundament")
+
+
+def read_doc(path):
+    """One document's whole text — the fundament's parts included.
+
+    Anything but the fundament index is opened as it always was. The
+    index returns itself and every part, so a check that greps the
+    fundament greps all of it.
+    """
+    text = io.open(path, encoding="utf-8").read()
+    if os.path.abspath(path) != FUNDAMENT:
+        return text
+    for name in sorted(os.listdir(FUNDAMENT_DIR)):
+        if name.endswith(".md"):
+            text += "\n" + io.open(
+                os.path.join(FUNDAMENT_DIR, name), encoding="utf-8").read()
+    return text
+
+
 def suite_source():
     """Every line of the suite, as one text.
 

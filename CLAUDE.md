@@ -14,7 +14,7 @@ habits are non-negotiable.
 
 | Question | File |
 |---|---|
-| Why is it built this way? Decisions, principles, past mistakes | `doc/v3_fundament.md` |
+| Why is it built this way? Decisions, principles, past mistakes | `doc/v3_fundament.md` — the index — and `doc/fundament/` |
 | What exists today, what is missing, how to run things | `v3_projektstatus.md` |
 | What does the original C++ do? | `doc/v3_orion2re_index.md` |
 | The Planets screen: the source reading, and the range helper for its follow-up | `doc/plntsum_reading.md` |
@@ -28,10 +28,16 @@ habits are non-negotiable.
 
 ## Before you change anything
 
-**Read `doc/v3_fundament.md` first.** It is long and it is the point
-of the project. Every entry in it was paid for by a mistake, and
-several of them are counter-intuitive enough that they will be
-re-broken by anyone who skips it.
+**Read the index `doc/v3_fundament.md` first, then the parts your
+task needs, and always every `principles-` part.** The fundament is
+the point of the project and it is 195 KB — two and a half times what
+work order 127 allows a session to read of one thing — so since work
+order 164 that path is an INDEX and the rules are nine parts under
+`doc/fundament/`, each one under 40 KB. Every entry in them was paid
+for by a mistake, and several are counter-intuitive enough that they
+will be re-broken by anyone who skips them. The sentence in bold above
+is in the index too, word for word, and a smoke check holds the two
+equal.
 
 **Check the source, do not guess.** When the original's behaviour is
 in question, grep the orion2re C++ rather than inferring from how the
@@ -55,8 +61,8 @@ derive world geometry.
 **The smoke test must be green before every commit.**
 
 ```bash
-python tools/smoke_test.py             # everything — 248 checks, ~72 s
-python tools/smoke_test.py --fast      # the commit gate's tier, ~32 s
+python tools/smoke_test.py             # everything — 249 checks, ~72 s
+python tools/smoke_test.py --fast      # the commit gate's 242, ~32 s
 python tools/smoke_test.py --screen colony_summary --fast   # NOT a gate
 ```
 
@@ -90,7 +96,7 @@ the fast tier holds that list and the guards to each other.
 time, not at commit time. See decision 31 and
 `doc/briefs/157-suite-profile.md`.
 
-248 checks, headless, no orion2re needed. **The count must not go
+249 checks, headless, no orion2re needed. **The count must not go
 down.** If a change makes a check obsolete, replace it — do not
 delete it. It went down exactly once, on 12 September 2026, when
 Phase B deleted the frame machinery the checks were about (decision

@@ -2,7 +2,7 @@
 #
 # Part of the OrionLayer smoke suite — 039_custom_race_a_move_that_worked_says_nothing.py.
 # `tools/smoke_test.py` executes this file, and every other
-# module in tools/smoke_suite/ (91 of them), in file-name
+# module in tools/smoke_suite/ (92 of them), in file-name
 # order and in ONE namespace: these statements stood inside
 # main() and still bind the names the later ones read.
 #

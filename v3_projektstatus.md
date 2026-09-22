@@ -2294,11 +2294,56 @@ files under `doc/` and are only summarised here.
 | | |
 |---|---|
 | Python | 32,960 lines across 111 modules — `find . -name '*.py'`, `__pycache__` excluded, the smoke test's 6,400 included. The previous figure here (21,642 across 94) was carried from an unstated method and could not be reproduced |
-| Smoke test | `python tools/smoke_test.py` — **248 checks**, headless, in `tools/smoke_suite/` since work order 162 (91 check modules, one group per screen plus a shared core; `tools/smoke_test.py` is the runner). **Two tiers since work order 158**: the bare command runs everything (~72 s here); `--fast` runs the commit gate's 241 (~32 s here). `--screen <name>` prints only that screen's sentences and the core's and is NEVER a gate. See "The gate has two tiers" below |
+| Smoke test | `python tools/smoke_test.py` — **249 checks**, headless, in `tools/smoke_suite/` since work order 162 (91 check modules, one group per screen plus a shared core; `tools/smoke_test.py` is the runner). **Two tiers since work order 158**: the bare command runs everything (~72 s here); `--fast` runs the commit gate's 242 (~32 s here). `--screen <name>` prints only that screen's sentences and the core's and is NEVER a gate. See "The gate has two tiers" below |
 | Assets | 170 MB (select_race 68, galaxy_map 51, shared 23, new_game 21, colony_summary 1) |
 | Screens in HD | 9 of ~20–22 (the GAME menu overlay, work order Stop 2, every dialog of the popup; colony summary draws list, sidebar, scan box and galaxy inset, and MOVES POPS — the first HD gesture that drives the game; planets, brief 101, lists, sorts, restricts and returns) |
 | Setup from clone | `python tools/setup.py` (deps via the system package manager) |
 | orion2re | required for live data, not for the smoke test |
+
+### The fundament is an index — 22 September 2026, work order 164
+
+`doc/v3_fundament.md` was 3 515 lines and 199 974 bytes, and every
+session was supposed to read it at startup — two and a half times what
+work order 127 allows a session to read of one thing. That path is the
+**index** now; the rules are **nine parts under `doc/fundament/`**, none
+over 40 KB.
+
+**Not a sentence changed, and that is a measurement.** The split was
+made by a script (`evidence/work_order_164/fundament_split.py`), and the
+same script proves it: it reads the index and the parts, strips only
+what the split itself added — recognisable by one sentinel per file —
+concatenates what is left in order and compares byte for byte.
+*199 974 bytes, 3 515 lines, identical.* All 70 decisions are present,
+each in exactly one part, and not one was renumbered: the numbers are
+identities cited across the tree.
+
+| part | KB | decisions |
+|---|---:|---|
+| `01-decisions-layout-structure-and-data.md` | 22 | 1-19, 34, 37-38, 50-51, 57, 70 |
+| `02-decisions-the-orion2re-boundary.md` | 36 | 20-25, 33, 35-36, 39-48, 52, 59-60, 62 |
+| `03-decisions-sizing-sprites-and-fonts.md` | 16 | 26-30, 32, 49, 53-54 |
+| `04-decisions-screen-artwork-and-markings.md` | 29 | 55-56, 58, 61, 63-69 |
+| `05-decisions-process.md` | 7 | 31 |
+| `06-principles-evidence-and-comparison.md` | 26 | — |
+| `07-principles-delivery.md` | 11 | — |
+| `08-principles-diagnosis-and-refactoring.md` | 25 | — |
+| `09-facts-orion2re-and-pygame.md` | 28 | — |
+
+**The startup rule**, in `CLAUDE.md` and in the index, word for word the
+same in both and held there by a check: *"Read the index
+`doc/v3_fundament.md` first, then the parts your task needs, and always
+every `principles-` part."* A session that follows it reads about 66 KB
+where it used to read 195 KB, and the parts it needs on top of that.
+
+**Nothing in the suite was weakened to survive it.** Ten checks grep the
+fundament for a marking or a decision heading; they ask
+`smoke_test.read_doc()` now, which returns the index and every part, so
+every assertion is the one it always was and **no check names a part** —
+a part name in an assertion would go stale the first time a decision
+moved, which is exactly what the split makes cheap. One check was added
+(248 -> 249): every part listed in the index both ways, every decision in
+exactly one part and named by the index, no rule text in the index, no
+part over the limit, and the startup rule identical in its two homes.
 
 ### The suite is a directory — 22 September 2026, work order 162
 
@@ -2322,8 +2367,8 @@ blocks into a session and writing them out again. Three proofs:
 
 | | command | checks | on this tree |
 |---|---|---:|---:|
-| **Full** — the default, and the pre-push gate | `python tools/smoke_test.py` | 248 | ~72 s |
-| **Fast** — the pre-commit gate | `python tools/smoke_test.py --fast` | 241 | ~32 s |
+| **Full** — the default, and the pre-push gate | `python tools/smoke_test.py` | 249 | ~72 s |
+| **Fast** — the pre-commit gate | `python tools/smoke_test.py --fast` | 242 | ~32 s |
 | **Screen** — **never a gate** | `python tools/smoke_test.py --screen <name>` | all of them, ~a third printed | the tier's |
 
 **`--screen` narrows what a run PRINTS, not what it runs**, and the

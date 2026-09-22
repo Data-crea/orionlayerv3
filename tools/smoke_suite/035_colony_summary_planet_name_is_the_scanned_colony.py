@@ -2,7 +2,7 @@
 #
 # Part of the OrionLayer smoke suite — 035_colony_summary_planet_name_is_the_scanned_colony.py.
 # `tools/smoke_test.py` executes this file, and every other
-# module in tools/smoke_suite/ (91 of them), in file-name
+# module in tools/smoke_suite/ (92 of them), in file-name
 # order and in ONE namespace: these statements stood inside
 # main() and still bind the names the later ones read.
 #
@@ -96,8 +96,8 @@ import inspect as _fs_insp
 from screens.colony_summary import colonyfigures as _fs_cf
 from screens.colony_summary import colonytrack as _fs_track
 _fs_norm = lambda _t: " ".join(_t.split())  # noqa: E731
-_fs_fund = open(os.path.join(os.path.dirname(SCREENS_DIR), "doc",
-                             "v3_fundament.md"), encoding="utf-8").read()
+_fs_fund = read_doc(os.path.join(os.path.dirname(SCREENS_DIR), "doc",
+                                 "v3_fundament.md"))
 _fs_entry = _fs_fund[_fs_fund.index("**28. Sprites are swapped by step"):]
 _fs_entry = _fs_norm(_fs_entry[:_fs_entry.index("**29.")])
 assert ("ONE EXCEPTION, AND IT IS MARKED" in _fs_entry
