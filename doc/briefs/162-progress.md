@@ -309,3 +309,71 @@ the last moved module.
 | `v3_projektstatus.md`, new section "The suite is a directory" | the three proofs, the measured closure, the size rule |
 | `v3_projektstatus.md`, exceptions | the five modules over 40 KB, with their sizes and the one reason |
 | `doc/redundancy_audit.md` | sixteen `smoke_test.py:<line>` citations repointed to their module |
+
+
+---
+
+## Acceptance
+
+| the order asks | result |
+|---|---|
+| normalised baseline stable across two runs | **yes** — two full runs of the unchanged tree, 247 sentences, byte-identical before any normalisation rule existed |
+| identical after the cut; count and skipped set identical | **yes** — `smoke_baseline.py compare` says *identical: 247 checks, 240 in the fast tier, 7 push-only, every sentence equal*. One normalisation rule, named to its message |
+| evidence stored | `~/orionlayer-fixtures/evidence/work_order_162/` |
+| full suite and fast tier green on a fresh clone | **yes** — clone + `python tools/setup.py`, 248 green; full 56.4 s, fast 30.5 s |
+| both hooks proved by running them | **yes** — a commit went through the pre-commit hook (fast tier), a push through the pre-push hook (full suite) to a LOCAL bare repository, and a third run proved the pre-commit hook refuses a red tree and leaves HEAD alone. Nothing reached GitHub; the clone's origin was replaced and checked for the absence of a github remote before any push, and the whole scratch setup was removed |
+| `--screen` for at least two screens | **yes** — `research_select` (112 of 241 sentences) and `colony_summary` (151), and `fleets` (126) |
+| a change inside the screen's folder runs the narrow selection | **yes** — `screens/research_select/screen.py` touched, the run stayed narrow |
+| a change in `core/` with the same flag widens and names the file | **yes** — `WIDENED TO FAST TIER: core/box.py changed outside screens/research_select/`, on the first line and the last. Both throwaway changes reverted, tree clean |
+| the size-limit check fails on a deliberately oversized module | **yes** — 600 padding lines took a module to 41 633 bytes and the run went red naming it; restored, caches cleared, green again |
+| push | **not done — Data's decision**, as the order says |
+
+### Runtimes, before and after
+
+| | before the cut | after the cut | fresh clone |
+|---|---:|---:|---:|
+| full suite | 71.88 / 71.83 s | 71.75 / 71.70 s | 56.4 s |
+| fast tier | 31.90 / 31.97 s | 31.77 / 31.81 s | 30.5 s |
+| `--screen <name> --fast` | — | 32.0 s | 30.6 s |
+
+**The cut costs nothing and saves nothing in time**, which is what a
+pure move should do. The numbers are lower than work order 158's
+(79.5–80.4 s full, 38.9–39.2 s fast) and that difference is not this
+order's: both of the runs above were measured on the same tree, before
+and after, and the *before* number was already 71.9 s.
+
+### What one run prints — the direct measure of what lands in context
+
+| run | bytes | lines | sentences |
+|---|---:|---:|---:|
+| full suite | 39 093 | 301 | 248 |
+| fast tier (the commit gate) | 37 735 | 290 | 241 |
+| `--screen research_select --fast` | **16 160** | 144 | 112 |
+| `--screen fleets --fast` | 20 412 | 157 | 126 |
+| `--screen colony_summary --fast` | 24 834 | 200 | 151 |
+| full suite `--quiet` (the hooks' own form) | 69 | 2 | 0 |
+
+A screen run prints **41 % to 64 %** of a full run, depending on how
+much of the suite is that screen's. Measured, `output_bytes.txt`.
+
+### Evidence
+
+| file | what it is |
+|---|---|
+| `baseline_before/`, `baseline_after/` | two full and two fast runs each, and `baseline.json` |
+| `inventory_before.txt`, `.json` | the 221-section table the cut was decided from |
+| `times_before.json` | a measured run, every check's segment anchored to its own file and line |
+| `smoke_cut.py` | the cutting script, kept here because its input no longer exists |
+| `size_limit_red.txt` | part 5 red and green |
+| `screen_selector_proofs.txt` | the two `--screen` acceptance cases |
+| `fresh_clone_and_hooks.txt` | the clone, both tiers, and all three hook proofs |
+| `output_bytes.txt` | what each run shape prints |
+
+### Commits
+
+| | |
+|---|---|
+| `8133b4f` | the brief, the progress file, the parked file and their index row |
+| `413fc6e` | parts 1 and 2 — the baseline tool and the inventory |
+| `3e1532e` | part 3 and part 4 — the cut and the selector |
+| `e0c2a60` | part 5 and the documentation |
