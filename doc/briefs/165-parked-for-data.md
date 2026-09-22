@@ -81,9 +81,41 @@ Entscheidung 43 selbst gegeben hat.
 
 ---
 
+## 2b. EIN OFFSET BLEIBT UNVERIFIZIERT, und das ist kein Versäumnis
+
+`hyper_advanced_tech` @640 liest in deinem laufenden Spiel **acht
+Nullen**. Der Header sagt, wo die Bytes liegen; was sie bedeuten, sagt
+nur ein Wert, der nicht null ist. Niemand in dieser Partie hat ein
+hyper-advanced Feld erreicht, also ist die Lesung ergebnislos — nicht
+falsch, ergebnislos.
+
+**Nichts zu entscheiden**, nur zu wissen: er bleibt in
+`core/structs/unverified.py`, und der nächste Lauf in einem späten
+Spiel schließt ihn in einer Minute ab.
+
+---
+
 ## 3. Getroffene Wahlen
 
-**Nur eine, weil nur ein Teil gebaut werden konnte.**
+### Der Cost-Suffix als TABELLE im Code, nicht in `layout.json`
+
+**Gewählt:** `COST_SUFFIX = {0: " RP", 1: " FP", 3: " RP", 4: " PR"}`
+steht in `screens/research_select/screen.py`, und `layout.json` hat
+seinen `cost_suffix` verloren.
+
+**Warum:** `layout.json` ist laut Entscheidung 15 für die Wörter, die
+**OrionLayer** besitzt. RP / FP / PR sind die Wörter des **Spiels**
+(tech.cpp:631-639), gewählt von einem Byte auf dem Draht. Sie dort zu
+lassen hieße, eine zweite Kopie einer Spielkonstante in unserer eigenen
+Textdatei zu halten — genau die Kopie, die veraltet.
+
+**Umkehr:** eine Zeile zurück in `layout.json`, eine Zeile im Screen.
+**Kosten:** die Prüfung, die die Tabelle gegen die vier Fälle des
+Originals hält, müsste mitgehen.
+
+---
+
+**Und die aus der ersten Sitzung:**
 
 ### Die Q4-Prüfung als EIGENE Prüfung, nicht als dritte Zahl in der bestehenden
 

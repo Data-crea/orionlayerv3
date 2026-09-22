@@ -10,7 +10,23 @@ Evidence root: `~/orionlayer-fixtures/evidence/work_order_165/`.
 
 ---
 
-## THE RUN IS BLOCKED FOR EVERY LIVE STEP — read this first
+## UPDATE, second session: the port was freed and PART A IS DONE
+
+Data closed his client. orion2re itself is still the same process
+(pid 35367, running since 20:28) — **his game, not a fresh one** — so
+everything below was done read-only: one client, one snapshot, nothing
+sent but the handshake. SAVE1-11 identical before and after, SAVE10
+included.
+
+Part A is committed (`06aca9a`). Parts B to E are not built; the run
+stopped at the point where the next step was a large refactor, and
+said so rather than starting one it could not finish well. What Part B
+needs is written out below, including the seams, so it is a short job
+and not a re-derivation.
+
+---
+
+## THE RUN WAS BLOCKED FOR EVERY LIVE STEP — the first session's finding
 
 **Data is playing right now.** Checked before anything else was done,
 which is rule 8 of the standing block in
@@ -94,7 +110,53 @@ options.
 
 ## Part 0 — the brief filed — **DONE**
 
-## Part A — foundations — **BLOCKED**, and its offline half is smaller than it looks
+## Part A — foundations — **DONE**, `06aca9a`
+
+**Three of four offsets got their second source, and the surprise is
+that none of them needed the game's own screen.** `unverified.py` had
+recorded that source two for @379 would have to be "a live read whose
+values agree with the rows the game's own screen draws". It turned out
+three agreements inside one read-only snapshot are stronger, because
+each one is against something already verified:
+
+| offset | second source |
+|---|---|
+| `s_player.current_research_application` @902 | reads 196, and application 196's field through the app->field table `tools/research_cost_check.py` holds to techdata.cpp is 45 — which is exactly what the VERIFIED `current_research_field` @901 beside it says |
+| `s_player.tech_applications` @379 | every one of the 212 bytes is a TECH_RESEARCH_STATUS; all 52 RESEARCHED applications are backed by a researched field in the VERIFIED `tech_fields` @296; and the application @902 calls in progress reads **available**, not researched — a field you are working on is not one you have finished. Its two siblings under field 45 read available too, which is what an unfinished category looks like |
+| `s_settings.language` @210 | pinned by its neighbour `number_of_players` @213, whose value 2 equals the player count the SNAPSHOT HEADER carries independently of the settings block. A misplaced block would have to put a 2 exactly there by accident — and `core/game_state.py` has been reading `difficulty` at @212 all along, which is the same block agreeing a third time |
+
+The header route was re-run for all four with `offsetof` directly
+(sizeof(s_settings) == 553, sizeof(s_player) == 0xF0E), and
+`tools/struct_header_check.py` now asserts the three new fields on
+every suite.
+
+**`hyper_advanced_tech` @640 stays in `unverified.py`, and says why:**
+all eight bytes are 0 in this game, so the read is inconclusive. It
+needs a game that has reached a hyper-advanced field. That is the one
+item of part A still owed.
+
+**The RP deviation is gone.** With `language` in the spec the suffix
+follows the game (RP / FP / PR, tech.cpp:631-639). The marking went
+with its cause, `layout.json` lost the suffix it had been carrying —
+it is the GAME'S word and a second copy in OrionLayer's own wording
+file is the stale copy this project pays for — and the check that held
+the marking was replaced by one that holds the TABLE to the original's
+four cases. Shown red by losing the language-1 case, caches cleared,
+`python -B`.
+
+**What the promotion does NOT license**, written beside the spec field
+rather than left to be discovered: the second source settles where the
+bytes are and that they are research statuses, not that status 1 means
+"this row appears on the game's own screen".
+`researchlist.validate_against_fields` still tests that on every entry
+and the screen still hands over when it disagrees.
+
+**A note on the marker net, because it worked.** The first draft of the
+`language` comment used the word DEVIATION while describing one being
+removed, and the tree-wide marker inventory refused the commit: a file
+carrying a marking no check reads. Reworded, not suppressed.
+
+## Part A, as first written — **BLOCKED**, and its offline half was smaller than it looked
 
 Three bullets, and the live block takes the first two:
 
@@ -119,7 +181,41 @@ entry that says "the header route is in" reads, three weeks later, like
 an entry that is in — and the file's whole purpose is quarantine. The
 owed work is in the parked file as four rows instead.
 
-## Part B — change mode — **NOT BUILT**
+## Part B — change mode — **NOT BUILT**, and the seam is now measured
+
+Still not built, and the reason changed: it is no longer the live
+block, it is size. What is left is a refactor across three modules
+plus a new screen folder, and starting one at the end of a long run is
+how a screen with fifteen checks on it ends up green and wrong.
+
+**What the next session does NOT have to work out**, because this one
+did:
+
+* **The data layer needs nothing.** `core/researchlist.py` carries
+  change mode end to end already — `ENTRY_POS_CHANGE`,
+  `PANEL_ORIGIN_CHANGE`, and a `select_mode=False` path through
+  `reconstruct`, `expected_fields`, `validate_against_fields` and
+  `row_field`.
+* **"The current field IS offered" costs nothing.** Both modes pass
+  `current_field=0` to `offered_field` and the docstring says why: the
+  game zeroes it around the call in change mode and before it in
+  select mode. The difference is in `tech_fields`, not in the call.
+* **The seam is `native.py`.** It is the only module that hardcodes
+  the mode — `PANEL_ORIGIN_SELECT` and `ENTRY_POS_SELECT` at module
+  level, and `BOX_NATIVE` built from them. Parameterising THAT is the
+  refactor; `panel.py` and `screen.py` follow.
+* **`panel.py` already expects the second colour.** Its docstring
+  records that `_tech_color[2]` "is not missing, it has nothing to
+  mark" in select mode. Change mode is what gives it something.
+* **Three markings come off** when it is built: the two popups are
+  part C, and the RP deviation is already gone.
+
+**The shape**: the behaviour moves to `core/` as a base class with the
+mode as configuration; each screen folder keeps its own three JSON
+files and a thin subclass, because decision 7 gives every screen its
+own folder and change mode cannot share one.
+
+## Part B — as first written
 
 Offline-buildable and deliberately not built. Its acceptance is
 entirely live ("row clicks and bare activations both commit, **read
