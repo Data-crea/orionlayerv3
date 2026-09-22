@@ -74,7 +74,8 @@ assert _rl.offered_field([0] * _rl_res.FIELD_COUNT, 4, 0) == 0
 #    so the wire carries a rectangle there. A reconstruction without it
 #    is one row short of the game's list and fails validation — which
 #    is the right failure, but it would fail on every such category.
-_rl_ta = [0] * _rl_unv.TECH_APPLICATIONS_COUNT
+from core.structs import player as _rl_plsp
+_rl_ta = [0] * _rl_plsp.TECH_APPLICATIONS_COUNT
 _rl_rows, _rl_ph = _rl.offered_rows(_rl_first, _rl_ta, _rl_apps)
 assert _rl_rows == (0,) and _rl_ph is True, (_rl_rows, _rl_ph)
 for _rl_a in _rl_apps[_rl_first]:

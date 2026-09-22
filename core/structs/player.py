@@ -121,6 +121,14 @@ SPEC = Spec("s_player", SIZE, [
     ("surplus_bc",            278, "i16"),
     ("research_accumulated",  591, "i32"),
     ("current_research_field", 901, "i8"),
+    # current_research_application — the APPLICATION inside that field.
+    # TWO SOURCES, 22 September 2026 (work order 165 part A): the header
+    # route puts it at 902, and live it read 196, whose field through
+    # the app->field table `tools/research_cost_check.py` holds to
+    # techdata.cpp is 45 — which is exactly what the VERIFIED
+    # `current_research_field` beside it says. A byte that is not the
+    # current application has no reason to resolve to the current field.
+    ("current_research_application", 902, "i8"),
     # tech_fields[TECH_FIELD_COUNT] — the per-field research status, and
     # the only one the sidebar needs: 3 means "already researched"
     # (colcalc.cpp:436-438). TWO SOURCES, 17 September 2026 (work order
@@ -133,6 +141,37 @@ SPEC = Spec("s_player", SIZE, [
     # `Player_N_Turns_Until_Research_Complete_` reproduce the original's
     # own "~18 turns" and "~17 turns" beside it.
     ("tech_fields",           296, "u8[83]"),
+    # tech_applications[TECH_APP_COUNT] — the per-APPLICATION research
+    # status (0 unavailable, 1 available to pick, 3 researched;
+    # `TECH_RESEARCH_STATUS`, orion2_consts.h:1321-1325). It is what
+    # decides which CHOICE ROWS the research screen offers under each
+    # category's field (`TECH::Init_Entry_Data_`, tech.cpp:602-624).
+    #
+    # PROMOTED OUT OF `unverified.py` 22 September 2026, work order 165
+    # part A, when its second source finally came in. Both, in order:
+    #
+    #   * the header route (work order 130 C) puts it at 379, 212 bytes
+    #     wide, with `sizeof(s_player) == 0xf0e` — the assert in
+    #     sizes.h:21. `tools/struct_header_check.py` re-runs that compile
+    #     on every suite.
+    #   * live, three agreements at once, none of which a misplaced
+    #     offset survives: every one of the 212 bytes is a
+    #     TECH_RESEARCH_STATUS and nothing else; all 52 RESEARCHED
+    #     applications have their own field marked researched in the
+    #     VERIFIED `tech_fields` above; and the application the
+    #     VERIFIED-in-the-same-run `current_research_application` names
+    #     as in progress reads 1, available — a field you are working on
+    #     is not a field you have finished. Its two siblings under field
+    #     45 read 1 as well, which is what an unfinished category looks
+    #     like.
+    #
+    # WHAT THE SECOND SOURCE DOES NOT PROVE, said rather than glossed:
+    # that status 1 means "this row APPEARS on the game's own screen".
+    # That claim is tested every time the screen runs —
+    # `researchlist.validate_against_fields` holds the reconstruction to
+    # the game's own FIELD_LIST on every entry — and the screen still
+    # hands over to the fallback when they disagree.
+    ("tech_applications",     379, "u8[212]"),
     ("total_research",       1613, "i16"),
     ("total_ships",          1615, "i16"),
     ("total_colonies",       1649, "i16"),
@@ -147,7 +186,16 @@ TRAITS_OFFSET = 2308       # int8_t traits[TRAIT_COUNT]
 #: scalars wrong is telling you about the scalars, not the record.
 #: Advanced City Planning lives in this table; see
 #: colonyrows.max_population, which does NOT apply it.
+#: THE SAME OFFSET AS THE SPEC FIELD ABOVE, kept as a constant because
+#: two callers want the NUMBER and not the parsed array: the live probe
+#: (`tools/struct_probe.py`) slices a raw record with it, and the
+#: suite's own stand-in builder writes into a raw record at it. Reading
+#: the data goes through the spec field; this is the anchor.
 TECH_APPLICATIONS_OFFSET = 379
+TECH_APPLICATIONS_COUNT = 212
+#: `TECH_RESEARCH_STATUS_AVAILABLE`, orion2_consts.h:1323 — the value
+#: that means a choice row is offered.
+TECH_APPLICATION_STATUS_AVAILABLE = 1
 TRAIT_COUNT = 31
 TRAIT_OMNISCIENCE = 27     # TRAIT enum, orion2_consts.h
 

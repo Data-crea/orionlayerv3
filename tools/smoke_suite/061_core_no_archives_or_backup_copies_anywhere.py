@@ -255,7 +255,8 @@ assert _bn.BUILDING_FIRST_STRING == \
         _bn.BUILDING_FIRST_STRING, _tn.APP_FIRST_STRING,
         _tn.TECH_APP_COUNT)
 assert _tn.TECH_FIELD_COUNT == _nm_res.FIELD_COUNT
-assert _tn.TECH_APP_COUNT == _nm_unv.TECH_APPLICATIONS_COUNT
+from core.structs import player as _nm_plsp
+assert _tn.TECH_APP_COUNT == _nm_plsp.TECH_APPLICATIONS_COUNT
 
 # 2. AN ABSENT FILE IS A STATE, NOT AN ERROR (decision 38). Both
 #    loaders are asked for a language nothing has ever extracted.

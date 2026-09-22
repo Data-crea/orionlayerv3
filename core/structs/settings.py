@@ -52,6 +52,22 @@ SPEC = Spec("s_settings", SIZE, [
     ("music_on", 19, "u8"),
     ("music_level", 20, "i8"),
     ("active_save_slot", 21, "i8"),
+    # language — WHICH WORD THE RESEARCH PANEL PRINTS AFTER A COST.
+    # `tech.cpp:631-639` picks "%i RP", "%i FP" (language 1) or "%i PR"
+    # (language 4) from this byte. Until work order 165 the HD research
+    # screen printed " RP" always and said so as a marked deviation,
+    # because this offset was not in the spec.
+    #
+    # TWO SOURCES, 22 September 2026 (work order 165 part A):
+    #   * orion2re's own headers compiled with their `#pragma pack(1)`
+    #     put it at 210 with `sizeof(s_settings) == 553`, which is also
+    #     the size of the settings block on the wire;
+    #   * live, the three bytes after it are `xenons_exist` 1,
+    #     `game_difficulty` 0 and `number_of_players` 2 — and that last
+    #     one equals the player count the SNAPSHOT HEADER carries
+    #     independently of this block. A misplaced block would have to
+    #     put a 2 exactly there by accident.
+    ("language", 210, "u8"),
 ], verified=True)
 
 #: The Settings dialog's thirteen rows, in ROW order — not the struct's.
@@ -83,3 +99,7 @@ def option_flags(raw, game_type):
     if game_type != 0:
         flags[1] = 0
     return flags
+
+#: The one home for the number `screens/research_select` needs when it
+#: reads the block straight off the wire rather than through the spec.
+LANGUAGE_OFFSET = 210

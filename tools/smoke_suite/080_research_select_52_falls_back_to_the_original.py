@@ -148,7 +148,8 @@ assert all("rect" not in _b.to_dict() for _b in _rs_scr.boxes)
 _rs_tf = [0] * _rl_res.FIELD_COUNT
 for _rs_g in (4, 7):
     _rs_tf[_rl.FIRST_FIELD_IN_GROUP[_rs_g]] = _rl.FIELD_STATUS_OFFERABLE
-_rs_ta = [_rl.APP_STATUS_AVAILABLE] * _rl_unv.TECH_APPLICATIONS_COUNT
+from core.structs import player as _rs_plsp
+_rs_ta = [_rl.APP_STATUS_AVAILABLE] * _rs_plsp.TECH_APPLICATIONS_COUNT
 _rs_entries = _rl.reconstruct(_rs_tf, _rs_ta, select_mode=True)
 _rs_blocks = {_k: _r for _k, _t, _r in _rl.expected_fields(_rs_entries)
               if _k.startswith("block ")}
@@ -217,7 +218,7 @@ def _rs_record(tech_fields, tech_apps):
     _off = next(_o for _n, _o, _k in player_mod.SPEC.fields
                 if _n == "tech_fields")
     _raw[_off:_off + len(tech_fields)] = bytes(tech_fields)
-    _ao = _rl_unv.TECH_APPLICATIONS_OFFSET
+    _ao = player_mod.TECH_APPLICATIONS_OFFSET
     _raw[_ao:_ao + len(tech_apps)] = bytes(tech_apps)
     return bytes(_raw)
 
@@ -393,10 +394,17 @@ _rs_src = {
     "layout": open(os.path.join(SCREENS_DIR, "research_select",
                                 "layout.json"), encoding="utf-8").read(),
 }
+# THE RP/FP/PR DEVIATION IS GONE — work order 165 part A. It was
+# there because `MOX::_settings.language` had no verified offset, so
+# HD printed " RP" whatever the game was running in. The byte is in
+# the settings spec now (@210, both sources beside the field), the
+# suffix follows the game, and the marking went with the cause. Its
+# replacement is the assertion three blocks down: the TABLE has to be
+# the original's four cases.
 assert set(_rss.MARKED) == {
     "science_room_animation", "category_list_popup", "description_box",
     "little_arrow", "title", "category_label_as_text",
-    "cost_suffix_language", "shrink_instead_of_squeeze"}, \
+    "shrink_instead_of_squeeze"}, \
     sorted(_rss.MARKED)
 for _kind in ("OMISSION", "HD EXTENSION", "DEVIATION"):
     assert _kind in _rs_src["screen"], _kind
@@ -410,7 +418,22 @@ for _absent in ("SR_R", "_Tech_List_", "Draw_Application_Description_",
         f"dropped and the omission is now invisible")
 # The three deviations each live where they are done.
 assert "DEVIATION" in _rs_src["panel"], "the squeeze/shrink deviation"
-assert "DEVIATION" in _rs_src["layout"], "the RP/FP/PR deviation"
+# …AND THE SUFFIX NOW FOLLOWS THE GAME. `tech.cpp:631-639` has three
+# cases and an else; the table must carry exactly that, and the
+# resolver must fall to " RP" for anything the original does not name
+# — which is what its own `else` does.
+assert _rss.COST_SUFFIX == {0: " RP", 1: " FP", 3: " RP", 4: " PR"}, (
+    f"the cost-unit table is {_rss.COST_SUFFIX}; tech.cpp:631-639 "
+    f"prints FP for language 1, PR for language 4 and RP otherwise")
+assert _rss.cost_suffix(1) == " FP" and _rss.cost_suffix(4) == " PR", (
+    "the resolver does not reproduce the original's two named cases")
+assert _rss.cost_suffix(0) == " RP" and _rss.cost_suffix(9) == " RP", (
+    "a language the original has no case for must fall to RP, which "
+    "is what its own else does — not to a blank or an error")
+assert "cost_suffix" not in _rs_src["layout"], (
+    "layout.json still carries a cost suffix. It is the GAME'S word "
+    "now and comes off the wire; a second copy in OrionLayer's own "
+    "wording file is the stale copy this project keeps paying for")
 assert "HD EXTENSION" in _rs_src["native"], "the chosen title rect"
 # And the screen has a help list of its own: three rectangles, ONE
 # id, all of them OUTSIDE the panel (billhelp.cpp:42-46).

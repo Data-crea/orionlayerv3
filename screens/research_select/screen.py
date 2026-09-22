@@ -77,9 +77,6 @@ disappear (decision 61):
   DEVIATION     the category label is printed as text where the
                 original paints it into the panel art; the word itself
                 is the game's own (billtext 64 + group)
-  DEVIATION     the cost suffix is always " RP"; the original picks RP,
-                FP or PR from `MOX::_settings.language`
-                (tech.cpp:631-639), which is not in the settings spec
   DEVIATION     a name too wide is SHRUNK, where `Squeeze_Print_`
                 compresses the glyphs (panel.py)
 """
@@ -88,7 +85,7 @@ import logging
 from core import billtext, research, researchlist, technames
 from core.screen_base import ScreenBase
 from core.structs import player as player_spec
-from core.structs import unverified
+from core.structs import settings as settings_spec
 
 from . import native, panel
 
@@ -104,9 +101,22 @@ MARKED = {
     "little_arrow": "OMISSION",
     "title": "HD EXTENSION",
     "category_label_as_text": "DEVIATION",
-    "cost_suffix_language": "DEVIATION",
     "shrink_instead_of_squeeze": "DEVIATION",
 }
+
+#: THE COST SUFFIX IS THE GAME'S, indexed by `MOX::_settings.language`
+#: (tech.cpp:631-639). A language the original has no case for falls to
+#: " RP", which is what its own `else` does. Transcribed here rather
+#: than put in `layout.json`, because it is the original's wording and
+#: not OrionLayer's — decision 15 is about the words a renderer must
+#: not own, and these are words the GAME owns.
+COST_SUFFIX = {0: " RP", 1: " FP", 3: " RP", 4: " PR"}
+
+
+def cost_suffix(language):
+    """The unit the original prints after a research cost."""
+    return COST_SUFFIX.get(language, " RP")
+
 
 #: Why the screen is on the fallback, in the order they are tested.
 READY = "ok"
@@ -131,6 +141,7 @@ class ResearchSelectScreen(ScreenBase):
         self._names = None
         self._wording = None
         self._sent = False       # one commit per visit (decision 21)
+        self._cost_suffix = COST_SUFFIX[0]
 
     # ── Lifecycle ─────────────────────────────────────────
 
@@ -170,6 +181,7 @@ class ResearchSelectScreen(ScreenBase):
         not have.
         """
         previous = self._state
+        self._cost_suffix = self._suffix_for(game_state)
         self._entries, self._state, self._problems = self._rebuild(game_state)
         if self._state != READY:
             self._hover = None
@@ -180,6 +192,19 @@ class ResearchSelectScreen(ScreenBase):
             log.warning("research select hands over to the original "
                         "picture (%s): %s", self._state,
                         "; ".join(self._problems[:4]) or "no detail")
+
+    def _suffix_for(self, game_state):
+        """The cost unit for the language the game is running in.
+
+        Absent settings are not an error state: the wire carries the
+        block on every snapshot, and before the first one there is
+        nothing to draw anyway. The fallback is the original's own
+        `else`, not a guess of ours.
+        """
+        raw = getattr(game_state, "settings_raw", b"") or b""
+        if len(raw) <= settings_spec.LANGUAGE_OFFSET:
+            return COST_SUFFIX[0]
+        return cost_suffix(raw[settings_spec.LANGUAGE_OFFSET])
 
     def _rebuild(self, game_state):
         """(entries, state, problems) for this frame's game state."""
@@ -214,13 +239,19 @@ class ResearchSelectScreen(ScreenBase):
         together. Found by driving it live, which is the only thing
         that would have.
 
-        `tech_fields` is a verified spec field. `tech_applications` is
-        NOT — it is quarantined in `core/structs/unverified.py` with one
-        of decision 23's two sources — so it is read here by its offset,
-        and `MARKED` and the status document say the rows rest on it.
-        The validation against the game's own field list is what stands
-        in until the second source is in: a wrong offset gives a wrong
-        row count, and a wrong row count does not validate.
+        BOTH are verified spec fields since work order 165 part A.
+        `tech_applications` was quarantined in
+        `core/structs/unverified.py` with one of decision 23's two
+        sources until 22 September 2026; its second source is written
+        out in `core/structs/player.py` beside the field.
+
+        The validation against the game's own field list did NOT retire
+        with the promotion, and the spec comment says why: the second
+        source settles where the bytes are and that they are research
+        statuses, not that status 1 means "this row appears on the
+        game's own screen". `researchlist.validate_against_fields` is
+        what tests that, on every entry, and the screen still hands
+        over when it disagrees.
         """
         if game_state is None:
             return None
@@ -233,14 +264,9 @@ class ResearchSelectScreen(ScreenBase):
             return None
         try:
             view = player_spec.SPEC.parse(raw)
-            tech_fields = list(view.tech_fields)
+            return list(view.tech_fields), list(view.tech_applications)
         except (AttributeError, IndexError, ValueError, TypeError):
             return None
-        start = unverified.TECH_APPLICATIONS_OFFSET
-        end = start + unverified.TECH_APPLICATIONS_COUNT
-        if len(raw) < end:
-            return None
-        return tech_fields, list(raw[start:end])
 
     # ── Rendering ─────────────────────────────────────────
 
@@ -266,8 +292,12 @@ class ResearchSelectScreen(ScreenBase):
         """The "N RP" string for one entry, as the original builds it.
 
         The number comes from `core.research` — one home for the table
-        (work order 129 C) — and the suffix from `layout.json`, where
-        the deviation is written down.
+        (work order 129 C) — and the suffix from the GAME'S OWN
+        language byte since work order 165 part A: `tech.cpp:631-639`
+        picks "%i RP", "%i FP" (language 1) or "%i PR" (language 4)
+        from `MOX::_settings.language`, and that byte is in the
+        settings spec now. It was printed as " RP" always, and marked
+        as a deviation for it, for as long as the offset was missing.
 
         SELECT mode subtracts NOTHING: `_Tech_Select_(0)` passes a
         research_cost_offset of 0 (tech.cpp:221), where change mode
@@ -276,8 +306,7 @@ class ResearchSelectScreen(ScreenBase):
         """
         if not entry.offered:
             return None
-        suffix = self._data.get("cost_suffix", " RP")
-        return f"{research.cost(entry.field)}{suffix}"
+        return f"{research.cost(entry.field)}{self._cost_suffix}"
 
     # ── Input ─────────────────────────────────────────────
 

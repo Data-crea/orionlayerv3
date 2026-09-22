@@ -7,7 +7,5 @@
     "wording_missing": "Research panel wording not extracted - run: python tools/billtext_extract.py",
     "unvalidated": "The game's field list does not match the reconstructed list; showing the game's own picture instead.",
     "no_player": "No player record on the wire yet."
-  },
-  "cost_suffix": " RP",
-  "cost_suffix_note": "DEVIATION, marked: tech.cpp:631-639 picks \"%i RP\", \"%i FP\" or \"%i PR\" from MOX::_settings.language, which is not in the settings spec (doc/tech_change_reading.md section 3, question 5). HD prints RP, which is right for English and for language 3, and wrong for 1 and 4."
+  }
 }

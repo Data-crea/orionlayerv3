@@ -161,7 +161,14 @@ _MARKED = {
     "screens/research_select/screen.py": "MARKED, and each held by a smoke check",
     "screens/research_select/panel.py": "SQUEEZES, HD SHRINKS",
     "screens/research_select/native.py": "part of the TECHSEL art",
-    "screens/research_select/layout.json": "MOX::_settings.language",
+    # CITATION CHANGED 22 September 2026, work order 165 part A. It was
+    # `MOX::_settings.language`, for the RP/FP/PR deviation this file
+    # carried while that byte had no verified offset. The byte is in
+    # the settings spec now and the suffix follows the game, so the
+    # deviation went — and what is left in this file is the title,
+    # which the original paints into its TECHSEL art rather than
+    # printing (an HD EXTENSION, and the reason it is here at all).
+    "screens/research_select/layout.json": "TECHSEL",
 
     # ADDED 19 September 2026, work order 134 C: the Fleets screen.
     # Its own check is the fleets markings block below — four
