@@ -51,30 +51,33 @@ Regel, sondern eine Absichtserklärung.
 
 ---
 
-## 2. Ein Widerspruch zwischen Fundament und Baum (Entscheidung 23)
+## 2. ZURÜCKGEZOGEN — es ist kein Widerspruch, und der Baum sagt auch warum
 
-Beim Ansehen von Teil A gefunden, **nicht repariert**, weil ein
-Widerspruch laut 164 geparkt und nicht aufgelöst wird:
+Ich hatte hier notiert, Fundament und Baum widersprächen sich bei
+Entscheidung 23: das Fundament sagt „live **oder** Header-Route", die
+Werkzeuge im Baum nennen die Header-Route „exactly half of decision 23".
 
-- **Das Fundament sagt ODER.** Entscheidung 23: *"Verification means
-  numeric agreement with live data via `tools/struct_probe.py`, **or**
-  compiling orion2re's own header … and matching the assert in
-  `sizes.h`."*
-- **Der Baum sagt UND.** `tools/struct_header_check.py` nennt sich
-  selbst *"exactly half of decision 23"*, und `core/structs/
-  unverified.py` hält `tech_applications` @379 zurück mit der
-  Begründung, *"ONE of its two sources is in"*.
+**Das war falsch gelesen, und `core/structs/unverified.py` sagt es
+selbst**, in der Notiz zu `tech_applications` @379:
 
-Nach dem Fundament wäre @379 längst verifiziert; nach dem Baum nicht.
-Dieser Auftrag entscheidet es für sich selbst (Q5: „two sources per
-offset"), also habe ich mich an den Baum gehalten — aber das Fundament
-sagt weiterhin etwas anderes, und es ist die Datei, die eine neue
-Sitzung zuerst liest.
+> *It is a whole `uint8_t[]` member and not a packed word, so the header
+> route carries it end to end (decision 23's own limit does not bite
+> here). … SOURCE TWO IS THE ONE THAT MATTERS and is not in: a live read
+> whose values agree with the rows the game's own screen draws. The
+> header says where the bytes are; only the screen says that these bytes
+> mean "this row is offered".*
 
-**Deine Entscheidung:** entweder das Fundament schärfen (zwei Quellen,
-und die Header-Route allein reicht nie) oder den Baum lockern. Es zu
-ändern kostet einen Satz — aber es ist ein Fundament-Eintrag, und die
-darf ich laut Auftrag nicht selbst anlegen.
+Das ist genau der zweite Absatz von Entscheidung 23 — *„a transcription
+of MEANING is not a measurement of LAYOUT"*. Die Header-Route beweist
+die **Lage** des Bytes; dass der Wert 1 „diese Zeile wird angeboten"
+**bedeutet**, beweist nur der Bildschirm des Spiels. Beide Quellen sind
+nötig, weil sie zwei verschiedene Dinge beweisen, nicht weil zweimal
+dasselbe verlangt würde.
+
+**Nichts für dich zu entscheiden.** Der Eintrag bleibt stehen, weil eine
+zurückgezogene Feststellung sichtbar zurückgezogen wird und nicht
+stillschweigend verschwindet — die Regel, die dieses Projekt sich für
+Entscheidung 43 selbst gegeben hat.
 
 ---
 
