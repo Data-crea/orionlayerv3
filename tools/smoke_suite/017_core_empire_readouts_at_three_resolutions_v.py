@@ -178,6 +178,12 @@ _MARKED = {
     # screen's marking block.
     "core/researchnative.py": "HD EXTENSION",
 
+    # …and the drawing with it. The squeeze/shrink DEVIATION is done
+    # here for both modes, and so is the INVENTION that fills a hovered
+    # row where the original cycles a palette index. Its own check is
+    # in the research screen's marking block.
+    "core/researchpanel.py": "DEVIATION",
+
     # ADDED 19 September 2026, work order 134 C: the Fleets screen.
     # Its own check is the fleets markings block below — four
     # OMISSIONs and one HD EXTENSION, each in the module that

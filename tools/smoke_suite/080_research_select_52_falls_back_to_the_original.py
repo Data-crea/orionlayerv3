@@ -417,7 +417,19 @@ for _absent in ("SR_R", "_Tech_List_", "Draw_Application_Description_",
         f"it was built and the marking must go, or the marking was "
         f"dropped and the omission is now invisible")
 # The three deviations each live where they are done.
+# The squeeze/shrink DEVIATION is done in `core/researchpanel.py` for
+# both modes since work order 165 part B, so it is asserted there as
+# well as in the screen's own binding of it.
 assert "DEVIATION" in _rs_src["panel"], "the squeeze/shrink deviation"
+_rs_draw_src = open(os.path.join(os.path.dirname(SCREENS_DIR), "core",
+                                 "researchpanel.py"),
+                    encoding="utf-8").read()
+for _need in ("DEVIATION", "INVENTION", "Squeeze_Print_",
+              "tech.cpp:686-696"):
+    assert _need in _rs_draw_src, (
+        f"core/researchpanel.py no longer carries {_need!r} — the "
+        f"squeeze deviation, the hover invention and the second "
+        f"colour's source all live where the drawing is")
 # …AND THE SUFFIX NOW FOLLOWS THE GAME. `tech.cpp:631-639` has three
 # cases and an else; the table must carry exactly that, and the
 # resolver must fall to " RP" for anything the original does not name
