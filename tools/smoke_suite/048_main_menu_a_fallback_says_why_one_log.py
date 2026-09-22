@@ -133,13 +133,27 @@ if slow("fallback_verdict_log"):
         # A2. THE RULE IS NOT ABOUT FLEETS. Every screen with the method
         # goes through the same place, so the check names the ones that
         # have it rather than one of them.
+        # WHERE THE SENTENCE IS DEFINED MOVED, and the check follows
+        # the CODE rather than a file list. Work order 165 part B made
+        # the two research screens one class in `core/researchscreen.py`
+        # — `screens/research_select/screen.py` is eighteen lines of
+        # configuration now and defines no method at all — so a list of
+        # files went green-by-absence the moment the behaviour moved.
+        # Asked of the CLASS, it cannot: a screen that stops answering
+        # `fallback_reason` fails here whichever file it lives in.
         _fb_with = sorted(
             _f for _f in ("screens/fleets/screen.py",
-                          "screens/research_select/screen.py")
+                          "core/researchscreen.py")
             if "def fallback_reason" in io.open(
                 os.path.join(os.path.dirname(SCREENS_DIR), _f),
                 encoding="utf-8").read())
         assert len(_fb_with) == 2, _fb_with
+        for _fb_slug in ("research_select", "research_change", "fleets"):
+            _fb_cls = type(d.screens[_fb_slug])
+            assert callable(getattr(_fb_cls, "fallback_reason", None)), (
+                f"{_fb_slug} cannot say why it handed over — a fallback "
+                f"that looks like working is what work order 130 shipped "
+                f"and 131 part D forbade")
         _fb_src = io.open(os.path.join(os.path.dirname(SCREENS_DIR),
                                        "main.py"), encoding="utf-8").read()
         assert _fb_src.count("def _verdict") == 1, (
