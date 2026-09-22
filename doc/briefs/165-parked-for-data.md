@@ -83,10 +83,78 @@ Entscheidung 43 selbst gegeben hat.
 
 ## 3. Getroffene Wahlen
 
-*(werden eingetragen, sobald die Teile gebaut sind)*
+**Nur eine, weil nur ein Teil gebaut werden konnte.**
+
+### Die Q4-Prüfung als EIGENE Prüfung, nicht als dritte Zahl in der bestehenden
+
+**Gewählt:** eine zweite `ok()` im selben Modul, statt 36 und 53 in die
+vorhandene Parkprüfung (Screen 8) aufzunehmen.
+
+**Warum:** Screen 8 ist das GAME-Popup, wo Feld 9 eine Ladeslot-Zeile
+ist. Bei 36 und 53 ist Feld 9 eine **Auswahlzeile**, und deren Commit
+liest den Mauszeiger des Spiels — ein dorthin gesendetes Parken wählt
+also, worauf der Spieler gerade zeigt, oder dereferenziert null im
+Spielprozess (Open Fix 23, als SIGSEGV in 128 C gesehen). Dieselbe
+Wache, aber nicht derselbe Unfall; zwei Sätze im Lauf sagen das, einer
+nicht.
+
+**Umkehr:** zwei Zeilen — die zweite `ok()` löschen, die Ids in die
+erste Prüfung aufnehmen, Zählerstand 250 -> 249 in beiden Dokumenten.
+
+**Kosten, falls du es anders willst:** keine. Beide Varianten prüfen
+dasselbe.
 
 ---
 
 ## 4. Geparkte Live-Schritte, mit exakten Kommandos
 
-*(wird am Ende des Laufs gefüllt)*
+**Voraussetzung für alles hier: dein OrionLayer ist zu.** Das Spiel darf
+laufen bleiben. Prüfen mit:
+
+```bash
+ss -tnp | grep 17362          # darf nur orion2re als LISTEN zeigen
+pgrep -af "main.py"           # darf nichts zeigen
+```
+
+### A — die zweiten Quellen (Entscheidung 23)
+
+Vier Offsets brauchen je ein Live-Lesen, das mit dem Bild des Spiels
+übereinstimmt. Der Header-Teil ist für alle vier schon mechanisch
+(`tools/struct_header_check.py` läuft in jedem Lauf):
+
+| Offset | was das Live-Lesen beweisen muss |
+|---|---|
+| `tech_applications` @379 | Wert 1 heißt „diese Zeile wird angeboten" — gegen die Zeilen, die der Bildschirm des Spiels zeichnet |
+| `hyper_advanced_tech` @640 | die Stufe, die als römische Ziffer erscheint |
+| `current_research_application` @902 | die Anwendung, die das Spiel als laufend anzeigt |
+| `s_settings.language` | das Byte, das RP / FP / PR wählt (tech.cpp:631-639) |
+
+Erst wenn @379 und @640 beide Quellen haben, dürfen sie aus
+`core/structs/unverified.py` heraus. Erst wenn `language` drin ist,
+fällt die RP-Abweichung in `screens/research_select/` — der Auftrag
+verlangt beides im selben Commit.
+
+### B, C, D, E — der ganze Rest
+
+Teil B (Change Mode) und Teil C (die beiden Popups) sind **offline
+baubar**, aber ihre Abnahme ist es nicht: „row clicks and bare
+activations both commit, **read back off the wire**". Teil D und Teil E
+sind von Anfang bis Ende live.
+
+Der fertige Startpunkt für die Live-Teile steht schon in
+`doc/briefs/130-parked-for-data.md` und gilt unverändert:
+
+```bash
+cd "$HOME/Master of Orion 2" && \
+    ~/orion2re/out/build/Linux/linux-debug/orion2re &
+cd ~/orionlayerv3
+python tools/research_hd.py newgame     # zur Karte, Zug eins
+python tools/research_hd.py advance     # zum ersten Dialog
+python tools/research_hd.py roomchoose 1 hd F4
+python tools/research_hd.py crash       # wenn eine Kategorie leer ist
+```
+
+**Was der nächste Lauf zuerst tun sollte:** Teil A live abschließen. Er
+ist der kleinste, er entsperrt die RP-Abweichung und die beiden
+Promotions, und er ist die Voraussetzung dafür, dass Change Mode
+überhaupt etwas anzeigen darf, wofür es einstehen kann.
