@@ -326,7 +326,7 @@ the last moved module.
 | a change inside the screen's folder runs the narrow selection | **yes** — `screens/research_select/screen.py` touched, the run stayed narrow |
 | a change in `core/` with the same flag widens and names the file | **yes** — `WIDENED TO FAST TIER: core/box.py changed outside screens/research_select/`, on the first line and the last. Both throwaway changes reverted, tree clean |
 | the size-limit check fails on a deliberately oversized module | **yes** — 600 padding lines took a module to 41 633 bytes and the run went red naming it; restored, caches cleared, green again |
-| push | **not done — Data's decision**, as the order says |
+| push | **done, 22 September 2026**, after Data asked for it — through the pre-push hook, which ran the FULL suite (248 green) before git sent anything. `a5c3f4e..7bc73bb` on `github.com:Data-crea/orionlayerv3`; `HEAD` and `origin/main` are the same commit and the tree is clean |
 
 ### Runtimes, before and after
 
@@ -377,3 +377,11 @@ much of the suite is that screen's. Measured, `output_bytes.txt`.
 | `413fc6e` | parts 1 and 2 — the baseline tool and the inventory |
 | `3e1532e` | part 3 and part 4 — the cut and the selector |
 | `e0c2a60` | part 5 and the documentation |
+| `99fab4c` | the acceptance table, the measurements and the parked file |
+| `07c5b81`, `7bc73bb` | the four sentences that live in both `CLAUDE.md` and the fundament, made literally identical |
+| `2b9d…` (this one) | the push recorded — see the Acceptance table |
+
+**Pushed 22 September 2026**, all seven through
+`tools/githooks/pre-push`, which ran the full suite first:
+`SMOKE TEST PASSED — 248 checks green`, then
+`a5c3f4e..7bc73bb  main -> main`. Evidence: `push.txt`.
