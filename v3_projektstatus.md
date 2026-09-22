@@ -2294,11 +2294,37 @@ files under `doc/` and are only summarised here.
 | | |
 |---|---|
 | Python | 32,960 lines across 111 modules — `find . -name '*.py'`, `__pycache__` excluded, the smoke test's 6,400 included. The previous figure here (21,642 across 94) was carried from an unstated method and could not be reproduced |
-| Smoke test | `python tools/smoke_test.py` — **261 checks**, headless, in `tools/smoke_suite/` since work order 162 (97 check modules, one group per screen plus a shared core; `tools/smoke_test.py` is the runner). **Two tiers since work order 158**: the bare command runs everything (~72 s here); `--fast` runs the commit gate's 254 (~32 s here). `--screen <name>` prints only that screen's sentences and the core's and is NEVER a gate. See "The gate has two tiers" below |
+| Smoke test | `python tools/smoke_test.py` — **263 checks**, headless, in `tools/smoke_suite/` since work order 162 (98 check modules, one group per screen plus a shared core; `tools/smoke_test.py` is the runner). **Two tiers since work order 158**: the bare command runs everything (~72 s here); `--fast` runs the commit gate's 256 (~32 s here). `--screen <name>` prints only that screen's sentences and the core's and is NEVER a gate. See "The gate has two tiers" below |
 | Assets | 170 MB (select_race 68, galaxy_map 51, shared 23, new_game 21, colony_summary 1) |
 | Screens in HD | 9 of ~20–22 (the GAME menu overlay, work order Stop 2, every dialog of the popup; colony summary draws list, sidebar, scan box and galaxy inset, and MOVES POPS — the first HD gesture that drives the game; planets, brief 101, lists, sorts, restricts and returns) |
 | Setup from clone | `python tools/setup.py` (deps via the system package manager) |
 | orion2re | required for live data, not for the smoke test |
+
+### The current field's second colour was wrong in three ways — 22 September 2026, work order 165 E
+
+Work order 131 part C's offline half, and it was a real gap.
+`Display_Entry_Text_` (tech.cpp:648-706) picks ONE colour for the
+current field's name AND its cost, then marks its applications: ALL of
+them when the player is Creative (`traits[TRAIT_CREATIVE]`,
+orion2_consts.h:971) or the field is one of the six
+`_starting_tech_field_ids` (techdata.cpp:548); otherwise the one whose
+**NAME** matches the current application's, by `strcasecmp`.
+
+HD marked one row, by id, and printed the cost in its own colour
+whatever the entry was. All three are transcribed now
+(`core/researchpanel.py`: `marks_every_row`, `marks_row`).
+
+`researchlist.ALL_APPLICATIONS_FIELDS` is the six, and
+`tools/research_cost_check.py` reads them out of BOTH of the engine's
+own copies — the array and the ids `Display_Entry_Text_` writes inline
+as hex — because agreeing with one of them and not the other would be
+right about nothing in particular.
+
+**The case is not reachable in either scratch save**, and that is
+measured rather than assumed: the six are the STARTING fields and SAVE5
+has all six at status 3, researched. Seeing it live needs a new game,
+which is the select-mode path open fix 26 blocks for an unattended
+session.
 
 ### The category list popup, checked against the engine's own list — 22 September 2026, work order 165 C
 
@@ -2496,8 +2522,8 @@ blocks into a session and writing them out again. Three proofs:
 
 | | command | checks | on this tree |
 |---|---|---:|---:|
-| **Full** — the default, and the pre-push gate | `python tools/smoke_test.py` | 261 | ~72 s |
-| **Fast** — the pre-commit gate | `python tools/smoke_test.py --fast` | 254 | ~32 s |
+| **Full** — the default, and the pre-push gate | `python tools/smoke_test.py` | 263 | ~72 s |
+| **Fast** — the pre-commit gate | `python tools/smoke_test.py --fast` | 256 | ~32 s |
 | **Screen** — **never a gate** | `python tools/smoke_test.py --screen <name>` | all of them, ~a third printed | the tier's |
 
 **`--screen` narrows what a run PRINTS, not what it runs**, and the

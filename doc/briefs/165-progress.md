@@ -502,9 +502,84 @@ the guard widened to admit 36 and 53 — which the neighbouring screen-8
 check survives on purpose — makes the new check and only the new check
 go red. 249 -> 250 checks.
 
-## Part E — the rest of select mode — **BLOCKED, parked**
+## Part E — the rest of select mode — **PART C's OFFLINE HALF DONE, the rest parked**
 
-131's parts A, B and C are live from end to end.
+The order's scope choice for part E is "131 parts B and C, the 128
+crash case, and one bounded attempt at open fix 26". What was reachable
+this session is 131 part C's OFFLINE half, and it was a real gap rather
+than a formality.
+
+### Done: the six "everyone gets everything" fields, and Creative
+
+`Display_Entry_Text_` (tech.cpp:648-706) picks ONE colour for the
+current field's name AND its cost, then marks its applications:
+
+* ALL of them when the player is Creative (`traits[TRAIT_CREATIVE]`,
+  orion2_consts.h:971) **or** the field is one of the six
+  `_starting_tech_field_ids` (techdata.cpp:548);
+* otherwise the one whose **NAME** matches the current application's —
+  `strcasecmp`, not an id comparison.
+
+**HD did none of the three.** It marked one row, by id, and printed the
+cost in its own colour whatever the entry was. All three are
+transcribed now:
+
+| | before | now |
+|---|---|---|
+| the six fields / Creative | one row marked | every row (`researchpanel.marks_every_row`) |
+| which row | `app == current[1]` | the NAME, case-folded (`marks_row`) |
+| the cost | always `cost` | the current colour when the entry is current |
+
+`ALL_APPLICATIONS_FIELDS` is in `core/researchlist.py` with the other
+transcribed tables, and `tools/research_cost_check.py` reads it out of
+the source — **out of BOTH of the engine's own copies**, the array and
+the six ids `Display_Entry_Text_` writes inline as hex, because a
+transcription that agreed with one of them and not the other would be
+right about nothing in particular.
+
+Two checks, one of them a rendering: two frames of the same state, one
+Creative and one not, on a field that is NOT one of the six, and the
+rows below the chosen one must differ. A flag that never reached the
+panel would draw the same picture twice — which is 129's own fault one
+level up.
+
+### Parked, with the reason measured rather than assumed
+
+**131 part C's LIVE half is unreachable in the scratch saves.** The six
+fields are the STARTING technology fields, and both scratch saves have
+all six at status 3 — researched. Read live, 22 September:
+
+```
+the six starting fields: 29:3, 55:3, 22:3, 57:3, 28:3, 23:3
+```
+
+So the case needs a NEW GAME, which is the select-mode path.
+
+**131 part B, and the select-mode path with it.** Reaching SELECT mode
+means ending a turn and dismissing the completion dialog, and open fix
+26 is exactly about that configuration: with a client connected and the
+dialog dismissed by an INJECTED click, the list commits a row by itself
+about a second and a half later. Data's own counter-test (19 September,
+real mouse, no client) shows the list waits. **The one variable that
+makes select mode usable is a real mouse in the orion2re window, which
+an unattended session does not have.** So 131 part B's third live
+choice and its missing resolutions stay parked — and change mode's
+resolutions, which do NOT need select mode, were done instead (part D,
+all four).
+
+**The 128 crash case** needs a list with an EMPTY category, which
+neither scratch save offers: change mode on SAVE4 and SAVE5 offers all
+eight. `research_hd.py crash` still exists and says so when it is run
+where the case is unreachable.
+
+**Open fix 26's bounded attempt** was not spent. The order gives it one
+attempt at "the separation of variables and the reading of the injected
+click path", and the separation is the half that decides: the
+"connected and silent" run needs the dialog dismissed WITHOUT the
+client, which the order itself says may be impossible from a tool and
+is then Data's run. It is. The reading alone would be a theory with no
+measurement to hold it against, and the order's own instruction is to
+park rather than let it hold up the rest.
 
 
 ---

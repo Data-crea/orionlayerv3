@@ -25,6 +25,7 @@ thing available. DEVIATION, in each screen's marked list.
 import pygame
 
 from core import palette
+from core import researchlist
 from core import researchnative as geom_mod
 
 #: The smallest the shrink may go before it gives up and clips.
@@ -80,23 +81,64 @@ def _blit_text(surface, style, text, pos, max_w, size, color):
     return surf
 
 
+def marks_every_row(field, creative):
+    """Whether EVERY application of the current field is marked.
+
+    `Display_Entry_Text_` (tech.cpp:661-666): a Creative player gets
+    every application of the field being researched, and so does any
+    player researching one of the six `_starting_tech_field_ids`
+    (techdata.cpp:548 — the same six the function tests inline). In
+    both cases the original marks all of the entry's rows, not one.
+
+    TRAIT_UNCREATIVE is NOT tested here, and its absence is the
+    transcription: it changes what the player GETS, not what is
+    marked, so an Uncreative player's entry is coloured like any other
+    player's.
+    """
+    return bool(creative) or field in researchlist.ALL_APPLICATIONS_FIELDS
+
+
+def marks_row(names, app, current_app):
+    """Whether the original marks THIS row when only one is marked.
+
+    **THE ORIGINAL COMPARES NAMES, NOT IDS** —
+    `strcasecmp(item->app_names[i],
+    _technology_applications[cur_app].name)`, tech.cpp:697-700 — so two
+    applications that share a name are both marked. Transcribed; where
+    the names are distinct it is the id comparison this was, and where
+    a name is missing it falls back to the id rather than marking
+    nothing.
+    """
+    if not current_app or not app:
+        return False
+    if names is None:
+        return app == current_app
+    mine, theirs = (names.application_name(app),
+                    names.application_name(current_app))
+    if not mine or not theirs:
+        return app == current_app
+    return mine.strip().casefold() == theirs.strip().casefold()
+
+
 def draw(surface, layout, style, entries, hover, words, names, wording,
-         current=(0, 0)):
+         current=(0, 0), creative=False):
     """Draw the eight entries. `hover` is (entry index, row) or None.
 
     `current` is `(current_research_field, current_research_application)`
     off the wire — see `CURRENT` above for what it colours and why
-    select mode passes zeros.
+    select mode passes zeros. `creative` is the player's
+    TRAIT_CREATIVE; see `marks_every_row`.
     """
     for entry in entries:
         if entry.offered:
             _draw_entry(surface, layout, style, entry, hover, words,
-                        names, wording, current)
+                        names, wording, current, creative)
 
 
 def _draw_entry(surface, layout, style, entry, hover, words, names, wording,
-                current):
+                current, creative=False):
     is_current = entry.field == current[0] and entry.field != 0
+    every_row = is_current and marks_every_row(entry.field, creative)
     # The category's own name. The original paints it into the TECHSEL
     # art; HD prints it, and the WORD is still the game's own —
     # billtext 64 + group (tech.cpp:802-816). Marked in screen.py.
@@ -108,11 +150,17 @@ def _draw_entry(surface, layout, style, entry, hover, words, names, wording,
                    layout.font_size(13), col("category", (128, 148, 186)))
 
     # The cost, right-aligned where Print_Right_ puts it (tech.cpp:703).
+    # AND IN THE CURRENT FIELD'S COLOUR WHEN IT IS THE CURRENT FIELD.
+    # `Display_Entry_Text_` picks one `color` and prints the field name
+    # (style 4) AND the cost (style 3) in it (tech.cpp:648-657), so the
+    # cost follows the name rather than having a colour of its own.
     cost_of = words.get("cost")
     cost = cost_of(entry) if cost_of else None
     if cost:
         size = layout.font_size(13)
-        surf = style.render_text(cost, size, col("cost", (188, 204, 236)))
+        surf = style.render_text(
+            cost, size, col("field_current", (250, 226, 150)) if is_current
+            else col("cost", (188, 204, 236)))
         cx, cy = geom_mod.window_point(entry.cost_anchor(), layout)
         surface.blit(surf, (cx - surf.get_width(), cy))
 
@@ -145,5 +193,6 @@ def _draw_entry(surface, layout, style, entry, hover, words, names, wording,
                    geom_mod.window_width(label_x, label_y, label_w, layout),
                    layout.font_size(14),
                    col("row_current", (250, 226, 150))
-                   if is_current and app == current[1] and app != 0
+                   if is_current and (every_row
+                                      or marks_row(names, app, current[1]))
                    else col("row", (198, 212, 238)))

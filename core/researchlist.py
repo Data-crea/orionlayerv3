@@ -106,6 +106,18 @@ APP_HYPER_FIRST = 204
 #: FIELD_HYPER_FIRST the extent this module claims the offset covers.
 FIELD_COUNT_HYPER_LAST = 82
 
+#: The six fields for which EVERY application counts as the chosen one
+#: — `TECHDATA::_starting_tech_field_ids` (techdata.cpp:548), and the
+#: same six ids `Display_Entry_Text_` tests one by one at tech.cpp:668
+#: (0x37, 0x39, 0x1D, 0x16, 0x1C, 0x17) and `Draw_Little_Arrow_` again
+#: at :756. A player researching one of them gets all of its
+#: applications, so the original marks all of its rows.
+#:
+#: Transcribed, and `tools/research_cost_check.py` reads the array out
+#: of the source and fails on any difference — a hand-copied table
+#: without a checker is the nebula sizes again (decision 36).
+ALL_APPLICATIONS_FIELDS = (29, 55, 22, 57, 28, 23)
+
 #: A field is OFFERABLE at status 2 (tech.cpp:591); 3 is researched
 #: (`core.research.STATUS_RESEARCHED`).
 FIELD_STATUS_OFFERABLE = 2

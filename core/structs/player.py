@@ -207,6 +207,12 @@ TECH_APPLICATIONS_COUNT = 212
 TECH_APPLICATION_STATUS_AVAILABLE = 1
 TRAIT_COUNT = 31
 TRAIT_OMNISCIENCE = 27     # TRAIT enum, orion2_consts.h
+#: orion2_consts.h:971. A Creative player gets EVERY application
+#: of the field being researched, which is why the research
+#: panel marks every row of it (`Display_Entry_Text_`,
+#: tech.cpp:661-666). TRAIT_UNCREATIVE (21) is not tested there:
+#: it changes what the player GETS, not what is marked.
+TRAIT_CREATIVE = 22
 
 
 #: What KIND of number each sidebar scalar is. They are not one

@@ -28,8 +28,8 @@ import importlib.util as _cd_ilu
 
 _cd_path = os.path.join(
     os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
-    "tools", "research_change_hd.py")
-_cd_spec = _cd_ilu.spec_from_file_location("_change_hd", _cd_path)
+    "tools", "researchchangephases.py")
+_cd_spec = _cd_ilu.spec_from_file_location("_change_phases", _cd_path)
 _cd = _cd_ilu.module_from_spec(_cd_spec)
 _cd_spec.loader.exec_module(_cd)
 

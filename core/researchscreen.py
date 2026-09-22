@@ -128,6 +128,9 @@ class ResearchPanelScreen(ResearchPopupsMixin, ScreenBase):
         #: mode never reads them — see `current_pair` and `cost_offset`.
         self._current = (0, 0)
         self._accumulated = 0
+        #: TRAIT_CREATIVE off the wire. It decides whether the current
+        #: field's rows are ALL marked (`researchpanel.marks_every_row`).
+        self._creative = False
         self.geom = researchnative.Geometry(self.MODE)
         self._box_native = self.geom.box_native()
 
@@ -292,6 +295,8 @@ class ResearchPanelScreen(ResearchPopupsMixin, ScreenBase):
             self._current = (view.current_research_field,
                              view.current_research_application)
             self._accumulated = view.research_accumulated
+            self._creative = player_spec.traits(
+                view)[player_spec.TRAIT_CREATIVE] == 1
             self._tech = (list(view.tech_fields),
                           list(view.tech_applications))
             return self._tech
@@ -329,7 +334,8 @@ class ResearchPanelScreen(ResearchPopupsMixin, ScreenBase):
         # gives it something.
         researchpanel.draw(surface, self.layout, self.style,
                            self._entries, self._hover, words, self._names,
-                           self._wording, current=self.current_pair())
+                           self._wording, current=self.current_pair(),
+                           creative=self._creative)
         # AND THE LIST POPUP OVER IT. The original saves the panel's
         # fields and draws the window on top (`Save_Field_Stats_`,
         # tech.cpp:889); here it is one more layer, still under the

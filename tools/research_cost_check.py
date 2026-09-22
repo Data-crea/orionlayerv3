@@ -160,6 +160,22 @@ def read_tables(tree):
 
     entry_to_group = array(tech, r"_entry_to_group\[8\]")
     first_in_group = array(mox, r"_first_field_in_group\[10\]")
+    techdata = load("techdata.cpp")
+    starting = array(techdata, r"_starting_tech_field_ids\[6\]")
+    if not starting:
+        problems.append("_starting_tech_field_ids not found in "
+                        "techdata.cpp")
+    # AND THE SAME SIX, WRITTEN OUT AS HEX ONE BY ONE at tech.cpp:668.
+    # The array and the branch are two copies in the ENGINE, so both are
+    # read: a transcription that agreed with one of them and not the
+    # other would be right about nothing in particular.
+    branch = re.search(
+        r"bool is_creative = false;(.*?)\n        \}", tech, re.S)
+    inline = tuple(int(v, 16) for v in re.findall(
+        r"tid == (0x[0-9A-Fa-f]+)", branch.group(1))) if branch else ()
+    if not inline:
+        problems.append("Display_Entry_Text_'s six field ids could not "
+                        "be read from tech.cpp")
 
     # The hyper-advanced switch, as an offset rather than eight cases:
     # every TECH_FIELD_X case must return TECH_APP_X at the same
@@ -184,6 +200,8 @@ def read_tables(tree):
         "ENTRY_TO_GROUP": entry_to_group,
         "FIRST_FIELD_IN_GROUP": first_in_group,
         "_hyper_cases": tuple(hyper),
+        "ALL_APPLICATIONS_FIELDS": starting,
+        "_inline_six": inline,
         "_consts": const,
     }, problems
 
@@ -207,6 +225,25 @@ def check_tables(tree):
         else:
             print(f"            researchlist.{name:<21}: "
                   f"{len(ours)} entries agree")
+
+    # THE SIX "EVERYONE GETS EVERYTHING" FIELDS, against BOTH of the
+    # engine's own copies: the array and the inline branch.
+    if tables["ALL_APPLICATIONS_FIELDS"]:
+        ours = tuple(researchlist.ALL_APPLICATIONS_FIELDS)
+        if set(ours) != set(tables["ALL_APPLICATIONS_FIELDS"]):
+            problems.append(
+                f"researchlist.ALL_APPLICATIONS_FIELDS is {sorted(ours)}, "
+                f"_starting_tech_field_ids is "
+                f"{sorted(tables['ALL_APPLICATIONS_FIELDS'])}")
+        elif tables["_inline_six"] and \
+                set(ours) != set(tables["_inline_six"]):
+            problems.append(
+                f"researchlist.ALL_APPLICATIONS_FIELDS is {sorted(ours)}, "
+                f"Display_Entry_Text_ tests "
+                f"{sorted(tables['_inline_six'])}")
+        else:
+            print(f"            _starting_tech_field_ids      : "
+                  f"{len(ours)} ids agree, and so does the inline branch")
 
     # The three sentinels and the two boundaries, by name.
     const = tables["_consts"]
