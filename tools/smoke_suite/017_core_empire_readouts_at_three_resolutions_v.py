@@ -2,7 +2,7 @@
 #
 # Part of the OrionLayer smoke suite — 017_core_empire_readouts_at_three_resolutions_v.py.
 # `tools/smoke_test.py` executes this file, and every other
-# module in tools/smoke_suite/ (92 of them), in file-name
+# module in tools/smoke_suite/ (93 of them), in file-name
 # order and in ONE namespace: these statements stood inside
 # main() and still bind the names the later ones read.
 #
@@ -183,6 +183,14 @@ _MARKED = {
     # row where the original cycles a palette index. Its own check is
     # in the research screen's marking block.
     "core/researchpanel.py": "DEVIATION",
+
+    # ADDED 22 September 2026, work order 165 part B: CHANGE mode, the
+    # engine's own screen 36. Its markings are select mode's minus the
+    # science room, which is select mode's own strip — and that
+    # difference is asserted, in both directions, in the change-mode
+    # check.
+    "screens/research_change/screen.py": "DEVIATION",
+    "screens/research_change/layout.json": "TECHSEL",
 
     # ADDED 19 September 2026, work order 134 C: the Fleets screen.
     # Its own check is the fleets markings block below — four

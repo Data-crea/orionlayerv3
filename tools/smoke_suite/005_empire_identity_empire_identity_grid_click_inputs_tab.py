@@ -2,7 +2,7 @@
 #
 # Part of the OrionLayer smoke suite — 005_empire_identity_empire_identity_grid_click_inputs_tab.py.
 # `tools/smoke_test.py` executes this file, and every other
-# module in tools/smoke_suite/ (92 of them), in file-name
+# module in tools/smoke_suite/ (93 of them), in file-name
 # order and in ONE namespace: these statements stood inside
 # main() and still bind the names the later ones read.
 #

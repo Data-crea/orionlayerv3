@@ -2,7 +2,7 @@
 #
 # Part of the OrionLayer smoke suite — 037_empire_identity_identity_letters_and_the_popup_n.py.
 # `tools/smoke_test.py` executes this file, and every other
-# module in tools/smoke_suite/ (92 of them), in file-name
+# module in tools/smoke_suite/ (93 of them), in file-name
 # order and in ONE namespace: these statements stood inside
 # main() and still bind the names the later ones read.
 #

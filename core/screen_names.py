@@ -50,7 +50,12 @@ SCREENS = {
     29: ("OFFICERS",        "leaders"),
     30: ("COLONIZATION_IN_MAIN", None),
     32: ("PLANET_SUMMARY",  "planets"),
-    36: ("TECH_CHANGE",     "research"),
+    #: 36 is the engine's own SCREEN_TECH_CHANGE, and the slug named
+    #: a folder that never existed: HD had select mode only, so
+    #: "research" resolved to nothing and 36 fell through to the
+    #: framebuffer. `screens/research_change/` is it, built by work
+    #: order 165 part B.
+    36: ("TECH_CHANGE",     "research_change"),
     39: ("REPORTS",         "reports"),
     40: ("TURN_SUMMARY",    "turn_summary"),
     #: 50 has no entry in the SCREEN enum — synthetic value used

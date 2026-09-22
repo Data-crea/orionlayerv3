@@ -2,7 +2,7 @@
 #
 # Part of the OrionLayer smoke suite — 076_galaxy_map_galaxy_map_parks_only_while_the.py.
 # `tools/smoke_test.py` executes this file, and every other
-# module in tools/smoke_suite/ (92 of them), in file-name
+# module in tools/smoke_suite/ (93 of them), in file-name
 # order and in ONE namespace: these statements stood inside
 # main() and still bind the names the later ones read.
 #
@@ -63,7 +63,7 @@ ok("galaxy map parks only while the game reports screen 0")
 # check asserting about an id nothing uses.
 from core import screen_names as _gm_scr_names
 _gm_res_ids = sorted(_i for _i, (_n, _slug) in _gm_scr_names.SCREENS.items()
-                     if _slug in ("research", "research_select"))
+                     if _slug in ("research_change", "research_select"))
 assert _gm_res_ids == [36, 53], (
     f"the research screen ids are {_gm_res_ids}, not [36, 53] — this "
     f"check is about the two lists whose field 9 is a choice row, and "

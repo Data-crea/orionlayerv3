@@ -2,7 +2,7 @@
 #
 # Part of the OrionLayer smoke suite — 063_galaxy_map_ship_tints_ship_0_7_are.py.
 # `tools/smoke_test.py` executes this file, and every other
-# module in tools/smoke_suite/ (92 of them), in file-name
+# module in tools/smoke_suite/ (93 of them), in file-name
 # order and in ONE namespace: these statements stood inside
 # main() and still bind the names the later ones read.
 #

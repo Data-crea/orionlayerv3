@@ -2,7 +2,7 @@
 #
 # Part of the OrionLayer smoke suite — 033_colony_summary_planet_paragraph_text_skin_and_planet.py.
 # `tools/smoke_test.py` executes this file, and every other
-# module in tools/smoke_suite/ (92 of them), in file-name
+# module in tools/smoke_suite/ (93 of them), in file-name
 # order and in ONE namespace: these statements stood inside
 # main() and still bind the names the later ones read.
 #
