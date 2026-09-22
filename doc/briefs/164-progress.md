@@ -146,3 +146,34 @@ two parts or in none, and rule text creeping back into the index — plus
 the 40 KB limit and the startup rule's two copies. It runs at **089**,
 before the whole-run bookkeeping at 091, so the documents' check count
 still counts everything.
+
+
+---
+
+## Acceptance
+
+| the order asks | result |
+|---|---|
+| concatenation identical to the original; the diff (or its absence) in the evidence folder | **identical** — `identity_proof.txt`: 199 974 bytes, 3 515 lines. There is no diff to store, which is the result |
+| every decision number present exactly once, and the same set as before | **yes** — 70 decisions, each in exactly one part, the set compared against the original's before the parts were written |
+| full suite green, fast tier green, on a fresh clone | **yes** — clone + `python tools/setup.py` green, full 249 in 56.2 s, fast 242 in 30.5 s (`fresh_clone.txt`) |
+| no part over 40 KB except listed exceptions | **no exceptions needed** — the largest part is 35.8 KB |
+| the startup rule reads the same in `CLAUDE.md` and the index | **yes**, and a check holds it there |
+| push | **Data's decision** |
+
+### Evidence
+
+| file | what it is |
+|---|---|
+| `v3_fundament.original.md` | the file as it was, 199 974 bytes — what the proof compares against |
+| `fundament_split.py` | the splitting script; `--verify` re-runs the proof at any time |
+| `identity_proof.txt` | its output |
+| `full_run_after.out` | the full suite after the split, 249 green |
+| `fresh_clone.txt` | the clone, `setup.py`, both tiers |
+
+### Commits
+
+| | |
+|---|---|
+| `a4fafc1` | the brief, the progress file, the parked file and their index row |
+| `3d08a71` | the cut, the adapted checks, the new check, the startup rule, the documents |
