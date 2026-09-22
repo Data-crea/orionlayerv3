@@ -170,6 +170,14 @@ _MARKED = {
     # printing (an HD EXTENSION, and the reason it is here at all).
     "screens/research_select/layout.json": "TECHSEL",
 
+    # ADDED 22 September 2026, work order 165 part B: the research
+    # panel's geometry became one module for both modes, and the ONE
+    # chosen rectangle on those screens — the title's strip, which the
+    # original paints into its TECHSEL art rather than printing — moved
+    # into it with everything else. Its own check is in the research
+    # screen's marking block.
+    "core/researchnative.py": "HD EXTENSION",
+
     # ADDED 19 September 2026, work order 134 C: the Fleets screen.
     # Its own check is the fleets markings block below — four
     # OMISSIONs and one HD EXTENSION, each in the module that

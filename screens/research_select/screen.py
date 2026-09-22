@@ -161,7 +161,8 @@ class ResearchSelectScreen(ScreenBase):
         for box in self.boxes:
             if box.name == "title":
                 box.style["label"] = self._data.get("title", "")
-        unseated = native.seat(self.boxes, self.layout)
+        unseated = native.seat(self.boxes, self.layout,
+                               native.BOX_NATIVE)
         assert not unseated, (
             f"{unseated} are in boxes.json and not in native.BOX_NATIVE. "
             f"A box this screen cannot seat draws at the origin and reads "
@@ -170,7 +171,7 @@ class ResearchSelectScreen(ScreenBase):
 
     def on_resize(self):
         super().on_resize()
-        native.seat(self.boxes, self.layout)
+        native.seat(self.boxes, self.layout, native.BOX_NATIVE)
 
     def update(self, game_state=None):
         """Rebuild the list from the state, and decide whether to draw it.

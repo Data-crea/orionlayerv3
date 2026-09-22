@@ -434,7 +434,17 @@ assert "cost_suffix" not in _rs_src["layout"], (
     "layout.json still carries a cost suffix. It is the GAME'S word "
     "now and comes off the wire; a second copy in OrionLayer's own "
     "wording file is the stale copy this project keeps paying for")
+# The chosen title rect. It is computed in `core/researchnative.py`
+# since work order 165 part B — one geometry for both modes — so the
+# marking is asserted THERE, where the number is, as well as in the
+# screen's own binding of it.
 assert "HD EXTENSION" in _rs_src["native"], "the chosen title rect"
+_rs_geo_src = open(os.path.join(os.path.dirname(SCREENS_DIR), "core",
+                                "researchnative.py"),
+                   encoding="utf-8").read()
+assert "HD EXTENSION" in _rs_geo_src and "title" in _rs_geo_src, (
+    "core/researchnative.py no longer marks the title rect as the one "
+    "chosen rectangle on the research screens")
 # And the screen has a help list of its own: three rectangles, ONE
 # id, all of them OUTSIDE the panel (billhelp.cpp:42-46).
 _rs_help = _sjson.load(open(os.path.join(
