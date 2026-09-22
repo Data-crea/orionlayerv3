@@ -602,11 +602,27 @@ park rather than let it hold up the rest.
 | `f8d259a` | part D: what the live run proved, and why its last item was parked |
 | — | **PUSHED here**, `57e3eda..f8d259a`, after the fresh-clone verification |
 | `100b320` | part D needs a load driver, so the Load dialog got one |
+| `6462bfb` | part D is closed: open fix 25's commit path covers change mode |
+| `2293ace` | part C: the description box, and the popup it found under the panel |
+| `49d9210` | part C: the category list popup, checked against the engine's own |
+| `ac5ce9a` | part E: the current field's second colour was wrong in three ways |
 
 ## What the next session does first
 
-Part E, if Data wants it — 131's parts A, B and C, which are live from
-end to end and now have a load driver to stand on. Part A's one
-remaining item (`hyper_advanced_tech` @640) needs a game that has
-reached a hyper-advanced field and is not reachable in any slot on this
-disk.
+**Nothing in this order that a session can reach on its own.** Parts A
+to D are done, part C is done, and what is left of part E is parked in
+`165-parked-for-data.md` §0c with the reading that makes each one
+unreachable rather than merely undone:
+
+* 131 part B and part C's live half need SELECT mode, and select mode
+  needs a real mouse in the orion2re window while open fix 26 is open;
+* the 128 crash case needs a list with an empty category, and neither
+  scratch save has one;
+* `hyper_advanced_tech` @640 needs a game that has reached a
+  hyper-advanced field;
+* open fix 26's own bounded attempt is unspent, and its deciding half
+  is Data's run.
+
+If Data hands over one of those states, the tools are in the tree:
+`tools/gameload.py` for the slot, `tools/research_change_hd.py` for
+change mode, `tools/research_hd.py` for select mode.

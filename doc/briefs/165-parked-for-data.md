@@ -6,10 +6,142 @@ nicht erledigen konnte.
 
 ---
 
-## 0. DER GANZE LIVE-TEIL IST BLOCKIERT — und zwar von dir
+## 0. DRITTE SITZUNG: DER PORT WAR FREI, UND ES IST FAST ALLES DURCH
 
-Als der Lauf anfing, liefen orion2re (PID 35367) **und dein eigener
-OrionLayer-Client** (PID 35712), seit 20:28 verbunden auf 17362.
+Du hast den Client geschlossen und den Push freigegeben. Was daraus
+geworden ist, steht in `165-progress.md`; hier stehen nur die
+**Entscheidungen** und das, was **geparkt** ist.
+
+**Alle elf `SAVE*.GAM` sind byte-identisch mit dem Stand vor dem Lauf**,
+SAVE10 und SAVE11 eingeschlossen. Es wurde nie gespeichert; die
+Scratch-Slots wurden ausschließlich GELESEN.
+
+**Was du geladen vorfindest: SAVE5 (Sternzeit 3509.1)**, weil dort der
+letzte Wechsel gemessen wurde. Dein eigenes Spiel stand bei Beginn auf
+Sternzeit 3500.3 mit 2 Spielern, 54 Sternen, 28 Koloniesätzen — und
+`SAVE10.GAM`, der Autosave, hält genau diese Sternzeit. Zurückholen:
+
+```bash
+cd ~/orionlayerv3 && python tools/gameload.py load 10
+```
+
+Ich habe das **nicht** selbst getan: das Protokoll nennt Slot 4 und 5,
+und das Laden jedes anderen Slots ist deine Entscheidung.
+
+**Die neuen Commits sind NICHT gepusht.** Deine Freigabe galt den zwölf
+Commits, die es beim Start gab (`57e3eda..f8d259a`, gepusht). Alles
+danach wartet auf dein Wort.
+
+---
+
+## 0b. DIE ENTSCHEIDUNGEN DIESER SITZUNG
+
+Jede mit dem, was ihre Umkehr kosten würde.
+
+### Teil C, Q1/Q10 — Umfang: **beide Popups, in beiden Modi** (Default)
+
+**Warum:** beide sind im Original reine Anzeige, beide hängen an
+derselben Klasse, und das Original hat für beide EINE Implementierung.
+**Umkehr:** eines von beiden wieder ausbauen — zwei Module und zwei
+Markierungen. **Kosten:** die Abnahme dieses Auftrags fiele weg.
+
+### Teil C, Q11 — der Radio-Index-Versatz: **HD öffnet die RICHTIGE Kategorie** (Default)
+
+**Warum:** das Original indiziert `entries[input - first_btn_field]`,
+während es Radios nur für nicht-leere Einträge gibt — es liest Daten,
+die nie gesetzt wurden. Eine Transkription davon machte HD genau in dem
+Fall falsch, in dem der Spieler es sieht.
+**Umkehr:** eine Zeile in `open_list_at`, plus die Markierung.
+**Kosten:** keine — beide Varianten sind eine Zeile.
+
+### Teil C — voller gegen verbleibende Kosten: **transkribiert** (Default)
+
+Verbleibend auf dem Eintrag, voll in der Beschreibung. Das ist die
+Absicht des Originals (§3), kein Fehler, und die Prüfung verlangt, dass
+die beiden Zahlen sich unterscheiden.
+
+### Teil C — die Beschreibungsbox liegt im GEMEINSAMEN Hilfe-Panel
+
+**Gewählt:** `core/helppopup.py` zeichnet sie, statt die 380 px breite
+Box des Originals an fester x-Position nachzubauen.
+**Warum:** dieselbe Sache — Titel und Körper eines Hilfe-Datensatzes —
+und das Panel gibt es schon, samt Umbruch, Scrollen und Schließen.
+**Umkehr:** eine eigene Box mit transkribierter Breite; die Höhe des
+Originals hängt an seinen Font-Metriken und ist nicht transkribierbar.
+**Kosten:** Markierung `description_box` müsste mitgehen.
+
+### Teil E — der Namensvergleich statt des Id-Vergleichs
+
+**Gewählt:** HD markiert die Zeile, deren NAME dem der laufenden
+Anwendung entspricht, case-insensitiv — wie `strcasecmp` im Original.
+**Warum:** es ist die Transkription. Bei eindeutigen Namen ist es
+derselbe Vergleich wie vorher; bei zwei gleichnamigen Anwendungen
+markiert das Original beide.
+**Umkehr:** eine Zeile. **Kosten:** keine.
+
+---
+
+## 0c. GEPARKT — und jedes mit einer GEMESSENEN Begründung
+
+### 1. Der Rest von Teil E (Work Order 131 B und C-live)
+
+**131 Teil C live:** die sechs „alle bekommen alles"-Felder sind die
+STARTFELDER, und beide Scratch-Saves haben alle sechs auf Status 3 —
+erforscht. Live gelesen: `29:3, 55:3, 22:3, 57:3, 28:3, 23:3`. Der Fall
+ist in SAVE4/SAVE5 **nicht erreichbar**; er braucht ein neues Spiel.
+
+**131 Teil B:** die dritte Auswahl im SELECT-Modus und dessen fehlende
+Auflösungen. Select Mode zu erreichen heißt: Zug beenden, dann den
+Abschlussdialog wegklicken — und genau diese Konfiguration ist Open Fix
+26. Dein Gegentest vom 19. September (echte Maus, kein Client) zeigt,
+dass die Liste wartet. **Die eine Variable, die Select Mode benutzbar
+macht, ist eine echte Maus im orion2re-Fenster**, und die hat eine
+unbeaufsichtigte Sitzung nicht.
+
+**Was du tun müsstest**, wenn du es willst: ein neues Spiel starten,
+den Abschlussdialog mit der echten Maus wegklicken, dann sagen — die
+Sitzung kann ab da mit `python tools/research_hd.py choose <entry> hd`
+weitermachen.
+
+### 2. Open Fix 26 — der eine zugestandene Versuch ist NICHT verbraucht
+
+Der Auftrag gibt ihm „einen begrenzten Versuch: die Trennung der
+Variablen und das Lesen des Injected-Click-Pfads". Die Trennung ist die
+Hälfte, die entscheidet, und der „verbunden und still"-Lauf braucht
+einen Abschlussdialog, der OHNE Client weggeklickt wird — was der
+Auftrag selbst als möglicherweise nicht werkzeugbar bezeichnet und dann
+dir zuweist. Er ist es. Ein Quellenlesen allein wäre eine Theorie ohne
+Messung dagegen, und die Regel des Auftrags ist dann: parken.
+
+**Nichts unter Open Fix 26 eingetragen**, weil nichts gelernt wurde,
+was dort nicht schon steht. Ein Eintrag, der nur wiederholt, was der
+vorige sagt, ist die Kopie, die veraltet.
+
+### 3. Der Absturzfall aus 128
+
+Braucht eine Liste mit einer LEEREN Kategorie. Change Mode bietet auf
+SAVE4 und SAVE5 alle acht an. `python tools/research_hd.py crash` sagt
+selbst, wenn der Fall nicht erreichbar ist.
+
+### 4. `hyper_advanced_tech` @640 — unverändert offen
+
+Acht Nullen in jedem erreichbaren Spiel. Der nächste Lauf in einer
+späten Partie schließt es in einer Minute ab. Das Listen-Popup behandelt
+es explizit: ohne zweite Quelle greift die Hyper-Auslassung **nicht**,
+das Feld bleibt in der Liste — eine Liste, die still eine Zeile zu kurz
+ist, ist der Fehler, den dieser Bildschirm schon einmal bezahlt hat.
+
+---
+
+## 0d. ERLEDIGT — der Live-Block der ersten Sitzung
+
+**Steht stehen, weil eine erledigte Feststellung sichtbar erledigt wird
+und nicht stillschweigend verschwindet** (dieselbe Regel wie §2 unten).
+Der Port ist seit der zweiten Sitzung frei; alles, was hier blockiert
+war, ist inzwischen gelaufen oder in §0c geparkt.
+
+Als der erste Lauf anfing, liefen orion2re (PID 35367) **und dein
+eigener OrionLayer-Client** (PID 35712), seit 20:28 verbunden auf 17362.
 
 Regel 8 des Standardblocks aus Work Order 126:
 
@@ -22,9 +154,8 @@ weg und von **Teil A die Hälfte**, weil die zweite Quelle jedes Offsets
 (Entscheidung 23, und die Q5-Regel dieses Auftrags wiederholt sie) ein
 Live-Lesen ist.
 
-**Was du tun musst, damit es weitergeht:** OrionLayer schließen (das
-Spiel kann laufen bleiben) und Bescheid sagen. Die exakten Kommandos
-für jeden geparkten Live-Schritt stehen unten.
+**Was zu tun war:** OrionLayer schließen. Getan. Die Kommandos in §4
+unten sind damit Geschichte — was davon noch offen ist, steht in §0c.
 
 ---
 
