@@ -2294,11 +2294,44 @@ files under `doc/` and are only summarised here.
 | | |
 |---|---|
 | Python | 32,960 lines across 111 modules — `find . -name '*.py'`, `__pycache__` excluded, the smoke test's 6,400 included. The previous figure here (21,642 across 94) was carried from an unstated method and could not be reproduced |
-| Smoke test | `python tools/smoke_test.py` — **251 checks**, headless, in `tools/smoke_suite/` since work order 162 (91 check modules, one group per screen plus a shared core; `tools/smoke_test.py` is the runner). **Two tiers since work order 158**: the bare command runs everything (~72 s here); `--fast` runs the commit gate's 244 (~32 s here). `--screen <name>` prints only that screen's sentences and the core's and is NEVER a gate. See "The gate has two tiers" below |
+| Smoke test | `python tools/smoke_test.py` — **254 checks**, headless, in `tools/smoke_suite/` since work order 162 (94 check modules, one group per screen plus a shared core; `tools/smoke_test.py` is the runner). **Two tiers since work order 158**: the bare command runs everything (~72 s here); `--fast` runs the commit gate's 247 (~32 s here). `--screen <name>` prints only that screen's sentences and the core's and is NEVER a gate. See "The gate has two tiers" below |
 | Assets | 170 MB (select_race 68, galaxy_map 51, shared 23, new_game 21, colony_summary 1) |
 | Screens in HD | 9 of ~20–22 (the GAME menu overlay, work order Stop 2, every dialog of the popup; colony summary draws list, sidebar, scan box and galaxy inset, and MOVES POPS — the first HD gesture that drives the game; planets, brief 101, lists, sorts, restricts and returns) |
 | Setup from clone | `python tools/setup.py` (deps via the system package manager) |
 | orion2re | required for live data, not for the smoke test |
+
+### Loading a save is a driver now — 22 September 2026, work order 165 D
+
+`tools/gameload.py`. The standing live protocol says scratch saves
+SAVE4/SAVE5 only, RELOADED, never continued, and nothing in the tree
+assembled that chain: `screens/game_menu/nodes.py` classified the dialog
+and named the slot rows, `tools/game_menu_hd.py` clicked the tenth row to
+demonstrate the GAME menu, and a run that needed a *named* slot had to
+park (work order 165 part D, first attempt).
+
+```bash
+python tools/gameload.py slots                 # the ten slots, loads nothing
+python tools/gameload.py load 4 work_order_165 # SAVE4.GAM, counter-checked
+```
+
+Every step is checked against the list read AT THAT MOMENT — the dialog
+by `nodes.classify`, the field by hotkey and type inside it, and the send
+through `tools/livesend.py`, which re-resolves index, type and native
+rect when the byte goes out. **Which save arrived** has four sources: the
+`.GAM` header on disk (description at 4..40, stardate int32 at 0x29,
+filedef.cpp:223-224), that slot's MSG_SAVE_SLOTS record, the row's own
+native rectangle from loadsave.cpp:263 beside its place in the sorted
+list — and, afterwards, the SNAPSHOT's stardate and player count, which
+is the only one of the four that is about the game rather than a file.
+
+**SAVE8 is refused in the first statement of `load_slot`**, before a
+field is read: it is the reference fixture, read and never played. The
+check hands that call `run=None`, so anything that touched the world
+first would raise the wrong exception and go red.
+
+Measured on this machine: all ten slots agree between file and dialog;
+`load 4` sent three ACTIVATE_FIELDs and landed on stardate 3509.0 with 5
+players where the game had been on 3500.3 with 2; SAVE1-9 identical.
 
 ### The fundament is an index — 22 September 2026, work order 164
 
@@ -2367,8 +2400,8 @@ blocks into a session and writing them out again. Three proofs:
 
 | | command | checks | on this tree |
 |---|---|---:|---:|
-| **Full** — the default, and the pre-push gate | `python tools/smoke_test.py` | 251 | ~72 s |
-| **Fast** — the pre-commit gate | `python tools/smoke_test.py --fast` | 244 | ~32 s |
+| **Full** — the default, and the pre-push gate | `python tools/smoke_test.py` | 254 | ~72 s |
+| **Fast** — the pre-commit gate | `python tools/smoke_test.py --fast` | 247 | ~32 s |
 | **Screen** — **never a gate** | `python tools/smoke_test.py --screen <name>` | all of them, ~a third printed | the tier's |
 
 **`--screen` narrows what a run PRINTS, not what it runs**, and the
