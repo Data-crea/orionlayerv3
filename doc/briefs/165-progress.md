@@ -10,6 +10,39 @@ Evidence root: `~/orionlayer-fixtures/evidence/work_order_165/`.
 
 ---
 
+## UPDATE, third session: PUSHED, and PART D IS CLOSED
+
+Data freed the port and released the push. In order:
+
+**The twelve commits of 165 are on GitHub**, `57e3eda..f8d259a`, after
+the fresh-clone verification the tree's rule asks for: clone,
+`python tools/setup.py`, full suite 251 green in 57 s, fast tier 244 in
+30 s, both hooks live off `core.hooksPath` (`fresh_clone_push.txt`).
+The push itself went through `tools/githooks/pre-push`, which ran the
+FULL suite again before git sent anything.
+
+**The load driver exists** — `tools/gameload.py`, the thing part D
+parked on. It is the chain the second session said was missing, and its
+own commit says what it checks against.
+
+**Part D's last item is done live**: three changes in three categories,
+every one read back off the wire as a PAIR, one of them by bare
+`ACTIVATE_FIELD`. **Open fix 25's commit path covers change mode.**
+
+SAVE1-9 byte-identical across everything below; SAVE10 and SAVE11
+unchanged too. Nothing was ever saved — the scratch slots were only
+ever READ.
+
+**What Data will find loaded:** SAVE5 (stardate 3509.1), because that is
+where the last change was measured. His own game was at stardate 3500.3
+with 2 players, 54 stars, 28 colony records when this session started,
+and `SAVE10.GAM` — the autosave — holds exactly that stardate.
+`python tools/gameload.py load 10` puts it back; this run did not do it
+on its own, because the protocol names slots 4 and 5 and a load of any
+other slot is Data's.
+
+---
+
 ## UPDATE, second session: the port was freed and PART A IS DONE
 
 Data closed his client. orion2re itself is still the same process
@@ -272,7 +305,7 @@ exist. An abstraction with one caller is a guess — *the third copy is
 the signal to extract*. Built now it would be shaped by select mode
 alone and reshaped when change mode arrived.
 
-## Part D — live acceptance — **THREE OF FIVE DONE LIVE, and it found two faults**
+## Part D — live acceptance — **DONE**, and it found three faults
 
 Run against Data's own game, read-only except for the two activations
 that open and leave change mode. **SAVE1-11 byte-identical to the
@@ -287,7 +320,7 @@ exactly as found.
 | the galaxy map does not park at 36 or 53 | **done offline**, `f172a09`, with a discriminating counter-test |
 | ESC and exit leave `current_research_field` and the application unchanged | **DONE LIVE.** Field 45, application 196, before and after. The exit button was found in the live list at `(269,452)-(360,470)` |
 | one field with research accumulated: the entry shows REMAINING | **DONE LIVE.** `research_accumulated` 175 on the wire, `cost_offset()` 175 in change mode and 0 in select mode, and every offered entry showed full − 175 — field 45 at 900 showing 725 RP |
-| three changes in three categories, read back off the wire | **NOT DONE** — see below |
+| three changes in three categories, read back off the wire | **DONE LIVE**, third session — see below |
 | HD beside the native frame at every resolution | **one resolution**, 1920x1080, in `D_change_mode/` |
 
 And the entry path itself: an HD click on the sidebar's research
@@ -322,7 +355,43 @@ and every lookup against the app table missed. The header route fixes
 the offset and the width — it does not promise the C type is the one a
 reader wants. `u8` now, with that sentence beside it.
 
-### Why item 1 is not done
+### Item 1, done: three changes, three categories, one of them bare
+
+`tools/research_change_hd.py run`, evidence in `D_run/`. Each change
+starts from a FRESHLY LOADED scratch slot, because three changes made
+one after another on one loaded game are three changes of which only
+the first started from a state anybody can reproduce.
+
+| | slot | how | entry / category | committed | the wire says | |
+|---|---|---|---|---|---|---|
+| 1 | SAVE4 | HD click at window 700,153 | entry 0, category 4 | field 21, application 25 | 21 / 25 | **MATCH** |
+| 2 | SAVE4 | bare `ACTIVATE_FIELD 4` | entry 1, category 2 | field 41, application 96 | 41 / 96 | **MATCH** |
+| 3 | SAVE5 | HD click at window 700,389 | entry 2, category 6 | field 2, application 106 | 2 / 106 | **MATCH** |
+
+Each one was `(60, 136)` before and the row's own pair after.
+
+**THIS IS THE PROOF THE ORDER ASKED FOR.** `doc/ext_tech_activate.patch`
+was measured in select mode (work order 130 B) and covers change mode by
+SOURCE READING — `_Tech_Select_(changing_tech)` is one function. Change 2
+is that reading measured: a bare activation with no click anywhere, and
+the row's field AND its application came back. Without the patch the
+commit branch reads the game's POINTER (`Get_Selected_Entry_`,
+tech.cpp:356) and an activation either commits whatever the pointer is
+over or dereferences null — open fix 23's SIGSEGV, seen live in 128 C.
+
+**Why the PAIR and not the field.** A category offers one field and
+several applications. The pointer explanation dies on the application:
+the pointer never moved in this run, and three different rows came back
+with three different application ids.
+
+**The reload is visible in the data, not only in the driver's word.**
+After change 1 the wire read field 21; at change 2's panel capture it
+read 60 again, which is SAVE4's own value. The fingerprint check says
+"unchanged" for the second and third loads of SAVE4 — stardate, players,
+stars and colonies do not move when research does — and the research
+field is what shows the slot came back.
+
+### Why item 1 was not done in the second session
 
 Three commits in three categories CHANGE the research, and the
 standing protocol is explicit: *scratch saves SAVE4/SAVE5 only,
@@ -363,10 +432,23 @@ go red. 249 -> 250 checks.
 |---|---|
 | `6ab5de7` | the brief, the progress file, the parked file, the index row — and the two findings that shaped the run |
 | `f172a09` | the one item of part D that does not need the port: the galaxy map does not park at 36 or 53 |
+| `ec6e0c4` | work order closed at the block, with the ground for the next run |
+| `06aca9a` | part A: three offsets get their second source, and the RP deviation goes |
+| `0bcef38` | part A written up, and part B's seam measured before it is cut |
+| `777a4de` | part B, the seam: the geometry is one module, two modes |
+| `02ce4b3` | part B: the panel is one class with two configurations |
+| `742a8e3` | part B: change mode exists — screen 36 is an HD screen |
+| `889f7dc` | part B: the galaxy map's research window opens change mode |
+| `29225db` | a check that asked a file list went green by absence, so it asks the class |
+| `1aa80b3` | part D found it: the research screen had been falling back since 142 B |
+| `f8d259a` | part D: what the live run proved, and why its last item was parked |
+| — | **PUSHED here**, `57e3eda..f8d259a`, after the fresh-clone verification |
+| `100b320` | part D needs a load driver, so the Load dialog got one |
 
 ## What the next session does first
 
-**Part A, live.** It is the smallest of the five, it unblocks the RP
-deviation and both promotions out of `unverified.py`, and until it is
-done change mode has nothing it may vouch for. The exact commands are
-in `165-parked-for-data.md` §4.
+Part E, if Data wants it — 131's parts A, B and C, which are live from
+end to end and now have a load driver to stand on. Part A's one
+remaining item (`hyper_advanced_tech` @640) needs a game that has
+reached a hyper-advanced field and is not reachable in any slot on this
+disk.
