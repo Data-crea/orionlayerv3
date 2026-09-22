@@ -171,9 +171,10 @@ count** — the list is meant to be uncomfortable to extend. Split
 rather than add to it, unless everything in the file is genuinely one
 thing. The smoke suite is exempt from that guideline and held to a
 stricter one: **no check module may pass 40 KB**, listed exceptions in
-the same document, checked by the suite itself. A check for a screen
-goes in that screen's own group — never in another screen's and never
-in the core.
+the same document, checked by the suite itself. A screen that outgrows
+the limit gets another module in its own group, split by topic; a new
+screen gets its own group; and a screen-specific check never goes into
+another screen's group or into the core.
 
 ---
 
