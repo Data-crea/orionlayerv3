@@ -115,7 +115,7 @@ in both directions.
 
 An exception is always the same thing: one section bigger than the
 limit on its own, and a section is one check's block, so splitting it
-would split a check. A SCREEN that outgrows the limit gets another
+would split a check. A screen that outgrows the limit gets another
 module in its own group, split by topic; a new screen gets its own
 group; and a screen-specific check never goes into another screen's
 group or into the core. The reason the limit is a setting and not a
