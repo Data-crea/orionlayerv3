@@ -130,13 +130,27 @@ class ScreenBase(HelpMixin):
         pass
 
     def render(self, surface):
-        """Draw the screen. Background first, then boxes, then frame."""
+        """Draw the screen. Background, boxes, frame, content, help."""
         self._render_background(surface)
         for box in self.boxes:
             box.render(surface, self.layout, self.style)
         if self.USE_FRAME:
             self._render_frame(surface)
+        self.render_content(surface)
         self.render_help(surface)
+
+    def render_content(self, surface):
+        """What the screen draws OVER its boxes. The base draws nothing.
+
+        **THE HELP POPUP HAS TO BE LAST**, and this hook is what makes
+        that true for a screen that draws content of its own. A screen
+        that calls `super().render(surface)` and then draws is drawing
+        over a popup that has already been painted — found on the two
+        research screens while work order 165 part C built the
+        description box, which is the same popup: right-click help
+        opened there and the panel's own text was painted across it.
+        """
+        return None
 
     def editor_note(self, box):
         """One line about `box` for the F5 editor's info bar, or None.

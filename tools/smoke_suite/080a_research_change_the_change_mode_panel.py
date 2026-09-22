@@ -142,12 +142,18 @@ _rc_src = open(os.path.join(SCREENS_DIR, "research_change", "screen.py"),
                encoding="utf-8").read()
 for _kind in ("OMISSION", "HD EXTENSION", "DEVIATION"):
     assert _kind in _rc_src, _kind
-for _absent in ("_Tech_List_", "Draw_Application_Description_",
-                "Draw_Little_Arrow_"):
+for _absent in ("_Tech_List_", "Draw_Little_Arrow_"):
     assert _absent in _rc_src, (
         f"{_absent} is no longer named in the omission list — either "
         f"it was built and the marking must go, or the marking was "
         f"dropped and the omission is now invisible")
+# The description box is BUILT (work order 165 part C) and marked as a
+# DEVIATION, so it is named for a different reason: what deviates is
+# the box, not the behaviour. Both modes take it from the same class,
+# and both must say so.
+assert _rcs.MARKED["description_box"] == "DEVIATION" == \
+    _rss2.MARKED["description_box"]
+assert "Draw_Application_Description_" in _rc_src
 # …and it must not MARK the science room, while still saying why it
 # does not. An omission of something the original does not draw here
 # would be a marking with no subject; a file that simply never

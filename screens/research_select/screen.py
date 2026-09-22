@@ -57,10 +57,14 @@ disappear (decision 61):
                 extracted
   OMISSION      the category list popup (`_Tech_List_`, tech.cpp:781+),
                 which is display-only and out of scope for this build
-  OMISSION      the description box a right click inside the panel
-                opens (tech.cpp:323-337, `Draw_Application_Description_`)
-                — so a right click inside the panel does NOTHING here
-                rather than something else
+  DEVIATION     the description box a right click over a row opens
+                (tech.cpp:323-337, `Draw_Application_Description_`) is
+                BUILT, work order 165 part C, and drawn in the shared
+                help panel: same trigger, same single help record, same
+                full cost on the end. The original's own box is 380 px
+                wide at a fixed x (textbox.cpp:40-88) and centres that
+                last line; the shared panel sizes itself to its text
+                and does not centre
   OMISSION      the little arrow and the cycling selection box
                 (`Draw_Little_Arrow_`, tech.cpp:740)
   HD EXTENSION  the title: the original's headline is part of the
@@ -81,7 +85,7 @@ from core.researchscreen import (            # noqa: F401  (re-exported)
 MARKED = {
     "science_room_animation": "OMISSION",
     "category_list_popup": "OMISSION",
-    "description_box": "OMISSION",
+    "description_box": "DEVIATION",
     "little_arrow": "OMISSION",
     "title": "HD EXTENSION",
     "category_label_as_text": "DEVIATION",

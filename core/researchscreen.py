@@ -279,8 +279,15 @@ class ResearchPanelScreen(ScreenBase):
 
     # ── Rendering ─────────────────────────────────────────
 
-    def render(self, surface):
-        super().render(surface)
+    def render_content(self, surface):
+        """The eight entries, over the boxes and UNDER the help popup.
+
+        `ScreenBase.render` ends with `render_help`, so a screen that
+        drew after calling it painted over its own popup — which these
+        two screens did until work order 165 part C, and which nobody
+        saw because the only popup they had was right-click help on a
+        strip the panel does not cover at every resolution.
+        """
         if self._state != READY:
             return
         words = {
@@ -454,15 +461,95 @@ class ResearchPanelScreen(ScreenBase):
         return None
 
     def handle_right_button(self, down, screen_x, screen_y):
-        """Help outside the panel; NOTHING inside it.
+        """Help outside the panel; the DESCRIPTION over a row inside it.
 
-        Inside the panel the original opens the description box for the
-        choice under the pointer (tech.cpp:323-337). That box is not
-        built, and decision 61 is explicit that a behaviour HD cannot
-        reproduce is not approximated: HD does nothing there rather
-        than guess. Outside, help id 254 works as on every screen.
+        The original's own order, and it is the order of two different
+        mechanisms rather than a preference: a right button first walks
+        the screen's help list (`Check_Help_List_`, fields.cpp:2916) and
+        a hit swallows the click; only a right click that reaches the
+        FIELD system comes back negative, and `_Tech_Select_` negates it
+        and resolves it through `Set_Selected_Entry_` (tech.cpp:323-337).
+
+        `Set_Selected_Entry_` matches `app_click_field_ids` and nothing
+        else (tech.cpp:468-487), so it is the ROWS that answer a right
+        click. An entry BLOCK, the whole-screen field and the panel's
+        empty space match nothing and open nothing — which is why this
+        returns False for them rather than finding something near by.
         """
-        return super().handle_right_button(down, screen_x, screen_y)
+        if not down:
+            return super().handle_right_button(down, screen_x, screen_y)
+        if self.help.visible:
+            self.help.close()
+            return True
+        if self.open_help_at(screen_x, screen_y):
+            return True
+        return self.open_description_at(screen_x, screen_y)
+
+    def open_description_at(self, screen_x, screen_y):
+        """The description box for the row under a point. True if one opened.
+
+        `app_id != 0` is the original's own guard (tech.cpp:337): the
+        placeholder row IS a row and can be committed, and it has no
+        application to describe.
+        """
+        hit = self.row_at(screen_x, screen_y)
+        if hit is None:
+            return False
+        entry = self._entries[hit[0]]
+        app = entry.apps[hit[1]]
+        if not app:
+            return False
+        text = self.description(entry, app)
+        if text is None:
+            return False
+        self.help.open(app, *text)
+        return True
+
+    def description(self, entry, app):
+        """(title, body) for one application, as the original builds it.
+
+        `Draw_Application_Description_` (tech.cpp:786-845) loads ONE
+        help record — `Far_Reload_Data_(help_lbx, 0, buf, app_idx, 1,
+        ...)`, no chain walk — and appends a line of its own:
+        billtext 61, the cost, and the language's unit.
+
+        **THE COST IS THE FULL ONE, in both modes.** The entry shows
+        what is left in change mode (`research_accumulated` subtracted,
+        tech.cpp:203); this shows `New_Get_Tech_Cost_(app, 1, player)`
+        (:802), which subtracts nothing. The original's design and not
+        a bug — `doc/tech_change_reading.md` §3 — so it is transcribed
+        and `cost_offset()` is deliberately not used here.
+
+        **AND THE FIELD IS THE ENTRY'S.** `New_Get_Tech_Cost_` looks the
+        application's field up in `_technology_applications[app]
+        .tech_field_id`; the entry's rows came out of
+        `_technology_fields[entry.field].tech[]` in the first place
+        (tech.cpp:537-586), so the two are the same field and a second
+        app->field table here would be a copy that can disagree.
+
+        **Q9 IS SETTLED** (work order 165 part C): no help record in
+        0..211 chains — every one of the 212 in `help_en.json` reports
+        `pages == 1` — so the extractor's chain walk has nothing to
+        join in this range and the file already holds exactly the one
+        record tech.cpp reads. No second extraction is needed.
+        """
+        record = self.helptext.entry(app)
+        if record is None:
+            record = self.helptext.missing_entry(app)
+        if record is None:
+            return None
+        title, body = record
+        # The original writes body, `\r`, then the cost line
+        # (tech.cpp:833-839). `\r` is FMTPARA's line break and
+        # `core/helpformat.py` honours it. The `\aY+3.` and the
+        # justify/centre codes around it are layout that renderer drops
+        # — it acts on X and T only, and says so — so they are not
+        # written here rather than written and dropped.
+        cost = research.cost(entry.field)
+        label = (self._wording.message(billtext.MSG_RESEARCH_COST)
+                 if self._wording else "") or ""
+        line = f"{label}{cost}{self._cost_suffix}"
+        return (title, f"{body}\r{line}" if body else line)
 
     # ── What the screen says when it cannot draw ──────────
 

@@ -2294,11 +2294,58 @@ files under `doc/` and are only summarised here.
 | | |
 |---|---|
 | Python | 32,960 lines across 111 modules — `find . -name '*.py'`, `__pycache__` excluded, the smoke test's 6,400 included. The previous figure here (21,642 across 94) was carried from an unstated method and could not be reproduced |
-| Smoke test | `python tools/smoke_test.py` — **256 checks**, headless, in `tools/smoke_suite/` since work order 162 (95 check modules, one group per screen plus a shared core; `tools/smoke_test.py` is the runner). **Two tiers since work order 158**: the bare command runs everything (~72 s here); `--fast` runs the commit gate's 249 (~32 s here). `--screen <name>` prints only that screen's sentences and the core's and is NEVER a gate. See "The gate has two tiers" below |
+| Smoke test | `python tools/smoke_test.py` — **258 checks**, headless, in `tools/smoke_suite/` since work order 162 (96 check modules, one group per screen plus a shared core; `tools/smoke_test.py` is the runner). **Two tiers since work order 158**: the bare command runs everything (~72 s here); `--fast` runs the commit gate's 251 (~32 s here). `--screen <name>` prints only that screen's sentences and the core's and is NEVER a gate. See "The gate has two tiers" below |
 | Assets | 170 MB (select_race 68, galaxy_map 51, shared 23, new_game 21, colony_summary 1) |
 | Screens in HD | 9 of ~20–22 (the GAME menu overlay, work order Stop 2, every dialog of the popup; colony summary draws list, sidebar, scan box and galaxy inset, and MOVES POPS — the first HD gesture that drives the game; planets, brief 101, lists, sorts, restricts and returns) |
 | Setup from clone | `python tools/setup.py` (deps via the system package manager) |
 | orion2re | required for live data, not for the smoke test |
+
+### The research description box, and a popup that was drawn under the panel — 22 September 2026, work order 165 C
+
+**The description box is built**, in `core/researchscreen.py`, so both
+research modes have it from one place. A right click over a row opens
+the help record for THAT row's application — one record, no chain walk,
+which is what `Draw_Application_Description_` reads (tech.cpp:786-845) —
+with billtext 61, the cost and the language's unit on the end.
+
+**Q9 is settled and needed no extractor.** The order said: show the
+single record tech.cpp reads, and if `help_en.json` holds chained text
+for a technology, extract the single record instead. It does not —
+every one of the 212 records in 0..211 reports `pages == 1`, so the
+chain walk in `tools/help_extract.py` has nothing to join in that range
+and the file already holds exactly what the original shows.
+
+**The cost there is the FULL one**, where the entry beside it shows what
+is left in change mode. The original's design, not a bug
+(`doc/tech_change_reading.md` §3), and the check asserts the two numbers
+differ so it cannot be measuring one of them twice.
+
+**And it opens over a ROW and nowhere else.** `Set_Selected_Entry_`
+matches `app_click_field_ids` and nothing else (tech.cpp:468-487), so an
+entry block, the whole-screen field and the panel's empty space open
+nothing; the placeholder row's app id is 0 and `app_id != 0` guards the
+call (:337).
+
+**THE DEFECT IT FOUND: the help popup was drawn UNDER the panel.**
+`ScreenBase.render` ends with `render_help`, and both research screens
+drew their entries after calling it — so right-click help on those two
+screens was painted and then covered by the panel's own text. Nobody had
+seen it because the popup was the only one they had. `ScreenBase` has a
+`render_content` hook now, called between the boxes and the help, and
+the research panel draws there.
+
+The check for it renders FOUR frames — baseline, panel only, popup only,
+both — because two were not enough: the panel's text is blitted with
+alpha, so it looks different over the popup's fill whichever order the
+two go in, and a test that only asked "did these pixels change" passed
+with the order swapped. Where the panel and the popup overlap, the frame
+with both must BE the popup's: 0 of 185 pixels wrong as built, 185 of
+185 with the order swapped (`description_popup_order_red.txt`).
+
+The `description_box` marking moved from OMISSION to DEVIATION on both
+screens: what deviates now is the BOX — the original's is 380 px wide at
+a fixed x (textbox.cpp:40-88) and centres its last line, the shared help
+panel sizes itself to its text and does not centre.
 
 ### Loading a save is a driver now — 22 September 2026, work order 165 D
 
@@ -2400,8 +2447,8 @@ blocks into a session and writing them out again. Three proofs:
 
 | | command | checks | on this tree |
 |---|---|---:|---:|
-| **Full** — the default, and the pre-push gate | `python tools/smoke_test.py` | 256 | ~72 s |
-| **Fast** — the pre-commit gate | `python tools/smoke_test.py --fast` | 249 | ~32 s |
+| **Full** — the default, and the pre-push gate | `python tools/smoke_test.py` | 258 | ~72 s |
+| **Fast** — the pre-commit gate | `python tools/smoke_test.py --fast` | 251 | ~32 s |
 | **Screen** — **never a gate** | `python tools/smoke_test.py --screen <name>` | all of them, ~a third printed | the tier's |
 
 **`--screen` narrows what a run PRINTS, not what it runs**, and the

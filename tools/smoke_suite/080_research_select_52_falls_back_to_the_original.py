@@ -408,14 +408,22 @@ assert set(_rss.MARKED) == {
     sorted(_rss.MARKED)
 for _kind in ("OMISSION", "HD EXTENSION", "DEVIATION"):
     assert _kind in _rs_src["screen"], _kind
-assert sum(1 for _v in _rss.MARKED.values() if _v == "OMISSION") == 4
-# The four omissions are things the screen must NOT have built.
-for _absent in ("SR_R", "_Tech_List_", "Draw_Application_Description_",
-                "Draw_Little_Arrow_"):
+# THREE OMISSIONS since work order 165 part C: the description box is
+# BUILT now and its marking moved to DEVIATION, because what is left of
+# it is a different BOX and not an absent behaviour. The count is
+# asserted so the move cannot be repeated by accident.
+assert sum(1 for _v in _rss.MARKED.values() if _v == "OMISSION") == 3
+assert _rss.MARKED["description_box"] == "DEVIATION"
+# The three omissions are things the screen must NOT have built…
+for _absent in ("SR_R", "_Tech_List_", "Draw_Little_Arrow_"):
     assert _absent in _rs_src["screen"], (
         f"{_absent} is no longer named in the omission list — either "
         f"it was built and the marking must go, or the marking was "
         f"dropped and the omission is now invisible")
+# …and the description box is named too, under its own label, because
+# a marking whose subject is unnamed cannot be checked against the
+# source at all.
+assert "Draw_Application_Description_" in _rs_src["screen"]
 # The three deviations each live where they are done.
 # The squeeze/shrink DEVIATION is done in `core/researchpanel.py` for
 # both modes since work order 165 part B, so it is asserted there as
