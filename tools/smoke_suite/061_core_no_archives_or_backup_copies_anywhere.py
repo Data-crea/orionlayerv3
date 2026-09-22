@@ -2,7 +2,7 @@
 #
 # Part of the OrionLayer smoke suite — 061_core_no_archives_or_backup_copies_anywhere.py.
 # `tools/smoke_test.py` executes this file, and every other
-# module in tools/smoke_suite/ (90 of them), in file-name
+# module in tools/smoke_suite/ (91 of them), in file-name
 # order and in ONE namespace: these statements stood inside
 # main() and still bind the names the later ones read.
 #

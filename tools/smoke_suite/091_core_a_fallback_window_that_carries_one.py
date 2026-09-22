@@ -1,10 +1,15 @@
 # smoke-suite area: core
 #
-# Part of the OrionLayer smoke suite — 089_core_a_fallback_window_that_carries_one.py.
+# Part of the OrionLayer smoke suite — 091_core_a_fallback_window_that_carries_one.py.
 # `tools/smoke_test.py` executes this file, and every other
-# module in tools/smoke_suite/ (90 of them), in file-name
+# module in tools/smoke_suite/ (91 of them), in file-name
 # order and in ONE namespace: these statements stood inside
 # main() and still bind the names the later ones read.
+#
+# Renumbered 089 -> 091 when work order 162 part 5 added the suite's
+# own size check: this module carries the two whole-run assertions —
+# the push-only guards and the documents' check count — and they can
+# only count what ran BEFORE them.
 #
 # Work order 162 moved them here by script, dedented and
 # otherwise unchanged. Do not import this file; it is not a

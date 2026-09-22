@@ -2,7 +2,7 @@
 #
 # Part of the OrionLayer smoke suite — 029_empire_identity_pop_identity_9_native_verified_by.py.
 # `tools/smoke_test.py` executes this file, and every other
-# module in tools/smoke_suite/ (90 of them), in file-name
+# module in tools/smoke_suite/ (91 of them), in file-name
 # order and in ONE namespace: these statements stood inside
 # main() and still bind the names the later ones read.
 #

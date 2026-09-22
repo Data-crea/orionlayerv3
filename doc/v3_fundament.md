@@ -98,6 +98,29 @@ document is built on, and the entries it produces crowd out the ones
 that are real. `tools/linecount.py` is the measure, and the smoke test
 holds the list to it.
 
+**THE SMOKE SUITE IS EXEMPT FROM THE LINE GUIDELINE AND HELD TO A
+STRICTER ONE — 22 September 2026, work order 162.** `tools/
+smoke_test.py` was 22 221 lines and 1.2 MB, almost all of it inside
+one `main()`, and it was exempt "by nature" the whole time. It is now
+`tools/smoke_test.py`, the runner, plus 91 check modules in
+`tools/smoke_suite/`, one group per screen and a shared core. The
+exemption did not widen — it is the same file in pieces — and what
+replaces it for the pieces is a SIZE, not a line count: **no check
+module may pass 40 KB**, half of work order 127's reading budget, so a
+screen's own checks and the core they lean on both fit in what a
+session may read of one thing. `tools/smoke_test.CHECK_MODULE_LIMIT`
+is the setting, the exceptions are listed in `v3_projektstatus.md`
+with their reason, and a check in the core holds the list to the files
+in both directions.
+
+An exception is always the same thing: one section bigger than the
+limit on its own, and a section is one check's block, so splitting it
+would split a check. A SCREEN that outgrows the limit gets another
+module in its own group, split by topic; a new screen gets its own
+group; and a screen-specific check never goes into another screen's
+group or into the core. The reason the limit is a setting and not a
+measurement is that it decides only how often a group gains a module.
+
 **7. Screens are auto-discovered** in `screens/` and
 `mods/*/screens/`, and **self-describe via `GAME_SCREEN_ID`**. There
 is no central registry to forget to update.
@@ -1845,6 +1868,46 @@ copy this project keeps paying for.
   157: the four faults where a check read the player's own files passed
   on the author's machine and failed in a clone, every time, and none
   was caught by the suite in any tier.
+
+**Extended 22 September 2026, work order 162: the suite is a
+directory, and there is a third way to run it that is NOT a gate.**
+The two gates are untouched — the numbers only moved because the
+machine and the suite did. What changed is where the checks live and
+what a development run prints.
+
+- **`python tools/smoke_test.py` is still the full suite** and still
+  the default, and `tools/smoke_test.py` is still the path. The checks
+  are in `tools/smoke_suite/` now, 91 modules, one group per screen
+  plus a shared core, executed in file-name order into ONE namespace —
+  which is what `main()` did with its locals, and changing it would
+  have been a rewrite rather than a move.
+- **The working rule for a session.** *During screen work iterate with
+  `--screen <name>`; before every handoff run the full suite; the push
+  gate stays mechanical.* That sentence is in `CLAUDE.md` in the same
+  words, deliberately, because it is the habit a session forms on its
+  first day and `CLAUDE.md` is what a session reads first.
+- **`--screen <name>` narrows what a run PRINTS, never what it runs**,
+  and says `SCREEN <name> ONLY — NOT A GATE` on its first and last
+  line. It was going to skip the other screens' checks, and the
+  measurement said no: this suite's checks share their fixtures
+  through objects — `d.active`, an app, a laid-out screen — filled by
+  method calls no name analysis can see, so one screen's dependency
+  closure is 87 % of the suite under a practical rule and 96 % under
+  the only sound one, and a narrowed run died on the galaxy map's own
+  screen object. 157 had refused this shape once already, for its
+  caching idea: *a check that inherits another check's app is a new
+  class of fault this project has not had yet.*
+- **The selector widens itself.** Before it narrows the output it asks
+  git what has changed against HEAD — index, working tree and
+  untracked alike — and if anything outside `screens/<name>/` and that
+  screen's own check modules has changed it runs the FAST TIER with
+  its full output and names the files that caused it. A screen's
+  territory is one computed function, so a new screen needs no edit.
+- **What it is worth, measured rather than claimed:** a `--screen`
+  run prints about a third of the sentences a full one does, and that
+  is the whole of the saving — the wall-clock time is the tier's. The
+  reading is where the split pays: a check for one screen is now in
+  that screen's own file, not somewhere inside 1.2 MB.
 
 ---
 

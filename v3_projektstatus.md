@@ -2294,11 +2294,58 @@ files under `doc/` and are only summarised here.
 | | |
 |---|---|
 | Python | 32,960 lines across 111 modules — `find . -name '*.py'`, `__pycache__` excluded, the smoke test's 6,400 included. The previous figure here (21,642 across 94) was carried from an unstated method and could not be reproduced |
-| Smoke test | `python tools/smoke_test.py` — **247 checks**, headless. **Two tiers since work order 158**: the bare command runs everything (~80 s here, ~64 s in a clone); `--fast` runs the commit gate's 240 (~39 s here, ~37 s in a clone). See "The gate has two tiers" below |
+| Smoke test | `python tools/smoke_test.py` — **248 checks**, headless, in `tools/smoke_suite/` since work order 162 (91 check modules, one group per screen plus a shared core; `tools/smoke_test.py` is the runner). **Two tiers since work order 158**: the bare command runs everything (~72 s here); `--fast` runs the commit gate's 241 (~32 s here). `--screen <name>` prints only that screen's sentences and the core's and is NEVER a gate. See "The gate has two tiers" below |
 | Assets | 170 MB (select_race 68, galaxy_map 51, shared 23, new_game 21, colony_summary 1) |
 | Screens in HD | 9 of ~20–22 (the GAME menu overlay, work order Stop 2, every dialog of the popup; colony summary draws list, sidebar, scan box and galaxy inset, and MOVES POPS — the first HD gesture that drives the game; planets, brief 101, lists, sorts, restricts and returns) |
 | Setup from clone | `python tools/setup.py` (deps via the system package manager) |
 | orion2re | required for live data, not for the smoke test |
+
+### The suite is a directory — 22 September 2026, work order 162
+
+`tools/smoke_test.py` was 22 221 lines and 1 172 833 bytes, almost all
+of it inside one `main()`: several times any context window, fifteen
+times work order 127's 80 KB reading budget, and getting worse with
+every screen. It is the **runner** now, 557 lines, and the checks are
+**91 modules in `tools/smoke_suite/`** — one group per screen plus a
+shared core, executed in file-name order into ONE namespace, which is
+what `main()` did with its locals.
+
+**Nothing was lost, and that is a measurement.** The cut was made by a
+script (`evidence/work_order_162/smoke_cut.py`), never by reading
+blocks into a session and writing them out again. Three proofs:
+
+| | |
+|---|---|
+| **AST** | the modules' statements, concatenated in order, dump identically to `main()`'s 4 020 top-level statements — asserted before a single file was written |
+| **output** | the normalised ordered `ok(...)` list of a full run is identical to the baseline taken before the cut; so are 247 full, 240 fast and the 7 push-only |
+| **time** | full 71.7 s before and after; fast 31.9 s before, 31.8 s after |
+
+| | command | checks | on this tree |
+|---|---|---:|---:|
+| **Full** — the default, and the pre-push gate | `python tools/smoke_test.py` | 248 | ~72 s |
+| **Fast** — the pre-commit gate | `python tools/smoke_test.py --fast` | 241 | ~32 s |
+| **Screen** — **never a gate** | `python tools/smoke_test.py --screen <name>` | all of them, ~a third printed | the tier's |
+
+**`--screen` narrows what a run PRINTS, not what it runs**, and the
+reason is worth keeping: it was meant to skip the other screens'
+checks, and the dependency closure says it cannot. The checks share
+their fixtures through objects — `d.active`, an app, a laid-out screen
+— that earlier checks fill by method calls no name analysis can see.
+One screen's closure is **87 %** of the suite under a practical rule
+and **96 %** under the only sound one, and a narrowed run died on the
+galaxy map's own screen object. 157 had already refused this shape for
+its caching idea: *a check that inherits another check's app is a new
+class of fault this project has not had yet.* The selector also widens
+itself — anything changed against HEAD outside `screens/<name>/` and
+that screen's own modules turns the run into the fast tier with its
+full output, naming the files.
+
+**The size rule that keeps it from growing back** is decision 6's
+shape one level up: no check module may pass 40 KB
+(`smoke_test.CHECK_MODULE_LIMIT`), the five exceptions are listed above
+with the reason, and the suite holds the list to the files in both
+directions — along with every module declaring its group, and none of
+them rebinding a name the runner owns.
 
 ### The gate has two tiers — 21 September 2026, work order 158
 
@@ -2698,7 +2745,23 @@ check asserts this list still agrees with it — the same trade the
 check count makes, for the same reason.
 
 `tools/struct_probe.py` (**478** code, 753 total), `screens/galaxy_map/screen.py` (**456** code, 776 total), `tools/colony_list_preview.py` (**403** code, 772 total), `screens/custom_race/screen.py` (**400** code, 558 total), `tools/colony_move_hd.py` (**385** code, 586 total), `core/editor/editor.py` (**359** code, 430 total), `screens/galaxy_map/renderer.py` (**336** code, 758 total), `tools/ext_diag.py` (**325** code, 473 total), `core/style.py` (**310** code, 479 total), `main.py` (**323** code, 549 total — over since work order 142 C added the debug input switch; 146 added the F8 surface screenshot, a TOOL for live acceptance on a display that renders but cannot be captured).
-`smoke_test.py` is exempt by nature.
+`smoke_test.py` is exempt by nature, **and since 22 September 2026 so
+is `tools/smoke_suite/`** — work order 162 split that one `main()` into
+ninety-one check modules, and they are the same file in pieces. They are
+held to something stricter in its place, below.
+
+---
+
+**Check modules over 40 KB, knowingly** — work order 162 part 5. No
+module in `tools/smoke_suite/` may pass half of work order 127's 80 KB
+reading budget, and `tools/smoke_test.CHECK_MODULE_LIMIT` is the
+setting. A module over it is always the same thing: **ONE section that
+is bigger than the limit on its own**, and a section is one check's
+block, so splitting it would split a check. The sizes below come from
+the files and a smoke check asserts this list against them in both
+directions.
+
+`011_galaxy_map_galaxy_map_stand_in_exactly_amoeba.py` (**51** KB — the galaxy map stand-in: exactly amoeba and antaran reach the player-ship fallback, thirteen `ok()` calls inside one block), `013_colony_summary_colony_summary_sort_keys_seven_five.py` (**45** KB — the seven sort keys at every resolution), `031_core_figures_sit_on_the_plate_s.py` (**44** KB — figures on the plate's inner floor, four resolutions and every band, measured out of the render), `059_core_ship_weapons_end_at_the_first.py` (**43** KB — the monster and ship-part block, nineteen `ok()` calls in one run of statements), `061_core_no_archives_or_backup_copies_anywhere.py` (**40** KB — the tree-sweep block: archives, the briefs index, the decision numbers and the exceptions list).
 
 **TWO TOOLS JOINED THE LIST ON 8 SEPTEMBER 2026 and one thing left
 them both.** `colony_list_preview.py` (345 -> 410) gained `--hold`,

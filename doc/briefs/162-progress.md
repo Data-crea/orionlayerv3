@@ -260,4 +260,52 @@ again on the last. The territory is one function, `territory()`, and
 it is computed: a screen owns `screens/<name>/` and its own check
 modules, so a new screen needs no edit.
 
-## Part 5 — the size limit — *not started*
+## Part 5 — the size limit — **DONE**
+
+`tools/smoke_suite/090_core_the_suite_holds_itself_to_a_size.py`, the
+**one check this work order added** (247 -> 248, so `CLAUDE.md` and the
+Snapshot table moved with it). It asserts three things, each the shape
+of a fault the split would otherwise re-acquire:
+
+1. **every module declares its group** (`# smoke-suite area: <name>`,
+   its first line) and the group is a real screen folder or the core.
+   A group that is a typo is a module every `--screen` run silently
+   leaves out of its output.
+2. **no module passes `CHECK_MODULE_LIMIT`, 40 KB**, unless
+   `v3_projektstatus.md` lists it at that size — both directions, the
+   decision-6 shape, because a hand-kept list is legitimate only with
+   a checker. Five exceptions today, every one the same thing: a
+   single section bigger than the limit, and a section is one check's
+   block.
+3. **no module rebinds a name `tools/smoke_test.py` owns at module
+   level.** The modules are executed INTO the runner's namespace, so a
+   bare `_why` there is a name 91 files can replace — and one of them
+   did, which cost the `--screen` widening line its second printing
+   before this check existed. 47 names, no collisions.
+
+**Red and green, in a throwaway change** (`size_limit_red.txt`): 600
+padding lines on `002_core_screen_lifecycles…py` took it to 41 633
+bytes and the run went red naming the file and the limit; the file was
+restored, the caches cleared, and the next run was green. The check is
+in the **core**, so it runs in the fast tier — the tier a commit goes
+through, which is the tier that has to notice.
+
+It runs at **090**, before the two whole-run assertions: the documents'
+check count can only count what ran before it, so
+`089_core_a_fallback_window…py` was renumbered to **091**. Nothing
+moved relative to anything else; a new check was inserted in front of
+the last moved module.
+
+## Documentation
+
+| where | what it now says |
+|---|---|
+| `CLAUDE.md`, "Non-negotiable habits" | the three commands, and the working rule in the same words as decision 31 |
+| `CLAUDE.md`, "Layout of the tree" | `tools/smoke_suite/` and what it holds |
+| `CLAUDE.md`, "Files over 300 lines" | the suite is exempt from the line guideline and held to 40 KB per module; a screen's check goes in that screen's group |
+| `doc/v3_fundament.md`, decision **6** | the exemption did not widen — the same file in pieces — and what replaces it is a SIZE, with the rule for a screen that outgrows it |
+| `doc/v3_fundament.md`, decision **31** | extended, not reversed: the suite is a directory, `--screen` is not a gate and why, the selector widens itself, and the working rule |
+| `v3_projektstatus.md`, Snapshot | 248 checks, the three commands, `--screen` is never a gate |
+| `v3_projektstatus.md`, new section "The suite is a directory" | the three proofs, the measured closure, the size rule |
+| `v3_projektstatus.md`, exceptions | the five modules over 40 KB, with their sizes and the one reason |
+| `doc/redundancy_audit.md` | sixteen `smoke_test.py:<line>` citations repointed to their module |

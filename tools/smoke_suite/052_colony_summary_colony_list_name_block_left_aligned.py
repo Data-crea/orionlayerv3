@@ -2,7 +2,7 @@
 #
 # Part of the OrionLayer smoke suite — 052_colony_summary_colony_list_name_block_left_aligned.py.
 # `tools/smoke_test.py` executes this file, and every other
-# module in tools/smoke_suite/ (90 of them), in file-name
+# module in tools/smoke_suite/ (91 of them), in file-name
 # order and in ONE namespace: these statements stood inside
 # main() and still bind the names the later ones read.
 #

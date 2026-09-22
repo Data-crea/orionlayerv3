@@ -352,6 +352,20 @@ def suite_source():
     return "\n".join(out)
 
 
+#: HALF THE READING BUDGET, PER CHECK MODULE — work order 162 part 5.
+#: Work order 127 set 80 KB as what a session may read of one thing;
+#: a check module gets half of it, so a screen's checks and the core
+#: they lean on both fit. **This is a SETTING, not a measurement**,
+#: and Data may change it — the number decides how often a screen's
+#: group gains another module, and nothing else.
+#:
+#: The check that holds the suite to it is in `tools/smoke_suite/`,
+#: in the core, with its exceptions listed in `v3_projektstatus.md`
+#: the way decision 6 lists a file over 300 code lines. An exception
+#: here is always the same thing: ONE section that is bigger than the
+#: limit on its own, and a section is one check's block.
+CHECK_MODULE_LIMIT = 40 * 1024
+
 #: The first line of every check module declares the group it belongs
 #: to. `tools/smoke_inventory.py` writes and reads the same marker —
 #: one home, so a module renamed by hand still says what it is.

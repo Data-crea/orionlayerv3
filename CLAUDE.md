@@ -55,9 +55,22 @@ derive world geometry.
 **The smoke test must be green before every commit.**
 
 ```bash
-python tools/smoke_test.py          # everything — 247 checks, ~80 s
-python tools/smoke_test.py --fast   # the commit gate's tier, ~39 s
+python tools/smoke_test.py             # everything — 248 checks, ~72 s
+python tools/smoke_test.py --fast      # the commit gate's tier, ~32 s
+python tools/smoke_test.py --screen colony_summary --fast   # NOT a gate
 ```
+
+**During screen work iterate with `--screen <name>`; before every
+handoff run the full suite; the push gate stays mechanical.** That is
+the working rule, and it reads the same here and in decision 31.
+`--screen` narrows what a run PRINTS — every check still runs, because
+the checks share their fixtures and a run that skipped the others
+would be measuring an app somebody else built (work order 162 measured
+it: one screen's dependency closure is 87 % of the suite, and 96 %
+under the only sound rule). It says `SCREEN <name> ONLY — NOT A GATE`
+on its first and last line, and it widens itself to the fast tier,
+naming the files, the moment anything outside that screen's own folder
+and check modules has changed against HEAD.
 
 **Two gates, both enforced by git** (decision 31, refined by work order
 158). `tools/githooks/pre-commit` runs the **fast** tier;
@@ -77,7 +90,7 @@ the fast tier holds that list and the guards to each other.
 time, not at commit time. See decision 31 and
 `doc/briefs/157-suite-profile.md`.
 
-247 checks, headless, no orion2re needed. **The count must not go
+248 checks, headless, no orion2re needed. **The count must not go
 down.** If a change makes a check obsolete, replace it — do not
 delete it. It went down exactly once, on 12 September 2026, when
 Phase B deleted the frame machinery the checks were about (decision
@@ -125,6 +138,9 @@ screens/<name>/         one folder per HD screen:
                           help.json    right-click help regions
                           assets/
 tools/                  smoke test, generators, live diagnostics
+tools/smoke_suite/      the smoke test's 91 check modules, one group
+                        per screen plus a shared core; smoke_test.py
+                        is the runner (work order 162)
 doc/                    the documents in the table above
 mods/                   file-level overrides; example_mod works
 ```
@@ -153,7 +169,11 @@ screen for can be answered in OrionLayer's window.
 **Files over 300 lines are listed in `v3_projektstatus.md` with their
 count** — the list is meant to be uncomfortable to extend. Split
 rather than add to it, unless everything in the file is genuinely one
-thing.
+thing. The smoke suite is exempt from that guideline and held to a
+stricter one: **no check module may pass 40 KB**, listed exceptions in
+the same document, checked by the suite itself. A check for a screen
+goes in that screen's own group — never in another screen's and never
+in the core.
 
 ---
 

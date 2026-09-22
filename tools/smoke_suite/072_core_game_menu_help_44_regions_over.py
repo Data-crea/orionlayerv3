@@ -2,7 +2,7 @@
 #
 # Part of the OrionLayer smoke suite — 072_core_game_menu_help_44_regions_over.py.
 # `tools/smoke_test.py` executes this file, and every other
-# module in tools/smoke_suite/ (90 of them), in file-name
+# module in tools/smoke_suite/ (91 of them), in file-name
 # order and in ONE namespace: these statements stood inside
 # main() and still bind the names the later ones read.
 #
