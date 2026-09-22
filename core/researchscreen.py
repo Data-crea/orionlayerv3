@@ -41,7 +41,8 @@ it logs why.
 import logging
 
 from core import billtext, research, researchlist, researchnative
-from core import researchpanel, technames
+from core import researchpanel, researchtechlist, technames
+from core.researchpopups import ResearchPopupsMixin
 from core.screen_base import ScreenBase
 from core.structs import player as player_spec
 from core.structs import settings as settings_spec
@@ -70,7 +71,7 @@ WORDING_MISSING = "wording_missing"
 UNVALIDATED = "unvalidated"
 
 
-class ResearchPanelScreen(ScreenBase):
+class ResearchPanelScreen(ResearchPopupsMixin, ScreenBase):
     """The research panel, in whichever of its two modes the subclass picks.
 
     `TECH::_Tech_Select_(changing_tech)` is ONE function in the
@@ -80,6 +81,12 @@ class ResearchPanelScreen(ScreenBase):
     """
 
     USE_FRAME = False
+
+    #: The "can draw" state, as a class attribute so
+    #: `core/researchpopups.py` can test it without importing this
+    #: module back — which would be a cycle — and without a second
+    #: copy of the word.
+    READY_STATE = READY
 
     #: "select" or "change" — everything else follows from it.
     MODE = "select"
@@ -104,6 +111,17 @@ class ResearchPanelScreen(ScreenBase):
         self._sent = False       # one commit per visit (decision 21)
         self._cost_suffix = COST_SUFFIX[0]
         self._left = False       # change mode: the exit has been sent
+        #: The category list popup, `TECH::_Tech_List_`. HD draws it
+        #: and sends NOTHING for it: it is display-only in the original
+        #: (`doc/tech_change_reading.md` §2), so the game stays in
+        #: `_Tech_Select_`'s own loop with the panel's field list —
+        #: which is also what keeps `validate_against_fields` passing
+        #: while the popup is up.
+        self._techlist = researchtechlist.TechListPopup()
+        #: The two arrays the popup rebuilds its own list from, kept
+        #: from the frame that parsed them rather than re-parsed: the
+        #: popup opens on a click and the wire is what it opened over.
+        self._tech = ([], [])
         #: `(current_research_field, current_research_application)` and
         #: `research_accumulated`, off the wire, refreshed by
         #: `_player_record` on every frame that has a record. Select
@@ -153,6 +171,7 @@ class ResearchPanelScreen(ScreenBase):
         self._hover = None
         self._sent = False
         self._left = False
+        self._techlist.close()
         # The title's WORDS come from layout.json and not from
         # boxes.json, so the wording has one home (decision 15) and the
         # F5 editor cannot end up owning a sentence.
@@ -273,7 +292,9 @@ class ResearchPanelScreen(ScreenBase):
             self._current = (view.current_research_field,
                              view.current_research_application)
             self._accumulated = view.research_accumulated
-            return list(view.tech_fields), list(view.tech_applications)
+            self._tech = (list(view.tech_fields),
+                          list(view.tech_applications))
+            return self._tech
         except (AttributeError, IndexError, ValueError, TypeError):
             return None
 
@@ -309,6 +330,13 @@ class ResearchPanelScreen(ScreenBase):
         researchpanel.draw(surface, self.layout, self.style,
                            self._entries, self._hover, words, self._names,
                            self._wording, current=self.current_pair())
+        # AND THE LIST POPUP OVER IT. The original saves the panel's
+        # fields and draws the window on top (`Save_Field_Stats_`,
+        # tech.cpp:889); here it is one more layer, still under the
+        # help popup, which `ScreenBase.render` draws last.
+        researchtechlist.draw(surface, self.layout, self.style,
+                              self._techlist, self.geom.origin,
+                              self._names, self._wording)
 
     def cost_text(self, entry):
         """The "N RP" string for one entry, as the original builds it.
@@ -334,6 +362,16 @@ class ResearchPanelScreen(ScreenBase):
 
     # ── Input ─────────────────────────────────────────────
 
+    def native_point(self, screen_x, screen_y):
+        """The 640x480 pixel a window point is, or None outside the view.
+
+        One conversion for the rows, the category buttons and the list
+        popup — the product's own placement, never arithmetic of a
+        caller's (decision 5).
+        """
+        return researchnative.from_hd_point(
+            self.layout.to_ref(screen_x, screen_y), self.layout)
+
     def row_at(self, screen_x, screen_y):
         """(entry index, row) under a WINDOW point, or None.
 
@@ -343,8 +381,7 @@ class ResearchPanelScreen(ScreenBase):
         """
         if self._state != READY:
             return None
-        point = researchnative.from_hd_point(
-            self.layout.to_ref(screen_x, screen_y), self.layout)
+        point = self.native_point(screen_x, screen_y)
         if point is None:
             return None
         nx, ny = point
@@ -357,6 +394,14 @@ class ResearchPanelScreen(ScreenBase):
 
     def handle_mouse_motion(self, screen_x, screen_y):
         super().handle_mouse_motion(screen_x, screen_y)
+        if self._techlist.visible:
+            self._hover = None
+            point = self.native_point(screen_x, screen_y)
+            hit = (self._techlist.at(self.geom.origin, *point)
+                   if point else None)
+            self._techlist.hover = (hit[1], hit[2]) if hit and \
+                hit[0] == "row" else None
+            return
         self._hover = self.row_at(screen_x, screen_y)
 
     def handle_click(self, screen_x, screen_y):
@@ -368,6 +413,11 @@ class ResearchPanelScreen(ScreenBase):
         fix 25.
         """
         if self.help_consumes_click(screen_x, screen_y):
+            return
+        if self._techlist.visible:
+            self.list_click(screen_x, screen_y)
+            return
+        if self.open_list_at(screen_x, screen_y):
             return
         hit = self.row_at(screen_x, screen_y)
         if hit is None:
@@ -416,7 +466,17 @@ class ResearchPanelScreen(ScreenBase):
         (tech.cpp:311-393).
         """
         import pygame
-        if not self.HAS_EXIT or key != pygame.K_ESCAPE:
+        if key != pygame.K_ESCAPE:
+            return
+        if self._techlist.visible:
+            # The popup's whole-screen field carries the ESC hotkey
+            # (tech.cpp:968), and `match_val == hidden_field_1` closes
+            # the list and returns to the panel — it does not leave the
+            # screen. So ESC under an open list never reaches the exit
+            # button, in either mode.
+            self._techlist.close()
+            return
+        if not self.HAS_EXIT:
             return
         self._leave()
 
@@ -481,75 +541,17 @@ class ResearchPanelScreen(ScreenBase):
         if self.help.visible:
             self.help.close()
             return True
+        if self._techlist.visible:
+            # While the list is up the panel is behind it and the help
+            # list has been replaced by the popup's own
+            # (`Tech_Change_List_*_Help_`, tech.cpp:915-931), whose
+            # rectangles lie outside the window. A right click on a ROW
+            # opens that application's description (:1003-1011);
+            # anywhere else only redraws (:993-998).
+            return self.list_describe(screen_x, screen_y)
         if self.open_help_at(screen_x, screen_y):
             return True
         return self.open_description_at(screen_x, screen_y)
-
-    def open_description_at(self, screen_x, screen_y):
-        """The description box for the row under a point. True if one opened.
-
-        `app_id != 0` is the original's own guard (tech.cpp:337): the
-        placeholder row IS a row and can be committed, and it has no
-        application to describe.
-        """
-        hit = self.row_at(screen_x, screen_y)
-        if hit is None:
-            return False
-        entry = self._entries[hit[0]]
-        app = entry.apps[hit[1]]
-        if not app:
-            return False
-        text = self.description(entry, app)
-        if text is None:
-            return False
-        self.help.open(app, *text)
-        return True
-
-    def description(self, entry, app):
-        """(title, body) for one application, as the original builds it.
-
-        `Draw_Application_Description_` (tech.cpp:786-845) loads ONE
-        help record — `Far_Reload_Data_(help_lbx, 0, buf, app_idx, 1,
-        ...)`, no chain walk — and appends a line of its own:
-        billtext 61, the cost, and the language's unit.
-
-        **THE COST IS THE FULL ONE, in both modes.** The entry shows
-        what is left in change mode (`research_accumulated` subtracted,
-        tech.cpp:203); this shows `New_Get_Tech_Cost_(app, 1, player)`
-        (:802), which subtracts nothing. The original's design and not
-        a bug — `doc/tech_change_reading.md` §3 — so it is transcribed
-        and `cost_offset()` is deliberately not used here.
-
-        **AND THE FIELD IS THE ENTRY'S.** `New_Get_Tech_Cost_` looks the
-        application's field up in `_technology_applications[app]
-        .tech_field_id`; the entry's rows came out of
-        `_technology_fields[entry.field].tech[]` in the first place
-        (tech.cpp:537-586), so the two are the same field and a second
-        app->field table here would be a copy that can disagree.
-
-        **Q9 IS SETTLED** (work order 165 part C): no help record in
-        0..211 chains — every one of the 212 in `help_en.json` reports
-        `pages == 1` — so the extractor's chain walk has nothing to
-        join in this range and the file already holds exactly the one
-        record tech.cpp reads. No second extraction is needed.
-        """
-        record = self.helptext.entry(app)
-        if record is None:
-            record = self.helptext.missing_entry(app)
-        if record is None:
-            return None
-        title, body = record
-        # The original writes body, `\r`, then the cost line
-        # (tech.cpp:833-839). `\r` is FMTPARA's line break and
-        # `core/helpformat.py` honours it. The `\aY+3.` and the
-        # justify/centre codes around it are layout that renderer drops
-        # — it acts on X and T only, and says so — so they are not
-        # written here rather than written and dropped.
-        cost = research.cost(entry.field)
-        label = (self._wording.message(billtext.MSG_RESEARCH_COST)
-                 if self._wording else "") or ""
-        line = f"{label}{cost}{self._cost_suffix}"
-        return (title, f"{body}\r{line}" if body else line)
 
     # ── What the screen says when it cannot draw ──────────
 

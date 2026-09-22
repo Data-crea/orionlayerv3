@@ -2294,11 +2294,60 @@ files under `doc/` and are only summarised here.
 | | |
 |---|---|
 | Python | 32,960 lines across 111 modules — `find . -name '*.py'`, `__pycache__` excluded, the smoke test's 6,400 included. The previous figure here (21,642 across 94) was carried from an unstated method and could not be reproduced |
-| Smoke test | `python tools/smoke_test.py` — **258 checks**, headless, in `tools/smoke_suite/` since work order 162 (96 check modules, one group per screen plus a shared core; `tools/smoke_test.py` is the runner). **Two tiers since work order 158**: the bare command runs everything (~72 s here); `--fast` runs the commit gate's 251 (~32 s here). `--screen <name>` prints only that screen's sentences and the core's and is NEVER a gate. See "The gate has two tiers" below |
+| Smoke test | `python tools/smoke_test.py` — **261 checks**, headless, in `tools/smoke_suite/` since work order 162 (97 check modules, one group per screen plus a shared core; `tools/smoke_test.py` is the runner). **Two tiers since work order 158**: the bare command runs everything (~72 s here); `--fast` runs the commit gate's 254 (~32 s here). `--screen <name>` prints only that screen's sentences and the core's and is NEVER a gate. See "The gate has two tiers" below |
 | Assets | 170 MB (select_race 68, galaxy_map 51, shared 23, new_game 21, colony_summary 1) |
 | Screens in HD | 9 of ~20–22 (the GAME menu overlay, work order Stop 2, every dialog of the popup; colony summary draws list, sidebar, scan box and galaxy inset, and MOVES POPS — the first HD gesture that drives the game; planets, brief 101, lists, sorts, restricts and returns) |
 | Setup from clone | `python tools/setup.py` (deps via the system package manager) |
 | orion2re | required for live data, not for the smoke test |
+
+### The category list popup, checked against the engine's own list — 22 September 2026, work order 165 C
+
+`core/researchtechlist.py` (content, geometry, paging, drawing) and
+`core/researchpopups.py` (the input, a mixin both modes get). A click on
+a category button opens that category's list; the page buttons page; a
+row click does nothing, as in the original, where the id it returns is
+compared against nothing; anything else closes it; a right click on a
+row opens that application's description. **Nothing is sent for any of
+it** — the popup is display-only (`doc/tech_change_reading.md` §2), so
+HD draws its own and the game stays in `_Tech_Select_`'s loop with the
+panel's field list, which is also what keeps
+`researchlist.validate_against_fields` passing while it is up.
+
+**THE RECONSTRUCTION WAS CHECKED AGAINST THE ENGINE'S OWN LIST.**
+
+```bash
+python tools/research_change_hd.py listprobe 4 0   # left column
+python tools/research_change_hd.py listprobe 5 1   # right column
+```
+
+It sends the category button ONCE, so the engine builds its own popup
+(`_Tech_List_` replaces the field list through `Save_Field_Stats_`,
+tech.cpp:889), and compares every row rectangle of the visible page:
+
+| | category | HD reconstructs | the game's list | result |
+|---|---|---|---|---|
+| SAVE4, entry 0, window on the right | 4 | 11 fields, 2 pages | 18 fields | **14 rows = 14, every rectangle MATCH** |
+| SAVE5, entry 1, window on the left | 2 | 7 fields, 2 pages | 18 fields | **14 rows = 14, every rectangle MATCH** |
+
+`(current_research_field, application)` was `(60, 136)` before and after
+each probe. That is decision 25's own condition met for this list: the
+reconstruction carries its own validation.
+
+**It settled the `tech[4]` padding too.** `Get_Group_List_` walks all
+four slots and reads `tech_applications[tech[i]]` for the empty ones,
+which is `tech_applications[0]`; HD transcribes that rather than
+dropping the padding, and in this game the byte is 0, so no phantom
+rows appear — which is what the live match confirms.
+
+Q11, the radio index skew, is NOT reproduced and is marked: the
+original indexes `entries[input - first_btn_field]` (tech.cpp:378-379)
+while radios exist only for non-empty entries, so a button opens the
+wrong category's list when an empty one is ahead of it. It is reading
+data that was never set.
+
+`core/researchscreen.py` passed 300 code lines when the popup input
+landed in it, so the two popups are a mixin — `core/researchpopups.py`
+— and the file is back under the guideline.
 
 ### The research description box, and a popup that was drawn under the panel — 22 September 2026, work order 165 C
 
@@ -2447,8 +2496,8 @@ blocks into a session and writing them out again. Three proofs:
 
 | | command | checks | on this tree |
 |---|---|---:|---:|
-| **Full** — the default, and the pre-push gate | `python tools/smoke_test.py` | 258 | ~72 s |
-| **Fast** — the pre-commit gate | `python tools/smoke_test.py --fast` | 251 | ~32 s |
+| **Full** — the default, and the pre-push gate | `python tools/smoke_test.py` | 261 | ~72 s |
+| **Fast** — the pre-commit gate | `python tools/smoke_test.py --fast` | 254 | ~32 s |
 | **Screen** — **never a gate** | `python tools/smoke_test.py --screen <name>` | all of them, ~a third printed | the tier's |
 
 **`--screen` narrows what a run PRINTS, not what it runs**, and the

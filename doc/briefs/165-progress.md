@@ -296,7 +296,90 @@ to `core/` as a base class with the mode as configuration, and each
 screen folder keeps only its own JSON and a thin subclass — decision 7
 gives each screen its folder, so change mode cannot share one.
 
-## Part C — the shared popups — **NOT BUILT**
+## Part C — the shared popups — **DONE**, both, both modes
+
+Built in `core/`, once, because both modes are one class already. The
+order's scope choice (Q1/Q10) is the default: **both popups, in both
+modes.**
+
+### The description box
+
+`core/researchpopups.py`. A right click over a ROW opens the help
+record for that row's application — one record, no chain walk, which is
+what `Draw_Application_Description_` reads (tech.cpp:786-845) — with
+billtext 61, the cost and the language's unit appended as the original
+appends them.
+
+**Q9 is settled and needed no extractor.** Every one of the 212 help
+records in 0..211 reports `pages == 1`, so the chain walk in
+`tools/help_extract.py` has nothing to join in that range and
+`help_en.json` already holds exactly the record tech.cpp reads.
+
+**The cost there is the FULL one** where the entry beside it shows what
+is left in change mode — the original's design (§3), transcribed, and
+the check asserts the two numbers differ so it cannot be measuring one
+of them twice.
+
+**It opens over a row and nowhere else.** `Set_Selected_Entry_` matches
+`app_click_field_ids` and nothing else (tech.cpp:468-487).
+
+### The category list popup
+
+`core/researchtechlist.py` (content, geometry, paging, drawing) and
+`core/researchpopups.py` (the input). It sends **nothing**: the popup
+is display-only in the original, so HD draws its own and the game stays
+in `_Tech_Select_`'s loop with the panel's field list — which is also
+what keeps `validate_against_fields` passing while it is up.
+
+**AND THE RECONSTRUCTION WAS CHECKED AGAINST THE ENGINE'S OWN LIST,
+LIVE.** `python tools/research_change_hd.py listprobe <slot> <entry>`
+sends the category button ONCE so the engine builds its own popup, then
+compares. Both columns:
+
+| | category | HD reconstructs | the game's list | rows |
+|---|---|---|---|---|
+| SAVE4, entry 0 (left column, window on the right) | 4 | 11 fields over 2 pages | 18 fields | **14 = 14, every rectangle MATCH** |
+| SAVE5, entry 1 (right column, window on the left) | 2 | 7 fields over 2 pages | 18 fields | **14 = 14, every rectangle MATCH** |
+
+The pair `(60, 136)` before and after each probe. That is decision 25's
+own condition met: the reconstruction carries its own validation.
+
+**It also settled the `tech[4]` padding.** `Get_Group_List_` walks all
+four slots and reads `tech_applications[tech[i]]` for the empty ones,
+which is `tech_applications[0]`. HD transcribes that rather than
+dropping the padding — and in this game the byte is 0, so no phantom
+rows appear, which the live match confirms.
+
+### The choices this part made
+
+* **Q1/Q10 scope** — the default: both popups, both modes.
+* **Q11, the radio index skew** — the default: HD opens the RIGHT
+  category and marks it a DEVIATION. The original indexes
+  `entries[input - first_btn_field]` while radios exist only for
+  non-empty entries, so it opens the wrong list when a category ahead
+  is empty — it is reading data that was never set.
+* **Full versus remaining cost** — the default: transcribed. Remaining
+  on the entry, full in the description.
+
+### Markings
+
+`category_list_popup` and `description_box` moved from OMISSION to
+DEVIATION on both screens, and `radio_index_skew` is new. Two omissions
+are left on select mode (the science room, the little arrow) and one on
+change mode. Every one is held by a check, and the tree-wide marker
+inventory now lists `core/researchpopups.py` and
+`core/researchtechlist.py`.
+
+### The defect part C found
+
+**The help popup was drawn UNDER the panel.** `ScreenBase.render` ends
+with `render_help` and both research screens drew their entries after
+calling it. `ScreenBase` has a `render_content` hook now. The check
+renders four frames — baseline, panel only, popup only, both — because
+two could not tell the orders apart: 0 of 185 overlapping pixels wrong
+as built, 185 of 185 with the order swapped.
+
+## Part C — as first written — **NOT BUILT**
 
 Offline-buildable and offline-*provable*, and still not built, for a
 reason that is the project's own rule rather than the live block: the

@@ -192,6 +192,15 @@ _MARKED = {
     "screens/research_change/screen.py": "DEVIATION",
     "screens/research_change/layout.json": "TECHSEL",
 
+    # ADDED 22 September 2026, work order 165 part C: the two popups
+    # the research panel shares. `researchpopups.py` carries Q11, the
+    # radio index skew HD does not reproduce; `researchtechlist.py`
+    # carries the window's own deviation — chosen page-button size,
+    # unextracted art — and the hover INVENTION it shares with
+    # `researchpanel.py`. Both are asserted in the list-popup block.
+    "core/researchpopups.py": "DEVIATION",
+    "core/researchtechlist.py": "DEVIATION",
+
     # ADDED 19 September 2026, work order 134 C: the Fleets screen.
     # Its own check is the fleets markings block below — four
     # OMISSIONs and one HD EXTENSION, each in the module that

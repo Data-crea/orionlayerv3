@@ -402,28 +402,31 @@ _rs_src = {
 # replacement is the assertion three blocks down: the TABLE has to be
 # the original's four cases.
 assert set(_rss.MARKED) == {
-    "science_room_animation", "category_list_popup", "description_box",
-    "little_arrow", "title", "category_label_as_text",
+    "science_room_animation", "category_list_popup", "radio_index_skew",
+    "description_box", "little_arrow", "title", "category_label_as_text",
     "shrink_instead_of_squeeze"}, \
     sorted(_rss.MARKED)
 for _kind in ("OMISSION", "HD EXTENSION", "DEVIATION"):
     assert _kind in _rs_src["screen"], _kind
-# THREE OMISSIONS since work order 165 part C: the description box is
-# BUILT now and its marking moved to DEVIATION, because what is left of
-# it is a different BOX and not an absent behaviour. The count is
-# asserted so the move cannot be repeated by accident.
-assert sum(1 for _v in _rss.MARKED.values() if _v == "OMISSION") == 3
-assert _rss.MARKED["description_box"] == "DEVIATION"
-# The three omissions are things the screen must NOT have built…
-for _absent in ("SR_R", "_Tech_List_", "Draw_Little_Arrow_"):
+# TWO OMISSIONS since work order 165 part C: both popups are BUILT and
+# their markings moved to DEVIATION, because what is left of each is a
+# different BOX and not an absent behaviour. The count is asserted so
+# the move cannot be repeated by accident.
+assert sum(1 for _v in _rss.MARKED.values() if _v == "OMISSION") == 2
+for _built in ("description_box", "category_list_popup",
+               "radio_index_skew"):
+    assert _rss.MARKED[_built] == "DEVIATION", _built
+# The two omissions are things the screen must NOT have built…
+for _absent in ("SR_R", "Draw_Little_Arrow_"):
     assert _absent in _rs_src["screen"], (
         f"{_absent} is no longer named in the omission list — either "
         f"it was built and the marking must go, or the marking was "
         f"dropped and the omission is now invisible")
-# …and the description box is named too, under its own label, because
-# a marking whose subject is unnamed cannot be checked against the
+# …and both popups are named too, under their own labels, because a
+# marking whose subject is unnamed cannot be checked against the
 # source at all.
-assert "Draw_Application_Description_" in _rs_src["screen"]
+for _named in ("Draw_Application_Description_", "_Tech_List_"):
+    assert _named in _rs_src["screen"], _named
 # The three deviations each live where they are done.
 # The squeeze/shrink DEVIATION is done in `core/researchpanel.py` for
 # both modes since work order 165 part B, so it is asserted there as

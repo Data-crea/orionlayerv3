@@ -133,7 +133,8 @@ assert _rc_sends == [], (
 #    ROOM — that difference IS the mode difference, so a drift in
 #    either direction is caught here (decision 61).
 assert set(_rcs.MARKED) == {
-    "category_list_popup", "description_box", "little_arrow", "title",
+    "category_list_popup", "radio_index_skew",
+    "description_box", "little_arrow", "title",
     "category_label_as_text", "shrink_instead_of_squeeze"}, \
     sorted(_rcs.MARKED)
 assert set(_rss2.MARKED) - set(_rcs.MARKED) == {"science_room_animation"}, (
@@ -142,18 +143,20 @@ _rc_src = open(os.path.join(SCREENS_DIR, "research_change", "screen.py"),
                encoding="utf-8").read()
 for _kind in ("OMISSION", "HD EXTENSION", "DEVIATION"):
     assert _kind in _rc_src, _kind
-for _absent in ("_Tech_List_", "Draw_Little_Arrow_"):
-    assert _absent in _rc_src, (
-        f"{_absent} is no longer named in the omission list — either "
-        f"it was built and the marking must go, or the marking was "
-        f"dropped and the omission is now invisible")
-# The description box is BUILT (work order 165 part C) and marked as a
-# DEVIATION, so it is named for a different reason: what deviates is
-# the box, not the behaviour. Both modes take it from the same class,
-# and both must say so.
-assert _rcs.MARKED["description_box"] == "DEVIATION" == \
-    _rss2.MARKED["description_box"]
-assert "Draw_Application_Description_" in _rc_src
+assert "Draw_Little_Arrow_" in _rc_src, (
+    "Draw_Little_Arrow_ is no longer named in the omission list — "
+    "either it was built and the marking must go, or the marking was "
+    "dropped and the omission is now invisible")
+# BOTH POPUPS ARE BUILT (work order 165 part C) and marked DEVIATION,
+# so they are named for a different reason: what deviates is the box,
+# not the behaviour. Both modes take them from the same class and both
+# must say so — which is the whole point of building them once.
+for _built in ("description_box", "category_list_popup",
+               "radio_index_skew"):
+    assert _rcs.MARKED[_built] == "DEVIATION" == _rss2.MARKED[_built], \
+        _built
+for _named in ("Draw_Application_Description_", "_Tech_List_"):
+    assert _named in _rc_src, _named
 # …and it must not MARK the science room, while still saying why it
 # does not. An omission of something the original does not draw here
 # would be a marking with no subject; a file that simply never

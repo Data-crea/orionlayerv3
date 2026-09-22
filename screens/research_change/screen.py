@@ -46,8 +46,22 @@ CHANGE MODE'S OWN FACTS, and each is a line of the source:
 MARKED, and each held by a smoke check so the marking cannot quietly
 disappear (decision 61):
 
-  OMISSION      the category list popup (`_Tech_List_`, tech.cpp:781+),
-                which is display-only and is work order 165 part C
+  DEVIATION     the category list popup (`_Tech_List_`, tech.cpp:847+)
+                is BUILT, work order 165 part C, and it sends nothing:
+                it is display-only in the original, so HD draws its own
+                and the game stays in the panel's loop. What deviates
+                is the WINDOW — TECHSEL 0x17-0x1A (change) / 0x09-0x0C
+                (select) is not extracted, the page buttons' size is
+                not in the source at all (their origins are) and is
+                chosen, and the hovered row is filled where the
+                original cycles a palette index
+  DEVIATION     Q11, the radio index skew: the original indexes
+                `entries[input - first_btn_field]` (tech.cpp:378-379)
+                while radios exist only for NON-EMPTY entries
+                (:236, :497-513), so with an empty category ahead of it
+                a button opens the WRONG category's list. HD opens the
+                category the button belongs to — the original is
+                reading data that was never set
   DEVIATION     the description box a right click over a row opens
                 (tech.cpp:323-337, `Draw_Application_Description_`) is
                 BUILT, work order 165 part C, and drawn in the shared
@@ -79,7 +93,8 @@ from core.researchscreen import (            # noqa: F401  (re-exported)
 #: It is select mode's list MINUS the science room, which is select
 #: mode's own strip, and that difference is the whole of it.
 MARKED = {
-    "category_list_popup": "OMISSION",
+    "category_list_popup": "DEVIATION",
+    "radio_index_skew": "DEVIATION",
     "description_box": "DEVIATION",
     "little_arrow": "OMISSION",
     "title": "HD EXTENSION",
