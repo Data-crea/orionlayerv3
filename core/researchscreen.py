@@ -40,6 +40,8 @@ it logs why.
 """
 import logging
 
+import pygame
+
 from core import billtext, research, researchlist, researchnative
 from core import researchpanel, researchtechlist, technames
 from core.researchpopups import ResearchPopupsMixin
@@ -193,6 +195,39 @@ class ResearchPanelScreen(ResearchPopupsMixin, ScreenBase):
     def on_resize(self):
         super().on_resize()
         researchnative.seat(self.boxes, self.layout, self._box_native)
+
+    def _render_background(self, surface):
+        """Under an OVERLAY: the parent screen, and the panel's own fill.
+
+        Change mode is a panel over the HD galaxy map — the GAME menu's
+        pattern (decision 69) — and it is what the original does:
+        `Draw_Mini_Main_Screen_` paints the map before the screen is
+        switched (mainscr_main.cpp:700-703, `Tech_Change_`
+        tech.cpp:1159-1161). A full-window background here would paint
+        the map out, which is what this screen did until work order 165
+        part F.
+
+        **AND THE PANEL'S OWN AREA IS FILLED, WHICH IS THE SOURCE'S OWN
+        LINE.** `Fill_(_g_scrn_x + 4, _g_scrn_y + 4, _g_scrn_x + 0x1D7,
+        _g_scrn_y + 0x1D8, 0)` — palette index 0 — runs before the
+        panel art is drawn over it (tech.cpp:290-291). The first build
+        of this overlay left it out, and the galaxy map shone THROUGH
+        the rows: clean in the side bands, unreadable where the text
+        is. Found by LOOKING at the live capture, which is the only
+        thing that would have.
+
+        Select mode is a screen of its own — the original fills the
+        same rectangle there (:300) and puts the science-room animation
+        beside it rather than the map — so it keeps the shared texture,
+        which covers that rectangle already.
+        """
+        if not self.IS_OVERLAY:
+            super()._render_background(surface)
+            return
+        surface.fill(
+            researchpanel.col("panel_fill", (0, 0, 0)),
+            pygame.Rect(*researchnative.window_rect(self.geom.panel_rect,
+                                                    self.layout)))
 
     def update(self, game_state=None):
         """Rebuild the list from the state, and decide whether to draw it.

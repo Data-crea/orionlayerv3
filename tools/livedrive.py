@@ -182,7 +182,16 @@ class Run:
             "name": name,
             "screen": st.current_screen,
             "fields": len(st.fields or []),
-            "hd_active": self.app.dispatcher.active_name,
+            # THE SCREEN THAT IS ACTUALLY DRAWING ON TOP, which is not
+            # `active_name` once a screen is an OVERLAY: the GAME menu
+            # and, since work order 165 part F, change mode both leave
+            # `active_name` saying "galaxy_map" while they are the
+            # picture. Work order 131 part D asks this record to name
+            # the HD screen that was drawing, and `active_name` stopped
+            # being that answer.
+            "hd_active": (self.app.dispatcher.overlay_name
+                          or self.app.dispatcher.active_name),
+            "hd_parent": self.app.dispatcher.active_name,
             "use_original": self.app.dispatcher.use_original,
             "showing_original": self.app._showing_original(),
             "stardate": getattr(st, "stardate", 0),

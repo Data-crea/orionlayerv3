@@ -502,6 +502,63 @@ the guard widened to admit 36 and 53 — which the neighbouring screen-8
 check survives on purpose — makes the new check and only the new check
 go red. 249 -> 250 checks.
 
+## Part F — Data's addition, 23 September 2026: change mode is an overlay
+
+Not in the order as filed. Data read the report on the three choices he
+had handed over, found that the change-mode background had gone to the
+ALTERNATIVE with no reason recorded, and reversed it.
+
+**Now the default.** `IS_OVERLAY`, `OVERLAY_PARENT = "galaxy_map"`,
+`OVERLAY_DIM = 0` — the GAME menu's pattern (decision 69), and the
+original's own: `Draw_Mini_Main_Screen_` paints the map before the
+screen is switched (mainscr_main.cpp:700-703). No marking is needed any
+more, because the default IS what the original does.
+
+The dispatcher needed nothing: `update_from_game` already holds an
+overlay that carries a `GAME_SCREEN_ID` for as long as the wire reports
+that id and closes it the moment it does not — the lock the GAME menu
+has had since work order 126 D. Input needed nothing either:
+`dispatcher.top` is the overlay, so the map never sees a click.
+
+**THE FAULT IT UNCOVERED, and only looking found it.** The panel did
+not fill its own area: the galaxy map shone THROUGH the rows, clean in
+the side bands and unreadable where the text is. The original fills
+`(s+4, 4)-(s+471, 472)` with palette index 0 before drawing the panel
+art over it (tech.cpp:290-291); that is transcribed now. The first
+version of the check could not have caught it — it only asked whether
+the side bands stayed equal.
+
+### Live on SAVE4, all four of Data's claims
+
+| | |
+|---|---|
+| entry through the research window | overlay `research_change` over `galaxy_map` |
+| the map is behind the panel | **0 of 99 900** band pixels differ with the panel and without it; **122 025** inside the panel do |
+| a click on the map outside the panel | **0 sends**, overlay still open, wire still 36 — and the control reverses it: the SAME point on the bare map sends 1 and reopens change mode |
+| ESC | back on the map, overlay closed, `(60, 136)` -> `(60, 136)` |
+
+HD beside the native frame in `D_overlay_4/`. SAVE1-9 identical,
+SAVE10 and SAVE11 unchanged. SAVE10 reloaded afterwards and confirmed
+by snapshot: stardate 3500.3, 2 players, 54 stars, 28 colony records.
+
+### The check, and its three counter-tests
+
+Two checks (263 -> 265). Each mutation was shown red, caches cleared,
+`python -B`, source restored:
+
+| mutation | what went red |
+|---|---|
+| `IS_OVERLAY = False` | the class assertion, and the dispatcher never opens it over the map |
+| the overlay paints its own background again | **99 900 of 99 900** band pixels changed |
+| the overlay stops filling its panel | **61 974** sampled pixels inside the panel are still what was behind it |
+
+### Seen and NOT changed
+
+HD does not draw the original's exit button (TECHSEL 27,
+tech.cpp:198-200) and takes no click there — only ESC leaves. The
+native frame beside it shows CANCEL. An omission from part B, **not
+marked**, and outside what Data asked for. It is in the parked file.
+
 ## Part E — the rest of select mode — **PART C's OFFLINE HALF DONE, the rest parked**
 
 The order's scope choice for part E is "131 parts B and C, the 128

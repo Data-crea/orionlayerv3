@@ -74,14 +74,44 @@ def enter_change(run):
                         seconds=90, label="screen 36"):
         return False
     return run.wait_for(
-        lambda st: (run.app.dispatcher.active_name == "research_change"
+        lambda st: (run.app.dispatcher.overlay_name == "research_change"
+                    and run.app.dispatcher.active_name == "galaxy_map"
                     and hd(run).state == "ok" and offered(run)),
-        seconds=90, label="change mode, drawn by HD")
+        seconds=90, label="change mode, drawn by HD over the map")
 
 
 def offered(run):
     """The entries change mode is offering, off the HD screen itself."""
     return [e for e in getattr(hd(run), "_entries", []) if e.offered]
+
+
+def panel_ready(run):
+    """Wait until change mode is DRAWN by HD and its exit is on the wire.
+
+    The first snapshot at 36 carries the one-field list `Clear_Fields_`
+    leaves behind (mainscr_main.cpp:699), so a caller that acts on the
+    screen id alone acts on a list that has nothing in it — which is
+    how this driver once asked to leave before there was an exit button
+    to activate.
+    """
+    return run.wait_for(
+        lambda st: (run.app.dispatcher.overlay_name == "research_change"
+                    and hd(run).exit_field() is not None),
+        seconds=90, label="change mode's panel and its exit button")
+
+
+def ensure_on_map(run):
+    """Leave change mode if the game is sitting in it. Re-runnability.
+
+    A driver that can only start from the map is a driver that has to
+    be rescued by hand the first time a step aborts half way.
+    """
+    run.pump(20)
+    if run.state.current_screen != SCREEN_CHANGE:
+        return True
+    print("    the game is on 36 already — leaving it first")
+    panel_ready(run)
+    return leave_change(run)
 
 
 def leave_change(run):
@@ -208,3 +238,50 @@ def describe(run, label):
     print(f"  {label}: change mode offers "
           + ", ".join(f"entry {e.index}/cat {e.group}: field {e.field} "
                       f"apps {list(e.apps)}" for e in offered(run)))
+
+
+def map_behind(run):
+    """Is the HD galaxy map visible behind the panel? A PIXEL answer.
+
+    Two frames of the SAME app state, one with the overlay and one
+    without. In the two side bands — native x 0..80 and 557..639, the
+    strips the original leaves as map (`Draw_Mini_Main_Screen_`,
+    mainscr_main.cpp:700-703) and this screen filled with a cockpit
+    texture until work order 165 part F — the panel draws nothing, so
+    the two frames must be IDENTICAL there. Inside the panel they must
+    differ, or the equality is about a frame that drew no panel at all.
+
+    Returns (behind, sampled, changed, panel_diff, map_only_surface).
+    """
+    import pygame
+    disp = run.app.dispatcher
+    screen = hd(run)
+
+    def frame(with_overlay):
+        kept = disp.overlay
+        if not with_overlay:
+            disp.overlay = None
+        surf = pygame.Surface((run.app.win_w, run.app.win_h))
+        surf.fill((0, 0, 0))
+        disp.render(surf)
+        disp.overlay = kept
+        return surf
+
+    with_panel, without = frame(True), frame(False)
+    seen = changed = 0
+    for band in ("left_band", "right_band"):
+        bx, by, bw, bh = researchnative.window_rect(
+            screen.geom.bands[band], screen.layout)
+        for y in range(by, by + bh, 2):
+            for x in range(bx, bx + bw, 2):
+                seen += 1
+                if with_panel.get_at((x, y))[:3] != \
+                        without.get_at((x, y))[:3]:
+                    changed += 1
+    px, py, pw, ph = researchnative.window_rect(screen.geom.panel_rect,
+                                                screen.layout)
+    panel_diff = sum(
+        1 for y in range(py, py + ph, 3) for x in range(px, px + pw, 3)
+        if with_panel.get_at((x, y))[:3] != without.get_at((x, y))[:3])
+    return (changed == 0 and panel_diff > 500, seen, changed,
+            panel_diff, without)

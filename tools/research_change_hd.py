@@ -39,15 +39,19 @@ import sys
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
+import pygame  # noqa: E402
+
 import gameload  # noqa: E402
 import livesend  # noqa: E402
-from core import researchlist, researchpanel  # noqa: E402
+from core import researchlist, researchnative  # noqa: E402
+from core import researchpanel  # noqa: E402
 from core import researchtechlist  # noqa: E402
 from livedrive import Run, SendCounter, close, hashes  # noqa: E402
 from researchchangephases import (SCRATCH, SCREEN_CHANGE,  # noqa: E402
                                   commit, describe, enter_change, hd,
-                                  leave_change, offered, pair,
-                                  plan_changes)
+                                  ensure_on_map, leave_change,
+                                  map_behind, offered, pair,
+                                  panel_ready, plan_changes)
 
 
 def cmd_probe(run, slot):
@@ -270,10 +274,106 @@ def cmd_resolutions(run, slot):
         "after": list(after)}
 
 
+def cmd_overlay(run, slot):
+    """Change mode as a PANEL OVER THE MAP, proved on the live game.
+
+    Work order 165 part F. Four claims, in the order Data named them:
+    the research window opens it; the map is visible behind it; a click
+    on the map outside the panel does nothing; ESC goes back with the
+    field and the application unchanged.
+    """
+    import pygame as _pg
+    ensure_on_map(run)
+    record = gameload.load_slot(run, slot)
+    if not record["loaded"]:
+        return False, {"load": record}
+    before = pair(run)
+    if not enter_change(run):
+        return False, {"load": record}
+    disp = run.app.dispatcher
+    entered = (disp.overlay_name == "research_change"
+               and disp.active_name == "galaxy_map")
+    print(f"    entered through the research window: overlay "
+          f"{disp.overlay_name!r} over {disp.active_name!r} — {entered}")
+    shot = run.capture("overlay_change_over_map")
+
+    behind, seen, changed, panel_diff, without = map_behind(run)
+    print(f"    the map is behind the panel: {changed} of {seen} band "
+          f"pixels differ with and without it, {panel_diff} inside the "
+          f"panel do — {behind}")
+    pygame.image.save(without, os.path.join(run.dir,
+                                            "map_without_panel.png"))
+
+    # A CLICK ON THE MAP OUTSIDE THE PANEL DOES NOTHING. The point is
+    # the research window itself — the one click that DOES something on
+    # the bare map, which is what makes this a control and not an
+    # observation about an empty spot.
+    galaxy = disp.screens["galaxy_map"]
+    box = galaxy.box_rect("sb_research_text")
+    point = pygame.Rect(*galaxy.layout.rect(box)).center
+    counter = SendCounter(run.app.client)
+    run.hd_click(*point)
+    run.pump(25)
+    quiet = (counter.total() == 0
+             and disp.overlay_name == "research_change"
+             and run.state.current_screen == SCREEN_CHANGE)
+    print(f"    click on the map at {point}: {counter.total()} sends, "
+          f"overlay {disp.overlay_name!r}, screen "
+          f"{run.state.current_screen} — {quiet}")
+
+    # ESC GOES BACK, AND CHANGES NOTHING.
+    pygame.event.clear()
+    pygame.event.post(pygame.event.Event(
+        pygame.KEYDOWN, {"key": pygame.K_ESCAPE, "unicode": "\x1b",
+                         "mod": 0}))
+    run.pump(4)
+    back = run.wait_for(livesend.on_galaxy_map, seconds=90,
+                        label="the galaxy map after ESC")
+    run.pump(20)
+    after = run.capture("overlay_back_on_the_map")
+    unchanged = pair(run) == before
+    closed = disp.overlay is None and disp.active_name == "galaxy_map"
+    print(f"    ESC: back on the map {back}, overlay closed {closed}, "
+          f"{before} -> {pair(run)} — unchanged {unchanged}")
+
+    # THE CONTROL, and it reverses itself: the same point on the BARE
+    # map does send, and what it sends is change mode again.
+    counter2 = SendCounter(run.app.client)
+    run.hd_click(*point)
+    reopened = run.wait_for(
+        lambda st: st.current_screen == SCREEN_CHANGE, seconds=60,
+        label="change mode again from the bare map")
+    print(f"    the same click on the BARE map: {counter2.total()} "
+          f"sends, screen {run.state.current_screen} — control "
+          f"{reopened and counter2.total() > 0}")
+    # AND WAIT FOR THE PANEL BEFORE LEAVING IT. The first snapshot at 36
+    # carries the one-field list `Clear_Fields_` leaves behind, so there
+    # is no exit button in it yet and `leave_change` refuses — correctly.
+    panel_ready(run)
+    leave_change(run)
+    final = pair(run)
+    ok = bool(entered and behind and quiet and back and closed
+              and unchanged and reopened and counter2.total() > 0
+              and final == before)
+    return ok, {"load": record, "entered": entered,
+                "band_pixels": seen, "band_changed": changed,
+                "panel_diff": panel_diff, "map_behind": behind,
+                "click_point": list(point),
+                "sends_under_panel": counter.total(),
+                "sends_on_bare_map": counter2.total(),
+                "esc_back": back, "overlay_closed": closed,
+                "before": list(before), "after": list(final),
+                "unchanged": final == before,
+                "hd_active": shot["hd_active"],
+                "hd_parent": shot.get("hd_parent"),
+                "png": shot["hd_png"], "native_png": shot["native_png"],
+                "after_png": after["hd_png"]}
+
+
 def main():
     args = sys.argv[1:]
     what = args[0] if args else "run"
-    slot = (int(args[1]) if what in ("probe", "listprobe", "resolutions")
+    slot = (int(args[1]) if what in ("probe", "listprobe", "resolutions", "overlay")
             and len(args) > 1 and args[1].isdigit() else None)
     folder = args[-1] if len(args) > 1 and not args[-1].isdigit() \
         else "work_order_165"
@@ -285,6 +385,8 @@ def main():
         ok, extra = cmd_probe(run, slot)
     elif what == "run":
         ok, extra = cmd_run(run)
+    elif what == "overlay":
+        ok, extra = cmd_overlay(run, slot or SCRATCH[0])
     elif what == "resolutions":
         ok, extra = cmd_resolutions(run, slot or SCRATCH[0])
     elif what == "listprobe":
@@ -293,7 +395,7 @@ def main():
             int(args[2]) if len(args) > 2 and args[2].isdigit()
             else 0)
     else:
-        sys.exit(f"unknown command {what!r}; known: probe, run, listprobe, resolutions")
+        sys.exit(f"unknown command {what!r}; known: probe, run, listprobe, resolutions, overlay")
     run.save_record({**extra, "sends": counter.counts,
                      "sent": [list(x) for x in counter.sent],
                      **close(run, saves)})

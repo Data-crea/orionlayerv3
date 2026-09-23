@@ -41,7 +41,12 @@ CHANGE MODE'S OWN FACTS, and each is a line of the source:
         `TECH::_tech_color[2]` is the field being researched and its
         chosen application (:686-696); select mode cannot reach it.
     no science room. That animation is select mode's left strip
-        (`SR_R%x_SC.LBX`, :245-273); here the strip is galaxy map.
+        (`SR_R%x_SC.LBX`, :245-273); here the strip is galaxy map —
+        and since work order 165 part F it IS the HD galaxy map, live
+        underneath. This screen is an OVERLAY over it, on the GAME
+        menu's pattern (decision 69): the map keeps drawing, takes no
+        input while the panel is up, and the dispatcher holds the
+        overlay for as long as the wire reports 36.
 
 MARKED, and each held by a smoke check so the marking cannot quietly
 disappear (decision 61):
@@ -109,3 +114,18 @@ class ResearchChangeScreen(ResearchPanelScreen):
     MODE = "change"
     LAYOUT_PATH = "screens/research_change/layout.json"
     HAS_EXIT = True
+    #: A PANEL OVER THE HD GALAXY MAP — the GAME menu's pattern
+    #: (decision 69), and the original's own: `Draw_Mini_Main_Screen_`
+    #: paints the map before the screen is switched
+    #: (mainscr_main.cpp:700-703), and `_Tech_Select_(1)` fills only
+    #: `(s+4, 4)-(s+471, 472)` over it (tech.cpp:290-291).
+    IS_OVERLAY = True
+    #: SCREEN_TECH_CHANGE is entered from ONE place, the galaxy map's
+    #: research window (mainscr_main.cpp:697-713, `_return_screen =
+    #: SCREEN_MAIN`), so the map is what it belongs over — and a client
+    #: connecting while change mode is already up has never been on the
+    #: map, which is the case work order 126 D found for the GAME menu.
+    OVERLAY_PARENT = "galaxy_map"
+    #: No dimming: a palette-indexed engine cannot darken what is under
+    #: a panel, and the original draws over the map as it is.
+    OVERLAY_DIM = 0

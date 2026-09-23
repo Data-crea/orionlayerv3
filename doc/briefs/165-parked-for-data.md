@@ -34,6 +34,44 @@ danach wartet auf dein Wort.
 
 ---
 
+## 0a. NACHTRAG, 23. September 2026 — der Hintergrund des Change-Modus
+
+**Die Wahl fiel ohne Begründung auf die Alternative und ist auf deine
+Entscheidung zurückgenommen.**
+
+Der Auftrag stellte sie so: Default ein Panel über der eingefrorenen
+HD-Galaxiekarte nach dem Muster des GAME-Menüs; Alternative *nur*, wenn
+dieses Muster nicht trägt, ein eigener Bildschirm mit neutralem
+Hintergrund, **markiert**. Gebaut wurde in der zweiten Sitzung die
+Alternative — eigener Bildschirm, geteilte Cockpit-Textur. Dass das
+Muster nicht getragen hätte, steht nirgends; die Wahl steht weder als
+Markierung im Baum noch als Eintrag in dieser Datei, obwohl der Auftrag
+beides verlangt. Sie war also keine Wahl, sondern ein Standardpfad, den
+niemand als Wahl erkannt hat.
+
+**Jetzt gebaut: der Default.** `IS_OVERLAY`, `OVERLAY_PARENT =
+"galaxy_map"`, `OVERLAY_DIM = 0`; die Dispatcher-Sperre für Id 36 hält
+das Panel, solange der Draht 36 meldet, und schließt es, sobald er es
+nicht mehr tut; die Karte bekommt keine Eingabe, weil `dispatcher.top`
+das Overlay ist. **Keine Markierung mehr nötig** — der Default ist das,
+was das Original tut (`Draw_Mini_Main_Screen_`, mainscr_main.cpp:700-703).
+
+**Und dabei ist ein Fehler aufgefallen, den nur das Hinsehen zeigt:**
+das Panel füllte seine eigene Fläche nicht. Die Karte schien durch die
+Zeilen. Das Original füllt `(s+4, 4)-(s+471, 472)` mit Palettenindex 0,
+bevor es die Panel-Grafik darüber zeichnet (tech.cpp:290-291) — jetzt
+transkribiert. Die erste Prüfung hätte es nicht gefunden: sie fragte
+nur, ob die Seitenbänder gleich bleiben.
+
+**Eine Beobachtung, nicht geändert:** die HD-Seite zeichnet den
+Exit-Knopf des Originals nicht (TECHSEL 27, tech.cpp:198-200) und nimmt
+dort auch keinen Klick an — nur ESC verlässt den Bildschirm. Im
+nativen Bild daneben steht dort CANCEL. Das ist eine Auslassung aus
+Teil B, sie ist **nicht markiert**, und sie gehört nicht zu dem, was du
+heute beauftragt hast. Deine Entscheidung.
+
+---
+
 ## 0b. DIE ENTSCHEIDUNGEN DIESER SITZUNG
 
 Jede mit dem, was ihre Umkehr kosten würde.

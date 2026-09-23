@@ -2294,11 +2294,52 @@ files under `doc/` and are only summarised here.
 | | |
 |---|---|
 | Python | 32,960 lines across 111 modules — `find . -name '*.py'`, `__pycache__` excluded, the smoke test's 6,400 included. The previous figure here (21,642 across 94) was carried from an unstated method and could not be reproduced |
-| Smoke test | `python tools/smoke_test.py` — **263 checks**, headless, in `tools/smoke_suite/` since work order 162 (98 check modules, one group per screen plus a shared core; `tools/smoke_test.py` is the runner). **Two tiers since work order 158**: the bare command runs everything (~72 s here); `--fast` runs the commit gate's 256 (~32 s here). `--screen <name>` prints only that screen's sentences and the core's and is NEVER a gate. See "The gate has two tiers" below |
+| Smoke test | `python tools/smoke_test.py` — **265 checks**, headless, in `tools/smoke_suite/` since work order 162 (99 check modules, one group per screen plus a shared core; `tools/smoke_test.py` is the runner). **Two tiers since work order 158**: the bare command runs everything (~72 s here); `--fast` runs the commit gate's 258 (~32 s here). `--screen <name>` prints only that screen's sentences and the core's and is NEVER a gate. See "The gate has two tiers" below |
 | Assets | 170 MB (select_race 68, galaxy_map 51, shared 23, new_game 21, colony_summary 1) |
 | Screens in HD | 9 of ~20–22 (the GAME menu overlay, work order Stop 2, every dialog of the popup; colony summary draws list, sidebar, scan box and galaxy inset, and MOVES POPS — the first HD gesture that drives the game; planets, brief 101, lists, sorts, restricts and returns) |
 | Setup from clone | `python tools/setup.py` (deps via the system package manager) |
 | orion2re | required for live data, not for the smoke test |
+
+### Change mode is a panel over the galaxy map — 23 September 2026, work order 165 F
+
+Data's addition after the report on the three choices the order handed
+over: the change-mode background had gone to the ALTERNATIVE — a screen
+of its own with the shared cockpit texture — with no reason recorded,
+no marking and no entry in the parked file, all three of which the
+order asks for. Reversed to the default.
+
+`screens/research_change/screen.py`: `IS_OVERLAY`, `OVERLAY_PARENT =
+"galaxy_map"`, `OVERLAY_DIM = 0`. That is the GAME menu's pattern
+(decision 69) and the original's own — `Draw_Mini_Main_Screen_` paints
+the map before the screen is switched (mainscr_main.cpp:700-703). **No
+marking is needed any more**, because the default is what the original
+does.
+
+Nothing else had to change. `Dispatcher.update_from_game` already holds
+an overlay that carries a `GAME_SCREEN_ID` for as long as the wire
+reports that id and closes it the moment it does not, and
+`dispatcher.top` is the overlay, so the map sees no input.
+
+**The fault it uncovered:** the panel did not fill its own area and the
+map shone THROUGH the rows — clean in the side bands, unreadable where
+the text is. `Fill_(s+4, 4, s+0x1D7, 0x1D8, 0)` runs before the panel
+art in the original (tech.cpp:290-291); transcribed now, into
+`ResearchPanelScreen._render_background`, which is the one place the
+two modes answer this question differently. Found by LOOKING at the
+live capture; the first version of the check asked only whether the
+side bands stayed equal and would have passed.
+
+Live on SAVE4 (`~/orionlayer-fixtures/evidence/work_order_165/D_overlay_4/`):
+entry through the research window; **0 of 99 900** side-band pixels
+differ with the panel and without it while **122 025** inside it do; a
+click on the map outside the panel sends **0** and leaves the panel up,
+where the same point on the bare map sends 1 and reopens change mode;
+ESC returns with `(60, 136)` unchanged. HD beside the native frame in
+the same folder.
+
+**Not changed, and worth knowing:** HD draws no exit button (TECHSEL
+27, tech.cpp:198-200) and takes no click where the original has CANCEL
+— only ESC leaves. An omission from part B, not marked.
 
 ### The current field's second colour was wrong in three ways — 22 September 2026, work order 165 E
 
@@ -2522,8 +2563,8 @@ blocks into a session and writing them out again. Three proofs:
 
 | | command | checks | on this tree |
 |---|---|---:|---:|
-| **Full** — the default, and the pre-push gate | `python tools/smoke_test.py` | 263 | ~72 s |
-| **Fast** — the pre-commit gate | `python tools/smoke_test.py --fast` | 256 | ~32 s |
+| **Full** — the default, and the pre-push gate | `python tools/smoke_test.py` | 265 | ~72 s |
+| **Fast** — the pre-commit gate | `python tools/smoke_test.py --fast` | 258 | ~32 s |
 | **Screen** — **never a gate** | `python tools/smoke_test.py --screen <name>` | all of them, ~a third printed | the tier's |
 
 **`--screen` narrows what a run PRINTS, not what it runs**, and the
