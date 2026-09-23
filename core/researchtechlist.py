@@ -64,7 +64,8 @@ import pygame
 from core import palette
 from core import researchlist
 from core import researchnative as geom_mod
-from core.researchpanel import _blit_text, col, draw_box
+from core import researchband
+from core.researchpanel import _blit_text, _fit, col, draw_box
 
 #: `TECH::_list_window_x_offsets` (tech.cpp:33), indexed by PANEL ENTRY.
 #: A left-column entry opens its window on the right and the other way
@@ -148,24 +149,18 @@ class Item:
                 list_x + ITEM_WIDTH - APP_X_OFFSET,
                 researchlist.ROW_Y2[row] + self.y)
 
-    def band_rect(self, row, list_x):
-        """The band HD DRAWS for a row — the APPLICATION's label line.
+    def band_span(self, list_x):
+        """The band's x span — `row_rect`'s, which is the list's width.
 
         The popup has the same split as the panel and the same reason:
-        `row_rect` is the click area out of list.cpp:94-116, and row 0's
+        `row_rect` is the CLICK area out of list.cpp:94-116, and row 0's
         runs from `y1[0]` = 0, which is the FIELD NAME's own line
         (printed at `item.y` in `draw`). The original's mark does not go
         there — `Draw_Little_Arrow_` (tech.cpp:740-775) sits on
-        `app_label_y[i] + 5` and stems up only to `app_label_y[0] - 3`.
-
-        So the band starts at the label's y, `APP_NAME_Y[row]` below the
-        item, and is `researchlist.BAND_H` tall for every row. It keeps
-        `row_rect`'s x span, which is the list's own width.
+        `app_label_y[i] + 5`. Where the band sits vertically is
+        `core/researchband.py`: centred on the text.
         """
-        top = self.y + APP_NAME_Y[row]
-        return (list_x, top,
-                list_x + ITEM_WIDTH - APP_X_OFFSET,
-                top + researchlist.BAND_H - 1)
+        return list_x, list_x + ITEM_WIDTH - APP_X_OFFSET
 
 
 def field_slots(field, apps_by_field=None):
@@ -368,23 +363,26 @@ def draw(surface, layout, style, popup, origin, names, wording):
                    palette.col("research_select",
                                *STATUS_COLOUR[item.status]))
         for row, app in enumerate(item.apps):
+            label_y = item.y + APP_NAME_Y[row]
+            text = APP_BULLET + (names.application_name(app)
+                                 if names else str(app))
+            width = geom_mod.window_width(lx + APP_X_OFFSET, label_y,
+                                          APP_LABEL_WIDTH, layout)
+            size = _fit(style, text, width, layout.font_size(13))
             if popup.hover == (i, row):
-                # `band_rect`, not `row_rect`: the click area keeps the
-                # transcribed row, the MARK covers the label line only.
-                fill = pygame.Rect(*geom_mod.window_rect(
-                    item.band_rect(row, lx), layout))
+                # The click area keeps the transcribed row; the MARK is
+                # centred on the text by `researchband`, exactly as on
+                # the panel — one rule, drawn by two modules.
+                fill = researchband.band(layout, style, size,
+                                         (lx + APP_X_OFFSET, label_y),
+                                         *item.band_span(lx))
                 shade = pygame.Surface(fill.size, pygame.SRCALPHA)
                 shade.fill(col("hover", (70, 104, 168, 90)))
                 surface.blit(shade, fill.topleft)
-            label_y = item.y + APP_NAME_Y[row]
-            _blit_text(surface, style,
-                       APP_BULLET + (names.application_name(app)
-                                     if names else str(app)),
+            _blit_text(surface, style, text,
                        geom_mod.window_point((lx + APP_X_OFFSET, label_y),
                                              layout),
-                       geom_mod.window_width(lx + APP_X_OFFSET, label_y,
-                                             APP_LABEL_WIDTH, layout),
-                       layout.font_size(13),
+                       width, size,
                        palette.col("research_select",
                                    *STATUS_COLOUR[item.statuses[row]]))
 

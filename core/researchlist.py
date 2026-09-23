@@ -164,6 +164,12 @@ APP_NAME_Y = (19, 34, 49, 64)
 #: (`ROW_Y2[1] - ROW_Y1[1] + 1` = 15), which is the pitch of
 #: `APP_NAME_Y`. Only row 0's rectangle is taller, because it swallows
 #: the FIELD NAME's line — and that is a CLICK area, not a mark.
+#:
+#: WHERE the band sits is not here: it is centred on the text, which
+#: takes the rendered font, so `core/researchband.py` owns it and this
+#: module owns only the height. There is no native rectangle for it —
+#: the one that used to be here hung the band's top edge on the
+#: label's top edge, and Data saw the words clinging to the ceiling.
 BAND_H = ROW_Y2[1] - ROW_Y1[1] + 1
 
 #: The maximum rows one entry can show — `tech[4]` has four slots, and
@@ -250,29 +256,12 @@ class Entry:
                 self.x + ROW_X_SPAN + margin,
                 self.y + ROW_Y_BASE + ROW_Y2[-1] + margin)
 
-    def band_rect(self, row):
-        """The band HD DRAWS for a row: the APPLICATION's label line.
+    def band_span(self):
+        """The band's x span, which is the row's own and transcribed.
 
-        **NOT `row_rect`.** That is the click area and it is
-        transcribed — row 0 is 34 px tall and takes in the field name's
-        own line (tech.cpp:27-32, :607-615), because the original
-        accepts a click there. A MARK on it is a different thing, and
-        the original's own mark says where it goes:
-        `Draw_Little_Arrow_` (tech.cpp:740-775) puts an arrowhead at
-        `app_label_y[i] + 5`, just left of the label, with a stem
-        rising only to `app_label_y[0] - 3` — sixteen pixels below the
-        field name and never on it.
-
-        So the band starts at the label's own y and is `BAND_H` tall,
-        the same for every row, and the field heading is never inside
-        it. Rows 1..3 come out exactly their transcribed rectangle;
-        only row 0's band is shorter than its click area.
+        The y is not here — see `BAND_H` and `core/researchband.py`.
         """
-        if not 0 <= row < len(self.apps):
-            raise IndexError(f"entry {self.index} has {len(self.apps)} "
-                             f"rows, asked for {row}")
-        top = self.y + ROW_Y_BASE + APP_NAME_Y[row]
-        return (self.x, top, self.x + ROW_X_SPAN, top + BAND_H - 1)
+        return self.x, self.x + ROW_X_SPAN
 
     def cost_anchor(self):
         """Where the "N RP" string ENDS — it is printed right-aligned."""

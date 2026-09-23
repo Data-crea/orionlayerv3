@@ -9,7 +9,7 @@
 # This one did NOT stand inside main(): it is work order 166 part D,
 # text that fits.
 #
-# The 4 check(s) it holds:
+# The 5 check(s) it holds:
 #   - every name and row label lies inside its own box with the
 #     margin, at four resolutions, with the longest real names
 #   - the hover band covers its row and stays inside the box, and the
@@ -18,8 +18,24 @@
 #     list popup (Data's Nachtrag to 166, rule 1)
 #   - the boxes and the button keep their distance from each other
 #     (Data's Nachtrag to 166, rules 2 and 3)
+#   - the hover band is centred on the line the eye reads, measured
+#     from the ink at four resolutions (Data, 23 September 2026)
 from core.helppopup import FALLBACK_BOX as _HelpFallbackBox
+from core import researchband as _tf_band
 from core import researchpanel as _tf_panel
+
+
+def _tf_band_of(entry, row, lay, size=None):
+    """The band the panel WOULD draw for a row, at that layout.
+
+    Through `researchband`, which is the module the panel draws with —
+    a check that recomputed the rectangle here would agree with itself
+    and with nothing else (decision 5).
+    """
+    lx, ly, _ = entry.app_label_anchor(row)
+    return _tf_band.band(lay, _dx_scr.style,
+                         size if size is not None else lay.font_size(14),
+                         (lx, ly), *entry.band_span())
 
 # ── THE LONGEST REAL NAMES, PER BOX ──
 #
@@ -160,15 +176,13 @@ for _tf_e in _tf_entries:
         _tf_e.panel_box(_tf_panel.BOX_MARGIN), _tf_lay)
     _tf_box = pygame.Rect(_bx, _by, _bw, _bh)
     for _tf_row in range(len(_tf_e.apps)):
-        _rx, _ry, _rw, _rh = _dx_geo.window_rect(
-            _tf_e.band_rect(_tf_row), _tf_lay)
-        _tf_band = pygame.Rect(_rx, _ry, _rw, _rh)
-        assert _tf_box.contains(_tf_band), (
-            f"entry {_tf_e.index} row {_tf_row}: the band {_tf_band} "
+        _tf_bnd = _tf_band_of(_tf_e, _tf_row, _tf_lay)
+        assert _tf_box.contains(_tf_bnd), (
+            f"entry {_tf_e.index} row {_tf_row}: the band {_tf_bnd} "
             f"is not inside its box {_tf_box}")
         # …and it is INSIDE by the margin, not merely touching.
-        assert _tf_band.left - _tf_box.left >= 2, (_tf_e.index, _tf_row)
-        assert _tf_box.right - _tf_band.right >= 2, (_tf_e.index, _tf_row)
+        assert _tf_bnd.left - _tf_box.left >= 2, (_tf_e.index, _tf_row)
+        assert _tf_box.right - _tf_bnd.right >= 2, (_tf_e.index, _tf_row)
         _tf_band_seen += 1
 assert _tf_band_seen >= 8, _tf_band_seen
 # AND IT IS DRAWN THERE: the hovered row's fill must appear inside the
@@ -176,8 +190,7 @@ assert _tf_band_seen >= 8, _tf_band_seen
 _tf_e0 = _tf_entries[0]
 _tf_hov = _tf_render(_tf_lay, _tf_entries, hover=(_tf_e0.index, 0))
 _tf_flat = _tf_render(_tf_lay, _tf_entries)
-_rx, _ry, _rw, _rh = _dx_geo.window_rect(_tf_e0.band_rect(0), _tf_lay)
-_tf_band = pygame.Rect(_rx, _ry, _rw, _rh)
+_tf_bnd = _tf_band_of(_tf_e0, 0, _tf_lay)
 _tf_moved = _tf_spill = 0
 for _tf_y in range(0, 1080, 2):
     for _tf_x in range(0, 1920, 2):
@@ -185,7 +198,7 @@ for _tf_y in range(0, 1080, 2):
                 _tf_flat.get_at((_tf_x, _tf_y))[:3]:
             continue
         _tf_moved += 1
-        if not _tf_band.collidepoint(_tf_x, _tf_y):
+        if not _tf_bnd.collidepoint(_tf_x, _tf_y):
             _tf_spill += 1
 assert _tf_moved > 100, _tf_moved
 assert _tf_spill == 0, (
@@ -311,10 +324,8 @@ assert len(_tf_head_ink) > 400, len(_tf_head_ink)
 _tf_cut = 0
 for _tf_e in _tf_entries:
     for _tf_row in range(len(_tf_e.apps)):
-        _rx, _ry, _rw, _rh = _dx_geo.window_rect(
-            _tf_e.band_rect(_tf_row), _tf_lay)
-        _tf_band = pygame.Rect(_rx, _ry, _rw, _rh)
-        _tf_cut += sum(1 for _p in _tf_head_ink if _tf_band.collidepoint(_p))
+        _tf_bnd = _tf_band_of(_tf_e, _tf_row, _tf_lay)
+        _tf_cut += sum(1 for _p in _tf_head_ink if _tf_bnd.collidepoint(_p))
 assert _tf_cut == 0, (
     f"{_tf_cut} of {len(_tf_head_ink)} pixels of the field headings lie "
     f"inside a hover band — the band is on the heading, and "
@@ -327,15 +338,17 @@ for _tf_e in _tf_entries:
     assert _tf_r0[3] - _tf_r0[1] == _rl.ROW_Y2[0] - _rl.ROW_Y1[0] == 33, \
         _tf_r0
     assert _tf_r0[1] == _tf_e.y + _rl.ROW_Y_BASE, _tf_r0
-    _tf_b0 = _tf_e.band_rect(0)
-    assert _tf_b0[1] > _tf_r0[1], (_tf_b0, _tf_r0)
-    assert _tf_b0[3] == _tf_r0[3], (_tf_b0, _tf_r0)
+    # The band starts below the field name's own line, whatever the
+    # centring does with it.
+    assert _tf_band_of(_tf_e, 0, _tf_lay).top > _dx_geo.window_rect(
+        (_tf_e.x, _tf_r0[1], _tf_e.x + 1, _tf_r0[1] + 1), _tf_lay)[1]
 # Every band is the SAME height, which is what "bei allen Zeilen gleich
 # hoch" asks for, and it is the height rows 1..3 already had.
-_tf_hs = {_tf_e.band_rect(_r)[3] - _tf_e.band_rect(_r)[1]
+_tf_hs = {_tf_band_of(_tf_e, _r, _tf_lay).height
           for _tf_e in _tf_entries for _r in range(len(_tf_e.apps))}
-assert _tf_hs == {_rl.BAND_H - 1}, _tf_hs
+assert len(_tf_hs) == 1, _tf_hs
 assert _rl.BAND_H == _rl.ROW_Y2[1] - _rl.ROW_Y1[1] + 1 == 15, _rl.BAND_H
+assert _tf_band.HEIGHT == _rl.BAND_H, _tf_band.HEIGHT
 
 # THE SAME IN THE LIST POPUP, measured the same way. Its rows come from
 # the same table (list.cpp:94-116) and its field name is printed at the
@@ -359,14 +372,16 @@ _tf_lx = _tf_lpop.list_x(_tf_lorigin)
 _tf_lcut = _tf_lrows = 0
 for _tf_item in _tf_lpop.items():
     for _tf_row in range(len(_tf_item.apps)):
-        _rx, _ry, _rw, _rh = _dx_geo.window_rect(
-            _tf_item.band_rect(_tf_row, _tf_lx), _tf_lay)
-        _tf_lband = pygame.Rect(_rx, _ry, _rw, _rh)
+        _tf_lband = _tf_band.band(
+            _tf_lay, _dx_scr.style, _tf_lay.font_size(13),
+            (_tf_lx + _tl.APP_X_OFFSET,
+             _tf_item.y + _tl.APP_NAME_Y[_tf_row]),
+            *_tf_item.band_span(_tf_lx))
         _tf_lcut += sum(1 for _p in _tf_lheads
                         if _tf_lband.collidepoint(_p))
         # The click area stays the transcribed row here too.
-        assert _tf_item.row_rect(_tf_row, _tf_lx)[3] == \
-            _tf_item.band_rect(_tf_row, _tf_lx)[3]
+        assert _tf_item.row_rect(_tf_row, _tf_lx)[:2] == \
+            (_tf_lx, _rl.ROW_Y1[_tf_row] + _tf_item.y)
         _tf_lrows += 1
 assert _tf_lrows >= 4, _tf_lrows
 assert _tf_lcut == 0, (
@@ -440,3 +455,143 @@ for _tf_e in _tf_entries:
 assert len(_tf_sizes) == 1, _tf_sizes
 ok("the boxes and the button keep their distance: no two of the eight "
    "and no box and CANCEL come within 3 native px, in both modes")
+
+# ── 5. THE BAND IS CENTRED ON THE LINE THE EYE READS ──
+#
+# Data, on the live panel: the band's top edge sat on the label's top
+# edge and the words clung to the ceiling of it ("Holo Simulator"). The
+# rule is the same distance above and below — and on the line the EYE
+# reads, from the top of the capitals to the baseline, because a
+# descender hangs below the baseline and centring on the full glyph box
+# would place two rows of the same panel differently for a reason
+# nobody can see.
+#
+# MEASURED, NOT RECOMPUTED, which is what Data asked for. Three renders
+# per row: the row's name alone, the same with nothing at all, and the
+# same with the hover on. The FIRST difference is the name's ink, the
+# SECOND is the band, and the two gaps come off those two rectangles.
+# Nothing here reads `researchband`'s arithmetic back.
+#
+# The name is capitals with no descenders, so its ink runs exactly from
+# the cap top to the baseline. In the popup the original prepends its
+# own bullet (`buffer[0] = '^'`, tech.cpp:10) and a circumflex sits
+# ABOVE the capitals, so the ink is measured to the right of it — the
+# bullet is not part of the line the eye reads either.
+_TF_FLAT = "HALT ION BEAM"
+
+
+class _TfOne:
+    """One application's name, in capitals; everything else empty."""
+
+    state = "ok"
+
+    def __init__(self, app):
+        self.app = app
+
+    def field_name(self, field):
+        return ""
+
+    def application_name(self, app, hyper_count=None):
+        return _TF_FLAT if app == self.app else ""
+
+
+def _tf_ink_box(a, b, region):
+    """The bounding box of what differs between two renders, in region."""
+    x1 = y1 = 10 ** 6
+    x2 = y2 = -1
+    for y in range(region.top, region.bottom):
+        for x in range(region.left, region.right):
+            if a.get_at((x, y))[:3] == b.get_at((x, y))[:3]:
+                continue
+            x1, y1 = min(x1, x), min(y1, y)
+            x2, y2 = max(x2, x), max(y2, y)
+    return None if x2 < 0 else pygame.Rect(x1, y1, x2 - x1 + 1, y2 - y1 + 1)
+
+
+_tf_centred = 0
+for _tf_w, _tf_h in ((1920, 1080), (2560, 1440), (3440, 1440),
+                     (3840, 2160)):
+    _tf_lay = Layout(_tf_w, _tf_h)
+    _tf_e = _tf_entries[0]
+    _bx, _by, _bw, _bh = _dx_geo.window_rect(
+        _tf_e.panel_box(_tf_panel.BOX_MARGIN), _tf_lay)
+    # Room for a band that reaches above its own row, which is exactly
+    # what centring row 0's band does.
+    _tf_region = pygame.Rect(_bx, max(0, _by - _bh), _bw, _bh * 3)
+    _tf_region.height = min(_tf_region.height, _tf_h - _tf_region.top)
+    _tf_none = _tf_render(_tf_lay, _tf_entries, names=_TfOne(None))
+    for _tf_row, _tf_app in enumerate(_tf_e.apps):
+        _tf_one = _TfOne(_tf_app)
+        _tf_flat = _tf_render(_tf_lay, _tf_entries, names=_tf_one)
+        _tf_hov = _tf_render(_tf_lay, _tf_entries,
+                             hover=(_tf_e.index, _tf_row), names=_tf_one)
+        _tf_ink = _tf_ink_box(_tf_flat, _tf_none, _tf_region)
+        _tf_bar = _tf_ink_box(_tf_hov, _tf_flat, _tf_region)
+        assert _tf_ink is not None and _tf_ink.height > 4, (_tf_w, _tf_row)
+        assert _tf_bar is not None and _tf_bar.height > 8, (_tf_w, _tf_row)
+        _tf_over = _tf_ink.top - _tf_bar.top
+        _tf_under = _tf_bar.bottom - _tf_ink.bottom
+        assert _tf_over > 0 and _tf_under > 0, (
+            f"{_tf_w}x{_tf_h} row {_tf_row}: the name {_tf_ink} is not "
+            f"inside the band {_tf_bar}")
+        assert abs(_tf_over - _tf_under) <= 1, (
+            f"{_tf_w}x{_tf_h} row {_tf_row}: {_tf_over} px of band above "
+            f"the name and {_tf_under} below it — the band is not "
+            f"centred on the line the eye reads")
+        _tf_centred += 1
+assert _tf_centred >= 4 * 2, _tf_centred
+
+# THE POPUP, the same measurement and the same rule.
+_tf_lpop = _tl.TechListPopup()
+_tf_lpop.open(type("E", (), {"index": 0, "group": 4})(), _tl_items)
+_tf_lorigin = _dx_geo.Geometry("change").origin
+_tf_litem = _tf_lpop.items()[0]
+_tf_lpopped = 0
+for _tf_w, _tf_h in ((1920, 1080), (2560, 1440), (3440, 1440),
+                     (3840, 2160)):
+    _tf_lay = Layout(_tf_w, _tf_h)
+    _tf_lx = _tf_lpop.list_x(_tf_lorigin)
+
+    def _tf_lrender(names, hover=None):
+        _s = pygame.Surface((_tf_w, _tf_h))
+        _s.fill((0, 0, 0))
+        _tf_lpop.hover = hover
+        _tl.draw(_s, _tf_lay, _dx_scr.style, _tf_lpop, _tf_lorigin,
+                 names, None)
+        _tf_lpop.hover = None
+        return _s
+
+    _lx1, _ly1, _lw, _lh = _dx_geo.window_rect(
+        _tf_lpop.window_rect(_tf_lorigin), _tf_lay)
+    # Past the bullet: `Print_`'s own '^' is left of the name and a
+    # circumflex sits above the capitals.
+    _tf_bullet = _dx_scr.style.get_font(
+        _tf_lay.font_size(13)).size(_tl.APP_BULLET)[0]
+    _tf_lregion = pygame.Rect(
+        _dx_geo.window_point((_tf_lx + _tl.APP_X_OFFSET, 0),
+                             _tf_lay)[0] + _tf_bullet + 2,
+        _ly1, _lw, _lh)
+    _tf_lnone = _tf_lrender(_TfOne(None))
+    for _tf_row, _tf_app in enumerate(_tf_litem.apps):
+        _tf_one = _TfOne(_tf_app)
+        _tf_lflat = _tf_lrender(_tf_one)
+        _tf_lhov = _tf_lrender(_tf_one, hover=(0, _tf_row))
+        _tf_link = _tf_ink_box(_tf_lflat, _tf_lnone, _tf_lregion)
+        _tf_lbar = _tf_ink_box(_tf_lhov, _tf_lflat, _tf_lregion)
+        if _tf_link is None:          # a padded slot has no name to draw
+            continue
+        assert _tf_lbar is not None, (_tf_w, _tf_row)
+        _tf_over = _tf_link.top - _tf_lbar.top
+        _tf_under = _tf_lbar.bottom - _tf_link.bottom
+        assert _tf_over > 0 and _tf_under > 0, (
+            f"popup {_tf_w}x{_tf_h} row {_tf_row}: the name {_tf_link} "
+            f"is not inside the band {_tf_lbar}")
+        assert abs(_tf_over - _tf_under) <= 1, (
+            f"popup {_tf_w}x{_tf_h} row {_tf_row}: {_tf_over} px above "
+            f"the name and {_tf_under} below it")
+        _tf_lpopped += 1
+assert _tf_lpopped >= 4, _tf_lpopped
+_tf_lpop.close()
+ok("the hover band is centred on the line the eye reads — the ink of a "
+   "name without descenders sits the same distance from both edges, at "
+   "four resolutions, on the panel and in the list popup")

@@ -164,3 +164,43 @@ steht. Im Vollbild ist die Inhaltsfläche die des Presets
 (main.py:501-529).
 **Umkehr:** die F11-Tastendrücke weglassen. **Kosten:** drei statt vier
 Auflösungen, und zwei davon mit falschem Namen.
+
+---
+
+## Nachtrag zum Nachtrag — das zentrierte Band
+
+### Zentriert wird auf Großbuchstaben bis Grundlinie, gemessen
+
+**Gewählt:** `core/researchband.py` rendert Großbuchstaben und liest
+die Tinte zurück (`Surface.get_bounding_rect`), statt die Metrik der
+Schrift zu fragen.
+**Warum:** `Font.get_ascent()` ist das Versprechen der Schrift, und die
+Versalhöhe steht in der Metrik überhaupt nicht. Gemessen ist, was die
+Regel verlangt — und es ist derselbe Zug, den die Prüfungen auf diesem
+Bildschirm machen.
+**Umkehr:** eine Zeile mit `get_ascent()`. **Kosten:** die Prüfung
+misst die Tinte, nicht die Metrik, und würde die Abweichung zeigen —
+bei dieser Schrift sind es 1 bis 2 px.
+
+### Das Band hat kein natives Rechteck mehr
+
+**Gewählt:** `Entry.band_rect` und `Item.band_rect` sind weg;
+`band_span()` gibt die x-Spanne (transkribiert), die y-Lage kommt aus
+`researchpanel.row_label` in Fensterpixeln.
+**Warum:** wo das Band sitzt, hängt an der gerenderten Schrift, und ein
+natives Rechteck dafür wäre eine Zahl, die bei jeder Auflösung etwas
+anderes bedeutet. Eine Rechnung, drei Aufrufer: die Zeichnung, der
+Live-Treiber und die Prüfungen.
+**Umkehr:** die y-Lage wieder in `researchlist` legen. **Kosten:** die
+Zentrierung ginge verloren, und genau das hast du beanstandet.
+
+### Die Bandhöhe bleibt bei 15 nativen px
+
+**Gewählt:** `BAND_H` unverändert, obwohl das Band jetzt nach oben aus
+seiner Zeile herausragt (Zeile 0: 147..181 statt 158..191 bei 1080p).
+**Warum:** die Höhe ist für alle Zeilen gleich, der Text liegt mittig
+darin, und die Feldüberschrift bleibt frei — 15 Fensterpixel Luft bei
+1080p, 31 bei 4K. Kein Grund, an der Höhe zu drehen.
+**Umkehr:** eine Zahl. **Kosten:** kleiner wird das Band eng um die
+Schrift, größer berührt Zeile 0 irgendwann die Überschrift, und dann
+geht die Regel aus dem Nachtrag rot.

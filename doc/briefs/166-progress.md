@@ -456,3 +456,81 @@ the two columns stand visibly apart, and CANCEL is clear of the boxes.
 | captures | `~/orionlayer-fixtures/evidence/work_order_166_nachtrag/` |
 | SAVE10 | reloaded and confirmed: stardate 3500.3, 2 players, 54 stars, 28 colony records |
 | every `SAVE*.GAM` | byte-identical, SAVE10 included |
+
+---
+
+# Data, 23 September 2026 — the band is centred on the text
+
+The band the Nachtrag built hung its top edge on the label's top edge:
+the words clung to the ceiling of it. Data's capture, "Holo Simulator".
+
+**The rule is Data's, and so was the place:** the original marks the
+row with a cycling palette index and a little arrow
+(`Draw_Little_Arrow_`, tech.cpp:740-775) and an RGB surface has
+neither, so there is nothing to transcribe here and everything to
+decide. Same distance above and below.
+
+**On the line the eye reads** — cap top to baseline. A descender hangs
+below the baseline and does not count: centring on the full glyph box
+would put "Holo Simulator" and "Ion Drive" at different heights in the
+same panel, for a reason nobody can see.
+
+## What moved, and what did not
+
+`core/researchband.py` is new and owns the placement. It MEASURES the
+cap-to-baseline span by rendering capitals and reading the ink back
+(`Surface.get_bounding_rect`) — `Font.get_ascent()` is the font's own
+promise and the cap height is not in the metrics at all.
+
+There is no native rectangle for the band any more: where it sits
+depends on the rendered font, so `Entry.band_rect` and
+`Item.band_rect` are gone and `band_span()` gives the x span, which is
+transcribed. `researchpanel.row_label` is the one computation of
+(size, width, band) — the drawing, the live driver and the checks all
+ask it rather than repeating it, and the size is the one the shrink
+rule actually used, so a name that had to come down a point is centred
+on the line it really renders.
+
+The text did not move: every anchor is transcribed. The click area did
+not move: `row_rect` is the original's own field and row 0 is still
+34 px tall with the field-name line in it.
+
+**The Nachtrag's rule still holds.** The centred band clears the field
+heading's ink by 15 window px at 1080p, 20 at 1440p and 31 at 4K.
+
+## The proof, measured end to end
+
+Check 5 in `080k` (the module holds five now; the suite is at **281**).
+Three renders per row: the row's name alone, the same with no names at
+all, and the same with the hover on. The FIRST difference is the ink of
+the name, the SECOND is the band, and the two gaps come off those two
+rectangles — nothing reads `researchband`'s arithmetic back.
+
+The name is capitals without descenders, so its ink runs exactly from
+the cap top to the baseline. In the popup the original prepends its own
+bullet (`buffer[0] = '^'`, tech.cpp:10) and a circumflex sits ABOVE the
+capitals, so the ink is measured to the right of it.
+
+Four resolutions, panel and popup, tolerance 1 px. Measured: 12/12 at
+1080p, 16/16 at both 1440p sizes, 24/24 at 4K.
+
+| counter-test | what went red |
+|---|---|
+| `band()` returns the label's own top edge again | 1920x1080 row 0: 1 px of band above the name and 23 below it |
+
+That is the fault Data reported, in the check's own words.
+
+## Live, SAVE4
+
+One box hovered per resolution, a different one each time
+(`tools/research_hover_hd.py 4 --one`): entry 0 at 1080p, 2 at 1440p,
+4 at ultrawide, 6 at 4K. Every hover hit its row, the screen was
+holding that row when the picture was taken, no band covered the field
+name, nothing was sent, `(60, 136)` before and after. SAVE1-9, SAVE10
+and SAVE11 byte-identical; SAVE10 reloaded and confirmed at stardate
+3500.3, 2 players, 54 stars, 28 colony records.
+
+Captures: `~/orionlayer-fixtures/evidence/work_order_166_centred/` —
+`row0_<entry>_<resolution>.png` the hovered row cut out of each of the
+four, `panel_<resolution>.png` the whole panel, `hover_4/` the original
+window and framebuffer pairs.

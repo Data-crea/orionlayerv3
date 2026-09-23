@@ -25,6 +25,7 @@ thing available. DEVIATION, in each screen's marked list.
 import pygame
 
 from core import palette
+from core import researchband
 from core import researchlist
 from core import researchnative as geom_mod
 
@@ -210,6 +211,31 @@ def draw_exit(surface, layout, style, native_rect, label, pressed=False):
     return box
 
 
+def row_label(layout, style, entry, row, text):
+    """(size, max width, band) for one row's label.
+
+    ONE computation of it, because three callers need the same answer:
+    the drawing below, the live driver that hovers a row and asks where
+    the band came out, and the checks. The band follows the SIZE, which
+    follows the text through the shrink rule, so a caller that took the
+    nominal size would get a band a pixel off on exactly the rows the
+    shrink touches.
+    """
+    label_x, label_y, label_w = entry.app_label_anchor(row)
+    width = geom_mod.window_width(label_x, label_y, label_w, layout)
+    size = _fit(style, text or "", width, layout.font_size(14))
+    return size, width, researchband.band(layout, style, size,
+                                          (label_x, label_y),
+                                          *entry.band_span())
+
+
+def row_text(entry, row, words, names):
+    """What the panel prints on a row — the placeholder or the name."""
+    if entry.placeholder:
+        return words.get("placeholder")
+    return names.application_name(entry.apps[row]) if names else None
+
+
 def draw(surface, layout, style, entries, hover, words, names, wording,
          current=(0, 0), creative=False):
     """Draw the eight entries. `hover` is (entry index, row) or None.
@@ -270,30 +296,29 @@ def _draw_entry(surface, layout, style, entry, hover, words, names, wording,
                else col("field", (226, 234, 250)))
 
     for row, app in enumerate(entry.apps):
+        label_x, label_y, label_w = entry.app_label_anchor(row)
+        # THE SIZE IS DECIDED BEFORE THE BAND, because the band is
+        # centred on the line this size renders — a name the shrink
+        # rule had to bring down has a shorter line to be centred on.
+        text = row_text(entry, row, words, names)
+        size, width, band = row_label(layout, style, entry, row, text)
         if hover == (entry.index, row):
             # The original marks the hovered row with a cycling box and
             # a little arrow (`Draw_Little_Arrow_`, tech.cpp:740). HD
             # fills the row instead — INVENTION: MOO2 cycles a palette
             # index, which an RGB surface does not have.
             #
-            # THE BAND IS NOT THE CLICK AREA. `band_rect`, not
-            # `row_rect`: tech.cpp:740-775 puts the arrowhead on the
-            # APPLICATION's label line and rises only to
-            # `app_label_y[0] - 3`, so the mark never reaches the field
-            # heading. Row 0's click area does reach it — the original
-            # accepts a click there — and the two are separate things.
-            rect = pygame.Rect(*geom_mod.window_rect(entry.band_rect(row),
-                                                   layout))
-            shade = pygame.Surface(rect.size, pygame.SRCALPHA)
+            # THE BAND IS NOT THE CLICK AREA, and it is not the label's
+            # own top edge either: `researchband` centres it on the
+            # capitals-to-baseline line, Data's rule after seeing the
+            # words clinging to the ceiling of it. The click area stays
+            # `row_rect`, transcribed, with the field-name line in it.
+            shade = pygame.Surface(band.size, pygame.SRCALPHA)
             shade.fill(col("hover", (70, 104, 168, 90)))
-            surface.blit(shade, rect.topleft)
-        label_x, label_y, label_w = entry.app_label_anchor(row)
-        _blit_text(surface, style,
-                   words.get("placeholder") if entry.placeholder
-                   else (names.application_name(app) if names else None),
+            surface.blit(shade, band.topleft)
+        _blit_text(surface, style, text,
                    geom_mod.window_point((label_x, label_y), layout),
-                   geom_mod.window_width(label_x, label_y, label_w, layout),
-                   layout.font_size(14),
+                   width, size,
                    col("row_current", (250, 226, 150))
                    if is_current and (every_row
                                       or marks_row(names, app, current[1]))

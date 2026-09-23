@@ -35,7 +35,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import pygame  # noqa: E402
 
 import gameload  # noqa: E402
-from core import researchnative  # noqa: E402
+from core import researchnative, researchpanel  # noqa: E402
 from livedrive import Run, SendCounter, close, hashes  # noqa: E402
 import livesend  # noqa: E402
 from researchchangephases import (SCRATCH, SCREEN_CHANGE,  # noqa: E402
@@ -127,8 +127,14 @@ def one_hover(run, screen, entry):
             if screen._hover == (entry.index, 0):
                 break
     counts, _ = counted.snapshot()
-    band, row = entry.band_rect(0), entry.row_rect(0)
+    row = entry.row_rect(0)
     point = screen.native_point(wx, wy)
+    # THE BAND COMES FROM THE PANEL ITSELF (`researchpanel.row_label`),
+    # in window pixels, because since the centring it depends on the
+    # rendered font and there is no native rectangle to quote.
+    _, _, band = researchpanel.row_label(
+        run.app.layout, run.app.style, entry, 0,
+        researchpanel.row_text(entry, 0, screen.panel_words(), screen._names))
     return {"entry": entry.index, "field": entry.field,
             "sends": counts, "quiet": sum(counts.values()) == 0,
             "attempts": attempts,
@@ -136,22 +142,24 @@ def one_hover(run, screen, entry):
             "point_window": [wx, wy], "point_native": list(point or ()),
             "hit": list(screen.row_at(wx, wy) or ()),
             "hover": list(screen._hover or ()),
-            "row_rect": list(row), "band_rect": list(band),
+            "row_rect": list(row), "band_window": list(band),
             # The verdict, and it is arithmetic on the two rectangles
             # the screen itself drew with — not a repeat of them.
             "on_the_row": screen.row_at(wx, wy) == (entry.index, 0),
-            "band_clear_of_the_point": point is not None
-            and not (band[0] <= point[0] <= band[2]
-                     and band[1] <= point[1] <= band[3])}
+            "band_clear_of_the_point": not band.collidepoint(wx, wy)}
 
 
-def one_resolution(run, screen):
-    """One pass over the eight boxes at the size the window has now."""
+def one_resolution(run, screen, which=None):
+    """One pass over the boxes at the size the window has now.
+
+    `which` names the entry indices to hover; None is all of them.
+    """
     size = (run.app.win_w, run.app.win_h)
     run.pump(12)
     out = []
     for entry in screen._entries:
-        if not entry.offered:
+        if not entry.offered or (which is not None
+                                 and entry.index not in which):
             continue
         got = one_hover(run, screen, entry)
         shot = run.capture(f"hover_e{entry.index}_{size[0]}x{size[1]}")
@@ -164,6 +172,8 @@ def one_resolution(run, screen):
 
 def main():
     args = [a for a in sys.argv[1:]]
+    one = "--one" in args
+    args = [a for a in args if a != "--one"]
     slot = int(args[0]) if args and args[0].isdigit() else SCRATCH[0]
     folder = args[-1] if args and not args[-1].isdigit() \
         else "work_order_166_nachtrag"
@@ -182,11 +192,17 @@ def main():
     if record["loaded"] and enter_change(run) and panel_ready(run):
         screen, before = hd(run), pair(run)
         reentries = 0
-        for _ in range(len(run.app._resolutions)):
+        offered = [e.index for e in screen._entries if e.offered]
+        for turn in range(len(run.app._resolutions)):
             key(run, pygame.K_F11)              # into fullscreen
             screen, again = ensure_panel(run)
             reentries += bool(again)
-            passes.append(one_resolution(run, screen))
+            # ONE BOX PER RESOLUTION under `--one`, and a different one
+            # each time: four pictures of the same box say less than
+            # four pictures of four, and the rule is the same for all.
+            which = ({offered[(turn * 2) % len(offered)]} if one
+                     else None)
+            passes.append(one_resolution(run, screen, which))
             key(run, pygame.K_F11)              # back to a window
             key(run, pygame.K_F9)               # the next preset
         quiet = sum(1 for p in passes for h in p["hovers"]
@@ -198,7 +214,8 @@ def main():
         sizes = [tuple(p["size"]) for p in passes]
         wanted = [(w, h) for w, h, _ in run.app._resolutions]
         ok = bool(sorted(sizes) == sorted(wanted)
-                  and len(passes) >= 4 and len(hovers) >= 4 * 4
+                  and len(passes) >= 4
+                  and len(hovers) >= (4 if one else 4 * 4)
                   and all(h["on_the_row"] for h in hovers)
                   and all(h["hover_is_the_row"] for h in hovers)
                   and all(h["band_clear_of_the_point"] for h in hovers)

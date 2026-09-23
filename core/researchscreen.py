@@ -371,6 +371,26 @@ class ResearchPanelScreen(ResearchPopupsMixin, ScreenBase):
         """
         return not (self.IS_OVERLAY and self._state == WAITING)
 
+    def panel_words(self):
+        """The strings `researchpanel.draw` takes, in one place.
+
+        A method rather than a literal inside `render_content` because
+        a live driver asks the screen what it is printing on a row —
+        and a second copy of this table in a tool is a table that
+        drifts from the one on screen.
+        """
+        return {
+            # The placeholder row's label is the game's own message 62,
+            # "Pure research" — a row that exists and CAN be picked
+            # (tech.cpp:624-636), not an error line.
+            "placeholder": self._wording.message(
+                billtext.MSG_NO_APPLICATION) if self._wording else None,
+            # A callable, because the cost is per entry and the entries
+            # change every frame. `panel` asks for the one it is drawing
+            # rather than being handed a table it could index wrongly.
+            "cost": self.cost_text,
+        }
+
     def render_content(self, surface):
         """The eight entries, over the boxes and UNDER the help popup.
 
@@ -382,17 +402,7 @@ class ResearchPanelScreen(ResearchPopupsMixin, ScreenBase):
         """
         if self._state != READY:
             return
-        words = {
-            # The placeholder row's label is the game's own message 62,
-            # "Pure research" — a row that exists and CAN be picked
-            # (tech.cpp:624-636), not an error line.
-            "placeholder": self._wording.message(
-                billtext.MSG_NO_APPLICATION) if self._wording else None,
-            # A callable, because the cost is per entry and the entries
-            # change every frame. `panel` asks for the one it is drawing
-            # rather than being handed a table it could index wrongly.
-            "cost": self.cost_text,
-        }
+        words = self.panel_words()
         # SELECT MODE PASSES ZEROS for the current field and
         # application on purpose — `Tech_Select_` has zeroed the field
         # before this list exists (tech.cpp:104-105), so the original's

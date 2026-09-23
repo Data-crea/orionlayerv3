@@ -2294,7 +2294,7 @@ files under `doc/` and are only summarised here.
 | | |
 |---|---|
 | Python | 32,960 lines across 111 modules — `find . -name '*.py'`, `__pycache__` excluded, the smoke test's 6,400 included. The previous figure here (21,642 across 94) was carried from an unstated method and could not be reproduced |
-| Smoke test | `python tools/smoke_test.py` — **280 checks**, headless, in `tools/smoke_suite/` since work order 162 (105 check modules, one group per screen plus a shared core; `tools/smoke_test.py` is the runner). **Two tiers since work order 158**: the bare command runs everything (~72 s here); `--fast` runs the commit gate's 273 (~32 s here). `--screen <name>` prints only that screen's sentences and the core's and is NEVER a gate. See "The gate has two tiers" below |
+| Smoke test | `python tools/smoke_test.py` — **281 checks**, headless, in `tools/smoke_suite/` since work order 162 (105 check modules, one group per screen plus a shared core; `tools/smoke_test.py` is the runner). **Two tiers since work order 158**: the bare command runs everything (~72 s here); `--fast` runs the commit gate's 274 (~32 s here). `--screen <name>` prints only that screen's sentences and the core's and is NEVER a gate. See "The gate has two tiers" below |
 | Assets | 170 MB (select_race 68, galaxy_map 51, shared 23, new_game 21, colony_summary 1) |
 | Screens in HD | 9 of ~20–22 (the GAME menu overlay, work order Stop 2, every dialog of the popup; colony summary draws list, sidebar, scan box and galaxy inset, and MOVES POPS — the first HD gesture that drives the game; planets, brief 101, lists, sorts, restricts and returns) |
 | Setup from clone | `python tools/setup.py` (deps via the system package manager) |
@@ -2385,6 +2385,42 @@ the client's three send methods.
 
 **The exceptions list moves with it**: `tools/colony_move_hd.py` is
 370 code lines now, fifteen shorter.
+
+### The hover band is centred on the text — 23 September 2026, Data on the live panel
+
+The band from the Nachtrag hung its top edge on the label's top edge,
+so the words clung to the ceiling of it ("Holo Simulator", Data's own
+capture). The band's PLACE is ours — the original cycles a palette
+index and draws a little arrow, and an RGB surface has neither — so the
+rule is Data's: the same distance above and below.
+
+**On the line the EYE reads**, from the top of the capitals to the
+baseline. A descender hangs below the baseline and does not count:
+centring on the full glyph box would put "Holo Simulator" and "Ion
+Drive" at different heights in the same panel, for a reason nobody can
+see.
+
+`core/researchband.py` owns it, and it MEASURES the span rather than
+asking the font: `get_ascent()` is the font's own promise and the cap
+height is not in the metrics at all, so the module renders capitals and
+reads the ink back. There is no native rectangle for the band any more
+— where it sits depends on the rendered font — so `researchlist` keeps
+only `BAND_H` and the x span, and `researchpanel.row_label` is the one
+computation of size, width and band that the drawing, the live driver
+and the checks all ask.
+
+The text did not move: every anchor is transcribed and so is the click
+area. **The Nachtrag's rule still holds** — the centred band clears the
+field heading by 15 window px at 1080p and 31 at 4K.
+
+The 166 D check took a fifth rule, and it is measured end to end: the
+name's ink is the difference between a render with that row's name and
+one with no names, the band is the difference between hovered and not
+hovered, and the two gaps come off those two rectangles. Four
+resolutions, the panel and the list popup, tolerance 1 px. The
+counter-test hangs the band back on the label line and it goes red with
+"1 px above the name and 23 below it" — which is the fault Data
+reported, in the check's own words.
 
 ### The hover band is not the click area — 23 September 2026, the Nachtrag to work order 166
 
@@ -2760,8 +2796,8 @@ blocks into a session and writing them out again. Three proofs:
 
 | | command | checks | on this tree |
 |---|---|---:|---:|
-| **Full** — the default, and the pre-push gate | `python tools/smoke_test.py` | 280 | ~72 s |
-| **Fast** — the pre-commit gate | `python tools/smoke_test.py --fast` | 273 | ~32 s |
+| **Full** — the default, and the pre-push gate | `python tools/smoke_test.py` | 281 | ~72 s |
+| **Fast** — the pre-commit gate | `python tools/smoke_test.py --fast` | 274 | ~32 s |
 | **Screen** — **never a gate** | `python tools/smoke_test.py --screen <name>` | all of them, ~a third printed | the tier's |
 
 **`--screen` narrows what a run PRINTS, not what it runs**, and the
