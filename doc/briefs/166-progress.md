@@ -279,3 +279,36 @@ that replaces the client's three send methods. `setattr` is part of the
 shape, or the test counts every stub client in the tree instead.
 Counter-test: a second such class anywhere under `tools/` turns it red
 (`E_one_counter_red.txt`).
+
+---
+
+## What the fresh-clone run caught, twice
+
+The fifth and sixth occurrence of the fault the fundament describes
+under *"A CHECK THAT READS THE PLAYER'S OWN FILES PASSES ON THE MACHINE
+THAT WROTE THEM"* — and the fresh-clone gate caught both, as it has
+caught every one before them.
+
+`080f` sets the committed stand-ins and then has the dispatcher OPEN
+the overlay. **Opening it ENTERS the screen**, and `enter` rebuilds its
+two loaders from the real tree: here they come back `ok` and nothing is
+noticed; in a clone they come back missing, the screen is not READY,
+`render_content` returns early, and the outer frame the block measures
+is never drawn. The check failed on "the frame changed nothing in the
+bands", which was true and was not the frame's fault.
+
+Setting them after the first open was not enough — the click control
+closes and reopens the overlay — so the second run failed the same way.
+They are set again in both places now, and the block **asserts the
+screen is READY before it measures**, so a clone that is not gets the
+reason instead of a symptom.
+
+## Closing
+
+| | |
+|---|---|
+| suite | **278** green, full and fast, here and in a fresh clone (`fresh_clone.txt`: full 64 s, fast 38 s) |
+| working tree | clean |
+| SAVE10 | reloaded and confirmed: stardate 3500.3, 2 players, 54 stars, 28 colony records |
+| every `SAVE*.GAM` | byte-identical to the start of work order 165 — nothing was ever saved |
+| captures | `~/orionlayer-fixtures/evidence/work_order_166/` |
