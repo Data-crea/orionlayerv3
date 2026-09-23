@@ -118,7 +118,18 @@ ok("change mode is a panel over the HD galaxy map: the dispatcher "
 # screen had a cockpit texture until part F — the two must be IDENTICAL,
 # because the panel draws nothing there. Inside the panel they must
 # differ, or the comparison is about a frame that drew no panel at all.
+#
+# THE STAND-INS ONCE MORE. The click control above closed and reopened
+# the overlay, and every open ENTERS the screen and rebuilds its two
+# loaders from the real tree — which is `ok` here and missing in a
+# clone. Setting them after the first open was not enough, and the
+# fresh-clone run said so a second time.
+_dx_scr._names = derived(_dx_tn.TechNames)
+_dx_scr._wording = derived(_dx_bt.BillText)
 _dx_scr.update(_dx_state)
+assert _dx_scr.state == _dx_core.READY, (
+    f"the panel is {_dx_scr.state}, so render_content returns early "
+    f"and the frame below is never drawn")
 _rs_map.update(_ov_map_state)
 
 
