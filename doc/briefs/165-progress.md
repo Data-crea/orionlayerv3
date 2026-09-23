@@ -677,6 +677,38 @@ The third mutation passed the FIRST version of that check, because the
 snapshot was taken after the counter had been released and nothing
 could move it any more. It is taken while the counter is live now.
 
+### The audit part H owed: every stored send count, checked
+
+Data asked which stored evidence came from `SendCounter` before the fix
+and whether each claim survives it. `SendCounter` was introduced by
+work order 130 (`9af2601`), so everything older — `brief110/`,
+`work_order_128/`, `work_order_129/`, `work_order_16sep/` — was counted
+by `tools/colony_move_hd.Counter`, a different class, and is out of
+this audit's scope.
+
+**The rule that decides every case: the fault can only make a stored
+number too HIGH.** A counter counts up, the stored dict was the live
+one, and a second counter added its own sends to the first. So a stored
+number is an upper bound on what the step sent, and **a stored ZERO is
+exact**.
+
+| record | the claim | holds |
+|---|---|---|
+| `work_order_130/A_step/` | nothing was sent into the select list after the hand-over (open fix 26) | **yes** — total 0 over the counted period, and zero is exact. But the per-frame COLUMN is one reading printed three times; noted at the record and in the entry |
+| `work_order_165/D_change_mode/` | three activations, listed | **yes** — `sends` total 3 equals `len(sent)` 3 |
+| `D_run/`, `D_probe_4/`, `D_probe_5/`, `D_listprobe_4/`, `D_listprobe_5/`, `D_resolutions_4/` | one counter per process, the run's total | **yes** — every `sends` total equals its own `len(sent)` (15, 5, 5, 7, 7, 5), so nothing grew unseen |
+| `load4/`, `load10/`, `slots/` (`tools/gameload.py`) | the run's total | **yes** — 3, 3 and 4, the lengths of the chains the runs printed |
+| `D_overlay_4/`, `D_exitbutton_4/` | the per-step numbers | **they did not** — `sends_under_panel` stored 3 where the run printed 0, and the ESC step stored 3 where it sent 1. Both runs were repeated after the fix and the files on disk are the new ones; the records now say 0 and 1 |
+
+So: one record needed a note, two were replaced by re-running, and the
+rest were never touched by the fault because they claim a whole-run
+total and that is what the live dict held at save time.
+
+**`colony_move_hd.Counter` has the same shape** — it wraps, never
+releases, and hands out its live dict. It is built once per process
+everywhere it is used, and every record from it stores a whole-run
+total, so the fault has not bitten there. Not changed; Data's call.
+
 ## Part E — the rest of select mode — **PART C's OFFLINE HALF DONE, the rest parked**
 
 The order's scope choice for part E is "131 parts B and C, the 128

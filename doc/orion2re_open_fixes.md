@@ -1726,6 +1726,20 @@ the real method, so a send cannot happen unseen. After the hand-over:
 | 50 | 53 | 0 | 0 |
 | 75 | 0 | **20** | **0** |
 
+**The last column is ONE reading, not three — noted 23 September 2026,
+work order 165 part H.** `tools/livedrive.SendCounter` handed out the
+live counts dict rather than a copy, so the three `sends` entries in
+`watch` are four serialisations of one object (with
+`driver_sends_after`), taken when the file was written.
+
+**The conclusion is untouched, and the reason is arithmetic.** That one
+number is the TOTAL for the counted period and it is zero; a counter
+only increases, so every moment inside the period was zero too. The
+aliasing can make a later number too HIGH — it cannot invent a zero.
+What is not in the evidence is the per-frame resolution the table's
+shape implies. `evidence/work_order_130/A_step/NOTE-165H-send-counter.md`
+has it in full.
+
 Three occasions in the same run: fields 3, 21 and 20, each of them the
 first offered entry's field.
 
