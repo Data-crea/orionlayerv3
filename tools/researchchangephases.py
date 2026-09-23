@@ -267,7 +267,15 @@ def map_behind(run):
         disp.overlay = kept
         return surf
 
+    from core import researchframe
     with_panel, without = frame(True), frame(False)
+    # THE OUTER FRAME REACHES OUTSIDE THE PANEL — by its rail and its
+    # corner brackets, which is what an outer frame is (work order 166
+    # part B). So what is asserted is not "the bands are untouched" but
+    # that everything which changed lies inside the FRAME's own rect.
+    frame_rect = researchframe.for_app(run.app).around(
+        researchnative.window_rect(screen.geom.panel_rect, screen.layout),
+        researchframe.REFERENCE_SCALE * screen.layout.scale)
     seen = changed = 0
     for band in ("left_band", "right_band"):
         bx, by, bw, bh = researchnative.window_rect(
@@ -275,8 +283,10 @@ def map_behind(run):
         for y in range(by, by + bh, 2):
             for x in range(bx, bx + bw, 2):
                 seen += 1
-                if with_panel.get_at((x, y))[:3] != \
+                if with_panel.get_at((x, y))[:3] == \
                         without.get_at((x, y))[:3]:
+                    continue
+                if not frame_rect.collidepoint(x, y):
                     changed += 1
     px, py, pw, ph = researchnative.window_rect(screen.geom.panel_rect,
                                                 screen.layout)

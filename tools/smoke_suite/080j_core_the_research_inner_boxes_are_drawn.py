@@ -85,10 +85,17 @@ _ib_surf.fill((0, 0, 0))
 _ib_panel.draw(_ib_surf, _dx_scr.layout, _dx_scr.style, _ib_entries,
                None, {"cost": lambda e: None}, _dx_scr._names,
                _dx_scr._wording)
+# THE DRAWN BOX IS NOT THE BLOCK FIELD, and that is work order 166
+# part D: the block is 3 px narrower than the rows it contains and
+# starts 3 px above the field name, so drawing it put the name on the
+# box's edge. The drawn box is the CONTENT plus a margin — ours, so
+# Data's (decision 53) — while the block stays the game's own field,
+# asserted above against `expected_fields`.
 _ib_drawn = 0
 for _ib_e in _ib_entries:
-    _bx, _by, _bw, _bh = _dx_geo.window_rect(_ib_e.block_rect(),
-                                             _dx_scr.layout)
+    assert _ib_e.panel_box(_ib_panel.BOX_MARGIN) != _ib_e.block_rect()
+    _bx, _by, _bw, _bh = _dx_geo.window_rect(
+        _ib_e.panel_box(_ib_panel.BOX_MARGIN), _dx_scr.layout)
     # The fill is inside; the outline is on the edge. Both are asked
     # for, so a box that drew only one of them fails.
     assert _ib_surf.get_at((_bx + _bw // 2, _by + _bh // 2))[:3] == \

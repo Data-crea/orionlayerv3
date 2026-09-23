@@ -220,6 +220,29 @@ class Entry:
         return (self.x + BLOCK_DX1, self.y + BLOCK_DY1,
                 self.x + BLOCK_DX2, self.y + BLOCK_DY2)
 
+    def panel_box(self, margin):
+        """The box HD DRAWS for this entry: its rows, plus a margin.
+
+        **NOT `block_rect`.** That is the game's own entry-block FIELD,
+        a transcription, and it is 3 px narrower than the rows it
+        contains (`x - 2 .. x + 215` against `x .. x + 218`) and starts
+        3 px above the field name. Drawing it put the name on the box's
+        top edge and let the hover band run past its right edge — which
+        is what Data saw on the live panel (work order 166, points 3
+        and 4).
+
+        The original has no such box: its panels are painted into the
+        TECHSEL artwork, and where the art's edges are, nobody here can
+        read. So the drawn box is OURS (decision 53 — a rule we chose
+        is Data's), and the honest shape for it is the CONTENT plus a
+        margin, so that every transcribed anchor keeps its place and
+        only the thing nobody transcribed moves.
+        """
+        return (self.x - margin,
+                self.y + ROW_Y_BASE - margin,
+                self.x + ROW_X_SPAN + margin,
+                self.y + ROW_Y_BASE + ROW_Y2[-1] + margin)
+
     def cost_anchor(self):
         """Where the "N RP" string ENDS — it is printed right-aligned."""
         return (self.x + COST_DX, self.y + COST_DY)

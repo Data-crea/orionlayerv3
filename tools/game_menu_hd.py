@@ -41,8 +41,9 @@ import pygame  # noqa: E402
 import toolenv  # noqa: E402
 toolenv.init_palette()
 
-from colony_move_hd import (Counter, click_at, native_png,  # noqa: E402
+from colony_move_hd import (click_at, native_png,  # noqa: E402
                             pump, wait_for)
+from livedrive import SendCounter  # noqa: E402
 import livesend  # noqa: E402  (a live tool is a client: work order 129 A)
 from fixtures import fixture_name  # noqa: E402
 from screens.game_menu import gmdraw, nodes  # noqa: E402
@@ -333,7 +334,7 @@ def main():
     if not app.connected:
         print("no game on the extension port")
         return 1
-    counter = Counter(app.client)
+    counter = SendCounter(app.client)
     if not back_on_galaxy(app, 20.0):
         print("  put the game on the galaxy map first")
         return 1

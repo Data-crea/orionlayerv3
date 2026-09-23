@@ -134,6 +134,9 @@ class SendCounter:
     def total(self):
         return sum(self.counts.values())
 
+    def __repr__(self):
+        return ", ".join(f"{k}={v}" for k, v in sorted(self.counts.items()))
+
 
 class Run:
     """One live acceptance, with its own evidence folder and record."""

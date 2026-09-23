@@ -122,7 +122,7 @@ def main():
     if not app.connected:
         print("no game on the extension port")
         return 1
-    counter = base.Counter(app.client)
+    counter = base.SendCounter(app.client)
     if not base.wait_for(app, lambda: (
             app.dispatcher.active is not None
             and getattr(app.dispatcher.active, "SCREEN_NAME", "")

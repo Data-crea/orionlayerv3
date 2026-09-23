@@ -201,6 +201,81 @@ Two checks (274 -> 276). Captures at four resolutions in
 `D_resolutions_4/`; beside the native frame the boxes now read as the
 same kind of thing.
 
-## Part D — text that fits — **not started**
+## Part D — text that fits — **DONE**
 
-## Part E — one counter in the tree — **not started**
+### What was wrong, and which of the two things moved
+
+Both of Data's observations are the SAME cause, and it is not the text:
+
+| | |
+|---|---|
+| the field name sits on the top edge of its box | the name is at `y + 21`; the block field starts at `y + 18` — 3 px above it |
+| the hover band runs past the right edge of its box | the row runs `x .. x + 218`; the block field ends at `x + 215` — 3 px inside it |
+
+The rows and the name anchors are TRANSCRIBED (tech.cpp:27-32,
+:683-738). The block field is the game's own field and also a
+transcription. What was NOT transcribed is the box HD draws, because
+the original has none — its panels are painted into the TECHSEL
+artwork and where the art's edges are, nobody here can read.
+
+So the thing that moved is the thing nobody transcribed:
+`Entry.panel_box(margin)` is the CONTENT plus a margin, and
+`block_rect()` stays the game's field. Decision 53 exactly — a rule we
+chose is Data's, a rule transcribed stays a check.
+
+**`BOX_MARGIN = 4`, and 4 is the most the layout allows**: entry 0's
+rows end at native x 313 and entry 1 begins at 322, a gap of 9, so two
+margins have to fit in 9 and 5 would make the columns touch.
+
+### The proof
+
+An offline check renders both screens at **all four resolutions** with
+**two name sets** — the longest field name each of the eight categories
+can offer out of the committed stand-in, and a synthetic name longer
+than any technology has, which is what the shrink rule has to survive.
+The text is measured as the DIFFERENCE between a render with the text
+and one without, so it is the drawing that is measured and not a second
+computation of where the drawing should have gone.
+
+Every text pixel must lie inside its own box's inner rect or in the
+header strip above it; the hover band must be inside its box by at
+least 2 px on each side and must change nothing outside its own row;
+CANCEL must stay inside the button the wire reported; the description
+box must stay inside the help panel.
+
+Counter-tests, both red (`D_text_red.txt`):
+
+| mutation | what went red |
+|---|---|
+| `BOX_MARGIN = 0` — the box hugs the text | 8 of 7686 text pixels outside, at 1440p |
+| the field name moved onto the box's top edge | 36 of 4316 outside, at 1080p |
+
+### And then looked at, every one
+
+All four captures in `D_resolutions_4/`, at 1:1. The names sit inside
+their boxes with a visible margin, the header words stay above, the
+corner lamps are round at every size and the title is there at every
+size. Nothing the eye found was missing from the check this time — the
+one thing it did find, the missing 4K title, was found in part B and is
+fixed there.
+
+## Part E — one counter in the tree — **DONE**
+
+`tools/colony_move_hd.Counter` is gone. It and `livedrive.SendCounter`
+were two classes doing one job — SendCounter was written from it — so
+when work order 165 H found that a counter which never puts the client
+back keeps counting the steps after it, only the younger one was
+repaired and nobody was going to fix the same fault twice.
+
+Its three callers (`colony_move_hd`, `game_menu_hd`,
+`colony_drop_sweep`) take `SendCounter` under its own name, not an
+alias: an alias is a second name for one thing, which is how a reader
+ends up believing there are two. `SendCounter` gained the `__repr__`
+its callers print. No record on disk changed.
+
+A check reads the tree by `ast` — a class is what is being counted, and
+a name in a comment is not one — and asserts there is exactly ONE class
+that replaces the client's three send methods. `setattr` is part of the
+shape, or the test counts every stub client in the tree instead.
+Counter-test: a second such class anywhere under `tools/` turns it red
+(`E_one_counter_red.txt`).

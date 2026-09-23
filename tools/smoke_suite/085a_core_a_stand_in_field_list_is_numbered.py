@@ -144,5 +144,42 @@ assert _si_outer.counts["activate_field"] == 3, _si_outer.counts
 assert _si_unwrapped(), (
     "the client is still wrapped after every counter was released")
 assert _si_client.log == [1, 2, 3, 4], _si_client.log
+# ── AND THERE IS ONE OF IT ──
+#
+# Work order 166 part E. `tools/colony_move_hd.Counter` stood beside
+# `SendCounter` doing the same job — SendCounter was written from it —
+# so when 165 H found that a counter which never puts the client back
+# keeps counting the steps after it, only the younger one was repaired
+# and nobody was going to fix the same fault twice. The older one is
+# gone and its three callers take this one.
+#
+# Read by `ast`, not by a grep: a class is what is being counted, and
+# a name in a comment is not one.
+_si_classes = []
+for _si_name in sorted(os.listdir(os.path.join(
+        os.path.dirname(SCREENS_DIR), "tools"))):
+    if not _si_name.endswith(".py"):
+        continue
+    _si_file = os.path.join(os.path.dirname(SCREENS_DIR), "tools",
+                            _si_name)
+    for _si_node in _si_ast.walk(_si_ast.parse(
+            io.open(_si_file, encoding="utf-8").read())):
+        if not isinstance(_si_node, _si_ast.ClassDef):
+            continue
+        _si_body = _si_ast.dump(_si_node)
+        # A COUNTER REPLACES the client's methods; a stub client
+        # merely defines them (`colony_list_preview._Client`). So
+        # `setattr` is part of the shape being counted, or the test
+        # counts every fake client in the tree.
+        if (all(_si_w in _si_body for _si_w in
+                ("activate_field", "inject_click", "inject_key"))
+                and "setattr" in _si_body):
+            _si_classes.append(f"{_si_name}:{_si_node.name}")
+assert _si_classes == ["livedrive.py:SendCounter"], (
+    f"the tree has {len(_si_classes)} classes that wrap the client's "
+    f"three send paths: {_si_classes}. One of them will be repaired "
+    f"and the others will not — which is what work order 166 part E "
+    f"closed")
 ok("a send counter puts the client back and hands out a copy, so a "
-   "step's number cannot grow after it was taken")
+   "step's number cannot grow after it was taken — and the tree has "
+   "exactly one of them")

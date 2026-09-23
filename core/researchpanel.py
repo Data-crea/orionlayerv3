@@ -72,6 +72,18 @@ def col(key, default):
 #: Both are read from the section that owns them rather than copied
 #: into this screen's own, because a second copy of a colour is the
 #: copy that goes stale.
+#: The margin between a box's edge and the content inside it, in the
+#: original's own pixels. OURS, so Data's (decision 53): the original
+#: paints its panels into the TECHSEL art and there is no edge to
+#: transcribe.
+#:
+#: **4 IS THE MOST THE LAYOUT ALLOWS.** Entry 0's rows end at native
+#: x 313 and entry 1 begins at 322 — a gap of 9 — so two margins have
+#: to fit in 9 and 5 would make the two columns touch. Vertically there
+#: is far more room (a box's bottom at 129 against the next box's top
+#: at 156), and one number for all four sides is worth more than two.
+BOX_MARGIN = 4
+
 BOX_FILL = palette.col("colony_summary", "panel_background", (8, 14, 23))
 BOX_OUTLINE = palette.col("panel", "thin_border", (55, 65, 85))
 
@@ -199,7 +211,7 @@ def draw(surface, layout, style, entries, hover, words, names, wording,
         # ALL EIGHT BOXES, offered or not: `Init_Entry_Data_` adds a
         # block field for every category and the original draws an
         # empty panel for one with nothing to offer (tech.cpp:225-231).
-        draw_box(surface, layout, style, entry.block_rect())
+        draw_box(surface, layout, style, entry.panel_box(BOX_MARGIN))
     for entry in entries:
         if entry.offered:
             _draw_entry(surface, layout, style, entry, hover, words,

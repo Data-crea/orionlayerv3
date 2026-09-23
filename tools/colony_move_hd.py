@@ -59,6 +59,7 @@ from screens.colony_summary import colonypick  # noqa: E402
 from screens.colony_summary import colonysend  # noqa: E402
 from screens.colony_summary import colonytrack  # noqa: E402
 from colony_list_preview import side_by_side  # noqa: E402
+from livedrive import SendCounter  # noqa: E402,F401
 
 SCREEN_COLONY_SUMMARY = 20
 
@@ -89,33 +90,16 @@ def native_png(state, path):
 DEFAULT_OUT_DIR = os.path.join("/tmp", "colony_move_hd")
 
 
-class Counter:
-    """Wraps the client's three send paths and counts them.
-
-    Not a mock: the real method still runs. What it buys is a claim
-    about the WIRE rather than about the picture.
-    """
-
-    def __init__(self, client):
-        self.client = client
-        self.counts = {"inject_click": 0, "activate_field": 0,
-                       "inject_key": 0}
-        for name in self.counts:
-            setattr(client, name, self._wrap(name, getattr(client, name)))
-
-    def _wrap(self, name, method):
-        def wrapped(*args, **kwargs):
-            self.counts[name] += 1
-            return method(*args, **kwargs)
-        return wrapped
-
-    def total(self):
-        return sum(self.counts.values())
-
-    def __repr__(self):
-        return ", ".join(f"{k}={v}" for k, v in sorted(self.counts.items()))
-
-
+#: ONE COUNTER IN THE TREE — work order 166 part E. `Counter` stood
+#: here and `livedrive.SendCounter` was written from it, so the tree
+#: had two classes doing one thing and only the younger one was
+#: repaired when work order 165 H found that a counter which never puts
+#: the client back keeps counting the steps after it. The older one had
+#: the same fault and nobody was going to fix it twice.
+#:
+#: Re-exported under its own name rather than aliased to `Counter`: an
+#: alias is a second name for one thing, which is how a reader ends up
+#: believing there are two.
 def pump(app, frames=1):
     """Run the real loop for `frames` frames."""
     for _ in range(frames):
@@ -316,7 +300,7 @@ def main():
     if not app.connected:
         print("no game on the extension port")
         return 1
-    counter = Counter(app.client)
+    counter = SendCounter(app.client)
 
     if not wait_for(app, lambda: (
             app.dispatcher.active is not None
