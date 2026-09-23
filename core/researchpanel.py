@@ -77,12 +77,24 @@ def col(key, default):
 #: paints its panels into the TECHSEL art and there is no edge to
 #: transcribe.
 #:
-#: **4 IS THE MOST THE LAYOUT ALLOWS.** Entry 0's rows end at native
-#: x 313 and entry 1 begins at 322 — a gap of 9 — so two margins have
-#: to fit in 9 and 5 would make the two columns touch. Vertically there
-#: is far more room (a box's bottom at 129 against the next box's top
-#: at 156), and one number for all four sides is worth more than two.
-BOX_MARGIN = 4
+#: **2, AND THE UPPER BOUND IS WHAT SETS IT.** Entry 0's rows end at
+#: native x 313 and entry 1 begins at 322 — a gap of 9 — so the two
+#: margins and the space between the columns come out of those 9 px
+#: together. 166 took 4, which leaves 1 px between the columns: legal,
+#: and on screen the two boxes read as one wide box with a seam. Data's
+#: Nachtrag to 166 asks for a VISIBLE gap and names the default —
+#: less margin around the content rather than a wider box — so 2 it is,
+#: and the columns stand 5 native px apart.
+#:
+#: It buys the button its clearance in the same move: change mode's
+#: exit sits at `y = 452` (`EXIT_BUTTON_Y`, tech.cpp:198-200) and the
+#: bottom row of boxes ended at 450 with a margin of 4. At 2 it ends at
+#: 448, and CANCEL has 4 px of its own.
+#:
+#: Both bounds are asserted rather than trusted, in
+#: `080k_core_the_research_text_fits_its_box` — with the text still
+#: inside its box, which is the floor the margin cannot fall through.
+BOX_MARGIN = 2
 
 BOX_FILL = palette.col("colony_summary", "panel_background", (8, 14, 23))
 BOX_OUTLINE = palette.col("panel", "thin_border", (55, 65, 85))
@@ -263,7 +275,14 @@ def _draw_entry(surface, layout, style, entry, hover, words, names, wording,
             # a little arrow (`Draw_Little_Arrow_`, tech.cpp:740). HD
             # fills the row instead — INVENTION: MOO2 cycles a palette
             # index, which an RGB surface does not have.
-            rect = pygame.Rect(*geom_mod.window_rect(entry.row_rect(row),
+            #
+            # THE BAND IS NOT THE CLICK AREA. `band_rect`, not
+            # `row_rect`: tech.cpp:740-775 puts the arrowhead on the
+            # APPLICATION's label line and rises only to
+            # `app_label_y[0] - 3`, so the mark never reaches the field
+            # heading. Row 0's click area does reach it — the original
+            # accepts a click there — and the two are separate things.
+            rect = pygame.Rect(*geom_mod.window_rect(entry.band_rect(row),
                                                    layout))
             shade = pygame.Surface(rect.size, pygame.SRCALPHA)
             shade.fill(col("hover", (70, 104, 168, 90)))

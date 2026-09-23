@@ -2294,7 +2294,7 @@ files under `doc/` and are only summarised here.
 | | |
 |---|---|
 | Python | 32,960 lines across 111 modules — `find . -name '*.py'`, `__pycache__` excluded, the smoke test's 6,400 included. The previous figure here (21,642 across 94) was carried from an unstated method and could not be reproduced |
-| Smoke test | `python tools/smoke_test.py` — **278 checks**, headless, in `tools/smoke_suite/` since work order 162 (105 check modules, one group per screen plus a shared core; `tools/smoke_test.py` is the runner). **Two tiers since work order 158**: the bare command runs everything (~72 s here); `--fast` runs the commit gate's 271 (~32 s here). `--screen <name>` prints only that screen's sentences and the core's and is NEVER a gate. See "The gate has two tiers" below |
+| Smoke test | `python tools/smoke_test.py` — **280 checks**, headless, in `tools/smoke_suite/` since work order 162 (105 check modules, one group per screen plus a shared core; `tools/smoke_test.py` is the runner). **Two tiers since work order 158**: the bare command runs everything (~72 s here); `--fast` runs the commit gate's 273 (~32 s here). `--screen <name>` prints only that screen's sentences and the core's and is NEVER a gate. See "The gate has two tiers" below |
 | Assets | 170 MB (select_race 68, galaxy_map 51, shared 23, new_game 21, colony_summary 1) |
 | Screens in HD | 9 of ~20–22 (the GAME menu overlay, work order Stop 2, every dialog of the popup; colony summary draws list, sidebar, scan box and galaxy inset, and MOVES POPS — the first HD gesture that drives the game; planets, brief 101, lists, sorts, restricts and returns) |
 | Setup from clone | `python tools/setup.py` (deps via the system package manager) |
@@ -2367,8 +2367,9 @@ from both screens' `boxes.json`. Marked `inner_boxes_drawn`.
 the name anchors are transcribed and the block field is the game's own;
 what nobody transcribed is the box HD draws, because the original
 paints its panels into the TECHSEL art. `Entry.panel_box(margin)` is
-the content plus `BOX_MARGIN = 4` — and 4 is the most the layout
-allows, since entry 0's rows end at 313 and entry 1 begins at 322.
+the content plus `BOX_MARGIN`, **2 since the Nachtrag** (below) and 4
+when 166 closed; entry 0's rows end at 313 and entry 1 begins at 322,
+so the two margins and the gap between the columns share those 9 px.
 
 Checked at four resolutions with two name sets — the longest the
 committed stand-in offers per category, and a name longer than any
@@ -2384,6 +2385,62 @@ the client's three send methods.
 
 **The exceptions list moves with it**: `tools/colony_move_hd.py` is
 370 code lines now, fifteen shorter.
+
+### The hover band is not the click area — 23 September 2026, the Nachtrag to work order 166
+
+Data, on the live panel: the band was covering the FIELD NAME. It was,
+and the reason is that one rectangle was doing two jobs. `row_rect` is
+transcribed — row 0 runs from `y1[0]` = 0 and is 34 px tall, taking in
+the field-name line, because `Add_Fields_To_List_Page_` (list.cpp:94-116)
+puts the click area there and the original accepts a click on it.
+
+**What the original marks there is a different shape**, and it is the
+first thing the Nachtrag asked to look up: `Draw_Little_Arrow_`
+(tech.cpp:740-775) draws an arrowhead at `app_label_y[i] + 5`, in
+`label_x - 9 .. label_x - 2`, with a stem rising only to
+`app_label_y[0] - 3` — three pixels above the first application's
+label, nineteen below the field's own name. The mark is on the
+APPLICATION's label line and never on the heading.
+
+So the drawn band is now `Entry.band_rect(row)` and
+`researchtechlist.Item.band_rect(row, list_x)`: the label's own y,
+`researchlist.BAND_H` tall, the same for every row. `BAND_H` is
+DERIVED (`ROW_Y2[1] - ROW_Y1[1] + 1` = 15, the pitch of `APP_NAME_Y`)
+rather than typed, which is why rows 1..3 come out exactly their
+transcribed rectangle and only row 0's band is shorter than its click
+area. `row_at` still hit-tests `row_rect`: what the player can hit did
+not change.
+
+**`BOX_MARGIN` is 2.** At 4 the two columns stood 1 native px apart and
+read as one wide box with a seam; at 2 they stand 5 apart and CANCEL,
+whose origin is `s + 189, 452` (tech.cpp:198-200), has 4 px of its own
+under the bottom row of boxes. Data named the default — less margin
+around the content rather than a wider box.
+
+The 166 D check took two more rules, each with its own counter-test:
+the field headings' ink is measured (a names stand-in with the
+application names empty, against one with neither, so the difference
+IS the headings) and no band may contain one of those pixels, on the
+panel and in the list popup; and no two of the eight boxes, and no box
+and CANCEL, may come within 3 native px, in both modes.
+
+Live on SAVE4, `tools/research_hover_hd.py`: the first row of every box
+hovered once at each of F9's four presets, 32 captures, the pointer put
+on the field-name line itself — the one place the two rectangles
+disagree. Every hover hit its row, the screen was holding that row when
+the picture was taken, no band covered the name, and the hovers sent
+nothing. The captures are in
+`~/orionlayer-fixtures/evidence/work_order_166_nachtrag/`.
+
+**Two things the run itself taught.** The window cannot be trusted to
+be the size it asked for — the compositor cut 1440 to 1371 — so the
+driver goes FULLSCREEN at each preset, where the content surface is the
+preset's own size (main.py:501-529). And the first attempt photographed
+the wrong row: the physical pointer is still lying where Data left it,
+and a real MOUSEMOTION after a fullscreen switch won one frame of
+thirty-two. `row_at` said yes anyway, because it is a function of the
+POINT. The driver now reads `screen._hover` back and posts again until
+it is the row, and reports how many motions that took.
 
 ### The original flashed up on every entry into change mode — 23 September 2026, work order 166 A
 
@@ -2703,8 +2760,8 @@ blocks into a session and writing them out again. Three proofs:
 
 | | command | checks | on this tree |
 |---|---|---:|---:|
-| **Full** — the default, and the pre-push gate | `python tools/smoke_test.py` | 278 | ~72 s |
-| **Fast** — the pre-commit gate | `python tools/smoke_test.py --fast` | 271 | ~32 s |
+| **Full** — the default, and the pre-push gate | `python tools/smoke_test.py` | 280 | ~72 s |
+| **Fast** — the pre-commit gate | `python tools/smoke_test.py --fast` | 273 | ~32 s |
 | **Screen** — **never a gate** | `python tools/smoke_test.py --screen <name>` | all of them, ~a third printed | the tier's |
 
 **`--screen` narrows what a run PRINTS, not what it runs**, and the

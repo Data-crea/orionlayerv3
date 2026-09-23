@@ -312,3 +312,147 @@ reason instead of a symptom.
 | SAVE10 | reloaded and confirmed: stardate 3500.3, 2 players, 54 stars, 28 colony records |
 | every `SAVE*.GAM` | byte-identical to the start of work order 165 — nothing was ever saved |
 | captures | `~/orionlayer-fixtures/evidence/work_order_166/` |
+
+---
+
+# Nachtrag to 166 — the hover band, the gap between the columns, CANCEL
+
+## What the original marks, read first
+
+The Nachtrag's own instruction, and it settled the shape before a line
+was written. `TECH::Draw_Little_Arrow_`, tech.cpp:740-775:
+
+```c
+for (; i < upper_bound; i++) {
+    int16_t label_x = entry->label_x;
+    int16_t y  = entry->app_label_y[i] + 5;
+    int16_t y0 = entry->app_label_y[0] - 3;
+    line::Line_(label_x - 9, y0, label_x - 9, y, color);
+    line::Line_(label_x - 9, y,  label_x - 2, y, color);
+    line::Line_(label_x - 5, y - 3, label_x - 2, y, color);
+    line::Line_(label_x - 5, y + 3, label_x - 2, y, color);
+}
+```
+
+An arrowhead on the APPLICATION's label line, just left of the label,
+with a stem that rises to three pixels above the FIRST label — which is
+nineteen pixels below the field name (`app_label_y[0]` is `y + 21 + 19`,
+the field name is printed at `y + 21`). **The original's own mark never
+touches the field heading.**
+
+## The split
+
+| | what it is | where it comes from |
+|---|---|---|
+| `row_rect` | the CLICK area, unchanged | transcribed, list.cpp:94-116 — row 0 is 34 px and takes in the field-name line, because the original accepts a click there |
+| `band_rect` | what HD DRAWS | the label's own y, `BAND_H` tall, every row the same |
+
+`BAND_H = ROW_Y2[1] - ROW_Y1[1] + 1` — derived from the transcribed
+table rather than typed, which is why rows 1..3 come out exactly their
+old rectangle and only row 0's band is shorter than its click area.
+`researchtechlist.Item` takes the same split for the same reason: its
+field name is printed at the item's own y and its rows come from the
+same table.
+
+`row_at` and `TechListPopup.at` still test `row_rect`. **What the
+player can hit did not change.**
+
+## The gap, and CANCEL
+
+`BOX_MARGIN` 4 -> 2. Entry 0's rows end at native x 313 and entry 1
+begins at 322, so nine pixels carry two margins AND the gap between the
+columns: at 4 the columns stood 1 px apart, at 2 they stand 5. The
+bottom row of boxes ends at 448 instead of 450, and CANCEL's origin is
+`s + 189, 452` (tech.cpp:198-200), so the button has 4 px of its own.
+
+Data named the default in the Nachtrag — less margin around the content
+rather than a wider box — and the 166 D rule that the text stays inside
+its box with a margin is the floor it cannot fall through. It is green.
+
+## The two new rules, and their counter-tests
+
+Both in `080k_core_the_research_text_fits_its_box` (the module now
+holds 4 checks; the suite is at **280**).
+
+**No hover band cuts the field heading.** Measured, not recomputed: the
+headings are rendered alone — a names stand-in whose application names
+come back empty — against a render with no names at all, so the
+difference IS the ink of the eight field names. No band may contain one
+of those pixels, on the panel and in the list popup. The click area is
+asserted to be the transcribed one in the same block, so the band
+cannot be bought by narrowing what the player can hit.
+
+**The boxes and the button keep their distance.** One rule over every
+pair rather than the two instances: no two of the eight boxes, and no
+box and CANCEL, closer than 3 native px, in both modes. CANCEL's
+rectangle is taken from `Geometry.exit_button_origin`, so the rule
+notices a moved button and not only a moved box.
+
+| mutation | what went red |
+|---|---|
+| `Entry.band_rect` returns `row_rect` | 3177 of 3177 heading pixels inside a band |
+| `Item.band_rect` returns `row_rect` | list popup: 1059 of 1059 |
+| `BOX_MARGIN = 4` | select mode: entry 0 and entry 1 are 1 native px apart |
+| a box's bottom margin grown by 4 | change mode: entry 6 and CANCEL are 0 apart |
+
+The fourth one is there because the third reddens on the columns and
+stops: without it the CANCEL half of the rule would never have been
+seen to fail.
+
+## Live, SAVE4
+
+`tools/research_hover_hd.py` — new, and its own file rather than a
+sixth command on `research_change_hd.py`, which is already at the
+length guideline.
+
+The pointer goes on the FIELD NAME's line inside row 0, which is the
+one place the two rectangles disagree; a hover in the middle of a row
+looks the same either way.
+
+| | |
+|---|---|
+| resolutions | 1920x1080, 2560x1440, 3440x1440, 3840x2160 — F9's own four |
+| hovers | 32 — the first row of every box, once per resolution |
+| every hover hit its row | yes |
+| the screen was holding that row when the picture was taken | yes, 32 motions for 32 hovers |
+| no band covered the field name under the pointer | yes |
+| what the hovers sent | nothing, 0 of 32 |
+| `(field, application)` | `(60, 136)` before and after |
+| left by | ESC -> `ACTIVATE_FIELD 1`, the exit field |
+| SAVE1-9, SAVE11 | byte-identical; SAVE10 reloaded, stardate 3500.3, 2 players |
+
+## Two things the run taught, both of them corrections
+
+**A window is not the size it asked for.** The first attempt cycled F9
+in windowed mode and got 1920x1080, 2560x**1371**, 3440x**1371** — the
+compositor cut 69 px of height, exactly as `App._set_mode`'s own
+docstring says it does, and then the fourth preset collided with the
+third and the pass stopped at three. The driver goes FULLSCREEN at each
+preset instead, where the content surface is the preset's own size
+(main.py:501-529) and the capture is the resolution it is named after.
+
+**`row_at` is a function of the point and knows nothing about the
+screen.** One capture of thirty-two came out with entry 1 row 1
+highlighted while the driver had just asked for entry 0 row 0: the
+physical pointer is still lying wherever Data left it, and a real
+MOUSEMOTION right after a fullscreen switch won that frame. Both the
+arithmetic and the picture-level assertions said yes. The driver now
+reads `screen._hover` back, posts again until it is the row, and
+reports how many motions that took — and the number is in the record.
+
+## And then looked at, every one
+
+All 32 captures, through four contact sheets built from the capture
+files themselves (`contact_<w>x<h>.png`, one tile per box, and
+`panel_<w>x<h>.png` for the whole panel). The band sits on the
+application's line at every size, the heading above it is untouched,
+the two columns stand visibly apart, and CANCEL is clear of the boxes.
+
+## Closing
+
+| | |
+|---|---|
+| suite | **280** green, full and fast |
+| captures | `~/orionlayer-fixtures/evidence/work_order_166_nachtrag/` |
+| SAVE10 | reloaded and confirmed: stardate 3500.3, 2 players, 54 stars, 28 colony records |
+| every `SAVE*.GAM` | byte-identical, SAVE10 included |

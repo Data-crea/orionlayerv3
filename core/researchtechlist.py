@@ -148,6 +148,25 @@ class Item:
                 list_x + ITEM_WIDTH - APP_X_OFFSET,
                 researchlist.ROW_Y2[row] + self.y)
 
+    def band_rect(self, row, list_x):
+        """The band HD DRAWS for a row — the APPLICATION's label line.
+
+        The popup has the same split as the panel and the same reason:
+        `row_rect` is the click area out of list.cpp:94-116, and row 0's
+        runs from `y1[0]` = 0, which is the FIELD NAME's own line
+        (printed at `item.y` in `draw`). The original's mark does not go
+        there — `Draw_Little_Arrow_` (tech.cpp:740-775) sits on
+        `app_label_y[i] + 5` and stems up only to `app_label_y[0] - 3`.
+
+        So the band starts at the label's y, `APP_NAME_Y[row]` below the
+        item, and is `researchlist.BAND_H` tall for every row. It keeps
+        `row_rect`'s x span, which is the list's own width.
+        """
+        top = self.y + APP_NAME_Y[row]
+        return (list_x, top,
+                list_x + ITEM_WIDTH - APP_X_OFFSET,
+                top + researchlist.BAND_H - 1)
+
 
 def field_slots(field, apps_by_field=None):
     """`_technology_fields[field].tech[4]`, PADDED, as the engine holds it.
@@ -350,8 +369,10 @@ def draw(surface, layout, style, popup, origin, names, wording):
                                *STATUS_COLOUR[item.status]))
         for row, app in enumerate(item.apps):
             if popup.hover == (i, row):
+                # `band_rect`, not `row_rect`: the click area keeps the
+                # transcribed row, the MARK covers the label line only.
                 fill = pygame.Rect(*geom_mod.window_rect(
-                    item.row_rect(row, lx), layout))
+                    item.band_rect(row, lx), layout))
                 shade = pygame.Surface(fill.size, pygame.SRCALPHA)
                 shade.fill(col("hover", (70, 104, 168, 90)))
                 surface.blit(shade, fill.topleft)

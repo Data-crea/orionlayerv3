@@ -297,6 +297,27 @@ class Run:
         self.pump(3)
         pygame.event.clear()
 
+    def hd_motion(self, x, y):
+        """The pointer MOVED to a window point — a hover, not a click.
+
+        The same front door as `hd_click`: `App` routes MOUSEMOTION to
+        `dispatcher.route_motion`, which is what sets a screen's hover.
+        `rel` and `buttons` are carried because the letterbox branch
+        rebuilds the event out of them (main.py:192-195) and a motion
+        without them raises there rather than arriving.
+
+        NOTHING IS SENT BY A HOVER, in either mode: the research
+        screen's `handle_mouse_motion` only assigns `_hover`. The
+        driver still counts sends around it, because "it sends nothing"
+        is a measurement and not an expectation.
+        """
+        pygame.event.clear()
+        pygame.event.post(pygame.event.Event(
+            pygame.MOUSEMOTION, {"pos": (x, y), "rel": (0, 0),
+                                 "buttons": (0, 0, 0)}))
+        self.pump(3)
+        pygame.event.clear()
+
 
 def fb_digest(run):
     """A digest of the game's own framebuffer, for "did anything change".
