@@ -133,10 +133,16 @@ assert _rc_sends == [], (
 #    ROOM — that difference IS the mode difference, so a drift in
 #    either direction is caught here (decision 61).
 assert set(_rcs.MARKED) == {
-    "category_list_popup", "radio_index_skew",
+    "category_list_popup", "radio_index_skew", "exit_button_as_text",
     "description_box", "little_arrow", "title",
     "category_label_as_text", "shrink_instead_of_squeeze"}, \
     sorted(_rcs.MARKED)
+# BOTH DIRECTIONS. Select mode has the science room, which is its own
+# strip; change mode has the exit button's label, which select mode has
+# no button to print (`accept_btn_id = -1`, tech.cpp:216). Asserting one
+# direction only would let a marking appear on one screen unnoticed.
+assert set(_rcs.MARKED) - set(_rss2.MARKED) == {"exit_button_as_text"}, (
+    sorted(set(_rcs.MARKED) - set(_rss2.MARKED)))
 assert set(_rss2.MARKED) - set(_rcs.MARKED) == {"science_room_animation"}, (
     sorted(set(_rss2.MARKED) ^ set(_rcs.MARKED)))
 _rc_src = open(os.path.join(SCREENS_DIR, "research_change", "screen.py"),

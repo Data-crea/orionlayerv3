@@ -24,10 +24,13 @@ CHANGE MODE'S OWN FACTS, and each is a line of the source:
     _g_scrn_x = 80, so the whole panel sits 81 px left of select
         mode's                                        (tech.cpp:146)
     THERE IS A WAY OUT, and it changes nothing. The exit button is the
-        first ESC field (tech.cpp:198-200; `Interpret_Keyboard_Input_`,
+        first ESC field (tech.cpp:208-210; `Interpret_Keyboard_Input_`,
         fields.cpp:2608-2613), and `input == accept_btn_id` is the one
-        branch of the loop that does not commit (:347-353). ESC and a
-        click on the button are the same act.
+        branch of the loop that does not commit (:357). ESC and a click
+        on the button are the same act, and HD sends the same thing for
+        both. The button is DRAWN and clickable at the rectangle the
+        wire reports — the source has its origin only, the art carries
+        its size.
     the cost is what is LEFT: `_Tech_Select_(1)` passes
         `research_accumulated` as the offset (:203), where select mode
         passes 0 (:221). The description box still shows the FULL cost
@@ -77,6 +80,15 @@ disappear (decision 61):
                 and does not centre
   OMISSION      the little arrow and the cycling selection box
                 (`Draw_Little_Arrow_`, tech.cpp:740)
+  DEVIATION     the exit button's LABEL is printed as text. The
+                original paints it into the button art (TECHSEL 0x1B,
+                tech.cpp:176) and passes `Add_Button_Field_` an EMPTY
+                label string (:208-210), so there is no string
+                tech.cpp prints to transcribe — the same situation the
+                category labels are in, and marked the same way. The
+                word is the one the art shows and the RECTANGLE is the
+                one the wire reports, never a constant: the source has
+                only the origin, because the art carries the size
   HD EXTENSION  the title: the original's headline is part of the
                 TECHSEL art and is not a string tech.cpp prints. Its
                 WORDING is the game's own name for the screen, help
@@ -96,9 +108,12 @@ from core.researchscreen import (            # noqa: F401  (re-exported)
 #: docstring and left in the code or the other way round.
 #:
 #: It is select mode's list MINUS the science room, which is select
-#: mode's own strip, and that difference is the whole of it.
+#: mode's own strip, PLUS the exit button's label, which select mode
+#: has no button to print — `accept_btn_id = -1` there (tech.cpp:216).
+#: Both differences are asserted, in both directions.
 MARKED = {
     "category_list_popup": "DEVIATION",
+    "exit_button_as_text": "DEVIATION",
     "radio_index_skew": "DEVIATION",
     "description_box": "DEVIATION",
     "little_arrow": "OMISSION",

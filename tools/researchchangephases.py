@@ -285,3 +285,98 @@ def map_behind(run):
         if with_panel.get_at((x, y))[:3] != without.get_at((x, y))[:3])
     return (changed == 0 and panel_diff > 500, seen, changed,
             panel_diff, without)
+
+
+def exit_click(run):
+    """Leave change mode by CLICKING the exit button. What the wire saw.
+
+    The rectangle is the one the live list reports — the source has the
+    origin only, because `Add_Button_Field_` takes the rest from the
+    art (tech.cpp:208-210, fields.cpp:366-367) — and the click is a
+    real pygame click in OrionLayer's own window, through the front
+    door. Returns the record for it.
+    """
+    screen = hd(run)
+    rect = screen.exit_rect()
+    if rect is None:
+        raise livesend.WrongDialog(
+            "no exit button at its own origin in the list on the wire")
+    field = screen.exit_field()
+    x, y, w, h = researchnative.window_rect(rect, screen.layout)
+    point = (x + w // 2, y + h // 2)
+    on_it = screen.exit_at(*point)
+    print(f"    the wire puts the exit button at {rect} (field "
+          f"{field.index}); HD's own hit test says {on_it} at window "
+          f"{point}")
+    # Imported here and not at module level: this module is loaded
+    # by a smoke check without pygame, and `livedrive` pulls in
+    # pygame, the palette and `main.App`.
+    from livedrive import SendCounter
+    counter = SendCounter(run.app.client)
+    run.hd_click(*point)
+    left = run.wait_for(livesend.on_galaxy_map, seconds=90,
+                        label="the galaxy map after the exit click")
+    run.pump(20)
+    closed = (run.app.dispatcher.overlay is None
+              and run.app.dispatcher.active_name == "galaxy_map")
+    return {"rect": list(rect), "field": field.index, "on_it": on_it,
+            "window_point": list(point), "left": left, "closed": closed,
+            "sends": counter.counts, "sent": [list(x) for x in
+                                              counter.sent]}
+
+
+def compare_list_popup(run, entry, items, screen):
+    """Open the GAME's own category list and compare HD's page to it.
+
+    The one validation this popup can have, and decision 25's own
+    condition: HD reconstructs `Get_Group_List_` and `Init_List_Data_`
+    from `s_player` and static tables, so the reconstruction has to be
+    checkable against what the engine builds. It is — `_Tech_List_`
+    replaces the field list with its own (`Save_Field_Stats_`,
+    tech.cpp:889, serialized through the moved pointer,
+    ext_api.cpp:245-259) and every row of the visible page is a hidden
+    field at exactly the rectangle HD computes.
+
+    HD ITSELF SENDS NOTHING for its popup; this sends the category
+    button ONCE, on purpose, to make the engine build the list being
+    compared against. The popup is display-only, so nothing changes.
+    """
+    from core import researchtechlist
+    field = screen.radio_field(entry.index)
+    if field is None:
+        raise livesend.WrongDialog(
+            f"no category button for entry {entry.index} in the live list")
+    panel_shape = len(run.state.fields or [])
+    livesend.activate(run.app.client, field.index, screen=SCREEN_CHANGE,
+                      field_type=researchlist.TYPE_RADIO,
+                      rect=(field.x, field.y, field.x_end, field.y_end),
+                      label=f"open the category list of entry {entry.index}")
+    opened = run.wait_for(lambda st: len(st.fields or []) != panel_shape,
+                          seconds=60, label="the game's own list popup")
+    run.pump(20)
+    live = list(run.state.fields or [])
+    # The popup's own shape: two type-0 page buttons, one type-7 field
+    # per visible row, then the two whole-screen fields (tech.cpp:936-969).
+    rows_live = [f for f in live
+                 if f.field_type == researchlist.TYPE_HIDDEN
+                 and (f.x, f.y, f.x_end, f.y_end) != (0, 0, 639, 479)]
+    popup = researchtechlist.TechListPopup()
+    popup.open(entry, items)
+    lx = popup.list_x(screen.geom.origin)
+    rows_hd = [item.row_rect(row, lx)
+               for item in popup.items()
+               for row in range(len(item.apps))]
+    got = [(f.x, f.y, f.x_end, f.y_end) for f in rows_live]
+    match = got == rows_hd
+    print(f"    the game's list has {len(live)} fields, {len(got)} rows; "
+          f"HD's first page has {len(rows_hd)}: "
+          f"{'MATCH' if match else 'MISMATCH'}")
+    if not match:
+        for i, (a, b) in enumerate(zip(got, rows_hd)):
+            if a != b:
+                print(f"      row {i}: game {a}, HD {b}")
+                break
+        print(f"      game {got[:3]} … HD {rows_hd[:3]} …")
+    return {"opened": opened, "live": live, "rows_game": got,
+            "rows_hd": rows_hd, "match": match,
+            "panel_shape": panel_shape}

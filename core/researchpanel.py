@@ -120,6 +120,38 @@ def marks_row(names, app, current_app):
     return mine.strip().casefold() == theirs.strip().casefold()
 
 
+def draw_exit(surface, layout, style, native_rect, label, pressed=False):
+    """The exit button, AT THE RECTANGLE THE WIRE REPORTS.
+
+    `Add_Button_Field_(s + 0xBD, 0x1C4, "", TECHSEL 27, "\x1B", '(')`
+    (tech.cpp:208-210; the art loaded at :176) takes its rectangle from
+    that art (fields.cpp:366-367), so the SOURCE has the origin and
+    nothing else — `doc/tech_change_reading.md` §2 had the end as NOT
+    SETTLED until the live list was read. The caller therefore hands in
+    the rectangle it found in the list read NOW, and where there is no
+    such field there is nothing to draw and nothing to click.
+
+    DEVIATION, marked: the word is painted into the button art and
+    `Add_Button_Field_` is passed an EMPTY label string, so there is no
+    string tech.cpp prints for HD to transcribe. It is printed as text
+    until the artwork is extracted — the same deviation the category
+    labels carry, and marked the same way.
+    """
+    box = pygame.Rect(*geom_mod.window_rect(native_rect, layout))
+    surface.fill(col("exit_fill", (20, 26, 42)), box)
+    pygame.draw.rect(surface, col("exit_border", (108, 140, 200)), box,
+                     max(1, box.height // 12))
+    if not label:
+        return box
+    size = _fit(style, label, int(box.width * 0.8),
+                layout.font_size(13))
+    text = style.render_text(label, size, col("exit_label",
+                                              (198, 212, 238)))
+    surface.blit(text, (box.centerx - text.get_width() // 2,
+                        box.centery - text.get_height() // 2))
+    return box
+
+
 def draw(surface, layout, style, entries, hover, words, names, wording,
          current=(0, 0), creative=False):
     """Draw the eight entries. `hover` is (entry index, row) or None.

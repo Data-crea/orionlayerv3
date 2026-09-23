@@ -49,9 +49,10 @@ from core import researchtechlist  # noqa: E402
 from livedrive import Run, SendCounter, close, hashes  # noqa: E402
 from researchchangephases import (SCRATCH, SCREEN_CHANGE,  # noqa: E402
                                   commit, describe, enter_change, hd,
-                                  ensure_on_map, leave_change,
-                                  map_behind, offered, pair,
-                                  panel_ready, plan_changes)
+                                  compare_list_popup, ensure_on_map,
+                                  exit_click, leave_change, map_behind,
+                                  offered, pair, panel_ready,
+                                  plan_changes)
 
 
 def cmd_probe(run, slot):
@@ -162,45 +163,13 @@ def cmd_listprobe(run, slot, want_entry=0):
                  offered(run)[0])
     items = screen.group_items(entry)
     pages = researchtechlist.paginate(items)
-    field = screen.radio_field(entry.index)
-    if field is None:
-        raise livesend.WrongDialog(
-            f"no category button for entry {entry.index} in the live list")
     print(f"    HD reconstructs category {entry.group}: "
           f"{len(items)} fields over {len(pages)} pages — "
           + ", ".join(f"{i.field}:{len(i.apps)}" for i in items))
-    panel_shape = len(run.state.fields or [])
-    livesend.activate(run.app.client, field.index, screen=SCREEN_CHANGE,
-                      field_type=researchlist.TYPE_RADIO,
-                      rect=(field.x, field.y, field.x_end, field.y_end),
-                      label=f"open the category list of entry {entry.index}")
-    opened = run.wait_for(lambda st: len(st.fields or []) != panel_shape,
-                          seconds=60, label="the game's own list popup")
-    run.pump(20)
-    live = list(run.state.fields or [])
+    result = compare_list_popup(run, entry, items, screen)
+    live, got, rows_hd, match = (result["live"], result["rows_game"],
+                                 result["rows_hd"], result["match"])
     run.capture("list_popup")
-    # The popup's own shape: two type-0 page buttons, one type-7 field
-    # per visible row, then the two whole-screen fields (tech.cpp:936-969).
-    rows_live = [f for f in live
-                 if f.field_type == researchlist.TYPE_HIDDEN
-                 and (f.x, f.y, f.x_end, f.y_end) != (0, 0, 639, 479)]
-    popup = researchtechlist.TechListPopup()
-    popup.open(entry, items)
-    lx = popup.list_x(screen.geom.origin)
-    rows_hd = [item.row_rect(row, lx)
-               for item in popup.items()
-               for row in range(len(item.apps))]
-    got = [(f.x, f.y, f.x_end, f.y_end) for f in rows_live]
-    match = got == rows_hd
-    print(f"    the game's list has {len(live)} fields, {len(got)} rows; "
-          f"HD's first page has {len(rows_hd)}: "
-          f"{'MATCH' if match else 'MISMATCH'}")
-    if not match:
-        for i, (a, b) in enumerate(zip(got, rows_hd)):
-            if a != b:
-                print(f"      row {i}: game {a}, HD {b}")
-                break
-        print(f"      game {got[:3]} … HD {rows_hd[:3]} …")
     # CLOSE IT: a positive input on the whole-screen ESC field returns
     # from `_Tech_List_` (tech.cpp:1015-1028).
     close = next((f for f in live
@@ -211,13 +180,15 @@ def cmd_listprobe(run, slot, want_entry=0):
     livesend.activate(run.app.client, close.index, screen=SCREEN_CHANGE,
                       field_type=researchlist.TYPE_HIDDEN,
                       rect=(0, 0, 639, 479), label="close the list")
-    back = run.wait_for(lambda st: len(st.fields or []) == panel_shape,
-                        seconds=60, label="the panel's list again")
+    back = run.wait_for(
+        lambda st: len(st.fields or []) == result["panel_shape"],
+        seconds=60, label="the panel's list again")
     left = leave_change(run)
     after = pair(run)
     print(f"    the popup changed nothing: {before} -> {after}: "
           f"{before == after}")
-    return bool(opened and match and back and left and before == after), {
+    return bool(result["opened"] and match and back and left
+                and before == after), {
         "load": record, "category": entry.group, "entry": entry.index,
         "items": [[i.field, list(i.apps), list(i.statuses), i.status]
                   for i in items],
@@ -370,10 +341,40 @@ def cmd_overlay(run, slot):
                 "after_png": after["hd_png"]}
 
 
+def cmd_exitbutton(run, slot):
+    """Part G, live: the exit button leaves, and changes nothing."""
+    ensure_on_map(run)
+    record = gameload.load_slot(run, slot)
+    if not record["loaded"] or not enter_change(run) \
+            or not panel_ready(run):
+        return False, {"load": record}
+    before = pair(run)
+    run.capture("exit_button_panel")
+    click = exit_click(run)
+    after = run.capture("exit_button_back_on_the_map")
+    now = pair(run)
+    one_send = (click["sends"]["activate_field"] == 1
+                and click["sends"]["inject_click"] == 0
+                and click["sends"]["inject_key"] == 0
+                and [(n, tuple(a)) for n, a in click["sent"]]
+                == [("activate_field", (click["field"],))])
+    print(f"    the click sent {click['sent']} — one activation of the "
+          f"exit field: {one_send}")
+    print(f"    back on the map {click['left']}, overlay closed "
+          f"{click['closed']}, {before} -> {now} — unchanged "
+          f"{now == before}")
+    ok = bool(click["on_it"] and click["left"] and click["closed"]
+              and one_send and now == before)
+    return ok, {"load": record, "click": click, "before": list(before),
+                "after": list(now), "unchanged": now == before,
+                "one_send": one_send, "panel_png": after["hd_png"]}
+
+
 def main():
     args = sys.argv[1:]
     what = args[0] if args else "run"
-    slot = (int(args[1]) if what in ("probe", "listprobe", "resolutions", "overlay")
+    slot = (int(args[1]) if what in ("probe", "listprobe", "resolutions", "overlay",
+                        "exitbutton")
             and len(args) > 1 and args[1].isdigit() else None)
     folder = args[-1] if len(args) > 1 and not args[-1].isdigit() \
         else "work_order_165"
@@ -385,6 +386,8 @@ def main():
         ok, extra = cmd_probe(run, slot)
     elif what == "run":
         ok, extra = cmd_run(run)
+    elif what == "exitbutton":
+        ok, extra = cmd_exitbutton(run, slot or SCRATCH[0])
     elif what == "overlay":
         ok, extra = cmd_overlay(run, slot or SCRATCH[0])
     elif what == "resolutions":
@@ -395,7 +398,7 @@ def main():
             int(args[2]) if len(args) > 2 and args[2].isdigit()
             else 0)
     else:
-        sys.exit(f"unknown command {what!r}; known: probe, run, listprobe, resolutions, overlay")
+        sys.exit(f"unknown command {what!r}; known: probe, run, listprobe, resolutions, overlay, exitbutton")
     run.save_record({**extra, "sends": counter.counts,
                      "sent": [list(x) for x in counter.sent],
                      **close(run, saves)})

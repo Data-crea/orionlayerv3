@@ -371,6 +371,15 @@ class ResearchPanelScreen(ResearchPopupsMixin, ScreenBase):
                            self._entries, self._hover, words, self._names,
                            self._wording, current=self.current_pair(),
                            creative=self._creative)
+        # THE EXIT BUTTON, where the wire says it is. Drawn after the
+        # entries and before the list popup, which covers the whole
+        # screen in the original too (`Save_Field_Stats_`, tech.cpp:889).
+        exit_rect = self.exit_rect()
+        if exit_rect is not None:
+            researchpanel.draw_exit(surface, self.layout, self.style,
+                                    exit_rect,
+                                    self._data.get("exit_label"))
+
         # AND THE LIST POPUP OVER IT. The original saves the panel's
         # fields and draws the window on top (`Save_Field_Stats_`,
         # tech.cpp:889); here it is one more layer, still under the
@@ -457,6 +466,13 @@ class ResearchPanelScreen(ResearchPopupsMixin, ScreenBase):
             return
         if self._techlist.visible:
             self.list_click(screen_x, screen_y)
+            return
+        if self.exit_at(screen_x, screen_y):
+            # `input_val == accept_btn_id` is tested BEFORE the commit
+            # branch (tech.cpp:357), and it is the one branch that does
+            # not commit. A click here and ESC are the same act and go
+            # out the same way — `_leave` is the one home for it.
+            self._leave()
             return
         if self.open_list_at(screen_x, screen_y):
             return
@@ -560,6 +576,32 @@ class ResearchPanelScreen(ResearchPopupsMixin, ScreenBase):
                     and (f.x, f.y) == want):
                 return f
         return None
+
+    def exit_rect(self):
+        """The exit button's NATIVE rectangle, off the list read now.
+
+        Never a constant. `Add_Button_Field_` takes the rectangle from
+        the art (fields.cpp:366-367) and tech.cpp:208-210 gives only
+        the origin, so `doc/tech_change_reading.md` §2 carried the end
+        as NOT SETTLED until the wire was read. A remembered number
+        would put a clickable word where the game may have no field at
+        all — decision 20, one step before a send.
+        """
+        field = self.exit_field()
+        if field is None:
+            return None
+        return (field.x, field.y, field.x_end, field.y_end)
+
+    def exit_at(self, screen_x, screen_y):
+        """True when a WINDOW point is on the exit button."""
+        rect = self.exit_rect()
+        if rect is None or self._state != READY:
+            return False
+        point = self.native_point(screen_x, screen_y)
+        if point is None:
+            return False
+        nx, ny = point
+        return rect[0] <= nx <= rect[2] and rect[1] <= ny <= rect[3]
 
     def handle_right_button(self, down, screen_x, screen_y):
         """Help outside the panel; the DESCRIPTION over a row inside it.

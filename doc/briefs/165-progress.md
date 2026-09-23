@@ -552,12 +552,60 @@ Two checks (263 -> 265). Each mutation was shown red, caches cleared,
 | the overlay paints its own background again | **99 900 of 99 900** band pixels changed |
 | the overlay stops filling its panel | **61 974** sampled pixels inside the panel are still what was behind it |
 
-### Seen and NOT changed
+### Seen, reported, and closed the same day — part G below
 
-HD does not draw the original's exit button (TECHSEL 27,
-tech.cpp:198-200) and takes no click there — only ESC leaves. The
-native frame beside it shows CANCEL. An omission from part B, **not
-marked**, and outside what Data asked for. It is in the parked file.
+HD drew no exit button and took no click where the original has CANCEL.
+Reported as an unmarked omission from part B; Data ordered it built.
+
+## Part G — Data's addition, 23 September 2026: the exit button
+
+**A field, at the rectangle the WIRE reports.** `Add_Button_Field_(s +
+0xBD, 0x1C4, "", TECHSEL 0x1B, "\x1B", '(')` (tech.cpp:208-210, the
+art at :176) takes its rectangle from that art (fields.cpp:366-367), so
+tech.cpp has the ORIGIN and nothing else — `doc/tech_change_reading.md`
+§2 carried the end as NOT SETTLED until the wire was read. So
+`exit_rect()` reads the live list, and where no field sits at that
+origin nothing is drawn and nothing is clickable.
+
+**A click sends what ESC sends**, and that is asserted by comparing the
+two rather than by reading the code twice. Both go through `_leave` —
+`input_val == accept_btn_id` is tested BEFORE the commit branch
+(tech.cpp:357) and is the one branch that does not commit.
+
+**The label is text, and marked.** The original paints CANCEL into the
+button art and passes `Add_Button_Field_` an EMPTY label string, so
+there is no string tech.cpp prints to transcribe — the same situation
+the category labels are in. `exit_button_as_text`, DEVIATION, in
+`layout.json` with its provenance: the word read off the native frame
+at the rectangle the wire reports.
+
+### Live on SAVE4
+
+```
+the wire puts the exit button at (269, 452, 360, 470) (field 1);
+HD's own hit test says True at window (948, 1038)
+the click sent [['activate_field', (1,)]] — one activation of the exit field
+back on the map True, overlay closed True, (60, 136) -> (60, 136) — unchanged
+```
+
+HD beside the native button in `D_exitbutton_4/`: same rectangle, the
+word as text where the original has its artwork.
+
+### The check, and its two counter-tests
+
+Two checks (265 -> 267). Each mutation shown red, caches cleared,
+`python -B`, source restored:
+
+| mutation | what went red |
+|---|---|
+| the rectangle's END is remembered and only the origin read | `(269,452,360,470) != (269,452,330,466)` — the narrower button the wire reported |
+| the click stops reaching `_leave` | `[] != [('ACTIVATE_FIELD', 0)]` — what ESC sends and the click does not |
+
+The drawing is asserted by COMPARISON, not by a colour: the button sits
+inside the panel's own fill rect `(s+4, 4)-(s+471, 472)` (tech.cpp:290),
+so that fill covers its area whether the button is drawn or not. Two
+frames — the field at its origin and one pixel beside it — must differ
+inside the button and nowhere else in the panel.
 
 ## Part E — the rest of select mode — **PART C's OFFLINE HALF DONE, the rest parked**
 

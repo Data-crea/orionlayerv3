@@ -2294,7 +2294,7 @@ files under `doc/` and are only summarised here.
 | | |
 |---|---|
 | Python | 32,960 lines across 111 modules — `find . -name '*.py'`, `__pycache__` excluded, the smoke test's 6,400 included. The previous figure here (21,642 across 94) was carried from an unstated method and could not be reproduced |
-| Smoke test | `python tools/smoke_test.py` — **265 checks**, headless, in `tools/smoke_suite/` since work order 162 (99 check modules, one group per screen plus a shared core; `tools/smoke_test.py` is the runner). **Two tiers since work order 158**: the bare command runs everything (~72 s here); `--fast` runs the commit gate's 258 (~32 s here). `--screen <name>` prints only that screen's sentences and the core's and is NEVER a gate. See "The gate has two tiers" below |
+| Smoke test | `python tools/smoke_test.py` — **267 checks**, headless, in `tools/smoke_suite/` since work order 162 (100 check modules, one group per screen plus a shared core; `tools/smoke_test.py` is the runner). **Two tiers since work order 158**: the bare command runs everything (~72 s here); `--fast` runs the commit gate's 260 (~32 s here). `--screen <name>` prints only that screen's sentences and the core's and is NEVER a gate. See "The gate has two tiers" below |
 | Assets | 170 MB (select_race 68, galaxy_map 51, shared 23, new_game 21, colony_summary 1) |
 | Screens in HD | 9 of ~20–22 (the GAME menu overlay, work order Stop 2, every dialog of the popup; colony summary draws list, sidebar, scan box and galaxy inset, and MOVES POPS — the first HD gesture that drives the game; planets, brief 101, lists, sorts, restricts and returns) |
 | Setup from clone | `python tools/setup.py` (deps via the system package manager) |
@@ -2337,9 +2337,37 @@ where the same point on the bare map sends 1 and reopens change mode;
 ESC returns with `(60, 136)` unchanged. HD beside the native frame in
 the same folder.
 
-**Not changed, and worth knowing:** HD draws no exit button (TECHSEL
-27, tech.cpp:198-200) and takes no click where the original has CANCEL
-— only ESC leaves. An omission from part B, not marked.
+That run also reported an unmarked omission from part B — HD drew no
+exit button where the original has CANCEL — which Data ordered built
+the same day. See below.
+
+### The exit button, at the rectangle the wire reports — 23 September 2026, work order 165 G
+
+`Add_Button_Field_(s + 0xBD, 0x1C4, "", TECHSEL 0x1B, "\x1B", '(')`
+(tech.cpp:208-210, art at :176) takes its rectangle from that art
+(fields.cpp:366-367): tech.cpp has the ORIGIN and nothing else, and
+`doc/tech_change_reading.md` §2 carried the end as NOT SETTLED until
+the live list was read. So `ResearchPanelScreen.exit_rect()` reads the
+live list, and where no field sits at that origin nothing is drawn and
+nothing is clickable.
+
+A click on it and ESC send the same thing, through one `_leave` —
+`input_val == accept_btn_id` is tested BEFORE the commit branch
+(tech.cpp:357) and is the one branch that does not commit. The check
+asserts it by COMPARING the two, not by reading the code twice.
+
+The label is TEXT and marked `exit_button_as_text`, DEVIATION: the word
+is painted into the button art and `Add_Button_Field_` is passed an
+EMPTY label string, so there is nothing tech.cpp prints to transcribe —
+the same situation the category labels are in. The word is the one the
+art shows, read off the native frame at the rectangle the wire reports.
+
+Live on SAVE4: the wire put it at (269, 452, 360, 470), field 1; the
+click sent exactly one `activate_field` on field 1; back on the map,
+overlay closed, `(60, 136)` unchanged. HD beside the native button in
+`~/orionlayer-fixtures/evidence/work_order_165/D_exitbutton_4/`.
+
+**With it, change mode has no unmarked omission left.**
 
 ### The current field's second colour was wrong in three ways — 22 September 2026, work order 165 E
 
@@ -2563,8 +2591,8 @@ blocks into a session and writing them out again. Three proofs:
 
 | | command | checks | on this tree |
 |---|---|---:|---:|
-| **Full** — the default, and the pre-push gate | `python tools/smoke_test.py` | 265 | ~72 s |
-| **Fast** — the pre-commit gate | `python tools/smoke_test.py --fast` | 258 | ~32 s |
+| **Full** — the default, and the pre-push gate | `python tools/smoke_test.py` | 267 | ~72 s |
+| **Fast** — the pre-commit gate | `python tools/smoke_test.py --fast` | 260 | ~32 s |
 | **Screen** — **never a gate** | `python tools/smoke_test.py --screen <name>` | all of them, ~a third printed | the tier's |
 
 **`--screen` narrows what a run PRINTS, not what it runs**, and the

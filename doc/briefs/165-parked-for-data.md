@@ -63,12 +63,13 @@ bevor es die Panel-Grafik darüber zeichnet (tech.cpp:290-291) — jetzt
 transkribiert. Die erste Prüfung hätte es nicht gefunden: sie fragte
 nur, ob die Seitenbänder gleich bleiben.
 
-**Eine Beobachtung, nicht geändert:** die HD-Seite zeichnet den
-Exit-Knopf des Originals nicht (TECHSEL 27, tech.cpp:198-200) und nimmt
-dort auch keinen Klick an — nur ESC verlässt den Bildschirm. Im
-nativen Bild daneben steht dort CANCEL. Das ist eine Auslassung aus
-Teil B, sie ist **nicht markiert**, und sie gehört nicht zu dem, was du
-heute beauftragt hast. Deine Entscheidung.
+**Eine Beobachtung war hier notiert — der fehlende Exit-Knopf — und
+sie ist am selben Tag erledigt** (Teil G, dein Auftrag darauf). Er wird
+gezeichnet und angeklickt, an dem Rechteck, das der Draht meldet; ein
+Klick sendet dasselbe wie ESC. Die Beschriftung ist Text und als
+`exit_button_as_text` markiert, wie die Kategorienamen, bis das
+Artwork kommt. Die nicht markierte Auslassung aus Teil B ist damit
+weg — sie war die letzte.
 
 ---
 
