@@ -57,6 +57,17 @@ assert _rs_d.active_name == "galaxy_map" and _rs_d.overlay is None
 
 _rs_client.state = _dx_state
 _rs_d.update_from_game(_dx_state)
+# THE STAND-INS AGAIN, because opening the overlay ENTERED the screen
+# and `enter` rebuilds its two loaders from the real tree. On a machine
+# that has run the extractors they come back `ok` and nothing is
+# noticed; in a CLONE they come back missing, the screen is not READY,
+# `render_content` returns early and the frame below is never drawn.
+# The fresh-clone run caught exactly that — the fault the fundament
+# describes under "A CHECK THAT READS THE PLAYER'S OWN FILES PASSES ON
+# THE MACHINE THAT WROTE THEM", for the fifth time.
+_dx_scr._names = derived(_dx_tn.TechNames)
+_dx_scr._wording = derived(_dx_bt.BillText)
+_dx_scr.update(_dx_state)
 assert _rs_d.active_name == "galaxy_map", (
     f"the map is not the parent any more ({_rs_d.active_name}); change "
     f"mode is supposed to be a panel OVER it")
