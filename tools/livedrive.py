@@ -78,14 +78,34 @@ class SendCounter:
     claim about THE WIRE rather than about the picture. Used here to
     settle whether a commit that nobody asked for came from this
     driver — the answer has to be a number, not an argument.
+
+    **IT PUTS THE CLIENT BACK, and that is not tidiness.** Every
+    counter WRAPS the client's three methods, so a second one wraps the
+    first and a send after that increments BOTH: a counter meant to
+    measure one step keeps counting every step after it. Read live on
+    23 September 2026 — a record said `activate_field: 3` for a step
+    whose own printed line said 0, because the dict it stored was the
+    LIVE one and two later steps had gone through the same wrapper. The
+    number that was true when it was printed was false when it was
+    written down.
+
+    So `release()` restores the client's own methods, `__exit__` calls
+    it, and `snapshot()` returns a COPY. A step measures itself with
+
+        with SendCounter(client) as counter:
+            ...
+        counts, sent = counter.snapshot()
     """
 
     def __init__(self, client):
+        self.client = client
         self.counts = {"activate_field": 0, "inject_click": 0,
                        "inject_key": 0}
         self.sent = []
+        self._real = {}
         for name in self.counts:
-            setattr(client, name, self._wrap(name, getattr(client, name)))
+            self._real[name] = getattr(client, name)
+            setattr(client, name, self._wrap(name, self._real[name]))
 
     def _wrap(self, name, real):
         def counted(*args, **kwargs):
@@ -93,6 +113,23 @@ class SendCounter:
             self.sent.append((name, args))
             return real(*args, **kwargs)
         return counted
+
+    def release(self):
+        """Put the client's own methods back. Idempotent."""
+        for name, real in self._real.items():
+            setattr(self.client, name, real)
+        self._real = {}
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *exc):
+        self.release()
+        return False
+
+    def snapshot(self):
+        """`(counts, sent)`, COPIED — the numbers as they are NOW."""
+        return dict(self.counts), [(n, tuple(a)) for n, a in self.sent]
 
     def total(self):
         return sum(self.counts.values())

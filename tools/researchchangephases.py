@@ -287,6 +287,57 @@ def map_behind(run):
             panel_diff, without)
 
 
+def _send_counter(run):
+    """`SendCounter` for this run's client.
+
+    Imported here and not at module level: this module is loaded by a
+    smoke check WITHOUT pygame, and `livedrive` pulls in pygame, the
+    palette and `main.App`.
+    """
+    from livedrive import SendCounter
+    return SendCounter(run.app.client)
+
+
+def esc_leave(run):
+    """Leave change mode by pressing ESC. What the wire saw.
+
+    The counterpart of `exit_click`, measured the same way, because
+    "ESC and a click on the button are the same act" is a claim about
+    what goes out and a claim like that is a number or it is an
+    argument. ESC resolves to the FIRST ESC field of the list
+    (`Interpret_Keyboard_Input_`, fields.cpp:2608-2613), which in
+    change mode is the exit button (tech.cpp:208-210).
+    """
+    import pygame
+    screen = hd(run)
+    field = screen.exit_field()
+    with _send_counter(run) as counter:
+        pygame.event.clear()
+        pygame.event.post(pygame.event.Event(
+            pygame.KEYDOWN, {"key": pygame.K_ESCAPE, "unicode": "\x1b",
+                             "mod": 0}))
+        run.pump(4)
+        left = run.wait_for(livesend.on_galaxy_map, seconds=90,
+                            label="the galaxy map after ESC")
+        run.pump(20)
+    counts, sent = counter.snapshot()
+    closed = (run.app.dispatcher.overlay is None
+              and run.app.dispatcher.active_name == "galaxy_map")
+    print(f"    ESC: sent {[list(x) for x in sent]} — the exit "
+          f"field is {field.index if field else None}")
+    return {"field": field.index if field else None, "left": left,
+            "closed": closed, "sends": counts,
+            "sent": [list(x) for x in sent]}
+
+
+def one_activation_of(record):
+    """True when this record is exactly one ACTIVATE_FIELD on its field."""
+    return (record["sends"] == {"activate_field": 1, "inject_click": 0,
+                                "inject_key": 0}
+            and [(n, tuple(a)) for n, a in record["sent"]]
+            == [("activate_field", (record["field"],))])
+
+
 def exit_click(run):
     """Leave change mode by CLICKING the exit button. What the wire saw.
 
@@ -308,21 +359,17 @@ def exit_click(run):
     print(f"    the wire puts the exit button at {rect} (field "
           f"{field.index}); HD's own hit test says {on_it} at window "
           f"{point}")
-    # Imported here and not at module level: this module is loaded
-    # by a smoke check without pygame, and `livedrive` pulls in
-    # pygame, the palette and `main.App`.
-    from livedrive import SendCounter
-    counter = SendCounter(run.app.client)
-    run.hd_click(*point)
-    left = run.wait_for(livesend.on_galaxy_map, seconds=90,
-                        label="the galaxy map after the exit click")
-    run.pump(20)
+    with _send_counter(run) as counter:
+        run.hd_click(*point)
+        left = run.wait_for(livesend.on_galaxy_map, seconds=90,
+                            label="the galaxy map after the exit click")
+        run.pump(20)
+    counts, sent = counter.snapshot()
     closed = (run.app.dispatcher.overlay is None
               and run.app.dispatcher.active_name == "galaxy_map")
     return {"rect": list(rect), "field": field.index, "on_it": on_it,
             "window_point": list(point), "left": left, "closed": closed,
-            "sends": counter.counts, "sent": [list(x) for x in
-                                              counter.sent]}
+            "sends": counts, "sent": [list(x) for x in sent]}
 
 
 def compare_list_popup(run, entry, items, screen):

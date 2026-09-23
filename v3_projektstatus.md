@@ -2294,7 +2294,7 @@ files under `doc/` and are only summarised here.
 | | |
 |---|---|
 | Python | 32,960 lines across 111 modules — `find . -name '*.py'`, `__pycache__` excluded, the smoke test's 6,400 included. The previous figure here (21,642 across 94) was carried from an unstated method and could not be reproduced |
-| Smoke test | `python tools/smoke_test.py` — **267 checks**, headless, in `tools/smoke_suite/` since work order 162 (100 check modules, one group per screen plus a shared core; `tools/smoke_test.py` is the runner). **Two tiers since work order 158**: the bare command runs everything (~72 s here); `--fast` runs the commit gate's 260 (~32 s here). `--screen <name>` prints only that screen's sentences and the core's and is NEVER a gate. See "The gate has two tiers" below |
+| Smoke test | `python tools/smoke_test.py` — **269 checks**, headless, in `tools/smoke_suite/` since work order 162 (101 check modules, one group per screen plus a shared core; `tools/smoke_test.py` is the runner). **Two tiers since work order 158**: the bare command runs everything (~72 s here); `--fast` runs the commit gate's 262 (~32 s here). `--screen <name>` prints only that screen's sentences and the core's and is NEVER a gate. See "The gate has two tiers" below |
 | Assets | 170 MB (select_race 68, galaxy_map 51, shared 23, new_game 21, colony_summary 1) |
 | Screens in HD | 9 of ~20–22 (the GAME menu overlay, work order Stop 2, every dialog of the popup; colony summary draws list, sidebar, scan box and galaxy inset, and MOVES POPS — the first HD gesture that drives the game; planets, brief 101, lists, sorts, restricts and returns) |
 | Setup from clone | `python tools/setup.py` (deps via the system package manager) |
@@ -2340,6 +2340,35 @@ the same folder.
 That run also reported an unmarked omission from part B — HD drew no
 exit button where the original has CANCEL — which Data ordered built
 the same day. See below.
+
+### A double that disagreed with the wire, and a number that grew after it was taken — 23 September 2026, work order 165 H
+
+Both found by Data reading a report: the counter-test printed
+`ACTIVATE_FIELD 0` where the live run printed field 1.
+
+**The stand-in numbered from 0.** `parse_fields` drops slot 0 once and
+renumbers nothing (work order 142 B), so `state.fields` starts at index
+1 and 0 cannot occur — and a screen sends `field.index`, which makes 0
+the value 142 B's own note names as the symptom of the fault it fixed.
+The suite's `_rl_list` built lists the wire cannot produce. The product
+was never wrong; the DOUBLE was, which is work order 131 part E's
+lesson for the third time in this order. `085a` asserts the rule
+against `parse_fields` itself and names the RAW fixtures that keep slot
+0 on purpose.
+
+**`SendCounter` kept counting after its step.** It wraps the client's
+three send methods and never put them back, so a second counter wrapped
+the first and every later send incremented both. A record said
+`activate_field: 3` for a step whose own printed line said 0. It has
+`release()`, `__enter__`/`__exit__` and a copying `snapshot()` now, and
+every per-step measurement is a `with`. Both live runs were repeated
+and their records now agree with their own lines.
+
+**Live, in the same run:** ESC sends `ACTIVATE_FIELD 1` and the click
+on the exit button sends `ACTIVATE_FIELD 1` — the same field, one
+activation each. Both paths are measured in `exitbutton` now, so "ESC
+and a click on the button are the same act" is two numbers rather than
+a reading of the code twice.
 
 ### The exit button, at the rectangle the wire reports — 23 September 2026, work order 165 G
 
@@ -2591,8 +2620,8 @@ blocks into a session and writing them out again. Three proofs:
 
 | | command | checks | on this tree |
 |---|---|---:|---:|
-| **Full** — the default, and the pre-push gate | `python tools/smoke_test.py` | 267 | ~72 s |
-| **Fast** — the pre-commit gate | `python tools/smoke_test.py --fast` | 260 | ~32 s |
+| **Full** — the default, and the pre-push gate | `python tools/smoke_test.py` | 269 | ~72 s |
+| **Fast** — the pre-commit gate | `python tools/smoke_test.py --fast` | 262 | ~32 s |
 | **Screen** — **never a gate** | `python tools/smoke_test.py --screen <name>` | all of them, ~a third printed | the tier's |
 
 **`--screen` narrows what a run PRINTS, not what it runs**, and the

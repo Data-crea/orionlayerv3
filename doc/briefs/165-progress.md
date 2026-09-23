@@ -607,6 +607,76 @@ so that fill covers its area whether the button is drawn or not. Two
 frames — the field at its origin and one pixel beside it — must differ
 inside the button and nowhere else in the panel.
 
+## Part H — two faults Data found by reading a report, 23 September 2026
+
+His question: *the counter-test says ESC sends `ACTIVATE_FIELD 0`, the
+live run says the click sends field 1 — what does ESC send live, and
+why does the test say 0?*
+
+**Measured: ESC live sends `ACTIVATE_FIELD 1`**, the same as the click.
+Both paths are counted in one run now, so "ESC and a click are the same
+act" is two numbers rather than a claim:
+
+```
+ESC:   sent [['activate_field', (1,)]] — the exit field is 1
+click: sent [['activate_field', (1,)]]
+ESC and the click sent the same thing: True
+each was one activation of the exit field: True
+```
+
+### Fault one: the stand-in numbered from 0, and the wire never does
+
+`parse_fields` drops slot 0 ONCE and renumbers nothing (work order
+142 B), so a list a screen is ever handed starts at index 1. The
+suite's `_rl_list` numbered from 0 — and a screen sends `field.index`
+as ACTIVATE_FIELD, which makes 0 the very value 142 B's own note names
+as the symptom of the fault it had just fixed: *"a stale hotkey in slot
+0 would have sent ACTIVATE_FIELD 0"*.
+
+Nothing the product does was wrong — it reads whatever index the live
+list carries, and the live sends were right. What was wrong is the
+DOUBLE, and that is work order 131 part E's lesson for the third time
+in this order.
+
+Fixed in `_rl_list` and in the two places that renumbered by hand. The
+check asserts the rule against `parse_fields` itself, and names the RAW
+fixtures that legitimately keep slot 0 — `tools/game_menu_fields.json`
+is the engine's list, dummy included, because `nodes.real()` is tested
+on dropping it.
+
+### Fault two: a number that grew after it was taken
+
+Found while answering the first. `SendCounter` WRAPS the client's three
+send methods and never put them back, so a second counter wrapped the
+first and every later send incremented both. A step that stored the
+LIVE dict wrote down a number that was true when it was printed and
+false afterwards:
+
+| | printed in the run | stored in the record |
+|---|---|---|
+| the click on the map under the panel | **0 sends** | `activate_field: 3` |
+| ESC leaving change mode | one activation | `activate_field: 3` |
+
+`release()` puts the client's own methods back, `__exit__` calls it,
+`snapshot()` returns a COPY, and every per-step measurement is a
+`with`. Both live runs were repeated; the records now say 0 and 1 where
+their own lines do.
+
+### The checks, and their three counter-tests
+
+Two checks (267 -> 269). Each mutation shown red, caches cleared,
+`python -B`, source restored:
+
+| mutation | what went red |
+|---|---|
+| the stand-in numbers from 0 again | `[0, 1, 2, 3, 4, 5]` against `range(1, n+1)` |
+| `release()` does nothing | "a released counter is still counting" |
+| `snapshot()` hands out the live dict | "the snapshot moved with the counter: `{'activate_field': 3}`" |
+
+The third mutation passed the FIRST version of that check, because the
+snapshot was taken after the counter had been released and nothing
+could move it any more. It is taken while the counter is live now.
+
 ## Part E — the rest of select mode — **PART C's OFFLINE HALF DONE, the rest parked**
 
 The order's scope choice for part E is "131 parts B and C, the 128

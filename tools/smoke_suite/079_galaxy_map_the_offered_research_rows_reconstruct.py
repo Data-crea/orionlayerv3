@@ -142,11 +142,21 @@ for _rl_mode in (True, False):
 from core.game_state import FieldInfo as _RlField
 
 def _rl_list(entries, select_mode=True):
-    """The FIELD_LIST the game would build for these entries."""
+    """The FIELD_LIST the game would build for these entries.
+
+    **NUMBERED FROM 1, because `state.fields` is.** `parse_fields`
+    drops slot 0 once and renumbers nothing (core/game_state.py, work
+    order 142 B), so a list a screen is ever handed starts at index 1
+    and index 0 cannot occur — and a screen sends `field.index` as
+    ACTIVATE_FIELD, which makes 0 the value work order 142 B's own note
+    names as the symptom of the fault it fixed. Numbering this from 0
+    made every check that printed an index print one the wire cannot
+    produce; Data caught it in a report on 23 September 2026.
+    """
     out = []
     for _kind, _ft, _r in _rl.expected_fields(entries, select_mode):
         _f = _RlField()
-        _f.index = len(out)
+        _f.index = len(out) + 1
         _f.field_type = 7 if _ft is None else _ft
         if _r is None:
             _f.x = _f.y = _f.x_end = _f.y_end = 0
@@ -194,7 +204,7 @@ assert _rl_hit is not None and _lf.rect(_rl_hit) == _rl_e.row_rect(0)
 # The same row, in a list where every index has moved.
 _rl_shifted = _rl_list(_rl_entries)[:1] + _rl_list(_rl_entries)
 for _i, _f in enumerate(_rl_shifted):
-    _f.index = _i
+    _f.index = _i + 1
 _rl_hit2 = _rl.row_field(_rl_shifted, _rl_e, 0)
 assert _rl_hit2 is not None and _lf.rect(_rl_hit2) == _rl_e.row_rect(0)
 # And absent from a list that does not hold it: no send, not a guess.

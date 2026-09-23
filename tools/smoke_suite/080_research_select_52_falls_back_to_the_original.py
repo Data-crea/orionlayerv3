@@ -225,7 +225,7 @@ def _rs_record(tech_fields, tech_apps):
 from core.structs import player as player_mod
 _rs_live = _rl_list(_rs_entries)
 for _i, _f in enumerate(_rs_live):
-    _f.index = _i
+    _f.index = _i + 1          # `state.fields` starts at 1: see _rl_list
 _rs_gs2 = _RsPlayerState(_rs_live, [_rs_record(_rs_tf, _rs_ta)])
 _rs_scr.enter(_rs_gs2)
 _rs_scr.update(_rs_gs2)

@@ -50,8 +50,9 @@ from livedrive import Run, SendCounter, close, hashes  # noqa: E402
 from researchchangephases import (SCRATCH, SCREEN_CHANGE,  # noqa: E402
                                   commit, describe, enter_change, hd,
                                   compare_list_popup, ensure_on_map,
-                                  exit_click, leave_change, map_behind,
-                                  offered, pair, panel_ready,
+                                  esc_leave, exit_click, leave_change,
+                                  map_behind, offered,
+                                  one_activation_of, pair, panel_ready,
                                   plan_changes)
 
 
@@ -282,13 +283,18 @@ def cmd_overlay(run, slot):
     galaxy = disp.screens["galaxy_map"]
     box = galaxy.box_rect("sb_research_text")
     point = pygame.Rect(*galaxy.layout.rect(box)).center
-    counter = SendCounter(run.app.client)
-    run.hd_click(*point)
-    run.pump(25)
-    quiet = (counter.total() == 0
+    # A COUNTER PER STEP, released when the step ends and READ as a
+    # copy: a counter left wrapping the client keeps counting the steps
+    # after it, and a record that stores the live dict writes down a
+    # number that was true when it was printed and false afterwards.
+    with SendCounter(run.app.client) as counter:
+        run.hd_click(*point)
+        run.pump(25)
+    under_panel = counter.total()
+    quiet = (under_panel == 0
              and disp.overlay_name == "research_change"
              and run.state.current_screen == SCREEN_CHANGE)
-    print(f"    click on the map at {point}: {counter.total()} sends, "
+    print(f"    click on the map at {point}: {under_panel} sends, "
           f"overlay {disp.overlay_name!r}, screen "
           f"{run.state.current_screen} — {quiet}")
 
@@ -309,14 +315,15 @@ def cmd_overlay(run, slot):
 
     # THE CONTROL, and it reverses itself: the same point on the BARE
     # map does send, and what it sends is change mode again.
-    counter2 = SendCounter(run.app.client)
-    run.hd_click(*point)
-    reopened = run.wait_for(
-        lambda st: st.current_screen == SCREEN_CHANGE, seconds=60,
-        label="change mode again from the bare map")
-    print(f"    the same click on the BARE map: {counter2.total()} "
+    with SendCounter(run.app.client) as counter2:
+        run.hd_click(*point)
+        reopened = run.wait_for(
+            lambda st: st.current_screen == SCREEN_CHANGE, seconds=60,
+            label="change mode again from the bare map")
+    on_bare_map = counter2.total()
+    print(f"    the same click on the BARE map: {on_bare_map} "
           f"sends, screen {run.state.current_screen} — control "
-          f"{reopened and counter2.total() > 0}")
+          f"{reopened and on_bare_map > 0}")
     # AND WAIT FOR THE PANEL BEFORE LEAVING IT. The first snapshot at 36
     # carries the one-field list `Clear_Fields_` leaves behind, so there
     # is no exit button in it yet and `leave_change` refuses — correctly.
@@ -324,14 +331,14 @@ def cmd_overlay(run, slot):
     leave_change(run)
     final = pair(run)
     ok = bool(entered and behind and quiet and back and closed
-              and unchanged and reopened and counter2.total() > 0
+              and unchanged and reopened and on_bare_map > 0
               and final == before)
     return ok, {"load": record, "entered": entered,
                 "band_pixels": seen, "band_changed": changed,
                 "panel_diff": panel_diff, "map_behind": behind,
                 "click_point": list(point),
-                "sends_under_panel": counter.total(),
-                "sends_on_bare_map": counter2.total(),
+                "sends_under_panel": under_panel,
+                "sends_on_bare_map": on_bare_map,
                 "esc_back": back, "overlay_closed": closed,
                 "before": list(before), "after": list(final),
                 "unchanged": final == before,
@@ -342,32 +349,37 @@ def cmd_overlay(run, slot):
 
 
 def cmd_exitbutton(run, slot):
-    """Part G, live: the exit button leaves, and changes nothing."""
+    """Part G, live: ESC and the button leave, send the same, change nothing.
+
+    BOTH paths are measured, not one and an argument about the other:
+    "ESC and a click on the button are the same act" is a claim about
+    what goes out, and two send counters are what settle it.
+    """
     ensure_on_map(run)
     record = gameload.load_slot(run, slot)
-    if not record["loaded"] or not enter_change(run) \
-            or not panel_ready(run):
+    if not record["loaded"]:
         return False, {"load": record}
     before = pair(run)
-    run.capture("exit_button_panel")
-    click = exit_click(run)
-    after = run.capture("exit_button_back_on_the_map")
+    ways = {}
+    for name, leave in (("esc", esc_leave), ("click", exit_click)):
+        if not enter_change(run) or not panel_ready(run):
+            return False, {"load": record, "ways": ways}
+        run.capture(f"exit_button_{name}_panel")
+        ways[name] = leave(run)
+        run.capture(f"exit_button_{name}_back_on_the_map")
+    same = (ways["esc"]["field"] == ways["click"]["field"]
+            and ways["esc"]["sent"] == ways["click"]["sent"])
+    each = all(one_activation_of(w) for w in ways.values())
     now = pair(run)
-    one_send = (click["sends"]["activate_field"] == 1
-                and click["sends"]["inject_click"] == 0
-                and click["sends"]["inject_key"] == 0
-                and [(n, tuple(a)) for n, a in click["sent"]]
-                == [("activate_field", (click["field"],))])
-    print(f"    the click sent {click['sent']} — one activation of the "
-          f"exit field: {one_send}")
-    print(f"    back on the map {click['left']}, overlay closed "
-          f"{click['closed']}, {before} -> {now} — unchanged "
-          f"{now == before}")
-    ok = bool(click["on_it"] and click["left"] and click["closed"]
-              and one_send and now == before)
-    return ok, {"load": record, "click": click, "before": list(before),
-                "after": list(now), "unchanged": now == before,
-                "one_send": one_send, "panel_png": after["hd_png"]}
+    print(f"    ESC and the click sent the same thing: {same} "
+          f"({ways['esc']['sent']})")
+    print(f"    each was one activation of the exit field: {each}")
+    print(f"    {before} -> {now} — unchanged {now == before}")
+    ok = bool(same and each and now == before
+              and all(w["left"] and w["closed"] for w in ways.values()))
+    return ok, {"load": record, "ways": ways, "same": same,
+                "each_one_activation": each, "before": list(before),
+                "after": list(now), "unchanged": now == before}
 
 
 def main():
