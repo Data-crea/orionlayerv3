@@ -104,6 +104,13 @@ assets/shared/figures/
 # left on this screen to ignore, and the tools that made them are
 # deleted rather than merely unused.
 
+# The research panel's outer frame is DERIVED — work order 166 part B,
+# decision 49's surviving half. `tools/make_research_frame.py` cuts it
+# out of screens/fleets/assets/frame.png, which IS committed, with a
+# plain crop, so a rebuild reproduces it byte for byte and a smoke
+# check asserts exactly that rather than trusting the tool's existence.
+assets/shared/frames/
+
 # --- Local state ---
 # settings.json is NOT ignored: it holds window size, skin, language
 # and the localhost port, no secrets, and `load_settings()` falls back

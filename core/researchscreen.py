@@ -43,7 +43,8 @@ import logging
 import pygame
 
 from core import billtext, research, researchlist, researchnative
-from core import researchpanel, researchstate, researchtechlist
+from core import researchframe, researchpanel, researchstate
+from core import researchtechlist
 from core import technames
 from core.researchstate import (      # noqa: F401  (re-exported)
     EMPTY_LIST_GRACE, NAMES_MISSING, NO_PLAYER, READY,
@@ -177,9 +178,31 @@ class ResearchPanelScreen(ResearchPopupsMixin, ScreenBase):
         self._left = False
         self._empty_frames = 0
         self._techlist.close()
-        # The title's WORDS come from layout.json and not from
-        # boxes.json, so the wording has one home (decision 15) and the
-        # F5 editor cannot end up owning a sentence.
+        self._dress_boxes()
+        self.update(game_state)
+
+    def _dress_boxes(self):
+        """Seat every box, and give the title its word.
+
+        **BOTH ARE LOST BY A RESIZE AND BOTH HAVE TO BE REDONE.**
+        `ScreenBase.on_resize` calls `_reload_boxes`, which REPLACES
+        every box object with a freshly parsed one — so a value written
+        onto a box in `enter` is written onto an object the screen no
+        longer has. Only the seating was redone here, and the title's
+        label was not: the research panel lost its headline at every
+        resolution the player did not enter at.
+
+        Found by work order 166 part B in a live 4K capture, and the
+        offline check could not have found it — it constructed a screen
+        at each size, which is the colony column's own blind spot
+        (the fundament, "A PREVIEW THAT CONSTRUCTS IN ONE SIZE CANNOT
+        SEE A RESIZE FAULT — the check has to go the way the fault
+        went"). The check for it now enters at one size and resizes.
+
+        The title's WORDS come from layout.json and not from boxes.json,
+        so the wording has one home (decision 15) and the F5 editor
+        cannot end up owning a sentence.
+        """
         for box in self.boxes:
             if box.name == "title":
                 box.style["label"] = self._data.get("title", "")
@@ -190,11 +213,10 @@ class ResearchPanelScreen(ResearchPopupsMixin, ScreenBase):
             f"own box table for mode {self.MODE!r}. "
             f"A box this screen cannot seat draws at the origin and reads "
             f"as a layout bug rather than a missing entry")
-        self.update(game_state)
 
     def on_resize(self):
         super().on_resize()
-        researchnative.seat(self.boxes, self.layout, self._box_native)
+        self._dress_boxes()
 
     def _render_background(self, surface):
         """Under an OVERLAY: the parent screen, and the panel's own fill.
@@ -396,6 +418,15 @@ class ResearchPanelScreen(ResearchPopupsMixin, ScreenBase):
         researchtechlist.draw(surface, self.layout, self.style,
                               self._techlist, self.geom.origin,
                               self._names, self._wording)
+        # AND THE FRAME LAST, so the metal is on top of everything the
+        # panel drew — the cockpit frame's own rule
+        # (`core/frame.py`: "drawn as an overlay (last) so content
+        # renders underneath"). Its centre is transparent, so it covers
+        # nothing but the corners it is made of.
+        researchframe.for_app(self.app).render(
+            surface,
+            researchnative.window_rect(self.geom.panel_rect, self.layout),
+            self.layout.scale)
 
     def cost_text(self, entry):
         """The "N RP" string for one entry, as the original builds it.

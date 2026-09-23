@@ -91,7 +91,80 @@ moment, found the same way, fixed without a bound. Nothing else in the
 tree implements `wants_original`, so the class is closed today; a new
 screen that grows one inherits the question and not the answer.
 
-## Part B — the outer frame, from the Fleets art — **not started**
+## Part B — the outer frame, from the Fleets art — **DONE**
+
+### Where it was cut from, measured
+
+`tools/frame_holes.py` reads the Fleets frame's own transparent holes
+and names the scanner map's `inset_map` at image (228, 211, 1491, 906).
+The frame around it was found by walking OUTWARD from the hole's edge
+on 50 rows and 50 columns, stopping at the first run of eight dark
+pixels — the gap between this frame and its neighbours — and taking the
+mode:
+
+```
+left  x 205 (rail 23)   right  x 1741 (rail 23)
+top   y 189 (rail 22)   bottom y 1138 (rail 22)
+```
+
+so the cut is **(205, 189, 1537, 950)**, by `tools/make_research_frame.py`.
+**DERIVED**, decision 49's surviving half: the input is committed, the
+output is not, the cut is a plain crop, `tools/setup.py` runs it, and a
+smoke check rebuilds it in a temporary tree and compares byte for byte.
+
+The nine-slice corner is **140 px**, and that is measured too: each
+corner bracket reaches at most 132 px along either axis beyond the
+plain rail — TL 128x127, TR 127x124, BL 130x130, BR 132x129.
+
+### The corners scale, they do not stretch
+
+The tree had two nine-slicers and neither does what this needs:
+
+| | corner rule |
+|---|---|
+| `core/nineslice.NineSlice` | the SOURCE's pixel size, whatever the window is |
+| `core/frame.FrameRenderer` | target/source PER AXIS — stretches when the aspect differs, and this panel is square where the cut is 1.62:1 |
+
+What is wanted is one factor from the WINDOW. `core/researchframe.py`
+gets it by SCALING THE SOURCE ONCE and nine-slicing the result, so
+`NineSlice` still does the slicing and there is no third implementation
+of it — only a third rule about its corners. The factor is
+`0.5 * layout.scale`, because `screens/fleets/assets/frame.png` is
+3840x2160, the reference at 2x: a corner is 70 px at 1080p and 140 —
+the source's own — at 3840x2160.
+
+Marked `outer_frame`: **DEVIATION**, not an extension. The original
+draws TECHSEL.LBX's own panel art in that place, so this is a different
+picture where there was one, and decision 61's vocabulary reserves
+"extension" for what the original does not do at all.
+
+### THE FAULT IT UNCOVERED: the title was lost to every resize
+
+The 4K capture had no headline. Not the frame's doing:
+`ScreenBase.on_resize` calls `_reload_boxes`, which REPLACES every box
+object — so the label `enter()` wrote onto the title box was written
+onto an object the screen no longer had. **The research panel lost its
+title at every resolution the player did not enter at**, and had since
+the screen was built.
+
+It is the colony column's own fault one screen over, and the offline
+check could not have found it: it CONSTRUCTS a screen at each size, and
+the fundament says exactly that — *"A PREVIEW THAT CONSTRUCTS IN ONE
+SIZE CANNOT SEE A RESIZE FAULT — the check has to go the way the fault
+went."* `_dress_boxes()` is now one place that seats the boxes AND
+gives the title its word, called from `enter` and from `on_resize`, and
+the check enters at one size and resizes through all four.
+
+### Acceptance
+
+| | |
+|---|---|
+| captures at all four resolutions, beside the native frame | `D_resolutions_4/` — 1080p, 1440p, ultrawide, 4K, each with its native picture |
+| corner lamps unstretched, measured | the lamp's bounding-box aspect at each resolution against the cut's own, within 0.06, and its size within 4 px of the source's times the window factor |
+| CANCEL stays inside the frame | yes, in every capture |
+| the frame grows outward, never inward over content | it does — no collision at 1080p, so the default was not needed |
+
+Three checks (271 -> 274).
 
 ## Part C — inner boxes drawn in code — **not started**
 

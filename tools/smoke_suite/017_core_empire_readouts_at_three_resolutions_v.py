@@ -192,6 +192,12 @@ _MARKED = {
     "screens/research_change/screen.py": "DEVIATION",
     "screens/research_change/layout.json": "TECHSEL",
 
+    # ADDED 23 September 2026, work order 166 part B: the research
+    # panel's outer frame, cut from the Fleets artwork. Its own check
+    # is the frame block — the cut rebuilds byte for byte and the
+    # corners scale without stretching.
+    "core/researchframe.py": "DEVIATION",
+
     # ADDED 22 September 2026, work order 165 part C: the two popups
     # the research panel shares. `researchpopups.py` carries Q11, the
     # radio index skew HD does not reproduce; `researchtechlist.py`

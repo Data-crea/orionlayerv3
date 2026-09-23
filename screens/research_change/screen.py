@@ -89,6 +89,13 @@ disappear (decision 61):
                 word is the one the art shows and the RECTANGLE is the
                 one the wire reports, never a constant: the source has
                 only the origin, because the art carries the size
+  DEVIATION     the outer frame is the FLEETS screen's inner frame —
+                the one around its scanner map, orange lamps in the
+                corners — cut out of `screens/fleets/assets/frame.png`
+                and nine-sliced around the panel's content box (work
+                order 166 part B, Data's decision). The original draws
+                TECHSEL.LBX's own panel art there, so this is a
+                different picture in the same place and not an addition
   HD EXTENSION  the title: the original's headline is part of the
                 TECHSEL art and is not a string tech.cpp prints. Its
                 WORDING is the game's own name for the screen, help
@@ -117,6 +124,7 @@ MARKED = {
     "radio_index_skew": "DEVIATION",
     "description_box": "DEVIATION",
     "little_arrow": "OMISSION",
+    "outer_frame": "DEVIATION",
     "title": "HD EXTENSION",
     "category_label_as_text": "DEVIATION",
     "shrink_instead_of_squeeze": "DEVIATION",

@@ -134,7 +134,7 @@ assert _rc_sends == [], (
 #    either direction is caught here (decision 61).
 assert set(_rcs.MARKED) == {
     "category_list_popup", "radio_index_skew", "exit_button_as_text",
-    "description_box", "little_arrow", "title",
+    "description_box", "little_arrow", "outer_frame", "title",
     "category_label_as_text", "shrink_instead_of_squeeze"}, \
     sorted(_rcs.MARKED)
 # BOTH DIRECTIONS. Select mode has the science room, which is its own

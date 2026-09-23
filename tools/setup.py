@@ -101,6 +101,10 @@ STEPS = [
     ("make_surface_tiles.py", [],
      os.path.join(CS, "surfaces", "gaia.png"),
      "10 planet surface pictures, cut from assets/_src/surfaces/"),
+    ("make_research_frame.py", [],
+     os.path.join(ROOT, "assets", "shared", "frames",
+                  "research_panel.png"),
+     "the research panel's outer frame, cut from the Fleets artwork"),
     # THE COLONY FRAME PLATES ARE GONE — Phase B, 12 September 2026,
     # decision 55. They were decision 49's derived files and needed a
     # step here; the colony screen wears one fixed image now and
@@ -124,6 +128,8 @@ REQUIRED_INPUTS = [
                   "frame.png"), "colony frame"),
     (os.path.join(ROOT, "screens", "game_menu", "assets", "frame.png"),
      "GAME menu frame (decision 69)"),
+    (os.path.join(ROOT, "screens", "fleets", "assets", "frame.png"),
+     "Fleets frame — the research panel's own is cut from it"),
     (os.path.join(ROOT, "screens", "colony_summary",
                   "layout_reference.json"), "colony layout reference"),
     (os.path.join(GM, "icons", "_source_sheet.png"), "sidebar icon sheet"),

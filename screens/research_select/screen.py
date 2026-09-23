@@ -81,6 +81,13 @@ disappear (decision 61):
                 and does not centre
   OMISSION      the little arrow and the cycling selection box
                 (`Draw_Little_Arrow_`, tech.cpp:740)
+  DEVIATION     the outer frame is the FLEETS screen's inner frame —
+                the one around its scanner map, orange lamps in the
+                corners — cut out of `screens/fleets/assets/frame.png`
+                and nine-sliced around the panel's content box (work
+                order 166 part B, Data's decision). The original draws
+                TECHSEL.LBX's own panel art there, so this is a
+                different picture in the same place and not an addition
   HD EXTENSION  the title: the original's headline is part of the
                 TECHSEL art and is not a string tech.cpp prints
   DEVIATION     the category label is printed as text where the
@@ -102,6 +109,7 @@ MARKED = {
     "radio_index_skew": "DEVIATION",
     "description_box": "DEVIATION",
     "little_arrow": "OMISSION",
+    "outer_frame": "DEVIATION",
     "title": "HD EXTENSION",
     "category_label_as_text": "DEVIATION",
     "shrink_instead_of_squeeze": "DEVIATION",
