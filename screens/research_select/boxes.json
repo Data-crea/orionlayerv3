@@ -29,52 +29,28 @@
       "hidden": true
     },
     {
-      "name": "entry_0",
-      "style": {
-        "skin": "inner_panel"
-      }
+      "name": "entry_0"
     },
     {
-      "name": "entry_1",
-      "style": {
-        "skin": "inner_panel"
-      }
+      "name": "entry_1"
     },
     {
-      "name": "entry_2",
-      "style": {
-        "skin": "inner_panel"
-      }
+      "name": "entry_2"
     },
     {
-      "name": "entry_3",
-      "style": {
-        "skin": "inner_panel"
-      }
+      "name": "entry_3"
     },
     {
-      "name": "entry_4",
-      "style": {
-        "skin": "inner_panel"
-      }
+      "name": "entry_4"
     },
     {
-      "name": "entry_5",
-      "style": {
-        "skin": "inner_panel"
-      }
+      "name": "entry_5"
     },
     {
-      "name": "entry_6",
-      "style": {
-        "skin": "inner_panel"
-      }
+      "name": "entry_6"
     },
     {
-      "name": "entry_7",
-      "style": {
-        "skin": "inner_panel"
-      }
+      "name": "entry_7"
     }
   ]
 }

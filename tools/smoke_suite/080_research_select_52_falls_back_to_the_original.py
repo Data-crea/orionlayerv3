@@ -403,8 +403,9 @@ _rs_src = {
 # the original's four cases.
 assert set(_rss.MARKED) == {
     "science_room_animation", "category_list_popup", "radio_index_skew",
-    "description_box", "little_arrow", "outer_frame", "title",
-    "category_label_as_text", "shrink_instead_of_squeeze"}, \
+    "description_box", "little_arrow", "outer_frame",
+    "inner_boxes_drawn", "title", "category_label_as_text",
+    "shrink_instead_of_squeeze"}, \
     sorted(_rss.MARKED)
 for _kind in ("OMISSION", "HD EXTENSION", "DEVIATION"):
     assert _kind in _rs_src["screen"], _kind

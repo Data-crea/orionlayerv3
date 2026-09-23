@@ -166,7 +166,40 @@ the check enters at one size and resizes through all four.
 
 Three checks (271 -> 274).
 
-## Part C — inner boxes drawn in code — **not started**
+## Part C — inner boxes drawn in code — **DONE**
+
+The eight entry boxes wore `inner_panel`, a nine-sliced IMAGE out of
+the skin, and Data's verdict on the live panel was that it does not fit
+them. They carry **no skin at all** now — a box with none draws nothing
+of its own — and `core.researchpanel.draw_box` draws them the way
+`screens/planets/` draws its boxes:
+
+| | |
+|---|---|
+| the fill | `colony_summary.panel_background`, which is what `planetdraw.PANEL_BG` fills its five windows with |
+| the outline | `panel.thin_border` through `Style.draw_plate`, the rounded 1 px plate of decision 51 — the same call `planetdraw` makes for its headings, controls and status |
+
+Both are read from the section that owns them rather than copied into
+this screen's own section, and a check asserts the two are still equal
+to the Planets screen's.
+
+**The list popup's window goes through the same helper.** It drew
+itself with two hand-written `draw.rect` calls and two colours of its
+own; the entry boxes would have made that a third copy.
+
+**All eight boxes are drawn, offered or not** — `Init_Entry_Data_` adds
+a block field for every category and the original draws an empty panel
+for one with nothing to offer (tech.cpp:225-231) — and at the game's
+OWN rectangle: `Entry.block_rect()` is one function now, used by the
+drawing and by `expected_fields`, so the box and the field the
+reconstruction is validated against cannot come apart (decision 5).
+
+Marked `inner_boxes_drawn`: DEVIATION. The original wears TECHSEL art
+in these places and HD has none of it.
+
+Two checks (274 -> 276). Captures at four resolutions in
+`D_resolutions_4/`; beside the native frame the boxes now read as the
+same kind of thing.
 
 ## Part D — text that fits — **not started**
 

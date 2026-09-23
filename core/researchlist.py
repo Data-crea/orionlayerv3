@@ -207,6 +207,19 @@ class Entry:
                 self.x + ROW_X_SPAN,
                 self.y + ROW_Y_BASE + ROW_Y2[row])
 
+    def block_rect(self):
+        """The entry's BLOCK rectangle (tech.cpp:225-231).
+
+        All eight exist whether or not the category offers anything —
+        the original adds the field and draws an empty panel for a
+        category with nothing to offer — so this is both the field the
+        reconstruction is validated against AND the box the HD panel
+        draws. One home for it, because two rectangles for one thing is
+        how a box and its hit test come apart (decision 5).
+        """
+        return (self.x + BLOCK_DX1, self.y + BLOCK_DY1,
+                self.x + BLOCK_DX2, self.y + BLOCK_DY2)
+
     def cost_anchor(self):
         """Where the "N RP" string ENDS — it is printed right-aligned."""
         return (self.x + COST_DX, self.y + COST_DY)
@@ -405,8 +418,7 @@ def expected_fields(entries, select_mode=True):
                          entry.row_rect(row)))
     for entry in entries:
         want.append((f"block {entry.index}", TYPE_HIDDEN,
-                     (entry.x + BLOCK_DX1, entry.y + BLOCK_DY1,
-                      entry.x + BLOCK_DX2, entry.y + BLOCK_DY2)))
+                     entry.block_rect()))
     for entry in entries:
         if entry.offered:
             x, y = RADIO_POS[entry.index]

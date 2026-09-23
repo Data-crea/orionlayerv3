@@ -56,6 +56,40 @@ def col(key, default):
     return palette.col("research_select", key, default)
 
 
+#: THE INNER BOXES ARE DRAWN, NOT WORN — work order 166 part C, Data's
+#: verdict on the live panel: the `inner_panel` ARTWORK does not fit
+#: them. They are drawn the way `screens/planets/` draws its boxes, out
+#: of the same two colours and through the same helper, so the two
+#: screens read as one system rather than as two takes on it:
+#:
+#:   the fill     `colony_summary.panel_background`, which is what
+#:                `planetdraw.PANEL_BG` fills its five windows with
+#:   the outline  `panel.thin_border` through `Style.draw_plate`, the
+#:                rounded 1 px plate of decision 51 — `planetdraw`
+#:                draws its headings, controls and status with the
+#:                same call
+#:
+#: Both are read from the section that owns them rather than copied
+#: into this screen's own, because a second copy of a colour is the
+#: copy that goes stale.
+BOX_FILL = palette.col("colony_summary", "panel_background", (8, 14, 23))
+BOX_OUTLINE = palette.col("panel", "thin_border", (55, 65, 85))
+
+
+def draw_box(surface, layout, style, native_rect):
+    """One box of the panel: a fill and a rounded outline, in code.
+
+    `native_rect` is a 640x480 rectangle — an entry's block or the list
+    popup's window. Nothing here is a transcription: the original wears
+    TECHSEL artwork in these places and HD has none of it, so the box
+    is the tree's own panel look. DEVIATION, `inner_boxes_drawn`.
+    """
+    rect = pygame.Rect(*geom_mod.window_rect(native_rect, layout))
+    surface.fill(tuple(BOX_FILL)[:3], rect)
+    style.draw_plate(surface, rect, layout.scale, BOX_OUTLINE)
+    return rect
+
+
 def _fit(style, text, max_w, size):
     """The largest size at or below `size` whose render fits `max_w`."""
     while size > MIN_FONT:
@@ -161,6 +195,11 @@ def draw(surface, layout, style, entries, hover, words, names, wording,
     select mode passes zeros. `creative` is the player's
     TRAIT_CREATIVE; see `marks_every_row`.
     """
+    for entry in entries:
+        # ALL EIGHT BOXES, offered or not: `Init_Entry_Data_` adds a
+        # block field for every category and the original draws an
+        # empty panel for one with nothing to offer (tech.cpp:225-231).
+        draw_box(surface, layout, style, entry.block_rect())
     for entry in entries:
         if entry.offered:
             _draw_entry(surface, layout, style, entry, hover, words,

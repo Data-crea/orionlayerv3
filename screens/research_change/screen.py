@@ -89,6 +89,14 @@ disappear (decision 61):
                 word is the one the art shows and the RECTANGLE is the
                 one the wire reports, never a constant: the source has
                 only the origin, because the art carries the size
+  DEVIATION     the eight entry boxes and the list popup's window are
+                DRAWN IN CODE — one fill and one rounded outline
+                through `Style.draw_plate`, the way `screens/planets/`
+                draws its boxes and out of the same two palette
+                entries. They wore the `inner_panel` ARTWORK until work
+                order 166 part C, and Data's verdict on the live panel
+                was that it does not fit them. The original wears
+                TECHSEL art in these places and HD has none of it
   DEVIATION     the outer frame is the FLEETS screen's inner frame —
                 the one around its scanner map, orange lamps in the
                 corners — cut out of `screens/fleets/assets/frame.png`
@@ -125,6 +133,7 @@ MARKED = {
     "description_box": "DEVIATION",
     "little_arrow": "OMISSION",
     "outer_frame": "DEVIATION",
+    "inner_boxes_drawn": "DEVIATION",
     "title": "HD EXTENSION",
     "category_label_as_text": "DEVIATION",
     "shrink_instead_of_squeeze": "DEVIATION",

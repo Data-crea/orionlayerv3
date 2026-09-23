@@ -64,7 +64,7 @@ import pygame
 from core import palette
 from core import researchlist
 from core import researchnative as geom_mod
-from core.researchpanel import _blit_text, col
+from core.researchpanel import _blit_text, col, draw_box
 
 #: `TECH::_list_window_x_offsets` (tech.cpp:33), indexed by PANEL ENTRY.
 #: A left-column entry opens its window on the right and the other way
@@ -324,10 +324,11 @@ def draw(surface, layout, style, popup, origin, names, wording):
     """Draw the popup. The caller has already drawn the panel under it."""
     if not popup.visible:
         return
-    rect = pygame.Rect(*geom_mod.window_rect(popup.window_rect(origin),
-                                             layout))
-    pygame.draw.rect(surface, col("list_fill", (14, 18, 28)), rect)
-    pygame.draw.rect(surface, col("list_border", (70, 104, 168)), rect, 2)
+    # THE SAME BOX THE ENTRIES WEAR, through the same helper — work
+    # order 166 part C. It was two hand-written `draw.rect` calls with
+    # two colours of its own, which is the second copy the panel's own
+    # boxes would have made a third.
+    rect = draw_box(surface, layout, style, popup.window_rect(origin))
 
     title = wording.list_title(popup.entry.group) if wording else None
     if title:
