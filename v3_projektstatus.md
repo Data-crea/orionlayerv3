@@ -2386,6 +2386,30 @@ the client's three send methods.
 **The exceptions list moves with it**: `tools/colony_move_hd.py` is
 370 code lines now, fifteen shorter.
 
+### OPEN: two segfaults in the suite, in numpy, not reproduced — 23 September 2026
+
+Recorded because the pre-commit hook refusing on 139 exists for exactly
+this and because "it passed the next time" is not an explanation.
+
+| | |
+|---|---|
+| 1 | pre-commit, FAST tier: `Fatal Python error: Segmentation fault` in `numpy.lib._arraysetops_impl._unique1d`, called from `032_colony_summary_a_click_on_the_centre_of.py:761` |
+| 2 | fresh clone, FULL tier, same tree, no stack captured (the runner's output was cut by the crash) |
+
+Six clean runs around them on the same tree: two fast and one full by
+hand, three full in the clone, 274 and 281 green. The check that
+crashed is the colony summary's click test, which the commit it refused
+does not touch.
+
+**Not explained.** What is known: the suite peaks near 7 GB resident,
+the machine had 13-14 GB free beside 35 GB of cache, and the crash is
+inside numpy's C code both times rather than in the tree's own.
+`faulthandler` is what printed the stack — work order 128 F1 turned it
+on for exactly this, and it earned its place here.
+
+The logs are in
+`~/orionlayer-fixtures/evidence/work_order_166_centred/precommit_segfault_139.log`.
+
 ### The hover band is centred on the text — 23 September 2026, Data on the live panel
 
 The band from the Nachtrag hung its top edge on the label's top edge,
