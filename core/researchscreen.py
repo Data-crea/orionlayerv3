@@ -43,7 +43,11 @@ import logging
 import pygame
 
 from core import billtext, research, researchlist, researchnative
-from core import researchpanel, researchtechlist, technames
+from core import researchpanel, researchstate, researchtechlist
+from core import technames
+from core.researchstate import (      # noqa: F401  (re-exported)
+    EMPTY_LIST_GRACE, NAMES_MISSING, NO_PLAYER, READY,
+    UNVALIDATED, WAITING, WORDING_MISSING)
 from core.researchpopups import ResearchPopupsMixin
 from core.screen_base import ScreenBase
 from core.structs import player as player_spec
@@ -63,14 +67,6 @@ COST_SUFFIX = {0: " RP", 1: " FP", 3: " RP", 4: " PR"}
 def cost_suffix(language):
     """The unit the original prints after a research cost."""
     return COST_SUFFIX.get(language, " RP")
-
-
-#: Why the screen is on the fallback, in the order they are tested.
-READY = "ok"
-NO_PLAYER = "no_player"
-NAMES_MISSING = "names_missing"
-WORDING_MISSING = "wording_missing"
-UNVALIDATED = "unvalidated"
 
 
 class ResearchPanelScreen(ResearchPopupsMixin, ScreenBase):
@@ -130,6 +126,9 @@ class ResearchPanelScreen(ResearchPopupsMixin, ScreenBase):
         #: mode never reads them — see `current_pair` and `cost_offset`.
         self._current = (0, 0)
         self._accumulated = 0
+        #: Consecutive frames on which the wire carried NO field list.
+        #: Reset by `enter` and by the first list that arrives.
+        self._empty_frames = 0
         #: TRAIT_CREATIVE off the wire. It decides whether the current
         #: field's rows are ALL marked (`researchpanel.marks_every_row`).
         self._creative = False
@@ -176,6 +175,7 @@ class ResearchPanelScreen(ResearchPopupsMixin, ScreenBase):
         self._hover = None
         self._sent = False
         self._left = False
+        self._empty_frames = 0
         self._techlist.close()
         # The title's WORDS come from layout.json and not from
         # boxes.json, so the wording has one home (decision 15) and the
@@ -239,16 +239,28 @@ class ResearchPanelScreen(ResearchPopupsMixin, ScreenBase):
         """
         previous = self._state
         self._cost_suffix = self._suffix_for(game_state)
+        # AN EMPTY LIST IS NOT A DISAGREEMENT, it is the game not
+        # having built one yet — counted here so `_rebuild` can tell
+        # the two apart. See `WAITING`.
+        if getattr(game_state, "fields", None):
+            self._empty_frames = 0
+        else:
+            self._empty_frames += 1
         self._entries, self._state, self._problems = self._rebuild(game_state)
         if self._state != READY:
             self._hover = None
-        if self._state != previous and self._state != READY:
+        if self._state != previous and self._state not in (READY, WAITING):
             # Logged ONCE per change, not per frame: this runs at 60 Hz
             # and a reason repeated 3600 times a minute is a reason
             # nobody reads.
             log.warning("research %s hands over to the original "
                         "picture (%s): %s", self.MODE, self._state,
                         "; ".join(self._problems[:4]) or "no detail")
+        if previous == WAITING and self._state == UNVALIDATED:
+            # The give-up, and it says so: the list never came.
+            log.warning("research %s waited %d frames for the game's "
+                        "field list and it never came — handing over",
+                        self.MODE, self._empty_frames)
 
     def _suffix_for(self, game_state):
         """The cost unit for the language the game is running in.
@@ -264,31 +276,15 @@ class ResearchPanelScreen(ResearchPopupsMixin, ScreenBase):
         return cost_suffix(raw[settings_spec.LANGUAGE_OFFSET])
 
     def _rebuild(self, game_state):
-        """(entries, state, problems) for this frame's game state."""
-        if self._names is not None and self._names.state != "ok":
-            return [], NAMES_MISSING, [f"research names: "
-                                       f"{self._names.state}"]
-        if self._wording is not None and self._wording.state != "ok":
-            return [], WORDING_MISSING, [f"panel wording: "
-                                         f"{self._wording.state}"]
-        record = self._player_record(game_state)
-        if record is None:
-            return [], NO_PLAYER, ["no player record on the wire"]
-        tech_fields, tech_applications = record
-        # `current_field=0` IN BOTH MODES, and the docstring of
-        # `offered_field` says why: the game has zeroed it before the
-        # list is built in select mode and zeroes it around the call in
-        # change mode, so the current field IS offered in change mode
-        # without anything here asking for it.
-        entries = researchlist.reconstruct(
-            tech_fields, tech_applications, current_field=0,
-            select_mode=self.select_mode)
-        problems = researchlist.validate_against_fields(
-            entries, getattr(game_state, "fields", None),
-            select_mode=self.select_mode)
-        if problems:
-            return entries, UNVALIDATED, problems
-        return entries, READY, []
+        """(entries, state, problems) for this frame's game state.
+
+        The RULE is `core.researchstate.classify`, a pure function; what
+        is here is only the gathering of its inputs.
+        """
+        return researchstate.classify(
+            self._names, self._wording, self._player_record(game_state),
+            getattr(game_state, "fields", None), self.select_mode,
+            self._empty_frames)
 
     def _player_record(self, game_state):
         """(tech_fields, tech_applications) off the wire, or None.
@@ -339,6 +335,19 @@ class ResearchPanelScreen(ResearchPopupsMixin, ScreenBase):
             return None
 
     # ── Rendering ─────────────────────────────────────────
+
+    def draws_this_frame(self):
+        """Nothing at all while an OVERLAY waits for the game's list.
+
+        Work order 166 part A. In change mode the panel is over the HD
+        galaxy map (decision 69's pattern), so drawing nothing leaves
+        the map — which is what the order asks for and what the player
+        was looking at a frame earlier. Select mode has nothing
+        underneath, so it draws its own empty panel: the Fleets
+        screen's answer to the same moment, "empty, because nothing is
+        `ok`, but its own" (work order 142 A).
+        """
+        return not (self.IS_OVERLAY and self._state == WAITING)
 
     def render_content(self, surface):
         """The eight entries, over the boxes and UNDER the help popup.
@@ -659,8 +668,21 @@ class ResearchPanelScreen(ResearchPopupsMixin, ScreenBase):
         vouch for: it hands over to the fallback view (now clickable,
         part A) and logs why." This is that hand-over, and it is what
         this order has instead of a reporting stop.
+
+        **EXCEPT WHILE THE GAME HAS NOT BUILT ITS LIST** (work order
+        166 part A). Between the switch to 36 and `Init_Entry_Data_`
+        the wire carries no fields at all, and handing over for that
+        put the game's own picture on screen for 22 frames on every
+        entry — measured, five entries out of five. That is not a
+        screen failing to vouch, it is a screen with nothing to vouch
+        for yet, so HD keeps drawing what it drew last: in change mode
+        the galaxy map under the panel, because the panel draws
+        nothing until `READY`.
+
+        The wait is BOUNDED (`EMPTY_LIST_GRACE`) so a list that never
+        comes still reaches the picture, with its own line in the log.
         """
-        return self._state != READY
+        return self._state not in (READY, WAITING)
 
     def keep_lock(self, screen_id):
         return None

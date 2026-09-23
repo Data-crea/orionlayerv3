@@ -2294,7 +2294,7 @@ files under `doc/` and are only summarised here.
 | | |
 |---|---|
 | Python | 32,960 lines across 111 modules — `find . -name '*.py'`, `__pycache__` excluded, the smoke test's 6,400 included. The previous figure here (21,642 across 94) was carried from an unstated method and could not be reproduced |
-| Smoke test | `python tools/smoke_test.py` — **269 checks**, headless, in `tools/smoke_suite/` since work order 162 (101 check modules, one group per screen plus a shared core; `tools/smoke_test.py` is the runner). **Two tiers since work order 158**: the bare command runs everything (~72 s here); `--fast` runs the commit gate's 262 (~32 s here). `--screen <name>` prints only that screen's sentences and the core's and is NEVER a gate. See "The gate has two tiers" below |
+| Smoke test | `python tools/smoke_test.py` — **271 checks**, headless, in `tools/smoke_suite/` since work order 162 (102 check modules, one group per screen plus a shared core; `tools/smoke_test.py` is the runner). **Two tiers since work order 158**: the bare command runs everything (~72 s here); `--fast` runs the commit gate's 264 (~32 s here). `--screen <name>` prints only that screen's sentences and the core's and is NEVER a gate. See "The gate has two tiers" below |
 | Assets | 170 MB (select_race 68, galaxy_map 51, shared 23, new_game 21, colony_summary 1) |
 | Screens in HD | 9 of ~20–22 (the GAME menu overlay, work order Stop 2, every dialog of the popup; colony summary draws list, sidebar, scan box and galaxy inset, and MOVES POPS — the first HD gesture that drives the game; planets, brief 101, lists, sorts, restricts and returns) |
 | Setup from clone | `python tools/setup.py` (deps via the system package manager) |
@@ -2340,6 +2340,45 @@ the same folder.
 That run also reported an unmarked omission from part B — HD drew no
 exit button where the original has CANCEL — which Data ordered built
 the same day. See below.
+
+### The original flashed up on every entry into change mode — 23 September 2026, work order 166 A
+
+Data saw it live at stardate 3500.3: the game's own picture, with a
+description on the left, before the HD panel appears. Measured before
+anything was changed — `tools/entry_glimpse.py`, one record line per
+RENDERED frame, five entries on SAVE4 — and it was **22 frames every
+time**, screen 36, `hd_state` unvalidated, **zero fields on the wire**.
+
+`Clear_Fields_` leaves count 1 (fields.cpp:207) and `parse_fields`
+drops slot 0, so between the switch to 36 and `Init_Entry_Data_` the
+wire carries no field list at all. `validate_against_fields` cannot
+agree with an absent list, so the screen said UNVALIDATED and handed
+over to the framebuffer.
+
+**NOT YET is not WRONG**, and telling the two apart is the fix
+(`core/researchstate.py`, the rule as a pure function): an absent list
+is `WAITING` and does not hand over; a list that is THERE and disagrees
+is `UNVALIDATED` on the first frame, exactly as before — that is the
+fault work order 165 D found and it keeps no grace at all. The bound is
+`EMPTY_LIST_GRACE = 66`, three times the 22 that were measured, and it
+is the give-up rather than a timer (decision 21).
+
+While it waits an overlay draws **nothing** —
+`ScreenBase.draws_this_frame()` — so change mode leaves the HD galaxy
+map it is a panel over. Select mode has nothing underneath and draws
+its own empty panel, which is the Fleets screen's answer to the same
+moment (work order 142 A) and where the state's name comes from.
+
+Live after the fix: `[0, 0, 0, 0, 0]` against `[22, 22, 22, 22, 22]`
+before, same tool, same method. Evidence in
+`~/orionlayer-fixtures/evidence/work_order_166/`.
+
+**The tool's first verdict was wrong and is worth knowing.** It sampled
+the letterbox bars for pure black, on the reasoning that
+`original_view.render` fills the window black before blitting, and read
+"no glimpse" on 275 frames while the flag said 111:
+`core/fallbacknote.render` draws the reason OUTSIDE the picture, in the
+bars. It compares against the picture itself now.
 
 ### A double that disagreed with the wire, and a number that grew after it was taken — 23 September 2026, work order 165 H
 
@@ -2620,8 +2659,8 @@ blocks into a session and writing them out again. Three proofs:
 
 | | command | checks | on this tree |
 |---|---|---:|---:|
-| **Full** — the default, and the pre-push gate | `python tools/smoke_test.py` | 269 | ~72 s |
-| **Fast** — the pre-commit gate | `python tools/smoke_test.py --fast` | 262 | ~32 s |
+| **Full** — the default, and the pre-push gate | `python tools/smoke_test.py` | 271 | ~72 s |
+| **Fast** — the pre-commit gate | `python tools/smoke_test.py --fast` | 264 | ~32 s |
 | **Screen** — **never a gate** | `python tools/smoke_test.py --screen <name>` | all of them, ~a third printed | the tier's |
 
 **`--screen` narrows what a run PRINTS, not what it runs**, and the

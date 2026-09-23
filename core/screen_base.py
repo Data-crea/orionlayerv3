@@ -131,6 +131,8 @@ class ScreenBase(HelpMixin):
 
     def render(self, surface):
         """Draw the screen. Background, boxes, frame, content, help."""
+        if not self.draws_this_frame():
+            return
         self._render_background(surface)
         for box in self.boxes:
             box.render(surface, self.layout, self.style)
@@ -138,6 +140,24 @@ class ScreenBase(HelpMixin):
             self._render_frame(surface)
         self.render_content(surface)
         self.render_help(surface)
+
+    def draws_this_frame(self):
+        """False when the screen has nothing it may draw AT ALL.
+
+        Not the same question as `wants_original`: that one asks for
+        the GAME's picture; this one asks for nothing, so whatever is
+        already on the surface stands — for an OVERLAY that is the
+        parent screen underneath it.
+
+        Work order 166 part A: the research panel says False while the
+        game has not built its field list, so change mode shows the HD
+        galaxy map it is a panel over, rather than an empty frame that
+        fills in a third of a second later. A screen that is not an
+        overlay has nothing underneath and draws its own empty self
+        instead — the Fleets screen's answer to the same moment (work
+        order 142 A).
+        """
+        return True
 
     def render_content(self, surface):
         """What the screen draws OVER its boxes. The base draws nothing.
