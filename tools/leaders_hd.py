@@ -63,9 +63,17 @@ def other_clients():
     except OSError as exc:
         raise SystemExit(f"`ss` could not be run ({exc}) — cannot tell "
                          f"whether another client holds the engine")
-    return [line for line in out.splitlines()
-            if "ESTAB" in line and f":{PORT}" in line
-            and "orion2re" not in line]
+    # The CLIENT's side of a connection is the line whose PEER is the
+    # engine's port (`… 127.0.0.1:<n> 127.0.0.1:17362 …`) — read by
+    # position, not by the process name, which `ss` does not always
+    # print (seen on 24 September 2026: one reading without it).
+    busy = []
+    for line in out.splitlines():
+        cols = line.split()
+        if len(cols) >= 5 and cols[0] == "ESTAB" and \
+                cols[4].endswith(f":{PORT}"):
+            busy.append(line)
+    return busy
 
 
 def main():

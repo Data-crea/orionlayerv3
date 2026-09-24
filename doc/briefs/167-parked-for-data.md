@@ -76,7 +76,47 @@ gegen das Original ansehen.
 
 ## L — Live-Test und Beweisbilder: nicht gelaufen
 
-(wird am Ende des Laufs ergänzt)
+**Warum:** während des ganzen Laufs (19:56 bis zum Ende) hielt Deine
+eigene OrionLayer-Sitzung (`python main.py`, PID 173151, aus diesem Baum)
+die eine erlaubte Verbindung zu orion2re (PID 35367). Das Protokoll
+erlaubt einen Client; ein zweiter Engine-Prozess geht nicht, weil der
+Port fest ist (`ext::Init(uint16_t port = 17362)`, ext_api.h:11). Ich habe
+weder Deine Sitzung noch das Spiel angefasst: **kein Spielstand geladen,
+nichts gesendet, keine Datei in `~/Master of Orion 2` geschrieben.**
+
+**Was bereitsteht:** `tools/leaders_hd.py` — verweigert, solange ein
+anderer Client verbunden ist (geprüft: Exit 3 mit Deiner Verbindung).
+Wenn der Port frei ist:
+
+```bash
+cd ~/orionlayerv3
+python tools/leaders_hd.py probe
+python tools/leaders_hd.py run 5
+```
+
+Erwartet: `probe` druckt die Struct-Messung auf dem Draht (static /
+value / ships / stars / levels, alle „N of N" oder die erklärte
+Linie), Exit 0. `run 5` lädt SAVE5 über das GAME-Menü, öffnet Leaders
+über den HD-Button, zählt die Frames mit Originalbild beim Eintritt
+(Ziel 0), vergleicht die Live-Feldliste mit `ldrgeom.field_shapes`,
+legt pro Ansicht native / HD / side-by-side unter
+`~/orionlayer-fixtures/evidence/work_order_167/run_slot5/` ab, hasht
+SAVE1-11 vorher und nachher. Abbruch-Bedingung: jede Zeile „MISSING"
+oder „EXTRA" in der Felddiff ist ein Befund, kein Grund weiterzuklicken.
+
+**Anheuern/Entlassen live:** SAVE4 und SAVE5 bieten dem menschlichen
+Spieler (Spieler 0) **keinen** Anführer zum Anheuern an (dort: Hawk im
+Pool, Slith auf der Rafale; die Status-4-Anführer gehören Spielern 2, 3,
+4). **Nötiger Zustand:** ein Scratch-Spielstand, in dem Spieler 0 einen
+Anführer mit Status 4 hat — SAVE2 hat drei (Ruola, Cyr, Sparky), ist aber
+kein Scratch-Slot. Kopieren nach SAVE4/5 wäre Deine Entscheidung.
+Entlassen/Pool/Zuweisen brauchen zusätzlich open fix 30 (W).
+
+**Offline-Bilder statt dessen** (keine Beweisbilder im Sinn des
+Auftrags, es fehlt die native Hälfte):
+`~/orionlayer-fixtures/evidence/work_order_167/offline/` — sechs
+Zustände in 1080p und 2160p aus den echten Arrays von SAVE5/SAVE2 und
+der transkribierten Feldliste, mit dem Skript, das sie erzeugt.
 
 ## Nicht gebaut, aus dem Inventar (Teil A), jeweils mit Grund
 

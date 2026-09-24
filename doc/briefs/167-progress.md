@@ -275,3 +275,62 @@ files with their citations.
 Full suite green, 294, 99 s here today (the untouched HEAD in a scratch
 worktree: 281 in 81 s; peak memory 6.8 GB there, 7.8 GB here — the
 suite's own range).
+
+## Part F — the live test and the evidence — **PARKED** (item L)
+
+Data's own OrionLayer client held the one allowed connection for the
+whole run; the port is fixed, so no private engine either. Nothing was
+loaded, sent or written into the game. `tools/leaders_hd.py` is ready
+and refuses while another client is attached (measured: exit 3). The
+fresh-clone run was done instead: `git clone` of the local commits into
+a scratch directory, `tools/setup.py`, full suite **294 green, 82 s**,
+with none of the player's files.
+
+### Questions for Data (offline pictures, not findings)
+
+`~/orionlayer-fixtures/evidence/work_order_167/offline/`, 1080p and
+2160p, the saves' own arrays, the transcribed field list, NO native half:
+
+1. `01_ship_view_SAVE5_p0` — does the row layout (portrait, name,
+   cost column, status line, skills) read like the original's rows?
+2. `02_colony_view_SAVE5_p1` — Crassis "0 BC to hire": the Famous
+   discount of Ralleia at work, or should the original show more?
+3. `03_for_hire_SAVE2_p0` — "For Hire (n)" in red under the portrait.
+4. `04_hire_mode_hover_SAVE2_p0` — the hire panel and the price of the
+   hovered leader.
+5. `05_hire_popup_SAVE2_p0` — HD's popup against the original's.
+6. `06_skill_help_SAVE5_p0` — HD's skill help box (DEVIATION).
+
+---
+
+## Closing
+
+**What was built.** The Leaders screen (`screens/leaders/`, 29): both
+views, the four rows with the original's portraits and skill icons, all
+buttons in the original's art, the view box art, the galaxy box with the
+original's star and ship sprites, the hire popup, the game's own boxes,
+HD's skill help, right-click help from the original's tables, no outer
+frame. Under it: `s_leader_data` VERIFIED (header + fourteen saves),
+the skill table transcribed and checked, two new extractors
+(`officer_art_extract`, `skildesc_extract`), open fix 30 written as a
+patch that applies and compiles. 13 new checks, 281 -> 294, full suite
+and fresh clone green. Commits local: `dfd9d42`, `a5bb2d3`, `67cdb2e`
+and this closing one. Not pushed.
+
+**What was parked, and why** (`167-parked-for-data.md`): W — open fix
+30's go/no-go (without it: no pool / dismiss / assign / prev / next, no
+star display, no ship grid; placeholders say so); L — the live test and
+the side-by-side evidence (the client slot was never free; SAVE4/5
+offer no leader for hire to the human player); X — the shared string
+extraction strips whitespace (32 + 96 entries), outside this screen;
+the inventory items not built (system pictures, map strip, destination
+lines, detailed ship view, the timed text box's crop); the choices
+C1-C7.
+
+**What Data should look at first.**
+1. **W**, open fix 30 — it decides how much of the screen can act.
+2. **L**, then run `python tools/leaders_hd.py run 5` with your client
+   closed: the entry glimpse count and the field diff are the two
+   numbers that say whether the screen is the original's.
+3. **X**, the extractor finding — it affects the Fleets strip too.
+4. The offline pictures above, as questions.
