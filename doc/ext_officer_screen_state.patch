@@ -1,0 +1,168 @@
+Extension API: the Leaders screen's view state on the wire ("OFFS").
+
+STATUS: NOT APPLIED. Written by work order 167, 24 September 2026, and
+parked for Data's go/no-go (doc/briefs/167-parked-for-data.md, item W).
+orion2re's tree was not touched. What was shown, and only this: the
+patch applies to src/ext/ext_api.cpp at orion2re e6199966
+(`patch -p1 --dry-run`), and the patched file compiles with the
+engine's own flags from out/build/Linux/linux-debug/build.ninja
+(g++ -std=gnu++20 -fsyntax-only, the cmake_pch.hxx include, the
+ORION2RE_EXT define) — with a control: the same file with one member
+name misspelt is refused. It has not run.
+
+To apply, from ~/orion2re on the orionlayer-local branch:
+
+    patch -p1 < ~/orionlayerv3/doc/ext_officer_screen_state.patch
+
+then rebuild, and add the OFFS marker to tools/version_check.py in the
+same commit that records the apply (the pattern of open fixes 27/28).
+It comes back off with `patch -R -p1` and a rebuild.
+
+WHAT IT IS FOR
+
+    OFFICER::Officers_Screen_ (officer.cpp:856-1195) keeps everything
+    that decides what it shows and what a click does in OFFICER, MOX
+    and MAINPUPS globals, and SerializeState touches none of them.
+    Without this block an HD client knows the screen is up (29), knows
+    the field list and has every leader record — and cannot tell
+    which button mode is on (hire, pool, dismiss), which leader is
+    selected, which star the colony view shows or has chosen, which
+    stack the ship view shows, which ships are in its grid or which of
+    them is picked, where that grid is scrolled, or which leader the
+    hire popup is offering.
+
+    RECONSTRUCTION WAS TRIED FIRST (decision 25 of the OrionLayer
+    fundament):
+
+      - the VIEW and the HIRE mode ARE readable from the field list:
+        the ship view adds the scroll arrows `-`/`+` at (613, 22) and
+        (613, 170), the colony view does not (officer.cpp:2942-2963);
+        hire mode replaces HIRE `H` by CANCEL `X` (:2857-2881). HD
+        reads both there today and does not need this block for them.
+      - the LISTED LEADERS are a pure function of the leader records
+        (Build_Captain_Id_List_, :2705-2730) and HD rebuilds them; the
+        block carries the engine's list so the rebuild is CHECKED.
+      - POOL and DISMISS mode are not: both buttons stay the same
+        hidden fields in modes -1, 1 and 2 (:2831-2855) and only the
+        drawn frame differs. Nor is the selection, nor the two stars,
+        nor the stack (its ships reach the field list as fourteen
+        identical rectangles, :2959), nor the popup's leader.
+
+THE BLOCK, appended after FSEL, only while SCREEN_OFFICERS is up:
+
+    "OFFS"
+    int8   _officer_scrn_type        0 ship officers, 1 colony leaders
+    int8   _officer_button_mode      -1 none, 0 hire, 1 pool, 2 dismiss
+    int8   _officer_selected         leader id or -1
+    int8   _officer_scanned          leader id under the pointer or -1
+    int16  _officer_star_displayed   star the colony view shows
+    int16  _officer_star_chosen      star a leader would be assigned to
+    int16  _n_fltscrn_officers       0..4
+    int16  _officer_id_list[0..3]    the listed leaders, -1 past the end
+    int16  _small_ship_stack_ptr     the ship view's stack, -1 for none
+    int16  _ship_stack_start[stack]  its head node, -1 for none
+    int16  first_visible_row         of the big-icon grid's scroll bar
+    int16  _offpop_big_icon_selected the picked big icon or -1
+    int16  _scanned_big_ship         the big icon under the pointer
+    int16  _scanned_small_ship       the galaxy box icon under it
+    int16  _galaxy_map_scanned_star  the galaxy box star under it
+    int16  popup leader              MAINPUPS::_g_officer while the hire
+                                     popup is up over this screen, else -1
+    int16  popup field state         MAINPUPS::_field_state then, else -1
+    int16  N                         big icons
+    N x (int16 ship_idx, uint8 selected)   in DISPLAY order
+
+One file, src/ext/ext_api.cpp. Nothing above the block moves, so a
+client that stops reading after FSEL is unaffected.
+
+--- a/src/ext/ext_api.cpp
++++ b/src/ext/ext_api.cpp
+@@ -314,6 +314,88 @@
+             }
+         }
+     }
++
++    // 4. The Leaders screen's view state: "OFFS", written ONLY while
++    //    SCREEN_OFFICERS is up, and LAST, so nothing above it moves and
++    //    a client that stops after FSEL is unaffected. It can never
++    //    meet FLTS: that one is written only on SCREEN_FLEET. OrionLayer,
++    //    open fix 30.
++    //
++    //    NOTHING IN THIS BLOCK IS REACHABLE ANY OTHER WAY. Every value
++    //    is an OFFICER, MOX or MAINPUPS global the screen keeps for
++    //    itself (officer.cpp:12-29, mox.cpp) and SerializeState never
++    //    touched. The leader records are on the wire already and the
++    //    four listed leaders can be rebuilt from them
++    //    (Build_Captain_Id_List_ is a pure function, officer.cpp:
++    //    2705-2730), so the list is sent for the client to CHECK its
++    //    reconstruction against, not because it could not be had. What
++    //    cannot be had: which view is up, which button mode (hire, pool,
++    //    dismiss), which leader is selected and which is under the
++    //    pointer, which star the colony view shows and which it has
++    //    chosen, and — in the ship view — which stack, which ships in
++    //    which order and which of them is picked, where the list is
++    //    scrolled. And, while the hire popup runs over this screen
++    //    (mainpups.cpp:784-930, reporting 29 all the while), WHICH
++    //    leader it offers and in which state.
++    //
++    //    The big-icon list is written in DISPLAY order, the order
++    //    Build_Fltscrn_Big_Icon_Fields_ left in _fltscrn_big_icon —
++    //    the same array and the same order FLTS sends.
++    if (current_screen == SCREEN_OFFICERS) {
++        buf.push_back((uint8_t)'O');
++        buf.push_back((uint8_t)'F');
++        buf.push_back((uint8_t)'F');
++        buf.push_back((uint8_t)'S');
++
++        Write8(buf, (uint8_t)MOX::_officer_scrn_type);
++        Write8(buf, (uint8_t)OFFICER::_officer_button_mode);
++        Write8(buf, (uint8_t)MOX::_officer_selected);
++        Write8(buf, (uint8_t)MOX::_officer_scanned);
++        Write16(buf, OFFICER::_officer_star_displayed);
++        Write16(buf, OFFICER::_officer_star_chosen);
++
++        int16_t n_officers = MOX::_n_fltscrn_officers;
++        if (n_officers < 0) n_officers = 0;
++        if (n_officers > 4) n_officers = 4;
++        Write16(buf, n_officers);
++        for (int i = 0; i < 4; i++) {
++            Write16(buf, MOX::_officer_id_list ? MOX::_officer_id_list[i]
++                                               : (int16_t)-1);
++        }
++
++        int16_t stack = MOX::_small_ship_stack_ptr;
++        int16_t head = -1;
++        if (stack >= 0 && stack < MOX::_ship_stack_count) {
++            head = MOX::_ship_stack_start[stack];
++        } else {
++            stack = -1;
++        }
++        Write16(buf, stack);
++        Write16(buf, head);
++        Write16(buf, MOX::_scroll_bar ? MOX::_scroll_bar->first_visible_row
++                                      : (int16_t)0);
++        Write16(buf, MOX::_offpop_big_icon_selected);
++        Write16(buf, MOX::_scanned_big_ship);
++        Write16(buf, MOX::_scanned_small_ship);
++        Write16(buf, MOX::_galaxy_map_scanned_star);
++
++        // The hire popup, only while it is up over THIS screen: the
++        // flag is set by OFFICER::Hire_Officer_Popup_ for exactly the
++        // popup's lifetime (officer.cpp:3391-3400).
++        bool popup = MAINPUPS::_on_officer_screen_flag != 0;
++        Write16(buf, popup ? MAINPUPS::_g_officer : (int16_t)-1);
++        Write16(buf, popup ? MAINPUPS::_field_state : (int16_t)-1);
++
++        int16_t icons = MOX::_n_fltscrn_big_icons;
++        if (icons < 0) icons = 0;
++        if (icons > SHIP_LIST_CAPACITY) icons = SHIP_LIST_CAPACITY;
++        if (!MOX::_fltscrn_big_icon) icons = 0;
++        Write16(buf, icons);
++        for (int16_t i = 0; i < icons; i++) {
++            Write16(buf, MOX::_fltscrn_big_icon[i].ship_idx);
++            Write8(buf, (uint8_t)(MOX::_fltscrn_big_icon[i].selected != 0));
++        }
++    }
+ }
+ 
+ // ── Field list ───────────────────────────────────────────

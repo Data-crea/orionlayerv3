@@ -229,6 +229,18 @@ _MARKED = {
     # is the "the Fleets screen's own artwork" block.
     "screens/fleets/fltart.py": "HD EXTENSION",
 
+    # ADDED 24 September 2026, work order 167: the Leaders screen. Its
+    # own checks are the leaders group (tools/smoke_suite/090c): the
+    # layout.json marks, each named in the module that performs it —
+    # the drawn inner boxes, the HD font, the sprite scale, the button
+    # words, HD's own skill help box.
+    "screens/leaders/layout.json": "deviation_inner_boxes_drawn",
+    "screens/leaders/screen.py": "inner_boxes_drawn",
+    "screens/leaders/ldrdraw.py": "sprite_scale",
+    "screens/leaders/ldrright.py": "sprite_scale",
+    "screens/leaders/ldrdialog.py": "hd_skill_help",
+    "screens/leaders/ldrinput.py": "hd_skill_help",
+
 }
 _MARKS = ("HD EXTENSION", "DEVIATION")
 _SELF = SUITE_FILES

@@ -52,6 +52,8 @@ from core.technames import name_file as technames_file  # noqa: E402
 from core.billtext import message_file as billtext_file  # noqa: E402
 from core.kentext import string_file as kentext_file  # noqa: E402
 from screens.fleets.fltart import GAMEDATA as _fltart_gamedata  # noqa: E402
+from screens.leaders.ldrart import GAMEDATA as _ldrart_gamedata  # noqa: E402
+from core.skildesc import string_file as skildesc_file  # noqa: E402
 from screens.colony_summary.colonyfigures import (  # noqa: E402
     FIGURE_DIR, all_names)
 from core.config import load_settings      # noqa: E402
@@ -83,6 +85,7 @@ CS = os.path.join(ROOT, "screens", "colony_summary", "assets")
 #: IMPORTED, not spelled again — `fltart.GAMEDATA` is where the
 #: loader looks and therefore the only place that may decide it.
 FLEET_GAMEDATA = _fltart_gamedata
+LEADER_GAMEDATA = _ldrart_gamedata
 
 #: (tool, arguments, a path that must exist afterwards, what it is)
 STEPS = [
@@ -262,6 +265,20 @@ def from_game(settings=None):
          "builder's colour and the ship's name instead of the "
          "original's own picture",
          "python tools/fleet_art_extract.py"),
+        # THE LEADERS SCREEN (work order 167): its own artwork — the
+        # portraits, the skill icons, the buttons, the galaxy box's
+        # stars, the hire popup — and the skill help texts. Checked by
+        # the manifest for the same reason as the Fleets art.
+        (os.path.join(LEADER_GAMEDATA, "manifest.json"),
+         "Leaders screen artwork — without it a row shows no portrait "
+         "and no skill icons, and the buttons are drawn as words",
+         "python tools/officer_art_extract.py"),
+        (os.path.join(ROOT, *skildesc_file(lang).split("/")),
+         f"officer skill help texts ({lang}) — without them a right "
+         f"click on a leader's skill opens a box that says the text is "
+         f"not extracted",
+         "python tools/skildesc_extract.py"
+         + (f" --lang {lang}" if lang != "en" else "")),
     ]
 
 

@@ -82,6 +82,12 @@ class GameState:
     #: `screens/fleets/fltwire.py` names every key and says why each one
     #: could not be reconstructed.
     fleet_screen: Optional[dict] = None
+    #: Open fix 30's OFFS block — the Leaders screen's view state
+    #: (`doc/ext_officer_screen_state.patch`, NOT APPLIED as of work
+    #: order 167). None on every engine that exists today and on every
+    #: screen but 29; `screens/leaders/ldrwire.py` names every key and
+    #: what the screen does without it.
+    officer_screen: Optional[dict] = None
 
     # Fields (from FIELD_LIST message)
     fields: list = field(default_factory=list)
@@ -312,6 +318,35 @@ def parse_state(data: bytes) -> GameState:
             _flt["ship_idx"] = _ships
             _flt["ship_selected"] = _sel
             gs.fleet_screen = _flt
+
+    # The Leaders screen's view state — OPTIONAL block after FSEL, open
+    # fix 30 (doc/ext_officer_screen_state.patch). Written only while
+    # screen 29 is up, so it never meets FLTS. Four int8, sixteen int16,
+    # a count, then N x (int16 ship_idx, uint8 selected). Read whole or
+    # not at all, for FLTS's reason: a half-read block would draw a grid
+    # missing its last ships without saying so.
+    gs.officer_screen = None
+    if data[pos:pos + 4] == b"OFFS" and pos + 4 + 4 + 32 + 2 <= len(data):
+        pos += 4
+        _off = {}
+        for _key in ("view", "mode", "selected", "scanned"):
+            _off[_key] = read_i8()
+        for _key in ("star_displayed", "star_chosen", "n_officers"):
+            _off[_key] = read_i16()
+        _off["id_list"] = [read_i16() for _ in range(4)]
+        for _key in ("stack", "head_node", "first_row", "picked_icon",
+                     "scanned_big", "scanned_small", "scanned_star",
+                     "popup_leader", "popup_state"):
+            _off[_key] = read_i16()
+        _n = read_i16()
+        if 0 <= _n and pos + 3 * _n <= len(data):
+            _ships, _sel = [], []
+            for _ in range(_n):
+                _ships.append(read_i16())
+                _sel.append(read_u8() != 0)
+            _off["ship_idx"] = _ships
+            _off["ship_selected"] = _sel
+            gs.officer_screen = _off
 
     return gs
 

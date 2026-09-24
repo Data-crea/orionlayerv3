@@ -108,7 +108,7 @@ def ascii_runs(raw, indent="    ", min_len=3):
 #: header so a reader cannot mistake a decode for a verification.
 SPECS = {
     "colonies": ("core.structs.colony", "SPEC"),
-    "leaders": ("core.structs.unverified", "LEADER"),
+    "leaders": ("core.structs.leader", "SPEC"),
     "planets": ("core.structs.planet", "SPEC"),
     "nebulas": ("core.structs.nebula", "SPEC"),
     "players": ("core.structs.player", "SPEC"),

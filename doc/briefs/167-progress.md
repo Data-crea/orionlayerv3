@@ -141,6 +141,137 @@ POOL with a leader already selected acts at once (:1123-1124).
 
 ---
 
-## Part B onward
+## Part B — the data: the leader record verified, the skill table held — **DONE**
 
-(filled in as the run goes)
+**`s_leader_data` is VERIFIED** (`core/structs/leader.py`), out of
+`core/structs/unverified.py`. The two sources:
+
+1. **The header.** `tools/struct_header_check.py` now covers it: 15
+   offsets and `sizeof == 0x3b`, compiled from orion2re's own headers
+   with their packing, and the tool's control (one offset moved a byte)
+   is refused. The save serializer (`SAVEGAME::Write_Leader_`,
+   savegame.cpp:479-495) writes the same members in the same order at
+   the same widths, so a `.GAM` holds the 67 records at this stride.
+2. **Numbers out of real data**, `tools/leader_check.py`, fourteen
+   `.GAM` files on this disk (SAVE1-11 and the three fixtures), 871
+   records, each array located by HERODATA.LBX's own 67 names:
+
+| check | result |
+|---|---|
+| `type`, `pict_num` against HERODATA.LBX | 67/67 in all 14 |
+| stored `skill_value` against `Officer_Skill_Value_` recomputed from `general_skills`, `special_skills`, `tech_application` | 67/67 in 9 files; 35/67 in the 4 files of one game lineage (SAVE1 -> 3 -> 4 -> 5), the same 32 records by the same deltas with skills equal to HERODATA's — a stored value from a different computation at game creation, not an offset |
+| ship officers: status-1 location is a ship whose `officer_index` @116 names the leader back, and no other ship names one | 6 of 6 on SAVE4 and SAVE5, both directions |
+| colony leaders: location is a star whose `officer_index[player]` @187 names the leader back in its own player's slot | 2 of 2 on SAVE4, 1 of 1 on the natives fixture, both directions |
+| unowned `xp` on a level step 0/60/150/300/500/1000 | every unowned leader, every file |
+| owned `xp` and status-4 `eta` between SAVE4 and SAVE5 (one turn apart) | +1 each |
+
+LEGACY saves (header 0xE0: SAVE1, 3, 6, 9, 11) are read for the leader
+array only; the tool says it did not measure ships and stars there
+rather than reading bytes of a different layout. **`level` @52** is 0
+everywhere and no line of the engine writes it (only save and load);
+its value is a source fact, its offset has the header alone.
+
+**Two things contradicted earlier text, stated rather than smoothed:**
+work order 154 counted one officered ship per save in SAVE1/3/4/5; this
+reading finds six on SAVE4 and SAVE5 across all owners, one of them the
+player's — the count 154's sentence fits. And the stored `skill_value`
+cannot be recomputed for every game (above), so HD reads it and never
+recomputes — which is what the engine does (officer.cpp:387).
+
+`s_star_data.officer_index[8]` @187 added to the star spec (header
+route plus the colony links above).
+
+**The skill table** (`MOX::_skill_data[54]`, a literal in mox.cpp) is
+`core/leaderskills.py`, with the officer.cpp rules the screen needs
+(levels, bonus, the C format, the listed leaders, price, upkeep, the
+famous discount), held to mox.cpp, estrings.cpp and officer.cpp by
+`tools/leader_skill_check.py` — run in the suite, with a control. One
+detail measured rather than assumed: glibc's `snprintf(b, 40, "+%d%",
+1)` prints `+1`, which is what skills 4 and 5 show.
+
+**Words.** Skill and level names from ESTRINGS, every message from
+HESTRNGS (both extracted already). The skill help texts are SKILDESC.LBX:
+new extractor `tools/skildesc_extract.py` and loader `core/skildesc.py`
+(decision 38's pattern, registered in `setup.py`, a stand-in for the
+suite).
+
+## Part C — the artwork — **DONE**
+
+`tools/officer_art_extract.py` (reusing `fleet_art_extract`'s file
+helpers), loader `screens/leaders/ldrart.py` — raw entries, decoded at
+load time in FONTS.LBX entry 9's palette (`Load_Palette_(8)`,
+officer.cpp:674). 209 OFFICER.LBX entries (portraits and darkened
+portraits for all 67, 27 skill icons, 15 small ship icons, 11 stars, the
+buttons in both frames, the dull buttons, the two view-box arts, the
+hire-mode panel) and MAINPUPS.LBX 0x39-0x3B (the hire popup as this
+screen opens it). OFFICER.LBX's layout matches the source's entry
+arithmetic exactly (0x15 + 66 = 87 is the last portrait, 0x58 + 26 the
+last skill icon, …). Gitignored, registered, stale and absent are
+stated states. No AI artwork anywhere; the Fleets ship pictures (SHIPS.LBX,
+already extracted by `fleet_art_extract`) are reused in the ship-view
+grid.
+
+**Sizing** is the native rectangle's (`ldrgeom`), never an asset's —
+with one sourced exception: the original gives a button field its ART's
+size (fields.cpp:366-367, officer.cpp:2831-2908), so those sizes are
+the header's, and the wire carries the same rectangles.
+
+## Part D — the screen — **DONE (offline), live parked**
+
+`screens/leaders/`, ten modules, each under 300 code lines (the input
+half was split out of `screen.py` at 343 rather than listing it):
+`ldrgeom` (every native rectangle, sourced), `ldrwire` (six states:
+READY, WAITING, IN_BOX, POPUP, MISMATCH, UNVALIDATED), `ldrrows`,
+`ldrpopup`, `ldrdraw`, `ldrright`, `ldrdialog`, `ldrinput`, `ldrart`.
+
+**No flash of the original on open**: the first snapshots at 29 still
+carry the previous screen's list; that is WAITING, which DRAWS (the
+leaders come from the records, not from the list) and sends nothing,
+and hands over only after the bound (66 snapshots, work order 166's
+measured bound — the Leaders entry itself is not measured, item L).
+On the very first snapshot, with no view known yet, the rows stay empty
+rather than show the other view's leaders for a frame.
+
+**The wire gap** — open fix 30, `doc/ext_officer_screen_state.patch`,
+written, applied to a scratch copy of `ext_api.cpp` with `patch
+--dry-run`, compiled with the engine's own flags (`-fsyntax-only`, the
+cmake pch include, `ORION2RE_EXT`) and a control that is refused;
+**NOT applied**, go/no-go parked (item W). HD parses the `OFFS` block
+when it is there (`core/game_state.officer_screen`) and uses it; without
+it the placeholder and the send rules above.
+
+**A finding outside the screen** (item X): the shared ESTRINGS /
+HESTRNGS extraction strips whitespace the strings carry — measured, 32
+HESTRNGS and 96 ESTRINGS entries. Seen here as "Slith, theRebel Pilot";
+the Leaders screen puts its one space back with a workaround that
+expires by itself; the extractor is not changed by this order.
+
+### Rendered, offline (scratch, not evidence)
+
+A GameState built from SAVE5's and SAVE2's own arrays and a field list
+transcribed from `Add_Officer_Screen_Fields_`, rendered at 1920x1080:
+the ship view (Hawk in the pool, Slith on the Rafale), the colony view
+(Crassis for hire at 0 BC — Ralleia's Famous discount of 120 at level
+1 — Ralleia on Nazin, Kirsus in the pool), three officers for hire, the
+hire popup for Sparky ("will cost 100 bcs initially and 1 bc per turn,
+Hire?"), a confirmation box, the skill help box ("Captain Slith, the
+Rebel Pilot, increases the maximum damage of a ship by 10."). These are
+NOT the side-by-side evidence the order asks for — that needs the live
+game (item L).
+
+## Part E — the smoke group — **DONE**
+
+`tools/smoke_suite/090a`, `090b`, `090c` (area `leaders`), **13 checks**,
+281 -> **294** (fast 274 -> 287), both documents moved with them. Named
+090a-c so they run before 091, whose last check holds the two
+documents' counts to the run. Snapshots are real wire bytes through
+`core/game_state.parse_state`; the field lists are
+`Add_Officer_Screen_Fields_` transcribed field by field with the
+engine's slot 0; the words are the committed stand-ins; the art is
+forced absent and, where extracted, present. The core's inventories
+(markings, derived loaders, JSON formatting, the registry) list the new
+files with their citations.
+
+Full suite green, 294, 99 s here today (the untouched HEAD in a scratch
+worktree: 281 in 81 s; peak memory 6.8 GB there, 7.8 GB here — the
+suite's own range).

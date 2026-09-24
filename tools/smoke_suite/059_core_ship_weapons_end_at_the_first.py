@@ -592,6 +592,8 @@ _DERIVED_LOADERS = {
     "BillText", "BuildingNames", "EStrings", "HStrings",
     "ArcWords", "MainText", "ShipPartNames", "TechNames",
     "HelpText",
+    # work order 167: the officer skill help texts (SKILDESC.LBX)
+    "SkillDesc",
 }
 #: A language the player cannot have extracted, which is how a
 #: check forces the absent state without a temporary directory.

@@ -43,7 +43,7 @@ sys.path.insert(0, ROOT)
 
 from core import billtext, buildnames, estrings, hestrings  # noqa: E402
 from core import helptext, kentext, maintext, shipparts  # noqa: E402
-from core import technames  # noqa: E402
+from core import skildesc, technames  # noqa: E402
 # THE IDS COME FROM THE RENDERER'S OWN TABLE, not from a second
 # list here: `PARAGRAPH_HELP` is what the Fleets panel looks up,
 # so a stand-in built from it cannot hold a record the screen
@@ -139,6 +139,17 @@ def files():
         "entries": {str(help_id): {"title": f"Help {help_id} title",
                                    "body": f"Help {help_id} body"}
                     for help_id in sorted(PARAGRAPH_HELP.values())},
+    }
+    # THE LEADERS SCREEN'S SKILL TEXTS (work order 167). Every
+    # description carries the `%s` and the `%d` the original formats
+    # into it (officer.cpp:1782), so a stand-in exercises the
+    # substitution and not only the lookup.
+    out[skildesc.string_file("en")] = {
+        "_comment": NOTE, "language": "en",
+        "format": skildesc.FORMAT_VERSION,
+        "names": [f"SKILL_{i}" for i in range(skildesc.RECORD_COUNT)],
+        "descriptions": [f"%s has skill pair {i}, worth %d."
+                         for i in range(skildesc.RECORD_COUNT)],
     }
     return out
 

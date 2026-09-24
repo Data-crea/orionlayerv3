@@ -50,6 +50,7 @@ section for what was found where.
 | 26 | SELECT NEW RESEARCH commits a row by itself, about a second and a half after the science room hands over to it | **OPEN, deferred by Data 19 September 2026.** Observation, seen three times and measured once with a send counter on 18 September (work order 130's live run). Data reproduced the counter-case on 19 September: same binary, NO client connected, the dialog clicked away with a real mouse — the list waits. So open fix 25 is not the cause | A client cannot rely on reaching the list before it has chosen; three of six attempts to choose in HD lost the occasion. The player's way round it is to click the completion dialog away in the orion2re window with a real mouse |
 | 27 | The fleet screen's view state is not in the snapshot | **Applied** 19 September 2026 (work order 134 C), orion2re `cc5ec133` on `orionlayer-local`, `doc/ext_fleet_screen_state.patch`; required by `tools/version_check.py`; **NOT CONFIRMED LIVE** — 134's live part is parked; open upstream | — while applied. Without it HD cannot know which stack the fleet screen shows, which ships are in the grid, which are selected, where the list is scrolled or which filters are on, and hands over to the original picture |
 | 28 | One ship cannot be selected on the fleet screen | **Applied** 19 September 2026 (work order 134 C), orion2re `e6199966` on `orionlayer-local`, `doc/ext_fleet_screen_select.patch`; required by `tools/version_check.py`; **NOT CONFIRMED LIVE**; open upstream | — while applied. Without it only ALL changes the selection, so a subset of a stack cannot be moved or scrapped from HD |
+| 30 | The Leaders screen's view state is not in the snapshot — button mode, selection, the colony view's two stars, the ship view's stack and grid, the hire popup's leader | **Request, NOT APPLIED** — written by work order 167 (`doc/ext_officer_screen_state.patch`), applies and compiles against `e6199966`, parked for Data's go/no-go | Without it the HD Leaders screen shows every leader, both views, the buttons and the galaxy box, and sends only what it can confirm on the wire (the view tabs, HIRE, CANCEL, RETURN, a click on a leader for hire); pool, dismiss, assignment, the star display and the ship grid are drawn as a marked placeholder |
 
 Items 3 and 4 are both about INJECT_CLICK and both live in the same
 code path, but they are separate faults: 3 is where the coordinates
@@ -1942,3 +1943,66 @@ the framebuffer HD already subscribes to, and it is blitted at an
 integer magnification into an HD panel. It works and it is answerable,
 and it is the one place in an HD screen where the original's 640x480
 type appears. That is the marked limitation this fix replaces.
+
+---
+
+## 30. The Leaders screen's view state is not in the snapshot
+
+**Asked for by work order 167, 24 September 2026. NOT APPLIED** —
+`doc/ext_officer_screen_state.patch`, parked for Data's go/no-go in
+`doc/briefs/167-parked-for-data.md`. It applies to `src/ext/ext_api.cpp`
+at `e6199966` and compiles with the engine's own flags (with a control
+that is refused); it has not run.
+
+### Symptom
+
+An HD client on `SCREEN_OFFICERS` (29) has the field list and all 67
+leader records, and cannot say which button mode is on (hire, pool,
+dismiss), which leader is selected, which star the colony view shows or
+has chosen for an assignment, which stack the ship view shows, which
+ships are in its grid or which one is picked, where the grid is
+scrolled, or which leader the hire popup offers.
+
+### Why reconstruction does not reach it
+
+Followed to the end first (decision 25):
+
+1. The VIEW and HIRE MODE are readable, and HD reads them without this
+   fix: the ship view adds the scroll arrows `-` / `+` at (613, 22) and
+   (613, 170) and the colony view does not (officer.cpp:2942-2963); hire
+   mode replaces HIRE `H` with CANCEL `X` (:2857-2881).
+2. The LISTED LEADERS are `Build_Captain_Id_List_` (:2705-2730), a pure
+   function of the records — rebuilt by HD, and checked against the
+   block when it is there.
+3. POOL and DISMISS mode are not: both buttons are the same hidden
+   fields in modes -1, 1 and 2 (:2831-2855); only the drawn frame
+   differs. The selection, the displayed and the chosen star, the stack
+   and the popup's leader leave no trace in the list at all; the ship
+   grid reaches it as identical rectangles (:2959).
+
+A click on a leader in pool or dismiss mode ACTS (:1415-1438), so a
+client that guessed the mode would send an order nobody gave
+(decision 65).
+
+### Fix
+
+An optional trailing block `"OFFS"` in `ext::SerializeState`, written
+only while `current_screen == SCREEN_OFFICERS` and LAST, after FSEL — it
+can never meet FLTS, which is written only on `SCREEN_FLEET`. Four
+int8, sixteen int16 (the four listed leaders among them), an int16
+count, then
+N × (`int16 ship_idx`, `uint8 selected`) in display order — the array
+and the order FLTS already sends. The popup's leader and state are
+written only while `MAINPUPS::_on_officer_screen_flag` is set, which
+`OFFICER::Hire_Officer_Popup_` holds for exactly the popup's lifetime
+(officer.cpp:3391-3400). Full layout in the patch header. One file.
+
+### Cost to us
+
+Without it the HD Leaders screen draws every leader in both views, the
+buttons, the galaxy box and the hire popup it can identify, and sends
+only what it can confirm on the wire afterwards: the two view tabs,
+HIRE and CANCEL, RETURN, and a click on a leader who is for hire. POOL,
+DISMISS, assigning a leader, PREV / NEXT, the colony view's star display
+and the ship view's grid are drawn as a placeholder that names this
+item (`screens/leaders/ldrwire.py`, HD STATE).

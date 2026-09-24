@@ -34,7 +34,33 @@ from core.structs import Spec as _Spec
 from core.structs import unverified as _unv
 _quarantined = [v for v in vars(_unv).values()
                 if isinstance(v, _Spec)]
-assert _quarantined, "unverified.py exposes no specs at all"
+# WORK ORDER 167 PROMOTED THE LAST SPEC IN THE FILE (s_leader_data), so
+# "the file exposes at least one" stopped being a fact about the tree.
+# What that assertion stood for is that the quarantine is REAL — so it is
+# now the file's own two lists, held to the code in both directions: every
+# Spec the module still exposes is named under "Still needed", and every
+# struct named under "Already promoted" is a verified SPEC in the module
+# the line names. A promotion that forgot either half fails here.
+import importlib as _unv_imp
+import re as _unv_re
+_unv_doc = _unv.__doc__
+_unv_promoted, _unv_still = _unv_doc.split("Still needed, still unverified:")
+for _sp in _quarantined:
+    assert _sp.name in _unv_still, (
+        f"{_sp.name} is quarantined but not listed under 'Still needed'")
+_unv_moves = _unv_re.findall(r"^  (s_\w+)\s+->\s+core/structs/(\w+)\.py",
+                             _unv_promoted, _unv_re.M)
+assert len(_unv_moves) >= 5 and ("s_leader_data", "leader") in _unv_moves, \
+    _unv_moves
+for _st, _mod in _unv_moves:
+    _unv_spec = getattr(_unv_imp.import_module("core.structs." + _mod),
+                        "SPEC", None)
+    assert _unv_spec is not None and _unv_spec.name == _st \
+        and _unv_spec.verified, (
+            f"unverified.py says {_st} moved to core/structs/{_mod}.py, "
+            f"and that module has no verified SPEC of that name")
+    assert _st not in {_q.name for _q in _quarantined}, (
+        f"{_st} is listed as promoted and still quarantined")
 for _sp in _quarantined:
     assert not _sp.verified, (
         f"{_sp.name} is marked verified inside unverified.py — "

@@ -64,7 +64,7 @@ HEADERS = ("compat.h", "types.h", "settler.h", "consts.h",
 #: Spec modules this route covers: every field name in the Python spec
 #: is also the C++ member's name, so the assert can be generated.
 COVERED = ("player", "settings", "colony", "planet", "star", "nebula",
-           "ship_icon")
+           "ship_icon", "leader")
 
 #: And the one it does NOT cover, named rather than silently skipped
 #: (decision 61 — an omission is marked). `core/structs/ship.py` uses

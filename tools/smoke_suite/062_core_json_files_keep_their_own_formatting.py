@@ -129,6 +129,11 @@ _JSON_ABSENT_OK = {
     os.path.join("assets", "shared", "names", "kentext_en.json"),
     os.path.join("screens", "fleets", "assets", "gamedata",
                  "manifest.json"),
+    # Work order 167: the Leaders screen's two, entered in the same
+    # commit as their registry lines.
+    os.path.join("assets", "shared", "names", "skildesc_en.json"),
+    os.path.join("screens", "leaders", "assets", "gamedata",
+                 "manifest.json"),
 }
 if os.path.isdir(os.path.join(_json_root, ".git")):
     import subprocess as _json_sp

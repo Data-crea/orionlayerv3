@@ -2294,9 +2294,9 @@ files under `doc/` and are only summarised here.
 | | |
 |---|---|
 | Python | 32,960 lines across 111 modules — `find . -name '*.py'`, `__pycache__` excluded, the smoke test's 6,400 included. The previous figure here (21,642 across 94) was carried from an unstated method and could not be reproduced |
-| Smoke test | `python tools/smoke_test.py` — **281 checks**, headless, in `tools/smoke_suite/` since work order 162 (105 check modules, one group per screen plus a shared core; `tools/smoke_test.py` is the runner). **Two tiers since work order 158**: the bare command runs everything (~72 s here); `--fast` runs the commit gate's 274 (~32 s here). `--screen <name>` prints only that screen's sentences and the core's and is NEVER a gate. See "The gate has two tiers" below |
+| Smoke test | `python tools/smoke_test.py` — **294 checks**, headless, in `tools/smoke_suite/` since work order 162 (108 check modules, one group per screen plus a shared core; `tools/smoke_test.py` is the runner). **Two tiers since work order 158**: the bare command runs everything (~72 s here); `--fast` runs the commit gate's 287 (~32 s here). `--screen <name>` prints only that screen's sentences and the core's and is NEVER a gate. See "The gate has two tiers" below |
 | Assets | 170 MB (select_race 68, galaxy_map 51, shared 23, new_game 21, colony_summary 1) |
-| Screens in HD | 9 of ~20–22 (the GAME menu overlay, work order Stop 2, every dialog of the popup; colony summary draws list, sidebar, scan box and galaxy inset, and MOVES POPS — the first HD gesture that drives the game; planets, brief 101, lists, sorts, restricts and returns) |
+| Screens in HD | 11 of ~20–22 (the Leaders screen, work order 167, built and not accepted; the GAME menu overlay, work order Stop 2, every dialog of the popup; colony summary draws list, sidebar, scan box and galaxy inset, and MOVES POPS — the first HD gesture that drives the game; planets, brief 101, lists, sorts, restricts and returns) |
 | Setup from clone | `python tools/setup.py` (deps via the system package manager) |
 | orion2re | required for live data, not for the smoke test |
 
@@ -2820,8 +2820,8 @@ blocks into a session and writing them out again. Three proofs:
 
 | | command | checks | on this tree |
 |---|---|---:|---:|
-| **Full** — the default, and the pre-push gate | `python tools/smoke_test.py` | 281 | ~72 s |
-| **Fast** — the pre-commit gate | `python tools/smoke_test.py --fast` | 274 | ~32 s |
+| **Full** — the default, and the pre-push gate | `python tools/smoke_test.py` | 294 | ~72 s |
+| **Fast** — the pre-commit gate | `python tools/smoke_test.py --fast` | 287 | ~32 s |
 | **Screen** — **never a gate** | `python tools/smoke_test.py --screen <name>` | all of them, ~a third printed | the tier's |
 
 **`--screen` narrows what a run PRINTS, not what it runs**, and the
@@ -3391,6 +3391,64 @@ anywhere. Kept: `_black_hole_src.png`, which is the INPUT to
 ---
 
 ## What works
+
+### Leaders — BUILT, NOT ACCEPTED — work order 167, 24 September 2026
+
+`screens/leaders/`, orion2re `SCREEN_OFFICERS` (29), `OFFICER::Officers_Screen_`
+(officer.cpp:856-1195). HD STATE: **BUILT, NOT ACCEPTED** — the live
+part is parked (`doc/briefs/167-parked-for-data.md`, item L). The
+inventory of the original is `doc/briefs/167-progress.md` Part A.
+
+**What it draws.** Both views — Colony Leaders and Ship Officers, read
+off the field list (the ship view adds the scroll arrows) — with up to
+four leader rows each: the original's portrait (darkened while
+travelling or for hire), the name with its level title, the two cost
+lines in the original's two alignments, the status line under the
+portrait (red "For Hire (n)"), "ETA: n" over it, and every skill with its
+icon, name and bonus. HIRE / POOL / DISMISS / RETURN / CANCEL, PREV /
+NEXT, the tabs and the scroll arrows in the original's button art, dull
+where the original draws them dull; the view box with the original's
+box art; the galaxy box with the original's star and small-ship
+sprites; the hire popup (MAINPUPS.LBX 0x39) drawn by HD with the
+engine's own question when its leader can be identified; the game's
+confirmation / message / warning boxes through `screens/fleets/fltbox`;
+the skill help box; right-click help from the original's two tables.
+Every rectangle is the native one (`ldrgeom`, sourced line by line)
+through `core/researchnative.to_hd`.
+
+**The data.** `s_leader_data` is **VERIFIED** (`core/structs/leader.py`):
+the header route (`tools/struct_header_check.py` covers it) and
+`tools/leader_check.py` over fourteen saves — the stored skill_value
+against `Officer_Skill_Value_` recomputed, 67 of 67 in nine files; the
+ship and star officer links in both directions; the static fields
+against HERODATA.LBX. The one game lineage whose stored skill_value
+differs (SAVE1 -> 3 -> 4 -> 5, the same 32 records by the same deltas)
+is explained there and is not an offset. `s_star_data.officer_index[8]`
+@187 added the same way. The skill table (`MOX::_skill_data`, a literal
+in mox.cpp) is transcribed in `core/leaderskills.py` and held to the
+source by `tools/leader_skill_check.py`.
+
+**What it sends** is `ldrwire.View.sendable`'s answer: without open fix
+30 only what it can see the effect of — the tabs, HIRE, CANCEL, RETURN,
+a click on a leader for hire (or any leader in hire mode), the popup's
+two answers, a native box's buttons, a right click on a portrait
+(`Find_Selected_Leader_`). POOL, DISMISS, PREV / NEXT, assigning and
+the galaxy box answer nothing until the block is on the wire.
+
+**Markings** (`screens/leaders/layout.json` `marks`, each named in its
+module, held by `tools/smoke_suite/090c`): OMISSION `outer_frame`
+(OFFICER.LBX 0 is not drawn — the order's "no outer frame"); DEVIATION
+`inner_boxes_drawn`; DEVIATION `hd_font`; HD EXTENSION `sprite_scale`;
+DEVIATION `button_words`; DEVIATION `hd_skill_help` (HD draws the
+skill's text box itself); TRANSCRIPTION `hover`; HD STATE `open_fix_30`;
+OMISSION `system_pictures`; OMISSION `map_strip`; OMISSION
+`detailed_ship_view`; WORKAROUND `the_word` (expiring).
+
+**New derived files, never committed:** `tools/officer_art_extract.py`
+(OFFICER.LBX, MAINPUPS.LBX 0x39-0x3B, FONTS.LBX 9 ->
+`screens/leaders/assets/gamedata/`) and `tools/skildesc_extract.py`
+(SKILDESC.LBX -> `assets/shared/names/skildesc_<lang>.json`), both
+registered in `tools/setup.py:from_game()`, a stand-in for the second.
 
 ### The galaxy map loads its sprites once, not once per entry — work order 161, 21 September 2026
 
@@ -7387,6 +7445,26 @@ Renders at 1080p, 1440p, ultrawide and 2160p in
 the six decisions still open, are in `doc/briefs/134-parked-for-data.md`.
 
 ## What is missing
+
+### The Leaders screen: what work order 167 left, and why
+
+1. **Open fix 30 (`doc/ext_officer_screen_state.patch`) — NOT APPLIED,
+   go/no-go is Data's.** Without it: no button mode beyond hire, no
+   selection, no displayed star (colony view) and no stack or grid (ship
+   view) — the view box shows a placeholder that names the fix — and
+   POOL, DISMISS, PREV / NEXT, assigning a leader and the galaxy box's
+   clicks send nothing.
+2. **The live acceptance** (parked, item L): no live session could be
+   run while the one allowed client was attached.
+3. **The system display's pictures** (OMISSION `system_pictures`), **the
+   strip under the galaxy box** (OMISSION `map_strip`), **the detailed
+   ship view** on a right click (OMISSION `detailed_ship_view`).
+4. **The outer frame** — the order's own "frames come later".
+5. **A finding for the shared extractors** (parked, item X): the ESTRINGS
+   / HESTRNGS extraction strips whitespace the game's strings carry — 32
+   HESTRNGS and 96 ESTRINGS entries, among them `"%s Fleet: "`, the
+   `"%d Outpost, "` family and `", the "`. The Leaders screen puts back
+   the one space it needs; the other screens are untouched.
 
 ### The Fleets ship panel: two things the original prints and HD does not
 

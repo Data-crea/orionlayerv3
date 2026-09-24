@@ -1,0 +1,355 @@
+{
+  "_comment": "Right-click context help for the Leaders screen, transcribed from EVANHELP::_static_coloff_screen_help_list (16 entries) and _static_shipoff_screen_help_list (18) (evanhelp.cpp:170-212, s_help_box {help_id, x1, y1, x2, y2}), installed by Set_ColOff_Screen_Help_List_ / Set_ShipOff_Screen_Help_List_ (evanhelp.cpp:476-510) according to the view. `view` says which list an entry belongs to and the screen reads only that view's. `native` is the original's 640x480 rectangle and IS the region (the screen resolves it through core/researchnative, the conversion the drawing uses). A `row` entry is one leader row's: its top edge is pushed down by skills * 17 + 16 while that row lists skills (evanhelp.cpp:479-483, :493-497), which leaves the skill lines to their own help \u2014 the skill's text box (officer.cpp:1476-1482). The ship view also appends help 333 over its EMPTY big-icon cells (evanhelp.cpp:499-507); that one is computed by the screen from the grid, not listed here. First hit wins, the order is the original's.",
+  "_source": "evanhelp.cpp:170-212, :476-510",
+  "hd_extension": "The help popup auto-sizes to its text and scrolls when it cannot fit. The original draws a fixed box and lets FMTPARA wrap into it at a fixed 339 px (TEXTBOX::Draw_Help_Entry_, textbox.cpp:307); at four HD resolutions a fixed box either wastes half the screen on two lines or clips a long entry. Marked once per file, here, and in core/helppopup.py.",
+  "regions": [
+    {
+      "help_id": 313,
+      "view": "colony",
+      "native": [
+        9,
+        11,
+        148,
+        31
+      ]
+    },
+    {
+      "help_id": 314,
+      "view": "colony",
+      "native": [
+        150,
+        11,
+        295,
+        31
+      ]
+    },
+    {
+      "help_id": 315,
+      "view": "colony",
+      "native": [
+        305,
+        16,
+        624,
+        196
+      ]
+    },
+    {
+      "help_id": 316,
+      "view": "colony",
+      "native": [
+        91,
+        34,
+        299,
+        140
+      ],
+      "row": 0
+    },
+    {
+      "help_id": 316,
+      "view": "colony",
+      "native": [
+        91,
+        143,
+        299,
+        250
+      ],
+      "row": 1
+    },
+    {
+      "help_id": 316,
+      "view": "colony",
+      "native": [
+        91,
+        252,
+        299,
+        359
+      ],
+      "row": 2
+    },
+    {
+      "help_id": 316,
+      "view": "colony",
+      "native": [
+        91,
+        361,
+        300,
+        472
+      ],
+      "row": 3
+    },
+    {
+      "help_id": 318,
+      "view": "colony",
+      "native": [
+        364,
+        203,
+        566,
+        226
+      ]
+    },
+    {
+      "help_id": 319,
+      "view": "colony",
+      "native": [
+        327,
+        204,
+        362,
+        225
+      ]
+    },
+    {
+      "help_id": 320,
+      "view": "colony",
+      "native": [
+        569,
+        204,
+        602,
+        225
+      ]
+    },
+    {
+      "help_id": 321,
+      "view": "colony",
+      "native": [
+        306,
+        234,
+        623,
+        403
+      ]
+    },
+    {
+      "help_id": 322,
+      "view": "colony",
+      "native": [
+        363,
+        410,
+        567,
+        434
+      ]
+    },
+    {
+      "help_id": 323,
+      "view": "colony",
+      "native": [
+        306,
+        440,
+        378,
+        465
+      ]
+    },
+    {
+      "help_id": 324,
+      "view": "colony",
+      "native": [
+        388,
+        440,
+        460,
+        465
+      ]
+    },
+    {
+      "help_id": 325,
+      "view": "colony",
+      "native": [
+        469,
+        440,
+        541,
+        465
+      ]
+    },
+    {
+      "help_id": 326,
+      "view": "colony",
+      "native": [
+        554,
+        441,
+        623,
+        464
+      ]
+    },
+    {
+      "help_id": 313,
+      "view": "ship",
+      "native": [
+        9,
+        11,
+        148,
+        31
+      ]
+    },
+    {
+      "help_id": 314,
+      "view": "ship",
+      "native": [
+        150,
+        11,
+        295,
+        31
+      ]
+    },
+    {
+      "help_id": 328,
+      "view": "ship",
+      "native": [
+        91,
+        34,
+        299,
+        140
+      ],
+      "row": 0
+    },
+    {
+      "help_id": 328,
+      "view": "ship",
+      "native": [
+        91,
+        143,
+        299,
+        250
+      ],
+      "row": 1
+    },
+    {
+      "help_id": 328,
+      "view": "ship",
+      "native": [
+        91,
+        252,
+        299,
+        359
+      ],
+      "row": 2
+    },
+    {
+      "help_id": 328,
+      "view": "ship",
+      "native": [
+        91,
+        361,
+        300,
+        472
+      ],
+      "row": 3
+    },
+    {
+      "help_id": 329,
+      "view": "ship",
+      "native": [
+        364,
+        203,
+        566,
+        226
+      ]
+    },
+    {
+      "help_id": 330,
+      "view": "ship",
+      "native": [
+        327,
+        204,
+        362,
+        225
+      ]
+    },
+    {
+      "help_id": 331,
+      "view": "ship",
+      "native": [
+        569,
+        204,
+        602,
+        225
+      ]
+    },
+    {
+      "help_id": 332,
+      "view": "ship",
+      "native": [
+        306,
+        234,
+        623,
+        403
+      ]
+    },
+    {
+      "help_id": 322,
+      "view": "ship",
+      "native": [
+        363,
+        410,
+        567,
+        434
+      ]
+    },
+    {
+      "help_id": 323,
+      "view": "ship",
+      "native": [
+        306,
+        440,
+        378,
+        465
+      ]
+    },
+    {
+      "help_id": 324,
+      "view": "ship",
+      "native": [
+        388,
+        440,
+        460,
+        465
+      ]
+    },
+    {
+      "help_id": 325,
+      "view": "ship",
+      "native": [
+        469,
+        440,
+        541,
+        465
+      ]
+    },
+    {
+      "help_id": 334,
+      "view": "ship",
+      "native": [
+        613,
+        21,
+        623,
+        41
+      ]
+    },
+    {
+      "help_id": 335,
+      "view": "ship",
+      "native": [
+        613,
+        45,
+        624,
+        167
+      ]
+    },
+    {
+      "help_id": 336,
+      "view": "ship",
+      "native": [
+        613,
+        170,
+        623,
+        190
+      ]
+    },
+    {
+      "help_id": 326,
+      "view": "ship",
+      "native": [
+        554,
+        441,
+        623,
+        464
+      ]
+    }
+  ]
+}

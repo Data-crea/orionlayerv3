@@ -150,6 +150,10 @@ diff*.txt
 *.zip
 tools/tree_manifest.sha256
 screens/fleets/assets/gamedata/
+# The Leaders screen's own artwork out of the player's OFFICER.LBX,
+# MAINPUPS.LBX and FONTS.LBX (tools/officer_art_extract.py, work order
+# 167) — the original's pixels, so the Fleets rule and the same reason.
+screens/leaders/assets/gamedata/
 
 # --- Frame builds (decision 40) ---
 # `tools/fleets_frame_build.py` writes here by default. The BUILD is

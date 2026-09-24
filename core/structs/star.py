@@ -47,6 +47,14 @@ SPEC = Spec("s_star_data", SIZE, [
     ("has_colony",     176, "u8"),
     ("has_stargate",   182, "u8"),
     ("is_stagepoint",  186, "u8"),
+    # `int8_t officer_index[MAX_PLAYERS]` (orion2.h:3005): the colony
+    # leader each player keeps at this star, -1 for none. Work order
+    # 167. The header route asserts 187 (tools/struct_header_check.py);
+    # the second source is the leader records: every status-1 colony
+    # leader on SAVE4 and the natives fixture sits at a star whose slot
+    # FOR ITS OWN PLAYER names it back, and no other slot names anyone
+    # (tools/leader_check.py).
+    ("officer_index",  187, "i8[8]"),
     ("in_nebula",      232, "u8"),
 ], verified=True)
 
