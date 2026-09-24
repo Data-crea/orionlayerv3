@@ -77,40 +77,23 @@ def _ldw_f(index, rect, ftype, hotkey=0):
 
 
 def _ldw_fields(gs, view, mode=-1, drop_row=None):
-    """`Add_Officer_Screen_Fields_`, in its order (officer.cpp:2813-3021).
-    `drop_row` leaves one row's text field out — a list that disagrees."""
+    """The engine's list for this snapshot: slot 0 first (FIELD_ZERO_ROW),
+    then `ldrgeom.field_shapes` — `Add_Officer_Screen_Fields_` in its
+    order. `drop_row` leaves one row's text field out: a list that
+    disagrees with the rebuild."""
     _recs = _ldw_leader.parse_all(gs.leaders_raw)
     _rows = _ldw_ls.captain_id_list(_recs, gs.player_num, view)
     _pool = _ldw_ls.leaders_for_hire(_recs, gs.player_num, view)
+    _split = [tuple(len(_p) for _p in _ldw_pop.split_skills(_recs[_i]))
+              for _i in _rows]
+    _drop = None if drop_row is None else _ldw_g.text_field(drop_row)
     _out = [_ldw_f(*FIELD_ZERO_ROW[:1], FIELD_ZERO_ROW[1:5],
                    FIELD_ZERO_ROW[5])]
-    _add = lambda r, t, h=0: _out.append(_ldw_f(len(_out), r, t, h))
-    _B, _H = _ldw_g.TYPE_BUTTON, _ldw_g.TYPE_HIDDEN
-    if mode != 0 and _rows:
-        _add(_ldw_g.button_rect("dismiss"), _H, ord("D"))
-        _add(_ldw_g.button_rect("pool"), _H, ord("P"))
-    if _pool and mode != 0:
-        _add(_ldw_g.button_rect("hire"), _B, ord("H"))
-    if mode == 0 and _pool:
-        _add(_ldw_g.button_rect("cancel"), _B, ord("X"))
-    _add(_ldw_g.button_rect("tab_ship"), _H, ord("S"))
-    _add(_ldw_g.button_rect("tab_colony"), _H, ord("C"))
-    _add(_ldw_g.button_rect("return"), _B, 0x1B)
-    for _i, _idx in enumerate(_rows):
-        _sp, _ge = _ldw_pop.split_skills(_recs[_idx])
-        for _r in _ldw_g.row_skill_help_rects(_i, len(_sp), len(_ge)):
-            _add(_r, _H)
-    for _i, _idx in enumerate(_rows):
-        if _i != drop_row:
-            _add(_ldw_g.text_field(_i), _H)
-        _add(_ldw_g.portrait_field(_i), _H)
-    if view == _ldw_g.VIEW_SHIP:
-        _add(_ldw_g.button_rect("scroll_up"), _B, ord("-"))
-        _add(_ldw_g.button_rect("scroll_down"), _B, ord("+"))
-    _add(_ldw_g.button_rect("next"), _B, ord("."))
-    _add(_ldw_g.button_rect("prev"), _B, ord(","))
-    _add(_ldw_g.DEBUG_FIELD, _H)
-    _add(_ldw_g.CATCHER, _H)
+    for _rect, _type, _hk in _ldw_g.field_shapes(len(_rows), _split, view,
+                                                 mode, _pool):
+        if _rect == _drop:
+            continue
+        _out.append(_ldw_f(len(_out), _rect, _type, _hk))
     return [f for f in _out if f.index != 0]
 
 

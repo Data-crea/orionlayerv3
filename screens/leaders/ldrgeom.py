@@ -218,6 +218,49 @@ def button_rect(name):
     return (x, y, x + w, y + h)
 
 
+def field_shapes(n_rows, skill_split, view, mode, for_hire):
+    """`Add_Officer_Screen_Fields_` (officer.cpp:2813-3021) as the list
+    of `(rect, field type, hotkey)` it adds, IN ITS ORDER — the fields
+    this module's rectangles claim the engine builds.
+
+    `skill_split` is `[(special, general)]` per listed row; `for_hire` is
+    `Leaders_In_Hiring_Pool_` for the view. Left out, and said so: the
+    big-icon fields of the ship view (they depend on the stack, open fix
+    30), the system display's and the galaxy box's fields (they depend
+    on the star and the map) — a live diff lists those as "not
+    transcribed", never as disagreements.
+
+    One home for the transcription: the smoke group builds its fixture
+    lists from it, and `tools/leaders_live.py` holds the LIVE list to it,
+    which is the second source for every rectangle above.
+    """
+    out = []
+    if mode != 0 and n_rows:
+        out.append((button_rect("dismiss"), TYPE_HIDDEN, ord("D")))
+        out.append((button_rect("pool"), TYPE_HIDDEN, ord("P")))
+    if for_hire and mode != 0:
+        out.append((button_rect("hire"), TYPE_BUTTON, ord("H")))
+    if mode == 0 and for_hire:
+        out.append((button_rect("cancel"), TYPE_BUTTON, ord("X")))
+    out.append((button_rect("tab_ship"), TYPE_HIDDEN, ord("S")))
+    out.append((button_rect("tab_colony"), TYPE_HIDDEN, ord("C")))
+    out.append((button_rect("return"), TYPE_BUTTON, ESC))
+    for i, (special, general) in enumerate(skill_split):
+        for rect in row_skill_help_rects(i, special, general):
+            out.append((rect, TYPE_HIDDEN, 0))
+    for i in range(n_rows):
+        out.append((text_field(i), TYPE_HIDDEN, 0))
+        out.append((portrait_field(i), TYPE_HIDDEN, 0))
+    if view == VIEW_SHIP:
+        out.append((button_rect("scroll_up"), TYPE_BUTTON, ord("-")))
+        out.append((button_rect("scroll_down"), TYPE_BUTTON, ord("+")))
+    out.append((button_rect("next"), TYPE_BUTTON, ord(".")))
+    out.append((button_rect("prev"), TYPE_BUTTON, ord(",")))
+    out.append((DEBUG_FIELD, TYPE_HIDDEN, 0))
+    out.append((CATCHER, TYPE_HIDDEN, 0))
+    return out
+
+
 # ── The right half ───────────────────────────────────────
 
 #: The view's box art, OFFICER.LBX 1 (ship) / 2 (colony) at (300, 12)
