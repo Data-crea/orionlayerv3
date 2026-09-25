@@ -16,6 +16,8 @@ import logging
 import pygame
 
 from core import resources
+from core.hud import style as hudstyle
+from core.hud import tint
 
 log = logging.getLogger("hud")
 
@@ -76,13 +78,30 @@ def fit(name, height, width=None):
     key = (name, int(width), int(height))
     if key not in _scaled:
         _scaled[key] = pygame.transform.smoothscale(
-            img, (int(width), int(height)))
+            _tinted(name, img), (int(width), int(height)))
     return _scaled[key]
+
+
+def _tinted(name, img):
+    """The piece in the player's frame colour (HD EXTENSION, work order
+    170): the same rule as every code-drawn colour, per pixel, for the
+    pieces in `tint.FOLLOWS`; the picture icons are returned as they
+    are. Alpha is untouched."""
+    if name not in tint.FOLLOWS or tint.delta() == 0:
+        return img
+    out = img.copy()
+    px = pygame.surfarray.pixels3d(out)
+    px[...] = tint.rotate_pixels(px)
+    del px
+    return out
 
 
 def clear():
     """Drop the scaled copies (a resize makes every size stale)."""
     _scaled.clear()
+
+
+hudstyle.on_change(lambda: _scaled.clear())
 
 
 def reset():

@@ -359,9 +359,11 @@ def render(surface, rows, area, cfg, layout, style, first=0,
         surface, _bands, cols, _skip, first,
         lambda _li: (scanned is not None and _li < len(rows)
                      and rows[_li]["index"] == scanned),
-        ROW_A, ROW_B, ROW_SELECTED)
+        # Read NOW, not the import-time constants: the frame colour can
+        # change while the game runs (work order 170).
+        *listgrid.row_palette()[:3])
     listgrid.draw_cell_plates(surface, _bands, cols, _skip, style, scale,
-                              PLATE_COLOR)
+                              listgrid.row_palette()[3])
 
     window = rows[first:]
     for row, (y, row_h) in zip(window,

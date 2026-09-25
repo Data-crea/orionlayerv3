@@ -282,7 +282,9 @@
       "monster_steps": {
         "on": "On",
         "off": "Off"
-      }
+      },
+      "frame": "Frame colour",
+      "reset": "Reset"
     }
   },
   "settings_rows": {
@@ -359,7 +361,8 @@
       "heading",
       "floor",
       "colours",
-      "monsters"
+      "monsters",
+      "frame"
     ],
     "label_x": 0.114,
     "_label_x_note": "the engine rows' own label column (settings_rows.label_x), so the two lists align",
@@ -369,6 +372,8 @@
     "_swatch_note": "eight swatches from swatch_x to the right edge of the row, drawn from the SELECTED preset's base colours (core/playercolors.base), so they cannot disagree with what a restart will produce; swatch_gap is the gap between two as a share of one swatch",
     "divider_y": 0.5,
     "_restart_note": "The restart note is drawn right-aligned in the HEADING band, directly above the preset row's swatches: four row heights leave no fifth for it. Shown only while the saved preset differs from the one palette.init applied (palette.active_preset), so it goes away by itself after the restart.",
-    "_value_x_note": "0.46 let 'Player colours' run into the preset name in the first offline render (14 September 2026); 0.50 leaves a gap at 1080p, and the swatches follow at 0.74"
+    "_value_x_note": "0.46 let 'Player colours' run into the preset name in the first offline render (14 September 2026); 0.50 leaves a gap at 1080p, and the swatches follow at 0.74",
+    "hue_end": 0.84,
+    "_hue_note": "Work order 170, HD EXTENSION: the frame colour row. The hue bar runs from value_x to hue_end of the row, RESET after it; a click on the bar sets the hue under the pointer, RESET returns to the measured blue. The divider band became a third of a row so the six rows fit the box it had."
   }
 }

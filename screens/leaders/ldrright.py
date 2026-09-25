@@ -37,6 +37,8 @@ that names the item, rather than a star or a stack HD chose.
 """
 import pygame
 
+from core.hud import blocks as hud
+
 from core.structs import planet as planet_struct
 from core.structs import player as player_struct
 from core.structs import ship as ship_struct
@@ -149,9 +151,7 @@ def _placeholder(surface, screen, what, art):
     step = int(size * 1.2)
     panel = pygame.Rect(0, 0, r.w - 20, step * len(lines) + size)
     panel.center = r.center
-    surface.fill(tuple(draw.BOX_FILL)[:3], panel)
-    screen.style.draw_plate(surface, panel, screen.layout.scale,
-                            draw.BOX_OUTLINE)
+    hud.panel(surface, panel, screen.layout.scale)
     y = panel.y + size // 2
     for line in lines:
         draw.blit_text(surface, screen.style, line, r.centerx, y, r.w - 40,

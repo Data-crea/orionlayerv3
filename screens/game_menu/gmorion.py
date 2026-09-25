@@ -2,7 +2,10 @@
 
 Below the thirteen engine rows, five row heights: a divider, the
 "OrionLayer" heading, the map floor lift, the player-colour preset and
-the switch for the monster values in the Planets panel. MOO2 has none
+the switch for the monster values in the Planets panel — and since work
+order 170 a sixth, the HUD FRAME COLOUR: a hue bar and RESET (HD
+EXTENSION, `core/hud/tint.py`), applied at once and saved with the
+rest; the divider became a thin band so the box did not grow. MOO2 has none
 of the three; the game knows nothing about these rows.
 
 **TWO STATE SOURCES, NEVER MERGED.** The thirteen engine checkboxes
@@ -27,8 +30,15 @@ nothing when nothing changed.
 import pygame
 
 from core import palette, playercolors, usersettings
+from core.hud import style as hudstyle
+from core.hud import tint
 
-BANDS = ("divider", "heading", "floor", "colours", "monsters")
+BANDS = ("divider", "heading", "floor", "colours", "monsters", "frame")
+
+#: Each band's share of the box. The divider is a line, so since work
+#: order 170 it takes a third of a row and the frame-colour row fits in
+#: the same box: nothing below it (ACCEPT, the body's edge) moves.
+WEIGHTS = (1 / 3, 1, 1, 1, 1, 1)
 
 COL_DIVIDER = palette.require("game_menu", "orionlayer_divider")
 COL_HEADING = palette.require("game_menu", "orionlayer_heading")
@@ -55,7 +65,10 @@ def bands(screen):
     if box is None or box.screen_rect is None:
         return None
     area = box.screen_rect
-    edges = [area.y + (area.h * i) // len(BANDS) for i in range(len(BANDS) + 1)]
+    total, acc, edges = sum(WEIGHTS), 0.0, [area.y]
+    for w in WEIGHTS:
+        acc += w
+        edges.append(area.y + int(area.h * acc / total))
     out = {name: pygame.Rect(area.x, edges[i], area.w, edges[i + 1] - edges[i])
            for i, name in enumerate(BANDS)}
     rule = screen.words.get("orionlayer_rows", {})
@@ -66,7 +79,37 @@ def bands(screen):
     y = row.y + (row.h - side) // 2
     out["swatches"] = [pygame.Rect(x0 + int(i * side * (1 + gap)), y, side, side)
                        for i in range(8)]
+    # THE FRAME COLOUR ROW (work order 170): a hue bar from the value
+    # column to `hue_end`, and RESET right of it.
+    fr = out["frame"]
+    bx = fr.x + int(fr.w * rule.get("value_x", 0.5))
+    bw = int(fr.w * rule.get("hue_end", 0.84)) - (bx - fr.x)
+    bh = max(4, int(fr.h * 0.42))
+    out["hue_bar"] = pygame.Rect(bx, fr.y + (fr.h - bh) // 2, max(8, bw), bh)
+    rx = out["hue_bar"].right + int(fr.w * 0.02)
+    out["hue_reset"] = pygame.Rect(rx, fr.y, fr.right - rx, fr.h)
     return out
+
+
+def hue_at(geo, x):
+    """The hue in degrees under window x on the bar — the one mapping,
+    for the click and for the thumb (decision 5)."""
+    bar = geo["hue_bar"]
+    return max(0.0, min(359.0, (x - bar.x) * 360.0 / max(1, bar.w)))
+
+
+def thumb_x(geo, hue):
+    bar = geo["hue_bar"]
+    return bar.x + int(hue * bar.w / 360.0)
+
+
+def set_hue(screen, value):
+    """Store the frame colour and apply it at once (no restart): the
+    style's caches are rebuilt for the new colour on the next draw."""
+    settings = _settings(screen)
+    if settings is not None:
+        settings.set("hud_hue", None if value is None else int(round(value)))
+    hudstyle.set_hue(value)
 
 
 def selected(screen, key):
@@ -102,6 +145,11 @@ def handle_click(screen, x, y):
                tuple(playercolors.names(screen.app.colors)))
     elif geo["monsters"].collidepoint(x, y):
         _cycle(settings, "monster_values", MONSTER_STEPS)
+    elif geo["hue_reset"].collidepoint(x, y):
+        set_hue(screen, None)
+    elif geo["frame"].collidepoint(x, y) and \
+            geo["hue_bar"].left <= x <= geo["hue_bar"].right:
+        set_hue(screen, hue_at(geo, x))
     return True
 
 
@@ -165,3 +213,30 @@ def render(screen, surface):
     shown = value if value in MONSTER_STEPS else MONSTER_STEPS[0]
     _text(screen, surface, words.get("monster_steps", {}).get(shown, shown),
           size, COL_OPTION, mon.x + vx, mon)
+
+    _render_frame_row(screen, surface, geo, words, size, lx)
+
+
+def _render_frame_row(screen, surface, geo, words, size, lx):
+    """The frame colour row: label, the hue bar, its thumb, RESET."""
+    row = geo["frame"]
+    _text(screen, surface, words.get("frame", "Frame colour"), size,
+          COL_OPTION, lx, row)
+    bar = geo["hue_bar"]
+    # The bar shows every hue the setting can take, at the measured
+    # accent's lightness and saturation — the colour a panel edge would
+    # have at that point.
+    base = hudstyle.get().get("panel.edge")
+    for i in range(bar.w):
+        h = i * 360.0 / bar.w
+        c = tint.rotate(base, h - tint.REFERENCE)
+        pygame.draw.line(surface, c, (bar.x + i, bar.y), (bar.x + i, bar.bottom - 1))
+    screen.style.draw_plate(surface, bar, screen.layout.scale)
+    now = tint.hue()
+    tx = thumb_x(geo, tint.REFERENCE if now is None else now)
+    w = max(2, int(3 * screen.layout.scale))
+    surface.fill((255, 255, 255), (tx - w // 2, bar.y - w, w, bar.h + 2 * w))
+    reset = geo["hue_reset"]
+    _text(screen, surface, words.get("reset", "Reset"), size,
+          COL_STATE if now is not None else COL_OPTION,
+          reset.x, reset)

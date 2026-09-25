@@ -57,9 +57,13 @@ def _cached(key, build):
 
 
 def clear():
-    """Forget every drawn shape (a resize, or the smoke test)."""
+    """Forget every drawn shape (a resize, the frame colour changing, or
+    the smoke test)."""
     _CACHE.clear()
     art.clear()
+
+
+hudstyle.on_change(clear)
 
 
 def _px(ref_len, scale, floor=1.0):

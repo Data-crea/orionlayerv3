@@ -57,7 +57,7 @@ try:
     #     bands, the boundaries between them, and the swatches; the
     #     floor and preset rows cycle their values.
     _go_pts = [(_r.centerx, _r.centery) for _n, _r in _go_geo.items()
-               if _n != "swatches"]
+               if _n in _go.BANDS]
     _go_pts += [(_go_geo["floor"].centerx, _go_geo["floor"].top),
                 (_go_geo["colours"].centerx, _go_geo["colours"].top),
                 _go_geo["swatches"][3].center]
@@ -65,7 +65,9 @@ try:
                   app.user_settings.get("player_colors"),
                   app.user_settings.get("monster_values"))
     assert _go_before[2] == "on", "the monster values switch defaults on"
-    assert tuple(_go_geo) == _go.BANDS + ("swatches",), tuple(_go_geo)
+    # Since work order 170 the frame colour row adds its bar and RESET.
+    assert tuple(_go_geo) == _go.BANDS + ("swatches", "hue_bar",
+                                          "hue_reset"), tuple(_go_geo)
     for _p in _go_pts:
         _go_scr.handle_click(*_p)
     assert app.client.log == [], app.client.log
@@ -74,7 +76,7 @@ try:
     assert app.user_settings.get("monster_values") == "off", (
         "one click on the monster row must turn the switch off")
     _go_scr.render(surf)
-    ok("OrionLayer rows: clicks on all five bands, their boundaries and a "
+    ok("OrionLayer rows: clicks on all six bands, their boundaries and a "
        "swatch send nothing; floor, preset and monster rows cycle their "
        "values")
 
@@ -131,6 +133,10 @@ try:
        "active; swatches are the selected preset's; ACCEPT writes, a second "
        "save does not")
 finally:
+    # The frame colour row's centre click turned the HUD's hue; the rest
+    # of the suite measures the measured blue.
+    from core.hud import style as _go_hs
+    _go_hs.set_hue(None)
     _go_scr.exit()
     d.close_overlay()
     app.client, app.connected = _go_real[0], _go_real[1]

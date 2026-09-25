@@ -140,7 +140,7 @@ def colony_state():
     return clp._Snapshot(clp.COLONIES) if hasattr(clp, "COLONIES") else None
 
 
-def game_menu_state():
+def game_menu_state(node="menu"):
     from core.game_state import GameState
 
     class _F:
@@ -149,7 +149,7 @@ def game_menu_state():
     gs = GameState()
     gs.current_screen = 8
     fields = []
-    for row in fix["menu"]:
+    for row in fix[node]:
         f = _F()
         (f.index, f.x, f.y, f.x_end, f.y_end, f.field_type, f.hotkey) = row
         fields.append(f)
@@ -160,10 +160,11 @@ def game_menu_state():
 def stage(app, name):
     """Put `name` on screen with its offline state; return the state."""
     d = app.dispatcher
-    if name == "game_menu":
+    if name in ("game_menu", "game_menu_settings"):
         d.switch_to("galaxy_map")
         d.active.update(galaxy_state())
-        gs = game_menu_state()
+        gs = game_menu_state("settings" if name.endswith("settings")
+                             else "menu")
         # The settings record the suite's GAME menu fixture uses (070).
         from core.structs import settings as _set
         gs.settings_raw = bytes([1, 1, 1, 0, 0, 1, 1, 0, 1, 1, 0, 1, 0, 0,
@@ -210,7 +211,13 @@ def main():
     ap.add_argument("--size", help="WxH, default all three")
     ap.add_argument("--mockups", action="store_true")
     ap.add_argument("--out", default=OUT)
+    ap.add_argument("--hue", type=float, default=None,
+                    help="the HUD frame colour to render in (degrees); "
+                         "file names then carry it")
     args = ap.parse_args()
+    from core.hud import style as hudstyle
+    hudstyle.set_hue(args.hue)
+    tag = "" if args.hue is None else f"_hue{int(args.hue):03d}"
     os.makedirs(args.out, exist_ok=True)
     sizes = ([tuple(int(v) for v in args.size.split("x"))] if args.size
              else SIZES)
@@ -221,7 +228,8 @@ def main():
     for name in names:
         for w, h in sizes:
             surf = render(name, w, h)
-            path = os.path.join(args.out, f"{name}_{w}x{h}_offline.png")
+            path = os.path.join(args.out,
+                                f"{name}_{w}x{h}{tag}_offline.png")
             pygame.image.save(surf, path)
             print(path)
             if args.mockups and (w, h) == (3840, 2160) and name in MOCKUPS \

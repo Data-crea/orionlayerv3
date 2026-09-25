@@ -54,6 +54,10 @@ class App:
         palette.init(self.colors,
                      preset=self.user_settings.get("player_colors"),
                      base=self.user_settings.get("player_color_base"))
+        # The HUD frame colour (HD EXTENSION, work order 170): applied
+        # here once, and live from the Settings dialog afterwards.
+        from core.hud import style as hudstyle
+        hudstyle.set_hue(self.user_settings.get("hud_hue"))
 
         # Window
         win = self.settings.get("window", {})

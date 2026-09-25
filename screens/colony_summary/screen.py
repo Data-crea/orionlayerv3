@@ -385,7 +385,8 @@ class ColonySummaryScreen(ScreenBase):
         `colonyheader` already take. What stays here is the boxes,
         which is what a screen is for.
         """
-        colonymoveui.render_for(self, surface, MOVE_TEXT, PANEL_BG)
+        colonymoveui.render_for(self, surface, MOVE_TEXT,
+                                _hudstyle.get().colour("panel.fill"))
 
     # ── Frame ─────────────────────────────────────────────
 

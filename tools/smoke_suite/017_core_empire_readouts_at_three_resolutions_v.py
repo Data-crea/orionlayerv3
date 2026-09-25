@@ -65,6 +65,12 @@ _MARKED = {
     # window's edges (HD EXTENSION). Its own check is "galaxy map: no
     # star, name, fleet or wormhole pixel under a HUD block" (011a).
     "core/layout.py": "HD EXTENSION, work order 170",
+    # ADDED 25 September 2026, work order 170: the HUD frame colour (HD
+    # EXTENSION). Its own checks are the two "hud frame colour" ones in
+    # 006b.
+    "core/hud/tint.py": "HD EXTENSION (work order 170)",
+    "core/hud/art.py": "HD EXTENSION, work order",
+    "main.py": "The HUD frame colour (HD EXTENSION, work order 170)",
     "core/helppopup.py": "the panel auto-sizes to its text",
     "core/zoomtables.py": "INSET_DOT_DIM",
     "screens/colony_summary/colonybuild.py": "Buy",

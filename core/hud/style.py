@@ -12,6 +12,7 @@ leave yesterday's panels in the cache.
 import logging
 
 from core import resources
+from core.hud import tint
 
 log = logging.getLogger("hud")
 
@@ -53,16 +54,48 @@ class HudStyle:
         return default
 
     def colour(self, path):
-        """An RGB tuple; a `*_from` indirection is followed."""
+        """An RGB tuple; a `*_from` indirection is followed.
+
+        Turned to the player's frame colour (`core.hud.tint`, HD
+        EXTENSION, work order 170) — except a TEXT colour and the
+        background placeholder, which the setting never touches."""
         v = self._walk(self.chosen, path + "_from")
         if isinstance(v, str):
             return self.colour(v)
-        c = self.get(path)
-        return tuple(int(x) for x in c[:3])
+        c = tuple(int(x) for x in self.get(path)[:3])
+        if not_tinted(path):
+            return c
+        return tint.rotate(c)
 
     def mix(self, a, b, t):
         """`a` moved a fraction `t` towards `b`, both RGB tuples."""
         return tuple(int(round(x + (y - x) * t)) for x, y in zip(a, b))
+
+
+def not_tinted(path):
+    """The style values the frame colour never turns: every word and the
+    background placeholder (work order 170, the never-recolour list)."""
+    return (path.startswith("text.") or path.startswith("mockup_colony.text_")
+            or path == "background_placeholder")
+
+
+_listeners = []
+
+
+def on_change(fn):
+    """Call `fn()` whenever the frame colour changes — the block and
+    piece caches, which are built per colour."""
+    _listeners.append(fn)
+
+
+def set_hue(value):
+    """Set the frame colour (None = the measured blue) and invalidate
+    every cache built for the old one. Applies at once, no restart."""
+    if tint.set_hue(value):
+        for fn in _listeners:
+            fn()
+        return True
+    return False
 
 
 def get():
