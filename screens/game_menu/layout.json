@@ -284,7 +284,8 @@
         "off": "Off"
       },
       "frame": "Frame colour",
-      "reset": "Reset"
+      "reset": "Reset",
+      "tone": "Frame tone"
     }
   },
   "settings_rows": {
@@ -362,7 +363,8 @@
       "floor",
       "colours",
       "monsters",
-      "frame"
+      "frame",
+      "tone"
     ],
     "label_x": 0.114,
     "_label_x_note": "the engine rows' own label column (settings_rows.label_x), so the two lists align",
@@ -374,6 +376,7 @@
     "_restart_note": "The restart note is drawn right-aligned in the HEADING band, directly above the preset row's swatches: four row heights leave no fifth for it. Shown only while the saved preset differs from the one palette.init applied (palette.active_preset), so it goes away by itself after the restart.",
     "_value_x_note": "0.46 let 'Player colours' run into the preset name in the first offline render (14 September 2026); 0.50 leaves a gap at 1080p, and the swatches follow at 0.74",
     "hue_end": 0.84,
-    "_hue_note": "Work order 170, HD EXTENSION: the frame colour row. The hue bar runs from value_x to hue_end of the row, RESET after it; a click on the bar sets the hue under the pointer, RESET returns to the measured blue. The divider band became a third of a row so the six rows fit the box it had."
+    "_hue_note": "Work order 170, HD EXTENSION: the frame colour row. The hue bar runs from value_x to hue_end of the row, RESET after it; a click on the bar sets the hue under the pointer, RESET returns to the measured blue. The divider band became a third of a row so the six rows fit the box it had.",
+    "_tone_note": "Work order 171, HD EXTENSION: the frame tone row under the hue row - a saturation bar (grey to the chosen colour) and a brightness bar (black to silver), splitting the hue bar's span. RESET on the hue row resets all three. The seven rows share the box it had; the divider stays a third of a row."
   }
 }

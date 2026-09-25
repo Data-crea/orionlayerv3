@@ -57,45 +57,96 @@ REFERENCE = 196
 FOLLOWS = {"title_plate", "icon_colonies", "icon_planets", "icon_fleets",
            "icon_leaders", "icon_races", "icon_info", "icon_turn"}
 
+#: SATURATION and BRIGHTNESS — work order 171. The hue alone reaches
+#: only saturated colours; Data wants grey, silver and black too. Two
+#: factors on the same rule: S multiplies the accent's saturation (0 =
+#: a neutral grey of the same luminance, 1 = the measured saturation;
+#: nothing above, the measured blue is already fully saturated in most
+#: values), B multiplies its relative luminance. The ranges are ours
+#: (decision 53): B from 0.1 (black) to 1.6 (silver), chosen so that the
+#: named settings below are reachable and every word stays readable —
+#: a smoke check sweeps the whole range.
+SAT_RANGE = (0.0, 1.0)
+BRIGHT_RANGE = (0.1, 1.6)
+
+#: The neutral settings the order names, as (hue, saturation,
+#: brightness). A smoke check proves each is reachable from the
+#: controls and holds the edge floors there.
+NAMED = {"silver": (None, 0.0, 1.4), "grey": (None, 0.0, 0.8),
+         "dark_grey": (None, 0.0, 0.4), "black": (None, 0.0, 0.1)}
+
+#: THE EDGE FLOORS — the minimum edge brightness the order asks for,
+#: named. A colour is sorted by its MEASURED relative luminance: under
+#: EDGE_CLASS it is a fill, from EDGE_CLASS an edge, from LIT_CLASS a lit
+#: edge (the TURN edge, the panel's bright rim, the underline). While B
+#: darkens (B < 1), an edge never falls below EDGE_FLOOR and a lit edge
+#: never below LIT_FLOOR; a fill may go to black.
+#:
+#: EDGE_FLOOR 0.15 — MEASURED, not derived: the smallest floor at which
+#: every edge stays at 3:1 against every fill, or at least as visible as
+#: in the measured blue, over the whole brightness range at every
+#: saturation (0.11 failed at 29 settings, 0.13 at 4; the smoke check
+#: sweeps it). 3:1 is WCAG 2.1's non-text contrast (SC 1.4.11).
+#: LIT_FLOOR 0.36: a hover, active or TURN edge stays at least 2:1 above
+#: a normal edge at its floor, (0.36 + 0.05) / (0.15 + 0.05) = 2.05 —
+#: which is what keeps the states visible on a black frame.
+EDGE_CLASS, LIT_CLASS = 0.05, 0.30
+EDGE_FLOOR, LIT_FLOOR = 0.15, 0.36
+
 _hue = None
+_sat = None
+_bright = None
 
 
 def hue():
-    """The setting: None (the measured blue) or a hue in degrees."""
+    """The hue setting: None (the measured blue) or degrees."""
     return _hue
+
+
+def sat():
+    return 1.0 if _sat is None else _sat
+
+
+def bright():
+    return 1.0 if _bright is None else _bright
+
+
+def is_default():
+    return _hue is None and _sat is None and _bright is None
 
 
 def delta():
     return 0.0 if _hue is None else (float(_hue) - REFERENCE)
 
 
-def set_hue(value):
-    """Set the frame hue (None = the measured blue). True if it changed."""
-    global _hue
-    value = None if value is None else float(value) % 360.0
-    if value is not None and abs(value - REFERENCE) < 0.5:
-        value = None
-    if value == _hue:
+def set_tone(hue_value=None, sat_value=None, bright_value=None):
+    """Set all three (None = measured). True if anything changed."""
+    global _hue, _sat, _bright
+    h = None if hue_value is None else float(hue_value) % 360.0
+    if h is not None and abs(h - REFERENCE) < 0.5:
+        h = None
+    s = None if sat_value is None else min(max(float(sat_value),
+                                               SAT_RANGE[0]), SAT_RANGE[1])
+    if s is not None and abs(s - 1.0) < 0.005:
+        s = None
+    b = None if bright_value is None else min(max(float(bright_value),
+                                                  BRIGHT_RANGE[0]),
+                                              BRIGHT_RANGE[1])
+    if b is not None and abs(b - 1.0) < 0.005:
+        b = None
+    if (h, s, b) == (_hue, _sat, _bright):
         return False
-    _hue = value
+    _hue, _sat, _bright = h, s, b
     return True
+
+
+def set_hue(value):
+    """The hue alone, the other two kept (170's API)."""
+    return set_tone(value, _sat, _bright)
 
 
 def in_band(h_degrees):
     return BAND[0] <= h_degrees <= BAND[1]
-
-
-def rotate(rgb, d=None):
-    """One RGB triple through the rule; a tuple of ints."""
-    d = delta() if d is None else d
-    r, g, b = (v / 255.0 for v in rgb[:3])
-    h, l, s = colorsys.rgb_to_hls(r, g, b)
-    if d == 0 or s < 0.08 or not in_band(h * 360.0):
-        return tuple(int(v) for v in rgb[:3])
-    h = ((h * 360.0 + d) % 360.0) / 360.0
-    out = _keep_luminance(np.array([[[r, g, b]]]),
-                          np.array([[colorsys.hls_to_rgb(h, l, s)]]))
-    return tuple(int(v) for v in out[0, 0])
 
 
 def _lin(x):
@@ -110,29 +161,13 @@ def _srgb(x):
 _W = np.array([0.2126, 0.7152, 0.0722])
 
 
-def _keep_luminance(before, after):
-    """`after` (floats 0..1, (..., 3)) scaled in linear light to the
-    relative luminance of `before`; uint8. A channel that would pass 1
-    is clipped, which lowers that colour's luminance a little — never
-    raises it, so contrast against light words can only grow."""
-    lb = (_lin(before) * _W).sum(axis=-1, keepdims=True)
-    la_lin = _lin(after)
-    la = (la_lin * _W).sum(axis=-1, keepdims=True)
-    k = np.where(la > 1e-9, lb / np.where(la > 1e-9, la, 1.0), 1.0)
-    out = _srgb(np.clip(la_lin * k, 0.0, 1.0))
-    return np.clip(np.round(out * 255.0), 0, 255).astype(np.uint8)
+def luminance(rgb):
+    """Relative luminance (WCAG) of RGB values 0..255, any shape (...,3)."""
+    return (_lin(np.asarray(rgb, np.float64)[..., :3] / 255.0) * _W).sum(-1)
 
 
-def rotate_pixels(rgb, d=None):
-    """The same rule over an (H, W, 3) uint8 array; a new array.
-
-    Vectorised HLS, identical to `rotate` per pixel up to rounding
-    (a smoke check holds the two to within one level)."""
-    d = delta() if d is None else d
-    if d == 0:
-        return rgb.copy()
-    x = rgb.astype(np.float64) / 255.0
-    mx, mn = x.max(axis=2), x.min(axis=2)
+def _hls(x):
+    mx, mn = x.max(axis=-1), x.min(axis=-1)
     l = (mx + mn) / 2.0
     c = mx - mn
     s = np.where(c == 0, 0.0,
@@ -141,12 +176,12 @@ def rotate_pixels(rgb, d=None):
     safe = np.where(c == 0, 1.0, c)
     h = np.where(mx == r, ((g - b) / safe) % 6.0,
                  np.where(mx == g, (b - r) / safe + 2.0, (r - g) / safe + 4.0))
-    h = np.where(c == 0, 0.0, h * 60.0)
-    turn = (s >= 0.08) & (h >= BAND[0]) & (h <= BAND[1])
-    h2 = (h + d) % 360.0
-    # HLS -> RGB for the turned pixels.
+    return np.where(c == 0, 0.0, h * 60.0), l, s
+
+
+def _rgb(h, l, s):
     cc = (1.0 - np.abs(2.0 * l - 1.0)) * s
-    hp = h2 / 60.0
+    hp = (h % 360.0) / 60.0
     xx = cc * (1.0 - np.abs(hp % 2.0 - 1.0))
     z = np.zeros_like(cc)
     idx = np.floor(hp).astype(int) % 6
@@ -154,5 +189,78 @@ def rotate_pixels(rgb, d=None):
     gg = np.choose(idx, [xx, cc, cc, xx, z, z])
     bb = np.choose(idx, [z, z, xx, cc, cc, xx])
     m = l - cc / 2.0
-    out = _keep_luminance(x, np.stack([rr + m, gg + m, bb + m], axis=2))
-    return np.where(turn[..., None], out, rgb).astype(np.uint8)
+    return np.stack([rr + m, gg + m, bb + m], axis=-1)
+
+
+def transform_array(rgb, d, s_factor, b_factor, word=False, floors=True):
+    """THE RULE, over any (..., 3) uint8 array — every colour and every
+    pixel the frame colour turns goes through this one function, so code
+    and cut pieces cannot disagree.
+
+    In the accent band (and saturated at all): the hue turns by `d`, the
+    saturation is multiplied by `s_factor`, and the result is scaled in
+    linear light to a TARGET relative luminance — for a WORD its own
+    measured luminance (labels follow the colour, never the brightness,
+    so their contrast cannot fall), for everything else the measured
+    luminance times `b_factor` (a fill only ever darkens), held above
+    the edge floors while `b_factor` darkens. Outside the band nothing
+    changes."""
+    rgb = np.asarray(rgb, np.uint8)
+    if d == 0 and s_factor == 1.0 and b_factor == 1.0:
+        return rgb.copy()
+    x = rgb.astype(np.float64) / 255.0
+    h, l, s = _hls(x)
+    turn = (s >= 0.08) & (h >= BAND[0]) & (h <= BAND[1])
+    moved = _rgb(h + d, l, np.clip(s * s_factor, 0.0, 1.0))
+    l0 = (_lin(x) * _W).sum(-1)
+    if word:
+        target = l0
+    else:
+        # A FILL never brightens: above 1 the factor lifts the lines
+        # (silver) and leaves the fills as dark as measured — brighter
+        # fills only took contrast from the edges and words on them.
+        # AN EDGE DARKENS MORE SLOWLY THAN A FILL (square root of the
+        # factor): darkened by the same factor, edge and fill lost
+        # contrast together — measured, the grey setting put a separator
+        # at 2.8:1 on the selected row, against 3.1:1 in the blue.
+        target = np.where(l0 < EDGE_CLASS, l0 * min(b_factor, 1.0),
+                          l0 * (b_factor if b_factor >= 1.0
+                                else np.sqrt(b_factor)))
+        if b_factor < 1.0 and floors:
+            floor = np.where(l0 >= LIT_CLASS, LIT_FLOOR,
+                             np.where(l0 >= EDGE_CLASS, EDGE_FLOOR, 0.0))
+            target = np.maximum(target, floor)
+    lm = _lin(moved)
+    la = (lm * _W).sum(-1)
+    k = np.where(la > 1e-9, target / np.where(la > 1e-9, la, 1.0), 1.0)
+    out = _srgb(np.clip(lm * k[..., None], 0.0, 1.0))
+    out = np.clip(np.round(out * 255.0), 0, 255).astype(np.uint8)
+    return np.where(turn[..., None], out, rgb)
+
+
+def transform(rgb, word=False, d=None, s_factor=None, b_factor=None,
+              floors=True):
+    """One RGB triple through the rule, with the current setting unless
+    given; a tuple of ints. `floors=False` only for the settings row's
+    PREVIEW of the brightness bar, which shows the factor itself."""
+    d = delta() if d is None else d
+    s_factor = sat() if s_factor is None else s_factor
+    b_factor = bright() if b_factor is None else b_factor
+    arr = np.array([[list(rgb[:3])]], np.uint8)
+    return tuple(int(v) for v in transform_array(arr, d, s_factor,
+                                                 b_factor, word,
+                                                 floors)[0, 0])
+
+
+def rotate(rgb, d=None):
+    """The hue alone, by `d` degrees (170's API: the slider's own bar)."""
+    return transform(rgb, d=delta() if d is None else d, s_factor=1.0,
+                     b_factor=1.0)
+
+
+def rotate_pixels(rgb, d=None):
+    """An (H, W, 3) uint8 image through the rule, current setting unless
+    `d` is given (then the hue alone); a new array."""
+    if d is not None:
+        return transform_array(rgb, d, 1.0, 1.0)
+    return transform_array(rgb, delta(), sat(), bright())

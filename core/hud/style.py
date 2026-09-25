@@ -65,16 +65,31 @@ class HudStyle:
         c = tuple(int(x) for x in self.get(path)[:3])
         if not_tinted(path):
             return c
-        return tint.rotate(c)
+        return tint.transform(c, word=follows_as_word(path))
 
     def mix(self, a, b, t):
         """`a` moved a fraction `t` towards `b`, both RGB tuples."""
         return tuple(int(round(x + (y - x) * t)) for x, y in zip(a, b))
 
 
+#: THE ACCENT-COLOURED WORDS — work order 171 (170 P5 decided): the
+#: labels that wear the frame's own blue follow its colour, at their own
+#: luminance. Everything else that is a word — values, white text, the
+#: sub-values, the table's rows, the red negative — never turns.
+WORDS_THAT_FOLLOW = ("text.title.color", "text.label.color",
+                     "text.button.color", "mockup_colony.text_header")
+
+
+def follows_as_word(path):
+    return path in WORDS_THAT_FOLLOW
+
+
 def not_tinted(path):
-    """The style values the frame colour never turns: every word and the
-    background placeholder (work order 170, the never-recolour list)."""
+    """The style values the frame colour never turns: every word that is
+    not an accent label (`WORDS_THAT_FOLLOW`) and the background
+    placeholder (work order 170's never-recolour list, kept)."""
+    if follows_as_word(path):
+        return False
     return (path.startswith("text.") or path.startswith("mockup_colony.text_")
             or path == "background_placeholder")
 
@@ -88,14 +103,28 @@ def on_change(fn):
     _listeners.append(fn)
 
 
-def set_hue(value):
-    """Set the frame colour (None = the measured blue) and invalidate
-    every cache built for the old one. Applies at once, no restart."""
-    if tint.set_hue(value):
+def set_tone(hue=None, sat=None, bright=None):
+    """Set the frame colour — hue, saturation, brightness; None each for
+    the measured value — and invalidate every cache built for the old
+    one. Applies at once, no restart."""
+    if tint.set_tone(hue, sat, bright):
         for fn in _listeners:
             fn()
         return True
     return False
+
+
+def apply_settings(user_settings):
+    """The saved frame colour (hud_hue, hud_sat, hud_bright; any may be
+    absent — a 170 file carries the hue alone), applied at start."""
+    return set_tone(user_settings.get("hud_hue"),
+                    user_settings.get("hud_sat"),
+                    user_settings.get("hud_bright"))
+
+
+def set_hue(value):
+    """The hue alone (170's API), the other two kept."""
+    return set_tone(value, tint._sat, tint._bright)
 
 
 def get():

@@ -214,10 +214,18 @@ def main():
     ap.add_argument("--hue", type=float, default=None,
                     help="the HUD frame colour to render in (degrees); "
                          "file names then carry it")
+    ap.add_argument("--sat", type=float, default=None,
+                    help="the frame colour's saturation factor, 0..1")
+    ap.add_argument("--bright", type=float, default=None,
+                    help="the frame colour's brightness factor, 0.1..1.6")
+    ap.add_argument("--tag", default=None,
+                    help="a name for the colour in the file names")
     args = ap.parse_args()
     from core.hud import style as hudstyle
-    hudstyle.set_hue(args.hue)
-    tag = "" if args.hue is None else f"_hue{int(args.hue):03d}"
+    hudstyle.set_tone(args.hue, args.sat, args.bright)
+    tag = ("" if args.hue is None else f"_hue{int(args.hue):03d}")
+    if args.tag:
+        tag = f"_{args.tag}"
     os.makedirs(args.out, exist_ok=True)
     sizes = ([tuple(int(v) for v in args.size.split("x"))] if args.size
              else SIZES)

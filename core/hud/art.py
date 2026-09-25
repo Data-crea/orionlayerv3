@@ -87,7 +87,7 @@ def _tinted(name, img):
     170): the same rule as every code-drawn colour, per pixel, for the
     pieces in `tint.FOLLOWS`; the picture icons are returned as they
     are. Alpha is untouched."""
-    if name not in tint.FOLLOWS or tint.delta() == 0:
+    if name not in tint.FOLLOWS or tint.is_default():
         return img
     out = img.copy()
     px = pygame.surfarray.pixels3d(out)

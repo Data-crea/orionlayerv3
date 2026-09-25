@@ -67,7 +67,8 @@ try:
     assert _go_before[2] == "on", "the monster values switch defaults on"
     # Since work order 170 the frame colour row adds its bar and RESET.
     assert tuple(_go_geo) == _go.BANDS + ("swatches", "hue_bar",
-                                          "hue_reset"), tuple(_go_geo)
+                                          "hue_reset", "sat_bar",
+                                          "bright_bar"), tuple(_go_geo)
     for _p in _go_pts:
         _go_scr.handle_click(*_p)
     assert app.client.log == [], app.client.log
@@ -76,7 +77,7 @@ try:
     assert app.user_settings.get("monster_values") == "off", (
         "one click on the monster row must turn the switch off")
     _go_scr.render(surf)
-    ok("OrionLayer rows: clicks on all six bands, their boundaries and a "
+    ok("OrionLayer rows: clicks on all seven bands, their boundaries and a "
        "swatch send nothing; floor, preset and monster rows cycle their "
        "values")
 
@@ -136,7 +137,7 @@ finally:
     # The frame colour row's centre click turned the HUD's hue; the rest
     # of the suite measures the measured blue.
     from core.hud import style as _go_hs
-    _go_hs.set_hue(None)
+    _go_hs.set_tone(None, None, None)
     _go_scr.exit()
     d.close_overlay()
     app.client, app.connected = _go_real[0], _go_real[1]

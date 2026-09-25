@@ -33,12 +33,13 @@ from core import palette, playercolors, usersettings
 from core.hud import style as hudstyle
 from core.hud import tint
 
-BANDS = ("divider", "heading", "floor", "colours", "monsters", "frame")
+BANDS = ("divider", "heading", "floor", "colours", "monsters", "frame",
+         "tone")
 
 #: Each band's share of the box. The divider is a line, so since work
 #: order 170 it takes a third of a row and the frame-colour row fits in
 #: the same box: nothing below it (ACCEPT, the body's edge) moves.
-WEIGHTS = (1 / 3, 1, 1, 1, 1, 1)
+WEIGHTS = (1 / 3, 1, 1, 1, 1, 1, 1)
 
 COL_DIVIDER = palette.require("game_menu", "orionlayer_divider")
 COL_HEADING = palette.require("game_menu", "orionlayer_heading")
@@ -88,7 +89,27 @@ def bands(screen):
     out["hue_bar"] = pygame.Rect(bx, fr.y + (fr.h - bh) // 2, max(8, bw), bh)
     rx = out["hue_bar"].right + int(fr.w * 0.02)
     out["hue_reset"] = pygame.Rect(rx, fr.y, fr.right - rx, fr.h)
+    # THE TONE ROW (work order 171): saturation and brightness, two
+    # bars in the hue bar's span, side by side with a gap.
+    to = out["tone"]
+    hb = out["hue_bar"]
+    gap = max(4, int(hb.w * 0.06))
+    half = (hb.w - gap) // 2
+    ty = to.y + (to.h - hb.h) // 2
+    out["sat_bar"] = pygame.Rect(hb.x, ty, half, hb.h)
+    out["bright_bar"] = pygame.Rect(hb.x + half + gap, ty, half, hb.h)
     return out
+
+
+def bar_value(bar, x, lo, hi):
+    """The value under window x on a bar spanning lo..hi — the one
+    mapping, for the click and for the thumb (decision 5)."""
+    f = max(0.0, min(1.0, (x - bar.x) / max(1, bar.w)))
+    return lo + f * (hi - lo)
+
+
+def bar_x(bar, value, lo, hi):
+    return bar.x + int((value - lo) / (hi - lo) * bar.w)
 
 
 def hue_at(geo, x):
@@ -103,13 +124,29 @@ def thumb_x(geo, hue):
     return bar.x + int(hue * bar.w / 360.0)
 
 
-def set_hue(screen, value):
+def set_tone(screen, hue=..., sat=..., bright=...):
     """Store the frame colour and apply it at once (no restart): the
-    style's caches are rebuilt for the new colour on the next draw."""
+    style's caches are rebuilt for the new colour on the next draw.
+    An argument left out keeps its current value; None is the measured
+    one. Stored as hud_hue / hud_sat / hud_bright (work orders 170, 171);
+    a file with hud_hue alone reads the other two as measured."""
+    h = tint.hue() if hue is ... else hue
+    s = tint._sat if sat is ... else sat
+    b = tint._bright if bright is ... else bright
+    hudstyle.set_tone(h, s, b)
     settings = _settings(screen)
     if settings is not None:
-        settings.set("hud_hue", None if value is None else int(round(value)))
-    hudstyle.set_hue(value)
+        settings.set("hud_hue", None if tint.hue() is None
+                     else int(round(tint.hue())))
+        settings.set("hud_sat", None if tint._sat is None
+                     else round(tint._sat, 2))
+        settings.set("hud_bright", None if tint._bright is None
+                     else round(tint._bright, 2))
+
+
+def set_hue(screen, value):
+    """The hue alone (170)."""
+    set_tone(screen, hue=value)
 
 
 def selected(screen, key):
@@ -146,7 +183,14 @@ def handle_click(screen, x, y):
     elif geo["monsters"].collidepoint(x, y):
         _cycle(settings, "monster_values", MONSTER_STEPS)
     elif geo["hue_reset"].collidepoint(x, y):
-        set_hue(screen, None)
+        set_tone(screen, None, None, None)
+    elif geo["sat_bar"].inflate(0, geo["tone"].h - geo["sat_bar"].h) \
+            .collidepoint(x, y):
+        set_tone(screen, sat=bar_value(geo["sat_bar"], x, *tint.SAT_RANGE))
+    elif geo["bright_bar"].inflate(0, geo["tone"].h - geo["bright_bar"].h) \
+            .collidepoint(x, y):
+        set_tone(screen, bright=bar_value(geo["bright_bar"], x,
+                                          *tint.BRIGHT_RANGE))
     elif geo["frame"].collidepoint(x, y) and \
             geo["hue_bar"].left <= x <= geo["hue_bar"].right:
         set_hue(screen, hue_at(geo, x))
@@ -238,5 +282,31 @@ def _render_frame_row(screen, surface, geo, words, size, lx):
     surface.fill((255, 255, 255), (tx - w // 2, bar.y - w, w, bar.h + 2 * w))
     reset = geo["hue_reset"]
     _text(screen, surface, words.get("reset", "Reset"), size,
-          COL_STATE if now is not None else COL_OPTION,
+          COL_OPTION if tint.is_default() else COL_STATE,
           reset.x, reset)
+    _render_tone_row(screen, surface, geo, words, size, lx, base)
+
+
+def _render_tone_row(screen, surface, geo, words, size, lx, base):
+    """Saturation (grey -> the chosen colour) and brightness (black ->
+    silver), each bar drawn with the colours its positions give."""
+    _text(screen, surface, words.get("tone", "Frame tone"), size,
+          COL_OPTION, lx, geo["tone"])
+    w = max(2, int(3 * screen.layout.scale))
+    d = tint.delta()
+    for key, (lo, hi), now in (("sat_bar", tint.SAT_RANGE, tint.sat()),
+                               ("bright_bar", tint.BRIGHT_RANGE,
+                                tint.bright())):
+        bar = geo[key]
+        for i in range(bar.w):
+            v = bar_value(bar, bar.x + i, lo, hi)
+            c = (tint.transform(base, d=d, s_factor=v, b_factor=1.0)
+                 if key == "sat_bar" else
+                 tint.transform(base, d=d, s_factor=tint.sat(), b_factor=v,
+                                floors=False))
+            pygame.draw.line(surface, c, (bar.x + i, bar.y),
+                             (bar.x + i, bar.bottom - 1))
+        screen.style.draw_plate(surface, bar, screen.layout.scale)
+        tx = bar_x(bar, now, lo, hi)
+        surface.fill((255, 255, 255), (tx - w // 2, bar.y - w, w,
+                                       bar.h + 2 * w))

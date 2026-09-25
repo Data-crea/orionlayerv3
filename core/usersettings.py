@@ -47,6 +47,11 @@ DEFAULTS = {
     # The HUD frame colour, a hue in degrees; None is the measured blue
     # (work order 170, `core.hud.tint`).
     "hud_hue": None,
+    # Its saturation and brightness factors (work order 171); None is
+    # the measured value, so a file written by 170 with hud_hue alone
+    # reads the same colour it always did.
+    "hud_sat": None,
+    "hud_bright": None,
 }
 
 

@@ -57,7 +57,7 @@ class App:
         # The HUD frame colour (HD EXTENSION, work order 170): applied
         # here once, and live from the Settings dialog afterwards.
         from core.hud import style as hudstyle
-        hudstyle.set_hue(self.user_settings.get("hud_hue"))
+        hudstyle.apply_settings(self.user_settings)
 
         # Window
         win = self.settings.get("window", {})
