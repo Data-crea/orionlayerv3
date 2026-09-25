@@ -106,7 +106,7 @@ BOX_FILL = _hudstyle.get().colour("panel.fill")
 BOX_OUTLINE = palette.col("panel", "thin_border", (55, 65, 85))
 
 
-def draw_box(surface, layout, style, native_rect):
+def draw_box(surface, layout, style, native_rect, popup=False):
     """One box of the panel: a fill and a rounded outline, in code.
 
     `native_rect` is a 640x480 rectangle — an entry's block or the list
@@ -117,7 +117,12 @@ def draw_box(surface, layout, style, native_rect):
     rect = pygame.Rect(*geom_mod.window_rect(native_rect, layout))
     # A HUD PANEL since decision 71 (work order 169): the tree's panel
     # look is the HUD's now, and this box is still that look.
-    hud.panel(surface, rect, layout.scale)
+    # `popup`: a dialog over the panel (the list popup) wears the HUD
+    # popup block, lit, as every dialog does.
+    if popup:
+        hud.popup(surface, rect, layout.scale)
+    else:
+        hud.panel(surface, rect, layout.scale)
     return rect
 
 

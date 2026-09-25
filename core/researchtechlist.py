@@ -342,7 +342,9 @@ def draw(surface, layout, style, popup, origin, names, wording):
     # order 166 part C. It was two hand-written `draw.rect` calls with
     # two colours of its own, which is the second copy the panel's own
     # boxes would have made a third.
-    rect = draw_box(surface, layout, style, popup.window_rect(origin))
+    # Since decision 71 the list popup is the HUD popup block — a dialog.
+    rect = draw_box(surface, layout, style, popup.window_rect(origin),
+                    popup=True)
 
     title = wording.list_title(popup.entry.group) if wording else None
     if title:

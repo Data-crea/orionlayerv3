@@ -32,6 +32,8 @@ box as tall as the text plus 85 (textbox.cpp:40-88, :186-224).
 """
 import pygame
 
+from core.hud import blocks as hud
+
 from core import textfit
 
 from . import ldrdraw as draw
@@ -78,11 +80,10 @@ def draw_popup(surface, screen, view, rows_words, art, game_state):
         else:
             draw.draw_box(surface, screen, ldrpopup.popup_rect())
         return
-    bg = art.sprite("popup") if art is not None and art.available else None
-    if bg is not None:
-        surface.blit(draw.stretched(bg, box), box.topleft)
-    else:
-        draw.draw_box(surface, screen, ldrpopup.popup_rect())
+    # The HUD popup block (decision 71, work order 169): every dialog
+    # wears it; the OFFICER.LBX popup picture is not drawn — DEVIATION,
+    # the same as the buttons' (`ldrdraw.draw_button`).
+    hud.popup(surface, box, layout.scale)
     idx = popup.leader
     rec = view.leaders[idx]
     sprite = art.portrait(rec.pict_num) if art is not None and \
@@ -110,13 +111,9 @@ def draw_popup(surface, screen, view, rows_words, art, game_state):
             ("reject", "popup_reject", ldrpopup.REJECT_RECT),
             ("hire", "popup_hire", ldrpopup.HIRE_RECT)):
         r = draw.rect(layout, native)
-        face = art.sprite(sprite_name) if art is not None and \
-            art.available else None
-        if face is not None:
-            surface.blit(draw.stretched(face, r), r.topleft)
-        else:
-            screen.style.draw_plate(surface, r, layout.scale,
-                                    draw.BOX_OUTLINE)
+        # HUD small buttons with their words (decision 71).
+        hud.small_button(surface, r, layout.scale)
+        if True:
             draw.blit_text(surface, screen.style, key.upper(), r.centerx,
                            r.y + r.h // 4, r.w - 4,
                            draw.font_px(layout, "button"), ink, "center")
@@ -181,9 +178,7 @@ def skill_help_rect(screen, title, body):
 def draw_skill_help(surface, screen, title, body, art):
     """DEVIATION `hd_skill_help` — see the module docstring."""
     r, lines, size = skill_help_rect(screen, title, body)
-    surface.fill(tuple(draw.BOX_FILL)[:3], r)
-    screen.style.draw_plate(surface, r, screen.layout.scale,
-                            draw.BOX_OUTLINE)
+    hud.popup(surface, r, screen.layout.scale)
     ink = draw.text_colour(art, "normal")
     head = draw.text_colour(art, "selected")
     scale = draw.native_scale(screen.layout)
