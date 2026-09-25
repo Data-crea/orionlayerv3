@@ -13,6 +13,18 @@ right and the header had gone stale** — resolved 10 September 2026
 by dating the header to the edit and giving this session its
 paragraph, below, so the two agree again.
 
+This session (25 September 2026, work order 171): **the frame colour
+reaches grey, silver and black, and the galaxy title plate sits over the
+map's centre.** A "Frame tone" row (saturation, brightness) beside 170's
+hue (HD EXTENSION); one rule for code and pieces in `core/hud/tint.py`
+with named edge floors while darkening — EDGE_FLOOR 0.15 (measured over
+the whole range), LIT_FLOOR 0.36 (hover/active visible) — every word
+>= 6.2:1 over 288 settings, nothing clamped; accent labels now follow
+the frame colour, values and white text never. The GAME plate is centred
+on the map box, not the window. Checks 303 -> 305. Live not run: Data's
+engine held the port. `doc/briefs/171-progress.md`,
+`171-parked-for-data.md`.
+
 This session (25 September 2026, work order 170): **the galaxy
 map's bar is on the bottom edge and its map lies in the free space;
 and the HUD's frame colour is a setting.**
