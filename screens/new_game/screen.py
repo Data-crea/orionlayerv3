@@ -21,6 +21,9 @@ Input routing:
   ESC                             -> inject_key
 """
 import pygame
+
+from core.hud import blocks as hud
+from core.hud import style as hudstyle
 from core import palette
 from core.screen_base import ScreenBase
 
@@ -202,26 +205,33 @@ class NewGameScreen(ScreenBase):
     # ── Render ───────────────────────────────────────────────
 
     def render(self, surface):
-        surface.fill((6, 8, 16))
+        # THE HUD STYLE, decision 71 (work order 169). The cutout
+        # background (assets/background.png) framed the five setting
+        # pictures with its holes — a frame in all but name — so it is
+        # no longer drawn; it is still LOADED, because its cover-scale is
+        # what `_hd_to_screen` maps the slots through. The screen draws
+        # the placeholder background, and each picture on a HUD panel.
+        surface.fill(hudstyle.get().colour("background_placeholder"))
         if not self._bg_screen:
             return
         slots = self._cfg.get("setting_slots", {})
         cats = self._cfg.get("categories", {})
         text_cfg = self._cfg.get("text", {})
 
-        # 1. Setting images (under background cutouts)
+        # 1. + 2. Each setting picture on its HUD panel
         for cat, slot in slots.items():
+            sx, sy, sw, sh = self._hd_to_screen(*slot["rect"])
+            if sw <= 0 or sh <= 0:
+                continue
+            panel = pygame.Rect(sx, sy, sw, sh)
+            hud.panel(surface, panel, self.layout.scale)
             filename = self._current.get(cat)
             img = (self._get_setting_image(cat, filename)
                    if filename else None)
-            if not img:
-                continue
-            sx, sy, sw, sh = self._hd_to_screen(*slot["rect"])
-            if sw > 0 and sh > 0:
-                surface.blit(self._get_scaled(img, sw, sh), (sx, sy))
-
-        # 2. Background with transparent cutouts
-        surface.blit(self._bg_screen, (0, 0))
+            if img:
+                inner = hud.panel_inner(panel, self.layout.scale)
+                surface.blit(self._get_scaled(img, inner.w, inner.h),
+                             inner.topleft)
 
         # 3. Boxes (inner panels etc. from editor)
         for box in self.boxes:
@@ -277,13 +287,14 @@ class NewGameScreen(ScreenBase):
         labels = t.get("labels", {})
         for i, name in enumerate(t.get("order", [])):
             is_on = self._toggle_states.get(name, False)
-            btn_img = self._toggle_on if is_on else self._toggle_off
-            if not btn_img:
-                continue
             icon_hd = self._toggle_icon_rect(i)
             ix, iy, iw, ih = self._hd_to_screen(*icon_hd)
             if iw > 0 and ih > 0:
-                surface.blit(self._get_scaled(btn_img, iw, ih), (ix, iy))
+                # The HUD small button, lit while ON (decision 71); the
+                # knob pictures stay in the assets, not drawn.
+                hud.small_button(surface, pygame.Rect(ix, iy, iw, ih),
+                                 self.layout.scale,
+                                 "active" if is_on else "normal")
             lx_hd = icon_hd[0] + t.get("label_offset_x", 100)
             ly_hd = icon_hd[1] + icon_hd[3] // 2
             lx, ly, _, _ = self._hd_to_screen(lx_hd, ly_hd)
