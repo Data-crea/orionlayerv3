@@ -10,6 +10,8 @@ cached per pixel size).
 """
 import time
 import pygame
+
+from core.hud import blocks as hud
 from core import palette
 from core import gridlayout
 
@@ -39,19 +41,13 @@ BOX_RADIUS  = 4
 # -- Thin bordered box ------------------------------------
 
 def draw_thin_box(surface, L, rect, fill=True):
-    """Blue 1px outline with a dark translucent fill (custom_race look)."""
+    """A HUD panel since decision 71 (work order 169) — this screen's
+    own rounded box was a second panel look, which 71 rules out. `fill`
+    False keeps what it meant: the edge without the fill."""
     bx, by = L.pos(rect[0], rect[1])
     bw, bh = L.size(rect[2], rect[3])
     r = pygame.Rect(bx, by, bw, bh)
-    radius = max(2, int(BOX_RADIUS * L.scale))
-    if fill and len(COL_BOX_BG) == 4 and COL_BOX_BG[3] < 255:
-        fs = pygame.Surface(r.size, pygame.SRCALPHA)
-        pygame.draw.rect(fs, COL_BOX_BG, fs.get_rect(),
-                         border_radius=radius)
-        surface.blit(fs, r.topleft)
-    elif fill:
-        pygame.draw.rect(surface, COL_BOX_BG[:3], r, border_radius=radius)
-    pygame.draw.rect(surface, COL_BOX_BORDER, r, 1, border_radius=radius)
+    hud.panel(surface, r, L.scale, filled=fill)
     return r
 
 
@@ -253,11 +249,9 @@ def render_busy_panel(surface, L, style, panel, text_rect, title,
     if pw < 8 or ph < 8:
         return
     rect = pygame.Rect(px, py, pw, ph)
-    if backdrop is not None and backdrop.get_rect().contains(rect):
-        surface.blit(backdrop, (px, py), rect)
-    else:
-        surface.fill(COL_BOX_BG[:3], rect)
-    style.draw_thin_border(surface, rect, L.scale)
+    # The HUD popup block (decision 71): every popup wears it, opaque.
+    # `backdrop` is accepted and no longer cut out behind it.
+    hud.popup(surface, rect, L.scale)
 
     tx, ty = L.pos(text_rect[0], text_rect[1])
     tw, th = L.size(text_rect[2], text_rect[3])
