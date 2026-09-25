@@ -29,6 +29,9 @@ WHAT IS TRANSCRIPTION AND WHAT IS OURS — each marked where it happens:
 """
 import pygame
 
+from core.hud import blocks as hud
+from core.hud import text as hudtext
+
 from core import palette
 from core import researchnative as nat
 from core.config import REF_H, REF_W
@@ -113,8 +116,8 @@ def blit_text(surface, style, text, x, y, max_w, size, colour, align="left"):
 def draw_box(surface, screen, native):
     """One inner box: fill and plate. DEVIATION `inner_boxes_drawn`."""
     r = rect(screen.layout, native)
-    surface.fill(tuple(BOX_FILL)[:3], r)
-    screen.style.draw_plate(surface, r, screen.layout.scale, BOX_OUTLINE)
+    # A HUD panel since decision 71 (work order 169).
+    hud.panel(surface, r, screen.layout.scale)
     return r
 
 
@@ -294,23 +297,26 @@ BUTTON_WORDS = {"tab_colony": "Colony Leaders", "tab_ship": "Ship Officers",
 
 def draw_button(surface, screen, art, name, frame=0, dull=False,
                 at=None):
-    """One button at its native rectangle, the art's frame `frame` —
-    or the dull picture, or, without art, its word."""
+    """One button at its native rectangle, as a HUD small button with
+    its word — frame 1 is the "active" state, the dull picture the
+    "disabled" one.
+
+    **DEVIATION (decision 71, work order 169): the OFFICER.LBX button
+    art is not drawn.** Work order 167 drew the original's own pictures
+    here; decision 71 puts every screen in the HUD style, and a button
+    is the HUD's block. The art is still extracted and still used for
+    the portraits, the skill icons and the map box. Where the button
+    sits and what it sends are unchanged — its native rectangle, its
+    field."""
     layout = screen.layout
     x, y = at or geom.BUTTONS[name][0]
     w, h = geom.BUTTON_SIZE[name]
     r = rect(layout, (x, y, x + w - 1, y + h - 1))
-    art_name = geom.DULL.get(name) if dull else geom.BUTTONS[name][3]
-    sprite = None
-    if art is not None and art.available and art_name:
-        sprite = art.sprite(art_name, 0 if dull else frame)
-    if sprite is not None:
-        surface.blit(stretched(sprite, r), r.topleft)
-        return r
-    screen.style.draw_plate(surface, r, layout.scale, BOX_OUTLINE)
-    colour = TEXT_FALLBACK["selected" if frame else "normal"]
+    state = "disabled" if dull else ("active" if frame else "normal")
+    hud.small_button(surface, r, layout.scale, state)
+    colour = hudtext.colour("button")
     if dull:
-        colour = tuple(c // 2 for c in TEXT_FALLBACK["normal"])
+        colour = tuple(c // 2 for c in colour)
     blit_text(surface, screen.style, BUTTON_WORDS[name], r.centerx,
               r.y + (r.h - font_px(layout, "button")) // 2, r.w - 4,
               font_px(layout, "button"), colour, "center")

@@ -186,7 +186,7 @@ for _hf_root, _hf_dirs, _hf_files in os.walk(SCREENS_DIR):
 # on it that stops loading its frame fails until it is taken off. The
 # order's last commit leaves it empty.
 _HF_PENDING = set()
-_HF_BG_PENDING = {"leaders", "research_select", "research_change"}
+_HF_BG_PENDING = set()
 from core.screen_base import ScreenBase
 _hf_now = {os.path.basename(os.path.dirname(_p)) for _p in _hf_loaders}
 assert _hf_now == _HF_PENDING, (
@@ -199,12 +199,9 @@ for _hf_name in sorted(d.screens):
     _hf_scr = d.screens[_hf_name]
     if _hf_scr.IS_OVERLAY or not hasattr(_hf_scr, "_render_background"):
         continue
-    if type(_hf_scr)._render_background is not \
-            ScreenBase._render_background:
-        # Its own background — the same shrinking list as above.
-        assert _hf_name in _HF_BG_PENDING, (
-            f"{_hf_name} draws its own background instead of the slot")
-        continue
+    # A screen may override `_render_background` (the research panel
+    # does, for its overlay mode); what it draws WITHOUT a picture is
+    # what is asserted, by drawing it.
     _hf_scr._screen_dir = os.path.join(SCREENS_DIR, _hf_name)
     _hf_scr._load_background()
     _hf_surf = pygame.Surface((1920, 1080))

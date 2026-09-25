@@ -135,11 +135,6 @@ class LeadersScreen(ScreenBase):
 
     # ── Drawing ───────────────────────────────────────────
 
-    def _render_background(self, surface):
-        """Black, where the original's full-screen art would be — the
-        work order's "no outer frame"."""
-        surface.fill((0, 0, 0))
-
     def render(self, surface):
         self._render_background(surface)
         art, view = self._art, self._view
