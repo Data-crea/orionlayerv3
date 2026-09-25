@@ -42,6 +42,12 @@ hand and have no hole to derive from. **A regenerator keeps what it
 did not create**: `--write` preserves every non-cutout box verbatim
 and reports how many it kept.
 
+**SUPERSEDED FOR THE GALAXY MAP — 25 September 2026, decision 71.** No
+frame image is drawn there any more; the map, the sidebar and the nav
+boxes are measured off the HUD image (`tools/hud_measure.py`), and the
+`frame_holes` chain describes a picture nobody sees. The tool stays for
+the frames that are still in the tree.
+
 **4. Pannable image boxes** store their zoom and crop in `boxes.json`
 like any other box property.
 
@@ -139,6 +145,11 @@ either — Custom Race's message box is two boxes and a render call.
 
 **12. Frame variants only** — no runtime tile swapping.
 
+**SUPERSEDED — 25 September 2026, decision 71.** No frame and no frame
+variant is drawn; the pre-game screens' 9-slice frame gives way to the
+HUD title plate and buttons. The "no runtime tile swapping" half has
+nothing left to govern.
+
 **70. 3840x2160 is the source canvas for a new or replaced frame
 image.** 20 September 2026, Data's decision on work order 151.
 Numbered 70 after checking at the commit that carries it: the highest
@@ -148,6 +159,10 @@ authored and filed at 3840x2160. The frames already here keep their
 own size until something replaces them — this is not a migration
 order, and re-exporting an existing frame to satisfy it would resample
 art for nothing.
+
+**SUPERSEDED — 25 September 2026, decision 71.** No frame image is
+drawn, so no new one is authored. The HUD image is the source of the
+pieces cut out of it, not a frame, and is kept at the size Data made it.
 
 **Why that number, and not "large enough".**
 `core/screen_base._scale_frame` smoothscales the frame image ONCE onto
@@ -194,6 +209,11 @@ made it the third copy. **A screen that renders panel skins
 selectively must match on *both* names**; matching on `inner_panel`
 alone is how a converted box silently stops being drawn, which is
 what nearly happened to Select Race.
+
+**SUPERSEDED IN APPEARANCE — 25 September 2026, decision 71.** Both
+skin names stay, so no `boxes.json` changes, and both draw the HUD panel
+block (`core/hud`). What 34 protected — the appearance has one home and a
+screen never draws a border itself — is exactly what 71 keeps.
 
 **57. The colony list wears Data's palette: striped rows, a filled
 scanned row, and no hover colour.** 13 September 2026, briefs 95 and
@@ -287,6 +307,11 @@ and refuses a second home. The line this adds: **a skin that only a
 there.**
 
 **13. Frame-button clicks are handled in `ScreenBase.handle_click`.**
+
+**AMENDED — 25 September 2026, decision 71.** The two frame buttons are
+HUD slanted buttons now. Their clicks are still handled here, and the
+rect they are drawn in and the rect that is hit come from one function
+(`ScreenBase.hud_frame_button_rect`), decision 5.
 
 ### Data and resources
 
