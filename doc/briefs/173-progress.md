@@ -237,3 +237,62 @@ first, plus the commit that carries this document:
 Nothing force-pushed, no history rewritten. orion2re stays local: only
 this repository is pushed (the suite holds that no orion2re source file is
 tracked here).
+
+## Push — DONE, 25 September 2026
+
+Gates right before it: full suite 314 green; a fresh clone with
+`python tools/setup.py` 314 green; working tree clean at `4ab6fce`. The
+pre-push hook ran the full suite once more: 314 green.
+
+    git push origin main colony-free-bands rescue/ties-abend
+       9896b34..4ab6fce  main -> main
+     * [new branch]      colony-free-bands -> colony-free-bands
+     * [new branch]      rescue/ties-abend -> rescue/ties-abend
+
+**Pushed range:** `9896b34..4ab6fce` on `main` (33 commits: the 32
+listed above and `4ab6fce`, which carries the list). **Remote state
+after it** (`git ls-remote origin`), identical to the local refs:
+
+    4ab6fceb4d421a066e21574c03d4b518e82d9c84  HEAD
+    4ab6fceb4d421a066e21574c03d4b518e82d9c84  refs/heads/main
+    a24f7617e03c2b137f9f42a0fb2a6a5336a28350  refs/heads/colony-free-bands
+    0907b632437a81bf2c3a5d5536e9490a9f36a3ad  refs/heads/rescue/ties-abend
+
+No tags on either side. **This record is itself one more commit**, which
+cannot name its own hash: it went out in a second push under the same
+gates, and `main` local and remote are the same commit after it
+(the final report states that hash).
+
+## What was built
+
+- Data's universal background behind every HD screen and popup, cover-
+  scaled at every window size, one shared copy per size, never tinted;
+  the galaxy map's floor; the Main Menu keeps its title art.
+- Text groups whose words stood on the picture take the panel fill
+  (`"fill": true`), measured; every word on the bare picture >= 3.48:1.
+- The player's mod folder outside the tree (decision 72): backgrounds,
+  HUD pieces, a partial style.json, the default frame colour and 136
+  more pictures by name; broken files fall back; a settings row
+  switches it off; `tools/mod_template.py` with a plain-language guide
+  and never a MOO2 file.
+- `tools/background_measure.py`; checks 307 -> 314; the push.
+
+## What was parked
+
+P1 where the folder lives (outside the tree; `user_settings.json` stays
+in it), P2 the universal picture as the galaxy floor, P3 one folder
+rather than several, P4 the Main Menu keeping its art, P5 the panel
+fill on Select Race's and Custom Race's groups, P6 a 3840x2160 source
+for crisp stars, P7 the live part.
+
+## What Data should look at first
+
+1. `contact_sheet_1920x1080.png` — every screen on the new background.
+2. `galaxy_floor_before_map_background.png` against
+   `galaxy_floor_after_universal.png` (P2), and the galaxy map at
+   2576x1432 in `screens/`.
+3. `demo_mod_galaxy_map_*.png` and `demo_mod_colony_summary_*.png` —
+   then run `python tools/mod_template.py` and read the `MODDING.md` it
+   writes as somebody who is not a developer would.
+4. Select Race at 2160p (`screens/select_race_3840x2160_offline.png`) —
+   the filled groups (P5).
