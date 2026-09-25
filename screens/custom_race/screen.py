@@ -11,6 +11,8 @@ Layout (three inner panels + bottom bars):
 import logging
 import time
 import pygame
+
+from core.hud import blocks as hud
 from core.screen_base import ScreenBase
 from screens.custom_race.renderer import (
     render_race_picks_panel, render_specials_panel,
@@ -332,10 +334,14 @@ class CustomRaceScreen(ScreenBase):
         sx, sy = L.pos(rx, ry)
         sw, sh = L.size(rw, rh)
 
-        if self._bar_img:
-            scaled = pygame.transform.smoothscale(self._bar_img,
-                                                  (sw, sh))
-            surface.blit(scaled, (sx, sy))
+        # TWO HUD PANELS, one per half, since decision 71 (work order
+        # 169): the metal bar image (picks_score_bar.png, still in the
+        # tree) was the cockpit look and is not drawn.
+        half = sw // 2
+        gap = max(2, int(8 * L.scale))
+        for x0 in (sx, sx + half + gap // 2):
+            hud.panel(surface, pygame.Rect(x0, sy, half - gap // 2, sh),
+                      L.scale)
 
         from screens.custom_race.renderer import (
             COL_LABEL, COL_VALUE_POS, COL_VALUE_NEG)
