@@ -9,6 +9,8 @@ import logging
 
 import pygame
 
+from core.hud import blocks as hud
+
 from core import listgrid, palette
 from screens.colony_summary import colonyinset, colonyplanets
 from screens.galaxy_map.renderer import OWNER_COLORS
@@ -67,10 +69,12 @@ def window(screen, name):
 
 
 def fill_panels(screen, surface):
+    """Every window is a HUD panel since decision 71 (work order 169) —
+    the frame image that framed them is not drawn."""
     for name in PANELS:
         rect = window(screen, name)
         if rect:
-            surface.fill(tuple(PANEL_BG)[:3], rect)
+            hud.panel(surface, rect, screen.layout.scale)
     inset = window(screen, "galaxy_inset")
     if inset:
         # BLACK, and here that is a transcription: this screen leaves
@@ -123,6 +127,7 @@ def render_list(screen, surface, rows, cells, first, hover_index,
         row_a, row_b, row_sel)
     listgrid.draw_cell_plates(surface, bands, cols, (), screen.style, scale,
                               plate)
+    hud.table_header(surface, header, scale)
     listgrid.draw_headings(surface, header, cols,
                            screen._data.get("headings", {}), screen.style,
                            screen.layout.font_size(cfg.get("upper_font", 22)),
@@ -194,20 +199,17 @@ def render_scroll(screen, surface, total, first, visible):
     rect = window(screen, "scroll")
     if not rect:
         return
-    screen.style.draw_plate(surface, rect, screen.layout.scale, OUTLINE)
     arrow = rect.width
+    # The track and thumb are the HUD scrollbar (decision 71); the two
+    # arrow squares stay the original's controls, drawn as before.
+    hud.scrollbar(surface, rect.inflate(0, -2 * arrow), screen.layout.scale,
+                  first, visible, total)
     for top, rect_y in ((True, rect.y), (False, rect.bottom - arrow)):
         cx, h = rect.centerx, arrow // 3
         cy = rect_y + arrow // 2
         pts = ([(cx, cy - h), (cx - h, cy + h), (cx + h, cy + h)] if top
                else [(cx, cy + h), (cx - h, cy - h), (cx + h, cy - h)])
         pygame.draw.polygon(surface, tuple(CONTROL_TEXT)[:3], pts)
-    track = rect.inflate(-rect.width // 2, -2 * arrow)
-    if total > visible and track.height > 0:
-        th = max(track.width, track.height * visible // total)
-        ty = track.y + (track.height - th) * first // max(1, total - visible)
-        surface.fill(tuple(CONTROL_ACTIVE)[:3],
-                     pygame.Rect(track.x, ty, track.width, th))
 
 
 def scroll_arrows(screen):
@@ -225,11 +227,18 @@ def render_control(screen, surface, name, label, active=False, enabled=True,
     rect = window(screen, name)
     if not rect or not label:
         return
+    # The HUD's small button (decision 71): active, hover, disabled and
+    # normal are the block's four states; the word is drawn below as
+    # before, in its enabled or disabled colour.
     if active:
-        surface.fill(tuple(CONTROL_ACTIVE)[:3], rect)
-    elif enabled and mouse is not None and rect.collidepoint(mouse):
-        surface.fill(tuple(CONTROL_HOVER)[:3], rect)
-    screen.style.draw_plate(surface, rect, screen.layout.scale, OUTLINE)
+        state = "active"
+    elif not enabled:
+        state = "disabled"
+    elif mouse is not None and rect.collidepoint(mouse):
+        state = "hover"
+    else:
+        state = "normal"
+    hud.small_button(surface, rect, screen.layout.scale, state)
     size = screen.layout.font_size(_font(screen, name, 19))
     surf = _text(screen.style, label, size,
                  CONTROL_TEXT if enabled else CONTROL_DISABLED,

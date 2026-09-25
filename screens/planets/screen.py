@@ -77,8 +77,7 @@ class PlanetsScreen(ScreenBase):
         # MOX::_scanned_field = -1 on entry (plntsum.cpp:1945).
         self._first, self._hover = 0, None
         self._selected = self._scanned = None
-        self._load_frame(
-            self._data.get("frame", {}).get("image", "frame.png"))
+        # No frame image since decision 71: `_load_frame` is not called.
         self.update(game_state)
         self._push_sort_key()
 
@@ -93,7 +92,6 @@ class PlanetsScreen(ScreenBase):
 
     def on_resize(self):
         super().on_resize()
-        self._scale_frame()
 
     def _push_sort_key(self):
         """Impose the HD sort key on the game once, on entry — the colony
