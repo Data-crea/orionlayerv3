@@ -351,7 +351,9 @@ def small_button(surface, rect, scale, state="normal", label="",
             lambda w, h: raster.chamfered(w, h, ch), rect.w, rect.h,
             fill=fill, edge=edge,
             edge_w=_px(st.get("button.edge_width"), scale),
-            glow=edge, glow_w=_px(st.get("panel.glow_width"), scale) * 0.5,
+            # NO OUTER GLOW: a small button sits inside a panel and draws
+            # inside its own rect, nothing past it — which is what the
+            # research EXIT button's check holds it to.
             inner=st.colour("panel.fill_edge"),
             inner_w=_px(st.get("panel.inner_glow"), scale) * 0.4,
             ss=int(st.get("supersample")))

@@ -24,6 +24,8 @@ thing available. DEVIATION, in each screen's marked list.
 """
 import pygame
 
+from core.hud import blocks as hud
+
 from core import palette
 from core import researchband
 from core import researchlist
@@ -97,7 +99,10 @@ def col(key, default):
 #: inside its box, which is the floor the margin cannot fall through.
 BOX_MARGIN = 2
 
-BOX_FILL = palette.col("colony_summary", "panel_background", (8, 14, 23))
+#: The box's fill is the HUD panel's since decision 71 (work order 169):
+#: `draw_box` draws a HUD panel, and what lies inside it is this.
+from core.hud import style as _hudstyle
+BOX_FILL = _hudstyle.get().colour("panel.fill")
 BOX_OUTLINE = palette.col("panel", "thin_border", (55, 65, 85))
 
 
@@ -110,8 +115,9 @@ def draw_box(surface, layout, style, native_rect):
     is the tree's own panel look. DEVIATION, `inner_boxes_drawn`.
     """
     rect = pygame.Rect(*geom_mod.window_rect(native_rect, layout))
-    surface.fill(tuple(BOX_FILL)[:3], rect)
-    style.draw_plate(surface, rect, layout.scale, BOX_OUTLINE)
+    # A HUD PANEL since decision 71 (work order 169): the tree's panel
+    # look is the HUD's now, and this box is still that look.
+    hud.panel(surface, rect, layout.scale)
     return rect
 
 
@@ -197,9 +203,9 @@ def draw_exit(surface, layout, style, native_rect, label, pressed=False):
     labels carry, and marked the same way.
     """
     box = pygame.Rect(*geom_mod.window_rect(native_rect, layout))
-    surface.fill(col("exit_fill", (20, 26, 42)), box)
-    pygame.draw.rect(surface, col("exit_border", (108, 140, 200)), box,
-                     max(1, box.height // 12))
+    # The HUD's small button (decision 71), lit while pressed.
+    hud.small_button(surface, box, layout.scale,
+                     "active" if pressed else "normal")
     if not label:
         return box
     size = _fit(style, label, int(box.width * 0.8),

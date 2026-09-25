@@ -44,6 +44,7 @@ import pygame
 
 from core import billtext, research, researchlist, researchnative
 from core import researchframe, researchpanel, researchstate
+from core.hud import blocks as hud
 from core import researchtechlist
 from core import technames
 from core.researchstate import (      # noqa: F401  (re-exported)
@@ -433,10 +434,14 @@ class ResearchPanelScreen(ResearchPopupsMixin, ScreenBase):
         # (`core/frame.py`: "drawn as an overlay (last) so content
         # renders underneath"). Its centre is transparent, so it covers
         # nothing but the corners it is made of.
-        researchframe.for_app(self.app).render(
-            surface,
-            researchnative.window_rect(self.geom.panel_rect, self.layout),
-            self.layout.scale)
+        #
+        # SINCE DECISION 71 (work order 169) the frame is the HUD popup's
+        # lit EDGE — a panel with no fill, so the panel's own content
+        # stays visible — and not the nine-slice cut from the Fleets
+        # artwork (`researchframe`, kept in the tree, no longer drawn).
+        hud.panel(surface, pygame.Rect(*researchnative.window_rect(
+            self.geom.panel_rect, self.layout)), self.layout.scale,
+            lit=True, filled=False)
 
     def cost_text(self, entry):
         """The "N RP" string for one entry, as the original builds it.

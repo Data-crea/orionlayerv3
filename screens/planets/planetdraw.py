@@ -29,7 +29,10 @@ CONTROL_ACTIVE = palette.require("planets", "control_active")
 CONTROL_HOVER = palette.require("planets", "control_hover")
 CONTROL_DISABLED = palette.require("planets", "control_disabled_text")
 HEADING_TEXT = palette.require("planets", "heading_text")
-PANEL_BG = palette.require("colony_summary", "panel_background")
+#: The HUD panel's fill since decision 71 (work order 169): every window
+#: of this screen is a HUD panel, and the research boxes share it.
+from core.hud import style as _hudstyle
+PANEL_BG = _hudstyle.get().colour("panel.fill")
 INSET_FILL = palette.require("colony_summary", "galaxy_inset_fill")
 OUTLINE = palette.col("panel", "thin_border", (55, 65, 85))
 
