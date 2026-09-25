@@ -44,6 +44,7 @@ from screens.colony_summary import colonyrows
 
 from . import fltart
 from . import fltdraw
+from . import flthud
 from . import fltbox, fltmove, fltpanel, fltgeom, fltrows, fltscan
 from . import fltwire
 
@@ -108,13 +109,11 @@ class FleetsScreen(ScreenBase):
         self._hover_cell = None
         self._scan.clear()
         self._scan_star = -1
-        self._load_frame(
-            self._data.get("frame", {}).get("image", "frame.png"))
+        # No frame image since decision 71: `_load_frame` is not called.
         self.update(game_state)
 
     def on_resize(self):
         super().on_resize()
-        self._scale_frame()
 
     def update(self, game_state=None):
         """Read the snapshot, validate it, and keep only what survived.
@@ -321,6 +320,8 @@ class FleetsScreen(ScreenBase):
     def render(self, surface):
         self._render_background(surface)
         self._fill_hints()
+        flthud.draw_hud(surface, self, self.enabled_buttons(),
+                        self._filter_state())
         fltdraw.fill_inset(surface, self)
         for box in self.boxes:
             box.render(surface, self.layout, self.style)

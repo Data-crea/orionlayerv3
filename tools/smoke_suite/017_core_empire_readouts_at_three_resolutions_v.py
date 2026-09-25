@@ -57,6 +57,10 @@ _MARKED = {
     "screens/game_menu/gmframe.py": "HD DEVIATION",
     "screens/game_menu/gmdraw.py": "HD DEVIATION",
     "screens/galaxy_map/renderer.py": "HD EXTENSION B1",
+    # ADDED 25 September 2026, work order 169 / decision 71: the Fleets
+    # control words in the HUD's button colour (DEVIATION). Its own
+    # check is "Fleets in the HUD style" in the fleets group.
+    "screens/fleets/fltdraw.py": "DEVIATION (decision 71",
     "core/helppopup.py": "the panel auto-sizes to its text",
     "core/zoomtables.py": "INSET_DOT_DIM",
     "screens/colony_summary/colonybuild.py": "Buy",

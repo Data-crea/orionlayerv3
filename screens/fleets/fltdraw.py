@@ -21,6 +21,9 @@ the row it is itself showing. `layout.json` `scroll._hd_note`.
 """
 import pygame
 
+from core.hud import blocks as hud
+from core.hud import text as hudtext
+
 from core import palette
 
 from screens.galaxy_map import maplines
@@ -143,6 +146,9 @@ def draw_slots(surface, screen):
         # outlines, the inner one offset by the hole bleed. The FILL
         # stays — it is the backdrop the plate sits on, not a border.
         pygame.draw.rect(surface, fill, slot)
+        # The HUD outline round each slot (decision 71): the frame that
+        # bordered the holes is not drawn any more.
+        hud.outline(surface, slot, screen.layout.scale)
     _ = edge, width
 
 
@@ -266,25 +272,28 @@ def draw_labels(surface, screen, words, enabled=None, art=None,
         if rect is None or not text:
             continue
         live = enabled is None or name in enabled
-        on = bool((filters or {}).get(name))
-        if on:
-            # **THE ORIGINAL'S RADIO FACE IS NOT DRAWN ANY MORE**, and
-            # this is the fix for the doubled label work order 146 part
-            # 3 asked about. FLEET.LBX 9 and 10 are whole BUTTONS: a
-            # border, a lit blue field and the words "Support" and
-            # "Combat" baked into the pixels. Blitting one and then
-            # drawing HD's own label on top printed the word twice,
-            # offset, and the v4 hole is narrower than the art so the
-            # baked word overflowed the blue field as well.
-            #
-            # Under v4 the FRAME is the border, so a whole button blitted
-            # inside a hole is the wrong shape twice over. The state is
-            # the lit field, which is what the face's frame 1 is for;
-            # the word stays HD's, in HD's font, at HD's size.
-            fill = content_rect(screen, name) or rect
-            surface.fill(col("radio_on"), fill)
+        # SINCE DECISION 71 THE LIT STATE IS THE HUD BUTTON'S
+        # "active" (`draw_hud`); this fill is not drawn. The history
+        # below stays because it says why the LBX face is not used.
+        #
+        # **THE ORIGINAL'S RADIO FACE IS NOT DRAWN ANY MORE**, and
+        # this is the fix for the doubled label work order 146 part
+        # 3 asked about. FLEET.LBX 9 and 10 are whole BUTTONS: a
+        # border, a lit blue field and the words "Support" and
+        # "Combat" baked into the pixels. Blitting one and then
+        # drawing HD's own label on top printed the word twice,
+        # offset, and the v4 hole is narrower than the art so the
+        # baked word overflowed the blue field as well.
+        #
+        # Under v4 the FRAME is the border, so a whole button blitted
+        # inside a hole is the wrong shape twice over. The state is
+        # the lit field, which is what the face's frame 1 is for;
+        # the word stays HD's, in HD's font, at HD's size.
+        # DEVIATION (decision 71, work order 169): a live word is the
+        # HUD's measured button colour, as every HUD button's is; the
+        # palette's `label` stays in the skin. Dim is still the dim.
         _centred(surface, screen, rect, text,
-                 col("label") if live else col("label_dim"))
+                 hudtext.colour("button") if live else col("label_dim"))
 
 
 def _centred(surface, screen, rect, text, color, share=0.52):

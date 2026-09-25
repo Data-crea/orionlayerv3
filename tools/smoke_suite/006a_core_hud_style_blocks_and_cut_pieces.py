@@ -185,7 +185,7 @@ for _hf_root, _hf_dirs, _hf_files in os.walk(SCREENS_DIR):
 # not yet converted are named here, and the list may only shrink: a screen
 # on it that stops loading its frame fails until it is taken off. The
 # order's last commit leaves it empty.
-_HF_PENDING = {"fleets"}
+_HF_PENDING = set()
 _HF_BG_PENDING = {"leaders", "research_select", "research_change"}
 from core.screen_base import ScreenBase
 _hf_now = {os.path.basename(os.path.dirname(_p)) for _p in _hf_loaders}
