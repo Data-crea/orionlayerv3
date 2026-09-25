@@ -45,6 +45,7 @@ import logging
 
 import pygame
 
+from core import backgrounds
 from core import mapcoords as mc
 from core import mouse as mouse_input
 from core import palette
@@ -117,8 +118,7 @@ class GalaxyMapScreen(ScreenBase):
         self._tints = ship_icons.TintCache()
         self._wormholes = rnd.WormholeLayer()
         self._local = None
-        self._map_bg = None         # gas clouds behind the map
-        self._map_bg_scaled = None  # cover-scaled + cropped to map_area
+        self._map_bg_scaled = None  # the floor: the screen's background
         self._starfield = sf.StarfieldLayer()
         self._ping = home_ping.HomePing()
         self._viewctl = viewctl.ViewControl()   # decoupled HD viewport
@@ -266,13 +266,13 @@ class GalaxyMapScreen(ScreenBase):
         self._sprite_key_loaded = want_key
 
     def _load_map_background(self):
-        """Star field artwork drawn under stars, nebulas and fleets.
-        Cover-scaled and centre-cropped to the map_area box, so the
-        map keeps its aspect and the artwork is never distorted."""
-        cfg = self._data.get("frame", {})
-        path = self.asset_path("assets",
-                               cfg.get("map_background", "map_background.png"))
-        self._map_bg = pygame.image.load(path).convert() if path else None
+        """THE MAP FLOOR IS THE SCREEN'S BACKGROUND (work order 173):
+        Data's universal picture, or a mod's `backgrounds/galaxy_map.png`
+        (`core.backgrounds`). The floor was `map_background.png`, faint
+        gas that carries no game content — every nebula, wormhole, star,
+        line and fleet the engine reports is drawn OVER the floor, in
+        `_render_map`, so no floor can hide one. The old file stays in
+        the tree, loaded by nothing."""
         self._scale_map_background()
 
     def _scale_map_background(self):
@@ -283,19 +283,10 @@ class GalaxyMapScreen(ScreenBase):
         info panel — the background placeholder showed: the dark strip
         and the black corner of Data's 2576x1432 screenshot. The HUD
         sits on the floor (169, point 5), so the floor is under all of
-        it; the stars stay clipped to the map box."""
-        self._map_bg_scaled = None
-        if self._map_bg is None:
-            return
-        w, h = self.app.win_w, self.app.win_h
-        if w < 1 or h < 1:
-            return
-        iw, ih = self._map_bg.get_size()
-        scale = max(w / iw, h / ih)
-        sw, sh = max(w, int(iw * scale)), max(h, int(ih * scale))
-        scaled = pygame.transform.smoothscale(self._map_bg, (sw, sh))
-        self._map_bg_scaled = scaled.subsurface(
-            ((sw - w) // 2, (sh - h) // 2, w, h)).copy()
+        it; the stars stay clipped to the map box. The copy is
+        `core.backgrounds`' — one per window size, shared."""
+        self._map_bg_scaled = backgrounds.scaled(
+            self.SCREEN_NAME, self.app.win_w, self.app.win_h)
 
     def on_resize(self):
         super().on_resize()
@@ -461,7 +452,9 @@ class GalaxyMapScreen(ScreenBase):
     # ── Rendering ─────────────────────────────────────────
 
     def render(self, surface):
-        self._render_background(surface)
+        # No `_render_background`: the map floor IS the background, over
+        # the whole window (`floorlift.render_floor`), so a second blit of
+        # the same picture would only cost a frame's worth of pixels.
         self._render_map(surface)
         self._render_sidebar(surface)
         self._render_nav(surface)

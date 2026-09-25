@@ -132,6 +132,10 @@ SLOW_TIER = {
         "renders every screen and dialog at six frame colours and New "
         "Game at two box lists, comparing pictures and changed pixels "
         "(work order 172) — about 35 s"),
+    "background_contrast": (1,
+        "renders six screens three ways each to find every word that "
+        "stands on the universal background and measure its contrast "
+        "(work order 173) — about 20 s"),
     "tools_import": (1,
         "starts 49 fresh Python processes, one per runnable tool — the "
         "only expensive check in the suite that renders nothing, 2.0 s"),

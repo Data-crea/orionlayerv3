@@ -365,10 +365,25 @@ _boot_load = main_module.usersettings.load
 main_module.usersettings.load = lambda *_a, **_k: \
     main_module.usersettings.UserSettings(
         path=os.path.join(_boot_dir.name, "user_settings.json"))
+# AND THE PLAYER'S MOD FOLDER (work order 173, decision 72) — the same
+# leak one directory over: `App()` opens it, so the boot is pointed at
+# the scratch directory, which has none, and the state is dropped after,
+# or the Game Settings row would read this boot's switch as the one in
+# force for every later check.
+_boot_env = os.environ.get(main_module.usermod.ENV)
+os.environ[main_module.usermod.ENV] = _boot_dir.name
 try:
     app2 = main_module.App()
 finally:
     main_module.usersettings.load = _boot_load
+    if _boot_env is None:
+        os.environ.pop(main_module.usermod.ENV, None)
+    else:
+        os.environ[main_module.usermod.ENV] = _boot_env
+assert main_module.usermod.started_enabled() is True, \
+    "App() did not open the mod folder"
+assert not main_module.usermod.active(), "the boot found a mod folder"
+main_module.usermod.shutdown()
 assert palette.active_preset() == _boot_pc.ORIGINAL, (
     f"App() booted under preset {palette.active_preset()!r} — the "
     f"player's user_settings.json reached the smoke test")

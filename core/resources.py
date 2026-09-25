@@ -1,7 +1,9 @@
 """Mod-aware resource resolution.
 
 Every file the game loads (assets, JSON data, skins, screens)
-is resolved through this module. Active mods are searched first,
+is resolved through this module. The player's mod folder outside the
+tree comes first (`core/usermod.py`, decision 72 — the route for
+somebody who is not a developer); active mods are searched next,
 in the order listed in settings.json ("active_mods"); the base
 project is the final fallback.
 
@@ -26,6 +28,7 @@ use the module-level helpers or the `res` singleton.
 import os
 import json
 import logging
+from core import usermod
 from core.config import BASE_DIR, MODS_DIR
 
 log = logging.getLogger("resources")
@@ -64,10 +67,15 @@ class Resources:
     # ── Core resolution ──────────────────────────────────
 
     def resolve(self, relpath):
-        """Return the absolute path of relpath, mods first.
+        """Return the absolute path of relpath: the player's mod folder
+        first (`core.usermod`, decision 72), then mods, then the base.
 
         Returns None if the file exists nowhere.
         """
+        default = self._resolve_tree(relpath)
+        return usermod.override(relpath, default) or default
+
+    def _resolve_tree(self, relpath):
         for mod_dir in self.mod_dirs:
             p = os.path.join(mod_dir, relpath)
             if os.path.exists(p):

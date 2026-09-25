@@ -114,6 +114,16 @@ def delta():
 def set_tone(hue_value=None, sat_value=None, bright_value=None):
     """Set all three (None = measured). True if anything changed."""
     global _hue, _sat, _bright
+    h, s, b = normalise(hue_value, sat_value, bright_value)
+    if (h, s, b) == (_hue, _sat, _bright):
+        return False
+    _hue, _sat, _bright = h, s, b
+    return True
+
+
+def normalise(hue_value, sat_value, bright_value):
+    """The three values as `set_tone` keeps them: clamped, and None
+    where a value is the measured one."""
     h = None if hue_value is None else float(hue_value) % 360.0
     if h is not None and abs(h - REFERENCE) < 0.5:
         h = None
@@ -126,10 +136,7 @@ def set_tone(hue_value=None, sat_value=None, bright_value=None):
                                               BRIGHT_RANGE[1])
     if b is not None and abs(b - 1.0) < 0.005:
         b = None
-    if (h, s, b) == (_hue, _sat, _bright):
-        return False
-    _hue, _sat, _bright = h, s, b
-    return True
+    return h, s, b
 
 
 def set_hue(value):

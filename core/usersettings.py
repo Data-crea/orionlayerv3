@@ -52,6 +52,10 @@ DEFAULTS = {
     # reads the same colour it always did.
     "hud_sat": None,
     "hud_bright": None,
+    # The player's mod folder (decision 72): "off" uses the defaults and
+    # leaves the folder as it is. Read at start, so a change needs a
+    # restart (decision 18).
+    "user_mod": "on",
 }
 
 

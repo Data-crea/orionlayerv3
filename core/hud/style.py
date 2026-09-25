@@ -11,7 +11,7 @@ leave yesterday's panels in the cache.
 """
 import logging
 
-from core import resources
+from core import resources, usermod
 from core.hud import tint
 
 log = logging.getLogger("hud")
@@ -105,8 +105,16 @@ def on_change(fn):
 
 def set_tone(hue=None, sat=None, bright=None):
     """Set the frame colour — hue, saturation, brightness; None each for
-    the measured value — and invalidate every cache built for the old
-    one. Applies at once, no restart."""
+    the DEFAULT — and invalidate every cache built for the old one.
+    Applies at once, no restart.
+
+    The default is the measured value, or the mod folder's colour.json
+    where it names one (decision 72): so RESET returns to the mod's
+    colour, and the player's own choice still beats it."""
+    mod = usermod.frame_colour() if usermod.active() else {}
+    hue = mod.get("hue") if hue is None else hue
+    sat = mod.get("saturation") if sat is None else sat
+    bright = mod.get("brightness") if bright is None else bright
     if tint.set_tone(hue, sat, bright):
         for fn in _listeners:
             fn()
@@ -135,6 +143,9 @@ def get():
         if data is None:
             log.error("HUD style %s missing or unreadable — every block "
                       "will fail; run from a complete tree", PATH)
+        else:
+            # The player's partial style.json, key by key (decision 72).
+            data = usermod.style_overrides(data)
         _STYLE = HudStyle(data)
     return _STYLE
 

@@ -94,7 +94,13 @@ def make_app(width, height):
             self.connected = False
             self.client = _Client()
             self.dispatcher = Dispatcher()
-            self.user_settings = {}
+            # The DEFAULTS, as a fresh install has them — a bare dict
+            # answered None for every key and the settings rows drew
+            # blank values (found in work order 173's renders). Never
+            # saved: the path names no file this tool writes.
+            from core import usersettings
+            self.user_settings = usersettings.UserSettings(
+                path=os.devnull)
 
     app = _App()
     register_all(app, app.dispatcher, res)

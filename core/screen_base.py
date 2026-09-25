@@ -6,8 +6,8 @@ Every screen inherits from ScreenBase and implements:
   render()  — draw to surface
   exit()    — cleanup when leaving
 
-Background images are loaded automatically from
-screens/<n>/assets/background.png if the file exists.
+Every screen stands on the background `core.backgrounds` resolves
+for it (work order 173): its own picture, else the universal one.
 """
 import os
 import time
@@ -17,8 +17,8 @@ from core.pressfeedback import Pressed
 from core.box import load_boxes
 from core.config import REF_W, REF_H
 from core.screenhelp import HelpMixin
+from core import backgrounds
 from core.hud import screenframe
-from core.hud import style as hudstyle
 
 # Frame button click feedback
 BTN_FLASH_DURATION = 0.30     # total flash time in seconds
@@ -56,9 +56,6 @@ class ScreenBase(HelpMixin):
         self.boxes = []
         self.active = False
         self._screen_dir = ""
-        self._bg = None          # original background surface
-        self._bg_scaled = None   # scaled to current window size
-        self._bg_pos = (0, 0)
         self._frame = None         # a screen's own fixed frame image
         self._frame_scaled = None  # scaled to the reference area
         self._frame_pos = (0, 0)
@@ -124,8 +121,6 @@ class ScreenBase(HelpMixin):
         self.active = False
         self.boxes = []
         self.help.close()
-        self._bg = None
-        self._bg_scaled = None
 
     def update(self, game_state=None):
         """Per-frame data update. No rendering here."""
@@ -261,55 +256,30 @@ class ScreenBase(HelpMixin):
     # --- Background (automatic for all screens) ---
 
     def _load_background(self):
-        """The screen's BACKGROUND SLOT — decision 71.
-
-        One picture per screen, `screens/<name>/assets/background.png`,
-        resolved through the resource roots (mods first, decision 16), so
-        Data's backgrounds drop in as files and a mod can replace one.
-        Until a screen has one it draws the plain dark placeholder
-        (`chosen.background_placeholder` in the HUD style).
+        """The screen's BACKGROUND SLOT — decision 71, filled by work
+        order 173: `core.backgrounds` resolves the picture (the screen's
+        own, else Data's universal one, else the placeholder; the mod
+        folder's file of the same name first, decision 72) and keeps one
+        cover-scaled copy per window size for every screen that shares
+        it. Nothing is held here that a resize could leave stale.
 
         The shared cockpit texture used to be the fallback here. It was
         part of the cockpit look decision 71 replaces, so it is no longer
         drawn behind a screen; the file stays in the tree.
         """
-        path = self.asset_path("assets", "background.png")
-        if path:
-            self._bg = pygame.image.load(path).convert_alpha()
-            self._scale_background()
-        else:
-            self._bg = None
-            self._bg_scaled = None
 
     def _scale_background(self):
-        """Scale background to cover the entire window."""
-        if self._bg is None:
-            return
+        """Nothing to do: `core.backgrounds` scales per window size."""
 
-        win_w = self.app.win_w
-        win_h = self.app.win_h
-        img_w = self._bg.get_width()
-        img_h = self._bg.get_height()
-
-        # Scale to cover (crop edges if aspect ratio differs)
-        scale = max(win_w / img_w, win_h / img_h)
-        new_w = max(win_w, int(img_w * scale))
-        new_h = max(win_h, int(img_h * scale))
-
-        scaled = pygame.transform.smoothscale(self._bg, (new_w, new_h))
-
-        # Center crop
-        x = (new_w - win_w) // 2
-        y = (new_h - win_h) // 2
-        self._bg_scaled = scaled.subsurface((x, y, win_w, win_h)).copy()
-        self._bg_pos = (0, 0)
+    @property
+    def _bg_scaled(self):
+        """The background at the window's size (a popup's `backdrop`)."""
+        return backgrounds.scaled(self.SCREEN_NAME, self.app.win_w,
+                                  self.app.win_h)
 
     def _render_background(self, surface):
         """The background slot's picture, or the dark placeholder."""
-        if self._bg_scaled:
-            surface.blit(self._bg_scaled, self._bg_pos)
-        else:
-            surface.fill(hudstyle.get().colour("background_placeholder"))
+        backgrounds.draw(surface, self.SCREEN_NAME)
 
     # --- Fixed frame image (screens that wear one PNG over their content) ---
     #

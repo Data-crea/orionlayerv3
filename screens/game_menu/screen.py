@@ -128,8 +128,6 @@ class GameMenuScreen(ScreenBase):
 
     def _load_background(self):
         """An overlay draws no background: the map stays underneath."""
-        self._bg = None
-        self._bg_scaled = None
 
     @staticmethod
     def _initial_flags(game_state):

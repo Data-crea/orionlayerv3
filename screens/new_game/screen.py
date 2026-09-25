@@ -23,8 +23,7 @@ Input routing:
 import pygame
 
 from core.hud import blocks as hud
-from core.hud import style as hudstyle
-from core import palette
+from core import backgrounds, palette
 from core.screen_base import ScreenBase
 
 TOGGLE_LABEL_COLOR = palette.col("new_game", "toggle_label", (160, 180, 210))
@@ -221,8 +220,10 @@ class NewGameScreen(ScreenBase):
         # pictures with its holes — a frame in all but name — so it is
         # no longer drawn; it is still LOADED, because its cover-scale is
         # what `_hd_to_screen` maps the slots through. The screen draws
-        # the placeholder background, and each picture on a HUD panel.
-        surface.fill(hudstyle.get().colour("background_placeholder"))
+        # the universal background (work order 173; the cutout is a
+        # geometry template, not a picture), and each picture on a HUD
+        # panel.
+        backgrounds.draw(surface, self.SCREEN_NAME)
         if not self._bg_screen:
             return
         slots = self._cfg.get("setting_slots", {})

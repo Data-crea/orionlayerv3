@@ -5,7 +5,7 @@ import logging
 import pygame
 from core.config import (load_settings, TARGET_FPS, SCREENS_DIR,
                          build_line)
-from core import resources, palette, usersettings
+from core import resources, palette, usermod, usersettings
 from core import cursor as cursor_gfx
 from core import mouse as mouse_input
 from core.layout import Layout
@@ -46,6 +46,10 @@ class App:
         # colour preset is applied by palette.init, and every screen
         # binds its colours at import (decision 18, fundament 63).
         self.user_settings = usersettings.load()
+        # The player's mod folder (HD EXTENSION, decision 72), before
+        # anything is loaded through the resolver: skin colours, the HUD
+        # style, the frame colour and every picture below come through it.
+        usermod.init(self.user_settings.get("user_mod") != "off")
 
         # Skin colors (per-screen palettes resolve at screen import)
         skin = self.settings.get("skin", "default")

@@ -5,8 +5,11 @@ Below the thirteen engine rows, five row heights: a divider, the
 the switch for the monster values in the Planets panel — and since work
 order 170 a sixth, the HUD FRAME COLOUR: a hue bar and RESET (HD
 EXTENSION, `core/hud/tint.py`), applied at once and saved with the
-rest; the divider became a thin band so the box did not grow. MOO2 has none
-of the three; the game knows nothing about these rows.
+rest; the divider became a thin band so the box did not grow. Since
+work order 173 an eighth band, the MOD FOLDER switch (HD EXTENSION,
+decision 72, `core/usermod.py`): on or off, applied at the next start
+like the preset. MOO2 has none of them; the game knows nothing about
+these rows.
 
 **TWO STATE SOURCES, NEVER MERGED.** The thirteen engine checkboxes
 keep their local copy seeded from `s_settings` (`screen.flags`). These
@@ -29,17 +32,17 @@ nothing when nothing changed.
 """
 import pygame
 
-from core import palette, playercolors, usersettings
+from core import palette, playercolors, usermod, usersettings
 from core.hud import style as hudstyle
 from core.hud import tint
 
 BANDS = ("divider", "heading", "floor", "colours", "monsters", "frame",
-         "tone")
+         "tone", "mods")
 
 #: Each band's share of the box. The divider is a line, so since work
 #: order 170 it takes a third of a row and the frame-colour row fits in
 #: the same box: nothing below it (ACCEPT, the body's edge) moves.
-WEIGHTS = (1 / 3, 1, 1, 1, 1, 1, 1)
+WEIGHTS = (1 / 3, 1, 1, 1, 1, 1, 1, 1)
 
 COL_DIVIDER = palette.require("game_menu", "orionlayer_divider")
 COL_HEADING = palette.require("game_menu", "orionlayer_heading")
@@ -51,6 +54,9 @@ FLOOR_STEPS = ("off", "light", "haze")
 
 #: The monster values switch (screens/planets/monsterpanel), default on.
 MONSTER_STEPS = ("on", "off")
+
+#: The mod folder switch (work order 173, decision 72), default on.
+MOD_STEPS = ("on", "off")
 
 
 def _settings(screen):
@@ -129,19 +135,25 @@ def set_tone(screen, hue=..., sat=..., bright=...):
     style's caches are rebuilt for the new colour on the next draw.
     An argument left out keeps its current value; None is the measured
     one. Stored as hud_hue / hud_sat / hud_bright (work orders 170, 171);
-    a file with hud_hue alone reads the other two as measured."""
-    h = tint.hue() if hue is ... else hue
-    s = tint._sat if sat is ... else sat
-    b = tint._bright if bright is ... else bright
-    hudstyle.set_tone(h, s, b)
+    a file with hud_hue alone reads the other two as measured.
+
+    What is stored is the PLAYER'S value, not the colour in force: a
+    None stays None, so the mod folder's colour.json (decision 72) keeps
+    filling it — and switching the mod off does not leave its colour
+    behind in the player's file."""
     settings = _settings(screen)
+    now = ((settings.get("hud_hue"), settings.get("hud_sat"),
+            settings.get("hud_bright")) if settings is not None
+           else (tint.hue(), tint._sat, tint._bright))
+    h = now[0] if hue is ... else hue
+    s = now[1] if sat is ... else sat
+    b = now[2] if bright is ... else bright
+    hudstyle.set_tone(h, s, b)
     if settings is not None:
-        settings.set("hud_hue", None if tint.hue() is None
-                     else int(round(tint.hue())))
-        settings.set("hud_sat", None if tint._sat is None
-                     else round(tint._sat, 2))
-        settings.set("hud_bright", None if tint._bright is None
-                     else round(tint._bright, 2))
+        h, s, b = tint.normalise(h, s, b)
+        settings.set("hud_hue", None if h is None else int(round(h)))
+        settings.set("hud_sat", None if s is None else round(s, 2))
+        settings.set("hud_bright", None if b is None else round(b, 2))
 
 
 def set_hue(screen, value):
@@ -155,7 +167,12 @@ def selected(screen, key):
 
 
 def restart_pending(screen):
-    return selected(screen, "player_colors") != palette.active_preset()
+    """The colour preset and the mod folder are read at start: the note
+    shows while either saved choice differs from the one in force."""
+    started = usermod.started_enabled()
+    return (selected(screen, "player_colors") != palette.active_preset()
+            or (started is not None
+                and (selected(screen, "user_mod") != "off") != started))
 
 
 def _cycle(settings, key, steps):
@@ -182,6 +199,8 @@ def handle_click(screen, x, y):
                tuple(playercolors.names(screen.app.colors)))
     elif geo["monsters"].collidepoint(x, y):
         _cycle(settings, "monster_values", MONSTER_STEPS)
+    elif geo["mods"].collidepoint(x, y):
+        _cycle(settings, "user_mod", MOD_STEPS)
     elif geo["hue_reset"].collidepoint(x, y):
         set_tone(screen, None, None, None)
     elif geo["sat_bar"].inflate(0, geo["tone"].h - geo["sat_bar"].h) \
@@ -259,6 +278,24 @@ def render(screen, surface):
           size, COL_OPTION, mon.x + vx, mon)
 
     _render_frame_row(screen, surface, geo, words, size, lx)
+    _render_mod_row(screen, surface, geo["mods"], words, size, lx, vx)
+
+
+def _render_mod_row(screen, surface, row, words, size, lx, vx):
+    """The mod folder switch; with it on, how many of the folder's
+    files are in use, so a player can see the folder was found."""
+    _text(screen, surface, words.get("mods", "Mod folder"), size,
+          COL_OPTION, lx, row)
+    value = selected(screen, "user_mod")
+    shown = value if value in MOD_STEPS else MOD_STEPS[0]
+    img = _text(screen, surface, words.get("mod_steps", {}).get(shown, shown),
+                size, COL_OPTION, row.x + vx, row)
+    if shown == "on" and usermod.started_enabled():
+        n = usermod.in_use()
+        note = (words.get("mod_files", "{n} files").format(n=n)
+                if usermod.active() else words.get("mod_none", "no folder"))
+        _text(screen, surface, note, size, COL_STATE,
+              row.x + vx + img.get_width() + int(row.h * 0.6), row)
 
 
 def _render_frame_row(screen, surface, geo, words, size, lx):

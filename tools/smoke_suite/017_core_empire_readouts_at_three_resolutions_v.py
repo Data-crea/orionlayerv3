@@ -36,6 +36,10 @@
 # itself, and the exclusion is by exact path so a marking in any
 # other tool is still caught.
 _MARKED = {
+    # ADDED 25 September 2026, work order 173 / decision 72: the player's
+    # mod folder (HD EXTENSION). Its own check is 006d.
+    "core/usermod.py": "HD EXTENSION, work order 173, decision 72",
+    "tools/mod_template.py": "HD EXTENSION, work order 173, decision 72",
     # ADDED 15 September 2026, brief 110 Part A / decision 65: the
     # guard that sends no unchosen move order (DEVIATION). Its own
     # check is the galaxy_map icon hit test block.

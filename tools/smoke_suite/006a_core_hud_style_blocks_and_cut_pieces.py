@@ -14,7 +14,7 @@
 #   - hud cut pieces rebuild byte for byte, and the names agree both ways
 #   - hud blocks draw at three sizes, edges at their measured width
 #   - hud slanted button: drawn shape and hit shape agree
-#   - hud: no screen loads a frame image, and the background slot
+#   - hud: no screen loads a frame image, and the background slot is filled
 
 
 import json as _hj
@@ -193,22 +193,34 @@ assert _hf_now == _HF_PENDING, (
     f"screens loading a frame image {sorted(_hf_now)}, pending list "
     f"{sorted(_HF_PENDING)}: a converted screen comes off the list, and "
     f"no screen goes back on it")
-_hf_ph = _hs.colour("background_placeholder")
-_hf_n = 0
+# THE BACKGROUND SLOT IS FILLED (work order 173): every screen stands on
+# the picture `core.backgrounds` gives it — its own where the tree ships
+# one (the Main Menu's title art), Data's universal picture everywhere
+# else. Asserted by DRAWING each screen's `_render_background` (the
+# research panel overrides it) and comparing it with the universal
+# picture cover-scaled to the window.
+from core import backgrounds as _hf_bgs
+_hf_bgs.reset()
+_hf_uni = _hf_bgs.cover(pygame.image.load(os.path.join(
+    os.path.dirname(SCREENS_DIR), _hf_bgs.UNIVERSAL)), 1920, 1080)
+_hf_uni_px = pygame.image.tobytes(_hf_uni, "RGB")
+_hf_n, _hf_own = 0, []
 for _hf_name in sorted(d.screens):
     _hf_scr = d.screens[_hf_name]
     if _hf_scr.IS_OVERLAY or not hasattr(_hf_scr, "_render_background"):
         continue
-    # A screen may override `_render_background` (the research panel
-    # does, for its overlay mode); what it draws WITHOUT a picture is
-    # what is asserted, by drawing it.
-    _hf_scr._screen_dir = os.path.join(SCREENS_DIR, _hf_name)
-    _hf_scr._load_background()
     _hf_surf = pygame.Surface((1920, 1080))
     _hf_scr._render_background(_hf_surf)
-    if _hf_scr.asset_path("assets", "background.png") is None:
-        assert tuple(_hf_surf.get_at((5, 5)))[:3] == _hf_ph, _hf_name
+    _hf_got = pygame.image.tobytes(_hf_surf, "RGB")
+    if os.path.exists(os.path.join(os.path.dirname(SCREENS_DIR),
+                                   _hf_bgs.DIR, _hf_name + ".png")):
+        assert _hf_got != _hf_uni_px, f"{_hf_name} lost its own picture"
+        _hf_own.append(_hf_name)
+    else:
+        assert _hf_got == _hf_uni_px, (
+            f"{_hf_name} does not stand on the universal background")
         _hf_n += 1
-assert _hf_n >= 7, f"only {_hf_n} screens without a background picture"
-ok(f"hud: no screen loads a frame image; {_hf_n} screens without a "
-   f"background picture draw the placeholder")
+assert _hf_n >= 9, f"only {_hf_n} screens on the universal background"
+assert _hf_own == ["main_menu"], _hf_own
+ok(f"hud: no screen loads a frame image; {_hf_n} screens stand on the "
+   f"universal background, {len(_hf_own)} on its own picture")

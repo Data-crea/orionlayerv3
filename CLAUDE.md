@@ -61,8 +61,8 @@ derive world geometry.
 **The smoke test must be green before every commit.**
 
 ```bash
-python tools/smoke_test.py             # everything — 307 checks, ~72 s
-python tools/smoke_test.py --fast      # the commit gate's 299, ~32 s
+python tools/smoke_test.py             # everything — 314 checks, ~72 s
+python tools/smoke_test.py --fast      # the commit gate's 305, ~32 s
 python tools/smoke_test.py --screen colony_summary --fast   # NOT a gate
 ```
 
@@ -88,15 +88,15 @@ TIER. `python tools/setup.py` switches both on in a clone —
 **Full is the default.** The bare command above runs everything; only
 the pre-commit hook passes `--fast`. A fast run says so in its PASSED
 line, with the number of checks it did not run, so it cannot be mistaken
-for a full one. The eight push-only checks are declared in
+for a full one. The nine push-only checks are declared in
 `smoke_test.SLOW_TIER` with the reason each is expensive, and a check in
 the fast tier holds that list and the guards to each other.
 
-**What the trade costs:** a fault only those eight can see lands at push
+**What the trade costs:** a fault only those nine can see lands at push
 time, not at commit time. See decision 31 and
 `doc/briefs/157-suite-profile.md`.
 
-307 checks, headless, no orion2re needed. **The count must not go
+314 checks, headless, no orion2re needed. **The count must not go
 down.** If a change makes a check obsolete, replace it — do not
 delete it. It went down exactly once, on 12 September 2026, when
 Phase B deleted the frame machinery the checks were about (decision
@@ -144,7 +144,7 @@ screens/<name>/         one folder per HD screen:
                           help.json    right-click help regions
                           assets/
 tools/                  smoke test, generators, live diagnostics
-tools/smoke_suite/      the smoke test's 113 check modules, one group
+tools/smoke_suite/      the smoke test's 114 check modules, one group
                         per screen plus a shared core; smoke_test.py
                         is the runner (work order 162)
 doc/                    the documents in the table above

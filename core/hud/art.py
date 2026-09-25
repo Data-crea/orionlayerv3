@@ -26,6 +26,8 @@ log = logging.getLogger("hud")
 ICONS = ("treasury", "command", "food", "freighters", "research",
          "colonies", "planets", "fleets", "leaders", "races", "info", "turn")
 TITLE_PLATE = "title_plate"
+#: Every piece by file name — what a mod folder's `hud/` may replace.
+PIECES = tuple("icon_" + k for k in ICONS) + (TITLE_PLATE,)
 
 _raw = {}
 _scaled = {}
