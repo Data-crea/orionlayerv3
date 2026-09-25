@@ -13,6 +13,24 @@ right and the header had gone stale** — resolved 10 September 2026
 by dating the header to the edit and giving this session its
 paragraph, below, so the two agree again.
 
+This session (25 September 2026, work order 173): **one background
+behind every screen, and a mod folder anybody can use.** Data's
+universal picture (`assets/shared/backgrounds/universal.png`, 1675 x
+939, LICENSE entry) stands behind every HD screen and under every popup
+(`core/backgrounds.py`: the screen's own picture — the Main Menu's title
+art — else the universal one; cover-scaled, one shared copy per window
+size), and it is the galaxy map's floor. Text groups whose words stand
+on it take the panel fill (`"fill": true` on a `thin_border` box —
+Select Race and Custom Race, measured). **The player's mod folder**
+(HD EXTENSION, decision 72, `core/usermod.py`): one folder outside the
+tree, same name = replacement — backgrounds, HUD pieces, a partial
+style.json, the default frame colour, and any picture the screens
+resolve; broken files fall back with one log line; a GAME menu row
+switches it off; `tools/mod_template.py` writes a ready-to-edit folder
+with a plain-language guide and never a MOO2 file. Checks 307 -> 314.
+**Pushed** with everything since the last push (167-173).
+`doc/briefs/173-progress.md`.
+
 This session (25 September 2026, work order 172): **New Game's
 pictures are back, and the frame colour turns HUD components only.**
 The cause, established first by rendering three trees: 169 made the
@@ -2424,7 +2442,7 @@ files under `doc/` and are only summarised here.
 | | |
 |---|---|
 | Python | 32,960 lines across 111 modules — `find . -name '*.py'`, `__pycache__` excluded, the smoke test's 6,400 included. The previous figure here (21,642 across 94) was carried from an unstated method and could not be reproduced |
-| Smoke test | `python tools/smoke_test.py` — **314 checks**, headless, in `tools/smoke_suite/` since work order 162 (114 check modules, one group per screen plus a shared core; `tools/smoke_test.py` is the runner). **Two tiers since work order 158**: the bare command runs everything (~72 s here); `--fast` runs the commit gate's 305 (~32 s here). `--screen <name>` prints only that screen's sentences and the core's and is NEVER a gate. See "The gate has two tiers" below |
+| Smoke test | `python tools/smoke_test.py` — **314 checks**, headless, in `tools/smoke_suite/` since work order 162 (114 check modules, one group per screen plus a shared core; `tools/smoke_test.py` is the runner). **Two tiers since work order 158**: the bare command runs everything (~155 s here, measured 25 September 2026 — the 72 s this line said was before 172's and 173's rendering checks); `--fast` runs the commit gate's 305 (~63 s here). `--screen <name>` prints only that screen's sentences and the core's and is NEVER a gate. See "The gate has two tiers" below |
 | Assets | 170 MB (select_race 68, galaxy_map 51, shared 23, new_game 21, colony_summary 1) |
 | Screens in HD | 11 of ~20–22 (the Leaders screen, work order 167, built and not accepted; the GAME menu overlay, work order Stop 2, every dialog of the popup; colony summary draws list, sidebar, scan box and galaxy inset, and MOVES POPS — the first HD gesture that drives the game; planets, brief 101, lists, sorts, restricts and returns) |
 | Setup from clone | `python tools/setup.py` (deps via the system package manager) |
@@ -2950,8 +2968,8 @@ blocks into a session and writing them out again. Three proofs:
 
 | | command | checks | on this tree |
 |---|---|---:|---:|
-| **Full** — the default, and the pre-push gate | `python tools/smoke_test.py` | 314 | ~72 s |
-| **Fast** — the pre-commit gate | `python tools/smoke_test.py --fast` | 305 | ~32 s |
+| **Full** — the default, and the pre-push gate | `python tools/smoke_test.py` | 314 | ~155 s |
+| **Fast** — the pre-commit gate | `python tools/smoke_test.py --fast` | 305 | ~63 s |
 | **Screen** — **never a gate** | `python tools/smoke_test.py --screen <name>` | all of them, ~a third printed | the tier's |
 
 **`--screen` narrows what a run PRINTS, not what it runs**, and the

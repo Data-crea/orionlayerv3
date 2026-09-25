@@ -61,8 +61,8 @@ derive world geometry.
 **The smoke test must be green before every commit.**
 
 ```bash
-python tools/smoke_test.py             # everything — 314 checks, ~72 s
-python tools/smoke_test.py --fast      # the commit gate's 305, ~32 s
+python tools/smoke_test.py             # everything — 314 checks, ~155 s
+python tools/smoke_test.py --fast      # the commit gate's 305, ~63 s
 python tools/smoke_test.py --screen colony_summary --fast   # NOT a gate
 ```
 
