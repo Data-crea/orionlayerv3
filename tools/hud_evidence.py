@@ -164,7 +164,13 @@ def stage(app, name):
         d.switch_to("galaxy_map")
         d.active.update(galaxy_state())
         gs = game_menu_state()
+        # The settings record the suite's GAME menu fixture uses (070).
+        from core.structs import settings as _set
+        gs.settings_raw = bytes([1, 1, 1, 0, 0, 1, 1, 0, 1, 1, 0, 1, 0, 0,
+                                 0, 0, 0, 1, 50, 1, 49, 7]) + bytes(
+                                     _set.SIZE - 22)
         d.update_from_game(gs)
+        d.overlay.update(gs)
         return gs
     d.switch_to(name)
     gs = {"galaxy_map": galaxy_state, "colony_summary": colony_state}.get(

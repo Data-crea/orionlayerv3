@@ -15,8 +15,7 @@ paragraph, below, so the two agree again.
 
 This session (25 September 2026, work order 169): **the cockpit
 frames give way to ONE frameless style drawn in code — decision 71 —
-and the galaxy map and the GAME menu are the first screens to wear
-it.** The full account, screen by screen, is
+on all thirteen HD screens and every popup.** The full account, screen by screen, is
 `doc/briefs/169-progress.md`; what Data has to decide is
 `doc/briefs/169-parked-for-data.md`.
 
@@ -69,7 +68,19 @@ activates the original's field.
 below the title plate; every dialog in it (confirmation, slot warning)
 is a popup, every button a small button.
 
-Checks: **294 -> 299**, none deleted. Five new ones (core module
+**Every other screen followed**, one commit each: colony summary,
+planets, fleets, research select and change, leaders, custom race, new
+game, empire identity (main menu and select race changed through the
+shared skins). Windows are HUD panels, buttons HUD blocks, tables the
+HUD table, every popup and dialog the popup block. DEVIATIONS added and
+marked in their modules: the colony sort keys' and the Fleets control
+words' colour is the HUD's; the Leaders OFFICER.LBX button art and popup
+picture are not drawn. The frame images and their code stay in the
+tree, drawn by nothing. The live part is parked (the engine did not come
+up), `doc/briefs/169-parked-for-data.md` P1.
+
+Checks: **294 -> 300**, none deleted. Six new ones (the sixth is
+"Fleets in the HUD style", the Fleets marking's own check); five (core module
 `006a`: the style file against the tool, the cut pieces byte for
 byte, the blocks at three sizes, the slanted button's hit shape
 against its drawn shape on every pixel, no screen loading a frame

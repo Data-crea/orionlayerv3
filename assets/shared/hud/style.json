@@ -234,7 +234,7 @@
     "font": "Aldrich-Regular.ttf",
     "_font_note": "The mockups' face is a squared geometric sans. The tree holds two faces: Aldrich (squared, technical, the display font since 31 August) and pygame's default freesansbold. Aldrich is the closer; parked (169 P3).",
     "supersample": 3,
-    "_supersample_note": "Every block is drawn at 3x its device size and smoothscaled down once, then cached: that is the antialiasing of a slanted or chamfered edge at any resolution. 2 left a visible stair on the slant at 1080p, 4 cost 1.8x the time for no visible change.",
+    "_supersample_note": "Every block is drawn at 3x its device size and smoothscaled down once, then cached: that is the antialiasing of a slanted or chamfered edge at any resolution. 3 is chosen, not measured against 2 or 4; the edge-width check (smoke 006a) holds the result at three resolutions.",
     "glow_passes": 3,
     "_glow_note": "A glow is the edge line blurred by three box passes, the classic approximation of a gaussian: pygame 2.6 has no blur, numpy's cumulative sum is exact and fast.",
     "button": {
@@ -243,7 +243,7 @@
       "active_fill_from": "mockup_colony.selected",
       "active_edge_from": "action.edge",
       "disabled_alpha": 0.45,
-      "_note": "The HUD shows every nav button in ONE state. Hover takes the HUD's own brightest lit edge (the TURN button's) and the panel's inner glow as fill; active takes the colony mockup's selected row, which is the only 'chosen' look in the material; disabled is the normal button at 45 % \u2014 the value at which the COLONIES label in the mockup falls to the separator's brightness. None of the three is measured, all three are named."
+      "_note": "The HUD shows every nav button in ONE state. Hover takes the HUD's own brightest lit edge (the TURN button's) and the panel's inner glow as fill; active takes the colony mockup's selected row, the only 'chosen' look in the material; disabled is the normal button at 45 % opacity, a value chosen by eye and not measured. None of the three is measured, all three are named (169 parked, P4)."
     },
     "small_button": {
       "chamfer_frac": 0.5,

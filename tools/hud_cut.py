@@ -11,8 +11,9 @@
   TURN triangle. They are pictures (coins, a space station, a bowl of
   food, a microscope): no amount of code draws those.
 - the TITLE PLATE with its two wings — the plate's glossy centre, its
-  bevel and the orange lamps are painted light, and a code version was
-  tried and read as a flat trapezoid beside the rest of the artwork.
+  bevel and the orange lamps are painted light, which a flat fill, an
+  edge and a glow cannot reproduce. Judged from the artwork; no code
+  version was built (169 parked, P5).
 
 Everything else — panels, buttons, the action button, separators — is
 drawn in code by `core/hud` from `assets/shared/hud/style.json`.
