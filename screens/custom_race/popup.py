@@ -28,6 +28,8 @@ alpha-blend a sprite at all, so a darkened backdrop would be an
 invention rather than a transcription.
 """
 import pygame
+
+from core.hud import blocks as hud
 from screens.custom_race.renderer import _c
 
 # Only used when the screen has no background surface to borrow.
@@ -96,14 +98,11 @@ class MessagePopup:
         # original could not produce. The fill is the screen's own
         # background at these very coordinates, so the box reads as
         # bare backdrop with the panels lifted off it.
+        # SINCE DECISION 71 (work order 169) the box is the HUD popup
+        # block — still opaque, for the same reason — and `backdrop` is
+        # accepted and no longer cut out behind it.
         rect = pygame.Rect(px, py, pw, ph)
-        if backdrop and backdrop.get_rect().contains(rect):
-            surface.blit(backdrop, (px, py), rect)
-        else:
-            back = pygame.Surface((pw, ph), pygame.SRCALPHA)
-            back.fill(COL_BG)
-            surface.blit(back, (px, py))
-        style.draw_thin_border(surface, rect, L.scale)
+        hud.popup(surface, rect, L.scale)
 
         if not text:
             return
