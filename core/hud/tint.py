@@ -5,47 +5,39 @@ here, in the GAME menu's Settings dialog where the slider is
 (`screens/game_menu/gmorion.py`), in the status document and in a smoke
 check.
 
-**ONE RULE FOR CODE AND ARTWORK ALIKE, so the two never disagree.** A
-colour whose hue lies in the HUD's accent band is turned by the same
-angle and then brought back to its own RELATIVE LUMINANCE; every other
-colour is left as it is.
+**BY COMPONENT, NEVER BY COLOUR — work order 172.** The frame colour
+turns exactly the HUD's own components and nothing else, whatever its
+hue: the style values the blocks of `core/hud/` draw with (through
+`core.hud.style.HudStyle.colour`), the accent words
+(`style.WORDS_THAT_FOLLOW`), and the cut pieces that ARE frame
+(`FOLLOWS`: the title plate, the nav glyphs, the TURN triangle). Inside
+such a component EVERY pixel turns — 170 and 171 selected pixels by an
+accent hue band (170-250 degrees), and on the title plate that left the
+low-saturation and near-cyan pixels of its glossy centre untouched while
+their neighbours went grey: the "blotchy smear" Data saw. The one named
+exemption inside a component is the plate's two orange LAMPS
+(`lamp_mask`), which 170 promised never turn.
 
-**Why luminance and not HLS lightness** — measured, not assumed: turning
-at constant HLS lightness made the fills of hues 25-175 degrees (orange
-to cyan) so much brighter that a table word fell to 3.3:1 against the
-selected row, and the order's alternative was to clamp the slider to the
-other half of the wheel. Keeping each colour's luminance keeps every
-word's contrast exactly what it is in the measured blue, at every hue,
-so the slider runs the whole circle (a smoke check sweeps it). `rotate` applies it to one RGB triple (every code-drawn block,
-through `core.hud.style.HudStyle.colour`) and `rotate_pixels` to an
-image (the title plate, and the frame glyphs if they follow — see
-`FOLLOWS`). The title plate's orange lamps are outside the band and stay
-orange, exactly as a code-drawn orange would.
+Everything that is not a HUD component never reaches this module: the
+pictures (New Game's settings, the planet surfaces, portraits, banners),
+MOO2's sprites, star, player and race colours, the info panel's picture
+icons, every value and white word. Nothing here can touch them, because
+nothing passes them in.
 
-**WHAT IS NEVER TURNED** — the list the order gives, and where each is
-guaranteed:
-- every TEXT colour (`text.*`, the table words): `HudStyle.colour` skips
-  them, so no word changes colour and readability cannot move;
-- the background placeholder: skipped the same way;
-- star colours, player and race colours, star names, red negatives,
-  MOO2's sprites and portraits: none of them is a HUD style value, so
-  none of them passes through here at all;
-- the info panel's picture icons (coins, food, station, freighter,
-  microscope): `art` asks `FOLLOWS` and they are not in it.
+**ONE RULE FOR CODE AND ARTWORK ALIKE, so the two never disagree.**
+`transform_array` is the only function that turns anything; a style
+colour and a plate pixel go through it identically.
 
-**THE BAND** is 170-250 degrees: it holds every accent value
-`style.json` measured (187-218 degrees, the TURN edge to the fills) with
-room, and nothing else the HUD draws — the lamps are ~30, the red
-negative 2, the microscope's green ~120. The REFERENCE hue is the
-measured panel edge's, 196: a setting of 196 changes nothing, and so
-does the default, `None`.
+**Why luminance and not HLS lightness** — measured, not assumed (170):
+turning at constant HLS lightness made the fills of hues 25-175 degrees
+so much brighter that a table word fell to 3.3:1; keeping each colour's
+relative luminance keeps every word's contrast at every hue. The
+REFERENCE hue is the measured panel edge's, 196: a setting of 196 changes
+nothing, and so does the default, `None`.
 """
 import colorsys
 
 import numpy as np
-
-#: The accent band, degrees (see the module docstring).
-BAND = (170.0, 250.0)
 
 #: The measured accent's hue — `measured.panel.edge`, (13, 172, 232).
 #: A smoke check re-derives it from style.json.
@@ -145,10 +137,6 @@ def set_hue(value):
     return set_tone(value, _sat, _bright)
 
 
-def in_band(h_degrees):
-    return BAND[0] <= h_degrees <= BAND[1]
-
-
 def _lin(x):
     return np.where(x <= 0.04045, x / 12.92, ((x + 0.055) / 1.055) ** 2.4)
 
@@ -192,25 +180,56 @@ def _rgb(h, l, s):
     return np.stack([rr + m, gg + m, bb + m], axis=-1)
 
 
-def transform_array(rgb, d, s_factor, b_factor, word=False, floors=True):
-    """THE RULE, over any (..., 3) uint8 array — every colour and every
-    pixel the frame colour turns goes through this one function, so code
-    and cut pieces cannot disagree.
+#: Px the lamp mask grows by, in the piece's own (HUD) pixels: the pale
+#: core of the lamps measures up to ~6 px from the nearest warm pixel.
+LAMP_GROW = 6
 
-    In the accent band (and saturated at all): the hue turns by `d`, the
-    saturation is multiplied by `s_factor`, and the result is scaled in
-    linear light to a TARGET relative luminance — for a WORD its own
-    measured luminance (labels follow the colour, never the brightness,
-    so their contrast cannot fall), for everything else the measured
-    luminance times `b_factor` (a fill only ever darkens), held above
-    the edge floors while `b_factor` darkens. Outside the band nothing
-    changes."""
+
+def lamp_mask(rgb):
+    """The title plate's two orange LAMPS, the one exemption inside a
+    component (170: they never turn): warm (hue under 70 or over 330
+    degrees), saturated (s >= 0.35) pixels of the UNTINTED piece."""
+    x = np.asarray(rgb, np.uint8).astype(np.float64) / 255.0
+    h, l, s = _hls(x)
+    warm = ((h < 70.0) | (h > 330.0)) & (s >= 0.35)
+    pale = (s < 0.35) & (l > 0.5)
+    # AND THE LAMP'S PALE CORE: a lit lamp is near-white at its centre,
+    # too unsaturated to be "warm", and turned it went grey inside an
+    # orange ring (seen on dark grey and black, 172). The mask is grown
+    # by LAMP_GROW px so the whole lamp stays as painted.
+    grown = warm.copy()
+    for _ in range(LAMP_GROW):
+        g = grown.copy()
+        g[1:, :] |= grown[:-1, :]
+        g[:-1, :] |= grown[1:, :]
+        g[:, 1:] |= grown[:, :-1]
+        g[:, :-1] |= grown[:, 1:]
+        grown = g
+    # Grown only into the lamp's own warm or pale pixels — never into
+    # the saturated blue lines beside it, which are frame and turn.
+    return warm | (grown & pale)
+
+
+def transform_array(rgb, d, s_factor, b_factor, word=False, floors=True,
+                    keep=None):
+    """THE RULE, over any (..., 3) uint8 array of a HUD COMPONENT — every
+    colour and every pixel the frame colour turns goes through this one
+    function, so code and cut pieces cannot disagree. Every pixel turns;
+    `keep` (a boolean mask) names pixels that do not, which is only ever
+    the plate's lamps.
+
+    The hue turns by `d`, the saturation is multiplied by `s_factor`, and
+    the result is scaled in linear light to a TARGET relative luminance —
+    for a WORD its own measured luminance (labels follow the colour,
+    never the brightness, so their contrast cannot fall), for everything
+    else the measured luminance times `b_factor` (a fill only ever
+    darkens; an edge darkens with the square root), held above the edge
+    floors while `b_factor` darkens."""
     rgb = np.asarray(rgb, np.uint8)
     if d == 0 and s_factor == 1.0 and b_factor == 1.0:
         return rgb.copy()
     x = rgb.astype(np.float64) / 255.0
     h, l, s = _hls(x)
-    turn = (s >= 0.08) & (h >= BAND[0]) & (h <= BAND[1])
     moved = _rgb(h + d, l, np.clip(s * s_factor, 0.0, 1.0))
     l0 = (_lin(x) * _W).sum(-1)
     if word:
@@ -235,7 +254,9 @@ def transform_array(rgb, d, s_factor, b_factor, word=False, floors=True):
     k = np.where(la > 1e-9, target / np.where(la > 1e-9, la, 1.0), 1.0)
     out = _srgb(np.clip(lm * k[..., None], 0.0, 1.0))
     out = np.clip(np.round(out * 255.0), 0, 255).astype(np.uint8)
-    return np.where(turn[..., None], out, rgb)
+    if keep is not None:
+        out = np.where(np.asarray(keep)[..., None], rgb, out)
+    return out
 
 
 def transform(rgb, word=False, d=None, s_factor=None, b_factor=None,
@@ -258,9 +279,18 @@ def rotate(rgb, d=None):
                      b_factor=1.0)
 
 
-def rotate_pixels(rgb, d=None):
-    """An (H, W, 3) uint8 image through the rule, current setting unless
-    `d` is given (then the hue alone); a new array."""
+def rotate_pixels(rgb, d=None, keep=None):
+    """An (H, W, 3) uint8 image of a HUD component through the rule,
+    current setting unless `d` is given (then the hue alone); a new
+    array. `keep`: pixels that stay (the plate's lamps)."""
+    # NO FLOORS ON PAINTED ARTWORK (work order 172). The floors lift a
+    # colour whose measured luminance is an edge's to a fixed minimum;
+    # on a painted GRADIENT — the plate's glossy centre glow — that lifted
+    # the brighter half and let the darker half fall, which posterised it
+    # into the smear Data saw in grey. A piece is scaled by one smooth
+    # curve, so a gradient stays a gradient; its lines stay visible
+    # because an edge still darkens only with the square root.
     if d is not None:
-        return transform_array(rgb, d, 1.0, 1.0)
-    return transform_array(rgb, delta(), sat(), bright())
+        return transform_array(rgb, d, 1.0, 1.0, keep=keep, floors=False)
+    return transform_array(rgb, delta(), sat(), bright(), keep=keep,
+                           floors=False)

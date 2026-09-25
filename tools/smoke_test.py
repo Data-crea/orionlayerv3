@@ -128,6 +128,10 @@ SLOW_TIER = {
     "sidebar_research": (1,
         "renders the galaxy map sidebar's research readout through "
         "core/research for the original's four cases — 2.3 s"),
+    "tint_pictures": (1,
+        "renders every screen and dialog at six frame colours and New "
+        "Game at two box lists, comparing pictures and changed pixels "
+        "(work order 172) — about 35 s"),
     "tools_import": (1,
         "starts 49 fresh Python processes, one per runnable tool — the "
         "only expensive check in the suite that renders nothing, 2.0 s"),

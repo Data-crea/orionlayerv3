@@ -42,15 +42,16 @@ _fc_h = _fc_cs.rgb_to_hls(*[_v / 255 for _v in _fc_meas["panel"]["edge"]])[0]
 assert round(_fc_h * 360) == _fc_tint.REFERENCE, (
     f"tint.REFERENCE {_fc_tint.REFERENCE} is not the measured panel "
     f"edge's hue {_fc_h * 360:.1f}")
-# Every accent the style measured lies in the band, and nothing that
-# must never turn does: the red negative, the orange lamps' hue.
-for _fc_path in ("panel.edge", "panel.fill", "action.edge", "button.edge",
-                 "separator.color", "mockup_colony.selected"):
-    _fc_hh = _fc_cs.rgb_to_hls(*[_v / 255 for _v in
-                                 _fc_st._walk(_fc_meas, _fc_path)])[0] * 360
-    assert _fc_tint.in_band(_fc_hh), (_fc_path, _fc_hh)
-assert not _fc_tint.in_band(_fc_cs.rgb_to_hls(
-    *[_v / 255 for _v in _fc_meas["text"]["negative"]["color"]])[0] * 360)
+# BY COMPONENT, NEVER BY COLOUR (work order 172, replacing 170's "every
+# accent lies in the hue band"): the rule turns whatever a HUD component
+# hands it — a red pixel as readily as a blue one — and selects nothing
+# by hue; what it must not touch never reaches it.
+_fc_src = open(_fc_tint.__file__, encoding="utf-8").read()
+assert "BAND = " not in _fc_src and "in_band" not in _fc_src, (
+    "core/hud/tint.py selects by hue again")
+_fc_red = _fc_np.array([[[200, 50, 50]]], _fc_np.uint8)
+assert (_fc_tint.transform_array(_fc_red, 90, 1.0, 1.0) != _fc_red).any(), (
+    "a red pixel of a component did not turn")
 
 # 2 — THE NEVER-RECOLOUR LIST, at a hue far from blue (20, a red).
 # SINCE WORK ORDER 171 the accent labels follow (`WORDS_THAT_FOLLOW`,
@@ -81,7 +82,8 @@ try:
     assert not ({"icon_treasury", "icon_command", "icon_food",
                  "icon_freighters", "icon_research"} & _fc_tint.FOLLOWS)
     _fc_plate = _hc_pieces()["title_plate"][0][..., :3]
-    _fc_turned = _fc_tint.rotate_pixels(_fc_plate)
+    _fc_turned = _fc_tint.rotate_pixels(
+        _fc_plate, keep=_fc_tint.lamp_mask(_fc_plate))
     _fc_x = _fc_plate.astype(float) / 255
     _fc_mx, _fc_mn = _fc_x.max(axis=2), _fc_x.min(axis=2)
     _fc_c = _fc_mx - _fc_mn

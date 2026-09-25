@@ -140,6 +140,19 @@ def colony_state():
     return clp._Snapshot(clp.COLONIES) if hasattr(clp, "COLONIES") else None
 
 
+def new_game_state():
+    """A setting for each of the five pictures, two toggles on."""
+    class _S:
+        pass
+    gs = _S()
+    for a, v in dict(ng_difficulty=1, ng_galaxy_size=1, ng_galaxy_age=1,
+                     ng_opponents=3, ng_tech_level=1, ng_tactical_combat=1,
+                     ng_random_events=0, ng_antarans=1,
+                     current_screen=13).items():
+        setattr(gs, a, v)
+    return gs
+
+
 def game_menu_state(node="menu"):
     from core.game_state import GameState
 
@@ -174,8 +187,8 @@ def stage(app, name):
         d.overlay.update(gs)
         return gs
     d.switch_to(name)
-    gs = {"galaxy_map": galaxy_state, "colony_summary": colony_state}.get(
-        name, lambda: None)()
+    gs = {"galaxy_map": galaxy_state, "colony_summary": colony_state,
+          "new_game": new_game_state}.get(name, lambda: None)()
     d.active.update(gs)
     return gs
 

@@ -367,6 +367,27 @@ def small_button(surface, rect, scale, state="normal", label="",
         _label(surface, style_renderer, rect, label, role, state, None, scale)
 
 
+def checkbox(surface, rect, scale, checked, hover=False):
+    """A checkbox (work order 172): the small button's square and, when
+    `checked`, a tick in the lit edge colour — so it follows the frame
+    colour and, at the edge floors, stays visible on a black frame. Both
+    states are drawn every frame; the state is never a shade alone."""
+    rect = pygame.Rect(rect)
+    small_button(surface, rect, scale,
+                 "active" if checked else ("hover" if hover else "normal"))
+    if not checked:
+        return
+    st = hudstyle.get()
+    col = st.colour("action.edge")
+    w = max(2, int(round(rect.h / 7)))
+    pts = [(rect.x + rect.w * 0.24, rect.y + rect.h * 0.52),
+           (rect.x + rect.w * 0.43, rect.y + rect.h * 0.72),
+           (rect.x + rect.w * 0.78, rect.y + rect.h * 0.30)]
+    pygame.draw.lines(surface, col, False, pts, w)
+    for p in pts:
+        pygame.draw.circle(surface, col, (int(p[0]), int(p[1])), w // 2)
+
+
 # ── the title plate ──────────────────────────────────────────────────
 
 def title_plate_rect(center_x, top_y, scale):
@@ -404,54 +425,8 @@ def title_plate(surface, center_x, top_y, scale, text="",
     return box
 
 
-# ── tables ───────────────────────────────────────────────────────────
+# ── tables — `core/hud/tables.py`, re-exported here so every block is
+# still reached as `blocks.<name>` (split for the line guideline, 172) ──
 
-def table_header(surface, rect, scale):
-    """The header band of a table, and the line under it."""
-    st = hudstyle.get()
-    r = pygame.Rect(rect)
-    surface.fill(st.colour("mockup_colony.header"), r)
-    separator(surface, r.x, r.right, r.bottom - 1, scale)
-
-
-def table_row(surface, rect, scale, index, selected=False):
-    """One table row: striped by LIST index, the selected row filled and
-    rimmed as the colony mockup draws it, a thin line under every row."""
-    st = hudstyle.get()
-    r = pygame.Rect(rect)
-    if selected:
-        surface.fill(st.colour("mockup_colony.selected"), r)
-        edge = st.colour("mockup_colony.selected_edge")
-        w = max(1, round(_px(st.get("panel.edge_width"), scale) * 0.6))
-        pygame.draw.rect(surface, edge, r, w,
-                         border_radius=max(2, int(4 * scale)))
-        return
-    key = "mockup_colony.row_a" if index % 2 == 0 else "mockup_colony.row_b"
-    surface.fill(st.colour(key), r)
-    pygame.draw.line(surface, st.colour("mockup_colony.row_line"),
-                     (r.x, r.bottom - 1), (r.right - 1, r.bottom - 1))
-
-
-def table_text_colour(kind="row"):
-    """The table's words: "header" or "row" (colony mockup)."""
-    return hudstyle.get().colour(f"mockup_colony.text_{kind}")
-
-
-def scrollbar(surface, rect, scale, first=0, visible=1, total=1):
-    """A scroll track and its thumb; the thumb covers visible/total of
-    the track, starting at first/total, and is `scrollbar.width_frac`
-    of the column wide, centred."""
-    st = hudstyle.get()
-    r = pygame.Rect(rect)
-    tw = max(2, int(r.w * st.get("scrollbar.width_frac")))
-    track = pygame.Rect(r.centerx - tw // 2, r.y, tw, r.h)
-    rad = tw // 2
-    pygame.draw.rect(surface, st.colour("mockup_colony.scroll_track"),
-                     track, border_radius=rad)
-    total = max(total, 1)
-    frac = min(1.0, visible / total)
-    th = max(tw, int(r.h * frac))
-    ty = r.y + int((r.h - th) * (first / max(1, total - visible))
-                   if total > visible else 0)
-    pygame.draw.rect(surface, st.colour("mockup_colony.scroll_thumb"),
-                     (track.x, ty, tw, th), border_radius=rad)
+from core.hud.tables import (  # noqa: E402,F401
+    scrollbar, table_header, table_row, table_text_colour)

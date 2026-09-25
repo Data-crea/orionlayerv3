@@ -208,10 +208,10 @@ def _settings(screen, surface):
             side = int(band.h * rule.get("checkbox", 0.7))
             square = pygame.Rect(band.x, band.y + (band.h - side) // 2,
                                  side, side)
-            screen.style.draw_plate(surface, square, screen.layout.scale)
-            if screen.flags is not None and screen.flags[i]:
-                surface.fill(tuple(COL_CHECK[:3]), square.inflate(
-                    -max(4, side // 4), -max(4, side // 4)))
+            # The HUD checkbox (work order 172): one block for every
+            # checkbox, the tick following the frame colour.
+            hud.checkbox(surface, square, screen.layout.scale,
+                         bool(screen.flags is not None and screen.flags[i]))
             ty = band.y + (band.h - size) // 2
             if i < len(ids):
                 lx = band.x + int(band.w * rule.get("label_x", 0.11))

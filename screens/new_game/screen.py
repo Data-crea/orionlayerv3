@@ -123,6 +123,17 @@ class NewGameScreen(ScreenBase):
             (cx, cy, win_w, win_h)).copy()
         self._scaled_cache.clear()
 
+    def setting_picture(self, category, panel):
+        """The picture for `category`'s current setting, scaled to the
+        panel's inner rect, or None. One function for the drawing and the
+        check that holds the picture to its source (work order 172)."""
+        filename = self._current.get(category)
+        img = self._get_setting_image(category, filename) if filename else None
+        if img is None:
+            return None
+        inner = hud.panel_inner(panel, self.layout.scale)
+        return self._get_scaled(img, inner.w, inner.h)
+
     def _load_toggle_buttons(self):
         on_path = self.asset_path("assets", "toggle_on.png")
         off_path = self.asset_path("assets", "toggle_off.png")
@@ -218,24 +229,25 @@ class NewGameScreen(ScreenBase):
         cats = self._cfg.get("categories", {})
         text_cfg = self._cfg.get("text", {})
 
-        # 1. + 2. Each setting picture on its HUD panel
+        # 1. Boxes (the editor's panels) FIRST — work order 172. The
+        #    2560x1440 box list carries an `inner_panel` box on every
+        #    picture slot, and since 169 that skin is a FILLED HUD panel;
+        #    drawn after the pictures it covered all five, at every frame
+        #    colour. The pictures come after everything that frames them.
+        for box in self.boxes:
+            box.render(surface, self.layout, self.style)
+
+        # 2. Each setting picture on its HUD panel, drawn last of its
+        #    slot and touched by nothing afterwards.
         for cat, slot in slots.items():
             sx, sy, sw, sh = self._hd_to_screen(*slot["rect"])
             if sw <= 0 or sh <= 0:
                 continue
             panel = pygame.Rect(sx, sy, sw, sh)
             hud.panel(surface, panel, self.layout.scale)
-            filename = self._current.get(cat)
-            img = (self._get_setting_image(cat, filename)
-                   if filename else None)
-            if img:
-                inner = hud.panel_inner(panel, self.layout.scale)
-                surface.blit(self._get_scaled(img, inner.w, inner.h),
-                             inner.topleft)
-
-        # 3. Boxes (inner panels etc. from editor)
-        for box in self.boxes:
-            box.render(surface, self.layout, self.style)
+            img = self.setting_picture(cat, panel)
+            if img is not None:
+                surface.blit(img, hud.panel_inner(panel, self.layout.scale))
 
         # 4. + 5. Category titles / dynamic value labels
         tfont = self.style.get_font(self._hd_font_size(
@@ -294,11 +306,12 @@ class NewGameScreen(ScreenBase):
             icon_hd = self._toggle_icon_rect(i)
             ix, iy, iw, ih = self._hd_to_screen(*icon_hd)
             if iw > 0 and ih > 0:
-                # The HUD small button, lit while ON (decision 71); the
-                # knob pictures stay in the assets, not drawn.
-                hud.small_button(surface, pygame.Rect(ix, iy, iw, ih),
-                                 self.layout.scale,
-                                 "active" if is_on else "normal")
+                # The HUD checkbox — a tick while ON (work order 172: the
+                # small button's lit fill alone was too faint to read,
+                # and on a dark frame colour invisible). The knob
+                # pictures stay in the assets, not drawn.
+                hud.checkbox(surface, pygame.Rect(ix, iy, iw, ih),
+                             self.layout.scale, is_on)
             lx_hd = icon_hd[0] + t.get("label_offset_x", 100)
             ly_hd = icon_hd[1] + icon_hd[3] // 2
             lx, ly, _, _ = self._hd_to_screen(lx_hd, ly_hd)

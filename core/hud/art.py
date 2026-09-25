@@ -85,13 +85,15 @@ def fit(name, height, width=None):
 def _tinted(name, img):
     """The piece in the player's frame colour (HD EXTENSION, work order
     170): the same rule as every code-drawn colour, per pixel, for the
-    pieces in `tint.FOLLOWS`; the picture icons are returned as they
-    are. Alpha is untouched."""
+    pieces in `tint.FOLLOWS` — the WHOLE piece, since 172, the plate's
+    lamps excepted; the picture icons are returned as they are. Alpha
+    is untouched."""
     if name not in tint.FOLLOWS or tint.is_default():
         return img
     out = img.copy()
     px = pygame.surfarray.pixels3d(out)
-    px[...] = tint.rotate_pixels(px)
+    keep = tint.lamp_mask(px) if name == TITLE_PLATE else None
+    px[...] = tint.rotate_pixels(px, keep=keep)
     del px
     return out
 
