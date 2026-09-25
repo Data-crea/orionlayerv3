@@ -261,8 +261,19 @@ _b3_png = os.path.join(SCREENS_DIR, "colony_summary", "assets",
                        "frame.png")
 _b3_w, _b3_h, _b3_holes = fh.find_holes(_b3_png)
 _b3_named = fh.name_holes(_b3_holes, "colony_summary", (_b3_w, _b3_h))
-assert fh.SPARE_HOLES == [], (
-    f"the frame has holes no window claims: {fh.SPARE_HOLES}")
+# SINCE WORK ORDER 170 THE SORT ROW AND RETURN HAVE LEFT THEIR HOLES: the
+# frame is not drawn (decision 71) and the row sits on the bottom edge,
+# declared in `_windows_without_a_hole`. So the holes no window claims
+# are exactly the old bottom row — one per declared window that is not
+# the header — and nothing else in the frame may go unclaimed.
+_b3_lr = _b3_json.load(open(os.path.join(
+    SCREENS_DIR, "colony_summary", "layout_reference.json")))
+_b3_left = [_n for _n in _b3_lr.get("_windows_without_a_hole", ())
+            if _n != "header"]
+assert len(fh.SPARE_HOLES) == len(_b3_left) and all(
+    _h[1] > 0.85 * _b3_h for _h in fh.SPARE_HOLES), (
+    f"the frame has holes no window claims outside the old sort row: "
+    f"{fh.SPARE_HOLES}, declared hole-less {_b3_left}")
 assert len(fh.BAND_KEYS) == 3 and set(fh.BAND_KEYS) <= set(_b3_named), (
     f"the band keys {fh.BAND_KEYS} are not three matched windows")
 _b3_band_row = next(_row for _row in fh._rows(_b3_holes)

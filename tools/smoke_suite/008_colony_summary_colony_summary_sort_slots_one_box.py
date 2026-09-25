@@ -297,46 +297,38 @@ ok("layout_reference._sort_slots is a pointer to layout.json and "
 # are the artwork's own; what is swapped is the geometry handed to
 # the matcher, which is the actual case: Data moves two slots in
 # GIMP and `layout_reference.json` moves with them.
-_sw_w, _sw_h, _sw_holes = fh.find_holes(
-    res.screen_file("colony_summary", "assets", "frame.png"))
-_sw_ref = dict(fh.reference_windows("colony_summary",
-                                    (_sw_w, _sw_h)))
-_sw_lr = app.res.load_json(
-    "screens/colony_summary/layout_reference.json", {}) or {}
-_a, _b = fh.SORT_BOX_KEYS[1], fh.SORT_BOX_KEYS[4]
-_sw_ref[_a], _sw_ref[_b] = _sw_ref[_b], _sw_ref[_a]
-_sw_named = fh.name_holes(_sw_holes, "colony_summary",
-                          (_sw_w, _sw_h), _sw_ref)
-assert "overlap" in (fh.LAST_MATCH or ""), fh.LAST_MATCH
-# AND ORDER WOULD HAVE GOT IT WRONG, which is what makes this a
-# test: the second slot from the left is where `sort_population`
-# sits, and an index-based namer calls it that because it is
-# second. It has to come back as the key the geometry now puts
-# there.
-# THE BOTTOM ROW IS EIGHT HOLES SINCE 12 September 2026 — the
-# seven keys and RETURN, which took the eighth slot the evening
-# Data's frame cut one for it. Counted against the rule's own
-# names for that row rather than against `SORT_KEYS`, which is
-# seven and is not what the row holds.
-_sw_row = sorted((tuple(_r) for _r in _sw_holes
-                  if _r[1] > 0.85 * _sw_h), key=lambda _r: _r[0])
-_sw_want = len(fh.SORT_KEYS) + (
-    0 if "return_button" in _sw_lr.get(
-        "_windows_without_a_hole", ()) else 1)
-assert len(_sw_row) == _sw_want, (
-    f"{len(_sw_row)} holes in the artwork's bottom row, "
-    f"{len(fh.SORT_KEYS)} sort keys and "
-    f"{_sw_want - len(fh.SORT_KEYS)} for RETURN")
-_sw_at = {tuple(_r): _n for _n, _r in _sw_named.items()}
-assert _sw_at[_sw_row[1]] == _b, (
-    f"the second slot from the left came back as "
-    f"{_sw_at[_sw_row[1]]!r}; the swapped geometry puts {_b!r} "
-    f"there and {_a!r} is the name an INDEX would have given it")
-assert _sw_at[_sw_row[4]] == _a, (
-    f"the fifth slot came back as {_sw_at[_sw_row[4]]!r}, not "
-    f"{_a!r} — the swap has to be followed in both directions")
-ok("frame_holes names the frame's holes by overlap (two exchanged "
-   "sort slots keep their own names)")
+# REPLACED BY WORK ORDER 170 (decision 71). This was "frame_holes names
+# the frame's holes by overlap": the slots came out of the frame's holes,
+# so a namer that went by ORDER could give PRODUCING science's hole. The
+# frame is not drawn and the row no longer comes from holes — it sits on
+# the bottom edge, declared in `_windows_without_a_hole` — so the hazard
+# moved: what must hold now is that a slot's rect travels with its NAME
+# from `layout_reference.json` through `colonyplates.seat` into the
+# click geometry. Two slots are exchanged in a copy of the reference and
+# each KEY has to come back at the rect the copy gives it.
+_sw_scr = d.screens["colony_summary"]
+_sw_lr, _sw_wins = _cpl.load_reference(
+    _cpl.reference_path(os.path.dirname(SCREENS_DIR)))
+_a, _b = "sort_population", "sort_science"
+_sw_wins = dict(_sw_wins)
+_sw_wins[_a], _sw_wins[_b] = _sw_wins[_b], _sw_wins[_a]
+_sw_saved = {_bx.name: _bx.ref_rect for _bx in _sw_scr.boxes}
+try:
+    _cpl.seat([_bx for _bx in _sw_scr.boxes if _bx.name in _sw_wins],
+              _sw_wins, _sw_scr.layout)
+    _sw_hits = {_btn.key: _btn.hit for _btn in _csort_mod.for_screen(_sw_scr)}
+    for _k, _n in (("population", _a), ("science", _b)):
+        _want = pygame.Rect(*_sw_scr.layout.rect(_sw_wins[_n]))
+        assert _sw_hits[_k] == _want, (
+            f"{_k} is hit at {_sw_hits[_k]}, but the reference puts "
+            f"{_n} at {_want} — a slot did not travel with its name")
+finally:
+    for _bx in _sw_scr.boxes:
+        if _bx.name in _sw_saved:
+            _bx.ref_rect = _sw_saved[_bx.name]
+            _bx.update_layout(_sw_scr.layout)
+ok("two exchanged sort slots keep their own keys, from the reference "
+   "through the seat into the click geometry")
 
 
 # ── THE SLOTS ARE A MARKED DEVIATION, AT EVERY HOME ─────────
