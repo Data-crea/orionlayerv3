@@ -57,8 +57,27 @@ def owned(layout=None, icons=None):
     a = hud_cut.load() if icons is None else None
     px0, py0, px1, py1 = g["panel"]
     out = {}
+    # THE BAR SITS ON THE BOTTOM EDGE — work order 170. The HUD image
+    # carries 137 transparent rows under its bar, and 169 kept them as
+    # layout: the bar ended 54 ref px above the bottom. The bar moves
+    # down as one piece until its lowest edge line (TURN's) is the
+    # HUD's own screen-edge margin (`edge_margin`, measured on the
+    # panel's right side) above the bottom, and it hangs from the
+    # WINDOW's bottom edge (`anchor_v: bottom`), so a window taller
+    # than 16:9 keeps it there too.
+    drop = (1080 - g["edge_margin"]) - g["turn"][3]
+    nav_top, nav_bottom = g["nav_top"] + drop, g["nav_bottom"] + drop
+    tx0, ty0, tx1, ty1 = g["turn"]
+    ty0, ty1 = ty0 + drop, ty1 + drop
+    # THE MAP LIES IN THE FREE SPACE — work order 170: below the title
+    # plate, above the bar, left of the panel, `MAP_GAP` clear of each;
+    # it stretches with the window between plate and bar.
+    plate_bottom = hud_measure.ref(hud_cut.TITLE[3] - hud_cut.TITLE[1], 0)
+    map_top = plate_bottom + MAP_GAP
     out["map_area"] = {"name": "map_area",
-                       "rect": [0, 0, px0 - MAP_GAP, g["turn"][1] - MAP_GAP],
+                       "rect": [0, map_top, px0 - MAP_GAP,
+                                ty0 - MAP_GAP - map_top],
+                       "anchor_v": "stretch",
                        "style": {"font_scale": 1.0}}
     out["sidebar"] = {"name": "sidebar",
                       "rect": [px0, py0, px1 - px0, py1 - py0],
@@ -91,14 +110,16 @@ def owned(layout=None, icons=None):
             out[f"sb_{key}_icon"] = {
                 "name": f"sb_{key}_icon",
                 "rect": [ib[0], ib[1], ib[2] - ib[0], ib[3] - ib[1]]}
-    h = g["nav_bottom"] - g["nav_top"]
+    h = nav_bottom - nav_top
     for key, c in zip(NAV, g["nav_centres"]):
         w = g["nav_width"]
         out[f"nav_{key}"] = {"name": f"nav_{key}",
-                             "rect": [round(c - w / 2), g["nav_top"], w, h],
+                             "rect": [round(c - w / 2), nav_top, w, h],
+                             "anchor_v": "bottom",
                              "style": {"font_size": 18}}
-    x0, y0, x1, y1 = g["turn"]
-    out["nav_turn"] = {"name": "nav_turn", "rect": [x0, y0, x1 - x0, y1 - y0],
+    out["nav_turn"] = {"name": "nav_turn",
+                       "rect": [tx0, ty0, tx1 - tx0, ty1 - ty0],
+                       "anchor_v": "bottom",
                        "style": {"font_size": 26}}
     return out
 

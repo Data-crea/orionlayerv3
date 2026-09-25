@@ -4,10 +4,11 @@
       "name": "map_area",
       "rect": [
         0,
-        0,
+        75,
         1611,
-        947
+        906
       ],
+      "anchor_v": "stretch",
       "style": {
         "font_scale": 1.0
       }
@@ -28,10 +29,11 @@
       "name": "nav_turn",
       "rect": [
         1604,
-        953,
+        987,
         282,
         73
       ],
+      "anchor_v": "bottom",
       "style": {
         "font_size": 26
       }
@@ -40,10 +42,11 @@
       "name": "nav_colonies",
       "rect": [
         41,
-        960,
+        994,
         250,
         62
       ],
+      "anchor_v": "bottom",
       "style": {
         "font_size": 18
       }
@@ -52,10 +55,11 @@
       "name": "nav_planets",
       "rect": [
         297,
-        960,
+        994,
         250,
         62
       ],
+      "anchor_v": "bottom",
       "style": {
         "font_size": 18
       }
@@ -64,10 +68,11 @@
       "name": "nav_fleets",
       "rect": [
         563,
-        960,
+        994,
         250,
         62
       ],
+      "anchor_v": "bottom",
       "style": {
         "font_size": 18
       }
@@ -76,10 +81,11 @@
       "name": "nav_leaders",
       "rect": [
         817,
-        960,
+        994,
         250,
         62
       ],
+      "anchor_v": "bottom",
       "style": {
         "font_size": 18
       }
@@ -88,10 +94,11 @@
       "name": "nav_races",
       "rect": [
         1086,
-        960,
+        994,
         250,
         62
       ],
+      "anchor_v": "bottom",
       "style": {
         "font_size": 18
       }
@@ -100,10 +107,11 @@
       "name": "nav_info",
       "rect": [
         1348,
-        960,
+        994,
         250,
         62
       ],
+      "anchor_v": "bottom",
       "style": {
         "font_size": 18
       }
@@ -383,10 +391,11 @@
       "name": "map_area",
       "rect": [
         0,
-        0,
+        75,
         1611,
-        947
+        906
       ],
+      "anchor_v": "stretch",
       "style": {
         "font_scale": 1.0
       }
@@ -407,10 +416,11 @@
       "name": "nav_turn",
       "rect": [
         1604,
-        953,
+        987,
         282,
         73
       ],
+      "anchor_v": "bottom",
       "style": {
         "font_size": 26
       }
@@ -419,10 +429,11 @@
       "name": "nav_colonies",
       "rect": [
         41,
-        960,
+        994,
         250,
         62
       ],
+      "anchor_v": "bottom",
       "style": {
         "font_size": 18
       }
@@ -431,10 +442,11 @@
       "name": "nav_planets",
       "rect": [
         297,
-        960,
+        994,
         250,
         62
       ],
+      "anchor_v": "bottom",
       "style": {
         "font_size": 18
       }
@@ -443,10 +455,11 @@
       "name": "nav_fleets",
       "rect": [
         563,
-        960,
+        994,
         250,
         62
       ],
+      "anchor_v": "bottom",
       "style": {
         "font_size": 18
       }
@@ -455,10 +468,11 @@
       "name": "nav_leaders",
       "rect": [
         817,
-        960,
+        994,
         250,
         62
       ],
+      "anchor_v": "bottom",
       "style": {
         "font_size": 18
       }
@@ -467,10 +481,11 @@
       "name": "nav_races",
       "rect": [
         1086,
-        960,
+        994,
         250,
         62
       ],
+      "anchor_v": "bottom",
       "style": {
         "font_size": 18
       }
@@ -479,10 +494,11 @@
       "name": "nav_info",
       "rect": [
         1348,
-        960,
+        994,
         250,
         62
       ],
+      "anchor_v": "bottom",
       "style": {
         "font_size": 18
       }

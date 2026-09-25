@@ -2374,7 +2374,7 @@ files under `doc/` and are only summarised here.
 | | |
 |---|---|
 | Python | 32,960 lines across 111 modules — `find . -name '*.py'`, `__pycache__` excluded, the smoke test's 6,400 included. The previous figure here (21,642 across 94) was carried from an unstated method and could not be reproduced |
-| Smoke test | `python tools/smoke_test.py` — **300 checks**, headless, in `tools/smoke_suite/` since work order 162 (110 check modules, one group per screen plus a shared core; `tools/smoke_test.py` is the runner). **Two tiers since work order 158**: the bare command runs everything (~72 s here); `--fast` runs the commit gate's 293 (~32 s here). `--screen <name>` prints only that screen's sentences and the core's and is NEVER a gate. See "The gate has two tiers" below |
+| Smoke test | `python tools/smoke_test.py` — **301 checks**, headless, in `tools/smoke_suite/` since work order 162 (111 check modules, one group per screen plus a shared core; `tools/smoke_test.py` is the runner). **Two tiers since work order 158**: the bare command runs everything (~72 s here); `--fast` runs the commit gate's 294 (~32 s here). `--screen <name>` prints only that screen's sentences and the core's and is NEVER a gate. See "The gate has two tiers" below |
 | Assets | 170 MB (select_race 68, galaxy_map 51, shared 23, new_game 21, colony_summary 1) |
 | Screens in HD | 11 of ~20–22 (the Leaders screen, work order 167, built and not accepted; the GAME menu overlay, work order Stop 2, every dialog of the popup; colony summary draws list, sidebar, scan box and galaxy inset, and MOVES POPS — the first HD gesture that drives the game; planets, brief 101, lists, sorts, restricts and returns) |
 | Setup from clone | `python tools/setup.py` (deps via the system package manager) |
@@ -2900,8 +2900,8 @@ blocks into a session and writing them out again. Three proofs:
 
 | | command | checks | on this tree |
 |---|---|---:|---:|
-| **Full** — the default, and the pre-push gate | `python tools/smoke_test.py` | 300 | ~72 s |
-| **Fast** — the pre-commit gate | `python tools/smoke_test.py --fast` | 293 | ~32 s |
+| **Full** — the default, and the pre-push gate | `python tools/smoke_test.py` | 301 | ~72 s |
+| **Fast** — the pre-commit gate | `python tools/smoke_test.py --fast` | 294 | ~32 s |
 | **Screen** — **never a gate** | `python tools/smoke_test.py --screen <name>` | all of them, ~a third printed | the tier's |
 
 **`--screen` narrows what a run PRINTS, not what it runs**, and the
@@ -3322,7 +3322,7 @@ in exactly ONE bucket. The numbers below are produced by
 check asserts this list still agrees with it — the same trade the
 check count makes, for the same reason.
 
-`tools/struct_probe.py` (**478** code, 753 total), `screens/galaxy_map/screen.py` (**414** code, 728 total — down from 456 when work order 169 moved the HUD drawing into `hudview.py`), `tools/colony_list_preview.py` (**403** code, 772 total), `screens/custom_race/screen.py` (**402** code, 565 total — two more since work order 169 drew the picks and score bar as two HUD panels), `tools/colony_move_hd.py` (**370** code, 570 total — fifteen lines shorter since work order 166 part E took its `Counter` out: the tree has one send counter now, `livedrive.SendCounter`), `core/editor/editor.py` (**359** code, 430 total), `screens/galaxy_map/renderer.py` (**336** code, 758 total), `tools/ext_diag.py` (**325** code, 473 total), `main.py` (**323** code, 549 total — over since work order 142 C added the debug input switch; 146 added the F8 surface screenshot, a TOOL for live acceptance on a display that renders but cannot be captured).
+`tools/struct_probe.py` (**478** code, 753 total), `screens/galaxy_map/screen.py` (**409** code, 731 total — down from 456 when work order 169 moved the HUD drawing into `hudview.py`, and the floor went to `floorlift.render_floor` in 170), `tools/colony_list_preview.py` (**403** code, 772 total), `screens/custom_race/screen.py` (**403** code, 569 total — three more since work orders 169 and 170: the picks and score bar as two HUD panels, and the flag that keeps its frame buttons inside its columns), `tools/colony_move_hd.py` (**370** code, 570 total — fifteen lines shorter since work order 166 part E took its `Counter` out: the tree has one send counter now, `livedrive.SendCounter`), `core/editor/editor.py` (**359** code, 430 total), `screens/galaxy_map/renderer.py` (**336** code, 758 total), `tools/ext_diag.py` (**325** code, 473 total), `main.py` (**323** code, 549 total — over since work order 142 C added the debug input switch; 146 added the F8 surface screenshot, a TOOL for live acceptance on a display that renders but cannot be captured).
 `smoke_test.py` is exempt by nature, **and since 22 September 2026 so
 is `tools/smoke_suite/`** — work order 162 split that one `main()` into
 ninety-one check modules, and they are the same file in pieces. They are

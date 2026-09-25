@@ -52,3 +52,23 @@ def apply(surface, rect, app):
     if any(lift):
         surface.fill(lift, rect, special_flags=pygame.BLEND_RGB_ADD)
     return lift
+
+
+def render_floor(screen, surface, px=None):
+    """The map's floor over the whole window (work order 170): the
+    artwork, the OLED floor lift (HD EXTENSION, one point, both floor
+    paths) and the background point stars — additive, so the value a
+    star carries is the light it contributes. Under everything, the HUD
+    included: the floor used to stop at the map box, which left the
+    letterbox strip and the corner above the info panel black."""
+    import pygame
+    whole = pygame.Rect(0, 0, screen.app.win_w, screen.app.win_h)
+    scaled = screen._map_bg_scaled
+    if scaled is not None and scaled.get_size() == whole.size:
+        surface.blit(scaled, (0, 0))
+    else:
+        from screens.galaxy_map.screen import MAP_BG
+        surface.fill(MAP_BG[:3], whole)
+    apply(surface, whole, screen.app)
+    if px is not None:
+        screen._starfield.render(surface, tuple(whole), px)

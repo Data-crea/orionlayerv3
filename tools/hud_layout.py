@@ -64,6 +64,13 @@ def galaxy_layout(a):
         "nav_width": ref(pitch - gap, 0),
         "turn": [ref(turn_x[0], 0), ref(turn_y[0], 0),
                  ref(turn_x[1], 0), ref(turn_y[1], 0)],
+        # THE HUD'S OWN SCREEN-EDGE MARGIN, work order 170: the gap
+        # between the info panel's opaque right edge and the image's
+        # right edge. The one place the artwork says how far a block
+        # sits from the screen's edge — the bottom edge of the image
+        # is NOT such a place: 137 transparent rows under the bar,
+        # which 169 took for layout and which is the band Data saw.
+        "edge_margin": ref(a.shape[1] - panel[2], 0),
     }
     return out
 

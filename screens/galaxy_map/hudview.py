@@ -25,8 +25,10 @@ from screens.galaxy_map import sidebar as sb
 def title_rect(screen):
     """The title plate's text box in device px."""
     L = screen.layout
+    # From the WINDOW's top edge (work order 170), as the bar hangs from
+    # its bottom one: on a window taller than 16:9 both reach the edge.
     return hud.title_plate_rect(L.offset_x + REF_W * L.scale / 2,
-                                L.offset_y, L.scale)[1]
+                                0, L.scale)[1]
 
 
 def render_title(screen, surface):
@@ -39,7 +41,7 @@ def render_title(screen, surface):
     title = cfg.get("title", screen.FRAME_TITLE)
     L = screen.layout
     hud.title_plate(surface, L.offset_x + REF_W * L.scale / 2,
-                    L.offset_y, L.scale, title, screen.style,
+                    0, L.scale, title, screen.style,
                     colour=screen.pressed.colour(
                         "title", hudtext.colour("title"))[:3])
 
@@ -117,8 +119,9 @@ def render_nav(screen, surface):
 
 
 def nav_rect(screen, key):
-    box = screen.box_rect(f"nav_{key}")
-    return pygame.Rect(*screen.layout.rect(box)) if box else None
+    """The window rect, anchors included: the bar hangs from the
+    window's bottom edge (work order 170)."""
+    return screen.box_screen_rect(f"nav_{key}")
 
 
 def nav_hit(screen, key, x, y):

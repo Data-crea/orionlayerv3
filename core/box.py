@@ -25,6 +25,8 @@ class Box:
         self.ref_rect = tuple(data["rect"]) if "rect" in data else None
         self.field_id = data.get("field_id")
         self.anchor = data.get("anchor")  # None, "right", "left"
+        # None, "top", "bottom", "stretch" — see `Layout.vertical`.
+        self.anchor_v = data.get("anchor_v")
         self.style = data.get("style", {})
         self.data_field = data.get("data_field")
         self.hidden = data.get("hidden", False)
@@ -58,8 +60,7 @@ class Box:
             return
         x, y, w, h = self.ref_rect
         sw = int(w * layout.scale)
-        sh = int(h * layout.scale)
-        sy = int(y * layout.scale + layout.offset_y)
+        sy, sh = layout.vertical(y, h, self.anchor_v)
 
         # Content area boundaries (16:9 area centered in window)
         content_right = layout.offset_x + REF_W * layout.scale
@@ -202,6 +203,8 @@ class Box:
             d["field_id"] = self.field_id
         if self.anchor:
             d["anchor"] = self.anchor
+        if self.anchor_v:
+            d["anchor_v"] = self.anchor_v
         if self.style:
             d["style"] = self.style
         if self.data_field:

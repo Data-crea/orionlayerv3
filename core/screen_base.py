@@ -365,6 +365,16 @@ class ScreenBase(HelpMixin):
                 return box.ref_rect
         return None
 
+    def box_screen_rect(self, name):
+        """A named box's WINDOW rect as `Box.update_layout` placed it —
+        anchors included (work order 170) — or None. Where a box may be
+        anchored to the window's edge, this is the rect to draw and hit
+        with; `layout.rect(box_rect(name))` is the content-area rect."""
+        for box in self.boxes:
+            if box.name == name and box.screen_rect is not None:
+                return pygame.Rect(box.screen_rect)
+        return None
+
     def box_style(self, name):
         """A named box's style dict, or {} when there is no such box.
 

@@ -60,19 +60,30 @@ ok("floor lift: off is byte-identical on the graphic and on the "
 
 # 13. ONE APPLICATION POINT, after both floor paths and before the
 #     star field — so nothing else on the map is lifted.
+# SINCE WORK ORDER 170 the floor is drawn over the whole window by ONE
+# function, `floorlift.render_floor`, which `_render_map` calls first:
+# the application point moved there with it, and is held there.
 _fl_src_txt = open(os.path.join(SCREENS_DIR, "galaxy_map", "screen.py"),
                    encoding="utf-8").read()
-assert _fl_src_txt.count("floorlift.apply(") == 1, \
+_fl_mod_txt = open(os.path.join(SCREENS_DIR, "galaxy_map", "floorlift.py"),
+                   encoding="utf-8").read()
+assert "floorlift.apply(" not in _fl_src_txt, \
     "the floor lift is applied at more than one point"
-assert "OLED floor lift: HD EXTENSION" in _fl_src_txt, \
+_fl_body = _fl_mod_txt.split("def render_floor(", 1)[1]
+assert _fl_body.count("apply(") == 1, \
+    "the floor lift is applied at more than one point"
+assert "OLED floor lift (HD EXTENSION" in _fl_body, \
     "the call site lost its HD EXTENSION marking"
-_fl_body = _fl_src_txt.split("def _render_map(", 1)[1].split("\n    def ", 1)[0]
-_fl_at = _fl_body.index("floorlift.apply(")
-assert _fl_body.index("surface.blit(self._map_bg_scaled") < _fl_at
+_fl_at = _fl_body.index("apply(")
+assert _fl_body.index("surface.blit(scaled") < _fl_at
 assert _fl_body.index("surface.fill(MAP_BG") < _fl_at
-assert _fl_at < _fl_body.index("self._starfield.render(")
-ok("floor lift: exactly one application point in _render_map, after both "
-   "floor paths and before the star field")
+assert _fl_at < _fl_body.index("_starfield.render(")
+_fl_rm = _fl_src_txt.split("def _render_map(", 1)[1].split("\n    def ", 1)[0]
+assert "self._render_floor(" in _fl_rm.split("set_clip", 1)[0], \
+    "_render_map no longer draws the floor first"
+ok("floor lift: exactly one application point, in the floor that "
+   "_render_map draws first, after both floor paths and before the star "
+   "field")
 
 # ── GAME menu overlay (work order Stop 2, 14 September 2026) ──
 import json as _gm_json

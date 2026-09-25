@@ -39,6 +39,36 @@ class Layout:
             int(h * self.scale),
         )
 
+    def vertical(self, ref_y, ref_h, anchor=None):
+        """(window y, window height) of a reference band, by anchor.
+
+        HD EXTENSION, work order 170 (decision 71's HUD). The content
+        area is 16:9 and centred, so on a window taller than 16:9 it
+        leaves letterbox above and below — and a bar that should sit
+        on the window's bottom edge would sit on the content area's.
+        An anchor keeps a box's distance from the WINDOW's edge instead:
+
+          None       the content area, as every box always was
+          "top"      its distance from the window's top edge
+          "bottom"   its distance from the window's bottom edge
+          "stretch"  top edge as "top", bottom edge as "bottom": the
+                     box grows with the window between the two
+
+        Every distance is the reference distance times `scale`, so at
+        16:9 and at every wider window all four give the same rect."""
+        top = ref_y * self.scale
+        bottom = (self.ref_h - ref_y - ref_h) * self.scale
+        if anchor == "top":
+            return int(top), int(ref_h * self.scale)
+        if anchor == "bottom":
+            h = int(ref_h * self.scale)
+            return int(self.window_h - bottom) - h, h
+        if anchor == "stretch":
+            y = int(top)
+            return y, int(self.window_h - bottom) - y
+        return (int(ref_y * self.scale + self.offset_y),
+                int(ref_h * self.scale))
+
     def pos(self, ref_x, ref_y):
         """Reference position -> window position (int tuple)."""
         return (

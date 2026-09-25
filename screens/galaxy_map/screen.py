@@ -6,8 +6,10 @@ picture arrives), the star map's own floor, and Data's HUD drawn over
 it in code by `core.hud` — the title plate, the info panel, six slanted
 nav buttons and the TURN action button. The boxes are written from the
 HUD's measured layout by `tools/hud_boxes.py` (decision 3's successor):
-  map_area        the star field, from the screen's top-left corner to
-                  the HUD — the floor runs under the title plate
+  map_area        the star field, in the FREE SPACE between the title
+                  plate, the bar and the panel (work order 170), and
+                  stretching with the window between plate and bar
+                  (`anchor_v`); the floor runs under the whole window
   sidebar         the info panel: stardate on top, five readouts
   nav_*           seven buttons mirroring the original: six along
                   the bottom (Colonies, Planets, Fleets, Leaders,
@@ -19,6 +21,13 @@ nav column on the RIGHT of the map and GAME top-left (mainscr.cpp);
 HD puts the buttons in a row along the bottom and GAME in the title
 plate. The click follows the box — each button activates the
 original's field — so only the place differs.
+
+**DEVIATION, work order 170: the map rectangle is not the original's
+shape.** The original's map window is native (22,22)-(527,421), 506:400;
+HD's is the free space left by the HUD, much wider. `mapcoords.MapView`
+fits the native viewport into it, centred, and a click goes back through
+the same view's `to_native`, so the click mapping follows the box by
+construction — the star under the pointer is the star the game selects.
 
 Positions come from core.mapcoords, which transcribes orion2re's
 own transform rather than measuring it. Clicking a star sends an
@@ -267,11 +276,18 @@ class GalaxyMapScreen(ScreenBase):
         self._scale_map_background()
 
     def _scale_map_background(self):
+        """Cover-scaled to the WHOLE WINDOW since work order 170.
+
+        The floor was cut to the map box, and outside it — the
+        letterbox of a window wider than 16:9, the corner above the
+        info panel — the background placeholder showed: the dark strip
+        and the black corner of Data's 2576x1432 screenshot. The HUD
+        sits on the floor (169, point 5), so the floor is under all of
+        it; the stars stay clipped to the map box."""
         self._map_bg_scaled = None
-        box = self.box_rect("map_area")
-        if self._map_bg is None or not box:
+        if self._map_bg is None:
             return
-        _, _, w, h = self.layout.rect(box)
+        w, h = self.app.win_w, self.app.win_h
         if w < 1 or h < 1:
             return
         iw, ih = self._map_bg.get_size()
@@ -373,10 +389,13 @@ class GalaxyMapScreen(ScreenBase):
         as a state by the proxy. Everything downstream keeps one
         code path either way.
         """
-        box = self.box_rect("map_area")
-        if not box or self._state is None:
+        # The box's WINDOW rect (work order 170): `map_area` stretches
+        # between the title plate and the bar (`anchor_v`), so its
+        # reference rect through `layout.rect` is not where it is.
+        rect = self.box_screen_rect("map_area")
+        if rect is None or self._state is None:
             return None
-        rect = self.layout.rect(box)
+        rect = tuple(rect)
         if self._viewctl.active:
             return mc.SmoothMapView(rect, self._viewctl.proxy(self._state))
         return mc.MapView(rect, self._state)
@@ -456,26 +475,19 @@ class GalaxyMapScreen(ScreenBase):
     def _render_title(self, surface):
         hudview.render_title(self, surface)
 
+    def _render_floor(self, surface, px=None):
+        """The floor over the whole window, with the OLED floor lift
+        (HD EXTENSION) — `floorlift.render_floor`."""
+        floorlift.render_floor(self, surface, px)
+
     def _render_map(self, surface):
         ctx = self._map_context()
+        self._render_floor(surface, ctx.px if ctx is not None else None)
         if ctx is None:
             return
         view = ctx.view
         clip = surface.get_clip()
         surface.set_clip(pygame.Rect(*view.box))
-        if (self._map_bg_scaled is not None
-                and self._map_bg_scaled.get_size() == view.box[2:]):
-            surface.blit(self._map_bg_scaled, view.box[:2])
-        else:
-            surface.fill(MAP_BG[:3], pygame.Rect(*view.box))
-        # The OLED floor lift: HD EXTENSION, one point, both floor paths.
-        floorlift.apply(surface, pygame.Rect(*view.box), self.app)
-
-        # Background point stars, added on top of the artwork and
-        # under everything the game owns. Additive, so the value a
-        # star carries is the light it contributes — the same weight
-        # over a gas cloud as over empty space.
-        self._starfield.render(surface, view.box, ctx.px)
 
         player_num = getattr(self._state, "player_num", 0)
         omniscient = self._omniscient
