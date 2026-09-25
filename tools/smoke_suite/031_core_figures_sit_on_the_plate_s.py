@@ -794,10 +794,17 @@ def _held_ink_at(_W, _H):
         finally:
             _hd_m.pos = _hd_saved
         # ABOVE THE PLATE, NOT ABOVE BLACK. The cell plate's own
-        # line is `panel.thin_border`, (55, 65, 85), which sums to
-        # 205 and runs along every band's edge — a threshold that
-        # caught it would measure the plate and call it a figure.
-        # The masters are the game's own palette and are brighter.
+        # line runs along every band's edge — a threshold that caught
+        # it would measure the plate and call it a figure. Since
+        # decision 71 it is the HUD outline, `panel.edge_dim`, and the
+        # premise is asserted rather than assumed (it was (55, 65, 85)
+        # before, and the first HUD colour tried, the separator's,
+        # summed to 317 and broke it). The masters are the game's own
+        # palette and are brighter.
+        from core.hud import style as _hd_hs
+        assert sum(_hd_hs.get().colour("panel.edge_dim")) < 260, (
+            "the HUD outline is as bright as a figure; this check "
+            "cannot tell the two apart any more")
         return pygame.surfarray.array3d(_s2).transpose(
             1, 0, 2).sum(axis=2) > 260
 

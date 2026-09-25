@@ -104,6 +104,11 @@ STEPS = [
     ("make_surface_tiles.py", [],
      os.path.join(CS, "surfaces", "gaia.png"),
      "10 planet surface pictures, cut from assets/_src/surfaces/"),
+    ("hud_cut.py", [],
+     os.path.join(ROOT, "assets", "shared", "hud", "cut",
+                  "title_plate.png"),
+     "12 HUD icons and the title plate, cut from assets/shared/hud/ "
+     "(decision 71)"),
     ("make_research_frame.py", [],
      os.path.join(ROOT, "assets", "shared", "frames",
                   "research_panel.png"),

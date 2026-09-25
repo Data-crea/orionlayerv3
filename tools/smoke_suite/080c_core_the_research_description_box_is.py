@@ -239,6 +239,17 @@ for _dx_sy in range(0, 1080, 3):
                    else (min(_dx_box[0], _dx_sx), min(_dx_box[1], _dx_sy),
                          max(_dx_box[2], _dx_sx), max(_dx_box[3], _dx_sy)))
 assert _dx_box is not None, "the help popup drew nothing at all"
+# THE POPUP'S OPAQUE BODY, NOT ITS GLOW (work order 169, decision 71):
+# the HUD popup block's outer glow is translucent by design and blends
+# with whatever is under it, panel included, so the footprint is shrunk
+# by the glow's pad (`core.hud.raster.shape`: ceil(2.2 x glow) + 2) and
+# three px of sampling grid. What is claimed — the popup is drawn LAST —
+# is about the body, and the body is opaque.
+from core.hud import style as _dx_hs
+_dx_pad = int(math.ceil(_dx_hs.get().get("panel.glow_width")
+                        * app.layout.scale * 2.2)) + 2 + 3
+_dx_box = (_dx_box[0] + _dx_pad, _dx_box[1] + _dx_pad,
+           _dx_box[2] - _dx_pad, _dx_box[3] - _dx_pad)
 _dx_both = _dx_wrong = 0
 for _dx_sy in range(_dx_box[1], _dx_box[3] + 1):
     for _dx_sx in range(_dx_box[0], _dx_box[2] + 1):

@@ -38,6 +38,7 @@ import pygame
 from core import hestrings
 from core import palette
 from core import research
+from core.hud import text as hudtext
 from core.structs import player as player_struct
 
 LABEL_COLOR = palette.col("galaxy_map", "sidebar_label", (128, 146, 180))
@@ -73,6 +74,12 @@ LABEL_GAP = 5
 #: Fallback geometry, used only when the sb_* boxes are absent.
 DEFAULT_ICON_FRAC = 0.40
 ICON_PAD = 0.12
+
+
+def _hud_colours():
+    """(label, value, sub, negative) — the HUD style's text colours."""
+    return (hudtext.colour("label"), hudtext.colour("value"),
+            hudtext.colour("sub"), hudtext.colour("negative"))
 
 
 def _fmt_signed(value):
@@ -268,23 +275,27 @@ def draw_text_block(surface, style, layout, rect, label, main, sub,
                     warn, font_scale, align, fonts):
     """Label, value and sub inside one text box, vertically centred."""
     x, y, w, h = rect
+    # THE HUD's FACE AND COLOURS since decision 71 (work order 169): one
+    # face for label and value, as Data's mockup has it — the
+    # proportional font was here for the DEMO Bank Gothic's watermark
+    # glyphs, which Aldrich does not have — and the label, value, sub
+    # and negative colours measured off the mockup (`measured.text`).
+    label_col, value_col, sub_col, warn_col = _hud_colours()
     label_font = style.get_font(
         layout.font_size(int(fonts["label"] * font_scale)))
-    value_font = style.get_prop_font(
+    value_font = style.get_font(
         layout.font_size(int(fonts["value"] * font_scale)))
-    sub_font = style.get_prop_font(
+    sub_font = style.get_font(
         layout.font_size(int(fonts["sub"] * font_scale)))
 
-    lt = _fit_width(label_font.render(label.upper(), True,
-                                      LABEL_COLOR[:3]), w)
+    lt = _fit_width(label_font.render(label.upper(), True, label_col), w)
     # A row may carry more than one value line since work order 129 D —
     # the research row prints the chance, the turns and the points — so
     # `main` is a string or a sequence of them.
     values = (main,) if isinstance(main, str) else tuple(main)
-    vts = [value_font.render(line, True,
-                             (WARN_COLOR if warn else VALUE_COLOR)[:3])
+    vts = [value_font.render(line, True, warn_col if warn else value_col)
            for line in values]
-    st = sub_font.render(sub, True, SUB_COLOR[:3]) if sub else None
+    st = sub_font.render(sub, True, sub_col) if sub else None
 
     if st is not None and sub.startswith(SUB_INLINE_PREFIX):
         vts[-1], st = _pair_surface(
@@ -301,13 +312,12 @@ def draw_text_block(surface, style, layout, rect, label, main, sub,
     while block_h > h and len(vts) > 1 or (block_h > h and vts
                                            and vts[0].get_height() > 6):
         scale_to = max(1, int(min(v.get_height() for v in vts) * 0.9))
-        smaller = style.get_prop_font(max(6, scale_to))
+        smaller = style.get_font(max(6, scale_to))
         vts = [_fit_width(smaller.render(line, True,
-                                         (WARN_COLOR if warn
-                                          else VALUE_COLOR)[:3]), w)
+                                         warn_col if warn else value_col), w)
                for line in values]
         if st is not None:
-            st = _fit_width(sub_font.render(sub, True, SUB_COLOR[:3]), w)
+            st = _fit_width(sub_font.render(sub, True, sub_col), w)
         new_h = lt.get_height() + gap + sum(v.get_height() for v in vts) \
             + (st.get_height() if st is not None else 0)
         if new_h >= block_h:

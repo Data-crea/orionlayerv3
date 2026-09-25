@@ -17,6 +17,8 @@ from core.pressfeedback import Pressed
 from core.box import load_boxes
 from core.config import REF_W, REF_H
 from core.screenhelp import HelpMixin
+from core.hud import screenframe
+from core.hud import style as hudstyle
 
 # Frame button click feedback
 BTN_FLASH_DURATION = 0.30     # total flash time in seconds
@@ -259,13 +261,19 @@ class ScreenBase(HelpMixin):
     # --- Background (automatic for all screens) ---
 
     def _load_background(self):
-        """Load background.png from the screen's assets folder.
+        """The screen's BACKGROUND SLOT — decision 71.
 
-        Resolution order: mods → screen assets → shared cockpit
-        texture (assets/shared/background_cockpit.png).
+        One picture per screen, `screens/<name>/assets/background.png`,
+        resolved through the resource roots (mods first, decision 16), so
+        Data's backgrounds drop in as files and a mod can replace one.
+        Until a screen has one it draws the plain dark placeholder
+        (`chosen.background_placeholder` in the HUD style).
+
+        The shared cockpit texture used to be the fallback here. It was
+        part of the cockpit look decision 71 replaces, so it is no longer
+        drawn behind a screen; the file stays in the tree.
         """
-        path = (self.asset_path("assets", "background.png")
-                or self.app.res.shared("background_cockpit.png"))
+        path = self.asset_path("assets", "background.png")
         if path:
             self._bg = pygame.image.load(path).convert_alpha()
             self._scale_background()
@@ -297,12 +305,11 @@ class ScreenBase(HelpMixin):
         self._bg_pos = (0, 0)
 
     def _render_background(self, surface):
-        """Draw background image or solid color fallback."""
+        """The background slot's picture, or the dark placeholder."""
         if self._bg_scaled:
             surface.blit(self._bg_scaled, self._bg_pos)
         else:
-            bg = self.colors.get("background", [6, 8, 16])
-            surface.fill(bg[:3])
+            surface.fill(hudstyle.get().colour("background_placeholder"))
 
     # --- Fixed frame image (screens that wear one PNG over their content) ---
     #
@@ -330,9 +337,15 @@ class ScreenBase(HelpMixin):
         self._frame_pos = (x, y)
 
     def _render_frame_image(self, surface):
-        if self._frame_scaled is not None:
-            surface.blit(self._frame_scaled, self._frame_pos)
-        elif self.USE_FRAME:
+        """NOTHING IS DRAWN HERE SINCE DECISION 71 (work order 169).
+
+        The fixed frame images are replaced by the HUD blocks, which each
+        screen draws in its own `render`. This method, `_load_frame` and
+        `_scale_frame` stay, as the order that recorded 71 asks — a later
+        order removes them with the images — but no screen's picture
+        goes through them any more. `USE_FRAME` screens get the HUD's
+        title plate and buttons from `_render_frame` below."""
+        if self.USE_FRAME:
             self._render_frame(surface)
 
     # --- Box helpers ---
@@ -406,14 +419,14 @@ class ScreenBase(HelpMixin):
             box.update_layout(self.layout)
 
     def _render_frame(self, surface):
-        """Draw the 9-slice frame overlay and optional title/buttons."""
-        self.style.draw_frame(surface, variant=self.FRAME_VARIANT)
-        if self.FRAME_TITLE:
-            self._render_frame_title(surface)
-        if self.FRAME_BTN_LEFT:
-            self._render_frame_button(surface, "left", self.FRAME_BTN_LEFT[0])
-        if self.FRAME_BTN_RIGHT:
-            self._render_frame_button(surface, "right", self.FRAME_BTN_RIGHT[0])
+        """The HUD's title plate and the two frame buttons — decision 71.
+        See `core.hud.screenframe`."""
+        screenframe.render(self, surface)
+
+    def hud_frame_button_rect(self, side):
+        """Where frame button `side` is drawn AND hit (decision 5); the
+        click is still handled here, in `handle_click` (decision 13)."""
+        return screenframe.button_rect(self, side)
 
     def _get_active_frame(self):
         """Return the active frame renderer (variant or default)."""
@@ -496,38 +509,15 @@ class ScreenBase(HelpMixin):
         """Which frame button was hit: 'left', 'right' or None.
 
         Use this when a button has no field_id yet (unwired) but
-        should still trigger local behaviour.
-        """
-        frame = self._get_active_frame()
-        if not frame or not frame.available:
-            return None
-        ww, wh = self.app.win_w, self.app.win_h
-        if self.FRAME_BTN_LEFT:
-            r = frame.button_rect_left(ww, wh)
-            if r and pygame.Rect(*r).collidepoint(screen_x, screen_y):
-                return "left"
-        if self.FRAME_BTN_RIGHT:
-            r = frame.button_rect_right(ww, wh)
-            if r and pygame.Rect(*r).collidepoint(screen_x, screen_y):
-                return "right"
-        return None
+        should still trigger local behaviour. Since decision 71 it asks
+        the HUD buttons, through the rect they are drawn in."""
+        return screenframe.side_at(self, screen_x, screen_y)
 
     def _frame_button_hit(self, screen_x, screen_y):
         """Check if a click hit a frame button. Returns field_id or None."""
-        frame = self._get_active_frame()
-        if not frame or not frame.available:
-            return None
-        ww, wh = self.app.win_w, self.app.win_h
-        if self.FRAME_BTN_LEFT:
-            r = frame.button_rect_left(ww, wh)
-            if r:
-                rect = pygame.Rect(*r)
-                if rect.collidepoint(screen_x, screen_y):
-                    return self.FRAME_BTN_LEFT[1]
-        if self.FRAME_BTN_RIGHT:
-            r = frame.button_rect_right(ww, wh)
-            if r:
-                rect = pygame.Rect(*r)
-                if rect.collidepoint(screen_x, screen_y):
-                    return self.FRAME_BTN_RIGHT[1]
+        side = self._frame_button_side(screen_x, screen_y)
+        if side == "left":
+            return self.FRAME_BTN_LEFT[1]
+        if side == "right":
+            return self.FRAME_BTN_RIGHT[1]
         return None

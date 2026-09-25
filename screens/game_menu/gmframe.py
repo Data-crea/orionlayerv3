@@ -44,6 +44,8 @@ the smoke test holds every dialog to the opening's alpha.
 """
 import pygame
 
+from core.hud import blocks as hud
+
 #: Reference px the opening reaches past the body box on each side, so
 #: the frame's anti-aliased rim lands on the fill and not on the body's
 #: edge. The same 2 as the cutout screens' bleed.
@@ -64,26 +66,49 @@ def _map_cutout(screen):
     return None
 
 
+#: Reference px kept clear between the popup and the map's free area —
+#: what the old frame image's own transparent margins gave (12 to 18),
+#: and the panel's glow needs room.
+MARGIN = 14
+
+
+def free_area(screen):
+    """The map cutout less the HUD's title plate, reference px: the part
+    of the map nothing of the HUD covers (decision 71). The plate hangs
+    from the top edge (`core.hud.blocks.title_plate_rect`), so only a
+    cutout that reaches under it loses its top band."""
+    cut = _map_cutout(screen)
+    if cut is None:
+        return None
+    from core.hud import blocks as hud
+    plate, _text = hud.title_plate_rect(0, 0, 1.0)
+    mx, my, mw, mh = cut
+    top = max(my, plate.bottom)
+    return (mx, top, mw, my + mh - top)
+
+
 def placement(screen, design_body):
     """{frame, opening, body: (x, y, w, h) in reference px, factor} for the
-    body box as `boxes.json` has it, or None without a map cutout."""
-    cfg = spec(screen)
-    cut = _map_cutout(screen)
-    if not cfg.get("opening") or cut is None:
+    body box as `boxes.json` has it, or None without a map cutout.
+
+    **SINCE DECISION 71 THERE IS NO FRAME IMAGE TO FIT** (work order 169):
+    the body is the HUD popup block, and it is the largest box of the
+    design body's own aspect (the original's 628:850) that fits the map's
+    free area less `MARGIN` and `BLEED`, centred in it. `frame` and
+    `opening` are kept as keys, both the body plus `BLEED`, so every
+    reader of the placement still finds the rect it asks for."""
+    area = free_area(screen)
+    if area is None:
         return None
-    img_w, img_h = cfg["image_size"]
-    ox, oy, ow, oh = cfg["opening"]
-    mx, my, mw, mh = cut
-    s = mh / img_h
-    fx, fy = mx + (mw - img_w * s) / 2, my
-    opx, opy, opw, oph = fx + ox * s, fy + oy * s, ow * s, oh * s
+    ax, ay, aw, ah = area
+    ax, ay, aw, ah = ax + MARGIN, ay + MARGIN, aw - 2 * MARGIN, ah - 2 * MARGIN
     _, _, dw, dh = design_body
-    factor = min((opw - 2 * BLEED) / dw, (oph - 2 * BLEED) / dh)
+    factor = min((aw - 2 * BLEED) / dw, (ah - 2 * BLEED) / dh)
     bw, bh = dw * factor, dh * factor
-    return {"frame": (fx, fy, img_w * s, mh),
-            "opening": (opx, opy, opw, oph),
-            "body": (opx + (opw - bw) / 2, opy + (oph - bh) / 2, bw, bh),
-            "factor": factor}
+    bx, by = ax + (aw - bw) / 2, ay + (ah - bh) / 2
+    opening = (bx - BLEED, by - BLEED, bw + 2 * BLEED, bh + 2 * BLEED)
+    return {"frame": opening, "opening": opening,
+            "body": (bx, by, bw, bh), "factor": factor}
 
 
 def seat(screen):
@@ -150,15 +175,10 @@ def _image(screen, size):
 
 
 def draw(screen, surface, body):
-    """Fill the opening, then the frame over it. False without artwork."""
-    if not spec(screen).get("opening"):
-        return False
+    """The popup block over the opening — decision 71: the GAME menu and
+    every dialog in it wear the HUD popup. False without a placement."""
     frame, opening = rects(screen, body)
     if frame is None:
         return False
-    image = _image(screen, frame.size)
-    if image is None:
-        return False
-    surface.blit(screen.help_backdrop(), opening, opening)
-    surface.blit(image, frame.topleft)
+    hud.popup(surface, opening, screen.layout.scale)
     return True

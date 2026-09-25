@@ -50,6 +50,12 @@ screens/colony_summary/assets/surfaces/
 # a picture for Data to name the icons from, not an input to anything.
 screens/colony_summary/assets/_src/output/cut/
 
+# The HUD pieces code cannot draw — twelve icons and the title plate —
+# cut unscaled from assets/shared/hud/galaxy_hud.png by tools/hud_cut.py
+# (decision 71). The smoke test rebuilds them into a scratch directory
+# and compares bytes.
+assets/shared/hud/cut/
+
 # --- Contact sheets (diagnostic output of --sheet) ---
 **/_contact_sheet.png
 

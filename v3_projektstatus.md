@@ -1,6 +1,6 @@
 # OrionLayer v3 — Project Status
 
-Updated: 20 September 2026
+Updated: 25 September 2026
 
 **How to read the date above.** The header names the day this file
 was last edited; the "This session (…)" paragraphs below it run
@@ -12,6 +12,75 @@ carrying entries dated 9 September inside it. **The convention is
 right and the header had gone stale** — resolved 10 September 2026
 by dating the header to the edit and giving this session its
 paragraph, below, so the two agree again.
+
+This session (25 September 2026, work order 169): **the cockpit
+frames give way to ONE frameless style drawn in code — decision 71 —
+and the galaxy map and the GAME menu are the first screens to wear
+it.** The full account, screen by screen, is
+`doc/briefs/169-progress.md`; what Data has to decide is
+`doc/briefs/169-parked-for-data.md`.
+
+**The material is in the tree.** `assets/shared/hud/galaxy_hud.png`
+(Data's AI-generated HUD, 6704x3756, text removed) and
+`doc/briefs/169-mockup-galaxy.png` (the galaxy mockup) are committed;
+LICENSE lists both as AI-generated and now also says what work order
+168 found — the galaxy map's and the Fleets screen's frames are
+AI-generated too. Data's colony mockup (21 MB) is not committed; its
+sha256 is in the style file.
+
+**The style is measured, and held to its measurement.**
+`assets/shared/hud/style.json` is the one file every screen's blocks
+read. Its `measured` block is what `tools/hud_measure.py` (with
+`hud_layout.py` and `hud_colony.py`) measures off the two committed
+images — every region named in the tool — and the smoke test holds
+the file to the tool. Its `chosen` block is what nothing in the
+material shows (hover, active, disabled; the background placeholder;
+where the pre-game screens' two frame buttons go), each with its
+reason: ours, and therefore Data's (decision 53).
+
+**The blocks, `core/hud/`:** panel, popup (a lit, opaque panel),
+separator, outline (what `draw_plate` draws now), slanted button in
+four states with its glowing underline, action button, small button,
+title plate (a CUT piece, see below), table header / row / selected
+row / scrollbar, all drawn at the device size — supersampled 3x and
+smoothscaled once — and cached per size and state. The box skins of
+decision 34 (`thin_border`, `inner_panel`, `panel`, `button`), the
+plate of decision 51 and the help popup go through them, so every
+screen that used them changed look without a line of its own.
+
+**Cut pieces, DERIVED:** `tools/hud_cut.py` cuts the twelve icons and
+the title plate out of the HUD, unscaled, into
+`assets/shared/hud/cut/` (ignored, a step of `tools/setup.py`, rebuilt
+byte for byte by the suite). An icon is un-composited off the panel it
+was painted on; a clone without the pieces draws text-only buttons and
+a lit panel for the title.
+
+**The galaxy map** draws its background slot (a dark placeholder until
+Data's picture), the floor in `map_area` — which now runs from the
+screen's top-left corner to the HUD — and the HUD over it. Its boxes
+are written by `tools/hud_boxes.py` from the HUD's measured layout,
+the successor of decision 3's hole cutting, and a check holds them to
+it. **DEVIATION, carried over and marked in `screen.py`:** the nav
+buttons sit in a row along the bottom and GAME in the title plate,
+where the original has a column on the right; each button still
+activates the original's field.
+
+**The GAME menu** wears the popup block, seated in the map's free area
+below the title plate; every dialog in it (confirmation, slot warning)
+is a popup, every button a small button.
+
+Checks: **294 -> 299**, none deleted. Five new ones (core module
+`006a`: the style file against the tool, the cut pieces byte for
+byte, the blocks at three sizes, the slanted button's hit shape
+against its drawn shape on every pixel, no screen loading a frame
+image). REWRITTEN because their subject is gone — each names its
+replacement in its own comment: "galaxy_map frame cutouts ==
+boxes.json" is "galaxy_map boxes == the HUD's measured layout"; the
+GAME menu's "body wears the frame image", "frame: opening == the
+artwork's hole" and "frame drawn on the first opening" are the popup
+versions of themselves; class A no longer lists the galaxy map. Four
+checks had a premise about the old plate colour or shape, now
+asserted rather than assumed.
 
 This session (20 September 2026, work order 155): **the strip under
 the Fleets map names the star the pointer is over — and the finding
@@ -2294,7 +2363,7 @@ files under `doc/` and are only summarised here.
 | | |
 |---|---|
 | Python | 32,960 lines across 111 modules — `find . -name '*.py'`, `__pycache__` excluded, the smoke test's 6,400 included. The previous figure here (21,642 across 94) was carried from an unstated method and could not be reproduced |
-| Smoke test | `python tools/smoke_test.py` — **294 checks**, headless, in `tools/smoke_suite/` since work order 162 (108 check modules, one group per screen plus a shared core; `tools/smoke_test.py` is the runner). **Two tiers since work order 158**: the bare command runs everything (~72 s here); `--fast` runs the commit gate's 287 (~32 s here). `--screen <name>` prints only that screen's sentences and the core's and is NEVER a gate. See "The gate has two tiers" below |
+| Smoke test | `python tools/smoke_test.py` — **299 checks**, headless, in `tools/smoke_suite/` since work order 162 (109 check modules, one group per screen plus a shared core; `tools/smoke_test.py` is the runner). **Two tiers since work order 158**: the bare command runs everything (~72 s here); `--fast` runs the commit gate's 292 (~32 s here). `--screen <name>` prints only that screen's sentences and the core's and is NEVER a gate. See "The gate has two tiers" below |
 | Assets | 170 MB (select_race 68, galaxy_map 51, shared 23, new_game 21, colony_summary 1) |
 | Screens in HD | 11 of ~20–22 (the Leaders screen, work order 167, built and not accepted; the GAME menu overlay, work order Stop 2, every dialog of the popup; colony summary draws list, sidebar, scan box and galaxy inset, and MOVES POPS — the first HD gesture that drives the game; planets, brief 101, lists, sorts, restricts and returns) |
 | Setup from clone | `python tools/setup.py` (deps via the system package manager) |
@@ -2820,8 +2889,8 @@ blocks into a session and writing them out again. Three proofs:
 
 | | command | checks | on this tree |
 |---|---|---:|---:|
-| **Full** — the default, and the pre-push gate | `python tools/smoke_test.py` | 294 | ~72 s |
-| **Fast** — the pre-commit gate | `python tools/smoke_test.py --fast` | 287 | ~32 s |
+| **Full** — the default, and the pre-push gate | `python tools/smoke_test.py` | 299 | ~72 s |
+| **Fast** — the pre-commit gate | `python tools/smoke_test.py --fast` | 292 | ~32 s |
 | **Screen** — **never a gate** | `python tools/smoke_test.py --screen <name>` | all of them, ~a third printed | the tier's |
 
 **`--screen` narrows what a run PRINTS, not what it runs**, and the
@@ -3242,7 +3311,7 @@ in exactly ONE bucket. The numbers below are produced by
 check asserts this list still agrees with it — the same trade the
 check count makes, for the same reason.
 
-`tools/struct_probe.py` (**478** code, 753 total), `screens/galaxy_map/screen.py` (**456** code, 776 total), `tools/colony_list_preview.py` (**403** code, 772 total), `screens/custom_race/screen.py` (**400** code, 558 total), `tools/colony_move_hd.py` (**370** code, 570 total — fifteen lines shorter since work order 166 part E took its `Counter` out: the tree has one send counter now, `livedrive.SendCounter`), `core/editor/editor.py` (**359** code, 430 total), `screens/galaxy_map/renderer.py` (**336** code, 758 total), `tools/ext_diag.py` (**325** code, 473 total), `core/style.py` (**310** code, 479 total), `main.py` (**323** code, 549 total — over since work order 142 C added the debug input switch; 146 added the F8 surface screenshot, a TOOL for live acceptance on a display that renders but cannot be captured).
+`tools/struct_probe.py` (**478** code, 753 total), `screens/galaxy_map/screen.py` (**414** code, 728 total — down from 456 when work order 169 moved the HUD drawing into `hudview.py`), `tools/colony_list_preview.py` (**403** code, 772 total), `screens/custom_race/screen.py` (**400** code, 558 total), `tools/colony_move_hd.py` (**370** code, 570 total — fifteen lines shorter since work order 166 part E took its `Counter` out: the tree has one send counter now, `livedrive.SendCounter`), `core/editor/editor.py` (**359** code, 430 total), `screens/galaxy_map/renderer.py` (**336** code, 758 total), `tools/ext_diag.py` (**325** code, 473 total), `main.py` (**323** code, 549 total — over since work order 142 C added the debug input switch; 146 added the F8 surface screenshot, a TOOL for live acceptance on a display that renders but cannot be captured).
 `smoke_test.py` is exempt by nature, **and since 22 September 2026 so
 is `tools/smoke_suite/`** — work order 162 split that one `main()` into
 ninety-one check modules, and they are the same file in pieces. They are
@@ -3259,7 +3328,7 @@ block, so splitting it would split a check. The sizes below come from
 the files and a smoke check asserts this list against them in both
 directions.
 
-`011_galaxy_map_galaxy_map_stand_in_exactly_amoeba.py` (**51** KB — the galaxy map stand-in: exactly amoeba and antaran reach the player-ship fallback, thirteen `ok()` calls inside one block), `013_colony_summary_colony_summary_sort_keys_seven_five.py` (**45** KB — the seven sort keys at every resolution), `031_core_figures_sit_on_the_plate_s.py` (**44** KB — figures on the plate's inner floor, four resolutions and every band, measured out of the render), `059_core_ship_weapons_end_at_the_first.py` (**43** KB — the monster and ship-part block, nineteen `ok()` calls in one run of statements), `061_core_no_archives_or_backup_copies_anywhere.py` (**40** KB — the tree-sweep block: archives, the briefs index, the decision numbers and the exceptions list).
+`011_galaxy_map_galaxy_map_stand_in_exactly_amoeba.py` (**51** KB — the galaxy map stand-in: exactly amoeba and antaran reach the player-ship fallback, thirteen `ok()` calls inside one block), `013_colony_summary_colony_summary_sort_keys_seven_five.py` (**45** KB — the seven sort keys at every resolution), `031_core_figures_sit_on_the_plate_s.py` (**45** KB — figures on the plate's inner floor, four resolutions and every band, measured out of the render), `059_core_ship_weapons_end_at_the_first.py` (**43** KB — the monster and ship-part block, nineteen `ok()` calls in one run of statements), `061_core_no_archives_or_backup_copies_anywhere.py` (**40** KB — the tree-sweep block: archives, the briefs index, the decision numbers and the exceptions list).
 
 **TWO TOOLS JOINED THE LIST ON 8 SEPTEMBER 2026 and one thing left
 them both.** `colony_list_preview.py` (345 -> 410) gained `--hold`,

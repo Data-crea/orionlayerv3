@@ -449,20 +449,31 @@ if "galaxy_map" in d.screens:
     app.client = FakeClient()
     ok("galaxy_map anchored zoom (pointer-fixed, clamps, parking)")
 
-    # Frame cutouts are the second source for every galaxy box:
-    # boxes.json must equal what tools/frame_holes.py derives
-    # from the PNG, else content and cutouts have drifted apart.
-    import frame_holes as fh
-    assert gm._frame_scaled is not None, "galaxy frame not loaded"
-    fw, fhh, holes = fh.find_holes(
-        res.screen_file("galaxy_map", "assets", "frame.png"))
-    named = fh.name_holes(holes)
-    assert [fw, fhh] == gm._data["frame"]["image_size"], (fw, fhh)
-    for name, r in named.items():
-        want = fh.to_ref(r, fw, fhh)
-        got = (gm._data["frame"]["title_rect"] if name == "title"
-               else list(gm.box_rect(name)))
-        assert all(abs(a - b) <= 2 for a, b in zip(got, want)), \
-            (name, got, want)
+    # THE HUD IS THE SECOND SOURCE FOR EVERY GALAXY BOX — decision 71,
+    # work order 169. This replaced "galaxy_map frame cutouts ==
+    # boxes.json": the frame image is no longer drawn, so its holes are
+    # the holes of a picture nobody sees, and the check that held the
+    # boxes to them measured nothing. What the boxes follow now is the
+    # HUD's measured layout, and `tools/hud_boxes.py` writes them from
+    # it; a box dragged off its place in the artwork fails here.
+    import hud_boxes as _hb
+    _hb_icons = {_k: _v[1] for _k, _v in
+                 ((_n[5:], _p) for _n, _p in _hc_pieces().items()
+                  if _n.startswith("icon_"))}
+    _hb_want = _hb.owned(icons=_hb_icons)
+    for _hb_key in ("1920x1080", "2560x1440"):
+        _hb_file = {_b["name"]: _b for _b in _hj.load(open(
+            res.screen_file("galaxy_map", "boxes.json")))[_hb_key]}
+        for _hb_n, _hb_b in _hb_want.items():
+            assert _hb_n in _hb_file, f"{_hb_key}: {_hb_n} missing"
+            assert all(abs(_a - _c) <= 1 for _a, _c in zip(
+                _hb_file[_hb_n]["rect"], _hb_b["rect"])), (
+                f"{_hb_key}/{_hb_n}: boxes.json {_hb_file[_hb_n]['rect']} "
+                f"but the HUD puts it at {_hb_b['rect']} — run "
+                f"python tools/hud_boxes.py --write, or move the artwork")
+    assert gm._frame_scaled is None, (
+        "the galaxy map loaded its frame image again; decision 71 draws "
+        "the HUD instead")
     gm.render(pygame.display.get_surface())
-    ok("galaxy_map frame cutouts == boxes.json")
+    ok(f"galaxy_map boxes == the HUD's measured layout "
+       f"({len(_hb_want)} boxes, 2 resolutions)")

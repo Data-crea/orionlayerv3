@@ -12,7 +12,7 @@
 #
 # The 2 check(s) it holds:
 #   - GAME menu markings: OMISSION (slot icon), UNVERIFIED (Save right click), DEVIATION (empty slot e
-#   - GAME menu frame drawn on the first opening: the metal's opaque pixels are on the screen at 1080p
+#   - GAME menu popup drawn on the first opening: its rim is on the screen at 1080p and 1440p
 
 
 # 7. THE MARKINGS cannot silently disappear: module, layout.json and
@@ -52,16 +52,18 @@ ok("GAME menu markings: OMISSION (slot icon), UNVERIFIED (Save right "
    "click), DEVIATION (empty slot edit) in module, layout, status; the "
    "slot-name HD STATE gone")
 
-# 7a. THE METAL IS ON THE SCREEN, on the FIRST opening. Every other
-#     frame check measures geometry, and every one of them entered the
-#     overlay twice — which is exactly what hid the missing artwork:
-#     `enter` seated the boxes before it had read layout.json, so the
-#     first opening drew the fill alone (16 September 2026). This one
-#     takes the real path once — a fresh app, the dispatcher opening the
-#     overlay for screen 8 — renders it, and compares the drawn pixels
-#     with the scaled frame image wherever that image is fully opaque.
+# 7a. THE POPUP IS ON THE SCREEN, on the FIRST opening. Rewritten by
+#     work order 169 (decision 71) from "the metal is on the screen": the
+#     frame image is no longer drawn, and the fault this check exists for
+#     is unchanged — every other placement check entered the overlay
+#     twice, which is what hid a first opening that drew the fill alone
+#     (16 September 2026). It takes the real path once — a fresh app, the
+#     dispatcher opening the overlay for screen 8 — renders it, and
+#     compares the popup's RIM (the band of its edge line, where no
+#     content is drawn) with the popup block drawn alone at that rect.
 if slow("game_menu_frame_drawn"):
     from screens.game_menu import gmframe as _mt_gmf
+    from core.hud import blocks as _mt_hud
     for _W, _H in ((1920, 1080), (2560, 1440)):
         _mt_app, _ = _pv.build_screen(_W, _H)
         _mt_d = _mt_app.dispatcher
@@ -74,30 +76,28 @@ if slow("game_menu_frame_drawn"):
         _mt_s = _mt_d.overlay
         assert _mt_d.overlay_name == "game_menu" and _mt_s is not None
         _mt_s.update(_mt_gs)
-        _mt_fr, _ = _mt_gmf.rects(_mt_s)
+        _mt_fr, _mt_op = _mt_gmf.rects(_mt_s)
         assert _mt_fr is not None, (
-            _W, "the first opening of the GAME menu has no frame placement")
+            _W, "the first opening of the GAME menu has no placement")
         _mt_surf = pygame.Surface((_W, _H))
         _mt_surf.fill((255, 0, 255))
         _mt_s.render(_mt_surf)
-        _mt_img = pygame.transform.smoothscale(pygame.image.load(
-            res.screen_file("game_menu", "assets", "frame.png")),
-            _mt_fr.size)
-        _mt_a = pygame.surfarray.array_alpha(_mt_img).T
-        _mt_rgb = pygame.surfarray.array3d(_mt_img).transpose(1, 0, 2)
-        # `smoothscale` tops out a hair below 255 (253 measured), so "fully
-        # opaque" is >= 250 and the colour may carry that sliver of ground.
-        _mt_ys, _mt_xs = np.where(_mt_a >= 250)
-        _mt_ys, _mt_xs = _mt_ys + _mt_fr.y, _mt_xs + _mt_fr.x
-        _mt_in = (_mt_ys >= 0) & (_mt_ys < _H) & (_mt_xs >= 0) & (_mt_xs < _W)
-        _mt_draw = pygame.surfarray.array3d(_mt_surf).transpose(1, 0, 2)[
-            _mt_ys[_mt_in], _mt_xs[_mt_in]].astype(int)
-        _mt_want = _mt_rgb[_mt_ys[_mt_in] - _mt_fr.y,
-                           _mt_xs[_mt_in] - _mt_fr.x].astype(int)
-        _mt_hit = int((np.abs(_mt_draw - _mt_want).max(axis=1) <= 4).sum())
-        _mt_n = int(_mt_in.sum())
-        assert _mt_n > 50000 and _mt_hit >= 0.98 * _mt_n, (
-            f"GAME menu frame at {_W}x{_H}: {_mt_hit} of {_mt_n} opaque "
-            f"frame pixels drawn — the artwork is not on the screen")
-    ok("GAME menu frame drawn on the first opening: the metal's opaque "
-       "pixels are on the screen at 1080p and 1440p")
+        _mt_ref = pygame.Surface((_W, _H))
+        _mt_ref.fill((255, 0, 255))
+        _mt_hud.popup(_mt_ref, _mt_op, _mt_s.layout.scale)
+        _mt_rim = np.zeros((_H, _W), bool)
+        _mt_e = max(2, int(3 * _mt_s.layout.scale))
+        _mt_rim[_mt_op.top:_mt_op.bottom, _mt_op.left:_mt_op.right] = True
+        _mt_rim[_mt_op.top + _mt_e:_mt_op.bottom - _mt_e,
+                _mt_op.left + _mt_e:_mt_op.right - _mt_e] = False
+        _mt_a = pygame.surfarray.array3d(_mt_surf).transpose(1, 0, 2)
+        _mt_b = pygame.surfarray.array3d(_mt_ref).transpose(1, 0, 2)
+        _mt_n = int(_mt_rim.sum())
+        _mt_hit = int((np.abs(_mt_a[_mt_rim].astype(int)
+                              - _mt_b[_mt_rim].astype(int)).max(axis=1)
+                       <= 4).sum())
+        assert _mt_n > 2000 and _mt_hit >= 0.98 * _mt_n, (
+            f"GAME menu popup at {_W}x{_H}: {_mt_hit} of {_mt_n} rim "
+            f"pixels drawn — the popup is not on the screen")
+    ok("GAME menu popup drawn on the first opening: its rim is on the "
+       "screen at 1080p and 1440p")

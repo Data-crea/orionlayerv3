@@ -421,7 +421,12 @@ def _tagged_rt(self, *a, **k):
     _TEXT_IDS.add(id(r)); _TEXT_KEEP.append(r)
     return r
 
-_FRAME_SCREENS = ("colony_summary", "galaxy_map")
+#: THE GALAXY MAP LEFT ON 25 SEPTEMBER 2026 (work order 169, decision
+#: 71): it draws no frame image, so no glyph of it can be under one —
+#: the subject of both classes is gone there. Its boxes are held to the
+#: HUD's measured layout instead ("galaxy_map boxes == the HUD's
+#: measured layout", module 007).
+_FRAME_SCREENS = ("colony_summary",)
 #: CLASS B TAKES ONE MORE, and the split is not tidiness. `fleets`
 #: joined on 19 September 2026 (work order 137 E2) once its three
 #: strut stubs were out of the artwork — but class A builds each

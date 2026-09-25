@@ -1,17 +1,24 @@
 """Galaxy Map Screen — orion2re SCREEN_MAIN (id 0).
 
-Layout: one cockpit frame PNG (assets/frame.png) with transparent
-cutouts, stretched over the 1920x1080 reference area and drawn ABOVE
-everything else. The boxes in boxes.json are the cutouts themselves,
-derived by tools/frame_holes.py — content is painted underneath and
-shows through:
-  map_area        the star field
-  sidebar         stardate on top, then five resource readouts
+Layout: THE HUD, decision 71 (work order 169). No frame image is drawn;
+the screen is its background slot (a dark placeholder until Data's
+picture arrives), the star map's own floor, and Data's HUD drawn over
+it in code by `core.hud` — the title plate, the info panel, six slanted
+nav buttons and the TURN action button. The boxes are written from the
+HUD's measured layout by `tools/hud_boxes.py` (decision 3's successor):
+  map_area        the star field, from the screen's top-left corner to
+                  the HUD — the floor runs under the title plate
+  sidebar         the info panel: stardate on top, five readouts
   nav_*           seven buttons mirroring the original: six along
                   the bottom (Colonies, Planets, Fleets, Leaders,
                   Races, Info) and nav_turn bottom-right; the title
-                  cutout doubles as the GAME menu button
-The title cutout is not a box; it lives in layout.json ("frame").
+                  plate doubles as the GAME menu button
+
+**DEVIATION, and it was one before 169 too:** the original puts its
+nav column on the RIGHT of the map and GAME top-left (mainscr.cpp);
+HD puts the buttons in a row along the bottom and GAME in the title
+plate. The click follows the box — each button activates the
+original's field — so only the place differs.
 
 Positions come from core.mapcoords, which transcribes orion2re's
 own transform rather than measuring it. Clicking a star sends an
@@ -50,6 +57,7 @@ from screens.galaxy_map import viewctl
 from screens.galaxy_map import starfield as sf
 from screens.galaxy_map import floorlift
 from screens.galaxy_map import sidebar as sb
+from screens.galaxy_map import hudview
 
 log = logging.getLogger("galaxy_map")
 
@@ -119,8 +127,7 @@ class GalaxyMapScreen(ScreenBase):
         self._data = self.app.res.load_json(
             "screens/galaxy_map/layout.json", {}) or {}
         self._load_sprites()
-        self._load_frame(
-            self._data.get("frame", {}).get("image", "frame.png"))
+        # No frame image (decision 71): `_load_frame` is not called.
         self._load_map_background()
         self._starfield.configure(self._data.get("starfield", {}))
         self._hover_star = None
@@ -284,7 +291,6 @@ class GalaxyMapScreen(ScreenBase):
         self._wormholes.clear()
         # Ring radii are HD pixels; every cached one is now wrong.
         self._ping.clear_cache()
-        self._scale_frame()
         self._scale_map_background()
 
     def exit(self):
@@ -440,35 +446,15 @@ class GalaxyMapScreen(ScreenBase):
         self._render_map(surface)
         self._render_sidebar(surface)
         self._render_nav(surface)
-        self._render_frame_image(surface)
         self._render_title(surface)
-        # Above the cockpit frame: the popup is a dialog, not content
-        # under a cutout.
+        # Above the HUD: the popup is a dialog, not content.
         self.render_help(surface)
 
+    def title_rect(self):
+        return hudview.title_rect(self)
+
     def _render_title(self, surface):
-        """Title text inside the frame's title cutout (layout.json)."""
-        cfg = self._data.get("frame", {})
-        rect = cfg.get("title_rect")
-        title = cfg.get("title", self.FRAME_TITLE)
-        if not rect or not title:
-            return
-        x, y, w, h = self.layout.rect(rect)
-        font = self.style.get_font(self.layout.font_size(
-            cfg.get("title_font", 30)))
-        # The pressed GAME word is orange, as BUFFER0.LBX 1's frame 1 is.
-        text = font.render(title.upper(), True,
-                           self.pressed.colour("title", TITLE_COLOR)[:3])
-        # CENTRED BY INK, NOT BY THE FONT'S LINE BOX (galaxy frame v2,
-        # 16 September 2026). The line box carries the descent, so an
-        # all-caps word centred by it sat 3 to 5.5 px ABOVE the centre
-        # of the hexagon hole at 1080p..2160p. `title_rect` is the hole
-        # plus a symmetric bleed, so its centre is the hole's; the hole
-        # itself sits ~4.5 ref px right of the map's centre in the
-        # artwork, and the word follows the hole, not the map.
-        ink = text.get_bounding_rect()
-        surface.blit(text, (x + (w - ink.w) // 2 - ink.x,
-                            y + (h - ink.h) // 2 - ink.y))
+        hudview.render_title(self, surface)
 
     def _render_map(self, surface):
         ctx = self._map_context()
@@ -553,26 +539,7 @@ class GalaxyMapScreen(ScreenBase):
         surface.set_clip(clip)
 
     def _render_sidebar(self, surface):
-        box = self.box_rect("sidebar")
-        if not box:
-            return
-        surface.fill(PANEL_BG[:3], pygame.Rect(*self.layout.rect(box)))
-        stardate = (str(getattr(self._state, "stardate_str", "--"))
-                    if self._state is not None else "--")
-        rows = self._data.get("sidebar_rows") or sb.DEFAULT_ROWS
-        icons = self._sidebar_icons()
-        sb.render(surface, self.layout, self.style,
-                  self._sidebar_geometry(rows, icons),
-                  self._local, self._data.get("labels", {}), rows,
-                  font_scales=self._sidebar_font_scales(rows),
-                  aligns=self._sidebar_aligns(rows),
-                  monetary=self._data.get("monetary_unit", "BC"),
-                  extras={"stardate": (stardate, "")},
-                  icons=icons, cache=self._cache,
-                  fonts=self._data.get("sidebar_fonts", sb.DEFAULT_FONTS),
-                  panel_box=box,
-                  dividers=self._data.get("sidebar_dividers", True),
-                  hstrings=boxdraw._texts(self))
+        hudview.render_sidebar(self, surface)
 
     def _sidebar_icons(self):
         """Row key -> cache key, for the icons that actually loaded."""
@@ -601,7 +568,11 @@ class GalaxyMapScreen(ScreenBase):
         return sb.fallback_geometry(box, rows, icons) if box else {}
 
     def _sidebar_font_scales(self, rows):
-        return {key: self.box_font_scale(
+        # The STORED scale: `sidebar.draw_text_block` goes through
+        # `Layout.font_size`, which applies the window scale already
+        # ("Scaling twice"). Since 169 one value serves every size, so
+        # the per-resolution tuning that cancelled the square is gone.
+        return {key: self.box_font_scale_stored(
             f"{SIDEBAR_BOX_PREFIX}{key}_text") for key in rows}
 
     def _sidebar_aligns(self, rows):
@@ -610,25 +581,13 @@ class GalaxyMapScreen(ScreenBase):
             for key in rows}
 
     def _render_nav(self, surface):
-        """Navigation buttons: the frame provides the bezel, so each
-        box only gets a fill plus its label; hover brightens the fill."""
-        # Window coordinates, not desktop coordinates: in fullscreen
-        # the content sits inside black bars and a raw get_pos() puts
-        # the highlight one bar-width off the pointer.
-        mouse = mouse_input.pos()
-        for spec in self._data.get("buttons", []):
-            name = f"nav_{spec['key']}"
-            box = self.box_rect(name)
-            if not box:
-                continue
-            font = self.style.get_font(self.layout.font_size(
-                self.box_style(name).get("font_size", 16)))
-            rect = pygame.Rect(*self.layout.rect(box))
-            hovered = rect.collidepoint(mouse)
-            surface.fill((NAV_HOVER_BG if hovered else NAV_BG)[:3], rect)
-            text = font.render(spec["label"].upper(), True, NAV_TEXT[:3])
-            surface.blit(text, (rect.x + (rect.w - text.get_width()) // 2,
-                                rect.y + (rect.h - text.get_height()) // 2))
+        hudview.render_nav(self, surface)
+
+    def nav_rect(self, key):
+        return hudview.nav_rect(self, key)
+
+    def nav_hit(self, key, x, y):
+        return hudview.nav_hit(self, key, x, y)
 
     def _render_hover_name(self, surface, view):
         """Hovered system name, bottom-centre inside the map area.
@@ -668,17 +627,10 @@ class GalaxyMapScreen(ScreenBase):
         mapinput.mousewheel(self, direction, mx, my)
 
     def help_extra_rect(self, spec):
-        """The title cutout, which is not a box.
-
-        The galaxy map draws its own cockpit frame PNG rather than
-        the shared 9-slice, so the title bar lives in layout.json
-        under `frame.title_rect` instead of coming from
-        `Frame.title_rect()`. Resolved through the same
-        `layout.rect()` the click path uses — decision 5.
-        """
+        """The title plate, which is not a box: `title_rect`, the same
+        function the click and the drawing use (decision 5)."""
         if spec.get("title"):
-            rect = self._data.get("frame", {}).get("title_rect")
-            return pygame.Rect(*self.layout.rect(rect)) if rect else None
+            return self.title_rect()
         return None
 
     # ── Home system ping ──────────────────────────────────

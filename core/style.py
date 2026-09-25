@@ -18,11 +18,19 @@ import logging
 import pygame
 
 from core.nineslice import NineSlice, load_tile_directory
+from core.hud import blocks as hud
 
 log = logging.getLogger("style")
 
 # 9-slice margins for outer_box_dark_blue.png (chamfered corners)
 SKIN_MARGINS = (60, 60, 60, 60)  # left, right, top, bottom
+
+
+def _scale_of(surface):
+    """Device px per reference px for a skin drawn on `surface`, the
+    window: `Layout.scale`'s own rule (the smaller axis factor), for the
+    callers that hand a skin a rect and no layout."""
+    return min(surface.get_width() / 1920.0, surface.get_height() / 1080.0)
 
 
 class StyleRenderer:
@@ -304,131 +312,51 @@ class StyleRenderer:
     def draw_button(self, surface, rect, label="", hover=False,
                     font_size=16, style=None, glow_offsets=None,
                     glow_rotations=None):
-        """Draw a button with skin background, border, glows, label."""
-        sx, sy, sw, sh = rect.x, rect.y, rect.w, rect.h
-        if sw < 4 or sh < 4:
-            return
-        btn = self.colors.get("button", {})
-        style = style or {}
+        """The `button` box skin: the HUD's slanted button (decision 71).
 
-        # 1. Background (9-slice texture)
-        bg = self._get_bg(sw, sh)
-        if bg:
-            surface.blit(bg, (sx, sy))
-
-        # 1b. Hover tint
-        if hover:
-            tint = pygame.Surface((sw, sh), pygame.SRCALPHA)
-            tint.fill(self.HOVER_TINT)
-            surface.blit(tint, (sx, sy))
-
-        # 2. Border lines
-        if hover:
-            border_col = btn.get("border_hover", [120, 160, 220])[:3]
-            alpha = 240
-        else:
-            border_col = btn.get("border", [70, 95, 145])[:3]
-            alpha = 180
-        glow_col = self.colors.get("grid", [25, 35, 55])[:3]
-
-        line = pygame.Surface((sw, sh), pygame.SRCALPHA)
-        pygame.draw.rect(line, (glow_col[0], glow_col[1],
-                                glow_col[2], alpha // 3),
-                         (0, 0, sw, sh), 1, border_radius=3)
-        pygame.draw.rect(line, (border_col[0], border_col[1],
-                                border_col[2], alpha),
-                         (1, 1, sw - 2, sh - 2), 1, border_radius=2)
-        surface.blit(line, (sx, sy))
-
-        # 3. Corner glows
-        glows = self._get_scaled_corners(sh)
-        if glows:
-            corners = [("tl", sx, sy), ("tr", sx + sw, sy),
-                       ("bl", sx, sy + sh), ("br", sx + sw, sy + sh)]
-            for key, cx, cy in corners:
-                img = glows[key]
-                rot = glow_rotations.get(key, 0) if glow_rotations else 0
-                if rot:
-                    img = pygame.transform.rotate(img, rot)
-                iw, ih = img.get_width(), img.get_height()
-                if glow_offsets:
-                    ox, oy = glow_offsets.get(key, (0, 0))
-                    surface.blit(img, (cx + ox - iw//2, cy + oy - ih//2))
-                else:
-                    ci = self.CORNER_INSET
-                    dx = ci if 'l' in key else -ci
-                    dy = ci if 't' in key else -ci
-                    surface.blit(img, (cx + dx - iw//2, cy + dy - ih//2))
-
-        # 4. Label
-        if label:
-            if hover:
-                text_col = btn.get("text_hover", [220, 230, 255])[:3]
-            else:
-                text_col = btn.get("text", [180, 195, 225])[:3]
-            text = self.render_text(label.upper(), font_size, text_col)
-            tx = sx + (sw - text.get_width()) // 2
-            ty = sy + (sh - text.get_height()) // 2
-            surface.blit(text, (tx, ty))
+        The skin texture, the two border lines and the corner glow images
+        this drew until work order 169 are the cockpit look 71 replaced;
+        the files stay in the skin and nothing draws them. `font_size`,
+        `glow_offsets` and `glow_rotations` are accepted and unused — a
+        HUD label is sized from the button's own height, and a box that
+        still carries them in `boxes.json` must not raise."""
+        hud.slant_button(surface, rect, _scale_of(surface),
+                         "hover" if hover else "normal", label,
+                         style_renderer=self)
 
     def draw_panel(self, surface, rect):
-        """Draw a panel background (9-slice, no border/glows)."""
-        bg = self._get_bg(rect.w, rect.h)
-        if bg:
-            surface.blit(bg, (rect.x, rect.y))
+        """The `panel` box skin: a HUD panel (decision 71)."""
+        hud.panel(surface, rect, _scale_of(surface))
 
     def draw_inner_panel(self, surface, x, y, w, h):
-        """Draw an inner content panel using the inner_panel 9-slice.
+        """The `inner_panel` skin: a HUD panel since decision 71.
 
-        Renders the beveled frame with transparent center.
-        Call with pixel coordinates (already scaled by Layout).
-        """
-        if not self.inner_panel:
-            pygame.draw.rect(surface, (50, 70, 110), (x, y, w, h), 1,
-                             border_radius=3)
-            return
-        panel = self.inner_panel.render(w, h)
-        surface.blit(panel, (x, y))
+        Decision 34's two skins keep their names so no `boxes.json`
+        changes; `inner_panel` framed pictures and still does, as a
+        filled HUD panel the picture is drawn onto."""
+        hud.panel(surface, (x, y, w, h), _scale_of(surface))
 
     def draw_plate(self, surface, rect, scale=1.0, color=None):
-        """One rounded 1 px plate. **Decision 51.**
+        """One plate outline. **Decision 51, drawn by decision 71's block.**
 
         The rect may come from a `Box` or be computed — the colony
-        screen's fifty cell plates and its five column headings are
-        `column x band`, derived from six boxes and a row count, and
-        there is no box for any of them. What 34 protects is the
-        APPEARANCE having one home, which is here; what it does not
-        require is that a rect come from `boxes.json`.
-
-        It exists because the arithmetic was already in two places:
-        `draw_thin_border` below and `colonyheader.render`, which had
-        pasted `max(6, int(10 * scale))` out rather than invent a box
-        per plate. `color` None takes the panel skin's own line.
-
-        **IT GREW A FILL, A RIM AND A RADIUS FOR ONE DAY.** They were
-        for the prototype that drew every colony window by code with no
-        artwork at all, and they went with it when the static frame
-        became the only path (Phase B, 12 September 2026). Every
-        caller always passed the defaults, so nothing here changed
-        twice.
-        """
-        if color is None:
-            color = self.colors.get("panel", {}).get(
-                "thin_border", [55, 65, 85])
-        radius = max(6, int(10 * scale))
-        pygame.draw.rect(surface, tuple(color[:3]), rect, 1,
-                         border_radius=radius)
+        screen's sixty cell plates and its column headings are `column x
+        band`, and there is no box for any of them. What 34 protects is
+        the APPEARANCE having one home: since work order 169 that home is
+        `core.hud.blocks.outline`, the separator-coloured line with small
+        cut corners. `color` is accepted and IGNORED — a screen asking
+        for its own outline colour is a screen drawing its own variant of
+        a block, which decision 71 rules out."""
+        hud.outline(surface, rect, scale)
 
     def draw_thin_border(self, surface, rect, scale=1.0):
-        """Draw the thin rounded outline used as a light panel skin.
+        """The `thin_border` skin: a HUD panel WITHOUT fill (decision 71).
 
-        The counterpart to `draw_inner_panel`: no texture, no fill,
-        just the line. Custom Race groups its three columns with it,
-        New Game its five setting boxes, and the message popup borders
-        itself with it. The line itself is `draw_plate`'s since
-        8 September 2026 — this is the box-skin name for it.
-        """
-        self.draw_plate(surface, rect, scale)
+        It was always an outline drawn round content that is already
+        there — Custom Race's columns, New Game's image boxes, the
+        message popup — so it stays one: the HUD panel's edge, glow and
+        inner band, no fill over what the box holds."""
+        hud.panel(surface, rect, scale, filled=False)
 
     def get_asset(self, rel_path):
         """Load and cache an image from the skin directory."""

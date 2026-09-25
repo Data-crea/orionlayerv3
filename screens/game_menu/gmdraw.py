@@ -16,6 +16,9 @@ game's own strings from HESTRNGS.
 """
 import pygame
 
+from core import mouse as mouse_input
+from core.hud import blocks as hud
+
 from core import palette
 from core.hestrings import printf
 from core.structs import settings as settings_spec
@@ -95,20 +98,32 @@ def panel(screen, surface, name):
     b = box(screen, name)
     if b is None or b.screen_rect is None:
         return None
-    # The body wears Data's frame image instead of an outline (decision
-    # 69, `gmframe`); it fills its own opening, so nothing else is drawn.
+    # The body wears the HUD popup block (decision 71; it wore Data's frame
+    # image under decision 69, `gmframe`); nothing else is drawn for it.
     if b.style.get("frame") and gmframe.draw(screen, surface, b.screen_rect):
         return b
+    # A panel with a `backdrop` is a DIALOG — the confirmation, the slot
+    # warning: the popup block too, opaque, as every dialog is since 71.
     if b.style.get("backdrop"):
-        surface.blit(screen.help_backdrop(), b.screen_rect, b.screen_rect)
+        hud.popup(surface, b.screen_rect, screen.layout.scale)
+        return b
     b.render(surface, screen.layout, screen.style)
     return b
 
 
 def button(screen, surface, name, word):
-    b = panel(screen, surface, name)
-    if b is None:
+    """A button of the menu: the HUD's small button (decision 71), lit
+    while pressed and on hover; its word in code as before."""
+    b = box(screen, name)
+    if b is None or b.screen_rect is None:
         return
+    if screen.pressed.is_down(name):
+        state = "active"
+    elif b.screen_rect.collidepoint(mouse_input.pos()):
+        state = "hover"
+    else:
+        state = "normal"
+    hud.small_button(surface, b.screen_rect, screen.layout.scale, state)
     size = _size(screen, b, default=30)
     img = screen.style.render_text(
         word, size, tuple(screen.pressed.colour(name, COL_BUTTON)[:3]))

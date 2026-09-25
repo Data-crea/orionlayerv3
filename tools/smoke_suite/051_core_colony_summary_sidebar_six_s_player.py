@@ -201,7 +201,12 @@ _cl.render(_surf, [{"name": "Regions I", "pops": 4,
                     "max_pop": 9}],
            _area, _pl_cfg, app.layout, app.style)
 _px = pygame.surfarray.array3d(_surf)
-_plate_rgb = list(_cl.PLATE_COLOR[:3])
+# The plate's colour is the HUD outline's since decision 71 (work order
+# 169): `draw_plate` draws `core.hud.blocks.outline`, whose line is
+# `panel.edge_dim`. What is asserted — the plate rect IS the drop rect —
+# did not change; only where its colour is read from.
+from core.hud import style as _pl_hs
+_plate_rgb = list(_pl_hs.get().colour("panel.edge_dim"))
 _pl_bands = _cl.row_bands(_area, _pl_cfg, app.layout.scale, 1)
 _pl_boxes = _ctk.row_boxes(_area, _pl_cfg, app.layout.scale,
                            {"name": "Regions I", "pops": 4,
@@ -274,12 +279,18 @@ for _dp, _dn, _fns in os.walk(_proj):
         # quotes the expression in a docstring recording where it
         # used to live, and a grep that matched prose would report
         # the history as a second home.
-        if "radius = max(6, int(10 * scale))" in \
+        #
+        # SINCE DECISION 71 THE HOME IS THE HUD OUTLINE BLOCK (work
+        # order 169): `draw_plate` hands every plate to
+        # `core.hud.blocks.outline`, and its geometry — the chamfered
+        # outer polygon, the inset keyed out — is the fingerprint. The
+        # old rounded rect's assignment is gone from the tree.
+        if "outer = raster.chamfered(rect.w - 1, rect.h - 1" in \
                 open(_fp, encoding="utf-8").read():
             _plate_hits.append(os.path.relpath(_fp, _proj))
-assert _plate_hits == [os.path.join("core", "style.py")], (
-    f"the plate's rounded-rect arithmetic lives in {_plate_hits}; "
-    f"one home, which is StyleRenderer.draw_plate (decision 51)")
+assert _plate_hits == [os.path.join("core", "hud", "blocks.py")], (
+    f"the plate's arithmetic lives in {_plate_hits}; one home, which "
+    f"is core.hud.blocks.outline (decisions 51 and 71)")
 ok("colony cells: a plate per cell of every band, the plate rect "
    "IS the drop rect, and one home for the arithmetic")
 

@@ -1,0 +1,285 @@
+{
+  "_note": "The HUD style (decision 71, work order 169). `measured` is a COPY of what tools/hud_measure.py measures off assets/shared/hud/galaxy_hud.png and doc/briefs/169-mockup-galaxy.png; the smoke test holds the two equal, so edit the artwork or the tool, never this block. Lengths are REFERENCE px (1920x1080) and scale with the window; colours are RGB. `mockup_colony` comes from Data's colony mockup, which is not in the tree (21 MB) \u2014 its sha256 is recorded, the tool re-measures it with --colony, and the suite reports rather than checks it. `chosen` holds what nothing in the material shows, each value with the reason it is what it is: those are ours, which under decision 53 means Data's to change.",
+  "measured": {
+    "source": {
+      "width": 6704,
+      "to_ref": 0.286396
+    },
+    "panel": {
+      "fill": [
+        3,
+        12,
+        28
+      ],
+      "fill_edge": [
+        0,
+        26,
+        62
+      ],
+      "inner_glow": 14.3,
+      "edge": [
+        13,
+        172,
+        232
+      ],
+      "edge_dim": [
+        0,
+        78,
+        148
+      ],
+      "edge_width": 2.3,
+      "glow": [
+        0,
+        49,
+        95
+      ],
+      "glow_width": 3.2,
+      "chamfer": 10.9
+    },
+    "separator": {
+      "color": [
+        0,
+        119,
+        198
+      ],
+      "width": 1.1,
+      "inset_left": 28.9,
+      "inset_right": 17.5
+    },
+    "button": {
+      "fill": [
+        1,
+        9,
+        22
+      ],
+      "edge": [
+        0,
+        87,
+        161
+      ],
+      "edge_width": 1.4,
+      "slant": 0.713,
+      "underline": [
+        233,
+        248,
+        255
+      ],
+      "underline_width": 41.2,
+      "underline_height": 3.2,
+      "underlines_found": 6
+    },
+    "action": {
+      "fill": [
+        2,
+        8,
+        18
+      ],
+      "edge": [
+        84,
+        234,
+        255
+      ],
+      "edge_width": 2.0,
+      "inner": [
+        0,
+        47,
+        103
+      ]
+    },
+    "galaxy": {
+      "panel": [
+        1617,
+        85,
+        1900,
+        931
+      ],
+      "separators": [
+        201,
+        349,
+        494,
+        628,
+        767
+      ],
+      "nav_top": 960,
+      "nav_bottom": 1022,
+      "nav_centres": [
+        166,
+        422,
+        688,
+        942,
+        1211,
+        1473
+      ],
+      "nav_width": 250,
+      "turn": [
+        1604,
+        953,
+        1886,
+        1026
+      ]
+    },
+    "text": {
+      "title": {
+        "color": [
+          168,
+          211,
+          248
+        ],
+        "cap": 0.404
+      },
+      "label": {
+        "color": [
+          133,
+          178,
+          228
+        ],
+        "cap": 0.101
+      },
+      "value": {
+        "color": [
+          251,
+          251,
+          253
+        ],
+        "cap": 0.14
+      },
+      "sub": {
+        "color": [
+          145,
+          182,
+          224
+        ],
+        "cap": 0.101
+      },
+      "button": {
+        "color": [
+          142,
+          205,
+          233
+        ],
+        "cap": 0.24
+      },
+      "action": {
+        "color": [
+          246,
+          248,
+          252
+        ],
+        "cap": 0.293
+      },
+      "negative": {
+        "color": [
+          243,
+          68,
+          63
+        ],
+        "cap": 0.163
+      }
+    },
+    "mockup_colony": {
+      "sha256": "9c9b90497e6274b312f5091d067da094969537a5848b239afa3c21c634d09900",
+      "row_a": [
+        1,
+        12,
+        25
+      ],
+      "row_b": [
+        5,
+        18,
+        31
+      ],
+      "selected": [
+        0,
+        40,
+        86
+      ],
+      "header": [
+        3,
+        12,
+        23
+      ],
+      "row_line": [
+        8,
+        20,
+        37
+      ],
+      "selected_edge": [
+        27,
+        82,
+        131
+      ],
+      "scroll_thumb": [
+        0,
+        89,
+        211
+      ],
+      "scroll_track": [
+        12,
+        25,
+        41
+      ],
+      "text_header": [
+        150,
+        215,
+        255
+      ],
+      "text_row": [
+        136,
+        170,
+        232
+      ]
+    }
+  },
+  "chosen": {
+    "font": "Aldrich-Regular.ttf",
+    "_font_note": "The mockups' face is a squared geometric sans. The tree holds two faces: Aldrich (squared, technical, the display font since 31 August) and pygame's default freesansbold. Aldrich is the closer; parked (169 P3).",
+    "supersample": 3,
+    "_supersample_note": "Every block is drawn at 3x its device size and smoothscaled down once, then cached: that is the antialiasing of a slanted or chamfered edge at any resolution. 2 left a visible stair on the slant at 1080p, 4 cost 1.8x the time for no visible change.",
+    "glow_passes": 3,
+    "_glow_note": "A glow is the edge line blurred by three box passes, the classic approximation of a gaussian: pygame 2.6 has no blur, numpy's cumulative sum is exact and fast.",
+    "button": {
+      "hover_edge_from": "action.edge",
+      "hover_fill_from": "panel.fill_edge",
+      "active_fill_from": "mockup_colony.selected",
+      "active_edge_from": "action.edge",
+      "disabled_alpha": 0.45,
+      "_note": "The HUD shows every nav button in ONE state. Hover takes the HUD's own brightest lit edge (the TURN button's) and the panel's inner glow as fill; active takes the colony mockup's selected row, which is the only 'chosen' look in the material; disabled is the normal button at 45 % \u2014 the value at which the COLONIES label in the mockup falls to the separator's brightness. None of the three is measured, all three are named."
+    },
+    "small_button": {
+      "chamfer_frac": 0.5,
+      "_note": "a small button inside a panel is the action button's shape at half the panel's chamfer, so it reads as the same family and does not compete with the panel's own corner"
+    },
+    "popup": {
+      "fill_from": "panel.fill",
+      "edge_from": "action.edge",
+      "_note": "a dialog is a panel lit like the action button, because it is the thing that wants an answer; opaque, as decision 69's fill rule and 'a palette-indexed engine cannot dim' both require"
+    },
+    "scrollbar": {
+      "width_frac": 0.5,
+      "_note": "the thumb is half the scroll column, centred, as the colony mockup draws it"
+    },
+    "text_min_px": 9,
+    "_text_note": "text sizes come from measured cap-height fractions (`measured.text.*.cap`) times the box's height; below 9 device px Aldrich stops being legible, so that is the floor.",
+    "background_placeholder": [
+      3,
+      7,
+      16
+    ],
+    "_background_note": "What a screen draws until Data's background for it arrives (decision 71: one slot per screen, a plain dark placeholder until then). Darker than the panel fill (3, 12, 28) so a panel reads as a panel on it, and the same hue.",
+    "frame_buttons": {
+      "left": [
+        122,
+        988,
+        267,
+        45
+      ],
+      "right": [
+        1531,
+        988,
+        267,
+        45
+      ]
+    },
+    "_frame_buttons_note": "Where the pre-game screens' two frame buttons go, in reference px: the old skin frame's own button bars (assets/shared/skins/default/frame/9slice.json, 1672x941 source scaled to 1920x1080), so no screen's content had to move when the frame went. Left is a slanted button, right the action button."
+  }
+}

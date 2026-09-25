@@ -41,22 +41,21 @@ def mouse_motion(screen, screen_x, screen_y):
 def click(screen, screen_x, screen_y):
     if screen.help_consumes_click(screen_x, screen_y):
         return True
-    # Title cutout = the original's GAME button (top centre).
-    title = screen._data.get("frame", {}).get("title_rect")
-    if title and pygame.Rect(*screen.layout.rect(title)).collidepoint(
-            screen_x, screen_y):
-        screen.pressed.press("title", pygame.Rect(*screen.layout.rect(title)))
+    # The HUD title plate = the original's GAME button (top centre).
+    # `title_rect` is the one function the drawing and the help use too.
+    title = screen.title_rect()
+    if title.collidepoint(screen_x, screen_y):
+        screen.pressed.press("title", title)
         activate(screen, screen._data.get("actions", {}).get("game_menu"),
                  "game menu")
         return True
 
-    # Navigation buttons next — they sit outside the map area.
+    # Navigation buttons next — the HUD draws them over the map's floor,
+    # so they are asked before the map is. Each is hit as the shape it
+    # is drawn as (`nav_hit`, decision 5).
     for spec in screen._data.get("buttons", []):
-        box = screen.box_rect(f"nav_{spec['key']}")
-        if not box:
-            continue
-        if pygame.Rect(*screen.layout.rect(box)).collidepoint(
-                screen_x, screen_y):
+        if screen.nav_hit(spec["key"], screen_x, screen_y):
+            screen.pressed.press(spec["key"], screen.nav_rect(spec["key"]))
             activate(screen, spec["field_id"], spec["key"])
             return True
 
@@ -78,6 +77,13 @@ def click(screen, screen_x, screen_y):
             screen._data.get("research_window_field"))
         if field is not None and screen.app.connected:
             activate(screen, field.index, "research window")
+        return True
+
+    # The info panel is not map: a click on it that no window took is
+    # swallowed, never sent through to a star under the panel.
+    side = screen.box_rect("sidebar")
+    if side and pygame.Rect(*screen.layout.rect(side)).collidepoint(
+            screen_x, screen_y):
         return True
 
     if boxdraw.handle_click(screen, screen_x, screen_y):

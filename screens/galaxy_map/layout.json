@@ -109,6 +109,8 @@
     "sub": 18
   },
   "sidebar_dividers": true,
+  "sidebar_row_pad": 8,
+  "_sidebar_row_pad_note": "Reference px between a sidebar row's text box and the separator above it (decision 71): tools/hud_boxes.py writes the sb_*_text boxes this far inside their bands, and the screen draws each separator this far above its row's text. Ours, not measured.",
   "_sidebar_icon_note": "Keys are sidebar_rows keys, values are files under assets/icons/ (cut from _source_sheet.png by tools/make_sidebar_icons.py). A row that is not listed gets no icon - that is why stardate is absent. POSITIONS ARE NOT HERE: every row owns two boxes in boxes.json, sb_<row>_text and sb_<row>_icon, both draggable and font-scalable in the F5 editor. sidebar_fonts are reference sizes multiplied by each text box's own font_scale. A text box style may carry \"align\": left | center | right. The icons are an HD addition; the original prints these five numbers over full-cell artwork.",
   "labels": {
     "treasury": "Treasury",

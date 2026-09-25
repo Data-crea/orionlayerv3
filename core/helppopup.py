@@ -36,6 +36,8 @@ so a darkened backdrop would be an invention.
 """
 import pygame
 
+from core.hud import blocks as hud
+
 from core import helpformat
 from core import palette
 from core import textfit
@@ -177,6 +179,11 @@ class HelpPopup:
         if not self.visible:
             return
         bx, by, bw, bh = box
+        # THE GLOW STAYS INSIDE THE BOX (decision 71): the popup block's
+        # outer glow reaches `glow_pad` past its rect, and everything the
+        # popup draws must lie in its box — so the panel is inset by it.
+        gp = hud.glow_pad(L.scale) / L.scale
+        bx, by, bw, bh = bx + gp, by + gp, bw - 2 * gp, bh - 2 * gp
         title_size = max(8, L.font_size(int(FONT_TITLE * fs)))
         body_size = max(8, L.font_size(int(FONT_BODY * fs)))
         close_size = max(8, L.font_size(int(FONT_CLOSE * fs)))
@@ -202,13 +209,12 @@ class HelpPopup:
         py = int(by * L.scale + L.offset_y) + (max_h - panel_h) // 2
         rect = pygame.Rect(px, py, pw, panel_h)
 
-        if backdrop is not None and backdrop.get_rect().contains(rect):
-            surface.blit(backdrop, (px, py), rect)
-        else:
-            fill = pygame.Surface((pw, panel_h))
-            fill.fill(tuple(COL_FILL[:3]))
-            surface.blit(fill, (px, py))
-        style.draw_thin_border(surface, rect, L.scale)
+        # THE POPUP BLOCK, decision 71 (work order 169): every popup and
+        # dialog wears it. Opaque, as before and for the reason before —
+        # a palette-indexed engine cannot dim what is under a dialog — so
+        # the cockpit-texture `backdrop` is no longer cut out behind it;
+        # the argument stays for the callers that still pass one.
+        hud.popup(surface, rect, L.scale)
 
         # Text area, clipped so a scrolled entry cannot bleed over
         # the border or the CLOSE line.

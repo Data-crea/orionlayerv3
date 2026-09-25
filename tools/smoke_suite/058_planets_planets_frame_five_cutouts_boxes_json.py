@@ -523,8 +523,13 @@ for _hv_W, _hv_H in ((1366, 768), (1920, 1080), (2560, 1440), (3840, 2160)):
         for _hv_y in (_hv_t, _hv_t + _hv_h - 1):
             _hv_scr.handle_mouse_motion(_hv_area.x + 10, _hv_y)
             _hv_scr.render(_hv_surf)
+            # One px into the cell: the band's edge line is the cell
+            # plate's own line everywhere but its CUT CORNER, where the
+            # fill shows. It was 4 px in while the plate was a rounded
+            # rect of radius 6; the HUD outline (decision 71) cuts its
+            # corners by ~3 px at 1366x768, so 4 px landed on the line.
             _hv_px = tuple(_hv_surf.get_at(
-                (_hv_cols["climate"][0] + 4, _hv_y)))[:3]
+                (_hv_cols["climate"][0] + 1, _hv_y)))[:3]
             assert _hv_px == _hv_sel, (
                 f"{_hv_W}x{_hv_H} y={_hv_y} (band {_hv_i}): the pixel "
                 f"shows {_hv_px}, the hovered row's fill is {_hv_sel}")

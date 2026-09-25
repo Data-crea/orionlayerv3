@@ -38,6 +38,8 @@ import logging
 
 import pygame
 
+from core.hud import blocks as hud
+
 from core import hestrings
 from core import palette
 from core import textfit
@@ -136,14 +138,15 @@ def _text(screen, surface, rect, text, size, colour, align="center"):
 
 
 def _frame(screen, surface, rect):
-    surface.fill(PANEL_BG[:3], rect)
-    screen.style.draw_thin_border(surface, rect, screen.layout.scale)
+    """The window's body: the HUD popup block (decision 71) — the system
+    window and the fleet box are dialogs over the map, opaque."""
+    hud.popup(surface, rect, screen.layout.scale)
 
 
 def _button(screen, surface, rect, label, size):
-    surface.fill(BUTTON_BG[:3], rect)
-    screen.style.draw_thin_border(surface, rect, screen.layout.scale)
-    _text(screen, surface, rect, label, size, TEXT_COLOR)
+    """CLOSE: the HUD's small button, its word in code."""
+    hud.small_button(surface, rect, screen.layout.scale, "normal", label,
+                     style_renderer=screen.style)
 
 
 def _close_label(screen):
@@ -205,10 +208,8 @@ def _draw_scroll(screen, surface, grid, count):
     the wire, so the thumb stands at the top; not measured, not clickable
     (brief 117: measured once the patches are live)."""
     bar = pygame.Rect(grid.right + 2, grid.y, max(6, grid.w // 30), grid.h)
-    screen.style.draw_thin_border(surface, bar, screen.layout.scale)
-    thumb = pygame.Rect(bar.x + 1, bar.y + 1, bar.w - 2,
-                        max(4, (bar.h - 2) * boxmodel.FLEET_ICONS_MAX // count))
-    surface.fill(SCROLL_THUMB[:3], thumb)
+    hud.scrollbar(surface, bar, screen.layout.scale, 0,
+                  boxmodel.FLEET_ICONS_MAX, count)
 
 
 def _draw_fleet(screen, surface, r, model, hits):
@@ -226,7 +227,7 @@ def _draw_fleet(screen, surface, r, model, hits):
         surface.fill((SELECTED if chosen else DESELECTED)[:3], cell)
         if model["selectable"][i]:
             hits.append((cell, ("select", ship, not chosen)))
-        screen.style.draw_thin_border(surface, cell, screen.layout.scale)
+        hud.outline(surface, cell, screen.layout.scale)
         kind = ship_icons.kind_for_owner(owner) or ship_icons.PLAYER_KIND
         key = ship_icons._resolve_sprite(screen._cache, kind, 0)
         if key is None:
