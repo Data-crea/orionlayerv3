@@ -1,5 +1,50 @@
 # Modding OrionLayer
 
+## The easy way: your mod folder (no programming)
+
+**HD EXTENSION, work order 173, decision 72.** To change how OrionLayer
+looks you do not need this repository at all. There is one folder for
+you, outside it:
+
+| system | folder |
+|---|---|
+| Linux | `~/.config/orionlayer/mod` (or `$XDG_CONFIG_HOME/orionlayer/mod`) |
+| Windows | `%APPDATA%\OrionLayer\mod` |
+| macOS | `~/Library/Application Support/OrionLayer/mod` |
+
+```bash
+python tools/mod_template.py
+```
+
+makes it for you, with a plain-language `MODDING.md` inside, a
+`NAMES.txt` of every name it can hold (with sizes), and OrionLayer's own
+files under `originals/` as starting points. Put a file in the folder
+under the right name, restart, and it is used instead of the built-in
+one; take it out and the original is back:
+
+```
+background.png             the picture behind every screen
+backgrounds/<screen>.png   one screen's picture (wins over background.png)
+hud/<piece>.png            a HUD icon or the title plate
+style.json                 HUD colours and sizes — only the keys you write
+colour.json                the frame colour OrionLayer starts with
+files/<path in the tree>   any other picture listed in NAMES.txt
+```
+
+A file OrionLayer cannot read, or a name it does not know, is skipped
+with one line in the log; a picture of another size is scaled to fit.
+The GAME menu's SETTINGS has **Mod folder: On / Off** (takes effect at
+the next start); switching it off leaves your files where they are.
+
+Pictures from Master of Orion 2 itself are never copied into the
+template — they are not ours to hand out — but their names are listed,
+so you can draw your own.
+
+Everything below is the **developer's** route: mods inside the tree,
+which can also replace data, layouts and whole screens.
+
+## Mods inside the tree
+
 Every file OrionLayer loads — assets, data, skins, even whole
 screens — resolves through `core/resources.py`. Active mods are
 searched first, the base project last. Overriding anything means

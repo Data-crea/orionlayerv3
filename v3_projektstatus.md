@@ -3025,7 +3025,7 @@ check in the *fast* tier, in both directions:
 | sidebar research readout | 2.3 s |
 | 49 tools import in fresh processes | 2.0 s; the only expensive check that renders nothing |
 | the frame colour never touches pictures (172) | ~35 s; every screen and dialog at six frame colours |
-| text on the universal background keeps its contrast (173) | ~20 s; six screens rendered three ways each |
+| text on the universal background keeps its contrast (173) | ~30 s; six screens rendered three ways each, two of them at 2160p |
 
 **The threshold was not the ranking.** A check went push-only when it
 cost at least a second **and** its own block could be skipped without a

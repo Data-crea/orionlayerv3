@@ -11,7 +11,8 @@
       "style": {
         "label": "Race Picks Panel",
         "font_scale": 1.0,
-        "skin": "thin_border"
+        "skin": "thin_border",
+        "fill": true
       }
     },
     {
@@ -25,7 +26,8 @@
       "style": {
         "label": "Special Abilities Panel",
         "font_scale": 1.0,
-        "skin": "thin_border"
+        "skin": "thin_border",
+        "fill": true
       }
     },
     {
@@ -39,7 +41,8 @@
       "style": {
         "label": "Description Panel",
         "font_scale": 1.0,
-        "skin": "thin_border"
+        "skin": "thin_border",
+        "fill": true
       }
     },
     {
@@ -160,7 +163,8 @@
       "style": {
         "label": "Race Picks Panel",
         "font_scale": 0.9,
-        "skin": "thin_border"
+        "skin": "thin_border",
+        "fill": true
       }
     },
     {
@@ -174,7 +178,8 @@
       "style": {
         "label": "Special Abilities Panel",
         "font_scale": 1.0,
-        "skin": "thin_border"
+        "skin": "thin_border",
+        "fill": true
       }
     },
     {
@@ -188,7 +193,8 @@
       "style": {
         "label": "Description Panel",
         "font_scale": 1.0,
-        "skin": "thin_border"
+        "skin": "thin_border",
+        "fill": true
       }
     },
     {

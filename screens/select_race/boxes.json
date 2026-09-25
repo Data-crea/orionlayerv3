@@ -11,7 +11,8 @@
       "style": {
         "label": "Race Grid",
         "font_scale": 1.0,
-        "skin": "thin_border"
+        "skin": "thin_border",
+        "fill": true
       }
     },
     {
@@ -25,7 +26,8 @@
       "style": {
         "label": "Info Panel",
         "font_scale": 1.0,
-        "skin": "thin_border"
+        "skin": "thin_border",
+        "fill": true
       }
     },
     {
@@ -80,7 +82,8 @@
       "style": {
         "label": "Race Grid",
         "font_scale": 1.0,
-        "skin": "thin_border"
+        "skin": "thin_border",
+        "fill": true
       }
     },
     {
@@ -94,7 +97,8 @@
       "style": {
         "label": "Info Panel",
         "font_scale": 1.0,
-        "skin": "thin_border"
+        "skin": "thin_border",
+        "fill": true
       }
     },
     {

@@ -122,8 +122,13 @@ class Box:
         elif skin == "text":
             self._render_text(surface, style_renderer, font_size)
         elif skin == "thin_border":
+            # `"fill": true` — a group whose TEXT stands on it: the HUD
+            # panel's fill under the words instead of the background
+            # (work order 173 measured Select Race's race names at 3.4:1
+            # on the universal picture, 9.4:1 on the old placeholder).
             style_renderer.draw_thin_border(
-                surface, self.screen_rect, layout.scale)
+                surface, self.screen_rect, layout.scale,
+                filled=bool(self.style.get("fill")))
         elif skin == "none":
             # **THE FRAME IS THE BORDER.** A box whose rect is a
             # transparent hole in the screen's frame image already has

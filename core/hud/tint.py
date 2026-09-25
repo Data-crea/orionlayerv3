@@ -165,8 +165,10 @@ def _hls(x):
     mx, mn = x.max(axis=-1), x.min(axis=-1)
     l = (mx + mn) / 2.0
     c = mx - mn
-    s = np.where(c == 0, 0.0,
-                 c / np.where(l <= 0.5, mx + mn, 2.0 - mx - mn + 1e-12))
+    # Divided only where it is defined: black is 0 / 0, which `where`
+    # threw away anyway but numpy warned about first (seen in 173's run).
+    s = np.divide(c, np.where(l <= 0.5, mx + mn, 2.0 - mx - mn + 1e-12),
+                  out=np.zeros_like(c), where=c != 0)
     r, g, b = x[..., 0], x[..., 1], x[..., 2]
     safe = np.where(c == 0, 1.0, c)
     h = np.where(mx == r, ((g - b) / safe) % 6.0,

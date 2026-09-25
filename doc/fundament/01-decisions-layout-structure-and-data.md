@@ -2,7 +2,7 @@
 
 How the HD client is laid out and where its data lives — the section's own preamble, Layout and coordinates, Structure, Data and resources.
 
-**Decisions in this part:** 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 34, 37, 38, 50, 51, 57, 70.
+**Decisions in this part:** 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 34, 37, 38, 50, 51, 57, 70, 72.
 
 The index is [`../v3_fundament.md`](../v3_fundament.md), and it is
 what to read first. This file is one part of the fundament and
@@ -441,3 +441,67 @@ the cells it always drew and names the command. That is the stated
 state of this feature, not a leftover, so the cell renderer is
 excluded from Stage 5's deletion list.
 
+
+**72. The player's mod folder: one folder outside the tree, file for
+file, and never a MOO2 file handed out.** 25 September 2026, Data's work
+order 173 (`doc/briefs/173-*`). Numbered 72 after checking at the commit
+that carries it: the highest entry was 71. **HD EXTENSION** — MOO2 has
+no such thing — marked in `core/usermod.py`, `tools/mod_template.py`,
+the status document and smoke check 006d.
+
+**The folder.** One, outside the repository, where the player can
+write: `$XDG_CONFIG_HOME/orionlayer/mod` on Linux (`~/.config/...`),
+`%APPDATA%\OrionLayer\mod` on Windows, `~/Library/Application
+Support/OrionLayer/mod` on macOS; `ORIONLAYER_USER_DIR` replaces the
+part before `mod`. Nothing is copied from it into the tree and nothing
+in it is ever committed. It is for somebody who is not a developer;
+`mods/` in the tree (decisions 16, 17) stays the route for a developer
+and is untouched.
+
+**The resolver is the one that already existed.** `Resources.resolve`
+asks `core.usermod` first and nothing else asks it, so decision 16
+holds as it stood: a screen asks for its default path and gets the
+player's file when there is a valid one. The two values that are not
+files — the partial style and the frame colour — are read by the one
+module that owns each (`core.hud.style`), through `core.usermod`.
+
+**The order, file for file.** The player's file replaces the file of
+the same name; a missing file is the default. For backgrounds,
+**the screen's own picture > the universal picture > the placeholder**,
+each of the two looked up in the folder first — so a mod's
+`backgrounds/galaxy_map.png` beats its `background.png`, and its
+`background.png` does not replace the Main Menu's title art unless it
+also names `backgrounds/main_menu.png`.
+
+**What can be replaced** (the template writes the list with sizes):
+`background.png`; `backgrounds/<screen>.png`; `hud/<piece>.png` — the
+twelve icons and the title plate; `style.json`, PARTIAL — a key
+replaces the default only if the default has it with the same kind of
+value; `colour.json` — the default frame colour, which the player's own
+choice beats and RESET returns to; `files/<tree path>` — any other
+picture the screens resolve (`usermod.GAME_ART` names the groups a
+trace of every screen's render found going through `resolve`).
+
+**Robust, or not at all.** Every file is checked before it is handed
+out; one that fails costs one log line and the default is used. A
+picture of another size is scaled ONCE to the default's size (a copy
+beside the folder), so every loader sees the size it always saw;
+backgrounds are cover-scaled anyway and keep theirs.
+
+**Off without deleting**: `user_mod` in `user_settings.json`, a row in
+the GAME menu's settings. Read at start like every resource choice —
+decision 18's trade, stated there.
+
+**THE MOO2 RULE.** OrionLayer hands out only its own files. The
+template tool copies Data's universal background, the HUD pieces cut
+from Data's HUD and the style values; pictures extracted from the game
+or derived from its artwork (LICENSE), and the game's fonts and texts,
+are listed BY NAME only. A check holds every file the tool writes to
+that rule, against every other file in the tree.
+
+**Not covered, on record**: the colony screen's figures, planet discs,
+surface pictures and output icons choose between file forms per source
+root (`Resources.roots`, decision 50's master-or-step), which the
+folder's per-file lookup does not reach; banners and skins resolve as
+whole directories (decision 17). All of them are still replaceable
+through `mods/`.

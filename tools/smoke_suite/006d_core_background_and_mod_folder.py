@@ -317,17 +317,34 @@ finally:
 #     against the brightest background under it. The floor is 3.4:1 —
 #     what the dimmest words measured on the old placeholder already
 #     (3.35: New Game's "|" separators); the background may not take any
-#     word below it. Push-only: ~20 s.
+#     word below it. AND THE PANELS DO THE WORK where words sit in a
+#     group: Select Race's race names measured 3.4:1 at 2160p over the
+#     picture's bright left edge (9.4 on the placeholder) until their
+#     `thin_border` groups took `"fill": true` — so at 2160p, where the
+#     picture is brightest under them, those two screens keep almost no
+#     word on the bare picture. Push-only: ~30 s.
 if slow("background_contrast"):
     import background_measure as _um_bm
-    _um_words, _um_low = 0, []
-    for _um_name in ("galaxy_map", "new_game", "select_race", "custom_race",
-                     "research_select", "game_menu_settings"):
-        _um_r = _um_bm.contrast(_um_name, 1920, 1080)
+    _um_words, _um_low, _um_bare = 0, [], {}
+    for _um_name, _um_size in (("galaxy_map", (1920, 1080)),
+                               ("new_game", (1920, 1080)),
+                               ("research_select", (1920, 1080)),
+                               ("game_menu_settings", (1920, 1080)),
+                               ("select_race", (1920, 1080)),
+                               ("custom_race", (1920, 1080)),
+                               ("select_race", (3840, 2160)),
+                               ("custom_race", (3840, 2160))):
+        _um_r = _um_bm.contrast(_um_name, *_um_size)
         _um_words += _um_r["words"]
         if _um_r["min"] is not None and _um_r["min"] < 3.4:
-            _um_low.append((_um_name, _um_r["min"], _um_r["min_at"]))
-    assert _um_words >= 150, f"only {_um_words} words measured"
+            _um_low.append((_um_name, _um_size, _um_r["min"],
+                            _um_r["min_at"]))
+        if _um_name in ("select_race", "custom_race"):
+            _um_bare[(_um_name, _um_size)] = _um_r["words"]
+    assert _um_words >= 60, f"only {_um_words} words measured"
     assert not _um_low, f"words below 3.4:1 on the background: {_um_low}"
+    assert all(_n <= 10 for _n in _um_bare.values()), (
+        f"text of a filled group stands on the bare picture: {_um_bare}")
     ok(f"text on the universal background: {_um_words} words on six "
-       f"screens, none below 3.4:1")
+       f"screens, none below 3.4:1; Select Race's and Custom Race's "
+       f"groups carry their words on the panel fill")

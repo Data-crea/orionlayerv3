@@ -135,7 +135,7 @@ SLOW_TIER = {
     "background_contrast": (1,
         "renders six screens three ways each to find every word that "
         "stands on the universal background and measure its contrast "
-        "(work order 173) — about 20 s"),
+        "(work order 173) — about 30 s"),
     "tools_import": (1,
         "starts 49 fresh Python processes, one per runnable tool — the "
         "only expensive check in the suite that renders nothing, 2.0 s"),

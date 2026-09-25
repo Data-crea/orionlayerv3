@@ -349,14 +349,19 @@ class StyleRenderer:
         a block, which decision 71 rules out."""
         hud.outline(surface, rect, scale)
 
-    def draw_thin_border(self, surface, rect, scale=1.0):
+    def draw_thin_border(self, surface, rect, scale=1.0, filled=False):
         """The `thin_border` skin: a HUD panel WITHOUT fill (decision 71).
 
         It was always an outline drawn round content that is already
         there — Custom Race's columns, New Game's image boxes, the
         message popup — so it stays one: the HUD panel's edge, glow and
-        inner band, no fill over what the box holds."""
-        hud.panel(surface, rect, scale, filled=False)
+        inner band, no fill over what the box holds.
+
+        `filled` is a box's own `"fill": true` (work order 173): the
+        groups whose words stand directly on the universal background,
+        drawn BEFORE their content, take the panel's fill — "the HUD
+        panel fill does the work", never a darkening of one screen."""
+        hud.panel(surface, rect, scale, filled=filled)
 
     def get_asset(self, rel_path):
         """Load and cache an image from the skin directory."""
