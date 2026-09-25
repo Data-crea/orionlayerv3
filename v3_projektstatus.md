@@ -13,6 +13,32 @@ right and the header had gone stale** — resolved 10 September 2026
 by dating the header to the edit and giving this session its
 paragraph, below, so the two agree again.
 
+This session (25 September 2026, work order 170): **the galaxy
+map's bar is on the bottom edge and its map lies in the free space;
+and the HUD's frame colour is a setting.**
+
+The cause of Data's band was MEASURED first: the bar's boxes came off
+the HUD artwork, which has 137 transparent rows under its bar, so the
+bar ended 54 ref px above the bottom; the left strip and the black
+corner were the letterbox and the panel's corner, where the floor was
+not drawn. Now the bar hangs from the WINDOW's bottom edge at the HUD's
+own screen-edge margin (20 ref px, measured), the map lies between
+title plate, bar and panel and stretches with the window (box anchors,
+`Layout.vertical`, HD EXTENSION), the floor covers the whole window.
+DEVIATION marked in `screens/galaxy_map/screen.py`: the map rectangle is
+not the original's 506:400; clicks follow it through the same view.
+Same fix for the colony sort row and the New Game / Empire Identity
+frame buttons; Planets, Fleets, Select Race parked with numbers.
+
+The frame colour (HD EXTENSION, `core/hud/tint.py`): a hue bar in the
+Game Settings dialog's OrionLayer rows; one luminance-keeping rule for
+code and cut pieces; words, placeholder, picture icons, the plate's
+lamps and all game colours never turn; saved in `user_settings.json`,
+applied without restart. Checks 301 -> 303 (plus 300 -> 301 for the
+overlap check). A read-only live snapshot of Data's own running game
+showed no star or name under the HUD at three sizes.
+`doc/briefs/170-progress.md`, `170-parked-for-data.md`.
+
 This session (25 September 2026, work order 169): **the cockpit
 frames give way to ONE frameless style drawn in code — decision 71 —
 on all thirteen HD screens and every popup.** The full account, screen by screen, is
