@@ -22,13 +22,24 @@ from screens.galaxy_map import boxdraw
 from screens.galaxy_map import sidebar as sb
 
 
+def plate_centre_x(screen):
+    """Where the title plate is centred: the MAP's horizontal centre
+    (work order 171). Since 170 the map ends at the info panel, so the
+    window's centre put the plate visibly right of the map's. Falls back
+    to the content area's centre while the map box has no rect."""
+    L = screen.layout
+    box = screen.box_screen_rect("map_area")
+    if box is None:
+        return L.offset_x + REF_W * L.scale / 2
+    return box.x + box.w / 2
+
+
 def title_rect(screen):
     """The title plate's text box in device px."""
-    L = screen.layout
     # From the WINDOW's top edge (work order 170), as the bar hangs from
     # its bottom one: on a window taller than 16:9 both reach the edge.
-    return hud.title_plate_rect(L.offset_x + REF_W * L.scale / 2,
-                                0, L.scale)[1]
+    return hud.title_plate_rect(plate_centre_x(screen), 0,
+                                screen.layout.scale)[1]
 
 
 def render_title(screen, surface):
@@ -40,7 +51,7 @@ def render_title(screen, surface):
     cfg = screen._data.get("frame", {})
     title = cfg.get("title", screen.FRAME_TITLE)
     L = screen.layout
-    hud.title_plate(surface, L.offset_x + REF_W * L.scale / 2,
+    hud.title_plate(surface, plate_centre_x(screen),
                     0, L.scale, title, screen.style,
                     colour=screen.pressed.colour(
                         "title", hudtext.colour("title"))[:3])

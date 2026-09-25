@@ -9,8 +9,9 @@
 # GAME plate and a band under the bar; this is what fails the day either
 # comes back.
 #
-# The 1 check(s) it holds:
+# The 2 check(s) it holds:
 #   - galaxy map: no star, name, fleet or wormhole pixel under a HUD block, at five window sizes
+#   - galaxy map: the title plate is centred on the map box (work order 171)
 
 
 import struct as _ov_struct
@@ -93,6 +94,7 @@ def _ov_mask(surf, other):
 
 
 _ov_seen = 0
+_ov_plates = 0
 for _W, _H in _OV_SIZES:
     _ov_app = _ov_he.make_app(_W, _H)
     _ov_app.dispatcher.switch_to("galaxy_map")
@@ -112,6 +114,18 @@ for _W, _H in _OV_SIZES:
         assert not _ov_box.colliderect(_ov_blk), (
             f"{_W}x{_H}: the map box {_ov_box} overlaps the HUD block "
             f"{_ov_blk}")
+    # THE PLATE IS CENTRED ON THE MAP (work order 171), not on the window:
+    # its text box's centre is the map box's horizontal centre.
+    # The PLATE's centre, not its text box's: the artwork's hexagon sits
+    # ~3 ref px left of the plate's middle, and the word follows the
+    # hexagon (16 September 2026).
+    from core.hud import blocks as _ov_blk
+    _ov_pc = _ov_blk.title_plate_rect(_ov_hv.plate_centre_x(_ov_gm), 0,
+                                      _ov_app.layout.scale)[0].centerx
+    _ov_plates += 1
+    assert abs(_ov_pc - _ov_box.centerx) <= 1, (
+        f"{_W}x{_H}: the title plate is centred at x {_ov_pc}, the map "
+        f"box at {_ov_box.centerx}")
     # THE BAR IS ON THE BOTTOM EDGE: TURN's lowest pixel is the HUD's
     # own screen-edge margin above the window's bottom, at every size.
     from core.hud import style as _ov_hs
@@ -146,3 +160,5 @@ report(f"galaxy map overlap: the reference save's {_ov_real} stars "
 ok(f"galaxy map: no star, name, fleet or wormhole pixel under a HUD "
    f"block, and the bar on the bottom edge ({len(_OV_SIZES)} window "
    f"sizes, {_ov_seen} renders)")
+ok(f"galaxy map: the title plate is centred on the map box, not the "
+   f"window ({_ov_plates} window sizes, within 1 px)")
