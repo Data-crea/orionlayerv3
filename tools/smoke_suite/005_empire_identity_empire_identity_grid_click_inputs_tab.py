@@ -181,7 +181,10 @@ if "empire_identity" in d.screens:
     ei._ruler.value = "Zed"
     ei._color = "purple"                          # row 2, col 3
     ei._home.value = "Kor"
-    ei.handle_click(bx + bw // 2, by + bh // 2)   # HD Accept
+    # Its OWN Accept (work order 170): Empire Identity's frame buttons
+    # sit on the bottom edge, Custom Race's inside its columns.
+    _ei_acc = ei.hud_frame_button_rect("right")
+    ei.handle_click(_ei_acc.centerx, _ei_acc.centery)   # HD Accept
     assert ei.busy
     for sid, fields in ((6, name_a), (6, name_a), (6, banner),
                         (0, name_b)):

@@ -43,6 +43,10 @@ class CustomRaceScreen(ScreenBase):
     FRAME_BTN_LEFT = ("Clear", 4)     # field 4 = Default/Clear (hotkey C)
     FRAME_BTN_RIGHT = ("Accept", 3)   # field 3 = Accept (hotkey A)
     FRAME_VARIANT = None    # default frame (with button bars)
+    # The three columns reach 22 ref px from the bottom and CLEAR and
+    # ACCEPT sit inside them: no band to close (work order 170), so the
+    # buttons stay at the old frame's bars rather than on the edge.
+    FRAME_BTN_AT_BOTTOM = False
 
     def __init__(self, app):
         super().__init__(app)

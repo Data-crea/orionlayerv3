@@ -29,7 +29,8 @@ ACTIVE_FOR = 0.30
 
 def render(screen, surface):
     L = screen.layout
-    hud.title_plate(surface, L.offset_x + REF_W * L.scale / 2, L.offset_y,
+    # From the window's top edge (work order 170).
+    hud.title_plate(surface, L.offset_x + REF_W * L.scale / 2, 0,
                     L.scale, screen.FRAME_TITLE, screen.style)
     for side in ("left", "right"):
         _button(screen, surface, side)
@@ -42,7 +43,17 @@ def button_rect(screen, side):
     if not spec:
         return None
     ref = hudstyle.get().get(f"frame_buttons.{side}")
-    return pygame.Rect(*screen.layout.rect(ref))
+    if not getattr(screen, "FRAME_BTN_AT_BOTTOM", True):
+        return pygame.Rect(*screen.layout.rect(ref))
+    # ON THE WINDOW'S BOTTOM EDGE (work order 170), the HUD's own
+    # screen-edge margin above it, as the galaxy map's bar: the old
+    # frame's button bars left a band under them once the frame went.
+    x, _y, w, h = ref
+    margin = hudstyle.get().get("galaxy.edge_margin")
+    L = screen.layout
+    sy, sh = L.vertical(1080 - margin - h, h, "bottom")
+    return pygame.Rect(int(x * L.scale + L.offset_x), sy,
+                       int(w * L.scale), sh)
 
 
 def hit(screen, side, x, y):
