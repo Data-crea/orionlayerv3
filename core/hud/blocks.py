@@ -229,9 +229,11 @@ def _label(surface, style_renderer, rect, label, role, state, icon, scale):
     if icon is None and not label:
         return
     r = pygame.Rect(rect)
+    # ONE LABEL COLOUR IN EVERY STATE: the state is the block's, never
+    # the word's. Data's rule for the colony sort keys (12 September
+    # 2026 — a dimmed PRODUCING was read as a wrong colour twice), made
+    # the rule for every HUD button.
     col = hudtext.colour(role)
-    if state == "hover" or state == "active":
-        col = hudstyle.get().colour("text.value.color")
     ic = art.icon(icon, int(r.h * 0.6)) if icon else None
     left = r.x
     if ic is not None:

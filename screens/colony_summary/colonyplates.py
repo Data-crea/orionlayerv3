@@ -417,9 +417,37 @@ def render_fills(screen, surface):
     # THE HOLES THAT ARE BIGGER THAN THEIR BOX GO DOWN FIRST, so the
     # box's own fill lands on top of the part it covers. Only
     # `galaxy_inset` has one; see `hole_rects`.
+    from core.hud import blocks as hud
+    holed = set()
     for name, rect in getattr(screen, "_hole_fills", {}).items():
-        _fill(name, bled(rect))
+        # The hole is the WINDOW (decision 71): its panel, and its own
+        # colour inside the panel's edge.
+        outer = pygame.Rect(*screen.layout.rect(bled(rect)))
+        hud.panel(surface, outer, screen.layout.scale)
+        colour = panels.get(name)
+        if isinstance(colour, str):
+            from core import palette as _pal
+            surface.fill(tuple(_pal.require("colony_summary", colour))[:3],
+                         hud.panel_inner(outer, screen.layout.scale))
+        holed.add(name)
+    # SINCE DECISION 71 (work order 169) A WINDOW IS A HUD PANEL. The
+    # frame that used to cover the fill's bleed is not drawn, so each
+    # window is the panel block at its own rect; the header is the table
+    # header band; a sort slot or RETURN is a button and draws itself
+    # (`colonysort`). The galaxy inset keeps its measured black inside
+    # its panel — `colonyinset` draws nothing behind the map, by
+    # transcription (movebox.cpp:36-38).
+    scale = screen.layout.scale
     for name in panels:
         box = None if name.startswith("_") else screen.box_rect(name)
-        if box:
+        if not box or name.startswith("sort_") or name == "return":
+            continue
+        if name in holed:
+            continue
+        rect = pygame.Rect(*screen.layout.rect(box))
+        if name == "header":
+            hud.table_header(surface, rect, scale)
+            continue
+        hud.panel(surface, rect, scale)
+        if isinstance(panels.get(name), str):
             _fill(name, box)

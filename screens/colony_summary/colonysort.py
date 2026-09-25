@@ -57,6 +57,9 @@ here — the even gaps they were the evidence for are gone with it.
 """
 import pygame
 
+from core.hud import blocks as hud
+from core.style import _scale_of
+
 #: Breathing room around a highlighted word, reference px.
 #:
 #: MEASURED, and the "about" is gone — 9 September 2026, off the
@@ -236,7 +239,9 @@ def font_size(screen):
 def button_at(buttons, x, y):
     """The key under a window point, or None."""
     for button in buttons:
-        if button.hit.collidepoint(x, y):
+        # The key is hit as the shape it is drawn as, the HUD's slanted
+        # button (decision 71, decision 5).
+        if hud.slant_hit(button.hit, x, y):
             return button.key
     return None
 
@@ -257,7 +262,12 @@ def render(surface, buttons, active_key, mouse,
     refuses a move made under an unavailable sort. What is gone is the
     drawing of it, which was the invented half.
 
-    The colour is the ORIGINAL's own: measured on its framebuffer,
+    **DEVIATION — THE LABEL COLOUR IS THE HUD'S** (decision 71, work
+    order 169): every HUD button's word is the mockup's measured
+    `text.button.color`. What the next paragraph measured is kept as
+    the record of what the original draws.
+
+    The colour WAS the ORIGINAL's own: measured on its framebuffer,
     every inactive label is (196, 196, 196) — all seven buttons are
     the same field, `Add_Multi_Button_Field_(x, 446, …,
     &_g_sort_index, 0..6, …)` (colsum.cpp:267-273). The original's
@@ -278,16 +288,20 @@ def render(surface, buttons, active_key, mouse,
     `fonts::Print_Centered_` at the FIELD's midpoint
     (fields.cpp:1896-1925), not at its sprite's.
     """
+    # SINCE DECISION 71 (work order 169) each key is a HUD slanted button
+    # in its own box — active lit, hover lit, the others plain — and the
+    # word is drawn by the block, centred in the box as before. The
+    # colour arguments are kept for the callers and no longer read: a
+    # key's colours are the HUD style's, one home for every button.
     for button in buttons:
-        active = button.key == active_key
-        if active or button.hit.collidepoint(mouse):
-            surface.fill((active_bg if active else hover_bg)[:3],
-                         button.highlight)
-        word = style.render_text(display(button.label), font_size,
-                                 text[:3])
-        surface.blit(word, (
-            button.hit.x + (button.hit.width - word.get_width()) // 2,
-            button.hit.y + (button.hit.height - word.get_height()) // 2))
+        if button.key == active_key:
+            state = "active"
+        elif hud.slant_hit(button.hit, *mouse):
+            state = "hover"
+        else:
+            state = "normal"
+        hud.slant_button(surface, button.hit, _scale_of(surface), state,
+                         display(button.label), style_renderer=style)
 
 
 def render_return(surface, screen, mouse, hover_bg, text_color):
@@ -320,13 +334,8 @@ def render_return(surface, screen, mouse, hover_bg, text_color):
     if not box:
         return
     rect = pygame.Rect(*screen.layout.rect(box))
-    if rect.collidepoint(mouse):
-        surface.fill(hover_bg[:3], rect)
     label = screen._data.get("return", {}).get("label", "Return")
-    word = screen.style.render_text(
-        label.upper(),
-        screen.layout.font_size(
-            screen.box_style("return").get("font_size", 24)),
-        text_color[:3])
-    surface.blit(word, (rect.x + (rect.w - word.get_width()) // 2,
-                        rect.y + (rect.h - word.get_height()) // 2))
+    # A HUD slanted button like the seven keys beside it (decision 71).
+    hud.slant_button(surface, rect, screen.layout.scale,
+                     "hover" if hud.slant_hit(rect, *mouse) else "normal",
+                     label, style_renderer=screen.style)

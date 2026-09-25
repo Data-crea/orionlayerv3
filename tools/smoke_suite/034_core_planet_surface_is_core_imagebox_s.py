@@ -55,6 +55,13 @@ def _ib_frame():
 _ib_got = _ib_frame()
 _ib_exp_s = pygame.Surface((1920, 1080))
 _ib_exp_s.fill(tuple(_cs_mod.PANEL_BG[:3]))
+# ONTO THE SAME PANEL THE SCREEN DRAWS (decision 71, work order 169): the
+# window is a HUD panel, whose soft inner band shows through the
+# picture's partial alpha along its top and bottom; the reference is
+# drawn over that panel, so what is compared is still only imagebox.
+from core.hud import blocks as _ib_hud
+_ib_hud.panel(_ib_exp_s, pygame.Rect(*_ib_scr.layout.rect(
+    _ib_scr.box_rect("colony_panel"))), _ib_scr.layout.scale)
 _ib.render_image_box(_ib_exp_s, _ib_scr.layout, _ib_tile,
                      _ib_box.ref_rect, _ib_box.style, {})
 _ib_exp = _np.array(pygame.surfarray.array3d(
@@ -64,7 +71,15 @@ _ib_cols = slice(40, _ib_rect.w - 40)
 assert (_ib_got[_ib_band, _ib_cols] == _ib_exp[_ib_band, _ib_cols]).all(), (
     "planet_surface on the screen is not core/imagebox's drawing of "
     "the scanned colony's tile with the box's own style")
-assert (_ib_got[_ib_band, 0] == _np.array(_cs_mod.PANEL_BG[:3])).all(), (
+# What is UNDER the box is the HUD panel (decision 71), so the fully
+# faded column must be that panel's own pixels, row for row.
+_ib_under = pygame.Surface((1920, 1080))
+_ib_under.fill(tuple(_cs_mod.PANEL_BG[:3]))
+_ib_hud.panel(_ib_under, pygame.Rect(*_ib_scr.layout.rect(
+    _ib_scr.box_rect("colony_panel"))), _ib_scr.layout.scale)
+_ib_under_a = _np.array(pygame.surfarray.array3d(
+    _ib_under.subsurface(_ib_rect))).transpose(1, 0, 2)
+assert (_ib_got[_ib_band, 0] == _ib_under_a[_ib_band, 0]).all(), (
     f"the picture's outer column is {_ib_got[_ib_band, 0][0]} and not "
     f"the panel base — the fade is not revealing what is under the box")
 _ib_saved = dict(_ib_box.style)

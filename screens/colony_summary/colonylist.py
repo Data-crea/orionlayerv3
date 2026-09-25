@@ -151,7 +151,13 @@ NO_FARM_COLOR = palette.col("colony_summary", "no_farming", (150, 120, 110))
 #: `screen._render_header`, and only these cells read this key. That
 #: this comment said otherwise until 13 September 2026 is why it says
 #: so now. No code default (decision 14): the skin carries the value.
-PLATE_COLOR = palette.require("colony_summary", "plate_outline")
+# SINCE DECISION 71 (work order 169) THE FOUR COLOURS BELOW ARE THE HUD
+# TABLE'S, through `listgrid.row_palette` — the one home every table
+# reads. Decision 57's colors.json keys stay in the skin, unread by this
+# list; the roles (A/B stripe by LIST index, a filled scanned row, no
+# hover colour) are unchanged.
+from core import listgrid as _lg
+PLATE_COLOR = _lg.row_palette()[3]
 
 #: THE ROW FILLS — HD EXTENSION, decision 57. Data's table, 13 September
 #: 2026: A and B alternate down the list and the scanned colony's row
@@ -162,9 +168,8 @@ PLATE_COLOR = palette.require("colony_summary", "plate_outline")
 #: the scanned colony (colsum.cpp:880-890, transcribed in
 #: `colonyselect`), so a hover fill could only ever be covered by the
 #: selected one. `colors.json` `_row_fill_note` carries the values.
-ROW_A = palette.require("colony_summary", "row_a")
-ROW_B = palette.require("colony_summary", "row_b")
-ROW_SELECTED = palette.require("colony_summary", "row_selected")
+# row_a, row_b and row_selected — the three roles, now the HUD table's.
+ROW_A, ROW_B, ROW_SELECTED = _lg.row_palette()[:3]
 
 #: **THE LOWER BOUND OF THE NAME COLUMN, and the editor REPORTS it
 #: rather than clamping.** Two sources, both required, and neither

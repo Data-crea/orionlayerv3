@@ -212,6 +212,7 @@ assert _icap.calls == [] and _icap.keys == [] and _icap.fields == [], (
 # and the only thing that can tell them apart is a sample.
 from screens.colony_summary import screen as _cs_mod
 from core import palette as _fl_pal
+from core.hud import style as _fl_hs
 _fl_panels = _scr_op._data.get("panels", {})
 # A PANEL NAMES A SKIN KEY OR IS `true` — 13 September 2026, brief
 # 96. A colour typed into `panels` is the second home decision 14
@@ -235,15 +236,23 @@ _scr_op.render(_fl_surf)
 for _k, _want in (("galaxy_inset",
                    _fl_pal.require("colony_summary",
                                    _fl_panels["galaxy_inset"])),
-                  ("header",
-                   _fl_pal.require("colony_summary",
-                                   _fl_panels["header"])),
-                  ("planet_info", None)):
+                  # SINCE DECISION 71 (work order 169) the header is
+                  # the HUD table header and a window the HUD panel:
+                  # what is read back is THOSE colours, by the same
+                  # method — the lesson of this check is unchanged.
+                  ("header", _fl_hs.get().colour("mockup_colony.header")),
+                  ("planet_info", _fl_hs.get().colour("panel.fill"))):
     _fr = pygame.Rect(*app.layout.rect(_scr_op.box_rect(_k)))
     _fa = pygame.surfarray.array3d(_fl_surf.subsurface(_fr))
     _hist = {}
-    for _sx in range(4, _fr.w - 4, 3):
-        for _sy in range(4, _fr.h - 4, 3):
+    # Inside the HUD panel's soft inner band (decision 71): its depth is
+    # the measured `panel.inner_glow`, and the band is a gradient on
+    # purpose. The header band has no edge and keeps the old 4.
+    _fm = 4 if _k == "header" else int(
+        (_fl_hs.get().get("panel.inner_glow")
+         + _fl_hs.get().get("panel.edge_width")) * app.layout.scale) + 4
+    for _sx in range(_fm, _fr.w - _fm, 3):
+        for _sy in range(min(_fm, _fr.h // 3), _fr.h - min(_fm, _fr.h // 3), 3):
             _c = tuple(int(_v) for _v in _fa[_sx, _sy])
             _hist[_c] = _hist.get(_c, 0) + 1
     _got, _n = max(_hist.items(), key=lambda _i: _i[1])

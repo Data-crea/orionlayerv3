@@ -177,6 +177,17 @@ def draw_row_fills(surface, bands, cols, skip, first, is_selected,
         li = first + band
         fill = band_fill(li, is_selected(li), row_a, row_b, row_selected)
         surface.fill(tuple(fill)[:3], pygame.Rect(fx, by, fw, bh))
+    # The selected band's RIM, the HUD table's selected row (decision
+    # 71): drawn after every fill so a neighbour cannot cover it.
+    from core.hud import style as hudstyle
+    rim = hudstyle.get().colour("mockup_colony.selected_edge")
+    for band, (by, bh) in enumerate(bands):
+        if is_selected(first + band):
+            # One px INSIDE the band: the band's edge lines stay its
+            # fill, which is what shows a hover or a scan reaching the
+            # whole band (the Planets hover check reads exactly those).
+            pygame.draw.rect(surface, rim,
+                             pygame.Rect(fx + 1, by + 1, fw - 2, bh - 2), 1)
 
 
 def draw_cell_plates(surface, bands, cols, skip, style, scale, color):
@@ -192,9 +203,18 @@ def draw_cell_plates(surface, bands, cols, skip, style, scale, color):
 
 def row_palette():
     """(row_a, row_b, row_selected, plate_outline, header_background,
-    header_text) from the list palette's one home, `colony_summary`.
-    No code default (decision 14)."""
-    from core import palette
-    return tuple(palette.require("colony_summary", key) for key in (
-        "row_a", "row_b", "row_selected", "plate_outline",
-        "header_background", "header_text"))
+    header_text) — the HUD table's (decision 71, work order 169).
+
+    Until 169 this read the colony list palette of decision 57 out of
+    `colors.json`. The HUD's table blocks carry the same six roles,
+    measured off Data's colony mockup (`mockup_colony` in the style
+    file), and every table on every screen reads them from there: the
+    colony list and the Planets list stripe, select and outline with
+    one set of colours. The plate outline is the HUD outline's own
+    (`panel.edge_dim`), since `draw_plate` draws that and nothing else."""
+    from core.hud import style as hudstyle
+    st = hudstyle.get()
+    return tuple(st.colour(k) for k in (
+        "mockup_colony.row_a", "mockup_colony.row_b",
+        "mockup_colony.selected", "panel.edge_dim",
+        "mockup_colony.header", "mockup_colony.text_header"))

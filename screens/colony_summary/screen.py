@@ -100,6 +100,7 @@ import pygame
 
 from core import mouse as mouse_input
 from core import palette
+from core.hud import blocks as hud
 from core.screen_base import ScreenBase
 from core.structs import player as player_struct
 
@@ -111,7 +112,12 @@ from . import (colonybuild, colonyempire, colonyfigures,
 
 log = logging.getLogger("colony_summary")
 
-PANEL_BG = palette.col("colony_summary", "panel_background", (8, 11, 20))
+#: THE PANEL BASE IS THE HUD PANEL'S FILL since decision 71 (work order
+#: 169): every window is a HUD panel now, so what lies under a box —
+#: what a fade reveals, what the move text is keyed against — is the
+#: measured `panel.fill`, not the skin's `panel_background`.
+from core.hud import style as _hudstyle
+PANEL_BG = _hudstyle.get().colour("panel.fill")
 NAV_HOVER_BG = palette.col("colony_summary", "nav_hover", (22, 34, 60))
 NAV_ACTIVE_BG = palette.col("colony_summary", "nav_active", (30, 48, 88))
 HEADER_OUTLINE = palette.col("panel", "thin_border", (55, 65, 85))
@@ -173,8 +179,7 @@ class ColonySummaryScreen(ScreenBase):
         self._data = self.app.res.load_json(
             "screens/colony_summary/layout.json", {}) or {}
         self._sort_key = self._data.get("sort", {}).get("default", "name")
-        self._load_frame(
-            self._data.get("frame", {}).get("image", "frame.png"))
+        # No frame image since decision 71: `_load_frame` is not called.
         # A selection does not survive leaving the screen, because in
         # the game it could not: leaving is one of the two
         # `Clear_Cluster_` paths (colsum.cpp:804 and :938), so a pick
@@ -439,7 +444,10 @@ class ColonySummaryScreen(ScreenBase):
         DEVIATIONS they carry (the window is ours; the outline colour
         is ours). Drawn AFTER the frame, because the plates sit inside
         the header cutout and the frame's rim overlaps it."""
-        colonyheader.render_for(self, surface, HEADER_OUTLINE, HEADER_TEXT)
+        # The heading words in the HUD table's header colour (decision 71).
+        from core import listgrid
+        colonyheader.render_for(self, surface, HEADER_OUTLINE,
+                                listgrid.row_palette()[5])
 
     #: What a column box means, for the F5 info bar. Delegated to
     #: `colonyheader`, which owns the column boxes: the line is
@@ -619,7 +627,7 @@ class ColonySummaryScreen(ScreenBase):
                              spec["key"], why)
                 self._inject(spec, f"sort {spec['key']}")
                 return None
-        if self._hit("return", screen_x, screen_y):
+        if self._hit_return(screen_x, screen_y):
             self._inject(self._data.get("return", {}), "return")
             return None
         area, cfg, scale, _n_rows = self._list_view()
@@ -771,6 +779,12 @@ class ColonySummaryScreen(ScreenBase):
         # is on screen and not what the scan box is showing — the
         # same asymmetry a sort has.
         return True
+
+    def _hit_return(self, x, y):
+        """RETURN is a HUD slanted button, hit as drawn (decision 71)."""
+        box = self.box_rect("return")
+        return bool(box) and hud.slant_hit(
+            pygame.Rect(*self.layout.rect(box)), x, y)
 
     def _hit(self, name, x, y):
         box = self.box_rect(name)

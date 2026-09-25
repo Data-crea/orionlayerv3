@@ -600,37 +600,39 @@ if slow("return_cutout"):
             finally:
                 _rb_m.pos = _rb_saved
 
-        # INSIDE THE ROUNDED CORNERS, INSIDE THE BLEED AND CLEAR OF
-        # THE WORD. The box is the hole grown by `colonyplates.BLEED`
-        # and the frame's rim is anti-aliased over the top of it, so a
-        # sample two pixels in reads the rim blended with the fill —
-        # (6, 8, 13) against (8, 11, 20) at 1680x1050, which is the
-        # rim at about four fifths. The word is centred and comes
-        # within 9 px of the box's width at 1280x720, so the samples
-        # stay on the top and bottom edges.
-        _rb_rad = max(6, int(10 * _rb_scr.layout.scale))
-        _rb_in = max(5, int(5 * _rb_scr.layout.scale))
-        _rb_pts = ((_rb_r.centerx, _rb_r.y + _rb_in),
-                   (_rb_r.centerx, _rb_r.bottom - 1 - _rb_in),
-                   (_rb_r.x + _rb_rad, _rb_r.y + _rb_in),
-                   (_rb_r.right - 1 - _rb_rad, _rb_r.bottom - 1 - _rb_in))
-        _rb_idle = _rb_render((0, 0))
-        for _rb_p in _rb_pts:
-            _rb_c = _rb_idle.get_at(_rb_p)[:3]
-            assert _rb_c == tuple(_rb_bg[:3]), (
-                f"{_W}x{_H}: {_rb_p} of RETURN's cutout "
-                f"{tuple(_rb_r)} is {_rb_c} and the panel fill is "
-                f"{tuple(_rb_bg[:3])} — the eighth slot is not being "
-                f"filled like the other seven")
-        # AND THE HOVER REACHES THE WHOLE BOX.
-        _rb_over = _rb_render(_rb_r.center)
-        for _rb_p in _rb_pts:
-            _rb_c = _rb_over.get_at(_rb_p)[:3]
-            assert _rb_c == tuple(_rb_hov[:3]), (
-                f"{_W}x{_H}: with the pointer on RETURN, {_rb_p} is "
-                f"{_rb_c} and the hover fill is {tuple(_rb_hov[:3])} "
-                f"— the hover has to reach the whole button")
-        # AND THE WORD IS ON IT.
+        # SINCE DECISION 71 (work order 169) RETURN IS THE SEVEN KEYS'
+        # BLOCK: a HUD slanted button, like them. Rewritten from sampling
+        # the cutout's panel fill and the whole-box hover fill — there is
+        # no cutout and no fill of its own any more. What holds instead:
+        # RETURN is drawn by `slant_button` at its box, "normal" with the
+        # pointer away and "hover" with the pointer anywhere inside the
+        # shape it is hit as, and its word carries the HUD label colour.
+        from core.hud import blocks as _rb_hud
+        _rb_calls = []
+        _rb_real = _rb_hud.slant_button
+
+        def _rb_spy(_s, _rect, _sc, _state="normal", _label="", *a, **k):
+            _rb_calls.append((tuple(pygame.Rect(_rect)), _state, _label))
+            return _rb_real(_s, _rect, _sc, _state, _label, *a, **k)
+        _rb_hud.slant_button = _rb_spy
+        try:
+            _rb_idle = _rb_render((0, 0))
+            _rb_idle_calls = list(_rb_calls)
+            _rb_calls.clear()
+            _rb_over = _rb_render(_rb_r.center)
+        finally:
+            _rb_hud.slant_button = _rb_real
+        _rb_mine = [c for c in _rb_idle_calls if c[0] == tuple(_rb_r)]
+        assert _rb_mine and _rb_mine[0][1] == "normal", (
+            _W, "RETURN is not drawn as a HUD slanted button", _rb_mine)
+        assert len(_rb_idle_calls) >= 8, (
+            _W, "RETURN and the seven keys are not one block",
+            len(_rb_idle_calls))
+        _rb_mine = [c for c in _rb_calls if c[0] == tuple(_rb_r)]
+        assert _rb_mine and _rb_mine[0][1] == "hover", (
+            _W, "the pointer on RETURN does not light it", _rb_mine)
+        from core.hud import style as _rb_hs
+        _rb_fg = _rb_hs.get().colour("text.button.color")
         _rb_ink = _np.array(pygame.surfarray.array3d(
             _rb_idle.subsurface(_rb_r))).reshape(-1, 3)
         assert (_np.abs(_rb_ink - _np.array(_rb_fg[:3])).sum(axis=1)
@@ -654,5 +656,6 @@ if slow("return_cutout"):
         _rb_fits.append(_rb_r.w - _rb_word.get_width())
     report(f"RETURN label clearance, narrowest of {len(_SIZES)} sizes: "
            f"{min(_rb_fits)} px of the slot's width")
-    ok(f"RETURN is the eighth cutout and behaves like one ({len(_SIZES)} "
-       f"sizes: panel fill, hover over the whole box, word inside it)")
+    ok(f"RETURN is the eighth slanted button and behaves like the seven "
+       f"({len(_SIZES)} sizes: the same block, lit on hover, word inside "
+       f"it)")

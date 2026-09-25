@@ -906,9 +906,17 @@ assert len(set(_sk_inks.values())) == 1, (
     f"different colours: {_sk_inks} — PRODUCING was dimmed until "
     f"12 September 2026 and nothing may dim a key again without "
     f"saying so on the screen rather than in a note")
-assert set(_sk_inks.values()) == {(196, 196, 196)}, (
-    f"the sort labels ink at {set(_sk_inks.values())} against the "
-    f"original's (196, 196, 196)")
+# THE COLOUR IS THE HUD's SINCE DECISION 71 (work order 169) — a marked
+# DEVIATION in `colonysort.render`: it was the original's own grey,
+# (196, 196, 196) off its framebuffer, and every HUD button label is the
+# mockup's measured `text.button.color`. One colour for all seven is the
+# rule that stays, above; this holds WHICH colour to its one home.
+from core.hud import style as _sk_hs
+assert set(_sk_inks.values()) == {_sk_hs.get().colour("text.button.color")}, (
+    f"the sort labels ink at {set(_sk_inks.values())} against the HUD's "
+    f"{_sk_hs.get().colour('text.button.color')}")
+from screens.colony_summary import colonysort as _sk_cs
+assert "DEVIATION — THE LABEL COLOUR IS THE HUD" in _sk_cs.render.__doc__
 # AND THE STATE THE DIMMING USED TO DRAW IS STILL THERE. It is
 # what refuses a move made under an unavailable sort
 # (`colonypick`) and what falls the key back to a name sort; only
