@@ -114,6 +114,16 @@ on the plate floor, plate rect == drop rect, one home for the plate
 arithmetic, the Planets hover band, the research popup drawn last and
 kept to its box, panel fills read back, the planet surface's fades).
 
+## Gates
+
+- Full suite on the working tree: **300 green**.
+- Fresh clone (`git clone` of the committed tree + `python tools/setup.py`,
+  which builds the cut pieces and then runs the suite): **300 green**.
+- The same clone with `assets/shared/hud/cut/` deleted: **300 green**,
+  the absence reported ("13 of 13 not built here — python tools/setup.py"),
+  every HUD button drawing its word alone.
+- Commits local, no push.
+
 ## Evidence — for Data to look at
 
 `~/orionlayer-fixtures/evidence/work_order_169/`, 41 files, all OFFLINE
