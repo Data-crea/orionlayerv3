@@ -166,10 +166,6 @@
         "2": {
           "image": "advanced",
           "label": "Advanced"
-        },
-        "3": {
-          "image": "post_warp",
-          "label": "Post Warp"
         }
       }
     }

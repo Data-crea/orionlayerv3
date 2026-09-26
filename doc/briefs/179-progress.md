@@ -131,3 +131,36 @@ data's absence:
   those bytes — the game dropped the ö when the name was typed; HD shows
   what is stored.
 - Checks: none new in this part (090j #1/#2 cover it).
+
+## 4. New Game: the fourth tech level removed — **DONE, live-checked**
+
+- **The original** offers three (newgame.cpp:281, `_civ_button_strings, 3`,
+  `_tech_level_anims[3]`): 0 = E_Strings 0x1ad "Pre Warp", 1 = 0xbe
+  "Average", 2 = 0xa9 "Advanced" (newgame.cpp:372-374, the player's English
+  ESTRINGS), stored in `starting_civilization_level` (:382). The wire sends
+  `_civ_button_variable` unchanged (ext_api.cpp:179).
+- **HD had four since the first v3 commit** (`e0ae910`): `layout.json` also
+  mapped a value 3, "Post Warp", with two pictures. The engine never sends
+  3, so it was dead, but it was there to be shown and to be modded. Removed:
+  the entry and `assets/tech_level/post_warp.png`, `post_warp1.png` (HD
+  artwork, not MOO2 files). 0/1/2 were already mapped right.
+- **Check** 090k (new group `new_game`): every category offers exactly the
+  original's value count, from the source (5/5/3/7/3), each value with its
+  picture, tech level Pre Warp/Average/Advanced = 0/1/2, no picture for a
+  value that does not exist — the rule, not the instance. **349 → 350.**
+- **Live** (engine 29787, intro skipped, guard `179_part4`): a new game per
+  level, the level set by clicking HD's tech slot until the engine's value
+  was the target, then ACCEPT → Select Race → ruler name and banner through
+  the net → galaxy map. The level read back from **two sources**, the wire's
+  `s_settings` byte 0xD9 (orion2.h:2493) and `MOX.SET` byte 0xD9 on disk
+  (written by the new game):
+
+  | set | HD label | wire 0xD9 | MOX.SET 0xD9 | size |
+  |---|---|---|---|---|
+  | 0 | Pre Warp | 0 | 0 | 1920x1080 |
+  | 2 | Advanced | 2 | 2 | 1920x1080 |
+  | 1 | Average | 1 | 1 | 2576x1432 |
+
+  `evidence/work_order_179/tech_level_*/` (pictures and `*_result.json`),
+  driver `techlevel179.py` beside them. After the run SAVE10 (the new games'
+  autosave) and MOX.SET were restored; the guard verified clean.
