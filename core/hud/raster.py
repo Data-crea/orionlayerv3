@@ -101,11 +101,12 @@ def blur(a, radius, passes=3):
 
 
 def shape(poly_fn, w, h, *, fill, edge, edge_w, glow=None, glow_w=0.0,
-          inner=None, inner_w=0.0, fill_alpha=1.0, ss=3):
+          inner=None, inner_w=0.0, fill_alpha=1.0, ss=3, glass=None):
     """One HUD shape as an RGBA surface, and the pad it was drawn with.
 
     `poly_fn(w, h)` gives the outline in device px. `fill`, `edge`,
     `glow`, `inner` are RGB; `edge_w`, `glow_w`, `inner_w` device px.
+    `glass`, when given, is a float (h, w, 3) fill in place of `fill`.
     The surface is the shape's box plus `pad` on every side, so a glow
     has room; blit it at (x - pad, y - pad)."""
     pad = int(np.ceil(glow_w * 2.2)) + 2 if glow else 1
@@ -116,6 +117,11 @@ def shape(poly_fn, w, h, *, fill, edge, edge_w, glow=None, glow_w=0.0,
     line = np.clip(outer - inner_m, 0.0, 1.0)
     rgb = np.empty(size[::-1] + (3,), np.float32)
     rgb[...] = fill
+    if glass is not None:
+        # The panel GLASS (work order 174): a per-pixel fill for the
+        # shape's own box, `core.hud.glass`; the edge, the inner band and
+        # the glow go over it as over a flat fill.
+        rgb[pad:pad + h, pad:pad + w] = glass
     if inner is not None and inner_w > 0:
         g = blur(line, inner_w / 2.0)
         g = np.clip(g / max(float(g.max()), 1e-6) * 1.6, 0.0, 1.0)

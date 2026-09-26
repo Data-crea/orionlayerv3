@@ -132,6 +132,11 @@ SLOW_TIER = {
         "renders every screen and dialog at six frame colours and New "
         "Game at two box lists, comparing pictures and changed pixels "
         "(work order 172) — about 35 s"),
+    "glass_floor": (1,
+        "renders every screen once to collect its panels, then builds the "
+        "glass of each over three backgrounds, five frame colours and five "
+        "slider positions to hold every HUD word at 4.5:1 (work order 174) "
+        "— about 40 s"),
     "background_contrast": (1,
         "renders six screens three ways each to find every word that "
         "stands on the universal background and measure its contrast "

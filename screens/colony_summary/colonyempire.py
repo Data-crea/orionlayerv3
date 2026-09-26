@@ -212,7 +212,9 @@ def render(surface, box, cfg, local, layout, style, font_scale,
     rect = pygame.Rect(*layout.rect(box))
     # The HUD panel's fill, read now so it follows the frame colour
     # (work order 170); this box sits inside colony_panel's HUD panel.
-    surface.fill(hudstyle.get().colour("panel.fill"), rect)
+    # GLASS since work order 174 — the panel's own fill, edgeless.
+    from core.hud import glass
+    glass.draw(surface, rect)
     left, right = value_column(rect, cfg, layout, frame_inset)
     label_size = layout.font_size(int(cfg.get("label_font", 18) * font_scale))
     value_size = layout.font_size(int(cfg.get("value_font", 26) * font_scale))

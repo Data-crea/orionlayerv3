@@ -128,7 +128,8 @@ class Box:
             # on the universal picture, 9.4:1 on the old placeholder).
             style_renderer.draw_thin_border(
                 surface, self.screen_rect, layout.scale,
-                filled=bool(self.style.get("fill")))
+                filled=bool(self.style.get("fill")),
+                dense=self.style.get("glass") == "dense")
         elif skin == "none":
             # **THE FRAME IS THE BORDER.** A box whose rect is a
             # transparent hole in the screen's frame image already has

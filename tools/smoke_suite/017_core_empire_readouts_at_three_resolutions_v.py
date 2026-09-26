@@ -40,6 +40,9 @@ _MARKED = {
     # mod folder (HD EXTENSION). Its own check is 006d.
     "core/usermod.py": "HD EXTENSION, work order 173, decision 72",
     "tools/mod_template.py": "HD EXTENSION, work order 173, decision 72",
+    # ADDED 26 September 2026, work order 174: the Panel glass slider
+    # (HD EXTENSION). Its own check is 006f.
+    "core/hud/glass.py": "and its slider (B3, HD EXTENSION)",
     # ADDED 15 September 2026, brief 110 Part A / decision 65: the
     # guard that sends no unchosen move order (DEVIATION). Its own
     # check is the galaxy_map icon hit test block.

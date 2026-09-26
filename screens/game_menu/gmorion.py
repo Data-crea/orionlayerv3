@@ -8,8 +8,9 @@ EXTENSION, `core/hud/tint.py`), applied at once and saved with the
 rest; the divider became a thin band so the box did not grow. Since
 work order 173 an eighth band, the MOD FOLDER switch (HD EXTENSION,
 decision 72, `core/usermod.py`): on or off, applied at the next start
-like the preset. MOO2 has none of them; the game knows nothing about
-these rows.
+like the preset; and since work order 174 the PANEL GLASS slider (HD
+EXTENSION, `core/hud/glass.py`), applied at once like the colour. MOO2
+has none of them; the game knows nothing about these rows.
 
 **TWO STATE SOURCES, NEVER MERGED.** The thirteen engine checkboxes
 keep their local copy seeded from `s_settings` (`screen.flags`). These
@@ -33,16 +34,17 @@ nothing when nothing changed.
 import pygame
 
 from core import palette, playercolors, usermod, usersettings
+from core.hud import glass
 from core.hud import style as hudstyle
 from core.hud import tint
 
 BANDS = ("divider", "heading", "floor", "colours", "monsters", "frame",
-         "tone", "mods")
+         "tone", "glass", "mods")
 
 #: Each band's share of the box. The divider is a line, so since work
 #: order 170 it takes a third of a row and the frame-colour row fits in
 #: the same box: nothing below it (ACCEPT, the body's edge) moves.
-WEIGHTS = (1 / 3, 1, 1, 1, 1, 1, 1, 1)
+WEIGHTS = (1 / 3, 1, 1, 1, 1, 1, 1, 1, 1)
 
 COL_DIVIDER = palette.require("game_menu", "orionlayer_divider")
 COL_HEADING = palette.require("game_menu", "orionlayer_heading")
@@ -104,6 +106,13 @@ def bands(screen):
     ty = to.y + (to.h - hb.h) // 2
     out["sat_bar"] = pygame.Rect(hb.x, ty, half, hb.h)
     out["bright_bar"] = pygame.Rect(hb.x + half + gap, ty, half, hb.h)
+    # THE PANEL GLASS ROW (work order 174): one bar in the hue bar's span,
+    # see-through at the left, solid at the right, and its own RESET.
+    gl = out["glass"]
+    out["glass_bar"] = pygame.Rect(hb.x, gl.y + (gl.h - hb.h) // 2, hb.w,
+                                   hb.h)
+    rr = out["hue_reset"]
+    out["glass_reset"] = pygame.Rect(rr.x, gl.y, rr.w, gl.h)
     return out
 
 
@@ -156,6 +165,18 @@ def set_tone(screen, hue=..., sat=..., bright=...):
         settings.set("hud_bright", None if b is None else round(b, 2))
 
 
+def set_glass(screen, value):
+    """The Panel glass slider (work order 174, HD EXTENSION): applied at
+    once, stored as hud_glass — the PLAYER'S value, None for the
+    default (the measured 0.5, or a mod's `chosen.glass.slider_default`)."""
+    glass.set_value(value)
+    settings = _settings(screen)
+    if settings is not None:
+        settings.set("hud_glass", None if value is None
+                     else round(glass.value(), 2) if glass._value is not None
+                     else None)
+
+
 def set_hue(screen, value):
     """The hue alone (170)."""
     set_tone(screen, hue=value)
@@ -201,6 +222,11 @@ def handle_click(screen, x, y):
         _cycle(settings, "monster_values", MONSTER_STEPS)
     elif geo["mods"].collidepoint(x, y):
         _cycle(settings, "user_mod", MOD_STEPS)
+    elif geo["glass_reset"].collidepoint(x, y):
+        set_glass(screen, None)
+    elif geo["glass"].collidepoint(x, y) and \
+            geo["glass_bar"].left <= x <= geo["glass_bar"].right:
+        set_glass(screen, bar_value(geo["glass_bar"], x, 0.0, 1.0))
     elif geo["hue_reset"].collidepoint(x, y):
         set_tone(screen, None, None, None)
     elif geo["sat_bar"].inflate(0, geo["tone"].h - geo["sat_bar"].h) \
@@ -278,7 +304,32 @@ def render(screen, surface):
           size, COL_OPTION, mon.x + vx, mon)
 
     _render_frame_row(screen, surface, geo, words, size, lx)
+    _render_glass_row(screen, surface, geo, words, size, lx)
     _render_mod_row(screen, surface, geo["mods"], words, size, lx, vx)
+
+
+def _render_glass_row(screen, surface, geo, words, size, lx):
+    """Panel glass: the bar shows what each position does — a light
+    sample seen through the glass, see-through at the left, solid at the
+    right — and the thumb; RESET is lit while the value is the player's."""
+    row, bar = geo["glass"], geo["glass_bar"]
+    _text(screen, surface, words.get("glass", "Panel glass"), size,
+          COL_OPTION, lx, row)
+    sample = (90, 120, 170)
+    for i in range(bar.w):
+        v = bar_value(bar, bar.x + i, 0.0, 1.0)
+        alpha, col = glass.profile(2, glass.transparency(v=v))
+        a = float(alpha[0])
+        c = tuple(int(sample[k] * (1 - a) + col[0][k] * a) for k in range(3))
+        pygame.draw.line(surface, c, (bar.x + i, bar.y),
+                         (bar.x + i, bar.bottom - 1))
+    screen.style.draw_plate(surface, bar, screen.layout.scale)
+    w = max(2, int(3 * screen.layout.scale))
+    tx = bar_x(bar, glass.value(), 0.0, 1.0)
+    surface.fill((255, 255, 255), (tx - w // 2, bar.y - w, w, bar.h + 2 * w))
+    reset = geo["glass_reset"]
+    _text(screen, surface, words.get("reset", "Reset"), size,
+          COL_OPTION if glass._value is None else COL_STATE, reset.x, reset)
 
 
 def _render_mod_row(screen, surface, row, words, size, lx, vx):

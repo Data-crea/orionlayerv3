@@ -46,6 +46,9 @@ _paths = {}
 _sources = {}
 _scaled = OrderedDict()
 _failed = set()
+#: The last picture handed out for drawing — what the panel glass shows
+#: through (work order 174): (key, surface) or None.
+_current = [None]
 
 
 def source_path(screen_name):
@@ -98,7 +101,18 @@ def scaled(screen_name, w, h):
         _scaled[key] = cover(_sources[path], int(w), int(h))
         while len(_scaled) > KEEP:
             _scaled.popitem(last=False)
+    _current[0] = (key, _scaled[key])
     return _scaled[key]
+
+
+def current(w, h):
+    """(key, surface) of the picture last drawn at w x h, or None — the
+    background the panel glass shows through. The key names the picture
+    and the size, so a cache keyed on it is rebuilt when either changes."""
+    cur = _current[0]
+    if cur is None or cur[1].get_size() != (int(w), int(h)):
+        return None
+    return cur
 
 
 def draw(surface, screen_name):
@@ -118,3 +132,4 @@ def reset():
     _sources.clear()
     _scaled.clear()
     _failed.clear()
+    _current[0] = None

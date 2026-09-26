@@ -124,7 +124,10 @@ def set_tone(hue=None, sat=None, bright=None):
 
 def apply_settings(user_settings):
     """The saved frame colour (hud_hue, hud_sat, hud_bright; any may be
-    absent — a 170 file carries the hue alone), applied at start."""
+    absent — a 170 file carries the hue alone) and Panel glass (174),
+    applied at start."""
+    from core.hud import glass
+    glass.set_value(user_settings.get("hud_glass"))
     return set_tone(user_settings.get("hud_hue"),
                     user_settings.get("hud_sat"),
                     user_settings.get("hud_bright"))

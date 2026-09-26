@@ -12,7 +12,8 @@
         "label": "Race Grid",
         "font_scale": 1.0,
         "skin": "thin_border",
-        "fill": true
+        "fill": true,
+        "glass": "dense"
       }
     },
     {
@@ -83,7 +84,8 @@
         "label": "Race Grid",
         "font_scale": 1.0,
         "skin": "thin_border",
-        "fill": true
+        "fill": true,
+        "glass": "dense"
       }
     },
     {

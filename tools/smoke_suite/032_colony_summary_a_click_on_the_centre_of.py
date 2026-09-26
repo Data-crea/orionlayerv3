@@ -10,7 +10,7 @@
 # otherwise unchanged. Do not import this file; it is not a
 # module. Add a check for this screen HERE, not in the core.
 #
-# The 8 check(s) it holds:
+# The 7 check(s) it holds:
 #   - a click on the centre of a figure's visible area picks up that figure — 1 to 20 figures in every
 #   - the planet discs are the climate enum's, px square, on the true pixel grid and masked by a circl
 #   - every row's disc is the one its climate selects, clear of the name's ink, and planet_info's line
@@ -18,7 +18,9 @@
 #   - every planet_output row wears the icon its id or morale sign selects, no taller than its row, on
 #   - the output icons are marked DEVIATION and the separators HD EXTENSION in colonyoutput, colonyout
 #   - the list palette is Data's table in the default skin (seven keys to the hex), nav_background and
-#   - the list stripes A/B by list index (holds under a one-row scroll) and fills the scanned colony's
+#
+# The list stripes moved to 032b when work order 174 made them glass
+# and this module passed 40 KB (the suite's size rule).
 
 
 # ── A CLICK ON A FIGURE AS SEEN PICKS UP THAT FIGURE ────────
@@ -719,51 +721,3 @@ ok("the list palette is Data's table in the default skin (seven "
    "keys to the hex), nav_background and row_hover absent, the row "
    "fills marked HD EXTENSION at every home, and no row-background or "
    "plate-outline colour typed anywhere in screens/colony_summary/")
-
-# ── …AND THE STRIPE IS THE LIST'S, THE FILL IS THE SCANNED ROW'S ──
-# Rendered, twice: from the top and scrolled by one. Every band's
-# background (the MODE over the band, which the fill dominates) is
-# row_selected where the band's colony is the scanned one and
-# otherwise A or B by LIST index — so scrolling by one swaps the
-# colours on screen and keeps each colony's own.
-from screens.colony_summary import colonyfigures as _lp_fig
-from screens.colony_summary import colonyscroll as _lp_scroll
-_lp_app, _lp_scr = _plv.build_screen(1920, 1080)
-_lp_app.dispatcher.switch_to("colony_summary")
-_lp_scr.enter(None)
-_lp_scr.update(_plv._Snapshot(_plv.COLONIES))
-_lp_area, _lp_cfg, _lp_scale, _lp_n = _lp_scr._list_view()
-_lp_rows = _lp_scr._rows
-assert len(_lp_rows) >= 3, "the synthetic empire has too few rows"
-_lp_scanned = _lp_rows[2]["index"]
-_lp_cols = [(_x, _w) for _k, (_x, _w)
-            in _lp_ct.columns(_lp_area, _lp_cfg).items()
-            if _k != _lp_scroll.COLUMN]
-_lp_x0 = min(_x for _x, _w in _lp_cols)
-_lp_x1 = max(_x + _w for _x, _w in _lp_cols)
-for _lp_first in (0, 1):
-    _lp_s = pygame.Surface((1920, 1080))
-    _lp_s.fill((255, 0, 255))
-    _lp_cl.render(_lp_s, _lp_rows, _lp_area, _lp_cfg, _lp_scr.layout,
-                  _lp_scr.style, _lp_first, _lp_scr._frame_inset(),
-                  _lp_fig.set_for(_lp_scr, _lp_area, _lp_cfg),
-                  _lp_scanned, None)
-    _lp_px = _np.array(pygame.surfarray.array3d(_lp_s)).transpose(1, 0, 2)
-    for _lp_b, (_lp_by, _lp_bh) in enumerate(
-            _lp_ct.all_bands(_lp_area, _lp_cfg)):
-        _lp_li = _lp_first + _lp_b
-        _lp_sel = (_lp_li < len(_lp_rows)
-                   and _lp_rows[_lp_li]["index"] == _lp_scanned)
-        _lp_exp = (_lp_cl.ROW_SELECTED if _lp_sel else
-                   (_lp_cl.ROW_A if _lp_li % 2 == 0 else _lp_cl.ROW_B))
-        _lp_band = _lp_px[_lp_by + 2:_lp_by + _lp_bh - 2,
-                          _lp_x0 + 2:_lp_x1 - 2].reshape(-1, 3)
-        _lp_c, _lp_cnt = _np.unique(_lp_band, axis=0, return_counts=True)
-        _lp_got = tuple(int(_v) for _v in _lp_c[int(_np.argmax(_lp_cnt))])
-        assert _lp_got == tuple(_lp_exp[:3]), (
-            f"first={_lp_first} band {_lp_b} (list index {_lp_li}"
-            f"{', scanned' if _lp_sel else ''}) is mostly {_lp_got}; "
-            f"expected {tuple(_lp_exp[:3])}")
-ok("the list stripes A/B by list index (holds under a one-row "
-   "scroll) and fills the scanned colony's band row_selected, "
-   "measured as the mode of every rendered band")

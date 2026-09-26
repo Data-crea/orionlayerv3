@@ -10,7 +10,8 @@ a COPY of what this tool prints, and a copy is legitimate only with a
 checker: the smoke test runs `measure()` and holds the file to it, so a
 value edited by hand is a value that fails.
 
-**Two sources, both committed.** `assets/shared/hud/galaxy_hud.png`, the
+**Three sources, all committed** (the third, Data's Select Race mockup
+of 174, gives the panel glass — `tools/hud_glass.py`). `assets/shared/hud/galaxy_hud.png`, the
 HUD itself (6704x3756, AI-generated, text removed), and
 `doc/briefs/169-mockup-galaxy.png`, Data's mockup of the finished galaxy
 screen — the only place the HUD's TEXT can be measured, because the HUD
@@ -44,12 +45,16 @@ from PIL import Image
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 import hud_colony  # noqa: E402  (the two halves split out of this tool)
+import hud_glass  # noqa: E402  (the panel glass, work order 174)
 import hud_layout  # noqa: E402
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 HUD = os.path.join(ROOT, "assets", "shared", "hud", "galaxy_hud.png")
 MOCKUP = os.path.join(ROOT, "doc", "briefs", "169-mockup-galaxy.png")
 STYLE = os.path.join(ROOT, "assets", "shared", "hud", "style.json")
+#: Work order 174: Data's Select Race mockup and the background under it.
+GLASS_MOCKUP = os.path.join(ROOT, "doc", "briefs", "174-mockup-select-race.png")
+UNIVERSAL = os.path.join(ROOT, "assets", "shared", "backgrounds", "universal.png")
 
 #: HUD px -> reference px, by width (see the docstring).
 HUD_W = 6704
@@ -310,6 +315,7 @@ def measure(hud_path=HUD, mockup_path=MOCKUP):
         col, h = word(m, box)
         text[key] = {"color": col, "cap": round(h / BOX_H[key], 3)}
     out["text"] = text
+    out["glass"] = hud_glass.measure_glass(GLASS_MOCKUP, UNIVERSAL)
     return out
 
 

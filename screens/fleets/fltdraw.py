@@ -22,6 +22,7 @@ the row it is itself showing. `layout.json` `scroll._hd_note`.
 import pygame
 
 from core.hud import blocks as hud
+from core.hud import glass
 from core.hud import text as hudtext
 
 from core import palette
@@ -145,7 +146,10 @@ def draw_slots(surface, screen):
         # its border. Drawing one here as well gave every cell two
         # outlines, the inner one offset by the hole bleed. The FILL
         # stays — it is the backdrop the plate sits on, not a border.
-        pygame.draw.rect(surface, fill, slot)
+        # GLASS since work order 174: dense glass under the slot's own
+        # navy, so the grid reads as the original's sunken slots and the
+        # background still shows through.
+        glass.draw(surface, slot, True, fill, glass.shade("row"))
         # The HUD outline round each slot (decision 71): the frame that
         # bordered the holes is not drawn any more.
         hud.outline(surface, slot, screen.layout.scale)

@@ -2442,7 +2442,7 @@ files under `doc/` and are only summarised here.
 | | |
 |---|---|
 | Python | 32,960 lines across 111 modules — `find . -name '*.py'`, `__pycache__` excluded, the smoke test's 6,400 included. The previous figure here (21,642 across 94) was carried from an unstated method and could not be reproduced |
-| Smoke test | `python tools/smoke_test.py` — **315 checks**, headless, in `tools/smoke_suite/` since work order 162 (115 check modules, one group per screen plus a shared core; `tools/smoke_test.py` is the runner). **Two tiers since work order 158**: the bare command runs everything (~155 s here, measured 25 September 2026 — the 72 s this line said was before 172's and 173's rendering checks); `--fast` runs the commit gate's 306 (~63 s here). `--screen <name>` prints only that screen's sentences and the core's and is NEVER a gate. See "The gate has two tiers" below |
+| Smoke test | `python tools/smoke_test.py` — **320 checks**, headless, in `tools/smoke_suite/` since work order 162 (117 check modules, one group per screen plus a shared core; `tools/smoke_test.py` is the runner). **Two tiers since work order 158**: the bare command runs everything (~200 s here, measured 26 September 2026 — the 72 s this line said was before the rendering checks of 172-174); `--fast` runs the commit gate's 310 (~95 s here). `--screen <name>` prints only that screen's sentences and the core's and is NEVER a gate. See "The gate has two tiers" below |
 | Assets | 170 MB (select_race 68, galaxy_map 51, shared 23, new_game 21, colony_summary 1) |
 | Screens in HD | 11 of ~20–22 (the Leaders screen, work order 167, built and not accepted; the GAME menu overlay, work order Stop 2, every dialog of the popup; colony summary draws list, sidebar, scan box and galaxy inset, and MOVES POPS — the first HD gesture that drives the game; planets, brief 101, lists, sorts, restricts and returns) |
 | Setup from clone | `python tools/setup.py` (deps via the system package manager) |
@@ -2968,8 +2968,8 @@ blocks into a session and writing them out again. Three proofs:
 
 | | command | checks | on this tree |
 |---|---|---:|---:|
-| **Full** — the default, and the pre-push gate | `python tools/smoke_test.py` | 315 | ~155 s |
-| **Fast** — the pre-commit gate | `python tools/smoke_test.py --fast` | 306 | ~63 s |
+| **Full** — the default, and the pre-push gate | `python tools/smoke_test.py` | 320 | ~200 s |
+| **Fast** — the pre-commit gate | `python tools/smoke_test.py --fast` | 310 | ~95 s |
 | **Screen** — **never a gate** | `python tools/smoke_test.py --screen <name>` | all of them, ~a third printed | the tier's |
 
 **`--screen` narrows what a run PRINTS, not what it runs**, and the
@@ -3028,9 +3028,10 @@ on a PASSED line that says FAST TIER — the two hooks differ by one
 flag, and a hook that quietly passed `--fast` would leave the project
 with two fast gates and no full one.
 
-**The nine push-only checks** (seven from 158; work order 172 added the
+**The ten push-only checks** (seven from 158; work order 172 added the
 picture sweep over six frame colours, 173 the contrast of the text on
-the universal background), declared in `smoke_test.SLOW_TIER` with
+the universal background, 174 the glass floor), declared in
+`smoke_test.SLOW_TIER` with
 the reason each is expensive, and held to the `slow(...)` guards by a
 check in the *fast* tier, in both directions:
 
@@ -3044,6 +3045,7 @@ check in the *fast* tier, in both directions:
 | 49 tools import in fresh processes | 2.0 s; the only expensive check that renders nothing |
 | the frame colour never touches pictures (172) | ~35 s; every screen and dialog at six frame colours |
 | text on the universal background keeps its contrast (173) | ~30 s; six screens rendered three ways each, two of them at 2160p |
+| glass keeps every HUD word at the floor (174) | ~40 s; every panel of every screen over three backgrounds, five frame colours, five slider positions |
 
 **The threshold was not the ranking.** A check went push-only when it
 cost at least a second **and** its own block could be skipped without a

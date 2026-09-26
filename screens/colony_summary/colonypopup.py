@@ -131,7 +131,9 @@ def draw(surface, area, cfg, scale, row, job, band, style, px, words):
     if made is None:
         return None
     rect, rendered = made
-    surface.fill(BG[:3], rect)
+    # GLASS since work order 174, the one fill; the popup keeps its edge.
+    from core.hud import glass
+    glass.draw(surface, rect)
     pygame.draw.rect(surface, EDGE[:3], rect, 1)
     pad = max(2, int(PAD * scale))
     y = rect.y + pad

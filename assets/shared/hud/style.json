@@ -229,6 +229,35 @@
         170,
         232
       ]
+    },
+    "glass": {
+      "top": [
+        9,
+        18,
+        27
+      ],
+      "bottom": [
+        2,
+        10,
+        17
+      ],
+      "alpha_top": 0.686,
+      "alpha_bottom": 0.819,
+      "source": {
+        "mockup": "doc/briefs/174-mockup-select-race.png",
+        "box": [
+          1066,
+          102,
+          1590,
+          822
+        ],
+        "bands": 9,
+        "align_shift": [
+          0,
+          -2
+        ],
+        "align_correlation": 0.817
+      }
     }
   },
   "chosen": {
@@ -281,6 +310,18 @@
         45
       ]
     },
-    "_frame_buttons_note": "Where the pre-game screens' two frame buttons go, in reference px: the old skin frame's own button bars (assets/shared/skins/default/frame/9slice.json, 1672x941 source scaled to 1920x1080), so no screen's content had to move when the frame went. Left is a slanted button, right the action button."
+    "_frame_buttons_note": "Where the pre-game screens' two frame buttons go, in reference px: the old skin frame's own button bars (assets/shared/skins/default/frame/9slice.json, 1672x941 source scaled to 1920x1080), so no screen's content had to move when the frame went. Left is a slanted button, right the action button.",
+    "glass": {
+      "slider_default": 0.5,
+      "dense_transparency": 0.5,
+      "soften": 0,
+      "corner_lines": false,
+      "floor_contrast": 4.5,
+      "_note": "Work order 174 B2/B3. The panel GLASS: the background under a panel shows through, dimmed, under a vertical gradient (measured.glass: its colours follow the frame colour through the tint rule, its opacity is the mockup's). slider_default is the Panel glass slider's measured position: 0.5 gives exactly the measured opacity; 0 doubles the transparency, 1 is solid. dense_transparency: the dense variant (tables, portrait grids) lets through this share of what the normal glass lets through, so it moves with the slider and stays denser. soften: a blur radius in reference px for the background under the glass, 0 = none (the mockup shows none; parked). corner_lines: the mockup's inner corner lines, off (parked with renders). floor_contrast: 170/171's word floor; a panel whose background is too bright for it at the slider's position is made denser, never the words dimmer.",
+      "row_shade": 0.45,
+      "selected_shade": 0.75,
+      "header_shade": 0.6,
+      "_shade_note": "Chosen, not measured (the mockup has no table): a table row, header band or grid slot is dense glass with its own colour laid over at this share, so the A/B stripe, the selected row and the header stay told apart and the background still shows through."
+    }
   }
 }

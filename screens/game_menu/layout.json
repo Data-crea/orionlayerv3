@@ -278,6 +278,7 @@
         "okabe_ito": "Okabe-Ito"
       },
       "restart": "Restart to apply",
+      "glass": "Panel glass",
       "mods": "Mod folder",
       "mod_steps": {
         "on": "On",
@@ -363,7 +364,7 @@
   "unverified_right_click": "UNVERIFIED, NOT TRANSCRIBED: a right click inside the Save dialog outside every help rectangle returns -1, which Do_Save_Game_Popup_'s `input_id < 0` branch reads as `abs(-1) = 1` inside the slot field range and leaves for the menu (loadsave.cpp:568-574). Data's order: verify live first. It could not be run: the game is a native Wayland client that xdotool cannot reach, and every field centre in that dialog lies inside a help rectangle, so MSG_CANCEL_FIELD cannot produce the case. Until it is verified, HD does nothing there.",
   "orionlayer_rows": {
     "_hd_extension": "HD EXTENSION (fundament 63, 64): five row heights below the thirteen engine rows - a divider, the OrionLayer heading, the map floor lift, the player-colour preset and the monster values switch for the Planets panel (default on). The game knows nothing about them: they have no field, their clicks send nothing, and their values live in core/usersettings.py. The hotkey column stays empty for all three rows.",
-    "_grow_note": "The box grew by one band (153 -> 191 reference px, 14 September 2026) and settings_accept moved down by the same 38 so the rows still end above ACCEPT; 38 is one band of the engine rows (497 / 13), so the new row is as tall as every other. Work order 173 added the mod folder row (decision 72) inside the same body: the thirteen engine rows went from 38 to 36 (497 -> 468) and this box grew by the 29 they gave up (191 -> 221 at 622), so every OrionLayer row keeps its 30 px and nothing below moves.",
+    "_grow_note": "The box grew by one band (153 -> 191 reference px, 14 September 2026) and settings_accept moved down by the same 38 so the rows still end above ACCEPT; 38 is one band of the engine rows (497 / 13), so the new row is as tall as every other. Work order 173 added the mod folder row (decision 72) inside the same body: the thirteen engine rows went from 38 to 36 (497 -> 468) and this box grew by the 29 they gave up (191 -> 221 at 622), so every OrionLayer row keeps its 30 px and nothing below moves. Work order 174 added the Panel glass row the same way: the engine rows 36 -> 34 (468 -> 442) and this box took those 26 px and the gap above ACCEPT (221 -> 264 at 596, ending 4 px above it); a row is 28 px now.",
     "bands": [
       "divider",
       "heading",
@@ -372,6 +373,7 @@
       "monsters",
       "frame",
       "tone",
+      "glass",
       "mods"
     ],
     "label_x": 0.114,

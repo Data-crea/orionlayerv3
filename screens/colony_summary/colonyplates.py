@@ -448,6 +448,7 @@ def render_fills(screen, surface):
         if name == "header":
             hud.table_header(surface, rect, scale)
             continue
-        hud.panel(surface, rect, scale)
+        # The colony LIST is a dense table: DENSE glass (work order 174).
+        hud.panel(surface, rect, scale, dense=(name == "list_area"))
         if isinstance(panels.get(name), str):
             _fill(name, box)

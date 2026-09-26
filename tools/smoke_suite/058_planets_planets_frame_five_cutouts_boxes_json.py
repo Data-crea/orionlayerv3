@@ -474,11 +474,15 @@ _pl_cols = _pld.columns(_pl_scr, _pl_scr._data["list"])
 _pl_bands = _pl_lg.all_bands(_pl_rr, 8)
 _pl_a, _pl_b, _pl_sel = _pl_lg.row_palette()[:3]
 for _pl_band, _pl_want in ((0, _pl_sel), (1, _pl_b)):
-    _pl_px = tuple(_pl_surf.get_at((
-        _pl_cols["climate"][0] + 4,
-        _pl_bands[_pl_band][0] + _pl_bands[_pl_band][1] // 2)))[:3]
-    assert _pl_px == tuple(_pl_want)[:3], (
-        f"band {_pl_band} is {_pl_px}, listgrid's fill is {_pl_want}")
+    _pl_pt = (_pl_cols["climate"][0] + 4,
+              _pl_bands[_pl_band][0] + _pl_bands[_pl_band][1] // 2)
+    _pl_px = tuple(_pl_surf.get_at(_pl_pt))[:3]
+    # Glass since work order 174: listgrid's fill AT THAT PLACE.
+    _pl_exp = _pl_lg.fill_colour_at((1920, 1080), _pl_cols, (),
+                                    _pl_bands[_pl_band], _pl_want,
+                                    _pl_band == 0, _pl_pt)
+    assert _pl_px == _pl_exp, (
+        f"band {_pl_band} is {_pl_px}, listgrid's fill there is {_pl_exp}")
 ok("planets markings: the panel shows only disc/name/special, the "
    "wheel and fills are marked HD EXTENSION and drawn, the range gap "
    "is marked in layout.json and the status document")
@@ -528,10 +532,14 @@ for _hv_W, _hv_H in ((1366, 768), (1920, 1080), (2560, 1440), (3840, 2160)):
             # fill shows. It was 4 px in while the plate was a rounded
             # rect of radius 6; the HUD outline (decision 71) cuts its
             # corners by ~3 px at 1366x768, so 4 px landed on the line.
-            _hv_px = tuple(_hv_surf.get_at(
-                (_hv_cols["climate"][0] + 1, _hv_y)))[:3]
-            assert _hv_px == _hv_sel, (
+            _hv_pt = (_hv_cols["climate"][0] + 1, _hv_y)
+            _hv_px = tuple(_hv_surf.get_at(_hv_pt))[:3]
+            # Glass since work order 174: the hovered fill AT THAT PLACE.
+            _hv_exp = _pl_lg.fill_colour_at((_hv_W, _hv_H), _hv_cols, (),
+                                            (_hv_t, _hv_h), _hv_sel, True,
+                                            _hv_pt)
+            assert _hv_px == _hv_exp, (
                 f"{_hv_W}x{_hv_H} y={_hv_y} (band {_hv_i}): the pixel "
-                f"shows {_hv_px}, the hovered row's fill is {_hv_sel}")
+                f"shows {_hv_px}, the hovered row's fill there is {_hv_exp}")
 ok(f"planets: the hovered row is the drawn row on all {_hv_lines} pixel "
    f"lines at four sizes, and a band's edge lines light that band")

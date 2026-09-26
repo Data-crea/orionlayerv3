@@ -77,7 +77,9 @@ def fill_panels(screen, surface):
     for name in PANELS:
         rect = window(screen, name)
         if rect:
-            hud.panel(surface, rect, screen.layout.scale)
+            # The planet LIST is a dense table: DENSE glass (work order 174).
+            hud.panel(surface, rect, screen.layout.scale,
+                      dense=(name == "list_area"))
     inset = window(screen, "galaxy_inset")
     if inset:
         # BLACK, and here that is a transcription: this screen leaves

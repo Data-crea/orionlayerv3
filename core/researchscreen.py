@@ -247,10 +247,12 @@ class ResearchPanelScreen(ResearchPopupsMixin, ScreenBase):
         if not self.IS_OVERLAY:
             super()._render_background(surface)
             return
-        surface.fill(
-            researchpanel.col("panel_fill", (0, 0, 0)),
-            pygame.Rect(*researchnative.window_rect(self.geom.panel_rect,
-                                                    self.layout)))
+        # GLASS since work order 174: the panel's area still hides the
+        # map (the source's own Fill_), now as the one glass fill — the
+        # background picture, dimmed, never the map behind.
+        from core.hud import glass
+        glass.draw(surface, pygame.Rect(*researchnative.window_rect(
+            self.geom.panel_rect, self.layout)))
 
     def update(self, game_state=None):
         """Rebuild the list from the state, and decide whether to draw it.

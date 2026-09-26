@@ -92,7 +92,9 @@ class TextInput:
 
     def render(self, surface, rect, style, layout):
         self._rect = pygame.Rect(rect)
-        pygame.draw.rect(surface, COL_BG, rect, border_radius=4)
+        # GLASS since work order 174 (dense: a field's text dominates).
+        from core.hud import glass
+        glass.draw(surface, rect, dense=True)
         border = COL_FOCUS if self.focused else COL_BORDER
         pygame.draw.rect(surface, border, rect, width=2,
                          border_radius=4)

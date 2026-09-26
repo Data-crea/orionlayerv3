@@ -35,6 +35,8 @@ OUT = os.path.expanduser("~/orionlayer-fixtures/evidence/work_order_169")
 SIZES = [(1920, 1080), (2560, 1440), (3840, 2160)]
 MOCKUPS = {"galaxy_map": os.path.join(ROOT, "doc", "briefs",
                                       "169-mockup-galaxy.png"),
+           "select_race": os.path.join(ROOT, "doc", "briefs",
+                                       "174-mockup-select-race.png"),
            "colony_summary": os.path.expanduser(
                "~/Downloads/colony_screen.png")}
 
@@ -179,11 +181,26 @@ def game_menu_state(node="menu"):
 def stage(app, name):
     """Put `name` on screen with its offline state; return the state."""
     d = app.dispatcher
-    if name in ("game_menu", "game_menu_settings"):
+    # THE POPUPS an offline state can open (work order 174's inventory):
+    # a help entry over the galaxy map, Custom Race's message box.
+    if name == "help_popup":
+        d.switch_to("galaxy_map")
+        gs = galaxy_state()
+        d.active.update(gs)
+        d.active.help.open("inventory", "Help",
+                           "A help entry, as the popup draws one. " * 12)
+        return gs
+    if name == "custom_race_message":
+        d.switch_to("custom_race")
+        d.active.update(None)
+        d.active._popup.open("You have spent more picks than you have. "
+                             "Remove some before you accept.")
+        return None
+    if name == "game_menu" or name.startswith("game_menu_"):
         d.switch_to("galaxy_map")
         d.active.update(galaxy_state())
-        gs = game_menu_state("settings" if name.endswith("settings")
-                             else "menu")
+        node = name[len("game_menu_"):] if name != "game_menu" else "menu"
+        gs = game_menu_state(node)
         # The settings record the suite's GAME menu fixture uses (070).
         from core.structs import settings as _set
         gs.settings_raw = bytes([1, 1, 1, 0, 0, 1, 1, 0, 1, 1, 0, 1, 0, 0,
@@ -239,12 +256,26 @@ def main():
                     help="the frame colour's brightness factor, 0.1..1.6")
     ap.add_argument("--tag", default=None,
                     help="a name for the colour in the file names")
+    ap.add_argument("--glass", type=float, default=None,
+                    help="the Panel glass slider, 0 see-through .. 1 solid "
+                         "(work order 174); file names then carry it")
+    ap.add_argument("--corner-lines", action="store_true",
+                    help="draw the glass's optional inner corner lines")
     args = ap.parse_args()
+    from core.hud import glass as hudglass
     from core.hud import style as hudstyle
     hudstyle.set_tone(args.hue, args.sat, args.bright)
+    if args.corner_lines:
+        hudstyle.get().chosen["glass"]["corner_lines"] = True
+    if args.glass is not None:
+        hudglass.set_value(args.glass)
     tag = ("" if args.hue is None else f"_hue{int(args.hue):03d}")
     if args.tag:
         tag = f"_{args.tag}"
+    if args.glass is not None:
+        tag += f"_glass{args.glass:.2f}"
+    if args.corner_lines:
+        tag += "_corners"
     os.makedirs(args.out, exist_ok=True)
     sizes = ([tuple(int(v) for v in args.size.split("x"))] if args.size
              else SIZES)

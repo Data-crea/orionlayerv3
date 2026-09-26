@@ -122,7 +122,8 @@ def draw_box(surface, layout, style, native_rect, popup=False):
     if popup:
         hud.popup(surface, rect, layout.scale)
     else:
-        hud.panel(surface, rect, layout.scale)
+        # DENSE glass (work order 174): a research list's words dominate.
+        hud.panel(surface, rect, layout.scale, dense=True)
     return rect
 
 

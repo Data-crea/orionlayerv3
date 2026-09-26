@@ -233,36 +233,57 @@ _scr_op.render(_fl_surf)
 # few px inward, and the inset draws stars on top. The background
 # is what most of the box is — the same method the (0, 8, 0)
 # measurement of the original used.
+# THE INSET: its measured black, by the mode, as before.
 for _k, _want in (("galaxy_inset",
                    _fl_pal.require("colony_summary",
-                                   _fl_panels["galaxy_inset"])),
-                  # SINCE DECISION 71 (work order 169) the header is
-                  # the HUD table header and a window the HUD panel:
-                  # what is read back is THOSE colours, by the same
-                  # method — the lesson of this check is unchanged.
-                  ("header", _fl_hs.get().colour("mockup_colony.header")),
-                  ("planet_info", _fl_hs.get().colour("panel.fill"))):
+                                   _fl_panels["galaxy_inset"])),):
     _fr = pygame.Rect(*app.layout.rect(_scr_op.box_rect(_k)))
     _fa = pygame.surfarray.array3d(_fl_surf.subsurface(_fr))
     _hist = {}
-    # Inside the HUD panel's soft inner band (decision 71): its depth is
-    # the measured `panel.inner_glow`, and the band is a gradient on
-    # purpose. The header band has no edge and keeps the old 4.
-    _fm = 4 if _k == "header" else int(
-        (_fl_hs.get().get("panel.inner_glow")
-         + _fl_hs.get().get("panel.edge_width")) * app.layout.scale) + 4
+    _fm = int((_fl_hs.get().get("panel.inner_glow")
+               + _fl_hs.get().get("panel.edge_width")) * app.layout.scale) + 4
     for _sx in range(_fm, _fr.w - _fm, 3):
         for _sy in range(min(_fm, _fr.h // 3), _fr.h - min(_fm, _fr.h // 3), 3):
             _c = tuple(int(_v) for _v in _fa[_sx, _sy])
             _hist[_c] = _hist.get(_c, 0) + 1
     _got, _n = max(_hist.items(), key=lambda _i: _i[1])
-    _exp = tuple(_want[:3]) if _want else tuple(_cs_mod.PANEL_BG[:3])
+    _exp = tuple(_want[:3])
     assert _got == _exp and _n > sum(_hist.values()) // 2, (
         f"{_k} is mostly {_got} ({_n} of {sum(_hist.values())} "
         f"samples) on the rendered frame; layout.json asks for "
         f"{_exp}")
+# THE HEADER AND A WINDOW ARE GLASS since work order 174: the fill is the
+# background showing through, so there is no one colour to take the mode
+# of. The same lesson by the successor method: what is on the rendered
+# frame must be what the named fill DRAWS there — the table header band
+# and the HUD panel, each redrawn over the same background into a
+# reference, compared pixel for pixel away from edges and words.
+from core import backgrounds as _fl_bgs
+from core.hud import blocks as _fl_blk
+for _k in ("header", "planet_info"):
+    _fr = pygame.Rect(*app.layout.rect(_scr_op.box_rect(_k)))
+    _ref = pygame.Surface((1920, 1080))
+    _fl_bgs.draw(_ref, "colony_summary")
+    if _k == "header":
+        _fl_blk.table_header(_ref, _fr, app.layout.scale)
+    else:
+        _fl_blk.panel(_ref, _fr, app.layout.scale)
+    _fm = 4 if _k == "header" else int(
+        (_fl_hs.get().get("panel.inner_glow")
+         + _fl_hs.get().get("panel.edge_width")) * app.layout.scale) + 4
+    _fa = pygame.surfarray.array3d(_fl_surf.subsurface(_fr))
+    _fb = pygame.surfarray.array3d(_ref.subsurface(_fr))
+    _same = _tot = 0
+    for _sx in range(_fm, _fr.w - _fm, 3):
+        for _sy in range(min(_fm, _fr.h // 3), _fr.h - min(_fm, _fr.h // 3), 3):
+            _tot += 1
+            _same += int((_fa[_sx, _sy] == _fb[_sx, _sy]).all())
+    assert _tot and _same > _tot // 2, (
+        f"{_k}: only {_same} of {_tot} samples are the glass its fill "
+        f"draws there")
 ok("colony_summary panel fills reach the screen (the inset is "
-   "black in a rendered frame, not only in layout.json)")
+   "black in a rendered frame, not only in layout.json; the header and "
+   "a window are the glass their fill draws)")
 
 ok("colony_summary galaxy_inset (transform, the four colour "
    "branches, uniform-scale geometry, markings, sends nothing)")

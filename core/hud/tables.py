@@ -6,6 +6,7 @@ Measured off Data's colony mockup (`mockup_colony` in style.json).
 """
 import pygame
 
+from core.hud import glass
 from core.hud import style as hudstyle
 
 
@@ -23,7 +24,10 @@ def table_header(surface, rect, scale):
     """The header band of a table, and the line under it."""
     st = hudstyle.get()
     r = pygame.Rect(rect)
-    surface.fill(st.colour("mockup_colony.header"), r)
+    # GLASS since work order 174: the header band is dense glass with
+    # its colour over it, not a flat near-black band.
+    glass.draw(surface, r, dense=True, shade=st.colour("mockup_colony.header"),
+               shade_alpha=float(st.get("glass.header_shade")))
     separator(surface, r.x, r.right, r.bottom - 1, scale)
 
 
@@ -33,14 +37,17 @@ def table_row(surface, rect, scale, index, selected=False):
     st = hudstyle.get()
     r = pygame.Rect(rect)
     if selected:
-        surface.fill(st.colour("mockup_colony.selected"), r)
+        glass.draw(surface, r, dense=True,
+                   shade=st.colour("mockup_colony.selected"),
+                   shade_alpha=float(st.get("glass.selected_shade")))
         edge = st.colour("mockup_colony.selected_edge")
         w = max(1, round(_px(st.get("panel.edge_width"), scale) * 0.6))
         pygame.draw.rect(surface, edge, r, w,
                          border_radius=max(2, int(4 * scale)))
         return
     key = "mockup_colony.row_a" if index % 2 == 0 else "mockup_colony.row_b"
-    surface.fill(st.colour(key), r)
+    glass.draw(surface, r, dense=True, shade=st.colour(key),
+               shade_alpha=float(st.get("glass.row_shade")))
     pygame.draw.line(surface, st.colour("mockup_colony.row_line"),
                      (r.x, r.bottom - 1), (r.right - 1, r.bottom - 1))
 

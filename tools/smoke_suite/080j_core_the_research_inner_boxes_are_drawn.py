@@ -97,12 +97,19 @@ for _ib_e in _ib_entries:
     _bx, _by, _bw, _bh = _dx_geo.window_rect(
         _ib_e.panel_box(_ib_panel.BOX_MARGIN), _dx_scr.layout)
     # The fill is inside; the outline is on the edge. Both are asked
-    # for, so a box that drew only one of them fails.
+    # for, so a box that drew only one of them fails. SINCE WORK ORDER
+    # 174 the fill is the panel's dense GLASS, so "the fill" is what the
+    # panel block draws at the box's centre, redrawn as a reference.
+    _ib_ref = pygame.Surface((1920, 1080))
+    from core.hud import blocks as _ib_blk
+    _ib_blk.panel(_ib_ref, pygame.Rect(_bx, _by, _bw, _bh),
+                  _dx_scr.layout.scale, dense=True)
+    _ib_fill = tuple(_ib_ref.get_at((_bx + _bw // 2, _by + _bh // 2)))[:3]
     assert _ib_surf.get_at((_bx + _bw // 2, _by + _bh // 2))[:3] == \
-        tuple(_ib_panel.BOX_FILL)[:3], _ib_e.index
+        _ib_fill, _ib_e.index
     _ib_edge = [_ib_surf.get_at((_x, _by + _bh // 2))[:3]
                 for _x in range(_bx, _bx + 3)]
-    assert any(_p != (0, 0, 0) and _p != tuple(_ib_panel.BOX_FILL)[:3]
+    assert any(_p != (0, 0, 0) and _p != _ib_fill
                for _p in _ib_edge), (
         f"entry {_ib_e.index} has a fill and no outline")
     _ib_drawn += 1

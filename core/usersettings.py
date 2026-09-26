@@ -56,6 +56,9 @@ DEFAULTS = {
     # leaves the folder as it is. Read at start, so a change needs a
     # restart (decision 18).
     "user_mod": "on",
+    # The Panel glass slider (work order 174), 0 see-through .. 1 solid;
+    # None is the default (the measured 0.5, or a mod's).
+    "hud_glass": None,
 }
 
 

@@ -23,9 +23,12 @@ Data's material; the other three are `chosen.button`, named there.
 """
 from collections import OrderedDict
 
+import numpy as np
 import pygame
 
+from core import backgrounds
 from core.hud import art
+from core.hud import glass
 from core.hud import raster
 from core.hud import style as hudstyle
 from core.hud import text as hudtext
@@ -84,21 +87,35 @@ def _dim(surf):
 
 # ── panel, popup, separator ──────────────────────────────────────────
 
-def panel(surface, rect, scale, lit=False, filled=True):
+def panel(surface, rect, scale, lit=False, filled=True, dense=False):
     """A HUD panel. `lit` gives it the action button's edge: a popup.
 
     `filled=False` draws the edge, its glow and the soft inner band but
     no fill — the panel for a box whose content is ALREADY drawn when the
-    border comes, which is what the `thin_border` skin always meant."""
+    border comes, which is what the `thin_border` skin always meant.
+
+    A FILLED panel is GLASS since work order 174 (`core.hud.glass`): the
+    background under it, dimmed, under the tinted gradient — `dense` the
+    variant for content that must dominate (tables, portrait grids). It
+    depends on where the panel is and what is behind it, so the cache key
+    carries the position, the background and the slider."""
     rect = pygame.Rect(rect)
     if rect.w < 4 or rect.h < 4:
         return
     st = hudstyle.get()
-    key = ("panel", rect.w, rect.h, round(scale, 4), lit, filled)
+    bg = (backgrounds.current(*surface.get_size()) if filled else None)
+    key = ("panel", rect.w, rect.h, round(scale, 4), lit, filled, dense,
+           rect.topleft if filled else None,
+           bg[0] if bg is not None else None,
+           round(glass.value(), 4) if filled else None)
 
     def build():
         ch = min(_px(st.get("panel.chamfer"), scale), min(rect.w, rect.h) / 4)
         edge = st.colour("popup.edge") if lit else st.colour("panel.edge")
+        fill_px = None
+        if filled:
+            fill_px = glass.fill(_under(bg, rect), rect.w, rect.h, dense,
+                                 rect=rect)
         return raster.shape(
             lambda w, h: raster.chamfered(w, h, ch), rect.w, rect.h,
             fill=st.colour("panel.fill"), edge=edge,
@@ -108,8 +125,27 @@ def panel(surface, rect, scale, lit=False, filled=True):
             inner=st.colour("panel.fill_edge"),
             inner_w=_px(st.get("panel.inner_glow"), scale),
             fill_alpha=1.0 if filled else 0.0,
-            ss=int(st.get("supersample")))
+            ss=int(st.get("supersample")), glass=fill_px)
     _blit_shape(surface, rect, _cached(key, build))
+    if filled and st.get("glass.corner_lines", False):
+        glass.corner_lines(surface, rect, scale)
+
+
+def _under(bg, rect):
+    """The background picture under `rect`, float (h, w, 3), black where
+    the rect leaves the window; None without a picture."""
+    if bg is None:
+        return None
+    pic = bg[1]
+    out = np.zeros((rect.h, rect.w, 3), np.float32)
+    clip = rect.clip(pic.get_rect())
+    if clip.w and clip.h:
+        a = pygame.surfarray.pixels3d(pic)
+        out[clip.y - rect.y:clip.bottom - rect.y,
+            clip.x - rect.x:clip.right - rect.x] = \
+            a[clip.x:clip.right, clip.y:clip.bottom].transpose(1, 0, 2)
+        del a
+    return out
 
 
 def outline(surface, rect, scale):

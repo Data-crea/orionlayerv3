@@ -164,6 +164,22 @@ def band_fill(list_index, selected, row_a, row_b, row_selected):
     return row_a if list_index % 2 == 0 else row_b
 
 
+def fill_colour_at(size, cols, skip, band, colour, selected, point):
+    """The colour `draw_row_fills` puts at `point` for a band (by, bh)
+    of `colour` in a window of `size` — the glass under that colour at
+    that place (work order 174). The one answer for a check that reads a
+    band back off a rendered frame, so no check rebuilds the glass."""
+    from core.hud import glass
+    from core.hud import style as _hs
+    span = plated_span(cols, skip)
+    ref = pygame.Surface(size)
+    glass.draw(ref, pygame.Rect(span[0], band[0], span[1], band[1]),
+               dense=True, shade=tuple(colour)[:3],
+               shade_alpha=float(_hs.get().get(
+                   "glass.selected_shade" if selected else "glass.row_shade")))
+    return tuple(ref.get_at(point))[:3]
+
+
 def draw_row_fills(surface, bands, cols, skip, first, is_selected,
                    row_a, row_b, row_selected):
     """Fill every band under the plated columns — HD EXTENSION,
@@ -173,10 +189,20 @@ def draw_row_fills(surface, bands, cols, skip, first, is_selected,
     if span is None:
         return
     fx, fw = span
+    from core.hud import glass
+    from core.hud import style as _hs
+    st = _hs.get()
     for band, (by, bh) in enumerate(bands):
         li = first + band
-        fill = band_fill(li, is_selected(li), row_a, row_b, row_selected)
-        surface.fill(tuple(fill)[:3], pygame.Rect(fx, by, fw, bh))
+        sel = is_selected(li)
+        fill = band_fill(li, sel, row_a, row_b, row_selected)
+        # GLASS since work order 174: dense glass with the band's colour
+        # over it — the stripe and the selection stay, the background
+        # shows through instead of a flat near-black band.
+        glass.draw(surface, pygame.Rect(fx, by, fw, bh), dense=True,
+                   shade=tuple(fill)[:3],
+                   shade_alpha=float(st.get("glass.selected_shade" if sel
+                                            else "glass.row_shade")))
     # The selected band's RIM, the HUD table's selected row (decision
     # 71): drawn after every fill so a neighbour cannot cover it.
     from core.hud import style as hudstyle
