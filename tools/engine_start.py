@@ -38,7 +38,9 @@ What this tool does about it:
    --inhibit idle` so the screen does not blank during the run — an
    inhibitor held by this run's process, gone when the engine exits, no
    setting changed (Data's configuration is not ours to change);
-4. refuses while another orion2re runs or the port is taken — found
+4. BACKS UP every file a run can write before the engine exists
+   (`tools/liveguard.py`, work order 175) and says how to verify after;
+5. refuses while another orion2re runs or the port is taken — found
    WITHOUT connecting (a bind test): an engine Data started is never
    connected to (174's precondition).
 
@@ -224,17 +226,20 @@ def is_hang(last_line, samples):
 
 
 def start(log_path, timeout=60, inhibit=True, out=print, retries=3,
-          engine=None):
-    """Start, and start again after a recognised hang."""
+          engine=None, guard=None):
+    """Start, and start again after a recognised hang. `guard` is the
+    folder the pre-run backup goes to (taken once, before the first
+    attempt)."""
     for attempt in range(1, retries + 1):
-        pid = _start_once(log_path, timeout, inhibit, out, engine)
+        pid = _start_once(log_path, timeout, inhibit, out, engine,
+                          guard if attempt == 1 else None)
         if pid != "hang":
             return pid
         out(f"start hang recognised (attempt {attempt} of {retries})")
     return None
 
 
-def _start_once(log_path, timeout, inhibit, out, engine=None):
+def _start_once(log_path, timeout, inhibit, out, engine=None, guard=None):
     engines, free, screen = running_engines(), port_free(), screen_state()
     ok, reasons = verdict(engines, free, screen)
     out(f"screen: blanked={screen['blanked']} idle={screen['idle_ms']} ms")
@@ -243,6 +248,15 @@ def _start_once(log_path, timeout, inhibit, out, engine=None):
             out("REFUSED: " + r)
         return None
     handle = open(log_path, "w")
+    if guard:
+        # THE BACKUP COMES FIRST (work order 175): every file the game or
+        # OrionLayer can write during a run, copied and hashed, before an
+        # engine exists that could write one. `liveguard verify` after.
+        import liveguard
+        man = liveguard.snapshot(guard)
+        out(f"GUARD: {sum(1 for f in man['files'].values() if f)} files "
+            f"backed up to {guard} — after the run: python "
+            f"tools/liveguard.py verify {guard} [--restore]")
     proc = subprocess.Popen(command(inhibit, engine), cwd=GAME_DIR,
                             env=display_env(),
                             stdin=subprocess.DEVNULL, stdout=handle,
@@ -288,6 +302,11 @@ def main():
     ap.add_argument("--timeout", type=int, default=60)
     ap.add_argument("--no-inhibit", action="store_true")
     ap.add_argument("--retries", type=int, default=3)
+    ap.add_argument("--guard", default=None,
+                    help="the pre-run backup folder (default: a new one "
+                         "under ~/orionlayer-fixtures/live_guard/)")
+    ap.add_argument("--no-guard", action="store_true",
+                    help="no backup — only for a start that loads nothing")
     ap.add_argument("--engine", default=None,
                     help="another orion2re binary (a build with open fix 31)")
     args = ap.parse_args()
@@ -295,8 +314,12 @@ def main():
         ok, reasons = verdict(running_engines(), port_free(), screen_state())
         print("OK to start" if ok else "\n".join("REFUSED: " + r for r in reasons))
         return 0 if ok else 1
+    guard = None if args.no_guard else (args.guard or os.path.join(
+        os.path.expanduser("~/orionlayer-fixtures"), "live_guard",
+        time.strftime("%Y%m%d_%H%M%S")))
     return 0 if start(args.log, args.timeout, not args.no_inhibit,
-                      retries=args.retries, engine=args.engine) else 1
+                      retries=args.retries, engine=args.engine,
+                      guard=guard) else 1
 
 
 if __name__ == "__main__":

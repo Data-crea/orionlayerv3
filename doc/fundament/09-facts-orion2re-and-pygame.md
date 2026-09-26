@@ -501,6 +501,21 @@ references in `doc/v3_orion2re_index.md`.
   engine waits there most of every frame — and a hang is told apart
   from the intro cinematic, which holds the log at the same line, only
   by the two threads' waits over several samples.
+- **A LIVE RUN WRITES MORE THAN THE SAVES — work order 175, after 174.**
+  The game writes, found in its source: SAVE1-10 (`Save_Game_`,
+  filedef.cpp:64; SAVE10 is the autosave TURN writes), `MOX.SET` after
+  every save AND when a loaded game is left for New Game
+  (`Save_Game_Settings_`, filedef.cpp:24/82 — with the LOADED SAVE's
+  settings, since a save carries its own, savegame.cpp:1368; in 174 that
+  set `active_save_slot` to the scratch slot), `HOF.M2` (score.cpp:205,
+  :614), `lastrace.rac` (racesel.cpp:704), `TEMP.TMP` (swap.cpp:24), and
+  a new `logs/game.<pid>.log` beside its binary per process. OrionLayer
+  writes `user_settings.json` (and `.tmp`, `.corrupt`) and, through the
+  F5 editor, files in the tree. `tools/liveguard.py` backs up every one
+  of them before a live run (`engine_start.py` calls it before the engine
+  exists) and names every change after — changed, appeared, vanished —
+  with `--restore` to put it back; the scratch slot a run saves to is
+  the only file it may `--allow`.
 
 ---
 

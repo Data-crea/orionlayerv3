@@ -61,8 +61,8 @@ derive world geometry.
 **The smoke test must be green before every commit.**
 
 ```bash
-python tools/smoke_test.py             # everything — 320 checks, ~200 s
-python tools/smoke_test.py --fast      # the commit gate's 310, ~95 s
+python tools/smoke_test.py             # everything — 321 checks, ~200 s
+python tools/smoke_test.py --fast      # the commit gate's 311, ~95 s
 python tools/smoke_test.py --screen colony_summary --fast   # NOT a gate
 ```
 
@@ -96,7 +96,7 @@ the fast tier holds that list and the guards to each other.
 time, not at commit time. See decision 31 and
 `doc/briefs/157-suite-profile.md`.
 
-320 checks, headless, no orion2re needed. **The count must not go
+321 checks, headless, no orion2re needed. **The count must not go
 down.** If a change makes a check obsolete, replace it — do not
 delete it. It went down exactly once, on 12 September 2026, when
 Phase B deleted the frame machinery the checks were about (decision
@@ -325,6 +325,24 @@ autosave and the game rewrites it at every turn end.
 (every `Save_Game_`/`Load_Game_` slot is 0-9 and the slot loops stop at ten);
 it is hashed with SAVE1-9 and must stay identical (work order 126 D,
 `v3_projektstatus.md`).
+
+**EVERY FILE A RUN CAN WRITE IS BACKED UP BEFORE AND VERIFIED AFTER**
+(work order 175, after 174 found `MOX.SET` rewritten by the game when a
+loaded scratch game was left for New Game). The list is found in the
+source, not named by an order: SAVE1-11, `MOX.SET`, `HOF.M2`,
+`lastrace.rac`, `TEMP.TMP` in the game folder; `user_settings.json`
+(with `.tmp`/`.corrupt`) and the tree's `git status` here.
+`tools/engine_start.py` takes the backup before the engine exists and
+prints the folder; after the run,
+
+```bash
+python tools/liveguard.py verify <folder>              # names every change
+python tools/liveguard.py verify <folder> --restore --allow SAVE4.GAM
+```
+
+The report names the folder, the scratch slot allowed, and the verify
+result. The rule and the file list live in `tools/liveguard.py` and in
+`doc/fundament/09-facts-orion2re-and-pygame.md`.
 
 State findings plainly, including the unwelcome ones. A wrong
 assumption caught early is worth more than a smooth answer: most of
