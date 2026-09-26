@@ -144,3 +144,31 @@ no tags. orion2re stays local (bundle in `~/`).
    first page fix 32 opens.
 3. `doc/orion2re_open_fixes.md` row 29 — a row the table had been missing
    since work order 152, added from its section.
+
+## Data's added question — does `python main.py` start an engine and leave it running? — **NO; nothing to change**
+
+Asked after the push was held (26 September 2026, own commit). Answer, in
+three parts:
+
+- **The source**: nothing `main.py`, `core/` or a screen runs launches a
+  process (`App._connect` only opens the TCP client, main.py:153-163; the
+  one `subprocess` call in `core/config.py` asks git for the build
+  revision) and nothing signals one; `App.run` ends with
+  `client.disconnect()` and `pygame.quit()` (main.py:170-181). There is no
+  launcher script in the tree.
+- **Live, with an engine running** (this run's PID 398250): `python main.py`
+  with a real window (`DISPLAY=:0`, x11) connected to it, had no child
+  process, and no new orion2re appeared; `xdotool windowquit` (the window
+  manager's normal close, WM_DELETE_WINDOW) ended it with exit 0 and the
+  engine — not its own — kept running.
+  `evidence/work_order_176/main_py/close_with_engine_LIVE.json` (+ `.log`).
+- **Live, without an engine**: it ran standalone ("Could not connect …
+  Running in standalone mode"), started nothing, closed with exit 0, and
+  no orion2re existed before, during or after.
+  `.../main_py/close_without_engine_LIVE.json`.
+
+So OrionLayer never starts an engine and therefore has none of its own to
+stop, and it never stops a foreign one — the requested behaviour already
+holds. The rule is now a check (006e check 4: an AST scan of main.py, core
+and screens for process launches and signals, and the exit path's
+disconnect). 337 -> 338.

@@ -11,12 +11,13 @@
 # an engine it did not start. Offline: no engine, no desktop — the
 # decisions are held, not the processes.
 #
-# The 3 check(s) it holds:
+# The 4 check(s) it holds:
 #   - engine start: the hang's signature, the refusals, the environment, no connect
 #   - live guard: every file a run can write backed up, every change named and restored (175)
 #   - a leftover engine or client is closed only after the backup: SIGTERM,
 #     SIGKILL only if needed, each recorded; the rule stands in CLAUDE.md,
 #     fundament part 09 and the tool (work order 176)
+#   - OrionLayer itself starts no engine and stops none (176, measured live)
 
 
 import engine_start as _es
@@ -193,3 +194,50 @@ ok("a leftover engine or client is closed only after the backup — SIGTERM, "
    "SIGKILL only if it stays, each recorded — and never connected to; the "
    "rule (while Data does not play) stands in CLAUDE.md, fundament 09 and "
    "tools/engine_start.py")
+
+# ── 4. OrionLayer never starts an engine, and never stops one ─────────
+# Asked on 26 September 2026 (work order 176, Data): does `python main.py`
+# start an orion2re and leave it running when its window is closed? It does
+# not start one: measured live the same day — no child process, no new
+# orion2re, with an engine running (it connected) and without (standalone),
+# and a normal window close (WM_DELETE_WINDOW) ended it with exit 0 and left
+# the engine it had not started running (evidence/work_order_176/main_py/).
+# So there is nothing of its own to stop, and a foreign engine is never
+# stopped. This holds the rule in the source: nothing the app runs launches
+# a process or signals one; its exit only disconnects.
+import ast as _nx_ast
+_nx_root = os.path.dirname(SCREENS_DIR)
+_nx_files = [os.path.join(_nx_root, "main.py")]
+for _nx_dir in ("core", "screens"):
+    for _nx_dp, _nx_dn, _nx_fn in os.walk(os.path.join(_nx_root, _nx_dir)):
+        _nx_dn[:] = [d for d in _nx_dn if d != "__pycache__"]
+        _nx_files += [os.path.join(_nx_dp, f) for f in _nx_fn
+                      if f.endswith(".py")]
+_nx_bad = []
+for _nx_f in _nx_files:
+    _nx_tree = _nx_ast.parse(open(_nx_f, encoding="utf-8").read())
+    for _nx_node in _nx_ast.walk(_nx_tree):
+        if isinstance(_nx_node, _nx_ast.Call):
+            _nx_fn = _nx_node.func
+            _nx_name = (_nx_fn.attr if isinstance(_nx_fn, _nx_ast.Attribute)
+                        else getattr(_nx_fn, "id", ""))
+            if _nx_name in ("Popen", "spawnv", "spawnl", "system", "kill",
+                            "killpg", "execv", "execvp", "startfile"):
+                _nx_bad.append(f"{os.path.relpath(_nx_f, _nx_root)}:"
+                               f"{_nx_node.lineno} {_nx_name}")
+            if _nx_name == "run" and any(
+                    isinstance(a, _nx_ast.List) and any(
+                        isinstance(e, _nx_ast.Constant) and
+                        "orion2re" in str(e.value) for e in a.elts)
+                    for a in _nx_node.args):
+                _nx_bad.append(f"{os.path.relpath(_nx_f, _nx_root)}:"
+                               f"{_nx_node.lineno} runs orion2re")
+assert not _nx_bad, ("OrionLayer itself launches or signals a process — it "
+                     "must neither start an engine nor stop one", _nx_bad)
+_nx_main = open(os.path.join(_nx_root, "main.py"), encoding="utf-8").read()
+_nx_run = _nx_main[_nx_main.index("    def run(self):"):
+                   _nx_main.index("    def _handle_events(self):")]
+assert "self.client.disconnect()" in _nx_run, "the exit only disconnects"
+ok("OrionLayer starts no engine and stops none: nothing main.py, core or a "
+   "screen runs launches or signals a process, and closing the window only "
+   "disconnects (measured live, work order 176)")
