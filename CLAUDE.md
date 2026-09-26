@@ -317,7 +317,9 @@ window will not get while the compositor is not drawing it (screen
 locked or blanked, or the window covered by a full-screen game): open
 fix 31, not applied. Start live runs with `python tools/engine_start.py`
 — it refuses on a locked screen, a taken port or an engine that is not
-ours (found without connecting), recognises the hang and starts again.
+ours (found without connecting), recognises the hang and starts again. Since work order 177 `--blanked-ok` accepts a
+blanked screen (fix 31 is applied; the start says so) — the default still
+refuses.
 The evidence and what was ruled out are in `doc/fundament/09-facts-
 orion2re-and-pygame.md`. (139 E/140 A's `S` at `rt_sigsuspend` and
 exit 144 were a different observation; the METHOD they left stands:
