@@ -2138,8 +2138,8 @@ approval (written and parked by work order 177). orion2re **`9ab84230`** on
 `orionlayer-local` ("OrionLayer Open Fix 34: send the save slots for the
 main menu's Load dialog too (ext_api.cpp)"), the only commit of this fix;
 bundle `~/orion2re_bundle_26sep_9ab84230.bundle`. Recorded in OrionLayer by
-the commit "Open fix 34 applied: the main menu's Load dialog sends its save
-slots … (179-2)" (its hash is in `doc/briefs/179-progress.md`, part 2).
+commit **`3787e0a`** ("Open fix 34 applied: the main menu's Load dialog sends
+its save slots … (179-2)"; the hash added by the next commit, 179-3).
 Patch: `doc/ext_main_menu_save_slots.patch`; required by
 `tools/version_check.py` (marker `main_menu_load`) since the same commit.
 Open upstream.

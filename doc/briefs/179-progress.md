@@ -105,3 +105,29 @@ so it is not used. Space is no main-menu hotkey (mainmenu.cpp:126-138).
 Measured: READY after **3 s** (was ~115 s). `--intro` lets it play. The
 closing of leftovers moved to `tools/engine_close.py` (engine_start had
 passed the 300-line guideline: 307 → 257). Check 006e #3b. **348 → 349.**
+- The OrionLayer commit that records fix 34 is **`3787e0a`** (written into
+  entry 34 by the part 3 commit — a commit cannot name its own hash).
+
+## 3. The main menu's Load dialog in HD — **DONE (built by 177, live now)**
+
+Nothing new had to be drawn: 177 wrote the main menu to hand its Load
+dialog to the GAME menu overlay — the popup block of 169/174, glass and
+tint, text in code, the same dialog the in-game Load uses — as soon as the
+dialog's fields AND the slots are on the wire (`screens/main_menu/screen.py`
+`_load_dialog`), and to keep the safety net for everything else. Fix 34
+supplies the slots, so this part is the live proof and the guard for the
+data's absence:
+
+- **Live, 1920x1080** (engine 23512): the dialog drawn in HD, the ten rows
+  equal to the ten save files (name, stardate, date = file mtime), CANCEL
+  back to the menu, row 4 → SAVE4 loaded (3509.0).
+  `evidence/work_order_179/fix34_main_menu_load_1920/`.
+- **Live, 2576x1432** (engine 29787): the dialog drawn, CANCEL.
+  `load_dialog_2576/`.
+- **Without the data** — the fallback stays: without slots the net shows
+  the game's picture (090j #1, unchanged); a stale slot message behind the
+  menu's own list opens nothing (090j #2).
+- One name reads "claude nicht lschen" (slot 8): the SAVE8 file itself holds
+  those bytes — the game dropped the ö when the name was typed; HD shows
+  what is stored.
+- Checks: none new in this part (090j #1/#2 cover it).
