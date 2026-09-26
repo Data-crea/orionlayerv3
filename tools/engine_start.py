@@ -236,7 +236,17 @@ def is_hang(last_line, samples):
         for s in samples))
 
 
-def start(log_path, timeout=60, inhibit=True, out=print, retries=3,
+#: The start deadline. 150 s since work order 177: the original's logo and
+#: intro sequence plays whenever no key or mouse button is down at start
+#: (`JIM::Draw_Logos_`, jim.cpp:18-120) and takes 112.9 s every time —
+#: measured in 11 of 82 starts in work order 176 — so 174's 60 s read a
+#: normal start as a timeout. The intro is also NAMED while it plays (the
+#: log at "data space allocated" without the hang's signature).
+START_DEADLINE = 150
+INTRO_SECONDS = 112.9
+
+
+def start(log_path, timeout=START_DEADLINE, inhibit=True, out=print, retries=3,
           engine=None, guard=None):
     """Start, and start again after a recognised hang. `guard` is the
     folder the pre-run backup goes to (taken once, before the first
@@ -273,6 +283,7 @@ def _start_once(log_path, timeout, inhibit, out, engine=None, guard=None):
                             stdin=subprocess.DEVNULL, stdout=handle,
                             stderr=subprocess.STDOUT, start_new_session=True)
     deadline = time.time() + timeout
+    intro_named = False
     pid = _engine_pid(proc.pid, deadline)
     while time.time() < deadline:
         with open(log_path, encoding="utf-8", errors="replace") as f:
@@ -296,6 +307,10 @@ def _start_once(log_path, timeout, inhibit, out, engine=None, guard=None):
                     os.kill(pid, 15)
                     time.sleep(2)
                     return "hang"
+                if not intro_named:
+                    out(f"INTRO: the original's logos and intro are playing "
+                        f"(about {INTRO_SECONDS:.0f} s; not a hang) — waiting")
+                    intro_named = True
         time.sleep(0.5)
     last = text.strip().splitlines()[-1:] or ["<empty log>"]
     out(f"TIMEOUT after {timeout} s: last line {last[0]!r}, state "
@@ -374,7 +389,7 @@ def main():
     ap.add_argument("--check", action="store_true", help="checks only")
     ap.add_argument("--log", default=os.path.join(
         os.path.expanduser("~/orionlayer-fixtures"), "orion2re_live.log"))
-    ap.add_argument("--timeout", type=int, default=60)
+    ap.add_argument("--timeout", type=int, default=START_DEADLINE)
     ap.add_argument("--no-inhibit", action="store_true")
     ap.add_argument("--retries", type=int, default=3)
     ap.add_argument("--guard", default=None,

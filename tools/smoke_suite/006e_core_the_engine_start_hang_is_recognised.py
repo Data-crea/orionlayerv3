@@ -79,6 +79,13 @@ assert "STATUS: APPLIED 26 September 2026" in open(os.path.join(
 assert '"Present_VSync_Interval_"' in open(os.path.join(
     os.path.dirname(SCREENS_DIR), "tools", "version_check.py"),
     encoding="utf-8").read()
+# Work order 177: the deadline outlasts the original's intro (112.9 s,
+# measured 11 times in 176), and the intro is named, not read as a hang.
+assert _es.START_DEADLINE > _es.INTRO_SECONDS + 20
+import inspect as _es_insp
+assert _es_insp.signature(_es.start).parameters["timeout"].default == \
+    _es.START_DEADLINE
+assert "default=START_DEADLINE" in open(_es.__file__, encoding="utf-8").read()
 ok("engine start: the start hang's signature (not the intro, not a "
    "running engine), three refusals named, CLAUDE.md's environment with "
    "ORION2RE_NO_VSYNC (open fix 31, applied), the port bound never "
