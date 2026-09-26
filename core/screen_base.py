@@ -121,6 +121,15 @@ class ScreenBase(HelpMixin):
         """
         return False
 
+    def handover_is_modal(self):
+        """True when `wants_original()` is a MODAL NET's verdict — "a modal
+        HD has no view for" (`core/modalnet.py`) — and not a screen that
+        cannot vouch for its data. The hand-over gate (work order 180 A2)
+        holds both the same way; only the second is counted as a failure
+        when it outlasts the hold, because the net is allowed for exactly
+        what it does."""
+        return False
+
     def exit(self):
         """Screen deactivated. Clean up."""
         self.active = False

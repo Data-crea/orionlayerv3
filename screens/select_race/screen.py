@@ -260,6 +260,9 @@ class SelectRaceScreen(ScreenBase):
     def wants_original(self):
         return bool(getattr(self, "_net_on", False))
 
+    def handover_is_modal(self):
+        return True          # the net is this screen's only hand-over
+
     def _escape_field(self):
         """The live ESC hot-key field of `Race_Selection_Screen_`, or None
         (a multiplayer game has none, racesel.cpp:197)."""

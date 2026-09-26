@@ -165,6 +165,7 @@ class Walk:
               f"total {summary['native_total']:3d} "
               f"pixels {summary['pixel_native_before_hd']:3d}/"
               f"{summary['pixel_native_total']:3d}"
+              f" held {summary['held']:3d}"
               f"{' kinds=' + ','.join(summary['kinds']) if summary['kinds'] else ''}"
               f"{flag}")
         if summary["native_total"]:

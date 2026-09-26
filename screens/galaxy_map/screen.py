@@ -386,6 +386,9 @@ class GalaxyMapScreen(ScreenBase):
         is shown as the game's own picture, input passed through."""
         return self._modal.fallback
 
+    def handover_is_modal(self):
+        return True              # the net is this screen's only hand-over
+
     # ── Geometry ──────────────────────────────────────────
 
     def _map_view(self):

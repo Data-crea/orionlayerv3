@@ -507,7 +507,13 @@ references in `doc/v3_orion2re_index.md`.
   every save AND when a loaded game is left for New Game
   (`Save_Game_Settings_`, filedef.cpp:24/82 — with the LOADED SAVE's
   settings, since a save carries its own, savegame.cpp:1368; in 174 that
-  set `active_save_slot` to the scratch slot), `HOF.M2` (score.cpp:205,
+  set `active_save_slot` to the scratch slot) — AND AT EVERY LOAD (work
+  order 180, found by the guard four times): `LOADSAVE` sets `active_save_slot` to the loaded slot and calls
+  `Save_Session_Related_Settings_` (loadsave.cpp:357-359, :1044), which
+  rewrites the first 211 bytes of MOX.SET — offset 21, one byte, when
+  nothing else changed; the same writer has five more call sites
+  (loadsave.cpp:557, :1264, :1590, mainscr.cpp:3300, multplay.cpp:966),
+  `HOF.M2` (score.cpp:205,
   :614), `lastrace.rac` (racesel.cpp:704), `TEMP.TMP` (swap.cpp:24), and
   a new `logs/game.<pid>.log` beside its binary per process. OrionLayer
   writes `user_settings.json` (and `.tmp`, `.corrupt`) — in

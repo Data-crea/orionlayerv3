@@ -57,6 +57,10 @@ _JSON_OTHER = {
     # indent=1 like their siblings.
     os.path.join("assets", "shared", "names", "techfields_en.json"),
     os.path.join("assets", "shared", "names", "billtext_en.json"),
+    # work order 180 A2: recorded transitions, one per line so a diff
+    # names the one that moved; written by tools/flash_fixture.py and
+    # never hand-edited.
+    os.path.join("tools", "fixtures", "transitions_180.json"),
     # hand-written with inline arrays for readability; never
     # rewritten by a tool.
     os.path.join("screens", "_template", "boxes.json"),

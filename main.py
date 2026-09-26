@@ -17,6 +17,7 @@ from core.editor import Editor
 from core import debuginput
 from core import fallbacknote
 from core import frametrace
+from core import handover
 from core import helppopup
 
 logging.basicConfig(level=logging.INFO,
@@ -130,6 +131,11 @@ class App:
         #: Which way into the game's picture `_showing_original` last
         #: took — `frametrace.NO_SCREEN`, `HAND_OVER`, `F12` — or "".
         self._net_kind = ""
+        #: A screen HD draws never presents a native frame (work order
+        #: 180 A2): every hand-over is asked here first.
+        self._handover = handover.Gate()
+        #: The surface shows only HD or the background (for a held frame).
+        self._surface_hd = False
         self._note_labels = self.res.load_json(
             "assets/shared/fallback/labels.json", {}) or {}
 
@@ -236,6 +242,8 @@ class App:
                     # typing into a name field, Enter, ESC. DEVIATION
                     # `fallback_keys` (the original has no such window).
                     self.original_view.forward_key(self.client, event)
+                elif self._handover.holding:
+                    pass  # nothing reaches a held frame (180 A2)
                 else:
                     self.dispatcher.route_key_event(event)
             elif self.editor.handle_event(event):
@@ -256,7 +264,8 @@ class App:
                 # screens that pan (galaxy map) implement it, all
                 # others simply do not answer.
                 top = self.dispatcher.top
-                if top and hasattr(top, "handle_right_button"):
+                if top and hasattr(top, "handle_right_button") \
+                        and not self._handover.holding:
                     down = event.type == pygame.MOUSEBUTTONDOWN
                     top.handle_right_button(down, *event.pos)
             elif event.type == pygame.MOUSEMOTION:
@@ -295,11 +304,12 @@ class App:
         """
         if not self.connected:
             self._net_kind = ""
+            self._handover.holding = False
             return self._verdict(False, None)
         if self.render_mode == "original" or self.dispatcher.use_original:
             self._net_kind = (frametrace.F12 if self.render_mode == "original"
                               else frametrace.NO_SCREEN)
-            return self._verdict(True, None)
+            return self._gated(True, None)
         # A THIRD WAY IN, work order 130 E: a screen that KNOWS the id
         # but cannot vouch for what it would draw. The research select
         # screen does this when the game's field list contradicts its
@@ -309,9 +319,18 @@ class App:
         top = self.dispatcher.top
         if top is not None and top.wants_original():
             self._net_kind = frametrace.HAND_OVER
-            return self._verdict(True, top)
+            return self._gated(True, top)
         self._net_kind = ""
-        return self._verdict(False, top)
+        return self._gated(False, top)
+
+    def _gated(self, want, top):
+        """The answer through the hand-over gate (work order 180 A2):
+        a held frame reports nothing — the gate logs its own lines."""
+        shown = handover.decide_for(self, want, self._net_kind, top)
+        if self._handover.holding:
+            self._fallback_note = None
+            return False
+        return self._verdict(shown, top)
 
     def _verdict(self, shown, top):
         """Return the decision, and report it. Work order 139 A.
@@ -341,6 +360,8 @@ class App:
             self.original_view.forward_click(
                 self.client, screen_x, screen_y,
                 self.win_w, self.win_h)
+        elif self._handover.holding:
+            return  # a held frame is not the game's state (180 A2)
         elif self.dispatcher.active:
             self.dispatcher.route_click(screen_x, screen_y)
 
@@ -374,6 +395,7 @@ class App:
         if self._frame_trace is not None:
             frametrace.record_app_frame(self, shown)
         if shown:
+            self._surface_hd = False
             picture = self.original_view.render(self.surface, self.layout)
             # WORK ORDER 139 D — the reason, where the player is
             # looking. Drawn AFTER the picture and outside it, and it
@@ -395,13 +417,19 @@ class App:
                     self.surface, self.style, self.colors, state,
                     self.dispatcher.screen_name_for(state.current_screen),
                     self.render_mode)
+        elif self._handover.holding:
+            # THE LAST HD FRAME, or the universal background (180 A2).
+            handover.render_hold(self)
         elif self.dispatcher.active:
             self.surface.fill((4, 6, 14))
             self.dispatcher.render(self.surface)
+            self._surface_hd = True
         else:
             self.surface.fill((6, 8, 16))
+            self._surface_hd = False
 
-        self.editor.render(self.surface)
+        if not self._handover.holding:
+            self.editor.render(self.surface)
         if self._fs_surface:
             self._fs_surface.fill((0, 0, 0))
             self._fs_surface.blit(self.surface, self._fs_offset)
@@ -464,6 +492,7 @@ class App:
 
     def _after_resolution_change(self):
         """Common refresh after any resolution/surface change."""
+        self._surface_hd = False      # a new surface holds no HD frame
         self.layout.update(self.win_w, self.win_h)
         self.style.clear_caches()
         cursor_gfx.apply(self.res, self.win_h, self.settings)

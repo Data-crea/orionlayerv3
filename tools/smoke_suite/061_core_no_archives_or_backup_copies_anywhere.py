@@ -443,7 +443,17 @@ class _FbState:
         self.palette = [(0, 0, 0)] * 256
         self.palette[3] = (0, 0, 255)
         self.palette[7] = (255, 0, 0)
-        self.fields = []
+        # THE SCIENCE ROOM'S LIST IS NEVER EMPTY (livedrive.fb_digest:
+        # the dummy, a whole-screen field and an ESC key). An EMPTY list
+        # at an id with no HD screen is a transition, which the hand-over
+        # gate holds (work order 180 A2) — so the fixture carries the ESC
+        # hot key, which the wire places at (5000, 5000) and which covers
+        # no pixel, and every click below still reaches what it reached.
+        from core.game_state import FieldInfo as _FbKeyField
+        _k = _FbKeyField()
+        (_k.index, _k.x, _k.y, _k.x_end, _k.y_end, _k.field_type,
+         _k.hotkey) = (1, 5000, 5000, 5000, 5000, 7, 0x1B)
+        self.fields = [_k]
 
 class _FbClient:
     game_ended = False
@@ -451,6 +461,7 @@ class _FbClient:
     def __init__(self, state):
         self.state = state
         self.log = []
+        self.stats = {"state": 0}
 
     def poll(self):
         pass

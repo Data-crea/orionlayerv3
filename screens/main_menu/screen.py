@@ -161,6 +161,9 @@ class MainMenuScreen(ScreenBase):
     def wants_original(self):
         return bool(getattr(self, "_net_on", False))
 
+    def handover_is_modal(self):
+        return True          # the net is this screen's only hand-over
+
     def update(self, game_state=None):
         if game_state is not None and getattr(self.app, "connected", False):
             if getattr(self, "_net", None) is None:

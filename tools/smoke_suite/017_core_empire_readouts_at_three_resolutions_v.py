@@ -285,6 +285,11 @@ _MARKED = {
     "screens/main_menu/screen.py": "DEVIATION `modal_fallback`",
     "screens/select_race/screen.py": "HD EXTENSION `back_button`",
 
+    # ADDED 27 September 2026, work order 180 A2: the hand-over gate —
+    # a known screen's transition keeps HD's last frame. Its own check
+    # is 090o.
+    "core/handover.py": "DEVIATION `hold_last_frame`",
+
 }
 _MARKS = ("HD EXTENSION", "DEVIATION")
 _SELF = SUITE_FILES

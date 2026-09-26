@@ -45,6 +45,11 @@ if slow("fallback_verdict_log"):
             self.lines = []
 
         def emit(self, record):
+            # The hand-over gate (work order 180 A2) logs its own holds
+            # and fallbacks; they are 090o's, and this check counts the
+            # REPORT's lines.
+            if record.name == "handover":
+                return
             self.lines.append(f"{record.name}: {record.getMessage()}")
 
     class _FbScreen:
@@ -58,6 +63,9 @@ if slow("fallback_verdict_log"):
         def wants_original(self):
             return self._reason is not None
 
+        def handover_is_modal(self):
+            return False
+
         def fallback_reason(self):
             return self._reason or ""
 
@@ -70,8 +78,15 @@ if slow("fallback_verdict_log"):
         render_mode = "hd"
 
         def __init__(self, screen):
+            # THE HAND-OVER GATE IS HELD OPEN HERE (hold 0): what is under
+            # test is the REPORT of a decision, and work order 180 A2's
+            # gate, which holds a hand-over for its data, is 090o's.
+            from core import handover as _fb_handover
+            self._handover = _fb_handover.Gate(hold=0, empty_hold=0)
+            self._net_kind = ""
             self.client = _nt.SimpleNamespace(
-                state=_nt.SimpleNamespace(current_screen=4))
+                state=_nt.SimpleNamespace(current_screen=4),
+                stats={"state": 0})
             self.dispatcher = _nt.SimpleNamespace(
                 use_original=False, top=screen, overlay=None,
                 active_name="fleets", overlay_name="")
@@ -79,6 +94,7 @@ if slow("fallback_verdict_log"):
             self._fallback_note = None
 
         _verdict = _fb_main.App._verdict
+        _gated = _fb_main.App._gated
         _showing_original = _fb_main.App._showing_original
 
     _fb_handler = _FbLog()
@@ -123,6 +139,9 @@ if slow("fallback_verdict_log"):
         class _FbMute:
             def wants_original(self):
                 return True
+
+            def handover_is_modal(self):
+                return False
         _fb_mute = _FbApp(_FbMute())
         assert _fb_mute._showing_original() is True
         assert _fb_note.NO_REASON in _fb_handler.lines[-1], _fb_handler.lines[-1]

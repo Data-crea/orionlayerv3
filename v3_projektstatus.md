@@ -2458,7 +2458,7 @@ files under `doc/` and are only summarised here.
 | | |
 |---|---|
 | Python | 32,960 lines across 111 modules — `find . -name '*.py'`, `__pycache__` excluded, the smoke test's 6,400 included. The previous figure here (21,642 across 94) was carried from an unstated method and could not be reproduced |
-| Smoke test | `python tools/smoke_test.py` — **357 checks**, headless, in `tools/smoke_suite/` since work order 162 (130 check modules, one group per screen plus a shared core; `tools/smoke_test.py` is the runner). **Two tiers since work order 158**: the bare command runs everything (~200 s here, measured 26 September 2026 — the 72 s this line said was before the rendering checks of 172-174); `--fast` runs the commit gate's 347 (~95 s here). `--screen <name>` prints only that screen's sentences and the core's and is NEVER a gate. See "The gate has two tiers" below |
+| Smoke test | `python tools/smoke_test.py` — **361 checks**, headless, in `tools/smoke_suite/` since work order 162 (131 check modules, one group per screen plus a shared core; `tools/smoke_test.py` is the runner). **Two tiers since work order 158**: the bare command runs everything (~200 s here, measured 26 September 2026 — the 72 s this line said was before the rendering checks of 172-174); `--fast` runs the commit gate's 351 (~95 s here). `--screen <name>` prints only that screen's sentences and the core's and is NEVER a gate. See "The gate has two tiers" below |
 | Assets | 170 MB (select_race 68, galaxy_map 51, shared 23, new_game 21, colony_summary 1) |
 | Screens in HD | 11 of ~20–22 (the Leaders screen, work order 167, built and not accepted; the GAME menu overlay, work order Stop 2, every dialog of the popup; colony summary draws list, sidebar, scan box and galaxy inset, and MOVES POPS — the first HD gesture that drives the game; planets, brief 101, lists, sorts, restricts and returns) |
 | Setup from clone | `python tools/setup.py` (deps via the system package manager) |
@@ -3412,7 +3412,7 @@ in exactly ONE bucket. The numbers below are produced by
 check asserts this list still agrees with it — the same trade the
 check count makes, for the same reason.
 
-`tools/struct_probe.py` (**478** code, 753 total), `screens/galaxy_map/screen.py` (**418** code, 767 total — down from 456 when work order 169 moved the HUD drawing into `hudview.py`, and the floor went to `floorlift.render_floor` in 170; 173 made the floor the shared background, `core.backgrounds`; 177 added 24 for the modals over the map — the routing of render, click, key and right button to `mapmodal.py`, which holds the modals themselves, and the map's own field list for the safety net), `tools/colony_list_preview.py` (**403** code, 772 total), `screens/custom_race/screen.py` (**403** code, 569 total — three more since work orders 169 and 170: the picks and score bar as two HUD panels, and the flag that keeps its frame buttons inside its columns), `tools/colony_move_hd.py` (**370** code, 570 total — fifteen lines shorter since work order 166 part E took its `Counter` out: the tree has one send counter now, `livedrive.SendCounter`), `core/editor/editor.py` (**359** code, 430 total), `screens/galaxy_map/renderer.py` (**336** code, 758 total), `tools/ext_diag.py` (**325** code, 473 total), `main.py` (**341** code, 581 total — over since work order 142 C added the debug input switch; 146 added the F8 surface screenshot, a TOOL for live acceptance on a display that renders but cannot be captured; 170 the two lines that apply the saved HUD frame colour at start; 173 the line that opens the player's mod folder; 177 the four that send the keys to the game while its picture is shown, the modal safety net's keys; 180 A1 the frame-trace switch and the one assignment per way into the game's picture that it records — the recording itself is `core/frametrace.record_app_frame`).
+`tools/struct_probe.py` (**478** code, 753 total), `screens/galaxy_map/screen.py` (**420** code, 775 total — down from 456 when work order 169 moved the HUD drawing into `hudview.py`, and the floor went to `floorlift.render_floor` in 170; 173 made the floor the shared background, `core.backgrounds`; 177 added 24 for the modals over the map — the routing of render, click, key and right button to `mapmodal.py`, which holds the modals themselves, and the map's own field list for the safety net; 180 A2 the two lines that say its only hand-over is the modal net's, `handover_is_modal`), `tools/colony_list_preview.py` (**403** code, 772 total), `screens/custom_race/screen.py` (**403** code, 569 total — three more since work orders 169 and 170: the picks and score bar as two HUD panels, and the flag that keeps its frame buttons inside its columns), `tools/colony_move_hd.py` (**370** code, 570 total — fifteen lines shorter since work order 166 part E took its `Counter` out: the tree has one send counter now, `livedrive.SendCounter`), `core/editor/editor.py` (**359** code, 430 total), `screens/galaxy_map/renderer.py` (**336** code, 758 total), `tools/ext_diag.py` (**325** code, 473 total), `main.py` (**363** code, 610 total — over since work order 142 C added the debug input switch; 146 added the F8 surface screenshot, a TOOL for live acceptance on a display that renders but cannot be captured; 170 the two lines that apply the saved HUD frame colour at start; 173 the line that opens the player's mod folder; 177 the four that send the keys to the game while its picture is shown, the modal safety net's keys; 180 A1 the frame-trace switch and the one assignment per way into the game's picture that it records — the recording itself is `core/frametrace.record_app_frame`; 180 A2 the hand-over gate's calls — the held frame's branch, its input refusals, `_gated` — with the gate itself in `core/handover.py`).
 `smoke_test.py` is exempt by nature, **and since 22 September 2026 so
 is `tools/smoke_suite/`** — work order 162 split that one `main()` into
 ninety-one check modules, and they are the same file in pieces. They are
@@ -3561,6 +3561,41 @@ anywhere. Kept: `_black_hole_src.png`, which is the INPUT to
 ---
 
 ## What works
+
+### No native frame on a screen HD draws — work order 180 A, 26-27 September 2026
+
+**The flash Data saw** — the game's own picture with a sentence on the
+left, before HD — was measured first (`doc/briefs/180-flash-findings.md`):
+the Fleets entry (one native frame plus `core/fallbacknote`'s sentence in
+the left pillarbox, 11 of 14 entries), the main menu's opening animation
+(1.29 s at startup) and a load (screen 39 with an empty list). The engine's
+own window is not a source: never raised or focused after its first map.
+
+**The rule, in one place** (`core/handover.py`, asked by
+`main.App._showing_original` for every hand-over): while a transition waits
+for its data the window keeps the last HD frame, or the universal
+background, and takes no input; the game's picture is shown at once only
+for an id HD has no screen for WITH a list to answer. A known screen whose
+data does not come within `HOLD` = 36 snapshots falls back once, logged as
+`FALLBACK`, counted in `Gate.failures`. A modal net's hand-over is held the
+same way and then shown, not failed (`ScreenBase.handover_is_modal`).
+**DEVIATION `hold_last_frame`**: the original has no second picture to wait
+with. Measured holds: 1 snapshot (Fleets), 2 (a load), 24 (the opening
+animation). Live after the fix: 202 transitions at 1920x1080 and
+2576x1432, **0 native frames**, 0 fallbacks (before: 17 of 276).
+
+**The instrument** stays: `core/frametrace.py` tags every presented frame
+(`hd`, `net`, `fill`, `hold`, with the screen id, the snapshot and the way
+in) when `ORIONLAYER_FRAME_TRACE` is set; `tools/flash_walk.py` walks every
+registry screen in and out through the HD window with a pixel verdict
+beside the trace; `tools/flash_table.py` makes the table;
+`tools/flash_fixture.py` turns walks into `tools/fixtures/transitions_180.json`,
+which check 090o replays — every registry screen must be a target (53 is
+SYNTHETIC: only TURN reaches it) and a gate that holds nothing must bring
+the three flashes back. `tools/xwatch.py` watches the X windows.
+
+**The decision text is Data's to file** (`doc/briefs/180-parked-for-data.md`,
+no number taken).
 
 ### Leaders — BUILT, NOT ACCEPTED — work order 167, 24 September 2026
 

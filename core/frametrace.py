@@ -10,11 +10,15 @@ count what the player saw rather than argue about it.
 WHAT IS RECORDED, one entry per `pygame.display.flip()`:
 
     t        `time.monotonic()` when the frame was presented
+    snap     the client's snapshot count (`stats["state"]`) at that frame
     screen   the game's `current_screen` in the snapshot that frame used
     fields   how many fields that snapshot's list held
+    live     how many of them a player could answer (all but index 0)
     source   "hd"   an HD screen drew it (`dispatcher.render`)
              "net"  the game's own picture (`original_view.render`)
              "fill" neither — the plain background fill
+             "hold" the hand-over gate kept the last HD frame or drew the
+                    universal background (work order 180 A2)
     kind     for "net", WHICH way in (see `main.App._showing_original`):
              "no_screen" decision 22's id HD has no screen for,
              "hand_over" a screen that knows the id said
@@ -49,7 +53,10 @@ log = logging.getLogger("frametrace")
 ENV = "ORIONLAYER_FRAME_TRACE"
 
 HD, NET, FILL = "hd", "net", "fill"
-SOURCES = (HD, NET, FILL)
+#: A frame the hand-over gate held (work order 180 A2): the last HD frame
+#: or the universal background, while a transition waits for its data.
+HOLD = "hold"
+SOURCES = (HD, NET, FILL, HOLD)
 #: The three ways into the game's picture (`App._showing_original`).
 NO_SCREEN, HAND_OVER, F12 = "no_screen", "hand_over", "f12"
 
@@ -77,8 +84,10 @@ class FrameTrace:
                  path or "in memory only")
         return trace
 
-    def record(self, *, screen, fields, source, kind="", hd="", reason=""):
-        entry = {"t": time.monotonic(), "screen": screen, "fields": fields,
+    def record(self, *, screen, fields, source, kind="", hd="", reason="",
+               snap=None, live=None):
+        entry = {"t": time.monotonic(), "snap": snap,
+                 "screen": screen, "fields": fields, "live": live,
                  "source": source, "kind": kind, "hd": hd,
                  "reason": reason or ""}
         self.frames.append(entry)
@@ -109,19 +118,27 @@ def record_app_frame(app, shown):
     state = app.client.state if app.connected else None
     dispatcher = app.dispatcher
     top = dispatcher.top
+    gate = getattr(app, "_handover", None)
+    held = bool(gate is not None and gate.holding)
     if shown:
         source = NET
+    elif held:
+        source = HOLD
     elif dispatcher.active:
         source = HD
     else:
         source = FILL
     name = ((dispatcher.overlay_name or dispatcher.active_name)
             if top is not None else "")
+    stats = getattr(getattr(app, "client", None), "stats", None) or {}
+    live = sum(1 for f in (getattr(state, "fields", None) or [])
+               if getattr(f, "index", 0) != 0)
     return app._frame_trace.record(
         screen=getattr(state, "current_screen", None),
-        fields=len(getattr(state, "fields", None) or []),
-        source=source, kind=app._net_kind if shown else "",
-        hd=name, reason=app._fallback_note or "")
+        fields=len(getattr(state, "fields", None) or []), live=live,
+        source=source, kind=app._net_kind if (shown or held) else "",
+        hd=name, reason=app._fallback_note or "",
+        snap=stats.get("state"))
 
 
 def summarise(frames, target=None):
@@ -152,6 +169,7 @@ def summarise(frames, target=None):
         "native_seconds": round(seconds, 3),
         "native_total": sum(1 for f in frames if f["source"] == NET),
         "kinds": sorted({f["kind"] for f in frames if f["source"] == NET}),
+        "held": sum(1 for f in frames if f["source"] == HOLD),
         "reasons": sorted({f["reason"] for f in frames
                            if f["source"] == NET and f["reason"]}),
         "screens": sorted({f["screen"] for f in frames
