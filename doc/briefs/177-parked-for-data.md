@@ -14,6 +14,16 @@ Until it is applied the safety net shows the game's own dialog — list, LOAD
 and CANCEL all work (live, both sizes' evidence in `continue_and_load_1920/`
 and `main_menu_load/`); with it, the GAME menu overlay draws it in HD.
 
+**What the Load dialog can and cannot do without it** (178, measured live at
+both sizes): it CAN list the ten slots with the game's own names, load a
+slot by clicking its row (the original's behaviour — the row loads at once),
+cancel with CANCEL or ESC — every input reaches the game. It CANNOT be drawn
+in HD: the player sees the 640x480 dialog scaled into the window with the
+original's frame and font, not the popup block the GAME menu's Load uses; no
+HD hover, no HD help regions, and the slot names and stardates are only
+pixels to OrionLayer. Applying it is one condition in `SerializeSaveSlots`
+and needs a rebuild and a live run; still NOT applied (178 was told not to).
+
 ## 2. `fltbox`'s WARNING crop is the wrong rectangle for text boxes
 
 The WARNING shape (one full-screen field, hotkey ESC) is also every TEXTBOX

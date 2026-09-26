@@ -187,3 +187,30 @@ drivers used (`probe.py`, `turn177.py`) are beside them.
 | 16 | live: Select Race BACK button (1920) and ESC (2576) → New Game | works | `select_race_back/*` |
 | 17 | live: main menu Load dialog — listed (net), CANCEL (1920 and 2576), row 4 → SAVE4 loaded, stardate 3509.0 (2576) | works | `continue_and_load_1920/001_…_mm_load_*`, `main_menu_load/*` |
 | 18 | liveguard: all game files identical to `177_master` after the run | clean (scratch SAVE4 loaded, never written; SAVE10/MOX.SET restored) | `live_guard/177_master`, `177_run2`, `177_run3` |
+| 19 | live (178, after the crash): CONTINUE → home star dialog prefilled "Mentar", accept unchanged with Enter → "Mentar" kept (1920) | works | `work_order_178/home_star_1920/*` |
+| 20 | live (178): the net WITH KEYS at 2576 — GAME → NEW → Select Race → the ruler-name popup through the net (one modalnet line), Backspace + "Tester" typed from HD, Enter → the banners | works | `work_order_178/net_keys_2576/*` |
+| 21 | live (178): the net's mouse at 2576 — a banner clicked through it → the game started, home star dialog "Altair" drawn in HD | works | `work_order_178/net_mouse_2576/*` |
+| 22 | live (178): main menu Load dialog at 1920 — listed through the net, a click on row 4 loads SAVE4 at once (stardate 3509.0), as the original's row does | works (the driver's following LOAD click fell on the map as an empty-map click — no effect) | `work_order_178/main_menu_load_1920/*` |
+| 23 | liveguard (178): engines 8708 and 9885 (started by 178, closed by SIGTERM); SAVE10 + MOX.SET restored from `178_engineA`, MOX.SET from `178_engineB`; all game files identical to `177_master` | clean | `live_guard/178_engineA`, `178_engineB` |
+
+Every live step of 177's order now ran at **both** window sizes (rows 8-17
+and 19-22). No step is broken.
+
+## The crash, and who finished this order
+
+The machine stopped hard at 18:24:55, after every row up to 18 was run and
+written but before this file was committed. Work order 178 recovered it
+(protected files verified, nothing to restore), ran the four size gaps
+(rows 19-22) and did the push below — see `178-progress.md`.
+
+## Push record
+
+(Filled in by 178 at the push.)
+
+## What Data should look at first
+
+1. `work_order_177/continue_and_load_1920/001_…_home_star_dialog_hd.png`
+   beside its `_native.png` — the dialog you did not see, now drawn.
+2. `work_order_177/turn_modals_2576x1432/` — the colony-base question
+   through the net and the confirmation drawn in HD (parked 7: its size).
+3. Parked item 1 (open fix 34) and item 3 (which modal gets its HD view next).

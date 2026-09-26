@@ -136,3 +136,33 @@ The crash cannot have spoiled a recorded result: each ran to completion
 before 18:16, its pictures decode, and the final liveguard verify (repeated
 above) is clean. They are not repeated. The four **no** cells are what part 4
 runs.
+
+---
+
+## 4. 177 finished
+
+**Live, own engines, liveguard before and after** (screen not blanked at
+either start; `--blanked-ok` given, not needed):
+
+| engine | PID | guard | used for | ended | verify |
+|---|---|---|---|---|---|
+| A | 8708 (launcher 8702), started 18:37:12 | `live_guard/178_engineA` | CONTINUE (SAVE10, read only) at 1920; GAME → NEW at 2576 | SIGTERM, gone within 10 s | SAVE10 and MOX.SET changed (the new game) → restored, verified identical |
+| B | 9885 (launcher 9879) | `live_guard/178_engineB` | main menu Load → SAVE4 (scratch, read only) at 1920 | SIGTERM | MOX.SET changed → restored, verified identical |
+
+After both: `liveguard verify 177_master` → only `tree/git status`;
+SAVE4 `b36cc852…` and SAVE8 `ab70cc9a…` equal to the manifest. Slots loaded:
+SAVE10 (by CONTINUE) and SAVE4; nothing saved to any slot.
+
+The four gaps from part 3 — all **works**, rows 19-22 of 177's table:
+
+| step | size | result | evidence (`work_order_178/`) |
+|---|---|---|---|
+| home star after CONTINUE, accept unchanged with Enter → "Mentar" | 1920 | works | `home_star_1920/` |
+| safety net with keys: ruler-name popup, Backspace + "Tester", Enter | 2576 | works (one modalnet line per shape) | `net_keys_2576/` |
+| safety net with the mouse: banner click → game starts, HD home star dialog "Altair" | 2576 | works | `net_mouse_2576/` |
+| main menu Load: row 4 → SAVE4 loaded, 3509.0 | 1920 | works; a row click loads at once, the driver's extra LOAD click landed on the map with no effect | `main_menu_load_1920/` |
+
+Nothing found that needs a code change. **Open fix 34 not applied**, parked
+(178 parked 1, 177 parked 1 extended with what the dialog can and cannot do
+without it). 177's results table is complete (rows 1-23), with the crash
+noted, "look at first" written; its push record is filled at the push.
