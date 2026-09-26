@@ -290,3 +290,56 @@ local (its bundles in `~/`). No force, no history rewrite: `git push origin
 main`, a fast-forward.
 
 Conditions, checked right before pushing (below, "Push — made").
+
+## Push — made
+
+Right before pushing, at `be48b2c`: full suite **338 green**; a fresh clone
+(`git clone`, `tools/setup.py` exit 0) **338 green**; working tree clean; no
+engine running; `tools/liveguard.py verify …/176_master` — "every file
+identical to the snapshot of 2026-09-26 15:00:53"; no live step broken
+(the three Races regressions from 175 were fixed before the final runs).
+`git push origin main` — the pre-push hook ran the full suite again (338
+green) — **`cb70745..be48b2c  main -> main`**, a fast-forward, no force.
+Afterwards `git fetch` and `git ls-remote`: `main` local = remote =
+`be48b2cc2244…`; `colony-free-bands` and `rescue/ties-abend` identical on
+both sides; no tags. This record is one more commit, pushed the same way
+right after (below).
+
+## Results (final)
+
+| step | result | evidence |
+|---|---|---|
+| rule for leftover engines recorded (CLAUDE.md, fundament 09, engine_start.py) | works | 38d155d; 006e check 3 |
+| leftover engine PID 368253 closed | done by Data (the harness had refused this session) | parked item 1 |
+| fix 32 applied (orion2re 2269749c), bundle, rebuild | works | part 2; version_check OK |
+| entry 32 checked whole; row 29 and a blank line fixed | works | part 2; 090f check 5 |
+| Info History curves and Turn Summary wired | works (live) | info/record_slot5_1920x1080.json; divisors = the save's |
+| fix 31: 82 starts | works — no VSync hang | fix31/*.json |
+| fix 31: tearing | parked — not observable from the session | parked item 5 |
+| engine_start's 60 s default vs the 112.9 s intro | parked (not from 175/176) | parked item 6 |
+| Leaders live: every button both tabs, galaxy box, grid (both sizes) | works 21/21 | leaders/record_slot4_*.json |
+| Leaders live: HIRE on a scratch slot offering leaders (both sizes) | works 6/6 | leaders/record_hire_slot4_*.json |
+| Leaders: destination lines in the galaxy box | parked (inventory gap) | parked item 7 |
+| Races live: RETURN and the four actions, against native (both sizes) | works 11/11 | races/record_slot4_*.json |
+| Races: own list not recognised (mission sizes) | broken → fixed | 9fad509; 090e check |
+| Races: declare-war box crashed the screen | broken → fixed | fddc428; 090e |
+| Races: "No Treaty" upper-cased | broken → fixed | 739a908; 090e |
+| Info live: every tab, Reference, scrolling (both sizes) | works 10/10, 12/12 | info/record_*.json |
+| Info live: the demo text mod | works | info/record_slot4_2576x1432_mod.json |
+| Info: Turn Summary colony jump | engine goes to the map (port deviation) — open-fix entry 33 | info/record_slot5_1920x1080.json |
+| extractor fix live (Leaders, Fleets) | works | leaders/, fleets/ records |
+| main.py starts / leaves an engine? | no — nothing to change; held by 006e check 4 | main_py/*.json; 9e4b2df |
+| liveguard | clean (SAVE4, MOX.SET restored) | part 3 |
+| full suite / fresh clone | works (338 / 338) | above |
+| push | made, local = remote | above |
+
+## What Data should look at first
+
+1. `evidence/work_order_176/races/001_LIVE_1920x1080_open_side.png` — the
+   Races screen live beside the original, after this run's three fixes.
+2. `evidence/work_order_176/leaders/004_LIVE_1920x1080_hire_popup_side.png`
+   — hiring live, the popup beside the original.
+3. Parked item 5: the engine's own window while scrolling — does fix 31
+   tear? Only your eyes can tell.
+4. Open-fix entry 33 (the Turn Summary's colony jump) — for Joes.
+5. Parked item 6 (engine_start's timeout) and 7 (destination lines).
