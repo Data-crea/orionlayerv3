@@ -19,6 +19,7 @@ import pygame
 from core.screen_base import ScreenBase
 
 log = logging.getLogger("select_race")
+TYPE_RADIO = 1          # FIELD_TYPE_RADIO, orion2_consts.h:206
 from screens.select_race.renderer import render_race_grid, grid_cell_rect
 from screens.select_race.info_panel import (
     render_race_name, render_race_description, render_race_traits,
@@ -120,6 +121,9 @@ class SelectRaceScreen(ScreenBase):
         No timeout here: picture mode is only left via portrait
         click (game moves to 50) or ESC.
         """
+        if game_state is not None and getattr(self.app, "connected", False):
+            self._net_on = self._modal_net().check(game_state,
+                                                   self.GAME_SCREEN_ID)
         if self._pending_picture_mode:
             screen = game_state.current_screen if game_state else -1
             if screen == self.GAME_SCREEN_ID:
@@ -232,6 +236,25 @@ class SelectRaceScreen(ScreenBase):
         if rid is not None and rid != self._selected_id:
             self._selected_id = rid
             self._desc_scroll = 0
+
+    def _modal_net(self):
+        """The safety net (work order 177 C, DEVIATION `modal_fallback`,
+        `core/modalnet`). The race list and the picture list are radio
+        buttons (`Add_Radio_Button_Field_`, racesel.cpp:203, :312, :343);
+        the ruler's name (`Naming_Popup_`, :787) and the banners
+        (`Flag_Screen_`, :899 — hidden fields and an ESC) have none, and
+        both are dialogs under screen 51 — found live: a client that
+        connects during them drew the race grid over them. In the normal flow the race click hands to
+        `empire_identity` first, so the net only catches what no HD screen
+        was told about."""
+        if getattr(self, "_net", None) is None:
+            from core import modalnet
+            self._net = modalnet.Net("select race", lambda f: any(
+                x.field_type == TYPE_RADIO for x in f))
+        return self._net
+
+    def wants_original(self):
+        return bool(getattr(self, "_net_on", False))
 
     def _escape_field(self):
         """The live ESC hot-key field of `Race_Selection_Screen_`, or None
