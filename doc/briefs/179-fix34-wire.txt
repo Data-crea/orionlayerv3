@@ -1,0 +1,95 @@
+MSG_SAVE_SLOTS (0x14) at 19:56:51, 892 bytes, 1 received this run; screen 10, 15 fields
+
+raw (first 160 bytes):
+02 0a 00 00 44 61 72 6c 6f 6b 27 73 20 63 6f 6c 6f 6e 79 20 64 65 73 74 72 6f 79 65 64 00 00 00
+00 00 00 00 00 00 00 00 00 53 74 61 72 64 61 74 65 3a 20 33 35 30 38 2e 35 00 00 00 00 00 00 00
+00 00 4a 75 6c 20 33 31 2c 20 31 32 36 20 20 20 31 33 3a 35 32 00 00 00 00 00 00 00 00 32 4e 61
+74 69 76 65 73 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+00 00 53 74 61 72 64 61 74 65 3a 20 33 35 30 32 2e 35 00 00 00 00 00 00 00 00 00 53 65 70 20 20
+
+parsed:
+{
+ "screen_data": 2,
+ "slots": [
+  {
+   "status": 0,
+   "game_type": 0,
+   "description": "Darlok's colony destroyed",
+   "active_marked": false,
+   "stardate": "Stardate: 3508.5",
+   "date": "Jul 31, 126   13:52"
+  },
+  {
+   "status": 0,
+   "game_type": 0,
+   "description": "2Natives",
+   "active_marked": false,
+   "stardate": "Stardate: 3502.5",
+   "date": "Sep  5, 126   20:45"
+  },
+  {
+   "status": 0,
+   "game_type": 0,
+   "description": "3",
+   "active_marked": false,
+   "stardate": "Stardate: 3508.6",
+   "date": "Jul 31, 126   18:00"
+  },
+  {
+   "status": 0,
+   "game_type": 0,
+   "description": "new",
+   "active_marked": false,
+   "stardate": "Stardate: 3509.0",
+   "date": "Sep 15, 126   15:04"
+  },
+  {
+   "status": 0,
+   "game_type": 0,
+   "description": "new",
+   "active_marked": false,
+   "stardate": "Stardate: 3509.1",
+   "date": "Sep 15, 126   15:04"
+  },
+  {
+   "status": 0,
+   "game_type": 0,
+   "description": "ddddd_",
+   "active_marked": false,
+   "stardate": "Stardate: 3500.0",
+   "date": "Jul 30, 126   21:12"
+  },
+  {
+   "status": 0,
+   "game_type": 0,
+   "description": "Androids",
+   "active_marked": false,
+   "stardate": "Stardate: 3511.5",
+   "date": "Sep 21, 126   20:54"
+  },
+  {
+   "status": 0,
+   "game_type": 0,
+   "description": "claude nicht lschen",
+   "active_marked": false,
+   "stardate": "Stardate: 3502.4",
+   "date": "Sep  3, 126   20:17"
+  },
+  {
+   "status": 0,
+   "game_type": 0,
+   "description": "1",
+   "active_marked": false,
+   "stardate": "Stardate: 3500.0",
+   "date": "Jul 30, 126   20:39"
+  },
+  {
+   "status": 0,
+   "game_type": 0,
+   "description": "(Auto Save)",
+   "active_marked": false,
+   "stardate": "Stardate: 3500.0",
+   "date": "Sep 26, 126   19:25"
+  }
+ ]
+}

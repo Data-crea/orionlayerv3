@@ -55,7 +55,7 @@ section for what was found where.
 | 31 | A session-launched engine hangs in its first logo frames when its window is not being drawn: every present waits for VSync, and the game thread waits for the present without a timeout | **Applied** 26 September 2026 by work order 175 (orion2re `f98b8547`, `doc/ext_present_no_vsync.patch`): `ORION2RE_NO_VSYNC=1` presents without waiting; open upstream | Without it an unattended live run hangs in about one start in eight while the screen is locked or another window covers the engine's; `tools/engine_start.py` detects the hang and starts again |
 | 32 | The Info screen's history divisors and turn messages are not in the snapshot — `_bill_savegame[6]` and the player's rendered `MSG_::_msgs` | **Applied** 26 September 2026 by work order 176 (orion2re `2269749c`, `doc/ext_info_screen_state.patch`); written by work order 175 D; open upstream | Without it the HD Info screen draws the History Graph's legend but not its curves, and says the Turn Summary's messages are not sent; every other page is complete |
 | 33 | The Info screen's Turn Summary never jumps to a colony: a click on a colony message prepares the jump and `Info_Screen_` then overwrites it with SCREEN_MAIN | **Observation**, reproduced live 26 September 2026 by work order 176 on SAVE5 | Nothing for OrionLayer (HD navigates the Info pages itself and offers no jump); for the game, a feature of the original is gone |
-| 34 | The main menu's Load dialog sends no save slots — MSG_SAVE_SLOTS goes out only on SCREEN_GAME, and the main menu runs the same dialog under SCREEN_MAIN_MENU | **Not applied** — written and parked by work order 177 (`doc/ext_main_menu_save_slots.patch`, dry-run and syntax-checked against orionlayer-local `2269749c`) | Without it HD cannot name the saves in the main menu's Load dialog and shows the game's own picture of it, input passed through (the safety net) |
+| 34 | The main menu's Load dialog sends no save slots — MSG_SAVE_SLOTS goes out only on SCREEN_GAME, and the main menu runs the same dialog under SCREEN_MAIN_MENU | **Applied** 26 September 2026 by work order 179 on Data's approval (orion2re `9ab84230` on `orionlayer-local`, `doc/ext_main_menu_save_slots.patch`); required by `tools/version_check.py`; confirmed live (`doc/briefs/179-fix34-wire.txt`); open upstream | Nothing while applied; without it HD shows the main menu's Load dialog as the game's own picture (the safety net) |
 
 Items 3 and 4 are both about INJECT_CLICK and both live in the same
 code path, but they are separate faults: 3 is where the coordinates
@@ -2133,24 +2133,92 @@ Nothing: HD's Info screen navigates its pages itself and offers no jump.
 
 ## 34. The main menu's Load dialog sends no save slots
 
-**Status: NOT APPLIED** — written by work order 177, 26 September 2026,
-parked for Data (`doc/briefs/177-parked-for-data.md`). Patch:
-`doc/ext_main_menu_save_slots.patch`, one condition in
-`SerializeSaveSlots` (`src/ext/ext_api.cpp`). Shown to apply and to compile
-with the engine's own flags, with a misspelt-constant control that is
-refused. It has not run.
+**Status: APPLIED** — 26 September 2026 by work order 179, on Data's
+approval (written and parked by work order 177). orion2re **`9ab84230`** on
+`orionlayer-local` ("OrionLayer Open Fix 34: send the save slots for the
+main menu's Load dialog too (ext_api.cpp)"), the only commit of this fix;
+bundle `~/orion2re_bundle_26sep_9ab84230.bundle`. Recorded in OrionLayer by
+the commit "Open fix 34 applied: the main menu's Load dialog sends its save
+slots … (179-2)" (its hash is in `doc/briefs/179-progress.md`, part 2).
+Patch: `doc/ext_main_menu_save_slots.patch`; required by
+`tools/version_check.py` (marker `main_menu_load`) since the same commit.
+Open upstream.
 
-**What is missing.** Open fix 14 sends each slot's status, type, name and
+**What was missing.** Open fix 14 sends each slot's status, type, name and
 stardate while the GAME popup's Load or Save dialog is up, and only on
 `SCREEN_GAME`. The main menu's LOAD GAME runs the same builder
 (`Add_Game_Popup_Fields_` case 2, loadsave.cpp:223-266) through
 `MAINMENU::Mainmenu_Load_Game_Popup_` (mainmenu.cpp:187-189), which sets
-`_screen_data` 2 while the screen stays `SCREEN_MAIN_MENU` — the rows reach
-a client, their contents do not.
+`_screen_data` 2 while the screen stays `SCREEN_MAIN_MENU` — the rows reached
+a client, their contents did not.
 
-**What the patch does.** Sends the slots also when the screen is the main
-menu and `_screen_data` is 2.
+**The exact change.** `src/ext/ext_api.cpp`, function `SerializeSaveSlots`
+(starts at line 478 before and after). Before: one line, **481**,
+`if (current_screen != SCREEN_GAME) {`. After: lines **481-485** — the
+OrionLayer comment (481-482), the new condition (483-484) and the widened
+test (485). Everything else in the function, and in the file, is unchanged.
+The diff, as committed (checked byte for byte against `git diff
+9ab84230~1 9ab84230` — the text after `@@` that git adds is not part of it):
 
-**What it costs us without it.** HD shows the main menu's Load dialog as the
-game's own picture with the input passed through (work order 177's safety
-net); with it, HD draws it as it draws the GAME menu's.
+```diff
+--- a/src/ext/ext_api.cpp
++++ b/src/ext/ext_api.cpp
+@@ -478,7 +478,11 @@
+ static bool SerializeSaveSlots(std::vector<uint8_t>& buf,
+                                int16_t current_screen) {
+     buf.clear();
+-    if (current_screen != SCREEN_GAME) {
++    // OrionLayer change, Open Fix 34 (orionlayerv3 doc/orion2re_open_fixes.md):
++    // the main menu's Load dialog (_screen_data 2) sends its save slots too.
++    const bool main_menu_load = current_screen == SCREEN_MAIN_MENU
++                                && MOX::_screen_data == 2;
++    if (current_screen != SCREEN_GAME && !main_menu_load) {
+         return false;
+     }
+     const int16_t screen_data = MOX::_screen_data;
+```
+
+**Live check** (work order 179, own engine, liveguard `179_fix34` and
+`179_run2`, both verified clean): the main menu's Load dialog opened and
+MSG_SAVE_SLOTS arrived — 892 bytes, screen_data 2, the ten slots whose
+dates match the ten `SAVEn.GAM` files' own timestamps; the wire message is
+kept in `~/orionlayer-fixtures/evidence/work_order_179/fix34_main_menu_load_1920/main_menu_load_wire.txt`.
+HD drew the dialog (GAME menu overlay), CANCEL closed it, row 4 loaded SAVE4
+(stardate 3509.0). Open fix 14 unchanged: the in-game GAME menu's Load
+(screen_data 2) and Save (screen_data 3) dialogs sent the same slots
+(`fix14_game_menu_1920/game_menu_load_wire.txt`, `…_save_wire.txt`), both
+cancelled, nothing saved.
+
+**Side effects — observed and ruled out.**
+- *Can `_screen_data` be 2 on the main menu other than in the Load dialog?*
+  **Yes, in two ways, both read in the source.** (1) The dialog's ESC exit:
+  `Do_Load_Game_Popup_` resets `_screen_data` to 0 on CANCEL
+  (`btn_popup_close_id`, loadsave.cpp:382-383) but NOT on
+  `screen_cancel_field_id` (the full-screen ESC field, :388-391), so after
+  ESC the main menu is back with `_screen_data` 2. **Measured live**: the
+  menu's own 7-field list arrived with a slot message behind it
+  (`fix34_esc_side_effect/after_esc_wire.txt`). (2) `_screen_data` is a
+  global that many in-game paths set to a STAR INDEX (colsum.cpp:915-949,
+  colony.cpp:1557, msg.cpp:666, mainscr.cpp:1587, report.cpp:271/739/866 …),
+  and the game can return to the main menu from a game (nextturn.cpp:57-77,
+  score.cpp:200, multplay.cpp:298) without resetting it — so a game left
+  with star 2 selected would do the same. Not reproduced live.
+- *What it costs.* In both cases one slot message follows the main menu's
+  own field list, built from `_game_popup_fields`, which then points into
+  `_screen_seg` (mainmenu.cpp:196) or the menu's own block in
+  `_global_data_seg` (:411) — valid memory, so no crash, but the slot
+  statuses can be stale. `_save_game_dates`/`_stardates` live in
+  `_global_data_seg` and are the menu's own. OrionLayer is not affected: the
+  main menu opens its Load view only when the field list IS the Load dialog
+  (`nodes.classify` = LOAD) and slots are present; a slot message behind
+  the menu's own list opens nothing and does not reach the safety net (live,
+  and smoke check 090j #2).
+- *Ruled out:* the in-game Load/Save dialogs (unchanged, above); message
+  frequency (slots are still sent only right after a field list, never per
+  frame, ext_api.cpp:965); screens other than 8 and 10 (the condition names
+  both).
+
+**How to revert.** From `~/orion2re` on `orionlayer-local`: `git revert
+9ab84230`, then `ninja -C out/build/Linux/linux-debug`; then move the patch
+back from `LOCAL_PATCHES` to `REPORTED_PATCHES` in `tools/version_check.py`.
+HD then shows the dialog as the game's own picture again (the safety net).

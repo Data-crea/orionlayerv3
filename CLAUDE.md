@@ -61,8 +61,8 @@ derive world geometry.
 **The smoke test must be green before every commit.**
 
 ```bash
-python tools/smoke_test.py             # everything — 347 checks, ~200 s
-python tools/smoke_test.py --fast      # the commit gate's 337, ~95 s
+python tools/smoke_test.py             # everything — 349 checks, ~200 s
+python tools/smoke_test.py --fast      # the commit gate's 339, ~95 s
 python tools/smoke_test.py --screen colony_summary --fast   # NOT a gate
 ```
 
@@ -96,7 +96,7 @@ the fast tier holds that list and the guards to each other.
 time, not at commit time. See decision 31 and
 `doc/briefs/157-suite-profile.md`.
 
-347 checks, headless, no orion2re needed. **The count must not go
+349 checks, headless, no orion2re needed. **The count must not go
 down.** If a change makes a check obsolete, replace it — do not
 delete it. It went down exactly once, on 12 September 2026, when
 Phase B deleted the frame machinery the checks were about (decision
@@ -207,6 +207,7 @@ another screen's group or into the core.
 ```bash
 pip install -r requirements.txt
 python tools/setup.py          # rebuild generated artwork, then verify
+python tools/version_check.py  # the orion2re build: every fix it needs (README)
 python main.py                 # standalone works without orion2re
 ```
 
@@ -319,7 +320,8 @@ fix 31, not applied. Start live runs with `python tools/engine_start.py`
 — it refuses on a locked screen, a taken port or an engine that is not
 ours (found without connecting), recognises the hang and starts again. Since work order 177 `--blanked-ok` accepts a
 blanked screen (fix 31 is applied; the start says so) — the default still
-refuses.
+refuses. Since work order 179 the start skips the original's intro with one
+key to the engine's own window (Data: always), `--intro` to watch it.
 The evidence and what was ruled out are in `doc/fundament/09-facts-
 orion2re-and-pygame.md`. (139 E/140 A's `S` at `rt_sigsuspend` and
 exit 144 were a different observation; the METHOD they left stands:

@@ -178,6 +178,14 @@ LOCAL_PATCHES = {
         "the snapshot carries neither the history divisors nor the turn "
         "messages (open fix 32), so the Info screen's History Graph draws "
         "no curves and its Turn Summary lists nothing"),
+    # Applied 26 September 2026 (work order 179, Data's approval; orion2re
+    # 9ab84230 on orionlayer-local). The marker is the new condition's name.
+    "doc/ext_main_menu_save_slots.patch": (
+        os.path.join("src", "ext", "ext_api.cpp"),
+        "main_menu_load",
+        "the main menu's Load dialog sends no save slots (open fix 34), so "
+        "HD cannot draw it and shows the game's own picture through the "
+        "safety net"),
 }
 
 #: Patches that are REPORTED to Joes and not yet applied: listed with
@@ -186,14 +194,8 @@ LOCAL_PATCHES = {
 #: LOCAL_PATCHES, and from then on its absence fails. Same
 #: `file: (relative path, marker, what it enables)`. Empty from open
 #: fixes 20 and 21 moving up (15 September 2026) until open fix 34
-#: (work order 177).
-REPORTED_PATCHES = {
-    "doc/ext_main_menu_save_slots.patch": (
-        os.path.join("src", "ext", "ext_api.cpp"),
-        "main_menu_load",
-        "the main menu's Load dialog sends its save slots (open fix 34), "
-        "so HD can draw it instead of showing the game's picture"),
-}
+#: (work order 177), and again since 34 moved up (work order 179).
+REPORTED_PATCHES = {}
 
 
 def find_tree(argv):

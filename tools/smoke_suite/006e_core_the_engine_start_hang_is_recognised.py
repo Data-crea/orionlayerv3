@@ -11,12 +11,13 @@
 # an engine it did not start. Offline: no engine, no desktop — the
 # decisions are held, not the processes.
 #
-# The 4 check(s) it holds:
+# The 5 check(s) it holds:
 #   - engine start: the hang's signature, the refusals, the environment, no connect
 #   - live guard: every file a run can write backed up, every change named and restored (175)
 #   - a leftover engine or client is closed only after the backup: SIGTERM,
 #     SIGKILL only if needed, each recorded; the rule stands in CLAUDE.md,
 #     fundament part 09 and the tool (work order 176)
+#   - the intro skipped by default with one key to the engine's window (179)
 #   - OrionLayer itself starts no engine and stops none (176, measured live)
 
 
@@ -194,7 +195,12 @@ finally:
             p.kill()
     for _d in (_cf_game, _cf_root, os.path.dirname(_cf_dest)):
         shutil.rmtree(_d, ignore_errors=True)
-_cf_src = open(_es.__file__, encoding="utf-8").read()
+# Since work order 179 the closing lives in tools/engine_close.py (split
+# out of engine_start.py at the 300-line guideline); engine_start still
+# offers it, and the order is asserted where the code is.
+import engine_close as _cf_ec
+assert _es.close_foreign is _cf_ec.close_foreign
+_cf_src = open(_cf_ec.__file__, encoding="utf-8").read()
 assert _cf_src.index("liveguard.snapshot(guard, game_dir, root)") < \
     _cf_src.index("os.kill(pid, signal.SIGTERM)")
 for _cf_doc in ("CLAUDE.md", os.path.join("doc", "fundament",
@@ -208,6 +214,39 @@ ok("a leftover engine or client is closed only after the backup — SIGTERM, "
    "SIGKILL only if it stays, each recorded — and never connected to; the "
    "rule (while Data does not play) stands in CLAUDE.md, fundament 09 and "
    "tools/engine_start.py")
+
+# ── 3b. WORK ORDER 179: THE INTRO IS SKIPPED, BY THE ORIGINAL'S OWN KEY ──
+# Data: "always skip the intro — one key is enough". Default ON, `--intro`
+# to watch it; the key goes to the engine's own window, stops once the log
+# says the logos are drawn, and is a key the main menu has no use for.
+import intro_skip as _is
+_is_real = _is.skip_intro
+_is_sent, _is_said = [], []
+try:
+    _is.skip_intro = lambda pid, env: _is_sent.append(pid) or True
+    _is_n = 0
+    for _ in range(3):
+        _is_n = _is.step(42, _es.HANG_LINE, {}, _is_n, _is_said.append)
+    assert _is_n == 3 and _is_sent == [42, 42, 42], (_is_n, _is_sent)
+    assert len(_is_said) == 1 and "INTRO SKIPPED" in _is_said[0], _is_said
+    assert _is.step(42, _es.HANG_LINE + "\n" + _is.LOGOS_DONE, {}, 3,
+                    _is_said.append) == 3, "a key after the logos were drawn"
+    assert _is.step(42, _es.HANG_LINE, {}, 20, _is_said.append) == 20
+    _is.skip_intro = lambda pid, env: False
+    assert _is.step(42, _es.HANG_LINE, {}, 0, _is_said.append) == 0, \
+        "no window yet counts as a skip"
+finally:
+    _is.skip_intro = _is_real
+assert _is.SKIP_KEY == "space"  # no main-menu hotkey (mainmenu.cpp:126-138)
+assert '"--window"' in open(_is.__file__, encoding="utf-8").read(), \
+    "the key must go to the engine's own window, not to the focus"
+_is_es = open(_es.__file__, encoding="utf-8").read()
+assert "intro=False" in _is_es and '"--intro"' in _is_es, \
+    "skipping must be the default, --intro the exception"
+ok("engine start: the original's intro is skipped by default with one key "
+   "(space) sent to the engine's own window until the logos are drawn; "
+   "--intro lets it play")
+
 
 # ── 4. OrionLayer never starts an engine, and never stops one ─────────
 # Asked on 26 September 2026 (work order 176, Data): does `python main.py`

@@ -67,6 +67,38 @@ reports which of the two is missing, in the language you have set.
 
 Requires Python 3.10+ (verified on 3.12 and 3.14).
 
+## The orion2re build it needs
+
+<!-- orion2re-patches -->
+OrionLayer talks to an orion2re built from the branch **`orionlayer-local`**
+(`-DORION2RE_EXT=ON`), which is upstream plus the Extension API and the
+fixes below, in this order. The branch is never uploaded anywhere; on a new
+machine it comes from the bundle beside the backup
+(`~/orion2re_bundle_<date>_<hash>.bundle`, the newest one:
+`git clone -b orionlayer-local <bundle> ~/orion2re`), and each fix also has
+its patch file here. `python tools/version_check.py` checks a built tree
+against this list and prints the `patch -p1` command for any fix that is
+missing. The list's one home is `LOCAL_PATCHES` in `tools/version_check.py`;
+a smoke check holds this table to it.
+
+| # | orion2re commit | fix | patch |
+|---|---|---|---|
+| 1 | `a111355d` | the Extension API itself (`src/ext` and its hooks), with the `src/ext` parts of open fixes 1, 2, 3, 12, 14, 20, 21 | `doc/ext_save_slots.patch`, `doc/ext_fleet_selection.patch`, `doc/ext_fleet_select_ship.patch` |
+| 2 | `191aaa78` | open fix 3: an injected click keeps its pointer | `doc/ext_inject_click.patch` |
+| 3 | `6598052c` | open fix 5: Select Race records `_old_race` | — (one line, in the entry) |
+| 4 | `e099d3fc`, `3305d78c` | screen ids for Select Race and Custom Race; open fix 22 | `doc/ext_screen_id.patch` |
+| 5 | `7067c366` | open fix 12: the pop-move command, its engine half | `doc/ext_move_pop.patch` |
+| 6 | `f838c754` | open fix 24: the research dialogs' own ids | `doc/ext_research_screens.patch` |
+| 7 | `e9d07528` | open fix 25: the activated research row is the one chosen | `doc/ext_tech_activate.patch` |
+| 8 | `cc5ec133`, `e6199966` | open fixes 27, 28: the fleet screen's state, one ship | `doc/ext_fleet_screen_state.patch`, `doc/ext_fleet_screen_select.patch` |
+| 9 | `f98b8547` | open fix 31: present without VSync on request | `doc/ext_present_no_vsync.patch` |
+| 10 | `cc542e02` | open fix 30: the Leaders screen's state | `doc/ext_officer_screen_state.patch` |
+| 11 | `2269749c` | open fix 32: the Info screen's history and turn messages | `doc/ext_info_screen_state.patch` |
+| 12 | `9ab84230` | **open fix 34: the main menu's Load dialog sends its save slots** (work order 179) | `doc/ext_main_menu_save_slots.patch` |
+
+Every entry, with its status, reason and revert, is in
+`doc/orion2re_open_fixes.md`.
+
 ## Quick start
 
 **Terminal 1 — the game** (built with `-DORION2RE_EXT=ON`):

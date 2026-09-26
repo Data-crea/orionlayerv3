@@ -63,6 +63,9 @@ import subprocess
 import sys
 import time
 
+import intro_skip  # work order 179: one key skips the intro
+from engine_close import _cmdline, close_foreign, foreign_clients  # noqa: F401 (176)
+
 ENGINE = os.path.expanduser("~/orion2re/out/build/Linux/linux-debug/orion2re")
 GAME_DIR = os.path.expanduser("~/Master of Orion 2")
 PORT = 17362
@@ -249,15 +252,14 @@ def is_hang(last_line, samples):
 START_DEADLINE = 150
 INTRO_SECONDS = 112.9
 
-
 def start(log_path, timeout=START_DEADLINE, inhibit=True, out=print, retries=3,
-          engine=None, guard=None, blanked_ok=False):
+          engine=None, guard=None, blanked_ok=False, intro=False):
     """Start, and start again after a recognised hang. `guard` is the
     folder the pre-run backup goes to (taken once, before the first
     attempt)."""
     for attempt in range(1, retries + 1):
         pid = _start_once(log_path, timeout, inhibit, out, engine,
-                          guard if attempt == 1 else None, blanked_ok)
+                          guard if attempt == 1 else None, blanked_ok, intro)
         if pid != "hang":
             return pid
         out(f"start hang recognised (attempt {attempt} of {retries})")
@@ -265,7 +267,7 @@ def start(log_path, timeout=START_DEADLINE, inhibit=True, out=print, retries=3,
 
 
 def _start_once(log_path, timeout, inhibit, out, engine=None, guard=None,
-                blanked_ok=False):
+                blanked_ok=False, intro=False):
     engines, free, screen = running_engines(), port_free(), screen_state()
     ok, reasons = verdict(engines, free, screen, blanked_ok)
     out(f"screen: blanked={screen['blanked']} idle={screen['idle_ms']} ms")
@@ -292,10 +294,13 @@ def _start_once(log_path, timeout, inhibit, out, engine=None, guard=None,
                             stderr=subprocess.STDOUT, start_new_session=True)
     deadline = time.time() + timeout
     intro_named = False
+    skips = 0
     pid = _engine_pid(proc.pid, deadline)
     while time.time() < deadline:
         with open(log_path, encoding="utf-8", errors="replace") as f:
             text = f.read()
+        if not intro and pid and HANG_LINE in text:
+            skips = intro_skip.step(pid, text, display_env(), skips, out)
         if READY in text:
             out(f"READY: orion2re PID {pid} (launcher {proc.pid}), log {log_path}")
             return pid
@@ -304,7 +309,8 @@ def _start_once(log_path, timeout, inhibit, out, engine=None, guard=None,
             return None
         if pid and time.time() - (deadline - timeout) > 10:
             last = (text.strip().splitlines() or [""])[-1]
-            if last == HANG_LINE:
+            if last == HANG_LINE and (intro or skips == 0 or
+                                      time.time() - (deadline - timeout) > 20):
                 samples = []
                 for _ in range(6):
                     samples.append(thread_waits(pid))
@@ -328,70 +334,6 @@ def _start_once(log_path, timeout, inhibit, out, engine=None, guard=None,
     return None
 
 
-def foreign_clients(root=None):
-    """[(pid, command line, started)] of OrionLayer clients (`python
-    main.py` run in this tree) — found by their working directory."""
-    root = root or os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-    out = subprocess.run(["ps", "-eo", "pid=,lstart=,args="],
-                         capture_output=True, text=True).stdout
-    rows = []
-    for line in out.splitlines():
-        parts = line.split(None, 6)
-        if len(parts) < 7 or "main.py" not in parts[6] or \
-                int(parts[0]) == os.getpid():
-            continue
-        try:
-            cwd = os.readlink(f"/proc/{parts[0]}/cwd")
-        except OSError:
-            continue
-        if os.path.realpath(cwd) == os.path.realpath(root):
-            rows.append((int(parts[0]), parts[6], " ".join(parts[1:6])))
-    return rows
-
-
-def _alive(pid):
-    try:
-        with open(f"/proc/{pid}/stat") as fh:
-            return fh.read().split()[2] != "Z"
-    except OSError:
-        return False
-
-
-def close_foreign(targets, guard, out=print, wait=5.0, game_dir=None,
-                  root=None):
-    """Work order 176: back up (liveguard), then SIGTERM, wait, SIGKILL only
-    if still there. `targets` [(pid, command line, started)]. Returns
-    [(pid, command line, started, how it ended)]. Never connects."""
-    import liveguard
-    if targets:
-        man = liveguard.snapshot(guard, game_dir, root)
-        out(f"backup before closing: {guard} "
-            f"({sum(1 for f in man['files'].values() if f)} files)")
-    record = []
-    for pid, cmdline, started in targets:
-        os.kill(pid, signal.SIGTERM)
-        deadline = time.time() + wait
-        while time.time() < deadline and _alive(pid):
-            time.sleep(0.2)
-        how = "ended on SIGTERM"
-        if _alive(pid):
-            os.kill(pid, signal.SIGKILL)
-            time.sleep(0.5)
-            how = "SIGKILL after SIGTERM" + ("" if not _alive(pid)
-                                             else " — STILL THERE")
-        record.append((pid, cmdline, started, how))
-        out(f"closed PID {pid} ({cmdline}, started {started}): {how}")
-    return record
-
-
-def _cmdline(pid):
-    try:
-        with open(f"/proc/{pid}/cmdline", "rb") as fh:
-            return fh.read().replace(b"\0", b" ").decode().strip()
-    except OSError:
-        return "?"
-
-
 def main():
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     ap.add_argument("--check", action="store_true", help="checks only")
@@ -410,6 +352,10 @@ def main():
     ap.add_argument("--blanked-ok", action="store_true",
                     help="start on a blanked or locked screen (open fix 31 "
                          "applied; work order 177) — said in the output")
+    ap.add_argument("--intro", action="store_true",
+                    help="let the original's logos and intro play (by "
+                         "default one key skips them, as in the original; "
+                         "work order 179)")
     ap.add_argument("--close-foreign", action="store_true",
                     help="close engines and clients this tool did not start "
                          "(work order 176: backup first, SIGTERM, SIGKILL "
@@ -436,7 +382,8 @@ def main():
         time.strftime("%Y%m%d_%H%M%S")))
     return 0 if start(args.log, args.timeout, not args.no_inhibit,
                       retries=args.retries, engine=args.engine,
-                      guard=guard, blanked_ok=args.blanked_ok) else 1
+                      guard=guard, blanked_ok=args.blanked_ok,
+                      intro=args.intro) else 1
 
 
 if __name__ == "__main__":
