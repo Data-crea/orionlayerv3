@@ -262,6 +262,12 @@ _MARKED = {
     "screens/leaders/ldrdialog.py": "hd_skill_help",
     "screens/leaders/ldrinput.py": "hd_skill_help",
 
+    # ADDED 26 September 2026, work order 175 C: the Races screen. Its
+    # own check is the races group (tools/smoke_suite/090e): every
+    # layout.json mark named in the module that performs it.
+    "screens/races/layout.json": "deviation_hud_parts",
+    "screens/races/racesdraw.py": "hud_parts",
+
 }
 _MARKS = ("HD EXTENSION", "DEVIATION")
 _SELF = SUITE_FILES

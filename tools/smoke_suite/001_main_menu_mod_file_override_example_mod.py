@@ -59,7 +59,7 @@ d = app.dispatcher
 assert d.screen_map.get(10) == "main_menu", d.screen_map
 assert d.screen_map.get(13) == "new_game"
 assert d.screen_map.get(51) == "select_race"
-# 6 is the Races screen, which has no HD version: it falls back
-# (decision 22) instead of routing to race selection (open fix 22).
-assert d.screen_map.get(6) is None, d.screen_map.get(6)
+# 6 is the Races screen — its own HD screen since work order 175 C, and
+# never race selection (open fix 22: that reports the synthetic 51).
+assert d.screen_map.get(6) == "races", d.screen_map.get(6)
 ok(f"discovery + game-ID map ({len(d.screens)} screens)")

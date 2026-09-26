@@ -1,0 +1,70 @@
+{
+  "_comment": "Right-click context help for the Races screen, transcribed from BILLHELP::_races_help_list (billhelp.cpp:74-83, s_help_box {help_id, x1, y1, x2, y2}), installed by Races_Help_ (billhelp.cpp:118-120, called at racescrn.cpp:731). First hit wins, so the two screen halves (258) stay last, where the original keeps them. `native` is the original's 640x480 rectangle; the screen resolves it through core/researchnative, the conversion the drawing uses.",
+  "_source": "orion2re orionlayer-local, billhelp.cpp:74-83",
+  "hd_extension": "The help popup auto-sizes to its text and scrolls when it cannot fit. The original draws a fixed box and lets FMTPARA wrap into it at a fixed 339 px (TEXTBOX::Draw_Help_Entry_, textbox.cpp:307); at four HD resolutions a fixed box either wastes half the screen on two lines or clips a long entry. Marked once per file, here, and in core/helppopup.py.",
+  "regions": [
+    {
+      "help_id": 259,
+      "native": [
+        320,
+        360,
+        639,
+        422
+      ]
+    },
+    {
+      "help_id": 260,
+      "native": [
+        429,
+        444,
+        515,
+        460
+      ]
+    },
+    {
+      "help_id": 261,
+      "native": [
+        429,
+        423,
+        515,
+        439
+      ]
+    },
+    {
+      "help_id": 262,
+      "native": [
+        334,
+        423,
+        421,
+        439
+      ]
+    },
+    {
+      "help_id": 572,
+      "native": [
+        334,
+        444,
+        421,
+        460
+      ]
+    },
+    {
+      "help_id": 258,
+      "native": [
+        0,
+        0,
+        319,
+        479
+      ]
+    },
+    {
+      "help_id": 258,
+      "native": [
+        320,
+        0,
+        639,
+        479
+      ]
+    }
+  ]
+}

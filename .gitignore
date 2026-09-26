@@ -160,6 +160,9 @@ screens/fleets/assets/gamedata/
 # MAINPUPS.LBX and FONTS.LBX (tools/officer_art_extract.py, work order
 # 167) — the original's pixels, so the Fleets rule and the same reason.
 screens/leaders/assets/gamedata/
+# The Races screen's portraits, overlay and spy icons out of the player's
+# RACES.LBX (tools/races_art_extract.py, work order 175) — the same rule.
+screens/races/assets/gamedata/
 
 # --- Frame builds (decision 40) ---
 # `tools/fleets_frame_build.py` writes here by default. The BUILD is

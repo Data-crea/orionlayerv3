@@ -104,6 +104,7 @@ SPEC = Spec("s_player", SIZE, [
     ("race",                   37, "u8"),
     ("color",                  38, "u8"),
     ("personality",            39, "u8"),
+    ("objectives",             40, "u8"),
     ("home_planet_id",         41, "i16"),
     ("research_breakthrough",  48, "i8"),
     ("tax_rate",               49, "u8"),
@@ -181,9 +182,26 @@ SPEC = Spec("s_player", SIZE, [
     # the game's own FIELD_LIST on every entry — and the screen still
     # hands over to the fallback when they disagree.
     ("tech_applications",     379, "u8[212]"),
+    # THE RACES SCREEN'S FIELDS, work order 175 C. Header route (the
+    # compiler asserts every offset, `tools/struct_header_check.py`) and,
+    # as the second source, the game's own invariants over every save on
+    # this disk (`tools/races_check.py`): a treaty is the same seen from
+    # both sides, relations stay in -100..100, a treaty is 0..6 (the six
+    # `_treaty_labels`, estrings.cpp:91-97, and 6 total war, which the
+    # screen clamps to label 5, racescrn.cpp:151-155), spies count in
+    # bits 0-5 — 14 of 14 saves on this disk, 26 September 2026.
+    ("current_trade_agreement_level", 1545, "i16[8]"),
+    ("current_research_agreement_level", 1579, "i16[8]"),
     ("total_research",       1613, "i16"),
     ("total_ships",          1615, "i16"),
     ("total_colonies",       1649, "i16"),
+    ("relations",            1660, "i8[8]"),
+    ("treaty",               1676, "i8[8]"),
+    ("trade_treaty",         1684, "i8[8]"),
+    ("research_treaty",      1692, "i8[8]"),
+    ("tribute_treaty",       1700, "i16[8]"),
+    ("spies",                3772, "u8[8]"),
+    ("ignoring",             3781, "u8"),
 ], verified=True)
 
 CONTACT_OFFSET = 1512      # sbyte contact[MAX_PLAYERS]

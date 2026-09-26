@@ -2458,7 +2458,7 @@ files under `doc/` and are only summarised here.
 | | |
 |---|---|
 | Python | 32,960 lines across 111 modules — `find . -name '*.py'`, `__pycache__` excluded, the smoke test's 6,400 included. The previous figure here (21,642 across 94) was carried from an unstated method and could not be reproduced |
-| Smoke test | `python tools/smoke_test.py` — **326 checks**, headless, in `tools/smoke_suite/` since work order 162 (118 check modules, one group per screen plus a shared core; `tools/smoke_test.py` is the runner). **Two tiers since work order 158**: the bare command runs everything (~200 s here, measured 26 September 2026 — the 72 s this line said was before the rendering checks of 172-174); `--fast` runs the commit gate's 316 (~95 s here). `--screen <name>` prints only that screen's sentences and the core's and is NEVER a gate. See "The gate has two tiers" below |
+| Smoke test | `python tools/smoke_test.py` — **330 checks**, headless, in `tools/smoke_suite/` since work order 162 (119 check modules, one group per screen plus a shared core; `tools/smoke_test.py` is the runner). **Two tiers since work order 158**: the bare command runs everything (~200 s here, measured 26 September 2026 — the 72 s this line said was before the rendering checks of 172-174); `--fast` runs the commit gate's 320 (~95 s here). `--screen <name>` prints only that screen's sentences and the core's and is NEVER a gate. See "The gate has two tiers" below |
 | Assets | 170 MB (select_race 68, galaxy_map 51, shared 23, new_game 21, colony_summary 1) |
 | Screens in HD | 11 of ~20–22 (the Leaders screen, work order 167, built and not accepted; the GAME menu overlay, work order Stop 2, every dialog of the popup; colony summary draws list, sidebar, scan box and galaxy inset, and MOVES POPS — the first HD gesture that drives the game; planets, brief 101, lists, sorts, restricts and returns) |
 | Setup from clone | `python tools/setup.py` (deps via the system package manager) |
@@ -2984,8 +2984,8 @@ blocks into a session and writing them out again. Three proofs:
 
 | | command | checks | on this tree |
 |---|---|---:|---:|
-| **Full** — the default, and the pre-push gate | `python tools/smoke_test.py` | 326 | ~200 s |
-| **Fast** — the pre-commit gate | `python tools/smoke_test.py --fast` | 316 | ~95 s |
+| **Full** — the default, and the pre-push gate | `python tools/smoke_test.py` | 330 | ~200 s |
+| **Fast** — the pre-commit gate | `python tools/smoke_test.py --fast` | 320 | ~95 s |
 | **Screen** — **never a gate** | `python tools/smoke_test.py --screen <name>` | all of them, ~a third printed | the tier's |
 
 **`--screen` narrows what a run PRINTS, not what it runs**, and the
@@ -3639,6 +3639,41 @@ built, the extractor keeps its spaces.)
 `screens/leaders/assets/gamedata/`) and `tools/skildesc_extract.py`
 (SKILDESC.LBX -> `assets/shared/names/skildesc_<lang>.json`), both
 registered in `tools/setup.py:from_game()`, a stand-in for the second.
+
+### Races — BUILT, NOT ACCEPTED — work order 175 C, 26 September 2026
+
+`screens/races/`, orion2re `SCREEN_RACE` (6), `RACESCRN::Race_Screen_`
+(racescrn.cpp:677-1093). HD STATE: **BUILT, NOT ACCEPTED** — the live
+part is parked (`doc/briefs/175-parked-for-data.md`). The inventory is
+`doc/briefs/175-progress.md` part C, on top of `doc/races_screen_reading.md`.
+
+**What it draws**, in the HUD style (glass panels, HUD blocks for the
+bars, sliders and buttons): up to seven other races — the original's
+portrait (RACES.LBX 32 + race, `tools/races_art_extract.py`) in its
+banner-colour frame, the ELIMINATED overlay, the name, the treaty
+paragraph (ESTRINGS treaty labels, BILLTEXT research / trade / tribute
+lines), NO CONTACT, (IGNORED), the relation slider and, on hover, its word,
+the spies and the mission row (display only); the agents' pool; SPY / AGENT
+bonus (`spy::Compute_Spy_Bonuses_`); RETURN, AUDIENCE, REPORT, DECLARE WAR,
+IGNORE.
+
+**The data**: the Races fields of `s_player` (relations, treaty and the
+treaty flags and levels, tribute, spies, ignoring, objectives) are new in
+`core/structs/player.py` — the header route asserts every offset and
+`tools/races_check.py` holds the game's invariants over 14 saves.
+
+**What it sends** (`raceswire.View.sendable`): RETURN / ESC and the four
+actions in the main mode; in WHO mode (read off the list: 8 + 5n against
+7 + n fields) a race's field or the catcher. The race report and diplomacy
+report the same id with neither list and are shown by the fallback. The
+missions and the spy drag are not sent (their effect reaches the wire only
+on commit) — parked.
+
+**Markings** (`screens/races/layout.json`, held by `tools/smoke_suite/090e`):
+OMISSION `outer_frame`, DEVIATION `hud_parts`, DEVIATION `button_words`,
+DEVIATION `hd_font`, HD EXTENSION `sprite_scale`, HD EXTENSION `who_lit`,
+HD STATE `missions_and_spies`, HD STATE `armed_action`, OMISSION
+`anomaly_leaders`, TRANSCRIPTION `hover`.
 
 ### The galaxy map loads its sprites once, not once per entry — work order 161, 21 September 2026
 

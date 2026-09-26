@@ -53,6 +53,7 @@ from core.billtext import message_file as billtext_file  # noqa: E402
 from core.kentext import string_file as kentext_file  # noqa: E402
 from screens.fleets.fltart import GAMEDATA as _fltart_gamedata  # noqa: E402
 from screens.leaders.ldrart import GAMEDATA as _ldrart_gamedata  # noqa: E402
+from screens.races.racesart import GAMEDATA as _racesart_gamedata  # noqa: E402
 from core.skildesc import string_file as skildesc_file  # noqa: E402
 from screens.colony_summary.colonyfigures import (  # noqa: E402
     FIGURE_DIR, all_names)
@@ -86,6 +87,7 @@ CS = os.path.join(ROOT, "screens", "colony_summary", "assets")
 #: loader looks and therefore the only place that may decide it.
 FLEET_GAMEDATA = _fltart_gamedata
 LEADER_GAMEDATA = _ldrart_gamedata
+RACES_GAMEDATA = _racesart_gamedata
 
 #: (tool, arguments, a path that must exist afterwards, what it is)
 STEPS = [
@@ -278,6 +280,12 @@ def from_game(settings=None):
          "Leaders screen artwork — without it a row shows no portrait "
          "and no skill icons, and the buttons are drawn as words",
          "python tools/officer_art_extract.py"),
+        # THE RACES SCREEN (work order 175 C): the race portraits, the
+        # eliminated overlay and the spy icons out of RACES.LBX.
+        (os.path.join(RACES_GAMEDATA, "manifest.json"),
+         "Races screen artwork — without it a race's panel shows a plate "
+         "instead of its portrait and its spies as a number",
+         "python tools/races_art_extract.py"),
         (os.path.join(ROOT, *skildesc_file(lang).split("/")),
          f"officer skill help texts ({lang}) — without them a right "
          f"click on a leader's skill opens a box that says the text is "
