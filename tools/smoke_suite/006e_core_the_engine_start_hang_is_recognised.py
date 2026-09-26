@@ -52,6 +52,13 @@ assert "287200" in _es_why[0] and "never connected to" in _es_why[0] \
     and "--close-foreign" in _es_why[0], _es_why[0]
 assert "blanked or locked" in _es_why[2]
 assert _es.verdict([], True, {"blanked": None})[0]
+# --blanked-ok (work order 177) lifts only the screen's refusal, never
+# the foreign engine's or the port's; and the default still refuses.
+assert _es.verdict([], True, {"blanked": True}, blanked_ok=True)[0]
+assert not _es.verdict([], True, {"blanked": True})[0]
+_es_ok, _es_why = _es.verdict([(287200, 35660, "x")], False,
+                              {"blanked": True}, blanked_ok=True)
+assert not _es_ok and len(_es_why) == 2, _es_why
 
 # The environment: CLAUDE.md's three variables and open fix 31's switch.
 _es_env = _es.display_env({})

@@ -154,9 +154,13 @@ def port_free(port=PORT):
         s.close()
 
 
-def verdict(engines, free, screen):
+def verdict(engines, free, screen, blanked_ok=False):
     """(ok, [reasons]) — the decision, separate from asking, so the smoke
-    suite can hold it without a desktop."""
+    suite can hold it without a desktop. `blanked_ok` (work order 177,
+    `--blanked-ok`): with open fix 31 applied (175) the engine presents
+    without VSync, and a hang that still came would be recognised and
+    started again below — so a blanked screen may be accepted, on
+    request, and the start says so."""
     reasons = []
     for pid, ppid, started in engines:
         reasons.append(f"orion2re PID {pid} (parent {ppid}, started {started}) "
@@ -165,7 +169,7 @@ def verdict(engines, free, screen):
                        f"order 176, while Data does not play)")
     if not free:
         reasons.append(f"port {PORT} is taken")
-    if screen.get("blanked") is True:
+    if screen.get("blanked") is True and not blanked_ok:
         reasons.append("the screen is blanked or locked: orion2re would wait "
                        "in its first logo frame (a VSync present the "
                        "compositor never completes) — wake and unlock the "
@@ -247,23 +251,27 @@ INTRO_SECONDS = 112.9
 
 
 def start(log_path, timeout=START_DEADLINE, inhibit=True, out=print, retries=3,
-          engine=None, guard=None):
+          engine=None, guard=None, blanked_ok=False):
     """Start, and start again after a recognised hang. `guard` is the
     folder the pre-run backup goes to (taken once, before the first
     attempt)."""
     for attempt in range(1, retries + 1):
         pid = _start_once(log_path, timeout, inhibit, out, engine,
-                          guard if attempt == 1 else None)
+                          guard if attempt == 1 else None, blanked_ok)
         if pid != "hang":
             return pid
         out(f"start hang recognised (attempt {attempt} of {retries})")
     return None
 
 
-def _start_once(log_path, timeout, inhibit, out, engine=None, guard=None):
+def _start_once(log_path, timeout, inhibit, out, engine=None, guard=None,
+                blanked_ok=False):
     engines, free, screen = running_engines(), port_free(), screen_state()
-    ok, reasons = verdict(engines, free, screen)
+    ok, reasons = verdict(engines, free, screen, blanked_ok)
     out(f"screen: blanked={screen['blanked']} idle={screen['idle_ms']} ms")
+    if blanked_ok and screen.get("blanked") is True:
+        out("BLANKED SCREEN ACCEPTED (--blanked-ok): open fix 31 presents "
+            "without VSync; a hang would be recognised and retried")
     if not ok:
         for r in reasons:
             out("REFUSED: " + r)
@@ -399,6 +407,9 @@ def main():
                     help="no backup — only for a start that loads nothing")
     ap.add_argument("--engine", default=None,
                     help="another orion2re binary (a build with open fix 31)")
+    ap.add_argument("--blanked-ok", action="store_true",
+                    help="start on a blanked or locked screen (open fix 31 "
+                         "applied; work order 177) — said in the output")
     ap.add_argument("--close-foreign", action="store_true",
                     help="close engines and clients this tool did not start "
                          "(work order 176: backup first, SIGTERM, SIGKILL "
@@ -425,7 +436,7 @@ def main():
         time.strftime("%Y%m%d_%H%M%S")))
     return 0 if start(args.log, args.timeout, not args.no_inhibit,
                       retries=args.retries, engine=args.engine,
-                      guard=guard) else 1
+                      guard=guard, blanked_ok=args.blanked_ok) else 1
 
 
 if __name__ == "__main__":
