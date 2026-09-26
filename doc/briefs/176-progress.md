@@ -258,3 +258,35 @@ only, each step EXPECTED / OBSERVED with native and HD from one snapshot).
 Note on the three fix commits: the pre-commit hook runs the fast suite on the
 working tree, which held all three fixes; each intermediate commit's own
 tree was not run separately.
+
+## Push — what goes out (listed before pushing)
+
+Remote `origin` = `git@github.com:Data-crea/orionlayerv3.git`. `main` is 17
+commits ahead of `origin/main` (fetched 26 September 2026), plus this commit
+(the list itself) — 18:
+
+    e2c808d Work order 176 part 3: every live step of 175 run; open-fix entry 33 (176-3)
+    9e4b2df OrionLayer starts no engine and stops none — measured, and held by a check (176)
+    739a908 Races: "No Treaty" keeps its case, as the original prints it — a 175 regression (176-3)
+    fddc428 Races: the declare-war box no longer crashes the screen — a 175 regression (176-3)
+    9fad509 Races: each slot's own mission-button sizes — a 175 regression (176-3)
+    84455bd Work order 176: live tests and the push parked on the refused close (176-3)
+    fe9b348 Open fix 32 applied and wired: History curves, Turn Summary (176-2)
+    38d155d Work order 176 filed; the rule for engines this session did not start (176-1)
+    54a5c3f Work order 175: tests, results and what to look at first; CLAUDE.md fix
+    7a2526f Work order 175 D: the Info screen, its texts moddable (decision 73)
+    6b55071 Work order 175 C: the Races screen
+    51b2517 Work order 175 B: the Leaders screen complete, with open fix 30
+    8b03592 The string extractor keeps its spaces; the Leaders workaround goes (175)
+    9cfa50e Open fix 30 applied: the Leaders screen's view state on the wire (175 A)
+    64bb4ec Open fix 31 applied: present without VSync on request (175 A)
+    8842bca The live-test protocol backs up every file a run can write (175)
+    266f6f5 174 recorded as pushed; work order 175 filed (175)
+    (this commit) Work order 176: the push list
+
+The other local branches, `colony-free-bands` and `rescue/ties-abend`, are
+identical to their remote counterparts; there are no tags. orion2re stays
+local (its bundles in `~/`). No force, no history rewrite: `git push origin
+main`, a fast-forward.
+
+Conditions, checked right before pushing (below, "Push — made").
