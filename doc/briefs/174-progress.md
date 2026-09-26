@@ -434,3 +434,12 @@ view; C7 hiring a leader.
    `tints/` and `slider/`.
 4. **Open fix 31** (A1): the patch, and whether to apply it — it is what
    made the live test possible behind your game.
+
+## Push — DONE, 26 September 2026 (recorded by work order 175)
+
+Data asked for it after 174 closed. Gates: working tree clean, a fresh
+clone with `python tools/setup.py` 320 green, the pre-push hook's full
+suite 320 green. `git push origin main`: **`214cafb..cb70745`** (174's
+three commits: A `2e3203e`, B `8742339`, C `cb70745`). Remote after it
+identical to the local refs: `main` at `cb70745`, `colony-free-bands`
+and `rescue/ties-abend` unchanged.
