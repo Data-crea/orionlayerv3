@@ -155,6 +155,15 @@ LOCAL_PATCHES = {
         "which refuses without the fleet box and writes an array this "
         "screen does not read (open fix 28) — so a single ship cannot "
         "be selected and only ALL changes the selection"),
+    # Applied 26 September 2026 by work order 175 on Data's authorisation
+    # (orion2re orionlayer-local f98b8547).
+    "doc/ext_present_no_vsync.patch": (
+        os.path.join("src", "game", "platform.cpp"),
+        "Present_VSync_Interval_",
+        "ORION2RE_NO_VSYNC=1 is ignored, so a session-launched engine "
+        "hangs in its first logo frames whenever its window is not drawn "
+        "(open fix 31) and runs at a frame a second behind a full-screen "
+        "window"),
 }
 
 #: Patches that are REPORTED to Joes and not yet applied: listed with

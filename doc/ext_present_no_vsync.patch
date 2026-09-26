@@ -1,8 +1,9 @@
 Present without VSync on request: ORION2RE_NO_VSYNC=1 ("the start hang").
 
-STATUS: NOT APPLIED. Written by work order 174 part A, 26 September 2026
-(doc/briefs/174-progress.md), open fix 31. orion2re's tree was not
-touched. What was shown: the patch applies to src/game/platform.cpp at
+STATUS: APPLIED 26 September 2026 by work order 175 on Data's
+authorisation — orion2re orionlayer-local f98b8547, rebuilt, bundle
+~/orion2re_bundle_26sep_cc542e02.bundle. Written by work order 174 part
+A (doc/briefs/174-progress.md), open fix 31. Before the apply: What was shown: the patch applies to src/game/platform.cpp at
 orion2re e6199966 (`patch -p1 --dry-run` in the tree); a scratch copy of
 e6199966 (`git archive` plus the vendors folder) built with it under the
 linux-debug settings (Ninja, Debug, ORION2RE_EXT=ON) and RAN: with

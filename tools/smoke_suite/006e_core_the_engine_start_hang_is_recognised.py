@@ -62,13 +62,22 @@ _es_src = open(_es.__file__, encoding="utf-8").read()
 assert ".connect(" not in _es_src and "create_connection" not in _es_src
 assert "pkill" not in _es_src and "killall" not in _es_src
 assert "open fix 31" in _es_src
-assert "## 31. A session-launched engine hangs" in open(os.path.join(
-    os.path.dirname(SCREENS_DIR), "doc", "orion2re_open_fixes.md"),
+_es_fixes = open(os.path.join(os.path.dirname(SCREENS_DIR), "doc",
+                              "orion2re_open_fixes.md"), encoding="utf-8").read()
+assert "## 31. A session-launched engine hangs" in _es_fixes
+# APPLIED by work order 175: the list, the patch and version_check say so.
+assert "**Applied** 26 September 2026 by work order 175" in next(
+    _l for _l in _es_fixes.splitlines() if _l.startswith("| 31 |"))
+assert "STATUS: APPLIED 26 September 2026" in open(os.path.join(
+    os.path.dirname(SCREENS_DIR), "doc", "ext_present_no_vsync.patch"),
+    encoding="utf-8").read()
+assert '"Present_VSync_Interval_"' in open(os.path.join(
+    os.path.dirname(SCREENS_DIR), "tools", "version_check.py"),
     encoding="utf-8").read()
 ok("engine start: the start hang's signature (not the intro, not a "
    "running engine), three refusals named, CLAUDE.md's environment with "
-   "ORION2RE_NO_VSYNC, the port bound never connected, nothing killed by "
-   "name")
+   "ORION2RE_NO_VSYNC (open fix 31, applied), the port bound never "
+   "connected, nothing killed by name")
 
 
 # 2 — THE LIVE GUARD (work order 175): 174 hashed SAVE1-11 and the game

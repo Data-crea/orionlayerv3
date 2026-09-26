@@ -22,12 +22,14 @@ P1, 170 P1). 174 A found where and why (open fix 31):
   likely blanked and locked (300 s idle). The command, the environment
   variables, the parent process and an idle inhibitor made no
   difference; neither did another renderer or disabling explicit sync.
-  Only not waiting for VSync did — a patch, not applied
-  (`doc/ext_present_no_vsync.patch`, `ORION2RE_NO_VSYNC=1`).
+  Only not waiting for VSync did — open fix 31
+  (`doc/ext_present_no_vsync.patch`, `ORION2RE_NO_VSYNC=1`), APPLIED by
+  work order 175 on the local branch.
 
 What this tool does about it:
 
-1. sets `ORION2RE_NO_VSYNC=1` — ignored by an engine without the patch;
+1. sets `ORION2RE_NO_VSYNC=1` — open fix 31, applied since 175 (an engine
+   without it ignores the variable);
 2. RECOGNISES the hang by its signature — the log standing at "data
    space allocated" while, over 3 s of samples, the main thread waits
    in the GPU sync and the game thread on its condition — and starts
