@@ -516,6 +516,17 @@ references in `doc/v3_orion2re_index.md`.
   exists) and names every change after — changed, appeared, vanished —
   with `--restore` to put it back; the scratch slot a run saves to is
   the only file it may `--allow`.
+- **AN ENGINE THIS SESSION DID NOT START — work order 176 (Data), WHILE
+  DATA DOES NOT PLAY.** It replaces 171's "never connect, never kill":
+  an orion2re or an OrionLayer client found running that Claude Code
+  did not start is a leftover from Data looking at screens, not a game
+  in progress, and may be closed — `tools/liveguard.py` first (the
+  backup of every file a run can write), then SIGTERM, a few seconds,
+  SIGKILL only if it is still there, and PID, command line, start time
+  and how it ended recorded in the progress file
+  (`python tools/engine_start.py --close-foreign` does all of it). It is
+  still NEVER connected to — close it and start your own. When Data plays
+  again he says so, and 171's rule is back.
 
 ---
 

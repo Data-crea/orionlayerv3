@@ -61,8 +61,8 @@ derive world geometry.
 **The smoke test must be green before every commit.**
 
 ```bash
-python tools/smoke_test.py             # everything — 334 checks, ~200 s
-python tools/smoke_test.py --fast      # the commit gate's 324, ~95 s
+python tools/smoke_test.py             # everything — 335 checks, ~200 s
+python tools/smoke_test.py --fast      # the commit gate's 325, ~95 s
 python tools/smoke_test.py --screen colony_summary --fast   # NOT a gate
 ```
 
@@ -96,7 +96,7 @@ the fast tier holds that list and the guards to each other.
 time, not at commit time. See decision 31 and
 `doc/briefs/157-suite-profile.md`.
 
-334 checks, headless, no orion2re needed. **The count must not go
+335 checks, headless, no orion2re needed. **The count must not go
 down.** If a change makes a check obsolete, replace it — do not
 delete it. It went down exactly once, on 12 September 2026, when
 Phase B deleted the frame machinery the checks were about (decision
@@ -324,6 +324,15 @@ exit 144 were a different observation; the METHOD they left stands:
 engine does not come up, Data starts it from their own desktop session
 and this session connects to it (work order 140) — only when Data says
 so.
+
+**AN ENGINE OR CLIENT THIS SESSION DID NOT START** (work order 176, Data;
+it holds WHILE DATA DOES NOT PLAY — he will say when he plays again, and
+171's "never connect, never kill" is back): it is a leftover, not a game
+in progress, and may be closed — `python tools/engine_start.py
+--close-foreign` backs up every protected file first (`tools/liveguard.py`),
+sends SIGTERM, waits, SIGKILLs only if needed, and prints PID, command
+line, start time and how it ended for the progress file. Never connect to
+it: close it and start your own.
 
 **Loading a save and restarting the game are yours to do** (Data's
 decision, 10 September 2026) — on two conditions: the report says

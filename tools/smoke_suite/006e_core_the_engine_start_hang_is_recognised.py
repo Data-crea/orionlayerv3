@@ -11,9 +11,12 @@
 # an engine it did not start. Offline: no engine, no desktop — the
 # decisions are held, not the processes.
 #
-# The 2 check(s) it holds:
+# The 3 check(s) it holds:
 #   - engine start: the hang's signature, the refusals, the environment, no connect
 #   - live guard: every file a run can write backed up, every change named and restored (175)
+#   - a leftover engine or client is closed only after the backup: SIGTERM,
+#     SIGKILL only if needed, each recorded; the rule stands in CLAUDE.md,
+#     fundament part 09 and the tool (work order 176)
 
 
 import engine_start as _es
@@ -44,7 +47,8 @@ assert _es_ok and not _es_why
 _es_ok, _es_why = _es.verdict([(287200, 35660, "Fr Sep 25 19:00:09 2026")],
                               False, {"blanked": True})
 assert not _es_ok and len(_es_why) == 3, _es_why
-assert "287200" in _es_why[0] and "not ours" in _es_why[0]
+assert "287200" in _es_why[0] and "never connected to" in _es_why[0] \
+    and "--close-foreign" in _es_why[0], _es_why[0]
 assert "blanked or locked" in _es_why[2]
 assert _es.verdict([], True, {"blanked": None})[0]
 
@@ -138,3 +142,54 @@ ok("live guard: every file a run can write (SAVE1-11, MOX.SET, HOF.M2, "
    "lastrace.rac, TEMP.TMP, user_settings.json, the tree) backed up before "
    "the engine starts; changed, appeared and vanished named and put back; "
    "the scratch slot allowed")
+
+# ── 3. WORK ORDER 176: A LEFTOVER IS CLOSED, NEVER CONNECTED TO ────────
+# A process THIS CHECK starts stands in for the leftover: one that ends on
+# SIGTERM, one that ignores it. The backup comes first, both are recorded.
+import subprocess as _cf_sp
+import tempfile as _cf_tmp
+_cf_game = _cf_tmp.mkdtemp()
+_cf_root = _cf_tmp.mkdtemp()
+_cf_dest = os.path.join(_cf_tmp.mkdtemp(), "guard")
+_cf_procs = []
+try:
+    with open(os.path.join(_cf_game, "SAVE4.GAM"), "wb") as _f:
+        _f.write(b"scratch")
+    _cf_procs.append(_cf_sp.Popen([sys.executable, "-c",
+                                   "import time; time.sleep(60)"]))
+    _cf_procs.append(_cf_sp.Popen([sys.executable, "-c",
+                                   "import signal, time; signal.signal("
+                                   "signal.SIGTERM, signal.SIG_IGN); "
+                                   "time.sleep(60)"]))
+    import time as _cf_time
+    _cf_time.sleep(0.5)
+    _cf_rec = _es.close_foreign(
+        [(p.pid, "stand-in", "now") for p in _cf_procs], _cf_dest,
+        out=lambda *_a: None, wait=1.0, game_dir=_cf_game, root=_cf_root)
+    for p in _cf_procs:
+        p.wait(timeout=5)
+    assert os.path.exists(os.path.join(_cf_dest, "manifest.json")), \
+        "no backup before closing"
+    assert [r[3] for r in _cf_rec] == ["ended on SIGTERM",
+                                       "SIGKILL after SIGTERM"], _cf_rec
+    assert _es.close_foreign([], _cf_dest + "_none", out=lambda *_a: None) == []
+finally:
+    for p in _cf_procs:
+        if p.poll() is None:
+            p.kill()
+    for _d in (_cf_game, _cf_root, os.path.dirname(_cf_dest)):
+        shutil.rmtree(_d, ignore_errors=True)
+_cf_src = open(_es.__file__, encoding="utf-8").read()
+assert _cf_src.index("liveguard.snapshot(guard, game_dir, root)") < \
+    _cf_src.index("os.kill(pid, signal.SIGTERM)")
+for _cf_doc in ("CLAUDE.md", os.path.join("doc", "fundament",
+                                          "09-facts-orion2re-and-pygame.md")):
+    _cf_text = open(os.path.join(os.path.dirname(SCREENS_DIR), _cf_doc),
+                    encoding="utf-8").read()
+    assert "--close-foreign" in _cf_text and "Data does not play" in \
+        " ".join(_cf_text.split()).replace("DATA DOES NOT PLAY",
+                                           "Data does not play"), _cf_doc
+ok("a leftover engine or client is closed only after the backup — SIGTERM, "
+   "SIGKILL only if it stays, each recorded — and never connected to; the "
+   "rule (while Data does not play) stands in CLAUDE.md, fundament 09 and "
+   "tools/engine_start.py")

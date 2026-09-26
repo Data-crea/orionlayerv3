@@ -43,14 +43,21 @@ What this tool does about it:
 4. BACKS UP every file a run can write before the engine exists
    (`tools/liveguard.py`, work order 175) and says how to verify after;
 5. refuses while another orion2re runs or the port is taken — found
-   WITHOUT connecting (a bind test): an engine Data started is never
-   connected to (174's precondition).
+   WITHOUT connecting (a bind test). **WORK ORDER 176's RULE**, which
+   replaces 171's "never connect, never kill" WHILE DATA DOES NOT PLAY
+   (he will say when he plays again): an engine or client this tool did
+   not start is a leftover from Data looking at screens, and
+   `--close-foreign` closes it — `liveguard.snapshot` first, then
+   SIGTERM, a few seconds, SIGKILL only if it is still there — and prints
+   PID, command line, start time and how it ended for the progress file.
+   Such an engine is still NEVER connected to.
 
 The three display variables are CLAUDE.md's, determined, never typed.
 """
 import argparse
 import glob
 import os
+import signal
 import socket
 import subprocess
 import sys
@@ -153,7 +160,9 @@ def verdict(engines, free, screen):
     reasons = []
     for pid, ppid, started in engines:
         reasons.append(f"orion2re PID {pid} (parent {ppid}, started {started}) "
-                       f"is running — not ours to connect to or stop")
+                       f"is running and was not started by this run — never "
+                       f"connected to; close it with --close-foreign (work "
+                       f"order 176, while Data does not play)")
     if not free:
         reasons.append(f"port {PORT} is taken")
     if screen.get("blanked") is True:
@@ -296,6 +305,70 @@ def _start_once(log_path, timeout, inhibit, out, engine=None, guard=None):
     return None
 
 
+def foreign_clients(root=None):
+    """[(pid, command line, started)] of OrionLayer clients (`python
+    main.py` run in this tree) — found by their working directory."""
+    root = root or os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    out = subprocess.run(["ps", "-eo", "pid=,lstart=,args="],
+                         capture_output=True, text=True).stdout
+    rows = []
+    for line in out.splitlines():
+        parts = line.split(None, 6)
+        if len(parts) < 7 or "main.py" not in parts[6] or \
+                int(parts[0]) == os.getpid():
+            continue
+        try:
+            cwd = os.readlink(f"/proc/{parts[0]}/cwd")
+        except OSError:
+            continue
+        if os.path.realpath(cwd) == os.path.realpath(root):
+            rows.append((int(parts[0]), parts[6], " ".join(parts[1:6])))
+    return rows
+
+
+def _alive(pid):
+    try:
+        with open(f"/proc/{pid}/stat") as fh:
+            return fh.read().split()[2] != "Z"
+    except OSError:
+        return False
+
+
+def close_foreign(targets, guard, out=print, wait=5.0, game_dir=None,
+                  root=None):
+    """Work order 176: back up (liveguard), then SIGTERM, wait, SIGKILL only
+    if still there. `targets` [(pid, command line, started)]. Returns
+    [(pid, command line, started, how it ended)]. Never connects."""
+    import liveguard
+    if targets:
+        man = liveguard.snapshot(guard, game_dir, root)
+        out(f"backup before closing: {guard} "
+            f"({sum(1 for f in man['files'].values() if f)} files)")
+    record = []
+    for pid, cmdline, started in targets:
+        os.kill(pid, signal.SIGTERM)
+        deadline = time.time() + wait
+        while time.time() < deadline and _alive(pid):
+            time.sleep(0.2)
+        how = "ended on SIGTERM"
+        if _alive(pid):
+            os.kill(pid, signal.SIGKILL)
+            time.sleep(0.5)
+            how = "SIGKILL after SIGTERM" + ("" if not _alive(pid)
+                                             else " — STILL THERE")
+        record.append((pid, cmdline, started, how))
+        out(f"closed PID {pid} ({cmdline}, started {started}): {how}")
+    return record
+
+
+def _cmdline(pid):
+    try:
+        with open(f"/proc/{pid}/cmdline", "rb") as fh:
+            return fh.read().replace(b"\0", b" ").decode().strip()
+    except OSError:
+        return "?"
+
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     ap.add_argument("--check", action="store_true", help="checks only")
@@ -311,7 +384,23 @@ def main():
                     help="no backup — only for a start that loads nothing")
     ap.add_argument("--engine", default=None,
                     help="another orion2re binary (a build with open fix 31)")
+    ap.add_argument("--close-foreign", action="store_true",
+                    help="close engines and clients this tool did not start "
+                         "(work order 176: backup first, SIGTERM, SIGKILL "
+                         "only if needed; never connect) and exit")
     args = ap.parse_args()
+    if args.close_foreign:
+        targets = [(pid, _cmdline(pid), started)
+                   for pid, _ppid, started in running_engines()]
+        targets += foreign_clients()
+        if not targets:
+            print("no engine or client running that this tool did not start")
+            return 0
+        guard = args.guard or os.path.join(
+            os.path.expanduser("~/orionlayer-fixtures"), "live_guard",
+            time.strftime("close_%Y%m%d_%H%M%S"))
+        rec = close_foreign(targets, guard)
+        return 0 if all("STILL" not in r[3] for r in rec) else 1
     if args.check:
         ok, reasons = verdict(running_engines(), port_free(), screen_state())
         print("OK to start" if ok else "\n".join("REFUSED: " + r for r in reasons))
