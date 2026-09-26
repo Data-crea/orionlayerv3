@@ -252,3 +252,50 @@ dropped inherited its ratio. The app keeps one renderer for its life and
 never showed it; tools and checks that stand apps up did. The ratio lives
 on the renderer now; 006h holds it. Pre-existing (not from this order),
 fixed because it made a check machine-dependent.
+
+## Finish
+
+Right before the push, at `a5fe7b6`: full suite **354 green**; a fresh
+clone (`git clone`, `tools/setup.py` exit 0, 56 HUD pieces built, full
+suite) **354 green** — the first clone run was RED and found the cap-ratio
+fault above, fixed before this one; working tree clean; no engine or client
+running; `liveguard verify 179_fix34 --allow user_settings.json`: every game
+file and the old settings file identical to this order's first backup
+(only the tree's own commits reported); SAVE8 `ab70cc9a…` untouched; no live
+step broken. Push: the seven commits 983ad14 … a5fe7b6 and this one, `main`
+only (`colony-free-bands`, `rescue/ties-abend` already equal on the remote;
+no tags). orion2re: `9ab84230` on `orionlayer-local`, local only, bundled.
+
+## Summary
+
+| part | what | result |
+|---|---|---|
+| 1 | `user_settings.json` → `~/.config/orionlayer/` (XDG), one-time copy, liveguard both homes | done; live: migrated on the first start (19:56), old file unchanged |
+| 2 | open fix 34 applied (`9ab84230`), rebuilt, live, documented byte for byte; README lists the engine a clone needs | done; side effect (ESC keeps `_screen_data` 2) found, measured, harmless for HD |
+| — | the intro skipped with one key (Data, mid-run) | done; READY in 3 s |
+| 3 | the main menu's Load dialog drawn in HD | done (177's overlay + fix 34), live at both sizes |
+| 4 | the fourth tech level removed | done; three levels live, two sources each |
+| 5 | 2160p star names and Select Race text | done; the resolution factor was squared on both; 1080p pixel-identical |
+| 6 | the missing icons | done; 43 glyphs of our own, 67 buttons; shown where the word fits |
+| — | HUD words wrong-sized after a renderer was replaced (found by the clone) | fixed |
+
+**Checks: 344 → 354** (006g ×3, 090j #2, 006e #3b, 090k, 090l, 090m, 006h ×2;
+none removed; 062's and 006a's assertions replaced with their new truth,
+013's measurement taught to leave the glyph out).
+
+**Parked** (`179-parked-for-data.md`): 1 fix 34's ESC side effect (default:
+leave it); 2 text at 2576x1432 a quarter smaller after part 5 (default:
+proportional); 3 Custom Race and Empire Identity have the same double
+scale (not changed); 4 buttons too narrow for icon and word (default: the
+word alone).
+
+**Live steps Data should look at himself:**
+1. Main menu → LOAD GAME: the dialog is HD now (`evidence/work_order_179/
+   fix34_main_menu_load_1920/`, `load_dialog_2576/`).
+2. Your own 2576x1432 window: star names and Select Race are smaller than
+   you are used to (parked 2; `scaling_2160/compare_*_2576x1432_*`).
+3. The icons on the buttons (`icons/glyph_sheet.png`, `icons/*_offline.png`)
+   — the shapes are mine, not yours yet.
+4. New Game → TECH LEVEL cycles three values; a Pre Warp / Advanced start.
+5. Your settings: the first start copied them to
+   `~/.config/orionlayer/user_settings.json`; the old file is still there.
