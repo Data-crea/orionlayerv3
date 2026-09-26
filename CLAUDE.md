@@ -61,8 +61,8 @@ derive world geometry.
 **The smoke test must be green before every commit.**
 
 ```bash
-python tools/smoke_test.py             # everything — 314 checks, ~155 s
-python tools/smoke_test.py --fast      # the commit gate's 305, ~63 s
+python tools/smoke_test.py             # everything — 315 checks, ~155 s
+python tools/smoke_test.py --fast      # the commit gate's 306, ~63 s
 python tools/smoke_test.py --screen colony_summary --fast   # NOT a gate
 ```
 
@@ -96,7 +96,7 @@ the fast tier holds that list and the guards to each other.
 time, not at commit time. See decision 31 and
 `doc/briefs/157-suite-profile.md`.
 
-314 checks, headless, no orion2re needed. **The count must not go
+315 checks, headless, no orion2re needed. **The count must not go
 down.** If a change makes a check obsolete, replace it — do not
 delete it. It went down exactly once, on 12 September 2026, when
 Phase B deleted the frame machinery the checks were about (decision
@@ -144,7 +144,7 @@ screens/<name>/         one folder per HD screen:
                           help.json    right-click help regions
                           assets/
 tools/                  smoke test, generators, live diagnostics
-tools/smoke_suite/      the smoke test's 114 check modules, one group
+tools/smoke_suite/      the smoke test's 115 check modules, one group
                         per screen plus a shared core; smoke_test.py
                         is the runner (work order 162)
 doc/                    the documents in the table above
@@ -299,28 +299,21 @@ paragraph below stays** — a run that works is not a cause any more
 than a run that failed was. What it does mean: try it before assuming
 it will not come up, and do not park a live part on this note.
 
-**AND THAT IS NOT ENOUGH FROM INSIDE A SANDBOXED SESSION — CAUSE
-OPEN.** With all three set, orion2re still stops after `mox2: data
-space allocated` from a session-launched run: the process sits at 0 %
-CPU in state `S` at `rt_sigsuspend`, and the shell that launched it
-exits 144. **Why is not established.** Work order 139 E wrote it up as
-"suspended from outside" and that reading was wrong twice, corrected
-by work order 140 A:
-
-- **`S` is not stopped.** `T` is stopped. A process in `S` at
-  `rt_sigsuspend` called `sigsuspend()` ITSELF and is waiting for a
-  signal of its own — its own code's doing, not an outside stop.
-- **144 is not SIGUSR1.** `128 + n` names signal *n* as `kill -l`
-  numbers them, and on Linux 16 is **SIGSTKFLT**; SIGUSR1 is 10. The
-  number was read off a habit rather than off `kill -l`.
-
-So the two observations stand and the conclusion does not. What is
-worth keeping is the METHOD: `ps -o stat,%cpu,wchan -p <pid>`
-separates "the game is busy" from "the game is waiting" in one line,
-and `kill -l <n>` is what names a signal — neither of them is a guess,
-and the guess is what had to be withdrawn. Where the engine does not
-come up, Data starts it from their own desktop session and this
-session connects to it (work order 140).
+**THE START HANG IS EXPLAINED — work order 174 A, 26 September 2026.**
+A session-launched engine that stops after `mox2: data space
+allocated` is waiting in its first logo frames for a VSync present its
+window will not get while the compositor is not drawing it (screen
+locked or blanked, or the window covered by a full-screen game): open
+fix 31, not applied. Start live runs with `python tools/engine_start.py`
+— it refuses on a locked screen, a taken port or an engine that is not
+ours (found without connecting), recognises the hang and starts again.
+The evidence and what was ruled out are in `doc/fundament/09-facts-
+orion2re-and-pygame.md`. (139 E/140 A's `S` at `rt_sigsuspend` and
+exit 144 were a different observation; the METHOD they left stands:
+`ps -o stat,%cpu,wchan` and `kill -l <n>` instead of a guess.) Where the
+engine does not come up, Data starts it from their own desktop session
+and this session connects to it (work order 140) — only when Data says
+so.
 
 **Loading a save and restarting the game are yours to do** (Data's
 decision, 10 September 2026) — on two conditions: the report says

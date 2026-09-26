@@ -473,6 +473,34 @@ references in `doc/v3_orion2re_index.md`.
   Desmond, SIL Open Font License) — see decision 41. The detection
   machinery stays and now reports nothing, which is exactly what it
   was written to do for a clean font.
+- **A SESSION-LAUNCHED ENGINE HANGS IN ITS FIRST LOGO FRAMES WHEN ITS
+  WINDOW IS NOT BEING DRAWN — the start hang of 139 E, 169 and 170,
+  explained by work order 174 A (26 September 2026).** It sits beside
+  CLAUDE.md's live-run protocol because it is the part of that protocol
+  that was open. **Where**, from backtraces of hung starts: the game
+  thread in `JIM::Draw_Logos_` waits, with no timeout, for a present
+  (`video::Submit_Palette_` / `Publish_Off_Page_`); the main thread is
+  in that present — `SDL_RenderPresent` with VSync on (platform.cpp:644,
+  :1390), inside the NVIDIA GLX swap, in `drmSyncobjTimelineWait`. The
+  last log line, "data space allocated", is where it stopped
+  (`SDL_LogInfo` is unbuffered stderr). **When**: a VSync present to a
+  window the compositor is not drawing can wait forever — measured with
+  a full-screen game covering the monitor (8 hangs in 60 starts of the
+  same unchanged command), and very likely the locked, blanked screen
+  of 169's unattended run (GNOME blanks and locks after 300 s idle).
+  **Not the cause**, each changed alone: the parent process, `nohup`,
+  a new session, an idle inhibitor, the window minimised, disabling
+  explicit sync (the wait moved to `xcb_wait_for_special_event`), the
+  Vulkan renderer (to `VULKAN_AcquireNextSwapchainImage`), the software
+  renderer. **What removed it**: not waiting for VSync — open fix 31,
+  `doc/ext_present_no_vsync.patch` (`ORION2RE_NO_VSYNC=1`, NOT
+  APPLIED), 0 hangs in 50 starts of a scratch build. Until it is
+  applied, `tools/engine_start.py` recognises the hang by its signature
+  and starts again. Two readings from before 174 stand corrected:
+  `drm_syncobj_array_wait_timeout` alone is NOT a hang — a healthy
+  engine waits there most of every frame — and a hang is told apart
+  from the intro cinematic, which holds the log at the same line, only
+  by the two threads' waits over several samples.
 
 ---
 

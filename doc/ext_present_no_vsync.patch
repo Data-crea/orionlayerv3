@@ -1,0 +1,70 @@
+Present without VSync on request: ORION2RE_NO_VSYNC=1 ("the start hang").
+
+STATUS: NOT APPLIED. Written by work order 174 part A, 26 September 2026
+(doc/briefs/174-progress.md), open fix 31. orion2re's tree was not
+touched. What was shown: the patch applies to src/game/platform.cpp at
+orion2re e6199966 (`patch -p1 --dry-run` in the tree); a scratch copy of
+e6199966 (`git archive` plus the vendors folder) built with it under the
+linux-debug settings (Ninja, Debug, ORION2RE_EXT=ON) and RAN: with
+ORION2RE_NO_VSYNC=1, 48 of 50 starts reached "ext: server started" with
+none in the start hang (the two others were not caught hanging; 30 more
+starts with a backtrace armed were all ready); the same scratch build
+without it hung in 1 of 20, Data's own build in 8 of 60 counted starts.
+
+WHY: platform.cpp turns VSync on (SDL_SetRenderVSync(..., 1), lines 644
+and 1390), so every present waits for the display. When the compositor
+does not draw the window - the screen locked or blanked, or the window
+fully covered (26 September: a full-screen game) - a present can wait
+forever: backtraces show the main thread in the NVIDIA GLX swap
+(drmSyncobjTimelineWait; with __NV_DISABLE_EXPLICIT_SYNC=1 in
+xcb_wait_for_special_event instead; with SDL_RENDER_DRIVER=vulkan in
+VULKAN_AcquireNextSwapchainImage), and the game thread in
+video::Submit_Palette_ / video::Publish_Off_Page_, waiting for that
+present with no timeout (SDL_WaitCondition, timeoutNS=-1) - inside
+JIM::Draw_Logos_, right after "mox2: data space allocated". The default
+does not change; only a run that sets the variable presents without
+waiting.
+
+diff --git a/src/game/platform.cpp b/src/game/platform.cpp
+index 8e6d8e0..399f958 100644
+--- a/src/game/platform.cpp
++++ b/src/game/platform.cpp
+@@ -10,6 +10,20 @@ uint32_t g_last_scan_code;
+ 
+ namespace platform {
+ 	namespace {
++#ifdef ORION2RE_EXT
++		// ORION2RE_NO_VSYNC=1: present without waiting for the display.
++		// A VSync present to a window the compositor is not drawing
++		// (screen locked or blanked, window fully covered) never
++		// completes, and the game thread waits for it without a timeout
++		// (video::Submit_Palette_, video::Publish_Off_Page_): the start
++		// hangs in its first logo frames. Unattended runs set this.
++		int Present_VSync_Interval_() {
++			const char* value = SDL_getenv("ORION2RE_NO_VSYNC");
++			return (value != nullptr && value[0] != '\0' && value[0] != '0') ? 0 : 1;
++		}
++#else
++		int Present_VSync_Interval_() { return 1; }
++#endif
+ 		bool g_has_lost_focus;
+ 		SDL_Window* g_sdl_window;
+ 		SDL_Renderer* g_sdl_renderer;
+@@ -641,7 +655,7 @@ namespace platform {
+ 
+ 				// Match the original frame-present cadence more closely by blocking on
+ 				// display refresh when the active renderer backend supports it.
+-				(void)SDL_SetRenderVSync(g_sdl_renderer, 1);
++				(void)SDL_SetRenderVSync(g_sdl_renderer, Present_VSync_Interval_());
+ 			}
+ 
+ 			if (!Ensure_Render_Presentation_()) {
+@@ -1387,7 +1401,7 @@ namespace platform {
+ 			SDL_Quit();
+ 			return 0;
+ 		}
+-		(void)SDL_SetRenderVSync(g_sdl_renderer, 1);
++		(void)SDL_SetRenderVSync(g_sdl_renderer, Present_VSync_Interval_());
+ #ifdef ORION2RE_EXT
+ 		if (!ext::g_hide_window)
+ #endif

@@ -51,6 +51,7 @@ section for what was found where.
 | 27 | The fleet screen's view state is not in the snapshot | **Applied** 19 September 2026 (work order 134 C), orion2re `cc5ec133` on `orionlayer-local`, `doc/ext_fleet_screen_state.patch`; required by `tools/version_check.py`; **NOT CONFIRMED LIVE** — 134's live part is parked; open upstream | — while applied. Without it HD cannot know which stack the fleet screen shows, which ships are in the grid, which are selected, where the list is scrolled or which filters are on, and hands over to the original picture |
 | 28 | One ship cannot be selected on the fleet screen | **Applied** 19 September 2026 (work order 134 C), orion2re `e6199966` on `orionlayer-local`, `doc/ext_fleet_screen_select.patch`; required by `tools/version_check.py`; **NOT CONFIRMED LIVE**; open upstream | — while applied. Without it only ALL changes the selection, so a subset of a stack cannot be moved or scrapped from HD |
 | 30 | The Leaders screen's view state is not in the snapshot — button mode, selection, the colony view's two stars, the ship view's stack and grid, the hire popup's leader | **Request, NOT APPLIED** — written by work order 167 (`doc/ext_officer_screen_state.patch`), applies and compiles against `e6199966`, parked for Data's go/no-go | Without it the HD Leaders screen shows every leader, both views, the buttons and the galaxy box, and sends only what it can confirm on the wire (the view tabs, HIRE, CANCEL, RETURN, a click on a leader for hire); pool, dismiss, assignment, the star display and the ship grid are drawn as a marked placeholder |
+| 31 | A session-launched engine hangs in its first logo frames when its window is not being drawn: every present waits for VSync, and the game thread waits for the present without a timeout | **Request, NOT APPLIED** — written by work order 174 A (`doc/ext_present_no_vsync.patch`): `ORION2RE_NO_VSYNC=1` presents without waiting; applies to `e6199966`, built and RUN in a scratch copy (0 hangs in 50 starts against 8 in 60 without) | Without it an unattended live run hangs in about one start in eight while the screen is locked or another window covers the engine's; `tools/engine_start.py` detects the hang and starts again |
 
 Items 3 and 4 are both about INJECT_CLICK and both live in the same
 code path, but they are separate faults: 3 is where the coordinates
@@ -2006,3 +2007,60 @@ HIRE and CANCEL, RETURN, and a click on a leader who is for hire. POOL,
 DISMISS, assigning a leader, PREV / NEXT, the colony view's star display
 and the ship view's grid are drawn as a placeholder that names this
 item (`screens/leaders/ldrwire.py`, HD STATE).
+
+## 31. A session-launched engine hangs in its first logo frames
+
+**Asked for by work order 174 A, 26 September 2026. NOT APPLIED** —
+`doc/ext_present_no_vsync.patch`. It applies to `src/game/platform.cpp`
+at `e6199966`; a scratch copy built with it RAN (numbers below).
+orion2re's tree was not touched.
+
+### Symptom
+
+Started from a session (139 E, 169 P1, 170 P1, and 26 September), the
+engine stops after `mox2: data space allocated` and never reaches
+`ext: server started`; Data's own start works. `ps` shows the main
+thread in `drm_syncobj_array_wait_timeout`.
+
+### Where it waits — evidence
+
+Backtraces of hung starts (`~/orionlayer-fixtures/evidence/work_order_174/
+hang_backtrace_*.txt`): the main thread in `SDL_RenderPresent` → the
+NVIDIA GLX swap → `drmSyncobjTimelineWait`; the game thread in
+`JIM::Draw_Logos_` → `palstore::Slow_Fade_In_` / `video::Toggle_Pages_`
+→ `video::Submit_Palette_` / `video::Publish_Off_Page_`, in
+`SDL_WaitCondition` with no timeout, waiting for that present. VSync is
+switched on at platform.cpp:644 and :1390.
+
+### When — the trigger
+
+A present to a window the compositor is not drawing can wait forever.
+On 26 September a full-screen game covered the whole monitor, and 8 of
+60 counted starts of Data's build hung; one start made before the game
+was launched ran cleanly. On 25 September (169) the hang began nine and
+a half minutes after the last input, with GNOME's screen blanked and
+locked after 300 s idle — circumstantial, not measured. Disabling NVIDIA's
+explicit sync (`__NV_DISABLE_EXPLICIT_SYNC=1`) moved the wait to
+`xcb_wait_for_special_event`; the Vulkan renderer to
+`VULKAN_AcquireNextSwapchainImage`; the software renderer still hung
+(SDL accelerates its window surface through GL). Only not waiting for
+VSync removed it.
+
+### Fix
+
+An environment variable, `ORION2RE_EXT`-gated: `ORION2RE_NO_VSYNC=1`
+passes 0 to both `SDL_SetRenderVSync` calls. The default is unchanged.
+Measured in the scratch build: with it, 48 of 50 starts ready and none
+in the hang (the other two were not caught hanging; 30 further starts
+with a backtrace armed were all ready); without it, 1 of 20 hung.
+A timeout on the game thread's wait would be the deeper fix; it was not
+attempted.
+
+### Cost to us
+
+Without it an unattended live run hangs in about one start in eight
+while the engine's window is covered or the screen is locked.
+`tools/engine_start.py` sets the variable (ignored by an engine
+without the patch), recognises the hang by its signature and starts
+again, stopping only the PID it started.
+
