@@ -43,7 +43,7 @@ sys.path.insert(0, ROOT)
 
 from core import billtext, buildnames, estrings, hestrings  # noqa: E402
 from core import helptext, kentext, maintext, shipparts  # noqa: E402
-from core import skildesc, technames  # noqa: E402
+from core import infotext, skildesc, technames  # noqa: E402
 # THE IDS COME FROM THE RENDERER'S OWN TABLE, not from a second
 # list here: `PARAGRAPH_HELP` is what the Fleets panel looks up,
 # so a stand-in built from it cannot hold a record the screen
@@ -108,6 +108,16 @@ def files():
         **{key: _numbered(key[:-1].title() if key.endswith("s") else key,
                           count)
            for key, (_first, count) in shipparts.TABLES.items()})
+    # Work order 175 D: the Info screen's topic lists, trait names and
+    # group names — synthetic, shaped like the real file.
+    out[infotext.text_file("en")] = {
+        "_comment": NOTE, "language": "en",
+        "format": infotext.FORMAT_VERSION,
+        "topics": {str(e): [[f"Topic {e}-{k}", e * 20 + k] for k in range(3)]
+                   for e in range(1, 17)},
+        "traits": [f"Trait {i}" for i in range(32)],
+        "groups": {str(i): f"Group {i}" for i in range(26)},
+    }
     out[kentext.string_file("en")] = {
         "_comment": NOTE, "language": "en",
         "format": kentext.FORMAT_VERSION,

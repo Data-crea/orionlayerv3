@@ -26,6 +26,8 @@ player's file when there is a valid one — so no screen loads around it.
     style.json                a PARTIAL HUD style: only the keys present
     colour.json               the default frame colour
     files/<tree path>         any other image, at its path in the tree
+    texts/<screen>/<key>.txt  a text by its stable key (work order 175,
+                              `core.modtexts`, decision 73)
 
 **NEVER A CRASH, NEVER A BROKEN SCREEN.** Every file is checked before it
 is handed out: an image must load, a JSON file must be an object whose
@@ -69,7 +71,10 @@ STYLE = "style.json"
 COLOUR = "colour.json"
 #: What the template lists and MODDING.md explains, in this order.
 NAMES = ("background.png", "backgrounds/<screen>.png", "hud/<piece>.png",
-         STYLE, COLOUR, "files/<path in the tree>")
+         STYLE, COLOUR, "files/<path in the tree>",
+         "texts/<screen>/<key>.txt")
+#: The texts' folder: read by `read_text`, asked by `core.modtexts`.
+TEXTS = "texts/"
 
 #: What the template tool writes that is not read as a replacement:
 #: the guide, the name list, and the starting points in `originals/`
@@ -96,7 +101,8 @@ GAME_ART = ("screens/custom_race/assets/*.png",
 COLOUR_KEYS = {"hue": (0.0, 360.0), "saturation": (0.0, 1.0),
                "brightness": (0.1, 1.6)}
 
-_state = {"root": None, "index": {}, "checked": {}, "enabled": None}
+_state = {"root": None, "index": {}, "checked": {}, "texts": {},
+          "enabled": None}
 
 
 def user_dir():
@@ -135,7 +141,8 @@ def tree_path(name):
 def init(enabled=True, root=None):
     """Index the folder once. Returns the number of files that will be
     used; every file that will not says why, once."""
-    _state.update(root=None, index={}, checked={}, enabled=bool(enabled))
+    _state.update(root=None, index={}, checked={}, texts={},
+                  enabled=bool(enabled))
     root = root or mod_dir()
     if not enabled:
         log.info("mod folder switched off (user_mod: off) — defaults only; "
@@ -152,6 +159,11 @@ def init(enabled=True, root=None):
             name = os.path.relpath(full, root).replace(os.sep, "/")
             if (name in (STYLE, COLOUR) or name in GUIDE
                     or name.startswith(ORIGINALS + "/")):
+                continue
+            if name.startswith(TEXTS):
+                if not name.endswith(".txt"):
+                    log.warning("mod: %s — a text is a .txt file — ignored",
+                                name)
                 continue
             target = tree_path(name)
             if target is None or not name.lower().endswith(IMAGE_EXT):
@@ -203,17 +215,52 @@ def started_enabled():
 
 def in_use():
     """How many of the folder's files are in use (the settings row):
-    its pictures, and style.json and colour.json where present."""
+    its pictures, style.json and colour.json where present, and its
+    text files (counted as present; a bad one says so when first asked)."""
     root = _state["root"]
     if root is None:
         return 0
-    return len(_state["index"]) + sum(
+    texts = 0
+    for _dir, _sub, files in os.walk(os.path.join(root, TEXTS)):
+        texts += sum(f.endswith(".txt") for f in files)
+    return len(_state["index"]) + texts + sum(
         os.path.exists(os.path.join(root, n)) for n in (STYLE, COLOUR))
+
+
+def read_text(name, max_bytes):
+    """The player's text file `name` (under `texts/`) as a str, or None.
+    Absent: None, silently. Unreadable, not UTF-8, empty or larger than
+    `max_bytes`: ONE log line per file per run, then None (the caller's
+    default)."""
+    root = _state["root"]
+    if root is None or not name.startswith(TEXTS) or ".." in name.split("/"):
+        return None
+    if name in _state["texts"]:
+        return _state["texts"][name]
+    path = os.path.join(root, *name.split("/"))
+    value = None
+    if os.path.isfile(path):
+        try:
+            if os.path.getsize(path) > max_bytes:
+                raise ValueError(f"larger than {max_bytes} bytes")
+            with open(path, "rb") as fh:
+                raw = fh.read()
+            value = raw.decode("utf-8-sig").replace("\r\n", "\n")
+            if value.endswith("\n"):
+                value = value[:-1]
+            if not value.strip():
+                raise ValueError("empty")
+        except (OSError, UnicodeDecodeError, ValueError) as err:
+            log.warning("mod: %s cannot be used (%s) — the default text is "
+                        "used", name, err)
+            value = None
+    _state["texts"][name] = value
+    return value
 
 
 def shutdown():
     """Back to never-initialised: the smoke suite, after a check."""
-    _state.update(root=None, index={}, checked={}, enabled=None)
+    _state.update(root=None, index={}, checked={}, texts={}, enabled=None)
 
 
 def override(relpath, default_path):

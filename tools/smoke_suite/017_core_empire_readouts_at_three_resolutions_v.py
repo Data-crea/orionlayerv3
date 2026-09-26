@@ -268,6 +268,16 @@ _MARKED = {
     "screens/races/layout.json": "deviation_hud_parts",
     "screens/races/racesdraw.py": "hud_parts",
 
+    # ADDED 26 September 2026, work order 175 D: the Info screen and its
+    # moddable texts. Its own check is the info group (090f): every
+    # layout.json mark named in the module that performs it, the texts'
+    # resolver, wrap and scroll with nothing cut.
+    "screens/info/layout.json": "hd_extension_wrap_and_scroll",
+    "screens/info/infobox.py": "wrap_and_scroll",
+    "screens/info/infodraw.py": "chart_colours",
+    "screens/info/screen.py": "moddable_texts",
+    "core/modtexts.py": "HD EXTENSION, work order 175, decision 73",
+
 }
 _MARKS = ("HD EXTENSION", "DEVIATION")
 _SELF = SUITE_FILES

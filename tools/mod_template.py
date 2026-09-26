@@ -14,6 +14,9 @@ copied up a level:
                                  from Data's HUD (`tools/hud_cut.py`)
     originals/style.json         every HUD style value
     originals/colour.json        the measured frame colour
+    originals/texts/<screen>/…   OrionLayer's OWN texts, by key (work
+                                 order 175, `core/modtexts`) — the game's
+                                 texts are listed in NAMES.txt by key only
 
 **NEVER A MOO2 FILE.** Pictures extracted from the game, or derived from
 its artwork (LICENSE, "Artwork derived from Master of Orion 2"), and the
@@ -36,7 +39,7 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, ROOT)
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-from core import usermod  # noqa: E402
+from core import modtexts, usermod  # noqa: E402
 
 STYLE = os.path.join(ROOT, "assets", "shared", "hud", "style.json")
 UNIVERSAL = os.path.join(ROOT, *usermod.UNIVERSAL.split("/"))
@@ -80,6 +83,11 @@ the original comes back.
   "Reset" there goes back to this file's colour.
 - **`files/<path>`** - any other picture on the list in `NAMES.txt`, at
   the path shown there.
+- **`texts/<screen>/<key>.txt`** - a TEXT, by its key: `info.tab.reference`
+  is `texts/info/tab.reference.txt`. Plain text, saved as UTF-8; a blank
+  line starts a paragraph. Long texts wrap and scroll. OrionLayer's own
+  texts are in `originals/texts/` to copy; the game's texts are listed in
+  `NAMES.txt` by key only.
 
 ## If something goes wrong
 
@@ -94,9 +102,9 @@ Your files stay where they are; switch it on again the same way.
 
 ## What is not here
 
-Pictures from Master of Orion 2 itself are not copied into `originals/`:
-they belong to the game's owners. `NAMES.txt` lists their names, so you
-can draw your own.
+Pictures and texts from Master of Orion 2 itself are not copied into
+`originals/`: they belong to the game's owners. `NAMES.txt` lists their
+names, so you can make your own.
 """
 
 
@@ -158,7 +166,33 @@ def names_txt(hud_sizes):
               "(names only - not ours to hand out):"]
     lines += [f"  files/{rel}  {s[0]} x {s[1]}"
               for rel, s in sorted(game_art().items())]
+    lines += ["", "texts/<screen>/<key>.txt  a text by its key, UTF-8. "
+              "OrionLayer's own (a copy is in originals/texts/):"]
+    keys = text_keys()
+    lines += [f"  {modtexts.file_name(k)}" for k, src in keys.items()
+              if src == "own"]
+    lines += ["", "  the game's texts (keys only - not ours to hand out; "
+              "OrionLayer reads them from your own game files):"]
+    lines += [f"  {modtexts.file_name(k)}" for k, src in keys.items()
+              if src == "moo2"]
     return "\n".join(lines) + "\n"
+
+
+def text_keys():
+    """{key: source} of every registered text (`core/modtexts`)."""
+    return modtexts.keys()
+
+
+def own_texts():
+    """{mod file name: OrionLayer's own default} — the texts the template
+    may copy. A "moo2" default is never read here (MOO2 rule)."""
+    out = {}
+    for key, src in text_keys().items():
+        if src == "own":
+            value = modtexts._registry[key][0]
+            if isinstance(value, str) and value:
+                out[modtexts.file_name(key)] = value
+    return out
 
 
 def make(target, log=print):
@@ -189,7 +223,10 @@ def make(target, log=print):
     _text(json.dumps(colour, indent=2) + "\n",
           os.path.join(target, usermod.ORIGINALS, "colour.json"),
           written, kept)
-    for sub in ("backgrounds", "hud", "files"):
+    for name, value in own_texts().items():
+        _text(value + "\n", os.path.join(target, usermod.ORIGINALS,
+                                          *name.split("/")), written, kept)
+    for sub in ("backgrounds", "hud", "files", "texts"):
         os.makedirs(os.path.join(target, sub), exist_ok=True)
     _text(GUIDE.format(folder=target), os.path.join(target, "MODDING.md"),
           written, kept)
@@ -214,6 +251,7 @@ def _text(text, dst, written, kept):
     if os.path.exists(dst):
         kept.append(dst)
         return
+    os.makedirs(os.path.dirname(dst), exist_ok=True)
     with open(dst, "w", encoding="utf-8") as handle:
         handle.write(text)
     written.append(dst)

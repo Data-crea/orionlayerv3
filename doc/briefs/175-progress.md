@@ -279,3 +279,96 @@ became "6 routes to races".
 `evidence/work_order_175/races/races_{main,who}_offline_*_{1920x1080,
 2560x1440,3840x2160,2576x1432}.png` (`tools/races_offline.py`). No native
 half — that needs the live game.
+
+## D. Info screen — INVENTORY (from the orion2re source, before building)
+
+**Screen.** `SCREEN_INFO` = 9 (orion2_consts.h:469), `INFO::Info_Screen_`
+(info.cpp:510-642); the galaxy map's INFO button (`Add_Irregular_Button_
+Field_(462,435,526,471,…,"I")`, mainscr.cpp:1399; mainscr_main.cpp:651-655);
+always back to SCREEN_MAIN (:641), `Set_Plyr_Info_Btns_` saving the tab into
+`history_btns` bits 4-6 (bill.cpp:379-382). **Finding:** info.cpp:641 sets
+SCREEN_MAIN unconditionally, so the Turn Summary's jump to a colony
+(`Goto_Msg_Colony_`, msg.cpp:653-672) is overwritten — looks like a port
+deviation; parked for Joes (item 6).
+
+**Fields.** EXIT (535,434) ESC (INFO.LBX 2, 91x30); five tabs, multi-buttons
+bound to the LOCAL `current_tab` (:563-574, `_sub_scr_field` :174); per page:
+History's four metric toggles (y 427, INFO.LBX 8-11), Tech's four category
+tabs (`_tech_rev_field`, INFO.LBX 16-19), up/down pagers and list rows, the
+race page button (385,427) past four races, Turn Summary's pagers and rows,
+Reference's index rows (`(0xDD, y-2, 0x19B, y+18)` / `(0x1A5, …, 0x263, …)`
+from y 100 by 20), BACK (386,427), the category pagers and topic rows.
+
+**Draws.** Left: stardate (151,27); chart — income bar (30,212), six
+maintenance bars 18 apart, percents `((v*1000)/max+5)/10`, labels BILLTEXT
+17-27 (net income with the stat byte). Pages: History (legend in player
+colours, axes, eight stardate labels, a y ladder, one polyline per player,
+`(ring * divisor)` smoothed ten times, :1222-1347); Tech Review (the four
+`_review_*` tables :35-70, researched applications only, empty groups
+dropped; name, APP_PICS picture, HELP.LBX record body); Race Statistics
+(race name upper-cased, trait lines as `Print_Player_Specials_To_Bitmap_`
+:338-404, ELIMINATED / NO CONTACT); Turn Summary (BILLTEXT 26 header,
+`MSG_::sprintf_msg_` lines, NO MESSAGES); Reference (BILLTEX 10/11 heads,
+the category labels ESTRINGS 0x294+ without the digit ones, HELP.LBX 15's
+"How to?" list; a category: HELP.LBX entry n sorted, the record's title and
+body; a how-to: its body). Long texts: FMTPARA into fixed bitmaps, lists
+paged, no scrolling (:917-931, :1086-1093, :1893-1906).
+
+**Reads.** `s_player`: bc_produced, total_maintenance, maintenance[6],
+tech_applications, traits, contact, n_times_established_contact,
+eliminated, race_name, the four history rings, history_btns; `_stardate`;
+**not on the wire:** `_bill_savegame[6]` (the rings' divisors and ring
+start) and `MSG_::_msgs` (the turn messages) — open fix 32 below; the pages'
+own state (tab, tech tab, race page, reference page, selection).
+
+**Right-click help.** `_info_help_list` 242/243 over the left panel, then
+250 / 249 / 248 / 247 / 244 / 245 / 246 per page (billhelp.cpp:3-40; the
+category/how-to installers named the other way round, info.cpp:1936-1947).
+
+## D. Info screen — BUILT (offline); texts moddable; live test parked
+
+`screens/info/` (id 9 was already routed to "info"; now there is a screen):
+`infogeom`, `infotexts`, `infopages`, `infobox`, `infodraw`, `infoview`,
+`screen.py`.
+
+| inventory item | built | how |
+|---|---|---|
+| stardate, chart, net income | yes | `infopages.chart`, new player fields |
+| tabs, RETURN / ESC | yes | HD-local tabs (HD STATE `local_navigation`), RETURN sent |
+| Tech Review | yes | the four tables transcribed; HELP.LBX body; OMISSION `app_pictures` |
+| Race Statistics | yes | `race_list(previously=True)`, `trait_lines` |
+| Reference: index, category, how-to | yes | topic lists extracted (`tools/infotext_extract.py`) |
+| History Graph | legend + toggles; curves parked | open fix 32 (divisors not on the wire) |
+| Turn Summary | placeholder | open fix 32 (messages not on the wire) |
+| right-click help | yes | `open_help_at`, the billhelp ids |
+| paging | replaced | HD EXTENSION `wrap_and_scroll` |
+
+**Moddable texts** (`core/modtexts`, decision 73 in fundament part 01):
+1060 stable keys; `texts/<screen>/<rest of key>.txt`, plain UTF-8 (format
+parked, item 5); missing = default; broken (not UTF-8, empty, > 64 KB) = one
+log line and default (read by `core/usermod.read_text` — the folder still
+has one reader). `tools/mod_template.py` writes OrionLayer's own texts to
+`originals/texts/` and lists the game's keys only; MODDING.md has a Texts
+section. **Could use it next:** the main and GAME menus, Custom Race's
+messages, the HUD headings, the Leaders and Races button words, the help
+popup's HD entries.
+
+**Open fix 32** written and parked: `doc/ext_info_screen_state.patch`
+("INFS": `_bill_savegame[6]` and the rendered messages), dry-run applies to
+orionlayer-local, syntax-checked with the engine's flags plus a refused
+control; row and section 32 in `doc/orion2re_open_fixes.md`.
+
+**New data**: `s_player` total_maintenance @280, maintenance[6] @284,
+n_times_established_contact @1521, the four history rings @2372.. (read
+unsigned, as info.cpp:1255-1266 casts), history_btns @3780 — header route
+green (48 offsets).
+
+**Checks**: new `090f` (4). 330 -> 334 (fast 324). 017 lists the new
+markings.
+
+**Evidence (offline)**: `evidence/work_order_175/info/info_*_offline_*` —
+seven views (five pages, a category, a how-to) at 1080p, 1440p, 2160p and
+2576x1432, and the same with the demo text mod (`*_MOD_*`); the mod itself
+is `evidence/work_order_175/demo_text_mod/` (four replacements, one long body
+that scrolls, one non-UTF-8 and one empty file that fall back with one log
+line each).

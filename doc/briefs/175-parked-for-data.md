@@ -55,3 +55,34 @@ the fallback), IGNORE (→ a race: "(IGNORED)" appears, press again), DECLARE
 WAR (→ a race → the confirmation, answer NO). Verify with
 `tools/liveguard.py verify … --allow SAVE4.GAM` — IGNORE changes the save's
 player record only if the game is saved, which the test does not do.
+
+## 5. The text files' format
+
+**Default taken:** one plain UTF-8 file per key, `texts/<first segment>/
+<rest of the key>.txt` (`info.tab.reference` → `texts/info/tab.reference.txt`);
+the whole file is the text, one trailing newline dropped, a blank line a
+paragraph. **Alternatives:** one file per screen with `key = text` lines
+(fewer files, but long texts need an escape for newlines), or JSON (exact,
+but easy to break for a non-programmer). Say which, and the resolver's one
+reader (`usermod.read_text`) changes, nothing else.
+
+## 6. Info: the Turn Summary's colony jump never happens (for Joes)
+
+info.cpp:641 sets `_current_screen = SCREEN_MAIN` unconditionally after the
+loop, so the jump `MSG_::Goto_Msg_Colony_` prepared (msg.cpp:653-672,
+info.cpp:2087-2091) is overwritten. Probably a port deviation from the
+original. Not an OrionLayer item; noted here for the open-fix list if Data
+agrees.
+
+## 7. Open fix 32 — apply?
+
+`doc/ext_info_screen_state.patch`: the History Graph's divisors and ring
+start and the Turn Summary's rendered messages ("INFS"). Written, dry-run and
+syntax-checked, NOT applied (the order: patch rule — entry, patch file,
+reported). With it, HD draws the curves and the messages.
+
+## 8. Info live test — waits for the port
+
+Load SAVE4, open INFO, click each tab (HD-local — nothing is sent), check
+the chart against the game's own numbers (F-key fallback / a native
+capture), RETURN and ESC. Nothing is written.

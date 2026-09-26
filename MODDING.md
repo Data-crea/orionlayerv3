@@ -29,6 +29,7 @@ hud/<piece>.png            a HUD icon or the title plate
 style.json                 HUD colours and sizes — only the keys you write
 colour.json                the frame colour OrionLayer starts with
 files/<path in the tree>   any other picture listed in NAMES.txt
+texts/<screen>/<key>.txt   a text, by its key (work order 175)
 ```
 
 A file OrionLayer cannot read, or a name it does not know, is skipped
@@ -39,6 +40,30 @@ the next start); switching it off leaves your files where they are.
 Pictures from Master of Orion 2 itself are never copied into the
 template — they are not ours to hand out — but their names are listed,
 so you can draw your own.
+
+### Texts (work order 175, decision 73)
+
+Every text of the **Info** screen is looked up by a stable key, and a text
+file in your folder replaces it. The file name IS the key: the part before
+the first dot is the folder, the rest the name —
+
+```
+info.tab.reference        ->  texts/info/tab.reference.txt
+info.reference.213.body   ->  texts/info/reference.213.body.txt
+```
+
+The file is plain text, saved as UTF-8 (any editor's default); a blank line
+starts a new paragraph. A long text wraps, and scrolls if it does not fit —
+nothing is ever cut off. A file OrionLayer cannot read (not UTF-8, empty,
+over 64 KB) costs one line in the log and the built-in text stays. Delete
+the file and the built-in text is back.
+
+The template writes OrionLayer's OWN texts into `originals/texts/` as
+starting points. The game's texts (the reference articles, the page
+titles, the trait names …) are the game owners' words: `NAMES.txt` lists
+their keys only, and OrionLayer reads them from your own game files.
+Screens that could use the same resolver next: the menus, Custom Race's
+messages, the HUD headings, the Leaders button words.
 
 Everything below is the **developer's** route: mods inside the tree,
 which can also replace data, layouts and whole screens.

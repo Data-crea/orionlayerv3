@@ -52,6 +52,7 @@ section for what was found where.
 | 28 | One ship cannot be selected on the fleet screen | **Applied** 19 September 2026 (work order 134 C), orion2re `e6199966` on `orionlayer-local`, `doc/ext_fleet_screen_select.patch`; required by `tools/version_check.py`; **NOT CONFIRMED LIVE**; open upstream | — while applied. Without it only ALL changes the selection, so a subset of a stack cannot be moved or scrapped from HD |
 | 30 | The Leaders screen's view state is not in the snapshot — button mode, selection, the colony view's two stars, the ship view's stack and grid, the hire popup's leader | **Applied** 26 September 2026 by work order 175 (orion2re `cc542e02`, `doc/ext_officer_screen_state.patch`); open upstream | Without it the HD Leaders screen shows every leader, both views, the buttons and the galaxy box, and sends only what it can confirm on the wire (the view tabs, HIRE, CANCEL, RETURN, a click on a leader for hire); pool, dismiss, assignment, the star display and the ship grid are drawn as a marked placeholder |
 | 31 | A session-launched engine hangs in its first logo frames when its window is not being drawn: every present waits for VSync, and the game thread waits for the present without a timeout | **Applied** 26 September 2026 by work order 175 (orion2re `f98b8547`, `doc/ext_present_no_vsync.patch`): `ORION2RE_NO_VSYNC=1` presents without waiting; open upstream | Without it an unattended live run hangs in about one start in eight while the screen is locked or another window covers the engine's; `tools/engine_start.py` detects the hang and starts again |
+| 32 | The Info screen's history divisors and turn messages are not in the snapshot — `_bill_savegame[6]` and the player's rendered `MSG_::_msgs` | **Not applied** — written and parked by work order 175 D (`doc/ext_info_screen_state.patch`, dry-run and syntax-checked against orionlayer-local `cc542e02`) | Without it the HD Info screen draws the History Graph's legend but not its curves, and the Turn Summary as a marked placeholder; every other page is complete |
 
 Items 3 and 4 are both about INJECT_CLICK and both live in the same
 code path, but they are separate faults: 3 is where the coordinates
@@ -2066,3 +2067,27 @@ while the engine's window is covered or the screen is locked.
 without the patch), recognises the hang by its signature and starts
 again, stopping only the PID it started.
 
+
+## 32. The Info screen's history divisors and turn messages are not in the snapshot
+
+**Status: NOT APPLIED** — written by work order 175 D, 26 September 2026,
+parked for Data (`doc/briefs/175-parked-for-data.md`). Patch:
+`doc/ext_info_screen_state.patch`, one file (`src/ext/ext_api.cpp`), an
+"INFS" block appended while `SCREEN_INFO` is up. Shown to apply
+(`patch -p1 --dry-run`) and to compile with the engine's own flags, with a
+misspelt-member control that is refused. It has not run.
+
+**What is missing.** The History Graph (`INFO::Draw_Histories_`,
+info.cpp:1222-1329) adds the four `s_player` history rings — on the wire —
+after multiplying each by `MOX::_bill_savegame[2..5]`, the divisors the
+rings were stored under (bill.cpp:445-535), and past 350 turns starts at
+`_bill_savegame[1]` (bill.cpp:547-556). The Turn Summary
+(info.cpp:2011-2112) lists `MSG_::_msgs`, rendered by `MSG_::sprintf_msg_`
+from RSTRING<lang>.LBX; none of it is in the snapshot.
+
+**What the patch sends.** The six `_bill_savegame` values, then the
+player's messages as the screen renders them (int16 length, raw bytes).
+
+**What it costs us without it.** The Info screen's History page shows its
+legend and says the curves need this fix; the Turn Summary page says the
+same. Reference, Tech Review and Race Statistics are complete.

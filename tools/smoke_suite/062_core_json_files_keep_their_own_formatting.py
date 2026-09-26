@@ -140,6 +140,8 @@ _JSON_ABSENT_OK = {
                  "manifest.json"),
     os.path.join("screens", "races", "assets", "gamedata",
                  "palette.json"),
+    # Work order 175 D: the Info screen's own texts (tools/infotext_extract).
+    os.path.join("assets", "shared", "names", "infotext_en.json"),
 }
 if os.path.isdir(os.path.join(_json_root, ".git")):
     import subprocess as _json_sp

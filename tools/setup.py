@@ -55,6 +55,7 @@ from screens.fleets.fltart import GAMEDATA as _fltart_gamedata  # noqa: E402
 from screens.leaders.ldrart import GAMEDATA as _ldrart_gamedata  # noqa: E402
 from screens.races.racesart import GAMEDATA as _racesart_gamedata  # noqa: E402
 from core.skildesc import string_file as skildesc_file  # noqa: E402
+from core.infotext import text_file as infotext_file  # noqa: E402
 from screens.colony_summary.colonyfigures import (  # noqa: E402
     FIGURE_DIR, all_names)
 from core.config import load_settings      # noqa: E402
@@ -286,6 +287,13 @@ def from_game(settings=None):
          "Races screen artwork — without it a race's panel shows a plate "
          "instead of its portrait and its spies as a number",
          "python tools/races_art_extract.py"),
+        # THE INFO SCREEN (work order 175 D): the Reference topic lists,
+        # the trait names and the Tech Review's group names.
+        (os.path.join(ROOT, *infotext_file(lang).split("/")),
+         f"Info screen texts ({lang}) — without them the Reference lists "
+         f"no topics and Race Statistics names no traits",
+         "python tools/infotext_extract.py"
+         + (f" --lang {lang}" if lang != "en" else "")),
         (os.path.join(ROOT, *skildesc_file(lang).split("/")),
          f"officer skill help texts ({lang}) — without them a right "
          f"click on a leader's skill opens a box that says the text is "

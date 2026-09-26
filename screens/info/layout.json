@@ -1,0 +1,14 @@
+{
+  "_comment": "The Info screen (SCREEN_INFO, 9), work order 175 D. Everything it draws is placed at the HD image of its native rectangle (infogeom, through core/researchnative), and every text comes through core/modtexts by its key (infotexts), so this file carries only the markings, each also stated in the module that performs it and held by the smoke group (tools/smoke_suite/090f).",
+  "marks": {
+    "hd_state": "BUILT, NOT ACCEPTED. The live part of work order 175 D is parked (doc/briefs/175-parked-for-data.md).",
+    "hd_state_local_navigation": "HD STATE \u2014 the tabs are multi-buttons bound to a local of Info_Screen_ (current_tab) and the pages keep their state in file statics the wire never carries; HD navigates the pages itself, starting on the tab the game saved (history_btns bits 4-6), and sends only RETURN / ESC.",
+    "hd_state_open_fix_32": "HD STATE \u2014 the History Graph's curves and the Turn Summary need open fix 32 (doc/ext_info_screen_state.patch, NOT APPLIED); each page says so in its own moddable words and draws what it has (the legend, the metric toggles).",
+    "omission_outer_frame": "OMISSION \u2014 INFO.LBX 0, the frame with the tabs, drop areas and chart painted in, and the interlaced fill are not drawn; glass HUD panels stand where they are.",
+    "omission_app_pictures": "OMISSION \u2014 the Tech Review's application pictures (APP_PICS.LBX, info.cpp:893-896) are not extracted by this order; the picture box stays an empty panel.",
+    "deviation_button_words": "DEVIATION \u2014 the tabs, the tech categories, the metric toggles, BACK and RETURN are words baked into INFO.LBX; HD writes OrionLayer's words, moddable (source 'own').",
+    "deviation_chart_colours": "DEVIATION \u2014 the chart's bars, the legend and the texts in HUD tones, not INFO.LBX 22-25 recoloured through INFO.LBX's palette (which this order does not extract).",
+    "hd_extension_wrap_and_scroll": "HD EXTENSION \u2014 every text wraps to its box, a word too long for a line is broken, and a box whose lines do not fit scrolls with the mouse wheel and shows a HUD scroll bar; the original pages its lists and cuts or overruns its long texts (info.cpp:1086-1093, :1893-1906).",
+    "hd_extension_moddable_texts": "HD EXTENSION \u2014 every text by a stable key through core/modtexts (decision 73): a file texts/info/<key>.txt in the player's mod folder replaces it; the original's words are read from the player's own files and never copied into the tree or the template."
+  }
+}

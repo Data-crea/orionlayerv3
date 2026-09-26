@@ -120,6 +120,15 @@ SPEC = Spec("s_player", SIZE, [
     ("bc_produced",           274, "i16"),
     ("surplus_food",          276, "i16"),
     ("surplus_bc",            278, "i16"),
+    # THE INFO SCREEN'S FIELDS, work order 175 D: the maintenance chart
+    # (info.cpp:462-498, :691-725), the contact count the active list
+    # reads (bill.cpp:577-590), the four history rings (bill.cpp:
+    # 546-556) and the saved tab / metric bits (bill.cpp:379-382,
+    # info.cpp:1208). Header route (offsets asserted by the compiler) and
+    # `tools/info_check.py` over every save: maintenance adds up to its
+    # total, the bits stay in their ranges.
+    ("total_maintenance",     280, "i32"),
+    ("maintenance",           284, "i16[6]"),
     ("research_accumulated",  591, "i32"),
     ("current_research_field", 901, "i8"),
     # current_research_application — the APPLICATION inside that field.
@@ -190,6 +199,7 @@ SPEC = Spec("s_player", SIZE, [
     # `_treaty_labels`, estrings.cpp:91-97, and 6 total war, which the
     # screen clamps to label 5, racescrn.cpp:151-155), spies count in
     # bits 0-5 — 14 of 14 saves on this disk, 26 September 2026.
+    ("n_times_established_contact", 1521, "i8[8]"),
     ("current_trade_agreement_level", 1545, "i16[8]"),
     ("current_research_agreement_level", 1579, "i16[8]"),
     ("total_research",       1613, "i16"),
@@ -200,7 +210,12 @@ SPEC = Spec("s_player", SIZE, [
     ("trade_treaty",         1684, "i8[8]"),
     ("research_treaty",      1692, "i8[8]"),
     ("tribute_treaty",       1700, "i16[8]"),
+    ("fleet_history",        2372, "i8[350]"),
+    ("tech_history",         2722, "i8[350]"),
+    ("population_history",   3072, "i8[350]"),
+    ("production_history",   3422, "i8[350]"),
     ("spies",                3772, "u8[8]"),
+    ("history_btns",         3780, "i8"),
     ("ignoring",             3781, "u8"),
 ], verified=True)
 

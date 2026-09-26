@@ -2,7 +2,7 @@
 
 How the HD client is laid out and where its data lives — the section's own preamble, Layout and coordinates, Structure, Data and resources.
 
-**Decisions in this part:** 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 34, 37, 38, 50, 51, 57, 70, 72.
+**Decisions in this part:** 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 34, 37, 38, 50, 51, 57, 70, 72, 73.
 
 The index is [`../v3_fundament.md`](../v3_fundament.md), and it is
 what to read first. This file is one part of the fundament and
@@ -505,3 +505,31 @@ root (`Resources.roots`, decision 50's master-or-step), which the
 folder's per-file lookup does not reach; banners and skins resolve as
 whole directories (decision 17). All of them are still replaceable
 through `mods/`.
+
+**73. Texts by stable key, replaceable from the mod folder** — work
+order 175 (`doc/briefs/175-*`), next to decision 72 and on its rules.
+Numbered 73 after checking at the commit that no decision carried it.
+
+**One resolver for words.** A screen asks `core.modtexts.text(key)`;
+it gets the player's text when the mod folder holds a good one, else the
+default the screen registered. No screen reads a mod file itself, and the
+folder is still read only by `core.usermod` (`read_text`) — decision 72's
+"one reader" stays true.
+
+**Stable keys**, dotted, `<screen>.<what>[.<more>]`, registered once in
+the screen's own text table (a module in `modtexts.TABLES`) with a source:
+`own` (OrionLayer's words — the template may copy them), `moo2` (the
+original's words, read from the player's own extracted files when asked
+— the template lists the KEY only, the MOO2 rule of decision 72) or
+`game` (a run-time value, never replaced).
+
+**The file**: one plain UTF-8 `.txt` per key, `texts/<first segment>/
+<rest>.txt` (the format is parked for Data, 175). Missing folder, file
+or key: the default. Not UTF-8, empty, or over 64 KB: one log line, the
+default. The screens that draw them wrap and scroll: a text of any length
+fits its box.
+
+**Not Info-only.** The resolver knows no screen. Candidates: every
+screen with words of its own — the menus, Custom Race's messages, the
+HUD headings, the Leaders button words, the help popup's HD entries. The
+Info screen is the first user.
