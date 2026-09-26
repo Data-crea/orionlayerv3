@@ -155,6 +155,10 @@ assert _rc_sl[0].relation_word == "WARM" and _rc_sl[1].relation_word == "COLD"
 assert _rc_sl[1].ignored and not _rc_sl[0].ignored
 assert (_rc_sl[0].spies, _rc_sl[0].mission) == (5, 1)
 assert _rc_sl[2].eliminated and _rc_sl[2].lines == []
+# No treaty: the label as it is, NOT upper-cased (racescrn.cpp:211-213).
+_rc_none = _rc_player.parse(_rc_player_raw("Plain", 1, 1))
+assert _rc_rows.treaty_lines(_rc_player.parse(_rc_players[0]), _rc_none, 3,
+                             _LcW) == ["none"], "the no-treaty fallback"
 assert _rc_rows.agents(_rc_v) == 3
 assert _rc_rows.spy_bonuses(_rc_v, []) == (0, 0)
 ok("the Races lists (active, shown with the eliminated and the omniscient's), "

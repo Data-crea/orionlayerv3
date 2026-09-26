@@ -86,8 +86,12 @@ def treaty_lines(me, other, index, words):
                            5 if theirs == 1 else 10))
     lines = [clean(x) for x in lines if x]
     if not lines:
+        # `_treaty_labels[0]` as it is: only a treaty > 0 is upper-cased
+        # (`strupr`, racescrn.cpp:156-157); the fallback is copied plain
+        # (:211-213) — "No Treaty", seen beside the native picture in work
+        # order 176's live run.
         label = words.estring(E_TREATY_FIRST)
-        lines = [clean(label.upper())] if label else []
+        lines = [clean(label)] if label else []
     return lines
 
 
