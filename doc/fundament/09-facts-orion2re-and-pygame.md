@@ -510,7 +510,9 @@ references in `doc/v3_orion2re_index.md`.
   set `active_save_slot` to the scratch slot), `HOF.M2` (score.cpp:205,
   :614), `lastrace.rac` (racesel.cpp:704), `TEMP.TMP` (swap.cpp:24), and
   a new `logs/game.<pid>.log` beside its binary per process. OrionLayer
-  writes `user_settings.json` (and `.tmp`, `.corrupt`) and, through the
+  writes `user_settings.json` (and `.tmp`, `.corrupt`) — in
+  `~/.config/orionlayer/` since work order 179, the program folder's old
+  copy held too while it exists — and, through the
   F5 editor, files in the tree. `tools/liveguard.py` backs up every one
   of them before a live run (`engine_start.py` calls it before the engine
   exists) and names every change after — changed, appeared, vanished —

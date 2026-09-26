@@ -556,10 +556,19 @@ if os.path.isdir(os.path.join(os.path.dirname(SCREENS_DIR), ".git")):
          "--no-index", "user_settings.json"],
         capture_output=True, text=True)
     assert _us_ign.returncode == 0, "user_settings.json is not ignored"
-    assert os.path.relpath(_us.PATH, os.path.dirname(SCREENS_DIR)) == \
+    # Work order 179: the loader's home is the player's OrionLayer folder
+    # now; the tree's own path is the OLD home, read once by the
+    # migration and still ignored, because a checkout that ran a build
+    # from before 179 has the file there.
+    assert os.path.relpath(_us.OLD_PATH, os.path.dirname(SCREENS_DIR)) == \
         "user_settings.json"
-    ok("user settings: user_settings.json is in .gitignore and is the "
-       "path the loader uses")
+    assert not os.path.abspath(_us.default_path()).startswith(
+        os.path.abspath(os.path.dirname(SCREENS_DIR)) + os.sep) or \
+        os.environ.get("ORIONLAYER_USER_DIR"), \
+        "the settings' home is inside the tree"
+    ok("user settings: user_settings.json in the tree is in .gitignore and "
+       "is the old home the migration reads; the loader's home is outside "
+       "the tree")
 else:
     report("user_settings.json ignore rule NOT checked — no .git")
     ok("user settings: ignore rule reported (no .git to ask)")

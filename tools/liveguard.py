@@ -26,7 +26,13 @@ happened to name.
                       lastrace.rac        the last custom race (racesel.cpp:704)
                       TEMP.TMP            the swap block (swap.cpp:24)
     OrionLayer        user_settings.json  the settings rows (usersettings.save),
-                                          with .tmp and .corrupt beside it
+                                          with .tmp and .corrupt beside it — in
+                                          its home `~/.config/orionlayer/`
+                                          (work order 179, key `config/…`) AND
+                                          in the program folder it was
+                                          migrated from (key `layer/…`), which
+                                          nothing writes any more but which
+                                          stays held while it exists
                       the tree            the F5 editor saves boxes.json,
                                           races.json, colony plates — held by
                                           the tree's `git status`, before and after
@@ -48,6 +54,9 @@ import sys
 import time
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+if ROOT not in sys.path:
+    sys.path.insert(0, ROOT)
+from core import usermod  # noqa: E402 — the settings' home (decision 72)
 GAME_DIR = os.environ.get("ORIONLAYER_GAME_DIR",
                           os.path.expanduser("~/Master of Orion 2"))
 
@@ -82,24 +91,36 @@ def _tree_status(root=ROOT):
         return None
 
 
-def files(game_dir=None, root=None):
-    """{key: absolute path or None} of every file a run can write."""
+def _present(folder, name):
+    path = os.path.join(folder, name)
+    return path if os.path.exists(path) else None
+
+
+def files(game_dir=None, root=None, config_dir=None):
+    """{key: absolute path or None} of every file a run can write.
+
+    `layer/` is the program folder (the settings' home before work order
+    179), `config/` the settings' home now (`usermod.user_dir()`). A
+    manifest from before 179 has no `config/` keys and is verified as it
+    was taken."""
     game_dir, root = game_dir or GAME_DIR, root or ROOT
+    config_dir = config_dir or usermod.user_dir()
     out = {f"game/{n}": _find(game_dir, n) for n in GAME_FILES}
-    out.update({f"layer/{n}": (os.path.join(root, n)
-                               if os.path.exists(os.path.join(root, n))
-                               else None) for n in LAYER_FILES})
+    out.update({f"layer/{n}": _present(root, n) for n in LAYER_FILES})
+    out.update({f"config/{n}": _present(config_dir, n) for n in LAYER_FILES})
     return out
 
 
-def snapshot(dest, game_dir=None, root=None):
+def snapshot(dest, game_dir=None, root=None, config_dir=None):
     """Copy and hash every file; record the tree's status. Returns the
     manifest."""
     os.makedirs(dest, exist_ok=True)
+    config_dir = config_dir or usermod.user_dir()
     man = {"taken": time.strftime("%Y-%m-%d %H:%M:%S"),
            "game_dir": game_dir or GAME_DIR, "root": root or ROOT,
+           "config_dir": config_dir,
            "files": {}, "tree_status": _tree_status(root or ROOT)}
-    for key, path in files(game_dir, root).items():
+    for key, path in files(game_dir, root, config_dir).items():
         if path is None:
             man["files"][key] = None
             continue
@@ -119,7 +140,7 @@ def verify(dest, restore=False, allow=(), log=print):
     removed) and the list of restored keys returned."""
     with open(os.path.join(dest, "manifest.json")) as fh:
         man = json.load(fh)
-    now = files(man["game_dir"], man["root"])
+    now = files(man["game_dir"], man["root"], man.get("config_dir"))
     changes, restored = [], []
     for key, before in man["files"].items():
         name = key.split("/", 1)[1]
@@ -142,6 +163,7 @@ def verify(dest, restore=False, allow=(), log=print):
                 os.remove(path)
             else:
                 target = path or before["path"]
+                os.makedirs(os.path.dirname(target), exist_ok=True)
                 shutil.copy2(before["copy"], target)
                 if _sha(target) != before["sha256"]:
                     raise RuntimeError(f"{key}: the restored copy does not "

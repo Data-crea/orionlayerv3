@@ -322,7 +322,9 @@ properties of the player's display and eyes, not of the game.
 
 **One home for the values, and it is not `settings.json`.**
 `core/usersettings.py` reads and writes `user_settings.json`: ignored by
-git, never shipped, never on the editor's save path (decision 19). An
+git, never shipped, never on the editor's save path (decision 19). (Its
+home moved out of the program folder to `~/.config/orionlayer/` in work
+order 179 — decision 72.) An
 absent file is the defaults, silently; an unreadable one is one error
 line, the defaults, and the file moved aside on the next save; a key
 this build does not know is written back. The Game Settings dialog's

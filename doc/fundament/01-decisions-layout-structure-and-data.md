@@ -458,6 +458,14 @@ in it is ever committed. It is for somebody who is not a developer;
 `mods/` in the tree (decisions 16, 17) stays the route for a developer
 and is untouched.
 
+**The player's settings live beside it** (work order 179, Data, 26
+September 2026): `user_settings.json` is read from and written to
+`user_dir()` — `~/.config/orionlayer/user_settings.json`, the same base,
+`XDG_CONFIG_HOME` honoured — no longer the program folder. A file in the
+program folder is copied over once when the new one is missing, and never
+deleted or written; when both exist the new one wins and one log line
+says so (`core/usersettings.py`, smoke check 006g).
+
 **The resolver is the one that already existed.** `Resources.resolve`
 asks `core.usermod` first and nothing else asks it, so decision 16
 holds as it stood: a screen asks for its default path and gets the

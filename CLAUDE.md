@@ -61,8 +61,8 @@ derive world geometry.
 **The smoke test must be green before every commit.**
 
 ```bash
-python tools/smoke_test.py             # everything — 344 checks, ~200 s
-python tools/smoke_test.py --fast      # the commit gate's 334, ~95 s
+python tools/smoke_test.py             # everything — 347 checks, ~200 s
+python tools/smoke_test.py --fast      # the commit gate's 337, ~95 s
 python tools/smoke_test.py --screen colony_summary --fast   # NOT a gate
 ```
 
@@ -96,7 +96,7 @@ the fast tier holds that list and the guards to each other.
 time, not at commit time. See decision 31 and
 `doc/briefs/157-suite-profile.md`.
 
-344 checks, headless, no orion2re needed. **The count must not go
+347 checks, headless, no orion2re needed. **The count must not go
 down.** If a change makes a check obsolete, replace it — do not
 delete it. It went down exactly once, on 12 September 2026, when
 Phase B deleted the frame machinery the checks were about (decision
@@ -144,7 +144,7 @@ screens/<name>/         one folder per HD screen:
                           help.json    right-click help regions
                           assets/
 tools/                  smoke test, generators, live diagnostics
-tools/smoke_suite/      the smoke test's 124 check modules, one group
+tools/smoke_suite/      the smoke test's 125 check modules, one group
                         per screen plus a shared core; smoke_test.py
                         is the runner (work order 162)
 doc/                    the documents in the table above
@@ -354,7 +354,9 @@ loaded scratch game was left for New Game). The list is found in the
 source, not named by an order: SAVE1-11, `MOX.SET`, `HOF.M2`,
 `lastrace.rac`, `TEMP.TMP` in the game folder; user_settings.json
 (generated at the first start, so a fresh clone has none; with
-`.tmp`/`.corrupt`) and the tree's `git status` here.
+`.tmp`/`.corrupt`) in its home `~/.config/orionlayer/` since work order
+179, AND in the program folder it was migrated from while that file
+exists; and the tree's `git status` here.
 `tools/engine_start.py` takes the backup before the engine exists and
 prints the folder; after the run,
 
