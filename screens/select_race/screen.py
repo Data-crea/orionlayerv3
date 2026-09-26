@@ -33,7 +33,14 @@ class SelectRaceScreen(ScreenBase):
     GAME_SCREEN_ID = 51
     USE_FRAME = True
     FRAME_TITLE = "Select Race"
-    FRAME_BTN_LEFT = None
+    #: THE WAY BACK (work order 177; 174 found none). The original offers
+    #: exactly one: ESC, a hot-key field `Add_Hot_Key_("\x1B")` added in a
+    #: single-player game (racesel.cpp:195-199), which returns to the
+    #: caller — New Game (:355-364). HD sends that live field on ESC and
+    #: on this frame button (HD EXTENSION `back_button`: the original has
+    #: no visible button, only the key). The field id is read off the list
+    #: at the moment of the click (`_escape_field`), never stored.
+    FRAME_BTN_LEFT = ("Back", None)
     FRAME_BTN_RIGHT = None
     FRAME_VARIANT = "select_race"
 
@@ -226,7 +233,37 @@ class SelectRaceScreen(ScreenBase):
             self._selected_id = rid
             self._desc_scroll = 0
 
+    def _escape_field(self):
+        """The live ESC hot-key field of `Race_Selection_Screen_`, or None
+        (a multiplayer game has none, racesel.cpp:197)."""
+        st = getattr(self.app.client, "state", None)
+        return next((f for f in (getattr(st, "fields", None) or [])
+                     if f.index != 0 and f.hotkey == 0x1B), None)
+
+    def _go_back(self):
+        f = self._escape_field()
+        if f is None or not self.app.connected:
+            log.info("select race: no ESC field on the wire — no way back "
+                     "offered (a multiplayer game)")
+            return False
+        log.info("select race: back -> field %d (ESC)", f.index)
+        self.app.client.activate_field(f.index)
+        return True
+
+    def _frame_button_hit(self, screen_x, screen_y):
+        if self._frame_button_side(screen_x, screen_y) == "left" and \
+                not self.is_picture_mode:
+            f = self._escape_field()
+            return f.index if f is not None else None
+        return super()._frame_button_hit(screen_x, screen_y)
+
     def handle_click(self, screen_x, screen_y):
+        if self._frame_button_side(screen_x, screen_y) == "left":
+            if not self.is_picture_mode:
+                self._go_back()
+            else:
+                self.handle_key(pygame.K_ESCAPE)
+            return
         rid = self._race_at_screen_pos(screen_x, screen_y)
         if rid is None:
             return
@@ -306,8 +343,10 @@ class SelectRaceScreen(ScreenBase):
                 if self.app.connected:
                     self.app.client.inject_key(pygame.K_ESCAPE)
                 self.set_mode(self.MODE_SELECT_RACE)
-            elif self.app.connected:
-                self.app.client.inject_click(162, 445)
+            else:
+                # The original's ESC field (174 found HD injecting a click
+                # at (162, 445), where no field lies — no way back).
+                self._go_back()
         elif key == pygame.K_RETURN:
             # Same path as a click: keeps HD and game in sync
             # (stock race → empire_identity, Custom → deferred
