@@ -78,3 +78,69 @@ start and every live step below is parked for that one reason (parked item
   `info_history_offline_*` files (the pre-fix-32 History page) from
   `evidence/work_order_175/info/`; they are gone, the 175 code that drew
   them is in git (7a2526f).
+
+## 3. Live tests — **PARKED** (parked items 1 and 2)
+
+No live step ran: the leftover engine PID 368253 held the fixed port all run
+and closing it was denied by the harness (part 1). Every step of 175's
+parked list is written out, ready to run, in parked item 2. No regression
+from 175 or this order was observed — none could be, live. No liveguard
+backup was taken (no engine of this run existed); no game or OrionLayer
+file was written by a run.
+
+## Tests
+
+- Full suite: **336 green** (26 September 2026, after part 2).
+- Fresh clone (`git clone` of the local commits, `tools/setup.py` exit 0,
+  full suite): **336 green**.
+- 334 -> 336 over this order: 006e's leftover-engine check, 090f's open
+  fix 32 check; nothing removed.
+
+## Push — **NOT MADE** (parked item 3)
+
+What WOULD go out — `main`, 11 commits ahead of `origin/main`
+(`git@github.com:Data-crea/orionlayerv3.git`):
+
+    fe9b348 Open fix 32 applied and wired: History curves, Turn Summary (176-2)
+    38d155d Work order 176 filed; the rule for engines this session did not start (176-1)
+    54a5c3f Work order 175: tests, results and what to look at first; CLAUDE.md fix
+    7a2526f Work order 175 D: the Info screen, its texts moddable (decision 73)
+    6b55071 Work order 175 C: the Races screen
+    51b2517 Work order 175 B: the Leaders screen complete, with open fix 30
+    8b03592 The string extractor keeps its spaces; the Leaders workaround goes (175)
+    9cfa50e Open fix 30 applied: the Leaders screen's view state on the wire (175 A)
+    64bb4ec Open fix 31 applied: present without VSync on request (175 A)
+    8842bca The live-test protocol backs up every file a run can write (175)
+    266f6f5 174 recorded as pushed; work order 175 filed (175)
+
+plus this closing commit. The other local branches (`colony-free-bands`,
+`rescue/ties-abend`) are identical to their remote counterparts; there are
+no tags. orion2re stays local (bundle in `~/`).
+
+## Results
+
+| step | result | evidence |
+|---|---|---|
+| rule for leftover engines recorded (CLAUDE.md, fundament 09, engine_start.py) | works | 38d155d; 006e check 3 |
+| leftover engine PID 368253 closed | parked — denied by the harness | part 1; parked item 1 |
+| fix 32 applied (orion2re 2269749c), bundle, rebuild | works | part 2; version_check OK |
+| entry 32 checked whole; row 29 and a blank line fixed | works | part 2; 090f check 5 |
+| Info History curves and Turn Summary wired | works (offline) | `evidence/work_order_176/info/*_offline_*`; 090f check 5 |
+| fix 31 starts and tearing | parked (port) | parked item 2 |
+| Leaders live, every button both tabs, hire | parked (port) | parked item 2 |
+| Races live | parked (port) | parked item 2 |
+| Info live, every tab, text mod, colony jump | parked (port) | parked items 2, 4 |
+| extractor spaces live | parked (port) | parked item 2 |
+| full suite / fresh clone | works (336 / 336) | above |
+| push | not made | parked item 3 |
+
+## What Data should look at first
+
+1. Parked item 1: close PID 368253 (`kill 368253`) or allow
+   `engine_start.py --close-foreign` — everything live, and the push,
+   follows from that one decision.
+2. `evidence/work_order_176/info/info_history_offline_*_1920x1080.png` —
+   the History Graph from open fix 32's divisors (the save's own), the
+   first page fix 32 opens.
+3. `doc/orion2re_open_fixes.md` row 29 — a row the table had been missing
+   since work order 152, added from its section.
