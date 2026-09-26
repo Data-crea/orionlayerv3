@@ -1,8 +1,11 @@
 Extension API: the Leaders screen's view state on the wire ("OFFS").
 
-STATUS: NOT APPLIED. Written by work order 167, 24 September 2026, and
-parked for Data's go/no-go (doc/briefs/167-parked-for-data.md, item W).
-orion2re's tree was not touched. What was shown, and only this: the
+STATUS: APPLIED 26 September 2026 by work order 175 on Data's
+authorisation — orion2re orionlayer-local cc542e02, rebuilt, bundle
+~/orion2re_bundle_26sep_cc542e02.bundle; version_check requires its
+marker. Written by work order 167, 24 September 2026, and parked for
+Data's go/no-go then (doc/briefs/167-parked-for-data.md, item W).
+Before the apply: What was shown, and only this: the
 patch applies to src/ext/ext_api.cpp at orion2re e6199966
 (`patch -p1 --dry-run`), and the patched file compiles with the
 engine's own flags from out/build/Linux/linux-debug/build.ninja

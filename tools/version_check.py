@@ -156,7 +156,7 @@ LOCAL_PATCHES = {
         "screen does not read (open fix 28) — so a single ship cannot "
         "be selected and only ALL changes the selection"),
     # Applied 26 September 2026 by work order 175 on Data's authorisation
-    # (orion2re orionlayer-local f98b8547).
+    # (orion2re orionlayer-local f98b8547 and cc542e02).
     "doc/ext_present_no_vsync.patch": (
         os.path.join("src", "game", "platform.cpp"),
         "Present_VSync_Interval_",
@@ -164,6 +164,13 @@ LOCAL_PATCHES = {
         "hangs in its first logo frames whenever its window is not drawn "
         "(open fix 31) and runs at a frame a second behind a full-screen "
         "window"),
+    "doc/ext_officer_screen_state.patch": (
+        os.path.join("src", "ext", "ext_api.cpp"),
+        # The block's own marker: "OFFS" is pushed a character at a time.
+        "_officer_star_displayed",
+        "the snapshot carries none of the Leaders screen's view state "
+        "(open fix 30), so POOL, DISMISS, assigning, PREV/NEXT, the star "
+        "display and the ship grid stay the HD STATE placeholder"),
 }
 
 #: Patches that are REPORTED to Joes and not yet applied: listed with

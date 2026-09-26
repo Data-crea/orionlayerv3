@@ -19,7 +19,7 @@
 #   - the two extractors write into the project, git ignores what they
 #     write, and both loaders say absent and stale; the skill help box
 #     formats the stand-in texts the original's way
-#   - open fix 30: the patch is filed NOT APPLIED, its entry is on the
+#   - open fix 30 is applied: patch, list and version_check say so, the tree carries it (175); was: NOT APPLIED, its entry is on the
 #     one list, nothing requires it yet, and it applies to the engine's
 #     own ext_api.cpp when that tree is on this disk
 import json as _ldc_json
@@ -224,40 +224,38 @@ ok("the Leaders extractors write into the project and git ignores their "
    "output; both loaders say absent and stale; the skill help box "
    "formats the original's way")
 
-# ── 13. OPEN FIX 30 ───────────────────────────────────────────
+# ── 13. OPEN FIX 30 — APPLIED by work order 175 ─────────────────
+# The patch's header, the one list and version_check say so; where an
+# orion2re tree is on this disk it carries the marker and the patch comes
+# back off cleanly (`patch -R --dry-run`), which is what "applied" means.
 _ldc_patch = os.path.join(_ldc_root, "doc", "ext_officer_screen_state.patch")
 _ldc_ptext = open(_ldc_patch, encoding="utf-8").read()
-assert "STATUS: NOT APPLIED" in _ldc_ptext and '"OFFS"' in _ldc_ptext
+assert "STATUS: APPLIED 26 September 2026" in _ldc_ptext and "cc542e02" in _ldc_ptext
 _ldc_fixes = open(os.path.join(_ldc_root, "doc", "orion2re_open_fixes.md"),
                   encoding="utf-8").read()
-assert "| 30 |" in _ldc_fixes and "## 30. The Leaders screen's view state" \
-    in _ldc_fixes
+assert "## 30. The Leaders screen's view state" in _ldc_fixes
+_ldc_row = next(_l for _l in _ldc_fixes.splitlines() if _l.startswith("| 30 |"))
+assert "**Applied** 26 September 2026 by work order 175" in _ldc_row, _ldc_row
 _ldc_vc = open(os.path.join(_ldc_root, "tools", "version_check.py"),
                encoding="utf-8").read()
-assert "OFFS" not in _ldc_vc, (
-    "version_check requires OFFS, and the patch is not applied — it would "
-    "refuse every engine that exists")
+assert '"_officer_star_displayed"' in _ldc_vc, "version_check does not require open fix 30"
 if _ldc_tree is not None and os.path.exists(os.path.join(
         _ldc_tree, "src", "ext", "ext_api.cpp")):
+    _ldc_api = os.path.join(_ldc_tree, "src", "ext", "ext_api.cpp")
+    assert "_officer_star_displayed" in open(_ldc_api, encoding="utf-8",
+                                             errors="replace").read()
     with _ldc_tmp.TemporaryDirectory() as _ldc_t:
         os.makedirs(os.path.join(_ldc_t, "src", "ext"))
-        with open(os.path.join(_ldc_tree, "src", "ext", "ext_api.cpp"),
-                  "rb") as _src, open(os.path.join(
-                      _ldc_t, "src", "ext", "ext_api.cpp"), "wb") as _dst:
+        with open(_ldc_api, "rb") as _src, open(os.path.join(
+                _ldc_t, "src", "ext", "ext_api.cpp"), "wb") as _dst:
             _dst.write(_src.read())
-        _ldc_run = _ldc_sp.run(["patch", "-p1", "--dry-run", "-i",
+        _ldc_run = _ldc_sp.run(["patch", "-R", "-p1", "--dry-run", "-i",
                                 _ldc_patch], cwd=_ldc_t,
                                capture_output=True, text=True)
-        if _ldc_run.returncode != 0 and "OFFS" in open(os.path.join(
-                _ldc_tree, "src", "ext", "ext_api.cpp"),
-                encoding="utf-8", errors="replace").read():
-            report("open fix 30 is already in this orion2re tree")
-        else:
-            assert _ldc_run.returncode == 0, _ldc_run.stdout + \
-                _ldc_run.stderr
+        assert _ldc_run.returncode == 0, _ldc_run.stdout + _ldc_run.stderr
 else:
-    report("open fix 30's patch NOT tried against ext_api.cpp — no "
-           "orion2re tree on this disk")
-ok("open fix 30: the patch is filed NOT APPLIED, its entry is on the one "
-   "list, nothing requires it yet, and it applies to the engine's own "
-   "ext_api.cpp")
+    report("open fix 30 NOT checked against ext_api.cpp — no orion2re "
+           "tree on this disk")
+ok("open fix 30 is applied: the patch and the one list say so with its "
+   "commit, version_check requires its marker, and the engine's own "
+   "ext_api.cpp carries it (the patch comes back off cleanly)")

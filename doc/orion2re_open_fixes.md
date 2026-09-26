@@ -50,7 +50,7 @@ section for what was found where.
 | 26 | SELECT NEW RESEARCH commits a row by itself, about a second and a half after the science room hands over to it | **OPEN, deferred by Data 19 September 2026.** Observation, seen three times and measured once with a send counter on 18 September (work order 130's live run). Data reproduced the counter-case on 19 September: same binary, NO client connected, the dialog clicked away with a real mouse — the list waits. So open fix 25 is not the cause | A client cannot rely on reaching the list before it has chosen; three of six attempts to choose in HD lost the occasion. The player's way round it is to click the completion dialog away in the orion2re window with a real mouse |
 | 27 | The fleet screen's view state is not in the snapshot | **Applied** 19 September 2026 (work order 134 C), orion2re `cc5ec133` on `orionlayer-local`, `doc/ext_fleet_screen_state.patch`; required by `tools/version_check.py`; **NOT CONFIRMED LIVE** — 134's live part is parked; open upstream | — while applied. Without it HD cannot know which stack the fleet screen shows, which ships are in the grid, which are selected, where the list is scrolled or which filters are on, and hands over to the original picture |
 | 28 | One ship cannot be selected on the fleet screen | **Applied** 19 September 2026 (work order 134 C), orion2re `e6199966` on `orionlayer-local`, `doc/ext_fleet_screen_select.patch`; required by `tools/version_check.py`; **NOT CONFIRMED LIVE**; open upstream | — while applied. Without it only ALL changes the selection, so a subset of a stack cannot be moved or scrapped from HD |
-| 30 | The Leaders screen's view state is not in the snapshot — button mode, selection, the colony view's two stars, the ship view's stack and grid, the hire popup's leader | **Request, NOT APPLIED** — written by work order 167 (`doc/ext_officer_screen_state.patch`), applies and compiles against `e6199966`, parked for Data's go/no-go | Without it the HD Leaders screen shows every leader, both views, the buttons and the galaxy box, and sends only what it can confirm on the wire (the view tabs, HIRE, CANCEL, RETURN, a click on a leader for hire); pool, dismiss, assignment, the star display and the ship grid are drawn as a marked placeholder |
+| 30 | The Leaders screen's view state is not in the snapshot — button mode, selection, the colony view's two stars, the ship view's stack and grid, the hire popup's leader | **Applied** 26 September 2026 by work order 175 (orion2re `cc542e02`, `doc/ext_officer_screen_state.patch`); open upstream | Without it the HD Leaders screen shows every leader, both views, the buttons and the galaxy box, and sends only what it can confirm on the wire (the view tabs, HIRE, CANCEL, RETURN, a click on a leader for hire); pool, dismiss, assignment, the star display and the ship grid are drawn as a marked placeholder |
 | 31 | A session-launched engine hangs in its first logo frames when its window is not being drawn: every present waits for VSync, and the game thread waits for the present without a timeout | **Applied** 26 September 2026 by work order 175 (orion2re `f98b8547`, `doc/ext_present_no_vsync.patch`): `ORION2RE_NO_VSYNC=1` presents without waiting; open upstream | Without it an unattended live run hangs in about one start in eight while the screen is locked or another window covers the engine's; `tools/engine_start.py` detects the hang and starts again |
 
 Items 3 and 4 are both about INJECT_CLICK and both live in the same
@@ -1949,11 +1949,12 @@ type appears. That is the marked limitation this fix replaces.
 
 ## 30. The Leaders screen's view state is not in the snapshot
 
-**Asked for by work order 167, 24 September 2026. NOT APPLIED** —
-`doc/ext_officer_screen_state.patch`, parked for Data's go/no-go in
-`doc/briefs/167-parked-for-data.md`. It applies to `src/ext/ext_api.cpp`
-at `e6199966` and compiles with the engine's own flags (with a control
-that is refused); it has not run.
+**Asked for by work order 167, 24 September 2026. APPLIED 26 September
+2026** by work order 175 on Data's authorisation — orion2re
+`orionlayer-local` `cc542e02`, `doc/ext_officer_screen_state.patch`;
+`tools/version_check.py` requires its marker. Open upstream. Before the
+apply it was shown to apply to `src/ext/ext_api.cpp` at `e6199966` and
+to compile with the engine's own flags (with a control that is refused).
 
 ### Symptom
 
