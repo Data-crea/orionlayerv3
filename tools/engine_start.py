@@ -160,9 +160,9 @@ def verdict(engines, free, screen):
     return (not reasons), reasons
 
 
-def command(inhibit=True):
+def command(inhibit=True, engine=None):
     """The engine command, under an idle inhibitor when one exists."""
-    cmd = [ENGINE]
+    cmd = [engine or ENGINE]
     if inhibit and _which("gnome-session-inhibit"):
         cmd = ["gnome-session-inhibit", "--inhibit", "idle", "--reason",
                "OrionLayer live run: orion2re needs the screen on"] + cmd
@@ -223,17 +223,18 @@ def is_hang(last_line, samples):
         for s in samples))
 
 
-def start(log_path, timeout=60, inhibit=True, out=print, retries=3):
+def start(log_path, timeout=60, inhibit=True, out=print, retries=3,
+          engine=None):
     """Start, and start again after a recognised hang."""
     for attempt in range(1, retries + 1):
-        pid = _start_once(log_path, timeout, inhibit, out)
+        pid = _start_once(log_path, timeout, inhibit, out, engine)
         if pid != "hang":
             return pid
         out(f"start hang recognised (attempt {attempt} of {retries})")
     return None
 
 
-def _start_once(log_path, timeout, inhibit, out):
+def _start_once(log_path, timeout, inhibit, out, engine=None):
     engines, free, screen = running_engines(), port_free(), screen_state()
     ok, reasons = verdict(engines, free, screen)
     out(f"screen: blanked={screen['blanked']} idle={screen['idle_ms']} ms")
@@ -242,7 +243,8 @@ def _start_once(log_path, timeout, inhibit, out):
             out("REFUSED: " + r)
         return None
     handle = open(log_path, "w")
-    proc = subprocess.Popen(command(inhibit), cwd=GAME_DIR, env=display_env(),
+    proc = subprocess.Popen(command(inhibit, engine), cwd=GAME_DIR,
+                            env=display_env(),
                             stdin=subprocess.DEVNULL, stdout=handle,
                             stderr=subprocess.STDOUT, start_new_session=True)
     deadline = time.time() + timeout
@@ -286,13 +288,15 @@ def main():
     ap.add_argument("--timeout", type=int, default=60)
     ap.add_argument("--no-inhibit", action="store_true")
     ap.add_argument("--retries", type=int, default=3)
+    ap.add_argument("--engine", default=None,
+                    help="another orion2re binary (a build with open fix 31)")
     args = ap.parse_args()
     if args.check:
         ok, reasons = verdict(running_engines(), port_free(), screen_state())
         print("OK to start" if ok else "\n".join("REFUSED: " + r for r in reasons))
         return 0 if ok else 1
     return 0 if start(args.log, args.timeout, not args.no_inhibit,
-                      retries=args.retries) else 1
+                      retries=args.retries, engine=args.engine) else 1
 
 
 if __name__ == "__main__":

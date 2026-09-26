@@ -71,3 +71,57 @@ every dialog.
 `~/Downloads/ChatGPT Image Sep 26, 2026, 06_14_19 AM.png` (a galaxy
 screen with a glass info panel and a silver frame) is not named by the
 order and was not used.
+
+## C1 — the live test ran on the fix-31 build
+
+**Default taken:** after four steps on your build — throttled to about a
+frame a second behind your full-screen game, a click lost — the live
+test ran on a scratch build of e6199966 with open fix 31 and
+`ORION2RE_NO_VSYNC=1`. Game code and Extension API are yours; only the
+present no longer waits. **Alternative:** repeat the live steps on your
+build with the engine's window in front (`live/driver/` holds the
+scripts).
+
+## C2 — an unknown modal on the galaxy map is invisible in HD
+
+Found live after TURN (colony base on Malus). The galaxy map draws only
+the boxes it knows and never hands an unknown one to the fallback view.
+**Default taken:** not fixed here (from before 169). **Suggestion:** the
+galaxy map's `wants_original()` answers True while `mapboxes.classify`
+says unknown — the game's own picture and its clicks, as for every
+screen HD has no version of.
+
+## C3 — Select Race's ESC
+
+HD's ESC injects a click at native (162, 445), where no field lies; the
+list's own ESC field (hotkey 27) would take the game back to New Game.
+**Default taken:** not fixed (first commit).
+
+## C4 — the main menu's Load dialog
+
+HD keeps drawing the main menu while the game's Load dialog is up, and
+`tools/gameload.py` knows only the GAME menu's variant (base (0x90,
+0x19)); the main menu centres it (`loadsave.cpp:224-229`). **Default
+taken:** not fixed; the driver checked the ten rows against the source
+itself.
+
+## C5 — MOX.SET
+
+Written by the game at 09:26:31 (leaving the loaded scratch game for New
+Game), not copied before — the order named SAVE1-11. **Default taken:**
+restored from the settings block of your own 06:18 autosave (7 bytes
+differed, `active_save_slot` among them); the run's file kept as
+`MOX.SET_after_run`. Not provably identical to the file before the run.
+**If anything in the game's options looks different**, copy
+`MOX.SET_after_run` or your own copy back.
+
+## C6 — three older findings
+
+New Game's layout lists a fourth tech level the original lacks; Select
+Race's text overlaps at 2160p (as before 169); the fallback view
+forwards clicks but not keys.
+
+## C7 — hiring a leader
+
+SAVE4 offers the player no leader for hire (as 167 found). Needs a
+scratch save that does.

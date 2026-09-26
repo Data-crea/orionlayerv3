@@ -1,6 +1,6 @@
 # OrionLayer v3 — Project Status
 
-Updated: 25 September 2026
+Updated: 26 September 2026
 
 **How to read the date above.** The header names the day this file
 was last edited; the "This session (…)" paragraphs below it run
@@ -12,6 +12,22 @@ carrying entries dated 9 September inside it. **The convention is
 right and the header had gone stale** — resolved 10 September 2026
 by dating the header to the edit and giving this session its
 paragraph, below, so the two agree again.
+
+This session (26 September 2026, work order 174): **the start hang is
+explained, every black box is glass, and the live test ran.** (A) A
+session-launched orion2re stops in its first logo frames when its window
+is not being drawn (screen locked, or covered by a full-screen game): a
+VSync present that never completes, the game thread waiting without a
+timeout — open fix 31, `doc/ext_present_no_vsync.patch`, not applied;
+`tools/engine_start.py` recognises the hang and starts again. (B) One
+glass fill in `core/hud/glass.py` for every panel, popup, table row and
+text field — the background dimmed under a gradient measured off Data's
+mockup, following the frame colour — and a Panel glass slider (HD
+EXTENSION) that never takes a HUD word below 4.5:1. (C) 103 live steps
+at 1920x1080 and 2576x1432 on scratch save SAVE4: 98 work, 2 parked, 3
+broken with two causes, both from before 169 (an unknown modal on the
+galaxy map is invisible in HD; Select Race has no way back); the main
+menu's Load dialog is not drawn in HD either. Checks 314 -> 320. `doc/briefs/174-progress.md`.
 
 This session (25 September 2026, work order 173): **one background
 behind every screen, and a mod folder anybody can use.** Data's
