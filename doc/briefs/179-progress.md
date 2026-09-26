@@ -196,3 +196,48 @@ existed and none was added: both screens now take the stored scale and let
   2160p: text at 1080p's proportions. **2576x1432 changes as well**: its
   factor was 1.78 instead of 1.33, so text there is now a quarter smaller —
   Data's own window size; parked item 2.
+
+## 6. The missing icons (169's P11) — **DONE: every button has a glyph; shown where it fits**
+
+- **Source: our own, drawn from coordinates.** 43 glyphs as line art on a
+  unit square in `assets/shared/hud/glyphs.json` (back, close, check,
+  load, save, new, power, gear, prev/next/up/down, person, players, hire,
+  dismiss, pool, star, trash, relocate, all, wrench, swords, colony, ship,
+  list, harvest, industry, science, hammer, coin, thermometer, crystal,
+  size, shield, gravity, leaf, range, flag, outpost, exit, clear, play),
+  drawn by the new `tools/hud_glyphs.py` (PIL, 4x supersampled, a soft
+  glow) into `assets/shared/hud/cut/icon_<glyph>.png` beside the cut
+  pieces — derived, ignored by git, built by `tools/setup.py` via
+  `hud_cut.py`. **No MOO2 file** is touched; LICENSE says what they are.
+  Colour, line and glow are `chosen.glyph` in `style.json` — the colour
+  measured off five nav icons (median (29, 179, 255)).
+- **Which button shows which:** one table, `glyphs.json` "buttons",
+  67 buttons on the 12 screens of P11, by the button's own NAME (never its
+  word). Wired through every path: box buttons (`Box.icon`, set by
+  `ScreenBase`), frame buttons (`screenframe`), the colony sort keys and
+  RETURN, the system window's CLOSE (`small_button` got `icon`), and the
+  screens that draw their word themselves through one helper,
+  `core/hud/icons.icon_beside` (Planets, GAME menu, Fleets via
+  `icons.fitted_word`, Leaders, Research EXIT).
+- **Moddable:** each glyph is a HUD piece — `art.PIECES`, so the mod
+  folder's `hud/icon_<glyph>.png` replaces it (a typo still refused) and
+  the mod template ships them; they turn with the frame colour like the
+  nav glyphs (`tint.FOLLOWS`).
+- **The rule: the word stays whole.** An icon is drawn only where it and
+  the whole word fit; otherwise the word alone. Found by looking: the
+  HUD block's own label path drew the icon and squeezed the word (the
+  colony sort keys, POPULATION under a person) — fixed, same rule.
+- **Placeholders: none needed** — every button has a clean source. What is
+  missing is ROOM (parked item 4): at 1920x1080 and 2576x1432 the colony
+  keys POPULATION, INDUSTRY, SCIENCE, PRODUCING and RETURN, Planets'
+  CLIMATE and MINERALS, Fleets' SUPPORT, COMBAT, PREV and NEXT, and the GAME
+  menu's five main buttons show their word only (HALL OF FAME too at
+  2576). Leaders, Research EXIT and the system window's CLOSE have no
+  offline state to render; their code path is the helper's.
+- Split for the line guideline: `core/hud/icons.py` (the helper, and
+  Fleets' `_centred` as `fitted_word`), `core/hud/glyphs.py` (names only,
+  so `art` and `tint` do not import each other). Checks: new 006h (2), 006a
+  now holds all pieces incl. glyphs, 013's label-colour measure leaves the
+  glyph out (13 is listed at 46 KB now). **352 → 354.**
+- Evidence: `evidence/work_order_179/icons/glyph_sheet.png` and every
+  affected screen at 1920x1080 and 2576x1432 (`*_offline.png`).

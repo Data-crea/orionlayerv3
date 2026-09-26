@@ -18,6 +18,7 @@ import pygame
 
 from core import mouse as mouse_input
 from core.hud import blocks as hud
+from core.hud import glyphs
 
 from core import palette
 from core.hestrings import printf
@@ -128,7 +129,10 @@ def button(screen, surface, name, word):
     img = screen.style.render_text(
         word, size, tuple(screen.pressed.colour(name, COL_BUTTON)[:3]))
     r = b.screen_rect
-    surface.blit(img, (r.x + (r.w - img.get_width()) // 2,
+    # The button's glyph beside the word when both fit (work order 179).
+    cx = hud.icon_beside(surface, r, glyphs.for_button("game_menu", name),
+                         img.get_width())
+    surface.blit(img, (cx - img.get_width() // 2,
                        r.y + (r.h - img.get_height()) // 2))
 
 

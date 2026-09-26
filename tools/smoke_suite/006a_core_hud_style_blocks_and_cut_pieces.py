@@ -87,9 +87,12 @@ for _hc_n in _hc_have:
 if len(_hc_have) < len(_hc_names):
     report(f"hud cut pieces: {len(_hc_names) - len(_hc_have)} of "
            f"{len(_hc_names)} not built here — python tools/setup.py")
-assert sorted("icon_" + k for k in _hart.ICONS) + [_hart.TITLE_PLATE] == \
-    sorted(_hc_names), ("core.hud.art.ICONS and tools/hud_cut.ICONS name "
-                        "different icons", _hc_names)
+# Since work order 179 the cutter also draws the button glyphs
+# (tools/hud_glyphs.py) into the same folder: the pieces art knows —
+# cut icons, the plate AND the glyphs — are exactly the files it writes.
+assert sorted(_hart.PIECES) == sorted(_hc_names), (
+    "core.hud.art.PIECES and what tools/hud_cut.py writes differ",
+    sorted(set(_hart.PIECES) ^ set(_hc_names)))
 ok(f"hud cut pieces rebuild byte for byte ({len(_hc_have)} of "
    f"{len(_hc_names)} present), and the names agree both ways")
 

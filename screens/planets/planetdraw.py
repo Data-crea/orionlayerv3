@@ -10,6 +10,7 @@ import logging
 import pygame
 
 from core.hud import blocks as hud
+from core.hud import glyphs
 
 from core import listgrid, palette
 from screens.colony_summary import colonyinset, colonyplanets
@@ -248,7 +249,10 @@ def render_control(screen, surface, name, label, active=False, enabled=True,
     surf = _text(screen.style, label, size,
                  CONTROL_TEXT if enabled else CONTROL_DISABLED,
                  rect.width - 8)
-    surface.blit(surf, surf.get_rect(center=rect.center))
+    # The button's glyph beside the word when both fit (work order 179).
+    cx = hud.icon_beside(surface, rect, glyphs.for_button("planets", name),
+                         surf.get_width(), dim=not enabled)
+    surface.blit(surf, surf.get_rect(center=(cx, rect.centery)))
 
 
 def render_heading(screen, surface, name, label):

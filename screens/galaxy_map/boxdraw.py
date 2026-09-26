@@ -39,6 +39,7 @@ import logging
 import pygame
 
 from core.hud import blocks as hud
+from core.hud import glyphs
 
 from core import hestrings
 from core import palette
@@ -146,7 +147,8 @@ def _frame(screen, surface, rect):
 def _button(screen, surface, rect, label, size):
     """CLOSE: the HUD's small button, its word in code."""
     hud.small_button(surface, rect, screen.layout.scale, "normal", label,
-                     style_renderer=screen.style)
+                     style_renderer=screen.style,
+                     icon=glyphs.for_button("galaxy_map", "close"))
 
 
 def _close_label(screen):

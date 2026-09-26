@@ -311,7 +311,7 @@ class StyleRenderer:
 
     def draw_button(self, surface, rect, label="", hover=False,
                     font_size=16, style=None, glow_offsets=None,
-                    glow_rotations=None):
+                    glow_rotations=None, icon=None):
         """The `button` box skin: the HUD's slanted button (decision 71).
 
         The skin texture, the two border lines and the corner glow images
@@ -322,7 +322,7 @@ class StyleRenderer:
         still carries them in `boxes.json` must not raise."""
         hud.slant_button(surface, rect, _scale_of(surface),
                          "hover" if hover else "normal", label,
-                         style_renderer=self)
+                         icon=icon, style_renderer=self)
 
     def draw_panel(self, surface, rect):
         """The `panel` box skin: a HUD panel (decision 71)."""

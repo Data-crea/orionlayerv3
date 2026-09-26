@@ -32,3 +32,16 @@ Custom Race (`box_font_scale` into `Layout.font_size` at screen.py:251, 298,
 part 5's fault; Custom Race's 2560x1440 boxes also carry a hand value (0.9)
 that may have been tuned against it. Not in this order's scope, not changed;
 a check like 090m per screen would show it.
+
+## 4. Buttons too narrow for icon AND word (default: the word alone)
+
+Every button of 169's P11 list has a glyph now, but a glyph is drawn only
+where it and the whole word fit. With the buttons as they are, these show
+the word only (1920x1080 and 2576x1432): colony summary POPULATION,
+INDUSTRY, SCIENCE, PRODUCING, RETURN; Planets CLIMATE, MINERALS; Fleets
+SUPPORT, COMBAT, PREV, NEXT; GAME menu SAVE GAME, LOAD GAME, NEW GAME, QUIT
+GAME, SETTINGS; main menu HALL OF FAME at 2576. To show them: wider boxes
+(F5) or a smaller word — your call, it changes the look. The glyphs are in
+`evidence/work_order_179/icons/glyph_sheet.png` — the shapes are mine;
+`assets/shared/hud/glyphs.json` is the one place to change one, or drop
+`hud/icon_<name>.png` into the mod folder.

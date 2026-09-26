@@ -895,6 +895,18 @@ for _sk_key in [_b["key"] for _b in _sk_data_sort["buttons"]]:
     # rendered in and a max would be whatever one edge pixel did.
     _sk_bright = _sk_a.reshape(-1, 3)
     _sk_bright = _sk_bright[_sk_bright.sum(axis=1) > 400]
+    # NOT THE GLYPH (work order 179): a key may carry its button glyph,
+    # line art in `chosen.glyph.colour`, beside the word; on a two-letter
+    # word (BC) the glyph has more bright pixels than the word, and the
+    # mode was the glyph's. This is about the WORD's colour, so the
+    # glyph's own colour and its anti-aliased shades toward black leave.
+    _sk_gc = _sk_np.array(__import__("json").load(open(os.path.join(
+        os.path.dirname(SCREENS_DIR), "assets", "shared", "hud",
+        "style.json")))["chosen"]["glyph"]["colour"], dtype=float)
+    _sk_unit = _sk_bright / _sk_np.maximum(
+        1, _sk_bright.max(axis=1, keepdims=True))
+    _sk_bright = _sk_bright[_sk_np.abs(
+        _sk_unit - _sk_gc / _sk_gc.max()).max(axis=1) > 0.12]
     assert len(_sk_bright) >= 20, (
         f"sort_{_sk_key} drew no word bright enough to measure")
     _sk_vals, _sk_counts = _sk_np.unique(

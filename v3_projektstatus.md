@@ -2458,7 +2458,7 @@ files under `doc/` and are only summarised here.
 | | |
 |---|---|
 | Python | 32,960 lines across 111 modules — `find . -name '*.py'`, `__pycache__` excluded, the smoke test's 6,400 included. The previous figure here (21,642 across 94) was carried from an unstated method and could not be reproduced |
-| Smoke test | `python tools/smoke_test.py` — **352 checks**, headless, in `tools/smoke_suite/` since work order 162 (128 check modules, one group per screen plus a shared core; `tools/smoke_test.py` is the runner). **Two tiers since work order 158**: the bare command runs everything (~200 s here, measured 26 September 2026 — the 72 s this line said was before the rendering checks of 172-174); `--fast` runs the commit gate's 342 (~95 s here). `--screen <name>` prints only that screen's sentences and the core's and is NEVER a gate. See "The gate has two tiers" below |
+| Smoke test | `python tools/smoke_test.py` — **354 checks**, headless, in `tools/smoke_suite/` since work order 162 (129 check modules, one group per screen plus a shared core; `tools/smoke_test.py` is the runner). **Two tiers since work order 158**: the bare command runs everything (~200 s here, measured 26 September 2026 — the 72 s this line said was before the rendering checks of 172-174); `--fast` runs the commit gate's 344 (~95 s here). `--screen <name>` prints only that screen's sentences and the core's and is NEVER a gate. See "The gate has two tiers" below |
 | Assets | 170 MB (select_race 68, galaxy_map 51, shared 23, new_game 21, colony_summary 1) |
 | Screens in HD | 11 of ~20–22 (the Leaders screen, work order 167, built and not accepted; the GAME menu overlay, work order Stop 2, every dialog of the popup; colony summary draws list, sidebar, scan box and galaxy inset, and MOVES POPS — the first HD gesture that drives the game; planets, brief 101, lists, sorts, restricts and returns) |
 | Setup from clone | `python tools/setup.py` (deps via the system package manager) |
@@ -2985,7 +2985,7 @@ blocks into a session and writing them out again. Three proofs:
 | | command | checks | on this tree |
 |---|---|---:|---:|
 | **Full** — the default, and the pre-push gate | `python tools/smoke_test.py` | 344 | ~200 s |
-| **Fast** — the pre-commit gate | `python tools/smoke_test.py --fast` | 342 | ~95 s |
+| **Fast** — the pre-commit gate | `python tools/smoke_test.py --fast` | 344 | ~95 s |
 | **Screen** — **never a gate** | `python tools/smoke_test.py --screen <name>` | all of them, ~a third printed | the tier's |
 
 **`--screen` narrows what a run PRINTS, not what it runs**, and the
@@ -3429,7 +3429,7 @@ block, so splitting it would split a check. The sizes below come from
 the files and a smoke check asserts this list against them in both
 directions.
 
-`011_galaxy_map_galaxy_map_stand_in_exactly_amoeba.py` (**51** KB — the galaxy map stand-in: exactly amoeba and antaran reach the player-ship fallback, thirteen `ok()` calls inside one block), `013_colony_summary_colony_summary_sort_keys_seven_five.py` (**45** KB — the seven sort keys at every resolution), `031_core_figures_sit_on_the_plate_s.py` (**45** KB — figures on the plate's inner floor, four resolutions and every band, measured out of the render), `059_core_ship_weapons_end_at_the_first.py` (**43** KB — the monster and ship-part block, nineteen `ok()` calls in one run of statements), `061_core_no_archives_or_backup_copies_anywhere.py` (**41** KB — the tree-sweep block: archives, the briefs index, the decision numbers and the exceptions list; 173 added the App boot's guard against the player's mod folder).
+`011_galaxy_map_galaxy_map_stand_in_exactly_amoeba.py` (**51** KB — the galaxy map stand-in: exactly amoeba and antaran reach the player-ship fallback, thirteen `ok()` calls inside one block), `013_colony_summary_colony_summary_sort_keys_seven_five.py` (**46** KB — the seven sort keys at every resolution; 179 taught its label-colour block to leave the button glyph out), `031_core_figures_sit_on_the_plate_s.py` (**45** KB — figures on the plate's inner floor, four resolutions and every band, measured out of the render), `059_core_ship_weapons_end_at_the_first.py` (**43** KB — the monster and ship-part block, nineteen `ok()` calls in one run of statements), `061_core_no_archives_or_backup_copies_anywhere.py` (**41** KB — the tree-sweep block: archives, the briefs index, the decision numbers and the exceptions list; 173 added the App boot's guard against the player's mod folder).
 
 **TWO TOOLS JOINED THE LIST ON 8 SEPTEMBER 2026 and one thing left
 them both.** `colony_list_preview.py` (345 -> 410) gained `--hold`,

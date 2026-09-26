@@ -30,6 +30,7 @@ WHAT IS TRANSCRIPTION AND WHAT IS OURS — each marked where it happens:
 import pygame
 
 from core.hud import blocks as hud
+from core.hud import glyphs
 from core.hud import text as hudtext
 
 from core import palette
@@ -316,7 +317,14 @@ def draw_button(surface, screen, art, name, frame=0, dull=False,
     colour = hudtext.colour("button")
     if dull:
         colour = tuple(c // 2 for c in colour)
-    blit_text(surface, screen.style, BUTTON_WORDS[name], r.centerx,
+    word = BUTTON_WORDS[name]
+    # The button's glyph beside the word when both fit (work order 179).
+    word_w = screen.style.render_text(word, fit(
+        screen.style, word, r.w - 4, font_px(layout, "button")),
+        colour).get_width() if word else 0
+    cx = hud.icon_beside(surface, r, glyphs.for_button("leaders", name),
+                         word_w, dim=dull)
+    blit_text(surface, screen.style, word, cx,
               r.y + (r.h - font_px(layout, "button")) // 2, r.w - 4,
               font_px(layout, "button"), colour, "center")
     return r

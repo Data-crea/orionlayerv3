@@ -25,6 +25,7 @@ thing available. DEVIATION, in each screen's marked list.
 import pygame
 
 from core.hud import blocks as hud
+from core.hud import glyphs
 
 from core import palette
 from core import researchband
@@ -218,7 +219,10 @@ def draw_exit(surface, layout, style, native_rect, label, pressed=False):
                 layout.font_size(13))
     text = style.render_text(label, size, col("exit_label",
                                               (198, 212, 238)))
-    surface.blit(text, (box.centerx - text.get_width() // 2,
+    # The button's glyph beside the word when both fit (work order 179).
+    cx = hud.icon_beside(surface, box, glyphs.for_button("research", "exit"),
+                         text.get_width())
+    surface.blit(text, (cx - text.get_width() // 2,
                         box.centery - text.get_height() // 2))
     return box
 

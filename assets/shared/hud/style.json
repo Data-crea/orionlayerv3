@@ -322,6 +322,17 @@
       "selected_shade": 0.75,
       "header_shade": 0.6,
       "_shade_note": "Chosen, not measured (the mockup has no table): a table row, header band or grid slot is dense glass with its own colour laid over at this share, so the A/B stripe, the selected row and the header stay told apart and the background still shows through."
+    },
+    "glyph": {
+      "colour": [
+        29,
+        179,
+        255
+      ],
+      "height": 150,
+      "stroke": 0.085,
+      "glow": 0.05,
+      "_note": "The button glyphs of work order 179 (assets/shared/hud/glyphs.json, drawn by tools/hud_glyphs.py). COLOUR: the nav glyphs' own blue, measured \u2014 the median RGB of the opaque pixels (alpha > 200) of the cut icon_leaders (44,179,253), icon_colonies (9,188,255), icon_info (29,167,255), icon_races (44,185,255) and icon_fleets (5,140,239), the median of the five per channel; like the nav glyphs they follow the frame colour (tint.FOLLOWS). HEIGHT: the master's px, the nav icons' own (143-169 px in the HUD). STROKE and GLOW: fractions of the height, chosen so a glyph at 0.6 of a 42 ref-px button (25 px) keeps a 2 px line at 1080p; ours, so Data's to change (decision 53)."
     }
   }
 }

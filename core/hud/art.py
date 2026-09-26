@@ -16,6 +16,7 @@ import logging
 import pygame
 
 from core import resources
+from core.hud import glyphs
 from core.hud import style as hudstyle
 from core.hud import tint
 
@@ -26,8 +27,15 @@ log = logging.getLogger("hud")
 ICONS = ("treasury", "command", "food", "freighters", "research",
          "colonies", "planets", "fleets", "leaders", "races", "info", "turn")
 TITLE_PLATE = "title_plate"
+
+# THE BUTTON GLYPHS (work order 179, part 6): the icons 169 listed as
+# missing, drawn from `assets/shared/hud/glyphs.json` by
+# `tools/hud_glyphs.py` into the same derived folder as the cut pieces —
+# so they load, scale, tint and are replaced by a mod exactly like them.
+GLYPHS = glyphs.GLYPHS
 #: Every piece by file name — what a mod folder's `hud/` may replace.
-PIECES = tuple("icon_" + k for k in ICONS) + (TITLE_PLATE,)
+PIECES = (tuple("icon_" + k for k in ICONS) + (TITLE_PLATE,)
+          + tuple("icon_" + k for k in GLYPHS))
 
 _raw = {}
 _scaled = {}
@@ -61,9 +69,13 @@ def raw(name):
 
 
 def icon(key, height):
-    """Icon `key` smoothscaled to `height` device px, aspect kept."""
-    assert key in ICONS, f"no HUD icon named {key!r}"
+    """Icon `key` (a cut icon or a glyph) smoothscaled to `height` device
+    px, aspect kept."""
+    assert key in ICONS or key in GLYPHS, f"no HUD icon named {key!r}"
     return fit("icon_" + key, height)
+
+
+for_button = glyphs.for_button
 
 
 def fit(name, height, width=None):

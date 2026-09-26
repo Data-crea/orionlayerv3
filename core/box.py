@@ -15,6 +15,8 @@ class Box:
 
     def __init__(self, data):
         self.name = data["name"]
+        #: The button's glyph (`core.hud.glyphs`), set by the screen.
+        self.icon = None
         # **A RECT IS OPTIONAL — 12 September 2026.** A screen may
         # DERIVE its boxes and carry only their names: the colony
         # summary's twenty come from `layout_reference.json` and
@@ -109,6 +111,7 @@ class Box:
                 font_size=font_size, style=self.style,
                 glow_offsets=self._scaled_glow_offsets(layout),
                 glow_rotations=self.style.get("glow_rot"),
+                icon=self.icon,
             )
         elif skin == "asset":
             r = self.screen_rect

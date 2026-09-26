@@ -28,6 +28,7 @@ import pygame
 
 from core import backgrounds
 from core.hud import art
+from core.hud.icons import _drawn, icon_beside  # noqa: F401 (179)
 from core.hud import glass
 from core.hud import raster
 from core.hud import style as hudstyle
@@ -275,13 +276,20 @@ def _label(surface, style_renderer, rect, label, role, state, icon, scale):
     # the rule for every HUD button.
     col = hudtext.colour(role)
     ic = art.icon(icon, int(r.h * 0.6)) if icon else None
+    s = (hudtext.render(style_renderer, label.upper(), role, r.h, col)
+         if label else None)
     left = r.x
     if ic is not None:
         ix = r.x + int(r.h * 0.35)
-        surface.blit(ic, (ix, r.y + (r.h - ic.get_height()) // 2))
-        left = ix + ic.get_width() + int(r.h * 0.12)
-    if label:
-        s = hudtext.render(style_renderer, label.upper(), role, r.h, col)
+        after = ix + ic.get_width() + int(r.h * 0.12)
+        # THE WORD STAYS WHOLE (work order 179): an icon that would push
+        # the word past the button's edge is not drawn — the word is what
+        # the button says, the icon only helps to find it.
+        if s is None or s.get_width() <= r.right - after:
+            surface.blit(ic, (ix, r.y + (r.h - ic.get_height()) // 2))
+            _drawn(icon)
+            left = after
+    if s is not None:
         hudtext.blit(surface, s, pygame.Rect(left, r.y, r.right - left, r.h))
 
 
@@ -375,7 +383,7 @@ def action_button(surface, rect, scale, state="normal", label="",
 
 
 def small_button(surface, rect, scale, state="normal", label="",
-                 style_renderer=None, role="button"):
+                 style_renderer=None, role="button", icon=None):
     """A button inside a panel: the action button's shape, small."""
     rect = pygame.Rect(rect)
     if rect.w < 4 or rect.h < 4:
@@ -400,7 +408,7 @@ def small_button(surface, rect, scale, state="normal", label="",
         return (_dim(surf) if state == "disabled" else surf), pad
     _blit_shape(surface, rect, _cached(key, build))
     if style_renderer is not None and label:
-        _label(surface, style_renderer, rect, label, role, state, None, scale)
+        _label(surface, style_renderer, rect, label, role, state, icon, scale)
 
 
 def checkbox(surface, rect, scale, checked, hover=False):

@@ -156,12 +156,16 @@ def cut(hud=HUD):
 
 
 def write(out=OUT, hud=HUD):
+    """The cut pieces and — since work order 179 — the button glyphs,
+    drawn by `hud_glyphs` into the same folder, derived the same way."""
+    import hud_glyphs
     os.makedirs(out, exist_ok=True)
     names = []
     for name, (arr, _box) in cut(hud).items():
         Image.fromarray(arr, "RGBA").save(os.path.join(out, name + ".png"),
                                           optimize=False)
         names.append(name)
+    names += hud_glyphs.write(out)
     return sorted(names)
 
 

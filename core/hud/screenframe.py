@@ -88,5 +88,7 @@ def _button(screen, surface, side):
     if state == "normal" and hit(screen, side, *mouse_input.pos()):
         state = "hover"
     draw = hud.action_button if side == "right" else hud.slant_button
+    from core.hud import glyphs
     draw(surface, r, screen.layout.scale, state, label,
+         icon=glyphs.for_button(screen.SCREEN_NAME, label.lower()),
          style_renderer=screen.style)

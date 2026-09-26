@@ -22,6 +22,7 @@ the row it is itself showing. `layout.json` `scroll._hd_note`.
 import pygame
 
 from core.hud import blocks as hud
+from core.hud import icons
 from core.hud import glass
 from core.hud import text as hudtext
 
@@ -296,21 +297,10 @@ def draw_labels(surface, screen, words, enabled=None, art=None,
         # DEVIATION (decision 71, work order 169): a live word is the
         # HUD's measured button colour, as every HUD button's is; the
         # palette's `label` stays in the skin. Dim is still the dim.
-        _centred(surface, screen, rect, text,
-                 hudtext.colour("button") if live else col("label_dim"))
-
-
-def _centred(surface, screen, rect, text, color, share=0.52):
-    """One line, centred, shrunk until it fits the box's width."""
-    size = max(8, int(rect.height * share))
-    while size > 8:
-        surf = screen.style.render_text(text, size, color)
-        if surf.get_width() <= rect.width - 2:
-            break
-        size -= 1
-    else:
-        surf = screen.style.render_text(text, size, color)
-    surface.blit(surf, surf.get_rect(center=rect.center))
+        # With the button's glyph beside it when both fit (work order 179).
+        icons.fitted_word(surface, screen.style, rect, text,
+                          hudtext.colour("button") if live else col("label_dim"),
+                          icon=icons.art.for_button("fleets", name), dim=not live)
 
 
 def draw_status(surface, screen, text, color=None):
@@ -323,7 +313,8 @@ def draw_status(surface, screen, text, color=None):
     rect = content_rect(screen, "status_band")
     if rect is None or not text:
         return
-    _centred(surface, screen, rect, text, color or col("label"), share=0.62)
+    icons.fitted_word(surface, screen.style, rect, text, color or col("label"),
+                      share=0.62)
 
 
 # ── The grid's content ────────────────────────────────────
@@ -502,10 +493,10 @@ def draw_cells(surface, screen, cells, art=None):
                 surface.blit(picture, at)
             if cell.name:
                 band = max(10, rect.height // 4)
-                _centred(surface, screen,
-                         pygame.Rect(rect.x, rect.bottom - band,
-                                     rect.width, band),
-                         cell.name, col("label"), share=0.8)
+                icons.fitted_word(surface, screen.style,
+                                  pygame.Rect(rect.x, rect.bottom - band,
+                                              rect.width, band),
+                                  cell.name, col("label"), share=0.8)
             _mark_cell(surface, screen, cell, rect, hover)
             continue
         # The cell is split the way the original splits it: the picture
@@ -521,10 +512,10 @@ def draw_cells(surface, screen, cells, art=None):
                          patch.inflate(-patch.width // 3,
                                        -patch.height // 3))
         if cell.name:
-            _centred(surface, screen,
-                     pygame.Rect(rect.x, rect.bottom - band,
-                                 rect.width, band),
-                     cell.name, col("label"), share=0.8)
+            icons.fitted_word(surface, screen.style,
+                              pygame.Rect(rect.x, rect.bottom - band,
+                                          rect.width, band),
+                              cell.name, col("label"), share=0.8)
         _mark_cell(surface, screen, cell, rect, hover)
 
 

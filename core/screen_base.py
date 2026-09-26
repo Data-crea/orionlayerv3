@@ -99,6 +99,11 @@ class ScreenBase(HelpMixin):
         path = self.asset_path(self.BOXES_FILE)
         self.boxes = load_boxes(path, self.app.win_w,
                                 self.app.win_h) if path else []
+        # A button box's glyph, by the screen's and the box's names
+        # (work order 179; `core.hud.glyphs`).
+        from core.hud import glyphs
+        for box in self.boxes:
+            box.icon = glyphs.for_button(self.SCREEN_NAME, box.name)
 
     def wants_original(self):
         """True when this screen cannot vouch for what it would draw.

@@ -58,6 +58,7 @@ here — the even gaps they were the evidence for are gone with it.
 import pygame
 
 from core.hud import blocks as hud
+from core.hud import glyphs
 from core.style import _scale_of
 
 #: Breathing room around a highlighted word, reference px.
@@ -301,7 +302,8 @@ def render(surface, buttons, active_key, mouse,
         else:
             state = "normal"
         hud.slant_button(surface, button.hit, _scale_of(surface), state,
-                         display(button.label), style_renderer=style)
+                         display(button.label), style_renderer=style,
+                         icon=glyphs.for_button("colony_summary", button.key))
 
 
 def render_return(surface, screen, mouse, hover_bg, text_color):
@@ -338,4 +340,5 @@ def render_return(surface, screen, mouse, hover_bg, text_color):
     # A HUD slanted button like the seven keys beside it (decision 71).
     hud.slant_button(surface, rect, screen.layout.scale,
                      "hover" if hud.slant_hit(rect, *mouse) else "normal",
-                     label, style_renderer=screen.style)
+                     label, style_renderer=screen.style,
+                     icon=glyphs.for_button("colony_summary", "return"))

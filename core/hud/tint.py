@@ -48,6 +48,10 @@ REFERENCE = 196
 #: by default (parked, 170 P4); the info panel's pictures never do.
 FOLLOWS = {"title_plate", "icon_colonies", "icon_planets", "icon_fleets",
            "icon_leaders", "icon_races", "icon_info", "icon_turn"}
+# The button glyphs (work order 179) are line art in the nav glyphs' own
+# blue and turn with the frame colour as the nav glyphs do.
+from core.hud import glyphs as _glyphs  # noqa: E402
+FOLLOWS = FOLLOWS | {"icon_" + _g for _g in _glyphs.GLYPHS}
 
 #: SATURATION and BRIGHTNESS — work order 171. The hue alone reaches
 #: only saturated colours; Data wants grey, silver and black too. Two
