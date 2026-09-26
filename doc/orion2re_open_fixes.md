@@ -54,6 +54,7 @@ section for what was found where.
 | 30 | The Leaders screen's view state is not in the snapshot — button mode, selection, the colony view's two stars, the ship view's stack and grid, the hire popup's leader | **Applied** 26 September 2026 by work order 175 (orion2re `cc542e02`, `doc/ext_officer_screen_state.patch`); open upstream | Without it the HD Leaders screen shows every leader, both views, the buttons and the galaxy box, and sends only what it can confirm on the wire (the view tabs, HIRE, CANCEL, RETURN, a click on a leader for hire); pool, dismiss, assignment, the star display and the ship grid are drawn as a marked placeholder |
 | 31 | A session-launched engine hangs in its first logo frames when its window is not being drawn: every present waits for VSync, and the game thread waits for the present without a timeout | **Applied** 26 September 2026 by work order 175 (orion2re `f98b8547`, `doc/ext_present_no_vsync.patch`): `ORION2RE_NO_VSYNC=1` presents without waiting; open upstream | Without it an unattended live run hangs in about one start in eight while the screen is locked or another window covers the engine's; `tools/engine_start.py` detects the hang and starts again |
 | 32 | The Info screen's history divisors and turn messages are not in the snapshot — `_bill_savegame[6]` and the player's rendered `MSG_::_msgs` | **Applied** 26 September 2026 by work order 176 (orion2re `2269749c`, `doc/ext_info_screen_state.patch`); written by work order 175 D; open upstream | Without it the HD Info screen draws the History Graph's legend but not its curves, and says the Turn Summary's messages are not sent; every other page is complete |
+| 33 | The Info screen's Turn Summary never jumps to a colony: a click on a colony message prepares the jump and `Info_Screen_` then overwrites it with SCREEN_MAIN | **Observation**, reproduced live 26 September 2026 by work order 176 on SAVE5 | Nothing for OrionLayer (HD navigates the Info pages itself and offers no jump); for the game, a feature of the original is gone |
 
 Items 3 and 4 are both about INJECT_CLICK and both live in the same
 code path, but they are separate faults: 3 is where the coordinates
@@ -2093,3 +2094,38 @@ player's messages as the screen renders them (int16 length, raw bytes).
 screen's History page shows its legend and says the curves cannot be
 drawn; the Turn Summary page says the messages are not sent. Reference,
 Tech Review and Race Statistics are complete either way.
+
+## 33. The Info screen's Turn Summary never jumps to a colony
+
+**Observation, reproduced live by work order 176, 26 September 2026.** No
+patch proposed.
+
+### Symptom
+
+In the Turn Summary a left click on a message about one of the player's
+colonies should open that colony's screen (`MSG_::Goto_Msg_Colony_`,
+msg.cpp:653-672, called from info.cpp:2087-2091). In orion2re it goes back
+to the galaxy map. Measured on SAVE5 (stardate 3509.1) with orionlayer-local
+`2269749c`: the turn's one message was "Malus Prime finished construction:
+Colony Base.  Next in queue was Research Lab."; activating its first list
+row (field 9, (223, 96)-(555, 105)) took the engine from screen 9 to screen
+0, not 1 (`~/orionlayer-fixtures/evidence/work_order_176/info/
+record_slot5_1920x1080.json`, step `turn_jump`).
+
+### Why
+
+`Goto_Msg_Colony_` sets `_current_screen = SCREEN_COLONY` and
+`_return_screen = SCREEN_INFO` and the Turn Summary forces the exit field;
+`Info_Screen_` then sets `_current_screen = SCREEN_MAIN` unconditionally
+after its loop (info.cpp:641), overwriting it. Most likely a port deviation
+from the original (whose screen dispatch honoured the colony jump); not
+checked against the original binary.
+
+### Fix
+
+Set SCREEN_MAIN at info.cpp:641 only when the loop did not already choose a
+screen (for example: only if `_current_screen` is still SCREEN_INFO).
+
+### Cost to us
+
+Nothing: HD's Info screen navigates its pages itself and offers no jump.

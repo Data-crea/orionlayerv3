@@ -172,3 +172,89 @@ stop, and it never stops a foreign one — the requested behaviour already
 holds. The rule is now a check (006e check 4: an AST scan of main.py, core
 and screens for process launches and signals, and the exit path's
 disconnect). 337 -> 338.
+
+## Part 3 — run, after Data closed PID 368253
+
+Data ended the leftover engine; the port was free, no client ran. Every
+engine below was started by this session with `tools/engine_start.py` and
+stopped by its PID (SIGTERM, each ended on it).
+
+**liveguard.** Master snapshot `~/orionlayer-fixtures/live_guard/176_master`
+(15:00:53, before any engine), plus the per-start guards `176_run1`,
+`176_run2`. After the run: `SAVE4.GAM` changed (the one deliberate change:
+SAVE2's game copied into scratch slot 4 for the hire step) and `MOX.SET`
+changed (the game rewrites it when a loaded game is left — 175's reason for
+liveguard), both **restored** from the master copy; then **every protected
+file identical to the master snapshot** (SAVE1-11, MOX.SET, HOF.M2,
+lastrace.rac, user_settings.json; TEMP.TMP absent before and after), and
+`176_run2` reports "every file identical". The only other difference, the
+tree's git status, was this run's own uncommitted code, gone once committed.
+Scratch slot named: **SAVE4** (SAVE5 loaded, never written; SAVE8 never
+touched).
+
+**Fix 31 — starts.** 82 starts in three series: 40 with a 45 s wait (33
+ready at once, 7 "timeout"), 12 with 150 s (12 ready), 30 with 150 s and a
+backtrace armed (30 ready: 26 at once, 4 after exactly 112.9 s). **No VSync
+hang** (the signature never appeared). The 11 slow starts are the original's
+logo/intro sequence, which plays when no key or button is down at start
+(jim.cpp:18-120) — `gdb` could not attach (ptrace refused), the timing and
+the source settle it. The tool's 60 s default reads them as timeouts:
+parked item 6. `evidence/work_order_176/fix31/starts_LIVE_*.json`,
+`stalls_LIVE.json`. **Tearing**: not observable from this session — parked
+item 5.
+
+**Leaders** (SAVE4; both sizes, 21 of 21 steps each): open with the OFFS
+block; the ship tab; NEXT / PREV cycle the stack; a stack icon in the galaxy
+box becomes the stack on show; the grid; assign (officer, then a combat
+ship, a confirmation answered YES → status 1 on that ship); POOL mode, an
+assigned officer to the pool (status 1 → 2); DISMISS mode, the "Dismiss %s?"
+box, YES → gone from the list; the colony tab; NEXT / PREV cycle the star;
+a star with a colony clicked in the galaxy box → chosen and shown; RETURN.
+**HIRE** (SAVE4 holding SAVE2's game; both sizes, 6 of 6): three leaders for
+hire, hire mode with CANCEL and the price panel, the hire popup naming its
+leader (open fix 30's `popup_leader`), HIRE → Ruola joins, BC 790 → 760.
+`evidence/work_order_176/leaders/` (`record_slot4_*`, `record_hire_slot4_*`;
+the hire run's `001_…_open` picture was overwritten by the later Leaders
+run's — its record is intact).
+
+**Races** (SAVE4; both sizes, 11 of 11): open in the main mode, beside the
+native picture: portraits and banner frames, WAR / No Treaty, the sliders,
+three agents, SPY 0 % / AGENT 10 % all as the original; IGNORE → a race →
+its bit flips and (IGNORED) shows, and back; REPORT → the report (the
+fallback) and back; AUDIENCE → the ambassador (the fallback: "…will listen
+when you are ready to surrender") clicked away; DECLARE WAR on the race at
+peace → the confirmation, NO → no war; RETURN. `evidence/work_order_176/races/`.
+**Three 175 regressions found and fixed here**, each with a check and its own
+commit: the screen did not recognise its own list (slot 1's SABOTAGE is
+13 px high, 175 used slot 0's 14 for all — 9fad509), the declare-war box
+crashed it (`raceswire.View` had no `in_box` — fddc428), and "No Treaty"
+was upper-cased (739a908). The run above is after the fixes.
+
+**Info** (SAVE5 at 1920x1080, SAVE4 at 2576x1432 with the demo text mod;
+10 of 10 and 12 of 12): opens on the game's saved tab (3); open fix 32's
+block live — divisors `[2, 91, 1, 9, 1, 6]` / `[2, 90, 1, 9, 1, 6]`, exactly
+the ones in the save files (the second source), and the turn's message;
+every tab HD-local; a Reference category and a How-to page; with the demo
+mod the tab, the title and BACK replaced, the 213 article 1338 px too long
+and scrolled by the wheel (offset 384), and one log line each for the
+non-UTF-8 and the empty file. **The colony jump**: the engine's Turn
+Summary row for "Malus Prime finished construction: Colony Base. …" (a
+colony message) was activated: screen 9 → **0**, not 1 — the jump is
+overwritten, as 175 read at info.cpp:641; recorded as open-fix entry 33
+(an observation for Joes). `evidence/work_order_176/info/`; the offline
+renders of part 2 re-made in `evidence/work_order_176/info_offline/` (the
+first set was deleted by this run's clean-up of the live folders).
+
+**Extractor fix live**: Leaders' skill help "Commander Hawk, the
+Astrogator, increases …" and the fleet strip "CYBERTOLLER FLEET: 1 Frigate"
+keep their spaces (both sizes); the Fleets screen's ten texts show no two
+words run together (`evidence/work_order_176/fleets/`).
+
+**Window sizes**: every screen above at 1920x1080 and 2576x1432.
+
+The drivers are `tools/screens175_live.py` with `screens175_steps.py`,
+`screens175_leaders.py`, `screens175_others.py` (one client, scratch slots
+only, each step EXPECTED / OBSERVED with native and HD from one snapshot).
+Note on the three fix commits: the pre-commit hook runs the fast suite on the
+working tree, which held all three fixes; each intermediate commit's own
+tree was not run separately.

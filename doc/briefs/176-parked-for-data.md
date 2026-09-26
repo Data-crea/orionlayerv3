@@ -79,3 +79,42 @@ engine's own list rows exist only while its local `current_tab` is the Turn
 Summary and HD does not drive that tab (HD STATE `local_navigation`), so
 HD offers no jump. Default: none; to be decided once the live run shows
 what the engine does.
+
+---
+
+## After Data closed PID 368253 (26 September 2026, afternoon): items 1-3 resolved
+
+Data ended the leftover engine himself; part 3 ran (progress file, "Part 3 —
+run"). Items 1 and 2 are done; item 3 (the push) follows the order's
+conditions at the end of the run; item 4's jump is measured (entry 33 of
+the open-fix list). New items:
+
+## 5. Fix 31: tearing is not observable from this session
+
+The engine's presented image is the compositor's; this session sees the
+framebuffer the API sends (whole frames, never torn) and no capture of
+Xwayland's scanout. 82 starts showed no VSync hang (item 6's intros aside).
+**Default taken:** fix 31 stays as applied. **Please look** at the engine's
+own window while scrolling the galaxy map and the Colonies list; if it
+tears, the proposal is **VSync off only during startup** (the hang is in
+the logo frames, before the window has ever been drawn — switch VSync on
+after `mox2: logos drawn`).
+
+## 6. `tools/engine_start.py` times out on the original's intro
+
+Of 82 starts, 11 played the full logo and intro sequence — 112.9 s every
+time, the original's behaviour when no key or mouse button is down at start
+(`JIM::Draw_Logos_`, jim.cpp:18-120); the rest skipped it at once. The tool's
+default `--timeout` is 60 s (since 174), so those starts are reported as
+TIMEOUT and stopped although nothing hangs (7 of 40 with 45 s; 0 of 42 with
+150 s). Not caused by 175 or 176, so not changed here. **Proposal:** a
+default of 150 s, or the tool sends the engine one key press after `mox2:
+data space allocated` to skip the intro as a player would.
+
+## 7. Leaders: the galaxy box has no destination lines
+
+The original draws the flight line of a stack in transit in the galaxy box
+(`FLT1::Draw_Fltscrn_Ship_Destination_Lines_(29)`, officer.cpp:758) — seen
+in the live native half; HD's galaxy box does not. It was not in 175's
+inventory (an inventory gap, not a regression). **Default taken:** recorded;
+a later order draws it (the Fleets screen's own line drawing can be reused).

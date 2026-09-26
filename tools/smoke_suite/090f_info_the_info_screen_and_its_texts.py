@@ -280,8 +280,11 @@ _if_fixes = open(os.path.join(_ldc_root, "doc", "orion2re_open_fixes.md"),
 _if_row = next(_l for _l in _if_fixes.splitlines() if _l.startswith("| 32 |"))
 assert "**Applied** 26 September 2026 by work order 176" in _if_row
 assert _if_fixes.count("## 32. ") == 1 and _if_fixes.count("| 32 |") == 1
-assert _if_fixes.rstrip().endswith("complete either way."), \
-    "entry 32 is the file's last section and ends whole"
+_if_sec32 = _if_fixes[_if_fixes.index("## 32. "):]
+_if_sec32 = _if_sec32[:_if_sec32.index("\n## ", 6)] if "\n## " in \
+    _if_sec32[6:] else _if_sec32
+assert _if_sec32.rstrip().endswith("complete either way."), \
+    "entry 32 ends whole (no later section cut into it)"
 assert '"MOX::_bill_savegame[i]"' in open(os.path.join(
     _ldc_root, "tools", "version_check.py"), encoding="utf-8").read()
 if _ldc_tree is not None and os.path.exists(os.path.join(
