@@ -15,16 +15,21 @@ import pygame
 from core.hud import style as hudstyle
 
 #: font px -> cap-height px, measured once per font on "H".
-_cap_ratio = {}
-
-
 def cap_ratio(style_renderer):
-    key = id(style_renderer)
-    if key not in _cap_ratio:
+    # KEPT ON THE RENDERER, not in a dict keyed by `id(style_renderer)`
+    # (work order 179): Python hands a dead object's id to the next one,
+    # so a renderer built after another was dropped — every tool and check
+    # that stands an app up — inherited the old one's ratio and drew every
+    # HUD word at the wrong size (38 px for 16 on the main menu, found by
+    # the fresh clone's full run). The app's one renderer never died, so
+    # the app never showed it.
+    ratio = getattr(style_renderer, "_hud_cap_ratio", None)
+    if ratio is None:
         font = style_renderer.get_font(200)
         ink = font.render("H", True, (255, 255, 255)).get_bounding_rect()
-        _cap_ratio[key] = max(0.3, ink.h / 200.0)
-    return _cap_ratio[key]
+        ratio = max(0.3, ink.h / 200.0)
+        style_renderer._hud_cap_ratio = ratio
+    return ratio
 
 
 def size_for(style_renderer, role, box_h, scale=1.0):

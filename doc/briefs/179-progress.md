@@ -241,3 +241,14 @@ existed and none was added: both screens now take the stored scale and let
   glyph out (13 is listed at 46 KB now). **352 → 354.**
 - Evidence: `evidence/work_order_179/icons/glyph_sheet.png` and every
   affected screen at 1920x1080 and 2576x1432 (`*_offline.png`).
+
+### Found at the end: HUD words at the wrong size after a renderer was replaced
+
+The fresh clone's FULL run failed 006h: the main menu drew its words at
+38 px where 16 is right, so they overflowed and the icons were (rightly)
+dropped. Cause: `core/hud/text.cap_ratio` cached per `id(style_renderer)`;
+Python reuses a dead object's id, so a renderer built after another was
+dropped inherited its ratio. The app keeps one renderer for its life and
+never showed it; tools and checks that stand apps up did. The ratio lives
+on the renderer now; 006h holds it. Pre-existing (not from this order),
+fixed because it made a check machine-dependent.

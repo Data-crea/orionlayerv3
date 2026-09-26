@@ -99,6 +99,14 @@ ok(f"button glyphs: {len(_bg_gl.BUTTONS)} buttons of 169's P11 table on "
 # 4 — THE WORD STAYS WHOLE. An icon beside a word only where both fit; a
 #     narrow button shows its word alone. Then the screens: what they
 #     really DRAW (icons.RECORD), not what they ask for.
+# The HUD word's size must not depend on which renderer lived before: the
+# cap ratio was cached by id(), and a new renderer inherited a dead one's
+# (words at 38 px for 16) — found by this check in the fresh clone's full
+# run. It lives on the renderer now.
+from core.hud import text as _bg_ht
+assert not hasattr(_bg_ht, "_cap_ratio"), "a cache keyed by id() is back"
+_bg_ht.cap_ratio(app.style)
+assert getattr(app.style, "_hud_cap_ratio", None) is not None
 if _bg_art.available("icon_back"):
     _bg_s = pygame.Surface((400, 100), pygame.SRCALPHA)
     _bg_ic.RECORD = []
