@@ -528,8 +528,12 @@ class GalaxyMapScreen(ScreenBase):
 
         # Star name size follows the zoom level, as the original
         # switches font style per zoom (Zoom_Level_Font_Style_).
-        name_size = self.layout.font_size(int(
-            16 * self.box_font_scale("map_area") * ctx.name_font_scale))
+        # The box's STORED scale: `Layout.font_size` applies the window
+        # scale once, and `box_font_scale` would apply it a second time —
+        # names four times the 1080p size at 2160p instead of twice (work
+        # order 179; `ScreenBase.box_font_scale_stored`).
+        name_size = self.layout.font_size(int(16 * ctx.name_font_scale
+                                              * self.box_font_scale_stored("map_area")))
 
         def render_label(text, colour):
             # Star names can contain characters Bank Gothic DEMO
@@ -624,7 +628,8 @@ class GalaxyMapScreen(ScreenBase):
         status_bar line now that that cutout is the TURN button."""
         if self._hover_star is None:
             return
-        fs = self.box_font_scale("map_area")
+        # Stored scale, for the reason at the star names (work order 179).
+        fs = self.box_font_scale_stored("map_area")
         font = self.style.get_prop_font(self.layout.font_size(int(18 * fs)))
         text = font.render(self._hover_star.name, True, STATUS_COLOR[:3])
         bx, by, bw, bh = view.box

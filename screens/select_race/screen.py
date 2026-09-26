@@ -180,13 +180,17 @@ class SelectRaceScreen(ScreenBase):
                     continue
                 box.render(surface, self.layout, self.style)
 
+        # Every text size below goes through `Layout.font_size`, which
+        # applies the window scale; the boxes' STORED font scale, or the
+        # scale is applied twice and the text at 2160p is twice its size
+        # and overlaps (work order 179; `box_font_scale_stored`).
         # Portrait grid (14 entries: 13 races + Custom Race)
         gr = self.box_rect("race_grid")
         if gr:
             render_race_grid(surface, L, self.style, self._races,
                              self._selected_id, gr,
                              self._portraits, self._thumb_cache,
-                             self.box_font_scale("race_grid"),
+                             self.box_font_scale_stored("race_grid"),
                              picture_mode=pic)
 
         # Info panel content (normal mode only)
@@ -194,18 +198,18 @@ class SelectRaceScreen(ScreenBase):
             nr = self.box_rect("race_name")
             if nr:
                 render_race_name(surface, L, self.style, race, nr,
-                                 self.box_font_scale("race_name"))
+                                 self.box_font_scale_stored("race_name"))
 
             dr = self.box_rect("race_description")
             if dr:
                 render_race_description(surface, L, self.style, race,
                                         dr, self._desc_scroll,
-                                        self.box_font_scale("race_description"))
+                                        self.box_font_scale_stored("race_description"))
 
             tr = self.box_rect("race_traits")
             if tr:
                 render_race_traits(surface, L, self.style, race, tr,
-                                   self.box_font_scale("race_traits"))
+                                   self.box_font_scale_stored("race_traits"))
 
         # Frame overlay
         if self.USE_FRAME:

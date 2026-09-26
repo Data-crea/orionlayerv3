@@ -164,3 +164,35 @@ data's absence:
   `evidence/work_order_179/tech_level_*/` (pictures and `*_result.json`),
   driver `techlevel179.py` beside them. After the run SAVE10 (the new games'
   autosave) and MOX.SET were restored; the guard verified clean.
+
+## 5. 2160p scaling — **DONE (both screens), 1080p pixel-identical**
+
+**The cause, one fault on both screens:** the text size was
+`Layout.font_size(ref × box_font_scale(box))`. `box_font_scale` already
+multiplies by `win_h / 1080`, and `Layout.font_size` multiplies by the window
+scale again, so the resolution factor was SQUARED: ×1 at 1080p, ×1.78 at
+1440p, **×4 at 2160p where ×2 is proportional**. `ScreenBase.
+box_font_scale_stored` exists for exactly this (its docstring names the
+failure, 7 September 2026) and was not used here. No hardcoded 2160p branch
+existed and none was added: both screens now take the stored scale and let
+`Layout.font_size` apply the resolution factor once.
+
+- **Star names** (and the hover name, same line of code): 16 × zoom scale ×
+  stored box scale → `Layout.font_size`. Measured by 090l on 88 names: every
+  one at 3840x2160 is exactly twice its 1920x1080 size (before: 13 → 43 px).
+- **Select Race**: grid names, race name and subtitle, description, traits
+  (`race_grid`, `race_name`, `race_description`, `race_traits`), same change.
+  Before, at 2160p, the race name ran into its subtitle and the Government
+  row was cut off at the panel's lower edge. Measured by 090m on the
+  screen's own 9 text sizes (the shared HUD frame excluded: it sizes itself
+  by its own rule): each is twice its 1080p size (before: 13 → 52 px).
+- Both checks shown RED on the old code and GREEN on the new (run with
+  `python -B`, fundament 08). **350 → 352** (new modules 090l, 090m).
+- **Renders** (offline, the suite's fixtures, `tools/hud_evidence.py`), before
+  and after, 1080p, 2160p and Data's 2576x1432:
+  `evidence/work_order_179/scaling_2160/{before,after}/` and
+  `compare_<screen>_<size>_before_left_after_right.png`. **1080p: pixel-
+  identical** before and after on both screens (image difference: none).
+  2160p: text at 1080p's proportions. **2576x1432 changes as well**: its
+  factor was 1.78 instead of 1.33, so text there is now a quarter smaller —
+  Data's own window size; parked item 2.

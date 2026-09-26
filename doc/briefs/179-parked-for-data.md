@@ -13,3 +13,22 @@ menu's own field list is followed by a slot message. HD ignores it (it needs
 the dialog's fields too), so nothing is wrong on screen. A one-line reset on
 the ESC path would be an engine change beyond fix 34; not written as a patch.
 Default: leave it, recorded in entry 34.
+
+## 2. Text at 2576x1432 is smaller after part 5 (default: proportional)
+
+The fault fixed in part 5 grew with the square of the window scale at every
+size above 1080p, not only at 2160p. At your 2576x1432 the star names and
+Select Race's text were 1.78x their 1080p size and are now 1.33x — the
+proportional size, a quarter smaller than you have been seeing. The order
+asked for 1080p unchanged and 2160p fixed; the same rule gives this. See
+`evidence/work_order_179/scaling_2160/compare_*_2576x1432_*.png`. If the old
+size at 2576 was right for your eyes, the way to get it back without the
+fault is a larger `font_scale` on the boxes (F5) — not the double factor.
+
+## 3. Two more screens with the same double scale (default: not changed)
+
+Custom Race (`box_font_scale` into `Layout.font_size` at screen.py:251, 298,
+320, …) and Empire Identity (screen.py:180, 207, 255) have the same shape as
+part 5's fault; Custom Race's 2560x1440 boxes also carry a hand value (0.9)
+that may have been tuned against it. Not in this order's scope, not changed;
+a check like 090m per screen would show it.
