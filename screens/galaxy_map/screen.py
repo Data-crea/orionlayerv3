@@ -105,6 +105,8 @@ class GalaxyMapScreen(ScreenBase):
 
     def __init__(self, app):
         super().__init__(app)
+        from screens.galaxy_map import mapmodal
+        self._modal = mapmodal.Modal(self)
         self._data = {}
         self._cache = rnd.SpriteCache()
         #: What `_load_sprites` last loaded FOR. None means "nothing
@@ -368,6 +370,21 @@ class GalaxyMapScreen(ScreenBase):
         # The eta label's order lock ends on the order's effect (mapeta).
         self._eta_lock = mapeta.advance(self._eta_lock, game_state,
                                         self._ships)
+        # The engine's modals over the map (work order 177, `mapmodal`).
+        if getattr(self.app, "connected", False):
+            self._modal.update(game_state)
+
+    def owns_field_list(self, fields):
+        """The map's own list: its grid field and its zoom-out button —
+        the test parking already makes (`update`, work order 128 C)."""
+        return (mapboxes.live_field(fields, self._data.get("map_cancel"))
+                is not None and mapboxes.live_field(
+                    fields, self._data.get("zoom_out_field")) is not None)
+
+    def wants_original(self):
+        """The safety net (work order 177): a modal the map has no view for
+        is shown as the game's own picture, input passed through."""
+        return self._modal.fallback
 
     # ── Geometry ──────────────────────────────────────────
 
@@ -459,6 +476,13 @@ class GalaxyMapScreen(ScreenBase):
         self._render_sidebar(surface)
         self._render_nav(surface)
         self._render_title(surface)
+        if self._modal.active:
+            # The engine's modal over the map (work order 177): the map
+            # dimmed under it, as every HD popup stands.
+            dim = pygame.Surface(surface.get_size(), pygame.SRCALPHA)
+            dim.fill((0, 0, 0, 120))
+            surface.blit(dim, (0, 0))
+            self._modal.render(surface)
         # Above the HUD: the popup is a dialog, not content.
         self.render_help(surface)
 
@@ -617,15 +641,25 @@ class GalaxyMapScreen(ScreenBase):
         mapinput.mouse_motion(self, screen_x, screen_y)
 
     def handle_click(self, screen_x, screen_y):
+        if self._modal.active:
+            self._modal.click(screen_x, screen_y)
+            return None
         if mapinput.click(self, screen_x, screen_y):
             return None
         return super().handle_click(screen_x, screen_y)
+
+    def handle_key_event(self, event):
+        if self._modal.active and self._modal.key_event(event):
+            return
+        super().handle_key_event(event)
 
     def handle_key(self, key):
         if not mapinput.key_down(self, key):
             super().handle_key(key)
 
     def handle_right_button(self, down, mx, my):
+        if self._modal.active:
+            return True            # the map under a modal does not pan
         return mapinput.right_button(self, down, mx, my)
 
     def handle_mousewheel(self, direction, mx, my):
