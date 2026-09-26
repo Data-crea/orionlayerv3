@@ -131,6 +131,14 @@ class View:
                        f"is shown.")
 
     @property
+    def in_box(self):
+        """`screens/fleets/fltbox` asks this — the native box's drawing and
+        its buttons are reused as they are (the Leaders screen's way).
+        Missing in 175: the declare-war box crashed the screen, found by
+        work order 176's live run."""
+        return self.state == IN_BOX
+
+    @property
     def draws(self):
         return self.state in (MAIN, WHO, IN_BOX, WAITING)
 

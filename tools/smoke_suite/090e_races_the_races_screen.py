@@ -205,9 +205,22 @@ _rc_scr.update(_rc_state(_rc_players, fields=_rc_fields(
     _rc_g.main_shape(3))))
 assert _rc_scr.wants_original() and _rc_click(_rc_mid(
     _rc_g.button_rect("exit"))) == []
+# The declare-war box (work order 176: 175 never drew it and the screen
+# crashed on it live): drawn through fltbox, NO goes to its own field.
+_rc_scr._waited = 0
+_rc_s = _rc_state(_rc_players, fields=_rc_box)
+_rc_scr.update(_rc_s)
+assert _rc_scr._view.in_box and not _rc_scr.wants_original()
+_rc_scr.render(pygame.Surface((1920, 1080)))
+from screens.fleets import fltbox as _rc_fb
+_rc_btn = {k: r for k, _f, r in _rc_fb.button_rects(_rc_scr)}
+assert set(_rc_btn) == {"yes", "no"}, _rc_btn
+_ldw_sent.clear()
+_rc_scr.handle_click(*_rc_btn["no"].center)
+assert _ldw_sent == [("act", 2)], _ldw_sent
 ok("the Races screen sends every button to its own field in MAIN, a race or "
-   "the catcher in WHO, ESC to RETURN — and no mission, no spy strip, "
-   "nothing from a dialog")
+   "the catcher in WHO, ESC to RETURN, the declare-war box's answer to its "
+   "field — and no mission, no spy strip, nothing from a dialog")
 
 # ── 3b. THE MISSION BUTTONS, EVERY SLOT (work order 176) ─────────────
 # 175 measured slot 0's pictures and used them for all seven; live, slot
