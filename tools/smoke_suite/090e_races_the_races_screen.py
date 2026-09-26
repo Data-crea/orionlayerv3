@@ -5,7 +5,7 @@
 # record packer and `_ldw_f` field builder it uses). Work order 175 C: the
 # Races screen (SCREEN_RACE, 6).
 #
-# The 4 check(s) it holds:
+# The 5 check(s) it holds:
 #   - the geometry is racescrn.cpp's (tables, slider remap, relation words,
 #     icon spacing, the two field shapes 8 + 5n and 7 + n), the player
 #     fields sit where the headers put them, and every save on this disk
@@ -16,6 +16,9 @@
 #     paragraph, the relation word, IGNORED, the spies and the bonuses
 #   - what is sent: every button to its own field in MAIN, a race or the
 #     catcher in WHO, ESC; nothing for a mission, nothing from a dialog
+#   - the mission buttons' fields are RACES.LBX's own sizes for EVERY slot
+#     (each slot has its own pictures, heights 13 or 14 — work order 176's
+#     live run found 175's one-slot table wrong)
 #   - it draws at three sizes and 2576x1432 with the art absent and
 #     present, its markings each have a home in the code, screen 6 routes
 #     here, its extractor writes into an ignored folder, and the loader
@@ -205,6 +208,32 @@ assert _rc_scr.wants_original() and _rc_click(_rc_mid(
 ok("the Races screen sends every button to its own field in MAIN, a race or "
    "the catcher in WHO, ESC to RETURN — and no mission, no spy strip, "
    "nothing from a dialog")
+
+# ── 3b. THE MISSION BUTTONS, EVERY SLOT (work order 176) ─────────────
+# 175 measured slot 0's pictures and used them for all seven; live, slot
+# 1's SABOTAGE is 13 high, not 14, the main list was not recognised and
+# the screen handed over. The table now holds each slot's own sizes; where
+# the player's RACES.LBX is on this disk it is the second source.
+assert len(_rc_g.MISSION_H) == _rc_g.SLOTS
+assert _rc_g.mission_rect(1, 1) == (196, 233, 267, 245), \
+    "slot 1's SABOTAGE as the live list reported it on 26 September 2026"
+_rc_fa = _ld_tool("fleet_art_extract")
+_rc_lbx_path = _rc_fa.find_lbx(None, "RACES.LBX")
+if _rc_lbx_path:
+    from core import lbx as _rc_lbx
+    _rc_e = _rc_lbx.read_entries(_rc_lbx_path)
+    for _i in range(_rc_g.SLOTS):
+        for _k, _base in enumerate((10, 17, 24)):
+            _h = _rc_lbx.parse_header(_rc_e[_base + _i], "RACES.LBX")
+            _r = _rc_g.mission_rect(_i, _k)
+            assert (_r[2] - _r[0] + 1, _r[3] - _r[1] + 1) == (
+                _h.width, _h.height), (_i, _k, _r, _h.width, _h.height)
+else:
+    report("the mission buttons NOT checked against RACES.LBX — not on "
+           "this disk")
+ok("the Races mission buttons' fields are each slot's own picture sizes "
+   "(RACES.LBX 10+i, 17+i, 24+i), checked against the file where it is "
+   "on disk")
 
 # ── 4. DRAWING, MARKINGS, ROUTING, EXTRACTION ───────────────
 import pygame as _rc_pg

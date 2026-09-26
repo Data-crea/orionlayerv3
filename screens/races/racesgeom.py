@@ -53,12 +53,17 @@ NO_CONTACT_DX, NO_CONTACT_DY = 0x5B, 10   # (:121-125)
 IGNORED_DX, IGNORED_DY = 37, 66     # (:569-572)
 BAR_SIZE = (8, 88)                  # RACES.LBX 3
 SLIDER_SIZE = (25, 13)              # RACES.LBX 2
-#: The mission buttons' offsets and widths (RACES.LBX 10+i, 17+i, 24+i:
-#: 75 x 13, 72 x 14, 40 x 13) — ESPIONAGE, SABOTAGE, HIDE. Multi-button
-#: fields end at `x + Get_Width_ - 1` (fields.cpp:337-338), type 3.
+#: The mission buttons' offsets and sizes — each race SLOT has its own
+#: three pictures (RACES.LBX 10+i, 17+i, 24+i, racescrn.cpp:321-323), and
+#: their heights differ from slot to slot: measured on this disk's
+#: RACES.LBX for work order 176, after the live list showed slot 1's
+#: SABOTAGE one pixel shorter than slot 0's (175 had measured slot 0 only
+#: and the screen refused the real list). ESPIONAGE, SABOTAGE, HIDE.
+#: Multi-button fields end at `x + Get_Width_ - 1` (fields.cpp:337-338).
 MISSION_DX = (0, 76, 149)
 MISSION_W = (75, 72, 40)
-MISSION_H = (13, 14, 13)
+MISSION_H = ((13, 14, 13), (13, 13, 13), (13, 13, 13), (14, 14, 14),
+             (13, 13, 13), (13, 13, 13), (13, 13, 13))
 
 #: `_slider_remap_list` and `_relation_name_table` (:30-31).
 SLIDER_REMAP = (74, 72, 68, 66, 62, 60, 56, 54, 50, 48, 44, 42, 38, 36,
@@ -125,7 +130,7 @@ def bar_field(i):
 def mission_rect(i, k):
     x, y = SPY_BUTTONS[i]
     return (x + MISSION_DX[k], y, x + MISSION_DX[k] + MISSION_W[k] - 1,
-            y + MISSION_H[k] - 1)
+            y + MISSION_H[i][k] - 1)
 
 
 def slider_y(i, relation):
