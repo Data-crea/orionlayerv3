@@ -266,6 +266,11 @@ step broken. Push: the seven commits 983ad14 … a5fe7b6 and this one, `main`
 only (`colony-free-bands`, `rescue/ties-abend` already equal on the remote;
 no tags). orion2re: `9ab84230` on `orionlayer-local`, local only, bundled.
 
+**Pushed:** `git push origin main` — the pre-push hook ran the full suite
+(354 green) — **`d2b30a6..f794094  main -> main`**, a fast-forward, no
+force; afterwards `git ls-remote`: local = remote = `f794094b2420…`. This
+line is one more commit, pushed the same way.
+
 ## Summary
 
 | part | what | result |
