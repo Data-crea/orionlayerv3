@@ -16,6 +16,7 @@ from core.original_view import OriginalView
 from core.editor import Editor
 from core import debuginput
 from core import fallbacknote
+from core import frametrace
 from core import helppopup
 
 logging.basicConfig(level=logging.INFO,
@@ -122,6 +123,13 @@ class App:
         #: key events from a socket, posted into the ordinary queue so
         #: they take the same path a real click does (work order 142 C).
         self._debug_input = debuginput.DebugInput.open()
+        #: TOOL, off unless ORIONLAYER_FRAME_TRACE is set: the source of
+        #: every presented frame (work order 180 A1). None costs one
+        #: `is None` test per frame.
+        self._frame_trace = frametrace.FrameTrace.open()
+        #: Which way into the game's picture `_showing_original` last
+        #: took — `frametrace.NO_SCREEN`, `HAND_OVER`, `F12` — or "".
+        self._net_kind = ""
         self._note_labels = self.res.load_json(
             "assets/shared/fallback/labels.json", {}) or {}
 
@@ -286,8 +294,11 @@ class App:
         OrionLayer's window.
         """
         if not self.connected:
+            self._net_kind = ""
             return self._verdict(False, None)
         if self.render_mode == "original" or self.dispatcher.use_original:
+            self._net_kind = (frametrace.F12 if self.render_mode == "original"
+                              else frametrace.NO_SCREEN)
             return self._verdict(True, None)
         # A THIRD WAY IN, work order 130 E: a screen that KNOWS the id
         # but cannot vouch for what it would draw. The research select
@@ -297,7 +308,9 @@ class App:
         # player answers the dialog through the picture instead.
         top = self.dispatcher.top
         if top is not None and top.wants_original():
+            self._net_kind = frametrace.HAND_OVER
             return self._verdict(True, top)
+        self._net_kind = ""
         return self._verdict(False, top)
 
     def _verdict(self, shown, top):
@@ -357,7 +370,10 @@ class App:
 
     def _render(self):
         """Render based on current mode."""
-        if self._showing_original():
+        shown = self._showing_original()
+        if self._frame_trace is not None:
+            frametrace.record_app_frame(self, shown)
+        if shown:
             picture = self.original_view.render(self.surface, self.layout)
             # WORK ORDER 139 D — the reason, where the player is
             # looking. Drawn AFTER the picture and outside it, and it
