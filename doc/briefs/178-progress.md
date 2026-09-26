@@ -5,7 +5,20 @@ Unattended run, 26 September 2026, from 18:33 (the machine came back up at
 
 ## Short answer for Data
 
-(Written last; see the end of the file until then.)
+**What the crash touched:** nothing that mattered. It came at 18:24:55,
+after all of 177's live steps had run and been written down, but before the
+last write-up was committed. Every protected file (SAVE1-11, MOX.SET, HOF.M2,
+lastrace.rac, TEMP.TMP, user_settings.json) was identical to 177's backup,
+so **nothing was restored**. No engine or client was left running; git
+fsck, orion2re and its bundle, and 177's 111 evidence files are all intact. The
+three uncommitted doc edits were read and committed. One stray file
+(`less`'s help screen, created after the reboot) was removed.
+
+**177 is complete and pushed.** Four live steps had run at only one of the
+two window sizes; this run did them at the other size, and all work. Open
+fix 34 is **not applied** and is parked as your decision. `main` is
+pushed: `a30ef2f..3fe2184`, plus this record, with the full suite and a fresh
+clone at 344 green. Look first at 177's "What Data should look at first".
 
 ---
 
@@ -166,3 +179,10 @@ Nothing found that needs a code change. **Open fix 34 not applied**, parked
 (178 parked 1, 177 parked 1 extended with what the dialog can and cannot do
 without it). 177's results table is complete (rows 1-23), with the crash
 noted, "look at first" written; its push record is filled at the push.
+
+## 5. Push — **MADE**
+
+The record is in `177-progress.md` "Push record": `a30ef2f..3fe2184`, fast-
+forward, full suite and fresh clone 344 green right before, tree clean,
+liveguard clean, no engine running, no broken step; local = remote after.
+This file's commit is pushed the same way, right after.

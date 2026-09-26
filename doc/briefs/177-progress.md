@@ -205,7 +205,18 @@ written but before this file was committed. Work order 178 recovered it
 
 ## Push record
 
-(Filled in by 178 at the push.)
+Pushed by work order 178. Right before pushing, at `3fe2184`: full suite
+**344 green**; a fresh clone (`git clone`, `tools/setup.py` exit 0) **344
+green**; working tree clean; no engine running; liveguard clean (all game
+files identical to `177_master`); no live step broken. Going out — `main`,
+nine commits ahead of `origin/main` (a30ef2f): f2b82a0, d3e60a2, 8c3be1b,
+57f1c8f, 388b09c, 4cb5161, 1bc79ba (177), 13cc8b1, 3fe2184 (178).
+`colony-free-bands` and `rescue/ties-abend` already identical on both sides;
+no tags. `git push origin main` — the pre-push hook ran the full suite (344
+green) — **`a30ef2f..3fe2184  main -> main`**, a fast-forward, no force.
+Afterwards `git ls-remote`: `main` local = remote = `3fe21842fb2c…`. The
+record itself is one more commit, pushed the same way (`178-progress.md`).
+orion2re: nothing pushed, untouched.
 
 ## What Data should look at first
 
