@@ -111,7 +111,11 @@ def decode(raw):
     the LBX predates unicode, and a tool that dies on one odd byte
     takes the other 811 strings with it.
     """
-    return raw.decode("cp437", errors="replace").strip()
+    # NO STRIP (work order 175, 167's finding X): the bytes are the
+    # string. `.strip()` here took the space out of `", the "`,
+    # `"%s Fleet: "` and 126 other entries, and a trailing "\n\n" off
+    # the long texts — every one of them printed by the game as it is.
+    return raw.decode("cp437", errors="replace")
 
 
 def main():

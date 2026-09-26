@@ -158,8 +158,7 @@ for _ldc_key, _ldc_word in (
         ("deviation_hd_skill_help", "hd_skill_help"),
         ("hd_state_open_fix_30", "open fix 30"),
         ("omission_system_pictures", "system_pictures"),
-        ("omission_outer_frame", "OFFICER.LBX 0"),
-        ("workaround_the_word", "the_word")):
+        ("omission_outer_frame", "OFFICER.LBX 0")):
     assert _ldc_key in _ldc_marks, f"layout.json lost {_ldc_key}"
     assert _ldc_word in _ldc_all, (
         f"{_ldc_key}: no module names {_ldc_word!r} — a marking with no "
@@ -216,10 +215,12 @@ _ldc_t, _ldc_body = _ldc_rows.skill_help_text(
 assert _ldc_t == "SKILL 14" and _ldc_body.endswith("worth 15."), _ldc_body
 assert "Title 4," in _ldc_body, "the title and its comma (officer.cpp:1769)"
 # The expiring workaround: a trailing space is put back only if missing.
-_LdcW = type("_LdcW", (), {"hstring": lambda self, i: ", the"})
+# SINCE WORK ORDER 175 the extractor keeps the trailing space, so the
+# word is the file's own string and the workaround that restored it is
+# gone (167's parked item X): what the loader holds is what is used.
 _LdcK = type("_LdcK", (), {"hstring": lambda self, i: ", the "})
-assert _ldc_rows.the_word(_LdcW(), 3) == ", the "
 assert _ldc_rows.the_word(_LdcK(), 3) == ", the "
+assert "workaround_the_word" not in _ldc_marks
 ok("the Leaders extractors write into the project and git ignores their "
    "output; both loaders say absent and stale; the skill help box "
    "formats the original's way")

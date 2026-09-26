@@ -43,23 +43,15 @@ UNIT_DEFAULT = "BC"
 
 
 def the_word(words, index):
-    """`Leader_Name_`'s ", the " for leader `index`, or None.
+    """`Leader_Name_`'s ", the " for leader `index`, or None — HESTRNGS
+    0x110 / 0x182 AS THE FILE HAS THEM, trailing space included.
 
-    **A WORKAROUND THAT EXPIRES BY ITSELF** (the shape of decision 44).
-    HESTRNGS 0x110 and 0x182 are `", the "` WITH a trailing space in the
-    player's file, and the shared extraction strips it
-    (`tools/estrings_extract.decode`, used by `hestrings_extract`), so
-    the loaded string is `", the"` and a title would be glued to it —
-    "Slith, theRebel Pilot". The fault is the extractor's and it is
-    parked for Data (work order 167, parked item X): 32 HESTRNGS and 96
-    ESTRINGS entries lose whitespace the same way. Here the one space
-    this screen needs is put back ONLY when it is missing, so the line
-    is a no-op the day the extractor keeps the bytes.
+    Until work order 175 the shared extraction stripped that space and
+    this function put it back (167's parked item X, a workaround marked
+    to expire); the extractor keeps the bytes now (format 2), so the
+    string is used as it is.
     """
-    text = words.hstring(ls.the_word_hestring(index))
-    if text is None:
-        return None
-    return text if text.endswith(" ") else text + " "
+    return words.hstring(ls.the_word_hestring(index))
 
 
 class Row:

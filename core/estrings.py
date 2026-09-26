@@ -46,7 +46,9 @@ log = logging.getLogger("estrings")
 #: Bumped when the extractor's output shape changes. A body an older
 #: extractor wrote renders almost right, which is worse than not
 #: loading at all — decision 38's own lesson.
-FORMAT_VERSION = 1
+#: 2 since work order 175: the extractor keeps leading and trailing
+#: whitespace (format 1 stripped it — 96 entries lost a space).
+FORMAT_VERSION = 2
 
 #: estrings.h:4. The loader walks exactly this many strings, so a
 #: file that yields fewer is refused rather than half-read.

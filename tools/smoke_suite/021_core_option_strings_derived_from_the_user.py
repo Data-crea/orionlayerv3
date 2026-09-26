@@ -10,7 +10,8 @@
 # otherwise unchanged. Do not import this file; it is not a
 # module. Add a check for this screen HERE, not in the core.
 #
-# The 1 check(s) it holds:
+# The 2 check(s) it holds:
+#   - the extractor keeps every string's own spaces and line breaks; format-1 files are stale (175)
 #   - option strings, derived from the user's ESTRINGS.LBX (); the TECHNAME and ESTRINGS walks stay ap
 
 
@@ -57,3 +58,33 @@ assert _ee.HEADER_SIZE == 4, (
     "two uint16s and seeks past both (farload.cpp:88-92, :107)")
 ok(f"option strings, derived from the user's ESTRINGS.LBX "
    f"({_es_note}); the TECHNAME and ESTRINGS walks stay apart")
+
+
+# ── THE EXTRACTOR KEEPS THE BYTES (work order 175, 167's parked X) ──
+# `decode` stripped every string: 96 ESTRINGS and 32 HESTRNGS entries
+# lost a leading or trailing space or a trailing line break — ", the ",
+# "%s Fleet: ", "  no", "Beam OCV: " — and a title read "Slith,
+# theRebel Pilot". The walk is unchanged; the decode keeps what the
+# file has; both loaders refuse a format-1 file as stale.
+import estrings_extract as _xk
+import tempfile as _xk_tmp
+from core import estrings as _xk_es, hestrings as _xk_hs
+for _xk_raw in (b", the ", b"%s Fleet: ", b"  no", b" ", b"text\n\n"):
+    assert _xk.decode(_xk_raw) == _xk_raw.decode("cp437"), _xk_raw
+_xk_blob = (b"\x03\x00\x20\x00" + b" %s gains a level\x00"
+            + b"Beam OCV: \x00" + b"lore\n\n\x00")
+assert [_xk.decode(_r) for _r in _xk.split_block(_xk_blob, 3)] == [
+    " %s gains a level", "Beam OCV: ", "lore\n\n"]
+assert _xk_es.FORMAT_VERSION == 2 and _xk_hs.FORMAT_VERSION == 2
+with _xk_tmp.TemporaryDirectory() as _xk_d:
+    _xk_path = os.path.join(_xk_d, *_xk_hs.string_file("en").split("/"))
+    os.makedirs(os.path.dirname(_xk_path))
+    with open(_xk_path, "w", encoding="utf-8") as _f:
+        json.dump({"format": 1, "strings": [""] * _xk_hs.HSTRINGS_COUNT}, _f)
+    assert _xk_hs.HStrings("en", root=_xk_d).state == "stale", \
+        "a stripped (format 1) file was read as current"
+assert "puts the one space back" not in open(os.path.join(
+    SCREENS_DIR, "leaders", "ldrrows.py"), encoding="utf-8").read(), \
+    "the Leaders workaround for the stripped space is back"
+ok("the string extractor keeps every string's own spaces and line breaks "
+   "(format 2); a format-1 file is stale; the Leaders workaround is gone")

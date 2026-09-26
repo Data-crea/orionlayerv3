@@ -36,7 +36,10 @@ log = logging.getLogger("hestrings")
 #: harold.cpp:1583 — the walk stops at 397.
 HSTRINGS_COUNT = 397
 
-FORMAT_VERSION = 1
+#: 2 since work order 175: the extractor keeps leading and trailing
+#: whitespace (format 1 stripped it — 32 entries lost a space or a
+#: trailing line break).
+FORMAT_VERSION = 2
 
 #: harold.cpp:1524-1561 — the language picks the FILE.
 LANGUAGE_FILES = {

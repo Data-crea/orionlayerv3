@@ -13,7 +13,6 @@
     "hd_state_open_fix_30": "HD STATE \u2014 the button mode beyond hire, the selection, the colony view's star, the ship view's stack and grid and the hire popup's leader are not on the wire without open fix 30 (doc/ext_officer_screen_state.patch, NOT APPLIED). Until then the view box shows a placeholder that names the fix, POOL / DISMISS / PREV / NEXT / assigning / the galaxy box send nothing, and a popup whose leader the list cannot name shows the game's own pixels.",
     "omission_system_pictures": "OMISSION \u2014 the colony view's system display: the star and planet pictures are not drawn (their artwork is not extracted by this order); HD writes the star's name and its planet slots. Only with open fix 30.",
     "omission_map_strip": "OMISSION \u2014 the strip under the galaxy box names the stack the GAME's pointer is over (Print_Galmap_Scanned_Ship_, officer.cpp:2094-2204): ship counts by hull, which HD does not build in this order. The strip stays empty.",
-    "omission_detailed_ship_view": "OMISSION \u2014 a right click on a big ship icon opens the combat screen's ship view (CMBTDRW1::Detailed_View_Ship_, officer.cpp:1041-1047). Not built; with open fix 30 the click reaches the game and its answer is the fallback picture.",
-    "workaround_the_word": "WORKAROUND, expiring \u2014 HESTRNGS 0x110 / 0x182 lose their trailing space in the shared extraction; ldrrows.the_word puts the one space back only when it is missing (parked, item X)."
+    "omission_detailed_ship_view": "OMISSION \u2014 a right click on a big ship icon opens the combat screen's ship view (CMBTDRW1::Detailed_View_Ship_, officer.cpp:1041-1047). Not built; with open fix 30 the click reaches the game and its answer is the fallback picture."
   }
 }

@@ -43,3 +43,32 @@ case) rewritten, `TEMP.TMP` appeared, `HOF.M2` vanished, the settings
 written, the allowed scratch slot saved — all named, all restored, the
 scratch slot left. Recorded in CLAUDE.md beside the protocol and in
 fundament part 09 beside the start hang.
+
+## The string extractor keeps its spaces — **DONE** (167's parked X)
+
+`tools/estrings_extract.decode` (also `hestrings_extract`'s) called
+`.strip()`. Measured on the raw bytes of the player's files
+(`extractor/strings_losing_spaces.json`): **96 ESTRINGS and 32 HESTRNGS
+entries** lost a leading or trailing space or a trailing line break —
+`", the "` (0x110, 0x182), `"%s Fleet: "` (0x131), `"  no"` (0x10A),
+`"Beam OCV: "` (0x99), the GAME menu's engine-row labels (0xAA...),
+`" %s gains a level"` and the other ESTRINGS messages, and the long
+lore texts' trailing `\n\n`. The docstring had promised the bytes all
+along; the decode now keeps them. Both loaders are **format 2**, so a
+stripped file reads as stale and `setup.py` names the command. Re-
+extracted on this disk; the committed stand-ins regenerated
+(`tools/make_derived_fixtures.py`). The Leaders workaround
+(`ldrrows.the_word`, and its `workaround_the_word` marking) is removed:
+the word is the file's own string.
+
+**Before/after**: `extractor/strings_before_after.png` — each affected
+string as a screen composes it (Leaders' title and cost column, the
+galaxy map's fleet box, a Fleets ship value, a GAME menu settings row,
+a Leaders message): "Slith, theRebel Pilot" -> "Slith, the Rebel Pilot",
+"Kif Fleet:3 ships" -> "Kif Fleet: 3 ships". The six screens that use
+the strings rendered offline before and after (`extractor/before`,
+`after`) are pixel-identical: offline states draw none of these strings
+(no leader rows, no fleet box, no ship values) — the live test is where
+they show in place. Check (322): the decode keeps spaces and line
+breaks, a synthetic block walks with them, format-1 files are stale,
+the workaround is gone.
