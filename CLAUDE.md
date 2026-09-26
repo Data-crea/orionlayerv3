@@ -151,7 +151,7 @@ doc/                    the documents in the table above
 mods/                   file-level overrides; example_mod works
 ```
 
-Thirteen screens exist (the list below names eleven; fleets and
+Fifteen screens exist (the list below names thirteen; fleets and
 research change are in `v3_projektstatus.md`): main menu, new game,
 select race, custom race, empire identity, galaxy map, colony
 summary (list, sidebar, scan
@@ -340,8 +340,9 @@ it is hashed with SAVE1-9 and must stay identical (work order 126 D,
 (work order 175, after 174 found `MOX.SET` rewritten by the game when a
 loaded scratch game was left for New Game). The list is found in the
 source, not named by an order: SAVE1-11, `MOX.SET`, `HOF.M2`,
-`lastrace.rac`, `TEMP.TMP` in the game folder; `user_settings.json`
-(with `.tmp`/`.corrupt`) and the tree's `git status` here.
+`lastrace.rac`, `TEMP.TMP` in the game folder; user_settings.json
+(generated at the first start, so a fresh clone has none; with
+`.tmp`/`.corrupt`) and the tree's `git status` here.
 `tools/engine_start.py` takes the backup before the engine exists and
 prints the folder; after the run,
 

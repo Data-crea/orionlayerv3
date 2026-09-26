@@ -372,3 +372,63 @@ seven views (five pages, a category, a how-to) at 1080p, 1440p, 2160p and
 is `evidence/work_order_175/demo_text_mod/` (four replacements, one long body
 that scrolls, one non-UTF-8 and one empty file that fall back with one log
 line each).
+
+## Tests
+
+- **Full suite: 334 green** (`python tools/smoke_test.py`, 26 September 2026).
+- **Fresh clone: 334 green** — `git clone` of the local commits into a
+  scratch directory, `tools/setup.py` (it reports the player-derived files
+  absent, as a clone must), full suite. The first clone run FOUND A FAULT
+  of this order: CLAUDE.md's new protocol paragraph named
+  `user_settings.json` in backticks, a file the first start generates, so a
+  clone failed 091's "CLAUDE.md points at a missing file". Fixed in the
+  closing commit (the name is plain text now); the clone then ran green.
+- Checks the order named: fix entries applied (006e, 090c); Leaders buttons
+  wired (090d); Races and Info smoke groups (090e, 090f); the text resolver
+  — override, missing, broken, no MOO2 text in the template (090f); no Info
+  text clipped at any tested size (090f); the extractor keeps spaces (021).
+  322 -> 334 over the order (+12), nothing removed.
+- **Backups**: no live run happened in this order (Data's engine held the
+  port throughout — PID 368253, checked again at the close), so no game or
+  OrionLayer file was touched by a run; nothing needed restoring.
+
+## Results
+
+| step | result | evidence |
+|---|---|---|
+| 174 recorded as pushed | works | 266f6f5, 174-progress "Push — DONE" |
+| live-test protocol extended (every written file backed up / verified) | works | `tools/liveguard.py`, `engine_start.py --guard`; 006e; CLAUDE.md + fundament 09 |
+| fix 31 applied (orion2re f98b8547), bundle, rebuild | works | open_fixes row 31, patch header, version_check |
+| fix 31 re-measure (starts, tearing) | parked (port) | parked item 1 |
+| fix 30 applied (orion2re cc542e02) | works | open_fixes row 30, 090c check 13 |
+| extractor keeps spaces; Leaders workaround removed | works | 8b03592; `evidence/.../extractor/` before/after |
+| Leaders: POOL, DISMISS, PREV/NEXT, arrows, assigning wired | works (offline) | 090d; `ldrmap` |
+| Leaders: top-right box, both strips, glass everywhere | works (offline) | `evidence/.../leaders/*_offline_*` (4 sizes) |
+| Leaders live test (both tabs, hire) | parked (port) | parked item 2 |
+| Races inventory | done | progress part C |
+| Races screen | works (offline) | 090e; `evidence/.../races/*_offline_*` (4 sizes, main + WHO) |
+| Races missions / spy drag | parked (not on the wire until commit) | parked item 3 |
+| Races live test | parked (port) | parked item 4 |
+| Info inventory | done | progress part D |
+| Info screen (chart, Tech Review, Race Stats, Reference) | works (offline) | 090f; `evidence/.../info/*_offline_*` (7 views, 4 sizes) |
+| Info History curves, Turn Summary | parked (open fix 32 written, not applied) | `doc/ext_info_screen_state.patch`, parked item 7 |
+| Info texts moddable (resolver, template, MODDING.md, decision 73) | works | 090f; `evidence/.../info/*_MOD_*`, `demo_text_mod/` |
+| Info live test | parked (port) | parked item 8 |
+| full suite / fresh clone | works (334 / 334) | above |
+
+## What Data should look at first
+
+1. `evidence/work_order_175/leaders/leaders_*_offline_*_2576x1432.png` — the
+   Leaders screen with every box glass and the black mini-map gone; the
+   right half now shows the system or the stack, and the fleet strip reads
+   "ELERIAN FLEET: 1 Cruiser, 3 Battleships".
+2. `evidence/work_order_175/info/info_reference_howto_offline_*_MOD_2576x1432.png`
+   beside the same without `_MOD_` — a text file in the mod folder replacing
+   the tab, the title, BACK and a whole article, which scrolls; then
+   parked item 5 (the file format) — the one choice this order made for you.
+3. `evidence/work_order_175/races/races_main_offline_*_1920x1080.png` — the
+   Races screen in the HUD style with the original portraits.
+4. Parked item 7: open fix 32 (History curves and Turn Summary) — apply or
+   not.
+5. When the engine is free: parked items 1, 2, 4, 8 — the live runs, each
+   with its steps; `tools/engine_start.py` takes the backups.
