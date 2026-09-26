@@ -55,6 +55,7 @@ section for what was found where.
 | 31 | A session-launched engine hangs in its first logo frames when its window is not being drawn: every present waits for VSync, and the game thread waits for the present without a timeout | **Applied** 26 September 2026 by work order 175 (orion2re `f98b8547`, `doc/ext_present_no_vsync.patch`): `ORION2RE_NO_VSYNC=1` presents without waiting; open upstream | Without it an unattended live run hangs in about one start in eight while the screen is locked or another window covers the engine's; `tools/engine_start.py` detects the hang and starts again |
 | 32 | The Info screen's history divisors and turn messages are not in the snapshot — `_bill_savegame[6]` and the player's rendered `MSG_::_msgs` | **Applied** 26 September 2026 by work order 176 (orion2re `2269749c`, `doc/ext_info_screen_state.patch`); written by work order 175 D; open upstream | Without it the HD Info screen draws the History Graph's legend but not its curves, and says the Turn Summary's messages are not sent; every other page is complete |
 | 33 | The Info screen's Turn Summary never jumps to a colony: a click on a colony message prepares the jump and `Info_Screen_` then overwrites it with SCREEN_MAIN | **Observation**, reproduced live 26 September 2026 by work order 176 on SAVE5 | Nothing for OrionLayer (HD navigates the Info pages itself and offers no jump); for the game, a feature of the original is gone |
+| 34 | The main menu's Load dialog sends no save slots — MSG_SAVE_SLOTS goes out only on SCREEN_GAME, and the main menu runs the same dialog under SCREEN_MAIN_MENU | **Not applied** — written and parked by work order 177 (`doc/ext_main_menu_save_slots.patch`, dry-run and syntax-checked against orionlayer-local `2269749c`) | Without it HD cannot name the saves in the main menu's Load dialog and shows the game's own picture of it, input passed through (the safety net) |
 
 Items 3 and 4 are both about INJECT_CLICK and both live in the same
 code path, but they are separate faults: 3 is where the coordinates
@@ -2129,3 +2130,27 @@ screen (for example: only if `_current_screen` is still SCREEN_INFO).
 ### Cost to us
 
 Nothing: HD's Info screen navigates its pages itself and offers no jump.
+
+## 34. The main menu's Load dialog sends no save slots
+
+**Status: NOT APPLIED** — written by work order 177, 26 September 2026,
+parked for Data (`doc/briefs/177-parked-for-data.md`). Patch:
+`doc/ext_main_menu_save_slots.patch`, one condition in
+`SerializeSaveSlots` (`src/ext/ext_api.cpp`). Shown to apply and to compile
+with the engine's own flags, with a misspelt-constant control that is
+refused. It has not run.
+
+**What is missing.** Open fix 14 sends each slot's status, type, name and
+stardate while the GAME popup's Load or Save dialog is up, and only on
+`SCREEN_GAME`. The main menu's LOAD GAME runs the same builder
+(`Add_Game_Popup_Fields_` case 2, loadsave.cpp:223-266) through
+`MAINMENU::Mainmenu_Load_Game_Popup_` (mainmenu.cpp:187-189), which sets
+`_screen_data` 2 while the screen stays `SCREEN_MAIN_MENU` — the rows reach
+a client, their contents do not.
+
+**What the patch does.** Sends the slots also when the screen is the main
+menu and `_screen_data` is 2.
+
+**What it costs us without it.** HD shows the main menu's Load dialog as the
+game's own picture with the input passed through (work order 177's safety
+net); with it, HD draws it as it draws the GAME menu's.

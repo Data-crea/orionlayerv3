@@ -1,0 +1,57 @@
+Extension API: the save slots on the MAIN MENU's Load dialog too.
+
+STATUS: NOT APPLIED. Written by work order 177, 26 September 2026, and
+parked for Data's go/no-go (doc/briefs/177-parked-for-data.md). What was
+shown, and only this: the patch applies to src/ext/ext_api.cpp at orion2re
+orionlayer-local 2269749c (`patch -p1 --dry-run`), and the patched file
+compiles with the engine's own flags from out/build/Linux/linux-debug/
+build.ninja (g++ -std=gnu++20 -fsyntax-only, the cmake_pch.hxx include,
+the ORION2RE_EXT define) — with a control: the same file with the new
+constant misspelt is refused. It has not run.
+
+To apply, from ~/orion2re on the orionlayer-local branch:
+
+    patch -p1 < ~/orionlayerv3/doc/ext_main_menu_save_slots.patch
+
+then rebuild, and add its marker (`main_menu_load`) to
+tools/version_check.py in the commit that records the apply.
+
+WHAT IT IS FOR
+
+    Open fix 14 (doc/ext_save_slots.patch, applied 16 September 2026)
+    sends MSG_SAVE_SLOTS — each slot's status, type, name and stardate —
+    while the GAME popup's Load or Save dialog is up, and only then:
+    SerializeSaveSlots requires SCREEN_GAME. The MAIN MENU's LOAD GAME
+    runs the same builder (Add_Game_Popup_Fields_ case 2,
+    loadsave.cpp:223-266) through MAINMENU::Mainmenu_Load_Game_Popup_
+    (mainmenu.cpp:187-189), which sets _screen_data 2 while
+    _current_screen stays SCREEN_MAIN_MENU (10) — so a client sees the
+    dialog's ten rows and knows nothing about what is in them. Reading
+    SAVEn.GAM from a folder of its own is refused (OrionLayer
+    fundament 60).
+
+    With it, OrionLayer draws the main menu's Load dialog as it draws the
+    GAME menu's; without it the dialog is shown as the game's own picture
+    with the input passed through (work order 177's safety net).
+
+One file, one condition. Nothing else moves.
+
+--- a/src/ext/ext_api.cpp
++++ b/src/ext/ext_api.cpp
+@@ -478,7 +478,15 @@
+ static bool SerializeSaveSlots(std::vector<uint8_t>& buf,
+                                int16_t current_screen) {
+     buf.clear();
+-    if (current_screen != SCREEN_GAME) {
++    // OrionLayer open fix 34: the MAIN MENU's Load dialog is the same
++    // builder (Add_Game_Popup_Fields_ case 2, loadsave.cpp:223-266) run
++    // by MAINMENU::Mainmenu_Load_Game_Popup_ (mainmenu.cpp:187-189), which
++    // sets _screen_data 2 while _current_screen stays SCREEN_MAIN_MENU —
++    // so its slots are sent too. Only the LOAD case: the main menu has no
++    // Save dialog.
++    const bool main_menu_load = current_screen == SCREEN_MAIN_MENU
++                                && MOX::_screen_data == 2;
++    if (current_screen != SCREEN_GAME && !main_menu_load) {
+         return false;
+     }
+     const int16_t screen_data = MOX::_screen_data;

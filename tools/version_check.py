@@ -184,9 +184,16 @@ LOCAL_PATCHES = {
 #: their marker so a tree that has them says so, but a tree without them
 #: is not a mismatch. The day one is applied it moves up into
 #: LOCAL_PATCHES, and from then on its absence fails. Same
-#: `file: (relative path, marker, what it enables)`. Empty since open
-#: fixes 20 and 21 moved up (15 September 2026).
-REPORTED_PATCHES = {}
+#: `file: (relative path, marker, what it enables)`. Empty from open
+#: fixes 20 and 21 moving up (15 September 2026) until open fix 34
+#: (work order 177).
+REPORTED_PATCHES = {
+    "doc/ext_main_menu_save_slots.patch": (
+        os.path.join("src", "ext", "ext_api.cpp"),
+        "main_menu_load",
+        "the main menu's Load dialog sends its save slots (open fix 34), "
+        "so HD can draw it instead of showing the game's picture"),
+}
 
 
 def find_tree(argv):
