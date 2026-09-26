@@ -1,20 +1,22 @@
 Extension API: the Info screen's history scale and turn messages on the wire ("INFS").
 
-STATUS: NOT APPLIED. Written by work order 175 D, 26 September 2026, and
-parked for Data's go/no-go (doc/briefs/175-parked-for-data.md). What was
-shown, and only this: the patch applies to src/ext/ext_api.cpp at orion2re
-orionlayer-local cc542e02 (`patch -p1 --dry-run`), and the patched file
-compiles with the engine's own flags from
-out/build/Linux/linux-debug/build.ninja (g++ -std=gnu++20 -fsyntax-only,
-the cmake_pch.hxx include, the ORION2RE_EXT define) — with a control: the
-same file with one member name misspelt is refused. It has not run.
+STATUS: APPLIED 26 September 2026 by work order 176 on Data's
+authorisation — orion2re orionlayer-local 2269749c, rebuilt, bundle
+~/orion2re_bundle_26sep_2269749c.bundle; version_check requires its
+marker. Written by work order 175 D the same day and parked then
+(doc/briefs/175-parked-for-data.md, item 7). Before the apply: the patch
+applied to src/ext/ext_api.cpp at orionlayer-local cc542e02 (`patch -p1
+--dry-run`), and the patched file compiled with the engine's own flags
+from out/build/Linux/linux-debug/build.ninja (g++ -std=gnu++20
+-fsyntax-only, the cmake_pch.hxx include, the ORION2RE_EXT define) — with
+a control: the same file with one member name misspelt was refused.
 
 To apply, from ~/orion2re on the orionlayer-local branch:
 
     patch -p1 < ~/orionlayerv3/doc/ext_info_screen_state.patch
 
-then rebuild, and add the INFS marker to tools/version_check.py in the
-commit that records the apply (the pattern of open fixes 30 and 31).
+then rebuild. tools/version_check.py requires its marker (the pattern of
+open fixes 30 and 31). It comes back off with `patch -R -p1` and a rebuild.
 
 WHAT IT IS FOR
 

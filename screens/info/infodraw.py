@@ -178,3 +178,44 @@ def button(surface, screen, native, words, active=False):
                      "active" if active else "normal")
     infobox.line(surface, screen, words, r.inflate(-6, 0), px(screen, "cost"),
                  hudtext.colour("button"), "center")
+
+
+def player_colour(player):
+    """A player's colour in the galaxy map's owner colours (the skin's),
+    by the record's `color` — the HUD's stand-in for `_hist_graph_palettes`
+    (DEVIATION `chart_colours`)."""
+    from core import palette
+    c = int(player.color) if 0 <= int(player.color) < 8 else 0
+    return tuple(palette.col("galaxy_map", f"owner_{c}", HIGH))[:3]
+
+
+def draw_graph(surface, screen, graph, order, stardate):
+    """The axes (x 237..588 at y 390, y 140..396 at x 237), the y maximum at
+    (246, 138), the eight labels at y 400 from x 239 stepping 50, and each
+    player's curve from x 238, stepping `step`, y = 390 - value, with the
+    original's one-pixel shadow (info.cpp:1330-1346, :1565-1643)."""
+    layout = screen.layout
+    axis = hudtext.colour("button")
+    P = lambda x, y: nd.point(layout, x, y)
+    w = max(1, int(nd.native_scale(layout)))
+    pygame.draw.line(surface, axis, P(232, 390), P(588, 390), w)
+    pygame.draw.line(surface, axis, P(237, 140), P(237, 396), w)
+    for k, label in enumerate(pages.x_labels(stardate)):
+        x = 239 + 50 * k
+        infobox.line(surface, screen, label, R(screen, (x - 24, 396, x + 24,
+                                                        408)),
+                     px(screen, "cost"), NORMAL, "center")
+    if graph is None:
+        return
+    scale, step, curves = graph
+    infobox.line(surface, screen, str(scale), R(screen, (240, 132, 300, 144)),
+                 px(screen, "cost"), NORMAL)
+    for p in reversed(order):
+        pts = curves.get(p) or []
+        if len(pts) < 2:
+            continue
+        colour = player_colour(screen._players[p])
+        line = [P(0xEE + step * t, 390 - v) for t, v in enumerate(pts)]
+        pygame.draw.lines(surface, (40, 40, 48), False,
+                          [(x + w, y + w) for x, y in line], w)
+        pygame.draw.lines(surface, colour, False, line, w)

@@ -171,6 +171,13 @@ LOCAL_PATCHES = {
         "the snapshot carries none of the Leaders screen's view state "
         "(open fix 30), so POOL, DISMISS, assigning, PREV/NEXT, the star "
         "display and the ship grid stay the HD STATE placeholder"),
+    "doc/ext_info_screen_state.patch": (
+        os.path.join("src", "ext", "ext_api.cpp"),
+        # The block's own marker: "INFS" is pushed a character at a time.
+        "MOX::_bill_savegame[i]",
+        "the snapshot carries neither the history divisors nor the turn "
+        "messages (open fix 32), so the Info screen's History Graph draws "
+        "no curves and its Turn Summary lists nothing"),
 }
 
 #: Patches that are REPORTED to Joes and not yet applied: listed with

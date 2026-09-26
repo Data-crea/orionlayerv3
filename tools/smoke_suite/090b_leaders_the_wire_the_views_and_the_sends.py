@@ -29,7 +29,7 @@ from core.structs import leader as _ldw_leader
 
 
 def _ldw_snapshot(leaders, player=0, screen=29, block=None, stars=(),
-                  ships=(), cut=0):
+                  ships=(), cut=0, tail=b""):
     """A STATE_SNAPSHOT payload, every section at its size, the leader
     records where the engine writes them, FSEL empty, and — when given
     — the OFFS block after it, exactly where the patch writes it."""
@@ -65,6 +65,7 @@ def _ldw_snapshot(leaders, player=0, screen=29, block=None, stars=(),
         _b += _S.pack("<h", len(block["icons"]))
         for _ship, _sel in block["icons"]:
             _b += _S.pack("<hB", _ship, _sel)
+    _b += tail                                # a later block (090f: INFS)
     return _ldw_gs.parse_state(bytes(_b[:len(_b) - cut]))
 
 

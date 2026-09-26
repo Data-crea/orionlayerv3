@@ -2458,7 +2458,7 @@ files under `doc/` and are only summarised here.
 | | |
 |---|---|
 | Python | 32,960 lines across 111 modules — `find . -name '*.py'`, `__pycache__` excluded, the smoke test's 6,400 included. The previous figure here (21,642 across 94) was carried from an unstated method and could not be reproduced |
-| Smoke test | `python tools/smoke_test.py` — **335 checks**, headless, in `tools/smoke_suite/` since work order 162 (120 check modules, one group per screen plus a shared core; `tools/smoke_test.py` is the runner). **Two tiers since work order 158**: the bare command runs everything (~200 s here, measured 26 September 2026 — the 72 s this line said was before the rendering checks of 172-174); `--fast` runs the commit gate's 325 (~95 s here). `--screen <name>` prints only that screen's sentences and the core's and is NEVER a gate. See "The gate has two tiers" below |
+| Smoke test | `python tools/smoke_test.py` — **336 checks**, headless, in `tools/smoke_suite/` since work order 162 (120 check modules, one group per screen plus a shared core; `tools/smoke_test.py` is the runner). **Two tiers since work order 158**: the bare command runs everything (~200 s here, measured 26 September 2026 — the 72 s this line said was before the rendering checks of 172-174); `--fast` runs the commit gate's 326 (~95 s here). `--screen <name>` prints only that screen's sentences and the core's and is NEVER a gate. See "The gate has two tiers" below |
 | Assets | 170 MB (select_race 68, galaxy_map 51, shared 23, new_game 21, colony_summary 1) |
 | Screens in HD | 11 of ~20–22 (the Leaders screen, work order 167, built and not accepted; the GAME menu overlay, work order Stop 2, every dialog of the popup; colony summary draws list, sidebar, scan box and galaxy inset, and MOVES POPS — the first HD gesture that drives the game; planets, brief 101, lists, sorts, restricts and returns) |
 | Setup from clone | `python tools/setup.py` (deps via the system package manager) |
@@ -2984,8 +2984,8 @@ blocks into a session and writing them out again. Three proofs:
 
 | | command | checks | on this tree |
 |---|---|---:|---:|
-| **Full** — the default, and the pre-push gate | `python tools/smoke_test.py` | 335 | ~200 s |
-| **Fast** — the pre-commit gate | `python tools/smoke_test.py --fast` | 325 | ~95 s |
+| **Full** — the default, and the pre-push gate | `python tools/smoke_test.py` | 336 | ~200 s |
+| **Fast** — the pre-commit gate | `python tools/smoke_test.py --fast` | 326 | ~95 s |
 | **Screen** — **never a gate** | `python tools/smoke_test.py --screen <name>` | all of them, ~a third printed | the tier's |
 
 **`--screen` narrows what a run PRINTS, not what it runs**, and the
@@ -3654,8 +3654,8 @@ five are pre-first-turn saves), the five tabs, and the pages — Tech Review
 HELP.LBX description), Race Statistics (race list with previously contacted,
 trait lines formatted as `Print_Player_Specials_To_Bitmap_`), Reference
 (index, sorted category topics with their article, "How to?" pages), History
-(the legend and the metric toggles; the curves need open fix 32) and Turn
-Summary (a moddable placeholder naming open fix 32).
+(legend, toggles and — since work order 176 — the curves, from open fix 32's
+divisors) and Turn Summary (the engine's rendered messages, open fix 32).
 
 **Texts, moddable** (decision 73): every text by a stable key through
 `core/modtexts` (1060 keys, `screens/info/infotexts.py`); a file
@@ -3668,11 +3668,12 @@ OrionLayer's own texts. Every text wraps and scrolls (`infobox`).
 **What it sends**: RETURN / ESC only — HD navigates the pages itself (HD
 STATE `local_navigation`: the tab is a local of `Info_Screen_`).
 
-**Open fix 32** (`doc/ext_info_screen_state.patch`, NOT APPLIED): the history
-divisors and the rendered turn messages.
+**Open fix 32** (`doc/ext_info_screen_state.patch`, APPLIED by work order 176,
+orion2re `2269749c`): the history divisors and the rendered turn messages; an
+engine without it gets a moddable notice on those two pages.
 
 **Markings** (`screens/info/layout.json`, `tools/smoke_suite/090f`): HD STATE
-`local_navigation`, HD STATE `open_fix_32`, OMISSION `outer_frame`, OMISSION
+`local_navigation`, HD STATE `engine_without_fix_32`, OMISSION `outer_frame`, OMISSION
 `app_pictures`, DEVIATION `button_words`, DEVIATION `chart_colours`, HD
 EXTENSION `wrap_and_scroll`, HD EXTENSION `moddable_texts`.
 

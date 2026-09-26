@@ -61,8 +61,8 @@ derive world geometry.
 **The smoke test must be green before every commit.**
 
 ```bash
-python tools/smoke_test.py             # everything — 335 checks, ~200 s
-python tools/smoke_test.py --fast      # the commit gate's 325, ~95 s
+python tools/smoke_test.py             # everything — 336 checks, ~200 s
+python tools/smoke_test.py --fast      # the commit gate's 326, ~95 s
 python tools/smoke_test.py --screen colony_summary --fast   # NOT a gate
 ```
 
@@ -96,7 +96,7 @@ the fast tier holds that list and the guards to each other.
 time, not at commit time. See decision 31 and
 `doc/briefs/157-suite-profile.md`.
 
-335 checks, headless, no orion2re needed. **The count must not go
+336 checks, headless, no orion2re needed. **The count must not go
 down.** If a change makes a check obsolete, replace it — do not
 delete it. It went down exactly once, on 12 September 2026, when
 Phase B deleted the frame machinery the checks were about (decision
@@ -183,7 +183,8 @@ diplomacy shown by the fallback — BUILT, NOT ACCEPTED).
 And info (`screens/info/`, wire id 9, work order 175 D: the chart and
 five pages; every text moddable by key through `core/modtexts`
 (decision 73), long texts wrap and scroll; History's curves and the Turn
-Summary wait for open fix 32 — BUILT, NOT ACCEPTED).
+Summary come from open fix 32, applied in work order 176 — BUILT, NOT
+ACCEPTED).
 Screens without an HD version fall back to the original framebuffer,
 so the game is always playable — and since work order 130 A that
 fallback shows the picture AND forwards clicks, so a dialog HD has no

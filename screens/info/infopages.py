@@ -186,3 +186,109 @@ def record(ident):
     """(title, body) of a HELP.LBX record through the resolver."""
     return (T(f"info.reference.{ident}.title", "") or "",
             T(f"info.reference.{ident}.body", "") or "")
+
+
+# ── History Graph (info.cpp:1222-1347, :1565-1643; bill.cpp:547-556) ──
+# Needs open fix 32's `_bill_savegame` (the rings' divisors and start).
+
+RING = 350
+#: The metrics in the toggles' order — `history_btns` bits 0-3 are
+#: population, production, fleet, tech (info.cpp:1241-1244) — and the
+#: divisor each ring was stored under (`_bill_savegame[2..5]`).
+METRICS = (("population_history", 2), ("production_history", 3),
+           ("fleet_history", 4), ("tech_history", 5))
+LADDER = (25, 50, 100, 250, 500, 1000, 2000)
+GRAPH_X0, GRAPH_Y0 = 0xEE, 0x186          # 238, 390
+
+
+def history_length(stardate, bill):
+    """`Get_History_Params_`: (start, length) — the int16 stardate plus
+    30536 is the turn count; past 350 the ring starts at bill[1]."""
+    turns = ((int(stardate) + 0x8000) & 0xFFFF) - 0x8000 + 30536
+    if turns > RING:
+        return int(bill[1]) % RING, RING
+    return 0, max(0, turns)
+
+
+def smooth(data):
+    """`Smooth_History_Data_` over every t, ten passes (:1278-1286)."""
+    n = len(data)
+    for _ in range(10):
+        for t in range(n):
+            v0 = data[t]
+            v1 = data[t + 1] if t + 1 < n else v0
+            v2 = data[t + 2] if t + 2 < n else v0
+            if t + 1 < n:
+                data[t + 1] = (v0 + v1 + v2) // 3
+    return data
+
+
+def history(players, order, bits, stardate, bill):
+    """(max_scale, step, {player: [y offsets 0..250]}) — `Draw_Histories_`
+    for the players in `order` with the metrics `bits` switched on, or
+    None when no metric is on (the original draws nothing then)."""
+    on = [(field, bill[k]) for i, (field, k) in enumerate(METRICS)
+          if bits >> i & 1]
+    if not on:
+        return None
+    start, n = history_length(stardate, bill)
+    curves = {}
+    for p in order:
+        rings = {f: list(getattr(players[p], f)) for f, _ in on}
+        pts = []
+        for t in range(n):
+            i = (start + t) % RING
+            pts.append(sum((rings[f][i] & 0xFF) * max(1, int(w))
+                           for f, w in on))
+        curves[p] = smooth(pts)
+    top = max([max(c) for c in curves.values() if c] + [0])
+    scale = next((s for s in LADDER if top < s), None)
+    if scale is None:
+        scale = LADDER[-1]
+        while top >= scale:
+            scale += 2000
+    divisor = scale * 100 // 250
+    curves = {p: [v * 100 // divisor for v in c] for p, c in curves.items()}
+    return scale, x_step(stardate), curves
+
+
+def x_step(stardate):
+    """`Draw_The_History_Graph_`'s return: pixels per turn (:1600-1622)."""
+    turns = (int(stardate) + 30536) & 0xFFFF
+    return 10 if turns <= 35 else 5 if turns <= 70 else 2 if turns <= 175 \
+        else 1
+
+
+def x_labels(stardate):
+    """The eight stardate labels under the graph (:1599-1643): from 3500.0
+    stepping 5/10/25/50 tenths — past 350 turns from the stardate 34.5
+    years back — "%i.%i" where it is not a whole number."""
+    turns = (int(stardate) + 30536) & 0xFFFF
+    value = 35000
+    step = 5 if turns <= 35 else 10 if turns <= 70 else 25 if turns <= 175 \
+        else 50
+    if turns > 350:
+        value = ((int(stardate) - 345) // 10) * 10
+    out = []
+    for _ in range(8):
+        whole, frac = value // 10, value % 10
+        out.append(f"{whole}.{frac}" if value % 5 == 0 and frac else
+                   f"{whole}")
+        value += step
+    return out
+
+
+# ── Turn Summary (info.cpp:2011-2112) ───────────────────────
+
+def messages(block):
+    """The rendered messages of open fix 32's block, as text: the game's
+    8-bit bytes (cp437) with their FMTPARA codes, for `infobox`."""
+    return [m.decode("cp437", errors="replace")
+            for m in ((block or {}).get("messages") or [])]
+
+
+def year(text, stardate):
+    """`Decode_Text_Year_`: the 0x88 byte (ê in cp437) is the stardate
+    "%d.%d" (jim.cpp:301-307)."""
+    return (text or "").replace("ê", f"{int(stardate) // 10}."
+                                          f"{int(stardate) % 10}")

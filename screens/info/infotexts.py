@@ -112,19 +112,17 @@ TEXTS.update({
     "info.reference.howto_prefix": (_bill(13), "moo2"),
     "info.reference.back": ("BACK", "own"),
     "info.stardate": ("", "game"),
-    # OrionLayer's own: the words for what HD cannot show yet (open fix
-    # 32), the history metrics and the tech categories whose words the
+    # OrionLayer's own: what HD says on an engine without open fix 32
+    # (applied since work order 176), the history metrics and the tech categories whose words the
     # original bakes into INFO.LBX 8-11 and 16-19.
-    "info.history.needs_fix": (
-        "The History Graph needs two things the game does not send yet: the "
-        "scale its history is stored in and, after 350 turns, where the "
-        "history starts (open fix 32, doc/ext_info_screen_state.patch). The "
-        "races and their colours are shown; the curves follow when the fix "
-        "is applied.", "own"),
-    "info.turns.needs_fix": (
-        "The Turn Summary lists the game's messages of this turn, which the "
-        "game does not send yet (open fix 32, doc/ext_info_screen_state."
-        "patch).", "own"),
+    "info.history.no_block": (
+        "This engine does not send the scale its history is stored in "
+        "(open fix 32, doc/ext_info_screen_state.patch, is not in it), so "
+        "the curves cannot be drawn. The races and their colours are "
+        "shown.", "own"),
+    "info.turns.no_block": (
+        "This engine does not send the turn's messages (open fix 32, "
+        "doc/ext_info_screen_state.patch, is not in it).", "own"),
     "info.history.metric.population": ("Population", "own"),
     "info.history.metric.production": ("Production", "own"),
     "info.history.metric.fleet": ("Fleet", "own"),

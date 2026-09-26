@@ -11,17 +11,43 @@ T = modtexts.text
 
 
 def history(screen, surface, me):
-    n = int(getattr(screen._state, "num_players", 0) or 0) or 8
-    order = pages.race_list(screen._players, screen._state.player_num, n)
-    names = [(screen._players[i].race_name, i, True) for i in order]
-    infodraw.rows(surface, screen, "history.legend", geom.HISTORY_LEGEND,
-                  [(t, None, h) for t, _i, h in names])
-    infodraw.text(surface, screen, "history.graph", geom.HISTORY_GRAPH,
-                  T("info.history.needs_fix", ""))
+    """`History_Subscreen_`: the legend in the players' colours
+    (`Display_Graphed_Players_Names_`, info.cpp:1350-1386), the axes, the
+    y maximum and the eight stardate labels (`Draw_The_History_Graph_`,
+    :1565-1643) and one curve per player (`Draw_Histories_`, :1222-1347)
+    — from open fix 32's divisors; an engine without it gets the notice."""
+    state = screen._state
+    n = int(getattr(state, "num_players", 0) or 0) or 8
+    order = pages.race_list(screen._players, state.player_num, n)
+    infodraw.nd.draw_box(surface, screen, geom.HISTORY_LEGEND)
+    x, y, gap = 351, 64, 0
+    if len(order) > 3:
+        x, gap = 295, 150
+    if len(order) > 6:
+        x, gap = 233, 122
+    for k, p in enumerate(order):
+        colour = infodraw.player_colour(screen._players[p])
+        infodraw.infobox.line(surface, screen, screen._players[p].race_name,
+                              infodraw.R(screen, (x, y, x + max(gap, 120) - 8,
+                                                  y + 14)),
+                              infodraw.px(screen, "skill"), colour)
+        y += 19
+        if k in (2, 5):
+            x, y = x + gap, 64
+    block = getattr(state, "info_screen", None)
     for k, key in enumerate(("population", "production", "fleet", "tech")):
         infodraw.button(surface, screen, geom.history_button_rect(k),
                         T(f"info.history.metric.{key}", key),
-                        bool((int(me.history_btns) >> k) & 1))
+                        bool(screen.hist_bits >> k & 1))
+    if block is None:
+        infodraw.text(surface, screen, "history.graph", geom.HISTORY_GRAPH,
+                      T("info.history.no_block", ""))
+        return
+    infodraw.nd.draw_box(surface, screen, geom.HISTORY_GRAPH)
+    graph = pages.history(screen._players, order, screen.hist_bits,
+                          state.stardate, block["bill"])
+    infodraw.draw_graph(surface, screen, graph, order, state.stardate)
+
 
 def tech(screen, surface, me):
     groups = pages.tech_review(me, screen.tech_tab)
@@ -74,8 +100,23 @@ def races(screen, surface, me):
                         f"{screen.race_page + 1}/2")
 
 def turns(screen, surface, me):
-    infodraw.text(surface, screen, "turns", geom.TURNS_BOX,
-                  T("info.turns.needs_fix", ""))
+    """`Turn_Summary_Subscreen_`: the header "… as of SD: ê" with the
+    stardate, then every message as `sprintf_msg_` rendered it (open fix
+    32), each a "^" paragraph (info.cpp:1953-1995), or NO MESSAGES; an
+    engine without the fix gets the notice."""
+    block = getattr(screen._state, "info_screen", None)
+    if block is None:
+        infodraw.text(surface, screen, "turns", geom.TURNS_BOX,
+                      T("info.turns.no_block", ""))
+        return
+    msgs = pages.messages(block)
+    head = pages.year(T("info.turns.header", "") or "",
+                      screen._state.stardate)
+    body = "\n\n".join(m.replace("^", "").strip() for m in msgs) if msgs \
+        else (T("info.turns.empty", "") or "")
+    infodraw.text(surface, screen, "turns",
+                  geom.TURNS_BOX, f"{head}\n\n{body}".strip())
+
 
 def reference(screen, surface, me):
     if screen.ref_mode == "index":

@@ -29,9 +29,11 @@ on the tab the game saved (`history_btns` bits 4-6, bill.cpp:379-382), and
 sends only RETURN / ESC. What the original writes back on exit
 (`Set_Plyr_Info_Btns_`) is then the tab the game had, not HD's.
 
-**HD STATE `open_fix_32`.** The History Graph's curves and the Turn
-Summary need `doc/ext_info_screen_state.patch` (NOT APPLIED): each page
-says so in its own moddable words and draws what it has.
+**Open fix 32** (`doc/ext_info_screen_state.patch`, APPLIED by work order
+176) brings the History Graph's divisors and the Turn Summary's rendered
+messages; on an engine without it (HD STATE `engine_without_fix_32`) those
+two pages say so in their own moddable words and draw what they have. The
+metric toggles are HD's own too (`history_btns` bits 0-3 at entry).
 """
 import logging
 
@@ -65,6 +67,7 @@ class InfoScreen(ScreenBase):
         self.page, self.tech_tab, self.race_page = REFERENCE, 0, 0
         self.ref_mode, self.ref_ix, self.topic = "index", 0, None
         self.tech_app = None
+        self.hist_bits = 0xF
         self._scroll, self._boxes, self._hits, self._drawn = {}, {}, {}, []
         self._info = None
 
@@ -94,6 +97,7 @@ class InfoScreen(ScreenBase):
         if not self._entered and me is not None:
             # The tab the game saved (`Get_Plyr_Info_Btns_`, info.cpp:500).
             tab = (int(me.history_btns) >> 4) & 7
+            self.hist_bits = int(me.history_btns) & 0xF
             self.page = tab if 0 <= tab < len(PAGES) else REFERENCE
             self._entered = True
 
@@ -179,6 +183,10 @@ class InfoScreen(ScreenBase):
                     return None
             if hit is not None:
                 self.tech_app = hit
+        elif self.page == HISTORY:
+            for k in range(4):
+                if self._in(p, geom.history_button_rect(k)):
+                    self.hist_bits ^= 1 << k
         elif self.page == RACES and self._in(p, geom.RACE_PAGE_BUTTON):
             self.race_page = 1 - self.race_page
         elif self.page == REFERENCE:

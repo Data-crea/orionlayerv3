@@ -255,6 +255,16 @@ if _ldc_tree is not None and os.path.exists(os.path.join(
         with open(_ldc_api, "rb") as _src, open(os.path.join(
                 _ldc_t, "src", "ext", "ext_api.cpp"), "wb") as _dst:
             _dst.write(_src.read())
+        # Open fix 32 (work order 176) sits right after this block in the
+        # same file: it comes off the scratch copy first, as the stack was
+        # applied, so fix 30's own context is what is checked.
+        _ldc_later = os.path.join(_ldc_root, "doc",
+                                  "ext_info_screen_state.patch")
+        if "MOX::_bill_savegame[i]" in open(_ldc_api, encoding="utf-8",
+                                            errors="replace").read():
+            _ldc_off = _ldc_sp.run(["patch", "-R", "-p1", "-i", _ldc_later],
+                                   cwd=_ldc_t, capture_output=True, text=True)
+            assert _ldc_off.returncode == 0, _ldc_off.stdout + _ldc_off.stderr
         _ldc_run = _ldc_sp.run(["patch", "-R", "-p1", "--dry-run", "-i",
                                 _ldc_patch], cwd=_ldc_t,
                                capture_output=True, text=True)

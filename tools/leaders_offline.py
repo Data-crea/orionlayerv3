@@ -72,9 +72,19 @@ def arrays(path):
     q += 8 * player.SIZE + 2 + len(ships) * ship.SIZE + 5 * MOVABLE_BOX + 10
     me, _scale, _zoom = struct.unpack_from("<hhh", blob, q)
     max_x, max_y = struct.unpack_from("<hh", blob, q + 7)
+    # Then `_fleet_icon_button_count` (u16), `_NUM_NEBULAS` (u8), the
+    # nebulas and `_bill_savegame[6]` (savegame.cpp:1389-1392) — the
+    # Info screen's history divisors, which the wire carries only with
+    # open fix 32.
+    from core.structs import nebula
+    r = q + 11 + 2
+    n_neb = blob[r]
+    r += 1 + n_neb * nebula.SIZE
+    bill = list(struct.unpack_from("<6h", blob, r))
+    n_players = struct.unpack_from("<h", blob, k + leader.COUNT * leader.SIZE)[0]
     return dict(leaders=leaders, stars=stars, ships=ships, colonies=colonies,
                 planets=planets, players=players, player=me,
-                map_max=(max_x, max_y))
+                map_max=(max_x, max_y), bill=bill, num_players=n_players)
 
 
 def state(a, view, scan_icon=False):

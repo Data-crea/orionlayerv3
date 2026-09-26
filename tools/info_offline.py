@@ -9,7 +9,9 @@ Reads the save; writes PNGs under
 `offline`. The save's: the players and the leaders
 (`tools/leaders_offline.arrays`). Made here: the stardate (3502.4, the
 reference fixture's own, from `tools/fixtures`), the field list (RETURN
-only), which page is up and what is selected on it.
+only), which page is up and what is selected on it. Open fix 32's block:
+the save's own `_bill_savegame` (the history divisors,
+`leaders_offline.arrays`) and NO messages — the engine renders those.
 
 `--mod DIR` renders with DIR as the player's mod folder, so the demo text
 mod of work order 175 can be seen replacing texts (`core/usermod`).
@@ -42,7 +44,8 @@ def state(a):
     gs.current_screen, gs.player_num = g.GAME_SCREEN_ID, a["player"]
     gs.player_raw, gs.leaders_raw = a["players"], a["leaders"]
     gs.stardate = fixtures.FIXTURES["reference"]["stardate"]
-    gs.num_players = sum(1 for r in a["players"] if r[1:2] != b"\0")
+    gs.num_players = a.get("num_players") or 8
+    gs.info_screen = {"bill": a["bill"], "messages": []}
     f = gsm.FieldInfo()
     f.index = 1
     f.x, f.y, f.x_end, f.y_end = g.EXIT

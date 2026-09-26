@@ -88,6 +88,12 @@ class GameState:
     #: engine without the fix; `screens/leaders/ldrwire.py` names every
     #: key and what the screen does without it.
     officer_screen: Optional[dict] = None
+    #: Open fix 32's INFS block — the Info screen's history divisors and
+    #: the player's rendered turn messages (`doc/ext_info_screen_state.
+    #: patch`, APPLIED by work order 176). {"bill": [six int16],
+    #: "messages": [bytes]}; None on every screen but 9 and on an engine
+    #: without the fix.
+    info_screen: Optional[dict] = None
 
     # Fields (from FIELD_LIST message)
     fields: list = field(default_factory=list)
@@ -347,6 +353,28 @@ def parse_state(data: bytes) -> GameState:
             _off["ship_idx"] = _ships
             _off["ship_selected"] = _sel
             gs.officer_screen = _off
+
+    # The Info screen's block — OPTIONAL, after OFFS's place, open fix 32
+    # (doc/ext_info_screen_state.patch). Written only while screen 9 is up.
+    # Six int16 (`MOX::_bill_savegame`), then N x (int16 length, bytes) —
+    # the messages as `MSG_::sprintf_msg_` renders them. Whole or None.
+    gs.info_screen = None
+    if data[pos:pos + 4] == b"INFS" and pos + 4 + 12 + 2 <= len(data):
+        pos += 4
+        _bill = [read_i16() for _ in range(6)]
+        _n = read_i16()
+        _msgs, _ok = [], 0 <= _n
+        for _ in range(max(0, _n)):
+            if pos + 2 > len(data):
+                _ok = False
+                break
+            _len = read_i16()
+            if _len < 0 or pos + _len > len(data):
+                _ok = False
+                break
+            _msgs.append(read_bytes(_len))
+        if _ok:
+            gs.info_screen = {"bill": _bill, "messages": _msgs}
 
     return gs
 
