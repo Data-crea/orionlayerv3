@@ -191,7 +191,12 @@ class Dispatcher:
         if self.overlay:
             overlay_id = getattr(self.overlay, "GAME_SCREEN_ID", None)
             if overlay_id is not None:
-                if screen_id == overlay_id:
+                # `ALSO_OVER_IDS`: a screen the overlay may also stand over
+                # — the GAME menu's Load dialog is run by the main menu too
+                # (work order 177), under SCREEN_MAIN_MENU; the parent
+                # screen decides when it closes there.
+                if screen_id == overlay_id or screen_id in getattr(
+                        self.overlay, "ALSO_OVER_IDS", ()):
                     return True
                 self.close_overlay()
             # Manually opened overlay (no ID): parent logic decides.

@@ -49,6 +49,11 @@ LOAD_HOLD_S = 120.0
 class GameMenuScreen(ScreenBase):
     SCREEN_NAME = "game_menu"
     GAME_SCREEN_ID = 8        # SCREEN_GAME, orion2_consts.h:468
+    #: The main menu runs the same Load dialog under SCREEN_MAIN_MENU
+    #: (MAINMENU::Mainmenu_Load_Game_Popup_, mainmenu.cpp:187-189): this
+    #: overlay draws it there once its save slots are on the wire (open fix
+    #: 34), opened and closed by the main menu (work order 177).
+    ALSO_OVER_IDS = (10,)
     IS_OVERLAY = True
     #: The screen the popup belongs over. SCREEN_GAME is entered from one
     #: place only, the galaxy map's GAME button (mainscr_main.cpp:609-613,

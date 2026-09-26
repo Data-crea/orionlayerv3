@@ -152,6 +152,37 @@ class OriginalView:
         else:
             client.inject_click(*coords)
 
+    @staticmethod
+    def key_code(event):
+        """The code the engine's INJECT_KEY takes for a KEYDOWN, or None.
+
+        Typed characters go as their own code — `ord` of the character,
+        upper case included, the way `core/injection.name_keys` has typed
+        names into the game since work order 128 — and the editing keys as
+        pygame's codes, which are the ASCII control codes the game reads
+        (Backspace 8, Tab 9, Enter 13, ESC 27, Delete 127). Keys with no
+        such code (arrows, function keys) are None: INJECT_KEY takes an
+        int16 and the game has no reading for them."""
+        editing = (pygame.K_BACKSPACE, pygame.K_TAB, pygame.K_RETURN,
+                   pygame.K_KP_ENTER, pygame.K_ESCAPE, pygame.K_DELETE)
+        if event.key in editing:
+            return pygame.K_RETURN if event.key == pygame.K_KP_ENTER \
+                else event.key
+        ch = getattr(event, "unicode", "") or ""
+        if len(ch) == 1 and 32 <= ord(ch) < 127:
+            return ord(ch)
+        return None
+
+    def forward_key(self, client, event):
+        """A key pressed while the window shows the game's own picture
+        goes to the game (work order 177's safety net: 174 found the
+        fallback forwarding clicks and swallowing keys — a dialog that
+        wants a name or Enter was a dead end). Returns the code sent."""
+        code = self.key_code(event)
+        if code is not None:
+            client.inject_key(code)
+        return code
+
     def render_status_bar(self, surface, style, colors,
                           state, screen_name, render_mode):
         """Mode/screen/stardate info line at the bottom edge."""

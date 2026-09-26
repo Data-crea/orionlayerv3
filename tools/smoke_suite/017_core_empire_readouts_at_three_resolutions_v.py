@@ -278,6 +278,13 @@ _MARKED = {
     "screens/info/screen.py": "moddable_texts",
     "core/modtexts.py": "HD EXTENSION, work order 175, decision 73",
 
+    # ADDED 26 September 2026, work order 177: the modal safety net (its
+    # check is 090g, the main menu's use of it 090j) and Select Race's
+    # way back (090i).
+    "core/modalnet.py": "DEVIATION `modal_fallback`",
+    "screens/main_menu/screen.py": "DEVIATION `modal_fallback`",
+    "screens/select_race/screen.py": "HD EXTENSION `back_button`",
+
 }
 _MARKS = ("HD EXTENSION", "DEVIATION")
 _SELF = SUITE_FILES

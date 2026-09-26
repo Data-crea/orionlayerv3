@@ -220,7 +220,15 @@ class App:
                     self._save_screenshot()
                 elif event.key == pygame.K_F12:
                     self._cycle_render_mode()
-                elif not self.editor.handle_event(event):
+                elif self.editor.handle_event(event):
+                    pass
+                elif self._showing_original():
+                    # THE SAFETY NET'S KEYS (work order 177): the picture
+                    # is the game's, so the keys are the game's too —
+                    # typing into a name field, Enter, ESC. DEVIATION
+                    # `fallback_keys` (the original has no such window).
+                    self.original_view.forward_key(self.client, event)
+                else:
                     self.dispatcher.route_key_event(event)
             elif self.editor.handle_event(event):
                 pass  # editor consumed it

@@ -133,7 +133,47 @@ class MainMenuScreen(ScreenBase):
         self._paused = False
         self._pause_timer = 0.0
 
+    # ── The Load dialog and the safety net (work order 177) ──
+
+    def _load_dialog(self, game_state):
+        """The main menu's LOAD GAME (mainmenu.cpp:132, :187-189) is the
+        GAME popup's Load dialog, centred. With its save slots on the wire
+        (open fix 34) the GAME menu overlay draws it, as in the GAME menu;
+        without them the net shows the game's own picture of it — the
+        rows' names are only there (DEVIATION `modal_fallback`)."""
+        from screens.game_menu import nodes
+        d = self.app.dispatcher
+        is_load = nodes.classify(getattr(game_state, "fields", None)) in (
+            nodes.LOAD, nodes.CONFIRM, nodes.WARNING)
+        slots = getattr(game_state, "save_slots", None)
+        if is_load and slots and d.overlay_name != "game_menu":
+            d.open_overlay("game_menu", game_state)
+        elif d.overlay_name == "game_menu" and not is_load:
+            d.close_overlay()
+
+    def _own_list(self, fields):
+        """NEW GAME's hidden field, which the menu always builds
+        (`Add_Hidden_Field_(0x19F, 0xD9, 0x237, 0xEE, "N")`,
+        mainmenu.cpp:137)."""
+        return any(f.hotkey == ord("N") and (f.x, f.y, f.x_end, f.y_end) ==
+                   (0x19F, 0xD9, 0x237, 0xEE) for f in fields)
+
+    def wants_original(self):
+        return bool(getattr(self, "_net_on", False))
+
     def update(self, game_state=None):
+        if game_state is not None and getattr(self.app, "connected", False):
+            if getattr(self, "_net", None) is None:
+                from core import modalnet
+                self._net = modalnet.Net(
+                    "main menu", self._own_list,
+                    known=(("load_with_slots",
+                            lambda f: bool(self._slots_now)),))
+            # The CURRENT snapshot's slots: a lambda over `game_state`
+            # would hold the first snapshot's for ever.
+            self._slots_now = getattr(game_state, "save_slots", None)
+            self._load_dialog(game_state)
+            self._net_on = self._net.check(game_state, self.GAME_SCREEN_ID)
         if not self._credits:
             return
         now = time.monotonic()
