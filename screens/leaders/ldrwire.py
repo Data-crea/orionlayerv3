@@ -24,15 +24,19 @@ WHAT IS ON THE WIRE WITHOUT ANY PATCH, and how each is read:
   the hire popup   its two buttons at the popup's own rectangles
                    (`ldrpopup`)
 
-**AND WHAT IS NOT — HD STATE, open fix 30.** The button mode beyond
-hire, the selection, the colony view's displayed and chosen star, the
-ship view's stack and grid, the popup's leader. `doc/ext_officer_
-screen_state.patch` puts them in an `OFFS` block; it is NOT APPLIED
-(parked for Data, work order 167). Without it `View.block` is None and
+**AND WHAT THE OFFS BLOCK ADDS — open fix 30, APPLIED** (work order 175,
+orion2re orionlayer-local cc542e02). The button mode beyond hire, the
+selection, the colony view's displayed and chosen star, the ship view's
+stack, grid and scroll row, the popup's leader (`doc/ext_officer_
+screen_state.patch`). With it `sendable()` lets POOL, DISMISS, PREV /
+NEXT, the scroll arrows, every leader click and the galaxy box and grid
+(`ldrmap`) go: the game answers in state HD reads back. An engine
+WITHOUT the fix still sends no block — `View.block` is None, and then
 `sendable()` says no to everything whose effect HD could not see
-confirmed — a click on a leader in pool or dismiss mode ACTS
-(officer.cpp:1415-1438), so guessing the mode would be sending an
-order nobody gave (decision 65).
+confirmed, as before: a click on a leader in pool or dismiss mode ACTS
+(officer.cpp:1415-1438), so guessing the mode would be sending an order
+nobody gave (decision 65). `tools/version_check.py` names such an
+engine.
 """
 from core import gamebox
 from core import leaderskills as ls

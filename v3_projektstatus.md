@@ -2458,7 +2458,7 @@ files under `doc/` and are only summarised here.
 | | |
 |---|---|
 | Python | 32,960 lines across 111 modules — `find . -name '*.py'`, `__pycache__` excluded, the smoke test's 6,400 included. The previous figure here (21,642 across 94) was carried from an unstated method and could not be reproduced |
-| Smoke test | `python tools/smoke_test.py` — **322 checks**, headless, in `tools/smoke_suite/` since work order 162 (117 check modules, one group per screen plus a shared core; `tools/smoke_test.py` is the runner). **Two tiers since work order 158**: the bare command runs everything (~200 s here, measured 26 September 2026 — the 72 s this line said was before the rendering checks of 172-174); `--fast` runs the commit gate's 312 (~95 s here). `--screen <name>` prints only that screen's sentences and the core's and is NEVER a gate. See "The gate has two tiers" below |
+| Smoke test | `python tools/smoke_test.py` — **326 checks**, headless, in `tools/smoke_suite/` since work order 162 (118 check modules, one group per screen plus a shared core; `tools/smoke_test.py` is the runner). **Two tiers since work order 158**: the bare command runs everything (~200 s here, measured 26 September 2026 — the 72 s this line said was before the rendering checks of 172-174); `--fast` runs the commit gate's 316 (~95 s here). `--screen <name>` prints only that screen's sentences and the core's and is NEVER a gate. See "The gate has two tiers" below |
 | Assets | 170 MB (select_race 68, galaxy_map 51, shared 23, new_game 21, colony_summary 1) |
 | Screens in HD | 11 of ~20–22 (the Leaders screen, work order 167, built and not accepted; the GAME menu overlay, work order Stop 2, every dialog of the popup; colony summary draws list, sidebar, scan box and galaxy inset, and MOVES POPS — the first HD gesture that drives the game; planets, brief 101, lists, sorts, restricts and returns) |
 | Setup from clone | `python tools/setup.py` (deps via the system package manager) |
@@ -2984,8 +2984,8 @@ blocks into a session and writing them out again. Three proofs:
 
 | | command | checks | on this tree |
 |---|---|---:|---:|
-| **Full** — the default, and the pre-push gate | `python tools/smoke_test.py` | 322 | ~200 s |
-| **Fast** — the pre-commit gate | `python tools/smoke_test.py --fast` | 312 | ~95 s |
+| **Full** — the default, and the pre-push gate | `python tools/smoke_test.py` | 326 | ~200 s |
+| **Fast** — the pre-commit gate | `python tools/smoke_test.py --fast` | 316 | ~95 s |
 | **Screen** — **never a gate** | `python tools/smoke_test.py --screen <name>` | all of them, ~a third printed | the tier's |
 
 **`--screen` narrows what a run PRINTS, not what it runs**, and the
@@ -3598,21 +3598,41 @@ is explained there and is not an offset. `s_star_data.officer_index[8]`
 in mox.cpp) is transcribed in `core/leaderskills.py` and held to the
 source by `tools/leader_skill_check.py`.
 
-**What it sends** is `ldrwire.View.sendable`'s answer: without open fix
-30 only what it can see the effect of — the tabs, HIRE, CANCEL, RETURN,
-a click on a leader for hire (or any leader in hire mode), the popup's
-two answers, a native box's buttons, a right click on a portrait
-(`Find_Selected_Leader_`). POOL, DISMISS, PREV / NEXT, assigning and
-the galaxy box answer nothing until the block is on the wire.
+**What it sends** is `ldrwire.View.sendable`'s answer. **Since work order
+175 open fix 30 is APPLIED** (orion2re orionlayer-local cc542e02) and the
+answer is every control the original has: the tabs, HIRE, CANCEL, POOL,
+DISMISS, PREV / NEXT, the scroll arrows, RETURN, any leader, a star with
+the player's colony (colony view), a stack icon and a big icon (ship
+view) — each to its live field (`ldrmap` finds the map's and the grid's),
+only in mode -1 where the loop acts — the popup's two answers, a native
+box's buttons, a right click on a portrait (`Find_Selected_Leader_`) or
+on a big icon (the game's ship view, shown as the fallback). On an engine
+without the fix the old short list stands (`ldrinput.NO_BLOCK`).
+
+**The right half since 175**: the colony view's system display (the
+star's name, each planet as the colony screens' disc with its name), the
+ship view's grid with its scroll bar, the boxes round the displayed /
+chosen star and the one under the pointer, the ship view's stack
+outlined; the strip under the view box names the displayed star with its
+leader or the big icon under the pointer, the strip under the map the
+star (or "unexplored") or the stack under the pointer — "%s Fleet: " and
+its counts with the hull names and, new in `core/shipparts` format 2,
+their plurals. Every box is a glass panel (the view box art and the black
+mini-map are gone — Data's screenshot). Offline renders from a save's own
+arrays: `tools/leaders_offline.py`.
 
 **Markings** (`screens/leaders/layout.json` `marks`, each named in its
 module, held by `tools/smoke_suite/090c`): OMISSION `outer_frame`
 (OFFICER.LBX 0 is not drawn — the order's "no outer frame"); DEVIATION
 `inner_boxes_drawn`; DEVIATION `hd_font`; HD EXTENSION `sprite_scale`;
 DEVIATION `button_words`; DEVIATION `hd_skill_help` (HD draws the
-skill's text box itself); TRANSCRIPTION `hover`; HD STATE `open_fix_30`;
-OMISSION `system_pictures`; OMISSION `map_strip`; OMISSION
-`detailed_ship_view`; WORKAROUND `the_word` (expiring).
+skill's text box itself); TRANSCRIPTION `hover`; since 175: HD STATE
+`engine_without_fix_30`, DEVIATION `view_box_glass`, DEVIATION
+`map_glass`, TRANSCRIPTION `pointer`, DEVIATION `strip_ink`, OMISSION
+`map_strip_monsters`; OMISSION `system_pictures`; OMISSION
+`detailed_ship_view`. (HD STATE `open_fix_30`, OMISSION `map_strip` and
+WORKAROUND `the_word` are retired: the fix is applied, the strip is
+built, the extractor keeps its spaces.)
 
 **New derived files, never committed:** `tools/officer_art_extract.py`
 (OFFICER.LBX, MAINPUPS.LBX 0x39-0x3B, FONTS.LBX 9 ->

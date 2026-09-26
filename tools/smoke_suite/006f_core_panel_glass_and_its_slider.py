@@ -56,9 +56,8 @@ def _gl_excluded(stage, app):
     if stage == "fleets":
         # The fleet map window: the engine's picture of the map.
         rects.append(scr.box_screen_rect("inset_map"))
-    if stage == "leaders":
-        from screens.leaders import ldrdraw, ldrgeom
-        rects.append(ldrdraw.rect(L, ldrgeom.GALAXY_BOX).inflate(8, 8))
+    # Leaders: no exclusion since work order 175 — its galaxy box is glass
+    # (DEVIATION `map_glass`, after Data saw it as a black hole).
     if stage == "empire_identity":
         rects.append(scr.box_screen_rect("banner_grid"))   # the banners' art
     if stage == "select_race":

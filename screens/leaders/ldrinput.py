@@ -14,14 +14,28 @@ THE RIGHT BUTTON, as the original splits it (officer.cpp:1283-1339,
 (DEVIATION `hd_skill_help`, `ldrdialog`); on a PORTRAIT it is
 `Find_Selected_Leader_` (:3159-3220), sent as a right click on the
 portrait's own field, whose answer is a box the wire shows; anywhere
-else it is the help list (`help.json`, the original's two tables).
+else it is the help list (`help.json`, the original's two tables). On a
+big ship icon, with the block, it is `CMBTDRW1::Detailed_View_Ship_`
+(officer.cpp:1041-1047), sent as a right click on the icon's field; the
+game's view answers as the fallback picture (OMISSION
+`detailed_ship_view`).
+
+THE GALAXY BOX AND THE GRID (work order 175, open fix 30 applied) —
+`ldrmap` finds the field, and only in mode -1, as the loop reads them
+(officer.cpp:986-1086): a star with one of the player's colonies in the
+colony view (it becomes `_officer_star_chosen` and `_displayed`,
+:1060-1070 — a star without one is not sent, the game would ignore it);
+a stack icon in the ship view (`Scan_Small_Ship_Icons_` makes it the
+stack on show, flt1.cpp:851-861 — in the colony view that pointer is
+invisible and is not sent); a big icon in the ship view (picks it, or
+assigns the selected officer, :1004-1034).
 """
 import logging
 
 from core import researchnative as nat
 from core import skildesc
 
-from . import ldrdialog, ldrdraw, ldrgeom, ldrrows, ldrwire
+from . import ldrdialog, ldrdraw, ldrgeom, ldrmap, ldrrows, ldrwire
 
 log = logging.getLogger("leaders")
 
@@ -82,8 +96,7 @@ def click(screen, screen_x, screen_y):
             if view.sendable(name):
                 send(screen, view.buttons[name], name)
             else:
-                log.info("leaders: %s not sent — the mode it acts in is "
-                         "not on the wire (open fix 30)", name)
+                log.info("leaders: %s not sent — %s", name, NO_BLOCK)
             return None
     for slot, idx, rec in view.listed():
         if not (_inside(point, ldrgeom.text_field(slot))
@@ -99,10 +112,41 @@ def click(screen, screen_x, screen_y):
             send(screen, _field_at(view, ldrgeom.text_field(slot)),
                  f"leader {idx}")
         else:
-            log.info("leaders: leader %d not sent — selecting needs the "
-                     "mode, which is not on the wire (open fix 30)", idx)
+            log.info("leaders: leader %d not sent — %s", idx, NO_BLOCK)
         return None
+    if view.block is not None and view.mode == -1:
+        _map_click(screen, view, point)
     return None
+
+
+#: Why a control needing the view state is not sent: an engine without
+#: open fix 30 (applied on orionlayer-local since work order 175;
+#: `tools/version_check.py` names an engine that lacks it).
+NO_BLOCK = ("the engine sends no OFFS block (open fix 30 is not in this "
+            "engine), so its effect could not be seen")
+
+
+def _map_click(screen, view, point):
+    """A click in the galaxy box or the grid — see the module docstring."""
+    state = screen._state
+    if view.view == ldrgeom.VIEW_SHIP:
+        big = ldrmap.big_icon_at(view.block, point)
+        if big is not None:
+            send(screen, _field_at(view, ldrgeom.grid_cell(big[1])),
+                 f"big icon {big[0]}")
+            return
+        hit = ldrmap.icon_at(state, view.fields, point)
+        if hit is not None:
+            send(screen, hit[1], f"stack icon {hit[0]}")
+        return
+    star = ldrmap.star_at(state, point)
+    if star is None:
+        return
+    if view.player not in ldrmap.colony_owners(state, state.stars[star]):
+        log.info("leaders: star %d not sent — no colony of the player's "
+                 "there, the game would ignore it", star)
+        return
+    send(screen, ldrmap.star_field(state, view.fields, star), f"star {star}")
 
 
 def right_button(screen, down, screen_x, screen_y):
@@ -123,6 +167,16 @@ def right_button(screen, down, screen_x, screen_y):
                     open_skill_help(screen, row, row.skills[k][0])
                     return True
         point = native(screen, screen_x, screen_y)
+        big = (ldrmap.big_icon_at(view.block, point)
+               if point is not None and view.view == ldrgeom.VIEW_SHIP
+               and view.mode == -1 else None)
+        if big is not None:
+            field = _field_at(view, ldrgeom.grid_cell(big[1]))
+            if field is not None and screen.app.connected:
+                log.info("leaders: ship view of big icon %d -> field %d",
+                         big[0], field.index)
+                screen.app.client.cancel_field(field.index)
+                return True
         if point is not None:
             for slot, _idx, _rec in view.listed():
                 if _inside(point, ldrgeom.portrait_field(slot)):
@@ -179,9 +233,12 @@ def open_help(screen, screen_x, screen_y):
 
 def hover(screen, screen_x, screen_y):
     """The leader under the pointer is lit and priced — HD's own
-    `_officer_scanned` (officer.cpp:1320-1336). Sends nothing."""
+    `_officer_scanned` (officer.cpp:1320-1336) — and the star, stack or
+    big icon under it named (`ldrmap.scan`). Sends nothing."""
     screen._hover = None
     point = native(screen, screen_x, screen_y)
+    if screen._view is not None and screen._view.state == ldrwire.READY:
+        ldrmap.scan(screen, point)
     if point is None or screen._view is None:
         return
     for slot, idx, _rec in screen._view.listed():

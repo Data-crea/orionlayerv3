@@ -156,7 +156,12 @@ for _ldc_key, _ldc_word in (
         ("hd_extension_sprite_scale", "sprite_scale"),
         ("deviation_button_words", "button_words"),
         ("deviation_hd_skill_help", "hd_skill_help"),
-        ("hd_state_open_fix_30", "open fix 30"),
+        ("hd_state_engine_without_fix_30", "NO_BLOCK"),
+        ("deviation_view_box_glass", "view_box_glass"),
+        ("deviation_map_glass", "map_glass"),
+        ("deviation_strip_ink", "strip_ink"),
+        ("omission_map_strip_monsters", "map_strip_monsters"),
+        ("transcription_pointer", "ldrmap.scan"),
         ("omission_system_pictures", "system_pictures"),
         ("omission_outer_frame", "OFFICER.LBX 0")):
     assert _ldc_key in _ldc_marks, f"layout.json lost {_ldc_key}"

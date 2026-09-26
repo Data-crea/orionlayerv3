@@ -18,13 +18,18 @@ consuming its `_COUNT` from `orion2_consts.h`:
     computers 6, drives 7, units 4, fuel 6, weapon mods 15,
     weapon mod plurals 15, weapon plurals 46,
     hull classes 9  strings 542 .. 550   <- read
+    hull plurals 9  strings 551 .. 559   <- read (work order 175)
 
 so every first index is a SUM OF CONSTANTS the game asserts, not a
 position measured off one file. Checked against the English
 TECHNAME.LBX on 14 September 2026: 295 "No Building", 384 "No Armor",
 391 "No Shield", 397 "No Weapons", 437..442 "Dragon Breath" ..
-"Caustic Slime", 542 "Frigate". No plural forms are read (Data's
-decision): the panel shows a count in its own column.
+"Caustic Slime", 542 "Frigate". No plural forms are read for the
+Planets panel (Data's decision): it shows a count in its own column.
+The HULL plurals are read since work order 175, for one reader: the
+Leaders screen's fleet strip prints "%d %s, " with `_hull_data[i].name`
+for one ship and `.size_name` for more (officer.cpp:2178-2184), and
+`size_name` is the second hull table (techinit.cpp:147-157).
 """
 import json
 import logging
@@ -35,8 +40,9 @@ from core.config import BASE_DIR
 
 log = logging.getLogger("shipparts")
 
-#: Bumped when the extractor's output shape changes (decision 38).
-FORMAT_VERSION = 1
+#: Bumped when the extractor's output shape changes (decision 38). 2 since
+#: work order 175: the `hull_plurals` table.
+FORMAT_VERSION = 2
 
 #: orion2_consts.h — each an enum with, for specials, a static_assert.
 SPECIAL_COUNT = 40
@@ -65,6 +71,7 @@ TABLES = {
     "shields": (SHIELD_FIRST_STRING, SHIELD_COUNT),
     "weapons": (WEAPON_FIRST_STRING, WEAPON_COUNT),
     "hulls": (HULL_FIRST_STRING, HULL_CLASS_COUNT),
+    "hull_plurals": (HULL_FIRST_STRING + HULL_CLASS_COUNT, HULL_CLASS_COUNT),
 }
 
 

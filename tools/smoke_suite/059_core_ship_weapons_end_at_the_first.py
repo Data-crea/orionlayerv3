@@ -296,16 +296,19 @@ assert _mme.parse_entry(_m_rec600) == "Space é"
 assert _mme.parse_entry(_pl_struct.pack("<HH", 1, 0x57B) + bytes(0x57B)) \
     is None
 with _mtmp.TemporaryDirectory() as _m_d:
+    # Each loader's OWN format, not 1 for both: ship part names are 2
+    # since work order 175 (the hull plurals), MAINTEXT is still 1.
     for _m_loader, _m_rel, _m_ok in (
             (_msp.ShipPartNames, _msp.name_file("en"),
-             {_k: {"0": "x"} for _k in _msp.TABLES}),
+             dict({_k: {"0": "x"} for _k in _msp.TABLES},
+                  format=_msp.FORMAT_VERSION)),
             (_mmt.MainText, _mmt.text_file("en"),
-             {"entries": {"0": "No Special"}})):
+             {"entries": {"0": "No Special"}, "format": _mmt.FORMAT_VERSION})):
         assert _m_loader("en", root=_m_d).state == "missing"
         _m_p = os.path.join(_m_d, *_m_rel.split("/"))
         os.makedirs(os.path.dirname(_m_p), exist_ok=True)
         for _m_body, _m_state in (({"format": 0}, "stale"),
-                                  (dict(_m_ok, format=1), "ok")):
+                                  (_m_ok, "ok")):
             with open(_m_p, "w", encoding="utf-8") as _fh:
                 _hjson.dump(_m_body, _fh)
             assert _m_loader("en", root=_m_d).state == _m_state, (

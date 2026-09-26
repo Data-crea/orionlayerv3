@@ -14,26 +14,33 @@ movebox.cpp:70), and each star the original's own sprite, OFFICER.LBX
 this box's space on entry (officer.cpp:905). Last drawn first: the loop
 runs from the last icon down.
 
-THE VIEW BOX — two views, and the original's own box art behind each
-(OFFICER.LBX 2 colony, 1 ship, at (300, 12), officer.cpp:1197-1203).
+THE STAR BOXES (movebox.cpp:292-294, :410-448): in the colony view an
+11 x 12 box round `_officer_star_displayed` — colour 0x1E, or the flashing
+0x6E ramp when it is also `_officer_star_chosen` (HD draws the ramp's
+middle, unanimated) — and round the star under HD's pointer, 0x71. In the
+ship view the stack on show is outlined (`Draw_Flashing_Small_Ship_Icon_`,
+officer.cpp:765-767, likewise unanimated).
+
+THE VIEW BOX — two views, on a glass panel (work order 175: the
+original's box art OFFICER.LBX 1 / 2 is no longer drawn — DEVIATION
+`view_box_glass`, decision 71 as for the buttons).
 
   colony view   the system display of `_officer_star_displayed`
                 (`SYS::Draw_System_Display_Popup_` at (306, 17),
                 officer.cpp:1928-1946). **OMISSION `system_pictures`**:
-                the star and planet pictures, whose artwork this order
-                has not extracted — HD writes the star's name and its
-                planet slots instead; the strip under the box names the
-                leader stationed there, as the original's does.
+                the star picture and the orbits; HD writes the star's
+                name and draws each planet in orbit order as the colony
+                screens' planet disc with its name, the colonies marked.
   ship view     the big icons of `_small_ship_stack_ptr`, 5 x 3 at
                 (302, 19) stepping 62 x 60 (`Get_Fltscrn_Big_Icon_XY_`,
                 flt2.cpp:116-128), each the ship's picture out of the
                 player's own SHIPS.LBX through `screens/fleets/fltart`
-                — the Fleets screen's extraction, reused — and its name.
+                — the Fleets screen's extraction, reused — and its name;
+                the scroll bar on its track (officer.cpp:741-744,
+                `ldrgeom.SCROLL_TRACK`).
 
-**HD STATE, open fix 30.** Which star and which stack are on show is
-not on the wire without `doc/ext_officer_screen_state.patch` (NOT
-APPLIED). Until then both views draw a marked placeholder in the box
-that names the item, rather than a star or a stack HD chose.
+Both come from open fix 30's block (applied, work order 175). An engine
+without it sends none, and the box stays empty — nothing HD chose.
 """
 import pygame
 
@@ -47,6 +54,7 @@ from screens.colony_summary import colonyrows
 
 from . import ldrdraw as draw
 from . import ldrgeom as geom
+from . import ldrmap
 
 #: `_using_colony_screen_palette ? 9 : 10` (movebox.cpp:70), cleared here.
 BLACK_HOLE_INDEX = 10
@@ -57,9 +65,16 @@ STAR_OFFSET = (-2, -2)
 MONSTER_FIRST = 8
 MAX_PLAYERS = 8
 
-#: What the placeholder says. Words of ours, marked HD STATE.
-PLACEHOLDER = ("Not on the wire yet: which {what} the game shows here "
-               "(open fix 30, doc/ext_officer_screen_state.patch).")
+#: The star boxes' colours where the palette is not extracted — the
+#: grey, the gold and the cyan those indices hold in the colony palette.
+BOX_FALLBACK = {ldrmap.BOX_DISPLAYED: (150, 150, 150),
+                ldrmap.BOX_CHOSEN: (236, 200, 90),
+                ldrmap.BOX_SCANNED: (110, 190, 240)}
+
+
+def _box_colour(art, index):
+    rgb = art.palette_rgb(index) if art is not None else None
+    return tuple(rgb) if rgb else BOX_FALLBACK.get(index, (200, 200, 200))
 
 
 def _colour_of(game_state, owner):
@@ -95,6 +110,11 @@ def draw_galaxy_box(surface, screen, game_state, art):
             pygame.draw.rect(surface, draw.TEXT_FALLBACK["normal"],
                              (int(x), int(y), dot, dot))
     icons = list(getattr(game_state, "ship_icons", None) or [])
+    view = screen._view
+    block = view.block if view is not None else None
+    stack_head = (int(block.get("head_node", -1)) if block is not None
+                  and view.view == geom.VIEW_SHIP
+                  and int(block.get("stack", -1)) >= 0 else None)
     for icon in reversed(icons):
         x, y = int(icon.x), int(icon.y)
         if x < 0 or y < 0:
@@ -114,77 +134,105 @@ def draw_galaxy_box(surface, screen, game_state, art):
         else:
             pygame.draw.rect(surface, draw.TEXT_FALLBACK["selected"],
                              (at[0], at[1], dot * 2, dot * 2))
+        if stack_head is not None and int(icon.node_idx) == stack_head:
+            size = sprite.get_size() if sprite is not None else (2, 2)
+            r = draw.rect(layout, (x - 1, y - 1, x + size[0], y + size[1]))
+            pygame.draw.rect(surface, _box_colour(art, ldrmap.BOX_CHOSEN + 2),
+                             r, max(1, int(draw.native_scale(layout))))
+    _draw_star_boxes(surface, screen, game_state, art)
     surface.set_clip(previous)
 
 
+def _draw_star_boxes(surface, screen, game_state, art):
+    view = screen._view
+    block = view.block if view is not None else None
+    width = max(1, int(draw.native_scale(screen.layout)))
+    boxes = []
+    if block is not None and view.view == geom.VIEW_COLONY:
+        shown = int(block.get("star_displayed", -1))
+        chosen = shown >= 0 and shown == int(block.get("star_chosen", -1))
+        boxes.append((shown, ldrmap.BOX_CHOSEN + 2 if chosen
+                      else ldrmap.BOX_DISPLAYED))
+    scan = getattr(screen, "_scan", None)
+    if scan is not None and scan[0] == "star":
+        boxes.append((scan[1], ldrmap.BOX_SCANNED))
+    for star, colour in boxes:
+        r = ldrmap.star_box_rect(game_state, star)
+        if r is not None:
+            pygame.draw.rect(surface, _box_colour(art, colour),
+                             draw.rect(screen.layout, r), width)
+
+
 def draw_view_box(surface, screen, view, game_state, art):
-    """The box art of the view that is up, and what is in it."""
-    layout = screen.layout
-    name = "colony_box" if view.view == geom.VIEW_COLONY else "fleet_box"
-    sprite = art.sprite(name) if art is not None and art.available else None
-    if sprite is not None:
-        w, h = sprite.get_size()
-        x, y = geom.VIEW_BOX[:2]
-        r = draw.rect(layout, (x, y, x + w - 1, y + h - 1))
-        surface.blit(draw.stretched(sprite, r), r.topleft)
+    """What is in the view box (the glass panel is `ldrdraw`'s)."""
     block = view.block
     if block is None:
-        _placeholder(surface, screen, "star" if view.view == geom.VIEW_COLONY
-                     else "fleet", art)
         return
     if view.view == geom.VIEW_COLONY:
         _draw_system(surface, screen, view, game_state, art,
                      int(block.get("star_displayed", -1)))
     else:
         _draw_grid(surface, screen, view, game_state, art, block)
+        _draw_scroll(surface, screen, block)
 
 
-def _placeholder(surface, screen, what, art):
-    r = draw.rect(screen.layout, (geom.SYSTEM_AT[0], geom.SYSTEM_AT[1],
-                                  geom.VIEW_BOX[2] - 8, geom.VIEW_BOX[3] - 8))
-    size = draw.font_px(screen.layout, "note")
-    from core import textfit
-    lines = textfit.wrap_text(screen.style, PLACEHOLDER.format(what=what),
-                              size, r.w - 40)
-    # A panel of its own behind the words, so they never sit on the box
-    # art's cell lines (the order: text fits its box cleanly).
-    step = int(size * 1.2)
-    panel = pygame.Rect(0, 0, r.w - 20, step * len(lines) + size)
-    panel.center = r.center
-    hud.panel(surface, panel, screen.layout.scale)
-    y = panel.y + size // 2
-    for line in lines:
-        draw.blit_text(surface, screen.style, line, r.centerx, y, r.w - 40,
-                       size, draw.text_colour(art, "normal"), "center")
-        y += step
+def _draw_scroll(surface, screen, block):
+    """`Draw_Generic_Vertical_Scroll_Bar_` on its track: the thumb at the
+    block's first row of the stack's rows (flt2.cpp:84-107)."""
+    ships = block.get("ship_idx") or []
+    rows = -(-len(ships) // geom.GRID_COLUMNS)
+    if rows <= geom.GRID_ROWS:
+        return
+    hud.scrollbar(surface, draw.rect(screen.layout, geom.SCROLL_TRACK),
+                  screen.layout.scale, max(0, int(block.get("first_row", 0))),
+                  geom.GRID_ROWS, rows)
 
 
 def _draw_system(surface, screen, view, game_state, art, star):
-    """The star's name and its planet slots by orbit — words where the
-    original draws pictures (OMISSION `system_pictures`). The leader
-    stationed there is the strip's, under the box (officer.cpp:810-826)."""
+    """The star's name, then each planet in orbit order as a disc with its
+    name under it, a colony's name in the selected ink (OMISSION
+    `system_pictures`). The leader stationed there is the strip's, under
+    the box (officer.cpp:810-826)."""
     stars = getattr(game_state, "stars", None) or []
     if not 0 <= star < len(stars):
         return
+    from screens.colony_summary import colonyplanets, colonyrows
     layout = screen.layout
     r = draw.rect(layout, (geom.SYSTEM_AT[0], geom.SYSTEM_AT[1],
                            geom.VIEW_BOX[2] - 8, geom.VIEW_BOX[3] - 8))
     size = draw.font_px(layout, "strip")
-    ink = draw.text_colour(art, "normal")
-    y = r.y + size // 2
-    draw.blit_text(surface, screen.style, stars[star].name, r.centerx, y,
-                   r.w - 8, int(size * 1.2), ink, "center")
-    y += int(size * 2)
+    draw.blit_text(surface, screen.style, stars[star].name, r.centerx,
+                   r.y + size // 2, r.w - 8, int(size * 1.2),
+                   draw.text_colour(art, "normal"), "center")
     raws = getattr(game_state, "planets_raw", None) or []
-    for slot, index in enumerate(star_struct.planet_indices(stars[star])):
-        if not 0 <= index < len(raws):
-            continue
-        p = planet_struct.parse(raws[index])
-        line = f"{slot + 1}.  " + ("colony" if p.colony_index >= 0 else
-                                   "—")
-        draw.blit_text(surface, screen.style, line, r.x + 12, y, r.w - 24,
-                       size, ink)
-        y += int(size * 1.3)
+    planets = [(i, planet_struct.parse(raws[i]))
+               for i in star_struct.planet_indices(stars[star])
+               if 0 <= i < len(raws)]
+    if not planets:
+        return
+    note = draw.font_px(layout, "note")
+    cell = r.w // max(5, len(planets))
+    top = r.y + size * 2
+    disc_max = min(cell - 6, r.bottom - top - 3 * note)
+    left = r.centerx - cell * len(planets) // 2
+    for k, (index, p) in enumerate(planets):
+        side = max(6, disc_max * (6 + min(4, int(p.size))) // 10)
+        centre = (left + cell * k + cell // 2, top + disc_max // 2)
+        disc = None
+        if int(p.planet_type) != 2:        # not a gas giant
+            discs = colonyplanets.set_for(screen, side)
+            disc = discs.get(int(p.climate)) if discs is not None else None
+        if disc is not None:
+            surface.blit(disc, disc.get_rect(center=centre))
+        else:
+            pygame.draw.circle(surface, draw.text_colour(art, "normal"),
+                               centre, side // 2, max(1, side // 12))
+        ink = draw.text_colour(art, "selected" if p.colony_index >= 0
+                               else "normal")
+        draw.blit_text(surface, screen.style,
+                       colonyrows.star_planet_name(stars[star], index),
+                       centre[0], top + disc_max + note // 2, cell - 4,
+                       note, ink, "center")
 
 
 def _draw_grid(surface, screen, view, game_state, art, block):

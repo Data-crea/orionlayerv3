@@ -109,7 +109,8 @@ def decode(raw):
 
 def write_ship_parts(strings, lang, lbx_path, out_dir):
     """The second range, for the Planets panel (fundament 64): specials,
-    armour, shields, weapons and hull classes, into `shipparts_<lang>.json`.
+    armour, shields, weapons, hull classes and their plurals (work order
+    175), into `shipparts_<lang>.json`.
 
     A SECOND FILE, not new keys in the building file: bumping that file's
     format would turn every existing building file stale and blank the
@@ -118,11 +119,11 @@ def write_ship_parts(strings, lang, lbx_path, out_dir):
     own counts (`core.shipparts.TABLES`). A block too short for the last
     hull name writes nothing and says so; the building file is unaffected.
     """
-    need = shipparts.HULL_FIRST_STRING + shipparts.HULL_CLASS_COUNT
+    need = max(first + count for first, count in shipparts.TABLES.values())
     if len(strings) < need:
         print(f"ship part names NOT written: the block holds {len(strings)} "
               f"strings and the walk needs {need} to reach the last hull "
-              f"class")
+              f"plural")
         return None
     tables = {key: {str(i): decode(strings[first + i])
                     for i in range(count)}

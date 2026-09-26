@@ -31,23 +31,28 @@ THE MODULES, one topic each:
   ldrinput   what a click, a right click, the pointer and a key do
   ldrart     the original's artwork, extracted by the player
 
+  ldrmap     the galaxy box's and the grid's fields, HD's pointer, and
+             what the two strips say
+
 **WHAT HD MAY SEND** is `ldrwire.View.sendable`'s answer and nothing
-else, and without open fix 30 (`doc/ext_officer_screen_state.patch`,
-NOT APPLIED) it is short on purpose: the two tabs, HIRE, CANCEL,
-RETURN, a click on a leader FOR HIRE, the popup's two answers and a
-native box's own buttons — each one's effect is visible on the wire
-afterwards. POOL, DISMISS, PREV / NEXT, assigning a leader and the
-galaxy box's clicks need the block; without it they are drawn and
-answer nothing (HD STATE).
+else. With open fix 30 (`doc/ext_officer_screen_state.patch`, APPLIED in
+work order 175) that is every control the original has: the tabs, HIRE,
+CANCEL, POOL, DISMISS, PREV / NEXT, the scroll arrows, RETURN, a click on
+any leader, a star, a stack or a big icon (`ldrmap`), the popup's two
+answers and a native box's own buttons — the game answers in state HD
+reads back. On an engine without the fix the list shrinks to what HD can
+see the effect of without the block: the tabs, HIRE, CANCEL, RETURN, a
+leader FOR HIRE, the popup and the boxes.
 """
 import logging
 
 from core import estrings, hestrings, skildesc
+from core.shipparts import ShipPartNames
 from core.screen_base import ScreenBase
 from core.structs import player as player_struct
 
-from . import ldrart, ldrdialog, ldrdraw, ldrgeom, ldrinput, ldrright
-from . import ldrrows, ldrwire
+from . import ldrart, ldrdialog, ldrdraw, ldrgeom, ldrinput, ldrmap
+from . import ldrright, ldrrows, ldrwire
 
 log = logging.getLogger("leaders")
 
@@ -66,6 +71,9 @@ class LeadersScreen(ScreenBase):
         self._rows = []
         self._hover = None          # leader id under the pointer
         self._skill_help = None     # (title, body) of HD's help box
+        self._scan = None           # HD's pointer in the map (ldrmap)
+        self._big = None            # the big icon under it (ldrmap)
+        self._parts = None
         self._data = {}
         self._shown = ({}, False, None)   # buttons, hire mode, mode
         self._words = None
@@ -83,7 +91,9 @@ class LeadersScreen(ScreenBase):
         self._words = ldrrows.Words(estrings.EStrings(language),
                                     hestrings.for_app(self.app), language)
         self._skills = skildesc.for_app(self.app)
+        self._parts = ShipPartNames(language)
         self._waited, self._hover, self._skill_help = 0, None, None
+        self._scan = self._big = None
         self._last_view = None
         self._shown = ({}, False, None)
         self._help_doc = self.app.res.load_json(
@@ -138,8 +148,7 @@ class LeadersScreen(ScreenBase):
     def render(self, surface):
         self._render_background(surface)
         art, view = self._art, self._view
-        ldrdraw.draw_frame_boxes(surface, self,
-                                 art is not None and art.available)
+        ldrdraw.draw_frame_boxes(surface, self)
         if view is not None and view.draws:
             ldrright.draw_view_box(surface, self, view, self._state, art)
         ldrright.draw_galaxy_box(surface, self, self._state, art)
@@ -212,12 +221,9 @@ class LeadersScreen(ScreenBase):
         art = self._art
         x, y = ldrgeom.HIRE_PANEL_AT
         w, h = ldrgeom.HIRE_PANEL_SIZE
-        r = ldrdraw.rect(self.layout, (x, y, x + w - 1, y + h - 1))
-        sprite = art.sprite("hire_panel") if art and art.available else None
-        if sprite is not None:
-            surface.blit(ldrdraw.stretched(sprite, r), r.topleft)
-        else:
-            ldrdraw.draw_box(surface, self, (x, y, x + w - 1, y + h - 1))
+        # A glass panel where the original draws OFFICER.LBX 17 (work
+        # order 175, DEVIATION `view_box_glass`'s reason: decision 71).
+        ldrdraw.draw_box(surface, self, (x, y, x + w - 1, y + h - 1))
         if self._hover is None or self._view is None:
             return
         from core import leaderskills as ls
@@ -240,34 +246,30 @@ class LeadersScreen(ScreenBase):
                           ldrdraw.text_colour(art, "normal"))
 
     def _draw_strips(self, surface):
-        """The strip under the view box (officer.cpp:810-826, :695-727)
-        — only where the wire names its subject (open fix 30)."""
+        """The strip under the view box — the displayed star (colony
+        view) or the big icon under the pointer (ship view) — and the one
+        under the map: the star or stack under the pointer (`ldrmap`)."""
         view, state = self._view, self._state
-        if view is None or view.block is None or state is None:
+        if view is None or view.block is None or state is None \
+                or self._words is None:
             return
-        text = ""
         if view.view == ldrgeom.VIEW_COLONY:
-            text = self._star_strip(int(view.block.get("star_displayed", -1)))
+            text = ldrmap.displayed_star_words(
+                state, view, self._words,
+                int(view.block.get("star_displayed", -1)))
+        else:
+            text = ldrmap.big_ship_words(state, view, self._words, self._big)
         ldrdraw.draw_strip(surface, self, ldrgeom.VIEW_STRIP, text, self._art)
-
-    def _star_strip(self, star):
-        """The star's name, or "%s (%s)" with its leader, or HESTR
-        0x92/0x93 with the ETA (officer.cpp:810-826)."""
-        stars = getattr(self._state, "stars", None) or []
-        if not 0 <= star < len(stars):
-            return ""
-        name = stars[star].name
-        slots = list(getattr(stars[star], "officer_index", []) or [])
-        me = self._view.player
-        leader = slots[me] if 0 <= me < len(slots) else -1
-        if leader < 0 or leader >= len(self._view.leaders):
-            return name
-        rec = self._view.leaders[leader]
-        if int(rec.eta) < 1:
-            return f"{name} ({rec.name})"
-        template = self._words.hstring(0x92 if int(rec.eta) == 1 else 0x93)
-        return hestrings.printf(template, name, rec.name, int(rec.eta)) \
-            if template else name
+        text = ""
+        if self._scan is not None and self._scan[0] == "star":
+            text = ldrmap.scanned_star_words(state, view, self._words,
+                                             self._scan[1])
+        elif self._scan is not None:
+            icons = getattr(state, "ship_icons", None) or []
+            if 0 <= self._scan[1] < len(icons):
+                text = ldrmap.fleet_words(state, icons[self._scan[1]],
+                                          self._words, self._parts)
+        ldrdraw.draw_strip(surface, self, ldrgeom.MAP_STRIP, text, self._art)
 
     def _popup_words(self):
         """What `ldrdialog.draw_popup` needs to name a leader."""

@@ -54,9 +54,10 @@ TEXT_FALLBACK = {"normal": (120, 156, 192), "selected": (160, 208, 236),
 #: sections that own them (work order 166 C) — not copied here.
 BOX_FILL = palette.col("colony_summary", "panel_background", (8, 14, 23))
 BOX_OUTLINE = palette.col("panel", "thin_border", (55, 65, 85))
-#: The galaxy box is black because the original's is: the stars are
-#: drawn over the black of OFFICER.LBX 0 in that rectangle.
-MAP_FILL = (0, 0, 0)
+#: The galaxy box is NOT black any more (work order 175): the original
+#: draws its stars over the black of OFFICER.LBX 0 there, and Data's
+#: screenshot showed that black as a hole in the HUD. It is a glass
+#: panel like every other box — DEVIATION `map_glass`.
 
 #: DEVIATION `hd_font`: the text heights in the original's own pixels,
 #: chosen from the line pitch each text sits on (the skill lines step
@@ -148,15 +149,13 @@ def row_box(i):
     return (x1, y1, x2, y2 - 1)
 
 
-def draw_frame_boxes(surface, screen, show_view_box_art):
-    """The boxes behind everything: four rows, the view box (unless the
-    original's own art is drawn there), the galaxy box, two strips."""
+def draw_frame_boxes(surface, screen):
+    """The boxes behind everything, each a glass HUD panel (work order
+    174's blocks): four rows, the view box, the galaxy box, two strips."""
     for i in range(geom.ROWS):
         draw_box(surface, screen, row_box(i))
-    if not show_view_box_art:
-        draw_box(surface, screen, geom.VIEW_BOX)
-    r = draw_box(surface, screen, geom.GALAXY_BOX)
-    surface.fill(MAP_FILL, r.inflate(-2, -2))
+    draw_box(surface, screen, geom.VIEW_BOX)
+    draw_box(surface, screen, geom.GALAXY_BOX)
     draw_box(surface, screen, geom.VIEW_STRIP)
     draw_box(surface, screen, geom.MAP_STRIP)
 
@@ -324,12 +323,28 @@ def draw_button(surface, screen, art, name, frame=0, dull=False,
 
 
 def draw_strip(surface, screen, native, text, art):
-    """A centred one-line strip (`Set_Fitted_Font_Style_` +
-    `Print_Centered_`, officer.cpp:725-726, :824-825, :2202)."""
+    """A centred strip (`Set_Fitted_Font_Style_` + `Print_Centered_`,
+    officer.cpp:725-726, :824-825; movebox.cpp:289-290). One line where
+    it fits at the note size; otherwise two, the way
+    `Print_Paragraph_Centered_` fills the fleet strip's 22 px
+    (officer.cpp:2186-2201) — never cut: the second line shrinks to fit.
+    DEVIATION `strip_ink`: the rows' ink, not the owner's colour ramp."""
     if not text:
         return
+    from core import textfit
     r = rect(screen.layout, native)
     size = font_px(screen.layout, "strip")
-    blit_text(surface, screen.style, text, r.centerx,
-              r.y + (r.h - size) // 2, r.w - 6, size,
-              text_colour(art, "normal"), "center")
+    ink = text_colour(art, "normal")
+    room = r.w - 6
+    if screen.style.render_text(text, size, ink).get_width() <= room:
+        blit_text(surface, screen.style, text, r.centerx,
+                  r.y + (r.h - size) // 2, room, size, ink, "center")
+        return
+    size = font_px(screen.layout, "note")
+    lines = textfit.wrap_text(screen.style, text, size, room)
+    lines = lines[:1] + [" ".join(lines[1:])] if len(lines) > 2 else lines
+    step = r.h // max(1, len(lines))
+    for k, line in enumerate(lines):
+        blit_text(surface, screen.style, line, r.centerx,
+                  r.y + k * step + (step - size) // 2, room, size, ink,
+                  "center")

@@ -83,10 +83,10 @@ class GameState:
     #: could not be reconstructed.
     fleet_screen: Optional[dict] = None
     #: Open fix 30's OFFS block — the Leaders screen's view state
-    #: (`doc/ext_officer_screen_state.patch`, NOT APPLIED as of work
-    #: order 167). None on every engine that exists today and on every
-    #: screen but 29; `screens/leaders/ldrwire.py` names every key and
-    #: what the screen does without it.
+    #: (`doc/ext_officer_screen_state.patch`, APPLIED by work order 175 on
+    #: orionlayer-local cc542e02). None on every screen but 29 and on an
+    #: engine without the fix; `screens/leaders/ldrwire.py` names every
+    #: key and what the screen does without it.
     officer_screen: Optional[dict] = None
 
     # Fields (from FIELD_LIST message)
