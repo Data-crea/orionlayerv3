@@ -572,6 +572,23 @@ references in `doc/v3_orion2re_index.md`.
   window presents without VSync whatever `ORION2RE_NO_VSYNC` says; a
   screenshot of the engine's window shows nothing, the picture is on the
   wire.
+- **THE INTRO'S SOUND, AND A SILENCE THAT WAS NOT THE ENGINE'S — work
+  order 183.** Measured with the real driver (`pipewire`), the engine's
+  stream sent by `PIPEWIRE_NODE` into a private null sink — it overrides
+  the `target.object` SDL sets itself (SDL_pipewire.c:1201-1205), proved
+  with silence before any sound — and recorded from its monitor: unskipped,
+  the logos are silent for 5.0 s and the intro then plays 108 s (peak
+  −7.8 dBFS, RMS −16.1); with the tools' key, nothing at all before the
+  main menu's music, which begins after READY. **The first recordings
+  were pure digital silence, intro and music alike**: WirePlumber restores
+  a stream's volume by application name, and this machine stores
+  `orion2re` muted at 0 % (`~/.local/state/wireplumber/stream-properties`,
+  the player's own setting, left alone) — so a measurement of what the
+  engine PRODUCES runs it under another `SDL_APP_NAME`. A playback
+  stream's own ports carry it after that volume; WirePlumber will not link
+  a recorder to them, and links made before the stream starts playing are
+  left on ports it replaces. The player's start is `python play.py`, the
+  tools' `engine_start.start` with its skip (check 090v).
 
 ---
 

@@ -2458,7 +2458,7 @@ files under `doc/` and are only summarised here.
 | | |
 |---|---|
 | Python | 32,960 lines across 111 modules — `find . -name '*.py'`, `__pycache__` excluded, the smoke test's 6,400 included. The previous figure here (21,642 across 94) was carried from an unstated method and could not be reproduced |
-| Smoke test | `python tools/smoke_test.py` — **380 checks**, headless, in `tools/smoke_suite/` since work order 162 (137 check modules, one group per screen plus a shared core; `tools/smoke_test.py` is the runner). **Two tiers since work order 158**: the bare command runs everything (~200 s here, measured 26 September 2026 — the 72 s this line said was before the rendering checks of 172-174); `--fast` runs the commit gate's 370 (~95 s here). `--screen <name>` prints only that screen's sentences and the core's and is NEVER a gate. See "The gate has two tiers" below |
+| Smoke test | `python tools/smoke_test.py` — **381 checks**, headless, in `tools/smoke_suite/` since work order 162 (138 check modules, one group per screen plus a shared core; `tools/smoke_test.py` is the runner). **Two tiers since work order 158**: the bare command runs everything (~200 s here, measured 26 September 2026 — the 72 s this line said was before the rendering checks of 172-174); `--fast` runs the commit gate's 371 (~95 s here). `--screen <name>` prints only that screen's sentences and the core's and is NEVER a gate. See "The gate has two tiers" below |
 | Assets | 170 MB (select_race 68, galaxy_map 51, shared 23, new_game 21, colony_summary 1) |
 | Screens in HD | 11 of ~20–22 (the Leaders screen, work order 167, built and not accepted; the GAME menu overlay, work order Stop 2, every dialog of the popup; colony summary draws list, sidebar, scan box and galaxy inset, and MOVES POPS — the first HD gesture that drives the game; planets, brief 101, lists, sorts, restricts and returns) |
 | Setup from clone | `python tools/setup.py` (deps via the system package manager) |
@@ -3573,8 +3573,17 @@ starts `true`, so the window is created hidden and never shown, and a hidden
 window presents without VSync. Measured on the virtual display: never
 mapped in six starts, READY in 1.5 s with the tools' intro skip, pacing
 6.06 snapshots/s (164.3 ms median gap) as before, the flash walk and the
-colony acceptance with orders as in 182. How a PLAYER starts the game and
-what they hear during the start: `doc/briefs/183-progress.md`.
+colony acceptance with orders as in 182.
+
+**The player's start is `python play.py`** (work order 183 Part 2, check
+090v): the engine through `tools/engine_start.start` — the tools' own
+start, so the tools' intro skip — on the player's desktop and audio, then
+`main.py`, and the engine stopped when OrionLayer ends. Measured with the
+real audio driver into a private null sink: with the key the engine plays
+nothing before the main menu's music, which begins after READY; without
+it, 108 s of intro sound. Nothing built for audio. This machine stores
+`orion2re`'s stream muted at 0 % (WirePlumber, Data's setting, parked).
+`doc/briefs/183-progress.md`.
 
 ### The single-colony screen and the build popup — BUILT, OPEN FIXES 35-40 APPLIED — work orders 180 B and C, 181
 

@@ -230,6 +230,9 @@ _vr_41 = _vr_fixes[_vr_fixes.index("\n## 41. "):]
 _vr_41 = _vr_41[:_vr_41.find("\n## ", 5)] if "\n## " in _vr_41[5:] else _vr_41
 assert "**Status: APPLIED** — 27 September 2026 by work order 183" in \
     _vr_41[:600] and f"**`{_vr_h41}`**" in _vr_41, "entry 41's status"
+# The OrionLayer commit that recorded it, named once it existed (183 Part 2).
+assert "Recorded in OrionLayer by commit **`89ce660`**" in _vr_41[:1400], \
+    "entry 41 must name the OrionLayer commit that recorded it"
 for _vr_part in ("**The exact change.**", "**Live check**", "**Side effects",
                  "**How to revert.**", "presents without VSync",
                  "byte for byte", "fixes34-41.bundle"):

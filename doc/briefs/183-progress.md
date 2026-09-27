@@ -80,3 +80,123 @@ Evidence root: `~/orionlayer-fixtures/evidence/work_order_183/`.
    commit's diff the file's and each marker once. 090r's old "41 is parked"
    assertions went with the state they described (in the same module).
    **Checks 379 → 380.**
+
+**Commit gate, recorded (the hook asks for both exits):** the first
+`git commit` of Part 1 was refused — the pre-commit fast tier exited
+**139**, a native segfault inside CPython 3.14.7 while check 059 walked an
+`ast` (`evidence/work_order_183/P1_precommit_139.log`), code this order did
+not touch; the same tier run by hand at once: **exit 0**, 370 green; the
+commit then went through its own hook green. Part 1 = OrionLayer
+**`89ce660`**.
+
+## Part 2 — players skip the intro, silently — **DONE: the player's start skips it; no intro audio is produced, nothing built for audio**
+
+1. **The player's path, found.** README's quick start was two terminals:
+   the orion2re binary bare in `~/Master of Orion 2`, then `python
+   main.py` — **no skip**, so the logos and the 113 s intro played (and
+   with fix 41 the player could not even press a key into the hidden
+   window). `main.py` starts no engine (176, check 006e). Data's desktop
+   launchers (`~/Schreibtisch/OrionLayer_Start.desktop`, the same file in
+   `~/.local/share/applications/`, 3 August) run `cd ~/orionlayer &&
+   ./launcher.sh edit main_menu` — a folder that no longer exists, so they
+   start nothing; they are his files outside the tree and were not touched
+   (parked, with the line that would work).
+   **Now: `python play.py`** (new, root): the engine through
+   `tools/engine_start.start` — THE function every live tool starts it
+   with, so the skip is the tools' by construction, not a copy — with
+   `real_desktop="player start (play.py)"` (the player's display and audio;
+   the tools' virtual display plays no sound), no guard, no idle
+   inhibitor; after READY `main.py` in the player's own environment (the
+   tools' forced drivers stripped); and the engine stopped when OrionLayer
+   ends — since fix 41 a leftover engine would be invisible, hold the port
+   and could keep playing music. It stops only the engine its own start
+   returned; with somebody else's engine running it refuses, as
+   `engine_start` does. README's quick start and CLAUDE.md now open with
+   it; the by-hand way stays, saying the intro then plays out.
+   **Live, on the virtual display** (only the display redirected by a
+   scratch driver: engine on Xvfb, client on dummy drivers; guards
+   `183_P2_play_virtual{,_b}` clean): INTRO SKIPPED, READY, `main.py` at
+   game screen 10 → HD `main_menu`, "no native frame", no key pressed;
+   OrionLayer ended → `orion2re PID 42781 stopped (SIGTERM)`.
+   **Found on the way:** the first version reported "did not stop;
+   SIGKILL" for an engine that had ended within a second — an exited
+   child stays a zombie that `kill(pid, 0)` still finds. It reaps now
+   (`play.gone`); timed separately: the engine exits 1.0 s after SIGTERM,
+   with and without a client having been connected.
+   **Check 090v** (new): `play.py` starts through `engine_start.start`
+   with the skip on, `real_desktop` set, no guard, no inhibitor; its client
+   env carries none of the tools' forcing; a real stand-in child is stopped
+   by SIGTERM and reaped; an already-ended engine is left alone; a refused
+   start signals nothing; `play.py` imports no skip and sends no key of its
+   own; README's quick start opens with `python play.py`.
+2. **Measured, without Data hearing it** (`evidence/work_order_183/
+   P2_audio/`): a private null sink (`pactl load-module
+   module-null-sink sink_name=ol183_measure`, the default sink checked
+   unchanged), the engine on the virtual display with its NORMAL driver
+   (`SDL_AUDIODRIVER` unset → `pipewire`, in its log), its stream sent
+   there by `PIPEWIRE_NODE`. SDL sets `target.object` to the default sink
+   itself (SDL_pipewire.c:1201-1205), so the override was proved first
+   with a stream of **pure silence** (linked only to the null sink; Data's
+   game stream stayed on HDMI), then a −20 dBFS tone recorded at −23.0
+   dBFS RMS (a sine's −3 dB) — the recorder hears what plays there. Every
+   engine run had a watchdog that would kill it the moment any of its
+   streams linked anywhere else: none did.
+   **The trap:** the first control (the intro allowed to play) recorded
+   pure digital silence for 126 s, intro and menu music alike — the
+   engine's stream was **muted at 0 %**: WirePlumber restores stream
+   volume by application name, and Data's state stores `orion2re` muted
+   (`~/.local/state/wireplumber/stream-properties` line 88). Not set by
+   any session (the only pactl/wpctl calls in any transcript are this
+   run's); his setting, **left alone** (parked). So the measurement runs
+   the engine as `SDL_APP_NAME=orion2re-183-measure`:
+
+   | run | before READY (engine start → READY) | after READY (1-6 s) |
+   |---|---|---|
+   | control, intro allowed (PID 39313) | **108.0 s of sound**, from 5.0 s on (the logos are silent), peak −7.8 dBFS, RMS −16.1 dBFS; READY at 113.0 s | music, RMS −26.0 dBFS |
+   | skip 1 / 2 / 3 (the tools' key) | **nothing**: 0 windows above −60 dBFS, digital silence (−120 dBFS), before the main menu's music is requested (0.08 s); READY in the log at 0.09 s | music from ≥ 0.25 s after the launch, RMS −18.4 / −18.4 / −18.8 dBFS |
+
+   (50 ms windows; the music track is random per start, `clock() % 3`,
+   jim.cpp — hence −26 against −18.) With the key, the logos end at once
+   and the intro is never played (jim.cpp:150-152); the key arrives at
+   ~0.06 s, and the first intro sound would come at 5.0 s.
+3. **Intro audio is produced only without the skip**, and the player's
+   start now skips — so, by the order's rule 4, **nothing was built for
+   audio**: no mute, no engine change, no new open fix. What a player
+   hears: nothing of the intro; the main menu's music, as ever — on THIS
+   machine not even that, while `orion2re` is stored muted.
+4. **The recording method for Part 3**, validated here in the null sink
+   (runs `X_measure`, `X_ownname`): on Data's real output path his game
+   plays too, so a sink monitor cannot isolate the engine. A recorder that
+   links to nothing by itself (`node.autoconnect = false`,
+   `node.dont-fallback = true` — never a microphone) is linked by name to
+   the engine stream's own output ports, re-linked every 20 ms. With the
+   measurement name it recorded the music at the monitor's level
+   (−26/−27 dBFS, the same profile), linked 0.15 s after the launch —
+   before any sound; with the engine's own name, silence on both (his
+   stored mute acts before the ports). Two tries that failed first, kept
+   because they would fail again: links made before the stream starts
+   playing are left on ports it replaces (recorded silence under a
+   −19 dBFS monitor), and a `pw-record` targeting the stream by name is
+   never linked at all.
+5. **Left as found**: the null sink unloaded (`pactl list sinks` has no
+   `ol183_measure`), the default sink unchanged, Data's game stream at
+   61 % unmuted before and after, the `orion2re` row unchanged. WirePlumber
+   caches a row for every stream it sees — this run added rows for
+   `ol183_measure`, `pw-record` and `orion2re-183-measure`, beside dozens
+   of earlier tools' rows; nothing reads them but WirePlumber's own restore.
+   Every engine guard clean (`183_A_*`, `183_B_*`, `183_C_skip_{1,2,3}`,
+   `183_D1`, `183_V_*`, `183_W_*`, `183_X_*`, `183_P2_*`).
+6. **Documented**: fundament part 09 (the intro's sound, the stored-mute
+   trap, the capture), entry 41's intro paragraph and its OrionLayer hash
+   (`89ce660`, held by 090r), README, CLAUDE.md, the status document.
+
+**Suite, recorded:** two full runs exited **139** — native segfaults in
+numpy's `_multiarray_umath` (check 006f in `core/hud/glass.py`, then in
+`core/hud/blocks.py`), before 090v runs and in code this order did not
+touch (`evidence/work_order_183/P2_suite_139{,b}.log`); the third: **exit
+0, 381 green**. Parked with what `coredumpctl` shows.
+090v shown red on its own (`python -B`, the suite's namespace stood in):
+`play.py` changed to pass `intro=True` → "the player's start must skip the
+intro"; restored, caches cleared, green. Full suite after the docs: **exit
+0, 381 green**.
+**Checks 380 → 381** (090v).

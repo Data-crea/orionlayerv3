@@ -61,8 +61,8 @@ derive world geometry.
 **The smoke test must be green before every commit.**
 
 ```bash
-python tools/smoke_test.py             # everything — 380 checks, ~200 s
-python tools/smoke_test.py --fast      # the commit gate's 370, ~95 s
+python tools/smoke_test.py             # everything — 381 checks, ~200 s
+python tools/smoke_test.py --fast      # the commit gate's 371, ~95 s
 python tools/smoke_test.py --screen colony_summary --fast   # NOT a gate
 ```
 
@@ -96,7 +96,7 @@ the fast tier holds that list and the guards to each other.
 time, not at commit time. See decision 31 and
 `doc/briefs/157-suite-profile.md`.
 
-380 checks, headless, no orion2re needed. **The count must not go
+381 checks, headless, no orion2re needed. **The count must not go
 down.** If a change makes a check obsolete, replace it — do not
 delete it. It went down exactly once, on 12 September 2026, when
 Phase B deleted the frame machinery the checks were about (decision
@@ -144,7 +144,7 @@ screens/<name>/         one folder per HD screen:
                           help.json    right-click help regions
                           assets/
 tools/                  smoke test, generators, live diagnostics
-tools/smoke_suite/      the smoke test's 137 check modules, one group
+tools/smoke_suite/      the smoke test's 138 check modules, one group
                         per screen plus a shared core; smoke_test.py
                         is the runner (work order 162)
 doc/                    the documents in the table above
@@ -219,10 +219,13 @@ python tools/version_check.py  # the orion2re build: every fix it needs (README)
 python main.py                 # standalone works without orion2re
 ```
 
-With the game (built `-DORION2RE_EXT=ON`), in a separate terminal:
+With the game (built `-DORION2RE_EXT=ON`) — the player's start since work
+order 183: the engine through the tools' own start (hidden window, the
+intro skipped by the same key), then OrionLayer; closing OrionLayer stops
+the engine (README's quick start has the by-hand way):
 
 ```bash
-cd "$HOME/Master of Orion 2" && ~/orion2re/out/build/Linux/linux-debug/orion2re
+python play.py
 ```
 
 Two things come from the user's own MOO2 installation and are not in

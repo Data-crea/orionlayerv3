@@ -104,16 +104,31 @@ Every entry, with its status, reason and revert, is in
 
 ## Quick start
 
-**Terminal 1 — the game** (built with `-DORION2RE_EXT=ON`):
+**Play** (orion2re from `orionlayer-local`, built with `-DORION2RE_EXT=ON`,
+and `xdotool` installed):
+
+```bash
+cd ~/orionlayerv3
+python play.py
+```
+
+This is the player's start (work order 183). It starts orion2re in
+`~/Master of Orion 2` — its own window stays hidden (open fix 41) — skips
+the original's logos and intro with the same key the live tools send, so
+nothing of the intro is played or heard, and then opens OrionLayer straight
+into the HD main menu, no key needed. Closing OrionLayer stops the game.
+The engine's log is `~/.cache/orionlayer/orion2re.log`.
+
+**By hand, in two terminals** — the original's intro then plays, with its
+sound, for about two minutes: its key would go to the engine's own window,
+which open fix 41 keeps hidden.
 
 ```bash
 cd "$HOME/Master of Orion 2"
 ~/orion2re/out/build/Linux/linux-debug/orion2re
 ```
 
-Wait for `ext: server started on port 17362`.
-
-**Terminal 2 — the frontend:**
+Wait for `ext: server started on port 17362`, then:
 
 ```bash
 cd ~/orionlayerv3

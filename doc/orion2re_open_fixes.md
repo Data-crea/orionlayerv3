@@ -2743,7 +2743,7 @@ picture: a list HD cannot name is a list HD cannot offer.
 
 ## 41. The engine's own window is shown before it is hidden
 
-**Status: APPLIED** — 27 September 2026 by work order 183, on Data's approval ("Data approves Open Fix 41 … exactly as proven in 182", `doc/briefs/183-work-order-apply-fix-41-players-skip-the-intro-silently.md`; written, proved and parked by work order 182, `doc/briefs/182-parked-for-data.md` item 1). orion2re **`4bf152e4`** on `orionlayer-local` ("OrionLayer Open Fix 41: keep the engine's own window hidden from the start"), the only commit of this fix, on top of fix 40; bundle `~/orion2re_bundle_27sep_4bf152e4_fixes34-41.bundle` (`git bundle verify`: exit 0; a clone of it has the same 1164 commits). Recorded in OrionLayer by commit OL183P1 ("Work order 183 Part 1: open fix 41 applied … (183-1)"; the hash added by the next commit, as 179 and 181 did). Patch: `doc/ext_engine_window_hidden.patch`; required by `tools/version_check.py` (marker `OrionLayer, open fix 41.`, on one line at each of the two changed places) since the same commit — a build without it is refused by name ("doc/ext_engine_window_hidden.patch : MISSING … open fix 41", measured on the tree of `2097b0c6`). Open upstream.
+**Status: APPLIED** — 27 September 2026 by work order 183, on Data's approval ("Data approves Open Fix 41 … exactly as proven in 182", `doc/briefs/183-work-order-apply-fix-41-players-skip-the-intro-silently.md`; written, proved and parked by work order 182, `doc/briefs/182-parked-for-data.md` item 1). orion2re **`4bf152e4`** on `orionlayer-local` ("OrionLayer Open Fix 41: keep the engine's own window hidden from the start"), the only commit of this fix, on top of fix 40; bundle `~/orion2re_bundle_27sep_4bf152e4_fixes34-41.bundle` (`git bundle verify`: exit 0; a clone of it has the same 1164 commits). Recorded in OrionLayer by commit **`89ce660`** ("Work order 183 Part 1: open fix 41 applied … (183-1)"; the hash added by the next commit, as 179 and 181 did). Patch: `doc/ext_engine_window_hidden.patch`; required by `tools/version_check.py` (marker `OrionLayer, open fix 41.`, on one line at each of the two changed places) since the same commit — a build without it is refused by name ("doc/ext_engine_window_hidden.patch : MISSING … open fix 41", measured on the tree of `2097b0c6`). Open upstream.
 
 **Against work order 182's proof**: the patch file applied to `2097b0c6` with `patch -p1 --dry-run` and `patch -p1`, no offset, no fuzz; the two files it leaves are blobs `88c157cd` and `3f943781`, the scratch commit's own; and `git diff 4bf152e4~1 4bf152e4` equals the patch file's diff **byte for byte, `diff --git` and `index` lines included** (sha256 `a2f8e948…` both) — the commit is the scratch proof. The rebuild (`ninja -C out/build/Linux/linux-debug`) compiled the two files and linked without a warning.
 
@@ -2840,8 +2840,11 @@ evidence `~/orionlayer-fixtures/evidence/work_order_183/P1_*`):
 
 **How the intro skip works with it.** Unchanged for the tools:
 `engine_start` sends the key to the window by id and it arrives (every
-start above). For a player, work order 183 Part 2 decides it: the
-player's start path sends the same key (see `doc/briefs/183-progress.md`).
+start above). For a player, since work order 183 Part 2: `python play.py`
+starts the engine through the same `engine_start.start`, so the same key
+arrives; the engine then plays nothing before the main menu's music
+(measured, `doc/briefs/183-progress.md`). Started by hand, the hidden
+window cannot take a key and the intro plays out, with its sound (README).
 
 **Side effects — observed and ruled out.**
 - *A hidden window presents without VSync.* By the source (`Present_
