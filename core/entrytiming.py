@@ -304,10 +304,12 @@ class EntryTiming:
 
     @staticmethod
     def summary(e, reached, why=""):
+        t2_abs = lambda e: e["t2"]  # noqa: E731 — perf_counter, for a tool
         """One entry as milliseconds per phase, plus what they rest on."""
         ms = lambda a, b: round((b - a) * 1000, 2)  # noqa: E731
         send = e["send"]
         rec = {"target": e["target"], "screen": e["screen"],
+               "t2_abs": t2_abs(e),
                "first_after_start": e["first_after_start"],
                "reached": reached, "why": why, "size": e["size"],
                "by_input": bool(send and send["by_input"]),

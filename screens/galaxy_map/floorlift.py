@@ -19,6 +19,20 @@ and blitting the floor additively on top — the form the brief measured
 two equal byte for byte. With step `off` nothing is called at all, so
 the map is the map it always was.
 
+**AND ONCE PER PICTURE, NOT ONCE PER FRAME** (work order 184). Over the
+floor picture the lift was an additive fill of the whole window on every
+frame — 33 ms at 1920, 59 at 2576, 130 at 3840 on the virtual display,
+most of a map frame, and so most of the research panel's first frame too,
+which is drawn over the map. The lifted floor is now made once for the
+picture and the step (`_lifted`: the picture COPIED, then `apply` on the
+copy) and blitted. The picture is opaque (`backgrounds.cover` of a
+`convert()`ed image, no alpha, no colour key), so blitting it replaces the
+window's pixels and the copy-then-add is the add-after-blit, byte for byte
+— held by a smoke check, and by the research renders at three sizes. The
+entry holds the picture itself, so a picture of the same size that
+replaced it (a resize there and back, another screen's `scaled`) can never
+be mistaken for it; a step or a size that changed builds a new one.
+
 **READ AT DRAW TIME, so the change is live**: the step comes from the
 player's settings (`core.usersettings`) on every frame, and the Game
 Settings screen behind the open popup shows it at once. The colours of
@@ -54,6 +68,23 @@ def apply(surface, rect, app):
     return lift
 
 
+#: (picture, lift, lifted copy) of the last floor lifted, or None. ONE,
+#: because there is one window: a resize replaces it.
+_LAST = [None]
+
+
+def _lifted(scaled, lift, app):
+    """The floor picture with the lift added — made once per picture and
+    step. `apply` is still the one place the lift is added."""
+    last = _LAST[0]
+    if last is not None and last[0] is scaled and last[1] == lift:
+        return last[2]
+    copy = scaled.copy()
+    apply(copy, copy.get_rect(), app)
+    _LAST[0] = (scaled, lift, copy)
+    return copy
+
+
 def render_floor(screen, surface, px=None):
     """The map's floor over the whole window (work order 170): the
     artwork, the OLED floor lift (HD EXTENSION, one point, both floor
@@ -65,10 +96,12 @@ def render_floor(screen, surface, px=None):
     whole = pygame.Rect(0, 0, screen.app.win_w, screen.app.win_h)
     scaled = screen._map_bg_scaled
     if scaled is not None and scaled.get_size() == whole.size:
-        surface.blit(scaled, (0, 0))
+        lift = tuple(LIFT[step(screen.app)][:3])
+        surface.blit(_lifted(scaled, lift, screen.app) if any(lift)
+                     else scaled, (0, 0))
     else:
         from screens.galaxy_map.screen import MAP_BG
         surface.fill(MAP_BG[:3], whole)
-    apply(surface, whole, screen.app)
+        apply(surface, whole, screen.app)
     if px is not None:
         screen._starfield.render(surface, tuple(whole), px)

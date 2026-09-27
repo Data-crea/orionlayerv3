@@ -5,11 +5,12 @@
 # tools/smoke_suite/, in file-name order and in ONE namespace. Do not
 # import this file; it is not a module.
 #
-# The 4 check(s) it holds:
+# The 5 check(s) it holds:
 #   - the open fixes the engine needs are one list, and README, setup's report and the fundament's line name exactly them
 #   - version_check requires every applied fix: a tree missing any one of them is reported by name
 #   - open fixes 35-40 are applied and documented: status, hashes, one-line markers, each entry's diff the patch file's; on this disk each commit's diff the file's and each marker over its block
 #   - open fix 41 is applied and documented: required, status and hash in entry, row and patch, two one-line markers, the entry's diff the file's; on this disk the commit's diff the file's
+#   - open fix 42 is written and parked, not applied: reported and never required, NOT APPLIED in entry, row and patch, one one-line marker, the entry's diff the file's; on this disk its pre-image is orionlayer-local's and its marker absent
 
 
 # ── THE ORION2RE BUILD IT NEEDS (work order 181) ────────────────
@@ -259,3 +260,57 @@ ok("open fix 41 is applied and documented: required by version_check, "
    "status and hash in the entry, its row and the patch file, two one-line "
    "markers, the entry's diff the file's; on this disk the commit's diff "
    "the file's")
+
+# 5. OPEN FIX 42 — WRITTEN AND PARKED by work order 184, NOT APPLIED (no
+#    engine patch may be applied in that order). The entry, its row and
+#    the patch file say so; version_check REPORTS it and never requires
+#    it; the one changed place carries the one-line marker; the entry's
+#    diff is the file's. On a disk with the tree: the hunk's pre-image
+#    (its context and removed lines) is exactly what `orionlayer-local`
+#    holds, so the file still applies where the entry says it does — and
+#    the marker is not in the tree, because nothing applied it.
+_vr_p42 = "doc/ext_input_delay_tick.patch"
+assert _vr_p42 in _vr_vc.REPORTED_PATCHES and _vr_p42 not in _vr_vc.LOCAL_PATCHES
+assert _vr_vc.REPORTED_PATCHES[_vr_p42][:2] == (
+    os.path.join("src", "game", "fields.cpp"), "OrionLayer, open fix 42.")
+assert _vr_vc.FIX_NUMBERS[_vr_p42] == (42,) and 42 not in _vr_want
+_vr_t42 = open(os.path.join(_vr_root, _vr_p42), encoding="utf-8").read()
+assert "STATUS: NOT APPLIED" in _vr_t42 and "work order 184" in _vr_t42
+_vr_d42 = _vr_t42[_vr_t42.index("diff --git"):]
+assert sum("OrionLayer, open fix 42." in _l for _l in _vr_d42.splitlines()
+           if _l.startswith("+")) == 1, "fix 42: one marker at its one place"
+_vr_42 = _vr_fixes[_vr_fixes.index("\n## 42. "):]
+_vr_42 = _vr_42[:_vr_42.find("\n## ", 5)] if "\n## " in _vr_42[5:] else _vr_42
+assert "**Status: NOT APPLIED" in _vr_42[:400] and _vr_p42 in _vr_42[:600]
+for _vr_part in ("**Proof.**", "no offset, no fuzz", "_current_scren",
+                 "**Scratch results**", "0 native frames", "0 lost",
+                 "**How to apply.**"):
+    assert _vr_part in _vr_42, f"entry 42 lacks {_vr_part}"
+_vr_j = _vr_42.index("```diff\n", _vr_42.index("**The exact change.**")) + 8
+_vr_n42 = "".join(_l for _l in _vr_norm(_vr_d42).splitlines(True)
+                  if not _l.startswith(("diff --git", "index ")))
+assert _vr_42[_vr_j:_vr_42.index("\n```", _vr_j)] + "\n" == _vr_n42, \
+    "entry 42's diff is not its patch file's"
+_vr_r42 = next(_l for _l in _vr_fixes.splitlines() if _l.startswith("| 42 |"))
+assert "**Written, NOT APPLIED** — work order 184" in _vr_r42
+_vr_pre = [(_l[1:] if _l[:1] in " -" else None) for _l in
+           _vr_d42[_vr_d42.index("\n@@") + 1:].splitlines()[1:]]
+_vr_pre = "\n".join(_l for _l in _vr_pre if _l is not None)
+_vr_f42 = _vr_sp.run(["git", "-C", _vr_tree_dir, "show",
+                      "orionlayer-local:src/game/fields.cpp"],
+                     capture_output=True, text=True, errors="replace") \
+    if os.path.isdir(os.path.join(_vr_tree_dir, ".git")) else None
+if _vr_f42 is not None and _vr_f42.returncode == 0:
+    assert _vr_pre in _vr_f42.stdout, (
+        "fix 42's pre-image is not orionlayer-local's fields.cpp any more — "
+        "the patch no longer applies where its entry says")
+    assert "OrionLayer, open fix 42." not in _vr_f42.stdout, (
+        "fix 42's marker is in orionlayer-local: it was applied — move it "
+        "to LOCAL_PATCHES and document it as applied")
+else:
+    report("open fix 42 NOT checked against orionlayer-local — no orion2re "
+           "tree on this disk")
+ok("open fix 42 is written and parked, not applied: reported and never "
+   "required, NOT APPLIED in entry, row and patch, one one-line marker, the "
+   "entry's diff the file's; on this disk its pre-image is "
+   "orionlayer-local's and its marker absent")

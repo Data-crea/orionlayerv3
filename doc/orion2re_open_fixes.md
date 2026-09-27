@@ -63,6 +63,7 @@ section for what was found where.
 | 39 | The build popup's queue under edit, its selection and its modes are not on the wire until OK — `COLBLDG::_current_item`, `_active_prod`, `_field_mode`, `_colony_auto_building` | **Applied** 27 September 2026 by work order 181 (orion2re `2be953d4`, `doc/ext_build_popup_queue.patch`, "BLDQ"); required; confirmed live | Nothing while applied; without it the build popup stays the game's own picture |
 | 40 | What the build popup offers, in its order, and its queue, with the costs and times it prints, is not on the wire — `_building_indexes`, `_military_indexes`, `Draw_Cost_And_Time_Info_` | **Applied** 27 September 2026 by work order 181 (orion2re `2097b0c6`, `doc/ext_build_popup_lists.patch`, "BLDL"); required; confirmed live | Nothing while applied; without it the build popup stays the game's own picture |
 | 41 | The engine's own window is shown before `ext::Init` sets `g_hide_window` (platform.cpp:1406-1408 on `2097b0c6`, mox2.cpp:382) | **Applied** 27 September 2026 by work order 183 on Data's approval (orion2re `4bf152e4` on `orionlayer-local`, `doc/ext_engine_window_hidden.patch`); written and proved by work order 182; required by `tools/version_check.py`; confirmed live on the virtual display (never mapped, pacing unchanged, HD identical); open upstream | Without it the engine's window appears on every start, and the original follows the real pointer over it |
+| 42 | A screen is silent on the wire while its input delay counts down: `Get_Input_` returns before `ext::Tick` (fields.cpp:161-167), so the research panel's list reaches a client ~550 ms after the engine has built it | **Written, NOT APPLIED** — work order 184 (`doc/ext_input_delay_tick.patch`); proved in scratch: research entries 636-686 → 77-103 ms (median), flash walk 29 transitions / 0 native frames, 182's stress 0 lost / 0 dropped, pacing and CPU unchanged | Without it every research entry waits ~550 ms for nothing (66-80 % of it), and every screen that sets an input delay (42 call sites) is heard that much later |
 
 Items 3 and 4 are both about INJECT_CLICK and both live in the same
 code path, but they are separate faults: 3 is where the coordinates
@@ -2872,3 +2873,144 @@ number out of README's table, `setup.py`'s report follows by itself, and
 fundament part 09's line). Without it the window is shown again, and on a
 covered or blanked screen the start depends on `ORION2RE_NO_VSYNC` (open
 fix 31) again.
+
+## 42. A screen is silent on the wire while its input delay counts down
+
+**Status: NOT APPLIED — written, proved and parked for Data by work order
+184 (Part 2), 27 September 2026** (`doc/briefs/184-parked-for-data.md`,
+item 1). Patch: `doc/ext_input_delay_tick.patch`; listed by
+`tools/version_check.py` under REPORTED_PATCHES (marker `OrionLayer, open
+fix 42.`, on one line at the one changed place).
+
+**What is missing.** `fields::Get_Input_()` returns 0 while a screen's
+input delay counts down (fields.cpp:161-164) and calls `ext::Tick` only
+after it (:167). So while a delay runs, a client hears nothing — no
+state, no field list, no picture. The research panel (`_Tech_Select_`)
+sets `Set_Input_Delay_(5)` before its loop (tech.cpp:306), and every idle
+pass waits `Release_Time_(2)`, 2 x 55 ms (tech.cpp:349-351, timer.cpp:15):
+the panel is built, drawn and faded in, and then the engine is silent for
+five passes. Measured on every one of 89 entries (work order 184 Part 1,
+`doc/briefs/184-research-timing.md`): exactly two snapshots between the
+click and the list — the switch (`Screen_Control_`'s own `Tick`,
+mox2.cpp:41, with an empty list) and the list itself, 505-594 ms later.
+That wait was 66-80 % of the time from the click to the HD panel; after
+work order 184's HD changes it is 81-88 % of it. OrionLayer cannot draw a
+list it has not received, nor one it has not validated (decision 33).
+
+42 call sites set a delay — 20 of one pass, 1 of two, 18 of three, 2 of
+five, 1 of twenty — and every one of those screens reaches a client that
+much later; the research panel is where it was measured.
+
+**What the patch changes.** One place, marked: during a delay,
+`Get_Input_` calls `ext::Tick` before it returns 0. Nothing else moves —
+the delay still returns 0 and still counts down, so the original ignores
+input exactly as long as before; a field activation that arrives
+meanwhile waits in `ext::g_pending_field`, which is consumed only after
+the delay, by the unchanged block below (:167-183); an injected click or
+key is queued through SDL as before and read when the screen next reads
+input. The existing `Tick` after the delay is untouched, so a call makes
+at most one `Tick`, as before.
+
+**The exact change.** `src/game/fields.cpp`, function
+`fields::Get_Input_` (starts at line 158): six lines added, **161-166**,
+before the delay's early return. The diff, as written by the scratch
+commit (the `diff --git` and `index` lines and the text git adds after
+`@@` are not part of it):
+
+```diff
+--- a/src/game/fields.cpp
++++ b/src/game/fields.cpp
+@@ -158,6 +158,12 @@
+     int16_t __cdecl Get_Input_() {
+         platform::Check_Exit_();
+ 
++#ifdef ORION2RE_EXT
++        // OrionLayer, open fix 42. The client hears the screen during its input delay too; the delay still returns 0 below.
++        if (_input_delay > 0) {
++            ext::Tick(MOX::_current_screen);
++        }
++#endif
+         if (_input_delay > 0) {
+             _input_delay--;
+             return 0;
+```
+
+**Proof.** In a scratch clone of `orionlayer-local` `4bf152e4` (never on
+`orionlayer-local`): the patch file applies with `patch -p1 --dry-run`
+and `patch -p1`, no offset, no fuzz, to a worktree at `4bf152e4`, and the
+applied `fields.cpp` equals the scratch commit's byte for byte; the whole
+engine built with the `linux-debug` preset (`ORION2RE_EXT=ON`, the
+vendored submodules copied from `~/orion2re`, no fetch) without an error,
+and the patched file compiles alone with the build's own command
+(`ninja -t commands`, `-fsyntax-only`); the control — `MOX::_current_scren`
+in the new block — was refused ("»_current_scren« ist kein Element von
+»MOX«").
+
+**Scratch results** (work order 184, evidence
+`~/orionlayer-fixtures/evidence/work_order_184/F42_*`, the virtual display,
+SAVE4, every start guarded and verified clean; OrionLayer with work order
+184's HD changes, so the difference is the fix alone):
+
+| | without fix 42 | with fix 42 |
+|---|---|---|
+| research entries, later, median / max — 1920 | 636 / 685 ms | **77 / 138 ms** |
+| — 2576 | 638 / 688 ms | **94 / 128 ms** |
+| — 3840 | 686 / 690 ms | **103 / 137 ms** |
+| first entry after start — 1920 / 2576 / 3840 | 637 / 679 / 1444 ms | 380 / 672 / 1423 ms |
+| the wait for the list (c), later, median | 549-561 ms, 2 snapshots | 0.8 ms — the list is in the snapshot right behind the switch |
+| the engine's OWN panel on the wire, later, median (range) | 659 ms (658-673) — with the list | 290 ms (177-351) — one idle pass after the list |
+| flash walk, 1920 (pre-game, the SAVE4 load, every in-game transition, the system window) | 29 transitions, 0 native frames | **29 transitions, 0 native frames** |
+| 182's stress, 1920 (100 Fleets, 100 colony, 200 popup cycles) | 1002 inputs, 0 lost, 0 dropped, 238 s | **1002 inputs, 0 lost, 0 dropped**, 236 s |
+| pacing, main menu (20 s) | 6.05/s, gap 164.6 / max 167.0 ms, CPU 2.6 % | 6.05/s, 164.7 / 166.9 ms, CPU 2.4 % |
+| pacing, galaxy map (20 s) | 18.20/s, 55.9 / 56.3 ms, CPU 5.4 % | 18.15/s, 55.8 / 56.4 ms, CPU 5.4 % |
+| pacing, colony screen (20 s) | 18.20/s, 55.9 / 56.2 ms, CPU 5.3 % | 18.15/s, 55.9 / 56.4 ms, CPU 5.2 % |
+| engine CPU over 10 research entries | 5.1 % | 5.1 % |
+
+**What a player sees with it.** The HD research panel ~550 ms sooner on
+every entry — and before the engine's own window would show it: the
+engine presents its panel only at the end of its first idle pass
+(`Mox_Sync_Update_` after `Release_Time_(2)`), and the wire carries what
+was PRESENTED, so the list arrives ~110-220 ms before the native picture
+(the table's last-but-one research row). HD draws from the validated
+list of the loop the engine is in, so this is not a picture of a screen
+the player cannot see; a click on a row in that interval is held in
+`g_pending_field` until the delay ends and then commits that row (open
+fix 25) — a wait of at most the remaining passes.
+
+**Side effects — observed and ruled out, and the risks named.**
+- *The snapshot rate* is unchanged in steady state (above): the fix adds
+  snapshots only while a delay counts down, one per pass of that screen's
+  own loop — the research panel's five passes add five snapshots over
+  550 ms, at the loop's own 9 a second. It does not raise the rate of any
+  screen; it removes a silence.
+- *A loop that does not pace its delay passes* would now send a snapshot
+  per pass without a pause (each ~300 KB with the framebuffer). None was
+  seen in the flash walk or the stress; the 42 sites were not read one by
+  one.
+- *A field list heard earlier*: a screen whose list is only half built
+  when its first delayed `Get_Input_` runs would now show that half-built
+  list to a client. `_Tech_Select_` builds its list completely before its
+  loop; the flash walk's 29 transitions (every HD screen) and the stress's
+  1002 inputs found no screen that hands over or holds on such a list —
+  and OrionLayer's hand-over gate (work order 180) holds a screen whose
+  list it cannot vouch for rather than showing the game's picture.
+- *Commands during a delay*: `ProcessInput` now runs during delay passes
+  too, so a command that acts at once (`MSG_SET_JOBS`, `MSG_SELECT_SHIP`)
+  is applied during a delay where it used to wait for its end. Both check
+  their own preconditions; none of 184's runs sent one.
+- *CPU*: unchanged within the measurement (5.1 % over ten entries on both).
+- *The first research entry after a start* no longer has a wait to hide
+  HD's first render in (work order 184's `core/researchprepare.py`): with
+  the fix it is 380 / 672 / 1423 ms against 637 / 679 / 1444 without —
+  never slower, but at 2576 and 3840 the gain is the later entries'. The
+  follow-up would be preparing the panel before the click (parked).
+
+**What it costs us without it.** Every research entry waits ~550 ms for
+nothing, and every screen with an input delay is heard 55-1100 ms after
+the engine is ready.
+
+**How to apply.** From `~/orion2re` on `orionlayer-local`, after fix 41:
+`patch -p1 < ~/orionlayerv3/doc/ext_input_delay_tick.patch`, then
+`ninja -C out/build/Linux/linux-debug`, and move the patch from
+`REPORTED_PATCHES` to `LOCAL_PATCHES` in `tools/version_check.py`. It comes
+back off with `patch -R -p1` and a rebuild.

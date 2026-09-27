@@ -47,6 +47,22 @@ references in `doc/v3_orion2re_index.md`.
   reconnect during one is worse than the silence: `accept()` also
   runs in `Tick()`, so the new connection sits there without even a
   HELLO_REPLY, which is the tell in the log.
+- **AND IT IS SILENT DURING A SCREEN'S INPUT DELAY** — work order 184,
+  27 September 2026. `Get_Input_` returns 0 on a pending
+  `Set_Input_Delay_` BEFORE it calls `ext::Tick` (fields.cpp:161-167), so
+  a screen that has built its list and drawn itself still sends nothing
+  until the delay has run out. The research panel's five passes of 110 ms
+  (tech.cpp:306, :349-351) were ~550 ms of silence on every one of 89
+  measured entries, 66-80 % of the time to the HD panel; the snapshot
+  before it — the switch, `Screen_Control_`'s own `Tick` (mox2.cpp:41) —
+  carries the empty list `Clear_Fields_` left. 42 call sites set a delay.
+  Open fix 42 (written, NOT APPLIED) ticks during it. Two more measured
+  facts from the same run: **the galaxy map is not the main menu** — the
+  map's loop runs at 55 ms (18.2 snapshots a second), the main menu's at
+  165 ms (6.05), and the first was once written as the second; and the
+  wire carries what was PRESENTED (`g_present_surface`, ext_api.cpp:708),
+  while a screen presents at the end of its first idle pass — so a list
+  can reach a client before the screen's own picture does.
 - **The home star name is not part of race selection.**
   `racesel.cpp` asks only for the ruler name and the banner; the game
   then returns, generates the galaxy, and asks for the home system on

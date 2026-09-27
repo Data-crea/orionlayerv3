@@ -234,8 +234,13 @@ LOCAL_PATCHES = {
 #: (work order 177), again since 34 moved up (work order 179), and again
 #: since work order 181 moved up open fixes 35-40, which work order 180
 #: had parked here — until 182 parked open fix 41 here, and again since
-#: work order 183 moved 41 up.
+#: work order 183 moved 41 up — until work order 184 parked open fix 42.
 REPORTED_PATCHES = {
+    # Work order 184: written, proved in scratch, parked — not applied.
+    "doc/ext_input_delay_tick.patch": (
+        os.path.join("src", "game", "fields.cpp"), "OrionLayer, open fix 42.",
+        "a screen heard during its input delay (the research panel's list "
+        "~550 ms sooner on every entry)"),
 }
 
 
@@ -268,6 +273,7 @@ FIX_NUMBERS = {
     "doc/ext_build_popup_queue.patch": (39,),
     "doc/ext_build_popup_lists.patch": (40,),
     "doc/ext_engine_window_hidden.patch": (41,),
+    "doc/ext_input_delay_tick.patch": (42,),
 }
 
 

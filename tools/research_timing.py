@@ -85,6 +85,9 @@ class Timer(flash_walk.Walk):
 
         from core.wire_protocol import MSG_FIELDS, MSG_VISUAL
         self.list_visual = None
+        #: Every visual of the current entry, (perf_counter, framebuffer),
+        #: from the click on — for the native floor (order part 1.4).
+        self.visual_log = None
         self._armed = False
 
         def keep(msg_type, flags, payload):
@@ -100,6 +103,10 @@ class Timer(flash_walk.Walk):
                 self._armed = True
             elif msg_type == MSG_VISUAL and self._armed:
                 self.list_visual, self._armed = payload, False
+            if msg_type == MSG_VISUAL and self.visual_log is not None \
+                    and len(self.visual_log) < 60:
+                self.visual_log.append((time.perf_counter(),
+                                        payload[:640 * 480]))
             return result
         client._handle_message = keep
         self.fixture = None
@@ -138,6 +145,10 @@ class Timer(flash_walk.Walk):
 
     def click_box(self, box_name):
         gm = self.app.dispatcher.screens["galaxy_map"]
+        # The map's boxes exist once it is ENTERED; right after a way back
+        # (`_home`) the wire may say map a frame before the HD map is.
+        self.wait(lambda: gm.box_rect(box_name) is not None,
+                  f"the galaxy map's {box_name} box")
         box = gm.box_rect(box_name)
         x, y, w, h = gm.layout.rect(box)
         pygame.event.clear()
@@ -160,6 +171,7 @@ class Timer(flash_walk.Walk):
         """One entry and its exit. Returns the timing record or None."""
         done = len(self.timing.entries)
         self.list_visual, self._armed = None, False
+        self.visual_log = []
         mark = self.trace.mark()
         self.click_box(box_name)
         ok = self.wait(lambda: len(self.timing.entries) > done,
@@ -171,6 +183,10 @@ class Timer(flash_walk.Walk):
         if rec is not None and self.list_visual is not None:
             rec["list_vs_settled_px"] = native_difference(
                 self.list_visual, self.raw.get(MSG_VISUAL_ID, b""))
+        if rec is not None:
+            rec["native"] = native_floor(rec, self.visual_log,
+                                         self.raw.get(MSG_VISUAL_ID, b""))
+        self.visual_log = None
         frames = self.trace.since(mark)
         summary = frametrace.summarise(frames, "research_change")
         if rec is not None:
@@ -180,6 +196,7 @@ class Timer(flash_walk.Walk):
             rec["waiting_frames"] = sum(
                 1 for f in frames[:summary["first_hd_frame"] or 0]
                 if f["screen"] == SCREEN_CHANGE)
+            nat = rec.get("native") or {}
             print(f"  {n:2d} {box_name:16s} "
                   f"{'first' if rec['first_after_start'] else 'later'} "
                   f"total {rec.get('total_ms', 0):7.1f} ms  "
@@ -188,7 +205,8 @@ class Timer(flash_walk.Walk):
                   f"d {rec['d_ms']:6.1f} d_ready "
                   f"{rec.get('d_ready_ms', 0):5.1f} e {rec.get('e_ms', 0):5.1f}"
                   f"  native {rec['native_frames']} held "
-                  f"{rec['held_frames']}")
+                  f"{rec['held_frames']}  engine's panel on the wire "
+                  f"{nat.get('ms_after_click')} ms")
         self.key(pygame.K_ESCAPE)
         self.wait(self.on_map, f"the map after entry {n}")
         self.frames(REST)
@@ -212,6 +230,36 @@ def native_difference(a, b):
     xs = [i % 640 for i in diff]
     ys = [i // 640 for i in diff]
     return {"pixels": len(diff), "box": [min(xs), min(ys), max(xs), max(ys)]}
+
+
+#: A framebuffer within this many pixels of the settled panel IS the
+#: panel: the loop redraws its selection box every pass, so a byte-for-
+#: byte test would never be met by some entries (Part 1: 16 of 25).
+NATIVE_TOLERANCE = 640 * 480 // 100
+
+
+def native_floor(rec, log, settled):
+    """When the engine's own panel was first on the wire, from the click.
+
+    `{"ms_after_t2": ..., "ms_after_click": ..., "diff_px": ...}` for the
+    first visual within `NATIVE_TOLERANCE` of the settled one, measured
+    against `rec`'s own t2 and (a)+(b); None if none was."""
+    import numpy as np
+    ref = np.frombuffer(settled[:640 * 480], np.uint8)
+    if ref.size != 640 * 480 or not log:
+        return None
+    for t, fb in log:
+        a = np.frombuffer(fb, np.uint8)
+        if a.size != ref.size:
+            continue
+        diff = int((a != ref).sum())
+        if diff <= NATIVE_TOLERANCE:
+            after_t2 = round((t - rec["t2_abs"]) * 1000, 1)
+            return {"ms_after_t2": after_t2,
+                    "ms_after_click": round(after_t2 + rec.get("a_ms", 0)
+                                            + rec.get("b_ms", 0), 1),
+                    "diff_px": diff}
+    return None
 
 
 def stats(values):
@@ -267,6 +315,8 @@ def main(argv):
             if not gameload.load_slot(t.run, SLOT)["loaded"]:
                 return 1
     ensure_on_map(t.run)
+    if not livesend.on_galaxy_map(t.run.state):
+        t._home()            # the flash walk's way back: the list's ESC field
     t.measuring = True
     t.wait(t.on_map, "the galaxy map")
     t.frames(REST)

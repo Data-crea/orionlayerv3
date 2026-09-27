@@ -2458,7 +2458,7 @@ files under `doc/` and are only summarised here.
 | | |
 |---|---|
 | Python | 32,960 lines across 111 modules — `find . -name '*.py'`, `__pycache__` excluded, the smoke test's 6,400 included. The previous figure here (21,642 across 94) was carried from an unstated method and could not be reproduced |
-| Smoke test | `python tools/smoke_test.py` — **382 checks**, headless, in `tools/smoke_suite/` since work order 162 (139 check modules, one group per screen plus a shared core; `tools/smoke_test.py` is the runner). **Two tiers since work order 158**: the bare command runs everything (~200 s here, measured 26 September 2026 — the 72 s this line said was before the rendering checks of 172-174); `--fast` runs the commit gate's 372 (~95 s here). `--screen <name>` prints only that screen's sentences and the core's and is NEVER a gate. See "The gate has two tiers" below |
+| Smoke test | `python tools/smoke_test.py` — **386 checks**, headless, in `tools/smoke_suite/` since work order 162 (141 check modules, one group per screen plus a shared core; `tools/smoke_test.py` is the runner). **Two tiers since work order 158**: the bare command runs everything (~200 s here, measured 26 September 2026 — the 72 s this line said was before the rendering checks of 172-174); `--fast` runs the commit gate's 376 (~95 s here). `--screen <name>` prints only that screen's sentences and the core's and is NEVER a gate. See "The gate has two tiers" below |
 | Assets | 170 MB (select_race 68, galaxy_map 51, shared 23, new_game 21, colony_summary 1) |
 | Screens in HD | 11 of ~20–22 (the Leaders screen, work order 167, built and not accepted; the GAME menu overlay, work order Stop 2, every dialog of the popup; colony summary draws list, sidebar, scan box and galaxy inset, and MOVES POPS — the first HD gesture that drives the game; planets, brief 101, lists, sorts, restricts and returns) |
 | Setup from clone | `python tools/setup.py` (deps via the system package manager) |
@@ -3561,6 +3561,37 @@ anywhere. Kept: `_black_hole_src.png`, which is the INPUT to
 ---
 
 ## What works
+
+### Opening the research screen — measured, then made faster, work order 184
+
+**Measured** (`core/entrytiming.py`, off unless `ORIONLAYER_ENTRY_TIMING`;
+`tools/research_timing.py`; findings in `doc/briefs/184-research-timing.md`):
+from the click on the galaxy map's research window to the first HD frame
+of change mode, 685 / 728 / 872 ms at 1920 / 2576 / 3840 (median of the
+later entries), the first entry after a start 1238 / 1658 / 3022 ms. ~550 ms
+of every entry is the ENGINE'S silence during `_Tech_Select_`'s input delay
+(open fix 42, below); the first entry's extra was HD's first render of the
+panel's HUD shapes; and every map frame under the panel paid the OLED floor
+lift's full-window additive fill.
+
+**Made faster, pixel-identical at 1920, 2576 and 3840**
+(`tools/research_render.py`, 18 renders byte for byte the ones before):
+- `core/hud/raster.py` builds a shape's masks and blurred bands once per
+  outline (`_geometry`, bounded by bytes, read-only arrays) — the panel's 19
+  shapes were 4 outlines (check 006i);
+- `core/researchprepare.py` draws the panel once off screen while the game
+  is silent, so the READY frame finds it cached (check 080l, with the
+  invalidations: resize, frame colour, glass, a moved box, other names; a
+  mod folder only at a start);
+- `screens/galaxy_map/floorlift.py` lifts the floor picture once per picture
+  and step instead of every frame (check 067 #14) — every map frame gains.
+
+Now 636 / 638 / 686 ms later and 637 / 679 / 1444 ms first (Xvfb); on
+Data's desktop at 2576x1371, 1610 → 679 ms first and 727 → 683 ms later.
+Startup unchanged (405 → 401 ms). What is left is the engine's: **open fix 42
+(written, NOT APPLIED, parked)** ticks during an input delay — measured in a
+scratch build, later entries 77 / 94 / 103 ms, flash walk and 182's stress
+green, pacing and CPU unchanged. `doc/briefs/184-progress.md`.
 
 ### The engine's own window never appears — open fix 41 APPLIED, work order 183
 

@@ -63,9 +63,12 @@ The research window's icon is the same field and measured the same (1920:
 **(c) took exactly two snapshots in every one of the 89 entries** — the
 switch snapshot and the list snapshot, 505-594 ms apart, with NOTHING in
 between. The "snapshot rate" in that phase is therefore not a rate at
-all: the engine sends nothing for ~550 ms (see below). On the map the rate
-is 6.06 a second (183); in the research loop it is 9 a second once the
-list is out (110 ms a pass).
+all: the engine sends nothing for ~550 ms (see below). On the galaxy map
+the rate is 18.2 a second (55.9 ms, measured in Part 2 — **corrected**:
+this line said "6.06 a second (183)", which is the MAIN MENU's rate,
+6.05 a second, 164.6 ms; the number was copied, not measured, and the
+first pacing probe of Part 2 caught it); in the research loop it is 9 a
+second once the list is out (110 ms a pass).
 
 **The real desktop agrees with Xvfb.** At Data's size the window manager
 granted 2576x1371, not 1432 (as `main.App._set_mode` records, work order
@@ -90,8 +93,9 @@ differs materially.
    has not received and must not draw one it has not validated (work
    order 130 C, decision 33).
 2. **The engine's switch, (b): 65-147 ms — mostly the engine's.** The
-   click is read at the map's next `Get_Input_` (its loop runs at 165 ms,
-   6 a second — so 0-165 ms, half of that on average), then
+   click is read at the map's next `Get_Input_` (its loop runs at 55 ms,
+   18 a second, measured in Part 2 — so 0-55 ms; this said 165 ms, the
+   main menu's loop, until Part 2 measured the map), then
    `Draw_Mini_Main_Screen_` and the switch. At 3840 the HD frame is itself
    ~150 ms, so the snapshot waits up to a frame before `poll` reads it:
    there (b) and (c) carry HD's frame time too.
@@ -172,7 +176,7 @@ delay.
 | | later entries | first entry | whose |
 |---|---|---|---|
 | (a) | 0.1 ms | 0.1 ms | ours, nothing to gain |
-| (b) | 79-147 ms | 67-144 ms | the engine's (map loop 165 ms, the switch), plus up to one HD frame at 3840 |
+| (b) | 79-147 ms | 67-144 ms | the engine's (the map's loop, 55 ms — corrected in Part 2 — and the switch), plus up to one HD frame at 3840 |
 | (c) | ~550 ms (66-80 %) | ~550 ms | **the engine's**: `Get_Input_` does not serialise during an input delay — an engine change (Part 2: an open fix, parked) |
 | (d) / d_ready | 2-4 ms | 2 ms (the first render is in (e)) | ours |
 | (e) | 40-150 ms | 0.6-2.3 s | **ours**: the HUD panels built on first use (research screen), the floor lift on every map frame (galaxy map under it) |

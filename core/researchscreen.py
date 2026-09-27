@@ -43,7 +43,7 @@ import logging
 import pygame
 
 from core import billtext, research, researchlist, researchnative
-from core import researchframe, researchpanel, researchstate
+from core import researchframe, researchpanel, researchprepare, researchstate
 from core.hud import blocks as hud
 from core import researchtechlist
 from core import technames
@@ -178,6 +178,7 @@ class ResearchPanelScreen(ResearchPopupsMixin, ScreenBase):
         self._sent = False
         self._left = False
         self._empty_frames = 0
+        self._prepared = False
         self._techlist.close()
         self._dress_boxes()
         self.update(game_state)
@@ -286,6 +287,8 @@ class ResearchPanelScreen(ResearchPopupsMixin, ScreenBase):
             log.warning("research %s waited %d frames for the game's "
                         "field list and it never came — handing over",
                         self.MODE, self._empty_frames)
+        if self._state == WAITING:
+            researchprepare.prepare(self)    # off screen (work order 184)
 
     def _suffix_for(self, game_state):
         """The cost unit for the language the game is running in.

@@ -92,3 +92,130 @@ Evidence root: `~/orionlayer-fixtures/evidence/work_order_184/`.
    field 9, which is safe). The harness now replaces `App._connect` so it
    CANNOT connect, and asserts it; the engine was stopped by PID and the
    guards verified before anything else ran.
+
+## Part 2 — faster where the measurement says it pays — **DONE: three HD changes, pixel-identical; open fix 42 written, proved and parked**
+
+The instrument first: `tools/research_render.py` (new) renders change mode
+offline from the raw wire payloads Part 1 recorded (`fixture_36`, in the
+evidence folder — the player's data), the real `main.App` with the clock
+frozen (the map animates) and its `_connect` replaced so it CANNOT reach an
+engine; one process per size (the caches are module-global), the path a
+cache has to survive (first entry, leave, second entry, resize to each other
+size and back). Baseline `render_before`: 18 renders, every render of one
+size equal to every other. Each change below was measured with it and with
+`tools/research_timing.py` as in Part 1.
+
+1. **The geometry memo** (`core/hud/raster.py`, `_geometry`): a shape's
+   coverage masks and blurred bands depend on the outline and widths only,
+   and the research panel's 19 shapes were 4 outlines — so they are built
+   once per outline and every panel composes its own colours and glass over
+   them, as before. Read-only arrays; bounded by bytes (96 MB: the 3840
+   frame's outline is ~70 MB and is used twice in one frame). First READY
+   frame offline: 577 → 349 ms (1920), 979 → 586 (2576), 2322 → 1521 (3840).
+   Renders identical. **Check 006i** (new). `core/hud/blocks.py` is not
+   touched (it stands at 300 code lines).
+2. **Prepared while the game is silent** (`core/researchprepare.py`, new;
+   two lines in `core/researchscreen.py`, which stays at 300 code lines): in
+   the WAITING state the screen draws its panel once onto a scratch surface
+   — the entries are the unvalidated reconstruction, and nothing of it is
+   shown (080h's with/without-overlay pixel comparison still passes) — so
+   the READY frame finds the HUD panels and glass cached. Offline, with a
+   wait fed first: the READY frame 46 / 74 / 154 ms, building 1 shape (the
+   exit button, whose size only the list gives). Renders identical.
+   **Check 080l** (new): after a wait the READY frame builds no HUD panel
+   and equals the frame drawn cold, byte for byte, as it is and after each
+   of a resize (2576), the frame colour, the glass slider, a box somewhere
+   else, other names (language / text resolver) — each done while the cache
+   is warm; once per visit; a mod folder can change only at a start
+   (`usermod.init` has one caller) and the preparation writes nothing.
+3. **The floor lift once per picture** (`screens/galaxy_map/floorlift.py`,
+   `_lifted`): Data's `floor_lift: light` made every map frame add a colour
+   to the whole window (33 / 59 / 130 ms); the picture is opaque, so the
+   lifted copy blitted is the old blit + add, byte for byte. READY frame
+   offline 14 / 17 / 28 ms first, 9 / 12 / 20 ms later (was 41 / 69 / 148).
+   Every map frame gains. **Check 067 #14** (new) holds the equality, one
+   copy per picture and step, the rebuild for a new step or a new picture of
+   the same size, nothing for off; check 067 #13's assertions changed to the
+   new shape (one adding place, `apply`, per floor path, before the stars).
+
+**Pixel identity, final tree** (`render_after`): all 18 renders identical to
+`render_before` — 1920 `0583eaab…`, 2576 `4065bed7…`, 3840 `2ac5711d…`
+(sha256 of the RGB bytes) — and the 1920 PNG looked at: the whole panel over
+the map. **No difference to explain.**
+
+**Live, after** (Xvfb, engine 81717, guards `184_P2_1920/2576/3840`; the real
+desktop 20:19:58-20:20:34, engine 82183, guard `184_P2_real`, same reason as
+Part 1, granted 2576x1371). Median / maximum, ms:
+
+| | first entry | later entries | (e) later | native frames |
+|---|---|---|---|---|
+| 1920 | 1238 → **637** | 685 / 720 → **636 / 685** | 40 → 7 | 0 |
+| 2576 | 1658 → **679** | 728 / 794 → **638 / 688** | 66 → 10 | 0 |
+| 3840 | 3022 → **1444** | 872 / 880 → **686 / 690** | 149 → 19 | 0 |
+| real desktop 2576x1371 | 1610 → **679** | 727 / 792 → **683 / 684** | 69 → 17 | 0 |
+
+At 3840 the preparation (~1.3 s) outlasts the engine's ~550 ms silence, so
+(c) stretches to 1.3 s on the first entry — still half of what it was
+(parked item 4). The later entries' remaining time is the engine's: (b)
+64-113 ms and (c) ~550 ms.
+
+**Startup**: `main.App()` plus its first three frames, standalone, ten runs
+each from scratch copies with fresh bytecode: median 405 ms before, 401 ms
+after — unchanged. (A first comparison said 537 → 406 ms: the "before"
+copy's `.pyc` files were stale after `git checkout` and `-B` recompiled on
+every run. Measured again with both caches rebuilt.)
+
+**The hand-over wait (c)**: it is not the 180 gate — change mode's WAITING
+state (166 A) keeps the map, the gate held no frame in any of the 255 timed
+entries of this order, 0 native frames — and it
+waits for nothing it does not need: the list is serialised on the SIXTH
+`Get_Input_` of the research loop (the input delay), and HD needs exactly
+that list to validate the panel (decision 33). No condition on the HD side
+to tighten; the silence is the engine's. **The flash check and 182's stress
+stay green** (below).
+
+**The engine side — open fix 42, written, proved, parked** (entry 42 in
+`doc/orion2re_open_fixes.md`, `doc/ext_input_delay_tick.patch`, reported by
+`version_check`, **check 090r #5** new; parked item 1). `Get_Input_` ticks
+during an input delay too; six lines, one marker. Scratch clone of
+`orionlayer-local` `4bf152e4` (`$SCRATCH/orion2re_184`, commit `21a37ffb`,
+never on the branch), vendors copied, `cmake --preset linux-debug
+-DORION2RE_EXT=ON`, `ninja orion2re`: built, exit 0. The patch FILE applied
+to a worktree at `4bf152e4` with `patch -p1 --dry-run` and `patch -p1`, no
+offset, no fuzz, `fields.cpp` byte for byte the scratch commit's; compiled
+alone with the build's own command (`ninja -t commands`, `-fsyntax-only`);
+the control `MOX::_current_scren` refused ("»_current_scren« ist kein
+Element von »MOX«"). (A first attempt read the command from
+`compile_commands.json`, which lists only vendor files, and ran an empty
+script — its "OK" was discarded, not reported.) Measured with it (engines
+82309, 82722, 84560, all this session's, guards `184_F42_*` verified): later
+entries **77 / 94 / 103 ms** (from 636 / 638 / 686), (c) 0.8 ms; the
+engine's own panel on the wire ~290 ms after the click (one idle pass after
+the list); flash walk 29 transitions, 0 native frames; stress 1002 inputs,
+0 lost, 0 dropped; pacing main menu 6.05/s (164.7 ms), map 18.15/s, colony
+18.15/s against 6.05 / 18.20 / 18.20 without; engine CPU over ten entries
+5.1 % both ways.
+
+**The same runs on the normal engine with the HD changes** (engine 83146,
+guard `184_P2_flash`): flash walk at 1920, 29 transitions, **0 native
+frames**; stress at 1920, 400 cycles, **1002 inputs, 0 lost, 0 dropped**
+(238 s).
+
+**Corrected in this part**: `184-research-timing.md` said the galaxy map
+runs at 6.06 snapshots a second and 165 ms — the main menu's figures, copied
+from 183 and not measured. The map is 18.2 a second, 55.9 ms (the pacing
+probe); the brief says so where it said the other, marked as corrected, and
+fundament part 09 carries the fact now.
+
+**Guards, one lesson**: after the 3840 run MOX.SET's load byte came back
+from the 2576 guard — which had been snapshotted AFTER the load, so its
+"restore" put the loaded state back; the 1920 guard (taken before the engine
+existed) then showed the change and restored the original, verified
+identical, and against this order's first guard (`184_P1_1920`) only the
+tree's own changes differ. From then on only a guard taken before its engine
+was restored from.
+
+**Checks 382 → 386** (006i, 080l, 067 #14, 090r #5), each shown red by a
+mutation in a copy of the tree (the read-only flag removed; the preparation
+not called: "('waiting', False)"; the lifted copy never reused: "the lift was
+redone for a frame"; fix 42's status line changed) and green in this tree.
