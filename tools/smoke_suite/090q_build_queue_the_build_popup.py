@@ -6,7 +6,7 @@
 # import this file; it is not a module.
 #
 # The 4 check(s) it holds:
-#   - screen 25 is claimed only with open fixes 35, 39 and 40; a list the rows contradict hands over, a box over it is modal
+#   - screen 25 is claimed only with open fixes 35, 38, 39 and 40; a list the rows contradict hands over, a box over it is modal
 #   - on every recorded popup the lists line up with the rows the game built, and every queued item has its numbers
 #   - the popup sends a row's own field, nothing for a separator, and the Auto Build radio by an injected click
 #   - the build popup draws at 1920, 2576 and 3840 from a recorded popup, and every mark it carries is named in its module and the status document
@@ -54,6 +54,16 @@ _bq_d.update_from_game(_bq_state(_bq_stops[0], blocks=False))
 assert _bq_d.use_original, ("without fixes 39/40 the game's picture stands",
                             _bq_d.active_name, _bq_d.overlay_name,
                             _bq_d._locked_screen)
+# Each of the four blocks the engine writes on 25 is required on its own
+# (work order 181: 38 joined, for the summary's "Turn(s) Left").
+assert _bq_w.BLOCKS == ("colony_screen", "colony_product", "build_queue",
+                        "build_lists")
+for _bq_k in _bq_w.BLOCKS:
+    _bq_one = _bq_state(_bq_stops[0])
+    setattr(_bq_one, _bq_k, None)
+    assert not _bq_w.claims(_bq_one), f"claimed without {_bq_k}"
+    _bq_d.update_from_game(_bq_one)
+    assert _bq_d.use_original, f"without {_bq_k} the game's picture stands"
 _bq_d.update_from_game(_bq_state(_bq_stops[0]))
 assert _bq_d.active_name == "build_queue"
 _bq_s = _bq_d.active
@@ -70,7 +80,7 @@ _bq_box.fields = [f for f in _bq_box.fields if (f.x, f.y) != (493, 447)]
 _bq_s.update(_bq_box)
 assert _bq_s._view.state == _bq_w.GAME_BOX and _bq_s.handover_is_modal()
 _bq_d.switch_to("main_menu")
-ok("screen 25 is claimed only with open fixes 35, 39 and 40; a list the rows "
+ok("screen 25 is claimed only with open fixes 35, 38, 39 and 40; a list the rows "
    "contradict hands over, a box over it is modal")
 
 # 2. THE LISTS ARE THE GAME'S, ROW FOR ROW.

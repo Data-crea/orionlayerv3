@@ -28,6 +28,7 @@ E_BLOCKADED, E_PLAGUE, E_POP_BOOM = 202, 415, 426
 E_POP = 424                                         # "Pop %d,%03d k (%+dk)"
 E_TURNS = 32                                        # "%d turn(s)"
 E_AUTOBUILD = 0x0BD
+E_NO_FARMING = 387                                  # ESTR_NO_FARMING
 PRESET_LABEL = "Auto Build Queue %d"                # colony_main.cpp:966
 
 #: colsysdi.cpp:103-118, indexed by PLANET_SIZE / _GRAVITY / MINERAL.
@@ -75,19 +76,23 @@ class Words:
                     planet_name)
 
     def status(self, view, player_num, state):
-        """The status word, "" for none, or None where the answer needs
-        open fix 37 and it is absent (HD STATE — nothing drawn)."""
+        """The status word, "" for none: Blockaded, else Plague, else Pop
+        Boom (colony_main.cpp:831-853) — the last two from open fix 37."""
         if view.blockaded(player_num):
             return self.e(E_BLOCKADED)
-        events = view.events(state)
-        if events is None:
-            return None
-        plague, boom = events
+        plague, boom = view.events(state)
         if plague:
             return self.e(E_PLAGUE)
         if boom:
             return self.e(E_POP_BOOM)
         return ""
+
+    def no_farming(self, view):
+        """E 387 over the farmers' row when `max_farms` is 0 — mode 0 of
+        `Do_Colony_Info_Pop_Stuff_For_Pop_` (coldraw.cpp:315-321), which
+        `Draw_Colony_Info_Pop_For_` calls for this screen too (colony.cpp:
+        1332-1345); "" otherwise."""
+        return self.e(E_NO_FARMING) if view.colony.max_farms == 0 else ""
 
     def pop(self, view):
         return _fmt(self.e(E_POP), *view.pop_line())

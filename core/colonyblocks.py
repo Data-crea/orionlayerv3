@@ -1,4 +1,5 @@
-"""Open fixes 35-40's blocks in the snapshot — work order 180 B and C.
+"""Open fixes 35-40's blocks in the snapshot — work order 180 B and C
+(applied on orionlayer-local by work order 181).
 
 Split out of `core/game_state.py` so that file stays under the 300-line
 guideline; `parse_state` calls `parse` right after the INFS block.

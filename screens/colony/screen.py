@@ -4,10 +4,10 @@ The original's `COLONY::Colony_Screen_` (colony_main.cpp:238-378) in the
 HUD style. Inventory: `doc/briefs/180-colony-inventory.md`.
 
 **IT CLAIMS ITS ID ONLY WHEN THE GAME SAYS WHICH COLONY IT SHOWS**
-(`claims`, open fix 35's "COLS" block, NOT APPLIED on the engine this
-order leaves behind). Without the block the dispatcher does not give id 1
-to this screen, and the game's own picture stands, exactly as before —
-"HD must not guess the colony". With it, the first tick at id 1 still
+(`claims`: open fix 35's "COLS" block with 36-38's, all APPLIED by work
+order 181). Without them the dispatcher does not give id 1 to this screen,
+and the game's own picture stands, exactly as before — "HD must not guess
+the colony". With them, the first tick at id 1 still
 carries the previous colony's handle, so the screen WAITS until the
 star/orbit pair and the handle agree, and the hand-over gate (180 A2)
 holds the last HD frame meanwhile.

@@ -175,3 +175,122 @@ a tree missing any one fix is reported by name; 35-40 applied and
 documented. Each shown red by a mutation (the fundament line without 40;
 fix 39's marker broken over two lines again; a marker in version_check
 that no longer matches) and green restored, run with `python -B`.
+
+## Part 3 — activate and accept both screens live — **DONE**
+
+**No flag.** With the blocks on the wire both screens claimed their ids by
+themselves from the first recording on (Part 2's `P2_record`).
+
+**Wire against the fixtures:** Part 2 — layout, sizes and (on the nine
+shared stops) every byte equal `tools/fixtures/colony_blocks_180.json`;
+nothing to correct in the fixture or `core/colonyblocks.py`.
+
+**The driver:** `tools/colony_accept.py` (new; `colony_live.Live` with a
+per-frame agreement count), evidence `~/orionlayer-fixtures/evidence/
+work_order_181/`. Engines, each started by this session with
+`tools/engine_start.py` and closed with SIGTERM: 100458 (guard `181_p3_a`,
+runs `P3_try1_1920x1080` and a first `--orders` try that crashed in its own
+report — its pictures kept apart in `P3_orders_1920x1080/
+first_try_crashed_0858/`), 102128 (`181_p3_b`, `P3_orders_1920x1080`, and a
+2576 run kept as `P3_orders_2576x1432_second_on_engine_102128` because the
+system window was still open from the 1920 run), 103384 (`181_p3_c`, the
+clean `P3_orders_2576x1432`), 103561 (`181_p3_d`,
+`P3_pictures_3840x2160_cancel_lost`, below), 105528 (`181_p3_e`,
+`P3_pictures_3840x2160`). SAVE4 loaded as scratch in every one, nothing
+saved. **Every guard:** MOX.SET's offset 21, 10 → 3 (`cmp -l`: `22 12 3`,
+the load's slot byte), restored, then identical; SAVE1-11 identical in
+every run (SAVE8 `ab70cc9a…`). The desktop was in active use during these
+runs (idle 89 ms at 08:56); nothing foreign was running.
+
+**Colony screen (1), every way the scratch save offers:**
+
+| way in / out | result |
+|---|---|
+| galaxy map: home star → system window → the colony's planet (HD's own disc click), ESC back | Sol IV, HD and native the same colony |
+| Colonies screen: row name (the game's field through `livesend` — the HD Colonies screen offers no such click), ESC back | Ixion II |
+| `<` and `>`, twice each way | 17 → 15 → 17 → 19 → 17 (Ixion II, Kif II, …); HD follows every switch |
+| L → Leaders (29), ESC back | both HD, back on the same colony |
+| Info screen / Turn Summary jump | **not reachable**: open fix 33 (the engine goes to the map; `info.cpp` unchanged since 176 measured it — the series touched only `ext_api.cpp`) |
+| turn-start reports, turn summary, colony landing | **not reachable** without TURN, which writes SAVE10 |
+
+**The handle/pair agreement, at every frame HD drew the colony screen:**
+406 frames at 1920, 395 at 2576, 267 at 3840 — the colony HD drew was the
+engine's handle in every one, 0 disagreeing, including the frames right
+after each switch (the gate holds 1-3 snapshots per entry until the pair
+and the handle agree).
+
+**Elements against the native screen** (side-by-sides below): title, pop
+line, system display, production rows, morale, job rows, the production
+window (name, **bar and turns — fix 38**: Housing 1 turn, Colony Base 6
+turns, as native), the building LIST (DEVIATION `building_list`), units,
+buttons. **Status word:** Blockaded none; CEVT answered plague 0 / pop boom
+0 on every colony walked (six) — **Plague and Pop Boom are not reachable
+in SAVE4**, so the two words were seen only in the smoke check's forced
+states. **Found and fixed:** the original prints **"No Farming"** centred
+in the farmers' row when `max_farms` is 0 on this screen too
+(`Draw_Colony_Info_Pop_For_` → mode 0 of `coldraw.cpp:315-321`); 180's
+colony screen did not. Now drawn (`coldraw._no_farming`, `colwords.
+no_farming`), seen on Kif II beside the native at 3840.
+
+**Pop move** (Ixion II, colony 17): a worker to scientists through the HD
+job rows, on the wire; moved back; `pop[]` restored word for word — at
+1920 and at 2576.
+
+**Build popup (25):** both lists against the native popup — order and
+names identical (Trade Goods, Housing, Research Lab, Soil Enrichment, Star
+Base; Freighter Fleet … Spy with its separators), the summary's numbers the
+native print (Colony Base 200 / 0 / 10, Turn(s) Left 5), the queue
+identical, queued buildings bright as in the native. Corsair and Paladin
+are dim natively and bright in HD — DEVIATION `ship_row_dim`, as marked.
+**Auto Build:** BLDQ 0, COLS `autobuild_enabled` 0, HD's radio unlit, the
+native radio unlit. **The queue under edit (fix 39):** Soil Enrichment (37)
+selected — in BLDQ and drawn in HD's queue while the colony's `producing[]`
+on the wire was still the old one; a ship (Colony Base -15) selected — the
+queue moved; **Cancel — `producing[]` exactly as before.** **One real
+order:** 37 added and **OK** — `producing[]` `[11, 11, 35, 40, 37, -1, -1]`
+on the wire, and the game's own popup reopened shows Soil Enrichment
+queued; then taken back the same way (the row toggles, colbldg.cpp:
+1654-1672) and OK — `producing[]` as before and **the colony record
+byte-identical** to before the add. Both sizes. The save file was never
+written (guards).
+
+**Flash — every transition into and out of 1 and 25, at 1920 and 2576:
+0 native frames** (trace and pixels agreeing), all settled, 0 fallbacks —
+19 transitions at 1920, 21 at 2576 (plus the 3840 walk, 0 as well). **Added
+to 180's replay set:** `tools/fixtures/transitions_180.json` regenerated
+from 180's six run folders plus `P3_orders_{1920x1080,2576x1432}` — all
+158 old transitions reproduced byte for byte, 40 added (198). 090p #7
+holds the twelve ways at both sizes in that set.
+
+**Comparison images:** `compare/` — 35 live side-by-sides (native | HD,
+one frame) at 1920, 2576 and 3840 (Sol IV from the map, Kif II, Ixion II
+and the other switch targets, the pop move, the popup, the queue under
+edit, after OK, taken back), and 39 offline side-by-sides of the live
+recording `P2_record` (four colonies, their `<` neighbours, three popups)
+at all three sizes.
+
+**A click lost once, at 3840** (`P3_pictures_3840x2160_cancel_lost`): the
+popup's Cancel did nothing for 30 s and the walk then ran one step behind.
+The trace shows the client's field list EMPTY for exactly that frame (snap
+1663: 45 fields → 0 → 45) — a one-frame FIELD_LIST of 0 from the engine
+while the popup rebuilt its fields; the activation most likely landed in
+that rebuild. **Not reproduced** on a fresh engine (every transition
+settled). Cause not established; parked with the evidence.
+
+**Markings.** HD STATE `status_word`, `production_bar` and `turns` are
+gone — from `coldraw`, `colwire`, `colwords`, `layout.json` (18 → 16
+marks), the status document and entries 37/38 — with the state itself:
+the colony screen now claims id 1 only with all four blocks the engine
+writes there (`colwire.BLOCKS`: COLS, CBLD, CEVT, CPRD), the popup only
+with its four (`bqwire.BLOCKS`: COLS, CPRD, BLDQ, BLDL; 38 joined for
+"Turn(s) Left"), and a CEVT or CPRD that does not describe the shown
+colony is waited for, never drawn. **Recorded as required:** 090p #5
+asserted "without open fix 37 the status word is an HD STATE: nothing" —
+that state no longer exists, so the assertion was replaced (the word for
+each of CEVT's answers, none included) and the claim check (#3) now
+proves each of the four blocks is required on its own; 090q #1 the same
+for the popup's four. No check was removed. DEVIATION `building_list`,
+`production_bar`, `ship_row_dim`, `label_number`, … and UNVERIFIED
+`building_placement` stay.
+
+**Checks: 374 → 375** (090p #7).

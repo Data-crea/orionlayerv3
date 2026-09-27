@@ -15,8 +15,6 @@
     "deviation_building_list": "The colony's buildings are a list of names in a panel; the original draws each building's picture on its cell of the scene.",
     "deviation_change_by_field": "CHANGE is sent as its FIELD [4], never as the key C: [5] (recalculate, and Do_Cheats_ with _cheats) is built first with the same hotkey and a key resolves to the first match (fields.cpp:2608-2613). Decision 39's key-first order does not apply to a shadowed key.",
     "deviation_hd_font": "Text in the HD font at a size from the native line pitch, fitted to the original's width (the Leaders screen's rule).",
-    "hd_state_status_word": "Plague and Pop Boom need open fix 37 (EVENTS::_event_data is not on the wire); without it nothing is drawn where the word would be. Blockaded is the star's bit and always drawn.",
-    "hd_state_production_bar": "The production bar and the turn count need open fix 38 (the product's cost is a source table and config); without it the window names the product and draws no bar and no turns.",
     "omission_unit_sprites": "The unit strip's troop and tank pictures are the player's art and not extracted; HD prints the counts the original prints beside them (':%d').",
     "omission_officer_portrait": "The officer's portrait and frame (C_Anims_ 30, 33, colony.cpp:714-717) are not drawn; the name or the ETA is.",
     "omission_product_picture": "The picture of what the colony builds (Draw_Info_Build_, colony_main.cpp:903-950) is the player's art; not drawn.",

@@ -1,8 +1,8 @@
 """The build popup (wire id 25) — work order 180 C.
 
 `COLBLDG::Build_Queue_Popup_` in the HUD style; see `bqwire` for when it
-claims its id (open fixes 35, 39, 40 — none applied on the engine this
-order leaves behind) and `bqdraw` for what it draws.
+claims its id (open fixes 35, 38, 39, 40 — applied by work order 181) and
+`bqdraw` for what it draws.
 
 **SELECTING AN ITEM IS AN ORDER** (the order's words), so nothing goes out
 but what the player clicks or types, each field found in the list on the

@@ -21,8 +21,6 @@ and each in `layout.json` `marks`, the status document and check 090p:
   DEVIATION      `building_list` — the colony's buildings are a list of
                  names; UNVERIFIED `building_placement` — open fix 36's
                  grid is read and not placed (see `_buildings`)
-  HD STATE       `status_word`, `production_bar`, `turns` — drawn as
-                 nothing while fixes 37 and 38 are absent
   OMISSION       `unit_sprites`, `officer_portrait`, `product_picture`,
                  `hover_strip`, `roads`, `planet_description` (the box
                  `_drawing_display` 2 shows, colony.cpp:1861-1866) — original art this project does
@@ -85,6 +83,7 @@ def draw(surface, screen, view, state, words, names):
     _system(surface, screen, view, state, words)
     _production(surface, screen, view)
     _jobs(surface, screen, view, state)
+    _no_farming(surface, screen, view, words)
     _build(surface, screen, view, state, words, names)
     _buildings(surface, screen, view, state, names)
     _units(surface, screen, view, words)
@@ -109,8 +108,8 @@ def _title_line(surface, screen, view, state, words, names):
     name = colonyrows.planet_name(view.colony, names.planets, names.stars)
     text(surface, screen, words.title(view, name), *geom.TITLE_CENTRE, 380,
          "title", "title", align="center")
+    # Blockaded, Plague or Pop Boom (open fix 37), or nothing at all.
     status = words.status(view, getattr(state, "player_num", 0), state)
-    # HD STATE `status_word`: None is "open fix 37 absent" — nothing drawn.
     text(surface, screen, status, *geom.STATUS_AT, 120, "value",
          "negative")
     text(surface, screen, words.pop(view), *geom.POP_RIGHT, 128, "value",
@@ -226,6 +225,16 @@ def _jobs(surface, screen, view, state):
             hud.outline(surface, rect, screen.layout.scale)
 
 
+def _no_farming(surface, screen, view, words):
+    """"No Farming", centred in the farmers' row: `Squeeze_Print_Paragraph_(
+    left_x, top_y + 5, right_x - left_x, 28, E 387, 2)` with the row's
+    (310, 62)-(510) (colony.cpp:1332-1345, coldraw.cpp:315-321) — 2 is the
+    centred mode. Found missing by work order 181's side-by-side."""
+    x1, y1, x2, _y2 = geom.JOB_ROWS[0]
+    text(surface, screen, words.no_farming(view), (x1 + 510) // 2, y1 + 5,
+         510 - x1, "value", "label", align="center")
+
+
 def _build(surface, screen, view, state, words, names):
     """The production window: name, bar, turns, the autobuild label."""
     layout = screen.layout
@@ -236,10 +245,7 @@ def _build(surface, screen, view, state, words, names):
          "value", align="center")
     text(surface, screen, words.autobuild(view), *geom.AUTOBUILD_CENTRE,
          110, "small", "label", align="center")
-    got = view.product(state)
-    if got is None:
-        return layout        # HD STATE `production_bar`, `turns`
-    cost, turns = got
+    cost, turns = view.product(state)        # open fix 38
     spent = cost if view.colony.bought_outright else \
         view.colony.production_spent
     # DEVIATION `production_bar`: the original draws two frames of its art

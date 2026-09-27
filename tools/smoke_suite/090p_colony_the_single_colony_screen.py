@@ -5,13 +5,14 @@
 # tools/smoke_suite/, in file-name order and in ONE namespace. Do not
 # import this file; it is not a module.
 #
-# The 6 check(s) it holds:
+# The 7 check(s) it holds:
 #   - open fixes 35-40's blocks, as a scratch engine wrote them, parse whole; a tail cut short leaves every block None
 #   - CRUNCH, TOGGLE and the full-screen field [0] are refused on screens 1 and 25, and every send there goes through that one guard
-#   - screen 1 is claimed only with open fix 35: without it the game's picture, as before; with it WAITING until the pair and the handle agree, a box over it modal
+#   - screen 1 is claimed only with open fixes 35-38's four blocks: without any of them the game's picture, as before; with them WAITING until the pair, the handle and CEVT/CPRD agree, a box over it modal
 #   - the colony screen's geometry is the source's: building cells on the live fields, the help table, _building_cr copied exactly
-#   - the colony screen's words by the source's own ids, the status word an HD STATE without fix 37, and the autobuild label's encodings
+#   - the colony screen's words by the source's own ids, the status word for each of open fix 37's answers, and the autobuild label's encodings
 #   - the colony screen draws at 1920, 2576 and 3840 from a READY snapshot, and every mark it carries is named in its module and the status document
+#   - every way into and out of screens 1 and 25 the scratch save offers is in the replayed set at 1920 and 2576, each reaching its screen
 
 
 # ── THE SINGLE-COLONY SCREEN (work order 180 B) ─────────────────
@@ -124,6 +125,10 @@ def _cs_state(handle=0, fields=True, blocks=True):
         gs.colony_screen = {"star": 0, "orbit": 0, "colony": handle,
                             "drawing_display": 0, "field_mode": 0,
                             "autobuild_enabled": 0}
+        gs.colony_placement = {"grid": [[0] * 6 for _ in range(6)],
+                               "satellites": [-1] * 10}
+        gs.colony_events = {"plague": False, "pop_boom": False}
+        gs.colony_product = {"producing": 1, "cost": 200, "turns": 5}
     if fields:
         gs.fields = [_cs_gsm.FieldInfo() for _ in range(3)]
         for _i, (_r, _t) in enumerate((((556, 459, 628, 478), 0),
@@ -139,7 +144,16 @@ from core.structs import star as _lm_star_mod
 # 3. THE CLAIM. Without open fix 35 id 1 is no HD screen's — the game's
 # picture, the path it always took; with it the screen WAITS on the first
 # tick's stale handle (the gate holds), and a box over it is a modal.
+# Since work order 181 applied 35-40 the claim asks for ALL FOUR blocks the
+# engine writes on 1 — 35's COLS, 36's CBLD, 37's CEVT, 38's CPRD — each on
+# its own, so no colony screen is drawn with a hole where a value would be.
 assert not _cs_wire.claims(_cs_state(blocks=False))
+assert _cs_wire.BLOCKS == ("colony_screen", "colony_placement",
+                           "colony_events", "colony_product")
+for _cs_k in _cs_wire.BLOCKS:
+    _cs_one = _cs_state()
+    setattr(_cs_one, _cs_k, None)
+    assert not _cs_wire.claims(_cs_one), f"claimed without {_cs_k}"
 _cs_d = app.dispatcher
 _cs_d.update_from_game(_cs_state(blocks=False))
 assert _cs_d.use_original and _cs_d.active is None, \
@@ -152,13 +166,23 @@ assert _cs_scr._view.draws and not _cs_scr.wants_original()
 _cs_scr.update(_cs_state(handle=5))
 assert _cs_scr._view.state == _cs_wire.WAITING and _cs_scr.wants_original() \
     and not _cs_scr.handover_is_modal(), "a stale handle is waited for"
+_cs_stale = _cs_state()
+_cs_stale.colony_product = {"producing": 7, "cost": 90, "turns": 2}
+_cs_scr.update(_cs_stale)
+assert _cs_scr._view.state == _cs_wire.WAITING, \
+    "a CPRD for another product than the colony's is waited for, not drawn"
+_cs_stale = _cs_state()
+_cs_stale.colony_events = {"plague": None, "pop_boom": None}
+_cs_scr.update(_cs_stale)
+assert _cs_scr._view.state == _cs_wire.WAITING, \
+    "CEVT's 'not a colony' answer is waited for, not drawn"
 _cs_scr.update(_cs_state(fields=False))
 assert _cs_scr._view.state == _cs_wire.GAME_BOX and \
     _cs_scr.handover_is_modal(), "a box over the screen is the net's"
 _cs_d.switch_to("main_menu")
-ok("screen 1 is claimed only with open fix 35: without it the game's picture, "
-   "as before; with it WAITING until the pair and the handle agree, a box "
-   "over it modal")
+ok("screen 1 is claimed only with open fixes 35-38's four blocks: without any "
+   "of them the game's picture, as before; with them WAITING until the pair, "
+   "the handle and CEVT/CPRD agree, a box over it modal")
 
 # 4. GEOMETRY IS THE SOURCE'S. The building cells of every recorded grid
 # land on the live building fields (the second source for fix 36's
@@ -211,8 +235,11 @@ _cs_v.colony = _cs_ns.SimpleNamespace(**{**_cs_v.colony.__dict__})  \
 assert _cs_w.turns(3) == "3 turn(s)"
 assert _cs_w.pop(_cs_v) == "Pop 4,000 k (+0k)", _cs_w.pop(_cs_v)
 _cs_g = _cs_state()
-assert _cs_w.status(_cs_v, 0, _cs_g) is None, \
-    "without open fix 37 the status word is an HD STATE: nothing"
+# Until work order 181 this asserted that WITHOUT open fix 37 the word was
+# an HD STATE, drawn as nothing. 181 applied the fix and the screen no
+# longer claims id 1 without CEVT (3. above), so that state is gone; what
+# replaces it is the word for each of CEVT's answers, none included.
+assert _cs_w.status(_cs_v, 0, _cs_g) == "", "neither event: no word"
 _cs_g.colony_events = {"plague": False, "pop_boom": True}
 assert _cs_w.status(_cs_v, 0, _cs_g) == "Pop. Boom"
 _cs_g.colony_events = {"plague": True, "pop_boom": True}
@@ -227,8 +254,8 @@ for _enabled, _value, _want in ((False, 0, ""), (False, 1, "Autobuilding"),
                                           occupation_policy=1, specialty=1)
     assert _cs_w.autobuild(_cs_v) == _want, (_enabled, _value)
 assert _cs_w.title(_cs_v, "Sol I") == "Industrial Colony of Sol I"
-ok("the colony screen's words by the source's own ids, the status word an "
-   "HD STATE without fix 37, and the autobuild label's encodings")
+ok("the colony screen's words by the source's own ids, the status word for "
+   "each of open fix 37's answers, and the autobuild label's encodings")
 
 # 6. IT DRAWS, and its marks are named where the rule says.
 import pygame as _cs_pg
@@ -262,3 +289,36 @@ for _cs_key in _cs_marks:
 ok(f"the colony screen draws at 1920, 2576 and 3840 from a READY snapshot, "
    f"and every mark it carries is named in its module and the status "
    f"document ({len(_cs_marks)} marks)")
+
+# 7. EVERY WAY INTO AND OUT OF SCREENS 1 AND 25 THE SCRATCH SAVE OFFERS is
+# in the recorded set 090o replays (work order 181, `tools/colony_accept.py`
+# on orionlayer-local with open fixes 35-40), at BOTH window sizes the order
+# names — and each recorded row sequence reaches the screen it is named for.
+# A way that is dropped from the fixture would stop being replayed without
+# anything failing in 090o, whose own rule is only "every registry screen
+# has SOME transition".
+with open(os.path.join(_cs_root, "tools", "fixtures", "transitions_180.json"),
+          encoding="utf-8") as _cs_fh:
+    _cs_tr = _cs_json.load(_cs_fh)["transitions"]
+_cs_ways = {"galaxy_map -> colony (system window)": 1,
+            "colony -> galaxy_map (ESC)": 0,
+            "colony_summary -> colony (row 0)": 1,
+            "colony -> colony (>)": 1, "colony -> colony (<)": 1,
+            "colony -> leaders (L)": 29, "leaders -> colony (ESC)": 1,
+            "colony -> build_queue (CHANGE)": 25,
+            "build_queue -> colony (OK)": 1,
+            "colony -> colony_summary (ESC)": 20,
+            "colony_summary -> build_queue (producing, row 1)": 25,
+            "build_queue -> colony_summary (Cancel)": 20}
+_cs_n = 0
+for _cs_size in ("1920x1080", "2576x1432"):
+    _cs_got = {t["transition"]: t for t in _cs_tr
+               if t.get("source") == f"P3_orders_{_cs_size}"}
+    for _cs_way, _cs_id in _cs_ways.items():
+        assert _cs_way in _cs_got, f"{_cs_way} at {_cs_size} not recorded"
+        assert any(_r[1] == _cs_id for _r in _cs_got[_cs_way]["rows"]), \
+            (_cs_way, _cs_size, "never reaches screen", _cs_id)
+        _cs_n += 1
+ok(f"every way into and out of screens 1 and 25 the scratch save offers is "
+   f"in the replayed set at 1920 and 2576, each reaching its screen "
+   f"({_cs_n} recorded transitions)")

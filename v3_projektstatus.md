@@ -2458,7 +2458,7 @@ files under `doc/` and are only summarised here.
 | | |
 |---|---|
 | Python | 32,960 lines across 111 modules — `find . -name '*.py'`, `__pycache__` excluded, the smoke test's 6,400 included. The previous figure here (21,642 across 94) was carried from an unstated method and could not be reproduced |
-| Smoke test | `python tools/smoke_test.py` — **374 checks**, headless, in `tools/smoke_suite/` since work order 162 (134 check modules, one group per screen plus a shared core; `tools/smoke_test.py` is the runner). **Two tiers since work order 158**: the bare command runs everything (~200 s here, measured 26 September 2026 — the 72 s this line said was before the rendering checks of 172-174); `--fast` runs the commit gate's 364 (~95 s here). `--screen <name>` prints only that screen's sentences and the core's and is NEVER a gate. See "The gate has two tiers" below |
+| Smoke test | `python tools/smoke_test.py` — **375 checks**, headless, in `tools/smoke_suite/` since work order 162 (134 check modules, one group per screen plus a shared core; `tools/smoke_test.py` is the runner). **Two tiers since work order 158**: the bare command runs everything (~200 s here, measured 26 September 2026 — the 72 s this line said was before the rendering checks of 172-174); `--fast` runs the commit gate's 365 (~95 s here). `--screen <name>` prints only that screen's sentences and the core's and is NEVER a gate. See "The gate has two tiers" below |
 | Assets | 170 MB (select_race 68, galaxy_map 51, shared 23, new_game 21, colony_summary 1) |
 | Screens in HD | 11 of ~20–22 (the Leaders screen, work order 167, built and not accepted; the GAME menu overlay, work order Stop 2, every dialog of the popup; colony summary draws list, sidebar, scan box and galaxy inset, and MOVES POPS — the first HD gesture that drives the game; planets, brief 101, lists, sorts, restricts and returns) |
 | Setup from clone | `python tools/setup.py` (deps via the system package manager) |
@@ -3578,21 +3578,39 @@ carrying the series (inventories `doc/briefs/180-colony-inventory.md` and
 engine — byte for byte the fixture 180 cut — and both screens claim their
 ids by themselves, no flag.
 
+**Live acceptance, work order 181** (`tools/colony_accept.py`, evidence
+`~/orionlayer-fixtures/evidence/work_order_181/`, SAVE4 scratch, never
+saved): every way into and out of screens 1 and 25 a save offers without a
+turn — the galaxy map's system window, the Colonies screen's name and
+producing columns, `<`/`>`, Leaders, CHANGE, Cancel, OK — at 1920x1080 and
+2576x1432 with **0 native frames**, and the colony HD drew equal to the
+engine's handle on every frame; a pop move there and back; the popup's
+lists, numbers, queue and Auto Build against the native popup; the queue
+under edit before OK; Cancel leaving `producing[]` as it was; one real
+order added with OK and taken back, the colony record byte-identical. The
+Info screen's Turn Summary jump is not reachable (open fix 33). Found and
+fixed there: "No Farming" in the farmers' row, which the original prints on
+this screen too (coldraw.cpp:315-321). NOT YET ACCEPTED BY DATA.
+
 **`screens/colony/`** (id 1): title, status, pop line, the system
 display's five orbits (`colsysdi.cpp`), the four production rows and
 morale, the three job rows with the pops' figures, the production window
 (name; bar and turns from fix 38), the officer, the units, CHANGE, BUY,
-LEADERS, RETURN, the 17 help regions. Marks: HD EXTENSION
+LEADERS, RETURN, the 17 help regions. It claims id 1 only with all four
+blocks the engine writes there (COLS, CBLD, CEVT, CPRD — `colwire.BLOCKS`),
+so the HD STATE marks `status_word`, `production_bar` and `turns` that
+stood here until work order 181 (nothing drawn while fix 37 or 38 was
+absent) are gone with the state they described. Marks: HD EXTENSION
 `surface_picture`, `pick_cancel`; DEVIATION `label_number`,
 `building_list`, `change_by_field`, `hd_font`, `production_bar`,
-`button_words`; HD STATE `status_word`, `production_bar`, `turns`;
-OMISSION `unit_sprites`, `officer_portrait`, `product_picture`, `roads`,
+`button_words`; OMISSION `unit_sprites`, `officer_portrait`, `product_picture`, `roads`,
 `hover_strip`, `building_actions`, `galaxy_inset`, `planet_description`; UNVERIFIED
 `building_placement` (fix 36's grid is read, its cells land on the live
 building fields, and what a cell's id means for the scene is not settled —
 nothing is placed from it). Check 090p.
 
-**`screens/build_queue/`** (id 25): both lists in the game's order (fix
+**`screens/build_queue/`** (id 25; claimed only with COLS, CPRD, BLDQ and
+BLDL, `bqwire.BLOCKS`): both lists in the game's order (fix
 40), a building bright while queued, the seven queue rows (fix 39), the
 title, the summary's name, cost, maintenance, build time and turns left
 (the engine's own numbers), OK, Cancel, Refit, Design, Repeat Build, the

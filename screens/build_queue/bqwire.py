@@ -4,9 +4,11 @@
 its own id reached from the colony screen's CHANGE and the Colonies
 screen's producing column. Inventory: `doc/briefs/180-build-inventory.md`.
 
-**IT CLAIMS ITS ID ONLY WITH THREE BLOCKS** — open fix 35's colony, 39's
-queue under edit and 40's two lists — none applied on the engine this
-order leaves behind; without them the game's picture stands, as before.
+**IT CLAIMS ITS ID ONLY WITH FOUR BLOCKS** — open fix 35's colony, 38's
+cost and turns (the summary's "Turn(s) Left"), 39's queue under edit and
+40's two lists, which the engine writes together on screen 25 (applied by
+work order 181, required by `tools/version_check.py`); without them the
+game's picture stands, as before.
 With them, the colony is used only when the pair and the handle agree
 (the first tick carries the previous handle, `screens/colony/colwire`),
 and the lists only when their LENGTHS equal the rows the live field list
@@ -58,15 +60,16 @@ HELP = ((501, BUILDINGS_BOX), (502, PICTURE_BOX), (503, SUMMARY_BOX),
         (537, (493, 447, 554, 465)), (511, (560, 447, 623, 465)),
         (512, (1, 1, 638, 478)))
 
+#: The blocks the engine writes on screen 25 (open fixes 35, 38-40).
+BLOCKS = ("colony_screen", "colony_product", "build_queue", "build_lists")
+
 READY, WAITING, GAME_BOX, MISMATCH = "READY", "WAITING", "GAME_BOX", \
     "MISMATCH"
 
 
 def claims(state):
     return (getattr(state, "current_screen", None) == GAME_SCREEN_ID
-            and getattr(state, "colony_screen", None) is not None
-            and getattr(state, "build_queue", None) is not None
-            and getattr(state, "build_lists", None) is not None)
+            and all(getattr(state, k, None) is not None for k in BLOCKS))
 
 
 def live_field(fields, ident):

@@ -19,10 +19,17 @@ The states, and what the screen does in each:
               confirmation, the transport or troop popup — a modal HD has
               no view for; the net shows it (`handover_is_modal`)
 
-Every other block — placement (36), the status word (37), the product's
-cost and turns (38) — is optional ON TOP of 35 and read only for a READY
-colony; each absent one is an HD STATE where the value would be, never an
-invented one.
+**AND ONLY WITH ALL FOUR OF ITS BLOCKS** — COLS (35), placement CBLD (36),
+the status word's CEVT (37), the product's cost and turns CPRD (38), which
+the engine writes together on screen 1. Work order 181 applied the series
+and `tools/version_check.py` requires it, so an engine that sends COLS
+without the other three is not one this tree runs against; it gets the
+game's picture (the safety net), never a colony screen with a hole where a
+value would be. Until 181 each absent block was an HD STATE drawn as
+nothing; with the claim asking for all four there is no such state left.
+A CPRD that names another product than the colony's first queue item is
+read in the same snapshot as the record and cannot disagree with it; if it
+ever does, the screen WAITS rather than draw a bar for the wrong item.
 """
 from core.structs import colony as colony_struct
 from core.structs import leader as leader_struct
@@ -36,10 +43,15 @@ from . import colgeom as geom
 READY, WAITING, GAME_BOX = "READY", "WAITING", "GAME_BOX"
 
 
+#: The blocks the engine writes on screen 1 (open fixes 35-38).
+BLOCKS = ("colony_screen", "colony_placement", "colony_events",
+          "colony_product")
+
+
 def claims(state):
     """The dispatcher's question: may this screen take id 1 at all?"""
     return (getattr(state, "current_screen", None) == geom.GAME_SCREEN_ID
-            and getattr(state, "colony_screen", None) is not None)
+            and all(getattr(state, k, None) is not None for k in BLOCKS))
 
 
 def live_field(fields, ident):
@@ -89,6 +101,15 @@ class View:
                            f"screen's handle says {block['colony']} — the "
                            f"first tick at screen 1, not settled yet.")
             return
+        ev = getattr(state, "colony_events", None)
+        prod = getattr(state, "colony_product", None)
+        record = colony_struct.parse(raws[derived])
+        if ev is None or ev.get("plague") is None or prod is None \
+                or prod["producing"] != record.producing[0]:
+            self.reason = ("The status word's or the product's block does "
+                           "not describe this colony yet (open fixes 37, "
+                           "38).")
+            return
         if live_field(getattr(state, "fields", None), geom.RETURN) is None:
             self.state = GAME_BOX
             self.reason = ("The game has opened its own box over the colony "
@@ -97,7 +118,7 @@ class View:
             return
         self.state = READY
         self.index = derived
-        self.colony = colony_struct.parse(raws[derived])
+        self.colony = record
         self.planet = at[0]
         stars = getattr(state, "stars", None) or []
         self.star = stars[block["star"]] if 0 <= block["star"] < len(stars) \
@@ -127,24 +148,20 @@ class View:
         return bool((self.star.blockaded >> (int(player_num) & 0x1F)) & 1)
 
     def events(self, state):
-        """(plague, pop boom) from open fix 37, or None — HD STATE."""
-        ev = getattr(state, "colony_events", None)
-        if ev is None or ev.get("plague") is None:
-            return None
+        """(plague, pop boom) from open fix 37's CEVT — a READY view has it
+        for this colony (`_read`)."""
+        ev = state.colony_events
         return ev["plague"], ev["pop_boom"]
 
     def placement(self, state):
-        """Open fix 36's grid and satellites, or None — HD STATE."""
-        return getattr(state, "colony_placement", None)
+        """Open fix 36's grid and satellites (read, not placed: UNVERIFIED
+        `building_placement`, see `coldraw._buildings`)."""
+        return state.colony_placement
 
     def product(self, state):
-        """Open fix 38's (cost, turns) for WHAT THIS COLONY PRODUCES, or
-        None. The block names its product; one that disagrees with the
-        colony record is stale and not used."""
-        p = getattr(state, "colony_product", None)
-        if p is None or self.colony is None or p["cost"] < 0 \
-                or p["producing"] != self.colony.producing[0]:
-            return None
+        """Open fix 38's (cost, turns) for what this colony produces — a
+        READY view has CPRD naming the colony's own first item (`_read`)."""
+        p = state.colony_product
         return p["cost"], p["turns"]
 
     def pop_line(self):
