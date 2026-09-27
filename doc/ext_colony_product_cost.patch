@@ -1,0 +1,77 @@
+Extension API: what the colony's current product costs, and how long it takes ("CPRD").
+
+STATUS: NOT APPLIED — written by work order 180 (B3), parked for Data
+(doc/briefs/180-parked-for-data.md, item 1.4).
+
+PROOF (work order 180, 27 September 2026): this file is one step of a
+series of six (open fixes 35-40, applied in that order on top of
+orionlayer-local 9ab84230 — each appends its block after the previous
+one). In a scratch clone of the engine, never on orionlayer-local:
+`patch -p1 --dry-run` then `patch -p1` applied it cleanly on the steps
+before it, and the patched src/ext/ext_api.cpp compiled with the engine's
+own flags from out/build/Linux/linux-debug/build.ninja (the ORION2RE_EXT
+and debug defines, every include directory, the cmake_pch.hxx include,
+-fsyntax-only) — with a control: the same file with `Calculate_Current_Production_Turn_Count_` misspelt `…_Turn_Cnt_` was
+refused. A full build of the whole series ran in scratch, only to record
+the wire format for OrionLayer's fixtures.
+
+To apply, from ~/orion2re on the orionlayer-local branch, after ext_colony_status_word.patch (37):
+
+    patch -p1 < ~/orionlayerv3/doc/ext_colony_product_cost.patch
+
+then rebuild. It comes back off with `patch -R -p1` and a rebuild.
+
+WHAT IT IS FOR
+
+    The colony screen draws the production bar over
+    COLCALC::Colony_Producing_Product_Cost_ (colony.cpp:967-978) and
+    "%d turn(s)" from Calculate_Current_Production_Turn_Count_
+    (colony.cpp:980-994). production_spent and bought_outright are in
+    s_colony and on the wire; the COST is a function of the building
+    table in the source, the player's ship designs and config values
+    (colcalc.cpp:2576; lander_ship_cost, config.cpp:3340), and the turns
+    follow from the cost.
+
+WIRE, after CEVT's place, while screen 1 or 25 is up:
+
+    "CPRD"  int16 producing[0], int32 cost, int16 turns — -1 each while
+            the handle is not a colony
+
+WHAT IT COSTS US WITHOUT IT: HD names what the colony builds but draws no
+bar and no turn count (HD STATE).
+
+diff --git a/src/ext/ext_api.cpp b/src/ext/ext_api.cpp
+index 9fe5907f..dbe4a11a 100644
+--- a/src/ext/ext_api.cpp
++++ b/src/ext/ext_api.cpp
+@@ -513,6 +513,30 @@ static void SerializeState(std::vector<uint8_t>& buf,
+         Write8(buf, ok ? (uint8_t)(EVENTS::Event_Check_Plague_(h) != 0) : (uint8_t)0xFF);
+         Write8(buf, ok ? (uint8_t)(EVENTS::Event_Check_Population_Boom_(h) != 0) : (uint8_t)0xFF);
+     }
++
++    // 9. What the shown colony's current product costs, and how long it
++    //    takes: "CPRD", written ONLY while SCREEN_COLONY or
++    //    SCREEN_QUEUE_POPUP is up, and LAST. OrionLayer, open fix 38.
++    //
++    //    The colony screen draws the production bar over
++    //    COLCALC::Colony_Producing_Product_Cost_ (colony.cpp:967-978) and
++    //    "%d turn(s)" from Calculate_Current_Production_Turn_Count_
++    //    (:980-994). production_spent and bought_outright are in s_colony
++    //    and on the wire; the cost is a function of source tables, the
++    //    player's ship designs and config values (colcalc.cpp:2576,
++    //    lander_ship_cost), and the turns follow from it. The two numbers
++    //    the screen draws are sent; -1 while the handle is not a colony.
++    if (current_screen == SCREEN_COLONY || current_screen == SCREEN_QUEUE_POPUP) {
++        buf.push_back((uint8_t)'C');
++        buf.push_back((uint8_t)'P');
++        buf.push_back((uint8_t)'R');
++        buf.push_back((uint8_t)'D');
++        const int16_t h = COLONY::_colony_handle;
++        const bool ok = h >= 0 && h < MOX::_NUM_COLONIES;
++        Write16(buf, ok ? MOX::_colony[h].producing[0] : (int16_t)-1);
++        Write32(buf, ok ? COLCALC::Colony_Producing_Product_Cost_(&MOX::_colony[h]) : -1);
++        Write16(buf, ok ? COLONY::Calculate_Current_Production_Turn_Count_(h) : (int16_t)-1);
++    }
+ }
+ 
+ // ── Field list ───────────────────────────────────────────

@@ -1,0 +1,70 @@
+Extension API: the colony screen's Plague and Pop Boom word ("CEVT").
+
+STATUS: NOT APPLIED — written by work order 180 (B3), parked for Data
+(doc/briefs/180-parked-for-data.md, item 1.3).
+
+PROOF (work order 180, 27 September 2026): this file is one step of a
+series of six (open fixes 35-40, applied in that order on top of
+orionlayer-local 9ab84230 — each appends its block after the previous
+one). In a scratch clone of the engine, never on orionlayer-local:
+`patch -p1 --dry-run` then `patch -p1` applied it cleanly on the steps
+before it, and the patched src/ext/ext_api.cpp compiled with the engine's
+own flags from out/build/Linux/linux-debug/build.ninja (the ORION2RE_EXT
+and debug defines, every include directory, the cmake_pch.hxx include,
+-fsyntax-only) — with a control: the same file with `Event_Check_Population_Boom_` misspelt `Event_Check_Population_Bom_` was
+refused. A full build of the whole series ran in scratch, only to record
+the wire format for OrionLayer's fixtures.
+
+To apply, from ~/orion2re on the orionlayer-local branch, after ext_colony_building_placement.patch (36):
+
+    patch -p1 < ~/orionlayerv3/doc/ext_colony_status_word.patch
+
+then rebuild. It comes back off with `patch -R -p1` and a rebuild.
+
+WHAT IT IS FOR
+
+    COLONY::Draw_Info_Name_And_Pop_ prints one status word at (0,0):
+    Blockaded, else Plague, else Pop Boom (colony_main.cpp:831-853).
+    Blockaded is the star's bit and on the wire. The other two are
+    EVENTS::Event_Check_Plague_ and Event_Check_Population_Boom_ over
+    EVENTS::_event_data, which is not serialized anywhere.
+
+WIRE, after CBLD, only while screen 1 is up:
+
+    "CEVT"  uint8 plague, uint8 pop boom — each 0 or 1, 0xFF while the
+            handle is not a colony (the first tick; see COLS)
+
+WHAT IT COSTS US WITHOUT IT: HD shows Blockaded and nothing in place of
+Plague or Pop Boom (HD STATE) — never a guess.
+
+diff --git a/src/ext/ext_api.cpp b/src/ext/ext_api.cpp
+index b057ad33..9fe5907f 100644
+--- a/src/ext/ext_api.cpp
++++ b/src/ext/ext_api.cpp
+@@ -493,6 +493,26 @@ static void SerializeState(std::vector<uint8_t>& buf,
+             Write16(buf, COLONY::_colony_satellites[i]);
+         }
+     }
++
++    // 8. The colony screen's status word: "CEVT", written ONLY while
++    //    SCREEN_COLONY is up, and LAST. OrionLayer, open fix 37.
++    //
++    //    Draw_Info_Name_And_Pop_ prints Blockaded, Plague or Pop Boom at
++    //    (0,0) (colony_main.cpp:831-853). Blockaded is the star's bit, on
++    //    the wire; the other two are EVENTS::Event_Check_Plague_ and
++    //    Event_Check_Population_Boom_ over EVENTS::_event_data, which is
++    //    not. Their two answers for the shown colony, one byte each, 0xFF
++    //    while the handle is not a colony (the first tick, COLS).
++    if (current_screen == SCREEN_COLONY) {
++        buf.push_back((uint8_t)'C');
++        buf.push_back((uint8_t)'E');
++        buf.push_back((uint8_t)'V');
++        buf.push_back((uint8_t)'T');
++        const int16_t h = COLONY::_colony_handle;
++        const bool ok = h >= 0 && h < MOX::_NUM_COLONIES;
++        Write8(buf, ok ? (uint8_t)(EVENTS::Event_Check_Plague_(h) != 0) : (uint8_t)0xFF);
++        Write8(buf, ok ? (uint8_t)(EVENTS::Event_Check_Population_Boom_(h) != 0) : (uint8_t)0xFF);
++    }
+ }
+ 
+ // ── Field list ───────────────────────────────────────────

@@ -194,8 +194,23 @@ LOCAL_PATCHES = {
 #: LOCAL_PATCHES, and from then on its absence fails. Same
 #: `file: (relative path, marker, what it enables)`. Empty from open
 #: fixes 20 and 21 moving up (15 September 2026) until open fix 34
-#: (work order 177), and again since 34 moved up (work order 179).
-REPORTED_PATCHES = {}
+#: (work order 177), and again since 34 moved up (work order 179). Work
+#: order 180 B/C parked open fixes 35-40 here; without them the colony
+#: screen and the build popup stay the game's own picture.
+REPORTED_PATCHES = {
+    "doc/ext_colony_screen_colony.patch": (
+        "src/ext/ext_api.cpp", "OrionLayer, open fix 35.",
+        "the colony screen and the build popup in HD (which colony)"),
+    "doc/ext_colony_building_placement.patch": (
+        "src/ext/ext_api.cpp", "OrionLayer, open fix 36.",
+        "the colony screen's building grid"),
+    "doc/ext_colony_status_word.patch": (
+        "src/ext/ext_api.cpp", "OrionLayer, open fix 37.",
+        "Plague and Pop Boom on the colony screen"),
+    "doc/ext_colony_product_cost.patch": (
+        "src/ext/ext_api.cpp", "OrionLayer, open fix 38.",
+        "the production bar and the turn count"),
+}
 
 
 def find_tree(argv):

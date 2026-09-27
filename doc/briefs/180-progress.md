@@ -187,3 +187,21 @@ references stand.
   `colony_events` as fix 37's per-screen answer (not `_event_data`), 017
   lists the new marked files.
 
+## B3. Everything in (c) — **WRITTEN AND PARKED**
+
+Open fixes **35** (which colony, "COLS"), **36** (placement, "CBLD"),
+**37** (Plague / Pop Boom, "CEVT"), **38** (cost and turns, "CPRD"): one
+entry each in `doc/orion2re_open_fixes.md` (what is missing, what the
+patch sends, what it costs us without it, how to apply), one patch file
+each under `doc/`, a series on `9ab84230`. **Proof:** in a scratch clone
+(`/tmp/.../orion2re_180`, `git clone --no-hardlinks`; Data's `~/orion2re`
+untouched — still `9ab84230` with its three untracked files) each patch
+FILE applied with `patch -p1 --dry-run` and `patch -p1`, no offset, no
+fuzz, the series reproducing the scratch commits byte for byte; each step
+compiled with `build.ninja`'s own flags (`-fsyntax-only`, the pch, the
+defines); each has a misspelt-constant control that the compiler refused
+(`SCREEN_QUEUE_POPPU`, `_colony_satelites`, `Event_Check_Population_Bom_`,
+`…_Turn_Cnt_`). `tools/version_check.py` lists them as REPORTED. In HD each
+absent piece is drawn as nothing and marked HD STATE; without 35 the screen
+stays on the net (**item 1.1 of the parked file, the most important**).
+
