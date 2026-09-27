@@ -102,8 +102,15 @@ from core.game_state import GameState as _GS
 # array, which would arrive as a record array like every other
 # one — a `*_raw` member, or a parsed list beside `stars`.
 _gs_attrs = [_a2 for _a2 in dir(_GS()) if not _a2.startswith("_")]
+# `colony_events` (work order 180 B, open fix 37, NOT APPLIED) is not the
+# array either: it is the two answers `Event_Check_Plague_` and
+# `Event_Check_Population_Boom_` give for the ONE colony screen 1 shows,
+# sent only while screen 1 is up — a Colonies row has nothing to read in
+# it, so the marking stands. Named here so any OTHER events member still
+# fails.
 _ev = [_a2 for _a2 in _gs_attrs
-       if "event" in _a2.lower() and not _a2.startswith("ng_")]
+       if "event" in _a2.lower() and not _a2.startswith("ng_")
+       and _a2 != "colony_events"]
 assert not _ev, (
     f"GameState grew an events member {_ev} — the colony-event "
     f"marking says the snapshot carries none, and that is now "

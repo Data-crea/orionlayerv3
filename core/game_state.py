@@ -94,6 +94,16 @@ class GameState:
     #: "messages": [bytes]}; None on every screen but 9 and on an engine
     #: without the fix.
     info_screen: Optional[dict] = None
+    #: Open fixes 35-40 (work order 180, NOT APPLIED): the colony screen's
+    #: and the build popup's own state. Each None on every other screen and
+    #: on an engine without its fix; `screens/colony/colwire.py` and
+    #: `screens/build_queue/bqwire.py` name every key.
+    colony_screen: Optional[dict] = None     # "COLS", fix 35
+    colony_placement: Optional[dict] = None  # "CBLD", fix 36
+    colony_events: Optional[dict] = None     # "CEVT", fix 37
+    colony_product: Optional[dict] = None    # "CPRD", fix 38
+    build_queue: Optional[dict] = None       # "BLDQ", fix 39
+    build_lists: Optional[dict] = None       # "BLDL", fix 40
 
     # Fields (from FIELD_LIST message)
     fields: list = field(default_factory=list)
@@ -376,6 +386,8 @@ def parse_state(data: bytes) -> GameState:
         if _ok:
             gs.info_screen = {"bill": _bill, "messages": _msgs}
 
+    from core import colonyblocks
+    pos = colonyblocks.parse(gs, data, pos)
     return gs
 
 

@@ -26,10 +26,12 @@ def aggregate(dirs):
         for row in data["rows"]:
             key = (row["transition"], size)
             a = agg.setdefault(key, {"walks": 0, "flashed": 0, "frames": 0,
+                                     "flashes": 0,
                                      "pixels": 0, "max_s": 0.0,
                                      "kinds": set()})
             a["walks"] += 1
             a["flashed"] += 1 if row["native_total"] else 0
+            a["flashes"] += row.get("flash_total", row["native_total"])
             a["frames"] += row["native_total"]
             a["pixels"] += row["pixel_native_total"]
             if row["native_before_hd"]:
@@ -40,16 +42,21 @@ def aggregate(dirs):
 
 def table(agg):
     lines = ["| transition | size | walks | with native frames | native "
-             "frames (trace / pixels) | longest before HD (s) | kind |",
-             "|---|---|---:|---:|---:|---:|---|"]
+             "frames (trace / pixels) | of them forbidden | longest before "
+             "HD (s) | kind |",
+             "|---|---|---:|---:|---:|---:|---:|---|"]
     for (name, size), a in agg.items():
         lines.append(
             f"| {name} | {size} | {a['walks']} | {a['flashed']} | "
-            f"{a['frames']} / {a['pixels']} | {a['max_s']:.3f} | "
+            f"{a['frames']} / {a['pixels']} | {a['flashes']} | "
+            f"{a['max_s']:.3f} | "
             f"{', '.join(sorted(a['kinds'])) or '—'} |")
     walks = sum(a["walks"] for a in agg.values())
     flashed = sum(a["flashed"] for a in agg.values())
-    lines.append(f"\n{walks} transition walks, {flashed} with native frames.")
+    forbidden = sum(a["flashes"] for a in agg.values())
+    lines.append(f"\n{walks} transition walks, {flashed} with native frames, "
+                 f"{forbidden} native frames the rule forbids (runs without "
+                 f"`flash_total` count every native frame as forbidden).")
     return "\n".join(lines)
 
 

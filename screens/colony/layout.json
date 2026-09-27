@@ -1,0 +1,31 @@
+{
+  "_comment": "The single-colony screen (wire id 1), work order 180 B. Geometry is screens/colony/colgeom.py (transcribed); the wording here is ours where the original's is baked into its art (decision 15), and the marks name every difference from the original, each held by check 090p and named in v3_projektstatus.md.",
+  "words": {
+    "_note": "DEVIATION `button_words`: the original's four buttons carry their words in COLPUPS.LBX art (colony_main.cpp:991-1012); HD draws the art as HUD buttons and the words in code, the Races screen's rule. 'marines' and 'armour' name the two unit counts the strip draws beside the original's sprites (military[0], military[1], colony_main.cpp:1193-1293).",
+    "change": "CHANGE",
+    "buy": "BUY",
+    "leaders": "LEADERS",
+    "return": "RETURN",
+    "marines": "Marines",
+    "armour": "Armour"
+  },
+  "marks": {
+    "hd_extension_surface_picture": "Data's picture of the colony's world, by climate (decision 58, the Colonies screen's colonysurfaces), stands where the original draws its landscape art (COLONY2.LBX 0x31 and the climate backdrop, colony_main.cpp:111-115). Absent pictures draw nothing.",
+    "deviation_label_number": "A production row is its icon and the original's own net as a number (colonyrows.drawn_production, coldraw.cpp:36-181), morale its mask and the halved value; the original COUNTS with sprites (Draw_Colony_Prod_Both_, Draw_Info_Morale_Both_). Decision 56's deviation, the Colonies screen's. A job row draws each pop's figure in the original's icon order, squeezed into the row.",
+    "deviation_building_list": "The colony's buildings are a list of names in a panel; the original draws each building's picture on its cell of the scene.",
+    "deviation_change_by_field": "CHANGE is sent as its FIELD [4], never as the key C: [5] (recalculate, and Do_Cheats_ with _cheats) is built first with the same hotkey and a key resolves to the first match (fields.cpp:2608-2613). Decision 39's key-first order does not apply to a shadowed key.",
+    "deviation_hd_font": "Text in the HD font at a size from the native line pitch, fitted to the original's width (the Leaders screen's rule).",
+    "hd_state_status_word": "Plague and Pop Boom need open fix 37 (EVENTS::_event_data is not on the wire); without it nothing is drawn where the word would be. Blockaded is the star's bit and always drawn.",
+    "hd_state_production_bar": "The production bar and the turn count need open fix 38 (the product's cost is a source table and config); without it the window names the product and draws no bar and no turns.",
+    "omission_unit_sprites": "The unit strip's troop and tank pictures are the player's art and not extracted; HD prints the counts the original prints beside them (':%d').",
+    "omission_officer_portrait": "The officer's portrait and frame (C_Anims_ 30, 33, colony.cpp:714-717) are not drawn; the name or the ETA is.",
+    "omission_product_picture": "The picture of what the colony builds (Draw_Info_Build_, colony_main.cpp:903-950) is the player's art; not drawn.",
+    "omission_roads": "The roads between buildings (Draw_Road_List_, colony_main.cpp:117) follow the placement and the original's art; not drawn.",
+    "omission_hover_strip": "The original names what its own pointer is over (Print_Scanned_String_, colony.cpp:807-816); HD shows refusal messages there and nothing else yet.",
+    "omission_building_actions": "A building's demolish confirmation and info box are routed by the REAL pointer's polygon (colony.cpp:1932-2028): an ACTIVATE_FIELD is swallowed or lands on whatever building the pointer is over. Not offered.",
+    "omission_galaxy_inset": "The galaxy-map inset (_drawing_display 1) is unreachable in orion2re ([9]/[10] are -1000 for ever, colony_main.cpp:981-982) and not built.",
+    "hd_extension_pick_cancel": "A pop picked in HD is HD's own until the drop (decision 47); ESC, a right click or a click outside every job row releases it and sends nothing.",
+    "unverified_building_placement": "Open fix 36's grid is parsed and its occupied cells land on the live building fields (verified), but what a cell's id means for the scene is not settled: Make_Bldg_Array_For_Colony_ also puts housing (-3) in the grid and jitters satellites into it (colony_main.cpp:559-600), and the recorded grids name Star Base and Star Fortress twice where the native scene shows each once. Nothing is placed from it until that is read and seen.",
+    "deviation_production_bar": "The production bar is drawn, not the original's art: C_Anims_ 34/35 at frames 0..50 over a 64 native px column from (606, 53) (coldraw.cpp:249-280). HD fills that column current/total; the art's width is not in the source, HD's is 12 native px."
+  }
+}

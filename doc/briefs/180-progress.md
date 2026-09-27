@@ -134,3 +134,56 @@ still true** — no block carries the colony or the popup's arrays
 sources are unchanged since `b44cbf76` (9 Aug), so the reading's line
 references stand.
 
+## B2. Everything in (b) — **BUILT, active only with open fix 35**
+
+- **Why "only with 35":** every (b) is buildable GIVEN the colony, and the
+  colony is (c). So the screen was written against the patched wire format
+  recorded from a SCRATCH engine (below) and claims id 1 only when COLS
+  arrives: `ScreenBase.claims` (new, default True) and the dispatcher asks
+  it, so without the block id 1 is decision 22's picture exactly as before
+  — no hold, no failure.
+- **`screens/colony/`:** `colgeom` (every rectangle sourced; `_building_cr`
+  copied by script and checked against colony.cpp; the building field
+  function), `colwire` (the View: pair vs handle, WAITING on the first tick,
+  GAME_BOX for a box over it), `colwords` (every string by the source's ids,
+  the system display's own short words), `coldraw`, `screen`; layout.json
+  (words, 18 marks), help.json (17 regions), boxes.json. The Colonies
+  screen's row model, icon walk, figures, output icons, surface pictures and
+  pop move are reused, not copied.
+- **Controls:** ESC/RETURN, `<`/`>`, L, A, B by their keys; CHANGE by its
+  FIELD (DEVIATION `change_by_field`: C reaches `[5]` first); the info
+  boxes, the system display, pop moves over MSG_SET_JOBS (picked locally,
+  sent on the drop, decision 47). **The safety rule:** `core/colony_guard.py`
+  refuses type-8 and full-screen fields on 1 and 25; every send goes
+  through it (090p).
+- **Also:** `core/colonyblocks.py` parses fixes 35-40's blocks (whole or
+  None); `s_player.ship_designs` (906) verified by the header route AND a
+  live read (the five names and costs of the native popup);
+  `prodname.ShipNames` names queued ships and designs.
+- **Live, SAVE4, scratch engine carrying fixes 35-40 (NEVER applied to
+  `orionlayer-local`; built in a scratch clone, `--engine`), guard
+  `20260927_010158`:** the first three colonies of the Colonies list (Ixion II
+  among them; `<` reached Sol II) at 1920x1080 and 2576x1432, each with its
+  popup; **one pop move through
+  the HD job rows — a worker to scientists, confirmed on the wire, and back,
+  restored word for word**; every value beside the game's own picture of
+  the same frame (`B_live_*`). Comparisons at 1920, 2576 and 3840 from the
+  recorded stops: `B_record2/*_offline_side.png` (27 pictures).
+- **Live, SAVE4, Data's engine (no fixes), guard `20260927_010338`:** the
+  same walk at both sizes stays on the net for ids 1 and 25 — 238 native
+  frames, **0 of them forbidden** (all an unclaimed id with a list to
+  answer), the Colonies screen around them without a flash (`B_net_*`).
+- **Differences found against the native screen, and what was done:** the
+  officer frame was drawn with no officer (fixed: only with one, as
+  colony.cpp:709); the placed building names repeated Star Base and Star
+  Fortress (the grid holds housing and jittered satellites — placement
+  made UNVERIFIED, the list is drawn); the production bar's size had been
+  typed (fixed: the 64 px column coldraw.cpp:249-280 draws, DEVIATION
+  `production_bar`); the popup summary lacked numbers for a queued item in
+  neither list (fix 40 amended to carry the queue's numbers). Morale 0 is
+  drawn as a mask and 0 where the original draws only the government icon
+  (DEVIATION `label_number`, the Colonies screen's).
+- Checks 090p (six). Existing checks adjusted, not weakened: 050 names
+  `colony_events` as fix 37's per-screen answer (not `_event_data`), 017
+  lists the new marked files.
+

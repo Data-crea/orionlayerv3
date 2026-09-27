@@ -121,6 +121,16 @@ class ScreenBase(HelpMixin):
         """
         return False
 
+    def claims(self, game_state):
+        """May this screen take its GAME_SCREEN_ID for this snapshot?
+
+        True by default. A screen whose whole content hangs on a block an
+        engine may not send (the colony screen and open fix 35, work order
+        180 B) says False without it, and the dispatcher then treats the
+        id as one no HD screen claims — decision 22's picture, the same
+        path as before the screen existed, with no hold and no failure."""
+        return True
+
     def handover_is_modal(self):
         """True when `wants_original()` is a MODAL NET's verdict — "a modal
         HD has no view for" (`core/modalnet.py`) — and not a screen that

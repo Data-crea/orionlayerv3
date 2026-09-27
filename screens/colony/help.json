@@ -1,0 +1,160 @@
+{
+  "_comment": "Right-click help for the single-colony screen, transcribed from _colony_screen_help_list (erichelp.cpp:90-108, {help_id, x1, y1, x2, y2}), installed by Set_Colony_Screen_Help_List_ (erichelp.cpp:149, called at colony_main.cpp:192 and :272). First hit wins, so 483 'general' stays last where the original keeps it. 491 'Jobs Output' is in the file and referenced by nothing, so it is not here either.",
+  "_source": "orion2re orionlayer-local, erichelp.cpp:90-108",
+  "hd_extension": "The help popup auto-sizes to its text and scrolls when it cannot fit. The original draws a fixed box and lets FMTPARA wrap into it at a fixed 339 px (TEXTBOX::Draw_Help_Entry_, textbox.cpp:307); at four HD resolutions a fixed box either wastes half the screen on two lines or clips a long entry. Marked once per file, here, and in core/helppopup.py.",
+  "regions": [
+    {
+      "help_id": 484,
+      "native": [
+        1,
+        1,
+        120,
+        14
+      ]
+    },
+    {
+      "help_id": 485,
+      "native": [
+        122,
+        1,
+        506,
+        15
+      ]
+    },
+    {
+      "help_id": 486,
+      "native": [
+        508,
+        1,
+        638,
+        15
+      ]
+    },
+    {
+      "help_id": 487,
+      "native": [
+        7,
+        24,
+        115,
+        151
+      ]
+    },
+    {
+      "help_id": 488,
+      "native": [
+        526,
+        27,
+        632,
+        112
+      ]
+    },
+    {
+      "help_id": 489,
+      "native": [
+        124,
+        29,
+        304,
+        57
+      ]
+    },
+    {
+      "help_id": 490,
+      "native": [
+        307,
+        29,
+        512,
+        56
+      ]
+    },
+    {
+      "help_id": 492,
+      "native": [
+        125,
+        59,
+        305,
+        88
+      ]
+    },
+    {
+      "help_id": 493,
+      "native": [
+        125,
+        88,
+        305,
+        118
+      ]
+    },
+    {
+      "help_id": 494,
+      "native": [
+        125,
+        118,
+        305,
+        148
+      ]
+    },
+    {
+      "help_id": 495,
+      "native": [
+        307,
+        59,
+        512,
+        148
+      ]
+    },
+    {
+      "help_id": 496,
+      "native": [
+        1,
+        443,
+        176,
+        478
+      ]
+    },
+    {
+      "help_id": 497,
+      "native": [
+        520,
+        124,
+        578,
+        143
+      ]
+    },
+    {
+      "help_id": 498,
+      "native": [
+        591,
+        124,
+        625,
+        143
+      ]
+    },
+    {
+      "help_id": 499,
+      "native": [
+        552,
+        425,
+        638,
+        448
+      ]
+    },
+    {
+      "help_id": 500,
+      "native": [
+        551,
+        455,
+        638,
+        478
+      ]
+    },
+    {
+      "help_id": 483,
+      "native": [
+        0,
+        0,
+        639,
+        50
+      ]
+    }
+  ]
+}

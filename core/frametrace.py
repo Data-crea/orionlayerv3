@@ -168,6 +168,10 @@ def summarise(frames, target=None):
         "native_before_hd": len(native),
         "native_seconds": round(seconds, 3),
         "native_total": sum(1 for f in frames if f["source"] == NET),
+        # A FLASH is a native frame the rule forbids: every one but an id
+        # no HD screen claims, showing a list to answer (180 A2).
+        "flash_total": sum(1 for f in frames if f["source"] == NET and not (
+            f["kind"] == NO_SCREEN and (f.get("live") or 0) > 0)),
         "kinds": sorted({f["kind"] for f in frames if f["source"] == NET}),
         "held": sum(1 for f in frames if f["source"] == HOLD),
         "reasons": sorted({f["reason"] for f in frames

@@ -290,6 +290,13 @@ _MARKED = {
     # is 090o.
     "core/handover.py": "DEVIATION `hold_last_frame`",
 
+    # ADDED 27 September 2026, work order 180 B and C: the colony screen
+    # and the build popup. Their own checks are 090p and 090q: every
+    # layout.json mark named in its module and the status document.
+    "screens/colony/coldraw.py": "surface_picture",
+    "screens/colony/layout.json": "deviation_label_number",
+    "screens/colony/screen.py": "change_by_field",
+
 }
 _MARKS = ("HD EXTENSION", "DEVIATION")
 _SELF = SUITE_FILES

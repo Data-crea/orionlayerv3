@@ -199,6 +199,18 @@ SPEC = Spec("s_player", SIZE, [
     # `_treaty_labels`, estrings.cpp:91-97, and 6 total war, which the
     # screen clamps to label 5, racescrn.cpp:151-155), spies count in
     # bits 0-5 — 14 of 14 saves on this disk, 26 September 2026.
+    # `struct s_ship_design ship_designs[6]` (orion2.h:1809) — the five
+    # designs the build popup offers (colbldg.cpp:219-238, i < 5) and a
+    # sixth slot. Work order 180 C. BOTH SOURCES: the header route puts it
+    # at 906 (asserted by tools/struct_header_check.py from this line), and
+    # the compiler over the same headers gives `sizeof(s_ship_design)` 99,
+    # `name` at 0 (char[16]) and `cost` at 94 (int16) — `DESIGN_SIZE`,
+    # `design_name`, `design_cost` below; LIVE on SAVE4 (27 September 2026,
+    # a scratch engine carrying open fix 40) the five names read here —
+    # Scout, Rafale, Corvette, Corsair, Paladin — are the five the native
+    # popup lists, and the five costs — 27, 126, 115, 358, 824 — are the
+    # ones the engine's own `Colony_Product_Cost_` sent for ids -50..-54.
+    ("ship_designs",          906, "u8[594]"),
     ("n_times_established_contact", 1521, "i8[8]"),
     ("current_trade_agreement_level", 1545, "i16[8]"),
     ("current_research_agreement_level", 1579, "i16[8]"),
@@ -312,6 +324,28 @@ def has_omniscience(view):
     traits", not as "no lore".
     """
     return traits(view)[TRAIT_OMNISCIENCE] != 0
+
+
+#: `s_ship_design` (orion2.h:1732): 99 bytes, `name` char[16] at 0,
+#: `cost` int16 at 94 — the compiler's numbers, see `ship_designs`.
+SHIP_DESIGNS_OFFSET, DESIGN_SIZE, DESIGN_SLOTS = 906, 99, 6
+DESIGN_NAME_LEN, DESIGN_COST_OFFSET = 16, 94
+
+
+def design_name(view, i):
+    """Design i's name, as `Selection_Name_` reads it for ids -50 - i."""
+    if not 0 <= int(i) < DESIGN_SLOTS:
+        return None
+    o = SHIP_DESIGNS_OFFSET + DESIGN_SIZE * int(i)
+    return view.raw[o:o + DESIGN_NAME_LEN].split(b"\0")[0].decode("latin-1")
+
+
+def design_cost(view, i):
+    if not 0 <= int(i) < DESIGN_SLOTS:
+        return None
+    return _struct.unpack_from(
+        "<h", view.raw,
+        SHIP_DESIGNS_OFFSET + DESIGN_SIZE * int(i) + DESIGN_COST_OFFSET)[0]
 
 
 def command_point_surplus(view):

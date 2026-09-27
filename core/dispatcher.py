@@ -219,7 +219,10 @@ class Dispatcher:
 
         name = self.screen_map.get(screen_id)
 
-        if name and name in self.screens:
+        # A screen may decline its id for a snapshot it cannot draw at all
+        # (`ScreenBase.claims`, work order 180 B): then the id is unclaimed.
+        if name and name in self.screens \
+                and self.screens[name].claims(game_state):
             self.switch_to(name, game_state)
             self.use_original = False
             return True

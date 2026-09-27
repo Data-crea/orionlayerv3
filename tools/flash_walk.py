@@ -46,7 +46,6 @@ from livedrive import Run, close, hashes  # noqa: E402
 from entry_glimpse import probe_points, shows_picture  # noqa: E402
 
 from core import frametrace  # noqa: E402
-from core.hud import screenframe  # noqa: E402
 from screens.game_menu import nodes  # noqa: E402
 
 FOLDER = "work_order_180"
@@ -182,49 +181,22 @@ class Walk:
 
     # ── the two legs ──────────────────────────────────────
     def pregame(self):
-        """Main menu, New Game, Select Race, Empire Identity, Custom Race."""
-        on = self.run.on_screen
-        self.transition("startup -> main_menu", "main_menu",
-                        lambda: None, on(10))
-        self.transition("main_menu -> new_game", "new_game",
-                        lambda: self.key(pygame.K_n), on(13))
-        ng = self.hd("new_game")
-        self.transition("new_game -> select_race", "select_race",
-                        lambda: self.click_rect(
-                            screenframe.button_rect(ng, "right")), on(51))
-        sr = self.hd("select_race")
-        self.transition("select_race -> empire_identity", "empire_identity",
-                        lambda: self.click_rect(self._race_cell(sr, 0)))
-        ei = self.hd("empire_identity")
-        self.transition("empire_identity -> select_race", "select_race",
-                        lambda: self.click_rect(
-                            screenframe.button_rect(ei, "left")), on(51))
-        # Custom: the 14th cell puts the game in picture select (still
-        # 51); a portrait then opens Racial_Option_Screen_ (50).
-        self.click_rect(self._race_cell(sr, 13))
-        self.settle(40)
-        self.transition("select_race -> custom_race", "custom_race",
-                        lambda: self.click_rect(self._race_cell(sr, 0)),
-                        on(50))
-        self.transition("custom_race -> select_race", "select_race",
-                        lambda: self.key(pygame.K_ESCAPE), on(51))
-        self.transition("select_race -> new_game", "new_game",
-                        lambda: self.click_rect(
-                            screenframe.button_rect(sr, "left")), on(13))
-        self.transition("new_game -> main_menu", "main_menu",
-                        lambda: self.click_rect(
-                            screenframe.button_rect(ng, "left")), on(10))
-
-    def _race_cell(self, sr, index):
-        from screens.select_race.screen import grid_cell_rect
-        gr = sr.box_rect("race_grid")
-        cx, cy, cw, ch = grid_cell_rect(gr, index)
-        sx, sy = sr.layout.pos(cx, cy)
-        sw, sh = sr.layout.size(cw, ch)
-        return (sx, sy, sw, sh)
+        """Main menu, New Game, Select Race, Empire Identity, Custom Race
+        — `tools/flash_legs.pregame`."""
+        import flash_legs
+        flash_legs.pregame(self)
 
     def load(self):
         """Main menu -> Load dialog (the GAME menu overlay) -> SAVE4."""
+        # The menu's OWN list first: during its opening animation the hand-
+        # over gate holds the frame and takes no input (180 A2), so an L
+        # pressed then is dropped, as a player's would be.
+        mm = self.app.dispatcher.screens.get("main_menu")
+        self.run.wait_for(lambda st: st.current_screen != 10 or
+                          nodes.classify(st.fields) == nodes.LOAD or
+                          mm._own_list(st.fields or []), seconds=30,
+                          label="the main menu's own list")
+        self.settle(10)
         if nodes.classify(self.st.fields) != nodes.LOAD:
             self.transition("main_menu -> load dialog", "game_menu",
                             lambda: self.key(pygame.K_l),

@@ -91,7 +91,36 @@ def kind(production_id):
     return KIND_OPTION
 
 
-def production_name(production_id, buildings=None, strings=None):
+class ShipNames:
+    """`Selection_Name_`'s two ship branches, from the wire (work order 180):
+    a queued ship is `_ship[-100 - id].d.name` (colbldg.h:33-35, ship.py
+    `name`, verified), a design `_player[owner].ship_designs[-50 - id]
+    .name` (colbldg.h:37-39, player.py `ship_designs`, verified)."""
+
+    def __init__(self, state, player_num):
+        self._ships = getattr(state, "ships_raw", None) or []
+        raws = getattr(state, "player_raw", None) or []
+        self._player = None
+        if 0 <= int(player_num) < len(raws):
+            from core.structs import player as player_struct
+            self._player = player_struct.parse(raws[int(player_num)])
+
+    def name(self, production_id):
+        from core.structs import player as player_struct
+        from core.structs import ship as ship_struct
+        value = int(production_id)
+        if value <= QUEUED_SHIP_BASE:
+            idx = QUEUED_SHIP_BASE - value
+            if 0 <= idx < len(self._ships):
+                return ship_struct.SPEC.parse(self._ships[idx]).name
+            return None
+        idx = SHIP_DESIGN_BASE - value
+        return (player_struct.design_name(self._player, idx)
+                if self._player is not None else None)
+
+
+def production_name(production_id, buildings=None, strings=None,
+                    ships=None):
     """(text, state) for one `producing[0]`. Never raises.
 
     `buildings` is a `core.buildnames.BuildingNames` and `strings` a
@@ -111,9 +140,11 @@ def production_name(production_id, buildings=None, strings=None):
         name = buildings.building(production_id)
         return (name, STATE_OK) if name else (None, STATE_MISSING)
     if branch in (KIND_QUEUED_SHIP, KIND_SHIP_DESIGN):
-        # NOT A MISSING FILE — a field that is not on the wire. The
-        # column must not offer `techname_extract` as the fix for it.
-        return None, STATE_UNSOURCED
+        # NOT A MISSING FILE — without a `ShipNames` the caller has not
+        # read the ship records, and the column must not offer
+        # `techname_extract` as the fix for it.
+        name = ships.name(production_id) if ships is not None else None
+        return (name, STATE_OK) if name else (None, STATE_UNSOURCED)
     if strings is None or strings.state != "ok":
         return None, STATE_MISSING
     text = strings.option(production_id)
