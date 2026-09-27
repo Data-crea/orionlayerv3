@@ -3589,7 +3589,7 @@ LEADERS, RETURN, the 17 help regions. Marks: HD EXTENSION
 `building_list`, `change_by_field`, `hd_font`, `production_bar`,
 `button_words`; HD STATE `status_word`, `production_bar`, `turns`;
 OMISSION `unit_sprites`, `officer_portrait`, `product_picture`, `roads`,
-`hover_strip`, `building_actions`, `galaxy_inset`; UNVERIFIED
+`hover_strip`, `building_actions`, `galaxy_inset`, `planet_description`; UNVERIFIED
 `building_placement` (fix 36's grid is read, its cells land on the live
 building fields, and what a cell's id means for the scene is not settled —
 nothing is placed from it). Check 090p.

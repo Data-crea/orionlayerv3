@@ -285,7 +285,7 @@ full tables are `A1_flash_table.md` and `A2_flash_table.md`):
 
 | screen | active in HD on Data's engine today | built, waiting only on fix 35 (or 35+39+40) | waiting on a further patch | not built, marked |
 |---|---|---|---|---|
-| colony (25 elements) | **0** — the whole screen waits on 35 | 17 | 4 (placement 36 — and UNVERIFIED even with it —, the status word 37, bar and turns 38, the planet description mode of 35) | 3 (galaxy inset unreachable, the entry boxes are the net's, the hover strip) |
+| colony (25 elements) | **0** — the whole screen waits on 35 | 17 | 3 (placement 36 — and UNVERIFIED even with it —, the status word 37, bar and turns 38) | 4 (galaxy inset unreachable, the entry boxes are the net's, the hover strip, and the planet description box of `_drawing_display` 2 — its mode is in fix 35, its drawing is not built: OMISSION `planet_description`, found writing this summary) |
 | build popup (15 elements) | **0** — waits on 35, 39, 40 | 13 | — | 2 (description, picture; a design's stat lines) |
 
 **Parked** (`180-parked-for-data.md`, by importance): 1.1 **open fix 35**

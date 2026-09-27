@@ -24,7 +24,8 @@ and each in `layout.json` `marks`, the status document and check 090p:
   HD STATE       `status_word`, `production_bar`, `turns` — drawn as
                  nothing while fixes 37 and 38 are absent
   OMISSION       `unit_sprites`, `officer_portrait`, `product_picture`,
-                 `hover_strip`, `roads` — original art this project does
+                 `hover_strip`, `roads`, `planet_description` (the box
+                 `_drawing_display` 2 shows, colony.cpp:1861-1866) — original art this project does
                  not extract, and the hover strip of the original's own
                  pointer; each named where it would be drawn
 """

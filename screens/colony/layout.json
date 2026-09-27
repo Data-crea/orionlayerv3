@@ -26,6 +26,7 @@
     "omission_galaxy_inset": "The galaxy-map inset (_drawing_display 1) is unreachable in orion2re ([9]/[10] are -1000 for ever, colony_main.cpp:981-982) and not built.",
     "hd_extension_pick_cancel": "A pop picked in HD is HD's own until the drop (decision 47); ESC, a right click or a click outside every job row releases it and sends nothing.",
     "unverified_building_placement": "Open fix 36's grid is parsed and its occupied cells land on the live building fields (verified), but what a cell's id means for the scene is not settled: Make_Bldg_Array_For_Colony_ also puts housing (-3) in the grid and jitters satellites into it (colony_main.cpp:559-600), and the recorded grids name Star Base and Star Fortress twice where the native scene shows each once. Nothing is placed from it until that is read and seen.",
-    "deviation_production_bar": "The production bar is drawn, not the original's art: C_Anims_ 34/35 at frames 0..50 over a 64 native px column from (606, 53) (coldraw.cpp:249-280). HD fills that column current/total; the art's width is not in the source, HD's is 12 native px."
+    "deviation_production_bar": "The production bar is drawn, not the original's art: C_Anims_ 34/35 at frames 0..50 over a 64 native px column from (606, 53) (coldraw.cpp:249-280). HD fills that column current/total; the art's width is not in the source, HD's is 12 native px.",
+    "omission_planet_description": "A click on a system-display summary puts the original in _drawing_display 2 and it draws that planet's description box (colony.cpp:1825-1831, :1861-1866). Open fix 35 carries the mode; HD does not draw the box yet \u2014 with the mode 2 it keeps the screen as it is."
   }
 }
