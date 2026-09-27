@@ -46,7 +46,7 @@ SCREENS = {
     14: ("HALL_OF_FAME",    None),
     18: ("PLANET_DATA",     "planet_data"),
     20: ("COLONY_SUMMARY",  "colony_summary"),
-    25: ("QUEUE_POPUP",     None),
+    25: ("QUEUE_POPUP",     "build_queue"),   # work order 180 C
     29: ("OFFICERS",        "leaders"),
     30: ("COLONIZATION_IN_MAIN", None),
     32: ("PLANET_SUMMARY",  "planets"),

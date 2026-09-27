@@ -296,6 +296,9 @@ _MARKED = {
     "screens/colony/coldraw.py": "surface_picture",
     "screens/colony/layout.json": "deviation_label_number",
     "screens/colony/screen.py": "change_by_field",
+    "screens/build_queue/bqdraw.py": "ship_row_dim",
+    "screens/build_queue/screen.py": "summary_follows_hd_pointer",
+    "screens/build_queue/layout.json": "deviation_ship_row_dim",
 
 }
 _MARKS = ("HD EXTENSION", "DEVIATION")

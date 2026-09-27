@@ -212,3 +212,20 @@ stays on the net (**item 1.1 of the parked file, the most important**).
 field list recorded on the scratch engine matches the reading's §2b
 exactly.
 
+## C2. Build from wire data — **BUILT, active only with fixes 35, 39, 40**
+
+- **`screens/build_queue/`** (`bqwire`, `bqdraw`, `screen`, layout.json with
+  7 marks, help.json with 13 regions): both lists in the game's order (a
+  building bright while queued), the queue, title, the summary with the
+  engine's own cost / maintenance / build time / turns left, the six
+  buttons, the hot keys, the Auto Build radio by an injected click. The
+  lists are used only when their lengths equal the rows the game built
+  (MISMATCH hands over and counts as a failure).
+- **Live, scratch engine, SAVE4, through the HD rows:** building 37
+  selected — in the queue on the wire; a ship row (-15) selected — the
+  queue moved on the wire; **Cancel — `producing[]` exactly as before the
+  popup ([11, 11, 35])**; the popup's summary after the ship: Colony Base,
+  Cost Here 200, Maint 0, Build Time 10, Turn(s) Left 5 — the native
+  popup's own print in the same frame (`B_live_1920x1080/007_*`).
+- Check 090q (four).
+

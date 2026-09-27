@@ -1,0 +1,21 @@
+{
+  "_comment": "The build popup (wire id 25), work order 180 C. Geometry and state: screens/build_queue/bqwire.py; drawing and marks: bqdraw.py. Each mark is held by check 090q and named in v3_projektstatus.md.",
+  "words": {
+    "_note": "DEVIATION `button_words`: the six buttons carry their words in COLBLDG.LBX art (colbldg.cpp:346-364); HD draws them as HUD buttons with the words in code.",
+    "cancel": "CANCEL",
+    "ok": "OK",
+    "refit": "REFIT",
+    "design": "DESIGN",
+    "repeat": "REPEAT BUILD",
+    "auto": "AUTO BUILD"
+  },
+  "marks": {
+    "deviation_ship_row_dim": "A ship or other row is never dimmed. The original dims a design by the colony's bases and the design's size, and a row by Colony_Can_Build_Product_ (colbldg.cpp:625-653) \u2014 a rule this screen does not copy.",
+    "deviation_hd_font": "Text in the HD font at a size from the native line pitch, fitted to the original's width (the Leaders screen's rule).",
+    "omission_description": "The selection panel's description comes from HELP.LBX by tech application (Print_App_Description_, colbldg.cpp:1056-1076); the map from application to help entry is not read, so no description is drawn.",
+    "omission_product_picture": "The selection's picture (colbldg.cpp:1108-1113) is the player's art; not drawn.",
+    "omission_design_stats": "A design's nine stat lines (Draw_Ship_Design_Info_, colbldg.cpp:1205-1303) need the weapon and system name tables; the design's name, cost and build time are drawn.",
+    "omission_delete_hint": "The original prints 'delete %s' over the queue row ITS pointer is on (colbldg.cpp:714-750); HD's pointer is not the game's, and the hint is not drawn.",
+    "hd_extension_summary_follows_hd_pointer": "The summary shows the item under HD's pointer, where the original's follows its own (_scanned_prod, colbldg.cpp:825); hovering sends nothing."
+  }
+}
