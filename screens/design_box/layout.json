@@ -14,7 +14,7 @@
     "deviation_filter_art": "The four filter buttons keep DESIGN.LBX's own button art (entries 22-25, the status as the frame) among HUD blocks: their words exist in no string table. The arc and rack words are DESIGN.LBX's too (38-47).",
     "deviation_centring_swap": "The shield table's cost and space are centred under their own headers; the original centres each on the OTHER header's width (desbox.cpp:2387, :2398, marked there as the original's), a shift of the two headers' width difference.",
     "hd_extension_box_titles": "The title plate; the original paints the headline into the box art, and the shield / computer box wears the special box's.",
-    "invention_chosen_fill": "The chosen weapon row lit by a HUD fill where the original draws an arrow sprite (_weapons_selected_seg).",
+    "invention_chosen_fill": "The chosen weapon row, and a modification that is on, lit by a HUD fill where the original draws an arrow sprite (_weapons_selected_seg) or the word's lit frame.",
     "omission_no_weapon_damage": "'No Weapon''s damage '0' is TECHDATA _weapons[0]'s; DSBX formats a damage string only for a weapon, so HD leaves the cell empty.",
     "omission_fit_colour": "A special that does not fit is dimmed by the original from its slot's space and the exclusions (desbox.cpp:2825-2846), neither on the wire; HD draws every special row alike.",
     "omission_flashing_hover": "The original flashes the hovered row in a cycling palette index; an RGB surface has none. Not drawn.",

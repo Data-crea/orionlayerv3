@@ -84,6 +84,27 @@ only the engine's window (OrionLayer staying on HD, or minimising itself),
 that is a change to `main.App._cycle_render_mode` alone.
 
 
+### 2c. The Ship Designer live test (part 8) — three differences, as questions
+
+Each HD state beside the game's frame of the same moment:
+`~/orionlayer-fixtures/evidence/work_order_185/P8_live_1920x1080/pairs/`.
+
+1. **A warning box over the designer appears after 3.8 s.** "You may not
+   upgrade the ship's shield." is a modal HD has no view for; the hand-over
+   gate holds HD's last frame for its full budget (`HOLD`, 36 snapshots —
+   2 s at the 18 snapshots/s it was measured at, 3.8 s on the scratch
+   engine) before the game's picture shows. The same holds for every modal
+   net since work order 180. Should a modal net show the picture at once
+   once its list holds a field to answer (as an unclaimed id already does)?
+   **Default: unchanged** — it is the gate's rule, not the designer's.
+2. **The chosen hull is only faintly marked**, and the six hull words are
+   small: HD draws them as HUD small buttons (the chosen one "active"); the
+   original fills the chosen row blue and prints the words large. Bigger
+   words and a lit fill? **Default: as built.**
+3. **(fixed in part 8, no question)** a weapon modification that is on
+   looked the same as one that is off; it is lit now (090y holds it).
+
+
 ## 3. Everything else
 
 - **`doc/CREDITS.md` quotes the 1.50 patch's own credits verbatim**, and
@@ -91,6 +112,16 @@ that is a change to `main.App._cycle_render_mode` alone.
   (`screens/main_menu/assets/credits.txt`) does not. Default: the document
   is left unchanged, because the order names the roll and the document
   marks the quotation as unchanged.
+
+- **Ship Designer states the scratch save does not reach** (part 8), each
+  with the save that would: a list of more than ten weapons (the scroll
+  arrows) — a save with 11+ weapon techs; a researched shield (the shield
+  picker's rows) — a save with Class I Shield; a special's exclusion or
+  "already on the ship" warning — a save with two mutually exclusive
+  specials researched; Refit (the refit flag, the hull buttons refused) —
+  a colony with a ship to refit in orbit; a rack chosen (`Shot x5`) was
+  reachable and not clicked. Typing the name stays UNVERIFIED
+  (`name_entry`): not attempted, the name is shown, not edited.
 
 ## 4. Carried over unchanged (not acted on in this order)
 

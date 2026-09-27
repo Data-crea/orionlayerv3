@@ -229,3 +229,26 @@ fix 43. Placeholders `<number: Data>`; nothing written into
    `filter_art`, `centring_swap`; HD EXTENSION `box_titles`; INVENTION
    `chosen_fill`; OMISSION `no_weapon_damage`, `fit_colour`,
    `flashing_hover`, `picker_help`; UNVERIFIED `fix45`.
+
+## Part 8 — Ship Designer live test — **DONE (3 differences: 1 fixed, 2 questions; unreachable states parked)**
+
+Scratch engine `build44` (PID 139760, Xvfb, guard `185_P8_live`, SAVE4,
+nothing saved; scratch driver, every input through the HD window, input log
+on). 16 states, each HD beside the game's frame of the same moment
+(`work_order_185/P8_live_1920x1080/pairs/`): the page; the shield panel's
+warning box (held, then the game's picture, answered by a click in HD's
+window); the page after it; the computer picker; the weapon picker; Laser
+Cannon chosen (arc box, Forward lit, Heavy Mount / Point Defense offered);
+Fwd Ext chosen (1-6, 12, 25); a modification on; the MISSILE filter off
+(the missile row gone, the button dim); ESC back; the special picker;
+Augmented Engines added (cost 89, space 32, 19 combat speed); plus on the
+first weapon row ("Nuclear Missiles (3)" ×2); Cruiser (293, 120);
+Clear; Cancel back to the popup. **Every number, word, arc, filter state
+and row agrees with the native frame.** Differences (parked 2c): the
+warning box shows after 3.76 s (the gate's modal hold — question); the
+chosen hull is faintly marked and its word small (question); a
+modification that is on was drawn as off — **fixed** (lit fill, INVENTION
+`chosen_fill` widened, 090y asserts it). 0 native frames on every
+transition. SAVE1-9 and SAVE11 identical, SAVE10 unchanged; MOX.SET
+rewritten by the game → restored from the pre-engine guard, verify clean.
+States the save does not reach, and the save each needs: parked, section 3.

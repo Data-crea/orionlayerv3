@@ -170,6 +170,24 @@ try:
             _db_s = pygame.Surface(_db_size)
             _db_fonts[_db_size][_db_stop] = _sd_he.font_sites(
                 _db_o.style, lambda: _db_o.render(_db_s))
+    # A modification switched on is lit (part 8 found it drawn as off).
+    _db_lit = []
+    for _db_on in (0, 1):
+        _db_a, _ = _pv.build_screen(1920, 1080)
+        _db_gs = _sd_he.design_state("weapon")
+        _db_gs.design_box["mod_status"][11] = _db_on
+        _db_a.dispatcher.update_from_game(_db_gs)
+        _db_o = _db_a.dispatcher.overlay
+        _db_a.hstrings = derived(HStrings)
+        _db_o._names = _sd_Names(_db_a, "en", root=DERIVED_ROOT)
+        _db_o.update(_db_gs)
+        _db_s = pygame.Surface((1920, 1080))
+        _db_o.render(_db_s)
+        _db_f = [f for i, f, _o in _db_wire.Box(_db_gs).mods() if i == 11][0]
+        _db_r = _sd_nd.rect(_db_o.layout, (_db_f.x, _db_f.y, _db_f.x_end,
+                                           _db_f.y_end))
+        _db_lit.append(pygame.image.tostring(_db_s.subsurface(_db_r), "RGB"))
+    assert _db_lit[0] != _db_lit[1], "a modification that is on looks off"
 finally:
     _db_art._loaded = _db_art_real
 for _db_stop in ("computer", "weapon", "special"):

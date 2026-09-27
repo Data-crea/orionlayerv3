@@ -29,7 +29,8 @@ and where it comes from:
                  headline into its box art, and the shield / computer box
                  wears the special box's ("Select Special System")
   INVENTION      `chosen_fill` — the chosen weapon row lit by a HUD fill
-                 where the original draws an arrow sprite
+                 where the original draws an arrow sprite, and a
+                 modification that is on, where it draws the lit frame
   OMISSION       `no_weapon_damage` — "No Weapon"'s damage "0" is
                  `_weapons[0]`'s, which DSBX does not carry (the writer
                  formats a damage string only for a weapon); `fit_colour`
@@ -197,6 +198,11 @@ def _mods(surface, screen, box, names):
     x1, y1, x2, y2 = geom.MOD_BOX
     nd.draw_box(surface, screen, (bx + x1, b + y1, bx + x2, b + y2))
     for i, f, on in box.mods():
+        if on:
+            # A modification switched on: lit like the chosen row (the
+            # original draws its word in the lit frame, frame 2).
+            hud.panel(surface, nd.rect(screen.layout, _rect(f)),
+                      screen.layout.scale, lit=True, dense=True)
         _t(surface, screen, names.part("weapon_mods", i), f.x, f.y,
            f.x_end - f.x, "value", "title" if on else "value")
 
