@@ -43,7 +43,7 @@ satellites (a DEVIATION: a list, not the scene) and draws no roads and no
 placement (HD STATE).
 
 diff --git a/src/ext/ext_api.cpp b/src/ext/ext_api.cpp
-index 868af44c..b057ad33 100644
+index 01169e5a..a94db57c 100644
 --- a/src/ext/ext_api.cpp
 +++ b/src/ext/ext_api.cpp
 @@ -468,6 +468,31 @@ static void SerializeState(std::vector<uint8_t>& buf,

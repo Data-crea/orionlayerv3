@@ -295,6 +295,12 @@ if _ldc_tree is not None and os.path.exists(os.path.join(
         with open(_if_api, "rb") as _src, open(os.path.join(
                 _if_t, "src", "ext", "ext_api.cpp"), "wb") as _dst:
             _dst.write(_src.read())
+        # Open fixes 35-40 (work order 181) are stacked on this block's
+        # trailing context: off the copy first, last one first.
+        import tools.version_check as _if_vcm
+        for _if_sp, _if_rc, _if_out in _if_vcm.take_off_colony_series(
+                _if_t, _ldc_root):
+            assert _if_rc == 0, f"{_if_sp} would not come off: {_if_out}"
         _if_run = _ldc_sp.run(["patch", "-R", "-p1", "--dry-run", "-i",
                                _if_pp], cwd=_if_t, capture_output=True,
                               text=True)

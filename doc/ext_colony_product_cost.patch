@@ -41,7 +41,7 @@ WHAT IT COSTS US WITHOUT IT: HD names what the colony builds but draws no
 bar and no turn count (HD STATE).
 
 diff --git a/src/ext/ext_api.cpp b/src/ext/ext_api.cpp
-index 9fe5907f..dbe4a11a 100644
+index 620b4cad..ce063ffc 100644
 --- a/src/ext/ext_api.cpp
 +++ b/src/ext/ext_api.cpp
 @@ -513,6 +513,30 @@ static void SerializeState(std::vector<uint8_t>& buf,

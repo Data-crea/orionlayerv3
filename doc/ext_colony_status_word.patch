@@ -38,7 +38,7 @@ WHAT IT COSTS US WITHOUT IT: HD shows Blockaded and nothing in place of
 Plague or Pop Boom (HD STATE) — never a guess.
 
 diff --git a/src/ext/ext_api.cpp b/src/ext/ext_api.cpp
-index b057ad33..9fe5907f 100644
+index a94db57c..620b4cad 100644
 --- a/src/ext/ext_api.cpp
 +++ b/src/ext/ext_api.cpp
 @@ -493,6 +493,26 @@ static void SerializeState(std::vector<uint8_t>& buf,

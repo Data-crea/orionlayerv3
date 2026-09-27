@@ -211,13 +211,50 @@ REPORTED_PATCHES = {
         "src/ext/ext_api.cpp", "OrionLayer, open fix 38.",
         "the production bar and the turn count"),
     "doc/ext_build_popup_queue.patch": (
-        "src/ext/ext_api.cpp", "COLBLDG::_colony_auto_building",
+        "src/ext/ext_api.cpp", "OrionLayer, open fix 39.",
         "the build popup's queue under edit"),
     "doc/ext_build_popup_lists.patch": (
         "src/ext/ext_api.cpp", "OrionLayer, open fix 40.",
         "the build popup's two lists and their numbers"),
 }
 
+
+#: Open fixes 35-40 in the order they are stacked on `ext_api.cpp` (work
+#: order 181). Each appends its block after the one before, so they sit
+#: on the trailing context of every earlier block in `SerializeState` —
+#: a check that proves an earlier patch comes back off (`patch -R`) has to
+#: take these off a copy first, last one first, as the stack was applied.
+COLONY_SERIES = (
+    "doc/ext_colony_screen_colony.patch",
+    "doc/ext_colony_building_placement.patch",
+    "doc/ext_colony_status_word.patch",
+    "doc/ext_colony_product_cost.patch",
+    "doc/ext_build_popup_queue.patch",
+    "doc/ext_build_popup_lists.patch",
+)
+
+
+def take_off_colony_series(workdir, root):
+    """Reverse every applied fix of COLONY_SERIES in `workdir` (a copy
+    holding `src/ext/ext_api.cpp`), last first. Returns the list of
+    (patch, returncode, output); a patch whose marker the copy does not
+    carry is skipped, so a tree without the series passes through."""
+    import subprocess
+    api = os.path.join(workdir, "src", "ext", "ext_api.cpp")
+    done = []
+    for patch in reversed(COLONY_SERIES):
+        table = LOCAL_PATCHES if patch in LOCAL_PATCHES else REPORTED_PATCHES
+        marker = table[patch][1]
+        with open(api, "r", errors="replace") as f:
+            if marker not in f.read():
+                continue
+        run = subprocess.run(
+            ["patch", "-R", "-p1", "-i", os.path.join(root, patch)],
+            cwd=workdir, capture_output=True, text=True)
+        done.append((patch, run.returncode, run.stdout + run.stderr))
+        if run.returncode != 0:
+            break
+    return done
 
 def find_tree(argv):
     """First existing candidate tree, or None."""

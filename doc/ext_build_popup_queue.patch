@@ -40,7 +40,7 @@ WHAT IT COSTS US WITHOUT IT: the build popup stays the game's own picture
 (the safety net) — a queue HD cannot see is a queue HD cannot edit.
 
 diff --git a/src/ext/ext_api.cpp b/src/ext/ext_api.cpp
-index dbe4a11a..6282f17a 100644
+index ce063ffc..11a3e21b 100644
 --- a/src/ext/ext_api.cpp
 +++ b/src/ext/ext_api.cpp
 @@ -537,6 +537,32 @@ static void SerializeState(std::vector<uint8_t>& buf,
@@ -49,8 +49,8 @@ index dbe4a11a..6282f17a 100644
      }
 +
 +    // 10. The build popup's queue as it is being edited: "BLDQ", written
-+    //     ONLY while SCREEN_QUEUE_POPUP is up, and LAST. OrionLayer, open
-+    //     fix 39.
++    //     ONLY while SCREEN_QUEUE_POPUP is up, and LAST.
++    //     OrionLayer, open fix 39.
 +    //
 +    //     COLBLDG edits a copy, _current_item[7], and writes it into the
 +    //     colony's producing[] only on OK or `<` / `>`

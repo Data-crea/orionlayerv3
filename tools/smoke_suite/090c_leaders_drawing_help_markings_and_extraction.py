@@ -255,9 +255,14 @@ if _ldc_tree is not None and os.path.exists(os.path.join(
         with open(_ldc_api, "rb") as _src, open(os.path.join(
                 _ldc_t, "src", "ext", "ext_api.cpp"), "wb") as _dst:
             _dst.write(_src.read())
-        # Open fix 32 (work order 176) sits right after this block in the
-        # same file: it comes off the scratch copy first, as the stack was
-        # applied, so fix 30's own context is what is checked.
+        # Open fixes 35-40 (work order 181) and then open fix 32 (work
+        # order 176) sit after this block in the same file: they come off
+        # the scratch copy first, last one first, as the stack was applied,
+        # so fix 30's own context is what is checked.
+        import tools.version_check as _ldc_vcm
+        for _ldc_p, _ldc_rc, _ldc_out in _ldc_vcm.take_off_colony_series(
+                _ldc_t, _ldc_root):
+            assert _ldc_rc == 0, f"{_ldc_p} would not come off: {_ldc_out}"
         _ldc_later = os.path.join(_ldc_root, "doc",
                                   "ext_info_screen_state.patch")
         if "MOX::_bill_savegame[i]" in open(_ldc_api, encoding="utf-8",

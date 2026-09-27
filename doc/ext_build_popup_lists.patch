@@ -48,7 +48,7 @@ WHAT IT COSTS US WITHOUT IT: the build popup stays the game's own picture
 (the safety net); a list HD cannot name is a list HD cannot offer.
 
 diff --git a/src/ext/ext_api.cpp b/src/ext/ext_api.cpp
-index 6282f17a..b4fd42ce 100644
+index 11a3e21b..9b293a82 100644
 --- a/src/ext/ext_api.cpp
 +++ b/src/ext/ext_api.cpp
 @@ -563,6 +563,72 @@ static void SerializeState(std::vector<uint8_t>& buf,

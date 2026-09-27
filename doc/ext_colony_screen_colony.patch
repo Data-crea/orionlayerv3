@@ -54,14 +54,14 @@ popup stay the game's own picture in OrionLayer's window (the safety
 net). HD does not guess the colony.
 
 diff --git a/src/ext/ext_api.cpp b/src/ext/ext_api.cpp
-index 5b902f31..868af44c 100644
+index 5b902f31..01169e5a 100644
 --- a/src/ext/ext_api.cpp
 +++ b/src/ext/ext_api.cpp
 @@ -6,6 +6,7 @@
  #include "ext/ext_server.h"
  #include "game/newgame.h"
  #include "game/platform.h"
-+#include "game/build_queue.h"
++#include "game/build_queue.h"  // OrionLayer, open fix 35. autobuild_settings, sent in "COLS".
  
  #include <vector>
  #include <cstring>
