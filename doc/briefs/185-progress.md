@@ -79,3 +79,41 @@ commits are not patch files) — the README says so, and reads the patches
 as exact descriptions of each change. Data sends it himself.
 
 ## Part 5 — credits roll — credits roll: already clean
+
+## Part 2 — fix 41, the proper version — **DONE: open fix 43 written, proved, parked**
+
+1. **How F12 works, measured first** (the applied build, engine 113660 after
+   part 1's baseline, SAVE4, `evidence/work_order_185/P2_f12_applied/`):
+   F12 switches OrionLayer's own window to the engine's picture (381
+   colours sampled, frame source `net`/`f12`), a forwarded click on the
+   native COLONIES button opened the colony summary, ESC came back, F12
+   returned to HD. **It works with fix 41**; what cannot happen is the
+   engine's own window appearing (parked 2b).
+2. **Open fix 43** (entry 43, `doc/ext_engine_window_on_request.patch`,
+   reported by `version_check`, **check 090r #6** new): `ORION2RE_HIDE_WINDOW`
+   decides the hidden start (replacing 41's `true`), `ext::Init` no longer
+   forces it, `MSG_SHOW_WINDOW` (0x86) sets the atomic flag, the main thread
+   applies a change once (show/hide, VSync again). Amends 41; revert =
+   `patch -R`, back to 41. Mechanism and alternatives: parked 2a.
+3. **Scratch**: worktree `wt43` of the scratch clone at `4bf152e4`
+   (commit `f110592e`), its own build directory `build43`, vendors copied,
+   the preset's variables; built exit 0. Proof: the patch FILE applied to a
+   fresh worktree at `4bf152e4` (`patch -p1 --dry-run`, then `patch -p1`,
+   no offset, no fuzz), byte for byte the scratch commit's five files;
+   `ext_api.cpp`, `ext_server.cpp`, `platform.cpp` compile alone with the
+   build's own command; the control `MSG_SHOW_WINDW` refused.
+4. **Live on Xvfb** (every start `engine_start.py --engine`, guards
+   `185_P2_noenv`, `185_P2_env`, `185_P2_control`, each verified identical):
+   without the variable IsViewable, hide → IsUnMapped, show → IsViewable;
+   with it IsUnMapped from the start, the skip arrives, show/hide work;
+   pacing 6.05/s, 165.0 ms; control: the applied build ignores the message.
+   (The first probe read "no window" — it lacked the private Xvfb's cookie;
+   with `XAUTHORITY` set it saw the window.)
+5. **The new check caught the author**: its first run failed on
+   `+#include <atomic>` in `ext_api.h`, a changed place without the marker.
+   The marker was added there (a comment), the scratch commit amended
+   (`884c727e` → `f110592e`), rebuilt, the patch regenerated, and the
+   apply, compile and control proofs run again on the new file — all as
+   before. The live results above were measured on `884c727e`; the two
+   differ in that one comment.
+6. HD side described in entry 43, not committed. **Checks 386 → 387.**

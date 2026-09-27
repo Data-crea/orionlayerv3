@@ -29,9 +29,44 @@ Designer's 20-pass delay before its weapon picker (design.cpp:870) — the
 same mechanism, a longer wait. **Default: not applied** (this order
 changes no engine).
 
+### 1b. Open fix 43 — the engine's window, done properly (amends 41)
+
+Entry 43, "The engine's window: hidden only when OrionLayer starts it, and
+shown again on request"; patch `doc/ext_engine_window_on_request.patch`.
+Proved in a scratch worktree of `4bf152e4` with its own build directory:
+started without `ORION2RE_HIDE_WINDOW` the window shows, as before fix 41;
+with it, it never shows and the intro skip still arrives; `MSG_SHOW_WINDOW`
+shows and hides it; pacing unchanged; the applied build ignores the
+message, so one OrionLayer runs on both. **Replaces** 41's hidden start,
+**keeps** 41's no-VSync while hidden; **revert**: `patch -R -p1` returns the
+engine to 41 as applied. **Default: not applied.**
+
 ## 2. Decisions asked for in this order
 
-(Filled per part below.)
+### 2a. The mechanism for fix 43 (part 2) — chosen: an environment variable to start hidden, an Extension API message to show and hide
+
+| | start hidden | show / hide while running |
+|---|---|---|
+| **environment variable** (chosen for the start) | yes — decided before the window's first show; OrionLayer already starts the engine this way (`ORION2RE_NO_VSYNC` in `tools/vdisplay.engine_env`, used by the tools and `play.py`) | no |
+| command-line flag | yes — but through the engine's own argument parsing, which is the original's code | no |
+| **Extension API message** (chosen for the way back) | no — the window is shown in the platform's setup before any client can connect | yes — `MSG_SHOW_WINDOW`, applied on the main thread |
+
+**Why:** the start can only be the starter's decision, and the way back
+can only be the client's. **Default:** both, as entry 43 describes.
+
+### 2b. What F12 should do once fix 43 is applied — a question, from a measurement
+
+Measured on your applied build (work order 185, part 2): **F12 inside
+OrionLayer works with fix 41** — OrionLayer's window shows the engine's
+picture with the status bar, clicks and keys reach the game (a click on
+COLONIES opened the colony summary, ESC came back), F12 returns to HD.
+What cannot happen is the engine's OWN window appearing. Is "F12 to the
+original does not work" about that window? **Default taken in entry 43's
+described HD side:** F12 does both — OrionLayer keeps showing the picture
+as today AND the engine's window is shown; F12 again hides it. If you want
+only the engine's window (OrionLayer staying on HD, or minimising itself),
+that is a change to `main.App._cycle_render_mode` alone.
+
 
 ## 3. Everything else
 

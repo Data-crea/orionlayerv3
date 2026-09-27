@@ -64,6 +64,7 @@ section for what was found where.
 | 40 | What the build popup offers, in its order, and its queue, with the costs and times it prints, is not on the wire — `_building_indexes`, `_military_indexes`, `Draw_Cost_And_Time_Info_` | **Applied** 27 September 2026 by work order 181 (orion2re `2097b0c6`, `doc/ext_build_popup_lists.patch`, "BLDL"); required; confirmed live | Nothing while applied; without it the build popup stays the game's own picture |
 | 41 | The engine's own window is shown before `ext::Init` sets `g_hide_window` (platform.cpp:1406-1408 on `2097b0c6`, mox2.cpp:382) | **Applied** 27 September 2026 by work order 183 on Data's approval (orion2re `4bf152e4` on `orionlayer-local`, `doc/ext_engine_window_hidden.patch`); written and proved by work order 182; required by `tools/version_check.py`; confirmed live on the virtual display (never mapped, pacing unchanged, HD identical); open upstream | Without it the engine's window appears on every start, and the original follows the real pointer over it |
 | 42 | A screen is silent on the wire while its input delay counts down: `Get_Input_` returns before `ext::Tick` (fields.cpp:161-167), so the research panel's list reaches a client ~550 ms after the engine has built it | **Written, NOT APPLIED** — work order 184 (`doc/ext_input_delay_tick.patch`); proved in scratch: research entries 636-686 → 77-103 ms (median), flash walk 29 transitions / 0 native frames, 182's stress 0 lost / 0 dropped, pacing and CPU unchanged; clicks in the gap (work order 185): 260 inputs, none lost, none taken twice — an input in the research panel's gap is held and taken when the delay ends | Without it every research entry waits ~550 ms for nothing (66-80 % of it), and every screen that sets an input delay (42 call sites) is heard that much later |
+| 43 | Open fix 41 hides the engine's window always: started on its own the engine is invisible for good, and nothing can show its window again | **Written, NOT APPLIED** — work order 185 (`doc/ext_engine_window_on_request.patch`), AMENDS fix 41; proved in scratch: without `ORION2RE_HIDE_WINDOW` the window shows as before 41, with it it never shows, `MSG_SHOW_WINDOW` shows and hides it, pacing unchanged, the applied build ignores the message | Without it an engine started without OrionLayer cannot be seen, and F12 can show only the engine's picture inside OrionLayer's window, never the engine's own window |
 
 Items 3 and 4 are both about INJECT_CLICK and both live in the same
 code path, but they are separate faults: 3 is where the coordinates
@@ -3064,3 +3065,279 @@ the engine is ready.
 `ninja -C out/build/Linux/linux-debug`, and move the patch from
 `REPORTED_PATCHES` to `LOCAL_PATCHES` in `tools/version_check.py`. It comes
 back off with `patch -R -p1` and a rebuild.
+
+## 43. The engine's window: hidden only when OrionLayer starts it, and shown again on request
+
+**Status: NOT APPLIED — written, proved and parked for Data by work order
+185 (Part 2), 27 September 2026** (`doc/briefs/185-parked-for-data.md`,
+items 1b and 2a). Patch: `doc/ext_engine_window_on_request.patch`; listed
+by `tools/version_check.py` under REPORTED_PATCHES (marker `OrionLayer, open
+fix 43.`, on one line at every changed place). **It AMENDS open fix 41**
+(applied, `4bf152e4`; entry 41, "The engine's own window is shown before it
+is hidden"): it replaces 41's unconditional hidden start and keeps 41's
+other half, a hidden window presenting without VSync. It is written against
+`4bf152e4`, i.e. on top of 41; reverting it returns the engine to 41 as
+applied, and reverting 41 as well returns it to before either.
+
+**What is missing.** Fix 41 starts `ext::g_hide_window` true in every
+`ORION2RE_EXT` build (ext_api.cpp:16), and `ext::Init` sets it true again
+(ext_api.cpp:1086). So an engine started on its own — without OrionLayer —
+creates its window hidden and never shows it; nothing can: the flag is only
+read once, before the first show (platform.cpp:1410-1412). Data accepted
+that for now (work order 184, "Fix 41 as it stands"), together with "F12 to
+the original does not work".
+
+**What F12 does today — measured, not assumed** (work order 185, on the
+applied build, the virtual display, SAVE4, evidence
+`evidence/work_order_185/P2_f12_applied/`). F12 is `main.App.
+_cycle_render_mode`: it switches OrionLayer's OWN window to the engine's
+framebuffer (`render_mode` "original", with the status bar "F12: switch
+mode"), forwards clicks and keys to the engine, and F12 again returns to
+HD. **That works with fix 41 applied**: the engine's picture was shown (381
+colours sampled, frame source `net`/`f12`), a click on the native COLONIES
+button went out as an activation and opened the colony summary, ESC came
+back, and F12 returned to the HD map. What does NOT work is the ENGINE'S
+OWN window: it can never be shown. The order's "F12 can show the original
+window" is therefore about that window, and this patch is what makes it
+possible.
+
+**What the patch changes.** Five files, every place marked:
+- `src/ext/ext_api.cpp` — `g_hide_window` starts from the environment:
+  hidden only when `ORION2RE_HIDE_WINDOW` is set, non-empty and not "0"
+  (a static function read at start, replacing 41's line 16); `ext::Init`
+  no longer forces it on (line 1086); a new command, `MSG_SHOW_WINDOW`,
+  sets the flag (ProcessInput) — only the flag, never the window.
+- `src/ext/ext_api.h` — the flag becomes `std::atomic<bool>`: a client's
+  command writes it on the game thread, the main thread reads it.
+- `src/ext/ext_server.h` / `.cpp` — `MSG_SHOW_WINDOW = 0x86`, one byte
+  (1 show, 0 hide); a shorter payload is dropped, never guessed.
+- `src/game/platform.cpp` — the main thread, which owns the window, keeps
+  whether it is on screen (`g_window_shown`, set after the first show) and
+  in its loop applies a changed flag once: `SDL_ShowWindow` or
+  `SDL_HideWindow`, then the VSync interval again (a shown window presents
+  with VSync unless `ORION2RE_NO_VSYNC`, a hidden one without).
+
+**The exact change.** The diff, as written by the scratch commit
+(`f110592e`; the `diff --git` and `index` lines and the text git adds after
+`@@` are not part of it):
+
+```diff
+--- a/src/ext/ext_api.cpp
++++ b/src/ext/ext_api.cpp
+@@ -4,6 +4,7 @@
+ #include "pch.h"
+ #include "ext/ext_api.h"
+ #include "ext/ext_server.h"
++#include <cstdlib>  // OrionLayer, open fix 43. std::getenv
+ #include "game/newgame.h"
+ #include "game/platform.h"
+ #include "game/build_queue.h"  // OrionLayer, open fix 35. autobuild_settings, sent in "COLS".
+@@ -13,7 +14,12 @@
+ 
+ namespace ext {
+ 
+-bool g_hide_window = true;  // OrionLayer, open fix 41. Hidden before the window is first shown, not after (platform.cpp).
++// OrionLayer, open fix 43. Hidden from the start only when the starter asks (ORION2RE_HIDE_WINDOW, set by OrionLayer's tools and play.py); started on its own, the window shows as before fix 41.
++static bool Hide_Window_At_Start_() {
++    const char* value = std::getenv("ORION2RE_HIDE_WINDOW");
++    return value != nullptr && value[0] != '\0' && value[0] != '0';
++}
++std::atomic<bool> g_hide_window{Hide_Window_At_Start_()};
+ int16_t g_pending_field = 0;
+ int16_t g_activated_input = 0;
+ bool g_injected_mouse_pending = false;
+@@ -1046,6 +1052,11 @@
+             }
+             break;
+ 
++        case MSG_SHOW_WINDOW:
++            // OrionLayer, open fix 43. Only the flag: the main thread shows or hides the window (platform.cpp).
++            g_hide_window = (cmd.param1 == 0);
++            break;
++
+         case MSG_CANCEL_FIELD:
+             // Right-click on field (DOWN + UP)
+             if (cmd.param1 >= 0 && cmd.param1 < fields::_fields_count) {
+@@ -1083,7 +1094,7 @@
+ // ── Public API ───────────────────────────────────────────
+ 
+ bool Init(uint16_t port) {
+-    g_hide_window = true;
++    // OrionLayer, open fix 43. The window's visibility is the starter's and the client's, no longer forced here.
+     g_last_screen = -99;
+     g_last_stardate = -1;
+     g_last_fields_count = -1;
+--- a/src/ext/ext_api.h
++++ b/src/ext/ext_api.h
+@@ -2,6 +2,7 @@
+ // orion2re Extension API
+ // Public interface. Only ext_api.cpp includes game headers.
+ 
++#include <atomic>  // OrionLayer, open fix 43. The window flag is shared by two threads.
+ #include <cstdint>
+ 
+ namespace ext {
+@@ -18,7 +19,8 @@
+ void Shutdown();
+ 
+ /// If true, suppress SDL_ShowWindow (headless mode).
+-extern bool g_hide_window;
++/// OrionLayer, open fix 43. Set at start from ORION2RE_HIDE_WINDOW, and by a client (MSG_SHOW_WINDOW) from the game thread; read by the main thread, which owns the window.
++extern std::atomic<bool> g_hide_window;
+ 
+ /// Pending field activation from external client.
+ /// Set by ProcessInput(), consumed by Get_Input_() early return.
+--- a/src/ext/ext_server.cpp
++++ b/src/ext/ext_server.cpp
+@@ -243,6 +243,16 @@
+         }
+         break;
+     }
++    case MSG_SHOW_WINDOW: {
++        // OrionLayer, open fix 43. uint8 show; shorter is dropped, never guessed.
++        if (payload_len >= 1) {
++            InputCommand cmd{};
++            cmd.type = MSG_SHOW_WINDOW;
++            cmd.param1 = payload[0] != 0 ? 1 : 0;
++            input_queue_.push_back(cmd);
++        }
++        break;
++    }
+     case MSG_SET_JOBS: {
+         // int16 colony_idx, uint8 count, count x (pop_idx, job).
+         // A malformed list is DROPPED here rather than half-queued:
+--- a/src/ext/ext_server.h
++++ b/src/ext/ext_server.h
+@@ -40,6 +40,8 @@
+ // fleet box. int16 ship_idx, uint8 selected (0 or 1). Applied only if
+ // every precondition holds; a refused command writes nothing.
+ constexpr uint16_t MSG_SELECT_SHIP   = 0x85;
++// OrionLayer, open fix 43. Show (1) or hide (0) the engine's own window: uint8 show.
++constexpr uint16_t MSG_SHOW_WINDOW   = 0x86;
+ 
+ // Subscription flags (bitmask)
+ constexpr uint16_t SUB_STATE         = 0x01;
+--- a/src/game/platform.cpp
++++ b/src/game/platform.cpp
+@@ -29,6 +29,10 @@
+ 		int Present_VSync_Interval_() { return 1; }
+ #endif
+ 		bool g_has_lost_focus;
++#ifdef ORION2RE_EXT
++		// OrionLayer, open fix 43. Whether the window is on screen now, so a client's request is applied once.
++		bool g_window_shown = false;
++#endif
+ 		SDL_Window* g_sdl_window;
+ 		SDL_Renderer* g_sdl_renderer;
+ 		SDL_Texture* g_sdl_present_texture;
+@@ -1410,6 +1414,9 @@
+ 		if (!ext::g_hide_window)
+ #endif
+ 		SDL_ShowWindow(g_sdl_window);
++#ifdef ORION2RE_EXT
++		g_window_shown = !ext::g_hide_window;  // OrionLayer, open fix 43.
++#endif
+ 		const char* renderer_name = SDL_GetRendererName(g_sdl_renderer);
+ 		SDL_LogInfo(
+ 			SDL_LOG_CATEGORY_APPLICATION,
+@@ -1460,6 +1467,18 @@
+ 
+         while (!Game_Thread_Exited_()) {
+             Service_Pending_Window_Events_();
++#ifdef ORION2RE_EXT
++            // OrionLayer, open fix 43. A client's MSG_SHOW_WINDOW, applied on this thread, which owns the window.
++            if (g_window_shown == ext::g_hide_window) {
++                g_window_shown = !ext::g_hide_window;
++                if (g_window_shown) {
++                    SDL_ShowWindow(g_sdl_window);
++                } else {
++                    SDL_HideWindow(g_sdl_window);
++                }
++                (void)SDL_SetRenderVSync(g_sdl_renderer, Present_VSync_Interval_());
++            }
++#endif
+ 
+             Present_Published_Off_Page_();
+             SDL_Delay(1);
+```
+
+**Proof.** In a scratch worktree of `orionlayer-local` `4bf152e4` with its
+own build directory (never on `orionlayer-local`, never the build `play.py`
+starts): the patch file applies with `patch -p1 --dry-run` and `patch -p1`,
+no offset, no fuzz, to a clean worktree at `4bf152e4`, and the applied
+files equal the scratch commit's byte for byte; the whole engine built
+(Debug, `ORION2RE_EXT=ON`, `ORION2RE_BUILD_TESTS=OFF` — the `linux-debug`
+preset's variables) without an error; `ext_api.cpp`, `ext_server.cpp` and
+`platform.cpp` each compile alone with the build's own command (`ninja -t
+commands`, `-fsyntax-only`); the control — `MSG_SHOW_WINDW` in
+`ext_api.cpp`'s new case — was refused ("»MSG_SHOW_WINDW« wurde in diesem
+Gültigkeitsbereich nicht deklariert").
+
+**Scratch results** (work order 185, measured on the scratch commit before
+the marker was added to the `#include <atomic>` line — `884c727e`, which
+differs from `f110592e` in that one comment only; rebuilt after it; the
+virtual display, the window's map
+state read with `xwininfo` on the engine's own window, every start through
+`tools/engine_start.py --engine` with its guard, each verified identical):
+
+| | result |
+|---|---|
+| started WITHOUT `ORION2RE_HIDE_WINDOW` (engine 123801) | the window **IsViewable** — as before fix 41; `MSG_SHOW_WINDOW 0` → IsUnMapped, `1` → IsViewable, snapshots flowing throughout (10 and 9 in 1.5 s) |
+| started WITH `ORION2RE_HIDE_WINDOW=1` (engine 124005) | **IsUnMapped** from the start, the intro skip still arrives (READY with the key); `1` → IsViewable, `0` → IsUnMapped |
+| pacing, main menu, 20 s, hidden | 6.05/s, gap median 165.0 ms, max 167.4, CPU 2.5 % — fix 41's 6.05 / 164.6 / 167.0 |
+| control: the applied build (fix 41 only, engine 124147) | IsUnMapped; `MSG_SHOW_WINDOW 1` ignored — still IsUnMapped, the engine serving (20 snapshots) |
+
+**The mechanism, and the alternatives** (parked item 2a): the START is an
+environment variable, because the window is shown in the platform's setup
+before any client could have connected, so only something the starter
+decides can keep it hidden — and OrionLayer's start already passes one
+that way (`ORION2RE_NO_VSYNC`, `tools/vdisplay.engine_env`, used by the
+tools and by `play.py`). A command-line flag would do the same but touches
+the engine's argument parsing, which is the original's; an Extension API
+message cannot, alone, prevent the first show. The WAY BACK is an Extension
+API message, because F12 happens while the game runs and only the client
+knows when.
+
+**The HD side, described, not committed** (it would only work with this
+patch): `tools/vdisplay.engine_env` sets `ORION2RE_HIDE_WINDOW=1` beside
+`ORION2RE_NO_VSYNC`, so every tool start and `play.py` start hidden as now;
+`core/game_client.GameClient.show_window(show)` sends `MSG_SHOW_WINDOW`
+with one byte; `main.App._cycle_render_mode` calls `show_window(True)` when
+it enters "original" and `show_window(False)` when it returns to "hd", and
+otherwise stays as it is — OrionLayer's window keeps showing the engine's
+picture with the status bar, so the player can use either window; F12 again
+hides the engine's window and returns to HD. `version_check` moves the
+patch to LOCAL_PATCHES. An engine without the fix ignores the message, so
+the same OrionLayer runs on both.
+
+**Side effects — observed and ruled out, and the risks named.**
+- *Focus and the pointer*: while the engine's window is shown and focused,
+  the original follows the REAL pointer over it (decision 39's correction)
+  — which is what a player using that window wants; OrionLayer's injected
+  clicks resolve their field from the enqueued coordinates as before.
+  After a hide, `g_window_focus_state` may be 0 (a focus-lost event), which
+  makes an injected pointer survive (platform.cpp:844) — more exact for
+  OrionLayer, not less.
+- *VSync while shown*: a shown window presents with VSync unless
+  `ORION2RE_NO_VSYNC` is set — the tools set it; `play.py` inherits it from
+  `engine_env`. A shown window covered by a full-screen game is open fix
+  31's case, answered by that variable.
+- *A standalone engine* is again as it was before fix 41: its window shows,
+  and it presents with VSync (`ext::Init` no longer forces the hidden flag,
+  which before 41 had turned VSync off for every extension build once the
+  server started).
+- *Thread safety*: the flag is atomic; the window is touched only by the
+  main thread, once per change.
+
+**What it costs us without it.** An engine started without OrionLayer
+cannot be seen or played, and F12 shows the original only inside
+OrionLayer's window.
+
+**How to apply.** From `~/orion2re` on `orionlayer-local`, after fix 41
+(fix 42, if applied, touches another file): `patch -p1 <
+~/orionlayerv3/doc/ext_engine_window_on_request.patch`, then `ninja -C
+out/build/Linux/linux-debug`; set `ORION2RE_HIDE_WINDOW=1` in
+`tools/vdisplay.engine_env`, add the F12 call and `GameClient.show_window`,
+and move the patch from `REPORTED_PATCHES` to `LOCAL_PATCHES`. It comes back
+off with `patch -R -p1` and a rebuild — the engine is then fix 41 as
+applied.

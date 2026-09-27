@@ -234,13 +234,21 @@ LOCAL_PATCHES = {
 #: (work order 177), again since 34 moved up (work order 179), and again
 #: since work order 181 moved up open fixes 35-40, which work order 180
 #: had parked here — until 182 parked open fix 41 here, and again since
-#: work order 183 moved 41 up — until work order 184 parked open fix 42.
+#: work order 183 moved 41 up — until work order 184 parked open fix 42,
+#: and work order 185 open fix 43.
 REPORTED_PATCHES = {
     # Work order 184: written, proved in scratch, parked — not applied.
     "doc/ext_input_delay_tick.patch": (
         os.path.join("src", "game", "fields.cpp"), "OrionLayer, open fix 42.",
         "a screen heard during its input delay (the research panel's list "
         "~550 ms sooner on every entry)"),
+    # Work order 185: written, proved in scratch, parked — not applied.
+    # It amends 41: the window hidden only when the starter asks.
+    "doc/ext_engine_window_on_request.patch": (
+        os.path.join("src", "ext", "ext_api.cpp"), "OrionLayer, open fix 43.",
+        "the engine's window hidden only when OrionLayer starts it "
+        "(ORION2RE_HIDE_WINDOW), and shown again on request (MSG_SHOW_WINDOW, "
+        "F12)"),
 }
 
 
@@ -274,6 +282,7 @@ FIX_NUMBERS = {
     "doc/ext_build_popup_lists.patch": (40,),
     "doc/ext_engine_window_hidden.patch": (41,),
     "doc/ext_input_delay_tick.patch": (42,),
+    "doc/ext_engine_window_on_request.patch": (43,),
 }
 
 

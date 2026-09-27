@@ -1,0 +1,187 @@
+Engine: the window hidden only when the starter asks, and shown again on request (open fix 43).
+
+STATUS: NOT APPLIED — written and proved by work order 185 (Part 2),
+parked for Data (doc/briefs/185-parked-for-data.md). No engine patch may
+be applied in that order. It AMENDS open fix 41 (applied, 4bf152e4): it
+replaces 41's `g_hide_window = true` start and keeps 41's other half, a
+hidden window presenting without VSync.
+
+PROOF (work order 185, 27 September 2026): in a scratch worktree of
+orionlayer-local 4bf152e4 with its own build directory (never on
+orionlayer-local itself, never the build play.py starts) this file applied
+with `patch -p1 --dry-run` and `patch -p1`, no offset, no fuzz, and the
+applied tree equals the scratch commit; the scratch engine was built in
+full (Debug, ORION2RE_EXT=ON, as the linux-debug preset) — no error — every
+changed .cpp compiles alone with the build's own command, and a control,
+the same file with `MSG_SHOW_WINDOW` misspelt `MSG_SHOW_WINDW` in
+ext_api.cpp, was refused by the compiler. The scratch engine then ran on
+the virtual display: see the entry, doc/orion2re_open_fixes.md 43.
+
+To apply, from ~/orion2re on the orionlayer-local branch (after fix 41,
+and after fix 42 if that is applied — they touch different files):
+
+    patch -p1 < ~/orionlayerv3/doc/ext_engine_window_on_request.patch
+
+then rebuild, and set ORION2RE_HIDE_WINDOW=1 where OrionLayer starts the
+engine (tools/vdisplay.engine_env). It comes back off with `patch -R -p1`
+and a rebuild, which returns the engine to fix 41 as applied.
+
+WHAT IT IS FOR
+
+    Fix 41 hides the window from the start, always: an ORION2RE_EXT engine
+    started on its own is invisible and stays so, and nothing can show
+    its window. With this patch the window is hidden at start only when
+    the environment says ORION2RE_HIDE_WINDOW (non-empty, not "0") — what
+    OrionLayer's start would set — and a client can show or hide it at any
+    time with MSG_SHOW_WINDOW (0x86, one byte: 1 show, 0 hide), applied on
+    the main thread, which owns the window. ext::Init no longer forces the
+    flag on. One marker, `OrionLayer, open fix 43.`, on one line at every
+    changed place.
+
+diff --git a/src/ext/ext_api.cpp b/src/ext/ext_api.cpp
+index 88c157cd..ba363aff 100644
+--- a/src/ext/ext_api.cpp
++++ b/src/ext/ext_api.cpp
+@@ -4,6 +4,7 @@
+ #include "pch.h"
+ #include "ext/ext_api.h"
+ #include "ext/ext_server.h"
++#include <cstdlib>  // OrionLayer, open fix 43. std::getenv
+ #include "game/newgame.h"
+ #include "game/platform.h"
+ #include "game/build_queue.h"  // OrionLayer, open fix 35. autobuild_settings, sent in "COLS".
+@@ -13,7 +14,12 @@
+ 
+ namespace ext {
+ 
+-bool g_hide_window = true;  // OrionLayer, open fix 41. Hidden before the window is first shown, not after (platform.cpp).
++// OrionLayer, open fix 43. Hidden from the start only when the starter asks (ORION2RE_HIDE_WINDOW, set by OrionLayer's tools and play.py); started on its own, the window shows as before fix 41.
++static bool Hide_Window_At_Start_() {
++    const char* value = std::getenv("ORION2RE_HIDE_WINDOW");
++    return value != nullptr && value[0] != '\0' && value[0] != '0';
++}
++std::atomic<bool> g_hide_window{Hide_Window_At_Start_()};
+ int16_t g_pending_field = 0;
+ int16_t g_activated_input = 0;
+ bool g_injected_mouse_pending = false;
+@@ -1046,6 +1052,11 @@ static void ProcessInput() {
+             }
+             break;
+ 
++        case MSG_SHOW_WINDOW:
++            // OrionLayer, open fix 43. Only the flag: the main thread shows or hides the window (platform.cpp).
++            g_hide_window = (cmd.param1 == 0);
++            break;
++
+         case MSG_CANCEL_FIELD:
+             // Right-click on field (DOWN + UP)
+             if (cmd.param1 >= 0 && cmd.param1 < fields::_fields_count) {
+@@ -1083,7 +1094,7 @@ static void ProcessInput() {
+ // ── Public API ───────────────────────────────────────────
+ 
+ bool Init(uint16_t port) {
+-    g_hide_window = true;
++    // OrionLayer, open fix 43. The window's visibility is the starter's and the client's, no longer forced here.
+     g_last_screen = -99;
+     g_last_stardate = -1;
+     g_last_fields_count = -1;
+diff --git a/src/ext/ext_api.h b/src/ext/ext_api.h
+index c228885f..e3585f13 100644
+--- a/src/ext/ext_api.h
++++ b/src/ext/ext_api.h
+@@ -2,6 +2,7 @@
+ // orion2re Extension API
+ // Public interface. Only ext_api.cpp includes game headers.
+ 
++#include <atomic>  // OrionLayer, open fix 43. The window flag is shared by two threads.
+ #include <cstdint>
+ 
+ namespace ext {
+@@ -18,7 +19,8 @@ void Tick(int16_t current_screen);
+ void Shutdown();
+ 
+ /// If true, suppress SDL_ShowWindow (headless mode).
+-extern bool g_hide_window;
++/// OrionLayer, open fix 43. Set at start from ORION2RE_HIDE_WINDOW, and by a client (MSG_SHOW_WINDOW) from the game thread; read by the main thread, which owns the window.
++extern std::atomic<bool> g_hide_window;
+ 
+ /// Pending field activation from external client.
+ /// Set by ProcessInput(), consumed by Get_Input_() early return.
+diff --git a/src/ext/ext_server.cpp b/src/ext/ext_server.cpp
+index 45dad4dc..23ed4df5 100644
+--- a/src/ext/ext_server.cpp
++++ b/src/ext/ext_server.cpp
+@@ -243,6 +243,16 @@ void Server::HandleClientMessage(Client& client) {
+         }
+         break;
+     }
++    case MSG_SHOW_WINDOW: {
++        // OrionLayer, open fix 43. uint8 show; shorter is dropped, never guessed.
++        if (payload_len >= 1) {
++            InputCommand cmd{};
++            cmd.type = MSG_SHOW_WINDOW;
++            cmd.param1 = payload[0] != 0 ? 1 : 0;
++            input_queue_.push_back(cmd);
++        }
++        break;
++    }
+     case MSG_SET_JOBS: {
+         // int16 colony_idx, uint8 count, count x (pop_idx, job).
+         // A malformed list is DROPPED here rather than half-queued:
+diff --git a/src/ext/ext_server.h b/src/ext/ext_server.h
+index 36d11892..4d9d4c4b 100644
+--- a/src/ext/ext_server.h
++++ b/src/ext/ext_server.h
+@@ -40,6 +40,8 @@ constexpr uint16_t MSG_SET_JOBS      = 0x84;
+ // fleet box. int16 ship_idx, uint8 selected (0 or 1). Applied only if
+ // every precondition holds; a refused command writes nothing.
+ constexpr uint16_t MSG_SELECT_SHIP   = 0x85;
++// OrionLayer, open fix 43. Show (1) or hide (0) the engine's own window: uint8 show.
++constexpr uint16_t MSG_SHOW_WINDOW   = 0x86;
+ 
+ // Subscription flags (bitmask)
+ constexpr uint16_t SUB_STATE         = 0x01;
+diff --git a/src/game/platform.cpp b/src/game/platform.cpp
+index 3f943781..22b6dad8 100644
+--- a/src/game/platform.cpp
++++ b/src/game/platform.cpp
+@@ -29,6 +29,10 @@ namespace platform {
+ 		int Present_VSync_Interval_() { return 1; }
+ #endif
+ 		bool g_has_lost_focus;
++#ifdef ORION2RE_EXT
++		// OrionLayer, open fix 43. Whether the window is on screen now, so a client's request is applied once.
++		bool g_window_shown = false;
++#endif
+ 		SDL_Window* g_sdl_window;
+ 		SDL_Renderer* g_sdl_renderer;
+ 		SDL_Texture* g_sdl_present_texture;
+@@ -1410,6 +1414,9 @@ namespace platform {
+ 		if (!ext::g_hide_window)
+ #endif
+ 		SDL_ShowWindow(g_sdl_window);
++#ifdef ORION2RE_EXT
++		g_window_shown = !ext::g_hide_window;  // OrionLayer, open fix 43.
++#endif
+ 		const char* renderer_name = SDL_GetRendererName(g_sdl_renderer);
+ 		SDL_LogInfo(
+ 			SDL_LOG_CATEGORY_APPLICATION,
+@@ -1460,6 +1467,18 @@ namespace platform {
+ 
+         while (!Game_Thread_Exited_()) {
+             Service_Pending_Window_Events_();
++#ifdef ORION2RE_EXT
++            // OrionLayer, open fix 43. A client's MSG_SHOW_WINDOW, applied on this thread, which owns the window.
++            if (g_window_shown == ext::g_hide_window) {
++                g_window_shown = !ext::g_hide_window;
++                if (g_window_shown) {
++                    SDL_ShowWindow(g_sdl_window);
++                } else {
++                    SDL_HideWindow(g_sdl_window);
++                }
++                (void)SDL_SetRenderVSync(g_sdl_renderer, Present_VSync_Interval_());
++            }
++#endif
+ 
+             Present_Published_Off_Page_();
+             SDL_Delay(1);
