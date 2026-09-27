@@ -11,7 +11,7 @@
 #   - screen 1 is claimed only with open fixes 35-38's four blocks: without any of them the game's picture, as before; with them WAITING until the pair, the handle and CEVT/CPRD agree, a box over it modal
 #   - the colony screen's geometry is the source's: building cells on the live fields, the help table, _building_cr copied exactly
 #   - the colony screen's words by the source's own ids, the status word for each of open fix 37's answers, and the autobuild label's encodings
-#   - the colony screen draws at 1920, 2576 and 3840 from a READY snapshot, and every mark it carries is named in its module and the status document
+#   - the colony screen draws at 1920, 2576 and 3840 from a READY snapshot, its text scaled once, and every mark it carries is named in its module and the status document
 #   - every way into and out of screens 1 and 25 the scratch save offers is in the replayed set at 1920 and 2576, each reaching its screen
 
 
@@ -260,18 +260,28 @@ ok("the colony screen's words by the source's own ids, the status word for "
 # 6. IT DRAWS, and its marks are named where the rule says.
 import pygame as _cs_pg
 _cs_inked = []
+import hud_evidence as _cs_he
+_cs_fonts = {}
 for _cs_size in ((1920, 1080), (2576, 1432), (3840, 2160)):
     _cs_app, _cs_s = _pv.build_screen(*_cs_size)
     _cs_app.dispatcher.update_from_game(_cs_state())
     _cs_c = _cs_app.dispatcher.active
     _cs_c.update(_cs_state())
     _cs_surf = _cs_pg.Surface(_cs_size)
-    _cs_c.render(_cs_surf)
+    # Every font the render asks for, by call site (work order 182: the
+    # window's factor is applied once — 090t's rule, measured here where
+    # the colony screen has a snapshot to draw).
+    _cs_fonts[_cs_size] = _cs_he.font_sites(
+        _cs_c.style, lambda: _cs_c.render(_cs_surf))
     from screens.leaders import ldrdraw as _cs_nd
     _cs_r = _cs_nd.rect(_cs_c.layout, _cs_geom.PROD_ROWS[1])
     _cs_inked.append(len({_cs_surf.get_at((x, _cs_r.centery))[:3]
                           for x in range(_cs_r.x, _cs_r.right, 3)}))
 assert min(_cs_inked) > 3, _cs_inked
+assert len(_cs_fonts[(1920, 1080)]) >= 5 and not _cs_he.scaled_twice(
+    _cs_fonts[(1920, 1080)], _cs_fonts[(3840, 2160)]), \
+    (_cs_fonts, _cs_he.scaled_twice(_cs_fonts[(1920, 1080)],
+                                    _cs_fonts[(3840, 2160)]))
 with open(os.path.join(_cs_root, "screens", "colony", "layout.json"),
           encoding="utf-8") as _cs_fh:
     _cs_marks = _cs_json.load(_cs_fh)["marks"]
@@ -287,6 +297,7 @@ for _cs_key in _cs_marks:
     assert f"`{_cs_name}`" in _cs_mod, f"{_cs_key}: not named in the module"
     assert f"`{_cs_name}`" in _cs_status, f"{_cs_key}: not in the status doc"
 ok(f"the colony screen draws at 1920, 2576 and 3840 from a READY snapshot, "
+   f"its text scaled once, "
    f"and every mark it carries is named in its module and the status "
    f"document ({len(_cs_marks)} marks)")
 

@@ -9,7 +9,7 @@
 #   - screen 25 is claimed only with open fixes 35, 38, 39 and 40; a list the rows contradict hands over, a box over it is modal
 #   - on every recorded popup the lists line up with the rows the game built, and every queued item has its numbers
 #   - the popup sends a row's own field, nothing for a separator, and the Auto Build radio by an injected click
-#   - the build popup draws at 1920, 2576 and 3840 from a recorded popup, and every mark it carries is named in its module and the status document
+#   - the build popup draws at 1920, 2576 and 3840 from a recorded popup, its text scaled once, and every mark it carries is named in its module and the status document
 
 
 # ── THE BUILD POPUP (work order 180 C) ──────────────────────────
@@ -148,18 +148,25 @@ ok("the popup sends a row's own field, nothing for a separator, and the Auto "
 
 # 4. IT DRAWS, and its marks are named where the rule says.
 _bq_inked = []
+_bq_fonts = {}
 for _bq_size in ((1920, 1080), (2576, 1432), (3840, 2160)):
     _bq_a, _bq_x = _pv.build_screen(*_bq_size)
     _bq_a.dispatcher.update_from_game(_bq_state(_bq_stops[0]))
     _bq_c = _bq_a.dispatcher.active
     _bq_c.update(_bq_state(_bq_stops[0]))
     _bq_surf = _cs_pg.Surface(_bq_size)
-    _bq_c.render(_bq_surf)
+    # Every font by call site: the window's factor once (090t's rule,
+    # work order 182), measured where the popup has a recorded state.
+    _bq_fonts[_bq_size] = _cs_he.font_sites(
+        _bq_c.style, lambda: _bq_c.render(_bq_surf))
     _bq_r = _bq_nd.rect(_bq_c.layout, _bq_w.QUEUE_BOX)
     _bq_inked.append(len({_bq_surf.get_at((x, y))[:3]
                           for x in range(_bq_r.x, _bq_r.right, 4)
                           for y in range(_bq_r.y, _bq_r.bottom, 7)}))
 assert min(_bq_inked) > 3, _bq_inked
+assert len(_bq_fonts[(1920, 1080)]) >= 3 and not _cs_he.scaled_twice(
+    _bq_fonts[(1920, 1080)], _bq_fonts[(3840, 2160)]), \
+    _cs_he.scaled_twice(_bq_fonts[(1920, 1080)], _bq_fonts[(3840, 2160)])
 with open(os.path.join(_cs_root, "screens", "build_queue", "layout.json"),
           encoding="utf-8") as _bq_fh:
     _bq_marks = _cs_json.load(_bq_fh)["marks"]
@@ -171,6 +178,7 @@ for _bq_key in _bq_marks:
                 else _bq_key.split("_", 1)[1])
     assert f"`{_bq_name}`" in _bq_mod, f"{_bq_key}: not named in the module"
     assert f"`{_bq_name}`" in _cs_status, f"{_bq_key}: not in the status doc"
-ok(f"the build popup draws at 1920, 2576 and 3840 from a recorded popup, and "
+ok(f"the build popup draws at 1920, 2576 and 3840 from a recorded popup, its "
+   f"text scaled once, and "
    f"every mark it carries is named in its module and the status document "
    f"({len(_bq_marks)} marks)")

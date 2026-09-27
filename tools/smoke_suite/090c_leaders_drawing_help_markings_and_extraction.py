@@ -9,7 +9,7 @@
 # The 5 check(s) it holds:
 #   - the screen draws at 1080p, 1440p and 2160p with the art absent
 #     (forced) and present (when extracted), and every line of text it
-#     draws fits the width the original gives it
+#     draws fits the width the original gives it, its text scaled once
 #   - help.json is the original's two help tables (evanhelp.cpp), the
 #     rows shrink by their skill lines, and help 333 covers the empty
 #     big-icon cells
@@ -103,9 +103,28 @@ try:
         _ldc_scr.render(pygame.Surface((_ldc_w, _ldc_h)))
 finally:
     _ldc_draw.blit_text = _ldc_real_blit
+# The window's factor, once (work order 182; 090t's rule, measured here
+# where the Leaders screen has a fixture to draw).
+import hud_evidence as _ldc_he
+_ldc_fs = {}
+for _ldc_w, _ldc_h in ((1920, 1080), (3840, 2160)):
+    _ldc_app, _ = _ldw_plv.build_screen(_ldc_w, _ldc_h)
+    _ldc_app.dispatcher.switch_to("leaders")
+    _ldc_scr = _ldc_app.dispatcher.screens["leaders"]
+    _ldc_scr._words = _ldc_rows.Words(derived(EStrings), derived(HStrings),
+                                      "en")
+    _ldc_scr._art = _ldc_arts[0][1]
+    _ldc_s = _ldw_snapshot(_ldw_recs, block=None)
+    _ldc_s.fields = _ldw_fields(_ldc_s, _ldw_g.VIEW_SHIP)
+    _ldc_scr.update(_ldc_s)
+    _ldc_fs[_ldc_w] = _ldc_he.font_sites(_ldc_scr.style, lambda: _ldc_scr.render(
+        pygame.Surface((_ldc_w, _ldc_h))))
+assert len(_ldc_fs[1920]) >= 3 and not _ldc_he.scaled_twice(
+    _ldc_fs[1920], _ldc_fs[3840]), _ldc_he.scaled_twice(_ldc_fs[1920],
+                                                         _ldc_fs[3840])
 ok("the Leaders screen draws at 1080p, 1440p and 2160p with the art "
-   "absent and present, the popup and a native box over it, and no text "
-   "is wider than the original's width for it")
+   "absent and present, the popup and a native box over it, no text "
+   "is wider than the original's width for it, and its text is scaled once")
 
 # ── 10. HELP ──────────────────────────────────────────────────
 _ldc_help = _ldc_json.load(open(os.path.join(_ldc_dir, "help.json"),

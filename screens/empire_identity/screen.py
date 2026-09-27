@@ -171,13 +171,16 @@ class EmpireIdentityScreen(ScreenBase):
         r = self.box_rect("identity_panel")
         if r:
             draw_thin_box(surface, L, r)
+        # Every font scale on this screen is the STORED one: each goes
+        # through `L.font_size` or `L.scale`, which apply the window's
+        # factor (work order 182; `box_font_scale` squared it at 2160p).
         for key in ("ruler", "banner", "home"):
             hr = self.box_rect(f"{key}_header")
             if hr:
                 draw_title_hint(surface, L, self.style,
                                 labels.get(f"{key}_title", key.title()),
                                 labels.get(f"{key}_hint", ""), hr,
-                                self.box_font_scale(f"{key}_header"))
+                                self.box_font_scale_stored(f"{key}_header"))
         gr = self.box_rect("banner_grid")
         if gr:
             draw_thin_box(surface, L, gr)
@@ -204,7 +207,7 @@ class EmpireIdentityScreen(ScreenBase):
         hr = self.box_rect("preview_header")
         if hr:
             font = self.style.get_font(L.font_size(
-                int(19 * self.box_font_scale("preview_header"))))
+                int(19 * self.box_font_scale_stored("preview_header"))))
             draw_centered(surface, font,
                           labels.get("preview_title", "Empire Preview").upper(),
                           COL_HEADER, L.rect(hr))
@@ -252,7 +255,7 @@ class EmpireIdentityScreen(ScreenBase):
              self._home.value if self._home else ""),
         )
         render_preview_text(surface, L, self.style,
-                            self.box_font_scale("preview_text"),
+                            self.box_font_scale_stored("preview_text"),
                             tr, empire, rows)
 
     def image_size(self, box_name):

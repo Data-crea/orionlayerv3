@@ -202,7 +202,9 @@ def render(surface, box, cfg, local, layout, style, font_scale,
     640 native. See `value_column` for how that reaches HD.
 
     `box` is the `sidebar` cutout in reference coordinates and
-    `font_scale` is the screen's `box_font_scale("sidebar")`; both
+    `font_scale` is the screen's `box_font_scale_stored("empire_stats")`
+    (the STORED scale: `layout.font_size` applies the window's factor —
+    this line named `box_font_scale("sidebar")` until work order 182); both
     are handed in rather than looked up, because a renderer that can
     reach a screen can reach anything.
     """

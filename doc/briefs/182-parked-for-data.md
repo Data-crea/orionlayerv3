@@ -49,3 +49,10 @@ starting" while it waits. **Default:** (a), nothing built.
   list went empty for one snapshot, its view would read it as a native box
   and the frame would be held, dropping a click in that snapshot (180's
   "no input to a screen the player cannot see") — observed never.
+- **Smaller text at your 2576x1432 on Custom Race and Empire Identity**
+  (part 4): proportional now (1.33x the 1080p size instead of 1.78x), as
+  the star names and Select Race became in 179. **Default:** proportional.
+- **Colony Summary's `planet_paragraph` at 3840** uses your 2560x1440 F5
+  `font_scale` 1.6 (the closest stored section), so its text is larger
+  there than proportional. Not a code fault; your tuning. **Default:**
+  unchanged.

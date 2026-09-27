@@ -312,7 +312,11 @@ nobody tuned it is a double scale. The help popup rendered at twice
 the intended size at 3840x2160 and looked perfectly fine in the 4K
 screenshot on its own — the fault only exists in the comparison.
 Anything that must work at an untuned resolution reads the stored
-scale directly.
+scale directly. **Held in general since work order 182** (check 090t):
+every screen the tree can stage is rendered at 1920 and 3840 and no font
+may come out more than twice its 1920 size, by the line that chose it —
+Custom Race and Empire Identity had carried the fault for three work
+orders after 179 fixed it on two other screens, one screen at a time.
 
 **A PATTERN IN THREE OBSERVATIONS IS NOT A RULE UNTIL THE WRITER
 SAYS IT IS.** A pop move appeared to change "always the next index" —

@@ -141,3 +141,59 @@ over 300 code lines moved by one (`colony_list_preview.py` 404,
 
 Also: `colony_accept.own_colony_disc` (the system window's disc of an own
 colony) is shared with the stress tool now.
+
+## Part 4 — the remaining double scaling — **DONE: two screens fixed, one general check**
+
+1. **The search, not limited to the known screens.** By the code: every
+   caller of the auto-factor `box_font_scale` (only Custom Race and Empire
+   Identity called it; the Colony Summary's `colonyempire` docstring still
+   named it while its caller already passed the stored scale) and every
+   raw `win_h / 1080` (New Game's status line and `original_view` size in
+   device pixels with one factor — correct; `fallbacknote` likewise). By
+   the effect: every registered screen and both popups `hud_evidence` can
+   open, rendered at 1920 and 3840, every font size by the line that chose
+   it (`tools/hud_evidence.font_sites`). The list:
+
+   | screen | element | cause | fixed |
+   |---|---|---|---|
+   | Custom Race | panel headers, pick rows and categories, specials, description, the Race Picks / Score bar, the message box — and the reference-space row heights and gaps they drive | `box_font_scale` (x win_h/1080) and `fs = win_h/1080` into `L.font_size` / `L.scale` / reference coordinates: 4x at 2160p (14 → 56 px, 24 → 96) | yes |
+   | Empire Identity | the three input headers, the preview header and the preview's title, labels and values | `box_font_scale` into `L.font_size`: 4x (19 → 76, 34 → 136) | yes |
+   | Colony Summary | `planet_paragraph` 17 → 54 at 3840 | NOT code: Data's F5 `font_scale` 1.6 in the 2560x1440 box section, which 3840 falls back to; with one box section at both sizes it scales once | not a fault — no change |
+   | Colony Summary | `colonyempire.render` docstring | named `box_font_scale("sidebar")`; the caller passes `box_font_scale_stored("empire_stats")` | docstring corrected |
+   | every other screen | — | scales once (star names and Select Race since 179) | — |
+
+   Screens that draw no text without a game (colony, build popup, Leaders)
+   were measured from their own fixtures: once.
+2. **Fixed as 179 did**: every `box_font_scale` → `box_font_scale_stored`
+   (5 on Custom Race, 3 on Empire Identity) and Custom Race's reference
+   factor `fs` → 1.0. **1080p pixel-identical, proved**: before/after
+   renders of Custom Race, its message box and Empire Identity at
+   1920x1080 — 0 pixels differ each (`~/orionlayer-fixtures/evidence/
+   work_order_182/scaling/{before,after}/`, `compare_*`); at 2576 and 3840
+   the text is now proportional (a 3840 render halved matches the 1080
+   one). Custom Race at 3840 no longer runs its Governments off the panel.
+3. **The general check — 090t, by rendering.** Every screen of the
+   registry plus the help popup and Custom Race's message box, at 1920 and
+   3840, both loading the SAME box section (so Data's per-resolution F5
+   values neither pass for nor hide a code fault); per call site, the
+   largest size at 3840 may not exceed twice the one at 1920 (+2). **Why
+   rendering and not a static rule**: the fault travels — `win_h/1080`
+   into an `fs` another module feeds to `L.font_size` — and a pattern
+   either misses the hop or forbids the legitimate direct sizing. The
+   attribution walks past the shared text helpers (`style`, `textfit`,
+   `hud/text`, `ldrdraw`, `coldraw.text`/`lines`) so a fitting loop's
+   trials count for their caller. Screens with no text offline are named,
+   and measured in their groups (090p colony, 090q popup, 090c Leaders —
+   each check extended, not replaced). **Shown red** on the old two screens
+   (with `python -B`; Custom Race and Empire Identity named, 4x each),
+   green on the new.
+4. **Evidence**: live native | HD side by sides of Custom Race and Empire
+   Identity at 1920, 2576 and 3840 (`scaling/live_side_by_side/`, the
+   pre-game walk on the virtual display, engine 166148, guard clean, 0
+   native frames in 27 transitions).
+
+**For Data at 2576x1432**: Custom Race and Empire Identity get smaller —
+their text was 1.78x its 1080p size there and is 1.33x now, the
+proportional size, as the star names and Select Race became in 179.
+
+**Checks: 378 → 379** (090t).

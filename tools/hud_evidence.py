@@ -305,3 +305,78 @@ def main():
 
 if __name__ == "__main__":
     sys.exit(main())
+
+
+# ── SCALED ONCE (work order 182, part 4) ──────────────────────────────
+#
+# The fault of 179 and 182 — the window's factor applied twice, 4x at 2160p
+# where 2x is proportional — lives in arithmetic (`box_font_scale` into
+# `Layout.font_size`, a `win_h / 1080` into a reference-space helper) that
+# a pattern cannot follow across modules. So it is measured where it lands:
+# every font size a render asks for, attributed to the first caller outside
+# the shared text helpers (a fitting loop's trials belong to its caller),
+# at 1920x1080 and at 3840x2160. Per call site the largest size at 3840 may
+# not exceed twice the largest at 1920 (+2 for rounding): scaled once is 2x,
+# scaled twice is 4x. Fewer is allowed — a capped size, a measuring font —
+# and is not what this is about.
+TEXT_HELPERS = ("core/style.py", "core/textfit.py", "core/hud/text.py",
+                "screens/leaders/ldrdraw.py")
+#: Helper FUNCTIONS in a screen's own drawing module that every string of
+#: the screen passes through: walked past like the files above, so a size
+#: is charged to the line that chose it, not to the one helper they share.
+TEXT_HELPER_FUNCTIONS = {("screens/colony/coldraw.py", "text"),
+                         ("screens/colony/coldraw.py", "lines")}
+
+
+def font_sites(style, render):
+    """{(file, line): largest size} of the fonts `render()` asks `style`
+    for, by the first caller outside TEXT_HELPERS."""
+    root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    seen = {}
+    real = (style.get_font, style.get_prop_font)
+
+    def rec(fn):
+        def inner(size, *a, **k):
+            f = sys._getframe(1)
+            while f is not None and (
+                    os.path.relpath(f.f_code.co_filename, root) in TEXT_HELPERS
+                    or (os.path.relpath(f.f_code.co_filename, root),
+                        f.f_code.co_name) in TEXT_HELPER_FUNCTIONS):
+                f = f.f_back
+            key = (os.path.relpath(f.f_code.co_filename, root), f.f_lineno) \
+                if f is not None else ("?", 0)
+            seen[key] = max(seen.get(key, 0), int(size))
+            return fn(size, *a, **k)
+        return inner
+    style.get_font, style.get_prop_font = rec(real[0]), rec(real[1])
+    try:
+        render()
+    finally:
+        style.get_font, style.get_prop_font = real
+    return seen
+
+
+def scaled_twice(small, large, factor=2):
+    """The call sites whose largest size at the large window exceeds
+    `factor` times the one at the small window (+2): {site: (a, b)}."""
+    return {k: (small[k], v) for k, v in large.items()
+            if k in small and v > factor * small[k] + 2}
+
+
+def same_boxes(section="1920x1080"):
+    """Load every screen's boxes from ONE resolution section, so a size
+    measured at two windows differs only by code — not by the per-
+    resolution `font_scale` Data tunes with F5 (colony summary's
+    `planet_paragraph` is 1.6 in 2560x1440, the section 3840 falls back to).
+    Returns the function that undoes it."""
+    from core import box as _box
+    from core import screen_base as _sb
+    real = _box.load_boxes
+    w, h = (int(v) for v in section.split("x"))
+    fixed = lambda source, win_w=1920, win_h=1080: real(source, w, h)  # noqa
+    # `screen_base` binds the name at import; both homes are replaced.
+    _box.load_boxes = _sb.load_boxes = fixed
+
+    def undo():
+        _box.load_boxes = _sb.load_boxes = real
+    return undo

@@ -229,7 +229,13 @@ class CustomRaceScreen(ScreenBase):
     def render(self, surface):
         self._render_background(surface)
         L = self.layout
-        fs = self.app.win_h / 1080.0
+        # The REFERENCE-space scale every consumer below multiplies into
+        # `L.font_size`, `L.scale` or reference coordinates — which apply
+        # the window's factor themselves. Work order 182: this was
+        # `win_h / 1080` and every `box_font_scale` (already x win_h/1080)
+        # below, so the factor was applied twice: 4x at 2160p where 2x is
+        # proportional (179's star-name fault, fundament "Scaling twice").
+        fs = 1.0
 
         rx, ry, rw, rh = self._content_rect()
 
@@ -248,7 +254,7 @@ class CustomRaceScreen(ScreenBase):
             self._panels[key] = (rect[0] + pad, rect[1] + head_h,
                                  rect[2] - pad * 2,
                                  rect[3] - head_h - pad)
-            self._panel_fs[key] = (self.box_font_scale(box_name)
+            self._panel_fs[key] = (self.box_font_scale_stored(box_name)
                                    if self.box_rect(box_name) else fs)
             self._panel_outer = getattr(self, "_panel_outer", {})
             self._panel_outer[key] = rect
@@ -295,7 +301,7 @@ class CustomRaceScreen(ScreenBase):
 
         # ── Bottom bar (ONE F5-movable box, on top of frame) ──
         self._render_bar(surface, L,
-                         self.box_font_scale("picks_score_bar"))
+                         self.box_font_scale_stored("picks_score_bar"))
 
         # ── Message box, above everything it interrupts ──
         self._render_popup(surface, L)
@@ -317,7 +323,7 @@ class CustomRaceScreen(ScreenBase):
         message = self._popup.message or self._message(
             "picks_negative", MSG_PICKS_NEGATIVE)
         self._popup.render(surface, L, self.style, panel, text_rect,
-                           self.box_font_scale("picks_popup_text"),
+                           self.box_font_scale_stored("picks_popup_text"),
                            message, self._bg_scaled)
 
     def _message(self, key, fallback):
@@ -361,7 +367,7 @@ class CustomRaceScreen(ScreenBase):
         ]
         for box_name, label, value, vcol in entries:
             tr = self.box_rect(box_name)
-            tfs = self.box_font_scale(box_name) if tr else fs
+            tfs = self.box_font_scale_stored(box_name) if tr else fs
             lfont = self.style.get_font(L.font_size(int(14 * tfs)))
             vfont = self.style.get_prop_font(
                 L.font_size(int(24 * tfs)))
@@ -386,7 +392,7 @@ class CustomRaceScreen(ScreenBase):
     def _draw_panel_header(self, surface, L, text, box_name, panel_rect):
         """Draw a centered header, positioned via its own F5 box."""
         hr = self.box_rect(box_name)
-        hfs = self.box_font_scale(box_name) if hr else 1.0
+        hfs = self.box_font_scale_stored(box_name) if hr else 1.0
         if hr:
             rx, ry, rw, rh = hr
         else:
