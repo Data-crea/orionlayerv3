@@ -18,6 +18,7 @@ from core import debuginput
 from core import fallbacknote
 from core import frametrace
 from core import inputlog
+from core import entrytiming
 from core import handover
 from core import helppopup
 
@@ -132,6 +133,10 @@ class App:
         #: TOOL, off unless ORIONLAYER_INPUT_LOG is set: every click and
         #: key, and whether it reached the engine (work order 182 part 3).
         self._input_log = inputlog.InputLog.open(self.client)
+        #: TOOL, off unless ORIONLAYER_ENTRY_TIMING is set: the research
+        #: screen's entry, phase by phase (work order 184). Off, nothing
+        #: is wrapped and the loop pays nothing.
+        self._entry_timing = entrytiming.EntryTiming.open(self)
         #: Which way into the game's picture `_showing_original` last
         #: took — `frametrace.NO_SCREEN`, `HAND_OVER`, `F12` — or "".
         self._net_kind = ""
