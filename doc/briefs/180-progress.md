@@ -205,3 +205,10 @@ defines); each has a misspelt-constant control that the compiler refused
 absent piece is drawn as nothing and marked HD STATE; without 35 the screen
 stays on the net (**item 1.1 of the parked file, the most important**).
 
+## C1. The build screen: inventory — **DONE**
+
+`doc/briefs/180-build-inventory.md`: 15 elements and 14 controls of
+`COLBLDG::Build_Queue_Popup_`; (a) 0, (b) 5, (c) 8, 2 omitted; the live
+field list recorded on the scratch engine matches the reading's §2b
+exactly.
+
