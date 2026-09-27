@@ -300,6 +300,17 @@ _MARKED = {
     "screens/build_queue/screen.py": "summary_follows_hd_pointer",
     "screens/build_queue/layout.json": "deviation_ship_row_dim",
 
+    # ADDED 28 September 2026, work order 185 part 7: the Ship Designer
+    # and its pickers. Their own checks are 090x and 090y: every
+    # layout.json mark named in its module and the status document.
+    "screens/ship_design/sddraw.py": "DEVIATION      `hud_frameless`",
+    "screens/ship_design/sdgeom.py": "DEVIATION `hud_frameless`",
+    "screens/ship_design/screen.py": "DEVIATION `row_help`",
+    "screens/ship_design/layout.json": "deviation_hud_frameless",
+    "screens/design_box/dbdraw.py": "`centring_swap`",
+    "screens/design_box/dbgeom.py": "HD EXTENSION `box_titles`",
+    "screens/design_box/layout.json": "deviation_filter_art",
+
 }
 _MARKS = ("HD EXTENSION", "DEVIATION")
 _SELF = SUITE_FILES

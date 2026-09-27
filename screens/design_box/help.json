@@ -1,0 +1,6 @@
+{
+  "_comment": "The Ship Designer's pickers (wire ids 54-56). OMISSION `picker_help`: the original's right-click help in the pickers (Draw_Generic_Replacement_Box_Help_, desbox.cpp:866-942; the weapon and special loops' help ids and Text_Box_ descriptions) is not built \u2014 most of it needs an item's help record, which is not on the wire. No regions, so a right click opens nothing; named in layout.json's marks and v3_projektstatus.md.",
+  "_source": "desbox.cpp:866-942",
+  "hd_extension": "The help popup auto-sizes to its text and scrolls when it cannot fit. The original draws a fixed box and lets FMTPARA wrap into it at a fixed 339 px (TEXTBOX::Draw_Help_Entry_, textbox.cpp:307); at four HD resolutions a fixed box either wastes half the screen on two lines or clips a long entry. Marked once per file, here, and in core/helppopup.py. No region here uses it yet (OMISSION picker_help).",
+  "regions": []
+}

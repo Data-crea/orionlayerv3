@@ -146,6 +146,11 @@ _JSON_ABSENT_OK = {
                  "palette.json"),
     # Work order 175 D: the Info screen's own texts (tools/infotext_extract).
     os.path.join("assets", "shared", "names", "infotext_en.json"),
+    # Work order 185 part 7: the Ship Designer's descriptions and artwork,
+    # entered in the same commit as their registry lines.
+    os.path.join("assets", "shared", "names", "techdesc_en.json"),
+    os.path.join("screens", "ship_design", "assets", "gamedata",
+                 "manifest.json"),
 }
 if os.path.isdir(os.path.join(_json_root, ".git")):
     import subprocess as _json_sp

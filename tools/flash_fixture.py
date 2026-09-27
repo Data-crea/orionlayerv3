@@ -3,9 +3,11 @@
 
     python tools/flash_fixture.py RUN_DIR [RUN_DIR ...]
 
-The run folders it was last written from (work order 181), under
+The run folders it was last written from (work order 185), under
 ~/orionlayer-fixtures/evidence/: work_order_180/{A2_after,B_live,B_net}_
-{1920x1080,2576x1432} and work_order_181/P3_orders_{1920x1080,2576x1432}.
+{1920x1080,2576x1432}, work_order_181/P3_orders_{1920x1080,2576x1432} and
+work_order_185/P7_design_{1920x1080,2576x1432} (`tools/design_walk.py`,
+on a scratch engine with open fixes 44 and 45 — not applied).
 
 Reads the `trace.jsonl` of `tools/flash_walk.py` runs and writes
 `tools/fixtures/transitions_180.json`: every walked transition as the
@@ -109,7 +111,10 @@ def main(dirs):
                      "tools/smoke_suite/090o. Written by "
                      "tools/flash_fixture.py from flash_walk traces; work "
                      "order 181 added every way into and out of screens 1 "
-                     "and 25 (tools/colony_accept.py, P3_orders_*).",
+                     "and 25 (tools/colony_accept.py, P3_orders_*); work "
+                     "order 185 the Ship Designer and its pickers "
+                     "(tools/design_walk.py on a scratch engine with open "
+                     "fixes 44 and 45, P7_design_*).",
             "columns": ["snapshot", "screen", "live_fields", "top",
                         "wants_picture", "way_in"],
             "transitions": build(dirs)}

@@ -61,8 +61,8 @@ derive world geometry.
 **The smoke test must be green before every commit.**
 
 ```bash
-python tools/smoke_test.py             # everything — 388 checks, ~200 s
-python tools/smoke_test.py --fast      # the commit gate's 378, ~95 s
+python tools/smoke_test.py             # everything — 398 checks, ~200 s
+python tools/smoke_test.py --fast      # the commit gate's 388, ~95 s
 python tools/smoke_test.py --screen colony_summary --fast   # NOT a gate
 ```
 
@@ -96,7 +96,7 @@ the fast tier holds that list and the guards to each other.
 time, not at commit time. See decision 31 and
 `doc/briefs/157-suite-profile.md`.
 
-388 checks, headless, no orion2re needed. **The count must not go
+398 checks, headless, no orion2re needed. **The count must not go
 down.** If a change makes a check obsolete, replace it — do not
 delete it. It went down exactly once, on 12 September 2026, when
 Phase B deleted the frame machinery the checks were about (decision
@@ -144,15 +144,16 @@ screens/<name>/         one folder per HD screen:
                           help.json    right-click help regions
                           assets/
 tools/                  smoke test, generators, live diagnostics
-tools/smoke_suite/      the smoke test's 141 check modules, one group
+tools/smoke_suite/      the smoke test's 143 check modules, one group
                         per screen plus a shared core; smoke_test.py
                         is the runner (work order 162)
 doc/                    the documents in the table above
 mods/                   file-level overrides; example_mod works
 ```
 
-Seventeen screens exist (the list below names fifteen; fleets and
-research change are in `v3_projektstatus.md`): main menu, new game,
+Nineteen screens exist (the list below names fifteen; fleets, research
+change, the Ship Designer and its pickers are in `v3_projektstatus.md`):
+main menu, new game,
 select race, custom race, empire identity, galaxy map, colony
 summary (list, sidebar, scan
 box and galaxy inset; sort and RETURN wired, scrolling for
@@ -244,6 +245,8 @@ python tools/maintext_extract.py                    # system special texts
 python tools/kentext_extract.py                     # weapon firing-arc words
 python tools/officer_art_extract.py                 # Leaders screen artwork
 python tools/skildesc_extract.py                    # officer skill help texts
+python tools/techdesc_extract.py                    # ship design descriptions
+python tools/design_art_extract.py                  # Ship Designer artwork
 ```
 
 Without the first, every right click opens a panel naming that

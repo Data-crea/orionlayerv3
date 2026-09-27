@@ -1,0 +1,24 @@
+{
+  "_comment": "The Ship Designer's three pickers (wire ids 54 shield / computer, 55 weapon, 56 special; open fix 45), work order 185 part 7. Geometry is screens/design_box/dbgeom.py (offsets from the box's base, which the wire gives); every label HESTRNGS by the original's id, every name TECHNAME's, every description and note TECHDESC's, every number open fix 45's DSBX row. The words here are OrionLayer's own where the original paints its words into DESIGN.LBX art (decision 15), replaceable from the mod folder by the keys in screens/ship_design/sdtexts.py; the marks name every difference, each held by the ship_design smoke group and named in v3_projektstatus.md.",
+  "words": {
+    "_note": "HD EXTENSION `box_titles`: the headlines are painted into the box art; the shield / computer box wears the special box's, so it reads 'Select Special System' as in the original. DEVIATION `button_words`: Cancel and Accept carry their words in the art (DESIGN.LBX 26, 27).",
+    "box_generic": "Select Special System",
+    "box_weapon": "Select Weapon System",
+    "box_special": "Select Special System",
+    "cancel": "CANCEL",
+    "accept": "ACCEPT"
+  },
+  "marks": {
+    "deviation_hud_frameless": "The boxes are HUD glass panels where the original draws DESIGN.LBX's box sprites; every position is the original's, from the box's base the wire gives.",
+    "deviation_button_words": "Cancel, Accept and the scroll arrows are HUD buttons with their words in code; the original paints them into DESIGN.LBX's button art.",
+    "deviation_filter_art": "The four filter buttons keep DESIGN.LBX's own button art (entries 22-25, the status as the frame) among HUD blocks: their words exist in no string table. The arc and rack words are DESIGN.LBX's too (38-47).",
+    "deviation_centring_swap": "The shield table's cost and space are centred under their own headers; the original centres each on the OTHER header's width (desbox.cpp:2387, :2398, marked there as the original's), a shift of the two headers' width difference.",
+    "hd_extension_box_titles": "The title plate; the original paints the headline into the box art, and the shield / computer box wears the special box's.",
+    "invention_chosen_fill": "The chosen weapon row lit by a HUD fill where the original draws an arrow sprite (_weapons_selected_seg).",
+    "omission_no_weapon_damage": "'No Weapon''s damage '0' is TECHDATA _weapons[0]'s; DSBX formats a damage string only for a weapon, so HD leaves the cell empty.",
+    "omission_fit_colour": "A special that does not fit is dimmed by the original from its slot's space and the exclusions (desbox.cpp:2825-2846), neither on the wire; HD draws every special row alike.",
+    "omission_flashing_hover": "The original flashes the hovered row in a cycling palette index; an RGB surface has none. Not drawn.",
+    "omission_picker_help": "The right click's help in the pickers is not built (help.json has no regions): most of it needs an item's help record, not on the wire.",
+    "unverified_fix45": "The pickers draw only from open fix 45's DSBX block (NOT APPLIED): built against the blocks recorded off a scratch engine, live on no applied engine. Without the fix the ids never reach the wire and the page hands a picker to the game's picture."
+  }
+}

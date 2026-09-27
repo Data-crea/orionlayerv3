@@ -49,6 +49,11 @@ class Dispatcher:
         game_id = getattr(screen, "GAME_SCREEN_ID", None)
         if game_id is not None:
             self.screen_map[game_id] = name
+            # `EXTRA_SCREEN_IDS`: more ids the same screen answers — the
+            # Ship Designer's three pickers are one box drawn three ways
+            # (work order 185, open fix 45's 54 / 55 / 56).
+            for extra in getattr(screen, "EXTRA_SCREEN_IDS", ()):
+                self.screen_map[extra] = name
 
     def screen_name_for(self, game_screen_id):
         """Display name for a game screen ID (status bar)."""
@@ -196,7 +201,9 @@ class Dispatcher:
                 # (work order 177), under SCREEN_MAIN_MENU; the parent
                 # screen decides when it closes there.
                 if screen_id == overlay_id or screen_id in getattr(
-                        self.overlay, "ALSO_OVER_IDS", ()):
+                        self.overlay, "ALSO_OVER_IDS", ()) or \
+                        screen_id in getattr(self.overlay,
+                                             "EXTRA_SCREEN_IDS", ()):
                     return True
                 self.close_overlay()
             # Manually opened overlay (no ID): parent logic decides.

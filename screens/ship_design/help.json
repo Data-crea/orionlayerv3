@@ -1,0 +1,126 @@
+{
+  "_comment": "Right-click help for the Ship Designer, transcribed from _static_design_screen_help_list (evanhelp.cpp:22-36, {help_id, x1, y1, x2, y2}), installed by Set_Design_Screen_Help_List_ (evanhelp.cpp:314-334), which moves the weapon table's region (383) and the specials table's (385) down below the loaded rows: y1 + n*14 + 15, capped at y2 ('rows' names which count). First hit wins, the list's own order.",
+  "_source": "orion2re orionlayer-local, evanhelp.cpp:22-36, :314-334",
+  "hd_extension": "The help popup auto-sizes to its text and scrolls when it cannot fit. The original draws a fixed box and lets FMTPARA wrap into it at a fixed 339 px (TEXTBOX::Draw_Help_Entry_, textbox.cpp:307); at four HD resolutions a fixed box either wastes half the screen on two lines or clips a long entry. Marked once per file, here, and in core/helppopup.py.",
+  "regions": [
+    {
+      "help_id": 375,
+      "native": [
+        17,
+        15,
+        227,
+        44
+      ]
+    },
+    {
+      "help_id": 376,
+      "native": [
+        231,
+        53,
+        427,
+        150
+      ]
+    },
+    {
+      "help_id": 377,
+      "native": [
+        432,
+        53,
+        623,
+        149
+      ]
+    },
+    {
+      "help_id": 378,
+      "native": [
+        118,
+        55,
+        226,
+        149
+      ]
+    },
+    {
+      "help_id": 379,
+      "native": [
+        16,
+        55,
+        114,
+        118
+      ]
+    },
+    {
+      "help_id": 382,
+      "native": [
+        18,
+        120,
+        111,
+        147
+      ]
+    },
+    {
+      "help_id": 383,
+      "native": [
+        17,
+        154,
+        622,
+        282
+      ],
+      "rows": "weapons"
+    },
+    {
+      "help_id": 385,
+      "native": [
+        16,
+        304,
+        623,
+        429
+      ],
+      "rows": "specials"
+    },
+    {
+      "help_id": 387,
+      "native": [
+        371,
+        440,
+        443,
+        466
+      ]
+    },
+    {
+      "help_id": 388,
+      "native": [
+        459,
+        440,
+        531,
+        466
+      ]
+    },
+    {
+      "help_id": 389,
+      "native": [
+        545,
+        440,
+        617,
+        466
+      ]
+    },
+    {
+      "help_id": 390,
+      "native": [
+        18,
+        441,
+        140,
+        466
+      ]
+    },
+    {
+      "help_id": 391,
+      "native": [
+        157,
+        441,
+        357,
+        464
+      ]
+    }
+  ]
+}

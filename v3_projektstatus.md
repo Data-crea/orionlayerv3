@@ -2458,7 +2458,7 @@ files under `doc/` and are only summarised here.
 | | |
 |---|---|
 | Python | 32,960 lines across 111 modules — `find . -name '*.py'`, `__pycache__` excluded, the smoke test's 6,400 included. The previous figure here (21,642 across 94) was carried from an unstated method and could not be reproduced |
-| Smoke test | `python tools/smoke_test.py` — **388 checks**, headless, in `tools/smoke_suite/` since work order 162 (141 check modules, one group per screen plus a shared core; `tools/smoke_test.py` is the runner). **Two tiers since work order 158**: the bare command runs everything (~200 s here, measured 26 September 2026 — the 72 s this line said was before the rendering checks of 172-174); `--fast` runs the commit gate's 378 (~95 s here). `--screen <name>` prints only that screen's sentences and the core's and is NEVER a gate. See "The gate has two tiers" below |
+| Smoke test | `python tools/smoke_test.py` — **398 checks**, headless, in `tools/smoke_suite/` since work order 162 (143 check modules, one group per screen plus a shared core; `tools/smoke_test.py` is the runner). **Two tiers since work order 158**: the bare command runs everything (~200 s here, measured 26 September 2026 — the 72 s this line said was before the rendering checks of 172-174); `--fast` runs the commit gate's 388 (~95 s here). `--screen <name>` prints only that screen's sentences and the core's and is NEVER a gate. See "The gate has two tiers" below |
 | Assets | 170 MB (select_race 68, galaxy_map 51, shared 23, new_game 21, colony_summary 1) |
 | Screens in HD | 11 of ~20–22 (the Leaders screen, work order 167, built and not accepted; the GAME menu overlay, work order Stop 2, every dialog of the popup; colony summary draws list, sidebar, scan box and galaxy inset, and MOVES POPS — the first HD gesture that drives the game; planets, brief 101, lists, sorts, restricts and returns) |
 | Setup from clone | `python tools/setup.py` (deps via the system package manager) |
@@ -3561,6 +3561,47 @@ anywhere. Kept: `_black_hole_src.png`, which is the INPUT to
 ---
 
 ## What works
+
+### The Ship Designer and its three pickers — BUILT, OPEN FIXES 44 AND 45 NOT APPLIED — work order 185, parts 6-8
+
+**Neither fix is applied**, so on the engine a player has nothing changes:
+without open fix 44's "DSGN" block `screens/ship_design/` claims nothing and
+id 3 stays the game's picture through the safety net, as before. Built from
+`doc/brief_ship_designer.md` (the reading `doc/ship_designer_reading.md`)
+against blocks recorded on a scratch engine carrying 44 and 45
+(`tools/design_walk.py`, evidence `work_order_185/P7_design_*`, SAVE4,
+nothing saved), whose committed cut is `tools/fixtures/design_blocks_185.json`
+(`tools/design_fixture.py`). Open fix 45 was amended in part 7 by one word —
+which modifications the weapon picker offers — and proved again (entry 45).
+Every way in and out — the build popup's design row, each picker and back,
+Cancel to the popup — walked at 1920x1080 and 2576x1432 with **0 native
+frames**, in the flash check's replay set. NOT ACCEPTED BY DATA.
+
+**`screens/ship_design/`** (id 3): the design's name, the ship picture
+(SHIPS.LBX through the Fleets extraction), the hull column (a hull without
+its button field dimmed and refused), drive / armour / shield / computer
+with the engine's numbers, the weapon table (count, name or plural,
+"(ammo)", damage and modification strings as the engine formats them,
+arc, cost and space divided as the original divides), the specials with
+their descriptions (TECHDESC, `tools/techdesc_extract.py`), Cost and Space
+Available, Clear / Cancel / Build, the 13 help regions. Sends: every
+control by activation of the field found in the list now, a hull by an
+injected click. Marks: DEVIATION `hud_frameless`, `button_words`,
+`row_help`; HD EXTENSION `title`; OMISSION `hover_messages`,
+`flashing_hover`; UNVERIFIED `name_entry` (shown, not edited), `fix44`.
+Check 090x.
+
+**`screens/design_box/`** (ids 54 shield / computer, 55 weapon, 56 special
+— one overlay over the page, `EXTRA_SCREEN_IDS`, which the dispatcher maps
+and keeps the overlay for): each box laid from the base its catch-all field
+gives, rows, numbers and the weapon's damage strings from DSBX, the weapon
+picker's filters, arc or rack list and modifications, Cancel / Accept, the
+scroll arrows. The arc pictures, the arc and rack words and the filter
+buttons are DESIGN.LBX's own (`tools/design_art_extract.py`, format 2).
+Marks: DEVIATION `hud_frameless`, `button_words`, `filter_art`,
+`centring_swap`; HD EXTENSION `box_titles`; INVENTION `chosen_fill`;
+OMISSION `no_weapon_damage`, `fit_colour`, `flashing_hover`,
+`picker_help`; UNVERIFIED `fix45`. Check 090y.
 
 ### Opening the research screen — measured, then made faster, work order 184
 

@@ -74,6 +74,27 @@ TABLES = {
     "hull_plurals": (HULL_FIRST_STRING + HULL_CLASS_COUNT, HULL_CLASS_COUNT),
 }
 
+#: THE SHIP DESIGNER'S TABLES (work order 185) — the rest of the same walk
+#: (techinit.cpp: after the weapons come the computers, drives, units, fuel,
+#: the modification names and plurals and the weapon plurals, then the
+#: hulls). OPTIONAL keys of the same file: a file written before 185 has
+#: none of them and still loads "ok" for every screen that reads TABLES —
+#: bumping FORMAT_VERSION would have made every player's file stale for the
+#: Planets and Leaders screens until the extractor ran again. A reader of
+#: these asks `has_design_names()`.
+_AFTER_WEAPONS = WEAPON_FIRST_STRING + WEAPON_COUNT
+_FUEL_FIRST = _AFTER_WEAPONS + COMPUTER_COUNT + DRIVE_COUNT + UNIT_COUNT
+_MODS_FIRST = _FUEL_FIRST + FUEL_COUNT
+DESIGN_TABLES = {
+    "computers": (_AFTER_WEAPONS, COMPUTER_COUNT),
+    "drives": (_AFTER_WEAPONS + COMPUTER_COUNT, DRIVE_COUNT),
+    "fuel": (_FUEL_FIRST, FUEL_COUNT),
+    "weapon_mods": (_MODS_FIRST, WEAPON_MOD_COUNT),
+    "weapon_mod_plurals": (_MODS_FIRST + WEAPON_MOD_COUNT, WEAPON_MOD_COUNT),
+    "weapon_plurals": (_MODS_FIRST + 2 * WEAPON_MOD_COUNT, WEAPON_COUNT),
+}
+assert DESIGN_TABLES["weapon_plurals"][0] + WEAPON_COUNT == HULL_FIRST_STRING
+
 
 def name_file(language="en"):
     """Where the extractor writes and the loader reads."""
@@ -87,7 +108,7 @@ class ShipPartNames:
     def __init__(self, language="en", root=None):
         self.language = language
         self.state = "missing"
-        self.tables = {key: {} for key in TABLES}
+        self.tables = {key: {} for key in {**TABLES, **DESIGN_TABLES}}
         self._load(root or BASE_DIR)
 
     def _load(self, root):
@@ -108,10 +129,17 @@ class ShipPartNames:
                         "%s — re-run tools/techname_extract.py",
                         path, data.get("format"), FORMAT_VERSION)
             return
-        for key in TABLES:
+        for key in {**TABLES, **DESIGN_TABLES}:
             self.tables[key] = {int(k): v
                                 for k, v in data.get(key, {}).items()}
-        self.state = "ok" if all(self.tables.values()) else "missing"
+        self.state = "ok" if all(self.tables[k] for k in TABLES) \
+            else "missing"
+
+    def has_design_names(self):
+        """True when the Ship Designer's optional tables were extracted
+        (a file from before work order 185 has none — re-run the
+        extractor)."""
+        return all(self.tables[k] for k in DESIGN_TABLES)
 
     def name(self, table, index):
         """The name, or None for an absent file or an index it lacks."""

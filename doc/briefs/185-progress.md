@@ -174,3 +174,58 @@ fix 43. Placeholders `<number: Data>`; nothing written into
    descriptions and notes in TECHDESC.LBX, pictures in SHIPS.LBX /
    DESIGN.LBX — HD extractions (part 7).
 6. Checks 387 → 388.
+
+## Part 7 — Ship Designer HD screen — **DONE (built against the recorded blocks; fixes 44/45 NOT applied)**
+
+1. **`screens/ship_design/`** (id 3) and **`screens/design_box/`** (54, 55,
+   56 — one overlay over the page; the dispatcher maps and keeps it through
+   `EXTRA_SCREEN_IDS`, new). Both claim only with open fix 44's DSGN (and 45's
+   DSBX): on the engine `play.py` starts nothing changes — id 3 stays the
+   game's picture. The page draws every value from DSGN, the pickers every
+   row and number from DSBX; each picker is laid from the base its catch-all
+   field gives. Under a picker the page draws from the design and its own
+   last list (nothing is sent from it). Inputs: activation of the field found
+   in the list now; a hull by injected click; refusals for a hidden hull, a
+   hidden plus, Build without its button, Accept only hidden; a click outside
+   a picker sends its full-screen field (the original closes there).
+2. **Texts and art**: TECHNAME's designer tables (`core/shipparts.py`),
+   TECHDESC (`core/techdesc.py`, `tools/techdesc_extract.py`), DESIGN.LBX's
+   arc pictures, arc and rack words and filter buttons
+   (`tools/design_art_extract.py`, format 2), the ship pictures through the
+   Fleets extraction. OrionLayer's own words (titles, button words) in
+   `screens/ship_design/sdtexts.py`, moddable (decision 73). Stand-ins for
+   the suite (`tools/make_derived_fixtures.py`: designer tables, TECHDESC).
+3. **Open fix 45 amended** by one word — which modifications the weapon
+   picker offers (the field list alone cannot say which mod a field is).
+   Scratch commit `cc0becc9` → `ce56babd`; every proof again: applied on
+   `4bf152e4` + fix 44 with no offset and no fuzz, equal to the commit, the
+   engine rebuilt, `ext_api.cpp` compiled alone exit 0, the misspelt
+   `_weapon_replacment_rack` control refused exit 1. Entry 45 and the patch
+   file updated; `core/designblocks.py` reads the word.
+4. **Live, scratch engine** (`build44`, PID 136228, guard `185_P7_walk`,
+   Xvfb, SAVE4, nothing saved; `tools/design_walk.py`, new, input log on):
+   build popup → designer → computer / weapon / special picker and back
+   (ESC) → popup → colony → map at **1920x1080 (13 transitions) and
+   2576x1432 (11), 0 native frames**. The weapon picker offered mods
+   10, 11, 12 (ECCM, Heavily Armored, Fast), as the native picker shows.
+   SAVE1-9 and SAVE11 identical, SAVE10 unchanged; `liveguard verify`:
+   MOX.SET changed (the game rewrites it on load) → restored from the guard
+   taken before the engine existed; verify then clean. Evidence
+   `work_order_185/P7_design_*`.
+5. **Fixtures**: `tools/fixtures/design_blocks_185.json` (cut by
+   `tools/design_fixture.py` from the 1920 walk); `transitions_180.json`
+   rebuilt from 180/181's folders plus the two walks (198 → 220; the old
+   set reproduced byte for byte first).
+6. **Checks 388 → 398** (fast 378 → 388, modules 141 → 143): **090x**
+   (ship_design, 6) and **090y** (design_box, 4); 004 now also reads
+   `EXTRA_SCREEN_IDS`; 017's marked-file inventory, 062's absent-ok list
+   and 055's help note gained the new files. 090t stages both screens
+   (the special picker over the page) from the committed stand-in, with the
+   text stand-ins where the player's files are absent. Full suite green.
+7. **Marks** (module, status document, check): page — DEVIATION
+   `hud_frameless`, `button_words`, `row_help`; HD EXTENSION `title`;
+   OMISSION `hover_messages`, `flashing_hover`; UNVERIFIED `name_entry`,
+   `fix44`. Pickers — DEVIATION `hud_frameless`, `button_words`,
+   `filter_art`, `centring_swap`; HD EXTENSION `box_titles`; INVENTION
+   `chosen_fill`; OMISSION `no_weapon_damage`, `fit_colour`,
+   `flashing_hover`, `picker_help`; UNVERIFIED `fix45`.

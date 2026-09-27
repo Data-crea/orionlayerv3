@@ -49,8 +49,9 @@ patches `doc/ext_ship_designer_state.patch` and
 `doc/ext_ship_designer_boxes.patch` (45 on top of 44). Proved in scratch
 and recorded live: the page's every printed value (DSGN), the pickers'
 ids 54-56 and their rows number for number (DSBX). **Unlocks** the HD Ship
-Designer (`screens/ship_design/`, part 7): with 44 its page, with 45 its
-three pickers; without them the designer stays the game's own picture, as
+Designer (`screens/ship_design/` and `screens/design_box/`, part 7): with
+44 its page, with 45 its three pickers (45 amended in part 7 by one word,
+the weapon picker's offered modifications, and proved again); without them the designer stays the game's own picture, as
 it is today. **Cost**: one block each, written only while the designer is
 up; three one-line guards. **Risk**: small — nothing the game reads
 changes; an OrionLayer that does not know 54-56 shows the game's picture

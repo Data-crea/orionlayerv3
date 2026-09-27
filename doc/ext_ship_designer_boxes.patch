@@ -13,7 +13,8 @@ with `patch -p1 --dry-run` and `patch -p1`, no offset, no fuzz, on top of fix 44
 applied tree equals the scratch commit; the scratch engine was built in
 full (Debug, ORION2RE_EXT=ON, as the linux-debug preset) — no error —
 every changed .cpp compiles alone with the build's own command, and a
-control, the same file with `_weapon_replacement_rack` misspelt `_weapon_replacment_rack` in ext_api.cpp, was refused by the compiler. See the entry,
+control, the same file with `_weapon_replacement_rack` misspelt `_weapon_replacment_rack` in ext_api.cpp, was refused by the compiler. Amended by part 7 (28 September 2026:
+the offered modifications, one word) and proved again the same way. See the entry,
 doc/orion2re_open_fixes.md 45.
 
 To apply, from ~/orion2re on the orionlayer-local branch:
@@ -31,16 +32,17 @@ WHAT IT IS FOR
     ext::ScreenOverride (open fix 24's pattern: what is SENT, nothing the
     game reads), and appends a block, "DSBX", while one is up: which slot
     and item, the scroll, the chosen and hovered row, the weapon's arcs,
-    rack and modifications, the four filters, each modification's status,
-    and per row the item and the numbers the picker prints, by the same
-    calls with the same arguments as its drawing. A marker, `OrionLayer,
+    rack and modifications, the four filters, each modification's status
+    and whether the picker offers it, and per row the item and the numbers
+    the picker prints, by the same calls with the same arguments as its
+    drawing. A marker, `OrionLayer,
     open fix 45.`, on one line at every changed place.
 
 diff --git a/src/ext/ext_api.cpp b/src/ext/ext_api.cpp
-index 5e5e818e..c41e0f41 100644
+index 5e5e818e..1dc3a003 100644
 --- a/src/ext/ext_api.cpp
 +++ b/src/ext/ext_api.cpp
-@@ -708,6 +708,100 @@ static void SerializeState(std::vector<uint8_t>& buf,
+@@ -708,6 +708,114 @@ static void SerializeState(std::vector<uint8_t>& buf,
              Write16(buf, d->special_devices[i]);
          }
      }
@@ -85,6 +87,20 @@ index 5e5e818e..c41e0f41 100644
 +        for (int i = 0; i < WEAPON_MOD_COUNT; i++) {
 +            Write16(buf, MOX::_weapon_mod_field_status[i]);
 +        }
++        //     Which modifications the weapon picker offers, bit i per mod —
++        //     the test Add_Replacement_Weapon_Fields_ adds a field by
++        //     (desbox.cpp:475-478); the fields alone do not say which mod
++        //     each is. OrionLayer, open fix 45.
++        uint16_t offered = 0;
++        if (current_screen == 55 && DESBOX::_field_item_chosen > -1) {
++            for (int16_t i = 1; i < WEAPON_MOD_COUNT; i++) {
++                if (DESBOX::Mod_Allowed_On_Weapon_Type_((uint8_t)i) &&
++                    DESBOX::Should_Add_Mod_(i)) {
++                    offered |= (uint16_t)(1u << i);
++                }
++            }
++        }
++        Write16(buf, (int16_t)offered);
 +        int16_t n = MOX::_scroll_bar->total_rows;
 +        if (n < 0) n = 0;
 +        if (n > 40) n = 40;

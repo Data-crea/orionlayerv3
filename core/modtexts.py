@@ -48,7 +48,7 @@ from core import usermod
 log = logging.getLogger("modtexts")
 
 #: The text tables: modules with a `TEXTS` dict {key: (default, source)}.
-TABLES = ("screens.info.infotexts",)
+TABLES = ("screens.info.infotexts", "screens.ship_design.sdtexts")
 SOURCES = ("own", "moo2", "game")
 MAX_BYTES = 64 * 1024
 

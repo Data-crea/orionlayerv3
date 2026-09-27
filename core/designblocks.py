@@ -11,8 +11,8 @@
             the three sub-dialogs reports its synthetic id (54 shield or
             computer, 55 weapon, 56 special system) — which box, its list
             and per row the numbers it prints, the chosen and hovered row,
-            the weapon's arcs, rack and modifications, the filters, the
-            scroll.
+            the weapon's arcs, rack and modifications (and which it
+            offers), the filters, the scroll.
 
 Read in the order `SerializeState` writes them (block 12, then 13), after
 the colony blocks, each WHOLE or left None — `core/colonyblocks.py`'s rule
@@ -105,6 +105,9 @@ def parse(gs, data, pos):
                         "rack"), take("10h")))
         out["filters"] = list(take("4B"))
         out["mod_status"] = list(take(f"{WEAPON_MOD_COUNT}h"))
+        (offered,) = take("H")
+        out["mods_offered"] = [i for i in range(1, WEAPON_MOD_COUNT)
+                               if offered >> i & 1]
         (n,) = take("h")
         if not 0 <= n <= 40:
             raise ValueError("count")

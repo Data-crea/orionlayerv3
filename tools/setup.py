@@ -55,7 +55,9 @@ from core.kentext import string_file as kentext_file  # noqa: E402
 from screens.fleets.fltart import GAMEDATA as _fltart_gamedata  # noqa: E402
 from screens.leaders.ldrart import GAMEDATA as _ldrart_gamedata  # noqa: E402
 from screens.races.racesart import GAMEDATA as _racesart_gamedata  # noqa: E402
+from screens.ship_design.sdart import GAMEDATA as _sdart_gamedata  # noqa: E402
 from core.skildesc import string_file as skildesc_file  # noqa: E402
+from core.techdesc import string_file as techdesc_file  # noqa: E402
 from core.infotext import text_file as infotext_file  # noqa: E402
 from screens.colony_summary.colonyfigures import (  # noqa: E402
     FIGURE_DIR, all_names)
@@ -90,6 +92,7 @@ CS = os.path.join(ROOT, "screens", "colony_summary", "assets")
 FLEET_GAMEDATA = _fltart_gamedata
 LEADER_GAMEDATA = _ldrart_gamedata
 RACES_GAMEDATA = _racesart_gamedata
+DESIGN_GAMEDATA = _sdart_gamedata
 
 #: (tool, arguments, a path that must exist afterwards, what it is)
 STEPS = [
@@ -254,6 +257,14 @@ def from_game(settings=None):
          f"them the colony summary draws coloured cells instead of "
          f"the game's own colonists",
          "python tools/raceicon_extract.py"),
+        # TECHDESC.LBX (work order 185): the Ship Designer's special
+        # descriptions and weapon notes.
+        (os.path.join(ROOT, *techdesc_file(lang).split("/")),
+         f"ship design descriptions ({lang}) — without them the Ship "
+         f"Designer shows its specials and weapons without the game's "
+         f"one-line descriptions",
+         "python tools/techdesc_extract.py"
+         + (f" --lang {lang}" if lang != "en" else "")),
         # KENTEXT.LBX: the weapon firing-arc words. **REGISTERED
         # 20 September 2026 — it had been missing since the extractor
         # was written**, so a clone was never told to run it and this
@@ -288,6 +299,11 @@ def from_game(settings=None):
          "Races screen artwork — without it a race's panel shows a plate "
          "instead of its portrait and its spies as a number",
          "python tools/races_art_extract.py"),
+        # THE SHIP DESIGNER (work order 185): its arc pictures and palette.
+        (os.path.join(DESIGN_GAMEDATA, "manifest.json"),
+         "Ship Designer artwork — without it the weapon picker shows no arc "
+         "picture and the ship picture is not drawn",
+         "python tools/design_art_extract.py"),
         # THE INFO SCREEN (work order 175 D): the Reference topic lists,
         # the trait names and the Tech Review's group names.
         (os.path.join(ROOT, *infotext_file(lang).split("/")),

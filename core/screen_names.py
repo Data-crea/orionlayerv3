@@ -83,6 +83,13 @@ SCREENS = {
     #: list it would draw (`ScreenBase.wants_original`).
     52: ("(synthetic)",     None),
     53: ("(synthetic)",     "research_select"),
+    #: 54, 55, 56, synthetic, ON THE WIRE ONLY WITH OPEN FIX 45 (work
+    #: order 185, NOT APPLIED): the Ship Designer's shield / computer,
+    #: weapon and special-system pickers, which run under SCREEN_DESIGN.
+    #: One HD screen answers all three (`EXTRA_SCREEN_IDS`).
+    54: ("(synthetic)",     "design_box"),
+    55: ("(synthetic)",     "design_box"),
+    56: ("(synthetic)",     "design_box"),
 }
 
 #: The last value of orion2re's own SCREEN enum:

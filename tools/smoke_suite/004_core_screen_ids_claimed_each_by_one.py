@@ -39,6 +39,14 @@ for _sid_path in sorted(glob.glob(os.path.join(SCREENS_DIR, "*", "screen.py"))
                 and isinstance(_sid_node.value.value, int)):
             _sid_claims.setdefault(_sid_node.value.value, []).append(
                 os.path.basename(os.path.dirname(_sid_path)))
+        # `EXTRA_SCREEN_IDS` (work order 185): more ids one screen answers,
+        # held to the same rules — a literal tuple, each id claimed once.
+        if (isinstance(_sid_node, _sid_ast.Assign)
+                and any(getattr(_t, "id", None) == "EXTRA_SCREEN_IDS"
+                        for _t in _sid_node.targets)):
+            for _sid_v in _sid_ast.literal_eval(_sid_node.value):
+                _sid_claims.setdefault(_sid_v, []).append(
+                    os.path.basename(os.path.dirname(_sid_path)))
 assert len(_sid_claims) >= 8, _sid_claims
 _sid_dupes = {k: v for k, v in _sid_claims.items() if len(v) > 1}
 assert not _sid_dupes, f"one screen id claimed twice: {_sid_dupes}"

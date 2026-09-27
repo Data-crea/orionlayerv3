@@ -3532,7 +3532,9 @@ live only in DESBOX's and MOX's globals.
 - `src/ext/ext_api.cpp` — block 13, "DSBX", while one of the three is
   reported: a version byte, the kind, the replacement type, slot and item,
   the scroll, the chosen and hovered row, the weapon's modifications, arcs
-  and rack, the four filters, the fifteen modification statuses, and per
+  and rack, the four filters, the fifteen modification statuses, which
+  modifications the weapon picker offers (bit i — the fields alone do not
+  say which mod each is; added in work order 185 part 7), and per
   row the item, selected, unlocked, cost, space, one extra value (the
   computer's bonus; the weapon id, because the weapon picker's rows go
   through `Weapon_Index_`, not `_design_choice_items`) and for a weapon the
@@ -3541,13 +3543,13 @@ live only in DESBOX's and MOX's globals.
   :2502-2504, :2821), never a second copy of a table.
 
 **The exact change.** The diff, as written by the scratch commit
-(`cc0becc9`, on `ef021842`; the `diff --git` and `index` lines and the
+(`ce56babd`, on `ef021842`; the `diff --git` and `index` lines and the
 text git adds after `@@` are not part of it):
 
 ```diff
 --- a/src/ext/ext_api.cpp
 +++ b/src/ext/ext_api.cpp
-@@ -708,6 +708,100 @@
+@@ -708,6 +708,114 @@
              Write16(buf, d->special_devices[i]);
          }
      }
@@ -3592,6 +3594,20 @@ text git adds after `@@` are not part of it):
 +        for (int i = 0; i < WEAPON_MOD_COUNT; i++) {
 +            Write16(buf, MOX::_weapon_mod_field_status[i]);
 +        }
++        //     Which modifications the weapon picker offers, bit i per mod —
++        //     the test Add_Replacement_Weapon_Fields_ adds a field by
++        //     (desbox.cpp:475-478); the fields alone do not say which mod
++        //     each is. OrionLayer, open fix 45.
++        uint16_t offered = 0;
++        if (current_screen == 55 && DESBOX::_field_item_chosen > -1) {
++            for (int16_t i = 1; i < WEAPON_MOD_COUNT; i++) {
++                if (DESBOX::Mod_Allowed_On_Weapon_Type_((uint8_t)i) &&
++                    DESBOX::Should_Add_Mod_(i)) {
++                    offered |= (uint16_t)(1u << i);
++                }
++            }
++        }
++        Write16(buf, (int16_t)offered);
 +        int16_t n = MOX::_scroll_bar->total_rows;
 +        if (n < 0) n = 0;
 +        if (n > 40) n = 40;
@@ -3709,10 +3725,17 @@ text git adds after `@@` are not part of it):
 **Proof.** In a scratch worktree of `orionlayer-local` `4bf152e4` with its
 own build directory (never on `orionlayer-local`, never the build `play.py`
 starts): the patch file applies with `patch -p1 --dry-run` and `patch -p1`, no offset, no fuzz, to a clean worktree at `4bf152e4` with fix 44's file applied first; the applied files equal the scratch commit's byte for
-byte (`cc0becc9`); the whole engine built (Debug, `ORION2RE_EXT=ON`, the
+byte (`ce56babd`); the whole engine built (Debug, `ORION2RE_EXT=ON`, the
 `linux-debug` preset's variables) without an error; `ext_api.cpp` and `desbox.cpp` compile
 alone with the build's own command (`ninja -t commands`, `-fsyntax-only`);
 the control — `_weapon_replacment_rack` for `_weapon_replacement_rack` — was refused ("»_weapon_replacment_rack« ist kein Element von »DESBOX«").
+**Amended by work order 185 part 7, 28 September 2026:** one word more in
+DSBX, the modifications the weapon picker offers (the HD picker cannot name
+a modification field without it). The scratch commit was amended
+(`cc0becc9` → `ce56babd`) and every proof above ran again on the new file:
+applied with no offset and no fuzz on `4bf152e4` + fix 44, equal to the
+commit, the engine rebuilt, `ext_api.cpp` compiled alone (exit 0), the same
+control refused (exit 1; `desbox.cpp` is unchanged by the amendment).
 
 **Recorded live** (the reading's section 10): the computer field → **54**,
 six rows, the Electronic Computer at cost 8 and bonus 25, four not

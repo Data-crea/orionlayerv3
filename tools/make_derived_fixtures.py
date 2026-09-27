@@ -43,7 +43,7 @@ sys.path.insert(0, ROOT)
 
 from core import billtext, buildnames, estrings, hestrings  # noqa: E402
 from core import helptext, kentext, maintext, shipparts  # noqa: E402
-from core import infotext, skildesc, technames  # noqa: E402
+from core import infotext, skildesc, techdesc, technames  # noqa: E402
 # THE IDS COME FROM THE RENDERER'S OWN TABLE, not from a second
 # list here: `PARAGRAPH_HELP` is what the Fleets panel looks up,
 # so a stand-in built from it cannot hold a record the screen
@@ -107,7 +107,17 @@ def files():
          "format": shipparts.FORMAT_VERSION},
         **{key: _numbered(key[:-1].title() if key.endswith("s") else key,
                           count)
-           for key, (_first, count) in shipparts.TABLES.items()})
+           for key, (_first, count) in {**shipparts.TABLES,
+                                        **shipparts.DESIGN_TABLES}.items()})
+    # Work order 185: the Ship Designer's descriptions and weapon notes.
+    out[techdesc.string_file("en")] = {
+        "_comment": NOTE, "language": "en",
+        "format": techdesc.FORMAT_VERSION,
+        "specials": [f"Description {i}"
+                     for i in range(techdesc.SPECIAL_COUNT)],
+        "weapon_notes": [f"Note {i}"
+                         for i in range(techdesc.WEAPON_NOTE_COUNT)],
+    }
     # Work order 175 D: the Info screen's topic lists, trait names and
     # group names — synthetic, shaped like the real file.
     out[infotext.text_file("en")] = {

@@ -125,9 +125,12 @@ def write_ship_parts(strings, lang, lbx_path, out_dir):
               f"strings and the walk needs {need} to reach the last hull "
               f"plural")
         return None
+    # The Ship Designer's tables (work order 185) ride along: the same walk,
+    # optional keys a loader of TABLES never needs (`core.shipparts`).
     tables = {key: {str(i): decode(strings[first + i])
                     for i in range(count)}
-              for key, (first, count) in shipparts.TABLES.items()}
+              for key, (first, count) in {**shipparts.TABLES,
+                                          **shipparts.DESIGN_TABLES}.items()}
     path = os.path.join(out_dir, os.path.basename(shipparts.name_file(lang)))
     with open(path, "w", encoding="utf-8") as handle:
         json.dump(dict({
