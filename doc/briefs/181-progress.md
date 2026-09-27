@@ -105,3 +105,73 @@ off the copy first, last one first, as the stack was applied —
 `version_check.COLONY_SERIES` and `take_off_colony_series` (a tree without
 the series passes through; a fix that will not come off fails the check
 by name). Fast tier then green, 361 of 371.
+
+## Part 2 — document every engine change — **DONE** (`87119b8`)
+
+1. **Comments in the engine source.** Every changed place carries
+   `OrionLayer, open fix <N>.` (Part 1 above, the grep): 35 on its include
+   line and over its block, 36-40 over theirs, each on ONE line.
+2. **Entries 35-40 in `doc/orion2re_open_fixes.md`**: status APPLIED, 27
+   September 2026, the orion2re commit, the OrionLayer commit (`87119b8`,
+   added by the next commit as 179 did), the change (file, function
+   `SerializeState`, the line ranges), the full diff, "against 180's
+   proof" (35: the include's comment; 39: the marker re-wrap, with the
+   patch file's diff; the rest: only the `index` line), the live wire
+   (`doc/briefs/181-fixes35-40-wire.txt`), side effects, the revert. The
+   summary rows say Applied. Entry 36 keeps "HD does not place buildings
+   yet" and UNVERIFIED `building_placement`, with the reason.
+   - **The live wire** (engine PID 94595 started by this session with
+     `tools/engine_start.py`, guard `181_p2_record`; SAVE4 loaded as
+     scratch, nothing saved; `tools/colony_record.py 4 4` → evidence
+     `P2_record`): all six blocks on every stop of their screens and none
+     elsewhere; field layout and sizes equal the fixture on all 12 colony
+     and popup stops, and **on the nine stops 180 recorded, every byte**
+     (`cmp` of the tails) — no fixture or parser correction. The HD colony
+     screen and build popup claimed ids 1 and 25 by themselves; the gate
+     held one snapshot per colony entry. Engine closed with SIGTERM.
+     Guard verify: `game/MOX.SET` changed — restored with `--restore`
+     BEFORE its bytes were compared, so this run did not itself confirm it
+     was the known offset-21 load byte (every later guard does); and the
+     tree's own uncommitted edits. SAVE1-11 identical (SAVE8
+     `ab70cc9a…`).
+   - **Side effects** read in the source: every function the blocks call
+     (`Event_Check_Plague_`, `Event_Check_Population_Boom_`,
+     `Colony_Product_Cost_` with `Ship_Type_Cost_For_Player_` and
+     `Cost_Reduction_For_Govt_Type_`, `Colony_N_Turns_To_Produce_`,
+     `Calculate_Colony_Turn_Count_From_Scrap_For_Prod_`) only reads.
+   - **The reverts, run** in a scratch clone: `git revert 2097b0c6 …
+     c5d4dacd` (reverse order) returns `ext_api.cpp` to `9ab84230` exactly;
+     so does the `patch -R -p1` chain of the six files, no offset or fuzz.
+3. **version_check**: the six moved from REPORTED_PATCHES (empty again) to
+   LOCAL_PATCHES. **A build without one is reported**: for each fix, a
+   scratch copy of the tree with exactly that commit's added lines removed
+   — exit 1, and the MISSING line names that patch and no other (git
+   revert of a single middle commit conflicts, the blocks being adjacent;
+   removing its lines is the same tree). 090r #2 holds it offline with a
+   stand-in tree per patch.
+4. **Every place that tells a clone which fixes it needs:** README's
+   orion2re table (row 13, and the bundle name); `tools/setup.py` now
+   prints "The orion2re build it needs … open fixes 3, 12, 14, 20, 21, 22,
+   24, 25, 27, 28, 30, 31, 32, 34, 35, 36, 37, 38, 39, 40" and whether the
+   tree here has them (`engine_report`); a line in fundament part 09
+   (there was no such line — the rule set had only pointed at
+   `version_check`). The numbers live in `version_check.FIX_NUMBERS`, keyed
+   like the two lists; 090r #1 holds README, setup and the fundament to it.
+   CLAUDE.md's colony-screen sentence no longer says "parked".
+5. **Docs against the commits, fix by fix:** each entry's diff equals
+   `git diff <hash>~1 <hash>` byte for byte after fix 34's convention (no
+   `diff --git`/`index` lines, nothing after `@@`): 35 2143 bytes, 36
+   1449, 37 1309, 38 1743, 39 1541, 40 3362 — all equal. Each patch
+   file's diff section equals its commit's `git diff` byte for byte. 090r
+   #3 holds entry = patch file offline, and commit = patch file where the
+   tree is on the disk.
+6. **Bundle:** `~/orion2re_bundle_27sep_2097b0c6_fixes34-40.bundle` (`git
+   bundle create --all`, beside 179's `…26sep_9ab84230.bundle`), 21 refs,
+   `git bundle verify`: "ist in Ordnung", complete history; a clone of it
+   shows 2097b0c6 … 9ab84230 on orionlayer-local. sha256 `e9956e89…`.
+
+**Checks: 371 → 374** — 090r (three): the one list and its three readers;
+a tree missing any one fix is reported by name; 35-40 applied and
+documented. Each shown red by a mutation (the fundament line without 40;
+fix 39's marker broken over two lines again; a marker in version_check
+that no longer matches) and green restored, run with `python -B`.
