@@ -266,6 +266,13 @@ for _cs_size in ((1920, 1080), (2576, 1432), (3840, 2160)):
     _cs_app, _cs_s = _pv.build_screen(*_cs_size)
     _cs_app.dispatcher.update_from_game(_cs_state())
     _cs_c = _cs_app.dispatcher.active
+    # The committed stand-ins, never the player's extracted tables: a
+    # count of drawn texts must be the same in a clone (fundament 08).
+    from core.estrings import EStrings
+    from core.buildnames import BuildingNames
+    _cs_c._strings = derived(EStrings)
+    _cs_c._buildings = derived(BuildingNames)
+    _cs_c._words = _cs_words.Words(_cs_c._strings)
     _cs_c.update(_cs_state())
     _cs_surf = _cs_pg.Surface(_cs_size)
     # Every font the render asks for, by call site (work order 182: the

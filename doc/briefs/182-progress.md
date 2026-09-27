@@ -197,3 +197,24 @@ their text was 1.78x its 1080p size there and is 1.33x now, the
 proportional size, as the star names and Select Race became in 179.
 
 **Checks: 378 → 379** (090t).
+
+## Finish — what the fresh clone caught
+
+The first fresh clone of `3c66682` failed where this machine passed —
+fundament 08's "a check that reads the player's own files passes on the
+machine that wrote them", once more, in this order's own additions:
+
+1. 090p's new "scaled once" measurement counted texts drawn with the
+   player's EXTRACTED string tables; a clone has none, draws fewer, and the
+   count (>= 5 sites) failed. 090p and 090q now hand the screens the
+   committed stand-ins (`derived(EStrings)`, `derived(BuildingNames)`).
+2. That exposed a real fault: the build popup formatted its title and
+   summary lines with `fmt % value`, and a template without the
+   placeholder — the stand-in's, a mod's, a language's — raised in the
+   render. Now `core.hestrings.printf`, the project's one safe
+   substitution (decision 37), as `colwords._fmt` already did; the colony
+   screen's officer ETA line had the same `%` and got the same fix.
+3. One clone run aborted with `*** stack smashing detected ***` inside
+   CPython 3.14.7's own `ast.parse` (`tools/linecount.py`, check 061) — a
+   native fault in the interpreter, in code this order did not touch; the
+   same clone passed 061 before and after. Recorded, not chased (parked).

@@ -29,6 +29,7 @@ and each in `layout.json` `marks`, the status document and check 090p:
 """
 import pygame
 
+from core.hestrings import printf
 from core.hud import blocks as hud
 from core.hud import text as hudtext
 from screens.colony_summary import colonyfigures, colonyoutputicons
@@ -306,7 +307,7 @@ def _officer(surface, screen, view, state, words):
         return                 # no frame either (colony.cpp:709)
     nd.draw_box(surface, screen, geom.OFFICER_FRAME)
     name, eta = got
-    line = (words.e(285) or "%d") % eta if eta > 0 else name
+    line = printf(words.e(285) or "%d", eta) if eta > 0 else name
     text(surface, screen, line, *geom.OFFICER_NAME_CENTRE, 80, "small",
          "value", align="center")
 

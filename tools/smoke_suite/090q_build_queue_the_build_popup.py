@@ -153,6 +153,10 @@ for _bq_size in ((1920, 1080), (2576, 1432), (3840, 2160)):
     _bq_a, _bq_x = _pv.build_screen(*_bq_size)
     _bq_a.dispatcher.update_from_game(_bq_state(_bq_stops[0]))
     _bq_c = _bq_a.dispatcher.active
+    # Committed stand-ins, as 090p's drawing check (a clone must count the
+    # same texts).
+    _bq_c._strings = derived(EStrings)
+    _bq_c._buildings = derived(BuildingNames)
     _bq_c.update(_bq_state(_bq_stops[0]))
     _bq_surf = _cs_pg.Surface(_bq_size)
     # Every font by call site: the window's factor once (090t's rule,

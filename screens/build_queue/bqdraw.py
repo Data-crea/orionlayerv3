@@ -20,6 +20,7 @@ check 090q:
                  picture, a design's nine stat lines, and the "delete %s"
                  the original prints over its own pointer's queue row
 """
+from core.hestrings import printf
 from core.hud import blocks as hud
 from core.hud import text as hudtext
 from screens.colony.coldraw import text
@@ -46,8 +47,11 @@ def _title(surface, screen, view, names):
     name = names.planet_name(view.colony)
     if fmt:
         x, y, width, h = w.TITLE
-        text(surface, screen, fmt % name, x + width // 2, y, width, "value",
-             "title", align="center")
+        # `printf`, never `%`: a template without the `%s` (a mod's, a
+        # language's) must not raise in a render (decision 37; work order
+        # 182 found it with the committed stand-in strings).
+        text(surface, screen, printf(fmt, name), x + width // 2, y, width,
+             "value", "title", align="center")
 
 
 def _lists(surface, screen, view, state, names):
@@ -101,7 +105,7 @@ def _summary(surface, screen, view, state, names, hover):
     for n, (eid, value) in enumerate(lines, start=2):
         fmt = screen.e(eid)
         if fmt:
-            text(surface, screen, fmt % value, w.SUMMARY_X,
+            text(surface, screen, printf(fmt, value), w.SUMMARY_X,
                  w.SUMMARY_Y + n * w.SUMMARY_PITCH, w.SUMMARY_W, "line",
                  "label")
 

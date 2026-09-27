@@ -56,3 +56,8 @@ starting" while it waits. **Default:** (a), nothing built.
   `font_scale` 1.6 (the closest stored section), so its text is larger
   there than proportional. Not a code fault; your tuning. **Default:**
   unchanged.
+- **One interpreter abort in a clone run**: `*** stack smashing detected
+  ***` inside CPython 3.14.7's `ast.parse` during check 061 (linecount),
+  once in five clone runs, not reproduced. The pre-push hook refuses such
+  an exit, as it should. **Default:** recorded, nothing changed; if it
+  recurs it belongs to the Python build, not to the tree.
