@@ -235,7 +235,7 @@ LOCAL_PATCHES = {
 #: since work order 181 moved up open fixes 35-40, which work order 180
 #: had parked here — until 182 parked open fix 41 here, and again since
 #: work order 183 moved 41 up — until work order 184 parked open fix 42,
-#: and work order 185 open fix 43.
+#: and work order 185 open fixes 43-45.
 REPORTED_PATCHES = {
     # Work order 184: written, proved in scratch, parked — not applied.
     "doc/ext_input_delay_tick.patch": (
@@ -249,6 +249,14 @@ REPORTED_PATCHES = {
         "the engine's window hidden only when OrionLayer starts it "
         "(ORION2RE_HIDE_WINDOW), and shown again on request (MSG_SHOW_WINDOW, "
         "F12)"),
+    # Work order 185: written, proved in scratch, parked — not applied.
+    "doc/ext_ship_designer_state.patch": (
+        os.path.join("src", "ext", "ext_api.cpp"), "OrionLayer, open fix 44.",
+        "the Ship Designer's design as it is edited, on the wire (DSGN)"),
+    "doc/ext_ship_designer_boxes.patch": (
+        os.path.join("src", "game", "desbox.cpp"), "OrionLayer, open fix 45.",
+        "the Ship Designer's three pickers: ids 54-56 and their lists (DSBX); "
+        "on top of fix 44"),
 }
 
 
@@ -283,6 +291,8 @@ FIX_NUMBERS = {
     "doc/ext_engine_window_hidden.patch": (41,),
     "doc/ext_input_delay_tick.patch": (42,),
     "doc/ext_engine_window_on_request.patch": (43,),
+    "doc/ext_ship_designer_state.patch": (44,),
+    "doc/ext_ship_designer_boxes.patch": (45,),
 }
 
 

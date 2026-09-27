@@ -104,6 +104,10 @@ class GameState:
     colony_product: Optional[dict] = None    # "CPRD", fix 38
     build_queue: Optional[dict] = None       # "BLDQ", fix 39
     build_lists: Optional[dict] = None       # "BLDL", fix 40
+    #: The Ship Designer, open fixes 44 and 45 (work order 185, NOT
+    #: APPLIED): `core/designblocks.py` names every key.
+    ship_design: Optional[dict] = None       # "DSGN", fix 44
+    design_box: Optional[dict] = None        # "DSBX", fix 45
 
     # Fields (from FIELD_LIST message)
     fields: list = field(default_factory=list)
@@ -386,8 +390,9 @@ def parse_state(data: bytes) -> GameState:
         if _ok:
             gs.info_screen = {"bill": _bill, "messages": _msgs}
 
-    from core import colonyblocks
+    from core import colonyblocks, designblocks
     pos = colonyblocks.parse(gs, data, pos)
+    pos = designblocks.parse(gs, data, pos)
     return gs
 
 

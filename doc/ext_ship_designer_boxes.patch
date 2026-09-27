@@ -1,0 +1,203 @@
+Engine: the Ship Designer's three sub-dialogs on the wire (ids 54-56, DSBX) (open fix 45).
+
+STATUS: NOT APPLIED — written and proved by work order 185 (Part 6),
+parked for Data (doc/briefs/185-parked-for-data.md). No engine patch may
+be applied in that order.
+It builds on open fix 44 (both append to SerializeState, 45 after 44):
+apply 44 first.
+
+PROOF (work order 185, 27 September 2026): in a scratch worktree of
+orionlayer-local 4bf152e4 with its own build directory (never on
+orionlayer-local itself, never the build play.py starts) this file applied
+with `patch -p1 --dry-run` and `patch -p1`, no offset, no fuzz, on top of fix 44 (4bf152e4 + doc/ext_ship_designer_state.patch), and the
+applied tree equals the scratch commit; the scratch engine was built in
+full (Debug, ORION2RE_EXT=ON, as the linux-debug preset) — no error —
+every changed .cpp compiles alone with the build's own command, and a
+control, the same file with `_weapon_replacement_rack` misspelt `_weapon_replacment_rack` in ext_api.cpp, was refused by the compiler. See the entry,
+doc/orion2re_open_fixes.md 45.
+
+To apply, from ~/orion2re on the orionlayer-local branch:
+
+    patch -p1 < ~/orionlayerv3/doc/ext_ship_designer_boxes.patch
+
+then rebuild. It comes back off with `patch -R -p1` and a rebuild.
+
+WHAT IT IS FOR
+
+    The designer's shield/computer, weapon and special-system pickers
+    (desbox.cpp) run under SCREEN_DESIGN, so a client cannot tell which is
+    open, and their lists and selection live only in DESBOX's globals. The
+    patch makes each picker report a synthetic id — 54, 55, 56 — through
+    ext::ScreenOverride (open fix 24's pattern: what is SENT, nothing the
+    game reads), and appends a block, "DSBX", while one is up: which slot
+    and item, the scroll, the chosen and hovered row, the weapon's arcs,
+    rack and modifications, the four filters, each modification's status,
+    and per row the item and the numbers the picker prints, by the same
+    calls with the same arguments as its drawing. A marker, `OrionLayer,
+    open fix 45.`, on one line at every changed place.
+
+diff --git a/src/ext/ext_api.cpp b/src/ext/ext_api.cpp
+index 5e5e818e..c41e0f41 100644
+--- a/src/ext/ext_api.cpp
++++ b/src/ext/ext_api.cpp
+@@ -708,6 +708,100 @@ static void SerializeState(std::vector<uint8_t>& buf,
+             Write16(buf, d->special_devices[i]);
+         }
+     }
++
++    // 13. The Ship Designer's open sub-dialog: "DSBX", written ONLY while one
++    //     of the three reports its synthetic id (54, 55, 56 — ext_api.h), and
++    //     LAST. OrionLayer, open fix 45.
++    //
++    //     Each picker builds its list into MOX::_design_choice_items (length
++    //     _scroll_bar->total_rows) and keeps its state in DESBOX's globals;
++    //     none of it is on the wire. Per row the numbers the picker prints,
++    //     by THE SAME CALLS WITH THE SAME ARGUMENTS as its drawing:
++    //     Print_Shield_Data_ (desbox.cpp:2395-2402), Print_Computer_Data_
++    //     (:2502-2504), Print_Special_System_Data_ (System_Added_Cost_And_
++    //     Space_, :2821), Print_Main_Weapon_Box_ (:2203-2221, the chosen
++    //     row with the current arcs, rack and mods, every other with the
++    //     defaults) — and for a weapon its damage string, as the engine
++    //     formats it (:2279).
++    if (current_screen >= 54 && current_screen <= 56 &&
++        MOX::_scroll_bar != nullptr && MOX::_design != nullptr) {
++        buf.push_back((uint8_t)'D');
++        buf.push_back((uint8_t)'S');
++        buf.push_back((uint8_t)'B');
++        buf.push_back((uint8_t)'X');
++        const s_current_design* d = MOX::_design;
++        Write8(buf, 1);                                   // block version
++        Write8(buf, (uint8_t)(current_screen - 53));      // 1, 2 or 3
++        Write16(buf, MOX::_design_screen_replacement_type);
++        Write16(buf, MOX::_design_screen_replacement_slot);
++        Write16(buf, MOX::_design_screen_replacement_item);
++        Write16(buf, MOX::_scroll_bar->first_visible_row);
++        Write16(buf, MOX::_scroll_bar->visible_rows);
++        Write16(buf, DESBOX::_field_item_chosen);
++        Write16(buf, DESBOX::_field_item_scanned);
++        Write16(buf, (int16_t)DESBOX::_weapon_replacement_mods);
++        Write16(buf, DESBOX::_weapon_replacement_arcs);
++        Write16(buf, (int16_t)DESBOX::_weapon_replacement_rack);
++        Write8(buf, DESBOX::_beam_filter_button_status);
++        Write8(buf, DESBOX::_missile_filter_button_status);
++        Write8(buf, DESBOX::_bomb_filter_button_status);
++        Write8(buf, DESBOX::_special_filter_button_status);
++        for (int i = 0; i < WEAPON_MOD_COUNT; i++) {
++            Write16(buf, MOX::_weapon_mod_field_status[i]);
++        }
++        int16_t n = MOX::_scroll_bar->total_rows;
++        if (n < 0) n = 0;
++        if (n > 40) n = 40;
++        Write16(buf, n);
++        char text[128];
++        for (int16_t row = 0; row < n; row++) {
++            const int16_t item = MOX::_design_choice_items[row];
++            int32_t cost = 0, space = 0;
++            int16_t extra = 0;
++            text[0] = '\0';
++            if (current_screen == 54 && item > 0 &&
++                MOX::_design_screen_replacement_type == TECH_APPLICATION_TYPE_SHIELD) {
++                const int16_t lvl = DESIGN::Tech_Level_(MOX::_PLAYER_NUM, TECHDATA::_shields[item].tech_app_id);
++                cost = DESIGN::Cost_Given_M_Level_(TECHDATA::_shields[item].cost_per_ship_type[d->ship_size], lvl);
++                space = static_cast<int16_t>(DESIGN::Space_Given_M_Level_(TECHDATA::_shields[item].space_per_ship_type[d->ship_size], lvl, 0));
++            } else if (current_screen == 54 && item > 0) {
++                const int16_t lvl = DESIGN::Tech_Level_(MOX::_PLAYER_NUM, TECHDATA::_computers[item].tech_app_id);
++                cost = DESIGN::Cost_Given_M_Level_(DESIGN::Computer_Cost_(item), lvl);
++                extra = (int16_t)TECHDATA::_computers[item].bonus;
++            } else if (current_screen == 56 && item > 0) {
++                int16_t c16 = 0, s16 = 0;
++                DESBOX::System_Added_Cost_And_Space_(row, &c16, &s16);
++                cost = c16;
++                space = s16;
++            } else if (current_screen == 55) {
++                const int16_t weapon = DESBOX::Weapon_Index_(row);
++                if (weapon > 0 && row > 0) {
++                    const bool chosen = DESBOX::_field_item_chosen > -1 &&
++                                        DESBOX::_field_item_chosen == row;
++                    const int16_t ammo = DESIGN::Weapon_Needs_Racks_(weapon) != 0
++                        ? DESIGN::Missile_Rack_Quantity_(chosen ? (int16_t)DESBOX::_weapon_replacement_rack : 1)
++                        : 0;
++                    const int16_t arc = chosen ? DESBOX::_weapon_replacement_arcs : (int16_t)WEAPON_FIRING_ARC_FORWARD;
++                    const int16_t mods = chosen ? (int16_t)DESBOX::_weapon_replacement_mods : 0;
++                    cost = DESIGN::Weapon_Cost_(weapon, 1, arc, ammo, mods);
++                    space = DESIGN::Weapon_Space_(MOX::_PLAYER_NUM, weapon, 1, arc, ammo, mods);
++                }
++                if (weapon > 0) {
++                    DESIGN::Design_Weapon_Damage_String_(weapon, text, sizeof(text), DESBOX::_field_item_chosen, row);
++                }
++                extra = weapon;
++            }
++            Write16(buf, item);
++            Write8(buf, (uint8_t)MOX::_design_choice_item_selected[row]);
++            Write8(buf, (uint8_t)d->replacement_item_unlocked[row]);
++            Write32(buf, cost);
++            Write32(buf, space);
++            Write16(buf, extra);
++            const size_t len = strnlen(text, sizeof(text));
++            Write8(buf, (uint8_t)len);
++            WriteBytes(buf, text, len);
++        }
++    }
+ }
+ 
+ // ── Field list ───────────────────────────────────────────
+diff --git a/src/ext/ext_api.h b/src/ext/ext_api.h
+index c228885f..c845ab21 100644
+--- a/src/ext/ext_api.h
++++ b/src/ext/ext_api.h
+@@ -33,6 +33,10 @@ extern int16_t g_pending_field;
+ /// race selection) would MOVE them: textbox.cpp:44 picks the description
+ /// box's x from it and textbox.cpp:284 its colour group. This changes what
+ /// is SENT and nothing the game reads.
++///
++/// OrionLayer, open fix 45. The Ship Designer's three sub-dialogs (desbox.cpp) run
++/// under SCREEN_DESIGN as well and report 54 (shield or computer), 55
++/// (weapon) and 56 (special system), so a client can tell which is open.
+ extern int16_t g_screen_override;
+ 
+ /// Sets `g_screen_override` while it lives and restores the previous value
+diff --git a/src/game/desbox.cpp b/src/game/desbox.cpp
+index 54c74549..aaa3be21 100644
+--- a/src/game/desbox.cpp
++++ b/src/game/desbox.cpp
+@@ -1,4 +1,7 @@
+ #include "pch.h"
++#ifdef ORION2RE_EXT
++#include "ext/ext_api.h"  // OrionLayer, open fix 45. ScreenOverride for the three sub-dialogs.
++#endif
+ 
+ namespace DESBOX {
+ 
+@@ -97,6 +100,10 @@ namespace DESBOX {
+     }
+ 
+     void __cdecl Special_Systems_Box_() {
++#ifdef ORION2RE_EXT
++        // OrionLayer, open fix 45. The special-system picker reports a synthetic 56 (ext_api.h); the game still reads SCREEN_DESIGN.
++        const ext::ScreenOverride ext_screen_guard(56);
++#endif
+         char msg42[120];
+         char msg41[200];
+         char msg42_base[200];
+@@ -1223,6 +1230,10 @@ namespace DESBOX {
+     }
+ 
+     void __cdecl Generic_Replacement_Box_() {
++#ifdef ORION2RE_EXT
++        // OrionLayer, open fix 45. The shield / computer picker reports a synthetic 54 (ext_api.h); the game still reads SCREEN_DESIGN.
++        const ext::ScreenOverride ext_screen_guard(54);
++#endif
+         uint8_t redraw_flag = 1;
+         bool first_time = true;
+         bool done = false;
+@@ -1313,6 +1324,10 @@ namespace DESBOX {
+     }
+ 
+     void __cdecl Weapons_Replacement_Box_() {
++#ifdef ORION2RE_EXT
++        // OrionLayer, open fix 45. The weapon picker reports a synthetic 55 (ext_api.h); the game still reads SCREEN_DESIGN.
++        const ext::ScreenOverride ext_screen_guard(55);
++#endif
+         char front_arc_text[30];
+         char rear_arc_text[30];
+         char beam_arc_text[30];

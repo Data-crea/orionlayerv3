@@ -5,12 +5,13 @@
 # tools/smoke_suite/, in file-name order and in ONE namespace. Do not
 # import this file; it is not a module.
 #
-# The 6 check(s) it holds:
+# The 7 check(s) it holds:
 #   - the open fixes the engine needs are one list, and README, setup's report and the fundament's line name exactly them
 #   - version_check requires every applied fix: a tree missing any one of them is reported by name
 #   - open fixes 35-40 are applied and documented: status, hashes, one-line markers, each entry's diff the patch file's; on this disk each commit's diff the file's and each marker over its block
 #   - open fix 41 is applied and documented: required, status and hash in entry, row and patch, two one-line markers, the entry's diff the file's; on this disk the commit's diff the file's
 #   - open fix 42 is written and parked, not applied: reported and never required, NOT APPLIED in entry, row and patch, one one-line marker, the entry's diff the file's; on this disk its pre-image is orionlayer-local's and its marker absent
+#   - open fixes 44 and 45 (the Ship Designer) are written and parked, not applied, 45 on top of 44: reported and never required, NOT APPLIED in entries, rows and patches, a one-line marker at every changed place, each entry's diff its file's; on this disk every pre-image is orionlayer-local's (45's ext_api.cpp hunk: 44's post-image) and no marker is in the tree
 #   - open fix 43 is written and parked, not applied, and amends 41: reported and never required, NOT APPLIED in entry, row and patch, a one-line marker at every changed place of its five files, the entry's diff the file's; on this disk every pre-image is orionlayer-local's and no marker is in the tree
 
 
@@ -373,4 +374,75 @@ ok("open fix 43 is written and parked, not applied, and amends 41: reported "
    "and never required, NOT APPLIED in entry, row and patch, a one-line "
    "marker at every changed place of its five files, the entry's diff the "
    "file's; on this disk every pre-image is orionlayer-local's and no "
+   "marker is in the tree")
+
+# 7. OPEN FIXES 44 AND 45 — THE SHIP DESIGNER, written and parked by work
+#    order 185, NOT APPLIED; 45 applies on top of 44 (both append to
+#    SerializeState). The rules of #6, per patch; 45's one hunk that sits
+#    on 44's new lines is held to 44's post-image instead of the tree.
+_vr_sd = {44: ("doc/ext_ship_designer_state.patch", ["src/ext/ext_api.cpp"]),
+          45: ("doc/ext_ship_designer_boxes.patch",
+               ["src/ext/ext_api.cpp", "src/ext/ext_api.h",
+                "src/game/desbox.cpp"])}
+_vr_post44 = ""
+for _vr_n, (_vr_p, _vr_files) in sorted(_vr_sd.items()):
+    _vr_mark = f"OrionLayer, open fix {_vr_n}."
+    assert _vr_p in _vr_vc.REPORTED_PATCHES and _vr_p not in _vr_vc.LOCAL_PATCHES
+    assert _vr_vc.REPORTED_PATCHES[_vr_p][1] == _vr_mark
+    assert _vr_vc.FIX_NUMBERS[_vr_p] == (_vr_n,) and _vr_n not in _vr_want
+    _vr_t = open(os.path.join(_vr_root, _vr_p), encoding="utf-8").read()
+    assert "STATUS: NOT APPLIED" in _vr_t and "work order 185" in _vr_t
+    _vr_d = _vr_t[_vr_t.index("diff --git"):]
+    assert sorted(_vr_re.findall(r"(?m)^\+\+\+ b/(\S+)$", _vr_d)) == \
+        sorted(_vr_files), (_vr_n, _vr_files)
+    for _vr_h in _vr_re.split(r"(?m)^@@ ", _vr_d)[1:]:
+        _vr_add = [_l for _l in _vr_h.splitlines() if _l.startswith("+")]
+        assert not _vr_add or any(_vr_mark in _l for _l in _vr_add), (
+            f"fix {_vr_n}: a changed place without its marker: {_vr_add[:2]}")
+    _vr_e = _vr_fixes[_vr_fixes.index(f"\n## {_vr_n}. "):]
+    _vr_e = _vr_e[:_vr_e.find("\n## ", 5)] if "\n## " in _vr_e[5:] else _vr_e
+    assert "**Status: NOT APPLIED" in _vr_e[:400] and _vr_p in _vr_e[:900]
+    for _vr_part in ("**Proof.**", "no offset, no fuzz", "**Recorded live**",
+                     "**How to apply.**", "ship_designer_reading.md"
+                     if _vr_n == 44 else "on top of open fix"):
+        assert _vr_part in _vr_e, f"entry {_vr_n} lacks {_vr_part}"
+    _vr_j = _vr_e.index("```diff\n", _vr_e.index("**The exact change.**")) + 8
+    _vr_nd = "".join(_l for _l in _vr_norm(_vr_d).splitlines(True)
+                     if not _l.startswith(("diff --git", "index ")))
+    assert _vr_e[_vr_j:_vr_e.index("```", _vr_j)] == _vr_nd, \
+        f"entry {_vr_n}'s diff is not its patch file's"
+    _vr_r = next(_l for _l in _vr_fixes.splitlines()
+                 if _l.startswith(f"| {_vr_n} |"))
+    assert "**Written, NOT APPLIED** — work order 185" in _vr_r
+    if not os.path.isdir(os.path.join(_vr_tree_dir, ".git")):
+        report(f"open fix {_vr_n} NOT checked against orionlayer-local — no "
+               f"orion2re tree on this disk")
+        continue
+    for _vr_f in _vr_files:
+        _vr_blk = _vr_d.split(f"+++ b/{_vr_f}\n", 1)[1].split("\ndiff --git", 1)[0]
+        _vr_src = _vr_sp.run(["git", "-C", _vr_tree_dir, "show",
+                              f"orionlayer-local:{_vr_f}"], capture_output=True,
+                             text=True, errors="replace").stdout
+        assert _vr_mark not in _vr_src, (
+            f"fix {_vr_n}'s marker is in orionlayer-local's {_vr_f}")
+        for _vr_h in _vr_re.split(r"(?m)^@@[^\n]*\n", _vr_blk)[1:]:
+            _vr_pre = "\n".join(_l[1:] for _l in _vr_h.splitlines()
+                                if _l[:1] in (" ", "-"))
+            _vr_post = "\n".join(_l[1:] for _l in _vr_h.splitlines()
+                                 if _l[:1] in (" ", "+"))
+            if _vr_n == 44:
+                _vr_post44 += _vr_post + "\n"
+            if _vr_n == 45 and _vr_f == "src/ext/ext_api.cpp" and \
+                    _vr_pre not in _vr_src:
+                assert _vr_pre in _vr_post44, (
+                    "fix 45's ext_api.cpp hunk is neither on orionlayer-local "
+                    "nor on fix 44's post-image")
+                continue
+            assert _vr_pre in _vr_src, (
+                f"fix {_vr_n}'s pre-image is not orionlayer-local's {_vr_f}")
+ok("open fixes 44 and 45 (the Ship Designer) are written and parked, not "
+   "applied, 45 on top of 44: reported and never required, NOT APPLIED in "
+   "entries, rows and patches, a one-line marker at every changed place, "
+   "each entry's diff its file's; on this disk every pre-image is "
+   "orionlayer-local's (45's ext_api.cpp hunk: 44's post-image) and no "
    "marker is in the tree")

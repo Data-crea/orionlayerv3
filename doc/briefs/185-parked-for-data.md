@@ -41,6 +41,21 @@ message, so one OrionLayer runs on both. **Replaces** 41's hidden start,
 **keeps** 41's no-VSync while hidden; **revert**: `patch -R -p1` returns the
 engine to 41 as applied. **Default: not applied.**
 
+### 1c. Open fixes 44 and 45 — the Ship Designer on the wire
+
+Entries 44 ("The Ship Designer's design as it is being edited") and 45
+("The Ship Designer's sub-dialogs: which is open, and what it offers");
+patches `doc/ext_ship_designer_state.patch` and
+`doc/ext_ship_designer_boxes.patch` (45 on top of 44). Proved in scratch
+and recorded live: the page's every printed value (DSGN), the pickers'
+ids 54-56 and their rows number for number (DSBX). **Unlocks** the HD Ship
+Designer (`screens/ship_design/`, part 7): with 44 its page, with 45 its
+three pickers; without them the designer stays the game's own picture, as
+it is today. **Cost**: one block each, written only while the designer is
+up; three one-line guards. **Risk**: small — nothing the game reads
+changes; an OrionLayer that does not know 54-56 shows the game's picture
+for them. **Default: not applied.**
+
 ## 2. Decisions asked for in this order
 
 ### 2a. The mechanism for fix 43 (part 2) — chosen: an environment variable to start hidden, an Extension API message to show and hide

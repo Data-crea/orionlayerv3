@@ -129,3 +129,48 @@ decision 39), from 183's proposed text with the fix 41 consequences as
 they stand — F12 stated as measured in part 2 — and the pointer to open
 fix 43. Placeholders `<number: Data>`; nothing written into
 `doc/fundament/`.
+
+## Part 6 — Ship Designer: reading report and brief — **DONE**
+
+1. **The reading**: `doc/ship_designer_reading.md` — drafted by a read-only
+   agent over `design_main.cpp`, `design.cpp`, `desbox.cpp`,
+   `design_config.cpp`, then checked at the tree before use: the way in
+   (only the build popup: Design + a design row, Refit + the custom row),
+   Cancel / Build back to it, the save (`Update_Player_Design_`), the one
+   input delay (20 passes, before the weapon picker), the in-progress
+   struct (corrected to orion2.h:702-743), no design data on the wire, no
+   other writer of SCREEN_DESIGN, what the page prints and computes, what
+   each picker prints. Every sub-dialog: the shield/computer picker, the
+   weapon picker (filters, arcs, racks, modifications, Accept), the special
+   picker, the hull buttons, the name field, the warning boxes; what a
+   finished design becomes (the slot is overwritten; no list-full case).
+   The table says, piece by piece, what is on the wire today.
+2. **Open fixes 44 and 45** (entries, patches, rows, `version_check`
+   REPORTED, **check 090r #7** new): "DSGN" — the edit, slot, refit flag,
+   printed numbers, computed stats, engine-formatted weapon strings; ids
+   54/55/56 for the three pickers and "DSBX" — their state and rows by the
+   same calls as their drawing. Scratch worktree `wt44` at `4bf152e4`, its
+   own build directory `build44`, commits `ef021842` (44) and `cc0becc9`
+   (45), built exit 0 after each; both patch files applied cleanly (44 on
+   `4bf152e4`, 45 on top of it), byte for byte the scratch commits, each
+   changed .cpp compiling alone, both misspelt-constant controls refused.
+3. **Recorded live** (scratch engine 132355, guard `185_P6_record`, SAVE4;
+   a scratch recorder, every send decided from the list read then):
+   DSGN on the designer agrees with the native page value for value (slot 0
+   "Scout"); the shield field with nothing researched gives the warning box
+   under 3 (the first run left it open — its script escaped only on an id
+   change; the second dismissed it through the box's full-screen field and
+   edited slot 1 "Rafale"); 54 / 55 / 56 with DSBX, the weapon picker's rows
+   equal to the native picker's. Reader: `core/designblocks.py` (new,
+   `game_state` calls it after the colony blocks; inert without the blocks).
+4. **The brief**: `doc/brief_ship_designer.md` (no line numbers) — the
+   claim rule (no DSGN, no claim: the safety net as today), the HUD layout
+   area by area with each value's source, the original graphics adopted
+   (SHIPS.LBX pictures through the Fleets extraction, DESIGN.LBX's arc
+   pictures) and not (its chrome — decision 71), the input path (hull
+   buttons by injected click, everything else by activation found in the
+   live list, the name UNVERIFIED), the markers, the texts.
+5. **No engine fix for texts or pictures**: every name is in TECHNAME.LBX,
+   descriptions and notes in TECHDESC.LBX, pictures in SHIPS.LBX /
+   DESIGN.LBX — HD extractions (part 7).
+6. Checks 387 → 388.

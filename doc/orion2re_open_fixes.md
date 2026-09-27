@@ -65,6 +65,8 @@ section for what was found where.
 | 41 | The engine's own window is shown before `ext::Init` sets `g_hide_window` (platform.cpp:1406-1408 on `2097b0c6`, mox2.cpp:382) | **Applied** 27 September 2026 by work order 183 on Data's approval (orion2re `4bf152e4` on `orionlayer-local`, `doc/ext_engine_window_hidden.patch`); written and proved by work order 182; required by `tools/version_check.py`; confirmed live on the virtual display (never mapped, pacing unchanged, HD identical); open upstream | Without it the engine's window appears on every start, and the original follows the real pointer over it |
 | 42 | A screen is silent on the wire while its input delay counts down: `Get_Input_` returns before `ext::Tick` (fields.cpp:161-167), so the research panel's list reaches a client ~550 ms after the engine has built it | **Written, NOT APPLIED** — work order 184 (`doc/ext_input_delay_tick.patch`); proved in scratch: research entries 636-686 → 77-103 ms (median), flash walk 29 transitions / 0 native frames, 182's stress 0 lost / 0 dropped, pacing and CPU unchanged; clicks in the gap (work order 185): 260 inputs, none lost, none taken twice — an input in the research panel's gap is held and taken when the delay ends | Without it every research entry waits ~550 ms for nothing (66-80 % of it), and every screen that sets an input delay (42 call sites) is heard that much later |
 | 43 | Open fix 41 hides the engine's window always: started on its own the engine is invisible for good, and nothing can show its window again | **Written, NOT APPLIED** — work order 185 (`doc/ext_engine_window_on_request.patch`), AMENDS fix 41; proved in scratch: without `ORION2RE_HIDE_WINDOW` the window shows as before 41, with it it never shows, `MSG_SHOW_WINDOW` shows and hides it, pacing unchanged, the applied build ignores the message | Without it an engine started without OrionLayer cannot be seen, and F12 can show only the engine's picture inside OrionLayer's window, never the engine's own window |
+| 44 | The Ship Designer's design as it is being edited is not on the wire — `MOX::_design`, the slot, the refit flag, the printed numbers | **Written, NOT APPLIED** — work order 185 (`doc/ext_ship_designer_state.patch`, "DSGN"); proved in scratch and recorded live: every value the native page prints | Without it the Ship Designer stays the game's own picture (the safety net): HD cannot show an edit it does not receive |
+| 45 | The Ship Designer's three sub-dialogs report SCREEN_DESIGN and their lists and selection are not on the wire | **Written, NOT APPLIED** — work order 185 (`doc/ext_ship_designer_boxes.patch`, ids 54-56 and "DSBX", on top of 44); proved in scratch and recorded live: the weapon picker's rows number for number | Without it the pickers stay the game's own picture even with fix 44: HD cannot tell which is open nor what it offers |
 
 Items 3 and 4 are both about INJECT_CLICK and both live in the same
 code path, but they are separate faults: 3 is where the coordinates
@@ -3341,3 +3343,397 @@ out/build/Linux/linux-debug`; set `ORION2RE_HIDE_WINDOW=1` in
 and move the patch from `REPORTED_PATCHES` to `LOCAL_PATCHES`. It comes back
 off with `patch -R -p1` and a rebuild — the engine is then fix 41 as
 applied.
+
+## 44. The Ship Designer's design as it is being edited
+
+**Status: NOT APPLIED — written, proved and parked for Data by work order
+185 (Part 6), 27 September 2026** (`doc/briefs/185-parked-for-data.md`,
+item 1c). Patch: `doc/ext_ship_designer_state.patch`; listed by
+`tools/version_check.py` under REPORTED_PATCHES (marker `OrionLayer, open
+fix 44.`, on one line at the changed place). The reading it rests on:
+`doc/ship_designer_reading.md`.
+
+**What is missing.** The designer (SCREEN_DESIGN, 3) edits `MOX::_design`,
+an `s_current_design` in the global data segment (orion2.h:702-743,
+design_main.cpp:577), and writes it into the player's `ship_designs[]`
+only on Build (`Update_Player_Design_`, design.cpp:755-801). No block of
+`SerializeState` covers the screen, so while a design is being edited
+nothing of the edit is on the wire — nor which slot is edited
+(`_temp_star_handle`), nor whether it is a refit (`_refit_ship`), nor the
+numbers the page computes at draw time (design_main.cpp:7-95). The saved
+slots arrive (the player records), the edit does not.
+
+**What the patch changes.** One place, marked: block 12 of `SerializeState`,
+"DSGN", appended while the GAME'S OWN `_current_screen` is SCREEN_DESIGN
+(never the reported id, so it also rides the sub-dialogs of fix 45) and
+`MOX::_design` exists: a version byte; the slot and the refit flag; the
+bottom line's two numbers (`Printed_Design_Cost_`, `_printed_space_avail`);
+the name; size, picture, shield, drive, computer, armour, fuel; hull space,
+space used, total cost; the drive's parsecs, combat speed, structure and
+armour points, shield strength and damage points blocked, the computer's
+beam attack, beam defence and missile evasion — through the same functions
+the page prints them with; per weapon row type, count, arc, modification
+bits, cost, space, ammo and the damage and modification strings the engine
+formats (`Design_Weapon_Damage_String_`, `Weapon_Mod_String_`, as length and
+bytes, never truncated); the eight specials. Every function it calls only
+reads (checked: `Build_Design_Template_` writes its output alone).
+
+**The exact change.** The diff, as written by the scratch commit
+(`ef021842`; the `diff --git` and `index` lines and the text git adds after
+`@@` are not part of it):
+
+```diff
+--- a/src/ext/ext_api.cpp
++++ b/src/ext/ext_api.cpp
+@@ -629,6 +629,85 @@
+             }
+         }
+     }
++
++    // 12. The Ship Designer's design as it is being edited: "DSGN", written
++    //     ONLY while the designer is up, and LAST. OrionLayer, open fix 44.
++    //
++    //     The designer edits MOX::_design, an s_current_design in the global
++    //     data segment (design_main.cpp:577), and writes it into the
++    //     player's ship_designs[] only on Build (Update_Player_Design_,
++    //     design.cpp:755-801); until then nothing of the edit is on the wire.
++    //     The test is the game's own _current_screen, never the reported id,
++    //     so the block also rides the sub-dialogs, which report their own
++    //     ids when open fix 45 is applied. With it: the slot being edited
++    //     and the refit flag, the two numbers the bottom line prints, the
++    //     design itself, the values Print_Current_Design_ computes at draw
++    //     time (design_main.cpp:7-95) and, per weapon row, the damage and
++    //     modification strings the engine formats (:124-171).
++    if (MOX::_current_screen == SCREEN_DESIGN && MOX::_design != nullptr) {
++        buf.push_back((uint8_t)'D');
++        buf.push_back((uint8_t)'S');
++        buf.push_back((uint8_t)'G');
++        buf.push_back((uint8_t)'N');
++        const s_current_design* d = MOX::_design;
++        Write8(buf, 1);                                   // block version
++        Write16(buf, MOX::_temp_star_handle);             // design slot
++        Write8(buf, (uint8_t)MOX::_refit_ship);
++        Write32(buf, (int32_t)DESIGN::Printed_Design_Cost_());
++        Write32(buf, DESIGN::_printed_space_avail);
++        WriteBytes(buf, d->name, 16);
++        Write16(buf, d->ship_size);
++        Write16(buf, d->picture_type);
++        Write16(buf, d->shield);
++        Write16(buf, d->ftl_type);
++        Write16(buf, d->computer_type);
++        Write16(buf, d->armor_type);
++        Write16(buf, d->fuel_type);
++        Write32(buf, d->hull_space);
++        Write32(buf, d->space_used);
++        Write32(buf, d->total_cost);
++        Write16(buf, (int16_t)TECHDATA::_drives[d->ftl_type].warp_speed);
++        Write16(buf, (int16_t)DESIGN::Current_Design_Combat_Speed_(MOX::_design));
++        Write16(buf, DESIGN::Current_Design_Structural_Points_());
++        Write16(buf, DESIGN::Current_Design_Armor_Absorption_());
++        Write16(buf, DESIGN::Shield_Strength_());
++        Write16(buf, DESIGN::Current_Shield_Damage_Points_Blocked_());
++        Write16(buf, (int16_t)TECHDATA::_computers[d->computer_type].bonus);
++        s_ship_design tmpl;
++        DESIGN::Build_Design_Template_(&tmpl);
++        int16_t atk = 0, def = 0, evade = 0;
++        INITSHIP::Get_Design_Combat_Bonuses_(tmpl, &atk, &def, &evade);
++        Write16(buf, def);
++        Write16(buf, evade);
++        char text[128];
++        auto write_text = [&]() {
++            size_t n = strnlen(text, sizeof(text));
++            Write8(buf, (uint8_t)n);
++            WriteBytes(buf, text, n);
++        };
++        for (int16_t i = 0; i < 8; i++) {
++            Write16(buf, d->weapon_type[i]);
++            Write16(buf, d->weapon_count[i]);
++            Write8(buf, (uint8_t)d->weapon_firing_arc[i]);
++            Write16(buf, (int16_t)d->weapon_specials[i]);
++            Write32(buf, d->weapon_cost[i]);
++            Write32(buf, d->weapon_space[i]);
++            Write8(buf, (uint8_t)d->weapon_ammo[i]);
++            text[0] = '\0';
++            if (d->weapon_type[i] != WEAPON_NO_WEAPONS) {
++                DESIGN::Design_Weapon_Damage_String_(i, text, sizeof(text), -1, -1);
++            }
++            write_text();
++            text[0] = '\0';
++            if (d->weapon_type[i] != WEAPON_NO_WEAPONS) {
++                DESIGN::Weapon_Mod_String_((int16_t)d->weapon_specials[i], text, sizeof(text));
++            }
++            write_text();
++        }
++        for (int16_t i = 0; i < 8; i++) {
++            Write16(buf, d->special_devices[i]);
++        }
++    }
+ }
+ 
+ // ── Field list ───────────────────────────────────────────
+```
+
+**Proof.** In a scratch worktree of `orionlayer-local` `4bf152e4` with its
+own build directory (never on `orionlayer-local`, never the build `play.py`
+starts): the patch file applies with `patch -p1 --dry-run` and `patch -p1`, no offset, no fuzz, to a clean worktree at `4bf152e4`; the applied files equal the scratch commit's byte for
+byte (`ef021842`); the whole engine built (Debug, `ORION2RE_EXT=ON`, the
+`linux-debug` preset's variables) without an error; `ext_api.cpp` compiles
+alone with the build's own command (`ninja -t commands`, `-fsyntax-only`);
+the control — `_printed_space_avial` for `_printed_space_avail` — was refused ("»_printed_space_avial« ist kein Element von »DESIGN«").
+
+**Recorded live** (with fix 45 on top, the virtual display, SAVE4,
+`~/orionlayer-fixtures/evidence/work_order_185/P6_design_record*`, every
+start guarded and verified identical; the reading's section 10 has the
+table): slot 0 "Scout" — space 25, space available 13, cost 25, 2 parsecs,
+16 combat speed, 8 structure, 8 armour points, +25 beam attack, beam
+defence +80, missile evasion 0 %, special 11 — every value the native page
+prints; slot 1 "Rafale" with its weapon rows and the engine's own damage
+strings ("8", "3-12") and "no modifications"; the block gone once Cancel
+returned to the build popup. HD reads it with `core/designblocks.py`.
+
+**Side effects — observed and ruled out.** Written only while the designer
+is up; the other screens' snapshots are unchanged. Snapshot pacing on the
+designer was not measured separately (its loop's own `Release_Time_(2)`
+paces it as before; the block adds a few hundred bytes to a snapshot that
+carries a 307 KB framebuffer).
+
+**What it costs us without it.** The Ship Designer stays the game's own
+picture (the safety net): HD claims id 3 only with DSGN on the wire.
+
+**How to apply.** From `~/orion2re` on `orionlayer-local`: `patch -p1 <
+~/orionlayerv3/doc/ext_ship_designer_state.patch`, then `ninja -C
+out/build/Linux/linux-debug`, and move the patch from `REPORTED_PATCHES` to
+`LOCAL_PATCHES`. It comes back off with `patch -R -p1` and a rebuild.
+
+## 45. The Ship Designer's sub-dialogs: which is open, and what it offers
+
+**Status: NOT APPLIED — written, proved and parked for Data by work order
+185 (Part 6), 27 September 2026** (`doc/briefs/185-parked-for-data.md`,
+item 1c). Patch: `doc/ext_ship_designer_boxes.patch`, **on top of open fix
+44** (both append to `SerializeState`, 45 after 44 — apply 44 first);
+listed by `tools/version_check.py` under REPORTED_PATCHES (marker
+`OrionLayer, open fix 45.`, on one line at every changed place).
+
+**What is missing.** The designer's three pickers — shield or computer
+(`DESBOX::Generic_Replacement_Box_`), weapon with arcs, racks and
+modifications (`Weapons_Replacement_Box_`), special system
+(`Special_Systems_Box_`) — run their own input loops under SCREEN_DESIGN.
+The wire reports 3 throughout, so a client cannot tell which is open
+(`_design_screen_replacement_type` is set when one opens and never cleared),
+and their lists, selection, arcs, rack, modifications, filters and scroll
+live only in DESBOX's and MOX's globals.
+
+**What the patch changes.**
+- `src/game/desbox.cpp` — each picker reports a synthetic id through
+  `ext::ScreenOverride` (open fix 24's pattern: what is SENT, nothing the
+  game reads): **54** shield or computer, **55** weapon, **56** special
+  system; the include under `#ifdef ORION2RE_EXT`.
+- `src/ext/ext_api.h` — the three ids documented beside the override.
+- `src/ext/ext_api.cpp` — block 13, "DSBX", while one of the three is
+  reported: a version byte, the kind, the replacement type, slot and item,
+  the scroll, the chosen and hovered row, the weapon's modifications, arcs
+  and rack, the four filters, the fifteen modification statuses, and per
+  row the item, selected, unlocked, cost, space, one extra value (the
+  computer's bonus; the weapon id, because the weapon picker's rows go
+  through `Weapon_Index_`, not `_design_choice_items`) and for a weapon the
+  damage string — every number by THE SAME CALLS WITH THE SAME ARGUMENTS as
+  the picker's own drawing (desbox.cpp:2203-2221, :2279, :2395-2402,
+  :2502-2504, :2821), never a second copy of a table.
+
+**The exact change.** The diff, as written by the scratch commit
+(`cc0becc9`, on `ef021842`; the `diff --git` and `index` lines and the
+text git adds after `@@` are not part of it):
+
+```diff
+--- a/src/ext/ext_api.cpp
++++ b/src/ext/ext_api.cpp
+@@ -708,6 +708,100 @@
+             Write16(buf, d->special_devices[i]);
+         }
+     }
++
++    // 13. The Ship Designer's open sub-dialog: "DSBX", written ONLY while one
++    //     of the three reports its synthetic id (54, 55, 56 — ext_api.h), and
++    //     LAST. OrionLayer, open fix 45.
++    //
++    //     Each picker builds its list into MOX::_design_choice_items (length
++    //     _scroll_bar->total_rows) and keeps its state in DESBOX's globals;
++    //     none of it is on the wire. Per row the numbers the picker prints,
++    //     by THE SAME CALLS WITH THE SAME ARGUMENTS as its drawing:
++    //     Print_Shield_Data_ (desbox.cpp:2395-2402), Print_Computer_Data_
++    //     (:2502-2504), Print_Special_System_Data_ (System_Added_Cost_And_
++    //     Space_, :2821), Print_Main_Weapon_Box_ (:2203-2221, the chosen
++    //     row with the current arcs, rack and mods, every other with the
++    //     defaults) — and for a weapon its damage string, as the engine
++    //     formats it (:2279).
++    if (current_screen >= 54 && current_screen <= 56 &&
++        MOX::_scroll_bar != nullptr && MOX::_design != nullptr) {
++        buf.push_back((uint8_t)'D');
++        buf.push_back((uint8_t)'S');
++        buf.push_back((uint8_t)'B');
++        buf.push_back((uint8_t)'X');
++        const s_current_design* d = MOX::_design;
++        Write8(buf, 1);                                   // block version
++        Write8(buf, (uint8_t)(current_screen - 53));      // 1, 2 or 3
++        Write16(buf, MOX::_design_screen_replacement_type);
++        Write16(buf, MOX::_design_screen_replacement_slot);
++        Write16(buf, MOX::_design_screen_replacement_item);
++        Write16(buf, MOX::_scroll_bar->first_visible_row);
++        Write16(buf, MOX::_scroll_bar->visible_rows);
++        Write16(buf, DESBOX::_field_item_chosen);
++        Write16(buf, DESBOX::_field_item_scanned);
++        Write16(buf, (int16_t)DESBOX::_weapon_replacement_mods);
++        Write16(buf, DESBOX::_weapon_replacement_arcs);
++        Write16(buf, (int16_t)DESBOX::_weapon_replacement_rack);
++        Write8(buf, DESBOX::_beam_filter_button_status);
++        Write8(buf, DESBOX::_missile_filter_button_status);
++        Write8(buf, DESBOX::_bomb_filter_button_status);
++        Write8(buf, DESBOX::_special_filter_button_status);
++        for (int i = 0; i < WEAPON_MOD_COUNT; i++) {
++            Write16(buf, MOX::_weapon_mod_field_status[i]);
++        }
++        int16_t n = MOX::_scroll_bar->total_rows;
++        if (n < 0) n = 0;
++        if (n > 40) n = 40;
++        Write16(buf, n);
++        char text[128];
++        for (int16_t row = 0; row < n; row++) {
++            const int16_t item = MOX::_design_choice_items[row];
++            int32_t cost = 0, space = 0;
++            int16_t extra = 0;
++            text[0] = '\0';
++            if (current_screen == 54 && item > 0 &&
++                MOX::_design_screen_replacement_type == TECH_APPLICATION_TYPE_SHIELD) {
++                const int16_t lvl = DESIGN::Tech_Level_(MOX::_PLAYER_NUM, TECHDATA::_shields[item].tech_app_id);
++                cost = DESIGN::Cost_Given_M_Level_(TECHDATA::_shields[item].cost_per_ship_type[d->ship_size], lvl);
++                space = static_cast<int16_t>(DESIGN::Space_Given_M_Level_(TECHDATA::_shields[item].space_per_ship_type[d->ship_size], lvl, 0));
++            } else if (current_screen == 54 && item > 0) {
++                const int16_t lvl = DESIGN::Tech_Level_(MOX::_PLAYER_NUM, TECHDATA::_computers[item].tech_app_id);
++                cost = DESIGN::Cost_Given_M_Level_(DESIGN::Computer_Cost_(item), lvl);
++                extra = (int16_t)TECHDATA::_computers[item].bonus;
++            } else if (current_screen == 56 && item > 0) {
++                int16_t c16 = 0, s16 = 0;
++                DESBOX::System_Added_Cost_And_Space_(row, &c16, &s16);
++                cost = c16;
++                space = s16;
++            } else if (current_screen == 55) {
++                const int16_t weapon = DESBOX::Weapon_Index_(row);
++                if (weapon > 0 && row > 0) {
++                    const bool chosen = DESBOX::_field_item_chosen > -1 &&
++                                        DESBOX::_field_item_chosen == row;
++                    const int16_t ammo = DESIGN::Weapon_Needs_Racks_(weapon) != 0
++                        ? DESIGN::Missile_Rack_Quantity_(chosen ? (int16_t)DESBOX::_weapon_replacement_rack : 1)
++                        : 0;
++                    const int16_t arc = chosen ? DESBOX::_weapon_replacement_arcs : (int16_t)WEAPON_FIRING_ARC_FORWARD;
++                    const int16_t mods = chosen ? (int16_t)DESBOX::_weapon_replacement_mods : 0;
++                    cost = DESIGN::Weapon_Cost_(weapon, 1, arc, ammo, mods);
++                    space = DESIGN::Weapon_Space_(MOX::_PLAYER_NUM, weapon, 1, arc, ammo, mods);
++                }
++                if (weapon > 0) {
++                    DESIGN::Design_Weapon_Damage_String_(weapon, text, sizeof(text), DESBOX::_field_item_chosen, row);
++                }
++                extra = weapon;
++            }
++            Write16(buf, item);
++            Write8(buf, (uint8_t)MOX::_design_choice_item_selected[row]);
++            Write8(buf, (uint8_t)d->replacement_item_unlocked[row]);
++            Write32(buf, cost);
++            Write32(buf, space);
++            Write16(buf, extra);
++            const size_t len = strnlen(text, sizeof(text));
++            Write8(buf, (uint8_t)len);
++            WriteBytes(buf, text, len);
++        }
++    }
+ }
+ 
+ // ── Field list ───────────────────────────────────────────
+--- a/src/ext/ext_api.h
++++ b/src/ext/ext_api.h
+@@ -33,6 +33,10 @@
+ /// race selection) would MOVE them: textbox.cpp:44 picks the description
+ /// box's x from it and textbox.cpp:284 its colour group. This changes what
+ /// is SENT and nothing the game reads.
++///
++/// OrionLayer, open fix 45. The Ship Designer's three sub-dialogs (desbox.cpp) run
++/// under SCREEN_DESIGN as well and report 54 (shield or computer), 55
++/// (weapon) and 56 (special system), so a client can tell which is open.
+ extern int16_t g_screen_override;
+ 
+ /// Sets `g_screen_override` while it lives and restores the previous value
+--- a/src/game/desbox.cpp
++++ b/src/game/desbox.cpp
+@@ -1,4 +1,7 @@
+ #include "pch.h"
++#ifdef ORION2RE_EXT
++#include "ext/ext_api.h"  // OrionLayer, open fix 45. ScreenOverride for the three sub-dialogs.
++#endif
+ 
+ namespace DESBOX {
+ 
+@@ -97,6 +100,10 @@
+     }
+ 
+     void __cdecl Special_Systems_Box_() {
++#ifdef ORION2RE_EXT
++        // OrionLayer, open fix 45. The special-system picker reports a synthetic 56 (ext_api.h); the game still reads SCREEN_DESIGN.
++        const ext::ScreenOverride ext_screen_guard(56);
++#endif
+         char msg42[120];
+         char msg41[200];
+         char msg42_base[200];
+@@ -1223,6 +1230,10 @@
+     }
+ 
+     void __cdecl Generic_Replacement_Box_() {
++#ifdef ORION2RE_EXT
++        // OrionLayer, open fix 45. The shield / computer picker reports a synthetic 54 (ext_api.h); the game still reads SCREEN_DESIGN.
++        const ext::ScreenOverride ext_screen_guard(54);
++#endif
+         uint8_t redraw_flag = 1;
+         bool first_time = true;
+         bool done = false;
+@@ -1313,6 +1324,10 @@
+     }
+ 
+     void __cdecl Weapons_Replacement_Box_() {
++#ifdef ORION2RE_EXT
++        // OrionLayer, open fix 45. The weapon picker reports a synthetic 55 (ext_api.h); the game still reads SCREEN_DESIGN.
++        const ext::ScreenOverride ext_screen_guard(55);
++#endif
+         char front_arc_text[30];
+         char rear_arc_text[30];
+         char beam_arc_text[30];
+```
+
+**Proof.** In a scratch worktree of `orionlayer-local` `4bf152e4` with its
+own build directory (never on `orionlayer-local`, never the build `play.py`
+starts): the patch file applies with `patch -p1 --dry-run` and `patch -p1`, no offset, no fuzz, to a clean worktree at `4bf152e4` with fix 44's file applied first; the applied files equal the scratch commit's byte for
+byte (`cc0becc9`); the whole engine built (Debug, `ORION2RE_EXT=ON`, the
+`linux-debug` preset's variables) without an error; `ext_api.cpp` and `desbox.cpp` compile
+alone with the build's own command (`ninja -t commands`, `-fsyntax-only`);
+the control — `_weapon_replacment_rack` for `_weapon_replacement_rack` — was refused ("»_weapon_replacment_rack« ist kein Element von »DESBOX«").
+
+**Recorded live** (the reading's section 10): the computer field → **54**,
+six rows, the Electronic Computer at cost 8 and bonus 25, four not
+researched; the first weapon row → **55**, four rows — No Weapon 0/0/0,
+Nuclear Missile 8/0/1, Nuclear Bomb 3-12/1/3, Laser Cannon 1-4/5/10, the
+native picker's rows number for number; the first special row → **56**,
+three specials with cost and space. The shield field on a ship with
+nothing researched gave the warning box under 3, as the source says.
+
+**Side effects — observed and ruled out, and the risks named.** The ids
+change what a client is told while a picker is up and nothing the game
+reads (the guard restores the previous override on every return). An
+engine with 45 and an OrionLayer that does not know 54-56 shows the
+game's picture for them — decision 22, as today. The weapon picker still
+opens behind the page's `Set_Input_Delay_(20)` (design.cpp:870): without
+open fix 42 its first twenty passes are silent, with it they are sent.
+
+**What it costs us without it.** With fix 44 alone the page can be HD and
+every picker stays the game's own picture; without either, the whole
+designer does.
+
+**How to apply.** After fix 44: `patch -p1 <
+~/orionlayerv3/doc/ext_ship_designer_boxes.patch`, rebuild, move the patch
+to `LOCAL_PATCHES`. It comes back off with `patch -R -p1` (before 44's).
