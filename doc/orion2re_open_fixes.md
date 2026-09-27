@@ -56,12 +56,12 @@ section for what was found where.
 | 32 | The Info screen's history divisors and turn messages are not in the snapshot — `_bill_savegame[6]` and the player's rendered `MSG_::_msgs` | **Applied** 26 September 2026 by work order 176 (orion2re `2269749c`, `doc/ext_info_screen_state.patch`); written by work order 175 D; open upstream | Without it the HD Info screen draws the History Graph's legend but not its curves, and says the Turn Summary's messages are not sent; every other page is complete |
 | 33 | The Info screen's Turn Summary never jumps to a colony: a click on a colony message prepares the jump and `Info_Screen_` then overwrites it with SCREEN_MAIN | **Observation**, reproduced live 26 September 2026 by work order 176 on SAVE5 | Nothing for OrionLayer (HD navigates the Info pages itself and offers no jump); for the game, a feature of the original is gone |
 | 34 | The main menu's Load dialog sends no save slots — MSG_SAVE_SLOTS goes out only on SCREEN_GAME, and the main menu runs the same dialog under SCREEN_MAIN_MENU | **Applied** 26 September 2026 by work order 179 on Data's approval (orion2re `9ab84230` on `orionlayer-local`, `doc/ext_main_menu_save_slots.patch`); required by `tools/version_check.py`; confirmed live (`doc/briefs/179-fix34-wire.txt`); open upstream | Nothing while applied; without it HD shows the main menu's Load dialog as the game's own picture (the safety net) |
-| 35 | Which colony the colony screen (1) and the build popup (25) show is not on the wire — `_screen_data`, `_orbit_temp`, `_colony_handle` | **Written, NOT APPLIED** — work order 180 B3, parked for Data (`doc/ext_colony_screen_colony.patch`, "COLS"); proved to apply and compile, control refused | Without it both screens stay the game's own picture (the safety net); HD does not guess the colony |
-| 36 | Where the colony screen puts its buildings is not on the wire — `COLONY::_colony_bldgs`, `_colony_satellites`, placed with `game_random` | **Written, NOT APPLIED** — work order 180 B3 (`doc/ext_colony_building_placement.patch`, "CBLD") | Without it the HD colony screen lists the buildings; with it the grid is read but not yet placed (UNVERIFIED `building_placement`) |
-| 37 | The colony screen's Plague / Pop Boom word is not on the wire — `EVENTS::_event_data` | **Written, NOT APPLIED** — work order 180 B3 (`doc/ext_colony_status_word.patch`, "CEVT") | Without it HD draws Blockaded and nothing for Plague or Pop Boom (HD STATE) |
-| 38 | What the colony's current product costs, and how long it takes, is not on the wire — `Colony_Producing_Product_Cost_`, `Calculate_Current_Production_Turn_Count_` | **Written, NOT APPLIED** — work order 180 B3 (`doc/ext_colony_product_cost.patch`, "CPRD") | Without it HD names the product and draws no bar and no turn count (HD STATE) |
-| 39 | The build popup's queue under edit, its selection and its modes are not on the wire until OK — `COLBLDG::_current_item`, `_active_prod`, `_field_mode`, `_colony_auto_building` | **Written, NOT APPLIED** — work order 180 C3 (`doc/ext_build_popup_queue.patch`, "BLDQ") | Without it the build popup stays the game's own picture |
-| 40 | What the build popup offers, in its order, and its queue, with the costs and times it prints, is not on the wire — `_building_indexes`, `_military_indexes`, `Draw_Cost_And_Time_Info_` | **Written, NOT APPLIED** — work order 180 C3 (`doc/ext_build_popup_lists.patch`, "BLDL") | Without it the build popup stays the game's own picture |
+| 35 | Which colony the colony screen (1) and the build popup (25) show is not on the wire — `_screen_data`, `_orbit_temp`, `_colony_handle` | **Applied** 27 September 2026 by work order 181 on Data's approval (orion2re `c5d4dacd` on `orionlayer-local`, `doc/ext_colony_screen_colony.patch`, "COLS"); required by `tools/version_check.py`; confirmed live (`doc/briefs/181-fixes35-40-wire.txt`); open upstream | Nothing while applied; without it both screens stay the game's own picture (the safety net) — HD does not guess the colony |
+| 36 | Where the colony screen puts its buildings is not on the wire — `COLONY::_colony_bldgs`, `_colony_satellites`, placed with `game_random` | **Applied** 27 September 2026 by work order 181 (orion2re `01bafd9c`, `doc/ext_colony_building_placement.patch`, "CBLD"); required; confirmed live | Nothing yet: HD lists the buildings (DEVIATION `building_list`) and does not place them from the grid (UNVERIFIED `building_placement`) |
+| 37 | The colony screen's Plague / Pop Boom word is not on the wire — `EVENTS::_event_data` | **Applied** 27 September 2026 by work order 181 (orion2re `a10e20ba`, `doc/ext_colony_status_word.patch`, "CEVT"); required; confirmed live | Nothing while applied |
+| 38 | What the colony's current product costs, and how long it takes, is not on the wire — `Colony_Producing_Product_Cost_`, `Calculate_Current_Production_Turn_Count_` | **Applied** 27 September 2026 by work order 181 (orion2re `8a6acc08`, `doc/ext_colony_product_cost.patch`, "CPRD"); required; confirmed live | Nothing while applied |
+| 39 | The build popup's queue under edit, its selection and its modes are not on the wire until OK — `COLBLDG::_current_item`, `_active_prod`, `_field_mode`, `_colony_auto_building` | **Applied** 27 September 2026 by work order 181 (orion2re `2be953d4`, `doc/ext_build_popup_queue.patch`, "BLDQ"); required; confirmed live | Nothing while applied; without it the build popup stays the game's own picture |
+| 40 | What the build popup offers, in its order, and its queue, with the costs and times it prints, is not on the wire — `_building_indexes`, `_military_indexes`, `Draw_Cost_And_Time_Info_` | **Applied** 27 September 2026 by work order 181 (orion2re `2097b0c6`, `doc/ext_build_popup_lists.patch`, "BLDL"); required; confirmed live | Nothing while applied; without it the build popup stays the game's own picture |
 
 Items 3 and 4 are both about INJECT_CLICK and both live in the same
 code path, but they are separate faults: 3 is where the coordinates
@@ -2231,21 +2231,16 @@ HD then shows the dialog as the game's own picture again (the safety net).
 
 ## 35. Which colony the colony screen and the build popup show
 
-**Status: NOT APPLIED — parked for Data.** Written by work order 180, 27 September 2026, and PARKED for Data
-(`doc/briefs/180-parked-for-data.md`) — no engine patch was applied in
-that order. One of a SERIES, 35 to 40, applied in that order on top of
-`orionlayer-local` `9ab84230` (each appends its block after the previous
-one). **Proof:** in a scratch clone, never on `orionlayer-local`, the patch
-file applied with `patch -p1 --dry-run` and then `patch -p1` on the steps
-before it, with no offset and no fuzz, and the series reproduced the
-scratch commits byte for byte; the patched `src/ext/ext_api.cpp` compiled
-with the engine's own flags from `build.ninja` (the defines, every include
-directory, the `cmake_pch.hxx` include, `-fsyntax-only`); and a control —
-the same file with `SCREEN_QUEUE_POPUP` misspelt `SCREEN_QUEUE_POPPU` — was refused by the compiler. A full scratch
-build of the series recorded the wire format that OrionLayer's fixtures
-(`tools/fixtures/colony_blocks_180.json`) are cut from.
-`tools/version_check.py` lists it under REPORTED_PATCHES (marker
-`OrionLayer, open fix 35.`).
+**Status: APPLIED** — 27 September 2026 by work order 181, on Data's approval of the series 35-40 (brief 180, `doc/briefs/180-parked-for-data.md` item 1; written, proved and parked by work order 180). orion2re **`c5d4dacd`** on `orionlayer-local` ("OrionLayer Open Fix 35: send which colony the colony screen and the build popup show ("COLS")"), the only commit of this fix, on top of `9ab84230` (fix 34); bundle `~/orion2re_bundle_27sep_2097b0c6_fixes34-40.bundle`. Recorded in OrionLayer by the commit "Work order 181 Part 2: …" (181-2) — its hash is added by the next commit, as 179 did for 34. Patch: `doc/ext_colony_screen_colony.patch`; required by `tools/version_check.py` (marker `OrionLayer, open fix 35.`, on one line in the block's comment) since the same commit. Open upstream.
+
+**Against work order 180's proof** (its scratch commit `3badb08e`): identical in every `+`, `-`, context and `@@` line but one — the `#include` carries the marker now, because Part 2.1 of work order 181 asks for one at every changed place and this line had none (parked: `doc/briefs/181-parked-for-data.md`, "Fix 35's include carries the marker too"). The patch file's diff against 180's:
+
+```diff
+-+#include "game/build_queue.h"
+++#include "game/build_queue.h"  // OrionLayer, open fix 35. autobuild_settings, sent in "COLS".
+```
+
+and the `index` line, git's hash of the whole file, which any changed byte changes.
 
 **What is missing.** `COLONY::Colony_Screen_` (colony_main.cpp:249-255)
 and `COLBLDG::Build_Queue_Popup_` (colbldg.cpp:462-469) take their colony
@@ -2263,29 +2258,79 @@ tick at the new id carries the previous handle (`Screen_Control_` ticks
 before it dispatches, mox2.cpp:40-41); OrionLayer uses the colony when the
 two agree.
 
+**The exact change.** `src/ext/ext_api.cpp`, two places. (1) The includes at the top: one line added, **9** (`#include "game/build_queue.h"` with the marker, after `game/platform.h` at 8), for `BUILD_QUEUE::autobuild_settings`. (2) Function `SerializeState` (starts at line 93 before, 94 after): the "COLS" block appended as its last statement, lines **441-470** after (after the INFS block, which ended at 439 before), directly before the function's closing brace. Nothing else in the file changes. The diff, as committed — checked byte for byte against `git diff c5d4dacd~1 c5d4dacd` (the `diff --git` and `index` lines and the text git adds after `@@` are not part of it):
+
+```diff
+--- a/src/ext/ext_api.cpp
++++ b/src/ext/ext_api.cpp
+@@ -6,6 +6,7 @@
+ #include "ext/ext_server.h"
+ #include "game/newgame.h"
+ #include "game/platform.h"
++#include "game/build_queue.h"  // OrionLayer, open fix 35. autobuild_settings, sent in "COLS".
+ 
+ #include <vector>
+ #include <cstring>
+@@ -437,6 +438,36 @@
+                        (const uint8_t*)text + len);
+         }
+     }
++
++    // 6. Which colony the colony screen and its build popup show: "COLS",
++    //    written ONLY while SCREEN_COLONY or SCREEN_QUEUE_POPUP is up, and
++    //    LAST. OrionLayer, open fix 35.
++    //
++    //    Both screens derive their colony on entry from MOX::_screen_data
++    //    (the star) and COLONY::_orbit_temp into COLONY::_colony_handle
++    //    (colony_main.cpp:249-255, colbldg.cpp:462-469); none of the three
++    //    was serialized, and the game enters screen 1 from eight places,
++    //    some of them its own (reports, info, turn summary, landing), so a
++    //    client cannot know it. The pair is set by every caller BEFORE the
++    //    switch; the handle only once the screen has run, so the first tick
++    //    at the new id carries the previous handle — the pair and the handle
++    //    are both sent and a client uses the colony when they agree.
++    //    Also the screen's own modes, which no field shows:
++    //    COLONY::_drawing_display (0 the screen, 2 a planet description),
++    //    COLONY::_field_mode, and the autobuild setting that decides the
++    //    label and what [18] does (colony_main.cpp:961-974).
++    if (current_screen == SCREEN_COLONY || current_screen == SCREEN_QUEUE_POPUP) {
++        buf.push_back((uint8_t)'C');
++        buf.push_back((uint8_t)'O');
++        buf.push_back((uint8_t)'L');
++        buf.push_back((uint8_t)'S');
++        Write16(buf, MOX::_screen_data);
++        Write16(buf, COLONY::_orbit_temp);
++        Write16(buf, COLONY::_colony_handle);
++        Write8(buf, COLONY::_drawing_display);
++        Write8(buf, COLONY::_field_mode);
++        Write8(buf, BUILD_QUEUE::autobuild_settings.enabled);
++    }
+ }
+ 
+ // ── Field list ───────────────────────────────────────────
+```
+
+**Live check** (work order 181 Part 2, orion2re `2097b0c6` built by the same order, SAVE4 loaded as scratch, nothing saved; `tools/colony_record.py` through four colonies of the Colonies list, each one's `<` neighbour and its build popup; liveguard `181_p2_record`, verified: MOX.SET's load byte, restored): COLS arrived on every stop at screens 1 and 25 and on no other (the Colonies screen's stop carried none): 13 bytes, `star 13, orbit 2, colony 17` entering the first row's colony. The hand-over gate held one snapshot at each entry before HD drew ("hold ended … after 1 snapshots" in the run's log) — the first tick, when the handle can still be the previous colony's — and HD then drew the colony the pair names. The block's bytes are in `doc/briefs/181-fixes35-40-wire.txt` (hex and parsed), the whole payloads in `~/orionlayer-fixtures/evidence/work_order_181/P2_record/*_state.bin`; field layout and sizes, and on the nine stops the two runs share every byte, equal `tools/fixtures/colony_blocks_180.json` (180's scratch engine) — nothing in the fixture or the parser needed correcting. The screens it feeds are accepted live in work order 181 Part 3 (`doc/briefs/181-progress.md`).
+
+**Side effects — observed and ruled out.**
+- *Other screens:* ruled out by the condition (`SCREEN_COLONY || SCREEN_QUEUE_POPUP`) and observed: the Colonies screen's snapshots carried no block.
+- *The first tick at screen 1 or 25 carries the previous colony's handle* (`Screen_Control_` ticks before it dispatches, mox2.cpp:40-41) — not a side effect of the patch but of when it is read; observed live as one held snapshot per entry, and the reason a client must use the colony only when the pair and the handle agree (`screens/colony/colwire.py`).
+- *The include:* `game/build_queue.h` adds declarations only; the build reported no warning.
+- *Game state:* the block reads six globals and writes only into the snapshot buffer.
+- *A client that does not know the block:* OrionLayer's parser reads every trailing block by its tag and leaves what follows unread (`core/game_state.py`), which is how 179's client treats these bytes too.
+- *Size:* 13 bytes more per snapshot, only on screens 1 and 25.
+
 **What it costs us without it.** The whole colony screen and the whole
 build popup stay the game's own picture in OrionLayer's window (the
 safety net), exactly as before work order 180. Nothing is guessed.
 
-**How to apply.** From `~/orion2re` on `orionlayer-local`, after the fixes before it in the series: `patch -p1 < ~/orionlayerv3/doc/ext_colony_screen_colony.patch`, then `ninja -C out/build/Linux/linux-debug`, and move the patch from `REPORTED_PATCHES` to `LOCAL_PATCHES` in `tools/version_check.py`. It comes back off with `patch -R -p1` and a rebuild.
+**How to revert.** From `~/orion2re` on `orionlayer-local`: `git revert 2097b0c6 2be953d4 8a6acc08 a10e20ba 01bafd9c c5d4dacd` (reverse series order), or `patch -R -p1 < ~/orionlayerv3/<file>` for `doc/ext_build_popup_lists.patch`, `doc/ext_build_popup_queue.patch`, `doc/ext_colony_product_cost.patch`, `doc/ext_colony_status_word.patch`, `doc/ext_colony_building_placement.patch`, `doc/ext_colony_screen_colony.patch` in that order; then `ninja -C out/build/Linux/linux-debug`, and move the patches back from `LOCAL_PATCHES` to `REPORTED_PATCHES` in `tools/version_check.py`. The blocks are stacked — each appends after the one before — so fix 35 comes off only with 40, 39, 38, 37, 36 off first. Without fix 35 both screens are the game's own picture again (the safety net); without any later one the screen that needs it is (see "What it costs us without it").
 
 ## 36. Where the colony screen puts its buildings
 
-**Status: NOT APPLIED — parked for Data.** Written by work order 180, 27 September 2026, and PARKED for Data
-(`doc/briefs/180-parked-for-data.md`) — no engine patch was applied in
-that order. One of a SERIES, 35 to 40, applied in that order on top of
-`orionlayer-local` `9ab84230` (each appends its block after the previous
-one). **Proof:** in a scratch clone, never on `orionlayer-local`, the patch
-file applied with `patch -p1 --dry-run` and then `patch -p1` on the steps
-before it, with no offset and no fuzz, and the series reproduced the
-scratch commits byte for byte; the patched `src/ext/ext_api.cpp` compiled
-with the engine's own flags from `build.ninja` (the defines, every include
-directory, the `cmake_pch.hxx` include, `-fsyntax-only`); and a control —
-the same file with `_colony_satellites` misspelt `_colony_satelites` — was refused by the compiler. A full scratch
-build of the series recorded the wire format that OrionLayer's fixtures
-(`tools/fixtures/colony_blocks_180.json`) are cut from.
-`tools/version_check.py` lists it under REPORTED_PATCHES (marker
-`OrionLayer, open fix 36.`).
+**Status: APPLIED** — 27 September 2026 by work order 181, on Data's approval of the series 35-40 (brief 180, `doc/briefs/180-parked-for-data.md` item 1; written, proved and parked by work order 180). orion2re **`01bafd9c`** on `orionlayer-local` ("OrionLayer Open Fix 36: send where the colony screen puts its buildings ("CBLD")"), the only commit of this fix, on top of fix 35; bundle `~/orion2re_bundle_27sep_2097b0c6_fixes34-40.bundle`. Recorded in OrionLayer by the commit "Work order 181 Part 2: …" (181-2) — its hash is added by the next commit, as 179 did for 34. Patch: `doc/ext_colony_building_placement.patch`; required by `tools/version_check.py` (marker `OrionLayer, open fix 36.`, on one line in the block's comment) since the same commit. Open upstream.
+
+**Against work order 180's proof** (scratch `e2b84db8`): identical in every `+`, `-`, context and `@@` line; only the `index` line differs, because fix 35's comment changed the file it starts from.
 
 **What is missing.** `Make_Bldg_Array_For_Colony_` (colony_main.cpp:
 536-631) fills `COLONY::_colony_bldgs` (6x6) and `_colony_satellites` (10)
@@ -2296,6 +2341,52 @@ colony has is on the wire; where they stand is not.
 **What the patch sends.** "CBLD", while screen 1 is up: 36 int16 building
 ids row by row, then the 10 satellite ids.
 
+**The exact change.** `src/ext/ext_api.cpp`, function `SerializeState` (starts at line 94 before and after): the "CBLD" block appended after fix 35's, lines **471-495** after (fix 35's block ended at 470). Nothing else changes. The diff, as committed — checked byte for byte against `git diff 01bafd9c~1 01bafd9c` (the `diff --git` and `index` lines and the text git adds after `@@` are not part of it):
+
+```diff
+--- a/src/ext/ext_api.cpp
++++ b/src/ext/ext_api.cpp
+@@ -468,6 +468,31 @@
+         Write8(buf, COLONY::_field_mode);
+         Write8(buf, BUILD_QUEUE::autobuild_settings.enabled);
+     }
++
++    // 7. Where the colony screen puts its buildings: "CBLD", written ONLY
++    //    while SCREEN_COLONY is up, and LAST. OrionLayer, open fix 36.
++    //
++    //    Make_Bldg_Array_For_Colony_ (colony_main.cpp:536-631) places the
++    //    colony's buildings on a 6x6 grid and its satellites in ten slots
++    //    with game_random seeded by the colony index plus Random_ draws;
++    //    Draw_Colony_Bldgs_ and Draw_Colony_Satellites_ draw from those two
++    //    arrays. A client would have to transcribe the RNG exactly, so the
++    //    arrays are sent as they are: 36 building ids, row by row, then the
++    //    ten satellite ids. Valid while COLS's handle agrees with its pair.
++    if (current_screen == SCREEN_COLONY) {
++        buf.push_back((uint8_t)'C');
++        buf.push_back((uint8_t)'B');
++        buf.push_back((uint8_t)'L');
++        buf.push_back((uint8_t)'D');
++        for (int r = 0; r < 6; r++) {
++            for (int c = 0; c < 6; c++) {
++                Write16(buf, (int16_t)COLONY::_colony_bldgs[r].buildings[c]);
++            }
++        }
++        for (int i = 0; i < 10; i++) {
++            Write16(buf, COLONY::_colony_satellites[i]);
++        }
++    }
+ }
+ 
+ // ── Field list ───────────────────────────────────────────
+```
+
+**Live check** (work order 181 Part 2, orion2re `2097b0c6` built by the same order, SAVE4 loaded as scratch, nothing saved; `tools/colony_record.py` through four colonies of the Colonies list, each one's `<` neighbour and its build popup; liveguard `181_p2_record`, verified: MOX.SET's load byte, restored): CBLD arrived on every stop at screen 1 and on none at 25: 96 bytes, the 36 grid cells and ten satellites (for colony 17: ids 22, 41, 7, 21 and 40 in five cells, no satellite). The block's bytes are in `doc/briefs/181-fixes35-40-wire.txt` (hex and parsed), the whole payloads in `~/orionlayer-fixtures/evidence/work_order_181/P2_record/*_state.bin`; field layout and sizes, and on the nine stops the two runs share every byte, equal `tools/fixtures/colony_blocks_180.json` (180's scratch engine) — nothing in the fixture or the parser needed correcting. The screens it feeds are accepted live in work order 181 Part 3 (`doc/briefs/181-progress.md`).
+
+**Side effects — observed and ruled out.**
+- *Game state:* reads `_colony_bldgs` and `_colony_satellites`, writes nothing. The arrays are filled on entry to the screen (`Make_Bldg_Array_For_Colony_`), so on the first tick they may still be the previous colony's — valid only while COLS agrees.
+- *What a cell means is not settled* — the grid also holds housing (-3) and jittered satellites (colony_main.cpp:559-600), and two of 180's grids named Star Base and Star Fortress twice where the native scene shows each once. **HD therefore does not place buildings yet: it lists them (DEVIATION `building_list`), and placement stays UNVERIFIED `building_placement`** until a reading of `Make_Bldg_Array_For_Colony_` settles what a cell is. Applying the fix changed nothing about that; it only makes the data available.
+- *Size:* 96 bytes per snapshot on screen 1 only.
+
 **What it costs us without it.** HD lists the colony's buildings instead
 of placing them (DEVIATION `building_list`). **Found while building on
 it:** the occupied cells land exactly on the live building fields (33
@@ -2304,25 +2395,13 @@ satellites (colony_main.cpp:559-600), and two grids name Star Base and
 Star Fortress twice where the native scene shows each once — so even with
 the block HD places nothing yet (UNVERIFIED `building_placement`).
 
-**How to apply.** From `~/orion2re` on `orionlayer-local`, after the fixes before it in the series: `patch -p1 < ~/orionlayerv3/doc/ext_colony_building_placement.patch`, then `ninja -C out/build/Linux/linux-debug`, and move the patch from `REPORTED_PATCHES` to `LOCAL_PATCHES` in `tools/version_check.py`. It comes back off with `patch -R -p1` and a rebuild.
+**How to revert.** From `~/orion2re` on `orionlayer-local`: `git revert 2097b0c6 2be953d4 8a6acc08 a10e20ba 01bafd9c` (reverse series order), or `patch -R -p1 < ~/orionlayerv3/<file>` for `doc/ext_build_popup_lists.patch`, `doc/ext_build_popup_queue.patch`, `doc/ext_colony_product_cost.patch`, `doc/ext_colony_status_word.patch`, `doc/ext_colony_building_placement.patch` in that order; then `ninja -C out/build/Linux/linux-debug`, and move the patches back from `LOCAL_PATCHES` to `REPORTED_PATCHES` in `tools/version_check.py`. The blocks are stacked — each appends after the one before — so fix 36 comes off only with 40, 39, 38, 37 off first. Without fix 35 both screens are the game's own picture again (the safety net); without any later one the screen that needs it is (see "What it costs us without it").
 
 ## 37. The colony screen's Plague and Pop Boom word
 
-**Status: NOT APPLIED — parked for Data.** Written by work order 180, 27 September 2026, and PARKED for Data
-(`doc/briefs/180-parked-for-data.md`) — no engine patch was applied in
-that order. One of a SERIES, 35 to 40, applied in that order on top of
-`orionlayer-local` `9ab84230` (each appends its block after the previous
-one). **Proof:** in a scratch clone, never on `orionlayer-local`, the patch
-file applied with `patch -p1 --dry-run` and then `patch -p1` on the steps
-before it, with no offset and no fuzz, and the series reproduced the
-scratch commits byte for byte; the patched `src/ext/ext_api.cpp` compiled
-with the engine's own flags from `build.ninja` (the defines, every include
-directory, the `cmake_pch.hxx` include, `-fsyntax-only`); and a control —
-the same file with `Event_Check_Population_Boom_` misspelt `Event_Check_Population_Bom_` — was refused by the compiler. A full scratch
-build of the series recorded the wire format that OrionLayer's fixtures
-(`tools/fixtures/colony_blocks_180.json`) are cut from.
-`tools/version_check.py` lists it under REPORTED_PATCHES (marker
-`OrionLayer, open fix 37.`).
+**Status: APPLIED** — 27 September 2026 by work order 181, on Data's approval of the series 35-40 (brief 180, `doc/briefs/180-parked-for-data.md` item 1; written, proved and parked by work order 180). orion2re **`a10e20ba`** on `orionlayer-local` ("OrionLayer Open Fix 37: send the colony screen's Plague and Pop Boom answers ("CEVT")"), the only commit of this fix, on top of fix 36; bundle `~/orion2re_bundle_27sep_2097b0c6_fixes34-40.bundle`. Recorded in OrionLayer by the commit "Work order 181 Part 2: …" (181-2) — its hash is added by the next commit, as 179 did for 34. Patch: `doc/ext_colony_status_word.patch`; required by `tools/version_check.py` (marker `OrionLayer, open fix 37.`, on one line in the block's comment) since the same commit. Open upstream.
+
+**Against work order 180's proof** (scratch `f5165b14`): identical in every `+`, `-`, context and `@@` line; only the `index` line differs (fix 35's comment).
 
 **What is missing.** `Draw_Info_Name_And_Pop_` prints Blockaded, else
 Plague, else Pop Boom (colony_main.cpp:831-853). Blockaded is the star's
@@ -2333,28 +2412,57 @@ serialized.
 **What the patch sends.** "CEVT", while screen 1 is up: two bytes, the two
 answers for the shown colony (0xFF while the handle is not a colony).
 
+**The exact change.** `src/ext/ext_api.cpp`, function `SerializeState` (line 94): the "CEVT" block appended after fix 36's, lines **496-515** after. Nothing else changes. The diff, as committed — checked byte for byte against `git diff a10e20ba~1 a10e20ba` (the `diff --git` and `index` lines and the text git adds after `@@` are not part of it):
+
+```diff
+--- a/src/ext/ext_api.cpp
++++ b/src/ext/ext_api.cpp
+@@ -493,6 +493,26 @@
+             Write16(buf, COLONY::_colony_satellites[i]);
+         }
+     }
++
++    // 8. The colony screen's status word: "CEVT", written ONLY while
++    //    SCREEN_COLONY is up, and LAST. OrionLayer, open fix 37.
++    //
++    //    Draw_Info_Name_And_Pop_ prints Blockaded, Plague or Pop Boom at
++    //    (0,0) (colony_main.cpp:831-853). Blockaded is the star's bit, on
++    //    the wire; the other two are EVENTS::Event_Check_Plague_ and
++    //    Event_Check_Population_Boom_ over EVENTS::_event_data, which is
++    //    not. Their two answers for the shown colony, one byte each, 0xFF
++    //    while the handle is not a colony (the first tick, COLS).
++    if (current_screen == SCREEN_COLONY) {
++        buf.push_back((uint8_t)'C');
++        buf.push_back((uint8_t)'E');
++        buf.push_back((uint8_t)'V');
++        buf.push_back((uint8_t)'T');
++        const int16_t h = COLONY::_colony_handle;
++        const bool ok = h >= 0 && h < MOX::_NUM_COLONIES;
++        Write8(buf, ok ? (uint8_t)(EVENTS::Event_Check_Plague_(h) != 0) : (uint8_t)0xFF);
++        Write8(buf, ok ? (uint8_t)(EVENTS::Event_Check_Population_Boom_(h) != 0) : (uint8_t)0xFF);
++    }
+ }
+ 
+ // ── Field list ───────────────────────────────────────────
+```
+
+**Live check** (work order 181 Part 2, orion2re `2097b0c6` built by the same order, SAVE4 loaded as scratch, nothing saved; `tools/colony_record.py` through four colonies of the Colonies list, each one's `<` neighbour and its build popup; liveguard `181_p2_record`, verified: MOX.SET's load byte, restored): CEVT arrived on every stop at screen 1: 6 bytes, `plague 0, pop boom 0` — this save has neither event, so neither word is reachable in it. The block's bytes are in `doc/briefs/181-fixes35-40-wire.txt` (hex and parsed), the whole payloads in `~/orionlayer-fixtures/evidence/work_order_181/P2_record/*_state.bin`; field layout and sizes, and on the nine stops the two runs share every byte, equal `tools/fixtures/colony_blocks_180.json` (180's scratch engine) — nothing in the fixture or the parser needed correcting. The screens it feeds are accepted live in work order 181 Part 3 (`doc/briefs/181-progress.md`).
+
+**Side effects — observed and ruled out.**
+- *Game state:* `EVENTS::Event_Check_Plague_` and `Event_Check_Population_Boom_` (events.cpp:131-151) only compare `_event_data[...]`'s status and target — read in the source, no write, no random draw — so calling them every snapshot changes nothing.
+- *A stale handle* gives the previous colony's answers on the first tick; the range guard sends 0xFF only for a handle outside the colony array.
+- *Size:* 6 bytes per snapshot on screen 1 only.
+
 **What it costs us without it.** HD draws Blockaded and nothing where
 Plague or Pop Boom would be (HD STATE `status_word`).
 
-**How to apply.** From `~/orion2re` on `orionlayer-local`, after the fixes before it in the series: `patch -p1 < ~/orionlayerv3/doc/ext_colony_status_word.patch`, then `ninja -C out/build/Linux/linux-debug`, and move the patch from `REPORTED_PATCHES` to `LOCAL_PATCHES` in `tools/version_check.py`. It comes back off with `patch -R -p1` and a rebuild.
+**How to revert.** From `~/orion2re` on `orionlayer-local`: `git revert 2097b0c6 2be953d4 8a6acc08 a10e20ba` (reverse series order), or `patch -R -p1 < ~/orionlayerv3/<file>` for `doc/ext_build_popup_lists.patch`, `doc/ext_build_popup_queue.patch`, `doc/ext_colony_product_cost.patch`, `doc/ext_colony_status_word.patch` in that order; then `ninja -C out/build/Linux/linux-debug`, and move the patches back from `LOCAL_PATCHES` to `REPORTED_PATCHES` in `tools/version_check.py`. The blocks are stacked — each appends after the one before — so fix 37 comes off only with 40, 39, 38 off first. Without fix 35 both screens are the game's own picture again (the safety net); without any later one the screen that needs it is (see "What it costs us without it").
 
 ## 38. What the colony's current product costs, and how long it takes
 
-**Status: NOT APPLIED — parked for Data.** Written by work order 180, 27 September 2026, and PARKED for Data
-(`doc/briefs/180-parked-for-data.md`) — no engine patch was applied in
-that order. One of a SERIES, 35 to 40, applied in that order on top of
-`orionlayer-local` `9ab84230` (each appends its block after the previous
-one). **Proof:** in a scratch clone, never on `orionlayer-local`, the patch
-file applied with `patch -p1 --dry-run` and then `patch -p1` on the steps
-before it, with no offset and no fuzz, and the series reproduced the
-scratch commits byte for byte; the patched `src/ext/ext_api.cpp` compiled
-with the engine's own flags from `build.ninja` (the defines, every include
-directory, the `cmake_pch.hxx` include, `-fsyntax-only`); and a control —
-the same file with `Calculate_Current_Production_Turn_Count_` misspelt `…_Turn_Cnt_` — was refused by the compiler. A full scratch
-build of the series recorded the wire format that OrionLayer's fixtures
-(`tools/fixtures/colony_blocks_180.json`) are cut from.
-`tools/version_check.py` lists it under REPORTED_PATCHES (marker
-`OrionLayer, open fix 38.`).
+**Status: APPLIED** — 27 September 2026 by work order 181, on Data's approval of the series 35-40 (brief 180, `doc/briefs/180-parked-for-data.md` item 1; written, proved and parked by work order 180). orion2re **`8a6acc08`** on `orionlayer-local` ("OrionLayer Open Fix 38: send the shown colony's product cost and turns ("CPRD")"), the only commit of this fix, on top of fix 37; bundle `~/orion2re_bundle_27sep_2097b0c6_fixes34-40.bundle`. Recorded in OrionLayer by the commit "Work order 181 Part 2: …" (181-2) — its hash is added by the next commit, as 179 did for 34. Patch: `doc/ext_colony_product_cost.patch`; required by `tools/version_check.py` (marker `OrionLayer, open fix 38.`, on one line in the block's comment) since the same commit. Open upstream.
+
+**Against work order 180's proof** (scratch `448a9d3d`): identical in every `+`, `-`, context and `@@` line; only the `index` line differs (fix 35's comment).
 
 **What is missing.** The colony screen's production bar is drawn over
 `COLCALC::Colony_Producing_Product_Cost_` (colony.cpp:967-978) and its
@@ -2367,28 +2475,83 @@ and config values (colcalc.cpp:2576, `lander_ship_cost`).
 `producing[0]`, int32 the cost, int16 the turns (-1s while the handle is
 not a colony).
 
+**The exact change.** `src/ext/ext_api.cpp`, function `SerializeState` (line 94): the "CPRD" block appended after fix 37's, lines **516-539** after. Nothing else changes. The diff, as committed — checked byte for byte against `git diff 8a6acc08~1 8a6acc08` (the `diff --git` and `index` lines and the text git adds after `@@` are not part of it):
+
+```diff
+--- a/src/ext/ext_api.cpp
++++ b/src/ext/ext_api.cpp
+@@ -513,6 +513,30 @@
+         Write8(buf, ok ? (uint8_t)(EVENTS::Event_Check_Plague_(h) != 0) : (uint8_t)0xFF);
+         Write8(buf, ok ? (uint8_t)(EVENTS::Event_Check_Population_Boom_(h) != 0) : (uint8_t)0xFF);
+     }
++
++    // 9. What the shown colony's current product costs, and how long it
++    //    takes: "CPRD", written ONLY while SCREEN_COLONY or
++    //    SCREEN_QUEUE_POPUP is up, and LAST. OrionLayer, open fix 38.
++    //
++    //    The colony screen draws the production bar over
++    //    COLCALC::Colony_Producing_Product_Cost_ (colony.cpp:967-978) and
++    //    "%d turn(s)" from Calculate_Current_Production_Turn_Count_
++    //    (:980-994). production_spent and bought_outright are in s_colony
++    //    and on the wire; the cost is a function of source tables, the
++    //    player's ship designs and config values (colcalc.cpp:2576,
++    //    lander_ship_cost), and the turns follow from it. The two numbers
++    //    the screen draws are sent; -1 while the handle is not a colony.
++    if (current_screen == SCREEN_COLONY || current_screen == SCREEN_QUEUE_POPUP) {
++        buf.push_back((uint8_t)'C');
++        buf.push_back((uint8_t)'P');
++        buf.push_back((uint8_t)'R');
++        buf.push_back((uint8_t)'D');
++        const int16_t h = COLONY::_colony_handle;
++        const bool ok = h >= 0 && h < MOX::_NUM_COLONIES;
++        Write16(buf, ok ? MOX::_colony[h].producing[0] : (int16_t)-1);
++        Write32(buf, ok ? COLCALC::Colony_Producing_Product_Cost_(&MOX::_colony[h]) : -1);
++        Write16(buf, ok ? COLONY::Calculate_Current_Production_Turn_Count_(h) : (int16_t)-1);
++    }
+ }
+ 
+ // ── Field list ───────────────────────────────────────────
+```
+
+**Live check** (work order 181 Part 2, orion2re `2097b0c6` built by the same order, SAVE4 loaded as scratch, nothing saved; `tools/colony_record.py` through four colonies of the Colonies list, each one's `<` neighbour and its build popup; liveguard `181_p2_record`, verified: MOX.SET's load byte, restored): CPRD arrived on every stop at screens 1 and 25: 12 bytes, for colony 17 `producing 11, cost 200, turns 5`. The block's bytes are in `doc/briefs/181-fixes35-40-wire.txt` (hex and parsed), the whole payloads in `~/orionlayer-fixtures/evidence/work_order_181/P2_record/*_state.bin`; field layout and sizes, and on the nine stops the two runs share every byte, equal `tools/fixtures/colony_blocks_180.json` (180's scratch engine) — nothing in the fixture or the parser needed correcting. The screens it feeds are accepted live in work order 181 Part 3 (`doc/briefs/181-progress.md`).
+
+**Side effects — observed and ruled out.**
+- *Game state:* `Colony_Producing_Product_Cost_` -> `Colony_Product_Cost_` (colcalc.cpp:1468, :2576), `Ship_Type_Cost_For_Player_` (:1489) with `DESIGN::Cost_Reduction_For_Govt_Type_` (design.cpp:474, which writes only through its `cost` pointer, a local of the caller) and `Calculate_Current_Production_Turn_Count_` -> `Colony_N_Turns_To_Produce_` (colony.cpp:445, colcalc.cpp:1549) — read in the source, each only reads; no random draw.
+- *The cost is sent as int32*, the type the function returns; the screen itself narrows it where it prints.
+- *Size:* 12 bytes per snapshot on screens 1 and 25.
+
 **What it costs us without it.** HD names the product and draws no bar
 and no turn count (HD STATE `production_bar`, `turns`).
 
-**How to apply.** From `~/orion2re` on `orionlayer-local`, after the fixes before it in the series: `patch -p1 < ~/orionlayerv3/doc/ext_colony_product_cost.patch`, then `ninja -C out/build/Linux/linux-debug`, and move the patch from `REPORTED_PATCHES` to `LOCAL_PATCHES` in `tools/version_check.py`. It comes back off with `patch -R -p1` and a rebuild.
+**How to revert.** From `~/orion2re` on `orionlayer-local`: `git revert 2097b0c6 2be953d4 8a6acc08` (reverse series order), or `patch -R -p1 < ~/orionlayerv3/<file>` for `doc/ext_build_popup_lists.patch`, `doc/ext_build_popup_queue.patch`, `doc/ext_colony_product_cost.patch` in that order; then `ninja -C out/build/Linux/linux-debug`, and move the patches back from `LOCAL_PATCHES` to `REPORTED_PATCHES` in `tools/version_check.py`. The blocks are stacked — each appends after the one before — so fix 38 comes off only with 40, 39 off first. Without fix 35 both screens are the game's own picture again (the safety net); without any later one the screen that needs it is (see "What it costs us without it").
 
 ## 39. The build popup's queue under edit
 
-**Status: NOT APPLIED — parked for Data.** Written by work order 180, 27 September 2026, and PARKED for Data
-(`doc/briefs/180-parked-for-data.md`) — no engine patch was applied in
-that order. One of a SERIES, 35 to 40, applied in that order on top of
-`orionlayer-local` `9ab84230` (each appends its block after the previous
-one). **Proof:** in a scratch clone, never on `orionlayer-local`, the patch
-file applied with `patch -p1 --dry-run` and then `patch -p1` on the steps
-before it, with no offset and no fuzz, and the series reproduced the
-scratch commits byte for byte; the patched `src/ext/ext_api.cpp` compiled
-with the engine's own flags from `build.ninja` (the defines, every include
-directory, the `cmake_pch.hxx` include, `-fsyntax-only`); and a control —
-the same file with `_colony_auto_building` misspelt `_colony_autobuilding` — was refused by the compiler. A full scratch
-build of the series recorded the wire format that OrionLayer's fixtures
-(`tools/fixtures/colony_blocks_180.json`) are cut from.
-`tools/version_check.py` lists it under REPORTED_PATCHES (marker
-`COLBLDG::_colony_auto_building`).
+**Status: APPLIED** — 27 September 2026 by work order 181, on Data's approval of the series 35-40 (brief 180, `doc/briefs/180-parked-for-data.md` item 1; written, proved and parked by work order 180). orion2re **`2be953d4`** on `orionlayer-local` ("OrionLayer Open Fix 39: send the build popup's queue under edit and its modes ("BLDQ")"), the only commit of this fix, on top of fix 38; bundle `~/orion2re_bundle_27sep_2097b0c6_fixes34-40.bundle`. Recorded in OrionLayer by the commit "Work order 181 Part 2: …" (181-2) — its hash is added by the next commit, as 179 did for 34. Patch: `doc/ext_build_popup_queue.patch`; required by `tools/version_check.py` (marker `OrionLayer, open fix 39.`, on one line in the block's comment) since the same commit. Open upstream.
+
+**Against work order 180's proof** (scratch `7b5080b2`): **the patch differs from 180's only by this comment** — the order's marker correction. 180's block DID name the fix, but broken over a line (`…and LAST. OrionLayer, open` / `fix 39.`), so the string `OrionLayer, open fix 39.` stood on no line and `tools/version_check.py` had fallen back to the symbol `COLBLDG::_colony_auto_building`. Re-wrapped, same line count, so fix 40's hunk does not move; the marker is now `OrionLayer, open fix 39.`. The diff of the patch file (`git diff 7fa43b4 -- doc/ext_build_popup_queue.patch`, work order 181 Part 1):
+
+```diff
+ diff --git a/src/ext/ext_api.cpp b/src/ext/ext_api.cpp
+-index dbe4a11a..6282f17a 100644
++index ce063ffc..11a3e21b 100644
+ --- a/src/ext/ext_api.cpp
+ +++ b/src/ext/ext_api.cpp
+ @@ -537,6 +537,32 @@ static void SerializeState(std::vector<uint8_t>& buf,
+@@ -49,8 +49,8 @@ index dbe4a11a..6282f17a 100644
+      }
+ +
+ +    // 10. The build popup's queue as it is being edited: "BLDQ", written
+-+    //     ONLY while SCREEN_QUEUE_POPUP is up, and LAST. OrionLayer, open
+-+    //     fix 39.
+++    //     ONLY while SCREEN_QUEUE_POPUP is up, and LAST.
+++    //     OrionLayer, open fix 39.
+ +    //
+ +    //     COLBLDG edits a copy, _current_item[7], and writes it into the
+ +    //     colony's producing[] only on OK or `<` / `>`
+```
+
+(the `index` line changes with fix 35's comment and this one).
 
 **What is missing.** COLBLDG edits a copy of the queue, `_current_item[7]`,
 and writes it into `producing[]` only on OK or `<` / `>`
@@ -2401,28 +2564,62 @@ Build radio's value are nowhere.
 `_current_item`, 4 int16 `_active_prod`, uint8 `_field_mode`, int16
 `_colony_auto_building`.
 
+**The exact change.** `src/ext/ext_api.cpp`, function `SerializeState` (line 94): the "BLDQ" block appended after fix 38's, lines **540-565** after. Nothing else changes. The diff, as committed — checked byte for byte against `git diff 2be953d4~1 2be953d4` (the `diff --git` and `index` lines and the text git adds after `@@` are not part of it):
+
+```diff
+--- a/src/ext/ext_api.cpp
++++ b/src/ext/ext_api.cpp
+@@ -537,6 +537,32 @@
+         Write32(buf, ok ? COLCALC::Colony_Producing_Product_Cost_(&MOX::_colony[h]) : -1);
+         Write16(buf, ok ? COLONY::Calculate_Current_Production_Turn_Count_(h) : (int16_t)-1);
+     }
++
++    // 10. The build popup's queue as it is being edited: "BLDQ", written
++    //     ONLY while SCREEN_QUEUE_POPUP is up, and LAST.
++    //     OrionLayer, open fix 39.
++    //
++    //     COLBLDG edits a copy, _current_item[7], and writes it into the
++    //     colony's producing[] only on OK or `<` / `>`
++    //     (Do_Exit_Screen_Cleanup_, colbldg.cpp:2003-2016); until then the
++    //     wire shows the queue from before the popup. With it: the
++    //     selection box (_active_prod, Draw_Active_Prod_ :1792-1851), the
++    //     mode a click is read in (_field_mode: 1 pick a design, 2 repeat,
++    //     :1577-1582) and the autobuild radio's value (_colony_auto_building).
++    if (current_screen == SCREEN_QUEUE_POPUP) {
++        buf.push_back((uint8_t)'B');
++        buf.push_back((uint8_t)'L');
++        buf.push_back((uint8_t)'D');
++        buf.push_back((uint8_t)'Q');
++        for (int i = 0; i < 7; i++) {
++            Write16(buf, COLBLDG::_current_item[i]);
++        }
++        for (int i = 0; i < 4; i++) {
++            Write16(buf, COLBLDG::_active_prod[i]);
++        }
++        Write8(buf, COLBLDG::_field_mode);
++        Write16(buf, COLBLDG::_colony_auto_building);
++    }
+ }
+ 
+ // ── Field list ───────────────────────────────────────────
+```
+
+**Live check** (work order 181 Part 2, orion2re `2097b0c6` built by the same order, SAVE4 loaded as scratch, nothing saved; `tools/colony_record.py` through four colonies of the Colonies list, each one's `<` neighbour and its build popup; liveguard `181_p2_record`, verified: MOX.SET's load byte, restored): BLDQ arrived on every stop at screen 25: 29 bytes, for colony 19 `items [11, 35, 40, -1, -1, -1, -1], active [-1, 0, 0, 0], field_mode 0, auto_building 0`. The block's bytes are in `doc/briefs/181-fixes35-40-wire.txt` (hex and parsed), the whole payloads in `~/orionlayer-fixtures/evidence/work_order_181/P2_record/*_state.bin`; field layout and sizes, and on the nine stops the two runs share every byte, equal `tools/fixtures/colony_blocks_180.json` (180's scratch engine) — nothing in the fixture or the parser needed correcting. The screens it feeds are accepted live in work order 181 Part 3 (`doc/briefs/181-progress.md`).
+
+**Side effects — observed and ruled out.**
+- *Game state:* reads `_current_item`, `_active_prod`, `_field_mode` and `_colony_auto_building`, writes nothing. The queue under edit reaches `producing[]` only on OK or `<` / `>`, exactly as before — the block only shows it earlier.
+- *Size:* 29 bytes per snapshot on screen 25 only.
+
 **What it costs us without it.** The build popup stays the game's own
 picture: a queue HD cannot see is a queue HD cannot edit.
 
-**How to apply.** From `~/orion2re` on `orionlayer-local`, after the fixes before it in the series: `patch -p1 < ~/orionlayerv3/doc/ext_build_popup_queue.patch`, then `ninja -C out/build/Linux/linux-debug`, and move the patch from `REPORTED_PATCHES` to `LOCAL_PATCHES` in `tools/version_check.py`. It comes back off with `patch -R -p1` and a rebuild.
+**How to revert.** From `~/orion2re` on `orionlayer-local`: `git revert 2097b0c6 2be953d4` (reverse series order), or `patch -R -p1 < ~/orionlayerv3/<file>` for `doc/ext_build_popup_lists.patch`, `doc/ext_build_popup_queue.patch` in that order; then `ninja -C out/build/Linux/linux-debug`, and move the patches back from `LOCAL_PATCHES` to `REPORTED_PATCHES` in `tools/version_check.py`. The blocks are stacked — each appends after the one before — so fix 39 comes off only with 40 off first. Without fix 35 both screens are the game's own picture again (the safety net); without any later one the screen that needs it is (see "What it costs us without it").
 
 ## 40. What the build popup offers, and its queue, with their numbers
 
-**Status: NOT APPLIED — parked for Data.** Written by work order 180, 27 September 2026, and PARKED for Data
-(`doc/briefs/180-parked-for-data.md`) — no engine patch was applied in
-that order. One of a SERIES, 35 to 40, applied in that order on top of
-`orionlayer-local` `9ab84230` (each appends its block after the previous
-one). **Proof:** in a scratch clone, never on `orionlayer-local`, the patch
-file applied with `patch -p1 --dry-run` and then `patch -p1` on the steps
-before it, with no offset and no fuzz, and the series reproduced the
-scratch commits byte for byte; the patched `src/ext/ext_api.cpp` compiled
-with the engine's own flags from `build.ninja` (the defines, every include
-directory, the `cmake_pch.hxx` include, `-fsyntax-only`); and a control —
-the same file with `COLONY_PRODUCTION_SEPARATOR` misspelt `COLONY_PRODUCTION_SEPERATOR`, and after the queue was added `COLONY_PRODUCTION_NONE` misspelt `…_NONNE` — was refused by the compiler. A full scratch
-build of the series recorded the wire format that OrionLayer's fixtures
-(`tools/fixtures/colony_blocks_180.json`) are cut from.
-`tools/version_check.py` lists it under REPORTED_PATCHES (marker
-`OrionLayer, open fix 40.`).
+**Status: APPLIED** — 27 September 2026 by work order 181, on Data's approval of the series 35-40 (brief 180, `doc/briefs/180-parked-for-data.md` item 1; written, proved and parked by work order 180). orion2re **`2097b0c6`** on `orionlayer-local` ("OrionLayer Open Fix 40: send the build popup's two lists and its queue with their numbers ("BLDL")"), the only commit of this fix, on top of fix 39; bundle `~/orion2re_bundle_27sep_2097b0c6_fixes34-40.bundle`. Recorded in OrionLayer by the commit "Work order 181 Part 2: …" (181-2) — its hash is added by the next commit, as 179 did for 34. Patch: `doc/ext_build_popup_lists.patch`; required by `tools/version_check.py` (marker `OrionLayer, open fix 40.`, on one line in the block's comment) since the same commit. Open upstream.
+
+**Against work order 180's proof** (scratch `053fa0d5`): identical in every `+`, `-`, context and `@@` line; only the `index` line differs (the comments of 35 and 39).
 
 **What is missing.** `Calculate_Building_Array_` (Trade Goods and
 Housing, then every building `Colony_Can_Build_Product_` allows, sorted by
@@ -2442,7 +2639,95 @@ queue holds as many as there are free worlds). Checked live against the
 native popup: Colony Base 200 / 0 / 10, Colony Ship 500 / 7 — the popup's
 own print.
 
+**The exact change.** `src/ext/ext_api.cpp`, function `SerializeState` (line 94): the "BLDL" block appended after fix 39's, lines **566-631** after; the function's closing brace follows at 632. Nothing else changes. The diff, as committed — checked byte for byte against `git diff 2097b0c6~1 2097b0c6` (the `diff --git` and `index` lines and the text git adds after `@@` are not part of it):
+
+```diff
+--- a/src/ext/ext_api.cpp
++++ b/src/ext/ext_api.cpp
+@@ -563,6 +563,72 @@
+         Write8(buf, COLBLDG::_field_mode);
+         Write16(buf, COLBLDG::_colony_auto_building);
+     }
++
++    // 11. What the build popup offers, in its own order, with the numbers
++    //     it prints for each: "BLDL", written ONLY while
++    //     SCREEN_QUEUE_POPUP is up, and LAST. OrionLayer, open fix 40.
++    //
++    //     Calculate_Building_Array_ keeps Trade Goods and Housing first,
++    //     then every building Colony_Can_Build_Product_ allows, sorted by
++    //     the language's building names (colbldg.cpp:161-178); the ship and
++    //     other list is Calculate_Military_Array_ (:180-264), with
++    //     COLONY_PRODUCTION_SEPARATOR rows between its groups. A client copy
++    //     would be a second copy of a long rule and of a sort by name. Per
++    //     entry the id, then the three numbers Draw_Cost_And_Time_Info_
++    //     prints (:1115-1174): the cost (as the screen casts it), the
++    //     maintenance for a building (-1 otherwise) and the build time;
++    //     -1, -1, -1 for a separator.
++    if (current_screen == SCREEN_QUEUE_POPUP) {
++        buf.push_back((uint8_t)'B');
++        buf.push_back((uint8_t)'L');
++        buf.push_back((uint8_t)'D');
++        buf.push_back((uint8_t)'L');
++        const int16_t h = COLONY::_colony_handle;
++        const bool ok = h >= 0 && h < MOX::_NUM_COLONIES;
++        auto entry = [&](int16_t id) {
++            Write16(buf, id);
++            if (!ok || id == COLONY_PRODUCTION_SEPARATOR) {
++                Write16(buf, (int16_t)-1);
++                Write16(buf, (int16_t)-1);
++                Write16(buf, (int16_t)-1);
++                return;
++            }
++            Write16(buf, (int16_t)COLCALC::Colony_Product_Cost_(&MOX::_colony[h], id));
++            Write16(buf, COLBLDG::Colony_Production_Is_Building_(id)
++                         ? (int16_t)TECHDATA::_buildings[id].maintenance
++                         : (int16_t)-1);
++            Write16(buf, COLONY::Calculate_Colony_Turn_Count_From_Scrap_For_Prod_(h, id));
++        };
++        int16_t nb = COLBLDG::_n_building_indexes;
++        if (nb < 0) nb = 0;
++        if (nb > 54) nb = 54;
++        Write16(buf, nb);
++        for (int16_t i = 0; i < nb; i++) {
++            entry(COLBLDG::_building_indexes[i]);
++        }
++        int16_t nm = COLBLDG::_n_military_indexes;
++        if (nm < 0) nm = 0;
++        if (nm > 54) nm = 54;
++        Write16(buf, nm);
++        for (int16_t i = 0; i < nm; i++) {
++            entry(COLBLDG::_military_indexes[i]);
++        }
++        // The seven queue items too: the summary shows the queue's first
++        // item when nothing is hovered (colbldg.cpp:825), and a queued item
++        // need not be in either list (a second Colony Base is not offered
++        // once the queue holds as many as there are free worlds, :185).
++        for (int i = 0; i < 7; i++) {
++            const int16_t id = COLBLDG::_current_item[i];
++            if (id == COLONY_PRODUCTION_NONE) {
++                Write16(buf, id);
++                Write16(buf, (int16_t)-1);
++                Write16(buf, (int16_t)-1);
++                Write16(buf, (int16_t)-1);
++            } else {
++                entry(id);
++            }
++        }
++    }
+ }
+ 
+ // ── Field list ───────────────────────────────────────────
+```
+
+**Live check** (work order 181 Part 2, orion2re `2097b0c6` built by the same order, SAVE4 loaded as scratch, nothing saved; `tools/colony_record.py` through four colonies of the Colonies list, each one's `<` neighbour and its build popup; liveguard `181_p2_record`, verified: MOX.SET's load byte, restored): BLDL arrived on every stop at screen 25: 192 to 216 bytes (4 to 7 building rows, 12 others, the seven queue items). The block's bytes are in `doc/briefs/181-fixes35-40-wire.txt` (hex and parsed), the whole payloads in `~/orionlayer-fixtures/evidence/work_order_181/P2_record/*_state.bin`; field layout and sizes, and on the nine stops the two runs share every byte, equal `tools/fixtures/colony_blocks_180.json` (180's scratch engine) — nothing in the fixture or the parser needed correcting. The screens it feeds are accepted live in work order 181 Part 3 (`doc/briefs/181-progress.md`).
+
+**Side effects — observed and ruled out.**
+- *Game state:* besides `Colony_Product_Cost_` (see 38) it calls `COLBLDG::Colony_Production_Is_Building_` (an inline test, colbldg.h:16) and `COLONY::Calculate_Colony_Turn_Count_From_Scrap_For_Prod_` (colony.cpp:422) — read in the source, both only read. It reads `_building_indexes` and `_military_indexes` as `Build_Queue_Popup_` last filled them and does not recompute them.
+- *The cost is cast to int16*, as `Draw_Cost_And_Time_Info_` does (colbldg.cpp:1121); a cost above 32767 would wrap in both.
+- *The counts are clamped to 0..54*, the arrays' size, so a stale count cannot run the loop past them.
+- *Size:* at most about 0.9 KB per snapshot (2 x 54 rows and the queue), only on screen 25; 192-216 bytes measured.
+
 **What it costs us without it.** The build popup stays the game's own
 picture: a list HD cannot name is a list HD cannot offer.
 
-**How to apply.** From `~/orion2re` on `orionlayer-local`, after the fixes before it in the series: `patch -p1 < ~/orionlayerv3/doc/ext_build_popup_lists.patch`, then `ninja -C out/build/Linux/linux-debug`, and move the patch from `REPORTED_PATCHES` to `LOCAL_PATCHES` in `tools/version_check.py`. It comes back off with `patch -R -p1` and a rebuild.
+**How to revert.** From `~/orion2re` on `orionlayer-local`: `git revert 2097b0c6`, or `patch -R -p1 < ~/orionlayerv3/<file>` for `doc/ext_build_popup_lists.patch` in that order; then `ninja -C out/build/Linux/linux-debug`, and move the patch back from `LOCAL_PATCHES` to `REPORTED_PATCHES` in `tools/version_check.py`. Without fix 35 both screens are the game's own picture again (the safety net); without any later one the screen that needs it is (see "What it costs us without it").

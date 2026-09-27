@@ -1,7 +1,9 @@
 Extension API: where the colony screen puts its buildings ("CBLD").
 
-STATUS: NOT APPLIED — written by work order 180 (B3), parked for Data
-(doc/briefs/180-parked-for-data.md, item 1.2).
+STATUS: APPLIED 27 September 2026 by work order 181, on Data's approval of
+the series 35-40 (brief 180, doc/briefs/180-parked-for-data.md item 1):
+orion2re 01bafd9c on orionlayer-local, required by tools/version_check.py.
+Entry: doc/orion2re_open_fixes.md, open fix 36.
 
 PROOF (work order 180, 27 September 2026): this file is one step of a
 series of six (open fixes 35-40, applied in that order on top of

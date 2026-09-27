@@ -1,0 +1,44 @@
+Open fixes 35-40 on the live wire — work order 181, 27 September 2026.
+orion2re orionlayer-local 2097b0c6 (fixes 35-40 on 9ab84230), built by this
+order; SAVE4 (scratch) loaded; recorded by tools/colony_record.py
+(ORIONLAYER_EVIDENCE_FOLDER=work_order_181, tag P2_record); guard
+~/orionlayer-fixtures/live_guard/181_p2_record. Each block is the tail of
+one MSG_STATE, from its tag; the whole payloads are the stops' *_state.bin
+in ~/orionlayer-fixtures/evidence/work_order_181/P2_record/.
+Every tail below is byte-identical to the same stop in
+tools/fixtures/colony_blocks_180.json (180's scratch engine).
+
+== stop 002_colony_row0: MSG_STATE 68980 bytes at 08:28:05, screen 1, 32 fields; blocks from byte 68853
+-- COLS (open fix 35), 13 bytes:
+   43 4f 4c 53 0d 00 02 00 11 00 00 00 00
+   parsed: {"star": 13, "orbit": 2, "colony": 17, "drawing_display": 0, "field_mode": 0, "autobuild_enabled": 0}
+-- CBLD (open fix 36), 96 bytes:
+   43 42 4c 44 00 00 00 00 00 00 16 00 00 00 00 00 00 00 29 00 00 00 07 00 00 00 00 00 00 00 00 00
+   00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 15 00 00 00 00 00 28 00 00 00
+   00 00 00 00 00 00 00 00 00 00 00 00 ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff
+   parsed: {"grid": [[0, 0, 0, 22, 0, 0], [0, 41, 0, 7, 0, 0], [0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0], [0, 21, 0, 0, 40, 0], [0, 0, 0, 0, 0, 0]], "satellites": [-1, -1, -1, -1, -1, -1, -1, -1, -1, -1]}
+-- CEVT (open fix 37), 6 bytes:
+   43 45 56 54 00 00
+   parsed: {"plague": false, "pop_boom": false}
+-- CPRD (open fix 38), 12 bytes:
+   43 50 52 44 0b 00 c8 00 00 00 05 00
+   parsed: {"producing": 11, "cost": 200, "turns": 5}
+
+== stop 004_popup_row0: MSG_STATE 69099 bytes at 08:28:08, screen 25, 44 fields; blocks from byte 68853
+-- COLS (open fix 35), 13 bytes:
+   43 4f 4c 53 0c 00 00 00 13 00 00 00 00
+   parsed: {"star": 12, "orbit": 0, "colony": 19, "drawing_display": 0, "field_mode": 0, "autobuild_enabled": 0}
+-- CPRD (open fix 38), 12 bytes:
+   43 50 52 44 0b 00 c8 00 00 00 01 00
+   parsed: {"producing": 11, "cost": 200, "turns": 1}
+-- BLDQ (open fix 39), 29 bytes:
+   42 4c 44 51 0b 00 23 00 28 00 ff ff ff ff ff ff ff ff ff ff 00 00 00 00 00 00 00 00 00
+   parsed: {"items": [11, 35, 40, -1, -1, -1, -1], "active": [-1, 0, 0, 0], "field_mode": 0, "auto_building": 0}
+-- BLDL (open fix 40), 192 bytes:
+   42 4c 44 4c 04 00 fe ff 00 00 ff ff 01 00 fd ff 00 00 ff ff 01 00 23 00 3c 00 01 00 03 00 28 00
+   90 01 02 00 0f 00 0c 00 f1 ff 32 00 ff ff 02 00 f4 ff f4 01 ff ff 13 00 ef ff 64 00 ff ff 04 00
+   f5 ff 64 00 ff ff 04 00 f7 ff ff ff ff ff ff ff ce ff 1b 00 ff ff 01 00 cd ff 7e 00 ff ff 05 00
+   cc ff 73 00 ff ff 05 00 cb ff 66 01 ff ff 0e 00 ca ff 38 03 ff ff 1f 00 f7 ff ff ff ff ff ff ff
+   f9 ff 64 00 ff ff 04 00 0b 00 c8 00 00 00 08 00 23 00 3c 00 01 00 03 00 28 00 90 01 02 00 0f 00
+   ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff
+   parsed: {"buildings": [{"id": -2, "cost": 0, "maintenance": -1, "time": 1}, {"id": -3, "cost": 0, "maintenance": -1, "time": 1}, {"id": 35, "cost": 60, "maintenance": 1, "time": 3}, {"id": 40, "cost": 400, "maintenance": 2, "time": 15}], "others": [{"id": -15, "cost": 50, "maintenance": -1, "time": 2}, {"id": -12, "cost": 500, "maintenance": -1, "time": 19}, {"id": -17, "cost": 100, "maintenance": -1, "time": 4}, {"id": -11, "cost": 100, "maintenance": -1, "time": 4}, {"id": -9, "cost": -1, "maintenance": -1, "time": -1}, {"id": -50, "cost": 27, "maintenance": -1, "time": 1}, {"id": -51, "cost": 126, "maintenance": -1, "time": 5}, {"id": -52, "cost": 115, "maintenance": -1, "time": 5}, {"id": -53, "cost": 358, "maintenance": -1, "time": 14}, {"id": -54, "cost": 824, "maintenance": -1, "time": 31}, {"id": -9, "cost": -1, "maintenance": -1, "time": -1}, {"id": -7, "cost": 100, "maintenance": -1, "time": 4}], "queue": [{"id": 11, "cost": 200, "maintenance": 0, "time": 8}, {"id": 35, "cost": 60, "maintenance": 1, "time": 3}, {"id": 40, "cost": 400, "maintenance": 2, "time": 15}, {"id": -1, "cost": -1, "maintenance": -1, "time": -1}, {"id": -1, "cost": -1, "maintenance": -1, "time": -1}, {"id": -1, "cost": -1, "maintenance": -1, "time": -1}, {"id": -1, "cost": -1, "maintenance": -1, "time": -1}]}

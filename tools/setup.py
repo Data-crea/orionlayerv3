@@ -42,6 +42,7 @@ import sys
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, ROOT)
+sys.path.insert(0, os.path.join(ROOT, "tools"))
 
 from core.buildnames import name_file as build_name_file
 from core.maintext import text_file as maintext_file  # noqa: E402
@@ -316,6 +317,29 @@ def run(tool, extra):
     return True
 
 
+def engine_report(tree=None):
+    """The orion2re build this tree needs, as lines — work order 181: a
+    fresh clone on another machine is told WHICH open fixes, not only
+    that `version_check` exists. The list's one home is
+    `version_check.LOCAL_PATCHES`; smoke check 090r holds these lines,
+    README's table and the fundament's line to it."""
+    import version_check
+    out = ["\n  The orion2re build it needs (README, tools/version_check.py):",
+           "    branch orionlayer-local, -DORION2RE_EXT=ON, every row of "
+           "README's table; checked by their patch: open fixes "
+           + ", ".join(str(n) for n in version_check.required_fixes())]
+    tree, missing = version_check.tree_report(tree)
+    if tree is None:
+        out.append("    no orion2re tree found here — clone it from the "
+                   "newest ~/orion2re_bundle_*.bundle (README)")
+    elif missing:
+        out.append(f"    {tree}: MISSING {', '.join(missing)} — "
+                   f"python tools/version_check.py names the patch command")
+    else:
+        out.append(f"    {tree}: every one of them applied")
+    return out
+
+
 def main():
     ap = argparse.ArgumentParser(
         description="Rebuild generated assets after a clone.")
@@ -376,6 +400,9 @@ def main():
             # Not a failure: the app explains this itself and names
             # the command. Setup only has to make it visible.
             print(f"    absent   {what} — run: {cmd}")
+
+    for line in engine_report():
+        print(line)
 
     if failed:
         print(f"\n{len(failed)} generator(s) failed: {', '.join(failed)}")

@@ -74,7 +74,8 @@ OrionLayer talks to an orion2re built from the branch **`orionlayer-local`**
 (`-DORION2RE_EXT=ON`), which is upstream plus the Extension API and the
 fixes below, in this order. The branch is never uploaded anywhere; on a new
 machine it comes from the bundle beside the backup
-(`~/orion2re_bundle_<date>_<hash>.bundle`, the newest one:
+(`~/orion2re_bundle_<date>_<hash>[_<fixes>].bundle`, the newest one —
+today `~/orion2re_bundle_27sep_2097b0c6_fixes34-40.bundle`:
 `git clone -b orionlayer-local <bundle> ~/orion2re`), and each fix also has
 its patch file here. `python tools/version_check.py` checks a built tree
 against this list and prints the `patch -p1` command for any fix that is
@@ -94,7 +95,8 @@ a smoke check holds this table to it.
 | 9 | `f98b8547` | open fix 31: present without VSync on request | `doc/ext_present_no_vsync.patch` |
 | 10 | `cc542e02` | open fix 30: the Leaders screen's state | `doc/ext_officer_screen_state.patch` |
 | 11 | `2269749c` | open fix 32: the Info screen's history and turn messages | `doc/ext_info_screen_state.patch` |
-| 12 | `9ab84230` | **open fix 34: the main menu's Load dialog sends its save slots** (work order 179) | `doc/ext_main_menu_save_slots.patch` |
+| 12 | `9ab84230` | open fix 34: the main menu's Load dialog sends its save slots | `doc/ext_main_menu_save_slots.patch` |
+| 13 | `c5d4dacd`, `01bafd9c`, `a10e20ba`, `8a6acc08`, `2be953d4`, `2097b0c6` | **open fixes 35-40, one commit each, in this order: which colony the colony screen and the build popup show (35), where its buildings stand (36), Plague and Pop Boom (37), the product's cost and turns (38), the build popup's queue under edit (39), its two lists and queue with their numbers (40)** (work order 181) | `doc/ext_colony_screen_colony.patch`, `doc/ext_colony_building_placement.patch`, `doc/ext_colony_status_word.patch`, `doc/ext_colony_product_cost.patch`, `doc/ext_build_popup_queue.patch`, `doc/ext_build_popup_lists.patch` |
 
 Every entry, with its status, reason and revert, is in
 `doc/orion2re_open_fixes.md`.

@@ -1,8 +1,13 @@
 Extension API: which colony the colony screen and the build popup show ("COLS").
 
-STATUS: NOT APPLIED — written by work order 180 (B3), parked for Data
-(doc/briefs/180-parked-for-data.md, item 1.1). No engine patch may be
-applied in that order.
+STATUS: APPLIED 27 September 2026 by work order 181, on Data's approval of
+the series 35-40 (brief 180, doc/briefs/180-parked-for-data.md item 1):
+orion2re c5d4dacd on orionlayer-local, required by tools/version_check.py.
+Entry: doc/orion2re_open_fixes.md, open fix 35.
+
+The diff below differs from work order 180's proof by one comment: the
+#include carries "OrionLayer, open fix 35." (work order 181, Part 2.1:
+a marker at every changed place; parked for Data, 181-parked-for-data.md).
 
 PROOF (work order 180, 27 September 2026): this file is one step of a
 series of six (open fixes 35-40, applied in that order on top of

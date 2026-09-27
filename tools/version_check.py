@@ -186,6 +186,35 @@ LOCAL_PATCHES = {
         "the main menu's Load dialog sends no save slots (open fix 34), so "
         "HD cannot draw it and shows the game's own picture through the "
         "safety net"),
+    # Applied 27 September 2026 by work order 181 (Data's approval of the
+    # series in brief 180; orion2re c5d4dacd … 2097b0c6 on
+    # orionlayer-local, in this order). Every marker is the block's own
+    # "OrionLayer, open fix N." comment, one line each since 181 re-wrapped
+    # fix 39's.
+    "doc/ext_colony_screen_colony.patch": (
+        os.path.join("src", "ext", "ext_api.cpp"), "OrionLayer, open fix 35.",
+        "the snapshot does not say which colony screen 1 and the build popup "
+        "(25) show (open fix 35), so both stay the game's own picture"),
+    "doc/ext_colony_building_placement.patch": (
+        os.path.join("src", "ext", "ext_api.cpp"), "OrionLayer, open fix 36.",
+        "the colony screen's building grid is not on the wire (open fix 36) "
+        "and the colony screen stays the game's own picture"),
+    "doc/ext_colony_status_word.patch": (
+        os.path.join("src", "ext", "ext_api.cpp"), "OrionLayer, open fix 37.",
+        "Plague and Pop Boom are not on the wire (open fix 37) and the "
+        "colony screen stays the game's own picture"),
+    "doc/ext_colony_product_cost.patch": (
+        os.path.join("src", "ext", "ext_api.cpp"), "OrionLayer, open fix 38.",
+        "the product's cost and turns are not on the wire (open fix 38) and "
+        "the colony screen and the build popup stay the game's own picture"),
+    "doc/ext_build_popup_queue.patch": (
+        os.path.join("src", "ext", "ext_api.cpp"), "OrionLayer, open fix 39.",
+        "the build popup's queue under edit is not on the wire (open fix "
+        "39) and the popup stays the game's own picture"),
+    "doc/ext_build_popup_lists.patch": (
+        os.path.join("src", "ext", "ext_api.cpp"), "OrionLayer, open fix 40.",
+        "the build popup's two lists and their numbers are not on the wire "
+        "(open fix 40) and the popup stays the game's own picture"),
 }
 
 #: Patches that are REPORTED to Joes and not yet applied: listed with
@@ -194,30 +223,55 @@ LOCAL_PATCHES = {
 #: LOCAL_PATCHES, and from then on its absence fails. Same
 #: `file: (relative path, marker, what it enables)`. Empty from open
 #: fixes 20 and 21 moving up (15 September 2026) until open fix 34
-#: (work order 177), and again since 34 moved up (work order 179). Work
-#: order 180 B/C parked open fixes 35-40 here; without them the colony
-#: screen and the build popup stay the game's own picture.
-REPORTED_PATCHES = {
-    "doc/ext_colony_screen_colony.patch": (
-        "src/ext/ext_api.cpp", "OrionLayer, open fix 35.",
-        "the colony screen and the build popup in HD (which colony)"),
-    "doc/ext_colony_building_placement.patch": (
-        "src/ext/ext_api.cpp", "OrionLayer, open fix 36.",
-        "the colony screen's building grid"),
-    "doc/ext_colony_status_word.patch": (
-        "src/ext/ext_api.cpp", "OrionLayer, open fix 37.",
-        "Plague and Pop Boom on the colony screen"),
-    "doc/ext_colony_product_cost.patch": (
-        "src/ext/ext_api.cpp", "OrionLayer, open fix 38.",
-        "the production bar and the turn count"),
-    "doc/ext_build_popup_queue.patch": (
-        "src/ext/ext_api.cpp", "OrionLayer, open fix 39.",
-        "the build popup's queue under edit"),
-    "doc/ext_build_popup_lists.patch": (
-        "src/ext/ext_api.cpp", "OrionLayer, open fix 40.",
-        "the build popup's two lists and their numbers"),
+#: (work order 177), again since 34 moved up (work order 179), and again
+#: since work order 181 moved up open fixes 35-40, which work order 180
+#: had parked here.
+REPORTED_PATCHES = {}
+
+
+#: The open-fix number(s) each patch carries, for a reader who has to be
+#: told WHICH fixes an engine needs rather than which files — `tools/
+#: setup.py` prints them so a fresh clone on another machine learns it
+#: (work order 181). Keyed exactly like LOCAL_PATCHES plus
+#: REPORTED_PATCHES, and a smoke check holds the keys to both and each
+#: number to the README row that names the patch; the numbers are the
+#: README table's, never parsed out of the prose above.
+FIX_NUMBERS = {
+    "doc/ext_inject_click.patch": (3,),
+    "doc/ext_move_pop.patch": (12,),
+    "doc/ext_save_slots.patch": (14,),
+    "doc/ext_fleet_selection.patch": (20,),
+    "doc/ext_fleet_select_ship.patch": (21,),
+    "doc/ext_screen_id.patch": (22,),
+    "doc/ext_research_screens.patch": (24,),
+    "doc/ext_tech_activate.patch": (25,),
+    "doc/ext_fleet_screen_state.patch": (27,),
+    "doc/ext_fleet_screen_select.patch": (28,),
+    "doc/ext_officer_screen_state.patch": (30,),
+    "doc/ext_present_no_vsync.patch": (31,),
+    "doc/ext_info_screen_state.patch": (32,),
+    "doc/ext_main_menu_save_slots.patch": (34,),
+    "doc/ext_colony_screen_colony.patch": (35,),
+    "doc/ext_colony_building_placement.patch": (36,),
+    "doc/ext_colony_status_word.patch": (37,),
+    "doc/ext_colony_product_cost.patch": (38,),
+    "doc/ext_build_popup_queue.patch": (39,),
+    "doc/ext_build_popup_lists.patch": (40,),
 }
 
+
+def required_fixes():
+    """The open-fix numbers every LOCAL patch carries, sorted."""
+    return sorted({n for patch in LOCAL_PATCHES for n in FIX_NUMBERS[patch]})
+
+
+def tree_report(tree=None):
+    """(tree, missing patches) for the first tree found, or (None, None)."""
+    tree = tree or find_tree([None])
+    if tree is None:
+        return None, None
+    return tree, [p for p, (rel, marker, _b) in sorted(LOCAL_PATCHES.items())
+                  if not has_marker(tree, rel, marker)]
 
 #: Open fixes 35-40 in the order they are stacked on `ext_api.cpp` (work
 #: order 181). Each appends its block after the one before, so they sit

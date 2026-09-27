@@ -45,7 +45,9 @@ from livedrive import Run, close, hashes  # noqa: E402
 
 from core import colony_guard  # noqa: E402
 
-FOLDER = "work_order_180"
+#: The evidence folder: the work order running the tool (180 wrote it;
+#: 181 runs it again), `ORIONLAYER_EVIDENCE_FOLDER` to name it.
+FOLDER = os.environ.get("ORIONLAYER_EVIDENCE_FOLDER", "work_order_180")
 NAME_FIELD = lambda i: (12, 35 + 31 * i, 101, 65 + 31 * i)  # noqa: E731
 CHANGE = (0, 519, 123)
 RETURN = (0, 556, 459)

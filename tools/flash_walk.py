@@ -48,7 +48,9 @@ from entry_glimpse import probe_points, shows_picture  # noqa: E402
 from core import frametrace  # noqa: E402
 from screens.game_menu import nodes  # noqa: E402
 
-FOLDER = "work_order_180"
+#: The evidence folder: the work order running the tool (180 wrote it;
+#: 181 runs it again), `ORIONLAYER_EVIDENCE_FOLDER` to name it.
+FOLDER = os.environ.get("ORIONLAYER_EVIDENCE_FOLDER", "work_order_180")
 SLOT = 4
 #: Consecutive frames of the target's own HD picture that end a watch.
 SETTLED = 30

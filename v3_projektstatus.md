@@ -2458,7 +2458,7 @@ files under `doc/` and are only summarised here.
 | | |
 |---|---|
 | Python | 32,960 lines across 111 modules — `find . -name '*.py'`, `__pycache__` excluded, the smoke test's 6,400 included. The previous figure here (21,642 across 94) was carried from an unstated method and could not be reproduced |
-| Smoke test | `python tools/smoke_test.py` — **371 checks**, headless, in `tools/smoke_suite/` since work order 162 (133 check modules, one group per screen plus a shared core; `tools/smoke_test.py` is the runner). **Two tiers since work order 158**: the bare command runs everything (~200 s here, measured 26 September 2026 — the 72 s this line said was before the rendering checks of 172-174); `--fast` runs the commit gate's 361 (~95 s here). `--screen <name>` prints only that screen's sentences and the core's and is NEVER a gate. See "The gate has two tiers" below |
+| Smoke test | `python tools/smoke_test.py` — **374 checks**, headless, in `tools/smoke_suite/` since work order 162 (134 check modules, one group per screen plus a shared core; `tools/smoke_test.py` is the runner). **Two tiers since work order 158**: the bare command runs everything (~200 s here, measured 26 September 2026 — the 72 s this line said was before the rendering checks of 172-174); `--fast` runs the commit gate's 364 (~95 s here). `--screen <name>` prints only that screen's sentences and the core's and is NEVER a gate. See "The gate has two tiers" below |
 | Assets | 170 MB (select_race 68, galaxy_map 51, shared 23, new_game 21, colony_summary 1) |
 | Screens in HD | 11 of ~20–22 (the Leaders screen, work order 167, built and not accepted; the GAME menu overlay, work order Stop 2, every dialog of the popup; colony summary draws list, sidebar, scan box and galaxy inset, and MOVES POPS — the first HD gesture that drives the game; planets, brief 101, lists, sorts, restricts and returns) |
 | Setup from clone | `python tools/setup.py` (deps via the system package manager) |
@@ -3562,23 +3562,21 @@ anywhere. Kept: `_black_hole_src.png`, which is the INPUT to
 
 ## What works
 
-### The single-colony screen and the build popup — BUILT, WAITING ON OPEN FIXES 35-40 — work order 180 B and C, 27 September 2026
+### The single-colony screen and the build popup — BUILT, OPEN FIXES 35-40 APPLIED — work orders 180 B and C, 181
 
-**Neither claims its id on the engine this order leaves behind.** Which
-colony the game shows is not on the wire (`_screen_data`, `_orbit_temp`,
-`_colony_handle`; inventories `doc/briefs/180-colony-inventory.md` and
-`180-build-inventory.md`), and HD does not guess it: `ScreenBase.claims`
-is False without open fix 35's COLS block, and the dispatcher then treats
-ids 1 and 25 exactly as before — the game's picture, no hold, no
-failure. Open fixes 35-40 are written, proved to apply and compile with a
-refused control each, and PARKED (`doc/briefs/180-parked-for-data.md`).
-Both screens were built and live-tested on a SCRATCH build carrying them
-(never applied to `orionlayer-local`): the colony screen for three
-colonies at 1920x1080 and 2576x1432, one pop move there and back through
-the HD job rows (on the wire, restored word for word), and the popup's
-building and ship selected through the HD rows and cancelled (the queue on
-the wire moved each time; `producing[]` after Cancel as before); every
-transition without a native frame.
+**Open fixes 35-40 are APPLIED** (work order 181, 27 September 2026, Data's
+approval of the series; orion2re `c5d4dacd` … `2097b0c6` on
+`orionlayer-local`, one commit each, required by `tools/version_check.py`,
+entries in `doc/orion2re_open_fixes.md`, the wire in
+`doc/briefs/181-fixes35-40-wire.txt`). Which colony the game shows comes
+from COLS (`_screen_data`, `_orbit_temp`, `_colony_handle`); HD does not
+guess it: `ScreenBase.claims` is False without the block, and on an engine
+without the fixes ids 1 and 25 stay the game's picture, no hold, no
+failure. Work order 180 built both screens against a scratch build
+carrying the series (inventories `doc/briefs/180-colony-inventory.md` and
+`180-build-inventory.md`); 181 recorded the six blocks live on the applied
+engine — byte for byte the fixture 180 cut — and both screens claim their
+ids by themselves, no flag.
 
 **`screens/colony/`** (id 1): title, status, pop line, the system
 display's five orbits (`colsysdi.cpp`), the four production rows and

@@ -61,8 +61,8 @@ derive world geometry.
 **The smoke test must be green before every commit.**
 
 ```bash
-python tools/smoke_test.py             # everything — 371 checks, ~200 s
-python tools/smoke_test.py --fast      # the commit gate's 361, ~95 s
+python tools/smoke_test.py             # everything — 374 checks, ~200 s
+python tools/smoke_test.py --fast      # the commit gate's 364, ~95 s
 python tools/smoke_test.py --screen colony_summary --fast   # NOT a gate
 ```
 
@@ -96,7 +96,7 @@ the fast tier holds that list and the guards to each other.
 time, not at commit time. See decision 31 and
 `doc/briefs/157-suite-profile.md`.
 
-371 checks, headless, no orion2re needed. **The count must not go
+374 checks, headless, no orion2re needed. **The count must not go
 down.** If a change makes a check obsolete, replace it — do not
 delete it. It went down exactly once, on 12 September 2026, when
 Phase B deleted the frame machinery the checks were about (decision
@@ -144,7 +144,7 @@ screens/<name>/         one folder per HD screen:
                           help.json    right-click help regions
                           assets/
 tools/                  smoke test, generators, live diagnostics
-tools/smoke_suite/      the smoke test's 133 check modules, one group
+tools/smoke_suite/      the smoke test's 134 check modules, one group
                         per screen plus a shared core; smoke_test.py
                         is the runner (work order 162)
 doc/                    the documents in the table above
@@ -187,9 +187,10 @@ Summary come from open fix 32, applied in work order 176 — BUILT, NOT
 ACCEPTED).
 And the single-colony screen (`screens/colony/`, wire id 1) and the build
 popup (`screens/build_queue/`, wire id 25), work order 180 B and C — BUILT,
-and CLAIMING THEIR IDS ONLY WITH OPEN FIXES 35-40, which are written and
-parked, not applied: which colony the game shows is not on the wire, HD
-does not guess it, and without the blocks both stay the game's own picture.
+and CLAIMING THEIR IDS ONLY WITH OPEN FIXES 35-40, APPLIED by work order 181
+(`orionlayer-local` `2097b0c6`): which colony the game shows comes from the
+blocks, HD does not guess it, and an engine without them keeps both the
+game's own picture.
 Every transition passes one hand-over gate (`core/handover.py`, work order
 180 A2): a screen HD draws never presents a native frame.
 Screens without an HD version fall back to the original framebuffer,

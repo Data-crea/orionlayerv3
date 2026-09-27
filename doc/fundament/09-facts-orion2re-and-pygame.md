@@ -463,6 +463,17 @@ references in `doc/v3_orion2re_index.md`.
   that second one is what the main menu prints
   (`mainmenu.cpp:295`). They can disagree with each other, which is
   why `tools/version_check.py` reads both.
+- **THE ENGINE ORIONLAYER NEEDS is `orionlayer-local`, built
+  `-DORION2RE_EXT=ON`, with every fix in README's orion2re table — the
+  ones with a patch are open fixes 3, 12, 14, 20, 21, 22, 24, 25, 27, 28,
+  30, 31, 32, 34, 35, 36, 37, 38, 39, 40** (35-40 applied by work order
+  181, 27 September 2026). The list's one home is
+  `tools/version_check.LOCAL_PATCHES`, with the numbers in `FIX_NUMBERS`;
+  README's table, `tools/setup.py`'s report and this line are held to it
+  by smoke check 090r, so a new applied fix that is missing here fails
+  the suite. The branch travels as a bundle beside the backup
+  (`~/orion2re_bundle_<date>_<hash>[_<fixes>].bundle`) and is never
+  uploaded anywhere.
 - **The DEMO Bank Gothic substituted 28 characters**, measured 29
   August by hashing every printable glyph:
   `! " # $ % & ' ( ) * + - / 4 < = > @ [ \ ] ^ _ ` { | } ~`
