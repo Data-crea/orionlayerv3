@@ -121,3 +121,16 @@ checks). Evidence root: `~/orionlayer-fixtures/evidence/work_order_180/`.
 - **The rule as a proposed decision:** `180-parked-for-data.md` item 2,
   number left free.
 - Checks: 090o (four). **357 → 361.**
+
+## B1. The single-colony screen: inventory — **DONE**
+
+`doc/briefs/180-colony-inventory.md`: 25 elements and 20 controls of
+`COLONY::Colony_Screen_` beside the original's routines, each (a) / (b) /
+(c) — (a) 0, (b) 17, (c) 5, plus one unreachable (the galaxy inset), one
+modal and one HD-local; 15 controls (b), 2 not offered with a reason, 3
+never (CRUNCH, TOGGLE, `[0]`). **126's two gaps re-checked on `9ab84230`:
+still true** — no block carries the colony or the popup's arrays
+(`grep` over `ext_api.cpp`; FSEL/FLTS/OFFS/INFS only), and the colony
+sources are unchanged since `b44cbf76` (9 Aug), so the reading's line
+references stand.
+
