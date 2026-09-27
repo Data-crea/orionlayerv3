@@ -225,8 +225,14 @@ LOCAL_PATCHES = {
 #: fixes 20 and 21 moving up (15 September 2026) until open fix 34
 #: (work order 177), again since 34 moved up (work order 179), and again
 #: since work order 181 moved up open fixes 35-40, which work order 180
-#: had parked here.
-REPORTED_PATCHES = {}
+#: had parked here — until 182 parked open fix 41 here.
+REPORTED_PATCHES = {
+    # Work order 182: written, proved in scratch, parked — not applied.
+    "doc/ext_engine_window_hidden.patch": (
+        os.path.join("src", "ext", "ext_api.cpp"), "OrionLayer, open fix 41.",
+        "the engine's own window never shown (the original's window hidden "
+        "from the start; the tools' intro skip still reaches it)"),
+}
 
 
 #: The open-fix number(s) each patch carries, for a reader who has to be
@@ -257,6 +263,7 @@ FIX_NUMBERS = {
     "doc/ext_colony_product_cost.patch": (38,),
     "doc/ext_build_popup_queue.patch": (39,),
     "doc/ext_build_popup_lists.patch": (40,),
+    "doc/ext_engine_window_hidden.patch": (41,),
 }
 
 

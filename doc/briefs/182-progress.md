@@ -69,3 +69,32 @@ left alone. Evidence root: `~/orionlayer-fixtures/evidence/work_order_182/`.
 **Checks: 375 → 377.** Every file this part touched that was listed as
 over 300 code lines moved by one (`colony_list_preview.py` 404,
 `colony_move_hd.py` 371) and is listed at the new count.
+
+## Part 2 — keep the engine's own window hidden — **WRITTEN, PROVED, PARKED** (open fix 41)
+
+1. **The source.** Created hidden (`SDL_WINDOW_HIDDEN`, platform.cpp:1370,
+   :1374), shown at :1406-1408 unless `ext::g_hide_window`; the flag is set
+   by `ext::Init()` (ext_api.cpp:1086), called from mox2.cpp:382 — after
+   the platform layer, hence shown. Dependents: VSync (a hidden window must
+   not wait for a VSync present — fix 31's hang), input (focus starts at 1
+   and changes only on focus events: unaffected), the intro skip (a key to
+   the window by id), window screenshots and `xwatch` (see an unmapped
+   window), the "window shown" log line (printed either way).
+2. **The fix**: `g_hide_window = true` from the start, and
+   `Present_VSync_Interval_` returns 0 while hidden — two places, each
+   with `OrionLayer, open fix 41.` on one line. Entry 41 and
+   `doc/ext_engine_window_hidden.patch`; `version_check` reports it (not
+   required); FIX_NUMBERS names it; 090r #3 holds the written form.
+3. **Scratch proof** (clone `o182` of `2097b0c6`; the vendored submodules
+   copied from `~/orion2re`, nothing fetched; `cmake --preset linux-debug
+   -DORION2RE_EXT=ON -DORION2RE_BUILD_CONFIG_TOOL=ON`, full build 14 s):
+   applies clean on a second fresh clone, builds, control
+   `ext::g_hide_windw` refused. Engines 143363, 145413, 145507 (real
+   session: `--real-desktop "open fix 41: the hidden window on a real
+   session, work order 182 Part 2.3"`), 145578, 147866, 147992 — started
+   and closed by this session, each guard clean. Window never mapped on
+   Xvfb and on `:0`; READY in 1.3-1.6 s with the skip, 115.1 s without;
+   pacing 6.1/s, 164.8 ms; the flash walk (29, incl. the load) and the
+   colony acceptance with orders identical to the unpatched engine.
+   **The intro skip needs no second route** — the key reaches the hidden
+   window. What a PLAYER sees during the hidden intro is parked (item 1).

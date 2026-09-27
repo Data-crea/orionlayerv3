@@ -1,0 +1,64 @@
+Engine: the engine's own window hidden from the start (open fix 41).
+
+STATUS: NOT APPLIED — written and proved by work order 182 (Part 2),
+parked for Data (doc/briefs/182-parked-for-data.md, item 1). No engine
+patch may be applied in that order.
+
+PROOF (work order 182, 27 September 2026): in a scratch clone of
+orionlayer-local 2097b0c6 (never on orionlayer-local itself) this file
+applied with `patch -p1 --dry-run` and `patch -p1`, no offset, no fuzz,
+and the applied tree equals the scratch commit; the scratch engine was
+built in full with the linux-debug preset (ORION2RE_EXT=ON) — no error —
+and a control, the same file with `ext::g_hide_window` misspelt
+`ext::g_hide_windw` in platform.cpp, was refused by the compiler. The
+scratch engine then ran on the virtual display and on a real session:
+see the entry, doc/orion2re_open_fixes.md 41.
+
+To apply, from ~/orion2re on the orionlayer-local branch (after fix 40):
+
+    patch -p1 < ~/orionlayerv3/doc/ext_engine_window_hidden.patch
+
+then rebuild. It comes back off with `patch -R -p1` and a rebuild.
+
+WHAT IT IS FOR
+
+    platform.cpp creates the window with SDL_WINDOW_HIDDEN and shows it
+    at the end of its setup unless ext::g_hide_window is set
+    (platform.cpp:1406-1408). ext::Init() sets that flag — but only from
+    mox2.cpp:382, after the platform layer has run, so in every
+    ORION2RE_EXT build the window is shown first (decision 39's
+    correction). The header already says what the flag is for: "suppress
+    SDL_ShowWindow (headless mode)". This decides it before the show.
+
+    A hidden window is never drawn by a compositor, and a VSync present
+    to a window nobody draws can wait for ever (open fix 31). So a hidden
+    window presents without VSync, whatever ORION2RE_NO_VSYNC says.
+
+diff --git a/src/ext/ext_api.cpp b/src/ext/ext_api.cpp
+index 9b293a82..88c157cd 100644
+--- a/src/ext/ext_api.cpp
++++ b/src/ext/ext_api.cpp
+@@ -13,7 +13,7 @@
+ 
+ namespace ext {
+ 
+-bool g_hide_window = false;
++bool g_hide_window = true;  // OrionLayer, open fix 41. Hidden before the window is first shown, not after (platform.cpp).
+ int16_t g_pending_field = 0;
+ int16_t g_activated_input = 0;
+ bool g_injected_mouse_pending = false;
+diff --git a/src/game/platform.cpp b/src/game/platform.cpp
+index 399f9589..3f943781 100644
+--- a/src/game/platform.cpp
++++ b/src/game/platform.cpp
+@@ -18,6 +18,10 @@ namespace platform {
+ 		// (video::Submit_Palette_, video::Publish_Off_Page_): the start
+ 		// hangs in its first logo frames. Unattended runs set this.
+ 		int Present_VSync_Interval_() {
++			// OrionLayer, open fix 41. A hidden window is never drawn, so it never presents with VSync.
++			if (ext::g_hide_window) {
++				return 0;
++			}
+ 			const char* value = SDL_getenv("ORION2RE_NO_VSYNC");
+ 			return (value != nullptr && value[0] != '\0' && value[0] != '0') ? 0 : 1;
+ 		}

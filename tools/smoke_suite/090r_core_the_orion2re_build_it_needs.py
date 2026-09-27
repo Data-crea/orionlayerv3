@@ -203,6 +203,19 @@ if _vr_live:
 else:
     report("open fixes 35-40 NOT checked against ext_api.cpp — no orion2re "
            "tree with the series on this disk")
+# Open fix 41 (work order 182): WRITTEN AND PARKED, not applied — the
+# entry says so, the patch is reported (never required), and each of its
+# two changed places carries the one-line marker.
+_vr_41 = _vr_fixes[_vr_fixes.index("\n## 41. "):]
+assert "NOT APPLIED" in _vr_41[:400] and "ext_engine_window_hidden.patch" in _vr_41
+assert "doc/ext_engine_window_hidden.patch" in _vr_vc.REPORTED_PATCHES and \
+    "doc/ext_engine_window_hidden.patch" not in _vr_vc.LOCAL_PATCHES
+_vr_p41 = open(os.path.join(_vr_root, "doc", "ext_engine_window_hidden.patch"),
+               encoding="utf-8").read()
+assert "STATUS: NOT APPLIED" in _vr_p41
+assert sum("OrionLayer, open fix 41." in _l for _l in
+           _vr_p41[_vr_p41.index("diff --git"):].splitlines()
+           if _l.startswith("+")) == 2, "fix 41: one marker per changed place"
 ok("open fixes 35-40 are applied and documented: status, both hashes, "
    "one-line markers, each entry's diff the patch file's; on this disk each "
    "commit's diff the file's and each marker over its block")
