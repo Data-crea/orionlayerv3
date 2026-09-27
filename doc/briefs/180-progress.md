@@ -238,3 +238,76 @@ refused, the whole series re-applied byte for byte), entries and patch
 files as B3's. Without them the popup stays on the net.
 
 **Checks: 361 → 371** (090p six, 090q four).
+
+## Finish
+
+At `238672d`: the full suite **371 green**; a fresh clone (`git clone`,
+`tools/setup.py` exit 0, its own verify the full suite) **371 green**;
+working tree clean; no engine and no client running; `liveguard verify`
+against this order's FIRST backup (`20260926_225659`, before any live
+step) and its last (`20260927_010338`): every game file and both
+settings homes identical — only the tree's own commits reported; SAVE8
+`ab70cc9a…` untouched; SAVE1-11 identical in every run. No live step is
+broken by this order. orion2re: `~/orion2re` untouched (`9ab84230`, its
+three untracked files); the scratch clone lives in the session's
+scratchpad only and nothing of it was pushed or bundled.
+
+## Summary
+
+| part | what | result |
+|---|---|---|
+| A1 | measure the flash | `180-flash-findings.md`: Data's flash is the Fleets entry (one native frame + the fallback sentence in the left pillarbox); also the main menu's opening animation and the load's screen 39; the engine window is not a source |
+| A2 | fix it in one place | `core/handover.py`, asked for every hand-over; live 0 native frames in 202 transitions; replay check 090o; the rule as a proposed decision (number free) |
+| B1 | colony inventory | 25 elements, 20 controls; 126's two gaps still true |
+| B2 | colony screen from the wire | built; claims id 1 only with fix 35; live on a scratch engine incl. a pop move there and back; the net on Data's engine |
+| B3 | colony gaps | open fixes 35-38 written, proved, parked |
+| C1 | build inventory | 15 elements, 14 controls; the live list is the reading's |
+| C2 | build popup from the wire | built; claims id 25 only with 35, 39, 40; live: a building and a ship selected, Cancel restores |
+| C3 | build gaps | open fixes 39-40 written, proved, parked |
+
+**Checks: 354 → 371** (090n ×3, 090o ×4, 090p ×6, 090q ×4; none removed;
+048, 050, 061, 062 and 017 adjusted with the reason written at each).
+
+**The flash table, before and after** (walks with a native frame; the
+full tables are `A1_flash_table.md` and `A2_flash_table.md`):
+
+| transition | before | after |
+|---|---|---|
+| galaxy_map -> fleets | 11 of 14 (≤0.155 s) | 0 of 10 |
+| startup -> main_menu | 1 of 2 (1.29 s) | 0 of 2 |
+| main_menu -> load dialog | 1 of 4 (0.160 s) | 0 of 2 |
+| load dialog -> galaxy_map | 4 of 4 (≤0.523 s) | 0 of 2 |
+| every other transition | 0 of 252 | 0 of 186 |
+| the colony legs, Data's engine (ids 1 and 25 on the net) | — | 238 native frames, **0 forbidden** |
+| the colony legs, scratch engine (HD) | — | 0 of 24 |
+
+**B and C — the share of the original now in HD, versus waiting on a patch:**
+
+| screen | active in HD on Data's engine today | built, waiting only on fix 35 (or 35+39+40) | waiting on a further patch | not built, marked |
+|---|---|---|---|---|
+| colony (25 elements) | **0** — the whole screen waits on 35 | 17 | 4 (placement 36 — and UNVERIFIED even with it —, the status word 37, bar and turns 38, the planet description mode of 35) | 3 (galaxy inset unreachable, the entry boxes are the net's, the hover strip) |
+| build popup (15 elements) | **0** — waits on 35, 39, 40 | 13 | — | 2 (description, picture; a design's stat lines) |
+
+**Parked** (`180-parked-for-data.md`, by importance): 1.1 **open fix 35**
+(which colony — the single most important item), 1.2 fix 38, 1.3 fix 37,
+1.4 fix 36 (unlocks nothing yet), then 39 and 40 for the popup; 2 the
+decision text for A2's rule; 3 a key or click during a hold is dropped,
+CHANGE by field, the popup's ship rows never dimmed, the omissions, MOX.SET
+on load, the engine window at startup.
+
+**Live steps Data should look at himself:**
+1. **Every former flash transition, in the real window**: open FLEETS from
+   the galaxy map a few times; start the game and OrionLayer and watch the
+   main menu come up; load a game. None should show the game's picture or
+   the sentence on the left (`A2_after_*`).
+2. **Focus on an unlocked desktop** at startup (A1 part 3 was measured on
+   a locked screen): does the engine's window ever come in front of
+   OrionLayer's?
+3. **The colony screen beside the original** — only possible on an engine
+   with open fix 35 (and ideally 36-38): the comparisons from this run are
+   `B_record2/*_offline_side.png` at 1920, 2576 and 3840, and the live ones
+   `B_live_*`; on your engine today the colony screen must look exactly as
+   before (the game's picture).
+4. **The build popup beside the original** — the same, with 39 and 40:
+   `B_record2/*popup*_offline_side.png`, `B_live_1920x1080/007_C2_*`.
+5. A key pressed during the main menu's opening animation (parked 3).
