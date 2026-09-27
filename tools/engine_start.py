@@ -52,7 +52,11 @@ What this tool does about it:
    PID, command line, start time and how it ended for the progress file.
    Such an engine is still NEVER connected to.
 
-The three display variables are CLAUDE.md's, determined, never typed.
+The three display variables are CLAUDE.md's, determined, never typed —
+and since work order 182 they are used only with `--real-desktop REASON`.
+By default the engine starts on the private Xvfb of `tools/vdisplay.py`,
+so a live run shows nothing in Data's session (and plays no sound there);
+the screen checks and the idle inhibitor apply only to the real desktop.
 """
 import argparse
 import glob
@@ -73,18 +77,19 @@ READY = "ext: server started"
 
 
 def display_env(base=None):
-    """The environment a live run needs (CLAUDE.md): DISPLAY :0, the
-    newest mutter Xwayland auth file, SDL's x11 driver."""
-    env = dict(os.environ if base is None else base)
-    env["DISPLAY"] = ":0"
-    auths = sorted(glob.glob(f"/run/user/{os.getuid()}/.mutter-Xwaylandauth.*"),
-                   key=os.path.getmtime, reverse=True)
-    if auths:
-        env["XAUTHORITY"] = auths[0]
-    env["SDL_VIDEODRIVER"] = "x11"
-    # Open fix 31: present without waiting for VSync (a patched engine).
-    env["ORION2RE_NO_VSYNC"] = "1"
-    return env
+    """The REAL desktop's environment (CLAUDE.md): DISPLAY :0, the mutter
+    Xwayland auth file that opens it, SDL's x11 driver. Used only with
+    `--real-desktop REASON` since work order 182 — see `run_env`."""
+    import vdisplay
+    return vdisplay.engine_env("real desktop", base, out=lambda *_: None)
+
+
+def run_env(reason=None, out=print):
+    """The environment an engine STARTS in (work order 182): the private
+    Xvfb of `tools/vdisplay.py`, never Data's session — unless the run
+    names a reason for the real desktop."""
+    import vdisplay
+    return vdisplay.engine_env(reason, out=out)
 
 
 def parse_bool(reply):
@@ -253,13 +258,16 @@ START_DEADLINE = 150
 INTRO_SECONDS = 112.9
 
 def start(log_path, timeout=START_DEADLINE, inhibit=True, out=print, retries=3,
-          engine=None, guard=None, blanked_ok=False, intro=False):
+          engine=None, guard=None, blanked_ok=False, intro=False,
+          real_desktop=None):
     """Start, and start again after a recognised hang. `guard` is the
     folder the pre-run backup goes to (taken once, before the first
-    attempt)."""
+    attempt). `real_desktop` is the REASON for Data's session; None (the
+    default since work order 182) is the virtual display."""
     for attempt in range(1, retries + 1):
         pid = _start_once(log_path, timeout, inhibit, out, engine,
-                          guard if attempt == 1 else None, blanked_ok, intro)
+                          guard if attempt == 1 else None, blanked_ok, intro,
+                          real_desktop)
         if pid != "hang":
             return pid
         out(f"start hang recognised (attempt {attempt} of {retries})")
@@ -267,10 +275,15 @@ def start(log_path, timeout=START_DEADLINE, inhibit=True, out=print, retries=3,
 
 
 def _start_once(log_path, timeout, inhibit, out, engine=None, guard=None,
-                blanked_ok=False, intro=False):
-    engines, free, screen = running_engines(), port_free(), screen_state()
+                blanked_ok=False, intro=False, real_desktop=None):
+    # The session's screen matters only when the engine goes onto it: a
+    # blanked desktop cannot hold up a present on the virtual display.
+    screen = screen_state() if real_desktop else {"blanked": False,
+                                                  "idle_ms": None}
+    engines, free = running_engines(), port_free()
     ok, reasons = verdict(engines, free, screen, blanked_ok)
-    out(f"screen: blanked={screen['blanked']} idle={screen['idle_ms']} ms")
+    if real_desktop:
+        out(f"screen: blanked={screen['blanked']} idle={screen['idle_ms']} ms")
     if blanked_ok and screen.get("blanked") is True:
         out("BLANKED SCREEN ACCEPTED (--blanked-ok): open fix 31 presents "
             "without VSync; a hang would be recognised and retried")
@@ -288,8 +301,9 @@ def _start_once(log_path, timeout, inhibit, out, engine=None, guard=None,
         out(f"GUARD: {sum(1 for f in man['files'].values() if f)} files "
             f"backed up to {guard} — after the run: python "
             f"tools/liveguard.py verify {guard} [--restore]")
-    proc = subprocess.Popen(command(inhibit, engine), cwd=GAME_DIR,
-                            env=display_env(),
+    env = run_env(real_desktop, out)
+    proc = subprocess.Popen(command(inhibit and bool(real_desktop), engine),
+                            cwd=GAME_DIR, env=env,
                             stdin=subprocess.DEVNULL, stdout=handle,
                             stderr=subprocess.STDOUT, start_new_session=True)
     deadline = time.time() + timeout
@@ -300,7 +314,7 @@ def _start_once(log_path, timeout, inhibit, out, engine=None, guard=None,
         with open(log_path, encoding="utf-8", errors="replace") as f:
             text = f.read()
         if not intro and pid and HANG_LINE in text:
-            skips = intro_skip.step(pid, text, display_env(), skips, out)
+            skips = intro_skip.step(pid, text, env, skips, out)
         if READY in text:
             out(f"READY: orion2re PID {pid} (launcher {proc.pid}), log {log_path}")
             return pid
@@ -356,11 +370,17 @@ def main():
                     help="let the original's logos and intro play (by "
                          "default one key skips them, as in the original; "
                          "work order 179)")
+    ap.add_argument("--real-desktop", metavar="REASON", default=None,
+                    help="start the engine in Data's session instead of the "
+                         "virtual display (work order 182) — only with a "
+                         "reason, which the progress file names")
     ap.add_argument("--close-foreign", action="store_true",
                     help="close engines and clients this tool did not start "
                          "(work order 176: backup first, SIGTERM, SIGKILL "
                          "only if needed; never connect) and exit")
     args = ap.parse_args()
+    if args.real_desktop is not None and not args.real_desktop.strip():
+        ap.error("--real-desktop needs a reason (the progress file names it)")
     if args.close_foreign:
         targets = [(pid, _cmdline(pid), started)
                    for pid, _ppid, started in running_engines()]
@@ -383,6 +403,7 @@ def main():
     return 0 if start(args.log, args.timeout, not args.no_inhibit,
                       retries=args.retries, engine=args.engine,
                       guard=guard, blanked_ok=args.blanked_ok,
+                      real_desktop=(args.real_desktop or "").strip() or None,
                       intro=args.intro) else 1
 
 

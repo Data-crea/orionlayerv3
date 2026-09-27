@@ -45,8 +45,11 @@ import time
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-os.environ.setdefault("SDL_VIDEODRIVER", "dummy")
-os.environ.setdefault("SDL_AUDIODRIVER", "dummy")
+# Work order 182: SDL's dummy drivers FORCED, never a window or a sound in
+# the user's session (a setdefault lost to an exported SDL_VIDEODRIVER).
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import vdisplay  # noqa: E402
+vdisplay.headless_clients()
 
 import pygame  # noqa: E402
 

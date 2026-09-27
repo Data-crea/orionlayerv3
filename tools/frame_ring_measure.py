@@ -70,7 +70,11 @@ import sys
 
 import numpy as np
 
-os.environ.setdefault("SDL_VIDEODRIVER", "dummy")
+# Work order 182: SDL's dummy drivers FORCED, never a window or a sound in
+# the user's session (a setdefault lost to an exported SDL_VIDEODRIVER).
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import vdisplay  # noqa: E402
+vdisplay.headless_clients()
 os.environ.setdefault("PYGAME_HIDE_SUPPORT_PROMPT", "1")
 import pygame  # noqa: E402
 from scipy import ndimage  # noqa: E402

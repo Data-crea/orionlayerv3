@@ -547,6 +547,28 @@ references in `doc/v3_orion2re_index.md`.
   still NEVER connected to — close it and start your own. When Data plays
   again he says so, and 171's rule is back.
 
+- **A LIVE RUN RUNS ON A VIRTUAL DISPLAY — work order 182, 27 September
+  2026.** Data works at the same desktop, and until 182 the engine's window
+  opened in front of him — a disturbance for him and, worse for the
+  evidence, a second source of input: the original reads the REAL pointer
+  (decision 39's correction), and on the real desktop a pop icon blinked
+  under wherever his mouse was. `tools/engine_start.py` now starts the
+  engine on a private Xvfb (`tools/vdisplay.py`: display :91-:99, its own
+  MIT cookie, no TCP, SDL's dummy audio), and every tool that loads pygame
+  FORCES SDL's dummy drivers — a `setdefault` lost to a shell exporting
+  `SDL_VIDEODRIVER=x11`, which CLAUDE.md's recipe exports. The real desktop
+  only with `--real-desktop REASON` (the engine) or
+  `ORIONLAYER_REAL_DESKTOP=<reason>` (a client); the progress file names
+  the reason. **Proved equivalent before switching**
+  (`doc/briefs/182-virtual-display.md`): the same flash walk and colony
+  acceptance on both, at 1920 and 2576 — identical transition tables, wire
+  values and results, 0 native frames each, pixel differences only in
+  animations, a random default name and that pointer blink. Held by smoke
+  check 090s. `mutter --headless` works too and writes a
+  `.mutter-Xwaylandauth.*` into the session's directory, so the real
+  desktop takes the auth file that OPENS `:0` (`vdisplay.session_auth`),
+  never merely the newest.
+
 ---
 
 ## 4. pygame facts worth memorising

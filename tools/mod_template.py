@@ -38,6 +38,10 @@ import sys
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, ROOT)
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+# Work order 182: SDL's dummy drivers FORCED, never a window or a sound in
+# the user's session.
+import vdisplay  # noqa: E402
+vdisplay.headless_clients()
 
 from core import modtexts, usermod  # noqa: E402
 

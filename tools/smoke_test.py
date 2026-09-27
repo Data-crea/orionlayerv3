@@ -51,8 +51,10 @@ import sys
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(
     os.path.abspath(__file__))))
-os.environ.setdefault("SDL_VIDEODRIVER", "dummy")
-os.environ.setdefault("SDL_AUDIODRIVER", "dummy")
+# FORCED, not a default (work order 182): the suite never opens a window or
+# plays a sound in the user's session, whatever the shell exports.
+os.environ["SDL_VIDEODRIVER"] = "dummy"
+os.environ["SDL_AUDIODRIVER"] = "dummy"
 if "--quiet" in sys.argv[1:]:
     # pygame greets on import, before the run can redirect anything.
     os.environ.setdefault("PYGAME_HIDE_SUPPORT_PROMPT", "1")

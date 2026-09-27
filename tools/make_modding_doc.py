@@ -23,6 +23,11 @@ import os
 import sys
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+# Work order 182: SDL's dummy drivers FORCED, never a window or a sound in
+# the user's session.
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import vdisplay  # noqa: E402
+vdisplay.headless_clients()
 
 from core.config import BASE_DIR  # noqa: E402
 from screens.colony_summary import colonyfigures as figures  # noqa: E402

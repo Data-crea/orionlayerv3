@@ -15,7 +15,11 @@ import argparse
 import os
 import sys
 
-os.environ.setdefault("SDL_VIDEODRIVER", "dummy")
+# Work order 182: SDL's dummy drivers FORCED, never a window or a sound in
+# the user's session (a setdefault lost to an exported SDL_VIDEODRIVER).
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import vdisplay  # noqa: E402
+vdisplay.headless_clients()
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, ROOT)
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))

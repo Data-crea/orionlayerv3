@@ -51,6 +51,10 @@ import sys
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+# Work order 182: SDL's dummy drivers FORCED here, not only through the
+# lazy `livedrive` import below — never a window or a sound in the session.
+import vdisplay  # noqa: E402
+vdisplay.headless_clients()
 
 import livesend  # noqa: E402
 from screens.game_menu import nodes  # noqa: E402

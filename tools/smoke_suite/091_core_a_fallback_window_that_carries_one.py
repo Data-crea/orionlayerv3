@@ -462,6 +462,14 @@ ok(f"the push-only tier is declared and guarded: "
    f"{len(_st_declared)} checks, each with its reason, the guards "
    f"and the list agreeing in both directions")
 
+# THIS COUNT HOLDS ONLY WHAT RAN BEFORE IT (work order 182): a module that
+# sorts after this one would pass without being counted, and 182's first
+# name for its check module (`091b_…`) did exactly that, green. So this is
+# the last module, by assertion.
+_cnt_mods = sorted(_f for _f in os.listdir(os.path.join(
+    os.path.dirname(SCREENS_DIR), "tools", "smoke_suite")) if _f.endswith(".py"))
+assert _cnt_mods[-1].startswith("091_core_a_fallback_window"), \
+    f"{_cnt_mods[-1]} sorts after the module that counts the checks"
 _counts = [("CLAUDE.md", _cmd, r"(\d+) checks, headless"),
            ("v3_projektstatus.md", None,
             r"smoke_test\.py` — \*\*(\d+) checks\*\*")]
