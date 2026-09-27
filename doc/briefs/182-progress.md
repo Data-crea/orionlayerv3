@@ -218,3 +218,64 @@ machine that wrote them", once more, in this order's own additions:
    CPython 3.14.7's own `ast.parse` (`tools/linecount.py`, check 061) — a
    native fault in the interpreter, in code this order did not touch; the
    same clone passed 061 before and after. Recorded, not chased (parked).
+
+At `bf26394`: the full suite **379 green**; a fresh clone (`tools/setup.py`
+exit 0, naming open fixes 3 … 40) **379 green**; the flash check — 090o
+replaying 198 recorded transitions — green, and 0 native frames in every
+live run of this order; `liveguard verify` against this order's FIRST
+backup (`182_p1_xvfb`): every game file and both settings homes identical,
+only the tree's own commits reported; SAVE8 `ab70cc9a…`; no engine or
+client running; the virtual display stopped (`tools/vdisplay.py stop`).
+orion2re: `orionlayer-local` `2097b0c6` untouched, its three untracked
+files untouched; the fix-41 scratch clone lives in the session's
+scratchpad only; nothing pushed or bundled.
+
+## Summary
+
+- **Virtual display: Xvfb**, private (`tools/vdisplay.py`, `:91`), started
+  by `engine_start` by default; every tool forces SDL's dummy drivers;
+  the real desktop only with `--real-desktop REASON`. **Equivalence:** the
+  same flash walk and colony acceptance with orders, at 1920 and 2576, on
+  Xvfb and on the real desktop — identical transition tables, wire values
+  and results, 0 native frames each; pixel differences only in
+  animations, the game's random default ruler name and one pop icon
+  blinking under the real pointer.
+- **Open fix 41** (`doc/ext_engine_window_hidden.patch`, NOT APPLIED,
+  parked): `ext::g_hide_window` true from the start, so the window the
+  engine creates hidden is never shown; a hidden window presents without
+  VSync. Scratch: never mapped on Xvfb or Data's session, no hang, pacing
+  6.1/s like the unpatched engine, the flash walk and the colony
+  acceptance identical. **The intro skip:** the tools' key still reaches
+  the hidden window (READY in 1.5 s; 115 s without it); what a player sees
+  during the hidden intro is parked with it.
+- **Stress** (virtual display, SAVE4): 1920, 2576, 3840 — each 700 cycles,
+  1003 inputs: **0 lost, 0 dropped**. No lost input to explain; 181's case
+  is outside interference. The click log stays as a tool.
+- **Double scaling**: Custom Race (headers, rows, specials, description,
+  bar, message box — 4x at 2160p) and Empire Identity (headers, preview —
+  4x) fixed, 1080p pixel-identical; Colony Summary's 3840 paragraph is
+  Data's own 2560 F5 value, not code; every other screen scales once. One
+  general check (090t) plus the same measurement in 090p, 090q, 090c.
+- **Also fixed**: the check count escaped by a module sorting after 091
+  (091 now asserts it is last); `gameload.py` and five others relied on a
+  `setdefault` or an indirection for the dummy drivers; the build popup's
+  `fmt % value` could raise on a template without its placeholder.
+- **Checks: 375 → 379** (090s ×2, 090u, 090t; none removed; 090c, 090p,
+  090q, 090r and 091 extended).
+
+**Parked** (`182-parked-for-data.md`): 1 open fix 41 for approval, with
+the player's hidden intro; 2 the virtual display (what you will notice,
+the escape flag); 3 the 181 click, the smaller text at 2576 on Custom Race
+and Empire Identity, the Colony Summary's 2560 tuning at 3840, one
+interpreter abort.
+
+**Live steps Data should look at himself:**
+1. **A live run no longer shows anything on your desktop** — run e.g.
+   `python tools/engine_start.py` and `python tools/colony_accept.py 1920
+   1080` and watch your screen stay yours (and silent);
+   `python tools/vdisplay.py stop` afterwards.
+2. **Custom Race and Empire Identity at your 2576x1432 window** — the text
+   is smaller than before, the proportional size
+   (`evidence/work_order_182/scaling/live_side_by_side/`).
+3. With open fix 41 applied, one day: that no engine window appears when
+   you start the game, and how the ~2-minute hidden intro feels.
