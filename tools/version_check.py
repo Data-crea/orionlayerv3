@@ -215,6 +215,14 @@ LOCAL_PATCHES = {
         os.path.join("src", "ext", "ext_api.cpp"), "OrionLayer, open fix 40.",
         "the build popup's two lists and their numbers are not on the wire "
         "(open fix 40) and the popup stays the game's own picture"),
+    # Applied 27 September 2026 by work order 183 (Data's approval; written,
+    # proved and parked by 182; orion2re 4bf152e4 on orionlayer-local). The
+    # marker is on one line at both changed places; this one is in the flag.
+    "doc/ext_engine_window_hidden.patch": (
+        os.path.join("src", "ext", "ext_api.cpp"), "OrionLayer, open fix 41.",
+        "the engine's own window is shown on the player's desktop at every "
+        "start (open fix 41), beside OrionLayer's, and the original follows "
+        "the real pointer over it"),
 }
 
 #: Patches that are REPORTED to Joes and not yet applied: listed with
@@ -225,13 +233,9 @@ LOCAL_PATCHES = {
 #: fixes 20 and 21 moving up (15 September 2026) until open fix 34
 #: (work order 177), again since 34 moved up (work order 179), and again
 #: since work order 181 moved up open fixes 35-40, which work order 180
-#: had parked here — until 182 parked open fix 41 here.
+#: had parked here — until 182 parked open fix 41 here, and again since
+#: work order 183 moved 41 up.
 REPORTED_PATCHES = {
-    # Work order 182: written, proved in scratch, parked — not applied.
-    "doc/ext_engine_window_hidden.patch": (
-        os.path.join("src", "ext", "ext_api.cpp"), "OrionLayer, open fix 41.",
-        "the engine's own window never shown (the original's window hidden "
-        "from the start; the tools' intro skip still reaches it)"),
 }
 
 

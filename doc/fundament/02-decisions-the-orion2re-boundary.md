@@ -540,6 +540,10 @@ the mechanism behind open fix 3's second half. A flag that is set
 after the thing it would have prevented is not a guard, and reading
 it as one cost a wrong sentence here.
 Saying which half was measured is the point of writing it down.
+**Since work order 183 (27 September 2026) the flag starts `true`** —
+open fix 41, applied: the window is created hidden and never shown, and
+`tools/version_check.py` refuses an engine without it. This paragraph
+still describes any build that lacks it.
 
 **A new message is not a new picture — 4 September 2026.**
 *(Superseded in force by "A fresh message is not a fresh world" under

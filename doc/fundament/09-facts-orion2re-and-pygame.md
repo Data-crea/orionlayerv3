@@ -466,8 +466,8 @@ references in `doc/v3_orion2re_index.md`.
 - **THE ENGINE ORIONLAYER NEEDS is `orionlayer-local`, built
   `-DORION2RE_EXT=ON`, with every fix in README's orion2re table — the
   ones with a patch are open fixes 3, 12, 14, 20, 21, 22, 24, 25, 27, 28,
-  30, 31, 32, 34, 35, 36, 37, 38, 39, 40** (35-40 applied by work order
-  181, 27 September 2026). The list's one home is
+  30, 31, 32, 34, 35, 36, 37, 38, 39, 40, 41** (35-40 applied by work
+  order 181, 41 by work order 183, 27 September 2026). The list's one home is
   `tools/version_check.LOCAL_PATCHES`, with the numbers in `FIX_NUMBERS`;
   README's table, `tools/setup.py`'s report and this line are held to it
   by smoke check 090r, so a new applied fix that is missing here fails
@@ -567,7 +567,11 @@ references in `doc/v3_orion2re_index.md`.
   check 090s. `mutter --headless` works too and writes a
   `.mutter-Xwaylandauth.*` into the session's directory, so the real
   desktop takes the auth file that OPENS `:0` (`vdisplay.session_auth`),
-  never merely the newest.
+  never merely the newest. **Since open fix 41 (applied by work order 183)
+  the engine's window is never mapped on either display**, and a hidden
+  window presents without VSync whatever `ORION2RE_NO_VSYNC` says; a
+  screenshot of the engine's window shows nothing, the picture is on the
+  wire.
 
 ---
 

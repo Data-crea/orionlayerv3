@@ -1,8 +1,10 @@
 Engine: the engine's own window hidden from the start (open fix 41).
 
-STATUS: NOT APPLIED — written and proved by work order 182 (Part 2),
-parked for Data (doc/briefs/182-parked-for-data.md, item 1). No engine
-patch may be applied in that order.
+STATUS: APPLIED 27 September 2026 by work order 183, on Data's approval —
+orion2re 4bf152e4 on orionlayer-local, this file's diff byte for byte
+(index lines included). Written and proved by work order 182 (Part 2),
+parked there for Data (doc/briefs/182-parked-for-data.md, item 1).
+Required by tools/version_check.py since work order 183.
 
 PROOF (work order 182, 27 September 2026): in a scratch clone of
 orionlayer-local 2097b0c6 (never on orionlayer-local itself) this file
@@ -14,11 +16,13 @@ and a control, the same file with `ext::g_hide_window` misspelt
 scratch engine then ran on the virtual display and on a real session:
 see the entry, doc/orion2re_open_fixes.md 41.
 
-To apply, from ~/orion2re on the orionlayer-local branch (after fix 40):
+To apply to a tree without it, from ~/orion2re on the orionlayer-local
+branch (after fix 40):
 
     patch -p1 < ~/orionlayerv3/doc/ext_engine_window_hidden.patch
 
-then rebuild. It comes back off with `patch -R -p1` and a rebuild.
+then rebuild. It comes back off with `git revert 4bf152e4` or
+`patch -R -p1` and a rebuild (see the entry for the rest of the revert).
 
 WHAT IT IS FOR
 

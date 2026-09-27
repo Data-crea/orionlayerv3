@@ -5,10 +5,11 @@
 # tools/smoke_suite/, in file-name order and in ONE namespace. Do not
 # import this file; it is not a module.
 #
-# The 3 check(s) it holds:
+# The 4 check(s) it holds:
 #   - the open fixes the engine needs are one list, and README, setup's report and the fundament's line name exactly them
 #   - version_check requires every applied fix: a tree missing any one of them is reported by name
 #   - open fixes 35-40 are applied and documented: status, hashes, one-line markers, each entry's diff the patch file's; on this disk each commit's diff the file's and each marker over its block
+#   - open fix 41 is applied and documented: required, status and hash in entry, row and patch, two one-line markers, the entry's diff the file's; on this disk the commit's diff the file's
 
 
 # ── THE ORION2RE BUILD IT NEEDS (work order 181) ────────────────
@@ -203,19 +204,55 @@ if _vr_live:
 else:
     report("open fixes 35-40 NOT checked against ext_api.cpp — no orion2re "
            "tree with the series on this disk")
-# Open fix 41 (work order 182): WRITTEN AND PARKED, not applied — the
-# entry says so, the patch is reported (never required), and each of its
-# two changed places carries the one-line marker.
-_vr_41 = _vr_fixes[_vr_fixes.index("\n## 41. "):]
-assert "NOT APPLIED" in _vr_41[:400] and "ext_engine_window_hidden.patch" in _vr_41
-assert "doc/ext_engine_window_hidden.patch" in _vr_vc.REPORTED_PATCHES and \
-    "doc/ext_engine_window_hidden.patch" not in _vr_vc.LOCAL_PATCHES
-_vr_p41 = open(os.path.join(_vr_root, "doc", "ext_engine_window_hidden.patch"),
-               encoding="utf-8").read()
-assert "STATUS: NOT APPLIED" in _vr_p41
-assert sum("OrionLayer, open fix 41." in _l for _l in
-           _vr_p41[_vr_p41.index("diff --git"):].splitlines()
-           if _l.startswith("+")) == 2, "fix 41: one marker per changed place"
 ok("open fixes 35-40 are applied and documented: status, both hashes, "
    "one-line markers, each entry's diff the patch file's; on this disk each "
    "commit's diff the file's and each marker over its block")
+
+
+# 4. OPEN FIX 41 — APPLIED by work order 183 on Data's approval (written,
+#    proved and parked by 182), documented as 35-40 were: required, the
+#    entry, its summary row and the patch file say so with the hash, each
+#    of the two changed places carries the one-line marker, and the entry's
+#    diff is the file's. The file's diff has TWO files, so the entry leaves
+#    out git's `diff --git` and `index` lines between them too.
+_vr_p41 = "doc/ext_engine_window_hidden.patch"
+_vr_h41 = "4bf152e4"
+assert _vr_p41 in _vr_vc.LOCAL_PATCHES and _vr_p41 not in _vr_vc.REPORTED_PATCHES
+assert _vr_vc.LOCAL_PATCHES[_vr_p41][1] == "OrionLayer, open fix 41."
+assert 41 in _vr_want
+_vr_t41 = open(os.path.join(_vr_root, _vr_p41), encoding="utf-8").read()
+assert "STATUS: APPLIED 27 September 2026 by work order 183" in _vr_t41 and \
+    f"orion2re {_vr_h41} on orionlayer-local" in _vr_t41, _vr_p41
+_vr_d41 = _vr_t41[_vr_t41.index("diff --git"):]
+assert sum("OrionLayer, open fix 41." in _l for _l in _vr_d41.splitlines()
+           if _l.startswith("+")) == 2, "fix 41: one marker per changed place"
+_vr_41 = _vr_fixes[_vr_fixes.index("\n## 41. "):]
+_vr_41 = _vr_41[:_vr_41.find("\n## ", 5)] if "\n## " in _vr_41[5:] else _vr_41
+assert "**Status: APPLIED** — 27 September 2026 by work order 183" in \
+    _vr_41[:600] and f"**`{_vr_h41}`**" in _vr_41, "entry 41's status"
+for _vr_part in ("**The exact change.**", "**Live check**", "**Side effects",
+                 "**How to revert.**", "presents without VSync",
+                 "byte for byte", "fixes34-41.bundle"):
+    assert _vr_part in _vr_41, f"entry 41 lacks {_vr_part}"
+_vr_j = _vr_41.index("```diff\n", _vr_41.index("**The exact change.**")) + 8
+_vr_n41 = "".join(_l for _l in _vr_norm(_vr_d41).splitlines(True)
+                  if not _l.startswith(("diff --git ", "index ")))
+assert _vr_41[_vr_j:_vr_41.index("\n```", _vr_j)] + "\n" == _vr_n41, \
+    "entry 41's diff is not its patch file's"
+_vr_r41 = next(_l for _l in _vr_fixes.splitlines() if _l.startswith("| 41 |"))
+assert "**Applied** 27 September 2026 by work order 183" in _vr_r41
+_vr_git41 = _vr_sp.run(["git", "-C", _vr_tree_dir, "diff", f"{_vr_h41}~1",
+                        _vr_h41], capture_output=True, text=True) \
+    if os.path.isdir(os.path.join(_vr_tree_dir, ".git")) else None
+if _vr_git41 is not None and _vr_git41.returncode == 0:
+    assert _vr_git41.stdout == _vr_d41, f"commit {_vr_h41} is not {_vr_p41}"
+    for _vr_rel in (("src", "ext", "ext_api.cpp"), ("src", "game", "platform.cpp")):
+        _vr_src = open(os.path.join(_vr_tree_dir, *_vr_rel), errors="replace").read()
+        assert _vr_src.count("OrionLayer, open fix 41.") == 1, _vr_rel
+else:
+    report(f"open fix 41 NOT checked against its commit — no orion2re tree "
+           f"with {_vr_h41} on this disk")
+ok("open fix 41 is applied and documented: required by version_check, "
+   "status and hash in the entry, its row and the patch file, two one-line "
+   "markers, the entry's diff the file's; on this disk the commit's diff "
+   "the file's")

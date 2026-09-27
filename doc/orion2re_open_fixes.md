@@ -62,7 +62,7 @@ section for what was found where.
 | 38 | What the colony's current product costs, and how long it takes, is not on the wire — `Colony_Producing_Product_Cost_`, `Calculate_Current_Production_Turn_Count_` | **Applied** 27 September 2026 by work order 181 (orion2re `8a6acc08`, `doc/ext_colony_product_cost.patch`, "CPRD"); required; confirmed live | Nothing while applied |
 | 39 | The build popup's queue under edit, its selection and its modes are not on the wire until OK — `COLBLDG::_current_item`, `_active_prod`, `_field_mode`, `_colony_auto_building` | **Applied** 27 September 2026 by work order 181 (orion2re `2be953d4`, `doc/ext_build_popup_queue.patch`, "BLDQ"); required; confirmed live | Nothing while applied; without it the build popup stays the game's own picture |
 | 40 | What the build popup offers, in its order, and its queue, with the costs and times it prints, is not on the wire — `_building_indexes`, `_military_indexes`, `Draw_Cost_And_Time_Info_` | **Applied** 27 September 2026 by work order 181 (orion2re `2097b0c6`, `doc/ext_build_popup_lists.patch`, "BLDL"); required; confirmed live | Nothing while applied; without it the build popup stays the game's own picture |
-| 41 | The engine's own window is shown before `ext::Init` sets `g_hide_window` (platform.cpp:1406-1408, mox2.cpp:382) | **Written, NOT APPLIED** — work order 182 (`doc/ext_engine_window_hidden.patch`); proved in scratch: never mapped on the virtual display and on a real session, pacing and HD unchanged, the intro skip still arrives | Without it the engine's window appears on every start, and the original follows the real pointer over it |
+| 41 | The engine's own window is shown before `ext::Init` sets `g_hide_window` (platform.cpp:1406-1408 on `2097b0c6`, mox2.cpp:382) | **Applied** 27 September 2026 by work order 183 on Data's approval (orion2re `4bf152e4` on `orionlayer-local`, `doc/ext_engine_window_hidden.patch`); written and proved by work order 182; required by `tools/version_check.py`; confirmed live on the virtual display (never mapped, pacing unchanged, HD identical); open upstream | Without it the engine's window appears on every start, and the original follows the real pointer over it |
 
 Items 3 and 4 are both about INJECT_CLICK and both live in the same
 code path, but they are separate faults: 3 is where the coordinates
@@ -2743,35 +2743,33 @@ picture: a list HD cannot name is a list HD cannot offer.
 
 ## 41. The engine's own window is shown before it is hidden
 
-**Status: NOT APPLIED — written, proved and parked for Data by work order
-182 (Part 2), 27 September 2026** (`doc/briefs/182-parked-for-data.md`,
-item 1). Patch: `doc/ext_engine_window_hidden.patch`; listed by
-`tools/version_check.py` under REPORTED_PATCHES (marker `OrionLayer, open
-fix 41.`, on one line at each changed place).
+**Status: APPLIED** — 27 September 2026 by work order 183, on Data's approval ("Data approves Open Fix 41 … exactly as proven in 182", `doc/briefs/183-work-order-apply-fix-41-players-skip-the-intro-silently.md`; written, proved and parked by work order 182, `doc/briefs/182-parked-for-data.md` item 1). orion2re **`4bf152e4`** on `orionlayer-local` ("OrionLayer Open Fix 41: keep the engine's own window hidden from the start"), the only commit of this fix, on top of fix 40; bundle `~/orion2re_bundle_27sep_4bf152e4_fixes34-41.bundle` (`git bundle verify`: exit 0; a clone of it has the same 1164 commits). Recorded in OrionLayer by commit OL183P1 ("Work order 183 Part 1: open fix 41 applied … (183-1)"; the hash added by the next commit, as 179 and 181 did). Patch: `doc/ext_engine_window_hidden.patch`; required by `tools/version_check.py` (marker `OrionLayer, open fix 41.`, on one line at each of the two changed places) since the same commit — a build without it is refused by name ("doc/ext_engine_window_hidden.patch : MISSING … open fix 41", measured on the tree of `2097b0c6`). Open upstream.
+
+**Against work order 182's proof**: the patch file applied to `2097b0c6` with `patch -p1 --dry-run` and `patch -p1`, no offset, no fuzz; the two files it leaves are blobs `88c157cd` and `3f943781`, the scratch commit's own; and `git diff 4bf152e4~1 4bf152e4` equals the patch file's diff **byte for byte, `diff --git` and `index` lines included** (sha256 `a2f8e948…` both) — the commit is the scratch proof. The rebuild (`ninja -C out/build/Linux/linux-debug`) compiled the two files and linked without a warning.
 
 **What is missing.** OrionLayer draws everything, so the engine's window
 should never be seen. `platform.cpp` creates it with `SDL_WINDOW_HIDDEN`
-(:1370, :1374) and shows it at the end of its setup unless
-`ext::g_hide_window` is set (:1406-1408); `ext::Init()` sets the flag
+(:1374, :1378 after the fix) and shows it at the end of its setup unless
+`ext::g_hide_window` is set (:1410-1412); `ext::Init()` sets the flag
 (ext_api.cpp:1086), but it is called from `mox2.cpp:382`, after the
-platform layer has run — so every `ORION2RE_EXT` build shows its window
-(decision 39's correction) and every player would see it. The flag's own
-declaration says what it is for: "suppress SDL_ShowWindow (headless mode)"
-(ext_api.h:20).
+platform layer has run — so every `ORION2RE_EXT` build without this fix
+shows its window (decision 39's correction) and every player would see it.
+The flag's own declaration says what it is for: "suppress SDL_ShowWindow
+(headless mode)" (ext_api.h:20-21).
 
 **What depends on the window being visible — read in the source:**
 - *VSync and frame pacing (open fix 31).* A VSync present to a window no
   compositor draws can wait for ever (the start hang, part 09). A hidden
-  window is never drawn, so the patch makes it present without VSync,
+  window is never drawn, so the fix makes it present without VSync,
   whatever `ORION2RE_NO_VSYNC` says (`Present_VSync_Interval_`,
-  platform.cpp:20).
-- *Input.* `g_window_focus_state` starts at 1 (platform.cpp:1333) and
-  changes only on focus events (:1143-1151), which a never-shown window
+  platform.cpp:20; used at :662 and :1408).
+- *Input.* `g_window_focus_state` starts at 1 (platform.cpp:1337) and
+  changes only on focus events (:1148, :1155), which a never-shown window
   does not receive: nothing that tests it changes. `Sync_Mouse_State_
-  From_SDL_` (:839) keeps reading SDL's mouse state, which for a window
-  that never has the pointer is not Data's pointer — the pop icon that
-  blinked under his mouse on the real desktop (work order 182 part 1) has
-  no mouse to follow.
+  From_SDL_` (:843) keeps reading SDL's mouse state, which for a window
+  that never has the pointer is not the player's pointer — the pop icon
+  that blinked under Data's mouse on the real desktop (work order 182
+  part 1) has no mouse to follow.
 - *The intro skip.* `tools/intro_skip.py` sends a space to the engine's
   window by id (`xdotool key --window`, a synthetic event to that window,
   mapped or not). Measured below: it still reaches the hidden window.
@@ -2780,21 +2778,23 @@ declaration says what it is for: "suppress SDL_ShowWindow (headless mode)"
   the tree depends on either for evidence: the native picture is on the
   wire.
 - *The log line* "platform: renderer initialized and window shown" is
-  printed after the conditional show either way (:1410-1413) — left as
-  it is, the smallest change; it now reads "shown" for a window that was
-  not.
+  printed after the conditional show either way (:1414-1417) — left as
+  it is, the smallest change; it reads "shown" for a window that was not.
 
 **What the patch changes.** Two places, both marked:
-`ext::g_hide_window` starts `true` (ext_api.cpp:16), so the existing
-condition at platform.cpp:1406 never shows the window; and
-`Present_VSync_Interval_` returns 0 while the window is hidden
-(platform.cpp:21-24). `ext::Init()` setting the flag again is unchanged.
+`ext::g_hide_window` starts `true`, so the existing condition at
+platform.cpp:1410 never shows the window; and `Present_VSync_Interval_`
+returns 0 while the window is hidden. `ext::Init()` setting the flag again
+is unchanged.
 
-**The exact change.** `src/ext/ext_api.cpp` line 16 (one line changed),
-and `src/game/platform.cpp`, function `platform::Present_VSync_Interval_`
-(starts at line 20): four lines added, **21-24**. The diff, as written by
-the scratch commit (the `diff --git` and `index` lines and the text git
-adds after `@@` are not part of it):
+**The exact change.** `src/ext/ext_api.cpp`, namespace `ext`, the flag's
+definition at line **16** (one line changed); and `src/game/platform.cpp`,
+function `platform::(anonymous)::Present_VSync_Interval_` (the
+`ORION2RE_EXT` branch, starting at line 20): four lines added, **21-24**;
+the function's old body follows at 25-26 and it closes at 27. Nothing else
+changes. The diff, as committed — checked byte for byte against
+`git diff 4bf152e4~1 4bf152e4` (the `diff --git` and `index` lines of both
+files and the text git adds after `@@` are not part of it):
 
 ```diff
 --- a/src/ext/ext_api.cpp
@@ -2808,8 +2808,6 @@ adds after `@@` are not part of it):
  int16_t g_pending_field = 0;
  int16_t g_activated_input = 0;
  bool g_injected_mouse_pending = false;
-diff --git a/src/game/platform.cpp b/src/game/platform.cpp
-index 399f9589..3f943781 100644
 --- a/src/game/platform.cpp
 +++ b/src/game/platform.cpp
 @@ -18,6 +18,10 @@
@@ -2825,45 +2823,49 @@ index 399f9589..3f943781 100644
  		}
 ```
 
-**Proof.** In a scratch clone of `orionlayer-local` `2097b0c6` (never on
-`orionlayer-local`): the patch file applies with `patch -p1 --dry-run` and
-`patch -p1`, no offset, no fuzz, and the applied tree equals the scratch
-commit; the whole engine built with the `linux-debug` preset
-(`ORION2RE_EXT=ON`, the vendored submodules copied from `~/orion2re`, no
-fetch) without an error; the control — `ext::g_hide_windw` in platform.cpp
-— was refused ("ist kein Element von »ext«").
-
-**Scratch results** (work order 182, evidence
-`~/orionlayer-fixtures/evidence/work_order_182/F41_*`, every start guarded
-and verified clean):
+**Live check** (work order 183 Part 1, orion2re `4bf152e4` built by the same
+order, on the virtual display — Xvfb `:91` — every start through
+`tools/engine_start.py` with its own liveguard backup, each verified after;
+evidence `~/orionlayer-fixtures/evidence/work_order_183/P1_*`):
 
 | | result |
 |---|---|
-| the window, virtual display (Xvfb :91) | exists, **never mapped** (`xwininfo`: IsUnMapped; no visible window of the PID) |
-| the window, Data's real session (`:0`, `--real-desktop`) | exists, **never mapped** — nothing appeared |
-| start | no hang in 5 starts; READY 1.3-1.6 s with the skip |
-| frame pacing (main menu) | 6.1 snapshots/s, gap median 164.8 ms, p95 165.9, max 166.7 — the unpatched engine's 6.0-6.1 / 165 ms |
-| the intro skip | the space key reaches the hidden window: READY after 1.6 s; without the key (`--intro`) 115.1 s |
-| HD, 1920, virtual display | the flash walk (pre-game, the SAVE4 load, every in-game transition, the system window): 29 transitions, 0 native frames; 181's colony acceptance with orders: 406 frames agreeing, every order as on the unpatched engine; transition tables, wire values per capture and results **identical** to the unpatched engine's run |
+| the window (four starts: PIDs 29931, 30052, 30148, 30255) | exists, **never mapped**: `tools/xwatch.py` on the display's root from before the engine existed recorded **0** map events of the engine's window in every start, and **2** of a control window mapped by the same run (so the watcher saw maps); `xwininfo` read `IsUnMapped` at READY and after 20 s |
+| start | no hang in 6 starts; READY 1.53-1.54 s after the launch, the intro skipped by the tools' key |
+| frame pacing (main menu, 20 s of STATE messages, the first 5 s left out) | **6.06 snapshots/s, gap median 164.3 ms, p95 166.4, max 166.8-167.1** — work order 182 measured 6.0-6.1/s, 164.8-165.2 / 166.4-166.5 / 166.7 ms, unpatched and patched alike |
+| the same without `ORION2RE_NO_VSYNC` in the environment (PID 30255) | 6.06/s, 164.5 / 166.5 / 167.5 ms, no hang — the hidden window alone turns VSync off |
+| the flash walk, 1920 (`tools/flash_walk.py`: pre-game, the SAVE4 load, every in-game transition, the system window) | 29 transitions, **0 native frames**; on 182's own comparison columns (name, settled, native, pixel verdict, screens) identical to 182's unpatched run (`V_flash_1920`) and to its fix-41 scratch run (`F41_flash`) — only the hand-over gate's `held` counts differ, as they differ between 182's own two runs |
+| the colony screen and the build popup, 1920 (`tools/colony_accept.py --orders`) | 23 transitions, 0 native frames, 407 colony frames agreeing with the engine's handle and 0 disagreeing; every order's result (the pop move and back, `<`/`>`, Leaders, the popup's lists, the queue under edit, Cancel, one real order and back) **identical** to 182's unpatched run, and its transition table identical to that run's; against 182's fix-41 run one row's sampled screen list differs (`[1]` for `[1, 25]` on the popup's OK — a snapshot timing) |
+| every guard | the start guards unchanged; the two runs that load SAVE4: MOX.SET's load byte only (offset 21, 10 → 3), restored and verified identical |
 
 **How the intro skip works with it.** Unchanged for the tools:
-`engine_start` sends the key to the window by id and it arrives. **What
-changes for a player** is parked: a hidden window also hides the
-original's logos and intro, which still play for ~113 s (with their sound)
-before the Extension API is up — the player sees OrionLayer's window
-waiting for the engine. Default: nothing in this fix (the smallest
-change); the options are in the parked file.
+`engine_start` sends the key to the window by id and it arrives (every
+start above). For a player, work order 183 Part 2 decides it: the
+player's start path sends the same key (see `doc/briefs/183-progress.md`).
 
-**Side effects — observed and ruled out.** Above: input and focus
-unchanged, pacing unchanged, HD identical; the tools that looked at the
-window itself (screenshots, xwatch) see nothing, by design.
+**Side effects — observed and ruled out.**
+- *A hidden window presents without VSync.* By the source (`Present_
+  VSync_Interval_` returns 0 while `g_hide_window`), for every build with
+  this fix, whether or not `ORION2RE_NO_VSYNC` is set. Measured: the pacing
+  does not change — 6.06 snapshots/s on the main menu with and without the
+  variable, as 182 measured with VSync-free presents on the unpatched
+  engine. Why the snapshot rate does not follow the present is not
+  established here; only that it does not move.
+- *Nothing is ever shown*: the tools that looked at the window itself
+  (screenshots, `xwatch`) see nothing, by design; the log still says
+  "window shown".
+- *Input and focus unchanged* (focus stays 1, the injected clicks and keys
+  of both acceptance runs took effect as before); HD identical.
 
 **What it costs us without it.** The engine's window appears on the
 player's desktop at every start, beside or in front of OrionLayer's, and
 the original follows the real pointer over it.
 
-**How to apply.** From `~/orion2re` on `orionlayer-local`, after fix 40:
-`patch -p1 < ~/orionlayerv3/doc/ext_engine_window_hidden.patch`, then
-`ninja -C out/build/Linux/linux-debug`, and move the patch from
-`REPORTED_PATCHES` to `LOCAL_PATCHES` in `tools/version_check.py`. It comes
-back off with `patch -R -p1` and a rebuild.
+**How to revert.** From `~/orion2re` on `orionlayer-local`: `git revert
+4bf152e4`, or `patch -R -p1 < ~/orionlayerv3/doc/ext_engine_window_hidden.patch`;
+then `ninja -C out/build/Linux/linux-debug`, and move the patch back from
+`LOCAL_PATCHES` to `REPORTED_PATCHES` in `tools/version_check.py` (and its
+number out of README's table, `setup.py`'s report follows by itself, and
+fundament part 09's line). Without it the window is shown again, and on a
+covered or blanked screen the start depends on `ORION2RE_NO_VSYNC` (open
+fix 31) again.
