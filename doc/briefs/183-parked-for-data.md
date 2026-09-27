@@ -74,3 +74,17 @@ and the order allows only necessary engine changes.
    established here. **Default:** recorded, nothing changed; every gate
    run that counted was a clean exit 0. If it keeps happening, a memory
    test is the cheap next step.
+
+## Live steps to look at yourself
+
+1. **A normal start of the game on your desktop** — `cd ~/orionlayerv3 &&
+   python play.py`: no engine window at any time, straight into the HD main
+   menu without a key, no intro sound. Close OrionLayer and check that no
+   `orion2re` is left (`pgrep -x orion2re` prints nothing). Measured in
+   Part 3 on your session (18:48 and 18:50): no engine window, the HD main
+   menu, no sound — but "no sound" there is also your stored mute (3.1):
+   to hear the game's own music afterwards you would unmute `orion2re`.
+2. **If you unmute `orion2re` (3.1)**, the same start once more: you should
+   hear the main menu's music right away and nothing before it — no intro.
+3. **Your desktop launchers (3.2)** — if you change the Exec line, one
+   click on it should do the same as step 1.

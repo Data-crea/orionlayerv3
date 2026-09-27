@@ -200,3 +200,48 @@ touch (`evidence/work_order_183/P2_suite_139{,b}.log`); the third: **exit
 intro"; restored, caches cleared, green. Full suite after the docs: **exit
 0, 381 green**.
 **Checks 380 → 381** (090v).
+
+Part 2 = OrionLayer **`6260aae`**.
+
+## Part 3 — acceptance on Data's real desktop — **DONE: no engine window, the HD main menu without a key, nothing of the intro audible**
+
+`--real-desktop` reason, as ordered: **"Fix 41 acceptance: the engine window
+must not appear in a real session"**. Before it (18:47): Borderlands 3 had
+ended, no audio stream played on the system, no engine or client ran, the
+screen was awake (idle 91 ms — Data at the desk). `play.main` exactly as a
+player runs it — the only changes, by a scratch driver: this reason, and a
+liveguard backup taken first.
+
+**Your screen was in use: 18:48:15-18:48:42 (27 s; OrionLayer's window for
+23 s of it) and 18:50:00-18:50:09 (9 s; OrionLayer's window 5 s, and a
+1 x 1 pixel control window for 0.3 s at 18:50:01).** Two runs, because the
+first left three things unproved (below).
+
+| | run 1, 18:48:15 (engine 55735, client 55852) | run 2, 18:50:00 (engine 58538, client 58671) |
+|---|---|---|
+| the start | `REAL DESKTOP (engine): <reason>`; INTRO SKIPPED at 1.56 s, logos drawn 1.57, READY (log) 1.58 | skip 2.11 s, logos drawn 2.15, READY (log) 2.17 |
+| the engine's window on `:0` (`xwatch` on the root from before the engine existed; only our PIDs' events kept, the raw file deleted — it names Data's windows) | **0 maps**, never in the client lists | **0 maps**, never in the client lists; `xwininfo` **IsUnMapped** in all 25 polls (window `60817467`) |
+| the watcher sees a map at all (control) | — not shown (OrionLayer's window is Wayland) | **yes**: a 1 x 1 X window, 2 map events |
+| HD main menu without a key | `HD draws: main_menu, game screen 10` 0.5 s after OrionLayer started | the same, 0.6 s after; "no native frame" |
+| the first screen changes | — | `n` then ESC to the engine's own (hidden) window, as the skip is sent: HD `new_game` (screen 13) at 5.7 s, back to `main_menu` at 7.2 s — still 0 maps |
+| the engine's own stream on the real output path (HDMI), captured from before the music (1.61 s / 2.18 s) | **0 non-zero samples in 24.4 s** | **0 non-zero samples in 6.2 s**; the stream `mute: true`, 0 % — Data's stored setting |
+| the end | OrionLayer ended (terminated after its 15 s wait), `orion2re PID 55735 stopped (SIGTERM)` | OrionLayer ended by SIGTERM, exit 0; `stopped (SIGTERM)` |
+| after | no engine, no client; guard `183_P3_real` identical | no engine, no client; guard `183_P3_real2` identical |
+
+**What run 1 could not show**, and why there was a run 2: OrionLayer's
+window is a native **Wayland** window for a player (`play.py` hands the
+client the player's own environment, and pygame picks `wayland` in this
+session), so X tools neither see it map nor send it keys — run 1 therefore
+had no positive control for the watcher on `:0`, no screen change and no
+screenshot. The ENGINE is an X11 client of Xwayland (its SDL uses x11 on
+this machine, CLAUDE.md), so any appearance of ITS window is an X map on
+`:0` — which run 2's control proves the watcher sees. Screenshots of
+OrionLayer's window were not taken: X cannot capture a Wayland window, and
+a screenshot of the whole screen would be Data's desktop. The HD evidence
+is the client's own log.
+
+**Nothing of the intro is audible, for two independent reasons:** the
+engine produces none once the key is sent (Part 2, measured), and on this
+machine the engine's whole stream is stored muted — the capture of what it
+hands the HDMI sink is exact zeros. Data's settings unchanged after both
+runs (his stored `orion2re` row, the default sink).
