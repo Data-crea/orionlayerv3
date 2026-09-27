@@ -84,10 +84,10 @@ differs materially.
    `Clear_Fields_` left behind (mainscr_main.cpp:699) — the wire said 0
    fields in every entry. `_Tech_Select_` then loads its art, builds the
    entries, draws and fades the panel in (tech.cpp:130-319), and enters
-   its loop with `Set_Input_Delay_(5)` (tech.cpp:306). **`Get_Input_`
+   its loop with `Set_Input_Delay_(5)` (tech.cpp:286). **`Get_Input_`
    returns on a pending input delay BEFORE it calls `ext::Tick`**
    (fields.cpp:161-167), and each idle pass waits `Release_Time_(2)` —
-   2 x 55 ms (tech.cpp:349-351, timer.cpp:15). So the first five passes
+   2 x 55 ms (tech.cpp:351-353, timer.cpp:15). So the first five passes
    send nothing, and the list, and the native picture with it, go out on
    the sixth: 5 x 110 = 550 ms, the measured gap. HD cannot draw a list it
    has not received and must not draw one it has not validated (work

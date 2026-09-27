@@ -52,7 +52,7 @@ references in `doc/v3_orion2re_index.md`.
   `Set_Input_Delay_` BEFORE it calls `ext::Tick` (fields.cpp:161-167), so
   a screen that has built its list and drawn itself still sends nothing
   until the delay has run out. The research panel's five passes of 110 ms
-  (tech.cpp:306, :349-351) were ~550 ms of silence on every one of 89
+  (tech.cpp:286, :351-353) were ~550 ms of silence on every one of 89
   measured entries, 66-80 % of the time to the HD panel; the snapshot
   before it — the switch, `Screen_Control_`'s own `Tick` (mox2.cpp:41) —
   carries the empty list `Clear_Fields_` left. 42 call sites set a delay.

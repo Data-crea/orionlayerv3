@@ -26,7 +26,7 @@ WHAT IT IS FOR
     (fields.cpp:161-164) and calls ext::Tick only after it (:167) — so
     while a delay counts down, nothing reaches a client: no state, no
     field list, no picture. The research panel sets a delay of five
-    passes of 110 ms (tech.cpp:306, :349-351), and its list reached
+    passes of 110 ms (tech.cpp:286, :351-353), and its list reached
     OrionLayer ~550 ms after the engine had built and drawn it — on every
     entry, 66-80 % of the time from the click to the panel (work order
     184, doc/briefs/184-research-timing.md). 42 call sites set a delay

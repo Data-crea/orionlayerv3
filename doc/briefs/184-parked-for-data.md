@@ -8,7 +8,7 @@ item names the default this run continued with.
 **What.** `fields::Get_Input_()` returns 0 while a screen's input delay
 counts down and calls `ext::Tick` only after it (fields.cpp:161-167), so
 while a delay runs the engine tells OrionLayer nothing. The research
-panel's delay is five passes of 110 ms (tech.cpp:306, :349-351): the
+panel's delay is five passes of 110 ms (tech.cpp:286, :351-353): the
 engine has built and drawn the panel, and then says nothing for ~550 ms.
 The fix calls `ext::Tick` during the delay too — six lines, one marker,
 nothing else changes (the delay still returns 0 and still counts down).

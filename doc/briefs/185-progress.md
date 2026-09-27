@@ -1,0 +1,81 @@
+# Work order 185 — progress
+
+Unattended run, 27 September 2026. Evidence root:
+`~/orionlayer-fixtures/evidence/work_order_185/`.
+
+## Before part 1
+
+- **Baseline as expected**: main = origin/main = `af4d354`, suite 386 green
+  (184's push gate); orion2re `orionlayer-local` `4bf152e4` (fixes 34-41
+  applied), its three untracked files (`mox.set`,
+  `racesel_custom_screen_id.patch`, `src.zip`) left alone. Number 185: no
+  `185-*` brief, no "Work order 185" commit.
+- Read: `doc/v3_fundament.md`, all three `principles-` parts (06, 07, 08),
+  part 09 (live runs, the virtual display, the files a run writes) and part
+  02 (the boundary) in this session; parts 01 and 04 before the two screens.
+- **Data's session**: at the first look a `python play.py` (PID 109569), its
+  engine 109587 and OrionLayer 109601 were running — Data playing; not
+  touched. A minute later all three had ended by themselves. Before every
+  live session below the run checks for his processes and does not start
+  while he plays (the port and the game folder are shared).
+
+## Part 1 — open fix 42: are clicks lost in the gap? — **DONE: none lost, none taken twice**
+
+1. **The tool**: `tools/gap_clicks.py` (new). One trial = open the screen
+   the player's way, t0 = the moment its FIRST HD frame was presented
+   (flipped — the frame trace stamps a frame before it is drawn, and a
+   cold first frame takes ~0.3 s to draw; the first debug run showed it),
+   the player's input posted into the HD window at t0 + offset, the wire
+   read back for 2.5 s, the input log saying what HD did with it. Screens:
+   the research panel (HD click on the exit → `ACTIVATE_FIELD`; and, added
+   when the first run showed the colony screen and popup have no gap, the
+   same gap through SDL's queues — `INJECT_KEY` ESC and `INJECT_CLICK` on
+   the exit, what HD's safety net forwards), the colony screen (HD ESC →
+   `ACTIVATE_FIELD` on its ESC field; never CRUNCH, TOGGLE or field [0]),
+   the build popup (HD click on Auto Build → `INJECT_CLICK`, read off open
+   fix 39's `auto_building`: flipped once / never / and back = taken /
+   lost / TAKEN TWICE, flipped back after each trial, left with Cancel).
+   13 offsets 0-1000 ms, two repetitions.
+2. **Patched** (scratch engine `21a37ffb` from 184, its own clone and build
+   directory in the scratchpad, never `~/orion2re`; engine 112705, guard
+   `185_P1_patched`, SAVE4): **130 of 130 taken**. **Unpatched** (the
+   applied build `4bf152e4`, engine 113660, guard `185_P1_unpatched`):
+   **130 of 130 taken**. Table: `evidence/work_order_185/gap_table.md`;
+   every trial in `P1_*/gap.json`.
+3. **The gap**: only the research panel has one with the fix. Inputs sent
+   0-400 ms after its first HD frame took effect 560-610 ms after that
+   frame, whenever sent — held until the delay ended; from 500 ms on the
+   normal latency. The colony screen and the popup: the same latency at
+   every offset (their three-pass delays end before HD's first frame).
+   Unpatched: no gap anywhere. **Entry 42 updated** (section "Clicks in the
+   gap", row 42); status stays NOT APPLIED / open; **no addition needed**;
+   approval parked with the recommendation to approve (parked 1a).
+4. **Cites corrected** (found while writing this part, fixed in all seven
+   copies): the research panel's delay is `tech.cpp:286` (184 wrote
+   `:306`), its idle pass `:351-353` (184: `:349-351`); the consumption
+   block after the delay `fields.cpp:173-183` (184: `:167-183`) — in entry
+   42, the patch file's header, `184-research-timing.md`,
+   `184-parked-for-data.md`, fundament part 09 and
+   `core/researchprepare.py`'s docstring.
+5. Guards `185_P1_patched` (MOX.SET's load byte restored, then identical)
+   and `185_P1_unpatched` (MOX.SET restored; otherwise only this order's
+   own files). SAVE1-9 identical, SAVE10/11 unchanged in every run.
+
+## Part 4 — handover package for Joes — **DONE (not committed)**
+
+`~/orionlayer-fixtures/handover_joes_2026-09-27/`, English: `README.md`
+(what each fix does, why OrionLayer needs it, the patch with its sha256,
+its local status), `patches/` (fixes 31, 34-41, the files from `doc/`),
+`entries/` (entries 31, 33, 34-41 in full), `notes/33-turn-summary-colony-
+jump.md` (with a reproduction; the jump also removes one way into the
+colony view) and `notes/load-dialog-screen-data-after-esc.md`. Every cite
+in the two notes re-read on `4bf152e4` (loadsave.cpp:382-383 and :388-391,
+info.cpp:641, msg.cpp:653-672, info.cpp:2087). No tree, no bundle.
+**Measured before writing the base paragraph**: the patches do NOT apply to
+upstream `cf4d9617` on their own (fix 31's third hunk fails; the later ones
+depend on earlier local changes), and the whole local series in number
+order does not reproduce `4bf152e4` either (fix 25 fails; other local
+commits are not patch files) — the README says so, and reads the patches
+as exact descriptions of each change. Data sends it himself.
+
+## Part 5 — credits roll — credits roll: already clean

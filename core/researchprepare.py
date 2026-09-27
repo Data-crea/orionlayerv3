@@ -11,9 +11,9 @@ The first snapshot at 36 comes from `Screen_Control_`'s own `ext::Tick`
 (mox2.cpp:41), with the list `Clear_Fields_` left behind
 (mainscr_main.cpp:699) — nothing. The list itself is serialised on the
 SIXTH `Get_Input_` of `_Tech_Select_`'s loop: `Set_Input_Delay_(5)`
-(tech.cpp:306) makes the first five return before `ext::Tick`
+(tech.cpp:286) makes the first five return before `ext::Tick`
 (fields.cpp:161-167), and each idle pass waits `Release_Time_(2)`, 110 ms
-(tech.cpp:349-351; timer.cpp:15, 55 ms a tick). Measured live: every one
+(tech.cpp:351-353; timer.cpp:15, 55 ms a tick). Measured live: every one
 of 75 entries had exactly two snapshots in that phase, 505-594 ms apart.
 So the building is done HERE, in that wait, instead of after it.
 

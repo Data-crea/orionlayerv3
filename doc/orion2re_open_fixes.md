@@ -63,7 +63,7 @@ section for what was found where.
 | 39 | The build popup's queue under edit, its selection and its modes are not on the wire until OK — `COLBLDG::_current_item`, `_active_prod`, `_field_mode`, `_colony_auto_building` | **Applied** 27 September 2026 by work order 181 (orion2re `2be953d4`, `doc/ext_build_popup_queue.patch`, "BLDQ"); required; confirmed live | Nothing while applied; without it the build popup stays the game's own picture |
 | 40 | What the build popup offers, in its order, and its queue, with the costs and times it prints, is not on the wire — `_building_indexes`, `_military_indexes`, `Draw_Cost_And_Time_Info_` | **Applied** 27 September 2026 by work order 181 (orion2re `2097b0c6`, `doc/ext_build_popup_lists.patch`, "BLDL"); required; confirmed live | Nothing while applied; without it the build popup stays the game's own picture |
 | 41 | The engine's own window is shown before `ext::Init` sets `g_hide_window` (platform.cpp:1406-1408 on `2097b0c6`, mox2.cpp:382) | **Applied** 27 September 2026 by work order 183 on Data's approval (orion2re `4bf152e4` on `orionlayer-local`, `doc/ext_engine_window_hidden.patch`); written and proved by work order 182; required by `tools/version_check.py`; confirmed live on the virtual display (never mapped, pacing unchanged, HD identical); open upstream | Without it the engine's window appears on every start, and the original follows the real pointer over it |
-| 42 | A screen is silent on the wire while its input delay counts down: `Get_Input_` returns before `ext::Tick` (fields.cpp:161-167), so the research panel's list reaches a client ~550 ms after the engine has built it | **Written, NOT APPLIED** — work order 184 (`doc/ext_input_delay_tick.patch`); proved in scratch: research entries 636-686 → 77-103 ms (median), flash walk 29 transitions / 0 native frames, 182's stress 0 lost / 0 dropped, pacing and CPU unchanged | Without it every research entry waits ~550 ms for nothing (66-80 % of it), and every screen that sets an input delay (42 call sites) is heard that much later |
+| 42 | A screen is silent on the wire while its input delay counts down: `Get_Input_` returns before `ext::Tick` (fields.cpp:161-167), so the research panel's list reaches a client ~550 ms after the engine has built it | **Written, NOT APPLIED** — work order 184 (`doc/ext_input_delay_tick.patch`); proved in scratch: research entries 636-686 → 77-103 ms (median), flash walk 29 transitions / 0 native frames, 182's stress 0 lost / 0 dropped, pacing and CPU unchanged; clicks in the gap (work order 185): 260 inputs, none lost, none taken twice — an input in the research panel's gap is held and taken when the delay ends | Without it every research entry waits ~550 ms for nothing (66-80 % of it), and every screen that sets an input delay (42 call sites) is heard that much later |
 
 Items 3 and 4 are both about INJECT_CLICK and both live in the same
 code path, but they are separate faults: 3 is where the coordinates
@@ -2886,8 +2886,8 @@ fix 42.`, on one line at the one changed place).
 input delay counts down (fields.cpp:161-164) and calls `ext::Tick` only
 after it (:167). So while a delay runs, a client hears nothing — no
 state, no field list, no picture. The research panel (`_Tech_Select_`)
-sets `Set_Input_Delay_(5)` before its loop (tech.cpp:306), and every idle
-pass waits `Release_Time_(2)`, 2 x 55 ms (tech.cpp:349-351, timer.cpp:15):
+sets `Set_Input_Delay_(5)` before its loop (tech.cpp:286), and every idle
+pass waits `Release_Time_(2)`, 2 x 55 ms (tech.cpp:351-353, timer.cpp:15):
 the panel is built, drawn and faded in, and then the engine is silent for
 five passes. Measured on every one of 89 entries (work order 184 Part 1,
 `doc/briefs/184-research-timing.md`): exactly two snapshots between the
@@ -2906,7 +2906,7 @@ much later; the research panel is where it was measured.
 the delay still returns 0 and still counts down, so the original ignores
 input exactly as long as before; a field activation that arrives
 meanwhile waits in `ext::g_pending_field`, which is consumed only after
-the delay, by the unchanged block below (:167-183); an injected click or
+the delay, by the unchanged block below (:173-183); an injected click or
 key is queued through SDL as before and read when the screen next reads
 input. The existing `Tick` after the delay is untouched, so a call makes
 at most one `Tick`, as before.
@@ -3004,6 +3004,56 @@ fix 25) — a wait of at most the remaining passes.
   the fix it is 380 / 672 / 1423 ms against 637 / 679 / 1444 without —
   never slower, but at 2576 and 3840 the gain is the later entries'. The
   follow-up would be preparing the panel before the click (parked).
+
+**Clicks in the gap — are they lost? Measured by work order 185 (Part 1),
+27 September 2026: no.** With the fix the HD screen can be up while
+`Get_Input_` still returns 0 for the delay's passes; Data asked whether a
+click that lands there is lost. `tools/gap_clicks.py` opened each screen
+the player's way, took the moment its FIRST HD frame was presented, posted
+the player's input into the HD window (or, for the SDL paths, sent it as
+HD's safety net does) at 13 offsets from 0 to 1000 ms after it, twice each,
+and read the wire back for 2.5 s: taken (the effect reached the wire),
+lost (it never did) or taken twice (a toggle flipped and flipped back).
+Scratch engine with this patch (`21a37ffb`) and the applied build
+(`4bf152e4`) as the baseline, SAVE4, 1920, the virtual display; table in
+`~/orionlayer-fixtures/evidence/work_order_185/gap_table.md`, every trial
+in the `P1_*/gap.json` beside it.
+
+| screen | input path | patched: taken / lost / twice | unpatched |
+|---|---|---|---|
+| research panel (change mode) | HD click on the exit → `ACTIVATE_FIELD` | 26 / 0 / 0 | 26 / 0 / 0 |
+| — the same gap | `INJECT_KEY` ESC (the exit's hotkey) | 26 / 0 / 0 | 26 / 0 / 0 |
+| — the same gap | `INJECT_CLICK` on the exit button | 26 / 0 / 0 | 26 / 0 / 0 |
+| colony screen | HD ESC → `ACTIVATE_FIELD` on its ESC field | 26 / 0 / 0 | 26 / 0 / 0 |
+| build popup | HD click on Auto Build → `INJECT_CLICK` (flag read off open fix 39's block) | 26 / 0 / 0 | 26 / 0 / 0 |
+
+**Where the gap is, and what happens in it.** Only the research panel has
+one: its delay (five passes of 110 ms) outlasts HD's first frame. An input
+sent 0-400 ms after that frame took effect 560-610 ms after the frame —
+whenever it was sent, i.e. when the delay ran out — and inputs from 500 ms
+on took the normal 30-100 ms (activation) or 190-260 ms (the SDL key and
+click, which go through the button's own press). So an input in the gap is
+**held and taken late**, never dropped: an activation waits in
+`ext::g_pending_field`, which only the block after the delay consumes
+(fields.cpp:173-183), and an injected key or click waits in SDL's queue,
+which `Get_Input_` does not read while it returns early. The colony
+screen's and the build popup's delays (three passes each) had run out
+before their first HD frame on every trial: the same latency at every
+offset (100-150 and ~80 ms), so there is no gap on those two to hit.
+Unpatched, no screen has a gap at all: the list only arrives once the
+delay is over, and every offset took the normal latency.
+
+**What that means for the player:** a click in the first ~0.5 s of the
+research panel does what it says, up to about half a second late; nothing
+is lost, nothing is done twice. **No addition to the fix is needed.** Two
+cases the trials did not reach, named: a second input sent inside the same
+gap — two activations in the gap collapse to the last one, because
+`g_pending_field` is one slot (fundament part 09, "A sequence of
+`ACTIVATE_FIELD`s must be sent one at a time and confirmed") — which HD
+does not produce here (the research screen sends one commit per visit and
+one exit); and the Ship Designer's 20-pass delay before its weapon picker
+(design.cpp:870), where a gap would be ~20 passes long if that picker gets
+an HD screen.
 
 **What it costs us without it.** Every research entry waits ~550 ms for
 nothing, and every screen with an input delay is heard 55-1100 ms after
