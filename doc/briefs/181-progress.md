@@ -294,3 +294,54 @@ for the popup's four. No check was removed. DEVIATION `building_list`,
 `building_placement` stay.
 
 **Checks: 374 → 375** (090p #7).
+
+## Finish
+
+At `337c72d`: the full suite **375 green** (exit 0); a fresh clone (`git
+clone`, `tools/setup.py` exit 0) names "open fixes 3, 12, 14, 20, 21, 22,
+24, 25, 27, 28, 30, 31, 32, 34, 35, 36, 37, 38, 39, 40" and its own full
+suite is **375 green**; the flash check — 090o replaying 198 recorded
+transitions, 40 of them this order's — green, and live 0 native frames on
+every transition into and out of 1 and 25; liveguard against this order's
+FIRST backup (`181_p2_record`, before any live step): every game file and
+both settings homes identical, only the tree's own commits reported;
+SAVE8 `ab70cc9a…` untouched; no engine or client running. orion2re:
+`orionlayer-local` at `2097b0c6`, its three untracked files untouched,
+nothing pushed; the bundle beside 179's.
+
+## Summary
+
+| fix | block | applied | orion2re commit | OrionLayer commits | documented |
+|---|---|---|---|---|---|
+| 35 | COLS | yes | `c5d4dacd` | `4563c56` (applied), `87119b8` (entry), `337c72d` (accepted) | yes |
+| 36 | CBLD | yes | `01bafd9c` | the same three | yes (UNVERIFIED `building_placement` kept) |
+| 37 | CEVT | yes | `a10e20ba` | the same three | yes |
+| 38 | CPRD | yes | `8a6acc08` | the same three | yes |
+| 39 | BLDQ | yes (marker re-wrapped) | `2be953d4` | the same three | yes |
+| 40 | BLDL | yes | `2097b0c6` | the same three | yes |
+
+**Checks: 371 → 375** (090r ×3, 090p #7; none removed; 090c, 090f, 090p
+#3/#5, 090q #1 adjusted, each with the reason in place).
+
+**Share in HD now** (180's inventories):
+
+| screen | in HD | still missing, and why |
+|---|---|---|
+| colony (25 elements) | **21** — everything 180 built plus the status word, bar and turns (37, 38), and "No Farming" | building PLACEMENT (the grid is on the wire, what a cell means is not settled — UNVERIFIED), the planet description box (OMISSION, not built), the hover strip (the original's own pointer), the galaxy inset (unreachable in this engine) |
+| build popup (15 elements) | **13** | the description and the product picture (the player's art / HELP.LBX by tech application), a design's stat lines — OMISSIONS; ship rows never dimmed (DEVIATION) |
+
+**Parked** (`181-parked-for-data.md`): fix 35's include carries the marker
+too (a second comment-only difference from 180's proof); a popup click
+lost once at 3840 (cause not established); Plague and Pop Boom not seen
+live (SAVE4 has neither).
+
+**Live steps Data should look at himself:**
+1. **The colony screen beside the original** — open a colony from the map
+   (home star, then its planet) and from the Colonies list; compare with
+   `compare/live_*_P3_colony_from_map_side.png`.
+2. **The build popup with one real build order** — CHANGE, click a
+   building, see it in the queue before OK, OK, reopen: it is queued;
+   click it again and OK to take it back (`compare/live_*_P3_popup_*`).
+3. **Switching colonies with `<` and `>`** — the title must follow at
+   once, never showing the previous colony (`compare/live_*_P3_switch_*`).
+4. Kif II's "No Farming" row, and the popup at 3840 (the one lost click).
