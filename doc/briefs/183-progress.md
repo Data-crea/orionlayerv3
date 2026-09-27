@@ -245,3 +245,77 @@ engine produces none once the key is sent (Part 2, measured), and on this
 machine the engine's whole stream is stored muted — the capture of what it
 hands the HDMI sink is exact zeros. Data's settings unchanged after both
 runs (his stored `orion2re` row, the default sink).
+
+Part 3 = OrionLayer **`bb2d91c`**.
+
+## Finish
+
+At `bb2d91c`:
+- **the full suite**: **exit 0, 381 green** (18:53-18:59);
+- **a fresh clone** (`git clone --no-hardlinks`, `tools/setup.py`): setup
+  **exit 0**, naming "branch orionlayer-local, … open fixes 3, 12, 14, 20,
+  21, 22, 24, 25, 27, 28, 30, 31, 32, 34, 35, 36, 37, 38, 39, 40, 41"; its
+  full suite: **exit 0, 381 green**;
+- **the flash check**: 090o, replaying the recorded transitions, green in
+  both runs above; and 0 native frames in every live run of this order
+  (Part 1's flash walk with the SAVE4 load, 29 transitions; the colony
+  acceptance, 23; Part 2's and Part 3's player starts);
+- **liveguard**, final, against this order's FIRST backup
+  (`183_P1_start_a`, 17:42): every game file and both settings homes
+  identical — only "tree/git status", this order's own commits; SAVE8
+  `ab70cc9a…`, unchanged;
+- no engine, no client running; the virtual display stopped
+  (`tools/vdisplay.py stop`); the private null sink unloaded; Data's
+  stored `orion2re` row, default sink and game stream as found;
+- orion2re: `orionlayer-local` **`4bf152e4`**, its three untracked files
+  untouched, never pushed (push URL disabled); the bundle
+  `~/orion2re_bundle_27sep_4bf152e4_fixes34-41.bundle` beside the others.
+
+## Summary
+
+- **Fix 41: APPLIED.** orion2re **`4bf152e4`** on `orionlayer-local`
+  (byte for byte 182's proof, `index` lines included); OrionLayer
+  **`89ce660`** (Part 1), named in the entry by `6260aae`. **Documented:
+  yes** — entry 41 APPLIED with date, both hashes, file / function /
+  lines, the full diff (held to the patch file, which is held to the
+  commit, by 090r #4), the live table, the revert, the side effects (a
+  hidden window presents without VSync; pacing measured unchanged, 6.06/s
+  and 164.3 ms, also without `ORION2RE_NO_VSYNC`); `version_check`
+  requires it and names it when missing; README, `setup.py` and
+  fundament 09 name 34-41; the bundle verified. Live on Xvfb: never mapped
+  in six starts, the flash walk and the colony acceptance as in 182. On
+  Data's desktop: never mapped (control shown), through the start, the
+  skip and two screen changes.
+- **The player's start: `python play.py`** (new) — README's quick start
+  was the engine by hand plus `main.py`, with no skip; Data's desktop
+  launchers point at a folder that no longer exists (parked). `play.py`
+  starts the engine through the tools' own `engine_start.start`, so the
+  intro skip is the tools' by construction (one space to the engine's own
+  window; the intro never plays); then `main.py`, landing in the HD main
+  menu with no key; closing OrionLayer stops the engine it started.
+  Proved on the virtual display and on Data's desktop.
+- **Audio, measured** with the real driver into a private null sink,
+  without Data hearing it: with the skip, **no intro audio at all** before
+  READY — digital silence until the main menu's music, which starts after
+  READY; without it, 108 s of intro from 5.0 s (peak −7.8, RMS −16.1
+  dBFS). **Nothing built for audio** (the order's rule 4), no new open
+  fix. Found: Data's WirePlumber state stores `orion2re` muted at 0 %,
+  so on this machine the engine is silent whatever it plays — left alone,
+  parked. On his real output path the engine's own stream was captured:
+  zeros.
+- **Checks: 379 → 381** (090r #4: fix 41 applied and documented; 090v: the
+  player's start). None removed.
+
+**Parked** (`183-parked-for-data.md`): 1 the proposed decision text; 2 no
+new open fix (one considered and not written); 3 the stored mute on
+`orion2re`, the dead desktop launchers, the by-hand start playing the
+intro, `xdotool` as a dependency, the native crashes; and the live steps
+for Data.
+
+**Live steps Data should look at himself:**
+1. `cd ~/orionlayerv3 && python play.py` on his desktop: no engine window,
+   straight into the HD main menu, no intro sound; after closing
+   OrionLayer no `orion2re` left.
+2. If he unmutes `orion2re`: the same start — the main menu's music at
+   once, nothing before it.
+3. His desktop launcher, if he changes its Exec line (parked 3.2).
