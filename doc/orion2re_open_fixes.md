@@ -60,6 +60,8 @@ section for what was found where.
 | 36 | Where the colony screen puts its buildings is not on the wire — `COLONY::_colony_bldgs`, `_colony_satellites`, placed with `game_random` | **Written, NOT APPLIED** — work order 180 B3 (`doc/ext_colony_building_placement.patch`, "CBLD") | Without it the HD colony screen lists the buildings; with it the grid is read but not yet placed (UNVERIFIED `building_placement`) |
 | 37 | The colony screen's Plague / Pop Boom word is not on the wire — `EVENTS::_event_data` | **Written, NOT APPLIED** — work order 180 B3 (`doc/ext_colony_status_word.patch`, "CEVT") | Without it HD draws Blockaded and nothing for Plague or Pop Boom (HD STATE) |
 | 38 | What the colony's current product costs, and how long it takes, is not on the wire — `Colony_Producing_Product_Cost_`, `Calculate_Current_Production_Turn_Count_` | **Written, NOT APPLIED** — work order 180 B3 (`doc/ext_colony_product_cost.patch`, "CPRD") | Without it HD names the product and draws no bar and no turn count (HD STATE) |
+| 39 | The build popup's queue under edit, its selection and its modes are not on the wire until OK — `COLBLDG::_current_item`, `_active_prod`, `_field_mode`, `_colony_auto_building` | **Written, NOT APPLIED** — work order 180 C3 (`doc/ext_build_popup_queue.patch`, "BLDQ") | Without it the build popup stays the game's own picture |
+| 40 | What the build popup offers, in its order, and its queue, with the costs and times it prints, is not on the wire — `_building_indexes`, `_military_indexes`, `Draw_Cost_And_Time_Info_` | **Written, NOT APPLIED** — work order 180 C3 (`doc/ext_build_popup_lists.patch`, "BLDL") | Without it the build popup stays the game's own picture |
 
 Items 3 and 4 are both about INJECT_CLICK and both live in the same
 code path, but they are separate faults: 3 is where the coordinates
@@ -2369,3 +2371,78 @@ not a colony).
 and no turn count (HD STATE `production_bar`, `turns`).
 
 **How to apply.** From `~/orion2re` on `orionlayer-local`, after the fixes before it in the series: `patch -p1 < ~/orionlayerv3/doc/ext_colony_product_cost.patch`, then `ninja -C out/build/Linux/linux-debug`, and move the patch from `REPORTED_PATCHES` to `LOCAL_PATCHES` in `tools/version_check.py`. It comes back off with `patch -R -p1` and a rebuild.
+
+## 39. The build popup's queue under edit
+
+**Status: NOT APPLIED — parked for Data.** Written by work order 180, 27 September 2026, and PARKED for Data
+(`doc/briefs/180-parked-for-data.md`) — no engine patch was applied in
+that order. One of a SERIES, 35 to 40, applied in that order on top of
+`orionlayer-local` `9ab84230` (each appends its block after the previous
+one). **Proof:** in a scratch clone, never on `orionlayer-local`, the patch
+file applied with `patch -p1 --dry-run` and then `patch -p1` on the steps
+before it, with no offset and no fuzz, and the series reproduced the
+scratch commits byte for byte; the patched `src/ext/ext_api.cpp` compiled
+with the engine's own flags from `build.ninja` (the defines, every include
+directory, the `cmake_pch.hxx` include, `-fsyntax-only`); and a control —
+the same file with `_colony_auto_building` misspelt `_colony_autobuilding` — was refused by the compiler. A full scratch
+build of the series recorded the wire format that OrionLayer's fixtures
+(`tools/fixtures/colony_blocks_180.json`) are cut from.
+`tools/version_check.py` lists it under REPORTED_PATCHES (marker
+`COLBLDG::_colony_auto_building`).
+
+**What is missing.** COLBLDG edits a copy of the queue, `_current_item[7]`,
+and writes it into `producing[]` only on OK or `<` / `>`
+(`Do_Exit_Screen_Cleanup_`, colbldg.cpp:2003-2016), so the wire shows the
+queue from before the popup; the selection box (`_active_prod`), the mode
+a click is read in (`_field_mode`: 1 pick a design, 2 repeat) and the Auto
+Build radio's value are nowhere.
+
+**What the patch sends.** "BLDQ", while screen 25 is up: 7 int16
+`_current_item`, 4 int16 `_active_prod`, uint8 `_field_mode`, int16
+`_colony_auto_building`.
+
+**What it costs us without it.** The build popup stays the game's own
+picture: a queue HD cannot see is a queue HD cannot edit.
+
+**How to apply.** From `~/orion2re` on `orionlayer-local`, after the fixes before it in the series: `patch -p1 < ~/orionlayerv3/doc/ext_build_popup_queue.patch`, then `ninja -C out/build/Linux/linux-debug`, and move the patch from `REPORTED_PATCHES` to `LOCAL_PATCHES` in `tools/version_check.py`. It comes back off with `patch -R -p1` and a rebuild.
+
+## 40. What the build popup offers, and its queue, with their numbers
+
+**Status: NOT APPLIED — parked for Data.** Written by work order 180, 27 September 2026, and PARKED for Data
+(`doc/briefs/180-parked-for-data.md`) — no engine patch was applied in
+that order. One of a SERIES, 35 to 40, applied in that order on top of
+`orionlayer-local` `9ab84230` (each appends its block after the previous
+one). **Proof:** in a scratch clone, never on `orionlayer-local`, the patch
+file applied with `patch -p1 --dry-run` and then `patch -p1` on the steps
+before it, with no offset and no fuzz, and the series reproduced the
+scratch commits byte for byte; the patched `src/ext/ext_api.cpp` compiled
+with the engine's own flags from `build.ninja` (the defines, every include
+directory, the `cmake_pch.hxx` include, `-fsyntax-only`); and a control —
+the same file with `COLONY_PRODUCTION_SEPARATOR` misspelt `COLONY_PRODUCTION_SEPERATOR`, and after the queue was added `COLONY_PRODUCTION_NONE` misspelt `…_NONNE` — was refused by the compiler. A full scratch
+build of the series recorded the wire format that OrionLayer's fixtures
+(`tools/fixtures/colony_blocks_180.json`) are cut from.
+`tools/version_check.py` lists it under REPORTED_PATCHES (marker
+`OrionLayer, open fix 40.`).
+
+**What is missing.** `Calculate_Building_Array_` (Trade Goods and
+Housing, then every building `Colony_Can_Build_Product_` allows, sorted by
+the language's names, colbldg.cpp:161-178) and `Calculate_Military_Array_`
+(:180-264, with separator rows). A client copy would be a second copy of a
+long rule and of a sort by translated names; the field list's row counts
+check the size, never the order.
+
+**What the patch sends.** "BLDL", while screen 25 is up: the building list
+and the other list, each an int16 count and per entry int16 id, cost,
+maintenance (-1 for a non-building) and build time — the numbers
+`Draw_Cost_And_Time_Info_` prints (:1115-1174), -1s for a separator —
+then the same four for each of the seven queue items, because the summary
+shows the queue's first item when nothing is hovered and a queued item
+need not be in either list (a second Colony Base is not offered once the
+queue holds as many as there are free worlds). Checked live against the
+native popup: Colony Base 200 / 0 / 10, Colony Ship 500 / 7 — the popup's
+own print.
+
+**What it costs us without it.** The build popup stays the game's own
+picture: a list HD cannot name is a list HD cannot offer.
+
+**How to apply.** From `~/orion2re` on `orionlayer-local`, after the fixes before it in the series: `patch -p1 < ~/orionlayerv3/doc/ext_build_popup_lists.patch`, then `ninja -C out/build/Linux/linux-debug`, and move the patch from `REPORTED_PATCHES` to `LOCAL_PATCHES` in `tools/version_check.py`. It comes back off with `patch -R -p1` and a rebuild.

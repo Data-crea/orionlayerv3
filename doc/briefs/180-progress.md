@@ -229,3 +229,12 @@ exactly.
   popup's own print in the same frame (`B_live_1920x1080/007_*`).
 - Check 090q (four).
 
+## C3. Missing data — **WRITTEN AND PARKED**
+
+Open fixes **39** (the queue under edit, "BLDQ") and **40** (the lists and
+the queue with their numbers, "BLDL" — amended during C2 to carry the
+queue's numbers, and re-proved: compile, control `COLONY_PRODUCTION_NONNE`
+refused, the whole series re-applied byte for byte), entries and patch
+files as B3's. Without them the popup stays on the net.
+
+**Checks: 361 → 371** (090p six, 090q four).

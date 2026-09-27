@@ -6,11 +6,11 @@ everything else. Every item names the default this run continued with.
 
 ## 1. Engine patches to approve
 
-A series, open fixes 35-38 (39 and 40, for the build popup, follow in part C3), each one file (`src/ext/ext_api.cpp`), each
+A series, open fixes 35-40, each one file (`src/ext/ext_api.cpp`), each
 an optional block appended to the snapshot only while its screen is up,
 each proved to apply (in order, on `9ab84230`, no offset, no fuzz) and to
 compile with the engine's own flags with a misspelt-constant control
-refused. Entries: `doc/orion2re_open_fixes.md` 35-38. **Default this run
+refused. Entries: `doc/orion2re_open_fixes.md` 35-40. **Default this run
 continued with: none applied**; the HD screens that use them are built,
 checked against recordings from a scratch build, and claim nothing on
 Data's engine.
@@ -20,16 +20,25 @@ Data's engine.
    IMPORTANT ITEM OF THIS ORDER.** The colony (`_screen_data`,
    `_orbit_temp`, `_colony_handle`) is not on the wire, the game enters
    screen 1 from eight places, several of its own, and HD must not guess
-   it. **Unlocks:** the whole HD colony screen (`screens/colony/`). Without it both stay the game's own
+   it. **Unlocks:** the whole HD colony screen (`screens/colony/`) — and,
+   with 39 and 40, the build popup. Without it both stay the game's own
    picture (the safety net, no flash).
-2. **Open fix 38 — the current product's cost and turns ("CPRD",
+2. **Open fix 39 — the build popup's queue under edit ("BLDQ",
+   `doc/ext_build_popup_queue.patch`).** `_current_item` only reaches
+   `producing[]` on OK. **Unlocks** (with 35 and 40): the HD build popup's
+   queue, selection box and Auto Build state.
+3. **Open fix 40 — the build popup's two lists and its queue, with their
+   costs and times ("BLDL", `doc/ext_build_popup_lists.patch`).**
+   **Unlocks** (with 35 and 39): the HD build popup's lists in the game's
+   own order and the summary's numbers.
+4. **Open fix 38 — the current product's cost and turns ("CPRD",
    `doc/ext_colony_product_cost.patch`).** **Unlocks:** the colony
    screen's production bar and turn count, the popup's "Turn(s) Left".
    Without it: the product is named, the bar and turns are HD STATE.
-3. **Open fix 37 — Plague and Pop Boom ("CEVT",
+5. **Open fix 37 — Plague and Pop Boom ("CEVT",
    `doc/ext_colony_status_word.patch`).** **Unlocks:** the status word's
    two event states. Without it: Blockaded only, the rest HD STATE.
-4. **Open fix 36 — where the buildings stand ("CBLD",
+6. **Open fix 36 — where the buildings stand ("CBLD",
    `doc/ext_colony_building_placement.patch`).** **Unlocks:** nothing yet
    — its cells are verified against the live fields, but the grid holds
    housing and jittered satellites too and named Star Base twice where the
@@ -84,6 +93,10 @@ files it with a number.
   (reading §2a, "NOT SETTLED live" there — not driven live here either,
   on purpose: `[5]` is `Do_Cheats_` with `_cheats`). **Default:** the
   field.
+- **The build popup's ship rows are never dimmed** (DEVIATION
+  `ship_row_dim`): the original's rule calls `Colony_Can_Build_Product_`
+  and compares design sizes with the colony's bases. **Default:** all
+  bright. Corsair and Paladin are dim in the native popup of Sol II.
 - **Omitted on both screens, each marked:** the product picture, the
   officer portrait, the unit sprites, the roads, the popup's description
   (HELP.LBX by tech application) and a design's stat lines, the original's

@@ -210,6 +210,12 @@ REPORTED_PATCHES = {
     "doc/ext_colony_product_cost.patch": (
         "src/ext/ext_api.cpp", "OrionLayer, open fix 38.",
         "the production bar and the turn count"),
+    "doc/ext_build_popup_queue.patch": (
+        "src/ext/ext_api.cpp", "COLBLDG::_colony_auto_building",
+        "the build popup's queue under edit"),
+    "doc/ext_build_popup_lists.patch": (
+        "src/ext/ext_api.cpp", "OrionLayer, open fix 40.",
+        "the build popup's two lists and their numbers"),
 }
 
 

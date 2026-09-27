@@ -1,0 +1,126 @@
+Extension API: what the build popup offers, in its order, and its queue, with their numbers ("BLDL").
+
+STATUS: NOT APPLIED — written by work order 180 (C3), parked for Data
+(doc/briefs/180-parked-for-data.md, item 1.6).
+
+PROOF (work order 180, 27 September 2026): this file is one step of a
+series of six (open fixes 35-40, applied in that order on top of
+orionlayer-local 9ab84230 — each appends its block after the previous
+one). In a scratch clone of the engine, never on orionlayer-local:
+`patch -p1 --dry-run` then `patch -p1` applied it cleanly on the steps
+before it, and the patched src/ext/ext_api.cpp compiled with the engine's
+own flags from out/build/Linux/linux-debug/build.ninja (the ORION2RE_EXT
+and debug defines, every include directory, the cmake_pch.hxx include,
+-fsyntax-only) — with a control: the same file with `COLONY_PRODUCTION_SEPARATOR` misspelt `COLONY_PRODUCTION_SEPERATOR` was
+refused. A full build of the whole series ran in scratch, only to record
+the wire format for OrionLayer's fixtures.
+
+To apply, from ~/orion2re on the orionlayer-local branch, after ext_build_popup_queue.patch (39):
+
+    patch -p1 < ~/orionlayerv3/doc/ext_build_popup_lists.patch
+
+then rebuild. It comes back off with `patch -R -p1` and a rebuild.
+
+WHAT IT IS FOR
+
+    COLBLDG::Calculate_Building_Array_ keeps Trade Goods and Housing
+    first, then every building COLCALC::Colony_Can_Build_Product_ allows,
+    qsorted by the language's building names (colbldg.cpp:161-178); the
+    ship and other list is Calculate_Military_Array_ (:180-264), with
+    COLONY_PRODUCTION_SEPARATOR rows between its groups. A client copy
+    would be a second copy of a long rule (tech applications, traits,
+    other colonies' queues) and of a sort by translated names; the field
+    list's row counts could check the SIZE, never the order. So the two
+    arrays are sent as they are, and per entry the three numbers
+    Draw_Cost_And_Time_Info_ prints for it (:1115-1174), so a client
+    can show any row's cost without a copy of Colony_Product_Cost_.
+
+WIRE, after BLDQ, only while screen 25 is up:
+
+    "BLDL"  int16 n, n x (int16 id, int16 cost, int16 maintenance or -1,
+            int16 build time) for the buildings; the same for the ships
+            and others; separators carry -1, -1, -1; then the same four
+            for each of the seven queue items (_current_item), NONE with
+            -1s — the summary shows the queue's first item when nothing
+            is hovered, and a queued item need not be in either list
+
+WHAT IT COSTS US WITHOUT IT: the build popup stays the game's own picture
+(the safety net); a list HD cannot name is a list HD cannot offer.
+
+diff --git a/src/ext/ext_api.cpp b/src/ext/ext_api.cpp
+index 6282f17a..b4fd42ce 100644
+--- a/src/ext/ext_api.cpp
++++ b/src/ext/ext_api.cpp
+@@ -563,6 +563,72 @@ static void SerializeState(std::vector<uint8_t>& buf,
+         Write8(buf, COLBLDG::_field_mode);
+         Write16(buf, COLBLDG::_colony_auto_building);
+     }
++
++    // 11. What the build popup offers, in its own order, with the numbers
++    //     it prints for each: "BLDL", written ONLY while
++    //     SCREEN_QUEUE_POPUP is up, and LAST. OrionLayer, open fix 40.
++    //
++    //     Calculate_Building_Array_ keeps Trade Goods and Housing first,
++    //     then every building Colony_Can_Build_Product_ allows, sorted by
++    //     the language's building names (colbldg.cpp:161-178); the ship and
++    //     other list is Calculate_Military_Array_ (:180-264), with
++    //     COLONY_PRODUCTION_SEPARATOR rows between its groups. A client copy
++    //     would be a second copy of a long rule and of a sort by name. Per
++    //     entry the id, then the three numbers Draw_Cost_And_Time_Info_
++    //     prints (:1115-1174): the cost (as the screen casts it), the
++    //     maintenance for a building (-1 otherwise) and the build time;
++    //     -1, -1, -1 for a separator.
++    if (current_screen == SCREEN_QUEUE_POPUP) {
++        buf.push_back((uint8_t)'B');
++        buf.push_back((uint8_t)'L');
++        buf.push_back((uint8_t)'D');
++        buf.push_back((uint8_t)'L');
++        const int16_t h = COLONY::_colony_handle;
++        const bool ok = h >= 0 && h < MOX::_NUM_COLONIES;
++        auto entry = [&](int16_t id) {
++            Write16(buf, id);
++            if (!ok || id == COLONY_PRODUCTION_SEPARATOR) {
++                Write16(buf, (int16_t)-1);
++                Write16(buf, (int16_t)-1);
++                Write16(buf, (int16_t)-1);
++                return;
++            }
++            Write16(buf, (int16_t)COLCALC::Colony_Product_Cost_(&MOX::_colony[h], id));
++            Write16(buf, COLBLDG::Colony_Production_Is_Building_(id)
++                         ? (int16_t)TECHDATA::_buildings[id].maintenance
++                         : (int16_t)-1);
++            Write16(buf, COLONY::Calculate_Colony_Turn_Count_From_Scrap_For_Prod_(h, id));
++        };
++        int16_t nb = COLBLDG::_n_building_indexes;
++        if (nb < 0) nb = 0;
++        if (nb > 54) nb = 54;
++        Write16(buf, nb);
++        for (int16_t i = 0; i < nb; i++) {
++            entry(COLBLDG::_building_indexes[i]);
++        }
++        int16_t nm = COLBLDG::_n_military_indexes;
++        if (nm < 0) nm = 0;
++        if (nm > 54) nm = 54;
++        Write16(buf, nm);
++        for (int16_t i = 0; i < nm; i++) {
++            entry(COLBLDG::_military_indexes[i]);
++        }
++        // The seven queue items too: the summary shows the queue's first
++        // item when nothing is hovered (colbldg.cpp:825), and a queued item
++        // need not be in either list (a second Colony Base is not offered
++        // once the queue holds as many as there are free worlds, :185).
++        for (int i = 0; i < 7; i++) {
++            const int16_t id = COLBLDG::_current_item[i];
++            if (id == COLONY_PRODUCTION_NONE) {
++                Write16(buf, id);
++                Write16(buf, (int16_t)-1);
++                Write16(buf, (int16_t)-1);
++                Write16(buf, (int16_t)-1);
++            } else {
++                entry(id);
++            }
++        }
++    }
+ }
+ 
+ // ── Field list ───────────────────────────────────────────
