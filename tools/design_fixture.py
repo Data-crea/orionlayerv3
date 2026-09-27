@@ -6,11 +6,11 @@
 
 Work order 185 part 7, the colony fixture's pattern (work order 180,
 `tools/fixtures/colony_blocks_180.json`): per stop the trailing blocks of
-open fixes 44 and 45 exactly as a scratch engine carrying the patches wrote
-them, cut at the DSGN tag, hex — and the stop's field list — so the smoke
+open fixes 44 and 45 as a scratch engine carrying the patches wrote them,
+cut at the DSGN tag, the texts the game wrote replaced by stand-ins
+(`neutral`), every number as it came, hex — and the stop's field list — so the smoke
 suite and `tools/hud_evidence.stage` can put the designer and its pickers
-on screen with no engine. Only ids, numbers and the engine-formatted
-strings; the design's name is the one the game gave it.
+on screen with no engine.
 
 The recording is the scratch recorder's (one folder per stop holding the
 snapshot `state.bin` and the list `fields.bin`, and `record.json` naming
@@ -29,6 +29,29 @@ OUT = os.path.join(ROOT, "tools", "fixtures", "design_blocks_185.json")
 STOPS = ("designer", "computer", "weapon", "special")
 
 
+def neutral(tail, design):
+    """The blocks with the texts the game wrote replaced by stand-ins —
+    the design's name (the game's own name list) and the modification
+    words (HESTRNGS) are not ours to commit (the derived stand-ins' rule,
+    `tools/make_derived_fixtures.py`). The damage strings are the engine's
+    numbers and stay. The name is a fixed 16 bytes; a modification text
+    is length-prefixed, and the block is read by its own length bytes."""
+    name = design["name"].encode("latin-1")
+    old = name.ljust(16, b"\0")
+    assert old in tail, design["name"]
+    tail = tail.replace(old, b"Design 1".ljust(16, b"\0"), 1)
+    for k, w in enumerate(design["weapons"]):
+        words = w["mods_text"].encode("latin-1")
+        if not words:
+            continue
+        stand_in = f"Mods {k}".encode("latin-1")
+        old = bytes([len(words)]) + words
+        at = tail.index(old)
+        tail = tail[:at] + bytes([len(stand_in)]) + stand_in + \
+            tail[at + len(old):]
+    return tail
+
+
 def cut(folder):
     stops = []
     for name in STOPS:
@@ -43,14 +66,15 @@ def cut(folder):
         at = state.index(b"DSGN")
         stops.append({
             "name": name, "screen": gs.current_screen,
-            "tail": state[at:].hex(),
+            "tail": neutral(state[at:], gs.ship_design).hex(),
             "fields": [[f.index, f.field_type, f.x, f.y, f.x_end, f.y_end,
                         f.hotkey] for f in fields]})
     return {"_note": (
         "Work order 185 part 7: the trailing blocks of open fixes 44 and 45 "
-        "(DSGN, DSBX) exactly as a scratch engine carrying the patches wrote "
-        "them (SAVE4; never applied to orionlayer-local), cut at the DSGN "
-        "tag, hex, and each stop's field list [index, type, x1, y1, x2, y2, "
+        "(DSGN, DSBX) as a scratch engine carrying the patches wrote them "
+        "(SAVE4; never applied to orionlayer-local), cut at the DSGN tag, "
+        "the design's name and the modification words replaced by "
+        "stand-ins (Design 1, Mods k), hex, and each stop's field list [index, type, x1, y1, x2, y2, "
         "hotkey]. Built by tools/design_fixture.py from the recording in "
         "evidence/work_order_185; read by tools/hud_evidence.stage and the "
         "ship_design smoke group."), "stops": stops}

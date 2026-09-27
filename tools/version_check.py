@@ -235,7 +235,7 @@ LOCAL_PATCHES = {
 #: since work order 181 moved up open fixes 35-40, which work order 180
 #: had parked here — until 182 parked open fix 41 here, and again since
 #: work order 183 moved 41 up — until work order 184 parked open fix 42,
-#: and work order 185 open fixes 43-45.
+#: and work order 185 open fixes 43-47.
 REPORTED_PATCHES = {
     # Work order 184: written, proved in scratch, parked — not applied.
     "doc/ext_input_delay_tick.patch": (
@@ -257,6 +257,15 @@ REPORTED_PATCHES = {
         os.path.join("src", "game", "desbox.cpp"), "OrionLayer, open fix 45.",
         "the Ship Designer's three pickers: ids 54-56 and their lists (DSBX); "
         "on top of fix 44"),
+    "doc/ext_audience_screen.patch": (
+        os.path.join("src", "game", "dip_scrn_main.cpp"),
+        "OrionLayer, open fix 46.",
+        "the diplomacy audience's own ids, 57 the player's and 58 the AI's"),
+    "doc/ext_audience_state.patch": (
+        os.path.join("src", "ext", "ext_api.cpp"), "OrionLayer, open fix 47.",
+        "the diplomacy audience's state on the wire (DIPL): who, the "
+        "statement, the reply text, the menu and its enabled items; on top "
+        "of fix 46"),
 }
 
 
@@ -293,6 +302,8 @@ FIX_NUMBERS = {
     "doc/ext_engine_window_on_request.patch": (43,),
     "doc/ext_ship_designer_state.patch": (44,),
     "doc/ext_ship_designer_boxes.patch": (45,),
+    "doc/ext_audience_screen.patch": (46,),
+    "doc/ext_audience_state.patch": (47,),
 }
 
 

@@ -239,8 +239,13 @@ popup (game_menu_reading §4-5); here it is the same builder.
 
 ## 3. Displayed values and the wire
 
-The STATE snapshot carries `MOX::_player[8]` whole (ext_api.cpp:119-121). Spec status is from
-`core/structs/player.py` (decision 23):
+The STATE snapshot carries `MOX::_player[8]` whole (ext_api.cpp:121-124 on `4bf152e4`; this
+said :119-121). Spec status is from `core/structs/player.py` (decision 23) as of this reading —
+**since work order 175 C `relations`, `treaty`, `trade_treaty`, `research_treaty` and
+`tribute_treaty` are in the spec (player.py), and `objectives` @40 is declared too**; the rows
+below saying "not in spec" for those are this reading's state, corrected by work order 185 part 9
+(`doc/audience_reading.md` §8.1). The audience's own state (statement, disabled items) is open
+fixes 46 and 47:
 - "header" = member line in `orion2.h`. No offset was computed in this reading, since a compile was
   not allowed.
 - `unverified.py` has none of these fields.

@@ -123,8 +123,11 @@ list is filtered to `owner == MOX::_PLAYER_NUM`
 are not the sorted ones.
 
 `OPEN`, and small: this holds while the local player's `objectives`
-IS `PLAYER_OBJECTIVE_HUMAN`. Nothing on the wire reports `objectives`,
-so a client cannot check it. Nothing in this project produces a state
+IS `PLAYER_OBJECTIVE_HUMAN`. (Corrected by work order 185 part 9: this
+said "nothing on the wire reports `objectives`" — it is byte 40 of every
+player record, on the wire, decoded as `objectives` in
+`core/structs/player.py`; `doc/audience_reading.md` §8.1.) A client can
+check it; OrionLayer does not yet. Nothing in this project produces a state
 where it would differ, and no reading of ours makes it impossible.
 
 ### 1.6 The answer

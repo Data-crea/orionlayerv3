@@ -67,6 +67,8 @@ section for what was found where.
 | 43 | Open fix 41 hides the engine's window always: started on its own the engine is invisible for good, and nothing can show its window again | **Written, NOT APPLIED** — work order 185 (`doc/ext_engine_window_on_request.patch`), AMENDS fix 41; proved in scratch: without `ORION2RE_HIDE_WINDOW` the window shows as before 41, with it it never shows, `MSG_SHOW_WINDOW` shows and hides it, pacing unchanged, the applied build ignores the message | Without it an engine started without OrionLayer cannot be seen, and F12 can show only the engine's picture inside OrionLayer's window, never the engine's own window |
 | 44 | The Ship Designer's design as it is being edited is not on the wire — `MOX::_design`, the slot, the refit flag, the printed numbers | **Written, NOT APPLIED** — work order 185 (`doc/ext_ship_designer_state.patch`, "DSGN"); proved in scratch and recorded live: every value the native page prints | Without it the Ship Designer stays the game's own picture (the safety net): HD cannot show an edit it does not receive |
 | 45 | The Ship Designer's three sub-dialogs report SCREEN_DESIGN and their lists and selection are not on the wire | **Written, NOT APPLIED** — work order 185 (`doc/ext_ship_designer_boxes.patch`, ids 54-56 and "DSBX", on top of 44); proved in scratch and recorded live: the weapon picker's rows number for number | Without it the pickers stay the game's own picture even with fix 44: HD cannot tell which is open nor what it offers |
+| 46 | The diplomacy audience has no screen id: it runs under its caller's (6, 0 or 12) | **Written, NOT APPLIED** — work order 185 (`doc/ext_audience_screen.patch`, ids 57 player / 58 AI); proved in scratch and recorded live: the Races screen's audience reports 57, back to 6 after Good Bye | Without it no HD audience can exist: a client cannot tell it is up, nor whose |
+| 47 | The diplomacy audience's state — who, the statement, the reply text, the menu and its enabled items — is not on the wire | **Written, NOT APPLIED** — work order 185 (`doc/ext_audience_state.patch`, "DIPL", on top of 46); proved in scratch and recorded live: the refusal, the greeting and the menu with its flags | Without it the audience stays the game's own picture even with fix 46 |
 
 Items 3 and 4 are both about INJECT_CLICK and both live in the same
 code path, but they are separate faults: 3 is where the coordinates
@@ -3760,3 +3762,323 @@ designer does.
 **How to apply.** After fix 44: `patch -p1 <
 ~/orionlayerv3/doc/ext_ship_designer_boxes.patch`, rebuild, move the patch
 to `LOCAL_PATCHES`. It comes back off with `patch -R -p1` (before 44's).
+
+## 46. The diplomacy audience has no screen id
+
+**Status: NOT APPLIED — written, proved and parked for Data by work order
+185 (Part 9), 28 September 2026** (`doc/briefs/185-parked-for-data.md`,
+item 1d). Patch: `doc/ext_audience_screen.patch`; listed by
+`tools/version_check.py` under REPORTED_PATCHES (marker `OrionLayer, open
+fix 46.`, on one line at every changed place). The reading:
+`doc/audience_reading.md`.
+
+**What is missing.** The audience is not a screen but a nested call —
+`DIP_SCRN::Diplomacy_Screen_` (dip_scrn_main.cpp:1257, the player's, from
+the Races screen, racescrn.cpp:913) and `Npc_Diplomacy_Screen_` (:1351, the
+AI's: at turn start through `Has_Diplomacy_Messages_`, report.cpp:648/653,
+under the id 0 `Reports_Screen_` sets, mainscr2.cpp:119; on a sneak attack
+through `Show_Sneak_Attack_Message_`, combfind.cpp:1636, under 12). Neither
+writes `_current_screen`, so the wire reports the caller's id throughout
+(ext_api.cpp:100) and no screen change fires: a client cannot tell the
+audience is up, and cannot tell it from the Races screen's other dialogs
+or from a turn-start report.
+
+**What the patch changes.**
+- `src/game/dip_scrn_main.cpp` — the player's audience reports a synthetic
+  **57**, the AI's **58**, through `ext::ScreenOverride` (open fix 24's
+  pattern: what is SENT, nothing the game reads; the AI's after its
+  "eliminated" return, so an audience that never opens reports nothing);
+  the include under `#ifdef ORION2RE_EXT`.
+- `src/ext/ext_api.h` — the two ids documented beside the override.
+
+**The exact change.** The diff, as written by the scratch commit
+(`453c4c05`, on `4bf152e4`; the `diff --git` and `index` lines and the
+text git adds after `@@` are not part of it):
+
+```diff
+--- a/src/ext/ext_api.h
++++ b/src/ext/ext_api.h
+@@ -44,6 +44,12 @@
+     ~ScreenOverride();
+ };
+ 
++/// OrionLayer, open fix 46. The diplomacy audience has no screen id and runs under its
++/// caller's (6 the Races screen, 0 a turn-start report, 12 a sneak attack
++/// in turn processing): it reports 57 when the player opened it
++/// (DIP_SCRN::Diplomacy_Screen_) and 58 when an AI asked for it
++/// (DIP_SCRN::Npc_Diplomacy_Screen_), so a client can tell it is up.
++
+ /// The field id of the input Get_Input_() is returning THIS CALL when it
+ /// came from a client's ACTIVATE_FIELD, and 0 when it came from the mouse.
+ ///
+--- a/src/game/dip_scrn_main.cpp
++++ b/src/game/dip_scrn_main.cpp
+@@ -1,4 +1,7 @@
+ #include "pch.h"
++#ifdef ORION2RE_EXT
++#include "ext/ext_api.h"  // OrionLayer, open fix 46. ScreenOverride for the two audiences.
++#endif
+ 
+ namespace DIP_SCRN {
+     /**
+@@ -1255,6 +1258,10 @@
+     }
+ 
+     void __cdecl Diplomacy_Screen_(int player_idx) {
++#ifdef ORION2RE_EXT
++        // OrionLayer, open fix 46. The player's audience reports a synthetic 57 (ext_api.h); the game still reads its caller's screen.
++        const ext::ScreenOverride ext_screen_guard(57);
++#endif
+         _diplomacy_current_music = -1;
+         _synch_up_established_flag = 0;
+ 
+@@ -1352,6 +1359,10 @@
+         if (MOX::_player[player_idx].eliminated == 1) {
+             return;
+         }
++#ifdef ORION2RE_EXT
++        // OrionLayer, open fix 46. An audience the AI asked for (turn start, report.cpp; a sneak attack, combfind.cpp) reports a synthetic 58 (ext_api.h).
++        const ext::ScreenOverride ext_screen_guard(58);
++#endif
+ 
+         fields::Deactivate_Help_List_();
+         fields::Enable_Draw_All_Fields_();
+```
+
+**Proof.** In a scratch worktree of `orionlayer-local` `4bf152e4` with its
+own build directory (never on `orionlayer-local`, never the build `play.py`
+starts): the patch file applies with `patch -p1 --dry-run` and `patch -p1`,
+no offset, no fuzz, to a clean worktree at `4bf152e4`; the applied files
+equal the scratch commit's byte for byte (`453c4c05`); the whole engine
+built (Debug, `ORION2RE_EXT=ON`) without an error; `dip_scrn_main.cpp`
+compiles alone with the build's own command (exit 0); the control —
+`ScreenOveride` for `ScreenOverride` — was refused ("»ScreenOveride« in
+Namensraum »ext« bezeichnet keinen Typ"). With 44, 45 and 47 all four apply
+together on `4bf152e4` (offsets only, no fuzz, no reject).
+
+**Recorded live** (with fix 47 on top, the virtual display, SAVE4, nothing
+agreed): the Races screen's AUDIENCE on race slot 0 → **57** at once, the
+ambassador's refusal; on slot 1 → **57**, the greeting, the menu, Good Bye
+→ back to **6**. The AI's **58** needs a turn start with a diplomacy
+message, which the scratch save does not reach without ending a turn — not
+recorded (parked, item 3).
+
+**Side effects — observed and ruled out, and the risks named.** The ids
+change what a client is told and nothing the game reads; the guard restores
+the previous override on every return. The audience's system picker writes
+`_current_screen = 6` (dip_scrn.cpp:717, :2311) and never restores it —
+unchanged by the patch; under the guard the wire still says 57 / 58 there.
+An OrionLayer that does not know 57 / 58 shows the game's picture for
+them — decision 22. The Races screen's HD view, which today waits 66
+snapshots and then hands a diplomacy dialog to the picture
+(`raceswire.WAIT_BOUND`), gets the audience's id at once instead.
+
+**What it costs us without it.** No HD audience can exist: a client cannot
+tell it is up, nor whose.
+
+**How to apply.** `patch -p1 < ~/orionlayerv3/doc/ext_audience_screen.patch`,
+rebuild, move the patch to `LOCAL_PATCHES`. It comes back off with
+`patch -R -p1`.
+
+## 47. The diplomacy audience's state is not on the wire
+
+**Status: NOT APPLIED — written, proved and parked for Data by work order
+185 (Part 9), 28 September 2026** (`doc/briefs/185-parked-for-data.md`,
+item 1d). Patch: `doc/ext_audience_state.patch`, **on top of open fix 46**
+(the block is written while 57 or 58 is reported — apply 46 first); listed
+by `tools/version_check.py` under REPORTED_PATCHES (marker `OrionLayer,
+open fix 47.`, on one line at every changed place).
+
+**What is missing.** Everything the audience shows lives in DIP_SCRN's
+globals (`_current_ambassador` dip_scrn.cpp:31, `_ambassador_option` :6,
+`_response_message` :8, `_diplomacy_message[250]` :32) and in the arguments
+of `fields::Get_List_Field_` (fields.cpp:1561): the menu's title, items and
+enable flags. None of it is serialized. The reply text is a random variant
+of its statement (dip_scrn_main.cpp:603), so even a known id does not name
+it; and the menus are lists of equal shape — Propose, Break and Offer are
+all eight rows at the same place — so the field list does not say which is
+up nor which items may be chosen.
+
+**What the patch changes.**
+- `src/game/fields.cpp` — `Get_List_Field_` records its list (title, first
+  item, item size, count, flags) in `ext::g_list_field` through
+  `ext::ListFieldGuard` while it takes input, restored when it returns.
+- `src/ext/ext_api.h`, `src/ext/ext_api.cpp` — the view and its guard, and
+  block 5b, "DIPL", between INFS and COLS while 57 or 58 is reported: a
+  version byte, the mode (1 the player's, 2 the AI's), the ambassador, the
+  ambassador's option (0 refused, 1 normal, 2 an AI proposal), the
+  statement id, the reply text as the engine rendered it, and the running
+  list — its title and per item the enable flag and the words.
+
+**The exact change.** The diff, as written by the scratch commit
+(`20f5f920`, on `453c4c05`; the `diff --git` and `index` lines and the
+text git adds after `@@` are not part of it):
+
+```diff
+--- a/src/ext/ext_api.cpp
++++ b/src/ext/ext_api.cpp
+@@ -439,6 +439,52 @@
+         }
+     }
+ 
++    // 5b. The diplomacy audience: "DIPL", written ONLY while it reports 57
++    //     or 58 (open fix 46), between INFS and COLS. OrionLayer, open fix 47.
++    //
++    //     The audience keeps everything in DIP_SCRN's globals and the list
++    //     field's arguments; none of it was serialized, and its menus are
++    //     lists of equal shape (Propose, Break and Offer are all eight rows
++    //     at the same place). Sent as the game holds them: which race, the
++    //     ambassador's mode (0 refused, 1 normal, 2 an AI proposal), the
++    //     statement id and the reply text AS THE ENGINE FORMATTED IT (the
++    //     variant is Random_, dip_scrn_main.cpp:603, so an id does not name
++    //     the text), and the menu taking input now — its title, and per
++    //     item the enable flag Get_List_Field_ honours and the words.
++    if (current_screen == 57 || current_screen == 58) {
++        buf.push_back((uint8_t)'D');
++        buf.push_back((uint8_t)'I');
++        buf.push_back((uint8_t)'P');
++        buf.push_back((uint8_t)'L');
++        Write8(buf, 1);                                   // block version
++        Write8(buf, (uint8_t)(current_screen - 56));      // 1 player, 2 AI
++        Write8(buf, DIP_SCRN::_current_ambassador);
++        Write8(buf, DIP_SCRN::_ambassador_option);
++        Write16(buf, DIP_SCRN::_response_message);
++        size_t len = strnlen(DIP_SCRN::_diplomacy_message,
++                             sizeof(DIP_SCRN::_diplomacy_message));
++        Write8(buf, (uint8_t)len);
++        WriteBytes(buf, DIP_SCRN::_diplomacy_message, len);
++        const ListFieldView& list = g_list_field;
++        int16_t n = (list.items != nullptr && list.count > 0) ? list.count : 0;
++        if (n > 40) n = 40;
++        Write16(buf, n);
++        if (n > 0) {
++            len = list.title != nullptr ? strnlen(list.title, 255) : 0;
++            Write8(buf, (uint8_t)len);
++            WriteBytes(buf, list.title, len);
++            const size_t item_max = list.item_size > 255 ? 255
++                                                         : (size_t)list.item_size;
++            for (int16_t i = 0; i < n; i++) {
++                const char* item = list.items + (size_t)i * list.item_size;
++                Write8(buf, list.flags != nullptr ? list.flags[i] : 1);
++                len = strnlen(item, item_max);
++                Write8(buf, (uint8_t)len);
++                WriteBytes(buf, item, len);
++            }
++        }
++    }
++
+     // 6. Which colony the colony screen and its build popup show: "COLS",
+     //    written ONLY while SCREEN_COLONY or SCREEN_QUEUE_POPUP is up, and
+     //    LAST. OrionLayer, open fix 35.
+@@ -1111,6 +1157,20 @@
+     g_screen_override = previous;
+ }
+ 
++// OrionLayer, open fix 47. The running list field (ext_api.h).
++ListFieldView g_list_field = {nullptr, nullptr, 0, 0, nullptr};
++
++ListFieldGuard::ListFieldGuard(const char* title, const char* items,
++                               int32_t item_size, int16_t count,
++                               const uint8_t* flags)
++    : previous(g_list_field) {
++    g_list_field = {title, items, item_size, count, flags};
++}
++
++ListFieldGuard::~ListFieldGuard() {
++    g_list_field = previous;
++}
++
+ void Tick(int16_t current_screen) {
+     // What the client is told. The override is the only difference; the
+     // game's own MOX::_current_screen is untouched, because the dialogs it
+--- a/src/ext/ext_api.h
++++ b/src/ext/ext_api.h
+@@ -50,6 +50,28 @@
+ /// (DIP_SCRN::Diplomacy_Screen_) and 58 when an AI asked for it
+ /// (DIP_SCRN::Npc_Diplomacy_Screen_), so a client can tell it is up.
+ 
++/// OrionLayer, open fix 47. The list fields::Get_List_Field_ is running: its title,
++/// its items (item_size apart), their count and their enable flags exist
++/// only as that call's arguments — the diplomacy audience's menus are such
++/// lists, and a client cannot tell them apart by their fields. Set by
++/// ListFieldGuard while the list takes input, restored when it returns;
++/// read by SerializeState. What is SENT, nothing the game reads.
++struct ListFieldView {
++    const char* title;
++    const char* items;
++    int32_t item_size;
++    int16_t count;
++    const uint8_t* flags;
++};
++extern ListFieldView g_list_field;
++
++struct ListFieldGuard {
++    ListFieldView previous;
++    ListFieldGuard(const char* title, const char* items, int32_t item_size,
++                   int16_t count, const uint8_t* flags);
++    ~ListFieldGuard();
++};
++
+ /// The field id of the input Get_Input_() is returning THIS CALL when it
+ /// came from a client's ACTIVATE_FIELD, and 0 when it came from the mouse.
+ ///
+--- a/src/game/fields.cpp
++++ b/src/game/fields.cpp
+@@ -1578,6 +1578,9 @@
+ 
+         int16_t cur_y = y;
+         int16_t y_step = font_height + font_vert_spacing;
++#ifdef ORION2RE_EXT
++        const char* ext_items = list_ptr;  // OrionLayer, open fix 47. The list's first item, before the walk moves list_ptr.
++#endif
+ 
+         do {
+             if (*list_ptr == '\0') {
+@@ -1607,6 +1610,10 @@
+             list_ptr += item_size;
+         } while (!eof);
+ 
++#ifdef ORION2RE_EXT
++        // OrionLayer, open fix 47. The list on the wire while it takes input (ext_api.h).
++        const ext::ListFieldGuard ext_list_guard(help, ext_items, item_size, index, item_flags);
++#endif
+         int16_t cur_font_style = fonts::Get_Current_Font_Style_();
+         s_colors *cur_font_color = fonts::Get_Current_Font_Color_();
+         s_colors *cur_highlight = fonts::Get_Current_Highlight_Color_();
+```
+
+**Proof.** In a scratch worktree of `orionlayer-local` `4bf152e4` with its
+own build directory (never on `orionlayer-local`, never the build `play.py`
+starts): the patch file applies with `patch -p1 --dry-run` and `patch -p1`,
+no offset, no fuzz, to a clean worktree at `4bf152e4` with fix 46's file
+applied first; the applied files equal the scratch commit's byte for byte
+(`20f5f920`); the whole engine built (Debug, `ORION2RE_EXT=ON`) without an
+error; `ext_api.cpp` and `fields.cpp` compile alone with the build's own
+command (exit 0); the control — `_respons_message` for `_response_message`
+— was refused ("»_respons_message« ist kein Element von »DIP_SCRN«").
+
+**Recorded live** (the virtual display, SAVE4, nothing agreed; evidence
+`work_order_185/P9_audience_*`): race slot 0 → DIPL mode player, ambassador
+1, option 0 (refused), statement 126, "Emperor Ember will listen when you
+are ready to surrender. Until then, we have nothing to say.", no list; race
+slot 1 → ambassador 4, option 1, statement 128 with its greeting, one
+full-screen field; clicked away → the menu "How may I serve you:" with
+Peace Treaty (disabled), Declare War, Surrender, Good Bye — the flags the
+list honours, matching its five type-10 fields; Good Bye → back to 6, no
+block. A finding: the reply text changed between the greeting and the menu
+under the same statement id — the menu's entry renders a fresh variant,
+which is why the text is sent and not derived.
+
+**Side effects — observed and ruled out, and the risks named.** The list
+recorder runs for every `Get_List_Field_` in the game and writes only
+pointers into memory that call owns for as long as the guard lives; it is
+read only while 57 / 58 is reported. Nothing the game reads changes. The
+block is at most ~2.4 KB (250 text + 40 items).
+
+**What it costs us without it.** With fix 46 alone HD knows the audience
+is up and whose — it can draw the ambassador and the stage — but not what
+is said nor what may be answered: the audience stays the game's picture.
+
+**How to apply.** After fix 46: `patch -p1 <
+~/orionlayerv3/doc/ext_audience_state.patch`, rebuild, move the patch to
+`LOCAL_PATCHES`. It comes back off with `patch -R -p1` (before 46's).

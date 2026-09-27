@@ -1,0 +1,84 @@
+Engine: the diplomacy audience reports its own screen ids, 57 and 58 (open fix 46).
+
+STATUS: NOT APPLIED — written and proved by work order 185 (Part 9),
+parked for Data (doc/briefs/185-parked-for-data.md). No engine patch may
+be applied in that order.
+
+PROOF (work order 185, 28 September 2026): in a scratch worktree of
+orionlayer-local 4bf152e4 with its own build directory (never on
+orionlayer-local itself, never the build play.py starts) this file applied
+with `patch -p1 --dry-run` and `patch -p1`, no offset, no fuzz, and the
+applied tree equals the scratch commit; the scratch engine was built in
+full (Debug, ORION2RE_EXT=ON) — no error — dip_scrn_main.cpp compiles alone
+with the build's own command, and a control, the same file with
+`ScreenOverride` misspelt `ScreenOveride`, was refused by the compiler.
+See the entry, doc/orion2re_open_fixes.md 46.
+
+To apply, from ~/orion2re on the orionlayer-local branch:
+
+    patch -p1 < ~/orionlayerv3/doc/ext_audience_screen.patch
+
+then rebuild. It comes back off with `patch -R -p1` and a rebuild.
+
+WHAT IT IS FOR
+
+    The diplomacy audience has no screen id: DIP_SCRN::Diplomacy_Screen_
+    (the player's, from the Races screen) and Npc_Diplomacy_Screen_ (the
+    AI's — at turn start from report.cpp, on a sneak attack from
+    combfind.cpp) run under their caller's id, 6, 0 or 12, so a client
+    cannot tell the audience is up. The patch makes each report a
+    synthetic id through ext::ScreenOverride (open fix 24's pattern: what
+    is SENT, nothing the game reads): 57 the player's, 58 the AI's. A
+    marker, `OrionLayer, open fix 46.`, on one line at every changed place.
+
+diff --git a/src/ext/ext_api.h b/src/ext/ext_api.h
+index c228885f..700571e3 100644
+--- a/src/ext/ext_api.h
++++ b/src/ext/ext_api.h
+@@ -44,6 +44,12 @@ struct ScreenOverride {
+     ~ScreenOverride();
+ };
+ 
++/// OrionLayer, open fix 46. The diplomacy audience has no screen id and runs under its
++/// caller's (6 the Races screen, 0 a turn-start report, 12 a sneak attack
++/// in turn processing): it reports 57 when the player opened it
++/// (DIP_SCRN::Diplomacy_Screen_) and 58 when an AI asked for it
++/// (DIP_SCRN::Npc_Diplomacy_Screen_), so a client can tell it is up.
++
+ /// The field id of the input Get_Input_() is returning THIS CALL when it
+ /// came from a client's ACTIVATE_FIELD, and 0 when it came from the mouse.
+ ///
+diff --git a/src/game/dip_scrn_main.cpp b/src/game/dip_scrn_main.cpp
+index a534a3b4..e3025c66 100644
+--- a/src/game/dip_scrn_main.cpp
++++ b/src/game/dip_scrn_main.cpp
+@@ -1,4 +1,7 @@
+ #include "pch.h"
++#ifdef ORION2RE_EXT
++#include "ext/ext_api.h"  // OrionLayer, open fix 46. ScreenOverride for the two audiences.
++#endif
+ 
+ namespace DIP_SCRN {
+     /**
+@@ -1255,6 +1258,10 @@ namespace DIP_SCRN {
+     }
+ 
+     void __cdecl Diplomacy_Screen_(int player_idx) {
++#ifdef ORION2RE_EXT
++        // OrionLayer, open fix 46. The player's audience reports a synthetic 57 (ext_api.h); the game still reads its caller's screen.
++        const ext::ScreenOverride ext_screen_guard(57);
++#endif
+         _diplomacy_current_music = -1;
+         _synch_up_established_flag = 0;
+ 
+@@ -1352,6 +1359,10 @@ namespace DIP_SCRN {
+         if (MOX::_player[player_idx].eliminated == 1) {
+             return;
+         }
++#ifdef ORION2RE_EXT
++        // OrionLayer, open fix 46. An audience the AI asked for (turn start, report.cpp; a sneak attack, combfind.cpp) reports a synthetic 58 (ext_api.h).
++        const ext::ScreenOverride ext_screen_guard(58);
++#endif
+ 
+         fields::Deactivate_Help_List_();
+         fields::Enable_Draw_All_Fields_();

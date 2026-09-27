@@ -1,0 +1,175 @@
+Engine: the diplomacy audience's state on the wire, "DIPL" (open fix 47).
+
+STATUS: NOT APPLIED — written and proved by work order 185 (Part 9),
+parked for Data (doc/briefs/185-parked-for-data.md). No engine patch may
+be applied in that order.
+It builds on open fix 46 (the block is written while 57 or 58 is
+reported): apply 46 first.
+
+PROOF (work order 185, 28 September 2026): in a scratch worktree of
+orionlayer-local 4bf152e4 with its own build directory (never on
+orionlayer-local itself, never the build play.py starts) this file applied
+with `patch -p1 --dry-run` and `patch -p1`, no offset, no fuzz, on top of
+fix 46 (4bf152e4 + doc/ext_audience_screen.patch), and the applied tree
+equals the scratch commit; the scratch engine was built in full (Debug,
+ORION2RE_EXT=ON) — no error — ext_api.cpp and fields.cpp compile alone
+with the build's own command, and a control, the same file with
+`_response_message` misspelt `_respons_message` in ext_api.cpp, was
+refused by the compiler. Recorded live on that engine (the entry). See the
+entry, doc/orion2re_open_fixes.md 47.
+
+To apply, from ~/orion2re on the orionlayer-local branch:
+
+    patch -p1 < ~/orionlayerv3/doc/ext_audience_state.patch
+
+then rebuild. It comes back off with `patch -R -p1` and a rebuild.
+
+WHAT IT IS FOR
+
+    The audience keeps its state in DIP_SCRN's globals and in the
+    arguments of fields::Get_List_Field_, and none of it is serialized:
+    who is talking, whether the ambassador refused, the statement and the
+    text the engine rendered for it (a random variant, so an id does not
+    name the text), and the menu taking input — its menus are lists of
+    equal shape. The patch records the running list's title, items and
+    enable flags while Get_List_Field_ takes input (ext::ListFieldGuard)
+    and appends a block, "DIPL", between INFS and COLS while 57 or 58 is
+    reported. A marker, `OrionLayer, open fix 47.`, on one line at every
+    changed place.
+
+diff --git a/src/ext/ext_api.cpp b/src/ext/ext_api.cpp
+index 88c157cd..6e55365e 100644
+--- a/src/ext/ext_api.cpp
++++ b/src/ext/ext_api.cpp
+@@ -439,6 +439,52 @@ static void SerializeState(std::vector<uint8_t>& buf,
+         }
+     }
+ 
++    // 5b. The diplomacy audience: "DIPL", written ONLY while it reports 57
++    //     or 58 (open fix 46), between INFS and COLS. OrionLayer, open fix 47.
++    //
++    //     The audience keeps everything in DIP_SCRN's globals and the list
++    //     field's arguments; none of it was serialized, and its menus are
++    //     lists of equal shape (Propose, Break and Offer are all eight rows
++    //     at the same place). Sent as the game holds them: which race, the
++    //     ambassador's mode (0 refused, 1 normal, 2 an AI proposal), the
++    //     statement id and the reply text AS THE ENGINE FORMATTED IT (the
++    //     variant is Random_, dip_scrn_main.cpp:603, so an id does not name
++    //     the text), and the menu taking input now — its title, and per
++    //     item the enable flag Get_List_Field_ honours and the words.
++    if (current_screen == 57 || current_screen == 58) {
++        buf.push_back((uint8_t)'D');
++        buf.push_back((uint8_t)'I');
++        buf.push_back((uint8_t)'P');
++        buf.push_back((uint8_t)'L');
++        Write8(buf, 1);                                   // block version
++        Write8(buf, (uint8_t)(current_screen - 56));      // 1 player, 2 AI
++        Write8(buf, DIP_SCRN::_current_ambassador);
++        Write8(buf, DIP_SCRN::_ambassador_option);
++        Write16(buf, DIP_SCRN::_response_message);
++        size_t len = strnlen(DIP_SCRN::_diplomacy_message,
++                             sizeof(DIP_SCRN::_diplomacy_message));
++        Write8(buf, (uint8_t)len);
++        WriteBytes(buf, DIP_SCRN::_diplomacy_message, len);
++        const ListFieldView& list = g_list_field;
++        int16_t n = (list.items != nullptr && list.count > 0) ? list.count : 0;
++        if (n > 40) n = 40;
++        Write16(buf, n);
++        if (n > 0) {
++            len = list.title != nullptr ? strnlen(list.title, 255) : 0;
++            Write8(buf, (uint8_t)len);
++            WriteBytes(buf, list.title, len);
++            const size_t item_max = list.item_size > 255 ? 255
++                                                         : (size_t)list.item_size;
++            for (int16_t i = 0; i < n; i++) {
++                const char* item = list.items + (size_t)i * list.item_size;
++                Write8(buf, list.flags != nullptr ? list.flags[i] : 1);
++                len = strnlen(item, item_max);
++                Write8(buf, (uint8_t)len);
++                WriteBytes(buf, item, len);
++            }
++        }
++    }
++
+     // 6. Which colony the colony screen and its build popup show: "COLS",
+     //    written ONLY while SCREEN_COLONY or SCREEN_QUEUE_POPUP is up, and
+     //    LAST. OrionLayer, open fix 35.
+@@ -1111,6 +1157,20 @@ ScreenOverride::~ScreenOverride() {
+     g_screen_override = previous;
+ }
+ 
++// OrionLayer, open fix 47. The running list field (ext_api.h).
++ListFieldView g_list_field = {nullptr, nullptr, 0, 0, nullptr};
++
++ListFieldGuard::ListFieldGuard(const char* title, const char* items,
++                               int32_t item_size, int16_t count,
++                               const uint8_t* flags)
++    : previous(g_list_field) {
++    g_list_field = {title, items, item_size, count, flags};
++}
++
++ListFieldGuard::~ListFieldGuard() {
++    g_list_field = previous;
++}
++
+ void Tick(int16_t current_screen) {
+     // What the client is told. The override is the only difference; the
+     // game's own MOX::_current_screen is untouched, because the dialogs it
+diff --git a/src/ext/ext_api.h b/src/ext/ext_api.h
+index 700571e3..034f75a3 100644
+--- a/src/ext/ext_api.h
++++ b/src/ext/ext_api.h
+@@ -50,6 +50,28 @@ struct ScreenOverride {
+ /// (DIP_SCRN::Diplomacy_Screen_) and 58 when an AI asked for it
+ /// (DIP_SCRN::Npc_Diplomacy_Screen_), so a client can tell it is up.
+ 
++/// OrionLayer, open fix 47. The list fields::Get_List_Field_ is running: its title,
++/// its items (item_size apart), their count and their enable flags exist
++/// only as that call's arguments — the diplomacy audience's menus are such
++/// lists, and a client cannot tell them apart by their fields. Set by
++/// ListFieldGuard while the list takes input, restored when it returns;
++/// read by SerializeState. What is SENT, nothing the game reads.
++struct ListFieldView {
++    const char* title;
++    const char* items;
++    int32_t item_size;
++    int16_t count;
++    const uint8_t* flags;
++};
++extern ListFieldView g_list_field;
++
++struct ListFieldGuard {
++    ListFieldView previous;
++    ListFieldGuard(const char* title, const char* items, int32_t item_size,
++                   int16_t count, const uint8_t* flags);
++    ~ListFieldGuard();
++};
++
+ /// The field id of the input Get_Input_() is returning THIS CALL when it
+ /// came from a client's ACTIVATE_FIELD, and 0 when it came from the mouse.
+ ///
+diff --git a/src/game/fields.cpp b/src/game/fields.cpp
+index 014a2f6b..13df7b4b 100644
+--- a/src/game/fields.cpp
++++ b/src/game/fields.cpp
+@@ -1578,6 +1578,9 @@ namespace fields {
+ 
+         int16_t cur_y = y;
+         int16_t y_step = font_height + font_vert_spacing;
++#ifdef ORION2RE_EXT
++        const char* ext_items = list_ptr;  // OrionLayer, open fix 47. The list's first item, before the walk moves list_ptr.
++#endif
+ 
+         do {
+             if (*list_ptr == '\0') {
+@@ -1607,6 +1610,10 @@ namespace fields {
+             list_ptr += item_size;
+         } while (!eof);
+ 
++#ifdef ORION2RE_EXT
++        // OrionLayer, open fix 47. The list on the wire while it takes input (ext_api.h).
++        const ext::ListFieldGuard ext_list_guard(help, ext_items, item_size, index, item_flags);
++#endif
+         int16_t cur_font_style = fonts::Get_Current_Font_Style_();
+         s_colors *cur_font_color = fonts::Get_Current_Font_Color_();
+         s_colors *cur_highlight = fonts::Get_Current_Highlight_Color_();

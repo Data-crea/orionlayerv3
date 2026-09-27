@@ -6,7 +6,7 @@
 # import this file; it is not a module.
 #
 # The 6 check(s) it holds:
-#   - open fixes 44 and 45's blocks, as a scratch engine wrote them, parse whole; a tail cut short leaves both None; the offered modifications are the recorded ones
+#   - open fixes 44 and 45's blocks, as a scratch engine wrote them, parse whole; a tail cut short leaves both None; the offered modifications are the recorded ones; no text of the game's in the cut
 #   - screen 3 is claimed only with open fix 44's DSGN: without it the game's picture, as before; the page READY on its own list, a box over it modal, a picker over it PICKER; ids 3 and 54-56 literal, table agrees
 #   - the designer sends each control's own field, a hull by an injected click, and refuses a hidden hull, a hidden plus, and Build without its button
 #   - the designer draws at 1920, 2576 and 3840 from the recorded page, its text scaled once, and every mark it carries is named in its module and the status document
@@ -50,9 +50,14 @@ assert [r["text"] for r in _sd_w["rows"]] == ["", "8", "3-12", "1-4"], \
 _sd_d = _sd_he.design_state("designer").ship_design
 assert (_sd_d["printed_cost"], _sd_d["printed_space_available"],
         _sd_d["hull_space"]) == (82, 47, 60), _sd_d
+# No text of the game's in the committed cut (tools/design_fixture.neutral).
+assert _sd_d["name"] == "Design 1" and all(
+    w["mods_text"] in ("", f"Mods {k}")
+    for k, w in enumerate(_sd_d["weapons"])), "a text the game wrote"
 ok(f"open fixes 44 and 45's blocks, as a scratch engine wrote them, parse "
    f"whole; a tail cut short leaves both None; the offered modifications "
-   f"are the recorded ones ({len(_sd_fix)} stops)")
+   f"are the recorded ones; no text of the game's in the cut "
+   f"({len(_sd_fix)} stops)")
 
 # 2. THE CLAIM, both ways, and the page's states.
 from screens.ship_design import screen as _sd_scr_mod

@@ -57,6 +57,21 @@ up; three one-line guards. **Risk**: small — nothing the game reads
 changes; an OrionLayer that does not know 54-56 shows the game's picture
 for them. **Default: not applied.**
 
+### 1d. Open fixes 46 and 47 — the diplomacy audience on the wire
+
+Entries 46 ("The diplomacy audience has no screen id") and 47 ("The
+diplomacy audience's state is not on the wire"); patches
+`doc/ext_audience_screen.patch` and `doc/ext_audience_state.patch` (47 on
+top of 46; the two series 44/45 and 46/47 apply together on `4bf152e4`).
+Proved in scratch and recorded live: the player's audience reports 57, the
+refusal, the greeting and the menu with its enable flags arrive in DIPL.
+**Unlocks** the HD audience (`screens/audience/`, part 10) — including the
+turn-start AI audience (58), which today is a modal net over the galaxy
+map. **Cost**: two one-line guards; a list recorder in `Get_List_Field_`
+(two lines); one block, written only while the audience is up. **Risk**:
+small — nothing the game reads changes. **Default: not applied.**
+
+
 ## 2. Decisions asked for in this order
 
 ### 2a. The mechanism for fix 43 (part 2) — chosen: an environment variable to start hidden, an Extension API message to show and hide

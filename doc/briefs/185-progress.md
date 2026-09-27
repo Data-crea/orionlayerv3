@@ -252,3 +252,59 @@ modification that is on was drawn as off — **fixed** (lit fill, INVENTION
 transition. SAVE1-9 and SAVE11 identical, SAVE10 unchanged; MOX.SET
 rewritten by the game → restored from the pre-engine guard, verify clean.
 States the save does not reach, and the save each needs: parked, section 3.
+
+## Part 9 — the diplomacy audience: reading, brief, open fixes — **DONE**
+
+1. **The reading** `doc/audience_reading.md` (read-only, every citation
+   `file:line` at `4bf152e4`; 30 of them re-checked before filing, all
+   agreed): there is no audience screen id — it is a nested call under its
+   caller's id (6 Races, 0 a turn-start report, 12 a sneak attack); what it
+   shows (DIPLOMAT.LBX room and ambassador, DIPLOMSx statements, JIMTEXT
+   menus); every menu the player can open; the AI's replies; every way in
+   and out; what each outcome writes; the globals; the input delays; what
+   is on the wire.
+2. **163's parked line** (open question 3 of `doc/ai_behaviour_reading.md`)
+   answered there: the player records are on the wire whole, during an
+   audience too, and `objectives`, `relations` and the treaty arrays are
+   declared already; what is missing is the audience's own state. Stale
+   claims corrected: `doc/pop_order_reading.md` ("nothing on the wire
+   reports objectives"), `doc/races_screen_reading.md` (the spec status,
+   the ext_api line numbers).
+3. **Open fixes 46 and 47** (entries, rows, patches, `version_check`
+   REPORTED, **check 090r #8**): 46 — the player's audience reports 57, the
+   AI's (turn start and sneak attack) 58, through ScreenOverride; 47 —
+   `Get_List_Field_` records its running list, and a "DIPL" block between
+   INFS and COLS carries the ambassador, the option, the statement id, the
+   reply text as rendered, and the menu with its enable flags. Scratch
+   worktree `wt46` at `4bf152e4`, own build directory `build46`; commits
+   `453c4c05` (46), `20f5f920` (47), each built exit 0; both files applied
+   with no offset and no fuzz (47 on 46), equal to the commits; each
+   changed .cpp compiled alone (exit 0); controls refused (exit 1:
+   `ScreenOveride`, `_respons_message`). 46's header note first sat on the
+   lines fix 45 changes — moved below the struct, so 44+45+46+47 apply
+   together on `4bf152e4` (offsets only, no fuzz, no reject). A first
+   compile run appended a second `-o` and failed for that reason — its
+   numbers were discarded and the run repeated correctly.
+4. **Recorded live** (engine `build46`, PID 146097, guard
+   `185_P9_audience`, Xvfb, SAVE4, nothing agreed; scratch recorder, input
+   log on): race slot 0 → 57, the refusal (option 0, statement 126); race
+   slot 1 → 57, the greeting, then the menu (title, four items, Peace
+   Treaty disabled), Good Bye by activation → 6. The reply text changed
+   between greeting and menu under one statement id. SAVE1-9 and SAVE11
+   identical, SAVE10 unchanged; MOX.SET rewritten → restored from the
+   pre-engine guard, verify clean. The AI's 58 needs a turn start with a
+   diplomacy message: not reachable without TURN — parked (part 11).
+5. **Client side**: `core/diplblocks.py` (read between INFS and COLS, whole
+   or None), `tools/audience_fixture.py` → `tools/fixtures/
+   audience_blocks_185.json`. **Found on the way**: the committed fixtures
+   must not carry the game's words — the audience's replies and menus, and
+   in part 7's designer fixture the design name and the modification
+   words. Both cutters now replace every text with a stand-in (`neutral`);
+   the designer fixture is re-cut (part 7's commit `6f0570c` still holds
+   the two short strings, hex-encoded; superseded, not rewritten).
+6. **The brief** `doc/brief_audience.md`: ids 57/58 on one screen, the
+   original's room and ambassador as the stage, HUD reply and menu panels,
+   items by activation (measured), disabled items refused, the markers.
+7. Checks 398 → 399 (090r #8). The DIPL parse check is written and waits
+   for part 10: a check group must name a screen folder, and
+   `screens/audience/` is part 10's.

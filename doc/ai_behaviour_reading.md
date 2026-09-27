@@ -405,6 +405,18 @@ The order asked for breadth. These were **located and not read**:
    player is playing for. `relations[]` and `treaty[]` are the same
    kind of one-line additions and are what a diplomacy screen would
    need.
+   **Answered by work order 185 part 9 (28 September 2026,
+   `doc/audience_reading.md` §8.1):** `objectives` is declared
+   (`core/structs/player.py`, `("objectives", 40, "u8")`) and so are
+   `relations`, `treaty` and the three treaty arrays (work order 175 C) —
+   the one-line additions are done. The player records are on the wire
+   whole on every snapshot, WHILE AN AUDIENCE IS UP TOO (every audience
+   loop calls `fields::Get_Input_`, which ticks), and each outcome is in
+   them the moment it happens. The audience reads `objectives` only as
+   "is this a human". What the diplomacy screen needs and the records do
+   NOT carry is the audience's own state — who is talking, the statement
+   and its text, the menu and which items are enabled: open fixes 46
+   (its ids) and 47 (the "DIPL" block), written and parked.
 4. **Are the three "the AI reads the human" places (section 6) a
    finding you want raised with Joes**, or are they the original's own
    behaviour and therefore not a fault at all? This reading cannot tell
