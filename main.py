@@ -17,6 +17,7 @@ from core.editor import Editor
 from core import debuginput
 from core import fallbacknote
 from core import frametrace
+from core import inputlog
 from core import handover
 from core import helppopup
 
@@ -128,6 +129,9 @@ class App:
         #: every presented frame (work order 180 A1). None costs one
         #: `is None` test per frame.
         self._frame_trace = frametrace.FrameTrace.open()
+        #: TOOL, off unless ORIONLAYER_INPUT_LOG is set: every click and
+        #: key, and whether it reached the engine (work order 182 part 3).
+        self._input_log = inputlog.InputLog.open(self.client)
         #: Which way into the game's picture `_showing_original` last
         #: took — `frametrace.NO_SCREEN`, `HAND_OVER`, `F12` — or "".
         self._net_kind = ""
@@ -216,6 +220,8 @@ class App:
                         pos=adjusted, rel=event.rel,
                         buttons=event.buttons)
 
+            if self._input_log is not None:
+                self._input_log.begin(self, event)
             if event.type == pygame.QUIT:
                 self.running = False
             elif event.type == pygame.VIDEORESIZE:
@@ -276,6 +282,8 @@ class App:
                     if top and hasattr(top, "handle_mousewheel"):
                         mx, my = mouse_input.pos()
                         top.handle_mousewheel(event.y, mx, my)
+            if self._input_log is not None:
+                self._input_log.end()
 
     def _adjust_mouse(self, x, y):
         """Adjust mouse coordinates for fullscreen offset.

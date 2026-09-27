@@ -96,17 +96,7 @@ class Accept(colony_live.Live):
         self.transition("galaxy_map -> system window", "galaxy_map",
                         lambda: self.click(x, y),
                         lambda st: len(st.fields or []) != before)
-        me = int(getattr(self.st, "player_num", 0) or 0)
-        raws = self.st.colonies_raw or []
-        disc = None
-        for _names, _box, model in boxdraw.drawable(gm):
-            for p in model.get("planets", []):
-                col = p.get("colony", -1)
-                c = colony_struct.parse(raws[col]) \
-                    if 0 <= col < len(raws) else None
-                if c is not None and c.owner == me and not c.outpost_flag:
-                    disc = next((r for r, f in gm._box_hits
-                                 if f == p["field"]), None)
+        disc = self.own_colony_disc()
         if disc is None:
             print("  from the map: no own colony's disc in the window")
             return False
@@ -120,6 +110,24 @@ class Accept(colony_live.Live):
                         livesend.on_galaxy_map)
         self._home()
         return ok
+
+    def own_colony_disc(self):
+        """The HD system window's disc of a colony of the local player's
+        (not an outpost: `Do_Colony_Screen_` answers those with a box)."""
+        from screens.galaxy_map import boxdraw
+        gm = self.hd("galaxy_map")
+        me = int(getattr(self.st, "player_num", 0) or 0)
+        raws = self.st.colonies_raw or []
+        disc = None
+        for _names, _box, model in boxdraw.drawable(gm):
+            for p in model.get("planets", []):
+                col = p.get("colony", -1)
+                c = colony_struct.parse(raws[col]) \
+                    if 0 <= col < len(raws) else None
+                if c is not None and c.owner == me and not c.outpost_flag:
+                    disc = next((r for r, f in getattr(gm, "_box_hits", [])
+                                 if f == p["field"]), None)
+        return disc
 
     def switch(self, key, label):
         before = self.index()

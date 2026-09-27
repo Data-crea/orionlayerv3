@@ -38,3 +38,14 @@ starting" while it waits. **Default:** (a), nothing built.
   engine) or `ORIONLAYER_REAL_DESKTOP="reason"` (a client). **Default:**
   used only for the equivalence proof and one pacing reference in this
   order, each named in progress.
+
+## 3. Everything else
+
+- **The 181 lost click — outside interference, by elimination.** 3009
+  inputs on the virtual display, none dropped or lost; the popup's field
+  list never went empty. **Default:** the gate unchanged, the click log
+  (`ORIONLAYER_INPUT_LOG=1`) kept as a tool. If it ever happens on the
+  virtual display the log names the cause. Worth knowing: IF the popup's
+  list went empty for one snapshot, its view would read it as a native box
+  and the frame would be held, dropping a click in that snapshot (180's
+  "no input to a screen the player cannot see") — observed never.

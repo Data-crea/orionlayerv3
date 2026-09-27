@@ -98,3 +98,46 @@ over 300 code lines moved by one (`colony_list_preview.py` 404,
    colony acceptance with orders identical to the unpatched engine.
    **The intro skip needs no second route** — the key reaches the hidden
    window. What a PLAYER sees during the hidden intro is parked (item 1).
+
+## Part 3 — click log and stress test — **DONE: nothing lost**
+
+1. **The click log**: `core/inputlog.py`, on only with
+   `ORIONLAYER_INPUT_LOG` (`1` in memory, else a JSON-lines file); off, it
+   is one `is None` test per event. `main.App` calls it around every event
+   of `_handle_events` (two lines; `main.py` 363 → 369 code lines, listed).
+   Per left click and key: time, screen id, the field count, the HD screen
+   on top and its view's state, the outcome — "sent" when a message went to
+   the engine while the input was handled (the ids listed) — or "dropped",
+   with the reason in `main.App`'s own order: app key, F5 editor, not
+   connected, the game's picture ("net"), a held frame ("hold"), else
+   "screen sent nothing".
+2. **The stress** (`tools/stress_inputs.py`, new; virtual display, SAVE4
+   scratch, fresh engine per size, engines 150339, 152274, 153792 started
+   and closed by this session; guards `182_P3_stress_*`, MOX.SET's load
+   byte restored, clean): per size 100 Fleets open/back, 100 colony
+   cycles (home star → system window → the colony's planet, `<`, `>`, ESC
+   to the map), 200 popup cycles (CHANGE, Cancel):
+
+   | size | cycles | steps | lost | inputs | dropped | inputs at an empty list | inputs during a hold | time |
+   |---|---|---|---|---|---|---|---|---|
+   | 1920x1080 | 400 | 1001 | **0** | 1003 | **0** | 0 | 0 | 291 s |
+   | 2576x1432 | 400 | 1001 | **0** | 1003 | **0** | 0 | 0 | 368 s |
+   | 3840x2160 | 400 | 1001 | **0** | 1003 | **0** | 0 | 0 | 547 s |
+
+   Every input was sent. The frame traces hold 200 HD frames with an empty
+   field list per size — every one the first frame back on the galaxy map
+   (from Fleets and from the colony screen), none on the popup: **the
+   popup's list never went empty in 600 cycles**, the frame 181 recorded.
+3. **Evaluation: nothing lost, so the 181 case counts as outside
+   interference** — Data was at the desk, and the engine's window follows
+   the real pointer (a pop icon blinking under it is in part 1's
+   comparison). The gate is not changed. What WOULD happen if the popup's
+   list did go empty for a snapshot is parked (item 3): its view becomes a
+   native box and the frame is held, so a click in that one snapshot would
+   be dropped — by 180's rule, and never observed. The log stays as a
+   debug tool. **Check 090u** holds it: off by default, every outcome and
+   reason on a stand-in app, `main.App`'s two hooks around every event
+   with no way out of the loop between them.
+
+Also: `colony_accept.own_colony_disc` (the system window's disc of an own
+colony) is shared with the stress tool now.
