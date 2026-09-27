@@ -151,7 +151,7 @@ doc/                    the documents in the table above
 mods/                   file-level overrides; example_mod works
 ```
 
-Fifteen screens exist (the list below names thirteen; fleets and
+Seventeen screens exist (the list below names fifteen; fleets and
 research change are in `v3_projektstatus.md`): main menu, new game,
 select race, custom race, empire identity, galaxy map, colony
 summary (list, sidebar, scan
@@ -185,6 +185,13 @@ five pages; every text moddable by key through `core/modtexts`
 (decision 73), long texts wrap and scroll; History's curves and the Turn
 Summary come from open fix 32, applied in work order 176 — BUILT, NOT
 ACCEPTED).
+And the single-colony screen (`screens/colony/`, wire id 1) and the build
+popup (`screens/build_queue/`, wire id 25), work order 180 B and C — BUILT,
+and CLAIMING THEIR IDS ONLY WITH OPEN FIXES 35-40, which are written and
+parked, not applied: which colony the game shows is not on the wire, HD
+does not guess it, and without the blocks both stay the game's own picture.
+Every transition passes one hand-over gate (`core/handover.py`, work order
+180 A2): a screen HD draws never presents a native frame.
 Screens without an HD version fall back to the original framebuffer,
 so the game is always playable — and since work order 130 A that
 fallback shows the picture AND forwards clicks, so a dialog HD has no
