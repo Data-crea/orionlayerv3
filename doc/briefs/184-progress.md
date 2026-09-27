@@ -219,3 +219,91 @@ was restored from.
 mutation in a copy of the tree (the read-only flag removed; the preparation
 not called: "('waiting', False)"; the lifted copy never reused: "the lift was
 redone for a frame"; fix 42's status line changed) and green in this tree.
+
+## Finish
+
+At `e273f10`:
+- **the full suite**: **exit 0, 386 green** (before the Part 2 commit, and
+  the commit's own fast tier, 376);
+- **a fresh clone** (`git clone --no-hardlinks`, `tools/setup.py`): setup
+  **exit 0**, its own verification the full suite, **386 green**;
+- **the flash check**: 090o, replaying the recorded transitions, green in
+  both runs above; and 0 native frames in every live run of this order —
+  255 timed research entries, the flash walk's 29 transitions on the normal
+  engine with the HD changes and 29 on the fix-42 scratch engine, the two
+  stress runs;
+- **182's stress**: 1002 inputs, 0 lost, 0 dropped on both engines;
+- **liveguard**, final, against this order's FIRST backup (`184_P1_1920`,
+  19:33): every game file and both settings homes identical — only
+  "tree/git status", this order's own commits; SAVE8 `ab70cc9a…`,
+  unchanged; SAVE1-9 identical and SAVE10/11 unchanged in every run;
+- no engine, no client running; the virtual display stopped;
+- orion2re: `orionlayer-local` **`4bf152e4`**, untouched, its three
+  untracked files alone; open fix 42 lives in a scratch clone in the
+  session's scratchpad (`21a37ffb`) and in `doc/ext_input_delay_tick.patch`.
+
+## Summary
+
+**Time to the first research frame** (click on the galaxy map's research
+window → the first HD frame of change mode), median / maximum, ms:
+
+| | first entry, before → after | later entries, before → after |
+|---|---|---|
+| Xvfb 1920x1080 | 1238 → **637** | 685 / 720 → **636 / 685** |
+| Xvfb 2576x1432 | 1658 → **679** | 728 / 794 → **638 / 688** |
+| Xvfb 3840x2160 | 3022 → **1444** | 872 / 880 → **686 / 690** |
+| real desktop 2576x1371 | 1610 → **679** | 727 / 792 → **683 / 684** |
+| *with open fix 42 (scratch, parked), Xvfb* | *380 / 672 / 1423* | *77 / 94 / 103 (max 138 / 128 / 137)* |
+
+(One first entry per run, so its median is its maximum.)
+
+**What was changed, and what each gained** (all pixel-identical — 18
+renders at 1920, 2576, 3840 byte for byte the ones before):
+- **HUD shapes share their geometry** (`core/hud/raster.py`): the panel's
+  first frame built 19 shapes of 4 outlines; the heavy part is now built
+  once per outline. First READY frame 577 → 349 ms at 1920, 2322 → 1521 at
+  3840 (offline).
+- **The panel prepared while the engine is silent**
+  (`core/researchprepare.py`): the first entry's HUD building moved into
+  the ~550 ms the engine is silent anyway. First entry 1238 → 637 ms at
+  1920 (now equal to a later one), 1658 → 679 at 2576, 3022 → 1444 at 3840
+  (together with the memo).
+- **The floor lift once per picture** (`screens/galaxy_map/floorlift.py`):
+  33 / 59 / 130 ms off every galaxy-map frame; (e) on later entries 40 / 66
+  / 149 → 7 / 10 / 19 ms, and the poll latency that rode on it in (b).
+- Startup unchanged (405 → 401 ms).
+
+**What is left, and whose**:
+- **the engine's**: ~550 ms of every entry is `_Tech_Select_`'s input
+  delay, during which `Get_Input_` sends nothing — **open fix 42** removes
+  it (later entries ~80-100 ms), parked with its gain, cost and risk; and
+  the switch itself, (b), 64-113 ms: the map's own 55 ms loop plus
+  `Draw_Mini_Main_Screen_`.
+- **the wire's**: nothing measurable on its own — the snapshot rate is not
+  the cause (the list waits for the delay, not for a slot), and the pacing
+  is unchanged with the fix.
+- **ours**: the first entry at 3840 (1444 ms: the preparation outlasts the
+  silence), and with fix 42 the first entry at every size (no silence to
+  hide it in) — parked item 4; everything else of ours is under 20 ms.
+
+**Checks: 381 → 386** (090w, 006i, 080l, 067 #14, 090r #5).
+
+**Parked for Data** (`184-parked-for-data.md`): 1. open fix 42 — gain
+636 / 638 / 686 → 77 / 94 / 103 ms, cost six lines and no measurable CPU or
+pacing change, risk every screen with an input delay (42 sites) is heard
+sooner, commands act during a delay, HD may draw before the engine's own
+window; default not applied. 2. The turn-start prompt not measured (it needs
+a TURN, which writes SAVE10). 3. Data's window size taken as 2576x1432.
+4. The first entry at 3840, and at every size with fix 42 — preparing before
+the click would cost startup or a hitch; not done. 5. Every galaxy-map frame
+is faster too (noted, nothing to decide).
+
+**Live steps Data should look at himself**:
+- start with `python play.py`, load a game and open research from the
+  galaxy map's research window several times in your own window: the panel
+  should look exactly as before;
+- the FIRST time after the start and then again: the first should no longer
+  take noticeably longer than the others (at your 2576 window: ~0.7 s both,
+  measured; the ~0.55 s that remains in every entry is the engine's, fix 42);
+- anything on the galaxy map feeling smoother at large windows is the floor
+  lift change (item 5), not an accident.
