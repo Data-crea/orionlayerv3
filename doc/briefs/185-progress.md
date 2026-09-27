@@ -117,3 +117,15 @@ as exact descriptions of each change. Data sends it himself.
    before. The live results above were measured on `884c727e`; the two
    differ in that one comment.
 6. HD side described in entry 43, not committed. **Checks 386 → 387.**
+
+## Part 3 — decision drafts — **DONE**
+
+`doc/briefs/185-decision-drafts.md`: draft 1, the flash rule of 180 (for
+part 02, after decision 22 "Graceful fallback."), from 180's proposed text
+with the snapshot rates measured since (36 snapshots ≈ 2 s on the map, ≈ 6
+s at the main menu), 166 A's waiting overlay, `claims`, the replay check
+and the live walk; draft 2, the player's start of 183 (for part 02, after
+decision 39), from 183's proposed text with the fix 41 consequences as
+they stand — F12 stated as measured in part 2 — and the pointer to open
+fix 43. Placeholders `<number: Data>`; nothing written into
+`doc/fundament/`.
