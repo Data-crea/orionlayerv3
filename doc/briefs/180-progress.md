@@ -311,3 +311,11 @@ on load, the engine window at startup.
 4. **The build popup beside the original** — the same, with 39 and 40:
    `B_record2/*popup*_offline_side.png`, `B_live_1920x1080/007_C2_*`.
 5. A key pressed during the main menu's opening animation (parked 3).
+
+**Pushed:** a second fresh clone at `3eb39dc` (the head pushed) — setup
+exit 0, 371 green; then `git push origin main`, the pre-push hook ran the
+full suite (371 green): **`5ecba52..3eb39dc  main -> main`**, a
+fast-forward, no force; `git ls-remote` afterwards: local = remote =
+`3eb39dc27d5e…`. This line is one more commit, pushed the same way.
+orion2re: nothing pushed, nothing applied; the six patch files are the
+only engine material in the repository (allowed: patch files under `doc/`).
