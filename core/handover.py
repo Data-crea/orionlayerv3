@@ -204,6 +204,15 @@ def decide_for(app, want, kind, top):
         kind = MODAL
     state = app.client.state
     d = app.dispatcher
+    # AN ID WHOSE HD SCREEN EXISTS AND DECLINED IT (work order 188): the
+    # screen waits for its block — the Hall of Fame's first tick at 14
+    # comes before the engine has read HOF.M2 (open fix 50) — so this is
+    # a transition, held like a known screen's hand-over (a modal's hold,
+    # not a failure), and the notice only if the data never comes (an
+    # engine without the fix: 187's path 3).
+    if kind == NO_SCREEN and getattr(state, "current_screen", -1) in \
+            (getattr(d, "screen_map", None) or {}):
+        kind = MODAL
     name = ((d.overlay_name or d.active_name) if top is not None
             else "") or ""
     box = bool(kind == MODAL and top is not None and

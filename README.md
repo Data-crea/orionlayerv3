@@ -75,7 +75,7 @@ OrionLayer talks to an orion2re built from the branch **`orionlayer-local`**
 fixes below, in this order. The branch is never uploaded anywhere; on a new
 machine it comes from the bundle beside the backup
 (`~/orion2re_bundle_<date>_<hash>[_<fixes>].bundle`, the newest one —
-today `~/orion2re_bundle_28sep_6859e163_fixes34-49.bundle`:
+today `~/orion2re_bundle_29sep_65b41b66_fixes34-50.bundle`:
 `git clone -b orionlayer-local <bundle> ~/orion2re`), and each fix also has
 its patch file here. `python tools/version_check.py` checks a built tree
 against this list and prints the `patch -p1` command for any fix that is
@@ -102,6 +102,7 @@ a smoke check holds this table to it.
 | 16 | `010870bc` | open fix 48: the move verdict for the fleet box's selection at every star, for the travel line on hover (work order 188) | `doc/ext_fleet_move_verdict.patch` |
 | 17 | `76f8c438` | open fix 29: the generic message box's kind, title, text and answers, for the HD message box (work order 188) | `doc/ext_message_box_text.patch` |
 | 18 | `6859e163` | open fix 49: the turn-time popups under their own ids (59-64; 40 kept for the Turn Summary) and what they show, for the HD turn popups (work order 188) | `doc/ext_turn_popups.patch` |
+| 19 | `65b41b66` | open fix 50: the Hall of Fame's entries, and 14 on both ways in (work order 188) | `doc/ext_hall_of_fame.patch` |
 
 Every entry, with its status, reason and revert, is in
 `doc/orion2re_open_fixes.md`.

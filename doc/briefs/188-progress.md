@@ -143,7 +143,7 @@ the stars, then the frame) and asserts the rebuild happened.
 
 **Live on Xvfb** (engine `010870bc`, SAVE4, own fleet at peren, guards
 `P3/guard_2576`, `P3/guard_1920` verified identical; `P3_hover_2576x1432`,
-`P3_hover_1920x1080`): FMOV arrived with the box open (29 reachable, 24 out
+`P3_hover_1920x1080`; see the correction below the table): FMOV arrived with the box open (29 reachable, 24 out
 of range on the map); hover Orion (moving, 6 turns) → **green**; out → no
 line; hover star 53 (out of range, 12 parsecs) → **red**; out → no line;
 click on Orion → the order as today (its destination line drawn). 0 native
@@ -155,9 +155,14 @@ frames. Screenshots `004_B1_hover_reachable_hd.png`, `006_B3_hover_unreachable_h
 | size | line on | line off |
 |---|---|---|
 | 2576x1432 | 5.87 / 5.99 ms | 5.73 / 5.85 ms |
-| 1920x1080 | 5.85 / 5.92 ms | 5.72 / 5.81 ms |
+| 1920x1080 | 4.75 / 4.80 ms | 4.61 / 4.66 ms |
 
-+0.14 ms with the line — smooth at 2576.
++0.14 ms with the line — smooth at 2576. **Corrected in Part 6**: the first
+"1920" row (5.85 / 5.72 ms) was a second 2576 run — zsh passed "1920 1080"
+as ONE argument, the driver fell back to its default size and overwrote the
+2576 folder; found when the same slip hit Part 6's 4K run. Re-run at 1920
+for real (`P3_hover_1920x1080`, `hover.json` size [1920, 1080]): green /
+none / red / none again, 0 native frames, the numbers above.
 
 **Not built**: the fleet box's ETA / refusal text while hovering
 (fleetpop.cpp:1063-1091) — FMOV carries its numbers; parked 1b.
@@ -261,3 +266,56 @@ turn-time popup of the report phase and the combat target; 2 needs none; 3
 and 6 cannot be drawn by HD at all (the data is missing: an engine fix or an
 extraction) and show the notice with what to do. Checks: 090za extended
 (path 3's wording). Count stays 417.
+
+## Part 6 — Main menu: Hall of Fame — **DONE**
+
+**Read first** (`evidence/.../readings/hall_of_fame_reading.md`):
+`SCORE::Hall_Of_Fame_Screen_` (id 14) — ten entries from HOF.M2 (`s_hof`,
+452 bytes), score descending, name / race / difficulty / score; out by a
+click anywhere or ESC (one full-screen field); the "C" key RE-CREATES the
+default file on disk; no empty state (a missing or bad file is replaced by
+ten defaults, which is what `~/Master of Orion 2/HOF.M2` holds — no game has
+entered it yet, so no test entries were needed). A second way in, at the
+end of a game, ran under another id. Nothing of it was on the wire.
+
+**Engine fix 50 "HOFM"** (new; entry "The Hall of Fame's entries are not on
+the wire"): the table in display order with the engine's words, the flashed
+entry, 14 on both ways in, a live flag against the stale first tick. Proof
+on `6859e163` (two controls refused); applied **`65b41b66`**, commit = patch,
+bundle `~/orion2re_bundle_29sep_65b41b66_fixes34-50.bundle` verified.
+
+**HD**: `screens/hall_of_fame/` claims 14 only with HOFM; ten numbered rows
+in the original's column proportions; the new entry flashes at the
+original's pace; CLOSE, a click anywhere and ESC send the screen's own exit
+field; **no other key reaches the game** (never "C"). **Compared with the
+native frame** (`P6_hof_1920x1080/002_hof_table_{hd,native}.png`): the same
+ten rows in the same order with the same words; two differences found and
+fixed before commit — the reading had assumed column headers in SCORE.LBX 15
+and the native frame has none (HD's header row removed), and the picture
+numbers the rows 1-10 (HD draws the numbers). Marks: DEVIATION `hud_table`,
+DEVIATION `flash`, HD EXTENSION `exit_button`, OMISSION `reset_key`.
+
+**Found**: the main menu sent fixed field ids 1-6, which are the engine's
+only with both CONTINUE and LOAD present — without a continue save
+HALL OF FAME (5) would have been QUIT. Every menu button is now resolved in
+the live list by its hotkey and rectangle (`MainMenuScreen.BUTTON_FIELDS`).
+And an id whose HD screen exists but has not claimed it yet (the Hall of
+Fame's first tick, before the engine has read the file) showed the F12
+notice for one snapshot; it is now held like a known screen waiting for its
+data (`handover.decide_for`), and the notice comes only if the data never
+does (path 3).
+
+**Live** (engine `65b41b66`, Xvfb, HOF.M2 in every guard, identical after):
+1920x1080 and 3840x2160 — in by HALL OF FAME, out by ESC; in again, out by a
+click; **0 native frames**. The walks are in the replayed transition set
+(`transitions_180.json` 240 → 248, the 240 reproduced byte for byte first).
+**Not seen live**: the flashed entry (it needs a game to end with a score in
+the table); the check draws it from a stand-in.
+
+**A slip found here, and corrected**: zsh passes an unquoted `$size` as ONE
+argument, so the "3840" run first ran at the driver's default 1920 — and
+Part 3's "1920" frame-time row had been a second 2576 run. Both were run
+again at the right size; Part 3's table is corrected in place.
+
+Checks 090ze (2); 090t stages the screen from a stand-in; 055's menu click
+through the live list. Count 417 → **419**.

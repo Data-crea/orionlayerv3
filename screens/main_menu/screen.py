@@ -158,6 +158,44 @@ class MainMenuScreen(ScreenBase):
         return any(f.hotkey == ord("N") and (f.x, f.y, f.x_end, f.y_end) ==
                    (0x19F, 0xD9, 0x237, 0xEE) for f in fields)
 
+    #: Each menu button's own field, by hotkey and rectangle
+    #: (`MAINMENU::Add_Main_Menu_Fields_`, mainmenu.cpp:110-140). The
+    #: boxes' `field_id`s (1-6) are the list's indices ONLY when both
+    #: CONTINUE and LOAD exist: without a continue save the engine adds no
+    #: CONTINUE field and every index after it moves up by one — HALL OF
+    #: FAME's 5 would then be QUIT (found by work order 188's reading).
+    #: So a click resolves its button in the live list, and a button the
+    #: game did not build sends nothing.
+    BUTTON_FIELDS = {
+        "continue": (ord("C"), (0x19F, 0xAC, 0x237, 0xC1)),
+        "load_game": (ord("L"), (0x19F, 0xC3, 0x237, 0xD7)),
+        "new_game": (ord("N"), (0x19F, 0xD9, 0x237, 0xEE)),
+        "multiplayer": (ord("M"), (0x19F, 0xF0, 0x237, 0x104)),
+        "hall_of_fame": (ord("H"), (0x19F, 0x106, 0x237, 0x11B)),
+        "quit": (ord("Q"), (0x19F, 0x11D, 0x237, 0x132)),
+    }
+
+    def button_field(self, name, fields):
+        """The live field of menu button `name`, or None."""
+        hotkey, rect = self.BUTTON_FIELDS[name]
+        return next((f for f in fields or [] if getattr(f, "index", 0) > 0
+                     and f.hotkey == hotkey and
+                     (f.x, f.y, f.x_end, f.y_end) == rect), None)
+
+    def handle_click(self, screen_x, screen_y):
+        if self.help_consumes_click(screen_x, screen_y):
+            return None
+        for box in self.boxes:
+            if box.name in self.BUTTON_FIELDS and \
+                    box.contains(screen_x, screen_y):
+                state = getattr(self.app.client, "state", None)
+                f = self.button_field(box.name,
+                                      getattr(state, "fields", None))
+                if f is not None and self.app.connected:
+                    self.app.client.activate_field(f.index)
+                return box
+        return super().handle_click(screen_x, screen_y)
+
     def wants_original(self):
         return bool(getattr(self, "_net_on", False))
 

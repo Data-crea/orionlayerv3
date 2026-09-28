@@ -1,0 +1,13 @@
+{
+  "_comment": "The Hall of Fame (work order 188 Part 6). Its words are ARTWORK in the original \u2014 SCORE.LBX entry 15 carries the title and the rank numbers 1-10 beside the rows (seen on the native frame, work order 188: the picture has NO column headers, which the source reading had assumed) \u2014 so the title is typed here per decision 15, the numbers are drawn, and a mod replaces this file.",
+  "words": {
+    "title": "HALL OF FAME",
+    "close": "CLOSE"
+  },
+  "marks": {
+    "deviation_hud_table": "The table in HUD panels on the universal background, where the original draws SCORE.LBX 15's picture (title, header and its own frame) with its own cursor (SCORE.LBX 16).",
+    "deviation_flash": "The new entry flashes as a lit row blinking at the original's pace (every 6 draw ticks, score.cpp:397-405), where the original cycles the row's palette colours.",
+    "hd_extension_exit_button": "A CLOSE button under the table; the original leaves on a click anywhere or ESC (its one full-screen field, score.cpp:549), which HD takes too.",
+    "omission_reset_key": "The original's 'C' key re-creates the default file on disk (score.cpp:329-334); HD never sends it \u2014 no key but ESC reaches the game from this screen."
+  }
+}

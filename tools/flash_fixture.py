@@ -11,7 +11,10 @@ on a scratch engine with open fixes 44 and 45 — not applied) and
 work_order_185/P10_audience_{1920x1080,2576x1432} (`tools/audience_walk.py`,
 with open fixes 46 and 47 — not applied), and work_order_187/
 P2_name_walk_1920x1080 (the designer's name typed in HD, Enter and ESC
-recorded as transitions; the 233 before it reproduced byte for byte first).
+recorded as transitions; the 233 before it reproduced byte for byte first),
+and work_order_188/P6_hof_{1920x1080,3840x2160} (the Hall of Fame, in and out
+by ESC and by a click, on open fix 50; the 240 before it reproduced byte
+for byte first).
 
 Reads the `trace.jsonl` of `tools/flash_walk.py` runs and writes
 `tools/fixtures/transitions_180.json`: every walked transition as the

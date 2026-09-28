@@ -325,6 +325,8 @@ _MARKED = {
     "core/msgbox.py": "DEVIATION `hud_message_box`",
     # ...and the turn-time popups on open fix 49. Its own check is 090zd.
     "core/turnpopup.py": "DEVIATION `hud_turn_popup`",
+    # ...and the Hall of Fame (open fix 50). Its own check is 090ze.
+    "screens/hall_of_fame/screen.py": "DEVIATION `hud_table`",
 
 }
 _MARKS = ("HD EXTENSION", "DEVIATION")

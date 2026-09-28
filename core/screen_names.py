@@ -43,7 +43,7 @@ SCREENS = {
     10: ("MAIN_MENU",       "main_menu"),
     12: ("NEXT_TURN",       None),
     13: ("NEW_GAME",        "new_game"),
-    14: ("HALL_OF_FAME",    None),
+    14: ("HALL_OF_FAME",    "hall_of_fame"),   # work order 188 (open fix 50)
     18: ("PLANET_DATA",     "planet_data"),
     20: ("COLONY_SUMMARY",  "colony_summary"),
     25: ("QUEUE_POPUP",     "build_queue"),   # work order 180 C

@@ -269,6 +269,11 @@ LOCAL_PATCHES = {
         os.path.join("src", "game", "turnsum.cpp"), "OrionLayer, open fix 49.",
         "the turn-time popups have no id of their own and their content is "
         "not on the wire (open fix 49): they stay behind the F12 notice"),
+    # Applied 29 September 2026 by work order 188: 65b41b66, on 6859e163.
+    "doc/ext_hall_of_fame.patch": (
+        os.path.join("src", "game", "score.cpp"), "OrionLayer, open fix 50.",
+        "the Hall of Fame's entries are not on the wire (open fix 50): it "
+        "stays behind the F12 notice"),
 }
 
 #: Patches that are REPORTED to Joes and not yet applied: listed with
@@ -330,6 +335,7 @@ FIX_NUMBERS = {
     "doc/ext_fleet_move_verdict.patch": (48,),
     "doc/ext_message_box_text.patch": (29,),
     "doc/ext_turn_popups.patch": (49,),
+    "doc/ext_hall_of_fame.patch": (50,),
 }
 
 

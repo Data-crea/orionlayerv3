@@ -120,6 +120,9 @@ class GameState:
     #: The turn-time popup that is up, open fix 49 (work order 188):
     #: `core/turnpopup.py` names every key.
     turn_popup: Optional[dict] = None        # "TPOP", fix 49
+    #: The Hall of Fame while it is up, open fix 50 (work order 188):
+    #: `core/hofblocks.py` names every key.
+    hall_of_fame: Optional[dict] = None      # "HOFM", fix 50
 
     # Fields (from FIELD_LIST message)
     fields: list = field(default_factory=list)
@@ -410,7 +413,9 @@ def parse_state(data: bytes) -> GameState:
     pos = moveblocks.parse(gs, data, pos)     # FMOV, open fix 48
     pos = msgbox.parse(gs, data, pos)         # MSGB, open fix 29
     from core import turnpopup
-    pos = turnpopup.parse(gs, data, pos)      # TPOP, open fix 49, LAST
+    pos = turnpopup.parse(gs, data, pos)      # TPOP, open fix 49
+    from core import hofblocks
+    pos = hofblocks.parse(gs, data, pos)      # HOFM, open fix 50, LAST
     return gs
 
 

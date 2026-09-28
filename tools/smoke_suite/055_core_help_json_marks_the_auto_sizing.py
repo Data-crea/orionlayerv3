@@ -61,7 +61,15 @@ _btn = next(b for b in _mmh.boxes if b.name == "new_game")
 _cx, _cy = _btn.screen_rect.center
 
 class _RecClient(FakeClient):
-    def __init__(self): self.acts = []
+    def __init__(self):
+        self.acts = []
+        # the six menu fields as the engine builds them (work order 188:
+        # the menu resolves each button in the live list by hotkey)
+        import types as _mh_ns
+        self.state = _mh_ns.SimpleNamespace(fields=[
+            _mh_ns.SimpleNamespace(index=i + 1, hotkey=hk, x=r[0], y=r[1],
+                                   x_end=r[2], y_end=r[3])
+            for i, (hk, r) in enumerate(type(_mmh).BUTTON_FIELDS.values())])
     def activate_field(self, fid): self.acts.append(fid)
 
 _prev_c, _prev_conn = app.client, app.connected

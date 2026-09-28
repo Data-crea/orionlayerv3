@@ -71,6 +71,7 @@ section for what was found where.
 | 47 | The diplomacy audience's state — who, the statement, the reply text, the menu and its enabled items — is not on the wire | **Applied** 28 September 2026 by work order 186 on Data's approval (orion2re `ba9b6bc6` on `orionlayer-local`, `doc/ext_audience_state.patch`, "DIPL", on top of 46); written, proved and parked by work order 185; proved again on the tip it was applied to, re-cut there (positions only); required by `tools/version_check.py` | Without it the audience stays the game's own picture even with fix 46 |
 | 48 | The move verdict for the fleet box's selection at every star is not on the wire — `Ships_Try_To_Move_To_`'s `s_ship_move_info`, which the original computes on hover | **Applied** 28 September 2026 by work order 188 under the order's advance approval (orion2re `010870bc` on `orionlayer-local`, `doc/ext_fleet_move_verdict.patch`, "FMOV"); required by `tools/version_check.py`; open upstream | Without it the galaxy map draws no travel line on hover, and HD would have to rebuild range, fuel, speed, gates and flux itself |
 | 49 | The turn-time popups have no id of their own (they report 0; the Turn Summary 40 for one tick) and what they show is not on the wire | **Applied** 29 September 2026 by work order 188 under the order's advance approval (orion2re `6859e163` on `orionlayer-local`, `doc/ext_turn_popups.patch`, ids 59-64 and "TPOP"); required by `tools/version_check.py`; open upstream | Without it every turn-time popup stays behind the F12 notice |
+| 50 | The Hall of Fame's entries are not on the wire, and its end-of-game way in does not report 14 | **Applied** 29 September 2026 by work order 188 under the order's advance approval (orion2re `65b41b66` on `orionlayer-local`, `doc/ext_hall_of_fame.patch`, "HOFM"); required by `tools/version_check.py`; open upstream | Without it the Hall of Fame stays behind the F12 notice |
 
 Items 3 and 4 are both about INJECT_CLICK and both live in the same
 code path, but they are separate faults: 3 is where the coordinates
@@ -5030,4 +5031,148 @@ are in the patch file's header.
 **Side effects.** The guards write only the view and the reported id; the one game-side addition is a file-static in science.cpp that only the guard reads. The block is at most a few KB (the Turn Summary's lines).
 
 **How to revert.** From `~/orion2re` on `orionlayer-local`: `git revert 6859e163` or `patch -R -p1`; rebuild; move the patch to `REPORTED_PATCHES`. Without it the turn-time popups stay behind the F12 notice (Stage 1).
+
+## 50. The Hall of Fame's entries are not on the wire
+
+**Status: APPLIED** — 29 September 2026 by work order 188 (Part 6, "Main menu: Hall of Fame"), under the order's advance approval ("Engine fixes: approved in advance for this run"). orion2re **`65b41b66`** on `orionlayer-local` ("OrionLayer Open Fix 50: send the Hall of Fame's entries and report 14 on both ways in ("HOFM")"), the only commit of this fix, on top of `6859e163`; bundle `~/orion2re_bundle_29sep_65b41b66_fixes34-50.bundle` (`git bundle verify`: exit 0). Patch: `doc/ext_hall_of_fame.patch` — `git diff 65b41b66~1 65b41b66` byte for byte; required by `tools/version_check.py` (marker `OrionLayer, open fix 50.`). Open upstream.
+
+**What is missing.** `SCORE::Hall_Of_Fame_Screen_` (score.cpp:291-356)
+draws its ten entries from `SCORE::_hof` (HOF.M2, `s_hof`, orion2.h:1039-
+1046) in the order Init sorted them, and the difficulty words from ESTRINGS
+(score.cpp:298-302). None of it is serialized; the field list carries ten
+row fields, the exit and the reset hotkey, no content. The end-of-game way
+in (`End_Of_Game_Hi_Score_`, score.cpp:199) runs the screen under the return
+screen's id, not 14. HD must not read HOF.M2 itself — decision 60's
+reasoning (the engine may rewrite the file on entry; HD's folder need not be
+the game's; the words are the engine's).
+
+**What the patch changes.** `src/game/score.cpp`: once the file is read
+and sorted, a `ScreenOverride(SCREEN_HALL_OF_FAME)` for the rest of the
+screen (14 on both ways in) and `ext::g_hof_live` set, cleared when the loop
+ends — `SCORE::_hi` outlives the screen and the first tick at 14 comes before
+the file is read. `src/ext/ext_api.h` / `.cpp`: the flag; block "HOFM",
+written LAST while 14 is reported and the flag is set: version, the file's
+version, the flashed entry, ten rows in the display order (record, score,
+race id, difficulty, the player's name, the race's name, the difficulty's
+word).
+
+**The exact change.** `git diff 65b41b66~1 65b41b66` (the `diff --git` and `index` lines and the text git adds after `@@` are not part of it):
+
+```diff
+--- a/src/ext/ext_api.cpp
++++ b/src/ext/ext_api.cpp
+@@ -1089,6 +1089,46 @@
+             Write16(buf, COMBFIND::_target.num_player_targets);
+         }
+     }
++
++    // 17. The Hall of Fame: "HOFM", written ONLY while it takes input (it
++    //     reports 14 on both ways in), and LAST. OrionLayer, open fix 50.
++    //
++    //     SCORE::Hall_Of_Fame_Screen_ draws its ten entries from SCORE::_hof
++    //     in the order Init sorted them (_hi->sort_list, score descending)
++    //     and the difficulty words from ESTRINGS into _difficulty_string —
++    //     none of it was serialized. Sent in the DISPLAY order, as the file
++    //     holds it: the record, the score, the race id, the difficulty and
++    //     its word as the engine loaded it, the player's and the race's
++    //     names; and the entry the screen flashes (a new record at game end).
++    if (current_screen == SCREEN_HALL_OF_FAME && g_hof_live && SCORE::_hi != nullptr) {
++        buf.push_back((uint8_t)'H');
++        buf.push_back((uint8_t)'O');
++        buf.push_back((uint8_t)'F');
++        buf.push_back((uint8_t)'M');
++        Write8(buf, 1);                                   // block version
++        Write16(buf, SCORE::_hof.version);
++        Write16(buf, SCORE::_entry_to_flash);
++        Write8(buf, 10);
++        for (int i = 0; i < 10; i++) {
++            const int16_t r = SCORE::_hi->sort_list[i][1];
++            const bool ok = r >= 0 && r < 10;
++            Write16(buf, r);
++            Write16(buf, ok ? SCORE::_hof.scores[r] : 0);
++            Write16(buf, ok ? SCORE::_hof.race_ids[r] : 0);
++            const int8_t d = ok ? SCORE::_hof.difficulties[r] : 0;
++            Write8(buf, (uint8_t)d);
++            const char* strs[3] = {
++                ok ? SCORE::_hof.player_names[r] : "",
++                ok ? SCORE::_hof.race_names[r] : "",
++                (d >= 0 && d < GAME_DIFFICULTY_COUNT) ? SCORE::_difficulty_string[d] : ""};
++            const size_t caps[3] = {20, 20, 15};
++            for (int k = 0; k < 3; k++) {
++                const size_t len = strnlen(strs[k], caps[k]);
++                Write8(buf, (uint8_t)len);
++                WriteBytes(buf, strs[k], len);
++            }
++        }
++    }
+ }
+ 
+ // ── Field list ───────────────────────────────────────────
+@@ -1576,6 +1616,9 @@
+     g_screen_override = previous;
+ }
+ 
++// OrionLayer, open fix 50. The Hall of Fame takes input (ext_api.h).
++bool g_hof_live = false;
++
+ // OrionLayer, open fix 29. The generic message box that is up (ext_api.h).
+ MessageBoxView g_message_box = {0, nullptr, nullptr, -1, -1, 0};
+ 
+--- a/src/ext/ext_api.h
++++ b/src/ext/ext_api.h
+@@ -78,6 +78,12 @@
+     ~ListFieldGuard();
+ };
+ 
++/// OrionLayer, open fix 50. True while SCORE::Hall_Of_Fame_Screen_ takes input:
++/// set once it has read the file and sorted it, cleared when it leaves —
++/// SCORE::_hi outlives the screen and the first tick at 14 comes before the
++/// file is read, so the pointer alone cannot say the table is current.
++extern bool g_hof_live;
++
+ /// OrionLayer, open fix 29. The generic message box that is up: which kind,
+ /// its title and text as the caller handed them (raw, FMTPARA codes and
+ /// all), the field id of each answer and a timed box's ticks — the text
+--- a/src/game/score.cpp
++++ b/src/game/score.cpp
+@@ -1,4 +1,7 @@
+ #include "pch.h"
++#ifdef ORION2RE_EXT
++#include "ext/ext_api.h"  // OrionLayer, open fix 50. The Hall of Fame on the wire.
++#endif
+ 
+ namespace SCORE {
+     s_hof _hof;
+@@ -314,6 +317,12 @@
+ 
+         SCORE::_hi->current_input_state = -1000;
+ 
++#ifdef ORION2RE_EXT
++        // OrionLayer, open fix 50. 14 on both ways in (the end of a game runs this under its return screen) and the table on the wire while it takes input.
++        const ext::ScreenOverride ext_screen_guard(SCREEN_HALL_OF_FAME);
++        ext::g_hof_live = true;
++#endif
++
+         do {
+             SCORE::_hi->prev_input_state = SCORE::_hi->current_input_state;
+             input_val = fields::Get_Input_();
+@@ -349,6 +358,9 @@
+ 
+         } while (!exit_screen);
+ 
++#ifdef ORION2RE_EXT
++        ext::g_hof_live = false;  // OrionLayer, open fix 50. The table is no longer the screen's.
++#endif
+         ERIC::Fast_Fade_Out_();
+         MOX::_current_screen = MOX::_return_screen;
+         fields::Clear_Fields_();
+```
+
+**Proof on the tip it was applied to** (work order 188, `evidence/work_order_188/P6/fix50_proof.json`): in a scratch clone at `6859e163` the patch file applied with `patch -p1 --dry-run` and `patch -p1`, no offset, no fuzz, the applied tree's diff equal to the file's; `ext_api.cpp` and `score.cpp` compiled alone with the build's own command (`-fsyntax-only`), exit 0; two controls refused, exit 1 each — `SCORE::_entry_to_flash` misspelt `_entry_to_flsh` in ext_api.cpp, `ext::g_hof_live` misspelt `g_hof_liv` in score.cpp. Then applied to `~/orion2re` (no offset; no engine running — checked), built (ninja, no error), `git add` of the three files, one commit; `git diff 65b41b66~1 65b41b66` equals the file's diff (`cmp`).
+
+**Recorded live** (engine `65b41b66`, the virtual display, the main menu, 1920x1080 and 3840x2160; HOF.M2 guarded, identical after; `evidence/work_order_188/P6_hof_*`): HOFM file version 130, no flashed entry, ten rows 1595 … 440 in the order the native frame shows them, the difficulty words Tutor / Easy / Average / Hard / Impossible as the engine loaded them; in by HALL OF FAME, out by ESC and by a click, 0 native frames.
+
+**Side effects.** The override and the flag only; nothing the game reads changes. The block is under 500 bytes.
+
+**How to revert.** From `~/orion2re` on `orionlayer-local`: `git revert 65b41b66` or `patch -R -p1`; rebuild; move the patch to `REPORTED_PATCHES`. Without it the Hall of Fame stays behind the F12 notice.
 

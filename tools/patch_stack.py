@@ -51,6 +51,8 @@ STACKED_AFTER_COLONY = (
     "doc/ext_message_box_text.patch",
     # 49 appends TPOP after 29's MSGB
     "doc/ext_turn_popups.patch",
+    # 50 appends HOFM after 49's TPOP
+    "doc/ext_hall_of_fame.patch",
 )
 
 
