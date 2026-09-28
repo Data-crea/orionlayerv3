@@ -17,6 +17,15 @@ screens for the turn-time ids by frequency. **Default: unchanged** (the
 order: inventory, no change) — so until Data decides, paths 1, 4 and 5
 still show the picture, which is against his rule.
 
+### 1b. Option C and the rule (Part 1)
+
+Option C, approved in this order, is built: a modal box over an HD screen
+now appears after ~0.4-0.7 s instead of ~2-4 s. But what appears is still
+the GAME'S picture of the box — the order's own rule forbids that outside
+F12. The two cannot both hold until HD draws those boxes (1a's step 2:
+one HD message box on open fix 29). **Default: option C as approved**; the
+rule's answer is 1a.
+
 ## 2. Carried over unchanged (not acted on in this order)
 
 - **From 185** (`doc/briefs/185-parked-for-data.md` item 2c, "The Ship

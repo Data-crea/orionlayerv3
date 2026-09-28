@@ -26,7 +26,13 @@ gate sits there and every screen — including the next one — is under it.
                transition, not a screen (the load's screen 39)
     modal      a screen's modal net says "a modal HD has no view for"
                (`ScreenBase.handover_is_modal`): held, then shown — the
-               net is allowed for exactly that, so it is not a failure
+               net is allowed for exactly that, so it is not a failure.
+               A modal BOX — a list that replaced the screen's own page,
+               its data already there (`ScreenBase.modal_is_box`) — is
+               shown once its live list has stood unchanged for
+               `MODAL_SETTLE` snapshots (work order 187, option C of
+               `doc/briefs/186-modal-hold.md`): no late data can end its
+               hold, which is why the full hold made every box ~4 s
     hand_over  a known screen cannot vouch for its data: held, then shown
                ONCE and counted in `failures`
 
@@ -60,13 +66,24 @@ HOLD = 36
 #: Snapshots an id with no HD screen may stand with an EMPTY list before
 #: its picture is shown anyway — the same bound, for the same reason.
 EMPTY_HOLD = 36
+#: Snapshots a modal BOX's live list must stand unchanged before it is
+#: shown (work order 187, Data's approval of option C): the modal net's
+#: SETTLE, counted in snapshots as its own docstring says — at a box's own
+#: pace (~106-113 ms, `186-modal-hold.md`) about half a second.
+from core.modalnet import SETTLE as MODAL_SETTLE  # noqa: E402
 
 F12, NO_SCREEN, MODAL, HAND_OVER = "f12", "no_screen", "modal", "hand_over"
 
 
 class Gate:
-    def __init__(self, hold=HOLD, empty_hold=EMPTY_HOLD):
+    def __init__(self, hold=HOLD, empty_hold=EMPTY_HOLD,
+                 modal_settle=MODAL_SETTLE):
         self.hold, self.empty_hold = hold, empty_hold
+        self.modal_settle = modal_settle
+        #: Modal boxes shown early (option C), for the report.
+        self.early = 0
+        self._sig = None
+        self._sig_since = 0
         #: Known screens whose data did not arrive within the hold.
         self.failures = 0
         #: Holds that ended with the screen's own picture — no native frame.
@@ -76,9 +93,14 @@ class Gate:
         self._start = 0
         self._released = False
 
-    def decide(self, want, kind, name, screen, live_fields, snapshots):
+    def decide(self, want, kind, name, screen, live_fields, snapshots,
+               box=False, sig=None):
         """True to present the game's picture, False to draw HD — and
-        `holding` says whether "False" means "keep the last HD frame"."""
+        `holding` says whether "False" means "keep the last HD frame".
+
+        `box`: the modal is a box over the screen's own page
+        (`ScreenBase.modal_is_box`); `sig`: its live list's shape — the
+        early release counts snapshots since `sig` last changed."""
         if not want or kind == F12 or (kind == NO_SCREEN and live_fields):
             self._close(snapshots)
             self.holding = False
@@ -87,13 +109,24 @@ class Gate:
         if key != self._episode:
             self._close(snapshots)
             self._episode, self._start, self._released = key, snapshots, False
+            self._sig, self._sig_since = sig, snapshots
             log.info("hold: %s, game screen %s (%s) — HD keeps its last "
                      "frame until the data arrives", name or "-", screen,
                      kind)
         if self._released:
             self.holding = False
             return True
+        if sig != self._sig:
+            self._sig, self._sig_since = sig, snapshots
         waited = snapshots - self._start
+        if kind == MODAL and box and live_fields and \
+                snapshots - self._sig_since >= self.modal_settle:
+            self._released, self.holding = True, False
+            self.early += 1
+            log.info("released: %s, game screen %s (modal box) — its list "
+                     "stood still for %d snapshots (option C, work order "
+                     "187)", name or "-", screen, snapshots - self._sig_since)
+            return True
         limit = self.empty_hold if kind == NO_SCREEN else self.hold
         if waited < limit:
             self.holding = True
@@ -142,9 +175,21 @@ def decide_for(app, want, kind, top):
     d = app.dispatcher
     name = ((d.overlay_name or d.active_name) if top is not None
             else "") or ""
+    box = bool(kind == MODAL and top is not None and
+               getattr(top, "modal_is_box", lambda: False)())
     return app._handover.decide(
         want, kind, name, getattr(state, "current_screen", -1),
-        live_fields(state), app.client.stats.get("state", 0))
+        live_fields(state), app.client.stats.get("state", 0),
+        box=box, sig=list_sig(state))
+
+
+def list_sig(state):
+    """A live list's shape: each answerable field's type and rectangle."""
+    return tuple((getattr(f, "field_type", None), getattr(f, "x", None),
+                  getattr(f, "y", None), getattr(f, "x_end", None),
+                  getattr(f, "y_end", None))
+                 for f in (getattr(state, "fields", None) or [])
+                 if getattr(f, "index", 0) != 0)
 
 
 def render_hold(app):

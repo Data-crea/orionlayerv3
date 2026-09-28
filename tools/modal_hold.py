@@ -4,6 +4,11 @@
     python tools/modal_hold.py designer [--repeat N]   # the Ship Designer's shield warning (id 3)
     python tools/modal_hold.py colony_base            # SAVE4's TURN: the colony-base choice (id 0)
     python tools/modal_hold.py combat                 # SAVE5's TURN: the combat choice (id 12)
+    python tools/modal_hold.py colony_buy             # the colony screen's BUY: its box (id 1)
+    ... --before     the gate as before work order 187: the early release of a
+                     modal box (option C) switched off IN THIS PROCESS ONLY
+                     (`Gate.modal_settle` set out of reach) — the "before" of
+                     187 part 1's table; the product is not changed
 
 MEASUREMENT ONLY. Nothing in the product is changed or patched; the tool
 drives the running App through its window (every input a posted pygame
@@ -112,6 +117,8 @@ def timeline(t0, wire, frames, before_sig, until):
         "box_pacing_median_ms": round(1000 * statistics.median(gaps), 1) if gaps else None,
         "box_snapshots_per_s": round(1 / statistics.median(gaps), 2) if gaps else None,
     })
+    if net0 is None:
+        out["no_native_frame_within_s"] = round(until - t0, 1)
     if hold0:
         out["gate_hold_starts_s"] = round(hold0["t"] - t0, 3)
         out["gate_hold_kind"] = hold0["kind"]
@@ -181,6 +188,46 @@ def designer(w, repeat):
     return results
 
 
+def colony_buy(w):
+    """The colony screen's BUY (field [3]): a Yes/No confirmation or a
+    message box over the colony screen (colony_main.cpp:740-800). Answered
+    so that nothing changes: the confirmation's "N" field, a message box's
+    full-screen field — through the picture HD shows, from the live list."""
+    from screens.colony import colgeom, colwire
+    gm = w.hd("galaxy_map")
+    star, view = gm.home_star(), gm._map_view()
+    before = len(w.st.fields or [])
+    w.click(*view.to_screen(star.x, star.y))
+    w.wait(lambda st: len(st.fields or []) != before, 20)
+    w.settle(10)
+    w.click_rect(w.own_colony_disc())
+    assert w.wait(w.on_colony, 20), "not on the colony screen — nothing sent"
+    w.settle(30)
+    f = colwire.live_field(w.st.fields, colgeom.BUY)
+    assert f is not None, "no BUY field now — nothing sent"
+    sig = live_sig(w.st.fields)
+    t0 = time.monotonic()
+    w.click_field(w.hd("colony"), (f.x, f.y, f.x_end, f.y_end))
+    res = w.record(t0, sig)
+    no = next((x for x in w.st.fields or [] if x.index and x.hotkey == ord("N")
+               and (x.x, x.y) == (0x159, 0x12E)), None)
+    full = next((x for x in w.st.fields or [] if x.index and
+                 (x.x, x.y, x.x_end, x.y_end) == (0, 0, 639, 479)), None)
+    target = no or full
+    res["box"] = "confirmation (answered No)" if no else (
+        "message box (clicked away)" if full else "unknown — nothing sent")
+    print(f"  colony BUY: {res}")
+    if target is not None and w.app._showing_original():
+        dx, dy, dw, dh, sc = w.app.original_view.placement(w.app.win_w, w.app.win_h)
+        w.click(int(dx + (target.x + target.x_end) / 2 * sc),
+                int(dy + (target.y + target.y_end) / 2 * sc))
+        w.wait(w.on_colony, 10)
+        w.settle(20)
+        w.transition("colony -> galaxy_map (ESC)", "galaxy_map",
+                     lambda: w.key(pygame.K_ESCAPE), livesend.on_galaxy_map)
+    return [res]
+
+
 def turn(p, slot):
     flash_walk.SLOT = slot
     assert p.st.current_screen == 10, "not at the main menu — nothing sent"
@@ -201,11 +248,17 @@ def main(argv):
     which = argv[0] if argv else "designer"
     repeat = next((int(a.split("=", 1)[1]) for a in argv if a.startswith("--repeat=")), 3)
     saves = hashes()
+    tag = f"modal_{which}" + ("_before" if "--before" in argv else "_after")
     if which == "designer":
         import design_walk
-        p = attach(design_walk.DesignWalk((1920, 1080), f"P4_modal_{which}"))
+        p = attach(design_walk.DesignWalk((1920, 1080), tag))
+    elif which == "colony_buy":
+        import colony_accept
+        p = attach(colony_accept.Accept((1920, 1080), tag))
     else:
-        p = attach(flash_walk.Walk((1920, 1080), f"P4_modal_{which}"))
+        p = attach(flash_walk.Walk((1920, 1080), tag))
+    if "--before" in argv:
+        p.app._handover.modal_settle = 10 ** 9      # this process only
     p.run.wait_for(lambda st: st.current_screen >= 0, seconds=30, label="first")
     p.settle(40)
     if which == "designer":
@@ -216,6 +269,10 @@ def main(argv):
         results = turn(p, 4)
     elif which == "combat":
         results = turn(p, 5)
+    elif which == "colony_buy":
+        if p.st.current_screen == 10:
+            p.load()
+        results = colony_buy(p)
     else:
         raise SystemExit(f"unknown scenario {which}")
     with open(os.path.join(p.run.dir, "modal_hold.json"), "w", encoding="utf-8") as fh:

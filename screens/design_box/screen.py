@@ -97,6 +97,10 @@ class DesignBoxScreen(ScreenBase):
     def handover_is_modal(self):
         return self._box is not None and self._box.state == dbwire.GAME_BOX
 
+    def modal_is_box(self):
+        # GAME_BOX with DSBX on the wire (not "no DSBX block").
+        return self.handover_is_modal() and self._box.box is not None
+
     def fallback_reason(self):
         if self._box is not None and not self._box.draws:
             return self._box.reason

@@ -140,6 +140,25 @@ class ScreenBase(HelpMixin):
         what it does."""
         return False
 
+    def modal_is_box(self):
+        """True when the modal `handover_is_modal()` reports is a BOX over
+        this screen's own page — a list that REPLACED the page, the
+        screen's own data already there — so no late data can come that
+        would end the gate's hold. The gate then shows it once its list
+        has stood still for `handover.MODAL_SETTLE` snapshots (work order
+        187, option C). False keeps the full hold: an unknown list may be
+        a transition whose own list is still to come (the main menu's
+        opening animation, work order 180 A1).
+
+        This default answers for a screen whose hand-over is a MODAL NET
+        (`core/modalnet.py` — the main menu's `_net`, select race's `_net`,
+        the galaxy map's `_modal.net`): a box only once the screen's own
+        list was seen this visit (`Net.box`). Screens with a GAME_BOX state
+        answer for themselves."""
+        net = getattr(self, "_net", None) or \
+            getattr(getattr(self, "_modal", None), "net", None)
+        return bool(getattr(net, "box", False))
+
     def exit(self):
         """Screen deactivated. Clean up."""
         self.active = False

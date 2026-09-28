@@ -5,11 +5,12 @@
 # tools/smoke_suite/, in file-name order and in ONE namespace. Do not
 # import this file; it is not a module.
 #
-# The 4 check(s) it holds:
+# The 5 check(s) it holds:
 #   - the hand-over gate: a known screen is held for its data and falls back once as a failure; a modal net and an empty no-screen id are held, not failed
 #   - main.App asks the gate for every hand-over, a held frame keeps the last HD frame or the universal background, and no input reaches it
 #   - recorded transitions for every registry screen replay with no native frame, before the target's first HD frame or after it, and no fallback
 #   - the replay can fail: without the hold, the three flashes work order 180 A1 measured come back
+#   - a modal BOX over a screen's own page is shown once its list has stood still for MODAL_SETTLE snapshots (option C, work order 187); every other hand-over keeps the full hold, and a net's box needs its own list seen first
 
 
 # ── A SCREEN HD DRAWS NEVER PRESENTS A NATIVE FRAME (180 A2) ────
@@ -187,3 +188,73 @@ assert {"galaxy_map -> fleets", "startup -> main_menu",
         "load dialog -> galaxy_map (SAVE4)"} <= _ho_back, sorted(_ho_back)
 ok(f"the replay can fail: without the hold, the three flashes work order "
    f"180 A1 measured come back ({len(_ho_back)} transitions)")
+
+
+# 5. OPTION C (work order 187, Data's approval; `doc/briefs/186-modal-hold.md`).
+#    A modal box over an HD screen waited out the full HOLD — 36 of the
+#    box's own snapshots, ~4 s — although no late data can end that hold.
+#    Now: a MODAL hand-over that is a BOX (`ScreenBase.modal_is_box`) is
+#    shown once its live list has stood unchanged for MODAL_SETTLE
+#    snapshots; a changing list restarts the count; everything else keeps
+#    the full hold. A net's box needs the screen's own list seen first —
+#    the main menu's opening animation (180 A1) comes before it and is held.
+from core import modalnet as _hc_mn
+from core.screen_base import ScreenBase as _HcBase
+assert _ho.MODAL_SETTLE == _hc_mn.SETTLE == 5 and _ho.HOLD == 36
+_hc_a, _hc_b = (("t7", 0, 0, 639, 479),), (("t0", 1, 1, 9, 9),)
+_hc_g = _ho.Gate()
+_hc_seq = [_hc_g.decide(True, _ho.MODAL, "ship_design", 3, 1, n, box=True,
+                        sig=_hc_a) for n in range(100, 110)]
+assert _hc_seq.index(True) == _ho.MODAL_SETTLE and _hc_g.early == 1, _hc_seq
+# a list that changes restarts the count
+_hc_g = _ho.Gate()
+_hc_sigs = [_hc_a, _hc_a, _hc_a, _hc_b, _hc_b, _hc_b, _hc_b, _hc_b, _hc_b]
+_hc_seq = [_hc_g.decide(True, _ho.MODAL, "colony", 1, 3, 200 + i, box=True,
+                        sig=_s) for i, _s in enumerate(_hc_sigs)]
+assert _hc_seq.index(True) == 3 + _ho.MODAL_SETTLE, _hc_seq
+# not a box, no answerable field, or not a modal: the full hold
+for _hc_kw in ({"kind": _ho.MODAL, "box": False, "live": 1},
+               {"kind": _ho.MODAL, "box": True, "live": 0},
+               {"kind": _ho.HAND_OVER, "box": True, "live": 1}):
+    _hc_g = _ho.Gate()
+    _hc_seq = [_hc_g.decide(True, _hc_kw["kind"], "x", 3, _hc_kw["live"], n,
+                            box=_hc_kw["box"], sig=_hc_a) for n in range(60)]
+    assert _hc_seq.index(True) == _ho.HOLD and _hc_g.early == 0, _hc_kw
+assert _HcBase.modal_is_box(_ho_ns.SimpleNamespace()) is False
+# the nets: unknown before the own list = a transition; after it = a box
+_hc_F = lambda **k: _ho_ns.SimpleNamespace(index=1, hotkey=0, field_type=0,
+                                           x=0, y=0, x_end=9, y_end=9, **k)
+_hc_net = _hc_mn.Net("t", lambda f: any(getattr(x, "mine", 0) for x in f))
+_hc_st = lambda fields: _ho_ns.SimpleNamespace(current_screen=10, fields=fields)
+for _ in range(8):
+    _hc_net.check(_hc_st([_hc_F()]), 10)
+assert _hc_net.unknown_signature and not _hc_net.box, "a transition, not a box"
+_hc_net.check(_hc_st([_hc_F(mine=1)]), 10)
+for _ in range(8):
+    _hc_net.check(_hc_st([_hc_F()]), 10)
+assert _hc_net.box, "an unknown list after the own one is a box"
+_hc_net.check(_ho_ns.SimpleNamespace(current_screen=0, fields=[]), 10)
+assert not _hc_net.own_seen, "leaving the id forgets the own list"
+# each screen's answer, on stand-ins of its own states
+from screens.ship_design import sdwire as _hc_sd
+from screens.ship_design.screen import ShipDesignScreen as _HcSD
+_hc_v = lambda st, design: _ho_ns.SimpleNamespace(_view=_ho_ns.SimpleNamespace(
+    state=st, design=design), handover_is_modal=lambda: st == _hc_sd.GAME_BOX)
+assert _HcSD.modal_is_box(_hc_v(_hc_sd.GAME_BOX, {"name": "x"}))
+assert not _HcSD.modal_is_box(_hc_v(_hc_sd.GAME_BOX, None))
+assert not _HcSD.modal_is_box(_hc_v(_hc_sd.READY, {"name": "x"}))
+for _hc_name in ("ship_design", "design_box", "audience", "colony",
+                 "build_queue"):
+    _hc_cls = type(d.screens[_hc_name]) if _hc_name in d.screens else None
+    assert _hc_cls is None or "modal_is_box" in _hc_cls.__dict__, _hc_name
+# the net screens answer through the base: their net's `box`
+_hc_ns1 = _ho_ns.SimpleNamespace(_net=_ho_ns.SimpleNamespace(box=True))
+_hc_ns2 = _ho_ns.SimpleNamespace(_modal=_ho_ns.SimpleNamespace(
+    net=_ho_ns.SimpleNamespace(box=False)))
+assert _HcBase.modal_is_box(_hc_ns1) is True
+assert _HcBase.modal_is_box(_hc_ns2) is False
+ok("a modal BOX over a screen's own page is shown once its list has stood "
+   "still for MODAL_SETTLE snapshots (option C, work order 187); every other "
+   "hand-over keeps the full hold, and a net's box needs its own list seen "
+   "first")
+

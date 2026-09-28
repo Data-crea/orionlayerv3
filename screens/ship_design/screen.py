@@ -129,6 +129,10 @@ class ShipDesignScreen(ScreenBase):
     def handover_is_modal(self):
         return self._view is not None and self._view.state == sdwire.GAME_BOX
 
+    def modal_is_box(self):
+        # GAME_BOX with DSGN on the wire: a box over the page, nothing late.
+        return self.handover_is_modal() and self._view.design is not None
+
     def fallback_reason(self):
         if self._view is not None and not self._view.draws:
             return self._view.reason

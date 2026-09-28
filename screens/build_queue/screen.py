@@ -82,6 +82,11 @@ class BuildQueueScreen(ScreenBase):
     def handover_is_modal(self):
         return self._view is not None and self._view.state == w.GAME_BOX
 
+    def modal_is_box(self):
+        # GAME_BOX is reached only after every block has been checked: the
+        # screen's data is there and a box has replaced its list.
+        return self.handover_is_modal()
+
     def fallback_reason(self):
         return self._view.reason if self._view is not None else ""
 

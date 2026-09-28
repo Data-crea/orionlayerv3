@@ -25,10 +25,11 @@ import logging
 
 log = logging.getLogger("modalnet")
 
-#: Snapshots an unknown list must stand before the net takes over. At the
-#: measured ~18 snapshots a second, a quarter of a second — longer than
-#: any transition tick seen (work order 166 A: two), shorter than a
-#: player's reaction.
+#: How long an unknown list must stand before the net takes over: `check`
+#: runs once per FRAME (the screens' per-frame `update`), so here it is
+#: five frames — measured in work order 186 part 4, where this comment still
+#: said "snapshots". The hand-over gate counts the same number in SNAPSHOTS
+#: for a modal box's early release (`handover.MODAL_SETTLE`, work order 187).
 SETTLE = 5
 
 
@@ -59,6 +60,10 @@ class Net:
         self._streak = 0
         self._logged = set()
         self.unknown_signature = None
+        #: The screen's own list was seen since its id came up — so an
+        #: unknown list now REPLACED the page: a box, not a transition
+        #: (work order 187, `ScreenBase.modal_is_box`).
+        self.own_seen = False
 
     def classify(self, fields):
         """"own", the name of a known modal, or None (unknown)."""
@@ -75,8 +80,11 @@ class Net:
     def check(self, state, screen_id):
         if state is None or getattr(state, "current_screen", None) != screen_id:
             self._streak = 0
+            self.own_seen = False
             return False
         kind = self.classify(getattr(state, "fields", None))
+        if kind == "own":
+            self.own_seen = True
         if kind is not None:
             self._streak = 0
             self.unknown_signature = None
@@ -92,3 +100,8 @@ class Net:
                         "game's picture, input passed through (%s)",
                         self.name, sig)
         return True
+
+    @property
+    def box(self):
+        """The net's hand-over is a box over the page (see `own_seen`)."""
+        return self.own_seen and self.unknown_signature is not None
