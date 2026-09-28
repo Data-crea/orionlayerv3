@@ -19,8 +19,9 @@ OPENS the field (:1437), and the designer's field was already active —
 measured live (work order 187 part 2): one Backspace took one letter,
 "Rafale" + "Hawke" became "RafalHawke". The code that always clears,
 0x0E7F (:1181-1183), no injected key produces (platform.cpp:420-455:
-Delete is 0x10000). A Backspace on an empty field does nothing (:1193), so
-15 clear the name in either state. Printable keys but `_` append up to `max_length - 1`
+Delete is 0x10000). A Backspace on an empty field does nothing (:1193); since work order 188
+part 2 the count is the engine's current name's length (`clear_count`),
+and 15 only when the name is not on the wire. Printable keys but `_` append up to `max_length - 1`
 (fields.cpp:1204-1219: 14 of the field's 15) and while the text fits the
 field's width; Enter commits (fields.cpp:1047-1058) and the designer then
 trims it, an empty name falling back to the slot's (design_main.cpp).
@@ -49,9 +50,30 @@ NAME_MAX = 14
 #: (the effect needs one pre-effect pair, `wire_protocol.EFFECT_PAIRS`).
 SETTLE_SNAPSHOTS = 6
 
-#: Backspaces sent before the text: the field's `max_length`, enough for any
-#: name it can hold (see the module's docstring for why not one).
+#: Backspaces sent before the text WHEN THE NAME IS NOT KNOWN: the field's
+#: `max_length`, enough for any name it can hold (see the module's docstring
+#: for why not one). Since work order 188 part 2 the count is the current
+#: name's length (`clear_count`), read from the wire (open fix 44's DSGN).
 CLEAR_KEYS = 15
+
+
+def clear_count(design_name, last_sent=None):
+    """Backspaces that clear the field: as many characters as it holds.
+
+    The click that OPENS the field copies the engine's name into it
+    (fields.cpp:1436-1444) — DSGN's name (open fix 44). A field that was
+    already active keeps the text last typed into it instead
+    (`_continuous_string`, fields.cpp:1100-1109), which the engine trims into
+    the name only afterwards (design_main.cpp:481) — so the text HD sent
+    last, if longer, is the bound. HD strips what it sends (the engine would
+    trim it anyway), so the two agree but for the default name an emptied
+    field falls back to (design_main.cpp:482-486), where the extra
+    Backspaces meet an empty field and do nothing (fields.cpp:1193). Too
+    many is harmless; too few was 187's "RafalHawke". Unknown (no DSGN):
+    `CLEAR_KEYS`."""
+    if design_name is None:
+        return CLEAR_KEYS
+    return max(len(design_name), len(last_sent or ""))
 
 #: The chain waits this long for the page's list before it gives up.
 STEP_TIMEOUT_S = 10.0
@@ -75,6 +97,8 @@ class NameEditor:
         self.chain = None
         self.sent = None          # the value the chain delivers
         self._after = None        # snapshot count when the chain ended
+        #: The text sent into the field last on this visit (`clear_count`).
+        self.last_sent = None
 
     @property
     def editing(self):
@@ -96,17 +120,23 @@ class NameEditor:
     def commit(self, value=None):
         if self.input is None or self.busy:
             return
-        value = self.input.value if value is None else value
+        value = (self.input.value if value is None else value).strip()
         app = self.screen.app
         if not app.connected:
             return
-        keys = name_keys(value, clear=CLEAR_KEYS)
+        current = (getattr(self.screen, "_view", None) and
+                   (self.screen._view.design or {}).get("name"))
+        clear = clear_count(current if isinstance(current, str) else None,
+                            self.last_sent)
+        keys = name_keys(value, clear=clear)
+        self.last_sent = value
 
         def run(client, fields):
             f = sdwire.live_field(fields, geom.NAME)
             x, y = (f.x + f.x_end) // 2, (f.y + f.y_end) // 2
             log.info("ship design: name %r — INJECT_CLICK (%d, %d), then %d "
-                     "keys", value, x, y, len(keys))
+                     "keys (%d Backspaces for %r)", value, x, y, len(keys),
+                     clear, current)
             return paced_keys(lambda c: c.inject_click(x, y), keys)
 
         self.chain = InjectionChain(app.client, [(

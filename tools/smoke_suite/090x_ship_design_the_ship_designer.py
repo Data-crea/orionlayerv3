@@ -323,10 +323,21 @@ assert _sd_p.name_edit.busy and not _sd_p.wants_original()
 for _ in range(40):
     _sd_p.name_edit.update(_sd_app.client.state)
 _sn_cx, _sn_cy = (_sn_f.x + _sn_f.x_end) // 2, (_sn_f.y + _sn_f.y_end) // 2
+# WORK ORDER 188 PART 2: as many Backspaces as the engine's name has (DSGN,
+# open fix 44), not a fixed 15 — the fixture's own name decides.
+_sn_name = (_sd_p._view.design or {}).get("name")
+assert isinstance(_sn_name, str) and _sn_name, "the fixture carries DSGN"
 assert _sd_log == [("click", _sn_cx, _sn_cy)] + \
-    [("key", _sn_pg.K_BACKSPACE)] * _sn.CLEAR_KEYS + \
+    [("key", _sn_pg.K_BACKSPACE)] * len(_sn_name) + \
     [("key", ord("A")), ("key", ord("b")), ("key", _sn_pg.K_RETURN)], _sd_log
-assert _sn.CLEAR_KEYS >= _sn.NAME_MAX + 1, "enough Backspaces for any name" 
+assert _sn.CLEAR_KEYS >= _sn.NAME_MAX + 1, "enough Backspaces for any name"
+# the rule: the name's length; a longer text sent last on this visit bounds
+# it (the still-active field holds it untrimmed); unknown: CLEAR_KEYS
+assert _sn.clear_count("Rafale") == 6 and _sn.clear_count("A" * 14) == 14
+assert _sn.clear_count("Hawke", "Hawkeye") == 7
+assert _sn.clear_count("Hawke", "Hawke") == 5
+assert _sn.clear_count(None) == _sn.CLEAR_KEYS
+assert _sd_p.name_edit.last_sent == "Ab" 
 assert not _sd_p.name_edit.busy
 # while the keys went out, a click on the page sent nothing else
 assert "activate" not in {e[0] for e in _sd_log}

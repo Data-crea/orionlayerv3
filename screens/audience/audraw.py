@@ -99,6 +99,11 @@ def disabled_colour():
                  for c in hudtext.colour("value")[:3])
 
 
+#: The menu title's text role: the items' (`value`) — the original draws
+#: the title in the items' colour (work order 188 part 2).
+TITLE_ROLE = ITEM_ROLE = "value"
+
+
 def _menu(surface, screen, view):
     items = view.items()
     top = view.title_field.y if view.title_field else items[0][1].y
@@ -107,13 +112,17 @@ def _menu(surface, screen, view):
     nd.draw_box(surface, screen, (geom.MENU_X1 - m, top - m,
                                   geom.MENU_X2 + m, bottom + m))
     if view.title_field is not None and view.audience["title"]:
+        # THE ITEMS' OWN COLOUR (work order 188 part 2, Data's answer to
+        # 187's parked 2a, "The audience menu's title colour"): the original
+        # prints "How may I serve you:" in the menu items' green, not in a
+        # heading colour; HD draws it in the items' role, as the items are.
         _line(surface, screen, view.audience["title"].strip(),
               view.title_field.x, view.title_field.y,
-              geom.MENU_X2 - geom.MENU_X1, "label")
+              geom.MENU_X2 - geom.MENU_X1, TITLE_ROLE)
     for item, f in items:
         r = nd.rect(screen.layout, _rect(f))
         if item["enabled"] and screen.hovered(r):
             hud.panel(surface, r, screen.layout.scale, lit=True, dense=True)
         _line(surface, screen, item["text"].strip(), f.x + 4, f.y,
-              f.x_end - f.x - 4, "value",
+              f.x_end - f.x - 4, ITEM_ROLE,
               None if item["enabled"] else disabled_colour())

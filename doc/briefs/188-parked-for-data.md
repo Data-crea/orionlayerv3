@@ -5,7 +5,10 @@ this order decided or left open, then the items carried over unchanged.
 
 ## 1. From this order
 
-(filled as the parts run)
+### 1a. Answered from 187 (no decision needed any more)
+
+- 187's 2a, "The audience menu's title colour": the order decided it — the
+  items' colour. Built (Part 2).
 
 ## 2. Carried over unchanged (not acted on in this order)
 

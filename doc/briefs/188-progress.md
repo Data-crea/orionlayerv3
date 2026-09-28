@@ -75,3 +75,35 @@ asserted with the crop switch on). Count 409 → **411**, full suite green.
 
 **Not live-tested in this part**: the live walks (flash walk, turns) run in
 Parts 4, 5 and 8 on the same code.
+
+## Part 2 — small items from 187 — **DONE**
+
+**The audience menu's header** (187's parked 2a, "The audience menu's title
+colour"): drawn in the items' own colour now (`audraw.TITLE_ROLE` =
+`ITEM_ROLE` = `value`), as the original prints "How may I serve you:" in the
+items' green. Check 090z #4 renders the recorded menu and asserts the colour
+the title and every enabled item were drawn in is one and the same.
+
+**The designer's name entry**: as many Backspaces as the engine's current
+name has (DSGN, open fix 44), not a fixed 15 (`sdname.clear_count`). Read
+first: the click that OPENS the field copies the name into it
+(fields.cpp:1436-1444), but an already-active field keeps the text last
+typed (`_continuous_string`, :1100-1109), which the engine only then trims
+into the name (design_main.cpp:481) — so HD strips what it sends and bounds
+the count by the text it sent last on the visit; too many Backspaces meet an
+empty field and do nothing (:1193), too few was 187's "RafalHawke". 15 only
+when DSGN is absent. Check 090x #7: the Backspaces are the fixture's name's
+length, and the rule's cases.
+
+**Live on Xvfb** (engine `230a0638`, SAVE4, guard `P2/guard` verified
+identical, nothing saved; `evidence/work_order_188/P2_name_1920x1080`,
+`P2/name.txt`):
+
+| before | typed | Backspaces sent | engine's name after | clean |
+|---|---|---:|---|---|
+| Rafale | Ox | 6 | Ox | yes |
+| Ox | Abcdefghijklmn (14, the field's maximum) | 2 | Abcdefghijklmn | yes |
+| Abcdefghijklmn | Ox | 14 | Ox | yes |
+
+0 native frames in the name entry and in the whole run (`native frames
+without F12: 0`); SAVE1-11 identical. Count stays 411.

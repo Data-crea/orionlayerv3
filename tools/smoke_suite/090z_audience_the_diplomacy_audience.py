@@ -168,10 +168,32 @@ assert abs(_au_geom.luminance(_au_dis) / _au_geom.luminance(_au_val) -
 assert _au_dis not in (_au_ht.colour("sub")[:3], _au_ht.colour("label")[:3])
 assert max(_au_dis) - min(_au_dis) <= max(_au_val) - min(_au_val) + 2, \
     "a disabled item keeps the enabled item's hue"
+# The menu's title in the items' own colour (work order 188 part 2, 187's
+# parked 2a: the original prints "How may I serve you:" in the items'
+# green) — asked of the render: the colour every drawn line was given.
+_au_seen = []
+_au_real_bt = _au_draw.nd.blit_text
+_au_draw.nd.blit_text = lambda surf, style, words, x, y, w, size, colour, **_k: \
+    _au_seen.append((words, tuple(colour[:3])))
+try:
+    _au_a, _ = _pv.build_screen(1920, 1080)
+    _au_gs = _au_fix.state("menu")
+    _au_a.dispatcher.update_from_game(_au_gs)
+    _au_a.dispatcher.active.update(_au_gs)
+    _au_a.dispatcher.active.render(pygame.Surface((1920, 1080)))
+finally:
+    _au_draw.nd.blit_text = _au_real_bt
+_au_title = _au_fix.state("menu").audience["title"].strip()
+_au_tc = [c for w, c in _au_seen if w == _au_title]
+_au_ic = {c for w, c in _au_seen for it, _f in _au_v["menu"].items()
+          if it["enabled"] and w == it["text"].strip()}
+assert _au_tc and _au_ic and set(_au_tc) == _au_ic == {_au_val}, \
+    (_au_tc, _au_ic, _au_val)
+assert _au_draw.TITLE_ROLE == _au_draw.ITEM_ROLE
 _au_nmarks = _sd_marks_named("audience", ("audraw.py", "screen.py",
                                           "auwire.py"))
 ok(f"the audience draws at 1920, 2576 and 3840 from the recorded menu, its "
-   f"text scaled once, and every mark it carries is named in its module "
+   f"text scaled once, the menu's title in the items' colour, and every mark it carries is named in its module "
    f"and the status document ({_au_nmarks} marks)")
 
 # 5. THE ART LOADER, and what the extractor takes (dip_scrn_main.cpp:465-

@@ -3585,7 +3585,8 @@ NOT ACCEPTED BY DATA.
 `EXTRA_SCREEN_IDS`): the race's room and ambassador (DIPLOMAT.LBX,
 `tools/audience_art_extract.py`; no ambassador when refused), the
 statement as the engine rendered it in the original's column, the menu at
-the fields the list built with its title, a disabled item dimmed. Sends:
+the fields the list built with its title — in the items' own colour, as
+the original prints it (work order 188 part 2) — a disabled item dimmed. Sends:
 an enabled item's field, a statement's one field on any click; a disabled
 item refused. Marks: DEVIATION `hud_frameless`; OMISSION `talking_loop`,
 `header_line`, `glass_remap`, `fade_in`, `audience_help` (UNVERIFIED
@@ -3622,8 +3623,10 @@ their descriptions (TECHDESC, `tools/techdesc_extract.py`), Cost and Space
 Available, Clear / Cancel / Build, the 13 help regions. Sends: every
 control by activation of the field found in the list now, a hull by an
 injected click; the NAME in HD's own text field since work order 187
-(`sdname.py`: on Enter an injected click on the original's field, 15
-Backspaces, the keys one per tick, Enter — the save dialog's path). Marks:
+(`sdname.py`: on Enter an injected click on the original's field, as
+many Backspaces as the engine's name has — DSGN's name, bounded by the text
+sent last on the visit; 15 only without DSGN, work order 188 part 2 — the
+keys one per tick, Enter — the save dialog's path). Marks:
 DEVIATION `hud_frameless`, `button_words`, `row_help`, `name_field`; HD
 EXTENSION `title`; OMISSION `hover_messages`, `flashing_hover` (OMISSION
 `name_entry` replaced by 187; UNVERIFIED `fix44` removed by work order
