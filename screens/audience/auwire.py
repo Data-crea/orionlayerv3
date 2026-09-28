@@ -2,7 +2,7 @@
 
 Work order 185 part 10. The screen draws ONLY from open fix 47's "DIPL"
 block (`core/diplblocks.py`) and the list the game built; fixes 46 and 47
-are NOT APPLIED (UNVERIFIED `fix46`, `fix47`). Without 46 the audience
+are applied since work order 186 (orion2re `8aea1a25`, `ba9b6bc6`). Without 46 the audience
 runs under its caller's id and never reaches this screen; with 46 and
 without 47 the screen declines 57 / 58 and the game's picture is shown.
 

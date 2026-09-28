@@ -149,6 +149,13 @@ assert max(_au_fonts[(1920, 1080)].values()) >= _au_want_px, \
     (_au_fonts[(1920, 1080)], _au_want_px)
 assert len(_au_fonts[(1920, 1080)]) >= 2 and not _sd_he.scaled_twice(
     _au_fonts[(1920, 1080)], _au_fonts[(3840, 2160)]), _au_fonts
+assert {"doc/ext_audience_screen.patch", "doc/ext_audience_state.patch"} <= \
+    set(_sd_vc.LOCAL_PATCHES)
+with open(os.path.join(SCREENS_DIR, "audience", "layout.json"),
+          encoding="utf-8") as _au_fh:
+    _au_mk = _sd_json.load(_au_fh)["marks"]
+assert not {"unverified_fix46", "unverified_fix47"} & set(_au_mk), \
+    "fixes 46 and 47 are applied (work order 186): their marks go"
 _au_nmarks = _sd_marks_named("audience", ("audraw.py", "screen.py",
                                           "auwire.py"))
 ok(f"the audience draws at 1920, 2576 and 3840 from the recorded menu, its "

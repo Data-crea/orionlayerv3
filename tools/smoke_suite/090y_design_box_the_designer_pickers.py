@@ -194,6 +194,11 @@ for _db_stop in ("computer", "weapon", "special"):
     _db_a1 = _db_fonts[(1920, 1080)][_db_stop]
     assert len(_db_a1) >= 3 and not _sd_he.scaled_twice(
         _db_a1, _db_fonts[(3840, 2160)][_db_stop]), _db_stop
+assert "doc/ext_ship_designer_boxes.patch" in _sd_vc.LOCAL_PATCHES
+with open(os.path.join(SCREENS_DIR, "design_box", "layout.json"),
+          encoding="utf-8") as _db_fh:
+    assert "unverified_fix45" not in _sd_json.load(_db_fh)["marks"], \
+        "fix 45 is applied (work order 186): its mark goes"
 _db_nmarks = _sd_marks_named("design_box",
                              ("dbdraw.py", "screen.py", "dbwire.py"))
 ok(f"the three pickers draw at 1920, 2576 and 3840 from the recorded boxes, "

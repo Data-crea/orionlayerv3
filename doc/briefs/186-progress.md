@@ -109,3 +109,49 @@ Unattended run, 28 September 2026. Evidence root:
    (re-exported by the same names): with it, version_check had reached 334
    code lines; without it, 284 — so it left the over-300 list rather than
    growing its entry. **Full suite: 405 green.**
+
+## Part 2 — HD side — **DONE**
+
+1. **The data is there, seen live first** (the engine `play.py` starts,
+   `230a0638`; engine 183602, guard `P2_live/guard_design`, Xvfb, SAVE4,
+   nothing saved; `evidence/work_order_186/P2_*`):
+   `tools/design_walk.py 1920 1080` — colony → popup → designer → computer
+   (54), weapon (55, offered mods 10, 11, 12), special (56) pickers and
+   back → popup → colony → map: DSGN on every designer stop, DSBX on each
+   picker, **13 transitions, 0 native frames**; `tools/audience_walk.py
+   1920 1080` — Races → refusal (57) → Races, Races → greeting → menu →
+   Good Bye → Races → map, the HD audience drawing from DIPL: **7
+   transitions, 0 native frames**. SAVE1-9 and SAVE11 identical, SAVE10
+   unchanged; MOX.SET rewritten by the load → restored from the guard taken
+   before the engine existed, verify clean; against the order's first
+   guard every game file identical.
+2. **Markers removed where the data is now there**: UNVERIFIED `fix44`
+   (page), `fix45` (pickers), `fix46`, `fix47` (audience) — from the
+   layouts, the modules' docstrings, `core/designblocks.py`,
+   `core/diplblocks.py`, the status document and both briefs; the two walk
+   tools no longer say "only against a scratch engine". **Kept**: UNVERIFIED
+   `name_entry` — the name is shown, not edited, and the reason is now the
+   data: DSGN carries the name as committed, the text being typed is the
+   engine's `_continuous_string`, on no block (fields.cpp:1048-1100,
+   :2181); F12 shows the original's own field. Part 3 measures what
+   injected keys do there. Every OMISSION / DEVIATION stays (they are about
+   drawing, not about the data path). No stubs were found beyond the marks
+   (`grep` for stub / NOT APPLIED / scratch engine in the three screens and
+   the two block readers).
+3. **Fix 43's HD side**, as entry 43 described it: `ORION2RE_HIDE_WINDOW=1`
+   in `tools/vdisplay.engine_env` (the tools' starts and `play.py`'s),
+   `MSG_SHOW_WINDOW` in `core/wire_protocol.py`, `GameClient.show_window`,
+   F12 in `main.App._cycle_render_mode` (main.py 371 → 373 code lines, its
+   over-300 entry extended). Live (engine 183602): started hidden
+   (IsUnMapped), F12 → the original's picture and the engine's window
+   **IsViewable**, F12 → HD and **IsUnMapped**. Part 1 measured the other
+   half: started without the variable the window is viewable.
+   README's quick start (play.py hidden because it asks; F12; by hand the
+   window shows again), `play.py`'s docstring, part 09's virtual-display
+   paragraph and entry 43's HD-side paragraph say so.
+4. **Checks 405 → 406** (fast 395 → 396): 090v #2 (new) — the variable on
+   both displays, `show_window`'s bytes, F12 on a stand-in App both ways
+   and silent without a connection; shown red with the variable removed
+   from `engine_env` (`python -B`, caches cleared after the restore), green
+   again. 090x / 090y / 090z now assert 44-47 required and their fix marks
+   gone, and `name_entry`'s reason. Full suite **406 green**.

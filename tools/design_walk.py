@@ -3,8 +3,8 @@
 
     python tools/design_walk.py W H [--slot N]
 
-ONLY AGAINST A SCRATCH ENGINE CARRYING OPEN FIXES 44 AND 45 (not applied;
-`tools/engine_start.py --engine <scratch binary>`): without them the
+ONLY AGAINST AN ENGINE CARRYING OPEN FIXES 44 AND 45 — applied since work
+order 186, so the engine `tools/engine_start.py` starts; without them the
 designer is the game's picture and there is nothing to walk. Every
 transition through the HD window (`colony_accept.Accept`, every frame
 traced and pixel-checked, recorded for the flash check's replay fixture,

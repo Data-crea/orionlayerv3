@@ -4,10 +4,10 @@ The original's `DESIGN::Design_Screen_` in the HUD style; the reading is
 `doc/ship_designer_reading.md`, the brief `doc/brief_ship_designer.md`.
 
 **IT CLAIMS ITS ID ONLY WITH OPEN FIX 44's "DSGN" BLOCK ON THE WIRE**
-(`sdwire.claims`). Neither 44 nor 45 is applied: on the engine a player has,
-id 3 stays the game's own picture through the safety net, exactly as
-before this screen existed — UNVERIFIED `fix44`: built against the blocks
-recorded off a scratch engine, live on no applied one. With the block, a
+(`sdwire.claims`). 44 and 45 are applied since work order 186 (orion2re
+`70d31b10`, `4af9fefa`) and the page was walked live on that engine; on an
+engine without them id 3 stays the game's own picture through the safety
+net, exactly as before this screen existed. With the block, a
 list that is not the page's (a warning box, or a picker on an engine
 without fix 45) is a modal HD has no view for, and the screen hands over.
 
@@ -25,8 +25,10 @@ field found in the list on the wire when the byte goes out (decision 20):
 Refused before it goes out (decision 33): a hull without its button field,
 plus / minus without their button, Build without its button (the original
 removes it when the design does not fit). Nothing else is sent — the name
-field is UNVERIFIED `name_entry` (what a client's keys do in a continuous
-string field is not measured), so the name is shown and not edited.
+field is UNVERIFIED `name_entry`: DSGN carries the name as committed, and
+the text being typed lives in the engine's `_continuous_string`, on no
+block, so HD could only draw an edit it invented; the name is shown and
+not edited here (F12 shows the original's own field, which takes keys).
 """
 import logging
 

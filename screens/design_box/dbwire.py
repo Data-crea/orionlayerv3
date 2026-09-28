@@ -2,7 +2,7 @@
 
 Work order 185. A picker draws ONLY from open fix 45's "DSBX" block
 (`core/designblocks.py`) and the field list the game built for it; fix 45
-is NOT APPLIED (UNVERIFIED `fix45`). Without DSBX the ids 54-56 never
+is applied since work order 186 (orion2re `4af9fefa`). Without DSBX the ids 54-56 never
 reach the wire — an engine without the fix reports 3 for a picker, and the
 page hands that list to the game's picture (`screens/ship_design/sdwire`).
 

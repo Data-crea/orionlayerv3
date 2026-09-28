@@ -45,6 +45,11 @@ MSG_SET_JOBS      = 0x84
 #: snapshot carries open fix 20's FSEL block, and reads the effect back
 #: off that block instead of assuming it.
 MSG_SELECT_SHIP   = 0x85
+#: Show (1) or hide (0) the engine's OWN window: uint8 show. Open fix 43
+#: (`doc/ext_engine_window_on_request.patch`, applied by work order 186);
+#: F12 sends it. An engine without the fix drops it, and nothing else
+#: depends on it being taken — the picture is on the wire either way.
+MSG_SHOW_WINDOW   = 0x86
 
 #: How many STATE/VISUAL pairs after an injected command can still
 #: describe the world BEFORE it. One — so a caller that waits for an

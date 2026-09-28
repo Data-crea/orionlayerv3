@@ -589,7 +589,11 @@ references in `doc/v3_orion2re_index.md`.
   the engine's window is never mapped on either display**, and a hidden
   window presents without VSync whatever `ORION2RE_NO_VSYNC` says; a
   screenshot of the engine's window shows nothing, the picture is on the
-  wire.
+  wire. **Since open fix 43 (work order 186, 28 September 2026) only
+  because the starter asks**: `vdisplay.engine_env` sets
+  `ORION2RE_HIDE_WINDOW=1` for every start, the tools' and `play.py`'s; an
+  engine started without it shows its window as before 41, and F12 shows
+  and hides it (`MSG_SHOW_WINDOW`).
 - **THE INTRO'S SOUND, AND A SILENCE THAT WAS NOT THE ENGINE'S — work
   order 183.** Measured with the real driver (`pipewire`), the engine's
   stream sent by `PIPEWIRE_NODE` into a private null sink — it overrides

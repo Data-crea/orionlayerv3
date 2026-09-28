@@ -12,8 +12,8 @@ graphics, the input path and the markings.
   (an AI asked for it — at turn start, or on a sneak attack in turn
   processing). One screen answers both (`EXTRA_SCREEN_IDS`, as the Ship
   Designer's pickers do).
-- It draws ONLY from the "DIPL" block (open fix 47). **Neither fix is
-  applied.** Without 46 the audience runs under its caller's id and no HD
+- It draws ONLY from the "DIPL" block (open fix 47). **Both are applied
+  since work order 186** (orion2re `8aea1a25`, `ba9b6bc6`). Without 46 the audience runs under its caller's id and no HD
   screen can know it is up: the Races screen's HD view hands a dialog it
   cannot name to the game's picture after its wait, and a turn-start
   audience is the modal net's case — exactly today's behaviour. With 46
@@ -64,7 +64,7 @@ Keys: none sent — the list has no hotkeys (type 10, hotkey 0).
 |---|---|
 | DEVIATION `hud_frameless` | panels in the HUD blocks, not the original's text box and list art |
 | OMISSION `talking_loop`, `header_line`, `audience_help` | as above |
-| UNVERIFIED `fix46`, `fix47` | the data path: built against blocks recorded on a scratch engine; the screen claims nothing without DIPL |
+| ~~UNVERIFIED `fix46`, `fix47`~~ | removed by work order 186: the fixes are applied and the data path was seen live on that engine |
 
 ## Texts
 

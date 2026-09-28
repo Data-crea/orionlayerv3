@@ -26,9 +26,12 @@ What differs from a tool's start, and why:
     idle inhibitor (the tools hold the screen on for an unattended run);
   * OrionLayer is started after READY, in the player's own environment —
     never the tools' dummy drivers;
-  * THE ENGINE IS STOPPED WHEN ORIONLAYER ENDS. Since open fix 41 its window
-    is never shown, so an engine left behind would be invisible, would hold
-    the port and could still play music — nothing the player could close.
+  * THE ENGINE IS STOPPED WHEN ORIONLAYER ENDS. Its window is hidden (open
+    fix 41; since open fix 43, work order 186, because this start asks for
+    it — `ORION2RE_HIDE_WINDOW` in `tools/vdisplay.engine_env` — and F12
+    shows it on request), so an engine left behind would be invisible,
+    would hold the port and could still play music — nothing the player
+    could close.
 
 Needs `xdotool` for the skip; without it the start says the intro will play.
 

@@ -3298,17 +3298,18 @@ message cannot, alone, prevent the first show. The WAY BACK is an Extension
 API message, because F12 happens while the game runs and only the client
 knows when.
 
-**The HD side, described, not committed** (it would only work with this
-patch): `tools/vdisplay.engine_env` sets `ORION2RE_HIDE_WINDOW=1` beside
-`ORION2RE_NO_VSYNC`, so every tool start and `play.py` start hidden as now;
-`core/game_client.GameClient.show_window(show)` sends `MSG_SHOW_WINDOW`
-with one byte; `main.App._cycle_render_mode` calls `show_window(True)` when
-it enters "original" and `show_window(False)` when it returns to "hd", and
-otherwise stays as it is — OrionLayer's window keeps showing the engine's
-picture with the status bar, so the player can use either window; F12 again
-hides the engine's window and returns to HD. `version_check` moves the
-patch to LOCAL_PATCHES. An engine without the fix ignores the message, so
-the same OrionLayer runs on both.
+**The HD side — built by work order 186 Part 2**, as 185 described it:
+`tools/vdisplay.engine_env` sets `ORION2RE_HIDE_WINDOW=1` beside
+`ORION2RE_NO_VSYNC`, so every tool start and `play.py` start hidden;
+`core/game_client.GameClient.show_window(show)` sends `MSG_SHOW_WINDOW` with
+one byte; `main.App._cycle_render_mode` calls `show_window(True)` entering
+"original" and `show_window(False)` returning to "hd" (nothing without a
+connection); OrionLayer's window keeps showing the engine's picture with
+the status bar meanwhile. Measured live on the virtual display (engine
+183602, guard `P2_live/guard_design`): started through `engine_start` the
+window IsUnMapped; F12 → render mode "original", frame source `net`, the
+engine's window **IsViewable**; F12 again → "hd", **IsUnMapped**. Held by
+check 090v #2. An engine without the fix ignores the message.
 
 **Side effects — observed and ruled out, and the risks named.**
 - *Focus and the pointer*: while the engine's window is shown and focused,

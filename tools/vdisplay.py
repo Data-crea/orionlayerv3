@@ -184,6 +184,10 @@ def engine_env(reason=None, base=None, out=print):
     env["SDL_VIDEODRIVER"] = "x11"
     # Open fix 31: present without waiting for VSync (a patched engine).
     env["ORION2RE_NO_VSYNC"] = "1"
+    # Open fix 43 (applied by work order 186): the engine's own window is
+    # hidden from the start only when its starter asks — every OrionLayer
+    # start does, the tools' and play.py's alike. F12 shows it on request.
+    env["ORION2RE_HIDE_WINDOW"] = "1"
     if reason:
         out(f"REAL DESKTOP (engine): {reason}")
         env["DISPLAY"] = ":0"

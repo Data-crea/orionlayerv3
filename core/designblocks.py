@@ -1,5 +1,5 @@
 """The Ship Designer's two blocks in the snapshot — open fixes 44 and 45
-(work order 185, written and parked, NOT APPLIED).
+(work order 185; applied by work order 186, orion2re `70d31b10`, `4af9fefa`).
 
     "DSGN"  open fix 44 (`doc/ext_ship_designer_state.patch`): while the
             game's `_current_screen` is SCREEN_DESIGN — the design being

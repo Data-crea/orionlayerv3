@@ -7,9 +7,10 @@ on a sneak attack: 58), one screen for both; the reading is
 
 **IT CLAIMS THE IDS ONLY WITH OPEN FIX 47's "DIPL" BLOCK ON THE WIRE**
 (`auwire.claims`), and the ids themselves exist only with open fix 46.
-Neither is applied: on the engine a player has, the audience runs under
-its caller's id and stays the game's picture, as before — UNVERIFIED
-`fix46`, `fix47`: built against blocks recorded off a scratch engine.
+Both are applied since work order 186 (orion2re `8aea1a25`, `ba9b6bc6`)
+and the player's audience (57) was walked live on that engine; on an
+engine without them the audience runs under its caller's id and stays the
+game's picture, as before.
 
 **WHAT IT SENDS** — ACTIVATE_FIELD, the field found in the list on the
 wire when the byte goes out (decision 20), nothing the player did not

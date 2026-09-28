@@ -114,15 +114,20 @@ python play.py
 ```
 
 This is the player's start (work order 183). It starts orion2re in
-`~/Master of Orion 2` — its own window stays hidden (open fix 41) — skips
+`~/Master of Orion 2` — its own window stays hidden, because this start
+asks for it (open fixes 41 and 43) — skips
 the original's logos and intro with the same key the live tools send, so
 nothing of the intro is played or heard, and then opens OrionLayer straight
 into the HD main menu, no key needed. Closing OrionLayer stops the game.
+**F12** switches OrionLayer's window to the original's picture AND shows
+the original's own window (open fix 43); F12 again hides it and returns
+to HD.
 The engine's log is `~/.cache/orionlayer/orion2re.log`.
 
-**By hand, in two terminals** — the original's intro then plays, with its
-sound, for about two minutes: its key would go to the engine's own window,
-which open fix 41 keeps hidden.
+**By hand, in two terminals** — the engine's own window is shown, as
+before open fix 41 (fix 43 hides it only when OrionLayer's start asks), and
+the original's intro plays with its sound for about two minutes unless you
+press a key in that window.
 
 ```bash
 cd "$HOME/Master of Orion 2"

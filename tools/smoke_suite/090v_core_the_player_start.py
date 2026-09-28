@@ -5,8 +5,9 @@
 # tools/smoke_suite/, in file-name order and in ONE namespace. Do not
 # import this file; it is not a module.
 #
-# The 1 check(s) it holds:
+# The 2 check(s) it holds:
 #   - the player's start (play.py) is the tools' start with the intro skip, on the player's desktop and audio, stops only the engine it started, and is the README's quick start
+#   - the engine's window is hidden only because OrionLayer's start asks (open fix 43): ORION2RE_HIDE_WINDOW on both displays; F12 shows it and hides it again, and a client without a connection sends nothing
 
 
 # ── THE PLAYER'S START (work order 183, part 2) ─────────────────
@@ -119,3 +120,71 @@ assert "python play.py" in _ps_block, \
 ok("the player's start (play.py) is the tools' start with the intro skip, on "
    "the player's desktop and audio, stops only the engine it started, and is "
    "the README's quick start")
+
+
+# ── THE ENGINE'S WINDOW ON REQUEST (open fix 43, work order 186) ─────
+#
+# Open fix 43 (applied by 186) hides the engine's window from the start
+# ONLY when the starter asks, `ORION2RE_HIDE_WINDOW`, and lets a client
+# show and hide it (`MSG_SHOW_WINDOW` 0x86, one byte). Without the variable
+# every start — the tools' and `play.py`'s — would show the original's
+# window on the player's desktop again (measured in 186 Part 1). So: the
+# one environment every start uses carries it, on the virtual display and
+# the real one alike; `GameClient.show_window` sends exactly the message;
+# and F12 shows the window entering the original's picture and hides it
+# returning to HD — asserted by calling the F12 handler on a stand-in App.
+import struct as _pw_struct
+import vdisplay as _pw_vd
+from core.wire_protocol import MSG_SHOW_WINDOW as _PW_MSG
+import main as _pw_main
+from core.game_client import GameClient as _PwClient
+
+assert _PW_MSG == 0x86
+_pw_real_ensure = _pw_vd.ensure
+_pw_vd.ensure = lambda out=print: (":97", 4242, "/nonexistent/xauth")
+try:
+    _pw_envs = {"virtual": _pw_vd.engine_env(base={}, out=lambda *a: None),
+                "real": _pw_vd.engine_env("a stand-in reason", base={},
+                                          out=lambda *a: None)}
+finally:
+    _pw_vd.ensure = _pw_real_ensure
+for _pw_k, _pw_e in _pw_envs.items():
+    assert _pw_e.get("ORION2RE_HIDE_WINDOW") == "1", (
+        f"the {_pw_k} display's engine would show its own window (open fix 43)")
+# play.py reaches the engine through engine_start, whose environment is
+# engine_env (the check above holds the start itself).
+assert "engine_env(" in _ps_insp.getsource(_ps_es)
+
+_pw_sent = []
+_pw_c = _PwClient()
+_pw_c._send_message = lambda t, p=b"": _pw_sent.append((t, p))
+_pw_c.show_window(True)
+_pw_c.show_window(False)
+assert _pw_sent == [(0x86, _pw_struct.pack("<B", 1)),
+                    (0x86, _pw_struct.pack("<B", 0))], _pw_sent
+
+_pw_calls = []
+
+
+class _PwStandIn:
+    render_mode = "hd"
+
+    class client:
+        connected = True
+
+        @staticmethod
+        def show_window(show):
+            _pw_calls.append(show)
+
+
+_pw_app = _PwStandIn()
+_pw_main.App._cycle_render_mode(_pw_app)
+assert _pw_app.render_mode == "original" and _pw_calls == [True], _pw_calls
+_pw_main.App._cycle_render_mode(_pw_app)
+assert _pw_app.render_mode == "hd" and _pw_calls == [True, False], _pw_calls
+_PwStandIn.client.connected = False
+_pw_main.App._cycle_render_mode(_pw_app)
+assert _pw_calls == [True, False], "F12 without a connection sent something"
+ok("the engine's window is hidden only because OrionLayer's start asks (open "
+   "fix 43): ORION2RE_HIDE_WINDOW on both displays; F12 shows it and hides it "
+   "again, and a client without a connection sends nothing")

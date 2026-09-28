@@ -16,7 +16,7 @@ from core.wire_protocol import (
     MSG_HELLO, MSG_HELLO_REPLY, MSG_STATE, MSG_FIELDS,
     MSG_VISUAL, MSG_EVENT,
     MSG_ACTIVATE, MSG_INJECT_KEY, MSG_INJECT_CLICK, MSG_CANCEL_FIELD,
-    MSG_SET_JOBS, MSG_SELECT_SHIP, MSG_SAVE_SLOTS,
+    MSG_SET_JOBS, MSG_SELECT_SHIP, MSG_SAVE_SLOTS, MSG_SHOW_WINDOW,
     SUB_STATE, SUB_FIELDS, SUB_VISUAL, SUB_EVENTS,
     parse_save_slots,
 )
@@ -366,6 +366,14 @@ class GameClient:
         """
         payload = struct.pack('<hB', ship_index, 1 if selected else 0)
         self._send_message(MSG_SELECT_SHIP, payload)
+
+    def show_window(self, show):
+        """Show or hide the ENGINE'S OWN window — `MSG_SHOW_WINDOW`, open
+        fix 43 (`doc/ext_engine_window_on_request.patch`, applied by work
+        order 186): one byte, 1 show, 0 hide, applied by the engine's main
+        thread. F12 sends it (`main.App._cycle_render_mode`). An engine
+        without the fix drops it; nothing comes back, and nothing waits."""
+        self._send_message(MSG_SHOW_WINDOW, struct.pack('<B', 1 if show else 0))
 
     def cancel_field(self, field_id):
         """Right-click on a field."""

@@ -11,7 +11,8 @@ layout, the graphics, the input path and the markings.
   pickers drawn over it, **54** (shield or computer), **55** (weapon) and
   **56** (special system) — the ids open fix 45 reports.
 - It draws ONLY from the "DSGN" block (open fix 44) and, for a picker, the
-  "DSBX" block (open fix 45). **Neither fix is applied.** Without DSGN the
+  "DSBX" block (open fix 45). **Both are applied since work order 186**
+  (orion2re `70d31b10`, `4af9fefa`). Without DSGN — an older engine — the
   screen DECLINES its id (`ScreenBase.claims`, the colony screen's pattern
   from open fix 35): id 3 is then an id no HD screen claims and the player
   gets the game's own picture through the safety net — exactly today's
@@ -93,8 +94,8 @@ answers it (the reading, section 10).
 | HD EXTENSION `title` | the title plate; the word is the game's own |
 | DEVIATION `picker_as_popup` | the pickers are HUD popups; the original draws them from DESIGN.LBX's box sprites |
 | OMISSION `flashing_hover` | the original flashes the hovered row and the shield / computer name in a cycling palette index; an RGB surface has none — HD fills the row as the research panel does (INVENTION `hover_fill`) |
-| UNVERIFIED `name_entry` | typing the name, until the live test |
-| UNVERIFIED `fix44`, `fix45` | the data path: built against the recorded blocks of a scratch engine, live on no applied engine — the screen claims nothing without DSGN |
+| UNVERIFIED `name_entry` | typing the name: the text being typed is the engine's `_continuous_string`, on no block (work order 186) |
+| ~~UNVERIFIED `fix44`, `fix45`~~ | removed by work order 186: the fixes are applied and the data path was seen live on that engine |
 
 ## Texts
 

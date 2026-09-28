@@ -7,10 +7,9 @@ popups over the designer's page (an overlay whose parent is
 `ship_design`); the reading is `doc/ship_designer_reading.md` section 3.
 
 **IT CLAIMS THE IDS ONLY WITH OPEN FIX 45's "DSBX" BLOCK ON THE WIRE**
-(`dbwire.claims`), and 45 is not applied — without it the ids never reach
-the wire at all: a picker reports 3 and the page hands its list to the
-game's picture. UNVERIFIED `fix45`: built against the blocks recorded off
-a scratch engine, live on no applied one.
+(`dbwire.claims`) — applied by work order 186 (orion2re `4af9fefa`) and
+walked live on that engine. Without it the ids never reach the wire at all:
+a picker reports 3 and the page hands its list to the game's picture.
 
 One screen answers three ids (`EXTRA_SCREEN_IDS`, which the dispatcher
 maps and keeps the overlay for), because the three are one box drawn three

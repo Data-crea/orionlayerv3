@@ -14,7 +14,6 @@
     "omission_hover_messages": "Over an empty weapon or special row the original prints 'Add New Weapon' or why none can be added; which of the three it is needs Space_For_Weapon_Replacement_, not on the wire. Not drawn.",
     "omission_flashing_hover": "The original flashes a hovered row and the shield / computer name in a cycling palette index (Set_Flashing_Colors_); an RGB surface has none. Not drawn.",
     "deviation_row_help": "A right click on a loaded weapon or special row opens the original's description of that item (Text_Box_ with the item's help record, found through its tech application); that id is not on the wire, so HD opens nothing there \u2014 the table's own help region begins below the loaded rows, as Set_Design_Screen_Help_List_ moves it.",
-    "unverified_name_entry": "The design name is shown and not edited: what a client's keys do in the original's continuous string field is not measured (decision 61).",
-    "unverified_fix44": "The page draws only from open fix 44's DSGN block (NOT APPLIED): built against the blocks recorded off a scratch engine (work order 185 part 6), live on no applied engine. Without the block the screen claims nothing and id 3 stays the game's own picture."
+    "unverified_name_entry": "The design name is shown and not edited: DSGN carries the name as committed, and the text being typed lives in the engine's _continuous_string, which no block carries \u2014 HD could only draw an edit it invented (decision 61). F12 shows the original's own field, which takes keys."
   }
 }

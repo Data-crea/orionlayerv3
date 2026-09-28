@@ -205,6 +205,17 @@ def _sd_marks_named(folder, files):
 
 _sd_nmarks = _sd_marks_named("ship_design",
                              ("sddraw.py", "screen.py", "sdwire.py"))
+# Open fixes 44 and 45 are APPLIED (work order 186) and the data path was
+# seen live on that engine: the build requires them, the page carries no
+# UNVERIFIED `fix44` any more, and the name keeps its mark with the reason
+# the data does not cover it (the text being typed is on no block).
+import version_check as _sd_vc
+with open(os.path.join(SCREENS_DIR, "ship_design", "layout.json"),
+          encoding="utf-8") as _sd_fh:
+    _sd_mk = _sd_json.load(_sd_fh)["marks"]
+assert "doc/ext_ship_designer_state.patch" in _sd_vc.LOCAL_PATCHES
+assert "unverified_fix44" not in _sd_mk, "fix 44 is applied: its mark goes"
+assert "_continuous_string" in _sd_mk["unverified_name_entry"], _sd_mk
 ok(f"the designer draws at 1920, 2576 and 3840 from the recorded page, its "
    f"text scaled once, and every mark it carries is named in its module and "
    f"the status document ({_sd_nmarks} marks)")

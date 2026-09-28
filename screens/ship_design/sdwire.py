@@ -1,10 +1,11 @@
 """What the Ship Designer reads off the wire, and whether it may draw.
 
 Work order 185. The page draws ONLY from open fix 44's "DSGN" block
-(`core/designblocks.py`), and neither fix 44 nor 45 is applied — so on the
-engine a player has, `claims` answers False and id 3 stays the game's own
-picture through the safety net, as it has always been. Nothing is drawn
-from an invented value (decision 61: UNVERIFIED `fix44`, `fix45`).
+(`core/designblocks.py`) — applied with 45 by work order 186 (orion2re
+`70d31b10`, `4af9fefa`) and seen live on that engine, so the page is HD on
+the engine `play.py` starts. On an engine without the block `claims`
+answers False and id 3 stays the game's own picture through the safety
+net. Nothing is drawn from an invented value (decision 61).
 
 THE STATES:
   READY     DSGN on the wire and the page's own list up (its Cancel button

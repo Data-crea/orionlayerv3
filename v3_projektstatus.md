@@ -2458,7 +2458,7 @@ files under `doc/` and are only summarised here.
 | | |
 |---|---|
 | Python | 32,960 lines across 111 modules — `find . -name '*.py'`, `__pycache__` excluded, the smoke test's 6,400 included. The previous figure here (21,642 across 94) was carried from an unstated method and could not be reproduced |
-| Smoke test | `python tools/smoke_test.py` — **405 checks**, headless, in `tools/smoke_suite/` since work order 162 (144 check modules, one group per screen plus a shared core; `tools/smoke_test.py` is the runner). **Two tiers since work order 158**: the bare command runs everything (~200 s here, measured 26 September 2026 — the 72 s this line said was before the rendering checks of 172-174); `--fast` runs the commit gate's 395 (~95 s here). `--screen <name>` prints only that screen's sentences and the core's and is NEVER a gate. See "The gate has two tiers" below |
+| Smoke test | `python tools/smoke_test.py` — **406 checks**, headless, in `tools/smoke_suite/` since work order 162 (144 check modules, one group per screen plus a shared core; `tools/smoke_test.py` is the runner). **Two tiers since work order 158**: the bare command runs everything (~200 s here, measured 26 September 2026 — the 72 s this line said was before the rendering checks of 172-174); `--fast` runs the commit gate's 396 (~95 s here). `--screen <name>` prints only that screen's sentences and the core's and is NEVER a gate. See "The gate has two tiers" below |
 | Assets | 170 MB (select_race 68, galaxy_map 51, shared 23, new_game 21, colony_summary 1) |
 | Screens in HD | 11 of ~20–22 (the Leaders screen, work order 167, built and not accepted; the GAME menu overlay, work order Stop 2, every dialog of the popup; colony summary draws list, sidebar, scan box and galaxy inset, and MOVES POPS — the first HD gesture that drives the game; planets, brief 101, lists, sorts, restricts and returns) |
 | Setup from clone | `python tools/setup.py` (deps via the system package manager) |
@@ -3414,7 +3414,7 @@ in exactly ONE bucket. The numbers below are produced by
 check asserts this list still agrees with it — the same trade the
 check count makes, for the same reason.
 
-`tools/struct_probe.py` (**478** code, 753 total), `screens/galaxy_map/screen.py` (**420** code, 775 total — down from 456 when work order 169 moved the HUD drawing into `hudview.py`, and the floor went to `floorlift.render_floor` in 170; 173 made the floor the shared background, `core.backgrounds`; 177 added 24 for the modals over the map — the routing of render, click, key and right button to `mapmodal.py`, which holds the modals themselves, and the map's own field list for the safety net; 180 A2 the two lines that say its only hand-over is the modal net's, `handover_is_modal`), `tools/colony_list_preview.py` (**404** code, 775 total — work order 182 added the line that forces SDL's dummy drivers), `screens/custom_race/screen.py` (**403** code, 569 total — three more since work orders 169 and 170: the picks and score bar as two HUD panels, and the flag that keeps its frame buttons inside its columns), `tools/colony_move_hd.py` (**371** code, 573 total — one more since work order 182 forces the dummy drivers — fifteen lines shorter since work order 166 part E took its `Counter` out: the tree has one send counter now, `livedrive.SendCounter`), `core/editor/editor.py` (**359** code, 430 total), `screens/galaxy_map/renderer.py` (**336** code, 758 total), `tools/ext_diag.py` (**325** code, 473 total), `main.py` (**371** code, 623 total — over since work order 142 C added the debug input switch; 146 added the F8 surface screenshot, a TOOL for live acceptance on a display that renders but cannot be captured; 170 the two lines that apply the saved HUD frame colour at start; 173 the line that opens the player's mod folder; 177 the four that send the keys to the game while its picture is shown, the modal safety net's keys; 180 A1 the frame-trace switch and the one assignment per way into the game's picture that it records — the recording itself is `core/frametrace.record_app_frame`; 180 A2 the hand-over gate's calls — the held frame's branch, its input refusals, `_gated` — with the gate itself in `core/handover.py`; 182 the click log's two hooks around every event and its switch — the log itself is `core/inputlog.py`; 184 the research entry timing's switch, its import and one assignment — the timing itself is `core/entrytiming.py`, which installs its hooks by wrapping and adds no line to the loop).
+`tools/struct_probe.py` (**478** code, 753 total), `screens/galaxy_map/screen.py` (**420** code, 775 total — down from 456 when work order 169 moved the HUD drawing into `hudview.py`, and the floor went to `floorlift.render_floor` in 170; 173 made the floor the shared background, `core.backgrounds`; 177 added 24 for the modals over the map — the routing of render, click, key and right button to `mapmodal.py`, which holds the modals themselves, and the map's own field list for the safety net; 180 A2 the two lines that say its only hand-over is the modal net's, `handover_is_modal`), `tools/colony_list_preview.py` (**404** code, 775 total — work order 182 added the line that forces SDL's dummy drivers), `screens/custom_race/screen.py` (**403** code, 569 total — three more since work orders 169 and 170: the picks and score bar as two HUD panels, and the flag that keeps its frame buttons inside its columns), `tools/colony_move_hd.py` (**371** code, 573 total — one more since work order 182 forces the dummy drivers — fifteen lines shorter since work order 166 part E took its `Counter` out: the tree has one send counter now, `livedrive.SendCounter`), `core/editor/editor.py` (**359** code, 430 total), `screens/galaxy_map/renderer.py` (**336** code, 758 total), `tools/ext_diag.py` (**325** code, 473 total), `main.py` (**373** code, 633 total — over since work order 142 C added the debug input switch; 146 added the F8 surface screenshot, a TOOL for live acceptance on a display that renders but cannot be captured; 170 the two lines that apply the saved HUD frame colour at start; 173 the line that opens the player's mod folder; 177 the four that send the keys to the game while its picture is shown, the modal safety net's keys; 180 A1 the frame-trace switch and the one assignment per way into the game's picture that it records — the recording itself is `core/frametrace.record_app_frame`; 180 A2 the hand-over gate's calls — the held frame's branch, its input refusals, `_gated` — with the gate itself in `core/handover.py`; 182 the click log's two hooks around every event and its switch — the log itself is `core/inputlog.py`; 184 the research entry timing's switch, its import and one assignment — the timing itself is `core/entrytiming.py`, which installs its hooks by wrapping and adds no line to the loop; 186 the two that show and hide the engine's own window on F12 (open fix 43)).
 `smoke_test.py` is exempt by nature, **and since 22 September 2026 so
 is `tools/smoke_suite/`** — work order 162 split that one `main()` into
 ninety-one check modules, and they are the same file in pieces. They are
@@ -3564,11 +3564,14 @@ anywhere. Kept: `_black_hole_src.png`, which is the INPUT to
 
 ## What works
 
-### The diplomacy audience — BUILT, OPEN FIXES 46 AND 47 NOT APPLIED — work order 185, parts 9-11
+### The diplomacy audience — BUILT, OPEN FIXES 46 AND 47 APPLIED (work order 186) — work order 185, parts 9-11
 
-**Neither fix is applied**, so on the engine a player has nothing changes:
-without open fix 46 the audience runs under its caller's id and stays the
-game's picture. Built from `doc/brief_audience.md` (the reading
+**Both fixes are applied since work order 186** (orion2re `8aea1a25`,
+`ba9b6bc6`): on the engine `play.py` starts the player's audience reports 57
+and the screen is HD — walked there in 186 Part 2 (Races → refusal →
+Races, Races → greeting → menu → Good Bye → Races, 7 transitions, 0 native
+frames). On an engine without them the audience runs under its caller's id
+and stays the game's picture. Built in 185 from `doc/brief_audience.md` (the reading
 `doc/audience_reading.md`) against DIPL blocks recorded on a scratch engine
 carrying 46 and 47, cut with every text replaced by stand-ins
 (`tools/audience_fixture.py`, `tools/fixtures/audience_blocks_185.json`).
@@ -3585,15 +3588,20 @@ statement as the engine rendered it in the original's column, the menu at
 the fields the list built with its title, a disabled item dimmed. Sends:
 an enabled item's field, a statement's one field on any click; a disabled
 item refused. Marks: DEVIATION `hud_frameless`; OMISSION `talking_loop`,
-`header_line`, `glass_remap`, `fade_in`, `audience_help`; UNVERIFIED
-`fix46`, `fix47`. Check 090z. Live test beside the native frames (part 11):
+`header_line`, `glass_remap`, `fade_in`, `audience_help` (UNVERIFIED
+`fix46`, `fix47` removed by work order 186: the data path is seen live on
+the applied engine). Check 090z. Live test beside the native frames (part 11):
 `doc/briefs/185-progress.md`.
 
-### The Ship Designer and its three pickers — BUILT, OPEN FIXES 44 AND 45 NOT APPLIED — work order 185, parts 6-8
+### The Ship Designer and its three pickers — BUILT, OPEN FIXES 44 AND 45 APPLIED (work order 186) — work order 185, parts 6-8
 
-**Neither fix is applied**, so on the engine a player has nothing changes:
-without open fix 44's "DSGN" block `screens/ship_design/` claims nothing and
-id 3 stays the game's picture through the safety net, as before. Built from
+**Both fixes are applied since work order 186** (orion2re `70d31b10`,
+`4af9fefa`): on the engine `play.py` starts DSGN and DSBX arrive and the
+page and its pickers are HD — walked there in 186 Part 2 (colony → popup →
+designer → each picker and back → popup → colony → map, 13 transitions, 0
+native frames). On an engine without them `screens/ship_design/` claims
+nothing and id 3 stays the game's picture through the safety net. Built in
+185 from
 `doc/brief_ship_designer.md` (the reading `doc/ship_designer_reading.md`)
 against blocks recorded on a scratch engine carrying 44 and 45
 (`tools/design_walk.py`, evidence `work_order_185/P7_design_*`, SAVE4,
@@ -3615,8 +3623,9 @@ Available, Clear / Cancel / Build, the 13 help regions. Sends: every
 control by activation of the field found in the list now, a hull by an
 injected click. Marks: DEVIATION `hud_frameless`, `button_words`,
 `row_help`; HD EXTENSION `title`; OMISSION `hover_messages`,
-`flashing_hover`; UNVERIFIED `name_entry` (shown, not edited), `fix44`.
-Check 090x.
+`flashing_hover`; UNVERIFIED `name_entry` (shown, not edited: the text
+being typed is the engine's `_continuous_string`, on no block) — `fix44`
+removed by work order 186, the data path seen live. Check 090x.
 
 **`screens/design_box/`** (ids 54 shield / computer, 55 weapon, 56 special
 — one overlay over the page, `EXTRA_SCREEN_IDS`, which the dispatcher maps
@@ -3628,7 +3637,8 @@ buttons are DESIGN.LBX's own (`tools/design_art_extract.py`, format 2).
 Marks: DEVIATION `hud_frameless`, `button_words`, `filter_art`,
 `centring_swap`; HD EXTENSION `box_titles`; INVENTION `chosen_fill`;
 OMISSION `no_weapon_damage`, `fit_colour`, `flashing_hover`,
-`picker_help`; UNVERIFIED `fix45`. Check 090y.
+`picker_help` (UNVERIFIED `fix45` removed by work order 186, the data
+path seen live). Check 090y.
 
 ### Opening the research screen — measured, then made faster, work order 184
 

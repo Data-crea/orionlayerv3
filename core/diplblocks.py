@@ -1,5 +1,5 @@
 """The diplomacy audience's block in the snapshot — open fixes 46 and 47
-(work order 185, written and parked, NOT APPLIED).
+(work order 185; applied by work order 186, orion2re `8aea1a25`, `ba9b6bc6`).
 
     "DIPL"  open fix 47 (`doc/ext_audience_state.patch`, on top of fix 46,
             `doc/ext_audience_screen.patch`): while the audience reports

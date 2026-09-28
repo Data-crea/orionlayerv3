@@ -18,7 +18,6 @@
     "omission_no_weapon_damage": "'No Weapon''s damage '0' is TECHDATA _weapons[0]'s; DSBX formats a damage string only for a weapon, so HD leaves the cell empty.",
     "omission_fit_colour": "A special that does not fit is dimmed by the original from its slot's space and the exclusions (desbox.cpp:2825-2846), neither on the wire; HD draws every special row alike.",
     "omission_flashing_hover": "The original flashes the hovered row in a cycling palette index; an RGB surface has none. Not drawn.",
-    "omission_picker_help": "The right click's help in the pickers is not built (help.json has no regions): most of it needs an item's help record, not on the wire.",
-    "unverified_fix45": "The pickers draw only from open fix 45's DSBX block (NOT APPLIED): built against the blocks recorded off a scratch engine, live on no applied engine. Without the fix the ids never reach the wire and the page hands a picker to the game's picture."
+    "omission_picker_help": "The right click's help in the pickers is not built (help.json has no regions): most of it needs an item's help record, not on the wire."
   }
 }

@@ -449,12 +449,22 @@ class App:
         pygame.display.flip()
 
     def _cycle_render_mode(self):
-        """F12: cycle through render modes."""
+        """F12: cycle through render modes.
+
+        Entering "original" also SHOWS THE ENGINE'S OWN WINDOW and returning
+        to "hd" hides it again — open fix 43 (work order 186): since fix 41
+        the engine starts hidden, and this is how the player gets the
+        original's window back, as it was before 41. This window keeps the
+        engine's picture meanwhile (either can be played). An engine
+        without fix 43 drops the message.
+        """
         modes = ["original", "hd"]
         idx = (modes.index(self.render_mode)
                if self.render_mode in modes else 0)
         self.render_mode = modes[(idx + 1) % len(modes)]
         log.info(f"Render mode: {self.render_mode}")
+        if self.client.connected:
+            self.client.show_window(self.render_mode == "original")
 
     def _set_mode(self, w, h, flags):
         """`set_mode`, and ADOPT the size that was actually granted.
