@@ -62,13 +62,13 @@ section for what was found where.
 | 38 | What the colony's current product costs, and how long it takes, is not on the wire — `Colony_Producing_Product_Cost_`, `Calculate_Current_Production_Turn_Count_` | **Applied** 27 September 2026 by work order 181 (orion2re `8a6acc08`, `doc/ext_colony_product_cost.patch`, "CPRD"); required; confirmed live | Nothing while applied |
 | 39 | The build popup's queue under edit, its selection and its modes are not on the wire until OK — `COLBLDG::_current_item`, `_active_prod`, `_field_mode`, `_colony_auto_building` | **Applied** 27 September 2026 by work order 181 (orion2re `2be953d4`, `doc/ext_build_popup_queue.patch`, "BLDQ"); required; confirmed live | Nothing while applied; without it the build popup stays the game's own picture |
 | 40 | What the build popup offers, in its order, and its queue, with the costs and times it prints, is not on the wire — `_building_indexes`, `_military_indexes`, `Draw_Cost_And_Time_Info_` | **Applied** 27 September 2026 by work order 181 (orion2re `2097b0c6`, `doc/ext_build_popup_lists.patch`, "BLDL"); required; confirmed live | Nothing while applied; without it the build popup stays the game's own picture |
-| 41 | The engine's own window is shown before `ext::Init` sets `g_hide_window` (platform.cpp:1406-1408 on `2097b0c6`, mox2.cpp:382) | **Applied** 27 September 2026 by work order 183 on Data's approval (orion2re `4bf152e4` on `orionlayer-local`, `doc/ext_engine_window_hidden.patch`); written and proved by work order 182; required by `tools/version_check.py`; confirmed live on the virtual display (never mapped, pacing unchanged, HD identical); open upstream | Without it the engine's window appears on every start, and the original follows the real pointer over it |
+| 41 | The engine's own window is shown before `ext::Init` sets `g_hide_window` (platform.cpp:1406-1408 on `2097b0c6`, mox2.cpp:382) | **Applied** 27 September 2026 by work order 183 on Data's approval (orion2re `4bf152e4` on `orionlayer-local`, `doc/ext_engine_window_hidden.patch`); written and proved by work order 182; required by `tools/version_check.py`; confirmed live on the virtual display (never mapped, pacing unchanged, HD identical); open upstream; amended by open fix 43 (work order 186): hidden from the start only when the starter asks | Without it the engine's window appears on every start, and the original follows the real pointer over it |
 | 42 | A screen is silent on the wire while its input delay counts down: `Get_Input_` returns before `ext::Tick` (fields.cpp:161-167), so the research panel's list reaches a client ~550 ms after the engine has built it | **Written, NOT APPLIED** — work order 184 (`doc/ext_input_delay_tick.patch`); proved in scratch: research entries 636-686 → 77-103 ms (median), flash walk 29 transitions / 0 native frames, 182's stress 0 lost / 0 dropped, pacing and CPU unchanged; clicks in the gap (work order 185): 260 inputs, none lost, none taken twice — an input in the research panel's gap is held and taken when the delay ends | Without it every research entry waits ~550 ms for nothing (66-80 % of it), and every screen that sets an input delay (42 call sites) is heard that much later |
-| 43 | Open fix 41 hides the engine's window always: started on its own the engine is invisible for good, and nothing can show its window again | **Written, NOT APPLIED** — work order 185 (`doc/ext_engine_window_on_request.patch`), AMENDS fix 41; proved in scratch: without `ORION2RE_HIDE_WINDOW` the window shows as before 41, with it it never shows, `MSG_SHOW_WINDOW` shows and hides it, pacing unchanged, the applied build ignores the message | Without it an engine started without OrionLayer cannot be seen, and F12 can show only the engine's picture inside OrionLayer's window, never the engine's own window |
-| 44 | The Ship Designer's design as it is being edited is not on the wire — `MOX::_design`, the slot, the refit flag, the printed numbers | **Written, NOT APPLIED** — work order 185 (`doc/ext_ship_designer_state.patch`, "DSGN"); proved in scratch and recorded live: every value the native page prints | Without it the Ship Designer stays the game's own picture (the safety net): HD cannot show an edit it does not receive |
-| 45 | The Ship Designer's three sub-dialogs report SCREEN_DESIGN and their lists and selection are not on the wire | **Written, NOT APPLIED** — work order 185 (`doc/ext_ship_designer_boxes.patch`, ids 54-56 and "DSBX", on top of 44); proved in scratch and recorded live: the weapon picker's rows number for number | Without it the pickers stay the game's own picture even with fix 44: HD cannot tell which is open nor what it offers |
-| 46 | The diplomacy audience has no screen id: it runs under its caller's (6, 0 or 12) | **Written, NOT APPLIED** — work order 185 (`doc/ext_audience_screen.patch`, ids 57 player / 58 AI); proved in scratch and recorded live: the Races screen's audience reports 57, back to 6 after Good Bye | Without it no HD audience can exist: a client cannot tell it is up, nor whose |
-| 47 | The diplomacy audience's state — who, the statement, the reply text, the menu and its enabled items — is not on the wire | **Written, NOT APPLIED** — work order 185 (`doc/ext_audience_state.patch`, "DIPL", on top of 46); proved in scratch and recorded live: the refusal, the greeting and the menu with its flags | Without it the audience stays the game's own picture even with fix 46 |
+| 43 | Open fix 41 hides the engine's window always: started on its own the engine is invisible for good, and nothing can show its window again | **Applied** 28 September 2026 by work order 186 on Data's approval (orion2re `230a0638` on `orionlayer-local`, `doc/ext_engine_window_on_request.patch`, AMENDS fix 41; on Data's condition, its proof complete on `ba9b6bc6`); written, proved and parked by work order 185; proved again on the tip it was applied to, re-cut there (positions only); required by `tools/version_check.py` | Without it an engine started without OrionLayer cannot be seen, and F12 can show only the engine's picture inside OrionLayer's window, never the engine's own window |
+| 44 | The Ship Designer's design as it is being edited is not on the wire — `MOX::_design`, the slot, the refit flag, the printed numbers | **Applied** 28 September 2026 by work order 186 on Data's approval (orion2re `70d31b10` on `orionlayer-local`, `doc/ext_ship_designer_state.patch`, "DSGN"); written, proved and parked by work order 185; proved again on the tip it was applied to; required by `tools/version_check.py` | Without it the Ship Designer stays the game's own picture (the safety net): HD cannot show an edit it does not receive |
+| 45 | The Ship Designer's three sub-dialogs report SCREEN_DESIGN and their lists and selection are not on the wire | **Applied** 28 September 2026 by work order 186 on Data's approval (orion2re `4af9fefa` on `orionlayer-local`, `doc/ext_ship_designer_boxes.patch`, ids 54-56 and "DSBX", on top of 44); written, proved and parked by work order 185; proved again on the tip it was applied to; required by `tools/version_check.py` | Without it the pickers stay the game's own picture even with fix 44: HD cannot tell which is open nor what it offers |
+| 46 | The diplomacy audience has no screen id: it runs under its caller's (6, 0 or 12) | **Applied** 28 September 2026 by work order 186 on Data's approval (orion2re `8aea1a25` on `orionlayer-local`, `doc/ext_audience_screen.patch`, ids 57 player / 58 AI); written, proved and parked by work order 185; proved again on the tip it was applied to, re-cut there (positions only); required by `tools/version_check.py` | Without it no HD audience can exist: a client cannot tell it is up, nor whose |
+| 47 | The diplomacy audience's state — who, the statement, the reply text, the menu and its enabled items — is not on the wire | **Applied** 28 September 2026 by work order 186 on Data's approval (orion2re `ba9b6bc6` on `orionlayer-local`, `doc/ext_audience_state.patch`, "DIPL", on top of 46); written, proved and parked by work order 185; proved again on the tip it was applied to, re-cut there (positions only); required by `tools/version_check.py` | Without it the audience stays the game's own picture even with fix 46 |
 
 Items 3 and 4 are both about INJECT_CLICK and both live in the same
 code path, but they are separate faults: 3 is where the coordinates
@@ -2751,6 +2751,8 @@ picture: a list HD cannot name is a list HD cannot offer.
 
 **Status: APPLIED** — 27 September 2026 by work order 183, on Data's approval ("Data approves Open Fix 41 … exactly as proven in 182", `doc/briefs/183-work-order-apply-fix-41-players-skip-the-intro-silently.md`; written, proved and parked by work order 182, `doc/briefs/182-parked-for-data.md` item 1). orion2re **`4bf152e4`** on `orionlayer-local` ("OrionLayer Open Fix 41: keep the engine's own window hidden from the start"), the only commit of this fix, on top of fix 40; bundle `~/orion2re_bundle_27sep_4bf152e4_fixes34-41.bundle` (`git bundle verify`: exit 0; a clone of it has the same 1164 commits). Recorded in OrionLayer by commit **`89ce660`** ("Work order 183 Part 1: open fix 41 applied … (183-1)"; the hash added by the next commit, as 179 and 181 did). Patch: `doc/ext_engine_window_hidden.patch`; required by `tools/version_check.py` (marker `OrionLayer, open fix 41.`, on one line at each of the two changed places) since the same commit — a build without it is refused by name ("doc/ext_engine_window_hidden.patch : MISSING … open fix 41", measured on the tree of `2097b0c6`). Open upstream.
 
+**Amended by open fix 43** (work order 186, 28 September 2026, orion2re `230a0638`; entry 43): this fix's `ext_api.cpp` line — the flag starting `true` — is replaced by 43's start from `ORION2RE_HIDE_WINDOW`, so the window is hidden from the start only when the starter asks; this fix's other half, a hidden window presenting without VSync (`platform.cpp`, `Present_VSync_Interval_`), stays, with its marker, and `tools/version_check.py` reads 41 there since (it reported 41 `MISSING` in `ext_api.cpp` on the first run after 43). `4bf152e4` and the patch file are unchanged; the file no longer reverse-applies on the tip — 43 comes off first.
+
 **Against work order 182's proof**: the patch file applied to `2097b0c6` with `patch -p1 --dry-run` and `patch -p1`, no offset, no fuzz; the two files it leaves are blobs `88c157cd` and `3f943781`, the scratch commit's own; and `git diff 4bf152e4~1 4bf152e4` equals the patch file's diff **byte for byte, `diff --git` and `index` lines included** (sha256 `a2f8e948…` both) — the commit is the scratch proof. The rebuild (`ninja -C out/build/Linux/linux-debug`) compiled the two files and linked without a warning.
 
 **What is missing.** OrionLayer draws everything, so the engine's window
@@ -2870,7 +2872,8 @@ window cannot take a key and the intro plays out, with its sound (README).
 player's desktop at every start, beside or in front of OrionLayer's, and
 the original follows the real pointer over it.
 
-**How to revert.** From `~/orion2re` on `orionlayer-local`: `git revert
+**How to revert.** Since work order 186 open fix 43 first (`git revert 230a0638`,
+entry 43), then, from `~/orion2re` on `orionlayer-local`: `git revert
 4bf152e4`, or `patch -R -p1 < ~/orionlayerv3/doc/ext_engine_window_hidden.patch`;
 then `ninja -C out/build/Linux/linux-debug`, and move the patch back from
 `LOCAL_PATCHES` to `REPORTED_PATCHES` in `tools/version_check.py` (and its
@@ -3072,16 +3075,7 @@ back off with `patch -R -p1` and a rebuild.
 
 ## 43. The engine's window: hidden only when OrionLayer starts it, and shown again on request
 
-**Status: NOT APPLIED — written, proved and parked for Data by work order
-185 (Part 2), 27 September 2026** (`doc/briefs/185-parked-for-data.md`,
-items 1b and 2a). Patch: `doc/ext_engine_window_on_request.patch`; listed
-by `tools/version_check.py` under REPORTED_PATCHES (marker `OrionLayer, open
-fix 43.`, on one line at every changed place). **It AMENDS open fix 41**
-(applied, `4bf152e4`; entry 41, "The engine's own window is shown before it
-is hidden"): it replaces 41's unconditional hidden start and keeps 41's
-other half, a hidden window presenting without VSync. It is written against
-`4bf152e4`, i.e. on top of 41; reverting it returns the engine to 41 as
-applied, and reverting 41 as well returns it to before either.
+**Status: APPLIED** — 28 September 2026 by work order 186 on Data's approval ("Approved: open fixes 44, 45 (as amended in 185), 46, 47" and, on condition, "the proper version of Fix 41 prepared in 185 Part 2", `doc/briefs/186-work-order-apply-fixes-44-47-ship-designer-audience-live-modal-hold.md`; written, proved and parked by work order 185 (Part 2), `doc/briefs/185-parked-for-data.md` items 1b, "Open fix 43 — the engine's window, done properly (amends 41)", and 2a). orion2re **`230a0638`** on `orionlayer-local` ("OrionLayer Open Fix 43: hide the engine's window only when the starter asks, and show it again on request (amends fix 41)"), the only commit of this fix, on top of `ba9b6bc6`; bundle `~/orion2re_bundle_28sep_230a0638_fixes34-47_43.bundle` (`git bundle verify`: exit 0). Patch: `doc/ext_engine_window_on_request.patch` — `git diff 230a0638~1 230a0638` byte for byte, `diff --git` and `index` lines included; required by `tools/version_check.py` (marker `OrionLayer, open fix 43.`, on one line at every changed place) since the same order — a build without it is refused by name (measured on the tree of `4bf152e4`: exit 1, 43-47 each `MISSING`). It AMENDS open fix 41 (entry 41 says so since). Open upstream.
 
 **What is missing.** Fix 41 starts `ext::g_hide_window` true in every
 `ORION2RE_EXT` build (ext_api.cpp:16), and `ext::Init` sets it true again
@@ -3121,9 +3115,7 @@ possible.
   `SDL_HideWindow`, then the VSync interval again (a shown window presents
   with VSync unless `ORION2RE_NO_VSYNC`, a hidden one without).
 
-**The exact change.** The diff, as written by the scratch commit
-(`f110592e`; the `diff --git` and `index` lines and the text git adds after
-`@@` are not part of it):
+**The exact change.** The diff, as committed — `git diff 230a0638~1 230a0638`, which is the patch file's (185's scratch commit was `f110592e`; the `diff --git` and `index` lines and the text git adds after `@@` are not part of it):
 
 ```diff
 --- a/src/ext/ext_api.cpp
@@ -3150,7 +3142,7 @@ possible.
  int16_t g_pending_field = 0;
  int16_t g_activated_input = 0;
  bool g_injected_mouse_pending = false;
-@@ -1046,6 +1052,11 @@
+@@ -1279,6 +1285,11 @@
              }
              break;
  
@@ -3162,7 +3154,7 @@ possible.
          case MSG_CANCEL_FIELD:
              // Right-click on field (DOWN + UP)
              if (cmd.param1 >= 0 && cmd.param1 < fields::_fields_count) {
-@@ -1083,7 +1094,7 @@
+@@ -1316,7 +1327,7 @@
  // ── Public API ───────────────────────────────────────────
  
  bool Init(uint16_t port) {
@@ -3277,6 +3269,10 @@ commands`, `-fsyntax-only`); the control — `MSG_SHOW_WINDW` in
 `ext_api.cpp`'s new case — was refused ("»MSG_SHOW_WINDW« wurde in diesem
 Gültigkeitsbereich nicht deklariert").
 
+**Re-cut for that tip.** As 185 wrote it, the file's third and fourth `ext_api.cpp` hunks applied at 1285 and 1327 — offset 233 lines, the blocks of fixes 44-47 above them. The file was regenerated from the applied scratch tree: those two positions and the index lines of `ext_api.cpp` and `ext_api.h` changed, and nothing else, and the re-cut file was proved again from the start (below). The order approved it only on this condition — the proof complete on the base it is applied to — and it was.
+
+**Proof on the tip it was applied to** (work order 186 Part 1, `~/orionlayer-fixtures/evidence/work_order_186/P1_proofs/`): in a scratch clone (`git clone --no-hardlinks`, never `~/orion2re`) reset to `orionlayer-local`'s tip `ba9b6bc6`, the patch file applied with `patch -p1 --dry-run` and `patch -p1`, no offset, no fuzz, and the applied tree's diff equal to the file's; every changed .cpp compiled alone with the build's own command (`ninja -t commands`, re-pointed at the scratch tree, `-fsyntax-only`), exit 0; the control — `case MSG_SHOW_WINDOW:` misspelt `case MSG_SHOW_WINDW:` in `ext_api.cpp` ("»MSG_SHOW_WINDW« wurde in diesem Gültigkeitsbereich nicht deklariert"), and a second one, `g_window_shown` misspelt `g_window_shwn` at the first show in `platform.cpp` ("nicht definiert") — refused, exit 1. Then the same file applied to `~/orion2re` (dry run and apply, no offset), `ninja -C out/build/Linux/linux-debug` (no error; no engine was running from the binary — checked by every process's `exe` and `engine_start --check` before each build), `git add` of its files alone, one commit.
+
 **Scratch results** (work order 185, measured on the scratch commit before
 the marker was added to the `#include <atomic>` line — `884c727e`, which
 differs from `f110592e` in that one comment only; rebuilt after it; the
@@ -3333,27 +3329,28 @@ the same OrionLayer runs on both.
 - *Thread safety*: the flag is atomic; the window is touched only by the
   main thread, once per change.
 
+**Live check** (work order 186 Part 1, the engine `play.py` starts — `230a0638`, every start through `tools/engine_start.py` with its guard, each verified identical; `evidence/work_order_186/P1_live/`):
+
+| | result |
+|---|---|
+| started WITHOUT `ORION2RE_HIDE_WINDOW` (engine 180817) | the window **IsViewable**; `MSG_SHOW_WINDOW 0` → IsUnMapped, `1` → IsViewable, 9 snapshots in each 1.5 s |
+| started WITH `ORION2RE_HIDE_WINDOW=1` (engine 180920) | **IsUnMapped** from the start, the intro skip arrives (READY); `1` → IsViewable, `0` → IsUnMapped |
+| pacing, main menu, 20 s | **6.05 snapshots/s, gap median 165.1-165.2 ms, max 167.5-167.7, engine CPU 2.4-2.5 %** — 41's 6.06 / 164.3 ms (work order 183) |
+
+**Side effects found applying it (work order 186).**
+- *Fix 41's line in `ext_api.cpp` is gone*, replaced by this fix's start from the environment: `tools/version_check.py` found 41 `MISSING` there on the first run after the apply. 41's other half and its marker stay in `platform.cpp` (`Present_VSync_Interval_`), so 41 is read there since (`LOCAL_PATCHES`), and 41 comes off only after this fix.
+- *Until the HD side sets `ORION2RE_HIDE_WINDOW`, every start shows the window* — measured above (engine 180817). On the virtual display it is harmless; `play.py` would show it on the player's desktop. The HD side (work order 186 Part 2) sets it in `tools/vdisplay.engine_env`.
+- *Pacing unchanged*: the main menu's pacing on the engine with the whole series (44-47 and 43; engines 180817 and 180920, 20 s each on the virtual display): **6.05 snapshots/s, gap median 165.1-165.2 ms, max 167.5-167.7, engine CPU 2.4-2.5 %** — 41's 6.06 / 164.3 ms (work order 183).
+
 **What it costs us without it.** An engine started without OrionLayer
 cannot be seen or played, and F12 shows the original only inside
 OrionLayer's window.
 
-**How to apply.** From `~/orion2re` on `orionlayer-local`, after fix 41
-(fix 42, if applied, touches another file): `patch -p1 <
-~/orionlayerv3/doc/ext_engine_window_on_request.patch`, then `ninja -C
-out/build/Linux/linux-debug`; set `ORION2RE_HIDE_WINDOW=1` in
-`tools/vdisplay.engine_env`, add the F12 call and `GameClient.show_window`,
-and move the patch from `REPORTED_PATCHES` to `LOCAL_PATCHES`. It comes back
-off with `patch -R -p1` and a rebuild — the engine is then fix 41 as
-applied.
+**How to revert.** From `~/orion2re` on `orionlayer-local`: `git revert 230a0638` (clean on its own, tried in scratch) or `patch -R -p1`; then `ninja -C out/build/Linux/linux-debug`, and move the patch back to `REPORTED_PATCHES` (README and part 09 as for 44). The engine is then fix 41 as applied: hidden always, `ORION2RE_HIDE_WINDOW` and `MSG_SHOW_WINDOW` ignored, so the same OrionLayer runs on it.
 
 ## 44. The Ship Designer's design as it is being edited
 
-**Status: NOT APPLIED — written, proved and parked for Data by work order
-185 (Part 6), 27 September 2026** (`doc/briefs/185-parked-for-data.md`,
-item 1c). Patch: `doc/ext_ship_designer_state.patch`; listed by
-`tools/version_check.py` under REPORTED_PATCHES (marker `OrionLayer, open
-fix 44.`, on one line at the changed place). The reading it rests on:
-`doc/ship_designer_reading.md`.
+**Status: APPLIED** — 28 September 2026 by work order 186 on Data's approval ("Approved: open fixes 44, 45 (as amended in 185), 46, 47" and, on condition, "the proper version of Fix 41 prepared in 185 Part 2", `doc/briefs/186-work-order-apply-fixes-44-47-ship-designer-audience-live-modal-hold.md`; written, proved and parked by work order 185 (Part 6), `doc/briefs/185-parked-for-data.md` item 1c, "Open fixes 44 and 45 — the Ship Designer on the wire"). orion2re **`70d31b10`** on `orionlayer-local` ("OrionLayer Open Fix 44: send the Ship Designer's design as it is being edited ("DSGN")"), the only commit of this fix, on top of `4bf152e4`; bundle `~/orion2re_bundle_28sep_70d31b10_fixes34-44.bundle` (`git bundle verify`: exit 0). Patch: `doc/ext_ship_designer_state.patch` — `git diff 70d31b10~1 70d31b10` byte for byte, `diff --git` and `index` lines included; required by `tools/version_check.py` (marker `OrionLayer, open fix 44.`, on one line at every changed place) since the same order — a build without it is refused by name (measured on the tree of `4bf152e4`: exit 1, 43-47 each `MISSING`). The reading it rests on: `doc/ship_designer_reading.md`. Open upstream.
 
 **What is missing.** The designer (SCREEN_DESIGN, 3) edits `MOX::_design`,
 an `s_current_design` in the global data segment (orion2.h:702-743,
@@ -3380,9 +3377,7 @@ formats (`Design_Weapon_Damage_String_`, `Weapon_Mod_String_`, as length and
 bytes, never truncated); the eight specials. Every function it calls only
 reads (checked: `Build_Design_Template_` writes its output alone).
 
-**The exact change.** The diff, as written by the scratch commit
-(`ef021842`; the `diff --git` and `index` lines and the text git adds after
-`@@` are not part of it):
+**The exact change.** The diff, as committed — `git diff 70d31b10~1 70d31b10`, which is the patch file's (185's scratch commit was `ef021842`; the `diff --git` and `index` lines and the text git adds after `@@` are not part of it):
 
 ```diff
 --- a/src/ext/ext_api.cpp
@@ -3483,6 +3478,8 @@ byte (`ef021842`); the whole engine built (Debug, `ORION2RE_EXT=ON`, the
 alone with the build's own command (`ninja -t commands`, `-fsyntax-only`);
 the control — `_printed_space_avial` for `_printed_space_avail` — was refused ("»_printed_space_avial« ist kein Element von »DESIGN«").
 
+**Proof on the tip it was applied to** (work order 186 Part 1, `~/orionlayer-fixtures/evidence/work_order_186/P1_proofs/`): in a scratch clone (`git clone --no-hardlinks`, never `~/orion2re`) reset to `orionlayer-local`'s tip `4bf152e4`, the patch file applied with `patch -p1 --dry-run` and `patch -p1`, no offset, no fuzz, and the applied tree's diff equal to the file's; every changed .cpp compiled alone with the build's own command (`ninja -t commands`, re-pointed at the scratch tree, `-fsyntax-only`), exit 0; the control — `_printed_space_avail` misspelt `_printed_space_avial` in `ext_api.cpp` ("»_printed_space_avial« ist kein Element von »DESIGN«") — refused, exit 1. Then the same file applied to `~/orion2re` (dry run and apply, no offset), `ninja -C out/build/Linux/linux-debug` (no error; no engine was running from the binary — checked by every process's `exe` and `engine_start --check` before each build), `git add` of its files alone, one commit.
+
 **Recorded live** (with fix 45 on top, the virtual display, SAVE4,
 `~/orionlayer-fixtures/evidence/work_order_185/P6_design_record*`, every
 start guarded and verified identical; the reading's section 10 has the
@@ -3499,22 +3496,16 @@ designer was not measured separately (its loop's own `Release_Time_(2)`
 paces it as before; the block adds a few hundred bytes to a snapshot that
 carries a 307 KB framebuffer).
 
+**Side effects found applying it (work order 186).** None at the start: the main menu's pacing on the engine with the whole series (44-47 and 43; engines 180817 and 180920, 20 s each on the virtual display): **6.05 snapshots/s, gap median 165.1-165.2 ms, max 167.5-167.7, engine CPU 2.4-2.5 %** — 41's 6.06 / 164.3 ms (work order 183). The live walks over the designer and the audience are work order 186 Part 3's.
+
 **What it costs us without it.** The Ship Designer stays the game's own
 picture (the safety net): HD claims id 3 only with DSGN on the wire.
 
-**How to apply.** From `~/orion2re` on `orionlayer-local`: `patch -p1 <
-~/orionlayerv3/doc/ext_ship_designer_state.patch`, then `ninja -C
-out/build/Linux/linux-debug`, and move the patch from `REPORTED_PATCHES` to
-`LOCAL_PATCHES`. It comes back off with `patch -R -p1` and a rebuild.
+**How to revert.** From `~/orion2re` on `orionlayer-local`: fix 45 first (`git revert 4af9fefa`, its block sits on 44's lines), then `git revert 70d31b10` — or `patch -R -p1` with the two files in the same order (the whole chain back to `4bf152e4` proved in scratch, byte for byte); then `ninja -C out/build/Linux/linux-debug`, and move the patch back from `LOCAL_PATCHES` to `REPORTED_PATCHES` in `tools/version_check.py` (and its number out of README's table and fundament part 09's line). Without it the designer's page is the game's own picture again.
 
 ## 45. The Ship Designer's sub-dialogs: which is open, and what it offers
 
-**Status: NOT APPLIED — written, proved and parked for Data by work order
-185 (Part 6), 27 September 2026** (`doc/briefs/185-parked-for-data.md`,
-item 1c). Patch: `doc/ext_ship_designer_boxes.patch`, **on top of open fix
-44** (both append to `SerializeState`, 45 after 44 — apply 44 first);
-listed by `tools/version_check.py` under REPORTED_PATCHES (marker
-`OrionLayer, open fix 45.`, on one line at every changed place).
+**Status: APPLIED** — 28 September 2026 by work order 186 on Data's approval ("Approved: open fixes 44, 45 (as amended in 185), 46, 47" and, on condition, "the proper version of Fix 41 prepared in 185 Part 2", `doc/briefs/186-work-order-apply-fixes-44-47-ship-designer-audience-live-modal-hold.md`; written, proved and parked by work order 185 (Part 6, amended in Part 7), `doc/briefs/185-parked-for-data.md` item 1c, "Open fixes 44 and 45 — the Ship Designer on the wire"). orion2re **`4af9fefa`** on `orionlayer-local` ("OrionLayer Open Fix 45: report the Ship Designer's three pickers (54-56) and send what they offer ("DSBX")"), the only commit of this fix, on top of `70d31b10`; bundle `~/orion2re_bundle_28sep_4af9fefa_fixes34-45.bundle` (`git bundle verify`: exit 0). Patch: `doc/ext_ship_designer_boxes.patch` — `git diff 4af9fefa~1 4af9fefa` byte for byte, `diff --git` and `index` lines included; required by `tools/version_check.py` (marker `OrionLayer, open fix 45.`, on one line at every changed place) since the same order — a build without it is refused by name (measured on the tree of `4bf152e4`: exit 1, 43-47 each `MISSING`). On top of open fix 44. Open upstream.
 
 **What is missing.** The designer's three pickers — shield or computer
 (`DESBOX::Generic_Replacement_Box_`), weapon with arcs, racks and
@@ -3544,9 +3535,7 @@ live only in DESBOX's and MOX's globals.
   the picker's own drawing (desbox.cpp:2203-2221, :2279, :2395-2402,
   :2502-2504, :2821), never a second copy of a table.
 
-**The exact change.** The diff, as written by the scratch commit
-(`ce56babd`, on `ef021842`; the `diff --git` and `index` lines and the
-text git adds after `@@` are not part of it):
+**The exact change.** The diff, as committed — `git diff 4af9fefa~1 4af9fefa`, which is the patch file's (185's scratch commit was `ce56babd`; the `diff --git` and `index` lines and the text git adds after `@@` are not part of it):
 
 ```diff
 --- a/src/ext/ext_api.cpp
@@ -3739,6 +3728,8 @@ applied with no offset and no fuzz on `4bf152e4` + fix 44, equal to the
 commit, the engine rebuilt, `ext_api.cpp` compiled alone (exit 0), the same
 control refused (exit 1; `desbox.cpp` is unchanged by the amendment).
 
+**Proof on the tip it was applied to** (work order 186 Part 1, `~/orionlayer-fixtures/evidence/work_order_186/P1_proofs/`): in a scratch clone (`git clone --no-hardlinks`, never `~/orion2re`) reset to `orionlayer-local`'s tip `70d31b10`, the patch file applied with `patch -p1 --dry-run` and `patch -p1`, no offset, no fuzz, and the applied tree's diff equal to the file's; every changed .cpp compiled alone with the build's own command (`ninja -t commands`, re-pointed at the scratch tree, `-fsyntax-only`), exit 0; the control — `_weapon_replacement_rack` misspelt `_weapon_replacment_rack` in `ext_api.cpp`, and a second one, `ext::ScreenOverride` misspelt `ext::ScreenOveride` on the special picker's guard in `desbox.cpp` (each refused: "ist kein Element von »DESBOX«", "bezeichnet keinen Typ") — refused, exit 1. Then the same file applied to `~/orion2re` (dry run and apply, no offset), `ninja -C out/build/Linux/linux-debug` (no error; no engine was running from the binary — checked by every process's `exe` and `engine_start --check` before each build), `git add` of its files alone, one commit.
+
 **Recorded live** (the reading's section 10): the computer field → **54**,
 six rows, the Electronic Computer at cost 8 and bonus 25, four not
 researched; the first weapon row → **55**, four rows — No Weapon 0/0/0,
@@ -3755,22 +3746,17 @@ game's picture for them — decision 22, as today. The weapon picker still
 opens behind the page's `Set_Input_Delay_(20)` (design.cpp:870): without
 open fix 42 its first twenty passes are silent, with it they are sent.
 
+**Side effects found applying it (work order 186).** None at the start: the main menu's pacing on the engine with the whole series (44-47 and 43; engines 180817 and 180920, 20 s each on the virtual display): **6.05 snapshots/s, gap median 165.1-165.2 ms, max 167.5-167.7, engine CPU 2.4-2.5 %** — 41's 6.06 / 164.3 ms (work order 183). The live walks over the designer and the audience are work order 186 Part 3's.
+
 **What it costs us without it.** With fix 44 alone the page can be HD and
 every picker stays the game's own picture; without either, the whole
 designer does.
 
-**How to apply.** After fix 44: `patch -p1 <
-~/orionlayerv3/doc/ext_ship_designer_boxes.patch`, rebuild, move the patch
-to `LOCAL_PATCHES`. It comes back off with `patch -R -p1` (before 44's).
+**How to revert.** From `~/orion2re` on `orionlayer-local`: `git revert 4af9fefa` (clean on its own on `230a0638`, tried in scratch) or `patch -R -p1`; then rebuild and move the patch back to `REPORTED_PATCHES` (README and part 09 as for 44). Without it the three pickers report 3 and are the game's own picture again; the page stays HD.
 
 ## 46. The diplomacy audience has no screen id
 
-**Status: NOT APPLIED — written, proved and parked for Data by work order
-185 (Part 9), 28 September 2026** (`doc/briefs/185-parked-for-data.md`,
-item 1d). Patch: `doc/ext_audience_screen.patch`; listed by
-`tools/version_check.py` under REPORTED_PATCHES (marker `OrionLayer, open
-fix 46.`, on one line at every changed place). The reading:
-`doc/audience_reading.md`.
+**Status: APPLIED** — 28 September 2026 by work order 186 on Data's approval ("Approved: open fixes 44, 45 (as amended in 185), 46, 47" and, on condition, "the proper version of Fix 41 prepared in 185 Part 2", `doc/briefs/186-work-order-apply-fixes-44-47-ship-designer-audience-live-modal-hold.md`; written, proved and parked by work order 185 (Part 9), `doc/briefs/185-parked-for-data.md` item 1d, "Open fixes 46 and 47 — the diplomacy audience on the wire"). orion2re **`8aea1a25`** on `orionlayer-local` ("OrionLayer Open Fix 46: report the diplomacy audience as its own screen, 57 the player's and 58 the AI's"), the only commit of this fix, on top of `4af9fefa`; bundle `~/orion2re_bundle_28sep_8aea1a25_fixes34-46.bundle` (`git bundle verify`: exit 0). Patch: `doc/ext_audience_screen.patch` — `git diff 8aea1a25~1 8aea1a25` byte for byte, `diff --git` and `index` lines included; required by `tools/version_check.py` (marker `OrionLayer, open fix 46.`, on one line at every changed place) since the same order — a build without it is refused by name (measured on the tree of `4bf152e4`: exit 1, 43-47 each `MISSING`). The reading: `doc/audience_reading.md`. Open upstream.
 
 **What is missing.** The audience is not a screen but a nested call —
 `DIP_SCRN::Diplomacy_Screen_` (dip_scrn_main.cpp:1257, the player's, from
@@ -3791,14 +3777,12 @@ or from a turn-start report.
   the include under `#ifdef ORION2RE_EXT`.
 - `src/ext/ext_api.h` — the two ids documented beside the override.
 
-**The exact change.** The diff, as written by the scratch commit
-(`453c4c05`, on `4bf152e4`; the `diff --git` and `index` lines and the
-text git adds after `@@` are not part of it):
+**The exact change.** The diff, as committed — `git diff 8aea1a25~1 8aea1a25`, which is the patch file's (185's scratch commit was `453c4c05`; the `diff --git` and `index` lines and the text git adds after `@@` are not part of it):
 
 ```diff
 --- a/src/ext/ext_api.h
 +++ b/src/ext/ext_api.h
-@@ -44,6 +44,12 @@
+@@ -48,6 +48,12 @@
      ~ScreenOverride();
  };
  
@@ -3856,6 +3840,10 @@ compiles alone with the build's own command (exit 0); the control —
 Namensraum »ext« bezeichnet keinen Typ"). With 44, 45 and 47 all four apply
 together on `4bf152e4` (offsets only, no fuzz, no reject).
 
+**Re-cut for that tip.** As 185 wrote it, the file's `ext_api.h` hunk applied at line 48 — offset 4 lines, because fix 45 added four lines above it. The file was regenerated from the applied scratch tree: that hunk's position (`-44` → `-48`) and the file's `ext_api.h` index line changed, and nothing else — every added, removed and context line is 185's — and the re-cut file was proved again from the start (below).
+
+**Proof on the tip it was applied to** (work order 186 Part 1, `~/orionlayer-fixtures/evidence/work_order_186/P1_proofs/`): in a scratch clone (`git clone --no-hardlinks`, never `~/orion2re`) reset to `orionlayer-local`'s tip `4af9fefa`, the patch file applied with `patch -p1 --dry-run` and `patch -p1`, no offset, no fuzz, and the applied tree's diff equal to the file's; every changed .cpp compiled alone with the build's own command (`ninja -t commands`, re-pointed at the scratch tree, `-fsyntax-only`), exit 0; the control — `ext::ScreenOverride` misspelt `ext::ScreenOveride` in `dip_scrn_main.cpp` ("»ScreenOveride« in Namensraum »ext« bezeichnet keinen Typ") — refused, exit 1. Then the same file applied to `~/orion2re` (dry run and apply, no offset), `ninja -C out/build/Linux/linux-debug` (no error; no engine was running from the binary — checked by every process's `exe` and `engine_start --check` before each build), `git add` of its files alone, one commit.
+
 **Recorded live** (with fix 47 on top, the virtual display, SAVE4, nothing
 agreed): the Races screen's AUDIENCE on race slot 0 → **57** at once, the
 ambassador's refusal; on slot 1 → **57**, the greeting, the menu, Good Bye
@@ -3873,21 +3861,16 @@ them — decision 22. The Races screen's HD view, which today waits 66
 snapshots and then hands a diplomacy dialog to the picture
 (`raceswire.WAIT_BOUND`), gets the audience's id at once instead.
 
+**Side effects found applying it (work order 186).** None at the start: the main menu's pacing on the engine with the whole series (44-47 and 43; engines 180817 and 180920, 20 s each on the virtual display): **6.05 snapshots/s, gap median 165.1-165.2 ms, max 167.5-167.7, engine CPU 2.4-2.5 %** — 41's 6.06 / 164.3 ms (work order 183). The live walks over the designer and the audience are work order 186 Part 3's.
+
 **What it costs us without it.** No HD audience can exist: a client cannot
 tell it is up, nor whose.
 
-**How to apply.** `patch -p1 < ~/orionlayerv3/doc/ext_audience_screen.patch`,
-rebuild, move the patch to `LOCAL_PATCHES`. It comes back off with
-`patch -R -p1`.
+**How to revert.** From `~/orion2re` on `orionlayer-local`: fix 47 first (`git revert ba9b6bc6`; 47's `ext_api.h` hunk sits on 46's comment, so 46 alone conflicts — tried in scratch), then `git revert 8aea1a25` — or `patch -R -p1` in the same order; then rebuild and move the patch back to `REPORTED_PATCHES` (README and part 09 as for 44).
 
 ## 47. The diplomacy audience's state is not on the wire
 
-**Status: NOT APPLIED — written, proved and parked for Data by work order
-185 (Part 9), 28 September 2026** (`doc/briefs/185-parked-for-data.md`,
-item 1d). Patch: `doc/ext_audience_state.patch`, **on top of open fix 46**
-(the block is written while 57 or 58 is reported — apply 46 first); listed
-by `tools/version_check.py` under REPORTED_PATCHES (marker `OrionLayer,
-open fix 47.`, on one line at every changed place).
+**Status: APPLIED** — 28 September 2026 by work order 186 on Data's approval ("Approved: open fixes 44, 45 (as amended in 185), 46, 47" and, on condition, "the proper version of Fix 41 prepared in 185 Part 2", `doc/briefs/186-work-order-apply-fixes-44-47-ship-designer-audience-live-modal-hold.md`; written, proved and parked by work order 185 (Part 9), `doc/briefs/185-parked-for-data.md` item 1d, "Open fixes 46 and 47 — the diplomacy audience on the wire"). orion2re **`ba9b6bc6`** on `orionlayer-local` ("OrionLayer Open Fix 47: send the diplomacy audience's state, its statement, reply and menu ("DIPL")"), the only commit of this fix, on top of `8aea1a25`; bundle `~/orion2re_bundle_28sep_ba9b6bc6_fixes34-47.bundle` (`git bundle verify`: exit 0). Patch: `doc/ext_audience_state.patch` — `git diff ba9b6bc6~1 ba9b6bc6` byte for byte, `diff --git` and `index` lines included; required by `tools/version_check.py` (marker `OrionLayer, open fix 47.`, on one line at every changed place) since the same order — a build without it is refused by name (measured on the tree of `4bf152e4`: exit 1, 43-47 each `MISSING`). On top of open fix 46. Open upstream.
 
 **What is missing.** Everything the audience shows lives in DIP_SCRN's
 globals (`_current_ambassador` dip_scrn.cpp:31, `_ambassador_option` :6,
@@ -3910,9 +3893,7 @@ up nor which items may be chosen.
   statement id, the reply text as the engine rendered it, and the running
   list — its title and per item the enable flag and the words.
 
-**The exact change.** The diff, as written by the scratch commit
-(`20f5f920`, on `453c4c05`; the `diff --git` and `index` lines and the
-text git adds after `@@` are not part of it):
+**The exact change.** The diff, as committed — `git diff ba9b6bc6~1 ba9b6bc6`, which is the patch file's (185's scratch commit was `20f5f920`; the `diff --git` and `index` lines and the text git adds after `@@` are not part of it):
 
 ```diff
 --- a/src/ext/ext_api.cpp
@@ -3970,7 +3951,7 @@ text git adds after `@@` are not part of it):
      // 6. Which colony the colony screen and its build popup show: "COLS",
      //    written ONLY while SCREEN_COLONY or SCREEN_QUEUE_POPUP is up, and
      //    LAST. OrionLayer, open fix 35.
-@@ -1111,6 +1157,20 @@
+@@ -1298,6 +1344,20 @@
      g_screen_override = previous;
  }
  
@@ -3993,7 +3974,7 @@ text git adds after `@@` are not part of it):
      // game's own MOX::_current_screen is untouched, because the dialogs it
 --- a/src/ext/ext_api.h
 +++ b/src/ext/ext_api.h
-@@ -50,6 +50,28 @@
+@@ -54,6 +54,28 @@
  /// (DIP_SCRN::Diplomacy_Screen_) and 58 when an AI asked for it
  /// (DIP_SCRN::Npc_Diplomacy_Screen_), so a client can tell it is up.
  
@@ -4057,6 +4038,10 @@ error; `ext_api.cpp` and `fields.cpp` compile alone with the build's own
 command (exit 0); the control — `_respons_message` for `_response_message`
 — was refused ("»_respons_message« ist kein Element von »DIP_SCRN«").
 
+**Re-cut for that tip.** As 185 wrote it, the file's second `ext_api.cpp` hunk applied at line 1344 — offset 187 lines, the blocks of fixes 44 and 45 above it — and its `ext_api.h` hunk at 54 (offset 4, fix 45). The file was regenerated from the applied scratch tree: those two positions and the two index lines changed, and nothing else, and the re-cut file was proved again from the start (below).
+
+**Proof on the tip it was applied to** (work order 186 Part 1, `~/orionlayer-fixtures/evidence/work_order_186/P1_proofs/`): in a scratch clone (`git clone --no-hardlinks`, never `~/orion2re`) reset to `orionlayer-local`'s tip `8aea1a25`, the patch file applied with `patch -p1 --dry-run` and `patch -p1`, no offset, no fuzz, and the applied tree's diff equal to the file's; every changed .cpp compiled alone with the build's own command (`ninja -t commands`, re-pointed at the scratch tree, `-fsyntax-only`), exit 0; the control — `DIP_SCRN::_response_message` misspelt `DIP_SCRN::_respons_message` in `ext_api.cpp` ("ist kein Element von »DIP_SCRN«") — refused, exit 1. Then the same file applied to `~/orion2re` (dry run and apply, no offset), `ninja -C out/build/Linux/linux-debug` (no error; no engine was running from the binary — checked by every process's `exe` and `engine_start --check` before each build), `git add` of its files alone, one commit.
+
 **Recorded live** (the virtual display, SAVE4, nothing agreed; evidence
 `work_order_185/P9_audience_*`): race slot 0 → DIPL mode player, ambassador
 1, option 0 (refused), statement 126, "Emperor Ember will listen when you
@@ -4075,10 +4060,10 @@ pointers into memory that call owns for as long as the guard lives; it is
 read only while 57 / 58 is reported. Nothing the game reads changes. The
 block is at most ~2.4 KB (250 text + 40 items).
 
+**Side effects found applying it (work order 186).** None at the start: the main menu's pacing on the engine with the whole series (44-47 and 43; engines 180817 and 180920, 20 s each on the virtual display): **6.05 snapshots/s, gap median 165.1-165.2 ms, max 167.5-167.7, engine CPU 2.4-2.5 %** — 41's 6.06 / 164.3 ms (work order 183). The live walks over the designer and the audience are work order 186 Part 3's.
+
 **What it costs us without it.** With fix 46 alone HD knows the audience
 is up and whose — it can draw the ambassador and the stage — but not what
 is said nor what may be answered: the audience stays the game's picture.
 
-**How to apply.** After fix 46: `patch -p1 <
-~/orionlayerv3/doc/ext_audience_state.patch`, rebuild, move the patch to
-`LOCAL_PATCHES`. It comes back off with `patch -R -p1` (before 46's).
+**How to revert.** From `~/orion2re` on `orionlayer-local`: `git revert ba9b6bc6` (clean on its own on `230a0638`, tried in scratch) or `patch -R -p1`; then rebuild and move the patch back to `REPORTED_PATCHES` (README and part 09 as for 44). Without it the audience has its id (46) but no state, and stays the game's own picture.

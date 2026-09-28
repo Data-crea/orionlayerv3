@@ -217,12 +217,42 @@ LOCAL_PATCHES = {
         "(open fix 40) and the popup stays the game's own picture"),
     # Applied 27 September 2026 by work order 183 (Data's approval; written,
     # proved and parked by 182; orion2re 4bf152e4 on orionlayer-local). The
-    # marker is on one line at both changed places; this one is in the flag.
+    # marker is on one line at both changed places. Read in platform.cpp
+    # since work order 186: open fix 43 replaced 41's line in ext_api.cpp
+    # (the flag now starts from ORION2RE_HIDE_WINDOW) and kept 41's other
+    # half, a hidden window presenting without VSync, with its marker.
     "doc/ext_engine_window_hidden.patch": (
-        os.path.join("src", "ext", "ext_api.cpp"), "OrionLayer, open fix 41.",
+        os.path.join("src", "game", "platform.cpp"), "OrionLayer, open fix 41.",
         "the engine's own window is shown on the player's desktop at every "
         "start (open fix 41), beside OrionLayer's, and the original follows "
         "the real pointer over it"),
+    # Applied 28 September 2026 by work order 186 (Data's approval; written,
+    # proved and parked by 185). One commit per fix on orionlayer-local, in
+    # the order 44, 45, 46, 47, 43: 70d31b10, 4af9fefa, 8aea1a25, ba9b6bc6,
+    # 230a0638. 45 sits on 44 and 47 on 46; 43 amends 41 (the window hidden
+    # only when the starter asks, shown again on request). 43, 46 and 47 were
+    # re-cut on the tip they were applied to (positions only).
+    "doc/ext_engine_window_on_request.patch": (
+        os.path.join("src", "ext", "ext_api.cpp"), "OrionLayer, open fix 43.",
+        "an engine started without OrionLayer is invisible for good and F12 "
+        "cannot show the engine's own window (open fix 43)"),
+    "doc/ext_ship_designer_state.patch": (
+        os.path.join("src", "ext", "ext_api.cpp"), "OrionLayer, open fix 44.",
+        "the Ship Designer's design is not on the wire (open fix 44) and the "
+        "designer stays the game's own picture"),
+    "doc/ext_ship_designer_boxes.patch": (
+        os.path.join("src", "game", "desbox.cpp"), "OrionLayer, open fix 45.",
+        "the Ship Designer's three pickers report 3 and their lists are not "
+        "on the wire (open fix 45): they stay the game's own picture"),
+    "doc/ext_audience_screen.patch": (
+        os.path.join("src", "game", "dip_scrn_main.cpp"),
+        "OrionLayer, open fix 46.",
+        "the diplomacy audience has no id of its own (open fix 46) and stays "
+        "the game's own picture"),
+    "doc/ext_audience_state.patch": (
+        os.path.join("src", "ext", "ext_api.cpp"), "OrionLayer, open fix 47.",
+        "the diplomacy audience's statement, reply and menu are not on the "
+        "wire (open fix 47) and the audience stays the game's own picture"),
 }
 
 #: Patches that are REPORTED to Joes and not yet applied: listed with
@@ -235,37 +265,14 @@ LOCAL_PATCHES = {
 #: since work order 181 moved up open fixes 35-40, which work order 180
 #: had parked here — until 182 parked open fix 41 here, and again since
 #: work order 183 moved 41 up — until work order 184 parked open fix 42,
-#: and work order 185 open fixes 43-47.
+#: and work order 185 open fixes 43-47, which work order 186 moved up;
+#: 42 stays (Data: not approved).
 REPORTED_PATCHES = {
     # Work order 184: written, proved in scratch, parked — not applied.
     "doc/ext_input_delay_tick.patch": (
         os.path.join("src", "game", "fields.cpp"), "OrionLayer, open fix 42.",
         "a screen heard during its input delay (the research panel's list "
         "~550 ms sooner on every entry)"),
-    # Work order 185: written, proved in scratch, parked — not applied.
-    # It amends 41: the window hidden only when the starter asks.
-    "doc/ext_engine_window_on_request.patch": (
-        os.path.join("src", "ext", "ext_api.cpp"), "OrionLayer, open fix 43.",
-        "the engine's window hidden only when OrionLayer starts it "
-        "(ORION2RE_HIDE_WINDOW), and shown again on request (MSG_SHOW_WINDOW, "
-        "F12)"),
-    # Work order 185: written, proved in scratch, parked — not applied.
-    "doc/ext_ship_designer_state.patch": (
-        os.path.join("src", "ext", "ext_api.cpp"), "OrionLayer, open fix 44.",
-        "the Ship Designer's design as it is edited, on the wire (DSGN)"),
-    "doc/ext_ship_designer_boxes.patch": (
-        os.path.join("src", "game", "desbox.cpp"), "OrionLayer, open fix 45.",
-        "the Ship Designer's three pickers: ids 54-56 and their lists (DSBX); "
-        "on top of fix 44"),
-    "doc/ext_audience_screen.patch": (
-        os.path.join("src", "game", "dip_scrn_main.cpp"),
-        "OrionLayer, open fix 46.",
-        "the diplomacy audience's own ids, 57 the player's and 58 the AI's"),
-    "doc/ext_audience_state.patch": (
-        os.path.join("src", "ext", "ext_api.cpp"), "OrionLayer, open fix 47.",
-        "the diplomacy audience's state on the wire (DIPL): who, the "
-        "statement, the reply text, the menu and its enabled items; on top "
-        "of fix 46"),
 }
 
 
@@ -320,42 +327,15 @@ def tree_report(tree=None):
     return tree, [p for p, (rel, marker, _b) in sorted(LOCAL_PATCHES.items())
                   if not has_marker(tree, rel, marker)]
 
-#: Open fixes 35-40 in the order they are stacked on `ext_api.cpp` (work
-#: order 181). Each appends its block after the one before, so they sit
-#: on the trailing context of every earlier block in `SerializeState` —
-#: a check that proves an earlier patch comes back off (`patch -R`) has to
-#: take these off a copy first, last one first, as the stack was applied.
-COLONY_SERIES = (
-    "doc/ext_colony_screen_colony.patch",
-    "doc/ext_colony_building_placement.patch",
-    "doc/ext_colony_status_word.patch",
-    "doc/ext_colony_product_cost.patch",
-    "doc/ext_build_popup_queue.patch",
-    "doc/ext_build_popup_lists.patch",
-)
-
-
-def take_off_colony_series(workdir, root):
-    """Reverse every applied fix of COLONY_SERIES in `workdir` (a copy
-    holding `src/ext/ext_api.cpp`), last first. Returns the list of
-    (patch, returncode, output); a patch whose marker the copy does not
-    carry is skipped, so a tree without the series passes through."""
-    import subprocess
-    api = os.path.join(workdir, "src", "ext", "ext_api.cpp")
-    done = []
-    for patch in reversed(COLONY_SERIES):
-        table = LOCAL_PATCHES if patch in LOCAL_PATCHES else REPORTED_PATCHES
-        marker = table[patch][1]
-        with open(api, "r", errors="replace") as f:
-            if marker not in f.read():
-                continue
-        run = subprocess.run(
-            ["patch", "-R", "-p1", "-i", os.path.join(root, patch)],
-            cwd=workdir, capture_output=True, text=True)
-        done.append((patch, run.returncode, run.stdout + run.stderr))
-        if run.returncode != 0:
-            break
-    return done
+#: The stacked patches on `ext_api.cpp` and how a check takes them off a
+#: copy live in `tools/patch_stack.py` (work order 186); the names stay
+#: importable from here, where the checks have always found them.
+try:  # run as a script (tools/ on the path) or imported as tools.version_check
+    from patch_stack import (  # noqa: E402,F401
+        COLONY_SERIES, STACKED_AFTER_COLONY, take_off_colony_series)
+except ImportError:
+    from tools.patch_stack import (  # noqa: E402,F401
+        COLONY_SERIES, STACKED_AFTER_COLONY, take_off_colony_series)
 
 def find_tree(argv):
     """First existing candidate tree, or None."""

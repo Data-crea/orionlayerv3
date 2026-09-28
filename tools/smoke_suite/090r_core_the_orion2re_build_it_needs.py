@@ -9,11 +9,11 @@
 #   - the open fixes the engine needs are one list, and README, setup's report and the fundament's line name exactly them
 #   - version_check requires every applied fix: a tree missing any one of them is reported by name
 #   - open fixes 35-40 are applied and documented: status, hashes, one-line markers, each entry's diff the patch file's; on this disk each commit's diff the file's and each marker over its block
-#   - open fix 41 is applied and documented: required, status and hash in entry, row and patch, two one-line markers, the entry's diff the file's; on this disk the commit's diff the file's
+#   - open fix 41 is applied and documented, and amended by 43: required (read in platform.cpp), status and hash in entry, row and patch, two one-line markers, the entry's diff the file's; on this disk the commit's diff the file's, and its ext_api.cpp line replaced by 43's
 #   - open fix 42 is written and parked, not applied: reported and never required, NOT APPLIED in entry, row and patch, one one-line marker, the entry's diff the file's; on this disk its pre-image is orionlayer-local's and its marker absent
-#   - open fixes 44 and 45 (the Ship Designer) are written and parked, not applied, 45 on top of 44: reported and never required, NOT APPLIED in entries, rows and patches, a one-line marker at every changed place, each entry's diff its file's; on this disk every pre-image is orionlayer-local's (45's ext_api.cpp hunk: 44's post-image) and no marker is in the tree
-#   - open fixes 46 and 47 (the diplomacy audience) are written and parked, not applied, 47 on top of 46: reported and never required, NOT APPLIED in entries, rows and patches, a one-line marker at every changed place, each entry's diff its file's; on this disk every pre-image is orionlayer-local's (47's ext_api.h hunk: 46's post-image) and no marker is in the tree
-#   - open fix 43 is written and parked, not applied, and amends 41: reported and never required, NOT APPLIED in entry, row and patch, a one-line marker at every changed place of its five files, the entry's diff the file's; on this disk every pre-image is orionlayer-local's and no marker is in the tree
+#   - open fixes 44 and 45 (the Ship Designer) are applied and documented, 45 on top of 44: required, status and hash in entries, rows and patches, a one-line marker at every changed place, each entry's diff its file's; on this disk each commit's diff its file's and every marker in the tree
+#   - open fixes 46 and 47 (the diplomacy audience) are applied and documented, 47 on top of 46, both re-cut on their tip: required, status and hash in entries, rows and patches, a one-line marker at every changed place, each entry's diff its file's; on this disk each commit's diff its file's and every marker in the tree
+#   - open fix 43 is applied and documented and amends 41, re-cut on its tip: required, status and hash in entry, row and patch, a one-line marker at every changed place of its five files, the entry's diff the file's; on this disk the commit's diff the file's and every marker in the tree
 
 
 # ── THE ORION2RE BUILD IT NEEDS (work order 181) ────────────────
@@ -222,7 +222,8 @@ ok("open fixes 35-40 are applied and documented: status, both hashes, "
 _vr_p41 = "doc/ext_engine_window_hidden.patch"
 _vr_h41 = "4bf152e4"
 assert _vr_p41 in _vr_vc.LOCAL_PATCHES and _vr_p41 not in _vr_vc.REPORTED_PATCHES
-assert _vr_vc.LOCAL_PATCHES[_vr_p41][1] == "OrionLayer, open fix 41."
+assert _vr_vc.LOCAL_PATCHES[_vr_p41][:2] == (
+    os.path.join("src", "game", "platform.cpp"), "OrionLayer, open fix 41.")
 assert 41 in _vr_want
 _vr_t41 = open(os.path.join(_vr_root, _vr_p41), encoding="utf-8").read()
 assert "STATUS: APPLIED 27 September 2026 by work order 183" in _vr_t41 and \
@@ -239,7 +240,8 @@ assert "Recorded in OrionLayer by commit **`89ce660`**" in _vr_41[:1400], \
     "entry 41 must name the OrionLayer commit that recorded it"
 for _vr_part in ("**The exact change.**", "**Live check**", "**Side effects",
                  "**How to revert.**", "presents without VSync",
-                 "byte for byte", "fixes34-41.bundle"):
+                 "byte for byte", "fixes34-41.bundle",
+                 "**Amended by open fix 43**", "230a0638"):
     assert _vr_part in _vr_41, f"entry 41 lacks {_vr_part}"
 _vr_j = _vr_41.index("```diff\n", _vr_41.index("**The exact change.**")) + 8
 _vr_n41 = "".join(_l for _l in _vr_norm(_vr_d41).splitlines(True)
@@ -253,16 +255,21 @@ _vr_git41 = _vr_sp.run(["git", "-C", _vr_tree_dir, "diff", f"{_vr_h41}~1",
     if os.path.isdir(os.path.join(_vr_tree_dir, ".git")) else None
 if _vr_git41 is not None and _vr_git41.returncode == 0:
     assert _vr_git41.stdout == _vr_d41, f"commit {_vr_h41} is not {_vr_p41}"
-    for _vr_rel in (("src", "ext", "ext_api.cpp"), ("src", "game", "platform.cpp")):
+    # Since work order 186 open fix 43 replaces 41's line in ext_api.cpp; 41's
+    # other half (platform.cpp) keeps its marker, and version_check reads it
+    # there. Both counts are asserted, so neither can drift unnoticed.
+    for _vr_rel, _vr_c in ((("src", "ext", "ext_api.cpp"), 0),
+                           (("src", "game", "platform.cpp"), 1)):
         _vr_src = open(os.path.join(_vr_tree_dir, *_vr_rel), errors="replace").read()
-        assert _vr_src.count("OrionLayer, open fix 41.") == 1, _vr_rel
+        assert _vr_src.count("OrionLayer, open fix 41.") == _vr_c, _vr_rel
 else:
     report(f"open fix 41 NOT checked against its commit — no orion2re tree "
            f"with {_vr_h41} on this disk")
-ok("open fix 41 is applied and documented: required by version_check, "
-   "status and hash in the entry, its row and the patch file, two one-line "
-   "markers, the entry's diff the file's; on this disk the commit's diff "
-   "the file's")
+ok("open fix 41 is applied and documented, and amended by 43: required by "
+   "version_check (read in platform.cpp), status and hash in the entry, its row "
+   "and the patch file, two one-line markers, the entry's diff the file's; on "
+   "this disk the commit's diff the file's, and its ext_api.cpp line replaced "
+   "by 43's")
 
 # 5. OPEN FIX 42 — WRITTEN AND PARKED by work order 184, NOT APPLIED (no
 #    engine patch may be applied in that order). The entry, its row and
@@ -318,204 +325,97 @@ ok("open fix 42 is written and parked, not applied: reported and never "
    "entry's diff the file's; on this disk its pre-image is "
    "orionlayer-local's and its marker absent")
 
-# 6. OPEN FIX 43 — WRITTEN AND PARKED by work order 185, NOT APPLIED; it
-#    AMENDS fix 41 (the window hidden only when the starter asks, shown
-#    again on request). Five files, so the pre-image is checked per file
-#    and the marker is counted per changed place: every hunk's added lines
-#    carry it at least once.
-_vr_p43 = "doc/ext_engine_window_on_request.patch"
-assert _vr_p43 in _vr_vc.REPORTED_PATCHES and _vr_p43 not in _vr_vc.LOCAL_PATCHES
-assert _vr_vc.REPORTED_PATCHES[_vr_p43][1] == "OrionLayer, open fix 43."
-assert _vr_vc.FIX_NUMBERS[_vr_p43] == (43,) and 43 not in _vr_want
-_vr_t43 = open(os.path.join(_vr_root, _vr_p43), encoding="utf-8").read()
-assert "STATUS: NOT APPLIED" in _vr_t43 and "AMENDS open fix 41" in _vr_t43
-_vr_d43 = _vr_t43[_vr_t43.index("diff --git"):]
-_vr_files43 = _vr_re.findall(r"(?m)^\+\+\+ b/(\S+)$", _vr_d43)
-assert sorted(_vr_files43) == sorted([
-    "src/ext/ext_api.cpp", "src/ext/ext_api.h", "src/ext/ext_server.cpp",
-    "src/ext/ext_server.h", "src/game/platform.cpp"]), _vr_files43
-for _vr_h in _vr_re.split(r"(?m)^@@ ", _vr_d43)[1:]:
-    _vr_add = [_l for _l in _vr_h.splitlines() if _l.startswith("+")]
-    assert not _vr_add or any("OrionLayer, open fix 43." in _l
-                              for _l in _vr_add), (
-        f"fix 43: a changed place without its marker: {_vr_add[:2]}")
-_vr_43 = _vr_fixes[_vr_fixes.index("\n## 43. "):]
-_vr_43 = _vr_43[:_vr_43.find("\n## ", 5)] if "\n## " in _vr_43[5:] else _vr_43
-assert "**Status: NOT APPLIED" in _vr_43[:400] and _vr_p43 in _vr_43[:700]
-for _vr_part in ("AMENDS open fix 41", "**What F12 does today", "**Proof.**",
-                 "no offset, no fuzz", "MSG_SHOW_WINDW", "**Scratch results**",
-                 "IsViewable", "**The HD side, described, not committed**",
-                 "**How to apply.**"):
-    assert _vr_part in _vr_43, f"entry 43 lacks {_vr_part}"
-_vr_j = _vr_43.index("```diff\n", _vr_43.index("**The exact change.**")) + 8
-_vr_n43 = "".join(_l for _l in _vr_norm(_vr_d43).splitlines(True)
+# 6-8. OPEN FIXES 44, 45, 46, 47 AND 43 — APPLIED by work order 186 on
+#    Data's approval (written, proved and parked by 185), in that order, one
+#    commit each on orionlayer-local; 45 sits on 44, 47 on 46, and 43 amends
+#    41. Documented as 41 was: required; the entry, its row and the patch
+#    file say so with the hash; every changed place carries the one-line
+#    marker; the entry's diff is the file's (git's `diff --git` and `index`
+#    lines left out). 43, 46 and 47 were re-cut on the tip they were applied
+#    to, and their entries say so. On a disk with the tree: each commit's
+#    diff IS its patch file's, index lines included, and every file the
+#    patch touches carries its marker.
+_vr_186 = {44: ("doc/ext_ship_designer_state.patch", "70d31b10",
+                ["src/ext/ext_api.cpp"], ("ship_designer_reading.md", "DSGN")),
+           45: ("doc/ext_ship_designer_boxes.patch", "4af9fefa",
+                ["src/ext/ext_api.cpp", "src/ext/ext_api.h", "src/game/desbox.cpp"],
+                ("On top of open fix 44", "_weapon_replacment_rack")),
+           46: ("doc/ext_audience_screen.patch", "8aea1a25",
+                ["src/ext/ext_api.h", "src/game/dip_scrn_main.cpp"],
+                ("audience_reading.md", "**Re-cut for that tip.**")),
+           47: ("doc/ext_audience_state.patch", "ba9b6bc6",
+                ["src/ext/ext_api.cpp", "src/ext/ext_api.h", "src/game/fields.cpp"],
+                ("On top of open fix 46", "**Re-cut for that tip.**")),
+           43: ("doc/ext_engine_window_on_request.patch", "230a0638",
+                ["src/ext/ext_api.cpp", "src/ext/ext_api.h", "src/ext/ext_server.cpp",
+                 "src/ext/ext_server.h", "src/game/platform.cpp"],
+                ("AMENDS open fix 41", "**Re-cut for that tip.**", "IsViewable",
+                 "IsUnMapped", "MSG_SHOW_WINDW", "**Live check**"))}
+_vr_git_ok = os.path.isdir(os.path.join(_vr_tree_dir, ".git"))
+
+
+def _vr_applied(_n):
+    _p, _h, _files, _parts = _vr_186[_n]
+    _mark = f"OrionLayer, open fix {_n}."
+    assert _p in _vr_vc.LOCAL_PATCHES and _p not in _vr_vc.REPORTED_PATCHES, _p
+    assert _vr_vc.LOCAL_PATCHES[_p][1] == _mark and _n in _vr_want
+    assert _vr_vc.FIX_NUMBERS[_p] == (_n,)
+    _t = open(os.path.join(_vr_root, _p), encoding="utf-8").read()
+    assert "STATUS: APPLIED 28 September 2026 by work order 186" in _t and \
+        f"orion2re {_h} on orionlayer-local" in _t and \
+        "PROOF ON THE TIP IT WAS APPLIED TO (work order 186)" in _t, _p
+    _d = _t[_t.index("diff --git"):]
+    assert sorted(_vr_re.findall(r"(?m)^\+\+\+ b/(\S+)$", _d)) == sorted(_files), _n
+    for _hk in _vr_re.split(r"(?m)^@@ ", _d)[1:]:
+        _add = [_l for _l in _hk.splitlines() if _l.startswith("+")]
+        assert not _add or any(_mark in _l for _l in _add), (
+            f"fix {_n}: a changed place without its marker: {_add[:2]}")
+    _e = _vr_fixes[_vr_fixes.index(f"\n## {_n}. "):]
+    _e = _e[:_e.find("\n## ", 5)] if "\n## " in _e[5:] else _e
+    assert "**Status: APPLIED** — 28 September 2026 by work order 186" in _e[:600] \
+        and f"**`{_h}`**" in _e[:1200] and _p in _e[:1600], f"entry {_n}'s status"
+    for _part in ("**The exact change.**", "**Proof on the tip it was applied to**",
+                  "no offset, no fuzz", "**Side effects found applying it",
+                  "**How to revert.**", "fixes34-4") + _parts:
+        assert _part in _e, f"entry {_n} lacks {_part}"
+    assert "**How to apply.**" not in _e, f"entry {_n} still says how to apply"
+    _j = _e.index("```diff\n", _e.index("**The exact change.**")) + 8
+    _nd = "".join(_l for _l in _vr_norm(_d).splitlines(True)
                   if not _l.startswith(("diff --git", "index ")))
-assert _vr_43[_vr_j:_vr_43.index("```", _vr_j)] == _vr_n43, \
-    "entry 43's diff is not its patch file's"
-_vr_r43 = next(_l for _l in _vr_fixes.splitlines() if _l.startswith("| 43 |"))
-assert "**Written, NOT APPLIED** — work order 185" in _vr_r43 and "AMENDS fix 41" in _vr_r43
-_vr_ok43 = os.path.isdir(os.path.join(_vr_tree_dir, ".git"))
-for _vr_f in _vr_files43 if _vr_ok43 else []:
-    _vr_blk = _vr_d43.split(f"+++ b/{_vr_f}\n", 1)[1].split("\ndiff --git", 1)[0]
-    _vr_src = _vr_sp.run(["git", "-C", _vr_tree_dir, "show",
-                          f"orionlayer-local:{_vr_f}"], capture_output=True,
-                         text=True, errors="replace")
-    assert _vr_src.returncode == 0, _vr_f
-    assert "OrionLayer, open fix 43." not in _vr_src.stdout, (
-        f"fix 43's marker is in orionlayer-local's {_vr_f}: it was applied")
-    for _vr_h in _vr_re.split(r"(?m)^@@[^\n]*\n", _vr_blk)[1:]:
-        _vr_pre = "\n".join(_l[1:] for _l in _vr_h.splitlines()
-                            if _l[:1] in (" ", "-"))
-        assert _vr_pre in _vr_src.stdout, (
-            f"fix 43's pre-image is not orionlayer-local's {_vr_f} any more")
-if not _vr_ok43:
-    report("open fix 43 NOT checked against orionlayer-local — no orion2re "
-           "tree on this disk")
-ok("open fix 43 is written and parked, not applied, and amends 41: reported "
-   "and never required, NOT APPLIED in entry, row and patch, a one-line "
-   "marker at every changed place of its five files, the entry's diff the "
-   "file's; on this disk every pre-image is orionlayer-local's and no "
-   "marker is in the tree")
+    assert _e[_j:_e.index("```", _j)] == _nd, f"entry {_n}'s diff is not its patch file's"
+    _r = next(_l for _l in _vr_fixes.splitlines() if _l.startswith(f"| {_n} |"))
+    assert "**Applied** 28 September 2026 by work order 186" in _r and _h in _r
+    if not _vr_git_ok:
+        report(f"open fix {_n} NOT checked against its commit — no orion2re "
+               f"tree on this disk")
+        return
+    _g = _vr_sp.run(["git", "-C", _vr_tree_dir, "diff", f"{_h}~1", _h],
+                    capture_output=True, text=True)
+    assert _g.returncode == 0 and _g.stdout == _d, f"commit {_h} is not {_p}"
+    for _f in _files:
+        _src = _vr_sp.run(["git", "-C", _vr_tree_dir, "show",
+                           f"orionlayer-local:{_f}"], capture_output=True,
+                          text=True, errors="replace").stdout
+        assert _mark in _src, f"fix {_n}'s marker is not in orionlayer-local's {_f}"
 
-# 7. OPEN FIXES 44 AND 45 — THE SHIP DESIGNER, written and parked by work
-#    order 185, NOT APPLIED; 45 applies on top of 44 (both append to
-#    SerializeState). The rules of #6, per patch; 45's one hunk that sits
-#    on 44's new lines is held to 44's post-image instead of the tree.
-_vr_sd = {44: ("doc/ext_ship_designer_state.patch", ["src/ext/ext_api.cpp"]),
-          45: ("doc/ext_ship_designer_boxes.patch",
-               ["src/ext/ext_api.cpp", "src/ext/ext_api.h",
-                "src/game/desbox.cpp"])}
-_vr_post44 = ""
-for _vr_n, (_vr_p, _vr_files) in sorted(_vr_sd.items()):
-    _vr_mark = f"OrionLayer, open fix {_vr_n}."
-    assert _vr_p in _vr_vc.REPORTED_PATCHES and _vr_p not in _vr_vc.LOCAL_PATCHES
-    assert _vr_vc.REPORTED_PATCHES[_vr_p][1] == _vr_mark
-    assert _vr_vc.FIX_NUMBERS[_vr_p] == (_vr_n,) and _vr_n not in _vr_want
-    _vr_t = open(os.path.join(_vr_root, _vr_p), encoding="utf-8").read()
-    assert "STATUS: NOT APPLIED" in _vr_t and "work order 185" in _vr_t
-    _vr_d = _vr_t[_vr_t.index("diff --git"):]
-    assert sorted(_vr_re.findall(r"(?m)^\+\+\+ b/(\S+)$", _vr_d)) == \
-        sorted(_vr_files), (_vr_n, _vr_files)
-    for _vr_h in _vr_re.split(r"(?m)^@@ ", _vr_d)[1:]:
-        _vr_add = [_l for _l in _vr_h.splitlines() if _l.startswith("+")]
-        assert not _vr_add or any(_vr_mark in _l for _l in _vr_add), (
-            f"fix {_vr_n}: a changed place without its marker: {_vr_add[:2]}")
-    _vr_e = _vr_fixes[_vr_fixes.index(f"\n## {_vr_n}. "):]
-    _vr_e = _vr_e[:_vr_e.find("\n## ", 5)] if "\n## " in _vr_e[5:] else _vr_e
-    assert "**Status: NOT APPLIED" in _vr_e[:400] and _vr_p in _vr_e[:900]
-    for _vr_part in ("**Proof.**", "no offset, no fuzz", "**Recorded live**",
-                     "**How to apply.**", "ship_designer_reading.md"
-                     if _vr_n == 44 else "on top of open fix"):
-        assert _vr_part in _vr_e, f"entry {_vr_n} lacks {_vr_part}"
-    _vr_j = _vr_e.index("```diff\n", _vr_e.index("**The exact change.**")) + 8
-    _vr_nd = "".join(_l for _l in _vr_norm(_vr_d).splitlines(True)
-                     if not _l.startswith(("diff --git", "index ")))
-    assert _vr_e[_vr_j:_vr_e.index("```", _vr_j)] == _vr_nd, \
-        f"entry {_vr_n}'s diff is not its patch file's"
-    _vr_r = next(_l for _l in _vr_fixes.splitlines()
-                 if _l.startswith(f"| {_vr_n} |"))
-    assert "**Written, NOT APPLIED** — work order 185" in _vr_r
-    if not os.path.isdir(os.path.join(_vr_tree_dir, ".git")):
-        report(f"open fix {_vr_n} NOT checked against orionlayer-local — no "
-               f"orion2re tree on this disk")
-        continue
-    for _vr_f in _vr_files:
-        _vr_blk = _vr_d.split(f"+++ b/{_vr_f}\n", 1)[1].split("\ndiff --git", 1)[0]
-        _vr_src = _vr_sp.run(["git", "-C", _vr_tree_dir, "show",
-                              f"orionlayer-local:{_vr_f}"], capture_output=True,
-                             text=True, errors="replace").stdout
-        assert _vr_mark not in _vr_src, (
-            f"fix {_vr_n}'s marker is in orionlayer-local's {_vr_f}")
-        for _vr_h in _vr_re.split(r"(?m)^@@[^\n]*\n", _vr_blk)[1:]:
-            _vr_pre = "\n".join(_l[1:] for _l in _vr_h.splitlines()
-                                if _l[:1] in (" ", "-"))
-            _vr_post = "\n".join(_l[1:] for _l in _vr_h.splitlines()
-                                 if _l[:1] in (" ", "+"))
-            if _vr_n == 44:
-                _vr_post44 += _vr_post + "\n"
-            if _vr_n == 45 and _vr_f == "src/ext/ext_api.cpp" and \
-                    _vr_pre not in _vr_src:
-                assert _vr_pre in _vr_post44, (
-                    "fix 45's ext_api.cpp hunk is neither on orionlayer-local "
-                    "nor on fix 44's post-image")
-                continue
-            assert _vr_pre in _vr_src, (
-                f"fix {_vr_n}'s pre-image is not orionlayer-local's {_vr_f}")
-ok("open fixes 44 and 45 (the Ship Designer) are written and parked, not "
-   "applied, 45 on top of 44: reported and never required, NOT APPLIED in "
-   "entries, rows and patches, a one-line marker at every changed place, "
-   "each entry's diff its file's; on this disk every pre-image is "
-   "orionlayer-local's (45's ext_api.cpp hunk: 44's post-image) and no "
-   "marker is in the tree")
 
-# 8. OPEN FIXES 46 AND 47 — THE DIPLOMACY AUDIENCE, written and parked by
-#    work order 185 part 9, NOT APPLIED; 47 applies on top of 46. The rules
-#    of #7; 47's ext_api.h hunk sits on 46's new comment and is held to
-#    46's post-image instead of the tree.
-_vr_au = {46: ("doc/ext_audience_screen.patch",
-               ["src/ext/ext_api.h", "src/game/dip_scrn_main.cpp"]),
-          47: ("doc/ext_audience_state.patch",
-               ["src/ext/ext_api.cpp", "src/ext/ext_api.h",
-                "src/game/fields.cpp"])}
-_vr_post46 = ""
-for _vr_n, (_vr_p, _vr_files) in sorted(_vr_au.items()):
-    _vr_mark = f"OrionLayer, open fix {_vr_n}."
-    assert _vr_p in _vr_vc.REPORTED_PATCHES and _vr_p not in _vr_vc.LOCAL_PATCHES
-    assert _vr_vc.REPORTED_PATCHES[_vr_p][1] == _vr_mark
-    assert _vr_vc.FIX_NUMBERS[_vr_p] == (_vr_n,) and _vr_n not in _vr_want
-    _vr_t = open(os.path.join(_vr_root, _vr_p), encoding="utf-8").read()
-    assert "STATUS: NOT APPLIED" in _vr_t and "work order 185" in _vr_t
-    _vr_d = _vr_t[_vr_t.index("diff --git"):]
-    assert sorted(_vr_re.findall(r"(?m)^\+\+\+ b/(\S+)$", _vr_d)) == \
-        sorted(_vr_files), (_vr_n, _vr_files)
-    for _vr_h in _vr_re.split(r"(?m)^@@ ", _vr_d)[1:]:
-        _vr_add = [_l for _l in _vr_h.splitlines() if _l.startswith("+")]
-        assert not _vr_add or any(_vr_mark in _l for _l in _vr_add), (
-            f"fix {_vr_n}: a changed place without its marker: {_vr_add[:2]}")
-    _vr_e = _vr_fixes[_vr_fixes.index(f"\n## {_vr_n}. "):]
-    _vr_e = _vr_e[:_vr_e.find("\n## ", 5)] if "\n## " in _vr_e[5:] else _vr_e
-    assert "**Status: NOT APPLIED" in _vr_e[:400] and _vr_p in _vr_e[:900]
-    for _vr_part in ("**Proof.**", "no offset, no fuzz", "**Recorded live**",
-                     "**How to apply.**", "audience_reading.md"
-                     if _vr_n == 46 else "on top of open fix"):
-        assert _vr_part in _vr_e, f"entry {_vr_n} lacks {_vr_part}"
-    _vr_j = _vr_e.index("```diff\n", _vr_e.index("**The exact change.**")) + 8
-    _vr_nd = "".join(_l for _l in _vr_norm(_vr_d).splitlines(True)
-                     if not _l.startswith(("diff --git", "index ")))
-    assert _vr_e[_vr_j:_vr_e.index("```", _vr_j)] == _vr_nd, \
-        f"entry {_vr_n}'s diff is not its patch file's"
-    _vr_r = next(_l for _l in _vr_fixes.splitlines()
-                 if _l.startswith(f"| {_vr_n} |"))
-    assert "**Written, NOT APPLIED** — work order 185" in _vr_r
-    if not os.path.isdir(os.path.join(_vr_tree_dir, ".git")):
-        report(f"open fix {_vr_n} NOT checked against orionlayer-local — no "
-               f"orion2re tree on this disk")
-        continue
-    for _vr_f in _vr_files:
-        _vr_blk = _vr_d.split(f"+++ b/{_vr_f}\n", 1)[1].split("\ndiff --git", 1)[0]
-        _vr_src = _vr_sp.run(["git", "-C", _vr_tree_dir, "show",
-                              f"orionlayer-local:{_vr_f}"], capture_output=True,
-                             text=True, errors="replace").stdout
-        assert _vr_mark not in _vr_src, (
-            f"fix {_vr_n}'s marker is in orionlayer-local's {_vr_f}")
-        for _vr_h in _vr_re.split(r"(?m)^@@[^\n]*\n", _vr_blk)[1:]:
-            _vr_pre = "\n".join(_l[1:] for _l in _vr_h.splitlines()
-                                if _l[:1] in (" ", "-"))
-            _vr_post = "\n".join(_l[1:] for _l in _vr_h.splitlines()
-                                 if _l[:1] in (" ", "+"))
-            if _vr_n == 46:
-                _vr_post46 += _vr_post + "\n"
-            if _vr_n == 47 and _vr_f == "src/ext/ext_api.h" and \
-                    _vr_pre not in _vr_src:
-                assert _vr_pre in _vr_post46, (
-                    "fix 47's ext_api.h hunk is neither on orionlayer-local "
-                    "nor on fix 46's post-image")
-                continue
-            assert _vr_pre in _vr_src, (
-                f"fix {_vr_n}'s pre-image is not orionlayer-local's {_vr_f}")
-ok("open fixes 46 and 47 (the diplomacy audience) are written and parked, "
-   "not applied, 47 on top of 46: reported and never required, NOT APPLIED "
-   "in entries, rows and patches, a one-line marker at every changed "
-   "place, each entry's diff its file's; on this disk every pre-image is "
-   "orionlayer-local's (47's ext_api.h hunk: 46's post-image) and no "
-   "marker is in the tree")
+_vr_applied(44)
+_vr_applied(45)
+ok("open fixes 44 and 45 (the Ship Designer) are applied and documented, 45 on "
+   "top of 44: required, status and hash in entries, rows and patches, a "
+   "one-line marker at every changed place, each entry's diff its file's; on "
+   "this disk each commit's diff its file's and every marker in the tree")
+
+_vr_applied(46)
+_vr_applied(47)
+ok("open fixes 46 and 47 (the diplomacy audience) are applied and documented, "
+   "47 on top of 46, both re-cut on their tip: required, status and hash in "
+   "entries, rows and patches, a one-line marker at every changed place, each "
+   "entry's diff its file's; on this disk each commit's diff its file's and "
+   "every marker in the tree")
+
+_vr_applied(43)
+ok("open fix 43 is applied and documented and amends 41, re-cut on its tip: "
+   "required, status and hash in entry, row and patch, a one-line marker at "
+   "every changed place of its five files, the entry's diff the file's; on "
+   "this disk the commit's diff the file's and every marker in the tree")

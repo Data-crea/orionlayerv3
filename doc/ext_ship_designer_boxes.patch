@@ -1,12 +1,13 @@
 Engine: the Ship Designer's three sub-dialogs on the wire (ids 54-56, DSBX) (open fix 45).
 
-STATUS: NOT APPLIED — written and proved by work order 185 (Part 6),
-parked for Data (doc/briefs/185-parked-for-data.md). No engine patch may
-be applied in that order.
-It builds on open fix 44 (both append to SerializeState, 45 after 44):
-apply 44 first.
+STATUS: APPLIED 28 September 2026 by work order 186, on Data's approval —
+orion2re 4af9fefa on orionlayer-local (before: 70d31b10), this file's
+diff byte for byte (index lines included). Written and proved by work
+order 185, parked there for Data (doc/briefs/185-parked-for-data.md).
+Required by tools/version_check.py since work order 186.
+It builds on open fix 44 (45's ext_api.cpp hunk sits on 44's block).
 
-PROOF (work order 185, 27 September 2026): in a scratch worktree of
+PROOF (work order 185, as written, 27 September 2026): in a scratch worktree of
 orionlayer-local 4bf152e4 with its own build directory (never on
 orionlayer-local itself, never the build play.py starts) this file applied
 with `patch -p1 --dry-run` and `patch -p1`, no offset, no fuzz, on top of fix 44 (4bf152e4 + doc/ext_ship_designer_state.patch), and the
@@ -17,11 +18,18 @@ control, the same file with `_weapon_replacement_rack` misspelt `_weapon_replacm
 the offered modifications, one word) and proved again the same way. See the entry,
 doc/orion2re_open_fixes.md 45.
 
-To apply, from ~/orion2re on the orionlayer-local branch:
+PROOF ON THE TIP IT WAS APPLIED TO (work order 186): in a scratch clone
+of orionlayer-local at 70d31b10 this file applied with `patch -p1
+--dry-run` and `patch -p1`, no offset, no fuzz, the applied tree equal to
+it; every changed .cpp compiled alone with the build's own command; the
+control — `_weapon_replacement_rack` misspelt `_weapon_replacment_rack` in
+ext_api.cpp, and `ext::ScreenOverride` misspelt `ext::ScreenOveride` on
+the special picker's guard in desbox.cpp — was refused by the compiler.
+Then applied to ~/orion2re, built (ninja, no error) and committed.
 
-    patch -p1 < ~/orionlayerv3/doc/ext_ship_designer_boxes.patch
-
-then rebuild. It comes back off with `patch -R -p1` and a rebuild.
+To revert, from ~/orion2re on the orionlayer-local branch: `git revert
+4af9fefa` (clean on its own on 230a0638) or `patch -R -p1`; then rebuild.
+See the entry, doc/orion2re_open_fixes.md 45.
 
 WHAT IT IS FOR
 

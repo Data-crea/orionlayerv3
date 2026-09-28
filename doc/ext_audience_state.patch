@@ -1,12 +1,14 @@
 Engine: the diplomacy audience's state on the wire, "DIPL" (open fix 47).
 
-STATUS: NOT APPLIED — written and proved by work order 185 (Part 9),
-parked for Data (doc/briefs/185-parked-for-data.md). No engine patch may
-be applied in that order.
+STATUS: APPLIED 28 September 2026 by work order 186, on Data's approval —
+orion2re ba9b6bc6 on orionlayer-local (before: 8aea1a25), this file's
+diff byte for byte (index lines included). Written and proved by work
+order 185, parked there for Data (doc/briefs/185-parked-for-data.md).
+Required by tools/version_check.py since work order 186.
 It builds on open fix 46 (the block is written while 57 or 58 is
-reported): apply 46 first.
+reported; its ext_api.h hunk sits on 46's comment).
 
-PROOF (work order 185, 28 September 2026): in a scratch worktree of
+PROOF (work order 185, as written, 28 September 2026): in a scratch worktree of
 orionlayer-local 4bf152e4 with its own build directory (never on
 orionlayer-local itself, never the build play.py starts) this file applied
 with `patch -p1 --dry-run` and `patch -p1`, no offset, no fuzz, on top of
@@ -18,11 +20,22 @@ with the build's own command, and a control, the same file with
 refused by the compiler. Recorded live on that engine (the entry). See the
 entry, doc/orion2re_open_fixes.md 47.
 
-To apply, from ~/orion2re on the orionlayer-local branch:
+PROOF ON THE TIP IT WAS APPLIED TO (work order 186): in a scratch clone
+of orionlayer-local at 8aea1a25 this file applied with `patch -p1
+--dry-run` and `patch -p1`, no offset, no fuzz, the applied tree equal to
+it; every changed .cpp compiled alone with the build's own command; the
+control — `DIP_SCRN::_response_message` misspelt `DIP_SCRN::_respons_message`
+in ext_api.cpp — was refused by the compiler.
+RE-CUT for that tip: as written by 185 its second ext_api.cpp hunk
+applied at line 1344 (offset 187 lines — fixes 44 and 45's blocks) and the
+ext_api.h hunk at 54 (offset 4); the file was regenerated from the applied
+tree, which changed those two positions and two index lines and nothing
+else, and the re-cut file was proved again from the start.
+Then applied to ~/orion2re, built (ninja, no error) and committed.
 
-    patch -p1 < ~/orionlayerv3/doc/ext_audience_state.patch
-
-then rebuild. It comes back off with `patch -R -p1` and a rebuild.
+To revert, from ~/orion2re on the orionlayer-local branch: `git revert
+ba9b6bc6` (clean on its own on 230a0638) or `patch -R -p1`; then rebuild.
+See the entry, doc/orion2re_open_fixes.md 47.
 
 WHAT IT IS FOR
 
@@ -38,7 +51,7 @@ WHAT IT IS FOR
     changed place.
 
 diff --git a/src/ext/ext_api.cpp b/src/ext/ext_api.cpp
-index 88c157cd..6e55365e 100644
+index 1dc3a003..8a87aad0 100644
 --- a/src/ext/ext_api.cpp
 +++ b/src/ext/ext_api.cpp
 @@ -439,6 +439,52 @@ static void SerializeState(std::vector<uint8_t>& buf,
@@ -94,7 +107,7 @@ index 88c157cd..6e55365e 100644
      // 6. Which colony the colony screen and its build popup show: "COLS",
      //    written ONLY while SCREEN_COLONY or SCREEN_QUEUE_POPUP is up, and
      //    LAST. OrionLayer, open fix 35.
-@@ -1111,6 +1157,20 @@ ScreenOverride::~ScreenOverride() {
+@@ -1298,6 +1344,20 @@ ScreenOverride::~ScreenOverride() {
      g_screen_override = previous;
  }
  
@@ -116,10 +129,10 @@ index 88c157cd..6e55365e 100644
      // What the client is told. The override is the only difference; the
      // game's own MOX::_current_screen is untouched, because the dialogs it
 diff --git a/src/ext/ext_api.h b/src/ext/ext_api.h
-index 700571e3..034f75a3 100644
+index 045b2e23..fc2e0ef2 100644
 --- a/src/ext/ext_api.h
 +++ b/src/ext/ext_api.h
-@@ -50,6 +50,28 @@ struct ScreenOverride {
+@@ -54,6 +54,28 @@ struct ScreenOverride {
  /// (DIP_SCRN::Diplomacy_Screen_) and 58 when an AI asked for it
  /// (DIP_SCRN::Npc_Diplomacy_Screen_), so a client can tell it is up.
  

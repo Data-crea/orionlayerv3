@@ -1,10 +1,12 @@
 Engine: the Ship Designer's design as it is being edited, on the wire (DSGN) (open fix 44).
 
-STATUS: NOT APPLIED — written and proved by work order 185 (Part 6),
-parked for Data (doc/briefs/185-parked-for-data.md). No engine patch may
-be applied in that order.
+STATUS: APPLIED 28 September 2026 by work order 186, on Data's approval —
+orion2re 70d31b10 on orionlayer-local (before: 4bf152e4), this file's
+diff byte for byte (index lines included). Written and proved by work
+order 185, parked there for Data (doc/briefs/185-parked-for-data.md).
+Required by tools/version_check.py since work order 186.
 
-PROOF (work order 185, 27 September 2026): in a scratch worktree of
+PROOF (work order 185, as written, 27 September 2026): in a scratch worktree of
 orionlayer-local 4bf152e4 with its own build directory (never on
 orionlayer-local itself, never the build play.py starts) this file applied
 with `patch -p1 --dry-run` and `patch -p1`, no offset, no fuzz, and the
@@ -14,11 +16,17 @@ every changed .cpp compiles alone with the build's own command, and a
 control, the same file with `_printed_space_avail` misspelt `_printed_space_avial` in ext_api.cpp, was refused by the compiler. See the entry,
 doc/orion2re_open_fixes.md 44.
 
-To apply, from ~/orion2re on the orionlayer-local branch:
+PROOF ON THE TIP IT WAS APPLIED TO (work order 186): in a scratch clone
+of orionlayer-local at 4bf152e4 this file applied with `patch -p1
+--dry-run` and `patch -p1`, no offset, no fuzz, the applied tree equal to
+it; every changed .cpp compiled alone with the build's own command; the
+control — `_printed_space_avail` misspelt `_printed_space_avial` in ext_api.cpp — was refused by the compiler.
+Then applied to ~/orion2re, built (ninja, no error) and committed.
 
-    patch -p1 < ~/orionlayerv3/doc/ext_ship_designer_state.patch
-
-then rebuild. It comes back off with `patch -R -p1` and a rebuild.
+To revert, from ~/orion2re on the orionlayer-local branch: `git revert
+70d31b10` only after 45's `git revert 4af9fefa` (45's block sits on 44's
+lines), or `patch -R -p1` in the same order; then rebuild. See the entry,
+doc/orion2re_open_fixes.md 44.
 
 WHAT IT IS FOR
 

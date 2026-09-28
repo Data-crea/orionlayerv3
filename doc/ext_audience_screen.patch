@@ -1,10 +1,12 @@
 Engine: the diplomacy audience reports its own screen ids, 57 and 58 (open fix 46).
 
-STATUS: NOT APPLIED — written and proved by work order 185 (Part 9),
-parked for Data (doc/briefs/185-parked-for-data.md). No engine patch may
-be applied in that order.
+STATUS: APPLIED 28 September 2026 by work order 186, on Data's approval —
+orion2re 8aea1a25 on orionlayer-local (before: 4af9fefa), this file's
+diff byte for byte (index lines included). Written and proved by work
+order 185, parked there for Data (doc/briefs/185-parked-for-data.md).
+Required by tools/version_check.py since work order 186.
 
-PROOF (work order 185, 28 September 2026): in a scratch worktree of
+PROOF (work order 185, as written, 28 September 2026): in a scratch worktree of
 orionlayer-local 4bf152e4 with its own build directory (never on
 orionlayer-local itself, never the build play.py starts) this file applied
 with `patch -p1 --dry-run` and `patch -p1`, no offset, no fuzz, and the
@@ -14,11 +16,23 @@ with the build's own command, and a control, the same file with
 `ScreenOverride` misspelt `ScreenOveride`, was refused by the compiler.
 See the entry, doc/orion2re_open_fixes.md 46.
 
-To apply, from ~/orion2re on the orionlayer-local branch:
+PROOF ON THE TIP IT WAS APPLIED TO (work order 186): in a scratch clone
+of orionlayer-local at 4af9fefa this file applied with `patch -p1
+--dry-run` and `patch -p1`, no offset, no fuzz, the applied tree equal to
+it; every changed .cpp compiled alone with the build's own command; the
+control — `ext::ScreenOverride` misspelt `ext::ScreenOveride` in
+dip_scrn_main.cpp — was refused by the compiler.
+RE-CUT for that tip: as written by 185 the ext_api.h hunk applied at
+line 48 (offset 4 lines — fix 45 added four lines above it); the file was
+regenerated from the applied tree, which changed that hunk's position and
+the file's index line and nothing else (every added and context line the
+same), and the re-cut file was proved again from the start.
+Then applied to ~/orion2re, built (ninja, no error) and committed.
 
-    patch -p1 < ~/orionlayerv3/doc/ext_audience_screen.patch
-
-then rebuild. It comes back off with `patch -R -p1` and a rebuild.
+To revert, from ~/orion2re on the orionlayer-local branch: `git revert
+8aea1a25` only after 47's `git revert ba9b6bc6` (47's ext_api.h hunk sits
+on 46's comment), or `patch -R -p1` in the same order; then rebuild. See
+the entry, doc/orion2re_open_fixes.md 46.
 
 WHAT IT IS FOR
 
@@ -32,10 +46,10 @@ WHAT IT IS FOR
     marker, `OrionLayer, open fix 46.`, on one line at every changed place.
 
 diff --git a/src/ext/ext_api.h b/src/ext/ext_api.h
-index c228885f..700571e3 100644
+index c845ab21..045b2e23 100644
 --- a/src/ext/ext_api.h
 +++ b/src/ext/ext_api.h
-@@ -44,6 +44,12 @@ struct ScreenOverride {
+@@ -48,6 +48,12 @@ struct ScreenOverride {
      ~ScreenOverride();
  };
  

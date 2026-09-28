@@ -1,12 +1,15 @@
 Engine: the window hidden only when the starter asks, and shown again on request (open fix 43).
 
-STATUS: NOT APPLIED — written and proved by work order 185 (Part 2),
-parked for Data (doc/briefs/185-parked-for-data.md). No engine patch may
-be applied in that order. It AMENDS open fix 41 (applied, 4bf152e4): it
-replaces 41's `g_hide_window = true` start and keeps 41's other half, a
-hidden window presenting without VSync.
+STATUS: APPLIED 28 September 2026 by work order 186, on Data's approval —
+orion2re 230a0638 on orionlayer-local (before: ba9b6bc6), this file's
+diff byte for byte (index lines included). Written and proved by work
+order 185, parked there for Data (doc/briefs/185-parked-for-data.md).
+Required by tools/version_check.py since work order 186.
+It AMENDS open fix 41 (applied, 4bf152e4): it replaces 41's
+`g_hide_window = true` start and keeps 41's other half, a hidden window
+presenting without VSync (41's marker is now read in platform.cpp).
 
-PROOF (work order 185, 27 September 2026): in a scratch worktree of
+PROOF (work order 185, as written, 27 September 2026): in a scratch worktree of
 orionlayer-local 4bf152e4 with its own build directory (never on
 orionlayer-local itself, never the build play.py starts) this file applied
 with `patch -p1 --dry-run` and `patch -p1`, no offset, no fuzz, and the
@@ -17,14 +20,24 @@ the same file with `MSG_SHOW_WINDOW` misspelt `MSG_SHOW_WINDW` in
 ext_api.cpp, was refused by the compiler. The scratch engine then ran on
 the virtual display: see the entry, doc/orion2re_open_fixes.md 43.
 
-To apply, from ~/orion2re on the orionlayer-local branch (after fix 41,
-and after fix 42 if that is applied — they touch different files):
+PROOF ON THE TIP IT WAS APPLIED TO (work order 186): in a scratch clone
+of orionlayer-local at ba9b6bc6 this file applied with `patch -p1
+--dry-run` and `patch -p1`, no offset, no fuzz, the applied tree equal to
+it; every changed .cpp compiled alone with the build's own command; the
+control — `case MSG_SHOW_WINDOW:` misspelt `case MSG_SHOW_WINDW:` in
+ext_api.cpp, and `g_window_shown` misspelt `g_window_shwn` at the first
+show in platform.cpp — was refused by the compiler.
+RE-CUT for that tip: as written by 185 its third and fourth
+ext_api.cpp hunks applied at 1285 and 1327 (offset 233 lines — the blocks
+of fixes 44-47); the file was regenerated from the applied tree, which
+changed those positions and the index lines of ext_api.cpp and ext_api.h
+and nothing else, and the re-cut file was proved again from the start.
+Then applied to ~/orion2re, built (ninja, no error) and committed.
 
-    patch -p1 < ~/orionlayerv3/doc/ext_engine_window_on_request.patch
-
-then rebuild, and set ORION2RE_HIDE_WINDOW=1 where OrionLayer starts the
-engine (tools/vdisplay.engine_env). It comes back off with `patch -R -p1`
-and a rebuild, which returns the engine to fix 41 as applied.
+To revert, from ~/orion2re on the orionlayer-local branch: `git revert
+230a0638` (clean on its own) or `patch -R -p1`, which returns the engine
+to fix 41 as applied; then rebuild. See the entry,
+doc/orion2re_open_fixes.md 43.
 
 WHAT IT IS FOR
 
@@ -39,7 +52,7 @@ WHAT IT IS FOR
     changed place.
 
 diff --git a/src/ext/ext_api.cpp b/src/ext/ext_api.cpp
-index 88c157cd..ba363aff 100644
+index 8a87aad0..3faa2c28 100644
 --- a/src/ext/ext_api.cpp
 +++ b/src/ext/ext_api.cpp
 @@ -4,6 +4,7 @@
@@ -64,7 +77,7 @@ index 88c157cd..ba363aff 100644
  int16_t g_pending_field = 0;
  int16_t g_activated_input = 0;
  bool g_injected_mouse_pending = false;
-@@ -1046,6 +1052,11 @@ static void ProcessInput() {
+@@ -1279,6 +1285,11 @@ static void ProcessInput() {
              }
              break;
  
@@ -76,7 +89,7 @@ index 88c157cd..ba363aff 100644
          case MSG_CANCEL_FIELD:
              // Right-click on field (DOWN + UP)
              if (cmd.param1 >= 0 && cmd.param1 < fields::_fields_count) {
-@@ -1083,7 +1094,7 @@ static void ProcessInput() {
+@@ -1316,7 +1327,7 @@ static void ProcessInput() {
  // ── Public API ───────────────────────────────────────────
  
  bool Init(uint16_t port) {
@@ -86,7 +99,7 @@ index 88c157cd..ba363aff 100644
      g_last_stardate = -1;
      g_last_fields_count = -1;
 diff --git a/src/ext/ext_api.h b/src/ext/ext_api.h
-index c228885f..e3585f13 100644
+index fc2e0ef2..1b6b8a9e 100644
 --- a/src/ext/ext_api.h
 +++ b/src/ext/ext_api.h
 @@ -2,6 +2,7 @@
