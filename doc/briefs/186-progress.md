@@ -261,3 +261,37 @@ the diplomacy menu act on the loaded game).
 What you should NOT see: the old 640x480 picture flashing before an HD
 screen; the original's window at any time except while F12 is on.
 
+## Part 4 — the hold before modal boxes (measured, nothing changed) — **DONE**
+
+Report: `doc/briefs/186-modal-hold.md` (the same file as `evidence/work_order_186/P4/report.md`); tool `tools/modal_hold.py`
+(new, measurement only: input time, every STATE and FIELD_LIST arrival with
+its list, every presented frame with its snapshot count). Engine
+`230a0638`, Xvfb, guarded; SAVE10 (TURN) and MOX.SET restored each time.
+
+| modal box | first frame of the game's picture | held | the box's pacing |
+|---|---|---|---|
+| the designer's shield warning, id 3 (3 runs) | 3.99 / 4.04 / 4.06 s | 36 snapshots, 3.96-3.97 s | 106 ms |
+| SAVE4's colony-base choice after TURN, id 0 (the map's net) | 4.10 s | 36 snapshots, 3.87 s | 113 ms |
+| SAVE5's combat choice after TURN, id 12 (no HD screen) | 0.14 s | 1 snapshot (empty list) | 106 ms |
+
+- **What the gate waits for**: nothing that can come. A modal is a list the
+  HD screen does not own; the gate renames the hand-over `modal` and holds
+  `HOLD` = 36 snapshots — a hold meant for a known screen whose data is
+  late, which ends early when that data arrives. For a modal it always
+  runs out. 36 was sized as 2 s at the map's 18 snapshots/s; a box's own
+  loop paces at `Release_Time_(2)` = 110 ms (gendraw.cpp:141-147), so ~4 s.
+  Input → box list 0.02-0.09 s, the hold starts on that frame, ~98 % of
+  the wait is the gate counting; the wire adds nothing measurable.
+- **Every modal over an HD screen** waits the same 36 of its own
+  snapshots; an id no HD screen claims is shown at once (the combat choice).
+- **Not fix 42**: no silence longer than one pass before any box, no input
+  delay in any of the three paths (the text box's delay is in its cleanup,
+  after the box).
+- Found, not changed: `modalnet.SETTLE` is checked per frame, not per
+  snapshot as documented; the frame trace labels these holds `hand_over`
+  where the gate logs `modal`.
+- **Options** A (as now) … E; **recommendation C**: show a `modal` hand-over
+  once its list has stood `SETTLE` snapshots (counted in snapshots, as
+  documented, ≈ 0.5 s at a box's pace), and keep `HOLD` for known screens
+  whose data is late. Parked (1g).
+

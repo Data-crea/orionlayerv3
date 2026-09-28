@@ -60,6 +60,18 @@ Build wrote two designs into the loaded scratch game's slots 1 and 2 (the
 first one a Cruiser "Interceptor" by the fault above) — in memory only,
 never saved; the engine was then stopped. Noted for completeness.
 
+### 1g. The hold before modal boxes — a decision (Part 4)
+
+Measured (`evidence/work_order_186/P4/report.md`): every modal box over an
+HD screen appears ~4 s after the input — the gate holds 36 snapshots, a
+hold meant for late data that a modal never sends, at the box's own ~106-113
+ms pace; an id no HD screen claims appears at once (0.14 s). Not related
+to fix 42. Options: A as now (~4 s); B show at once (~0.1 s); **C show once
+the list has stood `SETTLE` snapshots, counted in snapshots as documented
+(~0.5 s)**; D a short `HOLD` for modals only (~0.5 s, two mechanisms for
+one job); E hold in seconds (against decision 21). **Recommendation: C.
+Default: A — nothing changed** (the order: measure only).
+
 ## 2. Questions from the side-by-side (Part 3)
 
 ### 2a. The audience
