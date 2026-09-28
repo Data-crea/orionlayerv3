@@ -26,7 +26,16 @@ F12. The two cannot both hold until HD draws those boxes (1a's step 2:
 one HD message box on open fix 29). **Default: option C as approved**; the
 rule's answer is 1a.
 
-## 2. Carried over unchanged (not acted on in this order)
+## 2. Questions
+
+### 2a. The audience menu's title colour (Part 4)
+
+The original prints "How may I serve you:" in the items' own green; HD
+draws it in the HUD's label blue above white items. Same colour as the
+items (white)? **Default: as built** (the order asked about disabled items
+only).
+
+## 3. Carried over unchanged (not acted on in this order)
 
 - **From 185** (`doc/briefs/185-parked-for-data.md` item 2c, "The Ship
   Designer live test (part 8) — three differences, as questions", and 2d,

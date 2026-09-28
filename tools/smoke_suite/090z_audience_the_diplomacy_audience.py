@@ -156,6 +156,18 @@ with open(os.path.join(SCREENS_DIR, "audience", "layout.json"),
     _au_mk = _sd_json.load(_au_fh)["marks"]
 assert not {"unverified_fix46", "unverified_fix47"} & set(_au_mk), \
     "fixes 46 and 47 are applied (work order 186): their marks go"
+# A disabled item: the enabled colour at the original's brightness ratio
+# (work order 187 part 4: (0, 92, 0) beside (44, 164, 28) on 185's and 186's
+# native frames) — dimmer, same hue, never the HUD's blue `sub`/`label`.
+from screens.audience import audraw as _au_draw, augeom as _au_geom
+from core.hud import text as _au_ht
+assert abs(_au_geom.DISABLED_DIM - 0.48) < 0.01, _au_geom.DISABLED_DIM
+_au_dis, _au_val = _au_draw.disabled_colour(), _au_ht.colour("value")[:3]
+assert abs(_au_geom.luminance(_au_dis) / _au_geom.luminance(_au_val) -
+           _au_geom.DISABLED_DIM) < 0.02, (_au_dis, _au_val)
+assert _au_dis not in (_au_ht.colour("sub")[:3], _au_ht.colour("label")[:3])
+assert max(_au_dis) - min(_au_dis) <= max(_au_val) - min(_au_val) + 2, \
+    "a disabled item keeps the enabled item's hue"
 _au_nmarks = _sd_marks_named("audience", ("audraw.py", "screen.py",
                                           "auwire.py"))
 ok(f"the audience draws at 1920, 2576 and 3840 from the recorded menu, its "

@@ -167,3 +167,31 @@ field under the point still decides). **Check** 090g #3 extended: a hull
 button's click goes as INJECT_CLICK; red with type 3 taken out of the rule
 (the exact live failure), green again. No new check (count stays 409).
 
+## Part 4 — the disabled "Peace Treaty" — **DONE: the original is different; HD now matches it**
+
+**The original** (its own frames; the same values on 185's `P11` and 186's
+`P3` menu frames): the title and every enabled item **(44, 164, 28)**, the
+disabled "Peace Treaty" **(0, 92, 0)** — the same green, about half as
+bright (luminance 54 against 113, **0.48**) — and the hovered item (92,
+208, 44). **HD until now**: enabled white (251, 251, 253), the disabled
+item in the HUD's `sub` light blue (145, 182, 224) — nearly the title's
+blue (133, 178, 228), so it read as a heading or a highlight, not as
+"not available". **Changed** (`screens/audience/audraw.py`,
+`augeom.DISABLED_DIM`): a disabled item is the enabled colour at the
+original's own ratio, (120, 120, 121) — dimmer, same hue; the proportion is
+the transcription (fundament part 06). Check 090z extended (the ratio
+0.48 from the two measured colours, the dimmed luminance, never `sub` or
+`label`, the enabled item's hue).
+
+**Every disabled item reachable** (`evidence/work_order_187/P4*`, SAVE4 and
+SAVE5, guarded, nothing proposed): each save knows two races — slot 0
+refuses (no menu), slot 1's menu "How may I serve you:" has ONE disabled
+item, "Peace Treaty", in both saves; Declare War's confirmation (186) has
+none. Every audience transition 0 native frames. Side by side:
+`P4/menu_hd_vs_native.png` — HD's "Peace Treaty" now grey beside white,
+the original's dark green beside green.
+
+**Seen, not changed** (parked 2a as a question): HD draws the menu's title
+in the HUD's label blue, where the original prints it in the items' own
+colour.
+

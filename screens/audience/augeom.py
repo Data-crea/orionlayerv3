@@ -26,3 +26,19 @@ MENU_X1, MENU_X2, MENU_MARGIN = 10, 255, 6
 #: recorded fields, part 11), the statement in the same style 4; HD draws
 #: both at 16 native px, the height that pitch leaves room for.
 TEXT_PX = 16
+#: The original's menu colours, measured on its own frames (work order 187
+#: part 4; the same values on 185's `P11` and 186's `P3` menu frames, two
+#: runs): an item and the title (44, 164, 28), a DISABLED item (0, 92, 0),
+#: the hovered item (92, 208, 44). HD keeps its HUD palette and transcribes
+#: the RELATION (the fundament: a proportion is the transcription): a
+#: disabled item at the original's brightness ratio of disabled to normal.
+ORIGINAL_ITEM, ORIGINAL_DISABLED = (44, 164, 28), (0, 92, 0)
+
+
+def luminance(rgb):
+    r, g, b = rgb
+    return 0.299 * r + 0.587 * g + 0.114 * b
+
+
+#: 0.48 — a disabled item is about half as bright as an enabled one.
+DISABLED_DIM = luminance(ORIGINAL_DISABLED) / luminance(ORIGINAL_ITEM)

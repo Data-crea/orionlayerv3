@@ -7,7 +7,8 @@
                  original's column (x 80, 470 wide, centred on y 440), each
                  line centred (FMTPARA mode 2, fmtpara.cpp:1701-1702); the
                  menu's title and items at the fields the list built, a
-                 disabled item dimmed (`Get_List_Field_` ignores it)
+                 disabled item dimmed (`Get_List_Field_` ignores it) at the
+                 original's own ratio, `augeom.DISABLED_DIM` (work order 187)
   DEVIATION      `hud_frameless` — HUD panels behind the statement and the
                  menu where the original prints on the room
   OMISSION       `talking_loop` — the ambassador's animation (its phase is
@@ -82,11 +83,20 @@ def _size(screen):
                                       nd.native_scale(screen.layout))))
 
 
-def _line(surface, screen, words, x, y, w, role):
+def _line(surface, screen, words, x, y, w, role, colour=None):
     wx, wy = nd.point(screen.layout, x, y)
     width = nd.rect(screen.layout, (0, 0, w, 1)).w
     nd.blit_text(surface, screen.style, words, wx, wy, width, _size(screen),
-                 hudtext.colour(role))
+                 colour or hudtext.colour(role))
+
+
+def disabled_colour():
+    """An enabled item's colour at the original's disabled brightness —
+    the original draws a disabled item (0, 92, 0) beside (44, 164, 28), about
+    half as bright (`augeom.DISABLED_DIM`), in the same hue; 185-186's light
+    blue `sub` read as a heading or a highlight (work order 187 part 4)."""
+    return tuple(int(round(c * geom.DISABLED_DIM))
+                 for c in hudtext.colour("value")[:3])
 
 
 def _menu(surface, screen, view):
@@ -105,4 +115,5 @@ def _menu(surface, screen, view):
         if item["enabled"] and screen.hovered(r):
             hud.panel(surface, r, screen.layout.scale, lit=True, dense=True)
         _line(surface, screen, item["text"].strip(), f.x + 4, f.y,
-              f.x_end - f.x - 4, "value" if item["enabled"] else "sub")
+              f.x_end - f.x - 4, "value",
+              None if item["enabled"] else disabled_colour())
