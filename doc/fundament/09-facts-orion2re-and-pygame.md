@@ -29,6 +29,9 @@ references in `doc/v3_orion2re_index.md`.
   engine's POINTER (`Scan_Field_`, fields.cpp) — there it changed the hull.
   The engine's hit test takes the FIRST field covering a point (from index
   1), so a forwarded click resolves the same way (`original_view`).
+  **A multi-button (type 3) is the same** — measured, work order 187: 18 of
+  18 activated through F12 changed nothing (hull, Colonies sort, Info tab);
+  an injected click takes each one.
 - Prefer `ACTIVATE_FIELD` whenever the target code compares field IDs.
   `Flag_Screen_` compares `Get_Input_()`'s return against its eight
   hidden-field IDs.

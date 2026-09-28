@@ -123,14 +123,21 @@ class OriginalView:
     #: designer's hull changed. An INJECT_CLICK opens it, and it also puts
     #: the pointer on the field: the keys append, Enter commits.
     CONTINUOUS_INPUT_TYPE = 11
+    #: `FIELD_TYPE_MULTI_BUTTON` (orion2_consts.h): one of a group writing
+    #: one variable (the designer's hulls, the Colonies sort, the Info
+    #: tabs). Its value is written in the mouse path an activation skips —
+    #: measured, work order 187 part 3: every one of 18 clicks through F12
+    #: went out as ACTIVATE_FIELD and changed nothing (the hull stayed, the
+    #: Info page stayed). The same fault as the string field's, the same way.
+    MULTI_BUTTON_TYPE = 3
 
     def find_field_at(self, fields, x, y):
         """Find field at (x, y) in 640x480 coordinates.
 
         Skips dummy (index 0) and offscreen (5000, 5000) fields. The first
-        field covering the point decides, as in the engine; a radio button
-        or a continuous string field answers None — both must go through
-        INJECT_CLICK.
+        field covering the point decides, as in the engine; a radio button,
+        a continuous string field or a multi-button answers None — all three
+        must go through INJECT_CLICK.
         """
         if not fields:
             return None
@@ -147,7 +154,8 @@ class OriginalView:
                 # over a full-screen hidden field, which an activation then
                 # "clicked" (work order 186).
                 if f.field_type in (self.RADIO_BUTTON_TYPE,
-                                    self.CONTINUOUS_INPUT_TYPE):
+                                    self.CONTINUOUS_INPUT_TYPE,
+                                    self.MULTI_BUTTON_TYPE):
                     return None
                 return f.index
         return None

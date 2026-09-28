@@ -14,9 +14,9 @@
 #     control codes, arrows not at all), main.py routes it so, and an
 #     overlay may stand over a second screen id (ALSO_OVER_IDS)
 #   - the clicks: on the game's picture the first field under a click decides,
-#     as in the engine: a string field (type 11) or a radio button goes as
-#     INJECT_CLICK, any other field as ACTIVATE_FIELD, no field as
-#     INJECT_CLICK (work order 186)
+#     as in the engine: a string field (type 11), a radio button or a
+#     multi-button (type 3) goes as INJECT_CLICK, any other field as
+#     ACTIVATE_FIELD, no field as INJECT_CLICK (work orders 186, 187)
 import logging as _mn_log
 
 from core import modalnet as _mn
@@ -142,15 +142,20 @@ def _mn_field(i, x, y, xe, ye, t):
 
 
 assert _MnOV.CONTINUOUS_INPUT_TYPE == 11 and _MnOV.RADIO_BUTTON_TYPE == 1
+# A multi-button too (work order 187 part 3: 18 of 18 clicks through F12
+# went out as activations and were lost — hull, Colonies sort, Info tab).
+assert _MnOV.MULTI_BUTTON_TYPE == 3
 _mn_ov = _MnOV()
 _mn_cl = _MnClient([_mn_field(0, 0, 0, 639, 479, 7),
                     _mn_field(35, 18, 23, 152, 40, 11),     # the designer's name
                     _mn_field(36, 200, 23, 260, 40, 1),     # a radio button
+                    _mn_field(38, 118, 70, 227, 84, 3),     # a hull (multi-button)
                     _mn_field(37, 461, 443, 520, 465, 0),   # a button (Cancel)
                     _mn_field(42, 0, 0, 639, 479, 7)])      # the page's full-screen field, last
 _mn_x, _mn_y, _mn_w, _mn_h, _mn_s = _mn_ov.placement(1920, 1080)
 for _mn_nx, _mn_ny, _mn_want in ((85, 31, ("INJECT_CLICK", 85, 31)),
                                  (230, 31, ("INJECT_CLICK", 230, 31)),
+                                 (170, 77, ("INJECT_CLICK", 170, 77)),
                                  (490, 454, ("ACTIVATE_FIELD", 37)),
                                  (320, 300, ("ACTIVATE_FIELD", 42))):
     _mn_cl.log.clear()
@@ -160,5 +165,6 @@ for _mn_nx, _mn_ny, _mn_want in ((85, 31, ("INJECT_CLICK", 85, 31)),
 assert _mn_ov.find_field_at(_MnClient([_mn_field(5, 0, 0, 99, 99, 7)]).state.fields,
                             500, 400) is None   # no field there: INJECT_CLICK
 ok("on the game's picture the first field under a click decides, as in the "
-   "engine: a string field (type 11) or a radio button goes as INJECT_CLICK, "
-   "any other field as ACTIVATE_FIELD, no field as INJECT_CLICK (work order 186)")
+   "engine: a string field (type 11), a radio button or a multi-button (type "
+   "3) goes as INJECT_CLICK, any other field as ACTIVATE_FIELD, no field as "
+   "INJECT_CLICK (work orders 186, 187)")

@@ -139,3 +139,31 @@ for byte first) that 090o replays with 0 native frames. Shown red with an
 activation instead of the click. Marks: DEVIATION `name_field` replaces
 OMISSION `name_entry`. Count 408 → 409.
 
+## Part 3 — multi-buttons through F12 — **DONE: a clear forwarding defect, fixed**
+
+Measured the way 186 measured the text field (`evidence/work_order_187/P3/`,
+engine `230a0638`, SAVE4, guarded, nothing saved): F12, then clicks on the
+game's picture in OrionLayer's window, the input log saying what went out,
+the effect read where the wire or the picture shows it. Multi-buttons
+(type 3, `Add_Multi_Button_Field_`) the scratch save reaches: the
+designer's six hulls (DSGN's size), the Colonies screen's seven sort
+buttons (colsum.cpp:267-273, the engine's frame), the Info screen's five
+tabs (info.cpp:562-572). Left out: the Races screen's spy / sabotage
+buttons and the map's tax buttons — game decisions.
+
+| | before | after |
+|---|---|---|
+| what went out per click | ACTIVATE_FIELD (128), one each | INJECT_CLICK (130), one each |
+| designer hulls (6) | **0 of 6 taken** — the size stayed 1 | **6 of 6**: 0, 1, 2, 3, 4, 5 in order |
+| Info tabs (5) | **0 of 5** — the page never changed | **5 of 5** |
+| Colonies sort buttons (7) | **0 of 7** — no button redrawn | **6 of 7** redrawn; the 7th was the sort already chosen (all of before's clicks had been lost), where a click changes nothing |
+
+So every multi-button click through F12 was LOST: the button's variable is
+written in the mouse path an activation skips — the same kind of fault as
+186's string field (check 090g #3). None was taken twice (one message and
+one step per click). **The fix**: `original_view.find_field_at` answers
+None for a multi-button too, so the click goes as INJECT_CLICK (the first
+field under the point still decides). **Check** 090g #3 extended: a hull
+button's click goes as INJECT_CLICK; red with type 3 taken out of the rule
+(the exact live failure), green again. No new check (count stays 409).
+
