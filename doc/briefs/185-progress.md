@@ -371,3 +371,65 @@ sent); the second answered Cancel. 0 native frames. SAVE1-9, SAVE11
 identical, SAVE10 unchanged; MOX.SET → restored from the pre-engine guard,
 verify clean. **The AI's audience (58)** needs a turn start — parked with
 the save and permission it needs (section 3).
+
+## Part 12 — gates and push — **DONE**
+
+- **The full suite**: exit 0, **405 green** (before the part 11 commit;
+  each commit's own fast tier, 395).
+- **A fresh clone** (`git clone --no-hardlinks` at `8956d54`,
+  `tools/setup.py`): setup **exit 0**, its own verification the full
+  suite, **405 green**. (A bare suite run in the clone before setup fails
+  on the galaxy map's generated icons, as it always has — setup builds
+  them; the gate is setup's run.)
+- **The flash check**: 090o replaying 233 recorded transitions, green in
+  both runs; live, `tools/flash_walk.py` on the engine `play.py` starts
+  (orionlayer-local, fixes 44-47 not applied; guard `185_P12_flash`):
+  **29 transitions, 0 native frames**; and 0 native frames in every live
+  run of parts 7, 8, 10 and 11 on the scratch engines.
+- **liveguard**: every session verified after its engine stopped; MOX.SET,
+  rewritten by the game on each load, restored each time from the guard
+  taken before that engine existed; final verify against this order's
+  first backup (`185_P1_patched`): every game file identical — only the
+  tree's recorded `git status` differs, by this order's commits (the tree
+  is clean).
+- **orion2re unchanged**: no commit on orionlayer-local, no fix applied;
+  every engine change lives in scratch worktrees (`wt43`, `wt44`, `wt46`)
+  of a scratch clone, with their own build directories; the build
+  `play.py` starts was not rebuilt.
+- **Push**: `git push` (no force), ten commits, the pre-push hook's full
+  suite.
+
+## End of work order 185
+
+**Done**: parts 1-12 — fix 42's gap clicks (none lost), fix 43, the two
+decision drafts, the handover package for Joes (outside the repo), the
+credits roll (already clean), the Ship Designer read, built, walked and
+compared, the diplomacy audience read, built, walked and compared.
+
+**Parked for Data** (`doc/briefs/185-parked-for-data.md`): the open fixes
+below; the F12 question (2b); the designer's three differences (2c: the
+warning box's 3.8 s hold, the chosen hull's marking); the audience's two
+(2d: the header line, the fade-in and talking loop); the states the
+scratch save does not reach, each with the save it needs, including the
+AI's turn-start audience (58); the carried-over items (section 4).
+
+**Every open fix awaiting approval:**
+- **42 — A screen is silent on the wire while its input delay counts
+  down.** Ticks during an input delay so a screen's list reaches a client
+  when it is built — the research panel's entry 636-686 → 77-103 ms, no
+  input lost or taken twice.
+- **43 — The engine's window: hidden only when OrionLayer starts it, and
+  shown again on request.** Amends 41: an engine started on its own is
+  visible again, and a client can show and hide its window (F12).
+- **44 — The Ship Designer's design as it is being edited.** Puts the
+  design, the slot and the page's printed numbers on the wire ("DSGN"), so
+  the designer's page can be HD.
+- **45 — The Ship Designer's sub-dialogs: which is open, and what it
+  offers.** Ids 54-56 and their rows ("DSBX", amended in part 7 by the
+  offered modifications), so the three pickers can be HD.
+- **46 — The diplomacy audience has no screen id.** Ids 57 (the player's)
+  and 58 (an AI's, turn start and sneak attack), so a client can tell an
+  audience is up and whose.
+- **47 — The diplomacy audience's state is not on the wire.** "DIPL": who,
+  the statement, the reply text as rendered, the menu and which items are
+  enabled, so the audience can be HD.
