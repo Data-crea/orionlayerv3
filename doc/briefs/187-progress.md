@@ -251,3 +251,59 @@ an intermediate run (`s4k`): after the last audience had ended, the tool
 clicked the window's centre once more on a statement read a frame earlier
 — it landed on the map; the tool now clicks only while 57/58 still stands.
 
+## Part 7 — gates and push
+
+- **Full suite**: exit 0, **409 green** (tree at `8212d36`).
+- **Fresh clone** (`git clone --no-hardlinks` at `8212d36`, `python
+  tools/setup.py`): setup exit 0, its own full suite **409 green**.
+- **liveguard**: every engine verified after it stopped; SAVE10 (every TURN
+  run) and MOX.SET (every load) restored from the guard taken before that
+  engine; against the order's first live guard `guard_187_first`: every
+  game file identical (only the tree's `git status`, by this order's
+  commits).
+- **Flash check**: 090o's replay (240 transitions) green; live on the final
+  code (`P7_*`): flash walk 29, designer 11, audience 7 — **0 native
+  frames**.
+- **orion2re unchanged**: `orionlayer-local` at `230a0638`, no open fix
+  written (nothing needed the engine), fix 42 open.
+- **Push**: `git push` (no force), the pre-push hook's full suite.
+
+## End of work order 187
+
+**Modal hold (option C)**, input → first frame of the box, before → after:
+the designer's shield warning 4.01-4.07 s → **0.57-0.64 s**; the colony
+screen's BUY message 2.11 s → **0.38 s**; the map's colony-base choice
+4.11 s → **0.68 s**; the combat choice (no HD screen) unchanged 0.13 s. The
+box shown is still the game's picture (parked 1b).
+
+**Name entry in HD: works.** HD's own field, cursor and text; on Enter an
+injected click on the original's field, 15 Backspaces, the keys one per
+tick, Enter — "Rafale" → "Hawke" live, Backspace corrects, ESC cancels,
+0 native frames (checked in 090x #7 and replayed by 090o).
+
+**Multi-buttons through F12**: every click was LOST (18 of 18, sent as
+activations); fixed — now injected clicks, 18 of 18 taken, once each.
+
+**"Peace Treaty"**: the original draws it half as bright in the items' own
+colour, not in another hue — HD now does the same (grey beside white); the
+only disabled item the saves reach.
+
+**58**: **reached** — SAVE4, turn 14, after 14 turns of default decisions
+(listed in Part 5): five AI ambassadors' statements, all HD, into and out
+of it without a native frame.
+
+**Part 6**: **6 paths** by which the original can still show without F12;
+**needing Data's decision first**: (1) the one rule for all six — never
+the picture, HD's last frame with an "F12 to answer" notice; (2) one HD
+message box on open fix 29 ("A native message box's text is not in the
+snapshot"). Seen in walks: 1, 4, 5 (this order's Part 5 saw 1, 4 and 5
+again: the landing, the science room, the boxes over the map).
+
+**Parked** (`doc/briefs/187-parked-for-data.md`): 1a the six paths and the
+proposed rule; 1b option C still shows the game's picture of a box; 2a the
+audience menu's title colour; section 3, the items carried over unchanged
+(185's hull marking, header line, fade-in and talking animation; the load
+dialog's ESC slot message; narrow word-only buttons; buildings as a list;
+Plague and Pop Boom unseen; the research query at turn start not measured
+— reached by Part 5's turns, but not measured).
+
