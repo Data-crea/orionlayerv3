@@ -1,0 +1,12 @@
+{
+  "_comment": "The turn-time popups' own words in HD (work order 188, open fix 49; core/turnpopup.py) where the original's word is ARTWORK, not a string: TURNSUM.LBX 1-3 (the up, down and OK buttons, turnsum.cpp:134-153), the BUFFER0.LBX popup's cancel button, the science room and the GNN, which are answered by a click anywhere. Typed here per decision 15; the player's mod folder replaces this file. The hire popup's REJECT and HIRE are artwork too (ESTRINGS 0x13C and 0x1B4 are their hotkey LETTERS, H and R \u2014 seen live, work order 188), and TURN SUMMARY is TURNSUM.LBX's title art.",
+  "close": "CLOSE",
+  "cancel": "CANCEL",
+  "ok": "OK",
+  "prev": "PREV",
+  "next": "NEXT",
+  "continue": "CONTINUE",
+  "hire": "HIRE",
+  "reject": "REJECT",
+  "turn_summary": "TURN SUMMARY"
+}

@@ -162,3 +162,77 @@ frames. Screenshots `004_B1_hover_reachable_hd.png`, `006_B3_hover_unreachable_h
 **Not built**: the fleet box's ETA / refusal text while hovering
 (fleetpop.cpp:1063-1091) — FMOV carries its numbers; parked 1b.
 Checks 090zb (2). Count 411 → **413**.
+
+## Part 4 — Turn-change messages in HD — **DONE** (with Part 5's HD message box, which it uses)
+
+**Inventory first**: `doc/brief_turn_messages.md` — 33 items read from the
+source (a sub-agent's reading, `evidence/.../readings/turn_messages_reading.md`,
+checked against the code where it was built on), each with its id, what it
+shows, its buttons and where they lead, and the HD coverage. Before this
+order every report-phase popup reported 0 (the galaxy map) and the Turn
+Summary 40 for one tick; the texts were pixels only.
+
+**Two engine fixes, both applied under the advance approval** (entries,
+patches, proofs, bundles):
+
+| fix | first line | commit | what |
+|---|---|---|---|
+| 29 | "A native message box's text is not in the snapshot" | `76f8c438` | "MSGB": every generic box's kind, title, text, answer fields (TEXTBOX / message / warning / confirmation) |
+| 49 | "The turn-time popups have no id of their own, and what they show is not on the wire" (new) | `6859e163` | "TPOP": ids 59-64 (40 kept for the Turn Summary; 52, 33 keep theirs) and each popup's content |
+
+Fix 49 was drafted by a sub-agent in its own scratch clone and reviewed,
+proved (six files, six controls) and applied by the session. **A slip,
+recorded**: when fix 49 was built, an engine of this session's (PID 260952,
+the BUY test) was still running from the binary — the link replaced the
+file, nothing broke, the engine was stopped and its guard verified.
+
+**HD**: `core/msgbox.py` (the one HD message box, DEVIATION
+`hud_message_box`), `core/turnpopup.py` + `turnpopupwire.py` +
+`turnpopupcontent.py` (one panel, per-kind content, DEVIATION
+`hud_turn_popup`), `core/overlays.py` (the App's one home for both:
+drawn over the held frame, clicks and keys routed, the once-only answer),
+the rule in `core/handover.overlay_for` (a box wins over a popup; F12 shows
+the picture; the Leaders screen's own hire popup is left to it). Every
+answer is the popup's own field — clicked at its centre where the original
+reads the pointer (the Turn Summary's rows: fix 49's finding 1), activated
+elsewhere. **Found on the way**: FMTPARA's justification codes (`\x1A` +
+digit) printed their digits in HD — "0Food per farmer 10" for the original's
+"Food per farmer … 0" — fixed in `core/helpformat` (shared with the help
+popup), table rows drawn left / right; the leader offer's ESTRINGS words
+were the buttons' hotkey letters ("H", "R") — now the Leaders screen's own
+card (title, portrait, skills, HESTRNGS 0x124/0x125 with the engine's cost
+and upkeep) and typed REJECT / HIRE (artwork words, decision 15); a popup
+that ignores a click (a refused planet) locked the once-only guard — it now
+re-arms after 20 unchanged snapshots.
+
+**Jumps to a colony (known issue 33)**: the turn-time Turn Summary's jump
+WORKS — seen live, a colony row opened that colony's screen (1) and its
+RETURN came back to the Turn Summary (40). Open fix 33 is the Info screen's
+own overwrite (info.cpp:641); no turn message runs into it, so no engine fix.
+
+**Live** (engine `6859e163`, Xvfb, scratch saves in memory, nothing saved;
+SAVE10 and MOX.SET restored from the guard taken before each engine; default
+decisions listed in `turns.json`; `evidence/work_order_188/P4_turns_*`):
+SAVE4 20 turns (until an AI's audience, 58), SAVE5 20 turns (until 58), and a
+6-turn re-run on SAVE5 after the code moved into `core/overlays.py` —
+**0 native frames, 0 F12-notice frames** in all three.
+
+| type | HD | seen live | checked offline |
+|---|---|---|---|
+| planet choice (60) — the colony base, colony ship | popup | yes, SAVE4/5, every planet walked, CLOSE | 090zd |
+| colony confirmation / "cannot build there" / "place your orders" / spy reports | box | yes | 090zc |
+| colony landing (33) | popup | yes | 090zd |
+| Turn Summary (40): rows, a colony jump and back, CLOSE | popup | yes (one page; PREV/NEXT not reached live) | 090zd (pages) |
+| combat target (64) | popup | yes, CLOSE (no attack) | 090zd |
+| leader for hire (59) | popup | yes, REJECT | 090zd |
+| science room (52) | popup | yes, every entry | 090zd |
+| GNN (63) | popup | yes, SAVE5 | 090zd |
+| AI audience (58) | screen (187) | yes | 090z |
+| research selection (53) | screen | yes | 080x |
+| new system (61) | popup | **no** — a ship must reach an unexplored star (no move order in the run) | 090zd (stand-in) |
+| leader's level / marooned hero (62) | popup | **no** — a leader must gain a level | 090zd (stand-in) |
+| warning box (player attacked), strategic combat result, bombing report, treaty "really risk war", Artemis net, Loknar | box | **no** — an AI attack on the player / an attack on a treaty partner | 090zc (the kinds) |
+| tactical combat, invasion choice, ground combat, council, Antarans, mutation picker, monster bribe, star rename, occupation popup, end of game | **notice** (parked 1c) | no | — |
+
+Checks 090zc (2), 090zd (2); 090t measures the box's and the popup's text
+at 1920 and 3840. Count 413 → **417**.

@@ -1,0 +1,6 @@
+{
+  "_comment": "The HD message box's own words (work order 188, open fix 29's MSGB; core/msgbox.py). Every one of them is ARTWORK in the original \u2014 CONFIRM.LBX entries 1 and 2, the Yes and No buttons (gendraw.cpp:165-180), and TEXTBOX.LBX entry 3, the text box's button, which reads CLOSE on the native frame (work order 188, the colony screen's BUY box) (textbox.cpp:206, :244-245) \u2014 so there is no string to extract; typed here per decision 15, replaceable by the player's mod folder like every other file.",
+  "yes": "YES",
+  "no": "NO",
+  "close": "CLOSE"
+}

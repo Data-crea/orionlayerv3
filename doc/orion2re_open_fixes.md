@@ -50,7 +50,7 @@ section for what was found where.
 | 26 | SELECT NEW RESEARCH commits a row by itself, about a second and a half after the science room hands over to it | **OPEN, deferred by Data 19 September 2026.** Observation, seen three times and measured once with a send counter on 18 September (work order 130's live run). Data reproduced the counter-case on 19 September: same binary, NO client connected, the dialog clicked away with a real mouse — the list waits. So open fix 25 is not the cause | A client cannot rely on reaching the list before it has chosen; three of six attempts to choose in HD lost the occasion. The player's way round it is to click the completion dialog away in the orion2re window with a real mouse |
 | 27 | The fleet screen's view state is not in the snapshot | **Applied** 19 September 2026 (work order 134 C), orion2re `cc5ec133` on `orionlayer-local`, `doc/ext_fleet_screen_state.patch`; required by `tools/version_check.py`; **NOT CONFIRMED LIVE** — 134's live part is parked; open upstream | — while applied. Without it HD cannot know which stack the fleet screen shows, which ships are in the grid, which are selected, where the list is scrolled or which filters are on, and hands over to the original picture |
 | 28 | One ship cannot be selected on the fleet screen | **Applied** 19 September 2026 (work order 134 C), orion2re `e6199966` on `orionlayer-local`, `doc/ext_fleet_screen_select.patch`; required by `tools/version_check.py`; **NOT CONFIRMED LIVE**; open upstream | — while applied. Without it only ALL changes the selection, so a subset of a stack cannot be moved or scrapped from HD |
-| 29 | A native message box's text is not in the snapshot — the game's own boxes (confirmation, message, warning) reach a client only as pixels | **Open** — asked for by work order 152 | HD shows the game's own rendering of the box, cropped from the framebuffer into an HD panel (`core/gamebox.py`): answerable, but the one place the original's 640x480 type appears |
+| 29 | A native message box's text is not in the snapshot — the game's own boxes (confirmation, message, warning, text) reach a client only as pixels | **Applied** 28 September 2026 by work order 188 under the order's advance approval (orion2re `76f8c438` on `orionlayer-local`, `doc/ext_message_box_text.patch`, "MSGB", the general version); required by `tools/version_check.py`; open upstream | Without it HD cannot draw a generic box, and the F12 notice stands in its place |
 | 30 | The Leaders screen's view state is not in the snapshot — button mode, selection, the colony view's two stars, the ship view's stack and grid, the hire popup's leader | **Applied** 26 September 2026 by work order 175 (orion2re `cc542e02`, `doc/ext_officer_screen_state.patch`); open upstream | Without it the HD Leaders screen shows every leader, both views, the buttons and the galaxy box, and sends only what it can confirm on the wire (the view tabs, HIRE, CANCEL, RETURN, a click on a leader for hire); pool, dismiss, assignment, the star display and the ship grid are drawn as a marked placeholder |
 | 31 | A session-launched engine hangs in its first logo frames when its window is not being drawn: every present waits for VSync, and the game thread waits for the present without a timeout | **Applied** 26 September 2026 by work order 175 (orion2re `f98b8547`, `doc/ext_present_no_vsync.patch`): `ORION2RE_NO_VSYNC=1` presents without waiting; open upstream | Without it an unattended live run hangs in about one start in eight while the screen is locked or another window covers the engine's; `tools/engine_start.py` detects the hang and starts again |
 | 32 | The Info screen's history divisors and turn messages are not in the snapshot — `_bill_savegame[6]` and the player's rendered `MSG_::_msgs` | **Applied** 26 September 2026 by work order 176 (orion2re `2269749c`, `doc/ext_info_screen_state.patch`); written by work order 175 D; open upstream | Without it the HD Info screen draws the History Graph's legend but not its curves, and says the Turn Summary's messages are not sent; every other page is complete |
@@ -70,6 +70,7 @@ section for what was found where.
 | 46 | The diplomacy audience has no screen id: it runs under its caller's (6, 0 or 12) | **Applied** 28 September 2026 by work order 186 on Data's approval (orion2re `8aea1a25` on `orionlayer-local`, `doc/ext_audience_screen.patch`, ids 57 player / 58 AI); written, proved and parked by work order 185; proved again on the tip it was applied to, re-cut there (positions only); required by `tools/version_check.py` | Without it no HD audience can exist: a client cannot tell it is up, nor whose |
 | 47 | The diplomacy audience's state — who, the statement, the reply text, the menu and its enabled items — is not on the wire | **Applied** 28 September 2026 by work order 186 on Data's approval (orion2re `ba9b6bc6` on `orionlayer-local`, `doc/ext_audience_state.patch`, "DIPL", on top of 46); written, proved and parked by work order 185; proved again on the tip it was applied to, re-cut there (positions only); required by `tools/version_check.py` | Without it the audience stays the game's own picture even with fix 46 |
 | 48 | The move verdict for the fleet box's selection at every star is not on the wire — `Ships_Try_To_Move_To_`'s `s_ship_move_info`, which the original computes on hover | **Applied** 28 September 2026 by work order 188 under the order's advance approval (orion2re `010870bc` on `orionlayer-local`, `doc/ext_fleet_move_verdict.patch`, "FMOV"); required by `tools/version_check.py`; open upstream | Without it the galaxy map draws no travel line on hover, and HD would have to rebuild range, fuel, speed, gates and flux itself |
+| 49 | The turn-time popups have no id of their own (they report 0; the Turn Summary 40 for one tick) and what they show is not on the wire | **Applied** 29 September 2026 by work order 188 under the order's advance approval (orion2re `6859e163` on `orionlayer-local`, `doc/ext_turn_popups.patch`, ids 59-64 and "TPOP"); required by `tools/version_check.py`; open upstream | Without it every turn-time popup stays behind the F12 notice |
 
 Items 3 and 4 are both about INJECT_CLICK and both live in the same
 code path, but they are separate faults: 3 is where the coordinates
@@ -1924,7 +1925,184 @@ Without it a subset of a stack cannot be moved or scrapped from HD.
 
 ## 29. A native message box's text is not in the snapshot
 
-**Asked for by work order 152. OPEN.**
+**Status: APPLIED** — 28 September 2026 by work order 188 (Parts 4 and 5, the turn-change messages and the HD message box), under the order's advance approval ("Engine fixes: approved in advance for this run" — "Fix 29 and any new fix", `doc/briefs/188-work-order-original-never-shown-turn-messages-travel-line-multiplayer-hall-of-fame.md`); asked for by work order 152. orion2re **`76f8c438`** on `orionlayer-local` ("OrionLayer Open Fix 29: send the generic message box's kind, title, text and answers ("MSGB")"), the only commit of this fix, on top of `010870bc`; bundle `~/orion2re_bundle_28sep_76f8c438_fixes34-48_29.bundle` (`git bundle verify`: exit 0). Patch: `doc/ext_message_box_text.patch` — `git diff 76f8c438~1 76f8c438` byte for byte; required by `tools/version_check.py` (marker `OrionLayer, open fix 29.`). The GENERAL version below ("MSGB"), not the narrow scrap value. Open upstream.
+
+**What the patch changes.** `src/ext/ext_api.h` / `ext_api.cpp`: a view
+of the generic box that is up (`MessageBoxView`: kind 1 text, 2 timed
+text, 3 message, 4 warning, 5 confirmation; title, text, the answer
+fields, a timed box's ticks) and its guard, which saves the box below and
+gives it back when the box returns; block 15, "MSGB", written LAST in
+`SerializeState` on ANY screen while a box is up. `src/game/textbox.cpp`
+(`Do_Text_Box_`) and `src/game/gendraw.cpp` (`Message_Box_Exploding_`,
+`Confirmation_Box_`) set the guard once their own fields are added —
+which covers every caller of these three (`Text_Box_`, `Timed_Text_Box_`,
+`GENDRAW::Message_Box_`, `Help_`, `Warning_Box_`,
+`Message_Box_Exploding_Star_`, `COMBAT::Message_Box_Titled_`,
+`MAINSCR::Mini_Main_Screen_Text_Box_`, `HAROLD::User_Box_`'s types).
+
+**The exact change.** `git diff 76f8c438~1 76f8c438` (the `diff --git` and `index` lines and the text git adds after `@@` are not part of it):
+
+```diff
+--- a/src/ext/ext_api.cpp
++++ b/src/ext/ext_api.cpp
+@@ -898,6 +898,33 @@
+             }
+         }
+     }
++
++    // 15. The generic message box that is up: "MSGB", written on ANY screen
++    //     while one is (the boxes run under their caller's id), and LAST.
++    //     OrionLayer, open fix 29.
++    //
++    //     TEXTBOX::Do_Text_Box_ and GENDRAW's exploding, warning and
++    //     confirmation boxes print a caller's string that exists nowhere
++    //     else — H_Message_(n) formatted with values the engine computed —
++    //     so a client saw only their pixels. Sent as the box holds it: the
++    //     kind, the answer fields, a timed box's ticks, the title and the
++    //     text raw (FMTPARA codes and all), each with its length first.
++    if (g_message_box.kind != 0) {
++        buf.push_back((uint8_t)'M');
++        buf.push_back((uint8_t)'S');
++        buf.push_back((uint8_t)'G');
++        buf.push_back((uint8_t)'B');
++        Write8(buf, 1);                                   // block version
++        Write8(buf, g_message_box.kind);
++        Write16(buf, g_message_box.field_a);
++        Write16(buf, g_message_box.field_b);
++        Write16(buf, g_message_box.ticks);
++        for (const char* str : {g_message_box.title, g_message_box.text}) {
++            const size_t len = str != nullptr ? strnlen(str, 4000) : 0;
++            Write16(buf, (int16_t)len);
++            WriteBytes(buf, str, len);
++        }
++    }
+ }
+ 
+ // ── Field list ───────────────────────────────────────────
+@@ -1385,6 +1412,20 @@
+     g_screen_override = previous;
+ }
+ 
++// OrionLayer, open fix 29. The generic message box that is up (ext_api.h).
++MessageBoxView g_message_box = {0, nullptr, nullptr, -1, -1, 0};
++
++MessageBoxGuard::MessageBoxGuard(uint8_t kind, const char* title,
++                                 const char* text, int16_t field_a,
++                                 int16_t field_b, int16_t ticks)
++    : previous(g_message_box) {
++    g_message_box = {kind, title, text, field_a, field_b, ticks};
++}
++
++MessageBoxGuard::~MessageBoxGuard() {
++    g_message_box = previous;
++}
++
+ // OrionLayer, open fix 47. The running list field (ext_api.h).
+ ListFieldView g_list_field = {nullptr, nullptr, 0, 0, nullptr};
+ 
+--- a/src/ext/ext_api.h
++++ b/src/ext/ext_api.h
+@@ -78,6 +78,31 @@
+     ~ListFieldGuard();
+ };
+ 
++/// OrionLayer, open fix 29. The generic message box that is up: which kind,
++/// its title and text as the caller handed them (raw, FMTPARA codes and
++/// all), the field id of each answer and a timed box's ticks — the text
++/// otherwise reaches a client only as pixels. Set by MessageBoxGuard once
++/// the box's own fields are added (TEXTBOX::Do_Text_Box_,
++/// GENDRAW::Message_Box_Exploding_, GENDRAW::Confirmation_Box_), restored
++/// when the box returns, so a box opened over another box shows and then
++/// gives back the one below. What is SENT, nothing the game reads.
++struct MessageBoxView {
++    uint8_t kind;          // 0 none, 1 text, 2 timed text, 3 message, 4 warning, 5 confirmation
++    const char* title;     // Do_Text_Box_'s, or nullptr
++    const char* text;
++    int16_t field_a;       // the dismiss field, or Yes
++    int16_t field_b;       // No, or -1
++    int16_t ticks;         // a timed box's input ticks, else 0
++};
++extern MessageBoxView g_message_box;
++
++struct MessageBoxGuard {
++    MessageBoxView previous;
++    MessageBoxGuard(uint8_t kind, const char* title, const char* text,
++                    int16_t field_a, int16_t field_b, int16_t ticks);
++    ~MessageBoxGuard();
++};
++
+ /// The field id of the input Get_Input_() is returning THIS CALL when it
+ /// came from a client's ACTIVATE_FIELD, and 0 when it came from the mouse.
+ ///
+--- a/src/game/gendraw.cpp
++++ b/src/game/gendraw.cpp
+@@ -1,4 +1,7 @@
+ #include "pch.h"
++#ifdef ORION2RE_EXT
++#include "ext/ext_api.h"  // OrionLayer, open fix 29. MessageBoxGuard.
++#endif
+ 
+ namespace GENDRAW {
+     s_colors _message_text_colors = {{0xA0, 0xA3, 0xA3, 0xA5, 0xAB, 0xAB, 0xAB, 0xAB}};
+@@ -103,6 +106,10 @@
+         _message_box_y = 0x90;
+         int mode = 4;
+         _first_field = fields::Add_Hidden_Field_(0, 0, 0x27F, 0x1DF, "\x1B", 0x29);
++#ifdef ORION2RE_EXT
++        // OrionLayer, open fix 29. The box on the wire while it takes input (ext_api.h).
++        const ext::MessageBoxGuard ext_box_guard(_warning_box != 0 ? 4 : 3, nullptr, str, _first_field, -1, 0);
++#endif
+ 
+         s_colors font_colors;
+         fonts::Set_Remap_Font_Style_(4, &font_colors);
+@@ -171,6 +178,10 @@
+ 
+         _first_field = fields::Add_Hidden_Field_(0xeb, 0x12e, 0x11e, 0x143, "Y", 0x29);
+         int16_t second_field = fields::Add_Hidden_Field_(0x159, 0x12e, 0x18c, 0x143, "N", 0x29);
++#ifdef ORION2RE_EXT
++        // OrionLayer, open fix 29. The box on the wire while it takes input (ext_api.h).
++        const ext::MessageBoxGuard ext_box_guard(5, nullptr, text, _first_field, second_field, 0);
++#endif
+ 
+         for (int i = 0; i < 3; ++i) {
+             _image_seg[i] = (s_animation_header*)buffer::Buffer_Reload_("confirm.lbx", i, (uint8_t*)MOX::_global_cache_seg);
+--- a/src/game/textbox.cpp
++++ b/src/game/textbox.cpp
+@@ -1,4 +1,7 @@
+ #include "pch.h"
++#ifdef ORION2RE_EXT
++#include "ext/ext_api.h"  // OrionLayer, open fix 29. MessageBoxGuard.
++#endif
+ 
+ namespace TEXTBOX {
+     int16_t _bottom_y;
+@@ -246,7 +249,13 @@
+         video::Copy_Off_To_Back_();
+ 
+         /* "\x1B" is fmtpara's color-attribute control byte; used here as a non-printing field label. */
++#ifdef ORION2RE_EXT
++        // OrionLayer, open fix 29. The box on the wire while it takes input (ext_api.h).
++        const int16_t ext_dismiss = fields::Add_Hidden_Field_(0, 0, 639, 479, "\x1B", 41);
++        const ext::MessageBoxGuard ext_box_guard(input_ticks > 0 ? 2 : 1, title, text, ext_dismiss, -1, input_ticks);
++#else
+         fields::Add_Hidden_Field_(0, 0, 639, 479, "\x1B", 41);
++#endif
+ 
+         Text_Box_Get_Input_(input_ticks);
+ 
+```
+
+**Proof on the tip it was applied to** (work order 188, `evidence/work_order_188/P5/fix29_proof.json`): in a scratch clone at `010870bc` the patch file applied with `patch -p1 --dry-run` and `patch -p1`, no offset, no fuzz, the applied tree's diff equal to the file's; `ext_api.cpp`, `gendraw.cpp` and `textbox.cpp` compiled alone with the build's own command (`-fsyntax-only`), exit 0; three controls refused, exit 1 each — `g_message_box.field_b` misspelt `field_c` in ext_api.cpp ("hat kein Element namens »field_c«"), `ext::MessageBoxGuard` misspelt `ext::MessageBoxGard` in gendraw.cpp and in textbox.cpp ("bezeichnet keinen Typ"). Then applied to `~/orion2re` (no offset), built (ninja, no error; no engine running), `git add` of the four files, one commit; `git diff 76f8c438~1 76f8c438` equals the file's diff (`cmp`).
+
+**Recorded live** (engine `76f8c438`, the virtual display, SAVE4, nothing saved; `evidence/work_order_188/P5_box_*`): the designer's shield warning → MSGB kind `warning`, field 1 (the live list's one full-screen ESC field), "You may not upgrade the ship's shield."; the colony screen's BUY on Housing → kind `text`, field 1, "You cannot buy Housing or Trade Goods, as they are settings, not specific items." Both answered by a click on HD's box (activation of field 1): closed in 0.04 / 0.08 s, 0 native frames.
+
+**Side effects.** The guard writes only its own view, from pointers the box
+holds for as long as it takes input; nothing the game reads changes. At
+most ~8 KB (two strings capped at 4000 bytes) while a box is up.
+
+**How to revert.** From `~/orion2re` on `orionlayer-local`: `git revert 76f8c438` or `patch -R -p1`; rebuild; move the patch to `REPORTED_PATCHES`. Without it HD cannot draw a generic box, and the F12 notice (work order 188, Stage 1) stands in its place.
+
+### The request as asked by work order 152 (kept)
 
 ### Symptom
 
@@ -4159,4 +4337,697 @@ the original makes the same call on every hovered frame. Size ≤ 72 × 14 +
 verdict: the travel line appears only once the engine has accepted an order.
 
 **How to revert.** From `~/orion2re` on `orionlayer-local`: `git revert 010870bc` or `patch -R -p1`; then rebuild and move the patch to `REPORTED_PATCHES` (README and part 09 as for 44). Without it the galaxy map draws no travel line on hover.
+
+## 49. The turn-time popups have no id of their own, and what they show is not on the wire
+
+**Status: APPLIED** — 29 September 2026 by work order 188 (Part 4, "Turn-change messages in HD"), under the order's advance approval ("Engine fixes: approved in advance for this run", `doc/briefs/188-work-order-original-never-shown-turn-messages-travel-line-multiplayer-hall-of-fame.md`). orion2re **`6859e163`** on `orionlayer-local` ("OrionLayer Open Fix 49: report the turn-time popups under their own ids and send what they show ("TPOP")"), the only commit of this fix, on top of `76f8c438`; bundle `~/orion2re_bundle_28sep_6859e163_fixes34-49.bundle` (`git bundle verify`: exit 0). Patch: `doc/ext_turn_popups.patch` — `git diff 6859e163~1 6859e163` byte for byte; required by `tools/version_check.py` (marker `OrionLayer, open fix 49.`). Open upstream.
+
+**What is missing.** The report phase runs its popups under SCREEN_MAIN
+(`Reports_Screen_`, mainscr2.cpp:118), and the Turn Summary drops its 40
+after one tick (turnsum.cpp:90): a client cannot tell a leader offer, the
+colonisation planet choice or a discovery from the galaxy map. What each
+shows — the science room's discoveries and footer, the Turn Summary's lines,
+the GNN's news, the choice's star and planets, the combat targets — is on no
+wire. The inventory is `doc/brief_turn_messages.md`.
+
+**What the patch changes.** `src/ext/ext_api.h` / `ext_api.cpp`: a view of
+the popup that is up (`TurnPopupView`: kind, sixteen arguments, title, text)
+and `TurnPopupGuard`, which is a `ScreenOverride` and the view in one (saves
+and restores both; `end()` releases before a star-name popup that follows);
+block "TPOP", written LAST (after MSGB) on any screen while a popup is up —
+version, kind, the arguments, title and text raw, and per kind a tail: the
+Turn Summary's rendered lines with each one's jump flag, colony, page and
+row fields; the system display's field-to-planet and field-to-ship map
+(planet choice, discovery, combat target); the combat targets
+(`COMBFIND::_target`). The guards: `science.cpp` (52 kept; the room's reason
+recorded), `turnsum.cpp` (40 kept for the whole popup), `mainpups.cpp` (59
+leader for hire — not over the Leaders screen, which keeps 29 and its OFFS;
+60 planet choice; 61 new system; 62 a leader's level or a marooned hero; 64
+combat target), `events.cpp` (63, the GNN intro and each event),
+`colland.cpp` (33 kept). The layout, byte by byte, and every popup's fields
+are in the patch file's header.
+
+**The exact change.** `git diff 6859e163~1 6859e163` (the `diff --git` and `index` lines and the text git adds after `@@` are not part of it):
+
+```diff
+--- a/src/ext/ext_api.cpp
++++ b/src/ext/ext_api.cpp
+@@ -925,6 +925,170 @@
+             WriteBytes(buf, str, len);
+         }
+     }
++
++    // 16. The turn-time popup that is up: "TPOP", written on ANY screen
++    //     while one is, and LAST (after MSGB). OrionLayer, open fix 49.
++    //
++    //     The popups the turn start and turn processing open run under the
++    //     galaxy map's id (0) or the processing id (12) and keep what they
++    //     show in their own locals; TurnPopupGuard reports a synthetic id
++    //     for each and puts what it was opened with here:
++    //
++    //     kind  id  popup (function)                         args
++    //      1    52  science room (SCIENCE::Science_Room_)    [0] entries, [1] reason 0 unknown 1 researched
++    //                                                          2 stolen 3 artifact 4 captured, [2] entries shown
++    //                                                          so far, [3..] discovery_data slots raw (bit 0x4000 =
++    //                                                          weapon-mod entry, the next slot its mask)
++    //                                                          text = footer
++    //      2    40  Turn Summary (TURNSUM::Turn_Summary_Popup_) [0] cur_page [1] max_page [2] up field
++    //                                                          [3] down field [4] OK field [5] first row field
++    //                                                          [6] last row field [7] frame field [8] background
++    //                                                          field [9] message index it opened at (absolute)
++    //                                                          + the message list below
++    //      3    59  leader for hire (MAINPUPS::Random_New_Officer_Popup_)
++    //                                                        [0] leader [1] cost [2] star [3] field state 0 offer
++    //                                                          1 rejected 2 too poor 3 hired [4] hire field
++    //                                                          [5] reject/close field [6] dismiss field
++    //                                                          [7] over the Leaders screen (then id 29 is kept)
++    //                                                          [8] maintenance
++    //      4    60  planet choice (MAINPUPS::New_Colony_Selection_Popup_ and its
++    //               New_Outpost_ / Drop_Troops_ wrappers)  [0] star [1] mode 0 colony 1 outpost 2 troops
++    //                                                          [2] using colony ship [3] special shown
++    //                                                          [4] cancel field [5] dismiss field
++    //                                                          title = the popup's title; text = the special's
++    //                                                          description while it is shown
++    //                                                          + the system display below
++    //      5    61  new system (MAINPUPS::New_System_Discovery_Popup_)
++    //                                                        [0] star [1] special shown [2] dismiss field
++    //                                                          title/text as kind 4 + the system display below
++    //      6    62  leader level / marooned hero (MAINPUPS::Officer_Gains_Level_Popup_)
++    //                                                        [0] leader [1] state 0 level 1 joins 2 fails
++    //                                                          [2] star [3] dismiss field
++    //      7    63  GNN (EVENTS::Drive_Event_Screen_)        [0] message type (0 intro, 1 next event,
++    //                                                          event+2) [1] event id or -1 [2] subtype or -1
++    //                                                          [3] picture EVENTS.LBX or -1 [4..14]
++    //                                                          Get_Event_Message_'s colony_idx, val1, val2,
++    //                                                          player_idx1, tech_field_idx1, player_idx2,
++    //                                                          leader_idx, player_idx3, star_idx,
++    //                                                          tech_app_idx1, tech_app_idx2; text = the news
++    //      8    64  combat target (MAINPUPS::Defense_Colony_Selection_Popup_)
++    //                                                        [0] star [1] attacker [2] cancel field
++    //                                                          + the system display and COMBFIND::_target below
++    //      9    33  colony landing (COLLAND::Colony_Landing_Screen_)
++    //                                                        [0] planet [1] colony [2] star [3] dismiss field
++    //                                                          title = "colony built on" line
++    //
++    //     Written: version, kind, n_args + args, title, text (int16
++    //     length + raw bytes each), then per kind:
++    //     - 2: int16 count, per message: int16 length + the line as
++    //       MSG_::sprintf_msg_ renders it, uint8 1 if a click on it jumps
++    //       to a colony (MSG_::Goto_Msg_Colony_'s test), int16 that colony
++    //       or -1, uint8 its list page, int16 its first field on the page
++    //       shown or -1, uint8 its field count there (0 if not shown).
++    //     - 4, 5, 8: the system display's live fields: int16 star, int16
++    //       the grid field (asteroids: picked by POINTER position), 5 x
++    //       (int16 planet field, int16 planet) per orbit slot, 15 x (int16
++    //       ship field, int16 ship) per ship slot; -1000 / -1 when empty.
++    //     - 8 also: COMBFIND::_target: 5 x int16 colony, int16 count,
++    //       15 x int16 player, int16 count.
++    if (g_turn_popup.kind != 0) {
++        buf.push_back((uint8_t)'T');
++        buf.push_back((uint8_t)'P');
++        buf.push_back((uint8_t)'O');
++        buf.push_back((uint8_t)'P');
++        Write8(buf, 1);                                   // block version
++        Write8(buf, g_turn_popup.kind);
++        int16_t n_args = g_turn_popup.n_args;
++        if (n_args < 0) n_args = 0;
++        if (n_args > 16) n_args = 16;
++        Write16(buf, n_args);
++        for (int16_t i = 0; i < n_args; i++) {
++            Write16(buf, g_turn_popup.args[i]);
++        }
++        for (const char* str : {g_turn_popup.title, g_turn_popup.text}) {
++            const size_t len = str != nullptr ? strnlen(str, 4000) : 0;
++            Write16(buf, (int16_t)len);
++            WriteBytes(buf, str, len);
++        }
++
++        if (g_turn_popup.kind == 2) {
++            const s_list_state& list = TURNSUM::_g_turn_sum_header;
++            int16_t first = MSG_::First_Msg_For_Player_(MOX::_PLAYER_NUM);
++            int16_t n = MSG_::N_Msgs_For_Player_(MOX::_PLAYER_NUM);
++            if (first < 0 || first >= MAX_MESSAGES || n < 0) n = 0;
++            if (first + n > MAX_MESSAGES) n = (int16_t)(MAX_MESSAGES - first);
++            Write16(buf, n);
++            char text[256];
++            uint8_t page = 0;
++            for (int16_t i = 0; i < n; i++) {
++                s_MSG& msg = MSG_::_msgs[first + i];  // sprintf_msg_ takes it non-const, as INFS passes it
++                MSG_::sprintf_msg_(text, sizeof(text), &msg);
++                const size_t len = strnlen(text, sizeof(text));
++                Write16(buf, (int16_t)len);
++                WriteBytes(buf, text, len);
++
++                // Goto_Msg_Colony_'s test (msg.cpp), without its writes.
++                int16_t colony = -1;
++                if (msg.msg_type == MSG_TYPE_COLONY) {
++                    const int16_t planet = msg.u.colony.planet_idx;
++                    if (planet >= 0 && planet < MAX_PLANETS) {
++                        const int16_t c = MOX::_planet[planet].colony_index;
++                        if (c >= 0 && MOX::_colony[c].owner == MOX::_PLAYER_NUM) {
++                            colony = c;
++                        }
++                    }
++                }
++                Write8(buf, (uint8_t)(colony != -1));
++                Write16(buf, colony);
++
++                // The list item: its page (Init_List_Data_ starts a page at
++                // each stop_flag) and, on the page shown, the fields
++                // Add_Fields_To_List_Page_ gave its lines.
++                int16_t first_field = -1;
++                uint8_t n_fields = 0;
++                if (list.items != nullptr && i < list.num_items) {
++                    const s_list_item& item = list.items[i];
++                    if (i == 0 || item.stop_flag != 0) page++;
++                    if (page == list.cur_page && item.app_count != 0) {
++                        first_field = (int16_t)item.app_ids[0];
++                        n_fields = item.app_count;
++                    }
++                }
++                Write8(buf, page);
++                Write16(buf, first_field);
++                Write8(buf, n_fields);
++            }
++        }
++
++        if (g_turn_popup.kind == 4 || g_turn_popup.kind == 5 ||
++            g_turn_popup.kind == 8) {
++            Write16(buf, COLONY::_sys_disp_star_handle);
++            Write16(buf, MOX::_system_display_grid_field);
++            for (int i = 0; i < 5; i++) {
++                Write16(buf, MOX::_planet_buttons[i]);
++                Write16(buf, MOX::_sys_disp != nullptr ? MOX::_sys_disp[i].orbit
++                                                      : (int16_t)-1);
++            }
++            for (int i = 0; i < 15; i++) {
++                const bool used = MOX::_system_display_ships[i].ship_idx > -1;
++                Write16(buf, used ? MOX::_system_display_ships[i].button
++                                  : (int16_t)-1000);
++                Write16(buf, used ? MOX::_system_display_ships[i].ship_idx
++                                  : (int16_t)-1);
++            }
++        }
++
++        if (g_turn_popup.kind == 8) {
++            for (int i = 0; i < 5; i++) {
++                Write16(buf, COMBFIND::_target.colony_targets[i]);
++            }
++            Write16(buf, COMBFIND::_target.num_colony_targets);
++            for (int i = 0; i < 15; i++) {
++                Write16(buf, COMBFIND::_target.player_targets[i]);
++            }
++            Write16(buf, COMBFIND::_target.num_player_targets);
++        }
++    }
+ }
+ 
+ // ── Field list ───────────────────────────────────────────
+@@ -1426,6 +1590,44 @@
+     g_message_box = previous;
+ }
+ 
++// OrionLayer, open fix 49. The turn-time popup that is up (ext_api.h).
++TurnPopupView g_turn_popup = {0, {}, 0, nullptr, nullptr};
++
++TurnPopupGuard::TurnPopupGuard(int16_t screen_id, uint8_t kind,
++                               const char* title, const char* text)
++    : previous(g_turn_popup), previous_screen(g_screen_override),
++      active(true) {
++    g_turn_popup.kind = kind;
++    for (int16_t& a : g_turn_popup.args) a = -1;
++    g_turn_popup.n_args = 0;
++    g_turn_popup.text = text;
++    g_turn_popup.title = title;
++    if (screen_id >= 0) {
++        g_screen_override = screen_id;
++    }
++}
++
++TurnPopupGuard::~TurnPopupGuard() {
++    end();
++}
++
++void TurnPopupGuard::arg(int16_t i, int16_t v) const {
++    if (!active || i < 0 || i >= 16) return;
++    g_turn_popup.args[i] = v;
++    if (g_turn_popup.n_args < i + 1) g_turn_popup.n_args = (int16_t)(i + 1);
++}
++
++void TurnPopupGuard::set_text(const char* text) const {
++    if (active) g_turn_popup.text = text;
++}
++
++void TurnPopupGuard::end() {
++    if (!active) return;
++    active = false;
++    g_turn_popup = previous;
++    g_screen_override = previous_screen;
++}
++
+ // OrionLayer, open fix 47. The running list field (ext_api.h).
+ ListFieldView g_list_field = {nullptr, nullptr, 0, 0, nullptr};
+ 
+--- a/src/ext/ext_api.h
++++ b/src/ext/ext_api.h
+@@ -103,6 +103,39 @@
+     ~MessageBoxGuard();
+ };
+ 
++/// OrionLayer, open fix 49. The turn-time popup that is up: which one (kind),
++/// up to 16 numbers it was opened with or keeps (args, -1 = unset; the
++/// layout per kind is the table above SerializeState's "TPOP" block in
++/// ext_api.cpp), and its title and text where the game formats them into a
++/// buffer that outlives the popup's input loop. Set by TurnPopupGuard, which
++/// can also report a synthetic screen id while it lives (like
++/// ScreenOverride), restored when the popup returns — or earlier, by end(),
++/// where the popup opens another dialog on its way out. What is SENT,
++/// nothing the game reads.
++struct TurnPopupView {
++    uint8_t kind;          // 0 none, 1 science room ... 9 colony landing (ext_api.cpp)
++    int16_t args[16];
++    int16_t n_args;
++    const char* text;
++    const char* title;
++};
++extern TurnPopupView g_turn_popup;
++
++struct TurnPopupGuard {
++    TurnPopupView previous;
++    int16_t previous_screen;
++    bool active;
++    /// screen_id < 0: keep the reported id as it is.
++    TurnPopupGuard(int16_t screen_id, uint8_t kind, const char* title,
++                   const char* text);
++    ~TurnPopupGuard();
++    /// Sets args[i] of the view (and n_args to at least i + 1).
++    void arg(int16_t i, int16_t v) const;
++    void set_text(const char* text) const;
++    /// Restores the view and the reported id now; the destructor then does nothing.
++    void end();
++};
++
+ /// The field id of the input Get_Input_() is returning THIS CALL when it
+ /// came from a client's ACTIVATE_FIELD, and 0 when it came from the mouse.
+ ///
+--- a/src/game/colland.cpp
++++ b/src/game/colland.cpp
+@@ -1,4 +1,7 @@
+ #include "pch.h"
++#ifdef ORION2RE_EXT
++#include "ext/ext_api.h"  // OrionLayer, open fix 49. TurnPopupGuard.
++#endif
+ 
+ namespace COLLAND {
+     s_animation_header* _l_anims;
+@@ -200,6 +203,17 @@
+             }
+         }
+ 
++#ifdef ORION2RE_EXT
++        // OrionLayer, open fix 49. The landing: planet, colony, star and its title as Draw_Colony_Landing_Screen_ formats it (id 33 kept; "TPOP" kind 9).
++        char ext_planet_name[64];
++        char ext_title[200];
++        HACCESS::Do_Get_Planet_Name_(COLONY::_planet_handle, ext_planet_name, 1);  // own buffer: Get_Planet_Name_ writes MOX::_temp_string
++        snprintf(ext_title, sizeof(ext_title), ESTRINGS::E_Strings_(0xE5), ext_planet_name);
++        ext::TurnPopupGuard ext_popup_guard(-1, 9, ext_title, nullptr);
++        ext_popup_guard.arg(0, COLONY::_planet_handle);
++        ext_popup_guard.arg(1, COLONY::_colony_handle);
++        ext_popup_guard.arg(2, COLONY::_star_handle);
++#endif
+         do {
+             timer::Mark_Time_();
+             Add_Fields_();
+@@ -207,10 +221,16 @@
+             animate::Get_Animation_Frame_Count_(COLLAND::_l_anims);
+             animate::Get_Current_Frame_(COLLAND::_l_anims);
+             RUSS::Mox_Sync_Update_();
++#ifdef ORION2RE_EXT
++            ext_popup_guard.arg(3, _fields);  // OrionLayer, open fix 49. The dismiss field of this pass.
++#endif
+             input_result = fields::Get_Input_();
+             fields::Scan_Input_();
+             timer::Release_Time_(1);
+         } while (input_result == 0);
++#ifdef ORION2RE_EXT
++        ext_popup_guard.end();  // OrionLayer, open fix 49. Not over the star-name popup.
++#endif
+ 
+         COLONY::Reset_Field_Mode_();
+         fields::Clear_Fields_();
+--- a/src/game/events.cpp
++++ b/src/game/events.cpp
+@@ -1,4 +1,7 @@
+ #include "pch.h"
++#ifdef ORION2RE_EXT
++#include "ext/ext_api.h"  // OrionLayer, open fix 49. TurnPopupGuard.
++#endif
+ 
+ namespace EVENTS {
+     uint8_t _current_event;
+@@ -2291,7 +2294,16 @@
+                     Get_Event_Message_(1, (int16_t)(game_random::Random_(4) - 1), 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, _event_message, sizeof(_event_message));
+                     _event_status_flag = 0;
+                 }
++#ifdef ORION2RE_EXT
++                {
++                    // OrionLayer, open fix 49. The GNN intro: id 63, its message type and the news text ("TPOP" kind 7).
++                    const ext::TurnPopupGuard ext_popup_guard(63, 7, nullptr, _event_message);
++                    ext_popup_guard.arg(0, _current_event == 0 ? 0 : 1);
++                    Drive_Event_Screen_();
++                }
++#else
+                 Drive_Event_Screen_();
++#endif
+             }
+ 
+             _current_event++;
+@@ -2304,6 +2316,18 @@
+             _event_status_flag = 0;
+ 
+             if (MOX::_settings.show_gnn_report == 1) {
++#ifdef ORION2RE_EXT
++                // OrionLayer, open fix 49. The GNN event: id 63, event, subtype, picture, message values, news text ("TPOP" kind 7).
++                const ext::TurnPopupGuard ext_popup_guard(63, 7, nullptr, _event_message);
++                const int16_t ext_values[11] = {p3, p4, p5, player_idx, p7, p8, p9, p10, p11, p12, p13};
++                ext_popup_guard.arg(0, (int16_t)(event_id + 2));
++                ext_popup_guard.arg(1, event_id);
++                ext_popup_guard.arg(2, event_subtype);
++                ext_popup_guard.arg(3, (int16_t)(event_id + 2));
++                for (int16_t v = 0; v < 11; ++v) {
++                    ext_popup_guard.arg((int16_t)(4 + v), ext_values[v]);
++                }
++#endif
+                 Drive_Event_Screen_();
+             } else {
+                 JIM::Get_Text_Message_("jimtext.lbx", 29, text_buffer, sizeof(text_buffer));
+--- a/src/game/mainpups.cpp
++++ b/src/game/mainpups.cpp
+@@ -1,4 +1,7 @@
+ #include "pch.h"
++#ifdef ORION2RE_EXT
++#include "ext/ext_api.h"  // OrionLayer, open fix 49. TurnPopupGuard.
++#endif
+ 
+ namespace MAINPUPS {
+     char* _g_msg_ptr;
+@@ -575,6 +578,13 @@
+         Update_Colony_Defense_Fields_();
+         _last_scanned_field = _mp_fields[1];
+ 
++#ifdef ORION2RE_EXT
++        // OrionLayer, open fix 49. The combat target choice: id 64 and its star, attacker and cancel field ("TPOP" kind 8).
++        const ext::TurnPopupGuard ext_popup_guard(64, 8, nullptr, nullptr);
++        ext_popup_guard.arg(0, star_idx);
++        ext_popup_guard.arg(1, player_idx);
++#endif
++
+         Draw_Defense_Selection_Popup_();
+         RUSS::Mox_Sync_Update_();
+ 
+@@ -582,6 +592,9 @@
+             timer::Release_Time_(2);
+             timer::Mark_Time_();
+ 
++#ifdef ORION2RE_EXT
++            ext_popup_guard.arg(2, _mp_fields[6]);  // OrionLayer, open fix 49. The cancel field of this pass.
++#endif
+             input_event = fields::Get_Input_();
+             scanned_field = fields::Scan_Input_();
+ 
+@@ -739,6 +752,27 @@
+         fields::Assign_Auto_Function_(Draw_Selection_Popup_, 1);
+ 
+         Update_Selection_Fields_();
++#ifdef ORION2RE_EXT
++        // OrionLayer, open fix 49. The planet choice: id 60, its title as Draw_Selection_Popup_ formats it ("TPOP" kind 4).
++        char ext_title[200] = "";
++        {
++            int16_t ext_string_id = -1;
++            switch (_selection_state_flag) {
++            case 0: ext_string_id = (_g_using_colony_ship != 0) ? 0x1ce : 0x1cd; break;
++            case 1: ext_string_id = 0x1cb; break;
++            case 2: ext_string_id = 0x1cf; break;
++            case 3: ext_string_id = 0x1cc; break;
++            default: break;
++            }
++            if (ext_string_id != -1) {
++                snprintf(ext_title, sizeof(ext_title), ESTRINGS::E_Strings_(ext_string_id), MOX::_star[_g_star_n].name);
++            }
++        }
++        ext::TurnPopupGuard ext_popup_guard(60, 4, ext_title, nullptr);
++        ext_popup_guard.arg(0, _g_star_n);
++        ext_popup_guard.arg(1, _selection_state_flag);
++        ext_popup_guard.arg(2, _g_using_colony_ship);
++#endif
+         Draw_Selection_Popup_();
+         RUSS::Mox_Sync_Update_();
+ 
+@@ -746,12 +780,25 @@
+         do {
+             timer::Release_Time_(2);
+             timer::Mark_Time_();
++#ifdef ORION2RE_EXT
++            // OrionLayer, open fix 49. The special shown and the fields of this pass.
++            {
++                const bool ext_special = _g_special != SYSTEM_SPECIAL_NO_SPECIAL && _g_special != SYSTEM_SPECIAL_MAROONED_HERO;
++                ext_popup_guard.arg(3, _g_special);
++                ext_popup_guard.arg(4, _mp_fields[2]);
++                ext_popup_guard.arg(5, _mp_fields[0]);
++                ext_popup_guard.set_text(ext_special ? _g_msg_ptr : nullptr);
++            }
++#endif
+             input = fields::Get_Input_();
+             scan_input = fields::Scan_Input_();
+             result = Evaluate_Selection_Input_(&input, &scan_input, &done);
+             Draw_Selection_Popup_();
+             RUSS::Mox_Sync_Update_();
+         } while (done == 0);
++#ifdef ORION2RE_EXT
++        ext_popup_guard.end();  // OrionLayer, open fix 49. Not over the star-name popup.
++#endif
+ 
+         if (namestar::Can_Change_Star_Name_(star_idx) != 0 &&
+             MOX::_settings.animations_on == 0 &&
+@@ -831,6 +878,16 @@
+ 
+         _last_scanned_field = _mp_fields[1];
+ 
++#ifdef ORION2RE_EXT
++        // OrionLayer, open fix 49. The leader for hire: id 59 (29 kept over the Leaders screen, OFFS), leader, cost, star ("TPOP" kind 3).
++        const ext::TurnPopupGuard ext_popup_guard(_on_officer_screen_flag != 0 ? -1 : 59, 3, nullptr, nullptr);
++        ext_popup_guard.arg(0, _g_officer);
++        ext_popup_guard.arg(1, cost);
++        ext_popup_guard.arg(2, _g_star_n);
++        ext_popup_guard.arg(7, _on_officer_screen_flag != 0 ? 1 : 0);
++        ext_popup_guard.arg(8, OFFICER::Officer_Maintenance_(_g_player_n, _g_officer));
++#endif
++
+         video::Set_Refresh_Stencil_();
+         video::Set_Page_Off_();
+ 
+@@ -844,6 +901,13 @@
+             _on_officer_screen_flag == 0;
+ 
+         do {
++#ifdef ORION2RE_EXT
++            // OrionLayer, open fix 49. The state and the fields of this pass.
++            ext_popup_guard.arg(3, _field_state);
++            ext_popup_guard.arg(4, _mp_fields[7]);
++            ext_popup_guard.arg(5, _mp_fields[8]);
++            ext_popup_guard.arg(6, _mp_fields[0]);
++#endif
+             int16_t input = fields::Get_Input_();
+             int16_t scan_input = fields::Scan_Input_();
+ 
+@@ -967,6 +1031,14 @@
+ 
+         _last_scanned_field = _mp_fields[1];
+ 
++#ifdef ORION2RE_EXT
++        // OrionLayer, open fix 49. The new system: id 61, its title as Draw_Discovery_Popup_ formats it ("TPOP" kind 5).
++        char ext_title[200];
++        snprintf(ext_title, sizeof(ext_title), ESTRINGS::E_Strings_(456), MOX::_star[COLONY::_sys_disp_star_handle].name);
++        const ext::TurnPopupGuard ext_popup_guard(61, 5, ext_title, nullptr);
++        ext_popup_guard.arg(0, star_idx);
++#endif
++
+         Draw_Discovery_Popup_();
+         RUSS::Mox_Sync_Update_();
+ 
+@@ -974,6 +1046,15 @@
+             timer::Release_Time_(2);
+             timer::Mark_Time_();
+ 
++#ifdef ORION2RE_EXT
++            // OrionLayer, open fix 49. The special shown and the dismiss field of this pass.
++            {
++                const bool ext_special = _g_special != SYSTEM_SPECIAL_NO_SPECIAL && _g_special != SYSTEM_SPECIAL_MAROONED_HERO;
++                ext_popup_guard.arg(1, _g_special);
++                ext_popup_guard.arg(2, _mp_fields[0]);
++                ext_popup_guard.set_text(ext_special ? _g_msg_ptr : nullptr);
++            }
++#endif
+             input_val = fields::Get_Input_();
+             scanned_val = fields::Scan_Input_();
+ 
+@@ -1048,6 +1129,15 @@
+         Update_Officer_Gains_Level_Fields_();
+         _last_scanned_field = _mp_fields[1];
+ 
++#ifdef ORION2RE_EXT
++        // OrionLayer, open fix 49. The leader's level / marooned hero: id 62, leader, state, star, dismiss field ("TPOP" kind 6).
++        const ext::TurnPopupGuard ext_popup_guard(62, 6, nullptr, nullptr);
++        ext_popup_guard.arg(0, officer_idx);
++        ext_popup_guard.arg(1, _officer_gains_level_state);
++        ext_popup_guard.arg(2, _g_star_n);
++        ext_popup_guard.arg(3, _mp_fields[0]);
++#endif
++
+         video::Set_Page_Off_();
+         Draw_Officer_Gains_Level_Popup_();
+         RUSS::Mox_Sync_Update_();
+--- a/src/game/science.cpp
++++ b/src/game/science.cpp
+@@ -21,6 +21,11 @@
+ 
+     void* _science_mouse_bitmap;
+ 
++#ifdef ORION2RE_EXT
++    // OrionLayer, open fix 49. Why the room is up, set by the Show_Off_ callers, read and cleared by Science_Room_ (sent only).
++    static int16_t ext_science_reason = 0;
++#endif
++
+     void __cdecl Show_Off_Captured_Tech_(int16_t* captured_tech_ids, uint16_t tech_count, int16_t message_arg) {
+         char text_buffer[0x100];
+ 
+@@ -33,6 +38,9 @@
+         JIM::Decode_Text_System_(text_buffer, message_arg, sizeof(text_buffer));
+ 
+         char* trooper_anim = BILL::Cache_Player_Trooper_Anim_();
++#ifdef ORION2RE_EXT
++        if (ext_science_reason == 0) ext_science_reason = 4;  // OrionLayer, open fix 49. Captured, unless an artifact came here.
++#endif
+         SCIENCE::Science_Room_(trooper_anim, tech_count, captured_tech_ids, text_buffer);
+ 
+         file_ani::Reset_File_Animation_Buffer_();
+@@ -43,6 +51,9 @@
+ 
+     void __cdecl Show_Off_Artifact_Tech_(uint16_t tech_idx, int16_t planet_idx) {
+         int16_t discovered_tech = (int16_t)tech_idx;
++#ifdef ORION2RE_EXT
++        ext_science_reason = 3;  // OrionLayer, open fix 49. Artifact (either room).
++#endif
+ 
+         if (_finds_presented_by_scientist == 0) {
+             Show_Off_Captured_Tech_(&discovered_tech, 1, planet_idx);
+@@ -105,6 +116,9 @@
+         JIM::Get_Text_Message_("billtext.lbx", 2, message_text, sizeof(message_text));
+         JIM::Decode_Text_Tech_And_Other_Name_(message_text, MOX::_PLAYER_NUM, tech_idx, other_player_idx, sizeof(message_text));
+         spy_anim = BILL::Cache_Player_Spy_Anim_();
++#ifdef ORION2RE_EXT
++        ext_science_reason = 2;  // OrionLayer, open fix 49. Stolen.
++#endif
+         SCIENCE::Science_Room_(spy_anim, 1, &discovered_tech, message_text);
+         file_ani::Reset_File_Animation_Buffer_();
+         allocate::Pop_Block_(MOX::_screen_seg);
+@@ -122,6 +136,25 @@
+         // stolen and artifact technology (report.cpp), which is the same
+         // dialog and reports the same id.
+         const ext::ScreenOverride ext_screen_guard(52);
++        // OrionLayer, open fix 49. What the room presents (kind 1, id 52 kept; ext_api.cpp "TPOP").
++        const ext::TurnPopupGuard ext_popup_guard(-1, 1, nullptr, footer_text);
++        ext_popup_guard.arg(0, (int16_t)discovery_count);
++        ext_popup_guard.arg(1, ext_science_reason);
++        ext_popup_guard.arg(2, 0);
++        ext_science_reason = 0;
++        {
++            // Each entry takes one slot, a weapon-mod entry (0x4000) two.
++            int16_t slot = 0;
++            for (uint16_t e = 0; e < discovery_count && slot < 13; ++e) {
++                const bool mod = (discovery_data[slot] & 0x4000) != 0;
++                ext_popup_guard.arg((int16_t)(3 + slot), discovery_data[slot]);
++                ++slot;
++                if (mod && slot < 13) {
++                    ext_popup_guard.arg((int16_t)(3 + slot), discovery_data[slot]);
++                    ++slot;
++                }
++            }
++        }
+ #endif
+         MOX2::action_func_t saved_auto_function = nullptr;
+         int16_t science_hot_key;
+@@ -314,6 +347,9 @@
+ 
+                     ++current_entry_index;
+                     --remaining_discoveries;
++#ifdef ORION2RE_EXT
++                    ext_popup_guard.arg(2, (int16_t)(discovery_count - remaining_discoveries));  // OrionLayer, open fix 49. Entries shown.
++#endif
+ 
+                     first_entry = false;
+                     jumble_amount = (MOX::_settings.animations_on != 0) ? 100 : 0;
+@@ -438,6 +474,9 @@
+                     "SR_R%x_SC.LBX",
+                     (unsigned int)(uint8_t)MOX::_player[player_idx].race);
+ 
++#ifdef ORION2RE_EXT
++                ext_science_reason = 1;  // OrionLayer, open fix 49. Researched.
++#endif
+                 SCIENCE::Science_Room_(science_room_lbx, researched_tech_count, researched_tech_ids, decoded_text);
+                 return;
+             }
+--- a/src/game/turnsum.cpp
++++ b/src/game/turnsum.cpp
+@@ -1,4 +1,7 @@
+ #include "pch.h"
++#ifdef ORION2RE_EXT
++#include "ext/ext_api.h"  // OrionLayer, open fix 49. TurnPopupGuard.
++#endif
+ 
+ namespace {
+     int16_t _turn_sum_list_y[16] = {
+@@ -99,6 +102,11 @@
+             return;
+         }
+ 
++#ifdef ORION2RE_EXT
++        // OrionLayer, open fix 49. Keep reporting 40 while the popup is up (line above set 0) and send its list ("TPOP" kind 2).
++        const ext::TurnPopupGuard ext_popup_guard(SCREEN_TURN_SUMMARY, 2, nullptr, nullptr);
++#endif
++
+         if (MOX::_return_screen == SCREEN_REPORTS)
+         {
+             _g_turn_message_ix = 0;
+@@ -151,6 +159,19 @@
+                 int16_t field_btn_ok = fields::Add_Button_Field_(0xF2, 0x176, "", ok_button_image, "\x1B", 0);
+                 fields::Add_Hidden_Field_(0x54, 0x33, 0x1D0, 0x189, "\x1B", 0);
+                 int16_t field_hidden_bg = fields::Add_Hidden_Field_(0, 0, 0x27F, 0x1DF, "\x1B", 0);
++#ifdef ORION2RE_EXT
++                // OrionLayer, open fix 49. The page and the fields of this pass (ext_api.cpp "TPOP" kind 2).
++                ext_popup_guard.arg(0, _g_turn_sum_header.cur_page);
++                ext_popup_guard.arg(1, _g_turn_sum_header.max_page);
++                ext_popup_guard.arg(2, field_btn_up);
++                ext_popup_guard.arg(3, field_btn_down);
++                ext_popup_guard.arg(4, field_btn_ok);
++                ext_popup_guard.arg(5, INFO::_g_first_list_field);
++                ext_popup_guard.arg(6, INFO::_g_last_list_field);
++                ext_popup_guard.arg(7, (int16_t)(field_btn_ok + 1));
++                ext_popup_guard.arg(8, field_hidden_bg);
++                ext_popup_guard.arg(9, _g_turn_message_ix);
++#endif
+ 
+                 animate::Draw_(0x54, 0x33, popup_background_anim);
+                 LIST::Display_List_Page_(&_g_turn_sum_header);
+```
+
+**Proof on the tip it was applied to** (work order 188, `evidence/work_order_188/P4/fix49_proof.json`; drafted by a sub-agent in its own scratch clone, reviewed and proved by the session): in a scratch clone at `76f8c438` the patch file applied with `patch -p1 --dry-run` and `patch -p1`, no offset, no fuzz, the applied tree's diff equal to the file's; the six changed .cpp compiled alone with the build's own command (`-fsyntax-only`), exit 0 (the five game files also without ORION2RE_EXT); six controls refused, exit 1 each — `g_turn_popup.kind` misspelt in ext_api.cpp, `ext::TurnPopupGuard` misspelt `ext::TurnPopupGard` in each of turnsum.cpp, mainpups.cpp, science.cpp, events.cpp, colland.cpp. Then applied to `~/orion2re` (no offset), built (ninja, no error), `git add` of the seven files, one commit; `git diff 6859e163~1 6859e163` equals the file's diff (`cmp`). **A slip, recorded**: an engine of this session's own (PID 260952, the colony BUY test) was still running from the binary when it was rebuilt; the link replaced the file (the running process kept its old image) and nothing went wrong, but the ritual says no engine runs — it was stopped and its guard verified identical afterwards.
+
+**Recorded live** (engine `6859e163`, SAVE4, 15 turns, the virtual display, nothing saved; `evidence/work_order_188/P4_turns_save4_*`): 60 (the colony base's planet choice, "Select planet for Colony Base in Malus system", three planets), 33 (landing), 40 (the Turn Summary, a colony row jumped to that colony and came back), 64 (a combat target), 59 (a leader's offer), 52 (the science room, "Your scientists have completed their research in Positronics!"), each answered through HD's panel; 0 native frames.
+
+**Findings (recorded, not changed).** (1) A Turn Summary row acts on the row under the POINTER, not on the activated field (turnsum.cpp:176-179, the class of open fix 23): a client answers a row with an injected click, never an activation. (2) Asteroid belts in the system display are chosen through the grid field and the pointer only. (3) `Defense_Colony_Selection_Popup_` writes `MOX::_PLAYER_NUM` (mainpups.cpp:566). (4) The planet choice is also the map's colonise / outpost / drop-troops popup, so 60 is reported there too (the mode in args[1]).
+
+**Side effects.** The guards write only the view and the reported id; the one game-side addition is a file-static in science.cpp that only the guard reads. The block is at most a few KB (the Turn Summary's lines).
+
+**How to revert.** From `~/orion2re` on `orionlayer-local`: `git revert 6859e163` or `patch -R -p1`; rebuild; move the patch to `REPORTED_PATCHES`. Without it the turn-time popups stay behind the F12 notice (Stage 1).
 

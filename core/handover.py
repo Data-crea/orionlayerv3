@@ -239,3 +239,25 @@ def render_hold(app):
         from core import backgrounds
         backgrounds.draw(app.surface, "universal")
         app._surface_hd = True
+
+
+def overlay_for(app):
+    """What HD draws OVER the held frame instead of any picture (work order
+    188, open fixes 29 and 49): `("box", box)` while a generic message box
+    is up (MSGB), `("popup", popup)` while a turn-time popup is (TPOP),
+    None otherwise — and None on F12, the player's own mode. The box wins
+    over a popup: it is the one taking input (a confirmation over the
+    planet choice). The Leaders screen draws its own hire popup
+    (`screens/leaders`), so a hire popup over it (args[7] 1) is not ours."""
+    if getattr(app, "render_mode", "hd") == "original" or \
+            not getattr(app, "connected", False):
+        return None
+    state = app.client.state
+    box = getattr(state, "message_box", None)
+    if box is not None:
+        return ("box", box)
+    popup = getattr(state, "turn_popup", None)
+    if popup is not None and not (popup["kind"] == "leader_hire"
+                                  and popup["args"][7] == 1):
+        return ("popup", popup)
+    return None

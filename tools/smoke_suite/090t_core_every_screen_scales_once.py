@@ -34,7 +34,9 @@ import hud_evidence as _so_he
 _so_app = _so_he.make_app(1920, 1080)
 _so_targets = sorted(_so_app.dispatcher.screens) + ["help_popup",
                                                     "custom_race_message",
-                                                    "f12_notice"]
+                                                    "f12_notice",
+                                                    "message_box",
+                                                    "turn_popup"]
 
 
 def _so_sites(name, w, h):
@@ -51,6 +53,35 @@ def _so_sites(name, w, h):
             d.active.render(surf)
             _so_fn.Notice().render(surf, d.active.style, {},
                                    "NEXT_TURN (12)")
+        return _so_he.font_sites(d.active.style, draw)
+    if name == "turn_popup":
+        # Work order 188: a turn-time popup (open fix 49) — the App's too.
+        from core import turnpopup as _so_tp
+        _so_he.stage(app, "galaxy_map")
+        d = app.dispatcher
+
+        def draw():
+            surf = pygame.Surface((w, h))
+            d.active.render(surf)
+            _so_tp.draw(surf, d.active.style, {
+                "title": "A title", "lines": ["A line of the popup.",
+                                              ("A label", "+10")],
+                "options": [("An option", None)],
+                "buttons": [("CLOSE", None)], "picture": None})
+        return _so_he.font_sites(d.active.style, draw)
+    if name == "message_box":
+        # Work order 188: the HD message box (open fix 29) — the App's too.
+        from core import msgbox as _so_mb
+        _so_he.stage(app, "galaxy_map")
+        d = app.dispatcher
+
+        def draw():
+            surf = pygame.Surface((w, h))
+            d.active.render(surf)
+            _so_mb.draw(surf, d.active.style, {}, {
+                "kind": "text", "title": "A title", "text": "A line.\rAnother "
+                "line, long enough to wrap in the box at every size, and so "
+                "on and on.", "field_a": 1, "field_b": -1, "ticks": 0})
         return _so_he.font_sites(d.active.style, draw)
     _so_he.stage(app, name)
     d = app.dispatcher
@@ -84,7 +115,7 @@ assert not _so_bad, ("text scaled twice (largest size at 1920 -> at 3840, "
 # state"): at least these screens with text, and the blank ones by name.
 assert {"custom_race", "empire_identity", "select_race", "galaxy_map",
         "colony_summary", "new_game", "main_menu",
-        "f12_notice"} <= set(_so_measured), \
+        "f12_notice", "message_box", "turn_popup"} <= set(_so_measured), \
     _so_measured
 assert set(_so_blank) <= {"colony", "build_queue", "leaders"}, _so_blank
 ok(f"every screen the tree can stage scales its text once: "

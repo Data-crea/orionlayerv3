@@ -47,6 +47,10 @@ STACKED_AFTER_COLONY = (
     "doc/ext_engine_window_on_request.patch",
     # work order 188: 48 appends FMOV after 45's DSBX block, last
     "doc/ext_fleet_move_verdict.patch",
+    # 29 appends MSGB after 48's FMOV
+    "doc/ext_message_box_text.patch",
+    # 49 appends TPOP after 29's MSGB
+    "doc/ext_turn_popups.patch",
 )
 
 

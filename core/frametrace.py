@@ -88,13 +88,15 @@ class FrameTrace:
         return trace
 
     def record(self, *, screen, fields, source, kind="", hd="", reason="",
-               snap=None, live=None, notice=False):
+               snap=None, live=None, notice=False, box=False):
         entry = {"t": time.monotonic(), "snap": snap,
                  "screen": screen, "fields": fields, "live": live,
                  "source": source, "kind": kind, "hd": hd,
                  "reason": reason or ""}
         if notice:
             entry["notice"] = True
+        if box:
+            entry["box"] = True           # the HD message box (open fix 29)
         self.frames.append(entry)
         if self._fh is not None:
             self._fh.write(json.dumps(entry) + "\n")
@@ -144,7 +146,9 @@ def record_app_frame(app, shown):
         source=source, kind=app._net_kind if (shown or held) else "",
         hd=name, reason=app._fallback_note or "",
         snap=stats.get("state"),
-        notice=bool(held and getattr(gate, "notice", None) is not None))
+        notice=bool(held and getattr(gate, "notice", None) is not None),
+        box=bool(held and getattr(getattr(app, "_overlays", None), "active",
+                                  False)))
 
 
 def summarise(frames, target=None):

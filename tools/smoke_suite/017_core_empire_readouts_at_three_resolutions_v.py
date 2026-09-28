@@ -320,6 +320,11 @@ _MARKED = {
     "core/f12notice.py": "HD EXTENSION `f12_notice`",
     "assets/shared/fallback/labels.json": "HD EXTENSION f12_notice",
     "screens/fleets/fltbox.py": "HD EXTENSION `f12_notice`",
+    # ADDED 28 September 2026, work order 188: the HD message box on open
+    # fix 29. Its own check is 090zc.
+    "core/msgbox.py": "DEVIATION `hud_message_box`",
+    # ...and the turn-time popups on open fix 49. Its own check is 090zd.
+    "core/turnpopup.py": "DEVIATION `hud_turn_popup`",
 
 }
 _MARKS = ("HD EXTENSION", "DEVIATION")

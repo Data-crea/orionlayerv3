@@ -95,6 +95,17 @@ SCREENS = {
     #: the one an AI asked for (58), which run under their caller's id.
     57: ("(synthetic)",     "audience"),
     58: ("(synthetic)",     "audience"),
+    #: 59-64, synthetic, ON THE WIRE ONLY WITH OPEN FIX 49 (work order 188):
+    #: the report phase's popups, which run under SCREEN_MAIN (and the
+    #: combat target choice under 12). No HD SCREEN claims them: the App
+    #: draws them over the held frame (`core/turnpopup.py`, through
+    #: `core.handover.overlay_for`), as it draws 40, 52 and 33's content.
+    59: ("(synthetic)",     None),    # leader for hire
+    60: ("(synthetic)",     None),    # colonisation planet choice
+    61: ("(synthetic)",     None),    # new system explored
+    62: ("(synthetic)",     None),    # a leader gains a level
+    63: ("(synthetic)",     None),    # GNN
+    64: ("(synthetic)",     None),    # combat target choice
 }
 
 #: The last value of orion2re's own SCREEN enum:

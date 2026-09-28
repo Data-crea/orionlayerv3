@@ -1,0 +1,240 @@
+"""The HD message box — work order 188, Parts 4 and 5, on open fix 29.
+
+**ONE BOX FOR EVERY GENERIC BOX THE GAME OPENS.** `TEXTBOX::Do_Text_Box_`
+(with `Text_Box_`, `Timed_Text_Box_`, `GENDRAW::Message_Box_`, `Help_`,
+`COMBAT::Message_Box_Titled_`, `MAINSCR::Mini_Main_Screen_Text_Box_` and
+`HAROLD::User_Box_`'s text types), `GENDRAW::Message_Box_Exploding_` (and
+`Warning_Box_`, `Message_Box_Exploding_Star_`) and
+`GENDRAW::Confirmation_Box_` print a string their caller formatted, which
+until open fix 29 reached a client only as pixels. "MSGB" puts the kind,
+the title, the text (raw, FMTPARA codes and all) and the answer fields on
+the wire while the box takes input; this draws it in HD over the held last
+HD frame, wherever it opens — over an HD page, over the galaxy map at turn
+start, or over a screen HD has no view for (turn processing).
+
+WHAT IS TRANSCRIPTION: the text and title are the game's own, as the caller
+formatted them; the answers are the box's own fields (Yes = "Y", No = "N",
+the dismiss field ESC), activated by their id — which is what the box's own
+input loop compares (gendraw.cpp:201-207, textbox.cpp `Text_Box_Get_Input_`).
+The line breaks and columns follow FMTPARA (`core.helpformat`).
+
+**DEVIATION `hud_message_box`**: drawn in the HUD style (glass, the frame
+colour, HD's font) instead of TEXTBOX.LBX / WARNING.LBX / CONFIRM.LBX art,
+the warning box's animation not played, and — because the original's
+message and text boxes are answered by a click ANYWHERE (one full-screen
+hidden field) — HD draws the text box's CLOSE button on every box that is
+not a confirmation (the warning box has none in the original) and also takes
+a click anywhere and Enter / ESC / Space. The words on the buttons are artwork in the original
+and typed in `assets/shared/msgbox/labels.json` (decision 15).
+"""
+import struct as _st
+
+import pygame
+
+from core import helpformat
+from core.hud import blocks as hud
+from core.hud import text as hudtext
+
+KINDS = {1: "text", 2: "timed", 3: "message", 4: "warning",
+         5: "confirmation"}
+DEFAULT_WORDS = {"yes": "YES", "no": "NO", "close": "CLOSE"}
+#: Reference geometry (1080 px tall), scaled by `win_h / 1080`.
+REF_W = 900
+REF_PAD = 34
+#: The text's and the title's font px at 1080 — a paragraph, not a label in
+#: a box, so sized directly and scaled once by `win_h / 1080` (090t).
+REF_FONT, REF_TITLE_FONT = 30, 38
+REF_BUTTON = (220, 60)
+#: The held frame's dim under the box (as the F12 notice's).
+DIM_ALPHA = 110
+
+
+def parse(gs, data, pos):
+    """Read MSGB at `pos` into `gs.message_box` (None when absent or short).
+    Returns the new position."""
+    gs.message_box = None
+    if data[pos:pos + 4] != b"MSGB" or pos + 12 > len(data):
+        return pos
+    version, kind, fa, fb, ticks = _st.unpack_from("<BBhhh", data, pos + 4)
+    at = pos + 12
+    texts = []
+    for _ in range(2):
+        if at + 2 > len(data):
+            return pos
+        (n,) = _st.unpack_from("<h", data, at)
+        at += 2
+        if n < 0 or at + n > len(data):
+            return pos
+        texts.append(data[at:at + n].decode("latin-1"))
+        at += n
+    if version != 1 or kind not in KINDS:
+        return pos
+    gs.message_box = {"kind": KINDS[kind], "field_a": fa, "field_b": fb,
+                      "ticks": ticks, "title": texts[0] or None,
+                      "text": texts[1]}
+    return at
+
+
+def build(kind, text, title=None, field_a=1, field_b=-1, ticks=0):
+    """The block as the engine writes it — for the checks' stand-ins."""
+    code = {v: k for k, v in KINDS.items()}[kind]
+    out = b"MSGB" + _st.pack("<BBhhh", 1, code, field_a, field_b, ticks)
+    for s in (title or "", text):
+        raw = s.encode("latin-1")
+        out += _st.pack("<h", len(raw)) + raw
+    return out
+
+
+def answers(box, fields):
+    """`[(key, field)]` for the box's answers, each resolved in the LIVE
+    list by the id the box reported — or None for a field not in it (the
+    box and the list come in two messages; a list from before the box has
+    no such field and nothing is sent until it does)."""
+    by_index = {getattr(f, "index", None): f for f in (fields or [])}
+    if box["kind"] == "confirmation":
+        keys = (("yes", box["field_a"]), ("no", box["field_b"]))
+    else:
+        keys = (("close", box["field_a"]),)
+    return [(key, by_index.get(fid)) for key, fid in keys]
+
+
+def lines_of(text):
+    """The text's lines as FMTPARA lays them out: [(plain, paragraph)]."""
+    return [(ln.plain(), ln.paragraph_break)
+            for ln in helpformat.parse(text or "")]
+
+
+def split_right(line):
+    """`(left, right)` for a line whose last run is right-justified (a
+    table row: "Food per farmer" … "0"), else None."""
+    runs = [r for r in line.runs if r.text]
+    if len(runs) >= 2 and runs[-1].align == "right":
+        return (" ".join(r.text.strip() for r in runs[:-1]),
+                runs[-1].text.strip())
+    return None
+
+
+class View:
+    """The box over the held frame, for one App: drawing and input."""
+
+    def __init__(self):
+        self._base = None
+        self._key = None
+        self.rects = {}           # key -> window rect of its button
+        self.panel = None
+
+    def reset(self):
+        self._base = None
+        self._key = None
+        self.rects = {}
+        self.panel = None
+
+    def render(self, surface, style, labels, box):
+        """Draw `box` over the held surface; returns the panel rect."""
+        size = surface.get_size()
+        if self._base is None or self._base.get_size() != size:
+            base = surface.copy()
+            shade = pygame.Surface(size, pygame.SRCALPHA)
+            shade.fill((0, 0, 0, DIM_ALPHA))
+            base.blit(shade, (0, 0))
+            self._base = base
+        surface.blit(self._base, (0, 0))
+        self.panel, self.rects = draw(surface, style, labels, box)
+        return self.panel
+
+    def answer_at(self, box, fields, x, y):
+        """The field a click at (x, y) answers, or None. A text / message
+        box takes a click anywhere (its one full-screen field)."""
+        live = dict(answers(box, fields))
+        for key, rect in self.rects.items():
+            if rect.collidepoint(x, y):
+                return live.get(key)
+        if box["kind"] != "confirmation":
+            return live.get("close")
+        return None
+
+    @staticmethod
+    def answer_key(box, fields, event):
+        """The field a key answers: Y / N on a confirmation (the box's own
+        hotkeys), Enter / ESC / Space on the others."""
+        live = dict(answers(box, fields))
+        ch = (getattr(event, "unicode", "") or "").lower()
+        if box["kind"] == "confirmation":
+            return live.get({"y": "yes", "n": "no"}.get(ch, ""))
+        if event.key in (pygame.K_RETURN, pygame.K_ESCAPE, pygame.K_SPACE,
+                         pygame.K_KP_ENTER):
+            return live.get("close")
+        return None
+
+
+def draw(surface, style, labels, box):
+    """The panel: title, the text, the buttons. `(panel, {key: rect})`."""
+    win_w, win_h = surface.get_size()
+    s = win_h / 1080
+    words = dict(DEFAULT_WORDS, **{k: v for k, v in (labels or {}).items()
+                                   if k in DEFAULT_WORDS and v})
+    pad = int(REF_PAD * s)
+    w = int(REF_W * s)
+    inner = w - 2 * pad
+    size = max(10, int(REF_FONT * s))
+    colour = hudtext.colour("value")
+    rows = []
+    from core.textfit import wrap_rendered
+    for ln in helpformat.parse(box["text"] or ""):
+        plain = ln.plain()
+        if not plain.strip():
+            rows.append(None)
+            continue
+        pair = split_right(ln)
+        if pair is not None:
+            # a table row: the label left and the value right, in a column
+            # of the box's text width (FMTPARA's justification codes)
+            rows.append((style.render_text(pair[0], size, colour[:3]),
+                         style.render_text(pair[1], size, colour[:3])))
+        else:
+            rows.extend(wrap_rendered(style, plain, size, inner, colour))
+        if ln.paragraph_break:
+            rows.append(None)
+    while rows and rows[-1] is None:
+        rows.pop()
+    step = int(size * 1.3)
+    title = style.render_text(box["title"], max(12, int(REF_TITLE_FONT * s)),
+                              tuple(hudtext.colour("title")[:3])) \
+        if box.get("title") else None
+    bw, bh = int(REF_BUTTON[0] * s), int(REF_BUTTON[1] * s)
+    text_h = sum(step if r is not None else step // 2 for r in rows)
+    h = pad + (title.get_height() + pad // 2 if title else 0) + text_h + \
+        pad + bh + pad
+    h = min(h, win_h - 2 * pad)
+    panel = pygame.Rect((win_w - w) // 2, (win_h - h) // 2, w, h)
+    hud.popup(surface, panel, s)
+    y = panel.y + pad
+    if title:
+        surface.blit(title, title.get_rect(midtop=(panel.centerx, y)))
+        y += title.get_height() + pad // 2
+    col = pygame.Rect(0, 0, int(inner * 0.72), 1)
+    col.centerx = panel.centerx
+    for r in rows:
+        if r is None:
+            y += step // 2
+            continue
+        if y + step > panel.bottom - pad - bh:
+            break                   # the original clips at its window too
+        if isinstance(r, tuple):
+            surface.blit(r[0], (col.x, y))
+            surface.blit(r[1], r[1].get_rect(topright=(col.right, y)))
+        else:
+            surface.blit(r, r.get_rect(midtop=(panel.centerx, y)))
+        y += step
+    keys = ("yes", "no") if box["kind"] == "confirmation" else ("close",)
+    gap = pad
+    total = len(keys) * bw + (len(keys) - 1) * gap
+    x = panel.centerx - total // 2
+    rects = {}
+    for key in keys:
+        r = pygame.Rect(x, panel.bottom - pad - bh, bw, bh)
+        hud.action_button(surface, r, s, "normal", words[key],
+                          style_renderer=style)
+        rects[key] = r
+        x += bw + gap
+    return panel, rects

@@ -96,6 +96,10 @@ if slow("fallback_verdict_log"):
                 active_name="fleets", overlay_name="")
             self._reporter = _fb_note.Reporter()
             self._fallback_note = None
+            # work order 188: the HD box and turn popup the App asks for
+            # first (`handover.overlay_for`) — none up here
+            self._overlays = _nt.SimpleNamespace(update=lambda: False,
+                                                 active=False)
 
         _verdict = _fb_main.App._verdict
         _gated = _fb_main.App._gated

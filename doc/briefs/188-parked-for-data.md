@@ -17,6 +17,27 @@ in the fleet box while a star is hovered (fleetpop.cpp:1063-1091). FMOV now
 carries every number it needs (turns_left, parsecs, flags). **Default: not
 built** (the order asked for the line); the box keeps its status line.
 
+### 1c. The turn-time screens that still show the F12 notice (Parts 4, 5)
+
+Tactical combat (and combat's own boxes), the invasion / bombard choice,
+ground combat, the galactic council, the Antaran room, the evolutionary
+mutation picker, the monster bribe, the star rename, the occupation-policy
+popup and the end of game run under 12 / 0 / 33 without an HD view: the
+F12 notice stands there (Stage 1), so the game is answered on F12. What each
+needs is in `doc/brief_turn_messages.md` ("What would need engine fixes" of
+the reading: the council's state and lists, the combat popups' data, the
+star name field). **Default: notice**; proposal: the council and the star
+rename next (they appear in normal play without combat).
+
+### 1d. The popups' artwork (Part 4)
+
+The HD turn popups and the message box are HUD panels (DEVIATION
+`hud_turn_popup`, `hud_message_box`): the science room, the GNN studio and
+its picture, the colony landing art, TURNSUM.LBX, the BUFFER0.LBX frames and
+the system display's planet pictures are not drawn — the system display is
+a list of the star's planets by name. **Default: as built**; the pictures
+are an extractor away if Data wants them.
+
 ## 2. Carried over unchanged (not acted on in this order)
 
 - **From 185** (`doc/briefs/185-parked-for-data.md` item 2c, "The Ship

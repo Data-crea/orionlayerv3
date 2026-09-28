@@ -1,0 +1,191 @@
+Engine: the generic message box's kind, title, text and answers on the wire, "MSGB" (open fix 29).
+
+STATUS: APPLIED 28 September 2026 by work order 188 (Parts 4 and 5, the
+turn-change messages and the HD message box for the six paths of
+187-original-visibility), under the order's advance approval of the engine
+fixes a part needs ("Engine fixes: approved in advance for this run" — "Fix
+29 and any new fix") — orion2re 76f8c438 on orionlayer-local (before:
+010870bc), this file's diff byte for byte (index lines included). Required
+by tools/version_check.py since work order 188.
+
+PROOF ON THE TIP IT WAS APPLIED TO (work order 188): in a scratch clone of
+orionlayer-local at 010870bc this file applied with `patch -p1 --dry-run`
+and `patch -p1`, no offset, no fuzz, the applied tree's diff equal to it;
+ext_api.cpp, gendraw.cpp and textbox.cpp compiled alone with the build's
+own command (-fsyntax-only), exit 0; three controls were refused by the
+compiler, exit 1 each — `g_message_box.field_b` misspelt `field_c` in
+ext_api.cpp, `ext::MessageBoxGuard` misspelt `ext::MessageBoxGard` in
+gendraw.cpp and in textbox.cpp. Then applied to ~/orion2re (no offset),
+built (ninja, no error) and committed.
+
+To revert, from ~/orion2re on the orionlayer-local branch: `git revert
+76f8c438` or `patch -R -p1`; then rebuild. See the entry,
+doc/orion2re_open_fixes.md 29.
+
+WHAT IT IS FOR
+TEXTBOX::Do_Text_Box_ (with Text_Box_, Timed_Text_Box_, GENDRAW::Message_Box_,
+Help_, COMBAT::Message_Box_Titled_, MAINSCR::Mini_Main_Screen_Text_Box_ and
+HAROLD::User_Box_'s text types), GENDRAW::Message_Box_Exploding_ (with
+Warning_Box_ and Message_Box_Exploding_Star_) and GENDRAW::Confirmation_Box_
+print a string their caller formatted — H_Message_(n) with values the engine
+computed — which exists nowhere else: a client saw only the pixels, and the
+Stage 1 notice of work order 188 had to stand in their place. A guard set
+once the box's own fields are added puts the kind, the title and text as the
+caller handed them, the answer fields and a timed box's ticks on the wire
+while the box takes input, and gives back the box below when it returns.
+
+diff --git a/src/ext/ext_api.cpp b/src/ext/ext_api.cpp
+index f9e3d405..489a19c5 100644
+--- a/src/ext/ext_api.cpp
++++ b/src/ext/ext_api.cpp
+@@ -898,6 +898,33 @@ static void SerializeState(std::vector<uint8_t>& buf,
+             }
+         }
+     }
++
++    // 15. The generic message box that is up: "MSGB", written on ANY screen
++    //     while one is (the boxes run under their caller's id), and LAST.
++    //     OrionLayer, open fix 29.
++    //
++    //     TEXTBOX::Do_Text_Box_ and GENDRAW's exploding, warning and
++    //     confirmation boxes print a caller's string that exists nowhere
++    //     else — H_Message_(n) formatted with values the engine computed —
++    //     so a client saw only their pixels. Sent as the box holds it: the
++    //     kind, the answer fields, a timed box's ticks, the title and the
++    //     text raw (FMTPARA codes and all), each with its length first.
++    if (g_message_box.kind != 0) {
++        buf.push_back((uint8_t)'M');
++        buf.push_back((uint8_t)'S');
++        buf.push_back((uint8_t)'G');
++        buf.push_back((uint8_t)'B');
++        Write8(buf, 1);                                   // block version
++        Write8(buf, g_message_box.kind);
++        Write16(buf, g_message_box.field_a);
++        Write16(buf, g_message_box.field_b);
++        Write16(buf, g_message_box.ticks);
++        for (const char* str : {g_message_box.title, g_message_box.text}) {
++            const size_t len = str != nullptr ? strnlen(str, 4000) : 0;
++            Write16(buf, (int16_t)len);
++            WriteBytes(buf, str, len);
++        }
++    }
+ }
+ 
+ // ── Field list ───────────────────────────────────────────
+@@ -1385,6 +1412,20 @@ ScreenOverride::~ScreenOverride() {
+     g_screen_override = previous;
+ }
+ 
++// OrionLayer, open fix 29. The generic message box that is up (ext_api.h).
++MessageBoxView g_message_box = {0, nullptr, nullptr, -1, -1, 0};
++
++MessageBoxGuard::MessageBoxGuard(uint8_t kind, const char* title,
++                                 const char* text, int16_t field_a,
++                                 int16_t field_b, int16_t ticks)
++    : previous(g_message_box) {
++    g_message_box = {kind, title, text, field_a, field_b, ticks};
++}
++
++MessageBoxGuard::~MessageBoxGuard() {
++    g_message_box = previous;
++}
++
+ // OrionLayer, open fix 47. The running list field (ext_api.h).
+ ListFieldView g_list_field = {nullptr, nullptr, 0, 0, nullptr};
+ 
+diff --git a/src/ext/ext_api.h b/src/ext/ext_api.h
+index 1b6b8a9e..b08738fa 100644
+--- a/src/ext/ext_api.h
++++ b/src/ext/ext_api.h
+@@ -78,6 +78,31 @@ struct ListFieldGuard {
+     ~ListFieldGuard();
+ };
+ 
++/// OrionLayer, open fix 29. The generic message box that is up: which kind,
++/// its title and text as the caller handed them (raw, FMTPARA codes and
++/// all), the field id of each answer and a timed box's ticks — the text
++/// otherwise reaches a client only as pixels. Set by MessageBoxGuard once
++/// the box's own fields are added (TEXTBOX::Do_Text_Box_,
++/// GENDRAW::Message_Box_Exploding_, GENDRAW::Confirmation_Box_), restored
++/// when the box returns, so a box opened over another box shows and then
++/// gives back the one below. What is SENT, nothing the game reads.
++struct MessageBoxView {
++    uint8_t kind;          // 0 none, 1 text, 2 timed text, 3 message, 4 warning, 5 confirmation
++    const char* title;     // Do_Text_Box_'s, or nullptr
++    const char* text;
++    int16_t field_a;       // the dismiss field, or Yes
++    int16_t field_b;       // No, or -1
++    int16_t ticks;         // a timed box's input ticks, else 0
++};
++extern MessageBoxView g_message_box;
++
++struct MessageBoxGuard {
++    MessageBoxView previous;
++    MessageBoxGuard(uint8_t kind, const char* title, const char* text,
++                    int16_t field_a, int16_t field_b, int16_t ticks);
++    ~MessageBoxGuard();
++};
++
+ /// The field id of the input Get_Input_() is returning THIS CALL when it
+ /// came from a client's ACTIVATE_FIELD, and 0 when it came from the mouse.
+ ///
+diff --git a/src/game/gendraw.cpp b/src/game/gendraw.cpp
+index 4b3bef2e..94ae6005 100644
+--- a/src/game/gendraw.cpp
++++ b/src/game/gendraw.cpp
+@@ -1,4 +1,7 @@
+ #include "pch.h"
++#ifdef ORION2RE_EXT
++#include "ext/ext_api.h"  // OrionLayer, open fix 29. MessageBoxGuard.
++#endif
+ 
+ namespace GENDRAW {
+     s_colors _message_text_colors = {{0xA0, 0xA3, 0xA3, 0xA5, 0xAB, 0xAB, 0xAB, 0xAB}};
+@@ -103,6 +106,10 @@ namespace GENDRAW {
+         _message_box_y = 0x90;
+         int mode = 4;
+         _first_field = fields::Add_Hidden_Field_(0, 0, 0x27F, 0x1DF, "\x1B", 0x29);
++#ifdef ORION2RE_EXT
++        // OrionLayer, open fix 29. The box on the wire while it takes input (ext_api.h).
++        const ext::MessageBoxGuard ext_box_guard(_warning_box != 0 ? 4 : 3, nullptr, str, _first_field, -1, 0);
++#endif
+ 
+         s_colors font_colors;
+         fonts::Set_Remap_Font_Style_(4, &font_colors);
+@@ -171,6 +178,10 @@ namespace GENDRAW {
+ 
+         _first_field = fields::Add_Hidden_Field_(0xeb, 0x12e, 0x11e, 0x143, "Y", 0x29);
+         int16_t second_field = fields::Add_Hidden_Field_(0x159, 0x12e, 0x18c, 0x143, "N", 0x29);
++#ifdef ORION2RE_EXT
++        // OrionLayer, open fix 29. The box on the wire while it takes input (ext_api.h).
++        const ext::MessageBoxGuard ext_box_guard(5, nullptr, text, _first_field, second_field, 0);
++#endif
+ 
+         for (int i = 0; i < 3; ++i) {
+             _image_seg[i] = (s_animation_header*)buffer::Buffer_Reload_("confirm.lbx", i, (uint8_t*)MOX::_global_cache_seg);
+diff --git a/src/game/textbox.cpp b/src/game/textbox.cpp
+index 1ca2def3..cf473f09 100644
+--- a/src/game/textbox.cpp
++++ b/src/game/textbox.cpp
+@@ -1,4 +1,7 @@
+ #include "pch.h"
++#ifdef ORION2RE_EXT
++#include "ext/ext_api.h"  // OrionLayer, open fix 29. MessageBoxGuard.
++#endif
+ 
+ namespace TEXTBOX {
+     int16_t _bottom_y;
+@@ -246,7 +249,13 @@ namespace TEXTBOX {
+         video::Copy_Off_To_Back_();
+ 
+         /* "\x1B" is fmtpara's color-attribute control byte; used here as a non-printing field label. */
++#ifdef ORION2RE_EXT
++        // OrionLayer, open fix 29. The box on the wire while it takes input (ext_api.h).
++        const int16_t ext_dismiss = fields::Add_Hidden_Field_(0, 0, 639, 479, "\x1B", 41);
++        const ext::MessageBoxGuard ext_box_guard(input_ticks > 0 ? 2 : 1, title, text, ext_dismiss, -1, input_ticks);
++#else
+         fields::Add_Hidden_Field_(0, 0, 639, 479, "\x1B", 41);
++#endif
+ 
+         Text_Box_Get_Input_(input_ticks);
+ 

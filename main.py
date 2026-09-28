@@ -22,6 +22,7 @@ from core import entrytiming
 from core import handover
 from core import helppopup
 from core import f12notice
+from core import overlays
 
 logging.basicConfig(level=logging.INFO,
                     format="%(asctime)s.%(msecs)03d %(name)s: %(message)s",
@@ -154,6 +155,9 @@ class App:
         #: frame: "without_f12" must stay 0 (work order 188: the flash
         #: rule everywhere, not only on the walks' recorded transitions).
         self.native_frames = {"f12": 0, "without_f12": 0}
+        #: The HD message box and the turn-time popups (open fixes 29 and
+        #: 49, work order 188), drawn over the held frame: `core/overlays`.
+        self._overlays = overlays.Overlays(self)
         self._note_labels = self.res.load_json(
             "assets/shared/fallback/labels.json", {}) or {}
 
@@ -263,7 +267,9 @@ class App:
                     # `fallback_keys` (the original has no such window).
                     self.original_view.forward_key(self.client, event)
                 elif self._handover.holding:
-                    pass  # nothing reaches a held frame (180 A2)
+                    if self._overlays.active:  # the HD box's / popup's keys
+                        self._overlays.key(event)
+                    # nothing else reaches a held frame (180 A2)
                 else:
                     self.dispatcher.route_key_event(event)
             elif self.editor.handle_event(event):
@@ -328,6 +334,13 @@ class App:
             self._net_kind = ""
             self._handover.holding = False
             return self._verdict(False, None)
+        # A GENERIC BOX OR A TURN-TIME POPUP HD CAN DRAW (open fixes 29 and
+        # 49, work order 188): drawn in HD over the held last frame,
+        # whatever screen it opened on — the rule is `handover.overlay_for`.
+        if self._overlays.update():
+            self._net_kind = ""
+            self._handover.holding, self._handover.notice = True, None
+            return False
         if self.render_mode == "original" or self.dispatcher.use_original:
             self._net_kind = (frametrace.F12 if self.render_mode == "original"
                               else frametrace.NO_SCREEN)
@@ -389,6 +402,8 @@ class App:
                 self.client, screen_x, screen_y,
                 self.win_w, self.win_h)
         elif self._handover.holding:
+            if self._overlays.active:
+                self._overlays.click(screen_x, screen_y)
             return  # a held frame is not the game's state (180 A2)
         elif self.dispatcher.active:
             self.dispatcher.route_click(screen_x, screen_y)
@@ -451,7 +466,9 @@ class App:
             # THE LAST HD FRAME, or the universal background (180 A2).
             handover.render_hold(self)
             notice = self._handover.notice
-            if notice is not None:
+            if self._overlays.render(self.surface):
+                pass                      # the HD box or turn popup (188)
+            elif notice is not None:
                 # WORK ORDER 188, STAGE 1: where the game's picture would
                 # have been shown, the held frame dimmed and "F12 to
                 # answer" (HD EXTENSION `f12_notice`).

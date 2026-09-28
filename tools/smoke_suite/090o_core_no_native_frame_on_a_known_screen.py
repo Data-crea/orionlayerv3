@@ -78,10 +78,16 @@ assert "elif self._handover.holding:" in _ho_render and \
 assert "handover.render_hold(self)" in _ho_render
 assert "if not self._handover.holding:\n            self.editor.render" \
     in _ho_render
-assert "elif self._handover.holding:\n            return" in \
-    _ho_inspect.getsource(_ho_main.App._handle_click)
+# a held frame answers nothing — but the HD message box drawn over it
+# (open fix 29, work order 188), whose answer is the box's own field
+_ho_click = _ho_inspect.getsource(_ho_main.App._handle_click)
+_ho_held = _ho_click[_ho_click.index("elif self._handover.holding:"):]
+assert _ho_held.split("\n")[1].strip() == \
+    "if self._overlays.active:" and "            return" in _ho_held, \
+    _ho_held
 _ho_events = _ho_inspect.getsource(_ho_main.App._handle_events)
-assert "elif self._handover.holding:\n                    pass" in _ho_events
+assert "elif self._handover.holding:\n                    if self._overlays" \
+    in _ho_events
 assert "and not self._handover.holding" in _ho_events
 # The held frame itself: a surface that shows the game's picture (or a new
 # one after a resize) is covered with the universal background; a surface

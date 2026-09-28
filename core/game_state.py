@@ -114,6 +114,12 @@ class GameState:
     #: The move verdict at every star for the fleet box's selection, open
     #: fix 48 (work order 188): `core/moveblocks.py` names every key.
     fleet_move: Optional[dict] = None        # "FMOV", fix 48
+    #: The generic message box that is up, open fix 29 (work order 188):
+    #: `core/msgbox.py` names every key.
+    message_box: Optional[dict] = None       # "MSGB", fix 29
+    #: The turn-time popup that is up, open fix 49 (work order 188):
+    #: `core/turnpopup.py` names every key.
+    turn_popup: Optional[dict] = None        # "TPOP", fix 49
 
     # Fields (from FIELD_LIST message)
     fields: list = field(default_factory=list)
@@ -397,10 +403,14 @@ def parse_state(data: bytes) -> GameState:
             gs.info_screen = {"bill": _bill, "messages": _msgs}
 
     from core import colonyblocks, designblocks, diplblocks, moveblocks
+    from core import msgbox
     pos = diplblocks.parse(gs, data, pos)
     pos = colonyblocks.parse(gs, data, pos)
     pos = designblocks.parse(gs, data, pos)
-    pos = moveblocks.parse(gs, data, pos)     # FMOV, open fix 48, LAST
+    pos = moveblocks.parse(gs, data, pos)     # FMOV, open fix 48
+    pos = msgbox.parse(gs, data, pos)         # MSGB, open fix 29
+    from core import turnpopup
+    pos = turnpopup.parse(gs, data, pos)      # TPOP, open fix 49, LAST
     return gs
 
 

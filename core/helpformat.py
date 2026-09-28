@@ -72,11 +72,15 @@ class Run:
     it there with an X function or a tab.
     """
 
-    __slots__ = ("text", "x")
+    __slots__ = ("text", "x", "align")
 
-    def __init__(self, text, x=None):
+    def __init__(self, text, x=None, align=None):
         self.text = text
         self.x = x
+        #: The justification a `\x1A` + digit code set before this run
+        #: (`Set_Justification_`, fmtpara.cpp:998-1018: 0 left, 1 right,
+        #: 2 centre, 3 full), or None where none was set.
+        self.align = align
 
     def __repr__(self):
         return f"Run({self.text!r}, x={self.x})"
@@ -115,6 +119,7 @@ def parse(body):
     lines = []
     runs = []
     pending_x = None
+    align = None
     tabs = []
     text = []
     i = 0
@@ -123,7 +128,7 @@ def parse(body):
     def flush_text():
         nonlocal pending_x, text
         if text:
-            runs.append(Run("".join(text), pending_x))
+            runs.append(Run("".join(text), pending_x, align))
             text = []
             pending_x = None
 
@@ -165,6 +170,22 @@ def parse(body):
 
         if ch == "\b":
             i += 1                      # hyphenation hint, no output
+            continue
+
+        if ch == "\x1a":
+            # JUSTIFICATION (`Set_Justification_`, fmtpara.cpp:364-365,
+            # 998-1018): the byte AND the digit after it are the code — the
+            # text before is completed as its own segment and the digit sets
+            # the mode for what follows. Found by work order 188: the colony
+            # confirmation's "\x1A0Food per farmer \x1A10" printed its codes'
+            # digits ("0Food per farmer 10" for "Food per farmer … 0").
+            flush_text()
+            if i + 1 < n and body[i + 1].isdigit():
+                align = {"0": "left", "1": "right", "2": "center",
+                         "3": "full"}.get(body[i + 1], align)
+                i += 2
+            else:
+                i += 1
             continue
 
         if ch < " " or ch == "\x7f":

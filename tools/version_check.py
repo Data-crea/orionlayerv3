@@ -259,6 +259,16 @@ LOCAL_PATCHES = {
         os.path.join("src", "ext", "ext_api.cpp"), "OrionLayer, open fix 48.",
         "the move verdict for the fleet box's selection is not on the wire "
         "(open fix 48) and the galaxy map draws no travel line on hover"),
+    # Applied 28 September 2026 by work order 188: 76f8c438, on 010870bc.
+    "doc/ext_message_box_text.patch": (
+        os.path.join("src", "game", "gendraw.cpp"), "OrionLayer, open fix 29.",
+        "the generic message box's text is not on the wire (open fix 29): "
+        "HD shows the F12 notice in every box's place"),
+    # Applied 29 September 2026 by work order 188: 6859e163, on 76f8c438.
+    "doc/ext_turn_popups.patch": (
+        os.path.join("src", "game", "turnsum.cpp"), "OrionLayer, open fix 49.",
+        "the turn-time popups have no id of their own and their content is "
+        "not on the wire (open fix 49): they stay behind the F12 notice"),
 }
 
 #: Patches that are REPORTED to Joes and not yet applied: listed with
@@ -318,6 +328,8 @@ FIX_NUMBERS = {
     "doc/ext_audience_screen.patch": (46,),
     "doc/ext_audience_state.patch": (47,),
     "doc/ext_fleet_move_verdict.patch": (48,),
+    "doc/ext_message_box_text.patch": (29,),
+    "doc/ext_turn_popups.patch": (49,),
 }
 
 
