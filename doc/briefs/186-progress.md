@@ -236,30 +236,7 @@ Engine `230a0638` (the binary `play.py` starts), every session on Xvfb through
    SAVE1-9 and SAVE11 identical in every run.
 9. Checks **406 → 407** (fast 396 → 397).
 
-### Data's acceptance on his desktop (one screen)
-
-Start with `python play.py` (use a save you can throw away — Build and
-the diplomacy menu act on the loaded game).
-
-1. **No engine window appears**; the HD main menu, no intro sound.
-2. Load the save → map → your colony → **CHANGE → Design → a design row**:
-   the **HD Ship Designer** (glass panels, the design's numbers), no flash
-   of the old picture on the way in.
-3. Click the **computer panel**, a **weapon row**, a **special row**: each
-   an HD picker; in the weapon picker choose a weapon, an arc, a
-   modification; **ESC** back each time. Try **+ / −** and a **hull**.
-4. **F12**: OrionLayer shows the original's picture AND the **original's
-   own window opens**. Click the name, type, **Enter**, **F12**: the HD
-   page shows the new name; the original's window is gone.
-5. **Cancel** → the build popup (or **Build** to keep the design).
-6. **RACES → AUDIENCE → a race**: the HD audience (room, ambassador); click
-   the greeting → the menu; **Declare War → "REALLY DECLARE WAR?!" →
-   Cancel**; **Good Bye** → Races.
-7. Close OrionLayer → the engine stops too. Start the orion2re binary by
-   hand → **its window appears**, as before fix 41.
-
-What you should NOT see: the old 640x480 picture flashing before an HD
-screen; the original's window at any time except while F12 is on.
+Data's acceptance checklist: at the end of this file.
 
 ## Part 4 — the hold before modal boxes (measured, nothing changed) — **DONE**
 
@@ -295,3 +272,84 @@ its list, every presented frame with its snapshot count). Engine
   documented, ≈ 0.5 s at a box's pace), and keep `HOLD` for known screens
   whose data is late. Parked (1g).
 
+## Part 5 — gates and push
+
+- **Full suite**: exit 0, **407 green** (tree at `78ecab8`).
+- **Fresh clone** (`git clone --no-hardlinks` at `78ecab8`, `python
+  tools/setup.py`): setup exit 0, its own full suite **407 green**, the
+  engine it needs named as open fixes 3 … 41, 43, 44, 45, 46, 47 on
+  `orionlayer-local`. (The clone at Part 3's `ab9e49e`: the same, 407.)
+- **liveguard**: every session verified after its engine stopped; MOX.SET
+  (each load) and SAVE10 (the TURN presses of parts 3 and 4) restored from
+  the guard taken before that engine existed; against the order's first
+  guard `guard_186_start`: **every file identical** (the tree clean).
+- **Flash check**: 090o's replay in the suite, green; live on the final code
+  (engine `230a0638`, `P5_flash_1920x1080`): **29 transitions, 0 native
+  frames**.
+- **orion2re**: `orionlayer-local` at `230a0638`, its three untracked files
+  untouched, push URL disabled; nothing pushed anywhere.
+- **Push**: `git push` (no force), the pre-push hook's full suite.
+
+## End of work order 186
+
+**Applied** (orion2re `orionlayer-local`, one commit each, never pushed):
+
+| fix | first line | hash after |
+|---|---|---|
+| 44 | The Ship Designer's design as it is being edited | `70d31b10` |
+| 45 | The Ship Designer's sub-dialogs: which is open, and what it offers | `4af9fefa` |
+| 46 | The diplomacy audience has no screen id | `8aea1a25` |
+| 47 | The diplomacy audience's state is not on the wire | `ba9b6bc6` |
+| 43 | The engine's window: hidden only when OrionLayer starts it, and shown again on request (the proper fix 41; its proof complete on `ba9b6bc6`) | `230a0638` |
+
+**Not applied**: open fix 42, "A screen is silent on the wire while its
+input delay counts down" — Data did not approve it; its entry stays open,
+nothing builds on it.
+
+**Flash walk**: 29 transitions, 0 native frames (1920, final code); with
+the designer, audience and colony walks and both resolutions, 164
+recorded transitions in parts 2-3, 0 native frames.
+
+**The 3.8 s, in three sentences**: at every modal box over an HD screen the
+hand-over gate holds HD's last frame for its full 36 snapshots, because
+that hold ends early only when a known screen's late data arrives, and a
+modal never sends any. The box's own loop sends a snapshot every ~106-113
+ms, so the 36 take ~4 s (the box's list is on the wire within 0.1 s of the
+input; the wire adds nothing), while an id no HD screen claims is shown at
+once. It does not depend on fix 42 — no input delay precedes any box
+measured — and the recommendation (parked) is to show a modal once its
+list has stood `SETTLE` snapshots, about half a second.
+
+### Data's acceptance on his desktop (one screen)
+
+Start with `python play.py` (use a save you can throw away — Build and
+the diplomacy menu act on the loaded game).
+
+1. **No engine window appears**; the HD main menu, no intro sound.
+2. Load the save → map → your colony → **CHANGE → Design → a design row**:
+   the **HD Ship Designer** (glass panels, the design's numbers), no flash
+   of the old picture on the way in.
+3. Click the **computer panel**, a **weapon row**, a **special row**: each
+   an HD picker; in the weapon picker choose a weapon, an arc, a
+   modification; **ESC** back each time. Try **+ / −** and a **hull**.
+4. **F12**: OrionLayer shows the original's picture AND the **original's
+   own window opens**. Click the name, type, **Enter**, **F12**: the HD
+   page shows the new name; the original's window is gone.
+5. **Cancel** → the build popup (or **Build** to keep the design).
+6. **RACES → AUDIENCE → a race**: the HD audience (room, ambassador); click
+   the greeting → the menu; **Declare War → "REALLY DECLARE WAR?!" →
+   Cancel**; **Good Bye** → Races.
+7. Close OrionLayer → the engine stops too. Start the orion2re binary by
+   hand → **its window appears**, as before fix 41.
+
+What you should NOT see: the old 640x480 picture flashing before an HD
+screen; the original's window at any time except while F12 is on.
+
+**Parked** (`doc/briefs/186-parked-for-data.md`): fix 42 stays open (1a);
+the bundles' names (1b); name entry on the HD designer page — build it,
+recommendation (b) (1c); the AI's turn-start audience (58), not reachable
+without a game decision in SAVE4 / SAVE5, with the save it needs (1d);
+multi-buttons through the safety net, not measured (1e); two designs
+written in memory during the test (1f); **the modal hold — options A-E,
+recommendation C** (1g); the disabled audience item's colour (2a); and the
+items carried over unchanged from 185 and earlier (section 3).
