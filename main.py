@@ -475,7 +475,9 @@ class App:
                 kind, sid, top = notice
                 self._notice_view.render(
                     self.surface, self.style, self._note_labels,
-                    f12notice.what_for(kind, sid, top))
+                    f12notice.what_for(
+                        kind, sid, top, labels=self._note_labels,
+                        declined=sid in self.dispatcher.screen_map))
             else:
                 self._notice_view.reset(self.surface)
         elif self.dispatcher.active:

@@ -121,6 +121,14 @@ assert _of_g.failures == 1 and _of_g.notices == 1
 # the engine's screen name and id
 assert _of_fn.what_for("hand_over", 53, _OfTop("x", reason="R.")) == "R."
 assert _of_fn.what_for("no_screen", 12) == "NEXT_TURN (12)"
+# path 3 (work order 188 Part 5): an id whose HD screen declined it — the
+# engine lacks that screen's fixes — says so, from the HD string file
+assert "version_check" in _of_fn.what_for("no_screen", 1, declined=True)
+assert _of_fn.what_for("no_screen", 1, declined=True, labels={
+    "notice_engine": "X {screen} Y"}) == "X COLONY (1) Y"
+_of_mainsrc = io.open(os.path.join(os.path.dirname(SCREENS_DIR), "main.py"),
+                      encoding="utf-8").read()
+assert "declined=sid in self.dispatcher.screen_map" in _of_mainsrc
 
 # 4b. A NATIVE BOX'S CROP. With the box's pixels in a colour nothing HD
 # draws, the box's HD panel carries none of them, and no button answers

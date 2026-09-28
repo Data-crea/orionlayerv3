@@ -6,7 +6,7 @@
   "fallback": {
     "names_missing": "Research names not extracted - run: python tools/techname_extract.py",
     "wording_missing": "Research panel wording not extracted - run: python tools/billtext_extract.py",
-    "unvalidated": "The game's field list does not match the reconstructed list; showing the game's own picture instead.",
+    "unvalidated": "The game's field list does not match the reconstructed list; the game's own picture is on F12.",
     "no_player": "No player record on the wire yet."
   }
 }

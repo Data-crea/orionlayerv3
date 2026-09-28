@@ -40,6 +40,8 @@ from core.hud import text as hudtext
 DEFAULTS = {
     "notice_waiting": "The game is waiting for an answer",
     "notice_answer": "F12 to answer",
+    "notice_engine": "{screen}: this orion2re lacks the fixes its HD screen "
+                     "needs (python tools/version_check.py)",
 }
 #: Reference geometry (1080 px tall), scaled by `win_h / 1080`.
 REF_W, REF_H = 760, 190
@@ -54,9 +56,14 @@ def words(labels):
                  for k in ("notice_waiting", "notice_answer"))
 
 
-def what_for(kind, screen_id, top=None, engine_name=None):
+def what_for(kind, screen_id, top=None, engine_name=None, declined=False,
+             labels=None):
     """The one line naming what the game shows: the screen's own reason
-    (a hand-over), else the game's screen by its engine name and id."""
+    (a hand-over — path 6, e.g. "run: python tools/techname_extract.py"),
+    else the game's screen by its engine name and id — and, where an HD
+    screen exists for the id but declined it (path 3: the engine lacks the
+    fixes that screen needs, work order 188 Part 5), that reason, worded in
+    the HD string file (`notice_engine`)."""
     if top is not None and kind == "hand_over":
         getter = getattr(top, "fallback_reason", None)
         reason = getter() if callable(getter) else ""
@@ -65,7 +72,12 @@ def what_for(kind, screen_id, top=None, engine_name=None):
     if engine_name is None:
         from core import screen_names
         engine_name = screen_names.engine_name(screen_id)
-    return f"{engine_name} ({screen_id})"
+    name = f"{engine_name} ({screen_id})"
+    if declined:
+        template = (labels or {}).get("notice_engine") or DEFAULTS[
+            "notice_engine"]
+        return template.replace("{screen}", name)
+    return name
 
 
 def panel_rect(win_w, win_h):

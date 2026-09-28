@@ -3,5 +3,6 @@
   "prefix": "OrionLayer is showing the game's own picture:",
   "cut": "\u2026 (shortened)",
   "notice_waiting": "The game is waiting for an answer",
-  "notice_answer": "F12 to answer"
+  "notice_answer": "F12 to answer",
+  "notice_engine": "{screen}: this orion2re lacks the fixes its HD screen needs (python tools/version_check.py)"
 }

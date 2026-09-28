@@ -236,3 +236,28 @@ SAVE4 20 turns (until an AI's audience, 58), SAVE5 20 turns (until 58), and a
 
 Checks 090zc (2), 090zd (2); 090t measures the box's and the popup's text
 at 1920 and 3840. Count 413 → **417**.
+
+## Part 5 — Stage 2: HD for each of the six paths — **DONE as far as HD can go; what stays behind the notice is parked**
+
+**The HD message box on fix 29** (built and committed in Part 4, which needed
+it; proof first, then applied: see Part 4's table) replaces the notice for
+every generic box, on every path a box takes. Walked live on `6859e163`
+(Xvfb, SAVE4, guards verified; `evidence/work_order_188/P5_*`, each HD frame
+with its native frame beside):
+
+| path (187-original-visibility) | box / screen | HD now | live |
+|---|---|---|---|
+| 4 — a box over an HD page | the designer's shield warning (warning); the colony screen's BUY (text) | HD message box | drawn, CLOSE → gone, 0.04 / 0.08 s, 0 native frames |
+| 4b — a native box's crop in an HD panel | the Races screen's DECLARE WAR confirmation; the Fleets screen's SCRAP confirmation and the "Scrapping ships aborted" warning it chains to | HD message box (the crop is never drawn: `fltbox.SHOW_CROP` False) | NO → treaty unchanged (0 → 0); NO → the chained warning drawn in HD too, ESC closed it (the walk's own "closed" step expected no box and read BAD — the chain is the original's, `gamebox`'s notes say so) |
+| 5 — a box over a net screen | the colony-base planet choice (60) and its confirmation, "cannot build there", "really trash" | HD turn popup + HD box | Part 4's 46 turns |
+| 1 — an id with no HD screen | the combat target (12 → 64), Turn Summary (40), science room (52), landing (33) | HD turn popups | Part 4's turns |
+| 1 — the rest | tactical combat, council, Antarans, invasion, ground combat, mutation, monster bribe, star rename, occupation popup; Hall of Fame (Part 6), Multiplayer (Part 7) | F12 notice | parked 1c |
+| 2 — an empty list past EMPTY_HOLD | — | the plain hold (nothing to answer, no notice) | — |
+| 3 — a screen declining its id | an engine without the fixes that screen needs | the notice now SAYS so: "COLONY (1): this orion2re lacks the fixes its HD screen needs (python tools/version_check.py)" (HD string file `notice_engine`) | offline (090za) |
+| 6 — a screen that cannot vouch | missing extraction; a research list HD cannot rebuild | the notice with the screen's own sentence ("… not extracted — run: python tools/techname_extract.py"); the research screens' "unvalidated" sentence no longer claims the picture is shown ("the game's own picture is on F12") | offline (090za, 048) |
+
+**How many of the six paths are HD now**: 4, 4b and 5 wholly; 1 for every
+turn-time popup of the report phase and the combat target; 2 needs none; 3
+and 6 cannot be drawn by HD at all (the data is missing: an engine fix or an
+extraction) and show the notice with what to do. Checks: 090za extended
+(path 3's wording). Count stays 417.
