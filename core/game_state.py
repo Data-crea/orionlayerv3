@@ -111,6 +111,9 @@ class GameState:
     #: The diplomacy audience, open fixes 46 and 47 (work order 185, NOT
     #: APPLIED): `core/diplblocks.py` names every key.
     audience: Optional[dict] = None          # "DIPL", fix 47
+    #: The move verdict at every star for the fleet box's selection, open
+    #: fix 48 (work order 188): `core/moveblocks.py` names every key.
+    fleet_move: Optional[dict] = None        # "FMOV", fix 48
 
     # Fields (from FIELD_LIST message)
     fields: list = field(default_factory=list)
@@ -393,10 +396,11 @@ def parse_state(data: bytes) -> GameState:
         if _ok:
             gs.info_screen = {"bill": _bill, "messages": _msgs}
 
-    from core import colonyblocks, designblocks, diplblocks
+    from core import colonyblocks, designblocks, diplblocks, moveblocks
     pos = diplblocks.parse(gs, data, pos)
     pos = colonyblocks.parse(gs, data, pos)
     pos = designblocks.parse(gs, data, pos)
+    pos = moveblocks.parse(gs, data, pos)     # FMOV, open fix 48, LAST
     return gs
 
 

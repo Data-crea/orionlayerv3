@@ -10,6 +10,13 @@ this order decided or left open, then the items carried over unchanged.
 - 187's 2a, "The audience menu's title colour": the order decided it — the
   items' colour. Built (Part 2).
 
+### 1b. The fleet box's ETA text on hover (Part 3)
+
+The original also prints "%d turns to %s" / "%d parsecs to %s" / the refusal
+in the fleet box while a star is hovered (fleetpop.cpp:1063-1091). FMOV now
+carries every number it needs (turns_left, parsecs, flags). **Default: not
+built** (the order asked for the line); the box keeps its status line.
+
 ## 2. Carried over unchanged (not acted on in this order)
 
 - **From 185** (`doc/briefs/185-parked-for-data.md` item 2c, "The Ship

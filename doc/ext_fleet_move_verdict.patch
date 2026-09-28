@@ -1,0 +1,76 @@
+Engine: the move verdict for the fleet box's selection at every star, "FMOV" (open fix 48).
+
+STATUS: APPLIED 28 September 2026 by work order 188 (Part 3, the galaxy
+map's travel line on hover), under the order's advance approval of the
+engine fixes a part needs ("Engine fixes: approved in advance for this
+run") — orion2re 010870bc on orionlayer-local (before: 230a0638), this
+file's diff byte for byte (index lines included). Required by
+tools/version_check.py since work order 188.
+
+PROOF ON THE TIP IT WAS APPLIED TO (work order 188): in a scratch clone of
+orionlayer-local at 230a0638 (git clone --no-hardlinks, never ~/orion2re)
+this file applied with `patch -p1 --dry-run` and `patch -p1`, no offset, no
+fuzz, the applied tree's diff equal to it; ext_api.cpp compiled alone with
+the build's own command (-fsyntax-only), exit 0; the control —
+`SHIPMOVE::Ships_Try_To_Move_To_` misspelt `SHIPMOVE::Ships_Try_To_Mov_To_`
+in ext_api.cpp — was refused by the compiler ("ist kein Element von
+»SHIPMOVE«"), exit 1. Then applied to ~/orion2re (dry run and apply, no
+offset), built (ninja, no error) and committed.
+
+To revert, from ~/orion2re on the orionlayer-local branch: `git revert
+010870bc` or `patch -R -p1`; then rebuild. See the entry,
+doc/orion2re_open_fixes.md 48.
+
+WHAT IT IS FOR
+The original draws the preview travel line while the pointer HOVERS a star
+with the fleet box's ships selected — green when the move is legal, red
+when it is refused — from SHIPMOVE::Ships_Try_To_Move_To_ into
+_g_ship_move_info (Scan_Stars_XY_, mainscr.cpp:2987-2993;
+Draw_ETA_Destination_Line_, mainscr.cpp:535-568). None of it is on the
+wire, and the engine's own verdict follows the engine's pointer, which a
+client never moves: so the same call is made here for every star into a
+local struct, and the 14-byte s_ship_move_info goes out as the game fills
+it. A client then colours the line from the engine's verdict and never
+recomputes range, fuel, speed, gates or flux itself.
+
+diff --git a/src/ext/ext_api.cpp b/src/ext/ext_api.cpp
+index 3faa2c28..f9e3d405 100644
+--- a/src/ext/ext_api.cpp
++++ b/src/ext/ext_api.cpp
+@@ -868,6 +868,36 @@ static void SerializeState(std::vector<uint8_t>& buf,
+             WriteBytes(buf, text, len);
+         }
+     }
++
++    // 14. The move verdict the fleet box's selection would get at every
++    //     star: "FMOV", written ONLY on SCREEN_MAIN while the fleet box is
++    //     open and a ship in it is selected, and LAST. OrionLayer, open fix 48.
++    //
++    //     The original computes it on HOVER (Scan_Stars_XY_,
++    //     mainscr.cpp:2987-2993) into _g_ship_move_info and colours the
++    //     preview line from it (Draw_ETA_Destination_Line_, :558-567); a
++    //     client hovers without the engine's pointer, so the same call is
++    //     made here for every star into a LOCAL struct, the global
++    //     untouched. Sent as the game fills it: the 14-byte s_ship_move_info.
++    if (current_screen == SCREEN_MAIN && MOVEBOX::Moveable_Box_Selected_(2) != 0 &&
++        FLEETPOP::Some_Icon_Selected_()) {
++        static int16_t ids[MAX_SHIPS];
++        HACCESS::Get_Fleet_Box_Selected_Ship_Ids_(ids, MAX_SHIPS, 0x00FF);
++        if (ids[0] != -1) {  // Ships_Try_To_Move_To_ reads _ship[ids[0]] unchecked
++            buf.push_back((uint8_t)'F');
++            buf.push_back((uint8_t)'M');
++            buf.push_back((uint8_t)'O');
++            buf.push_back((uint8_t)'V');
++            Write8(buf, 1);                                     // block version
++            Write16(buf, MOX::_NUM_STARS);
++            Write8(buf, (uint8_t)sizeof(s_ship_move_info));     // 14
++            for (int16_t s = 0; s < MOX::_NUM_STARS; s++) {
++                s_ship_move_info mi;
++                SHIPMOVE::Ships_Try_To_Move_To_(ids, s, &mi);
++                WriteBytes(buf, &mi, sizeof(mi));
++            }
++        }
++    }
+ }
+ 
+ // ── Field list ───────────────────────────────────────────

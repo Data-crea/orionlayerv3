@@ -75,7 +75,7 @@ OrionLayer talks to an orion2re built from the branch **`orionlayer-local`**
 fixes below, in this order. The branch is never uploaded anywhere; on a new
 machine it comes from the bundle beside the backup
 (`~/orion2re_bundle_<date>_<hash>[_<fixes>].bundle`, the newest one —
-today `~/orion2re_bundle_28sep_230a0638_fixes34-47_43.bundle`:
+today `~/orion2re_bundle_28sep_010870bc_fixes34-48.bundle`:
 `git clone -b orionlayer-local <bundle> ~/orion2re`), and each fix also has
 its patch file here. `python tools/version_check.py` checks a built tree
 against this list and prints the `patch -p1` command for any fix that is
@@ -99,6 +99,7 @@ a smoke check holds this table to it.
 | 13 | `c5d4dacd`, `01bafd9c`, `a10e20ba`, `8a6acc08`, `2be953d4`, `2097b0c6` | **open fixes 35-40, one commit each, in this order: which colony the colony screen and the build popup show (35), where its buildings stand (36), Plague and Pop Boom (37), the product's cost and turns (38), the build popup's queue under edit (39), its two lists and queue with their numbers (40)** (work order 181) | `doc/ext_colony_screen_colony.patch`, `doc/ext_colony_building_placement.patch`, `doc/ext_colony_status_word.patch`, `doc/ext_colony_product_cost.patch`, `doc/ext_build_popup_queue.patch`, `doc/ext_build_popup_lists.patch` |
 | 14 | `4bf152e4` | open fix 41: the engine's own window hidden from the start, and a hidden window presents without VSync (work order 183) | `doc/ext_engine_window_hidden.patch` |
 | 15 | `70d31b10`, `4af9fefa`, `8aea1a25`, `ba9b6bc6`, `230a0638` | **open fixes 44, 45, 46, 47 and 43, one commit each, in this order: the Ship Designer's design as it is edited (44), its three pickers and what they offer (45), the diplomacy audience's own ids (46) and its state (47), and the engine's window hidden only when the starter asks and shown again on request (43, amends 41)** (work order 186) | `doc/ext_ship_designer_state.patch`, `doc/ext_ship_designer_boxes.patch`, `doc/ext_audience_screen.patch`, `doc/ext_audience_state.patch`, `doc/ext_engine_window_on_request.patch` |
+| 16 | `010870bc` | open fix 48: the move verdict for the fleet box's selection at every star, for the travel line on hover (work order 188) | `doc/ext_fleet_move_verdict.patch` |
 
 Every entry, with its status, reason and revert, is in
 `doc/orion2re_open_fixes.md`.

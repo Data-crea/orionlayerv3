@@ -107,3 +107,58 @@ identical, nothing saved; `evidence/work_order_188/P2_name_1920x1080`,
 
 0 native frames in the name entry and in the whole run (`native frames
 without F12: 0`); SAVE1-11 identical. Count stays 411.
+
+## Part 3 — Galaxy map: travel line on hover — **DONE**
+
+**What the original does (read first, `evidence/.../readings/travel_line_reading.md`)**:
+it already draws this preview ON HOVER — `Scan_Stars_XY_` calls
+`SHIPMOVE::Ships_Try_To_Move_To_` for the fleet box's selection on every
+hovered frame (mainscr.cpp:2987-2993), and `Draw_ETA_Destination_Line_`
+(mainscr.cpp:535-568) draws the colour wave (not a true dash: an 8-pixel
+crawling palette wave) green when `moving && turns_left`, red on a black hole
+in the way, flux, or out of range (:558-567), nothing otherwise. HD had left
+it out ("its colour is the move result, which is not on the wire").
+
+**Engine fix 48, "FMOV"** (new, approved in advance): the engine's own verdict
+for the box's selected ships at EVERY star, written only on screen 0 with
+the box open and a ship selected (`doc/ext_fleet_move_verdict.patch`,
+entry 48). Proof on `230a0638`: no offset, compiles, control
+`Ships_Try_To_Mov_To_` refused. Applied: orion2re **`010870bc`**, rebuilt,
+commit diff = patch (cmp); bundle `~/orion2re_bundle_28sep_010870bc_fixes34-48.bundle`
+verified; `version_check` (LOCAL_PATCHES, FIX_NUMBERS), `patch_stack`,
+README row 16, part 09 updated (`setup.py` reads version_check at run time:
+its report lists 48 unchanged code).
+
+**HD** (`core/moveblocks.py`, `maplines.render_hover_preview`): the wave from
+the fleet box's head icon to the hovered star, under the stars, coloured by
+FMOV's verdict — never recomputed. **HD EXTENSION `hover_line`** ("Data's
+decision, 28 Sep"): the line leaves with the pointer (the original keeps it
+on the last star hovered); red also for an immobile fleet and a black-hole
+target (the original draws none). Clicking unchanged.
+
+**Found live**: the first run drew nothing — `_hover_star` was matched by
+identity, and every snapshot builds the star list anew. Now by position;
+check 090zb walks the app's sequence (hover, then a snapshot that rebuilds
+the stars, then the frame) and asserts the rebuild happened.
+
+**Live on Xvfb** (engine `010870bc`, SAVE4, own fleet at peren, guards
+`P3/guard_2576`, `P3/guard_1920` verified identical; `P3_hover_2576x1432`,
+`P3_hover_1920x1080`): FMOV arrived with the box open (29 reachable, 24 out
+of range on the map); hover Orion (moving, 6 turns) → **green**; out → no
+line; hover star 53 (out of range, 12 parsecs) → **red**; out → no line;
+click on Orion → the order as today (its destination line drawn). 0 native
+frames. Screenshots `004_B1_hover_reachable_hd.png`, `006_B3_hover_unreachable_hd.png`,
+`005/007_*_hover_out_hd.png`, `008_C1_after_click_hd.png`.
+
+**Frame time** (`App._render`, 120 frames each, median / p95):
+
+| size | line on | line off |
+|---|---|---|
+| 2576x1432 | 5.87 / 5.99 ms | 5.73 / 5.85 ms |
+| 1920x1080 | 5.85 / 5.92 ms | 5.72 / 5.81 ms |
+
++0.14 ms with the line — smooth at 2576.
+
+**Not built**: the fleet box's ETA / refusal text while hovering
+(fleetpop.cpp:1063-1091) — FMOV carries its numbers; parked 1b.
+Checks 090zb (2). Count 411 → **413**.

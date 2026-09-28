@@ -69,6 +69,7 @@ section for what was found where.
 | 45 | The Ship Designer's three sub-dialogs report SCREEN_DESIGN and their lists and selection are not on the wire | **Applied** 28 September 2026 by work order 186 on Data's approval (orion2re `4af9fefa` on `orionlayer-local`, `doc/ext_ship_designer_boxes.patch`, ids 54-56 and "DSBX", on top of 44); written, proved and parked by work order 185; proved again on the tip it was applied to; required by `tools/version_check.py` | Without it the pickers stay the game's own picture even with fix 44: HD cannot tell which is open nor what it offers |
 | 46 | The diplomacy audience has no screen id: it runs under its caller's (6, 0 or 12) | **Applied** 28 September 2026 by work order 186 on Data's approval (orion2re `8aea1a25` on `orionlayer-local`, `doc/ext_audience_screen.patch`, ids 57 player / 58 AI); written, proved and parked by work order 185; proved again on the tip it was applied to, re-cut there (positions only); required by `tools/version_check.py` | Without it no HD audience can exist: a client cannot tell it is up, nor whose |
 | 47 | The diplomacy audience's state — who, the statement, the reply text, the menu and its enabled items — is not on the wire | **Applied** 28 September 2026 by work order 186 on Data's approval (orion2re `ba9b6bc6` on `orionlayer-local`, `doc/ext_audience_state.patch`, "DIPL", on top of 46); written, proved and parked by work order 185; proved again on the tip it was applied to, re-cut there (positions only); required by `tools/version_check.py` | Without it the audience stays the game's own picture even with fix 46 |
+| 48 | The move verdict for the fleet box's selection at every star is not on the wire — `Ships_Try_To_Move_To_`'s `s_ship_move_info`, which the original computes on hover | **Applied** 28 September 2026 by work order 188 under the order's advance approval (orion2re `010870bc` on `orionlayer-local`, `doc/ext_fleet_move_verdict.patch`, "FMOV"); required by `tools/version_check.py`; open upstream | Without it the galaxy map draws no travel line on hover, and HD would have to rebuild range, fuel, speed, gates and flux itself |
 
 Items 3 and 4 are both about INJECT_CLICK and both live in the same
 code path, but they are separate faults: 3 is where the coordinates
@@ -4068,3 +4069,94 @@ is up and whose — it can draw the ambassador and the stage — but not what
 is said nor what may be answered: the audience stays the game's picture.
 
 **How to revert.** From `~/orion2re` on `orionlayer-local`: `git revert ba9b6bc6` (clean on its own on `230a0638`, tried in scratch) or `patch -R -p1`; then rebuild and move the patch back to `REPORTED_PATCHES` (README and part 09 as for 44). Without it the audience has its id (46) but no state, and stays the game's own picture.
+
+## 48. The move verdict for the fleet box's selection is not on the wire
+
+**Status: APPLIED** — 28 September 2026 by work order 188 (Part 3, "Galaxy map: travel line on hover"), under the order's advance approval ("Engine fixes: approved in advance for this run", `doc/briefs/188-work-order-original-never-shown-turn-messages-travel-line-multiplayer-hall-of-fame.md`). orion2re **`010870bc`** on `orionlayer-local` ("OrionLayer Open Fix 48: send the move verdict for the fleet box's selection at every star ("FMOV")"), the only commit of this fix, on top of `230a0638`; bundle `~/orion2re_bundle_28sep_010870bc_fixes34-48.bundle` (`git bundle verify`: exit 0). Patch: `doc/ext_fleet_move_verdict.patch` — `git diff 010870bc~1 010870bc` byte for byte, `diff --git` and `index` lines included; required by `tools/version_check.py` (marker `OrionLayer, open fix 48.`) since the same order. Open upstream.
+
+**What is missing.** With the fleet box's ships selected, the original
+draws a preview line to the star under the pointer — green when the move
+is legal, red when it is refused (`MAINSCR::Draw_ETA_Destination_Line_`,
+mainscr.cpp:535-568, colour rule :558-567) — and prints the ETA or the
+refusal in the fleet box (fleetpop.cpp:1063-1091). Both come from
+`SHIPMOVE::Ships_Try_To_Move_To_` (shipmove.cpp:776-969), called on HOVER
+by `Scan_Stars_XY_` (mainscr.cpp:2987-2993) into `MOX::_g_ship_move_info`.
+Nothing of it is serialized, and the global follows the ENGINE'S pointer,
+which a client never moves: sending the global would send a stale value.
+Rebuilding the verdict in a client means range (fuel tier, extended tanks,
+allied colonies within range, measured from the target), speed, navigators,
+black-hole blocks, wormholes, star and jump gates, hyperspace flux and a
+route already under way — a guess with extra steps (decisions 25 and 33).
+
+**What the patch changes.** `src/ext/ext_api.cpp` only — block 14, "FMOV",
+LAST in `SerializeState`, written only on SCREEN_MAIN while the fleet box
+is open (`MOVEBOX::Moveable_Box_Selected_(2)`) and a ship in it is selected
+(`FLEETPOP::Some_Icon_Selected_()`), the original's own hover gate
+(mainscr_main.cpp:451-453): a version byte, the star count, the struct size
+(14), then per star the `s_ship_move_info` `Ships_Try_To_Move_To_` fills for
+the fleet box's selected ships (`HACCESS::Get_Fleet_Box_Selected_Ship_Ids_`)
+— into a LOCAL struct; the global is untouched. An empty selection writes
+nothing (the function reads `_ship[ids[0]]` unchecked).
+
+**The exact change.** The diff, as committed — `git diff 010870bc~1 010870bc`, which is the patch file's (the `diff --git` and `index` lines and the text git adds after `@@` are not part of it):
+
+```diff
+--- a/src/ext/ext_api.cpp
++++ b/src/ext/ext_api.cpp
+@@ -868,6 +868,36 @@
+             WriteBytes(buf, text, len);
+         }
+     }
++
++    // 14. The move verdict the fleet box's selection would get at every
++    //     star: "FMOV", written ONLY on SCREEN_MAIN while the fleet box is
++    //     open and a ship in it is selected, and LAST. OrionLayer, open fix 48.
++    //
++    //     The original computes it on HOVER (Scan_Stars_XY_,
++    //     mainscr.cpp:2987-2993) into _g_ship_move_info and colours the
++    //     preview line from it (Draw_ETA_Destination_Line_, :558-567); a
++    //     client hovers without the engine's pointer, so the same call is
++    //     made here for every star into a LOCAL struct, the global
++    //     untouched. Sent as the game fills it: the 14-byte s_ship_move_info.
++    if (current_screen == SCREEN_MAIN && MOVEBOX::Moveable_Box_Selected_(2) != 0 &&
++        FLEETPOP::Some_Icon_Selected_()) {
++        static int16_t ids[MAX_SHIPS];
++        HACCESS::Get_Fleet_Box_Selected_Ship_Ids_(ids, MAX_SHIPS, 0x00FF);
++        if (ids[0] != -1) {  // Ships_Try_To_Move_To_ reads _ship[ids[0]] unchecked
++            buf.push_back((uint8_t)'F');
++            buf.push_back((uint8_t)'M');
++            buf.push_back((uint8_t)'O');
++            buf.push_back((uint8_t)'V');
++            Write8(buf, 1);                                     // block version
++            Write16(buf, MOX::_NUM_STARS);
++            Write8(buf, (uint8_t)sizeof(s_ship_move_info));     // 14
++            for (int16_t s = 0; s < MOX::_NUM_STARS; s++) {
++                s_ship_move_info mi;
++                SHIPMOVE::Ships_Try_To_Move_To_(ids, s, &mi);
++                WriteBytes(buf, &mi, sizeof(mi));
++            }
++        }
++    }
+ }
+ 
+ // ── Field list ───────────────────────────────────────────
+```
+
+**Proof on the tip it was applied to** (work order 188, `~/orionlayer-fixtures/evidence/work_order_188/P3/fix48_proof.json`): in a scratch clone (`git clone --no-hardlinks`, never `~/orion2re`) at `orionlayer-local`'s tip `230a0638`, the patch file applied with `patch -p1 --dry-run` and `patch -p1`, no offset, no fuzz, and the applied tree's diff equal to the file's; `ext_api.cpp` compiled alone with the build's own command (`ninja -t commands`, re-pointed at the scratch tree, `-fsyntax-only`), exit 0; the control — `SHIPMOVE::Ships_Try_To_Move_To_` misspelt `SHIPMOVE::Ships_Try_To_Mov_To_` ("ist kein Element von »SHIPMOVE«") — refused, exit 1. Then the same file applied to `~/orion2re` (dry run and apply, no offset), `ninja -C out/build/Linux/linux-debug orion2re` (no error; no engine was running), `git add src/ext/ext_api.cpp`, one commit; `git diff 010870bc~1 010870bc` equals the file's diff (`cmp`).
+
+**Side effects — read and ruled out.** `Ships_Try_To_Move_To_` `memset`s
+its out-struct and writes nothing else: every other call in it reads
+(`Ship_Range_`, `Star_In_Range_Of_Player_`, `Owned_Officer_Level_`,
+`Fleet_Uses_Jump_Gate_`, `GEO::Move_Player_1_Turn_To_Star_` into its own
+out-parameters, `EVENTS::Event_Check_Hyperspace_Flux_` reads
+`_event_data`). `Get_Fleet_Box_Selected_Ship_Ids_` fills the caller's
+buffer only (a static array here, 9000 ids). Cost: one selection walk and
+at most `_NUM_STARS` verdicts per snapshot while the box has a selection —
+the original makes the same call on every hovered frame. Size ≤ 72 × 14 +
+8 bytes.
+
+**What it costs us without it.** HD draws no preview line and no hover
+verdict: the travel line appears only once the engine has accepted an order.
+
+**How to revert.** From `~/orion2re` on `orionlayer-local`: `git revert 010870bc` or `patch -R -p1`; then rebuild and move the patch to `REPORTED_PATCHES` (README and part 09 as for 44). Without it the galaxy map draws no travel line on hover.
+

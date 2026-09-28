@@ -253,6 +253,12 @@ LOCAL_PATCHES = {
         os.path.join("src", "ext", "ext_api.cpp"), "OrionLayer, open fix 47.",
         "the diplomacy audience's statement, reply and menu are not on the "
         "wire (open fix 47) and the audience stays the game's own picture"),
+    # Applied 28 September 2026 by work order 188 (the order's advance
+    # approval of the engine fixes a part needs): 010870bc, on 230a0638.
+    "doc/ext_fleet_move_verdict.patch": (
+        os.path.join("src", "ext", "ext_api.cpp"), "OrionLayer, open fix 48.",
+        "the move verdict for the fleet box's selection is not on the wire "
+        "(open fix 48) and the galaxy map draws no travel line on hover"),
 }
 
 #: Patches that are REPORTED to Joes and not yet applied: listed with
@@ -311,6 +317,7 @@ FIX_NUMBERS = {
     "doc/ext_ship_designer_boxes.patch": (45,),
     "doc/ext_audience_screen.patch": (46,),
     "doc/ext_audience_state.patch": (47,),
+    "doc/ext_fleet_move_verdict.patch": (48,),
 }
 
 

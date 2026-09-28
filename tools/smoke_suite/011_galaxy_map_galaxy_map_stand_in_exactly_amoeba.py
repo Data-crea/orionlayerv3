@@ -744,7 +744,9 @@ if "galaxy_map" in d.screens:
         "doc/ext_fleet_selection.patch": "fsel_chain_len",
         "doc/ext_fleet_select_ship.patch": "Select_Ship_",
         "doc/ext_fleet_screen_state.patch": "_fltscrn_stack_owner",
-        "doc/ext_fleet_screen_select.patch": "Select_Fltscrn_Ship_"}
+        "doc/ext_fleet_screen_select.patch": "Select_Fltscrn_Ship_",
+        # the box's move verdict per star, work order 188 (open fix 48)
+        "doc/ext_fleet_move_verdict.patch": "OrionLayer, open fix 48."}
     assert not any("fleet" in k for k in _sel_vc.REPORTED_PATCHES)
     ok("fleet selection in the HD box (blue and black from the wire, "
        "MSG_SELECT_SHIP 0x85, orders only with a known selection, "

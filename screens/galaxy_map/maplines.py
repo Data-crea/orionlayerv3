@@ -59,10 +59,30 @@ live-confirmed, so neither is corrected towards the other. The smoke test
 fails if the tables become equal, or if either changes while this note and
 the comment on the other table still quote the old values.
 
+THE PREVIEW LINE ON HOVER — TRANSCRIBED since work order 188 (it was an
+OMISSION: its colour is the move result, which was not on the wire; open
+fix 48's FMOV puts the engine's own verdict for every star there).
+`MAINSCR::Draw_ETA_Destination_Line_` (mainscr.cpp:535-568): with the fleet
+box's ships selected and the pointer on a star, the same colour wave from
+the box's head icon (its corner plus half the header, as above) to the
+star, under the stars; green when `moving != 0 && turns_left != 0`, red
+when `blackhole_blocks || hyperspace_flux || (out_of_range && !immobile)`
+(:558-567). The verdict is FMOV's, never recomputed here.
+HD EXTENSION `hover_line` (Data's decision, 28 Sep — work order 188 Part 3,
+"The dashed line appears as soon as the mouse hovers over a star/planet
+... and disappears when the mouse leaves. Green: the ship can reach it.
+Red: it cannot."), where it differs from the original:
+  * the line LEAVES with the pointer — the original keeps `_eta_star_id` on
+    the last star hovered until another star or a ship icon is hovered, the
+    selection is emptied or an order given (mainscr_main.cpp:504, 539, 542,
+    593, 902, 917);
+  * RED also where the original draws NO line although the ship cannot go
+    there: an immobile fleet (`immobile`, speed 0) and a black hole as the
+    target (the original sets `_eta_star_id` to -1 there,
+    mainscr_main.cpp:538-540). The one star with no line is the one the
+    fleet already stands at (`moving` with `turns_left` 0).
+
 OMISSION, each with its reason:
-  * the order preview line (`Draw_ETA_Destination_Line_`,
-    mainscr.cpp:535-568): its colour is the move result, which is not on
-    the wire.
   * relocation lines (`Draw_Relocation_Links_`, mainscr.cpp:682-703):
     **HALF OF THIS REASON IS SPENT, and the omission stands on the
     other half.** It read "the setting and `relocate_ship_to` (star
@@ -291,3 +311,98 @@ def render_destination_lines(surface, ctx, state, ships, stars, game_zoom,
         for colour, p, q in wave_pieces(seg[0], seg[1], table, offset,
                                         ctx.px):
             stroke(surface, colour, p, q)
+
+
+def preview_colour(verdict, black_hole=False):
+    """"green", "red" or None for one star's FMOV verdict.
+
+    Transcribed (mainscr.cpp:558-567): green when the move is legal and
+    takes a turn; red on a black hole in the way, flux, or out of range.
+    HD EXTENSION `hover_line` (Data's decision, 28 Sep): red too for an
+    immobile fleet and a black hole as the target, where the original
+    draws nothing; None only at the star the fleet already stands at."""
+    if verdict is None:
+        return None
+    if black_hole:
+        return "red"                 # HD EXTENSION: never a destination
+    if verdict["moving"] and verdict["turns_left"]:
+        return "green"
+    if verdict["moving"] and not verdict["turns_left"]:
+        return None                  # already there: nothing to preview
+    if verdict["blackhole_blocks"] or verdict["hyperspace_flux"] or \
+            (verdict["out_of_range"] and not verdict["immobile"]):
+        return "red"
+    return "red"                     # HD EXTENSION: immobile, black hole
+
+
+def preview_line(state, star_index, game_zoom, black_hole=False):
+    """`{"icon", "star", "colour", "start"}` for the hovered star, or None:
+    FMOV's verdict (open fix 48) for the fleet box's selection, from the
+    box's head icon (the FSEL chain's first node, `Node_Ptr_From_Ship_Stack_`,
+    mainscr.cpp:545-553)."""
+    move = getattr(state, "fleet_move", None)
+    sel = getattr(state, "fleet_selection", None)
+    if not move or not sel or sel["stack"] < 0 or not sel["chain"]:
+        return None
+    if not any(sel["selected"][n] for n in sel["chain"]
+               if 0 <= n < len(sel["selected"])):
+        return None
+    verdicts = move["verdicts"]
+    if star_index is None or not 0 <= star_index < len(verdicts):
+        return None
+    colour = preview_colour(verdicts[star_index], black_hole)
+    if colour is None:
+        return None
+    head = sel["chain"][0]
+    icons = getattr(state, "ship_icons", None) or []
+    icon = next((i for i, ic in enumerate(icons) if ic.node_idx == head),
+                None)
+    if icon is None:
+        return None
+    hw, hh = zt.ship_icon_header_dimension(3 - game_zoom)
+    ic = icons[icon]
+    return {"icon": icon, "star": star_index, "colour": colour,
+            "start": (ic.x + (hw >> 1), ic.y + (hh >> 1))}
+
+
+def render_preview_line(surface, ctx, state, stars, star_index, game_zoom,
+                        anchor, ms, black_hole=False):
+    """Draw the hover preview (`Draw_ETA_Destination_Line_`), or nothing.
+    Returns the line's dict when it drew one."""
+    from core import mapcoords as mc
+    line = preview_line(state, star_index, game_zoom, black_hole)
+    if line is None:
+        return None
+    star = stars[star_index]
+    nx, ny = line["start"]
+    sx, sy = mc.galaxy_to_native(star.x, star.y, state)
+    table, offset = directional(nx, ny, sx, sy,
+                                RED if line["colour"] == "red" else GREEN,
+                                phase_at(ms))
+    a = ship_icons.anchored_point(state.ship_icons[line["icon"]], nx, ny,
+                                  ctx, anchor)
+    seg = clip(a, ctx.view.to_screen(star.x, star.y), ctx.view.box)
+    if seg is None:
+        return None
+    for colour, p, q in wave_pieces(seg[0], seg[1], table, offset, ctx.px):
+        stroke(surface, colour, p, q)
+    return line
+
+
+def render_hover_preview(screen, surface, ctx):
+    """The galaxy map's call: the preview to the star under the pointer
+    (`screen._hover_star`, local to HD — the engine's pointer never moves),
+    or nothing. The line goes with the pointer (HD EXTENSION `hover_line`)."""
+    hover = getattr(screen, "_hover_star", None)
+    if hover is None or getattr(screen, "_state", None) is None:
+        return None
+    stars = screen._stars
+    # BY POSITION, not identity: `_hover_star` is the object the last mouse
+    # motion found, and every snapshot builds `_stars` anew (found live, work
+    # order 188: an identity lookup never matched after the first update).
+    index = next((i for i, s in enumerate(stars)
+                  if (s.x, s.y) == (hover.x, hover.y)), None)
+    return render_preview_line(
+        surface, ctx, screen._state, stars, index, screen._game_zoom(),
+        screen._icon_anchor(), pygame.time.get_ticks(),
+        black_hole=star_struct.is_black_hole(hover))

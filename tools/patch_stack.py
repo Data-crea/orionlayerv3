@@ -34,7 +34,8 @@ COLONY_SERIES = (
 #: The fixes applied AFTER the colony series that change `ext_api.cpp`
 #: around its blocks, in the order work order 186 applied them: 44 and 45
 #: append after fix 40's block, 47 puts DIPL between INFS and COLS (fix
-#: 35's context), 43 changes ProcessInput and the flag. So they come off
+#: 35's context), 43 changes ProcessInput and the flag — and then the
+#: fixes of work order 188, in the order applied (48 after 45's block). So they come off
 #: a copy first, last one first — only their `ext_api.cpp` part, since the
 #: copy holds that file alone. (Fix 46 does not touch `ext_api.cpp`; fix
 #: 41's one line there sits far from every block and is left.)
@@ -44,6 +45,8 @@ STACKED_AFTER_COLONY = (
     "doc/ext_audience_screen.patch",
     "doc/ext_audience_state.patch",
     "doc/ext_engine_window_on_request.patch",
+    # work order 188: 48 appends FMOV after 45's DSBX block, last
+    "doc/ext_fleet_move_verdict.patch",
 )
 
 

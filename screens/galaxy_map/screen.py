@@ -522,6 +522,9 @@ class GalaxyMapScreen(ScreenBase):
         maplines.render_destination_lines(
             surface, ctx, self._state, self._ships, self._stars,
             self._game_zoom(), self._icon_anchor(), pygame.time.get_ticks())
+        # The preview to the hovered star (open fix 48, HD EXTENSION
+        # `hover_line`), right after them, as the original draws it.
+        maplines.render_hover_preview(self, surface, ctx)
         # "eta N" right after the lines, as Do_Ship_Destination_Lines_
         # prints it (ships.cpp:470-475).
         mapeta.render(surface, ctx, self._state, self._ships, self._stars,
