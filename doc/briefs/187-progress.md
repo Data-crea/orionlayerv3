@@ -195,3 +195,59 @@ the original's dark green beside green.
 in the HUD's label blue, where the original prints it in the items' own
 colour.
 
+## Part 5 — the AI's audience (58) — **DONE: reached in SAVE4 at turn 14**
+
+**Tool**: `tools/turn_audience.py` (new) — loads SAVE4/SAVE5, presses the HD
+map's TURN, and answers only prompts it identifies from the list read at
+that moment (every send through `livesend`); an unknown one stops the run
+with its shape and picture recorded. It was grown one prompt at a time over
+ten guarded runs (`evidence/work_order_187/P5/s4a-s4m.txt`; each engine
+stopped, SAVE10 and MOX.SET restored from the guard taken before it). The
+prompts it met, in the order they appeared, and each default decision:
+
+| prompt (screen) | decision |
+|---|---|
+| "Select planet for Colony Base in Malus system" (0) | the next planet not yet refused this turn (a planet refused → a message, then the next) |
+| "Build colony on Malus II with …" YES / NO (0) | **YES** — the colony base's own confirmation (every other Yes / No: NO) |
+| the colony landing (33), its messages | clicked away (full-screen field) |
+| the new colony's own screen (1) | its RETURN button (never CRUNCH, TOGGLE or field [0]) |
+| the turn summary (0), reports | CLOSE (the one button with ESC) |
+| a combat choice (12) | CLOSE — the engine resolves the battle |
+| "Administrator Lydon offers to join you …" REJECT / HIRE (0) | **REJECT** |
+| the science room (52) | clicked away |
+| "SELECT NEW RESEARCH" (53) | the first choice (an injected click on its centre); SAVE4 has every field researched — "Hyper-advanced Construction" |
+| the race picks after a research (0, PICKS / ACCEPT) | **ACCEPT with none taken** — the race unchanged |
+
+Every decision of the final run, per turn (`P5_turns_save4_1920x1080/
+decisions.json`, 72 entries): t1 colony base placed (planet chosen, YES),
+landing, the new colony's screen, the summary; t2 a combat, CLOSE; t3 a
+leader rejected; t4 the summary; t5 and t6 a colony base placed each; t7 a
+new colony's screen; t9 the summary; t13 the science room, research chosen;
+t14 research chosen, race picks accepted unchanged, a colony base placed —
+**then five AI ambassadors in a row (58)**. All in memory; nothing saved;
+SAVE10 restored after every run.
+
+**The audience (58)**: four statements, all declarations — "Death to the
+CyberToller race! …", "Your people are only fit as slaves to the noble
+Elerian Empire …", and two of the Gnolam Empire's. No menu and no
+proposal came (the AIs declared; nothing was answered but the statements'
+own click). HD drew all of it: **279 frames at 58, all HD**. Beside the
+native frame after its fade-in (`P5/ai_audience_hd_vs_native.png`): the
+same ambassador, room and statement with the same line breaks; the known
+differences — the header line ("Elerian Ambassador", OMISSION
+`header_line`), the HUD panel under the text (DEVIATION `hud_frameless`),
+the fade-in (OMISSION `fade_in`).
+
+**Into and out of it** (the frame sequence recorded around 58): map HD →
+5 held → **58: 279 HD** → 29 held → 15 native → HD. **Into 58 and out of it:
+no native frame.** The 15 native frames after it are the NEXT prompt — the
+turn summary over the map, a box (Part 6's path 5, shown by option C after
+5 snapshots) — not the audience's exit. The run's other native frames are
+the same kind: the colony landing (33), the science room (52), a combat
+turn (12) — screens without an HD version (Part 6's path 1).
+
+**Not done**: SAVE5 was not run (58 reached in SAVE4). One slip of mine in
+an intermediate run (`s4k`): after the last audience had ended, the tool
+clicked the window's centre once more on a statement read a frame earlier
+— it landed on the map; the tool now clicks only while 57/58 still stands.
+
