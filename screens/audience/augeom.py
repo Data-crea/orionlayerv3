@@ -21,3 +21,8 @@ STATEMENT_X, STATEMENT_W, STATEMENT_CY = 0x50, 0x1D6, 0x1B8
 STATEMENT_PANEL = (0x50 - 8, 400, 0x50 + 0x1D6 + 8, 476)
 #: The menu's column (x 10..255) and margin.
 MENU_X1, MENU_X2, MENU_MARGIN = 10, 255, 6
+#: The text's native height: the menu's rows are 21 px apart (the list's
+#: own pitch, font height plus spacing, fields.cpp:1591 — measured on the
+#: recorded fields, part 11), the statement in the same style 4; HD draws
+#: both at 16 native px, the height that pitch leaves room for.
+TEXT_PX = 16

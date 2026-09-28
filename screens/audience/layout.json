@@ -7,6 +7,7 @@
     "omission_audience_help": "The right click's help in the audience is not built (help.json has no regions).",
     "unverified_fix46": "The ids 57 / 58 come from open fix 46 (NOT APPLIED); without it the audience runs under its caller's id and never reaches this screen.",
     "unverified_fix47": "The screen draws only from open fix 47's DIPL block (NOT APPLIED): built against blocks recorded off a scratch engine, live on no applied engine. Without it the screen claims nothing.",
-    "omission_glass_remap": "The ambassador's glassed pixels are drawn as their palette indices, a hatching; the original remaps them against what lies beneath (Update_Glass_Remap_Colors_, dip_scrn_main.cpp:476) \u2014 translucency HD does not reproduce."
+    "omission_glass_remap": "The ambassador's glassed pixels are drawn as their palette indices, a hatching; the original remaps them against what lies beneath (Update_Glass_Remap_Colors_, dip_scrn_main.cpp:476). The engine's own framebuffer shows the same hatching (part 11, side by side), so the remap's effect, if any, lies beyond what the wire shows \u2014 not measured.",
+    "omission_fade_in": "The room's fade-in (up to 38 frames of the room's entry before the ambassador appears, dip_scrn_main.cpp:1985-2016) is not played: HD shows the ambassador and the statement at once, where the original still fades (seen side by side, part 11)."
   }
 }

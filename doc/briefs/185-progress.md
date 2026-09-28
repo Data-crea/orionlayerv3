@@ -343,3 +343,31 @@ States the save does not reach, and the save each needs: parked, section 3.
    `header_line`, `glass_remap` (the ambassador's glassed pixels drawn as
    their indices — a hatching; the original remaps them against the room),
    `audience_help`; UNVERIFIED `fix46`, `fix47`.
+
+## Part 11 — the audience live test — **DONE (2 fixed, 2 questions; the AI audience parked)**
+
+Engine `build46` (PIDs 148507 for part 10's walk, 150365 here; guards
+`185_P10_walk`, `185_P11_live`; Xvfb, SAVE4, nothing saved; input log on).
+Every state HD beside the game's frame of the same moment
+(`work_order_185/P10_audience_1920x1080/pairs/`, `P11_audience_1920x1080/pairs/`):
+the refusal (no ambassador — as the original), the greeting, the menu
+"How may I serve you:" (Peace Treaty disabled, as the list's flag says),
+Declare War's confirmation "REALLY DECLARE WAR?!" (Yes / Cancel — answered
+Cancel through the HD screen; nothing declared), back to the menu, Good
+Bye. The room, the ambassador, the words, the flags and the line breaks
+agree with the native frames. Differences:
+- the statement and the menu were drawn at 9 native px against the
+  original's style-4 font — **fixed**: 16 native px, taken from the list's
+  own 21-px row pitch (`augeom.TEXT_PX`), the statement centred as FMTPARA
+  mode 2 centres it (fmtpara.cpp:1701-1702); the re-render breaks the
+  line where the native frame does;
+- the fade-in is not played (the native greeting frame is mid-fade) —
+  **marked** OMISSION `fade_in`, question (parked 2d);
+- the header line is not drawn — question (parked 2d);
+- the ambassador's hatching: the native framebuffer shows the same, so
+  `glass_remap`'s text now says so.
+A first run answered the confirmation with "no" (no such item — nothing
+sent); the second answered Cancel. 0 native frames. SAVE1-9, SAVE11
+identical, SAVE10 unchanged; MOX.SET → restored from the pre-engine guard,
+verify clean. **The AI's audience (58)** needs a turn start — parked with
+the save and permission it needs (section 3).

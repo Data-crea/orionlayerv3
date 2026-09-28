@@ -120,6 +120,21 @@ Each HD state beside the game's frame of the same moment:
    looked the same as one that is off; it is lit now (090y holds it).
 
 
+### 2d. The audience live test (part 11) — questions
+
+Side by side: `~/orionlayer-fixtures/evidence/work_order_185/P10_audience_1920x1080/pairs/`
+and `P11_audience_1920x1080/pairs/`.
+
+1. **The header line** ("Alkari Ambassador" in the race's colour, top
+   centre) is not drawn: it is JIMTEXT2 text with the race name decoded
+   in, and no extraction of JIMTEXT2 exists. Add one (the BILLTEXT walk
+   fits it)? **Default: not added** (OMISSION `header_line`).
+2. **The fade-in and the talking loop** are not played; HD shows the
+   ambassador and the statement at once and still. Play them (the frames
+   are in the extracted entries)? **Default: still** (OMISSION `fade_in`,
+   `talking_loop`).
+
+
 ## 3. Everything else
 
 - **`doc/CREDITS.md` quotes the 1.50 patch's own credits verbatim**, and
@@ -137,6 +152,13 @@ Each HD state beside the game's frame of the same moment:
   a colony with a ship to refit in orbit; a rack chosen (`Shot x5`) was
   reachable and not clicked. Typing the name stays UNVERIFIED
   (`name_entry`): not attempted, the name is shown, not edited.
+- **The AI's audience (58)** was not reached: it comes only at a turn start
+  with a diplomacy message (or a sneak attack in turn processing), and the
+  order ends no turn. What would reach it: a scratch save whose next turn
+  start carries a diplomacy message, and permission to end one turn on it
+  (SAVE10 is rewritten at turn end — logged, and restorable from the
+  guard). The screen is the same as for 57 (one screen, one block); the
+  recording would confirm the id and the opening statement.
 
 ## 4. Carried over unchanged (not acted on in this order)
 

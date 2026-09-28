@@ -3583,8 +3583,9 @@ statement as the engine rendered it in the original's column, the menu at
 the fields the list built with its title, a disabled item dimmed. Sends:
 an enabled item's field, a statement's one field on any click; a disabled
 item refused. Marks: DEVIATION `hud_frameless`; OMISSION `talking_loop`,
-`header_line`, `glass_remap`, `audience_help`; UNVERIFIED `fix46`, `fix47`.
-Check 090z.
+`header_line`, `glass_remap`, `fade_in`, `audience_help`; UNVERIFIED
+`fix46`, `fix47`. Check 090z. Live test beside the native frames (part 11):
+`doc/briefs/185-progress.md`.
 
 ### The Ship Designer and its three pickers — BUILT, OPEN FIXES 44 AND 45 NOT APPLIED — work order 185, parts 6-8
 

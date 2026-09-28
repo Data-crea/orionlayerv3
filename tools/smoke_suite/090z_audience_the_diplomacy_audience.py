@@ -141,6 +141,12 @@ for _au_size in ((1920, 1080), (2576, 1432), (3840, 2160)):
     _au_s = pygame.Surface(_au_size)
     _au_fonts[_au_size] = _sd_he.font_sites(_au_c.style,
                                             lambda: _au_c.render(_au_s))
+# The words at the size the original's row pitch leaves (part 11 found
+# them at 9 native px against the native frame's style 4).
+_au_want_px = round(_au_geom.TEXT_PX * _au_nd.native_scale(
+    _pv.build_screen(1920, 1080)[1].layout))
+assert max(_au_fonts[(1920, 1080)].values()) >= _au_want_px, \
+    (_au_fonts[(1920, 1080)], _au_want_px)
 assert len(_au_fonts[(1920, 1080)]) >= 2 and not _sd_he.scaled_twice(
     _au_fonts[(1920, 1080)], _au_fonts[(3840, 2160)]), _au_fonts
 _au_nmarks = _sd_marks_named("audience", ("audraw.py", "screen.py",
