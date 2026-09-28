@@ -7,7 +7,9 @@ The run folders it was last written from (work order 185), under
 ~/orionlayer-fixtures/evidence/: work_order_180/{A2_after,B_live,B_net}_
 {1920x1080,2576x1432}, work_order_181/P3_orders_{1920x1080,2576x1432} and
 work_order_185/P7_design_{1920x1080,2576x1432} (`tools/design_walk.py`,
-on a scratch engine with open fixes 44 and 45 — not applied).
+on a scratch engine with open fixes 44 and 45 — not applied) and
+work_order_185/P10_audience_{1920x1080,2576x1432} (`tools/audience_walk.py`,
+with open fixes 46 and 47 — not applied).
 
 Reads the `trace.jsonl` of `tools/flash_walk.py` runs and writes
 `tools/fixtures/transitions_180.json`: every walked transition as the
@@ -114,7 +116,9 @@ def main(dirs):
                      "and 25 (tools/colony_accept.py, P3_orders_*); work "
                      "order 185 the Ship Designer and its pickers "
                      "(tools/design_walk.py on a scratch engine with open "
-                     "fixes 44 and 45, P7_design_*).",
+                     "fixes 44 and 45, P7_design_*) and the diplomacy audience "
+                     "(tools/audience_walk.py, fixes 46 and 47, "
+                     "P10_audience_*).",
             "columns": ["snapshot", "screen", "live_fields", "top",
                         "wants_picture", "way_in"],
             "transitions": build(dirs)}

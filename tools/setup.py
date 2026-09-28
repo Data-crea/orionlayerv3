@@ -56,6 +56,7 @@ from screens.fleets.fltart import GAMEDATA as _fltart_gamedata  # noqa: E402
 from screens.leaders.ldrart import GAMEDATA as _ldrart_gamedata  # noqa: E402
 from screens.races.racesart import GAMEDATA as _racesart_gamedata  # noqa: E402
 from screens.ship_design.sdart import GAMEDATA as _sdart_gamedata  # noqa: E402
+from screens.audience.auart import GAMEDATA as _auart_gamedata  # noqa: E402
 from core.skildesc import string_file as skildesc_file  # noqa: E402
 from core.techdesc import string_file as techdesc_file  # noqa: E402
 from core.infotext import text_file as infotext_file  # noqa: E402
@@ -93,6 +94,7 @@ FLEET_GAMEDATA = _fltart_gamedata
 LEADER_GAMEDATA = _ldrart_gamedata
 RACES_GAMEDATA = _racesart_gamedata
 DESIGN_GAMEDATA = _sdart_gamedata
+AUDIENCE_GAMEDATA = _auart_gamedata
 
 #: (tool, arguments, a path that must exist afterwards, what it is)
 STEPS = [
@@ -304,6 +306,11 @@ def from_game(settings=None):
          "Ship Designer artwork — without it the weapon picker shows no arc "
          "picture and the ship picture is not drawn",
          "python tools/design_art_extract.py"),
+        # THE AUDIENCE (work order 185): the rooms, ambassadors and palettes.
+        (os.path.join(AUDIENCE_GAMEDATA, "manifest.json"),
+         "audience artwork — without it the audience shows its panels on "
+         "black, without the room and the ambassador",
+         "python tools/audience_art_extract.py"),
         # THE INFO SCREEN (work order 175 D): the Reference topic lists,
         # the trait names and the Tech Review's group names.
         (os.path.join(ROOT, *infotext_file(lang).split("/")),

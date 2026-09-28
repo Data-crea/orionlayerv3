@@ -163,9 +163,12 @@ screens/leaders/assets/gamedata/
 # The Races screen's portraits, overlay and spy icons out of the player's
 # RACES.LBX (tools/races_art_extract.py, work order 175) — the same rule.
 screens/races/assets/gamedata/
-# The Ship Designer's arc pictures and palette out of the player's
+# The Ship Designer's pictures and palette out of the player's
 # DESIGN.LBX and FONTS.LBX (tools/design_art_extract.py, work order 185).
 screens/ship_design/assets/gamedata/
+# The audience's rooms, ambassadors and palettes out of the player's
+# DIPLOMAT.LBX (tools/audience_art_extract.py, work order 185) — the same rule.
+screens/audience/assets/gamedata/
 
 # --- Frame builds (decision 40) ---
 # `tools/fleets_frame_build.py` writes here by default. The BUILD is

@@ -310,6 +310,10 @@ _MARKED = {
     "screens/design_box/dbdraw.py": "`centring_swap`",
     "screens/design_box/dbgeom.py": "HD EXTENSION `box_titles`",
     "screens/design_box/layout.json": "deviation_filter_art",
+    # ADDED 28 September 2026, work order 185 part 10: the diplomacy
+    # audience. Its own check is 090z.
+    "screens/audience/audraw.py": "DEVIATION      `hud_frameless`",
+    "screens/audience/augeom.py": "DEVIATION `hud_frameless`",
 
 }
 _MARKS = ("HD EXTENSION", "DEVIATION")

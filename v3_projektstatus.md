@@ -2458,7 +2458,7 @@ files under `doc/` and are only summarised here.
 | | |
 |---|---|
 | Python | 32,960 lines across 111 modules — `find . -name '*.py'`, `__pycache__` excluded, the smoke test's 6,400 included. The previous figure here (21,642 across 94) was carried from an unstated method and could not be reproduced |
-| Smoke test | `python tools/smoke_test.py` — **399 checks**, headless, in `tools/smoke_suite/` since work order 162 (143 check modules, one group per screen plus a shared core; `tools/smoke_test.py` is the runner). **Two tiers since work order 158**: the bare command runs everything (~200 s here, measured 26 September 2026 — the 72 s this line said was before the rendering checks of 172-174); `--fast` runs the commit gate's 389 (~95 s here). `--screen <name>` prints only that screen's sentences and the core's and is NEVER a gate. See "The gate has two tiers" below |
+| Smoke test | `python tools/smoke_test.py` — **405 checks**, headless, in `tools/smoke_suite/` since work order 162 (144 check modules, one group per screen plus a shared core; `tools/smoke_test.py` is the runner). **Two tiers since work order 158**: the bare command runs everything (~200 s here, measured 26 September 2026 — the 72 s this line said was before the rendering checks of 172-174); `--fast` runs the commit gate's 395 (~95 s here). `--screen <name>` prints only that screen's sentences and the core's and is NEVER a gate. See "The gate has two tiers" below |
 | Assets | 170 MB (select_race 68, galaxy_map 51, shared 23, new_game 21, colony_summary 1) |
 | Screens in HD | 11 of ~20–22 (the Leaders screen, work order 167, built and not accepted; the GAME menu overlay, work order Stop 2, every dialog of the popup; colony summary draws list, sidebar, scan box and galaxy inset, and MOVES POPS — the first HD gesture that drives the game; planets, brief 101, lists, sorts, restricts and returns) |
 | Setup from clone | `python tools/setup.py` (deps via the system package manager) |
@@ -3561,6 +3561,30 @@ anywhere. Kept: `_black_hole_src.png`, which is the INPUT to
 ---
 
 ## What works
+
+### The diplomacy audience — BUILT, OPEN FIXES 46 AND 47 NOT APPLIED — work order 185, parts 9-11
+
+**Neither fix is applied**, so on the engine a player has nothing changes:
+without open fix 46 the audience runs under its caller's id and stays the
+game's picture. Built from `doc/brief_audience.md` (the reading
+`doc/audience_reading.md`) against DIPL blocks recorded on a scratch engine
+carrying 46 and 47, cut with every text replaced by stand-ins
+(`tools/audience_fixture.py`, `tools/fixtures/audience_blocks_185.json`).
+Walked through the HD window (`tools/audience_walk.py`): Races → a refused
+audience → Races, Races → the greeting → the menu → Good Bye → Races, at
+1920x1080 and 2576x1432 with **0 native frames**, in the flash check's
+replay set. The AI's audience (58) comes only at a turn start — not walked.
+NOT ACCEPTED BY DATA.
+
+**`screens/audience/`** (ids 57 the player's, 58 the AI's — one screen,
+`EXTRA_SCREEN_IDS`): the race's room and ambassador (DIPLOMAT.LBX,
+`tools/audience_art_extract.py`; no ambassador when refused), the
+statement as the engine rendered it in the original's column, the menu at
+the fields the list built with its title, a disabled item dimmed. Sends:
+an enabled item's field, a statement's one field on any click; a disabled
+item refused. Marks: DEVIATION `hud_frameless`; OMISSION `talking_loop`,
+`header_line`, `glass_remap`, `audience_help`; UNVERIFIED `fix46`, `fix47`.
+Check 090z.
 
 ### The Ship Designer and its three pickers — BUILT, OPEN FIXES 44 AND 45 NOT APPLIED — work order 185, parts 6-8
 

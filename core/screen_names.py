@@ -90,6 +90,11 @@ SCREENS = {
     54: ("(synthetic)",     "design_box"),
     55: ("(synthetic)",     "design_box"),
     56: ("(synthetic)",     "design_box"),
+    #: 57 and 58, synthetic, ON THE WIRE ONLY WITH OPEN FIX 46 (work order
+    #: 185, NOT APPLIED): the diplomacy audience the player opened (57) and
+    #: the one an AI asked for (58), which run under their caller's id.
+    57: ("(synthetic)",     "audience"),
+    58: ("(synthetic)",     "audience"),
 }
 
 #: The last value of orion2re's own SCREEN enum:

@@ -308,3 +308,38 @@ States the save does not reach, and the save each needs: parked, section 3.
 7. Checks 398 → 399 (090r #8). The DIPL parse check is written and waits
    for part 10: a check group must name a screen folder, and
    `screens/audience/` is part 10's.
+
+## Part 10 — the audience HD screen — **DONE (built against the recorded blocks; fixes 46/47 NOT applied)**
+
+1. **`screens/audience/`** (ids 57 and 58, one screen via `EXTRA_SCREEN_IDS`;
+   `core/screen_names.py` 57/58): claims only with DIPL. The stage is the
+   original's own art — the race's room and ambassador out of DIPLOMAT.LBX
+   (`tools/audience_art_extract.py`, new, raw blobs, gitignored;
+   `screens/audience/auart.py`), no ambassador when refused, black filled
+   only under the room (without the art the panels stand on the universal
+   background — 006f's glass rule caught the opaque stage). HUD panels:
+   the statement as the engine rendered it in the original's column (x 80,
+   470 wide, centred on y 440), the menu at the list's own fields with its
+   title, disabled items dimmed. States off the live list: MENU,
+   STATEMENT, else GAME_BOX (the system picker, a list that disagrees) —
+   modal, the game's picture.
+2. **Input**: an enabled item's field by activation, a statement's one
+   field on any click, a disabled item refused; no keys (the list has no
+   hotkeys).
+3. **Live walk** (`tools/audience_walk.py`, new; engine `build46`, PID
+   148507, guard `185_P10_walk`, Xvfb, SAVE4, input log on): Races →
+   refused audience → click → Races; Races → greeting → click → menu → Good
+   Bye → Races; ESC to the map — at 1920x1080 (9 transitions) and 2576x1432
+   (7), **0 native frames**, every audience input sent by the HD screen.
+   SAVE1-9, SAVE11 identical, SAVE10 unchanged; MOX.SET → restored from the
+   pre-engine guard, verify clean. `transitions_180.json` 220 → 233.
+4. **Checks 399 → 405**: 090z gains 5 (claim and states, sends, draws at
+   three sizes and marks, art loader and extractor entries, recorded ways);
+   the DIPL parse check held from part 9 lands with it. 090t stages the
+   audience from its stand-in (`tools/standins.py`, new — moved out of
+   `tools/hud_evidence.py`, which the new staging had pushed over 300 code
+   lines).
+5. **Marks**: DEVIATION `hud_frameless`; OMISSION `talking_loop`,
+   `header_line`, `glass_remap` (the ambassador's glassed pixels drawn as
+   their indices — a hatching; the original remaps them against the room),
+   `audience_help`; UNVERIFIED `fix46`, `fix47`.

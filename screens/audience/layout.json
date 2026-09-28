@@ -1,0 +1,12 @@
+{
+  "_comment": "The diplomacy audience (wire ids 57 player, 58 AI; open fixes 46 and 47), work order 185 part 10. Geometry is screens/audience/augeom.py (transcribed from dip_scrn_main.cpp and fields.cpp); every word on the screen is the engine's, carried by open fix 47's DIPL block; the stage is DIPLOMAT.LBX's own art. The marks name every difference, each held by the audience smoke group and named in v3_projektstatus.md.",
+  "marks": {
+    "deviation_hud_frameless": "HUD panels behind the statement and the menu, where the original prints on the room.",
+    "omission_talking_loop": "The ambassador's animation is not drawn: its phase is not on the wire. The still is the frame the original shows with animations off.",
+    "omission_header_line": "JIMTEXT2's header line at (320, 10) \u2014 'Player n: name' or 'race Ambassador' \u2014 needs an extraction this order does not add.",
+    "omission_audience_help": "The right click's help in the audience is not built (help.json has no regions).",
+    "unverified_fix46": "The ids 57 / 58 come from open fix 46 (NOT APPLIED); without it the audience runs under its caller's id and never reaches this screen.",
+    "unverified_fix47": "The screen draws only from open fix 47's DIPL block (NOT APPLIED): built against blocks recorded off a scratch engine, live on no applied engine. Without it the screen claims nothing.",
+    "omission_glass_remap": "The ambassador's glassed pixels are drawn as their palette indices, a hatching; the original remaps them against what lies beneath (Update_Glass_Remap_Colors_, dip_scrn_main.cpp:476) \u2014 translucency HD does not reproduce."
+  }
+}

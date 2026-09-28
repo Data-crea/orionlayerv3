@@ -28,6 +28,8 @@ import sys
 # the user's session (a setdefault lost to an exported SDL_VIDEODRIVER).
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import vdisplay  # noqa: E402
+import standins  # noqa: E402
+from design_fixture import state as design_state  # noqa: E402,F401
 vdisplay.headless_clients()
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, ROOT)
@@ -182,13 +184,6 @@ def game_menu_state(node="menu"):
     return gs
 
 
-def design_state(stop):
-    """A Ship Designer stop of the committed stand-in — its reader lives
-    beside its writer, `tools/design_fixture.py`."""
-    import design_fixture
-    return design_fixture.state(stop)
-
-
 def stage(app, name):
     """Put `name` on screen with its offline state; return the state."""
     d = app.dispatcher
@@ -220,23 +215,8 @@ def stage(app, name):
         d.update_from_game(gs)
         d.overlay.update(gs)
         return gs
-    if name in ("ship_design", "design_box"):
-        # The designer from its stand-in, and the special picker over it
-        # (the weapon picker needs the player's DESIGN.LBX art). Where the
-        # player's text files are absent — a clone — the committed text
-        # stand-ins, so the screen draws the same number of texts there.
-        from screens.ship_design.screen import Names
-        gs = design_state("designer" if name == "ship_design" else "special")
-        d.update_from_game(gs)
-        derived = os.path.join(ROOT, "tools", "fixtures", "derived")
-        for scr in (d.active, d.overlay):
-            if scr is not None and scr.names().state != "ok":
-                from core.hestrings import HStrings
-                app.hstrings = HStrings("en", root=derived)
-                scr._names = Names(app, "en", root=derived)
-            if scr is not None:
-                scr.update(gs)
-        return gs
+    if name in standins.STAND_INS:
+        return standins.stage(app, name)
     d.switch_to(name)
     gs = {"galaxy_map": galaxy_state, "colony_summary": colony_state,
           "new_game": new_game_state}.get(name, lambda: None)()

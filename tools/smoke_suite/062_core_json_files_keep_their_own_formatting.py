@@ -151,6 +151,9 @@ _JSON_ABSENT_OK = {
     os.path.join("assets", "shared", "names", "techdesc_en.json"),
     os.path.join("screens", "ship_design", "assets", "gamedata",
                  "manifest.json"),
+    # Work order 185 part 10: the audience's artwork (DIPLOMAT.LBX).
+    os.path.join("screens", "audience", "assets", "gamedata",
+                 "manifest.json"),
 }
 if os.path.isdir(os.path.join(_json_root, ".git")):
     import subprocess as _json_sp
