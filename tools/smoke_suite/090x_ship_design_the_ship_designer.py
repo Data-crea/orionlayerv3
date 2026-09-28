@@ -5,13 +5,14 @@
 # tools/smoke_suite/, in file-name order and in ONE namespace. Do not
 # import this file; it is not a module.
 #
-# The 6 check(s) it holds:
+# The 7 check(s) it holds:
 #   - open fixes 44 and 45's blocks, as a scratch engine wrote them, parse whole; a tail cut short leaves both None; the offered modifications are the recorded ones; no text of the game's in the cut
 #   - screen 3 is claimed only with open fix 44's DSGN: without it the game's picture, as before; the page READY on its own list, a box over it modal, a picker over it PICKER; ids 3 and 54-56 literal, table agrees
 #   - the designer sends each control's own field, a hull by an injected click, and refuses a hidden hull, a hidden plus, and Build without its button
 #   - the designer draws at 1920, 2576 and 3840 from the recorded page, its text scaled once, and every mark it carries is named in its module and the status document
 #   - the designer's loaders: stand-ins read, the extracted art absent answers None with a reason, the art extractor's groups are the source's load order
 #   - every way into and out of the designer and its pickers is in the replayed set at 1920 and 2576, each reaching its screen
+#   - the name is typed in HD: nothing goes out until Enter, then an injected click on the name field, Backspaces enough to clear it, the keys and Enter, one per tick; ESC sends nothing; the page never asks for the game's picture meanwhile, and the live name entry replays with 0 native frames
 
 
 # ── THE SHIP DESIGNER (work order 185, part 7) ──────────────────
@@ -216,8 +217,8 @@ with open(os.path.join(SCREENS_DIR, "ship_design", "layout.json"),
     _sd_mk = _sd_json.load(_sd_fh)["marks"]
 assert "doc/ext_ship_designer_state.patch" in _sd_vc.LOCAL_PATCHES
 assert "unverified_fix44" not in _sd_mk, "fix 44 is applied: its mark goes"
-assert "_continuous_string" in _sd_mk["omission_name_entry"] and \
-    "unverified_name_entry" not in _sd_mk, _sd_mk
+assert "deviation_name_field" in _sd_mk and not {
+    "unverified_name_entry", "omission_name_entry"} & set(_sd_mk), _sd_mk
 ok(f"the designer draws at 1920, 2576 and 3840 from the recorded page, its "
    f"text scaled once, and every mark it carries is named in its module and "
    f"the status document ({_sd_nmarks} marks)")
@@ -278,3 +279,70 @@ for _sd_size in ("1920x1080", "2576x1432"):
 ok(f"every way into and out of the designer and its pickers is in the "
    f"replayed set at 1920 and 2576, each reaching its screen "
    f"({_sd_count} recorded transitions)")
+
+
+
+# 7. THE NAME, IN HD (work order 187, part 2). Data's rule: nothing of the
+#    original's picture outside F12 — so the name is typed in HD's own field
+#    and sent on Enter the save dialog's way (`sdname.py`): an injected
+#    click opens the original's field (an activation does not, 186), 15
+#    Backspaces clear it (one takes one letter in this field, 187), the keys, Enter. One
+#    send per tick (the double has no counters: one per update).
+import pygame as _sn_pg
+from screens.ship_design import sdname as _sn
+_sn_ev = lambda k, u="": _sn_pg.event.Event(_sn_pg.KEYDOWN, key=k, mod=0,
+                                            unicode=u, scancode=0)
+_sn_live = _sd_app.client.state.fields
+_sn_f = _sd_wire.live_field(_sn_live, _sd_geom.NAME)
+assert _sn_f is not None and (_sn_f.x, _sn_f.y, _sn_f.x_end, _sn_f.y_end) == \
+    _sd_geom.NAME_RECT, "the name field is where sdgeom says"
+_sn_r = _sd_nd.rect(_sd_p.layout, _sd_geom.NAME_RECT)
+_sd_p.name_edit = _sn.NameEditor(_sd_p)
+_sd_log.clear()
+_sd_p.handle_click(_sn_r.centerx, _sn_r.centery)
+assert _sd_p.name_edit.editing and _sd_log == [], _sd_log
+_sn_before = _sd_p.name_edit.input.value
+for _sn_k, _sn_u in ((_sn_pg.K_BACKSPACE, ""), (ord("x"), "X"),
+                     (ord("_"), "_"), (ord("b"), "B")):
+    _sd_p.handle_key_event(_sn_ev(_sn_k, _sn_u))
+assert _sd_p.name_edit.input.value == _sn_before[:-1] + "XB", \
+    "Backspace edits, '_' is refused, letters append"
+assert _sd_log == [], "nothing goes out before Enter"
+assert not _sd_p.wants_original(), "the page keeps HD's picture"
+# ESC cancels in HD: nothing sent, the field closes
+_sd_p.handle_key_event(_sn_ev(_sn_pg.K_ESCAPE))
+assert _sd_p.name_edit.input is None and _sd_log == []
+# a 15th character is refused
+_sd_p.handle_click(_sn_r.centerx, _sn_r.centery)
+for _sn_c in "ABCDEFGHIJKLMNOPQ":
+    _sd_p.handle_key_event(_sn_ev(ord(_sn_c.lower()), _sn_c))
+assert len(_sd_p.name_edit.input.value) <= _sn.NAME_MAX == 14
+_sd_p.name_edit.input.value = "Ab"
+_sd_p.handle_key_event(_sn_ev(_sn_pg.K_RETURN, "\r"))
+assert _sd_p.name_edit.busy and not _sd_p.wants_original()
+for _ in range(40):
+    _sd_p.name_edit.update(_sd_app.client.state)
+_sn_cx, _sn_cy = (_sn_f.x + _sn_f.x_end) // 2, (_sn_f.y + _sn_f.y_end) // 2
+assert _sd_log == [("click", _sn_cx, _sn_cy)] + \
+    [("key", _sn_pg.K_BACKSPACE)] * _sn.CLEAR_KEYS + \
+    [("key", ord("A")), ("key", ord("b")), ("key", _sn_pg.K_RETURN)], _sd_log
+assert _sn.CLEAR_KEYS >= _sn.NAME_MAX + 1, "enough Backspaces for any name" 
+assert not _sd_p.name_edit.busy
+# while the keys went out, a click on the page sent nothing else
+assert "activate" not in {e[0] for e in _sd_log}
+_sd_p.name_edit = _sn.NameEditor(_sd_p)
+# AND LIVE, 0 NATIVE FRAMES: the name entry walked on the applied engine
+# (work order 187 part 2: "Rafale" -> "Hawke", Backspace, Enter; then ESC)
+# is in the replayed set, which 090o runs through the gate — no native frame.
+with open(os.path.join(_sd_root, "tools", "fixtures", "transitions_180.json"),
+          encoding="utf-8") as _sn_fh:
+    _sn_tr = {t["transition"]: t for t in _sd_json.load(_sn_fh)["transitions"]}
+for _sn_k in ("ship_design -> ship_design (name entry: Enter)",
+              "ship_design -> ship_design (name entry: ESC)"):
+    assert _sn_k in _sn_tr and all(not r[4] for r in _sn_tr[_sn_k]["rows"]), (
+        f"{_sn_k}: not in the replayed set, or a row asks for the picture")
+ok("the name is typed in HD: nothing goes out until Enter, then an injected "
+   "click on the name field, Backspaces enough to clear it, the keys and "
+   "Enter, one per tick; "
+   "ESC sends nothing; the page never asks for the game's picture meanwhile, "
+   "and the live name entry replays with 0 native frames")

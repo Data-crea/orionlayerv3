@@ -24,12 +24,13 @@ field found in the list on the wire when the byte goes out (decision 20):
 
 Refused before it goes out (decision 33): a hull without its button field,
 plus / minus without their button, Build without its button (the original
-removes it when the design does not fit). Nothing else is sent — OMISSION
-`name_entry`: DSGN carries the name as committed, and the text being typed
-lives in the engine's `_continuous_string`, on no block, so HD could only
-draw an edit it invented; the name is shown and not edited here. Measured
-in work order 186: an injected click opens the original's field, keys
-append, Enter commits — F12 gives the player exactly that.
+removes it when the design does not fit). THE NAME (work order 187): a
+click on it opens HD's own text field; Enter sends an injected click on
+the original's field, 15 Backspaces to clear it, the keys one per tick
+and Enter —
+the save dialog's path (`sdname.py`, DEVIATION `name_field`); ESC cancels
+in HD. The typed text is HD's until the engine commits it (DSGN carries
+only the committed name).
 """
 import logging
 
@@ -40,7 +41,7 @@ from core.screen_base import ScreenBase
 from core.shipparts import ShipPartNames
 from screens.leaders import ldrdraw as nd
 
-from . import sddraw, sdgeom as geom, sdwire
+from . import sddraw, sdgeom as geom, sdname, sdwire
 
 log = logging.getLogger("ship_design")
 
@@ -101,6 +102,7 @@ class ShipDesignScreen(ScreenBase):
         self._view = None
         self._page_fields = None
         self._names = None
+        self.name_edit = sdname.NameEditor(self)
         self._data = self.app.res.load_json(
             "screens/ship_design/layout.json", {}) or {}
 
@@ -114,6 +116,7 @@ class ShipDesignScreen(ScreenBase):
     def exit(self):
         # A list remembered for drawing under a picker is this visit's.
         self._page_fields = None
+        self.name_edit = sdname.NameEditor(self)
         super().exit()
 
     # ── The dispatcher's and the gate's questions ────────────────────
@@ -147,6 +150,10 @@ class ShipDesignScreen(ScreenBase):
             self._view = sdwire.View(game_state, self._page_fields)
             if self._view.state == sdwire.READY:
                 self._page_fields = self._view.fields
+            self.name_edit.update(game_state)
+            self.name_edit.settled(
+                (self._view.design or {}).get("name"),
+                (getattr(self.app.client, "stats", None) or {}).get("state", 0))
 
     def word(self, key):
         """OrionLayer's own words, through decision 73's resolver (the
@@ -166,6 +173,10 @@ class ShipDesignScreen(ScreenBase):
         view = self._view
         if view is not None and view.draws and self.names().state == "ok":
             sddraw.draw(surface, self, view, self.names())
+            if self.name_edit.input is not None:
+                self.name_edit.input.render(
+                    surface, nd.rect(self.layout, geom.NAME_RECT),
+                    self.style, self.layout)
         self.render_help(surface)
 
     # ── Right-click help, `_static_design_screen_help_list` ───────────
@@ -233,6 +244,13 @@ class ShipDesignScreen(ScreenBase):
         return self._view is not None and \
             self._view.state == sdwire.READY and self.names().state == "ok"
 
+    def handle_key_event(self, event):
+        # The name field, while open or while its keys go out, takes every
+        # key (the TextInput needs `event.unicode`); otherwise the page's.
+        if self.name_edit.handle_key_event(event):
+            return
+        self.handle_key(event.key)
+
     def handle_key(self, key):
         if self.help_consumes_key(key) or not self.ready():
             return
@@ -244,7 +262,21 @@ class ShipDesignScreen(ScreenBase):
     def handle_click(self, screen_x, screen_y):
         if self.help_consumes_click(screen_x, screen_y) or not self.ready():
             return None
+        if self.name_edit.busy:
+            return None               # the name's keys are going out
+        name_hit = nd.rect(self.layout, geom.NAME_RECT).collidepoint(
+            screen_x, screen_y)
+        if self.name_edit.editing:
+            # As in the original, a click away from the open field commits
+            # it (fields.cpp copies the string on another field); the click
+            # itself is not passed on — DEVIATION `name_field`.
+            if not name_hit:
+                self.name_edit.commit()
+            return None
         live = self._live()
+        if name_hit and sdwire.live_field(live, geom.NAME) is not None:
+            self.name_edit.start((self._view.design or {}).get("name"))
+            return None
         for label, ident in (("Cancel", geom.CANCEL), ("Clear", geom.CLEAR),
                              ("Build", geom.BUILD),
                              ("picture <", geom.PICTURE_LEFT),

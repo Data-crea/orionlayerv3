@@ -25,6 +25,10 @@ PICTURE_LEFT = (TYPE_BUTTON, 0x11, 0x52)
 PICTURE_RIGHT = (TYPE_BUTTON, 0x5E, 0x52)
 #: The name field (a continuous string input, 15 characters).
 NAME = (TYPE_STRING, 0x12, 0x17)
+#: Its rectangle, as the list gives it (x_end 0x98 = 0x12 + 0x86 width,
+#: y_end 0x28 = y + the font height + 2, design_main.cpp:686-690; the
+#: recorded list agrees: (18, 23)-(152, 40)). HD's text field covers it.
+NAME_RECT = (0x12, 0x17, 0x98, 0x28)
 #: The shield and computer panels (hidden fields, `Add_Design_Buttons_`).
 SHIELD = (TYPE_HIDDEN, 0x1B5, 0x38)
 COMPUTER = (TYPE_HIDDEN, 0x1B5, 0x61)

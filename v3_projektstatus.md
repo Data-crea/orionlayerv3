@@ -2458,7 +2458,7 @@ files under `doc/` and are only summarised here.
 | | |
 |---|---|
 | Python | 32,960 lines across 111 modules — `find . -name '*.py'`, `__pycache__` excluded, the smoke test's 6,400 included. The previous figure here (21,642 across 94) was carried from an unstated method and could not be reproduced |
-| Smoke test | `python tools/smoke_test.py` — **408 checks**, headless, in `tools/smoke_suite/` since work order 162 (144 check modules, one group per screen plus a shared core; `tools/smoke_test.py` is the runner). **Two tiers since work order 158**: the bare command runs everything (~200 s here, measured 26 September 2026 — the 72 s this line said was before the rendering checks of 172-174); `--fast` runs the commit gate's 398 (~95 s here). `--screen <name>` prints only that screen's sentences and the core's and is NEVER a gate. See "The gate has two tiers" below |
+| Smoke test | `python tools/smoke_test.py` — **409 checks**, headless, in `tools/smoke_suite/` since work order 162 (144 check modules, one group per screen plus a shared core; `tools/smoke_test.py` is the runner). **Two tiers since work order 158**: the bare command runs everything (~200 s here, measured 26 September 2026 — the 72 s this line said was before the rendering checks of 172-174); `--fast` runs the commit gate's 399 (~95 s here). `--screen <name>` prints only that screen's sentences and the core's and is NEVER a gate. See "The gate has two tiers" below |
 | Assets | 170 MB (select_race 68, galaxy_map 51, shared 23, new_game 21, colony_summary 1) |
 | Screens in HD | 11 of ~20–22 (the Leaders screen, work order 167, built and not accepted; the GAME menu overlay, work order Stop 2, every dialog of the popup; colony summary draws list, sidebar, scan box and galaxy inset, and MOVES POPS — the first HD gesture that drives the game; planets, brief 101, lists, sorts, restricts and returns) |
 | Setup from clone | `python tools/setup.py` (deps via the system package manager) |
@@ -3621,12 +3621,13 @@ arc, cost and space divided as the original divides), the specials with
 their descriptions (TECHDESC, `tools/techdesc_extract.py`), Cost and Space
 Available, Clear / Cancel / Build, the 13 help regions. Sends: every
 control by activation of the field found in the list now, a hull by an
-injected click. Marks: DEVIATION `hud_frameless`, `button_words`,
-`row_help`; HD EXTENSION `title`; OMISSION `hover_messages`,
-`flashing_hover`, `name_entry` (shown, not edited: the text being typed
-is the engine's `_continuous_string`, on no block; typing works through
-F12, measured in 186) — UNVERIFIED `fix44` removed by work order 186, the
-data path seen live. Check 090x.
+injected click; the NAME in HD's own text field since work order 187
+(`sdname.py`: on Enter an injected click on the original's field, 15
+Backspaces, the keys one per tick, Enter — the save dialog's path). Marks:
+DEVIATION `hud_frameless`, `button_words`, `row_help`, `name_field`; HD
+EXTENSION `title`; OMISSION `hover_messages`, `flashing_hover` (OMISSION
+`name_entry` replaced by 187; UNVERIFIED `fix44` removed by work order
+186, the data path seen live). Check 090x.
 
 **`screens/design_box/`** (ids 54 shield / computer, 55 weapon, 56 special
 — one overlay over the page, `EXTRA_SCREEN_IDS`, which the dispatcher maps

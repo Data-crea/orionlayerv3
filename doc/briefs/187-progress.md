@@ -99,3 +99,43 @@ the full hold for non-boxes / empty lists / hand-overs, the nets' own-list
 rule, each screen's answer; shown red with the early release disabled.
 Count 407 → 408.
 
+## Part 2 — the designer's name entry in HD — **DONE: it works in HD, 0 native frames**
+
+**The path the HD screens that take text use** — the save dialog
+(`screens/game_menu/gmsave.py`, work order 124) and Empire Identity
+(`core/injection.py`): HD holds the text in its own `TextInput` (field,
+cursor, typed text drawn by HD); on Enter one paced `InjectionChain` step
+sends the field's opening input and the keys, one per tick (the game's key
+ring holds ten). **The designer now takes the same path**
+(`screens/ship_design/sdname.py`, new): a click on the name opens HD's
+field; Enter sends an injected click on the original's name field (an
+activation does not open this field — 186), **15 Backspaces**, the letters,
+Enter; ESC cancels in HD with nothing sent; a click away commits (as the
+original's field does); other input is refused while the keys go out.
+Letters but `_`, at most 14 (fields.cpp:1204-1216).
+
+**Found on the way, live**: the first version sent ONE Backspace, as the
+save dialog does, trusting `_active_input_field_first` (its first
+Backspace clears all, fields.cpp:1196-1199). "Rafale" + "Hawke" became
+"RafalHawke": the click sets that flag only when it OPENS the field
+(:1437), and the designer's field was already active, so one Backspace took
+one letter. The always-clearing code 0x0E7F (:1181) no injected key
+produces (Delete is 0x10000, platform.cpp:435). 15 Backspaces clear any
+name in either state (an empty field ignores them, :1193).
+
+**Live on Xvfb** (engine `230a0638`, SAVE4, guarded, nothing saved;
+`evidence/work_order_187/P2*`): open the field, clear, type "Hawkz",
+Backspace, "e", Enter → the engine's name **"Hawke"** after 4.9-5.7 s (21
+keys at one per tick); open again, type "Xyz", ESC → still "Hawke", the
+page stays; **0 native frames** in 329 and 397 presented frames, 0 held;
+both recorded as transitions ("name entry: Enter", "name entry: ESC").
+Screenshots: HD's glass field with the text and its caret.
+
+**Checks**: 090x #7 (new) — keys stay local until Enter; then click,
+15 Backspaces, the keys, Enter; ESC sends nothing; `_` and a 15th letter
+refused; the page never asks for the picture; the live name entry is in
+the replay set (`transitions_180.json` 233 → 240, the 233 reproduced byte
+for byte first) that 090o replays with 0 native frames. Shown red with an
+activation instead of the click. Marks: DEVIATION `name_field` replaces
+OMISSION `name_entry`. Count 408 → 409.
+
