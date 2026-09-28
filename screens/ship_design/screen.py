@@ -24,11 +24,12 @@ field found in the list on the wire when the byte goes out (decision 20):
 
 Refused before it goes out (decision 33): a hull without its button field,
 plus / minus without their button, Build without its button (the original
-removes it when the design does not fit). Nothing else is sent — the name
-field is UNVERIFIED `name_entry`: DSGN carries the name as committed, and
-the text being typed lives in the engine's `_continuous_string`, on no
-block, so HD could only draw an edit it invented; the name is shown and
-not edited here (F12 shows the original's own field, which takes keys).
+removes it when the design does not fit). Nothing else is sent — OMISSION
+`name_entry`: DSGN carries the name as committed, and the text being typed
+lives in the engine's `_continuous_string`, on no block, so HD could only
+draw an edit it invented; the name is shown and not edited here. Measured
+in work order 186: an injected click opens the original's field, keys
+append, Enter commits — F12 gives the player exactly that.
 """
 import logging
 

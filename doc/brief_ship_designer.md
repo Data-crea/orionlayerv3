@@ -94,7 +94,7 @@ answers it (the reading, section 10).
 | HD EXTENSION `title` | the title plate; the word is the game's own |
 | DEVIATION `picker_as_popup` | the pickers are HUD popups; the original draws them from DESIGN.LBX's box sprites |
 | OMISSION `flashing_hover` | the original flashes the hovered row and the shield / computer name in a cycling palette index; an RGB surface has none — HD fills the row as the research panel does (INVENTION `hover_fill`) |
-| UNVERIFIED `name_entry` | typing the name: the text being typed is the engine's `_continuous_string`, on no block (work order 186) |
+| OMISSION `name_entry` (was UNVERIFIED) | typing the name on the HD page: the text being typed is the engine's `_continuous_string`, on no block; measured in work order 186 — an injected click opens the original's field, keys append, Enter commits; F12 gives the player that |
 | ~~UNVERIFIED `fix44`, `fix45`~~ | removed by work order 186: the fixes are applied and the data path was seen live on that engine |
 
 ## Texts

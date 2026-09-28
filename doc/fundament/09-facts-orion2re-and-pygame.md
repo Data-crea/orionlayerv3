@@ -21,6 +21,14 @@ references in `doc/v3_orion2re_index.md`.
 - Radio buttons (type 1) never respond to `ACTIVATE_FIELD` — the
   toggle happens inside `Interpret_Mouse_Input_()`, which the early
   exit skips.
+- **A continuous string field (type 11) is opened only by a click, never
+  by `ACTIVATE_FIELD`** — measured, work order 186, on the Ship Designer's
+  name: an injected click opens it, the keys append, Enter commits (the
+  wire shows only the committed text). After an activation the keys go
+  nowhere, and Enter with no field open presses the field under the
+  engine's POINTER (`Scan_Field_`, fields.cpp) — there it changed the hull.
+  The engine's hit test takes the FIRST field covering a point (from index
+  1), so a forwarded click resolves the same way (`original_view`).
 - Prefer `ACTIVATE_FIELD` whenever the target code compares field IDs.
   `Flag_Screen_` compares `Get_Input_()`'s return against its eight
   hidden-field IDs.

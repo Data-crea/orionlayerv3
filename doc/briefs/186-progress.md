@@ -155,3 +155,109 @@ Unattended run, 28 September 2026. Evidence root:
    from `engine_env` (`python -B`, caches cleared after the restore), green
    again. 090x / 090y / 090z now assert 44-47 required and their fix marks
    gone, and `name_entry`'s reason. Full suite **406 green**.
+
+## Part 3 — verification on the engine `play.py` starts — **DONE (one fault found and fixed; the AI audience parked)**
+
+Engine `230a0638` (the binary `play.py` starts), every session on Xvfb through
+`tools/engine_start.py` with its own guard, SAVE4 or SAVE5, nothing saved
+(evidence `work_order_186/P3_*`).
+
+1. **Suite and clone**: full suite **407 green** before this part's commit.
+   The fresh clone runs on the committed tree — Part 5.
+2. **Flash walk over every transition, and the colony screens**:
+
+   | walk | 1920x1080 | 2576x1432 |
+   |---|---|---|
+   | `flash_walk` (pre-game, the SAVE4 load, every in-game screen, the system window) | 29, 0 native | 29, 0 native |
+   | `design_walk` (popup → designer → the three pickers → back) | 11, 0 | 11, 0 |
+   | `audience_walk` (Races → refusal; greeting → menu → Good Bye) | 7, 0 | 7, 0 |
+   | `colony_accept` (colony screen and build popup, every way in and out; fix 47 puts DIPL between INFS and COLS) | 17, 0 — 276 colony frames agreeing with the engine's handle, 0 disagreeing | — |
+
+   **Every recorded transition of this order — 164 in 16 runs — 0 native
+   frames** (summed from each run's `transitions.json`).
+3. **The Ship Designer live, beside 185's native frames**
+   (`P3_designer_1920x1080`, strips HD 186 | native 185 | native 186 in
+   `P3_side_by_side/`): 185's 16 states in 185's order. **HD 186 is pixel
+   for pixel HD 185** on 13 of them; 08 and 09 differ by 185's own later fix
+   (a modification that is on drawn lit); 02 is the game's picture in both
+   (the warning box, the modal net); in 03 185's native frame was taken
+   before the box had closed — 186's shows the page, as HD does. Native 186
+   vs native 185: 0-0.23 % except 03 (that timing). New in 186: out by the
+   HD **Cancel button** (185 left by ESC), a **second way in**, **name
+   entry**, **Build** (save design, in memory — nothing on disk). Every way
+   in the save offers was walked; Refit is not offered (parked, as in 185).
+4. **Name entry — a fault in the safety net, found and fixed.** Through F12
+   (the player's route to the original's own field) the name did not
+   change: the forwarded click went out as an ACTIVATE_FIELD, which never
+   opens a continuous string field; the five keys went nowhere; **Enter
+   then pressed the field under the engine's pointer** — the Cruiser hull,
+   where the last injected click had left it (fields.cpp `Scan_Field_`) —
+   and the design became a Cruiser "Interceptor", which Build then wrote
+   into slot 1 in memory. A probe measured the right path: an injected
+   click opens the field, keys append, Enter commits (`Corvette` →
+   `CorvetteAbc`). The first fix (skip string fields like radio buttons)
+   was not enough — the next field under the point, the page's full-screen
+   hidden field, was activated instead (and Enter opened the weapon picker
+   under the real pointer); a control with the engine's window hidden
+   again gave the same, so the shown window was not the cause. **The
+   fix**: `original_view.find_field_at` takes the FIRST field covering the
+   point, as the engine's hit test does (fields.cpp:710-715), and a radio
+   button or a string field there goes as INJECT_CLICK. Live again through
+   F12: click sent as 130, keys appended, Enter committed — `Corvette` →
+   `CorvetteQzxvk`, the HD page shows it — and **Build** returned to the
+   popup with slot 2's new cost (82). **Check 090g #3** (new) holds the
+   rule on a list shaped like the designer's; shown red with the old rule
+   (the exact live failure: field 42 activated), green again. The name is
+   now OMISSION `name_entry` (measured; HD's page itself does not edit
+   it — parked 1c), part 09 has the fact.
+5. **The audience live** (`P3_audience_states_1920x1080`): refusal (race
+   slot 0), greeting, the menu "How may I serve you:" (Peace Treaty
+   disabled, as the list's flag says), **Declare War → "REALLY DECLARE
+   WAR?!" answered Cancel** (the Yes item never sent) → back to the menu,
+   Good Bye, 7 transitions, 0 native. Beside 185's frames: HD within
+   0.5-0.9 % of 185's (the statement is a random variant — HD shows the
+   engine's current one, as its native frame does); the native frames
+   differ by the ambassador's animation. Differences, as questions: parked
+   2a.
+6. **The AI's turn-start audience (58) — not reachable by ending one turn**:
+   SAVE4's TURN stops at "Select planet for Colony Base in Malus system"
+   (work order 122's dialog — a game decision, place or scrap), SAVE5's at
+   "CyberToller select combat at peren" (a battle). The probe only
+   observed (nothing sent to either); SAVE10, rewritten by the TURN press,
+   and MOX.SET restored from the guards taken before those engines.
+   Parked 1d with the save it needs.
+7. **Fix 43 live**: the binary started by hand on Xvfb without OrionLayer's
+   variable — window **IsViewable** at 2, 4 and 8 s; OrionLayer's start —
+   **IsUnMapped**; F12 → **IsViewable**, F12 → **IsUnMapped** (Part 2).
+8. **Guards**: every session verified after its engine stopped; MOX.SET
+   (every load) and SAVE10 (the two TURN presses) restored from the guard
+   taken before that engine existed; against the order's first guard every
+   game file identical — only the tree's own uncommitted edits differ.
+   SAVE1-9 and SAVE11 identical in every run.
+9. Checks **406 → 407** (fast 396 → 397).
+
+### Data's acceptance on his desktop (one screen)
+
+Start with `python play.py` (use a save you can throw away — Build and
+the diplomacy menu act on the loaded game).
+
+1. **No engine window appears**; the HD main menu, no intro sound.
+2. Load the save → map → your colony → **CHANGE → Design → a design row**:
+   the **HD Ship Designer** (glass panels, the design's numbers), no flash
+   of the old picture on the way in.
+3. Click the **computer panel**, a **weapon row**, a **special row**: each
+   an HD picker; in the weapon picker choose a weapon, an arc, a
+   modification; **ESC** back each time. Try **+ / −** and a **hull**.
+4. **F12**: OrionLayer shows the original's picture AND the **original's
+   own window opens**. Click the name, type, **Enter**, **F12**: the HD
+   page shows the new name; the original's window is gone.
+5. **Cancel** → the build popup (or **Build** to keep the design).
+6. **RACES → AUDIENCE → a race**: the HD audience (room, ambassador); click
+   the greeting → the menu; **Declare War → "REALLY DECLARE WAR?!" →
+   Cancel**; **Good Bye** → Races.
+7. Close OrionLayer → the engine stops too. Start the orion2re binary by
+   hand → **its window appears**, as before fix 41.
+
+What you should NOT see: the old 640x480 picture flashing before an HD
+screen; the original's window at any time except while F12 is on.
+

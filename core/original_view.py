@@ -114,12 +114,23 @@ class OriginalView:
     # ── Original-mode interaction (moved from main.py) ─────
 
     RADIO_BUTTON_TYPE = 1
+    #: `FIELD_TYPE_CONTINUOUS_INPUT` (orion2_consts.h): a string field — the
+    #: Ship Designer's name, a save slot's description. An ACTIVATE_FIELD
+    #: never opens it for typing (the early exit returns the field without
+    #: the mouse path that sets `_input_field_active`), so typed keys went
+    #: nowhere and Enter then pressed the field under the engine's pointer
+    #: (`Scan_Field_`, fields.cpp) — measured, work order 186 part 3: the
+    #: designer's hull changed. An INJECT_CLICK opens it, and it also puts
+    #: the pointer on the field: the keys append, Enter commits.
+    CONTINUOUS_INPUT_TYPE = 11
 
     def find_field_at(self, fields, x, y):
         """Find field at (x, y) in 640x480 coordinates.
 
-        Skips dummy (index 0), offscreen (5000, 5000) and radio
-        button fields — radio buttons must go through INJECT_CLICK.
+        Skips dummy (index 0) and offscreen (5000, 5000) fields. The first
+        field covering the point decides, as in the engine; a radio button
+        or a continuous string field answers None — both must go through
+        INJECT_CLICK.
         """
         if not fields:
             return None
@@ -128,9 +139,16 @@ class OriginalView:
                 continue
             if f.x >= 5000 or f.y >= 5000:
                 continue
-            if f.field_type == self.RADIO_BUTTON_TYPE:
-                continue
             if f.x <= x <= f.x_end and f.y <= y <= f.y_end:
+                # The FIRST field that covers the point is the one the
+                # engine's own hit test takes (`Scan_Field_`, fields.cpp:
+                # 710-715, from index 1) — so it decides. Skipping it and
+                # taking the next was wrong: the designer's name field lies
+                # over a full-screen hidden field, which an activation then
+                # "clicked" (work order 186).
+                if f.field_type in (self.RADIO_BUTTON_TYPE,
+                                    self.CONTINUOUS_INPUT_TYPE):
+                    return None
                 return f.index
         return None
 
