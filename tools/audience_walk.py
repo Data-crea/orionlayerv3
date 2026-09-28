@@ -135,10 +135,13 @@ def main(argv):
     with open(os.path.join(w.run.dir, "stops.json"), "w",
               encoding="utf-8") as fh:
         json.dump(stops, fh, indent=1, default=str)
-    w.save({"results": results, **close(w.run, saves)})
+    closed = close(w.run, saves)
+    w.save({"results": results, **closed})
     bad = [r["transition"] for r in w.rows if r["native_total"]]
     print(f"\n  {len(w.rows)} transitions, {len(bad)} with native frames")
-    return 0
+    # Work order 188: a native frame without F12 ANYWHERE in the run —
+    # between the recorded transitions too — fails the walk.
+    return 1 if bad or closed["native_frames"].get("without_f12") else 0
 
 
 if __name__ == "__main__":

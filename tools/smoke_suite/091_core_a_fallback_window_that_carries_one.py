@@ -47,6 +47,10 @@ app2.client, app2.connected = _bw_client, True
 app2.render_mode = "hd"
 app2._update()
 assert app2.dispatcher.use_original, "the fixture did not fall back"
+# Since work order 188 the game's picture reaches the window on F12 only
+# (Stage 1: in HD the fallback holds with the notice, 090za) — so the
+# reading "the window shows the game's picture" is F12's.
+app2.render_mode = "original"
 app2._render()
 
 def _bw_colours(surface):
@@ -75,6 +79,7 @@ finally:
     app2.original_view.render = _bw_real_render
 app2._render()
 assert len(_bw_colours(app2.surface)) > 1
+app2.render_mode = "hd"
 ok("a fallback window that carries one colour is blank, whatever "
    "`use_original` says — the reading work order 129 got wrong")
 

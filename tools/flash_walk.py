@@ -353,12 +353,15 @@ def main(argv):
             for _ in range(repeat):
                 walk.ingame()
                 walk.boxes()
+    closed = close(walk.run, saves)
     walk.save({"registry": {str(k): v for k, v in
                             walk.app.dispatcher.screen_map.items()},
-               **close(walk.run, saves)})
+               **closed})
     bad = [r["transition"] for r in walk.rows if r["native_total"]]
     print(f"\n  {len(walk.rows)} transitions, {len(bad)} with native frames")
-    return 0
+    # Work order 188: a native frame without F12 ANYWHERE in the run —
+    # between the recorded transitions too — fails the walk.
+    return 1 if bad or closed["native_frames"].get("without_f12") else 0
 
 
 if __name__ == "__main__":

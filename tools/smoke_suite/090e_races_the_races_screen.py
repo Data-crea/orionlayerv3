@@ -217,11 +217,23 @@ _rc_scr.update(_rc_s)
 assert _rc_scr._view.in_box and not _rc_scr.wants_original()
 _rc_scr.render(pygame.Surface((1920, 1080)))
 from screens.fleets import fltbox as _rc_fb
-_rc_btn = {k: r for k, _f, r in _rc_fb.button_rects(_rc_scr)}
-assert set(_rc_btn) == {"yes", "no"}, _rc_btn
+# Work order 188, Stage 1: the box's question is not on the wire (open fix
+# 29), so no button answers blind — the notice stands, F12 answers. The
+# mapping to the box's own fields is kept for the box HD will draw, and is
+# asserted with the crop switch on.
+assert _rc_fb.button_rects(_rc_scr) == []
 _ldw_sent.clear()
-_rc_scr.handle_click(*_rc_btn["no"].center)
-assert _ldw_sent == [("act", 2)], _ldw_sent
+_rc_scr.handle_click(960, 540)
+assert _ldw_sent == [], _ldw_sent
+_rc_fb.SHOW_CROP = True
+try:
+    _rc_btn = {k: r for k, _f, r in _rc_fb.button_rects(_rc_scr)}
+    assert set(_rc_btn) == {"yes", "no"}, _rc_btn
+    _ldw_sent.clear()
+    _rc_scr.handle_click(*_rc_btn["no"].center)
+    assert _ldw_sent == [("act", 2)], _ldw_sent
+finally:
+    _rc_fb.SHOW_CROP = False
 ok("the Races screen sends every button to its own field in MAIN, a race or "
    "the catcher in WHO, ESC to RETURN, the declare-war box's answer to its "
    "field — and no mission, no spy strip, nothing from a dialog")

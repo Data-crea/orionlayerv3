@@ -102,14 +102,29 @@ _gx_conf = [_ldw_f(1, (235, 302, 286, 323), 7, ord("Y")),
 _gx_gs.fields = _gx_conf
 _gx_s.update(_gx_gs)
 assert _gx_m.kind == "confirmation" and not _gx_s.wants_original()
+# Work order 188, Stage 1: the question is not on the wire (open fix 29) —
+# the F12 notice in the box's place, and neither a click nor Y / N answers
+# blind. With the crop switch on, the old mapping (kept for the HD box).
+from screens.fleets import fltbox as _gx_fb
 _gx_s.render(_gx_surf)
+assert _gx_m._rects == {}
 _gx_sent.clear()
-_gx_yes = _gx_m._rects["yes"][0]
-_gx_s.handle_click(*_gx_yes.center)
-assert _gx_sent == [("act", 1)], _gx_sent
-_gx_sent.clear()
+_gx_s.handle_click(960, 540)
 _gx_s.handle_key_event(_GxE(pygame.K_n, "n"))
-assert _gx_sent == [("act", 2)], _gx_sent
+assert _gx_sent == [], _gx_sent
+_gx_fb.SHOW_CROP = True
+try:
+    _gx_s.render(_gx_surf)
+    _gx_sent.clear()
+    _gx_yes = _gx_m._rects["yes"][0]
+    _gx_s.handle_click(*_gx_yes.center)
+    assert _gx_sent == [("act", 1)], _gx_sent
+    _gx_sent.clear()
+    _gx_s.handle_key_event(_GxE(pygame.K_n, "n"))
+    assert _gx_sent == [("act", 2)], _gx_sent
+finally:
+    _gx_fb.SHOW_CROP = False
+    _gx_m._rects = {}
 _gx_d = _gx_s._data
 _gx_ownf = [_ldw_f(1, tuple(_gx_d["map_cancel"]["rect"]),
                    _gx_d["map_cancel"]["field_type"], 0),

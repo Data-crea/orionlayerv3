@@ -84,6 +84,10 @@ def click(screen, screen_x, screen_y):
                 send(screen, field, f"box {key}")
         return None
     if view.state == ldrwire.POPUP:
+        from screens.fleets import fltbox
+        if not fltbox.SHOW_CROP and not getattr(view.popup, "identified",
+                                                False):
+            return None      # Stage 1: no blind answer (work order 188)
         for key, rect in ldrdialog.popup_rects(screen):
             if rect.collidepoint(screen_x, screen_y):
                 send(screen, getattr(view.popup, key, None), f"popup {key}")

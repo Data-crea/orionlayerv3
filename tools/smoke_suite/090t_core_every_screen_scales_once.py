@@ -33,11 +33,25 @@ import hud_evidence as _so_he
 
 _so_app = _so_he.make_app(1920, 1080)
 _so_targets = sorted(_so_app.dispatcher.screens) + ["help_popup",
-                                                    "custom_race_message"]
+                                                    "custom_race_message",
+                                                    "f12_notice"]
 
 
 def _so_sites(name, w, h):
     app = _so_he.make_app(w, h)
+    if name == "f12_notice":
+        # Work order 188: the F12 notice (Stage 1) is the App's panel, not
+        # a screen's — drawn over the held galaxy map, as the App does.
+        from core import f12notice as _so_fn
+        _so_he.stage(app, "galaxy_map")
+        d = app.dispatcher
+
+        def draw():
+            surf = pygame.Surface((w, h))
+            d.active.render(surf)
+            _so_fn.Notice().render(surf, d.active.style, {},
+                                   "NEXT_TURN (12)")
+        return _so_he.font_sites(d.active.style, draw)
     _so_he.stage(app, name)
     d = app.dispatcher
 
@@ -69,7 +83,8 @@ assert not _so_bad, ("text scaled twice (largest size at 1920 -> at 3840, "
 # The force of the check is what it saw (fundament, "a green run in a null
 # state"): at least these screens with text, and the blank ones by name.
 assert {"custom_race", "empire_identity", "select_race", "galaxy_map",
-        "colony_summary", "new_game", "main_menu"} <= set(_so_measured), \
+        "colony_summary", "new_game", "main_menu",
+        "f12_notice"} <= set(_so_measured), \
     _so_measured
 assert set(_so_blank) <= {"colony", "build_queue", "leaders"}, _so_blank
 ok(f"every screen the tree can stage scales its text once: "

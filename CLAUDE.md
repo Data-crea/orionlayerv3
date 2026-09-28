@@ -61,8 +61,8 @@ derive world geometry.
 **The smoke test must be green before every commit.**
 
 ```bash
-python tools/smoke_test.py             # everything — 409 checks, ~200 s
-python tools/smoke_test.py --fast      # the commit gate's 399, ~95 s
+python tools/smoke_test.py             # everything — 411 checks, ~200 s
+python tools/smoke_test.py --fast      # the commit gate's 401, ~95 s
 python tools/smoke_test.py --screen colony_summary --fast   # NOT a gate
 ```
 
@@ -96,7 +96,7 @@ the fast tier holds that list and the guards to each other.
 time, not at commit time. See decision 31 and
 `doc/briefs/157-suite-profile.md`.
 
-409 checks, headless, no orion2re needed. **The count must not go
+411 checks, headless, no orion2re needed. **The count must not go
 down.** If a change makes a check obsolete, replace it — do not
 delete it. It went down exactly once, on 12 September 2026, when
 Phase B deleted the frame machinery the checks were about (decision
@@ -144,7 +144,7 @@ screens/<name>/         one folder per HD screen:
                           help.json    right-click help regions
                           assets/
 tools/                  smoke test, generators, live diagnostics
-tools/smoke_suite/      the smoke test's 144 check modules, one group
+tools/smoke_suite/      the smoke test's 145 check modules, one group
                         per screen plus a shared core; smoke_test.py
                         is the runner (work order 162)
 doc/                    the documents in the table above
@@ -195,10 +195,11 @@ blocks, HD does not guess it, and an engine without them keeps both the
 game's own picture.
 Every transition passes one hand-over gate (`core/handover.py`, work order
 180 A2): a screen HD draws never presents a native frame.
-Screens without an HD version fall back to the original framebuffer,
-so the game is always playable — and since work order 130 A that
-fallback shows the picture AND forwards clicks, so a dialog HD has no
-screen for can be answered in OrionLayer's window.
+Screens without an HD version no longer show the original framebuffer
+(work order 188, Stage 1 — Data's rule since 187: the original only on
+F12): HD holds its last frame with the notice "F12 to answer"
+(`core/f12notice.py`), and F12 shows the picture and forwards clicks as
+work order 130 A built it, so the game is always playable.
 
 **Files over 300 lines are listed in `v3_projektstatus.md` with their
 count** — the list is meant to be uncomfortable to extend. Split

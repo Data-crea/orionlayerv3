@@ -69,6 +69,13 @@ def draw_popup(surface, screen, view, rows_words, art, game_state):
     if popup is None:
         return
     if not popup.identified:
+        from screens.fleets import fltbox
+        if not fltbox.SHOW_CROP:
+            # Work order 188, Stage 1: an unidentified popup is the game's
+            # picture — the F12 notice instead, and no blind answer
+            # (`ldrinput`).
+            fltbox.draw_notice(surface, screen, "hire", box)
+            return
         fb = framebuffer_surface(game_state)
         crop = None
         if fb is not None:

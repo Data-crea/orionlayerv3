@@ -60,10 +60,21 @@ def placement(screen, box):
     return scale, pygame.Rect((win_w - dw) // 2, (win_h - dh) // 2, dw, dh)
 
 
+#: WORK ORDER 188, STAGE 1: the crop of the game's pixels is part of the
+#: original picture, which the player sees only on F12 (Data's rule of
+#: work order 187). Until the box's text is on the wire (open fix 29) HD
+#: draws the F12 notice in the box's place and answers NOTHING blind: a
+#: YES with no question in front of it is work order 122's scrapped
+#: colony base. False: the notice; the crop is never drawn.
+SHOW_CROP = False
+
+
 def button_rects(screen):
-    """`[(key, field, window rect)]` for the box that is up, or []."""
+    """`[(key, field, window rect)]` for the box that is up, or [] —
+    always [] under the Stage 1 notice (`SHOW_CROP` False): the answer is
+    given through F12."""
     view = getattr(screen, "_view", None)
-    if view is None or not view.in_box:
+    if view is None or not view.in_box or not SHOW_CROP:
         return []
     box = view.box
     scale, dest = placement(screen, box)
@@ -90,9 +101,11 @@ def draw(surface, screen, game_state):
     if view is None or not view.in_box:
         return False
     box = view.box
+    scale, dest = placement(screen, box)
+    if not SHOW_CROP:
+        return draw_notice(surface, screen, box.name, dest)
     fb = _framebuffer_surface(game_state)
     piece = gamebox.crop(fb, box.rect)
-    scale, dest = placement(screen, box)
     pad = max(2, int(round(6 * screen.layout.scale)))
     panel = dest.inflate(2 * pad, 2 * pad)
     surface.fill(col("box_panel"), panel)
@@ -108,4 +121,18 @@ def draw(surface, screen, game_state):
         surface.blit(label, label.get_rect(center=dest.center))
         return True
     surface.blit(pygame.transform.scale(piece, dest.size), dest.topleft)
+    return True
+
+
+def draw_notice(surface, screen, what, dest):
+    """The Stage 1 notice where a native box's crop would be (work order
+    188, HD EXTENSION `f12_notice`): the HUD popup with what the game
+    waits for and "F12 to answer" — never a pixel of the game's box."""
+    from core import f12notice
+    app = getattr(screen, "app", None)
+    labels = getattr(app, "_note_labels", None) or {}
+    rect = f12notice.panel_rect(*surface.get_size())
+    rect.center = dest.center
+    f12notice.draw_panel(surface, screen.style, labels,
+                         str(what or "").replace("_", " "), rect)
     return True

@@ -350,5 +350,11 @@ def close(run, before):
         same = before.get(k) == after.get(k)
         print(f"  {k}: {'unchanged' if same else 'REWRITTEN'} "
               f"({'logged only' if k == 'SAVE10.GAM' else 'must stay same'})")
+    # THE FLASH RULE EVERYWHERE (work order 188): every frame the run
+    # presented, not only the transitions a walk recorded — the App counts
+    # each native frame by whether F12 asked for it.
+    native = dict(getattr(run.app, "native_frames", {}) or {})
+    print(f"  native frames without F12: {native.get('without_f12', '?')}"
+          f" (must be 0); with F12: {native.get('f12', '?')}")
     return {"saves_before": before, "saves_after": after,
-            "scratch_changed": changed}
+            "scratch_changed": changed, "native_frames": native}

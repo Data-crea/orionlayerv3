@@ -140,11 +140,12 @@ def _ho_replay(rows, gate):
 def _ho_flashes(tr, presented):
     """Native frames anywhere in the transition — before the target's
     first HD frame AND after it: A1's main-menu flash came 62 frames
-    after HD had drawn — except the one the rule allows: an id HD has no
-    screen for, with a list to answer."""
+    after HD had drawn. Since work order 188 (Data's rule of 187: the
+    original only on F12) with NO exception: 180 A2 had allowed an id HD
+    has no screen for, with a list to answer; that one is a flash too."""
     rows = tr["rows"]
     return [i for i in range(len(rows)) if presented[i] == "net"
-            and not (rows[i][5] == "no_screen" and rows[i][2] > 0)]
+            and rows[i][5] != "f12"]
 
 
 _ho_bad, _ho_fail, _ho_held = [], 0, 0
@@ -182,7 +183,8 @@ ok(f"recorded transitions for every registry screen replay with no native "
 # load's empty screen 39, the main menu's opening animation.
 _ho_back = set()
 for _tr in _ho_fix:
-    if _ho_flashes(_tr, _ho_replay(_tr["rows"], _ho.Gate(0, 0))):
+    if _ho_flashes(_tr, _ho_replay(_tr["rows"], _ho.Gate(0, 0,
+                                                       stage1=False))):
         _ho_back.add(_tr["transition"])
 assert {"galaxy_map -> fleets", "startup -> main_menu",
         "load dialog -> galaxy_map (SAVE4)"} <= _ho_back, sorted(_ho_back)

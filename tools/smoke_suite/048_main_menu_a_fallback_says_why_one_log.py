@@ -81,8 +81,12 @@ if slow("fallback_verdict_log"):
             # THE HAND-OVER GATE IS HELD OPEN HERE (hold 0): what is under
             # test is the REPORT of a decision, and work order 180 A2's
             # gate, which holds a hand-over for its data, is 090o's.
+            # And STAGE 1 OFF (work order 188): the "shown" report is what
+            # F12 and a gate without Stage 1 still produce; the WITHHELD
+            # report of Stage 1 is asserted at the end of A1 below.
             from core import handover as _fb_handover
-            self._handover = _fb_handover.Gate(hold=0, empty_hold=0)
+            self._handover = _fb_handover.Gate(hold=0, empty_hold=0,
+                                               stage1=_fb_stage1)
             self._net_kind = ""
             self.client = _nt.SimpleNamespace(
                 state=_nt.SimpleNamespace(current_screen=4),
@@ -97,6 +101,7 @@ if slow("fallback_verdict_log"):
         _gated = _fb_main.App._gated
         _showing_original = _fb_main.App._showing_original
 
+    _fb_stage1 = False
     _fb_handler = _FbLog()
     _fb_root = _fb_logging.getLogger()
     _fb_root.addHandler(_fb_handler)
@@ -148,6 +153,22 @@ if slow("fallback_verdict_log"):
         # ...and it draws NO note: a panel over the game's picture
         # saying "no reason given" is noise.
         assert _fb_mute._fallback_note is None
+
+        # A1, Stage 1 (work order 188): the same hand-over through the
+        # real gate is WITHHELD — False, the F12 notice — and its reason
+        # is still one line, on change only.
+        _fb_stage1 = True
+        _fb_s1 = _FbScreen("no extracted names")
+        _fb_s1a = _FbApp(_fb_s1)
+        _fb_s1a.client.state.fields = [_nt.SimpleNamespace(index=1)]
+        _fb_n = len(_fb_handler.lines)
+        for _ in range(5):
+            assert _fb_s1a._showing_original() is False
+        assert _fb_s1a._handover.notice is not None
+        _fb_new = [l for l in _fb_handler.lines[_fb_n:] if "withheld" in l]
+        assert len(_fb_new) == 1 and "no extracted names" in _fb_new[0], \
+            _fb_handler.lines[_fb_n:]
+        _fb_stage1 = False
 
         # A2. THE RULE IS NOT ABOUT FLEETS. Every screen with the method
         # goes through the same place, so the check names the ones that

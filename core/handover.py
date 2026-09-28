@@ -77,8 +77,11 @@ F12, NO_SCREEN, MODAL, HAND_OVER = "f12", "no_screen", "modal", "hand_over"
 
 class Gate:
     def __init__(self, hold=HOLD, empty_hold=EMPTY_HOLD,
-                 modal_settle=MODAL_SETTLE):
+                 modal_settle=MODAL_SETTLE, stage1=True):
         self.hold, self.empty_hold = hold, empty_hold
+        #: Work order 188's Stage 1 (`never_without_f12`). False only in a
+        #: check that shows what the gate would present without it.
+        self.stage1 = stage1
         self.modal_settle = modal_settle
         #: Modal boxes shown early (option C), for the report.
         self.early = 0
@@ -89,6 +92,10 @@ class Gate:
         #: Holds that ended with the screen's own picture — no native frame.
         self.resolved = 0
         self.holding = False
+        #: `(kind, screen, top)` while the F12 notice stands (Stage 1,
+        #: work order 188), else None; `notices` counts how often one began.
+        self.notice = None
+        self.notices = 0
         self._episode = None
         self._start = 0
         self._released = False
@@ -145,6 +152,30 @@ class Gate:
                      kind, waited)
         return True
 
+    def never_without_f12(self, shown, kind, screen, live, top=None):
+        """STAGE 1 OF WORK ORDER 188: the game's picture is never shown
+        without F12 (Data's rule, work order 187). Where the gate would
+        have released it, the frame stays HELD — and when the game waits
+        for an answer (a live list), `notice` says what for, and the
+        window shows the F12 notice over the dimmed last HD frame
+        (`core.f12notice`, HD EXTENSION `f12_notice`). An empty list gets
+        the plain hold: nothing to answer, nothing to say (187's path 2).
+        The gate's own counts (`failures`, `early`) are kept: a known
+        screen whose data never came is still a failure, and says so."""
+        if not shown or kind == F12 or not self.stage1:
+            self.notice = None
+            return shown
+        self.holding = True
+        notice = (kind, screen, top) if live else None
+        if notice is not None and (self.notice is None or
+                                   self.notice[:2] != notice[:2]):
+            self.notices += 1
+            log.info("notice: game screen %s (%s) — the picture is not "
+                     "shown without F12; HD holds with \"F12 to answer\" "
+                     "(work order 188)", screen, kind)
+        self.notice = notice
+        return False
+
     def _close(self, snapshots):
         if self._episode is not None and not self._released:
             self.resolved += 1
@@ -177,10 +208,13 @@ def decide_for(app, want, kind, top):
             else "") or ""
     box = bool(kind == MODAL and top is not None and
                getattr(top, "modal_is_box", lambda: False)())
-    return app._handover.decide(
-        want, kind, name, getattr(state, "current_screen", -1),
-        live_fields(state), app.client.stats.get("state", 0),
+    gate = app._handover
+    live = live_fields(state)
+    screen = getattr(state, "current_screen", -1)
+    shown = gate.decide(
+        want, kind, name, screen, live, app.client.stats.get("state", 0),
         box=box, sig=list_sig(state))
+    return gate.never_without_f12(shown, kind, screen, live, top)
 
 
 def list_sig(state):

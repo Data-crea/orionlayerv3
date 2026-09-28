@@ -2458,7 +2458,7 @@ files under `doc/` and are only summarised here.
 | | |
 |---|---|
 | Python | 32,960 lines across 111 modules — `find . -name '*.py'`, `__pycache__` excluded, the smoke test's 6,400 included. The previous figure here (21,642 across 94) was carried from an unstated method and could not be reproduced |
-| Smoke test | `python tools/smoke_test.py` — **409 checks**, headless, in `tools/smoke_suite/` since work order 162 (144 check modules, one group per screen plus a shared core; `tools/smoke_test.py` is the runner). **Two tiers since work order 158**: the bare command runs everything (~200 s here, measured 26 September 2026 — the 72 s this line said was before the rendering checks of 172-174); `--fast` runs the commit gate's 399 (~95 s here). `--screen <name>` prints only that screen's sentences and the core's and is NEVER a gate. See "The gate has two tiers" below |
+| Smoke test | `python tools/smoke_test.py` — **411 checks**, headless, in `tools/smoke_suite/` since work order 162 (145 check modules, one group per screen plus a shared core; `tools/smoke_test.py` is the runner). **Two tiers since work order 158**: the bare command runs everything (~200 s here, measured 26 September 2026 — the 72 s this line said was before the rendering checks of 172-174); `--fast` runs the commit gate's 401 (~95 s here). `--screen <name>` prints only that screen's sentences and the core's and is NEVER a gate. See "The gate has two tiers" below |
 | Assets | 170 MB (select_race 68, galaxy_map 51, shared 23, new_game 21, colony_summary 1) |
 | Screens in HD | 11 of ~20–22 (the Leaders screen, work order 167, built and not accepted; the GAME menu overlay, work order Stop 2, every dialog of the popup; colony summary draws list, sidebar, scan box and galaxy inset, and MOVES POPS — the first HD gesture that drives the game; planets, brief 101, lists, sorts, restricts and returns) |
 | Setup from clone | `python tools/setup.py` (deps via the system package manager) |
@@ -3414,7 +3414,7 @@ in exactly ONE bucket. The numbers below are produced by
 check asserts this list still agrees with it — the same trade the
 check count makes, for the same reason.
 
-`tools/struct_probe.py` (**478** code, 753 total), `screens/galaxy_map/screen.py` (**420** code, 775 total — down from 456 when work order 169 moved the HUD drawing into `hudview.py`, and the floor went to `floorlift.render_floor` in 170; 173 made the floor the shared background, `core.backgrounds`; 177 added 24 for the modals over the map — the routing of render, click, key and right button to `mapmodal.py`, which holds the modals themselves, and the map's own field list for the safety net; 180 A2 the two lines that say its only hand-over is the modal net's, `handover_is_modal`), `tools/colony_list_preview.py` (**404** code, 775 total — work order 182 added the line that forces SDL's dummy drivers), `screens/custom_race/screen.py` (**403** code, 569 total — three more since work orders 169 and 170: the picks and score bar as two HUD panels, and the flag that keeps its frame buttons inside its columns), `tools/colony_move_hd.py` (**371** code, 573 total — one more since work order 182 forces the dummy drivers — fifteen lines shorter since work order 166 part E took its `Counter` out: the tree has one send counter now, `livedrive.SendCounter`), `core/editor/editor.py` (**359** code, 430 total), `screens/galaxy_map/renderer.py` (**336** code, 758 total), `tools/ext_diag.py` (**325** code, 473 total), `main.py` (**373** code, 633 total — over since work order 142 C added the debug input switch; 146 added the F8 surface screenshot, a TOOL for live acceptance on a display that renders but cannot be captured; 170 the two lines that apply the saved HUD frame colour at start; 173 the line that opens the player's mod folder; 177 the four that send the keys to the game while its picture is shown, the modal safety net's keys; 180 A1 the frame-trace switch and the one assignment per way into the game's picture that it records — the recording itself is `core/frametrace.record_app_frame`; 180 A2 the hand-over gate's calls — the held frame's branch, its input refusals, `_gated` — with the gate itself in `core/handover.py`; 182 the click log's two hooks around every event and its switch — the log itself is `core/inputlog.py`; 184 the research entry timing's switch, its import and one assignment — the timing itself is `core/entrytiming.py`, which installs its hooks by wrapping and adds no line to the loop; 186 the two that show and hide the engine's own window on F12 (open fix 43)).
+`tools/struct_probe.py` (**478** code, 753 total), `screens/galaxy_map/screen.py` (**420** code, 775 total — down from 456 when work order 169 moved the HUD drawing into `hudview.py`, and the floor went to `floorlift.render_floor` in 170; 173 made the floor the shared background, `core.backgrounds`; 177 added 24 for the modals over the map — the routing of render, click, key and right button to `mapmodal.py`, which holds the modals themselves, and the map's own field list for the safety net; 180 A2 the two lines that say its only hand-over is the modal net's, `handover_is_modal`), `tools/colony_list_preview.py` (**404** code, 775 total — work order 182 added the line that forces SDL's dummy drivers), `screens/custom_race/screen.py` (**403** code, 569 total — three more since work orders 169 and 170: the picks and score bar as two HUD panels, and the flag that keeps its frame buttons inside its columns), `tools/colony_move_hd.py` (**371** code, 573 total — one more since work order 182 forces the dummy drivers — fifteen lines shorter since work order 166 part E took its `Counter` out: the tree has one send counter now, `livedrive.SendCounter`), `core/editor/editor.py` (**359** code, 430 total), `screens/galaxy_map/renderer.py` (**336** code, 758 total), `tools/ext_diag.py` (**325** code, 473 total), `main.py` (**391** code, 662 total — over since work order 142 C added the debug input switch; 146 added the F8 surface screenshot, a TOOL for live acceptance on a display that renders but cannot be captured; 170 the two lines that apply the saved HUD frame colour at start; 173 the line that opens the player's mod folder; 177 the four that send the keys to the game while its picture is shown, the modal safety net's keys; 180 A1 the frame-trace switch and the one assignment per way into the game's picture that it records — the recording itself is `core/frametrace.record_app_frame`; 180 A2 the hand-over gate's calls — the held frame's branch, its input refusals, `_gated` — with the gate itself in `core/handover.py`; 182 the click log's two hooks around every event and its switch — the log itself is `core/inputlog.py`; 184 the research entry timing's switch, its import and one assignment — the timing itself is `core/entrytiming.py`, which installs its hooks by wrapping and adds no line to the loop; 186 the two that show and hide the engine's own window on F12 (open fix 43); 188 the F12 notice's calls — its branch in the held frame, the withheld picture's log line, and the count of every native frame by whether F12 asked for it — with the notice itself in `core/f12notice.py` and its rule in `core/handover.py`).
 `smoke_test.py` is exempt by nature, **and since 22 September 2026 so
 is `tools/smoke_suite/`** — work order 162 split that one `main()` into
 ninety-one check modules, and they are the same file in pieces. They are
@@ -3431,7 +3431,7 @@ block, so splitting it would split a check. The sizes below come from
 the files and a smoke check asserts this list against them in both
 directions.
 
-`011_galaxy_map_galaxy_map_stand_in_exactly_amoeba.py` (**51** KB — the galaxy map stand-in: exactly amoeba and antaran reach the player-ship fallback, thirteen `ok()` calls inside one block), `013_colony_summary_colony_summary_sort_keys_seven_five.py` (**46** KB — the seven sort keys at every resolution; 179 taught its label-colour block to leave the button glyph out), `031_core_figures_sit_on_the_plate_s.py` (**45** KB — figures on the plate's inner floor, four resolutions and every band, measured out of the render), `059_core_ship_weapons_end_at_the_first.py` (**43** KB — the monster and ship-part block, nineteen `ok()` calls in one run of statements), `061_core_no_archives_or_backup_copies_anywhere.py` (**41** KB — the tree-sweep block: archives, the briefs index, the decision numbers and the exceptions list; 173 added the App boot's guard against the player's mod folder).
+`011_galaxy_map_galaxy_map_stand_in_exactly_amoeba.py` (**51** KB — the galaxy map stand-in: exactly amoeba and antaran reach the player-ship fallback, thirteen `ok()` calls inside one block), `013_colony_summary_colony_summary_sort_keys_seven_five.py` (**46** KB — the seven sort keys at every resolution; 179 taught its label-colour block to leave the button glyph out), `031_core_figures_sit_on_the_plate_s.py` (**45** KB — figures on the plate's inner floor, four resolutions and every band, measured out of the render), `059_core_ship_weapons_end_at_the_first.py` (**43** KB — the monster and ship-part block, nineteen `ok()` calls in one run of statements), `061_core_no_archives_or_backup_copies_anywhere.py` (**42** KB — the tree-sweep block: archives, the briefs index, the decision numbers and the exceptions list; 173 added the App boot's guard against the player's mod folder; 188 the fallback view's Stage 1 half — in HD the notice and no forwarded click, the picture on F12 only).
 
 **TWO TOOLS JOINED THE LIST ON 8 SEPTEMBER 2026 and one thing left
 them both.** `colony_list_preview.py` (345 -> 410) gained `--hold`,
@@ -3796,6 +3796,38 @@ the three flashes back. `tools/xwatch.py` watches the X windows.
 
 **The decision text is Data's to file** (`doc/briefs/180-parked-for-data.md`,
 no number taken).
+
+### The original only on F12 — Stage 1 — work order 188, 28 September 2026
+
+**Data's rule (work order 187):** the player never sees any part of the
+original picture unless he presses F12. `doc/briefs/187-original-visibility.md`
+named six paths by which it still could; work order 188 found a seventh way
+the game's pixels reached the window — a native box's CROP inside an HD panel
+(`screens/fleets/fltbox.py`, used by Fleets, Races and Leaders; the map's
+confirmation in `mapmodal.py`; the Leaders hire popup before its leader is
+known) — filed as path 4b.
+
+**Stage 1, one place:** `handover.decide_for` ends in
+`Gate.never_without_f12`: wherever the gate would have released the picture,
+the frame stays HELD, and when the game waits for an answer (a live list)
+the App draws the F12 notice over the dimmed last HD frame —
+**HD EXTENSION `f12_notice`** (`core/f12notice.py`): "The game is waiting for
+an answer", what for (the screen's own reason, else the engine's screen name
+and id), "F12 to answer". The words are in the HD string file
+`assets/shared/fallback/labels.json` (mod-replaceable). An empty list keeps
+the plain hold (path 2: nothing to answer). F12 shows the picture as before;
+F12 again returns to HD. Nothing is answered while the notice stands. The
+crops: `fltbox.SHOW_CROP = False` — the notice in the box's place, and no
+button answers blind until the box's text is on the wire (open fix 29).
+`Gate.failures` still counts a known screen whose data never came.
+
+**The flash rule everywhere:** `frametrace.summarise`'s `flash_total` counts
+every native frame without F12 (180 A2's exception for an answerable
+no-screen id is gone); `main.App.native_frames` counts every presented
+native frame by whether F12 asked for it, `tools/livedrive.close` prints it
+for every live run and the three walks exit 1 on any. Checks 090za (the
+paths, 4b, the counter-test with Stage 1 off) and 090o (the replay, no
+exception left).
 
 ### Leaders — BUILT, NOT ACCEPTED — work order 167, 24 September 2026
 

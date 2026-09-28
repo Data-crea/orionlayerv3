@@ -484,10 +484,29 @@ app2.render_mode = "hd"
 app2._update()
 assert app2.dispatcher.use_original and app2.dispatcher.active is None, \
     (app2.dispatcher.use_original, app2.dispatcher.active_name)
-assert app2._showing_original(), (
-    "the dispatcher fell back and the window still does not show the "
-    "game's picture — decision 22 is a promise, not a comment")
+# WORK ORDER 188, STAGE 1 — DECISION 22'S PROMISE, REVERSED BY DATA'S RULE
+# (work order 187: the original only on F12). The dispatcher still falls
+# back, the game is still answerable — but only through F12: in HD mode the
+# window HOLDS with the F12 notice, draws no pixel of the picture, and
+# forwards no click. The picture and its click path below are F12's.
+assert not app2._showing_original(), (
+    "the game's picture shown without F12 — Data's rule (work order 187)")
+assert app2._handover.holding and app2._handover.notice is not None
+_fb_before = app2.native_frames["without_f12"]
 app2._render()
+assert app2.native_frames["without_f12"] == _fb_before
+for _fb_px in (240 + 1440 // 4, 240 + 3 * 1440 // 4):
+    assert app2.surface.get_at((_fb_px, 20))[:3] not in (
+        (0, 0, 255), (255, 0, 0)), "a pixel of the game's picture in HD"
+_fb_client.log.clear()
+app2._handle_click(960, 540)
+assert _fb_client.log == [], ("a click forwarded to a picture the player "
+                              "cannot see", _fb_client.log)
+app2.render_mode = "original"     # F12: the one way into the picture
+assert app2._showing_original(), (
+    "F12 does not show the game's picture — the notice's promise")
+app2._render()
+assert app2.native_frames["f12"] >= 1
 # 640x480 into 1920x1080 is pillarboxed: scale 2.25, a 1440-wide
 # picture at x 240. The numbers come from the view's own placement,
 # never from this check — a check that recomputes the geometry is
@@ -547,22 +566,22 @@ _fb_client.log.clear()
 app2._handle_click(_fb_mid, 540)
 _fb_fallback_call = list(_fb_client.log)
 assert _fb_fallback_call == [("ACTIVATE_FIELD", 4)], _fb_fallback_call
-_fb_client.log.clear()
-app2.render_mode = "original"     # F12: the other way into one view
-app2._handle_click(_fb_mid, 540)
-assert _fb_client.log == _fb_fallback_call, (
-    "F12 and the fallback forward the same click differently — "
-    "there is a second click path (decision 9)",
-    _fb_client.log, _fb_fallback_call)
 app2.render_mode = "hd"
+_fb_client.log.clear()
+app2._handle_click(_fb_mid, 540)
+assert _fb_client.log == [], ("Stage 1: in HD the fallback forwards "
+                              "nothing", _fb_client.log)
+app2.render_mode = "original"
 # And the editor still eats every click before either of them.
 app2.editor.active = True
 _fb_client.log.clear()
 app2._handle_click(_fb_mid, 540)
 assert _fb_client.log == [], _fb_client.log
 app2.editor.active = False
+app2.render_mode = "hd"
 ok("the fallback view draws the game's picture and forwards a click "
-   "to it by F12's own path")
+   "to it on F12 only — in HD it holds with the F12 notice and forwards "
+   "nothing (work order 188)")
 
 # ── WINDOW PIXEL -> NATIVE PIXEL, AT ALL FOUR SIZES ────────────
 #

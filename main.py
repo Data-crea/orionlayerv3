@@ -21,6 +21,7 @@ from core import inputlog
 from core import entrytiming
 from core import handover
 from core import helppopup
+from core import f12notice
 
 logging.basicConfig(level=logging.INFO,
                     format="%(asctime)s.%(msecs)03d %(name)s: %(message)s",
@@ -145,6 +146,14 @@ class App:
         self._handover = handover.Gate()
         #: The surface shows only HD or the background (for a held frame).
         self._surface_hd = False
+        #: The F12 notice over a held frame (work order 188, Stage 1): the
+        #: game's picture is never shown without F12.
+        self._notice_view = f12notice.Notice()
+        #: EVERY presented frame of the game's picture, by whether the
+        #: player asked for it with F12 — always counted, one integer a
+        #: frame: "without_f12" must stay 0 (work order 188: the flash
+        #: rule everywhere, not only on the walks' recorded transitions).
+        self.native_frames = {"f12": 0, "without_f12": 0}
         self._note_labels = self.res.load_json(
             "assets/shared/fallback/labels.json", {}) or {}
 
@@ -342,6 +351,12 @@ class App:
         shown = handover.decide_for(self, want, self._net_kind, top)
         if self._handover.holding:
             self._fallback_note = None
+            if self._handover.notice is not None:
+                # Work order 188, Stage 1: the picture withheld — logged
+                # with the screen's reason, on change only.
+                self._reporter.withheld(
+                    top, self.dispatcher,
+                    getattr(self.client.state, "current_screen", -1))
             return False
         return self._verdict(shown, top)
 
@@ -409,6 +424,8 @@ class App:
             frametrace.record_app_frame(self, shown)
         if shown:
             self._surface_hd = False
+            self.native_frames["f12" if self._net_kind == frametrace.F12
+                               else "without_f12"] += 1
             picture = self.original_view.render(self.surface, self.layout)
             # WORK ORDER 139 D — the reason, where the player is
             # looking. Drawn AFTER the picture and outside it, and it
@@ -433,7 +450,19 @@ class App:
         elif self._handover.holding:
             # THE LAST HD FRAME, or the universal background (180 A2).
             handover.render_hold(self)
+            notice = self._handover.notice
+            if notice is not None:
+                # WORK ORDER 188, STAGE 1: where the game's picture would
+                # have been shown, the held frame dimmed and "F12 to
+                # answer" (HD EXTENSION `f12_notice`).
+                kind, sid, top = notice
+                self._notice_view.render(
+                    self.surface, self.style, self._note_labels,
+                    f12notice.what_for(kind, sid, top))
+            else:
+                self._notice_view.reset(self.surface)
         elif self.dispatcher.active:
+            self._notice_view.reset()
             self.surface.fill((4, 6, 14))
             self.dispatcher.render(self.surface)
             self._surface_hd = True

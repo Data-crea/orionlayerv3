@@ -62,6 +62,12 @@ log = logging.getLogger("orionlayer")
 NO_REASON = "no reason given"
 
 
+def _reason(top):
+    """The screen's own sentence, or NO_REASON — the one lookup."""
+    getter = getattr(top, "fallback_reason", None)
+    return (getter() if callable(getter) else "") or NO_REASON
+
+
 class Reporter:
     """The log half of the same job, kept beside the drawing half.
 
@@ -90,10 +96,7 @@ class Reporter:
         name = dispatcher.active_name or "-"
         if top is not None and top is dispatcher.overlay:
             name = dispatcher.overlay_name or name
-        reason = ""
-        if shown:
-            getter = getattr(top, "fallback_reason", None)
-            reason = (getter() if callable(getter) else "") or NO_REASON
+        reason = _reason(top) if shown else ""
         key = (shown, name, screen_id, reason)
         if key != self._last:
             self._last = key
@@ -104,6 +107,20 @@ class Reporter:
                 log.info("HD draws: %s, game screen %s", name, screen_id)
         return (reason if shown and top is not None
                 and reason != NO_REASON else None)
+
+    def withheld(self, top, dispatcher, screen_id):
+        """Log, on change, a picture the gate WITHHELD (work order 188,
+        Stage 1): where it would have been shown, the F12 notice stands —
+        and the reason a screen gave is still worth its one line."""
+        name = dispatcher.active_name or "-"
+        if top is not None and top is dispatcher.overlay:
+            name = dispatcher.overlay_name or name
+        reason = _reason(top)
+        key = ("withheld", name, screen_id, reason)
+        if key != self._last:
+            self._last = key
+            log.info("original withheld (F12 notice): %s, game screen %s "
+                     "— %s", name, screen_id, reason)
 
 #: Reference-pixel geometry, scaled by `win_h / 1080` like every other
 #: size in the tree.

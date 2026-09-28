@@ -314,6 +314,12 @@ _MARKED = {
     # audience. Its own check is 090z.
     "screens/audience/audraw.py": "DEVIATION      `hud_frameless`",
     "screens/audience/augeom.py": "DEVIATION `hud_frameless`",
+    # ADDED 28 September 2026, work order 188 part 1: the original only on
+    # F12 — the notice over a held frame, and in a native box's place.
+    # Its own check is 090za.
+    "core/f12notice.py": "HD EXTENSION `f12_notice`",
+    "assets/shared/fallback/labels.json": "HD EXTENSION f12_notice",
+    "screens/fleets/fltbox.py": "HD EXTENSION `f12_notice`",
 
 }
 _MARKS = ("HD EXTENSION", "DEVIATION")

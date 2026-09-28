@@ -19,6 +19,9 @@ WHAT IS RECORDED, one entry per `pygame.display.flip()`:
              "fill" neither — the plain background fill
              "hold" the hand-over gate kept the last HD frame or drew the
                     universal background (work order 180 A2)
+    notice   present (True) on a "hold" frame that carries the F12
+             notice — where the picture would have been shown before
+             work order 188's Stage 1
     kind     for "net", WHICH way in (see `main.App._showing_original`):
              "no_screen" decision 22's id HD has no screen for,
              "hand_over" a screen that knows the id said
@@ -85,11 +88,13 @@ class FrameTrace:
         return trace
 
     def record(self, *, screen, fields, source, kind="", hd="", reason="",
-               snap=None, live=None):
+               snap=None, live=None, notice=False):
         entry = {"t": time.monotonic(), "snap": snap,
                  "screen": screen, "fields": fields, "live": live,
                  "source": source, "kind": kind, "hd": hd,
                  "reason": reason or ""}
+        if notice:
+            entry["notice"] = True
         self.frames.append(entry)
         if self._fh is not None:
             self._fh.write(json.dumps(entry) + "\n")
@@ -138,7 +143,8 @@ def record_app_frame(app, shown):
         fields=len(getattr(state, "fields", None) or []), live=live,
         source=source, kind=app._net_kind if (shown or held) else "",
         hd=name, reason=app._fallback_note or "",
-        snap=stats.get("state"))
+        snap=stats.get("state"),
+        notice=bool(held and getattr(gate, "notice", None) is not None))
 
 
 def summarise(frames, target=None):
@@ -168,10 +174,15 @@ def summarise(frames, target=None):
         "native_before_hd": len(native),
         "native_seconds": round(seconds, 3),
         "native_total": sum(1 for f in frames if f["source"] == NET),
-        # A FLASH is a native frame the rule forbids: every one but an id
-        # no HD screen claims, showing a list to answer (180 A2).
-        "flash_total": sum(1 for f in frames if f["source"] == NET and not (
-            f["kind"] == NO_SCREEN and (f.get("live") or 0) > 0)),
+        # A FLASH is a native frame the rule forbids — since work order
+        # 188 (Data's rule of 187: the original only on F12) EVERY native
+        # frame the player did not ask for with F12, the answerable
+        # no-screen id included (180 A2 had allowed that one).
+        "flash_total": sum(1 for f in frames if f["source"] == NET
+                           and f["kind"] != F12),
+        # Frames that held with the F12 notice (work order 188, Stage 1):
+        # where the picture WOULD have been shown before.
+        "notice_total": sum(1 for f in frames if f.get("notice")),
         "kinds": sorted({f["kind"] for f in frames if f["source"] == NET}),
         "held": sum(1 for f in frames if f["source"] == HOLD),
         "reasons": sorted({f["reason"] for f in frames

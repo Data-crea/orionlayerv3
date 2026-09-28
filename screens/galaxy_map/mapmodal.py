@@ -178,6 +178,10 @@ class Modal:
         s._view = view
         try:
             scale, dest = fltbox.placement(s, box)
+            if not fltbox.SHOW_CROP:
+                # Work order 188, Stage 1: the F12 notice, never the crop.
+                fltbox.draw_notice(surface, s, box.name, dest)
+                return
             pad = max(2, int(round(10 * s.layout.scale)))
             hud.popup(surface, dest.inflate(2 * pad, 2 * pad), s.layout.scale)
             piece = gamebox.crop(fltbox._framebuffer_surface(state), box.rect)
