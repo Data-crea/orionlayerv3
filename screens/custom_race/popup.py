@@ -33,7 +33,6 @@ from core.hud import blocks as hud
 from screens.custom_race.renderer import _c
 
 # Only used when the screen has no background surface to borrow.
-COL_BG   = _c("popup_bg",   (19, 26, 31, 255))
 COL_TEXT = _c("popup_text", (216, 88, 78))
 
 FONT     = 26      # reference units, before font_scale

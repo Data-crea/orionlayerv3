@@ -180,9 +180,6 @@ BUTTON_SIZE = {
 #: pixels off its own hit area.
 TAB_DRAW = {"tab_colony": (7, 10), "tab_ship": (160, 10)}
 
-#: The dull buttons stand where the live ones would (officer.cpp:781-794).
-DULL = {"hire": "hire_dull", "pool": "pool_dull", "dismiss": "dismiss_dull"}
-
 #: Hire mode's panel under the buttons and the cost line in it
 #: (officer.cpp:797-807): OFFICER.LBX 17 at (300, 441), text at
 #: (315, 450) fitted to 132 px.
@@ -286,7 +283,6 @@ SCROLL_TRACK = (0x264, 0x2D, 0x264 + 0xA, 0x2D + 0x79)
 #: (ship view, :725-726, y 211, fitted to 204). Its rectangle is help
 #: 318's (evanhelp.cpp:178).
 VIEW_STRIP = (364, 203, 566, 226)
-VIEW_STRIP_CENTRE_X = 466
 
 #: The galaxy map box: `Draw_Galaxy_Map_Box_(…, 306, 235, 318, 169, …)`
 #: (officer.cpp:756) and its fields (:2998-3011).

@@ -70,7 +70,6 @@ CHANGE = (TYPE_BUTTON, 519, 123)        # [4], hotkey C shadowed by [5]
 BUY = (None, 590, 123)                  # [3], type 0 buyable, 7 not
 LEADERS = (TYPE_BUTTON, 556, 427)       # [17], hotkey L
 RETURN = (TYPE_BUTTON, 556, 459)        # [1]
-AUTOBUILD = (TYPE_HIDDEN, 525, 26)      # [18], hotkey A
 
 # ── The lower half ────────────────────────────────────────────────────
 

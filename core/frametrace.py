@@ -59,7 +59,6 @@ HD, NET, FILL = "hd", "net", "fill"
 #: A frame the hand-over gate held (work order 180 A2): the last HD frame
 #: or the universal background, while a transition waits for its data.
 HOLD = "hold"
-SOURCES = (HD, NET, FILL, HOLD)
 #: The three ways into the game's picture (`App._showing_original`).
 NO_SCREEN, HAND_OVER, F12 = "no_screen", "hand_over", "f12"
 

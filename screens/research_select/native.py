@@ -30,11 +30,7 @@ from core.researchnative import (            # noqa: F401  (re-exported)
 #: This screen's configuration of the shared geometry.
 GEOM = Geometry("select")
 
-PANEL_RECT = GEOM.panel_rect
-SCIENCE_ROOM_RECT = GEOM.science_room_rect
 TITLE_RECT = GEOM.title_rect
-TOP_BAND_RECT = GEOM.bands["top_band"]
-BOTTOM_BAND_RECT = GEOM.bands["bottom_band"]
 BOX_NATIVE = GEOM.box_native()
 
 

@@ -53,7 +53,6 @@ TEXT_FALLBACK = {"normal": (120, 156, 192), "selected": (160, 208, 236),
 
 #: The inner boxes: the research screens' two colours, read from the
 #: sections that own them (work order 166 C) — not copied here.
-BOX_FILL = palette.col("colony_summary", "panel_background", (8, 14, 23))
 BOX_OUTLINE = palette.col("panel", "thin_border", (55, 65, 85))
 #: The galaxy box is NOT black any more (work order 175): the original
 #: draws its stars over the black of OFFICER.LBX 0 there, and Data's

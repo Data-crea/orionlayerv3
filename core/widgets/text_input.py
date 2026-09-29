@@ -23,7 +23,6 @@ from core import palette
 
 _c = palette.for_section("widgets")
 
-COL_BG        = _c("input_bg",        (12, 16, 30))
 COL_BORDER    = _c("input_border",    (60, 80, 120))
 COL_FOCUS     = _c("input_focus",     (120, 170, 255))
 COL_TEXT      = _c("input_text",      (220, 235, 255))

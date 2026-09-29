@@ -41,10 +41,6 @@ from core import research
 from core.hud import text as hudtext
 from core.structs import player as player_struct
 
-LABEL_COLOR = palette.col("galaxy_map", "sidebar_label", (128, 146, 180))
-VALUE_COLOR = palette.col("galaxy_map", "sidebar_value", (206, 216, 238))
-WARN_COLOR = palette.col("galaxy_map", "sidebar_warning", (214, 88, 74))
-SUB_COLOR = palette.col("galaxy_map", "sidebar_secondary", (150, 162, 190))
 DIVIDER_COLOR = palette.col("galaxy_map", "sidebar_divider", (44, 56, 84))
 
 #: Order and labels of the five readouts. Overridable via layout.json.

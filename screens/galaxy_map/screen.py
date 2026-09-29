@@ -91,10 +91,8 @@ MAP_BG = palette.col("galaxy_map", "map_background", (4, 5, 12))
 STATUS_COLOR = palette.col("galaxy_map", "status", (140, 155, 190))
 HOVER_COLOR = palette.col("galaxy_map", "hover_ring", (170, 200, 255))
 PANEL_BG = palette.col("galaxy_map", "panel_background", (8, 11, 20))
-NAV_BG = palette.col("galaxy_map", "nav_background", (10, 14, 26))
 NAV_HOVER_BG = palette.col("galaxy_map", "nav_hover", (22, 34, 60))
 NAV_TEXT = palette.col("galaxy_map", "nav_text", (196, 208, 236))
-TITLE_COLOR = palette.col("galaxy_map", "title", (200, 210, 238))
 
 
 class GalaxyMapScreen(ScreenBase):

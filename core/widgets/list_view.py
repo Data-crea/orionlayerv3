@@ -30,7 +30,6 @@ _c = palette.for_section("widgets")
 
 COL_HEADER     = _c("list_header",     (138, 180, 232))
 COL_ROW        = _c("list_row",        (200, 202, 212))
-COL_ROW_DIM    = _c("list_row_dim",    (144, 152, 176))
 COL_HOVER_BG   = _c("list_hover_bg",   (40, 55, 90, 120))
 COL_SELECT_BG  = _c("list_select_bg",  (50, 75, 130, 170))
 COL_SELECT_TX  = _c("list_select_text", (220, 235, 255))

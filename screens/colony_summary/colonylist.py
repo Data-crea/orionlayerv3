@@ -157,7 +157,6 @@ NO_FARM_COLOR = palette.col("colony_summary", "no_farming", (150, 120, 110))
 # list; the roles (A/B stripe by LIST index, a filled scanned row, no
 # hover colour) are unchanged.
 from core import listgrid as _lg
-PLATE_COLOR = _lg.row_palette()[3]
 
 #: THE ROW FILLS — HD EXTENSION, decision 57. Data's table, 13 September
 #: 2026: A and B alternate down the list and the scanned colony's row
@@ -240,11 +239,6 @@ NATIVE_LABEL_CAP = 10
 #: this screen (see `zoomtables.CLUSTER_FIGURE_OFFSET`), and this
 #: value is anchored on the one the label is made of.
 NO_FARM_FONT_REF = 26
-#: The "n not shown" line. Deliberately NOT `ROW_NAME`: it is not a
-#: colony and must not read as one, and the name-overflow check scans
-#: for row-name ink outside the name column.
-OVERFLOW_COLOR = palette.col("colony_summary", "row_overflow",
-                             (150, 120, 110))
 #: **THE POP MOVE DRAWS NO MARKS ON THE ROW — 8 September 2026.**
 #: `PICK_COLOR` outlined the cells a pick would take and `BAND_COLOR`
 #: framed the three drop targets while one was held. Both are gone,

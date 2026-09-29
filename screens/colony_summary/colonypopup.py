@@ -51,7 +51,6 @@ from core import textfit
 
 from . import colonytrack
 
-BG = palette.col("colony_summary", "popup_bg", (14, 20, 34))
 EDGE = palette.col("colony_summary", "popup_edge", (108, 132, 170))
 TEXT = palette.col("colony_summary", "popup_text", (206, 216, 238))
 

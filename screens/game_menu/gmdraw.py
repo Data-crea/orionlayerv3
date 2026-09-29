@@ -32,7 +32,6 @@ COL_ROW = palette.require("game_menu", "row_text")
 COL_ACTIVE = palette.require("game_menu", "row_active")
 COL_DETAIL = palette.require("game_menu", "row_detail")
 COL_OPTION = palette.require("game_menu", "option_text")
-COL_CHECK = palette.require("game_menu", "checkbox_on")
 COL_MESSAGE = palette.require("game_menu", "message")
 
 #: Which HESTRNGS id is the Load/Save status a slot message names.

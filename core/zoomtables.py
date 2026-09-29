@@ -140,7 +140,6 @@ NEBULA_EXTENDED_SHRINK = False
 #: HAROLD::Zoom_Level_Font_Style_ — the original picks a font
 #: STYLE, not a pixel size. Mapped here to relative text scale so
 #: an HD renderer can pick a proportional size.
-FONT_STYLE_BY_ZOOM = (3, 2, 2, 1)
 FONT_SCALE_BY_ZOOM = (1.00, 0.86, 0.86, 0.72)
 
 #: SHIPS::Get_XYs_For_Orbiting_Ships_ — vertical spacing between

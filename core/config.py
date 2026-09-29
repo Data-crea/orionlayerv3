@@ -17,8 +17,6 @@ SETTINGS_PATH = os.path.join(BASE_DIR, "settings.json")
 SCREENS_DIR = os.path.join(BASE_DIR, "screens")
 ASSETS_DIR = os.path.join(BASE_DIR, "assets")
 SHARED_DIR = os.path.join(ASSETS_DIR, "shared")
-SKINS_DIR = os.path.join(SHARED_DIR, "skins")
-FONTS_DIR = os.path.join(SHARED_DIR, "fonts")
 MODS_DIR = os.path.join(BASE_DIR, "mods")
 
 # --- FPS ---

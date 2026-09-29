@@ -44,7 +44,6 @@ HOW = "python tools/officer_art_extract.py"
 PORTRAITS = 67
 SKILL_ICONS = 27
 STARS = 11
-SMALL_SHIPS = 15
 
 
 class LeaderArt:

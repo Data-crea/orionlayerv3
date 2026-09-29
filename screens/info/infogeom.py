@@ -20,12 +20,10 @@ EXIT = (535, 434, 535 + 91 - 1, 434 + 30 - 1)
 TAB_AT = ((21, 50), (21, 77), (21, 102), (21, 128), (21, 154))
 TAB_SIZE = ((164, 27), (164, 25), (164, 26), (164, 26), (164, 27))
 #: The page title, centred at (416, 31) (:1150 and each page's twin).
-TITLE_AT = (416, 31)
 TITLE_BOX = (212, 21, 620, 44)
 #: The left panel: the stardate centred at (151, 27) (:578, :596).
 STARDATE_AT = (151, 27)
 LEFT_PANEL = (8, 8, 205, 471)
-TAB_PANEL = (14, 44, 199, 188)
 #: The chart (`Draw_Maint_Income_Chart_`, :732-776): the income bar at
 #: (30, 212), the six maintenance bars right to left 18 apart, the net
 #: income centred at (105, 196), the two headings at (42, 324) and

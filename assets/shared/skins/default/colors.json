@@ -234,12 +234,6 @@
       66,
       104
     ],
-    "box_bg": [
-      12,
-      20,
-      38,
-      120
-    ],
     "row_selected_bg": [
       74,
       54,
@@ -296,12 +290,6 @@
       186,
       214
     ],
-    "popup_bg": [
-      19,
-      26,
-      31,
-      255
-    ],
     "popup_text": [
       216,
       88,
@@ -318,11 +306,6 @@
       200,
       202,
       212
-    ],
-    "list_row_dim": [
-      144,
-      152,
-      176
     ],
     "list_hover_bg": [
       40,
@@ -356,11 +339,6 @@
       32,
       55
     ],
-    "input_bg": [
-      12,
-      16,
-      30
-    ],
     "input_border": [
       60,
       80,
@@ -388,17 +366,6 @@
     ]
   },
   "empire_identity": {
-    "box_border": [
-      42,
-      66,
-      104
-    ],
-    "box_bg": [
-      12,
-      20,
-      38,
-      120
-    ],
     "header": [
       120,
       170,
@@ -573,26 +540,6 @@
       155,
       190
     ],
-    "sidebar_label": [
-      128,
-      146,
-      180
-    ],
-    "sidebar_value": [
-      206,
-      216,
-      238
-    ],
-    "sidebar_secondary": [
-      150,
-      162,
-      190
-    ],
-    "sidebar_warning": [
-      214,
-      88,
-      74
-    ],
     "owner_0": [
       196,
       74,
@@ -679,11 +626,6 @@
       11,
       20
     ],
-    "nav_background": [
-      10,
-      14,
-      26
-    ],
     "nav_hover": [
       22,
       34,
@@ -693,11 +635,6 @@
       196,
       208,
       236
-    ],
-    "title": [
-      200,
-      210,
-      238
     ],
     "sidebar_divider": [
       44,
@@ -711,7 +648,7 @@
       14,
       23
     ],
-    "_panel_background_note": "#080E17, DATA'S TABLE (~/orionlayerv3-dev/doc/briefs/95-palette.png, 'Grundflaeche / Panels'), 13 September 2026, and it is EVERY panel on this screen: colonyplates.render_fills lays it into each cutout that layout.json's `panels` marks true, and colonyempire and the move notice read it too. A colour choice in the project's own palette (decision 34), not a transcription - the original's panels are whatever COLSUM.LBX entry 0 painted. The header and the galaxy inset name their own keys in `panels` and are the only two that differ. Was (8, 11, 20). `nav_background` stood beside this until the same day and nothing on this screen read it; the galaxy map's own `nav_background` is live and stays.",
+    "_panel_background_note": "#080E17, DATA'S TABLE (~/orionlayerv3-dev/doc/briefs/95-palette.png, 'Grundflaeche / Panels'), 13 September 2026, and it is EVERY panel on this screen: colonyplates.render_fills lays it into each cutout that layout.json's `panels` marks true, and colonyempire and the move notice read it too. A colour choice in the project's own palette (decision 34), not a transcription - the original's panels are whatever COLSUM.LBX entry 0 painted. The header and the galaxy inset name their own keys in `panels` and are the only two that differ. Was (8, 11, 20). `nav_background` stood beside this until the same day and nothing on this screen read it; the galaxy map's own went with work order 190, when nothing read it any more.",
     "nav_hover": [
       22,
       34,
@@ -894,16 +831,6 @@
       208,
       236
     ],
-    "control_active": [
-      30,
-      48,
-      88
-    ],
-    "control_hover": [
-      22,
-      34,
-      60
-    ],
     "control_disabled_text": [
       104,
       112,
@@ -963,11 +890,6 @@
       232,
       140,
       40
-    ],
-    "checkbox_on": [
-      80,
-      140,
-      255
     ],
     "message": [
       232,

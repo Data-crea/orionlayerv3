@@ -67,10 +67,7 @@ MSG_NO_APPLICATION = 62
 #: The description box's cost prefix (tech.cpp:735).
 MSG_RESEARCH_COST = 61
 #: The list popup's title parts (tech.cpp:802-816).
-MSG_LIST_SUFFIX = 63
 MSG_FIRST_GROUP = 64
-#: The science room's headline (science.cpp, work order 129 B).
-MSG_RESEARCH_COMPLETED = 1
 
 
 def message_file(language="en"):

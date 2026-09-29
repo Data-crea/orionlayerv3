@@ -19,8 +19,6 @@ _c = palette.for_section("empire_identity")
 
 
 # Same thin blue lines as the Custom Race category boxes
-COL_BOX_BORDER = _c("box_border",   (42, 66, 104))
-COL_BOX_BG     = _c("box_bg",       (12, 20, 38, 120))
 COL_HEADER     = _c("header",       (120, 170, 255))
 COL_HINT       = _c("hint",         (168, 176, 196))
 COL_SELECTED   = _c("banner_selected", (70, 140, 255))
@@ -35,7 +33,6 @@ GRID_COLS   = 4
 GRID_PAD    = 12      # inset inside the grid box
 CELL_GAP    = 8
 SEL_WIDTH   = 2
-BOX_RADIUS  = 4
 
 
 # -- Thin bordered box ------------------------------------

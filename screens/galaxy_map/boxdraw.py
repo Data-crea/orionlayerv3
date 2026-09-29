@@ -58,11 +58,9 @@ FLEET_BOXES = ("fleet_box", "fleet_title", "fleet_grid",
 PANEL_BG = palette.col("galaxy_map", "panel_background", (8, 11, 20))
 TITLE_COLOR = palette.col("galaxy_map", "title", (200, 210, 238))
 TEXT_COLOR = palette.col("galaxy_map", "nav_text", (196, 208, 236))
-BUTTON_BG = palette.col("galaxy_map", "nav_background", (10, 14, 26))
 GAS_GIANT = palette.col("galaxy_map", "status", (140, 155, 190))
 SELECTED = palette.col("galaxy_map", "fleet_selected", (40, 72, 196))
 DESELECTED = palette.col("galaxy_map", "fleet_deselected", (0, 0, 0))
-SCROLL_THUMB = palette.col("galaxy_map", "status", (140, 155, 190))
 #: The original's map window centre, native: a box whose own centre lies
 #: left of it sits on the left, and so on (mainscr.cpp:1060-1082).
 MAP_MID = ((22 + 527) / 2, (22 + 421) / 2)

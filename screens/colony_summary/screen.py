@@ -121,10 +121,6 @@ PANEL_BG = _hudstyle.get().colour("panel.fill")
 NAV_HOVER_BG = palette.col("colony_summary", "nav_hover", (22, 34, 60))
 NAV_ACTIVE_BG = palette.col("colony_summary", "nav_active", (30, 48, 88))
 HEADER_OUTLINE = palette.col("panel", "thin_border", (55, 65, 85))
-#: The five column words — Data's `header_text`, 13 September 2026.
-#: It read `label` until then, which the scan box, the sidebar and the
-#: scroll arrows also read; the header has its own key so it can differ.
-HEADER_TEXT = palette.require("colony_summary", "header_text")
 NAV_TEXT = palette.col("colony_summary", "nav_text", (196, 208, 236))
 #: The sort row's seven words, ALL SEVEN THE SAME — 12 September 2026.
 #: The original's own inactive label, measured on its framebuffer

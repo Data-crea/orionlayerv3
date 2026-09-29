@@ -26,8 +26,6 @@ STATUS_COLORS = {"red": palette.require("planets", "status_red"),
                  "green": palette.require("planets", "status_green"),
                  "neutral": palette.require("planets", "status_neutral")}
 CONTROL_TEXT = palette.require("planets", "control_text")
-CONTROL_ACTIVE = palette.require("planets", "control_active")
-CONTROL_HOVER = palette.require("planets", "control_hover")
 CONTROL_DISABLED = palette.require("planets", "control_disabled_text")
 HEADING_TEXT = palette.require("planets", "heading_text")
 #: The HUD panel's fill since decision 71 (work order 169): every window

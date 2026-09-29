@@ -13,7 +13,6 @@ a measurement).
 """
 GAME_SCREEN_ID = 55                      # the weapon picker, open fix 45
 EXTRA_SCREEN_IDS = (54, 56)              # shield / computer, special
-KINDS = {54: "generic", 55: "weapon", 56: "special"}
 
 TYPE_BUTTON, TYPE_HIDDEN = 0, 7
 ESC = 27
@@ -60,7 +59,6 @@ RACK_TEXT, RACK_STEP = (127, 88), 15
 MOD_BOX = (0xE0, 0x46, 0xE0 + 297, 0x46 + 102)
 #: The four filters at (base + x, B + 10), in the order of DSBX's filters.
 FILTER_XS = (0x66, 0xCC, 0x146, 0x1AD)
-FILTER_DY = 10
 #: `WEAPON_FIRING_ARC_*` (orion2_consts.h:1079-1085) in the order of the
 #: arc words; `Draw_Weapons_Arc_Box_` lights the first bit found in this
 #: order after Forward, and Forward when none is.

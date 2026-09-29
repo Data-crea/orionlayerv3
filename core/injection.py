@@ -55,8 +55,6 @@ import pygame
 
 log = logging.getLogger("injection")
 
-TYPE_BUTTON = 0
-TYPE_RADIO = 1
 TYPE_STRING = 11
 
 SETTLE_S = 0.35        # wait after a step before looking for the next

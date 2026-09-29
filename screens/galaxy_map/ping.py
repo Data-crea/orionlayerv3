@@ -51,9 +51,6 @@ RING_END_NATIVE = 46.0
 #: Ring thickness in native pixels, constant while it expands.
 RING_WIDTH_NATIVE = 1.6
 
-#: Peak alpha of a ring at birth, 0..255.
-RING_ALPHA = 210
-
 #: Supersampling used to draw one antialiased ring. pygame.draw has
 #: no antialiased thick circle, and a hard-edged ring at HD sizes
 #: reads as a jagged polygon.

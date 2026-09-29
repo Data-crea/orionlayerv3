@@ -17,8 +17,6 @@ import struct as _st
 
 #: The synthetic ids open fix 46 reports.
 AUDIENCE_IDS = {57: "player", 58: "ai"}
-#: `DIP_SCRN::_ambassador_option` (dip_scrn.cpp:6).
-OPTIONS = {0: "refused", 1: "normal", 2: "proposal"}
 
 
 def parse(gs, data, pos):
