@@ -124,8 +124,7 @@ def ensure(out=print):
         return got
     if shutil.which("Xvfb") is None:
         raise SystemExit("Xvfb is not installed (xorg-server-xvfb) — the "
-                         "virtual display cannot start; see "
-                         "doc/briefs/182-virtual-display.md")
+                         "virtual display cannot start")
     os.makedirs(STATE_DIR, exist_ok=True)
     n = next((n for n in DISPLAYS if _free(n)), None)
     if n is None:
