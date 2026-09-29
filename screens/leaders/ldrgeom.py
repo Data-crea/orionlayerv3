@@ -105,15 +105,6 @@ def portrait_cell(i):
     return (x, y, x + w - 1, y + h - 1)
 
 
-def portrait_origin(i, width, height):
-    """Where a portrait of this size is drawn (officer.cpp:640-641):
-    `(75 - w) / 2 + 12`, `37 + 109 i + (90 - h) / 2`. C division of a
-    non-negative difference, so floor — a portrait wider than the cell
-    does not exist in OFFICER.LBX (all 67 are 73 x 88)."""
-    cx, cy, cw, ch = PORTRAIT_CELL
-    return ((cw - width) // 2 + cx, i * ROW_PITCH + cy + (ch - height) // 2)
-
-
 def text_y(i):
     return row_top(i) + TEXT_DY
 

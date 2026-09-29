@@ -317,13 +317,6 @@ def leaders_for_hire(leaders, player, view_type):
                for r in leaders)
 
 
-def can_be_assigned(rec):
-    """`Leader_Can_Be_Assigned_` (officer.cpp:1514-1522)."""
-    return int(rec.status) in (leader_struct.STATUS_POOL,
-                               leader_struct.STATUS_ASSIGNED,
-                               leader_struct.STATUS_LIMBO)
-
-
 def level_name_estring(rec, level):
     """The ESTRINGS id of the title a leader is named with."""
     return LEVEL_NAME_ESTRINGS[int(rec.type)][level]
