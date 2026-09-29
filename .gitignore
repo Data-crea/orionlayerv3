@@ -105,17 +105,10 @@ assets/shared/figures/
 # by tools/frame_mask.py and the plates nine-sliced from the galaxy
 # map's master by tools/frame_build.py, both derived under decision 49
 # with a byte-for-byte rebuild as the licence. The screen wears one
-# fixed image now, screens/colony_summary/assets/frame.png, which is
-# AUTHORED artwork and is committed — so there is nothing generated
-# left on this screen to ignore, and the tools that made them are
-# deleted rather than merely unused.
-
-# The research panel's outer frame is DERIVED — work order 166 part B,
-# decision 49's surviving half. `tools/make_research_frame.py` cuts it
-# out of screens/fleets/assets/frame.png, which IS committed, with a
-# plain crop, so a rebuild reproduces it byte for byte and a smoke
-# check asserts exactly that rather than trusting the tool's existence.
-assets/shared/frames/
+# fixed image then, screens/colony_summary/assets/frame.png — no image
+# at all since decision 71, and work order 190 removed the file — so
+# there is nothing generated left on this screen to ignore, and the
+# tools that made them are deleted rather than merely unused.
 
 # --- Local state ---
 # settings.json is NOT ignored: it holds window size, skin, language
@@ -169,9 +162,3 @@ screens/ship_design/assets/gamedata/
 # The audience's rooms, ambassadors and palettes out of the player's
 # DIPLOMAT.LBX (tools/audience_art_extract.py, work order 185) — the same rule.
 screens/audience/assets/gamedata/
-
-# --- Frame builds (decision 40) ---
-# `tools/fleets_frame_build.py` writes here by default. The BUILD is
-# reproducible from `_src/` byte for byte, and what the screen wears is
-# `frame.png`, filed deliberately — a stray build beside it is not.
-screens/fleets/assets/frame_built.png

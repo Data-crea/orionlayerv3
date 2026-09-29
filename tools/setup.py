@@ -121,31 +121,22 @@ STEPS = [
                   "title_plate.png"),
      "12 HUD icons and the title plate, cut from assets/shared/hud/ "
      "(decision 71)"),
-    ("make_research_frame.py", [],
-     os.path.join(ROOT, "assets", "shared", "frames",
-                  "research_panel.png"),
-     "the research panel's outer frame, cut from the Fleets artwork"),
     # THE COLONY FRAME PLATES ARE GONE — Phase B, 12 September 2026,
     # decision 55. They were decision 49's derived files and needed a
     # step here; the colony screen wears one fixed image now and
     # `frame_build.py` is deleted with the rest of the plate
-    # machinery. Nothing replaces the step: `assets/frame.png` is
-    # authored artwork and is committed.
+    # machinery. Nothing replaces the step. (The research panel's cut
+    # from the Fleets artwork, `make_research_frame.py`, went with work
+    # order 190: nothing drew it since decision 71.)
 ]
 
 #: Inputs that must be in the repository for the steps to work. If one
 #: of these is missing the clone is broken, not merely incomplete.
 REQUIRED_INPUTS = [
     (os.path.join(GM, "ships", "_src"), "HD ship masters"),
-    # The galaxy map's and the GAME menu's frame.png were required here
-    # until work order 189 removed them: since decision 71 the map's boxes
-    # come from the HUD (`~/orionlayerv3-dev/tools/hud_boxes.py`) and the menu wears the HUD
-    # popup, so nothing read either. The colony and Fleets frames stay —
-    # the smoke test still holds live boxes to their holes.
-    (os.path.join(ROOT, "screens", "colony_summary", "assets",
-                  "frame.png"), "colony frame"),
-    (os.path.join(ROOT, "screens", "fleets", "assets", "frame.png"),
-     "Fleets frame — the research panel's own is cut from it"),
+    # No frame.png is required any more: work orders 189 and 190 removed
+    # them, since decision 71 draws no frame and the smoke test holds the
+    # boxes to what the screens draw.
     (os.path.join(ROOT, "screens", "colony_summary",
                   "layout_reference.json"), "colony layout reference"),
     (os.path.join(GM, "icons", "_source_sheet.png"), "sidebar icon sheet"),

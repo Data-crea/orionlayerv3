@@ -246,9 +246,10 @@ def hint_collides(stars, region="inset_map"):
 #: decision 71 no frame image is drawn (work order 189 removed the
 #: loader); the inset still bounds the content the boxes were cut for.
 #:
-#: A HAND-COPIED VALUE WITH A CHECKER (decision 36): the smoke test
-#: re-derives every number here from `assets/frame.png` and fails if
-#: the frame and this table stop agreeing.
+#: MEASURED OFF THE v4 FRAME, WHICH IS GONE (work order 190 removed it;
+#: nothing drew it since decision 71). The numbers stay as the insets the
+#: content is laid out with, so nothing moves; the smoke test holds
+#: `fltdraw.content_rect` to them and each one to its box.
 #: **THE v4 FRAME IS AN HD INVENTION.** The native Fleets screen has
 #: nothing like it: FLEET.LBX entry 0 (`Draw_Fleet_Screen_`,
 #: flt1.cpp:385) is flat blue plates with thin bevels, and every
@@ -271,11 +272,13 @@ CONTENT_INSET_SRC = {
 #: TARGET_CELL_SIZE, says why the walk reaches them).
 CONTENT_INSET_SRC.update({f"cell_{i:02d}": 10 for i in range(20)})
 
-#: The frame's own pixel size, which `to_ref` scales from. Not a
-#: layout number — the only thing it is allowed to convert is the
-#: chamfer above.
+#: The source pixel size the insets above and the scroll column below are
+#: in — the removed v4 frame's (work order 190). Not a layout number —
+#: the only things it is allowed to convert are those two.
 FRAME_SRC_SIZE = (3840, 2160)
 
+#: The scroll column in source px, where the v4 frame painted its bar;
+#: `scroll_column` is placed from it and HD draws its own bar there.
 SCROLL_SRC_COLUMN = (3447, 206, 107, 1314)
 SCROLL_PARTS = {
     "up": (0, 0, 107, 101),

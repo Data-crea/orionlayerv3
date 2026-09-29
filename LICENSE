@@ -67,18 +67,14 @@ It does NOT apply to:
       the tree. No copyright is claimed over it.
       Two cockpit frames are AI-generated as well, which this file did
       not say until work order 169 (work order 168 found it): the galaxy
-      map's frame.png, built from a ChatGPT render, and the Fleets
-      screen's screens/fleets/assets/frame.png with its source under
-      screens/fleets/assets/_src/, an AI draft edited and upscaled by the
-      maintainer — with the research panel's frame
-      tools/make_research_frame.py cuts from it. No copyright is claimed
-      over them. The other cockpit frames (screens/colony_summary/ and
-      screens/planets/assets/frame.png, and the GAME menu's) are the
-      maintainer's; how they were made is not recorded in the tree. None
-      of the frames is drawn since decision 71. Work order 189 removed
-      the galaxy map's and the GAME menu's from the tree (the history
-      keeps them); the other three stay while the smoke test still
-      measures boxes against them.
+      map's frame, built from a ChatGPT render, and the Fleets screen's,
+      an AI draft edited and upscaled by the maintainer, with the
+      research panel's frame cut from it. No copyright is claimed over
+      them. The other cockpit frames (the colony summary's, the planets
+      screen's and the GAME menu's) are the maintainer's; how they were
+      made is not recorded. None of the frames is drawn since decision
+      71, and none is in the tree any more: work orders 189 and 190
+      removed them (the history keeps them).
 
   The display font
       assets/shared/fonts/Aldrich-Regular.ttf is Copyright (c) 2011

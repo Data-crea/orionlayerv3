@@ -89,12 +89,14 @@ GRID_COLS, GRID_ROWS = 4, 5
 
 
 def content_rect(screen, name):
-    """A box's rect shrunk clear of the frame's chamfered corner.
+    """A box's rect shrunk by its declared content inset.
 
-    The frame draws LAST, so anything put in the corner of a hole is
-    covered rather than clipped — silently, and only at the corners.
-    `fltgeom.CONTENT_INSET_SRC` holds the measured chamfer per hole and
-    a smoke check re-derives it from the artwork.
+    The inset was the v4 frame's chamfer per hole, measured when the
+    frame was drawn over the content (it covered a hole's corners). No
+    frame is drawn since decision 71 and work order 190 removed it; the
+    numbers in `fltgeom.CONTENT_INSET_SRC` stay what the content is laid
+    out in, so the screen looks as it did, and a smoke check holds this
+    function to them.
     """
     r = _rect(screen, name)
     if r is None:
