@@ -471,9 +471,9 @@ if "galaxy_map" in d.screens:
                 f"{_hb_key}/{_hb_n}: boxes.json {_hb_file[_hb_n]['rect']} "
                 f"but the HUD puts it at {_hb_b['rect']} — run "
                 f"python tools/hud_boxes.py --write, or move the artwork")
-    assert gm._frame_scaled is None, (
-        "the galaxy map loaded its frame image again; decision 71 draws "
-        "the HUD instead")
+    assert not hasattr(gm, "_frame_scaled"), (
+        "the galaxy map carries a scaled frame image again; decision 71 "
+        "draws the HUD instead")
     gm.render(pygame.display.get_surface())
     ok(f"galaxy_map boxes == the HUD's measured layout "
        f"({len(_hb_want)} boxes, 2 resolutions)")

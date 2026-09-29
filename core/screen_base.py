@@ -15,18 +15,9 @@ import pygame
 
 from core.pressfeedback import Pressed
 from core.box import load_boxes
-from core.config import REF_W, REF_H
 from core.screenhelp import HelpMixin
 from core import backgrounds
 from core.hud import screenframe
-
-# Frame button click feedback
-BTN_FLASH_DURATION = 0.30     # total flash time in seconds
-BTN_PRESS_DURATION = 0.15     # text stays offset for this long
-BTN_PRESS_OFFSET = 2          # pixels down+right while pressed
-BTN_FLASH_COLOR = (160, 200, 255)  # light blue-white
-BTN_FLASH_MAX_ALPHA = 130     # starting opacity of flash overlay
-BTN_PRESSED_TEXT_COLOR = (230, 240, 255)  # bright white while pressed
 
 
 class ScreenBase(HelpMixin):
@@ -56,9 +47,6 @@ class ScreenBase(HelpMixin):
         self.boxes = []
         self.active = False
         self._screen_dir = ""
-        self._frame = None         # a screen's own fixed frame image
-        self._frame_scaled = None  # scaled to the reference area
-        self._frame_pos = (0, 0)
         self._btn_flash = None   # ("left"|"right", start_time)
         self.pressed = Pressed()  # a held press on a word (pressfeedback)
 
@@ -324,43 +312,6 @@ class ScreenBase(HelpMixin):
         """The background slot's picture, or the dark placeholder."""
         backgrounds.draw(surface, self.SCREEN_NAME)
 
-    # --- Fixed frame image (screens that wear one PNG over their content) ---
-    #
-    # Extracted 17 September 2026 (work order 126 I): the colony summary,
-    # the galaxy map and planets each carried this load, scale and blit,
-    # identical but for spelling — and every screen still to be built with
-    # a fixed frame would have pasted it a fourth time. Opt-in: a screen
-    # calls `_load_frame` from `enter`, `_scale_frame` from `on_resize` and
-    # `_render_frame_image` where the frame goes in its draw order.
-
-    def _load_frame(self, image="frame.png"):
-        """The frame; stretched over the reference area so its holes
-        coincide with the boxes measured out of them."""
-        path = self.asset_path("assets", image)
-        self._frame = (pygame.image.load(path).convert_alpha()
-                       if path else None)
-        self._scale_frame()
-
-    def _scale_frame(self):
-        if self._frame is None:
-            self._frame_scaled = None
-            return
-        x, y, w, h = self.layout.rect((0, 0, REF_W, REF_H))
-        self._frame_scaled = pygame.transform.smoothscale(self._frame, (w, h))
-        self._frame_pos = (x, y)
-
-    def _render_frame_image(self, surface):
-        """NOTHING IS DRAWN HERE SINCE DECISION 71 (work order 169).
-
-        The fixed frame images are replaced by the HUD blocks, which each
-        screen draws in its own `render`. This method, `_load_frame` and
-        `_scale_frame` stay, as the order that recorded 71 asks — a later
-        order removes them with the images — but no screen's picture
-        goes through them any more. `USE_FRAME` screens get the HUD's
-        title plate and buttons from `_render_frame` below."""
-        if self.USE_FRAME:
-            self._render_frame(surface)
-
     # --- Box helpers ---
 
     def box_rect(self, name):
@@ -458,75 +409,6 @@ class ScreenBase(HelpMixin):
             if v and v.available:
                 return v
         return self.style.frame
-
-    def _render_frame_title(self, surface):
-        """Render screen title in the frame's title bar area."""
-        frame = self._get_active_frame()
-        if not frame or not frame.available:
-            return
-        tr = frame.title_rect(self.app.win_w, self.app.win_h)
-        if not tr:
-            return
-        tx, ty, tw, th = tr
-        fs = max(8, int(th * 0.65))
-        col = self.colors.get("text", {}).get(
-            "primary", [190, 200, 230])
-        text = self.style.render_text(self.FRAME_TITLE.upper(), fs,
-                                      tuple(col[:3]))
-        cx = tx + (tw - text.get_width()) // 2
-        cy = ty + (th - text.get_height()) // 2
-        surface.blit(text, (cx, cy))
-
-    def _render_frame_button(self, surface, side, label):
-        """Render a text label in the frame's bottom button bar.
-
-        Shows a pressed effect (text offset + flash overlay) for
-        BTN_FLASH_DURATION seconds after a click.
-        """
-        frame = self._get_active_frame()
-        if not frame or not frame.available:
-            return
-        ww, wh = self.app.win_w, self.app.win_h
-        if side == "left":
-            r = frame.button_rect_left(ww, wh)
-        else:
-            r = frame.button_rect_right(ww, wh)
-        if not r:
-            return
-        bx, by, bw, bh = r
-
-        # Check flash state
-        pressed = False
-        flash_alpha = 0
-        if self._btn_flash and self._btn_flash[0] == side:
-            elapsed = time.monotonic() - self._btn_flash[1]
-            if elapsed < BTN_FLASH_DURATION:
-                pressed = elapsed < BTN_PRESS_DURATION
-                # Flash: bright at start, fade to zero
-                t = elapsed / BTN_FLASH_DURATION
-                flash_alpha = int(BTN_FLASH_MAX_ALPHA * (1.0 - t))
-            else:
-                self._btn_flash = None
-
-        fs = max(8, int(bh * frame.button_font_scale))
-        if pressed:
-            col = BTN_PRESSED_TEXT_COLOR
-        else:
-            col = self.colors.get("text", {}).get(
-                "primary", [190, 200, 230])
-        text = self.style.render_text(label.upper(), fs, tuple(col[:3]))
-        cx = bx + (bw - text.get_width()) // 2
-        cy = by + (bh - text.get_height()) // 2
-        if pressed:
-            cx += BTN_PRESS_OFFSET
-            cy += BTN_PRESS_OFFSET
-        surface.blit(text, (cx, cy))
-
-        # Flash overlay
-        if flash_alpha > 0:
-            flash = pygame.Surface((bw, bh), pygame.SRCALPHA)
-            flash.fill((*BTN_FLASH_COLOR, flash_alpha))
-            surface.blit(flash, (bx, by))
 
     def _frame_button_side(self, screen_x, screen_y):
         """Which frame button was hit: 'left', 'right' or None.

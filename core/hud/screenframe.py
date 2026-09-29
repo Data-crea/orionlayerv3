@@ -22,7 +22,8 @@ from core.hud import blocks as hud
 from core.hud import style as hudstyle
 
 #: How long a pressed frame button stays drawn active, in seconds —
-#: `ScreenBase.BTN_FLASH_DURATION`'s value, the press feedback the old
+#: the value of the old `ScreenBase.BTN_FLASH_DURATION` (removed with the
+#: 9-slice button drawing by work order 189), the press feedback the old
 #: frame buttons flashed for.
 ACTIVE_FOR = 0.30
 

@@ -144,7 +144,7 @@ NATIVE_W, NATIVE_H = colonyempire.NATIVE_W, colonyempire.NATIVE_H
 class ColonySummaryScreen(ScreenBase):
     SCREEN_NAME = "colony_summary"
     GAME_SCREEN_ID = 20         # SCREEN_COLONY_SUMMARY
-    USE_FRAME = False           # own frame PNG, see _render_frame_image
+    USE_FRAME = False           # no frame image since decision 71
     #: NO FRAME_TITLE, and that is the transcription (work order 156).
     #: `_no_title_note` and `v3_projektstatus.md` both said the word
     #: "survives as ScreenBase.FRAME_TITLE for the framebuffer fallback
@@ -179,7 +179,7 @@ class ColonySummaryScreen(ScreenBase):
         self._data = self.app.res.load_json(
             "screens/colony_summary/layout.json", {}) or {}
         self._sort_key = self._data.get("sort", {}).get("default", "name")
-        # No frame image since decision 71: `_load_frame` is not called.
+        # No frame image since decision 71 (work order 189 removed the loader).
         # A selection does not survive leaving the screen, because in
         # the game it could not: leaving is one of the two
         # `Clear_Cluster_` paths (colsum.cpp:804 and :938), so a pick
@@ -253,10 +253,6 @@ class ColonySummaryScreen(ScreenBase):
                    if len(r) >= player_struct.SIZE]
         idx = getattr(game_state, "player_num", 0)
         self._local = players[idx] if 0 <= idx < len(players) else None
-
-    def on_resize(self):
-        super().on_resize()
-        self._scale_frame()
 
     # ── Selection ─────────────────────────────────────────
     #
@@ -388,13 +384,6 @@ class ColonySummaryScreen(ScreenBase):
         colonymoveui.render_for(self, surface, MOVE_TEXT,
                                 _hudstyle.get().colour("panel.fill"))
 
-    # ── Frame ─────────────────────────────────────────────
-
-    # The load, scale and blit are ScreenBase's (`_load_frame`). ONE FILE AND
-    # NO SWITCH since Phase B (12 September 2026): `colonyframe` chose between
-    # a built plate and this, and `frame_preview` said which; both are gone
-    # with the plate machinery.
-
     # ── Rendering ─────────────────────────────────────────
 
     def render(self, surface):
@@ -412,7 +401,6 @@ class ColonySummaryScreen(ScreenBase):
         self._render_sidebar(surface)
         self._render_move(surface)
         self._render_buttons(surface)
-        self._render_frame_image(surface)
         self._render_header(surface)
         # LAST, OVER THE FRAME. `COLMOVE::Draw_Cluster_(
         # mouse::Pointer_X_(), mouse::Pointer_Y_())` is the final

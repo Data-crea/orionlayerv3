@@ -247,7 +247,8 @@ def columns(area, cfg):
     WINDOW — 9 September 2026.** What is read off a box is its
     REFERENCE left edge, and it is mapped into `area`, which is
     `list_area` resolved through the same `Layout.rect` call the
-    frame image goes through (`screen._scale_frame`). Both edges of
+    frame image went through (`screen._scale_frame`, removed with the
+    frame images' loader by work order 189). Both edges of
     every column therefore come out of one rect that is recomputed
     every frame.
 

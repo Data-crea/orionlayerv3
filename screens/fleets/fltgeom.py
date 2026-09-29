@@ -238,9 +238,11 @@ def hint_collides(stars, region="inset_map"):
 #: rounded/chamfered corners, so the largest axis-aligned rectangle
 #: fully inside a hole is the hole inset by this many SOURCE pixels on
 #: every side. Content drawn outside it is not clipped — it is drawn
-#: and then covered, because the frame image renders last
+#: and then covered, because the frame image rendered last
 #: (`_render_frame_image`), which is how the ship panel's first line
-#: disappeared under the corner the first time v4 was rendered.
+#: disappeared under the corner the first time v4 was rendered. Since
+#: decision 71 no frame image is drawn (work order 189 removed the
+#: loader); the inset still bounds the content the boxes were cut for.
 #:
 #: A HAND-COPIED VALUE WITH A CHECKER (decision 36): the smoke test
 #: re-derives every number here from `assets/frame.png` and fails if

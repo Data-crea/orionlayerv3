@@ -109,7 +109,7 @@ class FleetsScreen(ScreenBase):
         self._hover_cell = None
         self._scan.clear()
         self._scan_star = -1
-        # No frame image since decision 71: `_load_frame` is not called.
+        # No frame image since decision 71 (work order 189 removed the loader).
         self.update(game_state)
 
     def on_resize(self):
@@ -340,7 +340,6 @@ class FleetsScreen(ScreenBase):
         fltdraw.draw_status(surface, self, self._status)
         # The frame LAST, so its metal covers the two reference px each
         # box is allowed to bleed under it (fltgeom.BLEED).
-        self._render_frame_image(surface)
         # AFTER the frame: the box is the game's and it is modal, so
         # nothing of this screen may cover it. Before the help popup,
         # which is the player's own and may.

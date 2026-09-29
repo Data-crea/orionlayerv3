@@ -100,7 +100,7 @@ TITLE_COLOR = palette.col("galaxy_map", "title", (200, 210, 238))
 class GalaxyMapScreen(ScreenBase):
     SCREEN_NAME = "galaxy_map"
     GAME_SCREEN_ID = 0        # SCREEN_MAIN
-    USE_FRAME = False              # own frame PNG, see _render_frame_image
+    USE_FRAME = False              # no frame image since decision 71
     FRAME_TITLE = "Game"
 
     def __init__(self, app):
@@ -138,7 +138,7 @@ class GalaxyMapScreen(ScreenBase):
         self._data = self.app.res.load_json(
             "screens/galaxy_map/layout.json", {}) or {}
         self._load_sprites()
-        # No frame image (decision 71): `_load_frame` is not called.
+        # No frame image (decision 71; work order 189 removed the loader).
         self._load_map_background()
         self._starfield.configure(self._data.get("starfield", {}))
         self._hover_star = None
@@ -308,7 +308,6 @@ class GalaxyMapScreen(ScreenBase):
         self._tints.clear()
         self._wormholes.clear()
         self._ping.cancel()
-        self._frame_scaled = None
 
     def update(self, game_state=None):
         """Cache the parsed state. Nebulas and players are parsed

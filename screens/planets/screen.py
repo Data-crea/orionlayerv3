@@ -77,7 +77,7 @@ class PlanetsScreen(ScreenBase):
         # MOX::_scanned_field = -1 on entry (plntsum.cpp:1945).
         self._first, self._hover = 0, None
         self._selected = self._scanned = None
-        # No frame image since decision 71: `_load_frame` is not called.
+        # No frame image since decision 71 (work order 189 removed the loader).
         self.update(game_state)
         self._push_sort_key()
 
@@ -143,8 +143,6 @@ class PlanetsScreen(ScreenBase):
         return any(f.hotkey in (ord(hotkey.upper()), ord(hotkey.lower()))
                    for f in fields)
 
-    # ── Frame ─────────────────────────────────────────────
-
     # ── Rendering ─────────────────────────────────────────
 
     def render(self, surface):
@@ -168,7 +166,6 @@ class PlanetsScreen(ScreenBase):
                 self, surface, row,
                 planetwords.cells(self._view, row, self._words)["planet"])
         monsterpanel.render(self, surface, row)
-        self._render_frame_image(surface)
         self.render_help(surface)
 
     def _marker(self):

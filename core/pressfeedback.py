@@ -27,9 +27,10 @@ The feedback is drawn in HD and never waits for the game: it starts on the
 press, whether or not anything is sent, and a refusal is drawn as it always
 was (decision 33).
 
-Not the 9-slice frame's side-button flash in `core/screen_base.py`
-(`BTN_FLASH_*`): that one is a timed blue overlay on the old frame's two
-buttons and has no counterpart here. Two feedback mechanisms, not three.
+Not the 9-slice frame's side-button flash that `core/screen_base.py`
+drew until work order 189 (`BTN_FLASH_*`): a timed blue overlay on the
+old frame's two buttons, with no counterpart here. Since decision 71 the
+HUD buttons' press is `core/hud/screenframe.ACTIVE_FOR`.
 """
 from core import mouse as mouse_input
 from core import palette

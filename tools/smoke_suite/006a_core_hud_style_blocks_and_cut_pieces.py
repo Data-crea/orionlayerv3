@@ -172,8 +172,9 @@ ok("hud slanted button: drawn shape and hit shape agree on every pixel")
 
 
 # 5 — THE NEW STYLE IS WHAT EVERY SCREEN DRAWS: no screen loads a frame
-#     image any more (the images and `_load_frame` stay in the tree, as
-#     the order that recorded 71 asks), and a screen without a picture in
+#     image any more (work order 189 removed `ScreenBase._load_frame`,
+#     `_scale_frame` and `_render_frame_image`, the later order 71 asked
+#     for, and this check holds them gone), and a screen without a picture in
 #     its background slot draws the placeholder, never the old cockpit
 #     texture.
 _hf_loaders = []
@@ -196,6 +197,11 @@ assert _hf_now == _HF_PENDING, (
     f"screens loading a frame image {sorted(_hf_now)}, pending list "
     f"{sorted(_HF_PENDING)}: a converted screen comes off the list, and "
     f"no screen goes back on it")
+_hf_back = [_m for _m in ("_load_frame", "_scale_frame", "_render_frame_image")
+            if hasattr(ScreenBase, _m)]
+assert not _hf_back, (
+    f"ScreenBase carries the frame-image machinery again: {_hf_back} "
+    "(removed by work order 189; decision 71 draws the HUD)")
 # THE BACKGROUND SLOT IS FILLED (work order 173): every screen stands on
 # the picture `core.backgrounds` gives it — its own where the tree ships
 # one (the Main Menu's title art), Data's universal picture everywhere
