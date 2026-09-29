@@ -9,7 +9,10 @@ why each exception is an exception.
 
 This script runs the generators in order and finishes with the smoke
 test, so "did the clone come out complete?" has one answer instead of
-a checklist. Everything it does is idempotent, and that is not a
+a checklist. The smoke test and the git gate are the developer's: since
+work order 189 they live in the developer store and are linked into a
+developer's tree, so a player's clone has neither, and setup says so and
+stops after the artwork. Everything it does is idempotent, and that is not a
 figure of speech: every step here was checked byte-for-byte against
 the committed file it replaces. `stars/` is deliberately absent —
 `make_star_icons.py` no longer reproduces the trimmed sprites in the
@@ -379,13 +382,21 @@ def main():
             print(f"    MISSING  {what} — {os.path.relpath(path, ROOT)}")
         return 1
 
+    # A PLAYER'S CLONE HAS NO GATE AND NO SUITE (work order 189): both
+    # live in the developer store, which a developer's tree links in at
+    # their old paths (`~/orionlayerv3-dev/devlink.py`). Without them
+    # there is nothing to switch on and nothing to verify, and that is
+    # not a failure — the clone is complete for playing and modding.
+    developer = os.path.isdir(os.path.join(ROOT, HOOKS_PATH))
     hooks = subprocess.run(["git", "config", "--get", "core.hooksPath"],
                            cwd=ROOT, capture_output=True, text=True)
-    _missing = [h for h in HOOKS
+    _missing = [h for h in HOOKS if developer
                 if not os.access(os.path.join(ROOT, HOOKS_PATH, h), os.X_OK)]
     if _missing:
         print(f"  Git hooks: MISSING OR NOT EXECUTABLE — {', '.join(_missing)}")
-    if hooks.stdout.strip() == HOOKS_PATH:
+    if not developer:
+        print("  Git hooks: none — the developer's gate is not shipped\n")
+    elif hooks.stdout.strip() == HOOKS_PATH:
         print(f"  Git hooks: ok ({HOOKS_PATH}) — pre-commit runs the fast "
               f"tier, pre-push the full suite\n")
     elif args.check:
@@ -430,8 +441,9 @@ def main():
         print("\nCheck only, nothing was rebuilt.")
         return 0
 
-    if args.skip_smoke:
-        print("\nRebuilt. Smoke test skipped.")
+    if args.skip_smoke or not developer:
+        print("\nRebuilt. " + ("Smoke test skipped." if developer else
+              "Ready: python play.py (python main.py without the game)."))
         return 0
 
     print("\n  Verifying:")
