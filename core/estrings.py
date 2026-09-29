@@ -35,11 +35,11 @@ takes on every row. Buildings take the other branch and come from
 `core.buildnames`; the two loaders read different files and a check
 asserts neither reaches for the other's.
 """
-import json
 import logging
 import os
 
 from core.config import BASE_DIR
+from core import derivedjson
 
 log = logging.getLogger("estrings")
 
@@ -100,21 +100,12 @@ class EStrings:
 
     def _load(self, root):
         path = os.path.join(root, *string_file(self.language).split("/"))
-        if not os.path.exists(path):
-            log.info("estrings: %s absent — run "
-                     "`python tools/estrings_extract.py`", path)
-            return
-        try:
-            with open(path, encoding="utf-8") as handle:
-                data = json.load(handle)
-        except (ValueError, OSError) as err:
-            log.warning("estrings: %s will not load (%s)", path, err)
-            return
-        if int(data.get("format", 0)) < FORMAT_VERSION:
+        data, stale = derivedjson.load(path, log, "estrings",
+                                       "python tools/estrings_extract.py",
+                                       "tools/estrings_extract.py", FORMAT_VERSION)
+        if stale:
             self.state = "stale"
-            log.warning("estrings: %s is format %s, this build reads %s "
-                        "— re-run tools/estrings_extract.py",
-                        path, data.get("format"), FORMAT_VERSION)
+        if data is None:
             return
         # A DENSE LIST of exactly ESTRINGS_COUNT entries, and the
         # length is CHECKED rather than trusted. An empty string is a

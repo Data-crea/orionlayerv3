@@ -34,11 +34,11 @@ WHAT THE COLONY RECORD CARRIES. `colony->producing[0]`, drawn through
 another branch and is NOT a building name — `is_building` says which,
 and this module answers None for the rest rather than guessing.
 """
-import json
 import logging
 import os
 
 from core.config import BASE_DIR
+from core import derivedjson
 
 log = logging.getLogger("buildnames")
 
@@ -89,21 +89,12 @@ class BuildingNames:
 
     def _load(self, root):
         path = os.path.join(root, *name_file(self.language).split("/"))
-        if not os.path.exists(path):
-            log.info("building names: %s absent — run "
-                     "`python tools/techname_extract.py`", path)
-            return
-        try:
-            with open(path, encoding="utf-8") as handle:
-                data = json.load(handle)
-        except (ValueError, OSError) as err:
-            log.warning("building names: %s will not load (%s)", path, err)
-            return
-        if int(data.get("format", 0)) < FORMAT_VERSION:
+        data, stale = derivedjson.load(path, log, "building names",
+                                       "python tools/techname_extract.py",
+                                       "tools/techname_extract.py", FORMAT_VERSION)
+        if stale:
             self.state = "stale"
-            log.warning("building names: %s is format %s, this build "
-                        "reads %s — re-run tools/techname_extract.py",
-                        path, data.get("format"), FORMAT_VERSION)
+        if data is None:
             return
         self.names = {int(k): v for k, v in data.get("buildings", {}).items()}
         self.state = "ok" if self.names else "missing"

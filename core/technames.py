@@ -37,12 +37,12 @@ TWO NAMES THIS FILE DOES NOT HOLD, both marked rather than guessed:
     unverified (`core/structs/unverified.py`), so `application_name`
     returns the bare name and says so through `hyper_suffix`.
 """
-import json
 import logging
 import os
 
 from core.config import BASE_DIR
 from core.researchlist import FIELD_HYPER_FIRST
+from core import derivedjson
 
 log = logging.getLogger("technames")
 
@@ -98,21 +98,12 @@ class TechNames:
 
     def _load(self, root):
         path = os.path.join(root, *name_file(self.language).split("/"))
-        if not os.path.exists(path):
-            log.info("research names: %s absent — run "
-                     "`python tools/techname_extract.py`", path)
-            return
-        try:
-            with open(path, encoding="utf-8") as handle:
-                data = json.load(handle)
-        except (ValueError, OSError) as err:
-            log.warning("research names: %s will not load (%s)", path, err)
-            return
-        if int(data.get("format", 0)) < FORMAT_VERSION:
+        data, stale = derivedjson.load(path, log, "research names",
+                                       "python tools/techname_extract.py",
+                                       "tools/techname_extract.py", FORMAT_VERSION)
+        if stale:
             self.state = "stale"
-            log.warning("research names: %s is format %s, this build reads "
-                        "%s — re-run tools/techname_extract.py",
-                        path, data.get("format"), FORMAT_VERSION)
+        if data is None:
             return
         self.fields = {int(k): v for k, v in data.get("fields", {}).items()}
         self.applications = {int(k): v

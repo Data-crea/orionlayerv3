@@ -20,11 +20,11 @@ The record index is the skill PAIR — `skill_id / 2` (:1782-1784) — so
 the box title with `_` turned into spaces, and the DESCRIPTION run
 through `snprintf` with the leader's full name and the bonus.
 """
-import json
 import logging
 import os
 
 from core.config import BASE_DIR
+from core import derivedjson
 
 log = logging.getLogger("skildesc")
 
@@ -66,20 +66,12 @@ class SkillDesc:
 
     def _load(self, root):
         path = os.path.join(root, *string_file(self.language).split("/"))
-        if not os.path.exists(path):
-            log.info("skildesc: %s absent — run `%s`", path, HOW)
-            return
-        try:
-            with open(path, encoding="utf-8") as handle:
-                data = json.load(handle)
-        except (ValueError, OSError) as err:
-            log.warning("skildesc: %s will not load (%s)", path, err)
-            return
-        if int(data.get("format", 0)) < FORMAT_VERSION:
+        data, stale = derivedjson.load(path, log, "skildesc",
+                                       HOW,
+                                       HOW, FORMAT_VERSION)
+        if stale:
             self.state = "stale"
-            log.warning("skildesc: %s is format %s, this build reads %s — "
-                        "re-run %s", path, data.get("format"),
-                        FORMAT_VERSION, HOW)
+        if data is None:
             return
         names = list(data.get("names", []))
         descriptions = list(data.get("descriptions", []))

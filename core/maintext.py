@@ -20,11 +20,11 @@ window, and HD's answer to the galaxy map's movable boxes is its own
 brief (Data, 14 September 2026). The extractor and the loader come
 first so that brief finds the text in place.
 """
-import json
 import logging
 import os
 
 from core.config import BASE_DIR
+from core import derivedjson
 
 log = logging.getLogger("maintext")
 
@@ -63,21 +63,12 @@ class MainText:
 
     def _load(self, root):
         path = os.path.join(root, *text_file(self.language).split("/"))
-        if not os.path.exists(path):
-            log.info("maintext: %s absent — run "
-                     "`python tools/maintext_extract.py`", path)
-            return
-        try:
-            with open(path, encoding="utf-8") as handle:
-                data = json.load(handle)
-        except (ValueError, OSError) as err:
-            log.warning("maintext: %s will not load (%s)", path, err)
-            return
-        if int(data.get("format", 0)) < FORMAT_VERSION:
+        data, stale = derivedjson.load(path, log, "maintext",
+                                       "python tools/maintext_extract.py",
+                                       "tools/maintext_extract.py", FORMAT_VERSION)
+        if stale:
             self.state = "stale"
-            log.warning("maintext: %s is format %s, this build reads %s — "
-                        "re-run tools/maintext_extract.py",
-                        path, data.get("format"), FORMAT_VERSION)
+        if data is None:
             return
         self.entries = {int(k): v for k, v in data.get("entries", {}).items()}
         self.state = "ok" if self.entries else "missing"

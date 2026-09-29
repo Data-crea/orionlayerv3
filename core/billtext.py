@@ -38,11 +38,11 @@ read out of the English file on 18 September 2026):
 The ids are the game's, so `message()` takes the id and nothing here
 renumbers them.
 """
-import json
 import logging
 import os
 
 from core.config import BASE_DIR
+from core import derivedjson
 
 log = logging.getLogger("billtext")
 
@@ -87,21 +87,12 @@ class BillText:
 
     def _load(self, root):
         path = os.path.join(root, *message_file(self.language).split("/"))
-        if not os.path.exists(path):
-            log.info("billtext: %s absent — run "
-                     "`python tools/billtext_extract.py`", path)
-            return
-        try:
-            with open(path, encoding="utf-8") as handle:
-                data = json.load(handle)
-        except (ValueError, OSError) as err:
-            log.warning("billtext: %s will not load (%s)", path, err)
-            return
-        if int(data.get("format", 0)) < FORMAT_VERSION:
+        data, stale = derivedjson.load(path, log, "billtext",
+                                       "python tools/billtext_extract.py",
+                                       "tools/billtext_extract.py", FORMAT_VERSION)
+        if stale:
             self.state = "stale"
-            log.warning("billtext: %s is format %s, this build reads %s — "
-                        "re-run tools/billtext_extract.py",
-                        path, data.get("format"), FORMAT_VERSION)
+        if data is None:
             return
         self.messages = {int(k): v
                          for k, v in data.get("messages", {}).items()}

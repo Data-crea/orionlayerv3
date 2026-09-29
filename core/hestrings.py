@@ -25,11 +25,11 @@ and string 0 otherwise (harold.cpp:637-648); `message()` below returns
 None for an id outside the table instead, so a caller can tell a
 missing string from string 0.
 """
-import json
 import logging
 import os
 
 from core.config import BASE_DIR
+from core import derivedjson
 
 log = logging.getLogger("hestrings")
 
@@ -68,21 +68,12 @@ class HStrings:
 
     def _load(self, root):
         path = os.path.join(root, *string_file(self.language).split("/"))
-        if not os.path.exists(path):
-            log.info("hestrings: %s absent — run "
-                     "`python tools/hestrings_extract.py`", path)
-            return
-        try:
-            with open(path, encoding="utf-8") as handle:
-                data = json.load(handle)
-        except (ValueError, OSError) as err:
-            log.warning("hestrings: %s will not load (%s)", path, err)
-            return
-        if int(data.get("format", 0)) < FORMAT_VERSION:
+        data, stale = derivedjson.load(path, log, "hestrings",
+                                       "python tools/hestrings_extract.py",
+                                       "tools/hestrings_extract.py", FORMAT_VERSION)
+        if stale:
             self.state = "stale"
-            log.warning("hestrings: %s is format %s, this build reads %s "
-                        "— re-run tools/hestrings_extract.py",
-                        path, data.get("format"), FORMAT_VERSION)
+        if data is None:
             return
         strings = list(data.get("strings", []))
         if len(strings) != HSTRINGS_COUNT:
