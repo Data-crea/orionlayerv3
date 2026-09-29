@@ -55,11 +55,11 @@ ships only a master beats the base project's step files. Two
 `resources.resolve` calls would give the opposite — a base step file
 outranking a mod's master — which is why `Resources.roots()` exists.
 """
-import collections
 import logging
 import os
 
 from core import zoomtables
+from . import setcache
 
 # **NO MODULE-LEVEL pygame, AND THAT IS A CONSTRAINT AND NOT A
 # STYLE.** `colonyrows` states in its own docstring that it imports
@@ -419,14 +419,5 @@ def set_for(screen, area, cfg):
     """
     from . import colonytrack
     size = colonytrack.figure_size(area, cfg)
-    cache = getattr(screen.app, "figure_sets", None)
-    if cache is None:
-        cache = collections.OrderedDict()
-        screen.app.figure_sets = cache
-    if size in cache:
-        cache.move_to_end(size)
-    else:
-        cache[size] = FigureSet(screen.app.res, size)
-        while len(cache) > SET_CACHE:
-            cache.popitem(last=False)
-    return cache[size]
+    return setcache.lru(screen.app, "figure_sets", size,
+                        lambda: FigureSet(screen.app.res, size), SET_CACHE)

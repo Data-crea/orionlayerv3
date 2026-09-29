@@ -20,9 +20,9 @@ whatever the layout asks for, one cached set per pixel size, no
 that is the row icon's height at 1920x1080, so the reference
 resolution draws this art at 1:1 and every other size steps from it.
 """
-import collections
 import logging
 import os
+from . import setcache
 
 log = logging.getLogger("planets")
 
@@ -156,14 +156,5 @@ def set_for(screen, size):
     size = int(size)
     if size <= 0:
         return None
-    cache = getattr(screen.app, "planet_sets", None)
-    if cache is None:
-        cache = collections.OrderedDict()
-        screen.app.planet_sets = cache
-    if size in cache:
-        cache.move_to_end(size)
-    else:
-        cache[size] = PlanetSet(screen.app.res, size)
-        while len(cache) > SET_CACHE:
-            cache.popitem(last=False)
-    return cache[size]
+    return setcache.lru(screen.app, "planet_sets", size,
+                        lambda: PlanetSet(screen.app.res, size), SET_CACHE)

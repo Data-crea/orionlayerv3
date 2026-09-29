@@ -28,9 +28,9 @@ the tool's, from the source to the master. From the master every
 window size is nearest neighbour and the stored layout scale, never a
 font size (the help popup's double scale, fundament "Scaling twice").
 """
-import collections
 import logging
 import os
+from . import setcache
 
 log = logging.getLogger("output_icons")
 
@@ -127,15 +127,6 @@ def set_for(screen, cfg):
     size = icon_px(cfg, screen.layout.scale)
     if not size:
         return None
-    cache = getattr(screen.app, "output_icon_sets", None)
-    if cache is None:
-        cache = collections.OrderedDict()
-        screen.app.output_icon_sets = cache
-    key = (master, size)
-    if key in cache:
-        cache.move_to_end(key)
-    else:
-        cache[key] = IconSet(screen.app.res, master, size)
-        while len(cache) > SET_CACHE:
-            cache.popitem(last=False)
-    return cache[key]
+    return setcache.lru(screen.app, "output_icon_sets", (master, size),
+                        lambda: IconSet(screen.app.res, master, size),
+                        SET_CACHE)
