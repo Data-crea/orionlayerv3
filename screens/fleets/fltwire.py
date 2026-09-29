@@ -56,7 +56,7 @@ mismatch.
   (`core/structs/unverified.py`) and the portrait is LBX art.
 
 Every one of them is in `layout.json` under `marks` and in
-`doc/briefs/134-parked-for-data.md`, which is where decision 61 puts
+`~/orionlayerv3-dev/doc/briefs/134-parked-for-data.md`, which is where decision 61 puts
 them.
 """
 from core import gamebox
@@ -125,7 +125,7 @@ TYPE_SCROLL = 6
 #: LAST, so its presence means the whole list is built.
 #:
 #: Checked against recorded live lists rather than assumed: none of the
-#: galaxy map's own four (`tools/galaxy_box_fields.json`: closed,
+#: galaxy map's own four (`~/orionlayerv3-dev/tools/galaxy_box_fields.json`: closed,
 #: fleet_own, fleet_monster, system) carries a full-screen field at
 #: all. The one that does is a message box's own catcher
 #: (`textbox.cpp:246`), and it carries hotkey ESC — which is why the

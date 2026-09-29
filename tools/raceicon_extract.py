@@ -124,7 +124,7 @@ JOBS = ((0, "farmer"), (1, "worker"), (2, "scientist"))
 #: entry of each pair is therefore never drawn. It is extracted
 #: anyway, because a reference that silently omits half the file
 #: cannot be used to check that the half it kept is the right one.
-#: Recorded for the maintainer in `doc/orion2re_open_fixes.md`.
+#: Recorded for the maintainer in `~/orionlayerv3-dev/doc/orion2re_open_fixes.md`.
 ROLES = ("farmer_state0", "farmer", "worker_state0", "worker",
          "scientist_state0", "scientist",
          "military_1", "military_2", "military_3", "military_4",
@@ -200,7 +200,7 @@ def palette_note():
     their own provenance — they travel without this repository.
 
     SHORT ON PURPOSE. The full comparison of the two colony screens'
-    palettes lives in `v3_projektstatus.md` under "The population
+    palettes lives in `~/orionlayerv3-dev/v3_projektstatus.md` under "The population
     figures come out of RACEICON.LBX"; repeating it here would be a
     second copy of a finding, which is what goes stale.
     """

@@ -7,7 +7,7 @@ same step, by type and native rectangle, or it does not go at all.
 
 That rule was paid for twice — the scrapped colony base in work order
 122 and the SIGSEGV in the research prompt in 128 — and it is what
-`tools/livesend.py` enforces for the live tools (work order 129 A).
+`~/orionlayerv3-dev/tools/livesend.py` enforces for the live tools (work order 129 A).
 
 These two functions started in `screens/galaxy_map/mapboxes.py`, where
 the map cancel and then the map's parking guard both needed them (work

@@ -21,7 +21,7 @@ origin is the literal in the `animate::Remap_Draw_` call and the size is
 the LBX entry's own header, two independent sources that agree (work
 order 152). The PANEL around the crop is HD's, and the crop is the
 game's own 640x480 pixels shown at whatever the panel scales them to —
-which is the limitation, and it is marked in `v3_projektstatus.md` and
+which is the limitation, and it is marked in `~/orionlayerv3-dev/v3_projektstatus.md` and
 held by a smoke check. The replacement is open fix 29: the scrap value
 as an int16 in the FLTS block, after which the confirmation can be
 drawn in HD's own font.

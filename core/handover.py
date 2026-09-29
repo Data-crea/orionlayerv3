@@ -1,6 +1,6 @@
 """A screen HD draws never presents a native frame — work order 180, part A2.
 
-**THE RULE (proposed as a decision in `doc/briefs/180-parked-for-data.md`).**
+**THE RULE (proposed as a decision in `~/orionlayerv3-dev/doc/briefs/180-parked-for-data.md`).**
 While a transition waits for the data an HD screen needs, the window keeps
 showing the last HD frame, or the universal background. The game's own
 picture is shown only for a screen or a modal HD has no view for at all.
@@ -31,7 +31,7 @@ gate sits there and every screen — including the next one — is under it.
                its data already there (`ScreenBase.modal_is_box`) — is
                shown once its live list has stood unchanged for
                `MODAL_SETTLE` snapshots (work order 187, option C of
-               `doc/briefs/186-modal-hold.md`): no late data can end its
+               `~/orionlayerv3-dev/doc/briefs/186-modal-hold.md`): no late data can end its
                hold, which is why the full hold made every box ~4 s
     hand_over  a known screen cannot vouch for its data: held, then shown
                ONCE and counted in `failures`

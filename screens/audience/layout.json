@@ -1,5 +1,5 @@
 {
-  "_comment": "The diplomacy audience (wire ids 57 player, 58 AI; open fixes 46 and 47), work order 185 part 10. Geometry is screens/audience/augeom.py (transcribed from dip_scrn_main.cpp and fields.cpp); every word on the screen is the engine's, carried by open fix 47's DIPL block; the stage is DIPLOMAT.LBX's own art. The marks name every difference, each held by the audience smoke group and named in v3_projektstatus.md.",
+  "_comment": "The diplomacy audience (wire ids 57 player, 58 AI; open fixes 46 and 47), work order 185 part 10. Geometry is screens/audience/augeom.py (transcribed from dip_scrn_main.cpp and fields.cpp); every word on the screen is the engine's, carried by open fix 47's DIPL block; the stage is DIPLOMAT.LBX's own art. The marks name every difference, each held by the audience smoke group and named in ~/orionlayerv3-dev/v3_projektstatus.md.",
   "marks": {
     "deviation_hud_frameless": "HUD panels behind the statement and the menu, where the original prints on the room.",
     "omission_talking_loop": "The ambassador's animation is not drawn: its phase is not on the wire. The still is the frame the original shows with animations off.",

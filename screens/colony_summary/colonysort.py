@@ -108,7 +108,7 @@ def display(label):
 
     Marked here, in `colonyempire.value_row` for the sidebar half, in
     `layout.json` under `sort._typography_deviation`, in
-    `v3_projektstatus.md`, and in a smoke check that holds the stored
+    `~/orionlayerv3-dev/v3_projektstatus.md`, and in a smoke check that holds the stored
     labels to the original's spelling so the deviation stays a
     RENDERING choice and cannot become an edit to the data.
 

@@ -147,7 +147,7 @@ def _can_take_job(pops, n_pops, max_farms, index, new_job,
        mine*, while the code refuses `ECON_RESEARCH` and
        `ECON_INDUSTRY` and leaves only `ECON_FOOD`. That
        disagreement is a QUESTION for the maintainer
-       (`doc/orion2re_open_fixes.md` item 8), not something to
+       (`~/orionlayerv3-dev/doc/orion2re_open_fixes.md` item 8), not something to
        resolve here: the code is what runs, so the code is what is
        mirrored, and which side is wrong is not ours to decide.
 

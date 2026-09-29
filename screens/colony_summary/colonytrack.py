@@ -462,7 +462,7 @@ def _column_boxes(cols, cfg, scale, row, y, h, track, step):
     the whole band now**, because the plate rect is the drop rect is
     the cell rect and all three are `column x band` (decision 5).
     Recorded as closed here, in `layout.json` under
-    `move._drop_target_note`, and in `v3_projektstatus.md`.
+    `move._drop_target_note`, and in `~/orionlayerv3-dev/v3_projektstatus.md`.
 
     **A PER-ROW CAPACITY DISPLAY IS AN OPEN DESIGN QUESTION FOR DATA.**
     Not a gap to be filled by whoever reads this next, and not a
@@ -908,8 +908,8 @@ def figure_size(area, cfg):
     rather than assumed.
 
     Marked in `colonyfigures.FigureSet`, in `layout.json` under
-    `list._figure_size_deviation`, in `doc/v3_fundament.md` on
-    decision 28, in `v3_projektstatus.md` and in a smoke check.
+    `list._figure_size_deviation`, in `~/orionlayerv3-dev/doc/v3_fundament.md` on
+    decision 28, in `~/orionlayerv3-dev/v3_projektstatus.md` and in a smoke check.
     """
     step = figure_step(area, cfg)
     room = band_height(area, cfg) - PLATE_LINE
@@ -987,7 +987,7 @@ def figure_origin_y(top, height, ink_bottom):
     is a different decision from this one.
 
     Marked in `colonylist` where the blit is, in `layout.json` under
-    `list._figure_anchor_deviation`, in `v3_projektstatus.md` and in
+    `list._figure_anchor_deviation`, in `~/orionlayerv3-dev/v3_projektstatus.md` and in
     a smoke check.
     """
     return top + height - 1 - PLATE_LINE - ink_bottom

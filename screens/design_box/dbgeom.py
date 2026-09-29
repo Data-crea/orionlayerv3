@@ -8,7 +8,7 @@ each picker adds a catch-all field whose origin is that base (desbox.cpp
 where HD guesses. The weapon picker's table and lower box hang off its
 first row field and its arc / rack box field, for the same reason: their
 y depends on the height of DESIGN.LBX's box sprites, which is the
-original's measurement and not ours to repeat (CLAUDE.md: an asset is not
+original's measurement and not ours to repeat (~/orionlayerv3-dev/CLAUDE.md: an asset is not
 a measurement).
 """
 GAME_SCREEN_ID = 55                      # the weapon picker, open fix 45

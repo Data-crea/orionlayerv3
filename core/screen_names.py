@@ -5,8 +5,8 @@ via GAME_SCREEN_ID (see core/dispatcher.py), so nothing here can
 break auto-switching if a name is wrong or missing.
 
 Before this module existed, the same id -> name mapping was copied
-independently into core/dispatcher.py (status bar), tools/ext_diag.py
-(SCREEN_NAMES) and doc/v3_orion2re_index.md (Screen-Enum table) — and
+independently into core/dispatcher.py (status bar), ~/orionlayerv3-dev/tools/ext_diag.py
+(SCREEN_NAMES) and ~/orionlayerv3-dev/doc/v3_orion2re_index.md (Screen-Enum table) — and
 they had already drifted: dispatcher.py was missing id 7 (EXIT),
 ext_diag.py was missing id 50 (the synthetic custom_race screen from
 the ext-API patch). This is exactly the failure mode described in

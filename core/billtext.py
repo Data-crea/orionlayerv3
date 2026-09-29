@@ -20,7 +20,7 @@ So a message is its own six LBX entries, one per language slot, and
 NOT an offset into a block the way TECHNAME and ESTRINGS work. The
 extractor reads the whole file at the language it is given.
 
-**WHAT THE RESEARCH SCREEN USES** (doc/tech_change_reading.md §3, and
+**WHAT THE RESEARCH SCREEN USES** (~/orionlayerv3-dev/doc/tech_change_reading.md §3, and
 read out of the English file on 18 September 2026):
 
     1     the science room's headline, "Your scientists have completed

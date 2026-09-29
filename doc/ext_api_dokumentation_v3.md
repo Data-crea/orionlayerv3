@@ -9,7 +9,7 @@ against the running game and against mainscr.cpp; one label in the
 Galaxy Map dump was wrong and has been corrected (see the note there).
 
 **30 August, later:** "Known limitations of the current server" reduced to a
-pointer at `doc/orion2re_open_fixes.md`, after this copy had drifted
+pointer at `~/orionlayerv3-dev/doc/orion2re_open_fixes.md`, after this copy had drifted
 from it a second time — it still described two fixes as open that the
 fixes file had marked applied. The risk table was corrected the same
 way. This document describes the patch; the fixes file alone says
@@ -295,7 +295,7 @@ which queue properly. Only field activation has a single slot.
 A caller that needs several activations must therefore send one,
 observe that it took effect, and only then send the next. What that
 costs is in the next section, which is the part that was wrong here
-until 5 September 2026: this used to name `tools/zoom_probe.py` as
+until 5 September 2026: this used to name `~/orionlayerv3-dev/tools/zoom_probe.py` as
 the pattern to copy, and that tool drained frames for a fixed 0.6 s
 before comparing — a TIMED wait, which is what the injection rules
 refuse. It waits for the change now, with the duration as a timeout.
@@ -369,7 +369,7 @@ but `platform.cpp` mapped the injected SDL event through
 before the game consumed the click, which broke any handler that
 resolves its target from the POINTER rather than from the event.
 
-Both halves are `doc/orion2re_open_fixes.md` item 3 and both are in
+Both halves are `~/orionlayerv3-dev/doc/orion2re_open_fixes.md` item 3 and both are in
 `doc/ext_inject_click.patch`, applied locally to the orion2re tree on
 4 September 2026. **Exercised for the first time on 5 September
 2026**: a click injected at a computed native point picked up exactly
@@ -653,7 +653,7 @@ LBX at runtime into `MOX::_ship_icon_width/_height[4]`
 ## Known limitations of the current server
 
 **The list of what is being asked of Joes lives in
-`doc/orion2re_open_fixes.md` and nowhere else.** An earlier version
+`~/orionlayerv3-dev/doc/orion2re_open_fixes.md` and nowhere else.** An earlier version
 of this section described two server bugs in full — SendFrame
 dropping a client on a short write, and FIELD_LIST only being sent on
 a field-count change — and kept describing them as open after the
@@ -676,9 +676,9 @@ Server -> client, on the FIELDS subscription, right after a FIELD_LIST while the
 SCREEN_GAME (8) with the Load or Save dialog up (`MOX::_screen_data` 2 or 3). Payload: uint8
 screen_data, uint8 count (10), then per slot int8 status, int8 game type, char[37] description,
 char[25] stardate, char[25] date. **Not in the engine** until `doc/ext_save_slots.patch` is
-applied; the request and its status are `doc/orion2re_open_fixes.md` item 14, and the parser is
+applied; the request and its status are `~/orionlayerv3-dev/doc/orion2re_open_fixes.md` item 14, and the parser is
 `core.wire_protocol.parse_save_slots`. The GAME popup's field lists per dialog are in
-`doc/game_menu_reading.md` §4.
+`~/orionlayerv3-dev/doc/game_menu_reading.md` §4.
 
 ---
 

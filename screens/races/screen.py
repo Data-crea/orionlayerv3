@@ -2,14 +2,14 @@
 (racescrn.cpp:677-1093). Work order 175 C.
 
 HD STATE: **BUILT, NOT ACCEPTED.** The live part of work order 175 C is
-parked in `doc/briefs/175-parked-for-data.md` with its exact steps.
+parked in `~/orionlayerv3-dev/doc/briefs/175-parked-for-data.md` with its exact steps.
 Decision 61, and a smoke check fails if this sentence leaves this
 docstring.
 
 Entered from the galaxy map's RACES button. Up to seven other races —
 portrait, name, treaty paragraph, relation bar and slider, IGNORED, their
 spies and the mission row — the agents' pool, the SPY / AGENT bonus and
-the five buttons; the inventory is `doc/briefs/175-progress.md` part C.
+the five buttons; the inventory is `~/orionlayerv3-dev/doc/briefs/175-progress.md` part C.
 
 THE MODULES, one topic each:
 

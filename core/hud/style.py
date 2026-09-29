@@ -2,7 +2,7 @@
 
 `assets/shared/hud/style.json`, resolved through the resource roots so a
 mod can replace the look (decision 16). Its `measured` block is held to
-`tools/hud_measure.py` by the smoke test; its `chosen` block carries what
+`~/orionlayerv3-dev/tools/hud_measure.py` by the smoke test; its `chosen` block carries what
 nothing in Data's material shows, each value with its reason.
 
 Read ONCE per process, like the palette (decision 18): the blocks cache

@@ -4,7 +4,7 @@ Each step becomes one panel — a title, lines, options (rows the player
 picks) and buttons — drawn by the turn popups' panel (`core.turnpopup.draw`,
 the HUD style), every option and button bound to its OWN field from the
 block (never an index remembered). What each step shows and where its fields
-lead is `doc/multiplayer_reading.md` and the patch's header. The words are
+lead is `~/orionlayerv3-dev/doc/multiplayer_reading.md` and the patch's header. The words are
 `layout.json`'s (the original's are MULTIGM.LBX artwork, decision 15).
 """
 from core import turnpopup

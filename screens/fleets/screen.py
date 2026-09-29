@@ -2,7 +2,7 @@
 
 HD STATE: **BUILT, NOT ACCEPTED.** No live acceptance has run against
 this screen — work order 134's live part is parked in
-`doc/briefs/134-parked-for-data.md`, with the exact steps. Decision 61,
+`~/orionlayerv3-dev/doc/briefs/134-parked-for-data.md`, with the exact steps. Decision 61,
 and a smoke check fails if this sentence leaves this docstring.
 
 Entered from the galaxy map's Fleets button, which is the only place in

@@ -11,7 +11,7 @@ every entry.
 
 WHAT WAS IN THE WAY, AND WHAT MOVED IT
 
-`doc/research_screen_stop1.md` §1 found the categories and the offered
+`~/orionlayerv3-dev/doc/research_screen_stop1.md` §1 found the categories and the offered
 field reconstructible, and the choice ROWS not, for two named reasons.
 Work order 130 C addressed both rather than routing around them:
 
@@ -26,11 +26,11 @@ Work order 130 C addressed both rather than routing around them:
 2. **`tech_applications[212]` @379 had no verified source.** It has two
    now (decision 23): orion2re's headers compiled with their own
    `#pragma pack(1)` put it at 379 with `sizeof(s_player) == 0xf0e`,
-   the assert in sizes.h:21 — `tools/struct_header_check.py` runs that
+   the assert in sizes.h:21 — `~/orionlayerv3-dev/tools/struct_header_check.py` runs that
    on every suite — and a live read against the game's own screen.
 
 THE TABLES BELOW ARE TRANSCRIPTIONS, and every one of them has a
-checker: `tools/research_cost_check.py` reads all four out of the
+checker: `~/orionlayerv3-dev/tools/research_cost_check.py` reads all four out of the
 source and fails on any difference. A hand-copied table without a
 checker is the nebula sizes again (decision 36).
 
@@ -113,7 +113,7 @@ FIELD_COUNT_HYPER_LAST = 82
 #: at :756. A player researching one of them gets all of its
 #: applications, so the original marks all of its rows.
 #:
-#: Transcribed, and `tools/research_cost_check.py` reads the array out
+#: Transcribed, and `~/orionlayerv3-dev/tools/research_cost_check.py` reads the array out
 #: of the source and fails on any difference — a hand-copied table
 #: without a checker is the nebula sizes again (decision 36).
 ALL_APPLICATIONS_FIELDS = (29, 55, 22, 57, 28, 23)
@@ -183,7 +183,7 @@ class Entry:
     `field` is 0 for a category with nothing to offer. Such an entry is
     still drawn as an empty panel and still has an entry-block field on
     the wire, but it has no rows and no radio button — which is the
-    source of the radio index skew in `doc/tech_change_reading.md` §2.4.
+    source of the radio index skew in `~/orionlayerv3-dev/doc/tech_change_reading.md` §2.4.
     """
 
     __slots__ = ("index", "group", "field", "apps", "x", "y",
@@ -312,7 +312,7 @@ def field_applications():
             raise AssertionError(
                 f"application {app} is the fifth for field {field} — "
                 f"APP_FIELD disagrees with techdata.cpp, which "
-                f"tools/research_cost_check.py would have caught")
+                f"~/orionlayerv3-dev/tools/research_cost_check.py would have caught")
         row.append(app)
     return {f: tuple(a) for f, a in slots.items()}
 
@@ -405,7 +405,7 @@ BLOCK_DX1, BLOCK_DY1, BLOCK_DX2, BLOCK_DY2 = -2, 18, 215, 99
 #: `_tech_button_pos` (tech.cpp:38-43), the radio of entry i at
 #: `(pos[2i] + _g_scrn_x, pos[2i+1] + _g_scrn_y)`. Only non-empty
 #: entries get one (`Setup_Entry_Buttons_`, tech.cpp:497-513), which is
-#: the radio index skew of doc/tech_change_reading.md §2.4.
+#: the radio index skew of ~/orionlayerv3-dev/doc/tech_change_reading.md §2.4.
 RADIO_POS = ((21, 30), (248, 31), (21, 135), (248, 135),
              (21, 240), (248, 240), (21, 347), (248, 347))
 
@@ -429,7 +429,7 @@ def expected_fields(entries, select_mode=True):
 
     Returns a list of `(kind, field_type, rect)`, rect None where the
     rectangle is not predictable (the exit button's, whose end comes
-    from the art — `doc/tech_change_reading.md` §2 has it as NOT
+    from the art — `~/orionlayerv3-dev/doc/tech_change_reading.md` §2 has it as NOT
     SETTLED).
 
     **SLOT 0 IS NOT IN THIS LIST, and it used to be.** `Clear_Fields_`

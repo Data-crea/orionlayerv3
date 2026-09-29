@@ -146,7 +146,7 @@ class ColonySummaryScreen(ScreenBase):
     GAME_SCREEN_ID = 20         # SCREEN_COLONY_SUMMARY
     USE_FRAME = False           # no frame image since decision 71
     #: NO FRAME_TITLE, and that is the transcription (work order 156).
-    #: `_no_title_note` and `v3_projektstatus.md` both said the word
+    #: `_no_title_note` and `~/orionlayerv3-dev/v3_projektstatus.md` both said the word
     #: "survives as ScreenBase.FRAME_TITLE for the framebuffer fallback
     #: path". No such reader exists: the only one is `_render_frame_title`,
     #: reached from `_render_frame` behind `if self.USE_FRAME` — False

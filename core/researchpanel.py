@@ -198,7 +198,7 @@ def draw_exit(surface, layout, style, native_rect, label, pressed=False):
     `Add_Button_Field_(s + 0xBD, 0x1C4, "", TECHSEL 27, "\x1B", '(')`
     (tech.cpp:208-210; the art loaded at :176) takes its rectangle from
     that art (fields.cpp:366-367), so the SOURCE has the origin and
-    nothing else — `doc/tech_change_reading.md` §2 had the end as NOT
+    nothing else — `~/orionlayerv3-dev/doc/tech_change_reading.md` §2 had the end as NOT
     SETTLED until the live list was read. The caller therefore hands in
     the rectangle it found in the list read NOW, and where there is no
     such field there is nothing to draw and nothing to click.

@@ -1,7 +1,7 @@
 """Background point stars for the galaxy map.
 
 The original draws a dense field of single-pixel stars behind the
-map (see the reference screenshot and `doc/starfield_measurement.md`).
+map (see the reference screenshot and `~/orionlayerv3-dev/doc/starfield_measurement.md`).
 The HD background image carries the gas clouds but no points, so the
 map reads as empty next to the original.
 
@@ -39,7 +39,7 @@ import random
 
 import pygame
 
-# ── Measured constants (doc/starfield_measurement.md) ────
+# ── Measured constants (~/orionlayerv3-dev/doc/starfield_measurement.md) ────
 
 #: Map click area in native coordinates, field 23 of the Galaxy Map
 #: field list: (22, 22)-(527, 421). The density below is per native

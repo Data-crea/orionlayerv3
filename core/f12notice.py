@@ -6,7 +6,7 @@ No hand-over to the original for input, no native frame in a transition,
 no original screen as a fallback.
 
 **HD EXTENSION `f12_notice`.** Wherever the game's picture WOULD have been
-shown (`doc/briefs/187-original-visibility.md`, "Work order 187, Part 6 —
+shown (`~/orionlayerv3-dev/doc/briefs/187-original-visibility.md`, "Work order 187, Part 6 —
 where the original can still show without F12", paths 1-6, and the crop of
 a native box inside an HD panel, path 4b found by work order 188), HD keeps
 its last frame, dimmed, and draws one panel: what the game is waiting for,

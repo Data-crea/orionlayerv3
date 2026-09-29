@@ -4,7 +4,7 @@
 `MOX::_skill_data[54]` (mox.cpp:667-722), a literal in the engine that
 is on no wire, and `SKILL_NAME_ESTRINGS` / `LEVEL_NAME_ESTRINGS` are the
 ESTRINGS ids `Load_E_Strings_` hangs on it (estrings.cpp:215-294).
-`tools/leader_skill_check.py` reads both files and the level steps in
+`~/orionlayerv3-dev/tools/leader_skill_check.py` reads both files and the level steps in
 officer.cpp and fails on any difference; the smoke test runs it. A hand
 copy without that is the nebula sizes again.
 
@@ -360,7 +360,7 @@ def skill_value(rec, app_field, field_cost):
     """`Officer_Skill_Value_` (officer.cpp:105-155) — **FOR VERIFICATION
     ONLY.** The engine runs it once per leader at game creation
     (initgame.cpp:486) and stores the result; the screen reads the
-    stored value. `tools/leader_check.py` recomputes it to prove the
+    stored value. `~/orionlayerv3-dev/tools/leader_check.py` recomputes it to prove the
     offsets of the four fields it reads (see core/structs/leader.py).
 
     `app_field(app)` is the application's field or None/-1;

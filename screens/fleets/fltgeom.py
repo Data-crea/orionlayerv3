@@ -10,8 +10,8 @@ and hit-tests the boxes the file holds. Nothing computes a rectangle
 twice.
 
 **EVERY NUMBER BELOW WAS READ OFF THE TREE, NOT OFF THE REPORT.**
-`doc/fleet_screen_reading.md` was written by a sub-session in work order
-126 G and says so; CLAUDE.md's "you own every detail" makes that a claim
+`~/orionlayerv3-dev/doc/fleet_screen_reading.md` was written by a sub-session in work order
+126 G and says so; ~/orionlayerv3-dev/CLAUDE.md's "you own every detail" makes that a claim
 to check, not a source to build on. Checked 18 September 2026 against
 the tree `core/config.py` names the engine version of, file and line
 beside each entry — the reading was right in every one, which is worth
@@ -256,7 +256,7 @@ def hint_collides(stars, region="inset_map"):
 #: THAT screen, not this frame. The frame's holes are Data's layout,
 #: not the original's geometry, and nothing in the original can be
 #: cited for where they are. Marked here, in `layout.json`'s
-#: `frame._note`, in `v3_projektstatus.md`, and held by a smoke check.
+#: `frame._note`, in `~/orionlayerv3-dev/v3_projektstatus.md`, and held by a smoke check.
 CONTENT_INSET_SRC = {
     "inset_map": 42, "ship_panel": 39, "status_band": 7,
     "prev_fleet": 14, "next_fleet": 14,

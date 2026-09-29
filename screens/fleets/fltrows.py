@@ -323,7 +323,7 @@ def panel_lines(ship_idx, game_state, parts, strings=None, arcs=None):
     # records, which `core/structs/unverified.py` refuses) and Data's
     # answer to drawing the labels with nothing after them was no.
     # Marked `omission_panel_beam_bonuses`, and on the open list in
-    # `v3_projektstatus.md` with what lifting it needs.
+    # `~/orionlayerv3-dev/v3_projektstatus.md` with what lifting it needs.
 
     head[3] = _destination(view, game_state, strings)
 

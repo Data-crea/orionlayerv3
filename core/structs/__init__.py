@@ -9,7 +9,7 @@ guess): a spec is only marked verified=True after its offsets have
 been confirmed against live game data (known star names, known
 coordinates, ext_diag output). Unverified specs exist as documented
 starting points and are NOT used by production code paths.
-Use tools/struct_probe.py to verify offsets against a running game.
+Use ~/orionlayerv3-dev/tools/struct_probe.py to verify offsets against a running game.
 
 Usage:
     from core.structs import star
@@ -77,7 +77,7 @@ class Spec:
     def kind_width(cls, kind):
         """Bytes one field of this kind occupies. Raises on nonsense.
 
-        Used by the parser, by tools/struct_probe.py to lay out its
+        Used by the parser, by ~/orionlayerv3-dev/tools/struct_probe.py to lay out its
         columns, and by the smoke test to assert a spec covers its
         struct without gaps — one place that knows how wide a kind
         is, so those three cannot disagree.

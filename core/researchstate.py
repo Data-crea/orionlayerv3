@@ -38,7 +38,7 @@ WAITING = "waiting"
 #: How many consecutive frames with an EMPTY list the screen waits
 #: before it calls the silence a failure and hands over after all.
 #:
-#: **MEASURED, not guessed** (`tools/entry_glimpse.py`, work order 166
+#: **MEASURED, not guessed** (`~/orionlayerv3-dev/tools/entry_glimpse.py`, work order 166
 #: part A): five entries into change mode on SAVE4, and every one of
 #: them took exactly **22 frames** from the activation to a validated
 #: list. Three times that, so a slower machine or a bigger list has

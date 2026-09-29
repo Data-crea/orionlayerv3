@@ -55,7 +55,7 @@ TRANSCRIBED, and each with its source:
 
 NOT DRAWN — two states the original's row string carries and the HD
 row does not. Neither is a task in disguise and neither is on
-`doc/orion2re_open_fixes.md`; they are written down because they were
+`~/orionlayerv3-dev/doc/orion2re_open_fixes.md`; they are written down because they were
 found while reading `Draw_Colony_Summary_For_Colony_` for something
 else, and an omission nobody has recorded is indistinguishable from
 an omission nobody noticed.
@@ -606,7 +606,7 @@ def drawn_production(col, econ):
     positive as a word and -128 as a byte. It changes nothing at
     realistic import values, which is exactly why nobody would ever
     notice it, and it is NOT normalised here. Filed as a QUESTION in
-    doc/orion2re_open_fixes.md item 7 — does the original binary sign
+    ~/orionlayerv3-dev/doc/orion2re_open_fixes.md item 7 — does the original binary sign
     -test the byte or the word? — because it is not our tree and the
     answer decides which of the two is the transcription.
 
@@ -786,7 +786,7 @@ def build_rows(game_state, sort_key="name", names=None, held=None):
         # filter is a claim about what the byte at offset 6 MEANS and
         # the header can only fix where it sits (decision 23). It has
         # one now — see `core/structs/colony.py`, and
-        # `tools/struct_probe.py colonies --outposts` reproduces it
+        # `~/orionlayerv3-dev/tools/struct_probe.py colonies --outposts` reproduces it
         # against a live game.
         if col.owner != me or col.outpost_flag != 0:
             continue

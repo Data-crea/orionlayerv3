@@ -11,7 +11,7 @@ and a `sizeof` of exactly 361 matching
 members are contiguous — every offset is the previous offset plus the
 previous size, and the last ends on 361 — so the packing left no
 padding and no offset is free to move. Full write-up, including the
-provenance of the headers compiled, in `doc/s_colony_offsets.md`.
+provenance of the headers compiled, in `~/orionlayerv3-dev/doc/s_colony_offsets.md`.
 
 **Source two, the original's own screen.** Checked 31 August 2026
 against a screenshot of the colony summary from a savegame at 85
@@ -62,7 +62,7 @@ That is the query the earlier save could not answer. Its 21 colonies
 all carried 0, so the filter removed nothing and the count agreed
 with "offset 6 is the outpost flag" and with "offset 6 is a byte that
 is zero everywhere" equally well — consistent, and not a second
-source. `tools/struct_probe.py colonies --outposts` prints either
+source. `~/orionlayerv3-dev/tools/struct_probe.py colonies --outposts` prints either
 verdict and says which it is; against this save it reports
 ANSWERABLE and 12 against 11.
 
@@ -124,7 +124,7 @@ Both steps are reachable on the wire: this nibble, and
 
 **VERIFIED for 0..7 on 1 September 2026** — second source, live,
 and it does not merely support the player reading, it REFUTES the
-race one. `tools/struct_probe.py colonies --pop-nibble` against the
+race one. `~/orionlayerv3-dev/tools/struct_probe.py colonies --pop-nibble` against the
 reference save (stardate 3508.5, 21 colonies, 131 live colonists):
 
   owner 0: nibble 0 x39     owner 3: nibble 3 x28
@@ -143,7 +143,7 @@ different numbers for every player in this save, and the data picks
 the player one every time.
 
 The earlier pass had already recorded the weaker half — 598 colonists
-across two samples, nibble never above 9 (`doc/s_colony_offsets.md`).
+across two samples, nibble never above 9 (`~/orionlayerv3-dev/doc/s_colony_offsets.md`).
 That is consistent with both readings. The owner match is what
 separates them, and it was never checked until now.
 
@@ -272,7 +272,7 @@ POP_PROF_MAX = 2
 #: 23 asks for numeric agreement with live data, not for more reading
 #: of the same tree, and until this day every statement about 8 and 9
 #: rested on three source sites that could all be wrong together.
-#: Against `fixture_natives_3502.5.GAM` (see `v3_projektstatus.md`,
+#: Against `fixture_natives_3502.5.GAM` (see `~/orionlayerv3-dev/v3_projektstatus.md`,
 #: sha256 b1f1aa466716d6c0...):
 #:
 #:   the DATA      Urna I holds four pops, one of nibble 0 and three

@@ -1,7 +1,7 @@
 """Multiplayer (wire ids 15, 16, 17, 21, 22, 37, 41) — work order 188, Part 7.
 
 What orion2re offers behind the main menu's MULTIPLAYER is read in
-`doc/multiplayer_reading.md`: a setup (15) with three types — NETWORK (LAN,
+`~/orionlayerv3-dev/doc/multiplayer_reading.md`: a setup (15) with three types — NETWORK (LAN,
 orion2re's own router on port 47800), ONLINE (a direct endpoint; the
 original's MODEM, whose art the engine still shows) and HOTSEAT (one engine,
 players taking turns) — START NEW GAME, LOAD GAME, JOIN GAME, COMM INFO

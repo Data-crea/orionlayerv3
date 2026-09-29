@@ -113,7 +113,7 @@ class ResearchPanelScreen(ResearchPopupsMixin, ScreenBase):
         self._left = False       # change mode: the exit has been sent
         #: The category list popup, `TECH::_Tech_List_`. HD draws it
         #: and sends NOTHING for it: it is display-only in the original
-        #: (`doc/tech_change_reading.md` §2), so the game stays in
+        #: (`~/orionlayerv3-dev/doc/tech_change_reading.md` §2), so the game stays in
         #: `_Tech_Select_`'s own loop with the panel's field list —
         #: which is also what keeps `validate_against_fields` passing
         #: while the popup is up.
@@ -161,7 +161,7 @@ class ResearchPanelScreen(ResearchPopupsMixin, ScreenBase):
         what is LEFT; select mode passes 0 and shows the full cost. The
         description box shows the full cost in BOTH modes, which is the
         original's design and not a bug —
-        `doc/tech_change_reading.md` §3.
+        `~/orionlayerv3-dev/doc/tech_change_reading.md` §3.
         """
         return 0 if self.select_mode else self._accumulated
 
@@ -604,7 +604,7 @@ class ResearchPanelScreen(ResearchPopupsMixin, ScreenBase):
         does not commit (tech.cpp:347-353): it returns and the fields
         the player was looking at are untouched. The button's rect is
         not in the source — `Add_Button_Field_` takes it from the art
-        (fields.cpp:366-367) and `doc/tech_change_reading.md` §2 has
+        (fields.cpp:366-367) and `~/orionlayerv3-dev/doc/tech_change_reading.md` §2 has
         the end as NOT SETTLED — so it is found in the LIVE list by
         shape, never by a remembered index, exactly as a row is.
         """
@@ -642,7 +642,7 @@ class ResearchPanelScreen(ResearchPopupsMixin, ScreenBase):
 
         Never a constant. `Add_Button_Field_` takes the rectangle from
         the art (fields.cpp:366-367) and tech.cpp:208-210 gives only
-        the origin, so `doc/tech_change_reading.md` §2 carried the end
+        the origin, so `~/orionlayerv3-dev/doc/tech_change_reading.md` §2 carried the end
         as NOT SETTLED until the wire was read. A remembered number
         would put a clickable word where the game may have no field at
         all — decision 20, one step before a send.

@@ -22,7 +22,7 @@ One pixel on a hand-placed text field is not worth a second rule; it
 is written down here so that nobody later reads the difference as a
 fault.
 
-`tools/fleets_place_boxes.py` SEEDS them, so a future reshape moves
+`~/orionlayerv3-dev/tools/fleets_place_boxes.py` SEEDS them, so a future reshape moves
 them with the frame and nobody has to remember that they exist.
 
 **THE SEED IS A STARTING POINT AND NOT A CAGE** — Data,

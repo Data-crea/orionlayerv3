@@ -8,7 +8,7 @@ Fleets panel's officer path, not about the struct.
 
 **SOURCE 1 — THE HEADER.** `src/game/orion2.h:1088-1104`, compiled with
 its own `#pragma pack(1)`: every offset below is asserted by
-`tools/struct_header_check.py` (this spec is in its COVERED list), and
+`~/orionlayerv3-dev/tools/struct_header_check.py` (this spec is in its COVERED list), and
 `sizes.h` asserts `sizeof == 0x3b`. The member names here ARE the C++
 names, which is what lets that tool generate the asserts. The save
 serializer (`SAVEGAME::Write_Leader_`, savegame.cpp:479-495) writes the
@@ -16,7 +16,7 @@ same fifteen members in the same order at the same widths, so a `.GAM`
 holds the 67 records at this stride too.
 
 **SOURCE 2 — NUMBERS THAT CAN ONLY LAND IF THE OFFSET IS RIGHT.** Read
-by `tools/leader_check.py` out of real data: thirteen `.GAM` files on
+by `~/orionlayerv3-dev/tools/leader_check.py` out of real data: thirteen `.GAM` files on
 this disk (SAVE1-11 and the three secured fixtures), 871 records, each
 array located by HERODATA.LBX's own 67 names at this stride:
 
@@ -70,7 +70,7 @@ WARLORD trait), the price from `skill_value`, the skill bonuses from
 the static `_skill_data` table (mox.cpp:667-722) — all in
 `core/leaderskills.py`.
 
-Run `python tools/leader_check.py` to repeat the second source.
+Run `python ~/orionlayerv3-dev/tools/leader_check.py` to repeat the second source.
 """
 from core.structs import Spec
 

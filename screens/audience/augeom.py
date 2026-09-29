@@ -1,6 +1,6 @@
 """The audience's native geometry — transcribed, 640x480.
 
-From the reading (`doc/audience_reading.md` §1.2-1.3): the statement is
+From the reading (`~/orionlayerv3-dev/doc/audience_reading.md` §1.2-1.3): the statement is
 printed at x 80, 470 wide, centred on y 440 (`Print_Formatted_Paragraph_
 (0x50, 0x1B8 - height/2, 0x1D6, …)`, dip_scrn_main.cpp:1583-1586); every
 menu is `Get_List_Field_` at (10, 118), 245 wide — its fields give each

@@ -2,7 +2,7 @@
 
 **THE DIALOG IS NOT ON THE WIRE.** The game reports SCREEN_GAME (8) for
 all four dialogs, the confirmation and the warning; `MOX::_screen_data`
-is not serialized (doc/game_menu_reading.md §2). What IS on the wire is
+is not serialized (~/orionlayerv3-dev/doc/game_menu_reading.md §2). What IS on the wire is
 the field list each builder leaves behind, and in a single-player game
 every node has its own shape (measured 14 September 2026, §4):
 

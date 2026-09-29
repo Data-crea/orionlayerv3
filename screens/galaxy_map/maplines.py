@@ -101,7 +101,7 @@ OMISSION, each with its reason:
     but nothing has confirmed that the option is reachable in this
     build's options screen, so drawing the galaxy map's lines would
     mean guessing at whether a player can turn them off. Parked as
-    question 4 in `doc/briefs/144-parked-for-data.md`.
+    question 4 in `~/orionlayerv3-dev/doc/briefs/144-parked-for-data.md`.
 
     Not deleted and not quietly satisfied: the data is shared, the look
     is not, and this screen's own gate has still not been read.

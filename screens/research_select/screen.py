@@ -41,8 +41,8 @@ completion dialog away in the orion2re window with the real mouse. The
 research selection then waits, and this screen can be used for the
 choice.**
 
-That sentence is here, in `doc/orion2re_open_fixes.md` and in
-`v3_projektstatus.md`, and a smoke check fails if it leaves any of them
+That sentence is here, in `~/orionlayerv3-dev/doc/orion2re_open_fixes.md` and in
+`~/orionlayerv3-dev/v3_projektstatus.md`, and a smoke check fails if it leaves any of them
 while open fix 26 still says OPEN. The rest of what this screen still
 owes — the third live choice, two resolutions, the work order 128 crash
 case, the promotion of `tech_applications` out of `unverified.py`, and

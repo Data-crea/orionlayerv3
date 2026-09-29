@@ -1,5 +1,5 @@
 {
-  "_comment": "The build popup (wire id 25), work order 180 C. Geometry and state: screens/build_queue/bqwire.py; drawing and marks: bqdraw.py. Each mark is held by check 090q and named in v3_projektstatus.md.",
+  "_comment": "The build popup (wire id 25), work order 180 C. Geometry and state: screens/build_queue/bqwire.py; drawing and marks: bqdraw.py. Each mark is held by check 090q and named in ~/orionlayerv3-dev/v3_projektstatus.md.",
   "words": {
     "_note": "DEVIATION `button_words`: the six buttons carry their words in COLBLDG.LBX art (colbldg.cpp:346-364); HD draws them as HUD buttons with the words in code.",
     "cancel": "CANCEL",

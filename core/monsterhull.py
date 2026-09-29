@@ -17,7 +17,7 @@ starts, from two places, and this module is a copy of both:
 
 **A COPY IS ONLY LEGITIMATE WITH A CHECKER** (brief, B.2 item 4): a
 change in orion2re would leave these numbers quietly wrong on a panel
-that looks right. `tools/monster_hull_check.py` reads initship.cpp,
+that looks right. `~/orionlayerv3-dev/tools/monster_hull_check.py` reads initship.cpp,
 techdata.cpp and orion2_consts.h and fails on any difference, and the
 smoke test runs it whenever the orion2re tree is on this disk.
 

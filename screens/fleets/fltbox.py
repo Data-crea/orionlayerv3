@@ -11,7 +11,7 @@ is `H_Message_(n)` formatted with values the engine computed and it
 reaches a client only as pixels, so HD cannot set it in its own font.
 The replacement is open fix 29; until then this is a transcription of
 the original's own rendering rather than an invention of ours, which is
-the better of the two trades. Marked in `v3_projektstatus.md` and held
+the better of the two trades. Marked in `~/orionlayerv3-dev/v3_projektstatus.md` and held
 by a smoke check.
 """
 import pygame

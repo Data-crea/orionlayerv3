@@ -1,7 +1,7 @@
 """The turn-time popups in HD — work order 188 Part 4, on open fix 49.
 
 **WHAT THE ORIGINAL SHOWS AT TURN CHANGE** is inventoried in
-`doc/brief_turn_messages.md`. The generic boxes among it (the strategic
+`~/orionlayerv3-dev/doc/brief_turn_messages.md`. The generic boxes among it (the strategic
 combat result, the bombing report, spy reports, "really trash", the treaty
 confirmation …) are `core/msgbox.py`'s, on open fix 29. The popups that are
 their own dialogs are here, on open fix 49's "TPOP" block

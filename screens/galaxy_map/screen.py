@@ -5,7 +5,7 @@ the screen is its background slot (a dark placeholder until Data's
 picture arrives), the star map's own floor, and Data's HUD drawn over
 it in code by `core.hud` — the title plate, the info panel, six slanted
 nav buttons and the TURN action button. The boxes are written from the
-HUD's measured layout by `tools/hud_boxes.py` (decision 3's successor):
+HUD's measured layout by `~/orionlayerv3-dev/tools/hud_boxes.py` (decision 3's successor):
   map_area        the star field, in the FREE SPACE between the title
                   plate, the bar and the panel (work order 170), and
                   stretching with the window between plate and bar

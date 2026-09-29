@@ -10,7 +10,7 @@ WHAT IS ON THE WIRE, and how each is read:
                  race, colour, contact, treaty, relations, the treaties'
                  levels, spies, ignoring (core/structs/player.py, the
                  offsets added by work order 175 C: header route and
-                 `tools/races_check.py` over 14 saves)
+                 `~/orionlayerv3-dev/tools/races_check.py` over 14 saves)
   the lists      `Get_Players_Dead_Or_Alive_Or_Omniscient_` for the
                  portraits and texts, `Get_Active_Players_(0, 0)` for the
                  bars, spies and fields (bill.cpp:312-338, :565-596;

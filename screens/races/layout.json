@@ -1,7 +1,7 @@
 {
   "_comment": "The Races screen (SCREEN_RACE, 6), work order 175 C. Everything it draws is placed at the HD image of its native rectangle (racesgeom, through core/researchnative), so this file carries no geometry: only the markings, one per thing HD does that the original does not, or leaves out, or cannot do yet. Each is also stated in the module that performs it and held by the smoke group (tools/smoke_suite/090e).",
   "marks": {
-    "hd_state": "BUILT, NOT ACCEPTED. The live part of work order 175 C is parked (doc/briefs/175-parked-for-data.md).",
+    "hd_state": "BUILT, NOT ACCEPTED. The live part of work order 175 C is parked (~/orionlayerv3-dev/doc/briefs/175-parked-for-data.md).",
     "omission_outer_frame": "OMISSION \u2014 RACES.LBX 0, the background with the panels, bars, sliders and buttons painted in, is not drawn; decision 71's HUD style draws them in code.",
     "deviation_hud_parts": "DEVIATION \u2014 the relation bar and slider, the mission row and the five buttons are HUD blocks at the original's rectangles, not RACES.LBX 2, 3, 6-30 and 60.",
     "deviation_button_words": "DEVIATION \u2014 RETURN, AUDIENCE, REPORT, DECLARE WAR, IGNORE, ESPIONAGE / SABOTAGE / HIDE, the title and BONUSES are baked into the original's art; HD writes them in OrionLayer's words.",

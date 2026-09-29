@@ -3,7 +3,7 @@
 Data works at the same desktop while live runs happen. Until 182 the
 engine's window opened in front of him and his clicks and focus changes
 could land between a run's inputs. Measured on this machine
-(`doc/briefs/182-virtual-display.md`): a private **Xvfb** carries the
+(`~/orionlayerv3-dev/doc/briefs/182-virtual-display.md`): a private **Xvfb** carries the
 engine (SDL x11), the intro skip (`xdotool key --window`), screenshots
 (`import`) and a pygame window exactly as `:0` does, at the same snapshot
 pacing, and nothing of it reaches Data's session. `mutter --headless`
@@ -17,7 +17,7 @@ THE RULE, held by smoke check 090s:
   the session's display, unless the run names a reason for the real one;
 - a CLIENT (a pygame App a tool drives) gets `headless_clients()`: SDL's
   dummy video and audio drivers, FORCED — a `setdefault` lost to a shell
-  that exports `SDL_VIDEODRIVER=x11`, which is what CLAUDE.md's live recipe
+  that exports `SDL_VIDEODRIVER=x11`, which is what ~/orionlayerv3-dev/CLAUDE.md's live recipe
   says to export;
 - the real desktop is `--real-desktop REASON` on the command line, or
   `ORIONLAYER_REAL_DESKTOP=<reason>` in the environment; a flag without a
@@ -177,7 +177,7 @@ def session_auth(display=":0"):
 
 def engine_env(reason=None, base=None, out=print):
     """The environment an ENGINE starts in: this module's Xvfb, or — with a
-    reason — the real session's `:0` (CLAUDE.md's three variables)."""
+    reason — the real session's `:0` (~/orionlayerv3-dev/CLAUDE.md's three variables)."""
     env = dict(os.environ if base is None else base)
     env.pop("WAYLAND_DISPLAY", None)
     env["SDL_VIDEODRIVER"] = "x11"

@@ -3,7 +3,7 @@
 **TRANSCRIBED, NOT DESIGNED** — the Leaders and Races rule
 (`screens/leaders/ldrgeom.py`): each number is a literal of orion2re at
 `orionlayer-local` 9ab84230 (the colony sources unchanged since
-`b44cbf76`, work order 180 B1), read in `doc/colony_screen_reading.md`
+`b44cbf76`, work order 180 B1), read in `~/orionlayerv3-dev/doc/colony_screen_reading.md`
 and re-read for this module. The HD screen draws each thing at the HD
 image of its native rectangle (`core/researchnative`), so the drawing,
 the hit test and a native screenshot speak one coordinate system.
