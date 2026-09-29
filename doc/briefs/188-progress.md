@@ -386,3 +386,99 @@ the host's waiting steps, the joiner's, the loaded game's positions and the
 net turn's chat are drawn from MPLY and checked offline (090zf), not seen.
 
 Checks 090zf (2); 090t stages the setup. Count 419 → **421**.
+
+## Part 8 — gates and push
+
+- **Full suite**: exit 0, **421 green** (tree at `b15be95`).
+- **Fresh clone** (`git clone --no-hardlinks` at `b15be95`, `python
+  tools/setup.py`): setup exit 0 (its engine report names fixes … 29, … 48,
+  49, 50, 51), its own full suite **421 green**.
+- **liveguard**: every engine's guard verified after it stopped, SAVE10 and
+  MOX.SET restored from the guard taken before that engine; against the
+  order's first live guard `guard_188_first`: every game file identical
+  (HOF.M2 included), only the tree's `git status` (this order's commits).
+- **Flash check, the stricter rule** (every native frame without F12 counts,
+  anywhere in the run): on the final engine `8f7bd9e3` — `flash_walk` 29
+  transitions, `design_walk` 13, `audience_walk` 9: **0 native frames**, and
+  `native frames without F12: 0` for each whole run; 090o's replay (249
+  transitions) green.
+- **orion2re**: `orionlayer-local` at `8f7bd9e3`, never pushed; fix 42 open.
+- **Push**: `git push` (no force), the pre-push hook's full suite.
+
+## End of work order 188
+
+**Engine fixes applied** (each proved on the tip first, one commit each,
+entry APPLIED, version_check / README / part 09 / patch_stack updated, a
+bundle after each; setup.py reads version_check):
+
+| fix | first line | commit |
+|---|---|---|
+| 48 | "The move verdict for the fleet box's selection is not on the wire" (new) | `010870bc` |
+| 29 | "A native message box's text is not in the snapshot" | `76f8c438` |
+| 49 | "The turn-time popups have no id of their own, and what they show is not on the wire" (new) | `6859e163` |
+| 50 | "The Hall of Fame's entries are not on the wire" (new) | `65b41b66` |
+| 51 | "The multiplayer screens say nothing on the wire but their field lists" (new) | `8f7bd9e3` |
+
+Parked: none of this order's; fix 42 stays OPEN (not approved). Newest
+bundle `~/orion2re_bundle_29sep_8f7bd9e3_fixes34-51.bundle`.
+
+**The six paths** (187-original-visibility): Stage 1 on all six, and on a
+seventh (4b, a native box's crop) and an eighth (a screen switching the App
+into F12's mode — Empire Identity, found in Part 7). **HD now**: 4, 4b, 5
+wholly (the HD message box, the turn popups); 1 for the report phase, the
+Turn Summary, the science room, the landing, the combat target, the Hall of
+Fame and Multiplayer; 2 needs no notice. **Still the Stage 1 notice**: path 1
+for tactical combat, the council, the Antarans, the invasion choice, ground
+combat, the mutation picker, the monster bribe, the star rename, the
+occupation popup, the end of game (parked 1c); path 3 (an engine without the
+fixes — the notice names that) and path 6 (missing extraction — the notice
+names the command).
+
+**Turn-change messages**: built — the HD message box (every generic box) and
+the turn popups (science, Turn Summary with its colony jump, leader offer,
+planet choice, discovery, leader level, GNN, combat target, landing); seen
+live — planet choice, confirmations, text boxes, landing, Turn Summary and
+its jump, combat target, leader offer, science room, GNN, AI audience,
+research list; offline only — discovery, leader level (stand-ins); boxes of
+an attack on the player (warning, combat result, bombing, treaty); not built
+— the parked list above.
+
+**Travel line**: green / red on hover from open fix 48's verdict, gone on
+leaving, click as before; `App._render` 5.87 vs 5.73 ms at 2576x1432 and
+4.75 vs 4.61 ms at 1920x1080 (with / without the line, median).
+
+**Hall of Fame**: works — ten numbered rows as the native frame, out by a
+click or ESC, never 'C'; the engine offers no empty state; the flashed entry
+not seen live (needs a game's end). **Multiplayer**: the engine offers
+NETWORK, ONLINE, HOTSEAT (IPX / modem / serial removed; no pre-game chat, no
+reconnect); HD for every step; a whole hotseat game walked live; hosting and
+joining across two engines needs a second machine (parked 1f); the endpoint
+"ATZ" (parked 1e).
+
+**Save slots**: none overwritten — this run saved nothing (every live run in
+memory; SAVE10 and MOX.SET, which the game writes by itself, restored from
+the guard before each engine). **SAVE8 untouched** (sha256 `ab70cc9a…`, as
+in the first guard; last written 3 September).
+
+### Acceptance checklist for Data
+
+1. `python play.py`, load SAVE4, end a turn: the planet choice, the colony
+   confirmation, the landing, the Turn Summary — HD panels, never the
+   original; F12 still shows the original and F12 again returns.
+2. On the map, open a fleet (click its icon) and move the pointer over stars:
+   green to a reachable star, red to one out of range, gone when you leave;
+   click sends the fleet as before.
+3. Colony screen → BUY on Housing: the HD message box with the game's text.
+4. Ship Designer: rename a long name to "Ox" and back — replaced cleanly.
+5. Races → DECLARE WAR on a race → the HD confirmation → NO.
+6. Main menu → HALL OF FAME: ten numbered rows; a click returns.
+7. Main menu → MULTIPLAYER → HOTSEAT → START NEW GAME: two players, the
+   player switch, each player's turn.
+8. Something the order parked (1c) still shows "F12 to answer": F12 answers
+   it.
+
+**Parked** (`doc/briefs/188-parked-for-data.md`): 1a (answered), 1b the fleet
+box's ETA text on hover, 1c the turn-time screens behind the notice, 1d the
+popups' artwork, 1e the endpoint "ATZ", 1f network play across two engines,
+1g five engine bugs from multiplayer; section 2, the items carried over
+unchanged.
