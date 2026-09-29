@@ -139,7 +139,7 @@ REQUIRED_INPUTS = [
     (os.path.join(GM, "ships", "_src"), "HD ship masters"),
     # The galaxy map's and the GAME menu's frame.png were required here
     # until work order 189 removed them: since decision 71 the map's boxes
-    # come from the HUD (`tools/hud_boxes.py`) and the menu wears the HUD
+    # come from the HUD (`~/orionlayerv3-dev/tools/hud_boxes.py`) and the menu wears the HUD
     # popup, so nothing read either. The colony and Fleets frames stay —
     # the smoke test still holds live boxes to their holes.
     (os.path.join(ROOT, "screens", "colony_summary", "assets",

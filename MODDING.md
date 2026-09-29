@@ -261,7 +261,7 @@ screens/galaxy_map/assets/stars/<class>/0.png .. 5.png
 
 Classes are `blue`, `white`, `yellow`, `orange`, `red`, `brown`
 (spectral classes B, F, G, K, M and Dwarf). Black holes use
-`assets/black_hole.png` and their own size table — with extra rules,
+`screens/galaxy_map/assets/black_hole.png` and their own size table — with extra rules,
 see below.
 
 **The six steps are not "large to small" in the obvious sense.**
@@ -311,7 +311,7 @@ python tools/make_star_icons.py --out mods/my_mod/screens/galaxy_map/assets/star
 
 ## Galaxy map: the black hole
 
-`assets/black_hole.png` is not a normal sprite. There is exactly one
+`screens/galaxy_map/assets/black_hole.png` is not a normal sprite. There is exactly one
 drawing and the renderer **rotates it at runtime**, which puts four
 hard requirements on the file. Break any of them and the black hole
 still draws, but wrongly — and three of the four are invisible in a
