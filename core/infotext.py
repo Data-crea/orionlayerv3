@@ -7,10 +7,10 @@ Reference topic lists (HELP.LBX 1-16), the trait names (RACESTUF.LBX
 module reads them, the file carries a format version and is never
 committed, and its absence is a state the screen explains.
 """
-import json
 import logging
 import os
 
+from core import derivedjson
 from core.config import BASE_DIR
 
 log = logging.getLogger("infotext")
@@ -31,20 +31,17 @@ class InfoText:
         self.state = "missing"
         self.topics, self.traits, self.groups = {}, [], {}
         path = os.path.join(root or BASE_DIR, *text_file(language).split("/"))
-        if not os.path.exists(path):
-            log.info("infotext: %s absent — run `%s`", path, HOW)
-            return
-        try:
-            with open(path, encoding="utf-8") as fh:
-                data = json.load(fh)
-        except (OSError, ValueError) as err:
-            log.warning("infotext: %s will not load (%s)", path, err)
-            return
-        if int(data.get("format", 0)) != FORMAT_VERSION:
+        # THE SHARED HEAD (work order 191, audit D1). Until then this refused
+        # a NEWER format too (`!=`), where every other derived loader refuses
+        # only an older one; nothing recorded a reason, and decision 38's
+        # format version exists for the file an OLDER extractor mangled. A
+        # newer file comes only from a newer tree's extractor, which the
+        # other nine loaders accept — so this one does now as well.
+        data, stale = derivedjson.load(path, log, "infotext", HOW, HOW,
+                                       FORMAT_VERSION)
+        if stale:
             self.state = "stale"
-            log.warning("infotext: %s is format %s, this build reads %s — "
-                        "re-run %s", path, data.get("format"), FORMAT_VERSION,
-                        HOW)
+        if data is None:
             return
         self.topics = {int(k): [(t, int(i)) for t, i in v]
                        for k, v in data.get("topics", {}).items()}

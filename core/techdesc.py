@@ -15,10 +15,10 @@ this module decodes at load time, the file carries a format version and is
 never committed. Absent, every lookup answers None and the state says why;
 the screen draws no invented text.
 """
-import json
 import logging
 import os
 
+from core import derivedjson
 from core.config import BASE_DIR
 
 log = logging.getLogger("techdesc")
@@ -49,18 +49,15 @@ class TechDesc:
         self.weapon_notes = []
         path = os.path.join(root or BASE_DIR,
                             *string_file(language).split("/"))
-        if not os.path.exists(path):
-            log.info("tech descriptions: %s absent — run "
-                     "`python tools/techdesc_extract.py`", path)
-            return
-        try:
-            with open(path, encoding="utf-8") as handle:
-                data = json.load(handle)
-        except (ValueError, OSError) as err:
-            log.warning("tech descriptions: %s will not load (%s)", path, err)
-            return
-        if int(data.get("format", 0)) < FORMAT_VERSION:
+        # THE SHARED HEAD (work order 191, audit D1) — and with it the
+        # warning on a stale file this loader alone did not give.
+        data, stale = derivedjson.load(path, log, "tech descriptions",
+                                       "python tools/techdesc_extract.py",
+                                       "tools/techdesc_extract.py",
+                                       FORMAT_VERSION)
+        if stale:
             self.state = "stale"
+        if data is None:
             return
         self.specials = list(data.get("specials", []))
         self.weapon_notes = list(data.get("weapon_notes", []))
