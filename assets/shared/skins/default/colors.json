@@ -1,23 +1,5 @@
 {
   "panel": {
-    "bg": [
-      12,
-      16,
-      28,
-      230
-    ],
-    "border": [
-      60,
-      80,
-      120,
-      255
-    ],
-    "border_highlight": [
-      100,
-      140,
-      200,
-      255
-    ],
     "thin_border": [
       55,
       65,
@@ -25,46 +7,10 @@
     ]
   },
   "button": {
-    "bg": [
-      20,
-      28,
-      50,
-      240
-    ],
-    "bg_hover": [
-      30,
-      42,
-      75,
-      240
-    ],
-    "bg_active": [
-      15,
-      20,
-      38,
-      250
-    ],
-    "border": [
-      70,
-      95,
-      145,
-      255
-    ],
-    "border_hover": [
-      120,
-      160,
-      220,
-      255
-    ],
     "text": [
       180,
       195,
       225,
-      255
-    ],
-    "text_hover": [
-      220,
-      230,
-      255,
       255
     ],
     "_pressed_note": "pressed_text is TRANSCRIBED (core/pressfeedback.py): the orange of every pressed button picture the GAME button and the GAME menu use, palette index 126 through the main screen's palette. The load and save rows use it too, as an HD INVENTION.",
@@ -87,12 +33,6 @@
       170,
       255
     ],
-    "accent": [
-      210,
-      180,
-      100,
-      255
-    ],
     "title": [
       220,
       200,
@@ -105,18 +45,6 @@
     8,
     16,
     255
-  ],
-  "starfield": [
-    6,
-    8,
-    16,
-    255
-  ],
-  "grid": [
-    25,
-    35,
-    55,
-    80
   ],
   "main_menu": {
     "credit_role": [
@@ -1262,16 +1190,6 @@
   },
   "player_presets": {
     "_note": "Player-colour PRESETS \u2014 an HD EXTENSION (fundament 63): MOO2 assigns its eight player colours fixed. The preset `original` is not a table here: it IS the skin's own galaxy_map owner_*/ship_*, planets owner_hover_* and the banner/banner_hd sections. Every other preset is eight BASE colours in `order`, and palette.init derives the four tables from them by `rule` before any screen imports a colour (decision 18). A preset change therefore needs a restart.",
-    "order": [
-      "red",
-      "yellow",
-      "green",
-      "silver",
-      "blue",
-      "brown",
-      "purple",
-      "orange"
-    ],
     "rule": {
       "_deviation": "DEVIATION \u2014 OUR RULE, NOT THE ORIGINAL'S. Measured 14 September 2026: none of the original's tables follows from owner_* by one relation (ship_* vs owner_*: lift k per channel -0.22..1.00, max error 51; owner_hover_* vs owner_*: k 0.27..1.00, max error 52; the banner add is (0,0,0) for seven colours and (18,8,0) for orange). So a preset the game never had is filled by this invented rule: owner = base; ship = base + (255 - base) * k_ship; owner_hover = base + (255 - base) * k_hover; banner and banner_hd multiply = base with add (0,0,0). The original's orange add is a hand correction for one colour a preset does not have and is not reproduced. Data's decision (b), 14 September 2026.",
       "k_ship": 0.07,

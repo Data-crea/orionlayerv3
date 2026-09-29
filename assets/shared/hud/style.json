@@ -265,7 +265,6 @@
     "_font_note": "The mockups' face is a squared geometric sans. The tree holds two faces: Aldrich (squared, technical, the display font since 31 August) and pygame's default freesansbold. Aldrich is the closer; parked (169 P3).",
     "supersample": 3,
     "_supersample_note": "Every block is drawn at 3x its device size and smoothscaled down once, then cached: that is the antialiasing of a slanted or chamfered edge at any resolution. 3 is chosen, not measured against 2 or 4; the edge-width check (smoke 006a) holds the result at three resolutions.",
-    "glow_passes": 3,
     "_glow_note": "A glow is the edge line blurred by three box passes, the classic approximation of a gaussian: pygame 2.6 has no blur, numpy's cumulative sum is exact and fast.",
     "button": {
       "hover_edge_from": "action.edge",
@@ -314,7 +313,6 @@
     "glass": {
       "slider_default": 0.5,
       "dense_transparency": 0.5,
-      "soften": 0,
       "corner_lines": false,
       "floor_contrast": 4.5,
       "_note": "Work order 174 B2/B3. The panel GLASS: the background under a panel shows through, dimmed, under a vertical gradient (measured.glass: its colours follow the frame colour through the tint rule, its opacity is the mockup's). slider_default is the Panel glass slider's measured position: 0.5 gives exactly the measured opacity; 0 doubles the transparency, 1 is solid. dense_transparency: the dense variant (tables, portrait grids) lets through this share of what the normal glass lets through, so it moves with the slider and stays denser. soften: a blur radius in reference px for the background under the glass, 0 = none (the mockup shows none; parked). corner_lines: the mockup's inner corner lines, off (parked with renders). floor_contrast: 170/171's word floor; a panel whose background is too bright for it at the slider's position is made denser, never the words dimmer.",

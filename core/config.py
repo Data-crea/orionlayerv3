@@ -61,7 +61,6 @@ def load_settings():
             "height": REF_H,
             "fullscreen": False,
             "resizable": True,
-            "vsync": True,
             "min_width": 1280,
             "min_height": 720,
         },

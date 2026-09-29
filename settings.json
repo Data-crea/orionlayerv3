@@ -4,15 +4,12 @@
     "height": 1080,
     "fullscreen": false,
     "resizable": true,
-    "vsync": true,
     "min_width": 1280,
     "min_height": 720
   },
   "orion2re": {
-    "path": "",
     "host": "localhost",
-    "port": 17362,
-    "auto_start": false
+    "port": 17362
   },
   "render_mode": "hd",
   "active_mods": [],

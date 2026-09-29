@@ -56,10 +56,7 @@
     }
   ],
   "actions": {
-    "game_menu": 6,
-    "turn": 7,
-    "zoom_in": 8,
-    "zoom_out": 9
+    "game_menu": 6
   },
   "zoom_out_field": {
     "_source": "MAINSCR: _zoom_out_button = Add_Button_Field_(244, 455, ..., \"-\") (mainscr.cpp:1381, :1392); type 0 and the end corner (298, 473) read off the live list, 17 September 2026 (work order 128 C) and in tools/galaxy_box_fields.json. Parking looks this field up in the live list together with map_cancel's grid field and sends to the index it finds there; a list without both is not the galaxy map's, whatever screen number the game reports (the turn-start research prompt reports 0 and its field 9 is a choice row).",
@@ -101,7 +98,6 @@
     "value": 26,
     "sub": 18
   },
-  "sidebar_dividers": true,
   "sidebar_row_pad": 8,
   "_sidebar_row_pad_note": "Reference px between a sidebar row's text box and the separator above it (decision 71): tools/hud_boxes.py writes the sb_*_text boxes this far inside their bands, and the screen draws each separator this far above its row's text. Ours, not measured.",
   "_sidebar_icon_note": "Keys are sidebar_rows keys, values are files under assets/icons/ (cut from _source_sheet.png by tools/make_sidebar_icons.py). A row that is not listed gets no icon - that is why stardate is absent. POSITIONS ARE NOT HERE: every row owns two boxes in boxes.json, sb_<row>_text and sb_<row>_icon, both draggable and font-scalable in the F5 editor. sidebar_fonts are reference sizes multiplied by each text box's own font_scale. A text box style may carry \"align\": left | center | right. The icons are an HD addition; the original prints these five numbers over full-cell artwork.",
@@ -113,7 +109,6 @@
     "research": "Research",
     "breakthrough": "Breakthrough",
     "no_research": "None",
-    "turn": "Turn",
     "stardate": "Stardate"
   },
   "monetary_unit": "BC",

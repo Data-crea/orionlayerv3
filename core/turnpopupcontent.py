@@ -4,7 +4,7 @@ The content half of `core/turnpopup.py` (split for decision 6): from a
 popup (TPOP) and the snapshot, a title, lines, options and buttons, each
 bound to the popup's OWN field — see `core/turnpopup.py` for the rules.
 """
-DEFAULT_WORDS = {"close": "CLOSE", "cancel": "CANCEL", "ok": "OK",
+DEFAULT_WORDS = {"close": "CLOSE",
                  "prev": "PREV", "next": "NEXT", "continue": "CONTINUE",
                  "hire": "HIRE", "reject": "REJECT",
                  "turn_summary": "TURN SUMMARY"}
