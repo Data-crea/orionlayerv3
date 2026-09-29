@@ -72,8 +72,14 @@ _bi_missing = [_f for _f in _bi_files if _f not in _bi_linked]
 assert not _bi_missing, (
     f"doc/briefs/README.md does not index {_bi_missing} — it says "
     f"it holds every brief this project has been given")
+# RESOLVED LOGICALLY, not through the file system (work order 189): the
+# briefs live in the developer store and doc/briefs is a link into it, so
+# the OS would resolve `../x.md` inside the store, where a player file such
+# as doc/CREDITS.md is not. A path in a brief is a project path — the
+# store and the tree share one layout — so `..` is taken lexically.
 _bi_dangling = sorted(_l for _l in _bi_linked
-                      if not os.path.exists(os.path.join(_bi_dir, _l)))
+                      if not os.path.exists(os.path.normpath(
+                          os.path.join(_bi_dir, _l))))
 assert not _bi_dangling, (
     f"doc/briefs/README.md links {_bi_dangling}, which are not there")
 assert len(_bi_files) >= 148, (
