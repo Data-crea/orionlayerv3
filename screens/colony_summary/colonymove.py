@@ -313,10 +313,6 @@ class DropPlan:
         self.reason = reason
         self.stopped_at = stopped_at
 
-    @property
-    def complete(self):
-        return self.reason is None
-
     def __repr__(self):
         return (f"DropPlan(landed={self.landed}, carried={self.carried}"
                 f", reason={self.reason!r}, at={self.stopped_at})")

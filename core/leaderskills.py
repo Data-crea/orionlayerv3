@@ -138,11 +138,6 @@ FEMALE = frozenset((10, 22, 34, 37, 39, 60))
 HIRE_WINDOW = 30
 
 
-def skill(index):
-    """`(id, mask, type, strength, level_up, cost, format)`."""
-    return SKILLS[index]
-
-
 def has_general(rec, index):
     """`Officer_Has_General_Skill_` (officer.cpp:225-227)."""
     return (SKILLS[index][1] & int(rec.general_skills)) != 0

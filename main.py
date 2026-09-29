@@ -113,7 +113,6 @@ class App:
         self._fs_surface = None
         self._fs_offset = None
         mouse_input.set_offset(None)
-        self._fs_native = None
         #: What `_showing_original` last decided and why, so the log
         #: carries a CHANGE and never a frame count (work order 139 A).
         self._reporter = fallbacknote.Reporter()
@@ -304,15 +303,6 @@ class App:
                         top.handle_mousewheel(event.y, mx, my)
             if self._input_log is not None:
                 self._input_log.end()
-
-    def _adjust_mouse(self, x, y):
-        """Adjust mouse coordinates for fullscreen offset.
-
-        Kept as a method because callers exist; the arithmetic itself
-        lives in core.mouse so hover, wheel and the editor cannot
-        drift apart from it.
-        """
-        return mouse_input.adjust(x, y)
 
     def _showing_original(self):
         """True when the window shows orion2re's own framebuffer.
@@ -637,7 +627,7 @@ class App:
             # CONTENT size — the surface below is a plain Surface of
             # exactly that size, blitted into the middle of the
             # display. What is read back is the DISPLAY, because the
-            # centring offset and `_fs_native` are about it and a
+            # centring offset is about it and a
             # refused native size would put the content off centre
             # by half the difference.
             self._fs_surface = pygame.display.set_mode(
@@ -658,12 +648,10 @@ class App:
             # Offset for centering content on native screen
             self._fs_offset = ((native_w - w) // 2, (native_h - h) // 2)
             mouse_input.set_offset(self._fs_offset)
-            self._fs_native = (native_w, native_h)
             self._after_resolution_change()
         else:
             self._fs_surface = None
             self._fs_offset = None
-            self._fs_native = None
             mouse_input.set_offset(None)
             w, h, label = self._resolutions[self._res_index]
             self._apply_resolution(w, h, caption=label)

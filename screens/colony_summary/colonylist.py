@@ -482,66 +482,6 @@ def draw_held_cluster(surface, pointer, figures, cells, scale, y=None):
         x += pitch
 
 
-def _draw_overflow(surface, rows, area, cfg, scale, layout, style,
-                   first=0):
-    """Say how many rows are not on screen, because otherwise nothing
-    does.
-
-    **This is the fault it exists for, and it was live.** `render`
-    stops at the first row that would cross `area.bottom`, so a list
-    longer than the panel simply ended — no ellipsis, no count, no
-    scrollbar, and the rows that were drawn were all correct. At
-    1920x1080 the panel held NINE rows then — `row_height` was 62 —
-    so a twelve-colony empire lost three, and the way it was found
-    was somebody noticing a colony they knew they owned was not on a
-    screenshot. Every check in the suite was green, because every
-    check looked at rows that were drawn. The panel holds ten now
-    and the fault is the same one at thirteen colonies.
-
-    **The list scrolls now, and this line counts BOTH directions.**
-    It used to say "not a scrollbar and not a step towards one";
-    that step has since been taken, and the sentence was rewritten
-    rather than left to contradict the code under it. `hidden` is
-    the rows above the window plus the rows below it, so the number
-    is the honest one at every offset: it is the whole of what the
-    panel is not showing, not the tail alone. The layout.json
-    template is unchanged — "{count} more not shown" was already
-    true of both.
-
-    It counts against the ROW TOTAL and not against the game's ten
-    (decision 46's corollary): how many rows fit is derived from
-    `list_area` and `row_height` at this resolution and is ten only
-    by arithmetic.
-
-    Drawn in the strip the bands could not use, so it cannot cover a
-    row: the bands stop when the next one would cross `area.bottom`,
-    which leaves at least `row_height` minus one pixel of unused
-    height whenever anything was dropped at all. At an offset with a
-    full window and nothing below, that strip is where the count of
-    the rows ABOVE goes.
-    """
-    template = cfg.get("overflow", "")
-    if not template:
-        return
-    bands = row_bands(area, cfg, scale, max(0, len(rows) - first))
-    # Above plus below, in one subtraction: `first` rows are off the
-    # top and `len(rows) - first - len(bands)` are off the bottom.
-    hidden = len(rows) - len(bands)
-    if hidden <= 0:
-        return
-    text = template.replace("{count}", str(hidden))
-    surf = style.render_text(
-        text, layout.font_size(cfg.get("small_font", 15)),
-        OVERFLOW_COLOR[:3])
-    top = bands[-1][0] + bands[-1][1] if bands else area.y
-    # Centred in what is left, and clamped so a panel too short for
-    # even one row still shows the line rather than drawing it off
-    # the bottom edge.
-    y = min(top + max(0, (area.bottom - top - surf.get_height()) // 2),
-            area.bottom - surf.get_height())
-    surface.blit(surf, (area.x, max(area.y, y)))
-
-
 def _draw_name_block(surface, row, x, y, name_w, row_h, cfg,
                      name_px, small_px, style, frame_inset=0,
                      scanned=False, planets=None, icon_gap=0):

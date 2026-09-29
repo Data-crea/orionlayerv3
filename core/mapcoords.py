@@ -146,17 +146,6 @@ class MapView:
         return ((nx - MAP_ORIGIN) * ms / SCALE_UNIT + mx,
                 (ny - MAP_ORIGIN) * ms / SCALE_UNIT + my)
 
-    def star_click_target(self, star):
-        """The 640x480 point to click to select `star`.
-
-        Uses the star's own coordinates rather than the cursor
-        position, so the click lands dead centre on what the user
-        picked in HD even when the HD icon is far larger than the
-        original's few pixels.
-        """
-        return galaxy_to_native(star.x, star.y, self.state)
-
-
 class SmoothMapView(MapView):
     """MapView with float precision, for the decoupled HD viewport.
 

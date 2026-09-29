@@ -212,12 +212,6 @@ def dropped_functions(body):
     return "".join(sorted(used - set(HANDLED)))
 
 
-def to_json(lines):
-    """[Line] -> plain data, for a cached or exported form."""
-    return [{"runs": [{"t": r.text, "x": r.x} for r in ln.runs],
-             "br": ln.paragraph_break} for ln in lines]
-
-
 # ── Internals ────────────────────────────────────────────
 
 def _read_functions(body, i, seen=None):

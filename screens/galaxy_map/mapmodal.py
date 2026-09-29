@@ -82,7 +82,6 @@ class Modal:
         self.kind = None             # None, "home_star", "confirmation"
         self.text = ""
         self.fresh = True            # the prefilled name, untouched
-        self._shown_for = None
         self._rects = {}
         # The snapshot `update` was handed — the modal's fields and the
         # box's pixels; never the client's own snapshot (the map's one adoption

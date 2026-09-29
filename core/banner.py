@@ -134,7 +134,6 @@ def embed_emblem(target, shading, emblem, btype):
 class BannerRenderer:
     """
         br = BannerRenderer(BANNER_STAND)
-        br.warm_up(["human"])
         screen.blit(br.get("blue", "human"), (x, y))
     """
 
@@ -194,11 +193,6 @@ class BannerRenderer:
                     max(1, int(height)))
             self._cache[key] = pygame.transform.smoothscale(src, size)
         return self._cache[key]
-
-    def warm_up(self, races=None):
-        for color in self.colors:
-            for r in (races if races else [None]):
-                self.get(color, r)
 
     def clear(self):
         self._cache.clear()
