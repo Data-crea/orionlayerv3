@@ -579,7 +579,9 @@ Rules that keep a screen consistent with the rest:
   **including the digit 4**, which hid inside every number.
 - **A font you ship in a mod needs its licence next to it.** The
   smoke test enforces that for the base project.
-- After any change: `python tools/smoke_test.py`.
+- After any change, start OrionLayer (`python main.py` runs without the
+  game) and look at what you changed. The project's own smoke test is the
+  developers' and is not part of this repository.
 - Some assets are **not in the repository** — the ship steps, the cut
   sidebar icons, the colony output panel's six icons
   (`screens/colony_summary/assets/output/`, 31x31, the size in
