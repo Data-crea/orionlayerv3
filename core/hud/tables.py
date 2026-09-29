@@ -52,11 +52,6 @@ def table_row(surface, rect, scale, index, selected=False):
                      (r.x, r.bottom - 1), (r.right - 1, r.bottom - 1))
 
 
-def table_text_colour(kind="row"):
-    """The table's words: "header" or "row" (colony mockup)."""
-    return hudstyle.get().colour(f"mockup_colony.text_{kind}")
-
-
 def scrollbar(surface, rect, scale, first=0, visible=1, total=1):
     """A scroll track and its thumb; the thumb covers visible/total of
     the track, starting at first/total, and is `scrollbar.width_frac`

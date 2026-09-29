@@ -64,15 +64,12 @@ class NewGameScreen(ScreenBase):
         self._setting_imgs = {}
         self._current = {}       # category -> image filename
         self._labels = {}        # category -> display label
-        self._toggle_on = None
-        self._toggle_off = None
         self._toggle_states = {}
         self._scaled_cache = {}
 
     def enter(self, game_state=None):
         self._load_layout_cfg()
         super().enter(game_state)   # boxes, layout, background override
-        self._load_toggle_buttons()
         self._preload_setting_images()
         self._current = {}
         self._labels = {}
@@ -85,8 +82,6 @@ class NewGameScreen(ScreenBase):
         self._bg_screen = None
         self._setting_imgs.clear()
         self._scaled_cache.clear()
-        self._toggle_on = None
-        self._toggle_off = None
 
     # ── Config / loading ─────────────────────────────────────
 
@@ -132,14 +127,6 @@ class NewGameScreen(ScreenBase):
             return None
         inner = hud.panel_inner(panel, self.layout.scale)
         return self._get_scaled(img, inner.w, inner.h)
-
-    def _load_toggle_buttons(self):
-        on_path = self.asset_path("assets", "toggle_on.png")
-        off_path = self.asset_path("assets", "toggle_off.png")
-        if on_path:
-            self._toggle_on = pygame.image.load(on_path).convert_alpha()
-        if off_path:
-            self._toggle_off = pygame.image.load(off_path).convert_alpha()
 
     def _preload_setting_images(self):
         """Load ALL setting images up front so render never blocks on disk I/O."""
@@ -310,7 +297,8 @@ class NewGameScreen(ScreenBase):
                 # The HUD checkbox — a tick while ON (work order 172: the
                 # small button's lit fill alone was too faint to read,
                 # and on a dark frame colour invisible). The knob
-                # pictures stay in the assets, not drawn.
+                # pictures (toggle_on/off.png) were removed with their
+                # loader by work order 189.
                 hud.checkbox(surface, pygame.Rect(ix, iy, iw, ih),
                              self.layout.scale, is_on)
             lx_hd = icon_hd[0] + t.get("label_offset_x", 100)

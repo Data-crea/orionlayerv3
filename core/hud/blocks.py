@@ -473,4 +473,4 @@ def title_plate(surface, center_x, top_y, scale, text="",
 # still reached as `blocks.<name>` (split for the line guideline, 172) ──
 
 from core.hud.tables import (  # noqa: E402,F401
-    scrollbar, table_header, table_row, table_text_colour)
+    scrollbar, table_header, table_row)

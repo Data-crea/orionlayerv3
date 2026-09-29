@@ -120,10 +120,9 @@ def draw_popup(surface, screen, view, rows_words, art, game_state):
         r = draw.rect(layout, native)
         # HUD small buttons with their words (decision 71).
         hud.small_button(surface, r, layout.scale)
-        if True:
-            draw.blit_text(surface, screen.style, key.upper(), r.centerx,
-                           r.y + r.h // 4, r.w - 4,
-                           draw.font_px(layout, "button"), ink, "center")
+        draw.blit_text(surface, screen.style, key.upper(), r.centerx,
+                       r.y + r.h // 4, r.w - 4,
+                       draw.font_px(layout, "button"), ink, "center")
 
 
 def _popup_skills(surface, screen, rec, level, words, art, ink):

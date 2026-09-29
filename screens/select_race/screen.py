@@ -14,7 +14,6 @@ All positions come from boxes.json (editable with F5).
 import json
 import os
 import logging
-import time
 import pygame
 from core.screen_base import ScreenBase
 
@@ -55,8 +54,6 @@ class SelectRaceScreen(ScreenBase):
         self._desc_scroll = 0
         self._mode = self.MODE_SELECT_RACE
         self._thumb_cache = {}
-        self._custom_portrait_id = 0  # portrait index for custom race
-        self._picture_mode_time = 0   # when picture mode was entered
         self._pending_picture_mode = False  # deferred picture mode entry
 
     def enter(self, game_state=None):
@@ -93,8 +90,6 @@ class SelectRaceScreen(ScreenBase):
 
     def set_mode(self, mode):
         self._mode = mode
-        if mode == self.MODE_SELECT_PICTURE:
-            self._picture_mode_time = time.monotonic()
         self._apply_mode()
 
     def _apply_mode(self):
@@ -311,7 +306,6 @@ class SelectRaceScreen(ScreenBase):
             # Picture mode: only stock race portraits (0-12) are valid
             if rid == 13 or rid > 12:
                 return
-            self._custom_portrait_id = rid
             log.info("Custom portrait selected: %d (%s)",
                      rid, self._race_by_id(rid)["name"])
             # The game is in ITS picture-select state (we sent the

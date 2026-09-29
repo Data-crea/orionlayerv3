@@ -54,7 +54,6 @@ class CustomRaceScreen(ScreenBase):
         self._specials = []
         self._trait_state = {}
         self._starting_picks = 10
-        self._bar_img = None      # combined picks/score bar image
         self._icons = {}          # radio/checkbox images
         self._icon_cache = {}     # scaled icons per pixel size
         self._active = None       # entry shown in the description panel
@@ -68,7 +67,6 @@ class CustomRaceScreen(ScreenBase):
     def enter(self, game_state=None):
         super().enter(game_state)
         self._load_traits()
-        self._load_bar_image()
         self._load_icons()
         self._reset_traits()
         self._active = None
@@ -89,13 +87,6 @@ class CustomRaceScreen(ScreenBase):
         self._categories = self._traits_data.get("categories", [])
         self._specials = self._traits_data.get("specials", [])
         self._starting_picks = self._traits_data.get("starting_picks", 10)
-
-    def _load_bar_image(self):
-        """Combined Race Picks + Score bar (one image, one box)."""
-        path = self.asset_path("assets", "picks_score_bar.png")
-        if path:
-            self._bar_img = pygame.image.load(path).convert_alpha()
-            log.info("Loaded picks_score_bar.png")
 
     def _load_icons(self):
         """Radio and checkbox icons (mod-overridable assets).
@@ -332,9 +323,8 @@ class CustomRaceScreen(ScreenBase):
     def _render_bar(self, surface, L, fs):
         """Combined Race Picks + Score bar.
 
-        The image (picks_score_bar.png) holds two empty panels;
-        label+value pairs are positioned via F5-movable boxes
-        'picks_text' and 'score_text'.
+        Two HUD panels (decision 71); label+value pairs are positioned
+        via F5-movable boxes 'picks_text' and 'score_text'.
         """
         rect = self.box_rect("picks_score_bar")
         if not rect:
@@ -344,8 +334,8 @@ class CustomRaceScreen(ScreenBase):
         sw, sh = L.size(rw, rh)
 
         # TWO HUD PANELS, one per half, since decision 71 (work order
-        # 169): the metal bar image (picks_score_bar.png, still in the
-        # tree) was the cockpit look and is not drawn.
+        # 169): the metal bar image (picks_score_bar.png) was the
+        # cockpit look; work order 189 removed it and its loader.
         half = sw // 2
         gap = max(2, int(8 * L.scale))
         for x0 in (sx, sx + half + gap // 2):
