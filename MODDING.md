@@ -233,9 +233,9 @@ mods/my_mod/assets/shared/skins/neon/
 { "skin": "neon" }
 ```
 
-Skins resolve as complete directories: the frame tiles and their
-`9slice.json` (where the pre-game screens' two frame buttons sit) and
-`colors.json` all come from the selected skin. Copy `skins/default/` as
+Skins resolve as complete directories: the frame's `9slice.json`
+(where the pre-game screens' two frame buttons sit) and `colors.json`
+come from the selected skin. Copy `skins/default/` as
 a starting point.
 
 ### New or replaced screens

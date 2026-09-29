@@ -1,37 +1,26 @@
-"""The skin frame's GEOMETRY — 9slice.json and its nine tiles.
+"""The skin frame's GEOMETRY — its 9slice.json.
 
-Until decision 71 this composited the nine tiles into the pre-game
-screens' cockpit frame. Nothing draws them since work order 169, and
-work order 189 removed the compositing (`render`, `title_rect`,
-`content_rect`, the per-size cache). What is still read is the
-metadata: the two button bars (`button_rect_left/right`, the help
-regions of kind `frame_button`) and the content inset (Custom Race's
-fallback rect). The tiles are still loaded because `available` — the
-answer those readers ask first — has always meant "all nine are
-there"; see work order 189's parked file.
+Until decision 71 this composited nine tile images into the pre-game
+screens' cockpit frame. Nothing draws them since work order 169; work
+order 189 removed the compositing and work order 190 the tiles. What is
+read is the metadata: the two button bars (`button_rect_left/right`, the
+help regions of kind `frame_button`) and the content inset (Custom Race's
+fallback rect). `available` — the answer those readers ask first — means
+"this skin's frame has its 9slice.json" since 190; until then it meant
+"all nine tiles are there", which for the shipped skin is the same answer.
 
-Modders can replace individual tiles or swap the whole
-frame directory in their skin.
+A skin may replace the frame directory with its own 9slice.json.
 """
 import json
 import os
 import logging
-import pygame
 
 log = logging.getLogger("frame")
-
-TILE_NAMES = [
-    "top_left", "top", "top_right",
-    "left", "center", "right",
-    "bottom_left", "bottom", "bottom_right",
-]
-
 
 class FrameRenderer:
     """Renders a 9-slice frame at any size."""
 
     def __init__(self, frame_dir):
-        self.tiles = {}
         self.content_inset = (0, 0, 0, 0)  # l, r, t, b in source px
         self.source_w = 0
         self.source_h = 0
@@ -43,7 +32,7 @@ class FrameRenderer:
             self._load(frame_dir)
 
     def _load(self, frame_dir):
-        """Load tiles and metadata from frame directory."""
+        """Load the metadata from the frame directory."""
         meta_path = os.path.join(frame_dir, "9slice.json")
         if os.path.exists(meta_path):
             with open(meta_path, "r") as f:
@@ -65,18 +54,8 @@ class FrameRenderer:
                 rx = self.source_w - br_cfg["x_from_right"] - br_cfg["width"]
                 self.btn_right = (rx, br_cfg["y"], br_cfg["width"], br_cfg["height"])
 
-        count = 0
-        for name in TILE_NAMES:
-            path = os.path.join(frame_dir, f"{name}.png")
-            if os.path.exists(path):
-                self.tiles[name] = pygame.image.load(path).convert_alpha()
-                count += 1
-
-        self._loaded = count == 9
-        if self._loaded:
-            log.info("Frame loaded: %d tiles", count)
-        elif count > 0:
-            log.warning("Frame incomplete: %d/9 tiles", count)
+            self._loaded = True
+            log.info("Frame geometry loaded: %s", meta_path)
 
     @property
     def available(self):
