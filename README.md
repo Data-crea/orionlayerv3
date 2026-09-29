@@ -43,17 +43,17 @@ fix that is missing. The list's one home is `LOCAL_PATCHES` in
 
 **The engine cannot yet be built from this repository alone.** Two
 things are missing: the Extension API itself (row 1, `src/ext` and its
-hooks) and open fix 5 have no patch file here, and orion2re's own
-repository, github.com/mrjoes/orion2re, is private, so the upstream
-commit the patches apply to (`cf4d9617`, "1.50 Backport: mixed race
-penalty") is not publicly reachable. Until both change, the patched
-branch comes from the maintainer.
+hooks) has no patch file here, and orion2re's own repository,
+github.com/mrjoes/orion2re, is private, so the upstream commit the
+patches apply to (`cf4d9617`, "1.50 Backport: mixed race penalty") is
+not publicly reachable. Until both change, the patched branch comes
+from the maintainer.
 
 | # | orion2re commit | fix | patch |
 |---|---|---|---|
 | 1 | `a111355d` | the Extension API itself (`src/ext` and its hooks), with the `src/ext` parts of open fixes 1, 2, 3, 12, 14, 20, 21 | `doc/ext_save_slots.patch`, `doc/ext_fleet_selection.patch`, `doc/ext_fleet_select_ship.patch` |
 | 2 | `191aaa78` | open fix 3: an injected click keeps its pointer | `doc/ext_inject_click.patch` |
-| 3 | `6598052c` | open fix 5: Select Race records `_old_race` | — (one line; no patch file yet) |
+| 3 | `6598052c` | open fix 5: Select Race records `_old_race` (patch file since work order 192) | `doc/ext_select_race_old_race.patch` |
 | 4 | `e099d3fc`, `3305d78c` | screen ids for Select Race and Custom Race; open fix 22 | `doc/ext_screen_id.patch` |
 | 5 | `7067c366` | open fix 12: the pop-move command, its engine half | `doc/ext_move_pop.patch` |
 | 6 | `f838c754` | open fix 24: the research dialogs' own ids | `doc/ext_research_screens.patch` |

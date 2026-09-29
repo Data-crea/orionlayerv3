@@ -327,8 +327,8 @@ def resolve_owners(icons, ships, nodes=None):
 
     Three sources, in descending order of certainty:
 
-      1. The per-icon owner byte open fix 20 carries (block 1, once
-         doc/ext_ship_icon_owner.patch). Ground truth.
+      1. The per-icon owner byte open fix 20 carries (block 1 of
+         doc/ext_fleet_selection.patch). Ground truth.
       2. owners_from_nodes() — the wire's node table (`wire_nodes`),
          validated against star_idx.
       3. A last-resort guess from the ships parked at the icon's star,

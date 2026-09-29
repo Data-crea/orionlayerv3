@@ -73,6 +73,16 @@ LOCAL_PATCHES = {
         "INJECT_CLICK and MSG_CANCEL_FIELD read their 640x480 point as a "
         "window coordinate, so every click the fallback view forwards "
         "lands somewhere else (open fix 3, the coordinate half)"),
+    # Applied 17 September 2026 as found (work order 126 A, open fix 5,
+    # orion2re 6598052c); required from work order 192, which gave it its
+    # patch file — until then README's table named it and this list could
+    # not. The one line carries no comment, so the line is the marker:
+    # nothing else in orion2re writes `_old_race` from the loop index.
+    "doc/ext_select_race_old_race.patch": (
+        os.path.join("src", "game", "racesel.cpp"),
+        "_old_race = static_cast<int16_t>(i);",
+        "accepting a Custom Race can crash the Flag Screen on "
+        "racesel.lbx [entry 138] (open fix 5)"),
     # Applied 17 September 2026 (work order 129 B, open fix 24): the two
     # turn-start research dialogs report synthetic ids 52 and 53 on the wire.
     # The marker is the guard in the science room, because the override
@@ -312,6 +322,7 @@ REPORTED_PATCHES = {
 #: README table's, never parsed out of the prose above.
 FIX_NUMBERS = {
     "doc/ext_inject_click.patch": (3,),
+    "doc/ext_select_race_old_race.patch": (5,),
     "doc/ext_move_pop.patch": (12,),
     "doc/ext_save_slots.patch": (14,),
     "doc/ext_fleet_selection.patch": (20,),

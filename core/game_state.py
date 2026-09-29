@@ -284,10 +284,11 @@ def parse_state(data: bytes) -> GameState:
     #
     # s_ship_icon itself carries no owner: the C++ resolves it via
     # node_idx -> MOX::_ship_node[] -> MOX::_ship[].owner, and
-    # _ship_node is not serialized. doc/ext_ship_icon_owner.patch
-    # appends this block; without it every icon stays owner=None and
-    # screens/galaxy_map/ships.py falls back to inferring the owner
-    # from the ships parked at the star.
+    # _ship_node is not serialized. Open fix 20 appends this block
+    # (block 1 of doc/ext_fleet_selection.patch, which carries the
+    # retired ext_ship_icon_owner.patch); without it every icon stays
+    # owner=None and screens/galaxy_map/ships.py falls back to
+    # inferring the owner from the ships parked at the star.
     #
     # Deliberately LAST in the snapshot so an unpatched orion2re and a
     # patched one both parse — never insert a field above this line

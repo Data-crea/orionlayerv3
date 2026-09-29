@@ -618,11 +618,14 @@ every icon carries a checksum for its own node assignment.
 Serializing the table itself would cost `MAX_SHIPS * 5` bytes, 45 KB
 per tick, for something the client collapses into one byte per icon.
 
-**`doc/ext_ship_icon_owner.patch` in the OrionLayer tree proposes
-appending that one byte anyway. It is marked OPTIONAL and is not
-being requested.** Its only remaining value is the narrow case where
-`_ship[]` changed since the last `Find_Ship_Stacks_` call; the
-client's own validation already detects that and falls back.
+**The byte is on the wire anyway, as block 1 of open fix 20
+(`doc/ext_fleet_selection.patch`, applied 15 September 2026, brief
+119).** It began as a separate file, `ext_ship_icon_owner.patch`, marked
+OPTIONAL on 29 August; open fix 20 carries its block because the node
+table (block 2) has to come after it, and work order 192 removed the
+separate file, which could not be applied beside it. Its value is the
+narrow case where `_ship[]` changed since the last `Find_Ship_Stacks_`
+call; the client's own validation detects that too and falls back.
 
 ---
 
