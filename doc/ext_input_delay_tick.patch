@@ -1,8 +1,18 @@
 Engine: serialise during a screen's input delay (open fix 42).
 
-STATUS: NOT APPLIED — written and proved by work order 184 (Part 2),
-parked for Data (doc/briefs/184-parked-for-data.md, item 1). No engine
-patch may be applied in that order.
+STATUS: APPLIED 29 September 2026 by work order 191 (Data's bug list,
+item 2: "Open Fix 42") — orion2re 96da4c4d on orionlayer-local (before:
+8f7bd9e3), this file's diff byte for byte (index lines included). Required
+by tools/version_check.py since work order 191. Written and proved by work
+order 184 (Part 2), parked for Data (doc/briefs/184-parked-for-data.md,
+item 1) until then.
+
+PROOF ON THE TIP IT WAS APPLIED TO (work order 191): in a scratch clone of
+orionlayer-local at 8f7bd9e3 this file applied with no offset and no fuzz;
+fields.cpp compiled alone with the build's own command (-fsyntax-only), and
+the control below was refused again, exit 1. Re-cut for that tip: only the
+`index` line changed (fields.cpp's blob moved on since 4bf152e4); the hunk
+is the one 184 proved.
 
 PROOF (work order 184, 27 September 2026): in a scratch clone of
 orionlayer-local 4bf152e4 (never on orionlayer-local itself) this file
@@ -14,11 +24,12 @@ and a control, the same file with `MOX::_current_screen` misspelt
 scratch engine then ran on the virtual display: see the entry,
 doc/orion2re_open_fixes.md 42.
 
-To apply, from ~/orion2re on the orionlayer-local branch (after fix 41):
+It was applied, from ~/orion2re on the orionlayer-local branch, with:
 
     patch -p1 < ~/orionlayerv3/doc/ext_input_delay_tick.patch
 
-then rebuild. It comes back off with `patch -R -p1` and a rebuild.
+and a rebuild. It comes back off with `git revert 96da4c4d` or
+`patch -R -p1`, and a rebuild.
 
 WHAT IT IS FOR
 
@@ -41,7 +52,7 @@ WHAT IT IS FOR
     line at the one changed place.
 
 diff --git a/src/game/fields.cpp b/src/game/fields.cpp
-index 014a2f6b..f298d1f1 100644
+index 13df7b4b..3cff1b6c 100644
 --- a/src/game/fields.cpp
 +++ b/src/game/fields.cpp
 @@ -158,6 +158,12 @@ namespace fields {

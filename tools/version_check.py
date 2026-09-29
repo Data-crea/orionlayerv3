@@ -279,6 +279,11 @@ LOCAL_PATCHES = {
         os.path.join("src", "game", "multplay.cpp"), "OrionLayer, open fix 51.",
         "the multiplayer steps are not on the wire (open fix 51): all but "
         "the setup stay behind the F12 notice"),
+    # Applied 29 September 2026 by work order 191: 96da4c4d, on 8f7bd9e3.
+    "doc/ext_input_delay_tick.patch": (
+        os.path.join("src", "game", "fields.cpp"), "OrionLayer, open fix 42.",
+        "a screen is silent on the wire during its input delay (open fix "
+        "42): the research panel's list arrives ~550 ms late on every entry"),
 }
 
 #: Patches that are REPORTED to Joes and not yet applied: listed with
@@ -292,13 +297,9 @@ LOCAL_PATCHES = {
 #: had parked here — until 182 parked open fix 41 here, and again since
 #: work order 183 moved 41 up — until work order 184 parked open fix 42,
 #: and work order 185 open fixes 43-47, which work order 186 moved up;
-#: 42 stays (Data: not approved).
+#: 42 stayed (Data: not approved) until work order 191 moved it up
+#: (Data: "Open Fix 42" in its bug list).
 REPORTED_PATCHES = {
-    # Work order 184: written, proved in scratch, parked — not applied.
-    "doc/ext_input_delay_tick.patch": (
-        os.path.join("src", "game", "fields.cpp"), "OrionLayer, open fix 42.",
-        "a screen heard during its input delay (the research panel's list "
-        "~550 ms sooner on every entry)"),
 }
 
 
