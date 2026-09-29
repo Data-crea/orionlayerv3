@@ -23,8 +23,8 @@ are corrected rather than deleted, because a stale sentence about
 where boxes come from is exactly what sends the next session to the
 wrong tool. The frame is NOT the Planets artwork with its struts
 removed (work order 146 replaced that), it does NOT have one hole, and
-`boxes.json` was NOT seeded by `tools/fleet_boxes.py` — that tool is
-superseded and must not be run. Decision 3 DOES apply: the frame cuts
+`boxes.json` was NOT seeded by `tools/fleet_boxes.py` — that tool was
+superseded, and work order 189 removed it. Decision 3 DOES apply: the frame cuts
 32 holes, `tools/frame_holes.py` has a `fleets` rule that refuses any
 other shape, and the six boxes with no hole are placed by
 `screens/fleets/fltplaced.py` (work order 153). `layout.json`'s
@@ -232,11 +232,6 @@ class FleetsScreen(ScreenBase):
         return [self._view.reason] if self.wants_original() else []
 
     # ── Geometry, in one place ────────────────────────────
-
-    def opening(self):
-        """The frame's one opening in reference px, as layout.json
-        caches it from the artwork (work order 134 A measured it)."""
-        return self._data.get("frame", {}).get("opening")
 
     def box_by_name(self, name):
         for box in self.boxes:

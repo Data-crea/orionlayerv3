@@ -489,18 +489,3 @@ def scanned_star_line(game_state, star_idx, strings=None):
         return (strings.message(MSG_UNKNOWN_SYSTEM)
                 if strings is not None else "")
     return getattr(stars[star_idx], "name", "") or ""
-
-
-def star_name(game_state, star_idx):
-    """One star's name, or ""."""
-    stars = getattr(game_state, "stars", None) or []
-    if not (0 <= star_idx < len(stars)):
-        return ""
-    return getattr(stars[star_idx], "name", "") or ""
-
-
-def is_black_hole(game_state, star_idx):
-    stars = getattr(game_state, "stars", None) or []
-    if not (0 <= star_idx < len(stars)):
-        return False
-    return star_struct.is_black_hole(stars[star_idx])

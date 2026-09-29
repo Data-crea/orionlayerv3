@@ -2,10 +2,12 @@
 
 **Decision 5 lives here.** This module is the only place that turns the
 original's native constants into reference pixels, and the only place
-that splits a region into its parts. `tools/fleet_boxes.py` seeds
-`boxes.json` through `seat_regions`; the smoke test measures the file
-against the same function; the screen draws and hit-tests the boxes the
-file then holds. Nothing computes a rectangle twice.
+that splits a region into its parts. `tools/fleet_boxes.py` seeded
+`boxes.json` through `seat_regions` until the v4 frame's holes replaced
+the seat (work order 146; the tool was removed by work order 189 — the
+seat functions are parked there, see its parked file); the screen draws
+and hit-tests the boxes the file holds. Nothing computes a rectangle
+twice.
 
 **EVERY NUMBER BELOW WAS READ OFF THE TREE, NOT OFF THE REPORT.**
 `doc/fleet_screen_reading.md` was written by a sub-session in work order
@@ -383,7 +385,7 @@ def _padded(name, rect):
 def seat_regions(opening, bleed=BLEED):
     """Every region and control, seated, as rounded reference rects.
 
-    The dict `tools/fleet_boxes.py` writes and the smoke test checks.
+    The dict `tools/fleet_boxes.py` wrote (removed by work order 189).
     """
     out = {}
     for name, rect in REGIONS.items():

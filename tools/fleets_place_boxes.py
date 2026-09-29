@@ -17,7 +17,7 @@ holds only that each is inside the hole it belongs to, so a drag in
 the editor stands.
 
 **THIS IS NOT `tools/fleet_boxes.py`**, which seated the original's
-rectangles into one opening and must not be made to run again. Every
+rectangles into one opening (removed by work order 189). Every
 rule here is a rule against a HOLE, and it lives in
 `screens/fleets/fltplaced.py` so that the smoke test can recompute it
 without going through a tool (decision 5: nothing computes a

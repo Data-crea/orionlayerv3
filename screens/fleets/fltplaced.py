@@ -37,8 +37,8 @@ after the frame changes shape; drag afterwards and the drag stands.
 
 **WHAT THE SEEDER STILL OWES.** Re-running it OVERWRITES whatever F5
 left, because it writes the computed rect. That is the same bargain
-`tools/fleet_boxes.py` carried, and the tool says so before it
-writes.
+`tools/fleet_boxes.py` carried (removed by work order 189), and the
+tool says so before it writes.
 
 **WHAT IS NOT HERE.** `scroll_column` is placed from
 `fltgeom.SCROLL_SRC_COLUMN`, measured onto the painted bar, and has
