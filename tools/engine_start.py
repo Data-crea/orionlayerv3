@@ -43,10 +43,10 @@ What this tool does about it:
 4. BACKS UP every file a run can write before the engine exists
    (`tools/liveguard.py`, work order 175) and says how to verify after;
 5. refuses while another orion2re runs or the port is taken — found
-   WITHOUT connecting (a bind test). **WORK ORDER 176's RULE**, which
-   replaces 171's "never connect, never kill" WHILE DATA DOES NOT PLAY
-   (he will say when he plays again): an engine or client this tool did
-   not start is a leftover from Data looking at screens, and
+   WITHOUT connecting (a bind test). **THE LIVE PERMISSION**, standing
+   since work order 190 (Data; it replaced 176's "while Data does not
+   play", which replaced 171's "never connect, never kill"): an engine or
+   client this tool did not start may be closed, never connected to, and
    `--close-foreign` closes it — `liveguard.snapshot` first, then
    SIGTERM, a few seconds, SIGKILL only if it is still there — and prints
    PID, command line, start time and how it ended for the progress file.
@@ -174,7 +174,7 @@ def verdict(engines, free, screen, blanked_ok=False):
         reasons.append(f"orion2re PID {pid} (parent {ppid}, started {started}) "
                        f"is running and was not started by this run — never "
                        f"connected to; close it with --close-foreign (work "
-                       f"order 176, while Data does not play)")
+                       f"order 190's standing live permission)")
     if not free:
         reasons.append(f"port {PORT} is taken")
     if screen.get("blanked") is True and not blanked_ok:

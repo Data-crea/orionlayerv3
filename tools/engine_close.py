@@ -1,6 +1,6 @@
 """Close an engine or client this session did not start — work order 176.
 
-The rule (Data, while he does not play): a leftover is closed, never
+The rule (Data's live permission, standing since work order 190): a leftover is closed, never
 connected to — `tools/liveguard.py` backs up every file a run can write
 first, then SIGTERM, a few seconds, SIGKILL only if it is still there, each
 recorded. `python tools/engine_start.py --close-foreign` runs it; the code
