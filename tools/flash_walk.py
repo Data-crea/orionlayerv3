@@ -100,10 +100,6 @@ class Walk:
     def hd(self, name):
         return self.app.dispatcher.screens.get(name)
 
-    def top_name(self):
-        d = self.app.dispatcher
-        return d.overlay_name or d.active_name
-
     # ── inputs, all through the HD window ────────────────
     def click(self, x, y):
         pygame.event.clear()

@@ -85,9 +85,6 @@ def make_app(width, height):
         def inject_key(self, key):
             pass
 
-        def send_raw(self, *a, **k):
-            pass
-
     class _App:
         _fs_offset = None
 
