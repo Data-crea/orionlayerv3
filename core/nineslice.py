@@ -1,23 +1,17 @@
 """NineSlice — scalable texture rendering.
 
-Two building blocks used across the UI:
-  - NineSlice: splits one image into a 3x3 grid; corners stay
-    fixed, edges stretch 1D, center stretches 2D. Cached per size.
-  - load_tile_directory(): assembles nine separate tile images
-    (top_left.png ... bottom_right.png) into one NineSlice.
+NineSlice splits one image into a 3x3 grid; corners stay fixed,
+edges stretch 1D, center stretches 2D. Cached per size. Its one
+user since decision 71 is `core/researchframe.py`.
 
-The cockpit frame (core/frame.py) intentionally does NOT use
-this class: it scales its corners proportionally with the
-window, while NineSlice keeps corners at native pixel size.
+`load_tile_directory()`, which assembled the skin's inner panel
+tiles into one NineSlice, went with those tiles (work order 189):
+nothing drew them since the HUD blocks of decision 71.
 """
-import os
 import logging
 import pygame
 
 log = logging.getLogger("nineslice")
-
-TILE_NAMES = ["top_left", "top", "top_right", "left", "center",
-              "right", "bottom_left", "bottom", "bottom_right"]
 
 
 class NineSlice:
@@ -90,38 +84,3 @@ class NineSlice:
 
     def clear_cache(self):
         self._cache.clear()
-
-
-def load_tile_directory(panel_dir):
-    """Assemble nine tile PNGs from a directory into one NineSlice.
-
-    Returns None if the directory is missing tiles. Corner size is
-    taken from top_left.png (tiles are expected to be square-cornered).
-    """
-    parts = {}
-    for name in TILE_NAMES:
-        path = os.path.join(panel_dir, f"{name}.png")
-        if os.path.exists(path):
-            parts[name] = pygame.image.load(path).convert_alpha()
-    if len(parts) < 9:
-        return None
-
-    corner = parts["top_left"].get_width()
-    full_w = (corner + parts["top"].get_width()
-              + parts["top_right"].get_width())
-    full_h = (corner + parts["left"].get_height()
-              + parts["bottom_left"].get_height())
-    assembled = pygame.Surface((full_w, full_h), pygame.SRCALPHA)
-    assembled.blit(parts["top_left"], (0, 0))
-    assembled.blit(parts["top"], (corner, 0))
-    assembled.blit(parts["top_right"], (full_w - corner, 0))
-    assembled.blit(parts["left"], (0, corner))
-    assembled.blit(parts["center"], (corner, corner))
-    assembled.blit(parts["right"], (full_w - corner, corner))
-    bl_h = parts["bottom_left"].get_height()
-    assembled.blit(parts["bottom_left"], (0, full_h - bl_h))
-    assembled.blit(parts["bottom"], (corner, full_h - bl_h))
-    assembled.blit(parts["bottom_right"], (full_w - corner, full_h - bl_h))
-    log.debug("Assembled tiles from %s: %dx%d corner=%d",
-              panel_dir, full_w, full_h, corner)
-    return NineSlice(assembled, corner, corner, corner, corner)

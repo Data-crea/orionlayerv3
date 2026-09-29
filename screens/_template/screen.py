@@ -29,9 +29,8 @@ class TemplateScreen(ScreenBase):
                             # (parent keeps rendering; OVERLAY_DIM
                             # darkens it; auto-closes when the game
                             # leaves GAME_SCREEN_ID)
-    USE_FRAME = False       # True -> cockpit frame overlay
+    USE_FRAME = False       # True -> HUD title plate + frame buttons
     FRAME_TITLE = ""        # title bar text when USE_FRAME
-    FRAME_VARIANT = None    # e.g. "select_race" for buttonless frame
 
     def enter(self, game_state=None):
         super().enter(game_state)   # boxes, layout, background

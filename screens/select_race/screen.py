@@ -43,7 +43,6 @@ class SelectRaceScreen(ScreenBase):
     #: at the moment of the click (`_escape_field`), never stored.
     FRAME_BTN_LEFT = ("Back", None)
     FRAME_BTN_RIGHT = None
-    FRAME_VARIANT = "select_race"
 
     MODE_SELECT_RACE = "select_race"
     MODE_SELECT_PICTURE = "select_picture"

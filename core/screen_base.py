@@ -39,7 +39,6 @@ class ScreenBase(HelpMixin):
     FRAME_TITLE = ""        # Text rendered in the frame's title bar
     FRAME_BTN_LEFT = None   # ("CANCEL", field_id) or None
     FRAME_BTN_RIGHT = None  # ("ACCEPT", field_id) or None
-    FRAME_VARIANT = None    # Subdirectory name in frame/ (e.g. "select_race")
 
     def __init__(self, app):
         self.app = app
@@ -403,11 +402,9 @@ class ScreenBase(HelpMixin):
         return screenframe.button_rect(self, side)
 
     def _get_active_frame(self):
-        """Return the active frame renderer (variant or default)."""
-        if self.FRAME_VARIANT:
-            v = self.style.get_frame_variant(self.FRAME_VARIANT)
-            if v and v.available:
-                return v
+        """The skin frame's geometry (`core/frame.py`). Frame variants
+        (`FRAME_VARIANT`, a subfolder of frame/) went with the 9-slice
+        drawing in work order 189 — none was ever drawn after decision 71."""
         return self.style.frame
 
     def _frame_button_side(self, screen_x, screen_y):

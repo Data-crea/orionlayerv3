@@ -52,7 +52,6 @@ class EmpireIdentityScreen(ScreenBase):
     FRAME_TITLE = "Empire Identity"
     FRAME_BTN_LEFT = ("Cancel", None)    # field IDs follow with wiring
     FRAME_BTN_RIGHT = ("Accept", None)
-    FRAME_VARIANT = None
 
     def __init__(self, app):
         super().__init__(app)

@@ -1,29 +1,23 @@
-"""Style system — panels, button skins, corner glows, fonts.
+"""Style system — the box skins, fonts and the skin frame's geometry.
 
 Ported from v2 style.py, adapted for v3:
   - Colors from colors.json (not hardcoded)
   - Font sizes in reference space, scaled by Layout
-  - Pre-rotated corner glow images (no runtime flip)
-  - NineSlice lives in core/nineslice.py
 
-Rendering layers (bottom to top):
-  1. Background — 9-slice skin texture (scales to any size)
-  2. Border — programmatic lines (pixel-accurate)
-  3. Corner glows — images positioned on border corners
-  4. Label — centered text in the display font
+Since decision 71 every box skin draws a HUD block (`core.hud.blocks`).
+The cockpit layers this drew until work order 169 — the 9-slice skin
+texture, the corner glow images, the inner panel tiles, the frame
+overlay — were removed with their loaders by work order 189; the skin
+frame stays for its geometry (`core/frame.py`).
 """
 import os
 import hashlib
 import logging
 import pygame
 
-from core.nineslice import NineSlice, load_tile_directory
 from core.hud import blocks as hud
 
 log = logging.getLogger("style")
-
-# 9-slice margins for outer_box_dark_blue.png (chamfered corners)
-SKIN_MARGINS = (60, 60, 60, 60)  # left, right, top, bottom
 
 
 def _scale_of(surface):
@@ -36,9 +30,9 @@ def _scale_of(surface):
 class StyleRenderer:
     """Renders UI elements using skin assets.
 
-    Created once at startup. Loads textures, font, corner glows
-    from the skin directory. Draws buttons and panels at any size
-    with per-size caching.
+    Created once at startup. Loads the font and the skin frame's
+    geometry from the skin directory; draws the box skins as HUD
+    blocks at any size.
 
     Usage:
         style = StyleRenderer(skin_dir, font_path, colors)
@@ -46,16 +40,8 @@ class StyleRenderer:
         style.draw_panel(surface, rect)
     """
 
-    CORNER_INSET = 18   # corner glow position relative to box edge
-    HOVER_TINT = (30, 80, 120, 60)
-
     def __init__(self, skin_dir, font_path, colors):
         self.colors = colors
-        self.skin = None
-        self.inner_panel = None
-        self.corners = {}
-        self._corner_cache = {}
-        self._bg_cache = {}
         self._asset_cache = {}
         self._font_path = font_path
         self._font_cache = {}
@@ -63,84 +49,19 @@ class StyleRenderer:
         self.frame = None
         self._skin_dir = skin_dir
 
-        self._load_skin(skin_dir)
-        self._load_inner_panel(skin_dir)
-        self._load_corners(skin_dir)
         self._load_frame(skin_dir)
 
         what = []
-        if self.skin:
-            what.append("skin")
-        if self.inner_panel:
-            what.append("inner_panel")
-        if self.corners:
-            what.append(f"corners({len(self.corners)})")
         if self.frame and self.frame.available:
             what.append("frame")
         if self._font_path and os.path.exists(self._font_path):
             what.append("font")
         log.info("Loaded: %s", ", ".join(what) or "nothing")
 
-    def _load_skin(self, skin_dir):
-        path = os.path.join(skin_dir, "outer_box_dark_blue.png")
-        if os.path.exists(path):
-            img = pygame.image.load(path).convert_alpha()
-            l, r, t, b = SKIN_MARGINS
-            self.skin = NineSlice(img, l, r, t, b)
-
-    def _load_inner_panel(self, skin_dir):
-        """Load inner panel 9-slice from inner_panel/ directory."""
-        panel_dir = os.path.join(skin_dir, "inner_panel")
-        if not os.path.isdir(panel_dir):
-            return
-        self.inner_panel = load_tile_directory(panel_dir)
-        if self.inner_panel:
-            img = self.inner_panel.image
-            log.info("Inner panel loaded: %dx%d, corner=%d",
-                     img.get_width(), img.get_height(),
-                     self.inner_panel.left)
-
-    def _load_corners(self, skin_dir):
-        for key in ("tl", "tr", "bl", "br"):
-            path = os.path.join(skin_dir, f"corner_glow_{key}.png")
-            if os.path.exists(path):
-                self.corners[key] = pygame.image.load(path).convert_alpha()
-
     def _load_frame(self, skin_dir):
         from core.frame import FrameRenderer
         frame_dir = os.path.join(skin_dir, "frame")
         self.frame = FrameRenderer(frame_dir)
-        self._frame_variants = {}  # name → FrameRenderer
-        self._frame_dir = frame_dir
-
-    def get_frame_variant(self, name):
-        """Get a named frame variant (loaded from frame/<name>/ subdir)."""
-        if name not in self._frame_variants:
-            from core.frame import FrameRenderer
-            variant_dir = os.path.join(self._frame_dir, name)
-            renderer = FrameRenderer(variant_dir)
-            self._frame_variants[name] = renderer
-            if renderer.available:
-                log.info("Frame variant '%s' loaded", name)
-        return self._frame_variants.get(name)
-
-    def draw_frame(self, surface, variant=None):
-        """Draw the 9-slice frame overlay filling the entire surface.
-
-        variant: name of a frame subdirectory (e.g. 'select_race')
-                 to use instead of the default frame tiles.
-        """
-        frame = self.frame
-        if variant:
-            v = self.get_frame_variant(variant)
-            if v and v.available:
-                frame = v
-        if not frame or not frame.available:
-            return
-        w, h = surface.get_width(), surface.get_height()
-        frame_surf = frame.render(w, h)
-        if frame_surf:
-            surface.blit(frame_surf, (0, 0))
 
     def get_font(self, size):
         """Get cached display font at pixel size."""
@@ -270,43 +191,6 @@ class StyleRenderer:
             x += surf.get_width()
         return out
 
-    def _get_bg(self, w, h):
-        """Get background surface for a box size (cached)."""
-        key = (w, h)
-        if key not in self._bg_cache:
-            if not self.skin:
-                return None
-            src = self.skin.image
-            sw, sh = src.get_width(), src.get_height()
-            l, r, t, b = SKIN_MARGINS
-            if h >= t + b + 2:
-                self._bg_cache[key] = self.skin.render(w, h)
-            else:
-                cy = (sh - h) // 2
-                cx = (sw - w) // 2 if w < sw else 0
-                crop_w = min(w, sw)
-                strip = src.subsurface((cx, cy, crop_w, h)).copy()
-                if w != crop_w:
-                    strip = pygame.transform.smoothscale(strip, (w, h))
-                self._bg_cache[key] = strip
-        return self._bg_cache[key]
-
-    def _get_scaled_corners(self, box_h):
-        """Corner glow surfaces scaled to box height (cached)."""
-        if box_h not in self._corner_cache:
-            if len(self.corners) < 4:
-                return None
-            orig = self.corners["tl"]
-            scale = min(box_h / orig.get_height(), 1.0)
-            new_w = max(1, int(orig.get_width() * scale))
-            new_h = max(1, int(orig.get_height() * scale))
-            scaled = {}
-            for k, surf in self.corners.items():
-                scaled[k] = pygame.transform.smoothscale(
-                    surf, (new_w, new_h))
-            self._corner_cache[box_h] = scaled
-        return self._corner_cache[box_h]
-
     # -- Public drawing API --
 
     def draw_button(self, surface, rect, label="", hover=False,
@@ -316,7 +200,7 @@ class StyleRenderer:
 
         The skin texture, the two border lines and the corner glow images
         this drew until work order 169 are the cockpit look 71 replaced;
-        the files stay in the skin and nothing draws them. `font_size`,
+        work order 189 removed them from the skin. `font_size`,
         `glow_offsets` and `glow_rotations` are accepted and unused — a
         HUD label is sized from the button's own height, and a box that
         still carries them in `boxes.json` must not raise."""
@@ -403,13 +287,5 @@ class StyleRenderer:
 
     def clear_caches(self):
         """Clear all caches (on resolution change)."""
-        if self.skin:
-            self.skin.clear_cache()
-        if self.inner_panel:
-            self.inner_panel.clear_cache()
-        self._corner_cache.clear()
-        self._bg_cache.clear()
         self._asset_cache.clear()
         self._font_cache.clear()
-        if self.frame:
-            self.frame.clear_cache()

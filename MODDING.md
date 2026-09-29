@@ -233,9 +233,10 @@ mods/my_mod/assets/shared/skins/neon/
 { "skin": "neon" }
 ```
 
-Skins resolve as complete directories: frame tiles, inner panels,
-buttons, corner glows and `colors.json` all come from the selected
-skin. Copy `skins/default/` as a starting point.
+Skins resolve as complete directories: the frame tiles and their
+`9slice.json` (where the pre-game screens' two frame buttons sit) and
+`colors.json` all come from the selected skin. Copy `skins/default/` as
+a starting point.
 
 ### New or replaced screens
 
@@ -546,7 +547,7 @@ Start from `screens/_template/`. Key class attributes:
 | `SCREEN_NAME` | Must match the folder name |
 | `GAME_SCREEN_ID` | orion2re screen ID for auto-switching; `None` for sub-screens |
 | `IS_OVERLAY` / `OVERLAY_DIM` | Render above the active screen (popups) |
-| `USE_FRAME` / `FRAME_TITLE` / `FRAME_VARIANT` | Cockpit frame overlay |
+| `USE_FRAME` / `FRAME_TITLE` | The HUD title plate and the two frame buttons (decision 71) |
 | `FRAME_BTN_LEFT` / `FRAME_BTN_RIGHT` | `("Label", field_id)` button bars |
 
 Rules that keep a screen consistent with the rest:
