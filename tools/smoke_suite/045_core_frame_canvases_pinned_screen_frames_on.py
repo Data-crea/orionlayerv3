@@ -27,13 +27,13 @@
 # and this fails — which is the exact moment the decision applies.
 # Without it the entry would be an intention, which is the
 # principle "a labelling rule without a check is an intention".
+# The galaxy map's and the GAME menu's frames left the table when
+# work order 189 removed them (nothing loaded them since decision 71).
 from PIL import Image as _fc_Image
 _FRAME_CANVAS = (3840, 2160)
 _fc_pinned = {
     "colony_summary": (1672, 941),
     "fleets": (1445, 811),
-    "galaxy_map": (1707, 921),
-    "game_menu": (1108, 1419),
     "planets": (1920, 1080),
 }
 _fc_seen = {}

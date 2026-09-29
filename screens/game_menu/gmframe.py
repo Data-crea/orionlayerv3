@@ -1,10 +1,11 @@
-"""The GAME menu's frame: one fixed image around the popup body.
+"""The GAME menu's frame: where the popup body sits over the map.
 
-Decision 69. `assets/frame.png` is Data's artwork, committed, loaded
-through the resource roots (decision 16) and plain-scaled — no 9-slice,
-no master, the colony screen's way (decision 55). It replaces the body's
-`thin_border` outline and nothing else; the buttons, lists and message
-panels keep their skins.
+Decision 69 put one fixed image, `assets/frame.png`, around the popup
+body; since decision 71 (work order 169) the menu wears the HUD popup
+block (`draw` below) and work order 189 removed the image and its loader.
+What this module still owns is the PLACEMENT the image was fitted to —
+the paragraphs below describe it as it was decided, frame and all; the
+geometry is unchanged.
 
 **HD DEVIATION — WHERE IT SITS IS THE GALAXY MAP'S OPENING** (Data, work
 order 125, superseding the anchor of work order 122). The original has no
@@ -50,10 +51,6 @@ from core.hud import blocks as hud
 #: the frame's anti-aliased rim lands on the fill and not on the body's
 #: edge. The same 2 as the cutout screens' bleed.
 BLEED = 2
-
-
-def spec(screen):
-    return screen.words.get("frame") or {}
 
 
 def _map_cutout(screen):
@@ -159,19 +156,6 @@ def rects(screen, body=None):
     opening = pygame.Rect(int(x0), int(y0), int(ow * lay.scale + 0.999),
                           int(oh * lay.scale + 0.999))
     return frame, opening
-
-
-def _image(screen, size):
-    cache = getattr(screen, "_frame_cache", None)
-    if cache is None or cache[0] != size:
-        cache = screen._frame_cache = (size, None)
-        path = screen.asset_path("assets", spec(screen).get("image",
-                                                            "frame.png"))
-        if path:
-            src = pygame.image.load(path).convert_alpha()
-            cache = screen._frame_cache = (
-                size, pygame.transform.smoothscale(src, size))
-    return cache[1]
 
 
 def draw(screen, surface, body):

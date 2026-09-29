@@ -518,23 +518,18 @@ in the F5 editor. A text box's style may carry `"align"` with
 Reference font sizes for label, value and sub are `sidebar_fonts`
 in `layout.json`.
 
-### The frame is the layout — for the boxes it cuts
+### The HUD is the layout — for the galaxy map's boxes
 
-The galaxy map's `map_area`, `sidebar` and seven `nav_*` boxes are
-**derived from the transparent cutouts** in `assets/frame.png`, not
-positioned by hand. If you ship your own frame, regenerate them:
+The galaxy map's `map_area`, info panel rows, nav buttons and TURN
+boxes are **derived from the HUD's measured layout**, not positioned
+by hand (decision 71; until then they were cut from the holes of a
+frame image, which is gone). Moving one of them by hand slides it off
+its place in the HUD artwork, and the smoke test asserts the two
+agree.
 
-```bash
-python tools/frame_holes.py mods/my_mod/screens/galaxy_map/assets/frame.png --write
-```
-
-Moving one of those by hand would slide the content out from under
-its hole in the frame, and the smoke test asserts the two agree.
-
-Boxes that live *inside* a cutout are a different matter: the
-`sb_*` sidebar boxes have no hole of their own and are placed by
-hand. `frame_holes.py --write` keeps every box it did not derive
-and reports how many it kept.
+Boxes the HUD does not own — the help popup, the system window, the
+fleet box, the `sb_*` sidebar text boxes — are placed by hand and kept
+as they are when the derived ones are rewritten.
 
 ---
 

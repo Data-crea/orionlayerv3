@@ -62,17 +62,6 @@
     }
   },
   "frame": {
-    "image": "frame.png",
-    "image_size": [
-      1108,
-      1419
-    ],
-    "opening": [
-      115,
-      108,
-      879,
-      1193
-    ],
     "_note": "Decision 69: Data's fixed frame image around the popup body, plain-scaled with one factor so the opening covers the body box plus gmframe.BLEED, and centred on it. `opening` is the image's one transparent hole (alpha < 16, MIN_AREA 2000) as tools/frame_holes.find_holes measures it; the smoke test holds the two equal. Its aspect, 879:1193 = 0.737, is the body's 628:850 = 0.739, so the opening is the body. The octagon's interior is transparent: gmframe fills the opening from the cockpit texture before the frame is drawn, opaque and undimmed."
   },
   "native": {

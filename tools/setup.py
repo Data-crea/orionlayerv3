@@ -134,17 +134,13 @@ STEPS = [
 #: of these is missing the clone is broken, not merely incomplete.
 REQUIRED_INPUTS = [
     (os.path.join(GM, "ships", "_src"), "HD ship masters"),
-    # NOT A "MASTER" ANY MORE — Phase B. This file was the metal the
-    # colony plate was nine-sliced out of, which is why it was called
-    # one and why it was required for a STEP; the colony screen wears
-    # its own artwork now and nothing builds from this. It is still
-    # required, because it is the galaxy map's own frame and that
-    # screen derives its boxes from its holes.
-    (os.path.join(GM, "frame.png"), "galaxy map frame"),
+    # The galaxy map's and the GAME menu's frame.png were required here
+    # until work order 189 removed them: since decision 71 the map's boxes
+    # come from the HUD (`tools/hud_boxes.py`) and the menu wears the HUD
+    # popup, so nothing read either. The colony and Fleets frames stay —
+    # the smoke test still holds live boxes to their holes.
     (os.path.join(ROOT, "screens", "colony_summary", "assets",
                   "frame.png"), "colony frame"),
-    (os.path.join(ROOT, "screens", "game_menu", "assets", "frame.png"),
-     "GAME menu frame (decision 69)"),
     (os.path.join(ROOT, "screens", "fleets", "assets", "frame.png"),
      "Fleets frame — the research panel's own is cut from it"),
     (os.path.join(ROOT, "screens", "colony_summary",

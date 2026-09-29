@@ -1,20 +1,13 @@
 {
   "_comment": "All galaxy map data. Field IDs verified against the orion2re Galaxy Map field dump (24 fields) in ext_api_dokumentation_v3.md — with one correction from a live screenshot: field 14 (hotkey R) is the RACES button, not Research; the dump's label was a guess. Research is opened via the sidebar in the original. Layout mirrors the original: stardate tops the sidebar column, TURN sits bottom-right (the former status_bar cutout).",
   "frame": {
-    "image": "frame.png",
-    "image_size": [
-      1707,
-      921
-    ],
     "title_rect": [
       658,
       6,
       316,
       53
     ],
-    "title_font": 30,
     "_note": "The cockpit frame is one PNG with transparent cutouts, stretched over the whole 1920x1080 reference area. Every box in boxes.json is derived from those cutouts by tools/frame_holes.py (--write regenerates boxes.json). Do not move the map/sidebar/nav boxes by hand: they would leave their cutout and be covered by the frame. title_rect is the title cutout in reference pixels. The frame is drawn ABOVE all content, so the map may bleed a few pixels under the rim.",
-    "map_background": "map_background.png",
     "title": "Game",
     "_title_note": "The original's top bar reads GAME and the bar itself is the game menu button (field 6, hotkey G). Kept literal rather than naming the screen."
   },

@@ -1,7 +1,6 @@
 {
   "_comment": "The Fleets screen - orion2re SCREEN_FLEET (4), FLT1::Fleet_Screen_ (flt1.cpp:486-837). Work order 134, 18 September 2026. Every native rectangle this screen is laid out from lives in screens/fleets/fltgeom.py with its own source line, NOT here: a coordinate in two files is decision 5's exact failure. This file holds the frame, the wording HD has to supply because the original draws it as artwork, and the marks.",
   "frame": {
-    "image": "frame.png",
     "image_size": [
       3840,
       2160

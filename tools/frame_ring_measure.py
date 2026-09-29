@@ -83,13 +83,14 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 FIX = os.path.expanduser("~/orionlayer-fixtures")
 
 #: The candidates. In the tree first, then the 18 September set that
-#: Data delivered and that sits outside the tree (work order 132).
+#: Data delivered and that sits outside the tree (work order 132). The
+#: galaxy map's and the GAME menu's frames were measured by 168 and
+#: removed from the tree by work order 189 (nothing loaded them); the
+#: history has them.
 CANDIDATES = [
-    ("galaxy_map", os.path.join(ROOT, "screens/galaxy_map/assets/frame.png")),
     ("colony_summary", os.path.join(ROOT, "screens/colony_summary/assets/frame.png")),
     ("planets", os.path.join(ROOT, "screens/planets/assets/frame.png")),
     ("fleets", os.path.join(ROOT, "screens/fleets/assets/frame.png")),
-    ("game_menu", os.path.join(ROOT, "screens/game_menu/assets/frame.png")),
     ("in:frame_plain", os.path.join(FIX, "incoming/frames_18sep/frame_plain.png")),
     ("in:frame_map_sidebar", os.path.join(FIX, "incoming/frames_18sep/frame_map_sidebar.png")),
     ("in:frame_map_4panels", os.path.join(FIX, "incoming/frames_18sep/frame_map_4panels_7buttons.png")),

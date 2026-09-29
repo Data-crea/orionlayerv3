@@ -1,11 +1,6 @@
 {
   "_comment": "The Planets screen - orion2re SCREEN_PLANET_SUMMARY (32), PLNTSUM::Planet_Summary_Screen_ (plntsum.cpp). Brief 101, 13 September 2026, built from Data's mockup3/frame3. Words the original prints come from the user's own ESTRINGS.LBX and HESTRNGS.LBX (decision 38); the words below are only for what the original draws as PLNTSUM.LBX artwork and has no string for.",
   "frame": {
-    "image": "frame.png",
-    "image_size": [
-      1920,
-      1080
-    ],
     "_note": "One PNG with five transparent cutouts, stretched over the 1920x1080 reference area and drawn above all content. The five cutout boxes in boxes.json are what tools/frame_holes.py derives from it (rule `planets`, rows [2, 3]); the smoke test holds the two together. Everything else in boxes.json is placed by hand inside those five."
   },
   "list": {
