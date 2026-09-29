@@ -123,14 +123,13 @@ class HelpMixin:
 
         side = spec.get("frame_button")
         if side in ("left", "right"):
-            frame = self._get_active_frame()
-            if not frame or not frame.available:
-                return None
-            r = (frame.button_rect_left(self.app.win_w, self.app.win_h)
-                 if side == "left"
-                 else frame.button_rect_right(self.app.win_w,
-                                              self.app.win_h))
-            return pygame.Rect(*r) if r else None
+            # THE RECT THE HUD BUTTON IS DRAWN AND HIT AT (decision 5), work
+            # order 191. This read the old skin frame's button bars, which
+            # the buttons left when decision 71 put them on the window's
+            # bottom edge: New Game's two regions sat 27 px above their
+            # buttons at 1080p and beside them on ultrawide.
+            r = self.hud_frame_button_rect(side)
+            return pygame.Rect(r) if r else None
 
         if spec.get("screen"):
             return pygame.Rect(0, 0, self.app.win_w, self.app.win_h)
