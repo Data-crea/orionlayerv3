@@ -87,6 +87,7 @@ from core.structs import colony as colony_struct
 from . import colonyicons
 from . import colonymove
 from . import colonyrows
+from .colonyoutput import fill
 
 #: Refusals that are about the click frame rather than about a pop.
 #: `colonymove`'s five keep their own ids; these three are ours and
@@ -263,12 +264,6 @@ def message(words, outcome, total=0):
     full" alone reads as "nothing fits" when two of twelve would
     have.
     """
-    def fill(template, **values):
-        text = str(template or "")
-        for key, value in values.items():
-            text = text.replace("{" + key + "}", str(value))
-        return text
-
     if not isinstance(outcome, Refusal):
         return ""
     text = fill(words.get(outcome.reason, outcome.reason))

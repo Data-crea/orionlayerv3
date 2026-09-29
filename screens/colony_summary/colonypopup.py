@@ -50,6 +50,7 @@ from core import palette
 from core import textfit
 
 from . import colonytrack
+from .colonyoutput import fill
 
 EDGE = palette.col("colony_summary", "popup_edge", (108, 132, 170))
 TEXT = palette.col("colony_summary", "popup_text", (206, 216, 238))
@@ -68,12 +69,6 @@ def lines_for(row, job, words):
     a brace in a translated string must not raise inside a render
     path.
     """
-    def fill(template, **values):
-        text = str(template or "")
-        for key, value in values.items():
-            text = text.replace("{" + key + "}", str(value))
-        return text
-
     names = words.get("job_names", ["Farmers", "Workers", "Scientists"])
     cells = (row.get("cells") or ((), (), ()))[job]
     out = [fill(words.get("group", "{job}: {count}"),

@@ -125,6 +125,19 @@ def fill_template(template, values):
     return template
 
 
+def fill(template, **values):
+    """`fill_template` for a template that may be missing — the popup's and
+    the pick's convention: None (a key the layout does not carry) draws as
+    an empty string instead of raising.
+
+    ONE SOURCE SINCE WORK ORDER 190 (the redundancy audit's D4):
+    `colonypopup.lines_for` and `colonypick.message` each carried this as a
+    nested function, byte for byte; both call this now. `fill_template`
+    keeps raising on None, which is its callers' own behaviour.
+    """
+    return fill_template(str(template or ""), values)
+
+
 def _drawn(row, econ):
     """The net the original would draw on one production row."""
     return (row.get("drawn_production") or (0, 0, 0, 0))[econ]
