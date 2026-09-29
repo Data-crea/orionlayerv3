@@ -274,6 +274,11 @@ LOCAL_PATCHES = {
         os.path.join("src", "game", "score.cpp"), "OrionLayer, open fix 50.",
         "the Hall of Fame's entries are not on the wire (open fix 50): it "
         "stays behind the F12 notice"),
+    # Applied 29 September 2026 by work order 188: 8f7bd9e3, on 65b41b66.
+    "doc/ext_multiplayer_state.patch": (
+        os.path.join("src", "game", "multplay.cpp"), "OrionLayer, open fix 51.",
+        "the multiplayer steps are not on the wire (open fix 51): all but "
+        "the setup stay behind the F12 notice"),
 }
 
 #: Patches that are REPORTED to Joes and not yet applied: listed with
@@ -336,6 +341,7 @@ FIX_NUMBERS = {
     "doc/ext_message_box_text.patch": (29,),
     "doc/ext_turn_popups.patch": (49,),
     "doc/ext_hall_of_fame.patch": (50,),
+    "doc/ext_multiplayer_state.patch": (51,),
 }
 
 

@@ -14,7 +14,9 @@ P2_name_walk_1920x1080 (the designer's name typed in HD, Enter and ESC
 recorded as transitions; the 233 before it reproduced byte for byte first),
 and work_order_188/P6_hof_{1920x1080,3840x2160} (the Hall of Fame, in and out
 by ESC and by a click, on open fix 50; the 240 before it reproduced byte
-for byte first).
+for byte first), and work_order_188/P7_mp_1920x1080 (the multiplayer setup,
+its dialogs and a hotseat game, on open fix 51; the 248 before it
+reproduced byte for byte first).
 
 Reads the `trace.jsonl` of `tools/flash_walk.py` runs and writes
 `tools/fixtures/transitions_180.json`: every walked transition as the

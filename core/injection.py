@@ -115,8 +115,31 @@ def _banner_tiles(fields):
     return sorted(best, key=lambda f: (f.y, f.x))
 
 
+#: The Flag Screen's tile grid, native top-left corners, row-major in the
+#: colour order: x 96/220/344/467, y 144/280, each tile 83 x 98 (measured
+#: live, work order 188). A colour another player has taken is NOT in the
+#: list — hotseat player 2 saw seven tiles, green's (344, 144) absent — so
+#: the tiles are found by their place on the grid, never by their count.
+BANNER_GRID = [(x, y) for y in (144, 280) for x in (96, 220, 344, 467)]
+
+
+def banner_slots(fields):
+    """`{grid slot: field}` of the tiles the dialog offers."""
+    out = {}
+    for f in fields or []:
+        if getattr(f, "field_type", None) == TYPE_STRING:
+            continue
+        if (f.x, f.y) in BANNER_GRID and \
+                (f.x_end - f.x, f.y_end - f.y) == (83, 98):
+            out[BANNER_GRID.index((f.x, f.y))] = f
+    return out
+
+
 def is_banner_dialog(fields):
-    return len(_banner_tiles(fields)) >= 8
+    """The Flag Screen: all 8 tiles by shape (the single player's case),
+    or at least 6 of them on their grid (another player has taken some —
+    hotseat, work order 188)."""
+    return len(_banner_tiles(fields)) >= 8 or len(banner_slots(fields)) >= 6
 
 
 def describe(fields):
@@ -174,8 +197,22 @@ def paced_keys(first, keys):
 def click_banner(client, fields, color, order):
     """Click the radio tile for `color`; tiles are sorted by row/col
     and mapped onto `order` (the MOO2 colour sequence)."""
-    tiles = _banner_tiles(fields)[:len(order)]
     idx = order.index(color) if color in order else 0
+    slots = banner_slots(fields)
+    if slots and len(slots) < len(order):
+        # A colour is taken (hotseat, work order 188): the tile by its
+        # place on the grid; the wanted one taken -> the first free one,
+        # which is all the dialog offers anyway.
+        if idx not in slots:
+            free = sorted(slots)
+            log.warning("Banner %s is taken; the first free tile, slot %d",
+                        color, free[0])
+            idx = free[0]
+        f = slots[idx]
+        log.info("Banner slot %d -> field %d", idx, f.index)
+        client.activate_field(f.index)
+        return True
+    tiles = _banner_tiles(fields)[:len(order)]
     if idx >= len(tiles):
         log.warning("Banner tile %d missing (%d tiles)", idx, len(tiles))
         return False

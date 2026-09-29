@@ -44,7 +44,17 @@ SCREENS = {
     12: ("NEXT_TURN",       None),
     13: ("NEW_GAME",        "new_game"),
     14: ("HALL_OF_FAME",    "hall_of_fame"),   # work order 188 (open fix 50)
+    #: 15-17, 21, 22, 37, 41: the multiplayer screens (orion2_consts.h:
+    #: 475-495), one HD screen since work order 188 — the setup read off
+    #: its own list, every other step only with open fix 51's MPLY.
+    15: ("MULTI_PLAYER",    "multiplayer"),
+    16: ("HOTSEAT",         "multiplayer"),
+    17: ("HOTSEAT_SELECT_PLAYER", "multiplayer"),
     18: ("PLANET_DATA",     "planet_data"),
+    21: ("START_NET",       "multiplayer"),
+    22: ("JOIN_NET",        "multiplayer"),
+    37: ("NET_NEXT_TURN",   "multiplayer"),
+    41: ("LOAD_NET",        "multiplayer"),
     20: ("COLONY_SUMMARY",  "colony_summary"),
     25: ("QUEUE_POPUP",     "build_queue"),   # work order 180 C
     29: ("OFFICERS",        "leaders"),

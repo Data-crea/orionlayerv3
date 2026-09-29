@@ -53,6 +53,8 @@ STACKED_AFTER_COLONY = (
     "doc/ext_turn_popups.patch",
     # 50 appends HOFM after 49's TPOP
     "doc/ext_hall_of_fame.patch",
+    # 51 appends MPLY after 50's HOFM
+    "doc/ext_multiplayer_state.patch",
 )
 
 

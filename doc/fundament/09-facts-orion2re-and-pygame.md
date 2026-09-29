@@ -494,9 +494,9 @@ references in `doc/v3_orion2re_index.md`.
   `-DORION2RE_EXT=ON`, with every fix in README's orion2re table — the
   ones with a patch are open fixes 3, 12, 14, 20, 21, 22, 24, 25, 27, 28,
   29, 30, 31, 32, 34, 35, 36, 37, 38, 39, 40, 41, 43, 44, 45, 46, 47, 48, 49,
-  50** (35-40 applied by work order 181, 41 by work order 183, 27 September
-  2026; 44-47 and 43 by work order 186, 28 September 2026; 48, 29, 49 and 50
-  by work order 188, tip `65b41b66` — 42 is not applied). The list's one home is
+  50, 51** (35-40 applied by work order 181, 41 by work order 183, 27
+  September 2026; 44-47 and 43 by work order 186, 28 September 2026; 48, 29,
+  49, 50 and 51 by work order 188, tip `8f7bd9e3` — 42 is not applied). The list's one home is
   `tools/version_check.LOCAL_PATCHES`, with the numbers in `FIX_NUMBERS`;
   README's table, `tools/setup.py`'s report and this line are held to it
   by smoke check 090r, so a new applied fix that is missing here fails

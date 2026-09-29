@@ -123,6 +123,9 @@ class GameState:
     #: The Hall of Fame while it is up, open fix 50 (work order 188):
     #: `core/hofblocks.py` names every key.
     hall_of_fame: Optional[dict] = None      # "HOFM", fix 50
+    #: The multiplayer step that is up, open fix 51 (work order 188):
+    #: `core/mpblocks.py` names every key.
+    multiplayer: Optional[dict] = None       # "MPLY", fix 51
 
     # Fields (from FIELD_LIST message)
     fields: list = field(default_factory=list)
@@ -415,7 +418,9 @@ def parse_state(data: bytes) -> GameState:
     from core import turnpopup
     pos = turnpopup.parse(gs, data, pos)      # TPOP, open fix 49
     from core import hofblocks
-    pos = hofblocks.parse(gs, data, pos)      # HOFM, open fix 50, LAST
+    pos = hofblocks.parse(gs, data, pos)      # HOFM, open fix 50
+    from core import mpblocks
+    pos = mpblocks.parse(gs, data, pos)       # MPLY, open fix 51, LAST
     return gs
 
 

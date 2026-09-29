@@ -327,6 +327,9 @@ _MARKED = {
     "core/turnpopup.py": "DEVIATION `hud_turn_popup`",
     # ...and the Hall of Fame (open fix 50). Its own check is 090ze.
     "screens/hall_of_fame/screen.py": "DEVIATION `hud_table`",
+    # ...and the multiplayer screens (open fix 51). Its own check is 090zf.
+    "screens/multiplayer/screen.py": "DEVIATION `hud_panels`",
+    "screens/multiplayer/layout.json": "deviation_online_word",
 
 }
 _MARKS = ("HD EXTENSION", "DEVIATION")

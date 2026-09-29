@@ -38,6 +38,42 @@ the system display's planet pictures are not drawn — the system display is
 a list of the star's planets by name. **Default: as built**; the pictures
 are an extractor away if Data wants them.
 
+### 1e. The Online endpoint reads "ATZ" (Part 7)
+
+The multiplayer setup's Online type (its artwork still says MODEM) connects
+to one endpoint, which orion2re keeps in the settings (MOX.SET); the source's
+default is "127.0.0.1:47800" (multplay.cpp:233-237), but on this machine the
+dialog shows "ATZ" — a modem init string, apparently what the player's own
+MOX.SET holds at that place from the original game. Joining an Online game
+with it would fail. **Default: unchanged** (MOX.SET is Data's; HD shows what
+the engine holds and lets the player type another); proposal: Data types
+his router's endpoint once, or orion2re resets an endpoint that does not
+parse as host:port.
+
+### 1f. Network multiplayer across two engines (Part 7)
+
+The multiplayer setup, COMM INFO, the join list, the load list's message and
+a whole hotseat game were walked in HD on one engine. Hosting and joining a
+NETWORK or ONLINE game need a second engine, and one machine cannot run two
+on OrionLayer's wire (ext port 17362 fixed, ext_api.h:12) nor host twice
+(router port 47800 fixed). **How Data can test it**: on a second machine (or
+a second user account with its own game folder) start orion2re and choose
+NETWORK → START NEW GAME; on this machine, in OrionLayer, MULTIPLAYER →
+NETWORK → JOIN GAME — the HD list should show the host's game with its
+player count; or ONLINE with COMM INFO's endpoint set to the host's
+`address:47800`. What to look at: the host's waiting panel counting players,
+the race picks, the "Choose your empire" list for a loaded game, and the
+chat between turns (37). **Default: parked** (drawn from MPLY, checked
+offline in 090zf, not seen live).
+
+### 1g. Five engine bugs found reading multiplayer (open fix 51's entry)
+
+The chat buffer's overrun, the endpoint's one-byte overrun, two ESC buttons
+in the Online dialog, the pick-position screen's dead cancel (a joiner sends
+an uninitialised pick on ESC), the setup's four-field first pass. HD stays
+inside the buffers; nothing else is changed. **Default: reported** (for
+Joes), not fixed — no part of this order needs them fixed.
+
 ## 2. Carried over unchanged (not acted on in this order)
 
 - **From 185** (`doc/briefs/185-parked-for-data.md` item 2c, "The Ship

@@ -154,20 +154,6 @@ def colony_state():
     return clp._Snapshot(clp.COLONIES) if hasattr(clp, "COLONIES") else None
 
 
-def hof_state():
-    """The Hall of Fame with STAND-IN rows (no game text): open fix 50's
-    HOFM as the engine writes it, the entry 3 flashing."""
-    from core import hofblocks
-    from core.game_state import GameState
-    gs = GameState()
-    gs.current_screen = 14
-    rows = [{"record": 9 - i, "score": 1600 - 110 * i, "difficulty": i % 5,
-             "name": f"Name {i + 1}", "race": "Race",
-             "difficulty_word": "Level"} for i in range(10)]
-    hofblocks.parse(gs, hofblocks.build(rows, flash=6), 0)
-    return gs
-
-
 def new_game_state():
     """A setting for each of the five pictures, two toggles on."""
     class _S:
@@ -232,9 +218,11 @@ def stage(app, name):
     if name in standins.STAND_INS:
         return standins.stage(app, name)
     d.switch_to(name)
+    import hud_states
     gs = {"galaxy_map": galaxy_state, "colony_summary": colony_state,
           "new_game": new_game_state,
-          "hall_of_fame": hof_state}.get(name, lambda: None)()
+          "hall_of_fame": hud_states.hof_state,
+          "multiplayer": hud_states.mp_state}.get(name, lambda: None)()
     d.active.update(gs)
     return gs
 

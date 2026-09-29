@@ -208,6 +208,13 @@ class Dispatcher:
                 self.close_overlay()
             # Manually opened overlay (no ID): parent logic decides.
 
+        # MPLY (below) also ends a sub-screen's lock: Empire Identity, the
+        # race pick's sub-screen, is locked on the 51 that race selection
+        # leaves behind (work order 188, seen live in the hotseat setup).
+        if getattr(game_state, "multiplayer", None) is not None and \
+                "multiplayer" in self.screens and self._locked_screen:
+            self._locked_screen = ""
+            self._locked_game_ids = set()
         # Sub-screen lock: stay on locked screen until game changes
         if self._locked_screen and self._locked_screen != self.active_name:
             self._locked_screen = ""      # stale lock (screen left)
@@ -224,7 +231,17 @@ class Dispatcher:
             self._locked_screen = ""
             self._locked_game_ids = set()
 
-        name = self.screen_map.get(screen_id)
+        # A BLOCK THAT NAMES ITS SCREEN (work order 188): open fix 51's
+        # MPLY is on the wire exactly while a multiplayer step is up (its
+        # guards clear it for every race pick), whatever id the engine still
+        # reports — race selection leaves its 51 behind when it returns into
+        # the hotseat setup (open fix 22 restores the caller's id on ESC
+        # only), seen live. So the multiplayer screen takes it.
+        if getattr(game_state, "multiplayer", None) is not None and \
+                "multiplayer" in self.screens:
+            name = "multiplayer"
+        else:
+            name = self.screen_map.get(screen_id)
 
         # A screen may decline its id for a snapshot it cannot draw at all
         # (`ScreenBase.claims`, work order 180 B): then the id is unclaimed.

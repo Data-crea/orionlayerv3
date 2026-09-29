@@ -60,6 +60,7 @@ class EmpireIdentityScreen(ScreenBase):
         self._colors = []
         self._race = "elerian"
         self._color = "green"
+        self._failed = None           # a failed chain step (188)
         self._hover_color = None
         self._ruler = None            # TextInput
         self._home = None             # TextInput
@@ -80,6 +81,7 @@ class EmpireIdentityScreen(ScreenBase):
         self._colors = self._data.get("banner_colors", [])
         self._color = self._data.get("default_color", "green")
         self._race = self._race_from_selection()
+        self._failed = None
         self._tiles = bn.get_renderer(bn.BANNER_TILE)
         self._stand = bn.get_renderer(bn.BANNER_STAND_HD,
                                       with_background=False)
@@ -134,13 +136,26 @@ class EmpireIdentityScreen(ScreenBase):
         """A failed chain leaves the game standing in an original
         dialog the HD screen cannot draw — the classic symptom is HD
         back on Custom Race while orion2re waits on "Enter home star
-        name". Hand the player the framebuffer so the dialog can be
-        finished by hand (F12 switches back)."""
+        name". The dialog is finished on F12 (the notice says so)."""
         log.error("Injection chain failed at '%s' — the game is still "
                   "in an original dialog; switching to original view",
                   step or "?")
-        if getattr(self.app, "connected", False):
-            self.app.render_mode = "original"
+        # NEVER THE ORIGINAL'S PICTURE BY ITSELF (work order 188: Data's
+        # rule of 187 — the original only on F12). This used to switch the
+        # App into F12's mode; now the screen keeps its id and hands over,
+        # so the gate holds with the F12 notice naming the step, and the
+        # player answers the dialog on F12.
+        self._failed = step or "?"
+
+    def wants_original(self):
+        """Only after a failed chain (work order 188): the game waits in a
+        dialog of its own, which the notice then names and F12 answers."""
+        return bool(getattr(self, "_failed", None))
+
+    def fallback_reason(self):
+        step = getattr(self, "_failed", None)
+        return (f"Empire Identity could not finish its '{step}' step; the "
+                f"game waits in its own dialog") if step else ""
 
     def keep_lock(self, screen_id):
         """Dispatcher hook. True: hold regardless of the game's ID
@@ -148,6 +163,8 @@ class EmpireIdentityScreen(ScreenBase):
         None: let the dispatcher's lock_ids decide (idle)."""
         if self._chain:
             return True
+        if getattr(self, "_failed", None) and screen_id == 51:
+            return True       # the game waits in its dialog: the notice
         if self._release:
             return False
         return None

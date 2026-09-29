@@ -319,3 +319,70 @@ again at the right size; Part 3's table is corrected in place.
 
 Checks 090ze (2); 090t stages the screen from a stand-in; 055's menu click
 through the live list. Count 417 → **419**.
+
+## Part 7 — Main menu: Multiplayer — **DONE as far as one machine goes; network play across two engines parked**
+
+**What orion2re really offers** (reading report `doc/multiplayer_reading.md`,
+written from the source and extended by a live exploration of the screens):
+real, working multiplayer — NETWORK (LAN through orion2re's own router,
+port 47800), ONLINE (a direct endpoint; the art still says MODEM and its
+dialog is the old MODEM CONNECT panel with one live box, the endpoint) and
+HOTSEAT on one engine. Removed by design: IPX, modem, serial
+(netcode.cpp:266-275). Stubs / gaps: no chat before a game starts
+(`_allow_chat_mode` read by nothing), no reconnect, the router's timeouts
+(plan.md). Nothing of it was on the wire but the field lists.
+
+**Engine fix 51 "MPLY"** (new; "The multiplayer screens say nothing on the
+wire but their field lists"): 19 phases, one per step, with what each shows.
+Drafted by a sub-agent in its own scratch clone; the session proved it — the
+per-file compile could not prove netcode / netadapter (the real tree's
+precompiled header holds the unpatched `netadapter.h`), so the whole scratch
+tree was BUILT and those two controls ran through that build (refused).
+Applied **`8f7bd9e3`**, commit = patch, bundle
+`~/orion2re_bundle_29sep_8f7bd9e3_fixes34-51.bundle` verified. Its reading
+found five engine bugs (recorded in entry 51, not fixed): the chat buffer
+(60) under an 80-character input, the endpoint's one-byte overrun, two ESC
+buttons in the Online dialog, the pick-position screen's dead cancel, the
+setup's four-field first pass.
+
+**HD**: `screens/multiplayer/` answers 15, 16, 17, 21, 22, 37, 41 — the setup
+off its own list (`mpsetup`), COMM INFO with the engine's endpoint typed in
+HD, and every other step from MPLY as one panel (`mpdraw`), each option and
+button its own field; the endpoint and a chat line stay inside the engine's
+buffers (29, 59). Marks DEVIATION `hud_panels`, `online_word`.
+
+**Found live and fixed**:
+- **Race selection leaves its reported 51 behind** when it returns into the
+  hotseat setup (open fix 22, "Select Race borrows SCREEN_RACE…", restores the
+  caller's id on ESC only): HD showed Select Race over the hotseat setup.
+  The dispatcher now routes to the multiplayer screen whenever MPLY is on the
+  wire (its guards clear it for every race pick) and ends a sub-screen's lock.
+- **Empire Identity switched the App into F12's mode by itself** after a
+  failed chain (`render_mode = "original"`) — a seventh way to the original's
+  picture that 187's inventory and Part 1 missed, because it goes around the
+  gate. It now hands over (wants_original with its reason), so the gate holds
+  with the notice naming the step; a check refuses `render_mode = "original"`
+  anywhere in screens/ and core/.
+- **Hotseat's second player met a taken banner** (7 tiles instead of 8): the
+  chain waited for 8 and failed. Banner tiles are now found on their grid
+  and a taken colour picks the first free tile (`injection.banner_slots`).
+
+**Live on Xvfb** (engine `8f7bd9e3`, guards verified, SAVE10 / MOX.SET
+restored; `P7_mp_1920x1080`, `P7/mp.txt`; all input through the HD window):
+setup → ONLINE → COMM INFO (endpoint "ATZ", parked 1e) → CANCEL → NETWORK →
+JOIN GAME (no game on this machine) → CANCEL → LOAD GAME (no multiplayer
+save: the engine's message box, HD) → HOTSEAT → START NEW GAME → New Game →
+player 1's race and identity → the hotseat setup (1 human) → JOIN → player
+2's race and identity → the setup (2 humans) → ACCEPT → "Start the game with
+2 Human-controlled players and 6 Computer-controlled players?" YES → the
+player switch (both to play) → player 1's map (home star name, ACCEPT) →
+TURN → the switch (player 1 has played) → player 2's map. **0 native frames,
+0 F12-notice frames.** The walk is in the replayed transition set (249).
+
+**Not walked (parked 1f)**: hosting and joining a NETWORK / ONLINE game
+across two engines — only one engine per machine can be on OrionLayer's wire
+(the ext port 17362 is fixed) and only one can host (the router port 47800);
+the host's waiting steps, the joiner's, the loaded game's positions and the
+net turn's chat are drawn from MPLY and checked offline (090zf), not seen.
+
+Checks 090zf (2); 090t stages the setup. Count 419 → **421**.

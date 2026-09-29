@@ -1,0 +1,42 @@
+{
+  "_comment": "Multiplayer (work order 188 Part 7). Every word here is ARTWORK in the original \u2014 MULTIGM.LBX's buttons and panels (multplay.cpp:206-231, :656-675, :828-861; hotpop.cpp:32-38) \u2014 typed from the native frames of work order 188 (evidence P7_explore), per decision 15; a mod replaces this file. Two are named by what orion2re does rather than by the art: ONLINE (the art says MODEM) and ENDPOINT (the one live box of the art's MODEM CONNECT panel) \u2014 DEVIATION online_word.",
+  "words": {
+    "setup_title": "MULTI-PLAYER GAME SET UP",
+    "network": "NETWORK",
+    "online": "ONLINE",
+    "hotseat": "HOTSEAT",
+    "start": "START NEW GAME",
+    "load": "LOAD GAME",
+    "join": "JOIN GAME",
+    "comm": "COMM INFO",
+    "cancel": "CANCEL",
+    "comm_title": "ONLINE CONNECT",
+    "endpoint": "ENDPOINT",
+    "accept": "ACCEPT",
+    "join_title": "JOIN NETWORK GAME SETUP",
+    "host_title": "HOST NETWORK GAME",
+    "load_title": "LOAD MULTI-PLAYER GAME",
+    "hotseat_title": "HOTSEAT",
+    "switch_title": "HOTSEAT",
+    "begin": "BEGIN",
+    "join_player": "JOIN",
+    "players": "PLAYERS",
+    "net_turn_title": "WAITING FOR THE OTHER PLAYERS",
+    "chat": "CHAT",
+    "no_games": "No game found",
+    "played": "has played",
+    "initializing": "Initializing",
+    "needed": "Needed",
+    "race_info": "Waiting for the players' races",
+    "sending": "Sending data",
+    "getting": "Getting data",
+    "pick_title": "CHOOSE YOUR EMPIRE",
+    "taken": "taken",
+    "joined_waiting": "Joined - waiting for the host",
+    "generating": "Generating the galaxy"
+  },
+  "marks": {
+    "deviation_hud_panels": "HUD panels on the universal background, where the original draws MULTIGM.LBX's pictures and animations (the setup's frame, the waiting animations).",
+    "deviation_online_word": "The radio the art calls MODEM and the dialog it calls MODEM CONNECT are ONLINE and its ENDPOINT: orion2re replaced the modem with a direct TCP endpoint (netcode.cpp:266-275, docs/networking.md), and the MODEM CONNECT panel's other boxes (COM port, baud rate, phone number, modem strings) take no input."
+  }
+}

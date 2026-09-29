@@ -72,6 +72,7 @@ section for what was found where.
 | 48 | The move verdict for the fleet box's selection at every star is not on the wire — `Ships_Try_To_Move_To_`'s `s_ship_move_info`, which the original computes on hover | **Applied** 28 September 2026 by work order 188 under the order's advance approval (orion2re `010870bc` on `orionlayer-local`, `doc/ext_fleet_move_verdict.patch`, "FMOV"); required by `tools/version_check.py`; open upstream | Without it the galaxy map draws no travel line on hover, and HD would have to rebuild range, fuel, speed, gates and flux itself |
 | 49 | The turn-time popups have no id of their own (they report 0; the Turn Summary 40 for one tick) and what they show is not on the wire | **Applied** 29 September 2026 by work order 188 under the order's advance approval (orion2re `6859e163` on `orionlayer-local`, `doc/ext_turn_popups.patch`, ids 59-64 and "TPOP"); required by `tools/version_check.py`; open upstream | Without it every turn-time popup stays behind the F12 notice |
 | 50 | The Hall of Fame's entries are not on the wire, and its end-of-game way in does not report 14 | **Applied** 29 September 2026 by work order 188 under the order's advance approval (orion2re `65b41b66` on `orionlayer-local`, `doc/ext_hall_of_fame.patch`, "HOFM"); required by `tools/version_check.py`; open upstream | Without it the Hall of Fame stays behind the F12 notice |
+| 51 | The multiplayer screens say nothing on the wire but their field lists (which step is up, the type, endpoint, humans, sessions, users, chat) | **Applied** 29 September 2026 by work order 188 under the order's advance approval (orion2re `8f7bd9e3` on `orionlayer-local`, `doc/ext_multiplayer_state.patch`, "MPLY"); required by `tools/version_check.py`; open upstream | Without it every multiplayer step but the setup stays behind the F12 notice |
 
 Items 3 and 4 are both about INJECT_CLICK and both live in the same
 code path, but they are separate faults: 3 is where the coordinates
@@ -5175,4 +5176,806 @@ word).
 **Side effects.** The override and the flag only; nothing the game reads changes. The block is under 500 bytes.
 
 **How to revert.** From `~/orion2re` on `orionlayer-local`: `git revert 65b41b66` or `patch -R -p1`; rebuild; move the patch to `REPORTED_PATCHES`. Without it the Hall of Fame stays behind the F12 notice.
+
+## 51. The multiplayer screens say nothing on the wire but their field lists
+
+**Status: APPLIED** — 29 September 2026 by work order 188 (Part 7, "Main menu: Multiplayer"), under the order's advance approval ("Engine fixes: approved in advance for this run"). orion2re **`8f7bd9e3`** on `orionlayer-local` ("OrionLayer Open Fix 51: report which multiplayer step is up and send what it shows ("MPLY")"), the only commit of this fix, on top of `65b41b66`; bundle `~/orion2re_bundle_29sep_8f7bd9e3_fixes34-51.bundle` (`git bundle verify`: exit 0). Patch: `doc/ext_multiplayer_state.patch` — `git diff 8f7bd9e3~1 8f7bd9e3` byte for byte; required by `tools/version_check.py` (marker `OrionLayer, open fix 51.`). Open upstream.
+
+**What is missing.** Behind the main menu's MULTIPLAYER orion2re runs a
+setup (15), the Online endpoint dialog (under 15), the hotseat setup (16)
+and player switch (17), hosting (21) and joining (22) a network game with
+their waiting steps, the multiplayer load list and a loaded game's hosting
+(41), and the wait between network turns with its chat (37) — several steps
+under one id, and nothing of what they show on the wire: the selected type,
+the endpoint, the joined humans, the session list, the users connected, the
+chat. The reading is `doc/multiplayer_reading.md`.
+
+**What the patch changes.** `src/ext/ext_api.h` / `.cpp`: a
+`MultiplayerView` and its `MultiplayerGuard` (19 phases, the table above the
+block), block "MPLY", LAST (after HOFM), written while a phase is set — the
+phase and what that step shows, read where the game keeps it
+(`MOX::_mp_screen`, `NETMOX::_net`, the settings, the hotseat humans, the
+input box, the chat, the save-slot strings, the router). `multplay.cpp`,
+`hotpop.cpp`, `netstart.cpp`: a guard at every step, cleared for every race
+pick (51 shows its own screen). `netcode.h/.cpp`, `netadapter.h/.cpp`: two
+READ-ONLY accessors for the router's session list — the game's own
+`Net_Get_*` pump the router's packets first, which writes game state.
+
+**The exact change.** `git diff 8f7bd9e3~1 8f7bd9e3` (the `diff --git` and `index` lines and the text git adds after `@@` are not part of it):
+
+```diff
+--- a/src/ext/ext_api.cpp
++++ b/src/ext/ext_api.cpp
+@@ -95,6 +95,31 @@
+     buf.insert(buf.end(), p, p + len);
+ }
+ 
++// OrionLayer, open fix 51. A string as uint8 length + raw bytes, at most `cap` (and 255) bytes.
++static void WriteStr8(std::vector<uint8_t>& buf, const char* str, size_t cap) {
++    size_t len = str != nullptr ? strnlen(str, cap) : 0;
++    if (len > 255) len = 255;
++    Write8(buf, (uint8_t)len);
++    WriteBytes(buf, str, len);
++}
++
++// OrionLayer, open fix 51. A text input field of the "MPLY" block: its id,
++// its max length, the text it holds (its buffer), and — while the field is
++// being edited — the text typed so far (fields::_continuous_string, raw: the
++// commit strips a trailing '_').
++static void WriteInputField(std::vector<uint8_t>& buf, int16_t field,
++                            int16_t max_length, const char* text, size_t cap) {
++    Write16(buf, field);
++    Write8(buf, (uint8_t)max_length);
++    WriteStr8(buf, text, cap);
++    const bool editing = field > 0 && fields::_input_field_active != 0
++                         && fields::_active_input_field_number == field;
++    Write8(buf, (uint8_t)editing);
++    if (editing) {
++        WriteStr8(buf, fields::_continuous_string, sizeof(fields::_continuous_string));
++    }
++}
++
+ // ── State snapshot ───────────────────────────────────────
+ 
+ static void SerializeState(std::vector<uint8_t>& buf,
+@@ -1129,6 +1154,266 @@
+             }
+         }
+     }
++
++    // 18. The multiplayer step that takes input: "MPLY", written on ANY
++    //     screen while a MultiplayerGuard is set, and LAST (after HOFM).
++    //     OrionLayer, open fix 51.
++    //
++    //     The screens behind the main menu's Multiplayer button keep what
++    //     they show in MOX::_mp_screen (MULTPLAY::_g_mp_screen), NETMOX::_net,
++    //     the router adapter and their locals; a client saw one id for many
++    //     steps (15, 21, 22, 41) and none of the content. The phase says
++    //     which step takes input; the payload is what it shows. int16 LE.
++    //
++    //     phase  id     step                                    payload
++    //      1     15     MP setup (Multi_Player_Screen_)          A
++    //      2     15     Online setup dialog (Online_Setup_Screen_) B
++    //      3     41     net game name (Change_MP_Game_Name_)     C
++    //      4     41     load MP game list (Load_Multi_Player_Game_Screen_) D
++    //      5     16     hotseat setup (Hotseat_Screen_)          E
++    //      6     17     hotseat player switch (Hotseat_Select_Player_) F
++    //      7     21/41  host: initializing                       G
++    //      8     21     host: waiting for joiners                H
++    //      9     21     host: waiting for race info              I
++    //     10     21/41  host: sending data                       J
++    //     11     41     host a loaded game: pick own position    K
++    //     12     41     host a loaded game: waiting for joiners  H + L
++    //     13     22     join: initializing                       G
++    //     14     22     join: game list (Choose_Multi_Network_Game_Screen_) M
++    //     15     22     join: joined, waiting for the host       G
++    //     16     22     join: generating map (after race pick)   (none)
++    //     17     22     join a loaded game: pick position        K
++    //     18     22     join a loaded game: getting data         J
++    //     19     37     net next turn, chat (Chat_Box_Input_Loop_) N
++    //
++    //     s8 = uint8 length + raw bytes. IN = input field: int16 field,
++    //     uint8 max length, s8 its buffer, uint8 editing, s8 typed text (only
++    //     if editing). Field ids are -1000 where the game adds none.
++    //     A: uint8 settings.multi_player_game_type (1 network, 2 online,
++    //        4 hotseat), uint8 _game_type, uint8 _net.mode, 8 x int16 field:
++    //        network, online, hotseat, cancel, start, load, join, setup;
++    //        s8 endpoint, s8 settings.net_game_name.
++    //     B: IN endpoint (max 30), int16 OK field, int16 Cancel field.
++    //     C: IN name (namestar::_input_box), int16 cancel field, s8 prompt.
++    //     D: uint8 _game_type, int16 cancel field, uint8 10, per slot: int16
++    //        field, uint8 valid (the save's game type 1-3, 0 invalid), s8
++    //        description, s8 stardate, s8 date (as LOADSAVE formatted them).
++    //     E: int8 settings.number_of_players, int16 humans joined, int16 join
++    //        (-1000 when full), int16 accept, int16 cancel; per joined human
++    //        (humans of them, slot i = player i): uint8 race, uint8 color,
++    //        s8 name, s8 race name.
++    //     F: uint8 8, per player: uint8 status (0 none, 1 has played,
++    //        2 still to play: only 2 is selectable), int16 row field, int16
++    //        banner field.
++    //     G: uint8 _net.mode, s8 endpoint, s8 _net.cur_game_name.
++    //     H: int16 begin field, int16 router users, int8 number_of_players,
++    //        s8 _net.cur_game_name.
++    //     I: int16 players with race info (_net.player_connected_flags),
++    //        int16 router users, int8 _net.num_connected_players.
++    //     J: s8 MOX::_temp_string (the status line the screen prints, or "").
++    //     K: int16 begin field, uint8 8, per player: uint8 shown (human, not
++    //        eliminated), uint8 taken (connected: rows of taken players do
++    //        nothing), int16 row field, int16 banner field.
++    //     L: int8 _net.num_connected_players (humans in the save), int32
++    //        _net.joining_net_id (-1 none: a joiner is picking).
++    //     M: int16 cancel field, uint8 rows, per row: int16 field, uint16
++    //        players, uint16 max players, uint8 open, s8 session name.
++    //     N: IN chat (max 80; buffer MULTPLAY::_global_chat_string), int16
++    //        the full-screen "C" field; uint8 humans, per human banner:
++    //        uint8 player, uint8 has hit next turn; uint8 lines, per chat
++    //        line as the screen prints it: uint8 sender (>= 8 GNN), s8 line.
++    if (g_multiplayer.phase != MP_NONE) {
++        buf.push_back((uint8_t)'M');
++        buf.push_back((uint8_t)'P');
++        buf.push_back((uint8_t)'L');
++        buf.push_back((uint8_t)'Y');
++        Write8(buf, 1);                                   // block version
++        const uint8_t phase = g_multiplayer.phase;
++        Write8(buf, phase);
++
++        const s_mp_screen* mp = MOX::_mp_screen;
++        static const s_mp_screen mp_none = {};            // before the step sets it
++        const s_mp_screen& m = mp != nullptr ? *mp : mp_none;
++        const s_network& net = NETMOX::_net;
++        const netadapter::s_adapter* router = netcode::Ext_Router_Adapter_();
++        const int16_t users = router != nullptr
++            ? (int16_t)netadapter::Get_Users(router, nullptr, 0) : 0;
++
++        switch (phase) {
++        case MP_SETUP:
++            Write8(buf, MOX::_settings.multi_player_game_type);
++            Write8(buf, (uint8_t)MOX::_game_type);
++            Write8(buf, net.mode);
++            for (int16_t f : {m.field_id_network, m.field_id_online, m.field_id_hotseat,
++                              m.field_id_cancel, m.field_id_start_game, m.field_id_load_game,
++                              m.field_id_join_game, m.field_id_setup}) {
++                Write16(buf, f);
++            }
++            WriteStr8(buf, net.online_settings.endpoint, sizeof(net.online_settings.endpoint));
++            WriteStr8(buf, MOX::_settings.net_game_name, sizeof(MOX::_settings.net_game_name));
++            break;
++        case MP_ONLINE_SETUP:
++            WriteInputField(buf, m.game_list_field_ids[3], 30, net.online_settings.endpoint,
++                            sizeof(net.online_settings.endpoint));
++            Write16(buf, m.field_id_ok);
++            Write16(buf, m.field_id_cancel);
++            break;
++        case MP_NET_GAME_NAME:
++            WriteInputField(buf, namestar::_input_box.accept_field_id,
++                            namestar::_input_box.max_input_chars,
++                            namestar::_input_box.input_text,
++                            sizeof(namestar::_input_box.input_text));
++            Write16(buf, namestar::_input_box.cancel_field_id);
++            WriteStr8(buf, g_multiplayer.text, 255);
++            break;
++        case MP_LOAD_GAME: {
++            Write8(buf, (uint8_t)MOX::_game_type);
++            Write16(buf, m.field_id_cancel);
++            Write8(buf, 10);
++            const bool dates = MOX::_save_game_dates != nullptr
++                               && MOX::_save_game_stardates != nullptr;
++            for (int i = 0; i < 10; i++) {
++                Write16(buf, m.game_list_field_ids[i]);
++                Write8(buf, (uint8_t)m.save_slot_valid[i]);
++                WriteStr8(buf, MOX::_save_game_description[i].description,
++                          sizeof(MOX::_save_game_description[i].description));
++                WriteStr8(buf, dates ? MOX::_save_game_stardates + i * 25 : nullptr, 25);
++                WriteStr8(buf, dates ? MOX::_save_game_dates + i * 25 : nullptr, 25);
++            }
++            break;
++        }
++        case MP_HOTSEAT_SETUP: {
++            Write8(buf, (uint8_t)MOX::_settings.number_of_players);
++            int16_t humans = HOTPOP::_hotseat_human_players;
++            if (humans < 0) humans = 0;
++            if (humans > MAX_PLAYERS) humans = MAX_PLAYERS;
++            Write16(buf, humans);
++            for (int16_t f : g_multiplayer.fields) {
++                Write16(buf, f);
++            }
++            for (int16_t i = 0; i < humans; i++) {
++                const s_player& p = MOX::_player[i];
++                Write8(buf, p.race);
++                Write8(buf, p.color);
++                WriteStr8(buf, p.name, sizeof(p.name));
++                WriteStr8(buf, p.race_name, sizeof(p.race_name));
++            }
++            break;
++        }
++        case MP_HOTSEAT_SELECT:
++            Write8(buf, MAX_PLAYERS);
++            for (int i = 0; i < MAX_PLAYERS; i++) {
++                const int8_t status = m.player_button_status[i];
++                Write8(buf, (uint8_t)status);
++                Write16(buf, status != 0 ? m.player_field_ids[i] : (int16_t)-1000);
++                Write16(buf, status != 0 ? m.game_list_field_ids[i] : (int16_t)-1000);
++            }
++            break;
++        case MP_HOST_INIT:
++        case MP_JOIN_INIT:
++        case MP_JOIN_WAITING:
++            Write8(buf, net.mode);
++            WriteStr8(buf, net.online_settings.endpoint, sizeof(net.online_settings.endpoint));
++            WriteStr8(buf, net.cur_game_name, sizeof(net.cur_game_name));
++            break;
++        case MP_HOST_WAIT_JOINERS:
++        case MP_HOST_WAIT_LOADED:
++            Write16(buf, m.field_id_begin);
++            Write16(buf, users);
++            Write8(buf, (uint8_t)MOX::_settings.number_of_players);
++            WriteStr8(buf, net.cur_game_name, sizeof(net.cur_game_name));
++            if (phase == MP_HOST_WAIT_LOADED) {
++                Write8(buf, (uint8_t)net.num_connected_players);
++                Write32(buf, net.joining_net_id);
++            }
++            break;
++        case MP_HOST_WAIT_RACES: {
++            int16_t ready = 0;
++            for (int i = 0; i < MOX::_NUM_PLAYERS && i < MAX_PLAYERS; i++) {
++                if (net.player_connected_flags[i] != 0) ready++;
++            }
++            Write16(buf, ready);
++            Write16(buf, users);
++            Write8(buf, (uint8_t)net.num_connected_players);
++            break;
++        }
++        case MP_HOST_SENDING:
++        case MP_JOIN_GETTING_DATA:
++            WriteStr8(buf, MOX::_temp_string, sizeof(MOX::_temp_string));
++            break;
++        case MP_HOST_PICK_POSITION:
++        case MP_JOIN_PICK_POSITION:
++            Write16(buf, m.field_id_begin);
++            Write8(buf, MAX_PLAYERS);
++            for (int i = 0; i < MAX_PLAYERS; i++) {
++                const s_player& p = MOX::_player[i];
++                const bool shown = i < MOX::_NUM_PLAYERS
++                                   && p.objectives == PLAYER_OBJECTIVE_HUMAN && p.eliminated == 0;
++                Write8(buf, (uint8_t)shown);
++                Write8(buf, shown ? m.player_connected_flags[i] : 0);
++                Write16(buf, shown ? m.player_field_ids[i] : (int16_t)-1000);
++                Write16(buf, shown ? m.game_list_field_ids[i] : (int16_t)-1000);
++            }
++            break;
++        case MP_JOIN_GAME_LIST: {
++            Write16(buf, m.field_id_cancel);
++            int32_t rows = router != nullptr ? netadapter::Game_Count(router) : 0;
++            if (rows < 0) rows = 0;
++            if (rows > 10) rows = 10;
++            Write8(buf, (uint8_t)rows);
++            for (int32_t i = 0; i < rows; i++) {
++                const network::router::s_router_session_info* info =
++                    netadapter::Ext_Game_Info(router, (uint32_t)i);
++                Write16(buf, m.game_list_field_ids[i]);
++                Write16(buf, info != nullptr ? (int16_t)info->current_players : 0);
++                Write16(buf, info != nullptr ? (int16_t)info->max_players : 0);
++                Write8(buf, info != nullptr ? (uint8_t)info->open : 0);
++                WriteStr8(buf, info != nullptr ? info->session_name : nullptr,
++                          sizeof(info->session_name));
++            }
++            break;
++        }
++        case MP_NET_NEXT_TURN: {
++            WriteInputField(buf, m.player_field_ids[0], 80, MULTPLAY::_global_chat_string,
++                            sizeof(MULTPLAY::_global_chat_string));
++            Write16(buf, m.player_field_ids[1]);
++            uint8_t humans = 0;
++            for (int i = 0; i < MOX::_NUM_PLAYERS && i < MAX_PLAYERS; i++) {
++                if (MOX::_player[i].objectives == PLAYER_OBJECTIVE_HUMAN
++                    && MOX::_player[i].eliminated == 0) humans++;
++            }
++            Write8(buf, humans);
++            for (int i = 0; i < MOX::_NUM_PLAYERS && i < MAX_PLAYERS; i++) {
++                if (MOX::_player[i].objectives == PLAYER_OBJECTIVE_HUMAN
++                    && MOX::_player[i].eliminated == 0) {
++                    Write8(buf, (uint8_t)i);
++                    Write8(buf, (uint8_t)(net.players_hit_next_turn[i] != 0));
++                }
++            }
++            // Draw_Net_Next_Turn_Screen_'s lines, formatted as it prints them.
++            const s_net_chat* chat = CHAT::_chat_info;
++            int32_t lines = chat != nullptr ? chat->count : 0;
++            if (lines < 0) lines = 0;
++            if (lines > 14) lines = 14;
++            Write8(buf, (uint8_t)lines);
++            for (int32_t i = 0; i < lines; i++) {
++                const s_net_chat_msg& msg = chat->messages[i];
++                char line[100];
++                if (msg.player_id < MAX_PLAYERS) {
++                    snprintf(line, sizeof(line), "(%s)  %.*s", MOX::_player[msg.player_id].name,
++                             (int)sizeof(msg.text), msg.text);
++                } else {
++                    snprintf(line, sizeof(line), "( GNN )  %.*s", (int)sizeof(msg.text), msg.text);
++                }
++                Write8(buf, msg.player_id);
++                WriteStr8(buf, line, sizeof(line));
++            }
++            break;
++        }
++        default:
++            break;
++        }
++    }
+ }
+ 
+ // ── Field list ───────────────────────────────────────────
+@@ -1671,6 +1956,24 @@
+     g_screen_override = previous_screen;
+ }
+ 
++// OrionLayer, open fix 51. The multiplayer step that takes input (ext_api.h).
++MultiplayerView g_multiplayer = {0, {-1000, -1000, -1000}, nullptr};
++
++MultiplayerGuard::MultiplayerGuard(uint8_t phase, int16_t field_a,
++                                   int16_t field_b, int16_t field_c,
++                                   const char* text)
++    : previous(g_multiplayer) {
++    g_multiplayer = {phase, {field_a, field_b, field_c}, text};
++}
++
++MultiplayerGuard::~MultiplayerGuard() {
++    g_multiplayer = previous;
++}
++
++void MultiplayerGuard::set(uint8_t phase) const {
++    g_multiplayer = {phase, {-1000, -1000, -1000}, nullptr};
++}
++
+ // OrionLayer, open fix 47. The running list field (ext_api.h).
+ ListFieldView g_list_field = {nullptr, nullptr, 0, 0, nullptr};
+ 
+--- a/src/ext/ext_api.h
++++ b/src/ext/ext_api.h
+@@ -142,6 +142,59 @@
+     void end();
+ };
+ 
++/// OrionLayer, open fix 51. The multiplayer step that takes input: the
++/// screens behind the main menu's Multiplayer button report 15, 16, 17, 21,
++/// 22, 37 and 41, and one id covers several steps (15 the setup and its
++/// Online dialog, 21 every host step, 22 every join step, 41 the load list
++/// and hosting a loaded game). Set by MultiplayerGuard at each step's input
++/// loop (the phase table is above SerializeState's "MPLY" block in
++/// ext_api.cpp), restored when the step ends — a step opened inside another
++/// (the Online dialog, the load list) gives the outer one back. A function
++/// with several steps keeps one guard and moves it on with set().
++/// What a phase shows is read at send time from where the game keeps it
++/// (MOX::_mp_screen, NETMOX::_net, ...); `fields` and `text` hold what only
++/// the step's own locals hold. What is SENT, nothing the game reads.
++enum MultiplayerPhase : uint8_t {
++    MP_NONE = 0,
++    MP_SETUP = 1,               // 15 MULTPLAY::Multi_Player_Screen_
++    MP_ONLINE_SETUP = 2,        // 15 MULTPLAY::Online_Setup_Screen_
++    MP_NET_GAME_NAME = 3,       // 41 MULTPLAY::Change_MP_Game_Name_
++    MP_LOAD_GAME = 4,           // 41 MULTPLAY::Load_Multi_Player_Game_Screen_
++    MP_HOTSEAT_SETUP = 5,       // 16 HOTPOP::Hotseat_Screen_
++    MP_HOTSEAT_SELECT = 6,      // 17 MULTPLAY::Hotseat_Select_Player_
++    MP_HOST_INIT = 7,           // 21/41 NETSTART::Start_Net_Screen_ / Load_Net_Screen_
++    MP_HOST_WAIT_JOINERS = 8,   // 21 Start_Net_Screen_
++    MP_HOST_WAIT_RACES = 9,     // 21 Start_Net_Screen_
++    MP_HOST_SENDING = 10,       // 21/41 Start_Net_Screen_ / Load_Net_Screen_
++    MP_HOST_PICK_POSITION = 11, // 41 Load_Net_Screen_ (Choose_Network_Plyrs_Screen_)
++    MP_HOST_WAIT_LOADED = 12,   // 41 Load_Net_Screen_
++    MP_JOIN_INIT = 13,          // 22 NETSTART::Join_Net_Screen_
++    MP_JOIN_GAME_LIST = 14,     // 22 MULTPLAY::Choose_Multi_Network_Game_Screen_
++    MP_JOIN_WAITING = 15,       // 22 Join_Net_Screen_
++    MP_JOIN_GENERATING_MAP = 16,// 22 NETSTART::Net_Select_Race_
++    MP_JOIN_PICK_POSITION = 17, // 22 NETSTART::Net_Pick_Position_ (Choose_Network_Plyrs_Screen_)
++    MP_JOIN_GETTING_DATA = 18,  // 22 Net_Pick_Position_
++    MP_NET_NEXT_TURN = 19,      // 37 MULTPLAY::Chat_Box_Input_Loop_ (NETTURN, COMBFIND)
++};
++
++struct MultiplayerView {
++    uint8_t phase;          // MultiplayerPhase
++    int16_t fields[3];      // MP_HOTSEAT_SETUP: join, accept, cancel; else -1000
++    const char* text;       // MP_NET_GAME_NAME: the prompt; else nullptr
++};
++extern MultiplayerView g_multiplayer;
++
++struct MultiplayerGuard {
++    MultiplayerView previous;
++    explicit MultiplayerGuard(uint8_t phase, int16_t field_a = -1000,
++                              int16_t field_b = -1000, int16_t field_c = -1000,
++                              const char* text = nullptr);
++    ~MultiplayerGuard();
++    /// The function's next step (or MP_NONE while it opens a screen of its
++    /// own, like race selection): sets the phase, clears fields and text.
++    void set(uint8_t phase) const;
++};
++
+ /// The field id of the input Get_Input_() is returning THIS CALL when it
+ /// came from a client's ACTIVATE_FIELD, and 0 when it came from the mouse.
+ ///
+--- a/src/game/hotpop.cpp
++++ b/src/game/hotpop.cpp
+@@ -1,4 +1,7 @@
+ #include "pch.h"
++#ifdef ORION2RE_EXT
++#include "ext/ext_api.h"  // OrionLayer, open fix 51. MultiplayerGuard.
++#endif
+ 
+ namespace HOTPOP {
+     int16_t _hotseat_human_players;
+@@ -100,6 +103,10 @@
+         struct_::Clear_Structure_(temp_player, sizeof(s_player));
+ 
+         do {
++#ifdef ORION2RE_EXT
++            // OrionLayer, open fix 51. The hotseat setup on the wire with this pass's Join/Accept/Cancel fields.
++            const ext::MultiplayerGuard ext_mp_guard(ext::MP_HOTSEAT_SETUP, btn_join, btn_accept, btn_cancel);
++#endif
+             input = fields::Get_Input_();
+ 
+             if (HOTPOP::_hotseat_human_players == 0) {
+@@ -147,6 +154,9 @@
+ 
+             if (input == btn_join) {
+                 MOX::_PLAYER_NUM = player_idx;
++#ifdef ORION2RE_EXT
++                ext_mp_guard.set(ext::MP_NONE);  // OrionLayer, open fix 51. Race selection (51) is not this step.
++#endif
+                 if (RACESEL::Race_Selection_Screen_(temp_player) == 0) {
+                     EVANHELP::Set_Hotseat_Setup_Screen_Help_List_(center_x, center_y);
+                     if (HOTPOP::_hotseat_human_players == 0) {
+--- a/src/game/multplay.cpp
++++ b/src/game/multplay.cpp
+@@ -1,4 +1,7 @@
+ #include "pch.h"
++#ifdef ORION2RE_EXT
++#include "ext/ext_api.h"  // OrionLayer, open fix 51. MultiplayerGuard.
++#endif
+ 
+ namespace {
+     constexpr int kPlayerRemapPaletteStart = 144;
+@@ -119,6 +122,10 @@
+     void __cdecl Chat_Box_Input_Loop_() {
+         int16_t input_id;
+ 
++#ifdef ORION2RE_EXT
++        // OrionLayer, open fix 51. The net next turn screen (37, and COMBFIND's waits) on the wire while it takes input.
++        const ext::MultiplayerGuard ext_mp_guard(ext::MP_NET_NEXT_TURN);
++#endif
+         input_id = fields::Get_Input_();
+ 
+         if (MOX::_mp_screen->bg_height == 0) {
+@@ -281,6 +288,10 @@
+         mouse::Set_Mouse_List_(&MOX::_mouse_list_arrow, 1);
+         Add_MP_Setup_Screen_Fields_();
+ 
++#ifdef ORION2RE_EXT
++        // OrionLayer, open fix 51. The MP setup on the wire; the Online dialog and the load list nest their own.
++        const ext::MultiplayerGuard ext_mp_guard(ext::MP_SETUP);
++#endif
+         while (true) {
+             timer::Mark_Time_();
+             input_field = fields::Get_Input_();
+@@ -417,6 +428,10 @@
+             MISC::Fade_Into_Screen_(Hotseat_Draw_Next_Player_, &fade_flag, 11 /* 0xB */);
+         }
+ 
++#ifdef ORION2RE_EXT
++        // OrionLayer, open fix 51. The hotseat player switch on the wire while it takes input.
++        const ext::MultiplayerGuard ext_mp_guard(ext::MP_HOTSEAT_SELECT);
++#endif
+         while (!is_done) {
+             int16_t input = fields::Get_Input_();
+             int16_t scan_id = fields::Scan_Input_();
+@@ -448,6 +463,9 @@
+             }
+         }
+ 
++#ifdef ORION2RE_EXT
++        ext_mp_guard.set(ext::MP_NONE);  // OrionLayer, open fix 51. The switch is done; the reports follow.
++#endif
+         fields::Clear_Fields_();
+         fields::Set_Input_Delay_(3);
+         fields::Deactivate_Auto_Function_();
+@@ -693,6 +711,10 @@
+         fields::Deactivate_Help_List_();
+         help_anchor_field--;
+ 
++#ifdef ORION2RE_EXT
++        // OrionLayer, open fix 51. The Online setup dialog on the wire (under 15); the MP setup's phase comes back after.
++        const ext::MultiplayerGuard ext_mp_guard(ext::MP_ONLINE_SETUP);
++#endif
+         while (!exit_loop) {
+             fields::Clear_Fields_Above_(help_anchor_field);
+ 
+@@ -758,6 +780,11 @@
+             return -1;
+         }
+ 
++#ifdef ORION2RE_EXT
++        // OrionLayer, open fix 51. The load list on the wire (under 41), its slot strings formatted above.
++        const ext::MultiplayerGuard ext_mp_guard(ext::MP_LOAD_GAME);
++#endif
++
+         MISC::Fade_Into_Screen_(MULTPLAY::Draw_Load_MP_Game_Screen_, (uint8_t*)&MOX::_mp_screen->needs_full_redraw, 11);
+ 
+         while (!exit_loop) {
+@@ -934,6 +961,10 @@
+         
+         
+         strlcpy(prompt, HAROLD::H_Message_(0xFE /* HESTR_0FE_ENTER_NET_GAME_NAME */), sizeof(prompt));
++#ifdef ORION2RE_EXT
++        // OrionLayer, open fix 51. The net game name box on the wire, with its prompt (and a duplicate-name warning over it).
++        const ext::MultiplayerGuard ext_mp_guard(ext::MP_NET_GAME_NAME, -1000, -1000, -1000, prompt);
++#endif
+ 
+         y = namestar::Star_Name_Popup_Screen_Center_Y_();
+         x = namestar::Star_Name_Popup_Screen_Center_X_();
+@@ -1237,6 +1268,10 @@
+     Load_Choose_Multi_Net_Game_Screen_();
+     MOX::_mp_screen->subscreen_mode = 4;
+ 
++#ifdef ORION2RE_EXT
++    // OrionLayer, open fix 51. The game list on the wire (under 22) with the router's session records.
++    const ext::MultiplayerGuard ext_mp_guard(ext::MP_JOIN_GAME_LIST);
++#endif
+     do {
+         fields::Clear_Fields_();
+         Add_Choose_Multi_Net_Game_Fields_();
+--- a/src/game/netadapter.cpp
++++ b/src/game/netadapter.cpp
+@@ -404,6 +404,20 @@
+     return sessions[session_index].session.session_id;
+ }
+ 
++#ifdef ORION2RE_EXT
++// OrionLayer, open fix 51. The session record, read-only (netadapter.h).
++const network::router::s_router_session_info* Ext_Game_Info(const s_adapter* adapter, uint32_t session_index) {
++    if (adapter == nullptr || adapter->state == nullptr) {
++        return nullptr;
++    }
++    const std::vector<network::router::s_router_session_record>& sessions = network::router::Router_Session_Browser_Sessions(&adapter->state->browser);
++    if (session_index >= sessions.size()) {
++        return nullptr;
++    }
++    return &sessions[session_index].session;
++}
++#endif
++
+ bool Create_Game(s_adapter* adapter, const char* name, int32_t max_players, const char* player_name) {
+     if (adapter == nullptr || adapter->state == nullptr || max_players <= 0) {
+         return false;
+--- a/src/game/netadapter.h
++++ b/src/game/netadapter.h
+@@ -92,6 +92,13 @@
+ bool Set_New_Players_Enabled(s_adapter* adapter, bool enabled);
+ int32_t Get_Users(const s_adapter* adapter, uint32_t* users, int32_t max_users);
+ 
++#ifdef ORION2RE_EXT
++/// OrionLayer, open fix 51. The browser's record of session `session_index` (name, players,
++/// max players, open), or nullptr past the end — a const read for
++/// ext::SerializeState; Game_Name gives only the name.
++const network::router::s_router_session_info* Ext_Game_Info(const s_adapter* adapter, uint32_t session_index);
++#endif
++
+ bool Send_Game_Message(s_adapter* adapter, uint32_t target_network_id, uint16_t message_type, const void* payload, uint32_t payload_size);
+ bool Poll_Game_Packet(s_adapter* adapter, s_game_packet* packet);
+ bool Poll_Event(s_adapter* adapter, s_event* event);
+--- a/src/game/netcode.cpp
++++ b/src/game/netcode.cpp
+@@ -432,4 +432,11 @@
+         _netInitialized = 1;
+         return 1;
+     }
++
++#ifdef ORION2RE_EXT
++    // OrionLayer, open fix 51. Read-only access for ext::SerializeState (netcode.h); pumps nothing.
++    const netadapter::s_adapter* Ext_Router_Adapter_() {
++        return Is_Router_Mode_((uint32_t)_connection_type) ? &_router_adapter : nullptr;
++    }
++#endif
+ }
+\ No newline at end of file
+--- a/src/game/netcode.h
++++ b/src/game/netcode.h
+@@ -1,5 +1,9 @@
+ #pragma once
+ 
++#ifdef ORION2RE_EXT
++namespace netadapter { struct s_adapter; }  // OrionLayer, open fix 51. Ext_Router_Adapter_ below.
++#endif
++
+ namespace netcode {
+     using recv_fn = void(__cdecl*)(int16_t net_id, uint16_t packet_id, uint32_t len, uint8_t* packet);
+ 
+@@ -95,4 +99,13 @@
+      * @param player_name Local player display name.
+      */
+     int32_t __cdecl Net_Create_Game_(const char* name, int32_t max_players, const char* password, const char* player_name);
++
++#ifdef ORION2RE_EXT
++    /** OrionLayer, open fix 51. The router adapter for READING only (the
++     *  session list, the member count), or nullptr outside router modes —
++     *  the Net_Get_* wrappers pump the router first, which runs the receive
++     *  callback and so writes game state; ext::SerializeState must not.
++     */
++    const netadapter::s_adapter* Ext_Router_Adapter_();
++#endif
+ }
+\ No newline at end of file
+--- a/src/game/netstart.cpp
++++ b/src/game/netstart.cpp
+@@ -1,4 +1,7 @@
+ #include "pch.h"
++#ifdef ORION2RE_EXT
++#include "ext/ext_api.h"  // OrionLayer, open fix 51. MultiplayerGuard.
++#endif
+ 
+ namespace NETSTART {
+     char* _dialing_failed_error;
+@@ -33,6 +36,10 @@
+         RACESEL::Race_Selection_Screen_(local_player);
+ 
+         local_player->objectives = PLAYER_OBJECTIVE_HUMAN;
++#ifdef ORION2RE_EXT
++        // OrionLayer, open fix 51. "Generating map" on the wire (22) until the host's data comes.
++        const ext::MultiplayerGuard ext_mp_guard(ext::MP_JOIN_GENERATING_MAP);
++#endif
+         MULTPLAY::Reload_Generating_Map_Info_();
+ 
+         MISC::Fade_Into_Screen_(MULTPLAY::Draw_Generic_Net_Info_Screen_, &fade_flag, 11);
+@@ -78,6 +85,10 @@
+             connected_players[i] = (MOX::_player[i].network_player_id != -1);
+         }
+ 
++#ifdef ORION2RE_EXT
++        // OrionLayer, open fix 51. The pick-position list on the wire (22), then "getting data".
++        const ext::MultiplayerGuard ext_mp_guard(ext::MP_JOIN_PICK_POSITION);
++#endif
+         if (MULTPLAY::Choose_Network_Plyrs_Screen_(&selection, connected_players, false, true) == -1) {
+             message_buffer = -1;
+             NETMOX::Mox_Send_Message_(NETMOX::_net.host_election_id, NET_PACKET_PICK_YOUR_POSITION_RESULT, &message_buffer, sizeof(message_buffer));
+@@ -96,6 +107,9 @@
+         MULTPLAY::Reload_Getting_Data_Info_();
+ 
+         strlcpy(MOX::_temp_string, NETTURN::_waiting_message_fmt, sizeof(MOX::_temp_string));
++#ifdef ORION2RE_EXT
++        ext_mp_guard.set(ext::MP_JOIN_GETTING_DATA);  // OrionLayer, open fix 51. Its status line is set just above.
++#endif
+ 
+         while (NETMOX::_net.network_data_ptr == nullptr) {
+             fields::Get_Input_();
+@@ -174,6 +188,10 @@
+         const char* myname_str = s_myname_005597dc;
+ 
+         NETMOX::_net.sync_state = NET_SYNC_STATE_CLIENT_JOINING;
++#ifdef ORION2RE_EXT
++        // OrionLayer, open fix 51. The join steps on the wire (22): initializing, (game list nested), waiting.
++        const ext::MultiplayerGuard ext_mp_guard(ext::MP_JOIN_INIT);
++#endif
+ 
+         NETTURN::Net_Init_Host_Election_();
+         MULTPLAY::Reload_Initializing_Net_Info_();
+@@ -217,6 +235,9 @@
+ 
+         NETMOX::_net.is_network_active = 1;
+         NETMOX::_net.net_host_id = netcode::Net_Host_ID_();
++#ifdef ORION2RE_EXT
++        ext_mp_guard.set(ext::MP_JOIN_WAITING);  // OrionLayer, open fix 51. Joined; waiting for the host.
++#endif
+         MULTPLAY::Reload_Join_Net_Screen_();
+         fields::Clear_Fields_();
+         fields::Add_Hidden_Field_(0, 0, 639, 479, "", 0);
+@@ -239,6 +260,9 @@
+             return 0;
+         }
+ 
++#ifdef ORION2RE_EXT
++        ext_mp_guard.set(ext::MP_NONE);  // OrionLayer, open fix 51. Race selection (51) or the pick list follow with their own.
++#endif
+         if (NETMOX::_net.sync_state == NET_SYNC_STATE_CLIENT_SELECT_RACE) {
+             NETMOX::Mox_Send_Message_(NETMOX::_net.host_election_id, NET_PACKET_NETWORK_SYNC_STATUS, &MOX::_nebula_screen_seg, sizeof(MOX::_nebula_screen_seg));
+             result = (uint8_t)NETSTART::Net_Select_Race_();
+@@ -257,6 +281,10 @@
+ 
+     uint8_t __cdecl Start_Net_Screen_() {
+         NETMOX::_net.sync_state = NET_SYNC_STATE_HOST_STARTUP;
++#ifdef ORION2RE_EXT
++        // OrionLayer, open fix 51. The host steps on the wire (21): initializing, joiners, race info, sending.
++        const ext::MultiplayerGuard ext_mp_guard(ext::MP_HOST_INIT);
++#endif
+         NETTURN::Net_Init_Host_Election_();
+         MULTPLAY::Reload_Initializing_Net_Info_();
+         fields::Assign_Auto_Function_(MULTPLAY::Draw_Generic_Net_Info_Screen_, 1);
+@@ -297,6 +325,9 @@
+             MULTPLAY::Reload_Waiting_For_Joiners_Screen_();
+             fields::Clear_Fields_();
+             MULTPLAY::Add_Waiting_For_Joiners_Field_();
++#ifdef ORION2RE_EXT
++            ext_mp_guard.set(ext::MP_HOST_WAIT_JOINERS);  // OrionLayer, open fix 51. Begin is added just above.
++#endif
+             fields::Assign_Auto_Function_(MULTPLAY::Draw_Wait_For_New_Joiners_Screen_, 2);
+             MULTPLAY::Draw_Wait_For_New_Joiners_Screen_();
+             RUSS::Mox_Sync_Update_();
+@@ -385,6 +416,9 @@
+             }
+         }
+ 
++#ifdef ORION2RE_EXT
++        ext_mp_guard.set(ext::MP_NONE);  // OrionLayer, open fix 51. The host's race selection (51) is not a host step.
++#endif
+         RACESEL::Race_Selection_Screen_(&MOX::_player[MOX::_PLAYER_NUM]);
+ 
+         NETMOX::_net.player_color_selected_flags[MOX::_PLAYER_NUM] = 1;
+@@ -394,6 +428,9 @@
+ 
+         NETMOX::Mox_Send_Message_((int16_t)netadapter::NETADAPTER_BROADCAST_EXCLUDING_SELF, NET_PACKET_START_GAME, &msg, sizeof(msg));
+ 
++#ifdef ORION2RE_EXT
++        ext_mp_guard.set(ext::MP_HOST_WAIT_RACES);  // OrionLayer, open fix 51. Waiting for the joiners' race info.
++#endif
+         MULTPLAY::Reload_Wait_For_Race_Info_();
+         MISC::Fade_Into_Screen_(MULTPLAY::Draw_Generic_Net_Info_Screen_, &unused, 11);
+ 
+@@ -470,6 +507,9 @@
+             }
+         }
+ 
++#ifdef ORION2RE_EXT
++        ext_mp_guard.set(ext::MP_HOST_SENDING);  // OrionLayer, open fix 51. Sending the game data.
++#endif
+         MULTPLAY::Reload_Sending_Data_Info_();
+         video::Set_Page_Off_();
+         MULTPLAY::Draw_SendGet_Net_Info_Screen_();
+@@ -547,6 +587,10 @@
+         int16_t user_list[256];
+ 
+         NETMOX::_net.sync_state = NET_SYNC_STATE_LOAD_GAME_HOST_SETUP;
++#ifdef ORION2RE_EXT
++        // OrionLayer, open fix 51. Hosting a loaded game on the wire (41): initializing, own position, joiners, sending.
++        const ext::MultiplayerGuard ext_mp_guard(ext::MP_HOST_INIT);
++#endif
+         NETTURN::Net_Init_Host_Election_();
+         MULTPLAY::Reload_Initializing_Net_Info_();
+ 
+@@ -587,6 +631,9 @@
+             NETMOX::_net.network_sync_complete_flag = 0;
+         }
+ 
++#ifdef ORION2RE_EXT
++        ext_mp_guard.set(ext::MP_HOST_PICK_POSITION);  // OrionLayer, open fix 51. The host picks its own empire.
++#endif
+         int16_t choose_result = MULTPLAY::Choose_Network_Plyrs_Screen_(&payload.begin_state, status, 0, 1);
+         
+         fields::Clear_Fields_();
+@@ -611,6 +658,9 @@
+         MULTPLAY::Reload_Waiting_For_Joiners_Screen_();
+         fields::Clear_Fields_();
+         MULTPLAY::Add_Waiting_For_Joiners_Field_();
++#ifdef ORION2RE_EXT
++        ext_mp_guard.set(ext::MP_HOST_WAIT_LOADED);  // OrionLayer, open fix 51. Begin is added just above.
++#endif
+ 
+         NETMOX::_net.num_connected_players = 0;
+         if (MOX::_NUM_PLAYERS > 0) {
+@@ -705,6 +755,9 @@
+         }
+ 
+         MOX::_temp_string[0] = '\0';
++#ifdef ORION2RE_EXT
++        ext_mp_guard.set(ext::MP_HOST_SENDING);  // OrionLayer, open fix 51. Sending the game data.
++#endif
+         MULTPLAY::Reload_Sending_Data_Info_();
+         video::Set_Page_Off_();
+         MULTPLAY::Draw_SendGet_Net_Info_Screen_();
+```
+
+**Proof on the tip it was applied to** (work order 188; drafted by a sub-agent in its own scratch clone, reviewed and proved by the session): the patch file applied to a scratch clone at `65b41b66` with `patch -p1 --dry-run` and `patch -p1`, no offset, no fuzz, the applied tree's diff equal to the file's. `ext_api.cpp`'s, `multplay.cpp`'s, `hotpop.cpp`'s and `netstart.cpp`'s controls (`g_multiplayer` and `ext::MultiplayerGuard` misspelt) were refused by the per-file compile, exit 1 each. **The per-file compile cannot prove `netcode.cpp` and `netadapter.cpp`**: the build's precompiled header is the real tree's and already holds the unpatched `netadapter.h` (a "redefinition" error that is the tool's, not the patch's) — so the WHOLE scratch tree was built instead (`cmake -G Ninja -DCMAKE_BUILD_TYPE=Debug -DORION2RE_EXT=ON`, `ninja orion2re`: exit 0, linked), and the two controls ran through that build: `_router_adapter` misspelt in netcode.cpp and `Router_Session_Browser_Sessions` misspelt in netadapter.cpp, refused, exit 1 each; the tree restored and equal to the patch again (`git diff HEAD -- src | cmp`). Then applied to `~/orion2re` (no offset; no engine running — checked), built, `git add` of the nine files, one commit; `git diff 8f7bd9e3~1 8f7bd9e3` equals the file's diff.
+
+**Recorded live** (engine `8f7bd9e3`, the virtual display; `evidence/work_order_188/P7_mp_1920x1080`, `P7/mp.txt`): the setup (phase 1), Online selected, COMM INFO (phase 2, the endpoint "ATZ"), cancelled; JOIN (phase 14, no game on this machine), cancelled; LOAD without a multiplayer save (the engine's message box); HOTSEAT → START NEW GAME → two players joined (phase 5, their names and races), ACCEPT → "Start the game with 2 Human-controlled players and 6 Computer-controlled players?" YES → the player switch (phase 6, both to play) → player 1's map → TURN → the switch (player 1 has played) → player 2's map. 0 native frames.
+
+**Findings (recorded, not changed).** (1) The net chat buffer is 60 bytes but its input allows 80 — a long line overruns it (HD sends at most 59). (2) The endpoint input's commit writes one byte past its 30-byte buffer (HD sends at most 29). (3) In the Online dialog OK and Cancel both carry ESC. (4) The pick-position screen never returns -1: both callers' cancel checks are dead; on ESC a joiner sends an uninitialised pick and a loaded game's host becomes player 0. (5) The setup's first pass lists four fields only (the type flags are set at the end of that pass). (6) **Race selection leaves its reported 51 behind** when it returns into the hotseat setup — open fix 22 ("Select Race borrows SCREEN_RACE…") restores the caller's id on ESC only; HD therefore routes on MPLY, not on the id (seen live).
+
+**Side effects.** The guards write only the view; the two accessors return pointers and pump nothing. The block is under 3 KB (the chat lines and the session list the largest).
+
+**How to revert.** From `~/orion2re` on `orionlayer-local`: `git revert 8f7bd9e3` or `patch -R -p1`; rebuild; move the patch to `REPORTED_PATCHES`. Without it the multiplayer setup is still drawn in HD from its field list; every other step stays behind the F12 notice.
 
