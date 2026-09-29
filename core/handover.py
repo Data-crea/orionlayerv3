@@ -1,6 +1,6 @@
 """A screen HD draws never presents a native frame — work order 180, part A2.
 
-**THE RULE (proposed as a decision in `~/orionlayerv3-dev/doc/briefs/180-parked-for-data.md`).**
+**THE RULE (proposed as a decision in `dev:doc/briefs/180-parked-for-data.md`).**
 While a transition waits for the data an HD screen needs, the window keeps
 showing the last HD frame, or the universal background. The game's own
 picture is shown only for a screen or a modal HD has no view for at all.
@@ -8,7 +8,7 @@ If a known screen's data does not arrive within `HOLD` snapshots, the
 picture is shown ONCE — logged, and counted as a failure, not as normal.
 
 **WHY IT IS HERE AND NOT IN THE SCREENS.** Work order 180 A1 measured three
-transitions that presented the game's picture (`180-flash-findings.md`):
+transitions that presented the game's picture (`dev:doc/briefs/180-flash-findings.md`):
 Fleets judged its first snapshot a refusal, the main menu's modal net took
 the engine's opening animation for a modal, and the load passed through an
 id with no HD screen and an empty list. 142 A (Fleets) and 166 A (the
@@ -31,7 +31,7 @@ gate sits there and every screen — including the next one — is under it.
                its data already there (`ScreenBase.modal_is_box`) — is
                shown once its live list has stood unchanged for
                `MODAL_SETTLE` snapshots (work order 187, option C of
-               `~/orionlayerv3-dev/doc/briefs/186-modal-hold.md`): no late data can end its
+               `dev:doc/briefs/186-modal-hold.md`): no late data can end its
                hold, which is why the full hold made every box ~4 s
     hand_over  a known screen cannot vouch for its data: held, then shown
                ONCE and counted in `failures`
@@ -69,7 +69,7 @@ EMPTY_HOLD = 36
 #: Snapshots a modal BOX's live list must stand unchanged before it is
 #: shown (work order 187, Data's approval of option C): the modal net's
 #: SETTLE, counted in snapshots as its own docstring says — at a box's own
-#: pace (~106-113 ms, `186-modal-hold.md`) about half a second.
+#: pace (~106-113 ms, `dev:doc/briefs/186-modal-hold.md`) about half a second.
 from core.modalnet import SETTLE as MODAL_SETTLE  # noqa: E402
 
 F12, NO_SCREEN, MODAL, HAND_OVER = "f12", "no_screen", "modal", "hand_over"

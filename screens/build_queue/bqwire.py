@@ -2,7 +2,7 @@
 
 `COLBLDG::Build_Queue_Popup_` (colbldg.cpp:458-571), a switched screen of
 its own id reached from the colony screen's CHANGE and the Colonies
-screen's producing column. Inventory: `~/orionlayerv3-dev/doc/briefs/180-build-inventory.md`.
+screen's producing column. Inventory: `dev:doc/briefs/180-build-inventory.md`.
 
 **IT CLAIMS ITS ID ONLY WITH FOUR BLOCKS** — open fix 35's colony, 38's
 cost and turns (the summary's "Turn(s) Left"), 39's queue under edit and

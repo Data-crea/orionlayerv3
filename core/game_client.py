@@ -65,8 +65,8 @@ def fetch_snapshot(host="localhost", port=17362,
     things a user has to fix differently: nothing listening on the
     port, and a connection that never produced a snapshot.
 
-    **One home for this, not two.** `struct_probe.py` had this loop
-    and `colony_list_preview.py` needed the same one; a second copy
+    **One home for this, not two.** `dev:tools/struct_probe.py` had this loop
+    and `dev:tools/colony_list_preview.py` needed the same one; a second copy
     of a wait whose contract is "poll until `current_screen` is set,
     and treat silence as busy rather than dead" is the kind that
     drifts by a condition and is then wrong in only one of the tools.

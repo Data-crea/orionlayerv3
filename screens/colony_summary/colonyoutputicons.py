@@ -1,7 +1,7 @@
 """The output panel's row icons: four resources and two morale masks.
 
 **A DEVIATION, AND DECISION 56 SAYS WHICH KIND** (decision 56 in
-`~/orionlayerv3-dev/doc/v3_fundament.md`, under Sizing and artwork). The original's scan
+`dev:doc/v3_fundament.md`, under Sizing and artwork). The original's scan
 box draws its production rows and morale as COUNTING sprites
 (`Draw_Colony_Wee_Prod_` and `Draw_Info_Wee_Morale_`, colsum.cpp:1172
 and :1176) and never puts a glyph beside a word; this panel prints a

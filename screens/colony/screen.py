@@ -1,7 +1,7 @@
 """The single-colony screen (wire id 1) — work order 180 B.
 
 The original's `COLONY::Colony_Screen_` (colony_main.cpp:238-378) in the
-HUD style. Inventory: `~/orionlayerv3-dev/doc/briefs/180-colony-inventory.md`.
+HUD style. Inventory: `dev:doc/briefs/180-colony-inventory.md`.
 
 **IT CLAIMS ITS ID ONLY WHEN THE GAME SAYS WHICH COLONY IT SHOWS**
 (`claims`: open fix 35's "COLS" block with 36-38's, all APPLIED by work

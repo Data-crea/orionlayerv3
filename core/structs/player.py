@@ -28,7 +28,7 @@ explicit sign, and the struct is exactly as large either way round.
 
 **ALL SIX SIDEBAR SCALARS WERE READ AGAINST THE ORIGINAL'S OWN BOX
 on 3 September 2026, and they agree — six of six.** That is the
-second source decision 23 asks for, and `~/orionlayerv3-dev/tools/struct_probe.py
+second source decision 23 asks for, and `dev:tools/struct_probe.py
 players --sidebar` is what collected it: it prints the six beside the
 labels and signs the original uses, in the original's own order, for
 a human to hold against the game's Colonies screen.
@@ -134,7 +134,7 @@ SPEC = Spec("s_player", SIZE, [
     # current_research_application — the APPLICATION inside that field.
     # TWO SOURCES, 22 September 2026 (work order 165 part A): the header
     # route puts it at 902, and live it read 196, whose field through
-    # the app->field table `~/orionlayerv3-dev/tools/research_cost_check.py` holds to
+    # the app->field table `dev:tools/research_cost_check.py` holds to
     # techdata.cpp is 45 — which is exactly what the VERIFIED
     # `current_research_field` beside it says. A byte that is not the
     # current application has no reason to resolve to the current field.
@@ -171,7 +171,7 @@ SPEC = Spec("s_player", SIZE, [
     #
     #   * the header route (work order 130 C) puts it at 379, 212 bytes
     #     wide, with `sizeof(s_player) == 0xf0e` — the assert in
-    #     sizes.h:21. `~/orionlayerv3-dev/tools/struct_header_check.py` re-runs that compile
+    #     sizes.h:21. `dev:tools/struct_header_check.py` re-runs that compile
     #     on every suite.
     #   * live, three agreements at once, none of which a misplaced
     #     offset survives: every one of the 212 bytes is a
@@ -192,9 +192,9 @@ SPEC = Spec("s_player", SIZE, [
     # hands over to the fallback when they disagree.
     ("tech_applications",     379, "u8[212]"),
     # THE RACES SCREEN'S FIELDS, work order 175 C. Header route (the
-    # compiler asserts every offset, `~/orionlayerv3-dev/tools/struct_header_check.py`) and,
+    # compiler asserts every offset, `dev:tools/struct_header_check.py`) and,
     # as the second source, the game's own invariants over every save on
-    # this disk (`~/orionlayerv3-dev/tools/races_check.py`): a treaty is the same seen from
+    # this disk (`dev:tools/races_check.py`): a treaty is the same seen from
     # both sides, relations stay in -100..100, a treaty is 0..6 (the six
     # `_treaty_labels`, estrings.cpp:91-97, and 6 total war, which the
     # screen clamps to label 5, racescrn.cpp:151-155), spies count in
@@ -202,7 +202,7 @@ SPEC = Spec("s_player", SIZE, [
     # `struct s_ship_design ship_designs[6]` (orion2.h:1809) — the five
     # designs the build popup offers (colbldg.cpp:219-238, i < 5) and a
     # sixth slot. Work order 180 C. BOTH SOURCES: the header route puts it
-    # at 906 (asserted by ~/orionlayerv3-dev/tools/struct_header_check.py from this line), and
+    # at 906 (asserted by dev:tools/struct_header_check.py from this line), and
     # the compiler over the same headers gives `sizeof(s_ship_design)` 99,
     # `name` at 0 (char[16]) and `cost` at 94 (int16) — `DESIGN_SIZE`,
     # `design_name`, `design_cost` below; LIVE on SAVE4 (27 September 2026,
@@ -242,7 +242,7 @@ TRAITS_OFFSET = 2308       # int8_t traits[TRAIT_COUNT]
 #: colonyrows.max_population, which does NOT apply it.
 #: THE SAME OFFSET AS THE SPEC FIELD ABOVE, kept as a constant because
 #: two callers want the NUMBER and not the parsed array: the live probe
-#: (`~/orionlayerv3-dev/tools/struct_probe.py`) slices a raw record with it, and the
+#: (`dev:tools/struct_probe.py`) slices a raw record with it, and the
 #: suite's own stand-in builder writes into a raw record at it. Reading
 #: the data goes through the spec field; this is the anchor.
 TECH_APPLICATIONS_OFFSET = 379
@@ -275,7 +275,7 @@ TRAIT_CREATIVE = 22
 #:
 #: Ordered as COLSUM::Draw_Empire_Info_ prints them (colsum.cpp:418,
 #: orion2re 1.60), which is also the order in the colony summary's
-#: layout.json. `~/orionlayerv3-dev/tools/struct_probe.py players --sidebar` reads the
+#: layout.json. `dev:tools/struct_probe.py players --sidebar` reads the
 #: six from SPEC above and annotates them with this.
 SIDEBAR_KINDS = {
     "bc":                 ("stock",

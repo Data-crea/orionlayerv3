@@ -323,7 +323,7 @@ def panel_lines(ship_idx, game_state, parts, strings=None, arcs=None):
     # records, which `core/structs/unverified.py` refuses) and Data's
     # answer to drawing the labels with nothing after them was no.
     # Marked `omission_panel_beam_bonuses`, and on the open list in
-    # `~/orionlayerv3-dev/v3_projektstatus.md` with what lifting it needs.
+    # `dev:v3_projektstatus.md` with what lifting it needs.
 
     head[3] = _destination(view, game_state, strings)
 
@@ -382,7 +382,7 @@ def _destination(view, game_state, strings=None):
     work order 152 item 7 established that the line is the original's
     and did not carry its condition across. The blank is visible in
     the native screenshot of the same panel
-    (`evidence/work_order_152/panel/001_20_panel_native.png`).
+    (work order 152's evidence, `panel/001_20_panel_native.png`).
 
     The three wordings are the original's own (flt2.cpp:661-673):
 

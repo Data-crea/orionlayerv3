@@ -3,7 +3,7 @@
 **HD EXTENSION, decision 58.** The original shows no landscape on the Colonies
 screen: `Draw_Colony_Scan_Info_` (colsum.cpp:1155) draws production
 sprites, morale sprites and one paragraph, and nothing else. The
-picture is Data's design (brief 97, `~/orionlayerv3-dev/doc/briefs/97-mockup.png`), drawn
+picture is Data's design (brief 97, `dev:doc/briefs/97-mockup.png`), drawn
 in `colony_panel` for the scanned colony.
 
 **DEVIATION IN KIND, AND THE ARTWORK IS AI-GENERATED.** Data made the

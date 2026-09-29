@@ -250,7 +250,7 @@ class ScreenStateGate:
     `mapeta`, `mapinput`/`mapclick`, `boxmodel.remember` and the two
     map views all read the screen's `_state` and therefore all get the
     same answer. Work orders 135 B and 136 B; the hazard is question 15
-    of `~/orionlayerv3-dev/doc/fleet_screen_reading.md`.
+    of `dev:doc/fleet_screen_reading.md`.
 
     **`viewctl.park_game` is deliberately NOT behind it.** Parking
     drives the GAME's own zoom and stops on an absolute target read off

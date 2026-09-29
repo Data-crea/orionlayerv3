@@ -1,6 +1,6 @@
 """GAME menu — the HD overlay for `LOADSAVE::_Game_Popup_` (SCREEN_GAME, 8).
 
-The tree Stop 1 read (~/orionlayerv3-dev/doc/game_menu_reading.md): the menu, Settings,
+The tree Stop 1 read (dev:doc/game_menu_reading.md): the menu, Settings,
 Load, Save, the NEW/QUIT confirmation and the slot warning. Decision 59:
 one OVERLAY claims screen id 8, so the dispatcher opens it over the
 galaxy map and the native popup never shows; which dialog is up is read

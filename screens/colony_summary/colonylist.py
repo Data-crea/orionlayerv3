@@ -14,7 +14,7 @@ Pop_`, coldraw.cpp:282; `Calculate_Squish_Step_`, coldraw.cpp:12).
 This draws one bar per row instead, one square per colonist, in three
 zones, on a track as long as the engine's population ceiling. Marked
 here, in `layout.json` under `list._invention`, in
-`~/orionlayerv3-dev/v3_projektstatus.md`, and in a smoke check that fails if the marking
+`dev:v3_projektstatus.md`, and in a smoke check that fails if the marking
 disappears.
 
 A FIGURE MODE stood beside this for a day — a sprite per colonist,
@@ -23,7 +23,7 @@ built for: at a 22 px slot the silhouettes collapse into a stipple
 one step down in scale, and the rule ended up carrying the profession
 the figures were meant to carry. Deleted rather than switched off,
 because a branch nobody renders is a branch nobody checks. The
-comparison is in `~/orionlayerv3-dev/v3_projektstatus.md`.
+comparison is in `dev:v3_projektstatus.md`.
 
 **The per-row detail line is an HD EXTENSION.** The original prints
 it ONCE, for the selected colony, into the bottom-left scan box at
@@ -34,8 +34,8 @@ carry a name and nothing else. Putting it on every row makes
 comparable what the original could only show one at a time, which is
 the same family as the allocation bar: not something MOO2 chose
 against, something its screen had no room for. Marked here, in
-`layout.json` under `list._hd_extension`, in `~/orionlayerv3-dev/doc/v3_fundament.md`,
-in `~/orionlayerv3-dev/v3_projektstatus.md`, and in a smoke check.
+`layout.json` under `list._hd_extension`, in `dev:doc/v3_fundament.md`,
+in `dev:v3_projektstatus.md`, and in a smoke check.
 
 **THE SLIDER IS DRAWN — since 9 September 2026**, and the marker
 that stood here saying it was not is gone with it.
@@ -504,7 +504,7 @@ def _draw_name_block(surface, row, x, y, name_w, row_h, cfg,
     colsum.cpp:1155, substituting into `E_Strings_(74)`. Drawing it
     per row makes comparable what the original could only show one at
     a time. Marked here, in `layout.json` under `list._hd_extension`,
-    in `~/orionlayerv3-dev/v3_projektstatus.md`, and in a smoke check.
+    in `dev:v3_projektstatus.md`, and in a smoke check.
 
     The detail line is `cfg["detail"]`, substituted by REPLACE and
     not `str.format` (decision 37): a stray brace in a translated
@@ -779,7 +779,7 @@ def _cell_mark(cfg, cells, job, index):
     letter as Scientist), and no fixture contains the case to judge
     that collision on. Marking it from a guessed mapping is the thing
     a picture of the wrong thing is made of; it is recorded in
-    `~/orionlayerv3-dev/v3_projektstatus.md` instead.
+    `dev:v3_projektstatus.md` instead.
     """
     if not cells or job >= len(cells) or index >= len(cells[job]):
         return ""

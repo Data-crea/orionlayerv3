@@ -1,5 +1,5 @@
 {
-  "_comment": "The single-colony screen (wire id 1), work order 180 B. Geometry is screens/colony/colgeom.py (transcribed); the wording here is ours where the original's is baked into its art (decision 15), and the marks name every difference from the original, each held by check 090p and named in ~/orionlayerv3-dev/v3_projektstatus.md.",
+  "_comment": "The single-colony screen (wire id 1), work order 180 B. Geometry is screens/colony/colgeom.py (transcribed); the wording here is ours where the original's is baked into its art (decision 15), and the marks name every difference from the original, each held by check 090p and named in dev:v3_projektstatus.md.",
   "words": {
     "_note": "DEVIATION `button_words`: the original's four buttons carry their words in COLPUPS.LBX art (colony_main.cpp:991-1012); HD draws the art as HUD buttons and the words in code, the Races screen's rule. 'marines' and 'armour' name the two unit counts the strip draws beside the original's sprites (military[0], military[1], colony_main.cpp:1193-1293).",
     "change": "CHANGE",

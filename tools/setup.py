@@ -375,7 +375,7 @@ def main():
 
     # A PLAYER'S CLONE HAS NO GATE AND NO SUITE (work order 189): both
     # live in the developer store, which a developer's tree links in at
-    # their old paths (`~/orionlayerv3-dev/devlink.py`). Without them
+    # their old paths (`dev:devlink.py`). Without them
     # there is nothing to switch on and nothing to verify, and that is
     # not a failure — the clone is complete for playing and modding.
     developer = os.path.isdir(os.path.join(ROOT, HOOKS_PATH))

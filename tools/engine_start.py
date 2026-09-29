@@ -52,7 +52,7 @@ What this tool does about it:
    PID, command line, start time and how it ended for the progress file.
    Such an engine is still NEVER connected to.
 
-The three display variables are ~/orionlayerv3-dev/CLAUDE.md's, determined, never typed —
+The three display variables are dev:CLAUDE.md's, determined, never typed —
 and since work order 182 they are used only with `--real-desktop REASON`.
 By default the engine starts on the private Xvfb of `tools/vdisplay.py`,
 so a live run shows nothing in Data's session (and plays no sound there);
@@ -77,7 +77,7 @@ READY = "ext: server started"
 
 
 def display_env(base=None):
-    """The REAL desktop's environment (~/orionlayerv3-dev/CLAUDE.md): DISPLAY :0, the mutter
+    """The REAL desktop's environment (dev:CLAUDE.md): DISPLAY :0, the mutter
     Xwayland auth file that opens it, SDL's x11 driver. Used only with
     `--real-desktop REASON` since work order 182 — see `run_env`."""
     import vdisplay

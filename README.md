@@ -161,6 +161,16 @@ See [MODDING.md](MODDING.md). Short version: mirror any file's path under
 pictures can also be changed per player in `~/.config/orionlayer/mod/` —
 `python tools/mod_template.py` writes a starting point.
 
+## Notes in the source
+
+Comments and notes in the code cite the maintainer's developer notes as
+`dev:<path>` — for example `dev:doc/v3_fundament.md`, the project's
+decisions and working principles. Those notes (the design decisions,
+readings of the orion2re source, work orders, measurements and the test
+suite) are not part of this repository; a citation says where the
+reasoning behind a line is recorded, not a file you are missing. Work
+order, decision and open-fix numbers refer to the same notes.
+
 ## Credits
 
 Master of Orion II's makers, the MOO2 1.50 patch team and Joes for

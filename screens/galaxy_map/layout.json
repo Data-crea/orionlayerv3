@@ -59,7 +59,7 @@
     "game_menu": 6
   },
   "zoom_out_field": {
-    "_source": "MAINSCR: _zoom_out_button = Add_Button_Field_(244, 455, ..., \"-\") (mainscr.cpp:1381, :1392); type 0 and the end corner (298, 473) read off the live list, 17 September 2026 (work order 128 C) and in ~/orionlayerv3-dev/tools/galaxy_box_fields.json. Parking looks this field up in the live list together with map_cancel's grid field and sends to the index it finds there; a list without both is not the galaxy map's, whatever screen number the game reports (the turn-start research prompt reports 0 and its field 9 is a choice row).",
+    "_source": "MAINSCR: _zoom_out_button = Add_Button_Field_(244, 455, ..., \"-\") (mainscr.cpp:1381, :1392); type 0 and the end corner (298, 473) read off the live list, 17 September 2026 (work order 128 C) and in dev:tools/galaxy_box_fields.json. Parking looks this field up in the live list together with map_cancel's grid field and sends to the index it finds there; a list without both is not the galaxy map's, whatever screen number the game reports (the turn-start research prompt reports 0 and its field 9 is a choice row).",
     "field_type": 0,
     "rect": [
       244,
@@ -99,7 +99,7 @@
     "sub": 18
   },
   "sidebar_row_pad": 8,
-  "_sidebar_row_pad_note": "Reference px between a sidebar row's text box and the separator above it (decision 71): ~/orionlayerv3-dev/tools/hud_boxes.py writes the sb_*_text boxes this far inside their bands, and the screen draws each separator this far above its row's text. Ours, not measured.",
+  "_sidebar_row_pad_note": "Reference px between a sidebar row's text box and the separator above it (decision 71): dev:tools/hud_boxes.py writes the sb_*_text boxes this far inside their bands, and the screen draws each separator this far above its row's text. Ours, not measured.",
   "_sidebar_icon_note": "Keys are sidebar_rows keys, values are files under assets/icons/ (cut from _source_sheet.png by tools/make_sidebar_icons.py). A row that is not listed gets no icon - that is why stardate is absent. POSITIONS ARE NOT HERE: every row owns two boxes in boxes.json, sb_<row>_text and sb_<row>_icon, both draggable and font-scalable in the F5 editor. sidebar_fonts are reference sizes multiplied by each text box's own font_scale. A text box style may carry \"align\": left | center | right. The icons are an HD addition; the original prints these five numbers over full-cell artwork.",
   "labels": {
     "treasury": "Treasury",
@@ -126,7 +126,7 @@
     "type_10",
     "type_11"
   ],
-  "_nebula_note": "The twelve forms are the original STARBG.LBX nebula shapes (entry = type * 4 + zoom + 6) extracted by tools/nebula_extract.py; type_NN.png maps 1:1 to s_nebula.type NN, exactly as _nebula_pict_seg[type % 12] does. SIZE DOES NOT COME FROM THE ARTWORK. It comes from core/zoomtables.py NEBULA_DIM, the sprite dimensions of the four pre-rendered variants per type, indexed by zoom level like the original. An HD master may therefore be drawn at any resolution; only its aspect ratio has to match the original shape, which ~/orionlayerv3-dev/tools/nebula_asset_check.py verifies. Deriving the footprint from the asset width (the pre-29-August rule, asset_width / 3) broke as soon as masters were redrawn at their own working resolution.",
+  "_nebula_note": "The twelve forms are the original STARBG.LBX nebula shapes (entry = type * 4 + zoom + 6) extracted by tools/nebula_extract.py; type_NN.png maps 1:1 to s_nebula.type NN, exactly as _nebula_pict_seg[type % 12] does. SIZE DOES NOT COME FROM THE ARTWORK. It comes from core/zoomtables.py NEBULA_DIM, the sprite dimensions of the four pre-rendered variants per type, indexed by zoom level like the original. An HD master may therefore be drawn at any resolution; only its aspect ratio has to match the original shape, which dev:tools/nebula_asset_check.py verifies. Deriving the footprint from the asset width (the pre-29-August rule, asset_width / 3) broke as soon as masters were redrawn at their own working resolution.",
   "_star_note": "spectral_class 0..5 map to blue/white/yellow/orange/red/brown, class 6 is the black hole. star.size 0/1/2 is large/medium/small. Both confirmed in orion2_consts.h (STAR_CLASS) and used by renderer.CLASS_DIRS.",
   "_sizing_note": "Star and black hole sizes are NOT configured here. They come from core/zoomtables.py, transcribed from orion2re: MOX::_star_fields_dim {33,29,25,23,21,17} indexed by (zoom_level + star.size), and Draw_Black_Holes_ zoom_dist {39,33,33,24} which ignores star.size. Changing them would desync HD from the original's proportions. The same holds for nebulas: NEBULA_DIM there holds the twelve types x four zoom variants read out of STARBG.LBX.",
   "ship_icons": {

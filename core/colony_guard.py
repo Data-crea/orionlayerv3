@@ -1,7 +1,7 @@
 """The fields nothing may activate on the colony screen and its popup.
 
 Work order 180 B, from the reading reports of work order 126
-(`~/orionlayerv3-dev/doc/colony_screen_reading.md` §2a): on the single-colony screen,
+(`dev:doc/colony_screen_reading.md` §2a): on the single-colony screen,
 **CRUNCH, TOGGLE and the full-screen field [0] must never be activated —
 not live, not in a test, not by any HD control.**
 
@@ -17,7 +17,7 @@ not live, not in a test, not by any HD control.**
   over.
 
 So ONE function says no, and every sender on screens 1 and 25 goes
-through it: `~/orionlayerv3-dev/tools/colony_record.py`, and `screens/colony/` and
+through it: `dev:tools/colony_record.py`, and `screens/colony/` and
 `screens/build_queue/`'s `send`. A type-8 field is refused everywhere on
 those screens; a full-screen field is refused while either screen is
 reported, which also covers a text box's own full-screen field — a box

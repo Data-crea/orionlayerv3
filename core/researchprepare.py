@@ -26,7 +26,7 @@ What survives is only what the blocks, the glass and the fonts cache,
 keyed on the rectangles, the window size, the style and the glass slider
 — the keys the READY frame asks for, through the same calls, so that
 frame's pixels are the pixels it always drew: the renders at 1920, 2576
-and 3840 are byte for byte the ones before (`~/orionlayerv3-dev/tools/research_render.py`),
+and 3840 are byte for byte the ones before (`dev:tools/research_render.py`),
 and a smoke check holds that the READY frame after a wait builds no HUD
 shape at all.
 

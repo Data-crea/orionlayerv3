@@ -2,7 +2,7 @@
 (officer.cpp:856-1195). Work order 167.
 
 HD STATE: **BUILT, NOT ACCEPTED.** The live part of work order 167 is
-parked in `~/orionlayerv3-dev/doc/briefs/167-parked-for-data.md` (item L) with its exact
+parked in `dev:doc/briefs/167-parked-for-data.md` (item L) with its exact
 steps. Decision 61, and a smoke check fails if this sentence leaves this
 docstring.
 
@@ -10,7 +10,7 @@ Entered from the galaxy map's and the Fleets screen's LEADERS buttons
 and from the colony screen. Two views — Colony Leaders and Ship
 Officers — four rows of leaders, HIRE / POOL / DISMISS / RETURN, PREV /
 NEXT, the view box and the galaxy box; the inventory is
-`~/orionlayerv3-dev/doc/briefs/167-progress.md` Part A.
+`dev:doc/briefs/167-progress.md` Part A.
 
 **NO OUTER FRAME** (the work order): OFFICER.LBX 0, the full-screen art
 the original paints its rails and panels into, is not drawn. What stands

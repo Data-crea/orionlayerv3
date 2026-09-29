@@ -12,7 +12,7 @@ screen's seam: all struct reading lives there and this module is
 handed plain tuples.
 
 **TWO MARKINGS DECIDED ON 6 SEPTEMBER 2026, ahead of the geometry
-they describe** — `~/orionlayerv3-dev/doc/colony_inset_geometry.md` Part 3, and
+they describe** — `dev:doc/colony_inset_geometry.md` Part 3, and
 `layout.json`'s `inset._geometry_note` carries the same two:
 
 **HD EXTENSION — the inset's scale is fixed and off the rung

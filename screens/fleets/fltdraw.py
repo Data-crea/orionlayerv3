@@ -4,7 +4,7 @@
 picture is one full-screen image, `FLEET.LBX` entry 0 (`Draw_Fleet_Screen_`,
 flt1.cpp:385): the twenty sunken icon slots, the scroll column's rails,
 the panel surrounds and the seven button faces are painted into it, not
-drawn. That art is MOO2's and is never in this tree (~/orionlayerv3-dev/CLAUDE.md), so
+drawn. That art is MOO2's and is never in this tree (dev:CLAUDE.md), so
 every one of them is drawn here, in this project's own palette, at the
 places `fltgeom` seats.
 

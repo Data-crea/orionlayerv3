@@ -2,7 +2,7 @@
 
 Specs live here until their offsets are confirmed. Confirmation
 means one of:
-  - numeric agreement with live data via ~/orionlayerv3-dev/tools/struct_probe.py, or
+  - numeric agreement with live data via dev:tools/struct_probe.py, or
   - orion2re's own header compiled with its `#pragma pack(1)` and
     the resulting sizeof matching the assert in sizes.h.
 
@@ -18,7 +18,7 @@ Already promoted out of this file:
                    85-turn savegame, the pop[] bit masks promoted
                    with it but NOT all verified — only MASK_PROF is)
   s_leader_data -> core/structs/leader.py   (24 Sep 2026, work order
-                   167; header route plus ~/orionlayerv3-dev/tools/leader_check.py)
+                   167; header route plus dev:tools/leader_check.py)
 
 The old s_planet_data guess that used to sit here had `star_index`
 at offset 0 and an invented `position` at 2. Both were wrong: the
@@ -35,8 +35,8 @@ from core.structs import Spec
 
 #: s_leader_data — **PROMOTED 24 September 2026, work order 167**, to
 #: `core/structs/leader.py`, where both sources are written out: the
-#: header route (now in `~/orionlayerv3-dev/tools/struct_header_check.py`'s COVERED list)
-#: and `~/orionlayerv3-dev/tools/leader_check.py`'s numbers out of fourteen saves — the
+#: header route (now in `dev:tools/struct_header_check.py`'s COVERED list)
+#: and `dev:tools/leader_check.py`'s numbers out of fourteen saves — the
 #: stored skill_value against `Officer_Skill_Value_` recomputed, and the
 #: ship and star officer links in both directions.
 #:
@@ -45,7 +45,7 @@ from core.structs import Spec
 #: OCV/DCV) and not about the struct, which is why they did not have to
 #: be lifted for this promotion. One reading differs and is stated
 #: rather than smoothed over: 154 counted one officered ship each in
-#: SAVE1, 3, 4 and 5; `~/orionlayerv3-dev/tools/leader_check.py` finds SIX ships with an
+#: SAVE1, 3, 4 and 5; `dev:tools/leader_check.py` finds SIX ships with an
 #: officer on SAVE4 and SAVE5, across all owners — one of them the
 #: player's (Slith on ship 13), which is the count 154's sentence fits.
 #: The Beam line itself is still dropped; lifting it is its own work.

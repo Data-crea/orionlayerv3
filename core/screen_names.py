@@ -5,10 +5,10 @@ via GAME_SCREEN_ID (see core/dispatcher.py), so nothing here can
 break auto-switching if a name is wrong or missing.
 
 Before this module existed, the same id -> name mapping was copied
-independently into core/dispatcher.py (status bar), ~/orionlayerv3-dev/tools/ext_diag.py
-(SCREEN_NAMES) and ~/orionlayerv3-dev/doc/v3_orion2re_index.md (Screen-Enum table) — and
+independently into core/dispatcher.py (status bar), dev:tools/ext_diag.py
+(SCREEN_NAMES) and dev:doc/v3_orion2re_index.md (Screen-Enum table) — and
 they had already drifted: dispatcher.py was missing id 7 (EXIT),
-ext_diag.py was missing id 50 (the synthetic custom_race screen from
+dev:tools/ext_diag.py was missing id 50 (the synthetic custom_race screen from
 the ext-API patch). This is exactly the failure mode described in
 the 28 Aug project status entry ("A field dump is not documentation")
 that mis-labelled Galaxy Map field 14 for two weeks — a label copied
@@ -26,7 +26,7 @@ ORIONLAYER_NAMES: the OrionLayer screen/folder name shown on the
 
 Every label here is interpretation until checked against
 orion2_consts.h — same caveat as any other field/screen label in
-this project (see v3_orion2re_index.md, "Arbeitsweise").
+this project (see dev:doc/v3_orion2re_index.md, "Arbeitsweise").
 """
 
 #: id -> (ENGINE_NAME, orionlayer_name_or_None)

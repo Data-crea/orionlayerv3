@@ -370,7 +370,7 @@ class App:
         answered: every screen that hands over passes through
         `_showing_original`, so none of them needs a rule or a log call
         of its own. Until now `fallback_reason()` had exactly one
-        caller in the whole tree — `~/orionlayerv3-dev/tools/researchphases.py` — and a
+        caller in the whole tree — `dev:tools/researchphases.py` — and a
         player saw a screen that did not appear with nothing anywhere
         saying why (work order 138).
 

@@ -3,7 +3,7 @@
 tech.cpp:847-1029, opened by one of the eight category buttons on the
 research panel and **display-only**: a row click returns an id no branch
 compares, the highlight is pointer hover, and nothing in the popup
-changes the research (`~/orionlayerv3-dev/doc/tech_change_reading.md` §2, the input table).
+changes the research (`dev:doc/tech_change_reading.md` §2, the input table).
 So HD draws it and SENDS NOTHING — the game stays in `_Tech_Select_`'s
 own loop with the panel's field list, which is also what keeps
 `researchlist.validate_against_fields` passing while the popup is up.

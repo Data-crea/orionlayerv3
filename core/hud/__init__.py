@@ -4,6 +4,7 @@
     from core.hud import art                # the pieces cut from the HUD
     from core.hud import style              # style.json, dotted access
 
-See `blocks` for the list and `doc/fundament/04-*.md`, decision 71, for
+See `blocks` for the list, and decision 71
+(`dev:doc/fundament/04-decisions-screen-artwork-and-markings.md`) for
 why it replaces the cockpit frames.
 """

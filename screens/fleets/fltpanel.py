@@ -175,7 +175,7 @@ def panel_block(screen, lines, words=None, rect=None, px=None):
 #:
 #: **MEASURED TWICE.** Each one is a constant in the source AND was
 #: read off a native screenshot of this very panel
-#: (`evidence/work_order_152/panel/001_20_panel_native.png`, the ship
+#: (work order 152's evidence, `panel/001_20_panel_native.png`, the ship
 #: "Rafale"): the name starts at x 18, the weapon entries at 23,
 #: "Beam DCV:" and "Specials:" at 173, the special entries at 188, the
 #: OCV value ends at 133 and the DCV value starts at 288. A smoke

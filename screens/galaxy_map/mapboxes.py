@@ -13,7 +13,7 @@ buttons and the five sidebar windows, then `Add_Moveable_Box_Fields_`
 (:1424-1427). So an open box's fields are exactly those between the
 research window field (the last sidebar window, :1405) and the Q/V/grid
 tail — measured live on 15 September 2026 (brief 110 Stop 1,
-`~/orionlayerv3-dev/tools/galaxy_box_fields.json`): indices 0-20 identical with and
+`dev:tools/galaxy_box_fields.json`): indices 0-20 identical with and
 without a box, the box inserted from 21. The debug field (:1418) can sit
 in the same gap and is not part of a box.
 

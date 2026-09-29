@@ -26,7 +26,7 @@ constructed at the drop, with both clicks in it.
 neither an icon nor a drop band. (Not a right click since brief 98: the
 right button is context help, and the original's screen-wide help entry
 means it never reaches Cancel.) Marked here, in
-`colonypick`, in `layout.json` under `move`, in `~/orionlayerv3-dev/v3_projektstatus.md`,
+`colonypick`, in `layout.json` under `move`, in `dev:v3_projektstatus.md`,
 and in a smoke check.
 """
 import logging

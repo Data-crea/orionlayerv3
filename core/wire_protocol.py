@@ -1,7 +1,7 @@
 """orion2re Extension API — wire-protocol constants and raw parsing.
 
 Pure stdlib (only `struct`), no other project imports, so this can
-be imported by ~/orionlayerv3-dev/tools/ext_diag.py and ~/orionlayerv3-dev/tools/ext_diag_race.py without
+be imported by dev:tools/ext_diag.py and dev:tools/ext_diag_race.py without
 compromising their "must still work if the rest of the project is
 broken" design goal — while still being the single place the byte
 layout is defined.
@@ -9,7 +9,7 @@ layout is defined.
 Before this module existed, the frame header, message-type/
 subscription constants, and the FIELD_LIST (13 bytes/field) parser
 were each reimplemented independently in core/game_state.py,
-~/orionlayerv3-dev/tools/ext_diag.py, and ~/orionlayerv3-dev/tools/ext_diag_race.py — three copies of the
+dev:tools/ext_diag.py, and dev:tools/ext_diag_race.py — three copies of the
 same byte offsets, silently able to drift out of sync with each
 other and with ext_api_dokumentation_v3.md.
 

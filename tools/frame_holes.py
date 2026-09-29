@@ -20,7 +20,7 @@ still asked for:
                            build those names from
 
 The rects themselves come from `layout_reference.json` (colony summary,
-`colonyplates.reseat`), `~/orionlayerv3-dev/tools/hud_boxes.py` (galaxy
+`colonyplates.reseat`), `dev:tools/hud_boxes.py` (galaxy
 map) and the
 screens' `boxes.json`; nothing here reads an image any more.
 """

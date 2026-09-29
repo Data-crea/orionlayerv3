@@ -1,5 +1,5 @@
 {
-  "_note": "The HUD style (decision 71, work order 169). `measured` is a COPY of what ~/orionlayerv3-dev/tools/hud_measure.py measures off assets/shared/hud/galaxy_hud.png and ~/orionlayerv3-dev/doc/briefs/169-mockup-galaxy.png; the smoke test holds the two equal, so edit the artwork or the tool, never this block. Lengths are REFERENCE px (1920x1080) and scale with the window; colours are RGB. `mockup_colony` comes from Data's colony mockup, which is not in the tree (21 MB) \u2014 its sha256 is recorded, the tool re-measures it with --colony, and the suite reports rather than checks it. `chosen` holds what nothing in the material shows, each value with the reason it is what it is: those are ours, which under decision 53 means Data's to change.",
+  "_note": "The HUD style (decision 71, work order 169). `measured` is a COPY of what dev:tools/hud_measure.py measures off assets/shared/hud/galaxy_hud.png and dev:doc/briefs/169-mockup-galaxy.png; the smoke test holds the two equal, so edit the artwork or the tool, never this block. Lengths are REFERENCE px (1920x1080) and scale with the window; colours are RGB. `mockup_colony` comes from Data's colony mockup, which is not in the tree (21 MB) \u2014 its sha256 is recorded, the tool re-measures it with --colony, and the suite reports rather than checks it. `chosen` holds what nothing in the material shows, each value with the reason it is what it is: those are ours, which under decision 53 means Data's to change.",
   "measured": {
     "source": {
       "width": 6704,
@@ -244,7 +244,7 @@
       "alpha_top": 0.686,
       "alpha_bottom": 0.819,
       "source": {
-        "mockup": "~/orionlayerv3-dev/doc/briefs/174-mockup-select-race.png",
+        "mockup": "dev:doc/briefs/174-mockup-select-race.png",
         "box": [
           1066,
           102,

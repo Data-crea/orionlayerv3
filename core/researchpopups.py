@@ -3,7 +3,7 @@
 `_Tech_List_` (the category list) and `Draw_Application_Description_`
 (the description box) are tech.cpp:786-1029, and both are DISPLAY-ONLY
 in the original: nothing in either changes the research
-(`~/orionlayerv3-dev/doc/tech_change_reading.md` §2, the input table). So HD draws them
+(`dev:doc/tech_change_reading.md` §2, the input table). So HD draws them
 itself and sends nothing to the game for either — the game stays in
 `_Tech_Select_`'s own loop with the panel's field list, which is also
 what keeps `researchlist.validate_against_fields` passing while a popup
@@ -88,7 +88,7 @@ class ResearchPopupsMixin:
 
         **NOTHING IS SENT.** The popup is display-only in the original
         — a row click returns an id no branch compares, and nothing in
-        it changes the research (`~/orionlayerv3-dev/doc/tech_change_reading.md` §2) — so
+        it changes the research (`dev:doc/tech_change_reading.md` §2) — so
         HD opens its own and the game stays in the panel's loop.
         """
         if self._state != self.READY_STATE:
@@ -173,7 +173,7 @@ class ResearchPopupsMixin:
         what is left in change mode (`research_accumulated` subtracted,
         tech.cpp:203); this shows `New_Get_Tech_Cost_(app, 1, player)`
         (:802), which subtracts nothing. The original's design and not
-        a bug — `~/orionlayerv3-dev/doc/tech_change_reading.md` §3 — so it is transcribed
+        a bug — `dev:doc/tech_change_reading.md` §3 — so it is transcribed
         and `cost_offset()` is deliberately not used here.
 
         **AND THE FIELD IS THE ENTRY'S.** `New_Get_Tech_Cost_` looks the

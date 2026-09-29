@@ -4,9 +4,9 @@ Screen modules bind colours at IMPORT (decision 18), and a colour with no
 code default is `palette.require` — which raises if nothing has initialised
 the palette yet. `main.App` does that before any screen is imported; a tool
 has no App, so it has to do it itself, BEFORE its `from screens…` lines.
-`~/orionlayerv3-dev/tools/colony_move_hd.py` and four siblings did not, and could not be
+`dev:tools/colony_move_hd.py` and four siblings did not, and could not be
 imported at all from 14 September 2026 (`plate_outline`, `ship_0`) until
-work order 126 D; `~/orionlayerv3-dev/tools/game_menu_hd.py` carried its own copy of the fix.
+work order 126 D; `dev:tools/game_menu_hd.py` carried its own copy of the fix.
 This is the one home, and the smoke test imports every tool with a
 `__main__` in a fresh process so a tool that forgets it fails there.
 

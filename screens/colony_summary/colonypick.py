@@ -31,7 +31,7 @@ kinder — it is offered because *our* selection is not the game's
 cluster, so discarding it costs nothing and changes nothing on the
 other side of the wire. The moment a preview does inject, this
 paragraph stops being true and the extension has to go. Marked here,
-in `layout.json` under `move`, in `~/orionlayerv3-dev/v3_projektstatus.md`, and in a
+in `layout.json` under `move`, in `dev:v3_projektstatus.md`, and in a
 smoke check that fails if any of the three markings disappears.
 
 **THE THREE REFUSALS THAT ARE NOT `colonymove`'S.** That module

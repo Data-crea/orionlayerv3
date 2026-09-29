@@ -157,7 +157,7 @@ ORBIT_STACK_STEP_BASE = 11
 #: MEASURED, 29 August, from a native 640x480 screenshot: the central
 #: blob of the sprite, threshold-swept and cross-checked against the
 #: pixel map, is 11 x 10 px at zoom 0. See
-#: ~/orionlayerv3-dev/doc/ship_icon_measurement.md for the method and why it matters.
+#: dev:doc/ship_icon_measurement.md for the method and why it matters.
 #:
 #: The per-step shrink is one pixel, from the only hint the source
 #: gives: MAINSCR::Do_Fleet_Popup_ passes (13 - zoom, 9 - zoom) to
@@ -192,7 +192,7 @@ SHIP_ICON_DIM = ((11, 10), (10, 9), (9, 8), (8, 7))
 #: at the corner plus (6, 5); at zoom 0 it began at plus (8, 6), half of
 #: index 3's 16 x 12, where index 0's 11 x 11 matched 2 pixels of 74.
 #: NOT SHIP_ICON_DIM, which is 9 x 8 at zoom 2: that table sizes the HD
-#: icon and is left as it is (~/orionlayerv3-dev/doc/ship_icon_measurement.md). DELIBERATE
+#: icon and is left as it is (dev:doc/ship_icon_measurement.md). DELIBERATE
 #: DEVIATION between the two, work order 122 item 2.2: SHIP_ICON_DIM =
 #: ((11, 10), (10, 9), (9, 8), (8, 7)); the smoke test holds this comment to
 #: its current values.
@@ -208,7 +208,7 @@ SHIP_ICON_HEADER_DIM = ((11, 11), (12, 11), (12, 10), (16, 12))
 #: holds the two equal). MEASURED, work order 122 item 2.1, 16 September
 #: 2026: read from the headers with core/lbx.py, and the label's position
 #: confirmed live in the framebuffer for the colours the run could see
-#: (~/orionlayerv3-dev/v3_projektstatus.md, "the eta digit").
+#: (dev:v3_projektstatus.md, "the eta digit").
 SHIP_ICON_HEADER_DIM_BY_COLOUR = (
     ((11, 11), (12, 11), (12, 10), (16, 12)),
     ((11, 11), (12, 11), (13, 10), (16, 12)),
@@ -261,7 +261,7 @@ ETA_DIGIT_INK_ROWS = (5, 7)
 #: recorded rather than repaired here: guardian 13x11, crystal 15x12,
 #: dragon 13x13, hydra 13x12 and eel 15x5 at t40, against the table's
 #: screenshot numbers below. Out of this brief's scope; reported to
-#: Data (~/orionlayerv3-dev/doc/ship_icon_measurement.md, "The sprites disagree").
+#: Data (dev:doc/ship_icon_measurement.md, "The sprites disagree").
 #:
 #: UNVERIFIED for antaran still: it borrows the player footprint.
 MONSTER_ICON_DIM_ZOOM0 = {
@@ -404,7 +404,7 @@ FIGURE_STEPS = (1, 2, 3, 4)
 #: rather than to figure spacing; the absolute number is therefore
 #: ours and only the proportion among the three is the original's. A
 #: check measures every column box against this and reports the
-#: deviation into `~/orionlayerv3-dev/v3_projektstatus.md`, red only where one is
+#: deviation into `dev:v3_projektstatus.md`, red only where one is
 #: unmarked (decision 36's shape: a hand-editable value gets a
 #: checker, not a reminder).
 NATIVE_JOB_COLUMNS = {"farmers": 135, "workers": 142, "scientists": 134}
@@ -445,7 +445,7 @@ NATIVE_JOB_COLUMNS = {"farmers": 135, "workers": 142, "scientists": 134}
 #: third factor again. Three magnifications live on one screen and
 #: this constant picks the sprite's, because the thing it positions
 #: is a sprite. Stated here, in `colonylist.draw_held_cluster`, and
-#: in `~/orionlayerv3-dev/v3_projektstatus.md`.
+#: in `dev:v3_projektstatus.md`.
 CLUSTER_FIGURE_OFFSET = (5, -10)
 CLUSTER_FIGURE_PITCH = 20
 
@@ -459,7 +459,7 @@ CLUSTER_FIGURE_PITCH = 20
 #: `star_dimension()` answer about the galaxy map's zoom levels.
 #: There is no rung to read, so the size is derived.
 #:
-#: The derivation, in world units, from `~/orionlayerv3-dev/doc/colony_inset_geometry.md`
+#: The derivation, in world units, from `dev:doc/colony_inset_geometry.md`
 #: Part 3: the original's dot is 3 native px, which is
 #: `3 * M * 3953/10000` world units wide and `3 * M * 4395/10000`
 #: tall; at the HD inset's scale of `5/M` reference px per world unit

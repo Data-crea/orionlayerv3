@@ -3,7 +3,7 @@
 **TRANSCRIBED, NOT DESIGNED** — the Leaders and Races rule
 (`screens/leaders/ldrgeom.py`): each number is a literal of orion2re at
 `orionlayer-local` 9ab84230 (the colony sources unchanged since
-`b44cbf76`, work order 180 B1), read in `~/orionlayerv3-dev/doc/colony_screen_reading.md`
+`b44cbf76`, work order 180 B1), read in `dev:doc/colony_screen_reading.md`
 and re-read for this module. The HD screen draws each thing at the HD
 image of its native rectangle (`core/researchnative`), so the drawing,
 the hit test and a native screenshot speak one coordinate system.
@@ -11,7 +11,7 @@ the hit test and a native screenshot speak one coordinate system.
 The button rectangles come from the ART (`Add_Button_Field_` reads the
 extent from the picture, fields.cpp:366-367) and are not in the source;
 they are the live list's, recorded on 27 September 2026
-(`evidence/work_order_180/B_record`), and `colwire` finds every field in
+(work order 180's evidence, `B_record`), and `colwire` finds every field in
 the list it is sending into, so a different art size moves the button's
 field, never HD's idea of it.
 """

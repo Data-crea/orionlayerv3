@@ -1,6 +1,6 @@
 """The modals the engine shows over the galaxy map — work order 177.
 
-The inventory is `~/orionlayerv3-dev/doc/briefs/177-progress.md` part A. The map reports
+The inventory is `dev:doc/briefs/177-progress.md` part A. The map reports
 screen 0 through all of them; what tells them apart is the FIELD LIST
 (`classify`), and the rule of the screen is:
 

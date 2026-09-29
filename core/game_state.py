@@ -455,7 +455,7 @@ def parse_fields(data: bytes) -> list:
     The per-consumer filters stay where they are. They cost nothing,
     they document the rule where a reader meets it, and one of them —
     `injection._signature` — legitimately wants to see the whole list.
-    `~/orionlayerv3-dev/tools/ext_diag.py` builds its own list straight from the bytes,
+    `dev:tools/ext_diag.py` builds its own list straight from the bytes,
     deliberately redundant, and still sees slot 0.
     """
     fields = []

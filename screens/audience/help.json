@@ -1,6 +1,6 @@
 {
-  "_comment": "The diplomacy audience (wire ids 57, 58). OMISSION `audience_help`: the original's right-click help in the audience (help ids 567-613, 0x2B6, 0x261-0x268 and 612, ~/orionlayerv3-dev/doc/audience_reading.md) is not built. No regions, so a right click opens nothing; named in layout.json's marks and ~/orionlayerv3-dev/v3_projektstatus.md.",
-  "_source": "~/orionlayerv3-dev/doc/audience_reading.md",
+  "_comment": "The diplomacy audience (wire ids 57, 58). OMISSION `audience_help`: the original's right-click help in the audience (help ids 567-613, 0x2B6, 0x261-0x268 and 612, dev:doc/audience_reading.md) is not built. No regions, so a right click opens nothing; named in layout.json's marks and dev:v3_projektstatus.md.",
+  "_source": "dev:doc/audience_reading.md",
   "hd_extension": "The help popup auto-sizes to its text and scrolls when it cannot fit. The original draws a fixed box and lets FMTPARA wrap into it at a fixed 339 px (TEXTBOX::Draw_Help_Entry_, textbox.cpp:307); at four HD resolutions a fixed box either wastes half the screen on two lines or clips a long entry. Marked once per file, here, and in core/helppopup.py. No region here uses it yet (OMISSION audience_help).",
   "regions": []
 }

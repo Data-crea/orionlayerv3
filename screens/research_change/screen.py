@@ -35,7 +35,7 @@ CHANGE MODE'S OWN FACTS, and each is a line of the source:
         `research_accumulated` as the offset (:203), where select mode
         passes 0 (:221). The description box still shows the FULL cost
         (:735) — the original's design, not a bug
-        (`~/orionlayerv3-dev/doc/tech_change_reading.md` §3).
+        (`dev:doc/tech_change_reading.md` §3).
     THE CURRENT FIELD IS OFFERED, and it costs nothing to arrange: the
         game zeroes `current_research_field` around the call (:201,
         :204), so the reconstruction asks for the same `current_field=0`

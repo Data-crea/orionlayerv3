@@ -4,7 +4,7 @@ part 7.
 `DESBOX::Generic_Replacement_Box_` (shield or computer, 54),
 `Weapons_Replacement_Box_` (55) and `Special_Systems_Box_` (56) as HUD
 popups over the designer's page (an overlay whose parent is
-`ship_design`); the reading is `~/orionlayerv3-dev/doc/ship_designer_reading.md` section 3.
+`ship_design`); the reading is `dev:doc/ship_designer_reading.md` section 3.
 
 **IT CLAIMS THE IDS ONLY WITH OPEN FIX 45's "DSBX" BLOCK ON THE WIRE**
 (`dbwire.claims`) — applied by work order 186 (orion2re `4af9fefa`) and

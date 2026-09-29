@@ -3,7 +3,7 @@
 The original's `DIP_SCRN::Diplomacy_Screen_` (the player's, from the
 Races screen: 57) and `Npc_Diplomacy_Screen_` (an AI's — at turn start or
 on a sneak attack: 58), one screen for both; the reading is
-`~/orionlayerv3-dev/doc/audience_reading.md`, the brief `~/orionlayerv3-dev/doc/brief_audience.md`.
+`dev:doc/audience_reading.md`, the brief `dev:doc/brief_audience.md`.
 
 **IT CLAIMS THE IDS ONLY WITH OPEN FIX 47's "DIPL" BLOCK ON THE WIRE**
 (`auwire.claims`), and the ids themselves exist only with open fix 46.

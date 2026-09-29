@@ -40,7 +40,7 @@ WHAT DIFFERS BETWEEN THE MODES, and every line of it is source:
 
 **THE EXIT BUTTON'S SIZE IS NOT IN THE SOURCE** and is not invented
 here. `Add_Button_Field_` takes the rect from the ART
-(fields.cpp:366-367), which is why `~/orionlayerv3-dev/doc/tech_change_reading.md` §2 had
+(fields.cpp:366-367), which is why `dev:doc/tech_change_reading.md` §2 had
 the end as NOT SETTLED. So this module gives its ORIGIN only and the
 screen looks the field up in the live list by shape, the way every
 other send on these screens does — the rect comes off the wire or the
@@ -62,7 +62,7 @@ ORIGIN = {"select": 161, "change": 80}
 
 #: The black fill `_Tech_Select_` draws under the art (tech.cpp:281,
 #: :290): `(s+4, 4)` to `(s+0x1D7, 0x1D8)`. The source gives no size
-#: for the TECHSEL art itself (~/orionlayerv3-dev/doc/tech_change_reading.md §7: NOT
+#: for the TECHSEL art itself (dev:doc/tech_change_reading.md §7: NOT
 #: SETTLED), so the fill is the best source-side bound for what the
 #: panel covers, and it is the one both modes use.
 FILL_DX1, FILL_DY1, FILL_DX2, FILL_DY2 = 4, 4, 0x1D7, 0x1D8

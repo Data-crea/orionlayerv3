@@ -31,7 +31,7 @@ WHAT IS RECORDED, one entry per `pygame.display.flip()`:
 
 The source is the BRANCH `App._render` took, which is the code that put
 the pixels there. It is still a flag in the sense work order 129 warned
-about, so `~/orionlayerv3-dev/tools/flash_walk.py` also compares pixels inside the picture
+about, so `dev:tools/flash_walk.py` also compares pixels inside the picture
 area against the product's own rendering of the game's picture, the
 166 A method, and reports where the two disagree.
 

@@ -2,13 +2,13 @@
 Work order 175 D.
 
 HD STATE: **BUILT, NOT ACCEPTED.** The live part of work order 175 D is
-parked in `~/orionlayerv3-dev/doc/briefs/175-parked-for-data.md` with its exact steps.
+parked in `dev:doc/briefs/175-parked-for-data.md` with its exact steps.
 Decision 61, and a smoke check fails if this sentence leaves this
 docstring.
 
 The left panel (stardate, income and maintenance chart) and five pages —
 History Graph, Tech Review, Race Statistics, Turn Summary, Reference; the
-inventory is `~/orionlayerv3-dev/doc/briefs/175-progress.md` part D. EVERY TEXT is looked up
+inventory is `dev:doc/briefs/175-progress.md` part D. EVERY TEXT is looked up
 by a stable key through `core/modtexts` (decision 73, HD EXTENSION
 `moddable_texts`), so a mod replaces
 it with a file; long texts wrap and scroll (`infobox`).

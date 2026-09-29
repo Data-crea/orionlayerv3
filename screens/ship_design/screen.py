@@ -1,7 +1,7 @@
 """The Ship Designer (wire id 3) — work order 185, part 7.
 
 The original's `DESIGN::Design_Screen_` in the HUD style; the reading is
-`~/orionlayerv3-dev/doc/ship_designer_reading.md`, the brief `~/orionlayerv3-dev/doc/brief_ship_designer.md`.
+`dev:doc/ship_designer_reading.md`, the brief `dev:doc/brief_ship_designer.md`.
 
 **IT CLAIMS ITS ID ONLY WITH OPEN FIX 44's "DSGN" BLOCK ON THE WIRE**
 (`sdwire.claims`). 44 and 45 are applied since work order 186 (orion2re
@@ -54,7 +54,7 @@ class Names:
 
     def __init__(self, app, language, root=None):
         # `root`: another tree of derived files — the smoke suite's
-        # committed stand-ins (`~/orionlayerv3-dev/tools/make_derived_fixtures.py`). HESTRNGS
+        # committed stand-ins (`dev:tools/make_derived_fixtures.py`). HESTRNGS
         # is the App's one table (D17); a harness sets `app.hstrings`.
         self._h = hestrings.for_app(app)
         self._parts = ShipPartNames(language, root=root)

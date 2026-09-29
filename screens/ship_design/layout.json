@@ -1,5 +1,5 @@
 {
-  "_comment": "The Ship Designer (wire id 3), work order 185. Geometry is screens/ship_design/sdgeom.py (transcribed from design_main.cpp); every label is HESTRNGS by the original's own id, every name TECHNAME's, every number open fix 44's DSGN block. The words here are OrionLayer's own where the original paints its words into DESIGN.LBX art (decision 15), and the marks name every difference from the original, each held by the ship_design smoke group and named in ~/orionlayerv3-dev/v3_projektstatus.md.",
+  "_comment": "The Ship Designer (wire id 3), work order 185. Geometry is screens/ship_design/sdgeom.py (transcribed from design_main.cpp); every label is HESTRNGS by the original's own id, every name TECHNAME's, every number open fix 44's DSGN block. The words here are OrionLayer's own where the original paints its words into DESIGN.LBX art (decision 15), and the marks name every difference from the original, each held by the ship_design smoke group and named in dev:v3_projektstatus.md.",
   "words": {
     "_note": "DEVIATION `button_words`: the original's Clear, Cancel and Build carry their words in DESIGN.LBX's button art (entries 3-5), its title in the background (entry 0); HD draws them in code. The title's word is the one the art shows (HD EXTENSION `title`); no string table carries it.",
     "title": "Ship Design",

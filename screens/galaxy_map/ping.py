@@ -3,7 +3,7 @@
 **This is an INVENTION, and it is marked as one on purpose.** MOO2
 has no such effect and could not draw it: the game is palette-indexed
 and has no alpha blending, so nothing on its galaxy map can fade
-(`v3_fundament.md`, "an effect the original is technically incapable
+(`dev:doc/v3_fundament.md`, "an effect the original is technically incapable
 of"). Every other layer on this screen is a transcription with a
 source line; this one is a navigation aid for HD resolutions and
 large galaxies, where the home system is one small icon among two
@@ -87,7 +87,7 @@ def _faded(surface, factor):
     Not `set_alpha`: on a per-pixel-alpha surface that is an SDL
     alpha-modulation whose interaction with the existing channel has
     already cost this project a day once (see the pygame notes in
-    `v3_fundament.md`). Scaling the channel itself is unambiguous.
+    `dev:doc/v3_fundament.md`). Scaling the channel itself is unambiguous.
     """
     out = surface.copy()
     alpha = pygame.surfarray.pixels_alpha(out)

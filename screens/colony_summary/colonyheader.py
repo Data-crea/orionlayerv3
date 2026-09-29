@@ -16,7 +16,7 @@ and the Stage A3 rail pass fills it with a stretched rail. That is
 buildable, but it is a change to the plate machinery and a fill under
 every plate, and it is not what Stage 4 is for. Marked here, in
 `layout.json` under `header._deviation_window`, in
-`~/orionlayerv3-dev/v3_projektstatus.md`, and in a smoke check.
+`dev:v3_projektstatus.md`, and in a smoke check.
 
 **DEVIATION — THE OUTLINE COLOUR.** The original's outline is a
 neutral grey at luminance 114-124. Ours is `panel.thin_border`,

@@ -11,7 +11,7 @@ because a hand-copied table without one is the nebula sizes again
     FIELD_COST            TECHDATA::_technology_fields[].cost
                           (techdata.cpp:319ff, TECH_FIELD_COUNT = 83),
                           checked against the source by
-                          ~/orionlayerv3-dev/tools/research_cost_check.py, which the smoke
+                          dev:tools/research_cost_check.py, which the smoke
                           test runs.
     cost()                COLCALC::Player_Research_Cost_ (colcalc.cpp:526-539)
     chance()              COLCALC::Chance_For_Research_Breakthrough_Aux_
@@ -26,7 +26,7 @@ The player values these need — `tech_fields[]` (the per-field status) and
 
 #: TECHDATA::_technology_fields[i].cost, techdata.cpp:319ff — the sixth
 #: column of the table, one row per technology field, index 0 unused.
-#: A transcription: ~/orionlayerv3-dev/tools/research_cost_check.py reads the same column out
+#: A transcription: dev:tools/research_cost_check.py reads the same column out
 #: of techdata.cpp and fails on any difference.
 FIELD_COST = (
     0, 400, 650, 150, 80, 250, 4500, 250,

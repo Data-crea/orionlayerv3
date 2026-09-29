@@ -9,7 +9,7 @@ entirely. The popup is ours.
 
 *Marked here since 9 September 2026, and it is the third home
 arriving late.* `layout.json`'s `_hd_extension_popup` and
-`~/orionlayerv3-dev/v3_projektstatus.md` both listed "colonypopup" as one of the places
+`dev:v3_projektstatus.md` both listed "colonypopup" as one of the places
 this is marked, and this file said nothing of the kind for as long as
 both of them did — the fundament's "a marking that two documents
 claim exists is not a marking", in a file that describes the

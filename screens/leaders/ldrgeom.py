@@ -219,7 +219,7 @@ def field_shapes(n_rows, skill_split, view, mode, for_hire):
     transcribed", never as disagreements.
 
     One home for the transcription: the smoke group builds its fixture
-    lists from it, and `~/orionlayerv3-dev/tools/leaders_live.py` holds the LIVE list to it,
+    lists from it, and `dev:tools/leaders_live.py` holds the LIVE list to it,
     which is the second source for every rectangle above.
     """
     out = []

@@ -29,7 +29,7 @@ The source calls the second loop `race_idx`. It is the CONQUERED bit
 (`POP_MASK_CONQUERED`, pop.h:12), and this module names it that, for
 the reason `core/structs/colony.py` refuses to call the low nibble a
 race: a wrong name outlives every comment that corrects it. Filed as
-a QUESTION for the maintainer — `~/orionlayerv3-dev/doc/orion2re_open_fixes.md` item 9 —
+a QUESTION for the maintainer — `dev:doc/orion2re_open_fixes.md` item 9 —
 because it is not our tree and because the bit is not cosmetic: a
 conquered pop is drawn from a different sprite class entirely
 (`Colony_Pop_Anim_`, colony.cpp:1278), so this loop is what makes the
@@ -37,7 +37,7 @@ column read "working figures first, then race portraits".
 
 **AND THE ARRAY IT WALKS HAS NO ORDER OF ITS OWN.** Read from the
 writing side on 5 September 2026 and recorded in
-`~/orionlayerv3-dev/doc/pop_order_reading.md`: pops are appended, removed by swapping
+`dev:doc/pop_order_reading.md`: pops are appended, removed by swapping
 the last entry into the hole, and the whole array is shuffled
 outright when a colony builds Biospheres (invasion.cpp:721). So this
 walk is not one ordering among several — it is the only one the

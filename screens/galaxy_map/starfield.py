@@ -1,7 +1,7 @@
 """Background point stars for the galaxy map.
 
 The original draws a dense field of single-pixel stars behind the
-map (see the reference screenshot and `~/orionlayerv3-dev/doc/starfield_measurement.md`).
+map (see the reference screenshot and `dev:doc/starfield_measurement.md`).
 The HD background image carries the gas clouds but no points, so the
 map reads as empty next to the original.
 
@@ -19,7 +19,7 @@ full white. Brightness, not count, is what makes a star field noisy.
 
 **No twinkle, ever.** MOO2 draws palette-indexed into a static
 backdrop; it cannot fade or animate a background pixel. Anything
-moving here would be an invention (see `v3_fundament.md`, "an effect
+moving here would be an invention (see `dev:doc/v3_fundament.md`, "an effect
 the original is technically incapable of").
 
 Additive compositing, like the nebulas: the original paints these
@@ -39,7 +39,7 @@ import random
 
 import pygame
 
-# ── Measured constants (~/orionlayerv3-dev/doc/starfield_measurement.md) ────
+# ── Measured constants (dev:doc/starfield_measurement.md) ────
 
 #: Map click area in native coordinates, field 23 of the Galaxy Map
 #: field list: (22, 22)-(527, 421). The density below is per native

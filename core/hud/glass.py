@@ -2,8 +2,8 @@
 
 **WHAT IT IS.** Every filled HUD panel shows the background behind it,
 dimmed, under a vertical gradient, instead of a flat near-black fill:
-Data's Select Race mockup (`~/orionlayerv3-dev/doc/briefs/174-mockup-select-race.png`,
-measured by `~/orionlayerv3-dev/tools/hud_glass.py` into `measured.glass`). One place makes
+Data's Select Race mockup (`dev:doc/briefs/174-mockup-select-race.png`,
+measured by `dev:tools/hud_glass.py` into `measured.glass`). One place makes
 it, for every panel and popup — `blocks.panel` asks `fill()` here — so no
 screen draws its own.
 

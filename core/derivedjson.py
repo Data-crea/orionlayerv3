@@ -8,7 +8,7 @@ at info), unreadable (a warning), or written by an older extractor
 (`format` below the loader's `FORMAT_VERSION`: the state is "stale" and
 the warning names the command). Only what each does with the data after
 that differs. Until work order 190 that head stood in eight modules,
-copied (`~/orionlayerv3-dev/doc/redundancy_audit.md`, D1); this is its
+copied (`dev:doc/redundancy_audit.md`, D1); this is its
 one home, and each loader keeps its own tail.
 
 **IT READS THE FILE WHERE THE LOADER POINTS IT, and not through
