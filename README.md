@@ -1,8 +1,9 @@
 # OrionLayer v3
 
 An HD frontend for **Master of Orion 2**, built on
-[orion2re](https://github.com/mrjoes/orion2re) — the open-source C++
-reimplementation of the original engine.
+[orion2re](https://github.com/mrjoes/orion2re) — the C++
+reimplementation of the original engine by Joes (its repository is
+private at the moment).
 
 orion2re runs the game; OrionLayer replaces its 640x480 interface with
 high-resolution pygame screens. The two talk over a local TCP
@@ -40,9 +41,13 @@ built tree against this list and prints the `patch -p1` command for any
 fix that is missing. The list's one home is `LOCAL_PATCHES` in
 `tools/version_check.py`.
 
-**The Extension API itself (row 1, `src/ext` and its hooks) and open fix 5
-are not published as patch files yet**, so this repository alone cannot
-produce that branch; until they are, it comes from the maintainer.
+**The engine cannot yet be built from this repository alone.** Two
+things are missing: the Extension API itself (row 1, `src/ext` and its
+hooks) and open fix 5 have no patch file here, and orion2re's own
+repository, github.com/mrjoes/orion2re, is private, so the upstream
+commit the patches apply to (`cf4d9617`, "1.50 Backport: mixed race
+penalty") is not publicly reachable. Until both change, the patched
+branch comes from the maintainer.
 
 | # | orion2re commit | fix | patch |
 |---|---|---|---|
