@@ -19,6 +19,11 @@ position where it was.
             (`gs.combat_result`), on any screen.
     "CTGT"  54  the engine's verdict of what each weapon slot of the acting
             unit can hit now, per unit and per missile (`gs.targets`).
+    "CMEV"  56  what happened since the last snapshot, numbered: shots with
+            their damage, moves, turns, launches, hits, deaths, retreats,
+            boarding (`gs.combat_events`, `EVENTS`) — written on ANY screen
+            while events are unsent, so a battle's last events arrive with
+            the first snapshot after it.
 
 ONE SNAPSHOT IS ONE MOMENT: its blocks describe the battle after every event
 the engine recorded before it (open fix 56 drains them into the same
@@ -209,6 +214,59 @@ def _ctgt(data, pos):
             "missiles": missiles}, at
 
 
+#: The event kinds (ext_api.h, `CombatEventType`) and what their eight
+#: int16 arguments are, in order — the engine's own values at the hook.
+EVENTS = {
+    1: ("beam_shot", ("source", "target", "at_missile", "slot", "weapon",
+                      "result", "past_shields", "absorbed")),
+    2: ("reflect", ("reflector", "shooter", "past_shields", "absorbed")),
+    3: ("bomb", ("source", "target", "slot", "weapon", "hits")),
+    4: ("special", ("source", "target", "at_missile", "slot", "weapon")),
+    5: ("missile_launch", ("missile", "source", "target", "anti_missile",
+                           "slot", "type", "quantity", "speed")),
+    6: ("missile_merge", ("missile", "into", "quantity")),
+    7: ("missile_hit", ("missile", "source", "target", "type", "quantity",
+                        "past_shields", "absorbed", "anti_missile")),
+    8: ("fighter_pass", ("missile", "source", "target", "type", "passes_left",
+                         "past_shields", "absorbed")),
+    9: ("missile_gone", ("missile", "type", "quantity", "x", "y")),
+    10: ("move", ("unit", "from_x", "from_y", "to_x", "to_y", "cost",
+                  "teleport")),
+    11: ("rotate", ("unit", "from_facing", "to_facing", "step")),
+    12: ("destroy", ("unit", "death_state", "status_before", "owner",
+                     "previous_owner", "x_px", "y_px")),
+    13: ("retreat", ("unit", "x", "y", "owner", "status")),
+    14: ("blast_hit", ("source", "unit", "kind", "past_shields", "absorbed")),
+    15: ("web_damage", ("unit", "past_shields", "absorbed")),
+    16: ("capture", ("attacker", "defender", "result", "marines",
+                     "defenders_left", "owner_after")),
+    17: ("raid", ("attacker", "target", "sent", "back", "defenders_left",
+                  "damage")),
+}
+EVENT_FORMAT = "<HB8h"
+EVENT_SIZE = _st.calcsize(EVENT_FORMAT)
+
+
+def _cmev(data, pos):
+    """CMEV: the events recorded since the last snapshot, numbered from
+    `first` — a first above the client's next number is a GAP (the ring
+    holds 1024, or no client was connected). An unknown kind is kept by its
+    number: a newer engine's event must not end the stream."""
+    version, first, n = _st.unpack_from("<BIH", data, pos + 4)
+    at = pos + 11
+    if version != 1 or at + n * EVENT_SIZE > len(data):
+        return None, pos
+    events = []
+    for k in range(n):
+        serial, kind, *args = _st.unpack_from(EVENT_FORMAT, data, at)
+        name, keys = EVENTS.get(kind, (f"kind_{kind}", ()))
+        ev = {"seq": first + k, "serial": serial, "kind": name}
+        ev.update({key: args[i] for i, key in enumerate(keys)})
+        events.append(ev)
+        at += EVENT_SIZE
+    return {"first": first, "events": events}, at
+
+
 def build_cmsl(missiles, serial=1):
     """CMSL as the engine writes it — for the checks' stand-ins."""
     out = b"CMSL" + _st.pack("<BHBh", 1, serial, MISSILE_SIZE, len(missiles))
@@ -222,7 +280,8 @@ def build_cmsl(missiles, serial=1):
 #: tag -> (reader, the GameState attribute); the ENGINE's order, which is
 #: the order the blocks are read in.
 PARSERS = {"CMBT": (_cmbt, "combat"), "CMSL": (_cmsl, "ordnance"),
-           "CRES": (_cres, "combat_result"), "CTGT": (_ctgt, "targets")}
+           "CRES": (_cres, "combat_result"), "CTGT": (_ctgt, "targets"),
+           "CMEV": (_cmev, "combat_events")}
 
 
 def cut(data, at, tag):
@@ -247,6 +306,8 @@ def weight(tag, block):
         return len(value["units"])
     if tag == "CTGT":
         return sum(bin(m).count("1") for m in value["units"])
+    if tag == "CMEV":
+        return len(value["events"])
     return len(block)
 
 

@@ -69,6 +69,8 @@ STACKED_AFTER_COLONY = (
     "doc/ext_combat_targets.patch",
     # 59 appends FBSC after 54's CTGT
     "doc/ext_fleet_box_scroll.patch",
+    # 56 adds the event ring at the file's head and appends CMEV after 59's FBSC
+    "doc/ext_combat_events.patch",
 )
 
 
