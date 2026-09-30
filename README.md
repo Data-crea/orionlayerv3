@@ -73,6 +73,7 @@ from the maintainer.
 | 20 | `8f7bd9e3` | open fix 51: which multiplayer step is up and what it shows (work order 188) | `doc/ext_multiplayer_state.patch` |
 | 21 | `96da4c4d` | open fix 42: the extension ticks during a screen's input delay, so the research panel's list arrives ~550 ms sooner (work order 191) | `doc/ext_input_delay_tick.patch` |
 | 22 | `ab3f6892` | open fix 61: a right click at a point (MSG_INJECT_RIGHT_CLICK), so the F12 view can turn a ship on the battle map (work order 194) | `doc/ext_inject_right_click.patch` |
+| 23 | `2495e1cf` | open fix 52: a tactical battle reports 65 (its scan view 66, its board popup 67), and the gate the combat blocks are written under (work order 194) | `doc/ext_combat_screen_id.patch` |
 
 ## Install
 

@@ -57,6 +57,8 @@ STACKED_AFTER_COLONY = (
     "doc/ext_multiplayer_state.patch",
     # work order 194: 61 adds a case to ProcessInput (the right click)
     "doc/ext_inject_right_click.patch",
+    # 52 adds the battle's gate after 50's g_hof_live
+    "doc/ext_combat_screen_id.patch",
 )
 
 

@@ -1,0 +1,149 @@
+Engine: a tactical battle reports its own screen id, and the gate the combat blocks are written under (open fix 52).
+
+STATUS: APPLIED 30 September 2026 by work order 194 (Part B, the first of the
+combat fixes reserved by work order 193) — orion2re 2495e1cf on
+orionlayer-local (before: ab3f6892), this file's diff byte for byte (index lines
+included). Required by tools/version_check.py since work order 194.
+
+It was applied, from ~/orion2re on the orionlayer-local branch, with:
+
+    patch -p1 < ~/orionlayerv3/doc/ext_combat_screen_id.patch
+
+and a rebuild. It comes back off with `git revert 2495e1cf` or `patch -R -p1`,
+and a rebuild.
+
+WHAT IT IS FOR
+
+    Nothing in cmbt*, comb* or combat* writes MOX::_current_screen, so a
+    client saw 12 (SCREEN_MAIN_NEXT_TURN; 37 in a network game) for a whole
+    battle and could not tell it from turn processing (work order 193,
+    survey §3). ext::CombatGuard lives in COMBINIT::Tactical_Combat_ from
+    just after Deploy_Ships_ to the end of the block that holds the turn
+    loop, before End_Of_Combat_ writes the losses back: it reports 65, sets
+    ext::g_combat_live — the gate every later combat block (53-57) is
+    written under — and counts the battle in ext::g_combat_serial. The scan
+    view (CMBTDRW1::Detailed_View_Ship_) reports 66 and the board popup
+    (CMBTDRW1::Board_Popup_) 67 while a battle is live; the scan view is
+    also opened from the fleet screen, the map and the Leaders screen, which
+    keep their own ids.
+
+    What is SENT changes, nothing the game reads: the override is the one
+    ScreenOverride already used by open fixes 46, 49 and 50. An engine
+    without OrionLayer behaves exactly as before. One marker, `OrionLayer,
+    open fix 52.`, on one line at every changed place (ext_api.h,
+    ext_api.cpp, combinit.cpp, cmbtdrw1.cpp).
+
+diff --git a/src/ext/ext_api.cpp b/src/ext/ext_api.cpp
+index 7c31af8f..f5b1b8e2 100644
+--- a/src/ext/ext_api.cpp
++++ b/src/ext/ext_api.cpp
+@@ -1933,6 +1933,19 @@ ScreenOverride::~ScreenOverride() {
+ // OrionLayer, open fix 50. The Hall of Fame takes input (ext_api.h).
+ bool g_hof_live = false;
+ 
++// OrionLayer, open fix 52. A tactical battle is up (ext_api.h).
++bool g_combat_live = false;
++uint16_t g_combat_serial = 0;
++
++CombatGuard::CombatGuard() : screen(SCREEN_EXT_COMBAT), previous(g_combat_live) {
++    g_combat_live = true;
++    ++g_combat_serial;
++}
++
++CombatGuard::~CombatGuard() {
++    g_combat_live = previous;
++}
++
+ // OrionLayer, open fix 29. The generic message box that is up (ext_api.h).
+ MessageBoxView g_message_box = {0, nullptr, nullptr, -1, -1, 0};
+ 
+diff --git a/src/ext/ext_api.h b/src/ext/ext_api.h
+index a93ce87a..0aa1d872 100644
+--- a/src/ext/ext_api.h
++++ b/src/ext/ext_api.h
+@@ -84,6 +84,31 @@ struct ListFieldGuard {
+ /// file is read, so the pointer alone cannot say the table is current.
+ extern bool g_hof_live;
+ 
++/// OrionLayer, open fix 52. A tactical battle: its own id and the gate every combat block is written under.
++///
++/// Nothing in cmbt*/comb*/combat* writes MOX::_current_screen, so a client
++/// saw 12 (37 in a network game) for the whole battle and could not tell it
++/// from turn processing. CombatGuard lives in COMBINIT::Tactical_Combat_ from
++/// the ships' deployment to the end of the turn loop (before End_Of_Combat_
++/// writes the losses back): it reports SCREEN_EXT_COMBAT, sets g_combat_live
++/// and counts the battle in g_combat_serial. The two modals the battle opens
++/// report their own ids while it is live — the scan view
++/// (CMBTDRW1::Detailed_View_Ship_, also opened from the fleet screen, the map
++/// and the Leaders screen, which keep theirs) and the board popup
++/// (CMBTDRW1::Board_Popup_). What is SENT, nothing the game reads.
++constexpr int16_t SCREEN_EXT_COMBAT = 65;
++constexpr int16_t SCREEN_EXT_COMBAT_SCAN = 66;
++constexpr int16_t SCREEN_EXT_COMBAT_BOARD = 67;
++extern bool g_combat_live;
++extern uint16_t g_combat_serial;
++
++struct CombatGuard {
++    ScreenOverride screen;
++    bool previous;
++    CombatGuard();
++    ~CombatGuard();
++};
++
+ /// OrionLayer, open fix 29. The generic message box that is up: which kind,
+ /// its title and text as the caller handed them (raw, FMTPARA codes and
+ /// all), the field id of each answer and a timed box's ticks — the text
+diff --git a/src/game/cmbtdrw1.cpp b/src/game/cmbtdrw1.cpp
+index 9a05bd14..2ebfd504 100644
+--- a/src/game/cmbtdrw1.cpp
++++ b/src/game/cmbtdrw1.cpp
+@@ -1,4 +1,7 @@
+ #include "pch.h"
++#ifdef ORION2RE_EXT
++#include "ext/ext_api.h"  // OrionLayer, open fix 52. The battle's two modals have ids.
++#endif
+ 
+ namespace CMBTDRW1 {
+     const char s_combat_lbx[11] = "combat.lbx";
+@@ -217,6 +220,9 @@ namespace CMBTDRW1 {
+ 
+         int16_t exit_field_id = fields::Add_Hidden_Field_(0, 0, 0x27F, 0x1DF, "", 0);
+         bool exit_triggered = false;
++#ifdef ORION2RE_EXT
++        const ext::ScreenOverride ext_screen_guard(ext::g_combat_live ? ext::SCREEN_EXT_COMBAT_SCAN : -1);  // OrionLayer, open fix 52. 66 in a battle; elsewhere the caller's id.
++#endif
+         do {
+             int16_t input = fields::Get_Input_();
+             if (input == exit_field_id) {
+@@ -1610,6 +1616,9 @@ skip_cursor:
+         Draw_Board_Popup_();
+         RUSS::Mox_Sync_Update_();
+         mouse::Set_Mouse_List_(&MOX::_mouse_list_arrow, 1);
++#ifdef ORION2RE_EXT
++        const ext::ScreenOverride ext_screen_guard(ext::g_combat_live ? ext::SCREEN_EXT_COMBAT_BOARD : -1);  // OrionLayer, open fix 52. The board popup reports 67.
++#endif
+ 
+         while (!done) {
+             int16_t input = fields::Get_Input_();
+diff --git a/src/game/combinit.cpp b/src/game/combinit.cpp
+index f05008b9..9863a461 100644
+--- a/src/game/combinit.cpp
++++ b/src/game/combinit.cpp
+@@ -1,4 +1,7 @@
+ #include "pch.h"
++#ifdef ORION2RE_EXT
++#include "ext/ext_api.h"  // OrionLayer, open fix 52. The battle on the wire.
++#endif
+ 
+ namespace {
+     constexpr int kPlayerRemapPaletteStart = 144;
+@@ -1001,6 +1004,9 @@ int16_t __cdecl Tactical_Combat_(int16_t* plr1_ships, int16_t plr1_ship_count, i
+ 
+         Deploy_Ships_();
+         RUSS::Mox_Update_();
++#ifdef ORION2RE_EXT
++        const ext::CombatGuard ext_combat_guard;  // OrionLayer, open fix 52. 65 and the combat blocks' gate until the loop's block ends, before End_Of_Combat_.
++#endif
+ 
+         MOX::_auto_combat_flag[0] = 0;
+         MOX::_auto_combat_flag[1] = 0;

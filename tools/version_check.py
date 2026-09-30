@@ -300,6 +300,12 @@ LOCAL_PATCHES = {
         "OrionLayer, open fix 61.",
         "the wire has no right click at a point (open fix 61): the F12 view "
         "cannot turn a ship on the battle map"),
+    # Applied 30 September 2026 by work order 194: 2495e1cf, on ab3f6892.
+    "doc/ext_combat_screen_id.patch": (
+        os.path.join("src", "ext", "ext_api.cpp"),
+        "OrionLayer, open fix 52.",
+        "a tactical battle has no screen id (open fix 52): it reports 12 "
+        "and no combat block is written"),
 }
 
 #: Patches that are REPORTED to Joes and not yet applied: listed with
@@ -361,6 +367,7 @@ FIX_NUMBERS = {
     "doc/ext_hall_of_fame.patch": (50,),
     "doc/ext_multiplayer_state.patch": (51,),
     "doc/ext_inject_right_click.patch": (61,),
+    "doc/ext_combat_screen_id.patch": (52,),
 }
 
 
