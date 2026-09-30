@@ -33,7 +33,10 @@ list agrees with that click:
     box is drawn only while the FSEL block names an open box, and its
     chain must be one stack of the snapshot's ships holding the clicked
     one. The first visible cell is `first_visible_row * 3`
-    (fleetpop.cpp:643), not on the wire: HD shows the chain's first nine.
+    (fleetpop.cpp:643), on the wire since open fix 59 ("FBSC", work order
+    197 A2): a stack past nine ships is drawn from that row, and without
+    the block such a stack is not drawn at all — HD does not guess which
+    rows the engine shows.
 
 A mismatch draws nothing and says why. A box HD did not open — the game
 reopening the system window after the colony screen, a click in the game
@@ -78,6 +81,7 @@ from core.structs import player as player_struct
 from core.structs import ship as ship_struct
 from core.structs import star as star_struct
 from screens.galaxy_map import ships as ship_icons
+from screens.galaxy_map.boxscroll import FLEET_ICONS_MAX, scroll_window  # noqa: F401
 
 #: GEO::_orbit_consts, geo.cpp:5-13 — ellipse radii in TENTHS of a pixel;
 #: orbit n uses row n + 1 (geo.cpp:367-368).
@@ -93,7 +97,6 @@ ELLIPSE_TOLERANCE = 0.2
 #: 0x13 to 0x18, harold.cpp:1491-1494).
 PLANET_FIELD_MAX = 30
 FLEET_ICON_SPAN = 0x35          # fleetpop.cpp:164, x_end - x
-FLEET_ICONS_MAX = 9             # fleetpop.cpp:648-650
 PLANET_TYPE_ASTEROID = 1        # orion2_consts.h:402
 H_SYSTEM, H_UNEXPLORED = 0x16A, 0x16B
 H_WORMHOLE, H_WORMHOLE_UNKNOWN = 0x16C, 0x16D
@@ -321,6 +324,9 @@ def fleet_model(state, ident, box, text):
     if found is None:
         return None, why
     chain, stack = found
+    start, scroll, why = scroll_window(state, len(stack))
+    if why is not None:
+        return None, why
     if ident.ship not in stack:
         return None, (f"the clicked ship {ident.ship} is not in the stack "
                       f"{stack} the engine's box shows")
@@ -332,9 +338,12 @@ def fleet_model(state, ident, box, text):
     icon_fields = [f for f in box.fields if f.field_type == 7
                    and f.x_end - f.x == FLEET_ICON_SPAN
                    and f.y_end - f.y == FLEET_ICON_SPAN]
-    if len(icon_fields) != min(FLEET_ICONS_MAX, len(stack)):
+    # FLEETPOP adds a field for each VISIBLE icon only (fleetpop.cpp:150-
+    # 170, from `_first_fleet_movement_icon`), so the count is the window's.
+    visible = stack[start:start + FLEET_ICONS_MAX]
+    if len(icon_fields) != len(visible):
         return None, (f"{len(icon_fields)} icon fields for a stack of "
-                      f"{len(stack)}")
+                      f"{len(stack)} from cell {start}")
     stars = getattr(state, "stars", None) or []
     # The head node's ship, as FLEETPOP titles the box (fleetpop.cpp:618,
     # :625).
@@ -345,13 +354,14 @@ def fleet_model(state, ident, box, text):
         title = _msg(text, H_FLEET, getattr(local, "race_name", ""))
     else:
         title = str(first.name).upper()
-    shown = stack[:FLEET_ICONS_MAX]
+    shown = visible
+    nodes = chain[start:start + FLEET_ICONS_MAX]
     flags = state.fleet_selection["selected"]
     me = getattr(state, "player_num", 0)
     return {"kind": "fleet", "ship": ident.ship, "stack": shown,
-            "nodes": chain[:FLEET_ICONS_MAX], "count": len(stack),
+            "nodes": nodes, "count": len(stack), "scroll": scroll,
             "owners": [ships[i].owner for i in shown],
-            "selected": [flags[n] for n in chain[:FLEET_ICONS_MAX]],
+            "selected": [flags[n] for n in nodes],
             "selectable": [ships[i].owner == me and ships[i].status in
                            ORDERABLE_STATUS for i in shown],
             "title": title, "status": fleet_status(state, first, stars, text),

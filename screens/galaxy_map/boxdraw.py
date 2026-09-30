@@ -17,13 +17,18 @@ the words are the original's (boxmodel). Two things follow the original
 on purpose: a box sits on the same SIDE of the map as the game's window
 (left or right, top or bottom, read from the window's own rect), so it
 does not cover the star or fleet it belongs to; and a stack shows at most
-nine ships in rows of three. Two things do not: the planets stand in a
+nine ships in rows of three — past nine, the three rows the engine shows
+(open fix 59, FBSC) with the bar's thumb where the engine has it and its
+two arrows sending the bar's own "-" / "+" buttons (fleetpop.cpp:189-216,
+mainscr.cpp:3404-3408; work order 197 A2). Two things do not: the planets stand in a
 row by orbit instead of on ellipses, and a ship is drawn as its map icon
 (the fleet box's own ship pictures are not extracted).
 
 OMISSION (decision 61), each a field HD leaves alone: the system window's
 ship buttons, gate icons and planet hover line; the fleet box's ALL,
-scroll and the Outpost / Colonize / Engage / Transport / Attack buttons;
+the bar's thumb drag (a scroll field that reads the POINTER, fleetpop.cpp:
+213-216 — a click on the track steps one row toward it instead, DEVIATION
+`fleet_scroll_track`) and the Outpost / Colonize / Engage / Transport / Attack buttons;
 the space-monster branch of the system window. And three things drawn
 without a field, seen beside the original's window on 15 September 2026
 (evidence 71): the orbit rings, the asteroid belts, and the colony
@@ -205,21 +210,52 @@ def orders_ok(screen):
     return any(m["kind"] == "fleet" for _, _, m in drawable(screen))
 
 
-def _draw_scroll(screen, surface, grid, count):
-    """HD STATE: the bar the original shows past nine ships, drawn as a
-    display only. Its position (the box's first visible row) is not on
-    the wire, so the thumb stands at the top; not measured, not clickable
-    (brief 117: measured once the patches are live)."""
-    bar = pygame.Rect(grid.right + 2, grid.y, max(6, grid.w // 30), grid.h)
-    hud.scrollbar(surface, bar, screen.layout.scale, 0,
-                  boxmodel.FLEET_ICONS_MAX, count)
+def scroll_rects(box, grid):
+    """(bar, up, down) window rects of the fleet box's scroll column: the
+    strip between the grid and the box's right edge, an arrow square at
+    each end — the original's buttons sit above and below its track
+    (fleetpop.cpp:197-216)."""
+    w = max(8, min(box.right - grid.right - 3, grid.w // 12))
+    bar = pygame.Rect(grid.right + 1, grid.y, w, grid.h)
+    return (bar, pygame.Rect(bar.x, bar.y, w, w),
+            pygame.Rect(bar.x, bar.bottom - w, w, w))
+
+
+def _draw_scroll(screen, surface, box, grid, scroll, hits):
+    """The bar the original shows past nine ships (fleetpop.cpp:189, :782):
+    the thumb at the row the engine shows (FBSC), and the two arrows, each
+    a hit area for the bar's own button when the live list carries it."""
+    bar, up, down = scroll_rects(box, grid)
+    hud.scrollbar(surface, bar.inflate(0, -2 * up.h), screen.layout.scale,
+                  scroll["first_row"], scroll["visible_rows"], scroll["rows"])
+    for rect, field, top in ((up, scroll["up"], True),
+                             (down, scroll["down"], False)):
+        cx, cy, h = rect.centerx, rect.centery, max(2, rect.w // 3)
+        pts = ([(cx, cy - h), (cx - h, cy + h), (cx + h, cy + h)] if top
+               else [(cx, cy + h), (cx - h, cy - h), (cx + h, cy - h)])
+        pygame.draw.polygon(surface, TEXT_COLOR[:3], pts)
+        if field is not None:
+            hits.append((rect, field))
+    # DEVIATION `fleet_scroll_track`: the original's track is a scroll field
+    # dragged by the POINTER; a click on HD's track steps one row toward it
+    # through the same buttons.
+    track = pygame.Rect(bar.x, up.bottom, bar.w, down.y - up.bottom)
+    mid = track.y + track.h * (scroll["first_row"] + 1.5) / scroll["rows"]
+    if scroll["up"] is not None:
+        hits.append((pygame.Rect(track.x, track.y, track.w,
+                                 max(0, int(mid) - track.y)), scroll["up"]))
+    if scroll["down"] is not None:
+        hits.append((pygame.Rect(track.x, int(mid), track.w,
+                                 max(0, track.bottom - int(mid))),
+                     scroll["down"]))
 
 
 def _draw_fleet(screen, surface, r, model, hits):
     grid = r["fleet_grid"]
     cw, ch = grid.w // 3, grid.h // 3
-    if model["count"] > boxmodel.FLEET_ICONS_MAX:
-        _draw_scroll(screen, surface, grid, model["count"])
+    if model.get("scroll"):
+        _draw_scroll(screen, surface, r["fleet_box"], grid, model["scroll"],
+                     hits)
     for i, (ship, owner) in enumerate(zip(model["stack"], model["owners"])):
         cell = pygame.Rect(grid.x + cw * (i % 3), grid.y + ch * (i // 3),
                            cw, ch).inflate(-4, -4)
