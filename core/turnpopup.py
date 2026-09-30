@@ -39,6 +39,7 @@ drawn. A popup's help texts on right click are not offered.
 import pygame
 
 from core import helpformat
+from core.msgbox import dimmed_base
 from core.hud import blocks as hud
 from core.hud import text as hudtext
 from core.turnpopupwire import (  # noqa: F401 — the names callers use
@@ -69,20 +70,12 @@ class View:
 
     def render(self, surface, style, labels, popup, state, backdrop=None,
                app=None):
-        """`backdrop(surface)`, when given, draws what stands behind the
-        popup in the original — the galaxy map for the report phase's
-        popups (mainscr2.cpp: Reports_Screen_ runs over the map) — once,
-        when the popup first appears, instead of whatever HD frame came
-        last (a new colony's screen before the Turn Summary, seen live)."""
-        size = surface.get_size()
-        if self._base is None or self._base.get_size() != size:
-            if backdrop is not None:
-                backdrop(surface)
-            base = surface.copy()
-            shade = pygame.Surface(size, pygame.SRCALPHA)
-            shade.fill((0, 0, 0, 110))
-            base.blit(shade, (0, 0))
-            self._base = base
+        """`backdrop(surface)`, when given, draws the screen that stands
+        behind the popup — the galaxy map for the report phase's popups
+        (mainscr2.cpp: Reports_Screen_ runs over the map) — and returns
+        True; without one, or when it has nothing to draw, the popup stands
+        over the held frame (`msgbox.dimmed_base`, work order 196 A)."""
+        self._base = dimmed_base(surface, self._base, 110, backdrop)
         surface.blit(self._base, (0, 0))
         words = dict(DEFAULT_WORDS, **{k: v for k, v in (labels or {}).items()
                                        if k in DEFAULT_WORDS and v})

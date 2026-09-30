@@ -143,3 +143,27 @@ def nav_hit(screen, key, x, y):
         return False
     return (rect.collidepoint(x, y) if key == "turn"
             else hud.slant_hit(rect, x, y))
+
+
+def render_backdrop(screen, surface):
+    """The map behind a box or a turn-time popup (work order 196 A).
+
+    While the engine processes a turn it reports ids no HD screen claims,
+    the dispatcher EXITS the map, and `ScreenBase.exit` drops its boxes.
+    Rendered then, the map had no map area, sidebar or nav and drew only
+    its floor and the title: the black screen Data saw behind the Turn
+    Summary, the landing and every box after them. So an exited map loads
+    its boxes for the window as it is and draws the map as it last saw it
+    (no `update`: that would park the game and read the engine's modals).
+    Its own modal (`_modal`) and help are left out — the App's box is the
+    dialog, and two would stack."""
+    size = (screen.app.win_w, screen.app.win_h)
+    if not screen.active and (not screen.boxes
+                              or screen._backdrop_size != size):
+        screen._reload_boxes()
+        screen._update_box_layout()
+        screen._backdrop_size = size
+    screen._render_map(surface)
+    render_sidebar(screen, surface)
+    render_nav(screen, surface)
+    render_title(screen, surface)

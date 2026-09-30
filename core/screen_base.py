@@ -92,6 +92,14 @@ class ScreenBase(HelpMixin):
         for box in self.boxes:
             box.icon = glyphs.for_button(self.SCREEN_NAME, box.name)
 
+    def render_backdrop(self, surface):
+        """This screen as it stands BEHIND a box or a turn-time popup the
+        App draws over it (`core.overlays`, work order 196 A): its page,
+        and no dialog of its own — the App's box is the dialog. The default
+        is the screen's own render; a screen that draws the engine's modals
+        itself, or that can be asked while exited, says otherwise."""
+        self.render(surface)
+
     def wants_original(self):
         """True when this screen cannot vouch for what it would draw.
 

@@ -110,13 +110,9 @@ class View:
                            "not describe this colony yet (open fixes 37, "
                            "38).")
             return
-        if live_field(getattr(state, "fields", None), geom.RETURN) is None:
-            self.state = GAME_BOX
-            self.reason = ("The game has opened its own box over the colony "
-                           "screen; its fields are the only ones on the "
-                           "wire until it is answered.")
-            return
-        self.state = READY
+        # EVERY BLOCK AGREES: the page is known whether or not a box of the
+        # game's covers it — GAME_BOX draws it behind the App's box (work
+        # order 196 A), only the list below decides which state this is.
         self.index = derived
         self.colony = record
         self.planet = at[0]
@@ -138,6 +134,13 @@ class View:
         # screens. None for a colony that is not the local player's.
         self.row = next((r for r in colonyrows.build_rows(state)
                          if r["index"] == derived), None)
+        if live_field(getattr(state, "fields", None), geom.RETURN) is None:
+            self.state = GAME_BOX
+            self.reason = ("The game has opened its own box over the colony "
+                           "screen; its fields are the only ones on the "
+                           "wire until it is answered.")
+            return
+        self.state = READY
 
     # ── What the screen draws, each from one source ──────────────────
 

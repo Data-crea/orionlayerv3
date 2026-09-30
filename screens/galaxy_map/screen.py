@@ -128,6 +128,7 @@ class GalaxyMapScreen(ScreenBase):
         self._pan_from = None                   # right-drag anchor
         self._eta_lock = None                   # mapeta: order pending
         self._eta_cache = {}
+        self._backdrop_size = None              # hudview.render_backdrop
 
     # ── Lifecycle ─────────────────────────────────────────
 
@@ -485,6 +486,9 @@ class GalaxyMapScreen(ScreenBase):
             self._modal.render(surface)
         # Above the HUD: the popup is a dialog, not content.
         self.render_help(surface)
+
+    def render_backdrop(self, surface):
+        hudview.render_backdrop(self, surface)
 
     def title_rect(self):
         return hudview.title_rect(self)

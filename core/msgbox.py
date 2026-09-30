@@ -8,9 +8,10 @@
 `GENDRAW::Confirmation_Box_` print a string their caller formatted, which
 until open fix 29 reached a client only as pixels. "MSGB" puts the kind,
 the title, the text (raw, FMTPARA codes and all) and the answer fields on
-the wire while the box takes input; this draws it in HD over the held last
-HD frame, wherever it opens — over an HD page, over the galaxy map at turn
-start, or over a screen HD has no view for (turn processing).
+the wire while the box takes input; this draws it in HD wherever it opens,
+over the screen that is open — an HD page, the galaxy map at turn start and
+through turn processing, where no HD screen claims the id — or over the held
+last HD frame under an HD popup (`core.overlays.backdrop`, work order 196 A).
 
 WHAT IS TRANSCRIPTION: the text and title are the game's own, as the caller
 formatted them; the answers are the box's own fields (Yes = "Y", No = "N",
@@ -129,15 +130,13 @@ class View:
         self.rects = {}
         self.panel = None
 
-    def render(self, surface, style, labels, box):
-        """Draw `box` over the held surface; returns the panel rect."""
-        size = surface.get_size()
-        if self._base is None or self._base.get_size() != size:
-            base = surface.copy()
-            shade = pygame.Surface(size, pygame.SRCALPHA)
-            shade.fill((0, 0, 0, DIM_ALPHA))
-            base.blit(shade, (0, 0))
-            self._base = base
+    def render(self, surface, style, labels, box, backdrop=None):
+        """Draw `box` over the screen behind it; returns the panel rect.
+
+        `backdrop(surface)` draws the screen that is open and returns True,
+        or False when there is none to draw — then the box stands over the
+        held surface, dimmed once (`core.overlays`, work order 196 A)."""
+        self._base = dimmed_base(surface, self._base, DIM_ALPHA, backdrop)
         surface.blit(self._base, (0, 0))
         self.panel, self.rects = draw(surface, style, labels, box)
         return self.panel
@@ -165,6 +164,23 @@ class View:
                          pygame.K_KP_ENTER):
             return live.get("close")
         return None
+
+
+def dimmed_base(surface, base, alpha, backdrop=None):
+    """What a box or popup stands on, dimmed by `alpha`: the screen that is
+    open, drawn NOW by `backdrop` (a live screen, so every frame), or — when
+    `backdrop` draws nothing — the held surface, copied once and kept
+    (`base`), because after the first frame the surface holds the box too.
+    Shared by the message box and the turn popups (work order 196 A)."""
+    size = surface.get_size()
+    live = backdrop is not None and backdrop(surface)
+    if not live and base is not None and base.get_size() == size:
+        return base
+    out = surface.copy()
+    shade = pygame.Surface(size, pygame.SRCALPHA)
+    shade.fill((0, 0, 0, alpha))
+    out.blit(shade, (0, 0))
+    return out
 
 
 def draw(surface, style, labels, box):

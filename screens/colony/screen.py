@@ -164,6 +164,17 @@ class ColonyScreen(ScreenBase):
                              align="center")
         self.render_help(surface)
 
+    def render_backdrop(self, surface):
+        """The page behind the game's own box (work order 196 A) — "just
+        colonized", BUY — which the original draws over this screen: in
+        GAME_BOX every block has been checked, only the list is the box's."""
+        view = self._view
+        if view is None or view.state not in (colwire.READY, colwire.GAME_BOX):
+            return
+        self._render_background(surface)
+        coldraw.draw(surface, self, view, self._state, self._words,
+                     Names(self._state, self._buildings, self._strings))
+
     # ── Sending ──────────────────────────────────────────────────────
 
     def _live(self):

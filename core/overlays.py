@@ -55,12 +55,12 @@ class Overlays:
         drew = False
         if self.box is not None:
             self.box_view.render(surface, app.style, self.box_labels,
-                                 self.box)
+                                 self.box, backdrop=self.backdrop)
             drew = True
         elif self.popup is not None:
             self.popup_view.render(surface, app.style, self.popup_labels,
                                    self.popup, app.client.state,
-                                   backdrop=self._map_backdrop, app=app)
+                                   backdrop=self.backdrop, app=app)
             drew = True
         if self.box is None:
             self.box_view.reset()
@@ -69,13 +69,43 @@ class Overlays:
             self.popup_view.sent = None
         return drew
 
-    def _map_backdrop(self, surface):
-        """The galaxy map as its screen last drew it, behind a turn popup
-        (the report phase runs over the map in the original)."""
-        gm = self.app.dispatcher.screens.get("galaxy_map")
-        if gm is not None and getattr(gm, "_state", None) is not None:
-            surface.fill((4, 6, 14))
-            gm.render(surface)
+    def backdrop(self, surface):
+        """THE SCREEN THAT IS OPEN, drawn behind the box or popup — True if
+        it drew, False to leave the held frame (work order 196 A).
+
+        Data saw every turn-time popup and the boxes after it on a black
+        screen: the popups asked for the galaxy map, which the dispatcher
+        had EXITED for the turn (its boxes dropped, so it drew only its
+        floor and title), and a box stood on whatever frame was held — that
+        black base, or the frame before a screen that had just come up (the
+        new colony's, behind "just colonized"). The original draws each box
+        over the screen it opened on; the report phase's popups over the
+        map (mainscr2.cpp, `Reports_Screen_`). So:
+
+          an HD overlay is up (the GAME menu)   the held frame: the popup's
+                                                own picture under its
+                                                confirmation (gmdraw)
+          an HD screen claims the game's id     that screen's page
+          none does, in a game                  the galaxy map, as it last
+                                                drew it
+          none does, before a game              the held frame
+        """
+        d = self.app.dispatcher
+        if d.overlay is not None:
+            return False
+        top = d.active
+        # a screen whose data is there and whose list a box replaced
+        # (`modal_is_box`) has a page to stand behind it; one that cannot
+        # vouch for its data has none
+        if top is None or not top.draws_this_frame() or (
+                top.wants_original() and not top.modal_is_box()):
+            top = d.screens.get("galaxy_map")
+            if top is None or not same_game(getattr(top, "_state", None),
+                                            self.app.client.state):
+                return False
+        surface.fill((4, 6, 14))
+        top.render_backdrop(surface)
+        return True
 
     # ── input ─────────────────────────────────────────────────────────
     def click(self, x, y):
@@ -129,3 +159,15 @@ class Overlays:
                                     (field.y + field.y_end) // 2)
         else:
             app.client.activate_field(field.index)
+
+
+def same_game(map_state, state):
+    """True when the galaxy map's last snapshot is of the game running now:
+    the same galaxy and player, at most one turn behind (the report phase
+    runs after the stardate moved). A finished game's map must not stand
+    behind a box before the next game (work order 196 A)."""
+    if map_state is None or state is None:
+        return False
+    return (getattr(map_state, "num_stars", -1) == getattr(state, "num_stars", -2)
+            and getattr(map_state, "player_num", -1) == getattr(state, "player_num", -2)
+            and 0 <= getattr(state, "stardate", 0) - getattr(map_state, "stardate", 0) <= 1)
