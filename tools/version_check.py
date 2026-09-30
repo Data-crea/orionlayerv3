@@ -312,6 +312,12 @@ LOCAL_PATCHES = {
         "OrionLayer, open fix 53.",
         "the tactical battle's state is not on the wire (open fix 53): no "
         "unit, turn, view origin or legal move reaches HD"),
+    # Applied 30 September 2026 by work order 194: f506bc6c, on 9b7dcba0.
+    "doc/ext_combat_ordnance.patch": (
+        os.path.join("src", "ext", "ext_api.cpp"),
+        "OrionLayer, open fix 55.",
+        "the ordnance in flight is not on the wire (open fix 55): no "
+        "missile, torpedo or fighter reaches HD"),
 }
 
 #: Patches that are REPORTED to Joes and not yet applied: listed with
@@ -375,6 +381,7 @@ FIX_NUMBERS = {
     "doc/ext_inject_right_click.patch": (61,),
     "doc/ext_combat_screen_id.patch": (52,),
     "doc/ext_combat_state.patch": (53,),
+    "doc/ext_combat_ordnance.patch": (55,),
 }
 
 

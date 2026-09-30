@@ -61,6 +61,8 @@ STACKED_AFTER_COLONY = (
     "doc/ext_combat_screen_id.patch",
     # 53 appends CMBT after 51's MPLY, LAST
     "doc/ext_combat_state.patch",
+    # 55 appends CMSL after 53's CMBT
+    "doc/ext_combat_ordnance.patch",
 )
 
 

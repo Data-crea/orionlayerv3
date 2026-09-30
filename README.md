@@ -75,6 +75,7 @@ from the maintainer.
 | 22 | `ab3f6892` | open fix 61: a right click at a point (MSG_INJECT_RIGHT_CLICK), so the F12 view can turn a ship on the battle map (work order 194) | `doc/ext_inject_right_click.patch` |
 | 23 | `2495e1cf` | open fix 52: a tactical battle reports 65 (its scan view 66, its board popup 67), and the gate the combat blocks are written under (work order 194) | `doc/ext_combat_screen_id.patch` |
 | 24 | `9b7dcba0` | open fix 53: the tactical battle's state — units field by field, the turn order, the view origin, the legal moves ("CMBT") (work order 194) | `doc/ext_combat_state.patch` |
+| 25 | `f506bc6c` | open fix 55: the ordnance in flight — missiles, torpedoes, fighters with their targets ("CMSL") (work order 194) | `doc/ext_combat_ordnance.patch` |
 
 ## Install
 

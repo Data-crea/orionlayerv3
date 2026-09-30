@@ -14,7 +14,7 @@ position where it was.
             `s_combat_data` without its picture pointer, 309 bytes), and the
             acting unit's legal moves as a bitmap over the 81 x 68 grid.
     "CMSL"  55  the ordnance in flight: each live `s_missile` (26 bytes) with
-            its index.
+            its index (`gs.ordnance`).
     "CRES"  57  how the last battle ended, kept until the next one starts.
     "CTGT"  54  the engine's verdict of what each weapon slot of the acting
             unit can hit now, per unit and per missile.
@@ -122,9 +122,50 @@ def _cmbt(data, pos):
     return out, at + nbytes
 
 
+#: `s_missile` (orion2.h:1249-1266), 0x1A bytes — sizes.h asserts it.
+MISSILE_SIZE = 26
+MISSILE_FIELDS = (("type", "h"), ("owner", "h"), ("source_unit_idx", "h"),
+                  ("target_unit_idx", "h"), ("is_anti_missile_rocket", "b"),
+                  ("x", "h"), ("y", "h"), ("hits_taken", "h"),
+                  ("quantity", "h"), ("specials", "H"), ("travel_dist", "h"),
+                  ("facing_dir", "b"), ("speed", "B"), ("fighter_count", "b"),
+                  ("pad", "b"), ("is_active", "b"))
+MISSILE_FORMAT = "<" + "".join(f for _n, f in MISSILE_FIELDS)
+assert _st.calcsize(MISSILE_FORMAT) == MISSILE_SIZE
+
+
+def _cmsl(data, pos):
+    """CMSL: version, serial, the record size, n, n x (int16 index, the
+    live `s_missile` — type above 0)."""
+    version, serial, size, n = _st.unpack_from("<BHBh", data, pos + 4)
+    at = pos + 10
+    if version != 1 or size != MISSILE_SIZE or not 0 <= n <= 300 or \
+            at + n * (2 + size) > len(data):
+        return None, pos
+    missiles = []
+    for _ in range(n):
+        (index,) = _st.unpack_from("<h", data, at)
+        vals = _st.unpack_from(MISSILE_FORMAT, data, at + 2)
+        m = dict(zip((k for k, _f in MISSILE_FIELDS), vals))
+        m["index"] = index
+        missiles.append(m)
+        at += 2 + size
+    return {"serial": serial, "missiles": missiles}, at
+
+
+def build_cmsl(missiles, serial=1):
+    """CMSL as the engine writes it — for the checks' stand-ins."""
+    out = b"CMSL" + _st.pack("<BHBh", 1, serial, MISSILE_SIZE, len(missiles))
+    for m in missiles:
+        out += _st.pack("<h", m["index"])
+        out += _st.pack(MISSILE_FORMAT, *(int(m.get(k, 0))
+                                          for k, _f in MISSILE_FIELDS))
+    return out
+
+
 #: tag -> (reader, the GameState attribute); the ENGINE's order, which is
 #: the order the blocks are read in.
-PARSERS = {"CMBT": (_cmbt, "combat")}
+PARSERS = {"CMBT": (_cmbt, "combat"), "CMSL": (_cmsl, "ordnance")}
 
 
 def cut(data, at, tag):
@@ -143,6 +184,8 @@ def weight(tag, block):
     value, _end = PARSERS[tag][0](block, 0)
     if tag == "CMBT":
         return len(value["units"])
+    if tag == "CMSL":
+        return len(value["missiles"])
     return len(block)
 
 
