@@ -1,0 +1,188 @@
+Engine: how the last battle ended, "CRES" (open fix 57).
+
+STATUS: APPLIED 30 September 2026 by work order 194 (Part B; reserved by
+work order 193) — orion2re f1e6c581 on orionlayer-local (before: f506bc6c), this
+file's diff byte for byte (index lines included). Required by
+tools/version_check.py since work order 194.
+
+It was applied, from ~/orion2re on the orionlayer-local branch, with:
+
+    patch -p1 < ~/orionlayerv3/doc/ext_combat_result.patch
+
+and a rebuild. It comes back off with `git revert f1e6c581` or `patch -R -p1`,
+and a rebuild.
+
+WHAT IT IS FOR
+
+    A battle's end has no box and no input (COMBINIT::End_Of_Combat_), so a
+    client saw the result only afterwards, as a changed _ship[] (work order
+    193, survey §3). ext::Record_Combat_Result, called from
+    COMBINIT::Tactical_Combat_ just before End_Of_Combat_ writes the losses
+    back, keeps: a result number, the battle's serial (0 when the battle
+    was aborted before it started — abort_tactical), the winner exactly as
+    handed to End_Of_Combat_ (1 attacker, -1 defender, also after the
+    50-turn timeout, 666 both gone), the combat turn, star, colony, sides,
+    the colony's population lost, the stardate, and per unit its ship
+    index, owner, previous owner, status, retreat and capture flags and
+    damage. Block "CRES" is written on ANY screen while a result is kept,
+    and it is kept until the next battle starts: the stardate moves on in
+    the same Next_Turn_ as the battles (nextturn.cpp:123, :161), possibly
+    before any tick, so "until the turn moves on" could have sent it never.
+
+    What is recorded is a copy of values End_Of_Combat_ receives or reads;
+    nothing the game reads is written. An engine without OrionLayer behaves
+    exactly as before. One marker, `OrionLayer, open fix 57.`, on one line
+    at every changed place (ext_api.h, ext_api.cpp ×2, combinit.cpp).
+
+diff --git a/src/ext/ext_api.cpp b/src/ext/ext_api.cpp
+index 2c0b688e..37bfd2da 100644
+--- a/src/ext/ext_api.cpp
++++ b/src/ext/ext_api.cpp
+@@ -1518,6 +1518,42 @@ static void SerializeState(std::vector<uint8_t>& buf,
+             }
+         }
+     }
++
++    // 21. How the last battle ended: "CRES", written while a result is kept
++    //     (from just before End_Of_Combat_ until the next battle starts), on
++    //     ANY screen, after CMSL. OrionLayer, open fix 57.
++    if (g_combat_result.valid) {
++        const CombatResultView& r = g_combat_result;
++        buf.push_back((uint8_t)'C');
++        buf.push_back((uint8_t)'R');
++        buf.push_back((uint8_t)'E');
++        buf.push_back((uint8_t)'S');
++        Write8(buf, 1);                                   // block version
++        Write16(buf, (int16_t)r.number);
++        Write16(buf, (int16_t)r.serial);
++        Write8(buf, r.fought);
++        Write16(buf, r.winner);
++        Write16(buf, r.turn);
++        Write16(buf, r.star);
++        Write16(buf, r.colony);
++        Write16(buf, r.attacker);
++        Write16(buf, r.defender);
++        Write16(buf, r.colony_pop_lost);
++        Write32(buf, r.stardate);
++        Write16(buf, r.units);
++        for (int16_t i = 0; i < r.units; i++) {
++            const CombatResultUnit& u = r.unit[i];
++            Write16(buf, u.ship_idx);
++            Write8(buf, (uint8_t)u.owner);
++            Write8(buf, u.previous_owner);
++            Write8(buf, (uint8_t)u.unit_status);
++            Write8(buf, (uint8_t)u.is_retreating);
++            Write8(buf, (uint8_t)u.is_captured);
++            Write16(buf, u.structure_damage);
++            Write16(buf, u.armor_remaining);
++            Write16(buf, u.structure_max);
++        }
++    }
+ }
+ 
+ // ── Field list ───────────────────────────────────────────
+@@ -2044,6 +2080,37 @@ uint16_t g_combat_serial = 0;
+ CombatGuard::CombatGuard() : screen(SCREEN_EXT_COMBAT), previous(g_combat_live) {
+     g_combat_live = true;
+     ++g_combat_serial;
++    g_combat_result.valid = false;  // OrionLayer, open fix 57. A new battle: the last result goes.
++}
++
++// OrionLayer, open fix 57. How the last battle ended (ext_api.h).
++CombatResultView g_combat_result = {};
++
++void Record_Combat_Result(int16_t star_idx, int16_t colony_pop_lost,
++                          int16_t winner, bool fought) {
++    CombatResultView& r = g_combat_result;
++    r.valid = true;
++    ++r.number;
++    r.serial = fought ? g_combat_serial : 0;
++    r.fought = fought ? 1 : 0;
++    r.winner = winner;
++    r.turn = MOX::_combat_turn;
++    r.star = star_idx;
++    r.colony = MOX::_cmbt_colony_id;
++    r.attacker = MOX::_combat_attacker_player;
++    r.defender = MOX::_combat_defender_player;
++    r.colony_pop_lost = colony_pop_lost;
++    r.stardate = MOX::_stardate;
++    int16_t units = MOX::_combat_data != nullptr ? MOX::_combat_total_ship_count : 0;
++    if (units < 0) units = 0;
++    if (units > 210) units = 210;
++    r.units = units;
++    for (int16_t i = 0; i < units; i++) {
++        const s_combat_data& d = MOX::_combat_data[i];
++        r.unit[i] = {d.ship_idx, d.owner, d.previous_owner, d.unit_status,
++                     d.is_retreating, d.is_captured, d.structure_damage,
++                     d.armor_remaining, d.structure_max};
++    }
+ }
+ 
+ CombatGuard::~CombatGuard() {
+diff --git a/src/ext/ext_api.h b/src/ext/ext_api.h
+index 0aa1d872..f5ed22ba 100644
+--- a/src/ext/ext_api.h
++++ b/src/ext/ext_api.h
+@@ -102,6 +102,48 @@ constexpr int16_t SCREEN_EXT_COMBAT_BOARD = 67;
+ extern bool g_combat_live;
+ extern uint16_t g_combat_serial;
+ 
++/// OrionLayer, open fix 57. How a battle ended, recorded just before End_Of_Combat_ writes the losses back.
++///
++/// The end has no box and no input (combinit.cpp: End_Of_Combat_), so a
++/// client saw the result only afterwards, as a changed _ship[]. Recorded by
++/// Record_Combat_Result from COMBINIT::Tactical_Combat_ with the winner it
++/// hands End_Of_Combat_ (1 attacker, -1 defender — also after the 50-turn
++/// timeout — 666 both gone; 0 when the battle never started), and KEPT until
++/// the next battle starts: the stardate moves on in the same Next_Turn_
++/// (nextturn.cpp), possibly before any tick, so "until the turn moves on"
++/// could send it never. `number` counts results; a client tells them apart
++/// by it.
++struct CombatResultUnit {
++    int16_t ship_idx;
++    int8_t owner;
++    uint8_t previous_owner;
++    int8_t unit_status;
++    int8_t is_retreating;
++    int8_t is_captured;
++    int16_t structure_damage;
++    int16_t armor_remaining;
++    int16_t structure_max;
++};
++struct CombatResultView {
++    bool valid;
++    uint16_t number;
++    uint16_t serial;       // g_combat_serial of the battle; 0 when not fought
++    uint8_t fought;
++    int16_t winner;
++    int16_t turn;
++    int16_t star;
++    int16_t colony;
++    int16_t attacker;
++    int16_t defender;
++    int16_t colony_pop_lost;
++    int32_t stardate;
++    int16_t units;
++    CombatResultUnit unit[210];
++};
++extern CombatResultView g_combat_result;
++void Record_Combat_Result(int16_t star_idx, int16_t colony_pop_lost,
++                          int16_t winner, bool fought);
++
+ struct CombatGuard {
+     ScreenOverride screen;
+     bool previous;
+diff --git a/src/game/combinit.cpp b/src/game/combinit.cpp
+index 9863a461..8d097743 100644
+--- a/src/game/combinit.cpp
++++ b/src/game/combinit.cpp
+@@ -1139,6 +1139,9 @@ int16_t __cdecl Tactical_Combat_(int16_t* plr1_ships, int16_t plr1_ship_count, i
+         }
+     }
+ 
++#ifdef ORION2RE_EXT
++    ext::Record_Combat_Result(star_idx, colony_pop, combat_winner, abort_tactical == 0);  // OrionLayer, open fix 57. The result, before End_Of_Combat_ writes it back.
++#endif
+     End_Of_Combat_(star_idx, colony_pop, combat_winner);
+ 
+     if (combat_winner == 1 || combat_winner == 0x29A) {

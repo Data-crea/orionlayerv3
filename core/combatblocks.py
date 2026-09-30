@@ -15,7 +15,8 @@ position where it was.
             acting unit's legal moves as a bitmap over the 81 x 68 grid.
     "CMSL"  55  the ordnance in flight: each live `s_missile` (26 bytes) with
             its index (`gs.ordnance`).
-    "CRES"  57  how the last battle ended, kept until the next one starts.
+    "CRES"  57  how the last battle ended, kept until the next one starts
+            (`gs.combat_result`), on any screen.
     "CTGT"  54  the engine's verdict of what each weapon slot of the acting
             unit can hit now, per unit and per missile.
 
@@ -153,6 +154,37 @@ def _cmsl(data, pos):
     return {"serial": serial, "missiles": missiles}, at
 
 
+CRES_HEAD = "<BHHBhhhhhhhih"
+CRES_UNIT = "<hbBbbbhhh"
+CRES_UNIT_SIZE = _st.calcsize(CRES_UNIT)
+
+
+def _cres(data, pos):
+    """CRES: how the last battle ended — kept by the engine until the next
+    battle starts, so a client tells results apart by `number`."""
+    head = _st.unpack_from(CRES_HEAD, data, pos + 4)
+    at = pos + 4 + _st.calcsize(CRES_HEAD)
+    (version, number, serial, fought, winner, turn, star, colony, attacker,
+     defender, pop_lost, stardate, units) = head
+    if version != 1 or not 0 <= units <= 210 or \
+            at + units * CRES_UNIT_SIZE > len(data):
+        return None, pos
+    out = {"number": number, "serial": serial, "fought": bool(fought),
+           # 1 attacker, -1 defender (also after the 50-turn timeout: `turn`
+           # above 50), 666 both gone (combat1.cpp: Check_For_Winner_)
+           "winner": winner, "turn": turn, "star": star, "colony": colony,
+           "attacker": attacker, "defender": defender,
+           "colony_pop_lost": pop_lost, "stardate": stardate, "units": []}
+    keys = ("ship_idx", "owner", "previous_owner", "unit_status",
+            "is_retreating", "is_captured", "structure_damage",
+            "armor_remaining", "structure_max")
+    for _ in range(units):
+        out["units"].append(dict(zip(keys, _st.unpack_from(CRES_UNIT, data,
+                                                           at))))
+        at += CRES_UNIT_SIZE
+    return out, at
+
+
 def build_cmsl(missiles, serial=1):
     """CMSL as the engine writes it — for the checks' stand-ins."""
     out = b"CMSL" + _st.pack("<BHBh", 1, serial, MISSILE_SIZE, len(missiles))
@@ -165,7 +197,8 @@ def build_cmsl(missiles, serial=1):
 
 #: tag -> (reader, the GameState attribute); the ENGINE's order, which is
 #: the order the blocks are read in.
-PARSERS = {"CMBT": (_cmbt, "combat"), "CMSL": (_cmsl, "ordnance")}
+PARSERS = {"CMBT": (_cmbt, "combat"), "CMSL": (_cmsl, "ordnance"),
+           "CRES": (_cres, "combat_result")}
 
 
 def cut(data, at, tag):
@@ -186,6 +219,8 @@ def weight(tag, block):
         return len(value["units"])
     if tag == "CMSL":
         return len(value["missiles"])
+    if tag == "CRES":
+        return len(value["units"])
     return len(block)
 
 
