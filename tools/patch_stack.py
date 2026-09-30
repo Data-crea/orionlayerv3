@@ -67,6 +67,8 @@ STACKED_AFTER_COLONY = (
     "doc/ext_combat_result.patch",
     # 54 appends CTGT after 57's CRES
     "doc/ext_combat_targets.patch",
+    # 59 appends FBSC after 54's CTGT
+    "doc/ext_fleet_box_scroll.patch",
 )
 
 

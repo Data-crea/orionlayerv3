@@ -1,0 +1,69 @@
+Engine: the galaxy map fleet box's scroll row, "FBSC" (open fix 59).
+
+STATUS: APPLIED 30 September 2026 by work order 194 (Part B; reserved by
+work order 193) — orion2re 6f87c151 on orionlayer-local (before: 750434ef), this
+file's diff byte for byte (index lines included). Required by
+tools/version_check.py since work order 194.
+
+It was applied, from ~/orion2re on the orionlayer-local branch, with:
+
+    patch -p1 < ~/orionlayerv3/doc/ext_fleet_box_scroll.patch
+
+and a rebuild. It comes back off with `git revert 6f87c151` or `patch -R -p1`,
+and a rebuild.
+
+WHAT IT IS FOR
+
+    FLEETPOP builds the fleet box's ship cells from _fltpop_scroll_bar's
+    first_visible_row (fleetpop.cpp:643-644: the first cell is the row
+    times 3) and resets it when a stack opens (Initialize_Scroll_Bar_,
+    fleetpop.cpp:1324-1332); SerializeState sent only MOX::_scroll_bar, a
+    different bar. So a client could not say which three rows of a stack
+    past nine ships the box shows — work order 191's item 1, carried into
+    193's list. Block "FBSC", after CTGT, only on SCREEN_MAIN while
+    moveable box 2 shows a stack (FSEL's own condition): version, the
+    stack, first_visible_row, visible_rows, total_rows, and the field ids
+    of the bar's up and down buttons.
+
+    Only reads. An engine without OrionLayer behaves exactly as before. One
+    marker, `OrionLayer, open fix 59.`, on the block's first comment
+    lines.
+
+diff --git a/src/ext/ext_api.cpp b/src/ext/ext_api.cpp
+index 7ea40161..a57bae95 100644
+--- a/src/ext/ext_api.cpp
++++ b/src/ext/ext_api.cpp
+@@ -1616,6 +1616,33 @@ static void SerializeState(std::vector<uint8_t>& buf,
+                 src, MOX::_missile[m].x, MOX::_missile[m].y))));
+         }
+     }
++
++    // 23. The galaxy map fleet box's scroll row: "FBSC", written ONLY while
++    //     the fleet box (moveable box 2) shows a stack, after CTGT (work
++    //     order 191's item 1). OrionLayer, open fix 59.
++    //
++    //     FLEETPOP builds its ship cells from _fltpop_scroll_bar's
++    //     first_visible_row (fleetpop.cpp: _first_fleet_movement_icon = row
++    //     * 3) and resets it when a new stack opens (Initialize_Scroll_Bar_);
++    //     SerializeState sent only MOX::_scroll_bar, a different bar. So a
++    //     client could not say which three rows of a stack past nine ships
++    //     the box shows. The row, the bar's rows, and its two buttons' fields.
++    if (current_screen == SCREEN_MAIN && MOVEBOX::Moveable_Box_Selected_(2) &&
++        MOX::_fleet_box_ship_stack >= 0 &&
++        MOX::_fleet_box_ship_stack < MOX::_ship_stack_count) {
++        const s_scroll_bar& bar = MOX::_fltpop_scroll_bar;
++        buf.push_back((uint8_t)'F');
++        buf.push_back((uint8_t)'B');
++        buf.push_back((uint8_t)'S');
++        buf.push_back((uint8_t)'C');
++        Write8(buf, 1);                                   // block version
++        Write16(buf, MOX::_fleet_box_ship_stack);
++        Write16(buf, bar.first_visible_row);
++        Write16(buf, bar.visible_rows);
++        Write16(buf, bar.total_rows);
++        Write16(buf, bar.up_btn);
++        Write16(buf, bar.dn_btn);
++    }
+ }
+ 
+ // ── Field list ───────────────────────────────────────────

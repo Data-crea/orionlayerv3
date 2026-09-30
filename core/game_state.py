@@ -423,7 +423,9 @@ def parse_state(data: bytes) -> GameState:
     from core import mpblocks
     pos = mpblocks.parse(gs, data, pos)       # MPLY, open fix 51
     from core import combatblocks
-    pos = combatblocks.parse(gs, data, pos)   # CMBT…, open fixes 53-57, LAST
+    pos = combatblocks.parse(gs, data, pos)   # CMBT…, open fixes 53-57
+    from core import fleetscroll
+    pos = fleetscroll.parse(gs, data, pos)    # FBSC, open fix 59, LAST
     return gs
 
 

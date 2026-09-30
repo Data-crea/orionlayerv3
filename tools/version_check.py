@@ -330,6 +330,12 @@ LOCAL_PATCHES = {
         "OrionLayer, open fix 54.",
         "what the acting unit's weapons can hit is not on the wire (open "
         "fix 54): HD would have to recompute arcs, range and legality"),
+    # Applied 30 September 2026 by work order 194: 6f87c151, on 750434ef.
+    "doc/ext_fleet_box_scroll.patch": (
+        os.path.join("src", "ext", "ext_api.cpp"),
+        "OrionLayer, open fix 59.",
+        "the fleet box's scroll row is not on the wire (open fix 59): HD "
+        "shows a stack past nine ships from its first nine"),
 }
 
 #: Patches that are REPORTED to Joes and not yet applied: listed with
@@ -396,6 +402,7 @@ FIX_NUMBERS = {
     "doc/ext_combat_ordnance.patch": (55,),
     "doc/ext_combat_result.patch": (57,),
     "doc/ext_combat_targets.patch": (54,),
+    "doc/ext_fleet_box_scroll.patch": (59,),
 }
 
 
