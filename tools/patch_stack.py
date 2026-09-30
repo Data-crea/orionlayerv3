@@ -59,6 +59,8 @@ STACKED_AFTER_COLONY = (
     "doc/ext_inject_right_click.patch",
     # 52 adds the battle's gate after 50's g_hof_live
     "doc/ext_combat_screen_id.patch",
+    # 53 appends CMBT after 51's MPLY, LAST
+    "doc/ext_combat_state.patch",
 )
 
 

@@ -306,6 +306,12 @@ LOCAL_PATCHES = {
         "OrionLayer, open fix 52.",
         "a tactical battle has no screen id (open fix 52): it reports 12 "
         "and no combat block is written"),
+    # Applied 30 September 2026 by work order 194: 9b7dcba0, on 2495e1cf.
+    "doc/ext_combat_state.patch": (
+        os.path.join("src", "ext", "ext_api.cpp"),
+        "OrionLayer, open fix 53.",
+        "the tactical battle's state is not on the wire (open fix 53): no "
+        "unit, turn, view origin or legal move reaches HD"),
 }
 
 #: Patches that are REPORTED to Joes and not yet applied: listed with
@@ -368,6 +374,7 @@ FIX_NUMBERS = {
     "doc/ext_multiplayer_state.patch": (51,),
     "doc/ext_inject_right_click.patch": (61,),
     "doc/ext_combat_screen_id.patch": (52,),
+    "doc/ext_combat_state.patch": (53,),
 }
 
 

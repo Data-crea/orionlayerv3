@@ -421,7 +421,9 @@ def parse_state(data: bytes) -> GameState:
     from core import hofblocks
     pos = hofblocks.parse(gs, data, pos)      # HOFM, open fix 50
     from core import mpblocks
-    pos = mpblocks.parse(gs, data, pos)       # MPLY, open fix 51, LAST
+    pos = mpblocks.parse(gs, data, pos)       # MPLY, open fix 51
+    from core import combatblocks
+    pos = combatblocks.parse(gs, data, pos)   # CMBT…, open fixes 53-57, LAST
     return gs
 
 
