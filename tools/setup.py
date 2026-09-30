@@ -60,6 +60,7 @@ from screens.leaders.ldrart import GAMEDATA as _ldrart_gamedata  # noqa: E402
 from screens.races.racesart import GAMEDATA as _racesart_gamedata  # noqa: E402
 from screens.ship_design.sdart import GAMEDATA as _sdart_gamedata  # noqa: E402
 from screens.audience.auart import GAMEDATA as _auart_gamedata  # noqa: E402
+from screens.info.infoart import REL as _infoart_rel  # noqa: E402
 from core.skildesc import string_file as skildesc_file  # noqa: E402
 from core.techdesc import string_file as techdesc_file  # noqa: E402
 from core.infotext import text_file as infotext_file  # noqa: E402
@@ -301,6 +302,11 @@ def from_game(settings=None):
          "audience artwork — without it the audience shows its panels on "
          "black, without the room and the ambassador",
          "python tools/audience_art_extract.py"),
+        # THE INFO SCREEN'S TECH REVIEW PICTURES (work order 196 F).
+        (os.path.join(ROOT, *_infoart_rel.split("/"), "manifest.json"),
+         "Tech Review pictures — without them the Info screen's Tech Review "
+         "shows an empty picture box",
+         "python tools/info_art_extract.py"),
         # THE INFO SCREEN (work order 175 D): the Reference topic lists,
         # the trait names and the Tech Review's group names.
         (os.path.join(ROOT, *infotext_file(lang).split("/")),

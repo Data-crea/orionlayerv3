@@ -162,3 +162,6 @@ screens/ship_design/assets/gamedata/
 # The audience's rooms, ambassadors and palettes out of the player's
 # DIPLOMAT.LBX (tools/audience_art_extract.py, work order 185) — the same rule.
 screens/audience/assets/gamedata/
+# The Info screen's Tech Review pictures out of the player's APP_PICS.LBX and
+# FONTS.LBX (tools/info_art_extract.py, work order 196) — the same rule.
+screens/info/assets/gamedata/

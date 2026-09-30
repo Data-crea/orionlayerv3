@@ -22,6 +22,7 @@ check 090q:
 """
 from core.hestrings import printf
 from core.hud import blocks as hud
+from core.hud import hover as hud_hover
 from core.hud import text as hudtext
 from screens.colony.coldraw import text
 from screens.leaders import ldrdraw as nd
@@ -121,5 +122,5 @@ def _buttons(surface, screen, state, view):
         r = nd.rect(screen.layout, (f.x, f.y, f.x_end, f.y_end))
         lit = key == "auto" and view.auto_building != 0
         hud.slant_button(surface, r, screen.layout.scale,
-                         "active" if lit else "normal", screen.word(key),
-                         style_renderer=screen.style)
+                         hud_hover.pointer_state(r, "active" if lit else "normal"),
+                         screen.word(key), style_renderer=screen.style)

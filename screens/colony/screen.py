@@ -144,8 +144,8 @@ class ColonyScreen(ScreenBase):
         return (self._data.get("words") or {}).get(key, key.upper())
 
     def button_state(self, key, rect):
-        from core import mouse as mouse_input
-        return "hover" if rect.collidepoint(*mouse_input.pos()) else "normal"
+        from core.hud import hover
+        return hover.pointer_state(rect)
 
     def pick_cells(self):
         if self.pick is None:

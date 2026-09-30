@@ -124,8 +124,8 @@ class DesignBoxScreen(ScreenBase):
         return modtexts.text(name, default) or default
 
     def button_state(self, key, rect):
-        from core import mouse as mouse_input
-        return "hover" if rect.collidepoint(*mouse_input.pos()) else "normal"
+        from core.hud import hover
+        return hover.pointer_state(rect)
 
     def ready(self):
         return self._box is not None and self._box.draws and \

@@ -70,6 +70,15 @@ def tech(screen, surface, me):
     infodraw.text(surface, screen, "tech.name", geom.TECH_NAME, name or title,
                   "name", infodraw.HIGH, "center")
     infodraw.nd.draw_box(surface, screen, geom.TECH_PICTURE)
+    # TRANSCRIBED (work order 196 F): the application's picture,
+    # APP_PICS.LBX entry `id` at native (0x1B1, 0x73) (info.cpp:893, :1555),
+    # extracted by the player (`infoart`); none drawn while it is absent.
+    art = getattr(screen, "_art", None)
+    pic = art.picture(screen.tech_app) if art is not None else None
+    if pic is not None:
+        big = infodraw.nd.magnified(pic, screen.layout)
+        surface.blit(big, big.get_rect(center=infodraw.R(
+            screen, geom.TECH_PICTURE).center))
     infodraw.text(surface, screen, f"tech.body.{screen.tech_app}",
                   geom.TECH_BODY, body)
     for k, key in enumerate(pages.TECH_TABS):
@@ -93,8 +102,14 @@ def races(screen, surface, me):
             body = "\n".join([head, ""] + lines)
         else:
             body = T("info.races.none", "") or ""
+        # Each race in its own colour: the original prints the name and the
+        # specials in `_hist_graph_palettes[player]` (info.cpp:1683-1690) —
+        # the History legend's stand-in, `infodraw.player_colour`, whose
+        # marking covers it (196 E3).
+        colour = infodraw.player_colour(p) if j < len(order) else \
+            infodraw.NORMAL
         infodraw.text(surface, screen, f"races.{k}", box,
-                      body.replace("^", ""))
+                      body.replace("^", ""), colour=colour)
     if len(order) > 4:
         infodraw.button(surface, screen, geom.RACE_PAGE_BUTTON,
                         f"{screen.race_page + 1}/2")

@@ -23,6 +23,7 @@ WHAT IS TRANSCRIPTION AND WHAT IS OURS — each marked where it happens:
 import pygame
 
 from core.hud import blocks as hud
+from core.hud import hover
 from core.hud import text as hudtext
 from screens.leaders import ldrdraw as nd
 
@@ -228,8 +229,8 @@ def draw_buttons(surface, screen, live, armed):
     layout = screen.layout
     for name in geom.BUTTONS:
         r = nd.rect(layout, geom.button_rect(name))
-        state = ("disabled" if name not in live else
-                 "active" if name == armed else "normal")
+        state = hover.pointer_state(r, "disabled" if name not in live else
+                                  "active" if name == armed else "normal")
         hud.small_button(surface, r, layout.scale, state)
         colour = hudtext.colour("button")
         if state == "disabled":

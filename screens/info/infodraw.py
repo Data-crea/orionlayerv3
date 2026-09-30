@@ -5,9 +5,9 @@ of its native rectangle (`infogeom`, through the Leaders screen's
   OMISSION     `outer_frame` — INFO.LBX 0 (the frame with the tabs, the
                drop areas and the chart painted in) and the interlaced
                fill are not drawn: glass HUD panels stand where they are
-  OMISSION     `app_pictures` — APP_PICS.LBX's 212 application pictures
-               (info.cpp:893-896) are not extracted by this order; the
-               picture box stays an empty panel
+  (`app_pictures`, an OMISSION until work order 196 F: the Tech Review's
+  APP_PICS.LBX pictures are extracted by `tools/info_art_extract.py` and
+  drawn, `infoart`; the box stays empty only while they are absent)
   DEVIATION    `button_words` — the tabs, the tech categories, the metric
                toggles, BACK and RETURN are words the original bakes into
                INFO.LBX; HD writes OrionLayer's words (moddable, `own`)
@@ -210,12 +210,21 @@ def draw_graph(surface, screen, graph, order, stardate):
     scale, step, curves = graph
     infobox.line(surface, screen, str(scale), R(screen, (240, 132, 300, 144)),
                  px(screen, "cost"), NORMAL)
+    # THE SHADOW IS THE BACKGROUND'S OWN DARK TONE — work order 196 G. The
+    # original's shadow is palette 0xB1 one pixel down-right
+    # (info.cpp:1339-1340), measured on its frame as (8, 28, 8): exactly the
+    # darker of the graph's two interlaced rows, so it only darkens the
+    # lighter rows and never reads as a line. HD drew it in (40, 40, 48),
+    # BRIGHTER than its black panel, and every curve got a grey twin —
+    # Data's "drawn twice". So it takes the graph box's own tone, sampled
+    # before any curve is drawn.
+    shade = surface.get_at(P(560, 150))[:3]
     for p in reversed(order):
         pts = curves.get(p) or []
         if len(pts) < 2:
             continue
         colour = player_colour(screen._players[p])
         line = [P(0xEE + step * t, 390 - v) for t, v in enumerate(pts)]
-        pygame.draw.lines(surface, (40, 40, 48), False,
+        pygame.draw.lines(surface, shade, False,
                           [(x + w, y + w) for x, y in line], w)
         pygame.draw.lines(surface, colour, False, line, w)

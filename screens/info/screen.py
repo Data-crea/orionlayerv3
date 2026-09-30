@@ -70,6 +70,8 @@ class InfoScreen(ScreenBase):
         self.hist_bits = 0xF
         self._scroll, self._boxes, self._hits, self._drawn = {}, {}, {}, []
         self._info = None
+        from . import infoart
+        self._art = infoart.load()      # the Tech Review pictures (196 F)
 
     def enter(self, game_state=None):
         super().enter(game_state)
