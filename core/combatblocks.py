@@ -297,7 +297,7 @@ PARSERS = {"CMBT": (_cmbt, "combat"), "CMSL": (_cmsl, "ordnance"),
 
 def cut(data, at, tag):
     """The bytes of the `tag` block at `at`, or None when it does not read
-    whole — for the fixture cutter (`tools/combat_fixture.py`)."""
+    whole — for the fixture cutter (`dev:tools/combat_fixture.py`)."""
     reader, _attr = PARSERS[tag]
     try:
         value, end = reader(data, at)
