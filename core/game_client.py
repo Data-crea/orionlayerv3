@@ -321,9 +321,23 @@ class GameClient:
         self._open()
 
     def activate_field(self, field_id):
-        """Activate a field (simulates mouse click on a button)."""
-        self._send_message(MSG_ACTIVATE,
-                           struct.pack('<h', field_id))
+        """Activate a field (simulates mouse click on a button).
+
+        OPEN FIX 62 (work order 197 A4): the field's rectangle as THIS
+        client's list shows it goes along, and the engine drops the
+        activation if, when its next `Get_Input_` would take it, that index
+        names another field — a list that ended by itself in between (the
+        reports phase's whole-screen field) had handed its index to SELECT
+        NEW RESEARCH, which committed row 1 after its input delay (open fix
+        26). An engine without the fix reads the first two bytes and nothing
+        else (`ext_server.cpp`, `payload_len >= 2`), exactly as before; an
+        index this list does not carry goes alone, unchecked, as before."""
+        f = next((f for f in (getattr(self.state, "fields", None) or [])
+                  if getattr(f, "index", None) == field_id), None)
+        payload = struct.pack('<h', field_id)
+        if f is not None:
+            payload += struct.pack('<4h', f.x, f.y, f.x_end, f.y_end)
+        self._send_message(MSG_ACTIVATE, payload)
 
     def inject_key(self, keysym):
         """Send a keypress to the game.

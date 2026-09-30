@@ -348,6 +348,12 @@ LOCAL_PATCHES = {
         "OrionLayer, open fix 58.",
         "a battle cannot be played without clicks on the original's view "
         "(open fix 58): no move, fire or turn command"),
+    # Applied 30 September 2026 by work order 197: 6f69de27, on e4b2256a.
+    "doc/ext_activate_checked.patch": (
+        os.path.join("src", "ext", "ext_api.cpp"),
+        "OrionLayer, open fix 62.",
+        "an activation is taken by whatever list comes next (open fix 62): "
+        "SELECT NEW RESEARCH can commit a row nobody chose (open fix 26)"),
 }
 
 #: Patches that are REPORTED to Joes and not yet applied: listed with
@@ -417,6 +423,7 @@ FIX_NUMBERS = {
     "doc/ext_fleet_box_scroll.patch": (59,),
     "doc/ext_combat_events.patch": (56,),
     "doc/ext_combat_commands.patch": (58,),
+    "doc/ext_activate_checked.patch": (62,),
 }
 
 

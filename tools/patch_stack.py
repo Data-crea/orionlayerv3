@@ -73,6 +73,8 @@ STACKED_AFTER_COLONY = (
     "doc/ext_combat_events.patch",
     # 58 adds the command beside 56's ring and in ProcessInput
     "doc/ext_combat_commands.patch",
+    # work order 197: 62 checks the pending activation in ProcessInput and Tick
+    "doc/ext_activate_checked.patch",
 )
 
 
