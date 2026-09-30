@@ -23,7 +23,9 @@ gate sits there and every screen — including the next one — is under it.
     no_screen  an id no HD screen claims (decision 22): shown at once when
                its list holds a field to answer; HELD while the list is
                empty, because a picture with nothing on it to answer is a
-               transition, not a screen (the load's screen 39)
+               transition, not a screen (the load's screen 39) — and while
+               it holds only the engine's "click anywhere" field
+               (`skip_only`, work order 197 A1)
     modal      a screen's modal net says "a modal HD has no view for"
                (`ScreenBase.handover_is_modal`): held, then shown — the
                net is allowed for exactly that, so it is not a failure.
@@ -192,6 +194,35 @@ def live_fields(state):
                if getattr(f, "index", 0) != 0)
 
 
+#: The engine's "click anywhere" field: hidden, the whole screen, no hotkey
+#: or ESC — `_whole_screen_field` (mainscr.cpp:1382) under the reports phase
+#: (39), `_global_exit_field` (mainscr.cpp:2717, ESC) under turn processing
+#: (12). A message box has the same shape (textbox.cpp:249), and is told
+#: apart by its MSGB block (open fix 29), as a turn popup by TPOP (49).
+SKIP_FIELD = (7, 0, 0, 639, 479)
+SKIP_HOTKEYS = (0, 0x1B)
+
+
+def skip_only(state):
+    """True when every answerable field is a SKIP_FIELD.
+
+    Work order 197 A1: at every turn end the game reported 39 and 12 with
+    such a list and the map in its picture, and went on BY ITSELF within
+    0.02-0.15 s (measured, `evidence/work_order_197/A1_turns3.log`); HD had
+    flashed "The game is waiting for an answer — F12 to answer" over the
+    map for each. Nothing is asked, so it is held like an empty list — and
+    a state that lasts past EMPTY_HOLD still gets the notice."""
+    if getattr(state, "message_box", None) or \
+            getattr(state, "turn_popup", None):
+        return False
+    live = [f for f in (getattr(state, "fields", None) or [])
+            if getattr(f, "index", 0) != 0]
+    return bool(live) and all(
+        tuple(getattr(f, k, None) for k in ("field_type", "x", "y", "x_end",
+                                            "y_end")) == SKIP_FIELD and
+        getattr(f, "hotkey", None) in SKIP_HOTKEYS for f in live)
+
+
 def decide_for(app, want, kind, top):
     """`App._showing_original`'s answer, through the gate.
 
@@ -221,7 +252,9 @@ def decide_for(app, want, kind, top):
     live = live_fields(state)
     screen = getattr(state, "current_screen", -1)
     shown = gate.decide(
-        want, kind, name, screen, live, app.client.stats.get("state", 0),
+        want, kind, name, screen,
+        0 if kind == NO_SCREEN and skip_only(state) else live,
+        app.client.stats.get("state", 0),
         box=box, sig=list_sig(state))
     return gate.never_without_f12(shown, kind, screen, live, top)
 
