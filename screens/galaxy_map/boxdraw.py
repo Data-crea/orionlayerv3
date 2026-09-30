@@ -61,6 +61,9 @@ TEXT_COLOR = palette.col("galaxy_map", "nav_text", (196, 208, 236))
 GAS_GIANT = palette.col("galaxy_map", "status", (140, 155, 190))
 SELECTED = palette.col("galaxy_map", "fleet_selected", (40, 72, 196))
 DESELECTED = palette.col("galaxy_map", "fleet_deselected", (0, 0, 0))
+#: A hover refusal's line — the original's second colour set
+#: (fleetpop.cpp:1122-1150, `use_primary_colors = false`).
+REFUSED = palette.col("galaxy_map", "fleet_refused", (226, 96, 72))
 #: The original's map window centre, native: a box whose own centre lies
 #: left of it sits on the left, and so on (mainscr.cpp:1060-1082).
 MAP_MID = ((22 + 527) / 2, (22 + 421) / 2)
@@ -244,8 +247,26 @@ def _draw_fleet(screen, surface, r, model, hits):
             if colour is not None:
                 img = screen._tints.get(img, key, colour)
         surface.blit(img, img.get_rect(center=cell.center))
-    _text(screen, surface, r["fleet_status"], model["status"],
-          _font(screen, "fleet_status", 16), TEXT_COLOR)
+    status, colour = model["status"], TEXT_COLOR
+    over = hover_status(screen)
+    if over is not None:
+        status, colour = over[0], (REFUSED if over[1] else TEXT_COLOR)
+    _text(screen, surface, r["fleet_status"], status,
+          _font(screen, "fleet_status", 16), colour)
+
+
+def hover_status(screen):
+    """`boxmodel.hover_status` for the star under the pointer (work order
+    196 H): the move to it, before it is ordered."""
+    hover = getattr(screen, "_hover_star", None)
+    stars = getattr(screen, "_stars", None) or []
+    if hover is None or getattr(screen, "_state", None) is None:
+        return None
+    # By position, as the hover line finds it (`maplines.render_hover_preview`).
+    index = next((i for i, s in enumerate(stars)
+                  if (s.x, s.y) == (hover.x, hover.y)), None)
+    return boxmodel.hover_status(screen._state, index, stars,
+                                 _texts(screen))
 
 
 def render(screen, surface):

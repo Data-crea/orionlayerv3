@@ -59,7 +59,14 @@ THE TEXTS ARE THE ORIGINAL'S (HESTRNGS, `core/hestrings.py`):
     the MAP is the one that waits a turn (ships.cpp:472-475, run 114).
     DEVIATION: the original prints this line only while no icon is
     selected and nothing is hovered; HD does not follow that, and prints
-    the stack's own status always.
+    the stack's own status whenever it prints no hover text;
+  * the HOVER TEXT (work order 196 H, Data's item 16 — TRANSCRIBED, the
+    original does it): with a ship of the box selected and a star under the
+    pointer, the line is the move to that star before it is ordered
+    (fleetpop.cpp:1063-1150, `hover_status`) — "%d turn(s) to %s" / "ETA %d
+    turn(s)", or the refusal: a black hole, an immobile fleet, "%d
+    parsec(s) out of range" (with the star's name when visited), flux; from
+    FMOV's verdict for that star (open fix 48), never recomputed.
 """
 from dataclasses import dataclass
 
@@ -93,6 +100,10 @@ H_WORMHOLE, H_WORMHOLE_UNKNOWN = 0x16C, 0x16D
 H_STAR_CLASS = 0x0F
 H_FLEET, H_ORBITING, H_ANTARES = 0x66, 0x67, 0x68
 H_TURN, H_TURNS, H_ETA_TURN, H_ETA_TURNS = 0x69, 0x6A, 0x6B, 0x6C
+#: The hover's refusals, fleetpop.cpp:1122-1150.
+H_BLACK_HOLE, H_IMMOBILE, H_FLUX = 0x6D, 0x6E, 0x73
+H_RANGE_TURN, H_RANGE_TURNS, H_RANGE_ZERO, H_RANGE_UNKNOWN = \
+    0x6F, 0x70, 0x71, 0xEB
 
 
 @dataclass
@@ -353,6 +364,50 @@ def fleet_model(state, ident, box, text):
 #: FSEL block says whether it took (decision 33 covers one comparison,
 #: not a tech tree).
 ORDERABLE_STATUS = (0, 1, 2)
+
+
+def hover_status(state, star_index, stars, text):
+    """`(text, refused)` for the star under the pointer, or None — the fleet
+    box's line while a ship of it is selected and a star is hovered
+    (`Get_Fleetpop_...`'s info types 1-8, fleetpop.cpp:1063-1150), from
+    FMOV's verdict for that star; None where the original falls back to the
+    scanned ship (info type 0), and without FMOV or a selected ship (the
+    hover line's own gate, `maplines.preview_line`)."""
+    move = getattr(state, "fleet_move", None)
+    sel = getattr(state, "fleet_selection", None)
+    if not move or not sel or sel.get("stack", -1) < 0 or \
+            not sel.get("chain") or star_index is None:
+        return None
+    if not any(sel["selected"][n] for n in sel["chain"]
+               if 0 <= n < len(sel["selected"])):
+        return None
+    verdicts = move["verdicts"]
+    if not 0 <= star_index < min(len(verdicts), len(stars)):
+        return None
+    v, star = verdicts[star_index], stars[star_index]
+    visited = star_struct.visited_by(star, getattr(state, "player_num", 0))
+    turns, parsecs = int(v["turns_left"]), int(v["parsecs"])
+    if v["moving"]:
+        if turns == 0:
+            return _msg(text, H_ORBITING, star.name), False
+        if visited:
+            return _msg(text, H_TURN if turns == 1 else H_TURNS, turns,
+                        star.name), False
+        return _msg(text, H_ETA_TURN if turns == 1 else H_ETA_TURNS,
+                    turns), False
+    if v["blackhole_blocks"]:
+        return _msg(text, H_BLACK_HOLE), True
+    if v["immobile"]:
+        return _msg(text, H_IMMOBILE), True
+    if v["out_of_range"]:
+        if visited:
+            return _msg(text, H_RANGE_TURN if parsecs == 1 else
+                        H_RANGE_TURNS, parsecs, star.name), True
+        return (_msg(text, H_RANGE_ZERO) if parsecs == 0 else
+                _msg(text, H_RANGE_UNKNOWN, parsecs)), True
+    if v["hyperspace_flux"]:
+        return _msg(text, H_FLUX), True
+    return None
 
 
 def fleet_status(state, ship, stars, text):
