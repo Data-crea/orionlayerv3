@@ -65,6 +65,8 @@ STACKED_AFTER_COLONY = (
     "doc/ext_combat_ordnance.patch",
     # 57 amends 52's CombatGuard and appends CRES after 55's CMSL
     "doc/ext_combat_result.patch",
+    # 54 appends CTGT after 57's CRES
+    "doc/ext_combat_targets.patch",
 )
 
 

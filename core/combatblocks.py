@@ -18,7 +18,7 @@ position where it was.
     "CRES"  57  how the last battle ended, kept until the next one starts
             (`gs.combat_result`), on any screen.
     "CTGT"  54  the engine's verdict of what each weapon slot of the acting
-            unit can hit now, per unit and per missile.
+            unit can hit now, per unit and per missile (`gs.targets`).
 
 ONE SNAPSHOT IS ONE MOMENT: its blocks describe the battle after every event
 the engine recorded before it (open fix 56 drains them into the same
@@ -185,6 +185,30 @@ def _cres(data, pos):
     return out, at
 
 
+def _ctgt(data, pos):
+    """CTGT: the engine's verdict for the ACTING unit — per unit and per live
+    missile one byte, bit k = weapon slot k can hit it now (arc, ammunition,
+    range, legality: what Fire_Ship_ tests; not whether the player has the
+    slot switched on, which CMBT's `active` says)."""
+    version, serial, source, units = _st.unpack_from("<BHhh", data, pos + 4)
+    at = pos + 11
+    if version != 1 or not 0 <= units <= 210 or at + units + 2 > len(data):
+        return None, pos
+    masks = list(data[at:at + units])
+    at += units
+    (n,) = _st.unpack_from("<h", data, at)
+    at += 2
+    if not 0 <= n <= 300 or at + 3 * n > len(data):
+        return None, pos
+    missiles = {}
+    for _ in range(n):
+        index, mask = _st.unpack_from("<hB", data, at)
+        missiles[index] = mask
+        at += 3
+    return {"serial": serial, "unit": source, "units": masks,
+            "missiles": missiles}, at
+
+
 def build_cmsl(missiles, serial=1):
     """CMSL as the engine writes it — for the checks' stand-ins."""
     out = b"CMSL" + _st.pack("<BHBh", 1, serial, MISSILE_SIZE, len(missiles))
@@ -198,7 +222,7 @@ def build_cmsl(missiles, serial=1):
 #: tag -> (reader, the GameState attribute); the ENGINE's order, which is
 #: the order the blocks are read in.
 PARSERS = {"CMBT": (_cmbt, "combat"), "CMSL": (_cmsl, "ordnance"),
-           "CRES": (_cres, "combat_result")}
+           "CRES": (_cres, "combat_result"), "CTGT": (_ctgt, "targets")}
 
 
 def cut(data, at, tag):
@@ -221,6 +245,8 @@ def weight(tag, block):
         return len(value["missiles"])
     if tag == "CRES":
         return len(value["units"])
+    if tag == "CTGT":
+        return sum(bin(m).count("1") for m in value["units"])
     return len(block)
 
 

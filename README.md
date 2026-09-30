@@ -77,6 +77,7 @@ from the maintainer.
 | 24 | `9b7dcba0` | open fix 53: the tactical battle's state — units field by field, the turn order, the view origin, the legal moves ("CMBT") (work order 194) | `doc/ext_combat_state.patch` |
 | 25 | `f506bc6c` | open fix 55: the ordnance in flight — missiles, torpedoes, fighters with their targets ("CMSL") (work order 194) | `doc/ext_combat_ordnance.patch` |
 | 26 | `f1e6c581` | open fix 57: how the last battle ended — winner, sides, each unit's fate — kept until the next battle ("CRES") (work order 194) | `doc/ext_combat_result.patch` |
+| 27 | `750434ef` | open fix 54: what each weapon slot of the acting unit can hit now, the engine's own verdict ("CTGT") (work order 194) | `doc/ext_combat_targets.patch` |
 
 ## Install
 

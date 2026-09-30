@@ -324,6 +324,12 @@ LOCAL_PATCHES = {
         "OrionLayer, open fix 57.",
         "how a battle ended is not on the wire (open fix 57): HD sees the "
         "result only as a changed ship list"),
+    # Applied 30 September 2026 by work order 194: 750434ef, on f1e6c581.
+    "doc/ext_combat_targets.patch": (
+        os.path.join("src", "ext", "ext_api.cpp"),
+        "OrionLayer, open fix 54.",
+        "what the acting unit's weapons can hit is not on the wire (open "
+        "fix 54): HD would have to recompute arcs, range and legality"),
 }
 
 #: Patches that are REPORTED to Joes and not yet applied: listed with
@@ -389,6 +395,7 @@ FIX_NUMBERS = {
     "doc/ext_combat_state.patch": (53,),
     "doc/ext_combat_ordnance.patch": (55,),
     "doc/ext_combat_result.patch": (57,),
+    "doc/ext_combat_targets.patch": (54,),
 }
 
 
