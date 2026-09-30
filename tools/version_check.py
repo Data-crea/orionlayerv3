@@ -354,6 +354,12 @@ LOCAL_PATCHES = {
         "OrionLayer, open fix 62.",
         "an activation is taken by whatever list comes next (open fix 62): "
         "SELECT NEW RESEARCH can commit a row nobody chose (open fix 26)"),
+    # Applied 1 October 2026 by work order 197: ee844b0b, on 6f69de27.
+    "doc/ext_combat_events_merge.patch": (
+        os.path.join("src", "game", "cmbtmis.cpp"),
+        "OrionLayer, open fix 63.",
+        "CMEV reports hundreds of missile merges of empty slots (open fix "
+        "63): the battle's event stream does not fit its state"),
 }
 
 #: Patches that are REPORTED to Joes and not yet applied: listed with
@@ -424,6 +430,7 @@ FIX_NUMBERS = {
     "doc/ext_combat_events.patch": (56,),
     "doc/ext_combat_commands.patch": (58,),
     "doc/ext_activate_checked.patch": (62,),
+    "doc/ext_combat_events_merge.patch": (63,),
 }
 
 

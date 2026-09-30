@@ -82,6 +82,7 @@ from the maintainer.
 | 29 | `5bd4c404` | open fix 56: the battle's events, numbered, with their outcome — shots, moves, turns, launches, hits, deaths, retreats, boarding ("CMEV") (work order 194) | `doc/ext_combat_events.patch` |
 | 30 | `e4b2256a` | open fix 58: one command per battle action — move, fire, fire at a missile, face, select, release stasis, board — so HD plays a battle without clicks (MSG_COMBAT_COMMAND) (work order 194) | `doc/ext_combat_commands.patch` |
 | 31 | `6f69de27` | open fix 62: an activation is checked against the field the client saw, so a list that ended in between cannot hand its index to the next — SELECT NEW RESEARCH no longer commits a row by itself (open fix 26) (work order 197) | `doc/ext_activate_checked.patch` |
+| 32 | `ee844b0b` | open fix 63: the battle's event stream reports a missile merge and a missile gone only for a live missile — the original's merge loop goes on over empty slots (work order 197) | `doc/ext_combat_events_merge.patch` |
 
 ## Install
 
