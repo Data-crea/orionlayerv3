@@ -342,6 +342,12 @@ LOCAL_PATCHES = {
         "OrionLayer, open fix 56.",
         "the battle's events are not on the wire (open fix 56): HD cannot "
         "animate a battle or hold a result until its animation"),
+    # Applied 30 September 2026 by work order 194: e4b2256a, on 5bd4c404.
+    "doc/ext_combat_commands.patch": (
+        os.path.join("src", "ext", "ext_api.cpp"),
+        "OrionLayer, open fix 58.",
+        "a battle cannot be played without clicks on the original's view "
+        "(open fix 58): no move, fire or turn command"),
 }
 
 #: Patches that are REPORTED to Joes and not yet applied: listed with
@@ -410,6 +416,7 @@ FIX_NUMBERS = {
     "doc/ext_combat_targets.patch": (54,),
     "doc/ext_fleet_box_scroll.patch": (59,),
     "doc/ext_combat_events.patch": (56,),
+    "doc/ext_combat_commands.patch": (58,),
 }
 
 

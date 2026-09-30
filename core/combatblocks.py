@@ -242,7 +242,18 @@ EVENTS = {
                      "defenders_left", "owner_after")),
     17: ("raid", ("attacker", "target", "sent", "back", "defenders_left",
                   "damage")),
+    # open fix 58: a command taken (result 0) or refused, and why
+    18: ("command", ("op", "result", "a", "b")),
 }
+#: MSG_COMBAT_COMMAND's ops (ext_api.h, `CombatCommandOp`), open fix 58.
+COMMANDS = {"move": 1, "fire": 2, "fire_missile": 3, "face": 4,
+            "select": 5, "remove_stasis": 6, "board": 7}
+#: Why the engine refused one (CEV_COMMAND's result).
+REFUSALS = {1: "stale: another battle or unit", 2: "no orders now",
+            3: "not a legal cell", 4: "not a valid target",
+            5: "board or scan mode", 6: "a weapon mask in a network game",
+            7: "board mode refused", 8: "no field for that missile",
+            9: "unknown op"}
 EVENT_FORMAT = "<HB8h"
 EVENT_SIZE = _st.calcsize(EVENT_FORMAT)
 

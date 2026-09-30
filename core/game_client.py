@@ -17,7 +17,7 @@ from core.wire_protocol import (
     MSG_VISUAL, MSG_EVENT,
     MSG_ACTIVATE, MSG_INJECT_KEY, MSG_INJECT_CLICK, MSG_CANCEL_FIELD,
     MSG_SET_JOBS, MSG_SELECT_SHIP, MSG_SAVE_SLOTS, MSG_SHOW_WINDOW,
-    MSG_INJECT_RIGHT_CLICK,
+    MSG_INJECT_RIGHT_CLICK, MSG_COMBAT_COMMAND,
     SUB_STATE, SUB_FIELDS, SUB_VISUAL, SUB_EVENTS,
     parse_save_slots,
 )
@@ -345,6 +345,14 @@ class GameClient:
         (`MSG_INJECT_RIGHT_CLICK`); an engine without it drops it."""
         self._send_message(MSG_INJECT_RIGHT_CLICK,
                            struct.pack('<hh', x, y))
+
+    def combat_command(self, serial, unit, op, a=0, b=0, c=0):
+        """One battle action — open fix 58 (`MSG_COMBAT_COMMAND`). `serial`
+        and `unit` are the CMBT block's battle and acting unit: the engine
+        drops a command meant for another. What happened comes back as CMEV
+        events, never from here."""
+        self._send_message(MSG_COMBAT_COMMAND,
+                           struct.pack('<HhBhhh', serial, unit, op, a, b, c))
 
     def set_jobs(self, colony_index, pairs):
         """Set the job of one or more pops in ONE colony.

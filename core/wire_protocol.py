@@ -58,6 +58,13 @@ MSG_SHOW_WINDOW   = 0x86
 #: as every unknown type (`default: break`), so nothing happens there —
 #: never a left click in its place.
 MSG_INJECT_RIGHT_CLICK = 0x87
+#: One battle action (decision 52): uint16 battle serial, int16 the acting
+#: unit, uint8 op (`core.combatblocks.COMMANDS`), int16 a, b, c. Open fix
+#: 58 (`doc/ext_combat_commands.patch`, work order 194): consumed where the
+#: human's input is read, the original's own code then does the action; the
+#: engine says taken or refused in CMEV (event 18). An engine without the fix
+#: drops it. WIRE ONLY: no screen sends it yet.
+MSG_COMBAT_COMMAND = 0x88
 
 #: How many STATE/VISUAL pairs after an injected command can still
 #: describe the world BEFORE it. One — so a caller that waits for an
