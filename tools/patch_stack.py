@@ -55,6 +55,8 @@ STACKED_AFTER_COLONY = (
     "doc/ext_hall_of_fame.patch",
     # 51 appends MPLY after 50's HOFM
     "doc/ext_multiplayer_state.patch",
+    # work order 194: 61 adds a case to ProcessInput (the right click)
+    "doc/ext_inject_right_click.patch",
 )
 
 

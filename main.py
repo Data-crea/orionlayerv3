@@ -282,6 +282,13 @@ class App:
                 if top and hasattr(top, "handle_left_release") \
                         and not self.editor.active:
                     top.handle_left_release(*event.pos)
+            elif (event.type == pygame.MOUSEBUTTONDOWN and event.button == 3
+                  and self.connected and self._showing_original()):
+                # The F12 view: the game's own right click, at the point
+                # (open fix 61; work order 194). The engine pushes down
+                # AND up, so the release is not forwarded.
+                self.original_view.forward_right_click(
+                    self.client, *event.pos, self.win_w, self.win_h)
             elif (event.type in (pygame.MOUSEBUTTONDOWN,
                                  pygame.MOUSEBUTTONUP)
                   and event.button == 3):

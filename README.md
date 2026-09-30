@@ -72,6 +72,7 @@ from the maintainer.
 | 19 | `65b41b66` | open fix 50: the Hall of Fame's entries, and 14 on both ways in (work order 188) | `doc/ext_hall_of_fame.patch` |
 | 20 | `8f7bd9e3` | open fix 51: which multiplayer step is up and what it shows (work order 188) | `doc/ext_multiplayer_state.patch` |
 | 21 | `96da4c4d` | open fix 42: the extension ticks during a screen's input delay, so the research panel's list arrives ~550 ms sooner (work order 191) | `doc/ext_input_delay_tick.patch` |
+| 22 | `ab3f6892` | open fix 61: a right click at a point (MSG_INJECT_RIGHT_CLICK), so the F12 view can turn a ship on the battle map (work order 194) | `doc/ext_inject_right_click.patch` |
 
 ## Install
 

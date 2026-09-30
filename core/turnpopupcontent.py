@@ -95,14 +95,6 @@ def leader_card(state, index, app=None):
             "question": question}
 
 
-def _ship_owner(state, ship_index):
-    from core.structs import ship as ship_struct
-    raw = getattr(state, "ships_raw", None) or []
-    if not 0 <= ship_index < len(raw):
-        return None
-    return ship_struct.parse(raw[ship_index]).owner
-
-
 def _race_name(state, player):
     from core.structs import player as player_struct
     raw = getattr(state, "player_raw", None) or []
@@ -204,12 +196,19 @@ def content(popup, state, words, app=None):
         if kind == "combat_target":
             # A player target is chosen by clicking one of its ships
             # (Check_System_Display_Fields_Defense_Selection_,
-            # mainpups.cpp:2847-2951): one option per such ship button,
-            # named by the owner's race (s_player.race_name).
+            # mainpups.cpp:2937-3041): one option per such ship button,
+            # named by the owner's race (s_player.race_name). The SLOT is
+            # the owner: Build_System_Popup_Ships_ fills
+            # `_system_display_ships[owner_idx].ship_idx = node_idx`
+            # (sys.cpp:2172-2173), and the block writes the fifteen slots
+            # in order (ext_api.cpp:1097-1103). `ship` is a _ship_node
+            # index, not a _ship index — read as one it named some other
+            # ship's owner and no attack was offered (work order 193's
+            # defect, fixed in 194).
             wanted = set((popup.get("targets") or {}).get("players", []))
-            for slot in sysd.get("ships", []):
-                owner = _ship_owner(state, slot["ship"])
-                if slot["field"] > 0 and owner in wanted:
+            for owner, slot in enumerate(sysd.get("ships", [])):
+                if slot["field"] > 0 and slot["ship"] > -1 and \
+                        owner in wanted:
                     options.append((_race_name(state, owner),
                                     act(slot["field"], "click")))
         # the original's button reads CLOSE on both (BUFFER0.LBX, the

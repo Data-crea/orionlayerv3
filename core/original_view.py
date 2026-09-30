@@ -130,14 +130,21 @@ class OriginalView:
     #: went out as ACTIVATE_FIELD and changed nothing (the hull stayed, the
     #: Info page stayed). The same fault as the string field's, the same way.
     MULTI_BUTTON_TYPE = 3
+    #: `FIELD_TYPE_GRID` (orion2_consts.h): an area that reads WHERE it was
+    #: clicked — `_xpos/_ypos`, written in the mouse path an activation
+    #: skips (fields.cpp:173-189). The battle map is one (combat1.cpp:111):
+    #: a move goes to `_cur_combat_x + _xpos / 2` (:712-757), so an
+    #: ACTIVATE_FIELD moved the ship wherever the pointer had last been
+    #: (work order 193's survey, fixed in 194). Same fault, same way.
+    GRID_TYPE = 12
 
     def find_field_at(self, fields, x, y):
         """Find field at (x, y) in 640x480 coordinates.
 
         Skips dummy (index 0) and offscreen (5000, 5000) fields. The first
         field covering the point decides, as in the engine; a radio button,
-        a continuous string field or a multi-button answers None — all three
-        must go through INJECT_CLICK.
+        a continuous string field, a multi-button or a grid answers None —
+        all four must go through INJECT_CLICK.
         """
         if not fields:
             return None
@@ -155,7 +162,8 @@ class OriginalView:
                 # "clicked" (work order 186).
                 if f.field_type in (self.RADIO_BUTTON_TYPE,
                                     self.CONTINUOUS_INPUT_TYPE,
-                                    self.MULTI_BUTTON_TYPE):
+                                    self.MULTI_BUTTON_TYPE,
+                                    self.GRID_TYPE):
                     return None
                 return f.index
         return None
@@ -177,6 +185,21 @@ class OriginalView:
             client.activate_field(field_id)
         else:
             client.inject_click(*coords)
+
+    def forward_right_click(self, client, screen_x, screen_y,
+                            target_w, target_h):
+        """Route a window RIGHT click into orion2re (the F12 view).
+
+        Always the point, never a field: the original reads a right
+        click where it lands — help over a help region, turn to face on
+        the battle map (combat1.cpp:696-710) — and CANCEL_FIELD would
+        answer at a field's centre. Open fix 61 carries it; the letterbox
+        bar sends nothing. Returns the 640x480 point sent, or None."""
+        coords = self.screen_to_640(screen_x, screen_y,
+                                    target_w, target_h)
+        if coords:
+            client.inject_right_click(*coords)
+        return coords
 
     @staticmethod
     def key_code(event):

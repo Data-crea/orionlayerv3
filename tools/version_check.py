@@ -294,6 +294,12 @@ LOCAL_PATCHES = {
         os.path.join("src", "game", "fields.cpp"), "OrionLayer, open fix 42.",
         "a screen is silent on the wire during its input delay (open fix "
         "42): the research panel's list arrives ~550 ms late on every entry"),
+    # Applied 30 September 2026 by work order 194: ab3f6892, on 96da4c4d.
+    "doc/ext_inject_right_click.patch": (
+        os.path.join("src", "ext", "ext_api.cpp"),
+        "OrionLayer, open fix 61.",
+        "the wire has no right click at a point (open fix 61): the F12 view "
+        "cannot turn a ship on the battle map"),
 }
 
 #: Patches that are REPORTED to Joes and not yet applied: listed with
@@ -354,6 +360,7 @@ FIX_NUMBERS = {
     "doc/ext_turn_popups.patch": (49,),
     "doc/ext_hall_of_fame.patch": (50,),
     "doc/ext_multiplayer_state.patch": (51,),
+    "doc/ext_inject_right_click.patch": (61,),
 }
 
 

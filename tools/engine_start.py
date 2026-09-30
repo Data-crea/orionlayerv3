@@ -309,6 +309,10 @@ def _start_once(log_path, timeout, inhibit, out, engine=None, guard=None,
     deadline = time.time() + timeout
     intro_named = False
     skips = 0
+    # Found by NAME (`running_engines`): a binary not called `orion2re` is
+    # never found, the wait below never runs, and the TIMEOUT line must
+    # still be printable (work order 194 met it with a renamed copy).
+    text = ""
     pid = _engine_pid(proc.pid, deadline)
     while time.time() < deadline:
         with open(log_path, encoding="utf-8", errors="replace") as f:

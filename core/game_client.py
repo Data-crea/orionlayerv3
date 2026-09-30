@@ -17,6 +17,7 @@ from core.wire_protocol import (
     MSG_VISUAL, MSG_EVENT,
     MSG_ACTIVATE, MSG_INJECT_KEY, MSG_INJECT_CLICK, MSG_CANCEL_FIELD,
     MSG_SET_JOBS, MSG_SELECT_SHIP, MSG_SAVE_SLOTS, MSG_SHOW_WINDOW,
+    MSG_INJECT_RIGHT_CLICK,
     SUB_STATE, SUB_FIELDS, SUB_VISUAL, SUB_EVENTS,
     parse_save_slots,
 )
@@ -337,6 +338,12 @@ class GameClient:
     def inject_click(self, x, y):
         """Send a mouse click at (x,y) in 640x480 space."""
         self._send_message(MSG_INJECT_CLICK,
+                           struct.pack('<hh', x, y))
+
+    def inject_right_click(self, x, y):
+        """A RIGHT click at (x, y) in 640x480 space — open fix 61
+        (`MSG_INJECT_RIGHT_CLICK`); an engine without it drops it."""
+        self._send_message(MSG_INJECT_RIGHT_CLICK,
                            struct.pack('<hh', x, y))
 
     def set_jobs(self, colony_index, pairs):

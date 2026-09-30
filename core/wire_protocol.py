@@ -50,6 +50,14 @@ MSG_SELECT_SHIP   = 0x85
 #: F12 sends it. An engine without the fix drops it, and nothing else
 #: depends on it being taken — the picture is on the wire either way.
 MSG_SHOW_WINDOW   = 0x86
+#: A RIGHT click at (x, y) in 640x480 space: int16 x, int16 y. Open fix
+#: 61 (`doc/ext_inject_right_click.patch`, work order 194). CANCEL_FIELD
+#: right-clicks a field's CENTRE, which answers a button but not a grid
+#: field — the battle map reads the point (turn to face, combat1.cpp:
+#: 696-710). The F12 view sends it; an engine without the fix drops it,
+#: as every unknown type (`default: break`), so nothing happens there —
+#: never a left click in its place.
+MSG_INJECT_RIGHT_CLICK = 0x87
 
 #: How many STATE/VISUAL pairs after an injected command can still
 #: describe the world BEFORE it. One — so a caller that waits for an
