@@ -130,10 +130,12 @@ def draw(surface, row, x, y, width, row_h, cfg, style, layout):
         #                is NOT a fault.
         #   "missing"    a name file is absent or stale. The user is
         #                missing a command; name it.
-        #   "unsourced"  a queued ship or a ship design, whose name
-        #                is not on the wire. NO COMMAND FIXES IT, so
-        #                offering the extractor here would send the
-        #                reader to run something that cannot help.
+        #   "unsourced"  a queued ship or a ship design whose record
+        #                the wire does not carry (the names themselves
+        #                come through `prodname.ShipNames` since work
+        #                order 196). NO COMMAND FIXES IT, so offering
+        #                the extractor here would send the reader to
+        #                run something that cannot help.
         #
         # The old code had two states and read the SCREEN-wide
         # loader state, so an ordinary empty row on a fully extracted

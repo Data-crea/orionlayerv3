@@ -442,19 +442,27 @@ def galaxy_inset_label(game_state, colony_index):
     So on this screen the label names the selected colony's star,
     which is the same selection `colonyselect` already holds.
     """
+    stars = getattr(game_state, "stars", None) or []
+    idx = scanned_star(game_state, colony_index)
+    return stars[idx].name if idx is not None else ""
+
+
+def scanned_star(game_state, colony_index):
+    """`_galaxy_map_scanned_star` for the selected colony — its planet's
+    star (colsum.cpp:141, :1001) — or None. The label names it and the
+    inset marks it (work order 196 C2)."""
     if colony_index is None:
-        return ""
+        return None
     colonies = getattr(game_state, "colonies_raw", None) or []
     planets = getattr(game_state, "planets_raw", None) or []
     stars = getattr(game_state, "stars", None) or []
     if not (0 <= colony_index < len(colonies)):
-        return ""
+        return None
     colony = colony_struct.parse(colonies[colony_index])
     if not (0 <= colony.planet < len(planets)):
-        return ""
-    planet = planet_struct.parse(planets[colony.planet])
-    idx = int(planet.star_index)
-    return stars[idx].name if 0 <= idx < len(stars) else ""
+        return None
+    idx = int(planet_struct.parse(planets[colony.planet]).star_index)
+    return idx if 0 <= idx < len(stars) else None
 
 
 def _low_byte_signed(value):
@@ -769,10 +777,13 @@ def build_rows(game_state, sort_key="name", names=None, held=None):
         except (AttributeError, ValueError, TypeError):
             continue
 
+    # The ship branches' names, off the wire (work order 196 C3: the
+    # list never passed them, and every ship read "not on the wire").
+    ships = prodname.ShipNames(game_state, me)
     rows = []
     for index, raw in enumerate(game_state.colonies_raw):
         col = colony_struct.parse(raw)
-        _producing = (names.name(col.producing[0])
+        _producing = (names.name(col.producing[0], ships=ships)
                       if names is not None else (None, "missing"))
         # TRANSCRIBED, both halves. `Build_Global_Colony_List_`
         # (colxport.cpp:91-99) walks the colony array in order and
@@ -899,9 +910,10 @@ def build_rows(game_state, sort_key="name", names=None, held=None):
             #              "" is a legitimate one — E_Strings_(0x00C)
             #   missing    the branch is known, its file is not
             #              extracted
-            #   unsourced  a queued ship or a ship design, whose name
-            #              is `_ship[i].d.name` / a design record and
-            #              is NOT ON THE WIRE
+            #   unsourced  a queued ship or a ship design whose record
+            #              the wire does not carry (an index past
+            #              `ships_raw`) — the names themselves are read
+            #              through `prodname.ShipNames` (196 C3)
             # The third is why the state is per ROW and not per
             # screen: no extraction fixes it, so the column must not
             # offer a command for it.

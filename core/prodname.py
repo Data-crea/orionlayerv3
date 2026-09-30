@@ -24,16 +24,22 @@ absence:
       EVERY ROW** — producing[0] is -2, TRADE_GOODS, E_Strings_(0x21D).
 
     Colony_Production_Is_Queued_Ship_(id)   -> _ship[i].d.name
-      id <= COLONY_PRODUCTION_QUEUED_SHIP_BASE (-100). NOT ANSWERED:
-      `d.name` is not on the wire. `core/structs/ship.py` verifies
-      five fields — owner, status, location, x, y — and a name at a
-      guessed offset is exactly what decision 23 forbids.
+      id <= COLONY_PRODUCTION_QUEUED_SHIP_BASE (-100). ANSWERED through
+      `ShipNames` below: `d.name` is offset 0 of the ship record, verified
+      by both of decision 23's sources on 14 September 2026 (ship.py).
 
 and `Option_String_`'s own tail splits once more: a SHIP DESIGN id
 (-99..-50, colbldg.h:24) returns
-`_player[owner].ship_designs[idx].name`, which is not on the wire
-either, and anything else pops an error dialog and returns the empty
-string (colbldg.cpp:2380-2384).
+`_player[owner].ship_designs[idx].name` — verified in `player.py`
+(work order 180), also through `ShipNames` — and anything else pops an
+error dialog and returns the empty string (colbldg.cpp:2380-2384).
+
+**UNTIL WORK ORDER 196 THE COLONIES LIST NEVER ASKED.** Both names were
+verified by 180 for the single-colony screen, which passes `ShipNames`;
+`Resolver.name` did not take one, so every ship a colony built read
+"ship name not on the wire" on the Colonies list (Data's C3). STATE_
+UNSOURCED is left for a record the wire does not carry (an index past
+`ships_raw`, no player record).
 
 **ID 0 IS NOT A BUILDING, AND WE HAD IT WRONG.** Found 7 September
 2026 while transcribing this function. `Colony_Production_Is_Building_`
@@ -292,6 +298,8 @@ class Resolver:
                 return worse
         return "ok"
 
-    def name(self, production_id):
-        """(text, state) — `production_name` with both files bound."""
-        return production_name(production_id, self.buildings, self.strings)
+    def name(self, production_id, ships=None):
+        """(text, state) — `production_name` with both files bound, and
+        the snapshot's `ShipNames` for the two ship branches."""
+        return production_name(production_id, self.buildings, self.strings,
+                               ships=ships)

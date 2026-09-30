@@ -85,15 +85,26 @@ because no player in the reference save carries those colours.
    to 0.78 and this uses one number for all of them.
 3. **The map does not fill the hole.** See `map_rect`.
 
+**HD EXTENSION `inset_scanned_box` — work order 196 C2, Data's decision
+(item 8): the hovered colony's star is marked with the Planets screen's
+scanned-star box**, its 9x9 native outline in the star's own bright
+colour (`scanned_marker`). What the original does instead: view_mode 3
+resets every star's animation frame EXCEPT the scanned one
+(movebox.cpp:98-101), so that star alone would cycle its sprite —
+GSTAR.LBX entries 23-32, eight 3x3 frames each (read from the player's
+LBX, never shipped). Measured live on 30 September 2026 (SAVE4, the
+Colonies screen, 120 presented frames over 8 s): **not one pixel of the
+inset changed**, so the original's highlight could not be seen on the
+wire, and its frames are in the unshipped LBX — Data's rule for item 8
+then asks for the highlight anyway, marked. The box is the one the
+Planets screen transcribes (plntsum.cpp:1370-1377), so the two insets
+mark a star one way.
+
 **NOT DRAWN, and recorded rather than left to be noticed:**
 
-  the scanned star ANIMATES.  view_mode 3 resets every star's
-                              animation frame EXCEPT the scanned one
-                              (movebox.cpp:98-101), so that star
-                              cycles its sprite while the rest stand
-                              still. Reachable — the selection is
-                              known — and not drawn because the
-                              frames are in the same unshipped LBX.
+  the scanned star ANIMATES.  see `inset_scanned_box` above: the box
+                              stands in for it, the animation is not
+                              drawn.
   the stars are FIELDS.       `_galaxy_map_star_field[]`
                               (colsum.cpp:69-75): hovering a star in
                               the original's inset sets the scanned
@@ -273,6 +284,15 @@ def _blit_sprite(surface, x, y, cidx, cw, ch):
     surface.fill(dark, (left + cw, top + 2 * ch, cw, ch))
 
 
+def scanned_marker(stars, star_index):
+    """`(star_index, colour)` for `render`'s box on the scanned star — its
+    own bright shade — or None. HD EXTENSION `inset_scanned_box` (above)."""
+    if star_index is None or not 0 <= star_index < len(stars or ()):
+        return None
+    cidx = stars[star_index][2]
+    return star_index, INSET_COLORS.get(cidx, INSET_COLORS[8])[:3]
+
+
 def render(surface, stars, label, area, cfg, layout, style,
            native=(128, 91), marker=None):
     """Draw the inset into `area`, the `galaxy_inset` cutout.
@@ -310,7 +330,8 @@ def render(surface, stars, label, area, cfg, layout, style,
     # (star index, colour), a 9x9 native outline centred on the star —
     # graphics::Box_(star_x - 1, star_y - 1, 9, 9) over
     # Get_Galaxy_Map_Star_XY_'s mode-2 offset of 3 (plntsum.cpp:1370-1377,
-    # movebox.cpp:374). The colony summary passes none and draws none.
+    # movebox.cpp:374). The colony summary passes the hovered colony's
+    # star since work order 196 (HD EXTENSION `inset_scanned_box`).
     if marker is not None and 0 <= marker[0] < len(points):
         mx, my, _c, cw, ch = points[marker[0]]
         pygame.draw.rect(surface, tuple(marker[1])[:3],

@@ -167,6 +167,7 @@ class ColonySummaryScreen(ScreenBase):
         # reaches no client — see `colonypick`, which is where the
         # reason lives — and the second one sends both clicks.
         self._move = colonymoveui.MoveController()
+        self._jump = None       # a name click on its way (colonyjump)
 
     # ── Lifecycle ─────────────────────────────────────────
 
@@ -183,6 +184,7 @@ class ColonySummaryScreen(ScreenBase):
         # already discarded — and an in-flight send would be waiting
         # for an effect nobody is going to produce.
         self._move = colonymoveui.MoveController()
+        self._jump = None
         self.update(game_state)
         # THE SIX COLUMN BOXES BECOME THE COLUMN TABLE, once, on
         # load: what is bound is the live `Box` objects, so a drag in
@@ -243,6 +245,10 @@ class ColonySummaryScreen(ScreenBase):
         # built in the other order they would show pops in hand that
         # nothing is holding, for one frame, every time a move lands.
         self._move.advance(game_state, self._move_words())
+        if self._jump is not None:
+            self._jump.update(game_state)
+            if self._jump.finished:
+                self._jump = None
         self._rebuild_rows()
         raws = getattr(game_state, "player_raw", None) or []
         players = [player_struct.parse(r) for r in raws
@@ -497,8 +503,9 @@ class ColonySummaryScreen(ScreenBase):
         label under it is `Draw_Scan_Info_`'s (colsum.cpp:86). The
         positions and the colour rule are `colonyrows`', the drawing
         is `colonyinset`'s, and what is NOT drawn — the scanned
-        star's animation, the star fields, the population-transfer
-        connect line — is recorded there.
+        star's animation (a box marks it instead, HD EXTENSION
+        `inset_scanned_box`, work order 196 C2), the star fields, the
+        population-transfer connect line — is recorded there.
 
         Display only. Nothing here reaches the game, which on this
         screen is a rule and not an accident (decision 46).
@@ -506,11 +513,14 @@ class ColonySummaryScreen(ScreenBase):
         box = self.box_rect("galaxy_inset")
         if not box or self._state is None:
             return
+        stars = colonyrows.galaxy_inset_stars(self._state)
         colonyinset.render(
-            surface, colonyrows.galaxy_inset_stars(self._state),
+            surface, stars,
             colonyrows.galaxy_inset_label(self._state, self._selected),
             pygame.Rect(*self.layout.rect(box)),
-            self._data.get("inset", {}), self.layout, self.style)
+            self._data.get("inset", {}), self.layout, self.style,
+            marker=colonyinset.scanned_marker(
+                stars, colonyrows.scanned_star(self._state, self._selected)))
 
     def _render_sidebar(self, surface):
         """The six empire readouts. Everything about them, including
@@ -575,7 +585,7 @@ class ColonySummaryScreen(ScreenBase):
             return None
         if colonyscroll.handle(self, screen_x, screen_y):
             return
-        if self._move.busy:
+        if self._move.busy or self._jump is not None:
             # A move is on the wire. Every other button on this
             # screen injects something — a sort re-orders the game's
             # own list and resets `_first` (colsum.cpp:829-838), and
@@ -641,34 +651,22 @@ class ColonySummaryScreen(ScreenBase):
             self._move.cancel("clicked off the rows")
             self._rebuild_rows()
         if row_index is not None:
-            # DELIBERATELY INERT, and that is worth a comment because
-            # the original does something substantial here: clicking a
-            # row's name field sets `MOX::_current_screen =
-            # SCREEN_COLONY` and hands over the star and orbit
-            # (colsum.cpp:912-920), so the click leaves this screen
-            # for the colony screen. Clicking the PRODUCING text goes
-            # somewhere else again, to SCREEN_QUEUE_POPUP
-            # (colsum.cpp:922-944).
-            #
-            # Neither destination has an HD screen yet, and sending
-            # the injection anyway would move the game to a screen the
-            # HD side cannot draw — the fallback would take over and
-            # the player would be looking at 640x480 with no way back
-            # that this screen knows about. So the click is swallowed
-            # here rather than passed on.
-            #
-            # It is swallowed and NOT left to fall through, because
-            # falling through is the version that looks the same today
-            # and stops looking the same the moment anything else
-            # claims that area. An absence that is written down is a
-            # state; an absence that happens to work out is a bug
-            # waiting for its second cause.
-            #
-            # The hover has already moved the selection by the time a
-            # click arrives, so a player who clicks a row does see the
-            # panel change — which reads as the click working. That is
-            # the honest risk in leaving it inert, and it is the
-            # reason this comment is longer than the branch.
+            # A CLICK ON THE NAME OPENS THE COLONY — the original's own
+            # `_list_fields[i]` (colsum.cpp:904-921), work order 196 C1.
+            # Swallowed until the colony screen had an HD view (work
+            # order 180); `colonyjump` steers the game's window and sends
+            # it. Elsewhere on a row the click stays inert: the producing
+            # text's build popup is not asked for here.
+            row = self._rows[row_index]
+            if colonytrack.on_name(area, cfg, scale, row, screen_x) and \
+                    self.app.connected and self._state is not None:
+                from . import colonyjump
+                self._jump = colonyjump.Jump(
+                    self.app.client, self._state, colony=row["index"],
+                    position=row_index, n_colonies=len(self._rows),
+                    sort_key=self._sort_key)
+                if self._jump.finished:
+                    self._jump = None
             return None
         return super().handle_click(screen_x, screen_y)
 
