@@ -8,7 +8,10 @@ Rendering order:
   5. Dynamic value labels below each cutout
   6. Toggle buttons (blue=on, dark=off) with labels
   7. Frame overlay
-  8. Status line
+
+No status line: the original prints none, and the one HD drew ("New Game
+| Click settings to cycle | ESC -> Main Menu") was a leftover that Data
+found on the multiplayer New Game (work order 196 B1).
 
 All positions live in layout.json (v2 hd-space, 3440x1440) and are
 converted to screen coordinates via the background's cover-scale
@@ -267,21 +270,7 @@ class NewGameScreen(ScreenBase):
         if self.USE_FRAME:
             self._render_frame(surface)
 
-        # 8. Status line (after frame so it's not covered)
-        font = self.style.get_font(
-            max(8, int(14 * self.app.win_h / 1080)))
-        col = self.colors.get("text", {}).get(
-            "secondary", [120, 135, 170])
-        info = ("New Game  |  Click settings to cycle"
-                "  |  ESC \u2192 Main Menu")
-        text = font.render(info, True, tuple(col[:3]))
-        # Right of CANCEL since work order 170 put the button on the
-        # bottom edge, where this line used to be the only thing.
-        left = self.hud_frame_button_rect("left")
-        x = left.right + int(16 * self.layout.scale) if left else 10
-        surface.blit(text, (x, self.app.win_h - 24))
-
-        # 9. Right-click help, above everything including the frame.
+        # 8. Right-click help, above everything including the frame.
         self.render_help(surface)
 
     def _render_toggles(self, surface):
