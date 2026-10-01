@@ -11,20 +11,23 @@ import os
 
 import pygame
 
-from core import lbx
+from core import blobart, lbx
 
 log = logging.getLogger("races")
 
 GAMEDATA = os.path.join(os.path.dirname(os.path.abspath(__file__)),
                         "assets", "gamedata")
+#: The same folder as a tree path: read through the resolver (`core.blobart`)
+REL = "screens/races/assets/gamedata"
 FORMAT_VERSION = 1
 HOW = "python tools/races_art_extract.py"
 RACES = 13
 
 
 class RacesArt:
-    def __init__(self, folder=GAMEDATA):
+    def __init__(self, folder=None):
         self.folder = folder
+        self._src = blobart.Source(REL, folder)
         self.reason = ""
         self._palette = None
         self._cache = {}
@@ -32,7 +35,7 @@ class RacesArt:
 
     def _load(self):
         try:
-            with open(os.path.join(self.folder, "manifest.json"),
+            with open(self._src.path("manifest.json"),
                       encoding="utf-8") as fh:
                 manifest = json.load(fh)
             if int(manifest.get("format", 0)) != FORMAT_VERSION:
@@ -40,7 +43,7 @@ class RacesArt:
                                f"{manifest.get('format')}, this build reads "
                                f"{FORMAT_VERSION}. Run: {HOW}")
                 return
-            with open(os.path.join(self.folder, "palette.json"),
+            with open(self._src.path("palette.json"),
                       encoding="utf-8") as fh:
                 self._palette = {i: tuple(c) for i, c in
                                  enumerate(json.load(fh))}
@@ -70,11 +73,12 @@ class RacesArt:
             return None
         if name in self._cache:
             return self._cache[name]
-        surface = None
-        path = os.path.join(self.folder, f"{name}.bin")
+        surface = self._src.painted(f"{name}.bin")
+        if surface is not None:
+            self._cache[name] = surface
+            return surface
         try:
-            with open(path, "rb") as fh:
-                blob = fh.read()
+            blob = self._src.read(f"{name}.bin")
             header = lbx.parse_header(blob, name)
             pixels = lbx.decode_frame(blob, header, 0)
             if pixels is not None:
@@ -93,10 +97,10 @@ class RacesArt:
 _loaded = None
 
 
-def load(folder=GAMEDATA):
+def load(folder=None):
     global _loaded
     if _loaded is None or _loaded.folder != folder:
         _loaded = RacesArt(folder)
-        log.info("races artwork: %s", "loaded from " + folder
+        log.info("races artwork: %s", "loaded from " + _loaded._src.where
                  if _loaded.available else _loaded.reason)
     return _loaded

@@ -27,13 +27,15 @@ import os
 
 import pygame
 
-from core import lbx
+from core import blobart, lbx
 
 log = logging.getLogger("orionlayer")
 
 #: Where `tools/officer_art_extract.py` writes. Gitignored.
 GAMEDATA = os.path.join(os.path.dirname(os.path.abspath(__file__)),
                         "assets", "gamedata")
+#: The same folder as a tree path: read through the resolver (`core.blobart`)
+REL = "screens/leaders/assets/gamedata"
 
 FORMAT_VERSION = 1
 
@@ -49,15 +51,16 @@ STARS = 11
 class LeaderArt:
     """The extracted artwork, or an honest account of its absence."""
 
-    def __init__(self, folder=GAMEDATA):
+    def __init__(self, folder=None):
         self.folder = folder
+        self._src = blobart.Source(REL, folder)
         self.reason = ""
         self._palette = None
         self._cache = {}
         self._manifest = self._load_manifest()
 
     def _load_manifest(self):
-        path = os.path.join(self.folder, "manifest.json")
+        path = self._src.path("manifest.json")
         if not os.path.exists(path):
             self.reason = (f"The game's own Leaders artwork is not "
                            f"extracted. Run: {HOW}")
@@ -74,8 +77,7 @@ class LeaderArt:
                            f"this build reads {FORMAT_VERSION}. Run: {HOW}")
             return None
         try:
-            with open(os.path.join(self.folder, "palette.bin"), "rb") as fh:
-                self._palette = lbx.screen_palette(fh.read())
+            self._palette = lbx.screen_palette(self._src.read("palette.bin"))
         except (OSError, lbx.LbxError) as exc:
             self.reason = f"The screen palette is unusable ({exc}). Run: {HOW}"
             return None
@@ -99,8 +101,7 @@ class LeaderArt:
         three popup pieces), one frame, or None."""
         if not self.available:
             return None
-        return self._sprite(os.path.join(self.folder, "officer",
-                                         f"{name}.bin"), frame)
+        return self._sprite(("officer", f"{name}.bin"), frame)
 
     def portrait(self, pict_num, dark=False):
         """OFFICER.LBX `0x15 + pict_num`, or the darkened `0x8F + n`
@@ -125,15 +126,17 @@ class LeaderArt:
 
     # ── Decoding (fltart's path, for this folder) ─────────
 
-    def _sprite(self, path, frame=0):
-        key = (path, frame)
+    def _sprite(self, parts, frame=0):
+        key = (parts, frame)
         if key in self._cache:
             return self._cache[key]
-        surface = None
+        surface = self._src.painted(*parts, frame=frame)
+        if surface is not None:
+            self._cache[key] = surface
+            return surface
         try:
-            with open(path, "rb") as fh:
-                blob = fh.read()
-            header = lbx.parse_header(blob, os.path.basename(path))
+            blob = self._src.read(*parts)
+            header = lbx.parse_header(blob, parts[-1])
             pixels = lbx.decode_frame(blob, header, frame)
             if pixels is not None:
                 palette = dict(self._palette)
@@ -155,12 +158,12 @@ class LeaderArt:
 _loaded = None
 
 
-def load(folder=GAMEDATA):
+def load(folder=None):
     """The one instance. Decoding is lazy; this only reads the manifest."""
     global _loaded
     if _loaded is None or _loaded.folder != folder:
         _loaded = LeaderArt(folder)
         log.info("leaders artwork: %s",
-                 "loaded from " + folder if _loaded.available
+                 "loaded from " + _loaded._src.where if _loaded.available
                  else _loaded.reason)
     return _loaded

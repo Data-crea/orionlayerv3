@@ -15,23 +15,26 @@ import os
 
 import pygame
 
-from core import lbx
+from core import blobart, lbx
 
 log = logging.getLogger("audience")
 
 GAMEDATA = os.path.join(os.path.dirname(os.path.abspath(__file__)),
                         "assets", "gamedata")
+#: The same folder as a tree path: read through the resolver (`core.blobart`)
+REL = "screens/audience/assets/gamedata"
 FORMAT_VERSION = 1
 
 
 class AudienceArt:
-    def __init__(self, folder=GAMEDATA):
+    def __init__(self, folder=None):
         self.folder = folder
+        self._src = blobart.Source(REL, folder)
         self.reason = ""
         self.races = 0
         self._cache = {}
         try:
-            with open(os.path.join(folder, "manifest.json"),
+            with open(self._src.path("manifest.json"),
                       encoding="utf-8") as fh:
                 manifest = json.load(fh)
             if int(manifest.get("format", 0)) != FORMAT_VERSION:
@@ -46,9 +49,7 @@ class AudienceArt:
         return self.races > 0
 
     def _blob(self, group, race):
-        with open(os.path.join(self.folder, group, f"{race}.bin"),
-                  "rb") as fh:
-            return fh.read()
+        return self._src.read(group, f"{race}.bin")
 
     def _palette(self, race):
         blob = self._blob("palettes", race)
@@ -62,6 +63,8 @@ class AudienceArt:
             return self._cache[key]
         surface = None
         if self.available and 0 <= race < self.races:
+            surface = self._src.painted(group, f"{race}.bin")
+        if surface is None and self.available and 0 <= race < self.races:
             try:
                 blob = self._blob(group, race)
                 header = lbx.parse_header(blob, group)
@@ -79,10 +82,10 @@ class AudienceArt:
 _loaded = None
 
 
-def load(folder=GAMEDATA):
+def load(folder=None):
     global _loaded
     if _loaded is None or _loaded.folder != folder:
         _loaded = AudienceArt(folder)
-        log.info("audience artwork: %s", "loaded from " + folder
+        log.info("audience artwork: %s", "loaded from " + _loaded._src.where
                  if _loaded.available else _loaded.reason)
     return _loaded

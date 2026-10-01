@@ -69,13 +69,15 @@ import os
 
 import pygame
 
-from core import lbx
+from core import blobart, lbx
 
 log = logging.getLogger("orionlayer")
 
 #: Where `tools/fleet_art_extract.py` writes. Gitignored.
 GAMEDATA = os.path.join(os.path.dirname(os.path.abspath(__file__)),
                         "assets", "gamedata")
+#: The same folder as a tree path: read through the resolver (`core.blobart`)
+REL = "screens/fleets/assets/gamedata"
 
 #: Refused rather than rendered almost right — decision 38's own
 #: reason for carrying a version at all.
@@ -157,8 +159,9 @@ def magnified(surface, step):
 class FleetArt:
     """The extracted artwork, or an honest account of its absence."""
 
-    def __init__(self, folder=GAMEDATA):
+    def __init__(self, folder=None):
         self.folder = folder
+        self._src = blobart.Source(REL, folder)
         self.reason = ""
         self._palette = None
         self._cache = {}
@@ -168,7 +171,7 @@ class FleetArt:
     # ── Availability ──────────────────────────────────────
 
     def _load_manifest(self):
-        path = os.path.join(self.folder, "manifest.json")
+        path = self._src.path("manifest.json")
         if not os.path.exists(path):
             self.reason = (f"The game's own Fleets artwork is not "
                            f"extracted. Run: {HOW}")
@@ -185,8 +188,7 @@ class FleetArt:
                            f"this build reads {FORMAT_VERSION}. Run: {HOW}")
             return None
         try:
-            self._palette = lbx.screen_palette(
-                self._blob(os.path.join(self.folder, "palette.bin")))
+            self._palette = lbx.screen_palette(self._src.read("palette.bin"))
         except (OSError, lbx.LbxError) as exc:
             self.reason = f"The screen palette is unusable ({exc}). Run: {HOW}"
             return None
@@ -218,8 +220,7 @@ class FleetArt:
         if not 0 <= ship_type < SHIP_STRIDE or not 0 <= colour <= MAX_PLAYERS:
             return None
         index = ship_type + colour * SHIP_STRIDE
-        return self._sprite(os.path.join(self.folder, "ships",
-                                         f"{index}.bin"),
+        return self._sprite(("ships", f"{index}.bin"),
                             minimum=MIN_PICTURE,
                             ramp=colour if owner is None else owner)
 
@@ -244,8 +245,7 @@ class FleetArt:
         ramp = {}
         if index is not None:
             try:
-                blob = self._blob(os.path.join(self.folder, "ships",
-                                               f"{index}.bin"))
+                blob = self._src.read("ships", f"{index}.bin")
                 header = lbx.parse_header(blob, f"ships/{index}")
                 if header.has_palette:
                     ramp = lbx.read_palette(blob, header.frame_count)
@@ -258,8 +258,7 @@ class FleetArt:
         """An inset star, FLEET.LBX 34 + colour (flt1.cpp:1439-1447)."""
         if not self.available or not 0 <= colour < 11:
             return None
-        return self._sprite(os.path.join(self.folder, "fleet",
-                                         f"star_{colour}.bin"), frame=frame)
+        return self._sprite(("fleet", f"star_{colour}.bin"), frame=frame)
 
     def radio(self, which, on):
         """A filter radio's face, FLEET.LBX 9 or 10, or None.
@@ -271,8 +270,7 @@ class FleetArt:
         """
         if which not in ("support", "combat"):
             return None
-        return self._sprite(os.path.join(self.folder, "fleet",
-                                         f"radio_{which}.bin"),
+        return self._sprite(("fleet", f"radio_{which}.bin"),
                             frame=1 if on else 0)
 
     def selected_box(self):
@@ -347,11 +345,11 @@ class FleetArt:
     def _fleet(self, name):
         if not self.available:
             return None
-        return self._sprite(os.path.join(self.folder, "fleet", f"{name}.bin"))
+        return self._sprite(("fleet", f"{name}.bin"))
 
     # ── Decoding ──────────────────────────────────────────
 
-    def _sprite(self, path, frame=0, minimum=1, ramp=None):
+    def _sprite(self, parts, frame=0, minimum=1, ramp=None):
         """One decoded frame as a surface, or None.
 
         None for every reason a file can fail to be a picture — absent,
@@ -359,13 +357,16 @@ class FleetArt:
         be anything but a placeholder. The caller cannot tell them
         apart and must not: all of them mean "draw the fallback".
         """
-        key = (path, frame, ramp)
+        key = (parts, frame, ramp)
         if key in self._cache:
             return self._cache[key]
-        surface = None
+        surface = self._src.painted(*parts, frame=frame)   # as painted
+        if surface is not None:
+            self._cache[key] = surface
+            return surface
         try:
-            blob = self._blob(path)
-            header = lbx.parse_header(blob, os.path.basename(path))
+            blob = self._src.read(*parts)
+            header = lbx.parse_header(blob, parts[-1])
             if header.width >= minimum and header.height >= minimum:
                 surface = self._surface(blob, header, frame, ramp)
         except (OSError, lbx.LbxError, ValueError):
@@ -391,21 +392,17 @@ class FleetArt:
         return pygame.image.frombuffer(
             rgba, (header.width, header.height), "RGBA").convert_alpha()
 
-    @staticmethod
-    def _blob(path):
-        with open(path, "rb") as fh:
-            return fh.read()
 
 
 _loaded = None
 
 
-def load(folder=GAMEDATA):
+def load(folder=None):
     """The one instance. Decoding is lazy; this only reads the manifest."""
     global _loaded
     if _loaded is None or _loaded.folder != folder:
         _loaded = FleetArt(folder)
         log.info("fleets artwork: %s",
-                 "loaded from " + folder if _loaded.available
+                 "loaded from " + _loaded._src.where if _loaded.available
                  else _loaded.reason)
     return _loaded

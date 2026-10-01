@@ -73,14 +73,15 @@ SINGLES = {"background.png": UNIVERSAL}
 FRAMES = "frames/"
 FRAME_TREE = "screens/{screen}/assets/frame.png"
 #: Slots with no file of OrionLayer's own at their tree path: a mod file
-#: there ADDS the picture instead of replacing one — the frames, and the
-#: battle's pictures as PNG (195 §7: `core.blobart`, before the extracted
-#: blob is decoded), and the population figures — extracted from the
-#: player's MOO2 (absent in a tree that was not) and with steps the tree has
-#: no file for (`<name>@2x.png`, decision 50), read through `files_root`.
-#: Globs relative to the tree.
+#: there ADDS the picture instead of replacing one — the frames; the
+#: extracted artwork's pictures as PNG (195 §7, work order 199 D:
+#: `core.blobart` and the battle's `cbart`, before a blob is decoded); and
+#: the population figures — extracted from the player's MOO2 (absent in a
+#: tree that was not) and with steps the tree has no file for
+#: (`<name>@2x.png`, decision 50), read through `files_root`. Globs
+#: relative to the tree.
 SLOTS = ("screens/*/assets/frame.png",
-         "screens/combat/assets/gamedata/*/*.png",
+         "screens/*/assets/gamedata/*.png",
          "assets/shared/figures/*.png")
 #: The optional file a mod states its frames' layouts in (195 §3.5).
 MOD_JSON = "mod.json"

@@ -17,31 +17,33 @@ import os
 
 import pygame
 
-from core import lbx
+from core import blobart, lbx
 from screens.fleets import fltart
 
 log = logging.getLogger("ship_design")
 
 GAMEDATA = os.path.join(os.path.dirname(os.path.abspath(__file__)),
                         "assets", "gamedata")
+#: The same folder as a tree path: read through the resolver (`core.blobart`)
+REL = "screens/ship_design/assets/gamedata"
 FORMAT_VERSION = 2
 SHIP_STRIDE = 50
 
 
 class DesignArt:
-    def __init__(self, folder=GAMEDATA):
+    def __init__(self, folder=None):
         self.folder = folder
+        self._src = blobart.Source(REL, folder)
         self.reason = ""
         self._palette = None
         self._cache = {}
-        path = os.path.join(folder, "manifest.json")
+        path = self._src.path("manifest.json")
         try:
             with open(path, encoding="utf-8") as fh:
                 manifest = json.load(fh)
             if int(manifest.get("format", 0)) != FORMAT_VERSION:
                 raise ValueError(f"format {manifest.get('format')}")
-            with open(os.path.join(folder, "palette.bin"), "rb") as fh:
-                self._palette = lbx.screen_palette(fh.read())
+            self._palette = lbx.screen_palette(self._src.read("palette.bin"))
         except (OSError, ValueError, lbx.LbxError) as err:
             self.reason = (f"no designer artwork ({err}) — run "
                            "`python tools/design_art_extract.py`")
@@ -54,7 +56,7 @@ class DesignArt:
         """Arc picture 0..4, or None."""
         if not self.available or not 0 <= index < 5:
             return None
-        return self._decode(os.path.join(self.folder, "arcs", f"{index}.bin"))
+        return self._decode(self._src, ("arcs", f"{index}.bin"))
 
     #: The label groups and each one's picture count (the extractor's).
     LABELS = {"arc": ("arc_words", 5), "rack": ("rack_words", 5),
@@ -67,8 +69,7 @@ class DesignArt:
         folder, count = self.LABELS[kind]
         if not self.available or not 0 <= index < count:
             return None
-        return self._decode(os.path.join(self.folder, folder,
-                                         f"{index}.bin"), frame=frame)
+        return self._decode(self._src, (folder, f"{index}.bin"), frame=frame)
 
     def ship(self, picture, colour):
         """The ship picture `picture` in player colour `colour`, or None."""
@@ -77,19 +78,23 @@ class DesignArt:
             return None
         if not 0 <= picture < SHIP_STRIDE or not 0 <= colour < 8:
             return None
-        path = os.path.join(fleets.folder, "ships",
-                            f"{picture + colour * SHIP_STRIDE}.bin")
-        return self._decode(path, fleets.ship_ramp(colour))
+        # the Fleets screen's files, through ITS source (a PNG painted for
+        # the fleet ship is the designer's too)
+        return self._decode(fleets._src, (
+            "ships", f"{picture + colour * SHIP_STRIDE}.bin"),
+            fleets.ship_ramp(colour))
 
-    def _decode(self, path, ramp=None, frame=0):
-        key = (path, id(ramp) if ramp else None, frame)
+    def _decode(self, src, parts, ramp=None, frame=0):
+        key = (src.rel, parts, id(ramp) if ramp else None, frame)
         if key in self._cache:
             return self._cache[key]
-        surface = None
+        surface = src.painted(*parts, frame=frame)          # as painted
+        if surface is not None:
+            self._cache[key] = surface
+            return surface
         try:
-            with open(path, "rb") as fh:
-                blob = fh.read()
-            header = lbx.parse_header(blob, os.path.basename(path))
+            blob = src.read(*parts)
+            header = lbx.parse_header(blob, parts[-1])
             pixels = lbx.decode_frame(blob, header, frame)
             if pixels is not None and header.width > 2:
                 palette = dict(self._palette)
@@ -109,10 +114,10 @@ class DesignArt:
 _loaded = None
 
 
-def load(folder=GAMEDATA):
+def load(folder=None):
     global _loaded
     if _loaded is None or _loaded.folder != folder:
         _loaded = DesignArt(folder)
-        log.info("designer artwork: %s", "loaded from " + folder
+        log.info("designer artwork: %s", "loaded from " + _loaded._src.where
                  if _loaded.available else _loaded.reason)
     return _loaded

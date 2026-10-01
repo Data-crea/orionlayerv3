@@ -72,6 +72,18 @@ drawing, used as painted (no palette), at
 facings the game draws as flips stay flips, so a ship needs its five
 stored facings, not sixteen. `NAMES.txt` gives the numbering.
 
+### The other extracted pictures (work order 199)
+
+Fleets, Leaders, Races, the Ship Designer and the diplomacy audience draw
+the game's pictures the same way, from the files their extractors write
+into `screens/<screen>/assets/gamedata/`. A PNG at
+`files/screens/<screen>/assets/gamedata/<group>/<entry>_<frame>.png`
+replaces the drawing stored as `<group>/<entry>.bin` (frame 0 for a still
+picture; the Races screen keeps its drawings without a group folder,
+`…/gamedata/portrait_3_0.png`), used as painted — no palette and no ship colours, so a ship you
+paint shows in your colours for every owner. The Ship Designer draws the
+Fleets screen's ships, so one PNG serves both.
+
 Pictures from Master of Orion 2 itself are never copied into the
 template — they are not ours to hand out — but their names are listed,
 so you can draw your own.
