@@ -69,6 +69,7 @@ import time
 
 import intro_skip  # work order 179: one key skips the intro
 from engine_close import _cmdline, close_foreign, foreign_clients  # noqa: F401 (176)
+import workdirs  # work order 198: logs and guards under ~/claude/
 
 ENGINE = os.path.expanduser("~/orion2re/out/build/Linux/linux-debug/orion2re")
 GAME_DIR = os.path.expanduser("~/Master of Orion 2")
@@ -356,13 +357,13 @@ def main():
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     ap.add_argument("--check", action="store_true", help="checks only")
     ap.add_argument("--log", default=os.path.join(
-        os.path.expanduser("~/orionlayer-fixtures"), "orion2re_live.log"))
+        workdirs.LOGS, "orion2re_live.log"))
     ap.add_argument("--timeout", type=int, default=START_DEADLINE)
     ap.add_argument("--no-inhibit", action="store_true")
     ap.add_argument("--retries", type=int, default=3)
     ap.add_argument("--guard", default=None,
                     help="the pre-run backup folder (default: a new one "
-                         "under ~/orionlayer-fixtures/live_guard/)")
+                         "under ~/claude/live/live_guard/, workdirs.py)")
     ap.add_argument("--no-guard", action="store_true",
                     help="no backup — only for a start that loads nothing")
     ap.add_argument("--engine", default=None,
@@ -393,8 +394,7 @@ def main():
             print("no engine or client running that this tool did not start")
             return 0
         guard = args.guard or os.path.join(
-            os.path.expanduser("~/orionlayer-fixtures"), "live_guard",
-            time.strftime("close_%Y%m%d_%H%M%S"))
+            workdirs.LIVE_GUARD, time.strftime("close_%Y%m%d_%H%M%S"))
         rec = close_foreign(targets, guard)
         return 0 if all("STILL" not in r[3] for r in rec) else 1
     if args.check:
@@ -402,8 +402,7 @@ def main():
         print("OK to start" if ok else "\n".join("REFUSED: " + r for r in reasons))
         return 0 if ok else 1
     guard = None if args.no_guard else (args.guard or os.path.join(
-        os.path.expanduser("~/orionlayer-fixtures"), "live_guard",
-        time.strftime("%Y%m%d_%H%M%S")))
+        workdirs.LIVE_GUARD, time.strftime("%Y%m%d_%H%M%S")))
     return 0 if start(args.log, args.timeout, not args.no_inhibit,
                       retries=args.retries, engine=args.engine,
                       guard=guard, blanked_ok=args.blanked_ok,

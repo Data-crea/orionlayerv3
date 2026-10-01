@@ -44,6 +44,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(
     os.path.abspath(__file__))))
 
 from core.config import ORION2RE_VERSION  # noqa: E402
+from workdirs import BUNDLES  # noqa: E402,F401 (198: a tree is cloned from one)
 
 DEFAULT_TREES = ["~/orion2re", "~/src/orion2re", "/tmp/orion2re-main"]
 

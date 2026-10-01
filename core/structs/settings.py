@@ -13,7 +13,7 @@
 2. THE LIVE GAME. A STATE_SNAPSHOT's settings block read
    `1 1 1 0 0 1 1 0 1 1 0 1 0 0 | 0 0 0 1 50 1 49 7` for bytes 0..21.
    The native Settings dialog of the same moment
-   (`orionlayer-fixtures/evidence/game_menu/02_options.png`) shows its
+   (`~/claude/evidence/game_menu/02_options.png`) shows its
    thirteen boxes as on, on, off, off, on, on, off, on, on, off, on,
    off, off — which is bytes 0, 1, 3..13 with byte 2 SKIPPED, exactly
    the mapping `Set_Current_Game_Option_Flags_` makes

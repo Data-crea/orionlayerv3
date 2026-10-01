@@ -211,7 +211,7 @@ NATIVE_LABEL_CAP = 10
 #: original's size is font style 3, whose pixel height lives in the
 #: player's own FONTS.LBX and is in no source file this project can
 #: read. The capital "N" of "No Farming" measures 10 px of cap height
-#: on `orionlayer-fixtures/evidence/colony_summary_native_split.png`
+#: on `~/claude/evidence/colony_summary_native_split.png`
 #: (1:1 native, row pitch 31 confirmed on it).
 #:
 #: 10 of a 31 px row is 18.4 of this screen's **57 reference px band**
@@ -810,7 +810,7 @@ def _draw_no_farming(surface, boxes, band, cfg, layout, style):
     column's width by 28 px.
 
     **SECOND SOURCE, MEASURED, and it agrees to the pixel.** On
-    `orionlayer-fixtures/evidence/colony_summary_native_split.png` —
+    `~/claude/evidence/colony_summary_native_split.png` —
     the original's own list for the natives fixture, 1:1 native, its
     content origin at (22, 6) and its column separators landing on
     101/236/378/512 — the label's ink centre is 163, which is exactly

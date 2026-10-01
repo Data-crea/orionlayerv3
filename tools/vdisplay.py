@@ -33,12 +33,14 @@ import subprocess
 import sys
 import time
 
+import workdirs
+
 #: Display numbers tried for the live Xvfb, first free wins. Far from the
 #: session's own (:0, :1) and from anything mutter hands out (:2, :3).
 DISPLAYS = range(91, 100)
 #: One screen large enough for the engine's 640x480 window at any origin.
 GEOMETRY = "1920x1080x24"
-STATE_DIR = os.path.expanduser("~/orionlayer-fixtures/vdisplay")
+STATE_DIR = workdirs.VDISPLAY      # work order 198
 FLAG = "--real-desktop"
 ENV_FLAG = "ORIONLAYER_REAL_DESKTOP"
 

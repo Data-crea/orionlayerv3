@@ -395,7 +395,7 @@ FIGURE_STEPS = (1, 2, 3, 4)
 #: as literals: `left_x` 101 / 236 / 378 and `right_x` = the next
 #: `left_x` - 10. The DRAWN spans are the separators either side —
 #: 100 / 235 / 377 / 511, measured on
-#: `orionlayer-fixtures/evidence/colony_summary_native_split.png` at
+#: `~/claude/evidence/colony_summary_native_split.png` at
 #: 1:1 — giving **135 : 142 : 134, with WORKERS the widest**.
 #:
 #: **THE RATIO IS THE TRANSCRIPTION AND THE WIDTH IS NOT.** HD's job

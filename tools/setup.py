@@ -356,8 +356,8 @@ def engine_report(tree=None):
            + ", ".join(str(n) for n in version_check.required_fixes())]
     tree, missing = version_check.tree_report(tree)
     if tree is None:
-        out.append("    no orion2re tree found here — clone it from the "
-                   "newest ~/orion2re_bundle_*.bundle (README)")
+        out.append("    no orion2re tree found here — clone it from the newest "
+                   f"bundle in {version_check.BUNDLES} (README)")
     elif missing:
         out.append(f"    {tree}: MISSING {', '.join(missing)} — "
                    f"python tools/version_check.py names the patch command")
