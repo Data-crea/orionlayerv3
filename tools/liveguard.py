@@ -57,6 +57,7 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 if ROOT not in sys.path:
     sys.path.insert(0, ROOT)
 from core import usermod  # noqa: E402 — the settings' home (decision 72)
+import workdirs  # noqa: E402 — work order 199: a new ~/ entry is logged
 GAME_DIR = os.environ.get("ORIONLAYER_GAME_DIR",
                           os.path.expanduser("~/Master of Orion 2"))
 
@@ -114,7 +115,7 @@ def files(game_dir=None, root=None, config_dir=None):
 def snapshot(dest, game_dir=None, root=None, config_dir=None):
     """Copy and hash every file; record the tree's status. Returns the
     manifest."""
-    os.makedirs(dest, exist_ok=True)
+    workdirs.makedirs(dest, by="liveguard")
     config_dir = config_dir or usermod.user_dir()
     man = {"taken": time.strftime("%Y-%m-%d %H:%M:%S"),
            "game_dir": game_dir or GAME_DIR, "root": root or ROOT,

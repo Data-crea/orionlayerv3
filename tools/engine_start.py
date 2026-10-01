@@ -292,6 +292,8 @@ def _start_once(log_path, timeout, inhibit, out, engine=None, guard=None,
         for r in reasons:
             out("REFUSED: " + r)
         return None
+    workdirs.makedirs(os.path.dirname(os.path.abspath(log_path)),
+                      by="engine_start")
     handle = open(log_path, "w")
     if guard:
         # THE BACKUP COMES FIRST (work order 175): every file the game or
