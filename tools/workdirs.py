@@ -14,6 +14,8 @@ repositories is a path below it; nothing is created loose in `~/`.
     live/        the live tools' state: `live_guard/`, `vdisplay/`
     logs/        engine logs of live starts
     scratch/     temporary, may be emptied at any time
+    testsaves/   the test saves and their index (work order 199;
+                 dev:tools/testsave.py imports one into the test slot)
     _to_delete/  quarantine before anything is deleted
 
 `ORIONLAYER_FIXTURES` still names another fixtures folder, as before.
@@ -47,6 +49,7 @@ LIVE_GUARD = path("live", "live_guard")
 VDISPLAY = path("live", "vdisplay")
 LOGS = path("logs")
 SCRATCH = path("scratch")
+TESTSAVES = path("testsaves")
 TO_DELETE = path("_to_delete")
 CREATED_LOG = path("logs", "home_created.txt")
 
