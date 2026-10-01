@@ -17,61 +17,54 @@ numbers 9 frames.
 WHAT EACH EVENT DOES here:
   move       the unit glides from its cell to the new one (a teleport jumps)
   rotate     the unit turns one facing per frame to the new facing
-  beam_shot  a bolt from the shooter to the target in the weapon's two
-             colours (`Set_Beam_Colors_`, beams.cpp:1848-2062) and the damage
-             past the shields as a rising number — DEVIATION
-             `beam_simplified`: a straight two-colour bolt, not the
-             original's jittered bolt code (193's option (a), Data's
-             decision taken by work order 197)
-  special    the same bolt in the special's colour
+  beam_shot  the original's bolt (`cbbeam`, work order 199 C2): the muzzle
+             burst, the bolt frame by frame for `_max_frames` frames,
+             stopped at the shield when it holds, the hit flash, and the
+             damage past the shields as a rising number; at a missile or a
+             fighter group when the engine says so. OMISSION
+             `shield_flare`: the shield's own flare is not drawn
   missile_*  launches appear with the state after them; a hit shows its
              damage; a missile gone leaves
   destroy    CMBTSFX 3 / 4 / 5 by size at the unit's centre, the unit
              hidden from half-way (cmbtspec.cpp:1193-1276)
   retreat    CMBTSFX 42 beside the unit, which then leaves
              (cmbtdrw1.cpp:2376-2496)
-  others     their number over the unit, briefly (capture, raid, blast,
-             web damage) — DEVIATION `event_marks`
+  special,   the original's frames (`cbsfx`, work order 199 C2): the
+  bomb,      stasis field, tractor beam, gyro, plasma web, black hole,
+  blast_hit, stellar converter, a bomb's flight and impact, a blast round
+  web_damage its source, the web on a unit
+  others     their word over the unit, briefly (capture, raid, a reflection,
+             a special without its own frames here) — DEVIATION
+             `event_marks`
 """
 import copy
 import time
 
-import pygame
-
-from . import cbdraw
+from . import cbbeam, cbdraw, cbsfx, cbshot
 
 CELL = cbdraw.CELL
 MOVE_S = 0.15
 FRAME_S = 0.055
 NUMBER_S = 9 * FRAME_S
 BOLT_S = 6 * FRAME_S
-#: (c1, c2) per weapon id — `Set_Beam_Colors_`' table (beams.cpp:1848-2062).
-BEAM_COLOURS = {
-    1: ((0x59, 0x6b, 0xc3), (0xda, 0xfc, 0xff)),
-    2: ((0x59, 0x67, 0x6c), (0xb2, 0xc8, 0xc8)),
-    3: ((0xc8, 0x14, 0x20), (0xff, 0x50, 0x0a)),
-    4: ((0x5e, 0x70, 0xcd), (0xba, 0xdd, 0xff)),
-    5: ((0xd2, 0x46, 0x00), (0xff, 0xa2, 0x00)),
-    6: ((0x94, 0x9b, 0x49), (0xfe, 0xfe, 0x94)),
-    7: ((0x44, 0x98, 0x8f), (0x93, 0xff, 0xff)),
-    8: ((0x92, 0x53, 0xba), (0xff, 0xb8, 0xff)),
-    9: ((0xa9, 0x2b, 0x00), (0xff, 0xa6, 0x60)),
-    41: ((0xa9, 0x2b, 0x00), (0xff, 0xa6, 0x60)),
-    10: ((0x6b, 0xa2, 0x16), (0xf2, 0xff, 0x35)),
-    11: ((0xc9, 0x53, 0xc4), (0xff, 0xb8, 0xff)),
-    42: ((0xc9, 0x53, 0xc4), (0xff, 0xb8, 0xff)),
-    12: ((0xd2, 0x53, 0x00), (0xff, 0xff, 0x52)),
-}
-OTHER_BEAM = ((0x70, 0x90, 0xff), (0xe0, 0xf0, 0xff))
+#: The beams the colour table does not carry (beams.cpp:1124-1192):
+#: weapon id (orion2_consts.h:993-1035) -> (BEAMS.LBX 0's palette fragment,
+#: the bolt's length, its step a frame) — the spatial compressor, the
+#: mauler, the dragon and plasma breaths, weapon 46.
+FRAGMENT = {13: (2, 40, 55), 27: (5, 20, 40), 40: (5, 20, 40),
+            43: (5, 20, 40), 46: (6, 40, 50)}
 DEATH_SFX = {0: 3, 1: 4, 2: 4, 3: 5, 4: 5, 5: 5}
 RETREAT_SFX = 42
 
 
 class Player:
     def __init__(self):
+        self._art = None                 # the artwork, from the first draw
+        self._palettes = {}              # beam colours -> one palette dict
         self.reset()
 
     def reset(self):
+        self._last = None
         self.shown = None        # the battle as HD shows it
         self.ordnance = None
         self._queue = []         # [event, ...] still to play
@@ -125,6 +118,7 @@ class Player:
                 return
             ev = self._queue.pop(0)
             self._anim = (ev, now, self._start(ev, now))
+            self._last = ev
 
     def _adopt(self):
         """Show the newest state whose events have all been played."""
@@ -150,13 +144,29 @@ class Player:
         if k == "rotate":
             return FRAME_S * max(1, _turn_steps(ev["from_facing"],
                                                 ev["to_facing"]))
-        if k in ("beam_shot", "special"):
-            u = self._unit(ev.get("target", -1))
-            if u is not None and k == "beam_shot" and ev["past_shields"]:
+        if k in ("special", "bomb", "blast_hit", "web_damage"):
+            p = cbsfx.plan(ev, self._unit, self._art, self._last)
+            if p is not None:
+                ev["_sfx"] = p
+                u = self._unit(ev.get("unit", ev.get("target", -1)))
+                hit = ev.get("past_shields") or ev.get("hits")
+                if u is not None and hit:
+                    self._marks.append((str(hit), *cbdraw.centre(u),
+                                        now + p["frames"] * FRAME_S,
+                                        (0xff, 0xcc, 0x40)))
+                return p["frames"] * FRAME_S
+        if k == "beam_shot":
+            u = None if ev.get("at_missile") else \
+                self._unit(ev.get("target", -1))
+            dur = BOLT_S
+            b = self._beam(ev)
+            if b is not None:
+                dur = (b["frames"] + 2) * FRAME_S
+            if u is not None and ev["past_shields"]:
                 self._marks.append((str(ev["past_shields"]),
-                                    *cbdraw.centre(u), now + BOLT_S,
+                                    *cbdraw.centre(u), now + dur,
                                     (0xff, 0xcc, 0x40)))
-            return BOLT_S
+            return dur
         if k in ("missile_hit", "fighter_pass"):
             u = self._unit(ev.get("target", -1))
             if u is not None and ev.get("past_shields"):
@@ -169,7 +179,7 @@ class Player:
         if k == "retreat":
             return 12 * FRAME_S
         if k in ("capture", "raid", "blast_hit", "web_damage", "bomb",
-                 "reflect"):
+                 "reflect", "special"):
             u = self._unit(ev.get("defender", ev.get("target",
                                                      ev.get("unit", -1))))
             if u is not None:
@@ -203,13 +213,57 @@ class Player:
         ev = self._anim[0]
         if ev["kind"] == "move":
             return ((ev["to_x"] + 0.5) * CELL, (ev["to_y"] + 0.5) * CELL)
+        if ev["kind"] == "beam_shot":
+            return self._target_point(ev)
         u = self._unit(ev.get("target", ev.get("unit", -1)))
         return cbdraw.centre(u) if u is not None and \
             ev["kind"] != "rotate" else None
 
+    def _beam(self, ev):
+        """The shot as `cbbeam` draws it: its record, end points (world
+        px), frames, where it stops — or None without both units."""
+        src = self._unit(ev.get("source", -1))
+        at = self._target_point(ev)
+        if src is None or at is None:
+            return None
+        dst = None if ev.get("at_missile") else self._unit(ev["target"])
+        slot = ev.get("slot", 0)
+        weapons = src.get("weapons") or []
+        specials = weapons[slot]["specials"] if 0 <= slot < len(weapons) \
+            else 0
+        f = cbbeam.fx(ev.get("weapon", 0), specials)
+        cols = None
+        if f is None:                   # not a "Steve stuff" weapon
+            cols, length, step = FRAGMENT.get(ev.get("weapon"), (5, 20, 40))
+            f = dict(cbbeam.fx(3), style=0, length=length, step=step)
+        a = tuple(int(v) for v in cbdraw.centre(src))
+        b = tuple(int(v) for v in at)
+        n, _step = cbbeam.max_frames(a, b, f)
+        holds = dst is not None and ev.get("result", 0) & 1 and \
+            not ev.get("result", 0) & 2
+        size = {0: 0, 1: 1, 2: 1, 3: 2, 4: 3, 5: 3}.get(
+            int(dst["size_class"]), 1) if dst is not None else 0
+        return {"fx": f, "fragment": cols, "src": a, "dst": b, "frames": n,
+                "stop": size if holds else None}
+
+    def _target_point(self, ev):
+        """Where a shot goes (world px): the target unit's centre — or, when
+        the engine says `at_missile` (beams at ordnance, cmbtfire.cpp:1363),
+        the missile or fighter group whose INDEX `target` is."""
+        if ev.get("at_missile"):
+            m = next((m for m in (self.ordnance or {}).get("missiles", [])
+                      if m.get("index") == ev.get("target")), None)
+            return (m["x"], m["y"]) if m is not None else None
+        u = self._unit(ev.get("target", -1))
+        return cbdraw.centre(u) if u is not None else None
+
+    def _draw_beam(self, surface, cam, art, ev, b, t, cache):
+        cbshot.draw(surface, cam, art, ev, b, t, cache, self._palettes)
+
     # ── drawing ────────────────────────────────────────────────────
     def draw(self, surface, cam, art, style, scale, cache):
         now = time.monotonic()
+        self._art = art
         self._advance(now)
         if self._anim is not None:
             ev, t0, dur = self._anim
@@ -246,17 +300,15 @@ class Player:
                 sign = _turn_sign(ev["from_facing"], ev["to_facing"])
                 u["facing_dir"] = (ev["from_facing"] +
                                    sign * int(steps * t)) & 15
-        elif k in ("beam_shot", "special"):
-            src, dst = self._unit(ev["source"]), self._unit(ev["target"])
-            if src is None or dst is None:
-                return
-            c1, c2 = BEAM_COLOURS.get(ev.get("weapon"), OTHER_BEAM)
-            a = cam.to_window(*cbdraw.centre(src))
-            b = cam.to_window(*cbdraw.centre(dst))
-            head = (a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t)
-            width = max(1, int(3 * cam.scale))
-            pygame.draw.line(surface, c1, a, head, width + 2)
-            pygame.draw.line(surface, c2, a, head, width)
+        elif "_sfx" in ev:
+            p = ev["_sfx"]
+            if p["frames"]:
+                p["draw"](surface, cam, cache,
+                          min(p["frames"] - 1, int(t * p["frames"])))
+        elif k == "beam_shot":
+            b = self._beam(ev)
+            if b is not None:
+                self._draw_beam(surface, cam, art, ev, b, t, cache)
         elif k in ("destroy", "retreat"):
             u = self._unit(ev["unit"])
             if u is None:

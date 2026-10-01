@@ -1,0 +1,242 @@
+"""The battle's special effects in the original's frames — work order 199 C2.
+
+TRANSCRIPTION `special_effects` (`dev:doc/combat_drawing_reading.md` §5,
+cmbtspec.cpp): what an event that is not a beam looks like —
+
+  stasis field (32)    CMBTSFX 1 stretched along the line, two frames a
+                       picture (`Release_Time_(2)`), then the stasis ball
+                       growing over 10 frames to 90 % (:451-531, 273-355)
+  tractor beam (39)    CMBTSFX 2 frames 4-6 along the line (:175-214)
+  gyro destabilizer    CMBTSFX 8 along the line, then the target spun one
+  (34)                 facing a frame for 8 frames (:1441-1556)
+  plasma web (35)      CMBTSFX 14 along the line, then its impact 36-39 by
+                       size on the target (:1048-1140)
+  black hole (37)      CMBTSFX 46/45/45/44/44/43 by size, frames 0-7, on the
+                       target (cmbtfire.cpp:963-1002)
+  stellar converter    CMBTSFX 40 along the line, its impact 41 from frame 9
+  (38)                 at the target less 60 (:950-1046)
+  a bomb               CMBTMISL 144 + facing (160 biological) flying 6 px a
+                       frame, then CMBTSFX 7 at the target less 12
+                       (cmbtdrw1.cpp:3012-3096)
+  a blast              CMBTSFX 52 (pulsar, types 0-1) or 6 (type 2) round
+                       the source, once for all the units it hits
+                       (cmbtspec.cpp:1589-1760, 1972)
+  web damage           the web on the unit: CMBTSFX 21-35 by size and facing
+                       (:357-450)
+
+"Along the line" is `Draw_Bitmap_Line_` (bitmap.cpp:298-336): the picture
+stretched to the line's length, turned to its angle, centred on its middle.
+HD turns it with pygame's rotation — DEVIATION `texture_line`: the
+original's own resampling is not traced (the reading says so).
+"""
+import math
+
+import pygame
+
+from . import cbdraw
+from .cbbeamfx import get_angle
+
+STASIS, ANTI_MISSILE, GYRO, WEB, PULSAR, BLACK_HOLE, CONVERTER, TRACTOR = \
+    32, 33, 34, 35, 36, 37, 38, 39
+BHG = {0: 46, 1: 45, 2: 45, 3: 44, 4: 44, 5: 43}
+BIO = (25, 26)                       # death spore, bio terminator
+
+
+def _frames(art, entry, lbx="cmbtsfx"):
+    return max(1, art.frame_count(lbx, entry))
+
+
+def _size_idx(u):
+    return {0: 0, 1: 1, 2: 1, 3: 2, 4: 3, 5: 3}.get(int(u["size_class"]), 1)
+
+
+def _blit_centred(surface, cam, cache, pic, wx, wy, scale=1.0):
+    if pic is None:
+        return
+    img = cbdraw.scaled(pic, cam.scale * scale, cache)
+    x, y = cam.to_window(wx, wy)
+    surface.blit(img, (x - img.get_width() // 2, y - img.get_height() // 2))
+
+
+def _blit_at(surface, cam, cache, pic, wx, wy):
+    if pic is not None:
+        surface.blit(cbdraw.scaled(pic, cam.scale, cache),
+                     cam.to_window(wx, wy))
+
+
+def texture_line(surface, cam, cache, pic, a, b):
+    """`Draw_Bitmap_Line_`: `pic` stretched from a to b (world px)."""
+    if pic is None or a == b:
+        return
+    length = max(1, int(math.hypot(b[0] - a[0], b[1] - a[1])))
+    key = ("tline", id(pic), length, get_angle(b[0] - a[0], b[1] - a[1]),
+           round(cam.scale, 3))
+    if key not in cache:
+        img = pygame.transform.scale(pic, (length, pic.get_height()))
+        img = pygame.transform.rotate(
+            img, -get_angle(b[0] - a[0], b[1] - a[1]))
+        cache[key] = cbdraw.scaled(img, cam.scale, {})
+    img = cache[key]
+    x, y = cam.to_window((a[0] + b[0]) / 2, (a[1] + b[1]) / 2)
+    surface.blit(img, (x - img.get_width() // 2, y - img.get_height() // 2))
+
+
+def stasis_ball(art, u):
+    """(entry, mirror, flip) of the stasis ball for `u` (cmbtspec.cpp:273-355):
+    0x35 / 0x3A / 0x3F / 9 by size, the facing folded to 0..4."""
+    f = int(u["facing_dir"]) & 15
+    if 4 < f < 9:
+        d, mirror, flip = 8 - f, True, False
+    elif 8 < f < 13:
+        d, mirror, flip = f - 8, False, False
+    elif f >= 13:
+        d, mirror, flip = 16 - f, False, True
+    else:
+        d, mirror, flip = f, False, False
+    base = {0: 0x35, 1: 0x3A, 2: 0x3A, 3: 0x3F}.get(int(u["size_class"]), 9)
+    return base + d, mirror, flip
+
+
+def web_picture(u):
+    """(entry, mirror, flip) of the plasma web on `u` (cmbtspec.cpp:357-450)."""
+    f = int(u["facing_dir"]) & 15
+    sub = 4 if f in (4, 12) else f % 4
+    even = ((f // 4) & 1) == 0
+    s = int(u["size_class"])
+    if s == 0:
+        e = sub + 31 if even else 35 - sub
+    elif s in (1, 2):
+        e = sub + 26 if even else 30 - sub
+    elif s == 3:
+        e = sub + 21 if even else 25 - sub
+    else:
+        e = sub + 21 if even else 20 - sub
+    q = f // 4
+    return e, q == 1, q == 3
+
+
+def plan(ev, unit, art, previous=None):
+    """The event's effect: a dict with its `frames` and a `draw(surface,
+    cam, cache, frame)`, or None when it has none here. `unit(i)` is the
+    shown battle's unit; `previous` the event played before (a blast that
+    hits several units is drawn once)."""
+    k = ev["kind"]
+    if k == "special":
+        src, dst = unit(ev.get("source", -1)), unit(ev.get("target", -1))
+        if src is None or dst is None:
+            return None
+        a = tuple(int(v) for v in cbdraw.centre(src))
+        b = tuple(int(v) for v in cbdraw.centre(dst))
+        w = int(ev.get("weapon", 0))
+        if w == STASIS:
+            n = _frames(art, 1)
+            ball, mirror, flip = stasis_ball(art, dst)
+
+            def draw(surface, cam, cache, frame):
+                if frame < 2 * n:
+                    texture_line(surface, cam, cache,
+                                 art.surface("cmbtsfx", 1, frame // 2), a, b)
+                else:
+                    pct = min(90, (frame - 2 * n + 1) * 10) / 100
+                    _blit_centred(surface, cam, cache, art.surface(
+                        "cmbtsfx", ball, 0, None, mirror, flip), *b, pct)
+            return {"frames": 2 * n + 10, "draw": draw}
+        if w == TRACTOR:
+            def draw(surface, cam, cache, frame):
+                texture_line(surface, cam, cache, art.surface(
+                    "cmbtsfx", 2, 4 + frame % 3), a, b)
+            return {"frames": 6, "draw": draw}
+        if w == GYRO:
+            n = _frames(art, 8)
+            face0 = int(dst["facing_dir"])
+
+            def draw(surface, cam, cache, frame):
+                if frame < n:
+                    texture_line(surface, cam, cache,
+                                 art.surface("cmbtsfx", 8, frame), a, b)
+                else:
+                    dst["facing_dir"] = (face0 + (frame - n) // 2 + 1) & 15
+                    if frame >= n + 15:
+                        dst["facing_dir"] = face0
+            return {"frames": n + 16, "draw": draw}
+        if w == WEB:
+            n, m = _frames(art, 14), _frames(art, 36 + _size_idx(dst))
+
+            def draw(surface, cam, cache, frame):
+                if frame < n:
+                    texture_line(surface, cam, cache,
+                                 art.surface("cmbtsfx", 14, frame), a, b)
+                else:
+                    _blit_centred(surface, cam, cache, art.surface(
+                        "cmbtsfx", 36 + _size_idx(dst), frame - n), *b)
+            return {"frames": n + m, "draw": draw}
+        if w == BLACK_HOLE:
+            entry = BHG.get(int(dst["size_class"]), 44)
+
+            def draw(surface, cam, cache, frame):
+                _blit_centred(surface, cam, cache,
+                              art.surface("cmbtsfx", entry, frame % 8), *b)
+            return {"frames": 8, "draw": draw}
+        if w == CONVERTER:
+            n, m = _frames(art, 40), _frames(art, 41)
+
+            def draw(surface, cam, cache, frame):
+                if frame < n:
+                    texture_line(surface, cam, cache,
+                                 art.surface("cmbtsfx", 40, frame), a, b)
+                if frame >= 9 and frame - 9 < m:
+                    _blit_at(surface, cam, cache, art.surface(
+                        "cmbtsfx", 41, frame - 9), b[0] - 60, b[1] - 60)
+            return {"frames": max(n, 9 + m), "draw": draw}
+        return None
+    if k == "bomb":
+        src, dst = unit(ev.get("source", -1)), unit(ev.get("target", -1))
+        if src is None or dst is None:
+            return None
+        a, b = cbdraw.centre(src), cbdraw.centre(dst)
+        dist = max(abs(b[0] - a[0]), abs(b[1] - a[1]))
+        fly = max(1, int(dist // 6))
+        facing = int(round(get_angle(b[0] - a[0], a[1] - b[1]) / 22.5)) & 15
+        pic_entry = (160 if int(ev.get("weapon", 0)) in BIO else 144) + facing
+        m = _frames(art, 7)
+
+        def draw(surface, cam, cache, frame):
+            if frame < fly:
+                t = frame / fly
+                _blit_at(surface, cam, cache, art.surface("cmbtmisl",
+                                                          pic_entry, 0),
+                         a[0] + (b[0] - a[0]) * t - 17,
+                         a[1] + (b[1] - a[1]) * t - 17)
+            else:
+                _blit_at(surface, cam, cache, art.surface(
+                    "cmbtsfx", 7, frame - fly), b[0] - 12, b[1] - 12)
+        return {"frames": fly + m, "draw": draw}
+    if k == "blast_hit":
+        if previous is not None and previous.get("kind") == "blast_hit" and \
+                previous.get("source") == ev.get("source") and \
+                previous.get("blast") == ev.get("blast"):
+            return {"frames": 0, "draw": lambda *a_: None}
+        src = unit(ev.get("source", -1))
+        if src is None:
+            return None
+        entry = 52 if int(ev.get("blast", 0)) < 2 else 6
+        n = _frames(art, entry)
+        c = cbdraw.centre(src)
+
+        def draw(surface, cam, cache, frame):
+            _blit_centred(surface, cam, cache,
+                          art.surface("cmbtsfx", entry, frame), *c)
+        return {"frames": n, "draw": draw}
+    if k == "web_damage":
+        u = unit(ev.get("unit", -1))
+        if u is None:
+            return None
+        entry, mirror, flip = web_picture(u)
+        n = _frames(art, entry)
+        c = cbdraw.centre(u)
+
+        def draw(surface, cam, cache, frame):
+            _blit_centred(surface, cam, cache, art.surface(
+                "cmbtsfx", entry, frame % n, None, mirror, flip), *c)
+        return {"frames": n, "draw": draw}
+    return None
