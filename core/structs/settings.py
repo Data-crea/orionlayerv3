@@ -52,6 +52,13 @@ SPEC = Spec("s_settings", SIZE, [
     ("music_on", 19, "u8"),
     ("music_level", 20, "i8"),
     ("active_save_slot", 21, "i8"),
+    # combat_legal_moves_flag — the battle's LEGAL BOXES option: the
+    # original draws the acting human unit's legal cells only while it is
+    # 1 (cmbtdrw1.cpp:477, set from here at combinit.cpp:533). Work order
+    # 197 C: offset 0xB5 from orion2.h's field order and from
+    # `static_assert(offsetof(s_settings, combat_legal_moves_flag) == 0xB5)`
+    # compiled against the engine's own headers (0xB6 failed).
+    ("combat_legal_moves_flag", 0xB5, "i8"),
     # language — WHICH WORD THE RESEARCH PANEL PRINTS AFTER A COST.
     # `tech.cpp:631-639` picks "%i RP", "%i FP" (language 1) or "%i PR"
     # (language 4) from this byte. Until work order 165 the HD research

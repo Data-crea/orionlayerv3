@@ -219,6 +219,13 @@ class GameClient:
             return False
 
         got_message = False
+        # THE BATTLE'S EVENTS OF EVERY SNAPSHOT THIS POLL READS (work order
+        # 197 C): a screen sees only the state the poll leaves, and the
+        # engine sends several between two frames while the battle runs —
+        # CMEV carries each snapshot's events once, so they are gathered
+        # here onto the last state (`_carry_combat_events`), numbered as
+        # sent; a screen skips what it has seen by number.
+        self._cmev_batch = []
 
         try:
             # Read all available data
@@ -433,6 +440,18 @@ class GameClient:
             log.warning(f"Send failed: {e}")
             self._reconnect()
 
+    def _carry_combat_events(self):
+        """This poll's CMEV events so far onto the state just parsed."""
+        batch = getattr(self, "_cmev_batch", None)
+        if batch is None:
+            batch = self._cmev_batch = []
+        ev = getattr(self.state, "combat_events", None)
+        if ev:
+            batch.extend(ev["events"])
+        if batch:
+            self.state.combat_events = {"first": batch[0]["seq"],
+                                        "events": list(batch)}
+
     def _handle_message(self, msg_type, flags, payload):
         """Process a received message."""
         self.stats["bytes"] += len(payload) + 16
@@ -451,6 +470,7 @@ class GameClient:
                 self.state.palette = old_pal
                 self.state.fields = old_fields
                 self.state.save_slots = old_slots
+                self._carry_combat_events()
             except Exception as e:
                 log.error(f"State parse error: {e}")
 

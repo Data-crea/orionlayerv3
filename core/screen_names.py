@@ -119,9 +119,10 @@ SCREENS = {
     #: 65-67, synthetic, ON THE WIRE ONLY WITH OPEN FIX 52 (work order 194):
     #: a tactical battle (which reported 12 — 37 in a network game — for
     #: its whole length: nothing in the combat code writes _current_screen),
-    #: its scan view and its board popup. No HD screen claims them yet: the
-    #: App holds its last frame with the F12 notice, as it did at 12.
-    65: ("(synthetic)",     None),    # a tactical battle
+    #: its scan view and its board popup. The battle is HD's since work
+    #: order 197 C, while CMBT is on the wire; the scan view and the board
+    #: popup are not: the App holds its last frame with the F12 notice.
+    65: ("(synthetic)",     "combat"),  # a tactical battle (HD: work order 197 C)
     66: ("(synthetic)",     None),    # the battle's scan view
     67: ("(synthetic)",     None),    # the battle's board popup
 }

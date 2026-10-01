@@ -1,0 +1,377 @@
+"""The tactical battle — wire id 65 (open fix 52), work order 197 C.
+
+HD STATE: **BUILT, NOT ACCEPTED** until work order 197's live acceptance is
+recorded (`dev:doc/briefs/197-progress.md`, Part C).
+
+It claims 65 while the battle's state is on the wire (open fix 53's CMBT)
+and draws the whole field (`cbview`), the units, the planet and the ordnance
+in the original's own pictures (`cbart`, `cbdraw`), and the acting unit's
+panel (`cbpanel`); every event of open fix 56 is PLAYED before the state
+after it is shown (`cbplay`), and nothing is sent while one plays — Data's
+condition of 30 September 2026 for letting the engine run ahead.
+
+WHAT IT SENDS, each on the player's own unit's turn only, one command per
+action (decision 47) through open fix 58's MSG_COMBAT_COMMAND, the next only
+after the engine has answered the last (CMEV's event 18):
+
+    a legal cell              MOVE (open fix 65 keeps the original's view)
+    an enemy unit             FIRE with the switched weapon rows as the mask
+    an enemy unit, BOARD lit  BOARD (the board popup is answered CAPTURE)
+    an own unit               SELECT
+    an enemy missile          FIRE_MISSILE
+    a right click             FACE toward the cell
+    AUTO, WAIT, DONE, RETREAT the original's own fields, by activation
+
+and nothing of the camera: zoom and pan are HD's (`cbview`).
+"""
+import logging
+import time
+
+import pygame
+
+from core import combatblocks as cb
+from core.screen_base import ScreenBase
+from core.shipparts import ShipPartNames
+from core.structs import player as player_struct
+from core.structs import settings as settings_struct
+
+from . import cbart, cbdraw, cbpanel, cbplay, cbview
+
+log = logging.getLogger("combat")
+
+GAME_SCREEN_ID = 65
+GRID_TYPE, MAP_RECT = 12, (0, 0, 639, 359)
+FOOT = {0: 1, 1: 2, 2: 2, 3: 3, 4: 3, 5: 3}
+ANSWER_WAIT = 3.0                  # s: a command the engine never answers
+DRAG_SLOP = 6                      # px before a press is a pan
+
+
+def battle_list(fields):
+    """The battle's own list: its map is one grid field (combat1.cpp:111)."""
+    return any(getattr(f, "field_type", -1) == GRID_TYPE and
+               (f.x, f.y, f.x_end, f.y_end) == MAP_RECT
+               for f in fields or [])
+
+
+def field_by_hotkey(fields, hotkey, types=(0, 1)):
+    return next((f for f in fields or [] if f.index and f.hotkey == hotkey
+                 and f.field_type in types), None)
+
+
+class CombatScreen(ScreenBase):
+    SCREEN_NAME = "combat"
+    GAME_SCREEN_ID = GAME_SCREEN_ID
+    USE_FRAME = False
+
+    def __init__(self, app):
+        super().__init__(app)
+        self._state = None
+        self._art = cbart.CombatArt()
+        self._names = None
+        self._cam = None
+        self._serial = None
+        self._panel = cbpanel.Panel()
+        self._play = cbplay.Player()
+        self._masks = {}                 # unit -> weapon-row switches
+        self._board = False
+        self._sent = None                # (op, time) awaiting event 18
+        self._press = None               # (pos, button, dragged)
+        self._clock0 = time.monotonic()
+        self._cache = {}
+        self._turn_seen = None
+
+    # ── state ──────────────────────────────────────────────────────
+    def claims(self, game_state):
+        return getattr(game_state, "combat", None) is not None
+
+    def wants_original(self):
+        return False
+
+    def enter(self, game_state=None):
+        super().enter(game_state)
+        language = (getattr(self.app, "settings", {}) or {}).get(
+            "language", "en")
+        self._names = ShipPartNames(language)
+        self.update(game_state)
+
+    def update(self, game_state=None):
+        if game_state is None:
+            return
+        self._state = game_state
+        combat = getattr(game_state, "combat", None)
+        events = (getattr(game_state, "combat_events", None) or {}).get(
+            "events", [])
+        if combat is None:
+            return
+        if combat["serial"] != self._serial:
+            self._serial = combat["serial"]
+            self._cam, self._masks, self._board = None, {}, False
+            self._play.reset()
+        self._play.feed(combat, events, getattr(game_state, "ordnance", None))
+        for e in events:
+            if e["kind"] == "command" and self._sent and \
+                    e["op"] == self._sent[0]:
+                if e["result"]:
+                    log.info("combat: %s refused — %s", self._sent[0],
+                             cb.REFUSALS.get(e["result"], e["result"]))
+                self._sent = None
+
+    def _colours(self):
+        raws = getattr(self._state, "player_raw", None) or []
+        out = {}
+        for i, raw in enumerate(raws):
+            try:
+                out[i] = int(player_struct.SPEC.parse(raw).color)
+            except (ValueError, IndexError):
+                pass
+        return out
+
+    def _me(self):
+        return getattr(self._state, "player_num", 0) or 0
+
+    def _shown(self):
+        """The battle as HD shows it: the played state (`cbplay`)."""
+        return self._play.shown
+
+    def _acting(self):
+        c = self._shown()
+        return c["units"][c["cur_ship"]] if c else None
+
+    def _own_turn(self):
+        c = self._shown()
+        live = getattr(self._state, "combat", None)
+        return (c is not None and live is not None and not self._play.busy()
+                and live["units"][live["cur_ship"]]["owner"] == self._me()
+                and self._state.current_screen == GAME_SCREEN_ID
+                and battle_list(getattr(self._state, "fields", None)))
+
+    def _ready(self):
+        if self._sent and time.monotonic() - self._sent[1] > ANSWER_WAIT:
+            self._sent = None
+        return self._own_turn() and self._sent is None
+
+    def _mask(self, unit_idx, unit):
+        if unit_idx not in self._masks:
+            self._masks[unit_idx] = sum(
+                1 << k for k, w in enumerate(unit["weapons"])
+                if w["count"] > 0 and w["active"] == 1)
+        return self._masks[unit_idx]
+
+    # ── drawing ────────────────────────────────────────────────────
+    def render(self, surface):
+        win_w, win_h = surface.get_size()
+        c = self._shown()
+        band = cbpanel.Panel.area(win_w, win_h)
+        area = (0, 0, win_w, band.y)
+        if self._cam is None or tuple(self._cam.area) != area:
+            old = self._cam
+            self._cam = cbview.Camera(area)
+            if old is None and c is not None:
+                u = c["units"][c["cur_ship"]]
+                self._cam.frame_original(u["x"], u["y"])
+            elif old is not None:
+                self._cam.scale, self._cam.ox, self._cam.oy = \
+                    old.scale, old.ox, old.oy
+                self._cam.clamp()
+        cam, art = self._cam, self._art
+        if c is not None:
+            self._follow(c)
+        clock = int((time.monotonic() - self._clock0) / 0.11)   # 110 ms
+        cbdraw.draw_background(surface, cam, art,
+                               bool(c and c.get("in_nebula")), self._cache)
+        if c is None:
+            return
+        clip = surface.get_clip()
+        surface.set_clip(pygame.Rect(area))
+        unit = c["units"][c["cur_ship"]]
+        if self._own_turn() and unit["movement_left"] > 0 and \
+                self._legal_boxes():
+            cbdraw.draw_legal(surface, cam, art, c, unit)
+        cbdraw.draw_units(surface, cam, art, c, self._colours(), clock,
+                          self._cache, self._planet_picture(c))
+        if unit["owner"] == self._me():
+            cbdraw.draw_cursor(surface, cam, art, unit, clock, self._cache)
+        cbdraw.draw_ordnance(surface, cam, art, self._play.ordnance,
+                             max(10, int(18 * self.layout.scale)),
+                             self.style, self._cache)
+        self._play.draw(surface, cam, art, self.style, self.layout.scale,
+                        self._cache)
+        surface.set_clip(clip)
+        live = {k for k, _w, hk in cbpanel.BUTTONS
+                if self._own_turn() and (k == "board" or field_by_hotkey(
+                    getattr(self._state, "fields", None), hk))}
+        self._panel.draw(surface, self.style, unit if unit["owner"] ==
+                         self._me() else unit, self._weapon_name,
+                         self._mask(c["cur_ship"], unit), self._board, live,
+                         self.layout.scale)
+
+    def _follow(self, c):
+        """The original centres its view on each acting unit at its turn
+        (`Snap_Center_Combat_Screen_`, combinit.cpp:2240) and keeps what a
+        unit does in view; HD keeps the player's zoom and moves only when
+        the acting unit, or the event being played, would be off the area
+        or at its edge."""
+        turn = (c["serial"], c["turn"], c["cur_ship"])
+        at = None
+        if turn != self._turn_seen:
+            self._turn_seen = turn
+            at = cbdraw.centre(c["units"][c["cur_ship"]])
+        focus = self._play.focus()
+        if focus is not None:
+            at = focus
+        if at is not None and not self._cam.shows(*at):
+            self._cam.centre_on(*at)
+
+    def _legal_boxes(self):
+        """The game's own LEGAL BOXES option (cmbtdrw1.cpp:477): the legal
+        cells are drawn only while it is on. Without the settings record
+        on the wire nothing is drawn, as with the option off."""
+        raw = getattr(self._state, "settings_raw", b"") or b""
+        if len(raw) < settings_struct.SIZE:
+            return False
+        return settings_struct.SPEC.parse(raw).combat_legal_moves_flag == 1
+
+    def _weapon_name(self, wid):
+        return self._names.name("weapons", wid) if self._names else None
+
+    def _planet_picture(self, c):
+        key = ("planet", c.get("colony", -1))
+        if key not in self._cache:
+            self._cache[key] = self._load_planet(c)
+        return self._cache[key]
+
+    def _load_planet(self, c):
+        """CMBTPLNT[climate * 6 + size], its palette at +5
+        (combinit.cpp:1539-1559)."""
+        col = c.get("colony", -1)
+        try:
+            from core.structs import colony as colony_struct
+            from core.structs import planet as planet_struct
+            if col < 0:
+                return None
+            colony = colony_struct.SPEC.parse(self._state.colonies_raw[col])
+            p = planet_struct.parse(self._state.planets_raw[colony.planet])
+        except (IndexError, TypeError, AttributeError, ValueError):
+            return None
+        climate, size = int(p.climate), int(p.size)
+        pal_blob = self._art.blob("cmbtplnt", climate * 6 + 5)
+        extra = None
+        if pal_blob:
+            from core import lbx
+            try:
+                h = lbx.parse_header(pal_blob)
+                extra = lbx.read_palette(pal_blob, h.frame_count) \
+                    if h.has_palette else None
+            except lbx.LbxError:
+                extra = None
+        pic = self._art.surface("cmbtplnt", climate * 6 + size, 0, extra)
+        return (pic, size) if pic is not None else None
+
+    # ── input ──────────────────────────────────────────────────────
+    def _send(self, op, a=0, b=0, c=0):
+        combat = self._state.combat
+        log.info("combat: %s %s %s %s (unit %d)", op, a, b, c,
+                 combat["cur_ship"])
+        self.app.client.combat_command(combat["serial"], combat["cur_ship"],
+                                       cb.COMMANDS[op], a, b, c)
+        self._sent = (cb.COMMANDS[op], time.monotonic())
+
+    def _unit_at(self, cell):
+        c = self._shown()
+        for i, u in enumerate(c["units"]):
+            if u["unit_status"] != 0 or (i and u["structure_max"] <= 0):
+                continue
+            n = FOOT.get(int(u["size_class"]), 1) if i else 5
+            if u["x"] <= cell[0] < u["x"] + n and u["y"] <= cell[1] < u["y"] + n:
+                return i
+        return None
+
+    def _missile_at(self, x, y):
+        for m in (self._play.ordnance or {}).get("missiles", []):
+            mx, my = self._cam.to_window(m["x"], m["y"])
+            if abs(mx - x) < 14 * self._cam.scale and \
+                    abs(my - y) < 14 * self._cam.scale and \
+                    m.get("owner") != self._me():
+                return m["index"]
+        return None
+
+    def handle_click(self, screen_x, screen_y):
+        if self._state is None or getattr(self._state, "combat", None) is None:
+            return None
+        key = self._panel.button_at(screen_x, screen_y)
+        if key is not None:
+            return self._button(key)
+        row = self._panel.row_at(screen_x, screen_y)
+        if row is not None:
+            c = self._shown()
+            self._masks[c["cur_ship"]] = self._mask(
+                c["cur_ship"], c["units"][c["cur_ship"]]) ^ (1 << row)
+            return None
+        if not self._ready() or self._cam is None:
+            return None
+        cell = self._cam.cell_at(screen_x, screen_y)
+        if cell is None:
+            return None
+        c = self._shown()
+        me, cur = self._me(), c["cur_ship"]
+        missile = self._missile_at(screen_x, screen_y)
+        target = self._unit_at(cell)
+        if missile is not None:
+            self._send("fire_missile", missile)
+        elif target is not None and target != cur and \
+                c["units"][target]["owner"] != me:
+            if self._board:
+                self._board = False
+                self._send("board", target)
+            else:
+                self._send("fire", target, self._mask(cur, c["units"][cur]))
+        elif target is not None and target != cur:
+            self._send("select", target)
+        elif cb.legal(c["legal"], *cell):
+            self._send("move", *cell)
+        return None
+
+    def _button(self, key):
+        if key == "board":
+            self._board = not self._board
+            return None
+        hotkey = dict((k, hk) for k, _w, hk in cbpanel.BUTTONS)[key]
+        f = field_by_hotkey(getattr(self._state, "fields", None), hotkey)
+        if f is not None and self._own_turn() and self.app.connected:
+            log.info("combat: %s -> field %d", key, f.index)
+            self.app.client.activate_field(f.index)
+        return None
+
+    def handle_right_button(self, down, screen_x, screen_y):
+        """A right DRAG pans (the galaxy map's gesture, HD EXTENSION
+        `free_camera`); a right CLICK is FACE toward the cell, as the
+        original's right click on its map (combat1.cpp:696-710)."""
+        if down:
+            self._press = [(screen_x, screen_y), (screen_x, screen_y), False]
+            return
+        press, self._press = self._press, None
+        if press is None or press[2]:
+            return
+        if self._ready() and self._cam is not None:
+            cell = self._cam.cell_at(screen_x, screen_y)
+            if cell is not None:
+                self._send("face", *cell)
+
+    def handle_mouse_motion(self, screen_x, screen_y):
+        if self._press is not None and self._cam is not None:
+            (x0, y0), (lx, ly), moved = self._press
+            if moved or abs(screen_x - x0) + abs(screen_y - y0) > DRAG_SLOP:
+                self._cam.pan(screen_x - lx, screen_y - ly)
+                self._press = [(x0, y0), (screen_x, screen_y), True]
+        return super().handle_mouse_motion(screen_x, screen_y)
+
+    def handle_mousewheel(self, dy, screen_x, screen_y):
+        if self._cam is not None:
+            self._cam.zoom(dy, (screen_x, screen_y))
+
+    def handle_key(self, key):
+        if key == pygame.K_c and self._cam is not None and self._shown():
+            u = self._acting()
+            self._cam.centre_on(*cbdraw.centre(u))    # the original's C
+        elif key == pygame.K_ESCAPE:
+            self._board = False

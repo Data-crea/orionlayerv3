@@ -99,14 +99,22 @@ class Header:
     re-derive from `flags`, which is how two tools end up disagreeing
     about what bit 4 means.
     """
-    __slots__ = ("width", "height", "frame_count", "flags", "offsets")
+    __slots__ = ("width", "height", "frame_count", "flags", "offsets",
+                 "keyframe_interval")
 
-    def __init__(self, width, height, frame_count, flags, offsets):
+    def __init__(self, width, height, frame_count, flags, offsets,
+                 keyframe_interval=0):
         self.width = width
         self.height = height
         self.frame_count = frame_count
         self.flags = flags
         self.offsets = offsets
+        #: `s_animation_header.keyframe_interval` (orion2.h:241): every
+        #: n-th frame is whole, the ones between are drawn OVER it
+        #: (`Draw_Picture_To_Bitmap_`, bitmap.cpp:941-980). 0: every
+        #: frame whole. Kept since work order 197 (the combat ships'
+        #: engine glow is three such deltas, 193's trial).
+        self.keyframe_interval = keyframe_interval
 
     @property
     def mode(self):
@@ -125,7 +133,7 @@ def parse_header(blob, label="entry"):
     """The 12-byte header and the `frame_count + 1` offsets after it."""
     if len(blob) < 12:
         raise LbxError(f"{label}: entry too short for an animation header.")
-    width, height, _cur, frame_count, _loop, _key, _unk, flags = \
+    width, height, _cur, frame_count, _loop, key, _unk, flags = \
         struct.unpack_from("<hhhhbbBB", blob, 0)
     if width <= 0 or height <= 0 or frame_count <= 0:
         raise LbxError(f"{label}: implausible header "
@@ -134,7 +142,7 @@ def parse_header(blob, label="entry"):
         raise LbxError(f"{label}: entry too short for {frame_count} "
                        f"frame offsets.")
     offsets = struct.unpack_from(f"<{frame_count + 1}I", blob, 12)
-    return Header(width, height, frame_count, flags, offsets)
+    return Header(width, height, frame_count, flags, offsets, key)
 
 
 def read_palette(blob, frame_count):
@@ -215,7 +223,25 @@ def decode_bitmap(blob, offset, width, height):
     return bytearray(pixels)
 
 
-def decode_packed(blob, offset, width, height):
+def decode_composed(blob, header, frame=0):
+    """One frame as the engine COMPOSES it: every packed frame from the
+    last keyframe up to `frame` painted over the one before
+    (`BITMAP::Draw_Picture_To_Bitmap_`, bitmap.cpp:941-980, runs copied
+    literally). A bitmap entry or an interval of 0 is `decode_frame`."""
+    if header.mode != DRAW_MODE_ANIMATED or not header.keyframe_interval:
+        return decode_frame(blob, header, frame)
+    if not 0 <= frame < header.frame_count:
+        return None
+    start = (frame // header.keyframe_interval) * header.keyframe_interval
+    out = bytearray(header.width * header.height)
+    for k in range(start, frame + 1):
+        if decode_packed(blob, header.offsets[k], header.width,
+                         header.height, into=out) is None:
+            return None
+    return out
+
+
+def decode_packed(blob, offset, width, height, into=None):
     """RLE frame per `Draw_Animated_Sprite_`.
 
     A 4-byte frame header (unknown, start_y), then runs of
@@ -228,7 +254,7 @@ def decode_packed(blob, offset, width, height):
     and not an error: an LBX holds entries of several kinds and a
     caller walking all of them will meet data that is not a sprite.
     """
-    out = bytearray(width * height)
+    out = into if into is not None else bytearray(width * height)
     _unknown, start_y = struct.unpack_from("<HH", blob, offset)
     pos = offset + 4
     y = start_y

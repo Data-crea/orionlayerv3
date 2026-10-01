@@ -165,3 +165,7 @@ screens/audience/assets/gamedata/
 # The Info screen's Tech Review pictures out of the player's APP_PICS.LBX and
 # FONTS.LBX (tools/info_art_extract.py, work order 196) — the same rule.
 screens/info/assets/gamedata/
+# The tactical battle's ships, planets, ordnance, effects and palette out of
+# the player's CMBT*.LBX, BEAMS, SPHERSFX, COMBAT, MONSTER and FONTS.LBX
+# (tools/combat_art_extract.py, work order 197) — the same rule.
+screens/combat/assets/gamedata/

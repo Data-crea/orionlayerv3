@@ -307,6 +307,13 @@ def from_game(settings=None):
          "Tech Review pictures — without them the Info screen's Tech Review "
          "shows an empty picture box",
          "python tools/info_art_extract.py"),
+        # THE TACTICAL BATTLE (work order 197 C): ships, planets, ordnance,
+        # effects and the battle palette.
+        (os.path.join(ROOT, "screens", "combat", "assets", "gamedata",
+                      "manifest.json"),
+         "battle artwork — without it the HD battle draws its units as rings "
+         "on black",
+         "python tools/combat_art_extract.py"),
         # THE INFO SCREEN (work order 175 D): the Reference topic lists,
         # the trait names and the Tech Review's group names.
         (os.path.join(ROOT, *infotext_file(lang).split("/")),
