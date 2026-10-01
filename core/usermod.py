@@ -66,12 +66,25 @@ PREFIXES = (("backgrounds/", "assets/shared/backgrounds/"),
             ("hud/", "assets/shared/hud/cut/"),
             ("files/", ""))
 SINGLES = {"background.png": UNIVERSAL}
+#: A screen's frame (work order 197 E, 195's Q3): `frames/<screen>.png`,
+#: drawn by `core.frameslot` over the screen at 16:9 when it was painted
+#: for the screen's layout. HD EXTENSION — the original has no such slot.
+FRAMES = "frames/"
+FRAME_TREE = "screens/{screen}/assets/frame.png"
+#: Slots with no file of OrionLayer's own at their tree path: a mod file
+#: there ADDS the picture instead of replacing one — the frames, and the
+#: battle's pictures as PNG (195 §7: `core.blobart`, before the extracted
+#: blob is decoded). Globs relative to the tree.
+SLOTS = ("screens/*/assets/frame.png",
+         "screens/combat/assets/gamedata/*/*.png")
+#: The optional file a mod states its frames' layouts in (195 §3.5).
+MOD_JSON = "mod.json"
 #: The two files that are values, not pictures.
 STYLE = "style.json"
 COLOUR = "colour.json"
 #: What the template lists and MODDING.md explains, in this order.
 NAMES = ("background.png", "backgrounds/<screen>.png", "hud/<piece>.png",
-         STYLE, COLOUR, "files/<path in the tree>",
+         "frames/<screen>.png", STYLE, COLOUR, "files/<path in the tree>",
          "texts/<screen>/<key>.txt")
 #: The texts' folder: read by `read_text`, asked by `core.modtexts`.
 TEXTS = "texts/"
@@ -129,6 +142,9 @@ def tree_path(name):
     name = name.replace("\\", "/")
     if name in SINGLES:
         return SINGLES[name]
+    if name.startswith(FRAMES) and name.count("/") == 1:
+        stem = os.path.splitext(name[len(FRAMES):])[0]
+        return FRAME_TREE.format(screen=stem) if stem else None
     for prefix, target in PREFIXES:
         if name.startswith(prefix) and len(name) > len(prefix):
             rest = name[len(prefix):]
@@ -157,7 +173,7 @@ def init(enabled=True, root=None):
         for f in sorted(files):
             full = os.path.join(dirpath, f)
             name = os.path.relpath(full, root).replace(os.sep, "/")
-            if (name in (STYLE, COLOUR) or name in GUIDE
+            if (name in (STYLE, COLOUR, MOD_JSON) or name in GUIDE
                     or name.startswith(ORIGINALS + "/")):
                 continue
             if name.startswith(TEXTS):
@@ -173,7 +189,7 @@ def init(enabled=True, root=None):
             if not _known(name, target, BASE_DIR):
                 continue
             if name.startswith("files/") and not os.path.exists(
-                    os.path.join(BASE_DIR, target)):
+                    os.path.join(BASE_DIR, target)) and not is_slot(target):
                 log.warning("mod: %s replaces nothing (no %s in OrionLayer) "
                             "— ignored", name, target)
                 continue
@@ -182,12 +198,34 @@ def init(enabled=True, root=None):
     return len(_state["index"])
 
 
+def is_slot(target):
+    """A tree path a mod file may fill although OrionLayer has no file
+    there (`SLOTS`)."""
+    import fnmatch
+    return any(fnmatch.fnmatchcase(target, g) for g in SLOTS)
+
+
+def frame_layouts():
+    """mod.json's `{"frames": {"<screen>": "<layout hash>"}}`, or {}."""
+    data = _read_json(MOD_JSON) or {}
+    frames = data.get("frames")
+    return {str(k): str(v) for k, v in frames.items()} \
+        if isinstance(frames, dict) else {}
+
+
 def _known(name, target, base):
     """A background or HUD piece name OrionLayer asks for; a typo says so."""
     stem = os.path.splitext(os.path.basename(target))[0]
     if name.startswith("backgrounds/"):
         if stem == "universal" or os.path.isfile(
                 os.path.join(base, "screens", stem, "screen.py")):
+            return True
+        log.warning("mod: %s — there is no screen called %s — ignored",
+                    name, stem)
+        return False
+    if name.startswith(FRAMES):
+        stem = os.path.splitext(os.path.basename(name))[0]
+        if os.path.isfile(os.path.join(base, "screens", stem, "screen.py")):
             return True
         log.warning("mod: %s — there is no screen called %s — ignored",
                     name, stem)

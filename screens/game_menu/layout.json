@@ -275,6 +275,9 @@
       },
       "mod_files": "{n} files",
       "mod_none": "no folder",
+      "mod_wait": "Extracting the game's pictures \u2014 this can take a while ({i}/{n})",
+      "mod_done": "Ready \u2014 restart to use the mod folder",
+      "mod_failed": "{n} step(s) failed \u2014 see the log",
       "monsters": "Monster values",
       "monster_steps": {
         "on": "On",

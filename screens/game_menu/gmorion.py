@@ -33,7 +33,7 @@ nothing when nothing changed.
 """
 import pygame
 
-from core import palette, playercolors, usermod, usersettings
+from core import modsetup, palette, playercolors, usermod, usersettings
 from core.hud import glass
 from core.hud import style as hudstyle
 from core.hud import tint
@@ -57,8 +57,10 @@ FLOOR_STEPS = ("off", "light", "haze")
 #: The monster values switch (screens/planets/monsterpanel), default on.
 MONSTER_STEPS = ("on", "off")
 
-#: The mod folder switch (work order 173, decision 72), default on.
-MOD_STEPS = ("on", "off")
+#: The mod folder switch (work order 173, decision 72), default off since
+#: work order 197 (`core.usersettings`). Switching it ON starts the
+#: extraction and the kit in the background (`core.modsetup`).
+MOD_STEPS = ("off", "on")
 
 
 def _settings(screen):
@@ -222,6 +224,10 @@ def handle_click(screen, x, y):
         _cycle(settings, "monster_values", MONSTER_STEPS)
     elif geo["mods"].collidepoint(x, y):
         _cycle(settings, "user_mod", MOD_STEPS)
+        if settings.get("user_mod") == "on":
+            # Data, 30 September 2026: switching it on says it can take a
+            # while and starts the extraction (the row shows the progress).
+            modsetup.start()
     elif geo["glass_reset"].collidepoint(x, y):
         set_glass(screen, None)
     elif geo["glass"].collidepoint(x, y) and \
@@ -341,10 +347,20 @@ def _render_mod_row(screen, surface, row, words, size, lx, vx):
     shown = value if value in MOD_STEPS else MOD_STEPS[0]
     img = _text(screen, surface, words.get("mod_steps", {}).get(shown, shown),
                 size, COL_OPTION, row.x + vx, row)
-    if shown == "on" and usermod.started_enabled():
+    job = modsetup.state()
+    note = None
+    if job["phase"] == "running":
+        note = words.get("mod_wait", "Extracting — this can take a while "
+                         "({i}/{n})").format(i=job["i"], n=job["n"])
+    elif job["phase"] == "done":
+        note = (words.get("mod_failed", "{n} step(s) failed — see the log")
+                .format(n=len(job["failed"])) if job["failed"]
+                else words.get("mod_done", "Ready — restart to use it"))
+    elif shown == "on" and usermod.started_enabled():
         n = usermod.in_use()
         note = (words.get("mod_files", "{n} files").format(n=n)
                 if usermod.active() else words.get("mod_none", "no folder"))
+    if note is not None:
         _text(screen, surface, note, size, COL_STATE,
               row.x + vx + img.get_width() + int(row.h * 0.6), row)
 

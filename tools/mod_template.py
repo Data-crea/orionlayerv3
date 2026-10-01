@@ -85,8 +85,17 @@ the original comes back.
   `hue` 0 to 360, `saturation` 0 to 1, `brightness` 0.1 to 1.6. The
   colour you pick in the game's settings still wins over it, and
   "Reset" there goes back to this file's colour.
+- **`frames/<screen>.png`** - a FRAME painted over one screen, 3840 x
+  2160 with transparency. `templates/frames/<screen>.png` shows where the
+  screen's boxes are: paint over it and save it under `frames/`. It is
+  drawn only while the window is 16:9 and only for the layout it was
+  painted for; when a screen's boxes move, a new template is written and
+  the old frame waits for a repaint (one line in the log says why). If
+  your paint program drops the template's hidden stamp, name it in a
+  `mod.json`: `{{"frames": {{"<screen>": "<stamp>"}}}}` -
+  `python tools/frame_template.py` prints every stamp.
 - **`files/<path>`** - any other picture on the list in `NAMES.txt`, at
-  the path shown there.
+  the path shown there; the battle's pictures too, one PNG per drawing.
 - **`texts/<screen>/<key>.txt`** - a TEXT, by its key: `info.tab.reference`
   is `texts/info/tab.reference.txt`. Plain text, saved as UTF-8; a blank
   line starts a paragraph. Long texts wrap and scroll. OrionLayer's own
@@ -99,10 +108,14 @@ Nothing you put here can break the game. A file OrionLayer cannot read,
 or a name it does not know, is skipped and the original is used. Start
 OrionLayer from a terminal to see one line about each such file.
 
-## Switching it off
+## Switching it on and off
 
-In the game: GAME, then SETTINGS, then **Mod folder: Off**, and restart.
-Your files stay where they are; switch it on again the same way.
+The folder is **Off** until you switch it on (work order 197). In the
+game: GAME, then SETTINGS, then **Mod folder: On**. Switching it on
+extracts the game's pictures you have not extracted yet - this can take a
+while, the row shows how far it is - and writes this guide, `NAMES.txt`
+and the frame templates; then restart. **Mod folder: Off** the same
+way, and restart: your files stay where they are.
 
 ## What is not here
 
@@ -131,6 +144,15 @@ def screen_names():
             if "IS_OVERLAY = True" not in handle.read():
                 out.append(n)
     return out
+
+
+def frame_screens():
+    """The screens with a frame slot: those that place boxes
+    (`core.frameslot.layout_hash` is None for the others)."""
+    base = os.path.join(ROOT, "screens")
+    return sorted(n for n in os.listdir(base) if not n.startswith("_")
+                  and os.path.isfile(os.path.join(base, n, "screen.py"))
+                  and os.path.isfile(os.path.join(base, n, "boxes.json")))
 
 
 def game_art():
@@ -162,6 +184,13 @@ def names_txt(hud_sizes):
     lines += ["", "hud/<piece>.png           PNG with transparency:"]
     lines += [f"  hud/{n}.png  {s[0]} x {s[1]}"
               for n, s in sorted(hud_sizes.items())]
+    lines += ["", "frames/<screen>.png       a frame painted over the "
+              "screen (work order 197): 3840 x 2160 PNG with transparency,",
+              "                          drawn only in a 16:9 window and "
+              "only for the layout it was painted for -",
+              "                          paint over templates/frames/"
+              "<screen>.png (tools/frame_template.py writes them):"]
+    lines += [f"  frames/{n}.png" for n in frame_screens()]
     lines += ["", "style.json                HUD style values "
               "(see originals/style.json)",
               "colour.json               the default frame colour "
@@ -170,6 +199,13 @@ def names_txt(hud_sizes):
               "(names only - not ours to hand out):"]
     lines += [f"  files/{rel}  {s[0]} x {s[1]}"
               for rel, s in sorted(game_art().items())]
+    lines += ["", "  the battle's pictures (work order 197), one PNG per "
+              "stored drawing, used as painted:",
+              "  files/screens/combat/assets/gamedata/<file>/<entry>_<frame>"
+              ".png  (<file>: cmbtshp, monster, cmbtplnt, cmbtmisl, "
+              "cmbtfgtr, cmbtsfx, beams, sphersfx, combat;",
+              "  ships: entry = colour x 45 + design picture, frame = 4 x "
+              "facing (0-4, the rest are flips) + glow (0-3))"]
     lines += ["", "texts/<screen>/<key>.txt  a text by its key, UTF-8. "
               "OrionLayer's own (a copy is in originals/texts/):"]
     keys = text_keys()

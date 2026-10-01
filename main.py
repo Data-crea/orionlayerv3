@@ -5,7 +5,7 @@ import logging
 import pygame
 from core.config import (load_settings, TARGET_FPS, SCREENS_DIR,
                          build_line)
-from core import resources, palette, usermod, usersettings
+from core import resources, palette, usermod, usersettings, frameslot
 from core import cursor as cursor_gfx
 from core import mouse as mouse_input
 from core.layout import Layout
@@ -481,6 +481,10 @@ class App:
             self._notice_view.reset()
             self.surface.fill((4, 6, 14))
             self.dispatcher.render(self.surface)
+            # A mod's painted frame over the screen, where it fits (work
+            # order 197 E; HD EXTENSION, `core.frameslot`).
+            frameslot.draw(self.surface, self.res,
+                           self.dispatcher.active_name)
             self._surface_hd = True
         else:
             self.surface.fill((6, 8, 16))

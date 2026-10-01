@@ -26,6 +26,7 @@ one; take it out and the original is back:
 background.png             the picture behind every screen
 backgrounds/<screen>.png   one screen's picture (wins over background.png)
 hud/<piece>.png            a HUD icon or the title plate
+frames/<screen>.png        a frame painted over one screen (see Frames)
 style.json                 HUD colours and sizes — only the keys you write
 colour.json                the frame colour OrionLayer starts with
 files/<path in the tree>   any other picture listed in NAMES.txt
@@ -34,8 +35,42 @@ texts/<screen>/<key>.txt   a text, by its key (work order 175)
 
 A file OrionLayer cannot read, or a name it does not know, is skipped
 with one line in the log; a picture of another size is scaled to fit.
-The GAME menu's SETTINGS has **Mod folder: On / Off** (takes effect at
-the next start); switching it off leaves your files where they are.
+The GAME menu's SETTINGS has **Mod folder: Off / On** (takes effect at
+the next start). **It is Off until you switch it on** (work order 197;
+a folder you switched on before stays on). Switching it on extracts the
+game's pictures you have not extracted yet — the row says this can take
+a while and shows how far it is — then writes the template and the frame
+templates into the folder (`core/modsetup.py`). Switching it off leaves
+your files where they are.
+
+### Frames (work order 197, HD EXTENSION)
+
+`frames/<screen>.png` is a picture laid over one whole screen: 3840 x 2160
+with transparency, so the screen shows through where you leave it clear.
+`python tools/frame_template.py` writes `templates/frames/<screen>.png`
+into the folder (switching the folder on does it too): every box the
+screen places, outlined and named, at exactly the size it is drawn — paint
+over it and save the result under `frames/`. The template carries a hidden
+stamp of the screen's layout; a frame is drawn only
+
+- while the window is 16:9 (a painted picture scales evenly only there;
+  the boxes move differently at other shapes), and
+- while the screen's layout is the one the stamp names — move a box and
+  the frame waits for a repaint instead of sitting crooked.
+
+Each refusal is one line in the log. A paint program that drops the stamp
+can be answered with a `mod.json` in the folder:
+`{"frames": {"galaxy_map": "<stamp>"}}` — the tool prints every stamp.
+Screens whose geometry is code (the battle) have no frame slot.
+
+### The battle's pictures (work order 197)
+
+The battle draws the game's own pictures from the files
+`tools/combat_art_extract.py` extracts. One PNG replaces one stored
+drawing, used as painted (no palette), at
+`files/screens/combat/assets/gamedata/<file>/<entry>_<frame>.png`; the
+facings the game draws as flips stay flips, so a ship needs its five
+stored facings, not sixteen. `NAMES.txt` gives the numbering.
 
 Pictures from Master of Orion 2 itself are never copied into the
 template — they are not ours to hand out — but their names are listed,

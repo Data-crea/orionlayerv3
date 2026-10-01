@@ -149,7 +149,12 @@ class CombatArt:
                mirror, flip)
         if key in self._cache:
             return self._cache[key]
-        surf = None
+        surf = self._painted(lbx_name, entry, frame)
+        if surf is not None:
+            if mirror or flip:
+                surf = pygame.transform.flip(surf, mirror, flip)
+            self._cache[key] = surf
+            return surf
         b = self.blob(lbx_name, entry)
         if b is not None and self.available:
             try:
@@ -168,6 +173,22 @@ class CombatArt:
                 surf = None
         self._cache[key] = surf
         return surf
+
+    def _painted(self, lbx_name, entry, frame):
+        """A PNG for this stored drawing, if a mod gives one (work order 197
+        E, 195 §7): `<lbx>/<entry>_<frame>.png` beside the extracted blobs,
+        resolved like every file here — the player's mod folder
+        (`files/screens/combat/assets/gamedata/…`), a developer mod, the
+        project. Used as painted: no palette, no ramp; the facings that
+        are flips stay flips (a modder paints the 5 stored ones)."""
+        path = self._path(f"{lbx_name}/{int(entry)}_{int(frame)}.png")
+        if not path or not os.path.isfile(path):
+            return None
+        try:
+            img = pygame.image.load(path)
+        except (pygame.error, OSError):
+            return None
+        return img.convert_alpha() if pygame.display.get_surface() else img
 
     def ship(self, colour, picture, facing, glow=0, monster=False):
         """A battle unit's picture for its facing and glow frame 0..3."""

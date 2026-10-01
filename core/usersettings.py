@@ -95,8 +95,10 @@ DEFAULTS = {
     "hud_bright": None,
     # The player's mod folder (decision 72): "off" uses the defaults and
     # leaves the folder as it is. Read at start, so a change needs a
-    # restart (decision 18).
-    "user_mod": "on",
+    # restart (decision 18). OFF BY DEFAULT since work order 197 (Data;
+    # 195's Q5 (a)): the file stores a key only once the player changed
+    # it, so a player who switched the folder on keeps it on.
+    "user_mod": "off",
     # The Panel glass slider (work order 174), 0 see-through .. 1 solid;
     # None is the default (the measured 0.5, or a mod's).
     "hud_glass": None,
