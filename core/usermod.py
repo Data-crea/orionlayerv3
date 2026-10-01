@@ -13,7 +13,8 @@ and the folder is never under git.
 install, and the smoke test).
 
 **ONE RESOLVER.** Nothing reads this folder but this module, and
-nothing asks this module but `core.resources` (`Resources.resolve`) and
+nothing asks this module but `core.resources` (`Resources.resolve`, and
+`Resources.roots` for the loaders that choose per root, `files_root`) and
 the two values that are not files (`style_overrides`, `frame_colour`).
 A screen asks for its default path as it always did and gets the
 player's file when there is a valid one — so no screen loads around it.
@@ -74,9 +75,13 @@ FRAME_TREE = "screens/{screen}/assets/frame.png"
 #: Slots with no file of OrionLayer's own at their tree path: a mod file
 #: there ADDS the picture instead of replacing one — the frames, and the
 #: battle's pictures as PNG (195 §7: `core.blobart`, before the extracted
-#: blob is decoded). Globs relative to the tree.
+#: blob is decoded), and the population figures — extracted from the
+#: player's MOO2 (absent in a tree that was not) and with steps the tree has
+#: no file for (`<name>@2x.png`, decision 50), read through `files_root`.
+#: Globs relative to the tree.
 SLOTS = ("screens/*/assets/frame.png",
-         "screens/combat/assets/gamedata/*/*.png")
+         "screens/combat/assets/gamedata/*/*.png",
+         "assets/shared/figures/*.png")
 #: The optional file a mod states its frames' layouts in (195 §3.5).
 MOD_JSON = "mod.json"
 #: The two files that are values, not pictures.
@@ -196,6 +201,18 @@ def init(enabled=True, root=None):
             _state["index"][target] = full
     log.info("mod folder %s: %d file(s) in use", root, len(_state["index"]))
     return len(_state["index"])
+
+
+def files_root():
+    """The folder's `files/` as a RESOURCE ROOT, or None (work order 199 D,
+    195 §11.1): it mirrors the tree, so a loader that chooses between file
+    forms per source root (`Resources.roots`, decision 50's master-or-step
+    — the colony screens' figures, planet discs, surfaces and output icons)
+    tries it first. Such a loader checks a file's size itself and refuses a
+    wrong one (decision 50) — it is not scaled here."""
+    root = _state["root"]
+    path = os.path.join(root, "files") if root else None
+    return path if path and os.path.isdir(path) else None
 
 
 def is_slot(target):

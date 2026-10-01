@@ -98,9 +98,13 @@ class Resources:
         master, which is the opposite of what a mod is for.
 
         Still decision 16 — the caller gets roots from here and never
-        builds a path from `BASE_DIR` itself.
+        builds a path from `BASE_DIR` itself. The player's mod folder's
+        `files/` comes first when it is in use (decision 72's order: the
+        player, then mods, then the base; work order 199 D).
         """
-        return list(self.mod_dirs) + [BASE_DIR]
+        player = usermod.files_root()
+        return ([player] if player else []) + list(self.mod_dirs) + \
+            [BASE_DIR]
 
     def resolve_dir(self, relpath):
         """Return the first existing DIRECTORY for relpath, mods first.
