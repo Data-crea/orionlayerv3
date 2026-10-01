@@ -31,6 +31,7 @@ import pygame
 
 from core import combatblocks as cb
 from core.screen_base import ScreenBase
+from core.kentext import ArcWords
 from core.shipparts import ShipPartNames
 from core.structs import player as player_struct
 from core.structs import settings as settings_struct
@@ -74,6 +75,8 @@ class CombatScreen(ScreenBase):
         self._panel = cbpanel.Panel()
         self._play = cbplay.Player()
         self._pops = cbpopups.Popups()
+        self._specials = False               # the panel's SPECIALS view
+        self._ken = None
         self._masks = {}                 # unit -> weapon-row switches
         self._board = False
         self._sent = None                # (op, time) awaiting event 18
@@ -97,6 +100,7 @@ class CombatScreen(ScreenBase):
         language = (getattr(self.app, "settings", {}) or {}).get(
             "language", "en")
         self._names = ShipPartNames(language)
+        self._ken = ArcWords(language)
         self.update(game_state)
 
     def update(self, game_state=None):
@@ -210,10 +214,11 @@ class CombatScreen(ScreenBase):
         live = {k for k, _w, hk in cbpanel.BUTTONS
                 if self._own_turn() and (k in ("board", "scan") or field_by_hotkey(
                     getattr(self._state, "fields", None), hk))}
-        self._panel.draw(surface, self.style, unit, self._weapon_name,
+        pic = cbdraw.unit_picture(self._art, self._colours(), unit, 0)
+        self._panel.draw(surface, self.style, unit, self._names, self._ken,
                          self._mask(c["cur_ship"], unit),
                          self._board or self._pops.scan_mode and "scan", live,
-                         self.layout.scale)
+                         self.layout.scale, pic, self._specials)
         self._pops.draw(surface, self.style, self.layout.scale, self._state,
                         c, self._weapon_name)
 
@@ -288,6 +293,10 @@ class CombatScreen(ScreenBase):
         key = self._panel.button_at(screen_x, screen_y)
         if key is not None:
             return self._button(key)
+        tab = self._panel.tab_at(screen_x, screen_y)
+        if tab is not None:                  # a view only, as the original's
+            self._specials = tab == "specials"
+            return None
         row = self._panel.row_at(screen_x, screen_y)
         if row is not None:
             c = self._shown()

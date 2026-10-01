@@ -50,7 +50,13 @@ UNIT_FIELDS = (
     ("tac_val_defense", 54, "h"), ("tac_val_evade", 56, "h"),
     ("combat_speed_base", 58, "b"), ("current_speed", 59, "h"),
     ("movement_left", 61, "h"), ("special_status_flag", 64, "b"),
-    ("special_status_timer", 65, "B"), ("combat_status_flags", 72, "B"),
+    ("special_status_timer", 65, "B"),
+    # work order 199 C3: orion2.h's order between the verified neighbours
+    # (64 special_status_flag ... 72, 74, 75 ... 82 the weapon slots)
+    ("plasma_web_damage", 67, "h"), ("reflected_damage_pool", 69, "h"),
+    ("special_device_flags", 76, "5B"),
+    ("special_device_damage_flags", 178, "5B"),
+    ("combat_status_flags", 72, "B"),
     ("stasis_source_idx", 74, "B"), ("is_retreating", 75, "b"),
     ("structure_max", 170, "h"), ("crew_quality", 172, "b"),
     ("officer_idx", 173, "h"), ("marine_count", 175, "B"),

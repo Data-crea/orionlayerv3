@@ -122,12 +122,9 @@ def draw_units(surface, cam, art, combat, colours, glow_clock, cache,
                              cam.to_window(u["x"] * CELL + ox,
                                            u["y"] * CELL + oy))
             continue
-        owner = u["previous_owner"] if u["previous_owner"] <= 7 else u["owner"]
-        monster = u["previous_owner"] > 9
         # the glow cycle {1,2,3,2}, phased by the unit (cmbtdrw1.cpp:2499-2508)
         glow = (1, 2, 3, 2)[((glow_clock // 2) + i) % 4]
-        pic = art.ship(colours.get(owner, 0), u["picture_num"],
-                       u["facing_dir"], glow, monster=monster)
+        pic = unit_picture(art, colours, u, glow)
         if pic is None:
             wx, wy = centre(u)
             pygame.draw.circle(surface, (160, 170, 200),
@@ -138,6 +135,14 @@ def draw_units(surface, cam, art, combat, colours, glow_clock, cache,
         dx, dy = u.get("_off", (0, 0))      # a move being played (cbplay)
         surface.blit(scaled(pic, cam.scale, cache),
                      cam.to_window(ox + dx, oy + dy))
+
+
+def unit_picture(art, colours, u, glow=0):
+    """A unit's picture: its builder's colour (`previous_owner`), a
+    monster's own (cmbtdrw1.cpp:2533-2548), at glow frame `glow`."""
+    owner = u["previous_owner"] if u["previous_owner"] <= 7 else u["owner"]
+    return art.ship(colours.get(owner, 0), u["picture_num"], u["facing_dir"],
+                    glow, monster=u["previous_owner"] > 9)
 
 
 def draw_cursor(surface, cam, art, unit, glow_clock, cache):
