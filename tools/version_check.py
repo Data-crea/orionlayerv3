@@ -379,6 +379,12 @@ LOCAL_PATCHES = {
         "OrionLayer, open fix 66.",
         "the engine does not send CPOP (open fix 66): the battle's scan view "
         "and board popup stay the F12 notice"),
+    # Applied 1 October 2026 by work order 199: a8381e60, on 121950ed.
+    "doc/ext_msgbox_items.patch": (
+        os.path.join("src", "ext", "ext_api.cpp"),
+        "OrionLayer, open fix 67.",
+        "the engine sends message boxes without their item values (open fix "
+        "67): the boarding result's numbers are not printed"),
 }
 
 #: Patches that are REPORTED to Joes and not yet applied: listed with
@@ -453,6 +459,7 @@ FIX_NUMBERS = {
     "doc/ext_combat_command_view.patch": (65,),
     "doc/ext_set_spies.patch": (64,),
     "doc/ext_combat_popup.patch": (66,),
+    "doc/ext_msgbox_items.patch": (67,),
 }
 
 

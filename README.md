@@ -86,6 +86,7 @@ from the maintainer.
 | 33 | `76c7b880` | open fix 65: a battle command keeps the original's view round its action, as a click does — the view centred, a move longer than the view refused, a missile outside it given its field — so no command draws outside the frame buffer (work order 197) | `doc/ext_combat_command_view.patch` |
 | 34 | `9e19c9f3` | open fix 64: MSG_SET_SPIES — the Races screen's spies and missions set as one list through the game's own icon groups and setters, all or nothing (work order 197) | `doc/ext_set_spies.patch` |
 | 35 | `121950ed` | open fix 66: CPOP — the battle's scan view and board popup on the wire: the scanned unit, the popup's message, range and chosen marines, read only (work order 199) | `doc/ext_combat_popup.patch` |
+| 36 | `a8381e60` | open fix 67: MSGB version 2 — the values a message box's text prints through FMTPARA item codes (the boarding result), read only (work order 199) | `doc/ext_msgbox_items.patch` |
 
 ## Install
 

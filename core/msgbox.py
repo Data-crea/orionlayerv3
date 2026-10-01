@@ -17,14 +17,18 @@ WHAT IS TRANSCRIPTION: the text and title are the game's own, as the caller
 formatted them; the answers are the box's own fields (Yes = "Y", No = "N",
 the dismiss field ESC), activated by their id — which is what the box's own
 input loop compares (gendraw.cpp:201-207, textbox.cpp `Text_Box_Get_Input_`).
-The line breaks and columns follow FMTPARA (`core.helpformat`).
+The line breaks and columns follow FMTPARA (`core.helpformat`); the values
+the text's item codes print come with the block (open fix 67, version 2) —
+the boarding result's bonuses and marines.
 
 **DEVIATION `hud_message_box`**: drawn in the HUD style (glass, the frame
 colour, HD's font) instead of TEXTBOX.LBX / WARNING.LBX / CONFIRM.LBX art,
 the warning box's animation not played, and — because the original's
 message and text boxes are answered by a click ANYWHERE (one full-screen
 hidden field) — HD draws the text box's CLOSE button on every box that is
-not a confirmation (the warning box has none in the original) and also takes
+not a confirmation (the warning box has none in the original), lays a
+row's \\aX column moves out as left, centre and right runs rather than at
+the original's pixel columns (the boarding result's two sides), and takes
 a click anywhere and Enter / ESC / Space. The words on the buttons are artwork in the original
 and typed in `assets/shared/msgbox/labels.json` (decision 15).
 """
@@ -68,21 +72,37 @@ def parse(gs, data, pos):
             return pos
         texts.append(data[at:at + n].decode("latin-1"))
         at += n
-    if version != 1 or kind not in KINDS:
+    items = {}
+    if version == 2:
+        # the values of the text's item codes (open fix 67): a count, then
+        # an index byte and an int32 each
+        if at >= len(data) or at + 1 + data[at] * 5 > len(data):
+            return pos
+        for k in range(data[at]):
+            idx, val = _st.unpack_from("<Bi", data, at + 1 + 5 * k)
+            items[idx] = val
+        at += 1 + data[at] * 5
+    if version not in (1, 2) or kind not in KINDS:
         return pos
     gs.message_box = {"kind": KINDS[kind], "field_a": fa, "field_b": fb,
                       "ticks": ticks, "title": texts[0] or None,
-                      "text": texts[1]}
+                      "text": texts[1], "items": items}
     return at
 
 
-def build(kind, text, title=None, field_a=1, field_b=-1, ticks=0):
-    """The block as the engine writes it — for the checks' stand-ins."""
+def build(kind, text, title=None, field_a=1, field_b=-1, ticks=0,
+          items=None):
+    """The block as the engine writes it — for the checks' stand-ins;
+    version 2 (open fix 67) when `items` are given."""
     code = {v: k for k, v in KINDS.items()}[kind]
-    out = b"MSGB" + _st.pack("<BBhhh", 1, code, field_a, field_b, ticks)
+    out = b"MSGB" + _st.pack("<BBhhh", 1 if items is None else 2, code,
+                             field_a, field_b, ticks)
     for s in (title or "", text):
         raw = s.encode("latin-1")
         out += _st.pack("<h", len(raw)) + raw
+    if items is not None:
+        out += bytes([len(items)]) + b"".join(
+            _st.pack("<Bi", k, v) for k, v in items.items())
     return out
 
 
@@ -196,7 +216,7 @@ def draw(surface, style, labels, box):
     colour = hudtext.colour("value")
     rows = []
     from core.textfit import wrap_rendered
-    for ln in helpformat.parse(box["text"] or ""):
+    for ln in helpformat.parse(box["text"] or "", box.get("items")):
         plain = ln.plain()
         if not plain.strip():
             rows.append(None)

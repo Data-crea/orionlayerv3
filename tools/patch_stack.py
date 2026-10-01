@@ -81,6 +81,8 @@ STACKED_AFTER_COLONY = (
     "doc/ext_set_spies.patch",
     # work order 199: 66 appends CPOP after 56's CMEV, LAST
     "doc/ext_combat_popup.patch",
+    # work order 199: 67 extends 29's MSGB (version 2)
+    "doc/ext_msgbox_items.patch",
 )
 
 

@@ -48,6 +48,9 @@ resolution instead of at one.
 """
 import re
 
+#: fmtpara.cpp:56 `k_insert_item_kind`, by letter from A: '0' takes no
+#: argument
+ITEM_KIND = "11110101121212120000"
 #: fmtpara.cpp:4 — the letters that may follow \a
 LEGAL_FUNCTIONS = "FRTXYSHVPIMOC^="
 #: fmtpara.cpp:5 — what may appear inside an argument
@@ -109,12 +112,13 @@ class Line:
         return " ".join(r.text for r in self.runs if r.text)
 
 
-def parse(body):
+def parse(body, items=None):
     """Raw HELP.LBX body -> [Line]. Never raises on odd input.
 
     A body with no control codes at all comes back as one Line per
     source line, which is what an already-cleaned string does, so the
-    caller does not need to know which kind it has.
+    caller does not need to know which kind it has. `items` are the
+    paragraph variables' values by index (open fix 67), for 0x18.
     """
     lines = []
     runs = []
@@ -186,6 +190,31 @@ def parse(body):
                 i += 2
             else:
                 i += 1
+            continue
+
+        if ch == "\x18":
+            # INSERT ITEM (`Insert_Item_`, fmtpara.cpp:854-934): a letter,
+            # then — for a letter whose `k_insert_item_kind` is not '0' —
+            # one hex digit naming the variable. B, C and D print its value
+            # (C and D as the number: DEVIATION `item_ordinals`, the
+            # ordinal endings are not transcribed), F an "s" unless it is
+            # 1. Without the value (an engine without open fix 67) the
+            # code prints nothing rather than its own letters.
+            letter = body[i + 1:i + 2].upper()
+            i += 2
+            arg = None
+            if letter and ITEM_KIND[ord(letter) - 65:ord(letter) - 64] not in \
+                    ("", "0"):
+                while i < n and body[i] == " ":
+                    i += 1
+                arg = int(body[i], 16) if i < n and \
+                    body[i] in "0123456789abcdefABCDEF" else None
+                i += 1 if arg is not None else 0
+            value = (items or {}).get(arg)
+            if value is not None and letter in "BCD":
+                text.append(str(value))
+            elif value is not None and letter == "F" and value != 1:
+                text.append("s")
             continue
 
         if ch < " " or ch == "\x7f":

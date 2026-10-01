@@ -79,11 +79,11 @@ class CombatScreen(ScreenBase):
         self._ken = None
         self._masks = {}                 # unit -> weapon-row switches
         self._board = False
-        self._sent = None                # (op, time) awaiting event 18
-        self._press = None               # (pos, button, dragged)
+        # (op, time) awaiting event 18; (pos, button, dragged) of a press
+        self._sent = self._press = None
         self._clock0 = time.monotonic()
         self._cache = {}
-        self._turn_seen = None
+        self._turn_seen, self._home = None, False
 
     # ── state ──────────────────────────────────────────────────────
     def claims(self, game_state):
@@ -233,9 +233,16 @@ class CombatScreen(ScreenBase):
         if turn != self._turn_seen:
             self._turn_seen = turn
             at = cbdraw.centre(c["units"][c["cur_ship"]])
-        focus = self._play.focus()
+        focus, busy = self._play.focus(), self._play.busy()
+        self._home = self._home or busy
         if focus is not None:
             at = focus
+        elif self._home and self._own_turn():
+            # back to the player's own unit once a playback has ended and
+            # its turn is ready (the original snaps to the acting unit,
+            # combinit.cpp:2240)
+            self._home = False
+            at = cbdraw.centre(c["units"][c["cur_ship"]])
         if at is not None and not self._cam.shows(*at):
             self._cam.centre_on(*at)
 
