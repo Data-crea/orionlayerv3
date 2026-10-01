@@ -29,9 +29,10 @@ this screen does not keep. And a horizontal drag moves a BOUNDARY:
 a column's width is the distance to the next one
 (`colonytrack.columns`), so the neighbour follows.
 
-`LOCKED` — the frame cutouts. No handles at all. The rect comes from
-the artwork through `tools/frame_holes.py`, and the editor says so
-rather than refusing silently.
+`LOCKED` — the frame cutouts. No handles at all. Which boxes they are
+is `tools/frame_holes.py`'s vocabulary; their rects are derived
+(`layout_reference.json`, the HUD's boxes — no artwork is read since
+work order 190), and the editor says so rather than refusing silently.
 
 WHY A REFUSAL HAS TO SPEAK. The person dragging cannot see any of
 this: a cutout box and a hand-placed one look identical on screen, and
@@ -95,10 +96,11 @@ def refusal(screen_name, box_name, handle):
     if handle in HANDLES[kind]:
         return None
     if kind is LOCKED:
-        return (f"{box_name} is a frame cutout: its rect comes from the "
-                f"artwork through tools/frame_holes.py, and moving it "
-                f"here would slide content out from under its hole "
-                f"(decision 3). Change the plate, then re-derive.")
+        # Work order 197 (190's parked item 1): no artwork has been read
+        # since 190, so the old pointer to it was wrong.
+        return (f"{box_name} is a frame cutout: its rect is derived, and "
+                f"moving it by hand would move content off its place "
+                f"(decision 3).")
     if kind is BOUND:
         return (f"{box_name} is a list column: only its left and right "
                 f"edges are its own. y and height come from list_area "
