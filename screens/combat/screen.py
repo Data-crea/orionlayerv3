@@ -159,6 +159,9 @@ class CombatScreen(ScreenBase):
 
     # ── drawing ────────────────────────────────────────────────────
     def render(self, surface):
+        # OrionLayer's background under the panel's glass, as on every
+        # screen (`ScreenBase._render_background`); the field covers the rest
+        self._render_background(surface)
         win_w, win_h = surface.get_size()
         c = self._shown()
         band = cbpanel.Panel.area(win_w, win_h)
