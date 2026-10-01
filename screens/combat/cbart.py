@@ -201,6 +201,35 @@ class CombatArt:
                             self.ramp(colour), mirror, flip)
 
 
+def planet_picture(art, state, c):
+    """(picture, size) of the battle's planet: CMBTPLNT[climate * 6 + size],
+    its palette at +5 (combinit.cpp:1539-1559), or None. Moved here from the
+    screen by work order 199 (the screen's line guideline)."""
+    col = c.get("colony", -1)
+    try:
+        from core.structs import colony as colony_struct
+        from core.structs import planet as planet_struct
+        if col < 0:
+            return None
+        colony = colony_struct.SPEC.parse(state.colonies_raw[col])
+        p = planet_struct.parse(state.planets_raw[colony.planet])
+    except (IndexError, TypeError, AttributeError, ValueError):
+        return None
+    climate, size = int(p.climate), int(p.size)
+    pal_blob = art.blob("cmbtplnt", climate * 6 + 5)
+    extra = None
+    if pal_blob:
+        from core import lbx
+        try:
+            h = lbx.parse_header(pal_blob)
+            extra = lbx.read_palette(pal_blob, h.frame_count) \
+                if h.has_palette else None
+        except lbx.LbxError:
+            extra = None
+    pic = art.surface("cmbtplnt", climate * 6 + size, 0, extra)
+    return (pic, size) if pic is not None else None
+
+
 def _rgba(pixels, w, h, palette):
     out = bytearray(w * h * 4)
     for i, idx in enumerate(pixels):

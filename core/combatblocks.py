@@ -300,6 +300,21 @@ PARSERS = {"CMBT": (_cmbt, "combat"), "CMSL": (_cmsl, "ordnance"),
            "CMEV": (_cmev, "combat_events")}
 
 
+def parse_events_after(gs, data, pos):
+    """CMEV where the engine writes it when FBSC is present: after FBSC
+    (ext_api.cpp's sections 23, 24). Read only when `parse` found none."""
+    if getattr(gs, "combat_events", None) is None and \
+            data[pos:pos + 4] == b"CMEV":
+        try:
+            value, end = _cmev(data, pos)
+        except (_st.error, IndexError):
+            return pos
+        if value is not None:
+            gs.combat_events = value
+            return end
+    return pos
+
+
 def cut(data, at, tag):
     """The bytes of the `tag` block at `at`, or None when it does not read
     whole — for the fixture cutter (`dev:tools/combat_fixture.py`)."""

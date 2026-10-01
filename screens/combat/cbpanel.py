@@ -5,7 +5,8 @@ cmbtdrw1.cpp:446-448, `dev:doc/combat_drawing_reading.md` §6): the acting
 unit's name (:517-521), its weapons — count right-aligned, name, the arc or
 the ammunition (:2765-2933) — its systems box (drive, shields, computer,
 structure, armour, speed and "Remaining", :360-425), and the buttons AUTO,
-SCAN, BOARD, RETREAT, WAIT, DONE (:1268-1305).
+SCAN, BOARD, RETREAT, WAIT, DONE (:1268-1305). SCAN and BOARD are modes HD
+holds itself until a unit is clicked (`cbpopups`, work order 199).
 
 DEVIATION `hud_panel`: HD draws them as HUD blocks along the bottom of the
 window, in OrionLayer's words, not COMBAT.LBX 0; the shield rings round the
@@ -20,9 +21,9 @@ import pygame
 from core.hud import blocks as hud
 from core.hud import text as hudtext
 
-BUTTONS = (("auto", "AUTO", ord("A")), ("board", "BOARD", ord("B")),
-           ("retreat", "RETREAT", ord("R")), ("wait", "WAIT", ord("W")),
-           ("done", "DONE", ord("D")))
+BUTTONS = (("auto", "AUTO", ord("A")), ("scan", "SCAN", ord("S")),
+           ("board", "BOARD", ord("B")), ("retreat", "RETREAT", ord("R")),
+           ("wait", "WAIT", ord("W")), ("done", "DONE", ord("D")))
 
 
 class Panel:
@@ -95,7 +96,8 @@ class Panel:
         for n, (key, word, hotkey) in enumerate(BUTTONS):
             r = pygame.Rect(right.x + (n % 2) * (bw + pad),
                             right.y + (n // 2) * (bh + pad // 2), bw, bh)
-            state = "active" if key == "board" and board_mode else \
+            state = "active" if board_mode == {"board": True,
+                                               "scan": "scan"}.get(key) else \
                 "normal" if key in live else "disabled"
             hud.small_button(surface, r, scale, state, word,
                              style_renderer=style)

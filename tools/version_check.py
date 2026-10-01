@@ -373,6 +373,12 @@ LOCAL_PATCHES = {
         "OrionLayer, open fix 64.",
         "the engine does not take MSG_SET_SPIES (open fix 64): the HD Races "
         "screen cannot move spies or set a mission"),
+    # Applied 1 October 2026 by work order 199: 121950ed, on 9e19c9f3.
+    "doc/ext_combat_popup.patch": (
+        os.path.join("src", "ext", "ext_api.cpp"),
+        "OrionLayer, open fix 66.",
+        "the engine does not send CPOP (open fix 66): the battle's scan view "
+        "and board popup stay the F12 notice"),
 }
 
 #: Patches that are REPORTED to Joes and not yet applied: listed with
@@ -446,6 +452,7 @@ FIX_NUMBERS = {
     "doc/ext_combat_events_merge.patch": (63,),
     "doc/ext_combat_command_view.patch": (65,),
     "doc/ext_set_spies.patch": (64,),
+    "doc/ext_combat_popup.patch": (66,),
 }
 
 

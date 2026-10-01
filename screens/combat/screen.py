@@ -35,7 +35,7 @@ from core.shipparts import ShipPartNames
 from core.structs import player as player_struct
 from core.structs import settings as settings_struct
 
-from . import cbart, cbdraw, cbpanel, cbplay, cbview
+from . import cbart, cbdraw, cbpanel, cbplay, cbpopups, cbview
 
 log = logging.getLogger("combat")
 
@@ -61,6 +61,7 @@ def field_by_hotkey(fields, hotkey, types=(0, 1)):
 class CombatScreen(ScreenBase):
     SCREEN_NAME = "combat"
     GAME_SCREEN_ID = GAME_SCREEN_ID
+    EXTRA_SCREEN_IDS = (66, 67)          # scan view, board popup (199 C1)
     USE_FRAME = False
 
     def __init__(self, app):
@@ -72,6 +73,7 @@ class CombatScreen(ScreenBase):
         self._serial = None
         self._panel = cbpanel.Panel()
         self._play = cbplay.Player()
+        self._pops = cbpopups.Popups()
         self._masks = {}                 # unit -> weapon-row switches
         self._board = False
         self._sent = None                # (op, time) awaiting event 18
@@ -82,7 +84,10 @@ class CombatScreen(ScreenBase):
 
     # ── state ──────────────────────────────────────────────────────
     def claims(self, game_state):
-        return getattr(game_state, "combat", None) is not None
+        """65 with CMBT; 66 and 67 only with open fix 66's CPOP as well."""
+        return getattr(game_state, "combat", None) is not None and (
+            getattr(game_state, "current_screen", 65) == GAME_SCREEN_ID or
+            cbpopups.engine_popup(game_state) is not None)
 
     def wants_original(self):
         return False
@@ -107,6 +112,8 @@ class CombatScreen(ScreenBase):
             self._serial = combat["serial"]
             self._cam, self._masks, self._board = None, {}, False
             self._play.reset()
+            self._pops.reset()
+        self._pops.update(game_state)
         self._play.feed(combat, events, getattr(game_state, "ordnance", None))
         for e in events:
             if e["kind"] == "command" and self._sent and \
@@ -201,12 +208,14 @@ class CombatScreen(ScreenBase):
                         self._cache)
         surface.set_clip(clip)
         live = {k for k, _w, hk in cbpanel.BUTTONS
-                if self._own_turn() and (k == "board" or field_by_hotkey(
+                if self._own_turn() and (k in ("board", "scan") or field_by_hotkey(
                     getattr(self._state, "fields", None), hk))}
-        self._panel.draw(surface, self.style, unit if unit["owner"] ==
-                         self._me() else unit, self._weapon_name,
-                         self._mask(c["cur_ship"], unit), self._board, live,
+        self._panel.draw(surface, self.style, unit, self._weapon_name,
+                         self._mask(c["cur_ship"], unit),
+                         self._board or self._pops.scan_mode and "scan", live,
                          self.layout.scale)
+        self._pops.draw(surface, self.style, self.layout.scale, self._state,
+                        c, self._weapon_name)
 
     def _follow(self, c):
         """The original centres its view on each acting unit at its turn
@@ -240,35 +249,8 @@ class CombatScreen(ScreenBase):
     def _planet_picture(self, c):
         key = ("planet", c.get("colony", -1))
         if key not in self._cache:
-            self._cache[key] = self._load_planet(c)
+            self._cache[key] = cbart.planet_picture(self._art, self._state, c)
         return self._cache[key]
-
-    def _load_planet(self, c):
-        """CMBTPLNT[climate * 6 + size], its palette at +5
-        (combinit.cpp:1539-1559)."""
-        col = c.get("colony", -1)
-        try:
-            from core.structs import colony as colony_struct
-            from core.structs import planet as planet_struct
-            if col < 0:
-                return None
-            colony = colony_struct.SPEC.parse(self._state.colonies_raw[col])
-            p = planet_struct.parse(self._state.planets_raw[colony.planet])
-        except (IndexError, TypeError, AttributeError, ValueError):
-            return None
-        climate, size = int(p.climate), int(p.size)
-        pal_blob = self._art.blob("cmbtplnt", climate * 6 + 5)
-        extra = None
-        if pal_blob:
-            from core import lbx
-            try:
-                h = lbx.parse_header(pal_blob)
-                extra = lbx.read_palette(pal_blob, h.frame_count) \
-                    if h.has_palette else None
-            except lbx.LbxError:
-                extra = None
-        pic = self._art.surface("cmbtplnt", climate * 6 + size, 0, extra)
-        return (pic, size) if pic is not None else None
 
     # ── input ──────────────────────────────────────────────────────
     def _send(self, op, a=0, b=0, c=0):
@@ -299,7 +281,9 @@ class CombatScreen(ScreenBase):
         return None
 
     def handle_click(self, screen_x, screen_y):
-        if self._state is None or getattr(self._state, "combat", None) is None:
+        if self._state is None or getattr(self._state, "combat", None) is None \
+                or self._pops.click(screen_x, screen_y, self._state,
+                                    self.app.client):
             return None
         key = self._panel.button_at(screen_x, screen_y)
         if key is not None:
@@ -319,6 +303,9 @@ class CombatScreen(ScreenBase):
         me, cur = self._me(), c["cur_ship"]
         missile = self._missile_at(screen_x, screen_y)
         target = self._unit_at(cell)
+        if self._pops.scan_mode:             # SCAN, then a unit: HD's own view
+            self._pops.scan_mode, self._pops.local_unit = False, target
+            return None
         if missile is not None:
             self._send("fire_missile", missile)
         elif target is not None and target != cur and \
@@ -335,8 +322,9 @@ class CombatScreen(ScreenBase):
         return None
 
     def _button(self, key):
-        if key == "board":
-            self._board = not self._board
+        if key in ("board", "scan"):         # modes HD holds locally
+            self._board = key == "board" and not self._board
+            self._pops.scan_mode = key == "scan" and not self._pops.scan_mode
             return None
         hotkey = dict((k, hk) for k, _w, hk in cbpanel.BUTTONS)[key]
         f = field_by_hotkey(getattr(self._state, "fields", None), hotkey)
@@ -373,8 +361,10 @@ class CombatScreen(ScreenBase):
             self._cam.zoom(dy, (screen_x, screen_y))
 
     def handle_key(self, key):
+        if self._pops.key(key, self._state, self.app.client):
+            return
         if key == pygame.K_c and self._cam is not None and self._shown():
             u = self._acting()
             self._cam.centre_on(*cbdraw.centre(u))    # the original's C
         elif key == pygame.K_ESCAPE:
-            self._board = False
+            self._board = self._pops.scan_mode = False

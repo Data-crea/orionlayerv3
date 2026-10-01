@@ -85,6 +85,7 @@ from the maintainer.
 | 32 | `ee844b0b` | open fix 63: the battle's event stream reports a missile merge and a missile gone only for a live missile — the original's merge loop goes on over empty slots (work order 197) | `doc/ext_combat_events_merge.patch` |
 | 33 | `76c7b880` | open fix 65: a battle command keeps the original's view round its action, as a click does — the view centred, a move longer than the view refused, a missile outside it given its field — so no command draws outside the frame buffer (work order 197) | `doc/ext_combat_command_view.patch` |
 | 34 | `9e19c9f3` | open fix 64: MSG_SET_SPIES — the Races screen's spies and missions set as one list through the game's own icon groups and setters, all or nothing (work order 197) | `doc/ext_set_spies.patch` |
+| 35 | `121950ed` | open fix 66: CPOP — the battle's scan view and board popup on the wire: the scanned unit, the popup's message, range and chosen marines, read only (work order 199) | `doc/ext_combat_popup.patch` |
 
 ## Install
 

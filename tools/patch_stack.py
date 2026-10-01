@@ -79,6 +79,8 @@ STACKED_AFTER_COLONY = (
     "doc/ext_combat_command_view.patch",
     # work order 197: 64 adds MSG_SET_SPIES beside 58's command (ProcessInput)
     "doc/ext_set_spies.patch",
+    # work order 199: 66 appends CPOP after 56's CMEV, LAST
+    "doc/ext_combat_popup.patch",
 )
 
 
