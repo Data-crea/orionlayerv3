@@ -75,6 +75,10 @@ STACKED_AFTER_COLONY = (
     "doc/ext_combat_commands.patch",
     # work order 197: 62 checks the pending activation in ProcessInput and Tick
     "doc/ext_activate_checked.patch",
+    # work order 197: 65 keeps the view round 58's commands (Take_Combat_Command)
+    "doc/ext_combat_command_view.patch",
+    # work order 197: 64 adds MSG_SET_SPIES beside 58's command (ProcessInput)
+    "doc/ext_set_spies.patch",
 )
 
 

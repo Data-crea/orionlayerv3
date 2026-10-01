@@ -17,7 +17,7 @@ from core.wire_protocol import (
     MSG_VISUAL, MSG_EVENT,
     MSG_ACTIVATE, MSG_INJECT_KEY, MSG_INJECT_CLICK, MSG_CANCEL_FIELD,
     MSG_SET_JOBS, MSG_SELECT_SHIP, MSG_SAVE_SLOTS, MSG_SHOW_WINDOW,
-    MSG_INJECT_RIGHT_CLICK, MSG_COMBAT_COMMAND,
+    MSG_INJECT_RIGHT_CLICK, MSG_COMBAT_COMMAND, MSG_SET_SPIES,
     SUB_STATE, SUB_FIELDS, SUB_VISUAL, SUB_EVENTS,
     parse_save_slots,
 )
@@ -367,6 +367,17 @@ class GameClient:
         events, never from here."""
         self._send_message(MSG_COMBAT_COMMAND,
                            struct.pack('<HhBhhh', serial, unit, op, a, b, c))
+
+    def set_spies(self, races, agents):
+        """The Races screen's spies and missions — open fix 64
+        (`MSG_SET_SPIES`). `races` is [(player, spies, mission), …] for
+        EVERY race the screen shows, mission 1-3 or 0 to keep it; `agents`
+        the pool. The engine takes the whole list or nothing (the total
+        kept, no group above 63); the player record on the wire says which."""
+        payload = struct.pack('<B', len(races)) + b"".join(
+            struct.pack('<BBB', p, s, m) for p, s, m in races) + \
+            struct.pack('<B', agents)
+        self._send_message(MSG_SET_SPIES, payload)
 
     def set_jobs(self, colony_index, pairs):
         """Set the job of one or more pops in ONE colony.

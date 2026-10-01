@@ -24,7 +24,9 @@ WHAT IS ON THE WIRE, and how each is read:
 
 WHAT IS NOT: which action WHO mode has armed (a local of `Race_Screen_`,
 `active_action_field`); the spy drag and the missions before they are
-committed (`Update_Spy_Stuff_`, :518-530); the race report's and the
+committed (`Update_Spy_Stuff_`, :518-530) — which is why HD moves spies
+and sets missions by open fix 64's command, not by the drag (work order
+197, `racesspies`); the race report's and the
 diplomacy screen's state — both report screen 6 and show a list that is
 neither shape, so they are handed to the fallback picture with a reason
 (decision 22), which is the game's own screen and fully playable.
@@ -149,8 +151,8 @@ class View:
     def sendable(self, action):
         """Every button and, in WHO mode, a race: each answers in the list
         HD reads back (a mode change, a dialog, a box). The missions and
-        the spy drag are not sent: their effect is not on the wire until
-        the screen commits it (HD STATE `missions_and_spies`, parked)."""
+        the spy move go by open fix 64's command instead (`racesspies`,
+        work order 197): its effect is in the player record at once."""
         if self.state == MAIN:
             return action in self.buttons
         if self.state == WHO:

@@ -33,7 +33,7 @@ from core.screen_base import ScreenBase
 from core import researchnative as nat
 from screens.leaders import ldrdraw as nd
 
-from . import racesart, racesdraw, racesgeom, racesrows, raceswire
+from . import racesart, racesdraw, racesgeom, racesrows, racesspies, raceswire
 
 log = logging.getLogger("races")
 
@@ -51,6 +51,8 @@ class RacesScreen(ScreenBase):
         self._slots = []
         self._hover = None          # native point of the pointer
         self._armed = None          # HD STATE `armed_action`: what HD sent
+        self._hand = None           # racesspies.Hand: spies picked, not sent
+        self._spy_sent = None       # (expected groups, frames waited)
         self._words = None
         self._art = racesart.load()
         self.words_no_contact = self.words_ignored = ""
@@ -64,6 +66,7 @@ class RacesScreen(ScreenBase):
         self._billtext = BillText(language)
         self._estrings = EStrings(language)
         self._waited, self._hover, self._armed = 0, None, None
+        self._hand = self._spy_sent = None
         self.update(game_state)
 
     def update(self, game_state=None):
@@ -88,6 +91,12 @@ class RacesScreen(ScreenBase):
         self.words_agent = words.billtext(racesrows.B_AGENT) or ""
         self.my_race = int(self._view.players[self._view.me].race)
         self._slots = racesrows.slots(self._view, words)
+        if self._spy_sent is not None:
+            want, waited = self._spy_sent
+            now = racesspies.groups(self._slots, racesrows.agents(self._view))
+            # the command's effect is on the wire, or it was refused
+            self._spy_sent = None if now == want or waited > 20 else \
+                (want, waited + 1)
 
     def wants_original(self):
         return self._view is not None and not self._view.draws
@@ -120,6 +129,7 @@ class RacesScreen(ScreenBase):
                                  racesrows.agents(view), self.my_race, art)
             racesdraw.draw_bonuses(surface, self, racesrows.spy_bonuses(
                 view, getattr(self._state, "leaders_raw", None)), art)
+        racesdraw.draw_spy_hand(surface, self, self._hand, self._hover)
         racesdraw.draw_buttons(surface, self,
                                view.buttons if view is not None else {},
                                self._armed if who else None)
@@ -156,6 +166,54 @@ class RacesScreen(ScreenBase):
         log.info("races: %s -> field %d", why, field.index)
         self.app.client.activate_field(field.index)
 
+    # ── Spies and missions (open fix 64, `racesspies`) ─────
+
+    def _group_at(self, p):
+        """(key, box) of the spy group under native p: a movable race's
+        strip or the agent pool."""
+        for s in self._slots:
+            if racesspies.movable(s) and self._inside(
+                    p, racesgeom.SPY_GROUP[s.index]):
+                return s.index, racesgeom.SPY_GROUP[s.index]
+        if self._inside(p, racesgeom.AGENT_GROUP):
+            return racesspies.AGENTS, racesgeom.AGENT_GROUP
+        return None, None
+
+    def _spy_click(self, p):
+        """True if the click was the spies' or a mission's."""
+        if self._spy_sent is not None or not self.app.connected:
+            return False
+        counts = racesspies.groups(self._slots, racesrows.agents(self._view))
+        for s in self._slots:
+            for k in range(3):
+                if racesspies.movable(s) and self._inside(
+                        p, racesgeom.mission_rect(s.index, k)):
+                    self._send_spies(counts, {s.index: k + 1},
+                                     f"mission {k} for race {s.index}")
+                    return True
+        key, box = self._group_at(p)
+        if key is None:
+            return False
+        if self._hand is None:
+            icon = self._art.spy(self.my_race) if self._art else None
+            n = racesspies.pick_count(counts[key], box, icon.get_width()
+                                      if icon else 28, p[0])
+            self._hand = racesspies.Hand(key, n) if n else None
+            return True
+        hand, self._hand = self._hand, None
+        if key != hand.source:
+            new, _rest = racesspies.drop(counts, hand, key)
+            self._send_spies(new, {}, f"{hand.count} spies {hand.source} "
+                             f"-> {key}")
+        return True
+
+    def _send_spies(self, counts, missions, why):
+        races = racesspies.races_list(self._slots, counts, missions)
+        log.info("races: %s -> MSG_SET_SPIES %s agents %d", why, races,
+                 counts[racesspies.AGENTS])
+        self.app.client.set_spies(races, counts[racesspies.AGENTS])
+        self._spy_sent = (counts, 0)
+
     def handle_click(self, screen_x, screen_y):
         if self.help_consumes_click(screen_x, screen_y):
             return None
@@ -178,6 +236,8 @@ class RacesScreen(ScreenBase):
                 if name in racesgeom.ACTIONS:
                     self._armed = name
                 return None
+        if view.state == raceswire.MAIN and self._spy_click(p):
+            return None
         if view.state == raceswire.WHO:
             i = self._slot_at(p)
             if i is not None:
@@ -194,6 +254,9 @@ class RacesScreen(ScreenBase):
         if self.help_consumes_key(key):
             return
         view = self._view
+        if key == racesgeom.ESC and self._hand is not None:
+            self._hand = None           # back where it came from; nothing sent
+            return
         if key == racesgeom.ESC and view is not None and \
                 view.sendable("exit"):
             self._send(view.buttons["exit"], "ESC")

@@ -360,6 +360,18 @@ LOCAL_PATCHES = {
         "OrionLayer, open fix 63.",
         "CMEV reports hundreds of missile merges of empty slots (open fix "
         "63): the battle's event stream does not fit its state"),
+    # Applied 1 October 2026 by work order 197: 76c7b880, on ee844b0b.
+    "doc/ext_combat_command_view.patch": (
+        os.path.join("src", "ext", "ext_api.cpp"),
+        "OrionLayer, open fix 65.",
+        "a battle command can name a cell outside the original's view (open "
+        "fix 65): a tractoring ship moved there crashes the engine"),
+    # Applied 1 October 2026 by work order 197: 9e19c9f3, on 76c7b880.
+    "doc/ext_set_spies.patch": (
+        os.path.join("src", "ext", "ext_api.cpp"),
+        "OrionLayer, open fix 64.",
+        "the engine does not take MSG_SET_SPIES (open fix 64): the HD Races "
+        "screen cannot move spies or set a mission"),
 }
 
 #: Patches that are REPORTED to Joes and not yet applied: listed with
@@ -431,6 +443,8 @@ FIX_NUMBERS = {
     "doc/ext_combat_commands.patch": (58,),
     "doc/ext_activate_checked.patch": (62,),
     "doc/ext_combat_events_merge.patch": (63,),
+    "doc/ext_combat_command_view.patch": (65,),
+    "doc/ext_set_spies.patch": (64,),
 }
 
 

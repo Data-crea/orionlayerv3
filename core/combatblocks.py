@@ -236,7 +236,9 @@ EVENTS = {
     12: ("destroy", ("unit", "death_state", "status_before", "owner",
                      "previous_owner", "x_px", "y_px")),
     13: ("retreat", ("unit", "x", "y", "owner", "status")),
-    14: ("blast_hit", ("source", "unit", "kind", "past_shields", "absorbed")),
+    # the blast's own kind is `blast`: an argument named "kind" overwrote
+    # the event's kind in `_cmev` (work order 197's pulsar, seen as "1")
+    14: ("blast_hit", ("source", "unit", "blast", "past_shields", "absorbed")),
     15: ("web_damage", ("unit", "past_shields", "absorbed")),
     16: ("capture", ("attacker", "defender", "result", "marines",
                      "defenders_left", "owner_after")),
@@ -253,7 +255,10 @@ REFUSALS = {1: "stale: another battle or unit", 2: "no orders now",
             3: "not a legal cell", 4: "not a valid target",
             5: "board or scan mode", 6: "a weapon mask in a network game",
             7: "board mode refused", 8: "no field for that missile",
-            9: "unknown op"}
+            9: "unknown op",
+            # open fix 65: a move longer than the original's view (less a
+            # ship's margin) — the view the engine centres on the action
+            10: "longer than the original's view"}
 EVENT_FORMAT = "<HB8h"
 EVENT_SIZE = _st.calcsize(EVENT_FORMAT)
 

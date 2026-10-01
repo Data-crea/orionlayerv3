@@ -211,9 +211,23 @@ def draw_icons(surface, screen, box, count, race, art):
         surface.blit(big, nd.point(layout, box[0] + k * step, box[1]))
 
 
+def draw_spy_hand(surface, screen, hand, hover):
+    """The spies in hand (`racesspies.Hand`) as the original shows them on
+    its pointer: the count beside it (`Redraw_Spy_Mouse_`, the icon with a
+    number; HD draws the number only)."""
+    if hand is None or hover is None:
+        return
+    layout = screen.layout
+    at = nd.point(layout, hover[0] + 8, hover[1] + 6)
+    nd.blit_text(surface, screen.style, f"{hand.count}", at[0], at[1],
+                 nd.rect(layout, (0, 0, 40, 0)).w, nd.font_px(layout, "name"),
+                 ink(None, "high"))
+
+
 def _draw_missions(surface, screen, i, mission):
     """The mission row (RACES.LBX 10+i, 17+i, 24+i), the current one lit —
-    DISPLAY ONLY: a click on it is not sent (parked, 175)."""
+    a click sends the race's mission with open fix 64 (work order 197;
+    `racesspies`)."""
     layout = screen.layout
     for k, word in enumerate(WORDS["missions"]):
         r = nd.rect(layout, geom.mission_rect(i, k))

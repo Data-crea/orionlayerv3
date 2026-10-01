@@ -1,0 +1,110 @@
+Engine: the original's view kept round a commanded battle action (open fix 65).
+
+STATUS: APPLIED 1 October 2026 by work order 197 (Part B.2, "exercise ...
+correct what is off") — orion2re 76c7b880 on orionlayer-local (before:
+ee844b0b), this file's diff byte for byte (index lines included). Required
+by tools/version_check.py since work order 197.
+
+It was applied, from ~/orion2re on the orionlayer-local branch, with:
+
+    patch -p1 < ~/orionlayerv3/doc/ext_combat_command_view.patch
+
+and a rebuild. It comes back off with `git revert 76c7b880` or `patch -R -p1`,
+and a rebuild.
+
+WHAT IT IS FOR
+
+    A clicking player can choose only a cell inside the original's 32 x 18
+    view, which the game centres on the acting ship at its turn; open fix
+    58's MOVE can name any legal cell. In work order 197's battle at Altair
+    (the armed scratch game) a Doom Star holding a tractor beam was moved by
+    command to a cell beyond the view and the engine died: Move_Ship_ draws
+    the moving ship at its view position, and while it holds a tractor beam
+    it first redraws the whole battle (Draw_Main_Combat_Screen_), which ends
+    with Clip_Off_; the ship, partly outside the view, was then drawn
+    unclipped outside the frame buffer — SIGSEGV in draw::Draw_Bitmap_Sprite_
+    at (-76, -78), twice (cores of PIDs 582033, 582848).
+
+    Now MOVE, FIRE and BOARD centre the original's view on the middle of
+    the action with the game's own COMBINIT::Snap_Center_Combat_Screen_
+    (the C key's and every turn's centring) before the action runs, and a
+    MOVE longer than the view less a ship's margin (26 x 12 cells) is
+    refused (reason 10, new). The original builds a missile's field only
+    while the missile is inside its view (combat1.cpp:436-455), so the same
+    battle refused FIRE_MISSILE at an enemy missile outside it (reason 8):
+    now the view is centred on the missile and the battle's fields rebuilt
+    first (the game's own COMBAT1::Add_Tactical_Combat_Fields_), and fix
+    58's check follows as before. Only the hidden original view moves — the one a
+    player would have scrolled to make the click; nothing of the battle
+    does. The engine's own clipping gap stays as it is (an engine fix that
+    changes the game without OrionLayer: parked for Data).
+
+    Written only in src/ext, inside open fix 58's Take_Combat_Command;
+    nothing runs unless a client sends a command, so an engine without
+    OrionLayer behaves exactly as before. One marker, `OrionLayer, open fix
+    65.`, on one line at each changed place.
+
+diff --git a/src/ext/ext_api.cpp b/src/ext/ext_api.cpp
+index 5d754c6a..24c30e35 100644
+--- a/src/ext/ext_api.cpp
++++ b/src/ext/ext_api.cpp
+@@ -2261,6 +2261,28 @@ void Combat_Event(uint8_t type, int16_t a0, int16_t a1, int16_t a2, int16_t a3,
+     ++g_combat_event_next;
+ }
+ 
++// OrionLayer, open fix 65. The original's view kept round a commanded action, as a player's click keeps it.
++// A clicking player can only choose a cell inside the original's view, which
++// the game centres on the acting ship at its turn; a command can name any
++// legal cell. Move_Ship_ draws the moving ship at its view position, and
++// while it holds a tractor beam it redraws the whole battle first
++// (Draw_Main_Combat_Screen_), which switches clipping off, so a ship partly
++// outside the view was drawn unclipped outside the frame buffer: SIGSEGV
++// (work order 197, the armed scratch game at Altair). So the view is centred
++// on the middle of the action with the game's own Snap_Center_Combat_Screen_
++// before the action runs, and a move longer than the view less a ship's
++// margin (26 x 12 cells of 32 x 18) is refused (reason 10). The original
++// builds a missile's field only while the missile is inside its view
++// (combat1.cpp:436-455), so FIRE_MISSILE at one outside it centres the view
++// on the missile and rebuilds the battle's fields first (the game's own
++// Add_Tactical_Combat_Fields_). Only the hidden original view moves;
++// nothing of the battle does.
++static bool Keep_Action_In_View_(int16_t x0, int16_t y0, int16_t x1, int16_t y1, bool refuse_long) {
++    if (refuse_long && (abs(x1 - x0) > 26 || abs(y1 - y0) > 12)) return false;
++    COMBINIT::Snap_Center_Combat_Screen_((int16_t)((x0 + x1) / 2), (int16_t)((y0 + y1) / 2));
++    return true;
++}
++
+ // OrionLayer, open fix 58. Take_Combat_Command: the command's storage is above ProcessInput (ext_api.h).
+ void Combat_Command_Cell(int16_t* x, int16_t* y) {
+     if (g_cmd_cell_valid) {
+@@ -2319,6 +2341,7 @@ int16_t Take_Combat_Command(int16_t input_val) {
+         if (!free_mode) return refuse(5);
+         if (c.a < 0 || c.a >= COMBAT_GRID_WIDTH || c.b < 0 || c.b >= COMBAT_GRID_HEIGHT ||
+             MOX::_combat_grid[c.a][c.b] != 2000) return refuse(3);
++        if (!Keep_Action_In_View_(me.x, me.y, c.a, c.b, true)) return refuse(10);  // OrionLayer, open fix 65.
+         return cell(c.a, c.b, MOX::_space_field);
+     case CCMD_FACE:
+         if (c.a < 0 || c.a >= COMBAT_GRID_WIDTH || c.b < 0 || c.b >= COMBAT_GRID_HEIGHT) return refuse(3);
+@@ -2347,9 +2370,14 @@ int16_t Take_Combat_Command(int16_t input_val) {
+                 else if (w.active != -1) w.active = 0;
+             }
+         }
++        Keep_Action_In_View_(me.x, me.y, t.x, t.y, false);  // OrionLayer, open fix 65.
+         return cell(t.x, t.y, MOX::_space_field);
+     }
+     case CCMD_FIRE_MISSILE:
++        if (c.a >= 0 && c.a < 300 && MOX::_missile[c.a].type > 0 && MOX::_missile_field[c.a] < 1) {  // OrionLayer, open fix 65. A missile outside the view has no field: centre on it, rebuild the fields.
++            Keep_Action_In_View_(me.x, me.y, (int16_t)(MOX::_missile[c.a].x / 20), (int16_t)(MOX::_missile[c.a].y / 20), false);
++            COMBAT1::Add_Tactical_Combat_Fields_();
++        }
+         if (c.a < 0 || c.a >= 300 || MOX::_missile[c.a].type <= 0 ||
+             MOX::_missile_field[c.a] < 1) return refuse(8);
+         Combat_Event(CEV_COMMAND, c.op, 0, c.a, c.b);
+@@ -2367,6 +2395,7 @@ int16_t Take_Combat_Command(int16_t input_val) {
+             Combat_Event(CEV_COMMAND, c.op, 0, c.a, c.b);
+             return MOX::_board_button;
+         }
++        Keep_Action_In_View_(me.x, me.y, MOX::_combat_data[c.a].x, MOX::_combat_data[c.a].y, false);  // OrionLayer, open fix 65.
+         return cell(MOX::_combat_data[c.a].x, MOX::_combat_data[c.a].y, MOX::_space_field);
+     default:
+         return refuse(9);

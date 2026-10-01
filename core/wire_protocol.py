@@ -65,6 +65,10 @@ MSG_INJECT_RIGHT_CLICK = 0x87
 #: engine says taken or refused in CMEV (event 18). An engine without the fix
 #: drops it. WIRE ONLY: no screen sends it yet.
 MSG_COMBAT_COMMAND = 0x88
+#: Open fix 64 (work order 197): the Races screen's spies and missions as one
+#: list — uint8 n, n x (uint8 player, uint8 spies, uint8 mission 1-3 or 0
+#: kept), uint8 agent pool; all or nothing, only while the screen is up.
+MSG_SET_SPIES = 0x89
 
 #: How many STATE/VISUAL pairs after an injected command can still
 #: describe the world BEFORE it. One — so a caller that waits for an
