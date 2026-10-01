@@ -43,7 +43,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import vdisplay  # noqa: E402
 vdisplay.headless_clients()
 
-from core import modtexts, usermod  # noqa: E402
+from core import modart, modtexts, usermod  # noqa: E402
 
 STYLE = os.path.join(ROOT, "assets", "shared", "hud", "style.json")
 UNIVERSAL = os.path.join(ROOT, *usermod.UNIVERSAL.split("/"))
@@ -159,11 +159,11 @@ def game_art():
     """Tree path -> (w, h) of every picture `files/` can replace."""
     import pygame
     out = {}
-    for pattern in usermod.GAME_ART:
+    for pattern in modart.GAME_ART:
         for path in sorted(glob.glob(os.path.join(ROOT, pattern))):
-            if "/_src/" in path.replace(os.sep, "/"):
-                continue
             rel = os.path.relpath(path, ROOT).replace(os.sep, "/")
+            if modart.art_class(rel) != "game":
+                continue                # a source (`modart.SOURCES`)
             try:
                 out[rel] = pygame.image.load(path).get_size()
             except pygame.error:
@@ -205,7 +205,11 @@ def names_txt(hud_sizes):
               ".png  (<file>: cmbtshp, monster, cmbtplnt, cmbtmisl, "
               "cmbtfgtr, cmbtsfx, beams, sphersfx, combat;",
               "  ships: entry = colour x 45 + design picture, frame = 4 x "
-              "facing (0-4, the rest are flips) + glow (0-3))"]
+              "facing (0-4, the rest are flips) + glow (0-3))",
+              "", "  Fleets, Leaders, Races, the Ship Designer and the "
+              "audience (work order 199), the same way:",
+              "  files/screens/<screen>/assets/gamedata/<group>/<entry>_"
+              "<frame>.png  for the extracted <group>/<entry>.bin"]
     lines += ["", "texts/<screen>/<key>.txt  a text by its key, UTF-8. "
               "OrionLayer's own (a copy is in originals/texts/):"]
     keys = text_keys()

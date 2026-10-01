@@ -101,20 +101,8 @@ TEXTS = "texts/"
 GUIDE = ("MODDING.md", "NAMES.txt")
 ORIGINALS = "originals"
 
-#: The groups of pictures `files/` replaces that the screens are KNOWN
-#: to ask for through `Resources.resolve` (a trace of every screen's
-#: render, work order 173). Globs relative to the tree. Their pictures
-#: are MOO2's or derived from them: the template lists the names only.
-GAME_ART = ("screens/custom_race/assets/*.png",
-            "screens/empire_identity/assets/*.png",
-            "screens/galaxy_map/assets/black_hole.png",
-            "screens/galaxy_map/assets/icons/*.png",
-            "screens/galaxy_map/assets/nebula/*.png",
-            "screens/galaxy_map/assets/ships/*/*.png",
-            "screens/galaxy_map/assets/stars/*/*.png",
-            "screens/main_menu/assets/logo.png",
-            "screens/new_game/assets/*/*.png",
-            "screens/select_race/assets/portraits/*.png")
+#: What `files/` lists for the template, and every other picture in the
+#: tree with the reason it is not listed: `core.modart` (work order 199 D).
 
 #: colour.json's keys and their ranges (`core.hud.tint`'s own).
 COLOUR_KEYS = {"hue": (0.0, 360.0), "saturation": (0.0, 1.0),
