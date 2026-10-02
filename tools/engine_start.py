@@ -88,9 +88,25 @@ def display_env(base=None):
 def run_env(reason=None, out=print):
     """The environment an engine STARTS in (work order 182): the private
     Xvfb of `tools/vdisplay.py`, never Data's session — unless the run
-    names a reason for the real desktop."""
+    names a reason for the real desktop. And the player's language (work
+    order 200 C, open fix 70): `core/lang.engine_env` from the user
+    settings — English adds nothing."""
     import vdisplay
-    return vdisplay.engine_env(reason, out=out)
+    env = vdisplay.engine_env(reason, out=out)
+    root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    if root not in sys.path:
+        sys.path.insert(0, root)
+    from core import lang, usersettings
+    extra, gone = lang.engine_env(usersettings.load().data, GAME_DIR)
+    if extra:
+        out("LANGUAGE (engine): " + ", ".join(f"{k}={v}" for k, v in
+                                               sorted(extra.items())))
+    elif gone:
+        out(f"LANGUAGE (engine): English — {', '.join(gone)} in neither the "
+            f"game's folder nor a named one (python tools/language_files.py "
+            f"FOLDER); OrionLayer's own words stay in the chosen language")
+    env.update(extra)
+    return env
 
 
 def parse_bool(reply):

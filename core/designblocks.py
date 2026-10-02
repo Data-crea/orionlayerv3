@@ -27,6 +27,8 @@ work order 185 part 6 to the scratch engine's own bytes.
 """
 import struct as _st
 
+from core import lang
+
 #: `WEAPON_MOD_COUNT` (orion2_consts.h:1057, and its static_assert at
 #: :1391): the modification statuses DSBX carries.
 WEAPON_MOD_COUNT = 15
@@ -57,7 +59,7 @@ def parse(gs, data, pos):
     def text():
         (n,) = take("B")
         (raw,) = take(f"{n}s")
-        return raw.decode("latin-1")
+        return lang.wire_text(raw)
 
     def block(tag, reader):
         nonlocal pos
@@ -78,7 +80,7 @@ def parse(gs, data, pos):
         (name,) = take("16s")
         out = {"slot": slot, "refit": bool(refit), "printed_cost": cost,
                "printed_space_available": space_avail,
-               "name": name.split(b"\0", 1)[0].decode("latin-1")}
+               "name": lang.wire_text(name.split(b"\0", 1)[0])}
         out.update(zip(MAIN_FIELDS, take("7h")))
         out.update(zip(("hull_space", "space_used", "total_cost"),
                        take("3i")))

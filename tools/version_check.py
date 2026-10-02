@@ -398,6 +398,12 @@ LOCAL_PATCHES = {
         "the engine does not send HLPL (open fix 69): the audience's right-"
         "click help is not offered, and a forwarded right click cannot see "
         "the help that covers its field"),
+    # Applied 2 October 2026 by work order 200: a8b5640b, on f031cbad.
+    "doc/ext_language.patch": (
+        os.path.join("src", "game", "mox2.cpp"),
+        "OrionLayer, open fix 70.",
+        "the engine ignores the player's language (open fix 70): its own "
+        "texts stay English whatever Game Settings says"),
 }
 
 #: Patches that are REPORTED to Joes and not yet applied: listed with
@@ -475,6 +481,7 @@ FIX_NUMBERS = {
     "doc/ext_msgbox_items.patch": (67,),
     "doc/ext_combat_options.patch": (68,),
     "doc/ext_help_list.patch": (69,),
+    "doc/ext_language.patch": (70,),
 }
 
 

@@ -6,6 +6,8 @@ is `doc/ext_turn_popups.patch`'s header, byte by byte.
 """
 import struct as _st
 
+from core import lang
+
 KINDS = {1: "science", 2: "turn_summary", 3: "leader_hire",
          4: "planet_choice", 5: "discovery", 6: "leader_level", 7: "gnn",
          8: "combat_target", 9: "landing"}
@@ -39,7 +41,7 @@ def parse(gs, data, pos):
         if n < 0:
             raise ValueError("length")
         (raw,) = take(f"{n}s")
-        return raw.decode("latin-1")
+        return lang.wire_text(raw)
     try:
         version, kind, n = take("BBh")
         if version != 1 or kind not in KINDS or not 0 <= n <= 16:

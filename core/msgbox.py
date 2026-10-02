@@ -70,7 +70,7 @@ def parse(gs, data, pos):
         at += 2
         if n < 0 or at + n > len(data):
             return pos
-        texts.append(data[at:at + n].decode("latin-1"))
+        texts.append(lang.wire_text(data[at:at + n]))
         at += n
     items = {}
     if version == 2:

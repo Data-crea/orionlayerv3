@@ -18,6 +18,8 @@ Read WHOLE or left None (`core/colonyblocks.py`'s rule).
 """
 import struct as _st
 
+from core import lang
+
 HEAD = "<Bhhhhhh"
 HEAD_SIZE = _st.calcsize(HEAD)
 SCAN, BOARD = 66, 67
@@ -37,7 +39,7 @@ def parse(gs, data, pos):
         return pos
     gs.combat_popup = {"screen": screen, "serial": serial, "unit": unit,
                        "min": low, "max": high, "marines": chosen,
-                       "message": data[at + 1:at + 1 + n].decode("latin-1")}
+                       "message": lang.wire_text(data[at + 1:at + 1 + n])}
     return at + 1 + n
 
 

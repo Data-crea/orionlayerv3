@@ -15,6 +15,8 @@ Read WHOLE or left None (`core/colonyblocks.py`'s rule).
 """
 import struct as _st
 
+from core import lang
+
 
 def parse(gs, data, pos):
     """Read HOFM at `pos` into `gs.hall_of_fame` (None when absent or
@@ -40,7 +42,7 @@ def parse(gs, data, pos):
                 at += 1
                 if at + n > len(data):
                     return pos
-                texts.append(data[at:at + n].decode("latin-1"))
+                texts.append(lang.wire_text(data[at:at + n]))
                 at += n
             rows.append({"record": record, "score": score,
                          "race_id": race_id, "difficulty": difficulty,

@@ -40,6 +40,23 @@ LANGUAGES = ("en", "de")
 DEFAULT = "en"
 #: The original's language number for each (mox2.cpp, `_settings.language`).
 NUMBERS = {"en": 0, "de": 1}
+#: The files a German MOO2 has and an English one lacks, every one the
+#: engine opens by `_settings.language` (textbox.cpp:25, harold.cpp:51 and
+#: :1531, estrings.cpp:18, design.cpp:1025, officer.cpp:3474,
+#: mainmenu.cpp:604, the font `fontsg.lbx` — a missing one is the engine's
+#: fatal exit "fontsg.lbx [entry 0] could not be found", seen 2 October
+#: 2026) and the extractors read (`tools/language_files.py`).
+GERMAN_FILES = ("GER_HELP.LBX", "HGSTRNGS.LBX", "ESTRGERM.LBX", "MAINGERM.LBX",
+                "GERSKLLS.LBX", "GERTECD.LBX", "FONTSG.LBX", "HERODATG.LBX",
+                "GERCRDTS.LBX")
+#: Every file the German language owns — the ones above and two an English
+#: install DOES have, as English copies under the German names (Data's:
+#: DIPLOMSG.LBX and EVENTMSG.LBX byte for byte DIPLOMSE / EVENTMSE, the
+#: audience's statements and the events, dip_scrn_main.cpp:579,
+#: events.cpp:2366). With another install named, the engine reads these
+#: from there FIRST (open fix 70, `ORION2RE_LANGUAGE_FILES`); every other
+#: file stays the game folder's own.
+GERMAN_OWNED = GERMAN_FILES + ("DIPLOMSG.LBX", "EVENTMSG.LBX")
 
 #: The German font's slots for the characters ASCII lacks, read off the
 #: words of TECHNAME and BILLTEXT ("Geb[ude", "K#nstliche", "Bewu|tsein",
@@ -53,7 +70,7 @@ _FILE = re.compile(r"_([a-z]{2})\.json$")
 FALLBACKS = {}
 
 _state = {"language": DEFAULT, "table": {}, "upper": {}, "templates": [],
-          "memo": {}, "verbatim": False}
+          "memo": {}, "verbatim": False, "engine": 0}
 #: Placeholders that stand for a number, matched as one: a template "{job}:
 #: {count} of {pops}" took "Cost[0]: In this form of government" for a
 #: count while its placeholders matched anything (the German walk).
@@ -194,6 +211,75 @@ def source(path):
         log.info("lang: no %s source for %s — the English file is read",
                  lang, os.path.basename(path))
     return english, DEFAULT
+
+
+def set_engine_language(number):
+    """The language the engine's own texts are in: `_settings.language`,
+    byte 210 of every snapshot's settings (open fix 70 lets it be other than
+    0). Read before any block of the snapshot is parsed (`game_state`)."""
+    _state["engine"] = number
+
+
+def engine_settings(raw):
+    """`set_engine_language` from a snapshot's settings bytes; returns
+    them."""
+    set_engine_language(raw[210] if len(raw) > 210 else 0)
+    return raw
+
+
+def engine_language():
+    """The engine's language as a code ("en", "de"), None for one HD does
+    not offer."""
+    return next((k for k, v in NUMBERS.items() if v == _state["engine"]), None)
+
+
+def wire_text(raw, encoding="latin-1"):
+    """A string the engine sent: its bytes in latin-1 (or `encoding`), and
+    in the German font's slots decoded when the engine speaks German
+    (`CHARSET`) — an English engine's "[" stays a bracket."""
+    text = raw.decode(encoding, errors="replace")
+    table = CHARSET.get(engine_language())
+    return text.translate(table) if table else text
+
+
+def find_file(folder, name):
+    """`name` in `folder`, in whatever case the install wrote it; None."""
+    if not folder or not os.path.isdir(folder):
+        return None
+    wanted = name.lower()
+    return next((os.path.join(folder, f) for f in sorted(os.listdir(folder))
+                 if f.lower() == wanted), None)
+
+
+def missing_files(language, *folders):
+    """The language's files that none of `folders` holds."""
+    names = GERMAN_FILES if language == "de" else ()
+    return [n for n in names
+            if not any(find_file(f, n) for f in folders if f)]
+
+
+def engine_env(settings, game_dir=None):
+    """`(env, missing)`: the variables an engine with open fix 70 reads at
+    start — the player's language (`ORION2RE_LANGUAGE`, the original's
+    number) and the other install holding its files (`ORION2RE_LANGUAGE_DIR`,
+    recorded by `tools/language_files.py`, with the files the language owns,
+    `ORION2RE_LANGUAGE_FILES`, read from there first) — and the files that
+    keep it
+    English. ONLY WITH EVERY FILE: an engine told German without them stops
+    at its first one (the font). English sets nothing: an engine starts as
+    before the fix."""
+    language = (settings or {}).get("language") or DEFAULT
+    if language == DEFAULT or language not in NUMBERS:
+        return {}, []
+    folder = (settings or {}).get("language_dir")
+    gone = missing_files(language, game_dir, folder)
+    if gone:
+        return {}, gone
+    env = {"ORION2RE_LANGUAGE": str(NUMBERS[language])}
+    if folder:
+        env["ORION2RE_LANGUAGE_DIR"] = folder
+        env["ORION2RE_LANGUAGE_FILES"] = ",".join(GERMAN_OWNED)
+    return env, []
 
 
 def decode(value, language):

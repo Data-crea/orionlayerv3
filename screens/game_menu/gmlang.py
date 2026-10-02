@@ -18,7 +18,8 @@ def cycle(settings):
     now = settings.get("language") or lang.current()
     i = lang.LANGUAGES.index(now) if now in lang.LANGUAGES else -1
     settings.set("language", lang.LANGUAGES[(i + 1) % len(lang.LANGUAGES)])
-    langsetup.start(settings.get("language"))
+    langsetup.start(settings.get("language"),
+                    folder=settings.get("language_dir"))
 
 
 def render(screen, surface, row, words, size, lx, vx, text, chosen):

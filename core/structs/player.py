@@ -90,6 +90,8 @@ it to decide whether an owned system shows its owner's colour.
 """
 import struct as _struct
 
+from core import lang
+
 from core.structs import Spec
 
 SIZE = 0xF0E   # 3854
@@ -337,7 +339,7 @@ def design_name(view, i):
     if not 0 <= int(i) < DESIGN_SLOTS:
         return None
     o = SHIP_DESIGNS_OFFSET + DESIGN_SIZE * int(i)
-    return view.raw[o:o + DESIGN_NAME_LEN].split(b"\0")[0].decode("latin-1")
+    return lang.wire_text(view.raw[o:o + DESIGN_NAME_LEN].split(b"\0")[0])
 
 
 def design_cost(view, i):

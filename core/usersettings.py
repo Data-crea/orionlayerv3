@@ -105,6 +105,11 @@ DEFAULTS = {
     # The language OrionLayer shows (work order 200 C, `core/lang`): None
     # is settings.json's ("en"). Read at start, so a change needs a restart.
     "language": None,
+    # The folder of another install that holds the language's files (a
+    # German MOO2 beside an English one, work order 200 C): the extractors
+    # read it and the engine is told it (open fix 70). None: the game's own
+    # folder. Set by `tools/language_files.py`.
+    "language_dir": None,
 }
 
 

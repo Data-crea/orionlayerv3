@@ -18,6 +18,8 @@ description (frame format, message types, field-list layout).
 """
 import struct
 
+from core import lang
+
 MAGIC = 0x4F325845          # "O2XE"
 PROTO_VERSION = 1
 
@@ -117,7 +119,7 @@ MSG_NAMES = {
 
 def _cstr(raw):
     """A fixed char[] as the engine holds it: up to the first NUL."""
-    return raw.split(b"\0", 1)[0].decode("latin-1")
+    return lang.wire_text(raw.split(b"\0", 1)[0])
 
 
 def parse_save_slots(data):

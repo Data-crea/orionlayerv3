@@ -3,7 +3,7 @@
 Every text goes through `core/modtexts` by its key (`infotexts`), so a
 mod can replace it; every number is the snapshot's.
 """
-from core import modtexts
+from core import lang, modtexts
 from core.structs import player as player_struct
 
 T = modtexts.text
@@ -300,7 +300,7 @@ def x_labels(stardate):
 def messages(block):
     """The rendered messages of open fix 32's block, as text: the game's
     8-bit bytes (cp437) with their FMTPARA codes, for `infobox`."""
-    return [m.decode("cp437", errors="replace")
+    return [lang.wire_text(m, "cp437")
             for m in ((block or {}).get("messages") or [])]
 
 

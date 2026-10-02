@@ -5,7 +5,7 @@ Entpackt die binären Struct-Arrays in Python-Objekte.
 Struct-Größen kommen aus orion2re sizes.h.
 """
 import struct
-from core import wire_protocol
+from core import lang, wire_protocol
 from core.structs import star as star_struct
 from core.structs import ship_icon as ship_icon_struct
 from dataclasses import dataclass, field
@@ -215,7 +215,8 @@ def parse_state(data: bytes) -> GameState:
     gs.map_max_y = read_i16()
 
     # Settings
-    gs.settings_raw = read_bytes(SETTINGS_SIZE)
+    # the engine's language (open fix 70) noted before any of its texts below
+    gs.settings_raw = lang.engine_settings(read_bytes(SETTINGS_SIZE))
     # Shortcuts: difficulty at offset 0xD4, galaxy_size at 0xD6
     gs.difficulty = gs.settings_raw[0xD4]
     gs.galaxy_size = gs.settings_raw[0xD6]

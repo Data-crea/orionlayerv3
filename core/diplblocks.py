@@ -15,6 +15,8 @@ own picture, as it does today. The layout is the patch's, field for field.
 """
 import struct as _st
 
+from core import lang
+
 #: The synthetic ids open fix 46 reports.
 AUDIENCE_IDS = {57: "player", 58: "ai"}
 
@@ -39,7 +41,7 @@ def parse(gs, data, pos):
     def text():
         (n,) = take("B")
         (raw,) = take(f"{n}s")
-        return raw.decode("latin-1")
+        return lang.wire_text(raw)
 
     try:
         version, mode, ambassador, option, response = take("BBBBh")

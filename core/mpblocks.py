@@ -11,6 +11,8 @@ Read WHOLE or left None (`core/colonyblocks.py`'s rule).
 """
 import struct as _st
 
+from core import lang
+
 PHASES = {1: "setup", 2: "online", 3: "game_name", 4: "load_list",
           5: "hotseat", 6: "hotseat_switch", 7: "host_init",
           8: "host_wait", 9: "host_race_info", 10: "host_send",
@@ -38,7 +40,7 @@ class _Reader:
             raise ValueError("short")
         raw = self.data[self.pos:self.pos + n]
         self.pos += n
-        return raw.decode("latin-1")
+        return lang.wire_text(raw)
 
     def inp(self):
         field, limit = self.take("hB")

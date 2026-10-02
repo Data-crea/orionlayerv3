@@ -89,6 +89,7 @@ from the maintainer.
 | 36 | `a8381e60` | open fix 67: MSGB version 2 — the values a message box's text prints through FMTPARA item codes (the boarding result), read only (work order 199) | `doc/ext_msgbox_items.patch` |
 | 37 | `095ebac4` | open fix 68: COPT — the battle's OPTIONS panel on the wire: whether it is up, and its five option flags as the battle holds them, read only (work order 200) | `doc/ext_combat_options.patch` |
 | 38 | `f031cbad` | open fix 69: HLPL — the help list a right click is checked against on the wire: its ids and rectangles in its own order, read only (work order 200) | `doc/ext_help_list.patch` |
+| 39 | `a8b5640b` | open fix 70: the player's language — `ORION2RE_LANGUAGE` where the build forced 0, and `ORION2RE_LANGUAGE_DIR`, another install read for the language's files (its own files first, `ORION2RE_LANGUAGE_FILES`; read only; work order 200) | `doc/ext_language.patch` |
 
 ## Install
 
@@ -135,9 +136,22 @@ python tools/design_art_extract.py                  # Ship Designer artwork
 python tools/audience_art_extract.py                # audience artwork
 ```
 
-`python tools/help_extract.py --lang de` reads `GER_HELP.LBX`; the language
-must match `"language"` in `settings.json`. `python tools/setup.py --check`
-lists what is present and what is not, and changes nothing.
+`python tools/setup.py --check` lists what is present and what is not, and
+changes nothing.
+
+**German.** Game Settings → LANGUAGE → Deutsch, then restart. OrionLayer's
+own words are German at once. The game's words need the German files of a
+German MOO2 (`GER_HELP.LBX`, `HGSTRNGS.LBX`, `ESTRGERM.LBX`, `FONTSG.LBX`,
+…): in the game's own folder, or — when that is an English install — in
+another folder you name once:
+
+```bash
+python tools/language_files.py "/path/to/a German Master of Orion 2"
+```
+
+It checks the folder, records it, and extracts the German texts; the
+folder is only read. The game itself then speaks German too (open fix 70).
+Without the German files the game stays English and says so at its start.
 
 ## Quick start
 

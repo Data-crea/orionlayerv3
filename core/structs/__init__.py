@@ -19,6 +19,8 @@ Usage:
 import re as _re
 import struct as _struct
 
+from core import lang as _lang
+
 
 class StructView:
     """Parsed struct: named fields as attributes + .raw bytes."""
@@ -106,8 +108,7 @@ class Spec:
             if kind.startswith("str"):
                 length = int(kind[3:])
                 chunk = raw[offset:offset + length]
-                values[name] = (chunk.split(b"\x00")[0]
-                                .decode("latin-1", errors="replace"))
+                values[name] = (_lang.wire_text(chunk.split(b"\x00")[0]))
                 continue
             m = self._ARRAY_RE.match(kind)
             if m:

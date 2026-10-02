@@ -52,14 +52,28 @@ def state():
         return dict(_state)
 
 
-def start(language, steps=None, runner=None):
-    """Begin in the background; nothing while one runs or for English."""
+def plan_from(language, folder):
+    """[(path, argv)] against the other install the player named
+    (`language_dir`, `tools/language_files.py`): every extractor of the
+    language, its files read from there."""
+    tools = os.path.join(BASE_DIR, "tools")
+    if tools not in sys.path:
+        sys.path.insert(0, tools)
+    import language_files
+    return [(os.path.join(BASE_DIR, "assets", "shared", "names"), argv)
+            for argv in language_files.steps(language, folder)]
+
+
+def start(language, steps=None, runner=None, folder=None):
+    """Begin in the background; nothing while one runs or for English.
+    `folder`: the other install holding the language's files, if any."""
     if language == "en":
         return False
     with _lock:
         if _state["phase"] == "running":
             return False
-        steps = plan(language) if steps is None else steps
+        if steps is None:
+            steps = plan_from(language, folder) if folder else plan(language)
         _state.update(phase="running", i=0, n=len(steps), made=0)
     threading.Thread(target=_work, args=(steps, runner or modsetup._run),
                      name="langsetup", daemon=True).start()
@@ -71,11 +85,14 @@ def _work(steps, runner):
     for i, (path, argv) in enumerate(steps, 1):
         with _lock:
             _state.update(i=i)
+        ok = False
         try:
-            runner(argv)
+            ok = runner(argv)
         except OSError as err:
             log.warning("language setup: %s: %s", " ".join(argv), err)
-        made += os.path.exists(path)
+        # a step against the named folder writes where its extractor says:
+        # it counts by its own success; a planned file by being there
+        made += bool(ok) if os.path.isdir(path) else os.path.exists(path)
     with _lock:
         _state.update(phase="done", made=made)
     log.info("language setup done: %d of %d file(s) written", made,

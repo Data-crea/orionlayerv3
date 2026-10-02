@@ -33,6 +33,8 @@ September 2026 for letting the engine run ahead of HD's animations.
 """
 import struct as _st
 
+from core import lang
+
 GRID_W, GRID_H = 81, 68
 #: `s_combat_data` as CMBT writes it: the packed struct's bytes before
 #: `ship_image_seg` (0..197) and after it (206..316) — 309 bytes; the
@@ -78,7 +80,7 @@ CMBT_HEAD_SIZE = _st.calcsize(CMBT_HEAD)
 
 def unit(raw):
     """One CMBT unit record as a dict; `name` is the engine's (game text)."""
-    out = {"name": raw[:30].split(b"\0", 1)[0].decode("latin-1")}
+    out = {"name": lang.wire_text(raw[:30].split(b"\0", 1)[0])}
     for name, at, fmt in UNIT_FIELDS:
         vals = _st.unpack_from("<" + fmt, raw, at)
         out[name] = list(vals) if len(vals) > 1 else vals[0]

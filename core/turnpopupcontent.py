@@ -105,8 +105,10 @@ def _race_name(state, player):
 
 def _tech_name(tech):
     try:
-        from core import technames
-        return technames.TechNames().application_name(tech & 0x1FF)
+        from core import lang, technames
+        # in the language shown (the German walk found this one English)
+        return technames.TechNames(lang.current()).application_name(
+            tech & 0x1FF)
     except Exception:
         return None
 
