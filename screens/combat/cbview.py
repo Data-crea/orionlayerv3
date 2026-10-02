@@ -9,6 +9,7 @@ STARTS as the original frames a battle — 32 cells across, centred on the
 acting unit (`Snap_Center_Combat_Screen_`, combinit.cpp:2240) — so the first
 picture is the original's, larger.
 """
+import math
 from dataclasses import dataclass
 
 CELL = 20                        # px per cell (cmbtdrw1.cpp:809-810)
@@ -33,10 +34,33 @@ class Camera:
         """Four times the original's framing."""
         return 4 * self.area[2] / (VIEW_CELLS[0] * CELL)
 
+    def framing(self):
+        """The original's framing's scale: 32 cells across the area."""
+        return self.area[2] / (VIEW_CELLS[0] * CELL)
+
     def frame_original(self, cell_x, cell_y):
         """The original's framing: 32 cells across, centred on a cell."""
-        self.scale = self.area[2] / (VIEW_CELLS[0] * CELL)
+        self.scale = self.framing()
         self.centre_on((cell_x + 0.5) * CELL, (cell_y + 0.5) * CELL)
+
+    def rungs(self):
+        """The wheel's levels (work order 202 B): the framing times
+        ZOOM_STEP to a whole power, with the smallest and the largest
+        scale as the two ends. A step moves one rung, so a step back lands
+        on the level it left — before, a step was `scale * 1.15` clamped at
+        the ends, and ten steps in from 3.0 (12.14, clamped to 12) and ten
+        out came back at 2.97: another level, scaled again, cached again
+        (201)."""
+        lo, hi, base = self.min_scale(), self.max_scale(), self.framing()
+        out = [lo]
+        k = math.ceil(math.log(lo / base, ZOOM_STEP))
+        while base * ZOOM_STEP ** k < hi * (1 - 1e-6):
+            v = base * ZOOM_STEP ** k
+            if v > lo * (1 + 1e-6):
+                out.append(v)
+            k += 1
+        out.append(hi)
+        return out
 
     def centre_on(self, wx, wy):
         self.ox = wx - self.area[2] / (2 * self.scale)
@@ -73,10 +97,14 @@ class Camera:
             ay + ah * margin <= y <= ay + ah * (1 - margin)
 
     def zoom(self, steps, anchor):
-        """Wheel steps about a window point: the world point under it stays."""
+        """Wheel steps about a window point: the world point under it
+        stays. From a scale between two rungs (a resized window) the step
+        starts at the nearest one."""
         wx, wy = self.to_world(*anchor)
-        s = self.scale * (ZOOM_STEP ** steps)
-        self.scale = max(self.min_scale(), min(self.max_scale(), s))
+        r = self.rungs()
+        n = round(steps) or (1 if steps > 0 else -1 if steps < 0 else 0)
+        i = min(range(len(r)), key=lambda j: abs(math.log(r[j] / self.scale)))
+        self.scale = r[max(0, min(len(r) - 1, i + n))]
         self.ox = wx - (anchor[0] - self.area[0]) / self.scale
         self.oy = wy - (anchor[1] - self.area[1]) / self.scale
         self.clamp()

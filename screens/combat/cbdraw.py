@@ -57,13 +57,109 @@ def centre(unit):
     return (unit["x"] * CELL + CENTRE[size], unit["y"] * CELL + CENTRE[size])
 
 
+#: Bytes of pictures of the CURRENT zoom level the cache keeps although the
+#: last frame did not draw them (work order 202 B): the glow frames between
+#: their steps, an effect's other frames. At 12x a unit's four glow
+#: pictures are ~2 MB each, so 64 MB keeps a large battle's at every zoom.
+#: Pictures of another level are let go as soon as no frame draws them.
+IDLE_BYTES = 64 * 2 ** 20
+
+
+def _bytes(value):
+    """A cached entry's pixels: a surface, or a tuple that starts with one
+    (`cbshot`'s (picture, origin), the planet's (picture, size))."""
+    if isinstance(value, tuple) and value:
+        value = value[0]
+    if isinstance(value, pygame.Surface):
+        return value.get_pitch() * value.get_height()
+    return None
+
+
+def _level(key):
+    """The zoom a key was scaled for — its last element, as `scaled`,
+    `cbshot`'s bolts and `cbsfx`'s lines write it — or None."""
+    return key[-1] if isinstance(key, tuple) and key and \
+        isinstance(key[-1], float) else None
+
+
+class SpriteCache(dict):
+    """The battle's picture cache, BOUNDED BY BYTES (work order 202 B).
+
+    201 measured it at 3.5 GB after ten wheel steps in and ten out: every
+    zoom level's star layers stayed (`scaled` cleared only at 4000 entries,
+    and the 7680 x 5760 layers of 12x are 177 MB each). Now `begin(scale)`,
+    once a render, keeps every picture the last frame drew — the current
+    level's need, whatever its size — lets go of every other one scaled
+    for another zoom, and of the rest keeps the most recently drawn up to
+    `IDLE_BYTES`. A dict, so every caller keeps its `key in cache` and
+    `cache[key]`; reading an entry is what marks it drawn."""
+
+    def __init__(self):
+        super().__init__()
+        self.frame = 0
+        self._meta = {}              # key -> [bytes, last frame, source]
+
+    def begin(self, scale):
+        self.frame += 1
+        level = round(scale, 3)
+        idle = sorted((m[1], k) for k, m in self._meta.items()
+                      if m[1] < self.frame - 1)
+        spare = 0
+        for _f, k in idle:
+            lv = _level(k)
+            if lv is None or lv == level:
+                spare += self._meta[k][0]
+            else:
+                self._drop(k)
+        for _f, k in idle:
+            if spare <= IDLE_BYTES:
+                break
+            if k in self._meta:
+                spare -= self._meta[k][0]
+                self._drop(k)
+
+    def _drop(self, key):
+        self._meta.pop(key, None)
+        dict.pop(self, key, None)
+
+    def __setitem__(self, key, value):
+        super().__setitem__(key, value)
+        n = _bytes(value)
+        if n is not None:
+            self._meta[key] = [n, self.frame, None]
+        else:
+            self._meta.pop(key, None)
+
+    def __getitem__(self, key):
+        m = self._meta.get(key)
+        if m is not None:
+            m[1] = self.frame
+        return super().__getitem__(key)
+
+    def hold(self, key, source):
+        """Keep `source` alive with its scaled copy: the key is its id(),
+        and an id is reused once the object is gone."""
+        if key in self._meta:
+            self._meta[key][2] = source
+
+    def clear(self):
+        super().clear()
+        self._meta.clear()
+
+    def nbytes(self, drawn_only=False):
+        return sum(m[0] for m in self._meta.values()
+                   if not drawn_only or m[1] >= self.frame)
+
+
 def scaled(surf, scale, cache):
     key = (id(surf), round(scale, 3))
     if key not in cache:
         w = max(1, round(surf.get_width() * scale))
         h = max(1, round(surf.get_height() * scale))
         cache[key] = pygame.transform.scale(surf, (w, h))
-        if len(cache) > 4000:
+        if isinstance(cache, SpriteCache):
+            cache.hold(key, surf)
+        elif len(cache) > 4000:     # a caller's own dict
             cache.clear()
     return cache[key]
 

@@ -80,7 +80,7 @@ class CombatScreen(ScreenBase):
         # (op, time) awaiting event 18; (pos, button, dragged) of a press
         self._sent = self._press = None
         self._clock0 = time.monotonic()
-        self._cache = {}
+        self._cache = cbdraw.SpriteCache()     # bounded by bytes (202 B)
         self._turn_seen, self._home = None, False
 
     # ── state ──────────────────────────────────────────────────────
@@ -176,6 +176,7 @@ class CombatScreen(ScreenBase):
                     old.scale, old.ox, old.oy
                 self._cam.clamp()
         cam, art = self._cam, self._art
+        self._cache.begin(cam.scale)
         if c is not None:
             self._follow(c)
         clock = int((time.monotonic() - self._clock0) / 0.11)   # 110 ms
