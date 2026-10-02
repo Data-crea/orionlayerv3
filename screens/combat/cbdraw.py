@@ -102,8 +102,10 @@ class SpriteCache(dict):
     def begin(self, scale):
         self.frame += 1
         level = round(scale, 3)
-        idle = sorted((m[1], k) for k, m in self._meta.items()
-                      if m[1] < self.frame - 1)
+        # by the frame alone: the keys are of every shape (`cbshot`'s bolts,
+        # `scaled`'s pairs), and a tie must not compare them
+        idle = sorted(((m[1], k) for k, m in self._meta.items()
+                       if m[1] < self.frame - 1), key=lambda fk: fk[0])
         spare = 0
         for _f, k in idle:
             lv = _level(k)
