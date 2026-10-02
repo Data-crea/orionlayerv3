@@ -41,6 +41,7 @@ import pygame
 from core.hud import blocks as hud
 from core.hud import text as hudtext
 
+TABS = (("weapons", "WEAPONS"), ("specials", "SPECIALS"))
 BUTTONS = (("auto", "AUTO", ord("A")), ("scan", "SCAN", ord("S")),
            ("board", "BOARD", ord("B")), ("retreat", "RETREAT", ord("R")),
            ("wait", "WAIT", ord("W")), ("done", "DONE", ord("D")))
@@ -164,14 +165,28 @@ class Panel:
         # the weapons — or the special systems — (middle): the toggle above
         mid = pygame.Rect(left.right + pad, inner.y, int(inner.w * 0.40),
                           inner.h)
-        tab_h = small + 6
-        for n, (key, word) in enumerate((("weapons", "WEAPONS"),
-                                         ("specials", "SPECIALS"))):
+        right = pygame.Rect(mid.right + pad, inner.y,
+                            inner.right - mid.right - pad, inner.h)
+        bw, bh = (right.w - pad) // 2, max(small + 8, right.h // 3 - pad)
+        # TRANSCRIPTION `tab_words` (work order 200): the original's WEAPONS
+        # and SPECIALS pictures (COMBAT.LBX 7 and 8, combinit.cpp:688, :697)
+        # carry their word at the same 7-row cap height as the AUTO ... DONE
+        # pictures (COMBAT.LBX 0x32-0x36) — 7 of a 14-row picture against 7
+        # of a 20-row one. So HD draws the two words at the size it gives the
+        # buttons' words, in a tab twice the word's cap tall as the picture
+        # is; sized by the tab's own height they came out half as tall
+        # (199 C3's open item).
+        word_px = hudtext.size_for(style, "button", bh)
+        cap = word_px * hudtext.cap_ratio(style)
+        tab_h = max(small + 6, int(math.ceil(2 * cap)))
+        for n, (key, word) in enumerate(TABS):
             r = pygame.Rect(mid.x + n * (mid.w // 2), mid.y, mid.w // 2 - 4,
                             tab_h)
             hud.small_button(surface, r, scale, "active" if
                              (key == "specials") == bool(specials) else
-                             "normal", word, style_renderer=style)
+                             "normal")
+            hudtext.blit(surface, style.render_text(
+                word, word_px, hudtext.colour("button")), r)
             self.tabs[key] = r
         body = pygame.Rect(mid.x, mid.y + tab_h + 4, mid.w,
                            mid.h - tab_h - 4)
@@ -206,9 +221,6 @@ class Panel:
                     r.inflate(-pad, 0), align="left")
                 self.rows.append((r, k))
         # the buttons (right), each only while the live list carries it
-        right = pygame.Rect(mid.right + pad, inner.y,
-                            inner.right - mid.right - pad, inner.h)
-        bw, bh = (right.w - pad) // 2, max(small + 8, right.h // 3 - pad)
         for n, (key, word, hotkey) in enumerate(BUTTONS):
             r = pygame.Rect(right.x + (n % 2) * (bw + pad),
                             right.y + (n // 2) * (bh + pad // 2), bw, bh)

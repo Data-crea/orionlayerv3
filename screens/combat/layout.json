@@ -22,6 +22,7 @@
     "omission_shield_flare": "OMISSION \u2014 a beam stopped by a shield ends at a third of its diameter as in the original, but the shield's flare (BEAMS 67-86 by size and the hit's rotation, its ramp-in / loop / play-out state machine, beams.cpp:181-224, 437-479, 535-706) is not drawn, nor the reflection field's (0x59 + size * 5 + rot).",
     "transcription_weapon_rows": "TRANSCRIPTION \u2014 each weapon row as Draw_Weapon_Status_Display_ writes it (cmbtdrw1.cpp:2765-2933): the shots left, the Hv / Pd prefix, the name for one shot and the plural otherwise, x<ammo> for missiles, bombs, fighters and the anti-missile rocket, <n>t for a recharging torpedo, the arc word in brackets for a beam; exhausted rows dimmed; the special systems list from the unit's own flags, a damaged one dimmed (:543-591).",
     "deviation_shield_rings": "DEVIATION \u2014 the shields round the unit's picture in the panel are HD's rings, one per ten points left in each of the four arcs, not COMBAT.LBX's ring masks (cmbtdrw1.cpp:2057-2344).",
-    "omission_combat_options": "OMISSION \u2014 the panel's OPTIONS button and its five option lights (cmbtdrw1.cpp:1307-1322) are not drawn; the options are the game's settings."
+    "omission_combat_options": "OMISSION \u2014 the panel's OPTIONS button and its five option lights (cmbtdrw1.cpp:1307-1322) are not drawn; the options are the game's settings.",
+    "transcription_tab_words": "TRANSCRIPTION \u2014 the WEAPONS / SPECIALS words are drawn at the size of the buttons' words: the original's pictures (COMBAT.LBX 7 and 8) carry them at the same 7-row cap height as AUTO ... DONE (COMBAT.LBX 0x32-0x36), in a tab twice the word's cap tall as the picture is (combinit.cpp:688, 697; cmbtdrw1.cpp:1268-1273)."
   }
 }
