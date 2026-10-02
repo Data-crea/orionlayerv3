@@ -33,15 +33,16 @@ from core import combatblocks as cb
 from core.screen_base import ScreenBase
 from core.kentext import ArcWords
 from core.shipparts import ShipPartNames
-from . import cbart, cbdraw, cbhelp, cbopts, cbpanel, cbplay, cbpopups, cbview
+from . import cbart, cbdraw, cbopts, cbpanel, cbplay, cbpopups, cbview
+# the gestures, moved out by work order 202 (decision 6's guideline); FOOT and
+# field_by_hotkey are read here and by tools under this module's name
+from .cbinput import FOOT, CombatInput, field_by_hotkey  # noqa: F401
 
 log = logging.getLogger("combat")
 
 GAME_SCREEN_ID = 65
 GRID_TYPE, MAP_RECT = 12, (0, 0, 639, 359)
-FOOT = {0: 1, 1: 2, 2: 2, 3: 3, 4: 3, 5: 3}
 ANSWER_WAIT = 3.0                  # s: a command the engine never answers
-DRAG_SLOP = 6                      # px before a press is a pan
 
 
 def battle_list(fields):
@@ -51,12 +52,7 @@ def battle_list(fields):
                for f in fields or [])
 
 
-def field_by_hotkey(fields, hotkey, types=(0, 1)):
-    return next((f for f in fields or [] if f.index and f.hotkey == hotkey
-                 and f.field_type in types), None)
-
-
-class CombatScreen(ScreenBase):
+class CombatScreen(CombatInput, ScreenBase):
     SCREEN_NAME = "combat"
     GAME_SCREEN_ID = GAME_SCREEN_ID
     EXTRA_SCREEN_IDS = (66, 67)          # scan view, board popup (199 C1)
@@ -82,6 +78,7 @@ class CombatScreen(ScreenBase):
         self._clock0 = time.monotonic()
         self._cache = cbdraw.SpriteCache()     # bounded by bytes (202 B)
         self._turn_seen, self._home = None, False
+        self._tail = False                   # the battle's end playing (202 D)
 
     # ── state ──────────────────────────────────────────────────────
     def claims(self, game_state):
@@ -92,6 +89,27 @@ class CombatScreen(ScreenBase):
 
     def wants_original(self):
         return False
+
+    def finishing(self, game_state):
+        """THE BATTLE IS PLAYED TO ITS END (work order 202 D): it has ended
+        — its CMBT gone, or another battle's on the wire, or the game on an
+        id other than the battle's own — and its own events are still to
+        be played: those queued, and the last ones, which arrive with the
+        first snapshot after the battle (open fix 56). Till then this
+        screen keeps the window and takes no input; what the game shows
+        next waits (`ScreenBase.finishing`)."""
+        if self._serial is None or self._play.shown is None:
+            return False
+        combat = getattr(game_state, "combat", None)
+        if combat is not None and combat["serial"] == self._serial and \
+                getattr(game_state, "current_screen", GAME_SCREEN_ID) in \
+                (GAME_SCREEN_ID, *self.EXTRA_SCREEN_IDS):
+            return False
+        nxt = self._play._next_seq          # its last ones, not yet fed
+        return self._play.busy() or any(
+            e.get("serial") == self._serial and e["kind"] != "command" and
+            (nxt is None or e["seq"] >= nxt) for e in (getattr(
+                game_state, "combat_events", None) or {}).get("events", []))
 
     def enter(self, game_state=None):
         super().enter(game_state)
@@ -104,10 +122,18 @@ class CombatScreen(ScreenBase):
     def update(self, game_state=None):
         if game_state is None:
             return
-        self._state = game_state
         combat = getattr(game_state, "combat", None)
         events = (getattr(game_state, "combat_events", None) or {}).get(
             "events", [])
+        self._tail = self.finishing(game_state)
+        if self._tail:
+            # the battle's last events, played on the battle as it stood;
+            # the state after it (no CMBT, another battle, another screen)
+            # is not taken — the screen draws its own last state meanwhile
+            self._play.feed(None, [e for e in events
+                                   if e.get("serial") == self._serial], None)
+            return
+        self._state = game_state
         if combat is None:
             return
         if combat["serial"] != self._serial:
@@ -140,7 +166,8 @@ class CombatScreen(ScreenBase):
     def _own_turn(self):
         c = self._shown()
         live = getattr(self._state, "combat", None)
-        return (c is not None and live is not None and not self._play.busy()
+        return (c is not None and live is not None and not self._tail and
+                not self._play.busy()
                 and live["units"][live["cur_ship"]]["owner"] == self._me()
                 and self._state.current_screen == GAME_SCREEN_ID
                 and battle_list(getattr(self._state, "fields", None)))
@@ -266,116 +293,3 @@ class CombatScreen(ScreenBase):
         self.app.client.combat_command(combat["serial"], combat["cur_ship"],
                                        cb.COMMANDS[op], a, b, c)
         self._sent = (cb.COMMANDS[op], time.monotonic())
-
-    def _unit_at(self, cell):
-        c = self._shown()
-        for i, u in enumerate(c["units"]):
-            if u["unit_status"] != 0 or (i and u["structure_max"] <= 0):
-                continue
-            n = FOOT.get(int(u["size_class"]), 1) if i else 5
-            if u["x"] <= cell[0] < u["x"] + n and u["y"] <= cell[1] < u["y"] + n:
-                return i
-        return None
-
-    def handle_click(self, screen_x, screen_y):
-        if self.help_consumes_click(screen_x, screen_y):
-            return None
-        if self._state is None or getattr(self._state, "combat", None) is None \
-                or self._pops.click(screen_x, screen_y, self._state,
-                                    self.app.client) or \
-                self._opts.click(screen_x, screen_y, self._state,
-                                 self.app.client):
-            return None
-        key = self._panel.button_at(screen_x, screen_y)
-        if key is not None:
-            return self._button(key)
-        tab = self._panel.tab_at(screen_x, screen_y)
-        if tab is not None:                  # a view only, as the original's
-            self._specials = tab == "specials"
-            return None
-        row = self._panel.row_at(screen_x, screen_y)
-        if row is not None:
-            if self._own_turn() and self.app.connected:
-                self._panel.switch(row, self._state, self.app.client)
-            return None
-        if not self._ready() or self._cam is None:
-            return None
-        cell = self._cam.cell_at(screen_x, screen_y)
-        if cell is None:
-            return None
-        c = self._shown()
-        me, cur = self._me(), c["cur_ship"]
-        missile = cbdraw.missile_at(self._play.ordnance, self._cam, screen_x,
-                                    screen_y, me)
-        target = self._unit_at(cell)
-        if self._pops.scan_mode:             # SCAN, then a unit: HD's own view
-            self._pops.scan_mode, self._pops.local_unit = False, target
-            return None
-        if missile is not None:
-            self._send("fire_missile", missile)
-        elif target is not None and target != cur and \
-                c["units"][target]["owner"] != me:
-            if self._board:
-                self._board = False
-                self._send("board", target)
-            else:
-                self._send("fire", target, self._mask(cur, c["units"][cur]))
-        elif target is not None and target != cur:
-            self._send("select", target)
-        elif cb.legal(c["legal"], *cell):
-            self._send("move", *cell)
-        return None
-
-    def _button(self, key):
-        if key in ("board", "scan"):         # modes HD holds locally
-            self._board = key == "board" and not self._board
-            self._pops.scan_mode = key == "scan" and not self._pops.scan_mode
-            return None
-        hotkey = dict((k, hk) for k, _w, hk in cbpanel.BUTTONS)[key]
-        f = field_by_hotkey(getattr(self._state, "fields", None), hotkey)
-        if f is not None and self._own_turn() and self.app.connected:
-            log.info("combat: %s -> field %d", key, f.index)
-            self.app.client.activate_field(f.index)
-        return None
-
-    def handle_right_button(self, down, screen_x, screen_y):
-        """A right DRAG pans (the galaxy map's gesture, HD EXTENSION
-        `free_camera`); a right CLICK is FACE toward the cell, as the
-        original's right click on its map (combat1.cpp:696-710)."""
-        if down:
-            self._press = [(screen_x, screen_y), (screen_x, screen_y), False]
-            return
-        press, self._press = self._press, None
-        if press is None or press[2] or cbhelp.right(self, screen_x,
-                                                     screen_y):
-            return
-        if self._ready() and self._cam is not None:
-            cell = self._cam.cell_at(screen_x, screen_y)
-            if cell is not None:
-                self._send("face", *cell)
-
-    def handle_left_release(self, screen_x, screen_y):
-        self._pops.release(self._state, self.app.client)
-
-    def handle_mouse_motion(self, screen_x, screen_y):
-        self._pops.motion(screen_x)
-        if self._press is not None and self._cam is not None:
-            (x0, y0), (lx, ly), moved = self._press
-            if moved or abs(screen_x - x0) + abs(screen_y - y0) > DRAG_SLOP:
-                self._cam.pan(screen_x - lx, screen_y - ly)
-                self._press = [(x0, y0), (screen_x, screen_y), True]
-        return super().handle_mouse_motion(screen_x, screen_y)
-
-    def handle_mousewheel(self, dy, screen_x, screen_y):
-        if self._cam is not None:
-            self._cam.zoom(dy, (screen_x, screen_y))
-
-    def handle_key(self, key):
-        if self._pops.key(key, self._state, self.app.client) or \
-                self._opts.key(key, self._state, self.app.client):
-            return
-        if key == pygame.K_c and self._cam is not None and self._shown():
-            u = self._acting()
-            self._cam.centre_on(*cbdraw.centre(u))    # the original's C
-        elif key == pygame.K_ESCAPE:
-            self._board = self._pops.scan_mode = False

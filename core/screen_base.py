@@ -126,6 +126,16 @@ class ScreenBase(HelpMixin):
         path as before the screen existed, with no hold and no failure."""
         return True
 
+    def finishing(self, game_state):
+        """True while this screen still plays what belongs to it although
+        the game has moved on (work order 202 D: the battle's last events
+        arrive with the first snapshot after it). While it says so the
+        dispatcher keeps it (`Dispatcher.update_from_game`) and the App
+        draws it and nothing else — no next screen, no box, no picture of
+        the game's (`main.App._showing_original`); F12 still shows the
+        game. False by default."""
+        return False
+
     def handover_is_modal(self):
         """True when `wants_original()` is a MODAL NET's verdict — "a modal
         HD has no view for" (`core/modalnet.py`) — and not a screen that

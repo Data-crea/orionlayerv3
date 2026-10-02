@@ -94,23 +94,28 @@ class Player:
 
         Each snapshot's state waits for the last event queued so far —
         its own, or an earlier snapshot's when it brings none — and is
-        shown once that event has played."""
+        shown once that event has played.
+
+        `combat` None: the battle has ended and these are its LAST events
+        (they arrive with the first snapshot after it, open fix 56) —
+        queued like any others, with no state after them: what they leave
+        is the last picture (work order 202 D)."""
         new = [e for e in events
                if self._next_seq is None or e["seq"] >= self._next_seq]
         if new:
             self._next_seq = new[-1]["seq"] + 1
         if self.shown is None:
-            self.shown = copy.deepcopy(combat)
-            self.ordnance = ordnance
+            if combat is not None:
+                self.shown, self.ordnance = copy.deepcopy(combat), ordnance
             return
         playable = [e for e in new if e["kind"] != "command"]
         self._queue.extend(playable)
         if playable:
             self._last_queued = playable[-1]["seq"]
-        if not self.busy():
+        if combat is not None and not self.busy():
             self.shown, self.ordnance = copy.deepcopy(combat), ordnance
             self._after = []
-        else:
+        elif combat is not None:
             self._after.append((self._last_queued, copy.deepcopy(combat),
                                 ordnance))
 

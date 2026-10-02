@@ -336,6 +336,11 @@ class App:
             self._net_kind = ""
             self._handover.holding = False
             return self._verdict(False, None)
+        # A SCREEN PLAYING ITS LAST EVENTS (work order 202 D,
+        # `handover.finishing`): drawn to its end, nothing over it.
+        if handover.finishing(self):
+            self._net_kind = ""
+            return self._gated(False, self.dispatcher.top)
         # A GENERIC BOX OR A TURN-TIME POPUP HD CAN DRAW (open fixes 29 and
         # 49, work order 188): drawn in HD over the held last frame,
         # whatever screen it opened on — the rule is `handover.overlay_for`.

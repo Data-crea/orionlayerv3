@@ -283,6 +283,19 @@ def render_hold(app):
         app._surface_hd = True
 
 
+def finishing(app):
+    """True while the screen on top still plays what belongs to it although
+    the game has moved on (work order 202 D, `ScreenBase.finishing`: a
+    battle's last events) — then the App draws that screen and nothing
+    else: no HD box or popup over it (`overlay_for` is not asked), no next
+    screen, no picture of the game's. F12 is the player's own mode."""
+    if getattr(app, "render_mode", "hd") == "original":
+        return False
+    top = app.dispatcher.top
+    ask = getattr(top, "finishing", None)
+    return ask is not None and bool(ask(app.client.state))
+
+
 def overlay_for(app):
     """What HD draws OVER the held frame instead of any picture (work order
     188, open fixes 29 and 49): `("box", box)` while a generic message box

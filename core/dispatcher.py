@@ -191,6 +191,16 @@ class Dispatcher:
         """
         screen_id = game_state.current_screen
 
+        # A SCREEN STILL PLAYING WHAT BELONGS TO IT keeps the window (work
+        # order 202 D, `ScreenBase.finishing`): the battle's last events
+        # come with the first snapshot after it, and Data's condition of
+        # 30 September 2026 is that HD shows nothing after them before
+        # they are played.
+        finishing = getattr(self.active, "finishing", None)
+        if finishing is not None and not self.overlay and \
+                finishing(game_state):
+            return True
+
         # Overlay bound to a game screen ID: close it when the
         # game leaves that ID; ignore the parent re-report.
         if self.overlay:
