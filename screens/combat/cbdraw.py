@@ -272,14 +272,15 @@ def draw_absorber(surface, cam, art, u, i, clock, cache):
     """TRANSCRIPTION `energy_absorber` (work order 200): a unit whose Energy
     Absorber holds a charge (`reflected_damage_pool`) glows behind its
     picture — CMBTSFX 0x33 + (-1 - size) / 2, one less for size 4, its frame
-    (ship_frame / 2 + unit) modulo its frames, centred on the unit
+    (ship_frame / 2 + unit) modulo its frames (`clock` is `_ship_frame`,
+    `screen.ship_frame`), centred on the unit
     (`Draw_Energy_Absorber_`, cmbtfire.cpp:923-953, called before the
     ship's own picture by `Draw_Ship_`, cmbtdrw1.cpp:2632-2637). Not drawn
     in stasis or under a plasma web, as there; the black hole's own test
     is not on the wire."""
     entry = absorber_entry(u["size_class"])
     n = max(1, art.frame_count("cmbtsfx", entry))
-    pic = art.surface("cmbtsfx", entry, (clock + i) % n)
+    pic = art.surface("cmbtsfx", entry, (clock // 2 + i) % n)
     if pic is None:
         return
     img = scaled(pic, cam.scale, cache)

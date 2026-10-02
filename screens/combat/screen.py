@@ -43,6 +43,23 @@ log = logging.getLogger("combat")
 GAME_SCREEN_ID = 65
 GRID_TYPE, MAP_RECT = 12, (0, 0, 639, 359)
 ANSWER_WAIT = 3.0                  # s: a command the engine never answers
+TICK = 0.055                       # s: `Release_Time_(1)`, timer.cpp:14-24
+
+
+def ship_frame(seconds):
+    """The original's `_ship_frame` after `seconds` of an idle battle —
+    TRANSCRIPTION `pace`, corrected by work order 202 G. The glow
+    (cmbtdrw1.cpp:2499-2508), the selection cursor (:816-853) and the
+    Energy Absorber (cmbtfire.cpp:944) all read `_ship_frame / 2`, and
+    `_ship_frame` grows by one per `Draw_Main_Combat_Screen_` (:931). The
+    idle turn draws it TWICE per 55 ms tick — combat1.cpp:865 after the
+    input step and :1071 at the loop's end, one `Release_Time_(1)` at :1079
+    from the mark at :404 (measured in a scratch build: 612 + 612 draws,
+    two in the same millisecond, every 55 ms) — so each steps every 55 ms,
+    as orion2re's own window shows (201: 88 steps in 4.8 s). The reading
+    had taken the auto-function's 110 ms (`Assign_Auto_Function_(…, 2)`,
+    combat1.cpp:383) for the idle redraw: 220 ms a step, 4x too slow."""
+    return 2 * int(seconds / TICK)
 
 
 def battle_list(fields):
@@ -206,7 +223,7 @@ class CombatScreen(CombatInput, ScreenBase):
         self._cache.begin(cam.scale)
         if c is not None:
             self._follow(c)
-        clock = int((time.monotonic() - self._clock0) / 0.11)   # 110 ms
+        clock = ship_frame(time.monotonic() - self._clock0)
         cbdraw.draw_background(surface, cam, art,
                                bool(c and c.get("in_nebula")), self._cache)
         if c is None:
