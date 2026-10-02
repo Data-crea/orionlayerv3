@@ -385,6 +385,12 @@ LOCAL_PATCHES = {
         "OrionLayer, open fix 67.",
         "the engine sends message boxes without their item values (open fix "
         "67): the boarding result's numbers are not printed"),
+    # Applied 2 October 2026 by work order 200: 095ebac4, on a8381e60.
+    "doc/ext_combat_options.patch": (
+        os.path.join("src", "ext", "ext_api.cpp"),
+        "OrionLayer, open fix 68.",
+        "the engine does not send COPT (open fix 68): the battle's OPTIONS "
+        "panel is not offered and its options are read from the settings"),
 }
 
 #: Patches that are REPORTED to Joes and not yet applied: listed with
@@ -460,6 +466,7 @@ FIX_NUMBERS = {
     "doc/ext_set_spies.patch": (64,),
     "doc/ext_combat_popup.patch": (66,),
     "doc/ext_msgbox_items.patch": (67,),
+    "doc/ext_combat_options.patch": (68,),
 }
 
 

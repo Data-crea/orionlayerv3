@@ -124,6 +124,10 @@ def draw_units(surface, cam, art, combat, colours, glow_clock, cache,
             continue
         # the glow cycle {1,2,3,2}, phased by the unit (cmbtdrw1.cpp:2499-2508)
         glow = (1, 2, 3, 2)[((glow_clock // 2) + i) % 4]
+        if u.get("reflected_damage_pool", 0) > 0 and \
+                not u.get("plasma_web_damage") and \
+                u.get("stasis_source_idx", 255) == 255:
+            draw_absorber(surface, cam, art, u, i, glow_clock, cache)
         pic = unit_picture(art, colours, u, glow)
         if pic is None:
             wx, wy = centre(u)
@@ -135,6 +139,54 @@ def draw_units(surface, cam, art, combat, colours, glow_clock, cache,
         dx, dy = u.get("_off", (0, 0))      # a move being played (cbplay)
         surface.blit(scaled(pic, cam.scale, cache),
                      cam.to_window(ox + dx, oy + dy))
+
+
+def missile_at(ordnance, cam, x, y, me):
+    """The enemy missile or fighter group under window point (x, y)."""
+    for m in (ordnance or {}).get("missiles", []):
+        mx, my = cam.to_window(m["x"], m["y"])
+        if abs(mx - x) < 14 * cam.scale and abs(my - y) < 14 * cam.scale \
+                and m.get("owner") != me:
+            return m["index"]
+    return None
+
+
+def player_colours(state):
+    """Each player's colour, from the player records on the wire."""
+    from core.structs import player as player_struct
+    out = {}
+    for i, raw in enumerate(getattr(state, "player_raw", None) or []):
+        try:
+            out[i] = int(player_struct.SPEC.parse(raw).color)
+        except (ValueError, IndexError):
+            pass
+    return out
+
+
+def absorber_entry(size_class):
+    """CMBTSFX entry of the Energy Absorber's glow (cmbtfire.cpp:933-936;
+    C's division truncates)."""
+    size = max(0, min(5, int(size_class)))
+    return 0x33 + int((-1 - size) / 2) - (1 if size == 4 else 0)
+
+
+def draw_absorber(surface, cam, art, u, i, clock, cache):
+    """TRANSCRIPTION `energy_absorber` (work order 200): a unit whose Energy
+    Absorber holds a charge (`reflected_damage_pool`) glows behind its
+    picture — CMBTSFX 0x33 + (-1 - size) / 2, one less for size 4, its frame
+    (ship_frame / 2 + unit) modulo its frames, centred on the unit
+    (`Draw_Energy_Absorber_`, cmbtfire.cpp:923-953, called before the
+    ship's own picture by `Draw_Ship_`, cmbtdrw1.cpp:2632-2637). Not drawn
+    in stasis or under a plasma web, as there; the black hole's own test
+    is not on the wire."""
+    entry = absorber_entry(u["size_class"])
+    n = max(1, art.frame_count("cmbtsfx", entry))
+    pic = art.surface("cmbtsfx", entry, (clock + i) % n)
+    if pic is None:
+        return
+    img = scaled(pic, cam.scale, cache)
+    x, y = cam.to_window(*centre(u))
+    surface.blit(img, (x - img.get_width() // 2, y - img.get_height() // 2))
 
 
 def unit_picture(art, colours, u, glow=0):

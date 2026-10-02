@@ -430,7 +430,9 @@ def parse_state(data: bytes) -> GameState:
     # the fleet box open the events came here and were lost (work order 199).
     pos = combatblocks.parse_events_after(gs, data, pos)
     from core import combatpopup
-    pos = combatpopup.parse(gs, data, pos)    # CPOP, open fix 66, LAST
+    pos = combatpopup.parse(gs, data, pos)    # CPOP, open fix 66
+    from core import combatoptions
+    pos = combatoptions.parse(gs, data, pos)  # COPT, open fix 68, LAST
     return gs
 
 

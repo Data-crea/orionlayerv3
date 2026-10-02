@@ -33,10 +33,7 @@ from core import combatblocks as cb
 from core.screen_base import ScreenBase
 from core.kentext import ArcWords
 from core.shipparts import ShipPartNames
-from core.structs import player as player_struct
-from core.structs import settings as settings_struct
-
-from . import cbart, cbdraw, cbpanel, cbplay, cbpopups, cbview
+from . import cbart, cbdraw, cbopts, cbpanel, cbplay, cbpopups, cbview
 
 log = logging.getLogger("combat")
 
@@ -75,9 +72,10 @@ class CombatScreen(ScreenBase):
         self._panel = cbpanel.Panel()
         self._play = cbplay.Player()
         self._pops = cbpopups.Popups()
+        self._opts = cbopts.Options()         # the OPTIONS panel (work order 200)
         self._specials = False               # the panel's SPECIALS view
+        self._language = "en"
         self._ken = None
-        self._masks = {}                 # unit -> weapon-row switches
         self._board = False
         # (op, time) awaiting event 18; (pos, button, dragged) of a press
         self._sent = self._press = None
@@ -99,7 +97,7 @@ class CombatScreen(ScreenBase):
         super().enter(game_state)
         language = (getattr(self.app, "settings", {}) or {}).get(
             "language", "en")
-        self._names = ShipPartNames(language)
+        self._names, self._language = ShipPartNames(language), language
         self._ken = ArcWords(language)
         self.update(game_state)
 
@@ -114,10 +112,11 @@ class CombatScreen(ScreenBase):
             return
         if combat["serial"] != self._serial:
             self._serial = combat["serial"]
-            self._cam, self._masks, self._board = None, {}, False
+            self._cam, self._board = None, False
             self._play.reset()
             self._pops.reset()
         self._pops.update(game_state)
+        self._play.fast = cbopts.flag(game_state, "fast")
         self._play.feed(combat, events, getattr(game_state, "ordnance", None))
         for e in events:
             if e["kind"] == "command" and self._sent and \
@@ -126,16 +125,6 @@ class CombatScreen(ScreenBase):
                     log.info("combat: %s refused — %s", self._sent[0],
                              cb.REFUSALS.get(e["result"], e["result"]))
                 self._sent = None
-
-    def _colours(self):
-        raws = getattr(self._state, "player_raw", None) or []
-        out = {}
-        for i, raw in enumerate(raws):
-            try:
-                out[i] = int(player_struct.SPEC.parse(raw).color)
-            except (ValueError, IndexError):
-                pass
-        return out
 
     def _me(self):
         return getattr(self._state, "player_num", 0) or 0
@@ -162,11 +151,10 @@ class CombatScreen(ScreenBase):
         return self._own_turn() and self._sent is None
 
     def _mask(self, unit_idx, unit):
-        if unit_idx not in self._masks:
-            self._masks[unit_idx] = sum(
-                1 << k for k, w in enumerate(unit["weapons"])
-                if w["count"] > 0 and w["active"] == 1)
-        return self._masks[unit_idx]
+        """The rows at 1 as the battle holds them (`cbpanel.on_mask`)."""
+        live = getattr(self._state, "combat", None)
+        return cbpanel.on_mask(live["units"][unit_idx] if live and unit_idx <
+                               len(live["units"]) else unit)
 
     # ── drawing ────────────────────────────────────────────────────
     def render(self, surface):
@@ -199,10 +187,17 @@ class CombatScreen(ScreenBase):
         surface.set_clip(pygame.Rect(area))
         unit = c["units"][c["cur_ship"]]
         if self._own_turn() and unit["movement_left"] > 0 and \
-                self._legal_boxes():
+                cbopts.flag(self._state, "legal_moves"):
             cbdraw.draw_legal(surface, cam, art, c, unit)
-        cbdraw.draw_units(surface, cam, art, c, self._colours(), clock,
-                          self._cache, self._planet_picture(c))
+        if cbopts.flag(self._state, "grid"):
+            cbopts.draw_grid(surface, cam, art)
+        if cbopts.flag(self._state, "shield_arcs") and c["cur_ship"]:
+            cbopts.draw_shield_arcs(surface, cam, art, unit, cbdraw.centre(
+                unit), self.style, self._language)
+        self._play.colours = cbdraw.player_colours(self._state)
+        self._play.planet = self._planet_picture(c)
+        cbdraw.draw_units(surface, cam, art, c, self._play.colours, clock,
+                          self._cache, self._play.planet)
         if unit["owner"] == self._me():
             cbdraw.draw_cursor(surface, cam, art, unit, clock, self._cache)
         cbdraw.draw_ordnance(surface, cam, art, self._play.ordnance,
@@ -212,13 +207,18 @@ class CombatScreen(ScreenBase):
                         self._cache)
         surface.set_clip(clip)
         live = {k for k, _w, hk in cbpanel.BUTTONS
-                if self._own_turn() and (k in ("board", "scan") or field_by_hotkey(
+                if self._own_turn() and (k != "options" or cbopts.options(
+                    self._state)) and (k in ("board", "scan") or field_by_hotkey(
                     getattr(self._state, "fields", None), hk))}
-        pic = cbdraw.unit_picture(self._art, self._colours(), unit, 0)
+        pic = cbdraw.unit_picture(self._art, self._play.colours, unit, 0)
         self._panel.draw(surface, self.style, unit, self._names, self._ken,
-                         self._mask(c["cur_ship"], unit),
+                         [w["active"] for w in (self._state.combat["units"][
+                             c["cur_ship"]] if self._state.combat else unit)[
+                             "weapons"]],
                          self._board or self._pops.scan_mode and "scan", live,
                          self.layout.scale, pic, self._specials)
+        self._opts.draw(surface, self.style, self.layout.scale, self._state,
+                        band, self._panel.buttons)
         self._pops.draw(surface, self.style, self.layout.scale, self._state,
                         c, self._weapon_name)
 
@@ -245,15 +245,6 @@ class CombatScreen(ScreenBase):
             at = cbdraw.centre(c["units"][c["cur_ship"]])
         if at is not None and not self._cam.shows(*at):
             self._cam.centre_on(*at)
-
-    def _legal_boxes(self):
-        """The game's own LEGAL BOXES option (cmbtdrw1.cpp:477): the legal
-        cells are drawn only while it is on. Without the settings record
-        on the wire nothing is drawn, as with the option off."""
-        raw = getattr(self._state, "settings_raw", b"") or b""
-        if len(raw) < settings_struct.SIZE:
-            return False
-        return settings_struct.SPEC.parse(raw).combat_legal_moves_flag == 1
 
     def _weapon_name(self, wid):
         return self._names.name("weapons", wid) if self._names else None
@@ -283,19 +274,12 @@ class CombatScreen(ScreenBase):
                 return i
         return None
 
-    def _missile_at(self, x, y):
-        for m in (self._play.ordnance or {}).get("missiles", []):
-            mx, my = self._cam.to_window(m["x"], m["y"])
-            if abs(mx - x) < 14 * self._cam.scale and \
-                    abs(my - y) < 14 * self._cam.scale and \
-                    m.get("owner") != self._me():
-                return m["index"]
-        return None
-
     def handle_click(self, screen_x, screen_y):
         if self._state is None or getattr(self._state, "combat", None) is None \
                 or self._pops.click(screen_x, screen_y, self._state,
-                                    self.app.client):
+                                    self.app.client) or \
+                self._opts.click(screen_x, screen_y, self._state,
+                                 self.app.client):
             return None
         key = self._panel.button_at(screen_x, screen_y)
         if key is not None:
@@ -306,9 +290,8 @@ class CombatScreen(ScreenBase):
             return None
         row = self._panel.row_at(screen_x, screen_y)
         if row is not None:
-            c = self._shown()
-            self._masks[c["cur_ship"]] = self._mask(
-                c["cur_ship"], c["units"][c["cur_ship"]]) ^ (1 << row)
+            if self._own_turn() and self.app.connected:
+                self._panel.switch(row, self._state, self.app.client)
             return None
         if not self._ready() or self._cam is None:
             return None
@@ -317,7 +300,8 @@ class CombatScreen(ScreenBase):
             return None
         c = self._shown()
         me, cur = self._me(), c["cur_ship"]
-        missile = self._missile_at(screen_x, screen_y)
+        missile = cbdraw.missile_at(self._play.ordnance, self._cam, screen_x,
+                                    screen_y, me)
         target = self._unit_at(cell)
         if self._pops.scan_mode:             # SCAN, then a unit: HD's own view
             self._pops.scan_mode, self._pops.local_unit = False, target
@@ -364,7 +348,11 @@ class CombatScreen(ScreenBase):
             if cell is not None:
                 self._send("face", *cell)
 
+    def handle_left_release(self, screen_x, screen_y):
+        self._pops.release(self._state, self.app.client)
+
     def handle_mouse_motion(self, screen_x, screen_y):
+        self._pops.motion(screen_x)
         if self._press is not None and self._cam is not None:
             (x0, y0), (lx, ly), moved = self._press
             if moved or abs(screen_x - x0) + abs(screen_y - y0) > DRAG_SLOP:
@@ -377,7 +365,8 @@ class CombatScreen(ScreenBase):
             self._cam.zoom(dy, (screen_x, screen_y))
 
     def handle_key(self, key):
-        if self._pops.key(key, self._state, self.app.client):
+        if self._pops.key(key, self._state, self.app.client) or \
+                self._opts.key(key, self._state, self.app.client):
             return
         if key == pygame.K_c and self._cam is not None and self._shown():
             u = self._acting()

@@ -11,12 +11,21 @@ the range's two ends and the marines chosen between them, the bar, the two
 arrows that step the choice, RAID and CAPTURE, ESC to cancel. TRANSCRIPTION
 `board_popup`: HD shows the CHOICE FROM THE WIRE (`_g_var`), never one of its own, and an
 arrow is the original's own button field (164, 253) / (406, 253) — the
-next only after the last one's effect has arrived (decision 21). RAID and
-CAPTURE are the button fields at (163, 273) and (345, 273); ESC is the
-popup's own hotkey. OMISSION `board_slider_drag`: the original's bar is a
-scroll field the pointer drags (`Add_Scroll_Field_`, :1602), which an
-activation cannot aim (decision 39's correction) — HD's bar shows the
-choice and the arrows set it.
+next only after the last one's effect has arrived (decision 21) — and
+steps as the original's do: down while the choice is above 0, up while it
+is below the range's top (:1638-1644). RAID and CAPTURE are the button
+fields at (163, 273) and (345, 273); ESC is the popup's own hotkey.
+
+TRANSCRIPTION `board_slider` (work order 200, replacing 199's omission):
+the bar is the original's scroll field (`Add_Scroll_Field_(0xBB, 0xF9, min,
+max + 1, min, max, 0xCF, 0xD, &_g_var)`, :1602) and dragging it sets the
+choice as `Find_Bar_Position_` does (fields.cpp:1720-1762): the pointer's
+place along the field's 207 px, times the range (max + 1 - min), over the
+width, plus min, held to min .. max. HD's bar is that field drawn wider;
+while the pointer drags it the bar shows the choice the place gives, and on
+release HD clicks the field at the place the original's arithmetic maps to
+that choice — open fix 3 keeps an injected click's pointer until the game
+has read it — and the choice on the wire is the one shown after.
 
 THE SCAN VIEW (66) — `Detailed_View_Ship_` / `Combat_Draw_View_Ship_`
 (cmbtdrw1.cpp:156-247, :3114-…): one unit, large, its combat bonuses, crew,
@@ -45,6 +54,28 @@ BOARD_FIELDS = {"less": (0xA4, 0xFD), "more": (0x196, 0xFD),
                 "raid": (0xA3, 0x111), "capture": (0x159, 0x111)}
 ESC = 27
 ARROW_WAIT = 3.0           # s: an arrow whose effect never arrives
+#: the board popup's scroll field (cmbtdrw1.cpp:1602): x, y, width, height
+SLIDER = (0xBB, 0xF9, 0xCF, 0xD)
+
+
+def slider_value(native_x, low, high):
+    """`Find_Bar_Position_` for the popup's field (range max + 1)."""
+    x, _y, w, _h = SLIDER
+    if native_x >= x + w:
+        v = high + 1
+    elif native_x <= x:
+        v = low
+    else:
+        v = (native_x - x) * (high + 1 - low) // w + low
+    return max(low, min(high, v))
+
+
+def slider_point(value, low, high):
+    """The native point inside the field whose bar position is `value`:
+    the middle of the pixels that map to it."""
+    x, y, w, h = SLIDER
+    span = high + 1 - low
+    return x + int((value - low + 0.5) * w / span), y + h // 2
 
 
 def board_field(fields, key):
@@ -78,9 +109,11 @@ class Popups:
         self.local_unit = None       # HD's own scan view of this unit
         self.rects = {}
         self._pending = None         # (marines before, time) after an arrow
+        self._drag = None            # (low, high, value) while the bar is held
 
     def reset(self):
         self.scan_mode, self.local_unit, self._pending = False, None, None
+        self._drag = None
 
     def showing(self, state):
         """'board', 'scan' (the engine's), 'local' or None."""
@@ -148,9 +181,11 @@ class Popups:
         y += size + int(14 * k)
         bar = pygame.Rect(cols[0], y, cols[2] - cols[0], max(6, int(16 * k)))
         pygame.draw.rect(surface, (40, 48, 60), bar)
+        self.rects["bar"] = bar
         span = max(1, cp["max"] - cp["min"])
+        shown = self._drag[2] if self._drag else cp["marines"]
         fill = bar.copy()
-        fill.w = int(bar.w * (cp["marines"] - cp["min"]) / span)
+        fill.w = int(bar.w * (shown - cp["min"]) / span)
         pygame.draw.rect(surface, hudtext.colour("value")[:3], fill)
         less = pygame.Rect(bar.x - bh - 8, bar.centery - bh // 2, bh, bh)
         more = pygame.Rect(bar.right + 8, bar.centery - bh // 2, bh, bh)
@@ -243,9 +278,13 @@ class Popups:
             self._pending = None
         key = next((k for k, r in self.rects.items()
                     if r.collidepoint(x, y)), None)
-        if key is None or (key in ("less", "more") and self._pending):
+        if key is None or (key in ("less", "more", "bar") and self._pending):
             return True
-        if key == "less" and cp["marines"] <= cp["min"] or \
+        if key == "bar":                    # the scroll field, held
+            self._drag = (cp["min"], cp["max"], None)
+            self.motion(x)
+            return True
+        if key == "less" and cp["marines"] <= 0 or \
                 key == "more" and cp["marines"] >= cp["max"]:
             return True                     # the original's own guards (:1638-1644)
         f = board_field(fields, key)
@@ -254,6 +293,31 @@ class Popups:
             if key in ("less", "more"):
                 self._pending = (cp["marines"], time.monotonic())
         return True
+
+    def _native_x(self, x):
+        bar = self.rects["bar"]
+        return SLIDER[0] + (x - bar.x) * SLIDER[2] / max(1, bar.w)
+
+    def motion(self, x):
+        """The bar under the pointer shows the choice its place gives."""
+        if self._drag and "bar" in self.rects:
+            low, high, _v = self._drag
+            self._drag = (low, high, slider_value(int(self._native_x(x)),
+                                                  low, high))
+
+    def release(self, state, client):
+        """Letting go of the bar clicks the scroll field at the place that
+        gives the shown choice; the wire's choice is shown after."""
+        drag, self._drag = self._drag, None
+        cp = engine_popup(state)
+        if not drag or drag[2] is None or cp is None or \
+                drag[2] == cp["marines"]:
+            return
+        f = next((f for f in getattr(state, "fields", None) or []
+                  if f.index and (f.x, f.y) == SLIDER[:2]), None)
+        if f is not None:
+            client.inject_click(*slider_point(drag[2], cp["min"], cp["max"]))
+            self._pending = (cp["marines"], time.monotonic())
 
     def key(self, key, state, client):
         """ESC: the board popup's own hotkey; closes HD's scan view."""

@@ -12,17 +12,23 @@ THE PACE is the original's, TRANSCRIPTION `pace`
 (`dev:doc/combat_drawing_reading.md` §8): a move
 is 10 frames a cell with no timer (HD: 0.15 s a cell), a turn one facing per
 55 ms frame, an effect one frame per 55 ms (`Release_Time_(1)`), damage
-numbers 9 frames.
+numbers 9 frames. With the game's FAST ANIMATIONS on (open fix 68's COPT,
+work order 200) every effect takes the step the original takes under
+`_speedx2_flag`: a move 12 px a frame instead of 2 (cmbtmov1.cpp:309-317),
+a beam's bolt two frames at a time (`cbshot`), the specials' and a
+destroyed unit's frames every second one (cmbtspec.cpp:99, 1226 and the
+other sites), a retreat every third (cmbtdrw1.cpp:2462); a turn is not
+faster (`Rotate_Ship_` has no such step).
 
 WHAT EACH EVENT DOES here:
   move       the unit glides from its cell to the new one (a teleport jumps)
   rotate     the unit turns one facing per frame to the new facing
   beam_shot  the original's bolt (`cbbeam`, work order 199 C2): the muzzle
              burst, the bolt frame by frame for `_max_frames` frames,
-             stopped at the shield when it holds, the hit flash, and the
-             damage past the shields as a rising number; at a missile or a
-             fighter group when the engine says so. OMISSION
-             `shield_flare`: the shield's own flare is not drawn
+             stopped at the shield when it holds, the hit flash, the
+             shield's flare (`cbflare`, work order 200), and the damage
+             past the shields as a rising number; at a missile or a
+             fighter group when the engine says so
   missile_*  launches appear with the state after them; a hit shows its
              damage; a missile gone leaves
   destroy    CMBTSFX 3 / 4 / 5 by size at the unit's centre, the unit
@@ -33,14 +39,15 @@ WHAT EACH EVENT DOES here:
   bomb,      stasis field, tractor beam, gyro, plasma web, black hole,
   blast_hit, stellar converter, a bomb's flight and impact, a blast round
   web_damage its source, the web on a unit
-  others     their word over the unit, briefly (capture, raid, a reflection,
-             a special without its own frames here) — DEVIATION
-             `event_marks`
+  reflect    the beam sent back and the reflection field's flare
+             (`cbreflect`, work order 200)
+  others     their word over the unit, briefly (capture, raid, a special
+             without its own frames here) — DEVIATION `event_marks`
 """
 import copy
 import time
 
-from . import cbbeam, cbdraw, cbsfx, cbshot
+from . import cbbeam, cbdraw, cbflare, cbreflect, cbsfx, cbshot
 
 CELL = cbdraw.CELL
 MOVE_S = 0.15
@@ -60,6 +67,8 @@ RETREAT_SFX = 42
 class Player:
     def __init__(self):
         self._art = None                 # the artwork, from the first draw
+        self.fast = False                # the game's FAST ANIMATIONS (COPT)
+        self.colours, self.planet = {}, None   # for a flared target's picture
         self._palettes = {}              # beam colours -> one palette dict
         self.reset()
 
@@ -74,6 +83,8 @@ class Player:
         self._next_seq = None
         self._last_queued = None
         self._played = -1
+        self._carry = None       # a volley's flare, handed to its next shot
+        self.last_beam = None    # the shot a reflection sends back
 
     def busy(self):
         return bool(self._queue) or self._anim is not None
@@ -129,18 +140,26 @@ class Player:
         if done is not None:
             self.shown, self.ordnance = done[1], done[2]
 
+    @property
+    def reflection_frames(self):
+        return self._art.frame_count("beams", 0x59) if self._art else 4
+
+    def unit(self, i):
+        return self._unit(i)
+
     def _unit(self, i):
         units = self.shown["units"] if self.shown else []
         return units[i] if 0 <= i < len(units) else None
 
     def _start(self, ev, now):
         k = ev["kind"]
+        ev["_step"] = 2 if self.fast else 1
         if k == "move":
             if ev.get("teleport"):
                 return FRAME_S
             cells = max(abs(ev["to_x"] - ev["from_x"]),
                         abs(ev["to_y"] - ev["from_y"]), 1)
-            return MOVE_S * cells
+            return MOVE_S * cells / (6 if self.fast else 1)
         if k == "rotate":
             return FRAME_S * max(1, _turn_steps(ev["from_facing"],
                                                 ev["to_facing"]))
@@ -150,18 +169,26 @@ class Player:
                 ev["_sfx"] = p
                 u = self._unit(ev.get("unit", ev.get("target", -1)))
                 hit = ev.get("past_shields") or ev.get("hits")
+                ticks = -(-p["frames"] // ev["_step"])
                 if u is not None and hit:
                     self._marks.append((str(hit), *cbdraw.centre(u),
-                                        now + p["frames"] * FRAME_S,
+                                        now + ticks * FRAME_S,
                                         (0xff, 0xcc, 0x40)))
-                return p["frames"] * FRAME_S
+                return ticks * FRAME_S
         if k == "beam_shot":
             u = None if ev.get("at_missile") else \
                 self._unit(ev.get("target", -1))
             dur = BOLT_S
-            b = self._beam(ev)
+            b = ev["_beam"] = self._beam(ev)
             if b is not None:
-                dur = (b["frames"] + 2) * FRAME_S
+                nxt = self._queue[0] if self._queue else None
+                volley = nxt is not None and nxt["kind"] == "beam_shot" and \
+                    not nxt.get("at_missile") and all(
+                        nxt.get(f) == ev.get(f) for f in ("source", "target"))
+                self.last_beam = ev
+                self._carry = cbshot.plan(ev, b, cbshot.flared(self, ev, u),
+                                          self.fast, self._carry, volley)
+                dur = len(b["ticks"]) * FRAME_S
             if u is not None and ev["past_shields"]:
                 self._marks.append((str(ev["past_shields"]),
                                     *cbdraw.centre(u), now + dur,
@@ -173,13 +200,32 @@ class Player:
                 self._marks.append((str(ev["past_shields"]),
                                     *cbdraw.centre(u), now,
                                     (0xff, 0xcc, 0x40)))
+            if k == "missile_hit" and u is not None and ev.get("target") and \
+                    ev.get("absorbed", 0) > 0 and not ev.get("anti_missile"):
+                m = next((m for m in (self.ordnance or {}).get("missiles", [])
+                          if m.get("index") == ev.get("missile")), None)
+                at = cbdraw.centre(u)
+                b = ev["_beam"] = cbshot.plan_once(
+                    u, cbflare.SHIP_SIZE.get(int(u["size_class"]), 1), at,
+                    (m["x"], m["y"]) if m else at)
+                return len(b["ticks"]) * FRAME_S
             return 3 * FRAME_S
         if k == "destroy":
-            return 18 * FRAME_S
+            return 18 * FRAME_S / ev["_step"]
         if k == "retreat":
-            return 12 * FRAME_S
+            return 12 * FRAME_S / (3 if self.fast else 1)
+        if k == "reflect":
+            b = ev["_beam"] = cbreflect.plan(self, ev)
+            u = self._unit(ev.get("shooter", -1))
+            if b is not None:
+                if u is not None and ev.get("past_shields"):
+                    self._marks.append((str(ev["past_shields"]),
+                                        *cbdraw.centre(u), now + len(
+                                            b["ticks"]) * FRAME_S / 2,
+                                        (0xff, 0xcc, 0x40)))
+                return len(b["ticks"]) * FRAME_S
         if k in ("capture", "raid", "blast_hit", "web_damage", "bomb",
-                 "reflect", "special"):
+                 "special"):
             u = self._unit(ev.get("defender", ev.get("target",
                                                      ev.get("unit", -1))))
             if u is not None:
@@ -232,6 +278,7 @@ class Player:
         specials = weapons[slot]["specials"] if 0 <= slot < len(weapons) \
             else 0
         f = cbbeam.fx(ev.get("weapon", 0), specials)
+        total = self._art.frame_count("beams", 67) if self._art else 0
         cols = None
         if f is None:                   # not a "Steve stuff" weapon
             cols, length, step = FRAGMENT.get(ev.get("weapon"), (5, 20, 40))
@@ -244,7 +291,8 @@ class Player:
         size = {0: 0, 1: 1, 2: 1, 3: 2, 4: 3, 5: 3}.get(
             int(dst["size_class"]), 1) if dst is not None else 0
         return {"fx": f, "fragment": cols, "src": a, "dst": b, "frames": n,
-                "stop": size if holds else None}
+                "stop": size if holds else None, "specials": specials,
+                "total": total or 10}
 
     def _target_point(self, ev):
         """Where a shot goes (world px): the target unit's centre — or, when
@@ -258,7 +306,9 @@ class Player:
         return cbdraw.centre(u) if u is not None else None
 
     def _draw_beam(self, surface, cam, art, ev, b, t, cache):
-        cbshot.draw(surface, cam, art, ev, b, t, cache, self._palettes)
+        cbshot.draw(surface, cam, art, ev, cbshot.ramps(self, b), t, cache,
+                    self._palettes,
+                    cbshot.look(self, ev, art) if b.get("flare") else None)
 
     # ── drawing ────────────────────────────────────────────────────
     def draw(self, surface, cam, art, style, scale, cache):
@@ -303,10 +353,11 @@ class Player:
         elif "_sfx" in ev:
             p = ev["_sfx"]
             if p["frames"]:
-                p["draw"](surface, cam, cache,
-                          min(p["frames"] - 1, int(t * p["frames"])))
-        elif k == "beam_shot":
-            b = self._beam(ev)
+                n = ev.get("_step", 1)
+                p["draw"](surface, cam, cache, min(
+                    p["frames"] - 1, n * int(t * -(-p["frames"] // n))))
+        elif k in ("beam_shot", "missile_hit", "reflect"):
+            b = ev.get("_beam")
             if b is not None:
                 self._draw_beam(surface, cam, art, ev, b, t, cache)
         elif k in ("destroy", "retreat"):

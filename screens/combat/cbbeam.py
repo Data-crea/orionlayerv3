@@ -83,9 +83,11 @@ def max_frames(src, dst, f):
     return max(3, (rng + eff) // step), step
 
 
-def segment(src, dst, f, frame, stop_size=None):
+def segment(src, dst, f, frame, stop_size=None, skip=0):
     """(bx1, by1, bx2, by2) of the bolt at `frame` (:2294-2368), or None on
-    the frame that draws only the muzzle (frame 0) or after the last."""
+    the frame that draws only the muzzle (frame 0) or after the last.
+    `skip`: a reflected beam's tail starts that far out — a third of the
+    reflection field's diameter (:2388-2395)."""
     n, step = max_frames(src, dst, f)
     if frame >= n or frame == 0:
         return None
@@ -94,6 +96,7 @@ def segment(src, dst, f, frame, stop_size=None):
     tail = min(max(0, head - f["length"]), rng)
     if f["style"] == 2:                  # continuous: the whole way, at once
         head, tail = rng, 0
+    tail = min(tail + skip, rng)
     cut = 0
     if stop_size is not None:
         cut = min(SHIELD_DIAMETERS[stop_size] // 3, f["length"] - 1)
@@ -286,14 +289,17 @@ def draw_beam2(canvas, rnd, start, end, p1, p2, frame, f):
                               100, 3, frame * 2, 0, 0, 0, 1, c, c, b, b, a, a)
 
 
-def shot(src, dst, f, frame, stop_size, seed):
-    """The bolt's pixels at `frame`: {(x, y): colour offset}, native px."""
-    seg = segment(src, dst, f, frame, stop_size)
+def shot(src, dst, f, frame, stop_size, seed, skip=0):
+    """The bolt's pixels at `frame`: {(x, y): colour offset}, native px.
+    A reflected beam (`skip`) also starts its strands at its tail, as the
+    original's does (`attacker_x = bx1`, :2421-2424)."""
+    seg = segment(src, dst, f, frame, stop_size, skip)
     canvas = Canvas()
     if seg is not None:
         rnd = random.Random(seed * 131 + frame)
         bx1, by1, bx2, by2 = seg
-        draw_beam2(canvas, rnd, src, dst, (bx1, by1), (bx2, by2), frame, f)
+        draw_beam2(canvas, rnd, (bx1, by1) if skip else src, dst, (bx1, by1),
+                   (bx2, by2), frame, f)
     return canvas.px
 
 

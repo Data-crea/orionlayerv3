@@ -6,8 +6,9 @@ unit's name (:517-521), its picture with the shield rings (:2057-2344), its
 weapons — or, by the WEAPONS / SPECIALS toggle, its special systems
 (:543-591) — its systems box (drive, shields, computer, structure, armour,
 speed and "Remaining", :360-425), and the buttons AUTO, SCAN, BOARD,
-RETREAT, WAIT, DONE (:1268-1305). SCAN and BOARD are modes HD holds itself
-until a unit is clicked (`cbpopups`, work order 199).
+RETREAT, WAIT, DONE (:1268-1305) and OPTIONS under them (combat1.cpp:178,
+the panel itself is `cbopts`, work order 200). SCAN and BOARD are modes HD
+holds itself until a unit is clicked (`cbpopups`, work order 199).
 
 TRANSCRIPTION `weapon_rows` (199 C3): each weapon row as
 `Draw_Weapon_Status_Display_` writes it (:2765-2933) — the shots left (the
@@ -27,14 +28,22 @@ whole field is on the screen, HD EXTENSION `whole_grid`). DEVIATION
 `shield_rings`: the shields round the unit's picture are HD's rings, one
 per ten points left in each of the four arcs (front, right, back, left
 as `Facing_Shield_` counts them, cmbtfire.cpp:226-237), not the original's
-COMBAT.LBX ring masks. OMISSION `combat_options`: the OPTIONS button and
-its option lights are not drawn — the options are the game's settings.
-Each weapon row is a SWITCH, as the original's eight hidden weapon rows
-are (combat1.cpp:594-613: a click cycles the slot on and off) — HD keeps
-the switch itself and sends the mask with FIRE (open fix 58), one command
-per shot (decision 47).
+COMBAT.LBX ring masks.
+TRANSCRIPTION `weapon_switch` (work order 200): each weapon row IS the
+original's own switch — a hidden field over the row (combat1.cpp:180-183)
+that cycles the slot's `active` 1 -> 0 -> -1 -> 1 (:594-613): 1 fires on
+the next FIRE, 0 sits out that one shot (the fire puts it back to 1), -1
+is off for good — and only -1 keeps a weapon out of the defensive fire at
+an enemy moving past (`Defensive_Fire_Check_`, cmbtfir2.cpp:868-930).
+HD clicks that field, the next only once the last one's change is on the
+wire, and shows each row as the battle holds it (lit at 1, dimmed at 0,
+dark at -1, as the original's three colours, cmbtdrw1.cpp:2786-2849);
+FIRE sends the rows that are at 1 (open fix 58), one command per shot
+(decision 47). Work order 199 had kept the switch in HD alone, so a weapon
+could not be taken out of the defensive fire.
 """
 import math
+import time
 
 import pygame
 
@@ -44,18 +53,36 @@ from core.hud import text as hudtext
 TABS = (("weapons", "WEAPONS"), ("specials", "SPECIALS"))
 BUTTONS = (("auto", "AUTO", ord("A")), ("scan", "SCAN", ord("S")),
            ("board", "BOARD", ord("B")), ("retreat", "RETREAT", ord("R")),
-           ("wait", "WAIT", ord("W")), ("done", "DONE", ord("D")))
+           ("wait", "WAIT", ord("W")), ("done", "DONE", ord("D")),
+           ("options", "OPTIONS", ord("O")))
 #: `TECHDATA::_weapons[i].type` (techdata.cpp:481-527, the struct's last
 #: field): 0 beam, 1 missile, 2 torpedo, 3 bomb, 4 fighter, 5 special.
 WEAPON_TYPE = (0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 5, 1, 1, 1, 1, 2, 2, 2,
                3, 3, 3, 3, 3, 3, 0, 4, 4, 4, 4, 5, 5, 5, 5, 5, 5, 5, 5, 2, 0,
                0, 0, 5, 5)
 ANTI_MISSILE = 33
+ALL_SECTORS = 0x0F
 HEAVY, POINT_DEFENSE = 0x02, 0x04
 #: WEAPON_MOD_HEAVY_MOUNT / _POINT_DEFENSE (orion2_consts.h) in the
 #: modification tables
 MOD_HEAVY, MOD_PD = 1, 2
 TURNS = "t"                       # KENTEXT 85 (English)
+ROW_WAIT = 3.0                    # s: a switch whose change never arrives
+
+
+def row_field(fields, k):
+    """The original's hidden field over weapon row `k` (combat1.cpp:180-183:
+    (120, y - 10) to (255, y), y = 389 + 11 k)."""
+    rect = (120, 389 + 11 * k - 10, 255, 389 + 11 * k)
+    return next((f for f in fields or [] if f.index and
+                 (f.x, f.y, f.x_end, f.y_end) == rect), None)
+
+
+def on_mask(unit):
+    """The rows that fire on the next FIRE: `active` 1 (`Weapon_Is_On_`,
+    cmbtdrw1.cpp:2592-2594)."""
+    return sum(1 << k for k, w in enumerate(unit["weapons"])
+               if w["count"] > 0 and w["active"] == 1)
 
 
 def weapon_row(w, names, ken):
@@ -79,7 +106,10 @@ def weapon_row(w, names, ken):
             label += f" {ammo}{TURNS}"
     elif kind == 0:
         arc = int(w["arc"])
-        word = "360" if arc == 0x10 else \
+        # the panel's own switch (:2902-2924): ALL_SECTORS is 0x0F
+        # (orion2_consts.h:1084) — work order 199 had 0x10, which is the
+        # designer's `Weapon_Arc_String_` test, not this one
+        word = "360" if arc == ALL_SECTORS else \
             (ken.arc(arc) if ken is not None and arc in (1, 2, 4, 8) else "")
         label += f" ({word or ''})"
     exhausted = (kind in (1, 3, 4) and ammo == 0) or \
@@ -120,6 +150,24 @@ class Panel:
         self.rects = {}           # button key -> window rect
         self.rows = []            # (window rect, slot) of the weapon rows
         self.tabs = {}            # "weapons" / "specials" -> window rect
+        self.buttons = None       # the button block (the OPTIONS panel's place)
+        self._row_wait = None     # (row, active before, time) after a switch
+
+    def switch(self, row, state, client):
+        """A click on weapon row `row`: the original's own field, once the
+        last switch's change is on the wire. True when it was sent."""
+        live = state.combat["units"][state.combat["cur_ship"]]
+        w = self._row_wait
+        if w and (live["weapons"][w[0]]["active"] != w[1] or
+                  time.monotonic() - w[2] > ROW_WAIT):
+            self._row_wait = w = None
+        f = row_field(getattr(state, "fields", None), row)
+        if w is not None or f is None:
+            return False
+        client.activate_field(f.index)
+        self._row_wait = (row, live["weapons"][row]["active"],
+                          time.monotonic())
+        return True
 
     @staticmethod
     def area(win_w, win_h):
@@ -127,7 +175,7 @@ class Panel:
         h = int(win_h * 129 / 480 * 0.75)
         return pygame.Rect(0, win_h - h, win_w, h)
 
-    def draw(self, surface, style, unit, names, ken, mask, board_mode, live,
+    def draw(self, surface, style, unit, names, ken, actives, board_mode, live,
              scale, picture=None, specials=False):
         band = self.area(*surface.get_size())
         hud.panel(surface, band.inflate(-8, -8), scale, dense=True)
@@ -167,7 +215,9 @@ class Panel:
                           inner.h)
         right = pygame.Rect(mid.right + pad, inner.y,
                             inner.right - mid.right - pad, inner.h)
-        bw, bh = (right.w - pad) // 2, max(small + 8, right.h // 3 - pad)
+        rows = (len(BUTTONS) + 1) // 2
+        bw = (right.w - pad) // 2
+        bh = max(small + 8, (right.h - (rows - 1) * (pad // 2)) // rows)
         # TRANSCRIPTION `tab_words` (work order 200): the original's WEAPONS
         # and SPECIALS pictures (COMBAT.LBX 7 and 8, combinit.cpp:688, :697)
         # carry their word at the same 7-row cap height as the AUTO ... DONE
@@ -211,19 +261,22 @@ class Panel:
                 if wpn["count"] <= 0 or wpn["weapon_id"] <= 0:
                     continue
                 r = pygame.Rect(body.x, body.y + k * row_h, body.w, row_h - 2)
-                on = bool(mask >> k & 1)
+                state = actives[k] if k < len(actives) else 1
                 count, label, exhausted = weapon_row(wpn, names, ken)
-                hud.small_button(surface, r, scale, "active" if on else
-                                 "normal")
+                hud.small_button(surface, r, scale, {1: "active", 0: "normal"}
+                                 .get(state, "disabled"))
                 hudtext.blit(surface, style.render_text(
                     f"{count}  {label}", small, hudtext.colour(
-                        "label" if exhausted else "button")[:3]),
+                        "label" if exhausted or state != 1 else "button")[:3]),
                     r.inflate(-pad, 0), align="left")
                 self.rows.append((r, k))
         # the buttons (right), each only while the live list carries it
+        self.buttons = right
         for n, (key, word, hotkey) in enumerate(BUTTONS):
             r = pygame.Rect(right.x + (n % 2) * (bw + pad),
                             right.y + (n // 2) * (bh + pad // 2), bw, bh)
+            if n == len(BUTTONS) - 1 and n % 2 == 0:    # OPTIONS, centred
+                r.x = right.x + (right.w - bw) // 2
             state = "active" if board_mode == {"board": True,
                                                "scan": "scan"}.get(key) else \
                 "normal" if key in live else "disabled"
