@@ -87,7 +87,11 @@ class RacesArt:
                     palette.update(lbx.read_palette(blob, header.frame_count))
                 surface = pygame.image.frombuffer(
                     lbx.rgba_bytes(pixels, palette),
-                    (header.width, header.height), "RGBA").copy()
+                    (header.width, header.height), "RGBA")
+                # once in the display's format (work order 202 A, as `ldrart`):
+                # R-G-B-A is converted pixel by pixel on every blit otherwise
+                surface = surface.convert_alpha() \
+                    if pygame.display.get_surface() is not None else surface.copy()
         except (OSError, lbx.LbxError, ValueError):
             surface = None
         self._cache[name] = surface

@@ -166,7 +166,7 @@ class CombatArt:
                     pal.update(palette)
                 px = lbx.decode_composed(b, h, frame)
                 if px is not None:
-                    surf = _rgba(px, h.width, h.height, pal)
+                    surf = display_format(_rgba(px, h.width, h.height, pal))
                     if mirror or flip:
                         surf = pygame.transform.flip(surf, mirror, flip)
             except (lbx.LbxError, ValueError):
@@ -188,7 +188,7 @@ class CombatArt:
             img = pygame.image.load(path)
         except (pygame.error, OSError):
             return None
-        return img.convert_alpha() if pygame.display.get_surface() else img
+        return display_format(img)
 
     def ship(self, colour, picture, facing, glow=0, monster=False):
         """A battle unit's picture for its facing and glow frame 0..3."""
@@ -228,6 +228,21 @@ def planet_picture(art, state, c):
             extra = None
     pic = art.surface("cmbtplnt", climate * 6 + size, 0, extra)
     return (pic, size) if pic is not None else None
+
+
+def display_format(surf):
+    """The surface in the display's own pixel format, once, after decoding
+    (work order 202 A). `_rgba` builds R-G-B-A bytes (red mask 0xff); the
+    display keeps red at 0xff0000 (Xvfb's x11 and SDL's dummy driver,
+    measured in 202), so SDL converted every pixel of every blit: the
+    three star layers alone cost 148 ms a frame
+    (`dev:doc/combat_lag_analysis.md` §2, item 1). Converting changes no
+    pixel (201's counter-test, 202's walk over every picture).
+    Without a display (a tool that never opens one) the surface stays as
+    it is: `convert_alpha` needs a display to convert to."""
+    if surf is None or pygame.display.get_surface() is None:
+        return surf
+    return surf.convert_alpha()
 
 
 def _rgba(pixels, w, h, palette):
