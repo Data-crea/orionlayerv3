@@ -36,7 +36,7 @@ import struct as _st
 
 import pygame
 
-from core import helpformat
+from core import helpformat, lang
 from core.hud import blocks as hud
 from core.hud import text as hudtext
 
@@ -214,29 +214,32 @@ def draw(surface, style, labels, box):
     inner = w - 2 * pad
     size = max(10, int(REF_FONT * s))
     colour = hudtext.colour("value")
-    rows = []
-    from core.textfit import wrap_rendered
-    for ln in helpformat.parse(box["text"] or "", box.get("items")):
-        plain = ln.plain()
-        if not plain.strip():
-            rows.append(None)
-            continue
-        pair = split_right(ln)
-        if pair is not None:
-            # a table row: the label left and the value right, in a column
-            # of the box's text width (FMTPARA's justification codes)
-            rows.append((style.render_text(pair[0], size, colour[:3]),
-                         style.render_text(pair[1], size, colour[:3])))
-        else:
-            rows.extend(wrap_rendered(style, plain, size, inner, colour))
-        if ln.paragraph_break:
-            rows.append(None)
-    while rows and rows[-1] is None:
-        rows.pop()
-    step = int(size * 1.3)
-    title = style.render_text(box["title"], max(12, int(REF_TITLE_FONT * s)),
-                              tuple(hudtext.colour("title")[:3])) \
-        if box.get("title") else None
+    # the box's text and title are the game's: no word of them is
+    # OrionLayer's to translate (work order 200 C, `core/lang.verbatim`)
+    with lang.verbatim():
+        rows = []
+        from core.textfit import wrap_rendered
+        for ln in helpformat.parse(box["text"] or "", box.get("items")):
+            plain = ln.plain()
+            if not plain.strip():
+                rows.append(None)
+                continue
+            pair = split_right(ln)
+            if pair is not None:
+                # a table row: the label left and the value right, in a column
+                # of the box's text width (FMTPARA's justification codes)
+                rows.append((style.render_text(pair[0], size, colour[:3]),
+                             style.render_text(pair[1], size, colour[:3])))
+            else:
+                rows.extend(wrap_rendered(style, plain, size, inner, colour))
+            if ln.paragraph_break:
+                rows.append(None)
+        while rows and rows[-1] is None:
+            rows.pop()
+        step = int(size * 1.3)
+        title = style.render_text(box["title"], max(12, int(REF_TITLE_FONT * s)),
+                                  tuple(hudtext.colour("title")[:3])) \
+            if box.get("title") else None
     bw, bh = int(REF_BUTTON[0] * s), int(REF_BUTTON[1] * s)
     text_h = sum(step if r is not None else step // 2 for r in rows)
     h = pad + (title.get_height() + pad // 2 if title else 0) + text_h + \

@@ -39,7 +39,7 @@ TRANSCRIPTION `popup_right`, `turnpopupcontent.RIGHT_HELP`.)
 """
 import pygame
 
-from core import helpformat
+from core import helpformat, lang
 from core.msgbox import dimmed_base
 from core.hud import blocks as hud
 from core.hud import text as hudtext
@@ -136,12 +136,13 @@ def draw(surface, style, c):
     # to it (a leader offer's question ran past the panel's edge, seen in
     # work order 200 B's pictures)
     text_w = inner - (pic.get_width() + pad if pic is not None else 0)
-    for text in c["lines"]:
-        if isinstance(text, tuple):           # a table row: label, value
-            rows.append((style.render_text(text[0], size, colour[:3]),
-                         style.render_text(text[1], size, colour[:3])))
-            continue
-        rows.extend(_wrap(style, text, size, text_w, colour) or [None])
+    with lang.verbatim():          # the popup's lines are the game's (200 C)
+        for text in c["lines"]:
+            if isinstance(text, tuple):       # a table row: label, value
+                rows.append((style.render_text(text[0], size, colour[:3]),
+                             style.render_text(text[1], size, colour[:3])))
+                continue
+            rows.extend(_wrap(style, text, size, text_w, colour) or [None])
     step = int(size * 1.3)
     title = (style.render_text(c["title"], max(12, int(REF_TITLE_FONT * s)),
                                tuple(hudtext.colour("title")[:3]))

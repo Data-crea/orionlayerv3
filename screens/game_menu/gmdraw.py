@@ -16,7 +16,7 @@ game's own strings from HESTRNGS.
 """
 import pygame
 
-from core import mouse as mouse_input
+from core import lang, mouse as mouse_input
 from core.hud import blocks as hud
 from core.hud import glyphs
 
@@ -128,6 +128,13 @@ def button(screen, surface, name, word):
     img = screen.style.render_text(
         word, size, tuple(screen.pressed.colour(name, COL_BUTTON)[:3]))
     r = b.screen_rect
+    # the text-fit rule outside English (work order 200 C: ÜBERNEHMEN was
+    # wider than its button); English is drawn exactly as before
+    while img.get_width() > r.w * 0.9 and size > 8 and \
+            lang.current() != lang.DEFAULT:
+        size -= 1
+        img = screen.style.render_text(
+            word, size, tuple(screen.pressed.colour(name, COL_BUTTON)[:3]))
     # The button's glyph beside the word when both fit (work order 179).
     cx = hud.icon_beside(surface, r, glyphs.for_button("game_menu", name),
                          img.get_width())

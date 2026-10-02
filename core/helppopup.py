@@ -38,7 +38,7 @@ import pygame
 
 from core.hud import blocks as hud
 
-from core import helpformat
+from core import helpformat, lang
 from core import palette
 from core import textfit
 
@@ -189,7 +189,8 @@ class HelpPopup:
         close_size = max(8, L.font_size(int(FONT_CLOSE * fs)))
 
         inner_w = max(40, int((bw - 2 * PAD_X) * L.scale))
-        blocks = self._blocks(style, title_size, body_size, inner_w)
+        with lang.verbatim():         # the game's help text (200 C)
+            blocks = self._blocks(style, title_size, body_size, inner_w)
         content_h = sum(h for _, h in blocks)
 
         pad_top = int(PAD_TOP * L.scale)

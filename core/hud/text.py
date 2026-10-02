@@ -12,6 +12,8 @@ blocked-glyph fallback of decision 30 still applies.
 """
 import pygame
 
+from core import lang
+
 from core.hud import style as hudstyle
 
 #: font px -> cap-height px, measured once per font on "H".
@@ -55,6 +57,13 @@ def blit(surface, surf, rect, align="center", valign="center", ink=True):
     all-caps word centred by its line box sits high (galaxy frame v2,
     16 September 2026 — the same fault, kept fixed here)."""
     r = pygame.Rect(rect)
+    if surf.get_width() > r.w > 0 and lang.current() != lang.DEFAULT:
+        # THE TEXT-FIT RULE for a one-line label (`core/textfit`: wrap, then
+        # shrink): a German word longer than the English one it replaces
+        # is drawn smaller, never past its box (work order 200 C). English
+        # is left exactly as it was drawn before.
+        surf = pygame.transform.smoothscale(
+            surf, (r.w, max(1, surf.get_height() * r.w // surf.get_width())))
     if align == "left":
         x = r.x
     elif align == "right":

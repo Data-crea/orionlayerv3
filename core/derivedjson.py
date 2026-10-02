@@ -21,6 +21,8 @@ logs what it logged before, letter for letter.
 import json
 import os
 
+from core import lang
+
 
 def load(path, log, label, how, rerun, format_version):
     """`(data, stale)` for the versioned JSON file at `path`.
@@ -29,7 +31,12 @@ def load(path, log, label, how, rerun, format_version):
     `how`") or will not load (warning); `(None, True)` when its format is
     older than `format_version` (warning: "… — re-run `rerun`"); otherwise
     `(data, False)` with the parsed dict.
+
+    A file in a language the install has no source for is read in English
+    (`lang.source`, work order 200 C), and a German file's characters are
+    decoded (`lang.decode`).
     """
+    path, language = lang.source(path)
     if not os.path.exists(path):
         log.info(f"{label}: %s absent — run `{how}`", path)
         return None, False
@@ -44,4 +51,4 @@ def load(path, log, label, how, rerun, format_version):
                     f"re-run {rerun}", path, data.get("format"),
                     format_version)
         return None, True
-    return data, False
+    return lang.decode(data, language), False

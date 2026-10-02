@@ -55,7 +55,9 @@ class ArcWords:
             os.path.dirname(os.path.abspath(__file__))))
 
     def _load(self, root):
-        path = os.path.join(root, *string_file(self.language).split("/"))
+        from core import lang
+        path, language = lang.source(
+            os.path.join(root, *string_file(self.language).split("/")))
         if not os.path.exists(path):
             self.absent = (f"{string_file(self.language)} is not there — "
                            f"run: python tools/kentext_extract.py "
@@ -71,7 +73,8 @@ class ArcWords:
             self.absent = (f"{path}: format {doc.get('format')!r}, this "
                            f"build reads {FORMAT_VERSION} — re-extract")
             return
-        self.arcs = {int(k): v for k, v in (doc.get("arcs") or {}).items()}
+        self.arcs = {int(k): v for k, v in
+                     lang.decode(doc.get("arcs") or {}, language).items()}
 
     @property
     def available(self):

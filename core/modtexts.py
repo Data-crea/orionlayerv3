@@ -25,7 +25,10 @@ extracted file when the screen asks, and is never in this tree.
 
 **THE FILES** (the format is parked for Data, 175 item 3): one plain
 UTF-8 text file per key, `texts/<first segment>/<rest of the key>.txt` —
-`info.tab.history` is `texts/info/tab.history.txt`. The whole file is the
+`info.tab.history` is `texts/info/tab.history.txt`. PER LANGUAGE (decision
+C-3, work order 200 C): in German `texts/de/info/tab.history.txt` is read
+first; the file without a language is the mod's own words and is used in
+every language that has none of its own. The whole file is the
 text; one trailing newline is dropped; a blank line is a paragraph break.
 Somebody who is not a programmer opens the file OrionLayer's template
 wrote, types, saves.
@@ -43,7 +46,7 @@ resolver knows nothing Info-specific.
 import importlib
 import logging
 
-from core import usermod
+from core import lang, usermod
 
 log = logging.getLogger("modtexts")
 
@@ -88,9 +91,13 @@ def keys():
     return {k: _registry[k][1] for k in sorted(_registry)}
 
 
-def file_name(key):
-    """The mod file that replaces `key`: texts/<first>/<rest>.txt."""
+def file_name(key, language=None):
+    """The mod file that replaces `key`: texts/<first>/<rest>.txt — and in
+    a language other than English texts/<language>/<first>/<rest>.txt
+    first (decision C-3, work order 200 C)."""
     first, _, rest = key.partition(".")
+    if language and language != lang.DEFAULT:
+        return f"texts/{language}/{first}/{rest}.txt"
     return f"texts/{first}/{rest}.txt"
 
 
@@ -120,6 +127,11 @@ def text(key, fallback=None):
     if got is not None and got[1] == "game":
         return fallback
     if got is not None:
+        if lang.current() != lang.DEFAULT:
+            mine = usermod.read_text(file_name(key, lang.current()),
+                                     MAX_BYTES)
+            if mine is not None:
+                return mine
         mine = usermod.read_text(file_name(key), MAX_BYTES)
         if mine is not None:
             return mine

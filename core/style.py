@@ -15,6 +15,7 @@ import hashlib
 import logging
 import pygame
 
+from core import lang
 from core.hud import blocks as hud
 
 log = logging.getLogger("style")
@@ -25,6 +26,27 @@ def _scale_of(surface):
     window: `Layout.scale`'s own rule (the smaller axis factor), for the
     callers that hand a skin a rect and no layout."""
     return min(surface.get_width() / 1920.0, surface.get_height() / 1080.0)
+
+
+class _TrFont:
+    """A font whose `render` and `size` see OrionLayer's own words in the
+    language shown (`core.lang.tr`, work order 200 C): the screens that
+    draw with a font directly (the galaxy map's sidebar, the pre-game
+    pages) are translated where `render_text` translates. English passes
+    through untouched; everything else is the font's."""
+    __slots__ = ("_font",)
+
+    def __init__(self, font):
+        self._font = font
+
+    def render(self, text, *args, **kwargs):
+        return self._font.render(lang.tr(text), *args, **kwargs)
+
+    def size(self, text):
+        return self._font.size(lang.tr(text))
+
+    def __getattr__(self, name):
+        return getattr(self._font, name)
 
 
 class StyleRenderer:
@@ -68,10 +90,10 @@ class StyleRenderer:
         size = max(8, size)
         if size not in self._font_cache:
             if self._font_path and os.path.exists(self._font_path):
-                self._font_cache[size] = pygame.font.Font(
-                    self._font_path, size)
+                self._font_cache[size] = _TrFont(pygame.font.Font(
+                    self._font_path, size))
             else:
-                self._font_cache[size] = pygame.font.Font(None, size)
+                self._font_cache[size] = _TrFont(pygame.font.Font(None, size))
         return self._font_cache[size]
 
     def get_prop_font(self, size):
@@ -83,7 +105,7 @@ class StyleRenderer:
         size = max(8, size)
         key = ("prop", size)
         if key not in self._font_cache:
-            self._font_cache[key] = pygame.font.Font(None, size)
+            self._font_cache[key] = _TrFont(pygame.font.Font(None, size))
         return self._font_cache[key]
 
     # ── Glyph substitution handling ──────────────────────
@@ -167,6 +189,7 @@ class StyleRenderer:
         and costs exactly what font.render() used to.
         """
         size = max(8, size)
+        text = lang.tr(text)          # OrionLayer's own words (200 C)
         runs = self.split_runs(text)
         if len(runs) <= 1 and not (runs and runs[0][0]):
             return self.get_font(size).render(text, antialias, color)

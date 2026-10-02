@@ -102,6 +102,9 @@ DEFAULTS = {
     # The Panel glass slider (work order 174), 0 see-through .. 1 solid;
     # None is the default (the measured 0.5, or a mod's).
     "hud_glass": None,
+    # The language OrionLayer shows (work order 200 C, `core/lang`): None
+    # is settings.json's ("en"). Read at start, so a change needs a restart.
+    "language": None,
 }
 
 

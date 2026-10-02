@@ -115,7 +115,17 @@ class HelpText:
         if isinstance(labels, dict):
             self._labels.update(labels)
 
-        data = self.res.load_json(help_file(self.language))
+        # no help file in this language: the English one (work order
+        # 200 C, `core.lang.source`); a German one's characters decoded
+        from core import lang
+        language = self.language
+        data = self.res.load_json(help_file(language))
+        if data is None and language in lang.LANGUAGES and \
+                language != lang.DEFAULT:
+            lang.source(help_file(language))     # logged once
+            language = lang.DEFAULT
+            data = self.res.load_json(help_file(language))
+        data = lang.decode(data, language)
         if not isinstance(data, dict):
             self._entries = {}
             self._available = False
@@ -160,7 +170,10 @@ class HelpText:
         return self._available
 
     def label(self, key):
-        return self._labels.get(key, FALLBACK_LABELS.get(key, ""))
+        """OrionLayer's own words of the popup, in the language shown (the
+        help popup draws its text verbatim, `core/lang.verbatim`)."""
+        from core import lang
+        return lang.tr(self._labels.get(key, FALLBACK_LABELS.get(key, "")))
 
     def entry(self, help_id):
         """Return (title, body) for a help id, or None.

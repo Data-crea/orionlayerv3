@@ -58,7 +58,7 @@ import collections
 
 import pygame
 
-from core import palette
+from core import lang, palette
 from core import textfit
 
 from .colonyempire import format_value
@@ -119,7 +119,14 @@ def fill_template(template, values):
     deliberate: a label that renders `{gravity}` on screen says which
     key is missing, and one that renders nothing says only that
     something is wrong.
+
+    In German (work order 200 C) the template and every word value are
+    OrionLayer's words, translated before they are put together
+    (`core.lang.tr`); English passes through untouched.
     """
+    template = lang.tr(template)
+    values = {k: lang.tr(v) if isinstance(v, str) else v
+              for k, v in values.items()}
     for key, value in values.items():
         template = template.replace("{" + key + "}", str(value))
     return template

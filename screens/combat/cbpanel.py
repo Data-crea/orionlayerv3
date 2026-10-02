@@ -47,6 +47,7 @@ import time
 
 import pygame
 
+from core import lang
 from core.hud import blocks as hud
 from core.hud import text as hudtext
 
@@ -207,7 +208,7 @@ class Panel:
                  ("Remaining", unit["movement_left"], unit["current_speed"]))
         y = left.y + size + 8
         for label, value, top in facts:
-            text = f"{label}  {value}" + (f" / {top}" if top else "")
+            text = f"{lang.tr(label)}  {value}" + (f" / {top}" if top else "")
             hudtext.blit(surface, style.render_text(
                 text, small, hudtext.colour("label")[:3]),
                 pygame.Rect(left.x, y, left.w // 2, small + 2), align="left")

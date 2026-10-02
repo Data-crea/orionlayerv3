@@ -112,6 +112,28 @@ their keys only, and OrionLayer reads them from your own game files.
 Screens that could use the same resolver next: the menus, Custom Race's
 messages, the HUD headings, the Leaders button words.
 
+### Texts per language (work order 200 C)
+
+OrionLayer speaks English or German (Game Settings, LANGUAGE; read at the
+next start). For a key, a German file goes one folder deeper, under the
+language's code:
+
+```
+info.tab.reference  ->  texts/de/info/tab.reference.txt   (German)
+                    ->  texts/info/tab.reference.txt      (English, and any
+                                                           language without
+                                                           its own file)
+```
+
+OrionLayer's OWN words in German — every button, heading and notice it
+writes itself — are one table, `assets/shared/lang/de.json` (`"words"`:
+the English text, then the German). Put your own copy at
+`files/assets/shared/lang/de.json` in your folder and it replaces the
+built-in table; keep the English side exactly as OrionLayer shows it, and
+keep the placeholders (`{n}`, `%d`) on the German side. The game's own
+words are not in this table: they come from your German game files where
+your installation has them, and stay English where it has none.
+
 Everything below is the **developer's** route: mods inside the tree,
 which can also replace data, layouts and whole screens.
 

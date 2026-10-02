@@ -5,7 +5,7 @@ import logging
 import pygame
 from core.config import (load_settings, TARGET_FPS, SCREENS_DIR,
                          build_line)
-from core import resources, palette, usermod, usersettings, frameslot
+from core import resources, palette, usermod, usersettings, frameslot, lang
 from core import cursor as cursor_gfx
 from core import mouse as mouse_input
 from core.layout import Layout
@@ -56,6 +56,10 @@ class App:
         # anything is loaded through the resolver: skin colours, the HUD
         # style, the frame colour and every picture below come through it.
         usermod.init(self.user_settings.get("user_mod") != "off")
+        # The language (work order 200 C, `core/lang`): the player's switch,
+        # else settings.json's — read here once, so a change needs a restart.
+        self.settings["language"] = lang.configure(self.user_settings.get(
+            "language") or self.settings.get("language"), self.res)
 
         # Skin colors (per-screen palettes resolve at screen import)
         skin = self.settings.get("skin", "default")

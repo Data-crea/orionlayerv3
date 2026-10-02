@@ -21,14 +21,17 @@ instead, and if there is nothing left to shrink it prints the string
 anyway, which is what the original does when its own loop runs out
 of steps (`BILL::Squeeze_Print_Paragraph_`).
 """
+from core import lang
 
 
 def wrap_text(style, text, size, width):
     """One source string into lines that each fit `width` if they can.
 
     Returns TEXT, not surfaces, so a caller — and a test — can assert
-    that nothing was dropped.
+    that nothing was dropped. OrionLayer's own sentence is translated
+    WHOLE first (`core.lang.tr`, work order 200 C), then cut.
     """
+    text = lang.tr(text)
     if style.render_text(text, size, (255, 255, 255)).get_width() <= width:
         return [text]
     lines, current = [], ""
@@ -67,6 +70,7 @@ def squeeze_lines(style, text, width, max_h, sizes, color):
     used and the string is printed whole regardless.
     """
     rgb = tuple(color[:3])
+    text = lang.tr(text)
     size = sizes[-1]
     for size in sizes:
         lines = wrap_text(style, text, size, width)

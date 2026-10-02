@@ -9,8 +9,11 @@ rest; the divider became a thin band so the box did not grow. Since
 work order 173 an eighth band, the MOD FOLDER switch (HD EXTENSION,
 decision 72, `core/usermod.py`): on or off, applied at the next start
 like the preset; and since work order 174 the PANEL GLASS slider (HD
-EXTENSION, `core/hud/glass.py`), applied at once like the colour. MOO2
-has none of them; the game knows nothing about these rows.
+EXTENSION, `core/hud/glass.py`), applied at once like the colour; and
+since work order 200 C the LANGUAGE switch (HD EXTENSION
+`language_switch`, `core/lang.py`): English or German, applied at the next
+start like the preset. MOO2 has none of them; the game knows nothing about
+these rows.
 
 **TWO STATE SOURCES, NEVER MERGED.** The thirteen engine checkboxes
 keep their local copy seeded from `s_settings` (`screen.flags`). These
@@ -33,18 +36,20 @@ nothing when nothing changed.
 """
 import pygame
 
-from core import modsetup, palette, playercolors, usermod, usersettings
+from core import lang, modsetup, palette, playercolors, usermod, usersettings
 from core.hud import glass
 from core.hud import style as hudstyle
 from core.hud import tint
 
+from . import gmlang
+
 BANDS = ("divider", "heading", "floor", "colours", "monsters", "frame",
-         "tone", "glass", "mods")
+         "tone", "glass", "mods", "language")
 
 #: Each band's share of the box. The divider is a line, so since work
 #: order 170 it takes a third of a row and the frame-colour row fits in
 #: the same box: nothing below it (ACCEPT, the body's edge) moves.
-WEIGHTS = (1 / 3, 1, 1, 1, 1, 1, 1, 1, 1)
+WEIGHTS = (1 / 3, 1, 1, 1, 1, 1, 1, 1, 1, 1)
 
 COL_DIVIDER = palette.require("game_menu", "orionlayer_divider")
 COL_HEADING = palette.require("game_menu", "orionlayer_heading")
@@ -190,12 +195,15 @@ def selected(screen, key):
 
 
 def restart_pending(screen):
-    """The colour preset and the mod folder are read at start: the note
-    shows while either saved choice differs from the one in force."""
+    """The colour preset, the mod folder and the language are read at
+    start: the note shows while a saved choice differs from the one in
+    force."""
     started = usermod.started_enabled()
+    chosen = selected(screen, "language")
     return (selected(screen, "player_colors") != palette.active_preset()
             or (started is not None
-                and (selected(screen, "user_mod") != "off") != started))
+                and (selected(screen, "user_mod") != "off") != started)
+            or (chosen is not None and chosen != lang.current()))
 
 
 def _cycle(settings, key, steps):
@@ -228,6 +236,8 @@ def handle_click(screen, x, y):
             # Data, 30 September 2026: switching it on says it can take a
             # while and starts the extraction (the row shows the progress).
             modsetup.start()
+    elif geo["language"].collidepoint(x, y):
+        gmlang.cycle(settings)
     elif geo["glass_reset"].collidepoint(x, y):
         set_glass(screen, None)
     elif geo["glass"].collidepoint(x, y) and \
@@ -254,10 +264,27 @@ def save(screen):
     return usersettings.save(settings) if settings is not None else False
 
 
-def _text(screen, surface, text, size, color, x, rect):
+def _text(screen, surface, text, size, color, x, rect, width=None,
+          fit=False):
     img = screen.style.render_text(text, size, tuple(color[:3]))
+    # the text-fit rule outside English (work order 200 C: "Zurücksetzen"
+    # ran past the dialog); English is drawn exactly as before — but for a
+    # row new with that order (`fit`), which fits in every language
+    while width and img.get_width() > width and size > 8 and \
+            (fit or lang.current() != lang.DEFAULT):
+        size -= 1
+        img = screen.style.render_text(text, size, tuple(color[:3]))
     surface.blit(img, (x, rect.y + (rect.h - img.get_height()) // 2))
     return img
+
+
+def _reset_room(screen, reset):
+    """The width a word from `reset.x` on has: to the dialog's inner edge."""
+    body = next((b for b in screen.boxes if b.name == "body"), None)
+    if body is None or body.screen_rect is None:
+        return None
+    return body.screen_rect.right - reset.x - (reset.x - body.screen_rect.x) \
+        // 20
 
 
 def render(screen, surface):
@@ -312,6 +339,11 @@ def render(screen, surface):
     _render_frame_row(screen, surface, geo, words, size, lx)
     _render_glass_row(screen, surface, geo, words, size, lx)
     _render_mod_row(screen, surface, geo["mods"], words, size, lx, vx)
+    gmlang.render(screen, surface, geo["language"], words, size, lx, vx,
+                  lambda *a, fit=False: _text(
+                      screen, surface, *a, fit=fit, width=_reset_room(
+                          screen, pygame.Rect(a[3], 0, 0, 0)) if fit else None),
+                  selected(screen, "language"))
 
 
 def _render_glass_row(screen, surface, geo, words, size, lx):
@@ -335,7 +367,8 @@ def _render_glass_row(screen, surface, geo, words, size, lx):
     surface.fill((255, 255, 255), (tx - w // 2, bar.y - w, w, bar.h + 2 * w))
     reset = geo["glass_reset"]
     _text(screen, surface, words.get("reset", "Reset"), size,
-          COL_OPTION if glass._value is None else COL_STATE, reset.x, reset)
+          COL_OPTION if glass._value is None else COL_STATE, reset.x, reset,
+          _reset_room(screen, reset))
 
 
 def _render_mod_row(screen, surface, row, words, size, lx, vx):
@@ -361,8 +394,9 @@ def _render_mod_row(screen, surface, row, words, size, lx, vx):
         note = (words.get("mod_files", "{n} files").format(n=n)
                 if usermod.active() else words.get("mod_none", "no folder"))
     if note is not None:
-        _text(screen, surface, note, size, COL_STATE,
-              row.x + vx + img.get_width() + int(row.h * 0.6), row)
+        nx = row.x + vx + img.get_width() + int(row.h * 0.6)
+        _text(screen, surface, note, size, COL_STATE, nx, row,
+              _reset_room(screen, pygame.Rect(nx, row.y, 0, 0)))
 
 
 def _render_frame_row(screen, surface, geo, words, size, lx):
@@ -387,7 +421,7 @@ def _render_frame_row(screen, surface, geo, words, size, lx):
     reset = geo["hue_reset"]
     _text(screen, surface, words.get("reset", "Reset"), size,
           COL_OPTION if tint.is_default() else COL_STATE,
-          reset.x, reset)
+          reset.x, reset, _reset_room(screen, reset))
     _render_tone_row(screen, surface, geo, words, size, lx, base)
 
 

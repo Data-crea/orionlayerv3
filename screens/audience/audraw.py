@@ -23,6 +23,7 @@
                  — the room's fade-in (dip_scrn_main.cpp:1985-2016) is not
                  played, the ambassador and the statement show at once
 """
+from core import lang
 from core.hud import blocks as hud
 from core.hud import text as hudtext
 from core.textfit import wrap_text
@@ -36,10 +37,12 @@ def _rect(f):
 
 
 def draw(surface, screen, view):
-    _stage(surface, screen, view)
-    _statement(surface, screen, view)
-    if view.items():
-        _menu(surface, screen, view)
+    # every word of the audience is the game's (work order 200 C)
+    with lang.verbatim():
+        _stage(surface, screen, view)
+        _statement(surface, screen, view)
+        if view.items():
+            _menu(surface, screen, view)
 
 
 def _stage(surface, screen, view):

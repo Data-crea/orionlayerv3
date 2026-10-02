@@ -3,6 +3,7 @@ the surface and the local player's record (`screen.py` routes by page).
 Every text by its key through `core/modtexts`; see `screen.py` for what
 each page may send (nothing but RETURN) and `infotexts` for the keys.
 """
+from core import lang
 from core import modtexts
 
 from . import infodraw, infogeom as geom, infopages as pages
@@ -132,8 +133,9 @@ def turns(screen, surface, me):
                       screen._state.stardate)
     body = "\n\n".join(m.replace("^", "").strip() for m in msgs) if msgs \
         else (T("info.turns.empty", "") or "")
-    infodraw.text(surface, screen, "turns",
-                  geom.TURNS_BOX, f"{head}\n\n{body}".strip())
+    with lang.verbatim():          # the engine's messages (200 C)
+        infodraw.text(surface, screen, "turns",
+                      geom.TURNS_BOX, f"{head}\n\n{body}".strip())
 
 
 def reference(screen, surface, me):
@@ -143,13 +145,15 @@ def reference(screen, surface, me):
             infodraw.text(surface, screen, f"ref.head.{k}",
                           geom.REFERENCE_HEADS[k], T(head, "") or "",
                           "name", infodraw.HIGH)
-        infodraw.rows(surface, screen, "ref.categories",
-                      geom.REFERENCE_LISTS[0],
-                      [(label, ("cat", i), False)
-                       for i, label in pages.categories()])
-        infodraw.rows(surface, screen, "ref.howto", geom.REFERENCE_LISTS[1],
-                      [(t, ("howto", i), False) for t, i in
-                       pages.topics(screen._info, 15, sort=False)])
+        with lang.verbatim():      # the game's words (200 C)
+            infodraw.rows(surface, screen, "ref.categories",
+                          geom.REFERENCE_LISTS[0],
+                          [(label, ("cat", i), False)
+                           for i, label in pages.categories()])
+            infodraw.rows(surface, screen, "ref.howto",
+                          geom.REFERENCE_LISTS[1],
+                          [(t, ("howto", i), False) for t, i in
+                           pages.topics(screen._info, 15, sort=False)])
         return
     back = geom.BACK_BUTTON
     if screen.ref_mode == "category":
@@ -160,17 +164,20 @@ def reference(screen, surface, me):
         items = pages.topics(screen._info, screen.ref_ix)
         if screen.topic is None and items:
             screen.topic = items[0][1]
-        infodraw.rows(surface, screen, "ref.cat.list", geom.CATEGORY_LIST,
-                      [(t, i, False) for t, i in items], screen.topic)
         title, body = pages.record(screen.topic) if screen.topic is not None \
             else ("", "")
-        infodraw.text(surface, screen, f"ref.cat.text.{screen.topic}",
-                      geom.CATEGORY_TEXT, f"{title}\n\n{body}".strip())
+        with lang.verbatim():      # the game's words (200 C)
+            infodraw.rows(surface, screen, "ref.cat.list",
+                          geom.CATEGORY_LIST,
+                          [(t, i, False) for t, i in items], screen.topic)
+            infodraw.text(surface, screen, f"ref.cat.text.{screen.topic}",
+                          geom.CATEGORY_TEXT, f"{title}\n\n{body}".strip())
     else:
         title, body = pages.record(screen.ref_ix)
         infodraw.text(surface, screen, "ref.howto.head", geom.HOWTO_HEAD,
                       (T("info.reference.howto_prefix", "") or "") + title,
                       "name", infodraw.HIGH, "center")
-        infodraw.text(surface, screen, f"ref.howto.text.{screen.ref_ix}",
-                      geom.HOWTO_TEXT, body)
+        with lang.verbatim():      # the game's words (200 C)
+            infodraw.text(surface, screen, f"ref.howto.text.{screen.ref_ix}",
+                          geom.HOWTO_TEXT, body)
     infodraw.button(surface, screen, back, T("info.reference.back", "BACK"))
