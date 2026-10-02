@@ -4,7 +4,7 @@ import sys
 import logging
 import pygame
 from core.config import (load_settings, TARGET_FPS, SCREENS_DIR,
-                         build_line)
+                         build_line, display_line)
 from core import resources, palette, usermod, usersettings, frameslot, lang
 from core import cursor as cursor_gfx
 from core import mouse as mouse_input
@@ -81,6 +81,8 @@ class App:
         if win.get("fullscreen", False):
             flags |= pygame.FULLSCREEN
         self.surface = self._set_mode(self.win_w, self.win_h, flags)
+        log.info(display_line(pygame.display.get_driver(), self.win_w,
+                              self.win_h))      # once (work order 202)
         pygame.display.set_caption("OrionLayer v3")
 
         # Custom cursor

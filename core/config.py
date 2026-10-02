@@ -129,3 +129,11 @@ def build_line():
                  "clean" if dirty is False else UNKNOWN_BUILD)
     return (f"OrionLayer {commit} ({state}), "
             f"orion2re {ORION2RE_VERSION}")
+
+
+def display_line(driver, width, height):
+    """The log's second line (work order 202, part 6): SDL's video driver
+    and the window OrionLayer got, once at start. 201 could not say which
+    driver Data plays on — `play.py` leaves SDL to choose, and the tools
+    measure x11 — nor at which size; a resize logs its own lines."""
+    return f"display: {driver or 'unknown'} driver, window {width}x{height}"
