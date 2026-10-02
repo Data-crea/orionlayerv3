@@ -37,8 +37,10 @@ HD EXTENSION `pick_cancel`, as on the Colonies screen. The galaxy-map
 inset is unreachable in this engine and not built (OMISSION
 `galaxy_inset`).
 
-Everything else is not sent: the buildings (their handler reads the real
-pointer — OMISSION `building_actions`), recalculation ([5] is a cheat
+A right click on a row of the building list asks the game for that
+building's description (TRANSCRIPTION `building_info`, `colright`, work
+order 200). Everything else is not sent: a building's demolish (its
+handler reads the real pointer — OMISSION `building_actions`), recalculation ([5] is a cheat
 with `_cheats`), and any key not listed.
 """
 import logging
@@ -53,7 +55,7 @@ from core.screen_base import ScreenBase
 from screens.colony_summary import colonymove, colonypick, colonysend
 from screens.leaders import ldrdraw as nd
 
-from . import coldraw, colgeom as geom, colwire, colwords
+from . import coldraw, colgeom as geom, colright, colwire, colwords
 
 log = logging.getLogger("colony")
 
@@ -222,7 +224,11 @@ class ColonyScreen(ScreenBase):
         if down and self.pick is not None:
             self.pick = None          # decision 47
             return True
-        return False
+        # the help regions (until work order 200 this override never let
+        # them open), then a building's description (`colright`)
+        if ScreenBase.handle_right_button(self, down, mx, my):
+            return True
+        return down and colright.answer(self, mx, my)
 
     def handle_click(self, screen_x, screen_y):
         if self.help_consumes_click(screen_x, screen_y):
@@ -256,6 +262,14 @@ class ColonyScreen(ScreenBase):
                 self.send(f, "system display")
                 return None
         return None
+
+    def help_extra_rect(self, spec):
+        """help.json's regions are the original's native rectangles, and
+        the page stands where the original's does. Without this hook they
+        resolved to nothing and no right click here ever opened help —
+        found by work order 200 B's walk against the original's list."""
+        native = spec.get("native")
+        return nd.rect(self.layout, native) if native else None
 
     def _hit(self, f, x, y):
         return nd.rect(self.layout, (f.x, f.y, f.x_end, f.y_end)) \

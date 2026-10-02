@@ -694,7 +694,7 @@ class ResearchPanelScreen(ResearchPopupsMixin, ScreenBase):
             return self.list_describe(screen_x, screen_y)
         if self.open_help_at(screen_x, screen_y):
             return True
-        return self.open_description_at(screen_x, screen_y)
+        return self.open_right_at(screen_x, screen_y)
 
     # ── What the screen says when it cannot draw ──────────
 

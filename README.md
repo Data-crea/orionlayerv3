@@ -88,6 +88,7 @@ from the maintainer.
 | 35 | `121950ed` | open fix 66: CPOP — the battle's scan view and board popup on the wire: the scanned unit, the popup's message, range and chosen marines, read only (work order 199) | `doc/ext_combat_popup.patch` |
 | 36 | `a8381e60` | open fix 67: MSGB version 2 — the values a message box's text prints through FMTPARA item codes (the boarding result), read only (work order 199) | `doc/ext_msgbox_items.patch` |
 | 37 | `095ebac4` | open fix 68: COPT — the battle's OPTIONS panel on the wire: whether it is up, and its five option flags as the battle holds them, read only (work order 200) | `doc/ext_combat_options.patch` |
+| 38 | `f031cbad` | open fix 69: HLPL — the help list a right click is checked against on the wire: its ids and rectangles in its own order, read only (work order 200) | `doc/ext_help_list.patch` |
 
 ## Install
 

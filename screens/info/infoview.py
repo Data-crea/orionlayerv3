@@ -90,6 +90,7 @@ def races(screen, surface, me):
     order = pages.race_list(screen._players, screen._state.player_num, n,
                             previously=True)
     first = 4 * screen.race_page
+    screen._race_shown = {}
     for k in range(4):
         box = geom.RACE_PANELS[k]
         j = first + k
@@ -100,6 +101,8 @@ def races(screen, surface, me):
             if p.eliminated:
                 lines = [T("info.races.eliminated", "") or ""] + lines
             body = "\n".join([head, ""] + lines)
+            if not p.eliminated:         # info.cpp:1719-1723
+                screen._race_shown[k] = (2, pages.trait_help(p))
         else:
             body = T("info.races.none", "") or ""
         # Each race in its own colour: the original prints the name and the

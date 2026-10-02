@@ -429,10 +429,10 @@ def parse_state(data: bytes) -> GameState:
     # The engine writes CMEV AFTER FBSC (ext_api.cpp's sections 23, 24): with
     # the fleet box open the events came here and were lost (work order 199).
     pos = combatblocks.parse_events_after(gs, data, pos)
-    from core import combatpopup
+    from core import combatpopup, combatoptions, helplist
     pos = combatpopup.parse(gs, data, pos)    # CPOP, open fix 66
-    from core import combatoptions
-    pos = combatoptions.parse(gs, data, pos)  # COPT, open fix 68, LAST
+    pos = combatoptions.parse(gs, data, pos)  # COPT, open fix 68
+    pos = helplist.parse(gs, data, pos)       # HLPL, open fix 69, LAST
     return gs
 
 

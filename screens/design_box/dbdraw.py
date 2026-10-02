@@ -37,9 +37,8 @@ and where it comes from:
                  — a special that does not fit is dimmed by the original
                  (desbox.cpp:2825-2846) from its slot's space and the
                  exclusions, neither on the wire: HD draws every special
-                 row alike; `flashing_hover`; `picker_help` — the right
-                 click's help (desbox.cpp:866-942 and the loops'
-                 `Text_Box_`) is not built
+                 row alike; `flashing_hover`. The right clicks are
+                 `dbright` (work order 200)
 """
 from core.hud import blocks as hud
 from core.hud import text as hudtext

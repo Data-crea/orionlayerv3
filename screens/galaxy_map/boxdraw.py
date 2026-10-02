@@ -12,6 +12,15 @@ screen for an own colony, "%s is an outpost planet" for an own outpost,
 nothing otherwise (mainscr_main.cpp:570-577). A click anywhere else inside
 a drawn box is swallowed, because the box covers the map there.
 
+TRANSCRIPTION `box_right` (work order 200 B) — a RIGHT click: on a planet
+disc it is a right click on that planet's own field (`core/rightinfo`), which
+the engine answers with `SYS::Potential_Colony_Info_Popup_`'s text box
+(mainscr.cpp:2104-2110; nothing for a gas giant), shown as HD's message box;
+on the fleet box's status line and close button it is the help the original
+appends for the box (310, 304; `help_at`). A ship cell's right click (the
+original's ship view, `Detailed_View_Ship_`) is not offered: HD has no view
+for it (parked, work order 200).
+
 DEVIATION — the layout is HD's. The boxes are boxes.json's, F5-movable;
 the words are the original's (boxmodel). Two things follow the original
 on purpose: a box sits on the same SIDE of the map as the game's window
@@ -200,6 +209,7 @@ def _draw_system(screen, surface, r, model, hits):
         else:
             pygame.draw.circle(surface, GAS_GIANT[:3], rect.center, side // 2, 2)
         hits.append((rect, p["field"]))
+        screen._box_planets.append((rect, p["field"]))
 
 
 def orders_ok(screen):
@@ -309,6 +319,8 @@ def render(screen, surface):
     """Draw every box HD may draw; remember the hit areas for clicks."""
     hits = []
     screen._box_hits = hits
+    screen._box_planets = []
+    screen._box_help = []
     for names, box, model in drawable(screen):
         r = _placed(screen, names, box)
         if r is None:
@@ -323,6 +335,13 @@ def render(screen, surface):
                   _font(screen, "system_text", 16), TEXT_COLOR, "left")
         else:
             _draw_fleet(screen, surface, r, model, hits)
+            # the fleet box's help, as `Set_Main_Screen_Help_List_`
+            # appends it (evanhelp.cpp:239-273): 310 the band above the
+            # buttons — HD's status line stands there — then 304 the
+            # close button. The order buttons' 305-309 have no HD element
+            # (the box offers no orders).
+            screen._box_help = [(r["fleet_status"], 310),
+                                (r[names[-1]], 304)]
         close = r[names[-1]]
         _button(screen, surface, close, _close_label(screen),
                 _font(screen, names[-1], 18))
@@ -355,6 +374,21 @@ def handle_click(screen, x, y):
                 _activate(screen, action, "field")
             return True
     return False
+
+
+def help_at(screen, x, y):
+    """The open fleet box's help id under (x, y), or None."""
+    return next((hid for rect, hid in getattr(screen, "_box_help", [])
+                 if rect.collidepoint(x, y)), None)
+
+
+def planet_field_at(screen, x, y):
+    """The system window's planet field under (x, y), or None — where the
+    original answers a right click with the planet's colony info
+    (`SYS::Potential_Colony_Info_Popup_`, mainscr.cpp:2105-2110; a gas
+    giant gets nothing there, as in the original)."""
+    return next((f for rect, f in getattr(screen, "_box_planets", [])
+                 if rect.collidepoint(x, y)), None)
 
 
 def handle_key(screen, key):

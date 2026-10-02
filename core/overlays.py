@@ -11,7 +11,7 @@ galaxy map behind a popup.
 """
 import logging
 
-from core import handover, msgbox, turnpopup
+from core import handover, msgbox, rightinfo, turnpopup
 
 log = logging.getLogger("orionlayer")
 
@@ -55,7 +55,7 @@ class Overlays:
         drew = False
         if self.box is not None:
             self.box_view.render(surface, app.style, self.box_labels,
-                                 self.box, backdrop=self.backdrop)
+                                 self.box, backdrop=self.box_backdrop)
             drew = True
         elif self.popup is not None:
             self.popup_view.render(surface, app.style, self.popup_labels,
@@ -67,7 +67,30 @@ class Overlays:
         if self.popup is None:
             self.popup_view.reset()
             self.popup_view.sent = None
+        host = self.help_host()
+        if host is not None and host.help.visible:
+            if self.popup is None:
+                host.help.close()     # its popup has gone
+            else:
+                host.render_help(surface)
         return drew
+
+    def help_host(self):
+        """The screen whose help popup a popup's right click opens (the
+        galaxy map's: one help popup, its look and texts)."""
+        return self.app.dispatcher.screens.get("galaxy_map")
+
+    def box_backdrop(self, surface):
+        """A box over a turn popup stands over the popup, as the original
+        draws it (a planet's colony info over the discovery, a skill's help
+        over a leader offer — work order 200 B); otherwise `backdrop`."""
+        popup = handover.popup_under_box(self.app)
+        if popup is None:
+            return self.backdrop(surface)
+        self.popup_view.render(surface, self.app.style, self.popup_labels,
+                               popup, self.app.client.state,
+                               backdrop=self.backdrop, app=self.app)
+        return True
 
     def backdrop(self, surface):
         """THE SCREEN THAT IS OPEN, drawn behind the box or popup — True if
@@ -108,7 +131,39 @@ class Overlays:
         return True
 
     # ── input ─────────────────────────────────────────────────────────
+    def right(self, down, x, y):
+        """A right click on what is up (work order 200 B): a text or message
+        box closes, as any input closes it (textbox.cpp:148-152,
+        gendraw.cpp:147-154; a confirmation reads only its two buttons,
+        :215-223); a popup answers as `turnpopup.View.right_at` says."""
+        if not down or not self.active:
+            return
+        host = self.help_host()
+        if host is not None and host.help.visible:
+            host.help.close()
+            return
+        fields = self.app.client.state.fields
+        if self.box is not None:
+            if self.box["kind"] != "confirmation":
+                self.answer_box(dict(msgbox.answers(self.box, fields))
+                                .get("close"))
+        elif self.popup is not None:
+            got = self.popup_view.right_at(x, y)
+            if got is None:
+                return
+            if host is None:
+                return
+            if got[0] == "help":
+                rightinfo.opener(host)(got[1])
+            elif got[0] == "field":
+                rightinfo.send(self.app, got[1], f"{self.popup['kind']} item",
+                               rightinfo.opener(host))
+
     def click(self, x, y):
+        host = self.help_host()
+        if host is not None and host.help.visible:
+            host.help.close()         # the help over a popup takes the click
+            return
         fields = self.app.client.state.fields
         if self.box is not None:
             self.answer_box(self.box_view.answer_at(self.box, fields, x, y))
@@ -116,6 +171,10 @@ class Overlays:
             self.answer_popup(self.popup_view.action_at(x, y))
 
     def key(self, event):
+        host = self.help_host()
+        if host is not None and host.help.visible:
+            host.help.close()
+            return
         fields = self.app.client.state.fields
         if self.box is not None:
             self.answer_box(msgbox.View.answer_key(self.box, fields, event))

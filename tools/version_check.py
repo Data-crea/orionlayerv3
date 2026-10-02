@@ -391,6 +391,13 @@ LOCAL_PATCHES = {
         "OrionLayer, open fix 68.",
         "the engine does not send COPT (open fix 68): the battle's OPTIONS "
         "panel is not offered and its options are read from the settings"),
+    # Applied 2 October 2026 by work order 200: f031cbad, on 095ebac4.
+    "doc/ext_help_list.patch": (
+        os.path.join("src", "ext", "ext_api.cpp"),
+        "OrionLayer, open fix 69.",
+        "the engine does not send HLPL (open fix 69): the audience's right-"
+        "click help is not offered, and a forwarded right click cannot see "
+        "the help that covers its field"),
 }
 
 #: Patches that are REPORTED to Joes and not yet applied: listed with
@@ -467,6 +474,7 @@ FIX_NUMBERS = {
     "doc/ext_combat_popup.patch": (66,),
     "doc/ext_msgbox_items.patch": (67,),
     "doc/ext_combat_options.patch": (68,),
+    "doc/ext_help_list.patch": (69,),
 }
 
 

@@ -4,7 +4,7 @@
     "deviation_hud_frameless": "HUD panels behind the statement and the menu, where the original prints on the room.",
     "omission_talking_loop": "The ambassador's animation is not drawn: its phase is not on the wire. The still is the frame the original shows with animations off.",
     "omission_header_line": "JIMTEXT2's header line at (320, 10) \u2014 'Player n: name' or 'race Ambassador' \u2014 needs an extraction this order does not add.",
-    "omission_audience_help": "The right click's help in the audience is not built (help.json has no regions).",
+    "transcription_audience_help": "TRANSCRIPTION \u2014 a right click opens the help the original's active list names at that native point (Setup_Diplomacy_Help_ / Setup_Full_Screen_Diplomacy_Help_, dip_scrn_main.cpp:1966-2043), the list read off open fix 69's HLPL block (core/helplist.py). Work order 200; it replaces 185's omission.",
     "omission_glass_remap": "The ambassador's glassed pixels are drawn as their palette indices, a hatching; the original remaps them against what lies beneath (Update_Glass_Remap_Colors_, dip_scrn_main.cpp:476). The engine's own framebuffer shows the same hatching (part 11, side by side), so the remap's effect, if any, lies beyond what the wire shows \u2014 not measured.",
     "omission_fade_in": "The room's fade-in (up to 38 frames of the room's entry before the ambassador appears, dip_scrn_main.cpp:1985-2016) is not played: HD shows the ambassador and the statement at once, where the original still fades (seen side by side, part 11)."
   }

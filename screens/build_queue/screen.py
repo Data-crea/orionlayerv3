@@ -150,6 +150,14 @@ class BuildQueueScreen(ScreenBase):
                 return "queue", i, f, v.items[i] if i < len(v.items) else -1
         return None
 
+    def help_extra_rect(self, spec):
+        """help.json's regions are the original's native rectangles, and
+        the page stands where the original's does. Without this hook they
+        resolved to nothing and no right click here ever opened help —
+        found by work order 200 B's walk against the original's list."""
+        native = spec.get("native")
+        return nd.rect(self.layout, native) if native else None
+
     def _hit(self, f, x, y):
         return nd.rect(self.layout, (f.x, f.y, f.x_end, f.y_end)) \
             .collidepoint(x, y)

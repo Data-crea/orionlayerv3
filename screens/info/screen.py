@@ -146,7 +146,11 @@ class InfoScreen(ScreenBase):
         p = self._native(screen_x, screen_y)
         if p is None:
             return False
-        help_id = next((h for h, r in self.HELP_LEFT if self._in(p, r)), None)
+        help_id = self.trait_help_at(screen_x, screen_y) \
+            if self.page == RACES else None
+        if help_id is None:
+            help_id = next((h for h, r in self.HELP_LEFT if self._in(p, r)),
+                           None)
         if help_id is None and self._in(p, (206, 0, 639, 479)):
             help_id = (self.HELP_REFERENCE[self.ref_mode]
                        if self.page == REFERENCE else self.HELP_PAGE[self.page])
@@ -156,6 +160,26 @@ class InfoScreen(ScreenBase):
             self.helptext.missing_entry(help_id)
         self.help.open(help_id, *entry)
         return True
+
+    def trait_help_at(self, x, y):
+        """A race's special under a window point: its help id, as the race
+        page's own list puts them first (info.cpp:1719-1751). HD wraps the
+        panel's text, so the line under the point is found among the
+        wrapped lines of each paragraph (`infobox.wrap`)."""
+        for k, (skip, ids) in getattr(self, "_race_shown", {}).items():
+            box = self._boxes.get(f"races.{k}")
+            if box is None or not box.inner.collidepoint(x, y):
+                continue
+            row = (y - box.inner.y + self._scroll.get(box.key, 0)) // \
+                box.step
+            n = 0
+            for i, para in enumerate(box.text.split("\n")):
+                n += max(1, len(infobox.wrap(self.style, para, box.size,
+                                             box.inner.w)))
+                if row < n:
+                    return ids[i - skip] if 0 <= i - skip < len(ids) \
+                        else None
+        return None
 
     # ── Input ─────────────────────────────────────────────
 

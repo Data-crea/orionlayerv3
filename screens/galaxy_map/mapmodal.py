@@ -193,9 +193,24 @@ class Modal:
             s._view = None
 
     # ── input ─────────────────────────────────────────────
+    def right(self, down):
+        """The right button while a modal is up (work order 200 B): the name
+        box's help is the whole screen's 675 (`Set_Input_Box_Help_List_`,
+        evanhelp.cpp:136, :362, namestar.cpp:305-307); a confirmation has
+        none (gendraw.cpp:60). Always True: the map under it does not pan."""
+        s = self.screen
+        if down and s.help.visible:
+            s.help.close()
+        elif down and self.kind == "home_star":
+            s.help.open(675, *(s.helptext.entry(675) or
+                               s.helptext.missing_entry(675)))
+        return True
+
     def click(self, x, y):
         """True when the click belonged to the modal (always, while one is
         up: the map under it must not answer)."""
+        if self.screen.help_consumes_click(x, y):
+            return True               # the help over the name box
         client = self.screen.app.client
         if self.kind == "home_star":
             if "accept" in self._rects and self._rects["accept"].collidepoint(

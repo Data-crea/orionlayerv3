@@ -296,9 +296,10 @@ class App:
                 # screens that pan (galaxy map) implement it, all
                 # others simply do not answer.
                 top = self.dispatcher.top
-                if top and hasattr(top, "handle_right_button") \
-                        and not self._handover.holding:
-                    down = event.type == pygame.MOUSEBUTTONDOWN
+                down = event.type == pygame.MOUSEBUTTONDOWN
+                if self._handover.holding:     # a box's / popup's (200 B)
+                    self._overlays.right(down, *event.pos)
+                elif top and hasattr(top, "handle_right_button"):
                     top.handle_right_button(down, *event.pos)
             elif event.type == pygame.MOUSEMOTION:
                 self.dispatcher.route_motion(*event.pos)

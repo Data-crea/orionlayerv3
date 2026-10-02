@@ -671,7 +671,7 @@ class GalaxyMapScreen(ScreenBase):
 
     def handle_right_button(self, down, mx, my):
         if self._modal.active:
-            return True            # the map under a modal does not pan
+            return self._modal.right(down)  # the map under it does not pan
         return mapinput.right_button(self, down, mx, my)
 
     def handle_mousewheel(self, direction, mx, my):

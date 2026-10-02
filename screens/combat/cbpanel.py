@@ -147,6 +147,8 @@ def draw_shields(surface, rect, unit, picture):
 
 class Panel:
     def __init__(self):
+        self.all_buttons, self.help_rows = {}, []
+        self.left = self.mid = self.facts = None
         self.rects = {}           # button key -> window rect
         self.rows = []            # (window rect, slot) of the weapon rows
         self.tabs = {}            # "weapons" / "specials" -> window rect
@@ -184,6 +186,8 @@ class Panel:
         size = max(10, int(22 * scale))
         small = max(9, int(18 * scale))
         self.rects, self.rows, self.tabs = {}, [], {}
+        self.all_buttons, self.help_rows = {}, []     # `cbhelp`'s
+        self.left = self.mid = self.facts = None
         if unit is None:
             return
         # the name, the systems and the picture with its shields (left)
@@ -213,6 +217,8 @@ class Panel:
         # the weapons — or the special systems — (middle): the toggle above
         mid = pygame.Rect(left.right + pad, inner.y, int(inner.w * 0.40),
                           inner.h)
+        self.left, self.mid = left, mid
+        self.facts = pygame.Rect(left.x, left.y, left.w // 2, left.h)
         right = pygame.Rect(mid.right + pad, inner.y,
                             inner.right - mid.right - pad, inner.h)
         rows = (len(BUTTONS) + 1) // 2
@@ -248,6 +254,7 @@ class Panel:
             for k, bit in enumerate(have[:8]):
                 r = pygame.Rect(body.x, body.y + k * row_h, body.w, row_h - 2)
                 word = names.name("specials", bit) or f"special {bit}"
+                self.help_rows.append((r, k))
                 hudtext.blit(surface, style.render_text(
                     word, small, hudtext.colour(
                         "label" if bit in damaged else "button")[:3]),
@@ -270,6 +277,7 @@ class Panel:
                         "label" if exhausted or state != 1 else "button")[:3]),
                     r.inflate(-pad, 0), align="left")
                 self.rows.append((r, k))
+                self.help_rows.append((r, k))
         # the buttons (right), each only while the live list carries it
         self.buttons = right
         for n, (key, word, hotkey) in enumerate(BUTTONS):
@@ -282,6 +290,7 @@ class Panel:
                 "normal" if key in live else "disabled"
             hud.small_button(surface, r, scale, state, word,
                              style_renderer=style)
+            self.all_buttons[key] = r
             if key in live:
                 self.rects[key] = r
         return band

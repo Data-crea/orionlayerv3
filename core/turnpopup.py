@@ -34,7 +34,8 @@ and animation, COLONY's landing art); the system display is a list of the
 star's planets (named) instead of the planets' pictures; the science room
 lists every discovery at once where the original shows one per click (each
 click is still sent, as the original counts them); the GNN picture is not
-drawn. A popup's help texts on right click are not offered.
+drawn. (A popup's right click is the original's since work order 200 —
+TRANSCRIPTION `popup_right`, `turnpopupcontent.RIGHT_HELP`.)
 """
 import pygame
 
@@ -79,9 +80,22 @@ class View:
         surface.blit(self._base, (0, 0))
         words = dict(DEFAULT_WORDS, **{k: v for k, v in (labels or {}).items()
                                        if k in DEFAULT_WORDS and v})
-        self.rects, self.buttons = draw(surface, style,
-                                        content(popup, state, words, app))
+        c = content(popup, state, words, app)
+        self.rects, self.buttons = draw(surface, style, c)
+        self.right = list(zip([r for r, _a in self.rects], c["right"])) + \
+            [(r, ("field", f)) for r, f in zip(c.get("table_rects", []),
+                                               c.get("line_right", []))]
+        self.right_help = c["right_help"]
         return self.rects
+
+    def right_at(self, x, y):
+        """A right click's answer: ("field", field), ("help", id) or None
+        (`turnpopupcontent.RIGHT_HELP`, TRANSCRIPTION `popup_right`)."""
+        for rect, action in getattr(self, "right", []):
+            if action is not None and rect.collidepoint(x, y):
+                return action
+        hid = getattr(self, "right_help", None)
+        return ("help", hid) if hid is not None else None
 
     def action_at(self, x, y):
         for rect, action in self.rects:
@@ -118,12 +132,16 @@ def draw(surface, style, c):
         pic = pygame.transform.scale(pic, (pic.get_width() * k,
                                            pic.get_height() * k))
     rows = []
+    # the text column beside a portrait is narrower than the panel: wrap
+    # to it (a leader offer's question ran past the panel's edge, seen in
+    # work order 200 B's pictures)
+    text_w = inner - (pic.get_width() + pad if pic is not None else 0)
     for text in c["lines"]:
         if isinstance(text, tuple):           # a table row: label, value
             rows.append((style.render_text(text[0], size, colour[:3]),
                          style.render_text(text[1], size, colour[:3])))
             continue
-        rows.extend(_wrap(style, text, size, inner, colour) or [None])
+        rows.extend(_wrap(style, text, size, text_w, colour) or [None])
     step = int(size * 1.3)
     title = (style.render_text(c["title"], max(12, int(REF_TITLE_FONT * s)),
                                tuple(hudtext.colour("title")[:3]))
@@ -160,6 +178,8 @@ def draw(surface, style, c):
         if isinstance(r, tuple):
             surface.blit(r[0], (col.x, y))
             surface.blit(r[1], r[1].get_rect(topright=(col.right, y)))
+            c.setdefault("table_rects", []).append(
+                pygame.Rect(col.x, y, col.w, step))
         elif r is not None:
             surface.blit(r, r.get_rect(midtop=(col.centerx if pic is not None
                                               else panel.centerx, y)))

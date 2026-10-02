@@ -33,7 +33,7 @@ from core import combatblocks as cb
 from core.screen_base import ScreenBase
 from core.kentext import ArcWords
 from core.shipparts import ShipPartNames
-from . import cbart, cbdraw, cbopts, cbpanel, cbplay, cbpopups, cbview
+from . import cbart, cbdraw, cbhelp, cbopts, cbpanel, cbplay, cbpopups, cbview
 
 log = logging.getLogger("combat")
 
@@ -211,6 +211,7 @@ class CombatScreen(ScreenBase):
                     self._state)) and (k in ("board", "scan") or field_by_hotkey(
                     getattr(self._state, "fields", None), hk))}
         pic = cbdraw.unit_picture(self._art, self._play.colours, unit, 0)
+        self._panel_unit = unit
         self._panel.draw(surface, self.style, unit, self._names, self._ken,
                          [w["active"] for w in (self._state.combat["units"][
                              c["cur_ship"]] if self._state.combat else unit)[
@@ -221,6 +222,7 @@ class CombatScreen(ScreenBase):
                         band, self._panel.buttons)
         self._pops.draw(surface, self.style, self.layout.scale, self._state,
                         c, self._weapon_name)
+        self.render_help(surface)               # `cbhelp`, work order 200
 
     def _follow(self, c):
         """The original centres its view on each acting unit at its turn
@@ -275,6 +277,8 @@ class CombatScreen(ScreenBase):
         return None
 
     def handle_click(self, screen_x, screen_y):
+        if self.help_consumes_click(screen_x, screen_y):
+            return None
         if self._state is None or getattr(self._state, "combat", None) is None \
                 or self._pops.click(screen_x, screen_y, self._state,
                                     self.app.client) or \
@@ -341,7 +345,8 @@ class CombatScreen(ScreenBase):
             self._press = [(screen_x, screen_y), (screen_x, screen_y), False]
             return
         press, self._press = self._press, None
-        if press is None or press[2]:
+        if press is None or press[2] or cbhelp.right(self, screen_x,
+                                                     screen_y):
             return
         if self._ready() and self._cam is not None:
             cell = self._cam.cell_at(screen_x, screen_y)

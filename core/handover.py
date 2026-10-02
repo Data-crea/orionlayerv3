@@ -298,8 +298,16 @@ def overlay_for(app):
     box = getattr(state, "message_box", None)
     if box is not None:
         return ("box", box)
-    popup = getattr(state, "turn_popup", None)
+    popup = popup_under_box(app)
+    if popup is not None:
+        return ("popup", popup)
+    return None
+
+
+def popup_under_box(app):
+    """The turn popup HD draws, whether or not a box stands over it."""
+    popup = getattr(app.client.state, "turn_popup", None)
     if popup is not None and not (popup["kind"] == "leader_hire"
                                   and popup["args"][7] == 1):
-        return ("popup", popup)
+        return popup
     return None

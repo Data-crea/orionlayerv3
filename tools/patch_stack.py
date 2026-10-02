@@ -83,8 +83,10 @@ STACKED_AFTER_COLONY = (
     "doc/ext_combat_popup.patch",
     # work order 199: 67 extends 29's MSGB (version 2)
     "doc/ext_msgbox_items.patch",
-    # work order 200: 68 appends COPT after 66's CPOP, LAST
+    # work order 200: 68 appends COPT after 66's CPOP
     "doc/ext_combat_options.patch",
+    # work order 200: 69 appends HLPL after 68's COPT, LAST
+    "doc/ext_help_list.patch",
 )
 
 

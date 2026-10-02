@@ -159,6 +159,23 @@ def trait_lines(player):
     return lines
 
 
+def trait_help(player):
+    """The help id of each of `trait_lines`' lines, as
+    `Race_Statistics_Specials_Help_` sets them (info.cpp:406-440): the
+    government 474 + value / 2, a rich or poor home world 457 / 458, the
+    others 442 + k below it and 443 + k above."""
+    traits = player_struct.traits(player)
+    out = []
+    for k in range(TRAIT_COUNT):
+        v = traits[k]
+        if v == 0 and k != TRAIT_GOVERNMENT:
+            continue
+        out.append(474 + int(v / 2) if k == TRAIT_GOVERNMENT else
+                   (458 if v < 0 else 457) if k == TRAIT_RICH_HOME else
+                   442 + k if k < TRAIT_RICH_HOME else 443 + k)
+    return out
+
+
 # ── Reference (info.cpp:997-1116, :1779-1906) ──────────────
 
 def categories():

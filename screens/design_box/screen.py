@@ -43,7 +43,7 @@ from screens.leaders import ldrdraw as nd
 from screens.ship_design import sdart
 from screens.ship_design.screen import Names
 
-from . import dbdraw, dbgeom as geom, dbwire
+from . import dbdraw, dbgeom as geom, dbright, dbwire
 
 log = logging.getLogger("ship_design")
 
@@ -147,6 +147,12 @@ class DesignBoxScreen(ScreenBase):
         log.info("design box: %s -> field %d", label, field.index)
         self.app.client.activate_field(field.index)
         return True
+
+    def open_help_at(self, screen_x, screen_y):
+        """A right click: `dbright` (work order 200)."""
+        box = self._live_box()
+        return box is not None and box.draws and \
+            dbright.answer(self, box, screen_x, screen_y)
 
     def _hit(self, f, x, y):
         return nd.rect(self.layout, (f.x, f.y, f.x_end, f.y_end)) \

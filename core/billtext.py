@@ -112,3 +112,12 @@ class BillText:
     def group_name(self, group):
         """A technology category's name, message 64 + group."""
         return self.message(MSG_FIRST_GROUP + int(group))
+
+    def list_title(self, group):
+        """The category list popup's title: the category's name and message
+        63 after it (`_Tech_List_`, tech.cpp:869-870, :951-955). Work order
+        200 B found the popup calling this while it did not exist — every
+        category list with BILLTEXT extracted raised in its first frame."""
+        name = self.group_name(group)
+        return None if name is None else name + (self.message(
+            MSG_FIRST_GROUP - 1) or "")

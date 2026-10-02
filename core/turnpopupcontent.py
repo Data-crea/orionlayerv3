@@ -116,6 +116,23 @@ def _field(state, index):
                  if getattr(f, "index", None) == index and index > 0), None)
 
 
+#: TRANSCRIPTION `popup_right` (work order 200 B) — what a right click on a
+#: popup does in the original. The whole-screen help entries:
+#: Turn_Summary_Popup_Help_ 247 (billhelp.cpp:26, turnsum.cpp:151),
+#: the planet choice's 563 (erichelp.cpp:110, mainpups.cpp:1676), the
+#: officer popups' 564 (erichelp.cpp:114, mainpups.cpp:305-309). Per item
+#: (`content`'s "right", a right click on the item's own field, its answer a
+#: box on the wire — `core/rightinfo`): a planet of the discovery or the
+#: defence choice, `Potential_Colony_Info_Popup_` (mainpups.cpp:2013,
+#: :2937-2944 -> mainscr.cpp:2105); a leader offer's HIRE / REJECT, its
+#: `Text_Box_` (mainpups.cpp:954-982), and its skill lines, the skill's
+#: help (`line_right`); the landing, which any input ends
+#: (colland.cpp:227-232). The science room and GNN deactivate help and read
+#: only positive fields (science.cpp:178, events.cpp:2573, :2604): nothing.
+RIGHT_HELP = {"turn_summary": 247, "planet_choice": 563,
+              "leader_level": 564}
+
+
 def content(popup, state, words, app=None):
     """`{"title", "lines", "options", "buttons"}` for one popup; options
     and buttons are `(label, action)`, an action `("activate" | "click",
@@ -124,6 +141,9 @@ def content(popup, state, words, app=None):
     title = popup.get("title")
     lines, options, buttons = [], [], []
     picture = None
+    # the right click (`RIGHT`): per option, per button, per table line,
+    # else the popup's
+    right_opts, right_buttons, line_right = [], [], []
 
     def act(index, how="activate"):
         f = _field(state, index)
@@ -180,8 +200,18 @@ def content(popup, state, words, app=None):
         # (Update_Random_New_Officer_Fields_, mainpups.cpp:1721-1773)
         buttons = [(words["reject"], act(a[5], "click")),
                    (words["hire"], act(a[4], "click"))]
+        right_buttons = [_field(state, a[5]), _field(state, a[4])]
+        # a skill line: its help field (`Add_Skill_Description_Help_
+        # Fields_`, officer.cpp:3893-3968 — 0xBE wide, one per skill in the
+        # order the card lists them), answered by `Print_Officer_Skill_
+        # Help_`'s box (mainpups.cpp:914, officer.cpp:3977-4003)
+        line_right = sorted(
+            (f for f in (getattr(state, "fields", None) or [])
+             if f.field_type == 7 and f.x_end - f.x == 0xBE),
+            key=lambda f: f.y)
         if a[3] > 0:                    # the tutor's result states
             buttons = [(words["continue"], act(a[6]) or act(a[5], "click"))]
+            right_buttons = []
     elif kind in ("planet_choice", "discovery", "combat_target"):
         sysd = popup.get("system") or {}
         title = title or _star_name(state, sysd.get("star", -1))
@@ -193,6 +223,8 @@ def content(popup, state, words, app=None):
             target = (act(slot["field"], "click")
                       if kind != "discovery" and slot["field"] > 0 else None)
             options.append((_planet_name(state, slot["planet"]), target))
+            right_opts.append(_field(state, slot["field"])
+                              if kind != "planet_choice" else None)
         if kind == "combat_target":
             # A player target is chosen by clicking one of its ships
             # (Check_System_Display_Fields_Defense_Selection_,
@@ -232,8 +264,13 @@ def content(popup, state, words, app=None):
         title = title or _planet_name(state, a[0])
         buttons = [(words["continue"], act(a[3]) or (
             ("activate", anywhere) if anywhere else None))]
+        right_buttons = [_field(state, a[3]) or anywhere]
+    right = [("field", f) if f is not None else None for f in
+             right_opts + [None] * (len(options) - len(right_opts)) +
+             right_buttons + [None] * (len(buttons) - len(right_buttons))]
     return {"title": title, "lines": lines, "options": options,
-            "buttons": buttons,
+            "buttons": buttons, "right": right, "line_right": line_right,
+            "right_help": RIGHT_HELP.get(kind),
             "picture": picture if kind == "leader_hire" else None}
 
 

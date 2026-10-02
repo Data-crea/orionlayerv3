@@ -36,6 +36,7 @@ import logging
 
 import pygame
 
+from core import rightinfo
 from core import hestrings, kentext, techdesc
 from core.screen_base import ScreenBase
 from core.shipparts import ShipPartNames
@@ -186,9 +187,10 @@ class ShipDesignScreen(ScreenBase):
         table regions' top moved below the loaded rows as
         `Set_Design_Screen_Help_List_` moves them (`+ n*14 + 15`, capped
         at the bottom), so a right click on a loaded row is not the
-        table's general entry. DEVIATION `row_help`: on a loaded row the
-        original opens that item's description, whose record is not on
-        the wire — HD opens nothing there."""
+        table's general entry. On a loaded row the original opens that
+        item's description (design.cpp:893-898, :941-948), a `Text_Box_`
+        on the wire: `open_help_at` sends the right click there —
+        TRANSCRIPTION `right_info` (`core/rightinfo`)."""
         out = []
         view = self._view
         counts = {"weapons": len(view.weapon_rows()) if view and view.draws
@@ -210,7 +212,24 @@ class ShipDesignScreen(ScreenBase):
                     self.helptext.missing_entry(help_id)
                 self.help.open(help_id, *entry)
                 return True
-        return False
+        f = self.row_field_at(screen_x, screen_y)
+        return f is not None and rightinfo.send(self.app, f, "design row",
+                                                rightinfo.opener(self))
+
+    def row_field_at(self, screen_x, screen_y):
+        """The loaded weapon or special row's hidden field under a point
+        (the fields `Add_Design_Fields_` puts over each row)."""
+        for f in self._live():
+            if f.index == 0 or f.field_type != geom.TYPE_HIDDEN or \
+                    not self._hit(f, screen_x, screen_y):
+                continue
+            if (f.x, f.x_end) in ((0x4D, 0x22C), (0x10, 0x26F)) and \
+                    geom.WEAPON_ROW_Y0 <= f.y < geom.WEAPON_ROW_Y0 + 8 * \
+                    geom.ROW_STEP or (f.x, f.x_end) == (0x11, 0x26F) and \
+                    geom.SPECIAL_ROW_Y0 <= f.y < geom.SPECIAL_ROW_Y0 + 8 * \
+                    geom.ROW_STEP:
+                return f
+        return None
 
     # ── Sending ──────────────────────────────────────────────────────
 
@@ -301,17 +320,7 @@ class ShipDesignScreen(ScreenBase):
                     if f.field_type == geom.TYPE_BUTTON:
                         self.send(f, f"{label} {i}")
                     return None       # a hidden field there: refused
-        for f in live:
-            if f.index == 0 or f.field_type != geom.TYPE_HIDDEN or \
-                    not self._hit(f, screen_x, screen_y):
-                continue
-            weapon = (f.x, f.x_end) in ((0x4D, 0x22C), (0x10, 0x26F)) and \
-                geom.WEAPON_ROW_Y0 <= f.y < geom.WEAPON_ROW_Y0 + 8 * \
-                geom.ROW_STEP
-            special = (f.x, f.x_end) == (0x11, 0x26F) and \
-                geom.SPECIAL_ROW_Y0 <= f.y < geom.SPECIAL_ROW_Y0 + 8 * \
-                geom.ROW_STEP
-            if weapon or special:
-                self.send(f, "weapon row" if weapon else "special row")
-                return None
+        f = self.row_field_at(screen_x, screen_y)
+        if f is not None:
+            self.send(f, "design row")
         return None

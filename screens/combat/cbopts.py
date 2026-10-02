@@ -18,7 +18,9 @@ TRANSCRIPTION `option_drawing` — WHAT THE OPTIONS DRAW, over the field:
 DISPLAY GRID, a line every 20 px both ways in colour 4 (cmbtdrw1.cpp:
 528-535, 1813-1820); SHOW SHIELD ARCS, the acting unit's four arc borders
 in colour 0x54 from its centre and the arcs' letters in font 0, colour
-0x81 — F R B L, A D I S in the German game — at the size's distance
+0x81 — F R B L; A D I S only in the Italian game (language 4,
+cmbtdrw1.cpp:27; the German game, language 1, keeps F R B L) — at the
+size's distance
 (`Draw_Shield_Arcs_`, cmbtdrw1.cpp:21-152); SHOW LEGAL MOVES, the legal
 cells (`cbdraw.draw_legal`). FAST ANIMATIONS sets the playback's steps
 (`cbplay`). MISSILE WARNING changes what a move does in the engine; its
@@ -50,7 +52,7 @@ WORDS = ("MISSILE WARNING", "FAST ANIMATIONS", "SHOW LEGAL MOVES",
 PANEL = (170, 180)
 GRID_INDEX, ARC_INDEX, LETTER_INDEX = 4, 0x54, 0x81
 ARC_RADIUS = {0: 15, 1: 22, 2: 25, 3: 30, 4: 33, 5: 33}
-LETTERS = {"en": "FRBL", "de": "ADIS"}
+LETTERS = {"en": "FRBL", "it": "ADIS"}        # language 4 is Italian
 WAIT = 1.0                       # s: a light whose change never arrives
 
 

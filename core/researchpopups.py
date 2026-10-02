@@ -30,6 +30,14 @@ class ResearchPopupsMixin:
     `_tech`, `_current`, `geom`, `native_point` — and owns none of it.
     """
 
+    def open_right_at(self, screen_x, screen_y):
+        """A right click inside the panel. On a category BUTTON
+        `_Tech_Select_` negates it and the buttons' branch takes it as a
+        left click (tech.cpp:333-335, :444-456) — the category list opens
+        (work order 200 B); on a row it is the description."""
+        return self.open_list_at(screen_x, screen_y) or \
+            self.open_description_at(screen_x, screen_y)
+
     def open_description_at(self, screen_x, screen_y):
         """The description box for the row under a point. True if one opened.
 
@@ -142,12 +150,23 @@ class ResearchPopupsMixin:
     def list_describe(self, screen_x, screen_y):
         """A right click while the list is up. True if it was consumed.
 
-        A row opens that application's description (tech.cpp:1003-1011,
+        The strips beside the window are help 256; a row opens that
+        application's description (tech.cpp:1003-1011,
         and `app_id != 0` guards it there too); anything else only
         redraws, which for HD means "nothing happens and the list stays
         open" — so the click is still consumed.
         """
         point = self.native_point(screen_x, screen_y)
+        # the list's own help list (tech.cpp:915-931): 256 on the two strips
+        # beside the window, `Tech_*_List_*_Help_`'s rectangles (billhelp.cpp:
+        # 54-72) — x up to the window's left edge and from 0x10C past it —
+        # work order 200 B
+        win_x = self._techlist.window_x(self.geom.origin)
+        if point is not None and (point[0] <= win_x or
+                                  point[0] >= win_x + 0x10C):
+            text = self.helptext.entry(256) or self.helptext.missing_entry(256)
+            self.help.open(256, *text)
+            return True
         hit = (self._techlist.at(self.geom.origin, *point)
                if point else None)
         if not (hit and hit[0] == "row"):

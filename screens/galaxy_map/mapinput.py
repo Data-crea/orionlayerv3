@@ -14,6 +14,7 @@ import logging
 import pygame
 
 from core import mapcoords as mc
+from core import rightinfo
 from core.screen_base import ScreenBase
 from screens.galaxy_map import boxdraw
 from screens.galaxy_map import boxmodel
@@ -209,6 +210,20 @@ def right_button(screen, down, mx, my):
     if not down:
         screen._pan_from = None
         return False
+    # The fleet box's help (work order 200 B) and a planet in the system
+    # window: the game's colony info (`core/rightinfo`) — its field, not a
+    # point on the map.
+    hid = boxdraw.help_at(screen, mx, my)
+    if hid is not None:
+        entry = screen.helptext.entry(hid) or \
+            screen.helptext.missing_entry(hid)
+        screen.help.open(hid, *entry)
+        return True
+    planet = boxdraw.planet_field_at(screen, mx, my)
+    if planet is not None:
+        rightinfo.send(screen.app, rightinfo.field_at_index(screen.app, planet),
+                       "planet colony info", rightinfo.opener(screen))
+        return True
     view = screen._map_view()
     if view is not None and pygame.Rect(*view.box).collidepoint(
             mx, my):

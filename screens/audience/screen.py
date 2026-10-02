@@ -24,11 +24,21 @@ choose (decision 65):
 
 Refused before it goes out (decision 33): a disabled item — the list
 ignores it (fields.cpp:1647-1649). No keys are sent: the list's fields
-carry no hotkey. A right click opens nothing (OMISSION `audience_help`:
-the audience's help ids are not built).
+carry no hotkey.
+
+A right click is the original's help (TRANSCRIPTION `audience_help`, work
+order 200): the audience builds its list per menu at run time
+(`Setup_Diplomacy_Help_`, one row per item and the whole screen last,
+dip_scrn_main.cpp:1966-1993; `Setup_Full_Screen_Diplomacy_Help_` on a
+statement, :2028-2043), and open fix 69 puts that list on the wire
+(`core/helplist`): HD walks it at the native point under the pointer, as
+`Check_Help_List_` does. The HD menu stands where the original's does, so
+the rows meet. Without the block nothing opens.
 """
 import logging
 
+from core import helplist
+from core import researchnative as nat
 from core.screen_base import ScreenBase
 from screens.leaders import ldrdraw as nd
 
@@ -94,6 +104,18 @@ class AudienceScreen(ScreenBase):
             return False
         log.info("audience: %s -> field %d", label, field.index)
         self.app.client.activate_field(field.index)
+        return True
+
+    def open_help_at(self, screen_x, screen_y):
+        state = getattr(self.app.client, "state", None)
+        p = nat.from_hd_point(self.layout.to_ref(screen_x, screen_y),
+                              self.layout)
+        hid = helplist.help_at(getattr(state, "help_list", None), *p) \
+            if p is not None else None
+        if hid is None:
+            return False
+        self.help.open(hid, *(self.helptext.entry(hid) or
+                              self.helptext.missing_entry(hid)))
         return True
 
     def handle_click(self, screen_x, screen_y):

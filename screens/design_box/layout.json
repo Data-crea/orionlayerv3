@@ -18,6 +18,6 @@
     "omission_no_weapon_damage": "'No Weapon''s damage '0' is TECHDATA _weapons[0]'s; DSBX formats a damage string only for a weapon, so HD leaves the cell empty.",
     "omission_fit_colour": "A special that does not fit is dimmed by the original from its slot's space and the exclusions (desbox.cpp:2825-2846), neither on the wire; HD draws every special row alike.",
     "omission_flashing_hover": "The original flashes the hovered row in a cycling palette index; an RGB surface has none. Not drawn.",
-    "omission_picker_help": "The right click's help in the pickers is not built (help.json has no regions): most of it needs an item's help record, not on the wire."
+    "transcription_picker_right": "TRANSCRIPTION \u2014 a right click in a picker answers as the original's (desbox.cpp:225-256, :873-948, :1462-1516; evanhelp.cpp:419-465): the weapon picker's help list (filters 392-395, Cancel 396, Accept 397, arcs 398 / racks 399), the help entries for Clear, OK, the box and the none row (681-693), and an item's or modification's description, which is the game's own Text_Box_ \u2014 HD sends the right click to that field and shows the box that comes back (core/rightinfo.py). Work order 200; it replaces 185's omission."
   }
 }
