@@ -41,6 +41,17 @@ dark at -1, as the original's three colours, cmbtdrw1.cpp:2786-2849);
 FIRE sends the rows that are at 1 (open fix 58), one command per shot
 (decision 47). Work order 199 had kept the switch in HD alone, so a weapon
 could not be taken out of the defensive fire.
+DEVIATION `selected_blue` (work order 203, Data's decision of 2 Oct 2026):
+a row at 1 is a filled bar in the original's menu blue, palette 0 index
+0xB0 (FONTS.LBX entry 1, `Load_Palette_(0)`, fonts.cpp:72-73) — the blue
+of the word on the original's CLOSE button (RACES.LBX 59) and of the info
+screen's outline (`Set_Outline_Color_(0xB0, 0xB0)`, info.cpp:590) — with
+its word in the same palette's navy 0xA2. The original writes an armed
+weapon in green (palette 3, 0x53 / 0x56, cmbtdrw1.cpp:2766-2767); in HD
+the lit button alone was barely told from the others, and a blue word
+would not be either: HD's own label colour is (133, 178, 228). An
+exhausted row stays dimmed even at 1, as the original's mode 2 overrides
+its armed colour (:2834-2839).
 """
 import math
 import time
@@ -49,6 +60,7 @@ import pygame
 
 from core import lang
 from core.hud import blocks as hud
+from core.hud import style as hudstyle
 from core.hud import text as hudtext
 
 TABS = (("weapons", "WEAPONS"), ("specials", "SPECIALS"))
@@ -69,6 +81,8 @@ HEAVY, POINT_DEFENSE = 0x02, 0x04
 MOD_HEAVY, MOD_PD = 1, 2
 TURNS = "t"                       # KENTEXT 85 (English)
 ROW_WAIT = 3.0                    # s: a switch whose change never arrives
+SELECTED_BLUE = (128, 172, 252)   # palette 0 index 0xB0, DEVIATION above
+SELECTED_WORD = (0, 0, 108)       # palette 0 index 0xA2
 
 
 def row_field(fields, k):
@@ -77,6 +91,22 @@ def row_field(fields, k):
     rect = (120, 389 + 11 * k - 10, 255, 389 + 11 * k)
     return next((f for f in fields or [] if f.index and
                  (f.x, f.y, f.x_end, f.y_end) == rect), None)
+
+
+def selected_bar(surface, rect, scale):
+    """DEVIATION `selected_blue`: the row's inside filled in the menu blue,
+    inside the small button's edge and cut at its chamfer."""
+    st = hudstyle.get()
+    e = max(1, int(round(float(st.get("button.edge_width")) * scale)))
+    ch = min(float(st.get("panel.chamfer")) * scale
+             * float(st.get("small_button.chamfer_frac")), rect.h / 3)
+    r = pygame.Rect(rect).inflate(-2 * e, -2 * e)
+    c = max(0, int(ch) - e)
+    pygame.draw.polygon(surface, SELECTED_BLUE, (
+        (r.left + c, r.top), (r.right - 1 - c, r.top), (r.right - 1, r.top + c),
+        (r.right - 1, r.bottom - 1 - c), (r.right - 1 - c, r.bottom - 1),
+        (r.left + c, r.bottom - 1), (r.left, r.bottom - 1 - c),
+        (r.left, r.top + c)))
 
 
 def on_mask(unit):
@@ -273,9 +303,13 @@ class Panel:
                 count, label, exhausted = weapon_row(wpn, names, ken)
                 hud.small_button(surface, r, scale, {1: "active", 0: "normal"}
                                  .get(state, "disabled"))
+                selected = state == 1 and not exhausted
+                if selected:
+                    selected_bar(surface, r, scale)
                 hudtext.blit(surface, style.render_text(
-                    f"{count}  {label}", small, hudtext.colour(
-                        "label" if exhausted or state != 1 else "button")[:3]),
+                    f"{count}  {label}", small, SELECTED_WORD if selected else
+                    hudtext.colour("label" if exhausted or state != 1
+                                   else "button")[:3]),
                     r.inflate(-pad, 0), align="left")
                 self.rows.append((r, k))
                 self.help_rows.append((r, k))
