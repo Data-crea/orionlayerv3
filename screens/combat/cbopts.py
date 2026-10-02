@@ -180,12 +180,13 @@ def draw_grid(surface, cam, art):
     left, top = cam.to_world(x0, y0)
     right, bottom = cam.to_world(x0 + w, y0 + h)
     step = 20
+    lw = max(1, round(cam.scale))         # one native pixel, scaled
     for gx in range(int(left // step) * step, int(right) + step, step):
         x = int(cam.to_window(gx, 0)[0])
-        pygame.draw.line(surface, col, (x, y0), (x, y0 + h - 1))
+        pygame.draw.line(surface, col, (x, y0), (x, y0 + h - 1), lw)
     for gy in range(int(top // step) * step, int(bottom) + step, step):
         y = int(cam.to_window(0, gy)[1])
-        pygame.draw.line(surface, col, (x0, y), (x0 + w - 1, y))
+        pygame.draw.line(surface, col, (x0, y), (x0 + w - 1, y), lw)
 
 
 #: Draw_Shield_Arcs_' borders by facing % 4 (far points, native px), and
@@ -226,6 +227,7 @@ def draw_shield_arcs(surface, cam, art, unit, centre, style, language="en"):
     for i, ((fx, fy), (dx, dy)) in enumerate(zip(_FAR[facing % 4],
                                                  _offsets(facing, sz))):
         pygame.draw.line(surface, line_col, start,
-                         cam.to_window(cx + fx, cy + fy))
+                         cam.to_window(cx + fx, cy + fy),
+                         max(1, round(cam.scale)))
         img = style.render_text(letters[i], px, text_col)
         surface.blit(img, cam.to_window(cx + dx - 2, cy + dy - 3))
