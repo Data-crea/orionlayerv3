@@ -22,6 +22,12 @@ cell (`x * 3 / 2 + 500`):
   unit         `(_ship_frame / 2) % 4` (`Draw_Fake_Combat_Buttons_`,
                :883-929)
 
+Under them the map's own star background: the panel picture COMBAT.LBX 0,
+drawn at (0, 351) before the map (`Full_Draw_Combat_Screen_`,
+cmbtdrw1.cpp:446-447), shows its stars in the map's window, so the map's
+background is that picture's (500, 13) 121 x 102 cut, scaled with the map
+(Data's decision 2 of work order 210); black without the player's art.
+
 A click is the map's grid field (combat1.cpp:120, :156; one cell a native
 px) and centres the view on the cell under it, `(map * 2) / 3`
 (`Snap_Center_Combat_Screen_`, :685-686). HD centres its own camera there
@@ -59,6 +65,29 @@ PULSE = (0, 2, 5, 2)
 #: The bracket's length past its corner: 499..506 (cmbtdrw1.cpp:1251).
 BRACKET = 7
 CELL = 20
+#: The panel picture (COMBAT.LBX 0) is drawn at y 351 (cmbtdrw1.cpp:447), so
+#: the map's window starts 364 - 351 = 13 px down it.
+PANEL_Y = 351
+
+
+def background(art, size):
+    """The map's star background at `size`: COMBAT.LBX 0's cut under the
+    map's window, or None without the art."""
+    if art is None or not art.available:
+        return None
+    key = (id(art), tuple(size))
+    if key not in _BACKGROUNDS:
+        panel = art.surface("combat", 0, 0)
+        if panel is None:
+            return None
+        cut = panel.subsurface(pygame.Rect(500, 364 - PANEL_Y, NATIVE_W,
+                                           NATIVE_H)).copy()
+        _BACKGROUNDS.clear()
+        _BACKGROUNDS[key] = pygame.transform.scale(cut, size)
+    return _BACKGROUNDS[key]
+
+
+_BACKGROUNDS = {}
 
 
 def rect_for(area):
@@ -163,6 +192,9 @@ def draw(surface, rect, combat, ordnance, cam, art, colours, planet,
                    else {})
     palette.update(ramps(art, combat, colours))
     surface.fill((0, 0, 0), rect)
+    bg = background(art, rect.size)
+    if bg is not None:
+        surface.blit(bg, rect.topleft)
     k = rect.w / NATIVE_W
     clip = surface.get_clip()
     surface.set_clip(rect)

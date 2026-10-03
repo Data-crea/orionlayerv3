@@ -7,6 +7,8 @@ Colors and font sizes are shared with renderer.py so the skin's
 import re
 import pygame
 
+from core import lang
+
 from screens.select_race.renderer import (
     COL_HEADING, COL_LABEL, COL_VALUE, COL_GOOD, COL_BAD,
     COL_NEUTRAL, COL_FLAVOR, COL_HIGHLIGHT, COL_KEYWORD,
@@ -40,7 +42,10 @@ def render_race_description(surface, L, style, race, rect,
                             scroll_offset=0, fs_scale=1.0):
     """Render scrollable description with markup in its own box."""
     rx, ry, rw, rh = rect
-    desc = race.get("description", "")
+    # OrionLayer's own text ([select_race.screen]): translated
+    # whole, before the markup is cut into words (work order 210 B2, Data's
+    # decision 1; the German in assets/shared/lang/de.json)
+    desc = lang.tr(race.get("description", ""))
     if not desc:
         return
     _render_description(surface, L, style, desc,
