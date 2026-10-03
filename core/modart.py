@@ -51,9 +51,11 @@ NOT_LISTED = {
         "the sheet the HUD pieces are cut from (tools/hud_cut.py)",
     "screens/galaxy_map/assets/_black_hole_src.png":
         "the source of black_hole.png (tools/make_black_hole_master.py)",
-    "screens/galaxy_map/assets/map_background.png": "loaded by nothing",
-    "screens/select_race/assets/banners/*.png": "loaded by nothing",
-    "screens/select_race/assets/planets/*.png": "loaded by nothing",
+    # Work order 205 moved the pictures nothing loaded — the galaxy map's
+    # old floor, Select Race's banners and planet, four larger portraits
+    # — into the developer store (Data: kept for the Select Race
+    # redesign); a player's tree no longer carries them, so they need no
+    # rule here.
     "screens/new_game/assets/background.png":
         "the cut-outs' geometry, never drawn (work order 199 D3)",
     "*/_src/*": "the sources an extractor or a tool works from",
