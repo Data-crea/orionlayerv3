@@ -90,6 +90,7 @@ from the maintainer.
 | 37 | `095ebac4` | open fix 68: COPT — the battle's OPTIONS panel on the wire: whether it is up, and its five option flags as the battle holds them, read only (work order 200) | `doc/ext_combat_options.patch` |
 | 38 | `f031cbad` | open fix 69: HLPL — the help list a right click is checked against on the wire: its ids and rectangles in its own order, read only (work order 200) | `doc/ext_help_list.patch` |
 | 39 | `a8b5640b` | open fix 70: the player's language — `ORION2RE_LANGUAGE` where the build forced 0, and `ORION2RE_LANGUAGE_DIR`, another install read for the language's files (its own files first, `ORION2RE_LANGUAGE_FILES`; read only; work order 200) | `doc/ext_language.patch` |
+| 40 | `e75477c5` | open fix 74: the Energy Absorber's discharge as a battle event — the beam shot it is drawn as (weapon 0x2E, no slot, its damage), before the target's death ("CMEV"; work order 210) | `doc/ext_combat_absorber.patch` |
 
 ## Install
 

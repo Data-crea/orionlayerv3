@@ -404,6 +404,12 @@ LOCAL_PATCHES = {
         "OrionLayer, open fix 70.",
         "the engine ignores the player's language (open fix 70): its own "
         "texts stay English whatever Game Settings says"),
+    # Applied 3 October 2026 by work order 210: e75477c5, on a8b5640b.
+    "doc/ext_combat_absorber.patch": (
+        os.path.join("src", "game", "cmbtfire.cpp"),
+        "OrionLayer, open fix 74.",
+        "the engine does not report the Energy Absorber's discharge (open fix "
+        "74): its damage arrives with no shot to show"),
 }
 
 #: Patches that are REPORTED to Joes and not yet applied: listed with
@@ -482,6 +488,7 @@ FIX_NUMBERS = {
     "doc/ext_combat_options.patch": (68,),
     "doc/ext_help_list.patch": (69,),
     "doc/ext_language.patch": (70,),
+    "doc/ext_combat_absorber.patch": (74,),
 }
 
 
