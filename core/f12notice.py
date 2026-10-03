@@ -165,16 +165,21 @@ def draw_panel(surface, style, labels, what, rect=None):
     return rect
 
 
-#: The screen's line, as a share of a row's height (work order 208 B3).
-READABLE = 0.62
+#: The screen's line: a row's full height at the "F12 to answer" line's
+#: SIZE (role `action`, cap 0.293) in the label colour — the `label` role's
+#: cap (0.101) drew it a few pixels high (work order 208 B3).
+READABLE = 1.0
+READABLE_SIZE_ROLE = "action"
 
 
-def _fitted(style, text, role, box_h, inner):
-    """One line at `box_h`, smaller only when it would not fit."""
-    surf = hudtext.render(style, text, role, box_h)
+def _fitted(style, text, role, box_h, inner, size_role=None):
+    """One line at `box_h`, smaller only when it would not fit; sized as
+    `size_role` (default `role`), coloured as `role`."""
+    sized, col = size_role or role, hudtext.colour(role)
+    surf = hudtext.render(style, text, sized, box_h, col)
     while surf.get_width() > inner and box_h > 8:
         box_h = int(box_h * 0.9)
-        surf = hudtext.render(style, text, role, box_h)
+        surf = hudtext.render(style, text, sized, box_h, col)
     return surf
 
 
@@ -188,12 +193,14 @@ def _wrapped(style, text, role, box_h, inner):
     with lang.verbatim():
         for word in text.split():
             trial = f"{line} {word}".strip()
-            if line and hudtext.render(style, trial, role,
+            if line and hudtext.render(style, trial, READABLE_SIZE_ROLE,
                                        box_h).get_width() > inner:
-                out.append(_fitted(style, line, role, box_h, inner))
+                out.append(_fitted(style, line, role, box_h, inner,
+                                   READABLE_SIZE_ROLE))
                 line = word
             else:
                 line = trial
         if line:
-            out.append(_fitted(style, line, role, box_h, inner))
+            out.append(_fitted(style, line, role, box_h, inner,
+                               READABLE_SIZE_ROLE))
     return out
