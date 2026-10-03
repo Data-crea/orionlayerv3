@@ -90,6 +90,19 @@ class BuildQueueScreen(ScreenBase):
     def fallback_reason(self):
         return self._view.reason if self._view is not None else ""
 
+    def no_view_reason(self, game_state):
+        """REFIT's ship list stands under the popup's id 25: its CANCEL is
+        `Add_Button_Field_(0x112, 0x1B8, …)` in both of its stages
+        (colrefit.cpp:357-386, :600-606). HD has no view of it
+        ([build_queue.refit], work order 208 B3)."""
+        if getattr(game_state, "current_screen", -1) != 25:
+            return None
+        for f in getattr(game_state, "fields", None) or []:
+            if getattr(f, "index", 0) and f.field_type == 0 and \
+                    (f.x, f.y) == (0x112, 0x1B8):
+                return "The refit ship list has no HD view yet"
+        return None
+
     def e(self, index):
         return self._strings.string(index)
 

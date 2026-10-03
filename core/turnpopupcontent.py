@@ -95,6 +95,21 @@ def leader_card(state, index, app=None):
             "question": question}
 
 
+def combat_title(state, star, app=None):
+    """The question the combat choice asks, as the original words it:
+    ESTRINGS 0x45 with the choosing player's race and the star
+    (`Draw_Defense_Selection_Popup_`, mainpups.cpp:2130-2135 — "CyberToller
+    select combat at Altair"). The chooser is the local player
+    (`_g_player_n`). None without the string file: the caller then names
+    the star alone (work order 208 A4)."""
+    template = _leader_words(app).estring(0x45)
+    if not template:
+        return None
+    from core.hestrings import printf
+    return printf(template, _race_name(state, getattr(state, "player_num", 0)),
+                  _star_name(state, star))
+
+
 def _race_name(state, player):
     from core.structs import player as player_struct
     raw = getattr(state, "player_raw", None) or []
@@ -216,6 +231,8 @@ def content(popup, state, words, app=None):
             right_buttons = []
     elif kind in ("planet_choice", "discovery", "combat_target"):
         sysd = popup.get("system") or {}
+        if kind == "combat_target" and not title:
+            title = combat_title(state, sysd.get("star", -1), app)
         title = title or _star_name(state, sysd.get("star", -1))
         if popup.get("text"):
             lines.append(popup["text"])

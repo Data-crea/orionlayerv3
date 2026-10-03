@@ -80,7 +80,8 @@ def parse(gs, data, pos):
         (name,) = take("16s")
         out = {"slot": slot, "refit": bool(refit), "printed_cost": cost,
                "printed_space_available": space_avail,
-               "name": lang.wire_text(name.split(b"\0", 1)[0])}
+               # the design's stored name (work order 208 A6)
+               "name": lang.stored(lang.wire_text(name.split(b"\0", 1)[0]))}
         out.update(zip(MAIN_FIELDS, take("7h")))
         out.update(zip(("hull_space", "space_used", "total_cost"),
                        take("3i")))

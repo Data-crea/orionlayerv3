@@ -126,6 +126,7 @@ class Overlays:
             if top is None or not same_game(getattr(top, "_state", None),
                                             self.app.client.state):
                 return False
+            follow_game(top, self.app.client.state)
         surface.fill((4, 6, 14))
         top.render_backdrop(surface)
         return True
@@ -218,6 +219,22 @@ class Overlays:
                                     (field.y + field.y_end) // 2)
         else:
             app.client.activate_field(field.index)
+
+
+def follow_game(screen, state):
+    """THE MAP BEHIND A TURN'S POPUPS FOLLOWS THE GAME (Data's decision 1
+    of work order 208). The dispatcher has EXITED the galaxy map for the
+    report phase, so it no longer receives snapshots and its sidebar
+    froze at the turn's start — 3510.6 and 4 597 BC where the original's,
+    drawn behind every report (`Reports_Screen_` ->
+    `Draw_Main_Screen_Filled_`, mainscr2.cpp:115-211), already read 3510.8
+    and 3 649 BC. Each new snapshot
+    is handed to it here, once; `update` sends nothing under another
+    screen id (its parking needs screen 0 and the map's own list)."""
+    if state is not None and getattr(screen, "_backdrop_state", None) \
+            is not state:
+        screen.update(state)
+        screen._backdrop_state = state
 
 
 def same_game(map_state, state):

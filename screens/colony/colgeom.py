@@ -60,6 +60,10 @@ JOB_ICON_X = (310, 510)
 BUILD_WINDOW = (517, 17, 639, 158)
 BUILD_NAME = (522, 38, 522 + 112, 38 + 141)
 BUILD_BAR_AT = (606, 43)
+#: The box the bar's art covers, measured off the native framebuffer
+#: (g207_plague, colony 1, work order 208 B2): x 608..628, y 74..102 — clear
+#: of the turns line, which `Print_Right_(624, 103)` puts under it.
+BUILD_BAR_BOX = (608, 74, 628, 102)
 BUILD_TURNS_RIGHT = (624, 103)
 AUTOBUILD_CENTRE = (578, 28)
 

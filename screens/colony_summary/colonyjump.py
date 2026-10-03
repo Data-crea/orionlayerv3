@@ -77,7 +77,7 @@ class Jump:
     """One jump from row `position` of the HD list (the game's order)."""
 
     def __init__(self, client, state, *, colony, position, n_colonies,
-                 sort_key):
+                 sort_key, order_known=True):
         self.client = client
         self.colony = colony
         self.n = int(n_colonies)
@@ -85,7 +85,7 @@ class Jump:
         self.reason = ""
         self._wait = None
         self._expect = None
-        if not colonypick.sort_binds(sort_key):
+        if not colonypick.sort_binds(sort_key, order_known):
             self._fail("the game's list is sorted by a key HD cannot "
                        "honour; a slot would name another colony")
             return

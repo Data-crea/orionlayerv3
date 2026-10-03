@@ -274,6 +274,14 @@ class App:
                 elif self._handover.holding:
                     if self._overlays.active:  # the HD box's / popup's keys
                         self._overlays.key(event)
+                    elif (self._handover.notice is not None and
+                          event.key == pygame.K_ESCAPE and self.connected):
+                        # ESC UNDER THE F12 NOTICE IS THE GAME'S (work order
+                        # 208 B3): the game waits for an answer HD cannot
+                        # draw, and ESC is the original's own way out of its
+                        # dialogs (the race report's EXIT takes it). HD
+                        # EXTENSION `f12_notice_esc`.
+                        self.client.inject_key(pygame.K_ESCAPE)
                     # nothing else reaches a held frame (180 A2)
                 else:
                     self.dispatcher.route_key_event(event)
@@ -486,7 +494,8 @@ class App:
                     self.surface, self.style, self._note_labels,
                     f12notice.what_for(
                         kind, sid, top, labels=self._note_labels,
-                        declined=sid in self.dispatcher.screen_map))
+                        declined=sid in self.dispatcher.screen_map,
+                        reason=self._handover.reason))
             else:
                 self._notice_view.reset(self.surface)
         elif self.dispatcher.active:

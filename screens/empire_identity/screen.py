@@ -89,9 +89,17 @@ class EmpireIdentityScreen(ScreenBase):
 
         home_default = self._data.get("home_default", {}).get(
             self._race, "")
+        # THE GAME'S OWN NAME WHEN THE FIELD STAYS EMPTY (work order 208
+        # B5): the engine draws a ruler name from RACENAME.LBX at random
+        # inside `Naming_Popup_` (racesel.cpp:796-803) and keeps it when
+        # the input comes back empty (:822-826) — which is what HD's chain
+        # sends for an empty field (`type_name` clears, types nothing,
+        # Enter). The name itself is in the engine's input buffer, on no
+        # wire, so the field says that the game's proposal stands
+        # (proposed open fix 73).
         self._ruler = TextInput(
             value="", max_len=self._data.get("ruler_max_len", 15),
-            placeholder="Ruler name", font_ref=30,
+            placeholder="The game's proposal", font_ref=30,
             on_submit=lambda v: self._accept(), on_cancel=self._cancel)
         self._home = TextInput(
             value=home_default, max_len=self._data.get("home_max_len", 12),

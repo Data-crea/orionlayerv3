@@ -46,7 +46,8 @@ def parse(gs, data, pos):
                 at += n
             rows.append({"record": record, "score": score,
                          "race_id": race_id, "difficulty": difficulty,
-                         "name": texts[0], "race": texts[1],
+                         # the player's own name (work order 208 A6)
+                         "name": lang.stored(texts[0]), "race": texts[1],
                          "difficulty_word": texts[2]})
     except (IndexError, _st.error):
         return pos

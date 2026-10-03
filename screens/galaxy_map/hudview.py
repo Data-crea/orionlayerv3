@@ -13,6 +13,8 @@ and the shape it is hit as.
 """
 import pygame
 
+from core import lang
+
 from core import mouse as mouse_input
 from core.config import REF_W
 from core.hud import art as hudart
@@ -84,7 +86,11 @@ def render_sidebar(screen, surface):
               screen._local, screen._data.get("labels", {}), rows,
               font_scales=screen._sidebar_font_scales(rows),
               aligns=screen._sidebar_aligns(rows),
-              monetary=screen._data.get("monetary_unit", "BC"),
+              # the unit in the session's words (work order 208 B7, Data's
+              # decision 6): "MC" in German, as the game's own texts and
+              # the info screen print it — the whole readout "132 BC" is
+              # no key of the table, so the unit is translated by itself
+              monetary=lang.tr(screen._data.get("monetary_unit", "BC")),
               extras={"stardate": (stardate, "")},
               icons={}, cache=screen._cache,
               fonts=screen._data.get("sidebar_fonts", sb.DEFAULT_FONTS),

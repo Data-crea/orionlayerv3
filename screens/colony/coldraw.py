@@ -250,11 +250,12 @@ def _build(surface, screen, view, state, words, names):
     spent = cost if view.colony.bought_outright else \
         view.colony.production_spent
     # DEVIATION `production_bar`: the original draws two frames of its art
-    # (C_Anims_ 34/35, frames 0..50) whose column runs 64 native px down
-    # from y + 10 (coldraw.cpp:249-280); the art's width is not in the
-    # source. HD draws the 64 px column, filled current / total, 12 px wide.
-    bx, by = geom.BUILD_BAR_AT
-    bar = nd.rect(layout, (bx, by + 10, bx + 11, by + 10 + 63))
+    # (C_Anims_ 34/35, frames 0..50, coldraw.cpp:249-280) — a box whose
+    # size is not in the source. HD draws a bar filled current / total in
+    # the box the art covers, measured off the native frame (work order 208
+    # B2): it ends above the turns line at y 103 (colony.cpp:993), which
+    # the 64 px column HD drew before ran through.
+    bar = nd.rect(layout, geom.BUILD_BAR_BOX)
     pygame.draw.rect(surface, hudtext.colour("label"), bar, 1)
     if cost > 0:
         filled = max(0, min(bar.h - 2, (bar.h - 2) * spent // cost))

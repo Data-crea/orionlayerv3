@@ -24,6 +24,10 @@ from core import textfit
 from . import fltrows
 from .fltdraw import _rect, col, content_rect
 
+#: `FLT2::_red_colors` (flt2.cpp:6): palette index 129, read as (196, 0, 0)
+#: off the native frame of work order 207's damaged special.
+DAMAGED_RED = (196, 0, 0)
+
 log = logging.getLogger("fleets")
 
 
@@ -276,7 +280,9 @@ def draw_columns(surface, screen, panel, rect):
             block = []
             for text in items:
                 block.extend(textfit.wrap_rendered(
-                    screen.style, text, size, widths[i], colour))
+                    screen.style, text, size, widths[i],
+                    DAMAGED_RED if isinstance(text, fltrows.Damaged)
+                    else colour))
             cols.append(block)
         rows = len(head) + bool(headings) + max(len(c) for c in cols)
         if rows * line_h > rect.height:

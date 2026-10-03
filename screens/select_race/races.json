@@ -286,12 +286,6 @@
         "note": "+25% diplomacy effectiveness"
       },
       {
-        "name": "Lucky",
-        "value": "",
-        "good": true,
-        "note": "Half price for legendary leaders"
-      },
-      {
         "name": "Government",
         "value": "Democracy",
         "good": null,

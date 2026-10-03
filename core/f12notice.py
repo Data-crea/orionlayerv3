@@ -57,13 +57,16 @@ def words(labels):
 
 
 def what_for(kind, screen_id, top=None, engine_name=None, declined=False,
-             labels=None):
+             labels=None, reason=None):
     """The one line naming what the game shows: the screen's own reason
     (a hand-over — path 6, e.g. "run: python tools/techname_extract.py"),
     else the game's screen by its engine name and id — and, where an HD
     screen exists for the id but declined it (path 3: the engine lacks the
     fixes that screen needs, work order 188 Part 5), that reason, worded in
-    the HD string file (`notice_engine`)."""
+    the HD string file (`notice_engine`). A screen's own `no_view_reason`
+    (work order 208 B3: it KNOWS it has no view of what stands) wins."""
+    if reason:
+        return reason
     if top is not None and kind == "hand_over":
         getter = getattr(top, "fallback_reason", None)
         reason = getter() if callable(getter) else ""
@@ -126,27 +129,71 @@ class Notice:
 
 def draw_panel(surface, style, labels, what, rect=None):
     """The panel alone, in `rect` or centred: HUD popup (glass, the frame
-    colour), the waiting line, the screen's line, "F12 to answer"."""
+    colour), the waiting line, the screen's line, "F12 to answer".
+
+    THE SCREEN'S LINE IS WRAPPED, NOT SHRUNK (work order 208 B3): a long
+    reason took a smaller font until it fitted — a few pixels high, read
+    by nobody. It keeps a readable height (`READABLE` of a row) and breaks
+    at spaces; the panel grows by the lines it needs."""
     win_w, win_h = surface.get_size()
     scale = win_h / 1080
     rect = pygame.Rect(rect) if rect is not None else panel_rect(win_w, win_h)
-    hud.popup(surface, rect, scale)
     waiting, answer = words(labels)
     line_h = max(8, rect.h // 4)
-    rows = [(waiting, "title"), (what or "", "label"), (answer, "action")]
-    top = rect.y + (rect.h - line_h * len(rows)) // 2
-    for text, role in rows:
+    inner = rect.w - 2 * max(4, int(20 * scale))
+    rows = []
+    for text, role in ((waiting, "title"), (what or "", "label"),
+                       (answer, "action")):
         if not text:
-            top += line_h
-            continue
-        # A line wider than the panel takes a smaller font, never a
-        # resampled picture of the text (and never a silent cut).
-        inner = rect.w - 2 * max(4, int(20 * scale))
-        box_h = line_h
-        surf = hudtext.render(style, text, role, box_h)
-        while surf.get_width() > inner and box_h > 8:
-            box_h = int(box_h * 0.9)
-            surf = hudtext.render(style, text, role, box_h)
-        hudtext.blit(surface, surf, pygame.Rect(rect.x, top, rect.w, line_h))
+            rows.append(None)
+        elif role == "label":
+            rows.extend(_wrapped(style, text, role,
+                                 max(8, int(line_h * READABLE)), inner))
+        else:
+            rows.append(_fitted(style, text, role, line_h, inner))
+    extra = max(0, len(rows) - 3) * line_h
+    if extra:
+        rect = pygame.Rect(rect.x, rect.y - extra // 2, rect.w,
+                           rect.h + extra)
+    hud.popup(surface, rect, scale)
+    top = rect.y + (rect.h - line_h * len(rows)) // 2
+    for surf in rows:
+        if surf is not None:
+            hudtext.blit(surface, surf, pygame.Rect(rect.x, top, rect.w,
+                                                   line_h))
         top += line_h
     return rect
+
+
+#: The screen's line, as a share of a row's height (work order 208 B3).
+READABLE = 0.62
+
+
+def _fitted(style, text, role, box_h, inner):
+    """One line at `box_h`, smaller only when it would not fit."""
+    surf = hudtext.render(style, text, role, box_h)
+    while surf.get_width() > inner and box_h > 8:
+        box_h = int(box_h * 0.9)
+        surf = hudtext.render(style, text, role, box_h)
+    return surf
+
+
+def _wrapped(style, text, role, box_h, inner):
+    """`text` broken at spaces into lines of `inner` width at `box_h`
+    (a single word wider than that is fitted alone). Translated once,
+    whole, before it is broken — the pieces are not sentences."""
+    from core import lang
+    text = lang.tr(text)
+    out, line = [], ""
+    with lang.verbatim():
+        for word in text.split():
+            trial = f"{line} {word}".strip()
+            if line and hudtext.render(style, trial, role,
+                                       box_h).get_width() > inner:
+                out.append(_fitted(style, line, role, box_h, inner))
+                line = word
+            else:
+                line = trial
+        if line:
+            out.append(_fitted(style, line, role, box_h, inner))
+    return out

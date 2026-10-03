@@ -98,12 +98,14 @@ class Gate:
         #: work order 188), else None; `notices` counts how often one began.
         self.notice = None
         self.notices = 0
+        #: A screen's `no_view_reason` for what stands now, else None.
+        self.reason = None
         self._episode = None
         self._start = 0
         self._released = False
 
     def decide(self, want, kind, name, screen, live_fields, snapshots,
-               box=False, sig=None):
+               box=False, sig=None, immediate=False):
         """True to present the game's picture, False to draw HD — and
         `holding` says whether "False" means "keep the last HD frame".
 
@@ -137,12 +139,16 @@ class Gate:
                      "187)", name or "-", screen, snapshots - self._sig_since)
             return True
         limit = self.empty_hold if kind == NO_SCREEN else self.hold
+        if immediate:
+            # the screen KNOWS it has no view (`no_view_reason`): nothing is
+            # on its way, so nothing is waited for (work order 208 B3)
+            limit = 0
         if waited < limit:
             self.holding = True
             return False
         self._released = True
         self.holding = False
-        if kind == HAND_OVER:
+        if kind == HAND_OVER and not immediate:
             self.failures += 1
             log.warning("FALLBACK: %s, game screen %s — its data did not "
                         "arrive within %d snapshots; the game's picture is "
@@ -246,6 +252,14 @@ def decide_for(app, want, kind, top):
         kind = MODAL
     name = ((d.overlay_name or d.active_name) if top is not None
             else "") or ""
+    # A SCREEN THAT KNOWS IT HAS NO VIEW (work order 208 B3): the notice
+    # comes at once and names the true reason.
+    screens = getattr(d, "screens", None) or {}
+    owner = top if top is not None else screens.get(
+        (getattr(d, "screen_map", None) or {}).get(
+            getattr(state, "current_screen", -1)))
+    ask = getattr(owner, "no_view_reason", None) if want else None
+    app._handover.reason = ask(state) if callable(ask) else None
     box = bool(kind == MODAL and top is not None and
                getattr(top, "modal_is_box", lambda: False)())
     gate = app._handover
@@ -255,7 +269,7 @@ def decide_for(app, want, kind, top):
         want, kind, name, screen,
         0 if kind == NO_SCREEN and skip_only(state) else live,
         app.client.stats.get("state", 0),
-        box=box, sig=list_sig(state))
+        box=box, sig=list_sig(state), immediate=bool(gate.reason))
     return gate.never_without_f12(shown, kind, screen, live, top)
 
 

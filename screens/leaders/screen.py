@@ -109,6 +109,15 @@ class LeadersScreen(ScreenBase):
         self._view = ldrwire.View(game_state, self._waited,
                                   self._warlord_of, self._last_view)
         if self._view.view_known:
+            if self._last_view is not None and \
+                    self._view.view != self._last_view:
+                # TRANSCRIBED (work order 208 B6): `Change_Screen_Type_`
+                # clears the scanned small and big ship on a tab change
+                # (officer.cpp:1841-1846) — the map strip goes empty — and
+                # leaves the scanned star alone.
+                if self._scan is not None and self._scan[0] == "icon":
+                    self._scan = None
+                self._big = None
             self._last_view = self._view.view
         if self._view.state == ldrwire.READY:
             # What the buttons looked like the last time the list was

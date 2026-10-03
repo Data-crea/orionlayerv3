@@ -10,10 +10,11 @@ check 090q:
                  seven queue rows, the title, the summary's lines and their
                  numbers (BLDL: the engine's own `Draw_Cost_And_Time_Info_`
                  values)
-  DEVIATION      `ship_row_dim` — a ship row is never dimmed: the original
-                 dims by `Colony_Can_Build_Product_` and the design's size
-                 against the colony's bases (:625-653), a rule this screen
-                 does not copy
+  DEVIATION      `ship_row_dim` — narrowed by work order 208 B8: a design
+                 LARGE or bigger is dimmed without a star base, star
+                 fortress or battlestation, as the original does
+                 (:625-633); what `Colony_Can_Build_Product_` and
+                 `Auto_Design_Type_` dim (:637-652) is not copied
   DEVIATION      `button_words`, `hd_font` — the Leaders and Races rules
   OMISSION       `description`, `product_picture`, `design_stats`,
                  `delete_hint` — the HELP.LBX description, the product's
@@ -55,6 +56,33 @@ def _title(surface, screen, view, names):
              "value", "title", align="center")
 
 
+#: `BUILDING_STAR_BASE`, `_STAR_FORTRESS`, `_BATTLESTATION`
+#: (orion2_consts.h:21, :53-54) and `SHIP_SIZE_LARGE` (:512).
+BASES, SHIP_SIZE_LARGE = (40, 41, 8), 2
+
+
+def design_needs_base(view, state, product):
+    """TRANSCRIBED (work order 208 B8): a design row is dimmed when the
+    colony has no star base, star fortress or battlestation and the design
+    is LARGE or bigger (colbldg.cpp:625-633). Not transcribed:
+    `Colony_Can_Build_Product_` (:637-640) and the special ships' dimming by
+    `Auto_Design_Type_` (:642-652) — DEVIATION `ship_row_dim`, narrowed."""
+    from core import prodname
+    from core.structs import player as player_struct
+    if prodname.kind(product) != prodname.KIND_SHIP_DESIGN or \
+            getattr(view, "colony", None) is None:
+        return False
+    raws = getattr(state, "player_raw", None) or []
+    me = getattr(state, "player_num", 0) or 0
+    if not 0 <= me < len(raws):
+        return False
+    size = player_struct.design_size(player_struct.parse(raws[me]),
+                                     prodname.SHIP_DESIGN_BASE - product)
+    built = list(view.colony.buildings)
+    has_base = any(0 <= b < len(built) and built[b] for b in BASES)
+    return size is not None and size >= SHIP_SIZE_LARGE and not has_base
+
+
 def _lists(surface, screen, view, state, names):
     dim = hudtext.colour("sub")
     for entries, rows, x, width, building in (
@@ -63,7 +91,8 @@ def _lists(surface, screen, view, state, names):
         for e, f in zip(entries, rows):
             if e["id"] == w.SEPARATOR:
                 continue
-            bright = view.queued(e["id"]) if building else True
+            bright = view.queued(e["id"]) if building else \
+                not design_needs_base(view, state, e["id"])
             name, _st = names.product(e["id"], state)
             text(surface, screen, name, x, f.y + 1, width, "value",
                  "value", colour=None if bright else dim)

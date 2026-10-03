@@ -339,7 +339,22 @@ def design_name(view, i):
     if not 0 <= int(i) < DESIGN_SLOTS:
         return None
     o = SHIP_DESIGNS_OFFSET + DESIGN_SIZE * int(i)
-    return lang.wire_text(view.raw[o:o + DESIGN_NAME_LEN].split(b"\0")[0])
+    # a stored name: never translated (work order 208 A6, `lang.Stored`)
+    return lang.stored(lang.wire_text(
+        view.raw[o:o + DESIGN_NAME_LEN].split(b"\0")[0]))
+
+
+#: `s_ship_design.size` at 16 — the same place as the ship record's own
+#: design copy (`ship.py` `size`, verified).
+DESIGN_SIZE_OFFSET = 16
+
+
+def design_size(view, i):
+    """Design i's hull size (0 frigate .. 5 doom star), or None."""
+    if not 0 <= int(i) < DESIGN_SLOTS:
+        return None
+    return view.raw[SHIP_DESIGNS_OFFSET + DESIGN_SIZE * int(i)
+                    + DESIGN_SIZE_OFFSET]
 
 
 def design_cost(view, i):

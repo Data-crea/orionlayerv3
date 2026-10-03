@@ -300,8 +300,12 @@ def draw_labels(surface, screen, words, enabled=None, art=None,
         # HUD's measured button colour, as every HUD button's is; the
         # palette's `label` stays in the skin. Dim is still the dim.
         # With the button's glyph beside it when both fit (work order 179).
+        # AN UNAVAILABLE BUTTON LOOKS AS IT DOES EVERYWHERE (work order 208
+        # B1): the HUD block is drawn "disabled" (`flthud.draw_hud`), the
+        # word keeps the button colour — `core/hud/blocks._label`'s rule,
+        # one label colour in every state. It was drawn green.
         icons.fitted_word(surface, screen.style, rect, text,
-                          hudtext.colour("button") if live else col("label_dim"),
+                          hudtext.colour("button"),
                           icon=icons.art.for_button("fleets", name), dim=not live)
 
 

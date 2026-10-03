@@ -136,6 +136,23 @@ def _template(english, german):
     return re.compile("^" + "".join(parts) + "$", re.S), german, names
 
 
+class Stored(str):
+    """STORED TEXT, NEVER TRANSLATED (Data's decision 5 of work order 208):
+    a name the game keeps in a save — a save's description, a ship's,
+    a design's, a star's, a leader's, a race's — is shown as stored. It
+    was translated whenever it happened to equal a key of the table
+    ("Androids" in the Load dialog became "Androiden"), because every
+    drawn string passes `tr` (`core/style.py` `render_text`). The wire's
+    readers mark it (`stored`); `tr` leaves a marked string alone. A
+    marked string stays marked only as itself: a text built around it
+    is a new, unmarked string."""
+
+
+def stored(text):
+    """`text` marked as stored text (see `Stored`)."""
+    return Stored(text) if isinstance(text, str) else text
+
+
 def _fill(german, values):
     seq = iter(values[n] for n in sorted(values) if n.startswith("_"))
     return _FIELD.sub(lambda m: tr(values[m.group(1)]) if m.group(1)
@@ -146,7 +163,7 @@ def tr(text):
     """OrionLayer's own words in the current language; anything the table
     does not hold (the game's words, names, numbers) unchanged."""
     if _state["language"] == DEFAULT or _state["verbatim"] or \
-            not isinstance(text, str):
+            not isinstance(text, str) or isinstance(text, Stored):
         return text
     hit = _state["table"].get(text)
     if hit is None and text.isupper():

@@ -108,7 +108,9 @@ class Spec:
             if kind.startswith("str"):
                 length = int(kind[3:])
                 chunk = raw[offset:offset + length]
-                values[name] = (_lang.wire_text(chunk.split(b"\x00")[0]))
+                # a name the save keeps: never translated (WO 208 A6)
+                values[name] = _lang.stored(
+                    _lang.wire_text(chunk.split(b"\x00")[0]))
                 continue
             m = self._ARRAY_RE.match(kind)
             if m:

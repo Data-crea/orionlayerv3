@@ -171,7 +171,7 @@ class Refusal:
                 f"carried={self.carried}, total={self.total})")
 
 
-def sort_binds(sort_key):
+def sort_binds(sort_key, order_known=True):
     """Can an HD row position be mapped to a game slot at all?
 
     Only while both lists are sorted the same way (decision 46, and
@@ -180,7 +180,7 @@ def sort_binds(sort_key):
     the kind, and every row would then name the wrong colony with
     every value on screen still correct.
     """
-    return sort_key not in colonyrows.SORT_UNAVAILABLE
+    return order_known and sort_key not in colonyrows.SORT_UNAVAILABLE
 
 
 def pick_at(pops, n_pops, job, slot, colony, position, sort_key):

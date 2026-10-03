@@ -116,6 +116,14 @@ class ScreenBase(HelpMixin):
         """
         return False
 
+    def no_view_reason(self, game_state):
+        """A sentence when the game shows something this screen KNOWS it
+        has no HD view for — a dialog of its own id, not data still on its
+        way. The F12 notice then stands at once and says it, instead of
+        holding the last frame for the data hold (work order 208 B3).
+        None: nothing known (the default)."""
+        return None
+
     def claims(self, game_state):
         """May this screen take its GAME_SCREEN_ID for this snapshot?
 

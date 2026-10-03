@@ -367,8 +367,17 @@ class FleetsScreen(ScreenBase):
         screen gave before it could show the state at all.
         """
         block = getattr(self._state, "fleet_screen", None) or {}
-        return {name: bool(block.get(key))
-                for name, (_which, key) in fltdraw.RADIOS.items()}
+        on = {name: bool(block.get(key))
+              for name, (_which, key) in fltdraw.RADIOS.items()}
+        # RELOCATE ON IS LIT (work order 208 B1, Data's decision 3): the
+        # original draws its button's second frame while relocate mode is
+        # 1 (flt1.cpp:459-469); HD's one "on" marking is the HUD button's
+        # "active" state, the same as the filters'.
+        view = getattr(self, "_view", None)
+        on["btn_relocate"] = bool(
+            view is not None and view.block and
+            int(view.block.get("relocate_mode", 0)) == 1)
+        return on
 
     def _inset_stars(self):
         """Every star as (native_x, native_y, colour index) inside the

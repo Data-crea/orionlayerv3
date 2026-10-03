@@ -182,6 +182,7 @@ class ColonySummaryScreen(ScreenBase):
         # for an effect nobody is going to produce.
         self._move = colonymoveui.MoveController()
         self._jump = None
+        self._selection.reset_order()
         self.update(game_state)
         # THE SIX COLUMN BOXES BECOME THE COLUMN TABLE, once, on
         # load: what is bound is the live `Box` objects, so a drag in
@@ -225,10 +226,16 @@ class ColonySummaryScreen(ScreenBase):
         screen that is up without a game has no original behind it to
         disagree with.
         """
-        for spec in self._data.get("sort", {}).get("buttons", []):
-            if spec["key"] == self._sort_key:
-                self._inject(spec, f"entry sort {spec['key']}")
-                return
+        # NAME FIRST (work order 208 A1): names are unique, so after it the
+        # game's list is in name order whatever key it held before, and
+        # the entry key then sorts THAT list stably — the order
+        # `colonyselect.game_order` builds. Without it the ties of the
+        # entry key would stand in the order of a key HD never saw.
+        buttons = self._data.get("sort", {}).get("buttons", [])
+        for key in dict.fromkeys(("name", self._sort_key)):
+            spec = next((b for b in buttons if b["key"] == key), None)
+            if spec is not None:
+                self._inject(spec, f"entry sort {key}")
 
     def update(self, game_state=None):
         if game_state is None:
@@ -261,7 +268,7 @@ class ColonySummaryScreen(ScreenBase):
     # properties over it so nothing else in this file has to know
     # which object holds them.
 
-    def _rebuild_rows(self):
+    def _rebuild_rows(self, resort=False):
         """Rebuild the rows, held cluster included.
 
         `_move.held()` is what turns a local selection into the
@@ -274,7 +281,7 @@ class ColonySummaryScreen(ScreenBase):
         """
         self._selection.rebuild(self._state, self._sort_key,
                                 colonybuild.names_for(self),
-                                held=self._move.held())
+                                held=self._move.held(), resort=resort)
 
     @property
     def _rows(self):
@@ -604,8 +611,9 @@ class ColonySummaryScreen(ScreenBase):
                 # survives it — `_reseat_selection` keeps the colony
                 # and lets its row move, which is what the original
                 # does by not touching `_g_colony_n` here at all
-                # (colsum.cpp:830-837).
-                self._rebuild_rows()
+                # (colsum.cpp:830-837). The game sorts the list it
+                # SHOWS, stably (`colonyselect.game_order`).
+                self._rebuild_rows(resort=True)
                 # The original scrolls back to the top on any sort
                 # click — `_first = 0` at colsum.cpp:832, inside the
                 # same handler that deliberately does NOT touch
@@ -661,7 +669,8 @@ class ColonySummaryScreen(ScreenBase):
                 self._jump = colonyjump.Jump(
                     self.app.client, self._state, colony=row["index"],
                     position=row_index, n_colonies=len(self._rows),
-                    sort_key=self._sort_key)
+                    sort_key=self._sort_key,
+                    order_known=self._selection.order_known)
                 if self._jump.finished:
                     self._jump = None
             return None

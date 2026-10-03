@@ -10,7 +10,7 @@
     "auto": "AUTO BUILD"
   },
   "marks": {
-    "deviation_ship_row_dim": "A ship or other row is never dimmed. The original dims a design by the colony's bases and the design's size, and a row by Colony_Can_Build_Product_ (colbldg.cpp:625-653) \u2014 a rule this screen does not copy.",
+    "deviation_ship_row_dim": "NARROWED, work order 208 B8. A design LARGE or bigger is dimmed while the colony has no star base, star fortress or battlestation (colbldg.cpp:625-633, bqdraw.design_needs_base), as in the original. Still not dimmed: what Colony_Can_Build_Product_ refuses (:637-640) and a special ship whose Auto_Design_Type_ is 0 (:642-652).",
     "deviation_hd_font": "Text in the HD font at a size from the native line pitch, fitted to the original's width (the Leaders screen's rule).",
     "omission_description": "The selection panel's description comes from HELP.LBX by tech application (Print_App_Description_, colbldg.cpp:1056-1076); the map from application to help entry is not read, so no description is drawn.",
     "omission_product_picture": "The selection's picture (colbldg.cpp:1108-1113) is the player's art; not drawn.",

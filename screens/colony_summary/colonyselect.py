@@ -76,6 +76,28 @@ from . import colonylist
 from . import colonyrows
 
 
+def game_order(rows, order, sort_key, resort):
+    """The rows in the order the GAME's list holds them (work order 208 A1).
+
+    TRANSCRIBED. The game builds its list in array order and sorts it
+    only on entry (colsum.cpp:109-110) and on a sort field (:829-830);
+    `Sort_Col_List_` is a bubble sort IN PLACE over the list it already
+    has (colsum.cpp:363-376), swapping only on a strictly positive
+    comparison — stable, so equal keys keep the order the LAST sort
+    left, not the array's. A new snapshot changes values and never the
+    order. So the order is state, kept here as colony indices: `order`
+    is the list as it stands (None: build order, which is the entry),
+    `resort` is a sort field just activated.
+    """
+    if order is not None:
+        pos = {index: n for n, index in enumerate(order)}
+        rows = sorted(rows, key=lambda row: pos.get(row["index"], len(pos)))
+        if resort:
+            rows = sorted(rows, key=colonyrows.SORT_KEYS.get(
+                sort_key, colonyrows.SORT_KEYS["name"]))
+    return rows
+
+
 class Selection:
     """The rows for one snapshot, and which colony is selected."""
 
@@ -85,8 +107,18 @@ class Selection:
         #: number `_list_col[]` holds. None only when there are no
         #: colonies at all.
         self.colony = None
+        #: The game's list order as colony indices, and whether HD can
+        #: still vouch for it (`game_order`; a key HD cannot honour
+        #: leaves the game's order unknown until the next entry).
+        self.order = None
+        self.order_key = None
+        self.order_known = True
 
-    def rebuild(self, state, sort_key, names=None, held=None):
+    def reset_order(self):
+        """On entry: the game rebuilds its list (colsum.cpp:109)."""
+        self.order, self.order_key, self.order_known = None, None, True
+
+    def rebuild(self, state, sort_key, names=None, held=None, resort=False):
         """Rebuild the rows and keep the selection pointing at a
         colony that is still in them.
 
@@ -101,8 +133,20 @@ class Selection:
         # `Get_Cluster_` does, which is clear one bit. Nothing here
         # interprets it — this class owns the SELECTION and the
         # window, not the move.
-        self.rows = colonyrows.build_rows(state, sort_key, names,
-                                          held=held)
+        rows = colonyrows.build_rows(state, sort_key, names, held=held)
+        # a key that is not the one the order was made with came from a
+        # sort field — the only way a key changes on this screen
+        resort = resort or (self.order is not None and
+                            sort_key != self.order_key)
+        self.rows = game_order(rows, self.order, sort_key, resort)
+        self.order_key = sort_key
+        if resort:
+            # NAME settles any order again: names do not tie, so the
+            # stable sort leaves nothing of the order before it
+            self.order_known = sort_key == "name" or (
+                self.order_known and
+                sort_key not in colonyrows.SORT_UNAVAILABLE)
+        self.order = [row["index"] for row in self.rows]
         self.reseat()
 
     def reseat(self):

@@ -230,15 +230,21 @@ class Panel:
         facts = (("Structure", unit["structure_max"] - unit["structure_damage"],
                   unit["structure_max"]),
                  ("Armor", unit["armor_remaining"], None),
-                 ("Shields", max(unit["shield_arc_current"]),
-                  unit["shield_arc_max"]),
+                 # TRANSCRIPTION (work order 208 A3): the SHIELD SYSTEM's
+                 # hits, as `Draw_Internals_Display_` prints them
+                 # (cmbtdrw1.cpp:387-395) — "No Shields" for shield_type 0
+                 # — not the arcs' strength, which the rings show.
+                 (("Shields", unit["shield_current_hits"],
+                   unit["shield_max_hits"]) if unit["shield_type"] else
+                  ("No Shields", "", None)),
                  ("Drive", unit["drive_current_hits"], unit["drive_max_hits"]),
                  ("Computer", unit["computer_current_hits"],
                   unit["computer_max_hits"]),
                  ("Remaining", unit["movement_left"], unit["current_speed"]))
         y = left.y + size + 8
         for label, value, top in facts:
-            text = f"{lang.tr(label)}  {value}" + (f" / {top}" if top else "")
+            text = (f"{lang.tr(label)}  {value}" + (f" / {top}" if top else
+                                                     "")).rstrip()
             hudtext.blit(surface, style.render_text(
                 text, small, hudtext.colour("label")[:3]),
                 pygame.Rect(left.x, y, left.w // 2, small + 2), align="left")

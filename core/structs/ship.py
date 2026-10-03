@@ -37,7 +37,9 @@ compiled where the header says, but every monster the probe could see
 carried zero there — monsters are repaired in full every turn — and a
 zero confirms no offset. Nothing reads them (Data's decision: the panel
 shows maximum values), so they stay UNVERIFIED and absent from this
-spec rather than present and unproven.
+spec rather than present and unproven. The one exception is
+`special_device_damage_flags` @118, verified by work order 208 (see its
+entry below) because the Fleets panel prints a damaged special red.
 
 LOCATION IS ENCODED, not a plain star index. consts.h:22-25 and
 HAROLD::Absolute_Location_ (harold.cpp:815):
@@ -135,6 +137,14 @@ SPEC = Spec("s_ship_data", SIZE, [
     # SHIPMOVE::Make_Ships_Move_To_ writes it with turns_left
     # (shipmove.cpp:597).
     ("travelling_speed", 108, "u8"),
+    # VERIFIED 3 October 2026 (work order 208 B4), two routes: the
+    # serializer writes the record in the struct's order and puts the five
+    # bytes after officer_index (savegame.cpp `Write_Ship_`: …, crew
+    # experience, officer_index, special_device_damage_flags, armor_damage),
+    # which is +118; and live, a test save with bit 11 set at +118 of the
+    # player's Scout (g207_damaged_special) made the ORIGINAL print that
+    # Scout's Extended Fuel Tanks in `_red_colors` (flt2.cpp:727-731).
+    ("special_device_damage_flags", 118, "u8[5]"),
     # VERIFIED 15 September 2026 (briefs 113/114), in the commit that
     # first reads it (the HD fleet box's "N turns to" line): the header
     # puts it at 109 after group_has_navigator 107 and travelling_speed

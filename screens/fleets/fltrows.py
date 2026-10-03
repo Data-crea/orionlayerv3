@@ -126,6 +126,12 @@ def cells(fleet_view, game_state):
     return out
 
 
+class Damaged(str):
+    """A special system's name whose device is damaged: `fltpanel` prints
+    it in `_red_colors` (flt2.cpp:727-731) — a label, so every other
+    reader still sees the word."""
+
+
 class Panel:
     """The scanned ship's readout, in the original's own three parts.
 
@@ -271,13 +277,8 @@ def panel_lines(ship_idx, game_state, parts, strings=None, arcs=None):
       (initship.cpp:638-687) needs officer skills, the crew record,
       traits, the strategic-combat flag and the tech applications;
       three of those are UNVERIFIED offsets and one is undecoded.
-    * **The RED for a damaged special.** The original colours a special
-      with `FLT2::_red_colors` when its bit is set in
-      `special_device_damage_flags` (flt2.cpp:724-731). That field is
-      at @118 by the header route and **is not verified**: the obvious
-      live check — a damaged device must be a fitted one — held on all
-      60 ships of the acceptance save and proved nothing, because not
-      one of them had any damage.
+    A damaged special is a `Damaged` label, which the panel prints in
+    `_red_colors` (work order 208 B4; the field verified there).
     """
     raws = getattr(game_state, "ships_raw", None) or []
     if not (0 <= ship_idx < len(raws)):
@@ -351,10 +352,15 @@ def panel_lines(ship_idx, game_state, parts, strings=None, arcs=None):
                        else f"{count} {label}")
 
     specials = []
+    flags = getattr(view, "special_device_damage_flags", None) or [0] * 5
     for bit in ship_struct.special_bits(view):
         label = parts.name("specials", bit) if parts else None
         if label:
-            specials.append(label)
+            # TRANSCRIBED (work order 208 B4, Data's decision 2): a special
+            # whose bit is set in special_device_damage_flags is printed in
+            # `_red_colors` (flt2.cpp:727-731).
+            damaged = (flags[bit >> 3] >> (bit & 7)) & 1
+            specials.append(Damaged(label) if damaged else label)
 
     none_word = message(MSG_NONE)
     if not weapons and none_word:

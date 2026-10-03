@@ -104,12 +104,13 @@ class MultiplayerScreen(ScreenBase):
 
     def _button(self, surface, key, rect, field, lit=False):
         s = self.layout.scale
-        if lit:
-            hud.panel(surface, rect.inflate(int(8 * s), int(8 * s)), s,
-                      lit=True)
-        hud.action_button(surface, rect, s,
-                          "normal" if field is not None else "disabled",
-                          self.words(key), style_renderer=self.style)
+        # THE CHOSEN TYPE IS THE BUTTON'S "active" STATE (work order 208
+        # B1, Data's decision 3: one "on" marking everywhere, decision 71's
+        # vocabulary) — it was a lit panel behind the button.
+        state = ("disabled" if field is None else
+                 "active" if lit else "normal")
+        hud.action_button(surface, rect, s, state, self.words(key),
+                          style_renderer=self.style)
         if field is not None:
             self._rects[key] = (rect, field)
 

@@ -104,6 +104,13 @@ class RacesScreen(ScreenBase):
     def fallback_reason(self):
         return self._view.reason if self._view else ""
 
+    def no_view_reason(self, game_state):
+        """The race report stands under id 6 (REPORT, then a race); HD has
+        no view of it yet ([races.report], work order 208 B3)."""
+        if self._view is not None and self._view.state == raceswire.DIALOG:
+            return "The race report has no HD view yet"
+        return None
+
     @property
     def problems(self):
         return [self._view.reason] if self.wants_original() else []

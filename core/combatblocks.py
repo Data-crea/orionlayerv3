@@ -80,7 +80,8 @@ CMBT_HEAD_SIZE = _st.calcsize(CMBT_HEAD)
 
 def unit(raw):
     """One CMBT unit record as a dict; `name` is the engine's (game text)."""
-    out = {"name": lang.wire_text(raw[:30].split(b"\0", 1)[0])}
+    # the unit's stored name (work order 208 A6)
+    out = {"name": lang.stored(lang.wire_text(raw[:30].split(b"\0", 1)[0]))}
     for name, at, fmt in UNIT_FIELDS:
         vals = _st.unpack_from("<" + fmt, raw, at)
         out[name] = list(vals) if len(vals) > 1 else vals[0]
