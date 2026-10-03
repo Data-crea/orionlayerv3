@@ -79,6 +79,14 @@ _state = {"language": DEFAULT, "table": {}, "upper": {}, "templates": [],
 NUMERIC = {"n", "i", "id", "count", "pops", "max_pop", "total", "landed",
            "carried", "turns", "growth", "food", "industry", "research",
            "bc", "morale", "shortage", "made"}
+#: Placeholders that stand for OrionLayer's own words ("Barren", "Farmers",
+#: a screen's name): the one kind of group `_fill` translates. Every other
+#: group is carried over as it was drawn (work order 209 A3): a value the
+#: table does not declare a word may be a name the game stored — a star, a
+#: ship, a leader — and stored text is never translated (decision 5 of
+#: work order 208). The table says which by its placeholder's name; check
+#: 090zz holds every placeholder of `de.json` to NUMERIC or WORDS.
+WORDS = {"climate", "size", "gravity", "mineral", "job", "screen"}
 _FIELD = re.compile(r"\{(\w+)\}|%[sd]")
 
 
@@ -154,9 +162,17 @@ def stored(text):
 
 
 def _fill(german, values):
+    """The German template with the drawn text's values put back: a WORDS
+    group translated, every other group (a number, a positional %s, a
+    stored name) exactly as it was drawn."""
     seq = iter(values[n] for n in sorted(values) if n.startswith("_"))
-    return _FIELD.sub(lambda m: tr(values[m.group(1)]) if m.group(1)
-                      else next(seq, m.group()), german)
+
+    def put(m):
+        name = m.group(1)
+        if not name:
+            return next(seq, m.group())
+        return tr(values[name]) if name in WORDS else values[name]
+    return _FIELD.sub(put, german)
 
 
 def tr(text):

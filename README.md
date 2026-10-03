@@ -128,6 +128,7 @@ python tools/kentext_extract.py                     # weapon firing-arc words
 python tools/raceicon_extract.py                    # population figures
 python tools/infotext_extract.py                    # Info screen texts
 python tools/skildesc_extract.py                    # officer skill help texts
+python tools/racestuf_extract.py                    # Select Race's race traits
 python tools/techdesc_extract.py                    # ship design descriptions
 python tools/fleet_art_extract.py                   # Fleets ship pictures
 python tools/officer_art_extract.py                 # Leaders screen artwork

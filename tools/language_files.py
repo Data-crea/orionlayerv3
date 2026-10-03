@@ -41,7 +41,7 @@ sys.path.insert(0, ROOT)
 from core import lang, usersettings  # noqa: E402
 
 #: (extractor, how it is told the file or folder) for a language's files;
-#: TECHNAME, BILLTEXT and KENTEXT hold every language in one file, in the
+#: TECHNAME, BILLTEXT, KENTEXT and RACESTUF hold every language in one file, in the
 #: game's own folder, and need only the language.
 STEPS = (
     ("help_extract.py", "GER_HELP.LBX", "positional"),
@@ -54,6 +54,7 @@ STEPS = (
     ("techname_extract.py", None, None),
     ("billtext_extract.py", None, None),
     ("kentext_extract.py", None, None),
+    ("racestuf_extract.py", None, None),
 )
 
 

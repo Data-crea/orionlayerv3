@@ -62,6 +62,7 @@ from screens.ship_design.sdart import GAMEDATA as _sdart_gamedata  # noqa: E402
 from screens.audience.auart import GAMEDATA as _auart_gamedata  # noqa: E402
 from screens.info.infoart import REL as _infoart_rel  # noqa: E402
 from core.skildesc import string_file as skildesc_file  # noqa: E402
+from core.racestuf import string_file as racestuf_file  # noqa: E402
 from core.techdesc import string_file as techdesc_file  # noqa: E402
 from core.infotext import text_file as infotext_file  # noqa: E402
 from screens.colony_summary.colonyfigures import (  # noqa: E402
@@ -326,6 +327,13 @@ def from_game(settings=None):
          f"click on a leader's skill opens a box that says the text is "
          f"not extracted",
          "python tools/skildesc_extract.py"
+         + (f" --lang {lang}" if lang != "en" else "")),
+        # SELECT RACE'S TRAITS (work order 209 A2): the stock races'
+        # records and the trait names, every language in one file.
+        (os.path.join(ROOT, *racestuf_file(lang).split("/")),
+         f"race traits ({lang}) — without them Select Race lists no "
+         f"traits, only the command that extracts them",
+         "python tools/racestuf_extract.py"
          + (f" --lang {lang}" if lang != "en" else "")),
     ]
 

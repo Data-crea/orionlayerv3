@@ -71,9 +71,13 @@ READY = "READY"
 #: short — and the screen cannot tell them apart from the outside, so it
 #: says all three and hands over.
 NO_BLOCK = "NO_BLOCK"
-#: The block is there and shows no stack (`_small_ship_stack_ptr` -1,
-#: which is the state before `Set_Initial_Stack_Pointer_` finds one, and
-#: after the last own ship is scrapped).
+#: The block is there and shows no stack (`_small_ship_stack_ptr` -1:
+#: before `Set_Initial_Stack_Pointer_` finds one, after the last own ship
+#: is scrapped, and when a filter hides every ship of the stack). A DRAWN
+#: state since work order 209 A1, not a hand-over: the original draws the
+#: screen with an empty grid and builds every control but the big icons
+#: (flt1.cpp:443-456, 1245-1248), so HD shows the empty grid and its live
+#: buttons, and the player always has RETURN.
 NO_STACK = "NO_STACK"
 #: No field list. Nothing can be sent, because a send resolves its field
 #: in the list it was handed (decision 20) — so nothing may be drawn as
@@ -356,14 +360,6 @@ class View:
                 "the click (decision 20), so with no list nothing may be "
                 "drawn as though it could be clicked.")
             return
-        if block.get("stack", -1) < 0 or not block.get("ship_idx"):
-            self.state = NO_STACK
-            self.reason = (
-                "The game is showing no fleet. `_small_ship_stack_ptr` is "
-                "-1, which is the state before the screen has found a "
-                "stack and after the last own ship is gone.")
-            return
-
         # A NATIVE BOX HAS TAKEN THE LIST. Checked BEFORE the
         # "not ours yet" test, because it is the same symptom with a
         # different cause and the wrong one was being reported for
@@ -420,6 +416,16 @@ class View:
                 f"shown until they are gone.")
             return
 
+        # NO STACK IS AN EMPTY GRID, NOT A REFUSAL (work order 209 A1).
+        # Checked after the box, the WAITING and the stranger tests,
+        # because those are about the list, and the list is the same
+        # with or without a stack: `Add_Fleet_Screen_Fields_` skips only
+        # the big icons and their scroll field (flt1.cpp:1245-1248).
+        if block.get("stack", -1) < 0 or not block.get("ship_idx"):
+            self.rows = []
+            self.state = NO_STACK
+            return
+
         player = getattr(game_state, "player_num", None)
         self.own_stack = (player is not None
                           and player == block.get("owner"))
@@ -474,7 +480,8 @@ class View:
 
     @property
     def ok(self):
-        return self.state == READY
+        """Drawn and clickable: READY, or the empty grid of NO_STACK."""
+        return self.state in (READY, NO_STACK)
 
     @property
     def in_box(self):

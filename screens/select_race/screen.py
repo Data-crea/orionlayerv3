@@ -15,6 +15,7 @@ import json
 import os
 import logging
 import pygame
+from core import estrings, lang, racestuf
 from core.screen_base import ScreenBase
 
 log = logging.getLogger("select_race")
@@ -70,6 +71,28 @@ class SelectRaceScreen(ScreenBase):
         data = self.app.res.load_json("screens/select_race/races.json")
         if data:
             self._races = data
+
+    def _race_traits(self, race):
+        """The race's trait rows from the player's RACESTUF.LBX (work
+        order 209 A2, decision 38): the game's own records, names and
+        government words, never a hand-written list — `core/racestuf`
+        transcribes what `Draw_Race_Selection_Screen_` prints
+        (racesel.cpp:1007-1074). Without the extracted file the box says
+        how to get it. Read at draw time, so `save_races` never writes
+        the player's game data into `races.json`."""
+        traits = racestuf.for_app(self.app)
+        if not traits.available:
+            return [{"name": f"run: {racestuf.HOW}", "value": "",
+                     "good": None}]
+        language = (getattr(self.app, "settings", {}) or {}).get(
+            "language", "en")
+        if getattr(self, "_estrings", None) is None or \
+                self._estrings.language != language:
+            self._estrings = estrings.EStrings(language)
+        return [dict(row, name=row["name"] if row.get("government")
+                     else lang.Stored(row["name"]),
+                     value=lang.Stored(row["value"]))
+                for row in traits.traits(race.get("id", -1), self._estrings)]
 
     def _load_portraits(self):
         """Load portrait images. Uses 'key' field or lowercase name."""
@@ -202,8 +225,9 @@ class SelectRaceScreen(ScreenBase):
 
             tr = self.box_rect("race_traits")
             if tr:
-                render_race_traits(surface, L, self.style, race, tr,
-                                   self.box_font_scale_stored("race_traits"))
+                render_race_traits(surface, L, self.style,
+                                   dict(race, traits=self._race_traits(race)),
+                                   tr, self.box_font_scale_stored("race_traits"))
 
         # Frame overlay
         if self.USE_FRAME:
