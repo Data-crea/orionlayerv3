@@ -282,22 +282,26 @@ def lasting_overlay(surface, cam, art, u, clock, cache, off=(0, 0)):
       black hole  `black_hole_source_idx` set: CMBTSFX 46/45/45/44/44/43 by
                   size, frame `(_ship_frame / 2) % 8`, + 8 once the hole's
                   flag is past 1 (`Draw_BHG_`, cmbtfire.cpp:963-1002)
-    Each centred on the unit."""
+    Each centred on the unit, glassed by its own table (the shield's for
+    the ball, `_plasma_web_remap_colors`, `_bhg_remap_colors`;
+    combinit.cpp:854-990, `cbart.CombatArt.glass`)."""
     from . import cbsfx
     wx, wy = centre(u)
     wx, wy = wx + off[0], wy + off[1]
     if u.get("stasis_source_idx", 255) != 255:
         e, mirror, flip = cbsfx.stasis_ball(art, u)
-        pic = art.surface("cmbtsfx", e, 0, None, mirror, flip)
+        pic = art.surface("cmbtsfx", e, 0, None, mirror, flip,
+                          glass="shield")
     elif int(u.get("plasma_web_damage", 0)) > 0:
         e, mirror, flip = cbsfx.web_picture(u)
         n = max(1, art.frame_count("cmbtsfx", e))
-        pic = art.surface("cmbtsfx", e, int(clock) % n, None, mirror, flip)
+        pic = art.surface("cmbtsfx", e, int(clock) % n, None, mirror, flip,
+                          glass="plasma_web")
     elif u.get("black_hole_source_idx", 255) != 255:
         e = cbsfx.BHG.get(int(u["size_class"]), 44)
         frame = (int(clock) // 2) % 8 + (0 if u.get("black_hole_flag") == 1
                                          else 8)
-        pic = art.surface("cmbtsfx", e, frame)
+        pic = art.surface("cmbtsfx", e, frame, glass="bhg")
     else:
         return
     if pic is None:
@@ -322,8 +326,8 @@ def draw_tractors(surface, cam, art, combat, cache):
             continue
         a = tuple(int(v) for v in centre(u))
         b = tuple(int(v) for v in centre(units[t]))
-        cbsfx.texture_line(surface, cam, cache, art.surface("cmbtsfx", 2, 6),
-                           a, b)
+        cbsfx.texture_line(surface, cam, cache, art.surface(
+            "cmbtsfx", 2, 6, glass="tractor"), a, b)
 
 
 def missile_at(ordnance, cam, x, y, me):

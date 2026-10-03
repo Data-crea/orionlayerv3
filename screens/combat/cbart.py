@@ -26,8 +26,14 @@ THE ORIGINAL'S RULES, transcribed (`dev:doc/combat_drawing_reading.md`):
                 `Flip_Bitmap_` mode 0 reverses each row, mode 3 the rows)
   glass         pixels 0xF0-0xFF blend with what is under them
                 (animate.cpp:279-287): HD draws them at half alpha —
-                DEVIATION `glass_alpha`, the original's per-effect blend
-                tables are not reproduced
+                DEVIATION `glass_alpha` — unless the drawing names its
+                glass table (`glass`, work order 210): then glass pixel
+                0xF0 + j is the table's colour j at its per cent, j = 0
+                black at 50 (`Update_Glass_Remap_Colors_`, remap.cpp:153-187;
+                the tables of combinit.cpp:854-990: shield and stasis ball,
+                pulsar, warp core, tractor, black hole, plasma web, stellar
+                converter). The original snaps each blend to the palette's
+                nearest colour; HD blends exactly.
 """
 import json
 import logging
@@ -142,11 +148,56 @@ class CombatArt:
             self._cache[key] = out
         return self._cache[key]
 
+    def glass(self, name):
+        """The glass table `name` (combinit.cpp:854-990): sixteen (r, g, b,
+        alpha), entry 0 black at 50 % (remap.cpp:154-157)."""
+        key = ("glass", name)
+        if key in self._cache:
+            return self._cache[key]
+        pal = self.palette_with()
+
+        def own(lbx_name, entry):
+            out = dict(pal)
+            b = self.blob(lbx_name, entry)
+            try:
+                h = lbx.parse_header(b)
+                if h.has_palette:
+                    out.update(lbx.read_palette(b, h.frame_count))
+            except (lbx.LbxError, TypeError):
+                pass
+            return out
+        rows = [(0, 0, 0, 50)]
+        for j in range(1, 16):
+            if name == "shield":
+                rows.append(((2 * j + 13) * 4, (2 * j + 30) * 4, 252,
+                             23 + 3 * (j - 1)))
+                continue
+            if name == "pulsar":
+                src, at, pct = own("cmbtsfx", 0x34), 144 + j, 53 + 3 * (j - 1)
+            elif name == "warp_core":
+                src, at, pct = own("sphersfx", 0), 144 + j, 53 + 3 * (j - 1)
+            elif name == "tractor":
+                src, at, pct = pal, 80 + j // 2, 23 + 3 * (j - 1)
+            elif name == "bhg":
+                src, at, pct = own("cmbtsfx", 0x2E), 144 + j, 2 * j + 60
+            elif name == "plasma_web":
+                src, at, pct = pal, 176 + j, min(100, (3 * j + 15) * 2)
+            elif name == "stellar_converter":
+                src, at, pct = own("cmbtsfx", 0x28), 144 + 2 * j, \
+                    53 + 3 * (j - 1)
+            else:
+                raise KeyError(name)
+            rows.append((*src.get(at, (0, 0, 0)), pct))
+        table = [(r, g, b, min(255, pct * 255 // 100)) for r, g, b, pct in rows]
+        self._cache[key] = table
+        return table
+
     def surface(self, lbx_name, entry, frame=0, palette=None, mirror=False,
-                flip=False):
-        """One frame as an RGBA surface at native size, or None."""
+                flip=False, glass=None):
+        """One frame as an RGBA surface at native size, or None; `glass`
+        names the table its glass pixels blend by (`glass`)."""
         key = ("sprite", lbx_name, int(entry), int(frame), id(palette),
-               mirror, flip)
+               mirror, flip, glass)
         if key in self._cache:
             return self._cache[key]
         surf = self._painted(lbx_name, entry, frame)
@@ -166,7 +217,9 @@ class CombatArt:
                     pal.update(palette)
                 px = lbx.decode_composed(b, h, frame)
                 if px is not None:
-                    surf = display_format(_rgba(px, h.width, h.height, pal))
+                    surf = display_format(_rgba(
+                        px, h.width, h.height, pal,
+                        self.glass(glass) if glass else None))
                     if mirror or flip:
                         surf = pygame.transform.flip(surf, mirror, flip)
             except (lbx.LbxError, ValueError):
@@ -293,10 +346,13 @@ def display_format(surf):
     return surf.convert_alpha()
 
 
-def _rgba(pixels, w, h, palette):
+def _rgba(pixels, w, h, palette, glass=None):
     out = bytearray(w * h * 4)
     for i, idx in enumerate(pixels):
         if idx == 0:
+            continue
+        if glass is not None and idx >= GLASS_FIRST:
+            out[4 * i:4 * i + 4] = bytes(glass[idx - GLASS_FIRST])
             continue
         r, g, b = palette.get(idx, (idx, idx, idx))
         out[4 * i:4 * i + 4] = bytes((r, g, b, GLASS_ALPHA

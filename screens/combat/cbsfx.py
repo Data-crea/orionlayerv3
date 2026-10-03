@@ -177,7 +177,8 @@ def plan(ev, unit, art, previous=None):
                 else:
                     pct = min(90, (frame - 2 * n + 1) * 10) / 100
                     _blit_centred(surface, cam, cache, art.surface(
-                        "cmbtsfx", ball, 0, None, mirror, flip), *b, pct)
+                        "cmbtsfx", ball, 0, None, mirror, flip,
+                        glass="shield"), *b, pct)
             return {"frames": 2 * n + 10, "draw": draw}
         if w == TRACTOR:
             # `Tractor_Beam_` fires frames 0-7 once, a tick each
@@ -185,7 +186,7 @@ def plan(ev, unit, art, previous=None):
             # (`cbdraw.draw_tractors`, work order 210 C2)
             def draw(surface, cam, cache, frame):
                 texture_line(surface, cam, cache, art.surface(
-                    "cmbtsfx", 2, frame), a, b)
+                    "cmbtsfx", 2, frame, glass="tractor"), a, b)
             return {"frames": 8, "draw": draw}
         if w == GYRO:
             n = _frames(art, 8)
@@ -209,7 +210,8 @@ def plan(ev, unit, art, previous=None):
                                  art.surface("cmbtsfx", 14, frame), a, b)
                 else:
                     _blit_centred(surface, cam, cache, art.surface(
-                        "cmbtsfx", 36 + _size_idx(dst), frame - n), *b)
+                        "cmbtsfx", 36 + _size_idx(dst), frame - n,
+                        glass="plasma_web"), *b)
             return {"frames": n + m, "draw": draw}
         if w == BLACK_HOLE:
             # `BHG_` (cmbtfire.cpp:1913-1979): CMBTSFX 47 along the line to
@@ -229,11 +231,12 @@ def plan(ev, unit, art, previous=None):
 
             def draw(surface, cam, cache, frame):
                 if frame < n:
-                    texture_line(surface, cam, cache,
-                                 art.surface("cmbtsfx", 40, frame), a, b)
+                    texture_line(surface, cam, cache, art.surface(
+                        "cmbtsfx", 40, frame, glass="stellar_converter"), a, b)
                 if frame >= 9 and frame - 9 < m:
                     _blit_at(surface, cam, cache, art.surface(
-                        "cmbtsfx", 41, frame - 9), b[0] - 60, b[1] - 60)
+                        "cmbtsfx", 41, frame - 9, glass="stellar_converter"),
+                        b[0] - 60, b[1] - 60)
             return {"frames": max(n, 9 + m), "draw": draw}
         return None
     if k == "bomb":

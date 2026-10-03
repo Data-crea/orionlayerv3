@@ -33,6 +33,9 @@ import random
 
 from . import cbdraw
 
+#: Blast type -> its glass table (cmbtspec.cpp:1621-1659; the compressor's
+#: picture is drawn without one, `sfx_type != 2`).
+GLASS = {0: "pulsar", 1: "pulsar", 2: None, 3: "warp_core", 4: "warp_core"}
 #: Weapon -> blast type (cmbtfire.cpp:1537-1621).
 AREA = {13: 2, 36: 1, 44: 0}
 #: Blast type -> (LBX, entry).
@@ -113,8 +116,8 @@ def plan(player, source, kind, art, rng=random):
             else:
                 _collapsing(surface, cam, cache, art, colours, src, frame,
                             min(99, pct) / 100.0, centre)
-        _centred(surface, cam, cache, art.surface(lbx_name, entry,
-                                                  min(frame, n - 1)), centre)
+        _centred(surface, cam, cache, art.surface(
+            lbx_name, entry, min(frame, n - 1), glass=GLASS[kind]), centre)
         if kind <= 2 and src["unit_status"] == 0:
             pic = cbdraw.unit_picture(art, colours, src, 0)
             if pic is not None:
