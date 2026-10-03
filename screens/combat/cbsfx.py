@@ -20,9 +20,8 @@ cmbtspec.cpp): what an event that is not a beam looks like —
   a bomb               CMBTMISL 144 + facing (160 biological) flying 6 px a
                        frame, then CMBTSFX 7 at the target less 12
                        (cmbtdrw1.cpp:3012-3096)
-  a blast              CMBTSFX 52 (pulsar, types 0-1) or 6 (type 2) round
-                       the source, once for all the units it hits
-                       (cmbtspec.cpp:1589-1760, 1972)
+  a blast hit          its number only: the blast is drawn on the event that
+                       fires it (`cbblast`, work order 210)
   web damage           the web on the unit: CMBTSFX 21-35 by size and facing
                        (:357-450)
 
@@ -119,6 +118,39 @@ def web_picture(u):
         e = sub + 21 if even else 20 - sub
     q = f // 4
     return e, q == 1, q == 3
+
+
+def anti_missile(a, b, destroyed, art, fast=False):
+    """TRANSCRIPTION `anti_missile` (work order 210 C3): the rocket a 3 x 3
+    dot in palette 25 with its corners in 16, from the source's centre to
+    the missile 20 px a tick (30 under FAST) along the line's major axis
+    (`Draw_Anti_Missile_Rockets_`, `Absolute_Interpolate_Line_`,
+    cmbtspec.cpp:686-730, 1395-1408); then, when it destroyed any, CMBTSFX 7
+    at the missile less 12, a tick a frame (:766-797). `destroyed` is HD's
+    reading (HD STATE `anti_missile_count`, `cbplay`)."""
+    speed = 30 if fast else 20
+    major = max(abs(b[0] - a[0]), abs(b[1] - a[1]))
+    fly = max(1, -(-int(major) // speed))
+    m = _frames(art, 7) if destroyed else 0
+    pal = art.palette_with() if hasattr(art, "palette_with") else {}
+    body, corner = pal.get(25, (200, 200, 200)), pal.get(16, (120, 120, 120))
+
+    def draw(surface, cam, cache, frame):
+        if frame < fly:
+            t = min(1.0, (frame + 1) * speed / max(1, major))
+            x = a[0] + (b[0] - a[0]) * t
+            y = a[1] + (b[1] - a[1]) * t
+            k = max(1, int(round(cam.scale)))
+            cx, cy = cam.to_window(x, y)
+            surface.fill(body, (cx - k, cy - k, 3 * k, 3 * k))
+            for dx, dy in ((-1, -1), (1, -1), (-1, 1), (1, 1)):
+                surface.fill(corner, (cx + dx * k, cy + dy * k, k, k))
+        elif m:
+            _blit_at(surface, cam, cache, art.surface("cmbtsfx", 7,
+                                                      frame - fly),
+                     b[0] - 12, b[1] - 12)
+    # FAST steps the flight, not the blast: `_draw_event`'s step is 1 here
+    return {"frames": fly + m, "draw": draw, "step": 1, "fly": fly}
 
 
 def plan(ev, unit, art, previous=None):
@@ -227,21 +259,17 @@ def plan(ev, unit, art, previous=None):
                     "cmbtsfx", 7, frame - fly), b[0] - 12, b[1] - 12)
         return {"frames": fly + m, "draw": draw}
     if k == "blast_hit":
+        # the blast itself is drawn on the event that fires it (`cbblast`,
+        # work order 210 C3/C4); its hits only raise their numbers, held as
+        # `Draw_Damage_Message_Queue_Until_Done_` holds them once for all
+        # (cmbtspec.cpp:1981-1983)
         if previous is not None and previous.get("kind") == "blast_hit" and \
                 previous.get("source") == ev.get("source") and \
                 previous.get("blast") == ev.get("blast"):
             return {"frames": 0, "draw": lambda *a_: None}
-        src = unit(ev.get("source", -1))
-        if src is None:
+        if unit(ev.get("source", -1)) is None:
             return None
-        entry = 52 if int(ev.get("blast", 0)) < 2 else 6
-        n = _frames(art, entry)
-        c = cbdraw.centre(src)
-
-        def draw(surface, cam, cache, frame):
-            _blit_centred(surface, cam, cache,
-                          art.surface("cmbtsfx", entry, frame), *c)
-        return {"frames": n, "draw": draw}
+        return {"frames": 9, "draw": lambda *a_: None}
     if k == "web_damage":
         # the web is on the unit for as long as it burns (the state,
         # `cbdraw.lasting_overlay`); the damage round only raises its

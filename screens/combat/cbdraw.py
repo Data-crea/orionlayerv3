@@ -218,7 +218,8 @@ def draw_units(surface, cam, art, combat, colours, glow_clock, cache,
     210 C2, `lasting_overlay`)."""
     from . import cbcloak
     for i, u in enumerate(combat["units"]):
-        if u["unit_status"] != 0 or (i and u["structure_max"] <= 0):
+        if u["unit_status"] != 0 or (i and u["structure_max"] <= 0) or \
+                u.get("_hidden"):        # a teleport playing (`cbplay`)
             continue
         if i == 0:
             if planet_pic is not None:
