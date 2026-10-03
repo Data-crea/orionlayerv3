@@ -23,8 +23,8 @@ system the unit carries, a damaged one dimmed (:543-591).
 
 DEVIATION `hud_panel`: HD draws all of it as HUD blocks along the bottom
 of the window, in OrionLayer's words where the original uses its own
-pictures and labels, not COMBAT.LBX 0; the reduced map is not drawn (the
-whole field is on the screen, HD EXTENSION `whole_grid`). DEVIATION
+pictures and labels, not COMBAT.LBX 0. The reduced map sits at the right
+end as the original's (`cbmap`, work order 209 B1). DEVIATION
 `shield_rings`: the shields round the unit's picture are HD's rings, one
 per ten points left in each of the four arcs (front, right, back, left
 as `Facing_Shield_` counts them, cmbtfire.cpp:226-237), not the original's
@@ -36,22 +36,29 @@ the next FIRE, 0 sits out that one shot (the fire puts it back to 1), -1
 is off for good — and only -1 keeps a weapon out of the defensive fire at
 an enemy moving past (`Defensive_Fire_Check_`, cmbtfir2.cpp:868-930).
 HD clicks that field, the next only once the last one's change is on the
-wire, and shows each row as the battle holds it (lit at 1, dimmed at 0,
-dark at -1, as the original's three colours, cmbtdrw1.cpp:2786-2849);
+wire, and shows each row as the battle holds it (`row_colours` below);
 FIRE sends the rows that are at 1 (open fix 58), one command per shot
 (decision 47). Work order 199 had kept the switch in HD alone, so a weapon
 could not be taken out of the defensive fire.
-DEVIATION `selected_blue` (work order 203, Data's decision of 2 Oct 2026):
-a row at 1 is a filled bar in the original's menu blue, palette 0 index
-0xB0 (FONTS.LBX entry 1, `Load_Palette_(0)`, fonts.cpp:72-73) — the blue
-of the word on the original's CLOSE button (RACES.LBX 59) and of the info
-screen's outline (`Set_Outline_Color_(0xB0, 0xB0)`, info.cpp:590) — with
-its word in the same palette's navy 0xA2. The original writes an armed
-weapon in green (palette 3, 0x53 / 0x56, cmbtdrw1.cpp:2766-2767); in HD
-the lit button alone was barely told from the others, and a blue word
-would not be either: HD's own label colour is (133, 178, 228). An
-exhausted row stays dimmed even at 1, as the original's mode 2 overrides
-its armed colour (:2834-2839).
+TRANSCRIPTION `row_colours` (work order 209 B2, Data's decision 2; the
+blue bars of work order 203 are gone): every row's count and words in the
+colour `Draw_Weapon_Status_Display_` picks (cmbtdrw1.cpp:2765-2846), from
+the battle palette (FONTS.LBX 4) — `row_mode`:
+  green 0x53   switched on (`active` 1); and every row of a unit the
+               computer controls (`Ship_Controlled_By_Computer_`,
+               combat1.cpp:217-227)
+  bright 0x56  switched on and able to hit the unit or missile under the
+               pointer — arc, range, legality (:2789-2823; HD reads the
+               engine's verdict, CTGT, open fix 54)
+  yellow 0xDC  switched off for the next shot (`active` 0) — or unable to
+               fire: no ammunition, a torpedo recharging, no shots left
+               (:2829-2835), whatever its switch
+  red 0x4A     switched off (`active` -1); exhaustion does not change it
+The SPECIALS tab (`Draw_Special_Status_Display_`, :543-589): a damaged
+system red 0x4A, a working one green 0x53 while its `weapon_ready_flags`
+entry is 1, else yellow 0xDC — nothing in the engine ever clears that
+flag (combinit.cpp:99, 329, 1372, 2066 set it to 1), so yellow is not
+reached there.
 """
 import math
 import time
@@ -62,6 +69,7 @@ from core import lang
 from core.hud import blocks as hud
 from core.hud import style as hudstyle
 from core.hud import text as hudtext
+from . import cbmap
 
 TABS = (("weapons", "WEAPONS"), ("specials", "SPECIALS"))
 BUTTONS = (("auto", "AUTO", ord("A")), ("scan", "SCAN", ord("S")),
@@ -81,8 +89,14 @@ HEAVY, POINT_DEFENSE = 0x02, 0x04
 MOD_HEAVY, MOD_PD = 1, 2
 TURNS = "t"                       # KENTEXT 85 (English)
 ROW_WAIT = 3.0                    # s: a switch whose change never arrives
-SELECTED_BLUE = (128, 172, 252)   # palette 0 index 0xB0, DEVIATION above
-SELECTED_WORD = (0, 0, 108)       # palette 0 index 0xA2
+#: `row_mode` -> the font's body colour (`s_colors` entry 1 — a glyph pixel
+#: n takes entry n - 1, fonts.cpp:62, and entry 0 is the edge) in the
+#: battle palette, FONTS.LBX entry 4 (cmbtdrw1.cpp:2766-2769).
+ON, IN_REACH, PAUSED, OFF = 0, 1, 2, 3
+ROW_COLOUR = {ON: (56, 132, 40),          # 0x53
+              IN_REACH: (108, 220, 76),   # 0x56
+              PAUSED: (212, 208, 44),     # 0xDC
+              OFF: (148, 0, 0)}           # 0x4A
 
 
 def row_field(fields, k):
@@ -93,20 +107,24 @@ def row_field(fields, k):
                  (f.x, f.y, f.x_end, f.y_end) == rect), None)
 
 
-def selected_bar(surface, rect, scale):
-    """DEVIATION `selected_blue`: the row's inside filled in the menu blue,
-    inside the small button's edge and cut at its chamfer."""
-    st = hudstyle.get()
-    e = max(1, int(round(float(st.get("button.edge_width")) * scale)))
-    ch = min(float(st.get("panel.chamfer")) * scale
-             * float(st.get("small_button.chamfer_frac")), rect.h / 3)
-    r = pygame.Rect(rect).inflate(-2 * e, -2 * e)
-    c = max(0, int(ch) - e)
-    pygame.draw.polygon(surface, SELECTED_BLUE, (
-        (r.left + c, r.top), (r.right - 1 - c, r.top), (r.right - 1, r.top + c),
-        (r.right - 1, r.bottom - 1 - c), (r.right - 1 - c, r.bottom - 1),
-        (r.left + c, r.bottom - 1), (r.left, r.bottom - 1 - c),
-        (r.left, r.top + c)))
+def row_mode(active, exhausted, computer=False, hover_bit=None):
+    """The original's `display_color_mode` for one weapon row
+    (cmbtdrw1.cpp:2784-2835). `hover_bit` is None with no unit or missile
+    under the pointer, else whether this slot can hit it."""
+    if computer:
+        mode = ON
+    elif active != 1:
+        mode = PAUSED if active == 0 else OFF
+    else:
+        mode = IN_REACH if hover_bit else ON
+    if mode != OFF and exhausted:
+        mode = PAUSED
+    return mode
+
+
+def special_mode(ready, damaged):
+    """`Draw_Special_Status_Display_`'s colour (cmbtdrw1.cpp:562-570)."""
+    return OFF if damaged else ON if ready == 1 else PAUSED
 
 
 def on_mask(unit):
@@ -180,6 +198,7 @@ class Panel:
     def __init__(self):
         self.all_buttons, self.help_rows = {}, []
         self.left = self.mid = self.facts = None
+        self.map = None           # the reduced map's rect (`cbmap`)
         self.rects = {}           # button key -> window rect
         self.rows = []            # (window rect, slot) of the weapon rows
         self.tabs = {}            # "weapons" / "specials" -> window rect
@@ -209,7 +228,10 @@ class Panel:
         return pygame.Rect(0, win_h - h, win_w, h)
 
     def draw(self, surface, style, unit, names, ken, actives, board_mode, live,
-             scale, picture=None, specials=False):
+             scale, picture=None, specials=False, computer=False, hover=None):
+        """`hover` is the CTGT mask of the unit or missile under the pointer
+        (bit k: slot k can hit it), None when the pointer is over neither;
+        `computer` whether the acting unit is the computer's."""
         band = self.area(*surface.get_size())
         hud.panel(surface, band.inflate(-8, -8), scale, dense=True)
         pad = int(16 * scale)
@@ -218,7 +240,7 @@ class Panel:
         small = max(9, int(18 * scale))
         self.rects, self.rows, self.tabs = {}, [], {}
         self.all_buttons, self.help_rows = {}, []     # `cbhelp`'s
-        self.left = self.mid = self.facts = None
+        self.left = self.mid = self.facts = self.map = None
         if unit is None:
             return
         # the name, the systems and the picture with its shields (left)
@@ -251,13 +273,17 @@ class Panel:
             y += small + 3
         draw_shields(surface, pygame.Rect(left.centerx, left.y, left.w // 2,
                                           left.h), unit, picture)
+        # the reduced map at the right end, as the original's (work order
+        # 209 B1, `cbmap`); the room is taken from the weapons column, so the
+        # buttons keep their size and move left by the map's width
+        self.map = cbmap.rect_for(inner)
         # the weapons — or the special systems — (middle): the toggle above
-        mid = pygame.Rect(left.right + pad, inner.y, int(inner.w * 0.40),
-                          inner.h)
+        mid = pygame.Rect(left.right + pad, inner.y,
+                          int(inner.w * 0.40) - self.map.w - pad, inner.h)
         self.left, self.mid = left, mid
         self.facts = pygame.Rect(left.x, left.y, left.w // 2, left.h)
         right = pygame.Rect(mid.right + pad, inner.y,
-                            inner.right - mid.right - pad, inner.h)
+                            self.map.x - mid.right - 2 * pad, inner.h)
         rows = (len(BUTTONS) + 1) // 2
         bw = (right.w - pad) // 2
         bh = max(small + 8, (right.h - (rows - 1) * (pad // 2)) // rows)
@@ -288,13 +314,16 @@ class Panel:
             have = special_bits(unit.get("special_device_flags") or [0] * 5)
             damaged = set(special_bits(unit.get("special_device_damage_flags")
                                        or [0] * 5))
+            ready = list(unit.get("weapon_ready_flags") or [1] * 8)
             for k, bit in enumerate(have[:8]):
                 r = pygame.Rect(body.x, body.y + k * row_h, body.w, row_h - 2)
                 word = names.name("specials", bit) or f"special {bit}"
                 self.help_rows.append((r, k))
+                # the k-th system shown reads ready flag k (`Special_Is_On_
+                # (ship, visible_special_count)`, cmbtdrw1.cpp:566)
                 hudtext.blit(surface, style.render_text(
-                    word, small, hudtext.colour(
-                        "label" if bit in damaged else "button")[:3]),
+                    word, small, ROW_COLOUR[special_mode(
+                        ready[k] if k < len(ready) else 0, bit in damaged)]),
                     r.inflate(-pad, 0), align="left")
             if not have:
                 hudtext.blit(surface, style.render_text(
@@ -307,15 +336,14 @@ class Panel:
                 r = pygame.Rect(body.x, body.y + k * row_h, body.w, row_h - 2)
                 state = actives[k] if k < len(actives) else 1
                 count, label, exhausted = weapon_row(wpn, names, ken)
-                hud.small_button(surface, r, scale, {1: "active", 0: "normal"}
-                                 .get(state, "disabled"))
-                selected = state == 1 and not exhausted
-                if selected:
-                    selected_bar(surface, r, scale)
+                # the row's frame says only that it is a switch (the
+                # original's hidden field has no picture); its state is the
+                # colour of its words, `row_colours`
+                hud.small_button(surface, r, scale, "normal")
+                mode = row_mode(state, exhausted, computer, None if hover
+                                is None else bool(hover >> k & 1))
                 hudtext.blit(surface, style.render_text(
-                    f"{count}  {label}", small, SELECTED_WORD if selected else
-                    hudtext.colour("label" if exhausted or state != 1
-                                   else "button")[:3]),
+                    f"{count}  {label}", small, ROW_COLOUR[mode]),
                     r.inflate(-pad, 0), align="left")
                 self.rows.append((r, k))
                 self.help_rows.append((r, k))

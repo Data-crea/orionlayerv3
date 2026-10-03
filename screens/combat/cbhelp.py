@@ -10,10 +10,9 @@ walked in its order, the first entry with an id winning
                           RETREAT 626, WAIT 627, DONE 628, and OPTIONS 617
   OPTIONS panel up        SELF DESTRUCT 695, the five lights 696-700
   then                    the current ship display 618 (HD's picture with
-                          its shields), the reduced map (missile warning
-                          panel 621 / map 620) — no HD element, HD draws no
-                          reduced map (HD EXTENSION `whole_grid`, 199) —
-                          the internals / target display 622 (HD's lines of
+                          its shields), the reduced map 620 (621 is the
+                          missile warning picture in its place, which HD
+                          does not draw, `cbmap`'s OMISSION), the internals / target display 622 (HD's lines of
                           the unit's systems, which the original prints
                           there: drive, shields, computer, structure,
                           armour, speed, remaining), then the eight
@@ -43,6 +42,7 @@ BUTTON_HELP = {"auto": 623, "scan": 624, "board": 625, "retreat": 626,
 OPTION_HELP = {"self_destruct": 695, "missile_warning": 696, "fast": 697,
                "legal_moves": 698, "shield_arcs": 699, "grid": 700}
 SHIP_DISPLAY, SYSTEMS_DISPLAY, WEAPONS_DISPLAY = 618, 622, 629
+REDUCED_MAP = 620                   # 0x26C, combat1.cpp:2494-2501
 
 
 def row_ids(unit, specials):
@@ -76,6 +76,8 @@ def help_at(panel, opts, options_up, unit, specials, x, y):
         return SYSTEMS_DISPLAY
     if panel.left is not None and panel.left.collidepoint(x, y):
         return SHIP_DISPLAY
+    if panel.map is not None and panel.map.collidepoint(x, y):
+        return REDUCED_MAP
     if unit is not None:
         ids = row_ids(unit, specials)
         for r, k in panel.help_rows:

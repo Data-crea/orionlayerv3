@@ -11,7 +11,7 @@ import logging
 import pygame
 
 from core import combatblocks as cb
-from . import cbdraw, cbhelp, cbpanel
+from . import cbdraw, cbhelp, cbmap, cbpanel
 
 log = logging.getLogger("combat")
 
@@ -25,6 +25,41 @@ def field_by_hotkey(fields, hotkey, types=(0, 1)):
 
 
 class CombatInput:
+    _pointer = None
+
+    def _hover(self, c):
+        """The CTGT mask of the unit or missile under the pointer — what
+        `Draw_Weapon_Status_Display_` is handed while the pointer is over
+        another unit or a missile (cmbtdrw1.cpp:690-724; the pointer
+        pictures 12 and 1, combat1.cpp:1818-1834) — or None. CTGT is the
+        engine's own arc, range and legality verdict for the acting unit
+        (open fix 54), the original's three tests."""
+        targets = getattr(self._state, "targets", None)
+        if self._pointer is None or self._cam is None or not targets or \
+                targets.get("unit") != c["cur_ship"] or \
+                not pygame.Rect(self._cam.area).collidepoint(self._pointer):
+            return None
+        missile = cbdraw.missile_at(self._play.ordnance, self._cam,
+                                    *self._pointer, self._me())
+        if missile is not None:
+            return targets["missiles"].get(missile, 0)
+        cell = self._cam.cell_at(*self._pointer)
+        unit = self._unit_at(cell) if cell is not None else None
+        if unit is None or unit == c["cur_ship"]:
+            return None
+        masks = targets["units"]
+        return masks[unit] if unit < len(masks) else 0
+
+    def _computer(self, c):
+        """`Ship_Controlled_By_Computer_` (combat1.cpp:217-227): another
+        player's unit, a monster's, or the side under AUTO (`_auto_combat`
+        is the acting side's flag, :1564-1566). HD runs single-player
+        battles, so the human is this client's player."""
+        unit = c["units"][c["cur_ship"]]
+        side = "auto_attacker" if unit["owner"] == c["attacker"] else \
+            "auto_defender"
+        return unit["owner"] != self._me() or bool(c.get(side))
+
     def _unit_at(self, cell):
         c = self._shown()
         for i, u in enumerate(c["units"]):
@@ -49,6 +84,12 @@ class CombatInput:
         key = self._panel.button_at(screen_x, screen_y)
         if key is not None:
             return self._button(key)
+        at = cbmap.cell_at(self._panel.map, screen_x, screen_y) \
+            if self._panel.map is not None else None
+        if at is not None:                   # the map's grid field: the view
+            if self._cam is not None:        # there, nothing sent (`cbmap`)
+                self._cam.centre_on(at[0] * cbmap.CELL, at[1] * cbmap.CELL)
+            return None
         tab = self._panel.tab_at(screen_x, screen_y)
         if tab is not None:                  # a view only, as the original's
             self._specials = tab == "specials"
@@ -121,6 +162,7 @@ class CombatInput:
             self._pops.release(self._state, self.app.client)
 
     def handle_mouse_motion(self, screen_x, screen_y):
+        self._pointer = (screen_x, screen_y)    # the rows' hover (`_hover`)
         self._pops.motion(screen_x)
         if self._press is not None and self._cam is not None:
             (x0, y0), (lx, ly), moved = self._press

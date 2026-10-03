@@ -33,7 +33,7 @@ from core import combatblocks as cb
 from core.screen_base import ScreenBase
 from core.kentext import ArcWords
 from core.shipparts import ShipPartNames
-from . import cbart, cbdraw, cbopts, cbpanel, cbplay, cbpopups, cbview
+from . import cbart, cbdraw, cbmap, cbopts, cbpanel, cbplay, cbpopups, cbview
 # the gestures, moved out by work order 202 (decision 6's guideline); FOOT and
 # field_by_hotkey are read here and by tools under this module's name
 from .cbinput import FOOT, CombatInput, field_by_hotkey  # noqa: F401
@@ -262,7 +262,13 @@ class CombatScreen(CombatInput, ScreenBase):
                              c["cur_ship"]] if self._state.combat else unit)[
                              "weapons"]],
                          self._board or self._pops.scan_mode and "scan", live,
-                         self.layout.scale, pic, self._specials)
+                         self.layout.scale, pic, self._specials,
+                         self._computer(self._state.combat or c),
+                         self._hover(c))
+        if self._panel.map is not None:              # work order 209 B1
+            cbmap.draw(surface, self._panel.map, c, self._play.ordnance,
+                       self._cam, self._art, self._play.colours,
+                       self._play.planet, clock, self.layout.scale)
         self._opts.draw(surface, self.style, self.layout.scale, self._state,
                         band, self._panel.buttons)
         self._pops.draw(surface, self.style, self.layout.scale, self._state,

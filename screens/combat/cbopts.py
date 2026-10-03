@@ -23,9 +23,9 @@ cmbtdrw1.cpp:27; the German game, language 1, keeps F R B L) — at the
 size's distance
 (`Draw_Shield_Arcs_`, cmbtdrw1.cpp:21-152); SHOW LEGAL MOVES, the legal
 cells (`cbdraw.draw_legal`). FAST ANIMATIONS sets the playback's steps
-(`cbplay`). MISSILE WARNING changes what a move does in the engine; its
-picture is the reduced map's, which HD does not draw (HD EXTENSION
-`whole_grid`).
+(`cbplay`). MISSILE WARNING changes what a move does in the engine; the
+original shows its warning picture in the reduced map's place, which HD
+does not (`cbmap`'s OMISSION `missile_warning_picture`).
 
 DEVIATION `hud_panel` (the panel's): the panel is HUD blocks over the
 buttons, not COMBAT.LBX 9 sliding up; the lights are HUD checkboxes.
