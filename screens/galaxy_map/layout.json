@@ -7,7 +7,7 @@
       316,
       53
     ],
-    "_note": "The cockpit frame is one PNG with transparent cutouts, stretched over the whole 1920x1080 reference area. Every box in boxes.json is derived from those cutouts by tools/frame_holes.py (--write regenerates boxes.json). Do not move the map/sidebar/nav boxes by hand: they would leave their cutout and be covered by the frame. title_rect is the title cutout in reference pixels. The frame is drawn ABOVE all content, so the map may bleed a few pixels under the rim.",
+    "_note": "No frame image since decision 71 (work order 169; the cockpit frame and tools/frame_holes.py's boxes were removed by work order 189). The screen is the HUD layout: the map's floor in map_area, the title plate (also the GAME button) drawn in code by hudview.title_rect/render_title, the info panel and the nav bar. `title` here is the plate's word; `title_rect` is kept for reference only — the click area is hudview.title_rect.",
     "title": "Game",
     "_title_note": "The original's top bar reads GAME and the bar itself is the game menu button (field 6, hotkey G). Kept literal rather than naming the screen."
   },
@@ -140,7 +140,7 @@
     "_note": "Ship and monster icons. Sizes are NOT configured here - they come from core/zoomtables.py (SHIP_ICON_DIM 13/12/11/10 px wide by zoom level, MONSTER_ICON_DIM_ZOOM0 per monster type). Only zoom level changes an icon's size; galaxy size merely caps how far the player may zoom out, so a Small galaxy is stuck at zoom 0 and always draws the largest icon.",
     "_fit_note": "How the HD artwork sits inside that native box, because the HD drawings do not share the original sprites' aspect ratios. 'height' (default) matches the original height - the dimension that decides whether a four-deep orbit stack collides, since slots sit only 11 - zoom px apart. 'width' matches the width and lets taller artwork overflow, which reads as an icon one size too big. 'box' never overflows. 'area' keeps the visual weight of the original box for artwork with a wildly different aspect - the eel master is 3.3:1 against a 10x9 box, where width-fit leaves a sliver and height-fit a banner three times too long.",
     "_kinds_note": "Per-kind overrides of fit and scale; anything absent inherits the global value above. Keys are the asset folder names: player, antaran, guardian, amoeba, crystal, dragon, eel, hydra. 'scale' other than 1.0 is a deliberate departure from orion2re's footprint.",
-    "_owner_note": "Player colour needs the owner of each icon, which s_ship_icon does not carry. ships.py rebuilds orion2re's _ship_node table from the serialized _ship[] array and validates it against star_idx - no C++ patch needed. Run tools/ship_icon_check.py against a running game to see the resolved owner and sprite per icon."
+    "_owner_note": "Player colour needs the owner of each icon, which s_ship_icon does not carry. Open fix 20 sends the node table (_ship_node[].ship_idx per node) and the owner byte; ships.py reads them (resolve_owners) and does not rebuild the table from _ship[] (see its OWNER section). Run tools/ship_icon_check.py against a running game to see the resolved owner and sprite per icon."
   },
   "starfield": {
     "enabled": true,

@@ -29,9 +29,9 @@ original's picture scaled but its COVERAGE re-projected without the
 squash, and every constellation is 11.2 % taller relative to its
 width. Chosen because a galaxy is a shape.
 
-**Neither is implemented here yet.** The box is still the old
-451 x 203 and this module still letterboxes the original's own
-picture through `MapView`; the rebuild's Stage 4 replaces both. That
+**Neither is implemented here yet.** The box already has the
+coverage's aspect (248 x 196 reference px), but this module still
+letterboxes the original's own 128:91 picture through `MapView`. That
 is a debt with a date on it, not a second opinion about what the
 right picture is.
 
@@ -207,26 +207,20 @@ def map_rect(area, native=(128, 91)):
     is a shape, and the box it goes in does not have to be the shape
     the original's box was.
 
-    It matters here because the cutout is NOT the original's box.
-    `galaxy_inset` is 451 x 203 reference px; the original's map is
-    128 x 91 native, which is 1.407 wide and the hole is 2.222. The
-    hole is not in the same place either — it starts at reference x
-    1056 while the original's box maps to 1140, so a box drawn where
-    the original puts it would hang 17 px past the hole's right edge.
+    It matters here because the box is NOT the original's box.
+    `galaxy_inset` is 248 x 196 reference px (`layout_reference.json`),
+    1.265 wide — the aspect of the original's COVERAGE
+    (`dev:doc/colony_inset_geometry.md` Part 3); the original's map is
+    128 x 91 native, 1.407 wide. Width therefore binds: 248/128 = 1.94,
+    giving 248 x 176 with about 10 px of panel above and below. **That
+    margin is the deviation and it is visible**, until the isotropic
+    re-projection in the module docstring replaces the letterbox.
 
-    Height is therefore what binds: 203/91 = 2.23, giving 285 x 203
-    with about 83 px of panel either side. **That margin is the
-    deviation and it is visible.** The alternative that fills the
-    hole is 384 x 203 — one native pixel to this screen's own
-    reference factors, 3 across and 2.25 down — and it was built and
-    rejected on the side-by-side: it stretches the galaxy 33 %
-    horizontally, and the constellation stops matching the original's
-    even though every star is at its own correct fraction of the box.
-
-    Not fixed by widening the frame's hole either, which would be
-    deriving artwork from a deviation to make the deviation go away
-    (decision 44's second half). If this hole should be 128:91, that
-    is an artwork decision with its own reasons.
+    The alternative that fills the box by stretching was built and
+    rejected on the side-by-side when the box was still 451 x 203: it
+    stretched the galaxy 33 % horizontally, and the constellation
+    stopped matching the original's even though every star was at its
+    own correct fraction of the box.
 
     `REF_W`/`REF_H` are not used for the scale for exactly that
     reason, and are kept out of this function rather than being

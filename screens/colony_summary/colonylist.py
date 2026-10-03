@@ -7,15 +7,14 @@ half is handed plain dicts (name, pops, jobs, no_farming, max_pop)
 and never touches a struct, so the seam is a data shape rather than a
 call graph.
 
-**The bar is an INVENTION.** The original draws three columns of pop
-sprites per row, one icon per colonist, squished together when a
-colony outgrows its column (`COLDRAW::Do_Colony_Info_Pop_Stuff_For_
-Pop_`, coldraw.cpp:282; `Calculate_Squish_Step_`, coldraw.cpp:12).
-This draws one bar per row instead, one square per colonist, in three
-zones, on a track as long as the engine's population ceiling. Marked
-here, in `layout.json` under `list._invention`, in
-`dev:v3_projektstatus.md`, and in a smoke check that fails if the marking
-disappears.
+**RETIRED: the allocation bar and its INVENTION marking.** The row
+once drew one square per colonist in three zones instead of the
+original's figures. `514ebb2` (8 September 2026) replaced it with the
+original's population figures in six column boxes (`colonytrack`,
+`colonyfigures`), a transcription of `COLDRAW::Do_Colony_Info_Pop_
+Stuff_For_Pop_` (coldraw.cpp:282). The marking is retired with it, here
+and in `layout.json` under `list._retired_invention`, and smoke check
+013 holds that it stays retired rather than silently lost.
 
 A FIGURE MODE stood beside this for a day — a sprite per colonist,
 the zone colour as a rule beneath — and lost the comparison it was

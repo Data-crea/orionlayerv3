@@ -38,11 +38,11 @@ mismatch.
 
 **WHAT IS STILL NOT DRAWN, AND IT IS MARKED EVERYWHERE, NOT HIDDEN:**
 
-- **OMISSION — the ship's own picture in a grid cell.** The original
-  draws `SHIPS.LBX picture_num + 50*colour` (ken.cpp:451-466), which is
-  MOO2's artwork and is never in this tree. The cell carries the ship's
-  name, its owner colour and its damage instead. HD has the small map
-  marker (derived artwork, decision 42) and no big design picture.
+- **LIFTED by work order 142 — the ship's own picture in a grid cell.**
+  It was an OMISSION; the cell now draws `SHIPS.LBX ship_type +
+  colour * 50` (ken.cpp:451-466) from the player's own files
+  (`fltart`, extracted by `tools/fleet_art_extract.py`), never shipped
+  in this tree.
 - **OMISSION — the attack and defense bonuses** in the ship panel.
   `INITSHIP::Get_Ship_Combat_Bonuses_` (initship.cpp:638-687) derives
   them from officer skills, `_crew_data`, traits, the strategic-combat

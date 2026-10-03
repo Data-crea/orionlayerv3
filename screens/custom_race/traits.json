@@ -2,6 +2,7 @@
   "_comment": "Order, labels and pick values follow the original MOO2 Custom Race screen; descriptions are the original in-game texts. Categories have no Normal row: clicking a selected option turns it off again. Specials sharing a group are mutually exclusive; value is the signed trait value written to the player record. field_id values are the orion2re Extension API field IDs from the Custom Race screen (screen 50).",
   "starting_picks": 10,
   "default_government": 2,
+  "_unverified_government_mapping": "UNVERIFIED government_mapping. The Governments options' `value`s (Feudal 0, Dictatorship 2, Democracy 3, Unification 6) are HD's own keys for the local `_trait_state`: the engine receives the option's `field_id` (ACTIVATE_FIELD), never the value. The game's own numbers are orion2_consts.h:193-199 \u2014 FEUDAL 0, DICTATORSHIP 2, DEMOCRACY 4, UNIFICATION 6 \u2014 so Democracy's 3 here is GOVERNMENT_IMPERIUM's number. Harmless while HD keeps its own state; to be corrected before the screen reads the trait from the player record (work order 205).",
   "messages": {
     "picks_negative": "Picks remaining must be greater than or equal to zero."
   },

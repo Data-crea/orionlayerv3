@@ -8,7 +8,9 @@ reading it rests on.
 
 STATUS: needed to retire the RESORT / ESTABLISH / PICK / DROP click
 chain, which costs four snapshot round trips per drop and has to
-steer the game's own ten-row window first. NOT YET APPLIED.
+steer the game's own ten-row window first. APPLIED locally and
+verified live on 10 September 2026 (open fix 12; required by
+tools/version_check.py).
 
     TO APPLY, to the orion2re working tree at ~/orion2re
     (engine 1.60.0, git cf4d9617):

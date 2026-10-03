@@ -1,16 +1,12 @@
 """What a colony window IS, and where its rectangle comes from.
 
-**THE STATIC FRAME IS THE ONLY PATH — 12 September 2026, Phase B,
-Data's decision after seeing all three.** The screen wears one fixed
-image, `assets/frame.png`, scaled to the reference area and blitted.
-There is no master, no built plate, no nine-slice, no bevel, no rails
-and no flag: `frame_build`, `frame_mask`, `frame_cut`, `frame_master`,
-`colony_frame_check`, `gimp_fixtures` and `colonyframe` are gone, and
-so are `frame_preview` and `colony_plateless`. This module kept the
-half of itself that survived — where a box's rectangle comes from —
-and lost the drawn fill/rim/lit line, which existed to answer "what
-does a box look like with no artwork at all" and is a question nobody
-is asking any more.
+**NO FRAME IMAGE SINCE DECISION 71.** Phase B (12 September 2026)
+made one fixed image, `assets/frame.png`, the screen's only frame;
+decision 71 replaced it with HUD panels drawn in code, and work order
+190 deleted the image. What this module keeps is where a box's
+rectangle comes from; the fill is `render_fills`, a HUD panel per
+window. The rectangles are still the holes of Data's frame of 13
+September 2026, typed into `layout_reference.json`.
 
 **THE CHAIN IS TWO LINKS NOW.** Decision 3 ran
 `layout_reference.json` -> mask -> plate -> `boxes.json`, with the
@@ -29,12 +25,9 @@ same day it became possible. `reseat` runs from
 is the fault `colonyheader.install_columns` records for the column
 table.
 
-**WHAT STILL HOLDS THE RECTANGLES TO THE ARTWORK.** A smoke check
-matches every window to a transparent hole of `assets/frame.png` by
-overlap and asserts it sits inside that hole at all three shipped
-resolutions. That is the whole of decision 3's guarantee with the
-generated middle removed: the rectangles are measured off the picture,
-and something re-measures them.
+**WHAT HOLDS THE RECTANGLES.** The frame image that a smoke check
+once measured them against is gone; they are held by the reference
+file itself and by the screen's layout checks (008, 033, 042).
 """
 import json
 import os
@@ -42,7 +35,8 @@ import os
 import pygame
 
 #: Reference-pixel bleed, so content covers what overlaps a box's own
-#: edge — here the frame's own rim, which is drawn over the content.
+#: edge — once the frame's rim, drawn over the content; since decision
+#: 71 the HUD panel drawn at the bled rect.
 #: **ONE NUMBER, AND `tools/boxes_from_reference.py` IMPORTS IT FROM
 #: HERE** rather than keeping its own: the tool writes `boxes.json` and
 #: `box_rects` rebuilds the same rects at startup, so a second copy
@@ -377,9 +371,9 @@ def _ordered():
 def render_fills(screen, surface):
     """Every cutout that shows content gets its panel fill.
 
-    Laid BEFORE the frame, which is blitted over the top — so a fill
-    reaches only as far as its hole lets it, and the frame's own rim
-    covers the `BLEED` the rect was grown by.
+    Since decision 71 each window is a HUD panel at its own (bled)
+    rect; no frame is drawn over the fills any more (see the comment
+    in the body).
 
     A panel may name its own fill: its value in the `panels` block is
     `true` for the panel base or the NAME of a `colors.json` key — the

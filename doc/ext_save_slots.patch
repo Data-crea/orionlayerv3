@@ -13,8 +13,10 @@ formatting included.
 Open fix 14 in doc/orion2re_open_fixes.md; fundament decision 60 is
 why a client does not read SAVEn.GAM from a folder of its own.
 
-STATUS: REPORTED, NOT APPLIED (14 September 2026). Until it is, the
-HD Load and Save dialogs show slot numbers only, a marked HD STATE.
+STATUS: APPLIED 16 September 2026 by Data, confirmed live the same
+evening (open fix 14; required by tools/version_check.py). Reported 14
+September 2026; until it was applied the HD Load and Save dialogs
+showed slot numbers only, a marked HD STATE.
 
     TO APPLY, to the orion2re working tree at ~/orion2re
     (engine 1.60.0, git cf4d9617, with doc/ext_move_pop.patch and

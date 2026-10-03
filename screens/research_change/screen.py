@@ -97,11 +97,10 @@ disappear (decision 61):
                 order 166 part C, and Data's verdict on the live panel
                 was that it does not fit them. The original wears
                 TECHSEL art in these places and HD has none of it
-  DEVIATION     the outer frame is the FLEETS screen's inner frame —
-                the one around its scanner map, orange lamps in the
-                corners — cut out of `screens/fleets/assets/frame.png`
-                and nine-sliced around the panel's content box (work
-                order 166 part B, Data's decision). The original draws
+  DEVIATION     the outer frame is the HUD popup panel (decision 71,
+                work order 169); before it, the Fleets screen's inner
+                frame cut from its frame image (work order 166 part B),
+                which work order 190 removed. The original draws
                 TECHSEL.LBX's own panel art there, so this is a
                 different picture in the same place and not an addition
   HD EXTENSION  the title: the original's headline is part of the

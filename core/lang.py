@@ -8,10 +8,12 @@ THREE KINDS OF WORDS, ONE LANGUAGE (decision C-1):
                           install). A file the install has no German source
                           for is read in English — `source` — and named once
                           in the log: "no German source".
-  the game's, on the wire the engine formats them; it is English in this
-                          install (it forces `_settings.language` to 0, and
-                          the German files it would open are absent) —
-                          parked, P-C1
+  the game's, on the wire the engine formats them in the language it is
+                          told (open fix 70, `doc/ext_language.patch`): the
+                          start passes the language and the German folder
+                          (`tools/language_files.py`) only when every German
+                          file is there; their German characters are
+                          decoded only when the engine's settings say German
   OrionLayer's own        one table per language, `assets/shared/lang/
                           <lang>.json`: {the English words: the German}, read
                           through the resources (a mod replaces the file,

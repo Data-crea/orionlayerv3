@@ -26,28 +26,16 @@ SELECT MODE'S OWN FACTS, and they are the only ones:
     the original's SECOND COLOUR is unreachable: `Tech_Select_` zeroes
     `current_research_field` before the list is built (tech.cpp:104-105).
 
-NOT ACCEPTED YET, and the reason is not ours: OPEN FIX 26.
-`SELECT NEW RESEARCH` commits a row BY ITSELF, about a second and a half
-after the science room hands over to it — measured 18 September 2026
-with a send counter proving the client sent nothing. Data's counter-test
-of 19 September (same binary, no client connected, the completion dialog
-clicked away with the real mouse) shows the list WAITS, so open fix 25
-is not the cause; the injected dismissal of that dialog and a connected
-client as such are both still suspect and not separated. OPEN, deferred
-by Data.
-
-**THE PLAYER'S WAY ROUND IT, while open fix 26 is open: click the
-completion dialog away in the orion2re window with the real mouse. The
-research selection then waits, and this screen can be used for the
-choice.**
-
-That sentence is here, in `dev:doc/orion2re_open_fixes.md` and in
-`dev:v3_projektstatus.md`, and a smoke check fails if it leaves any of them
-while open fix 26 still says OPEN. The rest of what this screen still
-owes — the third live choice, two resolutions, the work order 128 crash
-case, the promotion of `tech_applications` out of `unverified.py`, and
-the six always-open fields and uncreative races never compared against
-the original — is the status document's list.
+NOT ACCEPTED YET. Open fix 26 — `SELECT NEW RESEARCH` committing a row
+by itself about a second and a half after the science room hands over
+(measured 18 September 2026) — is CLOSED by open fix 62 (work order 197
+A4): the activation came from a field list that had ended. The
+workaround this docstring carried while it was open (click the
+completion dialog away with the real mouse) is no longer needed. What
+the screen still owes before Data can accept it — the third live
+choice, two more resolutions, the work order 128 crash case, the six
+always-open fields and uncreative races compared against the original —
+is its entry in the state, `[research_select.screen]`.
 
 MARKED, and each held by a smoke check so the marking cannot quietly
 disappear (decision 61):
@@ -89,11 +77,10 @@ disappear (decision 61):
                 order 166 part C, and Data's verdict on the live panel
                 was that it does not fit them. The original wears
                 TECHSEL art in these places and HD has none of it
-  DEVIATION     the outer frame is the FLEETS screen's inner frame —
-                the one around its scanner map, orange lamps in the
-                corners — cut out of `screens/fleets/assets/frame.png`
-                and nine-sliced around the panel's content box (work
-                order 166 part B, Data's decision). The original draws
+  DEVIATION     the outer frame is the HUD popup panel (decision 71,
+                work order 169); before it, the Fleets screen's inner
+                frame cut from its frame image (work order 166 part B),
+                which work order 190 removed. The original draws
                 TECHSEL.LBX's own panel art there, so this is a
                 different picture in the same place and not an addition
   HD EXTENSION  the title: the original's headline is part of the

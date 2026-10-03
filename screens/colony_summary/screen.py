@@ -4,25 +4,22 @@ The original's "Colonies" list: every colony in a row with its
 population split into farmers, workers and scientists, sortable by
 seven keys, with the empire totals on the right (colsum.cpp).
 
-Layout: one cockpit frame PNG (assets/frame.png) with transparent
-cutouts, stretched over the 1920x1080 reference area and drawn above
-everything else — the same construction as the galaxy map. The
-boxes in boxes.json ARE the cutouts, derived by tools/frame_holes.py:
-  list_area       the colony rows (population bars: next step)
-  sidebar         the six empire readouts
-  output_panel    per-colony food/industry/research — TRANSCRIPTION
-                  (COLSUM::Draw_Colony_Scan_Info_, colsum.cpp:1155);
-                  the earlier HD EXTENSION marking is withdrawn, see
-                  below and fundament 43
-  galaxy_inset    the original's small galaxy map, the RIGHTMOST of
-                  the three bottom holes — TRANSCRIPTION, drawn from
-                  colsum.cpp:415, native (380, 349, 128, 91); see
-                  `colonyinset` for what it does NOT draw
-  spare_panel     reserved; the MIDDLE hole, over the native column
-                  output_panel already answers for
+Layout: no frame image (decision 71; work order 190 deleted
+assets/frame.png). Every rectangle is typed once, in
+layout_reference.json (1920x1080 reference px), and
+`colonyplates.reseat` builds the boxes from it at each load and resize;
+boxes.json carries names and styles only. Each window is a HUD panel:
+  list_area       the colony rows, one allocation track each
+  header          the five heading plates, a band of the list's area
+  planet_info     the scanned colony's disc, name and paragraph
+  colony_panel    its output (TRANSCRIPTION, COLSUM::Draw_Colony_Scan_
+                  Info_, colsum.cpp:1155), surface and the empire
+                  readouts (COLSUM::Draw_Empire_Info_, colsum.cpp:418)
+  galaxy_inset    the original's small galaxy map (colsum.cpp:415,
+                  native (380, 349, 128, 91)); see `colonyinset`
   return          RETURN
   sort_*          the seven sort buttons
-The title cutout is not a box; it lives in layout.json ("frame").
+The screen has no title: the original's heading plates sit at the top.
 
 Input goes to the original without ever touching the field list. Two
 paths, and which one is taken is a property of the button:
