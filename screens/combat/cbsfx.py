@@ -6,13 +6,15 @@ cmbtspec.cpp): what an event that is not a beam looks like —
   stasis field (32)    CMBTSFX 1 stretched along the line, two frames a
                        picture (`Release_Time_(2)`), then the stasis ball
                        growing over 10 frames to 90 % (:451-531, 273-355)
-  tractor beam (39)    CMBTSFX 2 frames 4-6 along the line (:175-214)
+  tractor beam (39)    CMBTSFX 2 frames 0-7 along the line, a tick each
+                       (:642-684); the held line is the state's
   gyro destabilizer    CMBTSFX 8 along the line, then the target spun one
   (34)                 facing a frame for 8 frames (:1441-1556)
   plasma web (35)      CMBTSFX 14 along the line, then its impact 36-39 by
                        size on the target (:1048-1140)
-  black hole (37)      CMBTSFX 46/45/45/44/44/43 by size, frames 0-7, on the
-                       target (cmbtfire.cpp:963-1002)
+  black hole (37)      CMBTSFX 47 along the line for 12 ticks
+                       (cmbtfire.cpp:1913-1979); the hole on the target
+                       is the state's (`cbdraw.lasting_overlay`)
   stellar converter    CMBTSFX 40 along the line, its impact 41 from frame 9
   (38)                 at the target less 60 (:950-1046)
   a bomb               CMBTMISL 144 + facing (160 biological) flying 6 px a
@@ -39,6 +41,10 @@ from .cbbeamfx import get_angle
 STASIS, ANTI_MISSILE, GYRO, WEB, PULSAR, BLACK_HOLE, CONVERTER, TRACTOR = \
     32, 33, 34, 35, 36, 37, 38, 39
 BHG = {0: 46, 1: 45, 2: 45, 3: 44, 4: 44, 5: 43}
+#: The plasma web and the caustic slime: one routine, `Plasma_Web_`
+#: (cmbtfire.cpp:1566-1570).
+CAUSTIC_SLIME = 45
+WEBS = (WEB, CAUSTIC_SLIME)
 BIO = (25, 26)                       # death spore, bio terminator
 
 
@@ -142,10 +148,13 @@ def plan(ev, unit, art, previous=None):
                         "cmbtsfx", ball, 0, None, mirror, flip), *b, pct)
             return {"frames": 2 * n + 10, "draw": draw}
         if w == TRACTOR:
+            # `Tractor_Beam_` fires frames 0-7 once, a tick each
+            # (cmbtspec.cpp:642-684); the line that stays is the state's
+            # (`cbdraw.draw_tractors`, work order 210 C2)
             def draw(surface, cam, cache, frame):
                 texture_line(surface, cam, cache, art.surface(
-                    "cmbtsfx", 2, 4 + frame % 3), a, b)
-            return {"frames": 6, "draw": draw}
+                    "cmbtsfx", 2, frame), a, b)
+            return {"frames": 8, "draw": draw}
         if w == GYRO:
             n = _frames(art, 8)
             face0 = int(dst["facing_dir"])
@@ -159,7 +168,7 @@ def plan(ev, unit, art, previous=None):
                     if frame >= n + 15:
                         dst["facing_dir"] = face0
             return {"frames": n + 16, "draw": draw}
-        if w == WEB:
+        if w in WEBS:
             n, m = _frames(art, 14), _frames(art, 36 + _size_idx(dst))
 
             def draw(surface, cam, cache, frame):
@@ -171,12 +180,18 @@ def plan(ev, unit, art, previous=None):
                         "cmbtsfx", 36 + _size_idx(dst), frame - n), *b)
             return {"frames": n + m, "draw": draw}
         if w == BLACK_HOLE:
-            entry = BHG.get(int(dst["size_class"]), 44)
+            # `BHG_` (cmbtfire.cpp:1913-1979): CMBTSFX 47 along the line to
+            # the target's centre less half the picture's height, frame
+            # `counter % frames` for 12 ticks; the hole itself is the state
+            # that follows (`cbdraw.lasting_overlay`, work order 210 C2)
+            n = _frames(art, 47)
+            pic0 = art.surface("cmbtsfx", 47, 0)
+            b2 = (b[0], b[1] - (pic0.get_height() // 2 if pic0 else 0))
 
             def draw(surface, cam, cache, frame):
-                _blit_centred(surface, cam, cache,
-                              art.surface("cmbtsfx", entry, frame % 8), *b)
-            return {"frames": 8, "draw": draw}
+                texture_line(surface, cam, cache,
+                             art.surface("cmbtsfx", 47, frame % n), a, b2)
+            return {"frames": 12, "draw": draw}
         if w == CONVERTER:
             n, m = _frames(art, 40), _frames(art, 41)
 
@@ -228,15 +243,10 @@ def plan(ev, unit, art, previous=None):
                           art.surface("cmbtsfx", entry, frame), *c)
         return {"frames": n, "draw": draw}
     if k == "web_damage":
-        u = unit(ev.get("unit", -1))
-        if u is None:
+        # the web is on the unit for as long as it burns (the state,
+        # `cbdraw.lasting_overlay`); the damage round only raises its
+        # numbers (`Plasma_Web_Damage_`, combinit.cpp:2927-3005)
+        if unit(ev.get("unit", -1)) is None:
             return None
-        entry, mirror, flip = web_picture(u)
-        n = _frames(art, entry)
-        c = cbdraw.centre(u)
-
-        def draw(surface, cam, cache, frame):
-            _blit_centred(surface, cam, cache, art.surface(
-                "cmbtsfx", entry, frame % n, None, mirror, flip), *c)
-        return {"frames": n, "draw": draw}
+        return {"frames": 9, "draw": lambda *a_: None}
     return None

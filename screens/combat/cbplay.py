@@ -255,6 +255,25 @@ class Player:
             u = self._unit(ev["unit"])
             if u is not None:
                 u["unit_status"] = 5
+        elif k == "special":
+            # what a special leaves on its target, held from the moment its
+            # frames end until the state after it is shown (work order 210
+            # C2): the field each writes (cmbtfire.cpp:1907-1910, 1976-1977;
+            # cmbtspec.cpp:681, :1162)
+            src, dst = self._unit(ev.get("source", -1)), \
+                self._unit(ev.get("target", -1))
+            w = int(ev.get("weapon", 0))
+            if dst is None or src is None or ev.get("at_missile"):
+                return
+            if w == cbsfx.STASIS:
+                dst["stasis_source_idx"] = ev["source"]
+            elif w == cbsfx.BLACK_HOLE:
+                dst["black_hole_flag"] = 1
+                dst["black_hole_source_idx"] = ev["source"]
+            elif w == cbsfx.TRACTOR:
+                src["special_cooldown"] = ev["target"]
+            elif w in cbsfx.WEBS and not dst.get("plasma_web_damage"):
+                dst["plasma_web_damage"] = 1
 
     def focus(self):
         """The world point the event being played happens at (a move's

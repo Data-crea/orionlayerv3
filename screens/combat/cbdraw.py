@@ -208,7 +208,15 @@ def draw_legal(surface, cam, art, combat, unit):
 
 
 def draw_units(surface, cam, art, combat, colours, glow_clock, cache,
-               planet_pic=None):
+               planet_pic=None, phased_shown=True, fades=None, now=0.0,
+               fast=False):
+    """Every live unit as `Draw_Ship_` draws it (cmbtdrw1.cpp:2498-2655):
+    a cloaked unit darkened, a phased one its outline or nothing (`cbcloak`,
+    work order 210 C1; `phased_shown`: the acting unit is the local
+    player's), the absorber's glow, the picture, then ONE lasting overlay —
+    the stasis ball, else the plasma web, else the black hole (work order
+    210 C2, `lasting_overlay`)."""
+    from . import cbcloak
     for i, u in enumerate(combat["units"]):
         if u["unit_status"] != 0 or (i and u["structure_max"] <= 0):
             continue
@@ -222,21 +230,99 @@ def draw_units(surface, cam, art, combat, colours, glow_clock, cache,
             continue
         # the glow cycle {1,2,3,2}, phased by the unit (cmbtdrw1.cpp:2499-2508)
         glow = (1, 2, 3, 2)[((glow_clock // 2) + i) % 4]
+        flag = int(u.get("special_status_flag", 0))
+        fade = fades.step(i, now, fast) if fades is not None else None
+        ox, oy = sprite_origin(u)
+        dx, dy = u.get("_off", (0, 0))      # a move being played (cbplay)
+        at = cam.to_window(ox + dx, oy + dy)
+        if fade is not None:
+            # `Draw_Cloak_`: the facing's glow-0 frame, darkened by the
+            # fade's own mode and step (cmbtspec.cpp:106-117)
+            pic = cbcloak.picture(art, colours, u, 0, "cloak", fade[1],
+                                  fade[0])
+            if pic is not None:
+                surface.blit(scaled(pic, cam.scale, cache), at)
+            continue
+        if flag == cbcloak.PHASED:
+            pic = cbcloak.picture(art, colours, u, glow, "outline") \
+                if phased_shown else None
+            if pic is not None:
+                surface.blit(scaled(pic, cam.scale, cache), at)
+            continue
         if u.get("reflected_damage_pool", 0) > 0 and \
                 not u.get("plasma_web_damage") and \
-                u.get("stasis_source_idx", 255) == 255:
+                u.get("stasis_source_idx", 255) == 255 and \
+                u.get("black_hole_source_idx", 255) == 255:
             draw_absorber(surface, cam, art, u, i, glow_clock, cache)
-        pic = unit_picture(art, colours, u, glow)
+        if flag in cbcloak.CLOAKED:
+            pic = cbcloak.picture(art, colours, u, glow, "cloak",
+                                  (glow_clock + i * 2) % 16, 3)
+        else:
+            pic = unit_picture(art, colours, u, glow)
         if pic is None:
             wx, wy = centre(u)
             pygame.draw.circle(surface, (160, 170, 200),
                                [int(v) for v in cam.to_window(wx, wy)],
                                max(3, int(8 * cam.scale)), 1)
             continue
-        ox, oy = sprite_origin(u)
-        dx, dy = u.get("_off", (0, 0))      # a move being played (cbplay)
-        surface.blit(scaled(pic, cam.scale, cache),
-                     cam.to_window(ox + dx, oy + dy))
+        surface.blit(scaled(pic, cam.scale, cache), at)
+        lasting_overlay(surface, cam, art, u, glow_clock, cache, (dx, dy))
+
+
+def lasting_overlay(surface, cam, art, u, clock, cache, off=(0, 0)):
+    """TRANSCRIPTION `lasting_overlay` (work order 210 C2): what stays on a
+    held unit for as long as it is held, after its picture, one of three
+    (`Draw_Ship_`, cmbtdrw1.cpp:2641-2653):
+      stasis      `stasis_source_idx` set: the ball, frame 0, at 100 %
+                  (`Draw_Stasis_Ball_(i, 100, 0, 0)`, cmbtspec.cpp:273-355)
+      plasma web  `plasma_web_damage` above 0: the web by size and facing at
+                  frame `_ship_frame % frames` (`Draw_Plasma_Web_`,
+                  :357-450)
+      black hole  `black_hole_source_idx` set: CMBTSFX 46/45/45/44/44/43 by
+                  size, frame `(_ship_frame / 2) % 8`, + 8 once the hole's
+                  flag is past 1 (`Draw_BHG_`, cmbtfire.cpp:963-1002)
+    Each centred on the unit."""
+    from . import cbsfx
+    wx, wy = centre(u)
+    wx, wy = wx + off[0], wy + off[1]
+    if u.get("stasis_source_idx", 255) != 255:
+        e, mirror, flip = cbsfx.stasis_ball(art, u)
+        pic = art.surface("cmbtsfx", e, 0, None, mirror, flip)
+    elif int(u.get("plasma_web_damage", 0)) > 0:
+        e, mirror, flip = cbsfx.web_picture(u)
+        n = max(1, art.frame_count("cmbtsfx", e))
+        pic = art.surface("cmbtsfx", e, int(clock) % n, None, mirror, flip)
+    elif u.get("black_hole_source_idx", 255) != 255:
+        e = cbsfx.BHG.get(int(u["size_class"]), 44)
+        frame = (int(clock) // 2) % 8 + (0 if u.get("black_hole_flag") == 1
+                                         else 8)
+        pic = art.surface("cmbtsfx", e, frame)
+    else:
+        return
+    if pic is None:
+        return
+    img = scaled(pic, cam.scale, cache)
+    x, y = cam.to_window(wx, wy)
+    surface.blit(img, (x - img.get_width() // 2, y - img.get_height() // 2))
+
+
+def draw_tractors(surface, cam, art, combat, cache):
+    """TRANSCRIPTION `lasting_tractor` (work order 210 C2): every live unit
+    whose `special_cooldown` names a live other unit holds it with CMBTSFX 2
+    frame 6 along the line between their centres, under the units
+    (`Draw_Continuing_Tractor_`, cmbtspec.cpp:140-173, drawn by
+    `Full_Draw_Combat_Screen_` before the ships, cmbtdrw1.cpp:506-515)."""
+    from . import cbsfx
+    units = combat["units"]
+    for i, u in enumerate(units):
+        t = int(u.get("special_cooldown", 255))
+        if u["unit_status"] != 0 or t == 255 or t == i or t >= len(units) \
+                or units[t]["unit_status"] != 0:
+            continue
+        a = tuple(int(v) for v in centre(u))
+        b = tuple(int(v) for v in centre(units[t]))
+        cbsfx.texture_line(surface, cam, cache, art.surface("cmbtsfx", 2, 6),
+                           a, b)
 
 
 def missile_at(ordnance, cam, x, y, me):
@@ -276,8 +362,8 @@ def draw_absorber(surface, cam, art, u, i, clock, cache):
     `screen.ship_frame`), centred on the unit
     (`Draw_Energy_Absorber_`, cmbtfire.cpp:923-953, called before the
     ship's own picture by `Draw_Ship_`, cmbtdrw1.cpp:2632-2637). Not drawn
-    in stasis or under a plasma web, as there; the black hole's own test
-    is not on the wire."""
+    in stasis, under a plasma web or in a black hole, as there (the hole's
+    test reads `black_hole_source_idx`, `draw_units`)."""
     entry = absorber_entry(u["size_class"])
     n = max(1, art.frame_count("cmbtsfx", entry))
     pic = art.surface("cmbtsfx", entry, (clock // 2 + i) % n)

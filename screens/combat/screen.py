@@ -33,7 +33,8 @@ from core import combatblocks as cb
 from core.screen_base import ScreenBase
 from core.kentext import ArcWords
 from core.shipparts import ShipPartNames
-from . import cbart, cbdraw, cbmap, cbopts, cbpanel, cbplay, cbpopups, cbview
+from . import (cbart, cbcloak, cbdraw, cbmap, cbopts, cbpanel, cbplay,
+               cbpopups, cbview)
 # the gestures, moved out by work order 202 (decision 6's guideline); FOOT and
 # field_by_hotkey are read here and by tools under this module's name
 from .cbinput import FOOT, CombatInput, field_by_hotkey  # noqa: F401
@@ -84,6 +85,7 @@ class CombatScreen(CombatInput, ScreenBase):
         self._serial = None
         self._panel = cbpanel.Panel()
         self._play = cbplay.Player()
+        self._fades = cbcloak.Fades()         # work order 210 C1
         self._pops = cbpopups.Popups()
         self._opts = cbopts.Options()         # the OPTIONS panel (work order 200)
         self._specials = False               # the panel's SPECIALS view
@@ -157,6 +159,7 @@ class CombatScreen(CombatInput, ScreenBase):
             self._serial = combat["serial"]
             self._cam, self._board = None, False
             self._play.reset()
+            self._fades.reset()
             self._pops.reset()
         self._pops.update(game_state)
         self._play.fast = cbopts.flag(game_state, "fast")
@@ -241,8 +244,13 @@ class CombatScreen(CombatInput, ScreenBase):
                 unit), self.style, self._language)
         self._play.colours = cbdraw.player_colours(self._state)
         self._play.planet = self._planet_picture(c)
+        now = time.monotonic()
+        self._fades.update(c["units"], now)
+        cbdraw.draw_tractors(surface, cam, art, c, self._cache)
         cbdraw.draw_units(surface, cam, art, c, self._play.colours, clock,
-                          self._cache, self._play.planet)
+                          self._cache, self._play.planet,
+                          phased_shown=unit["owner"] == self._me(),
+                          fades=self._fades, now=now, fast=self._play.fast)
         if unit["owner"] == self._me():
             cbdraw.draw_cursor(surface, cam, art, unit, clock, self._cache)
         cbdraw.draw_ordnance(surface, cam, art, self._play.ordnance,

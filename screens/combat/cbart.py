@@ -190,6 +190,54 @@ class CombatArt:
             return None
         return display_format(img)
 
+    def indexed(self, lbx_name, entry, frame=0, palette=None, mirror=False,
+                flip=False):
+        """One frame as palette indices — (h x w uint8 array, its palette)
+        — flipped as `surface` flips it, or None (no art, or a painted
+        picture: a mod's PNG has no indices). For drawings that remap the
+        indices first, as the original's `Plasma_Darken_` and
+        `Outline_Bitmap_` do (`cbcloak`, work order 210 C1)."""
+        if self._painted(lbx_name, entry, frame) is not None:
+            return None
+        b = self.blob(lbx_name, entry)
+        if b is None or not self.available:
+            return None
+        try:
+            import numpy as np
+            h = lbx.parse_header(b)
+            pal = self.palette_with()
+            if h.has_palette:
+                pal.update(lbx.read_palette(b, h.frame_count))
+            if palette:
+                pal.update(palette)
+            px = lbx.decode_composed(b, h, frame)
+            if px is None:
+                return None
+            arr = np.frombuffer(bytes(px), dtype=np.uint8).reshape(
+                h.height, h.width)
+        except (lbx.LbxError, ValueError):
+            return None
+        if mirror:
+            arr = arr[:, ::-1]
+        if flip:
+            arr = arr[::-1, :]
+        return np.ascontiguousarray(arr), pal
+
+    def from_indices(self, pixels, palette):
+        """An index array (`indexed`) as the RGBA surface `surface` makes."""
+        h, w = pixels.shape
+        return display_format(_rgba(pixels.tobytes(), w, h, palette))
+
+    def ship_indices(self, colour, picture, facing, glow=0, monster=False):
+        """`ship`'s frame as indices (`indexed`)."""
+        stored, mirror, flip = stored_facing(facing)
+        frame = 4 * stored + max(0, min(3, int(glow)))
+        if monster or picture == 44:
+            return self.indexed("monster", 25 if picture == 44 else picture,
+                                frame, None, mirror, flip)
+        return self.indexed("cmbtshp", int(colour) * 45 + int(picture), frame,
+                            self.ramp(colour), mirror, flip)
+
     def ship(self, colour, picture, facing, glow=0, monster=False):
         """A battle unit's picture for its facing and glow frame 0..3."""
         stored, mirror, flip = stored_facing(facing)

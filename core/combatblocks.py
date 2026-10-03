@@ -53,6 +53,9 @@ UNIT_FIELDS = (
     ("combat_speed_base", 58, "b"), ("current_speed", 59, "h"),
     ("movement_left", 61, "h"), ("special_status_flag", 64, "b"),
     ("special_status_timer", 65, "B"),
+    # work order 210 C2: the tractor's target, 0xFF none (orion2.h:619,
+    # set by `Tractor_Beam_`, cmbtspec.cpp:681)
+    ("special_cooldown", 66, "B"),
     # work order 199 C3: orion2.h's order between the verified neighbours
     # (64 special_status_flag ... 72, 74, 75 ... 82 the weapon slots)
     ("plasma_web_damage", 67, "h"), ("reflected_damage_pool", 69, "h"),
