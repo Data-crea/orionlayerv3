@@ -97,6 +97,11 @@ ROW_COLOUR = {ON: (56, 132, 40),          # 0x53
               IN_REACH: (108, 220, 76),   # 0x56
               PAUSED: (212, 208, 44),     # 0xDC
               OFF: (148, 0, 0)}           # 0x4A
+#: The weapon list's columns (`row_columns`): the count's right edge and the
+#: name's left edge in the original's list, 114..263 (cmbtdrw1.cpp:2775,
+#: :2858, :2929), as fractions of its width.
+COUNT_RIGHT = (127 - 114) / (263 - 114)
+NAME_LEFT = (131 - 114) / (263 - 114)
 
 
 def row_field(fields, k):
@@ -342,9 +347,20 @@ class Panel:
                 hud.small_button(surface, r, scale, "normal")
                 mode = row_mode(state, exhausted, computer, None if hover
                                 is None else bool(hover >> k & 1))
+                # TRANSCRIPTION `row_columns` (work order 210 B4): the count
+                # right-aligned at x 127 and the name from x 131 of the list's
+                # 114..263 (`Print_Integer_Right_(127, …)`, `Print_(131, …)`,
+                # cmbtdrw1.cpp:2858, :2929): as fractions of the row, so the
+                # count stands clear of the row's frame at every size
+                col = r.x + int(r.w * COUNT_RIGHT)
+                name_x = r.x + int(r.w * NAME_LEFT)
                 hudtext.blit(surface, style.render_text(
-                    f"{count}  {label}", small, ROW_COLOUR[mode]),
-                    r.inflate(-pad, 0), align="left")
+                    str(count), small, ROW_COLOUR[mode]),
+                    pygame.Rect(r.x, r.y, col - r.x, r.h), align="right")
+                hudtext.blit(surface, style.render_text(
+                    label, small, ROW_COLOUR[mode]),
+                    pygame.Rect(name_x, r.y, r.right - pad // 2 - name_x,
+                                r.h), align="left")
                 self.rows.append((r, k))
                 self.help_rows.append((r, k))
         # the buttons (right), each only while the live list carries it
