@@ -24,6 +24,7 @@ from screens.custom_race.description import (
 from screens.custom_race.popup import (
     MessagePopup, FALLBACK_PANEL, fallback_text_rect,
 )
+from screens.custom_race import governments
 
 log = logging.getLogger("custom_race")
 
@@ -85,6 +86,9 @@ class CustomRaceScreen(ScreenBase):
             return
         self._traits_data = data
         self._categories = self._traits_data.get("categories", [])
+        # The government options take the engine's numbers whatever the
+        # file says (work order 206: Democracy was 3, the engine's IMPERIUM).
+        governments.normalize(self._categories)
         self._specials = self._traits_data.get("specials", [])
         self._starting_picks = self._traits_data.get("starting_picks", 10)
 
