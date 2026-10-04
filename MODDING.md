@@ -72,6 +72,16 @@ drawing, used as painted (no palette), at
 facings the game draws as flips stay flips, so a ship needs its five
 stored facings, not sixteen. `NAMES.txt` gives the numbering.
 
+Paint at the stored drawing's size or at a whole multiple of it (work
+order 214): a Doom Star is 59 x 60, so 118 x 120, 236 x 240 and so on.
+OrionLayer draws the picture at the drawing's size and place and keeps
+its detail as the camera zooms in; any other size is refused (the log
+says so) and the game's drawing is used. A ship's frames are
+`<entry>_0.png` to `<entry>_19.png`: the five stored facings (0 points
+right, each next one 22.5 degrees counter-clockwise, 4 points up), four
+engine-glow frames each. Its entry is `colour * 45 + picture`, so a
+picture replaces one player colour's ship — there is no tint.
+
 ### The other extracted pictures (work order 199)
 
 Fleets, Leaders, Races, the Ship Designer and the diplomacy audience draw

@@ -23,7 +23,7 @@ hit flash of its own.
 """
 import pygame
 
-from . import cbbeam, cbdraw, cbflare
+from . import cbart, cbbeam, cbdraw, cbflare
 
 #: the frame at which the second channel takes the next entry (beams.cpp:
 #: 1466-1470: `frame_idx[other_i] >= 9`)
@@ -317,10 +317,11 @@ def _flare(surface, cam, art, b, tick, counter, look, cache):
         key = ("flared", id(pic), e, frame, rot)
         if key not in cache:
             m = cbflare.mask(art, e, frame, rot)
+            nw, nh = cbart.native_size(pic)
             cache[key] = None if m is None else cbflare.brightened(
-                pic, m, pic.get_width() // 2 - d // 2,
-                pic.get_height() // 2 - d // 2, art.palette_with(),
-                cache.setdefault("flare_memo", {}))
+                pic, m, nw // 2 - d // 2, nh // 2 - d // 2,
+                art.palette_with(), cache.setdefault("flare_memo", {}),
+                k=cbart.hd_factor(pic))
         if cache[key] is not None:
             surface.blit(cbdraw.scaled(cache[key], cam.scale, cache),
                          cam.to_window(ox, oy))

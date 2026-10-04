@@ -198,26 +198,31 @@ def brighten(rgb, level, palette, memo):
                     palette, memo)
 
 
-def brightened(picture, mask, ox, oy, palette, memo):
+def brightened(picture, mask, ox, oy, palette, memo, k=1):
     """A copy of `picture` lifted where `mask` (the flare's indices, its
-    top-left at (ox, oy) in the picture) holds a glass pixel 0xF0 + j: by
-    30 + 4 j per cent (`Load_Shield_Hit_`'s sixteen levels)."""
+    top-left at (ox, oy) in the drawing's pixels) holds a glass pixel
+    0xF0 + j: by 30 + 4 j per cent (`Load_Shield_Hit_`'s sixteen levels). A
+    painted picture at k times the drawing (HD EXTENSION `hd_painted`) is
+    lifted k x k pixels for each of the mask's."""
     w, h, rows = mask
     out = picture.copy()
     pw, ph = out.get_size()
     for y in range(h):
-        py = y + oy
-        if not 0 <= py < ph:
-            continue
         for x, idx in enumerate(rows[y]):
-            px = x + ox
-            if idx < GLASS or not 0 <= px < pw:
+            if idx < GLASS:
                 continue
-            c = out.get_at((px, py))
-            if c[3] == 0:
-                continue
-            r, g, b = brighten(c[:3], (idx - GLASS) * 4 + 30, palette, memo)
-            out.set_at((px, py), (r, g, b, c[3]))
+            pct = (idx - GLASS) * 4 + 30
+            for py in range((y + oy) * k, (y + oy + 1) * k):
+                if not 0 <= py < ph:
+                    continue
+                for px in range((x + ox) * k, (x + ox + 1) * k):
+                    if not 0 <= px < pw:
+                        continue
+                    c = out.get_at((px, py))
+                    if c[3] == 0:
+                        continue
+                    r, g, b = brighten(c[:3], pct, palette, memo)
+                    out.set_at((px, py), (r, g, b, c[3]))
     return out
 
 

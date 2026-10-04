@@ -31,7 +31,7 @@ the unit hidden from the frame `n / 2` on (cmbtspec.cpp:1192-1276).
 """
 import random
 
-from . import cbdraw
+from . import cbart, cbdraw
 
 #: Blast type -> its glass table (cmbtspec.cpp:1621-1659; the compressor's
 #: picture is drawn without one, `sfx_type != 2`).
@@ -99,7 +99,7 @@ def plan(player, source, kind, art, rng=random):
     lbx_name, entry = PICTURE[kind]
     n = max(1, art.frame_count(lbx_name, entry))
     pic0 = art.surface(lbx_name, entry, 0)
-    half = (pic0.get_width() // 2) if pic0 is not None else 0
+    half = (cbart.native_size(pic0)[0] // 2) if pic0 is not None else 0
     centre = cbdraw.centre(src)
     reach = in_reach(units, source, centre, half * half)
     colours = player.colours

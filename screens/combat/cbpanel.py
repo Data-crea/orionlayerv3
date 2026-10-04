@@ -69,7 +69,7 @@ from core import lang
 from core.hud import blocks as hud
 from core.hud import style as hudstyle
 from core.hud import text as hudtext
-from . import cbmap
+from . import cbart, cbmap
 
 TABS = (("weapons", "WEAPONS"), ("specials", "SPECIALS"))
 BUTTONS = (("auto", "AUTO", ord("A")), ("scan", "SCAN", ord("S")),
@@ -194,9 +194,14 @@ def draw_shields(surface, rect, unit, picture):
     four arcs round it, one ring per ten points left in each."""
     cx, cy = rect.center
     if picture is not None:
-        k = min(rect.w, rect.h) * 0.62 / max(picture.get_size())
-        img = pygame.transform.scale(picture, (max(1, int(picture.get_width() * k)),
-                                               max(1, int(picture.get_height() * k))))
+        k = min(rect.w, rect.h) * 0.62 / max(cbart.native_size(picture))
+        size = (max(1, int(picture.get_width() * k / cbart.hd_factor(picture))),
+                max(1, int(picture.get_height() * k / cbart.hd_factor(picture))))
+        # a painted picture at k times the drawing shrinks smoothly; the
+        # game's drawings keep their pixels (HD EXTENSION `hd_painted`)
+        img = (pygame.transform.smoothscale if cbart.hd_factor(picture) > 1
+               and size[0] < picture.get_width() else
+               pygame.transform.scale)(picture, size)
         surface.blit(img, img.get_rect(center=(cx, cy)))
     face = (int(unit["facing_dir"]) & 15) * 22.5
     base = min(rect.w, rect.h) * 0.36

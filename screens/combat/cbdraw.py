@@ -158,11 +158,19 @@ class SpriteCache(dict):
 
 
 def scaled(surf, scale, cache):
+    """`surf` at `scale` times the stored drawing's size — a painted picture
+    at k times that size (`cbart.hd_factor`, HD EXTENSION `hd_painted`)
+    shrinks by k more, smoothly, and keeps its detail where the camera is
+    closer than k."""
     key = (id(surf), round(scale, 3))
     if key not in cache:
-        w = max(1, round(surf.get_width() * scale))
-        h = max(1, round(surf.get_height() * scale))
-        cache[key] = pygame.transform.scale(surf, (w, h))
+        k = cbart.hd_factor(surf)
+        w = max(1, round(surf.get_width() * scale / k))
+        h = max(1, round(surf.get_height() * scale / k))
+        if k > 1 and (w, h) != surf.get_size():
+            cache[key] = pygame.transform.smoothscale(surf, (w, h))
+        else:
+            cache[key] = pygame.transform.scale(surf, (w, h))
         if isinstance(cache, SpriteCache):
             cache.hold(key, surf)
         elif len(cache) > 4000:     # a caller's own dict

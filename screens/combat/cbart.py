@@ -38,12 +38,34 @@ THE ORIGINAL'S RULES, transcribed (`dev:doc/combat_drawing_reading.md`):
 import json
 import logging
 import os
+import weakref
 
 import pygame
 
 from core import lbx
 
 log = logging.getLogger("combat")
+
+#: HD EXTENSION `hd_painted` (decision 80's sibling, decision 81: Data, work
+#: order 214): a painted picture may carry k times the pixels of the stored
+#: drawing it replaces, k a whole number, width and height exactly; it is
+#: drawn at the stored drawing's size, so its detail shows as the camera
+#: zooms in. The original draws its 640 x 480 drawings and nothing finer.
+#: Held per surface, weakly: a flip of a painted picture keeps its factor.
+_FACTOR = weakref.WeakKeyDictionary()
+
+
+def hd_factor(surf):
+    """How many pixels of `surf` make one pixel of the drawing it stands
+    for: 1 for a stored drawing, k for a painted picture at k times it."""
+    return _FACTOR.get(surf, 1) if surf is not None else 1
+
+
+def native_size(surf):
+    """`surf`'s size in the stored drawing's pixels."""
+    k = hd_factor(surf)
+    w, h = surf.get_size()
+    return w // k, h // k
 
 REL = "screens/combat/assets/gamedata"
 FORMAT_VERSION = 1
@@ -203,7 +225,10 @@ class CombatArt:
         surf = self._painted(lbx_name, entry, frame)
         if surf is not None:
             if mirror or flip:
+                k = hd_factor(surf)
                 surf = pygame.transform.flip(surf, mirror, flip)
+                if k > 1:
+                    _FACTOR[surf] = k
             self._cache[key] = surf
             return surf
         b = self.blob(lbx_name, entry)
@@ -233,15 +258,39 @@ class CombatArt:
         resolved like every file here — the player's mod folder
         (`files/screens/combat/assets/gamedata/…`), a developer mod, the
         project. Used as painted: no palette, no ramp; the facings that
-        are flips stay flips (a modder paints the 5 stored ones)."""
+        are flips stay flips (a modder paints the 5 stored ones).
+
+        HD EXTENSION `hd_painted` (decision 81): at the stored drawing's
+        size or k times it (k whole, both sides exactly), drawn at the
+        stored drawing's size; any other size is refused with one log line
+        and the stored drawing is drawn (decision 50's rule: a loader checks
+        a file's size and refuses a wrong one). Without the extracted
+        drawing there is no size to check against: used as painted."""
         path = self._path(f"{lbx_name}/{int(entry)}_{int(frame)}.png")
         if not path or not os.path.isfile(path):
             return None
         try:
-            img = pygame.image.load(path)
+            img = display_format(pygame.image.load(path))
         except (pygame.error, OSError):
             return None
-        return display_format(img)
+        b = self.blob(lbx_name, entry)
+        try:
+            h = lbx.parse_header(b) if b else None
+        except lbx.LbxError:
+            h = None
+        if h is None:
+            return img
+        w, hh = img.get_size()
+        k = w // h.width if h.width else 0
+        if k >= 1 and w == k * h.width and hh == k * h.height:
+            if k > 1:
+                _FACTOR[img] = k
+            return img
+        log.warning("combat: %s is %d x %d; a painted picture is the stored "
+                    "drawing's %d x %d or a whole multiple of it — the "
+                    "game's drawing is used", os.path.basename(path), w, hh,
+                    h.width, h.height)
+        return None
 
     def indexed(self, lbx_name, entry, frame=0, palette=None, mirror=False,
                 flip=False):

@@ -3,6 +3,7 @@
   "marks": {
     "hd_state": "BUILT, NOT ACCEPTED until work order 197's live acceptance is recorded.",
     "hd_extension_free_camera": "HD EXTENSION \u2014 the field is zoomed by the wheel about the pointer and panned by a right drag, as the galaxy map; the original scrolls its 32 x 18 window by the pointer at the screen's edges (combinit.cpp:2387-2496). The camera starts at the original's framing, 32 cells across round the acting unit.",
+    "hd_extension_hd_painted": "HD EXTENSION \u2014 a painted battle picture in the mod folder may be its stored drawing\u2019s size or a whole k times it; it is drawn at the drawing\u2019s size and place, shrunk smoothly, so its detail shows as the camera zooms in; another size is refused for the game\u2019s drawing. The original draws its 640 x 480 drawings and nothing finer (decision 81, Data, work order 214; cbart._painted, cbdraw.scaled).",
     "hd_extension_whole_grid": "HD EXTENSION \u2014 the whole 81 x 68 field can be on the screen at once; the original shows 32 x 18 cells; both draw the reduced map in the panel (work order 209 B1, cbmap).",
     "deviation_hud_panel": "DEVIATION \u2014 the acting unit's panel (name, systems, the picture with its shields, weapons or special systems, buttons) is HUD blocks in OrionLayer's words along the bottom, not COMBAT.LBX 0 with its pictures and labels.",
     "deviation_glass_alpha": "DEVIATION \u2014 a picture's glass pixels (0xF0-0xFF) are drawn at half alpha; the original blends them through a table per effect (animate.cpp:279-287, combinit.cpp:855-989).",
