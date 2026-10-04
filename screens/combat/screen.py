@@ -259,7 +259,6 @@ class CombatScreen(CombatInput, ScreenBase):
         if cbopts.flag(self._state, "shield_arcs") and c["cur_ship"]:
             cbopts.draw_shield_arcs(surface, cam, art, unit, cbdraw.centre(
                 unit), self.style, self._language)
-        self._play.in_view = cam.shows
         self._play.colours = cbdraw.player_colours(self._state)
         self._play.planet = self._planet_picture(c)
         now = time.monotonic()

@@ -80,7 +80,6 @@ class Player:
         self.colours, self.planet = {}, None   # for a flared target's picture
         self._palettes = {}              # beam colours -> one palette dict
         self.sounds = cbsound.Sounds()   # the battle's sounds (open fix 79)
-        self.in_view = None              # (wx, wy) -> on HD's camera
         self.reset()
 
     def reset(self):
@@ -344,6 +343,11 @@ class Player:
                                     *cbdraw.centre(u),
                                     now + p["frames"] * FRAME_S,
                                     (0xff, 0xcc, 0x40)))
+            # the numbers are waited for only when the pass did damage
+            # (`Add_Damage_Indicator_For_Ship_` queues no zero, cmbtmis.cpp:
+            # 946-967; measured: 3 ticks for a pass that hit nothing)
+            if not (pas.get("past_shields") or pas.get("absorbed")):
+                p["numbers"] = 0
             return (p["frames"] + p["numbers"]) * FRAME_S
         if k in ("missile_hit", "fighter_pass"):
             u = self._unit(ev.get("target", -1))
@@ -372,12 +376,12 @@ class Player:
         if k == "destroy":
             u = self._unit(ev.get("unit", -1))
             state = int(ev.get("death_state", 1))
-            # `Destroy_Ship_FX_` (cmbtspec.cpp:1175-1178): a ship the view
-            # does not show is shown first, and the original waits 7 ticks
-            # before it explodes; HD's camera goes to it the same way
-            # (`CombatScreen._follow`)
-            delay = 7 * FRAME_S if u is not None and self.in_view is not \
-                None and not self.in_view(*cbdraw.centre(u)) else 0.0
+            # HD STATE `view_pause`: `Destroy_Ship_FX_` waits 7 ticks before
+            # a ship off ITS 32 x 18 view explodes (cmbtspec.cpp:1175-1178),
+            # the view fix 65 centres on the action; HD's camera is not that
+            # view, and measured on the same battle (work order 212, run M4)
+            # the pause fell where the original took none — HD does not wait
+            delay = 0.0
             if u is not None and state in (2, 3, 4) and \
                     int(ev.get("previous_owner", 0)) < 10:
                 # a ship dying in a blast (work order 210 C4, `cbblast`)
