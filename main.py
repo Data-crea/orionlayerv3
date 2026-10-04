@@ -8,6 +8,7 @@ from core.config import (load_settings, TARGET_FPS, SCREENS_DIR,
                          build_line, display_line)
 from core import resources, palette, usermod, usersettings, frameslot, lang
 from core import framerate
+from core import lastword
 from core import cursor as cursor_gfx
 from core import mouse as mouse_input
 from core.layout import Layout
@@ -258,6 +259,7 @@ class App:
             if self._input_log is not None:
                 self._input_log.begin(self, event)
             if event.type == pygame.QUIT:
+                lastword.ended("the window was closed")
                 self.running = False
             elif event.type == pygame.VIDEORESIZE:
                 if self._ignore_resize:
@@ -449,6 +451,7 @@ class App:
                 # (decision 62). No reconnect, no "game ended" screen.
                 log.info("orion2re ended at the player's request; "
                          "OrionLayer exits with it")
+                lastword.ended("the game ended at the player's request")
                 self.running = False
                 return
             state = self.client.state
@@ -709,5 +712,9 @@ class App:
 
 
 if __name__ == "__main__":
+    # every way the client ends leaves a line saying why (work order 213:
+    # Data's client died silently as a battle opened) — the program's, not
+    # the tools' that build an App of their own
+    lastword.install()
     app = App()
     app.run()

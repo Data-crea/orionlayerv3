@@ -87,10 +87,34 @@ def gone(pid):
     return False
 
 
+def ending(rc):
+    """The line that says how OrionLayer ended, from its return code — work
+    order 213: Data's client died with SIGSEGV as a battle opened and his
+    terminal showed only the engine being stopped. The client's own last
+    word (`core/lastword.py`) says why from inside; this line is the one
+    that is always there, SIGKILL included, and it comes BEFORE the
+    engine's, so the terminal shows which side ended first."""
+    if rc is None:
+        # play.py itself was interrupted (Ctrl+C reaches both processes)
+        return "OrionLayer ended: play.py was interrupted before it returned"
+    if rc < 0:
+        try:
+            name = signal.Signals(-rc).name
+        except ValueError:
+            name = f"signal {-rc}"
+        why = "it crashed — the lines above say where; `coredumpctl " \
+            "list python` names the core" if -rc in (
+                signal.SIGSEGV, signal.SIGFPE, signal.SIGABRT, signal.SIGBUS,
+                signal.SIGILL) else "it was stopped from outside"
+        return f"OrionLayer ended: {name} ({why})"
+    return f"OrionLayer ended: exit status {rc}"
+
+
 def stop_engine(pid, out=print, wait=5.0):
     """SIGTERM the engine this start owns, SIGKILL if it stays. Returns how
     it ended, or None when it had already gone."""
     if gone(pid):
+        out(f"orion2re PID {pid} had already ended")
         return None
     os.kill(pid, signal.SIGTERM)
     end = time.time() + wait
@@ -114,10 +138,13 @@ def main(argv=None, out=print):
     if not pid:
         out(f"The game did not start — its log is {LOG}")
         return 1
+    rc = None
     try:
-        return subprocess.call([sys.executable, os.path.join(ROOT, "main.py")],
-                               cwd=ROOT, env=client_env())
+        rc = subprocess.call([sys.executable, os.path.join(ROOT, "main.py")],
+                             cwd=ROOT, env=client_env())
+        return rc
     finally:
+        out(ending(rc))
         stop_engine(pid, out)
 
 
