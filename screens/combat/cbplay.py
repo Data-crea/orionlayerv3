@@ -183,7 +183,9 @@ class Player:
             rec = after.get(idx) or {
                 "index": idx, "type": e.get("type", 0),
                 "quantity": e.get("quantity", 1), "facing_dir": 0,
-                "speed": e.get("speed", 0)}
+                "speed": e.get("speed", 0),
+                "target_unit_idx": e.get("target", -1),
+                "is_anti_missile_rocket": e.get("anti_missile", 0)}
             out.append({"kind": "flight", "seq": e["seq"] + 0.1,
                         "serial": None, "_flight": cbflight.launch(
                             rec, cbdraw.centre(src), end, self.fast)})

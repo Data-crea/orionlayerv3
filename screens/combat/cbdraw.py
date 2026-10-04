@@ -409,10 +409,10 @@ def final_target(missiles, m):
     seen = set()
     while m.get("is_anti_missile_rocket") and int(m["index"]) not in seen:
         seen.add(int(m["index"]))
-        m = by_index.get(int(m["target_unit_idx"]))
+        m = by_index.get(int(m.get("target_unit_idx", -1)))
         if m is None:
             return None
-    return int(m["target_unit_idx"])
+    return int(m.get("target_unit_idx", -1))
 
 
 def ordnance_frame(missiles, m, ship_frame, cur_ship):
@@ -424,7 +424,8 @@ def ordnance_frame(missiles, m, ship_frame, cur_ship):
     cycle = (ship_frame + int(m["index"])) % 3
     if int(m["type"]) in FIGHTER_TYPE:
         return cycle if final_target(missiles, m) == cur_ship else 0
-    if int(m["target_unit_idx"]) == cur_ship or int(m["type"]) == PROTON:
+    if int(m.get("target_unit_idx", -1)) == cur_ship or \
+            int(m["type"]) == PROTON:
         return cycle
     return 0
 
