@@ -147,6 +147,7 @@ class Player:
         nothing struck (HD STATE `flight_batch`)."""
         gone = {e["missile"]: (e["x"], e["y"]) for e in events
                 if e["kind"] == "missile_gone"}
+        events = self._with_launches(events, ordnance, gone)
         f = cbflight.plan(self._fed_ordnance, ordnance, gone)
         if f is None:
             return events
@@ -157,6 +158,31 @@ class Player:
              max(self._last_queued or 0, self._played)) + 0.5
         return events[:at] + [{"kind": "flight", "seq": seq,
                                "serial": None, "_flight": f}] + events[at:]
+
+    def _with_launches(self, events, ordnance, gone):
+        """Each launch flies from its ship (`cbflight.launch`) right after
+        its event: to where this snapshot puts the missile, or where it
+        ended (a Proton Torpedo strikes in its launch)."""
+        after = {m["index"]: m for m in (ordnance or {}).get("missiles", [])}
+        out = []
+        for e in events:
+            out.append(e)
+            if e["kind"] != "missile_launch":
+                continue
+            src = self._unit(e.get("source", -1))
+            idx = e.get("missile")
+            end = (after[idx]["x"], after[idx]["y"]) if idx in after else \
+                gone.get(idx)
+            if src is None or end is None:
+                continue
+            rec = after.get(idx) or {
+                "index": idx, "type": e.get("type", 0),
+                "quantity": e.get("quantity", 1), "facing_dir": 0,
+                "speed": e.get("speed", 0)}
+            out.append({"kind": "flight", "seq": e["seq"] + 0.1,
+                        "serial": None, "_flight": cbflight.launch(
+                            rec, cbdraw.centre(src), end, self.fast)})
+        return out
 
     def _with_lightning(self, events):
         """HD STATE `lightning_inferred` (work order 210 C3): a Lightning

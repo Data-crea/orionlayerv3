@@ -53,6 +53,7 @@
     "transcription_fighter_beams": "TRANSCRIPTION \u2014 a fighter pass fires its owner's point-defence beam from a quarter of the group, from the stack's places, then its number rises (Fighter_Combat_SFX_, cmbtmis.cpp:875-970; open fix 77; work order 212, cbflight)",
     "transcription_multi_beam": "TRANSCRIPTION \u2014 the Mass Driver and the Gauss Cannon fire three bolts a frame apart with the second muzzle set, the Mauler Device and the breaths three bolts; the last bolt drawn decides the hit and the flare (beams.cpp:856-909, 1155-1179, 1243-1266; work order 212, cbshot)",
     "transcription_mauler_ball": "TRANSCRIPTION \u2014 the mauler ball BEAMS.LBX 0x58 at a bolt's head until it strikes (beams.cpp:2420-2422; work order 212, cbshot)",
-    "transcription_transporter_beam": "TRANSCRIPTION \u2014 with Transporters a bomb starts near the planet after 8 ticks of CMBTSFX 15 along the line in the stasis bubble's glass (cmbtdrw1.cpp:3024-3040, cmbtspec.cpp:800-854; work order 212, cbsfx)"
+    "transcription_transporter_beam": "TRANSCRIPTION \u2014 with Transporters a bomb starts near the planet after 8 ticks of CMBTSFX 15 along the line in the stasis bubble's glass (cmbtdrw1.cpp:3024-3040, cmbtspec.cpp:800-854; work order 212, cbsfx)",
+    "transcription_launch_flight": "TRANSCRIPTION \u2014 a missile leaves its ship flying 12 px a pass to where its launch puts it, the Proton Torpedo and the Dragon Breath the whole way to their target (Missile_Launch_FX_, cmbtspec.cpp:856-948; work order 212, cbflight)"
   }
 }

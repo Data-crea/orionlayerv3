@@ -103,21 +103,41 @@ def plan(before, after, gone):
     return {"moves": moves, "frames": max(mv["passes"] for mv in moves)}
 
 
+def launch(record, start, end, fast=False):
+    """TRANSCRIPTION `launch_flight` (`Missile_Launch_FX_`, cmbtspec.cpp:
+    856-948): a missile leaves its ship flying 12 px a pass (36 under FAST),
+    with no wait, to where the state after its launch puts it — the Proton
+    Torpedo and the Dragon Breath the whole way to their target (:876-879).
+    `record` is the missile as the state after it (or its launch event)
+    gives it; it is drawn while it flies even before that state is shown."""
+    step = 36 if fast else 12
+    major = max(abs(end[0] - start[0]), abs(end[1] - start[1]))
+    mv = {"index": record["index"], "from": tuple(start), "to": tuple(end),
+          "passes": max(1, -(-int(major) // step)),
+          "facing": facing(*start, *end), "record": dict(record)}
+    return {"moves": [mv], "frames": mv["passes"]}
+
+
 def at(flight, ordnance, frame):
-    """The ordnance with every flying missile where pass `frame` has it."""
-    if ordnance is None:
-        return None
+    """The ordnance with every flying missile where pass `frame` has it —
+    a launched one added while it flies."""
+    ordnance = ordnance if ordnance is not None else {"missiles": []}
     by = {mv["index"]: mv for mv in flight["moves"]}
-    out = []
+    out, seen = [], set()
+
+    def place(m, mv):
+        f = min(1.0, frame / mv["passes"])
+        return dict(m, x=round(mv["from"][0] + (mv["to"][0] -
+                                                 mv["from"][0]) * f),
+                    y=round(mv["from"][1] + (mv["to"][1] - mv["from"][1]) * f),
+                    facing_dir=mv["facing"])
     for m in ordnance.get("missiles", []):
         mv = by.get(m["index"])
-        if mv is not None:
-            f = min(1.0, frame / mv["passes"])
-            m = dict(m, x=round(mv["from"][0] + (mv["to"][0] -
-                                                  mv["from"][0]) * f),
-                     y=round(mv["from"][1] + (mv["to"][1] - mv["from"][1]) * f),
-                     facing_dir=mv["facing"])
-        out.append(m)
+        seen.add(m["index"])
+        out.append(place(m, mv) if mv is not None else m)
+    for mv in flight["moves"]:
+        if mv["index"] not in seen and mv.get("record"):
+            out.append(place(mv["record"], mv))
     return dict(ordnance, missiles=out)
 
 
