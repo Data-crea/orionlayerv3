@@ -35,19 +35,23 @@ UNVALIDATED = "unvalidated"
 #: taken from there on purpose.
 WAITING = "waiting"
 
-#: How many consecutive frames with an EMPTY list the screen waits
+#: How many consecutive SNAPSHOTS with an EMPTY list the screen waits
 #: before it calls the silence a failure and hands over after all.
 #:
 #: **MEASURED, not guessed** (`dev:tools/entry_glimpse.py`, work order 166
 #: part A): five entries into change mode on SAVE4, and every one of
-#: them took exactly **22 frames** from the activation to a validated
-#: list. Three times that, so a slower machine or a bigger list has
-#: room, and a game that reports 36 and never builds a list still ends
-#: up on the picture with the reason in the log.
+#: them took exactly **22 frames** at 60 Hz from the activation to a
+#: validated list — 0.37 s, 7 snapshots at the engine's one per 55 ms input
+#: tick (18.2 a second, work order 177). Three times that, so a slower
+#: machine or a bigger list has room, and a game that reports 36 and never
+#: builds a list still ends up on the picture with the reason in the log.
+#: Counted in snapshots since work order 212 (decision 78): 66 FRAMES gave
+#: up after 1.1 s at 60 Hz and far sooner at a higher frame rate; 20
+#: snapshots are the same 1.1 s at every frame rate.
 #:
 #: A BOUND IS NOT A TIMER (decision 21): it is the give-up, and the
 #: thing that ends the wait is the list arriving.
-EMPTY_LIST_GRACE = 66
+EMPTY_LIST_GRACE = 20
 
 
 def classify(names, wording, record, fields, select_mode, empty_frames):
@@ -58,7 +62,7 @@ def classify(names, wording, record, fields, select_mode, empty_frames):
     wording, a player record, then the game's own field list.
 
     `record` is `(tech_fields, tech_applications)` or None.
-    `empty_frames` is how many consecutive frames the wire has carried
+    `empty_frames` is how many consecutive snapshots the wire has carried
     NO list — which is what tells `WAITING` from `UNVALIDATED`.
     """
     if names is not None and names.state != "ok":

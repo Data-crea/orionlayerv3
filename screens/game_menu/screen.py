@@ -330,3 +330,13 @@ class GameMenuScreen(ScreenBase):
 
     def help_extra_rect(self, spec):
         return gmdraw.help_rect(self, spec)
+
+    def own_help(self, name):
+        """An OrionLayer row's help (HD EXTENSION, work order 212): its
+        text in layout.json `own_help`, in the session's language — the
+        popup draws verbatim, so it is translated here."""
+        from core import lang
+        rec = (self.words.get("own_help") or {}).get(name)
+        if not rec:
+            return None
+        return lang.tr(rec["title"]), lang.tr(rec["body"])

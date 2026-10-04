@@ -45,8 +45,9 @@ NO_PLAYER = "no_player"
 
 #: How long a list that is neither shape may be the previous screen's,
 #: in snapshots, before it is read as a dialog. The research screens'
-#: measured bound (work order 166), as the Leaders screen uses it.
-WAIT_BOUND = 66
+#: measured bound (work order 166, in snapshots since work order 212), as
+#: the Leaders screen uses it.
+WAIT_BOUND = 20
 
 
 def _live(fields):

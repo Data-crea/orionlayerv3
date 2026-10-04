@@ -39,6 +39,13 @@ from .cbbeamfx import get_angle
 
 STASIS, ANTI_MISSILE, GYRO, WEB, PULSAR, BLACK_HOLE, CONVERTER, TRACTOR = \
     32, 33, 34, 35, 36, 37, 38, 39
+TICK = 0.055                 # s: `Release_Time_(1)`
+UNTIMED = 0.015              # s: a frame of a loop without a wait
+#: the damage numbers rise 9 frames (`Draw_Damage_Indicator_`, beams.cpp:
+#: 380-382); `Draw_Damage_Message_Queue_Until_Done_` waits for them
+NUMBERS = 9
+WEB_STEP = 6                 # px a frame (`Plasma_Web_`, cmbtspec.cpp:1073)
+SPIN_TURNS = 2               # HD STATE `gyro_spin`
 BHG = {0: 46, 1: 45, 2: 45, 3: 44, 4: 44, 5: 43}
 #: The plasma web and the caustic slime: one routine, `Plasma_Web_`
 #: (cmbtfire.cpp:1566-1570).
@@ -189,30 +196,69 @@ def plan(ev, unit, art, previous=None):
                     "cmbtsfx", 2, frame, glass="tractor"), a, b)
             return {"frames": 8, "draw": draw}
         if w == GYRO:
+            # `Draw_Gyro_Special_Effect_` (cmbtspec.cpp:1441-1556): the line,
+            # a tick a frame; eight passes of 2 ticks, the target turned one
+            # facing each and the line looping its last three frames (:1511-
+            # 1549, TRANSCRIPTION `gyro_line`); then `Gyro_Destablizer_`'s
+            # spin with no wait (:580-597) — HD STATE `gyro_spin`: its count
+            # is the engine's random numbers (19 draws of `Random_(13)`, about
+            # eight turns), on no wire; HD turns twice round at the pace of a
+            # loop without a wait, then the state after it gives the facing —
+            # then the numbers (:637)
             n = _frames(art, 8)
             face0 = int(dst["facing_dir"])
+            spin = SPIN_TURNS * 16
 
             def draw(surface, cam, cache, frame):
                 if frame < n:
                     texture_line(surface, cam, cache,
                                  art.surface("cmbtsfx", 8, frame), a, b)
+                elif frame < n + 16:
+                    k = (frame - n) // 2
+                    texture_line(surface, cam, cache, art.surface(
+                        "cmbtsfx", 8, k % 3 + n - 3), a, b)
+                    dst["facing_dir"] = (face0 + k + 1) & 15
                 else:
-                    dst["facing_dir"] = (face0 + (frame - n) // 2 + 1) & 15
-                    if frame >= n + 15:
+                    dst["facing_dir"] = (face0 + 9 + frame - n - 16) & 15
+                    if frame >= n + 16 + spin - 1:
                         dst["facing_dir"] = face0
-            return {"frames": n + 16, "draw": draw}
+            # its sounds, in the engine's order: 11 for the line and its
+            # fade, 11 again for the turn and its fade (cmbtspec.cpp:1470,
+            # :1508, :1511, :1555), then 3 for the spin, faded once the
+            # numbers have risen (:579, :638)
+            line, turn = n * TICK, (n + 16) * TICK
+            return {"frames": n + 16 + spin, "draw": draw, "hold": NUMBERS,
+                    "phases": [(n, TICK), (16, TICK), (spin, UNTIMED)],
+                    "sound_times": [0.0, line, line, turn, turn,
+                                    turn + spin * UNTIMED + NUMBERS * TICK]}
         if w in WEBS:
+            # TRANSCRIPTION `web_travel` (`Plasma_Web_`, cmbtspec.cpp:
+            # 1060-1140): CMBTSFX 14, its frames running on, travels from 20
+            # px above-left of the source's centre to the same of the
+            # target's, 6 px a frame on the longer axis, then the impact
+            # 36-39 by size, centred where the blob stopped; neither loop
+            # waits (HD STATE `untimed_pace`)
             n, m = _frames(art, 14), _frames(art, 36 + _size_idx(dst))
+            sx, sy, tx, ty = a[0] - 20, a[1] - 20, b[0] - 20, b[1] - 20
+            fly = max(1, -(-max(abs(tx - sx), abs(ty - sy)) // WEB_STEP))
 
             def draw(surface, cam, cache, frame):
-                if frame < n:
-                    texture_line(surface, cam, cache,
-                                 art.surface("cmbtsfx", 14, frame), a, b)
+                if frame < fly:
+                    f = frame / fly
+                    _blit_at(surface, cam, cache, art.surface(
+                        "cmbtsfx", 14, frame % n), sx + (tx - sx) * f,
+                        sy + (ty - sy) * f)
                 else:
                     _blit_centred(surface, cam, cache, art.surface(
-                        "cmbtsfx", 36 + _size_idx(dst), frame - n,
+                        "cmbtsfx", 36 + _size_idx(dst), frame - fly,
                         glass="plasma_web"), *b)
-            return {"frames": n + m, "draw": draw}
+            # its sounds, in the engine's order: the travel's (0x1B) and its
+            # fade as the blob arrives, the impact's (0x44) and its fade at
+            # the end (cmbtspec.cpp:1072, :1096, :1114, :1148)
+            return {"frames": fly + m, "draw": draw,
+                    "phases": [(fly + m, UNTIMED)],
+                    "sound_times": [0.0, fly * UNTIMED, fly * UNTIMED,
+                                    (fly + m) * UNTIMED]}
         if w == BLACK_HOLE:
             # `BHG_` (cmbtfire.cpp:1913-1979): CMBTSFX 47 along the line to
             # the target's centre less half the picture's height, frame
@@ -237,7 +283,10 @@ def plan(ev, unit, art, previous=None):
                     _blit_at(surface, cam, cache, art.surface(
                         "cmbtsfx", 41, frame - 9, glass="stellar_converter"),
                         b[0] - 60, b[1] - 60)
-            return {"frames": max(n, 9 + m), "draw": draw}
+            # each frame `Release_Time_(2)` (cmbtspec.cpp:1013), then the
+            # damage numbers until done (:1044)
+            return {"frames": max(n, 9 + m), "draw": draw, "wait": 2,
+                    "hold": NUMBERS}
         return None
     if k == "bomb":
         src, dst = unit(ev.get("source", -1)), unit(ev.get("target", -1))
@@ -245,7 +294,7 @@ def plan(ev, unit, art, previous=None):
             return None
         a, b = cbdraw.centre(src), cbdraw.centre(dst)
         dist = max(abs(b[0] - a[0]), abs(b[1] - a[1]))
-        fly = max(1, int(dist // 6))
+        fly = max(1, -(-int(dist) // 6))
         facing = int(round(get_angle(b[0] - a[0], a[1] - b[1]) / 22.5)) & 15
         pic_entry = (160 if int(ev.get("weapon", 0)) in BIO else 144) + facing
         m = _frames(art, 7)
@@ -260,7 +309,11 @@ def plan(ev, unit, art, previous=None):
             else:
                 _blit_at(surface, cam, cache, art.surface(
                     "cmbtsfx", 7, frame - fly), b[0] - 12, b[1] - 12)
-        return {"frames": fly + m, "draw": draw}
+        # `Draw_Bombs_` (cmbtdrw1.cpp:3049-3095): a tick a step, the numbers
+        # from the impact on, rising through the explosion's frames, then
+        # held until done (at least one pass, a do-while)
+        return {"frames": fly + m, "draw": draw, "number_frame": fly,
+                "hold": max(1, NUMBERS - m)}
     if k == "blast_hit":
         # the blast itself is drawn on the event that fires it (`cbblast`,
         # work order 210 C3/C4); its hits only raise their numbers, held as

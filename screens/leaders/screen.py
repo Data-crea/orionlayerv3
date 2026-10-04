@@ -105,7 +105,8 @@ class LeadersScreen(ScreenBase):
             return
         self._state = game_state
         own = ldrwire.is_officer_list(getattr(game_state, "fields", None))
-        self._waited = 0 if own else self._waited + 1
+        self._waited = 0 if own else \
+            self._waited + self.new_snapshot(game_state)
         self._view = ldrwire.View(game_state, self._waited,
                                   self._warlord_of, self._last_view)
         if self._view.view_known:

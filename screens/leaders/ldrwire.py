@@ -56,11 +56,12 @@ MISMATCH = "mismatch"        # a list that disagrees with the rebuild
 UNVALIDATED = "unvalidated"  # no list of this screen's, past the bound
 
 #: How long WAITING may last before it is UNVALIDATED, in snapshots.
-#: Work order 166's measured bound for the research screen (22 frames,
-#: three times over); a bound is the give-up, never a timer — what ends
-#: the wait is the list arriving (decision 21). The Leaders screen's own
-#: entry has not been measured live (parked, item L).
-WAIT_BOUND = 66
+#: Work order 166's measured bound for the research screen
+#: (`researchstate.EMPTY_LIST_GRACE`, counted in snapshots since work order
+#: 212); a bound is the give-up, never a timer — what ends the wait is the
+#: list arriving (decision 21). The Leaders screen's own entry has not been
+#: measured live (parked, item L).
+WAIT_BOUND = 20
 
 
 def _live(fields, name):

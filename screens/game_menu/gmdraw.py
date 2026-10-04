@@ -302,7 +302,7 @@ DIALOGS = {
 
 
 def help_rect(screen, spec):
-    """The two region kinds this overlay adds to help.json."""
+    """The region kinds this overlay adds to help.json."""
     around = spec.get("around")
     if around:
         body = rect(screen, around)
@@ -326,4 +326,11 @@ def help_rect(screen, spec):
         if area is None:
             return None
         return bands(area, spec.get("rows", 1))[spec.get("row", 0)]
+    band = spec.get("orionlayer_band")
+    if band:
+        # an OrionLayer row (work order 212): `gmorion.bands`, the one
+        # geometry its drawing and its clicks use (decision 5)
+        from . import gmorion
+        geo = gmorion.bands(screen)
+        return geo.get(band) if geo else None
     return None

@@ -456,6 +456,11 @@
       ]
     },
     {
+      "help_id": "orionlayer.frame_rate",
+      "node": "settings",
+      "orionlayer_band": "frame_rate"
+    },
+    {
       "help_id": 415,
       "node": "save",
       "around": "body",
@@ -536,5 +541,6 @@
         388
       ]
     }
-  ]
+  ],
+  "hd_own_help": "HD EXTENSION (work order 212): a region whose help_id is a name, not a number, shows OrionLayer's own text from layout.json `own_help` (in the session's language) \u2014 the OrionLayer rows have no entry in the game's HELP.LBX."
 }

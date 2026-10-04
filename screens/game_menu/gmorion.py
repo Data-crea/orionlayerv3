@@ -12,8 +12,10 @@ like the preset; and since work order 174 the PANEL GLASS slider (HD
 EXTENSION, `core/hud/glass.py`), applied at once like the colour; and
 since work order 200 C the LANGUAGE switch (HD EXTENSION
 `language_switch`, `core/lang.py`): English or German, applied at the next
-start like the preset. MOO2 has none of them; the game knows nothing about
-these rows.
+start like the preset; and since work order 212 the FRAME RATE (HD EXTENSION
+`frame_rate`, decision 79, `core/framerate.py`): 30, 60, 120, the monitor's
+rate (the default) or unlimited, applied at once. MOO2 has none of them; the
+game knows nothing about these rows.
 
 **TWO STATE SOURCES, NEVER MERGED.** The thirteen engine checkboxes
 keep their local copy seeded from `s_settings` (`screen.flags`). These
@@ -36,7 +38,8 @@ nothing when nothing changed.
 """
 import pygame
 
-from core import lang, modsetup, palette, playercolors, usermod, usersettings
+from core import (framerate, lang, modsetup, palette, playercolors, usermod,
+                  usersettings)
 from core.hud import glass
 from core.hud import style as hudstyle
 from core.hud import tint
@@ -44,12 +47,12 @@ from core.hud import tint
 from . import gmlang
 
 BANDS = ("divider", "heading", "floor", "colours", "monsters", "frame",
-         "tone", "glass", "mods", "language")
+         "tone", "glass", "frame_rate", "mods", "language")
 
 #: Each band's share of the box. The divider is a line, so since work
 #: order 170 it takes a third of a row and the frame-colour row fits in
 #: the same box: nothing below it (ACCEPT, the body's edge) moves.
-WEIGHTS = (1 / 3, 1, 1, 1, 1, 1, 1, 1, 1, 1)
+WEIGHTS = (1 / 3, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1)
 
 COL_DIVIDER = palette.require("game_menu", "orionlayer_divider")
 COL_HEADING = palette.require("game_menu", "orionlayer_heading")
@@ -230,6 +233,8 @@ def handle_click(screen, x, y):
                tuple(playercolors.names(screen.app.colors)))
     elif geo["monsters"].collidepoint(x, y):
         _cycle(settings, "monster_values", MONSTER_STEPS)
+    elif geo["frame_rate"].collidepoint(x, y):
+        _cycle(settings, "frame_rate", framerate.STEPS)
     elif geo["mods"].collidepoint(x, y):
         _cycle(settings, "user_mod", MOD_STEPS)
         if settings.get("user_mod") == "on":
@@ -338,6 +343,8 @@ def render(screen, surface):
 
     _render_frame_row(screen, surface, geo, words, size, lx)
     _render_glass_row(screen, surface, geo, words, size, lx)
+    _render_frame_rate_row(screen, surface, geo["frame_rate"], words, size,
+                           lx, vx)
     _render_mod_row(screen, surface, geo["mods"], words, size, lx, vx)
     gmlang.render(screen, surface, geo["language"], words, size, lx, vx,
                   lambda *a, fit=False: _text(
@@ -369,6 +376,19 @@ def _render_glass_row(screen, surface, geo, words, size, lx):
     _text(screen, surface, words.get("reset", "Reset"), size,
           COL_OPTION if glass._value is None else COL_STATE, reset.x, reset,
           _reset_room(screen, reset))
+
+
+def _render_frame_rate_row(screen, surface, row, words, size, lx, vx):
+    """The frame rate (decision 79): the choice, the monitor's with its rate."""
+    _text(screen, surface, words.get("frame_rate", "Frame rate"), size,
+          COL_OPTION, lx, row)
+    value = selected(screen, "frame_rate")
+    shown = value if value in framerate.STEPS else framerate.DEFAULT
+    word = words.get("frame_rate_steps", {}).get(shown, shown)
+    if shown == "monitor":
+        hz = getattr(screen.app, "_hz", None) or framerate.monitor_hz()
+        word = word.format(hz=hz)
+    _text(screen, surface, word, size, COL_OPTION, row.x + vx, row)
 
 
 def _render_mod_row(screen, surface, row, words, size, lx, vx):

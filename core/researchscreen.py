@@ -271,7 +271,8 @@ class ResearchPanelScreen(ResearchPopupsMixin, ScreenBase):
         if getattr(game_state, "fields", None):
             self._empty_frames = 0
         else:
-            self._empty_frames += 1
+            # per snapshot, not per frame (`ScreenBase.new_snapshot`)
+            self._empty_frames += self.new_snapshot(game_state)
         self._entries, self._state, self._problems = self._rebuild(game_state)
         if self._state != READY:
             self._hover = None

@@ -25,6 +25,9 @@ has the formulas):
   BEAMS.LBX     muzzle and hit flashes, shield flares, the beam palette
   SPHERSFX.LBX  the spherical blasts
   COMBAT.LBX    the star layers (46, 47, 48; 35 in a nebula), the cursor
+  SOUND.LBX     the battle's sounds, WAV entries by the engine's sound id
+                (`Play_Sound_`, sound.cpp:1290-1341), played by HD since
+                open fix 79 (`screens/combat/cbsound.py`, work order 212)
   FONTS.LBX 4   the battle palette (`Load_Palette_(3)`, combinit.cpp:661)
 
 An absent file is a state, not an error: the battle screen says how to get
@@ -50,7 +53,7 @@ DEFAULT_SEARCH = [
 ]
 FILES = ("CMBTSHP.LBX", "MONSTER.LBX", "CMBTPLNT.LBX", "CMBTMISL.LBX",
          "CMBTFGTR.LBX", "CMBTSFX.LBX", "BEAMS.LBX", "SPHERSFX.LBX",
-         "COMBAT.LBX")
+         "COMBAT.LBX", "SOUND.LBX")
 PALETTE_FILE, PALETTE_ENTRY, PALETTE_BYTES = "FONTS.LBX", 4, 256 * 4
 
 

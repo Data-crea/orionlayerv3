@@ -48,11 +48,18 @@ import copy
 import random
 import time
 
-from . import (cbbeam, cbblast, cbcloak, cbdraw, cbflare, cbreflect, cbsfx,
-               cbshot)
+from . import (cbbeam, cbblast, cbcloak, cbdraw, cbflare, cbflight,
+               cbreflect, cbsfx, cbshot, cbsound)
 
 CELL = cbdraw.CELL
 MOVE_S = 0.15
+#: HD STATE `untimed_pace` (work order 212): a loop of the source without a
+#: wait (the move, cmbtmov1.cpp:309-317; the plasma web's travel,
+#: cmbtspec.cpp:1075-1094; the gyro's random spin, :580-597; the teleport,
+#: cmbtmov1.cpp:816-886) is paced only by its page flip; HD gives each of
+#: its frames the move's own pace, 10 frames a cell in 0.15 s (decision H
+#: of work order 202), so they keep one tempo with each other.
+UNTIMED_S = MOVE_S / 10
 FRAME_S = 0.055
 NUMBER_S = 9 * FRAME_S
 BOLT_S = 6 * FRAME_S
@@ -72,6 +79,8 @@ class Player:
         self.fast = False                # the game's FAST ANIMATIONS (COPT)
         self.colours, self.planet = {}, None   # for a flared target's picture
         self._palettes = {}              # beam colours -> one palette dict
+        self.sounds = cbsound.Sounds()   # the battle's sounds (open fix 79)
+        self.in_view = None              # (wx, wy) -> on HD's camera
         self.reset()
 
     def reset(self):
@@ -85,9 +94,11 @@ class Player:
         self._next_seq = None
         self._last_queued = None
         self._played = -1
-        self._carry = None       # a volley's flare, handed to its next shot
         self._lightning_frame = 0   # CMBTSFX 0's own frame (work order 210)
         self.last_beam = None    # the shot a reflection sends back
+        self._fed = None         # the last snapshot's battle fed
+        self._fed_ordnance = None   # and its ordnance (`_with_flight`)
+        self.sounds.reset()
 
     def busy(self):
         return bool(self._queue) or self._anim is not None
@@ -107,12 +118,19 @@ class Player:
                if self._next_seq is None or e["seq"] >= self._next_seq]
         if new:
             self._next_seq = new[-1]["seq"] + 1
+        fresh = combat is not None and combat is not self._fed
+        if fresh:
+            self._fed = combat
         if self.shown is None:
             if combat is not None:
                 self.shown, self.ordnance = copy.deepcopy(combat), ordnance
+                self._fed_ordnance = ordnance
             return
         playable = self._with_lightning(
             [e for e in new if e["kind"] != "command"])
+        if fresh:
+            playable = self._with_flight(playable, ordnance)
+            self._fed_ordnance = ordnance
         self._queue.extend(playable)
         if playable:
             self._last_queued = playable[-1]["seq"]
@@ -122,6 +140,24 @@ class Player:
         elif combat is not None:
             self._after.append((self._last_queued, copy.deepcopy(combat),
                                 ordnance))
+
+    def _with_flight(self, events, ordnance):
+        """TRANSCRIPTION `flight` (`cbflight`, work order 212 E): the
+        missiles and fighters this snapshot moved fly from where the one
+        before left them, before its first hit — or at its end when
+        nothing struck (HD STATE `flight_batch`)."""
+        gone = {e["missile"]: (e["x"], e["y"]) for e in events
+                if e["kind"] == "missile_gone"}
+        f = cbflight.plan(self._fed_ordnance, ordnance, gone)
+        if f is None:
+            return events
+        at = next((i for i, e in enumerate(events)
+                   if e["kind"] in MISSILE_PHASE), len(events))
+        seq = events[at]["seq"] - 0.25 if at < len(events) else \
+            (events[-1]["seq"] if events else
+             max(self._last_queued or 0, self._played)) + 0.5
+        return events[:at] + [{"kind": "flight", "seq": seq,
+                               "serial": None, "_flight": f}] + events[at:]
 
     def _with_lightning(self, events):
         """HD STATE `lightning_inferred` (work order 210 C3): a Lightning
@@ -140,21 +176,54 @@ class Player:
         return out
 
     # ── the clock ──────────────────────────────────────────────────
+    def tick(self, now=None):
+        """Advance the playback and its sounds to `now`. Called from the
+        screen's `update` as well as from `draw`, so the battle's own clock
+        runs while the player looks at the original (F12) and nothing waits
+        for a frame to be drawn (decision 78: one clock)."""
+        now = time.monotonic() if now is None else now
+        self._advance(now)
+        self.sounds.tick(now)
+        if self._anim is not None and self._anim[0]["kind"] == "flight":
+            ev, t0, dur = self._anim
+            f = ev["_flight"]
+            self.ordnance = cbflight.at(f, ev["_base"], int(
+                (now - t0) / UNTIMED_S))
+
     def _advance(self, now):
         while True:
             if self._anim is not None:
                 ev, t0, dur = self._anim
+                self._attach(ev, t0, dur)
                 if now - t0 < dur:
                     return
                 self._finish(ev)
                 self._anim = None
-                self._played = ev["seq"]
+                self._played = max(ev["seq"], ev.get("_tail", ev["seq"]))
                 self._adopt()
             if not self._queue:
                 return
             ev = self._queue.pop(0)
+            if ev["kind"] in cbsound.KINDS:
+                # a sound with no animation of HD's before it — a field's
+                # click, an engine noise that starts before its move is
+                # recorded (cmbtmov1.cpp): now
+                self.sounds.at(now, ev)
+                self._played = max(self._played, ev["seq"])
+                self._adopt()
+                continue
             self._anim = (ev, now, self._start(ev, now))
             self._last = ev
+
+    def _attach(self, ev, t0, dur):
+        """The sounds the engine recorded after `ev` and before its next
+        event: started at their ticks into HD's animation of `ev`
+        (`cbsound.offset`), whether they came with it or with a snapshot
+        sent during its animation (the shield flare polls, beams.cpp:705)."""
+        while self._queue and self._queue[0]["kind"] in cbsound.KINDS:
+            s = self._queue.pop(0)
+            self.sounds.at(t0 + cbsound.offset(ev, s, dur), s)
+            ev["_tail"] = s["seq"]
 
     def _adopt(self):
         """Show the newest state whose events have all been played."""
@@ -182,9 +251,10 @@ class Player:
         if k == "move":
             if ev.get("teleport"):
                 # `Draw_Teleporting_Ship_`: ten frames, five under FAST
-                # (`cbcloak.vanish`, work order 210 C4)
+                # (`cbcloak.vanish`, work order 210 C4), its loop without a
+                # wait (HD STATE `untimed_pace`)
                 ev["_noise"] = random.randrange(0, 256, 2)
-                return FRAME_S * (10 // ev["_step"])
+                return UNTIMED_S * (10 // ev["_step"])
             cells = max(abs(ev["to_x"] - ev["from_x"]),
                         abs(ev["to_y"] - ev["from_y"]), 1)
             return MOVE_S * cells / (6 if self.fast else 1)
@@ -206,10 +276,10 @@ class Player:
                 ev["_sfx"] = p
                 u = self._unit(ev.get("unit", ev.get("target", -1)))
                 hit = ev.get("past_shields") or ev.get("hits")
-                ticks = -(-p["frames"] // p.get("step", ev["_step"]))
+                length = sfx_times(p, p.get("step", ev["_step"]))
                 if u is not None and hit and not ev.get("at_missile"):
                     self._marks.append((str(hit), *cbdraw.centre(u),
-                                        now + ticks * FRAME_S,
+                                        now + p["_number_at"],
                                         (0xff, 0xcc, 0x40)))
                 if ev.get("_destroyed"):
                     # the missiles destroyed, over the missile as the blast
@@ -218,26 +288,53 @@ class Player:
                     self._marks.append((str(ev["_destroyed"]), *ev["_at"],
                                         now + p["fly"] * FRAME_S,
                                         (0xff, 0xcc, 0x40)))
-                return ticks * FRAME_S
+                return length
         if k == "beam_shot":
+            # TRANSCRIPTION `firing` (`cbshot`, work order 212): every shot
+            # of one FIRE is one loop — the queued shots at the same target
+            # go with this one
+            shots = [ev]
+            while self._queue and _same_firing(ev, self._queue[0]):
+                shots.append(self._queue.pop(0))
+            ev["_tail"] = shots[-1]["seq"]
+            self.last_beam = shots[-1]
             u = None if ev.get("at_missile") else \
                 self._unit(ev.get("target", -1))
-            dur = BOLT_S
-            b = ev["_beam"] = self._beam(ev)
-            if b is not None:
-                nxt = self._queue[0] if self._queue else None
-                volley = nxt is not None and nxt["kind"] == "beam_shot" and \
-                    not nxt.get("at_missile") and all(
-                        nxt.get(f) == ev.get(f) for f in ("source", "target"))
-                self.last_beam = ev
-                self._carry = cbshot.plan(ev, b, cbshot.flared(self, ev, u),
-                                          self.fast, self._carry, volley)
-                dur = len(b["ticks"]) * FRAME_S
-            if u is not None and ev["past_shields"]:
-                self._marks.append((str(ev["past_shields"]),
-                                    *cbdraw.centre(u), now + dur,
+            planned = [(e, b) for e, b in ((e, self._beam(e)) for e in shots)
+                       if b is not None]
+            if not planned:
+                return BOLT_S
+            f = ev["_firing"] = cbshot.plan_firing(
+                planned, cbshot.flared(self, ev, u), self.fast)
+            for (_e, _b, evs), hit in zip(f["entries"], f["hits"]):
+                dmg = sum(int(e.get("past_shields", 0) or 0) for e in evs)
+                if u is not None and dmg:
+                    # the number appears in the pass the bolt strikes
+                    # (beams.cpp:1660-1672)
+                    self._marks.append((str(dmg), *cbdraw.centre(u),
+                                        now + hit * FRAME_S,
+                                        (0xff, 0xcc, 0x40)))
+            return len(f["rows"]) * FRAME_S
+        if k == "flight":
+            ev["_base"] = copy.deepcopy(self.ordnance)
+            return ev["_flight"]["frames"] * UNTIMED_S
+        if k == "fighter_pass" and self._queue and \
+                self._queue[0]["kind"] == "fighter_beam" and \
+                self._queue[0].get("missile") == ev.get("missile"):
+            # its beams and its number are the beam event's (open fix 77)
+            self._queue[0]["_pass"] = ev
+            return 0.0
+        if k == "fighter_beam":
+            p = ev["_beams"] = cbflight.beams_plan(ev)
+            pas = ev.get("_pass") or {}
+            u = self._unit(pas.get("target", -1)) \
+                if not pas.get("at_missile") else None
+            if u is not None and pas.get("past_shields"):
+                self._marks.append((str(pas["past_shields"]),
+                                    *cbdraw.centre(u),
+                                    now + p["frames"] * FRAME_S,
                                     (0xff, 0xcc, 0x40)))
-            return dur
+            return (p["frames"] + p["numbers"]) * FRAME_S
         if k in ("missile_hit", "fighter_pass"):
             u = self._unit(ev.get("target", -1))
             if u is not None and ev.get("past_shields"):
@@ -265,17 +362,25 @@ class Player:
         if k == "destroy":
             u = self._unit(ev.get("unit", -1))
             state = int(ev.get("death_state", 1))
+            # `Destroy_Ship_FX_` (cmbtspec.cpp:1175-1178): a ship the view
+            # does not show is shown first, and the original waits 7 ticks
+            # before it explodes; HD's camera goes to it the same way
+            # (`CombatScreen._follow`)
+            delay = 7 * FRAME_S if u is not None and self.in_view is not \
+                None and not self.in_view(*cbdraw.centre(u)) else 0.0
             if u is not None and state in (2, 3, 4) and \
                     int(ev.get("previous_owner", 0)) < 10:
                 # a ship dying in a blast (work order 210 C4, `cbblast`)
                 p = cbblast.plan(self, ev["unit"], state, self._art)
                 if p is not None:
+                    p["delay"] = delay
                     ev["_sfx"] = p
-                    return -(-p["frames"] // ev["_step"]) * FRAME_S
+                    return sfx_times(p, ev["_step"])
             if u is None:
                 return 18 * FRAME_S / ev["_step"]
             ev["_death"] = cbblast.death_plan(u, self._art)
-            return -(-ev["_death"][1] // ev["_step"]) * FRAME_S
+            ev["_dp"] = {"frames": ev["_death"][1], "delay": delay}
+            return sfx_times(ev["_dp"], ev["_step"])
         if k == "retreat":
             return 12 * FRAME_S / (3 if self.fast else 1)
         if k == "reflect":
@@ -328,6 +433,9 @@ class Player:
     def _finish(self, ev):
         """The event's lasting effect on the shown battle."""
         k = ev["kind"]
+        if k == "flight":
+            self.ordnance = cbflight.at(ev["_flight"], ev["_base"],
+                                        ev["_flight"]["frames"])
         done = ev.get("_sfx", {}).get("finish") if isinstance(
             ev.get("_sfx"), dict) else None
         if done is not None:
@@ -429,7 +537,7 @@ class Player:
     def draw(self, surface, cam, art, style, scale, cache):
         now = time.monotonic()
         self._art = art
-        self._advance(now)
+        self.tick(now)
         if self._anim is not None:
             ev, t0, dur = self._anim
             t = min(1.0, (now - t0) / dur) if dur else 1.0
@@ -485,11 +593,22 @@ class Player:
                                    sign * int(steps * t)) & 15
         elif "_sfx" in ev:
             p = ev["_sfx"]
-            if p["frames"]:
-                n = p.get("step", ev.get("_step", 1))
-                p["draw"](surface, cam, cache, min(
-                    p["frames"] - 1, n * int(t * -(-p["frames"] // n))))
-        elif k in ("beam_shot", "missile_hit", "reflect"):
+            frame = sfx_frame(p, t)
+            if frame is not None:
+                p["draw"](surface, cam, cache, frame)
+        elif k == "fighter_beam" and "_beams" in ev:
+            p = ev["_beams"]
+            frame = int(t * (p["frames"] + p["numbers"]))
+            if frame < p["frames"]:
+                cbflight.draw_beams(surface, cam, art, ev, p, frame, cache,
+                                    self._palettes)
+        elif k == "beam_shot" and "_firing" in ev:
+            f = ev["_firing"]
+            cbshot.ramps(self, f["b"])
+            cbshot.draw_firing(surface, cam, art, f, t, cache, self._palettes,
+                               cbshot.look(self, ev, art)
+                               if "flare_size" in f["b"] else None)
+        elif k in ("missile_hit", "reflect"):
             b = ev.get("_beam")
             if b is not None:
                 self._draw_beam(surface, cam, art, ev, b, t, cache)
@@ -509,7 +628,9 @@ class Player:
             if u is None:
                 return
             entry, n, (ox, oy) = ev["_death"]
-            frame = min(n - 1, int(n * t))
+            frame = sfx_frame(ev["_dp"], t)
+            if frame is None:
+                return
             if frame >= n // 2:
                 u["unit_status"] = 5
             pic = art.surface("cmbtsfx", entry, frame)
@@ -534,6 +655,54 @@ class Player:
             if t > 0.5:
                 u["unit_status"] = 5
 
+
+def sfx_times(p, step):
+    """TRANSCRIPTION `effect_pace` (work order 212, decision 2): when each
+    frame of an effect's plan is drawn — its `phases` [(frames, seconds a
+    frame)], by default all of them a 55 ms tick times `wait` (the
+    `Release_Time_(n)` of the source's loop) — every `step`-th one under
+    FAST ANIMATIONS, after `delay` seconds; then `hold` ticks in which the
+    damage numbers rise and nothing is drawn
+    (`Draw_Damage_Message_Queue_Until_Done_`, beams.cpp:495-508). Stores
+    `_times` [(start, end, frame)], `_length` and `_number_at` (when the
+    effect's number appears: at `number_frame`, else when the frames end) in
+    the plan; returns the length in seconds."""
+    phases = p.get("phases") or [(p["frames"], FRAME_S * p.get("wait", 1))]
+    times, t, base = [], float(p.get("delay", 0.0)), 0
+    for count, per in phases:
+        for f in range(0, count, max(1, step)):
+            times.append((t, t + per, base + f))
+            t += per
+        base += count
+    p["_times"], p["_length"] = times, t + p.get("hold", 0) * FRAME_S
+    at = p.get("number_frame")
+    p["_number_at"] = next((s for s, _e, i in times if i >= at), t) \
+        if at is not None else t
+    return p["_length"]
+
+
+def sfx_frame(p, t):
+    """The plan's frame at `t` (0..1 of its length), or None: before the
+    delay, in the hold, after the end."""
+    tau = t * p.get("_length", 0.0)
+    return next((i for s, e, i in p.get("_times", ()) if s <= tau < e), None)
+
+
+def _same_firing(first, ev):
+    """`ev` is another shot of `first`'s FIRE: a beam shot at the same
+    target from the same unit, recorded right after it (cmbtfire.cpp:1363).
+    The Energy Absorber's discharge (slot -1, open fix 74) is its own loop
+    (cmbtfire.cpp:1842)."""
+    return ev["kind"] == "beam_shot" and all(
+        ev.get(f) == first.get(f) for f in ("source", "target",
+                                             "at_missile")) and \
+        -1 not in (ev.get("slot"), first.get("slot"))
+
+
+#: the events of a missile phase (`Seeking_Missiles_`): the flight comes
+#: before the first of them
+MISSILE_PHASE = ("missile_hit", "fighter_pass", "missile_gone", "lightning",
+                 "fighter_beam")
 
 #: The Lightning Field's special bit (`SPECIAL_LIGHTNING_FIELD`).
 LIGHTNING_FIELD = 19

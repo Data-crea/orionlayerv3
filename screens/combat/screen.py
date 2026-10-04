@@ -63,6 +63,18 @@ def ship_frame(seconds):
     return 2 * int(seconds / TICK)
 
 
+def sound_level(game_state):
+    """The game's Sound Fx level, 0..100 (`_settings.sound_fx_level`, the
+    MENU's bar, loadsave.cpp:200-201): the master volume the engine plays
+    its sounds at (harold.cpp:364), so HD's battle sounds follow the same
+    slider. 100 when the settings are not on the wire."""
+    from core.structs import settings as spec
+    raw = getattr(game_state, "settings_raw", b"") or b""
+    if len(raw) < spec.SIZE:
+        return 100
+    return max(0, min(100, int(spec.parse(raw).sound_fx_level)))
+
+
 def battle_list(fields):
     """The battle's own list: its map is one grid field (combat1.cpp:111)."""
     return any(getattr(f, "field_type", -1) == GRID_TYPE and
@@ -85,6 +97,8 @@ class CombatScreen(CombatInput, ScreenBase):
         self._serial = None
         self._panel = cbpanel.Panel()
         self._play = cbplay.Player()
+        self._play.sounds._blob = self._art.blob   # SOUND.LBX (open fix 79)
+        self._play._art = self._art
         self._fades = cbcloak.Fades()         # work order 210 C1
         self._pops = cbpopups.Popups()
         self._opts = cbopts.Options()         # the OPTIONS panel (work order 200)
@@ -151,6 +165,7 @@ class CombatScreen(CombatInput, ScreenBase):
             # is not taken — the screen draws its own last state meanwhile
             self._play.feed(None, [e for e in events
                                    if e.get("serial") == self._serial], None)
+            self._play.tick()
             return
         self._state = game_state
         if combat is None:
@@ -163,7 +178,9 @@ class CombatScreen(CombatInput, ScreenBase):
             self._pops.reset()
         self._pops.update(game_state)
         self._play.fast = cbopts.flag(game_state, "fast")
+        self._play.sounds.set_level(sound_level(game_state))
         self._play.feed(combat, events, getattr(game_state, "ordnance", None))
+        self._play.tick()
         for e in events:
             if e["kind"] == "command" and self._sent and \
                     e["op"] == self._sent[0]:
@@ -242,6 +259,7 @@ class CombatScreen(CombatInput, ScreenBase):
         if cbopts.flag(self._state, "shield_arcs") and c["cur_ship"]:
             cbopts.draw_shield_arcs(surface, cam, art, unit, cbdraw.centre(
                 unit), self.style, self._language)
+        self._play.in_view = cam.shows
         self._play.colours = cbdraw.player_colours(self._state)
         self._play.planet = self._planet_picture(c)
         now = time.monotonic()

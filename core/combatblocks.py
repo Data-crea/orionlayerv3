@@ -258,6 +258,15 @@ EVENTS = {
                   "damage")),
     # open fix 58: a command taken (result 0) or refused, and why
     18: ("command", ("op", "result", "a", "b")),
+    # open fix 79: a battle sound HD plays, and a change of one (1 fade,
+    # 2 loop, 3 pitch; handle -1 every sound), each with the engine's 55 ms
+    # ticks since the event before it
+    19: ("sound", ("sound", "handle", "ticks")),
+    20: ("sound_change", ("handle", "change", "value", "ticks")),
+    # open fix 77: what a fighter pass draws — the owner's fighter beam, the
+    # group's place (px), facing and quantity, the point it fires at (px)
+    21: ("fighter_beam", ("missile", "beam", "x", "y", "facing", "quantity",
+                          "target_x", "target_y")),
 }
 #: MSG_COMBAT_COMMAND's ops (ext_api.h, `CombatCommandOp`), open fix 58.
 COMMANDS = {"move": 1, "fire": 2, "fire_missile": 3, "face": 4,

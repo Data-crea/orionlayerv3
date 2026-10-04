@@ -51,7 +51,10 @@ from .infotexts import PAGES
 
 log = logging.getLogger("info")
 T = modtexts.text
-WAIT_BOUND = 66
+#: snapshots without the screen's EXIT before the list is called another
+#: screen's: the research screens' measured bound (work order 166), in
+#: snapshots since work order 212 (`researchstate.EMPTY_LIST_GRACE`)
+WAIT_BOUND = 20
 HISTORY, TECH, RACES, TURNS, REFERENCE = range(5)
 
 
@@ -94,7 +97,8 @@ class InfoScreen(ScreenBase):
         self._exit = next((f for f in live if (f.x, f.y, f.x_end, f.y_end)
                            == geom.EXIT and f.field_type == geom.TYPE_BUTTON),
                           None)
-        self._waited = 0 if self._exit is not None else self._waited + 1
+        self._waited = 0 if self._exit is not None else \
+            self._waited + self.new_snapshot(game_state)
         me = self._me()
         if not self._entered and me is not None:
             # The tab the game saved (`Get_Plyr_Info_Btns_`, info.cpp:500).

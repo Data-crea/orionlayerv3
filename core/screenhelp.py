@@ -140,6 +140,11 @@ class HelpMixin:
         """Screen-specific region kinds. Base knows none."""
         return None
 
+    def own_help(self, name):
+        """(title, body) of OrionLayer's own help entry `name`, in the
+        language shown, or None. Base knows none."""
+        return None
+
     def open_help_at(self, screen_x, screen_y):
         """Open the help entry covering a point. True if one did.
 
@@ -152,7 +157,11 @@ class HelpMixin:
         for spec in self._help_regions:
             rect = self.help_region_rect(spec)
             if rect and rect.collidepoint(screen_x, screen_y):
-                entry = self.helptext.entry(spec["help_id"])
+                hid = spec["help_id"]
+                # a NAME is OrionLayer's own entry (work order 212): rows
+                # the original does not have get no HELP.LBX text
+                entry = self.own_help(hid) if isinstance(hid, str) else \
+                    self.helptext.entry(hid)
                 if entry is None:
                     entry = self.helptext.missing_entry(spec["help_id"])
                 self.help.open(spec["help_id"], *entry)

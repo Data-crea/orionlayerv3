@@ -110,6 +110,9 @@ DEFAULTS = {
     # read it and the engine is told it (open fix 70). None: the game's own
     # folder. Set by `tools/language_files.py`.
     "language_dir": None,
+    # The frame rate (work order 212, decision 79, `core/framerate`): 30, 60,
+    # 120, the monitor's rate or unlimited; applied at once.
+    "frame_rate": "monitor",
 }
 
 

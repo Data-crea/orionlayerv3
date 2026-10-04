@@ -182,6 +182,16 @@ class ScreenBase(HelpMixin):
         """Per-frame data update. No rendering here."""
         pass
 
+    def new_snapshot(self, game_state):
+        """True the first time this screen sees `game_state` — once per
+        snapshot (`GameClient` makes a new state for each), however often
+        a frame calls `update`. A bound that waits for the game counts
+        these, never frames: the frame rate is the player's (decision 79)
+        and must not shorten a wait (work order 212, decision 78)."""
+        fresh = game_state is not getattr(self, "_snapshot_seen", None)
+        self._snapshot_seen = game_state
+        return fresh
+
     def render(self, surface):
         """Draw the screen. Background, boxes, frame, content, help."""
         if not self.draws_this_frame():

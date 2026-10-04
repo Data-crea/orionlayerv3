@@ -75,7 +75,8 @@ class RacesScreen(ScreenBase):
         self._state = game_state
         self._view = raceswire.View(game_state, self._waited)
         own = self._view.state in (raceswire.MAIN, raceswire.WHO)
-        self._waited = 0 if own else self._waited + 1
+        self._waited = 0 if own else \
+            self._waited + self.new_snapshot(game_state)
         if self._view.state == raceswire.MAIN:
             self._armed = None
         if not self._view.draws or not self._view.players:

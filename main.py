@@ -2,10 +2,12 @@
 import os
 import sys
 import logging
+import time
 import pygame
 from core.config import (load_settings, TARGET_FPS, SCREENS_DIR,
                          build_line, display_line)
 from core import resources, palette, usermod, usersettings, frameslot, lang
+from core import framerate
 from core import cursor as cursor_gfx
 from core import mouse as mouse_input
 from core.layout import Layout
@@ -214,13 +216,23 @@ class App:
             self._handle_events()
             self._update()
             self._render()
-            self.clock.tick(TARGET_FPS)
+            self.clock.tick(self.frame_cap())
 
         if self._debug_input is not None:
             self._debug_input.close()
         self.client.disconnect()
         pygame.quit()
         sys.exit()
+    def frame_cap(self):
+        """The loop's cap: the player's frame rate (decision 79,
+        `core/framerate`), the monitor's rate asked again every two
+        seconds, since the window can move to another display.
+        `TARGET_FPS` stays the rate the measuring tools drive the loop at."""
+        now = time.monotonic()
+        if now >= getattr(self, "_hz_at", 0.0):
+            self._hz, self._hz_at = framerate.monitor_hz(), now + 2.0
+        return framerate.cap(self.user_settings.get("frame_rate"), self._hz)
+
     def _handle_events(self):
         # BEFORE the queue is drained, so anything posted here is in
         # this frame's events and not the next one's. It posts and
