@@ -194,7 +194,23 @@ class Overlays:
         self.box_sent = key
         log.info("message box: %s answered with field %d", box["kind"],
                  field.index)
+        if self.quit_confirmed(box, field):
+            # The GAME menu's QUIT asks "really quit?" in this box, not in
+            # the menu's own drawing: YES saves SAVE10.GAM and ends the game
+            # (loadsave.cpp:1257-1273). The client is told first, or the
+            # engine's going reads as a dead link and OrionLayer stays open,
+            # reconnecting (work order 214, Data: "I still have to close the
+            # overlay myself after QUIT GAME").
+            app.client.expect_shutdown()
         app.client.activate_field(field.index)
+
+    def quit_confirmed(self, box, field):
+        """YES in the confirmation the GAME menu's QUIT opened."""
+        disp = self.app.dispatcher
+        return (box.get("kind") == "confirmation" and
+                field.index == box.get("field_a") and
+                getattr(disp, "overlay_name", "") == "game_menu" and
+                getattr(disp.overlay, "pending", None) == "quit")
 
     def answer_popup(self, action):
         """A popup's answer through its own field: activated, or an injected
