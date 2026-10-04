@@ -94,6 +94,7 @@ from the maintainer.
 | 41 | `2b773c31` | open fix 79: the battle's sounds as events — each sound, fade, loop and pitch bend recorded with the ticks since the event before ("CMEV"), and none played by the engine while a client draws the battle, so OrionLayer plays them with its own picture (work order 212) | `doc/ext_combat_sound.patch` |
 | 42 | `89494e72` | open fix 71: the hidden engine's animation waits — skipped while a client draws the battle (not a timed message box's, not the input loop's), so an animated action reaches OrionLayer at once (work order 212) | `doc/ext_combat_waits.patch` |
 | 43 | `003af991` | open fix 77: a fighter pass's beam and group as a battle event — the owner's fighter beam, the group's place, facing and quantity, the target point ("CMEV"; work order 212) | `doc/ext_combat_fighter_beam.patch` |
+| 44 | `3a076921` | open fix 71, amended: a battle command taken leaves no input poll behind, so the first wait of its action is skipped too (work order 212) | `doc/ext_combat_waits_command.patch` |
 
 ## Install
 

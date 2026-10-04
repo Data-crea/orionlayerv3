@@ -220,9 +220,14 @@ class Player:
         event: started at their ticks into HD's animation of `ev`
         (`cbsound.offset`), whether they came with it or with a snapshot
         sent during its animation (the shield flare polls, beams.cpp:705)."""
-        while self._queue and self._queue[0]["kind"] in cbsound.KINDS:
+        while self._queue and (self._queue[0]["kind"] in cbsound.KINDS or
+                               self._queue[0]["kind"] in INSTANT):
+            # an event with nothing to draw (a missile gone, merged or
+            # launched, recorded between a hit and its sound, cmbtmis.cpp)
+            # does not take the sounds after it away from the picture
             s = self._queue.pop(0)
-            self.sounds.at(t0 + cbsound.offset(ev, s, dur), s)
+            if s["kind"] in cbsound.KINDS:
+                self.sounds.at(t0 + cbsound.offset(ev, s, dur), s)
             ev["_tail"] = s["seq"]
 
     def _adopt(self):
@@ -709,6 +714,9 @@ def _same_firing(first, ev):
                                              "at_missile")) and \
         -1 not in (ev.get("slot"), first.get("slot"))
 
+
+#: events HD draws nothing for: played with the animation before them
+INSTANT = ("missile_launch", "missile_merge", "missile_gone")
 
 #: the events of a missile phase (`Seeking_Missiles_`): the flight comes
 #: before the first of them

@@ -91,8 +91,11 @@ STACKED_AFTER_COLONY = (
     # Combat_Event and after 52's gate
     "doc/ext_combat_sound.patch",
     # work order 212: 71 marks the input poll in Tick and adds its wait test
-    # after 79's tick counter, LAST
+    # after 79's tick counter
     "doc/ext_combat_waits.patch",
+    # work order 212: 71 amended clears the poll mark in 79's Combat_Event
+    # after a taken command, LAST
+    "doc/ext_combat_waits_command.patch",
 )
 
 

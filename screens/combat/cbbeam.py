@@ -178,7 +178,11 @@ class Canvas:
         ln = max(abs(x2 - x1), abs(y2 - y1)) + 1
         step = (span << 16) // ln
         acc, r = 32000 // ln, 0
-        buf = [0] * (ln + 2)
+        # at least seven entries: the tip's fade writes six past the head
+        # into the original's fixed buffer (`replace::_graphics_buffer[1023]`,
+        # bolt.cpp:237-249) whatever the segment's length; only the line's own
+        # pixels are read back (a fighter's short bolt, work order 212)
+        buf = [0] * max(ln + 2, 7)
         up = y2 < y1
         for i in range(ln + 1):
             c = (acc >> 16) + r + base

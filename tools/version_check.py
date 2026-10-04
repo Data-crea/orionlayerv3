@@ -422,6 +422,13 @@ LOCAL_PATCHES = {
         "OrionLayer, open fix 71.",
         "the hidden engine waits out every battle animation (open fix 71): "
         "each animated action reaches HD seconds late"),
+    # Applied 4 October 2026 by work order 212: 3a076921, on 003af991 —
+    # fix 71 amended: a taken battle command's first wait is skipped too.
+    "doc/ext_combat_waits_command.patch": (
+        os.path.join("src", "ext", "ext_api.cpp"),
+        "OrionLayer, open fix 71, amended.",
+        "the hidden engine keeps the first wait of a commanded action (open "
+        "fix 71, amended): 110 ms before a special weapon's picture"),
     # Applied 4 October 2026 by work order 212: 003af991, on 89494e72.
     "doc/ext_combat_fighter_beam.patch": (
         os.path.join("src", "game", "cmbtmis.cpp"),
@@ -510,6 +517,7 @@ FIX_NUMBERS = {
     "doc/ext_combat_sound.patch": (79,),
     "doc/ext_combat_waits.patch": (71,),
     "doc/ext_combat_fighter_beam.patch": (77,),
+    "doc/ext_combat_waits_command.patch": (71,),
 }
 
 
