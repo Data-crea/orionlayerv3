@@ -270,6 +270,11 @@ class Player:
                 w in cbblast.AREA else None
             if p is None and k == "special" and w == cbsfx.ANTI_MISSILE:
                 p = self._anti_missile(ev)
+            if k == "bomb" and self.planet is not None:
+                # the planet picture's size, for the Transporters' start
+                # point (cmbtdrw1.cpp:3026-3027)
+                w, h = self.planet[0].get_size()
+                ev["_planet_half"] = (w // 2, h // 2)
             if p is None:
                 p = cbsfx.plan(ev, self._unit, self._art, self._last)
             if p is not None:
@@ -513,9 +518,15 @@ class Player:
             not ev.get("result", 0) & 2
         size = {0: 0, 1: 1, 2: 1, 3: 2, 4: 3, 5: 3}.get(
             int(dst["size_class"]), 1) if dst is not None else 0
+        w = int(ev.get("weapon", 0) or 0)
+        # every shooter but a fighter (`attacker_size_class` -1, beams.cpp:
+        # 1243), and a fighter's beams are not shots here (`cbflight`)
+        multi = w in cbshot.MULTI_BEAM
         return {"fx": f, "fragment": cols, "src": a, "dst": b, "frames": n,
                 "stop": size if holds else None, "specials": specials,
-                "total": total or 10}
+                "total": total or 10, "multi": 3 if multi else 1,
+                "variant": cbshot.MULTI_BEAM.get(w, 0) if multi else 0,
+                "ball": multi and cbshot.MULTI_BEAM[w] == 0}
 
     def _target_point(self, ev):
         """Where a shot goes (world px): the target unit's centre — or, when

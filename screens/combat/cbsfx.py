@@ -45,6 +45,8 @@ UNTIMED = 0.015              # s: a frame of a loop without a wait
 #: 380-382); `Draw_Damage_Message_Queue_Until_Done_` waits for them
 NUMBERS = 9
 WEB_STEP = 6                 # px a frame (`Plasma_Web_`, cmbtspec.cpp:1073)
+TRANSPORTERS = 35            # SPECIAL_TRANSPORTERS
+TRANSPORTER_TICKS = 8        # `Draw_Transporter_Bomb_Beam_`'s loop
 SPIN_TURNS = 2               # HD STATE `gyro_spin`
 BHG = {0: 46, 1: 45, 2: 45, 3: 44, 4: 44, 5: 43}
 #: The plasma web and the caustic slime: one routine, `Plasma_Web_`
@@ -52,6 +54,35 @@ BHG = {0: 46, 1: 45, 2: 45, 3: 44, 4: 44, 5: 43}
 CAUSTIC_SLIME = 45
 WEBS = (WEB, CAUSTIC_SLIME)
 BIO = (25, 26)                       # death spore, bio terminator
+
+
+def has_special(u, bit):
+    """`Does_Combat_Ship_Have_Special_`: the bit set and not damaged."""
+    from . import cbpanel
+    have = cbpanel.special_bits(u.get("special_device_flags") or [0] * 5)
+    hurt = cbpanel.special_bits(u.get("special_device_damage_flags") or
+                                [0] * 5)
+    return bit in have and bit not in hurt
+
+
+def _range(x1, y1, x2, y2):
+    """`special::Range_` (special.cpp:5-25): the longer axis and half the
+    shorter."""
+    dx, dy = abs(x2 - x1), abs(y2 - y1)
+    return dy // 2 + dx if dy < dx else dx // 2 + dy
+
+
+def _step(x, y, tx, ty, n):
+    """`special::Absolute_Interpolate_Line_` from (x, y): `n` px along the
+    longer axis toward (tx, ty), the shorter in proportion."""
+    dx, dy = tx - x, ty - y
+    if abs(dy) < abs(dx):
+        k = min(n, abs(dx))
+        return x + (k if dx > 0 else -k), y + int(dy * k / abs(dx))
+    k = min(n, abs(dy))
+    if k == 0:
+        return x, y
+    return x + int(dx * k / abs(dy)), y + (k if dy > 0 else -k)
 
 
 def _frames(art, entry, lbx="cmbtsfx"):
@@ -293,27 +324,46 @@ def plan(ev, unit, art, previous=None):
         if src is None or dst is None:
             return None
         a, b = cbdraw.centre(src), cbdraw.centre(dst)
-        dist = max(abs(b[0] - a[0]), abs(b[1] - a[1]))
+        # TRANSCRIPTION `transporter_beam` (`Draw_Bombs_`, cmbtdrw1.cpp:
+        # 3024-3040; `Draw_Transporter_Bomb_Beam_`, cmbtspec.cpp:800-854):
+        # with working Transporters the bomb starts near the planet — 20 px
+        # at a time toward it until within its picture's half-diagonal and
+        # 60 px — after 8 ticks of CMBTSFX 15 (frames 0-2) along the line
+        # from the ship to there, in the stasis bubble's glass (the shield's
+        # table, combinit.cpp:929)
+        start, beam = a, 0
+        half = ev.get("_planet_half")
+        if half and has_special(src, TRANSPORTERS):
+            limit = half[0] ** 2 + half[1] ** 2 + 3600
+            sx, sy = int(a[0]), int(a[1])
+            while _range(sx, sy, int(b[0]), int(b[1])) ** 2 > limit:
+                sx, sy = _step(sx, sy, int(b[0]), int(b[1]), 20)
+            start, beam = (sx, sy), TRANSPORTER_TICKS
+        dist = max(abs(b[0] - start[0]), abs(b[1] - start[1]))
         fly = max(1, -(-int(dist) // 6))
-        facing = int(round(get_angle(b[0] - a[0], a[1] - b[1]) / 22.5)) & 15
+        facing = int(round(get_angle(b[0] - start[0],
+                                     start[1] - b[1]) / 22.5)) & 15
         pic_entry = (160 if int(ev.get("weapon", 0)) in BIO else 144) + facing
         m = _frames(art, 7)
 
         def draw(surface, cam, cache, frame):
-            if frame < fly:
-                t = frame / fly
+            if frame < beam:
+                texture_line(surface, cam, cache, art.surface(
+                    "cmbtsfx", 15, frame % 3, glass="shield"), a, start)
+            elif frame < beam + fly:
+                t = (frame - beam) / fly
                 _blit_at(surface, cam, cache, art.surface("cmbtmisl",
                                                           pic_entry, 0),
-                         a[0] + (b[0] - a[0]) * t - 17,
-                         a[1] + (b[1] - a[1]) * t - 17)
+                         start[0] + (b[0] - start[0]) * t - 17,
+                         start[1] + (b[1] - start[1]) * t - 17)
             else:
                 _blit_at(surface, cam, cache, art.surface(
-                    "cmbtsfx", 7, frame - fly), b[0] - 12, b[1] - 12)
+                    "cmbtsfx", 7, frame - beam - fly), b[0] - 12, b[1] - 12)
         # `Draw_Bombs_` (cmbtdrw1.cpp:3049-3095): a tick a step, the numbers
         # from the impact on, rising through the explosion's frames, then
         # held until done (at least one pass, a do-while)
-        return {"frames": fly + m, "draw": draw, "number_frame": fly,
-                "hold": max(1, NUMBERS - m)}
+        return {"frames": beam + fly + m, "draw": draw,
+                "number_frame": beam + fly, "hold": max(1, NUMBERS - m)}
     if k == "blast_hit":
         # the blast itself is drawn on the event that fires it (`cbblast`,
         # work order 210 C3/C4); its hits only raise their numbers, held as

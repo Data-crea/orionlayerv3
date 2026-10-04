@@ -32,6 +32,12 @@ SECOND_AT = 9
 NUMBER_TICKS = 9
 #: weapon special 0x80: the entry is played three times (`special_timer`)
 REPEAT_SPECIAL, REPEATS = 0x80, 3
+#: TRANSCRIPTION `multi_beam` (beams.cpp:856-909, 1155-1179, 1243-1266): the
+#: Mass Driver and the Gauss Cannon fire three bolts a frame apart with the
+#: second muzzle set (`burst_variant` 1, BEAMS.LBX 33-64); the Mauler Device
+#: and the dragon's and plasma breaths three bolts with the mauler ball
+MULTI_BEAM = {1: 1, 2: 1, 27: 0, 40: 0, 43: 0}      # weapon -> burst variant
+MAULER_BALL = 0x58
 
 
 def bolt_frames(n, fast=False):
@@ -109,8 +115,9 @@ def plan_firing(shots, target, fast=False, total=10):
     hits, numbers = [], []
     for k, (_e, b, evs) in enumerate(entries):
         h = hit_frame(b)
+        last = b.get("multi", 1) - 1
         hits.append(min(t for t, row in enumerate(rows)
-                        for c, f in row if c == k and f >= h))
+                        for c, f in row if c == k and f + last >= h))
         if any(int(e.get("past_shields", 0) or 0) or
                int(e.get("absorbed", 0) or 0) for e in evs):
             numbers.append(hits[-1])
@@ -120,7 +127,9 @@ def plan_firing(shots, target, fast=False, total=10):
         seen = []
         for c, f in row:
             b = entries[c][1]
-            seg = cbbeam.segment(b["src"], b["dst"], b["fx"], f, b["stop"])                 if f and target is not None else None
+            g = lead_frame(b, f)
+            seg = cbbeam.segment(b["src"], b["dst"], b["fx"], g, b["stop"]) \
+                if g and target is not None else None
             if seg is not None:
                 seen.append(bool(res[c] & 1) and cbflare.in_shield(
                     seg[2], seg[3], *b["dst"], target[1]))
@@ -153,6 +162,17 @@ def plan_firing(shots, target, fast=False, total=10):
             "numbers": numbers, "b": look}
 
 
+def lead_frame(b, f):
+    """The frame whose bolt decides the hit and the flare: a multi-beam
+    weapon draws three bolts a pass, at frames f, f + 1 and f + 2
+    (`loop_count` 3, beams.cpp:1243-1266), and the last one drawn sets
+    `_ship_hit_now_flag` — one that has run out (frame >= n) draws nothing
+    and leaves the one before it deciding (:2294-2296)."""
+    n = b["frames"]
+    top = f + b.get("multi", 1) - 1
+    return min(top, n - 1) if f < n else f
+
+
 def hit_frame(b):
     """The frame a bolt strikes (`_ship_hit_now_flag`, beams.cpp:2321-2327):
     the first whose head reaches the target point — at once for a
@@ -174,7 +194,8 @@ def draw_firing(surface, cam, art, firing, t, cache, palettes, look=None):
     tick = min(len(rows) - 1, int(t * len(rows)))
     for c, frame in rows[tick]:
         ev, b, _s = firing["entries"][c]
-        _bolt(surface, cam, art, ev, b, frame, cache, palettes)
+        for k in range(b.get("multi", 1)):
+            _bolt(surface, cam, art, ev, b, frame + k, cache, palettes)
     st = firing["flare"][tick]
     if st[0] != 0 and look is not None:
         _flare(surface, cam, art, firing["b"], tick, st[1], look, cache)
@@ -253,10 +274,20 @@ def _bolt(surface, cam, art, ev, b, frame, cache, palettes):
         at = seg[:2] if seg else None
     if at is not None and (frame < 3 or b.get("skip")):  # Draw_Ship_Burst_
         pic = art.surface("beams", cbbeam.muzzle_entry(
-            b["src"], b["dst"], stream), frame % 3, pal)
+            b["src"], b["dst"], stream, b.get("variant", 0)), frame % 3, pal)
         if pic is not None:
             img = cbdraw.scaled(pic, cam.scale, cache)
             x, y = cam.to_window(*at)
+            surface.blit(img, (x - img.get_width() // 2,
+                               y - img.get_height() // 2))
+    if b.get("ball") and 0 < frame < n and frame < hit_frame(b):
+        # TRANSCRIPTION `mauler_ball`: the ball at the bolt's head until it
+        # strikes (`_mauler_ball_seg`, BEAMS.LBX 0x58; beams.cpp:2420-2422)
+        seg = cbbeam.segment(b["src"], b["dst"], b["fx"], frame, b["stop"])
+        pic = art.surface("beams", MAULER_BALL, 0, pal) if seg else None
+        if pic is not None:
+            img = cbdraw.scaled(pic, cam.scale, cache)
+            x, y = cam.to_window(seg[2], seg[3])
             surface.blit(img, (x - img.get_width() // 2,
                                y - img.get_height() // 2))
     if ev.get("result", 0) & 3 and frame >= n - 2:   # :2459-2477

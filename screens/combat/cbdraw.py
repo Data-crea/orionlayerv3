@@ -34,7 +34,10 @@ PLANET_CENTRE = {0: 30, 1: 40, 2: 60, 3: 70, 4: 80}
 PLANET_OFF = {0: (2, 2), 1: (0, 1), 2: (7, 7), 3: (4, 4), 4: (6, 6)}
 CURSOR = {0: (0x20, -3, -3), 1: (0x21, -5, -4), 2: (0x22, -8, -8)}
 MISSILE_TYPE = {14: 0, 15: 1, 16: 2, 17: 3, 18: 4, 19: 5, 20: 6, 40: 6}
-TORPEDOES = {18, 19, 20, 40}
+#: drawn with the torpedo layout, 23 px up and left; the Anti-Matter
+#: Torpedo (18) is drawn as a missile, 12 px (`Draw_Missile_`,
+#: cmbtmis.cpp:1146-1160; work order 212, [combat.fx_torpedo_offset])
+TORPEDOES = {19, 20, 40}
 FIGHTER_TYPE = {31: 0, 29: 1, 30: 2, 28: 3}
 STAR_LAYERS = ((46, 0.125), (47, 0.5), (48, 1.0))
 
