@@ -41,6 +41,7 @@ STASIS, ANTI_MISSILE, GYRO, WEB, PULSAR, BLACK_HOLE, CONVERTER, TRACTOR = \
     32, 33, 34, 35, 36, 37, 38, 39
 TICK = 0.055                 # s: `Release_Time_(1)`
 UNTIMED = 0.015              # s: a frame of a loop without a wait
+                             # (DEVIATION `untimed_pace`, decision 80)
 #: the damage numbers rise 9 frames (`Draw_Damage_Indicator_`, beams.cpp:
 #: 380-382); `Draw_Damage_Message_Queue_Until_Done_` waits for them
 NUMBERS = 9
@@ -270,7 +271,7 @@ def plan(ev, unit, art, previous=None):
             # px above-left of the source's centre to the same of the
             # target's, 6 px a frame on the longer axis, then the impact
             # 36-39 by size, centred where the blob stopped; neither loop
-            # waits (HD STATE `untimed_pace`)
+            # waits (DEVIATION `untimed_pace`)
             n, m = _frames(art, 14), _frames(art, 36 + _size_idx(dst))
             sx, sy, tx, ty = a[0] - 20, a[1] - 20, b[0] - 20, b[1] - 20
             fly = max(1, -(-max(abs(tx - sx), abs(ty - sy)) // WEB_STEP))

@@ -272,7 +272,7 @@ class CombatScreen(CombatInput, ScreenBase):
             cbdraw.draw_cursor(surface, cam, art, unit, clock, self._cache)
         cbdraw.draw_ordnance(surface, cam, art, self._play.ordnance,
                              max(10, int(18 * self.layout.scale)),
-                             self.style, self._cache)
+                             self.style, self._cache, clock, c["cur_ship"])
         self._play.draw(surface, cam, art, self.style, self.layout.scale,
                         self._cache)
         surface.set_clip(clip)

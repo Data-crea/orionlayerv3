@@ -53,12 +53,14 @@ from . import (cbbeam, cbblast, cbcloak, cbdraw, cbflare, cbflight,
 
 CELL = cbdraw.CELL
 MOVE_S = 0.15
-#: HD STATE `untimed_pace` (work order 212): a loop of the source without a
-#: wait (the move, cmbtmov1.cpp:309-317; the plasma web's travel,
-#: cmbtspec.cpp:1075-1094; the gyro's random spin, :580-597; the teleport,
-#: cmbtmov1.cpp:816-886) is paced only by its page flip; HD gives each of
-#: its frames the move's own pace, 10 frames a cell in 0.15 s (decision H
-#: of work order 202), so they keep one tempo with each other.
+#: DEVIATION `untimed_pace` (decision 80, Data, work order 214): a loop of
+#: the source without a wait (the move, cmbtmov1.cpp:309-317; the plasma
+#: web's travel, cmbtspec.cpp:1075-1094; the gyro's random spin, :580-597;
+#: the teleport, cmbtmov1.cpp:816-886; a missile's flight and launch) is
+#: paced only by its page flip — 1.9 ms a pass measured (work order 213), a
+#: flight would be invisible; HD gives each of its frames a fixed 15 ms, the
+#: move's own pace, 10 frames a cell in 0.15 s (decision H of work order
+#: 202), so they keep one tempo with each other.
 UNTIMED_S = MOVE_S / 10
 FRAME_S = 0.055
 NUMBER_S = 9 * FRAME_S
@@ -288,7 +290,7 @@ class Player:
             if ev.get("teleport"):
                 # `Draw_Teleporting_Ship_`: ten frames, five under FAST
                 # (`cbcloak.vanish`, work order 210 C4), its loop without a
-                # wait (HD STATE `untimed_pace`)
+                # wait (DEVIATION `untimed_pace`, decision 80)
                 ev["_noise"] = random.randrange(0, 256, 2)
                 return UNTIMED_S * (10 // ev["_step"])
             cells = max(abs(ev["to_x"] - ev["from_x"]),

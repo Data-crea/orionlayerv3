@@ -38,6 +38,7 @@ MISSILE_TYPE = {14: 0, 15: 1, 16: 2, 17: 3, 18: 4, 19: 5, 20: 6, 40: 6}
 #: Torpedo (18) is drawn as a missile, 12 px (`Draw_Missile_`,
 #: cmbtmis.cpp:1146-1160; work order 212, [combat.fx_torpedo_offset])
 TORPEDOES = {19, 20, 40}
+PROTON = 19                 # WEAPON_PROTON_TORPEDO
 FIGHTER_TYPE = {31: 0, 29: 1, 30: 2, 28: 3}
 STAR_LAYERS = ((46, 0.125), (47, 0.5), (48, 1.0))
 
@@ -401,16 +402,48 @@ def draw_cursor(surface, cam, art, unit, glow_clock, cache):
                  cam.to_window(unit["x"] * CELL + dx, unit["y"] * CELL + dy))
 
 
-def draw_ordnance(surface, cam, art, ordnance, font_px, style, cache):
-    for m in (ordnance or {}).get("missiles", []):
+def final_target(missiles, m):
+    """`Final_Flyer_Target_` (cmbtmis.h:64-70): an anti-missile rocket's
+    chain followed to the unit at its end."""
+    by_index = {int(o["index"]): o for o in missiles}
+    seen = set()
+    while m.get("is_anti_missile_rocket") and int(m["index"]) not in seen:
+        seen.add(int(m["index"]))
+        m = by_index.get(int(m["target_unit_idx"]))
+        if m is None:
+            return None
+    return int(m["target_unit_idx"])
+
+
+def ordnance_frame(missiles, m, ship_frame, cur_ship):
+    """TRANSCRIPTION `missile_frames` (work order 214): a missile cycles its
+    first three frames, `(_ship_frame + index) % 3`, while it is aimed at the
+    acting unit, the Proton Torpedo always; a fighter group while its final
+    target is the acting unit; otherwise frame 0 (`Draw_Missile_`,
+    cmbtmis.cpp:1130-1136; `Draw_Fighter_`, :1107-1111)."""
+    cycle = (ship_frame + int(m["index"])) % 3
+    if int(m["type"]) in FIGHTER_TYPE:
+        return cycle if final_target(missiles, m) == cur_ship else 0
+    if int(m["target_unit_idx"]) == cur_ship or int(m["type"]) == PROTON:
+        return cycle
+    return 0
+
+
+def draw_ordnance(surface, cam, art, ordnance, font_px, style, cache,
+                  ship_frame=0, cur_ship=None):
+    missiles = (ordnance or {}).get("missiles", [])
+    for m in missiles:
         kind = int(m["type"])
         facing = int(m["facing_dir"]) & 15
+        frame = ordnance_frame(missiles, m, ship_frame, cur_ship)
         if kind in FIGHTER_TYPE:
-            pic = art.surface("cmbtfgtr", FIGHTER_TYPE[kind] * 16 + facing)
+            pic = art.surface("cmbtfgtr", FIGHTER_TYPE[kind] * 16 + facing,
+                              frame)
             off = 12
             count = max(1, min(9, int(m["quantity"]) // 4))
         elif kind in MISSILE_TYPE:
-            pic = art.surface("cmbtmisl", MISSILE_TYPE[kind] * 16 + facing)
+            pic = art.surface("cmbtmisl", MISSILE_TYPE[kind] * 16 + facing,
+                              frame)
             off = 23 if kind in TORPEDOES else 12
             count = int(m["quantity"])
         else:

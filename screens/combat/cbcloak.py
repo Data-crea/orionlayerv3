@@ -45,8 +45,9 @@ cmbtmov1.cpp:816-886; `Vanish_Bitmap_Pixels_`, shear.cpp:540-588: a pixel
 is dropped where `_noise_table` is below the percentage, four pixels to a
 table word, the walk jumping by the dword count squared at each row's end
 and after a pixel of 0x80 or more; 100 % draws nothing).
-HD STATE `teleport_pace`: the original's loop has no wait (each frame as
-fast as it is presented); HD gives a frame 55 ms. The table's start index
+DEVIATION `untimed_pace` (decision 80): the original's loop has no wait
+(each frame as fast as it is presented); HD gives a frame 15 ms
+(`cbplay.UNTIMED_S`). HD STATE `teleport_noise`: the table's start index
 comes from the game's random numbers there, from HD's own here.
 """
 import numpy as np

@@ -7,8 +7,8 @@ the original flies every missile and fighter group together, pass by pass —
 each moves its own `speed` in px along the longer axis toward its target and
 turns to face it (`Get_Facing_`), the screen is drawn, and the hits are
 resolved as they arrive — until all have arrived or run out of range. The
-loop has no wait (HD STATE `untimed_pace`: HD gives each pass the move's
-pace, `cbplay.UNTIMED_S`). Until work order 212 HD showed every missile at
+loop has no wait (DEVIATION `untimed_pace`, decision 80: HD gives each pass
+the move's pace, 15 ms, `cbplay.UNTIMED_S`). Until work order 212 HD showed every missile at
 the snapshot's place: they jumped.
 
 HD STATE `flight_batch`: no event says where a missile was in each pass; HD
