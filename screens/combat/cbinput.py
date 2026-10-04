@@ -119,6 +119,14 @@ class CombatInput:
             if self._board:
                 self._board = False
                 self._send("board", target)
+            elif c["units"][target].get("stasis_source_idx", 255) != 255:
+                # TRANSCRIPTION `release_stasis` (work order 214): a click
+                # on an enemy held in a stasis field asks to release it
+                # (KENTEXT 61) and releases it on YES, as the original's
+                # click does (combat1.cpp:782-796, `Ship_Is_In_Stasis_`
+                # cmbtmov1.cpp:53-58); open fix 58's REMOVE_STASIS runs
+                # that branch, its box HD's. A FIRE there is refused.
+                self._send("remove_stasis", target)
             else:
                 self._send("fire", target, self._mask(cur, c["units"][cur]))
         elif target is not None and target != cur:
