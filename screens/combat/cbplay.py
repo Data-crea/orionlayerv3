@@ -49,7 +49,7 @@ import random
 import time
 
 from . import (cbbeam, cbblast, cbcloak, cbdraw, cbflare, cbflight,
-               cbreflect, cbsfx, cbshot, cbsound)
+               cbqueue, cbreflect, cbsfx, cbshot, cbsound)
 
 CELL = cbdraw.CELL
 MOVE_S = 0.15
@@ -97,6 +97,7 @@ class Player:
         self.last_beam = None    # the shot a reflection sends back
         self._fed = None         # the last snapshot's battle fed
         self._fed_ordnance = None   # and its ordnance (`_with_flight`)
+        self._aims_seen = False     # the engine sends open fix 82's aims
         self.sounds.reset()
 
     def busy(self):
@@ -117,6 +118,8 @@ class Player:
                if self._next_seq is None or e["seq"] >= self._next_seq]
         if new:
             self._next_seq = new[-1]["seq"] + 1
+        if any(e["kind"] == "beam_aim" for e in new):
+            self._aims_seen = True
         fresh = combat is not None and combat is not self._fed
         if fresh:
             self._fed = combat
@@ -228,6 +231,9 @@ class Player:
                 self._adopt()
             if not self._queue:
                 return
+            if self._queue[0]["kind"] == "beam_shot" and \
+                    not self._aims_ready(now):
+                return
             ev = self._queue.pop(0)
             if ev["kind"] in cbsound.KINDS:
                 # a sound with no animation of HD's before it — a field's
@@ -246,7 +252,7 @@ class Player:
         (`cbsound.offset`), whether they came with it or with a snapshot
         sent during its animation (the shield flare polls, beams.cpp:705)."""
         while self._queue and (self._queue[0]["kind"] in cbsound.KINDS or
-                               self._queue[0]["kind"] in INSTANT):
+                               self._queue[0]["kind"] in cbqueue.INSTANT):
             # an event with nothing to draw (a missile gone, merged or
             # launched, recorded between a hit and its sound, cmbtmis.cpp)
             # does not take the sounds after it away from the picture
@@ -305,6 +311,8 @@ class Player:
                 # point (cmbtdrw1.cpp:3026-3027)
                 w, h = self.planet[0].get_size()
                 ev["_planet_half"] = (w // 2, h // 2)
+            if k == "special" and w == cbsfx.GYRO:
+                self._take_spin(ev)
             if p is None:
                 p = cbsfx.plan(ev, self._unit, self._art, self._last)
             if p is not None:
@@ -329,14 +337,23 @@ class Player:
             # of one FIRE is one loop — the queued shots at the same target
             # go with this one
             shots = [ev]
-            while self._queue and _same_firing(ev, self._queue[0]):
+            while self._queue and cbqueue.same_firing(ev, self._queue[0]):
                 shots.append(self._queue.pop(0))
             ev["_tail"] = shots[-1]["seq"]
             self.last_beam = shots[-1]
             u = None if ev.get("at_missile") else \
                 self._unit(ev.get("target", -1))
-            planned = [(e, b) for e, b in ((e, self._beam(e)) for e in shots)
-                       if b is not None]
+            aims = self._take_aims(ev)
+            planned, k, slot = [], -1, object()
+            for e in shots:
+                if e.get("slot") != slot:
+                    k, slot = k + 1, e.get("slot")
+                aim = aims[k] if k < len(aims) and int(
+                    aims[k].get("weapon", -1)) == int(e.get("weapon", 0)) \
+                    else None
+                b = self._beam(e, aim)
+                if b is not None:
+                    planned.append((e, b))
             if not planned:
                 return BOLT_S
             f = ev["_firing"] = cbshot.plan_firing(
@@ -528,9 +545,14 @@ class Player:
         return cbdraw.centre(u) if u is not None and \
             ev["kind"] != "rotate" else None
 
-    def _beam(self, ev):
+    def _beam(self, ev, aim=None):
         """The shot as `cbbeam` draws it: its record, end points (world
-        px), frames, where it stops — or None without both units."""
+        px), frames, where it stops — or None without both units. With the
+        entry's `beam_aim` (open fix 82) its end points are the original's
+        own: the entry's last fire point and the target point with the miss
+        offset (beams.cpp:1381-1459), so its frame count is too (the count
+        halves its step past six frames, :2287-2301, and a few pixels
+        decide it); without one, the units' centres."""
         src = self._unit(ev.get("source", -1))
         at = self._target_point(ev)
         if src is None or at is None:
@@ -546,8 +568,12 @@ class Player:
         if f is None:                   # not a "Steve stuff" weapon
             cols, length, step = FRAGMENT.get(ev.get("weapon"), (5, 20, 40))
             f = dict(cbbeam.fx(3), style=0, length=length, step=step)
-        a = tuple(int(v) for v in cbdraw.centre(src))
-        b = tuple(int(v) for v in at)
+        if aim is not None:
+            a = (int(aim["from_x"]), int(aim["from_y"]))
+            b = (int(aim["to_x"]), int(aim["to_y"]))
+        else:
+            a = tuple(int(v) for v in cbdraw.centre(src))
+            b = tuple(int(v) for v in at)
         n, _step = cbbeam.max_frames(a, b, f)
         holds = dst is not None and ev.get("result", 0) & 1 and \
             not ev.get("result", 0) & 2
@@ -562,6 +588,15 @@ class Player:
                 "total": total or 10, "multi": 3 if multi else 1,
                 "variant": cbshot.MULTI_BEAM.get(w, 0) if multi else 0,
                 "ball": multi and cbshot.MULTI_BEAM[w] == 0}
+
+    def _aims_ready(self, now):
+        return cbqueue.aims_ready(self._queue, self._aims_seen, now)
+
+    def _take_spin(self, ev):
+        cbqueue.take_spin(self._queue, ev)
+
+    def _take_aims(self, ev):
+        return cbqueue.take_aims(self._queue, ev)
 
     def _target_point(self, ev):
         """Where a shot goes (world px): the target unit's centre — or, when
@@ -733,20 +768,6 @@ def sfx_frame(p, t):
     tau = t * p.get("_length", 0.0)
     return next((i for s, e, i in p.get("_times", ()) if s <= tau < e), None)
 
-
-def _same_firing(first, ev):
-    """`ev` is another shot of `first`'s FIRE: a beam shot at the same
-    target from the same unit, recorded right after it (cmbtfire.cpp:1363).
-    The Energy Absorber's discharge (slot -1, open fix 74) is its own loop
-    (cmbtfire.cpp:1842)."""
-    return ev["kind"] == "beam_shot" and all(
-        ev.get(f) == first.get(f) for f in ("source", "target",
-                                             "at_missile")) and \
-        -1 not in (ev.get("slot"), first.get("slot"))
-
-
-#: events HD draws nothing for: played with the animation before them
-INSTANT = ("missile_launch", "missile_merge", "missile_gone")
 
 #: the events of a missile phase (`Seeking_Missiles_`): the flight comes
 #: before the first of them

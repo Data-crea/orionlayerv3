@@ -434,7 +434,16 @@ LOCAL_PATCHES = {
         os.path.join("src", "game", "cmbtmis.cpp"),
         "OrionLayer, open fix 77.",
         "the engine does not report a fighter pass's beams (open fix 77): "
-        "HD shows the pass's number only"),
+        "HD shows the pass's number only"),    "doc/ext_combat_beam_aim.patch": (
+        os.path.join("src", "game", "beams.cpp"),
+        "OrionLayer, open fix 82.",
+        "the engine does not report where a beam is drawn (open fix 82): HD "
+        "draws it between the units' centres and a miss's beat can differ"),
+    "doc/ext_combat_gyro_spin.patch": (
+        os.path.join("src", "game", "cmbtspec.cpp"),
+        "OrionLayer, open fix 83.",
+        "the engine does not report the gyro's spin (open fix 83): HD turns "
+        "the target twice round"),
 }
 
 #: Patches that are REPORTED to Joes and not yet applied: listed with
@@ -518,6 +527,8 @@ FIX_NUMBERS = {
     "doc/ext_combat_waits.patch": (71,),
     "doc/ext_combat_fighter_beam.patch": (77,),
     "doc/ext_combat_waits_command.patch": (71,),
+    "doc/ext_combat_beam_aim.patch": (82,),
+    "doc/ext_combat_gyro_spin.patch": (83,),
 }
 
 

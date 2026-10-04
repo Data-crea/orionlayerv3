@@ -1,0 +1,40 @@
+OrionLayer open fix 83 — the gyro destabilizer's spin as a battle event
+======================================================================
+
+Work order 213 (Data's decision 2 on 212's P2: the gyro turns the target as the
+original does; the number from the source). orion2re on `orionlayer-local`, on
+top of open fix 82. Every line under ORION2RE_EXT.
+
+`Gyro_Destablizer_` (cmbtspec.cpp:536-640) spins its target, after the line's
+eight turns, `rotations_left` sixteenths of a turn with no wait: 19 draws of
+`Random_(13)`, then more while the spin would end 15, 0 or 1 sixteenths round
+(:566-575). The count is the engine's random draw and was on no wire. Recorded
+before the spin as CEV_GYRO_SPIN (the source, the target, the turns), through
+open fix 82's `Combat_Note`.
+
+diff --git a/src/ext/ext_api.h b/src/ext/ext_api.h
+index 53ce361d..0a0a5814 100644
+--- a/src/ext/ext_api.h
++++ b/src/ext/ext_api.h
+@@ -180,6 +180,7 @@ enum CombatEventType : uint8_t {
+     CEV_SOUND_CHANGE = 20,  // handle (-1 every sound), change (1 fade, 2 loop, 3 pitch), value, ticks — OrionLayer, open fix 79.
+     CEV_FIGHTER_BEAM = 21,  // missile, beam weapon, group x px, y px, facing, quantity, target x px, y px — OrionLayer, open fix 77.
+     CEV_BEAM_AIM = 22,      // source, target, weapon, fire points, from x px, y px, to x px, y px (an entry's last fire point, the target and its miss offset) — OrionLayer, open fix 82.
++    CEV_GYRO_SPIN = 23,     // source, target, turns (sixteenths of a turn the target spins after the line's eight) — OrionLayer, open fix 83.
+ };
+ 
+ /// OrionLayer, open fix 58. One command per battle action (decision 52), consumed where the human's input is read.
+diff --git a/src/game/cmbtspec.cpp b/src/game/cmbtspec.cpp
+index 81f2e414..56f3f778 100644
+--- a/src/game/cmbtspec.cpp
++++ b/src/game/cmbtspec.cpp
+@@ -573,6 +573,9 @@ namespace CMBTSPEC {
+                 if (normalized_rotation != 15 && normalized_rotation >= 2) break;
+                 rotations_left += (int16_t)game_random::Random_(13);
+             }
++#ifdef ORION2RE_EXT
++            ext::Combat_Note(ext::CEV_GYRO_SPIN, source_idx, target_idx, rotations_left);  // OrionLayer, open fix 83. The spin's count, from the engine's own random numbers.
++#endif
+ 
+             graphics::Set_Window_(0, 0, 639, 350);
+             video::Clip_On_();

@@ -231,14 +231,16 @@ def plan(ev, unit, art, previous=None):
             # a tick a frame; eight passes of 2 ticks, the target turned one
             # facing each and the line looping its last three frames (:1511-
             # 1549, TRANSCRIPTION `gyro_line`); then `Gyro_Destablizer_`'s
-            # spin with no wait (:580-597) — HD STATE `gyro_spin`: its count
-            # is the engine's random numbers (19 draws of `Random_(13)`, about
-            # eight turns), on no wire; HD turns twice round at the pace of a
-            # loop without a wait, then the state after it gives the facing —
-            # then the numbers (:637)
+            # spin with no wait (:580-597) — TRANSCRIPTION `gyro_spin` (Data's
+            # decision 2 of work order 213): its count is the engine's own
+            # random draw (19 of `Random_(13)`, then more while it would end
+            # 15, 0 or 1 sixteenths round, :566-575), on the wire since open
+            # fix 83 (`spin_turns`, taken by `cbplay`); an engine without it
+            # leaves HD STATE `gyro_spin`, two turns round; then the numbers
+            # (:637)
             n = _frames(art, 8)
             face0 = int(dst["facing_dir"])
-            spin = SPIN_TURNS * 16
+            spin = int(ev.get("spin_turns") or SPIN_TURNS * 16)
 
             def draw(surface, cam, cache, frame):
                 if frame < n:

@@ -94,8 +94,11 @@ STACKED_AFTER_COLONY = (
     # after 79's tick counter
     "doc/ext_combat_waits.patch",
     # work order 212: 71 amended clears the poll mark in 79's Combat_Event
-    # after a taken command, LAST
+    # after a taken command
     "doc/ext_combat_waits_command.patch",
+    # work order 213: 82 adds Combat_Note after 71 amended's Combat_Event,
+    # LAST (83 does not touch ext_api.cpp)
+    "doc/ext_combat_beam_aim.patch",
 )
 
 

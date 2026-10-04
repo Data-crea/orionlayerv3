@@ -1,0 +1,77 @@
+OrionLayer open fix 82 — a beam's aim as a battle event
+=======================================================
+
+Work order 213 (point D, Data's decision of 4 October 2026: an engine change a
+point needs is made and applied in the same run). orion2re on
+`orionlayer-local`, on top of open fix 71, amended. Every line under
+ORION2RE_EXT.
+
+`Beam_SFX_` (beams.cpp:1294-1712) draws each entry of a FIRE from a fire point
+of the shooter's picture (FIREPTS) to the target's centre plus, for a miss, two
+`Random_` offsets (:1381-1443); its frame count halves its step past six frames
+(:2287-2301), so a few pixels decide the beat. Neither point was on the wire
+(work order 212: an Ion Pulse Cannon miss ran 4 passes in the original and 7 in
+HD). Where the loop starts an entry (its frame 0, the last fire point drawn)
+CEV_BEAM_AIM is recorded: the shooter, the target, the weapon, the fire points,
+the start and the end point in world px. Not for a reflected beam (its own
+loop, reflection state 2). `Combat_Note` records it without restarting open fix
+79's tick count, so the sounds after it keep counting from the event they belong
+to.
+
+diff --git a/src/ext/ext_api.cpp b/src/ext/ext_api.cpp
+index cac0d38b..753c6d6f 100644
+--- a/src/ext/ext_api.cpp
++++ b/src/ext/ext_api.cpp
+@@ -2465,6 +2465,13 @@ void Combat_Event(uint8_t type, int16_t a0, int16_t a1, int16_t a2, int16_t a3,
+     if (type == CEV_COMMAND && a1 == 0) g_polled_since_wait = false;  // OrionLayer, open fix 71, amended. A command taken: its action's first wait is a frame of it, not the input loop's.
+ }
+ 
++void Combat_Note(uint8_t type, int16_t a0, int16_t a1, int16_t a2, int16_t a3,
++                 int16_t a4, int16_t a5, int16_t a6, int16_t a7) {
++    const int32_t ticks = g_battle_ticks;  // OrionLayer, open fix 82. A note inside an animation keeps the tick count.
++    Combat_Event(type, a0, a1, a2, a3, a4, a5, a6, a7);
++    g_battle_ticks = ticks;
++}
++
+ // OrionLayer, open fix 79. The battle's sounds as events (ext_api.h).
+ static bool Battle_Sound_Recorded_() {
+     return g_combat_live && g_hide_window.load() && g_server.ClientCount() > 0;
+diff --git a/src/ext/ext_api.h b/src/ext/ext_api.h
+index f59226cd..53ce361d 100644
+--- a/src/ext/ext_api.h
++++ b/src/ext/ext_api.h
+@@ -179,6 +179,7 @@ enum CombatEventType : uint8_t {
+     CEV_SOUND = 19,         // sound id, handle, ticks since the last other event — OrionLayer, open fix 79.
+     CEV_SOUND_CHANGE = 20,  // handle (-1 every sound), change (1 fade, 2 loop, 3 pitch), value, ticks — OrionLayer, open fix 79.
+     CEV_FIGHTER_BEAM = 21,  // missile, beam weapon, group x px, y px, facing, quantity, target x px, y px — OrionLayer, open fix 77.
++    CEV_BEAM_AIM = 22,      // source, target, weapon, fire points, from x px, y px, to x px, y px (an entry's last fire point, the target and its miss offset) — OrionLayer, open fix 82.
+ };
+ 
+ /// OrionLayer, open fix 58. One command per battle action (decision 52), consumed where the human's input is read.
+@@ -211,6 +212,10 @@ void Combat_Command_Cell(int16_t* x, int16_t* y);
+ void Combat_Event(uint8_t type, int16_t a0 = 0, int16_t a1 = 0, int16_t a2 = 0,
+                   int16_t a3 = 0, int16_t a4 = 0, int16_t a5 = 0,
+                   int16_t a6 = 0, int16_t a7 = 0);
++/// OrionLayer, open fix 82. What an animation drew from its own random numbers, recorded inside it: the sounds after it still count their ticks from the event they belong to (open fix 79).
++void Combat_Note(uint8_t type, int16_t a0 = 0, int16_t a1 = 0, int16_t a2 = 0,
++                 int16_t a3 = 0, int16_t a4 = 0, int16_t a5 = 0,
++                 int16_t a6 = 0, int16_t a7 = 0);
+ 
+ /// OrionLayer, open fix 79. The battle's sounds as events, the engine silent while a client draws.
+ ///
+diff --git a/src/game/beams.cpp b/src/game/beams.cpp
+index b8abdf78..a40722e5 100644
+--- a/src/game/beams.cpp
++++ b/src/game/beams.cpp
+@@ -1454,6 +1454,11 @@ namespace BEAMS {
+                                         attacker_picture_num, (uint8_t)attacker_facing_dir,
+                                         (uint8_t)target_bearing, fp_idx_val);
+                                 }
++#ifdef ORION2RE_EXT
++                                if (frame_idx[i] == 0 && fp_idx_val == fp_count - 1 && _g_reflection_state_flag != 2) {
++                                    ext::Combat_Note(ext::CEV_BEAM_AIM, attacker_ship_id, target_id, fx->weapon_id, fp_count, (int16_t)(attacker_center_x + fp_x + MOX::_cur_combat_x * 20), (int16_t)(attacker_center_y + fp_y + MOX::_cur_combat_y * 20), (int16_t)(target_center_x + rand_offsets[i + 2] + MOX::_cur_combat_x * 20), (int16_t)(target_center_y + rand_offsets[i] + MOX::_cur_combat_y * 20));  // OrionLayer, open fix 82. The bolt's own end points.
++                                }
++#endif
+                                 Fire_Weapon_(attacker_center_x + fp_x, attacker_center_y + fp_y,
+                                     target_center_x + rand_offsets[i + 2],
+                                     target_center_y + rand_offsets[i],

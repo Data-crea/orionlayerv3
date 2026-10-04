@@ -176,6 +176,19 @@ def special_bits(flags):
     return [b for b in range(40) if flags[b >> 3] >> (b & 7) & 1]
 
 
+#: `SPECIAL_REGENERATION` (orion2_consts.h:578), the last special bit.
+REGENERATION = 39
+
+
+def listed_specials(flags):
+    """The systems the SPECIALS tab lists: TRANSCRIPTION `specials_list`
+    (work order 213) — `Draw_Special_Status_Display_` walks the bits below
+    `SPECIAL_REGENERATION` unless `COMBINIT::_amoeba_regeneration` is set
+    (cmbtdrw1.cpp:557-558), and nothing in the engine sets it (combinit.h:11
+    is its only assignment), so Regeneration is never listed."""
+    return [b for b in special_bits(flags) if b < REGENERATION]
+
+
 def draw_shields(surface, rect, unit, picture):
     """The unit's picture with HD's shield rings (DEVIATION `shield_rings`):
     four arcs round it, one ring per ten points left in each."""
@@ -316,11 +329,16 @@ class Panel:
                            mid.h - tab_h - 4)
         row_h = max(small + 2, body.h // 8)
         if specials:
-            have = special_bits(unit.get("special_device_flags") or [0] * 5)
+            have = listed_specials(unit.get("special_device_flags")
+                                   or [0] * 5)
             damaged = set(special_bits(unit.get("special_device_damage_flags")
                                        or [0] * 5))
             ready = list(unit.get("weapon_ready_flags") or [1] * 8)
-            for k, bit in enumerate(have[:8]):
+            # TRANSCRIPTION `specials_list` (work order 213): no cap — the
+            # original prints row after row 11 px apart from y 0x17C
+            # (cmbtdrw1.cpp:557-582), so a ninth runs on past its 88 px
+            # list as here past the list's eight rows
+            for k, bit in enumerate(have):
                 r = pygame.Rect(body.x, body.y + k * row_h, body.w, row_h - 2)
                 word = names.name("specials", bit) or f"special {bit}"
                 self.help_rows.append((r, k))

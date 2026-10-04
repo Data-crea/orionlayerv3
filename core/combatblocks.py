@@ -267,6 +267,14 @@ EVENTS = {
     # group's place (px), facing and quantity, the point it fires at (px)
     21: ("fighter_beam", ("missile", "beam", "x", "y", "facing", "quantity",
                           "target_x", "target_y")),
+    # open fix 82: the points a FIRE's entry is drawn between (world px) —
+    # its last fire point and the target point with the original's own miss
+    # offset (beams.cpp:1381-1459), one per entry as the loop starts it
+    22: ("beam_aim", ("source", "target", "weapon", "fire_points", "from_x",
+                      "from_y", "to_x", "to_y")),
+    # open fix 83: the sixteenths of a turn the gyro destabilizer spins its
+    # target after the line — the engine's random draw (cmbtspec.cpp:566-575)
+    23: ("gyro_spin", ("source", "target", "turns")),
 }
 #: MSG_COMBAT_COMMAND's ops (ext_api.h, `CombatCommandOp`), open fix 58.
 COMMANDS = {"move": 1, "fire": 2, "fire_missile": 3, "face": 4,
