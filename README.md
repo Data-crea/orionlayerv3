@@ -91,6 +91,9 @@ from the maintainer.
 | 38 | `f031cbad` | open fix 69: HLPL — the help list a right click is checked against on the wire: its ids and rectangles in its own order, read only (work order 200) | `doc/ext_help_list.patch` |
 | 39 | `a8b5640b` | open fix 70: the player's language — `ORION2RE_LANGUAGE` where the build forced 0, and `ORION2RE_LANGUAGE_DIR`, another install read for the language's files (its own files first, `ORION2RE_LANGUAGE_FILES`; read only; work order 200) | `doc/ext_language.patch` |
 | 40 | `e75477c5` | open fix 74: the Energy Absorber's discharge as a battle event — the beam shot it is drawn as (weapon 0x2E, no slot, its damage), before the target's death ("CMEV"; work order 210) | `doc/ext_combat_absorber.patch` |
+| 41 | `2b773c31` | open fix 79: the battle's sounds as events — each sound, fade, loop and pitch bend recorded with the ticks since the event before ("CMEV"), and none played by the engine while a client draws the battle, so OrionLayer plays them with its own picture (work order 212) | `doc/ext_combat_sound.patch` |
+| 42 | `89494e72` | open fix 71: the hidden engine's animation waits — skipped while a client draws the battle (not a timed message box's, not the input loop's), so an animated action reaches OrionLayer at once (work order 212) | `doc/ext_combat_waits.patch` |
+| 43 | `003af991` | open fix 77: a fighter pass's beam and group as a battle event — the owner's fighter beam, the group's place, facing and quantity, the target point ("CMEV"; work order 212) | `doc/ext_combat_fighter_beam.patch` |
 
 ## Install
 

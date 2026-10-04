@@ -85,8 +85,14 @@ STACKED_AFTER_COLONY = (
     "doc/ext_msgbox_items.patch",
     # work order 200: 68 appends COPT after 66's CPOP
     "doc/ext_combat_options.patch",
-    # work order 200: 69 appends HLPL after 68's COPT, LAST
+    # work order 200: 69 appends HLPL after 68's COPT
     "doc/ext_help_list.patch",
+    # work order 212: 79 records the battle's sounds beside 56's
+    # Combat_Event and after 52's gate
+    "doc/ext_combat_sound.patch",
+    # work order 212: 71 marks the input poll in Tick and adds its wait test
+    # after 79's tick counter, LAST
+    "doc/ext_combat_waits.patch",
 )
 
 

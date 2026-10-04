@@ -410,6 +410,24 @@ LOCAL_PATCHES = {
         "OrionLayer, open fix 74.",
         "the engine does not report the Energy Absorber's discharge (open fix "
         "74): its damage arrives with no shot to show"),
+    # Applied 4 October 2026 by work order 212: 2b773c31, on e75477c5.
+    "doc/ext_combat_sound.patch": (
+        os.path.join("src", "game", "ericnet.cpp"),
+        "OrionLayer, open fix 79.",
+        "the engine plays the battle's sounds itself (open fix 79): they come "
+        "before HD's picture, and HD has none to play"),
+    # Applied 4 October 2026 by work order 212: 89494e72, on 2b773c31.
+    "doc/ext_combat_waits.patch": (
+        os.path.join("src", "game", "timer.cpp"),
+        "OrionLayer, open fix 71.",
+        "the hidden engine waits out every battle animation (open fix 71): "
+        "each animated action reaches HD seconds late"),
+    # Applied 4 October 2026 by work order 212: 003af991, on 89494e72.
+    "doc/ext_combat_fighter_beam.patch": (
+        os.path.join("src", "game", "cmbtmis.cpp"),
+        "OrionLayer, open fix 77.",
+        "the engine does not report a fighter pass's beams (open fix 77): "
+        "HD shows the pass's number only"),
 }
 
 #: Patches that are REPORTED to Joes and not yet applied: listed with
@@ -489,6 +507,9 @@ FIX_NUMBERS = {
     "doc/ext_help_list.patch": (69,),
     "doc/ext_language.patch": (70,),
     "doc/ext_combat_absorber.patch": (74,),
+    "doc/ext_combat_sound.patch": (79,),
+    "doc/ext_combat_waits.patch": (71,),
+    "doc/ext_combat_fighter_beam.patch": (77,),
 }
 
 
