@@ -168,8 +168,14 @@ def running_engines():
 
 def port_free(port=PORT):
     """True if nothing listens on `port` — by BINDING it, never by
-    connecting (a connection would be a client in somebody's game)."""
+    connecting (a connection would be a client in somebody's game). With
+    SO_REUSEADDR, as the engine binds it (ext_server.cpp:49): a closed
+    session's connection lingers in TIME-WAIT for about a minute, which
+    the engine starts over, and a plain bind refused — play.py said "the
+    game did not start" to a player starting again after closing (work
+    order 214). A listening engine still refuses the bind."""
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
     try:
         s.bind(("127.0.0.1", port))
         return True

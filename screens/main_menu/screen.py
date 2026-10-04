@@ -192,9 +192,31 @@ class MainMenuScreen(ScreenBase):
                 f = self.button_field(box.name,
                                       getattr(state, "fields", None))
                 if f is not None and self.app.connected:
+                    if box.name == "quit":
+                        self._quitting()
                     self.app.client.activate_field(f.index)
                 return box
         return super().handle_click(screen_x, screen_y)
+
+    def handle_key(self, key):
+        """Q is QUIT here too (`last_input_scan == 0x51`, mainmenu.cpp:521),
+        while the menu's own list is up."""
+        if key in (ord("q"), ord("Q")) and self.app.connected and \
+                not self.help_consumes_key(key) and self.button_field(
+                    "quit", getattr(getattr(self.app.client, "state", None),
+                                    "fields", None)) is not None:
+            self._quitting()
+            self.app.client.inject_key(key)
+            return
+        super().handle_key(key)
+
+    def _quitting(self):
+        """QUIT ends the game at once, no question (mainmenu.cpp:521-523,
+        SCREEN_EXIT): the client is told first, so the engine's going is
+        the game's end and OrionLayer closes with it — as the GAME menu's
+        QUIT does. Without it the silence read as a dead link: OrionLayer
+        stayed open, reconnecting (work order 214, Data's report)."""
+        self.app.client.expect_shutdown()
 
     def wants_original(self):
         return bool(getattr(self, "_net_on", False))
