@@ -540,6 +540,46 @@
         386,
         388
       ]
+    },
+    {
+      "help_id": "orionlayer.floor",
+      "node": "settings",
+      "orionlayer_band": "floor"
+    },
+    {
+      "help_id": "orionlayer.colours",
+      "node": "settings",
+      "orionlayer_band": "colours"
+    },
+    {
+      "help_id": "orionlayer.monsters",
+      "node": "settings",
+      "orionlayer_band": "monsters"
+    },
+    {
+      "help_id": "orionlayer.frame",
+      "node": "settings",
+      "orionlayer_band": "frame"
+    },
+    {
+      "help_id": "orionlayer.tone",
+      "node": "settings",
+      "orionlayer_band": "tone"
+    },
+    {
+      "help_id": "orionlayer.glass",
+      "node": "settings",
+      "orionlayer_band": "glass"
+    },
+    {
+      "help_id": "orionlayer.mods",
+      "node": "settings",
+      "orionlayer_band": "mods"
+    },
+    {
+      "help_id": "orionlayer.language",
+      "node": "settings",
+      "orionlayer_band": "language"
     }
   ],
   "hd_own_help": "HD EXTENSION (work order 212): a region whose help_id is a name, not a number, shows OrionLayer's own text from layout.json `own_help` (in the session's language) \u2014 the OrionLayer rows have no entry in the game's HELP.LBX."

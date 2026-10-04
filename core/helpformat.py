@@ -75,11 +75,15 @@ class Run:
     it there with an X function or a tab.
     """
 
-    __slots__ = ("text", "x", "align")
+    __slots__ = ("text", "x", "align", "end_x")
 
     def __init__(self, text, x=None, align=None):
         self.text = text
         self.x = x
+        # a right- or centre-justified run ends at the column the X function
+        # after it names (the boarding result's numbers end at 80 and 255,
+        # their words start at 82 and 257, cmbtfir2.cpp:1660-1666)
+        self.end_x = None
         #: The justification a `\x1A` + digit code set before this run
         #: (`Set_Justification_`, fmtpara.cpp:998-1018: 0 left, 1 right,
         #: 2 centre, 3 full), or None where none was set.
@@ -137,17 +141,25 @@ def parse(body, items=None):
             pending_x = None
 
     def end_line(paragraph=False):
-        nonlocal runs
+        nonlocal runs, pending_x
         flush_text()
         lines.append(Line(runs, paragraph))
         runs = []
+        # a new line starts at the left margin: a column named at the end
+        # of the line before is not this line's (the boarding result's
+        # "\aX255.\x1a0\n", cmbtfir2.cpp:1660)
+        pending_x = None
 
     while i < n:
         ch = body[i]
 
         if ch == "\a":
+            before = len(runs)
             flush_text()
             i, x, new_tabs = _read_functions(body, i + 1)
+            if x is not None and len(runs) > before and \
+                    runs[-1].align in ("right", "center"):
+                runs[-1].end_x = x
             if x is not None:
                 pending_x = x
             tabs.extend(new_tabs)

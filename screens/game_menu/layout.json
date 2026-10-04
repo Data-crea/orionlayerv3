@@ -375,6 +375,38 @@
     "orionlayer.frame_rate": {
       "title": "FRAME RATE",
       "body": "How often OrionLayer draws a new picture: 30, 60 or 120 times a second, as often as your monitor shows one (the default), or as often as the computer can. The battle's animations and sounds last the same at every setting; a higher rate only makes motion smoother, a lower one spares the computer. Applied at once."
+    },
+    "orionlayer.floor": {
+      "title": "MAP FLOOR",
+      "body": "Lifts the black floor of the galaxy map a little, for screens on which pure black looks switched off: Off draws the map as the original does, Light and Haze lift it by two steps measured from the floor picture itself. Only the map changes. Applied at once."
+    },
+    "orionlayer.colours": {
+      "title": "PLAYER COLOURS",
+      "body": "The eight colours OrionLayer draws the empires in \u2014 their stars' names, ships, banners and lists: Original keeps the game's own, Okabe-Ito uses eight colours that stay apart for most kinds of colour blindness. The swatches show the set. Applied at the next start."
+    },
+    "orionlayer.monsters": {
+      "title": "MONSTER VALUES",
+      "body": "On: the Planets screen shows a guarding monster's values in its picture window \u2014 its stage, size, structure, armour, shields, weapons and specials, as the game holds them. Off: only its type, as the original shows it. Applied at once."
+    },
+    "orionlayer.frame": {
+      "title": "FRAME COLOUR",
+      "body": "The colour of OrionLayer's frames and panels: click the bar to choose a hue. RESET returns to the measured blue of the original and resets the frame tone too. Applied at once."
+    },
+    "orionlayer.tone": {
+      "title": "FRAME TONE",
+      "body": "How strong and how bright the frame colour is: the left bar runs from grey to the full colour, the right one from black to silver. RESET on the frame colour row returns both. Applied at once."
+    },
+    "orionlayer.glass": {
+      "title": "PANEL GLASS",
+      "body": "How much of the background shows through OrionLayer's panels: further left the glass is clearer, at the right end the panels are solid. A panel over a bright background stays dense enough for its words to be read. Applied at once."
+    },
+    "orionlayer.mods": {
+      "title": "MOD FOLDER",
+      "body": "On: OrionLayer looks for pictures and texts in your own mod folder first (MODDING.md says where it is and how files are named); switching it on extracts the game's pictures there once, which can take a while. Off: only OrionLayer's own files. Applied at the next start."
+    },
+    "orionlayer.language": {
+      "title": "LANGUAGE",
+      "body": "The language of OrionLayer's own words and of the game's texts: English or German. For German the game's German files are looked for when you choose it. Applied at the next start."
     }
   },
   "orionlayer_rows": {

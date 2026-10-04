@@ -26,10 +26,14 @@ colour, HD's font) instead of TEXTBOX.LBX / WARNING.LBX / CONFIRM.LBX art,
 the warning box's animation not played, and — because the original's
 message and text boxes are answered by a click ANYWHERE (one full-screen
 hidden field) — HD draws the text box's CLOSE button on every box that is
-not a confirmation (the warning box has none in the original), lays a
-row's \\aX column moves out as left, centre and right runs rather than at
-the original's pixel columns (the boarding result's two sides), and takes
-a click anywhere and Enter / ESC / Space. The words on the buttons are artwork in the original
+not a confirmation (the warning box has none in the original), and takes
+a click anywhere and Enter / ESC / Space.
+
+TRANSCRIPTION `box_columns` (work order 213): a row whose runs sit at \\aX
+columns is laid out at those columns, as shares of the paragraph width the
+box formats at (339 px, textbox.cpp:200-208) — a left run from its column, a
+right- or centre-justified one up to the column the next X names: the
+boarding result's two sides side by side (cmbtfir2.cpp:1650-1666). The words on the buttons are artwork in the original
 and typed in `assets/shared/msgbox/labels.json` (decision 15).
 """
 import struct as _st
@@ -123,6 +127,28 @@ def lines_of(text):
     """The text's lines as FMTPARA lays them out: [(plain, paragraph)]."""
     return [(ln.plain(), ln.paragraph_break)
             for ln in helpformat.parse(text or "")]
+
+
+#: The paragraph width `Do_Text_Box_` formats at (textbox.cpp:200-208).
+TEXT_W = 339
+
+
+def column_runs(line):
+    """`[(text, align, x0, x1)]` in the original's px for a line with a
+    column (an X function), else None: where each run sits — a left run from
+    its column, a right or centred one within its column and the next."""
+    runs = [r for r in line.runs if r.text.strip()]
+    if not any(r.x is not None or r.end_x is not None for r in runs):
+        return None
+    out, at = [], 0
+    for k, r in enumerate(runs):
+        x0 = r.x if r.x is not None else at
+        x1 = r.end_x if r.end_x is not None else (
+            runs[k + 1].x if k + 1 < len(runs) and runs[k + 1].x is not None
+            else TEXT_W)
+        out.append((r.text.strip(), r.align or "left", x0, x1))
+        at = x1
+    return out
 
 
 def split_right(line):
@@ -224,8 +250,12 @@ def draw(surface, style, labels, box):
             if not plain.strip():
                 rows.append(None)
                 continue
+            cols = column_runs(ln)
             pair = split_right(ln)
-            if pair is not None:
+            if cols is not None:
+                rows.append([(style.render_text(t, size, colour[:3]), a, x0,
+                              x1) for t, a, x0, x1 in cols])
+            elif pair is not None:
                 # a table row: the label left and the value right, in a column
                 # of the box's text width (FMTPARA's justification codes)
                 rows.append((style.render_text(pair[0], size, colour[:3]),
@@ -259,7 +289,15 @@ def draw(surface, style, labels, box):
             continue
         if y + step > panel.bottom - pad - bh:
             break                   # the original clips at its window too
-        if isinstance(r, tuple):
+        if isinstance(r, list):
+            left = panel.x + pad
+            for img, a, x0, x1 in r:
+                p0, p1 = (left + inner * v // TEXT_W for v in (x0, x1))
+                at = {"right": "topright", "center": "midtop"}.get(a,
+                                                                  "topleft")
+                px = {"right": p1, "center": (p0 + p1) // 2}.get(a, p0)
+                surface.blit(img, img.get_rect(**{at: (px, y)}))
+        elif isinstance(r, tuple):
             surface.blit(r[0], (col.x, y))
             surface.blit(r[1], r[1].get_rect(topright=(col.right, y)))
         else:
