@@ -275,7 +275,21 @@ class CombatArt:
         and the stored drawing is drawn (decision 50's rule: a loader checks
         a file's size and refuses a wrong one). Without the extracted
         drawing there is no size to check against: used as painted."""
-        path = self._path(f"{lbx_name}/{int(entry)}_{int(frame)}.png")
+        return self.painted_file(lbx_name, f"{int(entry)}_{int(frame)}.png",
+                                 entry)
+
+    def painted_file(self, lbx_name, name, size_entry):
+        """The painted PNG `<lbx>/<name>`, sized against the stored drawing
+        `size_entry` (decision 81, as `_painted`), or None. Asked once per
+        name: a wrong size logs its one line once, and the battle's per-frame
+        lookups (`cbpaint`) do not reload the file (work order 217)."""
+        key = ("painted", lbx_name, name)
+        if key not in self._cache:
+            self._cache[key] = self._load_painted(lbx_name, name, size_entry)
+        return self._cache[key]
+
+    def _load_painted(self, lbx_name, name, entry):
+        path = self._path(f"{lbx_name}/{name}")
         if not path or not os.path.isfile(path):
             return None
         try:
@@ -340,9 +354,14 @@ class CombatArt:
         return display_format(_rgba(pixels.tobytes(), w, h, palette))
 
     def ship_indices(self, colour, picture, facing, glow=0, monster=False):
-        """`ship`'s frame as indices (`indexed`)."""
+        """`ship`'s frame as indices (`indexed`); None for a painted
+        picture, the colour-free one too (`cbpaint`)."""
         stored, mirror, flip = stored_facing(facing)
         frame = 4 * stored + max(0, min(3, int(glow)))
+        if not (monster or picture == 44):
+            from . import cbpaint
+            if cbpaint.ship(self, colour, picture, facing, glow) is not None:
+                return None
         if monster or picture == 44:
             return self.indexed("monster", 25 if picture == 44 else picture,
                                 frame, None, mirror, flip)
@@ -350,12 +369,19 @@ class CombatArt:
                             self.ramp(colour), mirror, flip)
 
     def ship(self, colour, picture, facing, glow=0, monster=False):
-        """A battle unit's picture for its facing and glow frame 0..3."""
+        """A battle unit's picture for its facing and glow frame 0..3: the
+        colour's own painted file, else the colour-free painted picture in
+        the owner's colour (`cbpaint`, HD EXTENSION `plating_colour`), else
+        the stored drawing."""
         stored, mirror, flip = stored_facing(facing)
         frame = 4 * stored + max(0, min(3, int(glow)))
         if monster or picture == 44:
             return self.surface("monster", 25 if picture == 44 else picture,
                                 frame, None, mirror, flip)
+        from . import cbpaint
+        free = cbpaint.ship(self, colour, picture, facing, glow)
+        if free is not None:
+            return free
         return self.surface("cmbtshp", int(colour) * 45 + int(picture), frame,
                             self.ramp(colour), mirror, flip)
 

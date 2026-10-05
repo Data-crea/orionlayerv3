@@ -80,11 +80,37 @@ says so) and the game's drawing is used. A ship's frames are
 `<entry>_0.png` to `<entry>_19.png`: the five stored facings (0 points
 right, each next one 22.5 degrees counter-clockwise, 4 points up), four
 engine-glow frames each. Its entry is `colour * 45 + picture`, so a
-picture replaces one player colour's ship — there is no tint. The game
+picture replaces one player colour's ship, drawn as painted. The game
 itself draws each colour's ships as their own pictures (the red Doom Star
-is a different drawing from the yellow one), so a ship for every owner is
-eight paintings, or one painting saved under all eight names — then every
-owner's ship looks the same.
+is a different drawing from the yellow one).
+
+**One picture for every player (work order 217).** Save a ship as
+`files/screens/combat/assets/gamedata/cmbtshp/all_<picture>_<frame>.png`
+— `all_43_0.png` is the Doom Star — and it is drawn for every owner who
+has no file of their own, in that owner's colour:
+
+- **Paint the hull in neutral grey.** Grey is what takes the player's
+  colour: any shade, dark to light, its light and shade kept. "Neutral"
+  means the red, green and blue of a pixel lie within about 13 of each
+  other (on 0-255); a grey that leans a little blue still counts.
+- **Paint in colour what should stay.** Engines, lights, copper trim,
+  windows: anything clearly coloured (red, green and blue more than about
+  25 apart) is drawn exactly as you painted it, for every player. White
+  highlights stay white.
+- **One file is enough:** `all_<picture>_0.png`, facing right, at twice
+  the stored drawing's size or more (a Doom Star at 118 x 120 or
+  236 x 240). The game turns it into the other facings and uses it for the
+  engine-glow frames.
+- **Every further file you paint is used:** `all_<picture>_4.png`,
+  `_8.png`, `_12.png`, `_16.png` are your own drawings of the facings
+  22.5, 45, 67.5 and 90 degrees round (counter-clockwise; 16 points up) —
+  the game turns only what you leave out; `_1` to `_3` (and `_5` to `_7`
+  and so on) add the engine glow.
+- **Keep the ship inside the circle** the picture's square holds if you
+  give only one facing: a turned picture stays on its canvas, and what
+  sticks out past the circle is cut at the diagonals.
+- A file under one colour's own name (`178_0.png`, silver's Doom Star)
+  still wins for that colour, drawn exactly as painted.
 
 ### The other extracted pictures (work order 199)
 
