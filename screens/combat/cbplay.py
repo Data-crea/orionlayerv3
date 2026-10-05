@@ -48,7 +48,7 @@ import copy
 import random
 import time
 
-from . import (cbbeam, cbblast, cbcloak, cbdraw, cbflare, cbflight,
+from . import (cbart, cbbeam, cbblast, cbcloak, cbdraw, cbflare, cbflight,
                cbqueue, cbreflect, cbsfx, cbshot, cbsound)
 
 CELL = cbdraw.CELL
@@ -313,7 +313,7 @@ class Player:
             if k == "bomb" and self.planet is not None:
                 # the planet picture's size, for the Transporters' start
                 # point (cmbtdrw1.cpp:3026-3027)
-                w, h = self.planet[0].get_size()
+                w, h = cbart.native_size(self.planet[0])
                 ev["_planet_half"] = (w // 2, h // 2)
             if k == "special" and w == cbsfx.GYRO:
                 self._take_spin(ev)

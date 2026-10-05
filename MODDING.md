@@ -80,7 +80,11 @@ says so) and the game's drawing is used. A ship's frames are
 `<entry>_0.png` to `<entry>_19.png`: the five stored facings (0 points
 right, each next one 22.5 degrees counter-clockwise, 4 points up), four
 engine-glow frames each. Its entry is `colour * 45 + picture`, so a
-picture replaces one player colour's ship — there is no tint.
+picture replaces one player colour's ship — there is no tint. The game
+itself draws each colour's ships as their own pictures (the red Doom Star
+is a different drawing from the yellow one), so a ship for every owner is
+eight paintings, or one painting saved under all eight names — then every
+owner's ship looks the same.
 
 ### The other extracted pictures (work order 199)
 

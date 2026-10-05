@@ -67,6 +67,15 @@ def native_size(surf):
     w, h = surf.get_size()
     return w // k, h // k
 
+
+def painted_as(surf, k):
+    """`surf`, a picture made from a painted one at k times its drawing
+    (stretched, turned), marked so that `cbdraw.scaled` shrinks it by k:
+    a new surface has lost the mark (work order 215)."""
+    if k > 1 and surf is not None:
+        _FACTOR[surf] = k
+    return surf
+
 REL = "screens/combat/assets/gamedata"
 FORMAT_VERSION = 1
 HOW = "python tools/combat_art_extract.py"

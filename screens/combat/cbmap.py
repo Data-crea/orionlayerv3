@@ -46,6 +46,8 @@ import pygame
 
 from core import lbx
 
+from . import cbart
+
 #: The map's native window: `Add_Grid_Field_(500, 364, 1, 1, 121, 102, …)`.
 NATIVE_W, NATIVE_H = 121, 102
 #: Palette indices (the battle palette, FONTS.LBX 4).
@@ -80,10 +82,14 @@ def background(art, size):
         panel = art.surface("combat", 0, 0)
         if panel is None:
             return None
-        cut = panel.subsurface(pygame.Rect(500, 364 - PANEL_Y, NATIVE_W,
-                                           NATIVE_H)).copy()
+        # a painted panel at k times the drawing (HD EXTENSION
+        # `hd_painted`) is cut at k times the place (work order 215)
+        k = cbart.hd_factor(panel)
+        cut = panel.subsurface(pygame.Rect(500 * k, (364 - PANEL_Y) * k,
+                                           NATIVE_W * k, NATIVE_H * k)).copy()
         _BACKGROUNDS.clear()
-        _BACKGROUNDS[key] = pygame.transform.scale(cut, size)
+        _BACKGROUNDS[key] = (pygame.transform.smoothscale if k > 1 else
+                             pygame.transform.scale)(cut, size)
     return _BACKGROUNDS[key]
 
 
@@ -159,6 +165,16 @@ def view_box(rect, cam):
 _PLANETS = {}
 
 
+def icon_at(pic, k):
+    """The overview planet at `k` map pixels a drawing's pixel: a painted
+    picture at its drawing's size too (HD EXTENSION `hd_painted`, work
+    order 215), shrunk smoothly."""
+    pw, ph = cbart.native_size(pic)
+    return (pygame.transform.smoothscale if cbart.hd_factor(pic) > 1 else
+            pygame.transform.scale)(pic, (max(1, int(pw * k)),
+                                          max(1, int(ph * k))))
+
+
 def planet_picture(art, combat, colours, size, palette, pulse=0):
     """COMBAT.LBX 0x36 + size + colour * 4 with its 0x50..0x5F taken into
     the defender's ramp at 0x60 (combinit.cpp:1457-1476), darkened by
@@ -212,9 +228,7 @@ def draw(surface, rect, combat, ordnance, cam, art, colours, planet,
             _blip(surface, rect, k, nx, ny, DEFENDER + (pulse if cur == 0
                                                         else 0), 4, palette)
         else:
-            img = pygame.transform.scale(planet_pic, (
-                max(1, int(planet_pic.get_width() * k)),
-                max(1, int(planet_pic.get_height() * k))))
+            img = icon_at(planet_pic, k)
             surface.blit(img, (rect.x + int((nx + size - 7) * k),
                                rect.y + int((ny + size - 7) * k)))
     for i, u in enumerate(units):

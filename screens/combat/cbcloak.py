@@ -55,6 +55,8 @@ import pygame
 
 from core import lbx
 
+from . import cbdraw
+
 PLASMA_ENTRY = 0x31
 OUTLINE_INDEX = 5
 #: `Draw_Cloak_`'s length by type, in steps (cmbtspec.cpp:74-89).
@@ -217,10 +219,10 @@ def vanished(art, colours, u, intensity, start=0):
     if key in cache:
         return cache[key]
     idx = art.ship_indices(colour, u["picture_num"], u["facing_dir"], 0,
-                           monster=u["previous_owner"] > 9)
+                           monster=cbdraw.from_monster_file(u))
     if idx is None:
         surf = art.ship(colour, u["picture_num"], u["facing_dir"], 0,
-                        monster=u["previous_owner"] > 9)
+                        monster=cbdraw.from_monster_file(u))
         if surf is not None:
             surf = surf.copy()
             surf.set_alpha(int(255 * (100 - min(100, intensity)) / 100))
@@ -259,10 +261,10 @@ def picture(art, colours, u, glow, how, progress=0, mode=3):
     if key in cache:
         return cache[key]
     idx = art.ship_indices(colour, u["picture_num"], u["facing_dir"], glow,
-                           monster=u["previous_owner"] > 9)
+                           monster=cbdraw.from_monster_file(u))
     if idx is None:                     # a painted picture: no indices
         surf = art.ship(colour, u["picture_num"], u["facing_dir"], glow,
-                        monster=u["previous_owner"] > 9)
+                        monster=cbdraw.from_monster_file(u))
         if surf is not None and how == "cloak":
             surf = surf.copy()
             surf.set_alpha(64)

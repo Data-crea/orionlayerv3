@@ -241,8 +241,7 @@ def draw_units(surface, cam, art, combat, colours, glow_clock, cache,
                              cam.to_window(u["x"] * CELL + ox,
                                            u["y"] * CELL + oy))
             continue
-        # the glow cycle {1,2,3,2}, phased by the unit (cmbtdrw1.cpp:2499-2508)
-        glow = (1, 2, 3, 2)[((glow_clock // 2) + i) % 4]
+        glow = glow_frame(u, i, glow_clock)
         flag = int(u.get("special_status_flag", 0))
         fade = fades.step(i, now, fast) if fades is not None else None
         ox, oy = sprite_origin(u)
@@ -391,12 +390,34 @@ def draw_absorber(surface, cam, art, u, i, clock, cache):
     surface.blit(img, (x - img.get_width() // 2, y - img.get_height() // 2))
 
 
+#: TRANSCRIPTION `monster_file` (work order 215): a unit built by no player
+#: — the Antarans (8) as much as a monster (10..) — is drawn from
+#: MONSTER.LBX, `previous_owner < MAX_PLAYERS` picks CMBTSHP
+#: (cmbtdrw1.cpp:2535-2545); `previous_owner > 9` is only the glow's test.
+MAX_PLAYERS = 8
+
+
+def from_monster_file(u):
+    """Whether `u`'s picture is MONSTER.LBX's (`monster_file`)."""
+    return int(u["previous_owner"]) >= MAX_PLAYERS
+
+
+def glow_frame(u, i, glow_clock):
+    """The unit's glow frame: a player's or an Antaran's the cycle
+    {1,2,3,2} phased by the unit, a monster's (`previous_owner > 9`) its
+    four frames in turn, frame 0 included (cmbtdrw1.cpp:2499-2508;
+    TRANSCRIPTION `monster_glow`, work order 215)."""
+    if int(u["previous_owner"]) <= 9:
+        return (1, 2, 3, 2)[((glow_clock // 2) + i) % 4]
+    return (glow_clock // 2) % 4
+
+
 def unit_picture(art, colours, u, glow=0):
     """A unit's picture: its builder's colour (`previous_owner`), a
-    monster's own (cmbtdrw1.cpp:2533-2548), at glow frame `glow`."""
+    monster's or an Antaran's own (`monster_file`), at glow frame `glow`."""
     owner = u["previous_owner"] if u["previous_owner"] <= 7 else u["owner"]
     return art.ship(colours.get(owner, 0), u["picture_num"], u["facing_dir"],
-                    glow, monster=u["previous_owner"] > 9)
+                    glow, monster=from_monster_file(u))
 
 
 def draw_cursor(surface, cam, art, unit, glow_clock, cache):

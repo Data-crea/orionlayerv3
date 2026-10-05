@@ -34,7 +34,7 @@ import math
 
 import pygame
 
-from . import cbdraw
+from . import cbart, cbdraw
 from .cbbeamfx import get_angle
 
 STASIS, ANTI_MISSILE, GYRO, WEB, PULSAR, BLACK_HOLE, CONVERTER, TRACTOR = \
@@ -116,10 +116,14 @@ def texture_line(surface, cam, cache, pic, a, b):
     key = ("tline", id(pic), length, get_angle(b[0] - a[0], b[1] - a[1]),
            round(cam.scale, 3))
     if key not in cache:
-        img = pygame.transform.scale(pic, (length, pic.get_height()))
+        # a painted picture at k times its drawing (HD EXTENSION
+        # `hd_painted`) is stretched to k times the length and keeps its
+        # mark, so the line is the drawing's thickness (work order 215)
+        k = cbart.hd_factor(pic)
+        img = pygame.transform.scale(pic, (length * k, pic.get_height()))
         img = pygame.transform.rotate(
             img, -get_angle(b[0] - a[0], b[1] - a[1]))
-        cache[key] = cbdraw.scaled(img, cam.scale, {})
+        cache[key] = cbdraw.scaled(cbart.painted_as(img, k), cam.scale, {})
     img = cache[key]
     x, y = cam.to_window((a[0] + b[0]) / 2, (a[1] + b[1]) / 2)
     surface.blit(img, (x - img.get_width() // 2, y - img.get_height() // 2))
@@ -300,7 +304,8 @@ def plan(ev, unit, art, previous=None):
             # that follows (`cbdraw.lasting_overlay`, work order 210 C2)
             n = _frames(art, 47)
             pic0 = art.surface("cmbtsfx", 47, 0)
-            b2 = (b[0], b[1] - (pic0.get_height() // 2 if pic0 else 0))
+            b2 = (b[0], b[1] - (cbart.native_size(pic0)[1] // 2
+                                if pic0 else 0))
 
             def draw(surface, cam, cache, frame):
                 texture_line(surface, cam, cache,
