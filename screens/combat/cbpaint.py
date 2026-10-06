@@ -29,6 +29,18 @@ THE COLOUR is the owner's colour as HD shows it everywhere
 the W3C compositing "color" blend: its hue and saturation at the pixel's own
 lightness. Computed once per picture and colour, then cached.
 
+HOW MUCH OF IT (Data's decision 6 of work order 219, amending how decision 82
+is applied, not what it selects): at full strength 40 painted ships of
+80-90 % grey plating turned one flat green — plates, panel lines and the
+copper drowned in the hue. The selected grey now takes `STRENGTH` (70 %) of
+the coloured value and keeps 30 % as painted, and the colour fades out at
+both ends of the plating's lightness: above `HIGHLIGHT` the lit edges and
+glints stay metal-grey, below `SHADOW` the panel lines and recesses stay dark
+and neutral, so the mid-tones carry the owner's colour. The ranges are
+placed on the painted fleet's plating (2.16 M selected pixels, 40 ships at
+8 x; `dev:tools/combat_plating.py --light`): lightness median 0.33, 10 %
+below 0.08, 10 % above 0.64.
+
 MISSING FRAMES, colour-free pictures only (a colour's own files are drawn as
 before): a missing glow frame (1-3) is its facing's frame 0; a missing
 STORED facing (the original draws five, 0-4, and mirrors and flips them
@@ -54,6 +66,14 @@ ALL = "all"
 GREY, COLOURED = 0.05, 0.10
 #: Lightness above which a grey pixel keeps its white (engine cores, glints).
 GLINT = (0.90, 0.98)
+#: Decision 6 of work order 219, the one place its numbers live: the share of
+#: the coloured value a selected pixel takes, and the lightness ranges over
+#: which the colour fades out — from full at HIGHLIGHT[0] to none at
+#: HIGHLIGHT[1] (lit plating stays metal), from none at SHADOW[0] to full at
+#: SHADOW[1] (dark lines stay neutral).
+STRENGTH = 0.70
+HIGHLIGHT = (0.55, 0.80)
+SHADOW = (0.06, 0.16)
 #: The original's owner colours, if the palette is not loaded (a tool).
 _DEFAULT = ((196, 74, 56), (206, 172, 34), (86, 166, 70), (226, 226, 234),
             (126, 174, 216), (196, 130, 88), (162, 104, 136), (238, 132, 12))
@@ -70,12 +90,28 @@ def owner_rgb(colour):
 
 
 def weights(rgb):
-    """How much each pixel takes the colour (0..1), `rgb` 0..1 (w, h, 3)."""
+    """Which pixels are the plating (0..1), `rgb` 0..1 (w, h, 3): decision
+    82's selection, unchanged by decision 6 (`amount`)."""
     mx, mn = rgb.max(-1), rgb.min(-1)
     chroma = mx - mn
     w = np.clip((COLOURED - chroma) / (COLOURED - GREY), 0, 1)
     light = (mx + mn) / 2
     return w * np.clip((GLINT[1] - light) / (GLINT[1] - GLINT[0]), 0, 1)
+
+
+def tone(rgb):
+    """How much of the colour a plating pixel's lightness lets through
+    (0..1): none in the deep shadows and on the bright highlights."""
+    light = (rgb.max(-1) + rgb.min(-1)) / 2
+    hi = np.clip((HIGHLIGHT[1] - light) / (HIGHLIGHT[1] - HIGHLIGHT[0]), 0, 1)
+    lo = np.clip((light - SHADOW[0]) / (SHADOW[1] - SHADOW[0]), 0, 1)
+    return hi * lo
+
+
+def amount(rgb):
+    """How much each pixel moves towards its coloured value (0..1): the
+    selection (`weights`) times `STRENGTH` times its `tone`."""
+    return weights(rgb) * STRENGTH * tone(rgb)
 
 
 def _lum(c):
@@ -99,7 +135,7 @@ def recoloured(surf, colour_rgb):
     """`surf` with its neutral grey in `colour_rgb`; alpha and every
     coloured pixel as painted; the painted factor kept."""
     rgb = pygame.surfarray.array3d(surf).astype(float) / 255
-    w = weights(rgb)[..., None]
+    w = amount(rgb)[..., None]
     out = rgb * (1 - w) + color_blend(rgb, colour_rgb) * w
     res = surf.copy()
     pygame.surfarray.pixels3d(res)[:] = np.clip(out * 255 + 0.5, 0,

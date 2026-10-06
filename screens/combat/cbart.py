@@ -24,16 +24,25 @@ THE ORIGINAL'S RULES, transcribed (`dev:doc/combat_drawing_reading.md`):
                 right, 9-12 stored f-8 turned half round, 13-15 stored 16-f
                 upside down (cmbtdrw1.cpp:2557-2615, bitmap.cpp:125-150 —
                 `Flip_Bitmap_` mode 0 reverses each row, mode 3 the rows)
-  glass         pixels 0xF0-0xFF blend with what is under them
-                (animate.cpp:279-287): HD draws them at half alpha —
-                DEVIATION `glass_alpha` — unless the drawing names its
-                glass table (`glass`, work order 210): then glass pixel
-                0xF0 + j is the table's colour j at its per cent, j = 0
-                black at 50 (`Update_Glass_Remap_Colors_`, remap.cpp:153-187;
-                the tables of combinit.cpp:854-990: shield and stasis ball,
-                pulsar, warp core, tractor, black hole, plasma web, stellar
-                converter). The original snaps each blend to the palette's
-                nearest colour; HD blends exactly.
+  glass         pixels 0xF0-0xFF blend with what is under them only in a
+                GLASSED drawing — its header's flag `ANIMATION_FLAG_GLASSED`
+                (animate.cpp:122-160, 572-640), or one the battle glasses as
+                it draws (`Set_Picture_Glassed_`: the planet's shield flares,
+                beams.cpp:605, :704; the small tractor, CMBTSFX 2,
+                cmbtspec.cpp:164, :209, :668); in every other drawing they
+                are colours of its palette, opaque — the battle's planets
+                (CMBTPLNT, flags 0; draw.cpp:59-95), a few ship and monster
+                pixels (work order 219: until then HD glassed every drawing,
+                and 6-43 % of a planet let the stars through).
+                TRANSCRIPTION `glassed_only`. In a glassed drawing HD draws
+                them at half alpha — DEVIATION `glass_alpha` — unless the
+                drawing names its glass table (`glass`, work order 210):
+                then glass pixel 0xF0 + j is the table's colour j at its per
+                cent, j = 0 black at 50 (`Update_Glass_Remap_Colors_`,
+                remap.cpp:153-187; the tables of combinit.cpp:854-990: shield
+                and stasis ball, pulsar, warp core, tractor, black hole,
+                plasma web, stellar converter). The original snaps each
+                blend to the palette's nearest colour; HD blends exactly.
 """
 import json
 import logging
@@ -76,11 +85,58 @@ def painted_as(surf, k):
         _FACTOR[surf] = k
     return surf
 
+
+def derived(new, source):
+    """`new`, made from `source` at the same size (a copy brightened,
+    recoloured, given an alpha), with `source`'s painted factor. Every
+    picture made from a battle picture passes through here or
+    `painted_as`: a copy without it is drawn k times too large (work order
+    219: the shield flare drew a painted ship 4 or 8 times its size while
+    it lasted, the cloak too)."""
+    return painted_as(new, hd_factor(source))
+
+#: No cap: a painted picture is held at the factor its file has.
+DETAIL_FULL = 1 << 16
+#: The filter a painted picture is shrunk by when the detail setting holds
+#: it smaller than its file (`held`): Lanczos keeps its edges and fine lines
+#: where an average would soften them; Pillow shrinks RGBA premultiplied, so
+#: no dark fringe comes in from the transparent pixels.
+HOLD_FILTER = "LANCZOS"
+
+
+def held(img, w, h, k):
+    """`img`, a painted picture larger than k times its drawing (w x h),
+    shrunk ONCE to exactly k x that size — at load, before the owner's
+    colour is laid on (HD EXTENSION `painted_detail`, work order 219)."""
+    from PIL import Image
+    size = (w * k, h * k)
+    pil = Image.frombytes("RGBA", img.get_size(),
+                          pygame.image.tobytes(img, "RGBA"))
+    pil = pil.resize(size, getattr(Image.Resampling, HOLD_FILTER))
+    return display_format(pygame.image.frombytes(pil.tobytes(), size,
+                                                 "RGBA").copy())
+
+
 REL = "screens/combat/assets/gamedata"
 FORMAT_VERSION = 1
 HOW = "python tools/combat_art_extract.py"
 GLASS_FIRST = 0xF0
 GLASS_ALPHA = 128
+#: Drawings without the glassed flag that the battle glasses as it draws
+#: them (`Set_Picture_Glassed_`): the planet's shield flares, BEAMS
+#: 113 + size * 5 + rotation for sizes 4-7 (beams.cpp:605, :704, :808-819),
+#: and the small tractor, CMBTSFX 2 (combinit.cpp:909; cmbtspec.cpp:164,
+#: :209, :668). Every other picture of the battle that is glassed carries
+#: the flag (work order 219, every header read).
+GLASSED_AS_DRAWN = frozenset([("beams", e) for e in range(133, 153)]
+                             + [("cmbtsfx", 2)])
+
+
+def glassed(lbx_name, entry, header):
+    """Do the drawing's pixels 0xF0-0xFF blend (TRANSCRIPTION
+    `glassed_only`), or are they colours?"""
+    return bool(header.flags & lbx.FLAG_GLASSED) or \
+        (lbx_name, int(entry)) in GLASSED_AS_DRAWN
 
 
 def stored_facing(facing):
@@ -107,7 +163,24 @@ class CombatArt:
         self._palette = None
         self._blobs = {}
         self._cache = {}
+        #: the largest factor a painted picture is held at (`set_detail`)
+        self.detail = DETAIL_FULL
         self._load()
+
+    def set_detail(self, cap):
+        """Hold painted pictures at `cap` times their drawing at most (HD
+        EXTENSION `painted_detail`, `core/paintdetail`). A change drops
+        every picture made so far, painted or made from one; True if it
+        did. The battle asks once, when its first view is built."""
+        cap = int(cap) if cap else DETAIL_FULL
+        if cap == self.detail:
+            return False
+        self.detail = cap
+        self._cache.clear()
+        cc = getattr(self, "_cloak_cache", None)
+        if cc is not None:
+            cc.clear()
+        return True
 
     def _path(self, name):
         if self.folder is not None:
@@ -253,7 +326,8 @@ class CombatArt:
                 if px is not None:
                     surf = display_format(_rgba(
                         px, h.width, h.height, pal,
-                        self.glass(glass) if glass else None))
+                        self.glass(glass) if glass else None,
+                        glassed(lbx_name, entry, h)))
                     if mirror or flip:
                         surf = pygame.transform.flip(surf, mirror, flip)
             except (lbx.LbxError, ValueError):
@@ -306,6 +380,8 @@ class CombatArt:
         w, hh = img.get_size()
         k = w // h.width if h.width else 0
         if k >= 1 and w == k * h.width and hh == k * h.height:
+            if k > self.detail:
+                img, k = held(img, h.width, h.height, self.detail), self.detail
             if k > 1:
                 _FACTOR[img] = k
             return img
@@ -349,7 +425,8 @@ class CombatArt:
         return np.ascontiguousarray(arr), pal
 
     def from_indices(self, pixels, palette):
-        """An index array (`indexed`) as the RGBA surface `surface` makes."""
+        """An index array (`indexed`) as the RGBA surface `surface` makes —
+        a unit's picture (`cbcloak`): not a glassed drawing."""
         h, w = pixels.shape
         return display_format(_rgba(pixels.tobytes(), w, h, palette))
 
@@ -430,7 +507,9 @@ def display_format(surf):
     return surf.convert_alpha()
 
 
-def _rgba(pixels, w, h, palette, glass=None):
+def _rgba(pixels, w, h, palette, glass=None, is_glassed=False):
+    """Indices to RGBA: a glass pixel blends (`glass`'s table, else half
+    alpha) only in a glassed drawing (`glassed`)."""
     out = bytearray(w * h * 4)
     for i, idx in enumerate(pixels):
         if idx == 0:
@@ -439,6 +518,6 @@ def _rgba(pixels, w, h, palette, glass=None):
             out[4 * i:4 * i + 4] = bytes(glass[idx - GLASS_FIRST])
             continue
         r, g, b = palette.get(idx, (idx, idx, idx))
-        out[4 * i:4 * i + 4] = bytes((r, g, b, GLASS_ALPHA
-                                      if idx >= GLASS_FIRST else 255))
+        out[4 * i:4 * i + 4] = bytes((r, g, b, GLASS_ALPHA if is_glassed
+                                      and idx >= GLASS_FIRST else 255))
     return pygame.image.frombuffer(bytes(out), (w, h), "RGBA").copy()

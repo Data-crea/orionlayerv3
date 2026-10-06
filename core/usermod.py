@@ -100,6 +100,11 @@ TEXTS = "texts/"
 #: (copy one up a level to use it — until then it changes nothing).
 GUIDE = ("MODDING.md", "NAMES.txt")
 ORIGINALS = "originals"
+#: The frame templates `tools/frame_template.py` writes into the folder
+#: (`templates/frames/<screen>.png`): pictures to paint over, never a
+#: replacement — not scanned, so they cost no "not a name" line at every
+#: start (work order 219: 22 of them); a real misnamed file still does.
+TEMPLATES = "templates"
 
 #: What `files/` lists for the template, and every other picture in the
 #: tree with the reason it is not listed: `core.modart` (work order 199 D).
@@ -129,6 +134,16 @@ def user_dir():
 
 def mod_dir():
     return os.path.join(user_dir(), FOLDER)
+
+
+#: F8's pictures (work order 219): in the player's own folder beside the mod
+#: folder and the settings — never the working directory, which put a
+#: screenshot of the game into the program's folder (and once into git).
+SCREENSHOTS = "screenshots"
+
+
+def screenshot_dir():
+    return os.path.join(user_dir(), SCREENSHOTS)
 
 
 def tree_path(name):
@@ -168,7 +183,7 @@ def init(enabled=True, root=None):
             full = os.path.join(dirpath, f)
             name = os.path.relpath(full, root).replace(os.sep, "/")
             if (name in (STYLE, COLOUR, MOD_JSON) or name in GUIDE
-                    or name.startswith(ORIGINALS + "/")):
+                    or name.startswith((ORIGINALS + "/", TEMPLATES + "/"))):
                 continue
             if name.startswith(TEXTS):
                 if not name.endswith(".txt"):

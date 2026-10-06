@@ -14,8 +14,10 @@ since work order 200 C the LANGUAGE switch (HD EXTENSION
 `language_switch`, `core/lang.py`): English or German, applied at the next
 start like the preset; and since work order 212 the FRAME RATE (HD EXTENSION
 `frame_rate`, decision 79, `core/framerate.py`): 30, 60, 120, the monitor's
-rate (the default) or unlimited, applied at once. MOO2 has none of them; the
-game knows nothing about these rows.
+rate (the default) or unlimited, applied at once; and since work order 219
+the PAINTED PICTURES (HD EXTENSION `painted_detail`, `core/paintdetail.py`):
+Auto (the default), Normal (4 x) or High (8 x), from the next battle on. MOO2
+has none of them; the game knows nothing about these rows.
 
 **TWO STATE SOURCES, NEVER MERGED.** The thirteen engine checkboxes
 keep their local copy seeded from `s_settings` (`screen.flags`). These
@@ -38,8 +40,8 @@ nothing when nothing changed.
 """
 import pygame
 
-from core import (framerate, lang, modsetup, palette, playercolors, usermod,
-                  usersettings)
+from core import (framerate, lang, modsetup, paintdetail, palette,
+                  playercolors, usermod, usersettings)
 from core.hud import glass
 from core.hud import style as hudstyle
 from core.hud import tint
@@ -47,12 +49,12 @@ from core.hud import tint
 from . import gmlang
 
 BANDS = ("divider", "heading", "floor", "colours", "monsters", "frame",
-         "tone", "glass", "frame_rate", "mods", "language")
+         "tone", "glass", "frame_rate", "painted", "mods", "language")
 
 #: Each band's share of the box. The divider is a line, so since work
 #: order 170 it takes a third of a row and the frame-colour row fits in
 #: the same box: nothing below it (ACCEPT, the body's edge) moves.
-WEIGHTS = (1 / 3, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1)
+WEIGHTS = (1 / 3, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1)
 
 COL_DIVIDER = palette.require("game_menu", "orionlayer_divider")
 COL_HEADING = palette.require("game_menu", "orionlayer_heading")
@@ -235,6 +237,8 @@ def handle_click(screen, x, y):
         _cycle(settings, "monster_values", MONSTER_STEPS)
     elif geo["frame_rate"].collidepoint(x, y):
         _cycle(settings, "frame_rate", framerate.STEPS)
+    elif geo["painted"].collidepoint(x, y):
+        _cycle(settings, "painted_detail", paintdetail.STEPS)
     elif geo["mods"].collidepoint(x, y):
         _cycle(settings, "user_mod", MOD_STEPS)
         if settings.get("user_mod") == "on":
@@ -345,6 +349,7 @@ def render(screen, surface):
     _render_glass_row(screen, surface, geo, words, size, lx)
     _render_frame_rate_row(screen, surface, geo["frame_rate"], words, size,
                            lx, vx)
+    _render_painted_row(screen, surface, geo["painted"], words, size, lx, vx)
     _render_mod_row(screen, surface, geo["mods"], words, size, lx, vx)
     gmlang.render(screen, surface, geo["language"], words, size, lx, vx,
                   lambda *a, fit=False: _text(
@@ -388,6 +393,21 @@ def _render_frame_rate_row(screen, surface, row, words, size, lx, vx):
     if shown == "monitor":
         hz = getattr(screen.app, "_hz", None) or framerate.monitor_hz()
         word = word.format(hz=hz)
+    _text(screen, surface, word, size, COL_OPTION, row.x + vx, row)
+
+
+def _render_painted_row(screen, surface, row, words, size, lx, vx):
+    """The painted pictures' detail (`core/paintdetail`); Auto says what it
+    picks for this window: a battle's field is the window's width, and its
+    opening view 32 cells of 20 px across it (`cbview.Camera.framing`)."""
+    _text(screen, surface, words.get("painted", "Painted pictures"), size,
+          COL_OPTION, lx, row)
+    value = selected(screen, "painted_detail")
+    shown = value if value in paintdetail.STEPS else paintdetail.DEFAULT
+    word = words.get("painted_steps", {}).get(shown, shown)
+    if shown == "auto":
+        word = word.format(k=paintdetail.cap(shown, surface.get_width()
+                                             / paintdetail.OPENING_PX))
     _text(screen, surface, word, size, COL_OPTION, row.x + vx, row)
 
 

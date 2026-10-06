@@ -635,18 +635,23 @@ class App:
         Reading `pygame.display.get_surface()` sidesteps every one of
         those, because it is the same surface the renderer just filled.
 
-        Under `$ORIONLAYER_SHOTS` when set, else the working directory,
-        named by the clock so a sequence keeps its order.
+        Under `$ORIONLAYER_SHOTS` when set (the live tools), else the
+        player's own folder (`core.usermod.screenshot_dir`: on Linux
+        `~/.config/orionlayer/screenshots/`) — never the working
+        directory, which is the program's folder for a player (work order
+        219). Named by the clock so a sequence keeps its order.
         """
         import datetime
+        from core import usermod
         surface = pygame.display.get_surface()
         if surface is None:
             log.warning("F8: no display surface to save")
             return
-        folder = os.environ.get("ORIONLAYER_SHOTS") or os.getcwd()
+        folder = os.environ.get("ORIONLAYER_SHOTS") or usermod.screenshot_dir()
         name = datetime.datetime.now().strftime("orionlayer_%H%M%S_%f.png")
         path = os.path.join(folder, name)
         try:
+            os.makedirs(folder, exist_ok=True)
             pygame.image.save(surface, path)
         except (pygame.error, OSError) as exc:
             log.warning("F8: could not save %s (%s)", path, exc)

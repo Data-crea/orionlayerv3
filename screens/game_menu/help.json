@@ -461,6 +461,11 @@
       "orionlayer_band": "frame_rate"
     },
     {
+      "help_id": "orionlayer.painted",
+      "node": "settings",
+      "orionlayer_band": "painted"
+    },
+    {
       "help_id": 415,
       "node": "save",
       "around": "body",

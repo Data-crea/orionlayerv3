@@ -186,7 +186,11 @@ screens without live game data.
 
 **Keys:** right click opens the game's context help where the original
 has it; **F12** switches to the original's picture and window and back;
-**F9** cycles the resolution presets; **F11** is fullscreen; **F5** opens
+**F9** cycles the resolution presets; **F11** is fullscreen; **F8** saves
+a screenshot of the window into `screenshots/` in OrionLayer's own folder
+(`~/.config/orionlayer/screenshots/`, on Windows
+`%APPDATA%\OrionLayer\screenshots`, on macOS
+`~/Library/Application Support/OrionLayer/screenshots`); **F5** opens
 the box editor. On the galaxy map the wheel zooms, a right-drag pans, `0`
 hands the view back to the game and HOME flashes rings over your home
 system (an OrionLayer addition, switchable under `home_ping` in

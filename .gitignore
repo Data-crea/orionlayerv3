@@ -169,3 +169,8 @@ screens/info/assets/gamedata/
 # the player's CMBT*.LBX, BEAMS, SPHERSFX, COMBAT, MONSTER and FONTS.LBX
 # (tools/combat_art_extract.py, work order 197) — the same rule.
 screens/combat/assets/gamedata/
+
+# F8 screenshots (main.App._save_screenshot) go to the player's own folder
+# since work order 219; one here came from the working directory and is a
+# picture of the game, never a file of the repository.
+/orionlayer_[0-9]*.png

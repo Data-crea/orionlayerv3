@@ -232,6 +232,8 @@ class CombatScreen(CombatInput, ScreenBase):
         if self._cam is None or tuple(self._cam.area) != area:
             old = self._cam
             self._cam = cbview.Camera(area)
+            if old is None:
+                self._hold_painted()
             if old is None and c is not None:
                 u = c["units"][c["cur_ship"]]
                 self._cam.frame_original(u["x"], u["y"])
@@ -323,6 +325,21 @@ class CombatScreen(CombatInput, ScreenBase):
             at = cbdraw.centre(c["units"][c["cur_ship"]])
         if at is not None and not self._cam.shows(*at):
             self._cam.centre_on(*at)
+
+    def _hold_painted(self):
+        """HD EXTENSION `painted_detail` (work order 219, `core/paintdetail`):
+        the factor painted pictures are held at, from Game Settings and the
+        battle's opening view, asked when a battle's first view is built.
+        A change drops the pictures made so far — here too, since the
+        scaled ones are keyed by the picture's `id` (P828)."""
+        from core import paintdetail
+        us = getattr(self.app, "user_settings", None)
+        choice = us.get("painted_detail") if us is not None else None
+        if self._art.set_detail(paintdetail.cap(choice,
+                                                self._cam.framing())):
+            self._cache.clear()
+            log.info("combat: painted pictures held at %d x at most (%s)",
+                     self._art.detail, choice or paintdetail.DEFAULT)
 
     def _weapon_name(self, wid):
         return self._names.name("weapons", wid) if self._names else None

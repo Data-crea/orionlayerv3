@@ -55,7 +55,7 @@ import pygame
 
 from core import lbx
 
-from . import cbdraw
+from . import cbart, cbdraw
 
 PLASMA_ENTRY = 0x31
 OUTLINE_INDEX = 5
@@ -224,7 +224,7 @@ def vanished(art, colours, u, intensity, start=0):
         surf = art.ship(colour, u["picture_num"], u["facing_dir"], 0,
                         monster=cbdraw.from_monster_file(u))
         if surf is not None:
-            surf = surf.copy()
+            surf = cbart.derived(surf.copy(), surf)
             surf.set_alpha(int(255 * (100 - min(100, intensity)) / 100))
         cache[key] = surf
         return surf
@@ -266,7 +266,7 @@ def picture(art, colours, u, glow, how, progress=0, mode=3):
         surf = art.ship(colour, u["picture_num"], u["facing_dir"], glow,
                         monster=cbdraw.from_monster_file(u))
         if surf is not None and how == "cloak":
-            surf = surf.copy()
+            surf = cbart.derived(surf.copy(), surf)
             surf.set_alpha(64)
         elif how != "cloak":
             surf = None

@@ -203,27 +203,64 @@ def brightened(picture, mask, ox, oy, palette, memo, k=1):
     top-left at (ox, oy) in the drawing's pixels) holds a glass pixel
     0xF0 + j: by 30 + 4 j per cent (`Load_Shield_Hit_`'s sixteen levels). A
     painted picture at k times the drawing (HD EXTENSION `hd_painted`) is
-    lifted k x k pixels for each of the mask's."""
+    lifted k x k pixels for each of the mask's, and the copy keeps its
+    factor (`cbart.derived`; work order 219: without it the ship under the
+    flare was drawn k times too large). Each (colour, level) is lifted and
+    snapped once, through `brighten` — the same arithmetic, so the pixels
+    are those the per-pixel walk gave; the walk took 54-164 ms for an 8 x
+    picture (work order 219)."""
+    import numpy as np
+    from . import cbart
     w, h, rows = mask
     out = picture.copy()
     pw, ph = out.get_size()
-    for y in range(h):
-        for x, idx in enumerate(rows[y]):
-            if idx < GLASS:
-                continue
-            pct = (idx - GLASS) * 4 + 30
-            for py in range((y + oy) * k, (y + oy + 1) * k):
-                if not 0 <= py < ph:
-                    continue
-                for px in range((x + ox) * k, (x + ox + 1) * k):
-                    if not 0 <= px < pw:
-                        continue
-                    c = out.get_at((px, py))
-                    if c[3] == 0:
-                        continue
-                    r, g, b = brighten(c[:3], pct, palette, memo)
-                    out.set_at((px, py), (r, g, b, c[3]))
-    return out
+    m = np.array(rows, dtype=np.int32)
+    lvl = np.where(m >= GLASS, (m - GLASS) * 4 + 30, 0)
+    if k > 1:
+        lvl = np.repeat(np.repeat(lvl, k, 0), k, 1)
+    big = np.zeros((ph, pw), dtype=np.int32)
+    y0, x0 = oy * k, ox * k
+    sy0, sx0 = max(0, y0), max(0, x0)
+    sy1, sx1 = min(ph, y0 + lvl.shape[0]), min(pw, x0 + lvl.shape[1])
+    if sy1 > sy0 and sx1 > sx0:
+        big[sy0:sy1, sx0:sx1] = lvl[sy0 - y0:sy1 - y0, sx0 - x0:sx1 - x0]
+    rgb = pygame.surfarray.pixels3d(out)
+    alpha = pygame.surfarray.pixels_alpha(out)
+    try:
+        hit = (big.T > 0) & (alpha > 0)
+        if hit.any():
+            c = rgb[hit].astype(np.int64)
+            pct = big.T[hit].astype(np.int64)
+            key = (c[:, 0] << 24) | (c[:, 1] << 16) | (c[:, 2] << 8) | pct
+            uniq, inv = np.unique(key, return_inverse=True)
+            rgb[hit] = _brighten_many(uniq, palette, memo)[inv.ravel()]
+    finally:
+        del rgb, alpha
+    return cbart.derived(out, picture)
+
+
+def _brighten_many(keys, palette, memo):
+    """`brighten` for many (colour << 8 | level) keys at once: the lift by
+    `colorsys`, as `brighten`; the nearest colour by one array search,
+    first of equals as `_nearest`'s `min` takes it."""
+    import numpy as np
+    lifted = []
+    for u in keys.tolist():
+        h, l, s = colorsys.rgb_to_hls(((u >> 24) & 255) / 255,
+                                      ((u >> 16) & 255) / 255,
+                                      ((u >> 8) & 255) / 255)
+        l = min(1.0, l + l * (u & 255) / 100)
+        r, g, b = colorsys.hls_to_rgb(h, l, s)
+        lifted.append((round(r * 255), round(g * 255), round(b * 255)))
+    todo = list(dict.fromkeys(c for c in lifted if c not in memo))
+    if todo:
+        pal = np.array(list(palette.values()), dtype=np.int64)
+        t = np.array(todo, dtype=np.int64)
+        for i in range(0, len(t), 4096):
+            d = ((t[i:i + 4096, None, :] - pal[None, :, :]) ** 2).sum(2)
+            for c, best in zip(todo[i:i + 4096], d.argmin(1).tolist()):
+                memo[c] = tuple(int(v) for v in pal[best])
+    return np.array([memo[c] for c in lifted], dtype=np.uint8)
 
 
 #: the shield glass: (r, g, b, per cent) per glass index (combinit.cpp:856-859)

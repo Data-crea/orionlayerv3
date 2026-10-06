@@ -86,7 +86,7 @@ def main(argv):
     ap.add_argument("--to", default=None)
     a = ap.parse_args(argv)
     out = os.path.abspath(a.to or os.path.join(usermod.mod_dir(),
-                                               "templates", "frames"))
+                                               usermod.TEMPLATES, "frames"))
     if os.path.commonpath([out, ROOT]) == ROOT:
         sys.exit(f"refused: {out} is inside the tree — templates go to the "
                  f"player's mod folder or elsewhere")

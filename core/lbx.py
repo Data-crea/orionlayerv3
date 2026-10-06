@@ -39,6 +39,9 @@ LBX_OFFSET_COUNT = 510
 
 #: `orion2_consts.h` — the flag bits of `s_animation_header`.
 FLAG_DRAW_MODE_MASK = 0x03
+#: `ANIMATION_FLAG_GLASSED` (orion2_consts.h:1138): pixels 0xF0-0xFF blend
+#: with what is under them; without it they are colours (animate.cpp:122-160)
+FLAG_GLASSED = 0x08
 FLAG_HAS_PALETTE = 0x10
 DRAW_MODE_ANIMATED = 0
 DRAW_MODE_BITMAP = 1

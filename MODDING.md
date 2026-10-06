@@ -84,13 +84,26 @@ picture replaces one player colour's ship, drawn as painted. The game
 itself draws each colour's ships as their own pictures (the red Doom Star
 is a different drawing from the yellow one).
 
+**Paint once, at the largest size you want to offer (work order 219).**
+The player chooses in Game Settings how finely the battle holds painted
+pictures: Normal keeps them at 4 times the drawing at most, High at 8
+times, Auto picks by the window (Normal up to 2560 pixels wide, High
+above). The game shrinks a larger picture itself, once, when the battle
+loads it, and never enlarges a smaller one — so put one file per name in
+the folder, the largest you have (8 times for a sharp High: a Doom Star at
+472 x 480), and both settings use it. There are no separate sets for 4x
+and 8x.
+
 **One picture for every player (work order 217).** Save a ship as
 `files/screens/combat/assets/gamedata/cmbtshp/all_<picture>_<frame>.png`
 — `all_43_0.png` is the Doom Star — and it is drawn for every owner who
 has no file of their own, in that owner's colour:
 
 - **Paint the hull in neutral grey.** Grey is what takes the player's
-  colour: any shade, dark to light, its light and shade kept. "Neutral"
+  colour: any shade, dark to light, its light and shade kept. The colour
+  is laid on at 70 % and fades out on the brightest and the darkest grey
+  (work order 219), so lit edges stay metal and panel lines stay dark: the
+  ship reads as its owner's at battle size and as metal up close. "Neutral"
   means the red, green and blue of a pixel lie within about 13 of each
   other (on 0-255); a grey that leans a little blue still counts.
 - **Paint in colour what should stay.** Engines, lights, copper trim,
