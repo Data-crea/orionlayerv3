@@ -15,7 +15,7 @@ since work order 200 C the LANGUAGE switch (HD EXTENSION
 start like the preset; and since work order 212 the FRAME RATE (HD EXTENSION
 `frame_rate`, decision 79, `core/framerate.py`): 30, 60, 120, the monitor's
 rate (the default) or unlimited, applied at once; and since work order 219
-the PAINTED PICTURES (HD EXTENSION `painted_detail`, `core/paintdetail.py`):
+the PAINTED DETAIL (HD EXTENSION `painted_detail`, `core/paintdetail.py`):
 Auto (the default), Normal (4 x) or High (8 x), from the next battle on. MOO2
 has none of them; the game knows nothing about these rows.
 
@@ -400,7 +400,7 @@ def _render_painted_row(screen, surface, row, words, size, lx, vx):
     """The painted pictures' detail (`core/paintdetail`); Auto says what it
     picks for this window: a battle's field is the window's width, and its
     opening view 32 cells of 20 px across it (`cbview.Camera.framing`)."""
-    _text(screen, surface, words.get("painted", "Painted pictures"), size,
+    _text(screen, surface, words.get("painted", "Painted detail"), size,
           COL_OPTION, lx, row)
     value = selected(screen, "painted_detail")
     shown = value if value in paintdetail.STEPS else paintdetail.DEFAULT

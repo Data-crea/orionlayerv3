@@ -88,7 +88,7 @@ def background(art, size):
         cut = panel.subsurface(pygame.Rect(500 * k, (364 - PANEL_Y) * k,
                                            NATIVE_W * k, NATIVE_H * k)).copy()
         _BACKGROUNDS.clear()
-        _BACKGROUNDS[key] = (pygame.transform.smoothscale if k > 1 else
+        _BACKGROUNDS[key] = (cbart.smooth if k > 1 else
                              pygame.transform.scale)(cut, size)
     return _BACKGROUNDS[key]
 
@@ -170,7 +170,7 @@ def icon_at(pic, k):
     picture at its drawing's size too (HD EXTENSION `hd_painted`, work
     order 215), shrunk smoothly."""
     pw, ph = cbart.native_size(pic)
-    return (pygame.transform.smoothscale if cbart.hd_factor(pic) > 1 else
+    return (cbart.smooth if cbart.hd_factor(pic) > 1 else
             pygame.transform.scale)(pic, (max(1, int(pw * k)),
                                           max(1, int(ph * k))))
 

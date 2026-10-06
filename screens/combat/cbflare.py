@@ -239,28 +239,68 @@ def brightened(picture, mask, ox, oy, palette, memo, k=1):
     return cbart.derived(out, picture)
 
 
-def _brighten_many(keys, palette, memo):
-    """`brighten` for many (colour << 8 | level) keys at once: the lift by
-    `colorsys`, as `brighten`; the nearest colour by one array search,
-    first of equals as `_nearest`'s `min` takes it."""
+def _v(m1, m2, hue):
+    """`colorsys._v` on arrays, operation for operation."""
     import numpy as np
-    lifted = []
-    for u in keys.tolist():
-        h, l, s = colorsys.rgb_to_hls(((u >> 24) & 255) / 255,
-                                      ((u >> 16) & 255) / 255,
-                                      ((u >> 8) & 255) / 255)
-        l = min(1.0, l + l * (u & 255) / 100)
-        r, g, b = colorsys.hls_to_rgb(h, l, s)
-        lifted.append((round(r * 255), round(g * 255), round(b * 255)))
-    todo = list(dict.fromkeys(c for c in lifted if c not in memo))
-    if todo:
-        pal = np.array(list(palette.values()), dtype=np.int64)
-        t = np.array(todo, dtype=np.int64)
-        for i in range(0, len(t), 4096):
-            d = ((t[i:i + 4096, None, :] - pal[None, :, :]) ** 2).sum(2)
-            for c, best in zip(todo[i:i + 4096], d.argmin(1).tolist()):
-                memo[c] = tuple(int(v) for v in pal[best])
-    return np.array([memo[c] for c in lifted], dtype=np.uint8)
+    hue = np.mod(hue, 1.0)
+    return np.where(hue < colorsys.ONE_SIXTH, m1 + (m2 - m1) * hue * 6.0,
+                    np.where(hue < 0.5, m2,
+                             np.where(hue < colorsys.TWO_THIRD,
+                                      m1 + (m2 - m1) * (colorsys.TWO_THIRD
+                                                        - hue) * 6.0, m1)))
+
+
+def _lift(rgb, level):
+    """`brighten`'s lift for many colours (n x 3, 0..255) and levels (n):
+    `colorsys.rgb_to_hls`, the lightness raised, `hls_to_rgb`, rounded as
+    `round` rounds — the same float operations in the same order, so the
+    same results (work order 219: 252 flare pictures byte-equal)."""
+    import numpy as np
+    r, g, b = (rgb[:, i].astype(np.float64) / 255 for i in range(3))
+    maxc = np.maximum(np.maximum(r, g), b)
+    minc = np.minimum(np.minimum(r, g), b)
+    sumc, rangec = maxc + minc, maxc - minc
+    l = sumc / 2.0
+    grey = minc == maxc
+    rng = np.where(grey, 1.0, rangec)
+    s = np.where(l <= 0.5, rangec / np.where(grey, 1.0, sumc),
+                 rangec / np.where(grey, 1.0, 2.0 - maxc - minc))
+    rc, gc, bc = (maxc - r) / rng, (maxc - g) / rng, (maxc - b) / rng
+    h = np.where(r == maxc, bc - gc,
+                 np.where(g == maxc, 2.0 + rc - bc, 4.0 + gc - rc))
+    h = np.mod(h / 6.0, 1.0)
+    h, s = np.where(grey, 0.0, h), np.where(grey, 0.0, s)
+    l = np.minimum(1.0, l + l * level / 100)
+    m2 = np.where(l <= 0.5, l * (1.0 + s), l + s - (l * s))
+    m1 = 2.0 * l - m2
+    out = [np.where(s == 0.0, l, _v(m1, m2, hh))
+           for hh in (h + colorsys.ONE_THIRD, h, h - colorsys.ONE_THIRD)]
+    return np.rint(np.stack(out, 1) * 255).astype(np.int64)
+
+
+def _brighten_many(keys, palette, memo):
+    """`brighten` for many (colour << 8 | level) keys at once: the lift
+    (`_lift`, `colorsys`' arithmetic on arrays), then the palette's nearest
+    colour for each distinct lifted colour, first of equals as `_nearest`'s
+    `min` takes it: |c - p|^2 less the constant |c|^2 is |p|^2 - 2 c.p, a
+    sum of whole numbers well inside a float's exact range, so the same
+    order and the same ties. `memo` is kept for the signature; one array
+    pass is cheaper than a dictionary of tuples (work order 219)."""
+    import numpy as np
+    keys = np.asarray(keys, dtype=np.int64)
+    rgb = np.stack([(keys >> 24) & 255, (keys >> 16) & 255,
+                    (keys >> 8) & 255], 1)
+    lifted = _lift(rgb, (keys & 255).astype(np.float64))
+    packed = (lifted[:, 0] << 16) | (lifted[:, 1] << 8) | lifted[:, 2]
+    uniq, inv = np.unique(packed, return_inverse=True)
+    t = np.stack([uniq >> 16, (uniq >> 8) & 255, uniq & 255], 1) \
+        .astype(np.float64)
+    pal = np.array(list(palette.values()), dtype=np.float64)
+    best = np.empty(len(t), dtype=np.int64)
+    for i in range(0, len(t), 65536):
+        d = (pal * pal).sum(1)[None, :] - 2.0 * (t[i:i + 65536] @ pal.T)
+        best[i:i + 65536] = d.argmin(1)
+    return pal.astype(np.uint8)[best][inv.ravel()]
 
 
 #: the shield glass: (r, g, b, per cent) per glass index (combinit.cpp:856-859)

@@ -168,7 +168,7 @@ def scaled(surf, scale, cache):
         w = max(1, round(surf.get_width() * scale / k))
         h = max(1, round(surf.get_height() * scale / k))
         if k > 1 and (w, h) != surf.get_size():
-            cache[key] = pygame.transform.smoothscale(surf, (w, h))
+            cache[key] = cbart.smooth(surf, (w, h))
         else:
             cache[key] = pygame.transform.scale(surf, (w, h))
         if isinstance(cache, SpriteCache):

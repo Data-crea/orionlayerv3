@@ -117,6 +117,25 @@ def held(img, w, h, k):
                                                  "RGBA").copy())
 
 
+def smooth(surf, size):
+    """`surf` scaled smoothly to `size`. Shrinking, an area average
+    (Pillow's BOX, on premultiplied alpha): `pygame.transform.smoothscale`
+    shrinking by a ratio that is not whole sums its fixed-point weights to
+    252-253 of 255, so every opaque pixel of a shrunk painted picture came
+    out 1 % see-through and 2-3 levels darker (work order 219: the stars
+    showed through a painted planet at 6 x, and through a 4 x ship at the
+    1080p opening view, since work order 214). Enlarging, smoothscale is
+    exact and stays."""
+    w, h = surf.get_size()
+    if size[0] >= w and size[1] >= h:
+        return pygame.transform.smoothscale(surf, size)
+    from PIL import Image
+    pil = Image.frombytes("RGBA", (w, h), pygame.image.tobytes(surf, "RGBA"))
+    pil = pil.resize(tuple(size), Image.Resampling.BOX)
+    return display_format(pygame.image.frombytes(pil.tobytes(), tuple(size),
+                                                 "RGBA").copy())
+
+
 REL = "screens/combat/assets/gamedata"
 FORMAT_VERSION = 1
 HOW = "python tools/combat_art_extract.py"

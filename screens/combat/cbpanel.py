@@ -199,7 +199,7 @@ def draw_shields(surface, rect, unit, picture):
                 max(1, int(picture.get_height() * k / cbart.hd_factor(picture))))
         # a painted picture at k times the drawing shrinks smoothly; the
         # game's drawings keep their pixels (HD EXTENSION `hd_painted`)
-        img = (pygame.transform.smoothscale if cbart.hd_factor(picture) > 1
+        img = (cbart.smooth if cbart.hd_factor(picture) > 1
                and size[0] < picture.get_width() else
                pygame.transform.scale)(picture, size)
         surface.blit(img, img.get_rect(center=(cx, cy)))
