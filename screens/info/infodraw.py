@@ -62,6 +62,15 @@ def draw_frame(surface, screen, page):
                      px(screen, "name"), HIGH, "center")
 
 
+def field(surface, screen, native):
+    """A content box inside the page: the original's inset field (its
+    striped green box) is the shared field since work order 223 —
+    inside the two panels, not a third panel."""
+    r = R(screen, native)
+    hud.field(surface, r, screen.layout.scale)
+    return r
+
+
 def pages_names():
     from .infotexts import PAGES
     return PAGES
@@ -123,8 +132,7 @@ def rows(surface, screen, key, native, items, selected=None, lit=None):
     """A scrolling list of one-line rows — `(text, payload, header)` — each
     shrunk to its width. Returns nothing; its hit rects go to
     `screen._hits[key]` as (rect, payload)."""
-    box = R(screen, native)
-    nd.draw_box(surface, screen, native)
+    box = field(surface, screen, native)
     inner = hud.panel_inner(box, screen.layout.scale).inflate(-4, -4)
     step = int(px(screen, "skill") * 1.35)
     total = step * len(items)
@@ -168,8 +176,8 @@ def text(surface, screen, key, native, body, size_key="skill", colour=NORMAL,
          align="left", panel=True):
     rect = R(screen, native)
     if panel:
-        nd.draw_box(surface, screen, native)
-        # Clear of the panel's edge and its glow (`blocks.panel_inner`).
+        field(surface, screen, native)
+        # Clear of the field's outline (`blocks.panel_inner`).
         rect = hud.panel_inner(rect, screen.layout.scale).inflate(-4, -4)
     infobox.Box(key, rect, body or "", px(screen, size_key),
                 colour, align).draw(surface, screen)

@@ -20,7 +20,7 @@ def history(screen, surface, me):
     state = screen._state
     n = int(getattr(state, "num_players", 0) or 0) or 8
     order = pages.race_list(screen._players, state.player_num, n)
-    infodraw.nd.draw_box(surface, screen, geom.HISTORY_LEGEND)
+    infodraw.field(surface, screen, geom.HISTORY_LEGEND)
     x, y, gap = 351, 64, 0
     if len(order) > 3:
         x, gap = 295, 150
@@ -44,7 +44,7 @@ def history(screen, surface, me):
         infodraw.text(surface, screen, "history.graph", geom.HISTORY_GRAPH,
                       T("info.history.no_block", ""))
         return
-    infodraw.nd.draw_box(surface, screen, geom.HISTORY_GRAPH)
+    infodraw.field(surface, screen, geom.HISTORY_GRAPH)
     graph = pages.history(screen._players, order, screen.hist_bits,
                           state.stardate, block["bill"])
     infodraw.draw_graph(surface, screen, graph, order, state.stardate)
@@ -70,7 +70,7 @@ def tech(screen, surface, me):
         if screen.tech_app is not None else ""
     infodraw.text(surface, screen, "tech.name", geom.TECH_NAME, name or title,
                   "name", infodraw.HIGH, "center")
-    infodraw.nd.draw_box(surface, screen, geom.TECH_PICTURE)
+    infodraw.field(surface, screen, geom.TECH_PICTURE)
     # TRANSCRIBED (work order 196 F): the application's picture,
     # APP_PICS.LBX entry `id` at native (0x1B1, 0x73) (info.cpp:893, :1555),
     # extracted by the player (`infoart`); none drawn while it is absent.

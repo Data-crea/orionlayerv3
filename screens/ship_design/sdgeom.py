@@ -88,3 +88,9 @@ PANELS = ((0x0E, 0x14, 0x9A, 0x2A), (0x0E, 0x2E, 0x72, 0x96),
           (0x74, 0x2E, 0xE6, 0x96), (0xE8, 0x2E, 0x1B0, 0x96),
           (0x1B2, 0x2E, 0x274, 0x96), (0x0E, 0x99, 0x274, 0x11E),
           (0x0E, 0x12F, 0x274, 0x1B2), (0x0E, 0x1B8, 0x164, 0x1D8))
+#: Work order 223 (the shared field): the name box IS a field — the text
+#: the player types; the drive / armour, shield / computer and the two
+#: tables are what the player reads and clicks in, the original's inset
+#: boxes, so a field stands inside each of those panels; the picture box
+#: is a field in its panel.
+NAME_PANEL, FIELD_PANELS = 0, (3, 4, 5, 6)

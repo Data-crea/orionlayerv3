@@ -98,19 +98,39 @@ def _lists(surface, screen, view, state, names):
                  "value", colour=None if bright else dim)
 
 
+#: The queue's rows as the game lays its fields out (colbldg.cpp, the
+#: seven type-7 fields at 207, 329 + 20 i — (458, 350 + 20 i), read off the
+#: live list in work order 223): one row's field where the list has none.
+QUEUE_ROW = (207, 329, 458, 350)
+
+
+def queue_row(view, i):
+    """Row i's native rect: the live field's, else the game's pattern;
+    one px short at top and bottom, so the rows stand apart (the fields
+    overlap by a px)."""
+    if i < len(view.queue):
+        f = view.queue[i]
+        x0, y0, x1, y1 = f.x, f.y, f.x_end, f.y_end
+    else:
+        x0, y0, x1, y1 = QUEUE_ROW
+        y0, y1 = y0 + i * w.QUEUE_PITCH, y1 + i * w.QUEUE_PITCH
+    return (x0, y0 + 1, x1, y1 - 1)
+
+
 def _queue(surface, screen, view, state, names):
+    """The seven queue rows — the original's striped rows — as the shared
+    field (work order 223), the row being edited 'on'."""
     active = view.active_queue_row()
-    for i, product in enumerate(view.items[:7]):
+    items = list(view.items[:7]) + [w.NONE] * (7 - len(view.items[:7]))
+    for i, product in enumerate(items):
+        hud.field(surface, nd.rect(screen.layout, queue_row(view, i)),
+                  screen.layout.scale,
+                  on=(i == active and i < len(view.queue)))
         name, _st = names.product(product, state) if product != w.NONE \
             else ("", "ok")
         y = w.QUEUE_TEXT_Y + i * w.QUEUE_PITCH
         text(surface, screen, name, w.QUEUE_TEXT_X, y, w.QUEUE_W, "value",
              "value", align="center")
-        if i == active and i < len(view.queue):
-            f = view.queue[i]
-            hud.outline(surface, nd.rect(screen.layout,
-                                         (f.x, f.y, f.x_end, f.y_end)),
-                        screen.layout.scale)
 
 
 def _summary(surface, screen, view, state, names, hover):

@@ -49,8 +49,16 @@ def draw(surface, screen, view, names):
     d = view.design
     hud.title_plate(surface, nd.point(layout, 320, 0)[0], 0, layout.scale,
                     screen.word("title"), style_renderer=screen.style)
-    for native in geom.PANELS:
+    for k, native in enumerate(geom.PANELS):
+        r = nd.rect(layout, native)
+        if k == geom.NAME_PANEL:
+            hud.field(surface, r, layout.scale)
+            continue
         nd.draw_box(surface, screen, native)
+        if k in geom.FIELD_PANELS:
+            hud.field(surface, hud.panel_inner(r, layout.scale),
+                      layout.scale)
+    hud.field(surface, nd.rect(layout, geom.PICTURE_BOX), layout.scale)
     _ship(surface, screen, view, names)
     _hulls(surface, screen, view, names)
     _systems(surface, screen, d, names)
