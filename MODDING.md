@@ -125,6 +125,40 @@ has no file of their own, in that owner's colour:
 - A file under one colour's own name (`178_0.png`, silver's Doom Star)
   still wins for that colour, drawn exactly as painted.
 
+**A livery: masks beside the ship (work order 220).** A ship may say which
+of its plates take the owner's colour; the player then chooses a pattern,
+a tone of their colour, a second colour of their own and the strength in
+GAME -> Settings -> Livery (the button shows once your folder holds a ship
+with masks). Put the masks beside the ship's file, one pair per pattern:
+
+```
+cmbtshp/all_<picture>_<frame>.png                    the ship
+cmbtshp/all_<picture>_<frame>_<pattern>_mask.png     first zone
+cmbtshp/all_<picture>_<frame>_<pattern>_mask2.png    second zone
+<pattern>: light, stripes, outer, mixed
+```
+
+- **A mask is a greyscale PNG of exactly the ship's size**: white = this
+  plate takes the colour, black = it stays as painted, grey in between
+  for soft edges. Another size is not used (one line in the log).
+- **The first zone** takes the owner's colour at full strength, in the
+  tone the player chose (Strong, Light, Muted), keeping the plate's light
+  and shade; bright glints fade back to metal. It applies to every fleet.
+- **The second zone** is the player's own mark: it takes the second
+  colour the player picked — only on the player's own fleet, never on the
+  others — laid on the same way. Make it a different set of plates than
+  the first zone (they should not overlap; about an eighth of the ship
+  works well). A pattern without a `_mask2` file simply has no second
+  colour on that ship.
+- Only neutral grey takes a colour under a mask, as above; engines,
+  copper, lights stay as painted whatever the mask says.
+- **No masks needed.** A ship without masks for the chosen pattern is
+  drawn as Full: all its grey at the lighter strength described above.
+  You may give some patterns and not others.
+- The masks follow the ship through everything: the Painted detail
+  setting shrinks them with the picture, and turned, mirrored and flipped
+  facings, shield flares and the cloak take them along.
+
 ### The other extracted pictures (work order 199)
 
 Fleets, Leaders, Races, the Ship Designer and the diplomacy audience draw
