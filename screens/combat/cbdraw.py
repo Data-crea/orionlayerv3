@@ -186,6 +186,7 @@ def scaled(surf, scale, cache):
 
 
 def draw_background(surface, cam, art, nebula, cache):
+    # LOOK EXCEPTION picture: the battle field's space (006f's named area)
     surface.fill((0, 0, 0), cam.area)
     if not art.available:
         return

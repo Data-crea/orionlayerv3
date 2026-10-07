@@ -322,6 +322,7 @@ class SpriteCache:
         surf = pygame.Surface(src.get_size())      # opaque, black
         surf.blit(src, (0, 0))                     # -> rgb * alpha
         if brightness < 255:
+            # LOOK EXCEPTION picture: a sprite's brightness, the map's art
             surf.fill((brightness,) * 3, special_flags=pygame.BLEND_RGB_MULT)
         self._scaled[key] = surf
         return surf

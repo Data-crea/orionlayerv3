@@ -694,5 +694,6 @@ def _draw_fallback(surface, cx, cy, w, h, owner):
     if owner is not None and 0 <= owner < 8:
         color = SHIP_COLORS.get(owner, NEUTRAL_COLOR)
     rect = pygame.Rect(int(cx - w / 2), int(cy - h / 2), w, h)
+    # LOOK EXCEPTION picture: a ship icon's stand-in in its owner's colour
     pygame.draw.rect(surface, color[:3], rect)
     pygame.draw.rect(surface, FALLBACK_OUTLINE[:3], rect, 1)

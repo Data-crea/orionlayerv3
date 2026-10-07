@@ -147,6 +147,7 @@ def _blip(surface, rect, k, nx, ny, base, size, palette):
         for col, off in enumerate(offs):
             px = rect.x + int((nx + col) * k)
             py = rect.y + int((ny + row) * k)
+            # LOOK EXCEPTION picture: the battle's overview map in the original's palette
             surface.fill(_colour(palette, base + off),
                          (px, py, max(1, int(k + 0.5)), max(1, int(k + 0.5))))
 
@@ -207,6 +208,7 @@ def draw(surface, rect, combat, ordnance, cam, art, colours, planet,
     palette = dict(art.palette_with() if art is not None and art.available
                    else {})
     palette.update(ramps(art, combat, colours))
+    # LOOK EXCEPTION picture: the overview map's space
     surface.fill((0, 0, 0), rect)
     bg = background(art, rect.size)
     if bg is not None:
@@ -241,6 +243,7 @@ def draw(surface, rect, combat, ordnance, cam, art, colours, planet,
               BLIP_OF.get(int(u["size_class"]), 2), palette)
     for m in (ordnance or {}).get("missiles", []):
         nx, ny = (int(m["x"]) // CELL) * 3 // 2, (int(m["y"]) // CELL) * 3 // 2
+        # LOOK EXCEPTION picture: a missile on the overview map
         surface.fill(_colour(palette, MISSILE),
                      (rect.x + int(nx * k), rect.y + int(ny * k),
                       max(1, int(k + 0.5)), max(1, int(k + 0.5))))

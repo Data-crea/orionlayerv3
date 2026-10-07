@@ -229,7 +229,8 @@ def draw_cell_plates(surface, bands, cols, skip, style, scale, color):
 
 def row_palette():
     """(row_a, row_b, row_selected, plate_outline, header_background,
-    header_text) — the HUD table's (decision 71, work order 169).
+    header_text) — the HUD table's (decision 71, work order 169); the
+    selected row is the shared 'on' fill since work order 223.
 
     Until 169 this read the colony list palette of decision 57 out of
     `colors.json`. The HUD's table blocks carry the same six roles,
@@ -242,5 +243,5 @@ def row_palette():
     st = hudstyle.get()
     return tuple(st.colour(k) for k in (
         "mockup_colony.row_a", "mockup_colony.row_b",
-        "mockup_colony.selected", "panel.edge_dim",
+        "field.on_fill", "panel.edge_dim",
         "mockup_colony.header", "mockup_colony.text_header"))

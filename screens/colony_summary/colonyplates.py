@@ -405,6 +405,7 @@ def render_fills(screen, surface):
         key = panels.get(name)
         colour = (palette.require("colony_summary", key)
                   if isinstance(key, str) else PANEL_BG)
+        # LOOK EXCEPTION picture: the galaxy inset's measured black (movebox.cpp:36-38) — the map, named in 006f
         surface.fill(tuple(colour)[:3],
                      pygame.Rect(*screen.layout.rect(rect)))
 
@@ -421,6 +422,7 @@ def render_fills(screen, surface):
         colour = panels.get(name)
         if isinstance(colour, str):
             from core import palette as _pal
+            # LOOK EXCEPTION picture: the galaxy inset's measured black inside its panel (movebox.cpp:36-38)
             surface.fill(tuple(_pal.require("colony_summary", colour))[:3],
                          hud.panel_inner(outer, screen.layout.scale))
         holed.add(name)

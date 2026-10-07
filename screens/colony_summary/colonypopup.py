@@ -52,7 +52,6 @@ from core import textfit
 from . import colonytrack
 from .colonyoutput import fill
 
-EDGE = palette.col("colony_summary", "popup_edge", (108, 132, 170))
 TEXT = palette.col("colony_summary", "popup_text", (206, 216, 238))
 
 #: Reference px of padding inside the box, and how far below the row
@@ -127,8 +126,9 @@ def draw(surface, area, cfg, scale, row, job, band, style, px, words):
     rect, rendered = made
     # GLASS since work order 174, the one fill; the popup keeps its edge.
     from core.hud import glass
+    from core.hud import blocks as hud
     glass.draw(surface, rect)
-    pygame.draw.rect(surface, EDGE[:3], rect, 1)
+    hud.outline(surface, rect, scale)
     pad = max(2, int(PAD * scale))
     y = rect.y + pad
     for surf in rendered:

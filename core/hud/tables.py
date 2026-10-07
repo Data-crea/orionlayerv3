@@ -37,8 +37,11 @@ def table_row(surface, rect, scale, index, selected=False):
     st = hudstyle.get()
     r = pygame.Rect(rect)
     if selected:
+        # THE SHARED 'ON' (work order 223, proposal C): a chosen row is
+        # 'on' like a chosen button, so it stays visible at every frame
+        # colour (the mockup's selected blue went to black under a dark one).
         glass.draw(surface, r, dense=True,
-                   shade=st.colour("mockup_colony.selected"),
+                   shade=st.colour("field.on_fill"),
                    shade_alpha=float(st.get("glass.selected_shade")))
         edge = st.colour("mockup_colony.selected_edge")
         w = max(1, round(_px(st.get("panel.edge_width"), scale) * 0.6))

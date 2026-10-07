@@ -58,7 +58,11 @@ class HudStyle:
 
         Turned to the player's frame colour (`core.hud.tint`, HD
         EXTENSION, work order 170) — except a TEXT colour and the
-        background placeholder, which the setting never touches."""
+        background placeholder, which the setting never touches.
+        `mix.<name>` is a fill that must be seen (`mixed`)."""
+        if path.startswith("mix."):
+            base, lit, t = self.mix_parts(path[4:])
+            return self.mix(base, lit, t)
         v = self._walk(self.chosen, path + "_from")
         if isinstance(v, str):
             return self.colour(v)
@@ -70,6 +74,39 @@ class HudStyle:
     def mix(self, a, b, t):
         """`a` moved a fraction `t` towards `b`, both RGB tuples."""
         return tuple(int(round(x + (y - x) * t)) for x, y in zip(a, b))
+
+    def mix_parts(self, name):
+        """(base, lit, share) of `chosen.mix.<name>` at the current frame
+        colour — work order 223. A fill that must be SEEN (a field, the
+        'on' state) is its base moved towards an EDGE colour, because
+        edges keep their floors when the frame colour takes fills to
+        black. The share is the chosen one, or lower where a HUD word
+        (`glass.WORDS`) would fall under `glass.floor_contrast` on it:
+        the fill gives way, never the words."""
+        key = (name, tint.hue(), tint.sat(), tint.bright())
+        hit = _mixes.get(key)
+        if hit is not None:
+            return hit
+        spec = self.chosen["mix"][name]
+        base, lit = self.colour(spec["base"]), self.colour(spec["lit"])
+        from core.hud import glass
+        words = [self.colour(w) for w in glass.WORDS]
+        floor = float(self.get("glass.floor_contrast"))
+        t = float(spec["share"])
+        while t > 0 and min(_contrast(self.mix(base, lit, t), w)
+                            for w in words) < floor:
+            t = round(t - 0.01, 2)
+        _mixes[key] = (base, lit, max(0.0, t))
+        return _mixes[key]
+
+
+#: `mix_parts` per (name, frame colour): the share search runs once.
+_mixes = {}
+
+
+def _contrast(a, b):
+    la, lb = tint.luminance(a), tint.luminance(b)
+    return (max(la, lb) + 0.05) / (min(la, lb) + 0.05)
 
 
 #: THE ACCENT-COLOURED WORDS — work order 171 (170 P5 decided): the
@@ -157,3 +194,4 @@ def reset():
     """Forget the loaded style (the smoke test, after swapping roots)."""
     global _STYLE
     _STYLE = None
+    _mixes.clear()

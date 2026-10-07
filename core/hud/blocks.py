@@ -149,7 +149,7 @@ def _under(bg, rect):
     return out
 
 
-def outline(surface, rect, scale):
+def outline(surface, rect, scale, lit=False):
     """The thinnest block: a line round a cell or a plate INSIDE a
     panel, corners cut small. No fill, no glow — a separator that goes
     round, and what decision 51's `draw_plate` draws since decision 71.
@@ -163,7 +163,7 @@ def outline(surface, rect, scale):
     if rect.w < 3 or rect.h < 3:
         return
     st = hudstyle.get()
-    key = ("outline", rect.w, rect.h, round(scale, 4))
+    key = ("outline", rect.w, rect.h, round(scale, 4), lit)
 
     def build():
         # WHOLE PIXELS, NOT A SUPERSAMPLED SHAPE: a line one or two px
@@ -180,13 +180,32 @@ def outline(surface, rect, scale):
         s.fill(key_col)
         s.set_colorkey(key_col)
         outer = raster.chamfered(rect.w - 1, rect.h - 1, round(ch))
-        pygame.draw.polygon(s, st.colour("panel.edge_dim"),
+        pygame.draw.polygon(s, st.colour("field.on_edge" if lit
+                                         else "panel.edge_dim"),
                             [(round(x), round(y)) for x, y in outer])
         inner = raster.inset(outer, w)
         pygame.draw.polygon(s, key_col,
                             [(round(x), round(y)) for x, y in inner])
         return s, 0
     _blit_shape(surface, rect, _cached(key, build))
+
+
+def field(surface, rect, scale, on=False):
+    """An EMPTY FIELD — work order 223, proposal A (decision 71 as
+    amended): the box the original draws where the player acts or reads
+    a list, its striped field. Dense glass with the field mix laid over
+    it (`style.json` `chosen.mix.field`: the dim edge at a share, so it
+    stays visible when the frame colour takes every fill to black) and
+    the outline round it; `on` — a chosen entry, a mode that is set —
+    takes the 'on' mix and the lit edge, the same 'on' every button
+    wears. One block: no screen draws its own field."""
+    rect = pygame.Rect(rect)
+    if rect.w < 3 or rect.h < 3:
+        return
+    st = hudstyle.get()
+    _base, lit, share = st.mix_parts("on" if on else "field")
+    glass.draw(surface, rect, dense=True, shade=lit, shade_alpha=share)
+    outline(surface, rect, scale, lit=on)
 
 
 def glow_pad(scale):

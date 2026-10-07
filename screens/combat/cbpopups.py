@@ -180,7 +180,7 @@ class Popups:
             surface.blit(t, t.get_rect(midtop=(x, y)))
         y += size + int(14 * k)
         bar = pygame.Rect(cols[0], y, cols[2] - cols[0], max(6, int(16 * k)))
-        pygame.draw.rect(surface, (40, 48, 60), bar)
+        hud.field(surface, bar, scale)
         self.rects["bar"] = bar
         span = max(1, cp["max"] - cp["min"])
         shown = self._drag[2] if self._drag else cp["marines"]

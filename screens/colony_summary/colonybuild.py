@@ -84,8 +84,6 @@ from core import textfit
 
 BUILD_NAME = palette.col("colony_summary", "build_name", (196, 208, 232))
 BUILD_TURNS = palette.col("colony_summary", "build_turns", (132, 148, 180))
-BUY_BG = palette.col("colony_summary", "buy_background", (34, 52, 88))
-BUY_EDGE = palette.col("colony_summary", "buy_edge", (72, 104, 160))
 BUY_TEXT = palette.col("colony_summary", "buy_text", (198, 214, 240))
 
 
@@ -184,10 +182,11 @@ def _buy_button(cfg, style, px):
     pad = max(2, px // 3)
     surf = pygame.Surface((label.get_width() + 2 * pad,
                            label.get_height() + pad), pygame.SRCALPHA)
-    rect = surf.get_rect()
-    pygame.draw.rect(surf, BUY_BG[:3], rect, border_radius=max(2, px // 5))
-    pygame.draw.rect(surf, BUY_EDGE[:3], rect, 1,
-                     border_radius=max(2, px // 5))
+    # The HUD's small button since work order 223 (proposal A): a
+    # button is one block on every screen. Its scale is the label's
+    # own (px at 1080p's 15).
+    from core.hud import blocks as hud
+    hud.small_button(surf, surf.get_rect(), px / 15.0)
     surf.blit(label, (pad, pad // 2))
     return surf
 

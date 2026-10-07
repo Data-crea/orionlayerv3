@@ -84,6 +84,7 @@ def fill_panels(screen, surface):
         # BLACK, and here that is a transcription: this screen leaves
         # _using_colony_screen_palette at 0, so Draw_Galaxy_Map_Box_ fills
         # its box with 0 (movebox.cpp:36-38, plntsum.cpp:1954).
+        # LOOK EXCEPTION picture: the galaxy inset's black, the original's map (006f's named area)
         surface.fill(tuple(INSET_FILL)[:3], inset)
 
 
@@ -213,6 +214,7 @@ def render_scroll(screen, surface, total, first, visible):
         cy = rect_y + arrow // 2
         pts = ([(cx, cy - h), (cx - h, cy + h), (cx + h, cy + h)] if top
                else [(cx, cy + h), (cx - h, cy - h), (cx + h, cy - h)])
+        # LOOK EXCEPTION marking: a scroll arrow glyph in the control's text colour
         pygame.draw.polygon(surface, tuple(CONTROL_TEXT)[:3], pts)
 
 

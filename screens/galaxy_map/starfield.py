@@ -129,6 +129,7 @@ def _stamp(diameter, colour):
     """
     if diameter <= 1.4:
         surf = pygame.Surface((1, 1))
+        # LOOK EXCEPTION picture: the star field's own stars
         surf.fill(colour)
         return surf
     size = max(2, int(math.ceil(diameter)))

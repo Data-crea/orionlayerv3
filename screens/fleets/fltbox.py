@@ -17,6 +17,7 @@ by a smoke check.
 import pygame
 
 from core import gamebox, palette
+from core.hud import blocks as hud
 
 #: Integer magnification only, and for the same reason `fltart.magnified`
 #: gives: these are the game's own pixels and a smooth resample of them
@@ -108,9 +109,8 @@ def draw(surface, screen, game_state):
     piece = gamebox.crop(fb, box.rect)
     pad = max(2, int(round(6 * screen.layout.scale)))
     panel = dest.inflate(2 * pad, 2 * pad)
-    surface.fill(col("box_panel"), panel)
-    pygame.draw.rect(surface, col("box_edge"), panel,
-                     max(1, int(round(2 * screen.layout.scale))))
+    # The dialog body is the HUD popup (work order 223, proposal A).
+    hud.popup(surface, panel, screen.layout.scale)
     if piece is None:
         # NO FRAMEBUFFER, so no text — and an empty panel would be a
         # dialog with no question in it. Say which box it is and let

@@ -388,6 +388,7 @@ def _render_second(screen, surface, geo, size, small):
             "active" if w.liv.second is None else None)
     sw = geo["second_swatch"]
     if w.liv.second is not None:
+        # LOOK EXCEPTION data: a colour swatch: the livery's second colour
         surface.fill(w.liv.second, sw)
     screen.style.draw_plate(surface, sw, screen.layout.scale)
     h, s, v = w.hsv
@@ -430,6 +431,7 @@ def _owner_rgb(colour):
 def _thumb(screen, surface, bar, value, lo, hi):
     t = max(2, int(3 * screen.layout.scale))
     x = gmorion.bar_x(bar, value, lo, hi)
+    # LOOK EXCEPTION marking: the slider's position tick
     surface.fill((255, 255, 255), (x - t // 2, bar.y - t, t, bar.h + 2 * t))
 
 

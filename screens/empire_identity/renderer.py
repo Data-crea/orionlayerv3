@@ -101,6 +101,7 @@ def render_banner_grid(surface, L, colors, race, selected, hover,
             surface.blit(img, (px + (pw - img.get_width()) // 2,
                                py + inset))
         else:
+            # LOOK EXCEPTION picture: the banner grid (a picture area, 006f): a missing banner's stand-in frame, the chosen and hovered banner's ring
             pygame.draw.rect(surface, (80, 40, 40), cell, 1)
         if key == selected:
             pygame.draw.rect(surface, COL_SELECTED, cell,
@@ -139,6 +140,7 @@ def draw_icon_ruler(surface, x, y, size):
                        (int(x + s / 2), int(y + s * 0.28)), head_r)
     body = pygame.Rect(int(x + s * 0.12), int(y + s * 0.55),
                        int(s * 0.76), int(s * 0.45))
+    # LOOK EXCEPTION marking: a drawn icon glyph in the grid's icon colour
     pygame.draw.rect(surface, COL_ICON, body,
                      border_top_left_radius=int(s * 0.38),
                      border_top_right_radius=int(s * 0.38))
@@ -153,6 +155,7 @@ def draw_icon_star(surface, x, y, size):
         ang = math.pi * i / 8
         r = size / 2 if i % 2 == 0 else size * 0.2
         pts.append((cx + math.cos(ang) * r, cy + math.sin(ang) * r))
+    # LOOK EXCEPTION marking: a drawn icon glyph in the grid's icon colour
     pygame.draw.polygon(surface, COL_ICON, pts)
 
 
@@ -319,6 +322,7 @@ def _draw_progress_bar(surface, L, bar, step_no, step_count, now=None):
         x = bar.x + i * (seg_w + gap)
         seg = pygame.Rect(x, bar.y, seg_w, bar.height)
         if i < step_no - 1:
+            # LOOK EXCEPTION data: the progress box's bar (INVENTION, P622), its filled and empty segments
             surface.fill(COL_BAR_FILL[:3], seg)
             continue
         surface.fill(COL_BAR_BG[:3], seg)

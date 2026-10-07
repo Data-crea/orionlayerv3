@@ -384,6 +384,7 @@ class MoveController:
             return
         band = colonytrack.band_height(area, cfg)
         strip = pygame.Rect(area.x, area.y, area.width, band)
+        # LOOK EXCEPTION marking: the pop-move notice's strip, in the notice's warning colour
         surface.fill(fill[:3], strip)
         inset = max(2, px // 2)
         sizes = [px - step for step in range(0, max(1, px - 9))]

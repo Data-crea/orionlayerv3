@@ -107,6 +107,7 @@ def draw_galaxy_box(surface, screen, game_state, art):
             surface.blit(big, (int(x) + STAR_OFFSET[0] * step,
                                int(y) + STAR_OFFSET[1] * step))
         else:
+            # LOOK EXCEPTION picture: the galaxy box's markers in the original's colours (officer.cpp)
             pygame.draw.rect(surface, draw.TEXT_FALLBACK["normal"],
                              (int(x), int(y), dot, dot))
     icons = list(getattr(game_state, "ship_icons", None) or [])
@@ -132,6 +133,7 @@ def draw_galaxy_box(surface, screen, game_state, art):
         if sprite is not None:
             surface.blit(draw.magnified(sprite, layout), at)
         else:
+            # LOOK EXCEPTION picture: the galaxy box's markers in the original's colours (officer.cpp)
             pygame.draw.rect(surface, draw.TEXT_FALLBACK["selected"],
                              (at[0], at[1], dot * 2, dot * 2))
         if stack_head is not None and int(icon.node_idx) == stack_head:
@@ -159,6 +161,7 @@ def _draw_star_boxes(surface, screen, game_state, art):
     for star, colour in boxes:
         r = ldrmap.star_box_rect(game_state, star)
         if r is not None:
+            # LOOK EXCEPTION picture: the galaxy box's markers in the original's colours (officer.cpp)
             pygame.draw.rect(surface, _box_colour(art, colour),
                              draw.rect(screen.layout, r), width)
 
@@ -257,6 +260,7 @@ def _draw_grid(surface, screen, view, game_state, art, block):
                        cell.bottom - size - 2, cell.w - 4, size, ink,
                        "center")
         if int(block.get("picked_icon", -1)) == k:
+            # LOOK EXCEPTION picture: the galaxy box's markers in the original's colours (officer.cpp)
             pygame.draw.rect(surface, draw.text_colour(art, "selected"),
                              cell, max(1, int(layout.scale * 2)))
 

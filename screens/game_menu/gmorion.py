@@ -353,6 +353,7 @@ def render(screen, surface):
     _text(screen, surface, words.get("presets", {}).get(shown, shown), size,
           COL_OPTION, row.x + vx, row)
     for rect, rgb in zip(geo["swatches"], playercolors.base(screen.app.colors, shown)):
+        # LOOK EXCEPTION data: a colour swatch: the colour the setting stands for
         surface.fill(tuple(rgb[:3]), rect)
         screen.style.draw_plate(surface, rect, screen.layout.scale)
 
@@ -396,6 +397,7 @@ def _render_glass_row(screen, surface, geo, words, size, lx):
     screen.style.draw_plate(surface, bar, screen.layout.scale)
     w = max(2, int(3 * screen.layout.scale))
     tx = bar_x(bar, glass.value(), 0.0, 1.0)
+    # LOOK EXCEPTION marking: the slider's position tick
     surface.fill((255, 255, 255), (tx - w // 2, bar.y - w, w, bar.h + 2 * w))
     reset = geo["glass_reset"]
     _text(screen, surface, words.get("reset", "Reset"), size,
@@ -495,6 +497,7 @@ def _render_frame_row(screen, surface, geo, words, size, lx):
     now = tint.hue()
     tx = thumb_x(geo, tint.REFERENCE if now is None else now)
     w = max(2, int(3 * screen.layout.scale))
+    # LOOK EXCEPTION marking: the slider's position tick
     surface.fill((255, 255, 255), (tx - w // 2, bar.y - w, w, bar.h + 2 * w))
     reset = geo["hue_reset"]
     _text(screen, surface, words.get("reset", "Reset"), size,
@@ -524,5 +527,6 @@ def _render_tone_row(screen, surface, geo, words, size, lx, base):
                              (bar.x + i, bar.bottom - 1))
         screen.style.draw_plate(surface, bar, screen.layout.scale)
         tx = bar_x(bar, now, lo, hi)
+        # LOOK EXCEPTION marking: the slider's position tick
         surface.fill((255, 255, 255), (tx - w // 2, bar.y - w, w,
                                        bar.h + 2 * w))

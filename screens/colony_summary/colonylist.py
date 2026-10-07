@@ -712,6 +712,7 @@ def _render_bar(surface, row, area, cfg, scale, band, track, text_px,
                 top, band_h, figures.ink_bottom(
                     cells[job][index].figure))))
             continue
+        # LOOK EXCEPTION data: a job's zone of the allocation track, coloured by job (decision 57)
         pygame.draw.rect(surface, ZONE_COLORS[job], rect)
         mark = _cell_mark(cfg, cells, job, index)
         if mark:

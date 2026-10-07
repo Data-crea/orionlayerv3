@@ -18,6 +18,7 @@ radio_on, checkbox_off) and are cached per pixel size.
 """
 import pygame
 from core import palette
+from core.hud import blocks as hud
 
 # Bound once here; description.py imports this same _c instead of
 # redefining it, so the whole screen shares one "custom_race"
@@ -30,12 +31,7 @@ COL_OPTION     = _c("option_label",   (206, 212, 226))
 COL_OPTION_SEL = _c("option_selected", (236, 242, 255))
 COL_VALUE_POS  = _c("pick_pos",       (80, 200, 120))
 COL_VALUE_NEG  = _c("pick_neg",       (216, 88, 78))
-COL_BOX_BORDER = _c("box_border",     (42, 66, 104))
-COL_ROW_SEL_BG = _c("row_selected_bg", (74, 54, 128, 170))
-COL_ROW_SEL_BD = _c("row_selected_border", (146, 108, 226))
 COL_CHECK      = _c("check_mark",     (86, 214, 122))
-COL_SCROLL_BG  = _c("scroll_bg",      (22, 30, 52))
-COL_SCROLL_TH  = _c("scroll_thumb",   (70, 95, 150))
 
 COL_BLOCKED    = _c("blocked",         (70, 75, 90))
 
@@ -132,8 +128,7 @@ def render_race_picks_panel(surface, L, style, categories, trait_state,
         bx, by = L.pos(entry["box"][0], entry["box"][1])
         bw, bh = L.size(entry["box"][2], entry["box"][3])
         box = pygame.Rect(bx, by, bw, bh)
-        pygame.draw.rect(surface, COL_BOX_BORDER, box, 1,
-                         border_radius=max(2, int(4 * L.scale)))
+        hud.outline(surface, box, L.scale)
 
         cur = trait_state.get(cat["trait_id"], 0)
         for opt, (orx, ory, orw, orh) in entry["rows"]:
@@ -217,12 +212,9 @@ def render_specials_panel(surface, L, style, specials, trait_state,
         dimmed = (spec["trait_id"], spec.get("value", 1)) in blocked
 
         if active is spec:
-            row = pygame.Rect(ox, oy, ow, oh)
-            hl = pygame.Surface(row.size, pygame.SRCALPHA)
-            hl.fill(COL_ROW_SEL_BG)
-            surface.blit(hl, row.topleft)
-            pygame.draw.rect(surface, COL_ROW_SEL_BD, row, 1,
-                             border_radius=max(2, int(3 * L.scale)))
+            # The row whose description shows is 'on' (work order 223).
+            hud.field(surface, pygame.Rect(ox, oy, ow, oh), L.scale,
+                      on=True)
 
         ic = icon(icons, cache, "checkbox_off", isize)
         icon_x = ox + pad_x
@@ -251,12 +243,8 @@ def render_specials_panel(surface, L, style, specials, trait_state,
         track = pygame.Rect(clip_x + clip_w - int(PANEL_INSET * L.scale),
                             clip_y, max(4, int(SCROLLBAR_W * L.scale)),
                             clip_h)
-        pygame.draw.rect(surface, COL_SCROLL_BG, track, border_radius=3)
-        frac_h = min(1.0, rh / total_h)
-        frac_y = min(1.0, scroll / total_h)
-        thumb = pygame.Rect(track.x, track.y + int(track.h * frac_y),
-                            track.w, max(20, int(track.h * frac_h)))
-        pygame.draw.rect(surface, COL_SCROLL_TH, thumb, border_radius=3)
+        hud.scrollbar(surface, track, L.scale, first=scroll, visible=rh,
+                      total=total_h)
 
 
 def _draw_check(surface, x, y, size, scale):

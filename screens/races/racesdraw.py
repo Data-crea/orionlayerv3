@@ -95,6 +95,7 @@ def draw_slot(surface, screen, slot, art, lit=False):
         surface.blit(over, over.get_rect(center=cell.center))
     width = max(1, int(nd.native_scale(layout)))
     c = slot.colour if 0 <= slot.colour < 8 else 0
+    # LOOK EXCEPTION transcription: the portrait's banner frame (racescrn.cpp:50-52, :270-279) and the WHO box (:555)
     pygame.draw.rect(surface, _pal(art, BANNER_HIGH[c], (180, 180, 180)),
                      cell.inflate(2 * width, 2 * width), width)
     pygame.draw.rect(surface, _pal(art, BANNER_LOW[c], (110, 110, 110)),

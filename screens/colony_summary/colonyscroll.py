@@ -280,6 +280,7 @@ def render(surface, area, cfg, scale, colour, first, rows_drawn, total):
         # draws for the track itself.
         for cx in (tr.left, tr.right - 1):
             for cy in (tr.top, tr.bottom - 1):
+                # LOOK EXCEPTION transcription: the original's slider, its corner dots and its light and dark borders in its own colours (colsum.cpp:762-770)
                 surface.fill(TRACK_DOT[:3], pygame.Rect(cx, cy, 1, 1))
         surface.fill(SLIDER_FILL[:3], thumb)
         # Borders drawn OVER the fill's own edge rows, light on top
@@ -290,6 +291,7 @@ def render(surface, area, cfg, scale, colour, first, rows_drawn, total):
                      pygame.Rect(thumb.left, thumb.top, 1, thumb.height))
         surface.fill(SLIDER_DARK[:3],
                      pygame.Rect(thumb.left, thumb.bottom - 1, thumb.width, 1))
+        # LOOK EXCEPTION transcription: the slider's dark borders (colsum.cpp:762-765)
         surface.fill(SLIDER_DARK[:3],
                      pygame.Rect(thumb.right - 1, thumb.top, 1, thumb.height))
     can_up = first > 0
@@ -307,6 +309,7 @@ def render(surface, area, cfg, scale, colour, first, rows_drawn, total):
             points = [(rect.centerx, rect.bottom - pad),
                       (rect.left + pad, rect.top + pad),
                       (rect.right - pad, rect.top + pad)]
+        # LOOK EXCEPTION marking: the scroll arrows in the list's text colour, halved when dead
         pygame.draw.polygon(surface, shade[:3], points)
 
 

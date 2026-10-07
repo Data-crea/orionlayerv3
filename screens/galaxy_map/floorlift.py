@@ -64,6 +64,7 @@ def apply(surface, rect, app):
     """Lift the floor inside `rect`. Returns the lift that was added."""
     lift = tuple(LIFT[step(app)][:3])
     if any(lift):
+        # LOOK EXCEPTION picture: the map floor's lift (HD EXTENSION floor_lift), added to the map's own picture
         surface.fill(lift, rect, special_flags=pygame.BLEND_RGB_ADD)
     return lift
 
@@ -101,6 +102,7 @@ def render_floor(screen, surface, px=None):
                      else scaled, (0, 0))
     else:
         from screens.galaxy_map.screen import MAP_BG
+        # LOOK EXCEPTION picture: the map's own floor under the lift
         surface.fill(MAP_BG[:3], whole)
         apply(surface, whole, screen.app)
     if px is not None:

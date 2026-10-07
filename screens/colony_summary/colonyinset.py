@@ -267,6 +267,7 @@ def _blit_sprite(surface, x, y, cidx, cw, ch):
                 if col == 1 and row == 1:
                     continue
                 shade = bright if (col == 1 or row == 1) else dark
+                # LOOK EXCEPTION picture: the galaxy inset's stars in the original's palette (movebox.cpp)
                 surface.fill(shade, (left + col * cw, top + row * ch,
                                      cw, ch))
         surface.fill(_dark(dark), (left + cw, top + ch, cw, ch))
@@ -328,6 +329,7 @@ def render(surface, stars, label, area, cfg, layout, style,
     # star since work order 196 (HD EXTENSION `inset_scanned_box`).
     if marker is not None and 0 <= marker[0] < len(points):
         mx, my, _c, cw, ch = points[marker[0]]
+        # LOOK EXCEPTION picture: a stack marker in its owner's colour
         pygame.draw.rect(surface, tuple(marker[1])[:3],
                          pygame.Rect(mx - 4 * cw, my - 4 * ch, 9 * cw, 9 * ch),
                          max(1, cw))

@@ -7,6 +7,7 @@ All positions come from box rects (1920x1080 reference).
 """
 import pygame
 from core import palette
+from core.hud import blocks as hud
 from core import gridlayout
 
 # Colors — every value can be overridden in the skin's
@@ -25,7 +26,6 @@ COL_KEYWORD   = _c("keyword",    (140, 185, 240))
 COL_SUBTITLE  = _c("subtitle",   (120, 104, 176))
 COL_SEPARATOR = _c("separator",  (60, 80, 120))
 COL_SELECTED  = _c("selected",   (120, 170, 255))
-COL_BORDER    = _c("border",     (50, 70, 110))
 COL_CELL_BG   = _c("cell_bg",    (16, 20, 38, 160))
 COL_NAME_SEL  = _c("name_selected", (180, 220, 255))
 COL_GOLD      = _c("gold",       (212, 160, 74))
@@ -122,8 +122,8 @@ def render_race_grid(surface, L, style, races, selected_id, rect,
                              (0, 0, sw, port_h), 3, border_radius=3)
             surface.blit(bdr, (sx, sy))
         else:
-            pygame.draw.rect(surface, COL_BORDER,
-                             (sx, sy, sw, port_h), 1, border_radius=2)
+            # The HUD outline (work order 223, proposal A).
+            hud.outline(surface, pygame.Rect(sx, sy, sw, port_h), L.scale)
 
         # Race name below portrait
         is_custom = (race.get("key") == "custom" or race["id"] == 13)

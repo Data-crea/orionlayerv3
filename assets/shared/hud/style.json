@@ -269,10 +269,30 @@
     "button": {
       "hover_edge_from": "action.edge",
       "hover_fill_from": "panel.fill_edge",
-      "active_fill_from": "mockup_colony.selected",
+      "active_fill_from": "mix.on",
       "active_edge_from": "action.edge",
       "disabled_alpha": 0.45,
-      "_note": "The HUD shows every nav button in ONE state. Hover takes the HUD's own brightest lit edge (the TURN button's) and the panel's inner glow as fill; active takes the colony mockup's selected row, the only 'chosen' look in the material; disabled is the normal button at 45 % opacity, a value chosen by eye and not measured. None of the three is measured, all three are named (169 parked, P4)."
+      "_note": "The HUD shows every nav button in ONE state. Hover takes the HUD's own brightest lit edge (the TURN button's) and the panel's inner glow as fill; active is the shared 'on' fill (`mix.on`, work order 223, which replaced the colony mockup's selected row: under a dark frame colour that fill went to black with every other fill and 'on' could not be seen, 208 P1); disabled is the normal button at 45 % opacity, a value chosen by eye and not measured. None of the three is measured, all three are named (169 parked, P4)."
+    },
+    "mix": {
+      "on": {
+        "base": "button.fill",
+        "lit": "action.edge",
+        "share": 0.45
+      },
+      "field": {
+        "base": "panel.fill",
+        "lit": "panel.edge_dim",
+        "share": 0.25
+      },
+      "_note": "Work order 223 (proposal A, decision 71 amended): the fills that must be SEEN are the base fill moved towards an EDGE colour by `share`, because the frame colour may take every fill to black (tint: `a fill may go to black`) while the edges keep their floors \u2014 so a field and an 'on' stay visible at every brightness. ON is 208 P1's proposal, the lit edge at 45 %; FIELD (an empty field, the original's striped box) the dim edge at 25 %, chosen so that under Data's colours of 7 October 2026 (hue 66, saturation 0.09, brightness 0.31) a field measures L* 11 against the original's striped field, L* 10.3 measured on RACES (native, work order 223). THE WORD FLOOR: where a HUD word would fall under `glass.floor_contrast` on the mixed fill, the share is lowered until it does not \u2014 never the words dimmer (at the silver end ON takes 22 %). Ours under decision 53, so Data's to change."
+    },
+    "field": {
+      "fill_from": "mix.field",
+      "edge_from": "panel.edge_dim",
+      "on_fill_from": "mix.on",
+      "on_edge_from": "action.edge",
+      "_note": "An EMPTY FIELD, work order 223: where the original draws a box the player acts in or reads a list from (its striped fields) HD draws `blocks.field` \u2014 dense glass with the field mix over it and the outline round it; a field that is chosen or on takes the 'on' mix and the lit edge. One block, so every screen's field is the same field."
     },
     "small_button": {
       "chamfer_frac": 0.5,

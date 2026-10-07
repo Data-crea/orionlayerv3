@@ -185,6 +185,7 @@ def anti_missile(a, b, destroyed, art, fast=False):
             y = a[1] + (b[1] - a[1]) * t
             k = max(1, int(round(cam.scale)))
             cx, cy = cam.to_window(x, y)
+            # LOOK EXCEPTION picture: an effect's sprite pixels
             surface.fill(body, (cx - k, cy - k, 3 * k, 3 * k))
             for dx, dy in ((-1, -1), (1, -1), (-1, 1), (1, 1)):
                 surface.fill(corner, (cx + dx * k, cy + dy * k, k, k))

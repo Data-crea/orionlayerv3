@@ -54,6 +54,7 @@ def _stage(surface, screen, view):
         return                    # no stage: the panels on the background
     # The original fills black and draws the room over it
     # (`Setup_Back_Page_`): the room's index 0 shows black.
+    # LOOK EXCEPTION picture: the ambassador's stage, black as the original's
     surface.fill((0, 0, 0), stage)
     surface.blit(nd.stretched(room, stage), stage.topleft)
     amb = None if view.refused else art.picture("ambassadors", view.race)

@@ -597,6 +597,7 @@ def render(surface, row, area, cfg, words, climates, layout, style,
             # if it goes.
             if i > 0 and sep_px:
                 sep_y = top - gap + max(0, (gap - sep_px) // 2)
+                # LOOK EXCEPTION marking: decision 56's separator line (HD EXTENSION), a line between rows, not a panel or field
                 surface.fill(SEPARATOR_COLOR[:3], pygame.Rect(
                     left + sep_inset, sep_y,
                     max(0, right - left - 2 * sep_inset), sep_px))

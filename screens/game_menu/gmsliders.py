@@ -123,6 +123,7 @@ def render(screen, surface):
         screen.style.draw_plate(surface, bar, screen.layout.scale)
         for first, last in cfg["blocks"]:
             x0, x1 = bar.x + round(first * sx), bar.x + round((last + 1) * sx)
+            # LOOK EXCEPTION transcription: the original's volume blocks, off, on and their glow
             surface.fill(tuple(COL_OFF[:3]), (x0, y0, x1 - x0, y1 - y0))
             if value is None or value <= first:
                 continue

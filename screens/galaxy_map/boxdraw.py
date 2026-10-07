@@ -73,8 +73,6 @@ PANEL_BG = palette.col("galaxy_map", "panel_background", (8, 11, 20))
 TITLE_COLOR = palette.col("galaxy_map", "title", (200, 210, 238))
 TEXT_COLOR = palette.col("galaxy_map", "nav_text", (196, 208, 236))
 GAS_GIANT = palette.col("galaxy_map", "status", (140, 155, 190))
-SELECTED = palette.col("galaxy_map", "fleet_selected", (40, 72, 196))
-DESELECTED = palette.col("galaxy_map", "fleet_deselected", (0, 0, 0))
 #: A hover refusal's line — the original's second colour set
 #: (fleetpop.cpp:1122-1150, `use_primary_colors = false`).
 REFUSED = palette.col("galaxy_map", "fleet_refused", (226, 96, 72))
@@ -243,6 +241,7 @@ def _draw_scroll(screen, surface, box, grid, scroll, hits):
         cx, cy, h = rect.centerx, rect.centery, max(2, rect.w // 3)
         pts = ([(cx, cy - h), (cx - h, cy + h), (cx + h, cy + h)] if top
                else [(cx, cy + h), (cx - h, cy - h), (cx + h, cy - h)])
+        # LOOK EXCEPTION marking: a scroll arrow glyph in the box's text colour
         pygame.draw.polygon(surface, TEXT_COLOR[:3], pts)
         if field is not None:
             hits.append((rect, field))
@@ -272,11 +271,12 @@ def _draw_fleet(screen, surface, r, model, hits):
         # One box per ship, blue selected and black not, as the original
         # draws its cells — the colour is the cell's node byte in the FSEL
         # block, the cell's place its place in the wire's chain.
+        # Since work order 223 the shared field, 'on' where chosen
+        # (proposal C): the original's blue cell, in the one look.
         chosen = model["selected"][i]
-        surface.fill((SELECTED if chosen else DESELECTED)[:3], cell)
+        hud.field(surface, cell, screen.layout.scale, on=chosen)
         if model["selectable"][i]:
             hits.append((cell, ("select", ship, not chosen)))
-        hud.outline(surface, cell, screen.layout.scale)
         kind = ship_icons.kind_for_owner(owner) or ship_icons.PLAYER_KIND
         key = ship_icons._resolve_sprite(screen._cache, kind, 0)
         if key is None:

@@ -90,6 +90,7 @@ def draw_chart(surface, screen, player):
         top = geom.BAR_BOTTOM - h * pct[k] // 100
         r = R(screen, (bx, top, bx + geom.BAR_W - 1, geom.BAR_BOTTOM))
         if r.h > 0:
+            # LOOK EXCEPTION data: an expense's bar, one colour per expense
             pygame.draw.rect(surface, BAR_COLOURS[k], r)
     net_text = pages.stat(T("info.chart.net_income", ""), net)
     x, y = geom.NET_AT
@@ -110,6 +111,7 @@ def draw_chart(surface, screen, player):
         label = T(f"info.chart.label.{name}", "") or ""
         text = f"{income}{label}" if k == 0 else f"{pct[k]:3d}%  {label}"
         r = R(screen, (x0, y, x0 + w - 1, y + hh - 2))
+        # LOOK EXCEPTION data: an expense's bar, one colour per expense
         pygame.draw.rect(surface, BAR_COLOURS[k], r.inflate(-r.w + 6, -4)
                          .move(-(r.w // 2) + 4, 0))
         infobox.line(surface, screen, text, r.inflate(-12, 0).move(6, 0),
@@ -140,7 +142,8 @@ def rows(surface, screen, key, native, items, selected=None, lit=None):
         if inner.contains(r):
             colour = HIGH if header or payload in (selected, lit) else NORMAL
             if payload is not None and payload == selected:
-                pygame.draw.rect(surface, (40, 70, 110), r)
+                # The chosen entry is 'on' (work order 223, proposal C).
+                hud.field(surface, r, screen.layout.scale, on=True)
             infobox.line(surface, screen, text,
                          r.inflate(-4, 0) if header else r.inflate(-16, 0)
                          .move(8, 0), px(screen, "skill"), colour)

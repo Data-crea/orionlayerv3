@@ -23,7 +23,6 @@ import pygame
 
 from core.hud import blocks as hud
 from core.hud import icons
-from core.hud import glass
 from core.hud import text as hudtext
 
 from core import palette
@@ -149,13 +148,11 @@ def draw_slots(surface, screen):
         # its border. Drawing one here as well gave every cell two
         # outlines, the inner one offset by the hole bleed. The FILL
         # stays — it is the backdrop the plate sits on, not a border.
-        # GLASS since work order 174: dense glass under the slot's own
-        # navy, so the grid reads as the original's sunken slots and the
-        # background still shows through.
-        glass.draw(surface, slot, True, fill, glass.shade("row"))
-        # The HUD outline round each slot (decision 71): the frame that
-        # bordered the holes is not drawn any more.
-        hud.outline(surface, slot, screen.layout.scale)
+        # A FIELD since work order 223 (proposal A): the original's
+        # sunken slot is the shared empty field — its own navy went to
+        # nothing a frame colour could turn, and every screen's field is
+        # one block.
+        hud.field(surface, slot, screen.layout.scale)
     _ = edge, width
 
 
@@ -199,6 +196,8 @@ def draw_scroll(surface, screen, first_row, total_rows):
     rects = scroll_rects(screen)
     if rects is None:
         return
+    # LOOK EXCEPTION transcription: the original's scroll bar colours,
+    # `Fill_FltScrn_Scroll_Bar_`'s blue gradient (see DEFAULTS).
     pygame.draw.rect(surface, col("scroll_track"), rects["track"])
     thumb = thumb_rect(screen, first_row, total_rows)
     if thumb is not None:
@@ -221,6 +220,7 @@ def _arrow(surface, rect, up, color):
     mid = (left + right) // 2
     points = ([(mid, top), (right, bottom), (left, bottom)] if up
               else [(left, top), (right, top), (mid, bottom)])
+    # LOOK EXCEPTION marking: a scroll arrow glyph
     pygame.draw.polygon(surface, color, points)
 
 
@@ -432,6 +432,7 @@ def draw_cell_mark(surface, screen, rect, colour, width):
     k = _chamfer_px(screen)
     x, y, w, h = rect.x, rect.y, rect.width, rect.height
     if w <= 2 * k or h <= 2 * k:
+        # LOOK EXCEPTION transcription: a cell's selection and hover mark in the original's colours (flt2.cpp)
         pygame.draw.rect(surface, colour, rect, width)
         return
     points = [(x + k, y), (x + w - 1 - k, y),
@@ -514,6 +515,7 @@ def draw_cells(surface, screen, cells, art=None):
         # render showed.
         band = max(10, rect.height // 4)
         patch = pygame.Rect(rect.x, rect.y, rect.width, rect.height - band)
+        # LOOK EXCEPTION data: the builder's colour where there is no ship picture
         pygame.draw.rect(surface, owner_colour(cell.builder),
                          patch.inflate(-patch.width // 3,
                                        -patch.height // 3))
@@ -543,6 +545,7 @@ def fill_inset(surface, screen):
     """
     rect = _rect(screen, "inset_map")
     if rect is not None:
+        # LOOK EXCEPTION picture: the inset map's black (movebox.cpp:38), 006f's named map area
         surface.fill(INSET_BACKGROUND, rect)
 
 
@@ -589,6 +592,7 @@ def draw_inset(surface, screen, stars, markers, art=None):
             sprite = fltart.magnified(sprite, step)
             surface.blit(sprite, (int(x) - 2 * step, int(y) - 2 * step))
             continue
+        # LOOK EXCEPTION picture: the inset map's stars and stack markers
         pygame.draw.rect(surface, _star_colour(colour_index),
                          (int(x), int(y), dot, dot))
     for mx, my, owner in markers:
