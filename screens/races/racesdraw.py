@@ -7,11 +7,15 @@ WHAT IS TRANSCRIPTION AND WHAT IS OURS — each marked where it happens:
   TRANSCRIPTION   every position, every string, which portrait, the frame
                   colours (`_banner_color_high/low` by the player's colour,
                   racescrn.cpp:50-52, :270-279), the slider's height, the
-                  spy icons' spacing, the relation word on hover
+                  spy icons' spacing, the relation word on hover, the
+                  relation bar's picture (RACES.LBX 3, :240-243) and the
+                  greyed mission words of a slot without missions
+                  (work order 223)
   OMISSION        `outer_frame` — RACES.LBX 0 (the background with the
                   panels, bars and buttons painted in) is not drawn: decision
-                  71's HUD style draws the panels, the bars, the sliders and
-                  the buttons in code (DEVIATION `hud_parts`)
+                  71's HUD style draws the panels, the striped fields (the
+                  shared field, work order 223), the sliders and the
+                  buttons in code (DEVIATION `hud_parts`)
   DEVIATION       `button_words` — the buttons, the mission row, the title
                   and the BONUSES label are words the original has baked into
                   its art; HD writes them (OrionLayer's words)
@@ -64,6 +68,9 @@ def draw_frame(surface, screen):
     nd.draw_box(surface, screen, geom.BONUS_BOX)
     nd.draw_box(surface, screen, geom.BUTTON_BOX)
     layout = screen.layout
+    # The agents' strip: where the pool's spies stand and are dropped
+    # back — a field, as RACES.LBX 0 paints it (work order 223).
+    hud.field(surface, nd.rect(layout, geom.AGENT_BOX), layout.scale)
     # The title on the HUD's title plate, as the galaxy map's (the words
     # are baked into RACES.LBX 0 in the original — `button_words`).
     hud.title_plate(surface, nd.point(layout, 320, 0)[0], 0, layout.scale,
@@ -74,12 +81,23 @@ def draw_frame(surface, screen):
                  hudtext.colour("button"))
 
 
+def draw_fields(surface, screen, i):
+    """The slot's striped fields as the original paints them into
+    RACES.LBX 0: the treaty field, the spy strip — where spies are
+    dropped — and the portrait cell, each the shared field (work order
+    223: "I cannot even see where to place the spies")."""
+    layout = screen.layout
+    for box in (geom.treaty_box(i), geom.spy_box(i), geom.portrait_box(i)):
+        hud.field(surface, nd.rect(layout, box), layout.scale)
+
+
 def draw_slot(surface, screen, slot, art, lit=False):
     """One race: portrait and frame, name, treaty lines or NO CONTACT, the
     IGNORED mark, and — for an active race — the bar, the slider, the spies
     and the mission row."""
     layout, style = screen.layout, screen.style
     i = slot.index
+    draw_fields(surface, screen, i)
     px, py = geom.PICTURE[i]
     cell = nd.rect(layout, (px, py, px + geom.PORTRAIT[0] - 1,
                             py + geom.PORTRAIT[1] - 1))
@@ -125,12 +143,18 @@ def draw_slot(surface, screen, slot, art, lit=False):
         draw_icons(surface, screen, geom.SPY_GROUP[i], slot.spies,
                    screen.my_race, art)
         _draw_missions(surface, screen, i, slot.mission)
+    else:
+        _draw_missions(surface, screen, i, None)
 
 
 def draw_empty(surface, screen, i, art):
-    """An unused slot: NO CONTACT, and the slider parked (:121-125, :247)."""
+    """An unused slot: its fields, NO CONTACT, the empty bar track with
+    the slider parked (:121-125, :247) and the mission words greyed — the
+    words RACES.LBX 0 has baked in where no mission button is drawn."""
+    draw_fields(surface, screen, i)
     _no_contact(surface, screen, i, art)
     _draw_bar(surface, screen, i, None, art)
+    _draw_missions(surface, screen, i, None)
 
 
 def _no_contact(surface, screen, i, art):
@@ -163,14 +187,21 @@ def _draw_text(surface, screen, slot, art):
 
 
 def _draw_bar(surface, screen, i, relation, art):
-    """The bar (RACES.LBX 3, 8 x 88) and the slider (2, 25 x 13) as HUD
-    parts; an unused slot shows the slider parked (:241-251)."""
+    """The bar and the slider (2, 25 x 13, a HUD part). A race in contact
+    has RACES.LBX 3 drawn — green at the top to red at the bottom, the
+    colour IS what the bar says (`Draw_Relations_Sliders_`, :240-243);
+    without the extracted picture it is a field. An unused slot draws no
+    bar: the background's empty track shows, a field here, and the
+    slider stands parked (:244-248)."""
     layout = screen.layout
     bx, by = geom.BAR[i]
+    track = nd.rect(layout, geom.bar_box(i))
+    pic = art.bar() if (art is not None and relation is not None) else None
+    if pic is not None:
+        surface.blit(nd.stretched(pic, track), track.topleft)
+    else:
+        hud.field(surface, track, layout.scale)
     if relation is not None:
-        track = nd.rect(layout, (bx, by, bx + geom.BAR_SIZE[0] - 1,
-                                 by + geom.BAR_SIZE[1] - 1))
-        hud.panel(surface, track, layout.scale, filled=True, dense=True)
         y = geom.slider_y(i, relation)
     else:
         y = by + geom.SLIDER_PARKED
@@ -226,18 +257,23 @@ def draw_spy_hand(surface, screen, hand, hover):
 
 
 def _draw_missions(surface, screen, i, mission):
-    """The mission row (RACES.LBX 10+i, 17+i, 24+i), the current one lit —
-    a click sends the race's mission with open fix 64 (work order 197;
-    `racesspies`)."""
+    """The mission row (RACES.LBX 10+i, 17+i, 24+i), the current one 'on'
+    — a click sends the race's mission with open fix 64 (work order 197;
+    `racesspies`). `mission` None: no buttons, the words greyed, as the
+    background shows them under a slot with none (empty or eliminated)."""
     layout = screen.layout
     for k, word in enumerate(WORDS["missions"]):
         r = nd.rect(layout, geom.mission_rect(i, k))
-        hud.small_button(surface, r, layout.scale,
-                         "active" if k == mission else "normal")
+        state = ("disabled" if mission is None else
+                 "active" if k == mission else "normal")
+        hud.small_button(surface, r, layout.scale, state)
+        colour = hudtext.colour("button")
+        if state == "disabled":
+            colour = tuple(v // 2 for v in colour)
         size = nd.font_px(layout, "cost")
         nd.blit_text(surface, screen.style, word, r.centerx,
-                     r.y + (r.h - size) // 2, r.w - 2, size,
-                     hudtext.colour("button"), "center")
+                     r.y + (r.h - size) // 2, r.w - 2, size, colour,
+                     "center")
 
 
 def draw_buttons(surface, screen, live, armed):

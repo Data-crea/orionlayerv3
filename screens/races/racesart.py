@@ -68,6 +68,11 @@ class RacesArt:
     def eliminated(self):
         return self._sprite("eliminated")
 
+    def bar(self):
+        """RACES.LBX 3, the relation bar — None where an extraction from
+        before work order 223 has no `bar.bin` (the bar is then a field)."""
+        return self._sprite("bar")
+
     def _sprite(self, name):
         if not self.available:
             return None

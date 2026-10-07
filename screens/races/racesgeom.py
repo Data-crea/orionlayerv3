@@ -93,6 +93,21 @@ BONUS_BOX = (330, 365, 620, 416)
 BUTTON_BOX = (330, 419, 620, 464)
 
 AGENT_FIELD = (328, 386, 613, 415)  # (:433)
+
+# ── The striped fields (work order 223) ─────────────────────
+#: The boxes RACES.LBX 0 paints for each race — the treaty text above,
+#: the spy strip below — and the agents' strip, as the game shows them:
+#: measured on the native picture of a live Races screen (between the
+#: fields' bright rims and their grey bevel; work order 223's recording,
+#: g207_base), and each holds what the source draws into it (`TEXT`'s
+#: paragraph, `_spy_group_data`, `_agent_group_data`). Inclusive native
+#: rects; x by column, y by slot.
+FIELD_X = ((120, 308), (331, 520))
+TREATY_Y = ((48, 93), (153, 200), (259, 305), (366, 411),
+            (47, 93), (154, 200), (259, 306))
+SPY_Y = ((98, 123), (205, 230), (311, 335), (416, 442),
+         (98, 123), (205, 230), (311, 335))
+AGENT_BOX = (331, 390, 620, 415)
 CATCHER = (0, 0, 639, 479)          # (:815)
 
 
@@ -125,6 +140,26 @@ def spy_field(i):
 def bar_field(i):
     x, y = BAR[i]
     return (x - 6, y - 6, x + 8, y + 88)
+
+
+def treaty_box(i):
+    x0, x1 = FIELD_X[0 if i < 4 else 1]
+    return (x0, TREATY_Y[i][0], x1, TREATY_Y[i][1])
+
+
+def spy_box(i):
+    x0, x1 = FIELD_X[0 if i < 4 else 1]
+    return (x0, SPY_Y[i][0], x1, SPY_Y[i][1])
+
+
+def portrait_box(i):
+    px, py = PICTURE[i]
+    return (px, py, px + PORTRAIT[0] - 1, py + PORTRAIT[1] - 1)
+
+
+def bar_box(i):
+    bx, by = BAR[i]
+    return (bx, by, bx + BAR_SIZE[0] - 1, by + BAR_SIZE[1] - 1)
 
 
 def mission_rect(i, k):

@@ -17,14 +17,17 @@ WHAT IT TAKES (racescrn.cpp unless named):
                   (`Draw_Race_Photos_`, :258-281, loaded :328) — 13 races
     31            the ELIMINATED overlay over a portrait (:266-268, :288)
     46 + race     the spy icon of each race (:286, :319, :335)
+    3             the relation bar, 8 x 88, green at the top to red at the
+                  bottom (`Draw_Relations_Sliders_`, :233-254) — its
+                  colour is what the bar says (work order 223)
   the palette     RACES.LBX entry 0 — the screen's background, which
                   carries the palette the screen runs in (:742, :775) —
                   laid over FONTS.LBX 9, the main palette its range leaves
                   as it is (`lbx.read_palette`)
 
 NOT taken, and why: the background itself (entry 0's pixels — the order's
-"no outer frame", decision 71's HUD style draws the panels), the bars,
-sliders and buttons (2, 3, 6-9, 60 — HUD blocks), the mission buttons
+"no outer frame", decision 71's HUD style draws the panels), the
+slider and buttons (2, 6-9, 60 — HUD blocks), the mission buttons
 10-30 (the spy missions are not built, parked), the cursors (1, 4, 5,
 61-63) and the network box (59).
 """
@@ -44,13 +47,13 @@ FORMAT_VERSION = 1
 DEFAULT_OUT = os.path.join(ROOT, "screens", "races", "assets", "gamedata")
 
 RACES = 13
-PORTRAIT_FIRST, SPY_FIRST, ELIMINATED = 32, 46, 31
+PORTRAIT_FIRST, SPY_FIRST, ELIMINATED, BAR = 32, 46, 31, 3
 BACKGROUND = 0
 FONTS_PALETTE, PALETTE_BYTES = 9, 256 * 4
 
 
 def wanted():
-    out = {"eliminated": ELIMINATED}
+    out = {"eliminated": ELIMINATED, "bar": BAR}
     out.update({f"portrait_{r}": PORTRAIT_FIRST + r for r in range(RACES)})
     out.update({f"spy_{r}": SPY_FIRST + r for r in range(RACES)})
     return out
@@ -79,7 +82,8 @@ def extract(folder=None, out=DEFAULT_OUT, dry_run=False):
     palette.update(lbx.read_palette(races[BACKGROUND], head.frame_count))
     manifest = {
         "format": FORMAT_VERSION,
-        "_what": ("The Races screen's portraits, overlay and spy icons and "
+        "_what": ("The Races screen's portraits, overlay, spy icons, "
+                  "relation bar and "
                   "its palette, out of the player's own Master of Orion 2. "
                   "Never committed, never shipped (decisions 38, 40, 42). "
                   "Rebuild with tools/races_art_extract.py."),

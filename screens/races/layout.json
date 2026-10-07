@@ -3,7 +3,7 @@
   "marks": {
     "hd_state": "BUILT, NOT ACCEPTED. The live part of work order 175 C is parked (dev:doc/briefs/175-parked-for-data.md).",
     "omission_outer_frame": "OMISSION \u2014 RACES.LBX 0, the background with the panels, bars, sliders and buttons painted in, is not drawn; decision 71's HUD style draws them in code.",
-    "deviation_hud_parts": "DEVIATION \u2014 the relation bar and slider, the mission row and the five buttons are HUD blocks at the original's rectangles, not RACES.LBX 2, 3, 6-30 and 60.",
+    "deviation_hud_parts": "DEVIATION \u2014 the slider, the mission row, the five buttons and the striped fields are HUD blocks at the original's rectangles, not RACES.LBX 2, 6-30, 60 and 0's painted fields; the relation bar is RACES.LBX 3 itself since work order 223.",
     "deviation_button_words": "DEVIATION \u2014 RETURN, AUDIENCE, REPORT, DECLARE WAR, IGNORE, ESPIONAGE / SABOTAGE / HIDE, the title and BONUSES are baked into the original's art; HD writes them in OrionLayer's words.",
     "deviation_hd_font": "DEVIATION \u2014 the bitmap fonts become the HD font at the native line height, shrunk to the original's width where they would overflow.",
     "hd_extension_sprite_scale": "HD EXTENSION \u2014 portraits and spy icons at an integer magnification, centred on their native cell (decision 28).",
