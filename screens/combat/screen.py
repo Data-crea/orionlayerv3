@@ -332,7 +332,7 @@ class CombatScreen(CombatInput, ScreenBase):
         battle's opening view, asked when a battle's first view is built.
         A change drops the pictures made so far — here too, since the
         scaled ones are keyed by the picture's `id` (P828)."""
-        from core import paintdetail
+        from core import livery, paintdetail
         us = getattr(self.app, "user_settings", None)
         choice = us.get("painted_detail") if us is not None else None
         if self._art.set_detail(paintdetail.cap(choice,
@@ -340,6 +340,15 @@ class CombatScreen(CombatInput, ScreenBase):
             self._cache.clear()
             log.info("combat: painted pictures held at %d x at most (%s)",
                      self._art.detail, choice or paintdetail.DEFAULT)
+        # HD EXTENSION `livery` (work order 220, `core/livery`): the window's
+        # choice from the next battle on, the second colour on the player's
+        # own colour only (decision 8); a change drops every picture made in
+        # the old one, here too (P828)
+        own = cbdraw.player_colours(self._state).get(self._me()) \
+            if self._state is not None else None
+        if self._art.set_livery(livery.from_settings(us, own)):
+            self._cache.clear()
+            log.info("combat: painted ships in %r", self._art.livery)
 
     def _weapon_name(self, wid):
         return self._names.name("weapons", wid) if self._names else None

@@ -36,7 +36,8 @@ from core.hestrings import printf
 from core.screen_base import ScreenBase
 from core.structs import settings as settings_spec
 from core.wire_protocol import EFFECT_PAIRS
-from screens.game_menu import gmdraw, gmframe, gmorion, gmsliders, nodes
+from screens.game_menu import (gmdraw, gmframe, gmlivery, gmorion,
+                               gmsliders, nodes)
 from screens.game_menu.gmsave import SaveEditor
 
 log = logging.getLogger("game_menu")
@@ -95,6 +96,7 @@ class GameMenuScreen(ScreenBase):
         self.menu_keys = set()  # the menu's buttons, as its last list had them
         self.slider_drag = None  # gmsliders: a press on a bar, not sent yet
         self.slider_sent = {}
+        self.livery = None      # gmlivery: the livery window, while it is up
 
     # ── Lifecycle ─────────────────────────────────────────
 
@@ -115,12 +117,14 @@ class GameMenuScreen(ScreenBase):
         self.node = self.under = self.pending = self.last_slot = None
         self.menu_keys = set()
         self._sent = None
+        self.livery = None
         self.flags = self._initial_flags(game_state)
         self.save.reset()
 
     def exit(self):
         # Every way out of the popup, ESC from Settings included, keeps
         # the OrionLayer rows' values; the save writes nothing twice.
+        gmlivery.close(self)
         gmorion.save(self)
         self.save.reset()
         super().exit()
@@ -161,11 +165,16 @@ class GameMenuScreen(ScreenBase):
                 self.save.reset_edit()
             log.info("game menu: %s -> %s", self.node, node)
             self.node = node
+            if node != nodes.SETTINGS:
+                # the livery window belongs to the Settings dialog: it
+                # closes with it, its choices kept (`gmlivery.close`)
+                gmlivery.close(self)
         self.save.update(game_state)
         gmsliders.advance(self, game_state)
 
     def render(self, surface):
         gmdraw.render(self, surface)
+        gmlivery.render(self, surface)
         self.render_help(surface)
 
     # ── Sending ───────────────────────────────────────────
@@ -247,6 +256,11 @@ class GameMenuScreen(ScreenBase):
     def handle_click(self, screen_x, screen_y):
         if self.help_consumes_click(screen_x, screen_y) or self.node is None:
             return None
+        if gmlivery.is_open(self):
+            # HD's own window over the Settings dialog: nothing under it
+            # takes a click, and nothing is sent (HD EXTENSION `livery`)
+            gmlivery.handle_click(self, screen_x, screen_y)
+            return None
         # THE PRESSED STATE FIRST, before anything decides whether to send:
         # it shows the click landed, not that the game took it (decision 33).
         for name, _ in self.BUTTONS.get(self.node, []):
@@ -292,16 +306,24 @@ class GameMenuScreen(ScreenBase):
 
     def handle_mouse_motion(self, screen_x, screen_y):
         super().handle_mouse_motion(screen_x, screen_y)
+        gmlivery.motion(self, screen_x, screen_y)
         gmsliders.motion(self, screen_x, screen_y)
 
     def handle_left_release(self, screen_x, screen_y):
         super().handle_left_release(screen_x, screen_y)
+        gmlivery.release(self, screen_x, screen_y)
         gmsliders.release(self, screen_x, screen_y)
 
     def handle_key_event(self, event):
         if self.save.handle_key_event(event):
             return
         if self.help_consumes_key(event.key) or self.node is None:
+            return
+        if gmlivery.is_open(self):
+            # ESC closes the window back to the settings; no key reaches
+            # the game while it is up
+            if event.key == pygame.K_ESCAPE:
+                gmlivery.close(self)
             return
         if event.key == pygame.K_ESCAPE:
             if self.node == nodes.CONFIRM:
@@ -323,8 +345,10 @@ class GameMenuScreen(ScreenBase):
     # ── Help ──────────────────────────────────────────────
 
     def help_region_rect(self, spec):
-        """Only the current dialog's table (help.json `node`)."""
-        if spec.get("node") != self.node:
+        """Only the current dialog's table (help.json `node`); while the
+        livery window is up, only its own (`gmlivery.NODE`)."""
+        if spec.get("node") != (gmlivery.NODE if gmlivery.is_open(self)
+                                else self.node):
             return None
         return super().help_region_rect(spec)
 

@@ -272,6 +272,15 @@ def started_enabled():
     return _state["enabled"]
 
 
+def targets(pattern):
+    """The tree paths the folder fills that match the glob `pattern`, in
+    order: what a window may offer (work order 220, the livery's ships and
+    masks), asked of the index `init` built, never of the disk."""
+    import fnmatch
+    return sorted(t for t in _state["index"]
+                  if fnmatch.fnmatchcase(t, pattern))
+
+
 def in_use():
     """How many of the folder's files are in use (the settings row):
     its pictures, style.json and colour.json where present, and its

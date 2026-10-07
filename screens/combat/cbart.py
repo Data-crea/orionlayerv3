@@ -184,6 +184,9 @@ class CombatArt:
         self._cache = {}
         #: the largest factor a painted picture is held at (`set_detail`)
         self.detail = DETAIL_FULL
+        #: the livery painted ships are coloured in (`set_livery`)
+        from core import livery
+        self.livery = livery.DEFAULT
         self._load()
 
     def set_detail(self, cap):
@@ -195,11 +198,32 @@ class CombatArt:
         if cap == self.detail:
             return False
         self.detail = cap
-        self._cache.clear()
+        self._drop()
+        return True
+
+    def set_livery(self, liv):
+        """Colour painted ships in the livery `liv` (HD EXTENSION `livery`,
+        `core/livery`, work order 220). A change drops every picture made
+        so far in the old one, and only those: no picture of the old livery
+        stays in memory (part D), while the files read and held stay (they
+        do not depend on it; the window's preview asks at every change).
+        True if it did."""
+        if liv == self.livery:
+            return False
+        self.livery = liv
+        for key in [k for k in self._cache
+                    if k[0] in ("plating", "plating_src")]:
+            del self._cache[key]
         cc = getattr(self, "_cloak_cache", None)
         if cc is not None:
             cc.clear()
         return True
+
+    def _drop(self):
+        self._cache.clear()
+        cc = getattr(self, "_cloak_cache", None)
+        if cc is not None:
+            cc.clear()
 
     def _path(self, name):
         if self.folder is not None:

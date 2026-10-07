@@ -307,7 +307,41 @@
       "language_steps": {
         "en": "English",
         "de": "Deutsch"
-      }
+      },
+      "livery": "Livery"
+    },
+    "livery": {
+      "_hd_extension": "HD EXTENSION `livery` (work order 220, decisions 1-6, 8, 9): the livery window's words; screens/game_menu/gmlivery.py, core/livery.py. MOO2 has no such window.",
+      "title": "LIVERY",
+      "pattern": "Pattern",
+      "pattern_full": "Full",
+      "pattern_light": "Light plates",
+      "pattern_stripes": "Stripes",
+      "pattern_outer": "Outer hull",
+      "pattern_mixed": "Mixed",
+      "core": "Core colour",
+      "core_strong": "Strong",
+      "core_dark": "Dark",
+      "core_light": "Light",
+      "core_muted": "Muted",
+      "second": "Second colour",
+      "none": "None",
+      "second_full": "Not with Full",
+      "hue": "Hue",
+      "sat": "Saturation",
+      "val": "Brightness",
+      "strength": "Strength",
+      "note": "From the next battle on",
+      "reset": "Reset",
+      "back": "Back",
+      "frigate": "Frigate",
+      "destroyer": "Destroyer",
+      "cruiser": "Cruiser",
+      "battleship": "Battleship",
+      "titan": "Titan",
+      "doom_star": "Doom Star",
+      "station": "Station",
+      "look": "Look {n}"
     }
   },
   "settings_rows": {
@@ -417,6 +451,50 @@
     "orionlayer.language": {
       "title": "LANGUAGE",
       "body": "The language of OrionLayer's own words and of the game's texts: English or German. For German the game's German files are looked for when you choose it. Applied at the next start."
+    },
+    "orionlayer.livery": {
+      "title": "LIVERY",
+      "body": "Opens the livery window, where you choose how the painted ships of the battle are coloured: which plates take the owner's colour, in which tone of it, a second colour of your own for your fleet, and how strongly. Shown only while your mod folder is on and holds painted ships with livery masks. The game's own pictures are not touched."
+    },
+    "livery.preview": {
+      "title": "PREVIEW",
+      "body": "A painted ship in your own colour, drawn by the battle's own code with exactly the choices made here: what you see is what the next battle shows."
+    },
+    "livery.hull": {
+      "title": "HULL TYPE",
+      "body": "Steps through the hull types your mod folder has painted, frigate to titan and the Doom Star. Only the preview changes."
+    },
+    "livery.look": {
+      "title": "LOOK",
+      "body": "Steps through the looks of this hull type, 1 to 8. Only the preview changes."
+    },
+    "livery.owners": {
+      "title": "ALL EIGHT OWNERS",
+      "body": "The same pattern, core colour and strength on all eight player colours, so you see at a glance whether the fleets stay apart. Yours is underlined, and only yours carries your second colour: the other fleets never do."
+    },
+    "livery.pattern": {
+      "title": "PATTERN",
+      "body": "Which plates take the owner's colour: Light plates, Stripes, Outer hull or Mixed, the masks a modder supplies with a ship, or Full: all the grey plating at the lighter strength, without masks. A ship without masks for the chosen pattern is drawn as Full. Applies to every fleet."
+    },
+    "livery.core": {
+      "title": "CORE COLOUR",
+      "body": "The tone of the owner's colour on the coloured plates: Strong is the colour as it is; Dark, Light and Muted are made from it by one rule, the same for every player. Applies to every fleet, each in its own colour."
+    },
+    "livery.second": {
+      "title": "SECOND COLOUR",
+      "body": "Any colour for the pattern's second zone, or None: pick the hue, then the saturation and the brightness. Only your own fleet carries it, so it cannot make another fleet's colour ambiguous. Not available under Full, which has no second zone."
+    },
+    "livery.strength": {
+      "title": "STRENGTH",
+      "body": "How strongly the painted plates take the colour, from faint to full. Applies to every fleet."
+    },
+    "livery.reset": {
+      "title": "RESET",
+      "body": "Back to the defaults: Light plates, Strong, no second colour, full strength."
+    },
+    "livery.back": {
+      "title": "BACK",
+      "body": "Back to the settings. Your choices are kept with your settings, not with a save game, and apply from the next battle on."
     }
   },
   "orionlayer_rows": {

@@ -55,6 +55,8 @@ import logging
 import numpy as np
 import pygame
 
+from core import livery
+
 from . import cbart
 
 log = logging.getLogger("combat")
@@ -120,8 +122,15 @@ def _lum(c):
 
 def color_blend(rgb, colour):
     """W3C compositing "color": SetLum(colour, Lum(rgb)), clipped."""
-    col = np.broadcast_to(np.array(colour, float) / 255, rgb.shape)
-    c = col + (_lum(rgb) - _lum(col))[..., None]
+    return at_lum(_lum(rgb), colour)
+
+
+def at_lum(lum, colour):
+    """`colour` (0-255) at the lightness `lum` (0..1, any shape): its hue
+    and saturation kept, clipped into the gamut (W3C SetLum, ClipColor)."""
+    shape = np.shape(lum) + (3,)
+    col = np.broadcast_to(np.array(colour, float)[:3] / 255, shape)
+    c = col + (lum - _lum(col))[..., None]
     lum = _lum(c)[..., None]
     lo = c.min(-1, keepdims=True)
     hi = c.max(-1, keepdims=True)
@@ -143,13 +152,119 @@ def recoloured(surf, colour_rgb):
     return cbart.painted_as(res, cbart.hd_factor(surf))
 
 
+# ── the livery (work order 220, `core/livery`) ─────────────────────
+#: The plates' middle lightness (W3C Lum): the median of the neutral pixels
+#: under both zones of all four patterns, 40 ships at 8 x, 3.9 M pixels
+#: (work order 220; p25 0.40, p75 0.65). A plate this light shows the laid
+#: colour exactly; lighter and darker ones keep their difference.
+REF = 0.52
+#: Over a zone, the lightness above which a glint fades back to neutral, from
+#: full at ZONE_GLINT[0] to none at ZONE_GLINT[1] — the zones' plates' 90th
+#: and 98th percentile, so a lit edge stays metal and the plate itself does
+#: not (219's HIGHLIGHT, 0.55-0.80, would take the colour off half of them).
+ZONE_GLINT = (0.78, 0.94)
+
+
+def _lum1(rgb):
+    return (rgb[0] * 0.3 + rgb[1] * 0.59 + rgb[2] * 0.11) / 255
+
+
+def remap(lum, pin):
+    """The plates' lightness with REF moved to `pin`, 0 and 1 kept: light
+    and shade keep their order and the colour's own lightness shows."""
+    pin = min(max(float(pin), 1e-3), 1 - 1e-3)
+    return np.where(lum <= REF, lum * (pin / REF),
+                    pin + (lum - REF) * ((1 - pin) / (1 - REF)))
+
+
+def lay(rgb, colour):
+    """`colour` laid onto plating `rgb` (0..1): the plate at REF shows the
+    colour as it is — a dark colour dark, white white — its light and
+    shade around it kept. One function for both zones (part C)."""
+    return at_lum(remap(_lum(rgb), _lum1(colour)), colour)
+
+
+def full(rgb, owner, liv):
+    """Full (decision 82 as 219 left it): the grey's `amount` towards the
+    owner's colour by the color blend. The core variant moves the lightness
+    by its own over the owner's; Strong at full strength is 219's colour
+    byte for byte."""
+    lum = _lum(rgb)
+    core = livery.core_rgb(owner, liv.core)
+    if liv.core != "strong":
+        lum = remap(lum, REF * _lum1(core) / max(_lum1(owner), 1e-3))
+    w = (amount(rgb) * liv.strength)[..., None] if liv.strength != 1 else \
+        amount(rgb)[..., None]
+    return rgb * (1 - w) + at_lum(lum, core) * w
+
+
+def zoned(rgb, core, second, zone1, zone2, strength):
+    """The livery's zones: the grey under zone 1 takes `core`, under zone 2
+    `second` (if any), at `strength`; the rest stays as painted, every
+    coloured pixel too (`weights`), and bright glints fade (`ZONE_GLINT`)."""
+    light = (rgb.max(-1) + rgb.min(-1)) / 2
+    sel = weights(rgb) * np.clip((ZONE_GLINT[1] - light) /
+                                 (ZONE_GLINT[1] - ZONE_GLINT[0]), 0, 1) \
+        * strength
+    w = (zone1 * sel)[..., None]
+    out = rgb * (1 - w) + lay(rgb, core) * w
+    if second is not None and zone2 is not None:
+        w = (zone2 * sel)[..., None]
+        out = out * (1 - w) + lay(rgb, second) * w
+    return out
+
+
+def masks(art, picture, frame, pattern, size):
+    """(zone 1, zone 2) of a painted frame for a pattern, each 0..1 (w, h)
+    or None: read through the picture's own loader, so held and sized as it
+    is (decision 83); a mask of another size than its picture is not used,
+    with one log line."""
+    if pattern not in livery.MASK_PATTERNS:
+        return None, None
+    out = []
+    for zone in (1, 2):
+        nm = livery.mask_name(picture, frame, pattern, zone)
+        m = art.painted_file("cmbtshp", nm, int(picture))
+        if m is not None and m.get_size() != size:
+            key = ("mask_size", nm)
+            if key not in art._cache:
+                art._cache[key] = True
+                log.warning("combat: %s is %d x %d, its picture %d x %d — "
+                            "not used", nm, *m.get_size(), *size)
+            m = None
+        out.append(None if m is None else
+                   pygame.surfarray.array3d(m)[..., 0].astype(float) / 255)
+    return tuple(out)
+
+
+def livery_recoloured(art, surf, picture, frame, colour, liv):
+    """`surf`, a colour-free painted frame, in the livery `liv` for the
+    owner `colour`: its pattern's zones where the ship has them, else Full.
+    The factor kept (`cbart.painted_as`)."""
+    owner = owner_rgb(colour)
+    if liv.pattern == "full" and liv.core == "strong" and \
+            liv.strength == 1:
+        return recoloured(surf, owner)
+    rgb = pygame.surfarray.array3d(surf).astype(float) / 255
+    z1, z2 = masks(art, picture, frame, liv.pattern, surf.get_size())
+    if z1 is None:
+        out = full(rgb, owner, liv)
+    else:
+        out = zoned(rgb, livery.core_rgb(owner, liv.core),
+                    liv.second_for(colour), z1, z2, liv.strength)
+    res = surf.copy()
+    pygame.surfarray.pixels3d(res)[:] = np.clip(out * 255 + 0.5, 0,
+                                                255).astype("uint8")
+    return cbart.painted_as(res, cbart.hd_factor(surf))
+
+
 def _file(art, picture, frame):
     return art.painted_file("cmbtshp", name(picture, frame), int(picture))
 
 
 def source(art, picture, facing, glow):
-    """(picture, mirror, flip, turn degrees) of the colour-free frame for
-    `facing` and `glow`, or None. The original's own scheme: five stored
+    """(picture, mirror, flip, turn degrees, its frame) of the colour-free
+    frame for `facing` and `glow`, or None. The original's own scheme: five stored
     facings, the other eleven their mirrors and flips (`stored_facing`).
     A stored facing's frame, else its frame 0 (the glow); a stored facing
     not given at all is the nearest given one turned, from 2 x and up."""
@@ -157,16 +272,20 @@ def source(art, picture, facing, glow):
     for g in dict.fromkeys((max(0, min(3, int(glow))), 0)):
         p = _file(art, picture, 4 * stored + g)
         if p is not None:
-            return p, mirror, flip, 0.0
+            return p, mirror, flip, 0.0, 4 * stored + g
     have = [s for s in range(5) if _file(art, picture, 4 * s) is not None
             or _file(art, picture, 4 * s + int(glow)) is not None]
     if not have:
         return None
     s = min(have, key=lambda s: (abs(stored - s), s))
-    p = _file(art, picture, 4 * s + int(glow)) or _file(art, picture, 4 * s)
+    frame = 4 * s + int(glow)
+    p = _file(art, picture, frame)
+    if p is None:
+        frame = 4 * s
+        p = _file(art, picture, frame)
     if cbart.hd_factor(p) <= 1:
         return None
-    return p, mirror, flip, (stored - s) * 22.5
+    return p, mirror, flip, (stored - s) * 22.5, frame
 
 
 def turned(surf, degrees):
@@ -188,17 +307,20 @@ def ship(art, colour, picture, facing, glow=0):
     if art._painted("cmbtshp", int(colour) * 45 + int(picture),
                     frame) is not None:
         return None
-    key = ("plating", int(colour), int(picture), int(facing) & 15, frame)
+    liv = getattr(art, "livery", livery.DEFAULT)
+    key = ("plating", int(colour), int(picture), int(facing) & 15, frame,
+           liv.key())
     cache = art._cache
     if key in cache:
         return cache[key]
     out = None
     src = source(art, picture, facing, glow)
     if src is not None:
-        pic, mirror, flip, turn = src
-        ck = ("plating_src", id(pic), int(colour))
+        pic, mirror, flip, turn, at = src
+        ck = ("plating_src", id(pic), int(colour), liv.key())
         if ck not in cache:
-            cache[ck] = (pic, recoloured(pic, owner_rgb(colour)))
+            cache[ck] = (pic, livery_recoloured(art, pic, picture, at,
+                                                colour, liv))
         out = cache[ck][1]
         if turn:
             out = turned(out, turn)

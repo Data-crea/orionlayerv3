@@ -16,8 +16,11 @@ start like the preset; and since work order 212 the FRAME RATE (HD EXTENSION
 `frame_rate`, decision 79, `core/framerate.py`): 30, 60, 120, the monitor's
 rate (the default) or unlimited, applied at once; and since work order 219
 the PAINTED DETAIL (HD EXTENSION `painted_detail`, `core/paintdetail.py`):
-Auto (the default), Normal (4 x) or High (8 x), from the next battle on. MOO2
-has none of them; the game knows nothing about these rows.
+Auto (the default), Normal (4 x) or High (8 x), from the next battle on; and
+since work order 220 the LIVERY button on that row (HD EXTENSION `livery`,
+`gmlivery`), shown only while the mod folder is on and holds painted ships
+with masks (decision 2), which opens the livery window. MOO2 has none of
+them; the game knows nothing about these rows.
 
 **TWO STATE SOURCES, NEVER MERGED.** The thirteen engine checkboxes
 keep their local copy seeded from `s_settings` (`screen.flags`). These
@@ -40,8 +43,10 @@ nothing when nothing changed.
 """
 import pygame
 
-from core import (framerate, lang, modsetup, paintdetail, palette,
+from core import (framerate, lang, livery, modsetup, paintdetail, palette,
                   playercolors, usermod, usersettings)
+from core import mouse as mouse_input
+from core.hud import blocks as hud
 from core.hud import glass
 from core.hud import style as hudstyle
 from core.hud import tint
@@ -50,6 +55,11 @@ from . import gmlang
 
 BANDS = ("divider", "heading", "floor", "colours", "monsters", "frame",
          "tone", "glass", "frame_rate", "painted", "mods", "language")
+
+#: Buttons a row carries besides its value, and the row each sits on: the
+#: livery window's (work order 220), in the RESET column of Painted detail.
+#: A help region each, named as the bands are (`orionlayer.<name>`).
+ROW_BUTTONS = {"livery": "painted"}
 
 #: Each band's share of the box. The divider is a line, so since work
 #: order 170 it takes a third of a row and the frame-colour row fits in
@@ -125,6 +135,12 @@ def bands(screen):
                                    hb.h)
     rr = out["hue_reset"]
     out["glass_reset"] = pygame.Rect(rr.x, gl.y, rr.w, gl.h)
+    # THE LIVERY BUTTON (work order 220) in the RESET column of the Painted
+    # detail row — only when it can do something (decision 2)
+    if livery.window_available():
+        pa = out["painted"]
+        out["livery"] = pygame.Rect(rr.x, pa.y + pa.h // 10, rr.w,
+                                           pa.h - pa.h // 5)
     return out
 
 
@@ -237,6 +253,9 @@ def handle_click(screen, x, y):
         _cycle(settings, "monster_values", MONSTER_STEPS)
     elif geo["frame_rate"].collidepoint(x, y):
         _cycle(settings, "frame_rate", framerate.STEPS)
+    elif "livery" in geo and geo["livery"].collidepoint(x, y):
+        from . import gmlivery
+        gmlivery.open_window(screen)
     elif geo["painted"].collidepoint(x, y):
         _cycle(settings, "painted_detail", paintdetail.STEPS)
     elif geo["mods"].collidepoint(x, y):
@@ -350,6 +369,7 @@ def render(screen, surface):
     _render_frame_rate_row(screen, surface, geo["frame_rate"], words, size,
                            lx, vx)
     _render_painted_row(screen, surface, geo["painted"], words, size, lx, vx)
+    _render_livery_button(screen, surface, geo, words, size)
     _render_mod_row(screen, surface, geo["mods"], words, size, lx, vx)
     gmlang.render(screen, surface, geo["language"], words, size, lx, vx,
                   lambda *a, fit=False: _text(
@@ -409,6 +429,24 @@ def _render_painted_row(screen, surface, row, words, size, lx, vx):
         word = word.format(k=paintdetail.cap(shown, surface.get_width()
                                              / paintdetail.OPENING_PX))
     _text(screen, surface, word, size, COL_OPTION, row.x + vx, row)
+
+
+def _render_livery_button(screen, surface, geo, words, size):
+    """The button that opens the livery window, where it is offered."""
+    rect = geo.get("livery")
+    if rect is None:
+        return
+    hud.small_button(surface, rect, screen.layout.scale,
+                     "hover" if rect.collidepoint(mouse_input.pos())
+                     else "normal")
+    img = screen.style.render_text(words.get("livery", "Livery"), size,
+                                   tuple(COL_OPTION[:3]))
+    while img.get_width() > rect.w * 0.9 and size > 8:
+        size -= 1
+        img = screen.style.render_text(words.get("livery", "Livery"), size,
+                                       tuple(COL_OPTION[:3]))
+    surface.blit(img, (rect.x + (rect.w - img.get_width()) // 2,
+                       rect.y + (rect.h - img.get_height()) // 2))
 
 
 def _render_mod_row(screen, surface, row, words, size, lx, vx):

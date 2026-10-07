@@ -326,6 +326,11 @@ def help_rect(screen, spec):
         if area is None:
             return None
         return bands(area, spec.get("rows", 1))[spec.get("row", 0)]
+    if spec.get("livery_part"):
+        # the livery window (work order 220): `gmlivery.geometry`, the one
+        # geometry its drawing and its clicks use (decision 5)
+        from . import gmlivery
+        return gmlivery.help_rect(screen, spec)
     band = spec.get("orionlayer_band")
     if band:
         # an OrionLayer row (work order 212): `gmorion.bands`, the one

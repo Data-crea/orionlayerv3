@@ -117,6 +117,14 @@ DEFAULTS = {
     # `core/paintdetail`): auto, normal (4 x) or high (8 x); from the next
     # battle on.
     "painted_detail": "auto",
+    # The livery of painted ships (work order 220, `core/livery`): the
+    # pattern, the core variant of the owner's colour, the player's second
+    # colour ([r, g, b] or None) and the strength; from the next battle on,
+    # in the livery window's preview at once.
+    "livery_pattern": "light",
+    "livery_core": "strong",
+    "livery_second": None,
+    "livery_strength": 1.0,
 }
 
 

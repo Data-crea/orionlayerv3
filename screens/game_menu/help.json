@@ -461,6 +461,11 @@
       "orionlayer_band": "frame_rate"
     },
     {
+      "help_id": "orionlayer.livery",
+      "node": "settings",
+      "orionlayer_band": "livery"
+    },
+    {
       "help_id": "orionlayer.painted",
       "node": "settings",
       "orionlayer_band": "painted"
@@ -585,6 +590,66 @@
       "help_id": "orionlayer.language",
       "node": "settings",
       "orionlayer_band": "language"
+    },
+    {
+      "help_id": "livery.back",
+      "node": "livery",
+      "livery_part": "back"
+    },
+    {
+      "help_id": "livery.reset",
+      "node": "livery",
+      "livery_part": "reset"
+    },
+    {
+      "help_id": "livery.hull",
+      "node": "livery",
+      "livery_part": "hull"
+    },
+    {
+      "help_id": "livery.look",
+      "node": "livery",
+      "livery_part": "look"
+    },
+    {
+      "help_id": "livery.owners",
+      "node": "livery",
+      "livery_part": "owners"
+    },
+    {
+      "help_id": "livery.pattern",
+      "node": "livery",
+      "livery_part": "pattern"
+    },
+    {
+      "help_id": "livery.pattern",
+      "node": "livery",
+      "livery_part": "pattern_label"
+    },
+    {
+      "help_id": "livery.core",
+      "node": "livery",
+      "livery_part": "core"
+    },
+    {
+      "help_id": "livery.core",
+      "node": "livery",
+      "livery_part": "core_label"
+    },
+    {
+      "help_id": "livery.second",
+      "node": "livery",
+      "livery_part": "second"
+    },
+    {
+      "help_id": "livery.strength",
+      "node": "livery",
+      "livery_part": "strength"
+    },
+    {
+      "help_id": "livery.preview",
+      "node": "livery",
+      "livery_part": "preview"
     }
   ],
   "hd_own_help": "HD EXTENSION (work order 212): a region whose help_id is a name, not a number, shows OrionLayer's own text from layout.json `own_help` (in the session's language) \u2014 the OrionLayer rows have no entry in the game's HELP.LBX."
