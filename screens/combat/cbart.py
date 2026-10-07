@@ -212,7 +212,8 @@ class CombatArt:
             return False
         self.livery = liv
         for key in [k for k in self._cache
-                    if k[0] in ("plating", "plating_src")]:
+                    if k[0] in ("plating", "plating_src", "plating_lit",
+                                "plating_turn")]:
             del self._cache[key]
         cc = getattr(self, "_cloak_cache", None)
         if cc is not None:
@@ -482,11 +483,22 @@ class CombatArt:
             from . import cbpaint
             if cbpaint.ship(self, colour, picture, facing, glow) is not None:
                 return None
+        lbx_name, entry = self._unit_entry(colour, picture, monster)
+        from . import cbpulse
+        if cbpulse.own(self, lbx_name, entry, stored, glow, mirror,
+                       flip) is not None:
+            return None
+        if lbx_name == "monster":
+            return self.indexed("monster", entry, frame, None, mirror, flip)
+        return self.indexed("cmbtshp", entry, frame, self.ramp(colour),
+                            mirror, flip)
+
+    @staticmethod
+    def _unit_entry(colour, picture, monster):
+        """(file, entry) of a unit's stored drawing (cmbtdrw1.cpp:2533)."""
         if monster or picture == 44:
-            return self.indexed("monster", 25 if picture == 44 else picture,
-                                frame, None, mirror, flip)
-        return self.indexed("cmbtshp", int(colour) * 45 + int(picture), frame,
-                            self.ramp(colour), mirror, flip)
+            return "monster", 25 if picture == 44 else int(picture)
+        return "cmbtshp", int(colour) * 45 + int(picture)
 
     def ship(self, colour, picture, facing, glow=0, monster=False):
         """A battle unit's picture for its facing and glow frame 0..3: the
@@ -495,15 +507,22 @@ class CombatArt:
         the stored drawing."""
         stored, mirror, flip = stored_facing(facing)
         frame = 4 * stored + max(0, min(3, int(glow)))
-        if monster or picture == 44:
-            return self.surface("monster", 25 if picture == 44 else picture,
-                                frame, None, mirror, flip)
-        from . import cbpaint
-        free = cbpaint.ship(self, colour, picture, facing, glow)
-        if free is not None:
-            return free
-        return self.surface("cmbtshp", int(colour) * 45 + int(picture), frame,
-                            self.ramp(colour), mirror, flip)
+        lbx_name, entry = self._unit_entry(colour, picture, monster)
+        if lbx_name == "cmbtshp":
+            from . import cbpaint
+            free = cbpaint.ship(self, colour, picture, facing, glow)
+            if free is not None:
+                return free
+        # a painted file without this glow frame: made from its frame 0,
+        # not the stored drawing between painted ones (`cbpulse`)
+        from . import cbpulse
+        made = cbpulse.own(self, lbx_name, entry, stored, glow, mirror, flip)
+        if made is not None:
+            return made
+        if lbx_name == "monster":
+            return self.surface("monster", entry, frame, None, mirror, flip)
+        return self.surface("cmbtshp", entry, frame, self.ramp(colour),
+                            mirror, flip)
 
 
 def planet_picture(art, state, c):

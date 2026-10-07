@@ -41,8 +41,12 @@ placed on the painted fleet's plating (2.16 M selected pixels, 40 ships at
 8 x; `dev:tools/combat_plating.py --light`): lightness median 0.33, 10 %
 below 0.08, 10 % above 0.64.
 
-MISSING FRAMES, colour-free pictures only (a colour's own files are drawn as
-before): a missing glow frame (1-3) is its facing's frame 0; a missing
+MISSING FRAMES: a missing glow frame (1-3) is MADE from its facing's frame
+0 — its engines lit under an engine mask, else frame 0 itself (decision 82
+as amended by work order 221, HD EXTENSION `engine_pulse`, `cbpulse`; a
+colour's own file the same way, from its own frame 0, in `cbart.ship`);
+colour-free pictures only from here on (a colour's own files are drawn as
+before): a missing
 STORED facing (the original draws five, 0-4, and mirrors and flips them
 into the other eleven) is TURNED in code from the nearest stored facing
 given, only from a picture larger than 1 x (216: 1 x goes soft) — a 1 x
@@ -130,6 +134,13 @@ def at_lum(lum, colour):
     and saturation kept, clipped into the gamut (W3C SetLum, ClipColor)."""
     shape = np.shape(lum) + (3,)
     col = np.broadcast_to(np.array(colour, float)[:3] / 255, shape)
+    return set_lum(col, lum)
+
+
+def set_lum(col, lum):
+    """Colours `col` (0..1, (..., 3)) at the lightness `lum` (0..1, (...)):
+    each one's hue and saturation kept, clipped into the gamut (W3C SetLum,
+    ClipColor). `at_lum` for one colour, `cbpulse` for a picture's own."""
     c = col + (lum - _lum(col))[..., None]
     lum = _lum(c)[..., None]
     lo = c.min(-1, keepdims=True)
@@ -140,11 +151,20 @@ def at_lum(lum, colour):
                     np.maximum(hi - lum, 1e-6), c)
 
 
-def recoloured(surf, colour_rgb):
+def _kept(w, keep):
+    """A colour's weights `w` with the engine zone `keep` left out (work
+    order 221, decision 4: the owner's colour and the livery never touch the
+    engines); `w` itself without a mask, so a ship without one is coloured
+    byte for byte as before."""
+    return w if keep is None else w * (1 - keep)
+
+
+def recoloured(surf, colour_rgb, keep=None):
     """`surf` with its neutral grey in `colour_rgb`; alpha and every
-    coloured pixel as painted; the painted factor kept."""
+    coloured pixel as painted, and what `keep` (0..1, an engine mask,
+    `cbpulse`) covers; the painted factor kept."""
     rgb = pygame.surfarray.array3d(surf).astype(float) / 255
-    w = amount(rgb)[..., None]
+    w = _kept(amount(rgb), keep)[..., None]
     out = rgb * (1 - w) + color_blend(rgb, colour_rgb) * w
     res = surf.copy()
     pygame.surfarray.pixels3d(res)[:] = np.clip(out * 255 + 0.5, 0,
@@ -184,7 +204,7 @@ def lay(rgb, colour):
     return at_lum(remap(_lum(rgb), _lum1(colour)), colour)
 
 
-def full(rgb, owner, liv):
+def full(rgb, owner, liv, keep=None):
     """Full (decision 82 as 219 left it): the grey's `amount` towards the
     owner's colour by the color blend. The core variant moves the lightness
     by its own over the owner's; Strong at full strength is 219's colour
@@ -193,19 +213,20 @@ def full(rgb, owner, liv):
     core = livery.core_rgb(owner, liv.core)
     if liv.core != "strong":
         lum = remap(lum, REF * _lum1(core) / max(_lum1(owner), 1e-3))
-    w = (amount(rgb) * liv.strength)[..., None] if liv.strength != 1 else \
-        amount(rgb)[..., None]
+    w = _kept(amount(rgb) * liv.strength if liv.strength != 1 else
+              amount(rgb), keep)[..., None]
     return rgb * (1 - w) + at_lum(lum, core) * w
 
 
-def zoned(rgb, core, second, zone1, zone2, strength):
+def zoned(rgb, core, second, zone1, zone2, strength, keep=None):
     """The livery's zones: the grey under zone 1 takes `core`, under zone 2
     `second` (if any), at `strength`; the rest stays as painted, every
-    coloured pixel too (`weights`), and bright glints fade (`ZONE_GLINT`)."""
+    coloured pixel too (`weights`), the engine zone `keep`, and bright
+    glints fade (`ZONE_GLINT`)."""
     light = (rgb.max(-1) + rgb.min(-1)) / 2
-    sel = weights(rgb) * np.clip((ZONE_GLINT[1] - light) /
-                                 (ZONE_GLINT[1] - ZONE_GLINT[0]), 0, 1) \
-        * strength
+    sel = _kept(weights(rgb) * np.clip((ZONE_GLINT[1] - light) /
+                                       (ZONE_GLINT[1] - ZONE_GLINT[0]), 0, 1)
+                * strength, keep)
     w = (zone1 * sel)[..., None]
     out = rgb * (1 - w) + lay(rgb, core) * w
     if second is not None and zone2 is not None:
@@ -242,16 +263,19 @@ def livery_recoloured(art, surf, picture, frame, colour, liv):
     owner `colour`: its pattern's zones where the ship has them, else Full.
     The factor kept (`cbart.painted_as`)."""
     owner = owner_rgb(colour)
+    from . import cbpulse
+    keep = cbpulse.mask(art, "cmbtshp", name(picture, frame)[:-4],
+                        int(picture), surf.get_size())
     if liv.pattern == "full" and liv.core == "strong" and \
             liv.strength == 1:
-        return recoloured(surf, owner)
+        return recoloured(surf, owner, keep)
     rgb = pygame.surfarray.array3d(surf).astype(float) / 255
     z1, z2 = masks(art, picture, frame, liv.pattern, surf.get_size())
     if z1 is None:
-        out = full(rgb, owner, liv)
+        out = full(rgb, owner, liv, keep)
     else:
         out = zoned(rgb, livery.core_rgb(owner, liv.core),
-                    liv.second_for(colour), z1, z2, liv.strength)
+                    liv.second_for(colour), z1, z2, liv.strength, keep)
     res = surf.copy()
     pygame.surfarray.pixels3d(res)[:] = np.clip(out * 255 + 0.5, 0,
                                                 255).astype("uint8")
@@ -304,8 +328,11 @@ def ship(art, colour, picture, facing, glow=0):
     colour-free picture for it."""
     stored, _m, _f = cbart.stored_facing(facing)
     frame = 4 * stored + max(0, min(3, int(glow)))
-    if art._painted("cmbtshp", int(colour) * 45 + int(picture),
-                    frame) is not None:
+    own = int(colour) * 45 + int(picture)
+    # the colour's own file wins for its colour: its frame 0 makes the
+    # facing's missing glow frames too (`cbpulse.own`), never this picture
+    if art._painted("cmbtshp", own, frame) is not None or \
+            art._painted("cmbtshp", own, 4 * stored) is not None:
         return None
     liv = getattr(art, "livery", livery.DEFAULT)
     key = ("plating", int(colour), int(picture), int(facing) & 15, frame,
@@ -322,11 +349,27 @@ def ship(art, colour, picture, facing, glow=0):
             cache[ck] = (pic, livery_recoloured(art, pic, picture, at,
                                                 colour, liv))
         out = cache[ck][1]
-        if turn:
-            out = turned(out, turn)
-        if mirror or flip:
-            k = cbart.hd_factor(out)
-            out = cbart.painted_as(pygame.transform.flip(out, mirror, flip),
-                                   k)
+        if at % 4 == 0 and frame % 4:
+            # the glow frame is not painted: made from frame 0 (`cbpulse`,
+            # HD EXTENSION `engine_pulse`), before it is turned or flipped,
+            # so the engine mask goes along
+            from . import cbpulse
+            out = cbpulse.frame(art, ("plating_lit", id(pic), int(colour),
+                                      liv.key()), out, "cmbtshp",
+                                name(picture, at)[:-4], int(picture),
+                                frame % 4)
+        if turn or mirror or flip:
+            # one copy per picture and way of turning it, not per glow
+            # frame: the frames a pulse leaves alike stay one surface, and
+            # the battle scales it once (`cbdraw.scaled`)
+            tk = ("plating_turn", id(out), turn, mirror, flip)
+            if tk not in cache:
+                t = turned(out, turn) if turn else out
+                if mirror or flip:
+                    t = cbart.painted_as(pygame.transform.flip(t, mirror,
+                                                               flip),
+                                         cbart.hd_factor(t))
+                cache[tk] = t
+            out = cache[tk]
     cache[key] = out
     return out

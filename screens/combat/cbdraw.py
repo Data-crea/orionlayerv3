@@ -168,7 +168,14 @@ def scaled(surf, scale, cache):
         w = max(1, round(surf.get_width() * scale / k))
         h = max(1, round(surf.get_height() * scale / k))
         if k > 1 and (w, h) != surf.get_size():
-            cache[key] = cbart.smooth(surf, (w, h))
+            out = cbart.smooth(surf, (w, h))
+            # a whole-surface alpha (a painted ship under the cloak,
+            # `cbcloak.picture`) is not in the pixels `smooth` averages:
+            # carried over, or the cloaked ship was drawn opaque at every
+            # zoom below its painted factor (work order 221)
+            if surf.get_alpha() is not None and surf.get_alpha() < 255:
+                out.set_alpha(surf.get_alpha())
+            cache[key] = out
         else:
             cache[key] = pygame.transform.scale(surf, (w, h))
         if isinstance(cache, SpriteCache):
