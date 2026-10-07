@@ -252,9 +252,10 @@ def _stepper(screen, surface, geo, name, label, size):
 
 def _ship(art, liv, colour, picture):
     """The painted ship of `colour` in `liv`, cropped to its pixels, drawn
-    by the battle's own `CombatArt.ship` (facing 0, no glow)."""
+    by the battle's own `CombatArt.ship` (facing 0, glow frame 1: the ship
+    at rest; frame 0 is its engines off since work order 222)."""
     art.set_livery(liv)
-    pic = art.ship(colour, picture, 0)
+    pic = art.ship(colour, picture, 0, 1)
     if pic is None:
         return None
     return pic.subsurface(pic.get_bounding_rect(min_alpha=8))

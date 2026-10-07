@@ -535,6 +535,18 @@ class Player:
             elif w in cbsfx.WEBS and not dst.get("plasma_web_damage"):
                 dst["plasma_web_damage"] = 1
 
+    def dont_draw(self):
+        """The unit the event being played draws itself — a move, a turn,
+        a teleport — or None. The original keeps that unit out of the
+        field it redraws (`_dont_draw_ship`, set by `Rotate_Ship_` and the
+        move, cmbtmov1.cpp:84-85, :321; the teleport, :836), and with it
+        the acting unit's cursor (cmbtdrw1.cpp:815): work order 222,
+        TRANSCRIPTION `cursor_hidden`."""
+        if self._anim is None:
+            return None
+        ev = self._anim[0]
+        return ev.get("unit") if ev["kind"] in ("move", "rotate") else None
+
     def focus(self):
         """The world point the event being played happens at (a move's
         cell, a shot's target), or None."""

@@ -161,10 +161,12 @@ cmbtshp/all_<picture>_<frame>_<pattern>_mask2.png    second zone
   setting shrinks them with the picture, and turned, mirrored and flipped
   facings, shield flares and the cloak take them along.
 
-**Pulsing engines: an engine mask beside the ship (work order 221).** In
-the original a ship's engines pulse in battle: low, middle, high, middle,
-one step every 55 ms. A painted ship gets the same pulse from one more
-file, so you never paint the glow frames yourself:
+**Pulsing engines: an engine mask beside the ship (work orders 221, 222).**
+In the original a ship's engines pulse in battle: low, middle, high,
+middle, one step every 55 ms, and they go dark when the ship is done for
+the turn, captured, hit on its shield, cloaking, teleporting or blowing
+up. A painted ship gets all of it from one more file, so you never paint
+the glow frames yourself:
 
 ```
 cmbtshp/all_<picture>_<frame>_engine.png    the engine mask
@@ -172,20 +174,31 @@ cmbtshp/<colour * 45 + picture>_<frame>_engine.png   for a colour's own file
 ```
 
 - **A greyscale PNG of exactly the ship's size**, like a livery mask:
-  white = an engine (it lights up fully), black = not an engine (never
-  changes), grey in between for a soft edge round the flame. Another size
-  is not used (one line in the log).
+  white = an engine, black = not an engine (never changes), grey in
+  between for a soft edge round the flame. A hole the white closes round
+  (a white-hot core inside a purple ring) counts as engine too. Another
+  size is not used (one line in the log).
 - **Paint the engines lit, at their lowest light**: your picture is the
-  bottom of the pulse. At its top the game lifts the light under the mask
-  by about a fifth (the original's own drawings, measured), keeping your
-  engine's colour; it does not paint a flame that is not there.
-- The owner's colour and the livery never touch what the mask covers.
+  bottom of the pulse. Towards the top the game lifts the light under the
+  mask and lets a soft glow grow out of the ship's back, about one pixel
+  of the original's drawing, in your engine's own colour — as strong as
+  the original's pulse, measured against its drawings. For the engines
+  off it takes the light under the mask down to a third and its colour
+  to grey.
+- The owner's colour and the livery never touch what the mask covers, nor
+  the glow.
+- **Your own engines-off frame**: paint frame 1 as well
+  (`all_<picture>_1.png`, engines lit) and your frame 0 is drawn as you
+  painted it wherever the engines are off — the original's own
+  convention, frame 0 off and frame 1 lit; the pulse is then made from
+  your frame 1. With frame 0 alone, frame 0 is the lit picture and the
+  game makes the dark one.
 - **Without a mask the ship stands still**, as before: every glow frame is
-  your frame 0. A glow frame you paint yourself (`_1` to `_3`) wins for
-  that frame.
+  your frame 0, also when its engines would be dark. A glow frame you
+  paint yourself (`_2`, `_3`) wins for that frame.
 - The mask follows the ship through the Painted detail setting, turned,
-  mirrored and flipped facings and the cloak. Under a shield flare the
-  original shows a ship's frame 0, so a flaring ship does not pulse.
+  mirrored and flipped facings and the cloak (a cloaked ship's glow fades
+  with it).
 
 ### The other extracted pictures (work order 199)
 

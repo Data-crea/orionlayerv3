@@ -41,10 +41,13 @@ placed on the painted fleet's plating (2.16 M selected pixels, 40 ships at
 8 x; `dev:tools/combat_plating.py --light`): lightness median 0.33, 10 %
 below 0.08, 10 % above 0.64.
 
-MISSING FRAMES: a missing glow frame (1-3) is MADE from its facing's frame
-0 — its engines lit under an engine mask, else frame 0 itself (decision 82
-as amended by work order 221, HD EXTENSION `engine_pulse`, `cbpulse`; a
-colour's own file the same way, from its own frame 0, in `cbart.ship`);
+MISSING FRAMES: a missing glow frame is MADE from its facing's frame 0 —
+or from frame 1 if the modder painted it, his frame 0 then his
+engines-off frame (`base`) — lit, glowing or darkened under an engine
+mask, else that frame itself (decision 82 as amended by work orders 221
+and 222, HD EXTENSION `engine_pulse`, `cbpulse`; frame 0 itself is made
+dark there unless frame 1 is painted, `_made`; a colour's own file the
+same way, from its own frames, in `cbart.ship`);
 colour-free pictures only from here on (a colour's own files are drawn as
 before): a missing
 STORED facing (the original draws five, 0-4, and mirrors and flips them
@@ -288,28 +291,57 @@ def _file(art, picture, frame):
 
 def source(art, picture, facing, glow):
     """(picture, mirror, flip, turn degrees, its frame) of the colour-free
-    frame for `facing` and `glow`, or None. The original's own scheme: five stored
-    facings, the other eleven their mirrors and flips (`stored_facing`).
-    A stored facing's frame, else its frame 0 (the glow); a stored facing
-    not given at all is the nearest given one turned, from 2 x and up."""
+    frame for `facing` and `glow`, or None. The original's own scheme: five
+    stored facings, the other eleven their mirrors and flips
+    (`stored_facing`). A stored facing's frame, else the frame a missing
+    one is made from (`base`); a stored facing not given at all is the
+    nearest given one turned, from 2 x and up."""
     stored, mirror, flip = cbart.stored_facing(facing)
-    for g in dict.fromkeys((max(0, min(3, int(glow))), 0)):
-        p = _file(art, picture, 4 * stored + g)
+    g = max(0, min(3, int(glow)))
+    for at in dict.fromkeys((4 * stored + g, base(art, picture, stored, g))):
+        p = _file(art, picture, at)
         if p is not None:
-            return p, mirror, flip, 0.0, 4 * stored + g
-    have = [s for s in range(5) if _file(art, picture, 4 * s) is not None
-            or _file(art, picture, 4 * s + int(glow)) is not None]
+            return p, mirror, flip, 0.0, at
+    have = [s for s in range(5) if _file(art, picture, 4 * s) is not None]
     if not have:
         return None
     s = min(have, key=lambda s: (abs(stored - s), s))
-    frame = 4 * s + int(glow)
+    frame = 4 * s + g
     p = _file(art, picture, frame)
     if p is None:
-        frame = 4 * s
+        frame = base(art, picture, s, g)
         p = _file(art, picture, frame)
     if cbart.hd_factor(p) <= 1:
         return None
     return p, mirror, flip, (stored - s) * 22.5, frame
+
+
+def base(art, picture, stored, glow):
+    """The frame a missing glow frame of a stored facing is made from
+    (work order 222): frame 1 if the modder painted it — then his frame 0
+    is his engines-off frame, the original's convention — else frame 0."""
+    if glow and _file(art, picture, 4 * stored + 1) is not None:
+        return 4 * stored + 1
+    return 4 * stored
+
+
+def _made(art, picture, out, key, at, glow):
+    """`out`, the coloured picture of frame `at`, as glow frame `glow`
+    (`cbpulse`, HD EXTENSION `engine_pulse`): made under the engine mask
+    of `at`'s picture, else of its facing's frame 0; frame 0 darkened
+    unless the modder painted frame 1 too. Before any turning or flipping,
+    so the mask goes along."""
+    from . import cbpulse
+    s = at // 4
+    stem = name(picture, at)[:-4]
+    if cbpulse.mask(art, "cmbtshp", stem, int(picture),
+                    out.get_size()) is None:
+        stem = name(picture, 4 * s)[:-4]
+    dark = _file(art, picture, 4 * s + 1) is None
+    if at % 4 == glow % 4 and (glow % 4 or not dark):
+        return out
+    return cbpulse.frame(art, key, out, "cmbtshp", stem, int(picture),
+                         glow % 4, dark)
 
 
 def turned(surf, degrees):
@@ -349,15 +381,10 @@ def ship(art, colour, picture, facing, glow=0):
             cache[ck] = (pic, livery_recoloured(art, pic, picture, at,
                                                 colour, liv))
         out = cache[ck][1]
-        if at % 4 == 0 and frame % 4:
-            # the glow frame is not painted: made from frame 0 (`cbpulse`,
-            # HD EXTENSION `engine_pulse`), before it is turned or flipped,
-            # so the engine mask goes along
-            from . import cbpulse
-            out = cbpulse.frame(art, ("plating_lit", id(pic), int(colour),
-                                      liv.key()), out, "cmbtshp",
-                                name(picture, at)[:-4], int(picture),
-                                frame % 4)
+        # the glow frame is not painted, or frame 0 is the engines off:
+        # made (`cbpulse`), before it is turned or flipped
+        out = _made(art, picture, out, ("plating_lit", id(pic), int(colour),
+                                        liv.key()), at, frame)
         if turn or mirror or flip:
             # one copy per picture and way of turning it, not per glow
             # frame: the frames a pulse leaves alike stay one surface, and

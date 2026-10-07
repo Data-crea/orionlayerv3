@@ -272,7 +272,8 @@ def draw_units(surface, cam, art, combat, colours, glow_clock, cache,
                 not u.get("plasma_web_damage") and \
                 u.get("stasis_source_idx", 255) == 255 and \
                 u.get("black_hole_source_idx", 255) == 255:
-            draw_absorber(surface, cam, art, u, i, glow_clock, cache)
+            draw_absorber(surface, cam, art, u, i, glow_clock, cache,
+                          (dx, dy))
         if flag in cbcloak.CLOAKED:
             pic = cbcloak.picture(art, colours, u, glow, "cloak",
                                   (glow_clock + i * 2) % 16, 3)
@@ -377,7 +378,7 @@ def absorber_entry(size_class):
     return 0x33 + int((-1 - size) / 2) - (1 if size == 4 else 0)
 
 
-def draw_absorber(surface, cam, art, u, i, clock, cache):
+def draw_absorber(surface, cam, art, u, i, clock, cache, off=(0, 0)):
     """TRANSCRIPTION `energy_absorber` (work order 200): a unit whose Energy
     Absorber holds a charge (`reflected_damage_pool`) glows behind its
     picture — CMBTSFX 0x33 + (-1 - size) / 2, one less for size 4, its frame
@@ -386,14 +387,17 @@ def draw_absorber(surface, cam, art, u, i, clock, cache):
     (`Draw_Energy_Absorber_`, cmbtfire.cpp:923-953, called before the
     ship's own picture by `Draw_Ship_`, cmbtdrw1.cpp:2632-2637). Not drawn
     in stasis, under a plasma web or in a black hole, as there (the hole's
-    test reads `black_hole_source_idx`, `draw_units`)."""
+    test reads `black_hole_source_idx`, `draw_units`). Where the ship is
+    drawn, a move's offset `off` included: `Draw_Ship_` draws it at its
+    own position, the moving ship's in the move loop (work order 222)."""
     entry = absorber_entry(u["size_class"])
     n = max(1, art.frame_count("cmbtsfx", entry))
     pic = art.surface("cmbtsfx", entry, (clock // 2 + i) % n)
     if pic is None:
         return
     img = scaled(pic, cam.scale, cache)
-    x, y = cam.to_window(*centre(u))
+    wx, wy = centre(u)
+    x, y = cam.to_window(wx + off[0], wy + off[1])
     surface.blit(img, (x - img.get_width() // 2, y - img.get_height() // 2))
 
 
@@ -409,11 +413,33 @@ def from_monster_file(u):
     return int(u["previous_owner"]) >= MAX_PLAYERS
 
 
+#: `Combat_Ship_Done_`: bit 2 of `combat_status_flags` (cmbtfir2.cpp:957,
+#: `Test_Bit_Field_` bit 2 is 0x04, struct.cpp:20-26), set by the DONE
+#: button only (combat1.cpp:852), the whole byte cleared when the unit's
+#: side's turn starts (`Init_Ship_For_Start_Of_Turn_`, combat1.cpp:1270),
+#: the bit on capture (cmbtfir2.cpp:1855).
+DONE_BIT = 0x04
+
+
+def engines_off(u):
+    """TRANSCRIPTION `dark_engines` (work order 222, Data's decision 2):
+    the unit is drawn at frame 0, its engines off — its player pressed
+    DONE this turn, or it was captured (`is_captured`, set for good by a
+    capture that is not telepathic, cmbtfir2.cpp:1841-1845) — for every
+    unit, monsters too (`Draw_Ship_`'s four quadrants,
+    cmbtdrw1.cpp:2563-2610)."""
+    return bool(int(u.get("combat_status_flags", 0)) & DONE_BIT) or \
+        int(u.get("is_captured", 0)) != 0
+
+
 def glow_frame(u, i, glow_clock):
-    """The unit's glow frame: a player's or an Antaran's the cycle
-    {1,2,3,2} phased by the unit, a monster's (`previous_owner > 9`) its
-    four frames in turn, frame 0 included (cmbtdrw1.cpp:2499-2508;
-    TRANSCRIPTION `monster_glow`, work order 215)."""
+    """The unit's glow frame: 0 while its engines are off (`engines_off`);
+    a player's or an Antaran's the cycle {1,2,3,2} phased by the unit, a
+    monster's (`previous_owner > 9`) its four frames in turn, frame 0
+    included (cmbtdrw1.cpp:2499-2508; TRANSCRIPTION `monster_glow`, work
+    order 215)."""
+    if engines_off(u):
+        return 0
     if int(u["previous_owner"]) <= 9:
         return (1, 2, 3, 2)[((glow_clock // 2) + i) % 4]
     return (glow_clock // 2) % 4

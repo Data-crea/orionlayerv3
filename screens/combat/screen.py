@@ -270,7 +270,13 @@ class CombatScreen(CombatInput, ScreenBase):
                           self._cache, self._play.planet,
                           phased_shown=unit["owner"] == self._me(),
                           fades=self._fades, now=now, fast=self._play.fast)
-        if unit["owner"] == self._me():
+        # TRANSCRIPTION `cursor_hidden` (work order 222): not while the
+        # acting unit is moved, turned, teleported or fades (cloak), the
+        # original's `_dont_draw_ship` (cmbtdrw1.cpp:815-819; Draw_Cloak_,
+        # cmbtspec.cpp:95) — HD drew it on the cell the move left
+        cur = c["cur_ship"]
+        if not self._computer(c) and self._play.dont_draw() != cur and \
+                self._fades.step(cur, now, self._play.fast) is None:
             cbdraw.draw_cursor(surface, cam, art, unit, clock, self._cache)
         cbdraw.draw_ordnance(surface, cam, art, self._play.ordnance,
                              max(10, int(18 * self.layout.scale)),

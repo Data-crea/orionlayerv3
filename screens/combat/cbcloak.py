@@ -34,7 +34,14 @@ uncloak before the shot that breaks the cloak (cmbtfire.cpp:1262-1273).
 UNVERIFIED `darken_glass`: a picture's pixels at 0x80 and above lie outside
 the original's 128-row map (it reads past it); HD leaves them as they are.
 A painted picture (a mod's PNG, no palette indices) is drawn at a quarter of
-its alpha when cloaked and not at all when phased.
+its alpha when cloaked. Phased, it is outlined as the original outlines its
+drawing (work order 222, Data's decision 5; until then it was not drawn
+at all, because the outline was made only from indices): HD EXTENSION
+`painted_outline` — its opaque pixels (alpha half or more) are the
+picture, the ring is every pixel within one stored-drawing pixel of it by
+4-neighbour steps (the painted factor k of them, the original's one
+pixel), in colour 5 of the battle's palette, the picture masked out
+(`painted_outline`).
 
 TRANSCRIPTION `teleport` (work order 210 C4): a Phase Shifter's or Sub
 Space Teleporter's move (`CEV_MOVE` with teleport 1) dissolves the unit out
@@ -180,6 +187,33 @@ def outline(pixels):
     return out
 
 
+def painted_outline(art, surf):
+    """HD EXTENSION `painted_outline`: `outline` for a painted picture at
+    factor k — the ring k painted pixels wide (one pixel of the drawing it
+    stands for) round its opaque pixels, in palette colour 5, the picture
+    itself left out; the factor kept."""
+    k = cbart.hd_factor(surf)
+    solid = pygame.surfarray.array_alpha(surf) >= 128
+    near = solid.copy()
+    for _ in range(k):
+        grow = near.copy()
+        grow[1:, :] |= near[:-1, :]
+        grow[:-1, :] |= near[1:, :]
+        grow[:, 1:] |= near[:, :-1]
+        grow[:, :-1] |= near[:, 1:]
+        near = grow
+    ring = near & ~solid
+    out = pygame.Surface(surf.get_size(), pygame.SRCALPHA)
+    rgb = art.palette_with().get(OUTLINE_INDEX, (0, 0, 0))[:3]
+    px = pygame.surfarray.pixels3d(out)
+    px[ring] = rgb
+    del px
+    pa = pygame.surfarray.pixels_alpha(out)
+    pa[:] = ring.astype(np.uint8) * 255
+    del pa
+    return cbart.painted_as(cbart.display_format(out), k)
+
+
 def vanish(pixels, intensity, start=0):
     """`Vanish_Bitmap_(…, intensity)` on an index array (bitmap.cpp:742-768,
     shear.cpp:540-588); `start` the even table index the game draws at
@@ -268,8 +302,8 @@ def picture(art, colours, u, glow, how, progress=0, mode=3):
         if surf is not None and how == "cloak":
             surf = cbart.derived(surf.copy(), surf)
             surf.set_alpha(64)
-        elif how != "cloak":
-            surf = None
+        elif surf is not None:
+            surf = painted_outline(art, surf)
         cache[key] = surf
         return surf
     pixels, palette = idx
