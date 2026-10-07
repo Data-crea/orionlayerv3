@@ -203,7 +203,9 @@ def match_planets(box, planets):
                 best = (err, p)
         if best is None or best[0] > ELLIPSE_TOLERANCE:
             return None
-        matched[f.index] = best[1]
+        # WHERE THE ENGINE PUTS IT, off the orbit centre (work order 223):
+        # the drawing places the planet there, not where HD would compute.
+        matched[f.index] = dict(best[1], at=(cx - ox, cy - oy))
     if sorted(p["planet"] for p in matched.values()) != \
             sorted(p["planet"] for p in planets):
         return None
@@ -224,6 +226,19 @@ def star_planets(state, star):
                     "size": int(p.size), "climate": int(p.climate),
                     "type": int(p.planet_type),
                     "colony": int(p.colony_index)})
+    return out
+
+
+def star_belts(state, star):
+    """The orbits of the star's asteroid belts — they get no field, the
+    window draws them (sys.cpp:553-557)."""
+    raws = getattr(state, "planets_raw", None) or []
+    out = []
+    for index in star_struct.planet_indices(star):
+        if 0 <= index < len(raws):
+            p = planet_struct.parse(raws[index])
+            if p.planet_type == PLANET_TYPE_ASTEROID:
+                out.append(int(p.orbit))
     return out
 
 
@@ -269,7 +284,7 @@ def system_model(state, ident, box, text, omniscient):
     model = {"kind": "system", "star": ident.star, "name": star.name,
              "viewable": viewable, "planets": [],
              "close": box.close.index if box.close is not None else None,
-             "body": "", "wormhole": ""}
+             "body": "", "wormhole": "", "belts": []}
     if viewable or _contact(state, planets, _local(state)):
         model["title"] = _msg(text, H_SYSTEM, star.name)
     else:
@@ -279,6 +294,7 @@ def system_model(state, ident, box, text, omniscient):
         return model, None
     for index, p in sorted(matched.items(), key=lambda kv: kv[1]["orbit"]):
         model["planets"].append(dict(p, field=index))
+    model["belts"] = star_belts(state, star)
     far = getattr(star, "wormhole_star_id", -1)
     if far is not None and 0 <= far < len(stars):
         if star_struct.visited_by(stars[far], me):

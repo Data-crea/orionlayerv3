@@ -29,19 +29,20 @@ does not cover the star or fleet it belongs to; and a stack shows at most
 nine ships in rows of three — past nine, the three rows the engine shows
 (open fix 59, FBSC) with the bar's thumb where the engine has it and its
 two arrows sending the bar's own "-" / "+" buttons (fleetpop.cpp:189-216,
-mainscr.cpp:3404-3408; work order 197 A2). Two things do not: the planets stand in a
-row by orbit instead of on ellipses, and a ship is drawn as its map icon
-(the fleet box's own ship pictures are not extracted).
+mainscr.cpp:3404-3408; work order 197 A2). One thing does not: a ship is drawn as its
+map icon (the fleet box's own ship pictures are not extracted). Since work
+order 223 the planets stand where the engine puts them, on their orbits
+(`sysorbits`).
 
 OMISSION (decision 61), each a field HD leaves alone: the system window's
 ship buttons, gate icons and planet hover line; the fleet box's ALL,
 the bar's thumb drag (a scroll field that reads the POINTER, fleetpop.cpp:
 213-216 — a click on the track steps one row toward it instead, DEVIATION
 `fleet_scroll_track`) and the Outpost / Colonize / Engage / Transport / Attack buttons;
-the space-monster branch of the system window. And three things drawn
+the space-monster branch of the system window. And one thing drawn
 without a field, seen beside the original's window on 15 September 2026
-(evidence 71): the orbit rings, the asteroid belts, and the colony
-markers beside owned planets.
+(evidence 71): the colony markers beside owned planets. (The orbit rings
+and the asteroid belts are drawn since work order 223, `sysorbits`.)
 
 A fleet box is drawn only from open fix 20's wire data (boxmodel): its
 cells follow the engine's chain, their colour is each node's selected
@@ -62,6 +63,7 @@ from screens.colony_summary import colonyplanets
 from screens.galaxy_map import boxmodel, mapboxes
 from screens.galaxy_map import renderer as rnd
 from screens.galaxy_map import ships as ship_icons
+from screens.galaxy_map import sysorbits
 
 log = logging.getLogger("galaxy_map.boxes")
 
@@ -183,21 +185,19 @@ def _draw_system(screen, surface, r, model, hits):
     star = stars[model["star"]]
     ctx = screen._map_context()
     name = rnd.star_icon_name(star, ctx) if ctx is not None else None
-    sun = min(view.h, view.w // 5)
+    s, cx, cy = sysorbits.frame(view)
+    # The sun in the rings' centre (`Draw_Sun_Seg_`, sys.cpp:562-578; its
+    # BUFFER0.LBX 0x53 + class picture is 32 x 34 native px).
+    sun = max(8, int(34 * s))
     if name and screen._cache.has(name):
         img = screen._cache.scaled(name, sun)
         if img is not None:
-            surface.blit(img, (view.x, view.centery - img.get_height() // 2))
-    planets = model["planets"]
-    if not planets:
-        return
-    cell = (view.w - sun) // len(planets)
-    disc_max = min(cell, view.h) * 8 // 10
-    for i, p in enumerate(planets):
-        side = max(4, disc_max * (6 + min(4, p["size"])) // 10)
-        cx = view.x + sun + cell * i + cell // 2
+            surface.blit(img, (cx - img.get_width() // 2,
+                               cy - img.get_height() // 2))
+
+    def planet(p, centre, side):
         rect = pygame.Rect(0, 0, side, side)
-        rect.center = (cx, view.centery)
+        rect.center = centre
         disc = None
         if p["type"] != 2:
             discs = colonyplanets.set_for(screen, side)
@@ -206,6 +206,11 @@ def _draw_system(screen, surface, r, model, hits):
             surface.blit(disc, rect.topleft)
         else:
             pygame.draw.circle(surface, GAS_GIANT[:3], rect.center, side // 2, 2)
+        return rect
+
+    # The orbits (work order 223): rings, belts, each planet where the
+    # engine put it (`sysorbits`).
+    for p, rect in sysorbits.draw(surface, view, model, planet):
         hits.append((rect, p["field"]))
         screen._box_planets.append((rect, p["field"]))
 
