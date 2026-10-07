@@ -140,6 +140,7 @@ python tools/techdesc_extract.py                    # ship design descriptions
 python tools/fleet_art_extract.py                   # Fleets ship pictures
 python tools/officer_art_extract.py                 # Leaders screen artwork
 python tools/races_art_extract.py                   # Races screen artwork
+python tools/colony_art_extract.py                  # colony screen pictures
 python tools/design_art_extract.py                  # Ship Designer artwork
 python tools/audience_art_extract.py                # audience artwork
 ```

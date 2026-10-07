@@ -10,7 +10,9 @@
     "armour": "Armour"
   },
   "marks": {
-    "hd_extension_surface_picture": "Data's picture of the colony's world, by climate (decision 58, the Colonies screen's colonysurfaces), stands where the original draws its landscape art (COLONY2.LBX 0x31 and the climate backdrop, colony_main.cpp:111-115). Absent pictures draw nothing.",
+    "transcription_scene": "TRANSCRIPTION (work order 223) \u2014 the original's picture of the world: COLONY2.LBX 0x31's sky with PLANETS.LBX's ground (climate x 3 + the planet's climate_bg_type) over it, in FONTS.LBX 2 with the ground's palette (colony_main.cpp:111-115, :475-479; colony.cpp:230-233), extracted by tools/colony_art_extract.py and drawn native pixel to its HD rectangle.",
+    "transcription_system_pictures": "TRANSCRIPTION (work order 223) \u2014 the system display's planets as COLSYSDI.LBX draws them: by the colony's climate and the planet's size, a gas giant, an asteroid belt, and each orbit's marker (colsysdi.cpp:4-48).",
+    "hd_extension_surface_picture": "Data's picture of the colony's world, by climate (decision 58, the Colonies screen's colonysurfaces), only where the original's pictures are not extracted. Absent pictures draw nothing.",
     "deviation_label_number": "A production row is its icon and the original's own net as a number (colonyrows.drawn_production, coldraw.cpp:36-181), morale its mask and the halved value; the original COUNTS with sprites (Draw_Colony_Prod_Both_, Draw_Info_Morale_Both_). Decision 56's deviation, the Colonies screen's. A job row draws each pop's figure in the original's icon order, squeezed into the row.",
     "deviation_building_list": "The colony's buildings are a list of names in a panel; the original draws each building's picture on its cell of the scene.",
     "deviation_change_by_field": "CHANGE is sent as its FIELD [4], never as the key C: [5] (recalculate, and Do_Cheats_ with _cheats) is built first with the same hotkey and a key resolves to the first match (fields.cpp:2608-2613). Decision 39's key-first order does not apply to a shadowed key.",

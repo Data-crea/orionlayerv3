@@ -10,10 +10,13 @@ WHAT IS TRANSCRIPTION AND WHAT IS OURS — each marked where it happens,
 and each in `layout.json` `marks`, the status document and check 090p:
 
   TRANSCRIPTION  every position, every string (`colwords`), the values
-                 (`colonyrows`: the net production, morale, the icon walk)
+                 (`colonyrows`: the net production, morale, the icon walk);
+                 `scene` and `system_pictures` — the original's sky and
+                 ground of the world and the system display's planets,
+                 extracted by the player (`colart`, work order 223)
   HD EXTENSION   `surface_picture` — Data's picture of the colony's world,
-                 by climate (decision 58), where the original draws its
-                 own landscape art
+                 by climate (decision 58), only where the original's
+                 pictures are not extracted
   DEVIATION      `label_number` — a production row is an icon and a number,
                  a job row the figures of its pops; the original COUNTS
                  with sprites (decision 56's deviation, the Colonies
@@ -32,13 +35,18 @@ import pygame
 from core.hestrings import printf
 from core.hud import blocks as hud
 from core.hud import text as hudtext
+from core.structs import colony as colony_struct
 from screens.colony_summary import colonyfigures, colonyoutputicons
 from screens.colony_summary import colonyrows, colonysurfaces
 from screens.colony_summary.colonyplanets import set_for as planet_set_for
 from screens.leaders import ldrdraw as nd
 
+from . import colart
 from . import colgeom as geom
 from . import colwire
+
+#: `PLANET_TYPE` (orion2_consts.h:400-405).
+ASTEROID, GAS_GIANT, PLANET = 1, 2, 3
 
 #: DEVIATION `hd_font` (the Leaders screen's): text heights in native
 #: pixels, from the line pitch each text sits on — the title's font 4
@@ -94,19 +102,64 @@ def draw(surface, screen, view, state, words, names):
 
 
 def _scene(surface, screen, view):
-    """HD EXTENSION `surface_picture` — decision 58's picture of the world,
-    by the colony's climate, under the band; nothing where it is absent."""
+    """TRANSCRIPTION `scene` (work order 223): the original's own picture
+    of the world — COLONY2.LBX's sky with PLANETS.LBX's ground of the
+    colony's climate and the planet's ground type over it, in the screen's
+    palette (`colart`; colony_main.cpp:111-115, :475-479) — the part under
+    the band, each native pixel to its exact HD rectangle. Without the
+    extracted pictures, HD EXTENSION `surface_picture`: decision 58's
+    painting of the world by climate; nothing where that is absent too."""
+    r = nd.rect(screen.layout, geom.SCENE)
+    art = colart.load()
+    pic = art.scene(view.colony.climate, _bg_type(view)) \
+        if art.available else None
+    if pic is not None:
+        x0, y0, x1, y1 = geom.SCENE
+        crop = pic.subsurface(pygame.Rect(x0, y0, x1 - x0 + 1, y1 - y0 + 1))
+        surface.blit(nd.stretched(crop, r), r.topleft)
+        return
     pics = colonysurfaces.set_for(screen)
     pic = pics.get(view.colony.climate) if pics is not None else None
     if pic is None:
         return
-    r = nd.rect(screen.layout, geom.SCENE)
     scaled = pygame.transform.smoothscale(pic, r.size)
     surface.blit(scaled, r.topleft)
 
 
+def _first_planet_word(screen):
+    """H_Message 0xA0, the first planet's word ("Prime"); None without the
+    game's table, and the numeral stays."""
+    from core import hestrings
+    table = hestrings.for_app(screen.app)
+    return table.message(0xA0) if table is not None else None
+
+
+def _bg_type(view):
+    planet = getattr(view, "planet", None)
+    return int(getattr(planet, "climate_bg_type", 0) or 0) if planet else 0
+
+
+def system_picture(art, planet, state, view):
+    """The system display's drawing of one orbit's planet: COLSYSDI by the
+    COLONY'S climate where the planet has one (a terraformed world shows
+    its new climate) and its size; a gas giant, an asteroid belt
+    (colsysdi.cpp:15-33). In the palette of the world shown."""
+    climate = planet.climate
+    ci = getattr(planet, "colony_index", -1)
+    raws = getattr(state, "colonies_raw", None) or []
+    if ci is not None and 0 <= ci < len(raws):
+        climate = colony_struct.parse(raws[ci]).climate
+    stem = {GAS_GIANT: "gas_giant", ASTEROID: "asteroids"}.get(
+        planet.planet_type) or colart.planet_stem(climate, planet.size)
+    return None if stem is None else art.sprite(
+        stem, view.colony.climate, _bg_type(view))
+
+
 def _title_line(surface, screen, view, state, words, names):
-    name = colonyrows.planet_name(view.colony, names.planets, names.stars)
+    # `Get_Planet_Name_` with the "Prime" word (colony.cpp:1019-1039;
+    # haccess.cpp:216-221), not the lists' No_Prime form (work order 223).
+    name = colonyrows.planet_name(view.colony, names.planets, names.stars,
+                                  first=_first_planet_word(screen))
     text(surface, screen, words.title(view, name), *geom.TITLE_CENTRE, 380,
          "title", "title", align="center")
     # Blockaded, Plague or Pop Boom (open fix 37), or nothing at all.
@@ -118,20 +171,41 @@ def _title_line(surface, screen, view, state, words, names):
 
 
 def _system(surface, screen, view, state, words):
+    """`Draw_Col_Sys_Disp_` (colsysdi.cpp:8-48): each orbit's marker and
+    its planet's own drawing, magnified to the window (decision 28)
+    (TRANSCRIPTION `system_pictures`, work order 223). Without the
+    extracted pictures, decision 58's climate disc for a planet."""
+    art = colart.load()
     size = max(1, int(20 * nd.native_scale(screen.layout)))
-    planets = planet_set_for(screen, size)
+    planets = None if art.available else planet_set_for(screen, size)
     for i, planet in enumerate(view.system):
+        (cx, cy), (tx, ty) = geom.sys_row(i)
+        if art.available:
+            mark = art.sprite("marker", view.colony.climate, _bg_type(view))
+            if mark is not None:
+                _centred(surface, screen, nd.magnified(mark, screen.layout),
+                         geom.SYS_X + 2, geom.SYS_Y + i * geom.SYS_ROW + 12)
         if planet is None:
             continue
-        (cx, cy), (tx, ty) = geom.sys_row(i)
-        pic = planets.get(planet.climate) if planets is not None and \
-            planet.planet_type == 3 else None
+        if art.available:
+            pic = system_picture(art, planet, state, view)
+            pic = nd.magnified(pic, screen.layout) if pic is not None \
+                else None
+        else:
+            pic = planets.get(planet.climate) if planets is not None and \
+                planet.planet_type == PLANET else None
         if pic is not None:
             x, y = nd.point(screen.layout, cx, cy)
             surface.blit(pic, (x - pic.get_width() // 2,
                                y - pic.get_height() // 2))
         lines(surface, screen, words.summary(planet, state), tx, ty,
               geom.SYS_TEXT_W, "line", "label", 8)
+
+
+def _centred(surface, screen, pic, native_x, native_y):
+    """`ERIC::Draw_Centered_` at a native point."""
+    x, y = nd.point(screen.layout, native_x, native_y)
+    surface.blit(pic, (x - pic.get_width() // 2, y - pic.get_height() // 2))
 
 
 def _production(surface, screen, view):

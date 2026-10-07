@@ -60,6 +60,7 @@ from screens.leaders.ldrart import GAMEDATA as _ldrart_gamedata  # noqa: E402
 from screens.races.racesart import GAMEDATA as _racesart_gamedata  # noqa: E402
 from screens.ship_design.sdart import GAMEDATA as _sdart_gamedata  # noqa: E402
 from screens.audience.auart import GAMEDATA as _auart_gamedata  # noqa: E402
+from screens.colony.colart import GAMEDATA as _colart_gamedata  # noqa: E402
 from screens.info.infoart import REL as _infoart_rel  # noqa: E402
 from core.skildesc import string_file as skildesc_file  # noqa: E402
 from core.racestuf import string_file as racestuf_file  # noqa: E402
@@ -100,6 +101,7 @@ LEADER_GAMEDATA = _ldrart_gamedata
 RACES_GAMEDATA = _racesart_gamedata
 DESIGN_GAMEDATA = _sdart_gamedata
 AUDIENCE_GAMEDATA = _auart_gamedata
+COLONY_GAMEDATA = _colart_gamedata
 
 #: (tool, arguments, a path that must exist afterwards, what it is)
 STEPS = [
@@ -293,6 +295,13 @@ def from_game(settings=None):
          "Races screen artwork — without it a race's panel shows a plate "
          "instead of its portrait and its spies as a number",
          "python tools/races_art_extract.py"),
+        # THE COLONY SCREEN (work order 223): the sky, the climates'
+        # grounds, the system display's planets and the screen's palette.
+        (os.path.join(COLONY_GAMEDATA, "manifest.json"),
+         "colony screen pictures — without them the colony's world is "
+         "decision 58's painting and the system display shows climate "
+         "discs instead of the game's planets",
+         "python tools/colony_art_extract.py"),
         # THE SHIP DESIGNER (work order 185): its arc pictures and palette.
         (os.path.join(DESIGN_GAMEDATA, "manifest.json"),
          "Ship Designer artwork — without it the weapon picker shows no arc "

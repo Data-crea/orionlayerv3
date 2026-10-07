@@ -270,21 +270,25 @@ def morale_icon(value):
     return "morale_low" if value < 0 else "morale_normal"
 
 
-def planet_name(colony, planets, stars):
-    """'Sol III' — HAROLD::Planet_Number_ counts occupied slots."""
+def planet_name(colony, planets, stars, first=None):
+    """'Sol III' — HAROLD::Planet_Number_ counts occupied slots. `first`:
+    the word that replaces "I" (`star_planet_name`)."""
     if not 0 <= colony.planet < len(planets):
         return "?"
     planet = planet_struct.parse(planets[colony.planet])
     if not 0 <= planet.star_index < len(stars):
         return "?"
-    return star_planet_name(stars[planet.star_index], colony.planet)
+    return star_planet_name(stars[planet.star_index], colony.planet, first)
 
 
-def star_planet_name(star, planet_index):
+def star_planet_name(star, planet_index, first=None):
     """`HACCESS::Do_Get_Planet_Name_` (haccess.cpp:208): "%s %s", the
     star's name and the numeral of the planet's place among the
     system's OCCUPIED slots. One home since brief 101 — the Planets
-    list names its rows through it too."""
+    list names its rows through it too. `first` is the localised name of
+    the first planet: `Get_Planet_Name_` (haccess.cpp:236-239) writes
+    H_Message 0xA0 ("Prime" in the English game) where the numeral is
+    "I"; the lists use `Get_Planet_Name_No_Prime_` and pass None."""
     number = 0
     for slot in star_struct.planet_indices(star):
         if slot == planet_index:
@@ -292,6 +296,8 @@ def star_planet_name(star, planet_index):
         if slot > -1:
             number += 1
     numeral = ROMAN[number] if number < len(ROMAN) else str(number + 1)
+    if first and numeral == "I":
+        numeral = first
     return f"{star.name} {numeral}"
 
 
