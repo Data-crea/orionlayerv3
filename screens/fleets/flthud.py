@@ -7,6 +7,7 @@ before.
 """
 from core import mouse as mouse_input
 from core.hud import blocks as hud
+from core.hud import shell
 
 from .fltdraw import CONTROL_WORDS, _rect
 
@@ -14,8 +15,20 @@ from .fltdraw import CONTROL_WORDS, _rect
 #: The windows that are HUD panels since decision 71 (work order 169),
 #: in the order they are drawn: the map, the ship panel, the ship grid,
 #: the strip with PREV/NEXT, and the button band.
-HUD_PANELS = ("inset_map", "ship_panel", "icon_area", "status_band",
+HUD_PANELS = ("map_panel", "ship_panel", "icon_area", "status_band",
               "button_band")
+
+#: The two actions of the whole screen, slanted (work order 225, decision
+#: 87): LEADERS and RETURN, the closing action at the band's bottom right.
+#: The rest are controls of the band — filters, modes, the arrows' PREV and
+#: NEXT — and rectangular (decision 88). Drawn and hit as one shape each.
+SLANTED = ("btn_leaders", "btn_return")
+
+
+def hit(name, rect, x, y):
+    """A control is hit as the shape it is drawn as (decision 5)."""
+    return shell.hit(rect, x, y) if name in SLANTED else \
+        rect.collidepoint(x, y)
 
 
 def draw_hud(surface, screen, enabled=None, filters=None):
@@ -38,8 +51,15 @@ def draw_hud(surface, screen, enabled=None, filters=None):
             state = "active"
         elif enabled is not None and name not in enabled:
             state = "disabled"
-        elif rect.collidepoint(mouse):
+        elif hit(name, rect, *mouse):
             state = "hover"
         else:
             state = "normal"
+        if name in SLANTED:
+            # Its word with it, as every shell button (draw_labels skips it).
+            hud.slant_button(surface, rect, scale, state,
+                             (screen._words or {}).get(dict(CONTROL_WORDS)[name],
+                                                       ""),
+                             style_renderer=screen.style)
+            continue
         hud.small_button(surface, rect, scale, state)

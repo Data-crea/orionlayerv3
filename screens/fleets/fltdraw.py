@@ -304,9 +304,11 @@ def draw_labels(surface, screen, words, enabled=None, art=None,
         # B1): the HUD block is drawn "disabled" (`flthud.draw_hud`), the
         # word keeps the button colour — `core/hud/blocks._label`'s rule,
         # one label colour in every state. It was drawn green.
-        icons.fitted_word(surface, screen.style, rect, text,
-                          hudtext.colour("button"),
-                          icon=icons.art.for_button("fleets", name), dim=not live)
+        if name in ("btn_leaders", "btn_return"):
+            continue          # slanted: the block draws its word (flthud)
+        # CAPITALS, NO GLYPH (work order 225, decision 91).
+        icons.fitted_word(surface, screen.style, rect, text.upper(),
+                          hudtext.colour("button"), icon=None, dim=not live)
 
 
 def draw_status(surface, screen, text, color=None):

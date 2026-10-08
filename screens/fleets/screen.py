@@ -55,6 +55,7 @@ class FleetsScreen(ScreenBase):
     SCREEN_NAME = "fleets"
     GAME_SCREEN_ID = fltgeom.GAME_SCREEN_ID   # 4, orion2_consts.h:465
     USE_FRAME = False        # its own fixed image, not the 9-slice
+    SHELL_WORN = True        # work order 225
 
     def __init__(self, app):
         super().__init__(app)
@@ -74,6 +75,12 @@ class FleetsScreen(ScreenBase):
         # showing and which cell wears the hover mark. One value for
         # both, because the original has one (work order 153 B).
         self._scan = fltscan.Scan()
+        # THE SHELL (work order 225): the title plate; the screen's own
+        # buttons stay in its band, where the original has them.
+        from core import lang
+        from core.hud import shell
+        self.shell = shell.Shell(
+            title=lambda: lang.tr(self._data.get("title", "Fleets")))
         # HD's own `MOX::_galaxy_map_scanned_star`: the star under the
         # pointer in the inset, which is what the strip under the map
         # names (work order 155). -1 is "nothing scanned", and the
@@ -339,6 +346,7 @@ class FleetsScreen(ScreenBase):
         # nothing of this screen may cover it. Before the help popup,
         # which is the player's own and may.
         fltbox.draw(surface, self, self._state)
+        self.render_shell(surface)
         self.render_help(surface)
 
     def enabled_buttons(self):
@@ -472,8 +480,8 @@ class FleetsScreen(ScreenBase):
         if self._inert():
             return None
         for box in self.boxes:
-            if box.name in fltwire.HOTKEYS and box.contains(screen_x,
-                                                            screen_y):
+            if box.name in fltwire.HOTKEYS and box.screen_rect and \
+                    flthud.hit(box.name, box.screen_rect, screen_x, screen_y):
                 # THE TWO FILTERS ARE RADIOS AND NEED A CLICK, NOT AN
                 # ACTIVATION. ACTIVATE_FIELD returns a type-1 field's id
                 # without toggling it (fields.cpp:1018-1024, :1116-1122,
