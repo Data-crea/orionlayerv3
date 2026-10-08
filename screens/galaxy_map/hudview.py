@@ -124,7 +124,7 @@ def render_nav(screen, surface):
         if rect is None:
             continue
         if screen.pressed.is_down(key):
-            state = "active"
+            state = "pressed"   # decision 92: the click, never the 'on' look
         elif nav_hit(screen, key, *mouse):
             state = "hover"
         else:

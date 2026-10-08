@@ -18,8 +18,12 @@ The blocks, and what each is measured from (style.json says exactly):
     table_header / table_row / scrollbar   Data's colony mockup
     popup          a panel lit like the action button, opaque
 
-States: "normal", "hover", "active", "disabled". Only "normal" is in
-Data's material; the other three are `chosen.button`, named there.
+States: "normal", "hover", "active", "pressed", "disabled". Only
+"normal" is in Data's material; the others are `chosen.button`, named
+there. "active" is SELECTED (a control that is on: the shared 'on' fill
+and the lit edge); "pressed" is the short click feedback: the hover shape
+and the word in the GAME menu's pressed orange (`core.pressfeedback`).
+Work order 225, decision 92: the two never look alike.
 """
 from collections import OrderedDict
 
@@ -34,7 +38,7 @@ from core.hud import raster
 from core.hud import style as hudstyle
 from core.hud import text as hudtext
 
-STATES = ("normal", "hover", "active", "disabled")
+STATES = ("normal", "hover", "active", "pressed", "disabled")
 
 #: Drawn shapes, keyed on everything that changes the pixels. Bounded,
 #: because a caller with a new size every frame (a resize drag) must not
@@ -258,7 +262,7 @@ def separator_span(rect, scale):
 def _button_colours(state):
     st = hudstyle.get()
     fill, edge = st.colour("button.fill"), st.colour("button.edge")
-    if state == "hover":
+    if state in ("hover", "pressed"):
         fill, edge = st.colour("button.hover_fill"), st.colour("button.hover_edge")
     elif state == "active":
         fill, edge = st.colour("button.active_fill"), st.colour("button.active_edge")
@@ -294,6 +298,11 @@ def _label(surface, style_renderer, rect, label, role, state, icon, scale):
     # 2026 — a dimmed PRODUCING was read as a wrong colour twice), made
     # the rule for every HUD button.
     col = hudtext.colour(role)
+    if state == "pressed":
+        # THE ONE EXCEPTION, and it is the press, not the state (decision
+        # 92): the GAME menu's orange word, for the span of the click.
+        from core import pressfeedback
+        col = tuple(pressfeedback.pressed_colour()[:3])
     ic = art.icon(icon, int(r.h * 0.6)) if icon else None
     s = (hudtext.render(style_renderer, label.upper(), role, r.h, col)
          if label else None)
@@ -334,7 +343,7 @@ def slant_button(surface, rect, scale, state="normal", label="",
             ss=int(st.get("supersample")))
         if underline:
             _underline(surf, pad, rect.w, rect.h, scale,
-                       bright=state in ("hover", "active"))
+                       bright=state in ("hover", "active", "pressed"))
         return (_dim(surf) if state == "disabled" else surf), pad
     _blit_shape(surface, rect, _cached(key, build))
     if style_renderer is not None:
@@ -381,7 +390,7 @@ def action_button(surface, rect, scale, state="normal", label="",
     def build():
         edge = st.colour("action.edge")
         fill = st.colour("action.fill")
-        if state == "hover":
+        if state in ("hover", "pressed"):
             fill = st.colour("button.hover_fill")
         elif state == "active":
             fill = st.colour("button.active_fill")

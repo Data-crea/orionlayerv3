@@ -118,7 +118,7 @@ def button(screen, surface, name, word):
     if b is None or b.screen_rect is None:
         return
     if screen.pressed.is_down(name):
-        state = "active"
+        state = "pressed"       # decision 92: the click, never the 'on' look
     elif b.screen_rect.collidepoint(mouse_input.pos()):
         state = "hover"
     else:

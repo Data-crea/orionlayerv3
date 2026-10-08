@@ -43,7 +43,9 @@ def table_row(surface, rect, scale, index, selected=False):
         glass.draw(surface, r, dense=True,
                    shade=st.colour("field.on_fill"),
                    shade_alpha=float(st.get("glass.selected_shade")))
-        edge = st.colour("mockup_colony.selected_edge")
+        # THE LIT EDGE, as a selected button wears it (work order 225,
+        # decision 92: "selected" looks the same everywhere).
+        edge = st.colour("field.on_edge")
         w = max(1, round(_px(st.get("panel.edge_width"), scale) * 0.6))
         pygame.draw.rect(surface, edge, r, w,
                          border_radius=max(2, int(4 * scale)))

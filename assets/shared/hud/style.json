@@ -351,6 +351,22 @@
       "stroke": 0.085,
       "glow": 0.05,
       "_note": "The button glyphs of work order 179 (assets/shared/hud/glyphs.json, drawn by tools/hud_glyphs.py). COLOUR: the nav glyphs' own blue, measured \u2014 the median RGB of the opaque pixels (alpha > 200) of the cut icon_leaders (44,179,253), icon_colonies (9,188,255), icon_info (29,167,255), icon_races (44,185,255) and icon_fleets (5,140,239), the median of the five per channel; like the nav glyphs they follow the frame colour (tint.FOLLOWS). HEIGHT: the master's px, the nav icons' own (143-169 px in the HUD). STROKE and GLOW: fractions of the height, chosen so a glyph at 0.6 of a 42 ref-px button (25 px) keeps a 2 px line at 1080p; ours, so Data's to change (decision 53)."
+    },
+    "shell": {
+      "content": [
+        20,
+        85,
+        1880,
+        975
+      ],
+      "panel_gap": 20,
+      "panel_inset": 8,
+      "element_gap": 8,
+      "button": [
+        250,
+        62
+      ],
+      "_note": "The screen shell of work order 225 (decisions 86-92): ONE content rectangle, one spacing, one button row and one bottom-right action for every full screen, taken from the galaxy map as built (it is the model, decision 87). Reference px (left, top, width, height). FROM THE GALAXY MAP: the right edge 1900 is the info panel's right edge (measured.galaxy.panel), = 1920 - measured.galaxy.edge_margin; the top 85 is the same panel's top edge, the first edge under the title plate; the bottom 1060 is TURN's bottom edge, = 1080 - edge_margin (dev:tools/hud_boxes.py hangs the bar there since work order 170); `button` is a nav button's size (measured.galaxy.nav_width; nav_bottom - nav_top); `panel_inset` and `element_gap` are the galaxy info panel's own row pad (screens/galaxy_map/layout.json sidebar_row_pad, 8: its first row starts 8 inside the panel, each row ends 8 above the separator and the next starts 8 below it). CHOICES, because the galaxy map does not answer them: the LEFT edge 20 mirrors the right one (edge_margin), so the rectangle is centred like the map's content area; `panel_gap` 20 is edge_margin again (the galaxy map shows ONE panel, so no distance between two exists there), so the bars a frame lays between two panels and round the rectangle are one width; the button row's bottom is the rectangle's bottom (the galaxy's nav buttons end 4 px higher only because the HUD art draws TURN taller); the bottom-right action is a slanted button of the row's size whose rect's right edge is the rectangle's right edge. Ours under decision 53, so Data's to change; the smoke test holds the measured half to measured.galaxy."
     }
   }
 }

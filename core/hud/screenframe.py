@@ -83,7 +83,7 @@ def _button(screen, surface, side):
     flash = screen._btn_flash
     if flash and flash[0] == side:
         if time.monotonic() - flash[1] < ACTIVE_FOR:
-            state = "active"
+            state = "pressed"      # decision 92: the click, not "on"
         else:
             screen._btn_flash = None
     if state == "normal" and hit(screen, side, *mouse_input.pos()):

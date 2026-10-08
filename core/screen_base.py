@@ -39,6 +39,9 @@ class ScreenBase(HelpMixin):
     FRAME_TITLE = ""        # Text rendered in the frame's title bar
     FRAME_BTN_LEFT = None   # ("CANCEL", field_id) or None
     FRAME_BTN_RIGHT = None  # ("ACCEPT", field_id) or None
+    #: The screen shell (work order 225, `core.hud.shell.Shell`): a screen
+    #: that wears it sets one in `__init__`; None draws nothing.
+    shell = None
 
     def __init__(self, app):
         self.app = app
@@ -202,7 +205,21 @@ class ScreenBase(HelpMixin):
         if self.USE_FRAME:
             self._render_frame(surface)
         self.render_content(surface)
+        self.render_shell(surface)
         self.render_help(surface)
+
+    def render_shell(self, surface):
+        """The screen's shell (title plate and buttons), when it wears one.
+        A screen that draws its own `render` calls this before its help."""
+        if self.shell is not None:
+            self.shell.render(surface, self.layout, self.style)
+
+    def shell_click(self, screen_x, screen_y):
+        """The key of the shell button under the click, or None; the shell
+        answers for its own geometry (decision 5)."""
+        if self.shell is None:
+            return None
+        return self.shell.button_at(self.layout, screen_x, screen_y)
 
     def draws_this_frame(self):
         """False when the screen has nothing it may draw AT ALL.
