@@ -34,10 +34,15 @@ E_TITLE, E_COST, E_MAINT, E_TIME, E_TURNS = 210, 242, 367, 211, 544
 
 
 def draw(surface, screen, view, state, names, hover):
+    # The shell's three panels (work order 225), then the original's boxes
+    # inside them. The title stands on the plate now (`screen._title`).
+    for name in ("left_panel", "middle_panel", "right_panel"):
+        r = screen.box_screen_rect(name)
+        if r is not None:
+            hud.panel(surface, r, screen.ref_layout.scale)
     for box in (w.BUILDINGS_BOX, w.PICTURE_BOX, w.SUMMARY_BOX, w.OTHERS_BOX,
                 w.DESCRIPTION_BOX, w.QUEUE_BOX):
         nd.draw_box(surface, screen, box)
-    _title(surface, screen, view, names)
     _lists(surface, screen, view, state, names)
     _queue(surface, screen, view, state, names)
     _summary(surface, screen, view, state, names, hover)
@@ -169,7 +174,16 @@ def _buttons(surface, screen, state, view):
         if f is None:
             continue
         r = nd.rect(screen.layout, (f.x, f.y, f.x_end, f.y_end))
-        lit = key == "auto" and view.auto_building != 0
+        if key == "auto":
+            # A TOGGLE inside a panel: rectangular, "selected" while on
+            # (work order 225, decisions 88 and 92).
+            lit = view.auto_building != 0
+            hud.small_button(surface, r, screen.layout.scale,
+                             hud_hover.pointer_state(
+                                 r, "active" if lit else "normal"),
+                             screen.word(key).upper(),
+                             style_renderer=screen.style)
+            continue
         hud.slant_button(surface, r, screen.layout.scale,
-                         hud_hover.pointer_state(r, "active" if lit else "normal"),
+                         hud_hover.pointer_state(r, "normal"),
                          screen.word(key), style_renderer=screen.style)

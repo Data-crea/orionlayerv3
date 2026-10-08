@@ -177,6 +177,23 @@ class PanelMap(Layout):
         nx, ny = reg.to_native(screen_x + 0.5, screen_y + 0.5)
         return self._ref_of(nx, ny)
 
+    @classmethod
+    def for_screen(cls, screen, regions):
+        """The map of a screen in the shell, from its own boxes:
+        `regions` is [(box name, native rect, hit)]. A hit region fills its
+        panel less the shell's inset (the native boxes stand inside the
+        panel's edge); a draw-only region fills its box. None while a box
+        is missing (the screen draws nothing native then)."""
+        from core.hud import shell
+        out = []
+        for name, native, hit in regions:
+            r = screen.box_screen_rect(name)
+            if r is None:
+                return None
+            out.append((name, native,
+                        shell.inner(r, screen.app.layout) if hit else r, hit))
+        return cls(screen.app.layout, out)
+
     def update(self, window_w, window_h):
         raise RuntimeError("a PanelMap is rebuilt from its screen's boxes, "
                            "never resized in place")

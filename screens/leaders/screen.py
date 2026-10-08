@@ -141,16 +141,7 @@ class LeadersScreen(ScreenBase):
         return self.box_screen_rect(name)
 
     def _build_map(self):
-        regions = []
-        for name, native, hit in REGIONS:
-            r = self.panel_rect(name)
-            if r is None:
-                self._map = None
-                return
-            if hit:
-                r = shell.inner(r, self.app.layout)
-            regions.append((name, native, r, hit))
-        self._map = panelmap.PanelMap(self.app.layout, regions)
+        self._map = panelmap.PanelMap.for_screen(self, REGIONS)
 
     def _row_visible(self, key):
         live, hire_mode, _mode = self._shown
