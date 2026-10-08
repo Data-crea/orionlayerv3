@@ -4,6 +4,7 @@ import time
 import pygame
 from core import palette
 from core.config import ORION2RE_VERSION
+from core.hud import shell
 from core.screen_base import ScreenBase
 
 # A credit line is "role <dots> name". The dot run is a separator, not
@@ -53,6 +54,7 @@ VERSION_BOX = "version_text"
 class MainMenuScreen(ScreenBase):
     SCREEN_NAME = "main_menu"
     GAME_SCREEN_ID = 10     # SCREEN_MAIN_MENU
+    SHELL_WORN = True       # work order 225: the rectangle, no plate
 
     # Credit scroll config (all in reference pixels / seconds)
     SCROLL_SPEED = 45
@@ -261,8 +263,12 @@ class MainMenuScreen(ScreenBase):
         # Logo (top-left of the CONTENT area, as the buttons are placed in
         # it: on a window wider than 16:9 both move in by the pillar band,
         # work order 224, D4)
+        # The logo at the shell's content rectangle's top-left corner (work
+        # order 225): the main menu has no title in the game, so it wears
+        # no plate and takes only the rectangle (decision 89).
         if self._logo_scaled:
-            surface.blit(self._logo_scaled, self.layout.pos(40, 80))
+            x, y, _w, _h = shell.content_ref()
+            surface.blit(self._logo_scaled, self.layout.pos(x, y))
 
         for box in self.boxes:
             box.render(surface, self.layout, self.style)

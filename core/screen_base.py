@@ -106,7 +106,9 @@ class ScreenBase(HelpMixin):
         # (work order 179; `core.hud.glyphs`).
         from core.hud import glyphs
         for box in self.boxes:
-            box.icon = glyphs.for_button(self.SCREEN_NAME, box.name)
+            # NO GLYPH on a screen in the shell (work order 225, decision 91).
+            box.icon = None if self.SHELL_WORN else \
+                glyphs.for_button(self.SCREEN_NAME, box.name)
 
     def render_backdrop(self, surface):
         """This screen as it stands BEHIND a box or a turn-time popup the
