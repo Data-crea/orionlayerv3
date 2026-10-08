@@ -28,6 +28,7 @@ import logging
 import pygame
 
 from core.hud import blocks as hud
+from core.hud import shell
 from core.hud import text as hudtext
 from core.screen_base import ScreenBase
 
@@ -43,7 +44,9 @@ TABLE_X0, TABLE_X1 = 139, 500
 #: The flash's pace: one step every 6 draw ticks of 55 ms (score.cpp:
 #: 397-405) — the lit row blinks at twice that period.
 FLASH_MS = 6 * 55
-REF_W, REF_ROW, REF_PAD, REF_FONT = 1180, 62, 28, 30
+#: The words' size and the columns' margin inside the panel, reference px
+#: (the shell's layout scales them).
+REF_FONT, REF_PAD = 30, 28
 
 
 def exit_field(fields):
@@ -57,12 +60,17 @@ class HallOfFameScreen(ScreenBase):
     SCREEN_NAME = "hall_of_fame"
     GAME_SCREEN_ID = 14
     USE_FRAME = False
+    SHELL_WORN = True
 
     def __init__(self, app):
         super().__init__(app)
         self._state = None
         self._data = {}
-        self._close = None
+        # THE SHELL (work order 225): the title plate, the table in the
+        # content rectangle, CLOSE the closing action bottom right.
+        self.shell = shell.Shell(title=lambda: self.words("title"),
+                                 buttons=[("close", lambda: self.words(
+                                     "close"), "action")], row=True)
 
     def enter(self, game_state=None):
         super().enter(game_state)
@@ -88,19 +96,18 @@ class HallOfFameScreen(ScreenBase):
         hof = getattr(self._state, "hall_of_fame", None)
         if hof is None:
             return
-        win_w, win_h = surface.get_size()
-        s = win_h / 1080
-        pad = int(REF_PAD * s)
-        w = int(REF_W * s)
-        row_h = int(REF_ROW * s)
+        L = self.ref_layout
+        s = L.scale
         size = max(10, int(REF_FONT * s))
         rows = hof["rows"]
-        top = hud.title_plate(surface, win_w // 2, int(40 * s), s,
-                              self.words("title"), self.style).bottom
-        panel = pygame.Rect((win_w - w) // 2, top + pad, w,
-                            row_h * len(rows) + 2 * pad)
+        # ONE PANEL, the shell's whole rectangle above the row (work order
+        # 225): the `table` box — the screen's own box, so the mod frame
+        # slot has a layout to paint for — and the ten rows share its
+        # inner height.
+        panel = self.box_screen_rect("table") or self.shell.panels(L)
         hud.panel(surface, panel, s, dense=True)
-        inner = panel.inflate(-2 * pad, -2 * pad)
+        inner = shell.inner(panel, L).inflate(-2 * int(REF_PAD * s), 0)
+        row_h = inner.h // max(1, len(rows))
 
         def column_rect(x0, x1, y):
             span = TABLE_X1 - TABLE_X0
@@ -138,10 +145,7 @@ class HallOfFameScreen(ScreenBase):
                                                  t.get_height()))
                 hudtext.blit(surface, t, r, align=align)
             y += row_h
-        self._close = pygame.Rect(0, 0, int(220 * s), int(58 * s))
-        self._close.midtop = (win_w // 2, panel.bottom + pad)
-        hud.action_button(surface, self._close, s, "normal",
-                          self.words("close"), style_renderer=self.style)
+        self.render_shell(surface)
 
     # ── input: the one way out ─────────────────────────────────────────
     def _leave(self, why):
@@ -154,7 +158,10 @@ class HallOfFameScreen(ScreenBase):
     def handle_click(self, screen_x, screen_y):
         if self.help_consumes_click(screen_x, screen_y):
             return None
-        self._leave("click")          # a click anywhere, as the original
+        # A click anywhere, as the original — CLOSE included; the shell
+        # only lends CLOSE its pressed look.
+        self.shell_click(screen_x, screen_y)
+        self._leave("click")
         return None
 
     def handle_key_event(self, event):
