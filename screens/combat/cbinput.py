@@ -37,7 +37,7 @@ class CombatInput:
         targets = getattr(self._state, "targets", None)
         if self._pointer is None or self._cam is None or not targets or \
                 targets.get("unit") != c["cur_ship"] or \
-                not pygame.Rect(self._cam.area).collidepoint(self._pointer):
+                not self._cam.on_field(*self._pointer):
             return None
         missile = cbdraw.missile_at(self._play.ordnance, self._cam,
                                     *self._pointer, self._me())

@@ -83,7 +83,20 @@ class Camera:
         return (self.ox + (x - self.area[0]) / self.scale,
                 self.oy + (y - self.area[1]) / self.scale)
 
+    def on_field(self, x, y):
+        """Is the window point on the battlefield — inside the area the
+        field is drawn in? The world goes on under the panel band, so a
+        point there maps to a cell nobody sees; it is the panel's, never
+        the field's. TRANSCRIPTION `field_only`: the original's field is
+        one grid field, (0,0)-(639,359) (combat1.cpp:114), and its panel
+        below holds other fields or none (work order 224, D1). The one
+        test for the click, the right click and the hover (decision 5)."""
+        ax, ay, aw, ah = self.area
+        return ax <= x < ax + aw and ay <= y < ay + ah
+
     def cell_at(self, x, y):
+        if not self.on_field(x, y):
+            return None
         wx, wy = self.to_world(x, y)
         if not (0 <= wx < WORLD_W and 0 <= wy < WORLD_H):
             return None
