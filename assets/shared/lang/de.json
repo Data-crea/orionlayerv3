@@ -551,6 +551,13 @@
     "How strongly the painted plates take the colour, from faint to full. Applies to every fleet.": "Wie stark die gemalten Platten die Farbe annehmen, von schwach bis voll. Gilt für jede Flotte.",
     "Back to the defaults: Light plates, Strong, no second colour, full strength.": "Zurück zu den Vorgaben: Helle Platten, Kräftig, keine Zweitfarbe, volle Stärke.",
     "Back to the settings. Your choices are kept with your settings, not with a save game, and apply from the next battle on.": "Zurück zu den Einstellungen. Deine Wahl bleibt bei deinen Einstellungen, nicht in einem Spielstand, und gilt ab der nächsten Schlacht.",
-    "RESET": "ZURÜCKSETZEN"
+    "RESET": "ZURÜCKSETZEN",
+    "Achievements": "Errungenschaften",
+    "Colony": "Kolonie",
+    "Weapons": "Waffen",
+    "Equipment": "Ausrüstung",
+    "Fleet": "Flotte",
+    "Technology": "Technologie",
+    "Nothing researched in this group yet.": "In dieser Gruppe ist noch nichts erforscht."
   }
 }

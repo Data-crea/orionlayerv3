@@ -25,9 +25,14 @@ designer, or the build popup.
 
 **HD STATE `first_row`.** Which five-ship row the ship list starts at is a
 static of the original (`_first_ship`); HD counts the pages it sent itself
-and starts at the top on entry.
+and starts at the top on entry. The arrows' hotkeys (E_Strings 0x89 and
+0xB, colrefit.cpp:357-371; "+" and "-" in the English game) therefore go
+through the same sends, never to the game as keys: a page the game turned
+alone would put HD's cells on other ships than the game's.
 """
 import logging
+
+import pygame
 
 from core import colony_guard, hestrings
 from core.estrings import EStrings
@@ -293,6 +298,33 @@ class RefitScreen(ScreenBase):
                                 if self._in(p, geom.design_row(k))), None)
         return super().handle_mouse_motion(screen_x, screen_y)
 
+    def _page(self, step):
+        """One row of five up (-1) or down (+1), by the arrow's own field;
+        down only while a ship stands past the view (colrefit.cpp:241-245)."""
+        if step < 0:
+            if self.send(self._field(geom.UP, geom.TYPE_BUTTON), "up"):
+                self.first = max(0, self.first - 5)
+        elif self.first + geom.CELLS < len(self._ships) and \
+                self.send(self._field(geom.DOWN, geom.TYPE_BUTTON), "down"):
+            self.first += 5
+
+    def handle_key(self, key):
+        """The arrows' hotkeys page through `_page` (HD STATE
+        `first_row`); every other key goes to the game as before."""
+        if self.help_consumes_key(key):
+            return
+        if self.kind == "ships":
+            ch = chr(key) if 0 < key < 0x110000 else ""
+            if key in (pygame.K_KP_PLUS, pygame.K_KP_MINUS):
+                ch = "+" if key == pygame.K_KP_PLUS else "-"
+            for rect, step in ((geom.DOWN, +1), (geom.UP, -1)):
+                f = self._field(rect, geom.TYPE_BUTTON)
+                if f is not None and f.hotkey and ch and \
+                        ord(ch.lower()) in (f.hotkey, ord(chr(f.hotkey).lower())):
+                    self._page(step)
+                    return
+        super().handle_key(key)
+
     def handle_click(self, screen_x, screen_y):
         if self.help_consumes_click(screen_x, screen_y):
             return None
@@ -304,14 +336,10 @@ class RefitScreen(ScreenBase):
             return None
         if self.kind == "ships":
             if self._in(p, geom.UP):
-                if self.send(self._field(geom.UP, geom.TYPE_BUTTON), "up"):
-                    self.first = max(0, self.first - 5)
+                self._page(-1)
                 return None
             if self._in(p, geom.DOWN):
-                if self.first + geom.CELLS < len(self._ships) and \
-                        self.send(self._field(geom.DOWN, geom.TYPE_BUTTON),
-                                  "down"):
-                    self.first += 5
+                self._page(+1)
                 return None
             for i in range(geom.CELLS):
                 if self._in(p, geom.cell(i)) and \
