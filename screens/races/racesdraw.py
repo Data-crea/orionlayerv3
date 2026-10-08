@@ -111,14 +111,9 @@ def draw_slot(surface, screen, slot, art, lit=False):
     if slot.eliminated and art is not None and art.eliminated() is not None:
         over = nd.magnified(art.eliminated(), layout)
         surface.blit(over, over.get_rect(center=cell.center))
-    width = max(1, int(nd.native_scale(layout)))
-    c = slot.colour if 0 <= slot.colour < 8 else 0
-    # LOOK EXCEPTION transcription: the portrait's banner frame (racescrn.cpp:50-52, :270-279) and the WHO box (:555)
-    pygame.draw.rect(surface, _pal(art, BANNER_HIGH[c], (180, 180, 180)),
-                     cell.inflate(2 * width, 2 * width), width)
-    pygame.draw.rect(surface, _pal(art, BANNER_LOW[c], (110, 110, 110)),
-                     cell, width)
+    width = banner_frame(surface, layout, cell, slot.colour, art)
     if lit:
+        # LOOK EXCEPTION transcription: the WHO box in the cycling 0xFF (:555)
         # The original boxes the portrait in the cycling 0xFF (:555); HD
         # also lights the whole panel's edge — the popup's lit edge, so
         # the race a click will pick is unmistakable (HD EXTENSION
@@ -145,6 +140,20 @@ def draw_slot(surface, screen, slot, art, lit=False):
         _draw_missions(surface, screen, i, slot.mission)
     else:
         _draw_missions(surface, screen, i, None)
+
+
+def banner_frame(surface, layout, cell, colour, art):
+    """The portrait's frame in the player's banner colours — high round
+    it, low on it (`Draw_Race_Photos_`, racescrn.cpp:270-279; the race
+    report's racerprt.cpp:105-107). Returns the line width."""
+    width = max(1, int(nd.native_scale(layout)))
+    c = colour if 0 <= colour < 8 else 0
+    # LOOK EXCEPTION transcription: the banner frame's colours (racescrn.cpp:50-52, :270-279)
+    pygame.draw.rect(surface, _pal(art, BANNER_HIGH[c], (180, 180, 180)),
+                     cell.inflate(2 * width, 2 * width), width)
+    pygame.draw.rect(surface, _pal(art, BANNER_LOW[c], (110, 110, 110)),
+                     cell, width)
+    return width
 
 
 def draw_empty(surface, screen, i, art):

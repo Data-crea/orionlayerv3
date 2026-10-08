@@ -1,0 +1,70 @@
+{
+  "_comment": "Right-click context help for Refit's ship list, transcribed from ERICHELP::_refit_ship_popup_help_list (erichelp.cpp:118-126, s_help_box {help_id, x1, y1, x2, y2}), installed by Set_Refit_Ship_Popup_Help_List_ (erichelp.cpp:198-200, colrefit.cpp:98). First hit wins, the screen-wide 534 last, where the original keeps it. The design list's right clicks are the game's own text boxes (colrefit.cpp:562-590).",
+  "_source": "orion2re orionlayer-local, erichelp.cpp:118-126",
+  "hd_extension": "The help popup auto-sizes to its text and scrolls when it cannot fit. The original draws a fixed box and lets FMTPARA wrap into it at a fixed 339 px (TEXTBOX::Draw_Help_Entry_, textbox.cpp:307); at four HD resolutions a fixed box either wastes half the screen on two lines or clips a long entry. Marked once per file, here, and in core/helppopup.py.",
+  "regions": [
+    {
+      "help_id": 514,
+      "native": [
+        468,
+        46,
+        478,
+        66
+      ]
+    },
+    {
+      "help_id": 535,
+      "native": [
+        159,
+        47,
+        460,
+        230
+      ]
+    },
+    {
+      "help_id": 521,
+      "native": [
+        467,
+        68,
+        479,
+        404
+      ]
+    },
+    {
+      "help_id": 536,
+      "native": [
+        159,
+        239,
+        459,
+        424
+      ]
+    },
+    {
+      "help_id": 522,
+      "native": [
+        468,
+        406,
+        478,
+        424
+      ]
+    },
+    {
+      "help_id": 537,
+      "native": [
+        272,
+        436,
+        363,
+        465
+      ]
+    },
+    {
+      "help_id": 534,
+      "native": [
+        1,
+        1,
+        638,
+        478
+      ]
+    }
+  ]
+}

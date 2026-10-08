@@ -1,0 +1,18 @@
+{
+  "_comment": "Refit (the build popup's id 25), work order 223. Geometry: screens/refit/refgeom.py; drawing and marks: refdraw.py, refwords.py, screen.py. Each mark is held by the smoke group and named in dev:doc/state/refit.md.",
+  "words": {
+    "_note": "DEVIATION `button_words`: the ship list's title and its buttons carry their words in REFITPUP.LBX art (colrefit.cpp:325-338); HD draws them in code.",
+    "title": "SELECT SHIP TO REFIT",
+    "cancel": "CANCEL",
+    "up": "-",
+    "down": "+"
+  },
+  "marks": {
+    "hd_state": "BUILT, NOT ACCEPTED (work order 223).",
+    "hd_state_first_row": "HD STATE \u2014 the row the ship list starts at is a static of the original (_first_ship); HD counts the pages it sent itself and starts at the top.",
+    "hd_state_picked_ship": "HD STATE \u2014 the ship being refitted (_g_ship_n) is not on the wire; the design list names the ship HD picked.",
+    "deviation_hud_parts": "DEVIATION \u2014 REFITPUP.LBX 0 / 4 and its buttons are the HUD's popup, fields and buttons; the ship pictures, the refusal words and every game word are the original's.",
+    "deviation_alone": "DEVIATION \u2014 the original draws its window over the build popup; HD shows it alone over the background, the popup unchanged under it.",
+    "omission_weapon_mods": "OMISSION \u2014 a weapon's modification words are not printed in the paragraph; its count and name are."
+  }
+}

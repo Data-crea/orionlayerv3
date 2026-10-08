@@ -1,0 +1,10 @@
+{
+  "_comment": "The race report (shown under Races' id 6), work order 223. Everything sits at the HD image of its native rectangle (rrgeom, through core/researchnative), the right half is Info's Tech Review (screens/info), so this file carries only the markings, each also stated in the module that performs it and held by the smoke group.",
+  "marks": {
+    "hd_state": "BUILT, NOT ACCEPTED (work order 223).",
+    "hd_state_report_player": "HD STATE \u2014 which race the report is about is a parameter of Race_Report_Screen_ and never on the wire; Races remembers the race HD picked after REPORT, and only that report is drawn (a report opened on F12 keeps the F12 notice).",
+    "hd_state_local_navigation": "HD STATE \u2014 the Tech Review's tabs and list are local, as on Info (info.cpp's file statics); the report sends RETURN / ESC only.",
+    "deviation_hud_parts": "DEVIATION \u2014 RACERPRT.LBX 0's painted boxes are the shared field and the panels decision 71's; the portrait, its banner frame, the spy icons and every word are the original's.",
+    "deviation_hd_font": "DEVIATION \u2014 the HD font at the native line height, as on Races and Info."
+  }
+}

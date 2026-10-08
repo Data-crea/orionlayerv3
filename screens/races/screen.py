@@ -51,6 +51,12 @@ class RacesScreen(ScreenBase):
         self._slots = []
         self._hover = None          # native point of the pointer
         self._armed = None          # HD STATE `armed_action`: what HD sent
+        # HD STATE `report_player` (work order 223): the race HD picked for
+        # the race report — the game's `player_idx` is never on the wire,
+        # so the report screen (screens/race_report) can draw only a
+        # report HD itself asked for.
+        self.report_player = None
+        self._last_sent = None      # the last action button HD sent
         self._hand = None           # racesspies.Hand: spies picked, not sent
         self._spy_sent = None       # (expected groups, frames waited)
         self._words = None
@@ -66,6 +72,8 @@ class RacesScreen(ScreenBase):
         self._billtext = BillText(language)
         self._estrings = EStrings(language)
         self._waited, self._hover, self._armed = 0, None, None
+        # Back from a report (or in for the first time): no race is picked.
+        self.report_player, self._last_sent = None, None
         self._hand = self._spy_sent = None
         self.update(game_state)
 
@@ -106,10 +114,12 @@ class RacesScreen(ScreenBase):
         return self._view.reason if self._view else ""
 
     def no_view_reason(self, game_state):
-        """The race report stands under id 6 (REPORT, then a race); HD has
-        no view of it yet ([races.report], work order 208 B3)."""
+        """The race report stands under id 6 (REPORT, then a race). Since
+        work order 223 it is HD's (`screens/race_report`) when HD asked for
+        it; a report HD did not ask for (opened on F12) names no race on
+        the wire, so it stays on F12 ([races.report])."""
         if self._view is not None and self._view.state == raceswire.DIALOG:
-            return "The race report has no HD view yet"
+            return "This race report was not opened in HD"
         return None
 
     @property
@@ -242,13 +252,18 @@ class RacesScreen(ScreenBase):
                     view.sendable(name):
                 self._send(view.buttons[name], name)
                 if name in racesgeom.ACTIONS:
-                    self._armed = name
+                    self._armed = self._last_sent = name
                 return None
         if view.state == raceswire.MAIN and self._spy_click(p):
             return None
         if view.state == raceswire.WHO:
             i = self._slot_at(p)
             if i is not None:
+                # Not `_armed`: a main-mode snapshot between REPORT and the
+                # game's WHO list clears that (seen live, work order 223).
+                if self._last_sent == "report" and i < len(view.active):
+                    self.report_player = view.active[i]
+                self._last_sent = None
                 self._send(view.field(racesgeom.who_field(i)), f"race {i}")
             else:
                 self._send(view.field(racesgeom.CATCHER), "cancel")

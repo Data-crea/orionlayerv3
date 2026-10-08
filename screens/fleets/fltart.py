@@ -224,6 +224,24 @@ class FleetArt:
                             minimum=MIN_PICTURE,
                             ramp=colour if owner is None else owner)
 
+    def ship_indices(self, ship_type, colour):
+        """(width, height, palette indices row by row) of a ship picture,
+        or None — for a screen that colours it in its own palette (the
+        colony screens' remap, `screens/refit/refart.py`, work order 223)."""
+        if not self.available or not 0 <= ship_type < SHIP_STRIDE or \
+                not 0 <= colour <= MAX_PLAYERS:
+            return None
+        try:
+            blob = self._src.read("ships",
+                                  f"{ship_type + colour * SHIP_STRIDE}.bin")
+            header = lbx.parse_header(blob, "ship")
+            pixels = lbx.decode_frame(blob, header, 0)
+        except (OSError, lbx.LbxError, ValueError):
+            return None
+        if pixels is None or header.width < MIN_PICTURE:
+            return None
+        return header.width, header.height, bytes(pixels)
+
     def ship_ramp(self, owner):
         """The owner's ship colours for 192..239, or `{}`.
 

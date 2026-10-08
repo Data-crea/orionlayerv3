@@ -93,14 +93,15 @@ class BuildQueueScreen(ScreenBase):
     def no_view_reason(self, game_state):
         """REFIT's ship list stands under the popup's id 25: its CANCEL is
         `Add_Button_Field_(0x112, 0x1B8, …)` in both of its stages
-        (colrefit.cpp:357-386, :600-606). HD has no view of it
-        ([build_queue.refit], work order 208 B3)."""
+        (colrefit.cpp:357-386, :600-606). Since work order 223 it is
+        `screens/refit`'s; it falls back here only when the list came
+        without the colony's COLS block (`refit.claims`)."""
         if getattr(game_state, "current_screen", -1) != 25:
             return None
         for f in getattr(game_state, "fields", None) or []:
             if getattr(f, "index", 0) and f.field_type == 0 and \
                     (f.x, f.y) == (0x112, 0x1B8):
-                return "The refit ship list has no HD view yet"
+                return "The refit list came without its colony's block"
         return None
 
     def e(self, index):

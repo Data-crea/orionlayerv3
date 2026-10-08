@@ -35,6 +35,8 @@ class Dispatcher:
     def __init__(self):
         self.screens = {}       # name -> ScreenBase instance
         self.screen_map = {}    # game screen_id -> name (from GAME_SCREEN_ID)
+        # game screen_id -> [names] that SHARE it (`SHARES_GAME_SCREEN_ID`)
+        self.shared_map = {}
         self.active = None      # active screen (ScreenBase)
         self.active_name = ""   # name of the active screen
         self.use_original = False  # True when no HD screen available
@@ -54,6 +56,14 @@ class Dispatcher:
             # (work order 185, open fix 45's 54 / 55 / 56).
             for extra in getattr(screen, "EXTRA_SCREEN_IDS", ()):
                 self.screen_map[extra] = name
+        # `SHARES_GAME_SCREEN_ID` (work order 223): a screen the game shows
+        # under ANOTHER screen's id — the race report under Races' 6, the
+        # refit lists under the build popup's 25. It has no id of its own,
+        # and it is asked first: it takes the snapshot only when its own
+        # `claims` recognises its list, else the id's owner is asked.
+        shared = getattr(screen, "SHARES_GAME_SCREEN_ID", None)
+        if shared is not None:
+            self.shared_map.setdefault(shared, []).append(name)
 
     def screen_name_for(self, game_screen_id):
         """Display name for a game screen ID (status bar)."""
@@ -106,8 +116,12 @@ class Dispatcher:
             self.use_original = False
             screen.enter(game_state)
 
-            # Check if this is a sub-screen (no GAME_SCREEN_ID)
-            is_mapped = name in self.screen_map.values()
+            # Check if this is a sub-screen (no GAME_SCREEN_ID). A screen
+            # that SHARES an id is no sub-screen: its `claims` decides on
+            # every snapshot, and a lock would keep it after its list is
+            # gone (work order 223 — the report stayed over Races).
+            is_mapped = name in self.screen_map.values() or \
+                getattr(screen, "SHARES_GAME_SCREEN_ID", None) is not None
             if is_mapped:
                 self._locked_screen = ""
                 self._locked_game_ids = set()
@@ -251,7 +265,9 @@ class Dispatcher:
                 "multiplayer" in self.screens:
             name = "multiplayer"
         else:
-            name = self.screen_map.get(screen_id)
+            name = next((n for n in self.shared_map.get(screen_id, ())
+                         if self.screens[n].claims(game_state)),
+                        self.screen_map.get(screen_id))
 
         # A screen may decline its id for a snapshot it cannot draw at all
         # (`ScreenBase.claims`, work order 180 B): then the id is unclaimed.
