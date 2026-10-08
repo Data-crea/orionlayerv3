@@ -258,11 +258,11 @@ class MainMenuScreen(ScreenBase):
         self._render_background(surface)
         self._render_credits(surface)
 
-        # Logo (top-left)
+        # Logo (top-left of the CONTENT area, as the buttons are placed in
+        # it: on a window wider than 16:9 both move in by the pillar band,
+        # work order 224, D4)
         if self._logo_scaled:
-            L = self.layout
-            surface.blit(self._logo_scaled,
-                         (int(40 * L.scale), int(80 * L.scale + L.offset_y)))
+            surface.blit(self._logo_scaled, self.layout.pos(40, 80))
 
         for box in self.boxes:
             box.render(surface, self.layout, self.style)
@@ -309,10 +309,8 @@ class MainMenuScreen(ScreenBase):
             if typ == "name":
                 x += self.CREDIT_INDENT
 
-            # Convert to screen coords
-            sx = int(x * L.scale)
-            sy = int(ref_y * L.scale + L.offset_y)
-            surface.blit(text_surf, (sx, sy))
+            # Reference to window, in the content area as the logo
+            surface.blit(text_surf, L.pos(x, ref_y))
 
     def on_resize(self):
         super().on_resize()
