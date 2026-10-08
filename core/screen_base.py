@@ -9,6 +9,7 @@ Every screen inherits from ScreenBase and implements:
 Every screen stands on the background `core.backgrounds` resolves
 for it (work order 173): its own picture, else the universal one.
 """
+import contextlib
 import os
 import time
 import pygame
@@ -45,6 +46,10 @@ class ScreenBase(HelpMixin):
     #: True on a screen fitted into the shell's content rectangle (work
     #: order 225); the suite holds every such screen to the shell's rules.
     SHELL_WORN = False
+    #: A TRANSCRIBED screen in the shell: its native regions, each carried
+    #: into one of its own boxes — [(box name, native rect, hit[, fill])],
+    #: `core.panelmap.PanelMap.for_screen`. None: no map, the 4:3 island.
+    REGIONS = None
 
     def __init__(self, app):
         self.app = app
@@ -59,10 +64,30 @@ class ScreenBase(HelpMixin):
     def layout(self):
         """The layout this screen's drawing and hit tests ask. A
         transcribed screen in the shell answers with its `PanelMap`
-        (`core.panelmap`), which places its NATIVE rectangles in its
-        panels; reference boxes, the shell and the help popup always use
-        `ref_layout`."""
-        return self.app.layout
+        (`core.panelmap`, built from `REGIONS`), which places its NATIVE
+        rectangles in its panels — except inside `island()`; reference
+        boxes, the shell and the help popup always use `ref_layout`."""
+        m = getattr(self, "_native_map", None)
+        if m is None or getattr(self, "_at_island", False):
+            return self.app.layout
+        return m
+
+    @contextlib.contextmanager
+    def island(self):
+        """Native rectangles at the 4:3 island, as before work order 225:
+        the original's dialogs over a transcribed screen (a hire popup, a
+        native box, a help box) keep their geometry."""
+        was, self._at_island = getattr(self, "_at_island", False), True
+        try:
+            yield
+        finally:
+            self._at_island = was
+
+    def build_native_map(self):
+        """The PanelMap of `REGIONS` from this screen's boxes, or None."""
+        from core import panelmap
+        self._native_map = panelmap.PanelMap.for_screen(
+            self, self.REGIONS) if self.REGIONS else None
 
     @property
     def ref_layout(self):
@@ -86,6 +111,7 @@ class ScreenBase(HelpMixin):
         )
         self._reload_boxes()
         self._update_box_layout()
+        self.build_native_map()
         self._load_background()
         self._load_help_regions()
 
@@ -348,6 +374,7 @@ class ScreenBase(HelpMixin):
         if self._screen_dir:
             self._reload_boxes()
         self._update_box_layout()
+        self.build_native_map()
         self._scale_background()
         self.help.clear_cache()
 

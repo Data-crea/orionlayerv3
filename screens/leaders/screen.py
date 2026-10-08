@@ -44,13 +44,11 @@ reads back. On an engine without the fix the list shrinks to what HD can
 see the effect of without the block: the tabs, HIRE, CANCEL, RETURN, a
 leader FOR HIRE, the popup and the boxes.
 """
-import contextlib
 import logging
 
 import pygame
 
 from core import estrings, hestrings, lang, skildesc
-from core import panelmap
 from core.hud import blocks as hud
 from core.hud import shell
 from core.shipparts import ShipPartNames
@@ -85,6 +83,7 @@ class LeadersScreen(ScreenBase):
     GAME_SCREEN_ID = ldrgeom.GAME_SCREEN_ID   # 29, orion2_consts.h:484
     USE_FRAME = False
     SHELL_WORN = True
+    REGIONS = REGIONS
 
     def __init__(self, app):
         super().__init__(app)
@@ -103,8 +102,6 @@ class LeadersScreen(ScreenBase):
         self._words = None
         self._skills = None
         self._art = ldrart.load()
-        self._map = None            # the PanelMap, built from the boxes
-        self._island = False        # True: native at the 4:3 island
         self.shell = shell.Shell(
             title=self._title, row=True,
             buttons=[(k, ldrdraw.BUTTON_WORDS[k], slot) for k, slot in ROW],
@@ -118,30 +115,8 @@ class LeadersScreen(ScreenBase):
         screen (layout.json `title`; the original's is OFFICER.LBX art)."""
         return lang.tr(self._data.get("title", "Leaders"))
 
-    @property
-    def layout(self):
-        """The PanelMap for every native rectangle — except while a
-        dialog of the original's is drawn or hit (`island`): dialogs keep
-        their geometry (work order 225)."""
-        if self._island or self._map is None:
-            return self.app.layout
-        return self._map
-
-    @contextlib.contextmanager
-    def island(self):
-        """Native rectangles at the 4:3 island, as before work order 225:
-        the hire popup, the engine's boxes, the skill help."""
-        was, self._island = self._island, True
-        try:
-            yield
-        finally:
-            self._island = was
-
     def panel_rect(self, name):
         return self.box_screen_rect(name)
-
-    def _build_map(self):
-        self._map = panelmap.PanelMap.for_screen(self, REGIONS)
 
     def _row_visible(self, key):
         live, hire_mode, _mode = self._shown
@@ -175,12 +150,7 @@ class LeadersScreen(ScreenBase):
         self._shown = ({}, False, None)
         self._help_doc = self.app.res.load_json(
             "screens/leaders/help.json", {}) or {}
-        self._build_map()
         self.update(game_state)
-
-    def on_resize(self):
-        super().on_resize()
-        self._build_map()
 
     def update(self, game_state=None):
         if game_state is None:

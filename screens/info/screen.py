@@ -37,7 +37,7 @@ metric toggles are HD's own too (`history_btns` bits 0-3 at entry).
 """
 import logging
 
-from core import modtexts, panelmap
+from core import modtexts
 from core.billtext import BillText
 from core.hud import shell
 from core.estrings import EStrings
@@ -84,26 +84,12 @@ class InfoScreen(ScreenBase):
         self._info = None
         from . import infoart
         self._art = infoart.load()      # the Tech Review pictures (196 F)
-        self._map = None
         self.shell = shell.Shell(title=self._title) if self.REGIONS else None
 
     def _title(self):
         """The page's title, from where the screen took it before the
         shell (`info.title.<page>`, drawn over the content area)."""
         return infodraw.T(f"info.title.{PAGES[self.page]}", "") or ""
-
-    @property
-    def layout(self):
-        """The PanelMap for everything native (`core.panelmap`)."""
-        return self._map if self._map is not None else self.app.layout
-
-    def _build_map(self):
-        self._map = panelmap.PanelMap.for_screen(self, self.REGIONS) \
-            if self.REGIONS else None
-
-    def on_resize(self):
-        super().on_resize()
-        self._build_map()
 
     def exit_rect(self):
         """EXIT (RETURN), the screen's closing action, as the slanted shell
@@ -127,7 +113,6 @@ class InfoScreen(ScreenBase):
         self._waited, self._scroll = 0, {}
         self.ref_mode, self.topic, self.tech_app = "index", None, None
         self._entered = False
-        self._build_map()
         self.update(game_state)
 
     def update(self, game_state=None):

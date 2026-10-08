@@ -25,7 +25,7 @@ import logging
 
 import pygame
 
-from core import colony_guard, panelmap, prodname
+from core import colony_guard, prodname
 from core.buildnames import BuildingNames
 from core.hestrings import printf
 from core.hud import shell
@@ -77,6 +77,7 @@ class BuildQueueScreen(ScreenBase):
     GAME_SCREEN_ID = w.GAME_SCREEN_ID
     USE_FRAME = False
     SHELL_WORN = True
+    REGIONS = REGIONS
 
     def __init__(self, app):
         super().__init__(app)
@@ -87,7 +88,6 @@ class BuildQueueScreen(ScreenBase):
         self._buildings = BuildingNames(lang)
         self._data = self.app.res.load_json(
             "screens/build_queue/layout.json", {}) or {}
-        self._map = None
         # The title plate carries the screen's title, "Build List for %s"
         # (E 210, colbldg.cpp), which the original prints over the queue.
         self.shell = shell.Shell(title=self._title)
@@ -98,19 +98,6 @@ class BuildQueueScreen(ScreenBase):
         names = Names(self._state, self._buildings, self._strings)
         return printf(self.e(bqdraw.E_TITLE) or "",
                       names.planet_name(self._view.colony))
-
-    @property
-    def layout(self):
-        """The PanelMap for everything native (`core.panelmap`)."""
-        return self._map if self._map is not None else self.app.layout
-
-    def enter(self, game_state=None):
-        super().enter(game_state)
-        self._map = panelmap.PanelMap.for_screen(self, REGIONS)
-
-    def on_resize(self):
-        super().on_resize()
-        self._map = panelmap.PanelMap.for_screen(self, REGIONS)
 
     def claims(self, game_state):
         return w.claims(game_state)
