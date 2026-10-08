@@ -37,8 +37,9 @@ metric toggles are HD's own too (`history_btns` bits 0-3 at entry).
 """
 import logging
 
-from core import modtexts
+from core import modtexts, panelmap
 from core.billtext import BillText
+from core.hud import shell
 from core.estrings import EStrings
 from core.infotext import InfoText
 from core.screen_base import ScreenBase
@@ -62,6 +63,14 @@ class InfoScreen(ScreenBase):
     SCREEN_NAME = "info"
     GAME_SCREEN_ID = geom.GAME_SCREEN_ID
     USE_FRAME = False
+    SHELL_WORN = True
+    #: THE SCREEN SHELL (work order 225): the original's left panel
+    #: (stardate, tabs, chart) IS the left panel (`fill`); the content area
+    #: below the page title fills the content panel, the title standing on
+    #: the plate — both fitted into the content rectangle (boxes.json,
+    #: `core.panelmap`). A subclass not in the shell yet says None.
+    REGIONS = (("left_panel", geom.LEFT_PANEL, True, True),
+               ("content_panel", geom.CONTENT_BELOW_TITLE, True))
 
     def __init__(self, app):
         super().__init__(app)
@@ -75,6 +84,39 @@ class InfoScreen(ScreenBase):
         self._info = None
         from . import infoart
         self._art = infoart.load()      # the Tech Review pictures (196 F)
+        self._map = None
+        self.shell = shell.Shell(title=self._title) if self.REGIONS else None
+
+    def _title(self):
+        """The page's title, from where the screen took it before the
+        shell (`info.title.<page>`, drawn over the content area)."""
+        return infodraw.T(f"info.title.{PAGES[self.page]}", "") or ""
+
+    @property
+    def layout(self):
+        """The PanelMap for everything native (`core.panelmap`)."""
+        return self._map if self._map is not None else self.app.layout
+
+    def _build_map(self):
+        self._map = panelmap.PanelMap.for_screen(self, self.REGIONS) \
+            if self.REGIONS else None
+
+    def on_resize(self):
+        super().on_resize()
+        self._build_map()
+
+    def exit_rect(self):
+        """EXIT (RETURN), the screen's closing action, as the slanted shell
+        button at the content panel's inner bottom-right corner, at the size
+        its native rectangle maps to — where the original puts it, inside
+        the panel's edge (decision 90). Drawn and hit here (decision 5)."""
+        r = infodraw.R(self, geom.EXIT)
+        panel = self.box_screen_rect("content_panel")
+        if panel is None:
+            return r
+        inner = shell.inner(panel, self.app.layout)
+        r.bottomright = inner.bottomright
+        return r
 
     def enter(self, game_state=None):
         super().enter(game_state)
@@ -85,6 +127,7 @@ class InfoScreen(ScreenBase):
         self._waited, self._scroll = 0, {}
         self.ref_mode, self.topic, self.tech_app = "index", None, None
         self._entered = False
+        self._build_map()
         self.update(game_state)
 
     def update(self, game_state=None):
@@ -134,6 +177,7 @@ class InfoScreen(ScreenBase):
         if me is not None:
             infodraw.draw_chart(surface, self, me)
             getattr(infoview, PAGES[self.page])(self, surface, me)
+        self.render_shell(surface)
         self.render_help(surface)
 
     # ── Right-click help (billhelp.cpp:3-40, info.cpp:1936-1947) ──
@@ -198,7 +242,7 @@ class InfoScreen(ScreenBase):
         if self.help_consumes_click(screen_x, screen_y):
             return None
         p = self._native(screen_x, screen_y)
-        if self._in(p, geom.EXIT):
+        if shell.hit(self.exit_rect(), screen_x, screen_y):
             self._send_exit("RETURN")
             return None
         for k in range(len(PAGES)):

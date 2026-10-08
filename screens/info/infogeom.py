@@ -37,6 +37,10 @@ INCOME_HEAD_AT, MAINT_HEAD_AT = (42, 324), (120, 324)
 LABEL_AT, LABEL_STEP, LABEL_SIZE = (25, 344), 16, (160, 20)
 #: The content area (the interlaced fill, :596).
 CONTENT = (212, 23, 620, 457)
+#: The content area under the page title, from the pages' first row (y 60)
+#: less the gap the shell's inset gives: what the content panel carries
+#: once the title stands on the plate (work order 225).
+CONTENT_BELOW_TITLE = (212, 52, 620, 457)
 
 # ── The pages' drop areas (info.cpp:118-322) ──────────────
 HISTORY_LEGEND = (220, 60, 609, 122)

@@ -19,6 +19,7 @@ import pygame
 
 from core import modtexts
 from core.hud import blocks as hud
+from core.hud import shell
 from core.hud import text as hudtext
 from screens.leaders import ldrdraw as nd
 
@@ -43,23 +44,26 @@ def px(screen, key):
 
 
 def draw_frame(surface, screen, page):
-    for box in (geom.LEFT_PANEL, geom.CONTENT):
-        nd.draw_box(surface, screen, box)
+    # In the shell the content panel is the screen's own box (the original's
+    # content area reaches up under the title, which stands on the plate).
+    panel = screen.box_screen_rect("content_panel")
+    nd.draw_box(surface, screen, geom.LEFT_PANEL)
+    if panel is not None and getattr(screen, "SHELL_WORN", False):
+        hud.panel(surface, panel, screen.ref_layout.scale)
+    else:
+        nd.draw_box(surface, screen, geom.CONTENT)
     layout = screen.layout
     for k, name in enumerate(pages_names()):
         r = R(screen, geom.tab_rect(k))
         hud.small_button(surface, r, layout.scale,
                          "active" if k == page else "normal")
-        infobox.line(surface, screen, T(f"info.tab.{name}", name), r.inflate(
+        infobox.line(surface, screen, T(f"info.tab.{name}", name).upper(),
+                     r.inflate(
             -8, 0), px(screen, "button"), hudtext.colour("button"), "center")
-    r = R(screen, geom.EXIT)
-    hud.small_button(surface, r, layout.scale, "normal")
-    infobox.line(surface, screen, T("info.exit", "RETURN"), r.inflate(-8, 0),
-                 px(screen, "button"), hudtext.colour("button"), "center")
-    title = T(f"info.title.{pages_names()[page]}", "") or ""
-    if title:
-        infobox.line(surface, screen, title, R(screen, geom.TITLE_BOX),
-                     px(screen, "name"), HIGH, "center")
+    # EXIT: the slanted closing action in the content panel's corner; the
+    # page's title stands on the shell's plate (work order 225).
+    shell.draw_button(surface, screen.exit_rect(), screen.ref_layout,
+                      T("info.exit", "RETURN"), screen.style)
 
 
 def field(surface, screen, native):
@@ -187,8 +191,9 @@ def button(surface, screen, native, words, active=False):
     r = R(screen, native)
     hud.small_button(surface, r, screen.layout.scale,
                      "active" if active else "normal")
-    infobox.line(surface, screen, words, r.inflate(-6, 0), px(screen, "cost"),
-                 hudtext.colour("button"), "center")
+    # Capitals (work order 225): a control's word, as every button's.
+    infobox.line(surface, screen, (words or "").upper(), r.inflate(-6, 0),
+                 px(screen, "cost"), hudtext.colour("button"), "center")
 
 
 def player_colour(player):

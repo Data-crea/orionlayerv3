@@ -180,18 +180,24 @@ class PanelMap(Layout):
     @classmethod
     def for_screen(cls, screen, regions):
         """The map of a screen in the shell, from its own boxes:
-        `regions` is [(box name, native rect, hit)]. A hit region fills its
-        panel less the shell's inset (the native boxes stand inside the
-        panel's edge); a draw-only region fills its box. None while a box
-        is missing (the screen draws nothing native then)."""
+        `regions` is [(box name, native rect, hit[, fill])]. A hit region
+        fills its panel less the shell's inset (the native boxes stand
+        inside the panel's edge) — or, with `fill`, the whole box: the
+        region IS one of the original's boxes, drawn as the panel itself.
+        A draw-only region fills its box. None while a box is missing (the
+        screen draws nothing native then)."""
         from core.hud import shell
         out = []
-        for name, native, hit in regions:
+        for spec in regions:
+            name, native, hit = spec[:3]
+            fill = spec[3] if len(spec) > 3 else False
             r = screen.box_screen_rect(name)
             if r is None:
                 return None
+            inner = hit and not fill
             out.append((name, native,
-                        shell.inner(r, screen.app.layout) if hit else r, hit))
+                        shell.inner(r, screen.app.layout) if inner else r,
+                        hit))
         return cls(screen.app.layout, out)
 
     def update(self, window_w, window_h):

@@ -59,6 +59,8 @@ class RaceReportScreen(InfoScreen):
     GAME_SCREEN_ID = None
     SHARES_GAME_SCREEN_ID = geom.SHARED_SCREEN_ID
     USE_FRAME = False
+    SHELL_WORN = False      # its own step of work order 225, later
+    REGIONS = None
 
     def __init__(self, app):
         super().__init__(app)
