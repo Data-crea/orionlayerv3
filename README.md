@@ -97,6 +97,7 @@ from the maintainer.
 | 44 | `3a076921` | open fix 71, amended: a battle command taken leaves no input poll behind, so the first wait of its action is skipped too (work order 212) | `doc/ext_combat_waits_command.patch` |
 | 45 | `65e48358` | open fix 82: a beam's aim as a battle event — each entry's last fire point and its target point with the miss offset, so a shot is drawn between the original's own points and runs its frames ("CMEV"; work order 213) | `doc/ext_combat_beam_aim.patch` |
 | 46 | `910e1401` | open fix 83: the gyro destabilizer's spin as a battle event — the turns the engine drew for the target's spin ("CMEV"; work order 213) | `doc/ext_combat_gyro_spin.patch` |
+| 47 | `8b1501f5` | open fix 84: the field list is sent when its content changes, not only its count — a view replaced by another of the same field count under one screen id (the race report's RETURN to Races) reaches OrionLayer (work order 223) | `doc/ext_field_list_content.patch` |
 
 ## Install
 

@@ -444,6 +444,14 @@ LOCAL_PATCHES = {
         "OrionLayer, open fix 83.",
         "the engine does not report the gyro's spin (open fix 83): HD turns "
         "the target twice round"),
+    # Applied 8 October 2026 by work order 223 (Data's decision): 8b1501f5,
+    # on 910e1401.
+    "doc/ext_field_list_content.patch": (
+        os.path.join("src", "ext", "ext_api.cpp"),
+        "OrionLayer, open fix 84.",
+        "the engine sends a field list only when its count changes (open fix "
+        "84): a race report's RETURN to Races with the same count leaves HD "
+        "on the report's list"),
 }
 
 #: Patches that are REPORTED to Joes and not yet applied: listed with
@@ -529,6 +537,7 @@ FIX_NUMBERS = {
     "doc/ext_combat_waits_command.patch": (71,),
     "doc/ext_combat_beam_aim.patch": (82,),
     "doc/ext_combat_gyro_spin.patch": (83,),
+    "doc/ext_field_list_content.patch": (84,),
 }
 
 

@@ -99,6 +99,8 @@ STACKED_AFTER_COLONY = (
     # work order 213: 82 adds Combat_Note after 71 amended's Combat_Event,
     # LAST (83 does not touch ext_api.cpp)
     "doc/ext_combat_beam_aim.patch",
+    # work order 223: 84 compares the field list's bytes in Tick, LAST
+    "doc/ext_field_list_content.patch",
 )
 
 
