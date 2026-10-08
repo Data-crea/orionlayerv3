@@ -96,6 +96,9 @@ class AudienceScreen(ScreenBase):
         self._render_background(surface)
         if self._view is not None and self._view.draws:
             audraw.draw(surface, self, self._view)
+        # last, as on every screen: a right click opens it (HLPL), and an
+        # open popup takes the next click or key (work order 224, D2)
+        self.render_help(surface)
 
     # ── Sending ──────────────────────────────────────────────────────
 

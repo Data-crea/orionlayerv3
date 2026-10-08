@@ -134,6 +134,9 @@ class DesignBoxScreen(ScreenBase):
     def render(self, surface):
         if self.ready():
             dbdraw.draw(surface, self, self._box, self.names())
+        # last: `dbright` opens it on a right click, and an open popup takes
+        # the next click or key (work order 224, D2's sibling)
+        self.render_help(surface)
 
     # ── Sending ──────────────────────────────────────────────────────
 
