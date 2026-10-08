@@ -18,6 +18,10 @@ always came from) and its buttons, and calls `render` last before its help
 and `button_at` first in its click handler. Every rect a shell button is
 drawn in is the rect it is hit in — `button_rect` (decision 5).
 
+HD EXTENSION `shell`: the original's screens are 640x480 pictures, each
+with its own edges; one rectangle, one spacing and one button row for all
+of them are ours (decision 89: a frame stays possible).
+
 "Selected" and "pressed" (decision 92) are the blocks' states: a selected
 control is "active" (the shared 'on' fill and the lit edge), a pressed one
 is "pressed" (the GAME menu's orange word, `core.pressfeedback`); the two
@@ -173,18 +177,23 @@ class Shell:
 
     `title` is a callable (or None: a screen without a title in the game,
     the main menu, takes only the rectangle). Each button is (key, label,
-    slot); a label may be a callable. `enabled(key)` and `selected(key)`
-    are asked per frame when given. `row` says whether the panels leave
+    slot); a label may be a callable. `enabled(key)`, `selected(key)` and
+    `visible(key)` are asked per frame when given. `row` says whether the panels leave
     room for a button row (`panels(layout, row)`)."""
 
     def __init__(self, title=None, buttons=(), row=False, enabled=None,
-                 selected=None):
+                 selected=None, visible=None):
         self.title = title
         self.buttons = list(buttons)
         self.row = row
         self.enabled = enabled
         self.selected = selected
+        self.visible = visible        # visible(key): False = not drawn, not hit
         self._pressed = None          # (key, monotonic time)
+
+    def shown(self):
+        return [b for b in self.buttons
+                if self.visible is None or self.visible(b[0])]
 
     def rect(self, layout, key):
         for k, _label, slot in self.buttons:
@@ -213,15 +222,23 @@ class Shell:
             c = content(layout)
             hud.title_plate(surface, c.centerx, 0, layout.scale, text or "",
                             style)
-        for key, label, slot in self.buttons:
+        for key, label, slot in self.shown():
             word = label() if callable(label) else label
             draw_button(surface, button_rect(layout, slot), layout, word,
                         style, self.state(key))
 
+    def key_at(self, layout, x, y):
+        """The key of the shown shell button under (x, y), or None — a
+        question only: nothing is pressed (the right click's help)."""
+        for key, _label, slot in self.shown():
+            if hit(button_rect(layout, slot), x, y):
+                return key
+        return None
+
     def button_at(self, layout, x, y):
         """The key of the enabled shell button under (x, y), or None; a hit
         starts its pressed feedback."""
-        for key, _label, slot in self.buttons:
+        for key, _label, slot in self.shown():
             if hit(button_rect(layout, slot), x, y):
                 if self.state(key) == "disabled":
                     return None

@@ -30,7 +30,6 @@ WHAT IS TRANSCRIPTION AND WHAT IS OURS — each marked where it happens:
 import pygame
 
 from core.hud import blocks as hud
-from core.hud import glyphs
 from core.hud import text as hudtext
 
 from core import palette
@@ -122,10 +121,21 @@ def draw_box(surface, screen, native):
     return r
 
 
+#: How far a sprite may overhang the scale it stands at (work order 225):
+#: in a shell panel the scale is the panel's (`PanelMap.sprite_scale`),
+#: 1.91 for the Leaders rows at 1080p, and a strict floor would halve the
+#: portraits there; 5 % keeps the step the island gave (2) while the
+#: portrait still ends above its row's status line.
+STEP_SLACK = 1.05
+
+
 def magnified(sprite, layout):
     """HD EXTENSION `sprite_scale`: the largest integer factor that does
-    not exceed the native-to-window scale."""
-    step = max(1, int(native_scale(layout)))
+    not exceed the native-to-window scale — in a shell panel the panel's
+    own (`core.panelmap`), within `STEP_SLACK`."""
+    fitted = getattr(layout, "sprite_scale", None)
+    step = max(1, int(fitted * STEP_SLACK) if fitted is not None
+               else int(native_scale(layout)))
     if step == 1:
         return sprite
     return pygame.transform.scale_by(sprite, step)
@@ -288,7 +298,7 @@ def _draw_skills(surface, screen, row, art, ink, i):
 #: rectangle and a word. The words are the art's own, read off
 #: OFFICER.LBX 3..13 — the source passes an EMPTY help string to every
 #: one (officer.cpp:2858-2908), so there is no string to transcribe.
-BUTTON_WORDS = {"tab_colony": "Colony Leaders", "tab_ship": "Ship Officers",
+BUTTON_WORDS = {"tab_colony": "COLONY LEADERS", "tab_ship": "SHIP OFFICERS",
                 "hire": "HIRE", "pool": "POOL", "dismiss": "DISMISS",
                 "cancel": "CANCEL", "return": "RETURN", "prev": "<",
                 "next": ">", "scroll_up": "^", "scroll_down": "v"}
@@ -317,12 +327,8 @@ def draw_button(surface, screen, art, name, frame=0, dull=False,
     if dull:
         colour = tuple(c // 2 for c in colour)
     word = BUTTON_WORDS[name]
-    # The button's glyph beside the word when both fit (work order 179).
-    word_w = screen.style.render_text(word, fit(
-        screen.style, word, r.w - 4, font_px(layout, "button")),
-        colour).get_width() if word else 0
-    cx = hud.icon_beside(surface, r, glyphs.for_button("leaders", name),
-                         word_w, dim=dull)
+    # NO GLYPH (work order 225, decision 91): the word alone, capitals.
+    cx = r.centerx
     blit_text(surface, screen.style, word, cx,
               r.y + (r.h - font_px(layout, "button")) // 2, r.w - 4,
               font_px(layout, "button"), colour, "center")

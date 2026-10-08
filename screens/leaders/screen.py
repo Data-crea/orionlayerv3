@@ -44,9 +44,15 @@ reads back. On an engine without the fix the list shrinks to what HD can
 see the effect of without the block: the tabs, HIRE, CANCEL, RETURN, a
 leader FOR HIRE, the popup and the boxes.
 """
+import contextlib
 import logging
 
-from core import estrings, hestrings, skildesc
+import pygame
+
+from core import estrings, hestrings, lang, skildesc
+from core import panelmap
+from core.hud import blocks as hud
+from core.hud import shell
 from core.shipparts import ShipPartNames
 from core.screen_base import ScreenBase
 from core.structs import player as player_struct
@@ -57,10 +63,28 @@ from . import ldrright, ldrrows, ldrwire
 log = logging.getLogger("leaders")
 
 
+#: THE SCREEN SHELL (work order 225, `shell_leaders.png`). The native
+#: regions each panel carries (`core.panelmap`): the left column — the two
+#: tabs and the four leader rows (officer.cpp:836-839, :1975-1991) — and the
+#: right half — the view box, its strip with PREV / NEXT, the galaxy box and
+#: its strip (officer.cpp:1197-1203, :756, :2102-2105). Hire mode's cost
+#: panel (OFFICER.LBX 17 at (300, 441), officer.cpp:797-807) stands in the
+#: button row, drawn only: its native rectangle overlaps POOL's and
+#: DISMISS's fields, which are shell buttons now.
+REGIONS = (("left_panel", (0, 10, 299, 469), True),
+           ("right_panel", (300, 10, 639, 436), True),
+           ("hire_panel", (300, 441, 536, 470), False))
+#: The buttons of the row, in the original's order left to right
+#: (officer.cpp:2831-2908); CANCEL stands where hire mode shows it.
+ROW = (("hire", 0), ("pool", 1), ("dismiss", 2), ("cancel", 3),
+       ("return", "action"))
+
+
 class LeadersScreen(ScreenBase):
     SCREEN_NAME = "leaders"
     GAME_SCREEN_ID = ldrgeom.GAME_SCREEN_ID   # 29, orion2_consts.h:484
     USE_FRAME = False
+    SHELL_WORN = True
 
     def __init__(self, app):
         super().__init__(app)
@@ -79,6 +103,68 @@ class LeadersScreen(ScreenBase):
         self._words = None
         self._skills = None
         self._art = ldrart.load()
+        self._map = None            # the PanelMap, built from the boxes
+        self._island = False        # True: native at the 4:3 island
+        self.shell = shell.Shell(
+            title=self._title, row=True,
+            buttons=[(k, ldrdraw.BUTTON_WORDS[k], slot) for k, slot in ROW],
+            visible=self._row_visible, enabled=self._row_enabled,
+            selected=self._row_selected)
+
+    # ── The shell and the map ─────────────────────────────
+
+    def _title(self):
+        """The plate's word: the galaxy map's nav label that opens this
+        screen (layout.json `title`; the original's is OFFICER.LBX art)."""
+        return lang.tr(self._data.get("title", "Leaders"))
+
+    @property
+    def layout(self):
+        """The PanelMap for every native rectangle — except while a
+        dialog of the original's is drawn or hit (`island`): dialogs keep
+        their geometry (work order 225)."""
+        if self._island or self._map is None:
+            return self.app.layout
+        return self._map
+
+    @contextlib.contextmanager
+    def island(self):
+        """Native rectangles at the 4:3 island, as before work order 225:
+        the hire popup, the engine's boxes, the skill help."""
+        was, self._island = self._island, True
+        try:
+            yield
+        finally:
+            self._island = was
+
+    def panel_rect(self, name):
+        return self.box_screen_rect(name)
+
+    def _build_map(self):
+        regions = []
+        for name, native, hit in REGIONS:
+            r = self.panel_rect(name)
+            if r is None:
+                self._map = None
+                return
+            if hit:
+                r = shell.inner(r, self.app.layout)
+            regions.append((name, native, r, hit))
+        self._map = panelmap.PanelMap(self.app.layout, regions)
+
+    def _row_visible(self, key):
+        live, hire_mode, _mode = self._shown
+        return key != "cancel" or "cancel" in live
+
+    def _row_enabled(self, key):
+        live = self._shown[0]
+        return key == "return" or key in live
+
+    def _row_selected(self, key):
+        # The original's frame 1: POOL in mode 1, DISMISS in mode 2
+        # (officer.cpp:778-839) — "selected" (decision 92).
+        mode = self._shown[2]
+        return (key, mode) in (("pool", 1), ("dismiss", 2))
 
     # ── Lifecycle ─────────────────────────────────────────
 
@@ -98,7 +184,12 @@ class LeadersScreen(ScreenBase):
         self._shown = ({}, False, None)
         self._help_doc = self.app.res.load_json(
             "screens/leaders/help.json", {}) or {}
+        self._build_map()
         self.update(game_state)
+
+    def on_resize(self):
+        super().on_resize()
+        self._build_map()
 
     def update(self, game_state=None):
         if game_state is None:
@@ -158,6 +249,10 @@ class LeadersScreen(ScreenBase):
     def render(self, surface):
         self._render_background(surface)
         art, view = self._art, self._view
+        for name in ("left_panel", "right_panel"):
+            r = self.panel_rect(name)
+            if r is not None:
+                hud.panel(surface, r, self.app.layout.scale)
         ldrdraw.draw_frame_boxes(surface, self)
         if view is not None and view.draws:
             ldrright.draw_view_box(surface, self, view, self._state, art)
@@ -165,14 +260,17 @@ class LeadersScreen(ScreenBase):
         ldrdraw.draw_rows(surface, self, self._rows, art, self._lit())
         self._draw_buttons(surface)
         self._draw_strips(surface)
-        if view is not None and view.state == ldrwire.POPUP:
-            ldrdialog.draw_popup(surface, self, view, self._popup_words(),
-                                 art, self._state)
-        if view is not None and view.state == ldrwire.IN_BOX:
-            from screens.fleets import fltbox
-            fltbox.draw(surface, self, self._state)
-        if self._skill_help is not None:
-            ldrdialog.draw_skill_help(surface, self, *self._skill_help, art)
+        self.render_shell(surface)
+        with self.island():
+            if view is not None and view.state == ldrwire.POPUP:
+                ldrdialog.draw_popup(surface, self, view,
+                                     self._popup_words(), art, self._state)
+            if view is not None and view.state == ldrwire.IN_BOX:
+                from screens.fleets import fltbox
+                fltbox.draw(surface, self, self._state)
+            if self._skill_help is not None:
+                ldrdialog.draw_skill_help(surface, self, *self._skill_help,
+                                          art)
         self.render_help(surface)
 
     def _lit(self):
@@ -198,21 +296,11 @@ class LeadersScreen(ScreenBase):
             return
         live, hire_mode, mode = self._shown
         colony = view.view == ldrgeom.VIEW_COLONY
-        for name, mode_on in (("dismiss", 2), ("pool", 1)):
-            if name in live:
-                ldrdraw.draw_button(surface, self, art, name,
-                                    frame=1 if mode == mode_on else 0)
-            else:
-                ldrdraw.draw_button(surface, self, art, name, dull=True)
-        if "hire" in live:
-            ldrdraw.draw_button(surface, self, art, "hire")
-        elif not view.for_hire_here():
-            ldrdraw.draw_button(surface, self, art, "hire", dull=True)
+        # HIRE, POOL, DISMISS, CANCEL and RETURN are the shell's row
+        # (work order 225): drawn by `render_shell`, hit by `shell_click`.
         if hire_mode:
             self._draw_hire_panel(surface)
-        if "cancel" in live:
-            ldrdraw.draw_button(surface, self, art, "cancel")
-        for name in ("return", "prev", "next"):
+        for name in ("prev", "next"):
             ldrdraw.draw_button(surface, self, art, name)
         if not colony:
             ldrdraw.draw_button(surface, self, art, "scroll_up")
@@ -296,12 +384,28 @@ class LeadersScreen(ScreenBase):
     def handle_click(self, screen_x, screen_y):
         if self.help_consumes_click(screen_x, screen_y):
             return None
+        view = self._view
+        modal = view is not None and view.state in (ldrwire.IN_BOX,
+                                                    ldrwire.POPUP)
+        if modal or self._skill_help is not None:
+            with self.island():
+                return ldrinput.click(self, screen_x, screen_y)
+        key = self.shell_click(screen_x, screen_y)
+        if key is not None:
+            ldrinput.press(self, key)
+            return None
         return ldrinput.click(self, screen_x, screen_y)
 
     def handle_right_button(self, down, screen_x, screen_y):
         return ldrinput.right_button(self, down, screen_x, screen_y)
 
     def open_help_at(self, screen_x, screen_y):
+        # A shell button's help is its native field's (help.json keeps the
+        # original's rectangles): asked at the field's centre.
+        key = self.shell.key_at(self.app.layout, screen_x, screen_y)
+        if key is not None:
+            return ldrinput.open_help_native(
+                self, ldrinput.centre(ldrgeom.button_rect(key)))
         return ldrinput.open_help(self, screen_x, screen_y)
 
     def handle_mouse_motion(self, screen_x, screen_y):

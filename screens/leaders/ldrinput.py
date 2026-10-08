@@ -97,10 +97,7 @@ def click(screen, screen_x, screen_y):
         return None
     for name in ldrgeom.BUTTONS:
         if _inside(point, ldrgeom.button_rect(name)) and name in view.buttons:
-            if view.sendable(name):
-                send(screen, view.buttons[name], name)
-            else:
-                log.info("leaders: %s not sent — %s", name, NO_BLOCK)
+            press(screen, name)
             return None
     for slot, idx, rec in view.listed():
         if not (_inside(point, ldrgeom.text_field(slot))
@@ -121,6 +118,26 @@ def click(screen, screen_x, screen_y):
     if view.block is not None and view.mode == -1:
         _map_click(screen, view, point)
     return None
+
+
+def press(screen, name):
+    """Button `name` pressed — on its native rectangle, or as a shell
+    button of the row (work order 225): its field in the list on the wire
+    NOW, sent only when `View.sendable` allows it. One path for both, so
+    the shell sends exactly what the native button sent."""
+    view = screen._view
+    if view is None or view.state != ldrwire.READY or \
+            name not in view.buttons:
+        return False
+    if view.sendable(name):
+        return send(screen, view.buttons[name], name)
+    log.info("leaders: %s not sent — %s", name, NO_BLOCK)
+    return False
+
+
+def centre(rect):
+    x1, y1, x2, y2 = rect
+    return ((x1 + x2) // 2, (y1 + y2) // 2)
 
 
 #: Why a control needing the view state is not sent: an engine without
@@ -210,11 +227,17 @@ def open_skill_help(screen, row, skill_id):
 def open_help(screen, screen_x, screen_y):
     """The original's help list for the view on show, first hit wins
     (`Check_Help_List_`, fields.cpp:2924-2932)."""
-    view = screen._view
-    if view is None:
-        return False
     point = native(screen, screen_x, screen_y)
     if point is None:
+        return False
+    return open_help_native(screen, point)
+
+
+def open_help_native(screen, point):
+    """`open_help` at a native pixel (a shell button asks at its field's
+    centre)."""
+    view = screen._view
+    if view is None:
         return False
     counts = [0] * ldrgeom.ROWS
     for row in screen._rows:

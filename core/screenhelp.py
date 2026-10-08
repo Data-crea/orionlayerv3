@@ -98,7 +98,7 @@ class HelpMixin:
         if pad:
             # Even inflation: pygame keeps the centre and dy//2 is
             # exact, so the band grows by `pad` on each side.
-            rect = rect.inflate(0, 2 * int(round(pad * self.layout.scale)))
+            rect = rect.inflate(0, 2 * int(round(pad * self.ref_layout.scale)))
         return rect
 
     def _help_region_shape(self, spec):
@@ -261,7 +261,7 @@ class HelpMixin:
             self.help.open(first, *entry)
 
         box = self.box_rect(self.HELP_BOX) or HELP_FALLBACK_BOX
-        self.help.render(surface, self.layout, self.style, box,
+        self.help.render(surface, self.ref_layout, self.style, box,
                          self._help_font_scale(),
                          backdrop=self.help_backdrop(),
                          close_label=self.helptext.label("close"),

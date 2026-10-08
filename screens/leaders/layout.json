@@ -1,5 +1,7 @@
 {
   "_comment": "The Leaders screen (SCREEN_OFFICERS, 29), work order 167. Everything it draws is placed at the HD image of its native rectangle (ldrgeom, through core/researchnative), so this file carries no geometry: only the markings, one per thing HD does that the original does not, or leaves out, or cannot fill yet. Each is also stated in the module that performs it, in dev:v3_projektstatus.md, and held by a smoke check (tools/smoke_suite/090a..090c).",
+  "title": "Leaders",
+  "_title_note": "The title plate's word (work order 225, the screen shell): the label of the galaxy map's nav button that opens this screen (screens/galaxy_map/layout.json buttons); the original's is OFFICER.LBX artwork. Translated through core.lang like the nav label.",
   "marks": {
     "hd_state": "BUILT, NOT ACCEPTED. The live part of work order 167 is parked (dev:doc/briefs/167-parked-for-data.md, item L).",
     "_note": "Decision 61. The same sentence stands in the module docstring of screens/leaders/screen.py and in dev:v3_projektstatus.md, and a smoke check fails if it leaves either.",

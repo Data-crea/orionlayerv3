@@ -57,6 +57,16 @@ class ScreenBase(HelpMixin):
 
     @property
     def layout(self):
+        """The layout this screen's drawing and hit tests ask. A
+        transcribed screen in the shell answers with its `PanelMap`
+        (`core.panelmap`), which places its NATIVE rectangles in its
+        panels; reference boxes, the shell and the help popup always use
+        `ref_layout`."""
+        return self.app.layout
+
+    @property
+    def ref_layout(self):
+        """The app's layout: reference px to the window, for boxes."""
         return self.app.layout
 
     @property
@@ -204,7 +214,7 @@ class ScreenBase(HelpMixin):
             return
         self._render_background(surface)
         for box in self.boxes:
-            box.render(surface, self.layout, self.style)
+            box.render(surface, self.ref_layout, self.style)
         if self.USE_FRAME:
             self._render_frame(surface)
         self.render_content(surface)
@@ -215,14 +225,14 @@ class ScreenBase(HelpMixin):
         """The screen's shell (title plate and buttons), when it wears one.
         A screen that draws its own `render` calls this before its help."""
         if self.shell is not None:
-            self.shell.render(surface, self.layout, self.style)
+            self.shell.render(surface, self.ref_layout, self.style)
 
     def shell_click(self, screen_x, screen_y):
         """The key of the shell button under the click, or None; the shell
         answers for its own geometry (decision 5)."""
         if self.shell is None:
             return None
-        return self.shell.button_at(self.layout, screen_x, screen_y)
+        return self.shell.button_at(self.ref_layout, screen_x, screen_y)
 
     def draws_this_frame(self):
         """False when the screen has nothing it may draw AT ALL.
@@ -445,7 +455,7 @@ class ScreenBase(HelpMixin):
     def _update_box_layout(self):
         """Set window rects for all boxes. Once on enter/resize."""
         for box in self.boxes:
-            box.update_layout(self.layout)
+            box.update_layout(self.ref_layout)
 
     def _render_frame(self, surface):
         """The HUD's title plate and the two frame buttons — decision 71.
