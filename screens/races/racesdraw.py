@@ -71,10 +71,8 @@ def draw_frame(surface, screen):
     # The agents' strip: where the pool's spies stand and are dropped
     # back — a field, as RACES.LBX 0 paints it (work order 223).
     hud.field(surface, nd.rect(layout, geom.AGENT_BOX), layout.scale)
-    # The title on the HUD's title plate, as the galaxy map's (the words
+    # The title stands on the shell's plate (work order 225; the words
     # are baked into RACES.LBX 0 in the original — `button_words`).
-    hud.title_plate(surface, nd.point(layout, 320, 0)[0], 0, layout.scale,
-                    WORDS["title"], screen.style)
     x, y = nd.point(layout, geom.BONUS_BOX[0] + 8, geom.BONUS_BOX[1] + 3)
     nd.blit_text(surface, screen.style, WORDS["bonuses"], x, y,
                  nd.rect(layout, (0, 0, 80, 0)).w, nd.font_px(layout, "note"),
@@ -287,7 +285,14 @@ def _draw_missions(surface, screen, i, mission):
 
 def draw_buttons(surface, screen, live, armed):
     layout = screen.layout
+    from core.hud import shell
     for name in geom.BUTTONS:
+        if name == "exit" and hasattr(screen, "exit_rect"):
+            # The closing action: slanted, in the panel's corner (225).
+            shell.draw_button(surface, screen.exit_rect(), screen.ref_layout,
+                              WORDS[name], screen.style,
+                              "disabled" if name not in live else "normal")
+            continue
         r = nd.rect(layout, geom.button_rect(name))
         state = hover.pointer_state(r, "disabled" if name not in live else
                                   "active" if name == armed else "normal")

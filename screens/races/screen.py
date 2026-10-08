@@ -29,6 +29,7 @@ import logging
 
 from core.billtext import BillText
 from core.estrings import EStrings
+from core.hud import shell
 from core.screen_base import ScreenBase
 from core import researchnative as nat
 from screens.leaders import ldrdraw as nd
@@ -42,6 +43,18 @@ class RacesScreen(ScreenBase):
     SCREEN_NAME = "races"
     GAME_SCREEN_ID = racesgeom.GAME_SCREEN_ID
     USE_FRAME = False
+    SHELL_WORN = True
+    #: THE SCREEN SHELL (work order 225): the original's two columns of race
+    #: slots — the right one with the agents' strip, the bonuses and the
+    #: buttons under its three slots — each a panel of the content
+    #: rectangle (boxes.json), carried through `core.panelmap` — `fill`: the
+    #: original's own boxes (the slots, the bonuses, the buttons' box) reach
+    #: the panel's edges and are the panels a frame would lie round.
+    REGIONS = (("left_panel", (16, 45, 312, 464), True, True),
+               ("right_panel", (328, 45, 624, 464), True, True))
+    #: Where EXIT stands, natively: the buttons' box right of the four
+    #: actions, both rows high (racescrn.cpp:338-373 puts EXIT there).
+    EXIT_AREA = (522, 423, 616, 460)
 
     def __init__(self, app):
         super().__init__(app)
@@ -64,6 +77,14 @@ class RacesScreen(ScreenBase):
         self.words_no_contact = self.words_ignored = ""
         self.words_spy = self.words_agent = ""
         self.my_race = 0
+        self.shell = shell.Shell(title=lambda: racesdraw.WORDS["title"])
+
+    def exit_rect(self):
+        """EXIT (RETURN), the closing action: the slanted shell button in
+        the buttons' box right of the four actions (decision 90: where the
+        original has it), at the bottom right of the content rectangle.
+        Drawn and hit here (decision 5)."""
+        return nd.rect(self.layout, self.EXIT_AREA)
 
     def enter(self, game_state=None):
         super().enter(game_state)
@@ -151,9 +172,11 @@ class RacesScreen(ScreenBase):
         racesdraw.draw_buttons(surface, self,
                                view.buttons if view is not None else {},
                                self._armed if who else None)
+        self.render_shell(surface)
         if view is not None and view.state == raceswire.IN_BOX:
             from screens.fleets import fltbox
-            fltbox.draw(surface, self, self._state)
+            with self.island():          # the engine's box keeps its place
+                fltbox.draw(surface, self, self._state)
         self.render_help(surface)
 
     def help_extra_rect(self, spec):
@@ -240,14 +263,23 @@ class RacesScreen(ScreenBase):
             return None
         if view.state == raceswire.IN_BOX:
             from screens.fleets import fltbox
-            for key, field, rect in fltbox.button_rects(self):
+            with self.island():
+                answers = fltbox.button_rects(self)
+            for key, field, rect in answers:
                 if rect.collidepoint(screen_x, screen_y):
                     self._send(field, f"box {key}")
+            return None
+        if view.state in (raceswire.MAIN, raceswire.WHO) and shell.hit(
+                self.exit_rect(), screen_x, screen_y):
+            if view.sendable("exit"):
+                self._send(view.buttons["exit"], "exit")
             return None
         p = self._native(screen_x, screen_y)
         if p is None or view.state not in (raceswire.MAIN, raceswire.WHO):
             return None
         for name in racesgeom.BUTTONS:
+            if name == "exit":
+                continue                 # the slanted button, above
             if self._inside(p, racesgeom.button_rect(name)) and \
                     view.sendable(name):
                 self._send(view.buttons[name], name)
