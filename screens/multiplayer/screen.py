@@ -27,6 +27,7 @@ import logging
 import pygame
 
 from core.hud import blocks as hud
+from core.hud import shell
 from core.hud import text as hudtext
 from core.injection import InjectionChain, name_keys, paced_keys
 from core.screen_base import ScreenBase
@@ -45,6 +46,7 @@ class MultiplayerScreen(ScreenBase):
     GAME_SCREEN_ID = 15
     EXTRA_SCREEN_IDS = (16, 17, 21, 22, 37, 41)
     USE_FRAME = False
+    SHELL_WORN = True
 
     def __init__(self, app):
         super().__init__(app)
@@ -53,6 +55,23 @@ class MultiplayerScreen(ScreenBase):
         self._rects = {}
         self._endpoint = None        # HD's text field in COMM INFO
         self._chain = None
+        # THE SHELL on the setup (work order 225): its title on the plate,
+        # its panel in the content rectangle, CANCEL the closing action.
+        # COMM INFO and the steps after the setup are dialogs (the turn
+        # popups' panel) and keep their geometry.
+        self.shell = shell.Shell(
+            title=lambda: self.words("setup_title"), row=True,
+            buttons=[("cancel", lambda: self.words("cancel"), "action")],
+            visible=lambda key: self._setup_up(),
+            enabled=lambda key: self._setup_field(key) is not None)
+
+    def _setup_up(self):
+        st = self._state
+        return getattr(st, "current_screen", None) == 15 and \
+            mpsetup.classify(getattr(st, "fields", None)) == mpsetup.SETUP
+
+    def _setup_field(self, key):
+        return mpsetup.buttons(getattr(self._state, "fields", None)).get(key)
 
     def enter(self, game_state=None):
         super().enter(game_state)
@@ -91,28 +110,42 @@ class MultiplayerScreen(ScreenBase):
     def render(self, surface):
         self._render_background(surface)
         self._rects = {}
+        self._slanted = set()      # keys hit as their parallelogram
         st = self._state
         fields = getattr(st, "fields", None)
         sid = getattr(st, "current_screen", None)
         if sid == 15 and mpsetup.classify(fields) == mpsetup.SETUP:
             self._draw_setup(surface, fields)
+            self.render_shell(surface)
         elif sid == 15 and mpsetup.classify(fields) == mpsetup.COMM:
             self._draw_comm(surface, fields)
         else:
             from . import mpdraw
             self._rects = mpdraw.draw_step(surface, self, st) or {}
 
-    def _button(self, surface, key, rect, field, lit=False):
+    def _button(self, surface, key, rect, field, lit=False, kind="action"):
         s = self.layout.scale
         # THE CHOSEN TYPE IS THE BUTTON'S "active" STATE (work order 208
         # B1, Data's decision 3: one "on" marking everywhere, decision 71's
         # vocabulary) — it was a lit panel behind the button.
         state = ("disabled" if field is None else
                  "active" if lit else "normal")
-        hud.action_button(surface, rect, s, state, self.words(key),
-                          style_renderer=self.style)
+        if kind == "toggle":
+            # A TYPE is a toggle inside the panel: rectangular, "selected"
+            # while chosen (work order 225, decisions 88 and 92).
+            hud.small_button(surface, rect, s, state, self.words(key),
+                             style_renderer=self.style)
+        elif kind == "slant":
+            # An action of the screen: slanted (decision 87).
+            hud.slant_button(surface, rect, s, state, self.words(key),
+                             style_renderer=self.style)
+        else:
+            hud.action_button(surface, rect, s, state, self.words(key),
+                              style_renderer=self.style)
         if field is not None:
             self._rects[key] = (rect, field)
+            if kind == "slant":
+                self._slanted.add(key)
 
     def _panel(self, surface, title, w_ref, h_ref):
         win_w, win_h = surface.get_size()
@@ -125,25 +158,29 @@ class MultiplayerScreen(ScreenBase):
         return panel, s
 
     def _draw_setup(self, surface, fields):
-        # four buttons on the right and CANCEL below them (the first
-        # version's 420 put CANCEL over COMM INFO — seen on the render)
-        panel, s = self._panel(surface, self.words("setup_title"), 900, 520)
+        """The setup in the shell (work order 225): one panel (the
+        `setup_panel` box) in the content rectangle, the three types on the
+        left as toggles, the four actions on the right, each column centred
+        in its half of the panel; CANCEL is the shell's closing action."""
+        L = self.ref_layout
+        s = L.scale
+        panel = self.box_screen_rect("setup_panel") or shell.panels(L, True)
+        hud.panel(surface, panel, s)
         btns = mpsetup.buttons(fields)
         chosen = mpsetup.selected(fields)
         bw, bh = int(REF_BUTTON[0] * s), int(REF_BUTTON[1] * s)
         gap = int(REF_GAP * s)
-        x_left = panel.x + int(60 * s)
-        x_right = panel.right - int(60 * s) - bw
+        halves = shell.split(shell.inner(panel, L), L, [1.0, 1.0])
         y = panel.y + int(50 * s)
-        for i, key in enumerate(("network", "online", "hotseat")):
-            r = pygame.Rect(x_left, y + i * (bh + gap), bw, bh)
-            self._button(surface, key, r, btns.get(key), lit=key == chosen)
-        for i, key in enumerate(("start", "load", "join", "comm")):
-            r = pygame.Rect(x_right, y + i * (bh + gap), bw, bh)
-            self._button(surface, key, r, btns.get(key))
-        r = pygame.Rect(0, 0, bw, bh)
-        r.midbottom = (panel.centerx, panel.bottom - int(30 * s))
-        self._button(surface, "cancel", r, btns.get("cancel"))
+        for half, keys, kind in ((halves[0], ("network", "online", "hotseat"),
+                                  "toggle"),
+                                 (halves[1], ("start", "load", "join",
+                                              "comm"), "slant")):
+            x = half.centerx - bw // 2
+            for i, key in enumerate(keys):
+                r = pygame.Rect(x, y + i * (bh + gap), bw, bh)
+                self._button(surface, key, r, btns.get(key),
+                             lit=key == chosen, kind=kind)
 
     def _draw_comm(self, surface, fields):
         panel, s = self._panel(surface, self.words("comm_title"), 900, 330)
@@ -182,8 +219,15 @@ class MultiplayerScreen(ScreenBase):
     def handle_click(self, screen_x, screen_y):
         if self.help_consumes_click(screen_x, screen_y):
             return None
+        if self.shell_click(screen_x, screen_y) == "cancel":
+            self._endpoint = None
+            self._send(self._setup_field("cancel"), "cancel")
+            return None
         for key, (rect, field) in list(self._rects.items()):
-            if rect.collidepoint(screen_x, screen_y):
+            hit = (hud.slant_hit(rect, screen_x, screen_y)
+                   if key in getattr(self, "_slanted", ()) else
+                   rect.collidepoint(screen_x, screen_y))
+            if hit:
                 if key == "endpoint":
                     self._open_endpoint()
                 elif key == "chat":
