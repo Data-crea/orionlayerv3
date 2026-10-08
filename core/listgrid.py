@@ -206,7 +206,9 @@ def draw_row_fills(surface, bands, cols, skip, first, is_selected,
     # The selected band's RIM, the HUD table's selected row (decision
     # 71): drawn after every fill so a neighbour cannot cover it.
     from core.hud import style as hudstyle
-    rim = hudstyle.get().colour("mockup_colony.selected_edge")
+    # THE LIT EDGE since work order 225 (decision 92): "selected" is one
+    # look — the 'on' fill and the edge a selected button wears.
+    rim = hudstyle.get().colour("field.on_edge")
     for band, (by, bh) in enumerate(bands):
         if is_selected(first + band):
             # One px INSIDE the band: the band's edge lines stay its

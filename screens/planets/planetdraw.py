@@ -10,7 +10,7 @@ import logging
 import pygame
 
 from core.hud import blocks as hud
-from core.hud import glyphs
+from core.hud import shell
 
 from core import listgrid, palette
 from screens.colony_summary import colonyinset, colonyplanets
@@ -35,9 +35,13 @@ PANEL_BG = _hudstyle.get().colour("panel.fill")
 INSET_FILL = palette.require("colony_summary", "galaxy_inset_fill")
 OUTLINE = palette.col("panel", "thin_border", (55, 65, 85))
 
-#: The frame's five cutouts, filled before the frame goes over them.
-PANELS = ("list_area", "side_panel", "planet_panel", "picture_panel",
-          "button_panel")
+#: The screen's four panels in the shell's content rectangle (work order
+#: 225, `shell_planets.png`): the table, the side panel, and under the
+#: table the two boxes the screen always had — the scanned planet and the
+#: space monster's values (decision 64) — two contents, so two boxes in one
+#: row. The bottom-right button panel went: its three buttons stand at the
+#: side panel's foot.
+PANELS = ("list_area", "side_panel", "planet_panel", "picture_panel")
 COLUMN_KEYS = ("planet", "climate", "gravity", "minerals", "size")
 
 
@@ -246,13 +250,38 @@ def render_control(screen, surface, name, label, active=False, enabled=True,
         state = "normal"
     hud.small_button(surface, rect, screen.layout.scale, state)
     size = screen.layout.font_size(_font(screen, name, 19))
-    surf = _text(screen.style, label, size,
+    # CAPITALS AND NO GLYPH (work order 225, decisions 88 and 91): a
+    # control inside a panel is a rectangular button with its word alone.
+    surf = _text(screen.style, label.upper(), size,
                  CONTROL_TEXT if enabled else CONTROL_DISABLED,
                  rect.width - 8)
-    # The button's glyph beside the word when both fit (work order 179).
-    cx = hud.icon_beside(surface, rect, glyphs.for_button("planets", name),
-                         surf.get_width(), dim=not enabled)
-    surface.blit(surf, surf.get_rect(center=(cx, rect.centery)))
+    surface.blit(surf, surf.get_rect(center=rect.center))
+
+
+def render_return(screen, surface, label):
+    """RETURN, the screen's closing action, as the slanted shell button at
+    the side panel's foot (`shell_planets.png`); hit as the same shape
+    (`return_hit`, decision 5)."""
+    rect = window(screen, "return")
+    if rect and label:
+        shell.draw_button(surface, rect, screen.layout, label, screen.style)
+
+
+def return_hit(screen, pos):
+    rect = window(screen, "return")
+    return bool(rect) and shell.hit(rect, *pos)
+
+
+def render_divider(screen, surface):
+    """The line between the filters and the two send buttons: midway in the
+    gap between the last filter and SEND COLONY SHIP, across the side panel
+    at the separator's measured insets."""
+    side, last, send = (window(screen, n) for n in
+                        ("side_panel", "restrict_range", "send_colony"))
+    if side and last and send:
+        x0, x1 = hud.separator_span(side, screen.layout.scale)
+        hud.separator(surface, x0, x1, (last.bottom + send.y) // 2,
+                      screen.layout.scale)
 
 
 def render_heading(screen, surface, name, label):
@@ -262,7 +291,9 @@ def render_heading(screen, surface, name, label):
     surf = _text(screen.style, label.upper(),
                  screen.layout.font_size(_font(screen, name, 22)),
                  HEADING_TEXT, rect.width - 8)
-    surface.blit(surf, surf.get_rect(center=rect.center))
+    # LEFT, on the panel's inner edge, as `shell_planets.png` sets the two
+    # headings over their controls (work order 225).
+    surface.blit(surf, surf.get_rect(midleft=rect.midleft))
 
 
 def render_status(screen, surface, status):

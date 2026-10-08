@@ -1,5 +1,7 @@
 {
   "_comment": "The Planets screen - orion2re SCREEN_PLANET_SUMMARY (32), PLNTSUM::Planet_Summary_Screen_ (plntsum.cpp). Brief 101, 13 September 2026, built from Data's mockup3/frame3. Words the original prints come from the user's own ESTRINGS.LBX and HESTRNGS.LBX (decision 38); the words below are only for what the original draws as PLNTSUM.LBX artwork and has no string for.",
+  "title": "Planets",
+  "_title_note": "The title plate's word (work order 225, the screen shell): the label of the galaxy map's nav button that opens this screen (screens/galaxy_map/layout.json buttons). The original prints no title here; its word is PLNTSUM.LBX artwork. Translated through core.lang like the nav label.",
   "list": {
     "row_count": 8,
     "_row_count_note": "TRANSCRIBED: eight rows. Summary_Screen_Print_Data_ clamps to eight (plntsum.cpp:54-56) and Add_Plntsum_Fields_ adds eight row fields (:745-748). The HD bands are equal; the original's _plntscrn_delta_y table (plntsum.cpp:11) is not, and its 54/55 pitch is native-pixel layout that the HD band replaces - the eight rows and their order are what is transcribed.",

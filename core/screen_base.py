@@ -42,6 +42,9 @@ class ScreenBase(HelpMixin):
     #: The screen shell (work order 225, `core.hud.shell.Shell`): a screen
     #: that wears it sets one in `__init__`; None draws nothing.
     shell = None
+    #: True on a screen fitted into the shell's content rectangle (work
+    #: order 225); the suite holds every such screen to the shell's rules.
+    SHELL_WORN = False
 
     def __init__(self, app):
         self.app = app

@@ -23,7 +23,9 @@ drawing is `planetdraw`; this file owns the boxes, the input and the wire.
 import logging
 
 from core import hestrings
+from core import lang
 from core import listgrid
+from core.hud import shell
 from core import mouse as mouse_input
 from core.screen_base import ScreenBase
 from core.shipparts import ShipPartNames
@@ -43,6 +45,7 @@ class PlanetsScreen(ScreenBase):
     SCREEN_NAME = "planets"
     GAME_SCREEN_ID = 32         # SCREEN_PLANET_SUMMARY, orion2_consts.h:487
     USE_FRAME = False
+    SHELL_WORN = True           # work order 225, `shell_planets.png`
 
     def __init__(self, app):
         super().__init__(app)
@@ -59,6 +62,15 @@ class PlanetsScreen(ScreenBase):
         self._parts = None          # ship part names, core.shipparts
         self._monster_sprites = {}  # owner -> panel sprite or None
         self._monster_scaled = {}   # the one scaled copy on screen
+        # THE SHELL (work order 225): the title plate; RETURN is a box of
+        # the side panel, so the shell carries no buttons here.
+        self.shell = shell.Shell(title=self._title)
+
+    def _title(self):
+        """The plate's word: the label of the galaxy map's button that
+        opens this screen (layout.json `title`; the original prints no
+        title, its word is PLNTSUM.LBX artwork), in the session's words."""
+        return lang.tr(self._data.get("title", "Planets"))
 
     # ── Lifecycle ─────────────────────────────────────────
 
@@ -166,6 +178,7 @@ class PlanetsScreen(ScreenBase):
                 self, surface, row,
                 planetwords.cells(self._view, row, self._words)["planet"])
         monsterpanel.render(self, surface, row)
+        self.render_shell(surface)
         self.render_help(surface)
 
     def _marker(self):
@@ -204,9 +217,9 @@ class PlanetsScreen(ScreenBase):
                 self, surface, "send_" + key, spec.get("label"),
                 enabled=self._send_available(spec.get("hotkey", "?")),
                 mouse=mouse)
-        planetdraw.render_control(self, surface, "return",
-                                  self._data.get("return", {}).get("label"),
-                                  mouse=mouse)
+        planetdraw.render_divider(self, surface)
+        planetdraw.render_return(self, surface,
+                                 self._data.get("return", {}).get("label"))
 
     # ── Input ─────────────────────────────────────────────
 
@@ -240,7 +253,7 @@ class PlanetsScreen(ScreenBase):
                 log.info("Send %s ship: not built in brief 101 — the send "
                          "chain is its own brief (decision 21)", key)
                 return None
-        if self._hit("return", pos):
+        if planetdraw.return_hit(self, pos):
             self._return()
             return None
         star = planetdraw.inset_star_at(self, self._inset_stars(), *pos)
