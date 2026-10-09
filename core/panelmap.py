@@ -31,6 +31,19 @@ A point outside every panel has no native pixel (`to_ref` gives a point
 DEVIATION `panel_fit`: the original's regions keep their proportion; a
 panel of another shape spreads its region's positions (the words and
 sprites keep their size).
+
+Why a shared module and a marked deviation, not a decision (work order 226
+H): decisions 86-92 put every screen in the shell's content rectangle but
+say nothing about HOW a transcribed screen's native drawing gets there.
+Nine screens need it (audience, build_queue, colony, info, leaders,
+race_report, races, refit, ship_design — the screens with `REGIONS`);
+nine copies of the carry would be nine places for drawing and hit test to
+part (decision 5). It changes where things stand, never what is sent, so
+it is a deviation of the picture, marked here and in [core.panel_map].
+What holds it: 006m (the map itself, both ways) and each screen's own
+shell check, which clicks every field where it is drawn and compares the
+send with the 4:3 island's — 090zaa, 090qc, 090pb, 090fc, 090ba, 090ebb,
+090ec, 090qe, 090xb.
 """
 import math
 
