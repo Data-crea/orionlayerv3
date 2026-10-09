@@ -1,6 +1,9 @@
 {
   "1920x1080": [
     {
+      "name": "table"
+    },
+    {
       "name": "list_area"
     },
     {
@@ -125,6 +128,9 @@
     }
   ],
   "2560x1440": [
+    {
+      "name": "table"
+    },
     {
       "name": "list_area"
     },

@@ -58,7 +58,6 @@ here — the even gaps they were the evidence for are gone with it.
 import pygame
 
 from core.hud import blocks as hud
-from core.hud import glyphs
 from core.style import _scale_of
 
 #: Breathing room around a highlighted word, reference px.
@@ -240,9 +239,9 @@ def font_size(screen):
 def button_at(buttons, x, y):
     """The key under a window point, or None."""
     for button in buttons:
-        # The key is hit as the shape it is drawn as, the HUD's slanted
-        # button (decision 71, decision 5).
-        if hud.slant_hit(button.hit, x, y):
+        # The key is hit as the shape it is drawn as (decision 5): since
+        # work order 225 a rectangular toggle (decision 88).
+        if button.hit.collidepoint(x, y):
             return button.key
     return None
 
@@ -289,21 +288,23 @@ def render(surface, buttons, active_key, mouse,
     `fonts::Print_Centered_` at the FIELD's midpoint
     (fields.cpp:1896-1925), not at its sprite's.
     """
-    # SINCE DECISION 71 (work order 169) each key is a HUD slanted button
-    # in its own box — active lit, hover lit, the others plain — and the
-    # word is drawn by the block, centred in the box as before. The
-    # colour arguments are kept for the callers and no longer read: a
-    # key's colours are the HUD style's, one home for every button.
+    # SINCE WORK ORDER 225 each key is a RECTANGULAR toggle in the shell's
+    # row (decision 88: a sort key is a control, not an action) — the
+    # active key "selected" (decision 92), hover lit, the others plain —
+    # with no glyph (decision 91), the word in capitals as every shell
+    # button's. Decision 71 made them slanted HUD buttons. The colour
+    # arguments are kept for the callers and no longer read: a key's
+    # colours are the HUD style's, one home for every button.
     for button in buttons:
         if button.key == active_key:
             state = "active"
-        elif hud.slant_hit(button.hit, *mouse):
+        elif button.hit.collidepoint(*mouse):
             state = "hover"
         else:
             state = "normal"
-        hud.slant_button(surface, button.hit, _scale_of(surface), state,
-                         display(button.label), style_renderer=style,
-                         icon=glyphs.for_button("colony_summary", button.key))
+        hud.small_button(surface, button.hit, _scale_of(surface), state,
+                         display(button.label).upper(),
+                         style_renderer=style)
 
 
 def render_return(surface, screen, mouse, hover_bg, text_color):
@@ -337,8 +338,7 @@ def render_return(surface, screen, mouse, hover_bg, text_color):
         return
     rect = pygame.Rect(*screen.layout.rect(box))
     label = screen._data.get("return", {}).get("label", "Return")
-    # A HUD slanted button like the seven keys beside it (decision 71).
-    hud.slant_button(surface, rect, screen.layout.scale,
-                     "hover" if hud.slant_hit(rect, *mouse) else "normal",
-                     label, style_renderer=screen.style,
-                     icon=glyphs.for_button("colony_summary", "return"))
+    # The shell's closing action since work order 225 (decision 87): the
+    # slanted shell button, no glyph, at the rectangle's bottom right.
+    from core.hud import shell
+    shell.draw_button(surface, rect, screen.layout, label, screen.style)

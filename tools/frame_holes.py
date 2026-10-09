@@ -84,7 +84,9 @@ FLEETS_COLS, FLEETS_ROWS = 4, 5                               # flt1.cpp:506-507
 RULE_NAMES = {
     "galaxy_map": {"title", "map_area", "sidebar", "nav_turn"}
                   | {f"nav_{k}" for k in NAV_KEYS},
-    "colony_summary": {"header", "list_area", "return"}
+    # `table` since work order 225: the shell panel the header and the
+    # rows stand in.
+    "colony_summary": {"table", "header", "list_area", "return"}
                       | set(BAND_KEYS) | set(SORT_BOX_KEYS),
     "planets": {name for row in PLANETS_KEYS for name in row},
     "fleets": (set(FLEETS_ROW1) | set(FLEETS_ROW2) | set(FLEETS_ARROW)

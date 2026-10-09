@@ -228,6 +228,9 @@ NATIVE_LABEL_CAP = 10
 #: before, against the old 58 px row, which is the same size arrived
 #: at from the same proportion — the value tracks the list and always
 #: has.
+#: **RE-DERIVED AGAIN, work order 225**: the shell's table gives the
+#: rows a 59.6 px band (the list 596 high), 10/31 of it is 19.2, and
+#: 19.2 / 0.70 = 27.4 -> **27**, whose cap renders 19.
 #: `layout.json list.no_farming_font` may override it.
 #:
 #: **THE ONE THING THIS DOES NOT REPRODUCE, stated rather than
@@ -237,7 +240,7 @@ NATIVE_LABEL_CAP = 10
 #: the font — is 1.87x its native row. Three magnifications live on
 #: this screen (see `zoomtables.CLUSTER_FIGURE_OFFSET`), and this
 #: value is anchored on the one the label is made of.
-NO_FARM_FONT_REF = 26
+NO_FARM_FONT_REF = 27
 #: **THE POP MOVE DRAWS NO MARKS ON THE ROW — 8 September 2026.**
 #: `PICK_COLOR` outlined the cells a pick would take and `BAND_COLOR`
 #: framed the three drop targets while one was held. Both are gone,

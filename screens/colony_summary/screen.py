@@ -138,6 +138,11 @@ class ColonySummaryScreen(ScreenBase):
     SCREEN_NAME = "colony_summary"
     GAME_SCREEN_ID = 20         # SCREEN_COLONY_SUMMARY
     USE_FRAME = False           # no frame image since decision 71
+    #: THE SCREEN SHELL (work order 225): the table and the three lower
+    #: panels fill the content rectangle (`layout_reference.json`
+    #: `_shell_note`); the sort keys are rectangular toggles in the row,
+    #: RETURN the closing action; the plate carries the galaxy map's word.
+    SHELL_WORN = True
     #: NO FRAME_TITLE, and that is the transcription (work order 156).
     #: `_no_title_note` and `dev:v3_projektstatus.md` both said the word
     #: "survives as ScreenBase.FRAME_TITLE for the framebuffer fallback
@@ -149,7 +154,11 @@ class ColonySummaryScreen(ScreenBase):
 
     def __init__(self, app):
         super().__init__(app)
+        from core import lang
+        from core.hud import shell
         self._data = {}
+        self.shell = shell.Shell(
+            title=lambda: lang.tr(self._data.get("title", "Colonies")))
         self._local = None          # parsed s_player of the local player
         self._sort_key = "name"     # what the original starts on
         self._state = None          # last snapshot, for the list
@@ -408,6 +417,7 @@ class ColonySummaryScreen(ScreenBase):
         self._render_move(surface)
         self._render_buttons(surface)
         self._render_header(surface)
+        self.render_shell(surface)
         # LAST, OVER THE FRAME. `COLMOVE::Draw_Cluster_(
         # mouse::Pointer_X_(), mouse::Pointer_Y_())` is the final
         # call of `Draw_Colony_Summary_Screen_` (colsum.cpp:506-511),
@@ -770,9 +780,11 @@ class ColonySummaryScreen(ScreenBase):
         return True
 
     def _hit_return(self, x, y):
-        """RETURN is a HUD slanted button, hit as drawn (decision 71)."""
+        """RETURN is the shell's slanted action, hit as drawn (decision 5;
+        work order 225)."""
+        from core.hud import shell
         box = self.box_rect("return")
-        return bool(box) and hud.slant_hit(
+        return bool(box) and shell.hit(
             pygame.Rect(*self.layout.rect(box)), x, y)
 
     def _hit(self, name, x, y):
