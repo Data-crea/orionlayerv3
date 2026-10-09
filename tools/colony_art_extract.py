@@ -53,6 +53,13 @@ WHAT IT TAKES (colony_main.cpp, colsysdi.cpp, colony.cpp):
                          shows (`People_Anim_(0, 4, race)`, colony_main.cpp:
                          444-462)
     race * 13 + 11       the race's spy (`Spy_Anim_`, colony.cpp:237-245)
+    race * 13 + v + 6    the units at the screen's foot, v 0..4 (militia,
+                         marines, powered armour, armour, battleoids;
+                         `Military_Anims_`, colony.cpp:1297-1306; 226 G)
+  COLPUPS.LBX
+    5                    the colony screen's band with its build box's grid
+                         room (`Draw_Colony_Info_Background_`, colony.cpp:
+                         621-635; work order 226 G)
 
 NOT taken: the screen's frames, buttons and sprites (decision 71's HUD
 draws them), the buildings and roads on the ground (OMISSION `roads`), and
@@ -71,7 +78,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from core import lbx  # noqa: E402
 from fleet_art_extract import _sha, find_lbx  # noqa: E402
 
-FORMAT_VERSION = 2
+FORMAT_VERSION = 3
 DEFAULT_OUT = os.path.join(ROOT, "screens", "colony", "assets", "gamedata")
 
 CLIMATES, BG_TYPES, SIZES = 10, 3, 5
@@ -102,6 +109,14 @@ def wanted():
     out["android"] = ("RACEICON.LBX", 0xA9)
     for r in range(RACES):
         out[f"spy_{r}"] = ("RACEICON.LBX", r * 13 + 11)
+        # the colony screen's units (work order 226 G): militia, marines,
+        # powered armour, armour, battleoids (`Military_Anims_`, colony.cpp:
+        # 1297-1306: race * 13 + variant + 6)
+        for v in range(5):
+            out[f"military_{r}_{v}"] = ("RACEICON.LBX", r * 13 + v + 6)
+    # the colony screen's band, its build box's room in it (work order 226
+    # G; `Draw_Colony_Info_Background_`, colony.cpp:621-635)
+    out["band"] = ("COLPUPS.LBX", 5)
     for c in range(CLIMATES):
         for t in range(BG_TYPES):
             out[f"ground_{c}_{t}"] = ("PLANETS.LBX", c * BG_TYPES + t)

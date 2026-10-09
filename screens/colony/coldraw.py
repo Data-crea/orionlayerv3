@@ -24,9 +24,21 @@ and each in `layout.json` `marks`, the status document and check 090p:
   DEVIATION      `building_list` — the colony's buildings are a list of
                  names; UNVERIFIED `building_placement` — open fix 36's
                  grid is read and not placed (see `_buildings`)
-  OMISSION       `unit_sprites`, `officer_portrait`, `product_picture`,
-                 `hover_strip`, `roads`, `planet_description` (the box
-                 `_drawing_display` 2 shows, colony.cpp:1861-1866) — original art this project does
+  TRANSCRIPTION  `unit_figures`, `product_room` (work order 226 G, Data's
+                 decision 6): the units at the screen's foot as the
+                 original's figures, and the build box's grid room with the
+                 product in it (`colroom`, the build popup's code)
+  DEVIATION      `row_cells` (226 G): the band's cells — the production
+                 rows, morale and the three job rows — ruled with the
+                 shell's outline where the original's art rules them; a
+                 job row's ruled cell is its field, the drop target
+                 (decision 5)
+  DEVIATION      `one_top` (226 G): the four boxes of the band share one
+                 top and one height, the band's (17..158), where the
+                 original's art boxes start at 17, 24 and 29
+  OMISSION       `officer_portrait`, `hover_strip`, `roads`,
+                 `planet_description` (the box `_drawing_display` 2 shows,
+                 colony.cpp:1861-1866) — original art this project does
                  not extract, and the hover strip of the original's own
                  pointer; each named where it would be drawn
 """
@@ -85,9 +97,13 @@ def lines(surface, screen, words, native_x, native_y, native_w, key, role,
 def draw(surface, screen, view, state, words, names):
     layout = screen.layout
     _scene(surface, screen, view)
-    for native in (geom.SYS_DISP, (124, 29, 304, 152),
-                   (307, 29, 512, 152), geom.BUILD_WINDOW):
-        nd.draw_box(surface, screen, native)
+    # DEVIATION `one_top`: the band's four boxes share its top and height.
+    top = min(b[1] for b in BAND_BOXES)
+    bottom = max(b[3] for b in BAND_BOXES)
+    for x0, _y0, x1, _y1 in BAND_BOXES:
+        nd.draw_box(surface, screen, (x0, top, x1, bottom))
+    _cells(surface, screen)
+    _room(surface, screen, view, state)
     _title_line(surface, screen, view, state, words, names)
     _system(surface, screen, view, state, words)
     _production(surface, screen, view)
@@ -95,10 +111,65 @@ def draw(surface, screen, view, state, words, names):
     _no_farming(surface, screen, view, words)
     _build(surface, screen, view, state, words, names)
     _buildings(surface, screen, view, state, names)
-    _units(surface, screen, view, words)
+    _units(surface, screen, view, words, state)
     _officer(surface, screen, view, state, words)
     _buttons(surface, screen, state)
     return layout
+
+
+#: The band's four boxes, the original art's (COLPUPS.LBX 5): the system
+#: display, production, population, the build window.
+BAND_BOXES = (geom.SYS_DISP, (124, 29, 304, 152), (307, 29, 512, 152),
+              geom.BUILD_WINDOW)
+
+
+def _cells(surface, screen):
+    """DEVIATION `row_cells`: each production row, the morale row and each
+    job row in a ruled cell, the shell's outline — the original's band art
+    rules them. A job row's cell IS its drop target (`colgeom.JOB_CELLS`,
+    which `screen._job_click` hits), so the drawn cell is the hit cell
+    (decision 5)."""
+    for native in list(geom.PROD_ROWS.values()) + [geom.MORALE] + \
+            list(geom.JOB_CELLS):
+        hud.outline(surface, nd.rect(screen.layout, native),
+                    screen.layout.scale)
+
+
+def _room(surface, screen, view, state):
+    """TRANSCRIPTION `product_room`: the build window's grid room with the
+    product standing in it, where the original draws it (`Draw_Info_Build_`,
+    colony_main.cpp:899-945) — `colroom`'s colony place, the build popup's
+    code; stepped up as the screen's sprites are (`nd.magnified`)."""
+    from screens.build_queue import bqproduct
+    from . import colroom
+    pid = view.colony.producing[0]
+    race = _race(state, int(view.colony.owner))
+    ship = None
+    from core import prodname
+    from core.structs import ship as ship_struct
+    if prodname.kind(pid) == prodname.KIND_QUEUED_SHIP:
+        ships = getattr(state, "ships_raw", None) or []
+        i = prodname.QUEUED_SHIP_BASE - pid
+        if 0 <= i < len(ships):
+            ship = ship_struct.parse(ships[i])
+    spec = bqproduct.picture(pid, race, None, ship) or ("room",)
+    t = colroom.tile(spec, view.colony.climate, _bg_type(view), "colony")
+    if t is None:
+        return
+    win = colroom.PLACES["colony"]["window"]
+    r = nd.rect(screen.layout, win)
+    big = nd.magnified(t, screen.layout)
+    clip = surface.get_clip()
+    surface.set_clip(r)
+    surface.blit(big, big.get_rect(center=r.center))
+    surface.set_clip(clip)
+
+
+def _race(state, owner):
+    from core.structs import player as player_struct
+    raws = getattr(state, "player_raw", None) or []
+    return int(player_struct.parse(raws[owner]).race) \
+        if 0 <= owner < len(raws) else 0
 
 
 def _scene(surface, screen, view):
@@ -367,16 +438,76 @@ def _buildings(surface, screen, view, state, names):
              "small", "label")
 
 
-def _units(surface, screen, view, words):
-    """The unit counts, `":%d"` as the original prints them beside its
-    sprites (colony_main.cpp:1241); OMISSION `unit_sprites`."""
-    marines, armour = view.units()
-    x1, y1, x2, y2 = geom.UNITS
-    parts = [p for p in (
-        f"{screen.word('marines')} :{marines}" if marines else "",
-        f"{screen.word('armour')} :{armour}" if armour else "") if p]
-    text(surface, screen, "   ".join(parts), x1 + 4, y2 - 12, x2 - x1,
-         "value", "value")
+#: `Military_Anim_` (colony.cpp:1308-1328): marines (0) are figure 1, or 2
+#: with Powered Armor (application 144); armour (1) is 3, or 4 with
+#: Battleoids (24); a figure is RACEICON race * 13 + figure + 6.
+MILITARY_FIGURES = {0: (1, 2, 144), 1: (3, 4, 24)}
+RESEARCHED = 3
+
+
+def unit_layout(counts):
+    """`Do_Colony_Info_Military_Stuff_For_` (colony_main.cpp:1193-1290),
+    both kinds in order: [(kind, slot, count)] — a figure at native
+    x = slot * 30 on the screen's foot (:1222, :1239), and `count` printed
+    at x = (slot + 1) * step beside it (or None, :1248). Eight units or
+    fewer are drawn one figure each; more, and each kind is one figure and
+    its count (`E 0x7C`), the next kind three slots on. Returns (figures,
+    step)."""
+    total = max(1, sum(counts))
+    step = max(1, 260 // total)
+    squish = 30 - step if step < 30 else 0
+    out, start = [], 0
+    for kind, n in enumerate(counts):
+        if n <= 0:
+            continue
+        if squish == 0:
+            for k in range(n):
+                out.append((kind, start + k, None))
+            start += n
+        else:
+            out.append((kind, start, n))
+            start += 3
+    return out, (30 - squish)
+
+
+def _units(surface, screen, view, words, state=None):
+    """TRANSCRIPTION `unit_figures` (work order 226 G, Data's decision 6):
+    the units at the screen's foot as the original draws them — the
+    owner's race's figures (`Military_Anim_`), on the bottom edge, the
+    count `E 0x7C` beside a lone figure (`unit_layout`)."""
+    from . import colart
+    counts = view.units()
+    figures, step = unit_layout(counts)
+    if not figures:
+        return
+    art = colart.load()
+    owner = int(view.colony.owner)
+    race = _race(state, owner) if state is not None else 0
+    apps = _tech_apps(state, int(getattr(state, "player_num", 0) or 0)) \
+        if state is not None else ()
+    for kind, slot, count in figures:
+        plain, better, app = MILITARY_FIGURES[kind]
+        fig = better if len(apps) > app and apps[app] == RESEARCHED else plain
+        pic = art.sprite(f"military_{race}_{fig}", view.colony.climate,
+                         _bg_type(view)) if art.available else None
+        x_native = slot * 30
+        height = pic.get_height() if pic is not None else 12
+        if pic is not None:
+            big = nd.magnified(pic, screen.layout)
+            surface.blit(big, nd.point(screen.layout, x_native,
+                                       479 - height))
+        if count is not None:
+            fmt = words.e(0x7C) or "x %d"
+            text(surface, screen, printf(fmt, count),
+                 (slot + 1) * step, 479 - height, 60, "value", "value")
+
+
+def _tech_apps(state, player):
+    from core.structs import player as player_struct
+    raws = getattr(state, "player_raw", None) or []
+    if not 0 <= player < len(raws):
+        return ()
+    return list(player_struct.parse(raws[player]).tech_applications)
 
 
 def _officer(surface, screen, view, state, words):

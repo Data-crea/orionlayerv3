@@ -309,7 +309,7 @@ class ColonyScreen(ScreenBase):
         command). The Colonies screen's rules and sender, unchanged."""
         view = self._view
         rows = [(j, nd.rect(self.layout, r)) for j, r in
-                enumerate(geom.JOB_ROWS)]
+                enumerate(geom.JOB_CELLS)]       # the drawn cells (226 G)
         job = next((j for j, r in rows if r.collidepoint(x, y)), None)
         if job is None:
             return False

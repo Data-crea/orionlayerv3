@@ -52,6 +52,13 @@ MORALE = (310, 32, 510, 61)
 #: The job rows, `_job_fields[0..2]` (coldraw.cpp:409): farmers, workers,
 #: scientists at y 62 + 30i; icons from x 310 to 510.
 JOB_ROWS = [(310, 62, 518, 92), (310, 92, 518, 122), (310, 122, 518, 152)]
+#: The job rows as HD draws and hits them (work order 226 G, DEVIATION
+#: `row_cells`): the fields clipped at the population box's edge, 512, where
+#: the original's band art rules its cells — the fields reach 518, into the
+#: gap before the build window, which would put the ruled cell outside its
+#: box. ONE table for the drawing and the drop (decision 5); the drop is a
+#: command (open fix 12), so the strip 513..518 only stops answering.
+JOB_CELLS = [(x0, y0, 512, y1) for x0, y0, _x1, y1 in JOB_ROWS]
 JOB_ICON_X = (310, 510)
 
 #: `Draw_Info_Build_` (colony_main.cpp:899-977): the window the picture
