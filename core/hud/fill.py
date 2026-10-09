@@ -25,7 +25,8 @@ The lines keep their contrast against the fill instead: `tint` reads
 that would fall under 3:1 against it, or under the contrast it has at
 the starting colour where that is less (the dim edge, by Data's design).
 
-**GLASS ON OR OFF.** Off (the default — a proposal, parked for Data):
+**GLASS ON OR OFF.** Off (the default — Data's decision of work order
+228, answering 227 P1; also for a settings file without the key):
 every box is filled opaque with its member, and the background never
 shows through (`core.hud.glass.fill`). On: the glass of work order 174,
 its gradient this colour's family, with its strength slider.
@@ -54,7 +55,10 @@ TARGETS = {
     "cell": ("cell", "panel"),
     "header": ("header", "panel"),
     "button": ("button", "panel"),
-    "selected": ("selected", "panel"),
+    # Data's decision 2 of work order 228 (226 P1): ONE "selected", the
+    # picture's brighter — the toggle that is on, the active sort button
+    # (74, 74, 66) — for a chosen row as well (decision 92).
+    "selected": ("on", "panel"),
     "dense": ("dense_glass", "ref_panel"),
     "glass_top": ("glass_top", "ref_panel"),
     "glass_bottom": ("glass_bottom", "ref_panel"),
@@ -293,14 +297,15 @@ def y_max():
 
 def target(name, rgb=None):
     """What a member reads when drawn: the panel colour at the member's
-    luminance. 'selected' is raised to the picture's and to 12 L* off a
-    cell, and gives way at the word floor."""
+    luminance. 'selected' is raised to the picture's (its toggle that is
+    on, work order 228) and to 12 L* off a cell, and gives way at the word
+    floor."""
     rgb = colour() if rgb is None else tuple(rgb[:3])
     y = lum(rgb) * ratio(name if name != "selected" else "selected")
     if name == "selected":
         mp = _st().get("mockup_planets")
         cell = lum(rgb) * ratio("cell")
-        y = max(y, lum(mp["selected"]), _y_of_L(_L(cell) + ON_OFF_FIELD))
+        y = max(y, lum(mp["on"]), _y_of_L(_L(cell) + ON_OFF_FIELD))
         y = min(y, _word_floor())
     return at_luminance(rgb, y)
 

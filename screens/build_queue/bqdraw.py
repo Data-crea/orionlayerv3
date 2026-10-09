@@ -27,6 +27,14 @@ check 090q:
                  stand at the shell's inset from the panel's inner line
   OMISSION       `delete_hint` — the "delete %s" the original prints over
                  its own pointer's queue row
+  TRANSCRIPTION  the two modes (work order 228, Data's decision 3): while
+                 DESIGN's mode is on every design row is bright and the
+                 design under the pointer blinks (colbldg.cpp:632-640), and
+                 the button that set a mode (DESIGN, REPEAT BUILD) is
+                 "selected" (decision 92) until the mode ends
+  OMISSION       `mode_pointer` — the original's mode shows as its pointer
+                 picture (17 for DESIGN, 16 for REPEAT, colbldg.cpp:21-22);
+                 HD has one pointer drawing (`core/cursor.py`)
 """
 from core import prodname
 from core.hestrings import printf
@@ -55,7 +63,7 @@ def draw(surface, screen, view, state, names, hover):
         hud.field(surface, nd.rect(screen.layout, box), screen.layout.scale)
     product = hover if hover is not None else view.items[0]
     _picture(surface, screen, view, state, names, product)
-    _lists(surface, screen, view, state, names)
+    _lists(surface, screen, view, state, names, hover)
     _queue(surface, screen, view, state, names)
     _summary(surface, screen, view, state, names, hover)
     _description(surface, screen, view, state, product)
@@ -101,12 +109,36 @@ def design_needs_base(view, state, product):
     return size is not None and size >= SHIP_SIZE_LARGE and not has_base
 
 
-def _lists(surface, screen, view, state, names):
+def design_blinks_dim(ticks):
+    """`ERIC::Global_Cycler_(30, 2)` (eric.cpp:98-102): the half of the
+    blink in which DESIGN's mode draws the design under the pointer dim
+    (colbldg.cpp:634-636) — every other 30 ms of the clock."""
+    return (int(ticks) // 30) % 2 != 0
+
+
+def row_bright(view, state, product, building, hover, ticks):
+    """Whether a list row is drawn bright. A building row while queued
+    (colbldg.cpp:675-680). A ship row unless a design needs a base
+    (`design_needs_base`); while DESIGN's mode is on (`_field_mode` 1)
+    nothing is dimmed by that rule, and the design under the pointer
+    blinks (colbldg.cpp:625-640)."""
+    if building:
+        return view.queued(product)
+    if getattr(view, "field_mode", w.MODE_NONE) == w.MODE_DESIGN:
+        return not (product == hover and
+                    prodname.kind(product) == prodname.KIND_SHIP_DESIGN and
+                    design_blinks_dim(ticks))
+    return not design_needs_base(view, state, product)
+
+
+def _lists(surface, screen, view, state, names, hover=None):
     """The two lists, each word at the shell's inset from its panel's inner
     line (DEVIATION `one_edge`: the original's x 13 and 485 are its boxes'
     own edges, which in the shell ARE the panel's inner line)."""
+    import pygame
     from core.hud import shell
     dim = hudtext.colour("sub")
+    ticks = pygame.time.get_ticks()
     pad = shell.inset(screen.ref_layout)
     for entries, rows, x, width, building, panel in (
             (view.buildings, view.building_rows, 13, 171, True, "left_panel"),
@@ -116,8 +148,8 @@ def _lists(surface, screen, view, state, names):
         for e, f in zip(entries, rows):
             if e["id"] == w.SEPARATOR:
                 continue
-            bright = view.queued(e["id"]) if building else \
-                not design_needs_base(view, state, e["id"])
+            bright = row_bright(view, state, e["id"], building, hover,
+                                ticks)
             name, _st = names.product(e["id"], state)
             px, py = nd.point(screen.layout, x, f.y + 1)
             pw = nd.rect(screen.layout, (0, 0, width, 1)).w
@@ -284,6 +316,10 @@ def _summary(surface, screen, view, state, names, hover):
                  "label")
 
 
+#: The buttons that set a mode, and the `field_mode` each sets.
+MODE_BUTTONS = {"design": w.MODE_DESIGN, "repeat": w.MODE_REPEAT}
+
+
 def _buttons(surface, screen, state, view):
     fields = getattr(state, "fields", None)
     for key, ident in (("cancel", w.CANCEL), ("ok", w.OK),
@@ -303,6 +339,12 @@ def _buttons(surface, screen, state, view):
                              screen.word(key).upper(),
                              style_renderer=screen.style)
             continue
+        # A mode's button is "selected" while its mode is on (work order
+        # 228, Data's decision 3; decision 92) — the original shows the
+        # mode by its pointer picture only (OMISSION `mode_pointer`).
+        on = key in MODE_BUTTONS and \
+            MODE_BUTTONS[key] == getattr(view, "field_mode", w.MODE_NONE)
         hud.slant_button(surface, r, screen.layout.scale,
-                         hud_hover.pointer_state(r, "normal"),
+                         hud_hover.pointer_state(r,
+                                                 "active" if on else "normal"),
                          screen.word(key), style_renderer=screen.style)

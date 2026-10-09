@@ -53,6 +53,13 @@ DESIGN = (TYPE_BUTTON, 561, 379)
 REPEAT = (TYPE_BUTTON, 503, 411)
 AUTO_BUILD = (TYPE_RADIO, 490, 342)
 
+#: `COLBLDG::_field_mode` (BLDQ's `field_mode`): DESIGN sets 1 — "which
+#: ship", the pointer picture 17 over the whole screen — and REPEAT BUILD
+#: sets 2 — "what", picture 16 (colbldg.cpp:1577-1582). Each mode lasts
+#: until the next click ends it (:1570-1574, :1704-1710, :1772-1778,
+#: :2140-2142). REFIT is no mode: it opens its popup at once (:1583-1610).
+MODE_NONE, MODE_DESIGN, MODE_REPEAT = 0, 1, 2
+
 HELP = ((501, BUILDINGS_BOX), (502, PICTURE_BOX), (503, SUMMARY_BOX),
         (504, OTHERS_BOX), (505, DESCRIPTION_BOX), (506, QUEUE_BOX),
         (507, (490, 342, 623, 363)), (508, (492, 379, 552, 397)),

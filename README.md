@@ -1,3 +1,7 @@
+> **Not ready to use yet.** OrionLayer is under heavy development. It is
+> not ready to play or to rely on yet, and none of its screens has been
+> accepted.
+
 # OrionLayer v3
 
 An HD frontend for **Master of Orion 2**, built on
