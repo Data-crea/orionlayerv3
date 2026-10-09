@@ -53,9 +53,24 @@ class RefitScreen(ScreenBase):
     GAME_SCREEN_ID = None
     SHARES_GAME_SCREEN_ID = geom.SHARED_SCREEN_ID
     USE_FRAME = False
+    SHELL_WORN = True
+    #: THE SCREEN SHELL (work order 225): the popup's content — the grid,
+    #: the arrows and the scroll, the info box (native 159..479 x 46..425)
+    #: — is one picture stage of the rectangle's full height, centred, in
+    #: its native proportion (`core.panelmap`), standing at the shell's
+    #: inset inside the stage's panel; the title stands on the
+    #: plate and Cancel is the shell's closing action. REFITPUP's window
+    #: (`POPUP`) is not drawn: the stage is the panel.
+    REGIONS = (("stage", (159, 46, 479, 425), True),)   # at the inset
+    SHELL_STAGE = "stage"
 
     def __init__(self, app):
         super().__init__(app)
+        from core.hud import shell
+        self.shell = shell.Shell(
+            title=self.title_text,
+            buttons=[("cancel", lambda: self.word("cancel"), "action")],
+            visible=lambda key: self.kind is not None)
         self._state = None
         self.kind = None
         self.first = 0              # HD STATE `first_row`
@@ -226,6 +241,15 @@ class RefitScreen(ScreenBase):
 
     # ── Drawing ───────────────────────────────────────────
 
+    def title_text(self):
+        """The list's title: the ships' word, or the design list's "%s"
+        with the picked ship's name."""
+        if self.kind == "designs":
+            ship = self._picked_ship()
+            return (self.e(geom.E_PICK_DESIGN) or "%s").replace(
+                "%s", ship.name if ship is not None else "")
+        return self.word("title") if self.kind == "ships" else ""
+
     def render(self, surface):
         self._render_background(surface)
         if self.kind == "ships":
@@ -254,6 +278,7 @@ class RefitScreen(ScreenBase):
                     self._parts), geom.DESIGN_TEXT)
         if self.kind is not None:
             refdraw.draw_buttons(surface, self, self.kind)
+        self.render_shell(surface)
         self.render_help(surface)
 
     def button_state(self, key, rect):
@@ -328,10 +353,14 @@ class RefitScreen(ScreenBase):
     def handle_click(self, screen_x, screen_y):
         if self.help_consumes_click(screen_x, screen_y):
             return None
+        if self.kind is not None and \
+                self.shell_click(screen_x, screen_y) == "cancel":
+            self.send(self._field(geom.CANCEL, geom.TYPE_BUTTON), "Cancel")
+            return None
         p = self._native(screen_x, screen_y)
         if p is None or self.kind is None:
             return None
-        if self._in(p, geom.CANCEL):
+        if self._in(p, geom.CANCEL) and not self.SHELL_WORN:
             self.send(self._field(geom.CANCEL, geom.TYPE_BUTTON), "Cancel")
             return None
         if self.kind == "ships":
