@@ -207,8 +207,14 @@ def field(surface, rect, scale, on=False):
     if rect.w < 3 or rect.h < 3:
         return
     st = hudstyle.get()
-    _base, lit, share = st.mix_parts("on" if on else "field")
-    glass.draw(surface, rect, dense=True, shade=lit, shade_alpha=share)
+    if on:
+        _base, lit, share = st.mix_parts("on")
+        glass.draw(surface, rect, dense=True, shade=lit, shade_alpha=share)
+    else:
+        # A CELL since work order 226 (decision 93): darker than its panel,
+        # set in, as Data's Planets picture draws it.
+        glass.draw(surface, rect, dense=True, shade=st.colour("field.shade"),
+                   shade_alpha=float(st.get("glass.row_shade")))
     outline(surface, rect, scale, lit=on)
 
 
@@ -259,9 +265,11 @@ def separator_span(rect, scale):
 
 # ── buttons ──────────────────────────────────────────────────────────
 
-def _button_colours(state):
+def _button_colours(state, small=False):
     st = hudstyle.get()
-    fill, edge = st.colour("button.fill"), st.colour("button.edge")
+    # A rectangular button's fill is the picture's (work order 226 B).
+    fill = st.colour("small_button.fill" if small else "button.fill")
+    edge = st.colour("button.edge")
     if state in ("hover", "pressed"):
         fill, edge = st.colour("button.hover_fill"), st.colour("button.hover_edge")
     elif state == "active":
@@ -420,7 +428,7 @@ def small_button(surface, rect, scale, state="normal", label="",
     key = ("small", rect.w, rect.h, round(scale, 4), state)
 
     def build():
-        fill, edge = _button_colours(state)
+        fill, edge = _button_colours(state, small=True)
         ch = min(_px(st.get("panel.chamfer"), scale)
                  * st.get("small_button.chamfer_frac"), rect.h / 3)
         surf, pad = raster.shape(

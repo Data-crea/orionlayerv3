@@ -26,7 +26,7 @@ def table_header(surface, rect, scale):
     r = pygame.Rect(rect)
     # GLASS since work order 174: the header band is dense glass with
     # its colour over it, not a flat near-black band.
-    glass.draw(surface, r, dense=True, shade=st.colour("mockup_colony.header"),
+    glass.draw(surface, r, dense=True, shade=st.colour("table.header"),
                shade_alpha=float(st.get("glass.header_shade")))
     separator(surface, r.x, r.right, r.bottom - 1, scale)
 
@@ -50,7 +50,7 @@ def table_row(surface, rect, scale, index, selected=False):
         pygame.draw.rect(surface, edge, r, w,
                          border_radius=max(2, int(4 * scale)))
         return
-    key = "mockup_colony.row_a" if index % 2 == 0 else "mockup_colony.row_b"
+    key = "table.row_a" if index % 2 == 0 else "table.row_b"
     glass.draw(surface, r, dense=True, shade=st.colour(key),
                shade_alpha=float(st.get("glass.row_shade")))
     pygame.draw.line(surface, st.colour("mockup_colony.row_line"),

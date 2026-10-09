@@ -60,16 +60,26 @@ class HudStyle:
         EXTENSION, work order 170) — except a TEXT colour and the
         background placeholder, which the setting never touches.
         `mix.<name>` is a fill that must be seen (`mixed`)."""
+        c = self._colour(path, path)
+        floor = self._walk(self.chosen, "selected_floor")
+        if isinstance(floor, dict) and isinstance(floor.get(path), str):
+            c = raise_to(c, self.get(floor[path]))
+        return c
+
+    def _colour(self, path, kind):
+        """`path`'s colour, tinted as `kind` is — an indirection keeps the
+        class of the name that asked (a word stays a word, work order
+        226: `text.value.color` borrows the picture's grey untinted)."""
         if path.startswith("mix."):
             base, lit, t = self.mix_parts(path[4:])
             return self.mix(base, lit, t)
         v = self._walk(self.chosen, path + "_from")
         if isinstance(v, str):
-            return self.colour(v)
+            return self._colour(v, kind)
         c = tuple(int(x) for x in self.get(path)[:3])
-        if not_tinted(path):
+        if not_tinted(kind):
             return c
-        return tint.transform(c, word=follows_as_word(path))
+        return tint.transform(c, word=follows_as_word(kind))
 
     def mix(self, a, b, t):
         """`a` moved a fraction `t` towards `b`, both RGB tuples."""
@@ -102,6 +112,33 @@ class HudStyle:
 
 #: `mix_parts` per (name, frame colour): the share search runs once.
 _mixes = {}
+
+
+def raise_to(colour, floor):
+    """`colour`, lifted in linear light to `floor`'s relative luminance
+    where it is darker — work order 226 B: 'selected' never weaker than
+    Data's picture. Hue and saturation stay the frame colour's."""
+    import numpy as np
+    want = float(tint.luminance(floor[:3]))
+    have = float(tint.luminance(colour[:3]))
+    if have >= want:
+        return tuple(colour[:3])
+    lin = tint._lin(np.asarray(colour[:3], np.float64) / 255.0)
+    if have <= 1e-9:
+        lin = np.full(3, want)
+    else:
+        lin = np.clip(lin * want / have, 0.0, 1.0)
+    w = tint._W
+    if float((lin * w).sum()) < want:
+        # A saturated colour clips before it gets there: the rest of the
+        # way towards white, in light, by the share that reaches it.
+        short = want - float((lin * w).sum())
+        room = float(((1.0 - lin) * w).sum())
+        lin = lin + (1.0 - lin) * min(1.0, short / max(room, 1e-9))
+    out = tint._srgb(lin)
+    # rounded UP: rounded to nearest it could land a hair under the floor
+    return tuple(min(255, int(np.ceil(v * 255 - 1e-9)))
+                 for v in np.clip(out, 0, 1))
 
 
 def _contrast(a, b):

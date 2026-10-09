@@ -244,6 +244,6 @@ def row_palette():
     from core.hud import style as hudstyle
     st = hudstyle.get()
     return tuple(st.colour(k) for k in (
-        "mockup_colony.row_a", "mockup_colony.row_b",
+        "table.row_a", "table.row_b",
         "field.on_fill", "panel.edge_dim",
-        "mockup_colony.header", "mockup_colony.text_header"))
+        "table.header", "mockup_colony.text_header"))

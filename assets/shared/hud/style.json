@@ -258,6 +258,132 @@
         ],
         "align_correlation": 0.817
       }
+    },
+    "mockup_planets": {
+      "sha256": "5e6e4249396d96b636a4db3644f1a980b2efd3eb16a25ebf67a4223f1b38f348",
+      "source": "dev:doc/briefs/226-mockup-planets.png",
+      "panel": [
+        27,
+        27,
+        24
+      ],
+      "cell": [
+        17,
+        17,
+        16
+      ],
+      "header": [
+        12,
+        12,
+        10
+      ],
+      "button": [
+        12,
+        12,
+        10
+      ],
+      "selected": [
+        51,
+        51,
+        45
+      ],
+      "on": [
+        74,
+        74,
+        66
+      ],
+      "selected_edge": [
+        201,
+        201,
+        180
+      ],
+      "frame_edge": [
+        143,
+        143,
+        120
+      ],
+      "text_main": [
+        228,
+        228,
+        214
+      ],
+      "text_secondary": [
+        180,
+        180,
+        162
+      ],
+      "frame_hue": 60.0,
+      "ref_panel": [
+        25,
+        27,
+        28
+      ],
+      "ref_cell": [
+        16,
+        17,
+        17
+      ],
+      "ref_header": [
+        11,
+        12,
+        13
+      ],
+      "ref_button": [
+        11,
+        12,
+        13
+      ],
+      "ref_selected": [
+        47,
+        51,
+        53
+      ],
+      "ref_on": [
+        68,
+        75,
+        77
+      ],
+      "ref_selected_edge": [
+        186,
+        202,
+        208
+      ],
+      "glass_top": [
+        36,
+        38,
+        39
+      ],
+      "glass_bottom": [
+        30,
+        33,
+        33
+      ],
+      "cell_shade": [
+        0,
+        0,
+        0
+      ],
+      "row_b_shade": [
+        9,
+        9,
+        8
+      ],
+      "header_shade": [
+        0,
+        0,
+        0
+      ],
+      "stripe_lift": 1.66,
+      "background_median": [
+        1,
+        2,
+        5
+      ],
+      "dense_glass": [
+        29,
+        31,
+        32
+      ]
     }
   },
   "chosen": {
@@ -292,11 +418,15 @@
       "edge_from": "panel.edge_dim",
       "on_fill_from": "mix.on",
       "on_edge_from": "action.edge",
-      "_note": "An EMPTY FIELD, work order 223: where the original draws a box the player acts in or reads a list from (its striped fields) HD draws `blocks.field` \u2014 dense glass with the field mix over it and the outline round it; a field that is chosen or on takes the 'on' mix and the lit edge. One block, so every screen's field is the same field."
+      "_note": "An EMPTY FIELD, work order 223: where the original draws a box the player acts in or reads a list from (its striped fields) HD draws `blocks.field` \u2014 dense glass with the field mix over it and the outline round it; a field that is chosen or on takes the 'on' mix and the lit edge. One block, so every screen's field is the same field.",
+      "shade_from": "mockup_planets.cell_shade",
+      "_shade_note": "Work order 226 B: an empty field is a cell (the picture's: darker than its panel, set in) \u2014 dense glass with the cell shade at glass.row_shade; 'on' keeps the shared on mix. Was the field mix (the dim edge at 25 %), which read brighter than the panel."
     },
     "small_button": {
       "chamfer_frac": 0.5,
-      "_note": "a small button inside a panel is the action button's shape at half the panel's chamfer, so it reads as the same family and does not compete with the panel's own corner"
+      "_note": "a small button inside a panel is the action button's shape at half the panel's chamfer, so it reads as the same family and does not compete with the panel's own corner",
+      "fill_from": "mockup_planets.ref_button",
+      "_fill_note": "Work order 226 B: a rectangular button (a control inside a panel, decision 88) has the picture's button fill, turned to the reference hue at its own luminance. The slanted buttons keep the HUD's measured button.fill."
     },
     "popup": {
       "fill_from": "panel.fill",
@@ -339,7 +469,10 @@
       "row_shade": 0.45,
       "selected_shade": 0.75,
       "header_shade": 0.6,
-      "_shade_note": "Chosen, not measured (the mockup has no table): a table row, header band or grid slot is dense glass with its own colour laid over at this share, so the A/B stripe, the selected row and the header stay told apart and the background still shows through."
+      "_shade_note": "Chosen, not measured (the mockup has no table): a table row, header band or grid slot is dense glass with its own colour laid over at this share, so the A/B stripe, the selected row and the header stay told apart and the background still shows through. Since work order 226 the shares stand and the COLOURS are solved off Data's Planets picture (chosen.table, chosen.field).",
+      "top_from": "mockup_planets.glass_top",
+      "bottom_from": "mockup_planets.glass_bottom",
+      "_fills_note": "Work order 226 B (decision 93): the gradient's two colours are the ones that give Data's Planets picture's panel over the universal background at the default slider (measured.mockup_planets, solved by dev:tools/hud_planets.py); the opacity stays the Select Race mockup's (measured.glass)."
     },
     "glyph": {
       "colour": [
@@ -367,6 +500,29 @@
         62
       ],
       "_note": "The screen shell of work order 225 (decisions 86-92): ONE content rectangle, one spacing, one button row and one bottom-right action for every full screen, taken from the galaxy map as built (it is the model, decision 87). Reference px (left, top, width, height). FROM THE GALAXY MAP: the right edge 1900 is the info panel's right edge (measured.galaxy.panel), = 1920 - measured.galaxy.edge_margin; the top 85 is the same panel's top edge, the first edge under the title plate; the bottom 1060 is TURN's bottom edge, = 1080 - edge_margin (dev:tools/hud_boxes.py hangs the bar there since work order 170); `button` is a nav button's size (measured.galaxy.nav_width; nav_bottom - nav_top); `panel_inset` and `element_gap` are the galaxy info panel's own row pad (screens/galaxy_map/layout.json sidebar_row_pad, 8: its first row starts 8 inside the panel, each row ends 8 above the separator and the next starts 8 below it). CHOICES, because the galaxy map does not answer them: the LEFT edge 20 mirrors the right one (edge_margin), so the rectangle is centred like the map's content area; `panel_gap` 20 is edge_margin again (the galaxy map shows ONE panel, so no distance between two exists there), so the bars a frame lays between two panels and round the rectangle are one width; the button row's bottom is the rectangle's bottom (the galaxy's nav buttons end 4 px higher only because the HUD art draws TURN taller); the bottom-right action is a slanted button of the row's size whose rect's right edge is the rectangle's right edge. Ours under decision 53, so Data's to change; the smoke test holds the measured half to measured.galaxy."
+    },
+    "table": {
+      "header_from": "mockup_planets.header_shade",
+      "row_a_from": "mockup_planets.cell_shade",
+      "row_b_from": "mockup_planets.row_b_shade",
+      "_note": "Work order 226 B (decision 93): a table's header band and its rows are dense glass with these laid over at the chosen shares (glass.header_shade, glass.row_shade); the colours are solved so the band reads as the picture's header and cell at the default slider over the universal background. The B stripe (decision 57) is the cell lifted by the colony mockup's own B/A ratio. Were mockup_colony's."
+    },
+    "text": {
+      "value": {
+        "color_from": "mockup_planets.text_main"
+      },
+      "sub": {
+        "color_from": "mockup_planets.text_secondary"
+      },
+      "_note": "Work order 226 B: the two greys of text off Data's Planets picture \u2014 main (a value, a header word) and secondary (a row's text, a sub-value). Words are never tinted; the accent labels still follow the frame colour."
+    },
+    "mockup_colony": {
+      "text_row_from": "mockup_planets.text_secondary"
+    },
+    "selected_floor": {
+      "field.on_fill": "mockup_planets.ref_selected",
+      "field.on_edge": "mockup_planets.ref_selected_edge",
+      "_note": "Work order 226 B: 'selected' is never weaker than the picture \u2014 where the frame colour takes the on fill or the lit edge below the picture's selected fill or edge in luminance, it is raised to it (the order: 'if selected in the game is weaker than in the picture, it follows the picture')."
     }
   }
 }
