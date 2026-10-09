@@ -3,10 +3,10 @@
     {
       "name": "race_picks_panel",
       "rect": [
-        75,
-        109,
-        696,
-        949
+        20,
+        85,
+        733,
+        893
       ],
       "style": {
         "label": "Race Picks Panel",
@@ -18,10 +18,10 @@
     {
       "name": "specials_panel",
       "rect": [
-        783,
-        109,
-        502,
-        949
+        773,
+        85,
+        529,
+        893
       ],
       "style": {
         "label": "Special Abilities Panel",
@@ -33,10 +33,10 @@
     {
       "name": "description_panel",
       "rect": [
-        1296,
-        109,
-        549,
-        949
+        1322,
+        85,
+        578,
+        893
       ],
       "style": {
         "label": "Description Panel",
@@ -48,10 +48,10 @@
     {
       "name": "picks_score_bar",
       "rect": [
-        510,
-        880,
-        900,
-        173
+        290,
+        998,
+        1340,
+        62
       ],
       "style": {
         "label": "Picks/Score Bar",
@@ -61,10 +61,10 @@
     {
       "name": "picks_text",
       "rect": [
-        555,
-        900,
-        280,
-        50
+        305,
+        1006,
+        635,
+        46
       ],
       "style": {
         "label": "Race Picks Text",
@@ -74,10 +74,10 @@
     {
       "name": "score_text",
       "rect": [
-        1000,
-        900,
-        280,
-        50
+        980,
+        1006,
+        635,
+        46
       ],
       "style": {
         "label": "Score Text",
@@ -87,9 +87,9 @@
     {
       "name": "picks_header",
       "rect": [
-        75,
-        109,
-        696,
+        28,
+        93,
+        717,
         30
       ],
       "style": {
@@ -100,9 +100,9 @@
     {
       "name": "specials_header",
       "rect": [
-        783,
-        107,
-        502,
+        781,
+        93,
+        513,
         30
       ],
       "style": {
@@ -113,9 +113,9 @@
     {
       "name": "description_header",
       "rect": [
-        1296,
-        107,
-        549,
+        1330,
+        93,
+        562,
         30
       ],
       "style": {
@@ -155,10 +155,10 @@
     {
       "name": "race_picks_panel",
       "rect": [
-        110,
-        109,
-        659,
-        834
+        20,
+        85,
+        733,
+        893
       ],
       "style": {
         "label": "Race Picks Panel",
@@ -170,10 +170,10 @@
     {
       "name": "specials_panel",
       "rect": [
-        783,
-        110,
-        502,
-        832
+        773,
+        85,
+        529,
+        893
       ],
       "style": {
         "label": "Special Abilities Panel",
@@ -185,10 +185,10 @@
     {
       "name": "description_panel",
       "rect": [
-        1296,
-        108,
-        523,
-        832
+        1322,
+        85,
+        578,
+        893
       ],
       "style": {
         "label": "Description Panel",
@@ -200,10 +200,10 @@
     {
       "name": "picks_score_bar",
       "rect": [
-        679,
-        955,
-        555,
-        49
+        290,
+        998,
+        1340,
+        62
       ],
       "style": {
         "label": "Picks/Score Bar",
@@ -213,10 +213,10 @@
     {
       "name": "picks_text",
       "rect": [
-        710,
-        963,
-        330,
-        35
+        305,
+        1006,
+        635,
+        46
       ],
       "style": {
         "label": "Race Picks Text",
@@ -226,10 +226,10 @@
     {
       "name": "score_text",
       "rect": [
-        960,
-        963,
-        290,
-        35
+        980,
+        1006,
+        635,
+        46
       ],
       "style": {
         "label": "Score Text",
@@ -239,9 +239,9 @@
     {
       "name": "picks_header",
       "rect": [
-        75,
-        109,
-        696,
+        28,
+        93,
+        717,
         30
       ],
       "style": {
@@ -252,9 +252,9 @@
     {
       "name": "specials_header",
       "rect": [
-        783,
-        107,
-        502,
+        781,
+        93,
+        513,
         30
       ],
       "style": {
@@ -265,9 +265,9 @@
     {
       "name": "description_header",
       "rect": [
-        1296,
-        107,
-        524,
+        1330,
+        93,
+        562,
         30
       ],
       "style": {

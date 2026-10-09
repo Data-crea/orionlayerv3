@@ -40,6 +40,12 @@ class CustomRaceScreen(ScreenBase):
     SCREEN_NAME = "custom_race"
     GAME_SCREEN_ID = 50     # Custom Race sub-screen (patched in racesel.cpp)
     USE_FRAME = True
+    #: THE SCREEN SHELL (work order 225): the three columns fill the content
+    #: rectangle above the button row in their old proportion, the headers
+    #: at the inset; the picks and score bar stands in the row between CLEAR
+    #: (the row's first slot) and ACCEPT (the closing action); both
+    #: resolution lists hold the same rects (`boxes.json`).
+    SHELL_WORN = True
     FRAME_TITLE = "Custom Race"
     FRAME_BTN_LEFT = ("Clear", 4)     # field 4 = Default/Clear (hotkey C)
     FRAME_BTN_RIGHT = ("Accept", 3)   # field 3 = Accept (hotkey A)
