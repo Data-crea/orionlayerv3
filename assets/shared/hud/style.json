@@ -394,12 +394,13 @@
     "_glow_note": "A glow is the edge line blurred by three box passes, the classic approximation of a gaussian: pygame 2.6 has no blur, numpy's cumulative sum is exact and fast.",
     "button": {
       "hover_edge_from": "action.edge",
-      "hover_fill_from": "panel.fill_edge",
+      "hover_fill_from": "fill.panel",
       "active_fill_from": "fill.selected",
       "active_edge_from": "action.edge",
       "disabled_alpha": 0.45,
       "_note": "The HUD shows every nav button in ONE state. Hover takes the HUD's own brightest lit edge (the TURN button's) and the panel's inner glow as fill; active is the shared 'on' fill (`mix.on`, work order 223, which replaced the colony mockup's selected row: under a dark frame colour that fill went to black with every other fill and 'on' could not be seen, 208 P1); disabled is the normal button at 45 % opacity, a value chosen by eye and not measured. None of the three is measured, all three are named (169 parked, P4).",
-      "fill_from": "fill.button"
+      "fill_from": "fill.button",
+      "_hover_note": "Work order 227 (decision 94): the hover fill is a box fill, so it is the fill family's \u2014 the panel's colour: lighter than a button, darker than 'selected', at every frame colour (it was the panel's inner glow, panel.fill_edge, which the frame brightness took darker than the button's own fill: hover read darker than normal at Data's brightness 0.25, seen live in 227's frame-time probe at 3840x2160)."
     },
     "mix": {
       "on": {
