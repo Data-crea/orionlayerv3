@@ -31,6 +31,19 @@ and the click then does what it does (a button, a mission).
 DEVIATION `spy_drop_rest`: what does not fit the target group stays in the
 group it came from (the original keeps it in hand for another drop); HD
 keeps no hand across a command.
+
+SET DOWN IS SET DOWN (work order 228 C, Data: "when it is set down it
+appears for a moment at its starting place and then at the target"). The
+cause: at the drop the hand was emptied and the command sent, but the
+groups were drawn from the wire, which shows the move only from the
+engine's first snapshot after it — so for the frames between, the spies
+stood in their old group again; a mission click had the same gap. The
+original moves its own arrays at once (`Move_Spy_Group_From_Mouse_`,
+racescrn.cpp:390-408) and writes the record when the screen is left
+(:518-527), so its picture never goes back. HD now draws what the send
+expects (`Sent`, `shown`) from the drop on, until the wire shows it; if the
+engine refuses (no such state within `REFUSED_AFTER` new snapshots) the
+wire's groups are drawn again — the spies go back once.
 """
 from dataclasses import dataclass
 
@@ -79,6 +92,45 @@ def drop(counts, hand, target):
     if rest:
         counts[hand.source] += rest     # HD keeps no hand across a send
     return counts, rest
+
+
+#: New snapshots without the expected groups after which a send counts as
+#: refused (the turn popups' `RESEND_AFTER`, core/turnpopup.py).
+REFUSED_AFTER = 20
+
+
+@dataclass
+class Sent:
+    groups: dict            # {slot index or AGENTS: spies} the send expects
+    missions: dict          # {slot index: mission 0-2} it sets
+    snapshots: int = 0      # new snapshots seen since
+
+
+def on_wire(sent, slots, agents):
+    """True once the wire shows every group and mission the send set."""
+    return groups(slots, agents) == sent.groups and all(
+        s.mission == sent.missions[s.index] for s in slots
+        if s.index in sent.missions)
+
+
+def settle(sent, slots, agents, new_snapshot):
+    """The pending send after one update: None once the wire shows it or
+    after `REFUSED_AFTER` new snapshots without it."""
+    if sent is None or on_wire(sent, slots, agents):
+        return None
+    sent.snapshots += int(bool(new_snapshot))
+    return None if sent.snapshots > REFUSED_AFTER else sent
+
+
+def shown(slots, agents, hand, sent):
+    """({group: spies drawn}, {slot: mission drawn}): the pending send's
+    groups and missions while one is pending, else the wire's; what is in
+    hand has left its group."""
+    counts = dict(sent.groups) if sent is not None else \
+        groups(slots, agents)
+    if hand is not None and hand.source in counts:
+        counts[hand.source] -= hand.count
+    return counts, dict(sent.missions) if sent is not None else {}
 
 
 def races_list(slots, counts, missions=None):

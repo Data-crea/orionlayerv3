@@ -89,7 +89,8 @@ def draw_fields(surface, screen, i):
         hud.field(surface, nd.rect(layout, box), layout.scale)
 
 
-def draw_slot(surface, screen, slot, art, lit=False, carried=0):
+def draw_slot(surface, screen, slot, art, lit=False, carried=0,
+              mission=None):
     """One race: portrait and frame, name, treaty lines or NO CONTACT, the
     IGNORED mark, and — for an active race — the bar, the slider, the spies
     and the mission row."""
@@ -137,7 +138,8 @@ def draw_slot(surface, screen, slot, art, lit=False, carried=0):
         # racescrn.cpp:411-414): it shows what stays (work order 226 E).
         draw_icons(surface, screen, geom.SPY_GROUP[i], slot.spies - carried,
                    screen.my_race, art)
-        _draw_missions(surface, screen, i, slot.mission)
+        _draw_missions(surface, screen, i,
+                       slot.mission if mission is None else mission)
     else:
         _draw_missions(surface, screen, i, None)
 
