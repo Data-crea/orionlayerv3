@@ -48,7 +48,6 @@ from core import textfit
 COL_TITLE = palette.col("help", "title", (72, 144, 56))
 COL_BODY = palette.col("help", "body", (72, 144, 56))
 COL_CLOSE = palette.col("help", "close", (150, 168, 200))
-COL_FILL = palette.col("help", "fill", (16, 16, 24))
 
 # Reference units (1920x1080), before the box's font_scale.
 FONT_TITLE = 30

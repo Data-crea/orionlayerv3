@@ -125,11 +125,6 @@ class EmpireIdentityScreen(ScreenBase):
         rid = getattr(sel, "_selected_id", None)
         return self._data.get("race_by_select_id", {}).get(str(rid), default)
 
-    def set_race(self, race_key):
-        """Change the emblem race (hook for later wiring)."""
-        if race_key in bn.RACES:
-            self._race = race_key
-
     def _load_homeworld(self):
         path = self.asset_path("assets", "homeworld.png")
         self._homeworld = (pygame.image.load(path).convert_alpha()

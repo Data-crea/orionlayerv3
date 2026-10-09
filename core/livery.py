@@ -138,10 +138,6 @@ class Livery:
     def __repr__(self):
         return "Livery(%s, %s, %s, %.2f, own=%s)" % self.key()
 
-    def with_own(self, own):
-        return Livery(self.pattern, self.core, self.second, self.strength,
-                      own)
-
     def second_for(self, colour):
         """The second colour on `colour`'s ships: the player's own only
         (decision 8), and never under Full (no second zone)."""
