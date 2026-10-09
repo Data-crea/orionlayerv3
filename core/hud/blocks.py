@@ -491,8 +491,17 @@ def title_plate(surface, center_x, top_y, scale, text="",
     else:
         panel(surface, box, scale, lit=True)
     if text and style_renderer is not None:
-        s = hudtext.render(style_renderer, text.upper(), "title", box.h,
-                           colour or hudtext.colour("title"))
+        col = colour or hudtext.colour("title")
+        s = hudtext.render(style_renderer, text.upper(), "title", box.h, col)
+        # A TITLE FITS ITS PLATE (work order 225): a long one — the colony's
+        # "INDUSTRIAL COLONY OF SOL II" — steps down until it stands inside
+        # the lit box instead of running into the lamps; one that fits is
+        # drawn exactly as before.
+        k = 1.0
+        while s.get_width() > box.w and k > 0.5:
+            k -= 0.05
+            s = hudtext.render(style_renderer, text.upper(), "title", box.h,
+                               col, scale=k)
         hudtext.blit(surface, s, box)
     return box
 

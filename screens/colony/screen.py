@@ -86,9 +86,21 @@ class ColonyScreen(ScreenBase):
     SCREEN_NAME = "colony"
     GAME_SCREEN_ID = geom.GAME_SCREEN_ID
     USE_FRAME = False
+    SHELL_WORN = True
+    #: THE SCREEN SHELL (work order 225): the colony screen is one picture —
+    #: the sky and ground with the windows over them — so its 640x480 stage
+    #: is fitted, in proportion, into the rectangle's full height, centred
+    #: (`stage`, `core.panelmap`); its title stands on the plate.
+    REGIONS = (("stage", (0, 0, 639, 479), True, True),)
+    SHELL_STAGE = "stage"
+    #: The four buttons are slanted and hit as drawn (decision 5; the audit
+    #: found them hit as their rectangles).
+    SLANTED = ("CHANGE", "BUY", "LEADERS", "RETURN")
 
     def __init__(self, app):
         super().__init__(app)
+        from core.hud import shell
+        self.shell = shell.Shell(title=self._shell_title)
         self._state = None
         self._view = None
         self.pick = None
@@ -164,6 +176,7 @@ class ColonyScreen(ScreenBase):
                 coldraw.text(surface, self, self.message,
                              *geom.HOVER_CENTRE, 600, "value", "negative",
                              align="center")
+        self.render_shell(surface)
         self.render_help(surface)
 
     def render_backdrop(self, surface):
@@ -176,6 +189,7 @@ class ColonyScreen(ScreenBase):
         self._render_background(surface)
         coldraw.draw(surface, self, view, self._state, self._words,
                      Names(self._state, self._buildings, self._strings))
+        self.render_shell(surface)
 
     # ── Sending ──────────────────────────────────────────────────────
 
@@ -246,7 +260,7 @@ class ColonyScreen(ScreenBase):
                            ("LEADERS", geom.LEADERS),
                            ("RETURN", geom.RETURN)):
             f = self._field(ident)
-            if f is not None and self._hit(f, screen_x, screen_y):
+            if f is not None and self._slant_hit(f, screen_x, screen_y):
                 self.send(f, key)
                 return None
         for native in list(geom.PROD_ROWS.values()) + [geom.MORALE]:
@@ -270,6 +284,21 @@ class ColonyScreen(ScreenBase):
         found by work order 200 B's walk against the original's list."""
         native = spec.get("native")
         return nd.rect(self.layout, native) if native else None
+
+    def _slant_hit(self, f, x, y):
+        from core.hud import shell
+        return shell.hit(nd.rect(self.layout, (f.x, f.y, f.x_end, f.y_end)),
+                         x, y)
+
+    def _shell_title(self):
+        view = self._view
+        # READY, and GAME_BOX: the page under the game's own box
+        # (`render_backdrop`) wears its title too.
+        if view is None or view.state not in (colwire.READY,
+                                              colwire.GAME_BOX):
+            return ""
+        names = Names(self._state, self._buildings, self._strings)
+        return coldraw.title_words(self, view, self._words, names)
 
     def _hit(self, f, x, y):
         return nd.rect(self.layout, (f.x, f.y, f.x_end, f.y_end)) \

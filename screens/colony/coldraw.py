@@ -155,13 +155,19 @@ def system_picture(art, planet, state, view):
         stem, view.colony.climate, _bg_type(view))
 
 
-def _title_line(surface, screen, view, state, words, names):
-    # `Get_Planet_Name_` with the "Prime" word (colony.cpp:1019-1039;
-    # haccess.cpp:216-221), not the lists' No_Prime form (work order 223).
+def title_words(screen, view, words, names):
+    """The colony's title: `Get_Planet_Name_` with the "Prime" word
+    (colony.cpp:1019-1039; haccess.cpp:216-221), not the lists' No_Prime
+    form (work order 223). On the shell's plate since work order 225."""
     name = colonyrows.planet_name(view.colony, names.planets, names.stars,
                                   first=_first_planet_word(screen))
-    text(surface, screen, words.title(view, name), *geom.TITLE_CENTRE, 380,
-         "title", "title", align="center")
+    return words.title(view, name)
+
+
+def _title_line(surface, screen, view, state, words, names):
+    if not getattr(screen, "SHELL_WORN", False):
+        text(surface, screen, title_words(screen, view, words, names),
+             *geom.TITLE_CENTRE, 380, "title", "title", align="center")
     # Blockaded, Plague or Pop Boom (open fix 37), or nothing at all.
     status = words.status(view, getattr(state, "player_num", 0), state)
     text(surface, screen, status, *geom.STATUS_AT, 120, "value",
