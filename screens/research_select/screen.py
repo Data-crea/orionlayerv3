@@ -91,6 +91,8 @@ disappear (decision 61):
   DEVIATION     a name too wide is SHRUNK, where `Squeeze_Print_`
                 compresses the glyphs (panel.py)
 """
+import pygame
+
 from core.researchscreen import (            # noqa: F401  (re-exported)
     COST_SUFFIX, NAMES_MISSING, NO_PLAYER, READY, UNVALIDATED,
     WORDING_MISSING, ResearchPanelScreen, cost_suffix)
@@ -112,9 +114,57 @@ MARKED = {
 }
 
 
+#: THE SCREEN SHELL (work order 225): select mode is a full screen — the
+#: science room's strip and the panel — so its two native regions are
+#: fitted into the content rectangle, side by side in their native
+#: proportion (`core.panelmap`), the title on the plate. Each region IS
+#: the box drawn as its panel (the science room's strip, the panel's lit
+#: edge), so both meet the rectangle's edges. Change mode is an overlay
+#: over the map and keeps its place (the order: no geometry change for
+#: overlays); the shared panel code is not touched.
+REGIONS_NATIVE = (("science_room", (0, 0, 160, 479)),
+                  ("panel", (165, 4, 632, 472)))
+
+
 class ResearchSelectScreen(ResearchPanelScreen):
     SCREEN_NAME = "research_select"
     GAME_SCREEN_ID = 53         # synthetic, open fix 24, wire only
     MODE = "select"
     LAYOUT_PATH = "screens/research_select/layout.json"
     HAS_EXIT = False
+    SHELL_WORN = True
+
+    def __init__(self, app):
+        super().__init__(app)
+        from core.hud import shell
+        self.shell = shell.Shell(title=lambda: self._data.get("title", ""))
+
+    def build_native_map(self):
+        """The two regions' panels are the shell's split of the content
+        rectangle, not boxes: every box of this screen is SEATED from the
+        geometry's own table (`researchnative.seat`), which refuses a box it
+        has no native rectangle for."""
+        from core import panelmap
+        from core.hud import shell
+        L = self.app.layout
+        widths = [float(n[2] - n[0] + 1) for _k, n in REGIONS_NATIVE]
+        parts = shell.split(shell.content(L), L, widths)
+        self._native_map = panelmap.PanelMap(L, [
+            (k, n, r, True) for (k, n), r in zip(REGIONS_NATIVE, parts)])
+
+    def _dress_boxes(self):
+        """Seated, then placed through the map: `Box.update_layout` scales
+        a reference rect uniformly, so a seated box is re-placed where the
+        map draws its native rectangle (decision 5: the same rect the
+        native drawing and `native_point` use). The title's words stand on
+        the shell's plate, not in the panel."""
+        super()._dress_boxes()
+        for box in self.boxes:
+            if box.name == "title":
+                box.style["label"] = ""
+            if box.ref_rect is not None:
+                box.screen_rect = pygame.Rect(*self.layout.rect(box.ref_rect))
+
+    def render_content(self, surface):
+        super().render_content(surface)
+        self.render_shell(surface)
