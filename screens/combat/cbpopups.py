@@ -319,6 +319,11 @@ class Popups:
             client.inject_click(*slider_point(drag[2], cp["min"], cp["max"]))
             self._pending = (cp["marines"], time.monotonic())
 
+    def cancel(self):
+        """The bar let go while HD holds its frame or shows the game's
+        picture (work order 226 A, D13): the drag ends, nothing is sent."""
+        self._drag = None
+
     def key(self, key, state, client):
         """ESC: the board popup's own hotkey; closes HD's scan view."""
         kind = self.showing(state)

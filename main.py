@@ -26,6 +26,7 @@ from core import handover
 from core import helppopup
 from core import f12notice
 from core import overlays
+from core import pointergate
 
 logging.basicConfig(level=logging.INFO,
                     format="%(asctime)s.%(msecs)03d %(name)s: %(message)s",
@@ -166,6 +167,8 @@ class App:
         #: The HD message box and the turn-time popups (open fixes 29 and
         #: 49, work order 188), drawn over the held frame: `core/overlays`.
         self._overlays = overlays.Overlays(self)
+        #: Motion, wheel and release ask the hold and F12 too (226 A, D13).
+        self._pointer_gate = pointergate.PointerGate()
         self._note_labels = self.res.load_json(
             "assets/shared/fallback/labels.json", {}) or {}
 
@@ -302,14 +305,22 @@ class App:
             elif self.editor.handle_event(event):
                 pass  # editor consumed it
             elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
-                self._handle_click(*event.pos)
+                self._pointer_gate.press(self._handle_click(*event.pos))
             elif event.type == pygame.MOUSEBUTTONUP and event.button == 1:
                 # The end of a held press, duck-typed like the right button:
-                # screens with a drag (the GAME menu's volume bars) answer.
+                # screens with a drag (the GAME menu's volume bars) answer —
+                # only for a press they got, and only while HD shows the
+                # game's state; otherwise the gesture ends unsent (D13).
                 top = self.dispatcher.top
-                if top and hasattr(top, "handle_left_release") \
-                        and not self.editor.active:
-                    top.handle_left_release(*event.pos)
+                verdict = self._pointer_gate.release(self._pointer_open())
+                if top is None or self.editor.active:
+                    pass
+                elif verdict == pointergate.DELIVER:
+                    if hasattr(top, "handle_left_release"):
+                        top.handle_left_release(*event.pos)
+                elif verdict == pointergate.CANCEL:
+                    if hasattr(top, "handle_left_cancel"):
+                        top.handle_left_cancel()
             elif (event.type == pygame.MOUSEBUTTONDOWN and event.button == 3
                   and self.connected and self._showing_original()):
                 # The F12 view: the game's own right click, at the point
@@ -330,9 +341,12 @@ class App:
                 elif top and hasattr(top, "handle_right_button"):
                     top.handle_right_button(down, *event.pos)
             elif event.type == pygame.MOUSEMOTION:
-                self.dispatcher.route_motion(*event.pos)
+                if pointergate.PointerGate.passes(self._pointer_open()):
+                    self.dispatcher.route_motion(*event.pos)
             elif event.type == pygame.MOUSEWHEEL:
-                if not self.editor.handle_event(event):
+                if not pointergate.PointerGate.passes(self._pointer_open()):
+                    pass                 # a held frame / F12 (D13)
+                elif not self.editor.handle_event(event):
                     top = self.dispatcher.top
                     if top and hasattr(top, "handle_mousewheel"):
                         mx, my = mouse_input.pos()
@@ -425,9 +439,17 @@ class App:
             shown, top, self.dispatcher, sid)
         return shown
 
+    def _pointer_open(self):
+        """True while the HD screen on top shows the game's state: not the
+        game's picture (F12, decision 76) and not a held frame (decision
+        74). Work order 226 A (D13): motion, wheel and release ask this, as
+        a click and a key always did."""
+        return not self._showing_original() and not self._handover.holding
+
     def _handle_click(self, screen_x, screen_y):
+        """True when the click reached the HD screen on top."""
         if self.editor.active:
-            return  # editor handles all clicks
+            return False  # editor handles all clicks
         if self._showing_original():
             self.original_view.forward_click(
                 self.client, screen_x, screen_y,
@@ -435,9 +457,11 @@ class App:
         elif self._handover.holding:
             if self._overlays.active:
                 self._overlays.click(screen_x, screen_y)
-            return  # a held frame is not the game's state (180 A2)
+            return False  # a held frame is not the game's state (180 A2)
         elif self.dispatcher.active:
             self.dispatcher.route_click(screen_x, screen_y)
+            return True
+        return False
 
     def _update(self):
         """Poll game state and update active screen + overlay."""

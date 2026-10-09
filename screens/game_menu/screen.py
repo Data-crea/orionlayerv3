@@ -314,6 +314,12 @@ class GameMenuScreen(ScreenBase):
         gmlivery.release(self, screen_x, screen_y)
         gmsliders.release(self, screen_x, screen_y)
 
+    def handle_left_cancel(self):
+        """A drag that crossed a hold or F12 ends unsent (226 A, D13)."""
+        super().handle_left_cancel()
+        gmlivery.release(self, 0, 0)       # sends nothing, ends the drag
+        self.slider_drag = None            # release() would inject a click
+
     def handle_key_event(self, event):
         if self.save.handle_key_event(event):
             return

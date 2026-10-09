@@ -169,6 +169,9 @@ class CombatInput:
         if not self._tail:
             self._pops.release(self._state, self.app.client)
 
+    def handle_left_cancel(self):
+        self._pops.cancel()
+
     def handle_mouse_motion(self, screen_x, screen_y):
         self._pointer = (screen_x, screen_y)    # the rows' hover (`_hover`)
         self._pops.motion(screen_x)

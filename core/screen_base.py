@@ -358,6 +358,12 @@ class ScreenBase(HelpMixin):
         """The press ends (core.pressfeedback)."""
         self.pressed.release()
 
+    def handle_left_cancel(self):
+        """The press ends while HD holds its frame or shows the game's
+        picture (`core.pointergate`, work order 226 A): the gesture ends
+        and nothing is sent. A screen with a drag drops it here."""
+        self.pressed.release()
+
     def handle_mouse_motion(self, screen_x, screen_y):
         """Update hover state for all boxes."""
         for box in self.boxes:
