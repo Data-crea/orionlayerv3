@@ -53,6 +53,14 @@ class AudienceScreen(ScreenBase):
     # source); `augeom` names the same, and the smoke group holds the two.
     GAME_SCREEN_ID = 57
     EXTRA_SCREEN_IDS = (58,)
+    SHELL_WORN = True
+    #: THE SCREEN SHELL (work order 225): the audience has no title in the
+    #: game (no plate) and is ONE picture — the room, the ambassador, the
+    #: statement and the menu over them — so its 640x480 stage is fitted,
+    #: in proportion, into the rectangle's full height, centred (the
+    #: `stage` box, `core.panelmap`).
+    REGIONS = (("stage", (0, 0, 639, 479), True, True),)
+    SHELL_STAGE = "stage"
     USE_FRAME = False
 
     def __init__(self, app):

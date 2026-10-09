@@ -50,6 +50,10 @@ class ScreenBase(HelpMixin):
     #: into one of its own boxes — [(box name, native rect, hit[, fill])],
     #: `core.panelmap.PanelMap.for_screen`. None: no map, the 4:3 island.
     REGIONS = None
+    #: A PICTURE screen in the shell (the audience's room): the box its 4:3
+    #: picture fills — the rectangle's full height, centred, every panel
+    #: of the screen inside it. None: a panel screen.
+    SHELL_STAGE = None
 
     def __init__(self, app):
         self.app = app
