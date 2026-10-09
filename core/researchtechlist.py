@@ -120,10 +120,16 @@ HYPER_DONE_ABOVE = 20
 #: `s_list_state.group_colors` plus the overrun the module docstring
 #: explains: 1 -> `_tech_color[3]`, 2 -> `_tech_color[0]` (the panel's
 #: own row colour), 4 -> `_tech_color[2]` (the panel's current-research
-#: colour).
+#: colour). 3 is an APPLICATION already researched in a field still in the
+#: list: `Get_Group_List_` keeps it (tech.cpp:1142-1151) and the literal's
+#: fourth entry is `&_tech_color[3]` again (tech.cpp:97), so it is drawn
+#: as 1 is. It was missing until work order 225, and the first live save
+#: with such an application opened the list and stopped the client
+#: (KeyError 3 in `draw`).
 STATUS_COLOUR = {0: ("list_none", (120, 132, 156)),
                  1: ("list_done", (150, 176, 210)),
                  2: ("row", (198, 212, 238)),
+                 STATUS_RESEARCHED: ("list_done", (150, 176, 210)),
                  STATUS_CURRENT: ("row_current", (250, 226, 150))}
 
 
