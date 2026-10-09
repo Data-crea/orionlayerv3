@@ -59,8 +59,7 @@ class RaceReportScreen(InfoScreen):
     GAME_SCREEN_ID = None
     SHARES_GAME_SCREEN_ID = geom.SHARED_SCREEN_ID
     USE_FRAME = False
-    SHELL_WORN = False      # its own step of work order 225, later
-    REGIONS = None
+    SHELL_WORN = True       # work order 225: Info's shell and regions
 
     def __init__(self, app):
         super().__init__(app)
@@ -146,24 +145,29 @@ class RaceReportScreen(InfoScreen):
         self._boxes, self._hits, self._drawn = {}, {}, []
         layout = self.layout
         from core.hud import blocks as hud
-        hud.panel(surface, nd.rect(layout, geom.CONTENT), layout.scale)
+        from core.hud import shell
+        # The content panel is the screen's own box (work order 225); the
+        # Tech Review's title stands on the shell's plate, as on Info.
+        panel = self.box_screen_rect("content_panel")
+        hud.panel(surface, panel if panel is not None else
+                  nd.rect(layout, geom.CONTENT), self.ref_layout.scale)
         view = self.view()
+        if view is None or self._words is None:
+            # The left panel stands before the column's data comes, as on
+            # Info: the shell's rectangle is never half drawn (225).
+            nd.draw_box(surface, self, geom.LEFT_PANEL)
         if view is not None and self._words is not None:
             rrdraw.draw_column(surface, self, view, self._words,
                                self._race_art)
-            title = infodraw.T("info.title.tech", "") or ""
-            if title:
-                infodraw.infobox.line(surface, self, title,
-                                      infodraw.R(self, igeom.TITLE_BOX),
-                                      infodraw.px(self, "name"),
-                                      infodraw.HIGH, "center")
             infoview.tech(self, surface, view["player"])
-        r = infodraw.R(self, igeom.EXIT)
-        hud.small_button(surface, r, layout.scale, "normal")
-        infodraw.infobox.line(surface, self, infodraw.T("info.exit", "RETURN"),
-                              r.inflate(-8, 0), infodraw.px(self, "button"),
-                              infodraw.hudtext.colour("button"), "center")
+        shell.draw_button(surface, self.exit_rect(), self.ref_layout,
+                          infodraw.T("info.exit", "RETURN"), self.style)
+        self.render_shell(surface)
         self.render_help(surface)
+
+    def _title(self):
+        """The Tech Review's title, as the report shows only that page."""
+        return infodraw.T("info.title.tech", "") or ""
 
     # ── Input ─────────────────────────────────────────────
 
@@ -171,7 +175,8 @@ class RaceReportScreen(InfoScreen):
         if self.help_consumes_click(screen_x, screen_y):
             return None
         p = self._native(screen_x, screen_y)
-        if self._in(p, geom.EXIT) or self._in(p, igeom.EXIT):
+        from core.hud import shell
+        if shell.hit(self.exit_rect(), screen_x, screen_y):
             self._send_exit("RETURN")
             return None
         for k in range(4):
