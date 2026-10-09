@@ -47,8 +47,7 @@ def line(words):
 def draw(surface, screen, view, names):
     layout = screen.layout
     d = view.design
-    hud.title_plate(surface, nd.point(layout, 320, 0)[0], 0, layout.scale,
-                    screen.word("title"), style_renderer=screen.style)
+    # The title stands on the shell's plate (work order 225).
     for k, native in enumerate(geom.PANELS):
         r = nd.rect(layout, native)
         if k == geom.NAME_PANEL:

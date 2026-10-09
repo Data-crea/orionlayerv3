@@ -96,6 +96,14 @@ class ShipDesignScreen(ScreenBase):
     # source); `sdgeom` names the same, and the smoke group holds the two.
     GAME_SCREEN_ID = 3
     USE_FRAME = False
+    SHELL_WORN = True
+    #: THE SCREEN SHELL (work order 225): the designer's page — its panels
+    #: run the original's whole width, name box to bottom line — fitted into
+    #: the content rectangle as one region whose boxes reach its edges
+    #: (`fill`, the `page` box, `core.panelmap`); the title on the plate.
+    REGIONS = (("page", (14, 20, 628, 472), True, True),)
+    #: The three bottom buttons are slanted and hit as drawn (decision 5).
+    SLANTED = ("Cancel", "Clear", "Build")
 
     def __init__(self, app):
         super().__init__(app)
@@ -106,6 +114,8 @@ class ShipDesignScreen(ScreenBase):
         self.name_edit = sdname.NameEditor(self)
         self._data = self.app.res.load_json(
             "screens/ship_design/layout.json", {}) or {}
+        from core.hud import shell
+        self.shell = shell.Shell(title=lambda: self.word("title"))
 
     def names(self):
         if self._names is None:
@@ -178,6 +188,7 @@ class ShipDesignScreen(ScreenBase):
                 self.name_edit.input.render(
                     surface, nd.rect(self.layout, geom.NAME_RECT),
                     self.style, self.layout)
+        self.render_shell(surface)
         self.render_help(surface)
 
     # ── Right-click help, `_static_design_screen_help_list` ───────────
@@ -253,6 +264,11 @@ class ShipDesignScreen(ScreenBase):
         self.app.client.inject_click(x, y)
         return True
 
+    def _slant_hit(self, f, x, y):
+        from core.hud import shell
+        return shell.hit(nd.rect(self.layout, (f.x, f.y, f.x_end, f.y_end)),
+                         x, y)
+
     def _hit(self, f, x, y):
         return nd.rect(self.layout, (f.x, f.y, f.x_end, f.y_end)) \
             .collidepoint(x, y)
@@ -303,7 +319,9 @@ class ShipDesignScreen(ScreenBase):
                              ("shield", geom.SHIELD),
                              ("computer", geom.COMPUTER)):
             f = sdwire.live_field(live, ident)
-            if f is not None and self._hit(f, screen_x, screen_y):
+            if f is not None and (self._slant_hit(f, screen_x, screen_y)
+                                  if label in self.SLANTED else
+                                  self._hit(f, screen_x, screen_y)):
                 self.send(f, label)
                 return None
         for size, (y1, _y2) in enumerate(geom.HULL_ROWS):
