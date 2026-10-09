@@ -12,10 +12,8 @@
   "marks": {
     "deviation_ship_row_dim": "NARROWED, work order 208 B8. A design LARGE or bigger is dimmed while the colony has no star base, star fortress or battlestation (colbldg.cpp:625-633, bqdraw.design_needs_base), as in the original. Still not dimmed: what Colony_Can_Build_Product_ refuses (:637-640) and a special ship whose Auto_Design_Type_ is 0 (:642-652).",
     "deviation_hd_font": "Text in the HD font at a size from the native line pitch, fitted to the original's width (the Leaders screen's rule).",
-    "omission_description": "The selection panel's description comes from HELP.LBX by tech application (Print_App_Description_, colbldg.cpp:1056-1076); the map from application to help entry is not read, so no description is drawn.",
-    "omission_product_picture": "The selection's picture (colbldg.cpp:1108-1113) is the player's art; not drawn.",
-    "omission_design_stats": "A design's nine stat lines (Draw_Ship_Design_Info_, colbldg.cpp:1205-1303) need the weapon and system name tables; the design's name, cost and build time are drawn.",
     "omission_delete_hint": "The original prints 'delete %s' over the queue row ITS pointer is on (colbldg.cpp:714-750); HD's pointer is not the game's, and the hint is not drawn.",
-    "hd_extension_summary_follows_hd_pointer": "The summary shows the item under HD's pointer, where the original's follows its own (_scanned_prod, colbldg.cpp:825); hovering sends nothing."
+    "hd_extension_summary_follows_hd_pointer": "The summary shows the item under HD's pointer, where the original's follows its own (_scanned_prod, colbldg.cpp:825); hovering sends nothing.",
+    "deviation_one_edge": "Work order 226 D: a list column is its shell panel, the original's inner box round the list is not drawn again inside it; the picture, summary and description boxes are cells of the middle panel (the shell's field); the lists' words stand at the shell's inset from the panel's inner line (Data's screenshot of 9 October 2026: no inset, two edges)."
   }
 }

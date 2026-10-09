@@ -15,17 +15,25 @@ check 090q:
                  fortress or battlestation, as the original does
                  (:625-633); what `Colony_Can_Build_Product_` and
                  `Auto_Design_Type_` dim (:637-652) is not copied
+  TRANSCRIPTION  the selected product's picture in the grid room and its
+                 information in the large box (work order 226 D, Data's
+                 decision 3; `bqproduct`, `screens/colony/colroom`)
   DEVIATION      `button_words`, `hd_font` — the Leaders and Races rules
-  OMISSION       `description`, `product_picture`, `design_stats`,
-                 `delete_hint` — the HELP.LBX description, the product's
-                 picture, a design's nine stat lines, and the "delete %s"
-                 the original prints over its own pointer's queue row
+  DEVIATION      `one_edge` (work order 226 D): a list column is its shell
+                 panel — the original's inner box round the list is not
+                 drawn again inside it — and the picture, summary and
+                 description boxes are cells of the middle panel (the
+                 shell's field), not panels in a panel; the lists' words
+                 stand at the shell's inset from the panel's inner line
+  OMISSION       `delete_hint` — the "delete %s" the original prints over
+                 its own pointer's queue row
 """
+from core import prodname
 from core.hestrings import printf
 from core.hud import blocks as hud
 from core.hud import hover as hud_hover
 from core.hud import text as hudtext
-from screens.colony.coldraw import text
+from screens.colony.coldraw import font, text
 from screens.leaders import ldrdraw as nd
 
 from . import bqwire as w
@@ -40,12 +48,17 @@ def draw(surface, screen, view, state, names, hover):
         r = screen.box_screen_rect(name)
         if r is not None:
             hud.panel(surface, r, screen.ref_layout.scale)
-    for box in (w.BUILDINGS_BOX, w.PICTURE_BOX, w.SUMMARY_BOX, w.OTHERS_BOX,
-                w.DESCRIPTION_BOX, w.QUEUE_BOX):
-        nd.draw_box(surface, screen, box)
+    # ONE EDGE PER GROUP (DEVIATION `one_edge`): the two lists are their
+    # panels; the middle panel's boxes are its cells. The queue's rows are
+    # fields of their own (`_queue`).
+    for box in (w.PICTURE_BOX, w.SUMMARY_BOX, w.DESCRIPTION_BOX):
+        hud.field(surface, nd.rect(screen.layout, box), screen.layout.scale)
+    product = hover if hover is not None else view.items[0]
+    _picture(surface, screen, view, state, names, product)
     _lists(surface, screen, view, state, names)
     _queue(surface, screen, view, state, names)
     _summary(surface, screen, view, state, names, hover)
+    _description(surface, screen, view, state, product)
     _buttons(surface, screen, state, view)
 
 
@@ -89,18 +102,124 @@ def design_needs_base(view, state, product):
 
 
 def _lists(surface, screen, view, state, names):
+    """The two lists, each word at the shell's inset from its panel's inner
+    line (DEVIATION `one_edge`: the original's x 13 and 485 are its boxes'
+    own edges, which in the shell ARE the panel's inner line)."""
+    from core.hud import shell
     dim = hudtext.colour("sub")
-    for entries, rows, x, width, building in (
-            (view.buildings, view.building_rows, 13, 171, True),
-            (view.others, view.other_rows, 485, 138, False)):
+    pad = shell.inset(screen.ref_layout)
+    for entries, rows, x, width, building, panel in (
+            (view.buildings, view.building_rows, 13, 171, True, "left_panel"),
+            (view.others, view.other_rows, 485, 138, False, "right_panel")):
+        r = screen.box_screen_rect(panel)
+        inner = shell.inner(r, screen.ref_layout) if r is not None else None
         for e, f in zip(entries, rows):
             if e["id"] == w.SEPARATOR:
                 continue
             bright = view.queued(e["id"]) if building else \
                 not design_needs_base(view, state, e["id"])
             name, _st = names.product(e["id"], state)
-            text(surface, screen, name, x, f.y + 1, width, "value",
-                 "value", colour=None if bright else dim)
+            px, py = nd.point(screen.layout, x, f.y + 1)
+            pw = nd.rect(screen.layout, (0, 0, width, 1)).w
+            if inner is not None:
+                px = max(px, inner.x + pad)
+                pw = min(pw, inner.right - pad - px)
+            nd.blit_text(surface, screen.style, name, px, py, pw,
+                         font(screen.layout, "value"),
+                         hudtext.colour("value") if bright else dim)
+
+
+def _world(view, state):
+    """(climate, ground type, race) the popup's pictures are drawn in."""
+    from core.structs import planet as planet_struct
+    from core.structs import player as player_struct
+    col = view.colony
+    pls = getattr(state, "planets_raw", None) or []
+    bg = planet_struct.parse(pls[col.planet]).climate_bg_type \
+        if 0 <= col.planet < len(pls) else 0
+    raws = getattr(state, "player_raw", None) or []
+    me = getattr(state, "player_num", 0) or 0
+    race = player_struct.parse(raws[me]).race if 0 <= me < len(raws) else 0
+    return int(col.climate), int(bg), int(race)
+
+
+def _ship_parts(view, state, product):
+    """(design picture, queued ship view) for a ship product, else Nones."""
+    from core.structs import player as player_struct
+    from core.structs import ship as ship_struct
+    from screens.refit import refwords
+    kind = prodname.kind(product)
+    raws = getattr(state, "player_raw", None) or []
+    me = getattr(state, "player_num", 0) or 0
+    if kind == prodname.KIND_SHIP_DESIGN and 0 <= me < len(raws):
+        d = refwords.design_view(player_struct.parse(raws[me]),
+                                 prodname.SHIP_DESIGN_BASE - product)
+        return d.picture_num, d
+    if kind == prodname.KIND_QUEUED_SHIP:
+        ships = getattr(state, "ships_raw", None) or []
+        i = prodname.QUEUED_SHIP_BASE - product
+        if 0 <= i < len(ships):
+            return None, ship_struct.parse(ships[i])
+    return None, None
+
+
+def _picture(surface, screen, view, state, names, product):
+    """The picture box: the grid room with the product in it, at a whole
+    step (`colroom`), or the word the original centres there."""
+    from screens.colony import colroom
+    from . import bqproduct
+    if product in (w.NONE, w.SEPARATOR, None):
+        return
+    box = nd.rect(screen.layout, w.PICTURE_BOX)
+    inner = box.inflate(-2, -2)
+    climate, bg, race = _world(view, state)
+    pic, ship = _ship_parts(view, state, product)
+    spec = bqproduct.picture(product, race, pic, ship)
+    colroom.draw(surface, inner, spec or ("room",), climate, bg)
+    if spec is None:
+        word = (screen.e(bqproduct.WORD_IN_BOX[product])
+                if product in bqproduct.WORD_IN_BOX
+                else names.product(product, state)[0])
+        cx, cy = nd.point(screen.layout, *colroom.CENTRE)
+        nd.blit_text(surface, screen.style, word, cx, cy, inner.w,
+                     font(screen.layout, "value"), hudtext.colour("value"),
+                     align="center")
+
+
+def _description(surface, screen, view, state, product):
+    """The large box: the product's help record or setting description,
+    or a design's paragraph, wrapped to the box in the shell's text."""
+    from core import helpformat
+    from core.hud import shell
+    from core.textfit import wrap_text
+    from . import bqproduct
+    if product in (w.NONE, w.SEPARATOR, None):
+        return
+    box = nd.rect(screen.layout, w.DESCRIPTION_BOX)
+    inner = box.inflate(-2 * shell.inset(screen.ref_layout),
+                        -2 * shell.inset(screen.ref_layout))
+    size = font(screen.layout, "value")
+    pitch = int(size * 1.25)
+    lines = []
+    _pic, ship = _ship_parts(view, state, product)
+    if ship is not None:
+        from screens.refit import refwords
+        for row in refwords.design_lines(ship, screen.e, screen.parts()):
+            lines.append("  ".join(str(v) for v in row if v))
+    else:
+        got = bqproduct.text(product, getattr(screen, "helptext", None),
+                             screen.maintext())
+        if got is not None:
+            for ln in helpformat.parse(got[1] or ""):
+                lines.extend(wrap_text(screen.style, ln.plain(), size,
+                                       inner.w) or [""])
+    y = inner.y
+    for ln in lines:
+        if y + pitch > inner.bottom:
+            break
+        nd.blit_text(surface, screen.style, ln, inner.x, y, inner.w, size,
+                     hudtext.colour("value"))
+        y += pitch
 
 
 #: The queue's rows as the game lays its fields out (colbldg.cpp, the

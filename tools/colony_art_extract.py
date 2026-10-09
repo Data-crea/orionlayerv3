@@ -31,6 +31,29 @@ WHAT IT TAKES (colony_main.cpp, colsysdi.cpp, colony.cpp):
     2                    palette 1, the screen's (`Load_Palette_(1, ...)`,
                          colony.cpp:231; fonts.cpp:72-73 loads entry id + 1)
 
+  COLBLDG.LBX
+    0                    the build popup's art, 640 x 480 with its palette:
+                         its picture box (203..285, 9..103) is the GRID ROOM
+                         a product stands in (`Draw_Build_Queue_Popup_`,
+                         colbldg.cpp:1026-1030; work order 226 D)
+  BLDG<n>.LBX
+    30 + (k % 10) * 36   building k + 1's drawing on the colony's ground
+                         at cell (5, 5), n = k // 10 (`Cache_Load_Bldg_`,
+                         colbcach.cpp:4-19; `Bldg_Coords_To_Effective_Frame_`
+                         colony_main.cpp:229) — the build popup cuts it out
+                         (`Draw_Building_With_Bottom_Centered_`, :421-442)
+  COLONY.LBX
+    9 + p                a satellite's drawing, p by `Satellite_Anim_Pic_`
+                         (colony.cpp:205-228)
+  COLONY2.LBX
+    7                    Trade Goods' BC stack (`Prod_Anims_(3, 1, 0)`,
+                         colony.cpp:345-353; colbldg.cpp, TRADE_GOODS)
+  RACEICON.LBX
+    0xA9                 the android a farmer, worker or scientist product
+                         shows (`People_Anim_(0, 4, race)`, colony_main.cpp:
+                         444-462)
+    race * 13 + 11       the race's spy (`Spy_Anim_`, colony.cpp:237-245)
+
 NOT taken: the screen's frames, buttons and sprites (decision 71's HUD
 draws them), the buildings and roads on the ground (OMISSION `roads`), and
 COLONY2's planet ball (0x32), which the map's planet popups draw, not this
@@ -48,13 +71,17 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from core import lbx  # noqa: E402
 from fleet_art_extract import _sha, find_lbx  # noqa: E402
 
-FORMAT_VERSION = 1
+FORMAT_VERSION = 2
 DEFAULT_OUT = os.path.join(ROOT, "screens", "colony", "assets", "gamedata")
 
 CLIMATES, BG_TYPES, SIZES = 10, 3, 5
 SKY = 0x31
 SYS_FIRST, GAS_GIANT, ASTEROIDS, MARKER = 11, 0x3E, 0x3F, 0x41
 SCREEN_PALETTE, PALETTE_BYTES = 2, 256 * 4
+#: BUILDING_COUNT (orion2_consts.h:62); cell (5, 5)'s frame, y odd:
+#: 5 * 6 - 5 + 5 (colony_main.cpp:229-236); COLONY.LBX's satellites
+#: 9..16 (colony.cpp:205-228: pictures 0..7); RACEICON's 13 races (13 entries each, then 0xA9, 0xAA).
+BUILDINGS, BLDG_CELL, SATELLITES, RACES = 49, 30, 8, 13
 
 
 def wanted():
@@ -63,6 +90,18 @@ def wanted():
            "gas_giant": ("COLSYSDI.LBX", GAS_GIANT),
            "asteroids": ("COLSYSDI.LBX", ASTEROIDS),
            "marker": ("COLSYSDI.LBX", MARKER)}
+    # The build popup (work order 226 D): its art, the buildings at cell
+    # (5, 5), the satellites, Trade Goods, the android and the spies.
+    out["build_art"] = ("COLBLDG.LBX", 0)
+    for b in range(1, BUILDINGS):
+        k = b - 1
+        out[f"bldg_{b}"] = (f"BLDG{k // 10}.LBX", BLDG_CELL + (k % 10) * 36)
+    for p in range(SATELLITES):
+        out[f"satellite_{p}"] = ("COLONY.LBX", 9 + p)
+    out["trade_goods"] = ("COLONY2.LBX", 7)
+    out["android"] = ("RACEICON.LBX", 0xA9)
+    for r in range(RACES):
+        out[f"spy_{r}"] = ("RACEICON.LBX", r * 13 + 11)
     for c in range(CLIMATES):
         for t in range(BG_TYPES):
             out[f"ground_{c}_{t}"] = ("PLANETS.LBX", c * BG_TYPES + t)
@@ -73,7 +112,8 @@ def wanted():
 
 def extract(folder=None, out=DEFAULT_OUT, dry_run=False):
     paths = {}
-    for name in ("PLANETS.LBX", "COLONY2.LBX", "COLSYSDI.LBX", "FONTS.LBX"):
+    names = sorted({n for n, _e in wanted().values()} | {"FONTS.LBX"})
+    for name in names:
         found = find_lbx(folder, name)
         if found is None:
             sys.exit(f"{name} not found. Give the folder that holds it:\n"

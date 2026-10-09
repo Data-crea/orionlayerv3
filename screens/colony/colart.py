@@ -40,7 +40,7 @@ GAMEDATA = os.path.join(os.path.dirname(os.path.abspath(__file__)),
                         "assets", "gamedata")
 #: The same folder as a tree path: read through the resolver (`core.blobart`).
 REL = "screens/colony/assets/gamedata"
-FORMAT_VERSION = 1
+FORMAT_VERSION = 2
 HOW = "python tools/colony_art_extract.py"
 CLIMATES, BG_TYPES, SIZES = 10, 3, 5
 

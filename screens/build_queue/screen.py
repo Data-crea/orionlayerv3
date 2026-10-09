@@ -133,6 +133,24 @@ class BuildQueueScreen(ScreenBase):
     def e(self, index):
         return self._strings.string(index)
 
+    def maintext(self):
+        """MAINTEXT's setting descriptions, read once (work order 226 D)."""
+        if getattr(self, "_maintext", None) is None:
+            from core.maintext import MainText
+            lang = (getattr(self.app, "settings", None) or {}).get(
+                "language", "en")
+            self._maintext = MainText(lang)
+        return self._maintext
+
+    def parts(self):
+        """The ship part names a design's paragraph uses (Refit's)."""
+        if getattr(self, "_parts", None) is None:
+            from core.shipparts import ShipPartNames
+            lang = (getattr(self.app, "settings", None) or {}).get(
+                "language", "en")
+            self._parts = ShipPartNames(lang)
+        return self._parts
+
     def word(self, key):
         return (self._data.get("words") or {}).get(key, key.upper())
 
