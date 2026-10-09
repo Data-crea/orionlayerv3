@@ -60,6 +60,15 @@ HOUSING_BUILDING = 14
 #: satellite at (578, 78), people, a spy, freighters and a ship at
 #: (578, 77), a colony ship or transport at (578, 57); Trade Goods and
 #: Refit draw nothing there. Its palette is the colony's alone.
+#: THE RAISED PLACE BELONGS TO TWO PRODUCTS, NOT TO TWO PICTURES (work
+#: order 227 B): only the special products COLONY SHIP (-12) and TRANSPORT
+#: (-11) are drawn at (578, 57) (colony_main.cpp:908-913); a ship from the
+#: queue is `Draw_Current_Ship_`'s (578, 77) whatever its picture
+#: (colony.cpp:778-783) — a queued colony ship has picture 45 too, and
+#: keyed by the picture it stood 20 native px high, under the product's
+#: name (226 G's finding; measured: the original's frame matches the
+#: picture at (578, 77), correlation 0.78, and not at (578, 57)). So
+#: `high_ships` is keyed by the product a ship spec carries (`spec[3]`).
 PLACES = {
     "popup": {"art": "build_art", "window": WINDOW, "centre": CENTRE,
               "foot": BUILDING_FOOT, "satellite": CENTRE,
@@ -68,7 +77,7 @@ PLACES = {
     "colony": {"art": "band", "window": (525, 26, 630, 113),
                "centre": (578, 77), "foot": (579, 106),
                "satellite": (578, 78), "trade_goods": None,
-               "high_ships": {45: (578, 57), 47: (578, 57)},
+               "high_ships": {-12: (578, 57), -11: (578, 57)},
                "overlay": False},
 }
 
@@ -142,13 +151,22 @@ def _centred(canvas, art, stem, at, window):
     return True
 
 
+def ship_centre(spec, place):
+    """Where a ("ship", picture, owner[, product]) spec's picture is
+    centred in `place`, native px: a special product's raised point, else
+    the place's centre — the one answer for the drawing and the check."""
+    pl = PLACES[place]
+    product = int(spec[3]) if len(spec) > 3 else None
+    return pl["high_ships"].get(product, pl["centre"])
+
+
 def tile(spec, climate, bg, place="popup"):
     """The place's window with the room and `spec`'s picture, native size,
     as an RGB surface — or None without the extraction. `spec`:
     ("building", id) — a satellite's own picture where it is one —,
     ("ground", id) — the ground drawing whatever the building —,
     ("trade_goods",), ("android",), ("spy", race), ("ship", picture_num,
-    owner), ("room",)."""
+    owner[, special product]), ("room",)."""
     key = (tuple(spec), int(climate), int(bg), place)
     if key in _cache:
         return _cache[key]
@@ -183,7 +201,7 @@ def tile(spec, climate, bg, place="popup"):
             from screens.refit import refart
             pic = refart.picture(int(spec[1]), int(spec[2]) if len(spec) > 2
                                  else 0, climate, bg)
-            at = pl["high_ships"].get(int(spec[1]), pl["centre"])
+            at = ship_centre(spec, place)
             if pic is not None:
                 out.blit(pic, (at[0] - win[0] - pic.get_width() // 2,
                                at[1] - win[1] - pic.get_height() // 2))

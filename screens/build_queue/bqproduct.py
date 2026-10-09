@@ -72,7 +72,9 @@ def picture(product, race, design_picture=None, ship=None):
     if product == SPY:
         return ("spy", int(race))
     if product in SHIP_PICTURES:
-        return ("ship", SHIP_PICTURES[product], 0)
+        # the product rides along: the colony screen raises two specials,
+        # not their pictures (work order 227 B, `colroom.PLACES`)
+        return ("ship", SHIP_PICTURES[product], 0, int(product))
     if prodname.kind(product) == prodname.KIND_SHIP_DESIGN and \
             design_picture is not None:
         return ("ship", int(design_picture), 0)
