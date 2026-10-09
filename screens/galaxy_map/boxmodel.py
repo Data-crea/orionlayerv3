@@ -274,34 +274,48 @@ def system_model(state, ident, box, text, omniscient):
     if want != tuple(box.rect[:2]):
         return None, (f"window at {tuple(box.rect[:2])}, {star.name} would "
                       f"put it at {want}")
-    me = getattr(state, "player_num", 0)
-    viewable = (not star_struct.is_black_hole(star)
-                and (star_struct.visited_by(star, me) or omniscient))
+    texts = window_texts(state, ident.star, text, omniscient)
     planets = star_planets(state, star)
-    matched = match_planets(box, planets) if viewable else {}
+    matched = match_planets(box, planets) if texts["viewable"] else {}
     if matched is None:
         return None, f"the planet fields do not fit {star.name}'s orbits"
-    model = {"kind": "system", "star": ident.star, "name": star.name,
-             "viewable": viewable, "planets": [],
-             "close": box.close.index if box.close is not None else None,
-             "body": "", "wormhole": "", "belts": []}
-    if viewable or _contact(state, planets, _local(state)):
-        model["title"] = _msg(text, H_SYSTEM, star.name)
-    else:
-        model["title"] = _msg(text, H_UNEXPLORED)
-    if not viewable:
-        model["body"] = _msg(text, H_STAR_CLASS + int(star.spectral_class))
+    model = dict(texts, star=ident.star, name=star.name, planets=[],
+                 close=box.close.index if box.close is not None else None,
+                 belts=[])
+    if not model["viewable"]:
         return model, None
     for index, p in sorted(matched.items(), key=lambda kv: kv[1]["orbit"]):
         model["planets"].append(dict(p, field=index))
     model["belts"] = star_belts(state, star)
+    return model, None
+
+
+def window_texts(state, star_index, text, omniscient):
+    """The system window's words and whether its system may be viewed —
+    ONE rule for the galaxy map's window and the combat target window
+    (work order 228 B; both are `Draw_System_Display_Popup_`'s,
+    sys.cpp:679-780): {"kind", "viewable", "title", "body", "wormhole"}."""
+    stars = getattr(state, "stars", None) or []
+    star = stars[star_index]
+    me = getattr(state, "player_num", 0)
+    viewable = (not star_struct.is_black_hole(star)
+                and (star_struct.visited_by(star, me) or omniscient))
+    out = {"kind": "system", "viewable": viewable, "body": "",
+           "wormhole": ""}
+    if viewable or _contact(state, star_planets(state, star), _local(state)):
+        out["title"] = _msg(text, H_SYSTEM, star.name)
+    else:
+        out["title"] = _msg(text, H_UNEXPLORED)
+    if not viewable:
+        out["body"] = _msg(text, H_STAR_CLASS + int(star.spectral_class))
+        return out
     far = getattr(star, "wormhole_star_id", -1)
     if far is not None and 0 <= far < len(stars):
         if star_struct.visited_by(stars[far], me):
-            model["wormhole"] = _msg(text, H_WORMHOLE, stars[far].name)
+            out["wormhole"] = _msg(text, H_WORMHOLE, stars[far].name)
         else:
-            model["wormhole"] = _msg(text, H_WORMHOLE_UNKNOWN)
-    return model, None
+            out["wormhole"] = _msg(text, H_WORMHOLE_UNKNOWN)
+    return out
 
 
 def wire_stack(state, ships):

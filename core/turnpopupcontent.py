@@ -95,29 +95,6 @@ def leader_card(state, index, app=None):
             "question": question}
 
 
-def combat_title(state, star, app=None):
-    """The question the combat choice asks, as the original words it:
-    ESTRINGS 0x45 with the choosing player's race and the star
-    (`Draw_Defense_Selection_Popup_`, mainpups.cpp:2130-2135 — "CyberToller
-    select combat at Altair"). The chooser is the local player
-    (`_g_player_n`). None without the string file: the caller then names
-    the star alone (work order 208 A4)."""
-    template = _leader_words(app).estring(0x45)
-    if not template:
-        return None
-    from core.hestrings import printf
-    return printf(template, _race_name(state, getattr(state, "player_num", 0)),
-                  _star_name(state, star))
-
-
-def _race_name(state, player):
-    from core.structs import player as player_struct
-    raw = getattr(state, "player_raw", None) or []
-    if player is None or not 0 <= player < len(raw):
-        return "?"
-    return player_struct.parse(raw[player]).race_name
-
-
 def _tech_name(tech):
     try:
         from core import lang, technames
@@ -229,10 +206,8 @@ def content(popup, state, words, app=None):
         if a[3] > 0:                    # the tutor's result states
             buttons = [(words["continue"], act(a[6]) or act(a[5], "click"))]
             right_buttons = []
-    elif kind in ("planet_choice", "discovery", "combat_target"):
+    elif kind in ("planet_choice", "discovery"):
         sysd = popup.get("system") or {}
-        if kind == "combat_target" and not title:
-            title = combat_title(state, sysd.get("star", -1), app)
         title = title or _star_name(state, sysd.get("star", -1))
         if popup.get("text"):
             lines.append(popup["text"])
@@ -244,27 +219,9 @@ def content(popup, state, words, app=None):
             options.append((_planet_name(state, slot["planet"]), target))
             right_opts.append(_field(state, slot["field"])
                               if kind != "planet_choice" else None)
-        if kind == "combat_target":
-            # A player target is chosen by clicking one of its ships
-            # (Check_System_Display_Fields_Defense_Selection_,
-            # mainpups.cpp:2937-3041): one option per such ship button,
-            # named by the owner's race (s_player.race_name). The SLOT is
-            # the owner: Build_System_Popup_Ships_ fills
-            # `_system_display_ships[owner_idx].ship_idx = node_idx`
-            # (sys.cpp:2172-2173), and the block writes the fifteen slots
-            # in order (ext_api.cpp:1097-1103). `ship` is a _ship_node
-            # index, not a _ship index — read as one it named some other
-            # ship's owner and no attack was offered (work order 193's
-            # defect, fixed in 194).
-            wanted = set((popup.get("targets") or {}).get("players", []))
-            for owner, slot in enumerate(sysd.get("ships", [])):
-                if slot["field"] > 0 and slot["ship"] > -1 and \
-                        owner in wanted:
-                    options.append((_race_name(state, owner),
-                                    act(slot["field"], "click")))
-        # the original's button reads CLOSE on both (BUFFER0.LBX, the
-        # native frame of work order 188's planet choice)
-        cancel = {"planet_choice": 4, "combat_target": 2}.get(kind)
+        # the original's button reads CLOSE (BUFFER0.LBX, the native frame
+        # of work order 188's planet choice)
+        cancel = {"planet_choice": 4}.get(kind)
         if cancel is not None:
             buttons.append((words["close"], act(a[cancel], "click")))
         else:

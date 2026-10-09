@@ -30,12 +30,19 @@ typed in `assets/shared/turnpopup/labels.json` (decision 15).
 **DEVIATION `hud_turn_popup`**: the HUD panel instead of each popup's own
 artwork (SCIENCE.LBX and the technology animations, TURNSUM.LBX, the
 BUFFER0.LBX popup frames with the system display, EVENTS.LBX's GNN picture
-and animation, COLONY's landing art); the system display is a list of the
-star's planets (named) instead of the planets' pictures; the science room
+and animation, COLONY's landing art); the planet choice's and the
+discovery's system display is a list of the star's planets (named) instead
+of the planets' pictures; the science room
 lists every discovery at once where the original shows one per click (each
 click is still sent, as the original counts them); the GNN picture is not
 drawn. (A popup's right click is the original's since work order 200 —
 TRANSCRIPTION `popup_right`, `turnpopupcontent.RIGHT_HELP`.)
+
+**THE COMBAT TARGET IS THE ORIGINAL'S WINDOW** (work order 228 B): the star
+system window with the star, the orbits, the planets and the fleets, drawn
+by the galaxy map's own system window code
+(`screens/galaxy_map/combattarget.py`) over the map — not this panel. The
+view below hands it the popup and keeps what it drew, in the same shape.
 """
 import pygame
 
@@ -76,6 +83,8 @@ class View:
         (mainscr2.cpp: Reports_Screen_ runs over the map) — and returns
         True; without one, or when it has nothing to draw, the popup stands
         over the held frame (`msgbox.dimmed_base`, work order 196 A)."""
+        if popup["kind"] == "combat_target":
+            return self._render_window(surface, popup, state, backdrop, app)
         self._base = dimmed_base(surface, self._base, 110, backdrop)
         surface.blit(self._base, (0, 0))
         words = dict(DEFAULT_WORDS, **{k: v for k, v in (labels or {}).items()
@@ -86,6 +95,25 @@ class View:
             [(r, ("field", f)) for r, f in zip(c.get("table_rects", []),
                                                c.get("line_right", []))]
         self.right_help = c["right_help"]
+        return self.rects
+
+    def _render_window(self, surface, popup, state, backdrop, app):
+        """The combat target window (work order 228 B) over the map, not
+        dimmed: the original draws it over the map as it stands
+        (combfind.cpp:942-947). It is the galaxy map's window; without the
+        map there is nothing to draw it with, and nothing is clickable."""
+        self._base = dimmed_base(surface, self._base, 0, backdrop)
+        surface.blit(self._base, (0, 0))
+        host = app.dispatcher.screens.get("galaxy_map") \
+            if app is not None else None
+        self.rects, self.right, self.buttons = [], [], []
+        self.right_help = None
+        if host is None:
+            return self.rects
+        from screens.galaxy_map import combattarget
+        drawn = combattarget.render(host, surface, popup, state, app)
+        self.rects, self.right = drawn.rects, drawn.right
+        self.buttons, self.right_help = drawn.buttons, drawn.right_help
         return self.rects
 
     def right_at(self, x, y):

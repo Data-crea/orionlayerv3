@@ -34,16 +34,20 @@ map icon (the fleet box's own ship pictures are not extracted). Since work
 order 223 the planets stand where the engine puts them, on their orbits
 (`sysorbits`).
 
+THE SYSTEM WINDOW'S DRAWING IS `syswindow`'s (work order 228 B): one
+implementation for this window and the combat target window
+(`combattarget`), as the original draws both with one function; this
+module places the map's window and keeps its hits.
+
 OMISSION (decision 61), each a field HD leaves alone: the system window's
 ship buttons and gate icons (its planet information under the pointer is
 drawn since work order 226 F, `sysinfo`); the fleet box's ALL,
 the bar's thumb drag (a scroll field that reads the POINTER, fleetpop.cpp:
 213-216 — a click on the track steps one row toward it instead, DEVIATION
 `fleet_scroll_track`) and the Outpost / Colonize / Engage / Transport / Attack buttons;
-the space-monster branch of the system window. And one thing drawn
-without a field, seen beside the original's window on 15 September 2026
-(evidence 71): the colony markers beside owned planets. (The orbit rings
-and the asteroid belts are drawn since work order 223, `sysorbits`.)
+the space-monster branch of the system window. (The orbit rings and the
+asteroid belts are drawn since work order 223, `sysorbits`; the colony
+markers beside owned planets since work order 228, `syswindow`.)
 
 A fleet box is drawn only from open fix 20's wire data (boxmodel): its
 cells follow the engine's chain, their colour is each node's selected
@@ -55,16 +59,11 @@ import logging
 import pygame
 
 from core.hud import blocks as hud
-from core.hud import glyphs
 
 from core import hestrings
 from core import palette
-from core import textfit
-from screens.colony_summary import colonyplanets
-from screens.galaxy_map import boxmodel, mapboxes
-from screens.galaxy_map import renderer as rnd
-from screens.galaxy_map import ships as ship_icons
-from screens.galaxy_map import sysorbits
+from screens.galaxy_map import boxmodel, mapboxes, sysfleets, syswindow
+from screens.galaxy_map.syswindow import TEXT_COLOR
 
 log = logging.getLogger("galaxy_map.boxes")
 
@@ -72,10 +71,6 @@ SYSTEM_BOXES = ("system_box", "system_title", "system_view",
                 "system_text", "system_close")
 FLEET_BOXES = ("fleet_box", "fleet_title", "fleet_grid",
                "fleet_status", "fleet_close")
-PANEL_BG = palette.col("galaxy_map", "panel_background", (8, 11, 20))
-TITLE_COLOR = palette.col("galaxy_map", "title", (200, 210, 238))
-TEXT_COLOR = palette.col("galaxy_map", "nav_text", (196, 208, 236))
-GAS_GIANT = palette.col("galaxy_map", "status", (140, 155, 190))
 #: A hover refusal's line — the original's second colour set
 #: (fleetpop.cpp:1122-1150, `use_primary_colors = false`).
 REFUSED = palette.col("galaxy_map", "fleet_refused", (226, 96, 72))
@@ -140,134 +135,15 @@ def _placed(screen, names, box):
     return {n: r.move(dx, dy) for n, r in rects.items()}
 
 
-def _font(screen, name, default):
-    style = next((b.style for b in screen.boxes if b.name == name), {})
-    return screen.layout.font_size(style.get("font_size", default))
-
-
-def _text(screen, surface, rect, text, size, colour, align="center"):
-    if not text:
-        return
-    surf = screen.style.render_text(text, size, tuple(colour[:3]))
-    x = {"left": rect.x, "right": rect.right - surf.get_width()}.get(
-        align, rect.x + (rect.w - surf.get_width()) // 2)
-    surface.blit(surf, (x, rect.y + (rect.h - surf.get_height()) // 2))
-
-
-def _frame(screen, surface, rect):
-    """The window's body: the HUD popup block (decision 71) — the system
-    window and the fleet box are dialogs over the map, opaque."""
-    hud.popup(surface, rect, screen.layout.scale)
-
-
-def _button(screen, surface, rect, label, size):
-    """CLOSE: the HUD's small button, its word in code."""
-    hud.small_button(surface, rect, screen.layout.scale, "normal", label,
-                     style_renderer=screen.style,
-                     icon=glyphs.for_button("galaxy_map", "close"))
-
-
-def _close_label(screen):
-    return (screen._data.get("movable_boxes") or {}).get("close", "")
-
-
 def _draw_system(screen, surface, r, model, hits):
+    """The window's view through `syswindow`; the planets' hit areas."""
+    from core import mouse
     view = r["system_view"]
-    if not model["viewable"]:
-        size = _font(screen, "system_view", 16)
-        lines = textfit.wrap_text(screen.style, model["body"], size, view.w)
-        y = view.y
-        for line in lines:
-            surf = screen.style.render_text(line, size, TEXT_COLOR[:3])
-            surface.blit(surf, (view.x, y))
-            y += surf.get_height()
-        return
-    stars = screen._stars
-    star = stars[model["star"]]
-    ctx = screen._map_context()
-    name = rnd.star_icon_name(star, ctx) if ctx is not None else None
-    s, cx, cy = sysorbits.frame(view)
-    # The sun in the rings' centre (`Draw_Sun_Seg_`, sys.cpp:562-578; its
-    # BUFFER0.LBX 0x53 + class picture is 32 x 34 native px).
-    sun = max(8, int(34 * s))
-    if name and screen._cache.has(name):
-        img = screen._cache.scaled(name, sun)
-        if img is not None:
-            surface.blit(img, (cx - img.get_width() // 2,
-                               cy - img.get_height() // 2))
-
-    def planet(p, centre, side):
-        rect = pygame.Rect(0, 0, side, side)
-        rect.center = centre
-        disc = None
-        if p["type"] != 2:
-            discs = colonyplanets.set_for(screen, side)
-            disc = discs.get(p["climate"]) if discs is not None else None
-        if disc is not None:
-            surface.blit(disc, rect.topleft)
-        else:
-            pygame.draw.circle(surface, GAS_GIANT[:3], rect.center, side // 2, 2)
-        return rect
-
-    # The orbits (work order 223): rings, belts, each planet where the
-    # engine put it (`sysorbits`).
-    drawn = sysorbits.draw(surface, view, model, planet)
+    drawn = syswindow.draw_view(screen, surface, view, model)
     for p, rect in drawn:
         hits.append((rect, p["field"]))
         screen._box_planets.append((rect, p["field"]))
-    _planet_info(screen, surface, view, drawn)
-
-
-def _planet_info(screen, surface, view, drawn):
-    """The planet under the pointer: a highlight round it and its lines in
-    a darkened box at the view's corner (`sysinfo`, work order 226 F;
-    sys.cpp:824-844). DEVIATION `planet_highlight_drawn`: the original's
-    highlight is BUFFER0.LBX 0x4B in the owner's colours, not extracted —
-    HD draws the HUD outline in the owner's colour (grey without one)."""
-    from core import mouse as mouse_input
-    from core.buildnames import BuildingNames
-    from core.estrings import EStrings
-    from screens.galaxy_map import sysinfo
-    from screens.planets import planetwords
-    pointer = mouse_input.pos()
-    over = next(((p, r) for p, r in reversed(drawn)
-                 if r.collidepoint(pointer)), None)
-    if over is None or getattr(screen, "_state", None) is None:
-        return
-    p, rect = over
-    if getattr(screen, "_sysinfo_words", None) is None:
-        lang = (getattr(screen.app, "settings", None) or {}).get(
-            "language", "en")
-        screen._sysinfo_words = (
-            planetwords.Words(EStrings(lang), hestrings.for_app(screen.app)),
-            BuildingNames(lang))
-    words, names = screen._sysinfo_words
-    owner = sysinfo.owner_colour(screen._state, p["planet"])
-    colour = palette.col("galaxy_map", f"owner_{owner}", TEXT_COLOR) \
-        if owner is not None else TEXT_COLOR
-    # LOOK EXCEPTION data: the planet owner's colour, as the original's highlight (sys.cpp:599-633)
-    pygame.draw.rect(surface, tuple(colour)[:3],
-                     rect.inflate(rect.w // 3, rect.h // 3), 1)
-    lines = sysinfo.lines(screen._state, p["planet"], words, names)
-    if not lines:
-        return
-    size = _font(screen, "system_text", 16)
-    gap = max(2, size // 3)
-    surfs = [(screen.style.render_text(t, size, TEXT_COLOR[:3]), g)
-             for t, g in lines if t]
-    pad = max(3, size // 3)
-    w = max(sf.get_width() for sf, _g in surfs) + 2 * pad
-    h = sum(sf.get_height() + (gap if g else 0) for sf, g in surfs) + 2 * pad
-    box = pygame.Rect(view.x + pad, view.y + pad, w, h)
-    shade = pygame.Surface(box.size, pygame.SRCALPHA)
-    # LOOK EXCEPTION transcription: the original's darkened box under the lines (`Draw_Darkened_Box_`, sys.cpp:841)
-    shade.fill((0, 0, 0, 170))
-    surface.blit(shade, box.topleft)
-    y = box.y + pad
-    for sf, g in surfs:
-        y += gap if g else 0
-        surface.blit(sf, (box.x + pad, y))
-        y += sf.get_height()
+    syswindow.planet_info(screen, surface, view, drawn, mouse.pos())
 
 
 def orders_ok(screen):
@@ -337,28 +213,16 @@ def _draw_fleet(screen, surface, r, model, hits):
         hud.field(surface, cell, screen.layout.scale, on=chosen)
         if model["selectable"][i]:
             hits.append((cell, ("select", ship, not chosen)))
-        kind = ship_icons.kind_for_owner(owner) or ship_icons.PLAYER_KIND
-        key = ship_icons._resolve_sprite(screen._cache, kind, 0)
-        if key is None:
-            continue
-        side = min(cell.w, cell.h) * 7 // 10
-        base = screen._cache.base(key)
-        img = screen._cache.scaled(key, max(1, side * base.get_width()
-                                            // max(base.get_width(),
-                                                   base.get_height())))
+        img = sysfleets.icon(screen, owner, min(cell.w, cell.h) * 7 // 10)
         if img is None:
             continue
-        if kind == ship_icons.PLAYER_KIND:
-            colour = ship_icons._player_color(screen._players, owner)
-            if colour is not None:
-                img = screen._tints.get(img, key, colour)
         surface.blit(img, img.get_rect(center=cell.center))
     status, colour = model["status"], TEXT_COLOR
     over = hover_status(screen)
     if over is not None:
         status, colour = over[0], (REFUSED if over[1] else TEXT_COLOR)
-    _text(screen, surface, r["fleet_status"], status,
-          _font(screen, "fleet_status", 16), colour)
+    syswindow.text(screen, surface, r["fleet_status"], status,
+                   syswindow.font(screen, "fleet_status", 16), colour)
 
 
 def hover_status(screen):
@@ -386,16 +250,19 @@ def render(screen, surface):
         r = _placed(screen, names, box)
         if r is None:
             continue
-        _frame(screen, surface, r[names[0]])
+        syswindow.frame(screen, surface, r[names[0]])
         hits.append((r[names[0]], None))
-        _text(screen, surface, r[names[1]], model["title"],
-              _font(screen, names[1], 20), TITLE_COLOR)
+        syswindow.text(screen, surface, r[names[1]], model["title"],
+                       syswindow.font(screen, names[1], 20),
+                       syswindow.TITLE_COLOR)
         if model["kind"] == "system":
             screen._system_drawn = True
             screen._hover_star = None    # no map hover under it (226 F)
             _draw_system(screen, surface, r, model, hits)
-            _text(screen, surface, r["system_text"], model["wormhole"],
-                  _font(screen, "system_text", 16), TEXT_COLOR, "left")
+            syswindow.text(screen, surface, r["system_text"],
+                           model["wormhole"],
+                           syswindow.font(screen, "system_text", 16),
+                           TEXT_COLOR, "left")
         else:
             _draw_fleet(screen, surface, r, model, hits)
             # the fleet box's help, as `Set_Main_Screen_Help_List_`
@@ -406,8 +273,8 @@ def render(screen, surface):
             screen._box_help = [(r["fleet_status"], 310),
                                 (r[names[-1]], 304)]
         close = r[names[-1]]
-        _button(screen, surface, close, _close_label(screen),
-                _font(screen, names[-1], 18))
+        syswindow.close_button(screen, surface, close,
+                               syswindow.close_label(screen))
         hits.append((close, model["close"]))
 
 
