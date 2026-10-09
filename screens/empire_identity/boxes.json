@@ -3,10 +3,10 @@
     {
       "name": "identity_panel",
       "rect": [
-        110,
-        125,
-        1700,
-        400
+        20,
+        85,
+        1880,
+        415
       ],
       "style": {
         "label": "Identity Panel",
@@ -17,10 +17,10 @@
     {
       "name": "ruler_header",
       "rect": [
-        150,
-        160,
-        420,
-        90
+        64,
+        121,
+        465,
+        94
       ],
       "style": {
         "label": "Ruler Header",
@@ -30,10 +30,10 @@
     {
       "name": "ruler_input",
       "rect": [
-        180,
-        300,
-        360,
-        84
+        97,
+        267,
+        399,
+        87
       ],
       "style": {
         "label": "Ruler Input",
@@ -43,10 +43,10 @@
     {
       "name": "banner_header",
       "rect": [
-        610,
-        138,
-        610,
-        72
+        573,
+        98,
+        675,
+        75
       ],
       "style": {
         "label": "Banner Header",
@@ -56,10 +56,10 @@
     {
       "name": "banner_grid",
       "rect": [
-        610,
-        212,
-        610,
-        300
+        573,
+        175,
+        675,
+        312
       ],
       "style": {
         "label": "Banner Grid",
@@ -70,10 +70,10 @@
     {
       "name": "home_header",
       "rect": [
-        1250,
-        160,
-        460,
-        90
+        1281,
+        121,
+        508,
+        94
       ],
       "style": {
         "label": "Home Header",
@@ -83,10 +83,10 @@
     {
       "name": "home_input",
       "rect": [
-        1280,
-        300,
-        400,
-        84
+        1314,
+        267,
+        442,
+        87
       ],
       "style": {
         "label": "Home Input",
@@ -96,10 +96,10 @@
     {
       "name": "preview_panel",
       "rect": [
-        110,
-        545,
-        1700,
-        440
+        20,
+        520,
+        1880,
+        458
       ],
       "style": {
         "label": "Preview Panel",
@@ -110,10 +110,10 @@
     {
       "name": "preview_image",
       "rect": [
-        560,
-        546,
-        1249,
-        438
+        518,
+        521,
+        1381,
+        456
       ],
       "style": {
         "label": "Homeworld Artwork",
@@ -131,10 +131,10 @@
     {
       "name": "preview_header",
       "rect": [
-        110,
-        560,
-        1700,
-        50
+        20,
+        536,
+        1880,
+        52
       ],
       "style": {
         "label": "Preview Header",
@@ -144,10 +144,10 @@
     {
       "name": "preview_banner",
       "rect": [
-        240,
-        600,
-        320,
-        340
+        164,
+        577,
+        354,
+        354
       ],
       "style": {
         "label": "Preview Banner",
@@ -157,10 +157,10 @@
     {
       "name": "preview_text",
       "rect": [
-        630,
-        660,
-        700,
-        260
+        595,
+        640,
+        774,
+        270
       ],
       "style": {
         "label": "Preview Text",
@@ -170,18 +170,18 @@
     {
       "name": "busy_panel",
       "rect": [
-        110,
-        78,
-        1700,
+        28,
+        93,
+        1864,
         46
       ]
     },
     {
       "name": "busy_text",
       "rect": [
-        134,
-        85,
-        1652,
+        52,
+        100,
+        1816,
         32
       ]
     }

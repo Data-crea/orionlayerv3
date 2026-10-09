@@ -49,6 +49,11 @@ class EmpireIdentityScreen(ScreenBase):
     SCREEN_NAME = "empire_identity"
     GAME_SCREEN_ID = None     # sub-screen; wired later (after Custom Race)
     USE_FRAME = True
+    #: THE SCREEN SHELL (work order 225): the identity panel and the
+    #: preview fill the content rectangle above the button row, every box
+    #: inside them carried along in proportion (`boxes.json`); CANCEL and
+    #: ACCEPT the shell's buttons, the title on the plate (`screenframe`).
+    SHELL_WORN = True
     FRAME_TITLE = "Empire Identity"
     FRAME_BTN_LEFT = ("Cancel", None)    # field IDs follow with wiring
     FRAME_BTN_RIGHT = ("Accept", None)
