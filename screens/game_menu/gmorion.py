@@ -19,8 +19,11 @@ the PAINTED DETAIL (HD EXTENSION `painted_detail`, `core/paintdetail.py`):
 Auto (the default), Normal (4 x) or High (8 x), from the next battle on; and
 since work order 220 the LIVERY button on that row (HD EXTENSION `livery`,
 `gmlivery`), shown only while the mod folder is on and holds painted ships
-with masks (decision 2), which opens the livery window. MOO2 has none of
-them; the game knows nothing about these rows.
+with masks (decision 2), which opens the livery window; and since work
+order 227 the BOX FILL (HD EXTENSION, decision 94, `gmfill`): a glass
+switch on the Panel glass row and the fill colour in two rows of the
+frame colour's kind. MOO2 has none of them; the game knows nothing about
+these rows.
 
 **TWO STATE SOURCES, NEVER MERGED.** The thirteen engine checkboxes
 keep their local copy seeded from `s_settings` (`screen.flags`). These
@@ -51,10 +54,11 @@ from core.hud import glass
 from core.hud import style as hudstyle
 from core.hud import tint
 
-from . import gmlang
+from . import gmfill, gmlang
 
 BANDS = ("divider", "heading", "floor", "colours", "monsters", "frame",
-         "tone", "glass", "frame_rate", "painted", "mods", "language")
+         "tone", "glass", "fill", "fill_tone", "frame_rate", "painted",
+         "mods", "language")
 
 #: Buttons a row carries besides its value, and the row each sits on: the
 #: livery window's (work order 220), in the RESET column of Painted detail.
@@ -64,7 +68,7 @@ ROW_BUTTONS = {"livery": "painted"}
 #: Each band's share of the box. The divider is a line, so since work
 #: order 170 it takes a third of a row and the frame-colour row fits in
 #: the same box: nothing below it (ACCEPT, the body's edge) moves.
-WEIGHTS = (1 / 3, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1)
+WEIGHTS = (1 / 3, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1)
 
 COL_DIVIDER = palette.require("game_menu", "orionlayer_divider")
 COL_HEADING = palette.require("game_menu", "orionlayer_heading")
@@ -135,6 +139,8 @@ def bands(screen):
                                    hb.h)
     rr = out["hue_reset"]
     out["glass_reset"] = pygame.Rect(rr.x, gl.y, rr.w, gl.h)
+    # THE GLASS SWITCH AND THE FILL COLOUR (work order 227, `gmfill`).
+    gmfill.geometry(out, rule)
     # THE LIVERY BUTTON (work order 220) in the RESET column of the Painted
     # detail row — only when it can do something (decision 2)
     if livery.window_available():
@@ -266,6 +272,8 @@ def handle_click(screen, x, y):
             modsetup.start()
     elif geo["language"].collidepoint(x, y):
         gmlang.cycle(settings)
+    elif gmfill.handle_click(screen, geo, x, y):
+        pass
     elif geo["glass_reset"].collidepoint(x, y):
         set_glass(screen, None)
     elif geo["glass"].collidepoint(x, y) and \
@@ -367,6 +375,7 @@ def render(screen, surface):
 
     _render_frame_row(screen, surface, geo, words, size, lx)
     _render_glass_row(screen, surface, geo, words, size, lx)
+    gmfill.render(screen, surface, geo, words, size, lx)
     _render_frame_rate_row(screen, surface, geo["frame_rate"], words, size,
                            lx, vx)
     _render_painted_row(screen, surface, geo["painted"], words, size, lx, vx)
@@ -380,29 +389,20 @@ def render(screen, surface):
 
 
 def _render_glass_row(screen, surface, geo, words, size, lx):
-    """Panel glass: the bar shows what each position does — a light
-    sample seen through the glass, see-through at the left, solid at the
-    right — and the thumb; RESET is lit while the value is the player's."""
+    """Panel glass: the switch (work order 227), then the bar showing what
+    each position does — a light sample seen through the glass,
+    see-through at the left, solid at the right — and the thumb, dimmed
+    while the switch is off; RESET is lit while the value is the
+    player's."""
     row, bar = geo["glass"], geo["glass_bar"]
     _text(screen, surface, words.get("glass", "Panel glass"), size,
           COL_OPTION, lx, row)
-    sample = (90, 120, 170)
-    for i in range(bar.w):
-        v = bar_value(bar, bar.x + i, 0.0, 1.0)
-        alpha, col = glass.profile(2, glass.transparency(v=v))
-        a = float(alpha[0])
-        c = tuple(int(sample[k] * (1 - a) + col[0][k] * a) for k in range(3))
-        pygame.draw.line(surface, c, (bar.x + i, bar.y),
-                         (bar.x + i, bar.bottom - 1))
-    screen.style.draw_plate(surface, bar, screen.layout.scale)
-    w = max(2, int(3 * screen.layout.scale))
-    tx = bar_x(bar, glass.value(), 0.0, 1.0)
-    # LOOK EXCEPTION marking: the slider's position tick
-    surface.fill((255, 255, 255), (tx - w // 2, bar.y - w, w, bar.h + 2 * w))
+    gmfill.render_switch(screen, surface, geo, words, size)
+    gmfill.render_glass_bar(screen, surface, bar)
     reset = geo["glass_reset"]
     _text(screen, surface, words.get("reset", "Reset"), size,
-          COL_OPTION if glass._value is None else COL_STATE, reset.x, reset,
-          _reset_room(screen, reset))
+          COL_OPTION if glass._value is None or gmfill.glass_dim()
+          else COL_STATE, reset.x, reset, _reset_room(screen, reset))
 
 
 def _render_frame_rate_row(screen, surface, row, words, size, lx, vx):

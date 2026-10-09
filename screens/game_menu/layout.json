@@ -308,7 +308,13 @@
         "en": "English",
         "de": "Deutsch"
       },
-      "livery": "Livery"
+      "livery": "Livery",
+      "glass_steps": {
+        "on": "On",
+        "off": "Off"
+      },
+      "fill": "Box fill",
+      "fill_tone": "Box fill tone"
     },
     "livery": {
       "_hd_extension": "HD EXTENSION `livery` (work order 220, decisions 1-6, 8, 9): the livery window's words; screens/game_menu/gmlivery.py, core/livery.py. MOO2 has no such window.",
@@ -434,15 +440,15 @@
     },
     "orionlayer.frame": {
       "title": "FRAME COLOUR",
-      "body": "The colour of OrionLayer's frames and panels: click the bar to choose a hue. RESET returns to the measured blue of the original and resets the frame tone too. Applied at once."
+      "body": "The colour of OrionLayer's frames: the lines and edges round the boxes, the buttons' edges and the accent words. Click the bar to choose a hue. RESET returns to the measured blue of the original and resets the frame tone too. The boxes' fill has its own colour (Box fill). Applied at once."
     },
     "orionlayer.tone": {
       "title": "FRAME TONE",
-      "body": "How strong and how bright the frame colour is: the left bar runs from grey to the full colour, the right one from black to silver. RESET on the frame colour row returns both. Applied at once."
+      "body": "How strong and how bright the frame colour is: the left bar runs from grey to the full colour, the right one from black to silver. It changes the lines only, never the fill of a box. RESET on the frame colour row returns both. Applied at once."
     },
     "orionlayer.glass": {
       "title": "PANEL GLASS",
-      "body": "How much of the background shows through OrionLayer's panels: further left the glass is clearer, at the right end the panels are solid. A panel over a bright background stays dense enough for its words to be read. Applied at once."
+      "body": "Whether the background shows through OrionLayer's boxes. Off: every box is filled with the box fill colour, solid. On: the boxes are glass, and the bar sets how much shows through \u2014 further left clearer, at the right end solid; a box over a bright background stays dense enough for its words to be read. The bar works only while the glass is on and keeps its value while it is off. Applied at once."
     },
     "orionlayer.mods": {
       "title": "MOD FOLDER",
@@ -495,11 +501,19 @@
     "livery.back": {
       "title": "BACK",
       "body": "Back to the settings. Your choices are kept with your settings, not with a save game, and apply from the next battle on."
+    },
+    "orionlayer.fill": {
+      "title": "BOX FILL",
+      "body": "The colour that fills every box of OrionLayer: panels, popups, fields, table rows and headers, buttons. Click the bar to choose a hue. The other fills follow it \u2014 rows, headers and buttons darker than a panel, a chosen entry lighter. RESET returns to the starting colour and resets the box fill tone too. The frame colour does not change it. Applied at once."
+    },
+    "orionlayer.fill_tone": {
+      "title": "BOX FILL TONE",
+      "body": "How strong and how bright the box fill colour is: the left bar runs from grey to the full colour, the right one from black to the brightest fill at which every word stays readable. RESET on the box fill row returns both. Applied at once."
     }
   },
   "orionlayer_rows": {
     "_hd_extension": "HD EXTENSION (fundament 63, 64): five row heights below the thirteen engine rows - a divider, the OrionLayer heading, the map floor lift, the player-colour preset and the monster values switch for the Planets panel (default on). The game knows nothing about them: they have no field, their clicks send nothing, and their values live in core/usersettings.py. The hotkey column stays empty for all three rows.",
-    "_grow_note": "The box grew by one band (153 -> 191 reference px, 14 September 2026) and settings_accept moved down by the same 38 so the rows still end above ACCEPT; 38 is one band of the engine rows (497 / 13), so the new row is as tall as every other. Work order 173 added the mod folder row (decision 72) inside the same body: the thirteen engine rows went from 38 to 36 (497 -> 468) and this box grew by the 29 they gave up (191 -> 221 at 622), so every OrionLayer row keeps its 30 px and nothing below moves. Work order 174 added the Panel glass row the same way: the engine rows 36 -> 34 (468 -> 442) and this box took those 26 px and the gap above ACCEPT (221 -> 264 at 596, ending 4 px above it); a row is 28 px now. Work order 200 C added the LANGUAGE row the same way: the engine rows 34 -> 32 (442 -> 416) and this box took those 26 px (264 -> 290 at 570), a row still 28 px. Work order 212 added the FRAME RATE row the same way: the engine rows 32 -> 30 (416 -> 390) and this box took those 26 px (290 -> 316 at 544); with the divider a third of a row, a row is 30.6 px (31.1 before). Work order 219 added the PAINTED DETAIL row the same way: the engine rows 30 -> 28 (390 -> 364) and this box took those 26 px (316 -> 342 at 518); a row is 30.2 px.",
+    "_grow_note": "The box grew by one band (153 -> 191 reference px, 14 September 2026) and settings_accept moved down by the same 38 so the rows still end above ACCEPT; 38 is one band of the engine rows (497 / 13), so the new row is as tall as every other. Work order 173 added the mod folder row (decision 72) inside the same body: the thirteen engine rows went from 38 to 36 (497 -> 468) and this box grew by the 29 they gave up (191 -> 221 at 622), so every OrionLayer row keeps its 30 px and nothing below moves. Work order 174 added the Panel glass row the same way: the engine rows 36 -> 34 (468 -> 442) and this box took those 26 px and the gap above ACCEPT (221 -> 264 at 596, ending 4 px above it); a row is 28 px now. Work order 200 C added the LANGUAGE row the same way: the engine rows 34 -> 32 (442 -> 416) and this box took those 26 px (264 -> 290 at 570), a row still 28 px. Work order 212 added the FRAME RATE row the same way: the engine rows 32 -> 30 (416 -> 390) and this box took those 26 px (290 -> 316 at 544); with the divider a third of a row, a row is 30.6 px (31.1 before). Work order 219 added the PAINTED DETAIL row the same way: the engine rows 30 -> 28 (390 -> 364) and this box took those 26 px (316 -> 342 at 518); a row is 30.2 px. Work order 227 added the BOX FILL rows (fill colour, fill tone; the glass switch sits on the Panel glass row): the engine rows 28 -> 26 (364 -> 338) gave 26 px and the dialog grew by 35 (body 850 -> 885, ACCEPT 865 -> 900), this box 342 -> 403 at 492; a row is 30.2 px as before.",
     "bands": [
       "divider",
       "heading",
@@ -509,6 +523,8 @@
       "frame",
       "tone",
       "glass",
+      "fill",
+      "fill_tone",
       "frame_rate",
       "painted",
       "mods",

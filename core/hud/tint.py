@@ -93,6 +93,22 @@ _hue = None
 _sat = None
 _bright = None
 
+#: THE GROUND THE EDGES STAND ON — work order 227 (decision 94). Since the
+#: fill is the player's own colour (`core.hud.fill`) and no longer darkens
+#: with B, the floors are taken against it: (luminance of the brightest
+#: fill now, the same at the starting fill colour); None = not set (the
+#: floors as 171 measured them). See `_ground_floor`.
+_ground = None
+_ground0 = None
+
+
+def set_ground(now, start):
+    """The brightest fill's luminance, now and at the starting colour —
+    set by `core.hud.fill` whenever the fill colour changes."""
+    global _ground, _ground0
+    _ground = None if now is None else float(now)
+    _ground0 = None if start is None else float(start)
+
 
 def hue():
     """The hue setting: None (the measured blue) or degrees."""
@@ -239,7 +255,9 @@ def transform_array(rgb, d, s_factor, b_factor, word=False, floors=True,
     darkens; an edge darkens with the square root), held above the edge
     floors while `b_factor` darkens."""
     rgb = np.asarray(rgb, np.uint8)
-    if d == 0 and s_factor == 1.0 and b_factor == 1.0:
+    raised = None
+    if d == 0 and s_factor == 1.0 and b_factor == 1.0 and not (
+            floors and not word and lighter_ground()):
         return rgb.copy()
     x = rgb.astype(np.float64) / 255.0
     h, l, s = _hls(x)
@@ -258,18 +276,75 @@ def transform_array(rgb, d, s_factor, b_factor, word=False, floors=True,
         target = np.where(l0 < EDGE_CLASS, l0 * min(b_factor, 1.0),
                           l0 * (b_factor if b_factor >= 1.0
                                 else np.sqrt(b_factor)))
-        if b_factor < 1.0 and floors:
-            floor = np.where(l0 >= LIT_CLASS, LIT_FLOOR,
-                             np.where(l0 >= EDGE_CLASS, EDGE_FLOOR, 0.0))
-            target = np.maximum(target, floor)
+        raised = None
+        if floors:
+            g = _ground_floor(l0, b_factor)
+            if lighter_ground():
+                old = _ground_floor_171(l0, b_factor)
+                raised = g > np.maximum(target, old) + 1e-9
+            target = np.maximum(target, g)
     lm = _lin(moved)
     la = (lm * _W).sum(-1)
     k = np.where(la > 1e-9, target / np.where(la > 1e-9, la, 1.0), 1.0)
-    out = _srgb(np.clip(lm * k[..., None], 0.0, 1.0))
+    lin = np.clip(lm * k[..., None], 0.0, 1.0)
+    if not word and raised is not None and raised.any():
+        # AN EDGE THE FILL LIFTED (work order 227) that a saturated hue
+        # clips short of its floor goes the rest of the way towards white,
+        # as `style.raise_to` does — only these: everything else is scaled
+        # exactly as 171 measured it.
+        short = target - (lin * _W).sum(-1)
+        room = ((1.0 - lin) * _W).sum(-1)
+        share = np.where(raised & (short > 1e-9),
+                         np.clip(short / np.maximum(room, 1e-12), 0.0, 1.0),
+                         0.0)
+        lin = lin + (1.0 - lin) * share[..., None]
+    out = _srgb(lin)
     out = np.clip(np.round(out * 255.0), 0, 255).astype(np.uint8)
     if keep is not None:
         out = np.where(np.asarray(keep)[..., None], rgb, out)
     return out
+
+
+def lighter_ground():
+    """True while the fill is lighter than at the starting colour."""
+    return (_ground is not None and _ground0 is not None
+            and _ground > _ground0 + 1e-12)
+
+
+def _ground_floor_171(l0, b_factor):
+    """171's floors alone, as they were before the fill had a colour."""
+    if b_factor >= 1.0:
+        return np.zeros_like(l0)
+    return np.where(l0 >= LIT_CLASS, LIT_FLOOR,
+                    np.where(l0 >= EDGE_CLASS, EDGE_FLOOR, 0.0))
+
+
+def _ground_floor(l0, b_factor):
+    """The least luminance an edge may take, per pixel of measured
+    luminance `l0` — 0 for a fill.
+
+    171's floors while B darkens (EDGE_FLOOR, LIT_FLOOR); and since work
+    order 227, as the fill no longer darkens with B and may be lighter
+    than at the start, an edge also keeps its contrast against the
+    brightest fill (`_ground`): 3:1 (WCAG 1.4.11), or the contrast it has
+    at the starting fill where that is less — the dim edge sits at 2.1:1
+    by Data's design. At the starting fill and B >= 1 that is the edge's
+    own measured luminance, so the default draws as it always did. A lit
+    edge stays 2:1 over a normal one at its floor."""
+    edge, lit = l0 >= EDGE_CLASS, l0 >= LIT_CLASS
+    if _ground is None or _ground0 is None:
+        return _ground_floor_171(l0, b_factor)
+    three = 3.0 * (_ground + 0.05) - 0.05
+    keep = (l0 + 0.05) * (_ground + 0.05) / (_ground0 + 0.05) - 0.05
+    need = np.minimum(three, keep)
+    if b_factor < 1.0:
+        e_floor = max(EDGE_FLOOR, three)
+        l_floor = max(LIT_FLOOR, 2.0 * (e_floor + 0.05) - 0.05)
+        need = np.maximum(need, np.where(lit, l_floor, EDGE_FLOOR))
+    elif not lighter_ground():
+        # Not lighter than the start: nothing to keep that B >= 1 loses.
+        return np.zeros_like(l0)
+    return np.where(edge, need, 0.0)
 
 
 def transform(rgb, word=False, d=None, s_factor=None, b_factor=None,

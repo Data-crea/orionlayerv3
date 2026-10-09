@@ -582,6 +582,16 @@
       "orionlayer_band": "glass"
     },
     {
+      "help_id": "orionlayer.fill",
+      "node": "settings",
+      "orionlayer_band": "fill"
+    },
+    {
+      "help_id": "orionlayer.fill_tone",
+      "node": "settings",
+      "orionlayer_band": "fill_tone"
+    },
+    {
       "help_id": "orionlayer.mods",
       "node": "settings",
       "orionlayer_band": "mods"

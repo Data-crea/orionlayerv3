@@ -73,6 +73,11 @@ class HudStyle:
         if path.startswith("mix."):
             base, lit, t = self.mix_parts(path[4:])
             return self.mix(base, lit, t)
+        if path.startswith("fill."):
+            # THE BOX FILL (work order 227, decision 94): the player's
+            # colour and its family, never turned by the frame colour.
+            from core.hud import fill
+            return fill.member(path[5:])
         v = self._walk(self.chosen, path + "_from")
         if isinstance(v, str):
             return self._colour(v, kind)
@@ -198,10 +203,12 @@ def set_tone(hue=None, sat=None, bright=None):
 
 def apply_settings(user_settings):
     """The saved frame colour (hud_hue, hud_sat, hud_bright; any may be
-    absent — a 170 file carries the hue alone) and Panel glass (174),
-    applied at start."""
-    from core.hud import glass
+    absent — a 170 file carries the hue alone), Panel glass (174) and the
+    box fill — the glass switch and the fill colour (227) — applied at
+    start."""
+    from core.hud import fill, glass
     glass.set_value(user_settings.get("hud_glass"))
+    fill.apply_settings(user_settings)
     return set_tone(user_settings.get("hud_hue"),
                     user_settings.get("hud_sat"),
                     user_settings.get("hud_bright"))
@@ -224,6 +231,9 @@ def get():
             # The player's partial style.json, key by key (decision 72).
             data = usermod.style_overrides(data)
         _STYLE = HudStyle(data)
+        # The edge floors stand on the fill (work order 227).
+        from core.hud import fill
+        tint.set_ground(*fill.ground_pair())
     return _STYLE
 
 
@@ -232,3 +242,5 @@ def reset():
     global _STYLE
     _STYLE = None
     _mixes.clear()
+    from core.hud import fill
+    fill.reset()

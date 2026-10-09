@@ -150,7 +150,15 @@ def peak_lum(img):
 def fill(bg, w, h, dense=False, rect=None):
     """The glass for a w x h panel as float RGB (h, w, 3). `bg` is the
     background under it (same shape, float), or None: then the glass is
-    the gradient over black."""
+    the gradient over black.
+
+    WITH THE GLASS SWITCHED OFF (work order 227, decision 94) it is the
+    fill colour, opaque and flat — the panel member, or the dense one —
+    and `bg` is not read: the box does not depend on the background."""
+    from core.hud import fill as boxfill
+    if not boxfill.glass_on():
+        c = boxfill.member("dense" if dense else "panel")
+        return np.broadcast_to(np.array(c, np.float32), (h, w, 3)).copy()
     t = transparency(dense)
     if bg is None:
         bg = np.zeros((h, w, 3), np.float32)
@@ -201,7 +209,9 @@ def draw(surface, rect, dense=False, shade=None, shade_alpha=0.0):
     rect = pygame.Rect(rect)
     if rect.w < 1 or rect.h < 1:
         return
-    bg = backgrounds.current(*surface.get_size())
+    from core.hud import fill as boxfill
+    bg = (backgrounds.current(*surface.get_size()) if boxfill.glass_on()
+          else None)
     key = (tuple(rect), dense, bg[0] if bg is not None else None,
            round(value(), 4), tuple(shade[:3]) if shade else None,
            round(shade_alpha, 3), _tint_key())
@@ -238,8 +248,10 @@ def shade(kind):
 
 
 def _tint_key():
+    from core.hud import fill as boxfill
     from core.hud import tint
-    return (tint._hue, tint._sat, tint._bright)
+    return (tint._hue, tint._sat, tint._bright, boxfill.glass_on(),
+            boxfill.colour())
 
 
 def forget():

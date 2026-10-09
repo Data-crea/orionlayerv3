@@ -108,11 +108,15 @@ def panel(surface, rect, scale, lit=False, filled=True, dense=False):
     if rect.w < 4 or rect.h < 4:
         return
     st = hudstyle.get()
-    bg = (backgrounds.current(*surface.get_size()) if filled else None)
+    from core.hud import fill as boxfill
+    # Glass off (work order 227): the fill is flat, so the panel does not
+    # depend on where it stands or what is behind it.
+    see = filled and boxfill.glass_on()
+    bg = (backgrounds.current(*surface.get_size()) if see else None)
     key = ("panel", rect.w, rect.h, round(scale, 4), lit, filled, dense,
-           rect.topleft if filled else None,
+           rect.topleft if see else None,
            bg[0] if bg is not None else None,
-           round(glass.value(), 4) if filled else None)
+           round(glass.value(), 4) if see else None)
 
     def build():
         ch = min(_px(st.get("panel.chamfer"), scale), min(rect.w, rect.h) / 4)
@@ -197,19 +201,21 @@ def outline(surface, rect, scale, lit=False):
 def field(surface, rect, scale, on=False):
     """An EMPTY FIELD — work order 223, proposal A (decision 71 as
     amended): the box the original draws where the player acts or reads
-    a list, its striped field. Dense glass with the field mix laid over
-    it (`style.json` `chosen.mix.field`: the dim edge at a share, so it
-    stays visible when the frame colour takes every fill to black) and
-    the outline round it; `on` — a chosen entry, a mode that is set —
-    takes the 'on' mix and the lit edge, the same 'on' every button
-    wears. One block: no screen draws its own field."""
+    a list, its striped field. A cell of the fill family (decision 93,
+    work order 226: dense glass, or with the glass off the opaque fill,
+    with the cell shade over it) and the outline round it; `on` — a
+    chosen entry, a mode that is set — takes the family's "selected" and
+    the lit edge, as a chosen row and a button that is on (decision 92).
+    One block: no screen draws its own field."""
     rect = pygame.Rect(rect)
     if rect.w < 3 or rect.h < 3:
         return
     st = hudstyle.get()
     if on:
-        _base, lit, share = st.mix_parts("on")
-        glass.draw(surface, rect, dense=True, shade=lit, shade_alpha=share)
+        # "Selected" is one look (decision 92): a chosen field is drawn as
+        # a chosen row — since work order 227 the fill family's selected.
+        glass.draw(surface, rect, dense=True, shade=st.colour("field.on_fill"),
+                   shade_alpha=float(st.get("glass.selected_shade")))
     else:
         # A CELL since work order 226 (decision 93): darker than its panel,
         # set in, as Data's Planets picture draws it.

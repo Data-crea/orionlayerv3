@@ -102,6 +102,14 @@ DEFAULTS = {
     # The Panel glass slider (work order 174), 0 see-through .. 1 solid;
     # None is the default (the measured 0.5, or a mod's).
     "hud_glass": None,
+    # The glass switch (work order 227, decision 94, `core/hud/fill`):
+    # true or false; None is the default (style.json `chosen.fill.
+    # glass_default`, OFF — parked for Data). The slider above keeps its
+    # value while the glass is off.
+    "hud_glass_on": None,
+    # The fill colour of every box (work order 227, decision 94), [r, g, b];
+    # None is the default (decision 93's panel, or a mod's).
+    "hud_fill": None,
     # The language OrionLayer shows (work order 200 C, `core/lang`): None
     # is settings.json's ("en"). Read at start, so a change needs a restart.
     "language": None,
