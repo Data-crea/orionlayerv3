@@ -21,10 +21,16 @@ back where it came from (nothing is sent: nothing moved on the engine's
 side). Without the fix the engine drops the message and the counts on the
 wire stay as they were.
 
+THE CARRIED SPIES (work order 226 E, Data's decision 4): while in hand they
+have left their group, which shows what stays, and ride on the pointer as
+the original's mouse picture does — the spy icon and, for more than one,
+the count (`racesdraw.draw_spy_hand`, racescrn.cpp:584-622). A click on no
+group puts them back where they came from, as the original's loop does,
+and the click then does what it does (a button, a mission).
+
 DEVIATION `spy_drop_rest`: what does not fit the target group stays in the
 group it came from (the original keeps it in hand for another drop); HD
-keeps no hand across a command, and draws the hand as its number beside
-the pointer, not as the original's pointer icon.
+keeps no hand across a command.
 """
 from dataclasses import dataclass
 

@@ -27,6 +27,7 @@ list is neither of this screen's shapes and the fallback shows them.
 """
 import logging
 
+from core import mouse as mouse_input
 from core.billtext import BillText
 from core.estrings import EStrings
 from core.hud import shell
@@ -156,19 +157,25 @@ class RacesScreen(ScreenBase):
         who = view is not None and view.state == raceswire.WHO
         lit = self._slot_at(self._hover) if who else None
         bar = None if who else self._bar_at(self._hover)
+        hand = self._hand
         for slot in self._slots:
             racesdraw.draw_slot(surface, self, slot, art,
-                                lit=lit == slot.index)
+                                lit=lit == slot.index,
+                                carried=hand.count if hand is not None
+                                and hand.source == slot.index else 0)
         for i in range(len(self._slots), racesgeom.SLOTS):
             racesdraw.draw_empty(surface, self, i, art)
         if bar is not None:
             racesdraw.relation_word(surface, self, self._slots[bar], art)
         if view is not None and view.players:
             racesdraw.draw_icons(surface, self, racesgeom.AGENT_GROUP,
-                                 racesrows.agents(view), self.my_race, art)
+                                 racesrows.agents(view) - (
+                                     hand.count if hand is not None and
+                                     hand.source == racesspies.AGENTS else 0),
+                                 self.my_race, art)
             racesdraw.draw_bonuses(surface, self, racesrows.spy_bonuses(
                 view, getattr(self._state, "leaders_raw", None)), art)
-        racesdraw.draw_spy_hand(surface, self, self._hand, self._hover)
+        racesdraw.draw_spy_hand(surface, self, hand, mouse_input.pos(), art)
         racesdraw.draw_buttons(surface, self,
                                view.buttons if view is not None else {},
                                self._armed if who else None)
@@ -277,6 +284,15 @@ class RacesScreen(ScreenBase):
         p = self._native(screen_x, screen_y)
         if p is None or view.state not in (raceswire.MAIN, raceswire.WHO):
             return None
+        if self._hand is not None and self._group_at(p)[0] is None:
+            # A click on no spy group puts the spies back where they came
+            # from — a race's other field (racescrn.cpp: the loop's `spy_group
+            # == nullptr` branch) or a button (its `input <= display_base`
+            # branch); nothing moved on the engine's side, so nothing is
+            # sent, and the click then does what it does (work order 226 E).
+            log.info("races: %d spies back to %s", self._hand.count,
+                     self._hand.source)
+            self._hand = None
         for name in racesgeom.BUTTONS:
             if name == "exit":
                 continue                 # the slanted button, above

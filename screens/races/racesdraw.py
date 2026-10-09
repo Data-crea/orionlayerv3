@@ -89,7 +89,7 @@ def draw_fields(surface, screen, i):
         hud.field(surface, nd.rect(layout, box), layout.scale)
 
 
-def draw_slot(surface, screen, slot, art, lit=False):
+def draw_slot(surface, screen, slot, art, lit=False, carried=0):
     """One race: portrait and frame, name, treaty lines or NO CONTACT, the
     IGNORED mark, and — for an active race — the bar, the slider, the spies
     and the mission row."""
@@ -133,7 +133,9 @@ def draw_slot(surface, screen, slot, art, lit=False):
     _draw_bar(surface, screen, i, slot.relation if slot.active else None,
               art)
     if slot.active and not slot.eliminated:
-        draw_icons(surface, screen, geom.SPY_GROUP[i], slot.spies,
+        # The spies in hand have left the group (`Move_Spies_Group_`,
+        # racescrn.cpp:411-414): it shows what stays (work order 226 E).
+        draw_icons(surface, screen, geom.SPY_GROUP[i], slot.spies - carried,
                    screen.my_race, art)
         _draw_missions(surface, screen, i, slot.mission)
     else:
@@ -250,17 +252,28 @@ def draw_icons(surface, screen, box, count, race, art):
         surface.blit(big, nd.point(layout, box[0] + k * step, box[1]))
 
 
-def draw_spy_hand(surface, screen, hand, hover):
-    """The spies in hand (`racesspies.Hand`) as the original shows them on
-    its pointer: the count beside it (`Redraw_Spy_Mouse_`, the icon with a
-    number; HD draws the number only)."""
-    if hand is None or hover is None:
+def draw_spy_hand(surface, screen, hand, pointer, art=None):
+    """The spies in hand on the pointer, as the original carries them
+    (work order 226 E, Data's decision 4): `Redraw_Spy_Mouse_`
+    (racescrn.cpp:608-622) puts the spy icon at (1, 1) of the mouse
+    picture and, for more than one, the count at (8, 4); the picture is
+    drawn at the pointer + (3, 2) (`Draw_Race_Screen_`, :584-588: :586). HD draws
+    the same at its own pointer, every frame (`pointer`: window px).
+    Drawing only — nothing is sent while the spies are carried."""
+    if hand is None or pointer is None:
         return
     layout = screen.layout
-    at = nd.point(layout, hover[0] + 8, hover[1] + 6)
-    nd.blit_text(surface, screen.style, f"{hand.count}", at[0], at[1],
-                 nd.rect(layout, (0, 0, 40, 0)).w, nd.font_px(layout, "name"),
-                 ink(None, "high"))
+    k = nd.native_scale(layout)
+    x0, y0 = pointer[0] + round(3 * k), pointer[1] + round(2 * k)
+    icon = art.spy(screen.my_race) if art is not None else None
+    if icon is not None:
+        surface.blit(nd.magnified(icon, layout),
+                     (x0 + round(1 * k), y0 + round(1 * k)))
+    if hand.count > 1 or icon is None:
+        nd.blit_text(surface, screen.style, f"{hand.count}",
+                     x0 + round(8 * k), y0 + round(4 * k),
+                     nd.rect(layout, (0, 0, 40, 0)).w,
+                     nd.font_px(layout, "name"), ink(art, "high"))
 
 
 def _draw_missions(surface, screen, i, mission):
