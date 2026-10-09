@@ -36,6 +36,9 @@ def mouse_motion(screen, screen_x, screen_y):
                 screen._viewctl.pan(view, screen._state, dx, dy)
                 screen._pan_from = (screen_x, screen_y)
         return
+    if boxdraw.system_open(screen):
+        screen._hover_star = None        # the window covers the map (226 F)
+        return
     screen._hover_star = screen._star_at(screen_x, screen_y)
 
 
@@ -92,6 +95,11 @@ def click(screen, screen_x, screen_y):
     view = screen._map_view()
     if view is not None and pygame.Rect(*view.box).collidepoint(
             screen_x, screen_y):
+        if boxdraw.system_open(screen):
+            # THE SYSTEM WINDOW IS OPEN: nothing reaches the map under it
+            # (work order 226 F) — closed through its own CLOSE (decision 66).
+            log.info("Map click ignored: the star system window is open")
+            return True
         map_click(screen, view, screen_x, screen_y)
         return True
 
@@ -225,6 +233,8 @@ def right_button(screen, down, mx, my):
                        "planet colony info", rightinfo.opener(screen))
         return True
     view = screen._map_view()
+    if view is not None and boxdraw.system_open(screen):
+        return False                     # no cancel, no pan (226 F)
     if view is not None and pygame.Rect(*view.box).collidepoint(
             mx, my):
         # DECISION 66: no positional right click while a box is open.
@@ -271,4 +281,6 @@ def mousewheel(screen, direction, mx, my):
         return
     if not pygame.Rect(*view.box).collidepoint(mx, my):
         return
+    if boxdraw.system_open(screen):
+        return                           # the window covers the map (226 F)
     screen._viewctl.zoom_at(view, screen._state, mx, my, direction)

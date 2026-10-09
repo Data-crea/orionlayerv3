@@ -35,7 +35,8 @@ order 223 the planets stand where the engine puts them, on their orbits
 (`sysorbits`).
 
 OMISSION (decision 61), each a field HD leaves alone: the system window's
-ship buttons, gate icons and planet hover line; the fleet box's ALL,
+ship buttons and gate icons (its planet information under the pointer is
+drawn since work order 226 F, `sysinfo`); the fleet box's ALL,
 the bar's thumb drag (a scroll field that reads the POINTER, fleetpop.cpp:
 213-216 — a click on the track steps one row toward it instead, DEVIATION
 `fleet_scroll_track`) and the Outpost / Colonize / Engage / Transport / Attack buttons;
@@ -210,9 +211,63 @@ def _draw_system(screen, surface, r, model, hits):
 
     # The orbits (work order 223): rings, belts, each planet where the
     # engine put it (`sysorbits`).
-    for p, rect in sysorbits.draw(surface, view, model, planet):
+    drawn = sysorbits.draw(surface, view, model, planet)
+    for p, rect in drawn:
         hits.append((rect, p["field"]))
         screen._box_planets.append((rect, p["field"]))
+    _planet_info(screen, surface, view, drawn)
+
+
+def _planet_info(screen, surface, view, drawn):
+    """The planet under the pointer: a highlight round it and its lines in
+    a darkened box at the view's corner (`sysinfo`, work order 226 F;
+    sys.cpp:824-844). DEVIATION `planet_highlight_drawn`: the original's
+    highlight is BUFFER0.LBX 0x4B in the owner's colours, not extracted —
+    HD draws the HUD outline in the owner's colour (grey without one)."""
+    from core import mouse as mouse_input
+    from core.buildnames import BuildingNames
+    from core.estrings import EStrings
+    from screens.galaxy_map import sysinfo
+    from screens.planets import planetwords
+    pointer = mouse_input.pos()
+    over = next(((p, r) for p, r in reversed(drawn)
+                 if r.collidepoint(pointer)), None)
+    if over is None or getattr(screen, "_state", None) is None:
+        return
+    p, rect = over
+    if getattr(screen, "_sysinfo_words", None) is None:
+        lang = (getattr(screen.app, "settings", None) or {}).get(
+            "language", "en")
+        screen._sysinfo_words = (
+            planetwords.Words(EStrings(lang), hestrings.for_app(screen.app)),
+            BuildingNames(lang))
+    words, names = screen._sysinfo_words
+    owner = sysinfo.owner_colour(screen._state, p["planet"])
+    colour = palette.col("galaxy_map", f"owner_{owner}", TEXT_COLOR) \
+        if owner is not None else TEXT_COLOR
+    # LOOK EXCEPTION data: the planet owner's colour, as the original's highlight (sys.cpp:599-633)
+    pygame.draw.rect(surface, tuple(colour)[:3],
+                     rect.inflate(rect.w // 3, rect.h // 3), 1)
+    lines = sysinfo.lines(screen._state, p["planet"], words, names)
+    if not lines:
+        return
+    size = _font(screen, "system_text", 16)
+    gap = max(2, size // 3)
+    surfs = [(screen.style.render_text(t, size, TEXT_COLOR[:3]), g)
+             for t, g in lines if t]
+    pad = max(3, size // 3)
+    w = max(sf.get_width() for sf, _g in surfs) + 2 * pad
+    h = sum(sf.get_height() + (gap if g else 0) for sf, g in surfs) + 2 * pad
+    box = pygame.Rect(view.x + pad, view.y + pad, w, h)
+    shade = pygame.Surface(box.size, pygame.SRCALPHA)
+    # LOOK EXCEPTION transcription: the original's darkened box under the lines (`Draw_Darkened_Box_`, sys.cpp:841)
+    shade.fill((0, 0, 0, 170))
+    surface.blit(shade, box.topleft)
+    y = box.y + pad
+    for sf, g in surfs:
+        y += gap if g else 0
+        surface.blit(sf, (box.x + pad, y))
+        y += sf.get_height()
 
 
 def orders_ok(screen):
@@ -326,6 +381,7 @@ def render(screen, surface):
     screen._box_hits = hits
     screen._box_planets = []
     screen._box_help = []
+    screen._system_drawn = False
     for names, box, model in drawable(screen):
         r = _placed(screen, names, box)
         if r is None:
@@ -335,6 +391,8 @@ def render(screen, surface):
         _text(screen, surface, r[names[1]], model["title"],
               _font(screen, names[1], 20), TITLE_COLOR)
         if model["kind"] == "system":
+            screen._system_drawn = True
+            screen._hover_star = None    # no map hover under it (226 F)
             _draw_system(screen, surface, r, model, hits)
             _text(screen, surface, r["system_text"], model["wormhole"],
                   _font(screen, "system_text", 16), TEXT_COLOR, "left")
@@ -405,3 +463,13 @@ def handle_key(screen, key):
             _activate(screen, model["close"], "close")
             return True
     return False
+
+
+def system_open(screen):
+    """True while HD draws the star system window (the frame before): then
+    the map under it takes nothing from the pointer — no hover name, no
+    click, no wheel, no pan (work order 226 F, Data's decision 5; beside
+    decision 66 and D13). The fleet box is not such a window: with it open
+    a star click is the original's move order (decision 65 amended)."""
+    return bool(getattr(screen, "_system_drawn", False))
+
