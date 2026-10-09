@@ -3,9 +3,11 @@
 Until decision 71 this composited nine tile images into the pre-game
 screens' cockpit frame. Nothing draws them since work order 169; work
 order 189 removed the compositing and work order 190 the tiles. What is
-read is the metadata: the two button bars (`button_rect_left/right`, the
-help regions of kind `frame_button`) and the content inset (Custom Race's
-fallback rect). `available` — the answer those readers ask first — means
+read is the metadata: the source size and the content inset (Custom
+Race's fallback rect). The two button bars it also read went in work
+order 228: nothing asked for them — the frame buttons and their help
+regions are the screen shell's (`core/hud/screenframe.py`,
+`core/screenhelp.py`). `available` — the answer those readers ask first — means
 "this skin's frame has its 9slice.json" since 190; until then it meant
 "all nine tiles are there", which for the shipped skin is the same answer.
 
@@ -18,14 +20,12 @@ import logging
 log = logging.getLogger("frame")
 
 class FrameRenderer:
-    """Renders a 9-slice frame at any size."""
+    """The skin frame's 9slice.json: source size and content inset."""
 
     def __init__(self, frame_dir):
         self.content_inset = (0, 0, 0, 0)  # l, r, t, b in source px
         self.source_w = 0
         self.source_h = 0
-        self.btn_left = None   # (x, y, w, h) in source px
-        self.btn_right = None  # (x, y, w, h) in source px
         self._loaded = False
 
         if os.path.isdir(frame_dir):
@@ -46,35 +46,9 @@ class FrameRenderer:
             # were read for the drawing and went with it (work order 189).
             sz = meta.get("source_size", [0, 0])
             self.source_w, self.source_h = sz
-            bl = meta.get("button_bar_left", {})
-            if bl:
-                self.btn_left = (bl["x"], bl["y"], bl["width"], bl["height"])
-            br_cfg = meta.get("button_bar_right", {})
-            if br_cfg:
-                rx = self.source_w - br_cfg["x_from_right"] - br_cfg["width"]
-                self.btn_right = (rx, br_cfg["y"], br_cfg["width"], br_cfg["height"])
-
             self._loaded = True
             log.info("Frame geometry loaded: %s", meta_path)
 
     @property
     def available(self):
         return self._loaded
-
-    def button_rect_left(self, win_w, win_h):
-        """Left button bar rect in window pixels, or None."""
-        if not self.btn_left or not self.source_w:
-            return None
-        sx = win_w / self.source_w
-        sy = win_h / self.source_h
-        bx, by, bw, bh = self.btn_left
-        return (int(bx * sx), int(by * sy), int(bw * sx), int(bh * sy))
-
-    def button_rect_right(self, win_w, win_h):
-        """Right button bar rect in window pixels, or None."""
-        if not self.btn_right or not self.source_w:
-            return None
-        sx = win_w / self.source_w
-        sy = win_h / self.source_h
-        bx, by, bw, bh = self.btn_right
-        return (int(bx * sx), int(by * sy), int(bw * sx), int(bh * sy))
