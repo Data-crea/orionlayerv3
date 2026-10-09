@@ -452,6 +452,14 @@ LOCAL_PATCHES = {
         "the engine sends a field list only when its count changes (open fix "
         "84): a race report's RETURN to Races with the same count leaves HD "
         "on the report's list"),
+    # Applied 9 October 2026 by work order 226 (Data's decision 1 of 9
+    # October): bdc3009b, on 8b1501f5.
+    "doc/ext_refit_first_ship.patch": (
+        os.path.join("src", "ext", "ext_api.cpp"),
+        "OrionLayer, open fix 85.",
+        "the engine does not report the refit ship list's first row (open "
+        "fix 85): HD counts the pages it sent, and a slider moved in the "
+        "game's window would put its cells on other ships"),
 }
 
 #: Patches that are REPORTED to Joes and not yet applied: listed with
@@ -538,6 +546,7 @@ FIX_NUMBERS = {
     "doc/ext_combat_beam_aim.patch": (82,),
     "doc/ext_combat_gyro_spin.patch": (83,),
     "doc/ext_field_list_content.patch": (84,),
+    "doc/ext_refit_first_ship.patch": (85,),
 }
 
 

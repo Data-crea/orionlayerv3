@@ -23,18 +23,27 @@ row, the last row and Cancel in the design list. The game answers: a help
 box (a ship it refuses), the officer's question, the next list, the
 designer, or the build popup.
 
-**HD STATE `first_row`.** Which five-ship row the ship list starts at is a
-static of the original (`_first_ship`); HD counts the pages it sent itself
-and starts at the top on entry. The arrows' hotkeys (E_Strings 0x89 and
-0xB, colrefit.cpp:357-371; "+" and "-" in the English game) therefore go
-through the same sends, never to the game as keys: a page the game turned
-alone would put HD's cells on other ships than the game's.
+**THE PAGE IS THE GAME'S, RE-ESTABLISHED FROM THE WIRE** (work order 226 A,
+D6; decision 46). Which five-ship row the ship list starts at is a static
+of the original (`_first_ship`: 0 on entry, colrefit.cpp:77; the arrows,
+:241-260; the slider, `Update_First_Ship_` on every draw, :415). Open fix
+85 sends it ("RFIT") with the list's length, and every snapshot sets
+`first` from it: HD never counts. The length is a second source for HD's
+reading of `Build_Ship_List_` (`ship_list`); while the two disagree, or
+on an engine without the block, HD draws no ship in a cell and sends no
+cell click (`first` is None). An arrow sends its field and nothing else
+moves until the wire shows the new row; until then (or `EFFECT_PAIRS`
+snapshots) a cell click is not sent, because the game may already have
+turned the page HD's picture still shows (F813). The arrows' hotkeys
+(E_Strings 0x89 and 0xB, colrefit.cpp:357-371; "+" and "-" in the English
+game) go through the same sends.
 """
 import logging
 
 import pygame
 
 from core import colony_guard, hestrings
+from core.wire_protocol import EFFECT_PAIRS
 from core.estrings import EStrings
 from core.screen_base import ScreenBase
 from core.shipparts import ShipPartNames
@@ -73,7 +82,8 @@ class RefitScreen(ScreenBase):
             visible=lambda key: self.kind is not None)
         self._state = None
         self.kind = None
-        self.first = 0              # HD STATE `first_row`
+        self.first = None           # the wire's row (open fix 85), or None
+        self._paging = None         # (row an arrow asked for, snapshots seen)
         self._ships = []            # ship indices in the original's order
         self._hover = None          # a cell (ships) or a row (designs)
         self._estrings = None
@@ -95,7 +105,8 @@ class RefitScreen(ScreenBase):
         lang = (getattr(self.app, "settings", {}) or {}).get("language", "en")
         self._estrings = EStrings(lang)
         self._parts = ShipPartNames(lang)
-        self.first, self._hover, self.kind = 0, None, None
+        self.first, self._hover, self.kind = None, None, None
+        self._paging = None
         self.update(game_state)
 
     def update(self, game_state=None):
@@ -104,11 +115,26 @@ class RefitScreen(ScreenBase):
         kind = geom.kind(getattr(game_state, "fields", None))
         if kind != self.kind:
             self._hover = None
-            if kind == "ships" and self.kind is None:
-                self.first = 0
+            self._paging = None
         self.kind = kind
         self._state = game_state
         self._ships = self.ship_list(game_state)
+        self.first = self.wire_first(game_state, self._ships)
+        if self._paging is not None and self.new_snapshot(game_state):
+            want, seen = self._paging
+            self._paging = (None if self.first == want or
+                            seen + 1 > EFFECT_PAIRS else (want, seen + 1))
+
+    @staticmethod
+    def wire_first(state, ships):
+        """The ship list's first row as the game holds it (open fix 85),
+        or None when the wire cannot place HD's cells: no RFIT block, or a
+        length that is not HD's own count of `ships`."""
+        block = getattr(state, "refit_list", None)
+        if not block or block.get("count") != len(ships):
+            return None
+        first = block.get("first")
+        return first if isinstance(first, int) and first >= 0 else None
 
     def wants_original(self):
         return False
@@ -184,7 +210,7 @@ class RefitScreen(ScreenBase):
         art = fltart.load()
         out = []
         for i in range(geom.CELLS):
-            k = self.first + i
+            k = (self.first + i) if self.first is not None else len(self._ships)
             if k >= len(self._ships):
                 out.append((i, None, None, ""))
                 continue
@@ -255,8 +281,8 @@ class RefitScreen(ScreenBase):
         if self.kind == "ships":
             refdraw.draw_frame(surface, self, self.word("title"))
             refdraw.draw_ships(surface, self, self.cells(), self._hover,
-                               self.first, len(self._ships))
-            if self._hover is not None and \
+                               self.first or 0, len(self._ships))
+            if self._hover is not None and self.first is not None and \
                     self.first + self._hover < len(self._ships):
                 k = self._ships[self.first + self._hover]
                 refdraw.draw_paragraph(surface, self, refwords.ship_lines(
@@ -325,17 +351,20 @@ class RefitScreen(ScreenBase):
 
     def _page(self, step):
         """One row of five up (-1) or down (+1), by the arrow's own field;
-        down only while a ship stands past the view (colrefit.cpp:241-245)."""
+        down only while a ship stands past the view (colrefit.cpp:241-245).
+        Nothing moves here: the wire's next rows say where the game went."""
+        if self.first is None:
+            return
         if step < 0:
             if self.send(self._field(geom.UP, geom.TYPE_BUTTON), "up"):
-                self.first = max(0, self.first - 5)
+                self._paging = (max(0, self.first - 5), 0)
         elif self.first + geom.CELLS < len(self._ships) and \
                 self.send(self._field(geom.DOWN, geom.TYPE_BUTTON), "down"):
-            self.first += 5
+            self._paging = (self.first + 5, 0)
 
     def handle_key(self, key):
-        """The arrows' hotkeys page through `_page` (HD STATE
-        `first_row`); every other key goes to the game as before."""
+        """The arrows' hotkeys page through `_page`; every other key goes
+        to the game as before."""
         if self.help_consumes_key(key):
             return
         if self.kind == "ships":
@@ -371,8 +400,12 @@ class RefitScreen(ScreenBase):
                 self._page(+1)
                 return None
             for i in range(geom.CELLS):
-                if self._in(p, geom.cell(i)) and \
-                        self.first + i < len(self._ships):
+                if self._in(p, geom.cell(i)) and self.first is not None \
+                        and self.first + i < len(self._ships):
+                    if self._paging is not None:
+                        log.info("refit: cell %d held — the page an arrow "
+                                 "asked for is not on the wire yet", i)
+                        return None
                     if self.send(self._field(geom.cell(i), geom.TYPE_HIDDEN),
                                  f"ship {self._ships[self.first + i]}"):
                         self._picked = self._ships[self.first + i]

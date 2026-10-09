@@ -71,3 +71,21 @@ def parse(gs, data, pos):
         return out
     gs.build_lists = block(b"BLDL", _bldl)
     return pos
+
+
+def parse_refit(gs, data, pos):
+    """Open fix 85 (work order 226 A): "RFIT", after HLPL, while the build
+    popup's id is up — the refit ship list's first row
+    (`COLREFIT::_first_ship`) and the list's length. Read whole or left
+    None; an engine without the fix writes none, and the refit screen then
+    draws no cell it cannot place (decision 46)."""
+    import struct as _st
+    gs.refit_list = None
+    if data[pos:pos + 4] != b"RFIT" or pos + 9 > len(data):
+        return pos
+    version, first, count = _st.unpack_from("<Bhh", data, pos + 4)
+    if version != 1:
+        return pos
+    gs.refit_list = {"first": first, "count": count}
+    return pos + 9
+
