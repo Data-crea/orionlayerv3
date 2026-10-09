@@ -29,6 +29,16 @@ ACTIVE_FOR = 0.30
 
 
 def render(screen, surface):
+    if getattr(screen, "SHELL_WORN", False):
+        # IN THE SCREEN SHELL (work order 225): the plate centred on the
+        # content rectangle and the buttons the shell's — `button_rect`.
+        L = screen.ref_layout
+        from core.hud import shell
+        hud.title_plate(surface, shell.content(L).centerx, 0, L.scale,
+                        screen.FRAME_TITLE, screen.style)
+        for side in ("left", "right"):
+            _button(screen, surface, side)
+        return
     L = screen.layout
     # From the window's top edge (work order 170).
     hud.title_plate(surface, L.offset_x + REF_W * L.scale / 2, 0,
@@ -43,6 +53,13 @@ def button_rect(screen, side):
     spec = screen.FRAME_BTN_LEFT if side == "left" else screen.FRAME_BTN_RIGHT
     if not spec:
         return None
+    if getattr(screen, "SHELL_WORN", False):
+        # The shell's buttons (decisions 87, 90): the closing action
+        # (ACCEPT) at the rectangle's bottom right, the other (CANCEL,
+        # BACK, CLEAR) the row's first slot.
+        from core.hud import shell
+        return shell.button_rect(screen.ref_layout,
+                                 "action" if side == "right" else 0)
     ref = hudstyle.get().get(f"frame_buttons.{side}")
     if not getattr(screen, "FRAME_BTN_AT_BOTTOM", True):
         return pygame.Rect(*screen.layout.rect(ref))
@@ -63,6 +80,9 @@ def hit(screen, side, x, y):
     r = button_rect(screen, side)
     if r is None:
         return False
+    if getattr(screen, "SHELL_WORN", False):
+        from core.hud import shell
+        return shell.hit(r, x, y)
     return r.collidepoint(x, y) if side == "right" else hud.slant_hit(r, x, y)
 
 
@@ -88,6 +108,11 @@ def _button(screen, surface, side):
             screen._btn_flash = None
     if state == "normal" and hit(screen, side, *mouse_input.pos()):
         state = "hover"
+    if getattr(screen, "SHELL_WORN", False):
+        from core.hud import shell
+        shell.draw_button(surface, r, screen.ref_layout, label,
+                          screen.style, state)
+        return
     draw = hud.action_button if side == "right" else hud.slant_button
     from core.hud import glyphs
     draw(surface, r, screen.layout.scale, state, label,

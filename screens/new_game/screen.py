@@ -53,6 +53,23 @@ class NewGameScreen(ScreenBase):
     FRAME_TITLE = "New Game"
     FRAME_BTN_LEFT = ("Cancel", 14)
     FRAME_BTN_RIGHT = ("Accept", 15)
+    #: THE SCREEN SHELL (work order 225): six panels, three by two, fill
+    #: the content rectangle above the button row — the five settings
+    #: (title, picture, value) and the three switches; the title on the
+    #: plate, CANCEL and ACCEPT the shell's buttons (`screenframe`). Every
+    #: rect comes from `_shell_slot` / `_shell_toggle`, which the drawing,
+    #: the click and the help all read (decision 5). The v2 3440x1440
+    #: positions of layout.json and the background's cover scale they went
+    #: through are no longer read.
+    SHELL_WORN = True
+    #: The panels in reading order; the last holds the switches.
+    SHELL_PANELS = ("difficulty", "galaxy_size", "galaxy_age", "players",
+                    "tech_level", "toggles")
+    #: Word sizes in reference px — what the v2 sizes (36, 38, 32) came
+    #: to at 1920x1080 through the cover scale.
+    TITLE_PX, LABEL_PX, TOGGLE_PX = 26, 28, 23
+    #: The switch's box, likewise (the v2 icon_size 80 at 1920x1080).
+    TOGGLE_BOX_PX = 60
 
     def __init__(self, app):
         super().__init__(app)
@@ -120,15 +137,26 @@ class NewGameScreen(ScreenBase):
             (cx, cy, win_w, win_h)).copy()
         self._scaled_cache.clear()
 
-    def setting_picture(self, category, panel):
-        """The picture for `category`'s current setting, scaled to the
-        panel's inner rect, or None. One function for the drawing and the
-        check that holds the picture to its source (work order 172)."""
+    def picture_rect(self, category):
+        """Where `category`'s picture is drawn: the shell's picture rect
+        (work order 225), else its v2 slot's panel inner rect."""
+        if self.SHELL_WORN:
+            return self._shell_slot(category)[1]
+        slot = self._cfg.get("setting_slots", {}).get(category)
+        panel = pygame.Rect(*self._hd_to_screen(*slot["rect"]))
+        return hud.panel_inner(panel, self.layout.scale)
+
+    def setting_picture(self, category, panel=None):
+        """The picture for `category`'s current setting, scaled to
+        `picture_rect` (or to `panel`'s inner rect when one is given), or
+        None. One function for the drawing and the check that holds the
+        picture to its source (work order 172)."""
         filename = self._current.get(category)
         img = self._get_setting_image(category, filename) if filename else None
         if img is None:
             return None
-        inner = hud.panel_inner(panel, self.layout.scale)
+        inner = (hud.panel_inner(panel, self.layout.scale) if panel
+                 is not None else self.picture_rect(category))
         return self._get_scaled(img, inner.w, inner.h)
 
     def _preload_setting_images(self):
@@ -180,6 +208,52 @@ class NewGameScreen(ScreenBase):
                 t.get("y0", 830) + index * t.get("dy", 105),
                 size, size)
 
+    # ── The shell's geometry (work order 225) ────────────────
+
+    def _shell_panel(self, name):
+        from core.hud import shell
+        L = self.ref_layout
+        area = shell.panels(L, row=True)
+        cols = shell.split(area, L, [1.0, 1.0, 1.0])
+        rows = shell.split(area, L, [1.0, 1.0], vertical=True)
+        i = self.SHELL_PANELS.index(name)
+        c, r = cols[i % 3], rows[i // 3]
+        return pygame.Rect(c.x, r.y, c.w, r.h)
+
+    def _shell_slot(self, cat):
+        """(panel, picture rect, title y, label y) of setting `cat`: the
+        title at the inner top, the value at the inner bottom, the
+        picture between them in its slot's own proportion, centred."""
+        from core.hud import shell
+        L = self.ref_layout
+        panel = self._shell_panel(cat)
+        inner = shell.inner(panel, L)
+        g = shell.element_gap(L)
+        th = L.font_size(self.TITLE_PX) + g
+        lh = L.font_size(self.LABEL_PX) + g
+        slot = self._cfg.get("setting_slots", {}).get(cat, {})
+        sw, sh = (slot.get("rect") or (0, 0, 600, 306))[2:]
+        room = pygame.Rect(inner.x, inner.y + th, inner.w,
+                           inner.h - th - lh)
+        k = min(room.w / sw, room.h / sh)
+        pic = pygame.Rect(0, 0, int(sw * k), int(sh * k))
+        pic.center = room.center
+        return panel, pic, inner.y, inner.bottom - lh + g
+
+    def _shell_toggle(self, i):
+        """(row rect, box rect) of switch `i`: the rows share the panel's
+        inner height, the box a square at the row's left."""
+        from core.hud import shell
+        L = self.ref_layout
+        inner = shell.inner(self._shell_panel("toggles"), L)
+        n = max(1, len(self._cfg.get("toggles", {}).get("order", [])))
+        h = inner.h // n
+        row = pygame.Rect(inner.x, inner.y + i * h, inner.w, h)
+        size = int(self.TOGGLE_BOX_PX * L.scale)
+        box = pygame.Rect(row.x + shell.element_gap(L) * 2, 0, size, size)
+        box.centery = row.centery
+        return row, box
+
     # ── Update ───────────────────────────────────────────────
 
     def update(self, game_state=None):
@@ -214,6 +288,11 @@ class NewGameScreen(ScreenBase):
         # geometry template, not a picture), and each picture on a HUD
         # panel.
         backgrounds.draw(surface, self.SCREEN_NAME)
+        if self.SHELL_WORN:
+            self._render_shell_panels(surface)
+            self._render_frame(surface)     # the plate and the buttons
+            self.render_help(surface)
+            return
         if not self._bg_screen:
             return
         slots = self._cfg.get("setting_slots", {})
@@ -273,6 +352,41 @@ class NewGameScreen(ScreenBase):
         # 8. Right-click help, above everything including the frame.
         self.render_help(surface)
 
+    def _render_shell_panels(self, surface):
+        """The six panels, the settings' words and pictures, the switches."""
+        L = self.ref_layout
+        cats = self._cfg.get("categories", {})
+        for name in self.SHELL_PANELS:
+            hud.panel(surface, self._shell_panel(name), L.scale)
+        tfont = self.style.get_font(L.font_size(self.TITLE_PX))
+        lfont = self.style.get_font(L.font_size(self.LABEL_PX))
+        for cat in self._cfg.get("setting_slots", {}):
+            panel, pic, ty, ly = self._shell_slot(cat)
+            # The outline UNDER the picture, just outside it: the picture
+            # stays its source pixel for pixel (172's rule, check 006f).
+            hud.outline(surface, pic.inflate(4, 4), L.scale)
+            img = self.setting_picture(cat)
+            if img is not None:
+                surface.blit(img, pic)
+            title = cats.get(cat, {}).get("title", "")
+            if title:
+                t = tfont.render(title.upper(), True, TITLE_COLOR)
+                surface.blit(t, (panel.centerx - t.get_width() // 2, ty))
+            label = self._labels.get(cat, "")
+            if label:
+                t = lfont.render(label, True, LABEL_COLOR)
+                surface.blit(t, (panel.centerx - t.get_width() // 2, ly))
+        t = self._cfg.get("toggles", {})
+        font = self.style.get_font(L.font_size(self.TOGGLE_PX))
+        for i, name in enumerate(t.get("order", [])):
+            row, box = self._shell_toggle(i)
+            hud.checkbox(surface, box, L.scale,
+                         self._toggle_states.get(name, False))
+            w = font.render(t.get("labels", {}).get(name, name).upper(),
+                            True, TOGGLE_LABEL_COLOR)
+            surface.blit(w, (box.right + box.w // 2,
+                             row.centery - w.get_height() // 2))
+
     def _render_toggles(self, surface):
         t = self._cfg.get("toggles", {})
         lfont = self.style.get_font(self._hd_font_size(
@@ -311,6 +425,8 @@ class NewGameScreen(ScreenBase):
         cat = spec.get("slot")
         if cat:
             slot = self._cfg.get("setting_slots", {}).get(cat)
+            if slot and self.SHELL_WORN:
+                return self._shell_slot(cat)[0]
             return self._hd_rect(slot["rect"]) if slot else None
 
         name = spec.get("toggle")
@@ -319,6 +435,8 @@ class NewGameScreen(ScreenBase):
             order = t.get("order", [])
             if name not in order:
                 return None
+            if self.SHELL_WORN:
+                return self._shell_toggle(order.index(name))[0]
             icon = self._toggle_icon_rect(order.index(name))
             return self._hd_rect((icon[0], icon[1] - 5,
                                   t.get("click_width", 600),
@@ -332,8 +450,10 @@ class NewGameScreen(ScreenBase):
             return
         # Settings: ACTIVATE_FIELD
         for cat, slot in self._cfg.get("setting_slots", {}).items():
-            if self._hd_rect(slot["rect"]).collidepoint(
-                    screen_x, screen_y):
+            # The whole panel answers under the shell, as the slot did.
+            hit = (self._shell_slot(cat)[0] if self.SHELL_WORN
+                   else self._hd_rect(slot["rect"]))
+            if hit.collidepoint(screen_x, screen_y):
                 self.app.client.activate_field(slot["field_id"])
                 return
         # Toggles: type=1 radio buttons — must use INJECT_CLICK.
@@ -347,8 +467,9 @@ class NewGameScreen(ScreenBase):
         dy = t.get("dy", 105)
         for i, name in enumerate(t.get("order", [])):
             icon = self._toggle_icon_rect(i)
-            region = (icon[0], icon[1] - 5, cw, dy)
-            if self._hd_rect(region).collidepoint(screen_x, screen_y):
+            region = (self._shell_toggle(i)[0] if self.SHELL_WORN else
+                      self._hd_rect((icon[0], icon[1] - 5, cw, dy)))
+            if region.collidepoint(screen_x, screen_y):
                 fid = t.get("field_ids", {}).get(name)
                 cx, cy = self._toggle_click_pos(name, fid)
                 if cx:
