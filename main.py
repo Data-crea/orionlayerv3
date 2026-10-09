@@ -36,6 +36,26 @@ log = logging.getLogger("orionlayer")
 
 
 
+def coalesce_motion(events):
+    """The events of one frame, with every pointer motion dropped that
+    another motion follows before any other event — work order 226 C.
+
+    A motion carries an absolute position, so only the last of a run says
+    where the pointer is; every handler reads that (hover, drag, pan). A
+    fast mouse queues many per frame, and each was routed in full before
+    the frame was drawn: on Planets 1.5 ms an event, the highlight a frame
+    or more late (measured, 226's report). A button, wheel or key between
+    two motions keeps the motion before it, so a press still sees the
+    pointer where it was pressed."""
+    out = []
+    for i, ev in enumerate(events):
+        if ev.type == pygame.MOUSEMOTION and i + 1 < len(events) and \
+                events[i + 1].type == pygame.MOUSEMOTION:
+            continue
+        out.append(ev)
+    return out
+
+
 class App:
     def __init__(self):
         pygame.init()
@@ -243,7 +263,7 @@ class App:
         # stops: from here on a debug click IS a click (decision 5).
         if self._debug_input is not None:
             self._debug_input.pump()
-        for event in pygame.event.get():
+        for event in coalesce_motion(pygame.event.get()):
             # Adjust mouse positions for fullscreen offset
             if self._fs_offset and hasattr(event, 'pos'):
                 ox, oy = self._fs_offset

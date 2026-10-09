@@ -96,8 +96,15 @@ class PlanetsScreen(ScreenBase):
     def update(self, game_state=None):
         if game_state is None:
             return
+        # ONCE PER SNAPSHOT (work order 226 C): the view parses every
+        # planet, colony and player record; the App calls `update` every
+        # frame with the same snapshot, and re-parsing it cost Planets 8 ms
+        # a frame. The list is still refreshed every frame (a filter or a
+        # sort clicked since).
+        if game_state is not self._state or self._view is None:
+            self._view = planetrows.View(game_state)
+            self._stars_cache = None
         self._state = game_state
-        self._view = planetrows.View(game_state)
         if self._list.refresh(self._view, self._filters):
             self._clear_scanned()
         self._clamp_after_filter()
@@ -144,9 +151,16 @@ class PlanetsScreen(ScreenBase):
         return None
 
     def _inset_stars(self):
+        """The inset's stars, built once per snapshot (work order 226 C):
+        a pointer motion off the list asked for them on every event."""
         if self._state is None:
             return []
-        return colonyrows.galaxy_inset_stars(self._state, INSET_NATIVE)
+        cache = getattr(self, "_stars_cache", None)
+        if cache is None or cache[0] is not self._state:
+            cache = (self._state, colonyrows.galaxy_inset_stars(
+                self._state, INSET_NATIVE))
+            self._stars_cache = cache
+        return cache[1]
 
     def _send_available(self, hotkey):
         """A send button is available exactly when the game added its

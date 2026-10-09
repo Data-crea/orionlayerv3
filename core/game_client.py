@@ -248,7 +248,15 @@ class GameClient:
                 self._lost(f"No data for {silent:.1f}s — reconnecting")
                 return False
 
-            # Parse messages from buffer
+            # Parse messages from buffer. Collected first: A STATE SNAPSHOT
+            # ANOTHER ONE FOLLOWS IN THIS POLL IS NOT PARSED (work order
+            # 226 C) — screens see only the last (`_carry_combat_events`),
+            # and on a screen whose loop has no wait the engine sends a
+            # dozen a frame, each a full parse (Planets: half the frame).
+            # One carrying the battle's events (CMEV) is parsed still, so
+            # they are gathered as before; fields, pictures and slots go
+            # onto the state in their order and are carried, as before.
+            batch = []
             while len(self._recv_buf) >= 16:
                 magic, length = struct.unpack_from(
                     '<II', self._recv_buf, 0
@@ -268,8 +276,19 @@ class GameClient:
                 )
                 payload = bytes(self._recv_buf[16:total])
                 del self._recv_buf[:total]
+                batch.append((msg_type, flags, payload))
 
-                self._handle_message(msg_type, flags, payload)
+            last_state = max((i for i, m in enumerate(batch)
+                              if m[0] == MSG_STATE), default=-1)
+            for i, (msg_type, flags, payload) in enumerate(batch):
+                if msg_type == MSG_STATE and i < last_state and \
+                        b"CMEV" not in payload:
+                    self.stats["state"] += 1
+                    self.stats["bytes"] += len(payload) + 16
+                    self.stats["state_skipped"] = \
+                        self.stats.get("state_skipped", 0) + 1
+                else:
+                    self._handle_message(msg_type, flags, payload)
                 got_message = True
 
         except (ConnectionResetError, BrokenPipeError, OSError) as e:
