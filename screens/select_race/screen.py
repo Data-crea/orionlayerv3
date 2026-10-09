@@ -33,6 +33,11 @@ class SelectRaceScreen(ScreenBase):
     #: (SCREEN_RACE) until work order 128, which is the Races screen.
     GAME_SCREEN_ID = 51
     USE_FRAME = True
+    #: THE SCREEN SHELL (work order 225): the race grid and the info panel
+    #: fill the content rectangle above the button row (`boxes.json`, the
+    #: same rects at both resolutions), BACK the row's first slot, the
+    #: title on the plate (`screenframe`).
+    SHELL_WORN = True
     FRAME_TITLE = "Select Race"
     #: THE WAY BACK (work order 177; 174 found none). The original offers
     #: exactly one: ESC, a hot-key field `Add_Hot_Key_("\x1B")` added in a

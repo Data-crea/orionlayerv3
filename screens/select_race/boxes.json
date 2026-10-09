@@ -3,10 +3,10 @@
     {
       "name": "race_grid",
       "rect": [
-        100,
-        115,
-        1070,
-        735
+        20,
+        85,
+        1185,
+        893
       ],
       "style": {
         "label": "Race Grid",
@@ -19,10 +19,10 @@
     {
       "name": "info_panel",
       "rect": [
-        1210,
-        115,
-        610,
-        735
+        1225,
+        85,
+        675,
+        893
       ],
       "style": {
         "label": "Info Panel",
@@ -34,9 +34,9 @@
     {
       "name": "race_name",
       "rect": [
-        1228,
-        125,
-        580,
+        1233,
+        93,
+        659,
         60
       ],
       "style": {
@@ -47,10 +47,10 @@
     {
       "name": "race_description",
       "rect": [
-        1228,
-        195,
-        580,
-        340
+        1233,
+        163,
+        659,
+        400
       ],
       "style": {
         "label": "Description",
@@ -60,10 +60,10 @@
     {
       "name": "race_traits",
       "rect": [
-        1228,
-        555,
-        580,
-        280
+        1233,
+        583,
+        659,
+        387
       ],
       "style": {
         "label": "Race Traits",
@@ -75,10 +75,10 @@
     {
       "name": "race_grid",
       "rect": [
-        115,
-        115,
-        1070,
-        837
+        20,
+        85,
+        1185,
+        893
       ],
       "style": {
         "label": "Race Grid",
@@ -91,10 +91,10 @@
     {
       "name": "info_panel",
       "rect": [
-        1210,
-        115,
-        610,
-        834
+        1225,
+        85,
+        675,
+        893
       ],
       "style": {
         "label": "Info Panel",
@@ -106,9 +106,9 @@
     {
       "name": "race_name",
       "rect": [
-        1228,
-        125,
-        580,
+        1233,
+        93,
+        659,
         60
       ],
       "style": {
@@ -119,9 +119,9 @@
     {
       "name": "race_description",
       "rect": [
-        1228,
-        208,
-        580,
+        1233,
+        163,
+        659,
         400
       ],
       "style": {
@@ -132,10 +132,10 @@
     {
       "name": "race_traits",
       "rect": [
-        1228,
-        618,
-        580,
-        310
+        1233,
+        583,
+        659,
+        387
       ],
       "style": {
         "label": "Race Traits",
