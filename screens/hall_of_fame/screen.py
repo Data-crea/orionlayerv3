@@ -167,7 +167,12 @@ class HallOfFameScreen(ScreenBase):
     def handle_key_event(self, event):
         if event.key == pygame.K_ESCAPE:
             self._leave("ESC")
-        return True                   # no other key reaches the game
+        else:
+            # Alt+C resets the hall of fame (score.cpp:565, a multi-hotkey):
+            # the one rule every screen shares (work order 230 E)
+            from core import keyfwd
+            keyfwd.forward(self, event)
+        return True
 
     def handle_key(self, key):
         if key == pygame.K_ESCAPE:

@@ -474,6 +474,18 @@ LOCAL_PATCHES = {
         "OrionLayer, open fix 87.",
         "the engine does not send the name box (open fix 87): \"Enter Star "
         "Name\" after a star's first colony shows the F12 notice"),
+    # Applied 10 October 2026 by work order 230 (decision 85): 6c431570.
+    "doc/ext_text_fields.patch": (
+        os.path.join("src", "ext", "ext_api.cpp"),
+        "OrionLayer, open fix 88.",
+        "the engine does not send the text fields (open fix 88): Custom "
+        "Race's name field shows nothing and reads nothing back"),
+    # Applied 10 October 2026 by work order 230 (decision 85): 0ff8f875.
+    "doc/ext_raw_key.patch": (
+        os.path.join("src", "ext", "ext_api.cpp"),
+        "OrionLayer, open fix 89.",
+        "the engine takes no raw key code (open fix 89): no F key, Alt+F "
+        "key or Alt+letter reaches the game"),
 }
 
 #: Patches that are REPORTED to Joes and not yet applied: listed with
@@ -563,6 +575,8 @@ FIX_NUMBERS = {
     "doc/ext_refit_first_ship.patch": (85,),
     "doc/ext_fleet_box_buttons.patch": (86,),
     "doc/ext_name_box.patch": (87,),
+    "doc/ext_text_fields.patch": (88,),
+    "doc/ext_raw_key.patch": (89,),
 }
 
 

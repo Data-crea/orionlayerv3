@@ -18,6 +18,7 @@ from core.wire_protocol import (
     MSG_ACTIVATE, MSG_INJECT_KEY, MSG_INJECT_CLICK, MSG_CANCEL_FIELD,
     MSG_SET_JOBS, MSG_SELECT_SHIP, MSG_SAVE_SLOTS, MSG_SHOW_WINDOW,
     MSG_INJECT_RIGHT_CLICK, MSG_COMBAT_COMMAND, MSG_SET_SPIES,
+    MSG_INJECT_RAW_KEY,
     SUB_STATE, SUB_FIELDS, SUB_VISUAL, SUB_EVENTS,
     parse_save_slots,
 )
@@ -374,6 +375,13 @@ class GameClient:
         if -32768 <= keysym <= 32767:
             self._send_message(MSG_INJECT_KEY,
                                struct.pack('<h', keysym))
+
+    def inject_raw_key(self, code):
+        """Send a key the engine's platform layer translates (open fix 89,
+        `core/keyfwd.py`): an F key, Alt+F key or Alt+letter code; the
+        engine drops anything else."""
+        if 0 <= code <= 0xFFFF:
+            self._send_message(MSG_INJECT_RAW_KEY, struct.pack('<H', code))
 
     def inject_click(self, x, y):
         """Send a mouse click at (x,y) in 640x480 space."""

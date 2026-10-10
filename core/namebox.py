@@ -36,21 +36,13 @@ import struct as _st
 
 import pygame
 
-from core import lang
+from core import lang, textfields
 from core.hud import blocks as hud
 from core.hud import text as hudtext
 
 log = logging.getLogger("orionlayer")
 
 KEY_BACKSPACE, KEY_ENTER, KEY_ESC = 8, 13, 27
-
-
-def _s8(data, pos):
-    n = data[pos]
-    end = pos + 1 + n
-    if end > len(data):
-        raise ValueError("short")
-    return lang.wire_text(data[pos + 1:end]), end
 
 
 def parse(gs, data, pos):
@@ -60,26 +52,21 @@ def parse(gs, data, pos):
     if data[pos:pos + 4] != b"INBX":
         return pos
     try:
-        at = pos + 4
-        version, x, y, field, limit = _st.unpack_from("<BhhhB", data, at)
+        version, x, y = _st.unpack_from("<Bhh", data, pos + 4)
         if version != 1:
             return pos
-        at += _st.calcsize("<BhhhB")
-        text, at = _s8(data, at)
-        editing = data[at]
-        at += 1
-        typed = None
-        if editing:
-            typed, at = _s8(data, at)
+        entry, at = textfields.input_field(data, pos + 4 + 5)
         (button,) = _st.unpack_from("<h", data, at)
-        at += 2
-        prompt, at = _s8(data, at)
+        prompt, at = textfields.s8(data, at + 2)
+        if at >= len(data):
+            return pos
         animated = data[at]
         at += 1
     except (ValueError, IndexError, _st.error):
         return pos
-    gs.name_box = {"x": x, "y": y, "field": field, "max": limit,
-                   "text": text, "editing": bool(editing), "typed": typed,
+    gs.name_box = {"x": x, "y": y, "field": entry["field"],
+                   "max": entry["max"], "text": entry["text"],
+                   "editing": entry["editing"], "typed": entry["typed"],
                    "button": button, "prompt": prompt,
                    "animated": bool(animated)}
     return at
@@ -99,10 +86,7 @@ def shown(box):
     """The name the box shows: what is typed, else what it opened with.
     The typed text carries the game's own cursor, a trailing '_' (fix 51's
     note: the commit strips it; '_' cannot be typed, fields.cpp:1210-1238)."""
-    if box["editing"] and box["typed"] is not None:
-        typed = box["typed"]
-        return typed[:-1] if typed.endswith("_") else typed
-    return box["text"]
+    return textfields.typed_text(box)
 
 
 def key_code(event):

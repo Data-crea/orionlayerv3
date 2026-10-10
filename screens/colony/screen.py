@@ -220,7 +220,11 @@ class ColonyScreen(ScreenBase):
             return
         what = KEYS.get(key)
         if what is None:
-            return                    # nothing else is sent (docstring)
+            # the rest of the original's keys (C, the Alt cheats;
+            # colony_main.cpp:980-1031): the one rule every screen shares
+            # (work order 230 E)
+            super().handle_key(key)
+            return
         if what == "esc":
             if self.pick is not None:
                 self.pick = None      # decision 47: the preview is ours

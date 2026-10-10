@@ -287,6 +287,8 @@ class InfoScreen(ScreenBase):
             return
         if key == geom.ESC:
             self._send_exit("ESC")
+        else:
+            super().handle_key(key)     # work order 230 E: the shared rule
 
     def _send_exit(self, why):
         if self._exit is None or not self.app.connected:

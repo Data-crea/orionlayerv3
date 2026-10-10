@@ -228,3 +228,7 @@ class CombatInput:
             self._cam.centre_on(*cbdraw.centre(u))    # the original's C
         elif key == pygame.K_ESCAPE:
             self._board = self._pops.scan_mode = False
+        else:
+            # A S B R W D T Z O — the battle's buttons' hotkeys (combat1.cpp:
+            # 109-187): the one rule every screen shares (work order 230 E)
+            super().handle_key(key)

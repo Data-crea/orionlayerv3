@@ -4,7 +4,8 @@
   "default_government": 2,
   "_government_values_note": "TRANSCRIBED: the Governments options' values are the engine's numbers, orion2_consts.h:192-202 (Feudal 0, Dictatorship 2, Democracy 4, Unification 6; screens/custom_race/governments.py). Democracy was 3, the engine's IMPERIUM, until work order 206; the engine never received it (a choice is sent as the option's field_id). default_government 2 is Dictatorship. Smoke check 039b holds it.",
   "messages": {
-    "picks_negative": "Picks remaining must be greater than or equal to zero."
+    "picks_negative": "Picks remaining must be greater than or equal to zero.",
+    "race_name": "Race Name"
   },
   "categories": [
     {

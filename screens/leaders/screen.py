@@ -376,4 +376,9 @@ class LeadersScreen(ScreenBase):
     def handle_key(self, key):
         if self.help_consumes_key(key):
             return
-        ldrinput.key(self, key)
+        if key == ldrinput.KEY_ESC:
+            ldrinput.key(self, key)
+        else:
+            # D P H X S C - + . , (officer.cpp:2822-2990): the one rule
+            # every screen shares (work order 230 E)
+            super().handle_key(key)

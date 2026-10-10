@@ -24,7 +24,7 @@ from screens.custom_race.description import (
 from screens.custom_race.popup import (
     MessagePopup, FALLBACK_PANEL, fallback_text_rect,
 )
-from screens.custom_race import governments
+from screens.custom_race import governments, racename
 
 log = logging.getLogger("custom_race")
 
@@ -291,9 +291,19 @@ class CustomRaceScreen(ScreenBase):
         dr = self._panel_outer["description"]
         self._draw_panel_header(surface, L, "DESCRIPTION",
                                 "description_header", dr)
+        desc = self._panels["description"]
+        lab_ref = self.box_rect("race_name_label")
+        if lab_ref:
+            # the race's name stands at the column's foot (work order 230
+            # E); the description ends above it (reference units, as the
+            # panel)
+            desc = (desc[0], desc[1], desc[2],
+                    max(0, min(desc[3], lab_ref[1] - desc[1] - 8)))
         render_description_panel(surface, L, self.style,
-            self._active_entry(), self._panels["description"],
+            self._active_entry(), desc,
             self._panel_fs["description"], self._desc_scroll)
+        racename.render(self, surface,
+                        self._message("race_name", racename.LABEL))
 
         # Frame overlay
         if self.USE_FRAME:
@@ -418,6 +428,8 @@ class CustomRaceScreen(ScreenBase):
             self._popup.close()
             return None
 
+        if racename.click(self, screen_x, screen_y):
+            return None
         side = self._frame_button_side(screen_x, screen_y)
         if side == "left":
             self._btn_flash = (side, time.monotonic())
@@ -563,6 +575,11 @@ class CustomRaceScreen(ScreenBase):
         # the game — ESC would otherwise cancel the whole screen.
         if self._popup.visible:
             self._popup.close()
+            return
+        if racename.editing(self):
+            # the name is being typed: every key is the field's, ESC too
+            # (it restores the old name, fields.cpp:1180-1190)
+            super().handle_key(key)
             return
         if key == pygame.K_ESCAPE:
             if self.app.connected:

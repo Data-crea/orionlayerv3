@@ -71,6 +71,11 @@ MSG_COMBAT_COMMAND = 0x88
 #: list — uint8 n, n x (uint8 player, uint8 spies, uint8 mission 1-3 or 0
 #: kept), uint8 agent pool; all or nothing, only while the screen is up.
 MSG_SET_SPIES = 0x89
+#: Open fix 89 (work order 230 E): a key code as the engine's platform layer
+#: translates F1-F10 (0x3B00-0x4400), Alt+F1-F10 (0x6800-0x7100) and
+#: Alt+letter (scan << 8, 0x1000-0x3200) — the keys MSG_INJECT_KEY cannot
+#: carry; the engine drops any other code.
+MSG_INJECT_RAW_KEY = 0x8A
 
 #: How many STATE/VISUAL pairs after an injected command can still
 #: describe the world BEFORE it. One — so a caller that waits for an

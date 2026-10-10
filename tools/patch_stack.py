@@ -105,8 +105,12 @@ STACKED_AFTER_COLONY = (
     "doc/ext_refit_first_ship.patch",
     # work order 229: 86 appends FBTN after 85's RFIT
     "doc/ext_fleet_box_buttons.patch",
-    # work order 230: 87 appends INBX after 86's FBTN, LAST
+    # work order 230: 87 appends INBX after 86's FBTN
     "doc/ext_name_box.patch",
+    # work order 230: 88 appends TXTF after 87's INBX
+    "doc/ext_text_fields.patch",
+    # work order 230: 89 adds a case to ProcessInput, LAST
+    "doc/ext_raw_key.patch",
 )
 
 

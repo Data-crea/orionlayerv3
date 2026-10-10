@@ -106,6 +106,8 @@ from the maintainer.
 | 48 | `bdc3009b` | open fix 85: RFIT — the refit ship list's first row on the wire, with the list's length, while the build popup's id is up, read only; OrionLayer re-establishes the list's page from it instead of counting (work order 226) | `doc/ext_refit_first_ship.patch` |
 | 49 | `4642eb1e` | open fix 86: FBTN — the fleet box's order buttons on the wire: ALL, Outpost, Colonize, Engage, Transport and Attack, each with whether the box offers it and its field, and the stack's star with its ignore-enemies bit, read only; OrionLayer's fleet box offers the orders from it (work order 229) | `doc/ext_fleet_box_buttons.patch` |
 | 50 | `34a1d873` | open fix 87: INBX — the game's name box on the wire: its prompt, the name it opened with, the typed text, its fields, read only; OrionLayer draws "Enter Star Name" after a star's first colony from it instead of the F12 notice (work order 230) | `doc/ext_name_box.patch` |
+| 51 | `6c431570` | open fix 88: TXTF — the text fields on the wire: per continuous input field its buffer and, while edited, the typed text, read only; OrionLayer shows and reads back a typed name (Custom Race's race name) from it (work order 230) | `doc/ext_text_fields.patch` |
+| 52 | `0ff8f875` | open fix 89: MSG_INJECT_RAW_KEY — a key code as the engine translates F1-F10, Alt+F1-F10 and Alt+letter, nothing else; OrionLayer passes the original's F and Alt keys with it (work order 230) | `doc/ext_raw_key.patch` |
 
 ## Install
 

@@ -321,4 +321,7 @@ class MultiplayerScreen(ScreenBase):
             f = next((f for k, (r, f) in self._rects.items()
                       if k == "cancel"), None)
             self._send(f, "ESC")
+        else:
+            from core import keyfwd     # work order 230 E: the shared rule
+            keyfwd.forward(self, event)
         return True

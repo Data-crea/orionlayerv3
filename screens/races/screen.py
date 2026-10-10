@@ -337,3 +337,8 @@ class RacesScreen(ScreenBase):
         if key == racesgeom.ESC and view is not None and \
                 view.sendable("exit"):
             self._send(view.buttons["exit"], "ESC")
+            return
+        # A, R, I, D — the screen's mode buttons' hotkeys (racescrn.cpp:
+        # 338-372): the one rule every screen shares (work order 230 E)
+        if key != racesgeom.ESC and view is not None:
+            super().handle_key(key)

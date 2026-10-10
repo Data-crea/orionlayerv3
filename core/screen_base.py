@@ -340,19 +340,30 @@ class ScreenBase(HelpMixin):
         return None
 
     def handle_key_event(self, event):
-        """Full pygame KEYDOWN event. Default: forward the keycode.
+        """Full pygame KEYDOWN event: kept for `handle_key`'s default, then
+        the keycode to `handle_key`.
 
         Screens with text input override this to access
-        event.unicode (see core/widgets/text_input.py).
+        event.unicode (see core/widgets/text_input.py); one that does not
+        answer a key itself calls `keyfwd.forward` (or this) for it.
         """
+        self._key_event = event
         self.handle_key(event.key)
 
     def handle_key(self, key):
-        """Handle keypress. Default: forward to orion2re."""
+        """A key the screen does not answer itself: to the game by the one
+        rule every screen shares (`core/keyfwd.py`, work order 230 E) —
+        where the original's answer is a field of the live list, never an
+        Enter into the engine's pointer or a blind ESC."""
         if self.help_consumes_key(key):
             return
-        if self.app.connected:
-            self.app.client.inject_key(key)
+        event = getattr(self, "_key_event", None)
+        if event is None or getattr(event, "key", None) != key:
+            event = pygame.event.Event(pygame.KEYDOWN, {
+                "key": key, "mod": 0, "unicode": chr(key) if 32 <= key < 127
+                else ""})
+        from core import keyfwd
+        keyfwd.forward(self, event)
 
     def handle_left_release(self, screen_x, screen_y):
         """The press ends (core.pressfeedback)."""

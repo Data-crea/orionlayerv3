@@ -266,6 +266,9 @@ class BuildQueueScreen(ScreenBase):
             return
         ch = KEYS.get(key)
         if ch is None:
+            # R, D, E (colbldg.cpp:360-364): the one rule every screen
+            # shares (work order 230 E)
+            super().handle_key(key)
             return
         field = next((f for f in self._live() if f.index != 0 and
                       f.hotkey == ord(ch)), None)

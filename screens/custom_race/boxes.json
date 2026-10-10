@@ -149,6 +149,32 @@
         "label": "Picks Popup Text",
         "font_scale": 1.0
       }
+    },
+    {
+      "name": "race_name_label",
+      "rect": [
+        1338,
+        900,
+        546,
+        26
+      ],
+      "style": {
+        "skin": "text",
+        "font_size": 18
+      }
+    },
+    {
+      "name": "race_name_field",
+      "rect": [
+        1338,
+        928,
+        546,
+        42
+      ],
+      "style": {
+        "skin": "text",
+        "font_size": 22
+      }
     }
   ],
   "2560x1440": [
@@ -300,6 +326,32 @@
       "style": {
         "label": "Picks Popup Text",
         "font_scale": 1.0
+      }
+    },
+    {
+      "name": "race_name_label",
+      "rect": [
+        1338,
+        900,
+        546,
+        26
+      ],
+      "style": {
+        "skin": "text",
+        "font_size": 18
+      }
+    },
+    {
+      "name": "race_name_field",
+      "rect": [
+        1338,
+        928,
+        546,
+        42
+      ],
+      "style": {
+        "skin": "text",
+        "font_size": 22
       }
     }
   ]
