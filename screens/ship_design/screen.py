@@ -175,10 +175,6 @@ class ShipDesignScreen(ScreenBase):
             f"ship_design.button.{key}"
         return modtexts.text(name, default) or default
 
-    def button_state(self, key, rect):
-        from core.hud import hover
-        return hover.pointer_state(rect)
-
     def render(self, surface):
         self._render_background(surface)
         view = self._view

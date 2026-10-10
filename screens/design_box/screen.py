@@ -123,10 +123,6 @@ class DesignBoxScreen(ScreenBase):
             f"ship_design.button.{key}"
         return modtexts.text(name, default) or default
 
-    def button_state(self, key, rect):
-        from core.hud import hover
-        return hover.pointer_state(rect)
-
     def ready(self):
         return self._box is not None and self._box.draws and \
             self.names().state == "ok" and not self._art_state()

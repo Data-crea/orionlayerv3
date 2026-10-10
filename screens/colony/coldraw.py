@@ -46,6 +46,7 @@ import pygame
 
 from core.hestrings import printf
 from core.hud import blocks as hud
+from core.hud import hover as hud_hover
 from core.hud import text as hudtext
 from core.structs import colony as colony_struct
 from screens.colony_summary import colonyfigures, colonyoutputicons
@@ -535,5 +536,5 @@ def _buttons(surface, screen, state):
         r = nd.rect(screen.layout, (f.x, f.y, f.x_end, f.y_end))
         dim = key == "buy" and f.field_type != geom.TYPE_BUTTON
         hud.slant_button(surface, r, screen.layout.scale,
-                         "disabled" if dim else screen.button_state(key, r),
+                         "disabled" if dim else hud_hover.pointer_state(r),
                          screen.word(key), style_renderer=screen.style)

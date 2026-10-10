@@ -31,6 +31,7 @@ import pygame
 
 from core.hestrings import printf
 from core.hud import blocks as hud
+from core.hud import hover as hud_hover
 from screens.colony import coldraw
 from screens.leaders import ldrdraw as nd
 
@@ -88,7 +89,7 @@ def _ship(surface, screen, view, names):
         if f is not None:
             r = nd.rect(screen.layout, (f.x, f.y, f.x_end, f.y_end))
             hud.small_button(surface, r, screen.layout.scale,
-                             screen.button_state(word, r), word,
+                             hud_hover.pointer_state(r), word,
                              style_renderer=screen.style)
     _t(surface, screen, names.h(0x30), *geom.SPACE_LABEL, 0x40, "value",
        "label")
@@ -101,7 +102,7 @@ def _hulls(surface, screen, view, names):
     for size, (y1, y2) in enumerate(geom.HULL_ROWS):
         r = nd.rect(screen.layout, (geom.HULL_X[0], y1, geom.HULL_X[1], y2))
         state = ("active" if size == d["size"] else
-                 screen.button_state(f"hull{size}", r)
+                 hud_hover.pointer_state(r)
                  if view.hull_offered(size) else "disabled")
         hud.small_button(surface, r, screen.layout.scale, state,
                          names.part("hulls", size) or "",
@@ -183,7 +184,7 @@ def _weapons(surface, screen, view, names):
                 (x, y, x + 10, y + 8)
             r = nd.rect(screen.layout, native)
             hud.small_button(surface, r, screen.layout.scale,
-                             screen.button_state(f"{word}{i}", r)
+                             hud_hover.pointer_state(r)
                              if f is not None else "disabled", word,
                              style_renderer=screen.style)
 
@@ -221,5 +222,5 @@ def _bottom(surface, screen, view, names):
         r = nd.rect(screen.layout, native)
         hud.slant_button(surface, r, screen.layout.scale,
                          "disabled" if f is None else
-                         screen.button_state(key, r),
+                         hud_hover.pointer_state(r),
                          screen.word(key), style_renderer=screen.style)

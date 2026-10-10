@@ -157,10 +157,6 @@ class ColonyScreen(ScreenBase):
     def word(self, key):
         return (self._data.get("words") or {}).get(key, key.upper())
 
-    def button_state(self, key, rect):
-        from core.hud import hover
-        return hover.pointer_state(rect)
-
     def pick_cells(self):
         if self.pick is None:
             return set()

@@ -21,6 +21,7 @@ Everything at the HD image of its native rectangle (`refgeom`, through
                  is under it, unchanged, and comes back with Cancel
 """
 from core.hud import blocks as hud
+from core.hud import hover as hud_hover
 from core.hud import text as hudtext
 from screens.colony.coldraw import font, text
 from screens.leaders import ldrdraw as nd
@@ -131,5 +132,5 @@ def draw_buttons(surface, screen, kind):
     for key, rect in names:
         r = nd.rect(layout, rect)
         hud.small_button(surface, r, layout.scale,
-                         screen.button_state(key, r), screen.word(key),
+                         hud_hover.pointer_state(r), screen.word(key),
                          style_renderer=screen.style)

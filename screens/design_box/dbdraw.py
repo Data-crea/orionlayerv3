@@ -41,6 +41,7 @@ and where it comes from:
                  `dbright` (work order 200)
 """
 from core.hud import blocks as hud
+from core.hud import hover as hud_hover
 from core.hud import text as hudtext
 from screens.colony import coldraw
 from screens.leaders import ldrdraw as nd
@@ -231,12 +232,12 @@ def _buttons(surface, screen, box):
             continue
         r = nd.rect(screen.layout, _rect(f))
         state = "disabled" if f.field_type != geom.TYPE_BUTTON else \
-            screen.button_state(key, r)
+            hud_hover.pointer_state(r)
         hud.slant_button(surface, r, screen.layout.scale, state,
                          screen.word(key), style_renderer=screen.style)
     for f in box.scroll_buttons():
         r = nd.rect(screen.layout, _rect(f))
         word = chr(f.hotkey) if 32 < f.hotkey < 127 else ""
         hud.small_button(surface, r, screen.layout.scale,
-                         screen.button_state(f"scroll{f.index}", r), word,
+                         hud_hover.pointer_state(r), word,
                          style_renderer=screen.style)

@@ -307,10 +307,6 @@ class RefitScreen(ScreenBase):
         self.render_shell(surface)
         self.render_help(surface)
 
-    def button_state(self, key, rect):
-        from core.hud import hover
-        return hover.pointer_state(rect)
-
     def help_extra_rect(self, spec):
         native = spec.get("native")
         return nd.rect(self.layout, tuple(native)) if native else None
