@@ -373,8 +373,19 @@ def engine_report(tree=None):
            + ", ".join(str(n) for n in version_check.required_fixes())]
     tree, missing = version_check.tree_report(tree)
     if tree is None:
-        out.append("    no orion2re tree found here — clone it from the newest "
-                   f"bundle in {version_check.BUNDLES} (README)")
+        # Work order 230 F: what a STRANGER can do — the bundles are the
+        # maintainer's own folder, and orion2re's repository is private
+        # (README, "The engine cannot yet be built from this repository
+        # alone").
+        out.append("    no orion2re found here. Without it OrionLayer still "
+                   "starts: python main.py shows the screens, with no game.")
+        out.append("    To play you need an orion2re built as above. It "
+                   "cannot be built from this repository alone (README, "
+                   "\"The orion2re build it needs\"): the patched branch "
+                   "comes from the maintainer.")
+        out.append("    Once you have the program: python play.py --engine "
+                   "PATH --game DIR (README, \"Where your game and engine "
+                   "are\").")
     elif missing:
         out.append(f"    {tree}: MISSING {', '.join(missing)} — "
                    f"python tools/version_check.py names the patch command")
