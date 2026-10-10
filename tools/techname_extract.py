@@ -60,6 +60,7 @@ import sys
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from core import lbx  # noqa: E402
+from core import paths  # noqa: E402 — work order 229 D: the game folder
 from core import shipparts  # noqa: E402
 from core import technames  # noqa: E402
 from core.buildnames import (  # noqa: E402
@@ -71,7 +72,7 @@ from core.config import BASE_DIR, load_settings  # noqa: E402
 #: Spanish, Italian — the same list `mox2.cpp`'s error strings use).
 LANGUAGES = {"en": 0, "de": 1, "fr": 2, "es": 3, "it": 4}
 
-DEFAULT_LBX = os.path.expanduser("~/Master of Orion 2/TECHNAME.LBX")
+DEFAULT_LBX = os.path.join(paths.game_dir(), "TECHNAME.LBX")
 
 
 def split_block(blob):

@@ -128,7 +128,43 @@ def stop_engine(pid, out=print, wait=5.0):
     return "SIGKILL"
 
 
+def configure(argv, out=print):
+    """`--engine PATH` and `--game DIR`, saved into the player's own
+    settings (work order 229 D, `core/paths.py`); then what is still
+    missing, in plain words. Returns the list of problems ([] to go on)."""
+    from core import paths
+    argv = list(argv or [])
+    want = {}
+    for flag in ("--engine", "--game"):
+        if flag in argv:
+            i = argv.index(flag)
+            if i + 1 >= len(argv):
+                return [f"{flag} needs a path after it"]
+            want[flag] = argv[i + 1]
+    if want:
+        where = paths.remember(want.get("--engine"), want.get("--game"))
+        out(f"Saved in {where}: " + ", ".join(
+            f"{k[2:]} = {v}" for k, v in want.items()))
+    return paths.problems()
+
+
+USAGE = """python play.py [--engine PATH] [--game DIR]
+
+Starts the game (orion2re) and OrionLayer together. --engine and --game are
+saved in your OrionLayer settings, so they are needed once."""
+
+
 def main(argv=None, out=print):
+    if argv and any(a in ("-h", "--help") for a in argv):
+        out(USAGE)
+        return 0
+    sys.path.insert(0, ROOT)
+    problems = configure(argv, out)
+    if problems:
+        out("OrionLayer cannot start the game yet:")
+        for line in problems:
+            out("  - " + line)
+        return 2
     if not shutil.which("xdotool"):
         out("WARNING: xdotool is not installed — the original's intro cannot "
             "be skipped and will play, with its sound, for about two minutes")

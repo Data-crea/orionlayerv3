@@ -90,6 +90,7 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, ROOT)
 
 from core import lbx  # noqa: E402
+from core import paths  # noqa: E402 — work order 229 D: the game folder
 
 #: Bumped when the LAYOUT of what is written changes. The loader
 #: refuses an older one rather than rendering almost right
@@ -101,8 +102,8 @@ FORMAT_VERSION = 1
 DEFAULT_OUT = os.path.join(ROOT, "screens", "fleets", "assets", "gamedata")
 
 DEFAULT_SEARCH = [
-    os.path.expanduser("~/Master of Orion 2"),
-    os.path.expanduser("~/Master of Orion 2/DATA"),
+    paths.game_dir(),
+    os.path.join(paths.game_dir(), "DATA"),
     ".",
 ]
 

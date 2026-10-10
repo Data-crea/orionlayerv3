@@ -82,8 +82,8 @@ def main():
                           conn.get("port", 17362),
                           subscribe_visual=False):
         print("orion2re is not reachable. Start it first:")
-        print('  cd "$HOME/Master of Orion 2" && '
-              "~/orion2re/out/build/Linux/linux-debug/orion2re")
+        from core import paths
+        print(f'  cd "{paths.game_dir()}" && "{paths.engine()}"')
         return 1
 
     deadline = time.monotonic() + args.seconds

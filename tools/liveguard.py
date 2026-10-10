@@ -57,9 +57,9 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 if ROOT not in sys.path:
     sys.path.insert(0, ROOT)
 from core import usermod  # noqa: E402 — the settings' home (decision 72)
+from core import paths  # noqa: E402 — work order 229 D: the game folder
 import workdirs  # noqa: E402 — work order 199: a new ~/ entry is logged
-GAME_DIR = os.environ.get("ORIONLAYER_GAME_DIR",
-                          os.path.expanduser("~/Master of Orion 2"))
+GAME_DIR = paths.game_dir()
 
 GAME_FILES = tuple(f"SAVE{n}.GAM" for n in range(1, 12)) + (
     "MOX.SET", "HOF.M2", "lastrace.rac", "TEMP.TMP")

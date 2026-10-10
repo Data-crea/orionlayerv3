@@ -44,13 +44,14 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, ROOT)
 
 from core import lbx  # noqa: E402
+from core import paths  # noqa: E402 — work order 229 D: the game folder
 
 FORMAT_VERSION = 2
 DEFAULT_OUT = os.path.join(ROOT, "screens", "ship_design", "assets",
                            "gamedata")
 DEFAULT_SEARCH = [
-    os.path.expanduser("~/Master of Orion 2"),
-    os.path.expanduser("~/Master of Orion 2/DATA"),
+    paths.game_dir(),
+    os.path.join(paths.game_dir(), "DATA"),
     ".",
 ]
 #: DESIGN.LBX entries of the five arc pictures.

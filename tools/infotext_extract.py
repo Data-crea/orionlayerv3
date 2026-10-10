@@ -35,6 +35,7 @@ sys.path.insert(0, ROOT)
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from core import infotext, lbx  # noqa: E402
+from core import paths  # noqa: E402 — work order 229 D: the game folder
 from core.config import load_settings  # noqa: E402
 
 LANGUAGES = {"en": 0, "de": 1, "fr": 2, "es": 3, "it": 4}
@@ -44,7 +45,7 @@ TOPIC_ENTRIES = range(1, 17)
 TOPIC_TEXT, TOPIC_SIZE = 80, 84
 RACESTUF_FIRST, TRAIT_NAMES = 8, 32
 GROUPS = 26
-DEFAULT_DIR = os.path.expanduser("~/Master of Orion 2")
+DEFAULT_DIR = paths.game_dir()
 
 
 def _find(folder, name):

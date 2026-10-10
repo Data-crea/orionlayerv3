@@ -56,6 +56,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(
     os.path.abspath(__file__))))
 
 from core import helpformat  # noqa: E402
+from core import paths  # noqa: E402 — work order 229 D: the game folder
 from core import lbx  # noqa: E402
 from core.helptext import HELP_LBX, HELP_DIR, help_file  # noqa: E402
 
@@ -66,8 +67,8 @@ CHAIN_END = 0
 CHAIN_NEXT = 0xFFFFFFFF
 
 DEFAULT_SEARCH = [
-    os.path.expanduser("~/Master of Orion 2"),
-    os.path.expanduser("~/Master of Orion 2/DATA"),
+    paths.game_dir(),
+    os.path.join(paths.game_dir(), "DATA"),
     os.path.expanduser("~/.wine/drive_c/GOG Games/Master of Orion 2"),
     ".",
 ]

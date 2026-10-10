@@ -27,9 +27,10 @@ licence covers and what it does not, and [Credits](#credits).
 
 ## Requirements
 
-- **Master of Orion 2**, your own installation, in `~/Master of Orion 2`.
-- **Python 3.10 or newer** (verified on 3.12 and 3.14) with pygame, numpy
-  and Pillow — `requirements.txt`.
+- **Master of Orion 2**, your own installation, anywhere (see *Where your
+  game and engine are* below).
+- **Python 3.10 or newer** (verified on 3.12 and 3.14) with pygame, numpy,
+  Pillow and scipy — `requirements.txt`.
 - **`xdotool`**, so the start can skip the original's intro (without it
   the intro plays).
 - **orion2re, patched for OrionLayer** — see the next section.
@@ -118,7 +119,7 @@ On Arch and other PEP 668 distributions `pip install` into the system
 environment is refused by design; use the system packages or a venv:
 
 ```bash
-sudo pacman -S python-pygame python-numpy python-pillow   # Arch
+sudo pacman -S python-pygame python-numpy python-pillow python-scipy   # Arch
 python -m venv .venv && .venv/bin/pip install -r requirements.txt
 ```
 
@@ -155,6 +156,20 @@ python tools/audience_art_extract.py                # audience artwork
 `python tools/setup.py --check` lists what is present and what is not, and
 changes nothing.
 
+**Where your game and engine are — the two things you set.** OrionLayer
+needs the folder of your Master of Orion 2 and the orion2re program built
+for it. Tell it once; both are saved in your OrionLayer settings:
+
+```bash
+python play.py --engine /path/to/orion2re --game "/path/to/Master of Orion 2"
+```
+
+Or set `ORIONLAYER_ENGINE` and `ORIONLAYER_GAME_DIR` in the environment.
+Without either, OrionLayer looks in `~/orion2re/out/build/Linux/linux-debug/orion2re`
+and `~/Master of Orion 2`. When one is missing or wrong, `play.py` says
+which and how to set it, and starts nothing. The extractors above read the
+same game folder.
+
 **German.** Game Settings → LANGUAGE → Deutsch, then restart. OrionLayer's
 own words are German at once. The game's words need the German files of a
 German MOO2 (`GER_HELP.LBX`, `HGSTRNGS.LBX`, `ESTRGERM.LBX`, `FONTSG.LBX`,
@@ -175,7 +190,7 @@ Without the German files the game stays English and says so at its start.
 python play.py
 ```
 
-`play.py` starts orion2re in `~/Master of Orion 2` with its own window
+`play.py` starts orion2re in your game folder with its own window
 hidden, skips the original's logos and intro, and opens OrionLayer
 straight into the HD main menu. Closing OrionLayer stops the game. The
 engine's log is `~/.cache/orionlayer/orion2re.log`.
@@ -184,8 +199,8 @@ By hand, in two terminals — the engine's own window is shown, and the
 intro plays unless you press a key in it:
 
 ```bash
-cd "$HOME/Master of Orion 2"
-~/orion2re/out/build/Linux/linux-debug/orion2re
+cd "/path/to/Master of Orion 2"
+/path/to/orion2re
 ```
 
 Wait for `ext: server started on port 17362`, then `python main.py`.

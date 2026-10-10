@@ -57,6 +57,7 @@ import sys
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from core import lbx  # noqa: E402
+from core import paths  # noqa: E402 — work order 229 D: the game folder
 from tools.raceicon_sheets import (  # noqa: E402
     SHEET_SCALE, contact_sheet, labelled_sheet, opaque_box, sprite_grid)
 from core.config import BASE_DIR  # noqa: E402
@@ -141,8 +142,8 @@ PALETTE_LBX, PALETTE_ENTRY = "COLSUM.LBX", 0
 COLOUR_SUFFIX = "_game"
 
 DEFAULT_SEARCH = [
-    os.path.expanduser("~/Master of Orion 2"),
-    os.path.expanduser("~/Master of Orion 2/DATA"),
+    paths.game_dir(),
+    os.path.join(paths.game_dir(), "DATA"),
     ".",
 ]
 

@@ -42,6 +42,7 @@ import sys
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from core import lbx  # noqa: E402
+from core import paths  # noqa: E402 — work order 229 D: the game folder
 from core.config import BASE_DIR, load_settings  # noqa: E402
 from core.estrings import (  # noqa: E402
     ESTRINGS_COUNT, FORMAT_VERSION, OPTION_STRINGS, string_file)
@@ -53,7 +54,7 @@ LANGUAGE_FILES = {
     "es": "ESTRSPAN.LBX", "it": "ESTRITAL.LBX", "pl": "ESTRPOLI.LBX",
 }
 
-GAME_DIR = os.path.expanduser("~/Master of Orion 2")
+GAME_DIR = paths.game_dir()
 
 
 #: The entry's own header: `total_count` then `element_size`, two

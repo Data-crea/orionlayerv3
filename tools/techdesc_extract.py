@@ -25,12 +25,13 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, ROOT)
 
 from core import lbx  # noqa: E402
+from core import paths  # noqa: E402 — work order 229 D: the game folder
 from core.config import BASE_DIR, load_settings  # noqa: E402
 from core.techdesc import (  # noqa: E402
     FORMAT_VERSION, LANGUAGE_FILES, RECORD_SIZE, SPECIAL_COUNT,
     WEAPON_NOTE_COUNT, string_file)
 
-GAME_DIR = os.path.expanduser("~/Master of Orion 2")
+GAME_DIR = paths.game_dir()
 
 
 def find(folder, filename):

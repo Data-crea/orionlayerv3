@@ -41,6 +41,7 @@ import sys
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from core import lbx  # noqa: E402
+from core import paths  # noqa: E402 — work order 229 D: the game folder
 
 try:
     from PIL import Image
@@ -54,8 +55,8 @@ GAMEPLAY_ZOOM = 3               # geo.cpp uses variant [3]
 GAMEPLAY_THRESHOLD = 5          # geo.cpp: pixel_data[...] > 5
 
 DEFAULT_SEARCH = [
-    os.path.expanduser("~/Master of Orion 2"),
-    os.path.expanduser("~/Master of Orion 2/DATA"),
+    paths.game_dir(),
+    os.path.join(paths.game_dir(), "DATA"),
     ".",
 ]
 

@@ -71,8 +71,15 @@ import intro_skip  # work order 179: one key skips the intro
 from engine_close import _cmdline, close_foreign, foreign_clients  # noqa: F401 (176)
 import workdirs  # work order 198: logs and guards under ~/claude/
 
-ENGINE = os.path.expanduser("~/orion2re/out/build/Linux/linux-debug/orion2re")
-GAME_DIR = os.path.expanduser("~/Master of Orion 2")
+ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+if ROOT not in sys.path:
+    sys.path.insert(0, ROOT)
+from core import paths  # noqa: E402 — work order 229 D
+
+#: The engine and the game folder: the environment, the player's own
+#: settings, else this machine's defaults (`core/paths.py`).
+ENGINE = paths.engine()
+GAME_DIR = paths.game_dir()
 PORT = 17362
 READY = "ext: server started"
 
@@ -97,7 +104,8 @@ def run_env(reason=None, out=print):
     if root not in sys.path:
         sys.path.insert(0, root)
     from core import lang, usersettings
-    extra, gone = lang.engine_env(usersettings.load().data, GAME_DIR)
+    extra, gone = lang.engine_env(usersettings.load().data,
+                                  paths.game_dir())
     if extra:
         out("LANGUAGE (engine): " + ", ".join(f"{k}={v}" for k, v in
                                                sorted(extra.items())))
@@ -210,7 +218,7 @@ def verdict(engines, free, screen, blanked_ok=False):
 
 def command(inhibit=True, engine=None):
     """The engine command, under an idle inhibitor when one exists."""
-    cmd = [engine or ENGINE]
+    cmd = [engine or paths.engine()]   # read now: play.py may just have set it
     if inhibit and _which("gnome-session-inhibit"):
         cmd = ["gnome-session-inhibit", "--inhibit", "idle", "--reason",
                "OrionLayer live run: orion2re needs the screen on"] + cmd
@@ -328,7 +336,7 @@ def _start_once(log_path, timeout, inhibit, out, engine=None, guard=None,
             f"tools/liveguard.py verify {guard} [--restore]")
     env = run_env(real_desktop, out)
     proc = subprocess.Popen(command(inhibit and bool(real_desktop), engine),
-                            cwd=GAME_DIR, env=env,
+                            cwd=paths.game_dir(), env=env,
                             stdin=subprocess.DEVNULL, stdout=handle,
                             stderr=subprocess.STDOUT, start_new_session=True)
     deadline = time.time() + timeout

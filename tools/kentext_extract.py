@@ -39,6 +39,7 @@ import sys
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from core import lbx                                      # noqa: E402
+from core import paths  # noqa: E402 — work order 229 D: the game folder
 from core.kentext import ARC_MESSAGES, FORMAT_VERSION, string_file  # noqa: E402
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -59,8 +60,7 @@ def message(entries, index, language):
 
 def main():
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
-    ap.add_argument("--lbx", default=os.path.expanduser(
-        "~/Master of Orion 2/KENTEXT.LBX"))
+    ap.add_argument("--lbx", default=os.path.join(paths.game_dir(), "KENTEXT.LBX"))
     ap.add_argument("--lang", default="en", choices=sorted(LANGUAGES))
     ap.add_argument("--out")
     args = ap.parse_args()

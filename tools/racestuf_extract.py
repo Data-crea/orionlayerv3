@@ -22,12 +22,13 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, ROOT)
 
 from core import lbx  # noqa: E402
+from core import paths  # noqa: E402 — work order 229 D: the game folder
 from core.config import BASE_DIR, load_settings  # noqa: E402
 from core.racestuf import (  # noqa: E402
     FORMAT_VERSION, NAME_COUNT, NAME_ENTRY, RACE_COUNT, TRAIT_COUNT,
     TRAIT_ENTRY, string_file)
 
-GAME_DIR = os.path.expanduser("~/Master of Orion 2")
+GAME_DIR = paths.game_dir()
 LBX_NAME = "RACESTUF.LBX"
 
 
