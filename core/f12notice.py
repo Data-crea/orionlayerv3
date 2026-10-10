@@ -106,7 +106,7 @@ class Notice:
         self._base = self._orig = None
         self._key = None
 
-    def render(self, surface, style, labels, what):
+    def render(self, surface, style, labels, what, title=None, action=None):
         """Draw the notice over the held `surface`. Returns the panel rect.
 
         The first call of a notice copies what the surface holds (the last
@@ -124,10 +124,12 @@ class Notice:
                 self._base = base
             self._key = key
         surface.blit(self._base, (0, 0))
-        return draw_panel(surface, style, labels, what)
+        return draw_panel(surface, style, labels, what, title=title,
+                          action=action)
 
 
-def draw_panel(surface, style, labels, what, rect=None):
+def draw_panel(surface, style, labels, what, rect=None, title=None,
+               action=None):
     """The panel alone, in `rect` or centred: HUD popup (glass, the frame
     colour), the waiting line, the screen's line, "F12 to answer".
 
@@ -139,6 +141,8 @@ def draw_panel(surface, style, labels, what, rect=None):
     scale = win_h / 1080
     rect = pygame.Rect(rect) if rect is not None else panel_rect(win_w, win_h)
     waiting, answer = words(labels)
+    # the frame guard's notice (work order 229 B) brings its own two lines
+    waiting, answer = title or waiting, action or answer
     line_h = max(8, rect.h // 4)
     inner = rect.w - 2 * max(4, int(20 * scale))
     rows = []

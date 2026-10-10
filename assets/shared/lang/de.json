@@ -564,6 +564,11 @@
     "Equipment": "Ausrüstung",
     "Fleet": "Flotte",
     "Technology": "Technologie",
-    "Nothing researched in this group yet.": "In dieser Gruppe ist noch nichts erforscht."
+    "Nothing researched in this group yet.": "In dieser Gruppe ist noch nichts erforscht.",
+    "Something went wrong in OrionLayer": "In OrionLayer ist etwas schiefgegangen",
+    "F12: play on (and save) in the original - F12 again: try HD once more": "F12: im Original weiterspielen (und speichern) - noch einmal F12: HD erneut versuchen",
+    "No game is connected: close OrionLayer and start it again": "Kein Spiel verbunden: OrionLayer schließen und neu starten",
+    "{screen}: an error in HD's own code. The game itself is still running.": "{screen}: ein Fehler in HDs eigenem Code. Das Spiel selbst läuft weiter.",
+    "The details are in": "Die Einzelheiten stehen in"
   }
 }

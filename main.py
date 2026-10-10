@@ -27,6 +27,7 @@ from core import helppopup
 from core import f12notice
 from core import overlays
 from core import pointergate
+from core import frameguard
 
 logging.basicConfig(level=logging.INFO,
                     format="%(asctime)s.%(msecs)03d %(name)s: %(message)s",
@@ -57,6 +58,12 @@ def coalesce_motion(events):
 
 
 class App:
+    #: One fault in one screen does not end the game (work order 229 B,
+    #: `core/frameguard`). DISARMED here, on the class, so a tool or check
+    #: that drives a frame by hand — or borrows these methods on a host of
+    #: its own — still raises and finds the attribute; `run` arms its own.
+    _guard = frameguard.FrameGuard()
+
     def __init__(self):
         pygame.init()
         # FIRST LINE OF EVERY LOG (work order 139 C). 138 could not say
@@ -236,10 +243,9 @@ class App:
 
     def run(self):
         """Main loop."""
+        self._guard = frameguard.FrameGuard.for_app()
         while self.running:
-            self._handle_events()
-            self._update()
-            self._render()
+            self._guard.frame(self)
             self.clock.tick(self.frame_cap())
 
         if self._debug_input is not None:
@@ -281,7 +287,9 @@ class App:
 
             if self._input_log is not None:
                 self._input_log.begin(self, event)
-            if event.type == pygame.QUIT:
+            if frameguard.blocks(self, event):
+                pass                     # a suspended screen (229 B)
+            elif event.type == pygame.QUIT:
                 lastword.ended("the window was closed")
                 self.running = False
             elif event.type == pygame.VIDEORESIZE:
@@ -390,6 +398,13 @@ class App:
         turn-start research dialogs (52, 53) were a dead end inside
         OrionLayer's window.
         """
+        if frameguard.suspended(self) is not None and \
+                self.render_mode != "original":
+            # A SUSPENDED SCREEN (work order 229 B) is asked nothing; the
+            # guard's notice stands in its place, and F12 is the way on.
+            self._net_kind = ""
+            self._handover.holding = False
+            return False
         if not self.connected:
             self._net_kind = ""
             self._handover.holding = False
@@ -506,7 +521,8 @@ class App:
             if state.current_screen >= 0:
                 self.dispatcher.update_from_game(state)
 
-        self.dispatcher.update_screens(state)
+        if frameguard.suspended(self) is None:  # nothing reaches it (229 B)
+            self.dispatcher.update_screens(state)
 
     def _render(self):
         """Render based on current mode."""
@@ -538,6 +554,8 @@ class App:
                     self.surface, self.style, self.colors, state,
                     self.dispatcher.screen_name_for(state.current_screen),
                     self.render_mode)
+        elif frameguard.suspended(self) is not None:
+            self._guard.render(self)      # the fault notice (229 B)
         elif self._handover.holding:
             # THE LAST HD FRAME, or the universal background (180 A2).
             handover.render_hold(self)
