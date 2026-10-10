@@ -186,16 +186,18 @@ def render(screen, surface, popup, state, app=None):
     stale = not live and last is not None and last[0] == key
     if stale:
         m = last[1]
-    syswindow.frame(screen, surface, r["system_box"])
+    # Data's decision 3 (work order 230 C), as the map's window
+    panel = syswindow.system_frame(screen, surface, r["system_box"],
+                                   r["system_title"])
     if m is None:
         log.info("combat target window: %s", why)
         m = {"title": title(state, (popup.get("system") or {}).get(
             "star", -1), estrings), "viewable": False, "body": why,
             "close": popup["args"][2], "planets": [], "fleets": [],
             "wormhole": ""}
-    syswindow.text(screen, surface, r["system_title"], m["title"],
-                   syswindow.font(screen, "system_title", 20),
-                   syswindow.TITLE_COLOR)
+    syswindow.title(screen, surface, panel, m["title"],
+                    syswindow.font(screen, "system_title", 20),
+                    syswindow.native_scale(r["system_box"]))
     view = r["system_view"]
     drawn = syswindow.draw_view(screen, surface, view, m, state)
     s = sysorbits.frame(view)[0]

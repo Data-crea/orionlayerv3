@@ -174,5 +174,10 @@
       613,
       415
     ]
+  },
+  "system_stars": {
+    "_note": "The star system window's stars (work order 230 C, screens/galaxy_map/sysstars.py): one point per native_px_per_star native px of the window, at the measured colours of BUFFER0.LBX 0x49; seed lays them out. A mod may change both, or ship screens/galaxy_map/assets/system_stars.png to replace the points.",
+    "native_px_per_star": 39.6,
+    "seed": 230
   }
 }

@@ -598,6 +598,52 @@
       44,
       56,
       84
+    ],
+    "_system_window_note": "The star system window's look, work order 230 C (Data's decision 3): black with stars, the frame and the title in the original's lettering blue. TRANSCRIBED from FONTS.LBX entry 1's palette and BUFFER0.LBX 0x49: system_window_bg the view's ground (0, 12, 0); system_blue 0x41, the title's letters and the frame (sys.cpp:944); system_title_shadow 0x3D (sys.cpp:986); system_title_panel 0x49's title panel; system_info_text 0x43 (sys.cpp:1359); the four info edges Draw_Highlight_Box_'s 0x42 / 0x41 / 0x3F / 0x40 (misc.cpp:396-438). The title's letters are system_blue raised to decision 94's word floor (screens/galaxy_map/syswindow.py at_floor).",
+    "system_window_bg": [
+      0,
+      12,
+      0
+    ],
+    "system_blue": [
+      80,
+      108,
+      144
+    ],
+    "system_title_shadow": [
+      32,
+      40,
+      76
+    ],
+    "system_title_panel": [
+      24,
+      24,
+      32
+    ],
+    "system_info_text": [
+      104,
+      140,
+      176
+    ],
+    "system_info_edge_outer_lit": [
+      92,
+      124,
+      160
+    ],
+    "system_info_edge_inner_lit": [
+      80,
+      108,
+      144
+    ],
+    "system_info_edge_outer_dim": [
+      56,
+      76,
+      108
+    ],
+    "system_info_edge_inner_dim": [
+      68,
+      92,
+      128
     ]
   },
   "colony_summary": {

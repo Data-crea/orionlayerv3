@@ -37,6 +37,40 @@ What is drawn, and from where:
                  633); HD draws its measured shape in code — a 35 native px
                  square centred on the planet, four corner brackets 2 px
                  thick and 8 long — in the owner's colour
+
+The window's look (work order 230 C, Data's decision 3, both windows):
+
+  DATA'S DECISION `system_window_look`: the window is black with stars
+                 (`sysstars`, the original's view), not filled with the
+                 box fill — an exception to decisions 93 and 94; its frame
+                 is a line in the blue of the original's lettering, and a
+                 title panel across the top carries "Star System <name>"
+                 in that blue. Lines drawn in code, no frame picture
+                 (decision 71).
+  TRANSCRIPTION  the blue: the title's colours `Font_Colors2_(4, 0x3C,
+                 0x41)` (sys.cpp:944, :975) — its letters 0x41 (80, 108,
+                 144), the shadow one native px down in 0x3D (32, 40, 76)
+                 (`_Print_Centered_Shadow_Down_`, sys.cpp:986); FONTS.LBX
+                 1's palette, and the most frequent title colour in Data's
+                 picture of the original
+  TRANSCRIPTION  the title panel: 0x49's panel colour, (24, 24, 32),
+                 measured on the picture
+  DEVIATION      `title_word_floor`: on that panel the original's 0x41
+                 stands at 3.3:1; the title's letters are the same blue
+                 raised until they keep decision 94's word floor (4.5:1
+                 with its margin) — (98, 133, 177) on the shipped panel.
+                 The frame keeps 0x41 exactly
+  TRANSCRIPTION  the information box (planet and fleet): its edge the
+                 original's `Draw_Highlight_Box_` (misc.cpp:396-438) in
+                 0x3F-0x42 — outer top and right 0x42, inner 0x41, outer
+                 left and bottom 0x3F, inner 0x40, one native px each —
+                 round `Draw_Darkened_Box_(…, 0x3F)` (sys.cpp:841,
+                 :1033); a planet's lines in `Font_Colors2_(2, 0x3C,
+                 0x43)`'s letters 0x43 (104, 140, 176) (sys.cpp:1359)
+  TRANSCRIPTION  the sun: BUFFER0.LBX 0x53 + class (sys.cpp:562-578), one
+                 fixed picture whatever the map's zoom — HD's step-0 star
+                 with as much light as it (`SUN_CANVAS_NATIVE`; until work
+                 order 230 it took the map's zoom step, and shrank with it)
 """
 import pygame
 
@@ -66,6 +100,36 @@ COLONY_MARKER_DX, OUTPOST_MARKER_DX, MARKER_DY = -8, -10, -2
 HIGHLIGHT, BRACKET_LINE, BRACKET_ARM = 35, 2, 8
 #: `Draw_Darkened_Box_(…, 0x3F)` under an information box (sys.cpp:841).
 INFO_SHADE = 170
+#: The window's look (work order 230 C): the original's palette, FONTS.LBX 1
+#: indices 0x3D, 0x3F-0x43 (see the module docstring); moddable in the
+#: skin's colors.json.
+BLUE = palette.col("galaxy_map", "system_blue", (80, 108, 144))
+TITLE_SHADOW = palette.col("galaxy_map", "system_title_shadow", (32, 40, 76))
+TITLE_PANEL = palette.col("galaxy_map", "system_title_panel", (24, 24, 32))
+INFO_TEXT = palette.col("galaxy_map", "system_info_text", (104, 140, 176))
+#: `Draw_Highlight_Box_`'s four edges: outer top/right, inner top/right,
+#: outer left/bottom, inner left/bottom (0x42, 0x41, 0x3F, 0x40).
+INFO_EDGE = (palette.col("galaxy_map", "system_info_edge_outer_lit",
+                         (92, 124, 160)),
+             palette.col("galaxy_map", "system_info_edge_inner_lit",
+                         (80, 108, 144)),
+             palette.col("galaxy_map", "system_info_edge_outer_dim",
+                         (56, 76, 108)),
+             palette.col("galaxy_map", "system_info_edge_inner_dim",
+                         (68, 92, 128)))
+#: BUFFER0.LBX 0x49, native px: the whole picture, and the title panel's
+#: band (its inner dark run, rows 12..37 of the picture, measured).
+WINDOW_PICTURE = (347, 273)
+TITLE_BAND = (12, 37)
+#: HD's step-0 star canvas, native px, whose LIGHT covers as much as the
+#: original's sun picture's (BUFFER0.LBX 0x53-0x58, 32-35 px pictures):
+#: equal area above luminance 100, the median over the six classes
+#: (42.6-58.7). Not stable under its threshold — a sweep 60 / 100 / 160
+#: gives medians 55 / 52 / 40 (work order 230, P607): the middle is taken
+#: and the spread said, since HD's star is not the original's drawing.
+SUN_CANVAS_NATIVE = 52
+#: Decision 94's word floor with its margin, for the title's letters.
+WORD_FLOOR = 4.6
 
 
 def font(screen, name, default):
@@ -86,6 +150,81 @@ def frame(screen, surface, rect):
     """The window's body: the HUD popup block (decision 71) — a dialog over
     the map, opaque."""
     hud.popup(surface, rect, screen.layout.scale)
+
+
+def native_scale(rect):
+    """Device px per native px of a window drawn into `rect`."""
+    return min(rect.w / WINDOW_PICTURE[0], rect.h / WINDOW_PICTURE[1])
+
+
+def line_width(screen):
+    return max(1, int(round(2 * screen.layout.scale)))
+
+
+def title_panel(box, title):
+    """The title panel: across the window, the title's band, inset from
+    the frame as far as the title box is."""
+    inset = max(0, title.x - box.x)
+    return pygame.Rect(box.x + inset, title.y, box.w - 2 * inset, title.h)
+
+
+def system_frame(screen, surface, box, title):
+    """DATA'S DECISION `system_window_look` (work order 230 C): the window
+    black with the original's stars, its frame a line in the lettering's
+    blue, the title panel across the top — not the box fill (an exception
+    to decisions 93 and 94)."""
+    from screens.galaxy_map import sysstars
+    s = native_scale(box)
+    panel = title_panel(box, title)
+    # LOOK EXCEPTION transcription: the original's window ground, Data's decision 3 (decision 94's exception)
+    surface.fill(sysstars.GROUND[:3], box)
+    below = pygame.Rect(box.x, panel.bottom, box.w, box.bottom - panel.bottom)
+    sysstars.draw(screen, surface, below, s)
+    lw = line_width(screen)
+    # LOOK EXCEPTION transcription: 0x49's title panel colour, Data's decision 3
+    pygame.draw.rect(surface, TITLE_PANEL[:3], panel)
+    # LOOK EXCEPTION transcription: the frame in the title's blue, palette 0x41 (sys.cpp:944), Data's decision 3
+    pygame.draw.rect(surface, BLUE[:3], panel, lw)
+    # LOOK EXCEPTION transcription: the frame in the title's blue, palette 0x41 (sys.cpp:944), Data's decision 3
+    pygame.draw.rect(surface, BLUE[:3], box, lw)
+    return panel
+
+
+def at_floor(colour, ground, floor=WORD_FLOOR):
+    """DEVIATION `title_word_floor`: `colour` raised in brightness, its hue
+    kept, until it stands at `floor` on `ground` (as it was if it does)."""
+    import numpy as np
+    from core.hud.glass import lum
+
+    def ratio(c):
+        a, b = float(lum(np.array(c, float))), float(lum(np.array(ground,
+                                                                    float)))
+        return (max(a, b) + 0.05) / (min(a, b) + 0.05)
+    c = tuple(int(v) for v in colour[:3])
+    k = 1.0
+    while ratio(c) < floor and k < 4.0:
+        k += 0.01
+        c = tuple(min(255, int(round(v * k))) for v in colour[:3])
+    return c
+
+
+def title_colour():
+    return at_floor(BLUE, TITLE_PANEL)
+
+
+def title(screen, surface, rect, words, size, s):
+    """The title in the blue with its shadow one native px down
+    (`_Print_Centered_Shadow_Down_(…, 0x3D, …)`, sys.cpp:986); `s` device
+    px per native px."""
+    if not words:
+        return
+    drop = max(1, int(round(s)))
+    shadow = screen.style.render_text(words, size, tuple(TITLE_SHADOW[:3]))
+    face = screen.style.render_text(words, size, title_colour())
+    x = rect.x + (rect.w - face.get_width()) // 2
+    y = rect.y + (rect.h - face.get_height()) // 2
+    surface.blit(shadow, (x, y + drop))
+    surface.blit(face, (x, y))
 
 
 def close_button(screen, surface, rect, label):
@@ -111,23 +250,29 @@ def draw_view(screen, surface, view, model, state=None):
     planets drawn, back to front. `state`: the snapshot the window shows
     (the screen's own by default)."""
     if not model["viewable"]:
+        # The star's description, as `Print_Empty_System_Data_` sets it
+        # (sys.cpp:1536-1593): a paragraph centred across and down the
+        # view, in the window's blue (measured 0x41 on the original's
+        # frame) — raised to the word floor on the ground, as the title
+        from screens.galaxy_map import sysstars
         size = font(screen, "system_view", 16)
-        lines = textfit.wrap_text(screen.style, model["body"], size, view.w)
-        y = view.y
-        for line in lines:
-            surf = screen.style.render_text(line, size, TEXT_COLOR[:3])
-            surface.blit(surf, (view.x, y))
-            y += surf.get_height()
+        lines = textfit.wrap_text(screen.style, model["body"], size,
+                                  int(view.w * 0.9))
+        colour = at_floor(BLUE, sysstars.GROUND)
+        surfs = [screen.style.render_text(line, size, colour)
+                 for line in lines]
+        y = view.y + (view.h - sum(sf.get_height() for sf in surfs)) // 2
+        for sf in surfs:
+            surface.blit(sf, (view.x + (view.w - sf.get_width()) // 2, y))
+            y += sf.get_height()
         return []
     stars = getattr(screen, "_stars", None) or []
     star = stars[model["star"]] if 0 <= model["star"] < len(stars) else None
-    ctx = screen._map_context()
-    name = rnd.star_icon_name(star, ctx) \
-        if ctx is not None and star is not None else None
+    name = sun_icon_name(star)
     s, cx, cy = sysorbits.frame(view)
-    # The sun in the rings' centre (`Draw_Sun_Seg_`, sys.cpp:562-578; its
-    # BUFFER0.LBX 0x53 + class picture is 32 x 34 native px).
-    sun = max(8, int(34 * s))
+    # The sun in the rings' centre (`Draw_Sun_Seg_`, sys.cpp:562-578): the
+    # original's fixed picture, ~32 native px of light, at every map zoom.
+    sun = max(8, int(round(SUN_CANVAS_NATIVE * s)))
     if name and screen._cache.has(name):
         img = screen._cache.scaled(name, sun)
         if img is not None:
@@ -152,6 +297,15 @@ def draw_view(screen, surface, view, model, state=None):
     markers(surface, state if state is not None else
             getattr(screen, "_state", None), drawn, s)
     return drawn
+
+
+def sun_icon_name(star):
+    """HD's star at its largest step — the window's sun is one fixed
+    picture (BUFFER0.LBX 0x53 + class), not the map's zoom step."""
+    if star is None:
+        return None
+    folder = rnd.CLASS_DIRS.get(star.spectral_class)
+    return f"stars/{folder}/0" if folder else None
 
 
 def marker_polygon(x, y, s):
@@ -215,7 +369,7 @@ def highlight(surface, centre, s, colour):
                                          t, a))
 
 
-def info_box(screen, surface, view, lines, colour=TEXT_COLOR):
+def info_box(screen, surface, view, lines, colour=INFO_TEXT):
     """Lines `[(text, gap_before)]` in the darkened box at the view's corner
     (`MISC::Draw_Darkened_Box_` at the content corner, sys.cpp:841, :1035)."""
     size = font(screen, "system_text", 16)
@@ -232,11 +386,30 @@ def info_box(screen, surface, view, lines, colour=TEXT_COLOR):
     # LOOK EXCEPTION transcription: the original's darkened box under the lines (`Draw_Darkened_Box_`, sys.cpp:841)
     shade.fill((0, 0, 0, INFO_SHADE))
     surface.blit(shade, box.topleft)
+    info_edge(surface, box, sysorbits.frame(view)[0])
     y = box.y + pad
     for sf, g in surfs:
         y += gap if g else 0
         surface.blit(sf, (box.x + pad, y))
         y += sf.get_height()
+
+
+def info_edge(surface, box, s):
+    """`Draw_Highlight_Box_` (misc.cpp:396-438) round the box: two lines a
+    side, each one native px, lit top and right, dim left and bottom."""
+    t = max(1, int(round(s)))
+    outer_lit, inner_lit, outer_dim, inner_dim = (c[:3] for c in INFO_EDGE)
+    for k, (lit, dim) in enumerate(((outer_lit, outer_dim),
+                                    (inner_lit, inner_dim))):
+        r = box.inflate(-2 * k * t, -2 * k * t)
+        # LOOK EXCEPTION transcription: Draw_Highlight_Box_'s edges, palette 0x3F-0x42 (misc.cpp:396-438)
+        surface.fill(lit, (r.x, r.y, r.w, t))
+        # LOOK EXCEPTION transcription: Draw_Highlight_Box_'s edges, palette 0x3F-0x42 (misc.cpp:396-438)
+        surface.fill(lit, (r.right - t, r.y, t, r.h))
+        # LOOK EXCEPTION transcription: Draw_Highlight_Box_'s edges, palette 0x3F-0x42 (misc.cpp:396-438)
+        surface.fill(dim, (r.x, r.y + t, t, r.h - t))
+        # LOOK EXCEPTION transcription: Draw_Highlight_Box_'s edges, palette 0x3F-0x42 (misc.cpp:396-438)
+        surface.fill(dim, (r.x, r.bottom - t, r.w, t))
 
 
 def planet_under(drawn, pointer):

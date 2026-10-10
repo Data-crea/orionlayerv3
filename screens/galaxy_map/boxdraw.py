@@ -259,11 +259,20 @@ def render(screen, surface):
             offer = fleetorders.offered(screen._state, model)
             r = fleetorders.place(r, names, offer["orders"],
                                   pygame.Rect(*screen._map_view().box))
-        syswindow.frame(screen, surface, r[names[0]])
+        if model["kind"] == "system":
+            # Data's decision 3 (work order 230 C): black with stars, the
+            # blue frame and title panel — `syswindow.system_frame`
+            panel = syswindow.system_frame(screen, surface, r[names[0]],
+                                           r[names[1]])
+            syswindow.title(screen, surface, panel, model["title"],
+                            syswindow.font(screen, names[1], 20),
+                            syswindow.native_scale(r[names[0]]))
+        else:
+            syswindow.frame(screen, surface, r[names[0]])
+            syswindow.text(screen, surface, r[names[1]], model["title"],
+                           syswindow.font(screen, names[1], 20),
+                           syswindow.TITLE_COLOR)
         hits.append((r[names[0]], None))
-        syswindow.text(screen, surface, r[names[1]], model["title"],
-                       syswindow.font(screen, names[1], 20),
-                       syswindow.TITLE_COLOR)
         if model["kind"] == "system":
             screen._system_drawn = True
             screen._hover_star = None    # no map hover under it (226 F)

@@ -4,18 +4,24 @@ orbits the original draws are missing").
 What the original draws when a star is clicked (sys.cpp:546-576,
 :451-544; geo.cpp:5-13, :245-279), and what HD draws for it:
 
-  TRANSCRIPTION  the frame: BUFFER0.LBX's ring pictures are 288 x 154 and
-                 the five rings share one centre, (143.5, 76.5) in them
-                 (measured on the five pictures); the planet fields the
-                 engine lays out sit on those ellipses (`boxmodel`). HD
-                 maps that picture into its own `system_view` box, one
-                 scale both ways, centred.
+  TRANSCRIPTION  the frame: the view is the original window's view, the
+                 322 x 183 native px inside BUFFER0.LBX 0x49 (12..333,
+                 46..228 of the window, the picture drawn one px down,
+                 sys.cpp:326), with the rings' centre at (162, 91) in it
+                 (`boxmodel.ORBIT_CENTRE` less the view's corner). HD maps
+                 that view into its own `system_view` box, one scale both
+                 ways, centred. Until work order 230 HD fitted only the
+                 ring pictures (288 x 154) and cut a planet on the fifth
+                 orbit at the view's edge, which the original's view holds.
   TRANSCRIPTION  the rings: one ellipse per orbit that holds a planet or a
                  gas giant, half-axes `_orbit_consts[orbit + 1] / 10`
                  (geo.cpp:252-254); an empty orbit draws nothing. Drawn in
-                 code at the window's size in the pictures' brightest
-                 colour (FONTS.LBX 1's index 62, (40, 52, 88), measured)
-                 — the pictures' own ellipses, not the pictures.
+                 code at the window's size as the pictures draw them (0x4D-
+                 0x51, measured, work order 230): a line three native px
+                 wide — its core FONTS.LBX 1's 0x3E (40, 52, 88), its sides
+                 the darker 0x3C / 0x3D blues (`RING_SIDE`, their mean)
+                 — the pictures' own ellipses, not the pictures. (Until
+                 work order 230 one native px of the core alone.)
   TRANSCRIPTION  pierced: each ring keeps 2 native px clear round its own
                  planet (two `Outline_Bitmap_` passes masked out of the ring,
                  sys.cpp:509-515), and the planets are drawn back to front
@@ -38,15 +44,18 @@ import random
 
 import pygame
 
-#: The ring pictures' size and the rings' common centre in them.
-PICTURE = (288, 154)
-CENTRE = (143.5, 76.5)
 #: `_orbit_consts` (geo.cpp:5-13); orbit k uses entry k + 1.
 ORBIT_CONSTS = ((225, 118), (464, 242), (704, 372), (949, 502),
                 (1199, 632), (1423, 751), (1650, 873))
-#: The rings' brightest colour, FONTS.LBX 1 index 62 (the pictures use
-#: 59-62, a dark-to-light ramp across the line).
+#: The original window's view in native px, and the rings' centre in it.
+VIEW = (322, 183)
+VIEW_CENTRE = (162, 91)
+#: The rings' core, FONTS.LBX 1 index 0x3E, and its sides: the pictures'
+#: 0x3B-0x3D share the other two of the three px (343 / 301 / 413 px on
+#: ring 0x4F), drawn as their mean (24, 28, 64).
 RING = (40, 52, 88)
+RING_SIDE = (24, 28, 64)
+RING_WIDTH = 3
 #: `_rot_plan_dim` by planet size; a gas giant is drawn HUGE.
 PLANET_DIM = (0x13, 0x14, 0x16, 0x16, 0x18)
 HUGE = 4
@@ -59,9 +68,12 @@ SUPERSAMPLE = 3
 
 
 def frame(view):
-    """(scale, centre x, centre y): the picture fitted into `view`."""
-    s = min(view.w / PICTURE[0], view.h / PICTURE[1])
-    return s, view.centerx, view.centery
+    """(scale, centre x, centre y): the original's view fitted into `view`,
+    the rings' centre where it stands in it."""
+    s = min(view.w / VIEW[0], view.h / VIEW[1])
+    x0 = view.x + (view.w - VIEW[0] * s) / 2.0
+    y0 = view.y + (view.h - VIEW[1] * s) / 2.0
+    return s, x0 + VIEW_CENTRE[0] * s, y0 + VIEW_CENTRE[1] * s
 
 
 def radii(orbit, s):
@@ -86,9 +98,14 @@ def ring(surface, orbit, s, cx, cy, hole=None):
     k = SUPERSAMPLE
     w, h = int(2 * rx + 6), int(2 * ry + 6)
     big = pygame.Surface((w * k, h * k), pygame.SRCALPHA)
-    line = max(1, int(round(s * k)))
+    side = max(1, int(round(RING_WIDTH * s * k)))
+    core = max(1, int(round(s * k)))
+    half = (side - core) // 2
+    pygame.draw.ellipse(big, RING_SIDE + (255,), pygame.Rect(
+        3 * k - half, 3 * k - half, int(2 * rx * k) + 2 * half,
+        int(2 * ry * k) + 2 * half), side)
     pygame.draw.ellipse(big, RING + (255,), pygame.Rect(
-        3 * k, 3 * k, int(2 * rx * k), int(2 * ry * k)), line)
+        3 * k, 3 * k, int(2 * rx * k), int(2 * ry * k)), core)
     if hole is not None:
         hx, hy, hr = hole
         pygame.draw.circle(big, (0, 0, 0, 0),
