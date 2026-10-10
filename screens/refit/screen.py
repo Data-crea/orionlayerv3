@@ -329,7 +329,15 @@ class RefitScreen(ScreenBase):
         """A field of the live list, behind the colony rules."""
         if field is None or not self.app.connected:
             return False
-        colony_guard.check(field, self._state.current_screen)
+        try:
+            colony_guard.check(field, getattr(self._state, "current_screen",
+                                              -1))
+        except colony_guard.Refused as err:
+            # As the colony screen and the build popup answer a refusal:
+            # logged, nothing sent — never raised out of a click handler
+            # (work order 228 D, redundancy N13: the one copy that let it).
+            log.warning("refit: %s — %s", label, err)
+            return False
         log.info("refit: %s -> field %d", label, field.index)
         self.app.client.activate_field(field.index)
         return True
