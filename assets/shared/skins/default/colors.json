@@ -297,48 +297,6 @@
     ]
   },
   "widgets": {
-    "list_header": [
-      138,
-      180,
-      232
-    ],
-    "list_row": [
-      200,
-      202,
-      212
-    ],
-    "list_hover_bg": [
-      40,
-      55,
-      90,
-      120
-    ],
-    "list_select_bg": [
-      50,
-      75,
-      130,
-      170
-    ],
-    "list_select_text": [
-      220,
-      235,
-      255
-    ],
-    "list_separator": [
-      60,
-      80,
-      120
-    ],
-    "list_scrollbar": [
-      70,
-      95,
-      150
-    ],
-    "list_scroll_bg": [
-      25,
-      32,
-      55
-    ],
     "input_border": [
       60,
       80,
