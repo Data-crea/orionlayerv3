@@ -237,9 +237,8 @@ def title_words(screen, view, words, names):
 
 
 def _title_line(surface, screen, view, state, words, names):
-    if not getattr(screen, "SHELL_WORN", False):
-        text(surface, screen, title_words(screen, view, words, names),
-             *geom.TITLE_CENTRE, 380, "title", "title", align="center")
+    # The title stands on the shell's plate (work order 225,
+    # `screen._shell_title`); the original's place is `geom.TITLE_CENTRE`.
     # Blockaded, Plague or Pop Boom (open fix 37), or nothing at all.
     status = words.status(view, getattr(state, "player_num", 0), state)
     text(surface, screen, status, *geom.STATUS_AT, 120, "value",

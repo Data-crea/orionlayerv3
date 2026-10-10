@@ -30,16 +30,10 @@ from . import refgeom as geom
 
 
 def draw_frame(surface, screen, title):
-    layout = screen.layout
-    if getattr(screen, "SHELL_WORN", False):
-        # In the screen shell (work order 225): the stage is the panel and
-        # the title stands on the shell's plate.
-        hud.panel(surface, screen.box_screen_rect("stage"), layout.scale)
-        return
-    hud.popup(surface, nd.rect(layout, geom.POPUP), layout.scale)
-    x0, y0, x1, y1 = geom.TITLE
-    text(surface, screen, title, (x0 + x1) // 2, y0, x1 - x0, "title",
-         "title", align="center")
+    """The stage: the shell's panel (work order 225) — the title stands on
+    the shell's plate, so `title` is not drawn here. The original's popup
+    and title rects (`geom.POPUP`, `geom.TITLE`) stay as its record."""
+    hud.panel(surface, screen.box_screen_rect("stage"), screen.layout.scale)
 
 
 def draw_ships(surface, screen, cells, hover, first, total):
@@ -126,9 +120,8 @@ def draw_buttons(surface, screen, kind):
     layout = screen.layout
     names = (("cancel", geom.CANCEL),) if kind == "designs" else (
         ("up", geom.UP), ("down", geom.DOWN), ("cancel", geom.CANCEL))
-    if getattr(screen, "SHELL_WORN", False):
-        # Cancel is the shell's closing action (work order 225).
-        names = tuple(n for n in names if n[0] != "cancel")
+    # Cancel is the shell's closing action (work order 225).
+    names = tuple(n for n in names if n[0] != "cancel")
     for key, rect in names:
         r = nd.rect(layout, rect)
         hud.small_button(surface, r, layout.scale,

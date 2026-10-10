@@ -385,9 +385,6 @@ class RefitScreen(ScreenBase):
         p = self._native(screen_x, screen_y)
         if p is None or self.kind is None:
             return None
-        if self._in(p, geom.CANCEL) and not self.SHELL_WORN:
-            self.send(self._field(geom.CANCEL, geom.TYPE_BUTTON), "Cancel")
-            return None
         if self.kind == "ships":
             if self._in(p, geom.UP):
                 self._page(-1)
