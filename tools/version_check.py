@@ -467,6 +467,13 @@ LOCAL_PATCHES = {
         "OrionLayer, open fix 86.",
         "the engine does not say which field is which of the fleet box's "
         "order buttons (open fix 86): HD's fleet box offers no orders"),
+    # Applied 10 October 2026 by work order 230 (decision 85): 34a1d873, on
+    # 4642eb1e.
+    "doc/ext_name_box.patch": (
+        os.path.join("src", "ext", "ext_api.cpp"),
+        "OrionLayer, open fix 87.",
+        "the engine does not send the name box (open fix 87): \"Enter Star "
+        "Name\" after a star's first colony shows the F12 notice"),
 }
 
 #: Patches that are REPORTED to Joes and not yet applied: listed with
@@ -555,6 +562,7 @@ FIX_NUMBERS = {
     "doc/ext_field_list_content.patch": (84,),
     "doc/ext_refit_first_ship.patch": (85,),
     "doc/ext_fleet_box_buttons.patch": (86,),
+    "doc/ext_name_box.patch": (87,),
 }
 
 

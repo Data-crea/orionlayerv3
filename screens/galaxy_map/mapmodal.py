@@ -41,6 +41,7 @@ import logging
 import pygame
 
 from core import gamebox, hestrings
+from screens.galaxy_map import taxrate
 from core.hud import blocks as hud
 from core.hud import text as hudtext
 
@@ -79,7 +80,7 @@ class Modal:
 
     def __init__(self, screen):
         self.screen = screen
-        self.kind = None             # None, "home_star", "confirmation"
+        self.kind = None             # None, "home_star", "confirmation", "tax_rate"
         self.text = ""
         self.fresh = True            # the prefilled name, untouched
         self._rects = {}
@@ -91,7 +92,8 @@ class Modal:
         self.net = modalnet.Net(
             "galaxy map", screen.owns_field_list,
             known=(("home_star", is_home_star),
-                   ("confirmation", is_confirmation)))
+                   ("confirmation", is_confirmation),
+                   ("tax_rate", taxrate.is_tax_rate)))
         self.fallback = False
 
     # ── state ─────────────────────────────────────────────
@@ -104,6 +106,8 @@ class Modal:
             kind = "home_star"
         elif on_map and is_confirmation(fields):
             kind = "confirmation"
+        elif on_map and taxrate.is_tax_rate(fields):
+            kind = "tax_rate"           # work order 230 D
         if kind == "home_star" and self.kind != "home_star":
             star = self.screen.home_star()
             self.text = (star.name if star is not None else "")[:MAX_CHARS]
@@ -124,6 +128,8 @@ class Modal:
             self._render_home_star(surface)
         elif self.kind == "confirmation":
             self._render_confirmation(surface)
+        elif self.kind == "tax_rate":
+            taxrate.render(self.screen, surface, self._state, self._rects)
 
     def _popup_rect(self, w_ref, h_ref):
         L = self.screen.layout
@@ -219,6 +225,9 @@ class Modal:
                          self.text)
                 client.inject_key(KEY_ENTER)
             return True
+        if self.kind == "tax_rate":
+            taxrate.click(self.screen, self._rects, x, y)
+            return True
         if self.kind == "confirmation":
             for key, (rect, field) in self._rects.items():
                 if rect.collidepoint(x, y) and self.screen.app.connected:
@@ -230,6 +239,9 @@ class Modal:
 
     def key_event(self, event):
         """True when the key belonged to the modal."""
+        if self.kind == "tax_rate":
+            taxrate.key(self.screen, self._rects, event)
+            return True
         if self.kind == "confirmation":
             ch = (getattr(event, "unicode", "") or "").upper()
             for key, (rect, field) in self._rects.items():

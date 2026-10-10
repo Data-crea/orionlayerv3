@@ -179,5 +179,28 @@
     "_note": "The star system window's stars (work order 230 C, screens/galaxy_map/sysstars.py): one point per native_px_per_star native px of the window, at the measured colours of BUFFER0.LBX 0x49; seed lays them out. A mod may change both, or ship screens/galaxy_map/assets/system_stars.png to replace the points.",
     "native_px_per_star": 39.6,
     "seed": 230
+  },
+  "treasury_window_field": {
+    "_source": "MAINSCR: _treasury_window_field = Add_Hidden_Field_(545, 49, 613, 119, \"\", 0x29) (mainscr.cpp:1401) - the sidebar's first window; its handler clears the map's fields and runs Tax_Rate_Popup_ (mainscr_main.cpp:733-748). The handler compares the id, so ACTIVATE_FIELD reaches it. Looked up in the LIVE list by type and rect (decision 20), as research_window_field. Work order 230 D.",
+    "field_type": 7,
+    "rect": [
+      545,
+      49,
+      613,
+      119
+    ]
+  },
+  "tax_rate": {
+    "_note": "The tax rate popup's words (work order 230 D, screens/galaxy_map/taxrate.py): the original's popup, rate buttons and ACCEPT are TAXRATE artwork with no string (mainpups.cpp:207-237) - typed here per decision 15. The title is the original picture's words, read off the native frame (work order 230).",
+    "title": "Set Tax Rate",
+    "rates": [
+      "0%",
+      "10%",
+      "20%",
+      "30%",
+      "40%",
+      "50%"
+    ],
+    "accept": "ACCEPT"
   }
 }

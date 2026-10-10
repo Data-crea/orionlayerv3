@@ -11,7 +11,7 @@ galaxy map behind a popup.
 """
 import logging
 
-from core import handover, msgbox, rightinfo, turnpopup
+from core import handover, msgbox, namebox, rightinfo, turnpopup
 
 log = logging.getLogger("orionlayer")
 
@@ -22,6 +22,10 @@ class Overlays:
         #: The box / popup that is up this frame, or None.
         self.box = None
         self.popup = None
+        #: The game's name box (open fix 87, work order 230 D), or None.
+        self.name = None
+        self.name_view = namebox.View()
+        self.name_base = None
         self.box_view = msgbox.View()
         self.popup_view = turnpopup.View()
         #: The last box answered: a second click before it has gone would
@@ -36,6 +40,7 @@ class Overlays:
     def update(self):
         """Ask the rule; True while a box or a popup is up."""
         over = handover.overlay_for(self.app)
+        self.name = over[1] if over and over[0] == "name" else None
         self.box = over[1] if over and over[0] == "box" else None
         self.popup = over[1] if over and over[0] == "popup" else None
         if self.box is None:
@@ -46,13 +51,23 @@ class Overlays:
 
     @property
     def active(self):
-        return self.box is not None or self.popup is not None
+        return self.box is not None or self.popup is not None or \
+            self.name is not None
 
     # ── drawing ───────────────────────────────────────────────────────
     def render(self, surface):
         """Draw what is up over the held surface; True if it drew."""
         app = self.app
         drew = False
+        if self.name is not None:
+            self.name_base = msgbox.dimmed_base(
+                surface, self.name_base, msgbox.DIM_ALPHA, self.backdrop)
+            surface.blit(self.name_base, (0, 0))
+            self.name_view.render(surface, app.style, self.box_labels,
+                                  self.name, app.layout.scale)
+            return True
+        self.name_view.reset()
+        self.name_base = None
         if self.box is not None:
             self.box_view.render(surface, app.style, self.box_labels,
                                  self.box, backdrop=self.box_backdrop)
@@ -166,6 +181,9 @@ class Overlays:
             host.help.close()         # the help over a popup takes the click
             return
         fields = self.app.client.state.fields
+        if self.name is not None:
+            self.send_name(self.name_view.click_code(x, y))
+            return
         if self.box is not None:
             self.answer_box(self.box_view.answer_at(self.box, fields, x, y))
         elif self.popup is not None:
@@ -177,11 +195,26 @@ class Overlays:
             host.help.close()
             return
         fields = self.app.client.state.fields
+        if self.name is not None:
+            self.send_name(namebox.key_code(event))
+            return
         if self.box is not None:
             self.answer_box(msgbox.View.answer_key(self.box, fields, event))
         elif self.popup is not None:
             self.answer_popup(turnpopup.key_action(self.popup_view,
                                                    self.popup, event))
+
+    def send_name(self, code):
+        """A key into the name box, as the game's own field takes it
+        (`core/namebox.py`): every key goes, nothing is answered twice
+        because each is one character of the name."""
+        if code is None or not self.app.connected:
+            return
+        if code in (namebox.KEY_ENTER, namebox.KEY_ESC):
+            log.info("name box: %s (%r)", "accept" if code ==
+                     namebox.KEY_ENTER else "cancel",
+                     namebox.shown(self.name))
+        self.app.client.inject_key(code)
 
     def answer_box(self, field):
         """The box's answer: its own field, activated — once per box."""

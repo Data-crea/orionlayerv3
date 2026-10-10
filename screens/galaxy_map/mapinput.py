@@ -83,6 +83,22 @@ def click(screen, screen_x, screen_y):
             activate(screen, field.index, "research window")
         return True
 
+    # THE TREASURY WINDOW OPENS THE TAX RATE POPUP — work order 230 D
+    # (mainscr_main.cpp:733-748): the sidebar's first window, found in the
+    # live list by shape as the research window is; the popup is HD's
+    # (`taxrate`, through the map's modal).
+    for _tw_box in ("sb_treasury_text", "sb_treasury_icon"):
+        box = screen.box_rect(_tw_box)
+        if not box or not pygame.Rect(*screen.layout.rect(box)).collidepoint(
+                screen_x, screen_y):
+            continue
+        field = mapboxes.live_field(
+            getattr(screen._state, "fields", None),
+            screen._data.get("treasury_window_field"))
+        if field is not None and screen.app.connected:
+            activate(screen, field.index, "treasury window")
+        return True
+
     # The info panel is not map: a click on it that no window took is
     # swallowed, never sent through to a star under the panel.
     side = screen.box_rect("sidebar")

@@ -322,6 +322,9 @@ def overlay_for(app):
             not getattr(app, "connected", False):
         return None
     state = app.client.state
+    name = name_box_for(state)
+    if name is not None:
+        return ("name", name)
     box = getattr(state, "message_box", None)
     if box is not None:
         return ("box", box)
@@ -329,6 +332,20 @@ def overlay_for(app):
     if popup is not None:
         return ("popup", popup)
     return None
+
+
+#: `Star_Name_Popup_Map_Center_X_/Y_` (namestar.cpp:15-21): the home star's
+#: box, which the galaxy map's own modal draws (work order 177).
+HOME_STAR_CORNER = (0x83, 0x92)
+
+
+def name_box_for(state):
+    """The game's name box HD draws over the held frame (open fix 87,
+    work order 230 D), or None — not the home star's, the map's own."""
+    box = getattr(state, "name_box", None)
+    if box is None or (box["x"], box["y"]) == HOME_STAR_CORNER:
+        return None
+    return box
 
 
 def popup_under_box(app):

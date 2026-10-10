@@ -103,8 +103,10 @@ STACKED_AFTER_COLONY = (
     "doc/ext_field_list_content.patch",
     # work order 226: 85 appends RFIT after 69's HLPL
     "doc/ext_refit_first_ship.patch",
-    # work order 229: 86 appends FBTN after 85's RFIT, LAST
+    # work order 229: 86 appends FBTN after 85's RFIT
     "doc/ext_fleet_box_buttons.patch",
+    # work order 230: 87 appends INBX after 86's FBTN, LAST
+    "doc/ext_name_box.patch",
 )
 
 
