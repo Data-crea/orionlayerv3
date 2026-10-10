@@ -617,7 +617,7 @@ class ColonySummaryScreen(ScreenBase):
                 self._sort_key = spec["key"]
                 # Re-sort now, so the rows the next hover hit-tests
                 # are the rows about to be drawn. The SELECTION
-                # survives it — `_reseat_selection` keeps the colony
+                # survives it — `Selection.reseat` keeps the colony
                 # and lets its row move, which is what the original
                 # does by not touching `_g_colony_n` here at all
                 # (colsum.cpp:830-837). The game sorts the list it
@@ -656,7 +656,7 @@ class ColonySummaryScreen(ScreenBase):
             return None
         if row_index is None:
             # Off the rows — and a held selection is DISCARDED here.
-            # HD EXTENSION, argued in `_cancel_pick` and
+            # HD EXTENSION, argued in `MoveController.cancel` and
             # `colonypick`: nothing has been injected, so there is
             # nothing on the other side of the wire to undo.
             self._move.cancel("clicked off the rows")

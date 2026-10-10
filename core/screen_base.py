@@ -36,7 +36,7 @@ class ScreenBase(HelpMixin):
                             # (popups: build queue, colonization, ...)
     OVERLAY_DIM = 120       # 0-255 darkening under the overlay
     BOXES_FILE = "boxes.json"
-    USE_FRAME = False       # True → draw 9-slice frame overlay
+    USE_FRAME = False       # True → the frame place (screenframe); no image (decision 71)
     FRAME_TITLE = ""        # Text rendered in the frame's title bar
     FRAME_BTN_LEFT = None   # ("CANCEL", field_id) or None
     FRAME_BTN_RIGHT = None  # ("ACCEPT", field_id) or None

@@ -2,8 +2,8 @@
 
 **DATA'S ARTWORK, CUT BY `tools/planet_extract.py`.** Ten 54 x 54 RGBA
 sprites under `assets/planets/`, one per `PLANET_CLIMATE`
-(orion2_consts.h:362-374). They are committed, like `assets/frame.png`
-and unlike the population figures: those come out of the player's own
+(orion2_consts.h:362-374). They are committed, the project's own art,
+unlike the population figures: those come out of the player's own
 RACEICON.LBX and these are the project's own art.
 
 **THE CLIMATE ID IS THE WHOLE MAPPING.** `colonyrows` puts

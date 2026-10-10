@@ -220,8 +220,9 @@ def hint_collides(stars, region="inset_map"):
 #: not a hole** (work orders 146 and 151). Everything else on this
 #: screen gets its rect from a transparent cutout; this one has none,
 #: so the hit rects and the thumb have to be put on the art by
-#: measurement or they will sit beside it. Source pixels in
-#: `screens/fleets/assets/frame.png` (3840x2160, work order 151):
+#: measurement or they will sit beside it. Source pixels in the frame
+#: image of work order 151 (3840x2160; the image went with work order
+#: 190, the measurements stand):
 #:
 #:   housing      x 3447..3553, the two rails at 3447-3460 and
 #:                3543-3553 with the dark track channel between them

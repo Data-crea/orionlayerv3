@@ -21,7 +21,7 @@ these, and the blocks read the tokens.
 (Data, answering 226 P2). Frame hue, saturation and brightness turn the
 lines only (`core.hud.tint`); a member is returned as it is, untinted.
 The lines keep their contrast against the fill instead: `tint` reads
-`edge_ground()`, the brightest fill an edge stands on, and lifts an edge
+`ground_pair()`, the brightest fill an edge stands on, and lifts an edge
 that would fall under 3:1 against it, or under the contrast it has at
 the starting colour where that is less (the dim edge, by Data's design).
 

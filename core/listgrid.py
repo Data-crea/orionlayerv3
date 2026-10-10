@@ -15,10 +15,9 @@ Nothing here reads a snapshot, a box file or a layout file. Callers
 hand in rects, counts and colours; the geometry is pure and the drawing
 takes a surface.
 
-**THE LIST PALETTE HAS ONE HOME**, `colors.json` under
-`colony_summary` (`row_a`, `row_b`, `row_selected`, `plate_outline`,
-`header_background`, `header_text`), and `row_palette()` is how a
-second screen reads it rather than carrying a copy of the values.
+**THE LIST PALETTE HAS ONE HOME**, the HUD table's style since decision
+71 (work order 169), and `row_palette()` is how every list reads it
+rather than carrying a copy of the values.
 The row fills are an HD EXTENSION (decision 57); the original's lists
 have no row backgrounds.
 """

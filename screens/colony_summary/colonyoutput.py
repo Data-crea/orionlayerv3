@@ -109,11 +109,9 @@ PanelRow = collections.namedtuple("PanelRow",
 def fill_template(template, values):
     """`{key}` -> value, by replace and never by `str.format`.
 
-    Decision 37. The second copy of this shape in the tree — the
-    first is `colonylist._detail_text`, which fills the per-row
-    detail line the same way. The rule is that the THIRD copy is the
-    signal to extract, so this note is here to make the third one
-    obvious rather than to apologise for the second.
+    Decision 37. The one home of this shape since work order 190
+    (redundancy D4): `colonylist._detail_text` fills the per-row
+    detail line through it.
 
     An unknown placeholder survives into the drawn string. That is
     deliberate: a label that renders `{gravity}` on screen says which

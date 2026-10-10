@@ -144,12 +144,10 @@ ROW_NAME_DIM = palette.col("colony_summary", "row_name_dim",
 DETAIL_COLOR = palette.col("colony_summary", "row_detail",
                            (132, 148, 180))
 NO_FARM_COLOR = palette.col("colony_summary", "no_farming", (150, 120, 110))
-#: The cell plate's line — `plate_outline`, Data's #29394C. NOT the
-#: header's key, although both are `draw_plate` (decision 51): the
-#: header plates are drawn with `panel.thin_border`, handed in by
-#: `screen._render_header`, and only these cells read this key. That
-#: this comment said otherwise until 13 September 2026 is why it says
-#: so now. No code default (decision 14): the skin carries the value.
+#: The cell plate's line is the HUD outline since decision 71
+#: (`listgrid.row_palette()[3]`, `panel.edge_dim`); the skin's
+#: `plate_outline` (Data's #29394C) is no longer read by this list (the
+#: redundancy audit's N34, parked by work order 228).
 # SINCE DECISION 71 (work order 169) THE FOUR COLOURS BELOW ARE THE HUD
 # TABLE'S, through `listgrid.row_palette` — the one home every table
 # reads. Decision 57's colors.json keys stay in the skin, unread by this

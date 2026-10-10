@@ -19,8 +19,9 @@ whose own Cancel does not exist.
 
 So the first click is LOCAL. It picks a pop, computes what the game
 WOULD take, and draws it. Nothing is injected until the second click
-names a target and every rule has passed — and then BOTH clicks go
-out, back to back, which is what `colonysend` does.
+names a target and every rule has passed — and then the move goes out
+as ONE command (open fix 12, `colonysend`; the two injected clicks it
+replaced went on 10 September 2026, commit c2de21d).
 
 **THE CANCEL IS AN HD EXTENSION, AND THIS IS THE SENTENCE IT RESTS
 ON.** A left click on neither an icon nor a column discards the
