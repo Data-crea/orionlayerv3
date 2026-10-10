@@ -19,6 +19,31 @@ FOOT = {0: 1, 1: 2, 2: 2, 3: 3, 4: 3, 5: 3}
 DRAG_SLOP = 6                      # px before a press is a pan
 
 
+#: The one field AUTO leaves: `Clear_Fields_` and a hidden field over the
+#: whole screen as `_auto_button` (combat1.cpp:569-570).
+FULL_SCREEN = (0, 0, 639, 479)
+
+
+def auto_off_field(state, me):
+    """TRANSCRIPTION `auto_off` (work order 229 F): while the player's side
+    plays under AUTO the engine's list is that one full-screen field, and
+    the computer's turn polls it (cmbtai.cpp:598, :616, :740): ANY click
+    switches AUTO off. Its index, or None when AUTO is not the player's or
+    the list is not that shape. Until 229 HD looked AUTO up by its hotkey
+    and waited for the player's turn, so AUTO, once on, could not be
+    switched off in HD (seen live: the flag stayed on to the battle's end)."""
+    c = getattr(state, "combat", None)
+    if not c:
+        return None
+    mine = c.get("auto_attacker") if c["attacker"] == me else \
+        c.get("auto_defender")
+    live = [f for f in (getattr(state, "fields", None) or []) if f.index]
+    if not mine or len(live) != 1:
+        return None
+    f = live[0]
+    return f.index if (f.x, f.y, f.x_end, f.y_end) == FULL_SCREEN else None
+
+
 def field_by_hotkey(fields, hotkey, types=(0, 1)):
     return next((f for f in fields or [] if f.index and f.hotkey == hotkey
                  and f.field_type in types), None)
@@ -74,6 +99,12 @@ class CombatInput:
         if self._tail:                       # its end playing: no input
             return None
         if self.help_consumes_click(screen_x, screen_y):
+            return None
+        off = auto_off_field(self._state, self._me())
+        if off is not None:                  # any click ends AUTO (229 F)
+            log.info("combat: AUTO off -> field %d", off)
+            if self.app.connected:
+                self.app.client.activate_field(off)
             return None
         if self._state is None or getattr(self._state, "combat", None) is None \
                 or self._pops.click(screen_x, screen_y, self._state,
