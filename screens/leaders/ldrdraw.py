@@ -74,6 +74,20 @@ def rect(layout, native):
     return pygame.Rect(*nat.window_rect(native, layout))
 
 
+def field_hit(layout, f, x, y):
+    """Is window point (x, y) on live field `f`, drawn where the layout
+    maps its native rectangle — the panel map's click test (work order
+    225), one home since work order 228 (four screens had a copy)."""
+    return rect(layout, (f.x, f.y, f.x_end, f.y_end)).collidepoint(x, y)
+
+
+def field_slant_hit(layout, f, x, y):
+    """`field_hit` for a field drawn as the shell's slanted button: its
+    own shape (`core.hud.shell.hit`)."""
+    from core.hud import shell
+    return shell.hit(rect(layout, (f.x, f.y, f.x_end, f.y_end)), x, y)
+
+
 def point(layout, x, y):
     return nat.window_point((x, y), layout)
 

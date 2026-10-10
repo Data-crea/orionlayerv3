@@ -202,10 +202,10 @@ class BuildQueueScreen(ScreenBase):
                                      v.building_rows),
                                     ("other", v.others, v.other_rows)):
             for i, (e, f) in enumerate(zip(entries, rows)):
-                if self._hit(f, x, y):
+                if nd.field_hit(self.layout, f, x, y):
                     return kind, i, f, e["id"]
         for i, f in enumerate(v.queue):
-            if self._hit(f, x, y):
+            if nd.field_hit(self.layout, f, x, y):
                 return "queue", i, f, v.items[i] if i < len(v.items) else -1
         return None
 
@@ -216,10 +216,6 @@ class BuildQueueScreen(ScreenBase):
         found by work order 200 B's walk against the original's list."""
         native = spec.get("native")
         return nd.rect(self.layout, native) if native else None
-
-    def _hit(self, f, x, y):
-        return nd.rect(self.layout, (f.x, f.y, f.x_end, f.y_end)) \
-            .collidepoint(x, y)
 
     def handle_mouse_motion(self, screen_x, screen_y):
         super().handle_mouse_motion(screen_x, screen_y)
@@ -241,11 +237,13 @@ class BuildQueueScreen(ScreenBase):
                            ("Refit", w.REFIT), ("Design", w.DESIGN),
                            ("Repeat", w.REPEAT)):
             f = w.live_field(fields, ident)
-            if f is not None and self._hit(f, screen_x, screen_y):
+            if f is not None and nd.field_hit(self.layout, f, screen_x,
+                                              screen_y):
                 self.send(f, key)
                 return None
         radio = w.live_field(fields, w.AUTO_BUILD)
-        if radio is not None and self._hit(radio, screen_x, screen_y) \
+        if radio is not None and nd.field_hit(self.layout, radio, screen_x,
+                                              screen_y) \
                 and self.app.connected:
             x, y = (radio.x + radio.x_end) // 2, (radio.y + radio.y_end) // 2
             log.info("build queue: Auto Build -> INJECT_CLICK (%d, %d)", x, y)

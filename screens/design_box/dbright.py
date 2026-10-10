@@ -23,6 +23,7 @@ help box is not on the wire); a description is the game's own
 that row's or button's field (`core/rightinfo`).
 """
 from core import rightinfo
+from screens.leaders import ldrdraw as nd
 
 SHIELD, COMPUTER = 2, 8          # TECH_APPLICATION_TYPE_* (orion2_consts.h)
 GENERIC = {SHIELD: {"clear": 683, "ok": 682, "box": 681, "none": 692},
@@ -34,7 +35,8 @@ WEAPON = {"filters": (392, 393, 394, 395), "clear": 396, "ok": 397,
 
 def target(screen, box, x, y):
     """('help', id) or ('field', field, why) for a right click, or None."""
-    hit = lambda f: f is not None and screen._hit(f, x, y)  # noqa: E731
+    hit = lambda f: f is not None and \
+        nd.field_hit(screen.layout, f, x, y)  # noqa: E731
     acc = box.accept()
     if box.kind == "weapon":
         for f, hid in zip(box.filter_fields(), WEAPON["filters"]):

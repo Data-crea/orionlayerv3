@@ -256,7 +256,8 @@ class ColonyScreen(ScreenBase):
                            ("LEADERS", geom.LEADERS),
                            ("RETURN", geom.RETURN)):
             f = self._field(ident)
-            if f is not None and self._slant_hit(f, screen_x, screen_y):
+            if f is not None and nd.field_slant_hit(self.layout, f,
+                                                    screen_x, screen_y):
                 self.send(f, key)
                 return None
         for native in list(geom.PROD_ROWS.values()) + [geom.MORALE]:
@@ -268,7 +269,7 @@ class ColonyScreen(ScreenBase):
         for f in self._live():
             if f.field_type == geom.TYPE_HIDDEN and x1 <= f.x and \
                     f.x_end <= x2 and y1 <= f.y and f.y_end <= y2 + 8 \
-                    and self._hit(f, screen_x, screen_y):
+                    and nd.field_hit(self.layout, f, screen_x, screen_y):
                 self.send(f, "system display")
                 return None
         return None
@@ -281,11 +282,6 @@ class ColonyScreen(ScreenBase):
         native = spec.get("native")
         return nd.rect(self.layout, native) if native else None
 
-    def _slant_hit(self, f, x, y):
-        from core.hud import shell
-        return shell.hit(nd.rect(self.layout, (f.x, f.y, f.x_end, f.y_end)),
-                         x, y)
-
     def _shell_title(self):
         view = self._view
         # READY, and GAME_BOX: the page under the game's own box
@@ -295,10 +291,6 @@ class ColonyScreen(ScreenBase):
             return ""
         names = Names(self._state, self._buildings, self._strings)
         return coldraw.title_words(self, view, self._words, names)
-
-    def _hit(self, f, x, y):
-        return nd.rect(self.layout, (f.x, f.y, f.x_end, f.y_end)) \
-            .collidepoint(x, y)
 
     def _job_click(self, x, y):
         """The pop move: first click picks (locally), second drops (one

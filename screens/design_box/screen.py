@@ -153,10 +153,6 @@ class DesignBoxScreen(ScreenBase):
         return box is not None and box.draws and \
             dbright.answer(self, box, screen_x, screen_y)
 
-    def _hit(self, f, x, y):
-        return nd.rect(self.layout, (f.x, f.y, f.x_end, f.y_end)) \
-            .collidepoint(x, y)
-
     # ── Input ────────────────────────────────────────────────────────
 
     def handle_key(self, key):
@@ -197,18 +193,20 @@ class DesignBoxScreen(ScreenBase):
             targets += [(f, f"mod {i}") for i, f, _on in live.mods()]
         targets += [(f, "row") for _y, _r, f in live.rows() if f is not None]
         for f, label in targets:
-            if self._hit(f, screen_x, screen_y):
+            if nd.field_hit(self.layout, f, screen_x, screen_y):
                 self.send(f, label)
                 return None
-        if acc is not None and self._hit(acc, screen_x, screen_y):
+        if acc is not None and nd.field_hit(self.layout, acc, screen_x,
+                                            screen_y):
             return None               # Accept not offered: refused
         if live.kind == "weapon":
             box = live.arc_box_field()
-            if box is not None and self._hit(box, screen_x, screen_y):
+            if box is not None and nd.field_hit(self.layout, box, screen_x,
+                                                screen_y):
                 # The arc box itself: the original answers with a message
                 # (no weapon chosen, or built-in 360) — its box, its picture.
                 self.send(box, "arc box")
                 return None
-        if not self._hit(live.base, screen_x, screen_y):
+        if not nd.field_hit(self.layout, live.base, screen_x, screen_y):
             self.send(live.full_screen, "outside the box")
         return None

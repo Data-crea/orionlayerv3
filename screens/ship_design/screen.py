@@ -228,7 +228,7 @@ class ShipDesignScreen(ScreenBase):
         (the fields `Add_Design_Fields_` puts over each row)."""
         for f in self._live():
             if f.index == 0 or f.field_type != geom.TYPE_HIDDEN or \
-                    not self._hit(f, screen_x, screen_y):
+                    not nd.field_hit(self.layout, f, screen_x, screen_y):
                 continue
             if (f.x, f.x_end) in ((0x4D, 0x22C), (0x10, 0x26F)) and \
                     geom.WEAPON_ROW_Y0 <= f.y < geom.WEAPON_ROW_Y0 + 8 * \
@@ -259,15 +259,6 @@ class ShipDesignScreen(ScreenBase):
         log.info("ship design: %s -> INJECT_CLICK (%d, %d)", label, x, y)
         self.app.client.inject_click(x, y)
         return True
-
-    def _slant_hit(self, f, x, y):
-        from core.hud import shell
-        return shell.hit(nd.rect(self.layout, (f.x, f.y, f.x_end, f.y_end)),
-                         x, y)
-
-    def _hit(self, f, x, y):
-        return nd.rect(self.layout, (f.x, f.y, f.x_end, f.y_end)) \
-            .collidepoint(x, y)
 
     # ── Input ────────────────────────────────────────────────────────
 
@@ -315,14 +306,15 @@ class ShipDesignScreen(ScreenBase):
                              ("shield", geom.SHIELD),
                              ("computer", geom.COMPUTER)):
             f = sdwire.live_field(live, ident)
-            if f is not None and (self._slant_hit(f, screen_x, screen_y)
-                                  if label in self.SLANTED else
-                                  self._hit(f, screen_x, screen_y)):
+            hit = nd.field_slant_hit if label in self.SLANTED else \
+                nd.field_hit
+            if f is not None and hit(self.layout, f, screen_x, screen_y):
                 self.send(f, label)
                 return None
         for size, (y1, _y2) in enumerate(geom.HULL_ROWS):
             f = sdwire.at_origin(live, geom.HULL_X[0], y1)
-            if f is not None and self._hit(f, screen_x, screen_y):
+            if f is not None and nd.field_hit(self.layout, f, screen_x,
+                                              screen_y):
                 if f.field_type == geom.TYPE_MULTI:
                     self.click_field(f, f"hull {size}")
                 return None           # a hidden hull field: not offered
@@ -330,7 +322,8 @@ class ShipDesignScreen(ScreenBase):
             y = geom.WEAPON_ROW_Y0 + i * geom.ROW_STEP
             for x, label in ((geom.MINUS_X, "minus"), (geom.PLUS_X, "plus")):
                 f = sdwire.at_origin(live, x, y)
-                if f is not None and self._hit(f, screen_x, screen_y):
+                if f is not None and nd.field_hit(self.layout, f, screen_x,
+                                                  screen_y):
                     if f.field_type == geom.TYPE_BUTTON:
                         self.send(f, f"{label} {i}")
                     return None       # a hidden field there: refused
