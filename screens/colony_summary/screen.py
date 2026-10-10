@@ -580,8 +580,7 @@ class ColonySummaryScreen(ScreenBase):
         # RETURN IS BACK UNDER THE FRAME — 12 September 2026, Data's
         # eighth slot. It was drawn after the frame for one day, with
         # the header plates, because the artwork cut no hole for it.
-        colonysort.render_return(surface, self, mouse, NAV_HOVER_BG,
-                                 NAV_TEXT)
+        colonysort.render_return(surface, self)
 
     def _sort_buttons(self):
         """The seven keys, one `sort_<key>` box each — see
@@ -648,9 +647,6 @@ class ColonySummaryScreen(ScreenBase):
                 state=self._state, area=area, cfg=cfg, scale=scale,
                 sort_key=self._sort_key, words=self._move_words(),
                 client=self.app.client, connected=self.app.connected,
-                sort_hotkey=colonymoveui.sort_hotkey(
-                    self._data.get("sort", {}).get("buttons", []),
-                    self._sort_key),
                 figures=colonyfigures.set_for(self, area, cfg)):
             # The selection may have appeared or gone. Rebuild NOW,
             # not at the next snapshot: the rows carry the held

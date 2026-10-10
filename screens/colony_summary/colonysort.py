@@ -307,7 +307,7 @@ def render(surface, buttons, active_key, mouse,
                          style_renderer=style)
 
 
-def render_return(surface, screen, mouse, hover_bg, text_color):
+def render_return(surface, screen):
     """RETURN, which is a button on this row and not a sort key.
 
     **IT HAS THE EIGHTH SLOT — 12 September 2026, Data's frame of that

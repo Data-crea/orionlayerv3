@@ -45,32 +45,6 @@ from . import colonysend
 log = logging.getLogger("colony_summary.move")
 
 
-def sort_hotkey(buttons, sort_key):
-    """The key that re-sorts the game's list, or None.
-
-    `colonysend` pushes it again once a move has landed, which is not
-    housekeeping: HD re-sorts from every snapshot and the game
-    re-sorts only when a sort field is activated
-    (`Sort_Col_List_`, colsum.cpp:829-838), so a move under a
-    production key leaves the two lists in different orders with
-    every value on both screens still correct.
-
-    None where the button has no usable letter — RETURN reports 0x25
-    and the seven sort buttons all have one, so today this only
-    answers None for a `layout.json` somebody has edited. The send
-    then simply skips the step, which leaves the two lists to be
-    re-bound by the next entry to the screen (`_push_sort_key`).
-    """
-    for spec in buttons:
-        if spec.get("key") != sort_key:
-            continue
-        key = spec.get("hotkey")
-        if isinstance(key, str) and len(key) == 1 and key.isascii():
-            return ord(key)
-        return None
-    return None
-
-
 class MoveController:
     """One pop move at a time, from the first click to the last word."""
 
@@ -111,8 +85,7 @@ class MoveController:
     # ── Input ─────────────────────────────────────────────
 
     def click(self, *, rows, row_index, x, state, area, cfg, scale,
-              sort_key, words, client, connected, sort_hotkey=None,
-              n_colonies=None, figures=None):
+              sort_key, words, client, connected, figures=None):
         """A left click on row `row_index`. True if it was taken.
 
         False means "this was not a click on the population track" —
@@ -134,9 +107,7 @@ class MoveController:
                                      figures)
         return self._second_click(row, row_index, pops, n_pops, max_farms,
                                   x, area, cfg, scale, words, client,
-                                  connected, sort_hotkey,
-                                  n_colonies if n_colonies is not None
-                                  else len(rows))
+                                  connected)
 
     def _first_click(self, row, row_index, pops, n_pops, x, area, cfg,
                      scale, sort_key, words, figures=None):
@@ -159,8 +130,7 @@ class MoveController:
         return True
 
     def _second_click(self, row, row_index, pops, n_pops, max_farms, x,
-                      area, cfg, scale, words, client, connected,
-                      sort_hotkey, n_colonies):
+                      area, cfg, scale, words, client, connected):
         """Drop — and this is the only path that can inject."""
         job = colonylist.drop_band(area, cfg, scale, row, x)
         if job is None:
