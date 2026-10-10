@@ -288,6 +288,35 @@ def is_hang(last_line, samples):
 START_DEADLINE = 150
 INTRO_SECONDS = 112.9
 
+#: Engine logs of earlier starts kept beside a log under ~/claude/ (work
+#: order 229 E); older ones go to ~/claude/_to_delete/engine_logs/.
+KEEP_LOGS = 30
+
+
+def keep_previous(log_path, out=print):
+    """Before a start overwrites `log_path`: under ~/claude/, the previous
+    engine log moves to `engine_logs/<its time>_<name>` beside it, the
+    newest KEEP_LOGS stay. A crash's log was lost to the next start (the
+    224-227 crashes). A player's own log (play.py's) is left alone."""
+    import shutil
+    root = os.path.realpath(workdirs.ROOT) + os.sep
+    if not os.path.realpath(log_path).startswith(root) or \
+            not os.path.exists(log_path) or os.path.getsize(log_path) == 0:
+        return None
+    keep = os.path.join(os.path.dirname(log_path), "engine_logs")
+    os.makedirs(keep, exist_ok=True)
+    stamp = time.strftime("%Y%m%d_%H%M%S",
+                          time.localtime(os.path.getmtime(log_path)))
+    dest = os.path.join(keep, f"{stamp}_{os.path.basename(log_path)}")
+    shutil.move(log_path, dest)
+    old = sorted(os.listdir(keep))
+    for name in old[:-KEEP_LOGS] if len(old) > KEEP_LOGS else []:
+        bin_ = os.path.join(workdirs.TO_DELETE, "engine_logs")
+        os.makedirs(bin_, exist_ok=True)
+        shutil.move(os.path.join(keep, name), os.path.join(bin_, name))
+    return dest
+
+
 def start(log_path, timeout=START_DEADLINE, inhibit=True, out=print, retries=3,
           engine=None, guard=None, blanked_ok=False, intro=False,
           real_desktop=None):
@@ -324,6 +353,7 @@ def _start_once(log_path, timeout, inhibit, out, engine=None, guard=None,
         return None
     workdirs.makedirs(os.path.dirname(os.path.abspath(log_path)),
                       by="engine_start")
+    keep_previous(log_path, out)
     handle = open(log_path, "w")
     if guard:
         # THE BACKUP COMES FIRST (work order 175): every file the game or
