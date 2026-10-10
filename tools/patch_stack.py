@@ -101,8 +101,10 @@ STACKED_AFTER_COLONY = (
     "doc/ext_combat_beam_aim.patch",
     # work order 223: 84 compares the field list's bytes in Tick
     "doc/ext_field_list_content.patch",
-    # work order 226: 85 appends RFIT after 69's HLPL, LAST
+    # work order 226: 85 appends RFIT after 69's HLPL
     "doc/ext_refit_first_ship.patch",
+    # work order 229: 86 appends FBTN after 85's RFIT, LAST
+    "doc/ext_fleet_box_buttons.patch",
 )
 
 

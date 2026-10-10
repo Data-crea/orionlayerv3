@@ -41,11 +41,12 @@ module places the map's window and keeps its hits.
 
 OMISSION (decision 61), each a field HD leaves alone: the system window's
 ship buttons and gate icons (its planet information under the pointer is
-drawn since work order 226 F, `sysinfo`); the fleet box's ALL,
-the bar's thumb drag (a scroll field that reads the POINTER, fleetpop.cpp:
-213-216 — a click on the track steps one row toward it instead, DEVIATION
-`fleet_scroll_track`) and the Outpost / Colonize / Engage / Transport / Attack buttons;
-the space-monster branch of the system window. (The orbit rings and the
+drawn since work order 226 F, `sysinfo`); the bar's thumb drag (a scroll
+field that reads the POINTER, fleetpop.cpp:213-216 — a click on the track
+steps one row toward it instead, DEVIATION `fleet_scroll_track`); the
+space-monster branch of the system window. The fleet box's ALL and its
+Outpost / Colonize / Engage / Transport / Attack buttons are drawn since
+work order 229 (`fleetorders`, open fix 86). (The orbit rings and the
 asteroid belts are drawn since work order 223, `sysorbits`; the colony
 markers beside owned planets since work order 228, `syswindow`.)
 
@@ -62,7 +63,8 @@ from core.hud import blocks as hud
 
 from core import hestrings
 from core import palette
-from screens.galaxy_map import boxmodel, mapboxes, sysfleets, syswindow
+from screens.galaxy_map import (boxmodel, fleetorders, mapboxes,
+                                sysfleets, syswindow)
 from screens.galaxy_map.syswindow import TEXT_COLOR
 
 log = logging.getLogger("galaxy_map.boxes")
@@ -245,11 +247,18 @@ def render(screen, surface):
     screen._box_hits = hits
     screen._box_planets = []
     screen._box_help = []
+    screen._order_rects = {}
     screen._system_drawn = False
     for names, box, model in drawable(screen):
         r = _placed(screen, names, box)
         if r is None:
             continue
+        offer = None
+        if model["kind"] == "fleet":
+            # the order buttons under CLOSE grow the box (work order 229 C)
+            offer = fleetorders.offered(screen._state, model)
+            r = fleetorders.place(r, names, offer["orders"],
+                                  pygame.Rect(*screen._map_view().box))
         syswindow.frame(screen, surface, r[names[0]])
         hits.append((r[names[0]], None))
         syswindow.text(screen, surface, r[names[1]], model["title"],
@@ -268,14 +277,16 @@ def render(screen, surface):
             # the fleet box's help, as `Set_Main_Screen_Help_List_`
             # appends it (evanhelp.cpp:239-273): 310 the band above the
             # buttons — HD's status line stands there — then 304 the
-            # close button. The order buttons' 305-309 have no HD element
-            # (the box offers no orders).
+            # close button, and the order buttons' 305-309 (`fleetorders`).
             screen._box_help = [(r["fleet_status"], 310),
                                 (r[names[-1]], 304)]
         close = r[names[-1]]
         syswindow.close_button(screen, surface, close,
                                syswindow.close_label(screen))
         hits.append((close, model["close"]))
+        if offer is not None:
+            fleetorders.draw(screen, surface, r, names, offer, hits,
+                             screen._box_help)
 
 
 def _activate(screen, index, what):

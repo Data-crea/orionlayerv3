@@ -105,6 +105,7 @@ class GameState:
     build_queue: Optional[dict] = None       # "BLDQ", fix 39
     build_lists: Optional[dict] = None       # "BLDL", fix 40
     refit_list: Optional[dict] = None        # "RFIT", fix 85
+    fleet_buttons: Optional[dict] = None     # "FBTN", fix 86
     #: The Ship Designer, open fixes 44 and 45 (work order 185, NOT
     #: APPLIED): `core/designblocks.py` names every key.
     ship_design: Optional[dict] = None       # "DSGN", fix 44
@@ -435,7 +436,9 @@ def parse_state(data: bytes) -> GameState:
     pos = combatpopup.parse(gs, data, pos)    # CPOP, open fix 66
     pos = combatoptions.parse(gs, data, pos)  # COPT, open fix 68
     pos = helplist.parse(gs, data, pos)       # HLPL, open fix 69
-    pos = colonyblocks.parse_refit(gs, data, pos)   # RFIT, open fix 85, LAST
+    pos = colonyblocks.parse_refit(gs, data, pos)   # RFIT, open fix 85
+    from core import fleetbuttons
+    pos = fleetbuttons.parse(gs, data, pos)   # FBTN, open fix 86, LAST
     return gs
 
 

@@ -80,6 +80,13 @@ class Box:
         """(x, y, x_end, y_end) of the whole window, inclusive."""
         return rect(self.fields[-1])
 
+    def added_buttons(self):
+        """The fleet box's order buttons, which lie under its whole-window
+        field (`_below`), top to bottom."""
+        whole = self.fields[-1]
+        return [f for f in self.fields[:-1]
+                if _below(whole, f) and f.y >= whole.y_end]
+
 
 @dataclass
 class BoxState:
@@ -112,13 +119,41 @@ def box_fields(fields):
     return [f for f in fields[start + 1:-3] if rect(f) != DEBUG_RECT]
 
 
+def _below(outer, inner):
+    """A button under `outer`, within its columns: the fleet box's order
+    buttons. `Add_Added_Buttons_` stacks them under CLOSE and grows the box
+    (fleetpop.cpp:444-510, :813-856), but `MOVEBOX::Add_Whole_Window_Field_`
+    is the box without them — seen live in work order 229 (Yoth: whole
+    window 22..182, Outpost 182..213, Colonize 214..245). Until 229 such a
+    box was not recognised at all, and HD drew no fleet box for a stack
+    that could colonise."""
+    return (inner.field_type == TYPE_BUTTON and outer.x <= inner.x
+            and inner.x_end <= outer.x_end and inner.y >= outer.y)
+
+
+def _whole(f, current):
+    """True when `f` closes the group `current`: it holds every field before
+    it — or, for a fleet box (opened by its drag strip on `f`'s top edge),
+    every field but the order buttons under it (`_below`). Only the fleet
+    box: the system window's CLOSE lies below its title strip too."""
+    if f.field_type != TYPE_HIDDEN or len(current) < 2:
+        return False
+    if all(_contains(f, g) for g in current[:-1]):
+        return True
+    first = current[0]
+    fleet = (first.field_type == TYPE_HIDDEN
+             and first.y_end - first.y == FLEET_DRAG_HEIGHT
+             and (first.x, first.y, first.x_end) == (f.x, f.y, f.x_end))
+    return fleet and all(_contains(f, g) or _below(f, g)
+                         for g in current[:-1])
+
+
 def _groups(span):
     """Split at each whole-window field; None if something is left over."""
     groups, current = [], []
     for f in span:
         current.append(f)
-        if (len(current) >= 2 and f.field_type == TYPE_HIDDEN
-                and all(_contains(f, g) for g in current[:-1])):
+        if _whole(f, current):
             groups.append(current)
             current = []
     return None if current else groups

@@ -163,8 +163,15 @@ def fleet_xy(icon_x, icon_y, w, h):
 
 
 def _size(box):
+    """The box's width and height as the engine clamps it: the fleet box's
+    height counts its order buttons (`Set_Added_Button_Stuff_` adds their
+    heights, `Set_Fleet_Box_Data_Dimensions_` clamps with the sum,
+    fleetpop.cpp:813-856, :1440-1453); their fields lie under the whole-
+    window field, each inclusive of its last row (work order 229, live:
+    a box at Sol 32 px too low without its Transport button)."""
     x0, y0, x1, y1 = box.rect
-    return x1 - x0, y1 - y0
+    extra = sum(f.y_end - f.y + 1 for f in box.added_buttons())
+    return x1 - x0, y1 - y0 + extra
 
 
 def _msg(text, index, *values):

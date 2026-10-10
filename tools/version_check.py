@@ -460,6 +460,13 @@ LOCAL_PATCHES = {
         "the engine does not report the refit ship list's first row (open "
         "fix 85): HD counts the pages it sent, and a slider moved in the "
         "game's window would put its cells on other ships"),
+    # Applied 10 October 2026 by work order 229 (the standing decision of 4
+    # October): 4642eb1e, on bdc3009b.
+    "doc/ext_fleet_box_buttons.patch": (
+        os.path.join("src", "ext", "ext_api.cpp"),
+        "OrionLayer, open fix 86.",
+        "the engine does not say which field is which of the fleet box's "
+        "order buttons (open fix 86): HD's fleet box offers no orders"),
 }
 
 #: Patches that are REPORTED to Joes and not yet applied: listed with
@@ -547,6 +554,7 @@ FIX_NUMBERS = {
     "doc/ext_combat_gyro_spin.patch": (83,),
     "doc/ext_field_list_content.patch": (84,),
     "doc/ext_refit_first_ship.patch": (85,),
+    "doc/ext_fleet_box_buttons.patch": (86,),
 }
 
 

@@ -2082,6 +2082,12 @@
     "game_menu/confirm_yes": "check",
     "game_menu/confirm_no": "close",
     "research/exit": "exit",
-    "galaxy_map/close": "close"
+    "galaxy_map/close": "close",
+    "galaxy_map/all": "all",
+    "galaxy_map/outpost": "outpost",
+    "galaxy_map/colonize": "colony",
+    "galaxy_map/engage": "swords",
+    "galaxy_map/transport": "person",
+    "galaxy_map/attack": "swords"
   }
 }
